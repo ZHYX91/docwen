@@ -1,0 +1,97 @@
+第三方组件许可证声明
+================================================================================
+
+本软件使用了以下开源组件，特此声明其许可证信息：
+
+================================================================================
+1. PyMuPDF (pymupdf)
+   License: AGPL-3.0
+   Copyright: Artifex Software, Inc.
+   Website: https://github.com/pymupdf/PyMuPDF
+
+2. PaddleOCR
+   License: Apache-2.0
+   Copyright: PaddlePaddle Authors
+   Website: https://github.com/PaddlePaddle/PaddleOCR
+
+3. PaddlePaddle
+   License: Apache-2.0
+   Copyright: PaddlePaddle Authors
+   Website: https://github.com/PaddlePaddle/Paddle
+
+4. python-docx
+   License: MIT
+   Copyright: Steve Canny
+   Website: https://github.com/python-openxml/python-docx
+
+5. openpyxl
+   License: MIT
+   Copyright: Eric Gazoni, Charlie Clark
+   Website: https://openpyxl.readthedocs.io
+
+6. Pillow
+   License: HPND (Historical Permission Notice and Disclaimer)
+   Copyright: Jeffrey A. Clark (Alex) and contributors
+   Website: https://github.com/python-pillow/Pillow
+
+7. ttkbootstrap
+   License: MIT
+   Copyright: Israel Dryer
+   Website: https://github.com/israel-dryer/ttkbootstrap
+
+8. pandas
+   License: BSD-3-Clause
+   Copyright: AQR Capital Management, LLC, Lambda Foundry, Inc. and PyData Development Team
+   Website: https://github.com/pandas-dev/pandas
+
+9. NumPy
+   License: BSD-3-Clause
+   Copyright: NumPy Developers
+   Website: https://github.com/numpy/numpy
+
+10. lxml
+    License: BSD-3-Clause
+    Copyright: Infrae, lxml dev team
+    Website: https://github.com/lxml/lxml
+
+11. PyYAML
+    License: MIT
+    Copyright: Kirill Simonov
+    Website: https://github.com/yaml/pyyaml
+
+12. tomlkit
+    License: MIT
+    Copyright: Sébastien Eustace
+    Website: https://github.com/sdispater/tomlkit
+
+13. watchdog
+    License: Apache-2.0
+    Copyright: Yesudeep Mangalapilly and contributors
+    Website: https://github.com/gorakhargosh/watchdog
+
+14. pywin32
+    License: PSF (Python Software Foundation License)
+    Copyright: Mark Hammond
+    Website: https://github.com/mhammond/pywin32
+
+15. pdf2docx
+    License: MIT
+    Copyright: dothinking
+    Website: https://github.com/dothinking/pdf2docx
+
+================================================================================
+
+许可证全文链接：
+- AGPL-3.0: https://www.gnu.org/licenses/agpl-3.0.txt
+- Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+- MIT: https://opensource.org/licenses/MIT
+- BSD-3-Clause: https://opensource.org/licenses/BSD-3-Clause
+- HPND: https://opensource.org/licenses/HPND
+- PSF: https://opensource.org/licenses/Python-2.0
+
+================================================================================
+
+请注意：
+- 本软件使用的PyMuPDF采用AGPL-3.0许可证，因此整个项目也采用AGPL-3.0许可证
+- 所有第三方组件的版权归其各自所有者所有
+- 使用本软件即表示您同意遵守上述所有许可证条款

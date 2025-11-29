@@ -1,0 +1,16 @@
+# 公文转换系统 - 日志配置文件
+
+[logging]
+# 日志系统全局开关
+enable = true          # true=启用日志系统, false=禁用
+
+# 日志级别选项 (debug/info/warning/error/critical)
+level = "debug"         # 默认info级别，开发时可设为debug
+
+# 文件输出设置
+file_prefix = "gongwen"  # 日志文件名前缀（如gongwen_20250910.log）
+retention_days = 30       # 日志保留天数（按天轮转）
+
+# 控制台输出设置
+console_enable = true   # 是否在控制台显示日志
+console_level = "debug"  # 控制台日志级别（可与文件级别不同，debug/info/warning/error/critical)

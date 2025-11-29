@@ -1,0 +1,20 @@
+# Office软件优先级配置
+# 用于控制不同格式转换时调用外部软件的优先级顺序
+
+[default_priority]
+# 文档处理软件优先级（用于DOC/DOCX/WPS等转换）
+word_processors = ["wps_writer", "msoffice_word", "libreoffice"]
+# 表格处理软件优先级（用于XLS/XLSX/ET等转换）
+spreadsheet_processors = ["wps_spreadsheets", "msoffice_excel", "libreoffice"]
+
+[special_conversions]
+# ODT格式转换优先级（WPS文字（wps_writer）不支持ODT）
+odt = ["msoffice_word", "libreoffice"]
+# ODS格式转换优先级（WPS表格（wps_spreadsheets）不支持ODS）
+ods = ["msoffice_excel", "libreoffice"]
+# PDF转Office优先级（WPS文字（wps_writer）不支持PDF转文档，Microsoft Word优先于LibreOffice）
+pdf_to_office = ["msoffice_word", "libreoffice"]
+# 文档转PDF优先级（使用文字处理软件）
+document_to_pdf = ["wps_writer", "msoffice_word", "libreoffice"]
+# 表格转PDF优先级（使用表格处理软件）
+spreadsheet_to_pdf = ["wps_spreadsheets", "msoffice_excel", "libreoffice"]

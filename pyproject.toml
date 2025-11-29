@@ -1,0 +1,81 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gongwen-converter"
+dynamic = ["version"]
+description = "公文图表格式转换软件 - 支持 Word/Markdown/Excel 互转"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "AGPL-3.0-or-later"}
+authors = [
+    {name = "ZhengYX", email = "zhengyx91@hotmail.com"}
+]
+keywords = ["document", "converter", "markdown", "docx", "excel", "office", "公文", "表格"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "Topic :: Office/Business",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: Microsoft :: Windows",
+]
+
+dependencies = [
+    # 图形界面
+    "ttkbootstrap>=1.18.0",
+    "tkinterdnd2>=0.4.3",
+    "Pillow>=11.3.0,<12.0.0",
+    
+    # 文档处理
+    "python-docx>=1.2.0",
+    "openpyxl>=3.1.5",
+    "lxml>=6.0.2",
+    "PyYAML>=6.0.2",
+    "tomlkit>=0.13.3",
+    "pandas>=2.3.3",
+    "tabulate>=0.9.0",
+    "olefile>=0.47",  # OLE文件格式解析，用于精确识别DOC/XLS
+    
+    # PDF/OFD处理
+    "pymupdf>=1.26.6",
+    "pymupdf4llm>=0.1.8",
+    "pdf2docx>=0.5.6",
+    "easyofd>=0.5.6",  # OFD文件转PDF
+    
+    # 数值计算
+    "numpy>=2.3.4,<3.0.0",
+    
+    # 图片转换
+    "img2pdf>=0.6.1",
+    "pillow-heif>=1.1.1",
+    
+    # OCR支持
+    "paddleocr>=3.3.1",
+    "paddlepaddle>=3.2.1",
+    
+    # Windows COM 自动化
+    "pywin32>=311",
+    
+    # IPC 进程间通信
+    "watchdog>=6.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    # 构建与打包
+    "Cython==3.1.6",
+    "pyinstaller==6.16.0",
+]
+
+[tool.setuptools]
+packages = ["gongwen_converter"]
+package-dir = {"" = "src"}
+
+[tool.setuptools.dynamic]
+version = {attr = "gongwen_converter.__version__"}
+
+[tool.setuptools.package-data]
+gongwen_converter = ["py.typed"]

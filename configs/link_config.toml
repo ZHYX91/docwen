@@ -1,0 +1,163 @@
+# ==================================
+#  公文转换器 - 链接处理配置
+# ==================================
+
+# ==================================
+#  配置作用范围说明
+# ==================================
+# 
+# 本配置文件中的所有设置对以下场景都有效：
+# 
+# 1. 生成MD内容时（决定MD中链接的格式）：
+#    - 文档转MD：DOCX/DOC → MD
+#    - 表格转MD：XLSX/XLS/CSV → MD
+#    - 版式转MD：PDF/OFD → MD
+#    - 图片OCR：JPG/PNG → MD（文字识别）
+#    - 图片提取：从各种文件中提取图片到MD
+# 
+# 2. 从MD转换时（处理MD中的链接）：
+#    - MD转文档：MD → DOCX
+#    - MD转表格：MD → XLSX
+# 
+# ==================================
+
+
+# ==================================
+#  格式设置（生成MD时的链接格式）
+# ==================================
+[format]
+# 图片链接格式
+# 可选值：
+#   "markdown" - Markdown标准格式：![alt](url) 或 [text](url)
+#   "wiki"     - Wiki链接格式：![[url]] 或 [[url]]（适用于Obsidian等）
+image_link_format = "markdown"
+
+# 图片链接嵌入模式（是否带!前缀）
+# true:  嵌入模式 - ![](url) 或 ![[url]]（显示图片内容）
+# false: 链接模式 - [](url) 或 [[url]]（仅作为链接）
+image_embed = true
+
+# MD文件链接格式
+# 可选值：
+#   "markdown" - Markdown标准格式：[text](url)（固定为链接模式，无嵌入）
+#   "wiki"     - Wiki链接格式：[[url]] 或 ![[url]]（可嵌入或链接）
+md_file_link_format = "wiki"
+
+# MD文件链接嵌入模式（是否带!前缀）
+# true:  ![[file.md]]  - Wiki嵌入格式，展示文件内容
+# false: [[file.md]]   - Wiki链接格式，不展示内容
+# 
+# ⚠️ 仅当 md_file_link_format = "wiki" 时有效
+# 当 md_file_link_format = "markdown" 时，此选项被忽略，固定输出 [file.md](file.md)
+md_file_embed = true
+
+
+# ==================================
+#  非嵌入链接处理（MD转DOCX/XLSX时）
+# ==================================
+[non_embed_links]
+# 普通Wiki链接的处理方式：[[link]] 或 [[link|text]]
+# 可选值：
+#   "keep"         - 保留原样：[[link|text]]
+#   "extract_text" - 提取文本：text（去除链接标记，只保留显示文本）
+#   "remove"       - 完全移除：删除整个链接
+wiki_mode = "extract_text"
+
+# 普通Markdown链接的处理方式：[text](url)
+# 可选值：
+#   "keep"         - 保留原样：[text](url)
+#   "extract_text" - 提取文本：text（去除链接标记，只保留显示文本）
+#   "remove"       - 完全移除：删除整个链接
+markdown_mode = "extract_text"
+
+
+# ==================================
+#  嵌入链接处理（MD转DOCX/XLSX时）
+# ==================================
+[embed_links]
+# 嵌入功能总开关
+# true:  启用嵌入处理（根据下面的配置决定如何处理）
+# false: 嵌入链接按非嵌入方式处理（使用上面[non_embed_links]的设置）
+enabled = true
+
+# 嵌入图片的处理方式：![[image.png]] 或 ![](image.png)
+# 可选值：
+#   "keep"         - 保留原样：![[image.png]]
+#   "extract_text" - 提取文本：image.png（去除链接标记）
+#   "remove"       - 完全移除：删除整个链接
+#   "embed"        - 插入内容：将图片实际插入到文档中
+image_mode = "embed"
+
+# 嵌入MD文件的处理方式：![[file.md]]（仅Wiki格式支持）
+# 可选值：
+#   "keep"         - 保留原样：![[file.md]]
+#   "extract_text" - 提取文本：file.md（去除链接标记）
+#   "remove"       - 完全移除：删除整个链接
+#   "embed"        - 插入内容：读取文件内容并递归处理后插入
+md_file_mode = "embed"
+
+
+# ==================================
+#  嵌入详细配置
+# ==================================
+[embedding]
+# MD文件递归嵌入的最大深度
+# 防止无限递归和性能问题（如 A嵌入B，B嵌入C，C嵌入D...）
+# 推荐值：3-5
+max_depth = 3
+
+
+# ==================================
+#  路径解析
+# ==================================
+[path_resolution]
+# 路径解析说明：
+# - 所有相对路径固定相对于源MD文件所在目录
+# - 当链接只有文件名时，按顺序在下列目录中搜索
+
+# 文件搜索子目录（相对于源MD文件所在目录）
+# 当链接只有文件名时按顺序搜索这些目录
+# 例如：., assets, images, attachments
+search_dirs = [".", "assets", "images", "attachments"]
+
+
+# ==================================
+#  错误处理
+# ==================================
+[error_handling]
+# 文件未找到时的处理方式
+# 可选值：
+#   "ignore"      - 静默忽略（删除链接，不留痕迹）
+#   "keep"        - 保留原链接标记（如 ![[missing.png]]）
+#   "placeholder" - 插入占位文本（使用下面的占位文本）
+file_not_found = "placeholder"
+
+# 文件未找到时的占位文本（仅当file_not_found="placeholder"时有效）
+# 支持占位符：{filename} - 被替换为找不到的文件名
+file_not_found_text = "⚠️ 文件未找到: {filename}"
+
+# 是否检测循环引用（A嵌入B，B嵌入A）
+# true:  检测并防止循环嵌入
+# false: 不检测（可能导致无限递归，不推荐）
+detect_circular = true
+
+# 检测到循环引用时的处理方式
+# 可选值：
+#   "ignore"      - 静默忽略（停止嵌入）
+#   "keep"        - 保留原链接标记
+#   "placeholder" - 插入占位文本
+circular_reference = "placeholder"
+
+# 循环引用时的占位文本（仅当circular_reference="placeholder"时有效）
+# 支持占位符：{filename} - 被替换为导致循环的文件名
+circular_text = "⚠️ 检测到循环引用: {filename}"
+
+# 达到最大嵌入深度时的处理方式
+# 可选值：
+#   "ignore"      - 静默忽略（停止嵌入）
+#   "keep"        - 保留原链接标记
+#   "placeholder" - 插入占位文本
+max_depth_reached = "placeholder"
+
+# 最大深度警告文本（仅当max_depth_reached="placeholder"时有效）
+max_depth_text = "⚠️ 达到最大嵌入深度"

@@ -1,0 +1,43 @@
+# 公文转换器GUI配置
+# 此文件用于配置图形用户界面的外观和行为设置
+
+[window]
+# 面板尺寸配置
+# 单位: 像素（逻辑值，会根据DPI自动缩放）
+center_panel_width = 400        # 中栏宽度（文件拖拽区和操作面板）
+left_panel_width = 400          # 批量面板宽度（批量模式下的文件列表）
+right_panel_width = 300         # 模板面板宽度（模板选择器）
+
+# 窗口位置配置（基于中栏屏幕坐标）
+center_panel_screen_x = 320     # 中栏在屏幕上的X坐标（保证中栏位置不变）
+window_y = 101                   # 窗口左上角Y坐标
+default_mode = "single"         # 默认启动模式："single"（单文件）或"batch"（批量）
+
+# 窗口尺寸设置
+default_height = 740            # 窗口默认高度
+min_height = 730                # 最小窗口高度
+
+# 窗口行为设置
+auto_center = false             # 是否自动居中窗口
+remember_gui_state = true       # 是否记住窗口关闭时的位置、大小、主题等
+
+[component]
+file_drop_height = 200   # 文件拖拽区域高度
+
+[theme]
+# 主题设置
+default_theme = "flatly"  # 默认主题名称 (可选: cerculean, cosmo, cyborg, darkly, flatly, journal, litera, lumen, minty, morph, pulse, sandstone, simplex, solar, superhero, united, vapor, yeti)
+
+[transparency]
+# 透明度设置
+enabled = false   # 是否启用窗口透明度效果
+default_value = 0.95   # 默认透明度值 (0.0完全透明 - 1.0完全不透明)
+min_value = 0.8        # 最小透明度限制
+max_value = 1.0        # 最大透明度限制
+
+[template]
+# MD文件默认模板类型
+# 可选值：
+#   "docx" - 使用文档模板
+#   "xlsx" - 使用表格模板
+md_default_template = "docx"

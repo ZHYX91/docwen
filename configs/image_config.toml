@@ -1,0 +1,47 @@
+# ==================================
+#  公文转换器 - 图片提取默认设置
+# ==================================
+
+# ==================================
+#  图片提取默认设置
+# ==================================
+[extraction_defaults]
+# 文档转MD时的默认设置
+# true:  DOCX转MD时默认勾选"提取图片"
+# false: DOCX转MD时默认不勾选"提取图片"
+docx_to_md_keep_images = true
+
+# 文档转MD时是否启用OCR
+# true:  DOCX转MD时默认勾选"图片文字识别"
+# false: DOCX转MD时默认不勾选"图片文字识别"
+docx_to_md_enable_ocr = false
+
+# 表格转MD时的默认设置
+# true:  XLSX转MD时默认勾选"提取图片"
+# false: XLSX转MD时默认不勾选"提取图片"
+xlsx_to_md_keep_images = true
+
+# 表格转MD时是否启用OCR
+# true:  XLSX转MD时默认勾选"图片文字识别"
+# false: XLSX转MD时默认不勾选"图片文字识别"
+xlsx_to_md_enable_ocr = false
+
+# 版式文件转MD时的默认设置
+# true:  PDF/OFD转MD时默认勾选"提取图片"
+# false: PDF/OFD转MD时默认不勾选"提取图片"
+layout_to_md_keep_images = true
+
+# 版式文件转MD时是否启用OCR
+# true:  PDF/OFD转MD时默认勾选"图片文字识别"
+# false: PDF/OFD转MD时默认不勾选"图片文字识别"
+layout_to_md_enable_ocr = false
+
+# 图片文件转MD时的默认设置
+# true:  图片转MD时默认勾选"提取图片"
+# false: 图片转MD时默认不勾选"提取图片"
+image_to_md_keep_images = true
+
+# 图片文件转MD时是否启用OCR
+# true:  图片转MD时默认勾选"图片文字识别"
+# false: 图片转MD时默认不勾选"图片文字识别"
+image_to_md_enable_ocr = true
