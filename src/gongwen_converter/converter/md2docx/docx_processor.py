@@ -91,7 +91,7 @@ def replace_placeholders(doc, yaml_data, body_data):
             logger.info(f"表格中所有行都需要删除，标记删除整个表格")
             tables_to_remove.append(table)
     
-    # 第四步：处理公文正文占位符
+    # 第四步：处理正文占位符
     process_main_content(doc, body_data, yaml_data)
 
     # 第五步：处理附件说明占位符
@@ -119,11 +119,11 @@ def replace_placeholders(doc, yaml_data, body_data):
     return temp_path
 
 def process_main_content(doc, body_data, yaml_data):
-    """处理公文正文占位符"""
+    """处理正文占位符"""
     for paragraph in doc.paragraphs:
         # 使用硬编码的特殊占位符
         from .placeholder_handler import SPECIAL_PLACEHOLDERS
-        main_content_ph = SPECIAL_PLACEHOLDERS.get('公文正文', '{{公文正文}}')
+        main_content_ph = SPECIAL_PLACEHOLDERS.get('正文', '{{正文}}')
         
         if main_content_ph in paragraph.text:
             # 移除特殊标记

@@ -139,10 +139,10 @@ def convert(
 
 def _read_and_parse_md(temp_md_path: str, original_md_path: str = None) -> tuple:
     """
-    读取并解析Markdown文件，返回YAML数据和正文
+    读取并解析Markdown文件，返回YAML数据和YAML后的Markdown内容
     
     新增功能：
-    - 在返回前展开MD正文中的嵌入链接（如果启用）
+    - 在返回前展开Markdown内容中的嵌入链接（如果启用）
     
     参数:
         temp_md_path: 临时Markdown文件路径（用于读取内容）
@@ -162,7 +162,7 @@ def _read_and_parse_md(temp_md_path: str, original_md_path: str = None) -> tuple
         yaml_content = yaml_match.group(1).replace('\t', '  ')
         md_body = content[yaml_match.end():].strip()
         logger.debug(f"提取YAML内容: {len(yaml_content)} 字符")
-        logger.debug(f"提取正文内容: {len(md_body)} 字符")
+        logger.debug(f"提取YAML后的内容: {len(md_body)} 字符")
     else:
         logger.warning("未找到YAML头部，使用空YAML")
         yaml_content = ""
@@ -197,12 +197,12 @@ def _read_and_parse_md(temp_md_path: str, original_md_path: str = None) -> tuple
             yaml_data = process_yaml_links(yaml_data, source_path_for_resolve)
             logger.info("YAML字段链接处理完成")
             
-            # 2. 处理正文中的链接
-            logger.info("开始处理正文中的链接...")
+            # 2. 处理Markdown内容中的链接
+            logger.info("开始处理Markdown内容中的链接...")
             original_length = len(md_body)
             md_body = process_markdown_links(md_body, source_path_for_resolve)
             new_length = len(md_body)
-            logger.info(f"正文链接处理完成 | 长度变化: {original_length} → {new_length}")
+            logger.info(f"Markdown内容链接处理完成 | 长度变化: {original_length} → {new_length}")
         except Exception as e:
             logger.error(f"处理Markdown链接失败: {e}", exc_info=True)
             logger.warning("将继续使用原始MD内容")

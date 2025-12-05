@@ -23,7 +23,7 @@ SPECIAL_MARKER_SUFFIX = "%%"
 
 # 特殊处理的占位符
 SPECIAL_PLACEHOLDERS = {
-    "公文正文": "{{公文正文}}",
+    "正文": "{{正文}}",
     "附件说明": "{{附件说明}}"
 }
 SPECIAL_PLACEHOLDER_LIST = list(SPECIAL_PLACEHOLDERS.values())
@@ -321,7 +321,7 @@ def process_paragraph_placeholders(paragraph, yaml_data, paragraphs_to_remove):
     
     示例：
     - 段落包含{{密级和保密期限}}，该字段为空 → 删除段落
-    - 段落包含{{公文标题}}，有值 → 替换为实际值
+    - 段落包含{{标题}}，有值 → 替换为实际值
     - 段落包含{{不存在的字段}} → 替换为空字符串
     
     参数:

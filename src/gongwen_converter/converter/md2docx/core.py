@@ -96,11 +96,12 @@ def convert(
             # 3. 在临时目录生成临时输出文件
             temp_output = os.path.join(temp_dir, "temp_output.docx")
             
-            # 4. 在临时目录转换
+            # 4. 在临时目录转换（传递原始文件路径用于标题提取）
             success = _convert_internal(
                 yaml_data, md_body, temp_output,
                 template_name, spell_check_option,
-                progress_callback, cancel_event
+                progress_callback, cancel_event,
+                original_source_path if original_source_path else md_path
             )
             
             if not success:
@@ -139,10 +140,10 @@ def convert(
 
 def _read_and_parse_md(temp_md_path: str, original_md_path: str = None) -> tuple:
     """
-    读取并解析Markdown文件，返回YAML数据和正文
+    读取并解析Markdown文件，返回YAML数据和YAML后的Markdown内容
     
     新增功能：
-    - 在返回前展开MD正文中的嵌入链接（如果启用）
+    - 在返回前展开Markdown内容中的嵌入链接（如果启用）
     
     参数:
         temp_md_path: 临时Markdown文件路径（用于读取内容）
@@ -162,7 +163,7 @@ def _read_and_parse_md(temp_md_path: str, original_md_path: str = None) -> tuple
         yaml_content = yaml_match.group(1).replace('\t', '  ')
         md_body = content[yaml_match.end():].strip()
         logger.debug(f"提取YAML内容: {len(yaml_content)} 字符")
-        logger.debug(f"提取正文内容: {len(md_body)} 字符")
+        logger.debug(f"提取YAML后的内容: {len(md_body)} 字符")
     else:
         logger.warning("未找到YAML头部，使用空YAML")
         yaml_content = ""
@@ -197,12 +198,12 @@ def _read_and_parse_md(temp_md_path: str, original_md_path: str = None) -> tuple
             yaml_data = process_yaml_links(yaml_data, source_path_for_resolve)
             logger.info("YAML字段链接处理完成")
             
-            # 2. 处理正文中的链接
-            logger.info("开始处理正文中的链接...")
+            # 2. 处理Markdown内容中的链接
+            logger.info("开始处理Markdown内容中的链接...")
             original_length = len(md_body)
             md_body = process_markdown_links(md_body, source_path_for_resolve)
             new_length = len(md_body)
-            logger.info(f"正文链接处理完成 | 长度变化: {original_length} → {new_length}")
+            logger.info(f"Markdown内容链接处理完成 | 长度变化: {original_length} → {new_length}")
         except Exception as e:
             logger.error(f"处理Markdown链接失败: {e}", exc_info=True)
             logger.warning("将继续使用原始MD内容")
@@ -219,7 +220,8 @@ def _convert_internal(
     template_name: str,
     spell_check_option: int,
     progress_callback,
-    cancel_event
+    cancel_event,
+    md_path: str = None
 ) -> bool:
     """
     内部转换实现
@@ -234,6 +236,7 @@ def _convert_internal(
         spell_check_option: 拼写检查选项
         progress_callback: 进度回调
         cancel_event: 取消事件
+        md_path: 原始MD文件路径（用于从文件名提取标题）
     
     返回:
         bool: 转换是否成功
@@ -243,9 +246,9 @@ def _convert_internal(
         logger.debug("预处理DOCX相关的YAML数据...")
         process_docx_specific_yaml(yaml_data)
         
-        # 2. 获取公文标题
-        yaml_data['公文标题'] = _get_title_from_yaml(yaml_data)
-        logger.debug(f"设置公文标题: {yaml_data['公文标题']}")
+        # 2. 获取标题（传递原始文件路径用于文件名提取）
+        yaml_data['标题'] = _get_title_from_yaml(yaml_data, md_path)
+        logger.debug(f"设置标题: {yaml_data['标题']}")
         
         # 3. 处理Markdown正文
         if progress_callback:
@@ -300,18 +303,46 @@ def _convert_internal(
         return False
 
 
-def _get_title_from_yaml(yaml_data: dict) -> str:
-    """从YAML数据中获取公文标题"""
-    if '公文标题' in yaml_data and yaml_data['公文标题']:
-        return str(yaml_data['公文标题']).strip()
+def _get_title_from_yaml(yaml_data: dict, md_path: str = None) -> str:
+    """从YAML数据中获取标题
+    
+    优先级：
+    1. YAML中的'标题'键
+    2. YAML中的'aliases'键
+    3. 从文件名提取（去除扩展名）
+    
+    参数:
+        yaml_data: YAML数据字典
+        md_path: 原始MD文件路径（用于提取文件名）
+    
+    返回:
+        str: 标题文本
+    """
+    # 第1优先级：YAML中的'标题'键
+    if '标题' in yaml_data and yaml_data['标题']:
+        logger.debug("使用YAML中的'标题'键")
+        return str(yaml_data['标题']).strip()
+    
+    # 第2优先级：YAML中的'aliases'键
     if 'aliases' in yaml_data:
         aliases = yaml_data['aliases']
         if isinstance(aliases, str):
+            logger.debug("使用YAML中的'aliases'键（字符串）")
             return aliases.strip()
         elif isinstance(aliases, list) and aliases:
+            logger.debug("使用YAML中的'aliases'键（列表第一项）")
             return str(aliases[0]).strip()
-    logger.warning("未设置公文标题，使用默认标题")
-    return "公文标题"
+    
+    # 第3优先级：从文件名提取
+    if md_path:
+        filename = os.path.splitext(os.path.basename(md_path))[0]
+        if filename:
+            logger.info(f"从文件名提取标题: {filename}")
+            return filename
+    
+    # 最后才使用默认值
+    logger.warning("未设置标题，使用默认标题")
+    return "标题"
 
 
 def _process_docx_template(doc: Document, output_path: str, yaml_data: dict, body_data: list) -> bool:

@@ -30,7 +30,7 @@ class TemplateValidator:
         """
         # 默认必需的占位符
         if not required_placeholders:
-            required_placeholders = ["公文标题", "公文正文", "发文机关署名"]
+            required_placeholders = ["标题", "正文", "发文机关署名"]
         
         logger.info(f"开始验证模板: {template_path}")
         logger.debug(f"必需占位符: {required_placeholders}")
@@ -169,7 +169,7 @@ if __name__ == "__main__":
         # 测试DOCX验证
         is_valid_docx, missing_docx, report_docx = validator.validate_template(
             docx_path,
-            ["公文标题", "公文正文", "发文机关署名"]
+            ["标题", "正文", "发文机关署名"]
         )
         print(f"DOCX验证结果: {'通过' if is_valid_docx else '失败'}")
         if missing_docx:

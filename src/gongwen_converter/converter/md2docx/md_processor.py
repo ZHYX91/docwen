@@ -1,6 +1,7 @@
 """
 Markdown处理器模块
-处理MD文件的正文部分，转换为结构化的段落数据
+处理MD文件中YAML头部之后的内容，转换为结构化的段落数据
+包括：小标题、正文文本、表格等
 """
 
 import logging
@@ -17,27 +18,27 @@ PUNCTUATION_SET = {'。', '，', '；', '：', '！', '？', '.', ',', ';', ':',
 
 def process_md_body(md_body):
     """
-    处理MD正文部分 - 精确控制标题和正文之间的分段，支持表格
+    处理YAML后的Markdown内容 - 精确控制小标题和正文文本之间的分段，支持表格
     
     参数:
-        md_body: Markdown正文内容
+        md_body: YAML头部之后的所有Markdown内容（包含小标题、正文文本、表格等）
         
     返回:
         list: 处理后的段落列表 [{
             'text': 文本内容,
-            'level': 标题级别 (0表示正文),
+            'level': 标题级别 (0表示正文文本),
             'type': 段落类型 ('heading'/'heading_with_content'/'content'/'table'),
             'table_data': 表格数据 (仅type='table'时存在)
         }]
     """
-    logger.info("开始处理MD正文...")
+    logger.info("开始处理YAML后的Markdown内容...")
     
-    # 记录正文初始状态
+    # 记录Markdown内容初始状态
     body_hash = hashlib.md5(md_body.encode('utf-8')).hexdigest()[:8]
-    logger.debug(f"MD正文初始状态 | 长度: {len(md_body)} 字符 | 哈希: {body_hash}")
+    logger.debug(f"Markdown内容初始状态 | 长度: {len(md_body)} 字符 | 哈希: {body_hash}")
     
     if not md_body:
-        logger.warning("MD正文为空")
+        logger.warning("Markdown内容为空")
         return []
     
     # 提取所有表格
@@ -54,12 +55,12 @@ def process_md_body(md_body):
         logger.debug(f"表格 {table_idx+1} 占据行 {start_line}-{end_line-1}")
     
     # 初始化各级标题计数器 - 每次处理独立
-    heading_levels = [0, 0, 0, 0, 0]  # 一至五级标题计数器
+    heading_levels = [0, 0, 0, 0, 0]  # 一至五级小标题计数器
     processed = []  # 处理后的段落列表
     
     # 分割为行，保留空行
     lines = md_body.split('\n')
-    logger.debug(f"正文总行数: {len(lines)}")
+    logger.debug(f"Markdown内容总行数: {len(lines)}")
     
     i = 0
     n = len(lines)
@@ -104,7 +105,7 @@ def process_md_body(md_body):
             
             # 检查标题末尾是否有符号
             if text and text[-1] in PUNCTUATION_SET:
-                # 有符号，检查下一行是否是正文（没有空行）
+                # 有符号，检查下一行是否是正文文本（没有空行）
                 if i + 1 < n and lines[i + 1].strip() and not lines[i + 1].startswith('#'):
                     processed.append({
                         'text': f"{number_to_chinese(heading_levels[0])}、{text}",
@@ -114,14 +115,14 @@ def process_md_body(md_body):
                     })
                     i += 1  # 跳过正文行
                     combined_count += 1
-                    logger.debug(f"创建组合标题段落 (一级): {text[:20]}... + 正文")
+                    logger.debug(f"创建组合小标题段落 (一级): {text[:20]}... + 正文")
                 else:
                     processed.append({
                         'text': f"{number_to_chinese(heading_levels[0])}、{text}",
                         'level': 1,
                         'type': 'heading'
                     })
-                    logger.debug(f"创建独立标题段落 (一级): {text[:20]}...")
+                    logger.debug(f"创建独立小标题段落 (一级): {text[:20]}...")
             else:
                 # 没有符号，即使下一行是正文也不合并
                 processed.append({
@@ -129,7 +130,7 @@ def process_md_body(md_body):
                     'level': 1,
                     'type': 'heading'
                 })
-                logger.debug(f"创建独立标题段落 (一级): {text[:20]}...")
+                logger.debug(f"创建独立小标题段落 (一级): {text[:20]}...")
                 
                 # 下一行是正文时，单独处理
                 if i + 1 < n and lines[i + 1].strip() and not lines[i + 1].startswith('#'):
@@ -140,7 +141,7 @@ def process_md_body(md_body):
                     })
                     i += 1
                     content_count += 1
-                    logger.debug(f"标题后添加正文段落: {lines[i + 1].strip()[:20]}...")
+                    logger.debug(f"小标题后添加正文文本: {lines[i + 1].strip()[:20]}...")
                     
         elif line.startswith('## '):  # 二级标题
             heading_levels[1] += 1
@@ -157,21 +158,21 @@ def process_md_body(md_body):
                     })
                     i += 1
                     combined_count += 1
-                    logger.debug(f"创建组合标题段落 (二级): {text[:20]}... + 正文")
+                    logger.debug(f"创建组合小标题段落 (二级): {text[:20]}... + 正文")
                 else:
                     processed.append({
                         'text': f"（{number_to_chinese(heading_levels[1])}）{text}",
                         'level': 2,
                         'type': 'heading'
                     })
-                    logger.debug(f"创建独立标题段落 (二级): {text[:20]}...")
+                    logger.debug(f"创建独立小标题段落 (二级): {text[:20]}...")
             else:
                 processed.append({
                     'text': f"（{number_to_chinese(heading_levels[1])}）{text}",
                     'level': 2,
                     'type': 'heading'
                 })
-                logger.debug(f"创建独立标题段落 (二级): {text[:20]}...")
+                logger.debug(f"创建独立小标题段落 (二级): {text[:20]}...")
                 
                 # 下一行是正文时，单独处理
                 if i + 1 < n and lines[i + 1].strip() and not lines[i + 1].startswith('#'):
@@ -182,7 +183,7 @@ def process_md_body(md_body):
                     })
                     i += 1
                     content_count += 1
-                    logger.debug(f"标题后添加正文段落: {lines[i + 1].strip()[:20]}...")
+                    logger.debug(f"小标题后添加正文文本: {lines[i + 1].strip()[:20]}...")
                 
         elif line.startswith('### '):  # 三级标题
             heading_levels[2] += 1
@@ -199,21 +200,21 @@ def process_md_body(md_body):
                     })
                     i += 1
                     combined_count += 1
-                    logger.debug(f"创建组合标题段落 (三级): {text[:20]}... + 正文")
+                    logger.debug(f"创建组合小标题段落 (三级): {text[:20]}... + 正文")
                 else:
                     processed.append({
                         'text': f"{heading_levels[2]}. {text}",
                         'level': 3,
                         'type': 'heading'
                     })
-                    logger.debug(f"创建独立标题段落 (三级): {text[:20]}...")
+                    logger.debug(f"创建独立小标题段落 (三级): {text[:20]}...")
             else:
                 processed.append({
                     'text': f"{heading_levels[2]}. {text}",
                     'level': 3,
                     'type': 'heading'
                 })
-                logger.debug(f"创建独立标题段落 (三级): {text[:20]}...")
+                logger.debug(f"创建独立小标题段落 (三级): {text[:20]}...")
                 
                 # 下一行是正文时，单独处理
                 if i + 1 < n and lines[i + 1].strip() and not lines[i + 1].startswith('#'):
@@ -224,7 +225,7 @@ def process_md_body(md_body):
                     })
                     i += 1
                     content_count += 1
-                    logger.debug(f"标题后添加正文段落: {lines[i + 1].strip()[:20]}...")
+                    logger.debug(f"小标题后添加正文文本: {lines[i + 1].strip()[:20]}...")
                 
         elif line.startswith('#### '):  # 四级标题
             heading_levels[3] += 1
@@ -241,21 +242,21 @@ def process_md_body(md_body):
                     })
                     i += 1
                     combined_count += 1
-                    logger.debug(f"创建组合标题段落 (四级): {text[:20]}... + 正文")
+                    logger.debug(f"创建组合小标题段落 (四级): {text[:20]}... + 正文")
                 else:
                     processed.append({
                         'text': f"（{heading_levels[3]}）{text}",
                         'level': 4,
                         'type': 'heading'
                     })
-                    logger.debug(f"创建独立标题段落 (四级): {text[:20]}...")
+                    logger.debug(f"创建独立小标题段落 (四级): {text[:20]}...")
             else:
                 processed.append({
                     'text': f"（{heading_levels[3]}）{text}",
                     'level': 4,
                     'type': 'heading'
                 })
-                logger.debug(f"创建独立标题段落 (四级): {text[:20]}...")
+                logger.debug(f"创建独立小标题段落 (四级): {text[:20]}...")
                 
                 # 下一行是正文时，单独处理
                 if i + 1 < n and lines[i + 1].strip() and not lines[i + 1].startswith('#'):
@@ -266,7 +267,7 @@ def process_md_body(md_body):
                     })
                     i += 1
                     content_count += 1
-                    logger.debug(f"标题后添加正文段落: {lines[i + 1].strip()[:20]}...")
+                    logger.debug(f"小标题后添加正文文本: {lines[i + 1].strip()[:20]}...")
                 
         elif line.startswith('##### '):  # 五级标题
             heading_levels[4] += 1
@@ -282,21 +283,21 @@ def process_md_body(md_body):
                     })
                     i += 1
                     combined_count += 1
-                    logger.debug(f"创建组合标题段落 (五级): {text[:20]}... + 正文")
+                    logger.debug(f"创建组合小标题段落 (五级): {text[:20]}... + 正文")
                 else:
                     processed.append({
                         'text': f"{number_to_circled(heading_levels[4])}{text}",
                         'level': 5,
                         'type': 'heading'
                     })
-                    logger.debug(f"创建独立标题段落 (五级): {text[:20]}...")
+                    logger.debug(f"创建独立小标题段落 (五级): {text[:20]}...")
             else:
                 processed.append({
                     'text': f"{number_to_circled(heading_levels[4])}{text}",
                     'level': 5,
                     'type': 'heading'
                 })
-                logger.debug(f"创建独立标题段落 (五级): {text[:20]}...")
+                logger.debug(f"创建独立小标题段落 (五级): {text[:20]}...")
                 
                 # 下一行是正文时，单独处理
                 if i + 1 < n and lines[i + 1].strip() and not lines[i + 1].startswith('#'):
@@ -307,9 +308,9 @@ def process_md_body(md_body):
                     })
                     i += 1
                     content_count += 1
-                    logger.debug(f"标题后添加正文段落: {lines[i + 1].strip()[:20]}...")
+                    logger.debug(f"小标题后添加正文文本: {lines[i + 1].strip()[:20]}...")
                 
-        else:  # 正文段落
+        else:  # 正文文本段落
             # 修改点：不再合并连续正文行，每行都作为一个独立段落
             if line.strip():  # 确保不是空行
                 processed.append({
@@ -318,7 +319,7 @@ def process_md_body(md_body):
                     'type': 'content'
                 })
                 content_count += 1
-                logger.debug(f"添加正文段落: {line.strip()[:50]}...")
+                logger.debug(f"添加正文文本段落: {line.strip()[:50]}...")
                 
         i += 1
         total_paragraphs = len(processed)
@@ -357,26 +358,26 @@ if __name__ == "__main__":
     # 测试MD正文处理
     test_content = """
 # 一级标题
-这是正文内容
+这是正文文本
 
 ## 二级标题
 （一）二级标题带序号
-这是二级标题的正文
+这是二级标题的正文文本
 
 ### 三级标题
 1. 三级标题带序号
-这是三级标题的正文
+这是三级标题的正文文本
 
 #### 四级标题
 （1）四级标题带序号
-这是四级标题的正文
+这是四级标题的正文文本
 
 ##### 五级标题
 ①五级标题带序号
-这是五级标题的正文
+这是五级标题的正文文本
 
-普通正文段落1
-普通正文段落2
+普通正文文本段落1
+普通正文文本段落2
     """
     
     # 处理MD正文

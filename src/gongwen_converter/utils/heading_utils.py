@@ -18,73 +18,73 @@ FULL_WIDTH_NUMS = '０１２３４５６７８９'
 
 def detect_heading_level(text: str) -> tuple:
     """
-    检测标题级别并清理序号
-    自动识别1-5级公文标题格式并清理标题序号
+    检测小标题级别并清理序号
+    自动识别1-5级小标题格式并清理小标题序号
     
     参数:
-        text: 原始标题文本
+        text: 原始小标题文本
         
     返回:
-        tuple: (清理后的文本, 标题级别)
-            标题级别: 
-                0 = 非标题
-                1 = 一级标题
-                2 = 二级标题
-                3 = 三级标题
-                4 = 四级标题
-                5 = 五级标题
+        tuple: (清理后的文本, 小标题级别)
+            小标题级别: 
+                0 = 非小标题
+                1 = 一级小标题
+                2 = 二级小标题
+                3 = 三级小标题
+                4 = 四级小标题
+                5 = 五级小标题
                 
-    支持的标题格式:
-    1. 一级标题: 中文数字+顿号 (一、标题内容)
-    2. 二级标题: 带括号中文数字 (（一）标题内容)
-    3. 三级标题: 数字加点 (1. 标题内容) - 支持半角和全角数字
-    4. 四级标题: 带括号数字 ((1) 标题内容) - 支持半角和全角数字
-    5. 五级标题: 带圈数字 (① 标题内容) - 支持半角和全角圈数字
+    支持的小标题格式:
+    1. 一级小标题: 中文数字+顿号 (一、小标题内容)
+    2. 二级小标题: 带括号中文数字 (（一）小标题内容)
+    3. 三级小标题: 数字加点 (1. 小标题内容) - 支持半角和全角数字
+    4. 四级小标题: 带括号数字 ((1) 小标题内容) - 支持半角和全角数字
+    5. 五级小标题: 带圈数字 (① 小标题内容) - 支持半角和全角圈数字
     """
     # 记录输入和初始化
     logger.debug(f"检测标题级别 - 原始文本: '{text}'")
     cleaned_text = text.strip()
     original_text = cleaned_text  # 保存原始文本用于日志
     
-    # 五级标题: 带圈数字 (①, ②, ③) - 支持半角和全角
+    # 五级小标题: 带圈数字 (①, ②, ③) - 支持半角和全角
     if re.match(r'^[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳㉑㉒㉓㉔㉕㉖㉗㉘㉙㉚㉛㉜㉝㉞㉟㊱㊲㊳㊴㊵㊶㊷㊸㊹㊺㊻㊼㊽㊾㊿]', cleaned_text):
         # 去除带圈数字序号 (兼容点号、顿号、逗号)
         cleaned = re.sub(r'^[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳㉑㉒㉓㉔㉕㉖㉗㉘㉙㉚㉛㉜㉝㉞㉟㊱㊲㊳㊴㊵㊶㊷㊸㊹㊺㊻㊼㊽㊾㊿][\s\.、，,。]?', '', cleaned_text)
-        logger.info(f"识别为五级标题 | 原始: '{original_text}' -> 清理后: '{cleaned}'")
+        logger.info(f"识别为五级小标题 | 原始: '{original_text}' -> 清理后: '{cleaned}'")
         return cleaned, 5
     
-    # 四级标题: 带括号数字 ((1), (2), (3)) - 支持半角和全角数字
+    # 四级小标题: 带括号数字 ((1), (2), (3)) - 支持半角和全角数字
     # 全角数字范围: ０１２３４５６７８９ (U+FF10-U+FF19)
     if re.match(r'^[（(][0-9\uFF10-\uFF19][)）]', cleaned_text) or re.match(r'^\(\d+\)', cleaned_text):
         # 处理中英文括号混用 (兼容点号、顿号、逗号)
         cleaned = re.sub(r'^[（(][0-9\uFF10-\uFF19]+[)）][\s\.、，,。]?', '', cleaned_text)
-        logger.info(f"识别为四级标题 | 原始: '{original_text}' -> 清理后: '{cleaned}'")
+        logger.info(f"识别为四级小标题 | 原始: '{original_text}' -> 清理后: '{cleaned}'")
         return cleaned, 4
     
-    # 三级标题: 数字加点 (1., 2., 3.) - 支持半角和全角数字
+    # 三级小标题: 数字加点 (1., 2., 3.) - 支持半角和全角数字
     # 全角点号: ． (U+FF0E)
     if re.match(r'^[0-9\uFF10-\uFF19]+[\.．、，,。]', cleaned_text):
         # 处理点号/顿号混用 (支持全角点号)
         cleaned = re.sub(r'^[0-9\uFF10-\uFF19]+[\.．、，,。]\s*', '', cleaned_text)
-        logger.info(f"识别为三级标题 | 原始: '{original_text}' -> 清理后: '{cleaned}'")
+        logger.info(f"识别为三级小标题 | 原始: '{original_text}' -> 清理后: '{cleaned}'")
         return cleaned, 3
     
-    # 二级标题: 带括号中文数字 ((一), (二))
+    # 二级小标题: 带括号中文数字 ((一), (二))
     if re.match(r'^[（(][' + CHINESE_NUMS + '][)）]', cleaned_text):
         # 处理中英文括号混用 (兼容点号、顿号、逗号)
         cleaned = re.sub(r'^[（(][' + CHINESE_NUMS + r']+[)）][\s\.、，,。]?', '', cleaned_text)
-        logger.info(f"识别为二级标题 | 原始: '{original_text}' -> 清理后: '{cleaned}'")
+        logger.info(f"识别为二级小标题 | 原始: '{original_text}' -> 清理后: '{cleaned}'")
         return cleaned, 2
     
-    # 一级标题: 中文数字 (一、, 二、)
+    # 一级小标题: 中文数字 (一、, 二、)
     if re.match(r'^[' + CHINESE_NUMS + r']+[、,，\.。]', cleaned_text):
         # 处理顿号/逗号混用
         cleaned = re.sub(r'^[' + CHINESE_NUMS + r']+[、,，\.。]\s*', '', cleaned_text)
-        logger.info(f"识别为一级标题 | 原始: '{original_text}' -> 清理后: '{cleaned}'")
+        logger.info(f"识别为一级小标题 | 原始: '{original_text}' -> 清理后: '{cleaned}'")
         return cleaned, 1
     
-    # 非标题内容
-    logger.info(f"非标题内容: '{original_text}'")
+    # 非小标题内容
+    logger.info(f"非小标题内容: '{original_text}'")
     return cleaned_text, 0
 
 def split_content_by_delimiters(text):
@@ -92,7 +92,7 @@ def split_content_by_delimiters(text):
     按照特定符号分割文本内容
     查找顺序：中文冒号、英文冒号、中文句号、中文感叹号、英文感叹号
     返回: (内容1, 内容2)
-    用于将docx公文正文中，第1、2层标题和正文混合的段落，按标点符号分开。
+    用于将docx正文中，第1、2层小标题和正文文本混合的段落，按标点符号分开。
     """
     # 查找分隔符位置 - 支持全角符号
     # 全角冒号: ： (U+FF1A), 全角句号: ． (U+FF0E), 全角感叹号: ！ (U+FF01)

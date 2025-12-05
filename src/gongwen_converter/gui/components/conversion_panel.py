@@ -571,8 +571,14 @@ class ConversionPanel(tb.Frame):
         radio_frame.grid_columnconfigure(1, weight=0)
         radio_frame.grid_columnconfigure(2, weight=0)
         
-        # 创建压缩模式变量（默认：最高质量）
-        self.compress_mode_var = tk.StringVar(value='lossless')
+        # 创建压缩模式变量（从配置读取默认值）
+        default_compress_mode = 'lossless'
+        if self.config_manager:
+            try:
+                default_compress_mode = self.config_manager.get_image_compress_mode()
+            except Exception as e:
+                logger.warning(f"读取压缩模式默认值失败: {e}")
+        self.compress_mode_var = tk.StringVar(value=default_compress_mode)
         
         # 导入信息图标创建函数
         from gongwen_converter.utils.gui_utils import create_info_icon
@@ -634,8 +640,16 @@ class ConversionPanel(tb.Frame):
         )
         size_label.grid(row=0, column=0, sticky="w", padx=(0, scale(5)))
         
-        # 创建输入变量（默认值200）
-        self.size_limit_var = tk.StringVar(value="200")
+        # 创建输入变量（从配置读取默认值）
+        default_size_limit = 200
+        default_size_unit = 'KB'
+        if self.config_manager:
+            try:
+                default_size_limit = self.config_manager.get_image_size_limit()
+                default_size_unit = self.config_manager.get_image_size_unit()
+            except Exception as e:
+                logger.warning(f"读取大小限制默认值失败: {e}")
+        self.size_limit_var = tk.StringVar(value=str(default_size_limit))
         
         # 输入框
         self.size_limit_entry = tb.Entry(
@@ -647,8 +661,8 @@ class ConversionPanel(tb.Frame):
         )
         self.size_limit_entry.grid(row=0, column=1, sticky="ew", padx=(0, scale(5)))
         
-        # 创建单位下拉变量
-        self.size_unit_var = tk.StringVar(value='KB')
+        # 创建单位下拉变量（从配置读取默认值）
+        self.size_unit_var = tk.StringVar(value=default_size_unit)
         
         # 单位下拉菜单
         self.size_unit_combo = tb.Combobox(
@@ -736,8 +750,14 @@ class ConversionPanel(tb.Frame):
         size_options_frame.grid_rowconfigure(0, weight=1)
         size_options_frame.grid_columnconfigure(0, weight=1)
         
-        # 创建单选按钮变量（默认选择原图嵌入）
-        self.pdf_quality_var = tk.StringVar(value='original')
+        # 创建单选按钮变量（从配置读取默认值）
+        default_pdf_quality = 'original'
+        if self.config_manager:
+            try:
+                default_pdf_quality = self.config_manager.get_image_pdf_quality()
+            except Exception as e:
+                logger.warning(f"读取PDF质量默认值失败: {e}")
+        self.pdf_quality_var = tk.StringVar(value=default_pdf_quality)
         
         # 三个互斥单选按钮，放在边框内 - 优化对齐
         quality_radio_frame = tb.Frame(size_options_frame, bootstyle="default")
@@ -903,8 +923,14 @@ class ConversionPanel(tb.Frame):
         dpi_options_frame.grid_rowconfigure(0, weight=1)
         dpi_options_frame.grid_columnconfigure(0, weight=1)
         
-        # 创建单选按钮变量（默认选择300）
-        self.layout_image_dpi_var = tk.StringVar(value='300')
+        # 创建单选按钮变量（从配置读取默认值）
+        default_layout_dpi = 300
+        if self.config_manager:
+            try:
+                default_layout_dpi = self.config_manager.get_layout_render_dpi()
+            except Exception as e:
+                logger.warning(f"读取版式DPI默认值失败: {e}")
+        self.layout_image_dpi_var = tk.StringVar(value=str(default_layout_dpi))
         
         # 三个互斥单选按钮
         dpi_radio_frame = tb.Frame(dpi_options_frame, bootstyle="default")
@@ -1514,8 +1540,14 @@ class ConversionPanel(tb.Frame):
         merge_options_frame.grid_rowconfigure(0, weight=1)
         merge_options_frame.grid_columnconfigure(0, weight=1)
         
-        # 创建互斥的单选按钮变量（默认选择按单元格汇总）
-        self.merge_mode_var = tk.IntVar(value=3)  # 0=未选择, 1=按行, 2=按列, 3=按单元格
+        # 创建互斥的单选按钮变量（从配置读取默认值）
+        default_merge_mode = 3
+        if self.config_manager:
+            try:
+                default_merge_mode = self.config_manager.get_spreadsheet_merge_mode()
+            except Exception as e:
+                logger.warning(f"读取汇总模式默认值失败: {e}")
+        self.merge_mode_var = tk.IntVar(value=default_merge_mode)  # 0=未选择, 1=按行, 2=按列, 3=按单元格
         
         # 单选按钮容器
         merge_radio_frame = tb.Frame(merge_options_frame, bootstyle="default")
@@ -1923,8 +1955,14 @@ class ConversionPanel(tb.Frame):
         tiff_options_frame.grid_rowconfigure(0, weight=1)
         tiff_options_frame.grid_columnconfigure(0, weight=1)
         
-        # 创建单选按钮变量（默认选择保留透明）
-        self.tiff_mode_var = tk.StringVar(value="smart")
+        # 创建单选按钮变量（从配置读取默认值）
+        default_tiff_mode = "smart"
+        if self.config_manager:
+            try:
+                default_tiff_mode = self.config_manager.get_image_tiff_mode()
+            except Exception as e:
+                logger.warning(f"读取TIFF模式默认值失败: {e}")
+        self.tiff_mode_var = tk.StringVar(value=default_tiff_mode)
         
         # 单选按钮容器
         tiff_radio_frame = tb.Frame(tiff_options_frame, bootstyle="default")

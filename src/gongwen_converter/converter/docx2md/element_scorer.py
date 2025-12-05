@@ -106,10 +106,10 @@ class ElementScorer(BaseValidator):
             'doc_number': '发文字号',
             'combined_doc_number_signer': '发文字号+签发人',
             'signer': '签发人',
-            'title': '公文标题',
-            'title_following': '公文标题后续部分',
+            'title': '标题',
+            'title_following': '标题后续部分',
             'recipient': '主送机关',
-            'body': '公文正文',
+            'body': '正文区域',
             'attachment': '第1个附件',
             'attachment_following': '后续附件',
             'issuing_authority_signature': '发文机关署名',
@@ -179,7 +179,7 @@ class ElementScorer(BaseValidator):
                 {'condition': self.follows_element('issuing_authority_mark'), 'score': 20},
                 {'condition': self.is_in_expected_position('signer'), 'score': 20}
             ],
-            'title': [ # 公文标题（第1段）
+            'title': [ # 标题（第1段）
                 {'condition': self.is_official_title_font, 'score': 40},
                 {'condition': self.is_official_title_size, 'score': 40},
                 {'condition': self.is_in_expected_position('title'), 'score': 20},
@@ -247,12 +247,12 @@ class ElementScorer(BaseValidator):
             'printing_date': [ # 印发日期
                 {'condition': self.is_printing_date_format, 'score': 80}
             ],
-            'title_following': [  # 公文标题后续部分
+            'title_following': [  # 标题后续部分
                 {'condition': self.is_official_title_font, 'score': 40},
                 {'condition': self.is_official_title_size, 'score': 40},
                 {'condition': self.follows_element('title', max_empty_paras=0), 'score': 40},  # 紧接标题之后
             ],
-            'body': [  # 公文正文
+            'body': [  # 正文区域（包含小标题和正文文本）
                 {'condition': self.is_body_position, 'score': 100}
             ],
             'attachment_following': [  # 附件说明后续部分
@@ -293,7 +293,7 @@ class ElementScorer(BaseValidator):
         检查必要元素是否存在
         
         必要元素:
-        - 公文标题 (title)
+        - 标题 (title)
         - 发文机关署名 (issuing_authority_signature)
         - 成文日期 (issue_date)
         
@@ -788,7 +788,7 @@ class ElementScorer(BaseValidator):
         return matched
     
     def is_official_title_font(self, run, context):
-        """检查是否公文标题字体"""
+        """检查是否标题字体"""
         font = run['fonts'].get('eastAsia', '')
         
         # 检查字体是否包含"小标宋"或"黑体"
@@ -798,7 +798,7 @@ class ElementScorer(BaseValidator):
         return matched
     
     def is_official_title_size(self, run, context):
-        """检查是否公文标题字号"""
+        """检查是否标题字号"""
         size_name = docx_utils.get_font_size_name(run['fonts'].get('sz'))
         matched = size_name == "二号"
         logger.debug(f"标题字号检查 -> {matched}")
@@ -806,12 +806,12 @@ class ElementScorer(BaseValidator):
     
     def matches_title_pattern(self, run, context):
         """
-        检查标题文本是否符合公文标题模式
+        检查标题文本是否符合标题模式
         符合正则表达式则得40分
         """
         text = run['text'].strip()
         
-        # 定义公文标题的正则表达式
+        # 定义标题的正则表达式
         pattern = re.compile(
             r'^(?:[\u4e00-\u9fa5a-zA-Z0-9]+(?:[\s\u3000]+[\u4e00-\u9fa5a-zA-Z0-9]+)*[\s\u3000]+)?'  # 任意前缀
             r'(?:关于)?'  # 可选的"关于"
@@ -889,7 +889,7 @@ class ElementScorer(BaseValidator):
         return matched
 
     def is_body_position(self, run, context):
-        """检查是否在公文正文位置"""
+        """检查是否在正文位置"""
         if self.element_positions['recipient'] == -1 or context['para_index'] <= self.element_positions['recipient']:
             return False
         

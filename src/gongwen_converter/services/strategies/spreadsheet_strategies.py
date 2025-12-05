@@ -790,15 +790,15 @@ class SpreadsheetToPdfStrategy(BaseStrategy):
                 error=e
             )
     
-        @staticmethod
-        def _should_keep_intermediates() -> bool:
-            """判断是否应该保留中间文件"""
-            try:
-                from gongwen_converter.config.config_manager import config_manager
-                return config_manager.get_save_intermediate_files()
-            except Exception as e:
-                logger.warning(f"读取中间文件配置失败: {e}，使用默认设置（不保存中间文件）")
-                return False
+    @staticmethod
+    def _should_keep_intermediates() -> bool:
+        """判断是否应该保留中间文件"""
+        try:
+            from gongwen_converter.config.config_manager import config_manager
+            return config_manager.get_save_intermediate_files()
+        except Exception as e:
+            logger.warning(f"读取中间文件配置失败: {e}，使用默认设置（不保存中间文件）")
+            return False
 
 
 # ==================== 智能转换链：策略工厂 ====================

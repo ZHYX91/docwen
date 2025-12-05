@@ -213,8 +213,9 @@ class DocxToMdStrategy(BaseStrategy):
                 # 步骤3：从GUI获取导出选项
                 extract_image = options.get('extract_image', True)
                 extract_ocr = options.get('extract_ocr', False)
+                optimize_for_type = options.get('optimize_for_type', None)  # 新增：获取优化类型
                 
-                logger.info(f"从options提取参数 - extract_image: {extract_image}, extract_ocr: {extract_ocr}")
+                logger.info(f"从options提取参数 - extract_image: {extract_image}, extract_ocr: {extract_ocr}, optimize_for_type: {optimize_for_type}")
                 
                 # 步骤4：调用核心转换函数，解析DOCX结构并转换为Markdown
                 if progress_callback:
@@ -224,6 +225,7 @@ class DocxToMdStrategy(BaseStrategy):
                     processed_file,
                     extract_image=extract_image,
                     extract_ocr=extract_ocr,
+                    optimize_for_type=optimize_for_type,  # 新增：传递优化类型
                     progress_callback=progress_callback,
                     cancel_event=cancel_event,
                     output_folder=temp_output_folder,  # 传递输出文件夹路径用于图片提取
@@ -490,156 +492,6 @@ class DocxValidationStrategy(BaseStrategy):
             return False
 
 
-@register_conversion(CATEGORY_DOCUMENT, 'txt')
-class DocxToTxtStrategy(BaseStrategy):
-    """
-    将DOCX文件转换为TXT纯文本文件的策略。
-    
-    转换流程：
-    1. 将DOCX转换为Markdown（带YAML头部）
-    2. 移除YAML元数据头部
-    3. 保存为TXT格式的纯文本
-    
-    功能特性：
-    - 自动分离主要部分和附件部分
-    - 移除格式标记，提取纯文本内容
-    - 支持取消操作
-    
-    输出文件：
-    - 主要部分TXT文件
-    - 附件部分TXT文件（如果存在）
-    """
-
-    def execute(
-        self,
-        file_path: str,
-        options: Optional[Dict[str, Any]] = None,
-        progress_callback: Optional[Callable[[str], None]] = None
-    ) -> ConversionResult:
-        """
-        执行DOCX到TXT的转换。
-        
-        Args:
-            file_path: 输入的DOCX文件路径
-            options: 转换选项字典，包含：
-                - cancel_event: (可选) 用于取消操作的事件对象
-            progress_callback: 进度更新回调函数
-            
-        Returns:
-            ConversionResult: 包含转换结果的对象
-            - success: 转换是否成功
-            - output_path: 主要部分的TXT文件路径
-            - message: 成功或失败的描述信息
-            - error: 失败时的错误对象
-        """
-        try:
-            if progress_callback:
-                progress_callback("正在转换为TXT...")
-            
-            options = options or {}
-            cancel_event = options.get("cancel_event")
-            actual_format = options.get("actual_format")  # 从options中提取actual_format
-            
-            # 根据actual_format生成description
-            description = f"from{actual_format.capitalize()}" if actual_format else "fromDocx"
-            
-            # 先转换为Markdown格式（中间格式）
-            result = convert_docx_to_md(
-                file_path,
-                config=None,
-                progress_callback=progress_callback,
-                cancel_event=cancel_event
-            )
-            
-            if cancel_event and cancel_event.is_set():
-                return ConversionResult(success=False, message="操作已取消")
-            
-            if not result['success']:
-                return ConversionResult(success=False, message=f"转换失败: {result['error']}")
-            
-            from gongwen_converter.utils.workspace_manager import get_output_directory
-            output_dir = get_output_directory(file_path)
-            
-            # 生成主要部分的TXT输出路径
-            main_txt_output = generate_output_path(
-                file_path,
-                output_dir=output_dir,
-                section="主要部分",
-                add_timestamp=True,
-                description=description,
-                file_type="txt"
-            )
-            
-            # 提取主要部分纯文本内容（移除YAML头部）
-            main_plain_text = self._extract_plain_text(result['main_content'])
-            
-            # 写入主要部分TXT文件
-            if progress_callback:
-                progress_callback("正在写入...")
-            
-            with open(main_txt_output, 'w', encoding='utf-8') as f:
-                f.write(main_plain_text)
-            
-            logger.info(f"主要部分TXT文件已写入: {main_txt_output}")
-            
-            # 如果有附件内容，写入附件TXT文件
-            if result['attachment_content']:
-                attachment_txt_output = generate_output_path(
-                    file_path,
-                    output_dir=output_dir,
-                    section="附件部分",
-                    add_timestamp=True,
-                    description=description,
-                    file_type="txt"
-                )
-                
-                # 提取附件纯文本内容（移除YAML头部）
-                attachment_plain_text = self._extract_plain_text(result['attachment_content'])
-                
-                if progress_callback:
-                    progress_callback("正在写入...")
-                
-                with open(attachment_txt_output, 'w', encoding='utf-8') as f:
-                    f.write(attachment_plain_text)
-                
-                logger.info(f"附件TXT文件已写入: {attachment_txt_output}")
-            
-            return ConversionResult(
-                success=True, 
-                output_path=main_txt_output, 
-                message="转换为TXT成功。"
-            )
-            
-        except Exception as e:
-            logger.error(f"DOCX转TXT失败: {e}", exc_info=True)
-            return ConversionResult(success=False, message=f"转换失败: {e}", error=e)
-    
-    def _extract_plain_text(self, markdown_content: str) -> str:
-        """
-        从Markdown内容中提取纯文本。
-        
-        当前配置：保留YAML元数据头部。
-        
-        Args:
-            markdown_content: 包含YAML头部的Markdown内容
-            
-        Returns:
-            str: 完整的文本内容（包含YAML头部）
-        """
-        # 直接返回完整内容，保留YAML头部
-        return markdown_content.strip()
-        
-        # 以下代码已注释，未来如需移除YAML头部可取消注释
-        # # 找到第二个 --- 之后的内容
-        # parts = markdown_content.split('---', 2)
-        # if len(parts) >= 3:
-        #     # 有YAML头部，取第三部分（正文）
-        #     return parts[2].strip()
-        # else:
-        #     # 没有YAML头部，直接返回全部内容
-        #     return markdown_content.strip()
-
-
 @register_conversion(CATEGORY_DOCUMENT, 'pdf')
 class DocumentToPdfStrategy(BaseStrategy):
     """
@@ -794,8 +646,7 @@ class DocumentToPdfStrategy(BaseStrategy):
         """判断是否应该保留中间文件"""
         try:
             from gongwen_converter.config.config_manager import config_manager
-            intermediate_settings = config_manager.get_intermediate_files_settings()
-            return intermediate_settings.get("save_to_output", False)
+            return config_manager.get_save_intermediate_files()
         except Exception as e:
             logger.warning(f"读取中间文件配置失败: {e}，使用默认设置（不保存中间文件）")
             return False
@@ -958,8 +809,7 @@ def _create_document_conversion_strategy(source_fmt: str, target_fmt: str):
             """判断是否应该保留中间文件"""
             try:
                 from gongwen_converter.config.config_manager import config_manager
-                intermediate_settings = config_manager.get_intermediate_files_settings()
-                return intermediate_settings.get("save_to_output", False)
+                return config_manager.get_save_intermediate_files()
             except Exception as e:
                 logger.warning(f"读取中间文件配置失败: {e}，使用默认设置（不保存中间文件）")
                 return False

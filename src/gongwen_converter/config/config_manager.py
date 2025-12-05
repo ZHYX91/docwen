@@ -145,9 +145,9 @@ class ConfigManager:
         """获取整个软件优先级配置块"""
         return self._configs.get("software_priority", {})
     
-    def get_image_config_block(self) -> Dict[str, Any]:
-        """获取整个图片配置块"""
-        return self._configs.get("image_config", {})
+    def get_file_defaults_block(self) -> Dict[str, Any]:
+        """获取整个文件处理配置块"""
+        return self._configs.get("file_defaults", {})
     
     # --------------------------
     # 第二层：子表级别访问方法
@@ -232,9 +232,22 @@ class ConfigManager:
         """获取链接错误处理配置子表"""
         return self.get_link_config_block().get("error_handling", {})
     
-    def get_extraction_defaults_config(self) -> Dict[str, Any]:
-        """获取图片提取默认设置子表"""
-        return self.get_image_config_block().get("extraction_defaults", {})
+    # File Defaults配置子表
+    def get_document_defaults(self) -> Dict[str, Any]:
+        """获取文档文件默认设置子表"""
+        return self.get_file_defaults_block().get("document", {})
+    
+    def get_spreadsheet_defaults(self) -> Dict[str, Any]:
+        """获取表格文件默认设置子表"""
+        return self.get_file_defaults_block().get("spreadsheet", {})
+    
+    def get_image_defaults(self) -> Dict[str, Any]:
+        """获取图片文件默认设置子表"""
+        return self.get_file_defaults_block().get("image", {})
+    
+    def get_layout_defaults(self) -> Dict[str, Any]:
+        """获取版式文件默认设置子表"""
+        return self.get_file_defaults_block().get("layout", {})
 
     # Output配置子表
     
@@ -501,8 +514,8 @@ class ConfigManager:
         返回:
             bool: 是否保留图片
         """
-        extraction_config = self.get_extraction_defaults_config()
-        keep_images = extraction_config.get("docx_to_md_keep_images", True)
+        document_config = self.get_document_defaults()
+        keep_images = document_config.get("to_md_keep_images", True)
         safe_log.debug("文档转MD保留图片: %s", keep_images)
         return keep_images
     
@@ -513,8 +526,8 @@ class ConfigManager:
         返回:
             bool: 是否启用OCR
         """
-        extraction_config = self.get_extraction_defaults_config()
-        enable_ocr = extraction_config.get("docx_to_md_enable_ocr", False)
+        document_config = self.get_document_defaults()
+        enable_ocr = document_config.get("to_md_enable_ocr", False)
         safe_log.debug("文档转MD启用OCR: %s", enable_ocr)
         return enable_ocr
     
@@ -525,8 +538,8 @@ class ConfigManager:
         返回:
             bool: 是否保留图片
         """
-        extraction_config = self.get_extraction_defaults_config()
-        keep_images = extraction_config.get("xlsx_to_md_keep_images", True)
+        spreadsheet_config = self.get_spreadsheet_defaults()
+        keep_images = spreadsheet_config.get("to_md_keep_images", True)
         safe_log.debug("表格转MD保留图片: %s", keep_images)
         return keep_images
     
@@ -537,8 +550,8 @@ class ConfigManager:
         返回:
             bool: 是否启用OCR
         """
-        extraction_config = self.get_extraction_defaults_config()
-        enable_ocr = extraction_config.get("xlsx_to_md_enable_ocr", False)
+        spreadsheet_config = self.get_spreadsheet_defaults()
+        enable_ocr = spreadsheet_config.get("to_md_enable_ocr", False)
         safe_log.debug("表格转MD启用OCR: %s", enable_ocr)
         return enable_ocr
     
@@ -549,8 +562,8 @@ class ConfigManager:
         返回:
             bool: 是否保留图片
         """
-        extraction_config = self.get_extraction_defaults_config()
-        keep_images = extraction_config.get("layout_to_md_keep_images", True)
+        layout_config = self.get_layout_defaults()
+        keep_images = layout_config.get("to_md_keep_images", True)
         safe_log.debug("版式转MD保留图片: %s", keep_images)
         return keep_images
     
@@ -561,8 +574,8 @@ class ConfigManager:
         返回:
             bool: 是否启用OCR
         """
-        extraction_config = self.get_extraction_defaults_config()
-        enable_ocr = extraction_config.get("layout_to_md_enable_ocr", False)
+        layout_config = self.get_layout_defaults()
+        enable_ocr = layout_config.get("to_md_enable_ocr", False)
         safe_log.debug("版式转MD启用OCR: %s", enable_ocr)
         return enable_ocr
     
@@ -573,8 +586,8 @@ class ConfigManager:
         返回:
             bool: 是否保留图片
         """
-        extraction_config = self.get_extraction_defaults_config()
-        keep_images = extraction_config.get("image_to_md_keep_images", True)
+        image_config = self.get_image_defaults()
+        keep_images = image_config.get("to_md_keep_images", True)
         safe_log.debug("图片转MD保留图片: %s", keep_images)
         return keep_images
     
@@ -585,10 +598,93 @@ class ConfigManager:
         返回:
             bool: 是否启用OCR
         """
-        extraction_config = self.get_extraction_defaults_config()
-        enable_ocr = extraction_config.get("image_to_md_enable_ocr", True)
+        image_config = self.get_image_defaults()
+        enable_ocr = image_config.get("to_md_enable_ocr", True)
         safe_log.debug("图片转MD启用OCR: %s", enable_ocr)
         return enable_ocr
+    
+    # File Defaults 新增的具体配置获取方法
+    def get_document_compress_mode(self) -> str:
+        """获取文档压缩模式（暂未使用）"""
+        document_config = self.get_document_defaults()
+        return document_config.get("compress_mode", "lossless")
+    
+    def get_spreadsheet_merge_mode(self) -> int:
+        """获取表格汇总模式默认值"""
+        spreadsheet_config = self.get_spreadsheet_defaults()
+        mode = spreadsheet_config.get("merge_mode", 3)
+        safe_log.debug("表格汇总模式: %d", mode)
+        return mode
+    
+    def get_image_compress_mode(self) -> str:
+        """获取图片压缩模式默认值"""
+        image_config = self.get_image_defaults()
+        mode = image_config.get("compress_mode", "lossless")
+        safe_log.debug("图片压缩模式: %s", mode)
+        return mode
+    
+    def get_image_size_limit(self) -> int:
+        """获取图片大小限制默认值"""
+        image_config = self.get_image_defaults()
+        limit = image_config.get("size_limit", 200)
+        safe_log.debug("图片大小限制: %d", limit)
+        return limit
+    
+    def get_image_size_unit(self) -> str:
+        """获取图片大小单位默认值"""
+        image_config = self.get_image_defaults()
+        unit = image_config.get("size_unit", "KB")
+        safe_log.debug("图片大小单位: %s", unit)
+        return unit
+    
+    def get_image_pdf_quality(self) -> str:
+        """获取图片转PDF质量默认值"""
+        image_config = self.get_image_defaults()
+        quality = image_config.get("pdf_quality", "original")
+        safe_log.debug("图片转PDF质量: %s", quality)
+        return quality
+    
+    def get_image_tiff_mode(self) -> str:
+        """获取图片转TIFF模式默认值"""
+        image_config = self.get_image_defaults()
+        mode = image_config.get("tiff_mode", "smart")
+        safe_log.debug("图片转TIFF模式: %s", mode)
+        return mode
+    
+    def get_layout_render_dpi(self) -> int:
+        """获取版式文件渲染DPI默认值"""
+        layout_config = self.get_layout_defaults()
+        dpi = layout_config.get("render_dpi", 300)
+        safe_log.debug("版式渲染DPI: %d", dpi)
+        return dpi
+    
+    def get_document_enable_symbol_pairing(self) -> bool:
+        """获取文档校对-标点配对默认值"""
+        document_config = self.get_document_defaults()
+        enabled = document_config.get("enable_symbol_pairing", True)
+        safe_log.debug("文档标点配对: %s", enabled)
+        return enabled
+    
+    def get_document_enable_symbol_correction(self) -> bool:
+        """获取文档校对-符号校对默认值"""
+        document_config = self.get_document_defaults()
+        enabled = document_config.get("enable_symbol_correction", True)
+        safe_log.debug("文档符号校对: %s", enabled)
+        return enabled
+    
+    def get_document_enable_typos_rule(self) -> bool:
+        """获取文档校对-错别字默认值"""
+        document_config = self.get_document_defaults()
+        enabled = document_config.get("enable_typos_rule", True)
+        safe_log.debug("文档错别字校对: %s", enabled)
+        return enabled
+    
+    def get_document_enable_sensitive_word(self) -> bool:
+        """获取文档校对-敏感词默认值"""
+        document_config = self.get_document_defaults()
+        enabled = document_config.get("enable_sensitive_word", True)
+        safe_log.debug("文档敏感词匹配: %s", enabled)
+        return enabled
     
     def get_save_intermediate_files(self) -> bool:
         """

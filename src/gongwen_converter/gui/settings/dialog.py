@@ -108,11 +108,12 @@ class SettingsDialog(BaseDialog):
         # 创建选项卡
         self._create_general_tab()
         self._create_link_tab()
-        self._create_image_tab()
         self._create_output_tab()
-        self._create_validation_tab()
         self._create_logging_tab()
-        self._create_software_tab()
+        self._create_document_tab()
+        self._create_spreadsheet_tab()
+        self._create_image_tab()
+        self._create_layout_tab()
         
         logger.debug("选项卡区域创建完成")
     
@@ -185,7 +186,7 @@ class SettingsDialog(BaseDialog):
             image_tab = ImageTab(
                 self.notebook,
                 self.config_manager,
-                lambda key, value: self._on_setting_changed("image_config", key, value)
+                lambda key, value: self._on_setting_changed("file_defaults", key, value)
             )
             
             # 添加到选项卡控件
@@ -232,34 +233,80 @@ class SettingsDialog(BaseDialog):
             logger.error(f"创建输出设置选项卡失败: {str(e)}")
             self._show_tab_error("输出设置", str(e))
     
-    def _create_validation_tab(self):
-        """创建校对设置选项卡"""
-        logger.debug("创建校对设置选项卡")
+    def _create_document_tab(self):
+        """创建文档设置选项卡"""
+        logger.debug("创建文档设置选项卡")
         
         try:
-            from .validation_tab import ValidationTab
+            from .document_tab import DocumentTab
             
-            # 创建校对设置选项卡
-            validation_tab = ValidationTab(
+            document_tab = DocumentTab(
                 self.notebook,
                 self.config_manager,
-                lambda key, value: self._on_setting_changed("typo_settings", key, value)
+                lambda key, value: self._on_setting_changed("file_defaults", key, value)
             )
             
-            # 添加到选项卡控件
-            self.notebook.add(validation_tab, text="  校对  ")
+            self.notebook.add(document_tab, text="  文档  ")
+            self.tabs["document"] = document_tab
             
-            # 存储选项卡引用
-            self.tabs["validation"] = validation_tab
-            
-            logger.debug("校对设置选项卡创建完成")
+            logger.debug("文档设置选项卡创建完成")
             
         except ImportError as e:
-            logger.error(f"导入校对设置选项卡失败: {str(e)}")
-            self._show_tab_error("校对设置", str(e))
+            logger.error(f"导入文档设置选项卡失败: {str(e)}")
+            self._show_tab_error("文档设置", str(e))
         except Exception as e:
-            logger.error(f"创建校对设置选项卡失败: {str(e)}")
-            self._show_tab_error("校对设置", str(e))
+            logger.error(f"创建文档设置选项卡失败: {str(e)}")
+            self._show_tab_error("文档设置", str(e))
+    
+    def _create_spreadsheet_tab(self):
+        """创建表格设置选项卡"""
+        logger.debug("创建表格设置选项卡")
+        
+        try:
+            from .spreadsheet_tab import SpreadsheetTab
+            
+            spreadsheet_tab = SpreadsheetTab(
+                self.notebook,
+                self.config_manager,
+                lambda key, value: self._on_setting_changed("file_defaults", key, value)
+            )
+            
+            self.notebook.add(spreadsheet_tab, text="  表格  ")
+            self.tabs["spreadsheet"] = spreadsheet_tab
+            
+            logger.debug("表格设置选项卡创建完成")
+            
+        except ImportError as e:
+            logger.error(f"导入表格设置选项卡失败: {str(e)}")
+            self._show_tab_error("表格设置", str(e))
+        except Exception as e:
+            logger.error(f"创建表格设置选项卡失败: {str(e)}")
+            self._show_tab_error("表格设置", str(e))
+    
+    def _create_layout_tab(self):
+        """创建版式设置选项卡"""
+        logger.debug("创建版式设置选项卡")
+        
+        try:
+            from .layout_tab import LayoutTab
+            
+            layout_tab = LayoutTab(
+                self.notebook,
+                self.config_manager,
+                lambda key, value: self._on_setting_changed("file_defaults", key, value)
+            )
+            
+            self.notebook.add(layout_tab, text="  版式  ")
+            self.tabs["layout"] = layout_tab
+            
+            logger.debug("版式设置选项卡创建完成")
+            
+        except ImportError as e:
+            logger.error(f"导入版式设置选项卡失败: {str(e)}")
+            self._show_tab_error("版式设置", str(e))
+        except Exception as e:
+            logger.error(f"创建版式设置选项卡失败: {str(e)}")
+            self._show_tab_error("版式设置", str(e))
     
     def _create_logging_tab(self):
         """创建日志设置选项卡"""
@@ -289,35 +336,6 @@ class SettingsDialog(BaseDialog):
         except Exception as e:
             logger.error(f"创建日志设置选项卡失败: {str(e)}")
             self._show_tab_error("日志设置", str(e))
-    
-    def _create_software_tab(self):
-        """创建软件优先级设置选项卡"""
-        logger.debug("创建软件优先级设置选项卡")
-        
-        try:
-            from .software_tab import SoftwareTab
-            
-            # 创建软件优先级设置选项卡
-            software_tab = SoftwareTab(
-                self.notebook,
-                self.config_manager,
-                lambda key, value: self._on_setting_changed("software_priority", key, value)
-            )
-            
-            # 添加到选项卡控件
-            self.notebook.add(software_tab, text="  软件  ")
-            
-            # 存储选项卡引用
-            self.tabs["software"] = software_tab
-            
-            logger.debug("软件优先级设置选项卡创建完成")
-            
-        except ImportError as e:
-            logger.error(f"导入软件优先级设置选项卡失败: {str(e)}")
-            self._show_tab_error("软件设置", str(e))
-        except Exception as e:
-            logger.error(f"创建软件优先级设置选项卡失败: {str(e)}")
-            self._show_tab_error("软件设置", str(e))
     
     def _show_tab_error(self, tab_name: str, error: str):
         """显示选项卡错误信息"""
@@ -528,19 +546,26 @@ class SettingsDialog(BaseDialog):
                 success = False
                 logger.error("应用输出设置失败")
         
-        # 应用校对设置
-        if "validation" in self.tabs:
-            validation_success = self.tabs["validation"].apply_settings()
-            if not validation_success:
-                success = False
-                logger.error("应用校对设置失败")
-        
         # 应用日志设置
         if "logging" in self.tabs:
             logging_success = self.tabs["logging"].apply_settings()
             if not logging_success:
                 success = False
                 logger.error("应用日志设置失败")
+        
+        # 应用文档设置
+        if "document" in self.tabs:
+            document_success = self.tabs["document"].apply_settings()
+            if not document_success:
+                success = False
+                logger.error("应用文档设置失败")
+        
+        # 应用表格设置
+        if "spreadsheet" in self.tabs:
+            spreadsheet_success = self.tabs["spreadsheet"].apply_settings()
+            if not spreadsheet_success:
+                success = False
+                logger.error("应用表格设置失败")
         
         # 应用图片设置
         if "image" in self.tabs:
@@ -549,12 +574,12 @@ class SettingsDialog(BaseDialog):
                 success = False
                 logger.error("应用图片设置失败")
         
-        # 应用软件优先级设置
-        if "software" in self.tabs:
-            software_success = self.tabs["software"].apply_settings()
-            if not software_success:
+        # 应用版式设置
+        if "layout" in self.tabs:
+            layout_success = self.tabs["layout"].apply_settings()
+            if not layout_success:
                 success = False
-                logger.error("应用软件优先级设置失败")
+                logger.error("应用版式设置失败")
         
         logger.debug(f"所有设置应用结果: {success}")
         return success

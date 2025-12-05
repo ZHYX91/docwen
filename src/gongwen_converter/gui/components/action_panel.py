@@ -394,6 +394,7 @@ class ActionPanel(tb.Frame):
         显示简化的按钮布局：
         - 第一行：导出Markdown按钮
         - 第二行：导出选项（提取图片、图片文字识别）
+        - 第三行：针对优化选项（复选框 + 下拉框）
         
         所有按钮居中排列，支持DPI缩放。
         """
@@ -417,14 +418,13 @@ class ActionPanel(tb.Frame):
         
         # 配置选项框架网格权重（用于居中内部容器）
         doc_export_options_frame.grid_rowconfigure(0, weight=1)
+        doc_export_options_frame.grid_rowconfigure(1, weight=1)
         doc_export_options_frame.grid_columnconfigure(0, weight=1)
         
         # 从配置读取默认值
         try:
-            conversion_config = self.config_manager.get_conversion_config_block()
-            image_retention = conversion_config.get('image_retention', {})
-            default_extract_image = image_retention.get('docx_to_md_keep_images', True)
-            default_extract_ocr = image_retention.get('docx_to_md_enable_ocr', False)
+            default_extract_image = self.config_manager.get_docx_to_md_keep_images()
+            default_extract_ocr = self.config_manager.get_docx_to_md_enable_ocr()
         except Exception as e:
             logger.warning(f"读取文档转MD配置失败，使用默认值: {e}")
             default_extract_image = True
@@ -438,14 +438,18 @@ class ActionPanel(tb.Frame):
         self._doc_last_image_state = default_extract_image
         self._doc_last_ocr_state = default_extract_ocr
         
-        # 多选框容器，放在边框内
+        # 多选框容器，放在边框内（支持2行布局）
         checkbox_container = tb.Frame(doc_export_options_frame, bootstyle="default")
         checkbox_container.grid(row=0, column=0, sticky="", padx=scale(10), pady=scale(10))
         
-        # 配置多选框容器的列权重
+        # 配置多选框容器的行列权重
+        checkbox_container.grid_rowconfigure(0, weight=0)  # 第1行：图片选项
+        checkbox_container.grid_rowconfigure(1, weight=0)  # 第2行：分割线
+        checkbox_container.grid_rowconfigure(2, weight=0)  # 第3行：优化选项
         checkbox_container.grid_columnconfigure(0, weight=0)
         checkbox_container.grid_columnconfigure(1, weight=0)
         
+        # ===== 第1行：图片选项 =====
         # 提取图片 + 信息图标
         extract_image_container = tb.Frame(checkbox_container, bootstyle="default")
         extract_image_container.grid(row=0, column=0, sticky="w", padx=(scale(10), scale(20)))
@@ -487,7 +491,45 @@ class ActionPanel(tb.Frame):
         )
         extract_ocr_info.pack(side=tk.LEFT)
         
-        logger.debug("文档文件转换按钮创建完成（含导出选项）。")
+        # ===== 第2行：分割线 =====
+        separator = tb.Separator(checkbox_container, bootstyle="info")
+        separator.grid(row=1, column=0, columnspan=2, sticky="ew", padx=0, pady=scale(20))
+        
+        # ===== 第3行：优化选项（单行布局）=====
+        optimization_container = tb.Frame(checkbox_container, bootstyle="default")
+        optimization_container.grid(row=2, column=0, columnspan=2, sticky="", padx=(scale(10), scale(10)))
+        
+        # 复选框
+        self.doc_enable_optimization_var = tk.BooleanVar(value=True)  # 默认勾选
+        self.doc_enable_optimization_check = tb.Checkbutton(
+            optimization_container, text="针对优化",
+            variable=self.doc_enable_optimization_var,
+            command=self._on_doc_optimization_toggle,
+            bootstyle="round-toggle"
+        )
+        self.doc_enable_optimization_check.pack(side=tk.LEFT, padx=(0, scale(5)))
+        
+        # 信息图标
+        optimization_check_info = create_info_icon(
+            optimization_container,
+            "启用针对特定文档类型的优化转换\n"
+            "公文：识别公文元素，生成YAML元数据",
+            bootstyle="info"
+        )
+        optimization_check_info.pack(side=tk.LEFT, padx=(0, scale(10)))
+        
+        # 优化类型下拉框
+        self.doc_optimization_type_var = tk.StringVar(value="公文")
+        self.doc_optimization_type_combo = tb.Combobox(
+            optimization_container,
+            textvariable=self.doc_optimization_type_var,
+            values=["公文"],  # 未来可扩展: ["公文", "合同", "论文"]
+            state="readonly",
+            width=10
+        )
+        self.doc_optimization_type_combo.pack(side=tk.LEFT)
+        
+        logger.debug("文档文件转换按钮创建完成（含导出选项和优化选项）。")
 
     def _create_spreadsheet_to_md_button(self):
         """
@@ -954,22 +996,81 @@ class ActionPanel(tb.Frame):
     def _on_convert_doc_clicked(self):
         if self.on_action: self.on_action("convert_md_to_doc", self.file_path, self._get_selected_options())
     
+    def _on_doc_optimization_toggle(self):
+        """
+        处理针对优化复选框切换事件
+        
+        控制下拉框的启用/禁用状态：
+        - 勾选时：下拉框启用
+        - 不勾选时：下拉框禁用（灰色）
+        """
+        if self.doc_enable_optimization_var.get():
+            # 启用下拉框
+            self.doc_optimization_type_combo.config(state="readonly")
+            logger.debug("针对优化已启用，下拉框可选")
+        else:
+            # 禁用下拉框
+            self.doc_optimization_type_combo.config(state="disabled")
+            logger.debug("针对优化已禁用，下拉框灰色")
+    
     def _on_convert_document_to_md_clicked(self):
-        """处理文档转Markdown按钮点击事件"""
+        """
+        处理文档转Markdown按钮点击事件
+        
+        根据UI选项构建转换参数：
+        
+        导出选项：
+        - extract_image: 是否提取图片
+        - extract_ocr: 是否进行OCR识别
+        
+        优化选项：
+        - 不勾选"针对优化" → optimize_for_type = None（简化模式）
+        - 勾选"针对优化" + 选"公文" → optimize_for_type = "gongwen"（公文模式）
+        - 勾选"针对优化" + 选其他 → optimize_for_type = "contract"/"thesis"（预留）
+        
+        简化模式特点：
+        - 基于Word样式（Title/Subtitle/Heading 1-6）转换
+        - 无公文元素识别
+        - YAML只有标题和副标题
+        
+        公文模式特点：
+        - 三轮公文元素识别
+        - 生成14个字段的YAML元数据
+        - 附件内容单独输出
+        """
         if self.on_action:
             # 获取导出选项
             extract_image = self.doc_extract_image_var.get() if hasattr(self, 'doc_extract_image_var') else True
             extract_ocr = self.doc_extract_ocr_var.get() if hasattr(self, 'doc_extract_ocr_var') else False
             
+            # 获取优化选项
+            enable_optimization = self.doc_enable_optimization_var.get() if hasattr(self, 'doc_enable_optimization_var') else False
+            optimization_type = self.doc_optimization_type_var.get() if hasattr(self, 'doc_optimization_type_var') else "公文"
+            
+            # 确定优化类型参数
+            if enable_optimization:
+                # 映射中文 → 英文标识
+                type_map = {
+                    "公文": "gongwen",
+                    "合同": "contract",
+                    "论文": "thesis"
+                }
+                optimize_for_type = type_map.get(optimization_type, "gongwen")
+            else:
+                # 不优化 → 简化模式（None）
+                optimize_for_type = None
+            
             # 构建选项字典
             options = {
                 'extract_image': extract_image,
-                'extract_ocr': extract_ocr
+                'extract_ocr': extract_ocr,
+                'optimize_for_type': optimize_for_type
             }
             
             logger.info(
                 f"文档转Markdown - 导出选项: "
-                f"提取图片={extract_image}, OCR={extract_ocr}"
+                f"提取图片={extract_image}, OCR={extract_ocr}, "
+                f"优化类型={optimize_for_type}"
             )
             self.on_action("convert_document_to_md", self.file_path, options)
     

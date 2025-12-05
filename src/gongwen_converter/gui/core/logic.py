@@ -166,16 +166,8 @@ class MainWindowLogic:
         self.main_window.add_status_message(status_message, "secondary", False)
         self.main_window.show_template_selector()
         self.main_window.show_action_panel()
-        try:
-            conversion_config = config_manager.get_conversion_config_block()
-            template_config = conversion_config.get("template", {})
-            default_template_type = template_config.get("md_default_template", "docx")
-        except Exception as e:
-            logger.warning(f"读取MD默认模板类型配置失败: {e}，回退到 'docx'")
-            default_template_type = "docx"
-        if self.main_window.template_selector:
-            self.main_window.template_selector.activate_and_select(default_template_type)
-        logger.info("MD/TXT文件处理完成，已自动选择模板")
+        # 模板选择已由window.py和selector_manager.py处理，此处无需重复
+        logger.info("MD/TXT文件处理完成")
     
     def _handle_docx_file(self, file_path: str):
         """处理DOCX文件"""

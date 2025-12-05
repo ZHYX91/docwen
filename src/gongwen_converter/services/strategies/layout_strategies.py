@@ -633,8 +633,8 @@ class LayoutToOdtStrategy(BaseStrategy):
             logger.error(f"执行 LayoutToOdtStrategy 时出错: {e}", exc_info=True)
             return ConversionResult(success=False, message=f"转换失败: {str(e)}", error=e)
     
-        @staticmethod
-        def _should_keep_intermediates() -> bool:
+    @staticmethod
+    def _should_keep_intermediates() -> bool:
             """判断是否应该保留中间文件"""
             try:
                 from gongwen_converter.config.config_manager import config_manager
@@ -2029,8 +2029,7 @@ class LayoutToJpgStrategy(BaseStrategy):
         """判断是否应该保留中间文件"""
         try:
             from gongwen_converter.config.config_manager import config_manager
-            intermediate_settings = config_manager.get_intermediate_files_settings()
-            return intermediate_settings.get("save_to_output", False)
+            return config_manager.get_save_intermediate_files()
         except Exception as e:
             logger.warning(f"读取中间文件配置失败: {e}，使用默认设置（不保存中间文件）")
             return False
@@ -2096,7 +2095,7 @@ class LayoutToTifStrategy(BaseStrategy):
                 # 步骤1：预处理 - 确保文件是PDF格式
                 if actual_format != 'pdf':
                     if progress_callback:
-                        progress_callback(f"转换{actual_format.upper()}为PDF...")
+                        progress_callback(f"转换{actual_format.UPPER()}为PDF...")
                     pdf_path, intermediate_pdf = _preprocess_layout_file(
                         file_path, temp_dir, cancel_event, actual_format
                     )
@@ -2115,7 +2114,7 @@ class LayoutToTifStrategy(BaseStrategy):
                 from gongwen_converter.utils.path_utils import generate_output_path
                 
                 # 生成标准化TIF路径（在临时目录）
-                description = f"from{actual_format.capitalize()}"
+                description = f"from{actual_format.Capitalize()}"
                 tif_temp_path = generate_output_path(
                     file_path,
                     output_dir=temp_dir,
@@ -2227,8 +2226,7 @@ class LayoutToTifStrategy(BaseStrategy):
         """判断是否应该保留中间文件"""
         try:
             from gongwen_converter.config.config_manager import config_manager
-            intermediate_settings = config_manager.get_intermediate_files_settings()
-            return intermediate_settings.get("save_to_output", False)
+            return config_manager.get_save_intermediate_files()
         except Exception as e:
             logger.warning(f"读取中间文件配置失败: {e}，使用默认设置（不保存中间文件）")
             return False

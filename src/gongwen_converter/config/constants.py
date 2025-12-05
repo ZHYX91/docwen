@@ -124,18 +124,35 @@ DEFAULT_LINK_CONFIG = {
     }
 }
 
-# 默认图片配置
-DEFAULT_IMAGE_CONFIG = {
-    "image_config": {
-        "extraction_defaults": {
-            "docx_to_md_keep_images": True,
-            "docx_to_md_enable_ocr": False,
-            "xlsx_to_md_keep_images": True,
-            "xlsx_to_md_enable_ocr": False,
-            "layout_to_md_keep_images": True,
-            "layout_to_md_enable_ocr": False,
-            "image_to_md_keep_images": True,
-            "image_to_md_enable_ocr": True
+# 默认文件处理配置
+DEFAULT_FILE_DEFAULTS_CONFIG = {
+    "file_defaults": {
+        "document": {
+            "to_md_keep_images": True,
+            "to_md_enable_ocr": False,
+            "enable_symbol_pairing": True,
+            "enable_symbol_correction": True,
+            "enable_typos_rule": True,
+            "enable_sensitive_word": True
+        },
+        "spreadsheet": {
+            "to_md_keep_images": True,
+            "to_md_enable_ocr": False,
+            "merge_mode": 3
+        },
+        "image": {
+            "to_md_keep_images": True,
+            "to_md_enable_ocr": True,
+            "compress_mode": "lossless",
+            "size_limit": 200,
+            "size_unit": "KB",
+            "pdf_quality": "original",
+            "tiff_mode": "smart"
+        },
+        "layout": {
+            "to_md_keep_images": True,
+            "to_md_enable_ocr": False,
+            "render_dpi": 300
         }
     }
 }
@@ -163,7 +180,7 @@ DEFAULT_CONFIG = {
     **DEFAULT_LOGGING_CONFIG,
     **DEFAULT_GUI_CONFIG,
     **DEFAULT_LINK_CONFIG,
-    **DEFAULT_IMAGE_CONFIG,
+    **DEFAULT_FILE_DEFAULTS_CONFIG,
     **DEFAULT_OUTPUT_CONFIG,
     **DEFAULT_SYMBOL_SETTINGS,
     **DEFAULT_TYPOS_SETTINGS,
@@ -201,7 +218,7 @@ CONFIG_FILES = {
     "logger_config": "logger_config.toml",
     "gui_config": "gui_config.toml",
     "link_config": "link_config.toml",
-    "image_config": "image_config.toml",
+    "file_defaults": "file_defaults.toml",
     "output_config": "output_config.toml",
     "symbol_settings": "symbol_settings.toml",
     "typos_settings": "typos_settings.toml",

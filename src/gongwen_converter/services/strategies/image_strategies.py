@@ -857,8 +857,7 @@ class ImageToDocxStrategy(BaseStrategy):
         """
         try:
             from gongwen_converter.config.config_manager import config_manager
-            intermediate_settings = config_manager.get_intermediate_files_settings()
-            return intermediate_settings.get("save_to_output", False)
+            return config_manager.get_save_intermediate_files()
         except Exception as e:
             logger.warning(f"读取中间文件配置失败: {e}，使用默认设置（不保存）")
             return False
