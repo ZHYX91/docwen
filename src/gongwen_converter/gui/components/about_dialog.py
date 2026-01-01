@@ -202,11 +202,11 @@ class AboutDialog(BaseDialog):
             ("img2pdf", "用于批量将图片文件转换为 PDF 文档"),
             ("pywin32", "用于通过 COM 接口调用 WPS 和 Office 进行文档格式转换"),
             ("lxml", "用于处理 Office 文档的 XML 结构"),
+            ("latex2mathml", "用于将 LaTeX 公式转换为 MathML 格式"),
             ("PyYAML", "用于处理 Markdown frontmatter 元数据"),
             ("tomlkit", "用于读取和保存配置文件"),
             ("pandas", "用于表格数据的处理和分析"),
             ("numpy", "用于数值计算和数据处理的基础支持"),
-            ("tabulate", "用于生成格式化的表格输出"),
             ("olefile", "用于识别和处理旧版 Office 文档格式"),
             ("watchdog", "用于监控文件系统变化，实现进程间通信和单实例运行"),
         ]

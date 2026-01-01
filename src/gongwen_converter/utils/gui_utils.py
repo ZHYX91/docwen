@@ -7,7 +7,7 @@ import tkinter as tk
 from gongwen_converter.utils.font_utils import get_small_font
 
 
-def show_info_dialog(title: str, message: str, alert: bool = False):
+def show_info_dialog(title: str, message: str, alert: bool = False, parent=None):
     """
     通用对话框显示函数
     
@@ -15,16 +15,32 @@ def show_info_dialog(title: str, message: str, alert: bool = False):
         title: 对话框标题
         message: 消息内容
         alert: 是否使用警告样式 (True for warning, False for info)
+        parent: 父窗口（可选），用于定位对话框。如果提供父窗口，对话框将显示在父窗口中央
     """
     try:
         import ttkbootstrap as tb
         from ttkbootstrap.dialogs import MessageDialog
         
-        temp_root = tb.Window()
-        temp_root.withdraw()
+        # 如果提供了父窗口，使用父窗口；否则创建临时窗口
+        temp_root = None
+        if parent is not None:
+            dialog_parent = parent
+        else:
+            # 创建临时窗口，但尝试获取活动窗口的位置
+            temp_root = tb.Window()
+            temp_root.withdraw()
+            dialog_parent = temp_root
+            
+            # 尝试将临时窗口放置在屏幕中央
+            try:
+                screen_width = temp_root.winfo_screenwidth()
+                screen_height = temp_root.winfo_screenheight()
+                temp_root.geometry(f"+{screen_width//2}+{screen_height//2}")
+            except Exception:
+                pass
         
         dialog = MessageDialog(
-            parent=temp_root,
+            parent=dialog_parent,
             title=title,
             message=message,
             alert=alert,
@@ -32,20 +48,29 @@ def show_info_dialog(title: str, message: str, alert: bool = False):
         )
         dialog.show()
         
-        temp_root.destroy()
+        # 只在创建了临时窗口时销毁它
+        if temp_root is not None:
+            temp_root.destroy()
         
     except Exception:
         try:
             import tkinter as tk
             from tkinter import messagebox
             
-            root = tk.Tk()
-            root.withdraw()
-            if alert:
-                messagebox.showwarning(title, message)
+            # 使用parent或创建临时root
+            if parent is not None:
+                if alert:
+                    messagebox.showwarning(title, message, parent=parent)
+                else:
+                    messagebox.showinfo(title, message, parent=parent)
             else:
-                messagebox.showinfo(title, message)
-            root.destroy()
+                root = tk.Tk()
+                root.withdraw()
+                if alert:
+                    messagebox.showwarning(title, message)
+                else:
+                    messagebox.showinfo(title, message)
+                root.destroy()
         except Exception:
             print(f"[{'警告' if alert else '信息'}] {title}: {message}")
 

@@ -26,30 +26,22 @@
 #  格式设置（生成MD时的链接格式）
 # ==================================
 [format]
-# 图片链接格式
+# 图片链接样式
 # 可选值：
-#   "markdown" - Markdown标准格式：![alt](url) 或 [text](url)
-#   "wiki"     - Wiki链接格式：![[url]] 或 [[url]]（适用于Obsidian等）
-image_link_format = "markdown"
+#   "markdown_embed" - Markdown嵌入显示：![image.png](image.png) - 图片会直接显示
+#   "markdown_link"  - Markdown链接：[image.png](image.png) - 只显示可点击的链接
+#   "wiki_embed"     - Wiki嵌入显示：![[image.png]] - 图片会直接显示（适用于Obsidian）
+#   "wiki_link"      - Wiki链接：[[image.png]] - 只显示可点击的链接（适用于Obsidian）
+image_link_style = "markdown_embed"
 
-# 图片链接嵌入模式（是否带!前缀）
-# true:  嵌入模式 - ![](url) 或 ![[url]]（显示图片内容）
-# false: 链接模式 - [](url) 或 [[url]]（仅作为链接）
-image_embed = true
-
-# MD文件链接格式
+# MD文件链接样式
 # 可选值：
-#   "markdown" - Markdown标准格式：[text](url)（固定为链接模式，无嵌入）
-#   "wiki"     - Wiki链接格式：[[url]] 或 ![[url]]（可嵌入或链接）
-md_file_link_format = "wiki"
-
-# MD文件链接嵌入模式（是否带!前缀）
-# true:  ![[file.md]]  - Wiki嵌入格式，展示文件内容
-# false: [[file.md]]   - Wiki链接格式，不展示内容
+#   "markdown_link" - Markdown链接：[file.md](file.md) - 显示为可点击的链接
+#   "wiki_embed"    - Wiki嵌入显示：![[file.md]] - 文件内容会被展开显示（适用于Obsidian）
+#   "wiki_link"     - Wiki链接：[[file.md]] - 显示为可点击的链接（适用于Obsidian）
 # 
-# ⚠️ 仅当 md_file_link_format = "wiki" 时有效
-# 当 md_file_link_format = "markdown" 时，此选项被忽略，固定输出 [file.md](file.md)
-md_file_embed = true
+# 注：Markdown格式不支持嵌入MD文件内容，固定为链接形式
+md_file_link_style = "wiki_embed"
 
 
 # ==================================
@@ -75,18 +67,21 @@ markdown_mode = "extract_text"
 #  嵌入链接处理（MD转DOCX/XLSX时）
 # ==================================
 [embed_links]
-# 嵌入功能总开关
-# true:  启用嵌入处理（根据下面的配置决定如何处理）
-# false: 嵌入链接按非嵌入方式处理（使用上面[non_embed_links]的设置）
-enabled = true
-
-# 嵌入图片的处理方式：![[image.png]] 或 ![](image.png)
+# Wiki嵌入图片的处理方式：![[image.png]]
 # 可选值：
 #   "keep"         - 保留原样：![[image.png]]
 #   "extract_text" - 提取文本：image.png（去除链接标记）
 #   "remove"       - 完全移除：删除整个链接
 #   "embed"        - 插入内容：将图片实际插入到文档中
-image_mode = "embed"
+wiki_image_mode = "embed"
+
+# Markdown嵌入图片的处理方式：![alt](image.png)
+# 可选值：
+#   "keep"         - 保留原样：![alt](image.png)
+#   "extract_text" - 提取文本：image.png（去除链接标记）
+#   "remove"       - 完全移除：删除整个链接
+#   "embed"        - 插入内容：将图片实际插入到文档中
+markdown_image_mode = "embed"
 
 # 嵌入MD文件的处理方式：![[file.md]]（仅Wiki格式支持）
 # 可选值：

@@ -1,4 +1,4 @@
-"""
+﻿"""
 图片设置选项卡模块
 
 实现设置对话框的图片设置选项卡，包含：
@@ -30,6 +30,11 @@ class ImageTab(BaseSettingsTab):
     
     def __init__(self, parent, config_manager: any, on_change: Callable[[str, Any], None]):
         """初始化图片设置选项卡"""
+        # 联动逻辑标志位和状态记录
+        self._updating_image_options: bool = False
+        self._image_last_image_state: bool = False
+        self._image_last_ocr_state: bool = False
+        
         super().__init__(parent, config_manager, on_change)
         logger.info("图片设置选项卡初始化完成")
     
@@ -49,8 +54,8 @@ class ImageTab(BaseSettingsTab):
         
         frame = self.create_section_frame(
             self.scrollable_frame,
-            "提取/OCR设置",
-            SectionStyle.PRIMARY
+            "图片提取/OCR设置",
+            SectionStyle.DANGER
         )
         
         # 获取当前配置
@@ -80,6 +85,10 @@ class ImageTab(BaseSettingsTab):
             '图片转MD时默认勾选"图片文字识别"',
             self._on_image_ocr_changed
         )
+        
+        # 初始化状态记录
+        self._image_last_image_state = image_keep
+        self._image_last_ocr_state = image_ocr
     
     def _create_compress_options_section(self):
         """创建压缩选项设置区域"""
@@ -299,16 +308,80 @@ class ImageTab(BaseSettingsTab):
     # ========== 事件处理 ==========
     
     def _on_image_keep_changed(self):
-        """处理提取图片设置变更"""
-        value = self.image_keep_var.get()
-        logger.info(f"图片提取图片设置变更: {value}")
-        self.on_change("to_md_keep_images", value)
+        """
+        处理提取图片设置变更
+        
+        实现联动逻辑：
+        1. 勾选OCR时，自动勾选"提取图片"
+        2. 取消"提取图片"时，自动取消OCR
+        """
+        if self._updating_image_options:
+            return
+        
+        try:
+            self._updating_image_options = True
+            
+            extract_image = self.image_keep_var.get()
+            extract_ocr = self.image_ocr_var.get()
+            
+            # 检测状态变化
+            image_changed = (extract_image != self._image_last_image_state)
+            
+            # 场景：用户取消提取图片（从有到无）
+            if not extract_image and self._image_last_image_state and image_changed:
+                if extract_ocr:
+                    logger.debug("图片设置：取消提取图片，自动取消OCR")
+                    self.image_ocr_var.set(False)
+            
+            # 更新状态记录
+            self._image_last_image_state = self.image_keep_var.get()
+            self._image_last_ocr_state = self.image_ocr_var.get()
+            
+            # 通知配置变更
+            value = self.image_keep_var.get()
+            logger.info(f"图片提取图片设置变更: {value}")
+            self.on_change("to_md_keep_images", value)
+        
+        finally:
+            self._updating_image_options = False
     
     def _on_image_ocr_changed(self):
-        """处理OCR设置变更"""
-        value = self.image_ocr_var.get()
-        logger.info(f"图片OCR设置变更: {value}")
-        self.on_change("to_md_enable_ocr", value)
+        """
+        处理OCR设置变更
+        
+        实现联动逻辑：
+        1. 勾选OCR时，自动勾选"提取图片"
+        2. 取消"提取图片"时，自动取消OCR
+        """
+        if self._updating_image_options:
+            return
+        
+        try:
+            self._updating_image_options = True
+            
+            extract_image = self.image_keep_var.get()
+            extract_ocr = self.image_ocr_var.get()
+            
+            # 检测状态变化
+            ocr_changed = (extract_ocr != self._image_last_ocr_state)
+            
+            # 场景：用户勾选OCR（从无到有）
+            if extract_ocr and not self._image_last_ocr_state and ocr_changed:
+                if not extract_image:
+                    logger.debug("图片设置：勾选OCR，自动勾选提取图片")
+                    self.image_keep_var.set(True)
+            
+            # 更新状态记录
+            self._image_last_image_state = self.image_keep_var.get()
+            self._image_last_ocr_state = self.image_ocr_var.get()
+            
+            # 通知配置变更
+            value = self.image_ocr_var.get()
+            logger.info(f"图片OCR设置变更: {value}")
+            self.on_change("to_md_enable_ocr", value)
+        
+        finally:
+            self._updating_image_options = False
     
     def _on_compress_mode_changed(self):
         """处理压缩模式变更"""
@@ -352,10 +425,10 @@ class ImageTab(BaseSettingsTab):
             settings = self.get_settings()
             success = True
             
-            # 保存所有设置到file_defaults.toml
+            # 保存所有设置到conversion_defaults.toml
             for key, value in settings.items():
                 if not self.config_manager.update_config_value(
-                    "file_defaults", "image", key, value
+                    "conversion_defaults", "image", key, value
                 ):
                     success = False
             

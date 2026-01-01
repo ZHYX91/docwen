@@ -1,0 +1,221 @@
+# 标题序号配置文件
+# 定义MD转DOCX时的标题编号格式
+
+# ============================================
+# 全局设置
+# ============================================
+[settings]
+# MD转DOCX时使用的默认序号方案
+default_scheme = "gongwen_standard"
+
+# 方案显示顺序
+order = [
+    "gongwen_standard",
+    "hierarchical_standard",
+    "legal_standard",
+]
+
+# ============================================
+# 数字样式定义（供模板占位符使用）
+# ============================================
+[number_styles]
+  
+  [number_styles.chinese_lower]
+  name = "小写中文数字"
+  description = "一、二、三、四、五、六、七、八、九、十、十一、十二..."
+  
+  [number_styles.chinese_upper]
+  name = "大写中文数字"
+  description = "壹、贰、叁、肆、伍、陆、柒、捌、玖、拾、拾壹、拾贰..."
+  
+  [number_styles.arabic_half]
+  name = "半角阿拉伯数字"
+  description = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10..."
+  
+  [number_styles.arabic_full]
+  name = "全角阿拉伯数字"
+  description = "１、２、３、４、５、６、７、８、９、１０..."
+  
+  [number_styles.arabic_circled]
+  name = "带圈阿拉伯数字"
+  description = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫... (最多50)"
+  
+  [number_styles.letter_upper]
+  name = "大写拉丁字母"
+  description = "A, B, C, D, E, F, G..."
+  
+  [number_styles.letter_lower]
+  name = "小写拉丁字母"
+  description = "a, b, c, d, e, f, g..."
+  
+  [number_styles.roman_upper]
+  name = "大写罗马数字"
+  description = "I, II, III, IV, V, VI, VII..."
+  
+  [number_styles.roman_lower]
+  name = "小写罗马数字"
+  description = "i, ii, iii, iv, v, vi, vii..."
+
+# ============================================
+# 序号方案定义
+# ============================================
+# 模板占位符格式：{级别.样式}
+# 例如：
+#   {1.chinese_lower}  → 引用1级标题序号，使用小写中文数字
+#   {2.arabic_half}    → 引用2级标题序号，使用半角阿拉伯数字
+# ============================================
+
+# --------------------------------------------
+# 方案1：公文标准
+# --------------------------------------------
+[schemes.gongwen_standard]
+name = "公文标准"
+description = "中国公文标准序号格式（1-5级为标准格式，6-9级为备用层级格式）"
+enabled = true
+is_system = true
+
+  # 标准格式（1-5级）
+  # 一级标题：一、二、三、...
+  [schemes.gongwen_standard.level_1]
+  format = "{1.chinese_lower}、"
+  
+  # 二级标题：（一）（二）（三）...
+  [schemes.gongwen_standard.level_2]
+  format = "（{2.chinese_lower}）"
+  
+  # 三级标题：1. 2. 3. ...
+  [schemes.gongwen_standard.level_3]
+  format = "{3.arabic_half}. "
+  
+  # 四级标题：（1）（2）（3）...
+  [schemes.gongwen_standard.level_4]
+  format = "（{4.arabic_half}）"
+  
+  # 五级标题：①②③...
+  [schemes.gongwen_standard.level_5]
+  format = "{5.arabic_circled}"
+  
+  # 备用层级格式（6-9级，通常不使用）
+  # 注：公文标准通常不超过5级，此处为兼容Markdown和Word的多级标题
+  # 六级标题：1.1.1.1.1.1 、...
+  [schemes.gongwen_standard.level_6]
+  format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half} "
+  
+  # 七级标题：1.1.1.1.1.1.1 、...
+  [schemes.gongwen_standard.level_7]
+  format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half} "
+  
+  # 八级标题：1.1.1.1.1.1.1.1 、...
+  [schemes.gongwen_standard.level_8]
+  format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half}.{8.arabic_half} "
+  
+  # 九级标题：1.1.1.1.1.1.1.1.1 、...
+  [schemes.gongwen_standard.level_9]
+  format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half}.{8.arabic_half}.{9.arabic_half} "
+
+# --------------------------------------------
+# 方案2：层级数字标准
+# --------------------------------------------
+[schemes.hierarchical_standard]
+name = "层级数字标准"
+description = "层级递进格式：1 、1.1 、1.1.1 ...（序号后带空格，全部级别使用统一层级格式）"
+enabled = true
+is_system = true
+
+  # 一级标题：1 、2 、3 、...
+  [schemes.hierarchical_standard.level_1]
+  format = "{1.arabic_half} "
+  
+  # 二级标题：1.1 、1.2 、2.1 、...
+  [schemes.hierarchical_standard.level_2]
+  format = "{1.arabic_half}.{2.arabic_half} "
+  
+  # 三级标题：1.1.1 、1.1.2 、1.2.1 、...
+  [schemes.hierarchical_standard.level_3]
+  format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half} "
+  
+  # 四级标题：1.1.1.1 、1.1.1.2 、...
+  [schemes.hierarchical_standard.level_4]
+  format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half} "
+  
+  # 五级标题：1.1.1.1.1 、1.1.1.1.2 、...
+  [schemes.hierarchical_standard.level_5]
+  format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half} "
+  
+  # 六级标题：1.1.1.1.1.1 、1.1.1.1.1.2 、...
+  [schemes.hierarchical_standard.level_6]
+  format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half} "
+  
+  # 七级标题：1.1.1.1.1.1.1 、...
+  [schemes.hierarchical_standard.level_7]
+  format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half} "
+  
+  # 八级标题：1.1.1.1.1.1.1.1 、...
+  [schemes.hierarchical_standard.level_8]
+  format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half}.{8.arabic_half} "
+  
+  # 九级标题：1.1.1.1.1.1.1.1.1 、...
+  [schemes.hierarchical_standard.level_9]
+  format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half}.{8.arabic_half}.{9.arabic_half} "
+
+# --------------------------------------------
+# 方案3：法律条文标准
+# --------------------------------------------
+[schemes.legal_standard]
+name = "法律条文标准"
+description = "中国法律文本格式（1-5级为标准格式，6-9级为备用层级格式）"
+enabled = true
+is_system = true
+
+  # 标准格式（1-5级）
+  # 一级标题：第一编　、第二编　...（注：编后有全角空格）
+  [schemes.legal_standard.level_1]
+  format = "第{1.chinese_lower}编　"
+  
+  # 二级标题：第一章　、第二章　...（注：章后有全角空格）
+  [schemes.legal_standard.level_2]
+  format = "第{2.chinese_lower}章　"
+  
+  # 三级标题：第一节　、第二节　...（注：节后有全角空格）
+  [schemes.legal_standard.level_3]
+  format = "第{3.chinese_lower}节　"
+  
+  # 四级标题：第一条　、第二条　...（注：条后有全角空格）
+  [schemes.legal_standard.level_4]
+  format = "第{4.chinese_lower}条　"
+  
+  # 五级标题：（一）（二）（三）...（注：括号后无空格）
+  [schemes.legal_standard.level_5]
+  format = "（{5.chinese_lower}）"
+  
+  # 备用层级格式（6-9级，通常不使用）
+  # 注：法律文本通常不超过5级，此处为兼容Markdown和Word的多级标题
+  # 六级标题：1.1.1.1.1.1 、...
+  [schemes.legal_standard.level_6]
+  format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half} "
+  
+  # 七级标题：1.1.1.1.1.1.1 、...
+  [schemes.legal_standard.level_7]
+  format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half} "
+  
+  # 八级标题：1.1.1.1.1.1.1.1 、...
+  [schemes.legal_standard.level_8]
+  format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half}.{8.arabic_half} "
+  
+  # 九级标题：1.1.1.1.1.1.1.1.1 、...
+  [schemes.legal_standard.level_9]
+  format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half}.{8.arabic_half}.{9.arabic_half} "
+
+# ============================================
+# 使用说明
+# ============================================
+# 1. 修改 default_scheme 可更改默认方案
+# 2. format 字段支持引用任意级别的序号
+# 3. 可以添加任意文本装饰，如：
+#    format = "第{1.chinese_lower}章"  → 第一章、第二章
+#    format = "{1.arabic_half}-{2.arabic_half}"  → 1-1、1-2
+# 4. 空 format 表示该级别不显示序号：
+#    format = ""
+# 5. 支持跨级引用，例如三级标题可以引用一级：
+#    format = "{1.arabic_half}.{3.arabic_half}"  → 1.1、1.2 (跳过2级)
+# 6. 全角空格用于编、章、节、条等关键词后，括号和点号后使用半角空格

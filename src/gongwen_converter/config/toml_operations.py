@@ -396,19 +396,20 @@ def save_mapping_with_comments(
         
         # 添加新数据和注释
         for key, values in mapping_data.items():
-            current[key] = values
+            # 将键转为字符串
+            key_str = str(key)
+            
+            # 添加键值对
+            current[key_str] = values
             
             # 如果有注释，添加行内注释
-            if key in comments_data and comments_data[key]:
-                comment_text = comments_data[key].strip()
-                # 确保注释前有空格
+            if key_str in comments_data and comments_data[key_str]:
+                comment_text = comments_data[key_str].strip()
                 if not comment_text.startswith('#'):
                     comment_text = f"# {comment_text}"
                 else:
                     comment_text = f"# {comment_text[1:].strip()}"
-                
-                # 设置行内注释
-                current[key].comment(comment_text)
+                current[key_str].comment(comment_text)
         
         # 写回文件
         success = write_toml_document(filepath, doc)

@@ -1,4 +1,4 @@
-"""
+﻿"""
 版式设置选项卡模块
 
 实现设置对话框的版式设置选项卡，包含：
@@ -57,6 +57,11 @@ class LayoutTab(BaseSettingsTab):
         # 卡片容器
         self.pdf_to_office_cards_frame: Optional[tb.Frame] = None
         
+        # 联动逻辑标志位和状态记录
+        self._updating_layout_options: bool = False
+        self._layout_last_image_state: bool = False
+        self._layout_last_ocr_state: bool = False
+        
         # 加载配置
         self._load_settings_data(config_manager)
         
@@ -102,8 +107,8 @@ class LayoutTab(BaseSettingsTab):
         
         frame = self.create_section_frame(
             self.scrollable_frame,
-            "提取/OCR设置",
-            SectionStyle.PRIMARY
+            "图片提取/OCR设置",
+            SectionStyle.DANGER
         )
         
         # 获取当前配置
@@ -133,6 +138,10 @@ class LayoutTab(BaseSettingsTab):
             '版式文件转MD时默认勾选"图片文字识别"',
             self._on_layout_ocr_changed
         )
+        
+        # 初始化状态记录
+        self._layout_last_image_state = layout_keep
+        self._layout_last_ocr_state = layout_ocr
     
     def _create_dpi_section(self):
         """创建渲染DPI设置区域"""
@@ -393,16 +402,80 @@ class LayoutTab(BaseSettingsTab):
     # ========== 事件处理 ==========
     
     def _on_layout_keep_changed(self):
-        """处理提取图片设置变更"""
-        value = self.layout_keep_var.get()
-        logger.info(f"版式提取图片设置变更: {value}")
-        self.on_change("to_md_keep_images", value)
+        """
+        处理提取图片设置变更
+        
+        实现联动逻辑：
+        1. 勾选OCR时，自动勾选"提取图片"
+        2. 取消"提取图片"时，自动取消OCR
+        """
+        if self._updating_layout_options:
+            return
+        
+        try:
+            self._updating_layout_options = True
+            
+            extract_image = self.layout_keep_var.get()
+            extract_ocr = self.layout_ocr_var.get()
+            
+            # 检测状态变化
+            image_changed = (extract_image != self._layout_last_image_state)
+            
+            # 场景：用户取消提取图片（从有到无）
+            if not extract_image and self._layout_last_image_state and image_changed:
+                if extract_ocr:
+                    logger.debug("版式设置：取消提取图片，自动取消OCR")
+                    self.layout_ocr_var.set(False)
+            
+            # 更新状态记录
+            self._layout_last_image_state = self.layout_keep_var.get()
+            self._layout_last_ocr_state = self.layout_ocr_var.get()
+            
+            # 通知配置变更
+            value = self.layout_keep_var.get()
+            logger.info(f"版式提取图片设置变更: {value}")
+            self.on_change("to_md_keep_images", value)
+        
+        finally:
+            self._updating_layout_options = False
     
     def _on_layout_ocr_changed(self):
-        """处理OCR设置变更"""
-        value = self.layout_ocr_var.get()
-        logger.info(f"版式OCR设置变更: {value}")
-        self.on_change("to_md_enable_ocr", value)
+        """
+        处理OCR设置变更
+        
+        实现联动逻辑：
+        1. 勾选OCR时，自动勾选"提取图片"
+        2. 取消"提取图片"时，自动取消OCR
+        """
+        if self._updating_layout_options:
+            return
+        
+        try:
+            self._updating_layout_options = True
+            
+            extract_image = self.layout_keep_var.get()
+            extract_ocr = self.layout_ocr_var.get()
+            
+            # 检测状态变化
+            ocr_changed = (extract_ocr != self._layout_last_ocr_state)
+            
+            # 场景：用户勾选OCR（从无到有）
+            if extract_ocr and not self._layout_last_ocr_state and ocr_changed:
+                if not extract_image:
+                    logger.debug("版式设置：勾选OCR，自动勾选提取图片")
+                    self.layout_keep_var.set(True)
+            
+            # 更新状态记录
+            self._layout_last_image_state = self.layout_keep_var.get()
+            self._layout_last_ocr_state = self.layout_ocr_var.get()
+            
+            # 通知配置变更
+            value = self.layout_ocr_var.get()
+            logger.info(f"版式OCR设置变更: {value}")
+            self.on_change("to_md_enable_ocr", value)
+        
+        finally:
+            self._updating_layout_options = False
     
     def _on_dpi_changed(self):
         """处理DPI设置变更"""
@@ -431,11 +504,11 @@ class LayoutTab(BaseSettingsTab):
             settings = self.get_settings()
             success = True
             
-            # 保存到file_defaults.toml
-            file_defaults_keys = ["to_md_keep_images", "to_md_enable_ocr", "render_dpi"]
-            for key in file_defaults_keys:
+            # 保存到conversion_defaults.toml
+            conversion_defaults_keys = ["to_md_keep_images", "to_md_enable_ocr", "render_dpi"]
+            for key in conversion_defaults_keys:
                 if not self.config_manager.update_config_value(
-                    "file_defaults", "layout", key, settings[key]
+                    "conversion_defaults", "layout", key, settings[key]
                 ):
                     success = False
             

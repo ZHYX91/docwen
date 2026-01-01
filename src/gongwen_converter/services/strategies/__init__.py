@@ -143,3 +143,4 @@ from . import spreadsheet_strategies
 from . import image_strategies
 from . import layout_strategies
 from . import merge_tables_strategy
+from . import md_numbering_strategy

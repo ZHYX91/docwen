@@ -589,6 +589,7 @@ def list_all_actions(json_mode: bool = True) -> int:
         {"name": "merge_pdfs", "description": "合并PDF", "categories": ["layout"]},
         {"name": "split_pdf", "description": "拆分PDF", "categories": ["layout"]},
         {"name": "merge_images_to_tiff", "description": "合并为TIF", "categories": ["image"]},
+        {"name": "process_md_numbering", "description": "处理MD小标题序号", "categories": ["markdown"]},
     ]
     
     if json_mode:
@@ -599,5 +600,50 @@ def list_all_actions(json_mode: bool = True) -> int:
         for action in actions:
             cats = ", ".join(action["categories"])
             print(f"  {action['name']}: {action['description']} ({cats})")
+    
+    return 0
+
+
+def list_numbering_schemes(json_mode: bool = True) -> int:
+    """
+    列出所有可用的序号方案
+    
+    Args:
+        json_mode: 是否JSON输出
+        
+    Returns:
+        int: 退出码
+    """
+    # 尝试从配置文件读取序号方案
+    try:
+        from gongwen_converter.config.config_manager import config_manager
+        all_schemes = config_manager.get_heading_schemes()
+        
+        # 构建方案信息列表
+        schemes = []
+        for scheme_id, scheme_config in all_schemes.items():
+            schemes.append({
+                "id": scheme_id,
+                "name": scheme_config.get("name", scheme_id),
+                "description": scheme_config.get("description", "")
+            })
+    except Exception as e:
+        logger.warning(f"从配置读取序号方案失败: {e}，使用默认方案列表")
+        # 降级到硬编码
+        schemes = [
+            {"id": "gongwen_standard", "name": "公文标准", "description": "一、（一）1.（1）①"},
+            {"id": "hierarchical_standard", "name": "层级数字标准", "description": "1 1.1 1.1.1"},
+            {"id": "legal_standard", "name": "法律条文标准", "description": "第一编 第一章 第一节 第一条"},
+        ]
+    
+    if json_mode:
+        output = {"schemes": schemes}
+        print(json.dumps(output, ensure_ascii=False, indent=2))
+    else:
+        print("\n可用序号方案:")
+        for scheme in schemes:
+            print(f"  {scheme['id']}: {scheme['name']}")
+            if scheme.get('description'):
+                print(f"    示例: {scheme['description']}")
     
     return 0

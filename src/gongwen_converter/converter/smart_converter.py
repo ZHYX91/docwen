@@ -17,7 +17,7 @@ from typing import Optional, Callable, List
 import threading
 
 # 导入并重新导出异常类，使其成为模块的公共API
-from gongwen_converter.converter.formats.office import OfficeSoftwareNotFoundError
+from gongwen_converter.converter.formats.office import OfficeSoftwareNotFoundError, check_office_availability
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +90,13 @@ class SmartConverter:
             source_format = actual_format
             logger.info(f"智能转换链: {source_format} → {target_format}")
             logger.debug(f"输入文件: {input_path}, 真实格式: {actual_format}")
+            
+            # 预检查：对于需要Office软件的目标格式，先检查软件可用性
+            # 这样可以在转换开始前就告知用户软件不可用，避免浪费时间
+            available, error_msg = check_office_availability(target_format)
+            if not available:
+                logger.error(f"预检查失败: {error_msg}")
+                raise OfficeSoftwareNotFoundError(error_msg)
             
             # 规划转换路径
             conversion_path = self._plan_conversion_path(

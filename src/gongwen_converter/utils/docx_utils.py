@@ -1,6 +1,12 @@
 """
 DOCX处理工具模块
-包含所有与DOCX文件处理相关的工具函数
+包含所有与DOCX文件处理相关的通用工具函数
+
+注意：DOCX→MD 转换专用函数已迁移到 docx2md/shared/ 目录：
+- 列表检测 → list_processor.py
+- 分隔符检测 → break_processor.py
+- 样式检测 → style_detector.py
+- Markdown转换 → markdown_converter.py
 """
 
 import logging
@@ -568,35 +574,85 @@ def set_font_size(rPr, fonts):
     rPr.append(sz)
 
 def set_font_bold(rPr, fonts):
-    """设置加粗"""
+    """
+    设置加粗
+    
+    显式设置加粗属性，确保能覆盖段落样式的默认格式。
+    当 fonts['b']=False 时，显式设置 <w:b w:val="false"/> 以覆盖标题样式等的默认加粗。
+    """
     # 清除现有设置
     for elem in rPr.xpath('.//w:b'):
         rPr.remove(elem)
     
-    if fonts['b']:
-        b = OxmlElement('w:b')
-        rPr.append(b)
+    b = OxmlElement('w:b')
+    if not fonts['b']:
+        # 显式设置不加粗，覆盖段落样式的默认加粗
+        b.set(qn('w:val'), 'false')
+    rPr.append(b)
 
 def set_font_italic(rPr, fonts):
-    """设置倾斜"""
+    """
+    设置倾斜
+    
+    显式设置斜体属性，确保能覆盖段落样式的默认格式。
+    当 fonts['i']=False 时，显式设置 <w:i w:val="false"/> 以覆盖样式的默认斜体。
+    """
     # 清除现有设置
     for elem in rPr.xpath('.//w:i'):
         rPr.remove(elem)
     
-    if fonts['i']:
-        i = OxmlElement('w:i')
-        rPr.append(i)
+    i = OxmlElement('w:i')
+    if not fonts['i']:
+        # 显式设置不斜体，覆盖段落样式的默认斜体
+        i.set(qn('w:val'), 'false')
+    rPr.append(i)
 
 def set_font_underline(rPr, fonts):
-    """设置下划线"""
+    """
+    设置下划线
+    
+    显式设置下划线属性，确保能覆盖段落样式的默认格式。
+    下划线值为 'none' 或 False/None 时，显式设置 <w:u w:val="none"/> 以覆盖样式的默认下划线。
+    """
     # 清除现有设置
     for elem in rPr.xpath('.//w:u'):
         rPr.remove(elem)
     
-    if fonts['u']:
-        u = OxmlElement('w:u')
+    u = OxmlElement('w:u')
+    if fonts['u'] and fonts['u'] != 'none':
+        # 有下划线，设置具体类型（single、double、wave 等）
         u.set(qn('w:val'), fonts['u'])
-        rPr.append(u)
+    else:
+        # 无下划线，显式设置 none 覆盖段落样式的默认下划线
+        u.set(qn('w:val'), 'none')
+    rPr.append(u)
+
+def is_inside_fallback(element) -> bool:
+    """
+    检查元素是否位于 mc:Fallback 中
+    
+    AlternateContent 结构包含 Choice（现代格式）和 Fallback（兼容格式），
+    两者内容相同，只需处理 Choice 中的内容，应排除 Fallback 中的重复内容。
+    
+    此函数用于：
+    - formula_processor.py: 提取公式时排除 Fallback 中的重复公式
+    - textbox_processor.py: 提取文本框时排除 Fallback 中的重复内容
+    
+    参数:
+        element: lxml 元素
+        
+    返回:
+        bool: 如果元素在 Fallback 中返回 True
+    """
+    mc_fallback_tag = '{%s}Fallback' % NAMESPACES['mc']
+    
+    current = element.getparent()
+    while current is not None:
+        if current.tag == mc_fallback_tag:
+            return True
+        current = current.getparent()
+    return False
+
 
 def register_namespaces(root_element=None):
     """注册所有命名空间到XML处理"""

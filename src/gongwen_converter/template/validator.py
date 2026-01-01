@@ -140,18 +140,6 @@ class TemplateValidator:
                     missing.remove(ph)
                 logger.debug(f"找到占位符: {placeholder}")
 
-# 兼容旧接口的函数
-def validate_template(template_path, required_placeholders=None):
-    """
-    验证模板是否包含必需的占位符（兼容旧接口）
-    :param template_path: 模板路径
-    :param required_placeholders: 必需的占位符列表
-    :return: 验证结果 (True/False), 缺失占位符列表
-    """
-    validator = TemplateValidator()
-    is_valid, missing, _ = validator.validate_template(template_path, required_placeholders)
-    return is_valid, missing
-
 # 测试代码
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
@@ -183,10 +171,6 @@ if __name__ == "__main__":
         print(f"Excel验证结果: {'通过' if is_valid_xlsx else '失败'}")
         if missing_xlsx:
             print(f"缺失占位符: {missing_xlsx}")
-        
-        # 测试旧接口兼容性
-        is_valid, missing = validate_template(docx_path)
-        print(f"兼容接口验证结果: {'通过' if is_valid else '失败'}")
         
     except Exception as e:
         logger.error(f"测试失败: {str(e)}")

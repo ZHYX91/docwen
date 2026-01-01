@@ -12,7 +12,7 @@ import tempfile
 import threading
 from typing import Callable, Optional
 from openpyxl import load_workbook
-from openpyxl.styles import numbers
+from openpyxl.styles import numbers, Alignment
 from copy import copy
 
 from gongwen_converter.utils.text_utils import clean_text, is_pure_number
@@ -170,44 +170,40 @@ def _read_and_parse_md(temp_md_path: str, original_md_path: str = None) -> tuple
     
     yaml_data = yaml_utils.parse_yaml(yaml_content)
     
-    # 新增：处理所有Markdown链接（嵌入和非嵌入，如果启用）
-    from gongwen_converter.config.config_manager import config_manager
-    if config_manager.is_embedding_enabled():
-        try:
-            from gongwen_converter.utils.link_embedding import process_markdown_links
-            
-            # 使用原始文件路径进行路径解析（如果提供），否则使用临时路径
-            source_path_for_resolve = original_md_path if original_md_path else temp_md_path
-            
-            # 1. 处理YAML字段值中的链接
-            logger.info("开始处理YAML字段值中的链接...")
-            
-            def process_yaml_links(data, source_path):
-                """递归处理YAML数据结构中的所有链接"""
-                if isinstance(data, dict):
-                    return {k: process_yaml_links(v, source_path) for k, v in data.items()}
-                elif isinstance(data, list):
-                    return [process_yaml_links(item, source_path) for item in data]
-                elif isinstance(data, str):
-                    # 对字符串调用链接处理（depth=0，允许嵌套展开）
-                    return process_markdown_links(data, source_path, set(), depth=0)
-                else:
-                    return data
-            
-            yaml_data = process_yaml_links(yaml_data, source_path_for_resolve)
-            logger.info("YAML字段链接处理完成")
-            
-            # 2. 处理Markdown内容中的链接
-            logger.info("开始处理Markdown内容中的链接...")
-            original_length = len(md_body)
-            md_body = process_markdown_links(md_body, source_path_for_resolve)
-            new_length = len(md_body)
-            logger.info(f"Markdown内容链接处理完成 | 长度变化: {original_length} → {new_length}")
-        except Exception as e:
-            logger.error(f"处理Markdown链接失败: {e}", exc_info=True)
-            logger.warning("将继续使用原始MD内容")
-    else:
-        logger.debug("嵌入功能未启用，跳过链接处理")
+    # 处理所有Markdown链接（嵌入和非嵌入）
+    try:
+        from gongwen_converter.utils.link_processing import process_markdown_links
+        
+        # 使用原始文件路径进行路径解析（如果提供），否则使用临时路径
+        source_path_for_resolve = original_md_path if original_md_path else temp_md_path
+        
+        # 1. 处理YAML字段值中的链接
+        logger.info("开始处理YAML字段值中的链接...")
+        
+        def process_yaml_links(data, source_path):
+            """递归处理YAML数据结构中的所有链接"""
+            if isinstance(data, dict):
+                return {k: process_yaml_links(v, source_path) for k, v in data.items()}
+            elif isinstance(data, list):
+                return [process_yaml_links(item, source_path) for item in data]
+            elif isinstance(data, str):
+                # 对字符串调用链接处理（depth=0，允许嵌套展开）
+                return process_markdown_links(data, source_path, set(), depth=0)
+            else:
+                return data
+        
+        yaml_data = process_yaml_links(yaml_data, source_path_for_resolve)
+        logger.info("YAML字段链接处理完成")
+        
+        # 2. 处理Markdown内容中的链接
+        logger.info("开始处理Markdown内容中的链接...")
+        original_length = len(md_body)
+        md_body = process_markdown_links(md_body, source_path_for_resolve)
+        new_length = len(md_body)
+        logger.info(f"Markdown内容链接处理完成 | 长度变化: {original_length} → {new_length}")
+    except Exception as e:
+        logger.error(f"处理Markdown链接失败: {e}", exc_info=True)
+        logger.warning("将继续使用原始MD内容")
     
     return yaml_data, md_body
 
@@ -228,8 +224,9 @@ def _get_template_path(template_name: str) -> str:
             template_name += '.xlsx'
         
         # 使用模板加载器获取路径
-        from gongwen_converter.template.loader import get_template_path
-        path = get_template_path("xlsx", template_name)
+        from gongwen_converter.template.loader import TemplateLoader
+        template_loader = TemplateLoader()
+        path = template_loader.get_template_path("xlsx", template_name)
         
         # 验证模板存在
         if not os.path.exists(path):
@@ -601,6 +598,17 @@ def fill_dict_data_to_excel(wb, table_dict, template_placeholders_dict):
                     try:
                         target_cell.value = value
                         
+                        # 如果值包含换行符，设置自动换行
+                        if isinstance(value, str) and '\n' in value:
+                            # 保留原有对齐设置，仅添加换行
+                            current_alignment = target_cell.alignment
+                            target_cell.alignment = Alignment(
+                                horizontal=current_alignment.horizontal if current_alignment else None,
+                                vertical=current_alignment.vertical if current_alignment else None,
+                                wrap_text=True
+                            )
+                            logger.debug(f"设置单元格 {target_cell.coordinate} 自动换行")
+                        
                         # 设置单元格格式
                         if cell_format:
                             target_cell.number_format = cell_format
@@ -678,6 +686,17 @@ def fill_dict_data_to_excel(wb, table_dict, template_placeholders_dict):
                     # 正常单元格：填充数据，消耗数据项
                     try:
                         target_cell.value = value
+                        
+                        # 如果值包含换行符，设置自动换行
+                        if isinstance(value, str) and '\n' in value:
+                            # 保留原有对齐设置，仅添加换行
+                            current_alignment = target_cell.alignment
+                            target_cell.alignment = Alignment(
+                                horizontal=current_alignment.horizontal if current_alignment else None,
+                                vertical=current_alignment.vertical if current_alignment else None,
+                                wrap_text=True
+                            )
+                            logger.debug(f"设置单元格 {target_cell.coordinate} 自动换行")
                         
                         # 设置单元格格式
                         if cell_format:

@@ -15,10 +15,62 @@ import os
 import logging
 import tempfile
 import shutil
+import time
 from typing import Dict, Optional
 import threading
+from pathlib import Path
+
+from gongwen_converter.utils.yaml_utils import generate_basic_yaml_frontmatter
 
 logger = logging.getLogger(__name__)
+
+
+def _monitor_image_extraction(
+    output_folder: str,
+    stop_event: threading.Event,
+    progress_callback: Optional[callable]
+):
+    """
+    监控图片提取进度的后台线程
+    
+    用于监控pymupdf4llm在提取图片时的实时进度，
+    定期检查输出文件夹中的图片文件数量并通过回调函数反馈
+    
+    参数:
+        output_folder: 输出文件夹路径
+        stop_event: 停止监控的事件标志
+        progress_callback: 进度回调函数
+    """
+    if not progress_callback:
+        return
+    
+    last_count = 0
+    image_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.tif'}
+    
+    try:
+        while not stop_event.is_set():
+            try:
+                # 统计当前图片数量
+                folder_path = Path(output_folder)
+                if folder_path.exists():
+                    current_count = sum(
+                        1 for f in folder_path.iterdir()
+                        if f.is_file() and f.suffix.lower() in image_extensions
+                    )
+                    
+                    # 如果有新图片
+                    if current_count > last_count:
+                        progress_callback(f"正在提取图片：{current_count}")
+                        last_count = current_count
+                
+                # 每2秒检查一次（减少性能开销，小文件可能直接显示总数）
+                time.sleep(2)
+                
+            except Exception as e:
+                logger.error(f"监控图片提取时出错: {e}")
+                break
+    except Exception as e:
+        logger.error(f"监控线程异常: {e}")
 
 
 def extract_pdf_with_pymupdf4llm(
@@ -94,11 +146,15 @@ def extract_pdf_with_pymupdf4llm(
             
             md_text = pymupdf4llm.to_markdown(pdf_path, write_images=False)
             
-            # 保存MD文件
+            # 生成YAML头部（使用原始文件名，不含扩展名）
+            original_file_stem = os.path.splitext(os.path.basename(pdf_path))[0]
+            yaml_frontmatter = generate_basic_yaml_frontmatter(original_file_stem)
+            
+            # 保存MD文件（YAML头部 + 正文内容）
             md_filename = f"{basename_for_output}.md"
             md_path_temp = os.path.join(temp_output_folder, md_filename)
             with open(md_path_temp, 'w', encoding='utf-8') as f:
-                f.write(md_text)
+                f.write(yaml_frontmatter + md_text)
             
             logger.debug(f"已生成临时MD: {md_path_temp}")
             
@@ -123,13 +179,32 @@ def extract_pdf_with_pymupdf4llm(
         elif extract_images and not extract_ocr:
             logger.info("模式: 文本+图片")
             
-            # pymupdf4llm直接输出到临时文件夹
-            md_text = pymupdf4llm.to_markdown(
-                pdf_path,
-                write_images=True,
-                image_path=temp_output_folder,
-                image_format="png"
-            )
+            # 启动图片提取监控线程
+            stop_monitor = threading.Event()
+            monitor_thread = None
+            if progress_callback:
+                monitor_thread = threading.Thread(
+                    target=_monitor_image_extraction,
+                    args=(temp_output_folder, stop_monitor, progress_callback),
+                    daemon=True
+                )
+                monitor_thread.start()
+                logger.debug("已启动图片提取监控线程")
+            
+            try:
+                # pymupdf4llm直接输出到临时文件夹
+                md_text = pymupdf4llm.to_markdown(
+                    pdf_path,
+                    write_images=True,
+                    image_path=temp_output_folder,
+                    image_format="png"
+                )
+            finally:
+                # 停止监控线程
+                if monitor_thread:
+                    stop_monitor.set()
+                    monitor_thread.join(timeout=2)
+                    logger.debug("图片提取监控线程已停止")
             
             # 检查取消
             if cancel_event and cancel_event.is_set():
@@ -139,14 +214,22 @@ def extract_pdf_with_pymupdf4llm(
             image_count = _count_images_in_folder(temp_output_folder)
             logger.info(f"提取了{image_count}张图片")
             
+            # 提示图片提取完成的总数
+            if progress_callback:
+                progress_callback(f"图片提取完成，共{image_count}张图片")
+            
             # 替换MD中的绝对路径为相对路径，并应用配置的链接格式
             md_text = _convert_to_simple_paths(md_text)
             
-            # 保存MD文件
+            # 生成YAML头部（使用原始文件名，不含扩展名）
+            original_file_stem = os.path.splitext(os.path.basename(pdf_path))[0]
+            yaml_frontmatter = generate_basic_yaml_frontmatter(original_file_stem)
+            
+            # 保存MD文件（YAML头部 + 正文内容）
             md_filename = f"{basename_for_output}.md"
             md_path_temp = os.path.join(temp_output_folder, md_filename)
             with open(md_path_temp, 'w', encoding='utf-8') as f:
-                f.write(md_text)
+                f.write(yaml_frontmatter + md_text)
             
             logger.debug(f"已生成临时MD: {md_path_temp}")
             
@@ -171,17 +254,42 @@ def extract_pdf_with_pymupdf4llm(
         elif not extract_images and extract_ocr:
             logger.info("模式: 文本+OCR（无图片保存）")
             
-            # 在临时文件夹中提取图片（用于OCR）
-            md_text = pymupdf4llm.to_markdown(
-                pdf_path,
-                write_images=True,
-                image_path=temp_output_folder,
-                image_format="png"
-            )
+            # 启动图片提取监控线程
+            stop_monitor = threading.Event()
+            monitor_thread = None
+            if progress_callback:
+                monitor_thread = threading.Thread(
+                    target=_monitor_image_extraction,
+                    args=(temp_output_folder, stop_monitor, progress_callback),
+                    daemon=True
+                )
+                monitor_thread.start()
+                logger.debug("已启动图片提取监控线程")
+            
+            try:
+                # 在临时文件夹中提取图片（用于OCR）
+                md_text = pymupdf4llm.to_markdown(
+                    pdf_path,
+                    write_images=True,
+                    image_path=temp_output_folder,
+                    image_format="png"
+                )
+            finally:
+                # 停止监控线程
+                if monitor_thread:
+                    stop_monitor.set()
+                    monitor_thread.join(timeout=2)
+                    logger.debug("图片提取监控线程已停止")
             
             # 检查取消
             if cancel_event and cancel_event.is_set():
                 raise InterruptedError("操作已被取消")
+            
+            # 统计图片数量并提示
+            temp_image_count = _count_images_in_folder(temp_output_folder)
+            logger.info(f"提取了{temp_image_count}张图片用于OCR")
+            if progress_callback:
+                progress_callback(f"图片提取完成，共{temp_image_count}张，准备OCR识别...")
             
             # 对图片进行OCR并替换图片链接为OCR文本
             md_text, ocr_count = _replace_images_with_ocr(
@@ -192,11 +300,15 @@ def extract_pdf_with_pymupdf4llm(
             # 删除图片文件（只保留OCR文本）
             _delete_images_in_folder(temp_output_folder)
             
-            # 保存MD文件
+            # 生成YAML头部（使用原始文件名，不含扩展名）
+            original_file_stem = os.path.splitext(os.path.basename(pdf_path))[0]
+            yaml_frontmatter = generate_basic_yaml_frontmatter(original_file_stem)
+            
+            # 保存MD文件（YAML头部 + 正文内容）
             md_filename = f"{basename_for_output}.md"
             md_path_temp = os.path.join(temp_output_folder, md_filename)
             with open(md_path_temp, 'w', encoding='utf-8') as f:
-                f.write(md_text)
+                f.write(yaml_frontmatter + md_text)
             
             logger.debug(f"已生成临时MD: {md_path_temp}")
             
@@ -221,13 +333,32 @@ def extract_pdf_with_pymupdf4llm(
         else:  # extract_images and extract_ocr
             logger.info("模式: 文本+图片+OCR")
             
-            # pymupdf4llm直接输出到临时文件夹
-            md_text = pymupdf4llm.to_markdown(
-                pdf_path,
-                write_images=True,
-                image_path=temp_output_folder,
-                image_format="png"
-            )
+            # 启动图片提取监控线程
+            stop_monitor = threading.Event()
+            monitor_thread = None
+            if progress_callback:
+                monitor_thread = threading.Thread(
+                    target=_monitor_image_extraction,
+                    args=(temp_output_folder, stop_monitor, progress_callback),
+                    daemon=True
+                )
+                monitor_thread.start()
+                logger.debug("已启动图片提取监控线程")
+            
+            try:
+                # pymupdf4llm直接输出到临时文件夹
+                md_text = pymupdf4llm.to_markdown(
+                    pdf_path,
+                    write_images=True,
+                    image_path=temp_output_folder,
+                    image_format="png"
+                )
+            finally:
+                # 停止监控线程
+                if monitor_thread:
+                    stop_monitor.set()
+                    monitor_thread.join(timeout=2)
+                    logger.debug("图片提取监控线程已停止")
             
             # 检查取消
             if cancel_event and cancel_event.is_set():
@@ -236,6 +367,10 @@ def extract_pdf_with_pymupdf4llm(
             # 统计图片数量
             image_count = _count_images_in_folder(temp_output_folder)
             logger.info(f"提取了{image_count}张图片")
+            
+            # 提示图片提取完成的总数
+            if progress_callback:
+                progress_callback(f"图片提取完成，共{image_count}张，准备OCR识别...")
             
             # 在图片后添加OCR文本
             md_text, ocr_count = _add_ocr_after_images(
@@ -246,11 +381,15 @@ def extract_pdf_with_pymupdf4llm(
             # 替换MD中的绝对路径为相对路径
             md_text = _convert_to_simple_paths(md_text)
             
-            # 保存MD文件
+            # 生成YAML头部（使用原始文件名，不含扩展名）
+            original_file_stem = os.path.splitext(os.path.basename(pdf_path))[0]
+            yaml_frontmatter = generate_basic_yaml_frontmatter(original_file_stem)
+            
+            # 保存MD文件（YAML头部 + 正文内容）
             md_filename = f"{basename_for_output}.md"
             md_path_temp = os.path.join(temp_output_folder, md_filename)
             with open(md_path_temp, 'w', encoding='utf-8') as f:
-                f.write(md_text)
+                f.write(yaml_frontmatter + md_text)
             
             logger.debug(f"已生成临时MD: {md_path_temp}")
             
@@ -322,8 +461,7 @@ def _convert_to_simple_paths(md_text: str) -> str:
     
     # 获取链接格式配置
     link_settings = config_manager.get_markdown_link_style_settings()
-    image_format = link_settings.get("image_link_format", "wiki")
-    image_embed = link_settings.get("image_embed", True)
+    image_link_style = link_settings.get("image_link_style", "wiki_embed")
     
     # 查找所有图片链接 ![alt](path)
     pattern = r'!\[([^\]]*)\]\(([^)]+)\)'
@@ -336,7 +474,7 @@ def _convert_to_simple_paths(md_text: str) -> str:
         img_filename = os.path.basename(img_path)
         
         # 使用配置的格式
-        return format_image_link(img_filename, image_format, image_embed)
+        return format_image_link(img_filename, image_link_style)
     
     result = re.sub(pattern, replace_path, md_text)
     
@@ -376,9 +514,13 @@ def _create_image_md_file(
     try:
         lines = []
         
-        # 包含图片链接
+        # 包含图片链接（使用配置的链接格式）
         if include_image:
-            lines.append(f"![{image_filename}]({image_filename})")
+            from gongwen_converter.config.config_manager import config_manager
+            from gongwen_converter.utils.markdown_utils import format_image_link
+            link_settings = config_manager.get_markdown_link_style_settings()
+            image_link_style = link_settings.get("image_link_style", "wiki_embed")
+            lines.append(format_image_link(image_filename, image_link_style))
             lines.append("")  # 空行
         
         # 包含OCR识别文本
@@ -389,7 +531,8 @@ def _create_image_md_file(
             
             logger.info(f"开始OCR识别: {image_filename}")
             from gongwen_converter.utils.ocr_utils import extract_text_simple
-            ocr_text = extract_text_simple(image_path)
+            # 传递cancel_event给OCR函数
+            ocr_text = extract_text_simple(image_path, cancel_event)
             
             if ocr_text:
                 lines.append(ocr_text)
@@ -450,8 +593,9 @@ def _replace_images_with_ocr(
         alt_text = match.group(1)
         img_path = match.group(2)
         
-        # 检查取消
+        # 检查取消（在处理每张图片前）
         if cancel_event and cancel_event.is_set():
+            logger.info(f"OCR识别被取消，已完成 {ocr_count}/{total_images} 张")
             raise InterruptedError("操作已被取消")
         
         # 报告进度
@@ -489,10 +633,9 @@ def _replace_images_with_ocr(
             from gongwen_converter.utils.markdown_utils import format_md_file_link
             
             link_settings = config_manager.get_markdown_link_style_settings()
-            md_file_format = link_settings.get("md_file_link_format", "wiki")
-            md_file_embed = link_settings.get("md_file_embed", True)
+            md_file_link_style = link_settings.get("md_file_link_style", "wiki_embed")
             
-            return format_md_file_link(md_filename, md_file_format, md_file_embed)
+            return format_md_file_link(md_filename, md_file_link_style)
             
         except InterruptedError:
             raise
@@ -553,8 +696,9 @@ def _add_ocr_after_images(
         alt_text = match.group(2)
         img_path = match.group(3)
         
-        # 检查取消
+        # 检查取消（在处理每张图片前）
         if cancel_event and cancel_event.is_set():
+            logger.info(f"OCR识别被取消，已完成 {ocr_count}/{total_images} 张")
             raise InterruptedError("操作已被取消")
         
         # 报告进度
@@ -592,10 +736,9 @@ def _add_ocr_after_images(
             from gongwen_converter.utils.markdown_utils import format_md_file_link
             
             link_settings = config_manager.get_markdown_link_style_settings()
-            md_file_format = link_settings.get("md_file_link_format", "wiki")
-            md_file_embed = link_settings.get("md_file_embed", True)
+            md_file_link_style = link_settings.get("md_file_link_style", "wiki_embed")
             
-            return format_md_file_link(md_filename, md_file_format, md_file_embed)
+            return format_md_file_link(md_filename, md_file_link_style)
             
         except InterruptedError:
             raise

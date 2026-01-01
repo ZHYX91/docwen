@@ -16,7 +16,8 @@ from gongwen_converter.converter.md2xlsx.core import convert as convert_md_to_xl
 from gongwen_converter.converter.formats.office import (
     convert_xlsx_to_xls,
     office_to_xlsx,
-    OfficeSoftwareNotFoundError
+    OfficeSoftwareNotFoundError,
+    check_office_availability
 )
 
 logger = logging.getLogger(__name__)
@@ -274,8 +275,28 @@ class MdToOdsStrategy(BaseMdToSpreadsheetStrategy):
     """
     将Markdown转换为ODS文件的策略。
     
-    功能暂未实现。
+    转换流程：MD → XLSX → ODS
+    ODS是OpenDocument电子表格格式，需要安装Microsoft Excel或LibreOffice软件。
     """
+    
+    def execute(
+        self,
+        file_path: str,
+        options: Optional[Dict[str, Any]] = None,
+        progress_callback: Optional[Callable[[str], None]] = None
+    ) -> ConversionResult:
+        """
+        执行Markdown到ODS的转换，开始前进行软件可用性预检查。
+        """
+        # 预检查：ODS格式需要Microsoft Excel或LibreOffice，WPS不支持
+        available, error_msg = check_office_availability('ods')
+        if not available:
+            logger.error(f"ODS转换预检查失败: {error_msg}")
+            raise OfficeSoftwareNotFoundError(error_msg)
+        
+        # 调用父类的execute方法
+        return super().execute(file_path, options, progress_callback)
+    
     def _generate_final_path(self, file_path: str) -> str:
         """生成ODS输出路径"""
         return generate_output_path(file_path, section="", add_timestamp=True, description="fromMd", file_type="ods")
@@ -297,6 +318,12 @@ class MdToOdsStrategy(BaseMdToSpreadsheetStrategy):
         Raises:
             OfficeSoftwareNotFoundError: 未找到Office或WPS软件时抛出
         """
+        # 预检查：ODS格式需要Microsoft Excel或LibreOffice，WPS不支持
+        available, error_msg = check_office_availability('ods')
+        if not available:
+            logger.error(f"ODS转换预检查失败: {error_msg}")
+            raise OfficeSoftwareNotFoundError(error_msg)
+        
         if progress_callback: progress_callback("转换为ODS...")
         
         try:

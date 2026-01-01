@@ -1,12 +1,18 @@
 """
 YAML处理器模块
 处理MD文档的YAML内容
+
+国际化说明：
+YAML 键名通过 i18n 模块获取当前语言版本：
+- 中文环境输出: 标题: xxx
+- 英文环境输出: title: xxx
 """
 
 import yaml
 import logging
 from gongwen_converter.utils.validation_utils import is_value_empty
 from gongwen_converter.utils.text_utils import clean_text_in_data, clean_text
+from gongwen_converter.i18n import t
 
 # 配置日志
 logger = logging.getLogger(__name__)
@@ -125,6 +131,49 @@ def process_list_field(value) -> str:
     # 其他类型转换为字符串
     logger.debug(f"其他类型 {type(value).__name__}，转换为字符串: {str(value)}")
     return str(value)
+
+def generate_basic_yaml_frontmatter(file_stem: str) -> str:
+    """
+    生成基础YAML front matter
+    
+    用于表格、图片、版式文件等转MD时生成统一的YAML头部。
+    YAML 键名根据当前语言环境自动国际化。
+    
+    参数:
+        file_stem: 文件名（不含扩展名）
+        
+    返回:
+        str: YAML格式的front matter字符串
+        
+    示例:
+        >>> generate_basic_yaml_frontmatter("报告")
+        '---\\naliases:\\n  - 报告\\n标题: 报告\\n---\\n'  # 中文环境
+        '---\\naliases:\\n  - 报告\\ntitle: 报告\\n---\\n'  # 英文环境
+    """
+    lines = []
+    lines.append("---")
+    lines.append("aliases:")
+    
+    # 检查文件名是否为纯数字，如果是则用双引号包裹
+    if file_stem.isdigit():
+        lines.append(f'  - "{file_stem}"')
+    else:
+        lines.append(f"  - {file_stem}")
+    
+    # 获取国际化的标题键名
+    title_key = t("yaml_keys.title")
+    
+    # 标题字段
+    if file_stem.isdigit():
+        lines.append(f'{title_key}: "{file_stem}"')
+    else:
+        lines.append(f"{title_key}: {file_stem}")
+    
+    lines.append("---")
+    lines.append("")
+    
+    return "\n".join(lines)
+
 
 # 模块测试
 if __name__ == "__main__":

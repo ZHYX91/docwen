@@ -1,0 +1,548 @@
+# Document Converter - English (US) Language File
+# Locale Code: en_US
+# Encoding: UTF-8
+
+# =============================================================================
+# Common Text
+# =============================================================================
+[common]
+app_name = "Document Converter"
+close = "Close"
+apply = "Apply"
+cancel = "Cancel"
+ok = "OK"
+save = "Save"
+add = "Add"
+edit = "Edit"
+delete = "Delete"
+copy = "Copy"
+move_up = "Move Up"
+move_down = "Move Down"
+error = "Error"
+warning = "Warning"
+info = "Information"
+success = "Success"
+loading = "Loading..."
+processing = "Processing..."
+version = "Version {version}"
+untitled = "Untitled"
+enabled = "Enabled"
+disabled = "Disabled"
+yes = "Yes"
+no = "No"
+browse = "Browse..."
+select = "Select"
+clear = "Clear"
+reset = "Reset"
+refresh = "Refresh"
+preview = "Preview"
+help = "Help"
+about = "About"
+
+# =============================================================================
+# Settings Dialog
+# =============================================================================
+[settings]
+title = "Settings"
+apply_success = "Settings applied successfully"
+apply_failed = "Some settings failed to apply"
+
+# Tab Titles
+[settings.tabs]
+general = "General"
+text = "Text"
+document = "Document"
+spreadsheet = "Spreadsheet"
+image = "Image"
+layout = "Layout"
+link = "Link"
+formatting = "Format"
+output = "Output"
+logging = "Logging"
+
+# Settings Status Messages
+[settings.status]
+applied = "Settings applied"
+apply_failed = "Failed to apply settings. Please check the logs."
+apply_error = "Apply failed"
+
+# -----------------------------------------------------------------------------
+# General Settings Tab
+# -----------------------------------------------------------------------------
+[settings.general]
+# Language Settings Section
+language_section = "Language and Region"
+language_label = "Select interface language:"
+language_tooltip = "Select the display language for the application.\nChanges will take effect after restart."
+language_restart_hint = "Changes will take effect after restart."
+
+# Theme Settings Section
+theme_section = "Interface Theme"
+theme_label = "Select application theme:"
+theme_tooltip = "Select the visual theme for the application.\nDifferent themes provide different color schemes and interface styles.\nChanges will take effect after saving."
+theme_preview = "Theme Preview:"
+sample_button = "Sample Button"
+sample_text = "Sample Text"
+
+# Theme Names
+[settings.general.themes]
+cerculean = "Cerulean"
+cosmo = "Cosmo"
+cyborg = "Cyborg"
+darkly = "Darkly"
+flatly = "Flatly"
+journal = "Journal"
+litera = "Litera"
+lumen = "Lumen"
+minty = "Minty"
+morph = "Morph"
+pulse = "Pulse"
+sandstone = "Sandstone"
+simplex = "Simplex"
+solar = "Solar"
+superhero = "Superhero"
+united = "United"
+vapor = "Vapor"
+yeti = "Yeti"
+
+# Transparency Settings Section
+[settings.general.transparency]
+section = "Window Transparency"
+enable = "Enable window transparency"
+tooltip = "Enable window transparency effect.\nWhen enabled, you can adjust the transparency level\nto make the application window semi-transparent."
+
+# Window Behavior Settings Section
+[settings.general.window]
+section = "Window Behavior"
+remember_state = "Remember window position and size"
+remember_state_tooltip = "Remember the position and size of the application window.\nThe window will restore to its last state on next startup.\nThis helps maintain your preferred working environment."
+auto_center = "Auto-center window on startup"
+auto_center_tooltip = "Automatically center the window on screen when the application starts.\nIf 'Remember window position' is also enabled, this setting takes priority."
+default_mode_label = "Default file processing mode:"
+default_mode_tooltip = "Set the default file processing mode when the application starts.\nSingle File Mode: Process one file at a time\nBatch Mode: Process multiple files simultaneously"
+single_mode = "Single File Mode"
+batch_mode = "Batch Mode"
+
+# -----------------------------------------------------------------------------
+# Text Settings Tab
+# -----------------------------------------------------------------------------
+[settings.text]
+# MD to Document Numbering Settings
+md_to_docx_section = "MD to Document - Heading Numbering"
+remove_numbering = "Remove original numbering"
+remove_numbering_tooltip = "Whether to remove original numbering when converting MD to DOCX"
+add_numbering = "Add new numbering"
+add_numbering_tooltip = "Whether to add new numbering when converting MD to DOCX"
+scheme_label = "Numbering scheme:"
+scheme_tooltip = "Select the numbering scheme to use"
+
+# Numbering Cleaning Rules
+numbering_patterns_section = "Numbering Cleaning Rules"
+edit_patterns = "Edit cleaning rules..."
+
+# Template Settings
+template_section = "Default Template Type"
+template_label = "Default template for MD files:"
+template_tooltip = "Set the default template type for MD files"
+template_docx = "Document Template"
+template_xlsx = "Spreadsheet Template"
+
+# Proofreading Settings
+validation_section = "Document Proofreading"
+edit_numbering_schemes = "Edit numbering schemes..."
+
+# Dictionary Settings
+dictionary_section = "Proofreading Dictionary"
+edit_symbol_mapping = "Edit punctuation mapping..."
+edit_typos = "Edit typo dictionary..."
+edit_sensitive_words = "Edit sensitive words..."
+
+# -----------------------------------------------------------------------------
+# Document Settings Tab
+# -----------------------------------------------------------------------------
+[settings.document]
+# Content Extraction Settings
+extraction_section = "Document Content Extraction"
+keep_images = "Keep images"
+keep_images_tooltip = "Whether to keep images when converting document to MD"
+enable_ocr = "Enable OCR"
+enable_ocr_tooltip = "Whether to enable OCR to recognize text in images when converting document to MD"
+
+# Optimization Settings
+optimization_section = "Document Type Optimization"
+enable_optimization = "Enable targeted optimization"
+enable_optimization_tooltip = "Perform targeted optimization based on document type"
+optimization_type_label = "Optimization type:"
+optimization_gongwen = "Official Document"
+optimization_contract = "Contract"
+optimization_paper = "Paper"
+
+# Software Priority
+software_section = "Document Processing Software Priority"
+software_tooltip = "Drag to adjust software priority order"
+
+# Numbering Settings
+numbering_section = "Document to MD - Heading Numbering"
+
+# -----------------------------------------------------------------------------
+# Spreadsheet Settings Tab
+# -----------------------------------------------------------------------------
+[settings.spreadsheet]
+extraction_section = "Spreadsheet Content Extraction"
+merge_mode_section = "Table Merge Mode"
+merge_mode_label = "Default merge mode:"
+merge_mode_tooltip = "Set the default processing mode for table merging"
+software_section = "Spreadsheet Processing Software Priority"
+
+# Merge Mode Options
+[settings.spreadsheet.merge_modes]
+mode_1 = "Mode 1: Merge cells only"
+mode_2 = "Mode 2: Merge cells + headers"
+mode_3 = "Mode 3: Full merge"
+
+# -----------------------------------------------------------------------------
+# Image Settings Tab
+# -----------------------------------------------------------------------------
+[settings.image]
+extraction_section = "Image Content Extraction"
+compress_section = "Image Compression Options"
+compress_mode_label = "Compression mode:"
+compress_lossless = "Lossless"
+compress_lossy = "Lossy"
+compress_size_limit = "Size limit"
+size_limit_tooltip = "Set the target file size after compression"
+
+pdf_tiff_section = "PDF/TIFF Export Options"
+pdf_quality_label = "PDF quality:"
+pdf_original = "Original"
+pdf_high = "High"
+pdf_medium = "Medium"
+pdf_low = "Low"
+tiff_mode_label = "TIFF mode:"
+tiff_smart = "Smart"
+tiff_single = "Single page"
+tiff_multi = "Multi-page"
+
+# -----------------------------------------------------------------------------
+# Layout Settings Tab
+# -----------------------------------------------------------------------------
+[settings.layout]
+extraction_section = "Layout Content Extraction"
+dpi_section = "Rendering Settings"
+dpi_label = "Rendering DPI:"
+dpi_tooltip = "Set the DPI value for PDF/OFD rendering. Higher values are clearer but slower to process."
+software_section = "Layout Processing Software Priority"
+
+# -----------------------------------------------------------------------------
+# Link Settings Tab
+# -----------------------------------------------------------------------------
+[settings.link]
+format_section = "Markdown Link Format"
+image_link_style_label = "Image link format:"
+md_file_link_style_label = "MD file link format:"
+
+# Image Link Format Options
+[settings.link.image_styles]
+wiki_embed = "Wiki Embed: ![[image.png]]"
+wiki_link = "Wiki Link: [[image.png]]"
+md_embed = "MD Embed: ![](image.png)"
+md_link = "MD Link: [image.png](image.png)"
+
+# MD File Link Format Options
+[settings.link.md_file_styles]
+wiki_embed = "Wiki Embed: ![[file.md]]"
+wiki_link = "Wiki Link: [[file.md]]"
+md_link = "MD Link: [file.md](file.md)"
+
+non_embed_section = "Non-Embed Link Processing"
+wiki_link_mode = "Wiki link processing:"
+markdown_link_mode = "Markdown link processing:"
+
+embed_section = "Embed Link Processing"
+embedding_enabled = "Enable embedding"
+embed_image_mode = "Embed image processing:"
+embed_md_mode = "Embed MD file processing:"
+max_depth_label = "Max embed depth:"
+
+# Link Processing Modes
+[settings.link.modes]
+keep = "Keep as-is"
+extract_text = "Extract text"
+remove = "Remove"
+embed = "Embed content"
+
+# -----------------------------------------------------------------------------
+# Output Settings Tab
+# -----------------------------------------------------------------------------
+[settings.output]
+intermediate_section = "Intermediate Files"
+save_intermediate = "Save intermediate files to output directory"
+save_intermediate_tooltip = "Whether to save intermediate files generated during conversion to the output directory"
+
+directory_section = "Output Directory"
+output_mode_label = "Output location:"
+output_source = "Source file directory"
+output_custom = "Custom directory"
+custom_path_label = "Custom path:"
+
+date_folder_section = "Date Subfolder"
+create_date_folder = "Create date subfolder"
+date_format_label = "Date format:"
+
+behavior_section = "Output Behavior"
+auto_open_folder = "Auto-open output folder after conversion"
+
+# -----------------------------------------------------------------------------
+# Logging Settings Tab
+# -----------------------------------------------------------------------------
+[settings.logging]
+system_section = "Logging System"
+enable_logging = "Enable logging"
+log_level_label = "Log level:"
+
+file_section = "File Output"
+file_prefix_label = "Log file prefix:"
+retention_days_label = "Log retention days:"
+
+console_section = "Console Output"
+enable_console = "Enable console output"
+console_level_label = "Console log level:"
+
+# Log Levels
+[settings.logging.levels]
+debug = "Debug (DEBUG)"
+info = "Info (INFO)"
+warning = "Warning (WARNING)"
+error = "Error (ERROR)"
+
+# =============================================================================
+# About Dialog
+# =============================================================================
+[about]
+title = "About"
+version_info = "Version {version}"
+version_tooltip = "This software is offline-only. Please check for updates manually."
+contact = "Contact: {email}"
+copyright = "© {year} {author}"
+acknowledgments = "Acknowledgments"
+acknowledgments_intro = "This project uses the following excellent open source projects and tools. Special thanks to:"
+
+# =============================================================================
+# Main Interface Components
+# =============================================================================
+[components]
+
+# File Drop Zone
+[components.file_drop]
+empty_hint = "Drag files here\nor click to select"
+add_button = "Add Files"
+clear_button = "Clear"
+single_mode = "Single"
+batch_mode = "Batch"
+
+# File Selector
+[components.file_selector]
+empty_hint = "No files"
+file_count = "{count} file(s)"
+remove_tooltip = "Remove this file"
+open_tooltip = "Open this file"
+
+# Status Bar
+[components.status_bar]
+ready = "Ready"
+processing = "Processing..."
+completed = "Completed"
+failed = "Failed"
+open_location = "Open Location"
+
+# Action Panel
+[components.action_panel]
+convert = "Convert"
+cancel = "Cancel"
+options = "Options"
+
+# Conversion Panel
+[components.conversion_panel]
+select_format = "Select target format"
+convert_to = "Convert to"
+
+# Template Selector
+[components.template_selector]
+title = "Templates"
+docx_templates = "Document Templates"
+xlsx_templates = "Spreadsheet Templates"
+empty_hint = "No templates"
+open_location = "Open template location"
+
+# =============================================================================
+# File Type Categories
+# =============================================================================
+[file_types]
+document = "Document"
+spreadsheet = "Spreadsheet"
+image = "Image"
+layout = "Layout"
+text = "Text"
+unknown = "Unknown"
+
+# =============================================================================
+# Conversion Operations
+# =============================================================================
+[conversion]
+# Document Operations
+to_md = "To MD"
+to_docx = "To DOCX"
+to_doc = "To DOC"
+to_odt = "To ODT"
+to_rtf = "To RTF"
+to_pdf = "To PDF"
+validate = "Proofread"
+
+# Spreadsheet Operations
+to_xlsx = "To XLSX"
+to_xls = "To XLS"
+to_ods = "To ODS"
+to_csv = "To CSV"
+merge_tables = "Merge Tables"
+
+# Image Operations
+to_png = "To PNG"
+to_jpg = "To JPG"
+to_webp = "To WEBP"
+to_tiff = "To TIFF"
+compress = "Compress"
+merge_pdf = "Merge PDF"
+split_pdf = "Split PDF"
+merge_tiff = "Merge TIFF"
+
+# =============================================================================
+# Messages and Prompts
+# =============================================================================
+[messages]
+# File Operations
+file_added = "File added: {filename}"
+file_removed = "File removed: {filename}"
+files_cleared = "File list cleared"
+file_not_found = "File not found: {filename}"
+invalid_file_type = "Unsupported file type: {ext}"
+
+# Conversion Operations
+conversion_started = "Conversion started: {filename}"
+conversion_completed = "Conversion completed: {filename}"
+conversion_failed = "Conversion failed: {filename}"
+conversion_cancelled = "Conversion cancelled"
+
+# Settings
+settings_saved = "Settings saved"
+settings_save_failed = "Failed to save settings"
+restart_required = "Restart required for changes to take effect"
+
+# Confirmation Dialogs
+confirm_delete = "Are you sure you want to delete?"
+confirm_clear = "Are you sure you want to clear?"
+confirm_cancel = "Are you sure you want to cancel?"
+confirm_close = "There are unsaved changes. Are you sure you want to close?"
+
+# =============================================================================
+# Editor Dialogs
+# =============================================================================
+[editors]
+
+# Numbering Scheme Editor
+[editors.numbering_schemes]
+title = "Heading Numbering Scheme Editor"
+default_scheme = "Default scheme:"
+scheme_list = "Scheme List"
+add_scheme = "Add Scheme"
+copy_scheme = "Copy Scheme"
+delete_scheme = "Delete Scheme"
+scheme_name = "Scheme name:"
+scheme_description = "Description:"
+level_config = "Level Configuration"
+level = "Level {level}"
+format_label = "Format:"
+preview = "Preview"
+format_help = "Format Help"
+system_scheme = "(System)"
+
+# Cleaning Rules Editor
+[editors.cleaning_rules]
+title = "Numbering Cleaning Rules Editor"
+rule_list = "Rule List"
+rule_name = "Rule name:"
+rule_description = "Description:"
+rule_enabled = "Enabled"
+regex_label = "Regular expression:"
+test_section = "Regex Test"
+test_input = "Test input:"
+test_result = "Match result:"
+load_example = "Load Example"
+placeholder_info = "Placeholder Info"
+system_rule = "(System Rule)"
+
+# Mapping Editor
+[editors.mapping]
+title_symbol = "Punctuation Mapping Editor"
+title_typos = "Typo Dictionary Editor"
+title_sensitive = "Sensitive Words Editor"
+key_column = "Incorrect"
+values_column = "Correct"
+add_entry = "Add Entry"
+edit_entry = "Edit Entry"
+delete_entry = "Delete Entry"
+key_label = "Incorrect:"
+values_label = "Correct (one per line):"
+comment_label = "Comment:"
+
+# =============================================================================
+# Style Names (for document conversion)
+# These style names are used for style injection and detection in MD ↔ DOCX conversion
+# =============================================================================
+[styles]
+# Code Styles
+code_block = "Code Block"
+inline_code = "Inline Code"
+
+# Quote Styles (9 levels)
+quote_1 = "Quote 1"
+quote_2 = "Quote 2"
+quote_3 = "Quote 3"
+quote_4 = "Quote 4"
+quote_5 = "Quote 5"
+quote_6 = "Quote 6"
+quote_7 = "Quote 7"
+quote_8 = "Quote 8"
+quote_9 = "Quote 9"
+
+# Formula Styles
+formula_block = "Formula Block"
+inline_formula = "Inline Formula"
+
+# Horizontal Rule Styles
+horizontal_rule_1 = "Horizontal Rule 1"
+horizontal_rule_2 = "Horizontal Rule 2"
+horizontal_rule_3 = "Horizontal Rule 3"
+
+# List Styles
+list_block = "List Block"
+
+# Table Styles
+table_content = "Table Content"
+three_line_table = "Three Line Table"
+table_grid = "Table Grid"
+
+# =============================================================================
+# Placeholders (for document templates)
+# These placeholders are used for template filling in MD → DOCX conversion
+# =============================================================================
+[placeholders]
+title = "title"
+body = "body"
+
+# =============================================================================
+# YAML Keys (for metadata)
+# These keys are used for YAML front matter output in DOCX → MD conversion
+# =============================================================================
+[yaml_keys]
+title = "title"
+subtitle = "subtitle"

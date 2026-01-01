@@ -79,13 +79,50 @@
     Copyright: dothinking
     Website: https://github.com/dothinking/pdf2docx
 
+16. tkinterdnd2
+    License: MIT
+    Copyright: Petrus Zwart / Philippe Gagné
+    Website: https://github.com/pmgagne/tkinterdnd2
+
+17. latex2mathml
+    License: MIT
+    Copyright: Ronie Martinez
+    Website: https://github.com/roniemartinez/latex2mathml
+
+18. olefile
+    License: BSD-2-Clause
+    Copyright: Philippe Lagadec
+    Website: https://github.com/decalage2/olefile
+
+19. pymupdf4llm
+    License: AGPL-3.0
+    Copyright: Artifex Software, Inc.
+    Website: https://github.com/pymupdf/pymupdf4llm
+
+20. easyofd
+    License: MIT
+    Copyright: guowanghuai
+    Website: https://github.com/guowanghuai/easyofd
+
+21. pillow-heif
+    License: BSD-3-Clause
+    Copyright: Alexander Karpov
+    Website: https://github.com/bigcat88/pillow_heif
+
+22. img2pdf
+    License: LGPL-3.0
+    Copyright: Johannes Schauer Marin Rodrigues
+    Website: https://gitlab.mister-muffin.de/josch/img2pdf
+
 ================================================================================
 
 许可证全文链接：
 - AGPL-3.0: https://www.gnu.org/licenses/agpl-3.0.txt
 - Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
 - MIT: https://opensource.org/licenses/MIT
+- BSD-2-Clause: https://opensource.org/licenses/BSD-2-Clause
 - BSD-3-Clause: https://opensource.org/licenses/BSD-3-Clause
+- LGPL-3.0: https://www.gnu.org/licenses/lgpl-3.0.txt
 - HPND: https://opensource.org/licenses/HPND
 - PSF: https://opensource.org/licenses/Python-2.0
 

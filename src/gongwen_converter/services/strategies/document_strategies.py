@@ -229,7 +229,8 @@ class DocxToMdStrategy(BaseStrategy):
                     progress_callback=progress_callback,
                     cancel_event=cancel_event,
                     output_folder=temp_output_folder,  # 传递输出文件夹路径用于图片提取
-                    original_file_path=file_path  # 传递原始文件路径用于图片命名
+                    original_file_path=file_path,  # 传递原始文件路径用于图片命名
+                    options=options  # 传递options参数（包含序号配置）
                 )
 
                 if cancel_event and cancel_event.is_set():

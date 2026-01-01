@@ -1,4 +1,4 @@
-"""
+﻿"""
 设置选项卡基类模块
 
 本模块提供所有设置选项卡的抽象基类，实现了以下功能：
@@ -162,10 +162,24 @@ class BaseSettingsTab(tb.Frame, ABC):
         
         # 创建画布和滚动条
         self.canvas = tb.Canvas(main_frame)
+        
+        # 自定义滚动命令（带边界检查，防止滚动超出内容区域）
+        def bounded_yview(*args):
+            """带边界检查的滚动命令"""
+            if args[0] == 'scroll':
+                # 点击滚动条按钮时的滚动操作：检查是否已到边界
+                top, bottom = self.canvas.yview()
+                direction = int(args[1])
+                if top <= 0 and direction < 0:  # 已在顶部，不能再向上滚动
+                    return
+                if bottom >= 1 and direction > 0:  # 已在底部，不能再向下滚动
+                    return
+            self.canvas.yview(*args)
+        
         self.scrollbar = tb.Scrollbar(
             main_frame, 
             orient="vertical", 
-            command=self.canvas.yview
+            command=bounded_yview
         )
         # 创建滚动框架，添加右侧内边距以与滚动条保持间距
         self.scrollable_frame = tb.Frame(

@@ -8,9 +8,7 @@
 - 模板文件的模糊匹配和智能查找
 - 自动检测模板文件变更并更新缓存
 - 支持开发和生产环境的多路径适配
-- 提供兼容旧接口的函数调用
 
-采用高效的缓存策略，确保模板加载既快速又安全，同时保持内存使用的合理性。
 """
 
 import os
@@ -406,35 +404,6 @@ class TemplateLoader:
             self.refresh_cache()
         except Exception as e:
             logger.error(f"初始缓存刷新失败: {str(e)}")
-
-# 兼容旧接口的函数
-def get_template_dir():
-    """获取模板目录路径（兼容旧接口）"""
-    return TemplateLoader().get_default_template_dir()
-
-def get_template_path(template_type: str, template_name: str = None) -> str:
-    """获取模板完整路径（兼容旧接口）"""
-    return TemplateLoader().get_template_path(template_type, template_name)
-
-def load_docx_template(template_name: str = None) -> Document:
-    """加载DOCX模板（兼容旧接口）"""
-    return TemplateLoader().load_docx_template(template_name)
-
-def load_xlsx_template(template_name: str = None):
-    """加载Excel模板（兼容旧接口）"""
-    return TemplateLoader().load_xlsx_template(template_name)
-
-def get_available_templates(template_type: str, name_only: bool = True) -> List[str]:
-    """获取指定类型的所有可用模板（兼容旧接口）"""
-    return TemplateLoader().get_available_templates(template_type, name_only)
-
-def get_template_list(template_type: str) -> List[str]:
-    """获取指定类型的模板列表（GUI专用，兼容旧接口）"""
-    return TemplateLoader().get_template_list(template_type)
-
-def find_template(template_type: str, search_term: str) -> str:
-    """模糊查找模板（兼容旧接口）"""
-    return TemplateLoader().find_template(template_type, search_term)
 
 # 模块测试
 if __name__ == "__main__":

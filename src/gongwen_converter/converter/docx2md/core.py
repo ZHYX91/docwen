@@ -18,9 +18,9 @@ import re
 import logging
 import datetime
 from docx import Document
-from .content_injector import process_document_with_special_content
+from .shared.content_injector import process_document_with_special_content
 from gongwen_converter.utils.docx_utils import extract_format_from_paragraph_style, get_effective_run_format
-from gongwen_converter.converter.docx2md.element_scorer import create_element_scorer
+from .gongwen.scorer import create_element_scorer
 from gongwen_converter.utils.heading_utils import split_content_by_delimiters, add_markdown_heading, detect_heading_level
 from gongwen_converter.utils.path_utils import ensure_dir_exists, generate_output_path
 from gongwen_converter.utils.validation_utils import contains_chinese
@@ -48,7 +48,8 @@ def convert_docx_to_md(
     progress_callback: Optional[Callable[[str], None]] = None,
     cancel_event: Optional[threading.Event] = None,
     output_folder: Optional[str] = None,
-    original_file_path: Optional[str] = None
+    original_file_path: Optional[str] = None,
+    options: Optional[dict] = None
 ):
     """
     DOCX转MD路由函数
@@ -66,6 +67,7 @@ def convert_docx_to_md(
         cancel_event: 取消事件 (可选)
         output_folder: 输出文件夹路径，用于保存图片 (可选)
         original_file_path: 原始文件路径（用于图片命名，可选）
+        options: 转换选项字典，包含序号配置等
     
     返回:
         dict: 转换结果字典，包含以下键：
@@ -85,18 +87,19 @@ def convert_docx_to_md(
         'progress_callback': progress_callback,
         'cancel_event': cancel_event,
         'output_folder': output_folder,
-        'original_file_path': original_file_path
+        'original_file_path': original_file_path,
+        'options': options
     }
     
     # 路由到对应转换器
     if optimize_for_type == "gongwen":
         logger.info("使用公文优化模式")
-        from .converter_gongwen import convert_docx_to_md_gongwen
+        from .gongwen.converter import convert_docx_to_md_gongwen
         return convert_docx_to_md_gongwen(**common_params)
     else:
         # 默认使用简化模式
         logger.info("使用简化模式")
-        from .converter_simple import convert_docx_to_md_simple
+        from .simple.converter import convert_docx_to_md_simple
         return convert_docx_to_md_simple(**common_params)
 
 

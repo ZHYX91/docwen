@@ -147,19 +147,21 @@ class MainWindowLayoutBuilder(ScalableMixin):
         center_frame = tb.Frame(self.main_container, width=center_panel_width, bootstyle="default")
         center_frame.grid_propagate(False)
         
-        center_frame.grid_rowconfigure(0, weight=0)
-        center_frame.grid_rowconfigure(1, weight=1)
-        center_frame.grid_rowconfigure(2, weight=0)
-        center_frame.grid_rowconfigure(3, weight=0)
-        center_frame.grid_rowconfigure(4, weight=0)
-        center_frame.grid_rowconfigure(5, weight=0)
+        # 配置行权重：让状态栏占满剩余垂直空间
+        center_frame.grid_rowconfigure(0, weight=0)  # content_frame (文件输入+操作面板) - 固定高度
+        center_frame.grid_rowconfigure(1, weight=0)  # 空白区域 - 固定高度（不再扩展）
+        center_frame.grid_rowconfigure(2, weight=1)  # status_frame (状态栏) - 占满剩余空间
+        center_frame.grid_rowconfigure(3, weight=0)  # separator (分隔线) - 固定高度
+        center_frame.grid_rowconfigure(4, weight=0)  # button_frame (底部按钮) - 固定高度
+        center_frame.grid_rowconfigure(5, weight=0)  # 保留行 - 固定高度
         center_frame.grid_columnconfigure(0, weight=1)
         
         content_frame = self._create_content_frame(center_frame)
         content_frame.grid(row=0, column=0, sticky="nsew")
         
         status_frame, status_bar = self._create_status_bar(center_frame)
-        status_frame.grid(row=2, column=0, sticky="ew", pady=(self.scale(10), self.scale(5)))
+        # 使用nsew让status_frame在垂直方向上也能扩展，占满剩余空间
+        status_frame.grid(row=2, column=0, sticky="nsew", pady=(self.scale(10), self.scale(5)))
         
         separator = ttk.Separator(center_frame, orient="horizontal")
         separator.grid(row=3, column=0, sticky="ew", pady=(0, self.scale(5)))
@@ -319,20 +321,24 @@ class MainWindowLayoutBuilder(ScalableMixin):
         
     def _create_status_bar(self, parent: tb.Frame) -> Tuple[tb.Frame, Any]:
         """
-        创建状态栏
+        创建状态栏（可滚动，占满剩余垂直空间）
         """
-        logger.debug("创建状态栏")
+        logger.debug("创建可滚动状态栏")
 
+        # 状态栏容器框架，配置为占满垂直空间
         status_frame = tb.Frame(parent, bootstyle="default")
         
+        # 让状态栏内部可以垂直扩展
         status_frame.grid_rowconfigure(0, weight=1)
         status_frame.grid_columnconfigure(0, weight=1)
         
         try:
             from ..components.status_bar import StatusBar
-            status_bar = StatusBar(status_frame, line_count=4, on_location_clicked=None)
-            status_bar.grid(row=0, column=0, sticky="ew")
-            logger.debug("StatusBar组件创建成功")
+            # 创建可滚动的StatusBar组件（不再需要line_count参数）
+            status_bar = StatusBar(status_frame, on_location_clicked=None)
+            # 使用nsew让StatusBar占满整个status_frame（包括垂直方向）
+            status_bar.grid(row=0, column=0, sticky="nsew")
+            logger.debug("可滚动StatusBar组件创建成功")
         except ImportError as e:
             logger.error(f"导入StatusBar组件失败: {str(e)}")
             status_bar = tb.Label(status_frame, text="状态栏功能不可用", bootstyle="danger")
@@ -532,7 +538,7 @@ class MainWindowLayoutBuilder(ScalableMixin):
         batch_frame.grid_columnconfigure(0, weight=1)
         
         try:
-            from ..components.file_selector_tabbed import TabbedFileSelector
+            from ..components.file_selector import TabbedFileSelector
             tabbed_batch_file_list = TabbedFileSelector(
                 batch_frame,
                 on_tab_changed=None,  # 选项卡切换回调将在主窗口中设置

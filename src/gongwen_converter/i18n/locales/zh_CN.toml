@@ -1,0 +1,548 @@
+# 公文转换器 - 简体中文语言文件
+# 语言代码: zh_CN
+# 编码: UTF-8
+
+# =============================================================================
+# 通用文本
+# =============================================================================
+[common]
+app_name = "公文转换器"
+close = "关闭"
+apply = "应用"
+cancel = "取消"
+ok = "确定"
+save = "保存"
+add = "添加"
+edit = "编辑"
+delete = "删除"
+copy = "复制"
+move_up = "上移"
+move_down = "下移"
+error = "错误"
+warning = "警告"
+info = "信息"
+success = "成功"
+loading = "加载中..."
+processing = "处理中..."
+version = "版本 {version}"
+untitled = "未命名"
+enabled = "启用"
+disabled = "禁用"
+yes = "是"
+no = "否"
+browse = "浏览..."
+select = "选择"
+clear = "清除"
+reset = "重置"
+refresh = "刷新"
+preview = "预览"
+help = "帮助"
+about = "关于"
+
+# =============================================================================
+# 设置对话框
+# =============================================================================
+[settings]
+title = "设置"
+apply_success = "设置已成功应用"
+apply_failed = "部分设置应用失败"
+
+# 选项卡标题
+[settings.tabs]
+general = "通用"
+text = "文本"
+document = "文档"
+spreadsheet = "表格"
+image = "图片"
+layout = "版式"
+link = "链接"
+formatting = "格式"
+output = "输出"
+logging = "日志"
+
+# 设置状态消息
+[settings.status]
+applied = "设置已应用"
+apply_failed = "应用设置失败，请查看日志"
+apply_error = "应用失败"
+
+# -----------------------------------------------------------------------------
+# 通用设置选项卡
+# -----------------------------------------------------------------------------
+[settings.general]
+# 语言设置区域
+language_section = "语言和地区"
+language_label = "选择界面语言:"
+language_tooltip = "选择应用程序的界面显示语言。\n更改语言后需要重启应用才能生效。"
+language_restart_hint = "更改语言后需要重启应用才能生效。"
+
+# 主题设置区域
+theme_section = "界面主题"
+theme_label = "选择应用程序主题:"
+theme_tooltip = "选择应用程序的视觉主题。\n不同的主题提供不同的颜色方案和界面风格。\n更改主题会在保存后生效。"
+theme_preview = "主题预览:"
+sample_button = "示例按钮"
+sample_text = "示例文本"
+
+# 主题名称
+[settings.general.themes]
+cerculean = "蔚蓝"
+cosmo = "宇宙"
+cyborg = "赛博"
+darkly = "暗黑"
+flatly = "扁平"
+journal = "日记"
+litera = "文雅"
+lumen = "光感"
+minty = "薄荷"
+morph = "渐变"
+pulse = "脉动"
+sandstone = "砂岩"
+simplex = "极简"
+solar = "日光"
+superhero = "超英"
+united = "联合"
+vapor = "蒸汽"
+yeti = "雪人"
+
+# 透明度设置区域
+[settings.general.transparency]
+section = "窗口透明度"
+enable = "启用窗口透明度"
+tooltip = "启用窗口透明效果。\n启用后可以调整窗口的透明度级别，\n让应用程序窗口呈现半透明效果。"
+
+# 窗口行为设置区域
+[settings.general.window]
+section = "窗口行为"
+remember_state = "记住窗口位置和大小"
+remember_state_tooltip = "记住应用程序窗口的位置和尺寸。\n下次启动时，窗口会自动恢复到上次关闭时的状态。\n这有助于保持您习惯的工作环境。"
+auto_center = "启动时自动居中窗口"
+auto_center_tooltip = "应用程序启动时自动将窗口居中显示在屏幕上。\n如果同时启用了“记住窗口位置”，此设置将优先于记住的位置。"
+default_mode_label = "默认文件处理模式:"
+default_mode_tooltip = "设置应用程序启动时的默认文件处理模式。\n单文件模式：每次处理一个文件\n批量模式：可以同时处理多个文件"
+single_mode = "单文件模式"
+batch_mode = "批量模式"
+
+# -----------------------------------------------------------------------------
+# 文本设置选项卡
+# -----------------------------------------------------------------------------
+[settings.text]
+# MD转文档序号设置
+md_to_docx_section = "MD转文档 - 标题序号"
+remove_numbering = "清除原序号"
+remove_numbering_tooltip = "MD转DOCX时是否清除原有序号"
+add_numbering = "添加新序号"
+add_numbering_tooltip = "MD转DOCX时是否添加新序号"
+scheme_label = "序号方案:"
+scheme_tooltip = "选择要使用的序号方案"
+
+# 序号清理规则
+numbering_patterns_section = "序号清理规则"
+edit_patterns = "编辑清理规则..."
+
+# 模板设置
+template_section = "默认模板类型"
+template_label = "MD文件默认模板:"
+template_tooltip = "设置MD文件的默认模板类型"
+template_docx = "文档模板"
+template_xlsx = "表格模板"
+
+# 校对设置
+validation_section = "文档校对"
+edit_numbering_schemes = "编辑序号方案..."
+
+# 字典设置
+dictionary_section = "校对字典"
+edit_symbol_mapping = "编辑标点映射..."
+edit_typos = "编辑错别字库..."
+edit_sensitive_words = "编辑敏感词库..."
+
+# -----------------------------------------------------------------------------
+# 文档设置选项卡
+# -----------------------------------------------------------------------------
+[settings.document]
+# 内容提取设置
+extraction_section = "文档内容提取"
+keep_images = "保留图片"
+keep_images_tooltip = "文档转MD时是否保留图片"
+enable_ocr = "启用OCR识别"
+enable_ocr_tooltip = "文档转MD时是否启用OCR识别图片中的文字"
+
+# 优化设置
+optimization_section = "文档类型优化"
+enable_optimization = "启用针对性优化"
+enable_optimization_tooltip = "根据文档类型进行针对性优化处理"
+optimization_type_label = "优化类型:"
+optimization_gongwen = "公文"
+optimization_contract = "合同"
+optimization_paper = "论文"
+
+# 软件优先级
+software_section = "文档处理软件优先级"
+software_tooltip = "拖拽调整软件优先级顺序"
+
+# 序号设置
+numbering_section = "文档转MD - 标题序号"
+
+# -----------------------------------------------------------------------------
+# 表格设置选项卡
+# -----------------------------------------------------------------------------
+[settings.spreadsheet]
+extraction_section = "表格内容提取"
+merge_mode_section = "表格汇总模式"
+merge_mode_label = "默认汇总模式:"
+merge_mode_tooltip = "设置表格汇总时的默认处理模式"
+software_section = "表格处理软件优先级"
+
+# 汇总模式选项
+[settings.spreadsheet.merge_modes]
+mode_1 = "模式1: 仅合并单元格"
+mode_2 = "模式2: 合并单元格 + 表头"
+mode_3 = "模式3: 完全汇总"
+
+# -----------------------------------------------------------------------------
+# 图片设置选项卡
+# -----------------------------------------------------------------------------
+[settings.image]
+extraction_section = "图片内容提取"
+compress_section = "图片压缩选项"
+compress_mode_label = "压缩模式:"
+compress_lossless = "无损压缩"
+compress_lossy = "有损压缩"
+compress_size_limit = "大小限制"
+size_limit_tooltip = "设置压缩后的目标文件大小"
+
+pdf_tiff_section = "PDF/TIFF 导出选项"
+pdf_quality_label = "PDF质量:"
+pdf_original = "原始质量"
+pdf_high = "高质量"
+pdf_medium = "中等质量"
+pdf_low = "低质量"
+tiff_mode_label = "TIFF模式:"
+tiff_smart = "智能模式"
+tiff_single = "单页模式"
+tiff_multi = "多页模式"
+
+# -----------------------------------------------------------------------------
+# 版式设置选项卡
+# -----------------------------------------------------------------------------
+[settings.layout]
+extraction_section = "版式内容提取"
+dpi_section = "渲染设置"
+dpi_label = "渲染DPI:"
+dpi_tooltip = "设置PDF/OFD渲染的DPI值，数值越高越清晰但处理越慢"
+software_section = "版式处理软件优先级"
+
+# -----------------------------------------------------------------------------
+# 链接设置选项卡
+# -----------------------------------------------------------------------------
+[settings.link]
+format_section = "Markdown链接格式"
+image_link_style_label = "图片链接格式:"
+md_file_link_style_label = "MD文件链接格式:"
+
+# 图片链接格式选项
+[settings.link.image_styles]
+wiki_embed = "Wiki 嵌入: ![[image.png]]"
+wiki_link = "Wiki 链接: [[image.png]]"
+md_embed = "MD 嵌入: ![](image.png)"
+md_link = "MD 链接: [image.png](image.png)"
+
+# MD文件链接格式选项
+[settings.link.md_file_styles]
+wiki_embed = "Wiki 嵌入: ![[file.md]]"
+wiki_link = "Wiki 链接: [[file.md]]"
+md_link = "MD 链接: [file.md](file.md)"
+
+non_embed_section = "非嵌入链接处理"
+wiki_link_mode = "Wiki链接处理:"
+markdown_link_mode = "Markdown链接处理:"
+
+embed_section = "嵌入链接处理"
+embedding_enabled = "启用嵌入功能"
+embed_image_mode = "嵌入图片处理:"
+embed_md_mode = "嵌入MD文件处理:"
+max_depth_label = "最大嵌入深度:"
+
+# 链接处理模式
+[settings.link.modes]
+keep = "保持原样"
+extract_text = "提取文本"
+remove = "移除"
+embed = "嵌入内容"
+
+# -----------------------------------------------------------------------------
+# 输出设置选项卡
+# -----------------------------------------------------------------------------
+[settings.output]
+intermediate_section = "中间文件"
+save_intermediate = "保存中间文件到输出目录"
+save_intermediate_tooltip = "转换过程中生成的中间文件是否保存到输出目录"
+
+directory_section = "输出目录"
+output_mode_label = "输出位置:"
+output_source = "源文件目录"
+output_custom = "自定义目录"
+custom_path_label = "自定义路径:"
+
+date_folder_section = "日期子文件夹"
+create_date_folder = "创建日期子文件夹"
+date_format_label = "日期格式:"
+
+behavior_section = "输出行为"
+auto_open_folder = "转换完成后自动打开输出文件夹"
+
+# -----------------------------------------------------------------------------
+# 日志设置选项卡
+# -----------------------------------------------------------------------------
+[settings.logging]
+system_section = "日志系统"
+enable_logging = "启用日志记录"
+log_level_label = "日志级别:"
+
+file_section = "文件输出"
+file_prefix_label = "日志文件前缀:"
+retention_days_label = "日志保留天数:"
+
+console_section = "控制台输出"
+enable_console = "启用控制台输出"
+console_level_label = "控制台日志级别:"
+
+# 日志级别
+[settings.logging.levels]
+debug = "调试 (DEBUG)"
+info = "信息 (INFO)"
+warning = "警告 (WARNING)"
+error = "错误 (ERROR)"
+
+# =============================================================================
+# 关于对话框
+# =============================================================================
+[about]
+title = "关于"
+version_info = "版本 {version}"
+version_tooltip = "本软件禁止联网，需要用户自行检查更新"
+contact = "联系邮箱: {email}"
+copyright = "© {year} {author}"
+acknowledgments = "致谢"
+acknowledgments_intro = "本项目使用了以下优秀的开源项目和工具，特此致谢："
+
+# =============================================================================
+# 主界面组件
+# =============================================================================
+[components]
+
+# 文件拖拽区
+[components.file_drop]
+empty_hint = "拖拽文件到此处\n或点击选择文件"
+add_button = "添加文件"
+clear_button = "清除"
+single_mode = "单文件"
+batch_mode = "批量"
+
+# 文件选择器
+[components.file_selector]
+empty_hint = "暂无文件"
+file_count = "共 {count} 个文件"
+remove_tooltip = "移除此文件"
+open_tooltip = "打开此文件"
+
+# 状态栏
+[components.status_bar]
+ready = "就绪"
+processing = "处理中..."
+completed = "完成"
+failed = "失败"
+open_location = "打开位置"
+
+# 操作面板
+[components.action_panel]
+convert = "转换"
+cancel = "取消"
+options = "选项"
+
+# 转换面板
+[components.conversion_panel]
+select_format = "选择目标格式"
+convert_to = "转换为"
+
+# 模板选择器
+[components.template_selector]
+title = "模板"
+docx_templates = "文档模板"
+xlsx_templates = "表格模板"
+empty_hint = "暂无模板"
+open_location = "打开模板位置"
+
+# =============================================================================
+# 文件类型分类
+# =============================================================================
+[file_types]
+document = "文档"
+spreadsheet = "表格"
+image = "图片"
+layout = "版式"
+text = "文本"
+unknown = "未知"
+
+# =============================================================================
+# 转换操作
+# =============================================================================
+[conversion]
+# 文档操作
+to_md = "转为MD"
+to_docx = "转为DOCX"
+to_doc = "转为DOC"
+to_odt = "转为ODT"
+to_rtf = "转为RTF"
+to_pdf = "转为PDF"
+validate = "文档校对"
+
+# 表格操作
+to_xlsx = "转为XLSX"
+to_xls = "转为XLS"
+to_ods = "转为ODS"
+to_csv = "转为CSV"
+merge_tables = "汇总表格"
+
+# 图片操作
+to_png = "转为PNG"
+to_jpg = "转为JPG"
+to_webp = "转为WEBP"
+to_tiff = "转为TIFF"
+compress = "压缩"
+merge_pdf = "合并PDF"
+split_pdf = "拆分PDF"
+merge_tiff = "合并TIFF"
+
+# =============================================================================
+# 消息和提示
+# =============================================================================
+[messages]
+# 文件操作
+file_added = "文件已添加: {filename}"
+file_removed = "文件已移除: {filename}"
+files_cleared = "文件列表已清空"
+file_not_found = "文件未找到: {filename}"
+invalid_file_type = "不支持的文件类型: {ext}"
+
+# 转换操作
+conversion_started = "开始转换: {filename}"
+conversion_completed = "转换完成: {filename}"
+conversion_failed = "转换失败: {filename}"
+conversion_cancelled = "转换已取消"
+
+# 设置
+settings_saved = "设置已保存"
+settings_save_failed = "设置保存失败"
+restart_required = "需要重启应用才能生效"
+
+# 确认对话框
+confirm_delete = "确定要删除吗？"
+confirm_clear = "确定要清空吗？"
+confirm_cancel = "确定要取消吗？"
+confirm_close = "有未保存的更改，确定要关闭吗？"
+
+# =============================================================================
+# 编辑器对话框
+# =============================================================================
+[editors]
+
+# 序号方案编辑器
+[editors.numbering_schemes]
+title = "标题序号方案编辑器"
+default_scheme = "默认方案:"
+scheme_list = "方案列表"
+add_scheme = "添加方案"
+copy_scheme = "复制方案"
+delete_scheme = "删除方案"
+scheme_name = "方案名称:"
+scheme_description = "方案说明:"
+level_config = "级别配置"
+level = "级别 {level}"
+format_label = "格式:"
+preview = "预览"
+format_help = "格式帮助"
+system_scheme = "(系统)"
+
+# 清理规则编辑器
+[editors.cleaning_rules]
+title = "序号清理规则编辑器"
+rule_list = "规则列表"
+rule_name = "规则名称:"
+rule_description = "规则说明:"
+rule_enabled = "启用"
+regex_label = "正则表达式:"
+test_section = "正则测试"
+test_input = "测试输入:"
+test_result = "匹配结果:"
+load_example = "载入示例"
+placeholder_info = "占位符说明"
+system_rule = "(系统规则)"
+
+# 映射编辑器
+[editors.mapping]
+title_symbol = "标点符号映射编辑器"
+title_typos = "错别字库编辑器"
+title_sensitive = "敏感词库编辑器"
+key_column = "错误词"
+values_column = "正确词"
+add_entry = "添加条目"
+edit_entry = "编辑条目"
+delete_entry = "删除条目"
+key_label = "错误词:"
+values_label = "正确词 (每行一个):"
+comment_label = "备注:"
+
+# =============================================================================
+# 样式名（用于文档转换）
+# 这些样式名用于 MD ↔ DOCX 转换时的样式注入和检测
+# =============================================================================
+[styles]
+# 代码样式
+code_block = "代码块"
+inline_code = "行内代码"
+
+# 引用样式（9 级）
+quote_1 = "引用 1"
+quote_2 = "引用 2"
+quote_3 = "引用 3"
+quote_4 = "引用 4"
+quote_5 = "引用 5"
+quote_6 = "引用 6"
+quote_7 = "引用 7"
+quote_8 = "引用 8"
+quote_9 = "引用 9"
+
+# 公式样式
+formula_block = "公式块"
+inline_formula = "行内公式"
+
+# 分隔线样式
+horizontal_rule_1 = "分隔线 1"
+horizontal_rule_2 = "分隔线 2"
+horizontal_rule_3 = "分隔线 3"
+
+# 列表样式
+list_block = "列表块"
+
+# 表格样式
+table_content = "表格内容"
+three_line_table = "三线表"
+table_grid = "网格表"
+
+# =============================================================================
+# 占位符（用于文档模板）
+# 这些占位符用于 MD → DOCX 转换时的模板填充
+# =============================================================================
+[placeholders]
+title = "标题"
+body = "正文"
+
+# =============================================================================
+# YAML 键名（用于元数据）
+# 这些键名用于 DOCX → MD 转换时的 YAML 前置信息输出
+# =============================================================================
+[yaml_keys]
+title = "标题"
+subtitle = "副标题"

@@ -3,9 +3,9 @@
 
 [default_priority]
 # 文档处理软件优先级（用于DOC/DOCX/WPS等转换）
-word_processors = ["wps_writer", "msoffice_word", "libreoffice"]
+word_processors = ["msoffice_word", "wps_writer", "libreoffice"]
 # 表格处理软件优先级（用于XLS/XLSX/ET等转换）
-spreadsheet_processors = ["wps_spreadsheets", "msoffice_excel", "libreoffice"]
+spreadsheet_processors = ["msoffice_excel", "wps_spreadsheets", "libreoffice"]
 
 [special_conversions]
 # ODT格式转换优先级（WPS文字（wps_writer）不支持ODT）
@@ -15,6 +15,6 @@ ods = ["msoffice_excel", "libreoffice"]
 # PDF转Office优先级（WPS文字（wps_writer）不支持PDF转文档，Microsoft Word优先于LibreOffice）
 pdf_to_office = ["msoffice_word", "libreoffice"]
 # 文档转PDF优先级（使用文字处理软件）
-document_to_pdf = ["wps_writer", "msoffice_word", "libreoffice"]
+document_to_pdf = ["msoffice_word", "wps_writer", "libreoffice"]
 # 表格转PDF优先级（使用表格处理软件）
-spreadsheet_to_pdf = ["wps_spreadsheets", "msoffice_excel", "libreoffice"]
+spreadsheet_to_pdf = ["msoffice_excel", "wps_spreadsheets", "libreoffice"]

@@ -684,6 +684,53 @@ def get_allowed_types_by_category(category: str) -> str:
     return '、'.join(type_names)
 
 
+def _has_known_signature(file_path: str) -> bool:
+    """
+    检查文件是否有已知的二进制签名（不包含回退到扩展名的情况）
+    
+    参数:
+        file_path: 文件路径
+        
+    返回:
+        bool: 是否有已知签名
+    """
+    try:
+        with open(file_path, 'rb') as f:
+            header = f.read(16)
+        
+        # 检查所有已知的二进制签名
+        known_signatures = [
+            # 图片格式
+            (b'\xFF\xD8\xFF', 'jpeg'),                    # JPEG
+            (b'\x89PNG\r\n\x1a\n', 'png'),                # PNG
+            (b'GIF8', 'gif'),                             # GIF
+            (b'BM', 'bmp'),                               # BMP
+            (b'II\x2a\x00', 'tiff'),                      # TIFF (little-endian)
+            (b'MM\x00\x2a', 'tiff'),                      # TIFF (big-endian)
+            # 文档格式
+            (b'%PDF', 'pdf'),                             # PDF
+            (b'{\\rtf', 'rtf'),                           # RTF
+            (b'\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1', 'ole'), # OLE (DOC/XLS/WPS/ET)
+            (b'PK\x03\x04', 'zip'),                       # ZIP (DOCX/XLSX/ODT/ODS/XPS/OFD)
+        ]
+        
+        for signature, _ in known_signatures:
+            if header.startswith(signature):
+                return True
+        
+        # 检查HEIC/WebP等特殊格式
+        if b'ftypheic' in header[:12]:
+            return True
+        if header[:4] == b'RIFF' and len(header) >= 12 and header[8:12] == b'WEBP':
+            return True
+        
+        return False
+        
+    except Exception as e:
+        logger.debug(f"检查文件签名失败: {e}")
+        return False
+
+
 def validate_file_format(file_path: str) -> dict:
     """
     验证文件格式是否匹配（扩展名与实际格式）
@@ -696,7 +743,7 @@ def validate_file_format(file_path: str) -> dict:
             - actual_format: 实际格式 (如 'doc')
             - extension_format: 扩展名格式 (如 'docx')
             - is_match: 是否匹配
-            - warning_message: 警告消息（不匹配时）
+            - warning_message: 警告消息（不匹配时或无法验证时）
     """
     # 检测实际格式
     actual_format = detect_actual_file_format(file_path)
@@ -736,10 +783,16 @@ def validate_file_format(file_path: str) -> dict:
     
     is_match = are_formats_equivalent(actual_format, extension_format) or (actual_format == 'unknown')
     
+    # 检查是否有已知签名（用于判断是否是回退到扩展名的情况）
+    has_signature = _has_known_signature(file_path)
+    
+    # 检查是否是纯文本文件（文本文件通过内容检测，不是回退）
+    is_text_format = actual_format in ['txt', 'md', 'csv']
+    
     # 生成警告消息
     warning_message = ""
     if not is_match:
-        # 对纯文本格式给出明确的格式提示
+        # 格式不匹配的情况
         if actual_format in ['txt', 'md', 'csv']:
             # 区分各种纯文本格式
             format_display = {
@@ -752,6 +805,11 @@ def validate_file_format(file_path: str) -> dict:
         else:
             warning_message = f"⚠️ 实际为 {actual_name} 格式"
             logger.warning(f"检测到格式不匹配: {file_path} (扩展名: {ext_name}, 实际: {actual_name})")
+    elif is_match and not has_signature and not is_text_format and actual_format != 'unknown':
+        # 格式匹配但没有已知签名（回退到扩展名的情况）
+        # 不是纯文本格式，也不是未知格式
+        warning_message = "⚠️ 无法验证文件实际格式"
+        logger.warning(f"无法验证文件格式: {file_path} (扩展名: {ext_name}, 无已知签名)")
     else:
         logger.debug(f"文件格式匹配: {file_path} -> {actual_format}")
     

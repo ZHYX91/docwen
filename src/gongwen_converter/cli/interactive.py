@@ -700,8 +700,9 @@ def select_template(template_type: str) -> Optional[str]:
         Optional[str]: 模板名称
     """
     try:
-        from gongwen_converter.template.loader import get_available_templates
-        templates = get_available_templates(template_type)
+        from gongwen_converter.template.loader import TemplateLoader
+        template_loader = TemplateLoader()
+        templates = template_loader.get_available_templates(template_type)
         
         if not templates:
             print(f"错误: 未找到{template_type.upper()}模板")

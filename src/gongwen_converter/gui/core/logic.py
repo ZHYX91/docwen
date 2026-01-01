@@ -587,6 +587,9 @@ class MainWindowLogic:
                 result_tuple = (False, "操作已取消", None, action_type)
             else:
                 message_to_return = result.message or (str(result.error) if result.error else "操作失败")
+                # 如果是ValueError，尝试提取更友好的错误信息
+                if result.error and isinstance(result.error, ValueError):
+                    message_to_return = str(result.error)
                 result_tuple = (result.success, message_to_return, result.output_path, action_type)
             
             logger.info(f"[{operation_id}] 处理完成: {result_tuple[0]}, {result_tuple[1]}")
@@ -594,7 +597,11 @@ class MainWindowLogic:
             
         except Exception as e:
             logger.error(f"[{operation_id}] 处理异常: {str(e)}", exc_info=True)
-            self.processing_queue.put((False, f"发生意外错误: {str(e)}", None, action_type))
+            # 对于直接抛出的ValueError（如我们刚才在docx_processor中自定义的），直接显示信息
+            if isinstance(e, ValueError):
+                self.processing_queue.put((False, str(e), None, action_type))
+            else:
+                self.processing_queue.put((False, f"发生意外错误: {str(e)}", None, action_type))
         finally:
             with self.processing_lock:
                 if current_thread.ident in self._active_threads:

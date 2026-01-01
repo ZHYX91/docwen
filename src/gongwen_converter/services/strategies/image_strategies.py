@@ -12,6 +12,7 @@ from .base_strategy import BaseStrategy
 from gongwen_converter.services.result import ConversionResult
 from . import register_conversion, register_action, CATEGORY_IMAGE
 from gongwen_converter.utils.path_utils import generate_output_path
+from gongwen_converter.utils.yaml_utils import generate_basic_yaml_frontmatter
 
 if TYPE_CHECKING:
     from docx import Document
@@ -563,7 +564,8 @@ class ImageToMarkdownStrategy(BaseStrategy):
                     images_in_folder = [(final_image_path, image_filename)]
                 
                 # === 步骤5：统一OCR子文件夹的所有图片并生成MD内容 ===
-                md_content = ""
+                # 生成YAML头部（使用原始文件名，不含扩展名）
+                md_content = generate_basic_yaml_frontmatter(original_basename)
                 
                 try:
                     from gongwen_converter.utils.ocr_utils import extract_text_simple
@@ -583,28 +585,38 @@ class ImageToMarkdownStrategy(BaseStrategy):
                 from gongwen_converter.utils.markdown_utils import format_image_link
                 
                 link_settings = config_manager.get_markdown_link_style_settings()
-                image_format = link_settings.get("image_link_format", "wiki")
-                image_embed = link_settings.get("image_embed", True)
+                image_link_style = link_settings.get("image_link_style", "wiki_embed")
+                
+                # 计算总图片数（用于进度显示）
+                total_images = len(images_in_folder)
+                current_index = 0
+                
+                # 获取cancel_event（如果有）
+                cancel_event = options.get('cancel_event') if options else None
                 
                 for img_path, img_filename in images_in_folder:
+                    # 检查取消事件（在处理每张图片前）
+                    if cancel_event and cancel_event.is_set():
+                        logger.info("用户取消操作，停止OCR识别")
+                        return ConversionResult(success=False, message="操作已取消")
+                    
                     # 根据选项添加图片链接
                     if extract_image:
-                        image_link = format_image_link(img_filename, image_format, image_embed)
+                        image_link = format_image_link(img_filename, image_link_style)
                         md_content += f"{image_link}\n\n"
                     
-                # 根据选项进行OCR识别
-                if extract_ocr:
-                    if ocr_available:
+                    # 根据选项进行OCR识别（每一页都识别）
+                    if extract_ocr and ocr_available:
+                        # 增加当前索引
+                        current_index += 1
+                        
                         if progress_callback:
-                            if len(images_in_folder) > 1:
-                                # 多页时显示页码
-                                page_info = img_filename.replace(f'{original_basename}_page', '').replace('.png', '')
-                                progress_callback(f"识别第{page_info}页")
-                            else:
-                                progress_callback("识别文字中...")
+                            # 统一使用 "正在OCR识别：X/Y" 格式
+                            progress_callback(f"正在OCR识别：{current_index}/{total_images}")
                         
                         try:
-                            ocr_text = extract_text_simple(img_path)
+                            # 传递cancel_event给OCR函数
+                            ocr_text = extract_text_simple(img_path, cancel_event)
                             if ocr_text:
                                 md_content += f"{ocr_text}\n\n"
                                 logger.debug(f"OCR识别成功: {img_filename}")

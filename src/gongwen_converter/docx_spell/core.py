@@ -16,12 +16,130 @@ import os
 import datetime
 import logging
 from docx import Document
+from docx.shared import RGBColor
 from .spell_checker import TextValidator
 from .utils import plan_run_splits, rebuild_paragraph_with_splits
 from gongwen_converter.utils.path_utils import generate_output_path
+from gongwen_converter.config.config_manager import config_manager
 
 # 配置日志
 logger = logging.getLogger(__name__)
+
+
+def is_code_paragraph(paragraph) -> bool:
+    """
+    检测段落是否为代码块段落
+    
+    检测依据：
+    1. 段落样式名称包含代码相关关键词
+    2. 段落有灰色底纹/背景色
+    3. 段落中所有run都使用等宽字体
+    
+    参数:
+        paragraph: docx段落对象
+        
+    返回:
+        bool: 是否为代码段落
+    """
+    try:
+        # 1. 检查段落样式
+        style_name = paragraph.style.name if paragraph.style else ""
+        code_style_keywords = config_manager.get_code_paragraph_styles()
+        
+        # 精确匹配
+        if style_name in code_style_keywords:
+            logger.debug(f"段落匹配代码样式: {style_name}")
+            return True
+        
+        # 模糊匹配（如果启用）
+        if config_manager.get_code_fuzzy_match_enabled():
+            fuzzy_keywords = config_manager.get_code_fuzzy_keywords()
+            style_lower = style_name.lower()
+            for keyword in fuzzy_keywords:
+                if keyword.lower() in style_lower:
+                    logger.debug(f"段落模糊匹配代码样式: {style_name} (关键词: {keyword})")
+                    return True
+        
+        # 2. 检查灰色背景（如果启用）
+        if config_manager.is_code_gray_background_enabled():
+            gray_colors = config_manager.get_code_gray_colors()
+            
+            # 检查段落底纹
+            if hasattr(paragraph, '_element'):
+                pPr = paragraph._element.find('.//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}pPr')
+                if pPr is not None:
+                    shd = pPr.find('.//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}shd')
+                    if shd is not None:
+                        fill_color = shd.get('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}fill')
+                        if fill_color and fill_color.upper() in [c.upper() for c in gray_colors]:
+                            logger.debug(f"段落有灰色底纹: {fill_color}")
+                            return True
+        
+        # 3. 检查是否所有run都使用等宽字体
+        code_font = config_manager.get_code_font()
+        if paragraph.runs:
+            all_code_font = True
+            for run in paragraph.runs:
+                if run.text.strip():  # 只检查有内容的run
+                    font_name = run.font.name if run.font else None
+                    if font_name != code_font:
+                        all_code_font = False
+                        break
+            if all_code_font and len(paragraph.runs) > 0:
+                logger.debug(f"段落所有run使用代码字体: {code_font}")
+                return True
+        
+        return False
+        
+    except Exception as e:
+        logger.warning(f"检测代码段落时出错: {e}")
+        return False
+
+
+def is_quote_paragraph(paragraph) -> bool:
+    """
+    检测段落是否为引用段落
+    
+    检测依据：
+    1. 段落样式名称包含引用相关关键词
+    2. 段落样式是分级引用样式
+    
+    参数:
+        paragraph: docx段落对象
+        
+    返回:
+        bool: 是否为引用段落
+    """
+    try:
+        # 1. 检查段落样式
+        style_name = paragraph.style.name if paragraph.style else ""
+        
+        # 检查分级引用样式
+        level_styles = config_manager.get_quote_level_styles()
+        if style_name in level_styles:
+            logger.debug(f"段落匹配分级引用样式: {style_name}")
+            return True
+        
+        # 检查通用引用样式
+        quote_styles = config_manager.get_quote_paragraph_styles()
+        if style_name in quote_styles:
+            logger.debug(f"段落匹配引用样式: {style_name}")
+            return True
+        
+        # 模糊匹配（如果启用）
+        if config_manager.get_quote_fuzzy_match_enabled():
+            fuzzy_keywords = config_manager.get_quote_fuzzy_keywords()
+            style_lower = style_name.lower()
+            for keyword in fuzzy_keywords:
+                if keyword.lower() in style_lower:
+                    logger.debug(f"段落模糊匹配引用样式: {style_name} (关键词: {keyword})")
+                    return True
+        
+        return False
+        
+    except Exception as e:
+        logger.warning(f"检测引用段落时出错: {e}")
+        return False
 
 from typing import Callable, Optional
 import threading
@@ -253,9 +371,10 @@ def process_paragraph(para_index: int, paragraph, doc, validator) -> int:
         
     详细说明:
         1. 获取段落文本
-        2. 使用验证器检测文本中的错误
-        3. 一次性重建段落（标注所有错误位置）
-        4. 为每个错误添加批注
+        2. 检测并跳过代码块/引用段落（根据配置）
+        3. 使用验证器检测文本中的错误
+        4. 一次性重建段落（标注所有错误位置）
+        5. 为每个错误添加批注
     """
     text = paragraph.text
     if not text.strip():
@@ -266,6 +385,18 @@ def process_paragraph(para_index: int, paragraph, doc, validator) -> int:
         # 记录段落信息
         para_info = f"段落 {para_index+1}: '{text[:30]}...'" if len(text) > 30 else f"段落 {para_index+1}: '{text}'"
         logger.debug(f"处理 {para_info}")
+        
+        # 检测并跳过代码块（根据配置）
+        if config_manager.is_skip_code_blocks_enabled():
+            if is_code_paragraph(paragraph):
+                logger.info(f"跳过代码段落: {para_info}")
+                return 0
+        
+        # 检测并跳过引用块（根据配置）
+        if config_manager.is_skip_quote_blocks_enabled():
+            if is_quote_paragraph(paragraph):
+                logger.info(f"跳过引用段落: {para_info}")
+                return 0
         
         # 执行文本校对
         logger.debug("开始文本校对...")

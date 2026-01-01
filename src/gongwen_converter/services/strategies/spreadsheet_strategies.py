@@ -209,8 +209,12 @@ class SpreadsheetToMarkdownStrategy(BaseStrategy):
                     extract_image=extract_image,
                     extract_ocr=extract_ocr,
                     output_folder=temp_output_folder,  # 传递输出文件夹用于图片提取
-                    original_file_path=file_path  # 传递原始文件路径用于图片命名
+                    original_file_path=file_path,  # 传递原始文件路径用于图片命名
+                    progress_callback=progress_callback  # 传递进度回调，显示提取图片和OCR进度
                 )
+
+                if cancel_event and cancel_event.is_set():
+                    return ConversionResult(success=False, message="操作已取消")
 
                 # 步骤4：写入Markdown文件到临时子文件夹
                 if progress_callback:

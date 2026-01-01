@@ -1,4 +1,4 @@
-"""
+﻿"""
 映射编辑器对话框模块
 实现错误符号和自定义错别字的可视化编辑功能
 
@@ -31,7 +31,7 @@ class LayoutConfig:
     """布局配置类"""
     # 窗口尺寸
     WINDOW_WIDTH: int = 850   # 加宽以容纳三列完整显示
-    WINDOW_HEIGHT: int = 500  # 统一固定高度
+    WINDOW_HEIGHT: int = 600  # 窗口高度，确保表格和分页控件有足够空间
     
     # 表格参数
     TABLE_HEIGHT: int = 20    # 固定表格行数

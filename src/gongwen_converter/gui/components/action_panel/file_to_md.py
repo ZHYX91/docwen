@@ -1,0 +1,800 @@
+"""
+文件转MD功能模块
+
+提供各类文件转换为 Markdown 的按钮和选项：
+- 文档转MD：DOCX/DOC等文档文件
+- 表格转MD：XLSX/XLS等表格文件
+- 图片转MD：PNG/JPG等图片文件
+- 版式转MD：PDF/OFD等版式文件
+
+每种类型都支持导出选项（提取图片、OCR识别），
+使用公共组件 ExportOptionHandler 处理选项联动逻辑。
+
+依赖：
+- ActionPanelBase: 提供按钮样式、颜色映射等公共属性
+- config_manager: 读取选项默认值
+- ExportOptionHandler: 处理提取图片和OCR选项的联动
+
+使用方式：
+    此模块作为 Mixin 类被 ActionPanel 继承，不应直接实例化。
+"""
+
+import logging
+import tkinter as tk
+from typing import List
+
+import ttkbootstrap as tb
+
+from gongwen_converter.utils.dpi_utils import scale
+from gongwen_converter.utils.gui_utils import ToolTip, create_info_icon
+from gongwen_converter.gui.components.common import ExportOptionHandler
+
+logger = logging.getLogger(__name__)
+
+
+class FileToMdMixin:
+    """
+    文件转MD功能混入类
+    
+    提供各类文件转换为 Markdown 的所有功能：
+    - setup_for_document_file: 设置文档转MD模式
+    - setup_for_spreadsheet_file: 设置表格转MD模式
+    - setup_for_image_file: 设置图片转MD模式
+    - setup_for_layout_file: 设置版式转MD模式
+    
+    每种模式都有对应的按钮创建方法和点击事件处理方法。
+    
+    依赖基类属性：
+        button_container: 按钮容器框架
+        button_colors: 按钮颜色映射
+        button_style_1: 按钮样式配置
+        config_manager: 配置管理器
+        on_action: 操作回调函数
+    """
+    
+    # ==================== 文档转MD ====================
+    
+    def setup_for_document_file(self, file_path: str, file_list: List[str] = None):
+        """
+        设置为文档文件处理模式
+        
+        为DOCX/DOC等文档文件显示：
+        - 导出Markdown按钮
+        - 导出选项（提取图片、图片文字识别）
+        - 优化选项和序号选项
+        
+        参数：
+            file_path: 文档文件路径
+            file_list: 文件列表（批量模式时用于更新按钮状态）
+        """
+        logger.debug(f"设置文档文件处理模式: {file_path}")
+        self.file_type = "document"
+        self.file_path = file_path
+        self._clear_buttons()
+        self._clear_options()
+        self._create_document_conversion_buttons()
+        self.status_var.set("准备处理文档文件")
+        logger.info("文档文件操作面板设置完成")
+    
+    def _create_document_conversion_buttons(self):
+        """
+        创建文档文件转换按钮
+        
+        显示：
+        - 第一行：导出Markdown按钮
+        - 导出选项边框（提取图片、图片文字识别）
+        - 优化选项和序号选项
+        """
+        logger.debug("创建文档转换按钮")
+
+        # 第一行：导出Markdown按钮
+        self.convert_document_to_md_button = tb.Button(
+            self.button_container,
+            text="✏️ 导出 Markdown",
+            command=self._on_convert_document_to_md_clicked,
+            bootstyle=self.button_colors['success'],
+            **self.button_style_1
+        )
+        self.convert_document_to_md_button.grid(row=0, column=0, pady=(0, scale(10)))
+        ToolTip(
+            self.convert_document_to_md_button,
+            "将文档转换为Markdown格式\n可选：提取图片、图片文字识别（OCR）"
+        )
+        
+        # 导出选项边框
+        doc_export_options_frame = tb.Labelframe(
+            self.button_container,
+            text="导出选项",
+            bootstyle="info"
+        )
+        doc_export_options_frame.grid(
+            row=1, column=0, sticky="ew", padx=scale(20), pady=scale(10)
+        )
+        
+        # 配置选项框架网格权重
+        doc_export_options_frame.grid_rowconfigure(0, weight=1)
+        doc_export_options_frame.grid_rowconfigure(1, weight=1)
+        doc_export_options_frame.grid_columnconfigure(0, weight=1)
+        
+        # 从配置读取默认值
+        try:
+            default_extract_image = self.config_manager.get_docx_to_md_keep_images()
+            default_extract_ocr = self.config_manager.get_docx_to_md_enable_ocr()
+        except Exception as e:
+            logger.warning(f"读取文档转MD配置失败，使用默认值: {e}")
+            default_extract_image = True
+            default_extract_ocr = False
+        
+        # 创建选项变量
+        self.doc_extract_image_var = tk.BooleanVar(value=default_extract_image)
+        self.doc_extract_ocr_var = tk.BooleanVar(value=default_extract_ocr)
+        
+        # 创建导出选项处理器
+        self._doc_export_handler = ExportOptionHandler(
+            self.doc_extract_image_var,
+            self.doc_extract_ocr_var
+        )
+        
+        # 多选框容器
+        checkbox_container = tb.Frame(doc_export_options_frame, bootstyle="default")
+        checkbox_container.grid(row=0, column=0, sticky="", padx=scale(10), pady=scale(10))
+        
+        # 配置行列权重
+        for i in range(5):
+            checkbox_container.grid_rowconfigure(i, weight=0)
+        checkbox_container.grid_columnconfigure(0, weight=0)
+        checkbox_container.grid_columnconfigure(1, weight=0)
+        
+        # 从配置读取序号默认值
+        try:
+            default_remove_numbering = self.config_manager.get_docx_to_md_remove_numbering()
+            default_add_numbering = self.config_manager.get_docx_to_md_add_numbering()
+            default_scheme_id = self.config_manager.get_docx_to_md_default_scheme()
+        except Exception as e:
+            logger.warning(f"读取文档转MD序号配置失败，使用默认值: {e}")
+            default_remove_numbering = True
+            default_add_numbering = False
+            default_scheme_id = "gongwen_standard"
+        
+        # 获取序号方案名称列表
+        try:
+            scheme_names = self.config_manager.get_scheme_names()
+            if not scheme_names:
+                scheme_names = ["公文标准", "层级数字标准", "法律条文标准"]
+        except Exception as e:
+            logger.warning(f"获取序号方案名称列表失败: {e}")
+            scheme_names = ["公文标准", "层级数字标准", "法律条文标准"]
+        
+        # 方案ID到名称的映射
+        scheme_id_to_name = {
+            "gongwen_standard": "公文标准",
+            "hierarchical_standard": "层级数字标准",
+            "legal_standard": "法律条文标准"
+        }
+        default_scheme_name = scheme_id_to_name.get(default_scheme_id, "公文标准")
+        
+        # 从配置读取优化默认值
+        try:
+            default_enable_optimization = self.config_manager.get_docx_to_md_enable_optimization()
+            default_optimization_type = self.config_manager.get_docx_to_md_optimization_type()
+        except Exception as e:
+            logger.warning(f"读取优化配置失败，使用默认值: {e}")
+            default_enable_optimization = True
+            default_optimization_type = "公文"
+        
+        # ===== 第1行：图片选项 =====
+        # 提取图片 + 信息图标
+        extract_image_container = tb.Frame(checkbox_container, bootstyle="default")
+        extract_image_container.grid(row=0, column=0, sticky="w", padx=(scale(10), scale(20)))
+        
+        self.doc_extract_image_check = tb.Checkbutton(
+            extract_image_container,
+            text="提取图片",
+            variable=self.doc_extract_image_var,
+            command=self._doc_export_handler.on_option_changed,
+            bootstyle="round-toggle"
+        )
+        self.doc_extract_image_check.pack(side=tk.LEFT, padx=(0, scale(5)))
+        
+        extract_image_info = create_info_icon(
+            extract_image_container,
+            "无损提取嵌入的图片文件，并在Markdown文件中添加链接。",
+            bootstyle="info"
+        )
+        extract_image_info.pack(side=tk.LEFT)
+        
+        # 图片文字识别 + 信息图标
+        extract_ocr_container = tb.Frame(checkbox_container, bootstyle="default")
+        extract_ocr_container.grid(row=0, column=1, sticky="w", padx=(0, scale(10)))
+        
+        self.doc_extract_ocr_check = tb.Checkbutton(
+            extract_ocr_container,
+            text="图片文字识别",
+            variable=self.doc_extract_ocr_var,
+            command=self._doc_export_handler.on_option_changed,
+            bootstyle="round-toggle"
+        )
+        self.doc_extract_ocr_check.pack(side=tk.LEFT, padx=(0, scale(5)))
+        
+        extract_ocr_info = create_info_icon(
+            extract_ocr_container,
+            "对嵌入的图片进行OCR（离线），\n"
+            "结果输出至单独的Markdown文件，\n"
+            "并将文件链接添加至主要Markdown文件中。\n"
+            "耗时可能较长",
+            bootstyle="info"
+        )
+        extract_ocr_info.pack(side=tk.LEFT)
+        
+        # ===== 第2行：分割线 =====
+        separator = tb.Separator(checkbox_container, bootstyle="info")
+        separator.grid(row=1, column=0, columnspan=2, sticky="ew", padx=0, pady=scale(20))
+        
+        # ===== 第3行：针对文档类型优化 =====
+        optimization_container = tb.Frame(checkbox_container, bootstyle="default")
+        optimization_container.grid(
+            row=2, column=0, columnspan=2, sticky="w",
+            padx=(scale(10), scale(10)), pady=(0, scale(5))
+        )
+        
+        self.doc_enable_optimization_var = tk.BooleanVar(value=default_enable_optimization)
+        self.doc_enable_optimization_check = tb.Checkbutton(
+            optimization_container,
+            text="针对文档类型优化",
+            variable=self.doc_enable_optimization_var,
+            command=self._on_doc_optimization_toggle,
+            bootstyle="round-toggle"
+        )
+        self.doc_enable_optimization_check.pack(side=tk.LEFT, padx=(0, scale(5)))
+        
+        optimization_check_info = create_info_icon(
+            optimization_container,
+            "启用针对特定文档类型的优化转换\n"
+            "公文：识别公文元素，生成YAML元数据",
+            bootstyle="info"
+        )
+        optimization_check_info.pack(side=tk.LEFT, padx=(0, scale(10)))
+        
+        self.doc_optimization_type_var = tk.StringVar(value=default_optimization_type)
+        self.doc_optimization_type_combo = tb.Combobox(
+            optimization_container,
+            textvariable=self.doc_optimization_type_var,
+            values=["公文"],
+            state="readonly" if default_enable_optimization else "disabled",
+            width=10
+        )
+        self.doc_optimization_type_combo.pack(side=tk.LEFT)
+        
+        # ===== 第4行：清除原有文档小标题序号 =====
+        self.doc_remove_numbering_var = tk.BooleanVar(value=default_remove_numbering)
+        remove_numbering_container = tb.Frame(checkbox_container, bootstyle="default")
+        remove_numbering_container.grid(
+            row=3, column=0, columnspan=2, sticky="w",
+            padx=(scale(10), scale(10)), pady=(0, scale(5))
+        )
+        
+        doc_remove_numbering_check = tb.Checkbutton(
+            remove_numbering_container,
+            text="清除原有文档小标题序号",
+            variable=self.doc_remove_numbering_var,
+            bootstyle="round-toggle"
+        )
+        doc_remove_numbering_check.pack(side=tk.LEFT, padx=(0, scale(5)))
+        
+        remove_numbering_info = create_info_icon(
+            remove_numbering_container,
+            "自动识别并去除文档中已有的标题序号",
+            bootstyle="info"
+        )
+        remove_numbering_info.pack(side=tk.LEFT)
+        
+        # ===== 第5行：新增小标题序号 + 下拉框 =====
+        self.doc_add_numbering_var = tk.BooleanVar(value=default_add_numbering)
+        add_numbering_container = tb.Frame(checkbox_container, bootstyle="default")
+        add_numbering_container.grid(
+            row=4, column=0, columnspan=2, sticky="w",
+            padx=(scale(10), scale(10)), pady=(0, scale(5))
+        )
+        
+        doc_add_numbering_check = tb.Checkbutton(
+            add_numbering_container,
+            text="新增小标题序号",
+            variable=self.doc_add_numbering_var,
+            command=self._on_doc_add_numbering_toggle,
+            bootstyle="round-toggle"
+        )
+        doc_add_numbering_check.pack(side=tk.LEFT, padx=(0, scale(5)))
+        
+        add_numbering_info = create_info_icon(
+            add_numbering_container,
+            "根据选择的序号方案为 Markdown 小标题添加序号",
+            bootstyle="info"
+        )
+        add_numbering_info.pack(side=tk.LEFT, padx=(0, scale(10)))
+        
+        self.doc_numbering_scheme_var = tk.StringVar(value=default_scheme_name)
+        self.doc_numbering_scheme_combo = tb.Combobox(
+            add_numbering_container,
+            textvariable=self.doc_numbering_scheme_var,
+            values=scheme_names,
+            state="disabled" if not default_add_numbering else "readonly",
+            width=15
+        )
+        self.doc_numbering_scheme_combo.pack(side=tk.LEFT)
+        
+        logger.debug("文档文件转换按钮创建完成（含导出选项、优化选项和序号选项）")
+    
+    def _on_doc_optimization_toggle(self):
+        """处理针对优化复选框切换事件"""
+        if self.doc_enable_optimization_var.get():
+            self.doc_optimization_type_combo.config(state="readonly")
+            logger.debug("针对优化已启用，下拉框可选")
+        else:
+            self.doc_optimization_type_combo.config(state="disabled")
+            logger.debug("针对优化已禁用，下拉框灰色")
+    
+    def _on_doc_add_numbering_toggle(self):
+        """处理文档转MD"添加标题序号"复选框切换事件"""
+        if hasattr(self, 'doc_add_numbering_var') and hasattr(self, 'doc_numbering_scheme_combo'):
+            if self.doc_add_numbering_var.get():
+                self.doc_numbering_scheme_combo.config(state="readonly")
+                logger.debug("文档转MD：添加序号已启用，序号方案下拉框可选")
+            else:
+                self.doc_numbering_scheme_combo.config(state="disabled")
+                logger.debug("文档转MD：添加序号已禁用，序号方案下拉框灰色")
+    
+    def _on_convert_document_to_md_clicked(self):
+        """处理文档转Markdown按钮点击事件"""
+        if self.on_action:
+            # 获取导出选项
+            extract_image = self.doc_extract_image_var.get() if hasattr(self, 'doc_extract_image_var') else True
+            extract_ocr = self.doc_extract_ocr_var.get() if hasattr(self, 'doc_extract_ocr_var') else False
+            
+            # 获取优化选项
+            enable_optimization = self.doc_enable_optimization_var.get() if hasattr(self, 'doc_enable_optimization_var') else False
+            optimization_type = self.doc_optimization_type_var.get() if hasattr(self, 'doc_optimization_type_var') else "公文"
+            
+            # 确定优化类型参数
+            if enable_optimization:
+                type_map = {"公文": "gongwen", "合同": "contract", "论文": "thesis"}
+                optimize_for_type = type_map.get(optimization_type, "gongwen")
+            else:
+                optimize_for_type = None
+            
+            # 构建选项字典
+            options = {
+                'extract_image': extract_image,
+                'extract_ocr': extract_ocr,
+                'optimize_for_type': optimize_for_type
+            }
+            
+            # 添加序号配置参数
+            if hasattr(self, 'doc_remove_numbering_var') and self.doc_remove_numbering_var is not None:
+                scheme_name_to_id = {
+                    "公文标准": "gongwen_standard",
+                    "层级数字标准": "hierarchical_standard",
+                    "法律条文标准": "legal_standard"
+                }
+                options['doc_remove_numbering'] = self.doc_remove_numbering_var.get()
+                options['doc_add_numbering'] = self.doc_add_numbering_var.get()
+                if hasattr(self, 'doc_numbering_scheme_var') and self.doc_numbering_scheme_var is not None:
+                    scheme_name = self.doc_numbering_scheme_var.get()
+                    options['doc_numbering_scheme'] = scheme_name_to_id.get(scheme_name, "gongwen_standard")
+            
+            logger.info(
+                f"文档转Markdown - 导出选项: "
+                f"提取图片={extract_image}, OCR={extract_ocr}, "
+                f"优化类型={optimize_for_type}"
+            )
+            self.on_action("convert_document_to_md", self.file_path, options)
+    
+    # ==================== 表格转MD ====================
+    
+    def setup_for_spreadsheet_file(self, file_path: str, file_list: List[str] = None):
+        """
+        设置为表格文件处理模式
+        
+        为XLSX/XLS/CSV等表格文件显示：
+        - 导出Markdown按钮
+        - 导出选项（提取图片、图片文字识别）
+        
+        参数：
+            file_path: 表格文件路径
+            file_list: 文件列表（批量模式时用于更新按钮状态）
+        """
+        logger.debug(f"设置表格文件处理模式: {file_path}")
+        self.file_type = "spreadsheet"
+        self.file_path = file_path
+        self._clear_buttons()
+        self._clear_options()
+        self._create_spreadsheet_to_md_button()
+        self.status_var.set("准备处理表格文件")
+        logger.info("表格文件操作面板设置完成")
+    
+    def _create_spreadsheet_to_md_button(self):
+        """创建表格文件转换按钮"""
+        logger.debug("创建表格转换按钮（含导出选项）")
+        
+        # 导出Markdown按钮
+        self.convert_spreadsheet_to_md_button = tb.Button(
+            self.button_container,
+            text="✏️ 导出 Markdown",
+            command=self._on_convert_spreadsheet_to_md_clicked,
+            bootstyle=self.button_colors['success'],
+            **self.button_style_1
+        )
+        self.convert_spreadsheet_to_md_button.grid(row=0, column=0, pady=(0, scale(10)))
+        ToolTip(
+            self.convert_spreadsheet_to_md_button,
+            "将表格转换为Markdown格式\n可选：提取图片、图片文字识别（OCR）"
+        )
+        
+        # 导出选项边框
+        table_export_options_frame = tb.Labelframe(
+            self.button_container,
+            text="导出选项",
+            bootstyle="info"
+        )
+        table_export_options_frame.grid(
+            row=1, column=0, sticky="ew", padx=scale(20), pady=scale(10)
+        )
+        
+        table_export_options_frame.grid_rowconfigure(0, weight=1)
+        table_export_options_frame.grid_columnconfigure(0, weight=1)
+        
+        # 从配置读取默认值
+        try:
+            default_extract_image = self.config_manager.get_xlsx_to_md_keep_images()
+            default_extract_ocr = self.config_manager.get_xlsx_to_md_enable_ocr()
+        except Exception as e:
+            logger.warning(f"读取表格转MD配置失败，使用默认值: {e}")
+            default_extract_image = True
+            default_extract_ocr = False
+        
+        # 创建选项变量
+        self.table_extract_image_var = tk.BooleanVar(value=default_extract_image)
+        self.table_extract_ocr_var = tk.BooleanVar(value=default_extract_ocr)
+        
+        # 创建导出选项处理器
+        self._table_export_handler = ExportOptionHandler(
+            self.table_extract_image_var,
+            self.table_extract_ocr_var
+        )
+        
+        # 多选框容器
+        checkbox_container = tb.Frame(table_export_options_frame, bootstyle="default")
+        checkbox_container.grid(row=0, column=0, sticky="", padx=scale(10), pady=scale(10))
+        checkbox_container.grid_columnconfigure(0, weight=0)
+        checkbox_container.grid_columnconfigure(1, weight=0)
+        
+        # 提取图片 + 信息图标
+        extract_image_container = tb.Frame(checkbox_container, bootstyle="default")
+        extract_image_container.grid(row=0, column=0, sticky="w", padx=(scale(10), scale(20)))
+        
+        self.table_extract_image_check = tb.Checkbutton(
+            extract_image_container,
+            text="提取图片",
+            variable=self.table_extract_image_var,
+            command=self._table_export_handler.on_option_changed,
+            bootstyle="round-toggle"
+        )
+        self.table_extract_image_check.pack(side=tk.LEFT, padx=(0, scale(5)))
+        
+        extract_image_info = create_info_icon(
+            extract_image_container,
+            "无损提取嵌入的图片文件，并在Markdown文件中添加链接。",
+            bootstyle="info"
+        )
+        extract_image_info.pack(side=tk.LEFT)
+        
+        # 图片文字识别 + 信息图标
+        extract_ocr_container = tb.Frame(checkbox_container, bootstyle="default")
+        extract_ocr_container.grid(row=0, column=1, sticky="w", padx=(0, scale(10)))
+        
+        self.table_extract_ocr_check = tb.Checkbutton(
+            extract_ocr_container,
+            text="图片文字识别",
+            variable=self.table_extract_ocr_var,
+            command=self._table_export_handler.on_option_changed,
+            bootstyle="round-toggle"
+        )
+        self.table_extract_ocr_check.pack(side=tk.LEFT, padx=(0, scale(5)))
+        
+        extract_ocr_info = create_info_icon(
+            extract_ocr_container,
+            "对嵌入的图片进行OCR（离线），\n"
+            "结果输出至单独的Markdown文件，\n"
+            "并将文件链接添加至主要Markdown文件中。\n"
+            "耗时可能较长",
+            bootstyle="info"
+        )
+        extract_ocr_info.pack(side=tk.LEFT)
+        
+        logger.debug("表格文件转换按钮创建完成")
+    
+    def _on_convert_spreadsheet_to_md_clicked(self):
+        """处理表格转Markdown按钮点击事件"""
+        if self.on_action:
+            extract_image = self.table_extract_image_var.get() if hasattr(self, 'table_extract_image_var') else False
+            extract_ocr = self.table_extract_ocr_var.get() if hasattr(self, 'table_extract_ocr_var') else False
+            
+            options = {
+                'extract_image': extract_image,
+                'extract_ocr': extract_ocr
+            }
+            
+            logger.info(f"表格转Markdown - 导出选项: 提取图片={extract_image}, OCR={extract_ocr}")
+            self.on_action("convert_spreadsheet_to_md", self.file_path, options)
+    
+    # ==================== 图片转MD ====================
+    
+    def setup_for_image_file(self, file_path: str):
+        """
+        设置为图片文件处理模式
+        
+        为图片文件显示：
+        - 导出Markdown按钮（OCR识别）
+        - 导出选项（提取图片、图片文字识别）
+        
+        参数：
+            file_path: 图片文件路径
+        """
+        logger.debug(f"设置图片文件处理模式: {file_path}")
+        self.file_type = "image"
+        self.file_path = file_path
+        self._clear_buttons()
+        self._clear_options()
+        self._create_image_conversion_buttons()
+        self.status_var.set("准备处理图片文件")
+        logger.info("图片文件操作面板设置完成")
+    
+    def _create_image_conversion_buttons(self):
+        """创建图片文件转换按钮"""
+        logger.debug("创建图片转换按钮")
+        
+        # 导出Markdown按钮
+        self.convert_image_to_md_button = tb.Button(
+            self.button_container,
+            text="✏️ 导出 Markdown",
+            command=self._on_convert_image_to_md_clicked,
+            bootstyle=self.button_colors['success'],
+            **self.button_style_1
+        )
+        self.convert_image_to_md_button.grid(row=0, column=0, pady=(0, scale(10)))
+        ToolTip(
+            self.convert_image_to_md_button,
+            "将图片转换为Markdown格式\n可选：提取图片、图片文字识别（OCR）"
+        )
+        
+        # 导出选项边框
+        export_options_frame = tb.Labelframe(
+            self.button_container,
+            text="导出选项",
+            bootstyle="info"
+        )
+        export_options_frame.grid(row=1, column=0, sticky="ew", padx=scale(20), pady=scale(10))
+        
+        export_options_frame.grid_rowconfigure(0, weight=1)
+        export_options_frame.grid_columnconfigure(0, weight=1)
+        
+        # 从配置读取默认值
+        try:
+            default_extract_image = self.config_manager.get_image_to_md_keep_images()
+            default_extract_ocr = self.config_manager.get_image_to_md_enable_ocr()
+        except Exception as e:
+            logger.warning(f"读取图片转MD配置失败，使用默认值: {e}")
+            default_extract_image = True
+            default_extract_ocr = False
+        
+        # 创建选项变量
+        self.image_extract_image_var = tk.BooleanVar(value=default_extract_image)
+        self.image_extract_ocr_var = tk.BooleanVar(value=default_extract_ocr)
+        
+        # 创建导出选项处理器，带状态变化回调
+        self._image_export_handler = ExportOptionHandler(
+            self.image_extract_image_var,
+            self.image_extract_ocr_var,
+            on_state_changed=self._on_image_export_state_changed
+        )
+        
+        # 多选框容器
+        checkbox_container = tb.Frame(export_options_frame, bootstyle="default")
+        checkbox_container.grid(row=0, column=0, sticky="", padx=scale(10), pady=scale(10))
+        checkbox_container.grid_columnconfigure(0, weight=0)
+        checkbox_container.grid_columnconfigure(1, weight=0)
+        
+        # 提取图片 + 信息图标
+        extract_image_container = tb.Frame(checkbox_container, bootstyle="default")
+        extract_image_container.grid(row=0, column=0, sticky="w", padx=(scale(10), scale(20)))
+        
+        self.extract_image_check = tb.Checkbutton(
+            extract_image_container,
+            text="提取图片",
+            variable=self.image_extract_image_var,
+            command=self._image_export_handler.on_option_changed,
+            bootstyle="round-toggle"
+        )
+        self.extract_image_check.pack(side=tk.LEFT, padx=(0, scale(5)))
+        
+        extract_image_info = create_info_icon(
+            extract_image_container,
+            "在Markdown文件中插入图片链接。",
+            bootstyle="info"
+        )
+        extract_image_info.pack(side=tk.LEFT)
+        
+        # 图片文字识别 + 信息图标
+        extract_ocr_container = tb.Frame(checkbox_container, bootstyle="default")
+        extract_ocr_container.grid(row=0, column=1, sticky="w", padx=(0, scale(10)))
+        
+        self.extract_image_ocr_check = tb.Checkbutton(
+            extract_ocr_container,
+            text="图片文字识别",
+            variable=self.image_extract_ocr_var,
+            command=self._image_export_handler.on_option_changed,
+            bootstyle="round-toggle"
+        )
+        self.extract_image_ocr_check.pack(side=tk.LEFT, padx=(0, scale(5)))
+        
+        extract_ocr_info = create_info_icon(
+            extract_ocr_container,
+            "对图片进行OCR（离线），耗时可能较长",
+            bootstyle="info"
+        )
+        extract_ocr_info.pack(side=tk.LEFT)
+        
+        logger.debug("图片转换按钮创建完成")
+    
+    def _on_image_export_state_changed(self):
+        """处理图片导出选项状态变化"""
+        # 至少勾选一个选项才启用按钮
+        should_enable = self._image_export_handler.is_any_selected()
+        if hasattr(self, 'convert_image_to_md_button') and self.convert_image_to_md_button:
+            self.convert_image_to_md_button.config(state="normal" if should_enable else "disabled")
+    
+    def _on_convert_image_to_md_clicked(self):
+        """处理图片转Markdown按钮点击事件"""
+        if self.on_action:
+            extract_image = self.image_extract_image_var.get() if hasattr(self, 'image_extract_image_var') else True
+            extract_ocr = self.image_extract_ocr_var.get() if hasattr(self, 'image_extract_ocr_var') else True
+            
+            options = {
+                'extract_image': extract_image,
+                'extract_ocr': extract_ocr
+            }
+            
+            logger.info(f"图片转Markdown - 导出选项: 提取图片={extract_image}, OCR={extract_ocr}")
+            self.on_action("convert_image_to_md", self.file_path, options)
+    
+    # ==================== 版式转MD ====================
+    
+    def setup_for_layout_file(self, file_path: str):
+        """
+        设置为版式文件处理模式
+        
+        为PDF/OFD等版式文件显示导出Markdown按钮和提取选项。
+        
+        参数：
+            file_path: 版式文件路径
+        """
+        logger.debug(f"设置版式文件处理模式: {file_path}")
+        self.file_type = "layout"
+        self.file_path = file_path
+        self._clear_buttons()
+        self._clear_options()
+        self._create_layout_conversion_buttons()
+        self.status_var.set("准备处理版式文件")
+        logger.info("版式文件操作面板设置完成")
+    
+    def _create_layout_conversion_buttons(self):
+        """创建PDF文件转换按钮"""
+        logger.debug("创建PDF转换按钮")
+        
+        # 导出Markdown按钮
+        self.convert_layout_to_md_button = tb.Button(
+            self.button_container,
+            text="✏️ 导出 Markdown",
+            command=self._on_convert_layout_to_md_clicked,
+            bootstyle=self.button_colors['success'],
+            **self.button_style_1
+        )
+        self.convert_layout_to_md_button.grid(row=0, column=0, pady=(0, scale(10)))
+        ToolTip(
+            self.convert_layout_to_md_button,
+            "将版式文件转换为Markdown格式\n可选：提取图片、图片文字识别（OCR）"
+        )
+        
+        # 提取选项边框
+        extraction_frame = tb.Labelframe(
+            self.button_container,
+            text="提取选项",
+            bootstyle="info"
+        )
+        extraction_frame.grid(row=1, column=0, sticky="ew", padx=scale(20), pady=scale(10))
+        
+        extraction_frame.grid_rowconfigure(0, weight=1)
+        extraction_frame.grid_columnconfigure(0, weight=1)
+        
+        # 从配置读取默认值
+        try:
+            default_extract_images = self.config_manager.get_layout_to_md_keep_images()
+            default_extract_ocr = self.config_manager.get_layout_to_md_enable_ocr()
+        except Exception as e:
+            logger.warning(f"读取版式转MD配置失败，使用默认值: {e}")
+            default_extract_images = True
+            default_extract_ocr = False
+        
+        # 创建选项变量
+        self.pdf_extract_images_var = tk.BooleanVar(value=default_extract_images)
+        self.pdf_extract_ocr_var = tk.BooleanVar(value=default_extract_ocr)
+        
+        # 创建导出选项处理器
+        self._pdf_export_handler = ExportOptionHandler(
+            self.pdf_extract_images_var,
+            self.pdf_extract_ocr_var
+        )
+        
+        # 多选框容器
+        checkbox_container = tb.Frame(extraction_frame, bootstyle="default")
+        checkbox_container.grid(row=0, column=0, sticky="", padx=scale(10), pady=scale(10))
+        checkbox_container.grid_columnconfigure(0, weight=0)
+        checkbox_container.grid_columnconfigure(1, weight=0)
+        
+        # 提取图片 + 信息图标
+        extract_images_container = tb.Frame(checkbox_container, bootstyle="default")
+        extract_images_container.grid(row=0, column=0, sticky="w", padx=(scale(10), scale(20)))
+        
+        self.extract_images_check = tb.Checkbutton(
+            extract_images_container,
+            text="提取图片",
+            variable=self.pdf_extract_images_var,
+            command=self._pdf_export_handler.on_option_changed,
+            bootstyle="round-toggle"
+        )
+        self.extract_images_check.pack(side=tk.LEFT, padx=(0, scale(5)))
+        
+        extract_images_info = create_info_icon(
+            extract_images_container,
+            "无损提取嵌入的图片文件，并在Markdown文件中添加链接。",
+            bootstyle="info"
+        )
+        extract_images_info.pack(side=tk.LEFT)
+        
+        # 图片文字识别 + 信息图标
+        extract_ocr_container = tb.Frame(checkbox_container, bootstyle="default")
+        extract_ocr_container.grid(row=0, column=1, sticky="w", padx=(0, scale(10)))
+        
+        self.extract_ocr_check = tb.Checkbutton(
+            extract_ocr_container,
+            text="图片文字识别",
+            variable=self.pdf_extract_ocr_var,
+            command=self._pdf_export_handler.on_option_changed,
+            bootstyle="round-toggle"
+        )
+        self.extract_ocr_check.pack(side=tk.LEFT, padx=(0, scale(5)))
+        
+        extract_ocr_info = create_info_icon(
+            extract_ocr_container,
+            "对嵌入的图片进行OCR（离线），\n"
+            "结果输出至单独的Markdown文件，\n"
+            "并将文件链接添加至主要Markdown文件中。\n"
+            "耗时可能较长",
+            bootstyle="info"
+        )
+        extract_ocr_info.pack(side=tk.LEFT)
+        
+        logger.debug("PDF转换按钮创建完成")
+    
+    def _on_convert_layout_to_md_clicked(self):
+        """处理版式文件转Markdown按钮点击事件"""
+        if self.on_action:
+            extract_images = self.pdf_extract_images_var.get() if hasattr(self, 'pdf_extract_images_var') else False
+            extract_ocr = self.pdf_extract_ocr_var.get() if hasattr(self, 'pdf_extract_ocr_var') else False
+            
+            options = {
+                'extract_images': extract_images,
+                'extract_ocr': extract_ocr
+            }
+            
+            logger.info(f"版式文件转Markdown - 提取选项: 图片={extract_images}, OCR={extract_ocr}")
+            self.on_action("convert_layout_to_md", self.file_path, options)

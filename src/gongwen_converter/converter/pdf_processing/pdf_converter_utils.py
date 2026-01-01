@@ -381,14 +381,25 @@ def convert_pdf_to_docx(
     # 临时目录自动清理
 
 
-def _show_conversion_failed_dialog():
-    """显示友好的转换失败提示对话框"""
+def _show_conversion_failed_dialog(parent=None):
+    """
+    显示友好的转换失败提示对话框
+    
+    参数:
+        parent: 父窗口对象（可选，用于定位对话框）
+    """
     try:
-        import tkinter as tk
         from tkinter import messagebox
         
-        root = tk.Tk()
-        root.withdraw()
+        if parent is None:
+            # 如果没有提供父窗口，创建临时根窗口
+            import tkinter as tk
+            root = tk.Tk()
+            root.withdraw()
+            parent_window = root
+        else:
+            parent_window = parent
+            root = None
         
         messagebox.showerror(
             "PDF转换失败",
@@ -405,10 +416,12 @@ def _show_conversion_failed_dialog():
             "   pip install pdf2docx\n\n"
             "4. 或使用只提取文本(a)、只提取图片(b)、\n"
             "   只OCR(c)、图片+OCR(bc)等\n"
-            "   不需要外部工具的组合"
+            "   不需要外部工具的组合",
+            parent=parent_window
         )
         
-        root.destroy()
+        if root:
+            root.destroy()
     except Exception as e:
         logger.error(f"显示错误对话框失败: {e}")
 

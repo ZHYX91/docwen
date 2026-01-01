@@ -552,7 +552,7 @@ class FileDropArea(tb.Frame):
             
             # 显示文件格式验证警告（如有问题）
             validation_result = validate_file_format(self.file_path)
-            if not validation_result['is_match']:
+            if validation_result['warning_message']:
                 warning_label = tb.Label(
                     self.file_info_frame,
                     text=validation_result['warning_message'],

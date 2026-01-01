@@ -16,7 +16,7 @@ from gongwen_converter.config.config_manager import config_manager
 # 导入核心转换和处理函数
 from gongwen_converter.converter.md2docx.core import convert as convert_md_to_docx
 from gongwen_converter.docx_spell.core import process_docx
-from gongwen_converter.converter.formats.office import convert_docx_to_doc, convert_docx_to_rtf, docx_to_odt, OfficeSoftwareNotFoundError
+from gongwen_converter.converter.formats.office import convert_docx_to_doc, convert_docx_to_rtf, docx_to_odt, OfficeSoftwareNotFoundError, check_office_availability
 
 logger = logging.getLogger(__name__)
 
@@ -93,9 +93,14 @@ class BaseMdToDocumentStrategy(BaseStrategy):
                 
                 # 步骤1: MD转为初始DOCX (在临时目录中，使用副本)
                 update_progress("正在转换MD到DOCX...")
-                intermediate_docx_path = self._convert_md_to_initial_docx(
-                    temp_md, template_name, progress_callback, cancel_event, temp_dir, file_path
-                )
+                try:
+                    intermediate_docx_path = self._convert_md_to_initial_docx(
+                        temp_md, template_name, progress_callback, cancel_event, temp_dir, file_path, options
+                    )
+                except ValueError as ve:
+                    # 捕获已知的ValueError（如模板样式缺失），直接返回具体错误信息给界面
+                    return ConversionResult(success=False, message=str(ve), error=ve)
+                
                 if cancel_event and cancel_event.is_set():
                     return ConversionResult(success=False, message="操作已取消")
                 if not intermediate_docx_path:
@@ -151,7 +156,7 @@ class BaseMdToDocumentStrategy(BaseStrategy):
             logger.error(f"执行MD to Word策略时出错: {e}", exc_info=True)
             return ConversionResult(success=False, message=f"发生未知错误: {e}", error=e)
 
-    def _convert_md_to_initial_docx(self, md_path: str, template_name: str, progress_callback, cancel_event, temp_dir: str, original_md_path: str) -> Optional[str]:
+    def _convert_md_to_initial_docx(self, md_path: str, template_name: str, progress_callback, cancel_event, temp_dir: str, original_md_path: str, options: Optional[Dict[str, Any]] = None) -> Optional[str]:
         """
         将Markdown文件转换为初始的DOCX文件（第一步转换）。
         
@@ -162,6 +167,7 @@ class BaseMdToDocumentStrategy(BaseStrategy):
             cancel_event: 取消事件对象
             temp_dir: 临时目录路径
             original_md_path: 原始MD文件路径（用于生成文件名）
+            options: 转换选项字典，包含序号配置等
             
         Returns:
             Optional[str]: 成功时返回生成的DOCX文件路径，失败时返回None
@@ -183,9 +189,13 @@ class BaseMdToDocumentStrategy(BaseStrategy):
                 spell_check_option=0,
                 progress_callback=progress_callback,
                 cancel_event=cancel_event,
-                original_source_path=original_md_path
+                original_source_path=original_md_path,
+                options=options
             )
             return output_path
+        except ValueError:
+            # 如果是ValueError（如模板样式错误），直接向上抛出，不要在这里吞掉
+            raise
         except Exception as e:
             logger.error(f"_convert_md_to_initial_docx失败: {e}", exc_info=True)
             return None
@@ -369,6 +379,25 @@ class MdToOdtStrategy(BaseMdToDocumentStrategy):
     - 未校对：标记为 "fromMd"
     - 已校对：标记为 "checked"
     """
+    
+    def execute(
+        self,
+        file_path: str,
+        options: Optional[Dict[str, Any]] = None,
+        progress_callback: Optional[Callable[[str], None]] = None
+    ) -> ConversionResult:
+        """
+        执行Markdown到ODT的转换，开始前进行软件可用性预检查。
+        """
+        # 预检查：ODT格式需要Microsoft Word或LibreOffice，WPS不支持
+        available, error_msg = check_office_availability('odt')
+        if not available:
+            logger.error(f"ODT转换预检查失败: {error_msg}")
+            raise OfficeSoftwareNotFoundError(error_msg)
+        
+        # 调用父类的execute方法
+        return super().execute(file_path, options, progress_callback)
+    
     def _generate_final_path(self, file_path: str, was_checked: bool) -> str:
         """生成ODT输出路径"""
         description = "checked" if was_checked else "fromMd"
@@ -391,6 +420,12 @@ class MdToOdtStrategy(BaseMdToDocumentStrategy):
         Raises:
             OfficeSoftwareNotFoundError: 未找到Office或LibreOffice软件时抛出
         """
+        # 预检查：ODT格式需要Microsoft Word或LibreOffice，WPS不支持
+        available, error_msg = check_office_availability('odt')
+        if not available:
+            logger.error(f"ODT转换预检查失败: {error_msg}")
+            raise OfficeSoftwareNotFoundError(error_msg)
+        
         try:
             description = "checked" if was_checked else "fromMd"
             # 生成最终文件名
@@ -404,6 +439,8 @@ class MdToOdtStrategy(BaseMdToDocumentStrategy):
             
             # 返回临时目录中的路径
             return temp_output_path if result_path and os.path.exists(temp_output_path) else None
+        except OfficeSoftwareNotFoundError:
+            raise  # 预检查异常向上抛出
         except Exception as e:
             logger.error(f"MdToOdtStrategy._finalize_conversion失败: {e}", exc_info=True)
             return None

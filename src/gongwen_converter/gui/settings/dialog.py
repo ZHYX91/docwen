@@ -1,6 +1,11 @@
-"""
+﻿"""
 设置主对话框模块
-实现设置对话框的主窗口，包含通用、校对和日志三个选项卡
+
+实现设置对话框的主窗口，包含通用、文本、文档、表格、图片、版式、链接、格式、输出、日志等选项卡。
+
+国际化说明：
+所有用户可见文本通过 i18n 模块的 t() 函数获取，
+支持中英文界面切换。
 """
 
 import logging
@@ -15,6 +20,7 @@ from gongwen_converter.gui.components.base_dialog import BaseDialog
 from gongwen_converter.gui.core.theme_manager import get_theme_manager
 from gongwen_converter.gui.settings.config import DIALOG_CONFIG
 from gongwen_converter.utils.font_utils import get_small_font
+from gongwen_converter.i18n import t
 
 # 配置日志记录器
 logger = logging.getLogger()
@@ -35,7 +41,9 @@ class SettingsDialog(BaseDialog):
             config_manager: 配置管理器实例
             on_apply: 应用设置的回调函数
         """
-        super().__init__(main_window.root, title="设置 - 公文转换器", modal=True)
+        # 构建对话框标题：设置 - 应用名称
+        dialog_title = f"{t('settings.title')} - {t('common.app_name')}"
+        super().__init__(main_window.root, title=dialog_title, modal=True)
         logger.info("初始化设置主对话框")
 
         self.is_closing = False
@@ -107,13 +115,15 @@ class SettingsDialog(BaseDialog):
         
         # 创建选项卡
         self._create_general_tab()
-        self._create_link_tab()
-        self._create_output_tab()
-        self._create_logging_tab()
+        self._create_text_tab()
         self._create_document_tab()
         self._create_spreadsheet_tab()
         self._create_image_tab()
         self._create_layout_tab()
+        self._create_link_tab()
+        self._create_formatting_tab()
+        self._create_output_tab()
+        self._create_logging_tab()
         
         logger.debug("选项卡区域创建完成")
     
@@ -131,8 +141,8 @@ class SettingsDialog(BaseDialog):
                 lambda key, value: self._on_setting_changed("gui_config", key, value)
             )
             
-            # 添加到选项卡控件
-            self.notebook.add(general_tab, text="  通用  ")
+            # 添加到选项卡控件（使用国际化文本）
+            self.notebook.add(general_tab, text=f"  {t('settings.tabs.general')}  ")
             
             # 存储选项卡引用
             self.tabs["general"] = general_tab
@@ -145,6 +155,35 @@ class SettingsDialog(BaseDialog):
         except Exception as e:
             logger.error(f"创建通用设置选项卡失败: {str(e)}")
             self._show_tab_error("通用设置", str(e))
+    
+    def _create_text_tab(self):
+        """创建文本设置选项卡"""
+        logger.debug("创建文本设置选项卡")
+        
+        try:
+            from .text_tab import TextTab
+            
+            # 创建文本设置选项卡
+            text_tab = TextTab(
+                self.notebook,
+                self.config_manager,
+                lambda key, value: self._on_setting_changed("conversion_defaults", key, value)
+            )
+            
+            # 添加到选项卡控件（使用国际化文本）
+            self.notebook.add(text_tab, text=f"  {t('settings.tabs.text')}  ")
+            
+            # 存储选项卡引用
+            self.tabs["text"] = text_tab
+            
+            logger.debug("文本设置选项卡创建完成")
+            
+        except ImportError as e:
+            logger.error(f"导入文本设置选项卡失败: {str(e)}")
+            self._show_tab_error("文本设置", str(e))
+        except Exception as e:
+            logger.error(f"创建文本设置选项卡失败: {str(e)}")
+            self._show_tab_error("文本设置", str(e))
     
     def _create_link_tab(self):
         """创建链接设置选项卡"""
@@ -160,8 +199,8 @@ class SettingsDialog(BaseDialog):
                 lambda key, value: self._on_setting_changed("link_config", key, value)
             )
             
-            # 添加到选项卡控件
-            self.notebook.add(link_tab, text="  链接  ")
+            # 添加到选项卡控件（使用国际化文本）
+            self.notebook.add(link_tab, text=f"  {t('settings.tabs.link')}  ")
             
             # 存储选项卡引用
             self.tabs["link"] = link_tab
@@ -186,11 +225,11 @@ class SettingsDialog(BaseDialog):
             image_tab = ImageTab(
                 self.notebook,
                 self.config_manager,
-                lambda key, value: self._on_setting_changed("file_defaults", key, value)
+                lambda key, value: self._on_setting_changed("conversion_defaults", key, value)
             )
             
-            # 添加到选项卡控件
-            self.notebook.add(image_tab, text="  图片  ")
+            # 添加到选项卡控件（使用国际化文本）
+            self.notebook.add(image_tab, text=f"  {t('settings.tabs.image')}  ")
             
             # 存储选项卡引用
             self.tabs["image"] = image_tab
@@ -218,8 +257,8 @@ class SettingsDialog(BaseDialog):
                 lambda key, value: self._on_setting_changed("output_config", key, value)
             )
             
-            # 添加到选项卡控件
-            self.notebook.add(output_tab, text="  输出  ")
+            # 添加到选项卡控件（使用国际化文本）
+            self.notebook.add(output_tab, text=f"  {t('settings.tabs.output')}  ")
             
             # 存储选项卡引用
             self.tabs["output"] = output_tab
@@ -243,10 +282,10 @@ class SettingsDialog(BaseDialog):
             document_tab = DocumentTab(
                 self.notebook,
                 self.config_manager,
-                lambda key, value: self._on_setting_changed("file_defaults", key, value)
+                lambda key, value: self._on_setting_changed("conversion_defaults", key, value)
             )
             
-            self.notebook.add(document_tab, text="  文档  ")
+            self.notebook.add(document_tab, text=f"  {t('settings.tabs.document')}  ")
             self.tabs["document"] = document_tab
             
             logger.debug("文档设置选项卡创建完成")
@@ -268,10 +307,10 @@ class SettingsDialog(BaseDialog):
             spreadsheet_tab = SpreadsheetTab(
                 self.notebook,
                 self.config_manager,
-                lambda key, value: self._on_setting_changed("file_defaults", key, value)
+                lambda key, value: self._on_setting_changed("conversion_defaults", key, value)
             )
             
-            self.notebook.add(spreadsheet_tab, text="  表格  ")
+            self.notebook.add(spreadsheet_tab, text=f"  {t('settings.tabs.spreadsheet')}  ")
             self.tabs["spreadsheet"] = spreadsheet_tab
             
             logger.debug("表格设置选项卡创建完成")
@@ -293,10 +332,10 @@ class SettingsDialog(BaseDialog):
             layout_tab = LayoutTab(
                 self.notebook,
                 self.config_manager,
-                lambda key, value: self._on_setting_changed("file_defaults", key, value)
+                lambda key, value: self._on_setting_changed("conversion_defaults", key, value)
             )
             
-            self.notebook.add(layout_tab, text="  版式  ")
+            self.notebook.add(layout_tab, text=f"  {t('settings.tabs.layout')}  ")
             self.tabs["layout"] = layout_tab
             
             logger.debug("版式设置选项卡创建完成")
@@ -307,6 +346,35 @@ class SettingsDialog(BaseDialog):
         except Exception as e:
             logger.error(f"创建版式设置选项卡失败: {str(e)}")
             self._show_tab_error("版式设置", str(e))
+    
+    def _create_formatting_tab(self):
+        """创建格式设置选项卡"""
+        logger.debug("创建格式设置选项卡")
+        
+        try:
+            from .formatting_tab import FormattingTab
+            
+            # 创建格式设置选项卡
+            formatting_tab = FormattingTab(
+                self.notebook,
+                self.config_manager,
+                lambda key, value: self._on_setting_changed("conversion_config", key, value)
+            )
+            
+            # 添加到选项卡控件（使用国际化文本）
+            self.notebook.add(formatting_tab, text=f"  {t('settings.tabs.formatting')}  ")
+            
+            # 存储选项卡引用
+            self.tabs["formatting"] = formatting_tab
+            
+            logger.debug("格式设置选项卡创建完成")
+            
+        except ImportError as e:
+            logger.error(f"导入格式设置选项卡失败: {str(e)}")
+            self._show_tab_error("格式设置", str(e))
+        except Exception as e:
+            logger.error(f"创建格式设置选项卡失败: {str(e)}")
+            self._show_tab_error("格式设置", str(e))
     
     def _create_logging_tab(self):
         """创建日志设置选项卡"""
@@ -322,8 +390,8 @@ class SettingsDialog(BaseDialog):
                 lambda key, value: self._on_setting_changed("logger_config", key, value)
             )
             
-            # 添加到选项卡控件
-            self.notebook.add(logging_tab, text="  日志  ")
+            # 添加到选项卡控件（使用国际化文本）
+            self.notebook.add(logging_tab, text=f"  {t('settings.tabs.logging')}  ")
             
             # 存储选项卡引用
             self.tabs["logging"] = logging_tab
@@ -376,7 +444,7 @@ class SettingsDialog(BaseDialog):
         # 应用按钮
         apply_button = tb.Button(
             button_frame,
-            text="应用",
+            text=t("common.apply"),
             command=self._on_apply,
             bootstyle="success",
             width=10
@@ -386,7 +454,7 @@ class SettingsDialog(BaseDialog):
         # 确定按钮（应用并关闭）
         ok_button = tb.Button(
             button_frame,
-            text="确定",
+            text=t("common.ok"),
             command=self._on_ok,
             bootstyle="primary",
             width=10
@@ -396,7 +464,7 @@ class SettingsDialog(BaseDialog):
         # 取消按钮
         cancel_button = tb.Button(
             button_frame,
-            text="取消",
+            text=t("common.cancel"),
             command=self._on_cancel,
             bootstyle="secondary",
             width=10
@@ -500,7 +568,7 @@ class SettingsDialog(BaseDialog):
                 
                 # 3. 显示成功消息
                 logger.debug("显示成功消息...")
-                self._show_status("设置已应用", "success")
+                self._show_status(t("settings.status.applied"), "success")
                 
                 # 4. 清空修改的设置
                 logger.debug("清空 modified_settings...")
@@ -509,14 +577,14 @@ class SettingsDialog(BaseDialog):
             else:
                 # 显示错误消息
                 logger.error("保存设置失败")
-                self._show_status("应用设置失败，请查看日志", "danger")
+                self._show_status(t("settings.status.apply_failed"), "danger")
             
             logger.info("=" * 60)
                 
         except Exception as e:
             logger.error("=" * 60)
             logger.error(f"应用按钮处理过程中发生异常: {type(e).__name__}: {str(e)}", exc_info=True)
-            self._show_status(f"应用失败: {str(e)}", "danger")
+            self._show_status(f"{t('settings.status.apply_error')}: {str(e)}", "danger")
             logger.error("=" * 60)
     
     def _apply_all_settings(self) -> bool:
@@ -531,6 +599,13 @@ class SettingsDialog(BaseDialog):
             if not general_success:
                 success = False
                 logger.error("应用通用设置失败")
+        
+        # 应用文本设置
+        if "text" in self.tabs:
+            text_success = self.tabs["text"].apply_settings()
+            if not text_success:
+                success = False
+                logger.error("应用文本设置失败")
         
         # 应用链接设置
         if "link" in self.tabs:
@@ -580,6 +655,13 @@ class SettingsDialog(BaseDialog):
             if not layout_success:
                 success = False
                 logger.error("应用版式设置失败")
+        
+        # 应用格式设置
+        if "formatting" in self.tabs:
+            formatting_success = self.tabs["formatting"].apply_settings()
+            if not formatting_success:
+                success = False
+                logger.error("应用格式设置失败")
         
         logger.debug(f"所有设置应用结果: {success}")
         return success

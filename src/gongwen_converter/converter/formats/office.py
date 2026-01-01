@@ -337,14 +337,25 @@ def _convert_with_libreoffice(
         return None
 
 
-def _show_software_not_found_dialog():
-    """显示友好的软件未找到提示对话框"""
+def _show_software_not_found_dialog(parent=None):
+    """
+    显示友好的软件未找到提示对话框
+    
+    参数:
+        parent: 父窗口对象（可选，用于定位对话框）
+    """
     try:
-        import tkinter as tk
         from tkinter import messagebox
         
-        root = tk.Tk()
-        root.withdraw()
+        if parent is None:
+            # 如果没有提供父窗口，创建临时根窗口
+            import tkinter as tk
+            root = tk.Tk()
+            root.withdraw()
+            parent_window = root
+        else:
+            parent_window = parent
+            root = None
         
         messagebox.showerror(
             "格式转换失败",
@@ -358,10 +369,12 @@ def _show_software_not_found_dialog():
             "建议解决方案：\n\n"
             "1. 安装任一办公软件\n"
             "2. 确保软件版本支持该格式转换\n"
-            "3. 重启软件后重试"
+            "3. 重启软件后重试",
+            parent=parent_window
         )
         
-        root.destroy()
+        if root:
+            root.destroy()
     except Exception as e:
         logger.error(f"显示错误对话框失败: {e}")
 

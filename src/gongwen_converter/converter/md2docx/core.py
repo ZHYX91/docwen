@@ -14,8 +14,12 @@ import threading
 from typing import Callable, Optional
 from docx import Document
 
-from . import md_processor, docx_processor
-from gongwen_converter.template.loader import load_docx_template
+from .processors import md_processor
+from .processors import docx_processor
+from .style.injector import ensure_styles
+from .handlers.notes_part_handler import ensure_notes_parts
+from .handlers.numbering_handler import ensure_numbering_part
+from gongwen_converter.template.loader import TemplateLoader
 from gongwen_converter.utils.validation_utils import is_value_empty
 from gongwen_converter.utils.heading_utils import convert_to_halfwidth
 from gongwen_converter.docx_spell.core import process_docx
@@ -27,13 +31,13 @@ logger = logging.getLogger(__name__)
 
 # 附件序号清理正则
 ATTACH_NUM_PATTERN = re.compile(
-    r'^[一二三四五六七八九十]+、|'  # 中文序号
+    r'^[一二三四五六七八九十㈠㈡㈢㈣㈤㈥㈦㈧㈨㈩]+、|'  # 中文序号（含带括号中文数字）
     r'^（[一二三四五六七八九十]+）|'  # 带括号中文序号
     r'^\d+[\.．]\s*|'  # 半角数字 + 点
     r'^[０１２３４５６７８９]+[\.．]\s*|'  # 全角数字 + 点
     r'^（\d+）\s*|'  # 带括号半角数字
     r'^（[０１２３４５６７８９]+）\s*|'  # 带括号全角数字
-    r'^[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳㉑㉒㉓㉔㉕㉖㉗㉘㉙㉚㉛㉜㉝㉞㉟㊱㊲㊳㊴㊵㊶㊷㊸㊹㊺㊻㊼㊽㊾㊿]\s*'  # 带圈数字
+    r'^[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳㉑㉒㉓㉔㉕㉖㉗㉘㉙㉚㉛㉜㉝㉞㉟㊱㊲㊳㊴㊵㊶㊷㊸㊹㊺㊻㊼㊽㊾㊿⓪⓵⓶⓷⓸⓹⓺⓻⓼⓽⓾⓿❶❷❸❹❺❻❼❽❾❿⓫⓬⓭⓮⓯⓰⓱⓲⓳⓴]\s*'  # 带圈数字
 )
 
 
@@ -45,7 +49,8 @@ def convert(
     spell_check_option: int = 0,
     progress_callback: Optional[Callable[[str], None]] = None,
     cancel_event: Optional[threading.Event] = None,
-    original_source_path: Optional[str] = None
+    original_source_path: Optional[str] = None,
+    options: Optional[dict] = None
 ) -> Optional[str]:
     """
     将Markdown文件转换为DOCX文档
@@ -65,6 +70,7 @@ def convert(
         progress_callback: 进度回调函数
         cancel_event: 取消事件
         original_source_path: 原始源文件路径（用于嵌入功能的路径解析，可选）
+        options: 转换选项字典，包含序号配置等
     
     返回:
         str: 输出文件完整路径，失败时返回None
@@ -96,12 +102,13 @@ def convert(
             # 3. 在临时目录生成临时输出文件
             temp_output = os.path.join(temp_dir, "temp_output.docx")
             
-            # 4. 在临时目录转换（传递原始文件路径用于标题提取）
+            # 4. 在临时目录转换（传递原始文件路径用于标题提取和options）
             success = _convert_internal(
                 yaml_data, md_body, temp_output,
                 template_name, spell_check_option,
                 progress_callback, cancel_event,
-                original_source_path if original_source_path else md_path
+                original_source_path if original_source_path else md_path,
+                options
             )
             
             if not success:
@@ -133,6 +140,11 @@ def convert(
             logger.info(f"MD转DOCX成功: {output_path}")
             return output_path
         
+    except ValueError:
+        # 精确放行：让ValueError（如样式缺失）向上冒泡，以便上层捕获并显示给用户
+        raise
+    except ValueError:
+        raise
     except Exception as e:
         logger.error(f"MD转DOCX失败: {e}", exc_info=True)
         return None
@@ -171,44 +183,40 @@ def _read_and_parse_md(temp_md_path: str, original_md_path: str = None) -> tuple
     
     yaml_data = yaml_utils.parse_yaml(yaml_content)
     
-    # 新增：处理所有Markdown链接（嵌入和非嵌入，如果启用）
-    from gongwen_converter.config.config_manager import config_manager
-    if config_manager.is_embedding_enabled():
-        try:
-            from gongwen_converter.utils.link_embedding import process_markdown_links
-            
-            # 使用原始文件路径进行路径解析（如果提供），否则使用临时路径
-            source_path_for_resolve = original_md_path if original_md_path else temp_md_path
-            
-            # 1. 处理YAML字段值中的链接
-            logger.info("开始处理YAML字段值中的链接...")
-            
-            def process_yaml_links(data, source_path):
-                """递归处理YAML数据结构中的所有链接"""
-                if isinstance(data, dict):
-                    return {k: process_yaml_links(v, source_path) for k, v in data.items()}
-                elif isinstance(data, list):
-                    return [process_yaml_links(item, source_path) for item in data]
-                elif isinstance(data, str):
-                    # 对字符串调用链接处理（depth=0，允许嵌套展开）
-                    return process_markdown_links(data, source_path, set(), depth=0)
-                else:
-                    return data
-            
-            yaml_data = process_yaml_links(yaml_data, source_path_for_resolve)
-            logger.info("YAML字段链接处理完成")
-            
-            # 2. 处理Markdown内容中的链接
-            logger.info("开始处理Markdown内容中的链接...")
-            original_length = len(md_body)
-            md_body = process_markdown_links(md_body, source_path_for_resolve)
-            new_length = len(md_body)
-            logger.info(f"Markdown内容链接处理完成 | 长度变化: {original_length} → {new_length}")
-        except Exception as e:
-            logger.error(f"处理Markdown链接失败: {e}", exc_info=True)
-            logger.warning("将继续使用原始MD内容")
-    else:
-        logger.debug("嵌入功能未启用，跳过链接处理")
+    # 处理所有Markdown链接（嵌入和非嵌入）
+    try:
+        from gongwen_converter.utils.link_processing import process_markdown_links
+        
+        # 使用原始文件路径进行路径解析（如果提供），否则使用临时路径
+        source_path_for_resolve = original_md_path if original_md_path else temp_md_path
+        
+        # 1. 处理YAML字段值中的链接
+        logger.info("开始处理YAML字段值中的链接...")
+        
+        def process_yaml_links(data, source_path):
+            """递归处理YAML数据结构中的所有链接"""
+            if isinstance(data, dict):
+                return {k: process_yaml_links(v, source_path) for k, v in data.items()}
+            elif isinstance(data, list):
+                return [process_yaml_links(item, source_path) for item in data]
+            elif isinstance(data, str):
+                # 对字符串调用链接处理（depth=0，允许嵌套展开）
+                return process_markdown_links(data, source_path, set(), depth=0)
+            else:
+                return data
+        
+        yaml_data = process_yaml_links(yaml_data, source_path_for_resolve)
+        logger.info("YAML字段链接处理完成")
+        
+        # 2. 处理Markdown内容中的链接
+        logger.info("开始处理Markdown内容中的链接...")
+        original_length = len(md_body)
+        md_body = process_markdown_links(md_body, source_path_for_resolve)
+        new_length = len(md_body)
+        logger.info(f"Markdown内容链接处理完成 | 长度变化: {original_length} → {new_length}")
+    except Exception as e:
+        logger.error(f"处理Markdown链接失败: {e}", exc_info=True)
+        logger.warning("将继续使用原始MD内容")
     
     return yaml_data, md_body
 
@@ -221,7 +229,8 @@ def _convert_internal(
     spell_check_option: int,
     progress_callback,
     cancel_event,
-    md_path: str = None
+    md_path: str = None,
+    options: Optional[dict] = None
 ) -> bool:
     """
     内部转换实现
@@ -237,6 +246,7 @@ def _convert_internal(
         progress_callback: 进度回调
         cancel_event: 取消事件
         md_path: 原始MD文件路径（用于从文件名提取标题）
+        options: 转换选项字典，包含序号配置等
     
     返回:
         bool: 转换是否成功
@@ -250,25 +260,82 @@ def _convert_internal(
         yaml_data['标题'] = _get_title_from_yaml(yaml_data, md_path)
         logger.debug(f"设置标题: {yaml_data['标题']}")
         
-        # 3. 处理Markdown正文
+        # 3. 处理Markdown正文（支持序号配置）
         if progress_callback:
             progress_callback("正在处理Markdown正文...")
         logger.debug("处理Markdown正文...")
-        processed_body = md_processor.process_md_body(md_body)
-        logger.info(f"正文处理完成, 生成 {len(processed_body)} 个段落")
         
-        # 4. 加载模板
+        # 提取序号配置参数
+        if options is None:
+            options = {}
+        
+        remove_numbering = options.get('md_remove_numbering', False)
+        add_numbering = options.get('md_add_numbering', False)
+        scheme_name = options.get('md_numbering_scheme', 'gongwen_standard')
+        
+        # 创建序号格式化器（如果需要添加序号）
+        formatter = None
+        if add_numbering:
+            from gongwen_converter.utils.heading_numbering import get_formatter_from_config
+            from gongwen_converter.config.config_manager import config_manager
+            formatter = get_formatter_from_config(config_manager, scheme_name)
+            if not formatter:
+                logger.warning(f"无法创建序号格式化器（方案：{scheme_name}），将不添加序号")
+                add_numbering = False
+        
+        logger.info(f"处理Markdown正文：清除序号={remove_numbering}, 添加序号={add_numbering}")
+        
+        # 统一调用 process_md_body_with_notes（处理正文并提取脚注/尾注）
+        processed_body, footnotes, endnotes = md_processor.process_md_body_with_notes(
+            md_body, 
+            remove_numbering=remove_numbering,
+            add_numbering=add_numbering,
+            formatter=formatter
+        )
+        
+        logger.info(f"正文处理完成, 生成 {len(processed_body)} 个段落, 脚注: {len(footnotes)} 个, 尾注: {len(endnotes)} 个")
+        
+        # 4. 加载模板（先确保标题样式存在）
         if progress_callback:
             progress_callback("正在加载Word模板...")
         logger.debug(f"加载Word模板: {template_name}")
-        doc = load_docx_template(template_name)
+        
+        # 获取原始模板路径，检查并注入缺失的标题样式
+        # 使用统一的临时目录清理回调
+        temp_dirs_to_cleanup = []
+        def cleanup_temp_dir(temp_dir):
+            temp_dirs_to_cleanup.append(temp_dir)
+        
+        template_loader = TemplateLoader()
+        original_template_path = template_loader.get_template_path("docx", template_name)
+        processed_template_path = ensure_styles(original_template_path, progress_callback, cleanup_callback=cleanup_temp_dir)
+        
+        # 如果有脚注或尾注，确保模板包含脚注/尾注Part
+        if footnotes or endnotes:
+            processed_template_path = ensure_notes_parts(processed_template_path, cleanup_callback=cleanup_temp_dir)
+            logger.info("已确保模板包含脚注/尾注Part")
+        
+        # 如果有列表项，确保模板包含numbering.xml
+        has_list_items = any(item.get('type') == 'list_item' for item in processed_body)
+        if has_list_items:
+            processed_template_path = ensure_numbering_part(processed_template_path, cleanup_callback=cleanup_temp_dir)
+            logger.info("已确保模板包含numbering.xml")
+        
+        # 如果返回了临时路径（说明注入了样式或添加了Part），使用临时路径加载
+        if processed_template_path != original_template_path:
+            from docx import Document as DocxDocument
+            doc = DocxDocument(processed_template_path)
+            logger.info(f"使用增强后的临时模板: {processed_template_path}")
+        else:
+            doc = template_loader.load_docx_template(template_name)
+        
         logger.info("模板加载成功")
         
-        # 5. 替换占位符
+        # 5. 替换占位符（传递脚注/尾注数据）
         if progress_callback:
             progress_callback("正在填充模板内容...")
         logger.debug("处理模板占位符...")
-        success = _process_docx_template(doc, output_path, yaml_data, processed_body)
+        success = _process_docx_template(doc, output_path, yaml_data, processed_body, template_name, footnotes, endnotes)
         
         if not success:
             logger.error("在模板处理过程中发生错误")
@@ -298,9 +365,20 @@ def _convert_internal(
         logger.info(f"转换成功! DOCX文件已保存到: {output_path}")
         return True
         
+    except ValueError:
+        raise
     except Exception as e:
         logger.error(f"内部转换失败: {e}", exc_info=True)
         return False
+    finally:
+        # 清理 ensure_notes_parts 创建的临时目录
+        for temp_dir in temp_dirs_to_cleanup:
+            try:
+                if os.path.isdir(temp_dir):
+                    shutil.rmtree(temp_dir)
+                    logger.debug(f"已清理临时目录: {temp_dir}")
+            except Exception as e:
+                logger.warning(f"清理临时目录失败: {temp_dir}, 错误: {e}")
 
 
 def _get_title_from_yaml(yaml_data: dict, md_path: str = None) -> str:
@@ -345,11 +423,27 @@ def _get_title_from_yaml(yaml_data: dict, md_path: str = None) -> str:
     return "标题"
 
 
-def _process_docx_template(doc: Document, output_path: str, yaml_data: dict, body_data: list) -> bool:
-    """处理DOCX模板并保存结果"""
+def _process_docx_template(doc: Document, output_path: str, yaml_data: dict, body_data: list, 
+                           template_name: str = None, footnotes: dict = None, endnotes: dict = None) -> bool:
+    """
+    处理DOCX模板并保存结果
+    
+    参数:
+        doc: Document对象
+        output_path: 输出路径
+        yaml_data: YAML数据
+        body_data: 正文数据
+        template_name: 模板名称
+        footnotes: 脚注字典 {id: content}
+        endnotes: 尾注字典 {id: content}
+    
+    返回:
+        bool: 是否成功
+    """
     try:
         logger.debug("替换模板中的占位符...")
-        temp_path = docx_processor.replace_placeholders(doc, yaml_data, body_data)
+        temp_path = docx_processor.replace_placeholders(doc, yaml_data, body_data, template_name, 
+                                                        footnotes=footnotes, endnotes=endnotes)
         
         output_dir = os.path.dirname(output_path)
         os.makedirs(output_dir, exist_ok=True)
@@ -361,7 +455,12 @@ def _process_docx_template(doc: Document, output_path: str, yaml_data: dict, bod
             return False
             
         return True
+    except ValueError:
+        # 精确放行：如果是我们预期的业务错误（如缺少样式），直接向上抛出
+        # 这样上层策略就能捕获到具体的错误信息并显示给用户
+        raise
     except Exception as e:
+        # 其他未知错误，记录日志并返回False（显示通用错误信息）
         logger.error(f"处理DOCX模板时发生错误: {str(e)}", exc_info=True)
         return False
 

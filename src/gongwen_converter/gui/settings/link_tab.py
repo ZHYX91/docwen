@@ -1,4 +1,4 @@
-"""
+﻿"""
 链接设置选项卡模块
 
 实现设置对话框的链接设置选项卡，包含：
@@ -18,8 +18,28 @@ from ttkbootstrap.constants import *
 
 from gongwen_converter.gui.settings.base_tab import BaseSettingsTab
 from gongwen_converter.gui.settings.config import SectionStyle
+from gongwen_converter.utils.dpi_utils import scale
 
 logger = logging.getLogger(__name__)
+
+# 图片链接样式映射（配置值 <-> 显示值）
+IMAGE_STYLE_OPTIONS = ["Markdown嵌入显示", "Markdown链接", "Wiki嵌入显示", "Wiki链接"]
+IMAGE_STYLE_CONFIG_MAP = {
+    "Markdown嵌入显示": "markdown_embed",
+    "Markdown链接": "markdown_link",
+    "Wiki嵌入显示": "wiki_embed",
+    "Wiki链接": "wiki_link"
+}
+IMAGE_STYLE_DISPLAY_MAP = {v: k for k, v in IMAGE_STYLE_CONFIG_MAP.items()}
+
+# MD文件链接样式映射（配置值 <-> 显示值）
+MD_FILE_STYLE_OPTIONS = ["Markdown链接", "Wiki嵌入显示", "Wiki链接"]
+MD_FILE_STYLE_CONFIG_MAP = {
+    "Markdown链接": "markdown_link",
+    "Wiki嵌入显示": "wiki_embed",
+    "Wiki链接": "wiki_link"
+}
+MD_FILE_STYLE_DISPLAY_MAP = {v: k for k, v in MD_FILE_STYLE_CONFIG_MAP.items()}
 
 
 class LinkTab(BaseSettingsTab):
@@ -56,7 +76,7 @@ class LinkTab(BaseSettingsTab):
     
     def _create_markdown_link_format_section(self):
         """
-        创建Markdown链接格式设置区域
+        创建Markdown链接格式设置区域（两列布局）
         
         配置生成MD时的链接格式（适用于所有生成MD的场景）
         
@@ -73,10 +93,9 @@ class LinkTab(BaseSettingsTab):
         # 说明文本
         desc = tb.Label(
             frame,
-            text="设置生成MD时的链接格式（适用于文档、表格、版式、图片OCR等所有场景）",
+            text="设置生成的Markdown文件中的链接格式",
             bootstyle="secondary",
-            wraplength=450,
-            justify="left"
+            wraplength=scale(450)
         )
         desc.pack(anchor="w", pady=(0, 10))
         
@@ -86,70 +105,61 @@ class LinkTab(BaseSettingsTab):
         except Exception as e:
             logger.warning(f"读取链接配置失败，使用默认值: {e}")
             settings = {
-                "image_link_format": "wiki",
-                "image_embed": True,
-                "md_file_link_format": "wiki",
-                "md_file_embed": True
+                "image_link_style": "wiki_embed",
+                "md_file_link_style": "wiki_embed"
             }
         
-        # 图片链接格式
-        image_format = settings.get("image_link_format", "wiki")
-        image_format_display = "Wiki链接" if image_format == "wiki" else "Markdown链接"
-        self.image_link_format_var = tk.StringVar(value=image_format_display)
-        self.create_combobox_with_info(
-            frame,
+        # 创建两列容器
+        columns_frame = tb.Frame(frame)
+        columns_frame.pack(fill="x")
+        columns_frame.columnconfigure(0, weight=1)
+        columns_frame.columnconfigure(1, weight=1)
+        
+        left_column = tb.Frame(columns_frame)
+        left_column.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
+        
+        right_column = tb.Frame(columns_frame)
+        right_column.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
+        
+        # 左列 - 图片链接样式下拉框
+        image_style = settings.get("image_link_style", "wiki_embed")
+        image_style_display = IMAGE_STYLE_DISPLAY_MAP.get(image_style, "Wiki嵌入显示")
+        self.image_link_style_var = tk.StringVar(value=image_style_display)
+        self._create_column_combobox(
+            left_column,
             "图片链接格式:",
-            self.image_link_format_var,
-            ["Markdown链接", "Wiki链接"],
-            "Markdown格式: ![image.png](image.png) 或 [image.png](image.png)\n"
-            "Wiki格式: ![[image.png]] 或 [[image.png]]（适用于Obsidian等）",
-            self._on_image_link_format_changed
+            self.image_link_style_var,
+            IMAGE_STYLE_OPTIONS,
+            "设置图片在MD文件中的链接格式\n\n"
+            "• Markdown嵌入显示: ![alt](image.png)\n"
+            "• Markdown链接: [alt](image.png)\n"
+            "• Wiki嵌入显示: ![[image.png]] (Obsidian)\n"
+            "• Wiki链接: [[image.png]] (Obsidian)",
+            self._on_image_link_style_changed
         )
         
-        # 图片是否嵌入
-        self.image_embed_var = tk.BooleanVar(value=settings.get("image_embed", True))
-        self.create_checkbox_with_info(
-            frame,
-            "图片嵌入显示",
-            self.image_embed_var,
-            "启用: 显示图片内容（带!前缀）\n"
-            "禁用: 仅作为链接（不带!前缀）\n\n"
-            "Markdown: ![](url) vs [](url)\n"
-            "Wiki: ![[url]] vs [[url]]",
-            self._on_image_embed_changed
-        )
-        
-        # MD文件链接格式
-        md_format = settings.get("md_file_link_format", "wiki")
-        md_format_display = "Wiki链接" if md_format == "wiki" else "Markdown链接"
-        self.md_file_link_format_var = tk.StringVar(value=md_format_display)
-        self.create_combobox_with_info(
-            frame,
+        # 右列 - MD文件链接样式下拉框
+        md_style = settings.get("md_file_link_style", "wiki_embed")
+        md_style_display = MD_FILE_STYLE_DISPLAY_MAP.get(md_style, "Wiki嵌入显示")
+        self.md_file_link_style_var = tk.StringVar(value=md_style_display)
+        self._create_column_combobox(
+            right_column,
             "MD文件链接格式:",
-            self.md_file_link_format_var,
-            ["Markdown链接", "Wiki链接"],
-            "Markdown格式: [file.md](file.md)（固定为链接，无嵌入模式）\n"
-            "Wiki格式: ![[file.md]] 或 [[file.md]]（可嵌入或链接）",
-            self._on_md_file_link_format_changed
-        )
-        
-        # MD文件是否嵌入（仅Wiki有效）
-        self.md_file_embed_var = tk.BooleanVar(value=settings.get("md_file_embed", True))
-        self.create_checkbox_with_info(
-            frame,
-            "MD文件嵌入显示（仅Wiki）",
-            self.md_file_embed_var,
-            "启用: ![[file.md]] 嵌入文件内容\n"
-            "禁用: [[file.md]] 仅作为链接\n\n"
-            "⚠️ 仅当选择Wiki链接格式时有效",
-            self._on_md_file_embed_changed
+            self.md_file_link_style_var,
+            MD_FILE_STYLE_OPTIONS,
+            "设置MD文件在MD文件中的链接格式\n\n"
+            "• Markdown链接: [file.md](file.md)\n"
+            "• Wiki嵌入显示: ![[file.md]] (Obsidian)\n"
+            "• Wiki链接: [[file.md]] (Obsidian)\n\n"
+            "注：Markdown格式不支持嵌入MD文件内容",
+            self._on_md_file_link_style_changed
         )
         
         logger.debug("Markdown链接格式设置区域创建完成")
     
     def _create_non_embed_links_section(self):
         """
-        创建非嵌入链接处理区域
+        创建非嵌入链接处理区域（两列布局）
         
         配置MD转文档/表格时如何处理普通链接
         
@@ -166,41 +176,52 @@ class LinkTab(BaseSettingsTab):
         # 说明文本
         desc = tb.Label(
             frame,
-            text="设置MD转文档/表格时如何处理普通链接（不带!前缀的链接）",
+            text="设置Markdown转文档/表格时，如何处理普通链接（不带!前缀的链接）",
             bootstyle="secondary",
-            wraplength=450,
-            justify="left"
+            wraplength=scale(450)
         )
         desc.pack(anchor="w", pady=(0, 10))
         
-        # Wiki链接处理方式
+        # 创建两列容器
+        columns_frame = tb.Frame(frame)
+        columns_frame.pack(fill="x")
+        columns_frame.columnconfigure(0, weight=1)
+        columns_frame.columnconfigure(1, weight=1)
+        
+        left_column = tb.Frame(columns_frame)
+        left_column.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
+        
+        right_column = tb.Frame(columns_frame)
+        right_column.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
+        
+        # 左列 - Wiki链接处理方式
         wiki_mode = self.config_manager.get_wiki_link_mode()
         wiki_mode_display = self._mode_to_display(wiki_mode)
         self.wiki_link_mode_var = tk.StringVar(value=wiki_mode_display)
-        self.create_combobox_with_info(
-            frame,
-            "Wiki链接处理方式:",
+        self._create_column_combobox(
+            left_column,
+            "Wiki链接处理:",
             self.wiki_link_mode_var,
             ["保留原样", "提取文本", "完全移除"],
-            "处理 [[link]] 或 [[link|text]] 格式的链接\n\n"
+            "处理 [[link]] 或 [[link|text]] 格式\n\n"
             "保留原样: [[link|text]]\n"
-            "提取文本: text（去除链接标记）\n"
+            "提取文本: text（去除标记）\n"
             "完全移除: 删除整个链接",
             self._on_wiki_link_mode_changed
         )
         
-        # Markdown链接处理方式
+        # 右列 - Markdown链接处理方式
         markdown_mode = self.config_manager.get_markdown_link_mode()
         markdown_mode_display = self._mode_to_display(markdown_mode)
         self.markdown_link_mode_var = tk.StringVar(value=markdown_mode_display)
-        self.create_combobox_with_info(
-            frame,
-            "Markdown链接处理方式:",
+        self._create_column_combobox(
+            right_column,
+            "Markdown链接处理:",
             self.markdown_link_mode_var,
             ["保留原样", "提取文本", "完全移除"],
-            "处理 [text](url) 格式的链接\n\n"
+            "处理 [text](url) 格式\n\n"
             "保留原样: [text](url)\n"
-            "提取文本: text（去除链接标记）\n"
+            "提取文本: text（去除标记）\n"
             "完全移除: 删除整个链接",
             self._on_markdown_link_mode_changed
         )
@@ -209,7 +230,7 @@ class LinkTab(BaseSettingsTab):
     
     def _create_embed_links_section(self):
         """
-        创建嵌入链接处理区域
+        创建嵌入链接处理区域（混合布局）
         
         配置MD转文档/表格时如何处理嵌入链接
         
@@ -226,103 +247,214 @@ class LinkTab(BaseSettingsTab):
         # 说明文本
         desc = tb.Label(
             frame,
-            text="设置MD转文档/表格时如何处理嵌入链接（带!前缀的链接）",
+            text="设置Markdown转文档/表格时，如何处理嵌入链接（带!前缀的链接）",
             bootstyle="secondary",
-            wraplength=450,
-            justify="left"
+            wraplength=scale(450)
         )
         desc.pack(anchor="w", pady=(0, 10))
         
-        # 嵌入功能总开关
-        self.embedding_enabled_var = tk.BooleanVar(
-            value=self.config_manager.is_embedding_enabled()
-        )
-        self.create_checkbox_with_info(
-            frame,
-            "启用嵌入功能",
-            self.embedding_enabled_var,
-            "启用: 根据下面的设置处理嵌入链接\n"
-            "禁用: 嵌入链接按非嵌入方式处理（使用上面的设置）",
-            self._on_embedding_enabled_changed
-        )
+        # === 统一的 2行×2列 容器 ===
+        grid_frame = tb.Frame(frame)
+        grid_frame.pack(fill="x")
+        grid_frame.columnconfigure(0, weight=1, uniform="col")
+        grid_frame.columnconfigure(1, weight=1, uniform="col")
         
-        # 嵌入图片处理方式
-        embed_image_mode = self.config_manager.get_embed_image_mode()
-        embed_image_mode_display = self._embed_mode_to_display(embed_image_mode)
-        self.embed_image_mode_var = tk.StringVar(value=embed_image_mode_display)
-        self.create_combobox_with_info(
-            frame,
-            "嵌入图片处理方式:",
-            self.embed_image_mode_var,
+        # 创建4个单元格容器
+        cell_00 = tb.Frame(grid_frame)  # 第1行左列
+        cell_00.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
+        
+        cell_01 = tb.Frame(grid_frame)  # 第1行右列
+        cell_01.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
+        
+        cell_10 = tb.Frame(grid_frame)  # 第2行左列
+        cell_10.grid(row=1, column=0, sticky="nsew", padx=(0, 5))
+        
+        cell_11 = tb.Frame(grid_frame)  # 第2行右列
+        cell_11.grid(row=1, column=1, sticky="nsew", padx=(5, 0))
+        
+        # (0,0) Wiki嵌入图片处理方式
+        wiki_image_mode = self.config_manager.get_wiki_embed_image_mode()
+        wiki_image_mode_display = self._embed_mode_to_display(wiki_image_mode)
+        self.wiki_embed_image_mode_var = tk.StringVar(value=wiki_image_mode_display)
+        self._create_column_combobox(
+            cell_00,
+            "Wiki嵌入图片处理:",
+            self.wiki_embed_image_mode_var,
             ["保留原样", "提取文本", "完全移除", "插入内容"],
-            "处理 ![[image.png]] 或 ![](image.png) 格式\n\n"
+            "处理 ![[image.png]] 格式\n\n"
             "保留原样: ![[image.png]]\n"
             "提取文本: image.png\n"
             "完全移除: 删除链接\n"
-            "插入内容: 将图片实际插入到文档中",
-            self._on_embed_image_mode_changed
+            "插入内容: 将图片插入到文档中",
+            self._on_wiki_embed_image_mode_changed
         )
         
-        # 嵌入MD文件处理方式
+        # (0,1) Markdown嵌入图片处理方式
+        md_image_mode = self.config_manager.get_markdown_embed_image_mode()
+        md_image_mode_display = self._embed_mode_to_display(md_image_mode)
+        self.markdown_embed_image_mode_var = tk.StringVar(value=md_image_mode_display)
+        self._create_column_combobox(
+            cell_01,
+            "Markdown嵌入图片处理:",
+            self.markdown_embed_image_mode_var,
+            ["保留原样", "提取文本", "完全移除", "插入内容"],
+            "处理 ![alt](image.png) 格式\n\n"
+            "保留原样: ![alt](image.png)\n"
+            "提取文本: image.png\n"
+            "完全移除: 删除链接\n"
+            "插入内容: 将图片插入到文档中",
+            self._on_markdown_embed_image_mode_changed
+        )
+        
+        # (1,0) 嵌入MD文件处理方式
         embed_md_mode = self.config_manager.get_embed_md_file_mode()
         embed_md_mode_display = self._embed_mode_to_display(embed_md_mode)
         self.embed_md_file_mode_var = tk.StringVar(value=embed_md_mode_display)
-        self.create_combobox_with_info(
-            frame,
-            "嵌入MD文件处理方式:",
+        self._create_column_combobox(
+            cell_10,
+            "Wiki嵌入的其他Markdown文件处理:",
             self.embed_md_file_mode_var,
             ["保留原样", "提取文本", "完全移除", "插入内容"],
             "处理 ![[file.md]] 格式（仅Wiki支持）\n\n"
             "保留原样: ![[file.md]]\n"
             "提取文本: file.md\n"
             "完全移除: 删除链接\n"
-            "插入内容: 读取文件内容并递归处理后插入",
+            "插入内容: 递归处理后插入",
             self._on_embed_md_file_mode_changed
         )
         
-        # 最大嵌入深度
+        # (1,1) 最大嵌入深度
         max_depth = self.config_manager.get_max_embed_depth()
         self.max_depth_var = tk.StringVar(value=str(max_depth))
-        
-        depth_container = tb.Frame(frame)
-        depth_container.pack(fill="x", pady=(0, self.layout_config.widget_spacing))
-        
-        depth_label_frame = tb.Frame(depth_container)
-        depth_label_frame.pack(fill="x", pady=(0, self.layout_config.label_spacing))
-        
-        depth_label = tb.Label(
-            depth_label_frame,
-            text="最大嵌入深度:",
-            bootstyle="secondary"
-        )
-        depth_label.pack(side="left")
-        
-        from gongwen_converter.utils.gui_utils import create_info_icon
-        depth_info = create_info_icon(
-            depth_label_frame,
+        self._create_spinbox_in_column(
+            cell_11,
+            "最大嵌入深度:",
+            self.max_depth_var,
+            1, 10,
             "MD文件递归嵌入的最大深度\n"
             "防止无限递归和性能问题\n\n"
             "例如: A嵌入B，B嵌入C，C嵌入D...\n"
             "推荐值: 3-5",
-            "info"
+            self._on_max_depth_changed
         )
-        depth_info.pack(side="left", padx=(self.layout_config.widget_spacing, 0))
-        
-        depth_spinbox = tb.Spinbox(
-            depth_container,
-            from_=1,
-            to=10,
-            textvariable=self.max_depth_var,
-            bootstyle="secondary",
-            width=10,
-            command=self._on_max_depth_changed
-        )
-        depth_spinbox.pack(anchor="w")
-        # 绑定键盘事件
-        depth_spinbox.bind('<Return>', lambda e: self._on_max_depth_changed())
-        depth_spinbox.bind('<FocusOut>', lambda e: self._on_max_depth_changed())
         
         logger.debug("嵌入链接处理区域创建完成")
+    
+    def _create_column_combobox(
+        self,
+        parent: tk.Widget,
+        label_text: str,
+        variable: tk.StringVar,
+        values: list,
+        tooltip: str,
+        command=None,
+        disabled: bool = False
+    ) -> tb.Frame:
+        """
+        在指定列中创建带标签和信息图标的下拉框
+        
+        参数:
+            parent: 父组件（左列或右列）
+            label_text: 标签文本
+            variable: 绑定的StringVar变量
+            values: 下拉选项列表
+            tooltip: 工具提示文本
+            command: 选择改变时的回调函数
+            disabled: 是否禁用下拉框
+            
+        返回:
+            tb.Frame: 包含标签和下拉框的容器框架
+        """
+        from gongwen_converter.utils.gui_utils import create_info_icon
+        
+        # 创建容器
+        container = tb.Frame(parent)
+        container.pack(fill="x", pady=(0, self.layout_config.widget_spacing))
+        
+        # 创建标签行
+        label_frame = tb.Frame(container)
+        label_frame.pack(fill="x", pady=(0, self.layout_config.label_spacing))
+        
+        label = tb.Label(label_frame, text=label_text, bootstyle="secondary")
+        label.pack(side="left")
+        
+        info = create_info_icon(label_frame, tooltip, "info")
+        info.pack(side="left", padx=(self.layout_config.widget_spacing, 0))
+        
+        # 创建下拉框
+        combobox = tb.Combobox(
+            container,
+            textvariable=variable,
+            values=values,
+            state="disabled" if disabled else "readonly",
+            bootstyle="secondary"
+        )
+        combobox.pack(fill="x")
+        
+        # 绑定事件
+        if command and not disabled:
+            combobox.bind("<<ComboboxSelected>>", command)
+        
+        return container
+    
+    def _create_spinbox_in_column(
+        self,
+        parent: tk.Widget,
+        label_text: str,
+        variable: tk.StringVar,
+        from_val: int,
+        to_val: int,
+        tooltip: str,
+        command=None
+    ) -> tb.Frame:
+        """
+        在指定列中创建带标签和信息图标的Spinbox
+        
+        参数:
+            parent: 父组件（左列或右列）
+            label_text: 标签文本
+            variable: 绑定的StringVar变量
+            from_val: 最小值
+            to_val: 最大值
+            tooltip: 工具提示文本
+            command: 值改变时的回调函数
+            
+        返回:
+            tb.Frame: 包含标签和Spinbox的容器框架
+        """
+        from gongwen_converter.utils.gui_utils import create_info_icon
+        
+        # 创建容器
+        container = tb.Frame(parent)
+        container.pack(fill="x", pady=(0, self.layout_config.widget_spacing))
+        
+        # 创建标签行
+        label_frame = tb.Frame(container)
+        label_frame.pack(fill="x", pady=(0, self.layout_config.label_spacing))
+        
+        label = tb.Label(label_frame, text=label_text, bootstyle="secondary")
+        label.pack(side="left")
+        
+        info = create_info_icon(label_frame, tooltip, "info")
+        info.pack(side="left", padx=(self.layout_config.widget_spacing, 0))
+        
+        # 创建Spinbox
+        spinbox = tb.Spinbox(
+            container,
+            from_=from_val,
+            to=to_val,
+            textvariable=variable,
+            bootstyle="secondary",
+            command=command
+        )
+        spinbox.pack(fill="x")
+        
+        # 绑定键盘事件
+        if command:
+            spinbox.bind('<Return>', lambda e: command())
+            spinbox.bind('<FocusOut>', lambda e: command())
+        
+        return container
     
     # === 辅助方法：显示值和配置值转换 ===
     
@@ -366,31 +498,19 @@ class LinkTab(BaseSettingsTab):
     
     # === 事件处理方法 ===
     
-    def _on_image_link_format_changed(self, event=None):
-        """处理图片链接格式变更"""
-        display = self.image_link_format_var.get()
-        config_value = "wiki" if display == "Wiki链接" else "markdown"
-        logger.info(f"图片链接格式变更: {display} → {config_value}")
-        self.on_change("image_link_format", config_value)
+    def _on_image_link_style_changed(self, event=None):
+        """处理图片链接样式变更"""
+        display = self.image_link_style_var.get()
+        config_value = IMAGE_STYLE_CONFIG_MAP.get(display, "wiki_embed")
+        logger.info(f"图片链接样式变更: {display} → {config_value}")
+        self.on_change("image_link_style", config_value)
     
-    def _on_image_embed_changed(self):
-        """处理图片嵌入设置变更"""
-        value = self.image_embed_var.get()
-        logger.info(f"图片嵌入显示设置变更: {value}")
-        self.on_change("image_embed", value)
-    
-    def _on_md_file_link_format_changed(self, event=None):
-        """处理MD文件链接格式变更"""
-        display = self.md_file_link_format_var.get()
-        config_value = "wiki" if display == "Wiki链接" else "markdown"
-        logger.info(f"MD文件链接格式变更: {display} → {config_value}")
-        self.on_change("md_file_link_format", config_value)
-    
-    def _on_md_file_embed_changed(self):
-        """处理MD文件嵌入设置变更"""
-        value = self.md_file_embed_var.get()
-        logger.info(f"MD文件嵌入显示设置变更: {value}")
-        self.on_change("md_file_embed", value)
+    def _on_md_file_link_style_changed(self, event=None):
+        """处理MD文件链接样式变更"""
+        display = self.md_file_link_style_var.get()
+        config_value = MD_FILE_STYLE_CONFIG_MAP.get(display, "wiki_embed")
+        logger.info(f"MD文件链接样式变更: {display} → {config_value}")
+        self.on_change("md_file_link_style", config_value)
     
     def _on_wiki_link_mode_changed(self, event=None):
         """处理Wiki链接处理方式变更"""
@@ -406,18 +526,19 @@ class LinkTab(BaseSettingsTab):
         logger.info(f"Markdown链接处理方式变更: {display} → {config_value}")
         self.on_change("markdown_mode", config_value)
     
-    def _on_embedding_enabled_changed(self):
-        """处理嵌入功能开关变更"""
-        value = self.embedding_enabled_var.get()
-        logger.info(f"嵌入功能启用状态变更: {value}")
-        self.on_change("embedding_enabled", value)
-    
-    def _on_embed_image_mode_changed(self, event=None):
-        """处理嵌入图片处理方式变更"""
-        display = self.embed_image_mode_var.get()
+    def _on_wiki_embed_image_mode_changed(self, event=None):
+        """处理Wiki嵌入图片处理方式变更"""
+        display = self.wiki_embed_image_mode_var.get()
         config_value = self._display_to_embed_mode(display)
-        logger.info(f"嵌入图片处理方式变更: {display} → {config_value}")
-        self.on_change("embed_image_mode", config_value)
+        logger.info(f"Wiki嵌入图片处理方式变更: {display} → {config_value}")
+        self.on_change("wiki_image_mode", config_value)
+    
+    def _on_markdown_embed_image_mode_changed(self, event=None):
+        """处理Markdown嵌入图片处理方式变更"""
+        display = self.markdown_embed_image_mode_var.get()
+        config_value = self._display_to_embed_mode(display)
+        logger.info(f"Markdown嵌入图片处理方式变更: {display} → {config_value}")
+        self.on_change("markdown_image_mode", config_value)
     
     def _on_embed_md_file_mode_changed(self, event=None):
         """处理嵌入MD文件处理方式变更"""
@@ -449,27 +570,25 @@ class LinkTab(BaseSettingsTab):
         返回：
             Dict[str, Any]: 当前所有设置项的值
         """
-        # 图片链接格式
-        image_format_display = self.image_link_format_var.get()
-        image_format_config = "wiki" if image_format_display == "Wiki链接" else "markdown"
+        # 图片链接样式
+        image_style_display = self.image_link_style_var.get()
+        image_style_config = IMAGE_STYLE_CONFIG_MAP.get(image_style_display, "wiki_embed")
         
-        # MD文件链接格式
-        md_format_display = self.md_file_link_format_var.get()
-        md_format_config = "wiki" if md_format_display == "Wiki链接" else "markdown"
+        # MD文件链接样式
+        md_style_display = self.md_file_link_style_var.get()
+        md_style_config = MD_FILE_STYLE_CONFIG_MAP.get(md_style_display, "wiki_embed")
         
         settings = {
             # Markdown链接格式
-            "image_link_format": image_format_config,
-            "image_embed": self.image_embed_var.get(),
-            "md_file_link_format": md_format_config,
-            "md_file_embed": self.md_file_embed_var.get(),
+            "image_link_style": image_style_config,
+            "md_file_link_style": md_style_config,
             # 非嵌入链接处理
             "wiki_mode": self._display_to_mode(self.wiki_link_mode_var.get()),
             "markdown_mode": self._display_to_mode(self.markdown_link_mode_var.get()),
-            # 嵌入链接处理
-            "embedding_enabled": self.embedding_enabled_var.get(),
-            "embed_image_mode": self._display_to_embed_mode(self.embed_image_mode_var.get()),
-            "embed_md_file_mode": self._display_to_embed_mode(self.embed_md_file_mode_var.get()),
+            # 嵌入链接处理（拆分为Wiki和Markdown两种图片处理）
+            "wiki_image_mode": self._display_to_embed_mode(self.wiki_embed_image_mode_var.get()),
+            "markdown_image_mode": self._display_to_embed_mode(self.markdown_embed_image_mode_var.get()),
+            "md_file_mode": self._display_to_embed_mode(self.embed_md_file_mode_var.get()),
             "max_depth": int(self.max_depth_var.get())
         }
         
@@ -493,22 +612,12 @@ class LinkTab(BaseSettingsTab):
             
             # === Markdown链接格式 (format) ===
             if not self.config_manager.update_config_value(
-                "link_config", "format", "image_link_format", settings["image_link_format"]
+                "link_config", "format", "image_link_style", settings["image_link_style"]
             ):
                 success = False
             
             if not self.config_manager.update_config_value(
-                "link_config", "format", "image_embed", settings["image_embed"]
-            ):
-                success = False
-            
-            if not self.config_manager.update_config_value(
-                "link_config", "format", "md_file_link_format", settings["md_file_link_format"]
-            ):
-                success = False
-            
-            if not self.config_manager.update_config_value(
-                "link_config", "format", "md_file_embed", settings["md_file_embed"]
+                "link_config", "format", "md_file_link_style", settings["md_file_link_style"]
             ):
                 success = False
             
@@ -525,17 +634,17 @@ class LinkTab(BaseSettingsTab):
             
             # === 嵌入链接处理 (embed_links) ===
             if not self.config_manager.update_config_value(
-                "link_config", "embed_links", "enabled", settings["embedding_enabled"]
+                "link_config", "embed_links", "wiki_image_mode", settings["wiki_image_mode"]
             ):
                 success = False
             
             if not self.config_manager.update_config_value(
-                "link_config", "embed_links", "image_mode", settings["embed_image_mode"]
+                "link_config", "embed_links", "markdown_image_mode", settings["markdown_image_mode"]
             ):
                 success = False
             
             if not self.config_manager.update_config_value(
-                "link_config", "embed_links", "md_file_mode", settings["embed_md_file_mode"]
+                "link_config", "embed_links", "md_file_mode", settings["md_file_mode"]
             ):
                 success = False
             

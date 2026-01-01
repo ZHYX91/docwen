@@ -391,6 +391,8 @@ class MainWindow(ScalableMixin):
             self.conversion_panel.hide()
         if self.template_selector:
             self.template_selector.show()
+            # 智能刷新模板列表（仅在模板目录内容变化时更新）
+            self.template_selector.refresh_templates()
         
         if not self.template_panel_visible:
             logger.info("模板面板当前不可见，准备显示")
@@ -824,6 +826,10 @@ class MainWindow(ScalableMixin):
                 if not preview_only:
                     self.default_theme = theme_name
                 logger.info(f"主题成功切换为: {theme_name}")
+                
+                # 刷新装饰区域（斜线条纹颜色跟随主题）
+                if hasattr(self, 'conversion_panel') and self.conversion_panel:
+                    self.conversion_panel.refresh_decoration()
             else:
                 # 只在非预览模式下显示错误
                 if not preview_only:

@@ -42,7 +42,8 @@ def create_argument_parser() -> argparse.ArgumentParser:
         choices=[
             'export_md', 'convert', 'validate',
             'merge_tables', 'merge_pdfs', 'split_pdf',
-            'merge_images_to_tiff'
+            'merge_images_to_tiff',
+            'process_md_numbering'
         ],
         help='操作类型'
     )
@@ -197,6 +198,28 @@ def create_argument_parser() -> argparse.ArgumentParser:
         help='详细模式（显示更多信息）'
     )
     
+    # ========== 序号处理选项 ==========
+    numbering_group = parser.add_argument_group('序号选项', '用于小标题序号处理（适用于export_md/convert/process_md_numbering）')
+    
+    numbering_group.add_argument(
+        '--remove-numbering',
+        action='store_true',
+        help='清除原有小标题序号'
+    )
+    
+    numbering_group.add_argument(
+        '--add-numbering',
+        action='store_true',
+        help='新增小标题序号'
+    )
+    
+    numbering_group.add_argument(
+        '--numbering-scheme',
+        choices=['gongwen_standard', 'hierarchical_standard', 'legal_standard'],
+        default='gongwen_standard',
+        help='序号方案：gongwen_standard（公文标准）、hierarchical_standard（层级数字标准）、legal_standard（法律条文标准）'
+    )
+    
     # ========== AI功能 ==========
     ai_group = parser.add_argument_group('AI功能', 'AI自描述和查询功能')
     
@@ -210,6 +233,12 @@ def create_argument_parser() -> argparse.ArgumentParser:
         '--list-actions',
         action='store_true',
         help='列出所有可用操作'
+    )
+    
+    ai_group.add_argument(
+        '--list-numbering-schemes',
+        action='store_true',
+        help='列出所有可用的序号方案'
     )
     
     return parser
@@ -229,9 +258,12 @@ def execute_headless(args) -> int:
     """
     from gongwen_converter.cli import executor, utils
     
-    # 处理AI功能
+    # 处理查询功能
     if args.list_actions:
         return executor.list_all_actions(json_mode=args.json)
+    
+    if args.list_numbering_schemes:
+        return executor.list_numbering_schemes(json_mode=args.json)
     
     if args.inspect:
         if not args.files:
@@ -363,6 +395,31 @@ def build_options(args) -> dict:
     if args.quality_mode:
         options['quality_mode'] = args.quality_mode
     
+    # 序号处理选项（根据action决定前缀）
+    if args.remove_numbering:
+        if args.action == 'export_md':
+            options['doc_remove_numbering'] = True
+        elif args.action == 'convert':
+            options['md_remove_numbering'] = True
+        elif args.action == 'process_md_numbering':
+            options['remove_numbering'] = True
+    
+    if args.add_numbering:
+        if args.action == 'export_md':
+            options['doc_add_numbering'] = True
+        elif args.action == 'convert':
+            options['md_add_numbering'] = True
+        elif args.action == 'process_md_numbering':
+            options['add_numbering'] = True
+    
+    if args.numbering_scheme:
+        if args.action == 'export_md':
+            options['doc_numbering_scheme'] = args.numbering_scheme
+        elif args.action == 'convert':
+            options['md_numbering_scheme'] = args.numbering_scheme
+        elif args.action == 'process_md_numbering':
+            options['numbering_scheme'] = args.numbering_scheme
+    
     return options
 
 
@@ -381,7 +438,7 @@ def main() -> int:
         args = parser.parse_args()
         
         # 判断模式
-        if args.action or args.inspect or args.list_actions:
+        if args.action or args.inspect or args.list_actions or args.list_numbering_schemes:
             # Headless模式
             return execute_headless(args)
         else:

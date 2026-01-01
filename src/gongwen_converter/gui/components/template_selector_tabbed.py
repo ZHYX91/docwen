@@ -6,7 +6,7 @@ import logging
 from typing import List, Dict, Callable, Optional, Tuple
 
 from gongwen_converter.gui.components.template_selector import TemplateSelector
-from gongwen_converter.template.loader import get_available_templates
+from gongwen_converter.template.loader import TemplateLoader
 
 import ttkbootstrap as tb
 from ttkbootstrap.constants import *
@@ -31,6 +31,7 @@ class TabbedTemplateSelector(tb.Frame):
         
         self.tabs: Dict[str, tb.Frame] = {}
         self.template_lists: Dict[str, TemplateSelector] = {}
+        self.template_loader = TemplateLoader()
         
         self.current_tab: Optional[str] = None
         
@@ -80,8 +81,40 @@ class TabbedTemplateSelector(tb.Frame):
     def _load_templates(self):
         logger.debug("加载模板")
         for category, template_list in self.template_lists.items():
-            templates = get_available_templates(category)
+            templates = self.template_loader.get_available_templates(category)
             template_list.add_templates(templates, auto_select_first=True)
+
+    def refresh_templates(self):
+        """
+        智能刷新模板列表
+        仅在模板目录内容发生变化时才更新UI，避免不必要的重绘
+        """
+        logger.debug("检查模板列表是否需要刷新")
+        
+        for category, template_list in self.template_lists.items():
+            # 获取最新的模板列表
+            new_templates = self.template_loader.get_available_templates(category)
+            current_templates = template_list.templates
+            
+            # 比较新旧列表（使用集合比较，忽略顺序）
+            if set(new_templates) != set(current_templates):
+                logger.info(f"模板列表已变化 [{category}]: {len(current_templates)} -> {len(new_templates)}")
+                
+                # 记录当前选中的模板
+                current_selected = template_list.get_selected()
+                
+                # 更新模板列表
+                template_list.add_templates(new_templates, auto_select_first=False)
+                
+                # 尝试恢复之前选中的模板，如果不存在则选择第一个
+                if current_selected and current_selected in new_templates:
+                    template_list._select_template(current_selected)
+                elif new_templates:
+                    template_list._select_template(new_templates[0])
+            else:
+                logger.debug(f"模板列表无变化 [{category}]，跳过刷新")
+        
+        logger.debug("模板列表刷新检查完成")
 
     def _on_tab_changed(self, event):
         selected_index = self.notebook.index("current")
@@ -128,6 +161,11 @@ class TabbedTemplateSelector(tb.Frame):
     def reset(self):
         """重置组件状态"""
         logger.debug("重置选项卡式模板选择器")
+        
+        # 先刷新模板列表，确保数据是最新的
+        self.refresh_templates()
+        
+        # 然后切换到第一个选项卡并选择第一个模板
         self.notebook.select(0)
         for template_list in self.template_lists.values():
             if template_list.templates:

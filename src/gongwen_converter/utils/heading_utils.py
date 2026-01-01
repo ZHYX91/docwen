@@ -16,6 +16,55 @@ CHINESE_NUMS = '一二三四五六七八九十'
 # 全角数字 (０-９)
 FULL_WIDTH_NUMS = '０１２３４５６７８９'
 
+# ==============================================
+# 序号清理规则 - 占位符定义（硬编码，不可配置）
+# ==============================================
+# 使用 raw string 避免转义问题
+NUMBERING_PLACEHOLDERS = {
+    # 空格类（包含各种空白字符）
+    "space": r"[\s\u3000\u00A0\u200B\uFEFF]",
+    
+    # 分隔符类
+    "sep": r"[\.．、，,。]",
+    
+    # 括号类
+    "bracket_open": r"[（(]",
+    "bracket_close": r"[)）]",
+    
+    # 阿拉伯数字
+    "num_arab_half": r"[0-9]",
+    "num_arab_full": r"[０-９]",
+    "num_arab": r"[0-9０-９]",
+    
+    # 中文数字
+    "num_cn_lower": r"[一二三四五六七八九十百千零]",
+    "num_cn_upper": r"[壹贰叁肆伍陆柒捌玖拾佰仟]",
+    "num_cn_paren": r"[㈠㈡㈢㈣㈤㈥㈦㈧㈨㈩]",                    # 带括号中文数字 (U+3220-U+3229)
+    "num_cn": r"[一二三四五六七八九十百千壹贰叁肆伍陆柒捌玖拾佰仟零㈠㈡㈢㈣㈤㈥㈦㈧㈨㈩]",  # 包含 num_cn_paren
+    
+    # 所有数字（中文+阿拉伯）
+    "num": r"[一二三四五六七八九十百千壹贰叁肆伍陆柒捌玖拾佰仟零㈠㈡㈢㈣㈤㈥㈦㈧㈨㈩0-9０-９]",
+    
+    # 拉丁字母
+    "letter_lower": r"[a-z]",
+    "letter_upper": r"[A-Z]",
+    "letter": r"[a-zA-Z]",
+    
+    # 带圈数字 - 分类定义（便于维护）
+    "circled_1_20": r"[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]",           # 带圈 1-20 (U+2460-U+2473)
+    "circled_21_35": r"[㉑㉒㉓㉔㉕㉖㉗㉘㉙㉚㉛㉜㉝㉞㉟]",             # 带圈 21-35 (U+3251-U+325F)
+    "circled_36_50": r"[㊱㊲㊳㊴㊵㊶㊷㊸㊹㊺㊻㊼㊽㊾㊿]",             # 带圈 36-50 (U+32B1-U+32BF)
+    "circled_double": r"[⓵⓶⓷⓸⓹⓺⓻⓼⓽⓾]",                        # 双圈 1-10 (U+24F5-U+24FE)
+    "circled_solid": r"[❶❷❸❹❺❻❼❽❾❿⓫⓬⓭⓮⓯⓰⓱⓲⓳⓴]",             # 实心带圈 1-20 (U+2776-U+277F, U+24EB-U+24F4)
+    "circled_zero": r"[⓪⓿]",                                        # 带圈零 (U+24EA, U+24FF)
+    # 组合占位符（供配置文件使用，包含所有带圈/特殊数字符号，含带括号中文数字）
+    "circled": r"[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳㉑㉒㉓㉔㉕㉖㉗㉘㉙㉚㉛㉜㉝㉞㉟㊱㊲㊳㊴㊵㊶㊷㊸㊹㊺㊻㊼㊽㊾㊿⓪⓵⓶⓷⓸⓹⓺⓻⓼⓽⓾⓿❶❷❸❹❺❻❼❽❾❿⓫⓬⓭⓮⓯⓰⓱⓲⓳⓴㈠㈡㈢㈣㈤㈥㈦㈧㈨㈩]",
+    
+    # 中文单位词
+    "unit_suffix": r"[回篇册卷部集期编章节条款项目]",
+    "unit_prefix": r"[卷篇册部集期编章节回]",
+}
+
 def detect_heading_level(text: str) -> tuple:
     """
     检测小标题级别并清理序号
@@ -69,8 +118,8 @@ def detect_heading_level(text: str) -> tuple:
         logger.info(f"识别为三级小标题 | 原始: '{original_text}' -> 清理后: '{cleaned}'")
         return cleaned, 3
     
-    # 二级小标题: 带括号中文数字 ((一), (二))
-    if re.match(r'^[（(][' + CHINESE_NUMS + '][)）]', cleaned_text):
+    # 二级小标题: 带括号中文数字 ((一), (二), (十一))
+    if re.match(r'^[（(][' + CHINESE_NUMS + r']+[)）]', cleaned_text):
         # 处理中英文括号混用 (兼容点号、顿号、逗号)
         cleaned = re.sub(r'^[（(][' + CHINESE_NUMS + r']+[)）][\s\.、，,。]?', '', cleaned_text)
         logger.info(f"识别为二级小标题 | 原始: '{original_text}' -> 清理后: '{cleaned}'")
@@ -86,6 +135,55 @@ def detect_heading_level(text: str) -> tuple:
     # 非小标题内容
     logger.info(f"非小标题内容: '{original_text}'")
     return cleaned_text, 0
+
+def remove_heading_numbering(text: str) -> str:
+    """
+    清除文本中的所有标题序号
+    
+    功能：
+    - 从配置文件加载清理规则（支持用户自定义）
+    - 支持标准小标题格式（一、/（一）/1./（1）/①）
+    - 支持法律条文格式（第X编/章/节/条/款/项）
+    - 支持数字格式变体（中文、阿拉伯、全角等）
+    - 不判定级别，只清除序号
+    
+    参数:
+        text: 原始文本
+        
+    返回:
+        str: 清除序号后的文本（如无序号则返回原文本）
+        
+    示例:
+        "第一章 内容" → "内容"
+        "（一）内容" → "内容"
+        "1. 内容" → "内容"
+        "普通文本" → "普通文本"
+    """
+    from gongwen_converter.config.config_manager import config_manager
+    
+    cleaned = text.strip()
+    original = cleaned
+    
+    # 从配置获取清理规则
+    rules = config_manager.get_cleaning_rules()
+    
+    # 按优先级顺序尝试每条规则
+    for rule in rules:
+        try:
+            pattern = re.compile(rule["compiled_regex"])
+            new_cleaned = pattern.sub('', cleaned)
+            
+            if new_cleaned != original:
+                logger.debug(f"规则 '{rule['name']}' 匹配成功: '{original}' -> '{new_cleaned}'")
+                return new_cleaned.strip()
+        except re.error as e:
+            logger.warning(f"规则 '{rule['name']}' 正则表达式错误: {e}")
+            continue
+    
+    # 无匹配，返回原文本
+    logger.debug(f"未检测到序号: '{original}'")
+    return cleaned
+
 
 def split_content_by_delimiters(text):
     """

@@ -1,4 +1,4 @@
-"""
+﻿"""
 表格设置选项卡模块
 
 实现设置对话框的表格设置选项卡，包含：
@@ -62,6 +62,11 @@ class SpreadsheetTab(BaseSettingsTab):
         self.ods_cards_frame: Optional[tb.Frame] = None
         self.spreadsheet_to_pdf_cards_frame: Optional[tb.Frame] = None
         
+        # 联动逻辑标志位和状态记录
+        self._updating_sheet_options: bool = False
+        self._sheet_last_image_state: bool = False
+        self._sheet_last_ocr_state: bool = False
+        
         # 加载配置
         self._load_settings_data(config_manager)
         
@@ -120,8 +125,8 @@ class SpreadsheetTab(BaseSettingsTab):
         
         frame = self.create_section_frame(
             self.scrollable_frame,
-            "提取/OCR设置",
-            SectionStyle.PRIMARY
+            "图片提取/OCR设置",
+            SectionStyle.DANGER
         )
         
         # 获取当前配置
@@ -151,6 +156,10 @@ class SpreadsheetTab(BaseSettingsTab):
             '表格转MD时默认勾选"图片文字识别"',
             self._on_sheet_ocr_changed
         )
+        
+        # 初始化状态记录
+        self._sheet_last_image_state = sheet_keep
+        self._sheet_last_ocr_state = sheet_ocr
     
     def _create_merge_mode_section(self):
         """创建汇总模式设置区域"""
@@ -457,16 +466,80 @@ class SpreadsheetTab(BaseSettingsTab):
     # ========== 事件处理 ==========
     
     def _on_sheet_keep_changed(self):
-        """处理提取图片设置变更"""
-        value = self.sheet_keep_var.get()
-        logger.info(f"表格提取图片设置变更: {value}")
-        self.on_change("to_md_keep_images", value)
+        """
+        处理提取图片设置变更
+        
+        实现联动逻辑：
+        1. 勾选OCR时，自动勾选"提取图片"
+        2. 取消"提取图片"时，自动取消OCR
+        """
+        if self._updating_sheet_options:
+            return
+        
+        try:
+            self._updating_sheet_options = True
+            
+            extract_image = self.sheet_keep_var.get()
+            extract_ocr = self.sheet_ocr_var.get()
+            
+            # 检测状态变化
+            image_changed = (extract_image != self._sheet_last_image_state)
+            
+            # 场景：用户取消提取图片（从有到无）
+            if not extract_image and self._sheet_last_image_state and image_changed:
+                if extract_ocr:
+                    logger.debug("表格设置：取消提取图片，自动取消OCR")
+                    self.sheet_ocr_var.set(False)
+            
+            # 更新状态记录
+            self._sheet_last_image_state = self.sheet_keep_var.get()
+            self._sheet_last_ocr_state = self.sheet_ocr_var.get()
+            
+            # 通知配置变更
+            value = self.sheet_keep_var.get()
+            logger.info(f"表格提取图片设置变更: {value}")
+            self.on_change("to_md_keep_images", value)
+        
+        finally:
+            self._updating_sheet_options = False
     
     def _on_sheet_ocr_changed(self):
-        """处理OCR设置变更"""
-        value = self.sheet_ocr_var.get()
-        logger.info(f"表格OCR设置变更: {value}")
-        self.on_change("to_md_enable_ocr", value)
+        """
+        处理OCR设置变更
+        
+        实现联动逻辑：
+        1. 勾选OCR时，自动勾选"提取图片"
+        2. 取消"提取图片"时，自动取消OCR
+        """
+        if self._updating_sheet_options:
+            return
+        
+        try:
+            self._updating_sheet_options = True
+            
+            extract_image = self.sheet_keep_var.get()
+            extract_ocr = self.sheet_ocr_var.get()
+            
+            # 检测状态变化
+            ocr_changed = (extract_ocr != self._sheet_last_ocr_state)
+            
+            # 场景：用户勾选OCR（从无到有）
+            if extract_ocr and not self._sheet_last_ocr_state and ocr_changed:
+                if not extract_image:
+                    logger.debug("表格设置：勾选OCR，自动勾选提取图片")
+                    self.sheet_keep_var.set(True)
+            
+            # 更新状态记录
+            self._sheet_last_image_state = self.sheet_keep_var.get()
+            self._sheet_last_ocr_state = self.sheet_ocr_var.get()
+            
+            # 通知配置变更
+            value = self.sheet_ocr_var.get()
+            logger.info(f"表格OCR设置变更: {value}")
+            self.on_change("to_md_enable_ocr", value)
+        
+        finally:
+            self._updating_sheet_options = False
     
     def _on_merge_mode_changed(self):
         """处理汇总模式变更"""
@@ -497,11 +570,11 @@ class SpreadsheetTab(BaseSettingsTab):
             settings = self.get_settings()
             success = True
             
-            # 保存到file_defaults.toml
-            file_defaults_keys = ["to_md_keep_images", "to_md_enable_ocr", "merge_mode"]
-            for key in file_defaults_keys:
+            # 保存到conversion_defaults.toml
+            conversion_defaults_keys = ["to_md_keep_images", "to_md_enable_ocr", "merge_mode"]
+            for key in conversion_defaults_keys:
                 if not self.config_manager.update_config_value(
-                    "file_defaults", "spreadsheet", key, settings[key]
+                    "conversion_defaults", "spreadsheet", key, settings[key]
                 ):
                     success = False
             

@@ -58,6 +58,7 @@ class SelectorManager:
         self.current_files: List[str] = []
         self.current_mode: str = "single"  # "single" 或 "batch"
         self.selected_file: Optional[FileInfo] = None  # 当前选中的文件
+        self._is_initializing: bool = True  # 初始化标志，用于区分启动状态
         
         # 绑定所有文件列表的选中回调
         self._bind_file_list_callbacks()
@@ -156,6 +157,11 @@ class SelectorManager:
             failed_files: 失败的文件和错误消息列表
         """
         logger.info(f"文件添加事件: {len(added_files)} 成功, {len(failed_files)} 失败")
+        
+        # 首次用户操作，清除初始化标志
+        if self._is_initializing:
+            self._is_initializing = False
+            logger.debug("清除初始化标志（文件添加事件）")
         
         # 显示状态消息
         if added_files:
@@ -457,9 +463,17 @@ class SelectorManager:
             hasattr(self.file_drop_area, '_switch_to_empty_state')):
             self.file_drop_area._switch_to_empty_state()
         
-        # 更新状态栏
-        category_name = get_category_name(self.current_category) if self.current_category else "当前"
-        status_msg = f"{category_name}选项卡无文件"
+        # 更新状态栏 - 根据初始化状态显示不同消息
+        if self._is_initializing:
+            # 启动阶段：显示友好的启动消息
+            status_msg = "软件启动"
+            logger.debug("初始化阶段，显示启动消息")
+        else:
+            # 正常使用阶段：显示具体的无文件提示
+            category_name = get_category_name(self.current_category) if self.current_category else "当前"
+            status_msg = f"{category_name}选项卡无文件"
+            logger.debug(f"正常阶段，显示无文件提示: {status_msg}")
+        
         self.status_bar.add_message(status_msg, "secondary", False)
     
     def _show_file_state(self, file_info: FileInfo, current_files: List[str]):

@@ -8,7 +8,7 @@ from .date_utils import convert_date_format, generate_timestamp
 from .text_utils import clean_text, safe_get, format_display_value
 from .number_utils import number_to_chinese, number_to_circled
 from .markdown_utils import extract_yaml, clean_heading
-from .heading_utils import split_content_by_delimiters, add_markdown_heading, detect_heading_level
+from .heading_utils import split_content_by_delimiters, add_markdown_heading, detect_heading_level, remove_heading_numbering
 
 __all__ = [
     'ensure_dir_exists',
@@ -26,5 +26,6 @@ __all__ = [
     'clean_heading',
     'split_content_by_delimiters',
     'add_markdown_heading',
-    'detect_heading_level'
+    'detect_heading_level',
+    'remove_heading_numbering'
 ]

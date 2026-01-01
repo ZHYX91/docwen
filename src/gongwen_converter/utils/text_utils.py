@@ -132,12 +132,28 @@ def replace_placeholder(text: str, yaml_data: dict) -> tuple:
     
     return text, should_delete, should_clear
 
+def convert_html_br_to_newline(text: str) -> str:
+    """
+    将 HTML 换行标签转换为换行符
+    
+    支持的格式：<br>, <br/>, <br />
+    
+    参数:
+        text: 要处理的文本
+    
+    返回:
+        转换后的文本（<br> 替换为 \n）
+    """
+    return re.sub(r'<br\s*/?>', '\n', text, flags=re.IGNORECASE)
+
+
 def clean_text(text: str) -> str:
     """
     清理文本中的各种标记格式和特殊字符
     
     功能：
-    - 清理HTML标签：<tag>内容</tag>、<br/>等
+    - 将 <br> 标签转换为换行符（保留换行效果）
+    - 清理其他HTML标签：<tag>内容</tag> 等
     - 清理HTML注释：<!-- 注释 -->
     - 转换HTML实体：&nbsp;、&lt;、&#数字; 等
     - 移除零宽字符：\u200B、\u200C、\uFEFF 等
@@ -158,6 +174,9 @@ def clean_text(text: str) -> str:
         return text
     
     cleaned = text
+    
+    # 1. 先将 <br> 标签转换为换行符（在删除HTML标签之前）
+    cleaned = convert_html_br_to_newline(cleaned)
     
     # 3. 处理HTML注释
     # 格式：<!-- 注释内容 -->

@@ -6,7 +6,7 @@
 import os
 from typing import Dict, Any, List, Tuple, Optional, Union
 from .safe_logger import safe_log
-from .constants import DEFAULT_CONFIG, CONFIG_FILES
+from .constants import DEFAULT_CONFIG, CONFIG_FILES, DEFAULT_NUMBERING_PATTERNS_CONFIG
 from .toml_operations import read_toml_file, update_toml_value
 
 class ConfigManager:
@@ -111,23 +111,49 @@ class ConfigManager:
         return result
     
     # --------------------------
+    # 配置文件路径获取方法
+    # --------------------------
+    def get_config_file_path(self, config_name: str) -> str:
+        """
+        获取配置文件完整路径
+        
+        参数:
+            config_name: 配置名称（如 "proofread_symbols", "gui_config" 等）
+            
+        返回:
+            str: 配置文件完整路径
+            
+        异常:
+            ValueError: 未知的配置名称
+        """
+        if config_name not in CONFIG_FILES:
+            raise ValueError(f"未知的配置名称: {config_name}")
+        filename = CONFIG_FILES[config_name]
+        return os.path.join(self._config_dir, filename)
+    
+    # --------------------------
     # 第一层：配置块级别访问方法
     # --------------------------
     def get_logger_config_block(self) -> Dict[str, Any]:
         """获取整个日志配置块"""
         return self._configs.get("logger_config", {})
     
-    def get_symbol_settings_block(self) -> Dict[str, Any]:
-        """获取整个符号校对配置块"""
-        return self._configs.get("symbol_settings", {})
+    # 校对配置块
+    def get_proofread_config_block(self) -> Dict[str, Any]:
+        """获取校对主配置块"""
+        return self._configs.get("proofread_config", {})
+    
+    def get_proofread_symbols_block(self) -> Dict[str, Any]:
+        """获取符号校对配置块"""
+        return self._configs.get("proofread_symbols", {})
 
-    def get_typos_settings_block(self) -> Dict[str, Any]:
-        """获取整个错别字配置块"""
-        return self._configs.get("typos_settings", {})
+    def get_proofread_typos_block(self) -> Dict[str, Any]:
+        """获取错别字配置块"""
+        return self._configs.get("proofread_typos", {})
 
-    def get_sensitive_words_settings_block(self) -> Dict[str, Any]:
-        """获取整个敏感词配置块"""
-        return self._configs.get("sensitive_words_settings", {})
+    def get_proofread_sensitive_block(self) -> Dict[str, Any]:
+        """获取敏感词配置块"""
+        return self._configs.get("proofread_sensitive", {})
     
     def get_gui_config_block(self) -> Dict[str, Any]:
         """获取整个GUI配置块"""
@@ -145,9 +171,106 @@ class ConfigManager:
         """获取整个软件优先级配置块"""
         return self._configs.get("software_priority", {})
     
-    def get_file_defaults_block(self) -> Dict[str, Any]:
-        """获取整个文件处理配置块"""
-        return self._configs.get("file_defaults", {})
+    def get_conversion_defaults_block(self) -> Dict[str, Any]:
+        """获取整个转换默认值配置块（控制 GUI 界面的默认值设置）"""
+        return self._configs.get("conversion_defaults", {})
+    
+    def get_heading_numbering_config_block(self) -> Dict[str, Any]:
+        """获取整个标题序号配置块"""
+        return self._configs.get("heading_numbering_add", {})
+    
+    def get_numbering_patterns_block(self) -> Dict[str, Any]:
+        """获取整个序号清理规则配置块"""
+        # 优先从配置文件加载，否则使用默认配置
+        config = self._configs.get("heading_numbering_clean", {})
+        if not config:
+            config = DEFAULT_NUMBERING_PATTERNS_CONFIG.get("heading_numbering_clean", {})
+        return config
+    
+    def get_style_code_block(self) -> Dict[str, Any]:
+        """获取代码样式配置块"""
+        return self._configs.get("style_code", {})
+    
+    def get_style_quote_block(self) -> Dict[str, Any]:
+        """获取引用样式配置块"""
+        return self._configs.get("style_quote", {})
+    
+    def get_style_formula_block(self) -> Dict[str, Any]:
+        """获取公式样式配置块"""
+        return self._configs.get("style_formula", {})
+    
+    def get_style_table_block(self) -> Dict[str, Any]:
+        """获取表格样式配置块"""
+        return self._configs.get("style_table", {})
+    
+    # --------------------------
+    # 序号清理规则相关方法
+    # --------------------------
+    
+    def get_cleaning_rules(self) -> List[Dict[str, Any]]:
+        """
+        获取启用的清理规则列表（按优先级排序，已替换占位符）
+        
+        返回:
+            List[Dict]: 规则列表，每个规则包含:
+                - rule_id: str - 规则ID
+                - name: str - 规则名称
+                - description: str - 规则说明
+                - enabled: bool - 是否启用
+                - is_system: bool - 是否系统规则
+                - regex: str - 原始正则表达式
+                - compiled_regex: str - 替换占位符后的正则表达式
+        """
+        # 从 heading_utils.py 导入占位符定义（硬编码，使用 raw string）
+        from gongwen_converter.utils.heading_utils import NUMBERING_PLACEHOLDERS
+        
+        config = self.get_numbering_patterns_block()
+        placeholders = NUMBERING_PLACEHOLDERS  # 使用代码中的占位符
+        settings = config.get("settings", {})
+        rules_dict = config.get("rules", {})
+        order = settings.get("order", list(rules_dict.keys()))
+        
+        result = []
+        for rule_id in order:
+            if rule_id not in rules_dict:
+                continue
+            
+            rule = rules_dict[rule_id]
+            if not rule.get("enabled", True):
+                continue
+            
+            # 替换占位符
+            regex = rule.get("regex", "")
+            compiled_regex = self._replace_placeholders(regex, placeholders)
+            
+            result.append({
+                "rule_id": rule_id,
+                "name": rule.get("name", rule_id),
+                "description": rule.get("description", ""),
+                "enabled": rule.get("enabled", True),
+                "is_system": rule.get("is_system", False),
+                "regex": regex,
+                "compiled_regex": compiled_regex
+            })
+        
+        safe_log.debug("获取清理规则列表，共 %d 条启用的规则", len(result))
+        return result
+    
+    def _replace_placeholders(self, regex: str, placeholders: Dict[str, str]) -> str:
+        """
+        替换正则表达式中的占位符
+        
+        参数:
+            regex: 原始正则表达式（含 {placeholder} 格式的占位符）
+            placeholders: 占位符字典
+            
+        返回:
+            str: 替换后的正则表达式
+        """
+        result = regex
+        for name, value in placeholders.items():
+            result = result.replace(f"{{{name}}}", value)
+        return result
     
     # --------------------------
     # 第二层：子表级别访问方法
@@ -158,34 +281,51 @@ class ConfigManager:
         """获取日志配置子表"""
         return self.get_logger_config_block().get("logging", {})
     
-    # 错别字/符号等校对配置子表
-    def get_symbol_engine_settings(self) -> Dict[str, Any]:
-        """获取符号校对引擎设置子表"""
-        return self.get_symbol_settings_block().get("engine_settings", {})
-
-    def get_typos_engine_settings(self) -> Dict[str, Any]:
-        """获取错别字引擎设置子表"""
-        return self.get_typos_settings_block().get("engine_settings", {})
-
-    def get_sensitive_words_engine_settings(self) -> Dict[str, Any]:
-        """获取敏感词引擎设置子表"""
-        return self.get_sensitive_words_settings_block().get("engine_settings", {})
+    # 校对配置子表
+    def get_proofread_engine_config(self) -> Dict[str, Any]:
+        """获取校对引擎配置（开关和跳过规则）"""
+        return self.get_proofread_config_block().get("engine", {})
 
     def get_symbol_pairing_config(self) -> Dict[str, Any]:
         """获取符号配对子表"""
-        return self.get_symbol_settings_block().get("symbol_pairing", {})
+        return self.get_proofread_symbols_block().get("symbol_pairing", {})
     
     def get_symbol_map_config(self) -> Dict[str, Any]:
         """获取符号映射子表"""
-        return self.get_symbol_settings_block().get("symbol_map", {})
+        return self.get_proofread_symbols_block().get("symbol_map", {})
     
     def get_typos_config(self) -> Dict[str, Any]:
         """获取错别字子表"""
-        return self.get_typos_settings_block().get("typos", {})
+        return self.get_proofread_typos_block().get("typos", {})
 
     def get_sensitive_words_config(self) -> Dict[str, Any]:
         """获取敏感词子表"""
-        return self.get_sensitive_words_settings_block().get("sensitive_words", {})
+        return self.get_proofread_sensitive_block().get("sensitive_words", {})
+    
+    # 校对跳过规则方法
+    def is_skip_code_blocks_enabled(self) -> bool:
+        """
+        是否跳过代码块段落
+        
+        返回:
+            bool: 是否跳过
+        """
+        config = self.get_proofread_engine_config()
+        enabled = config.get("skip_code_blocks", True)
+        safe_log.debug("校对跳过代码块: %s", enabled)
+        return enabled
+    
+    def is_skip_quote_blocks_enabled(self) -> bool:
+        """
+        是否跳过引用段落
+        
+        返回:
+            bool: 是否跳过
+        """
+        config = self.get_proofread_engine_config()
+        enabled = config.get("skip_quote_blocks", False)
+        safe_log.debug("校对跳过引用块: %s", enabled)
+        return enabled
     
     # GUI配置子表
     def get_window_config(self) -> Dict[str, Any]:
@@ -207,6 +347,10 @@ class ConfigManager:
     def get_template_config(self) -> Dict[str, Any]:
         """获取模板设置子表（从GUI配置）"""
         return self.get_gui_config_block().get("template", {})
+    
+    def get_language_config(self) -> Dict[str, Any]:
+        """获取语言设置子表（从GUI配置）"""
+        return self.get_gui_config_block().get("language", {})
     
     def get_link_format_config(self) -> Dict[str, Any]:
         """获取链接格式配置子表"""
@@ -232,22 +376,26 @@ class ConfigManager:
         """获取链接错误处理配置子表"""
         return self.get_link_config_block().get("error_handling", {})
     
-    # File Defaults配置子表
+    # Conversion Defaults 配置子表
     def get_document_defaults(self) -> Dict[str, Any]:
         """获取文档文件默认设置子表"""
-        return self.get_file_defaults_block().get("document", {})
+        return self.get_conversion_defaults_block().get("document", {})
     
     def get_spreadsheet_defaults(self) -> Dict[str, Any]:
         """获取表格文件默认设置子表"""
-        return self.get_file_defaults_block().get("spreadsheet", {})
+        return self.get_conversion_defaults_block().get("spreadsheet", {})
     
     def get_image_defaults(self) -> Dict[str, Any]:
         """获取图片文件默认设置子表"""
-        return self.get_file_defaults_block().get("image", {})
+        return self.get_conversion_defaults_block().get("image", {})
     
     def get_layout_defaults(self) -> Dict[str, Any]:
         """获取版式文件默认设置子表"""
-        return self.get_file_defaults_block().get("layout", {})
+        return self.get_conversion_defaults_block().get("layout", {})
+    
+    def get_text_defaults(self) -> Dict[str, Any]:
+        """获取文本文件默认设置子表"""
+        return self.get_conversion_defaults_block().get("text", {})
 
     # Output配置子表
     
@@ -287,9 +435,13 @@ class ConfigManager:
         return words if isinstance(words, dict) else {}
     
     def get_symbol_map(self) -> Dict[str, list]:
-        """获取标点符号映射（带默认值）"""
+        """获取标点符号映射（带默认值，键统一为字符串）"""
         symbol_map = self.get_symbol_map_config()
-        return symbol_map if isinstance(symbol_map, dict) else {}
+        if isinstance(symbol_map, dict):
+            # 统一将所有键转为字符串，兼容整数键和字符串键
+            # 这确保 GUI 编辑后的字符串键与配置文件中的数字键行为一致
+            return {str(k): v for k, v in symbol_map.items()}
+        return {}
     
     def get_symbol_pairs(self) -> List[Tuple[str, str]]:
         """获取符号对列表（带默认值）"""
@@ -507,6 +659,18 @@ class ConfigManager:
         safe_log.debug("获取默认MD模板类型: %s", template_type)
         return template_type
     
+    def get_locale(self) -> str:
+        """
+        获取当前语言设置（从GUI配置）
+        
+        返回:
+            str: 语言代码，如 "zh_CN" 或 "en_US"
+        """
+        language_config = self.get_language_config()
+        locale = language_config.get("locale", "zh_CN")
+        safe_log.debug("获取语言设置: %s", locale)
+        return locale
+    
     def get_docx_to_md_keep_images(self) -> bool:
         """
         获取文档转MD时是否保留图片
@@ -686,6 +850,170 @@ class ConfigManager:
         safe_log.debug("文档敏感词匹配: %s", enabled)
         return enabled
     
+    # 标题序号配置获取方法（文档转MD）
+    def get_docx_to_md_remove_numbering(self) -> bool:
+        """
+        获取文档转MD时是否默认清除原序号
+        
+        返回:
+            bool: 是否清除原序号
+        """
+        document_config = self.get_document_defaults()
+        remove = document_config.get("to_md_remove_numbering", True)
+        safe_log.debug("文档转MD清除原序号: %s", remove)
+        return remove
+    
+    def get_docx_to_md_add_numbering(self) -> bool:
+        """
+        获取文档转MD时是否默认添加新序号
+        
+        返回:
+            bool: 是否添加新序号
+        """
+        document_config = self.get_document_defaults()
+        add = document_config.get("to_md_add_numbering", False)
+        safe_log.debug("文档转MD添加新序号: %s", add)
+        return add
+    
+    def get_docx_to_md_default_scheme(self) -> str:
+        """
+        获取文档转MD的默认序号方案
+        
+        返回:
+            str: 序号方案名称，如果配置的方案不存在则返回全局默认方案
+        """
+        try:
+            document_config = self.get_document_defaults()
+            scheme_name = document_config.get("to_md_default_scheme", "gongwen_standard")
+            
+            # 验证方案是否存在
+            heading_config = self.get_heading_numbering_config_block()
+            schemes = heading_config.get("schemes", {})
+            
+            if scheme_name not in schemes:
+                safe_log.warning(
+                    "配置的序号方案 '%s' 不存在，使用全局默认方案 'gongwen_standard'",
+                    scheme_name
+                )
+                return "gongwen_standard"
+            
+            safe_log.debug("文档转MD默认序号方案: %s", scheme_name)
+            return scheme_name
+        except Exception as e:
+            safe_log.error("获取文档转MD默认序号方案失败: %s", str(e))
+            return "gongwen_standard"
+    
+    def get_docx_to_md_enable_optimization(self) -> bool:
+        """
+        获取文档转MD时是否默认启用针对性优化
+        
+        返回:
+            bool: 是否启用针对文档类型优化
+        """
+        document_config = self.get_document_defaults()
+        enable = document_config.get("to_md_enable_optimization", True)
+        safe_log.debug("文档转MD启用优化: %s", enable)
+        return enable
+    
+    def get_docx_to_md_optimization_type(self) -> str:
+        """
+        获取文档转MD的默认优化类型
+        
+        返回:
+            str: 优化类型（"公文"/"合同"/"论文"）
+        """
+        document_config = self.get_document_defaults()
+        opt_type = document_config.get("to_md_optimization_type", "公文")
+        safe_log.debug("文档转MD优化类型: %s", opt_type)
+        return opt_type
+    
+    # 标题序号配置获取方法（MD转文档）
+    def get_md_to_docx_remove_numbering(self) -> bool:
+        """
+        获取MD转DOCX时是否默认清除原序号
+        
+        返回:
+            bool: 是否清除原序号
+        """
+        text_config = self.get_text_defaults()
+        remove = text_config.get("to_docx_remove_numbering", True)
+        safe_log.debug("MD转DOCX清除原序号: %s", remove)
+        return remove
+    
+    def get_md_to_docx_add_numbering(self) -> bool:
+        """
+        获取MD转DOCX时是否默认添加新序号
+        
+        返回:
+            bool: 是否添加新序号
+        """
+        text_config = self.get_text_defaults()
+        add = text_config.get("to_docx_add_numbering", True)
+        safe_log.debug("MD转DOCX添加新序号: %s", add)
+        return add
+    
+    def get_md_to_docx_default_scheme(self) -> str:
+        """
+        获取MD转DOCX的默认序号方案
+        
+        返回:
+            str: 序号方案名称，如果配置的方案不存在则返回全局默认方案
+        """
+        try:
+            text_config = self.get_text_defaults()
+            scheme_name = text_config.get("to_docx_default_scheme", "gongwen_standard")
+            
+            # 验证方案是否存在
+            heading_config = self.get_heading_numbering_config_block()
+            schemes = heading_config.get("schemes", {})
+            
+            if scheme_name not in schemes:
+                safe_log.warning(
+                    "配置的序号方案 '%s' 不存在，使用全局默认方案 'gongwen_standard'",
+                    scheme_name
+                )
+                return "gongwen_standard"
+            
+            safe_log.debug("MD转DOCX默认序号方案: %s", scheme_name)
+            return scheme_name
+        except Exception as e:
+            safe_log.error("获取MD转DOCX默认序号方案失败: %s", str(e))
+            return "gongwen_standard"
+    
+    # 序号方案相关方法
+    def get_heading_schemes(self) -> Dict[str, Dict]:
+        """
+        获取所有序号方案
+        
+        返回:
+            Dict[str, Dict]: 方案字典，键为方案ID，值为方案配置
+        """
+        heading_config = self.get_heading_numbering_config_block()
+        schemes = heading_config.get("schemes", {})
+        safe_log.debug("获取序号方案列表，共 %d 个方案", len(schemes))
+        return schemes
+    
+    def get_scheme_names(self) -> List[str]:
+        """
+        获取所有序号方案的名称列表（供GUI下拉框使用）
+        
+        返回:
+            List[str]: 方案显示名称列表，如 ["公文标准", "层级数字标准", "法律条文标准"]
+        """
+        schemes = self.get_heading_schemes()
+        scheme_names = []
+        
+        # 提取每个方案的name字段
+        for scheme_id, scheme_config in schemes.items():
+            if isinstance(scheme_config, dict) and "name" in scheme_config:
+                scheme_names.append(scheme_config["name"])
+            else:
+                # 如果没有name字段，使用ID
+                scheme_names.append(scheme_id)
+        
+        safe_log.debug("获取序号方案名称列表: %s", scheme_names)
+        return scheme_names
+    
     def get_save_intermediate_files(self) -> bool:
         """
         获取是否保存中间文件到输出目录（从输出配置）
@@ -704,20 +1032,42 @@ class ConfigManager:
         
         返回:
             Dict[str, Any]: 包含以下键的字典：
-                - image_link_format: str - 图片链接格式 ("markdown" 或 "wiki")
-                - image_embed: bool - 图片是否嵌入显示
-                - md_file_link_format: str - MD文件链接格式 ("markdown" 或 "wiki")
-                - md_file_embed: bool - MD文件是否嵌入显示（仅wiki有效）
+                - image_link_style: str - 图片链接样式 
+                    可选值: "markdown_embed", "markdown_link", "wiki_embed", "wiki_link"
+                - md_file_link_style: str - MD文件链接样式
+                    可选值: "markdown_link", "wiki_embed", "wiki_link"
         """
         link_format_config = self.get_link_format_config()
         settings = {
-            "image_link_format": link_format_config.get("image_link_format", "wiki"),
-            "image_embed": link_format_config.get("image_embed", True),
-            "md_file_link_format": link_format_config.get("md_file_link_format", "wiki"),
-            "md_file_embed": link_format_config.get("md_file_embed", True)
+            "image_link_style": link_format_config.get("image_link_style", "wiki_embed"),
+            "md_file_link_style": link_format_config.get("md_file_link_style", "wiki_embed")
         }
         safe_log.debug("获取Markdown链接格式设置: %s", settings)
         return settings
+    
+    def get_image_link_style(self) -> str:
+        """
+        获取图片链接样式
+        
+        返回:
+            str: 样式值 ("markdown_embed", "markdown_link", "wiki_embed", "wiki_link")
+        """
+        config = self.get_link_format_config()
+        style = config.get("image_link_style", "wiki_embed")
+        safe_log.debug("获取图片链接样式: %s", style)
+        return style
+    
+    def get_md_file_link_style(self) -> str:
+        """
+        获取MD文件链接样式
+        
+        返回:
+            str: 样式值 ("markdown_link", "wiki_embed", "wiki_link")
+        """
+        config = self.get_link_format_config()
+        style = config.get("md_file_link_style", "wiki_embed")
+        safe_log.debug("获取MD文件链接样式: %s", style)
+        return style
     
     # 非嵌入链接配置获取方法
     def get_wiki_link_mode(self) -> str:
@@ -745,28 +1095,28 @@ class ConfigManager:
         return mode
     
     # 嵌入链接配置获取方法
-    def is_embedding_enabled(self) -> bool:
+    def get_wiki_embed_image_mode(self) -> str:
         """
-        是否启用嵌入功能
-        
-        返回:
-            bool: 是否启用嵌入功能总开关
-        """
-        config = self.get_embed_links_config()
-        enabled = config.get("enabled", True)
-        safe_log.debug("嵌入功能启用状态: %s", enabled)
-        return enabled
-    
-    def get_embed_image_mode(self) -> str:
-        """
-        获取嵌入图片处理模式
+        获取Wiki嵌入图片处理模式（![[image.png]]）
         
         返回:
             str: 处理模式 ("keep", "extract_text", "remove", "embed")
         """
         config = self.get_embed_links_config()
-        mode = config.get("image_mode", "embed")
-        safe_log.debug("获取嵌入图片处理模式: %s", mode)
+        mode = config.get("wiki_image_mode", "embed")
+        safe_log.debug("获取Wiki嵌入图片处理模式: %s", mode)
+        return mode
+    
+    def get_markdown_embed_image_mode(self) -> str:
+        """
+        获取Markdown嵌入图片处理模式（![alt](image.png)）
+        
+        返回:
+            str: 处理模式 ("keep", "extract_text", "remove", "embed")
+        """
+        config = self.get_embed_links_config()
+        mode = config.get("markdown_image_mode", "embed")
+        safe_log.debug("获取Markdown嵌入图片处理模式: %s", mode)
         return mode
     
     def get_embed_md_file_mode(self) -> str:
@@ -920,6 +1270,346 @@ class ConfigManager:
         special_conversions = self.get_special_conversions_config()
         return special_conversions.get(conversion_type, [])
     
+    # --------------------------
+    # 转换行为配置方法
+    # --------------------------
+    
+    def get_conversion_config_block(self) -> Dict[str, Any]:
+        """获取整个转换行为配置块（直接控制转换引擎的行为规则）"""
+        return self._configs.get("conversion_config", {})
+    
+    def get_docx_to_md_config(self) -> Dict[str, Any]:
+        """获取DOCX转MD配置子表"""
+        return self.get_conversion_config_block().get("docx_to_md", {})
+    
+    def get_md_to_docx_config(self) -> Dict[str, Any]:
+        """获取MD转DOCX配置子表"""
+        return self.get_conversion_config_block().get("md_to_docx", {})
+    
+    def get_formatting_syntax_config(self) -> Dict[str, Any]:
+        """获取Markdown语法配置子表"""
+        return self.get_conversion_config_block().get("syntax", {})
+    
+    def get_code_detection_config(self) -> Dict[str, Any]:
+        """获取代码识别配置子表"""
+        return self.get_conversion_config_block().get("code_detection", {})
+    
+    def get_horizontal_rule_config(self) -> Dict[str, Any]:
+        """获取分隔符/分页符转换配置子表"""
+        return self.get_conversion_config_block().get("horizontal_rule", {})
+    
+    # ========== 分隔符/分页符配置 ==========
+    
+    def is_horizontal_rule_enabled(self) -> bool:
+        """
+        是否启用分隔符转换
+        
+        返回:
+            bool: 是否启用
+        """
+        config = self.get_horizontal_rule_config()
+        enabled = config.get("enabled", True)
+        safe_log.debug("分隔符转换启用: %s", enabled)
+        return enabled
+    
+    def get_horizontal_rule_docx_to_md_config(self) -> Dict[str, str]:
+        """
+        获取文档转MD的分隔符配置
+        
+        返回:
+            Dict[str, str]: {Word分隔符类型: MD分隔符}
+                - page_break: 分页符对应的MD分隔符
+                - section_break: 分节符对应的MD分隔符（所有类型统一）
+                - horizontal_rule: 分隔线对应的MD分隔符（Horizontal Rule 1/2/3 样式统一转换）
+        """
+        config = self.get_horizontal_rule_config()
+        docx_to_md = config.get("docx_to_md", {})
+        defaults = {
+            "page_break": "---",
+            "section_break": "***",
+            "horizontal_rule": "___"
+        }
+        result = {
+            "page_break": docx_to_md.get("page_break", defaults["page_break"]),
+            "section_break": docx_to_md.get("section_break", defaults["section_break"]),
+            "horizontal_rule": docx_to_md.get("horizontal_rule", defaults["horizontal_rule"])
+        }
+        safe_log.debug("文档转MD分隔符配置: %s", result)
+        return result
+    
+    def get_horizontal_rule_md_to_docx_config(self) -> Dict[str, str]:
+        """
+        获取MD转文档的分隔符配置
+        
+        返回:
+            Dict[str, str]: {MD分隔符类型: Word分隔符}
+                - dash: --- 对应的Word元素
+                - asterisk: *** 对应的Word元素
+                - underscore: ___ 对应的Word元素（可选 horizontal_rule_1/2/3）
+        """
+        config = self.get_horizontal_rule_config()
+        md_to_docx = config.get("md_to_docx", {})
+        defaults = {
+            "dash": "page_break",
+            "asterisk": "section_break",
+            "underscore": "horizontal_rule_1"
+        }
+        result = {
+            "dash": md_to_docx.get("dash", defaults["dash"]),
+            "asterisk": md_to_docx.get("asterisk", defaults["asterisk"]),
+            "underscore": md_to_docx.get("underscore", defaults["underscore"])
+        }
+        safe_log.debug("MD转文档分隔符配置: %s", result)
+        return result
+    
+    def get_horizontal_rule_mapping(self, hr_type: str) -> str:
+        """
+        获取指定分隔符类型的转换目标（MD→DOCX）
+        
+        参数:
+            hr_type: 分隔符类型 ("dash", "asterisk", "underscore")
+            
+        返回:
+            str: 转换目标 ("page_break", "section_continuous", "section_break", "ignore")
+        """
+        config = self.get_horizontal_rule_md_to_docx_config()
+        target = config.get(hr_type, "page_break")
+        safe_log.debug("分隔符 %s 映射目标: %s", hr_type, target)
+        return target
+    
+    def get_all_horizontal_rule_mappings(self) -> Dict[str, str]:
+        """
+        获取所有分隔符映射配置（MD→DOCX方向）
+        
+        返回:
+            Dict[str, str]: {分隔符类型: 转换目标}
+        """
+        return self.get_horizontal_rule_md_to_docx_config()
+    
+    def get_md_separator_for_break_type(self, break_type: str) -> Optional[str]:
+        """
+        根据 Word 分页/分节/分隔线类型获取对应的 MD 分隔符（DOCX→MD）
+        
+        参数:
+            break_type: Word 元素类型
+                - "page_break": 分页符
+                - "section_next", "section_continuous", "section_even", "section_odd": 分节符
+                - "horizontal_rule": 分隔线（Horizontal Rule 1/2/3 样式）
+            
+        返回:
+            str: MD 分隔符 ("---", "***", "___")，未找到或忽略时返回 None
+        """
+        config = self.get_horizontal_rule_docx_to_md_config()
+        
+        # 将所有分节符类型统一映射到 section_break 配置键
+        type_to_config_key = {
+            'page_break': 'page_break',
+            'section_continuous': 'section_break',
+            'section_next': 'section_break',
+            'section_even': 'section_break',
+            'section_odd': 'section_break',
+            'horizontal_rule': 'horizontal_rule'
+        }
+        config_key = type_to_config_key.get(break_type, break_type)
+        
+        # 获取配置的MD分隔符
+        md_separator = config.get(config_key)
+        
+        if md_separator and md_separator != "ignore":
+            safe_log.debug("分隔符类型 %s (配置键: %s) 映射为: %s", break_type, config_key, md_separator)
+            return md_separator
+        
+        safe_log.debug("分隔符类型 %s 映射为忽略或未配置", break_type)
+        return None
+    
+    def get_docx_to_md_preserve_formatting(self) -> bool:
+        """
+        获取DOCX转MD时是否保留正文格式
+        
+        返回:
+            bool: 是否保留格式（转为Markdown标记）
+        """
+        config = self.get_docx_to_md_config()
+        preserve = config.get("preserve_formatting", True)
+        safe_log.debug("DOCX转MD保留正文格式: %s", preserve)
+        return preserve
+    
+    def get_docx_to_md_preserve_heading_formatting(self) -> bool:
+        """
+        获取DOCX转MD时是否保留小标题格式
+        
+        返回:
+            bool: 是否保留小标题内的格式标记
+        """
+        config = self.get_docx_to_md_config()
+        preserve = config.get("preserve_heading_formatting", False)
+        safe_log.debug("DOCX转MD保留小标题格式: %s", preserve)
+        return preserve
+    
+    def get_docx_to_md_preserve_table_header_formatting(self) -> bool:
+        """
+        获取DOCX转MD时是否保留表头格式
+        
+        返回:
+            bool: 是否保留表头单元格中的格式标记
+        """
+        config = self.get_docx_to_md_config()
+        preserve = config.get("preserve_table_header_formatting", False)
+        safe_log.debug("DOCX转MD保留表头格式: %s", preserve)
+        return preserve
+    
+    def get_md_to_docx_formatting_mode(self) -> str:
+        """
+        获取MD转DOCX正文格式处理模式
+        
+        返回:
+            str: 处理模式 ("apply", "keep", "remove")
+        """
+        config = self.get_md_to_docx_config()
+        mode = config.get("formatting_mode", "apply")
+        if mode not in ["apply", "keep", "remove"]:
+            mode = "apply"
+        safe_log.debug("MD转DOCX正文格式处理模式: %s", mode)
+        return mode
+    
+    def get_md_to_docx_heading_formatting_mode(self) -> str:
+        """
+        获取MD转DOCX小标题格式处理模式
+        
+        返回:
+            str: 处理模式
+                - "apply": 应用格式，覆盖样式默认格式（未标记文字显式不加粗/不斜体）
+                - "keep": 保留标记原样
+                - "remove": 清理标记，让Word标题样式格式自然生效
+        """
+        config = self.get_md_to_docx_config()
+        mode = config.get("heading_formatting_mode", "remove")
+        if mode not in ["apply", "keep", "remove"]:
+            mode = "remove"
+        safe_log.debug("MD转DOCX小标题格式处理模式: %s", mode)
+        return mode
+    
+    def get_md_to_docx_table_header_formatting_mode(self) -> str:
+        """
+        获取MD转DOCX表头格式处理模式
+        
+        返回:
+            str: 处理模式
+                - "apply": 应用格式（**粗体** → 真正的粗体，可能与表格样式重复）
+                - "keep": 保留标记原样
+                - "remove": 清理标记，让表格样式（如 firstRow 加粗）自然生效
+        """
+        config = self.get_md_to_docx_config()
+        mode = config.get("table_header_formatting_mode", "remove")
+        if mode not in ["apply", "keep", "remove"]:
+            mode = "remove"
+        safe_log.debug("MD转DOCX表头格式处理模式: %s", mode)
+        return mode
+    
+    def get_syntax_setting(self, key: str, default: str = None) -> str:
+        """
+        获取特定格式的Markdown语法配置
+        
+        参数:
+            key: 格式键名（bold, italic, strikethrough, highlight, superscript, subscript）
+            default: 默认值
+            
+        返回:
+            str: 语法选项（如 "asterisk", "underscore", "extended", "html"）
+        """
+        config = self.get_formatting_syntax_config()
+        value = config.get(key, default)
+        safe_log.debug("获取语法配置 %s: %s", key, value)
+        return value
+    
+    def get_all_syntax_settings(self) -> Dict[str, str]:
+        """
+        获取所有Markdown语法配置
+        
+        返回:
+            Dict[str, str]: 语法配置字典
+        """
+        default_syntax = {
+            "bold": "asterisk",
+            "italic": "asterisk",
+            "strikethrough": "extended",
+            "highlight": "extended",
+            "superscript": "html",
+            "subscript": "html"
+        }
+        config = self.get_formatting_syntax_config()
+        # 合并默认值和用户配置
+        result = {**default_syntax, **config}
+        safe_log.debug("获取所有语法配置: %s", result)
+        return result
+    
+    def get_code_font(self) -> str:
+        """
+        获取代码字体
+        
+        返回:
+            str: 字体名称
+        """
+        config = self.get_code_detection_config()
+        font = config.get("code_font", "Consolas")
+        return font
+    
+    def get_code_background_color(self) -> str:
+        """
+        获取代码背景颜色
+        
+        返回:
+            str: 背景颜色（十六进制）
+        """
+        config = self.get_code_detection_config()
+        color = config.get("code_background_color", "E7E6E6")
+        return color
+    
+    def get_unordered_list_marker(self) -> str:
+        """
+        获取无序列表标记
+        
+        返回:
+            str: 标记类型 ("dash", "asterisk", "plus")
+        """
+        config = self.get_formatting_syntax_config()
+        marker = config.get("unordered_list", "dash")
+        if marker not in ["dash", "asterisk", "plus"]:
+            marker = "dash"
+        safe_log.debug("获取无序列表标记: %s", marker)
+        return marker
+    
+    def get_ordered_list_mode(self) -> str:
+        """
+        获取有序列表编号模式（暂未实现，预留）
+        
+        返回:
+            str: 模式 ("restart", "preserve")
+        """
+        config = self.get_formatting_syntax_config()
+        mode = config.get("ordered_list", "restart")
+        if mode not in ["restart", "preserve"]:
+            mode = "restart"
+        safe_log.debug("获取有序列表模式: %s", mode)
+        return mode
+    
+    def get_list_indent_spaces(self) -> int:
+        """
+        获取列表每级缩进的空格数
+        
+        用于 MD → DOCX 转换时识别多级列表嵌套级别。
+        
+        返回:
+            int: 每级缩进的空格数，默认为 2
+        """
+        config = self.get_formatting_syntax_config()
+        spaces = config.get("indent_spaces", 2)
+        # 确保在有效范围内
+        if not isinstance(spaces, int) or spaces < 1:
+            spaces = 2
+        safe_log.debug("获取列表缩进空格数: %d", spaces)
+        return spaces
+    
     def get_document_to_pdf_priority(self) -> List[str]:
         """获取文档转PDF的软件优先级列表"""
         special_conversions = self.get_special_conversions_config()
@@ -929,7 +1619,346 @@ class ConfigManager:
         """获取表格转PDF的软件优先级列表"""
         special_conversions = self.get_special_conversions_config()
         return special_conversions.get("spreadsheet_to_pdf", ["wps_spreadsheets", "msoffice_excel", "libreoffice"])
-
+    
+    # --------------------------
+    # 样式映射配置方法
+    # --------------------------
+    
+    # ========== 代码样式配置 ==========
+    
+    def is_code_style_detection_enabled(self) -> bool:
+        """
+        是否启用代码样式检测（DOCX→MD）
+        
+        返回:
+            bool: 是否启用代码样式检测（始终返回 True，因为样式列表控制具体行为）
+        """
+        # 新配置结构中没有 enabled 开关，始终返回 True
+        return True
+    
+    def get_code_paragraph_styles(self) -> List[str]:
+        """
+        获取代码块段落样式列表（DOCX→MD）
+        
+        返回:
+            List[str]: 段落样式名称列表，匹配后转为代码块 ```
+        """
+        config = self.get_style_code_block().get("docx_to_md", {})
+        styles = config.get("paragraph_styles", [
+            "HTML Preformatted", "Code Block", "代码块"
+        ])
+        safe_log.debug("代码块段落样式列表: %s", styles)
+        return styles
+    
+    def get_code_character_styles(self) -> List[str]:
+        """
+        获取行内代码字符样式列表（DOCX→MD）
+        
+        返回:
+            List[str]: 字符样式名称列表，匹配后转为行内代码 `
+        """
+        config = self.get_style_code_block().get("docx_to_md", {})
+        styles = config.get("character_styles", [
+            "HTML Code", "HTML Typewriter", "HTML Keyboard", "HTML Sample",
+            "HTML Variable", "HTML Definition", "HTML Cite", "HTML Address",
+            "HTML Acronym", "Inline Code", "Code", "Source Code",
+            "行内代码", "代码", "源代码", "源码"
+        ])
+        safe_log.debug("行内代码字符样式列表: %s", styles)
+        return styles
+    
+    def get_code_full_paragraph_as_block(self) -> bool:
+        """
+        获取是否将整段代码样式的段落视为代码块
+        
+        返回:
+            bool: 是否整段转代码块
+        """
+        config = self.get_style_code_block().get("docx_to_md", {})
+        return config.get("full_paragraph_as_block", True)
+    
+    def get_code_fuzzy_match_enabled(self) -> bool:
+        """
+        是否启用代码样式模糊匹配
+        
+        返回:
+            bool: 是否启用模糊匹配
+        """
+        config = self.get_style_code_block().get("docx_to_md", {})
+        enabled = config.get("fuzzy_match_enabled", True)
+        safe_log.debug("代码样式模糊匹配启用: %s", enabled)
+        return enabled
+    
+    def get_code_fuzzy_keywords(self) -> List[str]:
+        """
+        获取代码样式模糊匹配关键词（不区分大小写）
+        
+        返回:
+            List[str]: 模糊匹配关键词列表
+        """
+        config = self.get_style_code_block().get("docx_to_md", {})
+        keywords = config.get("fuzzy_keywords", ["code", "代码", "源码"])
+        safe_log.debug("代码模糊匹配关键词: %s", keywords)
+        return keywords
+    
+    # ========== 底纹检测配置 ==========
+    
+    def is_wps_shading_enabled(self) -> bool:
+        """
+        是否启用 WPS 底纹检测（DOCX→MD）
+        
+        WPS 底纹使用纯色填充方式（w:val="clear" + w:fill="D9D9D9"）
+        
+        返回:
+            bool: 是否启用 WPS 底纹检测
+        """
+        config = self.get_style_code_block().get("docx_to_md", {})
+        shading = config.get("shading", {})
+        enabled = shading.get("wps_enabled", True)
+        safe_log.debug("WPS 底纹检测启用: %s", enabled)
+        return enabled
+    
+    def is_word_shading_enabled(self) -> bool:
+        """
+        是否启用 Word 底纹检测（DOCX→MD）
+        
+        Word 底纹使用百分比图案填充方式（w:val="pct15" + w:fill="FFFFFF"）
+        
+        返回:
+            bool: 是否启用 Word 底纹检测
+        """
+        config = self.get_style_code_block().get("docx_to_md", {})
+        shading = config.get("shading", {})
+        enabled = shading.get("word_enabled", True)
+        safe_log.debug("Word 底纹检测启用: %s", enabled)
+        return enabled
+    
+    def get_inline_code_style(self) -> str:
+        """
+        获取行内代码样式配置（MD→DOCX）
+        
+        返回:
+            str: 样式名
+        """
+        config = self.get_style_code_block().get("md_to_docx", {})
+        style = config.get("inline_code_style", "Inline Code")
+        safe_log.debug("行内代码样式: %s", style)
+        return style
+    
+    def get_code_block_style(self) -> str:
+        """
+        获取代码块样式配置（MD→DOCX）
+        
+        返回:
+            str: 样式名
+        """
+        config = self.get_style_code_block().get("md_to_docx", {})
+        style = config.get("code_block_style", "Code Block")
+        safe_log.debug("代码块样式: %s", style)
+        return style
+    
+    # ========== 引用样式配置 ==========
+    
+    def is_quote_style_detection_enabled(self) -> bool:
+        """
+        是否启用引用样式检测（DOCX→MD）
+        
+        返回:
+            bool: 是否启用引用样式检测（始终返回 True，因为样式列表控制具体行为）
+        """
+        # 新配置结构中没有 enabled 开关，始终返回 True
+        return True
+    
+    def get_quote_level_styles(self) -> Dict[str, int]:
+        """
+        获取分级引用样式映射（DOCX→MD）
+        
+        返回:
+            Dict[str, int]: 样式名到引用级别的映射 {"quote 1": 1, "引用 1": 1, ...}
+        """
+        config = self.get_style_quote_block().get("docx_to_md", {})
+        level_styles = config.get("level_styles", {
+            "quote 1": 1, "quote 2": 2, "quote 3": 3, "quote 4": 4, "quote 5": 5,
+            "quote 6": 6, "quote 7": 7, "quote 8": 8, "quote 9": 9,
+            "引用 1": 1, "引用 2": 2, "引用 3": 3, "引用 4": 4, "引用 5": 5,
+            "引用 6": 6, "引用 7": 7, "引用 8": 8, "引用 9": 9
+        })
+        safe_log.debug("分级引用样式映射: %d 个样式", len(level_styles))
+        return level_styles
+    
+    def get_quote_paragraph_styles(self) -> List[str]:
+        """
+        获取通用引用段落样式列表（DOCX→MD）
+        
+        返回:
+            List[str]: 通用引用段落样式列表（无法确定级别时默认为1级）
+        """
+        config = self.get_style_quote_block().get("docx_to_md", {})
+        styles = config.get("paragraph_styles", [
+            "Quote", "Block Text", "Intense Quote", "引用", "明显引用"
+        ])
+        safe_log.debug("通用引用段落样式列表: %s", styles)
+        return styles
+    
+    def get_quote_character_styles(self) -> List[str]:
+        """
+        获取引用字符样式列表（DOCX→MD）
+        
+        返回:
+            List[str]: 引用字符样式列表（转为行内代码）
+        """
+        config = self.get_style_quote_block().get("docx_to_md", {})
+        styles = config.get("character_styles", ["Quote Char", "引用字符"])
+        safe_log.debug("引用字符样式列表: %s", styles)
+        return styles
+    
+    def get_quote_full_paragraph_as_block(self) -> bool:
+        """
+        获取是否将整段引用样式的段落视为引用块
+        
+        返回:
+            bool: 是否整段转引用块
+        """
+        config = self.get_style_quote_block().get("docx_to_md", {})
+        return config.get("full_paragraph_as_block", True)
+    
+    def get_quote_fuzzy_match_enabled(self) -> bool:
+        """
+        是否启用引用样式模糊匹配
+        
+        返回:
+            bool: 是否启用模糊匹配
+        """
+        config = self.get_style_quote_block().get("docx_to_md", {})
+        enabled = config.get("fuzzy_match_enabled", True)
+        safe_log.debug("引用样式模糊匹配启用: %s", enabled)
+        return enabled
+    
+    def get_quote_fuzzy_keywords(self) -> List[str]:
+        """
+        获取引用样式模糊匹配关键词（不区分大小写）
+        
+        返回:
+            List[str]: 模糊匹配关键词列表
+        """
+        config = self.get_style_quote_block().get("docx_to_md", {})
+        keywords = config.get("fuzzy_keywords", ["quote", "引用"])
+        safe_log.debug("引用模糊匹配关键词: %s", keywords)
+        return keywords
+    
+    def get_quote_style_for_level(self, level: int) -> str:
+        """
+        根据引用级别获取样式配置（MD→DOCX）
+        
+        参数:
+            level: 引用级别 (1-9)
+            
+        返回:
+            str: 样式名，如 "Quote 1"
+        """
+        # 确保级别在有效范围内
+        level = max(1, min(9, level))
+        
+        config = self.get_style_quote_block().get("md_to_docx", {})
+        
+        style_key = f"level_{level}_style"
+        style = config.get(style_key, f"Quote {level}")
+        
+        safe_log.debug("引用级别 %d 样式: %s", level, style)
+        return style
+    
+    # ========== 公式样式配置 ==========
+    
+    def get_inline_formula_style(self) -> str:
+        """
+        获取行内公式样式配置（MD→DOCX）
+        
+        返回:
+            str: 样式名
+        """
+        config = self.get_style_formula_block().get("md_to_docx", {})
+        style = config.get("inline_formula_style", "Inline Formula")
+        safe_log.debug("行内公式样式: %s", style)
+        return style
+    
+    def get_formula_block_style(self) -> str:
+        """
+        获取公式块样式配置（MD→DOCX）
+        
+        返回:
+            str: 样式名
+        """
+        config = self.get_style_formula_block().get("md_to_docx", {})
+        style = config.get("formula_block_style", "Formula Block")
+        safe_log.debug("公式块样式: %s", style)
+        return style
+    
+    # ========== 表格样式配置 ==========
+    
+    def get_table_style(self) -> str:
+        """
+        获取表格样式配置（MD→DOCX）
+        
+        返回:
+            str: 样式名
+        """
+        config = self.get_style_table_block().get("md_to_docx", {})
+        style = config.get("table_style", "Three Line Table")
+        safe_log.debug("表格样式: %s", style)
+        return style
+    
+    def get_table_content_style(self) -> str:
+        """
+        获取表格内容样式配置（MD→DOCX）
+        
+        返回:
+            str: 样式名
+        """
+        config = self.get_style_table_block().get("md_to_docx", {})
+        style = config.get("table_content_style", "Table Content")
+        safe_log.debug("表格内容样式: %s", style)
+        return style
+    
+    def get_table_style_mode(self) -> str:
+        """
+        获取表格样式模式（MD→DOCX）
+        
+        返回:
+            str: 模式 ("builtin" 使用内置样式, "custom" 使用自定义样式名)
+        """
+        config = self.get_style_table_block().get("md_to_docx", {})
+        mode = config.get("table_style_mode", "builtin")
+        if mode not in ["builtin", "custom"]:
+            mode = "builtin"
+        safe_log.debug("表格样式模式: %s", mode)
+        return mode
+    
+    def get_builtin_table_style_key(self) -> str:
+        """
+        获取内置表格样式键名（MD→DOCX）
+        
+        返回:
+            str: 内置样式键名 ("three_line_table" 或 "table_grid")
+        """
+        config = self.get_style_table_block().get("md_to_docx", {})
+        key = config.get("builtin_style_key", "three_line_table")
+        if key not in ["three_line_table", "table_grid"]:
+            key = "three_line_table"
+        safe_log.debug("内置表格样式键名: %s", key)
+        return key
+    
+    def get_custom_table_style_name(self) -> str:
+        """
+        获取自定义表格样式名称（MD→DOCX）
+        
+        返回:
+            str: 用户自定义的样式名称
+        """
+        config = self.get_style_table_block().get("md_to_docx", {})
+        name = config.get("custom_style_name", "")
+        safe_log.debug("自定义表格样式名: %s", name)
+        return name
+    
     def reload_configs(self):
         """重新加载所有配置文件（无日志依赖）"""
         safe_log.info("重新加载所有配置文件...")

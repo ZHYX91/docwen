@@ -1,10 +1,10 @@
-"""
+﻿"""
 文档设置选项卡模块
 
 实现设置对话框的文档设置选项卡，包含：
 - 提取/OCR默认设置
-- 校对选项开关
-- 词库配置按钮
+- 优化设置
+- DOCX转MD序号设置
 - 文档处理软件优先级
 """
 
@@ -63,6 +63,11 @@ class DocumentTab(BaseSettingsTab):
         self.odt_cards_frame: Optional[tb.Frame] = None
         self.document_to_pdf_cards_frame: Optional[tb.Frame] = None
         
+        # 联动逻辑标志位和状态记录
+        self._updating_doc_options: bool = False
+        self._doc_last_image_state: bool = False
+        self._doc_last_ocr_state: bool = False
+        
         # 加载配置数据
         self._load_settings_data(config_manager)
         
@@ -100,13 +105,36 @@ class DocumentTab(BaseSettingsTab):
         except Exception as e:
             logger.error(f"加载文档配置失败: {e}")
     
+    def _get_scheme_mappings(self):
+        """
+        动态获取序号方案ID和名称的双向映射
+        
+        Returns:
+            tuple: (id_to_name, name_to_id) 两个字典
+        """
+        id_to_name = {}
+        try:
+            schemes = self.config_manager.get_heading_schemes()
+            for sid, sconfig in schemes.items():
+                id_to_name[sid] = sconfig.get("name", sid)
+        except Exception as e:
+            logger.warning(f"动态获取序号方案映射失败: {e}")
+            # 后备默认值
+            id_to_name = {
+                "gongwen_standard": "公文标准",
+                "hierarchical_standard": "层级数字标准",
+                "legal_standard": "法律条文标准"
+            }
+        name_to_id = {v: k for k, v in id_to_name.items()}
+        return id_to_name, name_to_id
+    
     def _create_interface(self):
         """创建选项卡界面"""
         logger.debug("开始创建文档设置选项卡界面")
         
         self._create_extraction_section()
-        self._create_validation_section()
-        self._create_dictionary_section()
+        self._create_optimization_section()
+        self._create_docx_to_md_numbering_section()
         self._create_software_priority_section()
         
         logger.debug("文档设置选项卡界面创建完成")
@@ -124,8 +152,8 @@ class DocumentTab(BaseSettingsTab):
         
         frame = self.create_section_frame(
             self.scrollable_frame,
-            "提取/OCR设置",
-            SectionStyle.PRIMARY
+            "图片提取/OCR设置",
+            SectionStyle.DANGER
         )
         
         # 获取当前配置
@@ -155,116 +183,72 @@ class DocumentTab(BaseSettingsTab):
             '文档转MD时默认勾选"图片文字识别"',
             self._on_doc_ocr_changed
         )
+        
+        # 初始化状态记录
+        self._doc_last_image_state = doc_keep
+        self._doc_last_ocr_state = doc_ocr
     
-    def _create_validation_section(self):
-        """创建校对设置区域"""
-        logger.debug("创建校对设置区域")
+    def _create_optimization_section(self):
+        """创建优化设置区域"""
+        logger.debug("创建优化设置区域")
         
         frame = self.create_section_frame(
             self.scrollable_frame,
-            "校对设置",
+            "优化设置",
             SectionStyle.INFO
         )
         
         # 获取当前配置
         try:
-            document_config = self.config_manager.get_document_defaults()
-            symbol_pairing = document_config.get("enable_symbol_pairing", True)
-            symbol_correction = document_config.get("enable_symbol_correction", True)
-            typos_rule = document_config.get("enable_typos_rule", True)
-            sensitive_word = document_config.get("enable_sensitive_word", True)
+            enable_opt = self.config_manager.get_docx_to_md_enable_optimization()
+            opt_type = self.config_manager.get_docx_to_md_optimization_type()
         except Exception as e:
-            logger.warning(f"读取校对配置失败: {e}")
-            symbol_pairing, symbol_correction = True, True
-            typos_rule, sensitive_word = True, True
+            logger.warning(f"读取优化配置失败: {e}")
+            enable_opt, opt_type = True, "公文"
         
-        # 标点配对
-        self.symbol_pairing_var = tk.BooleanVar(value=symbol_pairing)
-        self.create_checkbox_with_info(
-            frame,
-            "启用标点配对检查",
-            self.symbol_pairing_var,
-            "检查括号、引号等是否成对出现",
-            lambda: self.on_change("enable_symbol_pairing", self.symbol_pairing_var.get())
+        # 启用优化 + 优化类型（同一行，左右各50%）
+        opt_frame = tb.Frame(frame)
+        opt_frame.pack(fill="x")
+        
+        # 左侧 - 复选框（占50%）
+        left_frame = tb.Frame(opt_frame)
+        left_frame.pack(side="left", expand=True, anchor="w")
+        
+        self.doc_enable_opt_var = tk.BooleanVar(value=enable_opt)
+        opt_checkbox = tb.Checkbutton(
+            left_frame,
+            text='默认启用"针对文档类型优化"',
+            variable=self.doc_enable_opt_var,
+            command=lambda: self.on_change("to_md_enable_optimization", self.doc_enable_opt_var.get()),
+            bootstyle="round-toggle"
         )
+        opt_checkbox.pack(side="left")
         
-        # 符号校对
-        self.symbol_correction_var = tk.BooleanVar(value=symbol_correction)
-        self.create_checkbox_with_info(
-            frame,
-            "启用符号校对",
-            self.symbol_correction_var,
-            "自动纠正全角/半角符号",
-            lambda: self.on_change("enable_symbol_correction", self.symbol_correction_var.get())
+        # 右侧 - 标签 + 下拉框（占50%）
+        right_frame = tb.Frame(opt_frame)
+        right_frame.pack(side="left", expand=True, anchor="w")
+        
+        type_label = tb.Label(
+            right_frame,
+            text="默认优化类型:",
+            font=(self.small_font, self.small_size)
         )
+        type_label.pack(side="left", padx=(0, 10))
         
-        # 错别字校对
-        self.typos_rule_var = tk.BooleanVar(value=typos_rule)
-        self.create_checkbox_with_info(
-            frame,
-            "启用错别字校对",
-            self.typos_rule_var,
-            "根据自定义词典检查并纠正错别字",
-            lambda: self.on_change("enable_typos_rule", self.typos_rule_var.get())
+        self.doc_opt_type_var = tk.StringVar(value=opt_type)
+        self.doc_opt_type_combo = tb.Combobox(
+            right_frame,
+            textvariable=self.doc_opt_type_var,
+            values=["公文", "合同", "论文"],
+            state="readonly",
+            width=10
         )
-        
-        # 敏感词匹配
-        self.sensitive_word_var = tk.BooleanVar(value=sensitive_word)
-        self.create_checkbox_with_info(
-            frame,
-            "启用敏感词匹配",
-            self.sensitive_word_var,
-            "检查文本中是否包含需要关注的敏感词",
-            lambda: self.on_change("enable_sensitive_word", self.sensitive_word_var.get())
+        self.doc_opt_type_combo.pack(side="left")
+        self.doc_opt_type_combo.bind(
+            '<<ComboboxSelected>>',
+            lambda e: self.on_change("to_md_optimization_type", self.doc_opt_type_var.get())
         )
     
-    def _create_dictionary_section(self):
-        """创建词库配置区域"""
-        logger.debug("创建词库配置区域")
-        
-        frame = self.create_section_frame(
-            self.scrollable_frame,
-            "词库配置",
-            SectionStyle.WARNING
-        )
-        
-        # 说明文本
-        desc_label = tb.Label(
-            frame,
-            text="配置校对词库：错误符号、错别字、敏感词。",
-            bootstyle="secondary",
-            wraplength=400
-        )
-        desc_label.pack(anchor="w", pady=(0, 10))
-        
-        # 按钮容器
-        button_frame = tb.Frame(frame)
-        button_frame.pack(fill="x", pady=(10, 0))
-        
-        # 三个编辑按钮
-        tb.Button(
-            button_frame,
-            text="📝 错误符号",
-            command=self._on_edit_symbol_mapping,
-            bootstyle="info",
-            width=12
-        ).pack(side="left", padx=(0, 5))
-        
-        tb.Button(
-            button_frame,
-            text="📝 错别字",
-            command=self._on_edit_custom_typos,
-            bootstyle="warning",
-            width=12
-        ).pack(side="left", padx=(0, 5))
-        
-        tb.Button(
-            button_frame,
-            text="📝 敏感词",
-            command=self._on_edit_sensitive_words,
-            bootstyle="danger",
-            width=12
-        ).pack(side="left")
     
     def _create_software_priority_section(self):
         """创建软件优先级区域"""
@@ -308,92 +292,6 @@ class DocumentTab(BaseSettingsTab):
         
         self.document_to_pdf_cards_frame = tb.Frame(frame)
         self.document_to_pdf_cards_frame.pack(fill="x")
-    
-    # ========== 词库配置方法 ==========
-    
-    def _on_edit_symbol_mapping(self):
-        """编辑符号映射"""
-        logger.info("打开符号映射编辑器")
-        config_file_path = self._get_config_file_path("symbol_settings.toml")
-        from gongwen_converter.config.toml_operations import read_toml_file
-        config_data = read_toml_file(config_file_path)
-        symbol_map = config_data.get("symbol_map", {})
-        self._open_editor("symbol", symbol_map, self._on_symbol_mapping_saved, config_file_path)
-    
-    def _on_edit_custom_typos(self):
-        """编辑错别字"""
-        logger.info("打开错别字映射编辑器")
-        config_file_path = self._get_config_file_path("typos_settings.toml")
-        from gongwen_converter.config.toml_operations import read_toml_file
-        config_data = read_toml_file(config_file_path)
-        custom_typos = config_data.get("typos", {})
-        self._open_editor("typo", custom_typos, self._on_custom_typos_saved, config_file_path)
-    
-    def _on_edit_sensitive_words(self):
-        """编辑敏感词"""
-        logger.info("打开敏感词映射编辑器")
-        config_file_path = self._get_config_file_path("sensitive_words.toml")
-        from gongwen_converter.config.toml_operations import read_toml_file
-        config_data = read_toml_file(config_file_path)
-        sensitive_words = config_data.get("sensitive_words", {})
-        self._open_editor("sensitive", sensitive_words, self._on_sensitive_words_saved, config_file_path)
-    
-    def _get_config_file_path(self, filename: str) -> str:
-        """获取配置文件完整路径"""
-        import os
-        try:
-            config_dir = self.config_manager._config_dir
-            return os.path.join(config_dir, filename)
-        except Exception as e:
-            logger.error(f"获取配置文件路径失败: {e}")
-            return None
-    
-    def _open_editor(self, editor_type, data, save_callback, config_file_path=None):
-        """打开映射编辑器"""
-        try:
-            from .mapping_editor import MappingEditorDialog
-            editor = MappingEditorDialog(
-                self,
-                editor_type,
-                data,
-                save_callback,
-                config_file_path=config_file_path
-            )
-            self.wait_window(editor)
-        except ImportError as e:
-            logger.error(f"导入映射编辑器失败: {e}")
-    
-    def _on_symbol_mapping_saved(self, new_mapping: Dict[str, List[str]]):
-        """保存符号映射"""
-        logger.info("符号映射已保存")
-        config_file_path = self._get_config_file_path("symbol_settings.toml")
-        self._save_mapping_with_comments(config_file_path, "symbol_map", new_mapping)
-    
-    def _on_custom_typos_saved(self, new_mapping: Dict[str, List[str]]):
-        """保存错别字"""
-        logger.info("错别字映射已保存")
-        config_file_path = self._get_config_file_path("typos_settings.toml")
-        self._save_mapping_with_comments(config_file_path, "typos", new_mapping)
-    
-    def _on_sensitive_words_saved(self, new_mapping: Dict[str, List[str]]):
-        """保存敏感词"""
-        logger.info("敏感词映射已保存")
-        config_file_path = self._get_config_file_path("sensitive_words.toml")
-        self._save_mapping_with_comments(config_file_path, "sensitive_words", new_mapping)
-    
-    def _save_mapping_with_comments(self, filepath, section, mapping_data):
-        """保存映射数据和备注"""
-        try:
-            from gongwen_converter.config.toml_operations import (
-                save_mapping_with_comments,
-                extract_inline_comments
-            )
-            comments_data = extract_inline_comments(filepath, section)
-            success = save_mapping_with_comments(filepath, section, mapping_data, comments_data)
-            if success:
-                self.config_manager.reload_configs()
-        except Exception as e:
-            logger.error(f"保存映射失败: {e}")
     
     # ========== 软件优先级方法 ==========
     
@@ -573,33 +471,202 @@ class DocumentTab(BaseSettingsTab):
         
         self._refresh_category(self.selected_category)
     
+    def _create_docx_to_md_numbering_section(self):
+        """创建DOCX转MD序号设置区域"""
+        logger.debug("创建DOCX转MD序号设置区域")
+        
+        frame = self.create_section_frame(
+            self.scrollable_frame,
+            "小标题序号设置（文档转为MarkDown）",
+            SectionStyle.PRIMARY
+        )
+        
+        # 获取当前配置
+        try:
+            remove_numbering = self.config_manager.get_docx_to_md_remove_numbering()
+            add_numbering = self.config_manager.get_docx_to_md_add_numbering()
+            default_scheme = self.config_manager.get_docx_to_md_default_scheme()
+        except Exception as e:
+            logger.warning(f"读取DOCX转MD序号配置失败: {e}")
+            remove_numbering, add_numbering = True, False
+            default_scheme = "gongwen_standard"
+        
+        # 获取序号方案列表
+        try:
+            scheme_names = self.config_manager.get_scheme_names()
+            if not scheme_names:
+                scheme_names = ["公文标准", "层级数字标准", "法律条文标准"]
+        except Exception as e:
+            logger.warning(f"获取序号方案列表失败: {e}")
+            scheme_names = ["公文标准", "层级数字标准", "法律条文标准"]
+        
+        # 动态获取方案ID到名称的映射
+        scheme_id_to_name, _ = self._get_scheme_mappings()
+        default_scheme_name = scheme_id_to_name.get(default_scheme, "公文标准")
+        
+        # 默认清除原有文档小标题序号
+        self.docx_to_md_remove_var = tk.BooleanVar(value=remove_numbering)
+        self.create_checkbox_with_info(
+            frame,
+            '默认清除原有文档小标题序号',
+            self.docx_to_md_remove_var,
+            'DOCX转MD时默认清除文档中已有的标题序号',
+            lambda: self.on_change("docx_to_md_remove_numbering", self.docx_to_md_remove_var.get())
+        )
+        
+        # 默认新增小标题序号到Markdown + 默认序号方案（同一行，左右各50%）
+        add_scheme_frame = tb.Frame(frame)
+        add_scheme_frame.pack(fill="x", pady=(10, 0))
+        
+        # 左侧 - 复选框（占50%）
+        left_frame = tb.Frame(add_scheme_frame)
+        left_frame.pack(side="left", expand=True, anchor="w")
+        
+        self.docx_to_md_add_var = tk.BooleanVar(value=add_numbering)
+        add_checkbox = tb.Checkbutton(
+            left_frame,
+            text='默认新增小标题序号到Markdown',
+            variable=self.docx_to_md_add_var,
+            command=lambda: self.on_change("docx_to_md_add_numbering", self.docx_to_md_add_var.get()),
+            bootstyle="round-toggle"
+        )
+        add_checkbox.pack(side="left")
+        
+        # 右侧 - 标签 + 下拉框（占50%）
+        right_frame = tb.Frame(add_scheme_frame)
+        right_frame.pack(side="left", expand=True, anchor="w")
+        
+        scheme_label = tb.Label(
+            right_frame,
+            text="默认序号方案:",
+            font=(self.small_font, self.small_size)
+        )
+        scheme_label.pack(side="left", padx=(0, 10))
+        
+        self.docx_to_md_scheme_var = tk.StringVar(value=default_scheme_name)
+        self.docx_to_md_scheme_combo = tb.Combobox(
+            right_frame,
+            textvariable=self.docx_to_md_scheme_var,
+            values=scheme_names,
+            state="readonly",
+            width=15
+        )
+        self.docx_to_md_scheme_combo.pack(side="left")
+        self.docx_to_md_scheme_combo.bind(
+            '<<ComboboxSelected>>',
+            lambda e: self._on_docx_to_md_scheme_changed()
+        )
+    
     # ========== 事件处理方法 ==========
     
+    def _on_docx_to_md_scheme_changed(self):
+        """处理DOCX转MD序号方案变更"""
+        scheme_name = self.docx_to_md_scheme_var.get()
+        
+        # 动态获取名称到ID的映射
+        _, scheme_name_to_id = self._get_scheme_mappings()
+        
+        scheme_id = scheme_name_to_id.get(scheme_name, "gongwen_standard")
+        logger.info(f"DOCX转MD序号方案变更: {scheme_name} ({scheme_id})")
+        self.on_change("docx_to_md_default_scheme", scheme_id)
+    
     def _on_doc_keep_changed(self):
-        """处理提取图片设置变更"""
-        value = self.doc_keep_var.get()
-        logger.info(f"文档提取图片设置变更: {value}")
-        self.on_change("to_md_keep_images", value)
+        """
+        处理提取图片设置变更
+        
+        实现联动逻辑：
+        1. 勾选OCR时，自动勾选"提取图片"
+        2. 取消"提取图片"时，自动取消OCR
+        """
+        if self._updating_doc_options:
+            return
+        
+        try:
+            self._updating_doc_options = True
+            
+            extract_image = self.doc_keep_var.get()
+            extract_ocr = self.doc_ocr_var.get()
+            
+            # 检测状态变化
+            image_changed = (extract_image != self._doc_last_image_state)
+            
+            # 场景：用户取消提取图片（从有到无）
+            if not extract_image and self._doc_last_image_state and image_changed:
+                if extract_ocr:
+                    logger.debug("文档设置：取消提取图片，自动取消OCR")
+                    self.doc_ocr_var.set(False)
+            
+            # 更新状态记录
+            self._doc_last_image_state = self.doc_keep_var.get()
+            self._doc_last_ocr_state = self.doc_ocr_var.get()
+            
+            # 通知配置变更
+            value = self.doc_keep_var.get()
+            logger.info(f"文档提取图片设置变更: {value}")
+            self.on_change("to_md_keep_images", value)
+        
+        finally:
+            self._updating_doc_options = False
     
     def _on_doc_ocr_changed(self):
-        """处理OCR设置变更"""
-        value = self.doc_ocr_var.get()
-        logger.info(f"文档OCR设置变更: {value}")
-        self.on_change("to_md_enable_ocr", value)
+        """
+        处理OCR设置变更
+        
+        实现联动逻辑：
+        1. 勾选OCR时，自动勾选"提取图片"
+        2. 取消"提取图片"时，自动取消OCR
+        """
+        if self._updating_doc_options:
+            return
+        
+        try:
+            self._updating_doc_options = True
+            
+            extract_image = self.doc_keep_var.get()
+            extract_ocr = self.doc_ocr_var.get()
+            
+            # 检测状态变化
+            ocr_changed = (extract_ocr != self._doc_last_ocr_state)
+            
+            # 场景：用户勾选OCR（从无到有）
+            if extract_ocr and not self._doc_last_ocr_state and ocr_changed:
+                if not extract_image:
+                    logger.debug("文档设置：勾选OCR，自动勾选提取图片")
+                    self.doc_keep_var.set(True)
+            
+            # 更新状态记录
+            self._doc_last_image_state = self.doc_keep_var.get()
+            self._doc_last_ocr_state = self.doc_ocr_var.get()
+            
+            # 通知配置变更
+            value = self.doc_ocr_var.get()
+            logger.info(f"文档OCR设置变更: {value}")
+            self.on_change("to_md_enable_ocr", value)
+        
+        finally:
+            self._updating_doc_options = False
     
     # ========== 配置获取和应用方法 ==========
     
     def get_settings(self) -> Dict[str, Any]:
         """获取当前设置"""
+        # 动态获取方案名称到ID的映射
+        _, scheme_name_to_id = self._get_scheme_mappings()
+        
         settings = {
             # 提取/OCR设置
             "to_md_keep_images": self.doc_keep_var.get(),
             "to_md_enable_ocr": self.doc_ocr_var.get(),
-            # 校对设置
-            "enable_symbol_pairing": self.symbol_pairing_var.get(),
-            "enable_symbol_correction": self.symbol_correction_var.get(),
-            "enable_typos_rule": self.typos_rule_var.get(),
-            "enable_sensitive_word": self.sensitive_word_var.get(),
+            # 优化设置
+            "to_md_enable_optimization": self.doc_enable_opt_var.get(),
+            "to_md_optimization_type": self.doc_opt_type_var.get(),
+            # DOCX转MD序号设置
+            "to_md_remove_numbering": self.docx_to_md_remove_var.get(),
+            "to_md_add_numbering": self.docx_to_md_add_var.get(),
+            "to_md_default_scheme": scheme_name_to_id.get(
+                self.docx_to_md_scheme_var.get(),
+                "gongwen_standard"
+            ),
             # 软件优先级
             "word_processors": [sw.software_id for sw in self.word_processors],
             "odt": [sw.software_id for sw in self.odt_software],
@@ -616,15 +683,15 @@ class DocumentTab(BaseSettingsTab):
             settings = self.get_settings()
             success = True
             
-            # 保存提取/OCR和校对设置到file_defaults.toml
-            file_defaults_keys = [
+            # 保存提取/OCR、优化和序号设置到conversion_defaults.toml
+            conversion_defaults_keys = [
                 "to_md_keep_images", "to_md_enable_ocr",
-                "enable_symbol_pairing", "enable_symbol_correction",
-                "enable_typos_rule", "enable_sensitive_word"
+                "to_md_enable_optimization", "to_md_optimization_type",
+                "to_md_remove_numbering", "to_md_add_numbering", "to_md_default_scheme"
             ]
-            for key in file_defaults_keys:
+            for key in conversion_defaults_keys:
                 if not self.config_manager.update_config_value(
-                    "file_defaults", "document", key, settings[key]
+                    "conversion_defaults", "document", key, settings[key]
                 ):
                     success = False
             

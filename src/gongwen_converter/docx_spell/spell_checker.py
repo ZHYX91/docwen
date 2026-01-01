@@ -102,13 +102,8 @@ class TextValidator:
         logger.debug("开始配置校对引擎...")
         
         try:
-            # 1. 从 config_manager 获取各配置块的引擎设置
-            symbol_settings = config_manager.get_symbol_engine_settings()
-            typos_settings = config_manager.get_typos_engine_settings()
-            sensitive_settings = config_manager.get_sensitive_words_engine_settings()
-            
-            # 合并所有引擎设置
-            settings = {**symbol_settings, **typos_settings, **sensitive_settings}
+            # 1. 从 config_manager 获取校对引擎配置（集中配置）
+            settings = config_manager.get_proofread_engine_config()
             logger.debug(f"基础配置 (默认+文件): {settings}")
             
             # 2. 应用构造函数传入的覆盖值
@@ -158,7 +153,7 @@ class TextValidator:
                             invalid_count += 1
                 
                 if invalid_count > 0:
-                    logger.warning(f"发现 {invalid_count} 个配置警告，建议检查 sensitive_words.toml")
+                    logger.warning(f"发现 {invalid_count} 个配置警告，建议检查 proofread_sensitive.toml")
                 else:
                     logger.info("敏感词配置验证通过")
             

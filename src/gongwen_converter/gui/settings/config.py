@@ -1,4 +1,4 @@
-"""
+﻿"""
 设置界面配置管理模块
 
 本模块统一管理所有设置界面的布局参数、样式常量和配置选项。
@@ -75,8 +75,8 @@ class DialogConfig:
         button_spacing: 按钮间距（像素）
         status_display_time: 状态消息显示时长（毫秒）
     """
-    default_width: int = 510
-    default_height: int = 750
+    default_width: int = 600
+    default_height: int = 800
     min_width: int = 510
     min_height: int = 750
     padding: int = 15

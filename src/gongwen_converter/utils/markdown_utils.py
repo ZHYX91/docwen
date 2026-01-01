@@ -38,69 +38,77 @@ def clean_heading(text: str) -> str:
     return cleaned
 
 
-def format_image_link(filename: str, link_format: str = "wiki", embed: bool = True) -> str:
+def format_image_link(filename: str, style: str = "wiki_embed") -> str:
     """
     格式化图片链接
     
     参数:
         filename: 图片文件名
-        link_format: "markdown" 或 "wiki"
-        embed: 是否嵌入显示
+        style: 链接样式，可选值：
+            - "markdown_embed": ![image.png](image.png) - 嵌入显示
+            - "markdown_link": [image.png](image.png) - 仅链接
+            - "wiki_embed": ![[image.png]] - Wiki嵌入显示
+            - "wiki_link": [[image.png]] - Wiki仅链接
     
     返回:
         格式化后的链接字符串
     
     示例:
-        >>> format_image_link("image.png", "markdown", True)
+        >>> format_image_link("image.png", "markdown_embed")
         '![image.png](image.png)'
-        >>> format_image_link("image.png", "markdown", False)
+        >>> format_image_link("image.png", "markdown_link")
         '[image.png](image.png)'
-        >>> format_image_link("image.png", "wiki", True)
+        >>> format_image_link("image.png", "wiki_embed")
         '![[image.png]]'
-        >>> format_image_link("image.png", "wiki", False)
+        >>> format_image_link("image.png", "wiki_link")
         '[[image.png]]'
     """
-    if link_format == "wiki":
-        result = f"![[{filename}]]" if embed else f"[[{filename}]]"
-    else:  # markdown
-        result = f"![{filename}]({filename})" if embed else f"[{filename}]({filename})"
+    style_mapping = {
+        "markdown_embed": f"![{filename}]({filename})",
+        "markdown_link": f"[{filename}]({filename})",
+        "wiki_embed": f"![[{filename}]]",
+        "wiki_link": f"[[{filename}]]"
+    }
     
-    logger.debug(f"格式化图片链接: {filename} -> {result} (format={link_format}, embed={embed})")
+    result = style_mapping.get(style, style_mapping["wiki_embed"])
+    logger.debug(f"格式化图片链接: {filename} -> {result} (style={style})")
     return result
 
 
-def format_md_file_link(filename: str, link_format: str = "wiki", embed: bool = True) -> str:
+def format_md_file_link(filename: str, style: str = "wiki_embed") -> str:
     """
     格式化MD文件链接
     
     参数:
         filename: MD文件名
-        link_format: "markdown" 或 "wiki"
-        embed: 是否嵌入（仅wiki有效）
+        style: 链接样式，可选值：
+            - "markdown_link": [file.md](file.md) - Markdown链接（固定为链接形式）
+            - "wiki_embed": ![[file.md]] - Wiki嵌入显示
+            - "wiki_link": [[file.md]] - Wiki仅链接
     
     返回:
         格式化后的链接字符串
     
     示例:
-        >>> format_md_file_link("file.md", "markdown", True)
+        >>> format_md_file_link("file.md", "markdown_link")
         '[file.md](file.md)'
-        >>> format_md_file_link("file.md", "markdown", False)
-        '[file.md](file.md)'
-        >>> format_md_file_link("file.md", "wiki", True)
+        >>> format_md_file_link("file.md", "wiki_embed")
         '![[file.md]]'
-        >>> format_md_file_link("file.md", "wiki", False)
+        >>> format_md_file_link("file.md", "wiki_link")
         '[[file.md]]'
     
     注意:
-        Markdown格式固定为链接形式，embed参数被忽略
+        Markdown格式不支持嵌入MD文件内容，"markdown_embed"会被视为"markdown_link"
     """
-    if link_format == "wiki":
-        result = f"![[{filename}]]" if embed else f"[[{filename}]]"
-    else:  # markdown
-        # Markdown格式固定为链接形式
-        result = f"[{filename}]({filename})"
+    style_mapping = {
+        "markdown_link": f"[{filename}]({filename})",
+        "markdown_embed": f"[{filename}]({filename})",  # Markdown不支持嵌入，等同于link
+        "wiki_embed": f"![[{filename}]]",
+        "wiki_link": f"[[{filename}]]"
+    }
     
-    logger.debug(f"格式化MD文件链接: {filename} -> {result} (format={link_format}, embed={embed})")
+    result = style_mapping.get(style, style_mapping["wiki_embed"])
+    logger.debug(f"格式化MD文件链接: {filename} -> {result} (style={style})")
     return result
 
 

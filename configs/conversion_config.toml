@@ -1,0 +1,121 @@
+# ==================================
+#  公文转换器 - 转换行为配置
+#  直接控制 DOCX ↔ Markdown 转换引擎的行为规则
+# ==================================
+
+# ----------------------------------
+#  DOCX → MD 格式设置
+# ----------------------------------
+[docx_to_md]
+# 正文非小标题格式处理
+# true: 保留格式，转换为Markdown标记（如 **粗体**、*斜体* 等）
+# false: 丢弃格式，只保留纯文本
+preserve_formatting = true
+
+# 小标题格式处理
+# true: 保留标题内的格式标记（如部分加粗转为 **加粗**）
+# false: 丢弃标题内的格式，只保留纯文本
+# 注意：通常Word标题样式已有固定格式，保留会导致冗余标记
+preserve_heading_formatting = false
+
+# 表头格式处理
+# true: 保留表头单元格中的格式标记（如 **粗体**）
+# false: 丢弃表头格式，只保留纯文本（推荐，避免冗余）
+# 注意：表格样式通常已定义表头加粗，保留会导致重复标记
+preserve_table_header_formatting = false
+
+# ----------------------------------
+#  MD → DOCX 格式设置
+# ----------------------------------
+[md_to_docx]
+# 正文非小标题格式标记处理模式:
+# "apply"  - 应用格式（**粗体** → 真正的粗体）
+# "keep"   - 保留标记（**粗体** → 显示为 **粗体**）
+# "remove" - 清理标记（**粗体** → 显示为 粗体，无格式）
+formatting_mode = "apply"
+
+# 小标题格式标记处理模式:
+# "apply"  - 应用格式，覆盖样式默认格式（未标记文字显式不加粗/不斜体）
+# "keep"   - 保留标记原样（标记文字会显示为 **粗体** 等）
+# "remove" - 清理标记，让Word标题样式格式自然生效
+# 注意：当Word标题样式本身是加粗时，"apply"模式可实现部分加粗效果
+heading_formatting_mode = "remove"
+
+# 表头格式标记处理模式:
+# "apply"  - 应用格式（**粗体** → 真正的粗体，可能与表格样式重复）
+# "keep"   - 保留标记原样（标记文字会显示为 **粗体** 等）
+# "remove" - 清理标记，让表格样式（如 firstRow 加粗）自然生效
+# 注意：表格样式通常已定义表头加粗，建议使用 "remove" 避免冗余
+table_header_formatting_mode = "remove"
+
+# ==================================
+#  Markdown格式语法配置（输出时使用）
+#  注意：输入时会同时识别所有格式语法
+# ==================================
+[syntax]
+# 粗体语法
+# "asterisk" = **文本**  |  "underscore" = __文本__
+bold = "asterisk"
+
+# 斜体语法
+# "asterisk" = *文本*  |  "underscore" = _文本_
+italic = "asterisk"
+
+# 删除线语法
+# "extended" = ~~文本~~  |  "html" = <del>文本</del>
+strikethrough = "extended"
+
+# 高亮语法
+# "extended" = ==文本==  |  "html" = <mark>文本</mark>
+highlight = "extended"
+
+# 上标语法
+# "extended" = ^文本^  |  "html" = <sup>文本</sup>
+superscript = "html"
+
+# 下标语法
+# "extended" = ~文本~  |  "html" = <sub>文本</sub>
+subscript = "html"
+
+# 无序列表标记（DOCX → MD 输出时使用）
+# "dash" = - 内容  |  "asterisk" = * 内容  |  "plus" = + 内容
+unordered_list = "dash"
+
+# 有序列表编号（DOCX → MD 输出时使用）
+# "restart" = 从1开始重新编号  |  "preserve" = 保留原编号
+# 注意：此选项暂未实现，保留供将来使用
+ordered_list = "restart"
+
+# 列表缩进空格数（MD → DOCX 时识别级别用）
+# 每级列表缩进的空格数，常见值：2 或 4
+indent_spaces = 4
+
+# ==================================
+#  分隔符/分页符/分隔线双向转换配置
+#  
+#  MD 分隔符与 Word 元素的对应关系：
+#  - --- (dash)       ↔ 分页符 (page_break)
+#  - *** (asterisk)   ↔ 分节符 (section_break)
+#  - ___ (underscore) ↔ 分隔线 (horizontal_rule_1/2/3)
+# ==================================
+[horizontal_rule]
+# 是否启用分隔符转换
+enabled = true
+
+# ----------------------------------
+#  文档转MD：Word分隔符 → MD分隔符
+# ----------------------------------
+# 可选值: "---", "***", "___", "ignore"
+[horizontal_rule.docx_to_md]
+page_break = "---"           # 分页符 → ---
+section_break = "***"        # 分节符（所有类型统一）→ ***
+horizontal_rule = "___"      # 分隔线（Horizontal Rule 1/2/3 样式）→ ___
+
+# ----------------------------------
+#  MD转文档：MD分隔符 → Word分隔符
+# ----------------------------------
+# 可选值: "page_break", "section_break", "horizontal_rule_1", "horizontal_rule_2", "horizontal_rule_3", "ignore"
+[horizontal_rule.md_to_docx]
+dash = "page_break"              # --- → 分页符
+asterisk = "section_break"       # *** → 分节符（下一页）
+underscore = "horizontal_rule_1" # ___ → 分隔线（Horizontal Rule 1 样式）

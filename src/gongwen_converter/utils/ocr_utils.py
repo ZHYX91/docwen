@@ -227,12 +227,13 @@ def get_ocr():
     return _ocr_instance
 
 
-def extract_text_simple(image_path: str) -> str:
+def extract_text_simple(image_path: str, cancel_event=None) -> str:
     """
     从图片中提取纯文本（用于Markdown）
     
     参数:
         image_path: 图片文件路径
+        cancel_event: 取消事件（可选），用于中断OCR识别
         
     返回:
         str: 识别的文本，多行用换行符分隔
@@ -240,7 +241,13 @@ def extract_text_simple(image_path: str) -> str:
     注意:
         - 如果识别失败，返回空字符串
         - GIF格式只识别第一帧
+        - 如果cancel_event被设置，立即返回空字符串
     """
+    # 检查取消事件
+    if cancel_event and cancel_event.is_set():
+        logger.info("OCR识别被取消（操作前检查）")
+        return ""
+    
     if not os.path.exists(image_path):
         logger.error(f"图片文件不存在: {image_path}")
         return ""
@@ -261,6 +268,11 @@ def extract_text_simple(image_path: str) -> str:
         logger.debug(f"开始OCR识别: {image_path}")
         ocr = get_ocr()
         result = ocr.predict(image_path)  # 3.x 使用 predict() 替代 ocr()
+        
+        # OCR完成后再次检查取消事件（处理OCR过程中的取消）
+        if cancel_event and cancel_event.is_set():
+            logger.info("OCR识别被取消（操作后检查）")
+            return ""
         
         # 3.x 返回字典结构，需要访问 rec_texts 字段
         if not result or len(result) == 0 or 'rec_texts' not in result[0]:
@@ -287,12 +299,13 @@ def extract_text_simple(image_path: str) -> str:
         return ""
 
 
-def extract_text_with_sizes(image_path: str) -> List[Dict[str, any]]:
+def extract_text_with_sizes(image_path: str, cancel_event=None) -> List[Dict[str, any]]:
     """
     从图片中提取文字和字号信息（用于DOCX）
     
     参数:
         image_path: 图片文件路径
+        cancel_event: 取消事件（可选），用于中断OCR识别
         
     返回:
         List[Dict]: 文字块列表，每个字典包含:
@@ -302,7 +315,13 @@ def extract_text_with_sizes(image_path: str) -> List[Dict[str, any]]:
     注意:
         - 如果识别失败，返回空列表
         - 字号基于文字高度估算，可能不完全准确
+        - 如果cancel_event被设置，立即返回空列表
     """
+    # 检查取消事件
+    if cancel_event and cancel_event.is_set():
+        logger.info("OCR识别被取消（操作前检查）")
+        return []
+    
     if not os.path.exists(image_path):
         logger.error(f"图片文件不存在: {image_path}")
         return []
@@ -323,6 +342,11 @@ def extract_text_with_sizes(image_path: str) -> List[Dict[str, any]]:
         logger.debug(f"开始OCR识别（含字号）: {image_path}")
         ocr = get_ocr()
         result = ocr.predict(image_path)  # 3.x 使用 predict() 替代 ocr()
+        
+        # OCR完成后再次检查取消事件（处理OCR过程中的取消）
+        if cancel_event and cancel_event.is_set():
+            logger.info("OCR识别被取消（操作后检查）")
+            return []
         
         # 3.x 返回字典结构，需要访问多个字段
         if not result or len(result) == 0 or 'rec_texts' not in result[0]:
