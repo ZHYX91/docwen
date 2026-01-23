@@ -9,15 +9,15 @@
    Copyright: Artifex Software, Inc.
    Website: https://github.com/pymupdf/PyMuPDF
 
-2. PaddleOCR
+2. RapidOCR
    License: Apache-2.0
-   Copyright: PaddlePaddle Authors
-   Website: https://github.com/PaddlePaddle/PaddleOCR
+   Copyright: RapidAI Team
+   Website: https://github.com/RapidAI/RapidOCR
 
-3. PaddlePaddle
-   License: Apache-2.0
-   Copyright: PaddlePaddle Authors
-   Website: https://github.com/PaddlePaddle/Paddle
+3. ONNX Runtime
+   License: MIT
+   Copyright: Microsoft Corporation
+   Website: https://github.com/microsoft/onnxruntime
 
 4. python-docx
    License: MIT

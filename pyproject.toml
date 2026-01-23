@@ -3,7 +3,7 @@ requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "gongwen-converter"
+name = "docwen"
 dynamic = ["version"]
 description = "公文图表格式转换软件 - 支持 Word/Markdown/Excel 互转"
 readme = "README.md"
@@ -53,8 +53,7 @@ dependencies = [
     "pillow-heif>=1.1.1",
     
     # OCR支持
-    "paddleocr>=3.3.1",
-    "paddlepaddle>=3.2.1",
+    "rapidocr_onnxruntime>=1.4.0",
     
     # Windows COM 自动化
     "pywin32>=311",
@@ -71,11 +70,11 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["gongwen_converter"]
+packages = ["docwen"]
 package-dir = {"" = "src"}
 
 [tool.setuptools.dynamic]
-version = {attr = "gongwen_converter.__version__"}
+version = {attr = "docwen.__version__"}
 
 [tool.setuptools.package-data]
-gongwen_converter = ["py.typed"]
+docwen = ["py.typed"]

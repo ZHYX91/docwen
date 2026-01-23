@@ -1,11 +1,11 @@
-公文转换器 (Gongwen Converter)
+公文转换器 (Docwen)
 ================================================================================
 
 Copyright (c) 2025 ZhengYX
 
 本软件基于 GNU Affero General Public License v3.0 (AGPL-3.0) 发布。
 
-项目主页：https://github.com/ZHYX91/gongwen-converter
+项目主页：https://github.com/ZHYX91/docwen
 作者邮箱：zhengyx91@hotmail.com
 
 ================================================================================
@@ -24,7 +24,7 @@ Copyright (c) 2025 ZhengYX
 
 1. 源代码获取
    本软件的完整源代码可通过以下方式获取：
-   - GitHub 仓库：https://github.com/ZHYX91/gongwen-converter
+   - GitHub 仓库：https://github.com/ZHYX91/docwen
    - 联系作者获取
 
 2. 第三方组件

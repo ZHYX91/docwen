@@ -1,0 +1,1608 @@
+# Docwen - Fichier de langue pour le français
+# Code de langue: fr_FR
+# Encodage: UTF-8
+
+[meta]
+name = "French"
+native_name = "Français"
+
+# =============================================================================
+# Interface en ligne de commande (CLI)
+# =============================================================================
+[cli]
+description = "DocWen CLI - Conversion de documents/tableaux/images/mise en page"
+example = "Exemple"
+header = "Docwen - Mode Interactif"
+
+# Texte d'aide CLI
+[cli.help]
+files = "Chemin du fichier d'entrée (prend en charge les caractères génériques, ex: *.docx)"
+action = "Type d'action"
+target = "Format cible (pour la conversion, ex: docx, pdf, jpg)"
+extract_img = "Extraire les images"
+ocr = "Reconnaissance de texte OCR pour les images"
+optimize_for = "Type d'optimisation: gongwen (Officiel), contract (Contrat), thesis (Thèse)"
+template = "Nom du modèle (pour MD vers Document/Tableau)"
+check_punct = "Vérifier la ponctuation"
+check_typo = "Vérifier les fautes de frappe"
+check_symbol = "Vérifier les symboles"
+check_sensitive = "Vérifier les termes signalés"
+merge_mode = "Mode de fusion: Ligne/Colonne/Cellule"
+base_table = "Chemin de la table de base"
+pages = "Plage de pages PDF (ex: 1-3,5,7-10)"
+dpi = "Qualité DPI de l'image"
+compress = "Mode de compression"
+size_limit = "Limite de taille de fichier (ex: 200KB, 2MB)"
+quality_mode = "Mode qualité PDF (image vers PDF)"
+batch = "Mode par lots (même configuration pour tous les fichiers)"
+yes = "Sauter toutes les confirmations"
+continue_on_error = "Continuer en cas d'erreur"
+json = "Sortie au format JSON (pour les scripts)"
+quiet = "Mode silencieux (sortie minimale)"
+verbose = "Mode verbeux"
+remove_numbering = "Supprimer la numérotation d'origine"
+add_numbering = "Ajouter une nouvelle numérotation"
+numbering_scheme = "Schéma de numérotation"
+inspect = "Inspecter les actions supportées (Auto-description IA)"
+list_actions = "Lister toutes les actions disponibles"
+list_numbering_schemes = "Lister tous les schémas de numérotation"
+list_templates = "Lister tous les modèles disponibles"
+lang = "Définir la langue temporairement"
+keep_alpha = "Garder la transparence pour TIFF"
+
+# Groupes CLI
+[cli.groups]
+export_options = "Options d'exportation"
+export_options_desc = "Pour l'action export_md"
+validate_options = "Options de validation"
+validate_options_desc = "Pour l'action validate"
+merge_options = "Options de fusion"
+merge_options_desc = "Pour l'action merge_tables"
+pdf_options = "Options PDF"
+pdf_options_desc = "Pour fusion/division PDF"
+image_options = "Options d'image"
+image_options_desc = "Pour la conversion d'image"
+batch_options = "Options par lots"
+batch_options_desc = "Traitement par lots"
+output_options = "Contrôle de sortie"
+output_options_desc = "Format et détails de la sortie"
+numbering_options = "Options de numérotation"
+numbering_options_desc = "Pour la numérotation des sous-titres"
+ai_options = "Fonctions IA"
+ai_options_desc = "Auto-description et requête"
+
+# Mode interactif CLI
+[cli.interactive]
+header = "Docwen - Mode Interactif"
+select_operation = "Sélectionner une opération"
+select_format = "Sélectionner le format de sortie"
+select_target_format = "Sélectionner le format cible"
+input_target_format = "Format cible (docx/pdf/...)"
+select_image_format = "Sélectionner le format d'image"
+select_pdf_size = "Sélectionner la taille PDF"
+select_numbering_scheme = "Sélectionner un schéma de numérotation"
+select_optimization_type = "Sélectionner le type d'optimisation"
+select_dpi = "Sélectionner la qualité DPI"
+select_compress_mode = "Mode de compression"
+confirm_convert_pdf = "Confirmer la conversion en PDF ?"
+confirm_merge = "Confirmer la fusion"
+export_options = "Options d'exportation"
+extraction_options = "Options d'extraction"
+numbering_options = "Options de numérotation"
+numbering_processing = "Traitement de la numérotation des titres"
+page_range_label = "Plage de pages"
+input_pages = "Entrer la plage de pages"
+input_files = "Entrer le chemin du fichier ou glisser-déposer"
+input_size_limit = "Limite de taille de fichier"
+input_other_pdfs = "Saisir les chemins des autres PDF à fusionner (jokers acceptés)"
+image_export_hint = "Remarque : pour les images, sélectionnez au moins une option"
+proofread_options = "Options de validation"
+proofread_toggle_hint = "\nEntrez des numéros pour basculer (ex : 1 3 4), Entrée pour confirmer"
+proofread_input = "Options de validation"
+
+# Menus
+[cli.interactive.menus]
+markdown_to_docx = "Convertir en Word (DOCX/DOC/ODT/RTF)"
+markdown_to_xlsx = "Convertir en Excel (XLSX/XLS/ODS/CSV)"
+process_numbering = "Traiter la numérotation"
+export_markdown = "Exporter en Markdown"
+export_md_ocr = "Exporter en Markdown (OCR)"
+format_convert = "Conversion de format"
+image_format_convert = "Conversion de format (PNG/JPG/BMP/GIF/TIF/WebP)"
+save_as_pdf = "Enregistrer en PDF"
+convert_to_document = "Convertir en document (DOCX/DOC)"
+document_validate = "Validation de document"
+render_to_image = "Rendre en image"
+pdf_tools = "Outils PDF (Fusion/Division)"
+merge_pdfs = "Fusionner des PDF"
+split_pdf = "Diviser un PDF"
+cancel = "Annuler"
+back = "Retour"
+
+# Formats
+[cli.interactive.formats]
+docx_recommended = "DOCX (Recommandé)"
+doc_office = "DOC (Nécessite Office)"
+odt_libre = "ODT (Nécessite LibreOffice)"
+rtf_office = "RTF (Nécessite Office)"
+xlsx_recommended = "XLSX (Recommandé)"
+xls_office = "XLS (Nécessite Office)"
+ods_libre = "ODS (Nécessite LibreOffice)"
+csv_text = "CSV (Texte brut)"
+tif_multipage = "TIF (Multi-pages)"
+jpg_jpeg = "JPG (JPEG)"
+png_lossless = "PNG (Sans perte)"
+jpg_lossy = "JPG (Avec pertes)"
+bmp = "BMP (Bitmap)"
+gif = "GIF (Animation)"
+tif = "TIF (Professionnel)"
+webp = "WebP (Moderne)"
+
+# DPI
+[cli.interactive.dpi]
+dpi_150 = "150 DPI (minimum)"
+dpi_300 = "300 DPI (Moyen, Recommandé)"
+dpi_600 = "600 DPI (HD)"
+
+# Compression
+[cli.interactive.compress]
+highest_quality = "Meilleure qualité"
+limit_size = "Limiter la taille"
+
+[cli.interactive.pdf_sizes]
+original = "Taille d'origine"
+fit_a4 = "Adapter au A4"
+fit_a3 = "Adapter au A3"
+
+# Schémas de numérotation
+[cli.interactive.numbering_schemes]
+gongwen_standard = "Standard Officiel"
+hierarchical_standard = "Hiérarchique Numérique"
+hierarchical_h2_start = "Hiérarchique (depuis H2) (H1 sans numéro ; depuis H2 : 1 1.1 1.1.1)"
+legal_standard = "Standard Juridique"
+
+# Types d'optimisation
+[cli.interactive.optimization_types]
+gongwen = "Officiel"
+contract = "Contrat"
+thesis = "Thèse"
+
+# Options de vérification
+[cli.interactive.proofread]
+symbol_pairing = "Appariement de symboles"
+symbol_correction = "Correction de symboles"
+typos_rule = "Vérification des fautes"
+sensitive_word = "Termes signalés"
+
+# Invites
+[cli.interactive.prompts]
+extract_images = "Extraire les images ?"
+embed_image = "Intégrer les images ?"
+ocr_recognition = "Activer la reconnaissance OCR ?"
+ocr_simple = "OCR ?"
+optimize_for_type = "Optimiser pour le type de document ?"
+remove_numbering = "Supprimer l'ancienne numérotation ?"
+add_numbering = "Ajouter une nouvelle numérotation ?"
+continue_next = "Traiter le fichier suivant ?"
+apply_to_all = "Appliquer à tous les fichiers ?"
+
+# Messages CLI
+[cli.messages]
+error_no_files = "Erreur : Aucun fichier d'entrée spécifié"
+error_no_action = "Erreur : Le mode Headless nécessite --action"
+error_no_valid_files = "Erreur : Aucun fichier valide"
+error_file_not_found = "Erreur : Fichier non trouvé"
+error_inspect_no_file = "Erreur : --inspect nécessite un fichier"
+warning_invalid_files = "Attention : {count} fichiers invalides"
+warning_format_mismatch = "Attention : {count} fichiers avec format incorrect"
+no_files_selected = "Aucun fichier sélectionné, sortie"
+no_operation_selected = "Aucune opération sélectionnée"
+program_interrupted = "Programme interrompu"
+error_prefix = "Erreur"
+files_found = "{count} fichier(s) trouvé(s)"
+file_list = "Liste des fichiers"
+file_count_suffix = " fichiers"
+more_files = "et {count} fichier(s) de plus"
+no_other_files = "Aucun autre fichier sélectionné"
+error_need_option = "Erreur : sélectionnez au moins une option"
+no_proofread_selected = "Aucune option de validation sélectionnée"
+error_no_template = "Erreur : aucun modèle {type} trouvé"
+available_type_templates = "Modèles {type} disponibles"
+template_list_error = "Erreur : impossible de charger la liste des modèles"
+invalid_index = "Indice invalide : {idx}"
+invalid_input = "Entrée invalide, veuillez saisir des numéros"
+batch_completed = "Traitement par lots terminé : {success}/{total} succès"
+failed_count = "Échec : {count} fichiers"
+available_actions = "Actions disponibles"
+available_schemes = "Schémas disponibles"
+available_templates = "Modèles disponibles"
+document_templates = "Modèles de document (DOCX)"
+spreadsheet_templates = "Modèles de tableau (XLSX)"
+no_templates = "(Aucun)"
+file_info = "Fichier"
+category_info = "Catégorie"
+format_info = "Format"
+supported_actions = "Actions supportées"
+example_format = "Exemple"
+base_file = "Fichier de base"
+other_pdf_files = "Autres fichiers PDF"
+will_merge_files = "Fusionnera {count} fichiers"
+page_range_hint = "Format : 1-3,5,7-10"
+current_file = "Actuel"
+
+# Mode par lots
+[cli.batch]
+batch_mode = "Mode par lots"
+process_mode = "Mode de traitement"
+processing_category = "Traitement des fichiers {category}..."
+batch_apply_same = "Traitement par lots (Même action)"
+process_one_by_one = "Traiter un par un"
+detected_same_type = "{count} fichiers {category} détectés"
+detected_mixed_types = "Types de fichiers mixtes détectés"
+process_by_type = "Traiter par type (Recommandé)"
+export_all_to_md = "Tout exporter en Markdown"
+configure_operation = "Configurer l'opération"
+
+# Catégories
+[cli.categories]
+markdown = "Markdown"
+document = "Document"
+spreadsheet = "Tableau"
+image = "Image"
+layout = "Mise en page"
+
+# Invites CLI
+[cli.prompts]
+select = "Sélectionner"
+default = "Défaut"
+invalid_yes_no = "Invalide, veuillez entrer y/n"
+enter_number_range = "Veuillez entrer un nombre entre 1-{max}"
+invalid_number = "Nombre invalide"
+cannot_be_empty = "Ne peut pas être vide"
+
+# Validation
+[cli.validation]
+file_not_exists = "Le fichier n'existe pas"
+not_a_file = "Le chemin n'est pas un fichier"
+file_empty = "Le fichier est vide"
+unsupported_type = "Type de fichier non supporté"
+
+# Résultats
+[cli.result]
+success = "Succès"
+failed = "Échec"
+output = "Sortie"
+
+# Actions
+[cli.actions]
+export_md = "Exporter en Markdown"
+convert = "Convertir"
+validate = "Valider"
+merge_tables = "Fusionner les tableaux"
+merge_pdfs = "Fusionner les PDF"
+split_pdf = "Diviser le PDF"
+merge_tiff = "Fusionner en TIFF"
+process_numbering = "Traiter la numérotation"
+
+# Schémas
+[cli.numbering_schemes]
+gongwen_standard = "Standard Officiel"
+hierarchical_standard = "Standard Hiérarchique"
+hierarchical_h2_start = "Hiérarchique (depuis H2)"
+legal_standard = "Standard Juridique"
+
+# =============================================================================
+# Textes généraux
+# =============================================================================
+[common]
+app_name = "DocWen"
+offline_version = "(Version hors ligne)"
+close = "Fermer"
+apply = "Appliquer"
+cancel = "Annuler"
+ok = "OK"
+save = "Enregistrer"
+error = "Erreur"
+version = "Version {version}"
+browse = "Parcourir..."
+select = "Sélectionner"
+disclaimer = "Logiciel de test. Aucune garantie de précision.\nPour tests uniquement. Pas d'utilisation commerciale ni de distribution."
+
+# =============================================================================
+# Paramètres
+# =============================================================================
+[settings]
+title = "Paramètres"
+
+# Onglets
+[settings.tabs]
+general = "Général"
+text = "Texte"
+document = "Document"
+spreadsheet = "Tableau"
+image = "Image"
+layout = "Mise en page"
+link = "Lien"
+formatting = "Formatage"
+output = "Sortie"
+logging = "Journal"
+
+# Statut
+[settings.status]
+applied = "Appliqué"
+apply_failed = "Échec, voir le journal"
+apply_error = "Erreur lors de l'application"
+
+# Général
+[settings.general]
+language_section = "🌐 Langue / Language"
+language_label = "Choisir la langue :"
+language_tooltip = "Choisir la langue d'affichage.\nRedémarrage requis."
+language_restart_hint = "Redémarrage requis."
+
+theme_section = "Thème"
+theme_label = "Choisir le thème :"
+theme_tooltip = "Choisir le thème visuel de l'application."
+theme_preview = "Aperçu :"
+sample_button = "Exemple"
+sample_text = "Texte"
+
+# Thèmes
+[settings.general.themes]
+cerculean = "Cerculean"
+cosmo = "Cosmo"
+cyborg = "Cyborg"
+darkly = "Darkly"
+flatly = "Flatly"
+journal = "Journal"
+litera = "Litera"
+lumen = "Lumen"
+minty = "Minty"
+morph = "Morph"
+pulse = "Pulse"
+sandstone = "Sandstone"
+simplex = "Simplex"
+solar = "Solar"
+superhero = "Superhero"
+united = "United"
+vapor = "Vapor"
+yeti = "Yeti"
+
+[settings.general.transparency]
+section = "Transparence"
+enable = "Activer la transparence de la fenêtre"
+tooltip = "Active les fenêtres semi-transparentes."
+
+[settings.general.window]
+section = "Comportement de la fenêtre"
+remember_state = "Mémoriser la position et la taille"
+remember_state_tooltip = "Restaurer l'état de la fenêtre au prochain démarrage."
+auto_center = "Centrer automatiquement"
+auto_center_tooltip = "Centrer la fenêtre au démarrage."
+default_mode_label = "Mode par défaut :"
+default_mode_tooltip = "Mode par défaut au démarrage."
+single_mode = "Fichier unique"
+batch_mode = "Par lots"
+
+# Texte
+[settings.text]
+md_to_docx_section = "Numérotation (MD vers DOCX)"
+remove_numbering = "Supprimer l'ancienne numérotation"
+remove_numbering_tooltip = "Supprime la numérotation existante dans Markdown."
+add_numbering = "Ajouter une nouvelle numérotation"
+scheme_label = "Schéma :"
+
+numbering_settings_section = "Paramètres de numérotation"
+numbering_settings_desc = "Gérer les règles d'ajout et de suppression."
+edit_numbering_schemes = "Schémas d'ajout"
+edit_patterns = "Modèles de nettoyage"
+
+template_section = "Paramètres de modèle"
+template_label = "Modèle par défaut pour Markdown :"
+template_tooltip = "Modèle par défaut lors de l'importation de fichiers MD."
+template_docx = "Document (DOCX)"
+template_xlsx = "Tableau (XLSX)"
+
+validation_section = "Paramètres de vérification"
+enable_symbol_pairing = "Activer l'appariement de symboles"
+enable_symbol_correction = "Activer la correction de symboles"
+enable_typos_rule = "Activer la vérification des fautes"
+enable_sensitive_word = "Activer les termes signalés"
+skip_code_blocks = "Ignorer les blocs de code"
+skip_quote_blocks = "Ignorer les blocs de citation"
+
+dictionary_section = "Dictionnaires"
+dictionary_desc = "Gérer les dictionnaires personnalisés."
+edit_symbol_mapping = "Symboles"
+edit_typos = "Fautes"
+edit_sensitive_words = "Termes signalés"
+
+editor_open_failed = "Impossible d'ouvrir l'éditeur : {error}"
+
+# Document
+[settings.document]
+extraction_section = "Extraction/OCR"
+keep_images = "Extraire les images"
+keep_images_tooltip = "Extraire les images lors de la conversion."
+enable_ocr = "Activer OCR"
+enable_ocr_tooltip = "Reconnaissance de texte pour les images."
+
+optimization_section = "Optimisation"
+enable_optimization = "Activer l'optimisation"
+optimization_type_label = "Type :"
+
+software_section = "Priorité logicielle"
+word_processors_label = "Traitement de texte"
+odt_conversion_label = "Conversion ODT"
+document_to_pdf_label = "Document vers PDF"
+
+[settings.document.software]
+wps_writer = "WPS Writer"
+msoffice_word = "Word"
+libreoffice = "LibreOffice"
+
+[settings.document.numbering]
+section = "Numérotation (DOCX vers MD)"
+remove = "Supprimer l'ancienne numérotation"
+remove_tooltip = "Supprime la numérotation existante."
+add = "Ajouter une nouvelle numérotation"
+scheme_label = "Schéma :"
+
+# Tableau
+[settings.spreadsheet]
+extraction_section = "Extraction/OCR"
+keep_images = "Extraire les images"
+keep_images_tooltip = "Extraire les images."
+enable_ocr = "Activer OCR"
+enable_ocr_tooltip = "Activer OCR."
+merge_mode_section = "Mode de fusion"
+merge_mode_desc = "Mode par défaut pour la fusion de tableaux."
+software_section = "Priorité logicielle"
+spreadsheet_processors_label = "Tableur"
+ods_conversion_label = "Conversion ODS"
+spreadsheet_to_pdf_label = "Tableau vers PDF"
+
+[settings.spreadsheet.merge_modes]
+by_row = "Par ligne"
+by_row_tooltip = "Ajouter les tableaux les uns sous les autres."
+by_column = "Par colonne"
+by_column_tooltip = "Ajouter les tableaux côte à côte."
+by_cell = "Par cellule"
+by_cell_tooltip = "Additionner les valeurs des cellules."
+
+[settings.spreadsheet.software]
+wps_spreadsheets = "WPS Spreadsheets"
+excel = "Excel"
+libreoffice = "LibreOffice"
+
+# Image
+[settings.image]
+extraction_section = "Extraction/OCR"
+keep_images = "Garder les images"
+keep_images_tooltip = "Garder les images lors de la conversion."
+enable_ocr = "Activer OCR"
+enable_ocr_tooltip = "Activer OCR."
+
+# Langue OCR
+ocr_language_label = "Langue OCR :"
+ocr_language_tooltip = "Choisir le modèle de langue utilisé pour la reconnaissance OCR.\n\n• Suivre la langue de l’interface : sélection automatique selon la langue de l’interface\n• Chinois/Anglais : adapté aux documents chinois/anglais\n• Japonais : adapté aux documents japonais\n• Alphabet latin : adapté à l’allemand, au français, au portugais, etc.\n• Alphabet cyrillique : adapté au russe, etc."
+ocr_language_auto = "Suivre la langue de l’interface"
+ocr_language_chinese = "Chinois/Anglais"
+ocr_language_japanese = "Japonais"
+ocr_language_chinese_cht = "Chinois traditionnel"
+ocr_language_english = "Anglais uniquement"
+ocr_language_korean = "Coréen"
+ocr_language_latin = "Alphabet latin (DE/FR/PT, etc.)"
+ocr_language_cyrillic = "Alphabet cyrillique (RU, etc.)"
+
+compress_section = "Compression"
+compress_desc = "Paramètres de compression par défaut."
+compress_lossless = "Meilleure qualité"
+compress_lossless_tooltip = "Sans perte ou haute qualité."
+compress_limit_size = "Limiter la taille"
+compress_limit_size_tooltip = "Ajuster la qualité pour la taille cible."
+size_limit_label = "Limite de taille :"
+
+pdf_tiff_section = "Options PDF/TIFF"
+pdf_size_label = "Taille image PDF"
+pdf_original = "Taille originale"
+pdf_a4 = "Ajuster à A4"
+pdf_a3 = "Ajuster à A3"
+tiff_mode_label = "Mode TIFF"
+tiff_keep_alpha = "Garder la transparence"
+tiff_keep_alpha_tooltip = "Garder la transparence."
+tiff_no_alpha = "Supprimer la transparence"
+tiff_no_alpha_tooltip = "Remplir l'arrière-plan en blanc."
+
+# Mise en page
+[settings.layout]
+extraction_section = "Extraction/OCR"
+keep_images = "Extraire les images"
+keep_images_tooltip = "Extraire les images."
+enable_ocr = "Activer OCR"
+enable_ocr_tooltip = "Activer OCR."
+dpi_section = "DPI de rendu"
+dpi_desc = "DPI pour le rendu de mise en page."
+dpi_min = "Min (150)"
+dpi_min_tooltip = "Aperçu rapide."
+dpi_medium = "Moyen (300)"
+dpi_medium_tooltip = "Recommandé."
+dpi_high = "Haut (600)"
+dpi_high_tooltip = "Qualité impression."
+software_section = "Priorité logicielle"
+pdf_to_doc_label = "PDF vers Document"
+
+# Lien
+[settings.link]
+format_section = "Format de lien Markdown"
+format_desc = "Format pour les liens dans Markdown."
+image_link_style_label = "Lien image :"
+image_link_style_tooltip = "Style pour l'intégration d'image."
+md_file_link_style_label = "Lien fichier :"
+md_file_link_style_tooltip = "Style pour les liens de fichier."
+
+non_embed_section = "Liens non intégrés"
+non_embed_desc = "Traitement des liens normaux."
+wiki_link_mode = "Liens Wiki :"
+wiki_link_tooltip = "Traitement des [[Liens Wiki]]."
+markdown_link_mode = "Liens Markdown :"
+markdown_link_tooltip = "Traitement des [Liens Markdown]."
+
+embed_section = "Liens intégrés"
+embed_desc = "Traitement des intégrations (!)."
+wiki_embed_image_mode = "Intégration image Wiki :"
+wiki_embed_image_tooltip = "![[Image]]."
+markdown_embed_image_mode = "Intégration image Markdown :"
+markdown_embed_image_tooltip = "![Image]."
+embed_md_file_mode = "Fichiers MD intégrés :"
+embed_md_file_tooltip = "![[Fichier.md]]."
+max_depth_label = "Profondeur max :"
+max_depth_tooltip = "Empêche les boucles infinies."
+
+[settings.link.image_styles]
+wiki_embed = "Intégration Wiki"
+wiki_link = "Lien Wiki"
+md_embed = "Intégration Markdown"
+md_link = "Lien Markdown"
+
+[settings.link.md_file_styles]
+wiki_embed = "Intégration Wiki"
+wiki_link = "Lien Wiki"
+md_link = "Lien Markdown"
+
+[settings.link.modes]
+keep = "Garder"
+extract_text = "Extraire le texte"
+remove = "Supprimer"
+embed = "Insérer le contenu"
+
+# Formatage
+[settings.formatting]
+docx_to_md_section = "Document vers Markdown"
+format_processing = "Traitement du format"
+format_processing_tooltip = "Comment les formatages sont traités."
+body_format_label = "Corps du texte :"
+body_format_tooltip = "Gras, Italique, etc."
+heading_format_label = "En-têtes :"
+heading_format_tooltip = "Formatage dans les en-têtes."
+table_header_format_label = "En-tête de tableau :"
+table_header_format_tooltip = "Formatage dans les en-têtes de tableau."
+
+separator_mapping = "Mappage des séparateurs"
+separator_mapping_tooltip = "Mappage des sauts Word vers Markdown."
+page_break_label = "Saut de page :"
+page_break_tooltip = "Saut de page Word."
+section_break_label = "Saut de section :"
+section_break_tooltip = "Saut de section Word."
+horizontal_rule_label = "Ligne de séparation :"
+horizontal_rule_tooltip = "Bordure inférieure Word."
+
+syntax_selection = "Choix de syntaxe"
+syntax_selection_tooltip = "Syntaxe Markdown pour la sortie."
+bold_syntax_label = "Gras :"
+bold_syntax_tooltip = "Syntaxe pour Gras."
+italic_syntax_label = "Italique :"
+italic_syntax_tooltip = "Syntaxe pour Italique."
+strikethrough_syntax_label = "Barré :"
+strikethrough_syntax_tooltip = "Syntaxe pour Barré."
+highlight_syntax_label = "Surligné :"
+highlight_syntax_tooltip = "Syntaxe pour Surligné."
+superscript_syntax_label = "Exposant :"
+superscript_syntax_tooltip = "Syntaxe pour Exposant."
+subscript_syntax_label = "Indice :"
+subscript_syntax_tooltip = "Syntaxe pour Indice."
+unordered_list_label = "Liste non ordonnée :"
+unordered_list_tooltip = "Symbole pour les listes."
+ordered_list_label = "Liste ordonnée :"
+ordered_list_tooltip = "Numérotation."
+indent_spaces_label = "Indentation :"
+indent_spaces_tooltip = "Espaces par niveau."
+
+md_to_docx_section = "Markdown vers Document"
+md_format_processing = "Traitement du format"
+md_format_processing_tooltip = "Comment les balises Markdown sont traitées."
+md_body_format_label = "Corps du texte :"
+md_body_format_tooltip = "Appliquer ou supprimer les balises."
+md_heading_format_label = "En-têtes :"
+md_heading_format_tooltip = "Balises dans les en-têtes."
+md_table_header_format_label = "En-tête de tableau :"
+md_table_header_format_tooltip = "Balises dans les en-têtes de tableau."
+
+md_separator_mapping = "Mappage des séparateurs"
+md_separator_mapping_tooltip = "Markdown vers sauts Word."
+dash_label = "--- (Tirets) :"
+dash_tooltip = "Mappage ---."
+asterisk_label = "*** (Astérisques) :"
+asterisk_tooltip = "Mappage ***."
+underscore_label = "___ (Soulignés) :"
+underscore_tooltip = "Mappage ___."
+
+table_style = "Style de tableau"
+table_style_tooltip = "Style pour les tableaux."
+builtin_style_radio = "Intégré"
+custom_style_radio = "Personnalisé"
+
+# List separator
+list_separator_label = "Séparateur de Liste YAML"
+list_separator_tooltip = "Séparateur utilisé pour joindre les valeurs de listes YAML en une chaîne\n\nValeurs courantes :\n• Virgule d'énumération chinoise (、)\n• Virgule (，)\n• Virgule + espace (, )\n• Chaîne vide : concaténation directe"
+
+[settings.formatting.options]
+preserve_format = "Garder le format"
+discard_format = "Jeter le format"
+apply_format = "Appliquer le format"
+keep_markup = "Garder le balisage"
+clean_markup = "Nettoyer le balisage"
+
+[settings.formatting.separators]
+dash = "---"
+asterisk = "***"
+underscore = "___"
+ignore = "Ignorer"
+page_break = "Saut de page"
+section_break = "Saut de section"
+horizontal_rule_1 = "Ligne de séparation 1"
+horizontal_rule_2 = "Ligne de séparation 2"
+horizontal_rule_3 = "Ligne de séparation 3"
+
+[settings.formatting.syntax]
+bold_asterisk = "Astérisque (**Texte**)"
+bold_underscore = "Souligné (__Texte__)"
+italic_asterisk = "Astérisque (*Texte*)"
+italic_underscore = "Souligné (_Texte_)"
+strikethrough_extended = "Étendu (~~Texte~~)"
+strikethrough_html = "HTML (<del>)"
+highlight_extended = "Étendu (==Texte==)"
+highlight_html = "HTML (<mark>)"
+superscript_extended = "Étendu (^Texte^)"
+superscript_html = "HTML (<sup>)"
+subscript_extended = "Étendu (~Texte~)"
+subscript_html = "HTML (<sub>)"
+unordered_dash = "Tiret (- Item)"
+unordered_asterisk = "Astérisque (* Item)"
+unordered_plus = "Plus (+ Item)"
+ordered_restart = "Redémarrer à 1"
+ordered_preserve = "Garder le numéro"
+indent_2_spaces = "2 Espaces"
+indent_4_spaces = "4 Espaces"
+
+[settings.formatting.table_styles]
+three_line_table = "Tableau à trois lignes"
+table_grid = "Tableau grille"
+
+# Sortie
+[settings.output]
+intermediate_section = "Fichiers intermédiaires"
+save_intermediate_label = "Enregistrer les fichiers intermédiaires"
+save_intermediate_tooltip = "Enregistrer toutes les étapes intermédiaires."
+save_intermediate_desc = "Enregistrement des formats intermédiaires."
+
+directory_section = "Répertoire de sortie"
+output_mode_label = "Lieu de sortie :"
+output_mode_tooltip = "Dossier source ou personnalisé."
+custom_path_label = "Chemin :"
+browse_title = "Choisir le dossier de sortie"
+
+[settings.output.output_modes]
+source = "Répertoire source"
+custom = "Personnalisé"
+
+[settings.output.date_folder]
+section = "Dossier de date"
+create_label = "Créer un sous-dossier de date"
+create_tooltip = "Crée un sous-dossier avec la date actuelle."
+format_label = "Format de date :"
+
+[settings.output.date_formats]
+iso = "2025-01-06"
+compact = "20250106"
+chinese = "2025年01月06日"
+
+[settings.output.behavior]
+section = "Comportement"
+auto_open_folder_label = "Ouvrir le dossier après"
+auto_open_folder_tooltip = "Ouvre le dossier de sortie après la conversion."
+
+# Journal
+[settings.logging]
+system_section = "Système"
+enable_logging_label = "Activer la journalisation"
+enable_logging_tooltip = "Active le système de journalisation."
+log_level_label = "Niveau de journal :"
+log_level_tooltip = "Niveau de détail des journaux."
+
+file_section = "Fichier"
+file_prefix_label = "Préfixe de fichier :"
+file_prefix_tooltip = "Préfixe pour les fichiers journaux."
+retention_days_label = "Rétention (jours) :"
+retention_days_tooltip = "Supprimer les journaux après X jours."
+
+console_section = "Console"
+enable_console_label = "Sortie console"
+enable_console_tooltip = "Afficher les journaux dans la console."
+console_level_label = "Niveau console :"
+console_level_tooltip = "Niveau pour la console."
+
+[settings.logging.levels]
+debug = "Débogage (DEBUG)"
+info = "Info (INFO)"
+warning = "Avertissement (WARNING)"
+error = "Erreur (ERROR)"
+
+# À propos
+[about]
+title = "À propos"
+version_info = "Version {version}"
+version_tooltip = "Version hors ligne. Veuillez mettre à jour manuellement."
+contact = "Contact : {email}"
+copyright = "© {year} {author}"
+acknowledgments = "Remerciements"
+acknowledgments_intro = "Merci aux projets open-source suivants :"
+
+[about.tools]
+python_docx = "Conversion DOCX/Markdown"
+openpyxl = "Conversion XLSX/Markdown"
+pymupdf = "Traitement PDF/XPS"
+pymupdf4llm = "Extraction PDF intelligente"
+pdf2docx = "PDF vers Word"
+easyofd = "Traitement OFD"
+rapidocr = "OCR hors ligne"
+onnxruntime = "Moteur d'inférence"
+ttkbootstrap = "GUI moderne"
+tkinterdnd2 = "Glisser-déposer"
+pillow = "Traitement d'image"
+pillow_heif = "Support HEIF"
+img2pdf = "Image vers PDF"
+pywin32 = "Interface Office COM"
+lxml = "Traitement XML"
+latex2mathml = "Formules LaTeX"
+pyyaml = "Métadonnées YAML"
+tomlkit = "Configuration TOML"
+pandas = "Analyse de données"
+numpy = "Calcul numérique"
+olefile = "Support Office Legacy"
+watchdog = "Surveillance du système de fichiers"
+
+# Composants
+[components]
+
+[components.file_drop]
+section_title = "Fichiers d'entrée"
+empty_hint_single = "📤 Glisser un fichier ici"
+empty_hint_batch = "📤 Glisser fichiers/dossiers ici"
+add_button = "Ajouter"
+clear_button = "Effacer"
+single_mode = "Unique"
+batch_mode = "Lot"
+unavailable = "Non disponible"
+batch_summary = "Lot : {count} fichiers {category}"
+
+[components.file_selector]
+empty_hint = "Aucun fichier\nGlissez des fichiers ici pour le traitement par lots"
+unavailable = "Non disponible"
+
+[components.status_bar]
+unavailable = "Non disponible"
+
+app_started = "Programme démarré"
+no_files_in_tab = "Aucun fichier dans {category}"
+unknown_file_type = "Type inconnu"
+files_cleared = "Fichiers effacés"
+
+processing_wait = "Traitement, veuillez patienter{dots}"
+operation_cancelled = "Annulé"
+processing_file = "Traitement {current}/{total} : {filename}"
+batch_completed = "Lot terminé : {success} succès, {failed} échec"
+skipped_same_format = "Ignoré : Déjà {format}"
+
+selected_text_file = "Fichier texte choisi"
+selected_document_file = "Document choisi"
+selected_spreadsheet_file = "Tableau choisi"
+selected_image_file = "Image choisie"
+selected_layout_file = "Mise en page choisie"
+
+operation_success = "Opération réussie !"
+conversion_failed = "Échec de conversion"
+trial_expired_title = "Version d'essai expirée"
+trial_expired_message = "Version d'essai expirée. Veuillez contacter le développeur."
+open_location_title = "Ouvrir le dossier"
+open_location_confirm = "Ouvrir le dossier source ?"
+template_selected = "Modèle : {name}"
+files_added = "{count} fichiers ajoutés à {category}"
+files_add_failed = "Échec de l'ajout de {count} fichiers"
+file_selected = "Choisi : {filename} ({category})"
+
+[components.file_dialogs]
+skip_title = "Fichier ignoré"
+skip_message = "Ignoré\n\nRaison : {reason}\n\nFichier : {filename}\nLieu : {location}"
+skip_reason_unknown = "Inconnu"
+
+error_title = "Erreur"
+error_message = "Échec\n\nFichier : {filename}\nErreur : {error}\n\nConseil :\n1. Fichier corrompu ?\n2. Logiciel en cours d'exécution ?\n3. Voir les journaux"
+error_unknown = "Erreur inconnue"
+
+[components.action_panel]
+section_title = "Actions"
+unavailable = "Non disponible"
+
+[components.conversion_panel]
+unavailable = "Non disponible"
+
+[components.template_selector]
+no_templates = "Aucun disponible"
+unavailable = "Non disponible"
+
+[components.template_selector_tabbed]
+document_templates = "Document"
+spreadsheet_templates = "Tableau"
+
+# Types de fichiers
+[file_types]
+document = "Document"
+spreadsheet = "Tableau"
+image = "Image"
+layout = "Mise en page"
+text = "Texte"
+unknown = "Inconnu"
+
+text_category = "Texte"
+document_category = "Document"
+spreadsheet_category = "Tableau"
+layout_category = "Mise en page"
+image_category = "Image"
+
+unknown_type = "Type inconnu"
+format_mismatch = "⚠️ Est {format}"
+format_unverifiable = "⚠️ Non vérifiable"
+format_txt = "TXT"
+format_md = "Markdown"
+format_csv = "CSV"
+
+# Conversion
+[conversion]
+
+
+
+# Noms de fichiers générés (pour la dénomination des fichiers de sortie)
+[conversion.filenames]
+split_part1 = "Partie1"
+split_part2 = "Partie2"
+merged_pdf = "PDFFusionné"
+merged_table = "TableauFusionné"
+
+# Messages
+[messages]
+file_not_found = "Non trouvé : {filename}"
+invalid_file_type = "Type invalide : {ext}"
+unsupported_file_type = "Non supporté"
+unknown_file_category = "Catégorie inconnue : {category}"
+
+error_prefix = "Erreur : {message}"
+operation_failed = "Opération échouée : {error}"
+processing_exception = "Exception : {error}"
+system_init_error = "Erreur d'initialisation"
+process_file_failed = "Échec du traitement : {error}"
+batch_merge_need_two_layout = "Nécessite min. 2 fichiers de mise en page"
+batch_merge_need_two_image = "Nécessite min. 2 fichiers image"
+batch_merge_need_two_table = "Nécessite min. 2 fichiers tableau"
+batch_file_list_not_init = "Liste de fichiers non initialisée"
+select_base_table_first = "Veuillez d'abord choisir un tableau de base"
+select_merge_mode = "Veuillez choisir le mode de fusion"
+process_failed = "Erreur : {error}"
+file_processing_failed = "Échec du traitement du fichier : {error}"
+template_selection_failed = "Échec de la sélection du modèle : {error}"
+cancel_failed = "Échec de l’annulation : {error}"
+clear_failed = "Échec de l’effacement : {error}"
+settings_unavailable = "Les paramètres ne sont pas disponibles"
+open_settings_failed = "Impossible d’ouvrir les paramètres : {error}"
+apply_settings_failed = "Impossible d’appliquer les paramètres : {error}"
+about_unavailable = "La fenêtre À propos n’est pas disponible"
+open_about_failed = "Impossible d’ouvrir À propos : {error}"
+
+
+
+
+single_file_only = "Un seul fichier en mode unique"
+no_valid_files = "Aucun fichier valide"
+no_folder_in_single_mode = "Pas de dossier en mode unique"
+all_supported_files = "Tous supportés"
+all_files = "Tous les fichiers"
+select_multiple_files = "Sélection multiple"
+category_mismatch = "Catégorie non conforme : {current_name} → {new_name}"
+category_mismatch_detail = "Conflit de type : {selected_name} vs {file_category_name}"
+
+# Messages d'erreur
+[messages.errors]
+invalid_docx_template = "Le fichier modèle \"{template_name}\" est invalide ou corrompu. Veuillez ouvrir le modèle avec Word ou WPS, le modifier et l'enregistrer pour vous assurer qu'il s'agit d'un fichier DOCX valide."
+
+# Messages d'avertissement
+[messages.warnings]
+missing_body_placeholder = "⚠️ Aucun espace réservé pour le corps (tel que {{正文}} ou {{body}}) n'a été trouvé dans le modèle. Le contenu Markdown n'a pas été inséré"
+
+# Éditeurs
+[editors]
+
+[editors.numbering_add]
+window_title = "Éditeur de schéma"
+scheme_list = "Schémas"
+default_scheme = "Défaut :"
+level_format_config = "Format de niveau"
+realtime_preview = "Aperçu"
+format_help = "📖 Aide"
+format_help_title = "Espaces réservés"
+format_help_text = "Aide sur les espaces réservés..."
+
+level_1 = "Niveau 1"
+level_2 = "Niveau 2"
+level_3 = "Niveau 3"
+level_4 = "Niveau 4"
+level_5 = "Niveau 5"
+level_6 = "Niveau 6"
+level_7 = "Niveau 7"
+level_8 = "Niveau 8"
+level_9 = "Niveau 9"
+
+new_scheme = "Nouveau"
+copy_suffix = "(Copie)"
+
+preview_sample = "Exemple {level_name}"
+no_format = "Aucun format"
+preview_failed = "Erreur"
+
+menu_current_level = "── Actuel ({level}) ──"
+menu_decorations = "── Décoration ──"
+menu_hierarchical = "── Hiérarchie ──"
+
+style_chinese_lower = "Chin. Min"
+style_chinese_upper = "Chin. Maj"
+style_arabic_half = "Arabe"
+style_arabic_circled = "Encercle"
+style_letter_upper = "Lettre Maj"
+style_roman_upper = "Romain Maj"
+
+decoration_dun = "Virgule"
+decoration_dot_space = "Point+Espace"
+decoration_bracket = "Parenthèse"
+decoration_chapter = "Chapitre"
+
+
+load_failed = "Erreur de chargement"
+load_failed_message = "Impossible de charger : {error}"
+save_failed = "Erreur d'enregistrement"
+save_failed_message = "Impossible d'enregistrer"
+save_failed_with_error = "Erreur : {error}"
+cannot_delete = "Impossible de supprimer"
+cannot_delete_default_scheme = "Le défaut ne peut pas être supprimé"
+
+[editors.numbering_add.names]
+hierarchical_standard = "Hiérarchique"
+hierarchical_h2_start = "Hiérarchique (depuis H2)"
+
+[editors.numbering_add.descriptions]
+hierarchical_standard_desc = "1 , 1.1 , 1.1.1 ..."
+hierarchical_h2_start_desc = "Depuis H2 : 1 , 1.1 ..."
+
+[editors.common]
+basic_info = "Info"
+name = "Nom :"
+description = "Description :"
+add = "Ajouter"
+copy = "Copier"
+delete = "Supprimer"
+move_up = "Monter"
+move_down = "Descendre"
+save = "Enregistrer"
+cancel = "Annuler"
+prompt = "Note"
+select_item_first = "Veuillez sélectionner un élément"
+cannot_delete = "Non supprimable"
+system_item_hint = "Élément système"
+confirm_delete = "Confirmer la suppression"
+confirm_delete_message = "Vraiment supprimer : {name} ?"
+confirm_close = "Confirmer la fermeture"
+unsaved_changes_hint = "Modifications non enregistrées"
+unsaved_close_message = "Vraiment fermer ?"
+
+[editors.numbering_clean]
+window_title = "Règles de nettoyage"
+rule_list = "Règles"
+rule_edit = "Modifier"
+name = "Nom :"
+description = "Description :"
+regex = "Regex :"
+regex_test = "Test"
+input = "Entrée :"
+result = "Résultat :"
+status = "Statut :"
+load_example = "Charger l'exemple"
+available_placeholders = "Espaces réservés"
+new_rule = "Nouveau"
+copy_suffix = "(Copie)"
+match_success = "Correspondance"
+no_match = "Pas de correspondance"
+regex_error = "Erreur Regex"
+test_error = "Erreur"
+placeholder_info = """Infos sur les espaces réservés :
+
+{space}        - Espaces (espace, espace pleine largeur, etc.)
+{sep}          - Séparateurs (point, virgule, etc.)
+{bracket_open} - Crochets/parenthèses ouvrants (chinois/anglais)
+{bracket_close}- Crochets/parenthèses fermants (chinois/anglais)
+{num_arab}     - Chiffres arabes (demi/pleine largeur)
+{num_cn}       - Chiffres chinois (min./maj.)
+{num_cn_paren} - Chiffres chinois entre parenthèses (㈠-㈩)
+{num}          - Tous les nombres (chinois + arabes + ㈠-㈩)
+{letter}       - Lettres latines (maj./min.)
+{circled}      - Nombres encerclés (①-㊿, ❶-⓴, ⓵-⓾, etc.)
+{unit_suffix}  - Suffixes d’unités chinoises (chapitre, section, etc.)
+{unit_prefix}  - Préfixes d’unités chinoises (volume, partie, etc.)"""
+prompt = "Note"
+no_example_text = "Pas de texte d'exemple"
+load_failed = "Erreur de chargement"
+load_failed_message = "Erreur : {error}"
+save_failed = "Erreur d'enregistrement"
+save_failed_message = "Erreur lors de l'enregistrement"
+save_failed_with_error = "Erreur : {error}"
+
+[editors.numbering_clean.names]
+chinese_unit_suffix = "Suffixe unité chin."
+chinese_unit_prefix = "Préfixe unité chin."
+circled_numbers = "Nombres encerclés"
+bracket_number = "Nombres entre parenthèses"
+hierarchical = "Hiérarchique"
+number_separator = "Séparateur de nombre"
+legal_english = "Anglais Juridique"
+letter_number = "Numéro lettre"
+
+[editors.numbering_clean.descriptions]
+chinese_unit_suffix_desc = "Chapitre X etc."
+chinese_unit_prefix_desc = "Partie X etc."
+circled_numbers_desc = "① etc."
+bracket_number_desc = "(1) etc."
+hierarchical_desc = "1.1 etc."
+number_separator_desc = "1. etc."
+legal_english_desc = "Chapter X etc."
+letter_number_desc = "A. etc."
+
+[editors.mapping]
+symbol_editor_title = "Symboles"
+typo_editor_title = "Fautes"
+sensitive_editor_title = "Termes signalés"
+generic_editor_title = "Mappage"
+
+symbol_correct_symbol = "Correct"
+symbol_error_symbols = "Incorrect"
+typo_correct_word = "Correct"
+typo_error_words = "Incorrect"
+sensitive_sensitive_word = "Terme signalé"
+sensitive_exceptions = "Exceptions"
+comment = "Commentaire"
+generic_key = "Clé"
+generic_value_list = "Valeurs"
+
+symbol_description = "Mappage de symboles."
+typo_description = "Correction de fautes."
+sensitive_description = "Termes signalés et exceptions."
+generic_description = "Mappage général."
+
+add_entry = "Ajouter une entrée"
+edit_entry = "Modifier"
+delete_entry = "Supprimer"
+
+prompt = "Note"
+select_entry_to_edit = "Veuillez choisir"
+select_entry_to_delete = "Veuillez choisir"
+confirm_delete = "Confirmer la suppression"
+confirm_delete_message = "Supprimer : {entry_key} ?"
+error = "Erreur"
+save_error = "Erreur d'enregistrement : {error}"
+
+add = "Ajouter"
+edit = "Modifier"
+symbol_mapping = "Symboles"
+typo_mapping = "Fautes"
+sensitive_mapping = "Terme signalé"
+generic_mapping = "Mappage"
+
+symbol_correct_symbol_label = "Correct :"
+typo_correct_word_label = "Correct :"
+sensitive_sensitive_word_label = "Terme signalé :"
+generic_key_label = "Clé :"
+symbol_error_symbols_label = "Incorrect (Liste) :"
+typo_error_words_label = "Incorrect (Liste) :"
+sensitive_exceptions_label = "Exceptions (Liste) :"
+generic_value_list_label = "Valeurs (Liste) :"
+comment_label = "Commentaire :"
+
+symbol_example = "Ex : ,"
+typo_example = "Ex : Mot"
+sensitive_example = "Ex : Terme → Exceptions"
+generic_example = "Une valeur par ligne"
+
+enter_correct_symbol_or_word = "Veuillez entrer"
+enter_error_symbol_or_word_list = "Veuillez entrer la liste"
+
+# Gestion des clés en double
+duplicate_key_title = "La clé existe déjà"
+duplicate_key_message = "La clé \"{entry_key}\" existe déjà\n\nValeurs actuelles : {current_values}\nCommentaire actuel : {current_comment}\n\nVeuillez sélectionner une action :"
+duplicate_key_no_comment = "(aucun)"
+overwrite = "Écraser"
+overwrite_tooltip = "Remplacer complètement par les nouvelles valeurs et le commentaire"
+merge = "Fusionner"
+merge_tooltip = "Fusionner les nouvelles et anciennes valeurs (dédupliquées), commentaire : conserver l'ancien si le nouveau est vide"
+
+# Styles
+[styles]
+code_block = "Bloc de code"
+inline_code = "Code en ligne"
+
+quote_1 = "Citation 1"
+quote_2 = "Citation 2"
+quote_3 = "Citation 3"
+quote_4 = "Citation 4"
+quote_5 = "Citation 5"
+quote_6 = "Citation 6"
+quote_7 = "Citation 7"
+quote_8 = "Citation 8"
+quote_9 = "Citation 9"
+
+formula_block = "Bloc de formule"
+inline_formula = "Formule en ligne"
+
+horizontal_rule_1 = "Ligne de séparation 1"
+horizontal_rule_2 = "Ligne de séparation 2"
+horizontal_rule_3 = "Ligne de séparation 3"
+
+list_block = "Bloc de liste"
+
+table_content = "Contenu du tableau"
+three_line_table = "Tableau à trois lignes"
+table_grid = "Tableau grille"
+
+# Body Paragraph Style
+body_paragraph = "Paragraphe du corps"
+
+# =============================================================================
+# Style Format Configurations (for style injection format properties)
+# =============================================================================
+[style_formats]
+
+# Body paragraph format (Times New Roman, 12pt, no indent, left aligned)
+[style_formats.body_paragraph]
+east_asia_font = "SimSun"
+ascii_font = "Times New Roman"
+font_size_pt = 12
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 0
+bold = false
+justification = "left"
+
+# Heading 1 format (Arial, 16pt, bold, left aligned)
+[style_formats.heading_1]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 16
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# Heading 2 format (Arial, 14pt, bold, left aligned)
+[style_formats.heading_2]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 14
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# Heading 3-9 format (Arial, 12pt, bold, left aligned)
+[style_formats.heading_3_9]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 12
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# Espaces réservés
+[placeholders]
+title = "Titre"
+body = "Corps"
+
+# YAML
+[yaml_keys]
+title = "Titre"
+subtitle = "Sous-titre"
+
+# Panneau de conversion
+[conversion_panel]
+format_conversion = "Conversion"
+save_as = "Enregistrer sous"
+select_file_hint = "Choisir le fichier"
+same_format_tooltip = "Déjà {format}"
+compressible_format_tooltip = "Compressible"
+png_compression_tooltip = "PNG est sans perte"
+bmp_compression_tooltip = "BMP est sans perte"
+gif_compression_tooltip = "GIF est sans perte"
+tif_compression_tooltip = "TIFF est sans perte"
+other_format_compression_tooltip = "Pas de compression pour {format}"
+high_quality_conversion_tooltip = "Haute qualité"
+lossless_conversion_tooltip = "Sans perte"
+document_conversion_tooltip = "Convertir en Document"
+csv_conversion_tooltip = "Convertir en CSV"
+spreadsheet_conversion_tooltip = "Convertir en Tableau"
+pdf_conversion_tooltip = "Convertir en PDF"
+docx_conversion_tooltip = "Convertir en DOCX"
+doc_conversion_tooltip = "Convertir en DOC"
+tif_conversion_tooltip = "Rendre en TIF"
+jpg_conversion_tooltip = "Rendre en JPG"
+
+[conversion_panel.document]
+convert_to_other_formats = "Autres formats"
+convert_to_layout = "En mise en page"
+save_as_pdf = "En PDF"
+save_as_pdf_tooltip = "Enregistrer en PDF"
+save_as_ofd = "En OFD"
+save_as_ofd_tooltip = "N/A"
+proofread_document = "Vérification"
+proofread_hint = "Vérifier le document"
+proofread_button = "📝 Vérifier"
+proofread_button_tooltip = "Vérifier le document"
+proofread_options = "Options"
+symbol_pairing = "Appariement"
+symbol_pairing_tooltip = "Appariement de symboles"
+typos_rule = "Fautes"
+typos_rule_tooltip = "Fautes"
+symbol_correction = "Symboles"
+symbol_correction_tooltip = "Symboles"
+sensitive_word = "Termes signalés"
+sensitive_word_tooltip = "Vérifier les termes signalés"
+
+[conversion_panel.image]
+convert_to_other_formats = "Autres formats"
+compression_options = "Compression"
+highest_quality = "Meilleure qualité"
+highest_quality_tooltip = "Qualité max"
+limit_file_size = "Limiter la taille"
+limit_file_size_tooltip = "Taille cible"
+file_size_limit = "Limite :"
+enter_size_limit_warning = "Entrer la limite"
+kb_range_warning = "10-10000 KB"
+mb_range_warning = "1-100 MB"
+enter_valid_number_warning = "Entrer un nombre"
+convert_to_layout = "En mise en page"
+save_as_pdf = "En PDF"
+save_as_pdf_tooltip = "PDF"
+save_as_ofd = "En OFD"
+save_as_ofd_tooltip = "N/A"
+size_options = "Taille"
+original_embed = "Original"
+fit_a4 = "A4"
+fit_a3 = "A3"
+no_pdf_size_option_warning = "Choisir la taille"
+merge_images = "Fusionner"
+merge_images_hint = "Fusionner les images"
+merge_to_tif = "En TIF"
+conversion_options = "Options"
+preserve_transparency = "Garder la transparence"
+preserve_transparency_tooltip = "Garder"
+no_transparency = "Supprimer"
+no_transparency_tooltip = "Fond blanc"
+
+[conversion_panel.layout]
+convert_to_other_formats = "Autres formats"
+save_as_ofd_tooltip = "N/A"
+convert_to_document_or_image = "Document/Image"
+save_as_format = "En {format}"
+save_as_docx_tooltip = "DOCX"
+save_as_doc_tooltip = "DOC"
+render_as_tif = "En TIF"
+render_as_tif_tooltip = "TIF"
+render_as_jpg = "En JPG"
+render_as_jpg_tooltip = "JPG"
+image_quality_dpi = "DPI"
+minimum_150 = "Min (150)"
+moderate_300 = "Moyen (300)"
+high_definition_600 = "Haut (600)"
+merge_split = "Fusionner/Diviser"
+merge_split_hint = "Fusionner/Diviser"
+merge_to_pdf = "Fusionner PDF"
+merge_to_pdf_tooltip = "Fusionner PDF"
+merge_to_ofd = "Fusionner OFD"
+merge_to_ofd_tooltip = "N/A"
+split_to_pdf = "Diviser PDF"
+split_to_pdf_tooltip = "Diviser PDF"
+split_to_ofd = "Diviser OFD"
+split_to_ofd_tooltip = "N/A"
+split_page_range = "Plage :"
+page_range_info = "Pages (1-5, 7, 9-10)"
+page_range_placeholder = "ex : 1-3"
+selected_split_file = "Choisi : {pages} pages"
+no_file_selected = "Aucun fichier"
+cannot_split_all_pages = "Pas toutes les pages"
+pages_out_of_range_adjusted = "Pages hors plage, ajustées : {pages}"
+all_pages_out_of_range = "Toutes les pages sont hors plage : {pages}"
+
+[conversion_panel.spreadsheet]
+convert_to_other_formats = "Autres formats"
+convert_to_layout = "En mise en page"
+save_as_pdf = "En PDF"
+save_as_pdf_tooltip = "PDF"
+save_as_ofd = "En OFD"
+save_as_ofd_tooltip = "N/A"
+merge_tables = "Fusionner tableaux"
+merge_tables_hint = "Fusionner"
+merge_tables_button = "📋 Fusionner"
+merge_tables_button_tooltip = "Fusionner tableaux"
+merge_options = "Options"
+merge_by_row = "Ligne"
+merge_by_row_tooltip = "Par ligne"
+merge_by_column = "Colonne"
+merge_by_column_tooltip = "Par colonne"
+merge_by_cell = "Cellule"
+merge_by_cell_tooltip = "Par cellule"
+selected_reference_table = "Base :"
+no_table_selected = "Pas de tableau"
+
+[action_panel]
+export_options = "Export"
+extraction_options = "Extraction"
+generation_options = "Génération"
+extract_images = "Images"
+extract_images_tooltip = "Extraire images"
+ocr = "OCR"
+ocr_tooltip = "OCR"
+
+[action_panel.proofread]
+symbol_pairing = "Appariement"
+symbol_pairing_tooltip = "Signes"
+typos_rule = "Fautes"
+typos_rule_tooltip = "Fautes"
+symbol_correction = "Symboles"
+symbol_correction_tooltip = "Symboles"
+sensitive_word = "Termes signalés"
+sensitive_word_tooltip = "Vérifier les termes signalés"
+
+[action_panel.document]
+ready = "Prêt"
+export_markdown = "Exporter en Markdown"
+export_markdown_tooltip = "Vers MD"
+optimize_for_type = "Optimisation"
+optimize_for_type_tooltip = "Optimisation type"
+remove_existing_numbering = "Suppr. num."
+remove_existing_numbering_tooltip = "Supprimer"
+add_new_numbering = "Ajout num."
+add_new_numbering_tooltip = "Ajouter"
+
+[action_panel.spreadsheet]
+ready = "Prêt"
+export_markdown = "Exporter en Markdown"
+export_markdown_tooltip = "Vers MD"
+
+[action_panel.image]
+ready = "Prêt"
+export_markdown = "Exporter en Markdown"
+export_markdown_tooltip = "Vers MD"
+extract_images_tooltip = "Garder images"
+ocr_tooltip = "OCR"
+
+[action_panel.layout]
+ready = "Prêt"
+export_markdown = "Exporter en Markdown"
+export_markdown_tooltip = "Vers MD"
+
+[action_panel.md_to_document]
+ready = "Prêt"
+generate_docx = "DOCX"
+generate_docx_tooltip = "Vers DOCX"
+generate_doc = "DOC"
+generate_doc_tooltip = "Vers DOC"
+generate_odt = "ODT"
+generate_odt_tooltip = "Vers ODT"
+generate_rtf = "RTF"
+generate_rtf_tooltip = "Vers RTF"
+remove_existing_numbering = "Suppr. num."
+remove_existing_numbering_tooltip = "Supprimer"
+add_new_numbering = "Ajout num."
+add_new_numbering_tooltip = "Ajouter"
+
+[action_panel.md_to_spreadsheet]
+ready = "Prêt"
+generate_xlsx = "XLSX"
+generate_xlsx_tooltip = "Vers XLSX"
+generate_xls = "XLS"
+generate_xls_tooltip = "Vers XLS"
+generate_ods = "ODS"
+generate_ods_tooltip = "Vers ODS"
+generate_csv = "CSV"
+generate_csv_tooltip = "Vers CSV"
+
+[conversion.progress]
+converting_to_format = "Vers {format}..."
+preparing = "Préparation..."
+preparing_format = "Prépare {format}..."
+detecting_format = "Détecte format..."
+processing_images = "Images..."
+saving_file = "Enregistre..."
+csv_completed = "CSV terminé ({count})"
+tiff_completed = "TIFF terminé ({count})"
+final_conversion = "Finalise..."
+extracting_pdf_content = "Extraction PDF..."
+images_extracted = "{count} images"
+images_extracted_preparing_ocr = "Préparation OCR ({count} images)..."
+extracting_images = "Extrait images : {count}"
+ocr_recognizing = "OCR : {current}/{total}"
+loading_document = "Charge document..."
+loading_word_template = "Charge modèle Word..."
+loading_excel_template = "Charge modèle Excel..."
+parsing_markdown = "Analyse Markdown..."
+processing_markdown_body = "Traite contenu..."
+processing_textboxes_tables = "Traite tableaux..."
+extracting_title = "Extrait titre..."
+extracting_markdown_tables = "Extrait tableaux..."
+generating_markdown = "Génère Markdown..."
+filling_template = "Remplit modèle..."
+filling_yaml_data = "Remplit YAML..."
+filling_table_data = "Remplit tableau..."
+saving_excel = "Enregistre Excel..."
+writing_file = "Écrit fichier..."
+executing_final_proofread = "Vérification finale..."
+initializing_proofread = "Init vérification..."
+proofreading_progress = "Vérifie... {current}/{total}"
+saving_proofread_result = "Enregistre vérification..."
+validating_params = "Valide paramètres..."
+preprocessing_base_table = "Pré-traite tableau..."
+merging_table_progress = "Fusion tableau {current}/{total}..."
+saving_merge_result = "Enregistre fusion..."
+conversion_to_csv_success = "Succès CSV ({count})."
+converting_format_to_png = "{format} vers PNG..."
+converting_format_to_pdf = "{format} vers PDF..."
+error_no_template = "Erreur : Pas de modèle."
+spell_checking = "Vérification orthographe..."
+extracting_images_start = "Extrait images..."
+styles_injected = "{count} styles injectés"
+preparing_files = "Prépare fichiers..."
+preparing_merge = "Prépare la fusion ({count})..."
+preparing_merge_images = "Prépare les images ({count})..."
+preparing_split_pdf = "Prépare division..."
+preparing_proofread = "Prépare vérification..."
+reading_file = "Lit fichier..."
+processing_numbering = "Traite numérotation..."
+proofreading = "Vérification..."
+converting_ofd_to_pdf = "OFD vers PDF..."
+converting_xps_to_pdf = "XPS vers PDF..."
+converting_caj_to_pdf = "CAJ vers PDF..."
+using_external_tool_pdf = "Outil externe..."
+processing_file_progress = "Fichier {current}/{total} : {filename}"
+merging_pdf_files = "Fusion PDF..."
+merging_file_progress = "Fusion {current}/{total}"
+creating_pdf_part = "Crée PDF partie {part}..."
+rendering_pdf_to_png = "Rend PDF vers PNG..."
+rendering_pdf_to_jpg = "Rend PDF vers JPG..."
+rendering_pdf_pages = "Rend pages PDF..."
+rendering_page_progress = "Page {current}/{total}..."
+saving_tif_file = "Enregistre TIF..."
+step_pdf_to_docx = "1/2 : PDF vers DOCX..."
+step_docx_to_format = "2/2 : DOCX vers {format}..."
+extracting_page = "Extrait page {page}"
+converting_format_to_target = "{format} vers {target}..."
+converting_page_to_format = "Page {page} vers {format}..."
+loading_image_progress = "Charge image {current}/{total}..."
+determining_color_mode = "Mode couleur..."
+converting_to_mode = "Vers {mode}..."
+generating_tiff_file = "Génère TIFF..."
+merge_completed = "Fusion terminée."
+converting_source_to_target = "{source} → {target}..."
+step_conversion_progress = "Étape {step}/{total} : {source} → {target}"
+conversion_completed_with_readonly_warnings = "Terminé avec avertissements (lecture seule) : {count}"
+fixing_conflict_style = "Correction du conflit de style : {name} ({from_type} → {to_type})"
+styles_injected_with_conflicts = "Styles injectés : {count} (conflits : {conflicts})"
+
+[conversion.messages]
+operation_cancelled = "Annulé"
+conversion_failed_check_log = "Échec. Voir journal."
+conversion_to_format_success = "Succès {format}."
+
+
+proofread_completed = "Vérification terminée."
+proofread_skipped = "Ignoré."
+proofread_failed = "Échec."
+
+file_already_pdf = "Déjà PDF"
+ofd_to_pdf_failed = "Erreur OFD"
+xps_to_pdf_failed = "Erreur XPS"
+ofd_conversion_not_implemented = "OFD non implémenté"
+txt_conversion_developing = "TXT en développement."
+
+missing_pymupdf = "PyMuPDF manquant"
+missing_office_for_pdf = "Office manquant"
+missing_office_for_conversion = "Office manquant"
+doc_format_requires_office = "Office requis"
+xls_format_requires_office = "Office requis"
+external_tool_failed = "Erreur outil externe"
+pdf_to_docx_failed = "Erreur PDF vers DOCX"
+
+no_files_to_merge = "Aucun fichier"
+need_at_least_two_files = "Min. 2 fichiers"
+no_pages_to_split = "Aucune page"
+split_failed_all_pages = "Échec division"
+
+md_to_xlsx_failed = "Erreur MD vers XLSX"
+md_to_docx_failed = "Erreur MD vers DOCX"
+spell_check_failed = "Erreur orthographe"
+final_format_failed = "Erreur format"
+final_format_generation_failed = "Erreur génération"
+no_csv_generated = "Aucun CSV généré"
+
+no_images_to_merge = "Aucune image"
+no_images_loaded = "Aucune image chargée"
+conversion_failed_no_target = "Aucune cible"
+
+no_numbering_operation = "Aucune opération choisie"
+
+conversion_to_image_success = "Vers {format} ({count})"
+conversion_to_tif_success = "Vers TIF ({pages})"
+conversion_to_format_pages_success = "Vers {format} ({count})"
+merge_pdf_success = "Fusion : {file_count} fichiers, {page_count} pages"
+split_pdf_success_two = "Divisé : {pages1} pages + {pages2} pages"
+split_pdf_success_one = "Divisé : 1 fichier, {pages} pages"
+merge_images_to_tiff_success = "Fusion vers TIFF ({count})"
+
+docx_to_format_failed = "Erreur DOCX vers {format}"
+conversion_to_format_failed = "Erreur vers {format}"
+conversion_failed_with_error = "Erreur : {error}"
+unsupported_layout_format = "Non supporté : {format}"
+format_to_pdf_not_implemented = "{format} vers PDF N/A"
+all_pages_invalid = "Aucune page valide (total : {total})"
+
+# =============================================================================
+# Texte des commentaires de relecture
+# =============================================================================
+[proofread]
+
+[proofread.error_type]
+typo = "Faute de frappe"
+punctuation = "Ponctuation"
+sensitive = "Terme signalé"
+unmatched = "Symbole non apparié"
+
+[proofread.source]
+typo = "Vérification des fautes"
+symbol = "Vérification des symboles"
+sensitive = "Vérification termes signalés"
+pairing = "Vérification d'appariement"
+
+[proofread.suggestion]
+sensitive = "Terme signalé détecté"
+extra_close = "Symbole fermant en trop"
+unclosed = "Symbole non fermé"

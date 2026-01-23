@@ -1,5 +1,20 @@
 # 标题序号配置文件
 # 定义MD转DOCX时的标题编号格式
+#
+# ============================================
+# 国际化说明
+# ============================================
+# locales: 指定方案适用的语言
+#   - ["zh_CN"]: 仅在中文界面显示
+#   - ["*"]: 在所有语言界面显示
+#
+# name vs name_key:
+#   - name: 直接存储显示名称（用于语言专属方案，无需翻译）
+#   - name_key: 翻译键，从 i18n 文件获取名称（用于通用方案，需要多语言翻译）
+#
+# 示例：
+#   - gongwen_standard: locales=["zh_CN"]，使用 name，因为只有中文用户看到
+#   - hierarchical_standard: locales=["*"]，使用 name_key，因为所有语言都显示
 
 # ============================================
 # 全局设置
@@ -12,6 +27,7 @@ default_scheme = "gongwen_standard"
 order = [
     "gongwen_standard",
     "hierarchical_standard",
+    "hierarchical_h2_start",
     "legal_standard",
 ]
 
@@ -73,6 +89,7 @@ name = "公文标准"
 description = "中国公文标准序号格式（1-5级为标准格式，6-9级为备用层级格式）"
 enabled = true
 is_system = true
+locales = ["zh_CN"]
 
   # 标准格式（1-5级）
   # 一级标题：一、二、三、...
@@ -117,10 +134,11 @@ is_system = true
 # 方案2：层级数字标准
 # --------------------------------------------
 [schemes.hierarchical_standard]
-name = "层级数字标准"
-description = "层级递进格式：1 、1.1 、1.1.1 ...（序号后带空格，全部级别使用统一层级格式）"
+name_key = "hierarchical_standard"
+description_key = "hierarchical_standard_desc"
 enabled = true
 is_system = true
+locales = ["*"]
 
   # 一级标题：1 、2 、3 、...
   [schemes.hierarchical_standard.level_1]
@@ -166,6 +184,7 @@ name = "法律条文标准"
 description = "中国法律文本格式（1-5级为标准格式，6-9级为备用层级格式）"
 enabled = true
 is_system = true
+locales = ["zh_CN"]
 
   # 标准格式（1-5级）
   # 一级标题：第一编　、第二编　...（注：编后有全角空格）
@@ -205,6 +224,52 @@ is_system = true
   # 九级标题：1.1.1.1.1.1.1.1.1 、...
   [schemes.legal_standard.level_9]
   format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half}.{8.arabic_half}.{9.arabic_half} "
+
+# --------------------------------------------
+# 方案4：层级数字(H2起)
+# --------------------------------------------
+[schemes.hierarchical_h2_start]
+name_key = "hierarchical_h2_start"
+description_key = "hierarchical_h2_start_desc"
+enabled = true
+is_system = true
+locales = ["*"]
+
+  # 一级标题：跳过（无序号，可作为文章标题）
+  [schemes.hierarchical_h2_start.level_1]
+  format = ""
+  
+  # 二级标题：1 、2 、3 、...
+  [schemes.hierarchical_h2_start.level_2]
+  format = "{2.arabic_half} "
+  
+  # 三级标题：1.1 、1.2 、2.1 、...
+  [schemes.hierarchical_h2_start.level_3]
+  format = "{2.arabic_half}.{3.arabic_half} "
+  
+  # 四级标题：1.1.1 、1.1.2 、1.2.1 、...
+  [schemes.hierarchical_h2_start.level_4]
+  format = "{2.arabic_half}.{3.arabic_half}.{4.arabic_half} "
+  
+  # 五级标题：1.1.1.1 、1.1.1.2 、...
+  [schemes.hierarchical_h2_start.level_5]
+  format = "{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half} "
+  
+  # 六级标题：1.1.1.1.1 、1.1.1.1.2 、...
+  [schemes.hierarchical_h2_start.level_6]
+  format = "{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half} "
+  
+  # 七级标题：1.1.1.1.1.1 、...
+  [schemes.hierarchical_h2_start.level_7]
+  format = "{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half} "
+  
+  # 八级标题：1.1.1.1.1.1.1 、...
+  [schemes.hierarchical_h2_start.level_8]
+  format = "{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half}.{8.arabic_half} "
+  
+  # 九级标题：1.1.1.1.1.1.1.1 、...
+  [schemes.hierarchical_h2_start.level_9]
+  format = "{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half}.{8.arabic_half}.{9.arabic_half} "
 
 # ============================================
 # 使用说明

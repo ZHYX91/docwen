@@ -1,408 +1,529 @@
-# 公文转换器 (Gongwen Converter)
+[English](README.md) | [简体中文](README_zh-CN.md) | [繁體中文](README_zh-TW.md) | [Deutsch](README_de-DE.md) | [Français](README_fr-FR.md) | [Русский](README_ru-RU.md) | [Português](README_pt-BR.md) | [日本語](README_ja-JP.md) | [한국어](README_ko-KR.md) | [Español](README_es-ES.md) | [Tiếng Việt](README_vi-VN.md)
 
-公文图表格式转换软件 - 支持 Word/Markdown/Excel 互转，完全本地运行，数据安全可靠。
+# DocWen
 
-## 📖 项目背景
+A document and chart format conversion tool supporting Word/Markdown/Excel bidirectional conversion. Runs completely locally, ensuring data security and reliability.
 
-本软件最初为文印室日常工作设计，解决以下痛点：
-- 各科室发来的文档格式混乱，需要整理为规范格式
-- 文档类型繁多，每种类型有不同的固定格式要求
-- 需要完全离线运行，适配内网环境和老旧设备
+## 📖 Project Background
 
-**设计理念**：降低学习成本，不依赖pandoc/LaTeX等技术工具，提供傻瓜式操作界面。
+This software was originally designed for the daily work of the printing office to solve the following problems:
+- Document formats sent by various departments are chaotic and need to be organized into standardized formats.
+- There are many types of documents, each with different fixed format requirements.
+- Needs to run offline, adapting to intranet environments and legacy equipment.
 
-## ✨ 核心功能
+**Design Philosophy**: This software is positioned as a lightweight, fool-proof tool. While it cannot compare with professional tools like LaTeX or Pandoc in terms of professionalism and functional completeness, it excels in zero learning cost and out-of-the-box usability, making it suitable for daily office scenarios where format requirements are not extremely strict.
 
-- **📄 文档格式转换** - Word ↔ Markdown 互转，智能识别公文元素，支持数学公式转换、分隔符双向转换（`---` ↔ 分页符，`***` ↔ 分节符，`___` ↔ 分隔线）。支持 DOCX/DOC/WPS/RTF/ODT 等格式。
-- **📊 表格格式转换** - Excel ↔ Markdown 互转，支持 XLSX/XLS/ET/ODS/CSV 等格式。包含表格汇总工具。
-- **📑 PDF与版式文件** - PDF/XPS/OFD 转 Markdown 或 DOCX，支持 PDF 合并、拆分等操作。
-- **🖼️ 图片处理** - 支持 JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC 等格式互转和智能压缩。
-- **🔍 OCR文字识别** - 集成 PaddleOCR，从图片和 PDF 中提取文字。
-- **✏️ 文本校对** - 基于自定义词库检查错别字、标点、符号和敏感词。可在设置界面编辑规则。
-- **📝 模板系统** - 灵活的模板机制，支持自定义公文和报表格式。
-- **💻 双模式操作** - 图形界面 + 命令行界面。
-- **🔒 完全本地运行** - 离线运行，数据安全，内置网络隔离机制。
-- **🔗 单实例运行** - 智能管理程序实例，支持与 Obsidian 插件无缝集成。
+## ✨ Core Features
 
-## 更新日志
+- **📄 Document Format Conversion** - Bidirectional Word ↔ Markdown conversion. Supports mathematical formula conversion, and bidirectional separator conversion (Markdown's three types of separators vs. Word's page breaks, section breaks, and horizontal lines). Supports formats like DOCX/DOC/WPS/RTF/ODT.
+- **📊 Spreadsheet Format Conversion** - Bidirectional Excel ↔ Markdown conversion. Supports XLSX/XLS/ET/ODS/CSV formats. Includes table summary tools.
+- **📑 PDF and Layout Files** - PDF/XPS/OFD to Markdown or DOCX conversion. Supports PDF merging, splitting, and other operations.
+- **🖼️ Image Processing** - Supports bidirectional conversion and compression of JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC formats.
+- **🔍 OCR Text Recognition** - Integrated RapidOCR to extract text from images and PDFs.
+- **✏️ Text Proofreading** - Checks for typos, punctuation, symbols, and sensitive words based on custom dictionaries. Rules can be edited in the settings interface.
+- **📝 Template System** - Flexible template mechanism supporting custom document and report formats.
+- **💻 Dual Mode Operation** - Graphical User Interface (GUI) + Command Line Interface (CLI).
+- **🔒 Completely Local Operation** - Runs offline, ensuring data security with built-in network isolation mechanisms.
+- **🔗 Single Instance Operation** - Automatically manages program instances and supports integration with the accompanying Obsidian plugin.
+
+## Changelog
+
+### v0.6.0 (2025-01-20)
+
+- Full internationalization support (GUI and CLI support 11 languages).
+- Replaced PaddleOCR with RapidOCR for better compatibility.
+- Added multilingual Word/Excel templates.
+- Automatic template style detection and injection.
+- Other optimizations and fixes.
 
 ### v0.5.1 (2025-01-01)
 
-- 新增数学公式双向转换（Word OMML ↔ Markdown LaTeX）
-- 新增脚注/尾注双向转换
-- 新增代码、引用等字符和段落样式
-- 增强列表处理（多级嵌套、自动编号）
-- 增强表格功能（样式检测/注入、三线表等）
-- 优化小标题序号清理和添加
-- 改进界面交互和设置联动
+- Added bidirectional math formula conversion (Word OMML ↔ Markdown LaTeX).
+- Added bidirectional footnote/endnote conversion.
+- Added character and paragraph styles for code, quotes, etc.
+- Enhanced list processing (multi-level nesting, automatic numbering).
+- Enhanced table functions (style detection/injection, three-line tables, etc.).
+- Optimized cleaning and adding of subheading numbers.
+- Improved interface interaction and settings linkage.
 
 ### v0.4.1 (2025-12-05)
 
-- 重构命令行界面，提升用户体验
-- 添加对非公文文档转换的支持
-- 实现更多选项配置化
+- Refactored CLI to improve user experience.
+- Added support for more document types.
+- Implemented more configurable options.
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-### 启动程序
+### Launch Program
 
-双击 `GongwenConverter.exe` 启动图形界面。
+Double-click `DocWen.exe` to start the graphical interface.
 
-### 快速入门指南
+### Quick Start Guide
 
-1. **准备一个 Markdown 文件**：
+1.  **Prepare a Markdown File**:
 
-   ```markdown
-   ---
-   标题: 测试文档
-   发文字号: 测试〔2024〕1号
-   主送机关: 测试部门
-   成文日期: 2024年10月26日
-   ---
-   
-   ## 测试标题
-   
-   这是测试正文内容。
-   ```
+    ```markdown
+    ---
+    title: Test Document
+    ---
+    
+    ## Test Title
+    
+    This is the test body content.
+    ```
 
-2. **拖拽转换**：
-   - 启动程序
-   - 将 .md 文件拖入窗口
-   - 选择模板
-   - 点击"转换为 DOCX"
+2.  **Drag and Drop Conversion**:
+    - Launch the program.
+    - Drag the `.md` file into the window.
+    - Select a template.
+    - Click "Convert to DOCX".
 
-3. **获取结果**：
-   - 在相同目录下生成格式规范的 Word 文档
+3.  **Get Results**:
+    - A standardized Word document will be generated in the same directory.
 
-## 📝 Markdown 语法约定
+**Tip**: You can use the sample files in the `samples/` directory to quickly try out the software's features.
 
-### 标题级别映射
+## 📝 Markdown Syntax Conventions
 
-为方便无背景知识的同事记忆，本软件的Markdown标题与Word标题**一一对应**：
-- 文档的标题（title）和副标题（subtitle）放在YAML元数据中
-- Markdown的 `# 一级标题` 对应 Word的"标题1"
-- Markdown的 `## 二级标题` 对应 Word的"标题2"
-- 以此类推，最多支持9级标题
+### Heading Level Mapping
 
-### 换行与分段
+To make it easier for colleagues without background knowledge to remember, the Markdown headings in this software correspond **one-to-one** with Word headings:
+- Document title and subtitle are placed in YAML metadata.
+- Markdown `# Heading 1` corresponds to Word "Heading 1".
+- Markdown `## Heading 2` corresponds to Word "Heading 2".
+- And so on, supporting up to 9 levels of headings.
 
-**基本规则**：每个非空行默认作为独立段落处理。
+**Tip**: If you prefer using Markdown's first-level heading (`#`) as the document title, starting from second-level headings (`##`) for body headings, you can style "Heading 1" in the Word template to look like a document title (e.g., centered, bold, larger font size), and select a numbering scheme that skips first-level heading numbering in the settings. This way, your first-level headings will appear as document titles.
 
-**混合段落**：当小标题需要与正文混合在同一段时，需满足以下条件：
-1. 小标题末尾有标点符号（支持：。，；：！？ 及对应的英文标点）
-2. 正文文本位于小标题的**紧邻下一行**
-3. 正文行不能是标题（不以 `#` 开头）
+### Line Breaks and Paragraphs
 
-**示例**：
+**Basic Rule**: Every non-empty line is treated as a separate paragraph by default.
+
+**Mixed Paragraphs**: When a subheading needs to be mixed with the body text in the same paragraph, the following conditions must be met:
+1.  The subheading ends with a terminating punctuation mark (supports multilingual punctuation, including periods, question marks, exclamation marks, and other common terminating punctuation).
+2.  The body text is located on the **immediate next line** of the subheading.
+3.  The body text line cannot be a special Markdown element (such as headings, code blocks, tables, lists, quotes, formula blocks, separators, etc.).
+
+**Example**:
 ```markdown
-## 一、工作要求。
-本次会议要求各单位认真落实...
+## I. Work Requirements.
+This meeting requires all units to earnestly implement...
 ```
-上述两行会被合并为同一段落，其中"一、工作要求。"保持小标题格式，"本次会议..."为正文格式。
+The above two lines will be merged into the same paragraph, where "I. Work Requirements." keeps the subheading format, and "This meeting..." keeps the body text format.
 
-**注意**：
-- 小标题和正文之间不能有空行，否则会被识别为独立段落
-- 如果小标题末尾没有标点符号，即使没有空行也会被识别为独立段落
+**Note**:
+- There cannot be an empty line between the subheading and the body text; otherwise, they will be recognized as separate paragraphs.
+- If the subheading does not end with a punctuation mark and has no empty line before the body text, the body text will be merged into the heading line with adjusted formatting.
 
-### 分隔线双向转换
+### Bidirectional Separator Conversion
 
-支持 Markdown 分隔线与 Word 分页符/分节符/分隔线的双向转换：
+Supports bidirectional conversion between Markdown separators and Word page breaks/section breaks/horizontal lines:
 
-- **DOCX → MD**：Word 中的分页符、分节符、分隔线自动转换为 Markdown 分隔线
-- **MD → DOCX**：Markdown 中的 `---`、`***`、`___` 自动转换为对应的 Word 元素
-- **可配置**：具体映射关系可在设置界面自定义
+-   **DOCX → MD**: Word page breaks, section breaks, and horizontal lines are automatically converted to Markdown separators.
+-   **MD → DOCX**: Markdown `---`, `***`, `___` are automatically converted to corresponding Word elements.
+-   **Configurable**: Specific mapping relationships can be customized in the settings interface.
 
-## 📖 详细使用指南
+## 📖 Detailed Usage Guide
 
-### Word 转 Markdown
+### Word to Markdown
 
-1. 将 .docx 文件拖入程序窗口
-2. 程序自动分析文档结构
-3. 生成包含 YAML 元数据的 .md 文件
+1.  Drag the `.docx` file into the program window.
+2.  The program automatically analyzes the document structure.
+3.  Generates a `.md` file containing YAML metadata.
 
-**支持的格式**：
-- `.docx` - 标准 Word 文档
-- `.doc` - 自动转换为 DOCX 后处理
-- `.wps` - WPS 文档自动转换
+**Supported Formats**:
+-   `.docx` - Standard Word document.
+-   `.doc` - Automatically converted to DOCX for processing.
+-   `.wps` - WPS document automatically converted.
 
-**导出选项说明**：
+**Export Options**:
 
-| 选项 | 说明 |
-|-----|------|
-| **提取图片** | 勾选后，将文档中的图片提取到输出文件夹，MD文件中插入图片链接 |
-| **图片文字识别** | 勾选后，对图片进行OCR识别，创建图片.md文件（包含识别的文字） |
-| **针对优化（公文）** | 勾选后，使用三轮评分算法识别公文元素，生成包含14个公文专用字段的YAML元数据；不勾选则使用简化模式，YAML只包含标题和副标题两个基本字段 |
-| **清理小标题序号** | 勾选后，移除小标题前的序号（如"一、""（一）""1."等），转换为纯标题文本 |
-| **添加小标题序号** | 勾选后，根据标题层级自动添加序号（可在设置中配置序号方案） |
+| Option | Description |
+| :--- | :--- |
+| **Extract Images** | If checked, images in the document are extracted to the output folder, and image links are inserted into the MD file. |
+| **Image OCR** | If checked, performs OCR on images and creates an image `.md` file (containing recognized text). |
+| **Clean Subheading Numbers** | If checked, removes numbers before subheadings (e.g., "一、", "（一）", "1.", etc.) and converts them to pure title text. |
+| **Add Subheading Numbers** | If checked, automatically adds numbers based on heading levels (numbering scheme can be configured in settings). |
 
-### Markdown 转 Word
+### Markdown to Word
 
-1. 准备包含 YAML 头部的 .md 文件
-2. 拖入程序窗口并选择对应的 Word 模板
-3. 程序自动填充模板并生成文档
+1.  Prepare a `.md` file with a YAML header.
+2.  Drag it into the program window and select the corresponding Word template.
+3.  The program automatically fills the template and generates the document.
 
-**转换选项说明**：
+**Conversion Options**:
 
-| 选项 | 说明 |
-|-----|------|
-| **清理小标题序号** | 勾选后，移除小标题前的序号（如"一、""（一）""1."等），转换为纯标题文本 |
-| **添加小标题序号** | 勾选后，根据标题层级自动添加序号（可在设置中配置序号方案） |
+| Option | Description |
+| :--- | :--- |
+| **Clean Subheading Numbers** | If checked, removes numbers before subheadings. |
+| **Add Subheading Numbers** | If checked, automatically adds numbers based on heading levels. |
 
-**注意**：如果公文中有小标题和正文文本混合的段落，在MD文件中需要保持严格换行（参见上方"换行与分段"说明）。
+**Note**: If there are paragraphs where subheadings and body text are mixed, strict line breaks must be maintained in the MD file (see "Line Breaks and Paragraphs" above).
 
-### 模板样式智能处理
+### Automatic Template Style Processing
 
-转换器在 Markdown → DOCX 转换时会自动检测和处理模板样式：
+The converter automatically detects and processes template styles during Markdown → DOCX conversion:
 
-| 样式类型 | 检测行为 | 缺失时注入 |
-|---------|---------|-----------|
-| 标题 (heading 1~9) | 检测段落样式 | 公文风格标题样式 |
-| 引用 (Quote 1~9) | 检测段落样式 | 灰色背景 + 左边框 |
-| 代码块/行内代码 | 检测对应类型 | Consolas 字体 + 灰色背景 |
-| 表格样式 | 用户配置优先，不存在则注入 | 三线表/网格表 |
-| 列表定义 | 优先使用模板最新定义 | decimal/bullet 预设 |
-| 分隔线 | 检测 Horizontal Rule | 底部边框段落样式 |
+#### Style Classification
 
-**使用建议**：在模板中自定义样式后，转换器会自动使用您的样式；如果模板中没有，会使用内置预设样式。
+**Paragraph Style**: Applied to the entire paragraph.
 
-### 表格文件处理
+| Style | Detection Behavior | Injection when Missing | Source |
+| :--- | :--- | :--- | :--- |
+| Heading (1~9) | Detects paragraph style | Template heading styles | Word Built-in |
+| Code Block | Detects paragraph style | Consolas font + Gray background | Defined by Software |
+| Quote (1~9) | Detects paragraph style | Gray background + Left border | Defined by Software |
+| Formula Block | Detects paragraph style | Formula specific style | Defined by Software |
+| Separator (1~3) | Detects paragraph style | Bottom border paragraph style | Defined by Software |
 
-1. **Excel/CSV 转 Markdown**：拖入 .xlsx 或 .csv 文件，自动转换为 Markdown 表格
-2. **Markdown 转 Excel**：准备好 MD 文件，选择 Excel 模板进行转换
+**Character Style**: Applied to selected text.
 
-**支持的格式**：
-- `.xlsx` - 标准 Excel 文档
-- `.xls` - 自动转换为 XLSX 后处理
-- `.et` - WPS 表格自动转换
-- `.csv` - CSV 文本表格
+| Style | Detection Behavior | Injection when Missing | Source |
+| :--- | :--- | :--- | :--- |
+| Inline Code | Detects character style | Consolas font + Gray shading | Defined by Software |
+| Inline Formula | Detects character style | Formula specific style | Defined by Software |
 
-### 文本校对功能
+**Table Style**: Applied to the entire table.
 
-程序提供四种可自定义的校对规则：
+| Style | Detection Behavior | Injection when Missing | Source |
+| :--- | :--- | :--- | :--- |
+| Three-Line Table | User config priority | Three-line table style definition | Defined by Software |
+| Grid Table | User config priority | Grid table style definition | Defined by Software |
 
-1. **标点配对检查** - 检测括号、引号等成对标点是否匹配
-2. **符号校对** - 检测中英文标点混用问题
-3. **错别字检查** - 基于自定义词库检查常见错别字
-4. **敏感词检测** - 基于自定义词库检测敏感词
+**Numbering Definition**: Used for list formats.
 
-**自定义词库**：在程序的"设置"界面中可视化编辑错别字库和敏感词库。
+| Type | Detection Behavior | Handling when Missing |
+| :--- | :--- | :--- |
+| List Numbering | Scans existing ordered/unordered list definitions in template | Uses decimal/bullet preset |
 
-**使用方法**：
-1. 将需要校对的 Word 文档拖入程序
-2. 勾选需要的校对规则
-3. 点击"文本校对"按钮
-4. 校对结果以批注形式显示在文档中
+#### Style Name Internationalization
 
-### 支持的公文元素
+-   **Word Built-in Styles** (heading 1~9):
+    -   Style names use Word standard English names (e.g., `heading 1`).
+    -   Word automatically displays localized names based on system language (e.g., "标题 1" on Chinese systems).
+-   **Software Defined Styles** (Code Block, Quote, Formula, Separator, Table, etc.):
+    -   Injects corresponding language style names based on the software's interface language setting.
+    -   Chinese Interface: Injects "代码块", "引用 1", "三线表", etc.
+    -   English Interface: Injects "Code Block", "Quote 1", "Three Line Table", etc.
 
-- 标题、发文字号、密级
-- 主送机关、抄送机关、附件
-- 签发人、成文日期、印发机关
-- 以及其他标准公文要素
+**Suggestion**: After customizing styles in the template, the converter will automatically use your styles; if not present in the template, it will use built-in preset styles.
 
-## ⚙️ 配置说明
+### Spreadsheet File Processing
 
-程序行为可以通过 `configs/` 目录下的配置文件（共17个）调整：
+1.  **Excel/CSV to Markdown**: Drag `.xlsx` or `.csv` files to automatically convert to Markdown tables.
+2.  **Markdown to Excel**: Prepare an MD file and select an Excel template for conversion.
 
-| 配置文件 | 功能说明 |
-|---------|---------|
-| `gui_config.toml` | 界面设置（主题、窗口大小、透明度等） |
-| `logger_config.toml` | 日志系统配置 |
-| `conversion_config.toml` | 格式转换配置（DOCX↔MD格式保留、分隔符转换） |
-| `conversion_defaults.toml` | 文件处理默认设置（提取、OCR、校对、汇总、压缩、DPI等） |
-| `heading_numbering_add.toml` | 标题序号方案（添加序号） |
-| `heading_numbering_clean.toml` | 序号清理规则（清除序号） |
-| `link_config.toml` | 链接嵌入和格式配置 |
-| `output_config.toml` | 输出目录和行为配置 |
-| `proofread_config.toml` | 校对主配置 |
-| `proofread_symbols.toml` | 符号校对规则配置 |
-| `proofread_typos.toml` | 错别字映射表配置 |
-| `proofread_sensitive.toml` | 敏感词匹配规则配置 |
-| `software_priority.toml` | Office软件优先级配置 |
-| `style_code.toml` | 代码样式配置（Code Block/Inline Code） |
-| `style_formula.toml` | 公式样式配置（Formula Block/Inline Formula） |
-| `style_quote.toml` | 引用样式配置（Quote 1-9） |
-| `style_table.toml` | 表格样式配置（Three Line Table/Table Content） |
+**Supported Formats**:
+-   `.xlsx` - Standard Excel document.
+-   `.xls` - Automatically converted to XLSX for processing.
+-   `.et` - WPS spreadsheet automatically converted.
+-   `.csv` - CSV text table.
 
-详细配置说明请参考 `doc/技术文档.md`。
+### Text Proofreading Function
 
-## 🛠️ 模板系统
+The program provides four customizable proofreading rules:
 
-### 使用现有模板
+1.  **Punctuation Pairing Check** - Detects if paired punctuation like parentheses and quotes match.
+2.  **Symbol Proofreading** - Detects mixed use of Chinese and English punctuation.
+3.  **Typo Check** - Checks for common typos based on a custom dictionary.
+4.  **Sensitive Word Detection** - Detects sensitive words based on a custom dictionary.
 
-程序自带多个常用公文模板：
+**Custom Dictionaries**: Visually edit typo and sensitive word dictionaries in the "Settings" interface.
 
-- `公文通用.docx` - 标准公文格式
-- `白头文.docx` - 无红头公文
-- `表格测试.xlsx` - Excel 报表模板
+**Usage**:
+1.  Drag the Word document to be proofread into the program.
+2.  Check the required proofreading rules.
+3.  Click the "Text Proofreading" button.
+4.  Proofreading results are displayed as comments in the document.
 
-### 自定义模板
+## 🛠️ Template System
 
-1. 使用 Word 或 WPS 创建模板文件
-2. 参考现有模板，在需要填充的位置插入占位符：`{{标题}}`、`{{发文字号}}` 等
-3. 模板中，内置的标题1~标题5，需要手动修改样式
-4. 将模板保存到 `templates/` 目录
-5. 重启程序，新模板自动加载
+### Using Existing Templates
 
-也可以复制现有模板，修改后重命名。
+The program comes with various templates, including multilingual versions. You can select and use them as needed. Template files are located in the `templates/` directory.
 
-## 🔧 命令行使用
+### Custom Templates
 
-除了图形界面，程序还提供功能完整的命令行界面（CLI），适合批量处理。
+1.  Create a template file using Word or WPS.
+2.  Refer to existing templates and insert placeholders like `{{Title}}`, `{{DocumentNumber}}`, etc., where filling is needed.
+3.  In the template, built-in Heading 1 ~ Heading 5 styles need to be manually modified.
+4.  Save the template to the `templates/` directory.
+5.  Restart the program, and the new template will be automatically loaded.
 
-### 两种运行模式
+You can also copy an existing template, modify it, and rename it.
 
-1. **交互模式** - 友好的菜单引导，类似GUI操作
-2. **Headless模式** - 直接执行命令，适合自动化脚本
+### Placeholder Usage
 
-### 快速开始
+#### Word Template Placeholders
 
-```bash
-# 交互模式：拖拽文件到终端即可
-GongwenConverter.exe document.docx
+**YAML Field Placeholders**: Use `{{Field Name}}` format in the template, which will be replaced by the corresponding value in the Markdown file's YAML header during conversion.
 
-# Headless模式：导出为Markdown
-GongwenConverter.exe document.docx --action export_md --extract-img
+| Placeholder | Description |
+| :--- | :--- |
+| `{{Title}}` | Document title (Retrieval rules see below) |
+| `{{Body}}` | Markdown body content insertion position |
+| Others | Supports any custom field |
 
-# 批量处理：转换所有Word文档
-GongwenConverter.exe *.docx --action export_md --batch --yes
-```
+**Title Retrieval Priority**:
 
-### 常用操作示例
+| Priority | Source | Description |
+| :--- | :--- | :--- |
+| 1 | YAML `Title` field | Highest priority |
+| 2 | YAML `aliases` field | Takes the first element of the list, or string value |
+| 3 | Filename | Filename without `.md` extension |
 
-**导出Markdown**：
-```bash
-# 导出Word为MD（提取图片）
-GongwenConverter.exe report.docx --action export_md --extract-img
+**Multilingual Support**: The title and body placeholders support multiple languages, e.g., title can be `{{title}}`, `{{标题}}`, `{{Titel}}`, etc., body can be `{{body}}`, `{{正文}}`, `{{Inhalt}}`, etc.
 
-# 导出并启用OCR
-GongwenConverter.exe report.docx --action export_md --extract-img --ocr
-```
+#### Excel Template Placeholders
 
-**格式转换**：
-```bash
-# Word转PDF
-GongwenConverter.exe report.docx --action convert --target pdf
+Excel templates support three types of placeholders:
 
-# Markdown转Word（指定模板）
-GongwenConverter.exe document.md --action convert --target docx --template 公文通用
+**1. YAML Field Placeholder** `{{Field Name}}`
+
+Used to fill a single value from the Markdown file's YAML header:
+
+```markdown
+---
+ReportName: 2024 Annual Sales Statistics
+Unit: Sales Dept
+---
 ```
 
-**文档校对**：
-```bash
-# 启用所有校对规则
-GongwenConverter.exe document.docx --action validate --check-punct --check-typo --check-symbol --check-sensitive
+`{{ReportName}}`, `{{Unit}}` in the template will be replaced with corresponding values. The title field also follows the priority rules.
+
+**2. Column Fill Placeholder** `{{↓Field Name}}`
+
+Extracts data from the Markdown table and fills **downwards** row by row starting from the placeholder position:
+
+```markdown
+| ProductName | Quantity |
+|:--- |:--- |
+| Product A | 100 |
+| Product B | 200 |
 ```
 
-**批量处理**：
-```bash
-# 批量转换Word为MD
-GongwenConverter.exe *.docx --action export_md --extract-img --batch --yes
+`{{↓ProductName}}` in the Excel template will be replaced by "Product A", and the next row will be filled with "Product B".
 
-# 批量转换为PDF（遇错继续）
-GongwenConverter.exe *.xlsx --action convert --target pdf --batch --continue-on-error
+**3. Row Fill Placeholder** `{{→Field Name}}`
+
+Extracts data from the Markdown table and fills **rightwards** column by column starting from the placeholder position:
+
+```markdown
+| Month |
+|:--- |
+| Jan |
+| Feb |
+| Mar |
 ```
 
-**PDF操作**：
-```bash
-# 合并PDF文件
-GongwenConverter.exe file1.pdf file2.pdf file3.pdf --action merge_pdfs
+`{{→Month}}` in the Excel template will be filled with "Jan", "Feb", "Mar" sequentially to the right.
 
-# 拆分PDF（指定页码）
-GongwenConverter.exe report.pdf --action split_pdf --pages "1-3,5,7-10"
-```
+**Merged Cell Handling**: The program automatically skips non-first cells of merged cells to ensure correct data filling.
 
-### 主要参数说明
+**Multi-table Data Merge**: If there are multiple tables in Markdown using the same header name, data will be merged in order and filled sequentially.
 
-| 参数 | 说明 | 示例 |
-|-----|------|------|
-| `--action` | 操作类型 | `export_md`, `convert`, `validate` |
-| `--target` | 目标格式 | `pdf`, `docx`, `xlsx` |
-| `--template` | 模板名称 | `公文通用` |
-| `--extract-img` | 提取图片 | - |
-| `--ocr` | OCR识别 | - |
-| `--batch` | 批量模式 | - |
-| `--yes` / `-y` | 跳过确认 | - |
-| `--json` | JSON输出 | - |
-| `--quiet` / `-q` | 安静模式 | - |
+## 🖥️ Graphical Interface Usage
 
-## 🔌 Obsidian 插件
+Most users use this software through the graphical interface. Here is the detailed operation guide.
 
-项目包含配套的 Obsidian 插件，实现与转换器的智能集成：
+### Interface Overview
 
-### 核心特性
+The program uses an **adaptive three-column layout**:
 
-- **🚀 一键启动** - 侧边栏图标快速启动转换器
-- **📂 智能传递** - 自动传递当前打开的文件路径
-- **🔄 单实例管理** - 程序已运行时自动发送文件，无需重复启动
-- **💪 崩溃恢复** - 智能检测进程状态，自动清理残留文件
+| Area | Description | Display Timing |
+| :--- | :--- | :--- |
+| **Center Column (Main Area)** | File drag-and-drop area, operation panel, status bar | Always shown |
+| **Right Column** | Template selector / Format conversion panel | Automatically expands after selecting a file |
+| **Left Column** | Batch file list (grouped by type) | Shown when switching to batch mode |
 
-### 工作原理
+### Basic Operation Flow
 
-插件通过基于文件系统的进程间通信与转换器交互：
+1.  **Launch Program**: Double-click `DocWen.exe`.
+2.  **Import File**:
+    -   Method 1: Drag and drop files directly into the window.
+    -   Method 2: Click the "Add" button in the drag-and-drop area to select files.
+3.  **Select Template** (if conversion is needed): The right template panel expands automatically; select a suitable template.
+4.  **Configure Options**: Check the required conversion/export options in the operation panel.
+5.  **Execute Operation**: Click the corresponding function button (e.g., "Export MD", "Convert to DOCX", etc.).
+6.  **View Result**: The status bar shows progress and results; click the 📍 icon to locate the output file.
 
-1. **首次点击** → 启动转换器并传入当前文件
-2. **再次点击（有文件）** → 替换为新文件（单文件模式）
-3. **再次点击（无文件）** → 激活转换器窗口
+### Single File Mode vs. Batch Mode
 
-### 安装方法
+The program supports two processing modes, switchable via the toggle button in the file drag-and-drop area:
 
-1. 将 `obsidian-plugin/` 目录中的插件文件复制到 Obsidian 插件目录：
-   ```
-   <Vault>/.obsidian/plugins/gongwen-converter-assistant/
-   ```
+**Single File Mode** (Default):
+-   Process one file at a time.
+-   Simple interface, suitable for daily use.
 
-2. 在 Obsidian 设置中启用插件并配置转换器路径
+**Batch Mode**:
+-   Import multiple files simultaneously.
+-   Left column shows categorized file list (grouped by document/spreadsheet/image, etc.).
+-   Supports batch adding, removing, and sorting.
+-   Clicking a file in the list switches the current operation target.
 
-详细说明请参考 `obsidian-plugin/README.md`。
+### Operation Panel Functions
 
-## ❓ 常见问题
+The operation panel automatically adjusts available options based on file type:
 
-### 转换失败怎么办？
+| File Type | Available Operations |
+| :--- | :--- |
+| Word Document | Export MD, Convert PDF, Text Proofreading, OCR |
+| Markdown | Convert DOCX, Convert PDF |
+| Excel Spreadsheet | Export MD, Convert PDF, Table Summary |
+| PDF File | Export MD, Merge, Split, OCR |
+| Image File | Format Conversion, Compression, OCR |
 
-- 检查文件是否被其他程序占用
-- 确认文件格式正确
-- 查看 `logs/` 目录下的错误日志
+### Settings Interface
 
-### 模板不显示？
+Click the ⚙️ button in the bottom right corner of the window to open settings:
 
-- 确认模板文件在 `templates/` 目录中
-- 检查模板文件是否损坏
-- 重启程序重新加载模板
+-   **General**: Interface theme, language, window opacity.
+-   **Conversion**: Default values for various conversion options.
+-   **Output**: Default output directory, file naming rules.
+-   **Proofread**: Edit typo and sensitive word dictionaries.
+-   **Style**: Code block, quote, table style configurations.
 
-### 校对功能不工作？
+### Shortcuts
 
-- 确认文档为 .docx 格式
-- 检查文档是否包含可编辑文本
-- 在设置中确认校对规则已启用
-
-## 📞 获取帮助
-
-- **详细技术文档**：查看 `doc/技术文档.md`
-- **配置示例**：参考 `configs/` 目录中的配置文件
-
-## 🔒 安全特性
-
-- **完全本地运行**：所有处理在本地完成，不依赖网络
-- **网络隔离**：内置网络隔离机制，防止数据泄露
-- **无数据上传**：用户文件不会上传到任何服务器
-
-## 📜 许可证
-
-本项目采用 **GNU Affero General Public License v3.0 (AGPL-3.0)** 许可证。
-
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-
-- 本项目使用了 PyMuPDF（采用AGPL-3.0许可证），因此整个项目也采用AGPL-3.0许可证
-- 您可以自由地使用、修改和分发本软件
-- 如果您修改本软件并通过网络提供服务，必须向用户提供修改后的源代码
-- 详细许可证信息请参阅 [LICENSE](LICENSE) 文件
-
-### 联系方式
-
-- **GitHub**: https://github.com/ZHYX91/gongwen-converter
-- **联系作者**: zhengyx91@hotmail.com
+-   **Drag External File**: Drag directly into the window to import.
+-   **Double-click Status Bar Result**: Quickly open the output file directory.
+-   **Right-click Template Item**: Open template file location.
 
 ---
 
-**作者**：ZhengYX
+## 🔧 Command Line Usage
+
+In addition to the GUI, the program provides a Command Line Interface (CLI), suitable for automation scripts and batch processing scenarios.
+
+### Running Modes
+
+-   **Interactive Mode**: Displays a menu guide after passing in a file, similar to GUI operation.
+-   **Headless Mode**: Execute directly by adding `--action` parameter, suitable for script invocation.
+
+### Common Examples
+
+```bash
+# Interactive Mode
+DocWen.exe document.docx
+
+# Export Word to Markdown (Extract Images + OCR)
+DocWen.exe report.docx --action export_md --extract-img --ocr
+
+# Markdown to Word (Specify Template)
+DocWen.exe document.md --action convert --target docx --template "Template Name"
+
+# Batch Conversion (Skip confirmation, continue on error)
+DocWen.exe *.docx --action export_md --batch --yes --continue-on-error
+
+# Document Proofreading
+DocWen.exe document.docx --action validate --check-typo --check-punct
+
+# PDF Merge/Split
+DocWen.exe *.pdf --action merge_pdfs
+DocWen.exe report.pdf --action split_pdf --pages "1-3,5,7-10"
+```
+
+### Main Arguments
+
+| Argument | Description |
+| :--- | :--- |
+| `--action` | Operation type: `export_md`, `convert`, `validate`, `merge_pdfs`, `split_pdf` |
+| `--target` | Target format: `pdf`, `docx`, `xlsx`, `md` |
+| `--template` | Template name (e.g., `Template Name`) |
+| `--extract-img` | Extract images during export |
+| `--ocr` | Enable OCR recognition |
+| `--batch` | Batch processing mode |
+| `--yes` / `-y` | Skip confirmation prompts |
+| `--continue-on-error` | Continue processing next item on error |
+| `--json` | Output result in JSON format |
+| `--quiet` / `-q` | Quiet mode, reduce output |
+
+## 🔌 Obsidian Plugin
+
+The project includes a matching Obsidian plugin to work in tandem with the converter:
+
+### Core Features
+
+-   **🚀 One-Click Launch** - Sidebar icon to quickly launch the converter.
+-   **📂 Automatic Handover** - Automatically passes the currently open file path.
+-   **🔄 Single Instance Management** - Automatically sends file if the program is already running, no need to restart.
+-   **💪 Crash Recovery** - Automatically detects process status and automatically cleans up residual files.
+
+### Working Principle
+
+The plugin interacts with the converter via file system-based IPC:
+
+1.  **First Click** → Launch converter and pass current file.
+2.  **Click Again (With File)** → Replace with new file (Single File Mode).
+3.  **Click Again (No File)** → Activate converter window.
+
+### Installation
+
+The plugin has been released to a separate repository. Please visit [docwen-obsidian](https://github.com/ZHYX91/docwen-obsidian) for installation instructions and the latest version.
+
+## ❓ FAQ
+
+### What if conversion fails?
+
+-   Check if the file is occupied by another program.
+-   Confirm the file format is correct.
+-   Check error logs in the `logs/` directory.
+
+### Template not showing?
+
+-   Confirm template files are in the `templates/` directory.
+-   Check if the template file is corrupted.
+-   Restart the program to reload templates.
+
+### Proofreading function not working?
+
+-   Confirm the document is in .docx format.
+-   Check if the document contains editable text.
+-   Confirm proofreading rules are enabled in settings.
+
+### Output format not as expected?
+
+-   The program generates documents based on template styles. To adjust output format, modify the style definitions in the template file directly.
+-   Template files are located in the `templates/` directory.
+-   After modifying template styles, all documents converted using that template will apply the new styles.
+
+### Formula cells are empty after Excel to Markdown conversion?
+
+This is expected behavior. The program reads the **cached values** of cells rather than the formulas themselves.
+
+**Technical Reason**:
+-   In Excel files, formula cells store both the formula and the last calculated result (cached value).
+-   The program uses `data_only=True` mode, which only retrieves cached values.
+-   If the file has never been opened in Excel (e.g., generated by a program), or was edited but not re-saved, the cached value will be empty.
+
+**Solution**:
+1.  Open the file in Excel.
+2.  Wait for formula calculation to complete.
+3.  Save the file.
+4.  Convert again.
+
+## 🔒 Security Features
+
+-   **Completely Local Operation**: All processing is done locally, no network dependency.
+-   **Network Isolation**: Built-in network isolation mechanism prevents data leakage.
+-   **No Data Upload**: User files are never uploaded to any server.
+
+## 📜 License
+
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+
+-   This project uses PyMuPDF (licensed under AGPL-3.0), so the entire project is also licensed under AGPL-3.0.
+-   You are free to use, modify, and distribute this software.
+-   If you modify this software and provide services over a network, you must provide the modified source code to users.
+-   For detailed license information, please see the [LICENSE](LICENSE) file.
+
+### Contact
+
+-   **GitHub**: https://github.com/ZHYX91/docwen
+-   **Contact Author**: zhengyx91@hotmail.com
+
+---
+
+**Author**: ZhengYX

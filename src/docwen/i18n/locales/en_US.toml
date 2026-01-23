@@ -1,0 +1,1806 @@
+# Document Converter - English (US) Language File
+# Locale Code: en_US
+# Encoding: UTF-8
+
+[meta]
+name = "English (US)"
+native_name = "English (US)"
+
+# =============================================================================
+# CLI Command Line Interface
+# =============================================================================
+[cli]
+description = "Document Converter CLI - Supports document/spreadsheet/image/layout file conversion"
+example = "Example"
+header = "Document Converter - Interactive Mode"
+
+# CLI Help Text
+[cli.help]
+files = "Input file path(s) (supports wildcards like *.docx)"
+action = "Action type"
+target = "Target format (for convert action, e.g., docx, pdf, jpg)"
+extract_img = "Extract images"
+ocr = "OCR text recognition"
+optimize_for = "Optimization type: gongwen (official), contract, thesis"
+template = "Template name (for MD to document/spreadsheet)"
+check_punct = "Check punctuation pairing"
+check_typo = "Check typos"
+check_symbol = "Check symbols"
+check_sensitive = "Check flagged terms"
+merge_mode = "Merge mode: row/col/cell"
+base_table = "Base table file path"
+pages = "PDF split page range (e.g., 1-3,5,7-10)"
+dpi = "Image DPI quality"
+compress = "Compression mode"
+size_limit = "File size limit (e.g., 200KB, 2MB)"
+quality_mode = "PDF quality mode (for image to PDF)"
+batch = "Batch mode (same config for all files)"
+yes = "Skip all confirmation prompts"
+continue_on_error = "Continue on error"
+json = "JSON output format (for AI/script parsing)"
+quiet = "Quiet mode (minimal output)"
+verbose = "Verbose mode (show more information)"
+remove_numbering = "Remove existing heading numbers"
+add_numbering = "Add new heading numbers"
+numbering_scheme = "Numbering scheme"
+inspect = "Query supported operations (AI self-describe)"
+list_actions = "List all available actions"
+list_numbering_schemes = "List all available numbering schemes"
+list_templates = "List all available templates"
+lang = "Temporarily set interface language (does not save to config)"
+keep_alpha = "Preserve transparency when merging TIFF"
+
+# CLI Argument Group Titles
+[cli.groups]
+export_options = "Export Options"
+export_options_desc = "For export_md action"
+validate_options = "Proofread Options"
+validate_options_desc = "For validate action"
+merge_options = "Merge Options"
+merge_options_desc = "For merge_tables action"
+pdf_options = "PDF Options"
+pdf_options_desc = "For PDF merge/split"
+image_options = "Image Options"
+image_options_desc = "For image format conversion"
+batch_options = "Batch Options"
+batch_options_desc = "Batch file processing"
+output_options = "Output Control"
+output_options_desc = "Control output format and verbosity"
+numbering_options = "Numbering Options"
+numbering_options_desc = "For heading numbering"
+ai_options = "AI Features"
+ai_options_desc = "AI self-describe and query"
+
+# CLI Interactive Mode
+[cli.interactive]
+header = "Document Converter - Interactive Mode"
+select_operation = "Select operation"
+select_format = "Select output format"
+select_target_format = "Select target format"
+input_target_format = "Target format (docx/pdf/...)"
+select_image_format = "Select image format"
+select_pdf_size = "Select PDF size"
+select_numbering_scheme = "Select numbering scheme"
+select_optimization_type = "Select optimization type"
+select_dpi = "Select DPI quality"
+select_compress_mode = "Compression mode"
+confirm_convert_pdf = "Confirm convert to PDF?"
+confirm_merge = "Confirm merge"
+export_options = "Export options"
+extraction_options = "Extraction options"
+numbering_options = "Numbering options"
+numbering_processing = "Heading numbering processing"
+page_range_label = "Page range"
+input_pages = "Enter page range"
+input_files = "Enter file path or drag files"
+input_size_limit = "File size limit"
+input_other_pdfs = "Enter other PDF file paths to merge (wildcards supported)"
+image_export_hint = "Note: At least one option must be selected for images"
+proofread_options = "Proofread options"
+proofread_toggle_hint = "\nEnter numbers to toggle (e.g., 1 3 4), press Enter to confirm"
+proofread_input = "Proofread options"
+
+# File Type Menus
+[cli.interactive.menus]
+markdown_to_docx = "Convert to Word Document (DOCX/DOC/ODT/RTF)"
+markdown_to_xlsx = "Convert to Excel Spreadsheet (XLSX/XLS/ODS/CSV)"
+process_numbering = "Process Heading Numbers"
+export_markdown = "Export Markdown"
+export_md_ocr = "Export Markdown (OCR)"
+format_convert = "Format Conversion"
+image_format_convert = "Format Conversion (PNG/JPG/BMP/GIF/TIF/WebP)"
+save_as_pdf = "Save as PDF"
+convert_to_document = "Convert to Document (DOCX/DOC)"
+document_validate = "Document Proofreading"
+render_to_image = "Render to Image"
+pdf_tools = "PDF Tools (Merge/Split)"
+merge_pdfs = "Merge PDF files"
+split_pdf = "Split PDF file"
+cancel = "Cancel"
+back = "Back"
+
+# Format Options
+[cli.interactive.formats]
+docx_recommended = "DOCX (Recommended)"
+doc_office = "DOC (Requires Office)"
+odt_libre = "ODT (Requires LibreOffice)"
+rtf_office = "RTF (Requires Office)"
+xlsx_recommended = "XLSX (Recommended)"
+xls_office = "XLS (Requires Office)"
+ods_libre = "ODS (Requires LibreOffice)"
+csv_text = "CSV (Plain Text)"
+tif_multipage = "TIF (Multi-page TIFF)"
+jpg_jpeg = "JPG (JPEG)"
+png_lossless = "PNG (Lossless)"
+jpg_lossy = "JPG (Lossy)"
+bmp = "BMP (Bitmap)"
+gif = "GIF (Animation)"
+tif = "TIF (Professional)"
+webp = "WebP (Modern)"
+
+# DPI Options
+[cli.interactive.dpi]
+dpi_150 = "150 DPI (Minimum)"
+dpi_300 = "300 DPI (Medium, Recommended)"
+dpi_600 = "600 DPI (High Quality)"
+
+# Compression Options
+[cli.interactive.compress]
+highest_quality = "Highest Quality"
+limit_size = "Limit File Size"
+
+[cli.interactive.pdf_sizes]
+original = "Original size"
+fit_a4 = "Fit A4"
+fit_a3 = "Fit A3"
+
+# Numbering Schemes
+[cli.interactive.numbering_schemes]
+gongwen_standard = "Official Document Standard (一、（一）1.（1）①)"
+hierarchical_standard = "Hierarchical Number Standard (1 1.1 1.1.1)"
+hierarchical_h2_start = "Hierarchical (H2 Start) (H1 no number; from H2: 1 1.1 1.1.1)"
+legal_standard = "Legal Standard"
+
+# Optimization Types
+[cli.interactive.optimization_types]
+gongwen = "Official Document"
+contract = "Contract"
+thesis = "Thesis"
+
+# Proofread Options
+[cli.interactive.proofread]
+symbol_pairing = "Symbol Pairing"
+symbol_correction = "Symbol Correction"
+typos_rule = "Typo Checking"
+sensitive_word = "Flagged Terms Matching"
+
+# Prompt Text
+[cli.interactive.prompts]
+extract_images = "Extract images?"
+embed_image = "Embed images?"
+ocr_recognition = "OCR text recognition?"
+ocr_simple = "OCR recognition?"
+optimize_for_type = "Optimize for document type?"
+remove_numbering = "Remove existing numbering?"
+add_numbering = "Add new numbering?"
+continue_next = "Continue to next?"
+apply_to_all = "Apply to all files?"
+
+# CLI Messages
+[cli.messages]
+error_no_files = "Error: Input files required"
+error_no_action = "Error: --action required in Headless mode"
+error_no_valid_files = "Error: No valid files"
+error_file_not_found = "Error: No valid files found"
+error_inspect_no_file = "Error: --inspect requires a file"
+warning_invalid_files = "Warning: {count} file(s) invalid"
+warning_format_mismatch = "Warning: {count} file(s) format mismatch"
+no_files_selected = "No files selected, exiting"
+no_operation_selected = "No operation selected"
+program_interrupted = "Program interrupted"
+error_prefix = "Error"
+files_found = "Found {count} file(s)"
+file_list = "File list"
+file_count_suffix = " file(s)"
+more_files = "and {count} more file(s)"
+no_other_files = "No other files selected"
+error_need_option = "Error: At least one option must be selected"
+no_proofread_selected = "No proofread options selected"
+error_no_template = "Error: No {type} template found"
+available_type_templates = "Available {type} templates"
+template_list_error = "Error: Failed to load template list"
+invalid_index = "Invalid index: {idx}"
+invalid_input = "Invalid input, please enter numbers"
+batch_completed = "Batch completed: {success}/{total} succeeded"
+failed_count = "Failed: {count} file(s)"
+available_actions = "Available Actions"
+available_schemes = "Available Numbering Schemes"
+available_templates = "Available Templates"
+document_templates = "Document Templates (DOCX)"
+spreadsheet_templates = "Spreadsheet Templates (XLSX)"
+no_templates = "(None)"
+file_info = "File"
+category_info = "Category"
+format_info = "Format"
+supported_actions = "Supported Actions"
+example_format = "Example"
+base_file = "Base file"
+other_pdf_files = "Other PDF files"
+will_merge_files = "Will merge {count} files"
+page_range_hint = "Supported formats: 1-3,5,7-10"
+current_file = "Current"
+
+# Batch Mode
+[cli.batch]
+batch_mode = "Batch mode"
+process_mode = "Process mode"
+processing_category = "Processing {category} files..."
+batch_apply_same = "Batch Apply Same Operation (Recommended)"
+process_one_by_one = "Process One by One"
+detected_same_type = "Detected {count} {category} file(s)"
+detected_mixed_types = "Detected multiple file types"
+process_by_type = "Process by Type (Recommended)"
+export_all_to_md = "Export All to Markdown"
+configure_operation = "Configure Operation"
+
+# File Category Names
+[cli.categories]
+markdown = "Markdown"
+document = "Document"
+spreadsheet = "Spreadsheet"
+image = "Image"
+layout = "Layout"
+
+# CLI Prompts
+[cli.prompts]
+select = "Please select"
+default = "Default"
+invalid_yes_no = "Invalid input, please enter y/n"
+enter_number_range = "Please enter a number between 1-{max}"
+invalid_number = "Invalid input, please enter a number"
+cannot_be_empty = "This field cannot be empty"
+
+# CLI Validation Messages
+[cli.validation]
+file_not_exists = "File does not exist"
+not_a_file = "Path is not a file"
+file_empty = "File is empty"
+unsupported_type = "Unsupported file type"
+
+# CLI Result Messages
+[cli.result]
+success = "Operation successful"
+failed = "Operation failed"
+output = "Output"
+
+# CLI Action Descriptions
+[cli.actions]
+export_md = "Export to Markdown"
+convert = "Format conversion"
+validate = "Document proofreading"
+merge_tables = "Merge tables"
+merge_pdfs = "Merge PDFs"
+split_pdf = "Split PDF"
+merge_tiff = "Merge to TIF"
+process_numbering = "Process MD heading numbers"
+
+# CLI Numbering Scheme Names
+[cli.numbering_schemes]
+gongwen_standard = "Official Document Standard"
+hierarchical_standard = "Hierarchical Number Standard"
+hierarchical_h2_start = "Hierarchical (H2 Start)"
+legal_standard = "Legal Standard"
+
+# =============================================================================
+# Common Text
+# =============================================================================
+[common]
+app_name = "DocWen"
+offline_version = " (Offline Version)"
+close = "Close"
+apply = "Apply"
+cancel = "Cancel"
+ok = "OK"
+save = "Save"
+error = "Error"
+version = "Version {version}"
+browse = "Browse..."
+select = "Select"
+disclaimer = "Testing software. Accuracy not guaranteed.\nFor educational use only. No commercial use or distribution."
+
+# =============================================================================
+# Settings Dialog
+# =============================================================================
+[settings]
+title = "Settings"
+
+# Tab Titles
+[settings.tabs]
+general = "General"
+text = "Text"
+document = "Document"
+spreadsheet = "Spreadsheet"
+image = "Image"
+layout = "Layout"
+link = "Link"
+formatting = "Format"
+output = "Output"
+logging = "Logging"
+
+# Settings Status Messages
+[settings.status]
+applied = "Settings applied"
+apply_failed = "Failed to apply settings. Please check the logs."
+apply_error = "Apply failed"
+
+# -----------------------------------------------------------------------------
+# General Settings Tab
+# -----------------------------------------------------------------------------
+[settings.general]
+# Language Settings Section
+language_section = "🌐 语言 / Language"
+language_label = "Select interface language:"
+language_tooltip = "Select the display language for the application.\nChanges will take effect after restart."
+language_restart_hint = "Changes will take effect after restart."
+
+# Theme Settings Section
+theme_section = "Interface Theme"
+theme_label = "Select application theme:"
+theme_tooltip = "Select the visual theme for the application.\nDifferent themes provide different color schemes and interface styles.\nChanges will take effect after saving."
+theme_preview = "Theme Preview:"
+sample_button = "Sample Button"
+sample_text = "Sample Text"
+
+# Theme Names
+[settings.general.themes]
+cerculean = "Cerulean"
+cosmo = "Cosmo"
+cyborg = "Cyborg"
+darkly = "Darkly"
+flatly = "Flatly"
+journal = "Journal"
+litera = "Litera"
+lumen = "Lumen"
+minty = "Minty"
+morph = "Morph"
+pulse = "Pulse"
+sandstone = "Sandstone"
+simplex = "Simplex"
+solar = "Solar"
+superhero = "Superhero"
+united = "United"
+vapor = "Vapor"
+yeti = "Yeti"
+
+# Transparency Settings Section
+[settings.general.transparency]
+section = "Window Transparency"
+enable = "Enable window transparency"
+tooltip = "Enable window transparency effect.\nWhen enabled, you can adjust the transparency level\nto make the application window semi-transparent."
+
+# Window Behavior Settings Section
+[settings.general.window]
+section = "Window Behavior"
+remember_state = "Remember window position and size"
+remember_state_tooltip = "Remember the position and size of the application window.\nThe window will restore to its last state on next startup.\nThis helps maintain your preferred working environment."
+auto_center = "Auto-center window on startup"
+auto_center_tooltip = "Automatically center the window on screen when the application starts.\nIf 'Remember window position' is also enabled, this setting takes priority."
+default_mode_label = "Default file processing mode:"
+default_mode_tooltip = "Set the default file processing mode when the application starts.\nSingle File Mode: Process one file at a time\nBatch Mode: Process multiple files simultaneously"
+single_mode = "Single File Mode"
+batch_mode = "Batch Mode"
+
+# -----------------------------------------------------------------------------
+# Text Settings Tab
+# -----------------------------------------------------------------------------
+[settings.text]
+# MD to Document Numbering Settings
+md_to_docx_section = "Heading Numbering (MarkDown to Document)"
+remove_numbering = "Remove original Markdown heading numbering by default"
+remove_numbering_tooltip = "Remove existing heading numbering in Markdown when converting MD to DOCX"
+add_numbering = "Add new heading numbering by default"
+scheme_label = "Default numbering scheme:"
+
+# Numbering Settings Section
+numbering_settings_section = "Numbering Settings"
+numbering_settings_desc = "Manage heading numbering cleanup and addition schemes for MarkDown and document conversion."
+edit_numbering_schemes = "Heading Num Add"
+edit_patterns = "Heading Num Clean"
+
+# Template Settings
+template_section = "Template Settings"
+template_label = "Default template type for MarkDown files:"
+template_tooltip = "Set the default template selection for MD files\n• DOCX: Document template\n• XLSX: Spreadsheet template"
+template_docx = "Document Template (DOCX)"
+template_xlsx = "Spreadsheet Template (XLSX)"
+
+# Proofreading Settings
+validation_section = "Proofreading Settings"
+enable_symbol_pairing = "Enable symbol pairing"
+enable_symbol_correction = "Enable symbol correction"
+enable_typos_rule = "Enable typo correction"
+enable_sensitive_word = "Enable flagged terms matching"
+skip_code_blocks = "Skip code blocks"
+skip_quote_blocks = "Skip quote blocks"
+
+# Dictionary Configuration
+dictionary_section = "Dictionary Configuration"
+dictionary_desc = "Configure proofreading dictionaries: error symbols, typos, flagged terms."
+edit_symbol_mapping = "Error Symbols"
+edit_typos = "Typos"
+edit_sensitive_words = "Flagged Terms"
+
+# Error Messages
+editor_open_failed = "Failed to open editor: {error}"
+
+# -----------------------------------------------------------------------------
+# Document Settings Tab
+# -----------------------------------------------------------------------------
+[settings.document]
+# Content Extraction Settings
+extraction_section = "Image Extraction/OCR Settings"
+keep_images = "Check \"Extract images\" by default"
+keep_images_tooltip = "Check \"Extract images\" by default when converting document to MD"
+enable_ocr = "Check \"Image OCR\" by default"
+enable_ocr_tooltip = "Check \"Image OCR\" by default when converting document to MD"
+
+# Optimization Settings
+optimization_section = "Optimization Settings"
+enable_optimization = "Enable \"Optimize for document type\" by default"
+optimization_type_label = "Default optimization type:"
+
+# Software Priority
+software_section = "Software Priority"
+word_processors_label = "Document Processing Software Priority"
+odt_conversion_label = "ODT Format Conversion"
+document_to_pdf_label = "Document to PDF"
+
+# Software Names
+[settings.document.software]
+wps_writer = "WPS Writer"
+msoffice_word = "Word"
+libreoffice = "LibreOffice"
+
+# Numbering Settings
+[settings.document.numbering]
+section = "Heading Numbering (Document to MarkDown)"
+remove = "Remove original document heading numbering by default"
+remove_tooltip = "Remove existing heading numbering in document when converting DOCX to MD"
+add = "Add heading numbering to Markdown by default"
+scheme_label = "Default numbering scheme:"
+
+# -----------------------------------------------------------------------------
+# Spreadsheet Settings Tab
+# -----------------------------------------------------------------------------
+[settings.spreadsheet]
+extraction_section = "Image Extraction/OCR Settings"
+keep_images = "Check \"Extract images\" by default"
+keep_images_tooltip = "Check \"Extract images\" by default when converting spreadsheet to MD"
+enable_ocr = "Check \"Image OCR\" by default"
+enable_ocr_tooltip = "Check \"Image OCR\" by default when converting spreadsheet to MD"
+merge_mode_section = "Merge Mode Settings"
+merge_mode_desc = "Set the default mode for table merging"
+software_section = "Software Priority"
+spreadsheet_processors_label = "Spreadsheet Processing Software Priority"
+ods_conversion_label = "ODS Format Conversion"
+spreadsheet_to_pdf_label = "Spreadsheet to PDF"
+
+# Merge Mode Options
+[settings.spreadsheet.merge_modes]
+by_row = "Merge by Row"
+by_row_tooltip = "Merge multiple tables row by row into base table"
+by_column = "Merge by Column"
+by_column_tooltip = "Merge multiple tables column by column into base table"
+by_cell = "Merge by Cell"
+by_cell_tooltip = "Add data from corresponding cell positions"
+
+# Software Names
+[settings.spreadsheet.software]
+wps_spreadsheets = "WPS Spreadsheets"
+excel = "Excel"
+libreoffice = "LibreOffice"
+
+# -----------------------------------------------------------------------------
+# Image Settings Tab
+# -----------------------------------------------------------------------------
+[settings.image]
+extraction_section = "Image Extraction/OCR Settings"
+keep_images = "Check \"Extract images\" by default"
+keep_images_tooltip = "Check \"Extract images\" by default when converting image to MD"
+enable_ocr = "Check \"Image OCR\" by default"
+enable_ocr_tooltip = "Check \"Image OCR\" by default when converting image to MD"
+
+# OCR language settings
+ocr_language_label = "OCR recognition language:"
+ocr_language_tooltip = "Select the language model used for OCR text recognition.\n\n• Follow interface language: Automatically choose based on current UI language\n• Chinese/English: Suitable for mixed Chinese and English documents\n• Japanese: Suitable for Japanese documents\n• Latin script: Suitable for German, French, Portuguese, etc.\n• Cyrillic script: Suitable for Russian, etc."
+ocr_language_auto = "Follow interface language"
+ocr_language_chinese = "Chinese/English"
+ocr_language_japanese = "Japanese"
+ocr_language_chinese_cht = "Traditional Chinese"
+ocr_language_english = "English Only"
+ocr_language_korean = "Korean"
+ocr_language_latin = "Latin script (DE/FR/PT, etc.)"
+ocr_language_cyrillic = "Cyrillic script (RU, etc.)"
+
+compress_section = "Compression Options Settings"
+compress_desc = "Set the default compression mode for image format conversion"
+compress_lossless = "Highest Quality"
+compress_lossless_tooltip = "Lossless or high quality conversion (quality=95)"
+compress_limit_size = "Limit File Size"
+compress_limit_size_tooltip = "Compress to target size by adjusting quality parameter"
+size_limit_label = "Default size limit:"
+
+pdf_tiff_section = "PDF/TIFF Options Settings"
+pdf_size_label = "Default size for image to PDF"
+pdf_original = "Original Embed"
+pdf_a4 = "Fit A4"
+pdf_a3 = "Fit A3"
+tiff_mode_label = "Default mode for merge to TIFF"
+tiff_keep_alpha = "Preserve Transparency"
+tiff_keep_alpha_tooltip = "Preserve source image transparency (if any)"
+tiff_no_alpha = "No Transparency"
+tiff_no_alpha_tooltip = "Convert to RGB mode, transparent background becomes white"
+
+# -----------------------------------------------------------------------------
+# Layout Settings Tab
+# -----------------------------------------------------------------------------
+[settings.layout]
+extraction_section = "Image Extraction/OCR Settings"
+keep_images = "Check \"Extract images\" by default"
+keep_images_tooltip = "Check \"Extract images\" by default when converting layout files to MD"
+enable_ocr = "Check \"Image OCR\" by default"
+enable_ocr_tooltip = "Check \"Image OCR\" by default when converting layout files to MD"
+dpi_section = "Rendering DPI Settings"
+dpi_desc = "Set the default DPI (resolution) when converting layout files to images"
+dpi_min = "Minimum (150)"
+dpi_min_tooltip = "Smaller files, suitable for quick preview"
+dpi_medium = "Medium (300)"
+dpi_medium_tooltip = "Balanced quality and file size, recommended for general use"
+dpi_high = "High Quality (600)"
+dpi_high_tooltip = "High quality output, larger files, suitable for printing"
+software_section = "Software Priority"
+pdf_to_doc_label = "PDF to Document"
+
+# -----------------------------------------------------------------------------
+# Link Settings Tab
+# -----------------------------------------------------------------------------
+[settings.link]
+# Markdown Link Format Section
+format_section = "Markdown Link Format"
+format_desc = "Set the link format in generated Markdown files"
+image_link_style_label = "Image link format:"
+image_link_style_tooltip = "Set the link format for images in MD files\n\n• Markdown embed: ![alt](image.png)\n• Markdown link: [alt](image.png)\n• Wiki embed: ![[image.png]] (Obsidian)\n• Wiki link: [[image.png]] (Obsidian)"
+md_file_link_style_label = "MD file link format:"
+md_file_link_style_tooltip = "Set the link format for MD files in MD files\n\n• Markdown link: [file.md](file.md)\n• Wiki embed: ![[file.md]] (Obsidian)\n• Wiki link: [[file.md]] (Obsidian)\n\nNote: Markdown format does not support embedding MD file content"
+
+# Non-Embed Link Processing Section
+non_embed_section = "Non-Embed Link Processing"
+non_embed_desc = "Set how to handle regular links (without ! prefix) when converting MD to document/table"
+wiki_link_mode = "Wiki link processing:"
+wiki_link_tooltip = "Process [[link]] or [[link|text]] format\n\nKeep as-is: [[link|text]]\nExtract text: text (remove markup)\nRemove: Delete entire link"
+markdown_link_mode = "Markdown link processing:"
+markdown_link_tooltip = "Process [text](url) format\n\nKeep as-is: [text](url)\nExtract text: text (remove markup)\nRemove: Delete entire link"
+
+# Embed Link Processing Section
+embed_section = "Embed Link Processing"
+embed_desc = "Set how to handle embed links (with ! prefix) when converting MD to document/table"
+wiki_embed_image_mode = "Wiki embed image processing:"
+wiki_embed_image_tooltip = "Process ![[image.png]] format\n\nKeep as-is: ![[image.png]]\nExtract text: image.png\nRemove: Delete link\nEmbed content: Insert image into document"
+markdown_embed_image_mode = "Markdown embed image processing:"
+markdown_embed_image_tooltip = "Process ![alt](image.png) format\n\nKeep as-is: ![alt](image.png)\nExtract text: image.png\nRemove: Delete link\nEmbed content: Insert image into document"
+embed_md_file_mode = "Wiki embed MD file processing:"
+embed_md_file_tooltip = "Process ![[file.md]] format (Wiki only)\n\nKeep as-is: ![[file.md]]\nExtract text: file.md\nRemove: Delete link\nEmbed content: Recursively process and insert"
+max_depth_label = "Max embed depth:"
+max_depth_tooltip = "Maximum recursion depth for MD file embedding\nPrevent infinite recursion and performance issues\n\nExample: A embeds B, B embeds C, C embeds D...\nRecommended: 3-5"
+
+# Sub-node: Image Link Format Options
+[settings.link.image_styles]
+wiki_embed = "Wiki Embed"
+wiki_link = "Wiki Link"
+md_embed = "Markdown Embed"
+md_link = "Markdown Link"
+
+# Sub-node: MD File Link Format Options
+[settings.link.md_file_styles]
+wiki_embed = "Wiki Embed"
+wiki_link = "Wiki Link"
+md_link = "Markdown Link"
+
+# Sub-node: Link Processing Modes
+[settings.link.modes]
+keep = "Keep as-is"
+extract_text = "Extract text"
+remove = "Remove"
+embed = "Embed content"
+
+# -----------------------------------------------------------------------------
+# Format Settings Tab
+# -----------------------------------------------------------------------------
+[settings.formatting]
+# Document to MarkDown Section
+docx_to_md_section = "Document to MarkDown"
+format_processing = "Format Processing"
+format_processing_tooltip = "Configure format handling when converting Word documents to Markdown\n\nSome options do not work for 'Official Document Optimized' document to MarkDown conversion"
+body_format_label = "Body format handling:"
+body_format_tooltip = "Preserve format: Bold→**Bold**, Italic→*Italic*, Strikethrough→~~Strikethrough~~, etc.\nDiscard format: Keep plain text content only"
+heading_format_label = "Heading format handling:"
+heading_format_tooltip = "Preserve format: Bold within headings converted to **Bold**, etc.\nDiscard format: Headings keep plain text only, avoiding redundant markup\nNote: Word heading styles usually have fixed formatting, preserving may cause redundant markup"
+table_header_format_label = "Table header format handling:"
+table_header_format_tooltip = "Preserve format: Bold in header cells converted to **Bold**, etc.\nDiscard format: Headers keep plain text only, avoiding redundant markup\nNote: Table styles usually define header bold, preserving may cause duplicate markup"
+
+# Separator Mapping
+separator_mapping = "Separator Mapping"
+separator_mapping_tooltip = "Configure which Markdown separator to convert Word page breaks/section breaks/horizontal rules to\n\nPage break: Page breaks in Word\nSection break: All types of section breaks (next page/continuous/odd page/even page)\nHorizontal rule: Paragraph bottom border (generated when user types --- and presses Enter)"
+page_break_label = "Page break:"
+page_break_tooltip = "Convert Word page breaks to Markdown separators\nPage breaks are typically used to force page breaks at specific locations"
+section_break_label = "Section break:"
+section_break_tooltip = "Convert Word section breaks to Markdown separators\nAll section break types (next page/continuous/odd/even page) are handled uniformly"
+horizontal_rule_label = "Horizontal rule:"
+horizontal_rule_tooltip = "Convert Word horizontal rules (Horizontal Rule 1/2/3 styles) to Markdown separators"
+
+# Syntax Selection
+syntax_selection = "Syntax Selection"
+syntax_selection_tooltip = "Select the syntax format output when converting documents to Markdown\n(All format syntaxes are automatically recognized during input)"
+bold_syntax_label = "Bold syntax:"
+bold_syntax_tooltip = "Select the output syntax format for bold text"
+italic_syntax_label = "Italic syntax:"
+italic_syntax_tooltip = "Select the output syntax format for italic text"
+strikethrough_syntax_label = "Strikethrough syntax:"
+strikethrough_syntax_tooltip = "Select the output syntax format for strikethrough text"
+highlight_syntax_label = "Highlight syntax:"
+highlight_syntax_tooltip = "Select the output syntax format for highlighted text"
+superscript_syntax_label = "Superscript syntax:"
+superscript_syntax_tooltip = "Select the output syntax format for superscript text"
+subscript_syntax_label = "Subscript syntax:"
+subscript_syntax_tooltip = "Select the output syntax format for subscript text"
+unordered_list_label = "Unordered list:"
+unordered_list_tooltip = "Select the output marker symbol for unordered lists"
+ordered_list_label = "Ordered list:"
+ordered_list_tooltip = "Ordered list numbering method (this option is not yet implemented, will be supported in future versions)"
+indent_spaces_label = "List indentation:"
+indent_spaces_tooltip = "Number of spaces per level for Markdown list indentation, used to recognize multi-level nesting\n2 spaces: Commonly used by Obsidian, Typora, etc.\n4 spaces: Commonly used by VS Code, etc."
+
+# MarkDown to Document Section
+md_to_docx_section = "MarkDown to Document"
+md_format_processing = "Format Processing"
+md_format_processing_tooltip = "Configure format markup handling when converting Markdown to Word documents"
+md_body_format_label = "Body format markup handling:"
+md_body_format_tooltip = 'Apply format: **Bold** converted to actual bold format\nKeep markup: Keep **Bold** displayed as-is\nClean markup: Show only "Bold" text, no formatting'
+md_heading_format_label = "Heading format markup handling:"
+md_heading_format_tooltip = 'Apply format: Override default heading style formatting, enabling partial bold effects\nKeep markup: Keep markup displayed as-is\nClean markup: Let Word heading style formatting take effect naturally\nNote: When heading style itself is bold, "Apply format" can achieve partial bold'
+md_table_header_format_label = "Table header format markup handling:"
+md_table_header_format_tooltip = 'Apply format: **Bold** converted to actual bold (may duplicate with table style)\nKeep markup: Keep markup displayed as-is\nClean markup: Let table style (e.g., firstRow bold) take effect naturally\nNote: Table styles usually define header bold, recommended to use "Clean markup"'
+
+# MD to Document Separator Mapping
+md_separator_mapping = "Separator Mapping"
+md_separator_mapping_tooltip = "Configure which Word page break/section break/horizontal rule to convert Markdown separators to\n\nPage break: Page breaks in Word\nSection break: Section breaks in Word (next page type)\nHorizontal rule: Paragraph bottom border (visual separator)"
+dash_label = "--- (three dashes):"
+dash_tooltip = "Convert Markdown --- separator to Word page break/section break"
+asterisk_label = "*** (three asterisks):"
+asterisk_tooltip = "Convert Markdown *** separator to Word page break/section break"
+underscore_label = "___ (three underscores):"
+underscore_tooltip = "Convert Markdown ___ separator to Word page break/section break\nNote: Section break (page) is actually generated as Section break (next page)"
+
+# Table Style
+table_style = "Table Style"
+table_style_tooltip = "Configure the style used when converting Markdown tables to Word tables\n\n【Built-in Styles】\nThree-line table/Grid table: Automatically detect if template exists, inject style definition if not\n\n【Custom Style】\nDetect if template has this style, create a grid table format style with the same name if not"
+builtin_style_radio = "Use built-in style"
+custom_style_radio = "Use custom style name"
+
+# List separator
+list_separator_label = "YAML List Separator"
+list_separator_tooltip = "Separator used when joining YAML list values into a string\n\nCommon values:\n• Chinese enumeration comma (、)\n• Comma (，)\n• Comma + space (, )\n• Empty string: direct concatenation"
+
+# Format Handling Options
+[settings.formatting.options]
+preserve_format = "Preserve format"
+discard_format = "Discard format"
+apply_format = "Apply format"
+keep_markup = "Keep markup"
+clean_markup = "Clean markup"
+
+# Separator Options
+[settings.formatting.separators]
+dash = "---"
+asterisk = "***"
+underscore = "___"
+ignore = "Ignore"
+page_break = "Page break"
+section_break = "Section break"
+horizontal_rule_1 = "Horizontal Rule 1"
+horizontal_rule_2 = "Horizontal Rule 2"
+horizontal_rule_3 = "Horizontal Rule 3"
+
+# Syntax Options
+[settings.formatting.syntax]
+bold_asterisk = "Asterisk (**text**)"
+bold_underscore = "Underscore (__text__)"
+italic_asterisk = "Asterisk (*text*)"
+italic_underscore = "Underscore (_text_)"
+strikethrough_extended = "Extended (~~text~~)"
+strikethrough_html = "HTML (<del>)"
+highlight_extended = "Extended (==text==)"
+highlight_html = "HTML (<mark>)"
+superscript_extended = "Extended (^text^)"
+superscript_html = "HTML (<sup>)"
+subscript_extended = "Extended (~text~)"
+subscript_html = "HTML (<sub>)"
+unordered_dash = "Dash (- item)"
+unordered_asterisk = "Asterisk (* item)"
+unordered_plus = "Plus (+ item)"
+ordered_restart = "Restart from 1"
+ordered_preserve = "Preserve original numbering"
+indent_2_spaces = "2 spaces (recommended)"
+indent_4_spaces = "4 spaces"
+
+# Table Style Options
+[settings.formatting.table_styles]
+three_line_table = "Three Line Table"
+table_grid = "Table Grid"
+
+# -----------------------------------------------------------------------------
+# Output Settings Tab
+# -----------------------------------------------------------------------------
+[settings.output]
+# Intermediate Files Section
+intermediate_section = "Intermediate Files"
+save_intermediate_label = "Save intermediate files to output directory"
+save_intermediate_tooltip = "Enabled: Save all intermediate step files\nDisabled: Save only the final result file\n\nExample (XLS→XLSX→ODS):\n• Enabled: Save both XLSX and ODS\n• Disabled: Save only ODS"
+save_intermediate_desc = "Whether to save intermediate files like XLSX during multi-step conversion (e.g., XLS→XLSX→ODS)"
+
+# Output Directory Section
+directory_section = "Output Directory"
+output_mode_label = "Output location:"
+output_mode_tooltip = "Source location: Output to the same folder as the source file\nCustom location: Output to a specified folder"
+custom_path_label = "Custom path:"
+browse_title = "Select Output Directory"
+
+# Output Mode Options
+[settings.output.output_modes]
+source = "Source file directory"
+custom = "Custom directory"
+
+# Date Subfolder Section
+[settings.output.date_folder]
+section = "Date Subfolder"
+create_label = "Create date subfolder"
+create_tooltip = "Create a date subfolder in the output directory\nExample: Output Directory/2025-01-06/file.pdf\nThis option works for both output modes"
+format_label = "Date format:"
+
+# Date Format Options
+[settings.output.date_formats]
+iso = "2025-01-06"
+compact = "20250106"
+chinese = "2025年01月06日"
+
+# Output Behavior Section
+[settings.output.behavior]
+section = "Output Behavior"
+auto_open_folder_label = "Auto-open output folder after conversion"
+auto_open_folder_tooltip = "Automatically open the output folder and select the final file after successful conversion or proofreading\nConvenient for quickly viewing the result"
+
+# -----------------------------------------------------------------------------
+# Logging Settings Tab
+# -----------------------------------------------------------------------------
+[settings.logging]
+# Logging System Section
+system_section = "Logging System"
+enable_logging_label = "Enable logging system"
+enable_logging_tooltip = "Enable or disable the entire logging system.\nWhen disabled, the application will not record any log information.\nRecommended to keep enabled in production."
+log_level_label = "Log level:"
+log_level_tooltip = "Set the verbosity of logging.\nLevels from low to high: debug > info > warning > error > critical\nHigher levels record less information."
+
+# File Output Section
+file_section = "File Output"
+file_prefix_label = "Log file prefix:"
+file_prefix_tooltip = "Set the prefix for log file names"
+retention_days_label = "Log retention days:"
+retention_days_tooltip = "Set how many days to keep log files. Logs older than this will be automatically deleted."
+
+# Console Output Section
+console_section = "Console Output"
+enable_console_label = "Show logs in console"
+enable_console_tooltip = "When enabled, logs will also be output to the console window"
+console_level_label = "Console log level:"
+console_level_tooltip = "Set the log level for console output, can be different from file log level"
+
+# Log Levels
+[settings.logging.levels]
+debug = "Debug (DEBUG)"
+info = "Info (INFO)"
+warning = "Warning (WARNING)"
+error = "Error (ERROR)"
+
+# =============================================================================
+# About Dialog
+# =============================================================================
+[about]
+title = "About"
+version_info = "Version {version}"
+version_tooltip = "This software is offline-only. Please check for updates manually."
+contact = "Contact: {email}"
+copyright = "© {year} {author}"
+acknowledgments = "Acknowledgments"
+acknowledgments_intro = "This project uses the following excellent open source projects and tools. Special thanks to:"
+
+# Open Source Tool Descriptions
+[about.tools]
+python_docx = "For bidirectional conversion between docx and markdown, handling document styles and structure"
+openpyxl = "For bidirectional conversion between xlsx and markdown, processing spreadsheet data"
+pymupdf = "For PDF/XPS document content extraction and format conversion"
+pymupdf4llm = "For intelligent PDF extraction and conversion to Markdown format"
+pdf2docx = "For converting PDF documents to editable Word format"
+easyofd = "For reading and converting Chinese OFD format documents"
+rapidocr = "For OCR text recognition in images and PDFs, supports offline use"
+onnxruntime = "As the inference engine for RapidOCR"
+ttkbootstrap = "For building modern graphical user interfaces"
+tkinterdnd2 = "For implementing drag and drop functionality, enhancing user experience"
+pillow = "For image format conversion and icon resource processing"
+pillow_heif = "Provides HEIF image format support for Pillow"
+img2pdf = "For batch converting image files to PDF documents"
+pywin32 = "For calling WPS and Office via COM interface for document format conversion"
+lxml = "For processing XML structure of Office documents"
+latex2mathml = "For converting LaTeX formulas to MathML format"
+pyyaml = "For processing Markdown frontmatter metadata"
+tomlkit = "For reading and saving configuration files"
+pandas = "For spreadsheet data processing and analysis"
+numpy = "For basic support of numerical computation and data processing"
+olefile = "For identifying and processing legacy Office document formats"
+watchdog = "For monitoring file system changes, implementing IPC and single instance"
+
+# =============================================================================
+# Main Interface Components
+# =============================================================================
+[components]
+
+# File Drop Zone
+[components.file_drop]
+section_title = "Input Files"
+empty_hint_single = "📤 Drag a file here"
+empty_hint_batch = "📤 Drag files or folders here"
+add_button = "Add"
+clear_button = "Clear"
+single_mode = "Single"
+batch_mode = "Batch"
+unavailable = "File drop area unavailable"
+batch_summary = "Batch processing: {count} {category} file(s)"
+
+# File Selector
+[components.file_selector]
+empty_hint = "No files\nDrag files (folders) here to start batch processing"
+unavailable = "File selector unavailable"
+
+# Status Bar
+[components.status_bar]
+unavailable = "Status bar unavailable"
+
+# App status
+app_started = "Application started"
+no_files_in_tab = "No files in {category} tab"
+unknown_file_type = "Unknown file type"
+files_cleared = "File selection cleared"
+
+# Processing status
+processing_wait = "Processing, please wait{dots}"
+operation_cancelled = "Operation cancelled"
+processing_file = "Processing {current}/{total}: {filename}"
+batch_completed = "Batch completed: {success} succeeded, {failed} failed"
+skipped_same_format = "Skipped: Already in {format} format"
+
+# File type selection (unified style)
+selected_text_file = "Text file selected"
+selected_document_file = "Document file selected"
+selected_spreadsheet_file = "Spreadsheet file selected"
+selected_image_file = "Image file selected"
+selected_layout_file = "Layout file selected"
+
+# GUI status messages
+operation_success = "Operation completed successfully!"
+conversion_failed = "Conversion failed"
+trial_expired_title = "Trial Expired"
+trial_expired_message = "You can still complete this operation, but the trial version of this software has expired.\nPlease contact the developer for a licensed version."
+open_location_title = "Open Location"
+open_location_confirm = "Open original file location?"
+template_selected = "Template selected: {name}"
+files_added = "Added {count} file(s) to {category}"
+files_add_failed = "{count} file(s) failed to add"
+file_selected = "Selected: {filename} ({category})"
+
+# File status dialogs
+[components.file_dialogs]
+# Skip dialog
+skip_title = "File Skipped"
+skip_message = "File skipped conversion\n\nReason: {reason}\n\nOriginal file: {filename}\nLocation: {location}"
+skip_reason_unknown = "Unknown reason"
+
+# Error dialog
+error_title = "Conversion Failed"
+error_message = "File conversion failed\n\nFile: {filename}\nError: {error}\n\nSuggestions:\n1. Check if the file is corrupted\n2. Confirm related software is running normally\n3. Check logs for detailed information"
+error_unknown = "Unknown error"
+
+# Action Panel
+[components.action_panel]
+section_title = "Action Panel"
+unavailable = "Action panel unavailable"
+
+# Conversion Panel
+[components.conversion_panel]
+unavailable = "Conversion panel unavailable"
+
+# Template Selector
+[components.template_selector]
+no_templates = "No templates available"
+unavailable = "Template selector unavailable"
+
+# Tabbed Template Selector
+[components.template_selector_tabbed]
+document_templates = "Doc"
+spreadsheet_templates = "Sheet"
+
+# =============================================================================
+# File Type Categories
+# =============================================================================
+[file_types]
+document = "Document"
+spreadsheet = "Spreadsheet"
+image = "Image"
+layout = "Layout"
+text = "Text"
+unknown = "Unknown"
+
+# Category names with suffix (for tab labels)
+text_category = "Text"
+document_category = "Doc"
+spreadsheet_category = "Sheet"
+layout_category = "Layout"
+image_category = "Img"
+
+# Format validation related
+unknown_type = "Unknown"
+format_mismatch = "⚠️ Actual format: {format}"
+format_unverifiable = "⚠️ Cannot verify actual file format"
+format_txt = "TXT (Plain Text)"
+format_md = "Markdown"
+format_csv = "CSV (Table Text)"
+
+# =============================================================================
+# Conversion Operations
+# =============================================================================
+[conversion]
+# Document Operations
+
+# Spreadsheet Operations
+
+# Image Operations
+
+# Generated filenames (for output file naming)
+[conversion.filenames]
+split_part1 = "Split1"
+split_part2 = "Split2"
+merged_pdf = "MergedPDF"
+merged_table = "MergedTable"
+
+# =============================================================================
+# Messages and Prompts
+# =============================================================================
+[messages]
+# File Operations
+file_not_found = "File not found: {filename}"
+invalid_file_type = "Unsupported file type: {ext}"
+unsupported_file_type = "Unsupported file type"
+unknown_file_category = "Unknown file category: {category}"
+
+# GUI operation results
+error_prefix = "Error: {message}"
+operation_failed = "Operation failed: {error}"
+processing_exception = "Processing exception: {error}"
+system_init_error = "System initialization error"
+process_file_failed = "Failed to process file: {error}"
+batch_merge_need_two_layout = "Batch mode required, need at least 2 layout files to merge"
+batch_merge_need_two_image = "Batch mode required, need at least 2 image files to merge"
+batch_merge_need_two_table = "Batch mode required, need at least 2 spreadsheet files to merge"
+batch_file_list_not_init = "Batch file list component not initialized"
+select_base_table_first = "Please select a base table first"
+select_merge_mode = "Please select a merge mode (by row/column/cell)"
+process_failed = "Processing failed: {error}"
+file_processing_failed = "Failed to process file: {error}"
+template_selection_failed = "Failed to select template: {error}"
+cancel_failed = "Failed to cancel: {error}"
+clear_failed = "Failed to clear: {error}"
+settings_unavailable = "Settings are unavailable"
+open_settings_failed = "Failed to open settings: {error}"
+apply_settings_failed = "Failed to apply settings: {error}"
+about_unavailable = "About is unavailable"
+open_about_failed = "Failed to open About: {error}"
+
+# Conversion Operations
+
+# Settings
+
+# Confirmation Dialogs
+
+# File Drag and Drop
+single_file_only = "Only one file allowed in single file mode"
+no_valid_files = "No valid files detected"
+no_folder_in_single_mode = "Folders are not allowed in single file mode"
+all_supported_files = "All supported files"
+all_files = "All files"
+select_multiple_files = "Select multiple files"
+category_mismatch = "Can only add {current_name} files, cannot mix with {new_name} files"
+category_mismatch_detail = "Type mismatch (current list: {selected_name}, file: {file_category_name})"
+
+# Error Messages
+[messages.errors]
+invalid_docx_template = "Template file {template_name} is invalid or corrupted. Please open it with Word or WPS, edit and save it to ensure it is a valid DOCX file."
+
+# Warning Messages
+[messages.warnings]
+missing_body_placeholder = "⚠️ Body placeholder (e.g., {{body}}) not found in template. Markdown body content was not inserted."
+
+# =============================================================================
+# Editor Dialogs
+# =============================================================================
+[editors]
+
+# Numbering Add Editor
+[editors.numbering_add]
+window_title = "Numbering Scheme Editor"
+scheme_list = "Scheme List"
+default_scheme = "Default Scheme:"
+level_format_config = "Level Format Configuration"
+realtime_preview = "Real-time Preview"
+format_help = "📖 Format Help"
+format_help_title = "Format Placeholder Help"
+format_help_text = """Format Placeholder Usage
+
+Placeholder format: {level.style}
+
+Available styles:
+  chinese_lower  - Lowercase Chinese numerals (一、二、三)
+  chinese_upper  - Uppercase Chinese numerals (壹、贰、叁)
+  arabic_half    - Half-width Arabic numerals (1, 2, 3)
+  arabic_full    - Full-width Arabic numerals (１、２、３)
+  arabic_circled - Circled numbers (①②③)
+  letter_upper   - Uppercase letters (A, B, C)
+  letter_lower   - Lowercase letters (a, b, c)
+  roman_upper    - Uppercase Roman numerals (I, II, III)
+  roman_lower    - Lowercase Roman numerals (i, ii, iii)
+
+Examples:
+  {1.chinese_lower}、 → 一、二、三、
+  （{2.chinese_lower}） → （一）（二）（三）
+  {3.arabic_half}. → 1. 2. 3.
+  {1.arabic_half}.{2.arabic_half} → 1.1、1.2"""
+
+# Level names
+level_1 = "Level 1 Heading"
+level_2 = "Level 2 Heading"
+level_3 = "Level 3 Heading"
+level_4 = "Level 4 Heading"
+level_5 = "Level 5 Heading"
+level_6 = "Level 6 Heading"
+level_7 = "Level 7 Heading"
+level_8 = "Level 8 Heading"
+level_9 = "Level 9 Heading"
+
+# Create and copy
+new_scheme = "New Scheme"
+copy_suffix = "(Copy)"
+
+# Preview
+preview_sample = "Sample {level_name}"
+no_format = "No format defined"
+preview_failed = "Preview generation failed"
+
+# Placeholder menu
+menu_current_level = "── Current Level ({level}) ──"
+menu_decorations = "── Common Decorations ──"
+menu_hierarchical = "── Hierarchical Format ──"
+
+# Number styles
+style_chinese_lower = "Chinese Lower (一二三)"
+style_chinese_upper = "Chinese Upper (壹贰叁)"
+style_arabic_half = "Arabic Numerals (123)"
+style_arabic_circled = "Circled Numbers (①②③)"
+style_letter_upper = "Uppercase Letters (ABC)"
+style_roman_upper = "Roman Numerals (I II III)"
+
+# Decorations
+decoration_dun = "Chinese Comma"
+decoration_dot_space = "Dot + Space"
+decoration_bracket = "Full-width Brackets"
+decoration_chapter = "Chapter Format"
+
+# Validation messages
+
+# Error messages
+load_failed = "Load Failed"
+load_failed_message = "Failed to load configuration file: {error}"
+save_failed = "Save Failed"
+save_failed_message = "Failed to save configuration file"
+save_failed_with_error = "Failed to save configuration: {error}"
+cannot_delete = "Cannot Delete"
+cannot_delete_default_scheme = "Cannot delete the default scheme"
+
+# Scheme names
+[editors.numbering_add.names]
+hierarchical_standard = "Hierarchical Number Standard"
+hierarchical_h2_start = "Hierarchical (H2 Start)"
+
+# Scheme descriptions (for editor display)
+[editors.numbering_add.descriptions]
+hierarchical_standard_desc = "Hierarchical format: 1, 1.1, 1.1.1... (with space after number)"
+hierarchical_h2_start_desc = "Hierarchical format (skip H1/Level 1 Heading): Start from H2/Level 2 Heading with 1, 1.1, 1.1.1..."
+
+# Common editor texts (shared by all editors)
+[editors.common]
+basic_info = "Basic Info"
+name = "Name:"
+description = "Description:"
+add = "Add"
+copy = "Copy"
+delete = "Delete"
+move_up = "Move Up"
+move_down = "Move Down"
+save = "Save"
+cancel = "Cancel"
+prompt = "Info"
+select_item_first = "Please select an item first"
+cannot_delete = "Cannot Delete"
+system_item_hint = "System items cannot be deleted, only disabled"
+confirm_delete = "Confirm Delete"
+confirm_delete_message = "Are you sure you want to delete '{name}'?"
+confirm_close = "Confirm Close"
+unsaved_changes_hint = "Unsaved changes"
+unsaved_close_message = "There are unsaved changes. Are you sure you want to close?"
+
+# Numbering Clean Editor
+[editors.numbering_clean]
+window_title = "Cleanup Rules Editor"
+rule_list = "Rule List"
+rule_edit = "Rule Editor"
+name = "Name:"
+description = "Description:"
+regex = "Regex:"
+regex_test = "Regex Test"
+input = "Input:"
+result = "Result:"
+status = "Status:"
+load_example = "Load Example"
+available_placeholders = "Available Placeholders"
+new_rule = "New Rule"
+copy_suffix = "(Copy)"
+match_success = "Match Success"
+no_match = "No Match"
+regex_error = "Regex Error"
+test_error = "Error"
+placeholder_info = """Placeholder Info:
+
+{space}        - Whitespace (space, full-width space, etc.)
+{sep}          - Separators (dot, comma, etc.)
+{bracket_open} - Left brackets (Chinese/English)
+{bracket_close}- Right brackets (Chinese/English)
+{num_arab}     - Arabic numerals (half/full-width)
+{num_cn}       - Chinese numerals (lower/upper case)
+{num_cn_paren} - Parenthesized Chinese numerals (㈠-㈩)
+{num}          - All numerals (Chinese + Arabic + ㈠-㈩)
+{letter}       - Latin letters (upper/lower case)
+{circled}      - Circled numbers (①-㊿, ❶-⓴, ⓵-⓾, etc.)
+{unit_suffix}  - Chinese unit suffixes (chapter, section, etc.)
+{unit_prefix}  - Chinese unit prefixes (volume, part, etc.)"""
+prompt = "Info"
+no_example_text = "No example text configured for this rule"
+load_failed = "Load Failed"
+load_failed_message = "Failed to load config file: {error}"
+save_failed = "Save Failed"
+save_failed_message = "Failed to save config file"
+save_failed_with_error = "Failed to save config: {error}"
+
+# Cleanup rule names
+[editors.numbering_clean.names]
+chinese_unit_suffix = "Chinese [Di-X-Unit] Format"
+chinese_unit_prefix = "Chinese [Unit-X] Format"
+circled_numbers = "Circled Numbers"
+bracket_number = "Bracket Numbers"
+hierarchical = "Hierarchical Numbers"
+number_separator = "Number with Separator"
+legal_english = "English Chapter Format"
+letter_number = "Letter Numbers"
+
+# Cleanup rule descriptions (for editor display)
+[editors.numbering_clean.descriptions]
+chinese_unit_suffix_desc = "Match: 第X回/篇/册/卷/部/集/期/编/章/节/条/款/项/目 + space"
+chinese_unit_prefix_desc = "Match: 卷/篇/册/部/集/期/编/章/节/回 + number + space"
+circled_numbers_desc = "Match: ①-㊿, ❶-⓴, ⓵-⓾, ㈠-㈩ circled numbers + optional separator"
+bracket_number_desc = "Match: (1), （一）, 1), 一） etc. + optional separator"
+hierarchical_desc = "Match: 1.1 / 1.1.1 / 1.1.1.1 etc. + optional separator"
+number_separator_desc = "Match: 1. / 2、/ 一、/ 二, etc. + optional space"
+legal_english_desc = "Match: Chapter/Part/Volume/Book/Section + number/roman numeral"
+letter_number_desc = "Match: A. / A) / (A) / a. / a) letter numbering"
+
+# Mapping Editor
+[editors.mapping]
+# Dialog titles
+symbol_editor_title = "Punctuation Mapping Editor"
+typo_editor_title = "Typo Dictionary Editor"
+sensitive_editor_title = "Flagged Terms Editor"
+generic_editor_title = "Mapping Editor"
+
+# Column headers
+symbol_correct_symbol = "Correct Symbol"
+symbol_error_symbols = "Error Symbol List"
+typo_correct_word = "Correct Word"
+typo_error_words = "Error Word List"
+sensitive_sensitive_word = "Flagged Term"
+sensitive_exceptions = "Exception List"
+comment = "Comment"
+generic_key = "Key"
+generic_value_list = "Value List"
+
+# Description text
+symbol_description = "Configure error-to-correct symbol mappings. Key is the correct symbol, values are error symbols."
+typo_description = "Configure typo-to-correct word mappings. Key is the correct word, values are typos."
+sensitive_description = "Configure flagged terms and their exceptions. Key is the flagged term, values are exception phrases."
+generic_description = "Configure mapping relationships."
+
+# Buttons
+add_entry = "Add Entry"
+edit_entry = "Edit Entry"
+delete_entry = "Delete Entry"
+
+# Prompt messages
+prompt = "Info"
+select_entry_to_edit = "Please select an entry to edit first"
+select_entry_to_delete = "Please select an entry to delete first"
+confirm_delete = "Confirm Delete"
+confirm_delete_message = "Are you sure you want to delete entry '{entry_key}'?"
+error = "Error"
+save_error = "Save failed: {error}"
+
+# Entry edit dialog
+add = "Add"
+edit = "Edit"
+symbol_mapping = "Symbol Mapping"
+typo_mapping = "Typo Mapping"
+sensitive_mapping = "Flagged Term"
+generic_mapping = "Mapping"
+
+# Labels
+symbol_correct_symbol_label = "Correct symbol:"
+typo_correct_word_label = "Correct word:"
+sensitive_sensitive_word_label = "Flagged term:"
+generic_key_label = "Key:"
+symbol_error_symbols_label = "Error symbols (one per line):"
+typo_error_words_label = "Error words (one per line):"
+sensitive_exceptions_label = "Exceptions (one per line):"
+generic_value_list_label = "Values (one per line):"
+comment_label = "Comment:"
+
+# Example text
+symbol_example = 'Example: Correct symbol "，" (Chinese comma), error symbol "," (English comma)'
+typo_example = 'Example: Correct word "decision", error word "descision"'
+sensitive_example = "Example: Flagged term \"keyword\", exception \"keyword123\" (won't trigger check)"
+generic_example = "One value per line"
+
+# Validation messages
+enter_correct_symbol_or_word = "Please enter the correct symbol or word"
+enter_error_symbol_or_word_list = "Please enter the error symbol or word list"
+
+# Duplicate key handling
+duplicate_key_title = "Key Already Exists"
+duplicate_key_message = "Key \"{entry_key}\" already exists\n\nCurrent values: {current_values}\nCurrent comment: {current_comment}\n\nPlease select an action:"
+duplicate_key_no_comment = "(none)"
+overwrite = "Overwrite"
+overwrite_tooltip = "Replace existing values and comment with new ones"
+merge = "Merge"
+merge_tooltip = "Merge new and old values (deduplicated); keep old comment if new is empty"
+
+# =============================================================================
+# Style Names (for document conversion)
+# These style names are used for style injection and detection in MD ↔ DOCX conversion
+# =============================================================================
+[styles]
+# Code Styles
+code_block = "Code Block"
+inline_code = "Inline Code"
+
+# Quote Styles (9 levels)
+quote_1 = "Quote 1"
+quote_2 = "Quote 2"
+quote_3 = "Quote 3"
+quote_4 = "Quote 4"
+quote_5 = "Quote 5"
+quote_6 = "Quote 6"
+quote_7 = "Quote 7"
+quote_8 = "Quote 8"
+quote_9 = "Quote 9"
+
+# Formula Styles
+formula_block = "Formula Block"
+inline_formula = "Inline Formula"
+
+# Horizontal Rule Styles
+horizontal_rule_1 = "Horizontal Rule 1"
+horizontal_rule_2 = "Horizontal Rule 2"
+horizontal_rule_3 = "Horizontal Rule 3"
+
+# List Styles
+list_block = "List Block"
+
+# Table Styles
+table_content = "Table Content"
+three_line_table = "Three Line Table"
+table_grid = "Table Grid"
+
+# Body Paragraph Style
+body_paragraph = "Body Paragraph"
+
+# =============================================================================
+# Style Format Configurations (for style injection format properties)
+# =============================================================================
+[style_formats]
+
+# Body paragraph format (Times New Roman, 12pt, no indent, left aligned)
+[style_formats.body_paragraph]
+east_asia_font = "SimSun"
+ascii_font = "Times New Roman"
+font_size_pt = 12
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 0
+bold = false
+justification = "left"
+
+# Heading 1 format (Arial, 16pt, bold, left aligned)
+[style_formats.heading_1]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 16
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# Heading 2 format (Arial, 14pt, bold, left aligned)
+[style_formats.heading_2]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 14
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# Heading 3-9 format (Arial, 12pt, bold, left aligned)
+[style_formats.heading_3_9]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 12
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# =============================================================================
+# Placeholders (for document templates)
+# These placeholders are used for template filling in MD → DOCX conversion
+# =============================================================================
+[placeholders]
+title = "title"
+body = "body"
+
+# =============================================================================
+# YAML Keys (for metadata)
+# These keys are used for YAML front matter output in DOCX → MD conversion
+# =============================================================================
+[yaml_keys]
+title = "title"
+subtitle = "subtitle"
+
+# =============================================================================
+# Conversion Panel Sections
+# =============================================================================
+[conversion_panel]
+format_conversion = "Format Conversion"
+save_as = "Save As"
+select_file_hint = "Please select a file first"
+same_format_tooltip = "Already in {format} format"
+compressible_format_tooltip = "Compression supported"
+png_compression_tooltip = "PNG is lossless, does not support quality compression"
+bmp_compression_tooltip = "BMP is lossless, does not support quality compression"
+gif_compression_tooltip = "GIF is lossless, does not support quality compression"
+tif_compression_tooltip = "TIF/TIFF is lossless, does not support quality compression"
+other_format_compression_tooltip = "{format} format does not support quality compression"
+high_quality_conversion_tooltip = "High quality conversion"
+lossless_conversion_tooltip = "Lossless conversion"
+document_conversion_tooltip = "Convert to this document format"
+csv_conversion_tooltip = "Convert to CSV format (plain text table)"
+spreadsheet_conversion_tooltip = "Convert to this spreadsheet format"
+pdf_conversion_tooltip = "Convert to PDF format"
+docx_conversion_tooltip = "Convert to DOCX format"
+doc_conversion_tooltip = "Convert to DOC format"
+tif_conversion_tooltip = "Render as TIF image"
+jpg_conversion_tooltip = "Render as JPG image"
+
+# Document Conversion Section
+[conversion_panel.document]
+convert_to_other_formats = "Convert to other document formats"
+convert_to_layout = "Convert to layout format"
+save_as_pdf = "Save as PDF"
+save_as_pdf_tooltip = "Convert document to PDF layout file"
+save_as_ofd = "Save as OFD"
+save_as_ofd_tooltip = "Not supported yet"
+proofread_document = "Document Proofreading"
+proofread_hint = "Proofread the document"
+proofread_button = "📝 Proofread"
+proofread_button_tooltip = "Check for symbol pairing, typos, flagged terms, etc."
+proofread_options = "Proofreading Options"
+symbol_pairing = "Symbol Pairing"
+symbol_pairing_tooltip = "Check if paired symbols (brackets, quotes, etc.) match"
+typos_rule = "Typo Correction"
+typos_rule_tooltip = "Check for common typos"
+symbol_correction = "Symbol Correction"
+symbol_correction_tooltip = "Check for incorrect symbols"
+sensitive_word = "Flagged Terms Matching"
+sensitive_word_tooltip = "Check for flagged terms"
+
+# Image Conversion Section
+[conversion_panel.image]
+convert_to_other_formats = "Convert to other image formats"
+compression_options = "Compression Options"
+highest_quality = "Highest Quality"
+highest_quality_tooltip = "Lossless or high quality conversion. JPEG/WebP uses quality=95, PNG/BMP/GIF/TIF uses lossless compression."
+limit_file_size = "Limit File Size"
+limit_file_size_tooltip = "Compress to target size by adjusting quality parameter, only effective for JPEG/WebP. Other formats will be saved at highest quality."
+file_size_limit = "File size limit:"
+enter_size_limit_warning = "Please enter a file size limit"
+kb_range_warning = "Please enter a number between 10 and 10000 (KB)"
+mb_range_warning = "Please enter a number between 1 and 100 (MB)"
+enter_valid_number_warning = "Please enter a valid number"
+convert_to_layout = "Convert to layout format"
+save_as_pdf = "Save as PDF"
+save_as_pdf_tooltip = "Convert image to PDF layout file"
+save_as_ofd = "Save as OFD"
+save_as_ofd_tooltip = "Not supported yet"
+size_options = "Size Options"
+original_embed = "Original Embed"
+fit_a4 = "Fit A4"
+fit_a3 = "Fit A3"
+no_pdf_size_option_warning = "Please select a PDF size option"
+merge_images = "Merge Images"
+merge_images_hint = "Merge multiple images into one"
+merge_to_tif = "Merge to TIF"
+conversion_options = "Conversion Options"
+preserve_transparency = "Preserve Transparency"
+preserve_transparency_tooltip = "Preserve source image transparency (if any)"
+no_transparency = "No Transparency"
+no_transparency_tooltip = "Convert to RGB mode, transparent background becomes white"
+
+# Layout Conversion Section
+[conversion_panel.layout]
+convert_to_other_formats = "Convert to other layout formats"
+save_as_ofd_tooltip = "Not supported yet"
+convert_to_document_or_image = "Convert to document or image"
+save_as_format = "Save as {format}"
+save_as_docx_tooltip = "Convert layout file to DOCX document"
+save_as_doc_tooltip = "Convert layout file to DOC document"
+render_as_tif = "Render as TIF"
+render_as_tif_tooltip = "Render PDF pages as TIF images, supports multi-page TIFF, supports DPI quality selection"
+render_as_jpg = "Render as JPG"
+render_as_jpg_tooltip = "Render PDF as JPG images (one file per page)"
+image_quality_dpi = "Image Quality (DPI)"
+minimum_150 = "Low (150 DPI) - Quick Preview"
+moderate_300 = "Standard (300 DPI) - Daily Use"
+high_definition_600 = "High (600 DPI) - For Printing"
+merge_split = "Merge/Split"
+merge_split_hint = "Merge or split layout files"
+merge_to_pdf = "Merge to PDF"
+merge_to_pdf_tooltip = "Merge files in batch list into one PDF in top-to-bottom order. Use ↑↓ arrows to adjust merge order after selecting files."
+merge_to_ofd = "Merge to OFD"
+merge_to_ofd_tooltip = "Not supported yet"
+split_to_pdf = "Split to PDF"
+split_to_pdf_tooltip = "Split current file into two PDFs based on input page range. First file contains input pages, second file contains remaining pages (if any)."
+split_to_ofd = "Split to OFD"
+split_to_ofd_tooltip = "Not supported yet"
+split_page_range = "Split page range:"
+page_range_info = "Input page range, for example:\n• 1-5: Pages 1 to 5\n• 1,3,5: Pages 1, 3, 5\n• 1-3,7-9: Pages 1-3 and 7-9\n• Supports Chinese separators: 1~3;5;7至10"
+page_range_placeholder = "e.g.: 1-3,5,7-10"
+selected_split_file = "Selected file to split ({pages} pages):"
+no_file_selected = "No file selected"
+cannot_split_all_pages = "❌ Cannot split all pages (please leave some pages)"
+pages_out_of_range_adjusted = "⚠️ Some pages out of range, automatically adjusted (total {pages} pages)"
+all_pages_out_of_range = "❌ All pages out of range (total {pages} pages)"
+
+# Spreadsheet Conversion Section
+[conversion_panel.spreadsheet]
+convert_to_other_formats = "Convert to other spreadsheet formats"
+convert_to_layout = "Convert to layout format"
+save_as_pdf = "Save as PDF"
+save_as_pdf_tooltip = "Requires local Office software to convert spreadsheet to PDF layout file"
+save_as_ofd = "Save as OFD"
+save_as_ofd_tooltip = "Not supported yet"
+merge_tables = "Merge Tables"
+merge_tables_hint = "Merge multiple tables by selected mode"
+merge_tables_button = "📋 Merge Tables"
+merge_tables_button_tooltip = "Merge multiple tables in batch list into reference table by selected mode. First select merge mode (by row/by column/by cell)."
+merge_options = "Merge Options"
+merge_by_row = "Merge by Row"
+merge_by_row_tooltip = "Merge one or more tables row by row into reference table"
+merge_by_column = "Merge by Column"
+merge_by_column_tooltip = "Merge one or more tables column by column into reference table"
+merge_by_cell = "Merge by Cell"
+merge_by_cell_tooltip = "Add data from corresponding cell positions"
+selected_reference_table = "Currently selected reference table:"
+no_table_selected = "No table selected"
+
+# =============================================================================
+# Action Panel Sections
+# =============================================================================
+[action_panel]
+export_options = "Export Options"
+extraction_options = "Extraction Options"
+generation_options = "Generation Options"
+extract_images = "Extract Images"
+extract_images_tooltip = "Extract images from file when converting to MD"
+ocr = "Image OCR"
+ocr_tooltip = "Enable OCR to recognize text in images when converting to MD"
+
+# Proofreading Options
+[action_panel.proofread]
+symbol_pairing = "Symbol Pairing"
+symbol_pairing_tooltip = "Check if paired symbols (brackets, quotes, etc.) match"
+typos_rule = "Typo Correction"
+typos_rule_tooltip = "Check for common typos"
+symbol_correction = "Symbol Correction"
+symbol_correction_tooltip = "Check for incorrect symbols"
+sensitive_word = "Flagged Terms"
+sensitive_word_tooltip = "Check for flagged terms"
+
+# Document to MD Panel
+[action_panel.document]
+ready = "Ready"
+export_markdown = "Export Markdown"
+export_markdown_tooltip = "Convert document to Markdown format"
+optimize_for_type = "Optimize for document type"
+optimize_for_type_tooltip = "Perform targeted optimization based on document type"
+remove_existing_numbering = "Remove original document heading num"
+remove_existing_numbering_tooltip = "Remove existing heading numbering when converting to MD"
+add_new_numbering = "Add new heading num"
+add_new_numbering_tooltip = "Add new heading numbering when converting to MD"
+
+# Spreadsheet to MD Panel
+[action_panel.spreadsheet]
+ready = "Ready"
+export_markdown = "Export Markdown"
+export_markdown_tooltip = "Convert spreadsheet to Markdown format"
+
+# Image to MD Panel
+[action_panel.image]
+ready = "Ready"
+export_markdown = "Export Markdown"
+export_markdown_tooltip = "Convert image to Markdown format"
+extract_images_tooltip = "Keep images when converting to MD"
+ocr_tooltip = "Enable OCR to recognize text in images when converting to MD"
+
+# Layout to MD Panel
+[action_panel.layout]
+ready = "Ready"
+export_markdown = "Export Markdown"
+export_markdown_tooltip = "Convert layout file to Markdown format"
+
+# MD to Document Panel
+[action_panel.md_to_document]
+ready = "Ready"
+generate_docx = "Generate DOCX"
+generate_docx_tooltip = "Convert Markdown to DOCX document"
+generate_doc = "Generate DOC"
+generate_doc_tooltip = "Convert Markdown to DOC document (requires local Office software)"
+generate_odt = "Generate ODT"
+generate_odt_tooltip = "Convert Markdown to ODT document (requires LibreOffice)"
+generate_rtf = "Generate RTF"
+generate_rtf_tooltip = "Convert Markdown to RTF document (requires local Office software)"
+remove_existing_numbering = "Remove original Markdown heading num"
+remove_existing_numbering_tooltip = "Remove existing heading numbering when converting to document"
+add_new_numbering = "Add new heading num"
+add_new_numbering_tooltip = "Add new heading numbering when converting to document"
+
+# MD to Spreadsheet Panel
+[action_panel.md_to_spreadsheet]
+ready = "Ready"
+generate_xlsx = "Generate XLSX"
+generate_xlsx_tooltip = "Convert Markdown to XLSX spreadsheet"
+generate_xls = "Generate XLS"
+generate_xls_tooltip = "Convert Markdown to XLS spreadsheet (requires local Office software)"
+generate_ods = "Generate ODS"
+generate_ods_tooltip = "Convert Markdown to ODS spreadsheet (requires LibreOffice)"
+generate_csv = "Generate CSV"
+generate_csv_tooltip = "Convert Markdown to CSV spreadsheet (plain text format)"
+
+
+
+# =============================================================================
+# Conversion Progress Messages
+# =============================================================================
+[conversion.progress]
+converting_to_format = "Converting to {format}..."
+preparing = "Preparing..."
+preparing_format = "Preparing to convert {format} to PDF..."
+detecting_format = "Detecting actual format..."
+processing_images = "Processing images..."
+saving_file = "Saving file..."
+csv_completed = "Conversion completed. Generated {count} CSV file(s)."
+tiff_completed = "Conversion completed. Converted {count} page(s)."
+final_conversion = "Completing final format conversion..."
+extracting_pdf_content = "Extracting PDF content..."
+images_extracted = "Extracted {count} images"
+images_extracted_preparing_ocr = "Extracted {count} images, OCR..."
+extracting_images = "Extracting images: {count}"
+ocr_recognizing = "OCR recognizing: {current}/{total}"
+loading_document = "Loading document..."
+loading_word_template = "Loading Word template..."
+loading_excel_template = "Reading Excel template..."
+parsing_markdown = "Parsing Markdown file..."
+processing_markdown_body = "Processing Markdown content..."
+processing_textboxes_tables = "Processing text boxes and tables..."
+extracting_title = "Extracting title..."
+extracting_markdown_tables = "Extracting Markdown tables..."
+generating_markdown = "Generating Markdown content..."
+filling_template = "Filling template content..."
+filling_yaml_data = "Filling YAML data..."
+filling_table_data = "Filling table data..."
+saving_excel = "Saving Excel file..."
+writing_file = "Writing file..."
+executing_final_proofread = "Executing final proofread..."
+initializing_proofread = "Initializing proofreading engine..."
+proofreading_progress = "Proofreading... {current}/{total}"
+saving_proofread_result = "Saving proofread result..."
+validating_params = "Validating parameters..."
+preprocessing_base_table = "Preprocessing base table..."
+merging_table_progress = "Merging table {current}/{total}..."
+saving_merge_result = "Saving merge result..."
+conversion_to_csv_success = "Converted to CSV ({count} files)."
+converting_format_to_png = "Converting {format} to PNG..."
+converting_format_to_pdf = "Converting {format} to PDF..."
+error_no_template = "Error: Template name not provided."
+spell_checking = "Spell checking..."
+extracting_images_start = "Extracting images..."
+styles_injected = "Injected {count} missing style(s)"
+preparing_files = "Preparing files..."
+preparing_merge = "Preparing to merge {count} file(s)..."
+preparing_merge_images = "Preparing to merge {count} image(s)..."
+preparing_split_pdf = "Preparing to split PDF..."
+preparing_proofread = "Preparing to proofread..."
+reading_file = "Reading file..."
+processing_numbering = "Processing numbering..."
+proofreading = "Proofreading..."
+converting_ofd_to_pdf = "Converting OFD to PDF..."
+converting_xps_to_pdf = "Converting XPS to PDF..."
+converting_caj_to_pdf = "Converting CAJ to PDF..."
+using_external_tool_pdf = "Using external tool to convert PDF..."
+processing_file_progress = "Processing file {current}/{total}: {filename}"
+merging_pdf_files = "Merging PDF files..."
+merging_file_progress = "Merging file {current}/{total}"
+creating_pdf_part = "Creating PDF part {part}..."
+rendering_pdf_to_png = "Rendering PDF pages to PNG..."
+rendering_pdf_to_jpg = "Rendering PDF pages to JPG..."
+rendering_pdf_pages = "Rendering PDF pages..."
+rendering_page_progress = "Rendering page {current}/{total}..."
+saving_tif_file = "Saving TIF file..."
+step_pdf_to_docx = "Step 1/2: PDF to DOCX..."
+step_docx_to_format = "Step 2/2: DOCX to {format}..."
+extracting_page = "Extracting page {page}"
+converting_format_to_target = "Converting {format} to {target}..."
+converting_page_to_format = "Converting page {page} to {format}..."
+loading_image_progress = "Loading image {current}/{total}..."
+determining_color_mode = "Determining color mode..."
+converting_to_mode = "Converting to {mode} mode..."
+generating_tiff_file = "Generating TIFF file..."
+merge_completed = "Merge completed."
+converting_source_to_target = "Converting: {source} → {target}..."
+step_conversion_progress = "Step {step}/{total}: {source} → {target}..."
+conversion_completed_with_readonly_warnings = "Conversion completed, but {count} cell(s) could not be filled due to read-only status"
+fixing_conflict_style = "Fixing conflict style: {name} ({from_type}→{to_type})"
+styles_injected_with_conflicts = "Injected {count} style(s) (fixed {conflicts} conflict(s))"
+
+# =============================================================================
+# Conversion Result Messages (status bar/popup)
+# =============================================================================
+[conversion.messages]
+# General messages
+operation_cancelled = "Operation cancelled"
+conversion_failed_check_log = "Conversion failed, please check log."
+conversion_to_format_success = "Converted to {format}."
+
+# Success messages
+
+# Proofreading messages
+proofread_completed = "Proofreading completed."
+proofread_skipped = "No proofreading rules selected, operation skipped."
+proofread_failed = "Proofreading failed, please check log."
+
+# Layout conversion messages
+file_already_pdf = "File is already in PDF format"
+ofd_to_pdf_failed = "Failed to convert OFD to PDF"
+xps_to_pdf_failed = "Failed to convert XPS to PDF"
+ofd_conversion_not_implemented = "OFD conversion not implemented"
+txt_conversion_developing = "Layout to TXT feature is under development."
+
+# Missing dependency messages
+missing_pymupdf = "Missing PyMuPDF library, please install: pip install PyMuPDF"
+missing_office_for_pdf = "Office software not found (WPS, Microsoft Office or LibreOffice), cannot convert to PDF."
+missing_office_for_conversion = "Office software not found (WPS or Microsoft Office), cannot complete conversion."
+doc_format_requires_office = "DOC/WPS format conversion requires WPS or Microsoft Office"
+xls_format_requires_office = "XLS format conversion requires WPS or Microsoft Office"
+external_tool_failed = "External tool conversion failed, please install Word, LibreOffice or pdf2docx library"
+pdf_to_docx_failed = "PDF to DOCX failed, please install Word, LibreOffice or pdf2docx library"
+
+# Merge/Split messages
+no_files_to_merge = "No files provided for merging"
+need_at_least_two_files = "At least 2 files required for merging"
+no_pages_to_split = "No page numbers provided for splitting"
+split_failed_all_pages = "Split failed: input page numbers cover all pages, cannot split"
+
+# MD conversion messages
+md_to_xlsx_failed = "Failed to convert Markdown to XLSX."
+md_to_docx_failed = "Initial MD to DOCX conversion failed."
+spell_check_failed = "Spell check process failed."
+final_format_failed = "Final format conversion failed."
+final_format_generation_failed = "Final format generation failed."
+no_csv_generated = "No CSV files generated (worksheets may be empty)"
+
+# Image conversion messages
+no_images_to_merge = "No files to merge"
+no_images_loaded = "No images loaded successfully"
+conversion_failed_no_target = "Conversion failed: no target format specified"
+
+# Numbering operation messages
+no_numbering_operation = "Please specify at least one operation: --remove-numbering or --add-numbering"
+
+# Success messages (with parameters)
+conversion_to_image_success = "{format} saved, {count} images"
+conversion_to_tif_success = "TIF saved, {pages} pages"
+conversion_to_format_pages_success = "{format} saved, {count} pages"
+merge_pdf_success = "Merged {file_count} files, {page_count} pages"
+split_pdf_success_two = "Split: {pages1}p + {pages2}p"
+split_pdf_success_one = "Split: 1 file, {pages}p"
+merge_images_to_tiff_success = "Merged {count} images to TIFF"
+
+# Failure messages (with parameters)
+docx_to_format_failed = "DOCX→{format} failed"
+conversion_to_format_failed = "Convert to {format} failed"
+conversion_failed_with_error = "Failed: {error}"
+unsupported_layout_format = "Unsupported format: {format}"
+format_to_pdf_not_implemented = "{format}→PDF not implemented"
+all_pages_invalid = "Invalid pages ({total}p total)"
+
+# =============================================================================
+# Proofread Comment Text (for document proofreading annotations)
+# =============================================================================
+[proofread]
+
+# Error types
+[proofread.error_type]
+typo = "Typo"
+punctuation = "Punctuation"
+sensitive = "Flagged Term"
+unmatched = "Unmatched Symbol"
+
+# Error sources
+[proofread.source]
+typo = "Typo Check"
+symbol = "Symbol Check"
+sensitive = "Flagged Terms Check"
+pairing = "Pairing Check"
+
+# Suggestions
+[proofread.suggestion]
+sensitive = "Flagged term detected"
+extra_close = "Extra closing symbol"
+unclosed = "Unclosed symbol"

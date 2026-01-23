@@ -48,6 +48,12 @@ heading_formatting_mode = "remove"
 # 注意：表格样式通常已定义表头加粗，建议使用 "remove" 避免冗余
 table_header_formatting_mode = "remove"
 
+# YAML列表值拼接符
+# 当YAML字段值为列表时，使用此分隔符拼接为字符串
+# 常见值: "、"（中文顿号）、"，"（中文逗号）、", "（英文逗号+空格）
+# 空字符串表示无分隔符直接拼接
+list_separator = "、"
+
 # ==================================
 #  Markdown格式语法配置（输出时使用）
 #  注意：输入时会同时识别所有格式语法

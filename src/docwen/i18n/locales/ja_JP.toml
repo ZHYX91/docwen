@@ -1,0 +1,1803 @@
+# Document Converter - Japanese Language File
+# Locale Code: ja_JP
+# Encoding: UTF-8
+
+[meta]
+name = "Japanese"
+native_name = "日本語"
+
+# =============================================================================
+# CLI Command Line Interface
+# =============================================================================
+[cli]
+description = "ドキュメントコンバーター CLI - ドキュメント/スプレッドシート/画像/レイアウトファイルの変換をサポート"
+example = "例"
+header = "ドキュメントコンバーター - インタラクティブモード"
+
+# CLI Help Text
+[cli.help]
+files = "入力ファイルパス（*.docx などのワイルドカードをサポート）"
+action = "アクションタイプ"
+target = "ターゲット形式（convertアクション用、例：docx, pdf, jpg）"
+extract_img = "画像を抽出"
+ocr = "OCRテキスト認識"
+optimize_for = "最適化タイプ：gongwen（公文書）、contract（契約書）、thesis（論文）"
+template = "テンプレート名（MDからドキュメント/スプレッドシートへの変換用）"
+check_punct = "句読点のペアリングをチェック"
+check_typo = "誤字をチェック"
+check_symbol = "記号をチェック"
+check_sensitive = "注意用語をチェック"
+merge_mode = "結合モード：row（行）/col（列）/cell（セル）"
+base_table = "ベーステーブルのファイルパス"
+pages = "PDF分割ページ範囲（例：1-3,5,7-10）"
+dpi = "画像DPI品質"
+compress = "圧縮モード"
+size_limit = "ファイルサイズ制限（例：200KB, 2MB）"
+quality_mode = "PDF品質モード（画像からPDFへ）"
+batch = "バッチモード（すべてのファイルに同じ設定を適用）"
+yes = "確認プロンプトをすべてスキップ"
+continue_on_error = "エラーが発生しても続行"
+json = "JSON出力形式（AI/スクリプト解析用）"
+quiet = "静音モード（出力を最小限にする）"
+verbose = "詳細モード（より多くの情報を表示）"
+remove_numbering = "既存の見出し番号を削除"
+add_numbering = "新しい見出し番号を追加"
+numbering_scheme = "番号付けスキーム"
+inspect = "サポートされている操作を照会（AI自己記述）"
+list_actions = "利用可能なすべてのアクションをリスト"
+list_numbering_schemes = "利用可能なすべての番号付けスキームをリスト"
+list_templates = "利用可能なすべてのテンプレートをリスト"
+lang = "インターフェース言語を一時的に設定（設定には保存されません）"
+keep_alpha = "TIFF結合時に透明度を保持"
+
+# CLI Argument Group Titles
+[cli.groups]
+export_options = "エクスポートオプション"
+export_options_desc = "export_md アクション用"
+validate_options = "校正オプション"
+validate_options_desc = "validate アクション用"
+merge_options = "結合オプション"
+merge_options_desc = "merge_tables アクション用"
+pdf_options = "PDFオプション"
+pdf_options_desc = "PDF結合/分割用"
+image_options = "画像オプション"
+image_options_desc = "画像形式変換用"
+batch_options = "バッチオプション"
+batch_options_desc = "バッチファイル処理"
+output_options = "出力制御"
+output_options_desc = "出力形式と詳細度を制御"
+numbering_options = "番号付けオプション"
+numbering_options_desc = "見出し番号付け用"
+ai_options = "AI機能"
+ai_options_desc = "AI自己記述と照会"
+
+# CLI Interactive Mode
+[cli.interactive]
+header = "ドキュメントコンバーター - インタラクティブモード"
+select_operation = "操作を選択"
+select_format = "出力形式を選択"
+select_target_format = "ターゲット形式を選択"
+input_target_format = "ターゲット形式 (docx/pdf/...)"
+select_image_format = "画像形式を選択"
+select_pdf_size = "PDFサイズを選択"
+select_numbering_scheme = "番号付けスキームを選択"
+select_optimization_type = "最適化タイプを選択"
+select_dpi = "DPI品質を選択"
+select_compress_mode = "圧縮モード"
+confirm_convert_pdf = "PDFに変換しますか？"
+confirm_merge = "結合を確認"
+export_options = "エクスポートオプション"
+extraction_options = "抽出オプション"
+numbering_options = "番号付けオプション"
+numbering_processing = "見出し番号処理"
+page_range_label = "ページ範囲"
+input_pages = "ページ範囲を入力"
+input_files = "ファイルパスを入力するか、ファイルをドラッグ"
+input_size_limit = "ファイルサイズ制限"
+input_other_pdfs = "結合する他のPDFファイルのパスを入力（ワイルドカード対応）"
+image_export_hint = "注意：画像は少なくとも1つのオプションを選択してください"
+proofread_options = "校正オプション"
+proofread_toggle_hint = "\n番号を入力して切り替え（例：1 3 4）、Enterで確定"
+proofread_input = "校正オプション"
+
+# File Type Menus
+[cli.interactive.menus]
+markdown_to_docx = "Wordドキュメントに変換 (DOCX/DOC/ODT/RTF)"
+markdown_to_xlsx = "Excelスプレッドシートに変換 (XLSX/XLS/ODS/CSV)"
+process_numbering = "見出し番号を処理"
+export_markdown = "Markdownをエクスポート"
+export_md_ocr = "Markdownをエクスポート (OCR)"
+format_convert = "形式変換"
+image_format_convert = "形式変換 (PNG/JPG/BMP/GIF/TIF/WebP)"
+save_as_pdf = "PDFとして保存"
+convert_to_document = "ドキュメントに変換 (DOCX/DOC)"
+document_validate = "ドキュメント校正"
+render_to_image = "画像にレンダリング"
+pdf_tools = "PDFツール (結合/分割)"
+merge_pdfs = "PDFファイルを結合"
+split_pdf = "PDFファイルを分割"
+cancel = "キャンセル"
+back = "戻る"
+
+# Format Options
+[cli.interactive.formats]
+docx_recommended = "DOCX (推奨)"
+doc_office = "DOC (Officeが必要)"
+odt_libre = "ODT (LibreOfficeが必要)"
+rtf_office = "RTF (Officeが必要)"
+xlsx_recommended = "XLSX (推奨)"
+xls_office = "XLS (Officeが必要)"
+ods_libre = "ODS (LibreOfficeが必要)"
+csv_text = "CSV (プレーンテキスト)"
+tif_multipage = "TIF (マルチページTIFF)"
+jpg_jpeg = "JPG (JPEG)"
+png_lossless = "PNG (ロスレス)"
+jpg_lossy = "JPG (圧縮・劣化あり)"
+bmp = "BMP (ビットマップ)"
+gif = "GIF (アニメ)"
+tif = "TIF (プロ向け)"
+webp = "WebP (最新形式)"
+
+# DPI Options
+[cli.interactive.dpi]
+dpi_150 = "150 DPI (最小)"
+dpi_300 = "300 DPI (中、推奨)"
+dpi_600 = "600 DPI (高品質)"
+
+# Compression Options
+[cli.interactive.compress]
+highest_quality = "最高品質"
+limit_size = "ファイルサイズを制限"
+
+[cli.interactive.pdf_sizes]
+original = "元のサイズ"
+fit_a4 = "A4に合わせる"
+fit_a3 = "A3に合わせる"
+
+# Numbering Schemes
+[cli.interactive.numbering_schemes]
+gongwen_standard = "公文書標準"
+hierarchical_standard = "階層番号標準 (1 1.1 1.1.1)"
+hierarchical_h2_start = "階層 (H2開始)（H1は番号なし、H2から 1 1.1 1.1.1）"
+legal_standard = "法律標準"
+
+# Optimization Types
+[cli.interactive.optimization_types]
+gongwen = "公文書"
+contract = "契約書"
+thesis = "論文"
+
+# Proofread Options
+[cli.interactive.proofread]
+symbol_pairing = "記号ペアリング"
+symbol_correction = "記号修正"
+typos_rule = "誤字チェック"
+sensitive_word = "注意用語マッチング"
+
+# Prompt Text
+[cli.interactive.prompts]
+extract_images = "画像を抽出しますか？"
+embed_image = "画像を埋め込みますか？"
+ocr_recognition = "OCRテキスト認識を行いますか？"
+ocr_simple = "OCRしますか？"
+optimize_for_type = "ドキュメントタイプに合わせて最適化しますか？"
+remove_numbering = "既存の番号付けを削除しますか？"
+add_numbering = "新しい番号付けを追加しますか？"
+continue_next = "次へ進みますか？"
+apply_to_all = "すべてのファイルに適用しますか？"
+
+# CLI Messages
+[cli.messages]
+error_no_files = "エラー：入力ファイルが必要です"
+error_no_action = "エラー：Headlessモードでは --action が必要です"
+error_no_valid_files = "エラー：有効なファイルがありません"
+error_file_not_found = "エラー：有効なファイルが見つかりません"
+error_inspect_no_file = "エラー：--inspect にはファイルが必要です"
+warning_invalid_files = "警告：{count} 個のファイルが無効です"
+warning_format_mismatch = "警告：{count} 個のファイルの形式が一致しません"
+no_files_selected = "ファイルが選択されていません。終了します"
+no_operation_selected = "操作が選択されていません"
+program_interrupted = "プログラムが中断されました"
+error_prefix = "エラー"
+files_found = "{count} 件のファイルを検出"
+file_list = "ファイル一覧"
+file_count_suffix = "件"
+more_files = "他に {count} 件"
+no_other_files = "他のファイルが選択されていません"
+error_need_option = "エラー：少なくとも1つのオプションを選択してください"
+no_proofread_selected = "校正オプションが選択されていません"
+error_no_template = "エラー：{type} テンプレートが見つかりません"
+available_type_templates = "利用可能な {type} テンプレート"
+template_list_error = "エラー：テンプレート一覧を読み込めません"
+invalid_index = "無効な番号: {idx}"
+invalid_input = "入力が無効です。番号を入力してください"
+batch_completed = "バッチ完了：{success}/{total} 成功"
+failed_count = "失敗：{count} ファイル"
+available_actions = "利用可能なアクション"
+available_schemes = "利用可能な番号付けスキーム"
+available_templates = "利用可能なテンプレート"
+document_templates = "ドキュメントテンプレート (DOCX)"
+spreadsheet_templates = "スプレッドシートテンプレート (XLSX)"
+no_templates = "(なし)"
+file_info = "ファイル"
+category_info = "カテゴリ"
+format_info = "形式"
+supported_actions = "サポートされているアクション"
+example_format = "例"
+base_file = "ベースファイル"
+other_pdf_files = "その他のPDFファイル"
+will_merge_files = "{count} 個のファイルを結合します"
+page_range_hint = "サポートされている形式：1-3,5,7-10"
+current_file = "現在"
+
+# Batch Mode
+[cli.batch]
+batch_mode = "バッチモード"
+process_mode = "処理方式"
+processing_category = "{category} ファイルを処理しています..."
+batch_apply_same = "同じ操作を一括適用 (推奨)"
+process_one_by_one = "一つずつ処理"
+detected_same_type = "{count} 個の {category} ファイルを検出しました"
+detected_mixed_types = "複数のファイルタイプを検出しました"
+process_by_type = "タイプ別に処理 (推奨)"
+export_all_to_md = "すべてMarkdownにエクスポート"
+configure_operation = "操作を構成"
+
+# File Category Names
+[cli.categories]
+markdown = "Markdown"
+document = "ドキュメント"
+spreadsheet = "スプレッドシート"
+image = "画像"
+layout = "レイアウト"
+
+# CLI Prompts
+[cli.prompts]
+select = "選択してください"
+default = "デフォルト"
+invalid_yes_no = "無効な入力です。y/n を入力してください"
+enter_number_range = "1-{max} の数字を入力してください"
+invalid_number = "無効な入力です。数字を入力してください"
+cannot_be_empty = "この項目は空にできません"
+
+# CLI Validation Messages
+[cli.validation]
+file_not_exists = "ファイルが存在しません"
+not_a_file = "パスはファイルではありません"
+file_empty = "ファイルが空です"
+unsupported_type = "サポートされていないファイルタイプ"
+
+# CLI Result Messages
+[cli.result]
+success = "操作成功"
+failed = "操作失敗"
+output = "出力"
+
+# CLI Action Descriptions
+[cli.actions]
+export_md = "Markdownにエクスポート"
+convert = "形式変換"
+validate = "ドキュメント校正"
+merge_tables = "テーブル結合"
+merge_pdfs = "PDF結合"
+split_pdf = "PDF分割"
+merge_tiff = "TIFに結合"
+process_numbering = "MD見出し番号処理"
+
+# CLI Numbering Scheme Names
+[cli.numbering_schemes]
+gongwen_standard = "公文書標準"
+hierarchical_standard = "階層番号標準"
+hierarchical_h2_start = "階層 (H2開始)"
+legal_standard = "法律標準"
+
+# =============================================================================
+# Common Text
+# =============================================================================
+[common]
+app_name = "DocWen"
+offline_version = " (オフライン版)"
+close = "閉じる"
+apply = "適用"
+cancel = "キャンセル"
+ok = "OK"
+save = "保存"
+error = "エラー"
+version = "バージョン {version}"
+browse = "参照..."
+select = "選択"
+disclaimer = "テスト用ソフトウェアです。正確性は保証されません。\n教育目的でのみ使用してください。商用利用は禁止されています。"
+
+# =============================================================================
+# Settings Dialog
+# =============================================================================
+[settings]
+title = "設定"
+
+# Tab Titles
+[settings.tabs]
+general = "一般"
+text = "テキスト"
+document = "ドキュメント"
+spreadsheet = "スプレッドシート"
+image = "画像"
+layout = "レイアウト"
+link = "リンク"
+formatting = "フォーマット"
+output = "出力"
+logging = "ログ"
+
+# Settings Status Messages
+[settings.status]
+applied = "設定が適用されました"
+apply_failed = "設定の適用に失敗しました。ログを確認してください。"
+apply_error = "適用エラー"
+
+# -----------------------------------------------------------------------------
+# General Settings Tab
+# -----------------------------------------------------------------------------
+[settings.general]
+# Language Settings Section
+language_section = "🌐 言語 / Language"
+language_label = "インターフェース言語を選択："
+language_tooltip = "アプリケーションの表示言語を選択します。\n変更は再起動後に有効になります。"
+language_restart_hint = "変更は再起動後に有効になります。"
+
+# Theme Settings Section
+theme_section = "インターフェーステーマ"
+theme_label = "アプリケーションテーマを選択："
+theme_tooltip = "アプリケーションの視覚テーマを選択します。\nテーマによって配色やインターフェーススタイルが異なります。\n変更は保存後に有効になります。"
+theme_preview = "テーマプレビュー："
+sample_button = "サンプルボタン"
+sample_text = "サンプルテキスト"
+
+# Theme Names
+[settings.general.themes]
+cerculean = "Cerulean"
+cosmo = "Cosmo"
+cyborg = "Cyborg"
+darkly = "Darkly"
+flatly = "Flatly"
+journal = "Journal"
+litera = "Litera"
+lumen = "Lumen"
+minty = "Minty"
+morph = "Morph"
+pulse = "Pulse"
+sandstone = "Sandstone"
+simplex = "Simplex"
+solar = "Solar"
+superhero = "Superhero"
+united = "United"
+vapor = "Vapor"
+yeti = "Yeti"
+
+# Transparency Settings Section
+[settings.general.transparency]
+section = "ウィンドウの透明度"
+enable = "ウィンドウの透明度を有効にする"
+tooltip = "ウィンドウの透明効果を有効にします。\n有効にすると、透明度レベルを調整して\nアプリケーションウィンドウを半透明にできます。"
+
+# Window Behavior Settings Section
+[settings.general.window]
+section = "ウィンドウの動作"
+remember_state = "ウィンドウの位置とサイズを記憶"
+remember_state_tooltip = "アプリケーションウィンドウの位置とサイズを記憶します。\n次回起動時にウィンドウは最後の状態に復元されます。\nこれは好みの作業環境を維持するのに役立ちます。"
+auto_center = "起動時にウィンドウを自動的に中央揃え"
+auto_center_tooltip = "アプリケーション起動時にウィンドウを画面の中央に自動的に配置します。\n「ウィンドウ位置を記憶」も有効になっている場合、この設定が優先されます。"
+default_mode_label = "デフォルトのファイル処理モード："
+default_mode_tooltip = "アプリケーション起動時のデフォルトのファイル処理モードを設定します。\n単一ファイルモード：一度に1つのファイルを処理\nバッチモード：複数のファイルを同時に処理"
+single_mode = "単一ファイルモード"
+batch_mode = "バッチモード"
+
+# -----------------------------------------------------------------------------
+# Text Settings Tab
+# -----------------------------------------------------------------------------
+[settings.text]
+# MD to Document Numbering Settings
+md_to_docx_section = "見出し番号付け (MarkDownからドキュメント)"
+remove_numbering = "デフォルトで元のMarkdown見出し番号を削除"
+remove_numbering_tooltip = "MDをDOCXに変換する際、既存の見出し番号を削除します"
+add_numbering = "デフォルトで新しい見出し番号を追加"
+scheme_label = "デフォルトの番号付けスキーム："
+
+# Numbering Settings Section
+numbering_settings_section = "番号付け設定"
+numbering_settings_desc = "MarkDownとドキュメント変換のための見出し番号のクリーンアップと追加スキームを管理します。"
+edit_numbering_schemes = "見出し番号追加"
+edit_patterns = "見出し番号削除"
+
+# Template Settings
+template_section = "テンプレート設定"
+template_label = "MarkDownファイルのデフォルトテンプレートタイプ："
+template_tooltip = "MDファイルのデフォルトテンプレート選択を設定します\n• DOCX：ドキュメントテンプレート\n• XLSX：スプレッドシートテンプレート"
+template_docx = "ドキュメントテンプレート (DOCX)"
+template_xlsx = "スプレッドシートテンプレート (XLSX)"
+
+# Proofreading Settings
+validation_section = "校正設定"
+enable_symbol_pairing = "記号ペアリングを有効にする"
+enable_symbol_correction = "記号修正を有効にする"
+enable_typos_rule = "誤字修正を有効にする"
+enable_sensitive_word = "注意用語マッチングを有効にする"
+skip_code_blocks = "コードブロックをスキップ"
+skip_quote_blocks = "引用ブロックをスキップ"
+
+# Dictionary Configuration
+dictionary_section = "辞書構成"
+dictionary_desc = "校正辞書を構成します：エラー記号、誤字、機密用語。"
+edit_symbol_mapping = "エラー記号"
+edit_typos = "誤字"
+edit_sensitive_words = "注意用語"
+
+# Error Messages
+editor_open_failed = "エディタを開けませんでした：{error}"
+
+# -----------------------------------------------------------------------------
+# Document Settings Tab
+# -----------------------------------------------------------------------------
+[settings.document]
+# Content Extraction Settings
+extraction_section = "画像抽出/OCR設定"
+keep_images = "デフォルトで「画像を抽出」をチェック"
+keep_images_tooltip = "ドキュメントをMDに変換する際、デフォルトで「画像を抽出」をチェックします"
+enable_ocr = "デフォルトで「画像OCR」をチェック"
+enable_ocr_tooltip = "ドキュメントをMDに変換する際、デフォルトで「画像OCR」をチェックします"
+
+# Optimization Settings
+optimization_section = "最適化設定"
+enable_optimization = "デフォルトで「ドキュメントタイプに合わせて最適化」を有効にする"
+optimization_type_label = "デフォルトの最適化タイプ："
+
+# Software Priority
+software_section = "ソフトウェア優先順位"
+word_processors_label = "ドキュメント処理ソフトウェアの優先順位"
+odt_conversion_label = "ODT形式変換"
+document_to_pdf_label = "ドキュメントからPDF"
+
+# Software Names
+[settings.document.software]
+wps_writer = "WPS Writer"
+msoffice_word = "Word"
+libreoffice = "LibreOffice"
+
+# Numbering Settings
+[settings.document.numbering]
+section = "見出し番号付け (ドキュメントからMarkDown)"
+remove = "デフォルトで元のドキュメント見出し番号を削除"
+remove_tooltip = "DOCXをMDに変換する際、既存の見出し番号を削除します"
+add = "デフォルトでMarkdownに見出し番号を追加"
+scheme_label = "デフォルトの番号付けスキーム："
+
+# -----------------------------------------------------------------------------
+# Spreadsheet Settings Tab
+# -----------------------------------------------------------------------------
+[settings.spreadsheet]
+extraction_section = "画像抽出/OCR設定"
+keep_images = "デフォルトで「画像を抽出」をチェック"
+keep_images_tooltip = "スプレッドシートをMDに変換する際、デフォルトで「画像を抽出」をチェックします"
+enable_ocr = "デフォルトで「画像OCR」をチェック"
+enable_ocr_tooltip = "スプレッドシートをMDに変換する際、デフォルトで「画像OCR」をチェックします"
+merge_mode_section = "結合モード設定"
+merge_mode_desc = "テーブル結合のデフォルトモードを設定します"
+software_section = "ソフトウェア優先順位"
+spreadsheet_processors_label = "スプレッドシート処理ソフトウェアの優先順位"
+ods_conversion_label = "ODS形式変換"
+spreadsheet_to_pdf_label = "スプレッドシートからPDF"
+
+# Merge Mode Options
+[settings.spreadsheet.merge_modes]
+by_row = "行で結合"
+by_row_tooltip = "複数のテーブルを行ごとにベーステーブルに結合します"
+by_column = "列で結合"
+by_column_tooltip = "複数のテーブルを列ごとにベーステーブルに結合します"
+by_cell = "セルで結合"
+by_cell_tooltip = "対応するセル位置からデータを追加します"
+
+# Software Names
+[settings.spreadsheet.software]
+wps_spreadsheets = "WPS Spreadsheets"
+excel = "Excel"
+libreoffice = "LibreOffice"
+
+# -----------------------------------------------------------------------------
+# Image Settings Tab
+# -----------------------------------------------------------------------------
+[settings.image]
+extraction_section = "画像抽出/OCR設定"
+keep_images = "デフォルトで「画像を抽出」をチェック"
+keep_images_tooltip = "画像をMDに変換する際、デフォルトで「画像を抽出」をチェックします"
+enable_ocr = "デフォルトで「画像OCR」をチェック"
+enable_ocr_tooltip = "画像をMDに変換する際、デフォルトで「画像OCR」をチェックします"
+
+# OCR言語設定
+ocr_language_label = "OCR認識言語:"
+ocr_language_tooltip = "OCR文字認識で使用する言語モデルを選択します。\n\n• UI言語に従う：現在のUI言語に合わせて自動選択\n• 中国語/英語：中国語と英語の混在文書に適しています\n• 日本語：日本語文書に適しています\n• ラテン文字系：ドイツ語・フランス語・ポルトガル語などに適しています\n• キリル文字系：ロシア語などに適しています"
+ocr_language_auto = "UI言語に従う"
+ocr_language_chinese = "中国語/英語"
+ocr_language_japanese = "日本語"
+ocr_language_chinese_cht = "繁体字中国語"
+ocr_language_english = "英語のみ"
+ocr_language_korean = "韓国語"
+ocr_language_latin = "ラテン文字系（独/仏/葡など）"
+ocr_language_cyrillic = "キリル文字系（露など）"
+
+compress_section = "圧縮オプション設定"
+compress_desc = "画像形式変換のデフォルト圧縮モードを設定します"
+compress_lossless = "最高品質"
+compress_lossless_tooltip = "ロスレスまたは高品質変換 (quality=95)"
+compress_limit_size = "ファイルサイズを制限"
+compress_limit_size_tooltip = "品質パラメータを調整してターゲットサイズに圧縮します"
+size_limit_label = "デフォルトサイズ制限："
+
+pdf_tiff_section = "PDF/TIFFオプション設定"
+pdf_size_label = "画像からPDFへのデフォルトサイズ"
+pdf_original = "オリジナル埋め込み"
+pdf_a4 = "A4に合わせる"
+pdf_a3 = "A3に合わせる"
+tiff_mode_label = "TIFF結合のデフォルトモード"
+tiff_keep_alpha = "透明度を保持"
+tiff_keep_alpha_tooltip = "ソース画像の透明度を保持します（ある場合）"
+tiff_no_alpha = "透明度なし"
+tiff_no_alpha_tooltip = "RGBモードに変換し、透明な背景は白になります"
+
+# -----------------------------------------------------------------------------
+# Layout Settings Tab
+# -----------------------------------------------------------------------------
+[settings.layout]
+extraction_section = "画像抽出/OCR設定"
+keep_images = "デフォルトで「画像を抽出」をチェック"
+keep_images_tooltip = "レイアウトファイルをMDに変換する際、デフォルトで「画像を抽出」をチェックします"
+enable_ocr = "デフォルトで「画像OCR」をチェック"
+enable_ocr_tooltip = "レイアウトファイルをMDに変換する際、デフォルトで「画像OCR」をチェックします"
+dpi_section = "レンダリングDPI設定"
+dpi_desc = "レイアウトファイルを画像に変換する際のデフォルトDPI（解像度）を設定します"
+dpi_min = "最小 (150)"
+dpi_min_tooltip = "ファイルサイズが小さく、クイックプレビューに適しています"
+dpi_medium = "中 (300)"
+dpi_medium_tooltip = "品質とファイルサイズのバランスが良く、一般的な使用に推奨されます"
+dpi_high = "高品質 (600)"
+dpi_high_tooltip = "高品質出力、ファイルサイズが大きく、印刷に適しています"
+software_section = "ソフトウェア優先順位"
+pdf_to_doc_label = "PDFからドキュメント"
+
+# -----------------------------------------------------------------------------
+# Link Settings Tab
+# -----------------------------------------------------------------------------
+[settings.link]
+# Markdown Link Format Section
+format_section = "Markdownリンク形式"
+format_desc = "生成されるMarkdownファイル内のリンク形式を設定します"
+image_link_style_label = "画像リンク形式："
+image_link_style_tooltip = "MDファイル内の画像のリンク形式を設定します\n\n• Markdown埋め込み：![alt](image.png)\n• Markdownリンク：[alt](image.png)\n• Wiki埋め込み：![[image.png]] (Obsidian)\n• Wikiリンク：[[image.png]] (Obsidian)"
+md_file_link_style_label = "MDファイルリンク形式："
+md_file_link_style_tooltip = "MDファイル内のMDファイルのリンク形式を設定します\n\n• Markdownリンク：[file.md](file.md)\n• Wiki埋め込み：![[file.md]] (Obsidian)\n• Wikiリンク：[[file.md]] (Obsidian)\n\n注：Markdown形式はMDファイルコンテンツの埋め込みをサポートしていません"
+
+# Non-Embed Link Processing Section
+non_embed_section = "非埋め込みリンク処理"
+non_embed_desc = "MDをドキュメント/テーブルに変換する際の通常のリンク（! 接頭辞なし）の処理方法を設定します"
+wiki_link_mode = "Wikiリンク処理："
+wiki_link_tooltip = "[[link]] または [[link|text]] 形式を処理します\n\nそのまま保持：[[link|text]]\nテキスト抽出：text（マークアップを削除）\n削除：リンク全体を削除"
+markdown_link_mode = "Markdownリンク処理："
+markdown_link_tooltip = "[text](url) 形式を処理します\n\nそのまま保持：[text](url)\nテキスト抽出：text（マークアップを削除）\n削除：リンク全体を削除"
+
+# Embed Link Processing Section
+embed_section = "埋め込みリンク処理"
+embed_desc = "MDをドキュメント/テーブルに変換する際の埋め込みリンク（! 接頭辞あり）の処理方法を設定します"
+wiki_embed_image_mode = "Wiki埋め込み画像処理："
+wiki_embed_image_tooltip = "![[image.png]] 形式を処理します\n\nそのまま保持：![[image.png]]\nテキスト抽出：image.png\n削除：リンクを削除\nコンテンツ埋め込み：ドキュメントに画像を挿入"
+markdown_embed_image_mode = "Markdown埋め込み画像処理："
+markdown_embed_image_tooltip = "![alt](image.png) 形式を処理します\n\nそのまま保持：![alt](image.png)\nテキスト抽出：image.png\n削除：リンクを削除\nコンテンツ埋め込み：ドキュメントに画像を挿入"
+embed_md_file_mode = "Wiki埋め込みMDファイル処理："
+embed_md_file_tooltip = "![[file.md]] 形式を処理します（Wikiのみ）\n\nそのまま保持：![[file.md]]\nテキスト抽出：file.md\n削除：リンクを削除\nコンテンツ埋め込み：再帰的に処理して挿入"
+max_depth_label = "最大埋め込み深度："
+max_depth_tooltip = "MDファイル埋め込みの最大再帰深度\n無限再帰とパフォーマンスの問題を防ぎます\n\n例：AがBを埋め込み、BがCを埋め込み、CがDを埋め込み...\n推奨：3-5"
+
+# Sub-node: Image Link Format Options
+[settings.link.image_styles]
+wiki_embed = "Wiki埋め込み"
+wiki_link = "Wikiリンク"
+md_embed = "Markdown埋め込み"
+md_link = "Markdownリンク"
+
+# Sub-node: MD File Link Format Options
+[settings.link.md_file_styles]
+wiki_embed = "Wiki埋め込み"
+wiki_link = "Wikiリンク"
+md_link = "Markdownリンク"
+
+# Sub-node: Link Processing Modes
+[settings.link.modes]
+keep = "そのまま保持"
+extract_text = "テキスト抽出"
+remove = "削除"
+embed = "コンテンツ埋め込み"
+
+# -----------------------------------------------------------------------------
+# Format Settings Tab
+# -----------------------------------------------------------------------------
+[settings.formatting]
+# Document to MarkDown Section
+docx_to_md_section = "ドキュメントからMarkDown"
+format_processing = "フォーマット処理"
+format_processing_tooltip = "WordドキュメントをMarkdownに変換する際のフォーマット処理を構成します\n\n一部のオプションは「公文書最適化」ドキュメントからMarkDownへの変換では機能しません"
+body_format_label = "本文フォーマット処理："
+body_format_tooltip = "フォーマット保持：太字→**太字**、斜体→*斜体*、取り消し線→~~取り消し線~~など\nフォーマット破棄：プレーンテキストコンテンツのみ保持"
+heading_format_label = "見出しフォーマット処理："
+heading_format_tooltip = "フォーマット保持：見出し内の太字を**太字**に変換など\nフォーマット破棄：見出しはプレーンテキストのみ保持し、冗長なマークアップを回避\n注：Wordの見出しスタイルは通常固定のフォーマットを持っており、保持すると冗長なマークアップが発生する可能性があります"
+table_header_format_label = "テーブルヘッダーフォーマット処理："
+table_header_format_tooltip = "フォーマット保持：ヘッダーセルの太字を**太字**に変換など\nフォーマット破棄：ヘッダーはプレーンテキストのみ保持し、冗長なマークアップを回避\n注：テーブルスタイルは通常ヘッダーの太字を定義しており、保持すると重複したマークアップが発生する可能性があります"
+
+# Separator Mapping
+separator_mapping = "セパレーターマッピング"
+separator_mapping_tooltip = "Wordの改ページ/セクション区切り/水平線をどのMarkdownセパレーターに変換するかを構成します\n\n改ページ：Wordの改ページ\nセクション区切り：すべてのタイプのセクション区切り（次のページ/連続/奇数ページ/偶数ページ）\n水平線：段落の下の境界線（ユーザーが---と入力してEnterを押すと生成される）"
+page_break_label = "改ページ："
+page_break_tooltip = "Wordの改ページをMarkdownセパレーターに変換します\n改ページは通常、特定の場所で改ページを強制するために使用されます"
+section_break_label = "セクション区切り："
+section_break_tooltip = "Wordのセクション区切りをMarkdownセパレーターに変換します\nすべてのセクション区切りタイプ（次のページ/連続/奇数/偶数ページ）は一律に処理されます"
+horizontal_rule_label = "水平線："
+horizontal_rule_tooltip = "Wordの水平線（水平線1/2/3スタイル）をMarkdownセパレーターに変換します"
+
+# Syntax Selection
+syntax_selection = "構文選択"
+syntax_selection_tooltip = "ドキュメントをMarkdownに変換する際に出力する構文形式を選択します\n（すべてのフォーマット構文は入力時に自動的に認識されます）"
+bold_syntax_label = "太字構文："
+bold_syntax_tooltip = "太字テキストの出力構文形式を選択します"
+italic_syntax_label = "斜体構文："
+italic_syntax_tooltip = "斜体テキストの出力構文形式を選択します"
+strikethrough_syntax_label = "取り消し線構文："
+strikethrough_syntax_tooltip = "取り消し線テキストの出力構文形式を選択します"
+highlight_syntax_label = "ハイライト構文："
+highlight_syntax_tooltip = "ハイライトテキストの出力構文形式を選択します"
+superscript_syntax_label = "上付き文字構文："
+superscript_syntax_tooltip = "上付き文字テキストの出力構文形式を選択します"
+subscript_syntax_label = "下付き文字構文："
+subscript_syntax_tooltip = "下付き文字テキストの出力構文形式を選択します"
+unordered_list_label = "順序なしリスト："
+unordered_list_tooltip = "順序なしリストの出力マーカー記号を選択します"
+ordered_list_label = "順序付きリスト："
+ordered_list_tooltip = "順序付きリストの番号付け方法（このオプションはまだ実装されていません。将来のバージョンでサポートされる予定です）"
+indent_spaces_label = "リストインデント："
+indent_spaces_tooltip = "Markdownリストのインデントごとのスペース数。多層ネストを認識するために使用されます。\n2スペース：Obsidian、Typoraなどで一般的に使用されます。\n4スペース：VS Codeなどで一般的に使用されます。"
+
+# MarkDown to Document Section
+md_to_docx_section = "MarkDownからドキュメント"
+md_format_processing = "フォーマット処理"
+md_format_processing_tooltip = "MarkdownをWordドキュメントに変換する際のフォーマットマークアップ処理を構成します"
+md_body_format_label = "本文フォーマットマークアップ処理："
+md_body_format_tooltip = 'フォーマット適用：**太字** を実際の太字フォーマットに変換\nマークアップ保持：**太字** をそのまま表示\nマークアップ削除："太字" テキストのみ表示し、フォーマットなし'
+md_heading_format_label = "見出しフォーマットマークアップ処理："
+md_heading_format_tooltip = 'フォーマット適用：デフォルトの見出しスタイルフォーマットを上書きし、部分的な太字効果を有効にします\nマークアップ保持：マークアップをそのまま表示\nマークアップ削除：Wordの見出しスタイルフォーマットを自然に適用\n注：見出しスタイル自体が太字の場合、"フォーマット適用" で部分的な太字を実現できます'
+md_table_header_format_label = "テーブルヘッダーフォーマットマークアップ処理："
+md_table_header_format_tooltip = 'フォーマット適用：**太字** を実際の太字に変換（テーブルスタイルと重複する可能性があります）\nマークアップ保持：マークアップをそのまま表示\nマークアップ削除：テーブルスタイル（例：最初の行を太字）を自然に適用\n注：テーブルスタイルは通常ヘッダーの太字を定義しているため、"マークアップ削除" を推奨します'
+
+# MD to Document Separator Mapping
+md_separator_mapping = "セパレーターマッピング"
+md_separator_mapping_tooltip = "MarkdownセパレーターをどのWordの改ページ/セクション区切り/水平線に変換するかを構成します\n\n改ページ：Wordの改ページ\nセクション区切り：Wordのセクション区切り（次のページタイプ）\n水平線：段落の下の境界線（視覚的な区切り）"
+dash_label = "--- (3つのダッシュ):"
+dash_tooltip = "Markdownの --- セパレーターをWordの改ページ/セクション区切りに変換します"
+asterisk_label = "*** (3つのアスタリスク):"
+asterisk_tooltip = "Markdownの *** セパレーターをWordの改ページ/セクション区切りに変換します"
+underscore_label = "___ (3つのアンダースコア):"
+underscore_tooltip = "Markdownの ___ セパレーターをWordの改ページ/セクション区切りに変換します\n注：セクション区切り（ページ）は実際にはセクション区切り（次のページ）として生成されます"
+
+# Table Style
+table_style = "テーブルスタイル"
+table_style_tooltip = "MarkdownテーブルをWordテーブルに変換する際に使用するスタイルを構成します\n\n【組み込みスタイル】\n三線表/グリッド表：テンプレートが存在するか自動検出し、存在しない場合はスタイル定義を注入します\n\n【カスタムスタイル】\nテンプレートにこのスタイルがあるか検出し、ない場合は同じ名前のグリッド表形式スタイルを作成します"
+builtin_style_radio = "組み込みスタイルを使用"
+custom_style_radio = "カスタムスタイル名を使用"
+
+# リストセパレーター
+list_separator_label = "YAMLリストセパレーター"
+list_separator_tooltip = "YAMLリスト値を文字列に結合する際に使用するセパレーター\n\n一般的な値：\n• 読点（、）\n• カンマ（，）\n• カンマ + スペース（, ）\n• 空文字列：直接連結"
+
+# Format Handling Options
+[settings.formatting.options]
+preserve_format = "フォーマット保持"
+discard_format = "フォーマット破棄"
+apply_format = "フォーマット適用"
+keep_markup = "マークアップ保持"
+clean_markup = "マークアップ削除"
+
+# Separator Options
+[settings.formatting.separators]
+dash = "---"
+asterisk = "***"
+underscore = "___"
+ignore = "無視"
+page_break = "改ページ"
+section_break = "セクション区切り"
+horizontal_rule_1 = "水平線 1"
+horizontal_rule_2 = "水平線 2"
+horizontal_rule_3 = "水平線 3"
+
+# Syntax Options
+[settings.formatting.syntax]
+bold_asterisk = "アスタリスク (**text**)"
+bold_underscore = "アンダースコア (__text__)"
+italic_asterisk = "アスタリスク (*text*)"
+italic_underscore = "アンダースコア (_text_)"
+strikethrough_extended = "拡張 (~~text~~)"
+strikethrough_html = "HTML (<del>)"
+highlight_extended = "拡張 (==text==)"
+highlight_html = "HTML (<mark>)"
+superscript_extended = "拡張 (^text^)"
+superscript_html = "HTML (<sup>)"
+subscript_extended = "拡張 (~text~)"
+subscript_html = "HTML (<sub>)"
+unordered_dash = "ダッシュ (- item)"
+unordered_asterisk = "アスタリスク (* item)"
+unordered_plus = "プラス (+ item)"
+ordered_restart = "1から再開"
+ordered_preserve = "元の番号を保持"
+indent_2_spaces = "2スペース (推奨)"
+indent_4_spaces = "4スペース"
+
+# Table Style Options
+[settings.formatting.table_styles]
+three_line_table = "三線表"
+table_grid = "テーブルグリッド"
+
+# -----------------------------------------------------------------------------
+# Output Settings Tab
+# -----------------------------------------------------------------------------
+[settings.output]
+# Intermediate Files Section
+intermediate_section = "中間ファイル"
+save_intermediate_label = "中間ファイルを出力ディレクトリに保存"
+save_intermediate_tooltip = "有効：すべての中間ステップファイルを保存\n無効：最終結果ファイルのみ保存\n\n例 (XLS→XLSX→ODS)：\n• 有効：XLSXとODSの両方を保存\n• 無効：ODSのみ保存"
+save_intermediate_desc = "マルチステップ変換（例：XLS→XLSX→ODS）中にXLSXのような中間ファイルを保存するかどうか"
+
+# Output Directory Section
+directory_section = "出力ディレクトリ"
+output_mode_label = "出力場所："
+output_mode_tooltip = "ソース場所：ソースファイルと同じフォルダに出力\nカスタム場所：指定されたフォルダに出力"
+custom_path_label = "カスタムパス："
+browse_title = "出力ディレクトリを選択"
+
+# Output Mode Options
+[settings.output.output_modes]
+source = "ソースファイルディレクトリ"
+custom = "カスタムディレクトリ"
+
+# Date Subfolder Section
+[settings.output.date_folder]
+section = "日付サブフォルダ"
+create_label = "日付サブフォルダを作成"
+create_tooltip = "出力ディレクトリに日付サブフォルダを作成します\n例：Output Directory/2025-01-06/file.pdf\nこのオプションは両方の出力モードで機能します"
+format_label = "日付形式："
+
+# Date Format Options
+[settings.output.date_formats]
+iso = "2025-01-06"
+compact = "20250106"
+chinese = "2025年01月06日"
+
+# Output Behavior Section
+[settings.output.behavior]
+section = "出力動作"
+auto_open_folder_label = "変換後に出力フォルダを自動的に開く"
+auto_open_folder_tooltip = "変換または校正が成功した後、出力フォルダを自動的に開き、最終ファイルを選択します\n結果をすばやく確認するのに便利です"
+
+# -----------------------------------------------------------------------------
+# Logging Settings Tab
+# -----------------------------------------------------------------------------
+[settings.logging]
+# Logging System Section
+system_section = "ログシステム"
+enable_logging_label = "ログシステムを有効にする"
+enable_logging_tooltip = "ログシステム全体を有効または無効にします。\n無効にすると、アプリケーションはログ情報を記録しません。\n本番環境では有効にしておくことをお勧めします。"
+log_level_label = "ログレベル："
+log_level_tooltip = "ログの詳細度を設定します。\nレベル（低から高）：debug > info > warning > error > critical\nレベルが高いほど、記録される情報は少なくなります。"
+
+# File Output Section
+file_section = "ファイル出力"
+file_prefix_label = "ログファイル接頭辞："
+file_prefix_tooltip = "ログファイル名の接頭辞を設定します"
+retention_days_label = "ログ保持日数："
+retention_days_tooltip = "ログファイルを保持する日数を設定します。これより古いログは自動的に削除されます。"
+
+# Console Output Section
+console_section = "コンソール出力"
+enable_console_label = "コンソールにログを表示"
+enable_console_tooltip = "有効にすると、ログはコンソールウィンドウにも出力されます"
+console_level_label = "コンソールログレベル："
+console_level_tooltip = "コンソール出力のログレベルを設定します。ファイルログレベルとは異なる場合があります"
+
+# Log Levels
+[settings.logging.levels]
+debug = "デバッグ (DEBUG)"
+info = "情報 (INFO)"
+warning = "警告 (WARNING)"
+error = "エラー (ERROR)"
+
+# =============================================================================
+# About Dialog
+# =============================================================================
+[about]
+title = "バージョン情報"
+version_info = "バージョン {version}"
+version_tooltip = "このソフトウェアはオフライン専用です。更新を手動で確認してください。"
+contact = "連絡先：{email}"
+copyright = "© {year} {author}"
+acknowledgments = "謝辞"
+acknowledgments_intro = "このプロジェクトは以下の優れたオープンソースプロジェクトとツールを使用しています。以下に感謝します："
+
+# Open Source Tool Descriptions
+[about.tools]
+python_docx = "docxとmarkdownの双方向変換用、ドキュメントスタイルと構造を処理"
+openpyxl = "xlsxとmarkdownの双方向変換用、スプレッドシートデータを処理"
+pymupdf = "PDF/XPSドキュメントのコンテンツ抽出と形式変換用"
+pymupdf4llm = "インテリジェントなPDF抽出とMarkdown形式への変換用"
+pdf2docx = "PDFドキュメントを編集可能なWord形式に変換するため"
+easyofd = "中国のOFD形式のドキュメントを読み取り、変換するため"
+rapidocr = "画像とPDFのOCRテキスト認識用、オフライン使用をサポート"
+onnxruntime = "RapidOCRの推論エンジンとして"
+ttkbootstrap = "モダンなグラフィカルユーザーインターフェースを構築するため"
+tkinterdnd2 = "ドラッグアンドドロップ機能を実装し、ユーザーエクスペリエンスを向上させるため"
+pillow = "画像形式の変換とアイコンリソースの処理用"
+pillow_heif = "PillowにHEIF画像形式のサポートを提供"
+img2pdf = "画像ファイルを一括してPDFドキュメントに変換するため"
+pywin32 = "ドキュメント形式変換のためにCOMインターフェースを介してWPSとOfficeを呼び出すため"
+lxml = "OfficeドキュメントのXML構造を処理するため"
+latex2mathml = "LaTeX数式をMathML形式に変換するため"
+pyyaml = "Markdownフロントマターのメタデータを処理するため"
+tomlkit = "構成ファイルの読み取りと保存用"
+pandas = "スプレッドシートデータの処理と分析用"
+numpy = "数値計算とデータ処理の基本的なサポート用"
+olefile = "レガシーOfficeドキュメント形式の識別と処理用"
+watchdog = "ファイルシステムの変更を監視し、IPCと単一インスタンスを実装するため"
+
+# =============================================================================
+# Main Interface Components
+# =============================================================================
+[components]
+
+# File Drop Zone
+[components.file_drop]
+section_title = "入力ファイル"
+empty_hint_single = "📤 ここにファイルをドラッグ"
+empty_hint_batch = "📤 ここにファイルまたはフォルダをドラッグ"
+add_button = "追加"
+clear_button = "クリア"
+single_mode = "単一"
+batch_mode = "バッチ"
+unavailable = "ファイルドロップエリアは利用できません"
+batch_summary = "バッチ処理：{count} {category} ファイル"
+
+# File Selector
+[components.file_selector]
+empty_hint = "ファイルなし\nここにファイル（フォルダ）をドラッグしてバッチ処理を開始"
+unavailable = "ファイルセレクターは利用できません"
+
+# Status Bar
+[components.status_bar]
+unavailable = "ステータスバーは利用できません"
+
+# App status
+app_started = "アプリケーションが起動しました"
+no_files_in_tab = "{category} タブにファイルがありません"
+unknown_file_type = "不明なファイルタイプ"
+files_cleared = "ファイル選択がクリアされました"
+
+# Processing status
+processing_wait = "処理中、お待ちください{dots}"
+operation_cancelled = "操作がキャンセルされました"
+processing_file = "処理中 {current}/{total}：{filename}"
+batch_completed = "バッチ完了：{success} 成功、{failed} 失敗"
+skipped_same_format = "スキップ：すでに {format} 形式です"
+
+# File type selection (unified style)
+selected_text_file = "テキストファイルが選択されました"
+selected_document_file = "ドキュメントファイルが選択されました"
+selected_spreadsheet_file = "スプレッドシートファイルが選択されました"
+selected_image_file = "画像ファイルが選択されました"
+selected_layout_file = "レイアウトファイルが選択されました"
+
+# GUI status messages
+operation_success = "操作が正常に完了しました！"
+conversion_failed = "変換に失敗しました"
+trial_expired_title = "試用期間終了"
+trial_expired_message = "この操作は完了できますが、このソフトウェアの試用版の有効期限が切れました。\nライセンス版については開発者にお問い合わせください。"
+open_location_title = "場所を開く"
+open_location_confirm = "元のファイルの場所を開きますか？"
+template_selected = "テンプレート選択：{name}"
+files_added = "{count} 個のファイルを {category} に追加しました"
+files_add_failed = "{count} 個のファイルの追加に失敗しました"
+file_selected = "選択：{filename} ({category})"
+
+# File status dialogs
+[components.file_dialogs]
+# Skip dialog
+skip_title = "ファイルスキップ"
+skip_message = "ファイル変換がスキップされました\n\n理由：{reason}\n\n元のファイル：{filename}\n場所：{location}"
+skip_reason_unknown = "不明な理由"
+
+# Error dialog
+error_title = "変換失敗"
+error_message = "ファイル変換に失敗しました\n\nファイル：{filename}\nエラー：{error}\n\n提案：\n1. ファイルが破損していないか確認してください\n2. 関連するソフトウェアが正常に動作しているか確認してください\n3. 詳細についてはログを確認してください"
+error_unknown = "不明なエラー"
+
+# Action Panel
+[components.action_panel]
+section_title = "アクションパネル"
+unavailable = "アクションパネルは利用できません"
+
+# Conversion Panel
+[components.conversion_panel]
+unavailable = "変換パネルは利用できません"
+
+# Template Selector
+[components.template_selector]
+no_templates = "利用可能なテンプレートはありません"
+unavailable = "テンプレートセレクターは利用できません"
+
+# Tabbed Template Selector
+[components.template_selector_tabbed]
+document_templates = "文書"
+spreadsheet_templates = "表"
+
+# =============================================================================
+# File Type Categories
+# =============================================================================
+[file_types]
+document = "ドキュメント"
+spreadsheet = "スプレッドシート"
+image = "画像"
+layout = "レイアウト"
+text = "テキスト"
+unknown = "不明"
+
+# Category names with suffix (for tab labels)
+text_category = "テキスト"
+document_category = "文書"
+spreadsheet_category = "表"
+layout_category = "レイアウト"
+image_category = "画像"
+
+# Format validation related
+unknown_type = "不明"
+format_mismatch = "⚠️ 実際の形式：{format}"
+format_unverifiable = "⚠️ 実際のファイル形式を確認できません"
+format_txt = "TXT (プレーンテキスト)"
+format_md = "Markdown"
+format_csv = "CSV (テーブルテキスト)"
+
+# =============================================================================
+# Conversion Operations
+# =============================================================================
+[conversion]
+# Document Operations
+
+# Spreadsheet Operations
+
+# Image Operations
+
+# 生成ファイル名（出力ファイルの命名用）
+[conversion.filenames]
+split_part1 = "分割1"
+split_part2 = "分割2"
+merged_pdf = "結合PDF"
+merged_table = "統合表"
+
+# =============================================================================
+# Messages and Prompts
+# =============================================================================
+[messages]
+# File Operations
+file_not_found = "ファイルが見つかりません：{filename}"
+invalid_file_type = "サポートされていないファイルタイプ：{ext}"
+unsupported_file_type = "サポートされていないファイルタイプ"
+unknown_file_category = "不明なファイルカテゴリ：{category}"
+
+# GUI operation results
+error_prefix = "エラー：{message}"
+operation_failed = "操作失敗：{error}"
+processing_exception = "処理例外：{error}"
+system_init_error = "システム初期化エラー"
+process_file_failed = "ファイルの処理に失敗しました：{error}"
+batch_merge_need_two_layout = "バッチモードが必要です。結合するには少なくとも2つのレイアウトファイルが必要です"
+batch_merge_need_two_image = "バッチモードが必要です。結合するには少なくとも2つの画像ファイルが必要です"
+batch_merge_need_two_table = "バッチモードが必要です。結合するには少なくとも2つのスプレッドシートファイルが必要です"
+batch_file_list_not_init = "バッチファイルリストコンポーネントが初期化されていません"
+select_base_table_first = "最初にベーステーブルを選択してください"
+select_merge_mode = "結合モードを選択してください（行/列/セル）"
+process_failed = "処理失敗：{error}"
+file_processing_failed = "ファイルの処理に失敗しました：{error}"
+template_selection_failed = "テンプレートの選択に失敗しました：{error}"
+cancel_failed = "キャンセルに失敗しました：{error}"
+clear_failed = "クリアに失敗しました：{error}"
+settings_unavailable = "設定が利用できません"
+open_settings_failed = "設定を開けませんでした：{error}"
+apply_settings_failed = "設定の適用に失敗しました：{error}"
+about_unavailable = "「このアプリについて」が利用できません"
+open_about_failed = "「このアプリについて」を開けませんでした：{error}"
+
+# Conversion Operations
+
+# Settings
+
+# Confirmation Dialogs
+
+# File Drag and Drop
+single_file_only = "単一ファイルモードでは1つのファイルのみ許可されます"
+no_valid_files = "有効なファイルが検出されませんでした"
+no_folder_in_single_mode = "単一ファイルモードではフォルダは許可されていません"
+all_supported_files = "すべてのサポートされているファイル"
+all_files = "すべてのファイル"
+select_multiple_files = "複数のファイルを選択"
+category_mismatch = "{current_name} ファイルのみ追加できます。{new_name} ファイルと混在させることはできません"
+category_mismatch_detail = "タイプ不一致（現在のリスト：{selected_name}、ファイル：{file_category_name}）"
+
+# エラーメッセージ
+[messages.errors]
+invalid_docx_template = 'テンプレートファイル「{template_name}」は無効または破損しています。WordまたはWPSでテンプレートを開き、編集して保存し、有効なDOCXファイルであることを確認してください。'
+
+# 警告メッセージ
+[messages.warnings]
+missing_body_placeholder = '⚠️ テンプレートに本文プレースホルダー（例：{{正文}}または{{body}}）が見つかりませんでした。Markdown本文コンテンツは挿入されませんでした'
+
+# =============================================================================
+# Editor Dialogs
+# =============================================================================
+[editors]
+
+# Numbering Add Editor
+[editors.numbering_add]
+window_title = "番号付けスキームエディタ"
+scheme_list = "スキームリスト"
+default_scheme = "デフォルトスキーム："
+level_format_config = "レベルフォーマット構成"
+realtime_preview = "リアルタイムプレビュー"
+format_help = "📖 フォーマットヘルプ"
+format_help_title = "フォーマットプレースホルダーヘルプ"
+format_help_text = """フォーマットプレースホルダーの使用法
+
+プレースホルダー形式：{level.style}
+
+利用可能なスタイル：
+  chinese_lower  - 小文字の漢数字 (一、二、三)
+  chinese_upper  - 大文字の漢数字 (壹、贰、叁)
+  arabic_half    - 半角アラビア数字 (1, 2, 3)
+  arabic_full    - 全角アラビア数字 (１、２、３)
+  arabic_circled - 丸数字 (①②③)
+  letter_upper   - 大文字のアルファベット (A, B, C)
+  letter_lower   - 小文字のアルファベット (a, b, c)
+  roman_upper    - 大文字のローマ数字 (I, II, III)
+  roman_lower    - 小文字のローマ数字 (i, ii, iii)
+
+例：
+  {1.chinese_lower}、 → 一、二、三、
+  （{2.chinese_lower}） → （一）（二）（三）
+  {3.arabic_half}. → 1. 2. 3.
+  {1.arabic_half}.{2.arabic_half} → 1.1、1.2"""
+
+# Level names
+level_1 = "レベル1見出し"
+level_2 = "レベル2見出し"
+level_3 = "レベル3見出し"
+level_4 = "レベル4見出し"
+level_5 = "レベル5見出し"
+level_6 = "レベル6見出し"
+level_7 = "レベル7見出し"
+level_8 = "レベル8見出し"
+level_9 = "レベル9見出し"
+
+# Create and copy
+new_scheme = "新しいスキーム"
+copy_suffix = "(コピー)"
+
+# Preview
+preview_sample = "サンプル {level_name}"
+no_format = "フォーマット定義なし"
+preview_failed = "プレビュー生成失敗"
+
+# Placeholder menu
+menu_current_level = "── 現在のレベル ({level}) ──"
+menu_decorations = "── 一般的な装飾 ──"
+menu_hierarchical = "── 階層形式 ──"
+
+# Number styles
+style_chinese_lower = "小文字漢数字 (一二三)"
+style_chinese_upper = "大文字漢数字 (壹贰叁)"
+style_arabic_half = "アラビア数字 (123)"
+style_arabic_circled = "丸数字 (①②③)"
+style_letter_upper = "大文字アルファベット (ABC)"
+style_roman_upper = "ローマ数字 (I II III)"
+
+# Decorations
+decoration_dun = "読点（、）"
+decoration_dot_space = "ドット + スペース"
+decoration_bracket = "全角括弧"
+decoration_chapter = "章形式"
+
+# Validation messages
+
+# Error messages
+load_failed = "読み込み失敗"
+load_failed_message = "構成ファイルの読み込みに失敗しました：{error}"
+save_failed = "保存失敗"
+save_failed_message = "構成ファイルの保存に失敗しました"
+save_failed_with_error = "構成の保存に失敗しました：{error}"
+cannot_delete = "削除できません"
+cannot_delete_default_scheme = "デフォルトのスキームは削除できません"
+
+# Scheme names
+[editors.numbering_add.names]
+hierarchical_standard = "階層番号標準"
+hierarchical_h2_start = "階層 (H2開始)"
+
+# Scheme descriptions (for editor display)
+[editors.numbering_add.descriptions]
+hierarchical_standard_desc = "階層形式：1, 1.1, 1.1.1...（数字の後にスペースあり）"
+hierarchical_h2_start_desc = "階層形式（H1/レベル1見出しをスキップ）：H2/レベル2見出しから1, 1.1, 1.1.1...で開始"
+
+# Common editor texts (shared by all editors)
+[editors.common]
+basic_info = "基本情報"
+name = "名前："
+description = "説明："
+add = "追加"
+copy = "コピー"
+delete = "削除"
+move_up = "上へ移動"
+move_down = "下へ移動"
+save = "保存"
+cancel = "キャンセル"
+prompt = "情報"
+select_item_first = "最初に項目を選択してください"
+cannot_delete = "削除できません"
+system_item_hint = "システム項目は削除できません。無効にすることのみ可能です"
+confirm_delete = "削除確認"
+confirm_delete_message = "'{name}' を削除してもよろしいですか？"
+confirm_close = "閉じる確認"
+unsaved_changes_hint = "保存されていない変更"
+unsaved_close_message = "保存されていない変更があります。閉じてもよろしいですか？"
+
+# Numbering Clean Editor
+[editors.numbering_clean]
+window_title = "クリーンアップルールエディタ"
+rule_list = "ルールリスト"
+rule_edit = "ルールエディタ"
+name = "名前："
+description = "説明："
+regex = "正規表現："
+regex_test = "正規表現テスト"
+input = "入力："
+result = "結果："
+status = "ステータス："
+load_example = "例を読み込む"
+available_placeholders = "利用可能なプレースホルダー"
+new_rule = "新しいルール"
+copy_suffix = "(コピー)"
+match_success = "マッチ成功"
+no_match = "マッチなし"
+regex_error = "正規表現エラー"
+test_error = "エラー"
+placeholder_info = """プレースホルダー情報：
+
+{space}        - 空白（スペース、全角スペースなど）
+{sep}          - セパレーター（ドット、カンマなど）
+{bracket_open} - 左括弧（中国語/英語）
+{bracket_close}- 右括弧（中国語/英語）
+{num_arab}     - アラビア数字（半角/全角）
+{num_cn}       - 漢数字（小文字/大文字）
+{num_cn_paren} - 括弧付き漢数字（㈠-㈩）
+{num}          - すべての数字（中国語 + アラビア + ㈠-㈩）
+{letter}       - ラテン文字（大文字/小文字）
+{circled}      - 丸数字（①-㊿, ❶-⓴, ⓵-⓾など）
+{unit_suffix}  - 中国語単位接尾辞（章、節など）
+{unit_prefix}  - 中国語単位接頭辞（巻、部など）"""
+prompt = "情報"
+no_example_text = "このルールに設定された例はありません"
+load_failed = "読み込み失敗"
+load_failed_message = "構成ファイルの読み込みに失敗しました：{error}"
+save_failed = "保存失敗"
+save_failed_message = "構成ファイルの保存に失敗しました"
+save_failed_with_error = "構成の保存に失敗しました：{error}"
+
+# Cleanup rule names
+[editors.numbering_clean.names]
+chinese_unit_suffix = "中国語 [第X単位] 形式"
+chinese_unit_prefix = "中国語 [単位-X] 形式"
+circled_numbers = "丸数字"
+bracket_number = "括弧付き数字"
+hierarchical = "階層数字"
+number_separator = "セパレーター付き数字"
+legal_english = "英語の章形式"
+letter_number = "文字番号"
+
+# Cleanup rule descriptions (for editor display)
+[editors.numbering_clean.descriptions]
+chinese_unit_suffix_desc = "マッチ：第X回/篇/册/卷/部/集/期/编/章/节/条/款/项/目 + スペース"
+chinese_unit_prefix_desc = "マッチ：卷/篇/册/部/集/期/编/章/节/回 + 数字 + スペース"
+circled_numbers_desc = "マッチ：①-㊿, ❶-⓴, ⓵-⓾, ㈠-㈩ 丸数字 + オプションのセパレーター"
+bracket_number_desc = "マッチ：(1), （一）, 1), 一） など + オプションのセパレーター"
+hierarchical_desc = "マッチ：1.1 / 1.1.1 / 1.1.1.1 など + オプションのセパレーター"
+number_separator_desc = "マッチ：1. / 2、/ 一、/ 二, など + オプションのスペース"
+legal_english_desc = "マッチ：Chapter/Part/Volume/Book/Section + 数字/ローマ数字"
+letter_number_desc = "マッチ：A. / A) / (A) / a. / a) 文字番号"
+
+# Mapping Editor
+[editors.mapping]
+# Dialog titles
+symbol_editor_title = "句読点マッピングエディタ"
+typo_editor_title = "誤字辞書エディタ"
+sensitive_editor_title = "注意用語エディタ"
+generic_editor_title = "マッピングエディタ"
+
+# Column headers
+symbol_correct_symbol = "正しい記号"
+symbol_error_symbols = "エラー記号リスト"
+typo_correct_word = "正しい単語"
+typo_error_words = "エラー単語リスト"
+sensitive_sensitive_word = "注意用語"
+sensitive_exceptions = "例外リスト"
+comment = "コメント"
+generic_key = "キー"
+generic_value_list = "値リスト"
+
+# Description text
+symbol_description = "エラーから正しい記号へのマッピングを構成します。キーは正しい記号、値はエラー記号です。"
+typo_description = "誤字から正しい単語へのマッピングを構成します。キーは正しい単語、値は誤字です。"
+sensitive_description = "注意用語とその例外を構成します。キーは注意用語、値は例外フレーズです。"
+generic_description = "マッピング関係を構成します。"
+
+# Buttons
+add_entry = "エントリを追加"
+edit_entry = "エントリを編集"
+delete_entry = "エントリを削除"
+
+# Prompt messages
+prompt = "情報"
+select_entry_to_edit = "最初に編集するエントリを選択してください"
+select_entry_to_delete = "最初に削除するエントリを選択してください"
+confirm_delete = "削除確認"
+confirm_delete_message = "エントリ '{entry_key}' を削除してもよろしいですか？"
+error = "エラー"
+save_error = "保存失敗：{error}"
+
+# Entry edit dialog
+add = "追加"
+edit = "編集"
+symbol_mapping = "記号マッピング"
+typo_mapping = "誤字マッピング"
+sensitive_mapping = "注意用語"
+generic_mapping = "マッピング"
+
+# Labels
+symbol_correct_symbol_label = "正しい記号："
+typo_correct_word_label = "正しい単語："
+sensitive_sensitive_word_label = "注意用語："
+generic_key_label = "キー："
+symbol_error_symbols_label = "エラー記号（1行に1つ）："
+typo_error_words_label = "エラー単語（1行に1つ）："
+sensitive_exceptions_label = "例外（1行に1つ）："
+generic_value_list_label = "値（1行に1つ）："
+comment_label = "コメント："
+
+# Example text
+symbol_example = '例：正しい記号 "，" (読点)、エラー記号 "," (カンマ)'
+typo_example = '例：正しい単語 "decision"、エラー単語 "descision"'
+sensitive_example = "例：注意用語 \"keyword\"、例外 \"keyword123\" (チェックをトリガーしません)"
+generic_example = "1行に1つの値"
+
+# Validation messages
+enter_correct_symbol_or_word = "正しい記号または単語を入力してください"
+enter_error_symbol_or_word_list = "エラー記号または単語リストを入力してください"
+
+# 重複キー処理
+duplicate_key_title = "キーが既に存在します"
+duplicate_key_message = "キー \"{entry_key}\" は既に存在します\n\n現在の値：{current_values}\n現在のコメント：{current_comment}\n\n操作を選択してください："
+duplicate_key_no_comment = "（なし）"
+overwrite = "上書き"
+overwrite_tooltip = "新しい値とコメントで完全に置き換える"
+merge = "マージ"
+merge_tooltip = "新旧の値をマージ（重複排除）、コメント：新しいコメントが空の場合は元のコメントを保持"
+
+# =============================================================================
+# Style Names (for document conversion)
+# These style names are used for style injection and detection in MD ↔ DOCX conversion
+# =============================================================================
+[styles]
+# Code Styles
+code_block = "コードブロック"
+inline_code = "インラインコード"
+
+# Quote Styles (9 levels)
+quote_1 = "引用 1"
+quote_2 = "引用 2"
+quote_3 = "引用 3"
+quote_4 = "引用 4"
+quote_5 = "引用 5"
+quote_6 = "引用 6"
+quote_7 = "引用 7"
+quote_8 = "引用 8"
+quote_9 = "引用 9"
+
+# Formula Styles
+formula_block = "数式ブロック"
+inline_formula = "インライン数式"
+
+# Horizontal Rule Styles
+horizontal_rule_1 = "水平線 1"
+horizontal_rule_2 = "水平線 2"
+horizontal_rule_3 = "水平線 3"
+
+# List Styles
+list_block = "リストブロック"
+
+# Table Styles
+table_content = "テーブル内容"
+three_line_table = "三線表"
+table_grid = "テーブルグリッド"
+
+# Body Paragraph Style
+body_paragraph = "本文段落"
+
+# =============================================================================
+# Style Format Configurations (for style injection format properties)
+# =============================================================================
+[style_formats]
+
+# Body paragraph format (MS 明朝, 10.5pt, 1字符缩进, 两端对齐)
+[style_formats.body_paragraph]
+east_asia_font = "MS 明朝"
+ascii_font = "Times New Roman"
+font_size_pt = 10.5
+first_line_indent_chars = 100
+first_line_indent_cm = 0
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = false
+justification = "both"
+
+# Heading 1 format (MS ゴシック, 14pt, 1字符缩进, 两端对齐)
+[style_formats.heading_1]
+east_asia_font = "MS ゴシック"
+ascii_font = "Times New Roman"
+font_size_pt = 14
+first_line_indent_chars = 100
+first_line_indent_cm = 0
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = false
+justification = "both"
+
+# Heading 2-9 format (MS 明朝, 12pt, 1字符缩进, 两端对齐)
+[style_formats.heading_2]
+east_asia_font = "MS 明朝"
+ascii_font = "Times New Roman"
+font_size_pt = 12
+first_line_indent_chars = 100
+first_line_indent_cm = 0
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = false
+justification = "both"
+
+# Heading 3-9 format (MS 明朝, 12pt, 1字符缩进, 两端对齐)
+[style_formats.heading_3_9]
+east_asia_font = "MS 明朝"
+ascii_font = "Times New Roman"
+font_size_pt = 12
+first_line_indent_chars = 100
+first_line_indent_cm = 0
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = false
+justification = "both"
+
+# =============================================================================
+# Placeholders (for document templates)
+# These placeholders are used for template filling in MD → DOCX conversion
+# =============================================================================
+[placeholders]
+title = "タイトル"
+body = "本文"
+
+# =============================================================================
+# YAML Keys (for metadata)
+# These keys are used for YAML front matter output in DOCX → MD conversion
+# =============================================================================
+[yaml_keys]
+title = "タイトル"
+subtitle = "サブタイトル"
+
+# =============================================================================
+# Conversion Panel Sections
+# =============================================================================
+[conversion_panel]
+format_conversion = "形式変換"
+save_as = "名前を付けて保存"
+select_file_hint = "最初にファイルを選択してください"
+same_format_tooltip = "すでに {format} 形式です"
+compressible_format_tooltip = "圧縮がサポートされています"
+png_compression_tooltip = "PNGはロスレスであり、品質圧縮をサポートしていません"
+bmp_compression_tooltip = "BMPはロスレスであり、品質圧縮をサポートしていません"
+gif_compression_tooltip = "GIFはロスレスであり、品質圧縮をサポートしていません"
+tif_compression_tooltip = "TIF/TIFFはロスレスであり、品質圧縮をサポートしていません"
+other_format_compression_tooltip = "{format} 形式は品質圧縮をサポートしていません"
+high_quality_conversion_tooltip = "高品質変換"
+lossless_conversion_tooltip = "ロスレス変換"
+document_conversion_tooltip = "このドキュメント形式に変換"
+csv_conversion_tooltip = "CSV形式（プレーンテキストテーブル）に変換"
+spreadsheet_conversion_tooltip = "このスプレッドシート形式に変換"
+pdf_conversion_tooltip = "PDF形式に変換"
+docx_conversion_tooltip = "DOCX形式に変換"
+doc_conversion_tooltip = "DOC形式に変換"
+tif_conversion_tooltip = "TIF画像としてレンダリング"
+jpg_conversion_tooltip = "JPG画像としてレンダリング"
+
+# Document Conversion Section
+[conversion_panel.document]
+convert_to_other_formats = "他のドキュメント形式に変換"
+convert_to_layout = "レイアウト形式に変換"
+save_as_pdf = "PDFとして保存"
+save_as_pdf_tooltip = "ドキュメントをPDFレイアウトファイルに変換"
+save_as_ofd = "OFDとして保存"
+save_as_ofd_tooltip = "まだサポートされていません"
+proofread_document = "ドキュメント校正"
+proofread_hint = "ドキュメントを校正"
+proofread_button = "📝 校正"
+proofread_button_tooltip = "記号のペアリング、誤字、機密用語などをチェックします"
+proofread_options = "校正オプション"
+symbol_pairing = "記号ペアリング"
+symbol_pairing_tooltip = "ペアの記号（括弧、引用符など）が一致するか確認します"
+typos_rule = "誤字修正"
+typos_rule_tooltip = "一般的な誤字を確認します"
+symbol_correction = "記号修正"
+symbol_correction_tooltip = "誤った記号を確認します"
+sensitive_word = "注意用語マッチング"
+sensitive_word_tooltip = "注意用語を確認します"
+
+# Image Conversion Section
+[conversion_panel.image]
+convert_to_other_formats = "他の画像形式に変換"
+compression_options = "圧縮オプション"
+highest_quality = "最高品質"
+highest_quality_tooltip = "ロスレスまたは高品質変換。JPEG/WebPはquality=95を使用、PNG/BMP/GIF/TIFはロスレス圧縮を使用します。"
+limit_file_size = "ファイルサイズを制限"
+limit_file_size_tooltip = "品質パラメータを調整してターゲットサイズに圧縮します。JPEG/WebPにのみ有効です。他の形式は最高品質で保存されます。"
+file_size_limit = "ファイルサイズ制限："
+enter_size_limit_warning = "ファイルサイズ制限を入力してください"
+kb_range_warning = "10から10000（KB）の数値を入力してください"
+mb_range_warning = "1から100（MB）の数値を入力してください"
+enter_valid_number_warning = "有効な数値を入力してください"
+convert_to_layout = "レイアウト形式に変換"
+save_as_pdf = "PDFとして保存"
+save_as_pdf_tooltip = "画像をPDFレイアウトファイルに変換"
+save_as_ofd = "OFDとして保存"
+save_as_ofd_tooltip = "まだサポートされていません"
+size_options = "サイズオプション"
+original_embed = "オリジナル埋め込み"
+fit_a4 = "A4に合わせる"
+fit_a3 = "A3に合わせる"
+no_pdf_size_option_warning = "PDFサイズオプションを選択してください"
+merge_images = "画像を結合"
+merge_images_hint = "複数の画像を1つに結合"
+merge_to_tif = "TIFに結合"
+conversion_options = "変換オプション"
+preserve_transparency = "透明度を保持"
+preserve_transparency_tooltip = "ソース画像の透明度を保持します（ある場合）"
+no_transparency = "透明度なし"
+no_transparency_tooltip = "RGBモードに変換し、透明な背景は白になります"
+
+# Layout Conversion Section
+[conversion_panel.layout]
+convert_to_other_formats = "他のレイアウト形式に変換"
+save_as_ofd_tooltip = "まだサポートされていません"
+convert_to_document_or_image = "ドキュメントまたは画像に変換"
+save_as_format = "{format} として保存"
+save_as_docx_tooltip = "レイアウトファイルをDOCXドキュメントに変換"
+save_as_doc_tooltip = "レイアウトファイルをDOCドキュメントに変換"
+render_as_tif = "TIFとしてレンダリング"
+render_as_tif_tooltip = "PDFページをTIF画像としてレンダリングし、マルチページTIFFをサポート、DPI品質選択をサポート"
+render_as_jpg = "JPGとしてレンダリング"
+render_as_jpg_tooltip = "PDFをJPG画像としてレンダリングします（ページごとに1ファイル）"
+image_quality_dpi = "画像品質 (DPI)"
+minimum_150 = "低 (150 DPI) - クイックプレビュー"
+moderate_300 = "標準 (300 DPI) - 日常使用"
+high_definition_600 = "高 (600 DPI) - 印刷用"
+merge_split = "結合/分割"
+merge_split_hint = "レイアウトファイルを結合または分割"
+merge_to_pdf = "PDFに結合"
+merge_to_pdf_tooltip = "バッチリスト内のファイルを上から下の順序で1つのPDFに結合します。ファイルを選択した後、↑↓矢印を使用して結合順序を調整します。"
+merge_to_ofd = "OFDに結合"
+merge_to_ofd_tooltip = "まだサポートされていません"
+split_to_pdf = "PDFに分割"
+split_to_pdf_tooltip = "入力ページ範囲に基づいて現在のファイルを2つのPDFに分割します。最初のファイルには入力ページが含まれ、2番目のファイルには残りのページが含まれます（ある場合）。"
+split_to_ofd = "OFDに分割"
+split_to_ofd_tooltip = "まだサポートされていません"
+split_page_range = "分割ページ範囲："
+page_range_info = "ページ範囲を入力してください。例：\n• 1-5：1ページから5ページ\n• 1,3,5：1、3、5ページ\n• 1-3,7-9：1-3ページと7-9ページ\n• セパレーターをサポート：1~3;5;7至10"
+page_range_placeholder = "例：1-3,5,7-10"
+selected_split_file = "分割する選択されたファイル（{pages} ページ）："
+no_file_selected = "ファイルが選択されていません"
+cannot_split_all_pages = "❌ すべてのページを分割することはできません（いくつかのページを残してください）"
+pages_out_of_range_adjusted = "⚠️ 一部のページが範囲外です、自動的に調整されました（合計 {pages} ページ）"
+all_pages_out_of_range = "❌ すべてのページが範囲外です（合計 {pages} ページ）"
+
+# Spreadsheet Conversion Section
+[conversion_panel.spreadsheet]
+convert_to_other_formats = "他のスプレッドシート形式に変換"
+convert_to_layout = "レイアウト形式に変換"
+save_as_pdf = "PDFとして保存"
+save_as_pdf_tooltip = "スプレッドシートをPDFレイアウトファイルに変換するには、ローカルのOfficeソフトウェアが必要です"
+save_as_ofd = "OFDとして保存"
+save_as_ofd_tooltip = "まだサポートされていません"
+merge_tables = "テーブル結合"
+merge_tables_hint = "選択したモードで複数のテーブルを結合"
+merge_tables_button = "📋 テーブル結合"
+merge_tables_button_tooltip = "選択したモードでバッチリスト内の複数のテーブルを参照テーブルに結合します。最初に結合モード（行/列/セル）を選択してください。"
+merge_options = "結合オプション"
+merge_by_row = "行で結合"
+merge_by_row_tooltip = "1つ以上のテーブルを行ごとに参照テーブルに結合します"
+merge_by_column = "列で結合"
+merge_by_column_tooltip = "1つ以上のテーブルを列ごとに参照テーブルに結合します"
+merge_by_cell = "セルで結合"
+merge_by_cell_tooltip = "対応するセル位置からデータを追加します"
+selected_reference_table = "現在選択されている参照テーブル："
+no_table_selected = "テーブルが選択されていません"
+
+# =============================================================================
+# Action Panel Sections
+# =============================================================================
+[action_panel]
+export_options = "エクスポートオプション"
+extraction_options = "抽出オプション"
+generation_options = "生成オプション"
+extract_images = "画像を抽出"
+extract_images_tooltip = "MDに変換する際にファイルから画像を抽出します"
+ocr = "画像OCR"
+ocr_tooltip = "MDに変換する際に画像のテキストを認識するためにOCRを有効にします"
+
+# Proofreading Options
+[action_panel.proofread]
+symbol_pairing = "記号ペアリング"
+symbol_pairing_tooltip = "ペアの記号（括弧、引用符など）が一致するか確認します"
+typos_rule = "誤字修正"
+typos_rule_tooltip = "一般的な誤字を確認します"
+symbol_correction = "記号修正"
+symbol_correction_tooltip = "誤った記号を確認します"
+sensitive_word = "注意用語"
+sensitive_word_tooltip = "注意用語を確認します"
+
+# Document to MD Panel
+[action_panel.document]
+ready = "準備完了"
+export_markdown = "Markdownをエクスポート"
+export_markdown_tooltip = "ドキュメントをMarkdown形式に変換"
+optimize_for_type = "ドキュメントタイプに合わせて最適化"
+optimize_for_type_tooltip = "ドキュメントタイプに基づいてターゲットを絞った最適化を実行します"
+remove_existing_numbering = "元のドキュメント見出し番号を削除"
+remove_existing_numbering_tooltip = "MDに変換する際、既存の見出し番号を削除します"
+add_new_numbering = "新しい見出し番号を追加"
+add_new_numbering_tooltip = "MDに変換する際、新しい見出し番号を追加します"
+
+# Spreadsheet to MD Panel
+[action_panel.spreadsheet]
+ready = "準備完了"
+export_markdown = "Markdownをエクスポート"
+export_markdown_tooltip = "スプレッドシートをMarkdown形式に変換"
+
+# Image to MD Panel
+[action_panel.image]
+ready = "準備完了"
+export_markdown = "Markdownをエクスポート"
+export_markdown_tooltip = "画像をMarkdown形式に変換"
+extract_images_tooltip = "MDに変換する際に画像を保持します"
+ocr_tooltip = "MDに変換する際に画像のテキストを認識するためにOCRを有効にします"
+
+# Layout to MD Panel
+[action_panel.layout]
+ready = "準備完了"
+export_markdown = "Markdownをエクスポート"
+export_markdown_tooltip = "レイアウトファイルをMarkdown形式に変換"
+
+# MD to Document Panel
+[action_panel.md_to_document]
+ready = "準備完了"
+generate_docx = "DOCXを生成"
+generate_docx_tooltip = "MarkdownをDOCXドキュメントに変換"
+generate_doc = "DOCを生成"
+generate_doc_tooltip = "MarkdownをDOCドキュメントに変換（ローカルのOfficeソフトウェアが必要）"
+generate_odt = "ODTを生成"
+generate_odt_tooltip = "MarkdownをODTドキュメントに変換（LibreOfficeが必要）"
+generate_rtf = "RTFを生成"
+generate_rtf_tooltip = "MarkdownをRTFドキュメントに変換（ローカルのOfficeソフトウェアが必要）"
+remove_existing_numbering = "元のMarkdown見出し番号を削除"
+remove_existing_numbering_tooltip = "ドキュメントに変換する際、既存の見出し番号を削除します"
+add_new_numbering = "新しい見出し番号を追加"
+add_new_numbering_tooltip = "ドキュメントに変換する際、新しい見出し番号を追加します"
+
+# MD to Spreadsheet Panel
+[action_panel.md_to_spreadsheet]
+ready = "準備完了"
+generate_xlsx = "XLSXを生成"
+generate_xlsx_tooltip = "MarkdownをXLSXスプレッドシートに変換"
+generate_xls = "XLSを生成"
+generate_xls_tooltip = "MarkdownをXLSスプレッドシートに変換（ローカルのOfficeソフトウェアが必要）"
+generate_ods = "ODSを生成"
+generate_ods_tooltip = "MarkdownをODSスプレッドシートに変換（LibreOfficeが必要）"
+generate_csv = "CSVを生成"
+generate_csv_tooltip = "MarkdownをCSVスプレッドシートに変換（プレーンテキスト形式）"
+
+
+
+# =============================================================================
+# Conversion Progress Messages
+# =============================================================================
+[conversion.progress]
+converting_to_format = "{format}に変換中..."
+preparing = "準備中..."
+preparing_format = "{format} をPDFに変換する準備中..."
+detecting_format = "実際の形式を検出中..."
+processing_images = "画像を処理中..."
+saving_file = "ファイルを保存中..."
+csv_completed = "変換完了。{count} 個のCSVファイルを生成しました。"
+tiff_completed = "変換完了。{count} ページを変換しました。"
+final_conversion = "最終形式変換を完了中..."
+extracting_pdf_content = "PDFコンテンツを抽出中..."
+images_extracted = "{count} 個の画像を抽出しました"
+images_extracted_preparing_ocr = "{count} 個の画像を抽出しました、OCR..."
+extracting_images = "画像を抽出中：{count}"
+ocr_recognizing = "OCR認識中：{current}/{total}"
+loading_document = "ドキュメントを読み込み中..."
+loading_word_template = "Wordテンプレートを読み込み中..."
+loading_excel_template = "Excelテンプレートを読み込み中..."
+parsing_markdown = "Markdownファイルを解析中..."
+processing_markdown_body = "Markdownコンテンツを処理中..."
+processing_textboxes_tables = "テキストボックスとテーブルを処理中..."
+extracting_title = "タイトルを抽出中..."
+extracting_markdown_tables = "Markdownテーブルを抽出中..."
+generating_markdown = "Markdownコンテンツを生成中..."
+filling_template = "テンプレートコンテンツを充填中..."
+filling_yaml_data = "YAMLデータを充填中..."
+filling_table_data = "テーブルデータを充填中..."
+saving_excel = "Excelファイルを保存中..."
+writing_file = "ファイルを書き込み中..."
+executing_final_proofread = "最終校正を実行中..."
+initializing_proofread = "校正エンジンを初期化中..."
+proofreading_progress = "校正中... {current}/{total}"
+saving_proofread_result = "校正結果を保存中..."
+validating_params = "パラメータを検証中..."
+preprocessing_base_table = "ベーステーブルを前処理中..."
+merging_table_progress = "テーブル {current}/{total} を結合中..."
+saving_merge_result = "結合結果を保存中..."
+conversion_to_csv_success = "CSVに変換しました ({count} ファイル)。"
+converting_format_to_png = "{format} をPNGに変換中..."
+converting_format_to_pdf = "{format} をPDFに変換中..."
+error_no_template = "エラー：テンプレート名が指定されていません。"
+spell_checking = "スペルチェック中..."
+extracting_images_start = "画像を抽出中..."
+styles_injected = "{count} 個の欠落スタイルを注入しました"
+preparing_files = "ファイルを準備中..."
+preparing_merge = "{count} 個のファイルを結合する準備中..."
+preparing_merge_images = "{count} 個の画像を結合する準備中..."
+preparing_split_pdf = "PDFを分割する準備中..."
+preparing_proofread = "校正の準備中..."
+reading_file = "ファイルを読み込み中..."
+processing_numbering = "番号付けを処理中..."
+proofreading = "校正中..."
+converting_ofd_to_pdf = "OFDをPDFに変換中..."
+converting_xps_to_pdf = "XPSをPDFに変換中..."
+converting_caj_to_pdf = "CAJをPDFに変換中..."
+using_external_tool_pdf = "外部ツールを使用してPDFを変換中..."
+processing_file_progress = "ファイル処理中 {current}/{total}：{filename}"
+merging_pdf_files = "PDFファイルを結合中..."
+merging_file_progress = "ファイルを結合中 {current}/{total}"
+creating_pdf_part = "PDFパーツ {part} を作成中..."
+rendering_pdf_to_png = "PDFページをPNGにレンダリング中..."
+rendering_pdf_to_jpg = "PDFページをJPGにレンダリング中..."
+rendering_pdf_pages = "PDFページをレンダリング中..."
+rendering_page_progress = "ページ {current}/{total} をレンダリング中..."
+saving_tif_file = "TIFファイルを保存中..."
+step_pdf_to_docx = "ステップ 1/2：PDFからDOCX..."
+step_docx_to_format = "ステップ 2/2：DOCXから {format}..."
+extracting_page = "ページ {page} を抽出中"
+converting_format_to_target = "{format} を {target} に変換中..."
+converting_page_to_format = "ページ {page} を {format} に変換中..."
+loading_image_progress = "画像を読み込み中 {current}/{total}..."
+determining_color_mode = "カラーモードを決定中..."
+converting_to_mode = "{mode} モードに変換中..."
+generating_tiff_file = "TIFFファイルを生成中..."
+merge_completed = "結合完了。"
+converting_source_to_target = "変換：{source} → {target}..."
+step_conversion_progress = "ステップ {step}/{total}：{source} → {target}..."
+conversion_completed_with_readonly_warnings = "変換は完了しましたが、読み取り専用ステータスのため {count} 個のセルを充填できませんでした"
+fixing_conflict_style = "競合スタイルを修正中：{name} ({from_type}→{to_type})"
+styles_injected_with_conflicts = "{count} 個のスタイルを注入しました ({conflicts} 個の競合を修正)"
+
+# =============================================================================
+# Conversion Result Messages (status bar/popup)
+# =============================================================================
+[conversion.messages]
+# General messages
+operation_cancelled = "操作がキャンセルされました"
+conversion_failed_check_log = "変換に失敗しました。ログを確認してください。"
+conversion_to_format_success = "{format} に変換しました。"
+
+# Success messages
+
+# Proofreading messages
+proofread_completed = "校正完了。"
+proofread_skipped = "校正ルールが選択されていないため、操作はスキップされました。"
+proofread_failed = "校正に失敗しました。ログを確認してください。"
+
+# Layout conversion messages
+file_already_pdf = "ファイルはすでにPDF形式です"
+ofd_to_pdf_failed = "OFDからPDFへの変換に失敗しました"
+xps_to_pdf_failed = "XPSからPDFへの変換に失敗しました"
+ofd_conversion_not_implemented = "OFD変換は実装されていません"
+txt_conversion_developing = "レイアウトからTXTへの機能は開発中です。"
+
+# Missing dependency messages
+missing_pymupdf = "PyMuPDFライブラリが見つかりません。インストールしてください：pip install PyMuPDF"
+missing_office_for_pdf = "Officeソフトウェア（WPS、Microsoft Office、またはLibreOffice）が見つからないため、PDFに変換できません。"
+missing_office_for_conversion = "Officeソフトウェア（WPSまたはMicrosoft Office）が見つからないため、変換を完了できません。"
+doc_format_requires_office = "DOC/WPS形式変換にはWPSまたはMicrosoft Officeが必要です"
+xls_format_requires_office = "XLS形式変換にはWPSまたはMicrosoft Officeが必要です"
+external_tool_failed = "外部ツール変換に失敗しました。Word、LibreOffice、またはpdf2docxライブラリをインストールしてください"
+pdf_to_docx_failed = "PDFからDOCXへの変換に失敗しました。Word、LibreOffice、またはpdf2docxライブラリをインストールしてください"
+
+# Merge/Split messages
+no_files_to_merge = "結合するためのファイルが提供されていません"
+need_at_least_two_files = "結合するには少なくとも2つのファイルが必要です"
+no_pages_to_split = "分割するためのページ番号が提供されていません"
+split_failed_all_pages = "分割失敗：入力ページ番号がすべてのページをカバーしているため、分割できません"
+
+# MD conversion messages
+md_to_xlsx_failed = "MarkdownからXLSXへの変換に失敗しました。"
+md_to_docx_failed = "初期のMDからDOCXへの変換に失敗しました。"
+spell_check_failed = "スペルチェックプロセスに失敗しました。"
+final_format_failed = "最終形式変換に失敗しました。"
+final_format_generation_failed = "最終形式生成に失敗しました。"
+no_csv_generated = "CSVファイルが生成されませんでした（ワークシートが空である可能性があります）"
+
+# Image conversion messages
+no_images_to_merge = "結合するファイルがありません"
+no_images_loaded = "画像が正常に読み込まれませんでした"
+conversion_failed_no_target = "変換失敗：ターゲット形式が指定されていません"
+
+# Numbering operation messages
+no_numbering_operation = "少なくとも1つの操作を指定してください：--remove-numbering または --add-numbering"
+
+# Success messages (with parameters)
+conversion_to_image_success = "{format} 保存、{count} 画像"
+conversion_to_tif_success = "TIF保存、{pages} ページ"
+conversion_to_format_pages_success = "{format} 保存、{count} ページ"
+merge_pdf_success = "{file_count} ファイル、{page_count} ページを結合しました"
+split_pdf_success_two = "分割：{pages1}p + {pages2}p"
+split_pdf_success_one = "分割：1ファイル、{pages}p"
+merge_images_to_tiff_success = "{count} 個の画像をTIFFに結合しました"
+
+# Failure messages (with parameters)
+docx_to_format_failed = "DOCX→{format} 失敗"
+conversion_to_format_failed = "{format} への変換に失敗しました"
+conversion_failed_with_error = "失敗：{error}"
+unsupported_layout_format = "サポートされていない形式：{format}"
+format_to_pdf_not_implemented = "{format}→PDF は実装されていません"
+all_pages_invalid = "無効なページ（合計 {total}p）"
+
+# =============================================================================
+# 校正コメントテキスト
+# =============================================================================
+[proofread]
+
+[proofread.error_type]
+typo = "誤字脱字"
+punctuation = "句読点"
+sensitive = "注意用語"
+unmatched = "不一致の記号"
+
+[proofread.source]
+typo = "誤字脱字チェック"
+symbol = "記号チェック"
+sensitive = "注意用語チェック"
+pairing = "ペアリングチェック"
+
+[proofread.suggestion]
+sensitive = "注意用語検出"
+extra_close = "余分な閉じ記号"
+unclosed = "閉じられていない記号"

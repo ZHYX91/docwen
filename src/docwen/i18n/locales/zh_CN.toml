@@ -1,0 +1,1806 @@
+# 公文转换器 - 简体中文语言文件
+# 语言代码: zh_CN
+# 编码: UTF-8
+
+[meta]
+name = "Simplified Chinese"
+native_name = "简体中文"
+
+# =============================================================================
+# CLI 命令行界面
+# =============================================================================
+[cli]
+description = "公文转换器命令行工具 - 支持文档/表格/图片/版式文件的转换"
+example = "示例"
+header = "公文转换器 - 交互模式"
+
+# CLI帮助文本
+[cli.help]
+files = "输入文件路径（支持通配符，如 *.docx）"
+action = "操作类型"
+target = "目标格式（用于convert操作，如 docx, pdf, jpg）"
+extract_img = "提取图片"
+ocr = "OCR识别图片文字"
+optimize_for = "针对优化类型：gongwen（公文）、contract（合同）、thesis（论文）"
+template = "模板名称（用于MD转文档/表格）"
+check_punct = "检查标点配对"
+check_typo = "检查错别字"
+check_symbol = "检查符号规范"
+check_sensitive = "检查敏感词"
+merge_mode = "汇总模式：按行/按列/按单元格"
+base_table = "基准表格文件路径"
+pages = "PDF拆分页码范围（如 1-3,5,7-10）"
+dpi = "图片DPI质量"
+compress = "压缩模式"
+size_limit = "文件大小限制（如 200KB, 2MB）"
+quality_mode = "PDF质量模式（图片转PDF时使用）"
+batch = "批量模式（所有文件使用相同配置）"
+yes = "跳过所有确认提示"
+continue_on_error = "出错时继续处理剩余文件"
+json = "JSON格式输出（适合AI/脚本解析）"
+quiet = "安静模式（最小输出）"
+verbose = "详细模式（显示更多信息）"
+remove_numbering = "清除原有小标题序号"
+add_numbering = "新增小标题序号"
+numbering_scheme = "序号方案"
+inspect = "查询文件支持的操作（AI自描述）"
+list_actions = "列出所有可用操作"
+list_numbering_schemes = "列出所有可用的序号方案"
+list_templates = "列出所有可用模板"
+lang = "临时指定界面语言（不影响配置文件）"
+keep_alpha = "TIFF合并时保留透明度"
+
+# CLI参数组标题
+[cli.groups]
+export_options = "导出选项"
+export_options_desc = "用于export_md操作"
+validate_options = "校对选项"
+validate_options_desc = "用于validate操作"
+merge_options = "汇总选项"
+merge_options_desc = "用于merge_tables操作"
+pdf_options = "PDF选项"
+pdf_options_desc = "用于PDF合并/拆分"
+image_options = "图片选项"
+image_options_desc = "用于图片格式转换"
+batch_options = "批处理选项"
+batch_options_desc = "批量文件处理"
+output_options = "输出控制"
+output_options_desc = "控制输出格式和详细程度"
+numbering_options = "序号选项"
+numbering_options_desc = "用于小标题序号处理"
+ai_options = "AI功能"
+ai_options_desc = "AI自描述和查询功能"
+
+# CLI交互模式
+[cli.interactive]
+header = "公文转换器 - 交互模式"
+select_operation = "请选择操作"
+select_format = "请选择输出格式"
+select_target_format = "请选择目标格式"
+input_target_format = "目标格式 (docx/pdf/...)"
+select_image_format = "请选择图片格式"
+select_pdf_size = "请选择PDF尺寸"
+select_numbering_scheme = "请选择序号方案"
+select_optimization_type = "请选择优化类型"
+select_dpi = "请选择DPI质量"
+select_compress_mode = "压缩模式"
+confirm_convert_pdf = "确认转换为PDF?"
+confirm_merge = "确认合并"
+export_options = "导出选项"
+extraction_options = "提取选项"
+numbering_options = "序号处理选项"
+numbering_processing = "小标题序号处理"
+page_range_label = "页码范围"
+input_pages = "请输入页码范围"
+input_files = "请输入文件路径或拖入文件"
+input_size_limit = "文件大小上限"
+input_other_pdfs = "请输入要合并的其他PDF文件路径（支持通配符）"
+image_export_hint = "注意: 图片文件至少需要选择一个选项"
+proofread_options = "校对选项"
+proofread_toggle_hint = "\n输入序号切换状态（如: 1 3 4），直接回车确认"
+proofread_input = "校对选项"
+
+# 文件类型菜单
+[cli.interactive.menus]
+markdown_to_docx = "转换为 Word 文档 (DOCX/DOC/ODT/RTF)"
+markdown_to_xlsx = "转换为 Excel 表格 (XLSX/XLS/ODS/CSV)"
+process_numbering = "处理小标题序号"
+export_markdown = "导出 Markdown"
+export_md_ocr = "导出 Markdown (OCR)"
+format_convert = "格式转换"
+image_format_convert = "格式转换 (PNG/JPG/BMP/GIF/TIF/WebP)"
+save_as_pdf = "另存为 PDF"
+convert_to_document = "转换为文档 (DOCX/DOC)"
+document_validate = "文档校对"
+render_to_image = "渲染为图片"
+pdf_tools = "PDF工具箱 (合并/拆分)"
+merge_pdfs = "合并PDF文件"
+split_pdf = "拆分PDF文件"
+cancel = "取消"
+back = "返回"
+
+# 格式选项
+[cli.interactive.formats]
+docx_recommended = "DOCX (推荐)"
+doc_office = "DOC (需要Office)"
+odt_libre = "ODT (需要LibreOffice)"
+rtf_office = "RTF (需要Office)"
+xlsx_recommended = "XLSX (推荐)"
+xls_office = "XLS (需要Office)"
+ods_libre = "ODS (需要LibreOffice)"
+csv_text = "CSV (纯文本)"
+tif_multipage = "TIF (多页TIFF)"
+jpg_jpeg = "JPG (JPEG)"
+png_lossless = "PNG (无损)"
+jpg_lossy = "JPG (有损压缩)"
+bmp = "BMP (位图)"
+gif = "GIF (动画)"
+tif = "TIF (专业)"
+webp = "WebP (现代格式)"
+
+# DPI选项
+[cli.interactive.dpi]
+dpi_150 = "150 DPI (最小)"
+dpi_300 = "300 DPI (适中，推荐)"
+dpi_600 = "600 DPI (高清)"
+
+# 压缩选项
+[cli.interactive.compress]
+highest_quality = "最高质量"
+limit_size = "限制文件大小"
+
+[cli.interactive.pdf_sizes]
+original = "原图尺寸"
+fit_a4 = "适合A4"
+fit_a3 = "适合A3"
+
+# 序号方案
+[cli.interactive.numbering_schemes]
+gongwen_standard = "公文标准（一、（一）1.（1）①）"
+hierarchical_standard = "层级数字标准（1 1.1 1.1.1）"
+hierarchical_h2_start = "层级数字(H2起)（H1无序号，H2起为 1 1.1 1.1.1）"
+legal_standard = "法律条文标准（第一编 第一章 第一节 第一条）"
+
+# 优化类型
+[cli.interactive.optimization_types]
+gongwen = "公文"
+contract = "合同"
+thesis = "论文"
+
+# 校对选项
+[cli.interactive.proofread]
+symbol_pairing = "标点配对"
+symbol_correction = "符号校对"
+typos_rule = "错别字检查"
+sensitive_word = "敏感词匹配"
+
+# 提示文本
+[cli.interactive.prompts]
+extract_images = "提取图片?"
+embed_image = "嵌入图片?"
+ocr_recognition = "OCR识别图片文字?"
+ocr_simple = "OCR识别?"
+optimize_for_type = "针对文档类型优化?"
+remove_numbering = "清除原有序号?"
+add_numbering = "添加新序号?"
+continue_next = "继续处理下一个?"
+apply_to_all = "将此操作应用到所有文件?"
+
+# CLI消息
+[cli.messages]
+error_no_files = "错误: 需要指定输入文件"
+error_no_action = "错误: Headless模式需要指定 --action"
+error_no_valid_files = "错误: 没有有效文件"
+error_file_not_found = "错误: 未找到有效文件"
+error_inspect_no_file = "错误: --inspect 需要指定文件"
+warning_invalid_files = "警告: {count} 个文件无效"
+warning_format_mismatch = "警告: {count} 个文件格式不匹配"
+no_files_selected = "未选择文件，退出"
+no_operation_selected = "未选择任何操作"
+program_interrupted = "程序已中断"
+error_prefix = "错误"
+files_found = "找到 {count} 个文件"
+file_list = "文件列表"
+file_count_suffix = "个"
+more_files = "还有 {count} 个文件"
+no_other_files = "未选择其他文件"
+error_need_option = "错误: 至少需要选择一个选项"
+no_proofread_selected = "未选择任何校对选项"
+error_no_template = "错误: 未找到{type}模板"
+available_type_templates = "可用{type}模板"
+template_list_error = "错误: 无法加载模板列表"
+invalid_index = "无效序号: {idx}"
+invalid_input = "输入无效，请输入数字序号"
+batch_completed = "批量操作完成: {success}/{total} 成功"
+failed_count = "失败: {count} 个文件"
+available_actions = "可用操作"
+available_schemes = "可用序号方案"
+available_templates = "可用模板"
+document_templates = "文档模板 (DOCX)"
+spreadsheet_templates = "表格模板 (XLSX)"
+no_templates = "(无)"
+file_info = "文件"
+category_info = "类别"
+format_info = "格式"
+supported_actions = "支持的操作"
+example_format = "示例"
+base_file = "基准文件"
+other_pdf_files = "其他PDF文件"
+will_merge_files = "将合并 {count} 个文件"
+page_range_hint = "支持格式: 1-3,5,7-10 或 1~3;5;7至10"
+current_file = "当前"
+
+# 批处理模式
+[cli.batch]
+batch_mode = "批处理模式"
+process_mode = "处理方式"
+processing_category = "处理{category}文件..."
+batch_apply_same = "批量应用相同操作 (推荐)"
+process_one_by_one = "逐个处理"
+detected_same_type = "检测到 {count} 个{category}文件"
+detected_mixed_types = "检测到多种类型文件"
+process_by_type = "按类型分别处理 (推荐)"
+export_all_to_md = "全部导出为Markdown"
+configure_operation = "配置操作"
+
+# 文件类别名称
+[cli.categories]
+markdown = "Markdown"
+document = "文档"
+spreadsheet = "表格"
+image = "图片"
+layout = "版式"
+
+# CLI 提示文本
+[cli.prompts]
+select = "请选择"
+default = "默认"
+invalid_yes_no = "无效输入，请输入 y/n"
+enter_number_range = "请输入 1-{max} 之间的数字"
+invalid_number = "无效输入，请输入数字"
+cannot_be_empty = "此项不能为空"
+
+# CLI 验证消息
+[cli.validation]
+file_not_exists = "文件不存在"
+not_a_file = "路径不是文件"
+file_empty = "文件为空"
+unsupported_type = "不支持的文件类型"
+
+# CLI 结果消息
+[cli.result]
+success = "操作成功"
+failed = "操作失败"
+output = "输出"
+
+# CLI 操作描述
+[cli.actions]
+export_md = "导出为Markdown"
+convert = "格式转换"
+validate = "文档校对"
+merge_tables = "表格汇总"
+merge_pdfs = "合并PDF"
+split_pdf = "拆分PDF"
+merge_tiff = "合并为TIF"
+process_numbering = "处理MD小标题序号"
+
+# CLI 序号方案名称
+[cli.numbering_schemes]
+gongwen_standard = "公文标准"
+hierarchical_standard = "层级数字标准"
+hierarchical_h2_start = "层级数字(H2起)"
+legal_standard = "法律条文标准"
+
+# =============================================================================
+# 通用文本
+# =============================================================================
+[common]
+app_name = "DocWen"
+offline_version = "（离线版）"
+close = "关闭"
+apply = "应用"
+cancel = "取消"
+ok = "确定"
+save = "保存"
+error = "错误"
+version = "版本 {version}"
+browse = "浏览..."
+select = "选择"
+disclaimer = "测试软件，不保证转换准确率。\n仅供学习测试，禁止商用或分发。"
+
+# =============================================================================
+# 设置对话框
+# =============================================================================
+[settings]
+title = "设置"
+
+# 选项卡标题
+[settings.tabs]
+general = "通用"
+text = "文本"
+document = "文档"
+spreadsheet = "表格"
+image = "图片"
+layout = "版式"
+link = "链接"
+formatting = "格式"
+output = "输出"
+logging = "日志"
+
+# 设置状态消息
+[settings.status]
+applied = "设置已应用"
+apply_failed = "应用设置失败，请查看日志"
+apply_error = "应用失败"
+
+# -----------------------------------------------------------------------------
+# 通用设置选项卡
+# -----------------------------------------------------------------------------
+[settings.general]
+# 语言设置区域
+language_section = "🌐 语言 / Language"
+language_label = "选择界面语言:"
+language_tooltip = "选择应用程序的界面显示语言。\n更改语言后需要重启应用才能生效。"
+language_restart_hint = "更改语言后需要重启应用才能生效。"
+
+# 主题设置区域
+theme_section = "界面主题"
+theme_label = "选择应用程序主题:"
+theme_tooltip = "选择应用程序的视觉主题。\n不同的主题提供不同的颜色方案和界面风格。\n更改主题会在保存后生效。"
+theme_preview = "主题预览:"
+sample_button = "示例按钮"
+sample_text = "示例文本"
+
+# 主题名称
+[settings.general.themes]
+cerculean = "蔚蓝"
+cosmo = "宇宙"
+cyborg = "赛博"
+darkly = "暗黑"
+flatly = "扁平"
+journal = "日记"
+litera = "文雅"
+lumen = "光感"
+minty = "薄荷"
+morph = "渐变"
+pulse = "脉动"
+sandstone = "砂岩"
+simplex = "极简"
+solar = "日光"
+superhero = "超英"
+united = "联合"
+vapor = "蒸汽"
+yeti = "雪人"
+
+# 透明度设置区域
+[settings.general.transparency]
+section = "窗口透明度"
+enable = "启用窗口透明度"
+tooltip = "启用窗口透明效果。\n启用后可以调整窗口的透明度级别，\n让应用程序窗口呈现半透明效果。"
+
+# 窗口行为设置区域
+[settings.general.window]
+section = "窗口行为"
+remember_state = "记住窗口位置和大小"
+remember_state_tooltip = "记住应用程序窗口的位置和尺寸。\n下次启动时，窗口会自动恢复到上次关闭时的状态。\n这有助于保持您习惯的工作环境。"
+auto_center = "启动时自动居中窗口"
+auto_center_tooltip = "应用程序启动时自动将窗口居中显示在屏幕上。\n如果同时启用了“记住窗口位置”，此设置将优先于记住的位置。"
+default_mode_label = "默认文件处理模式:"
+default_mode_tooltip = "设置应用程序启动时的默认文件处理模式。\n单文件模式：每次处理一个文件\n批量模式：可以同时处理多个文件"
+single_mode = "单文件模式"
+batch_mode = "批量模式"
+
+# -----------------------------------------------------------------------------
+# 文本设置选项卡
+# -----------------------------------------------------------------------------
+[settings.text]
+# MD转文档序号设置
+md_to_docx_section = "小标题序号设置（MarkDown转为文档）"
+remove_numbering = "默认清除原有 Markdown 小标题序号"
+remove_numbering_tooltip = "MD转DOCX时默认清除Markdown中已有的标题序号"
+add_numbering = "默认新增小标题序号"
+scheme_label = "默认序号方案:"
+
+# 序号设置区域
+numbering_settings_section = "序号设置"
+numbering_settings_desc = "管理 MarkDown 与文档互转时，小标题序号的清理和新增方案。"
+edit_numbering_schemes = "小标题序号新增方案"
+edit_patterns = "小标题序号清理规则"
+
+# 模板设置
+template_section = "模板设置"
+template_label = "MarkDown 文件传入后的默认模板类型:"
+template_tooltip = "设置MD文件的默认模板选择\n• DOCX：文档模板\n• XLSX：表格模板"
+template_docx = "文档模板(DOCX)"
+template_xlsx = "表格模板(XLSX)"
+
+# 校对设置
+validation_section = "校对设置"
+enable_symbol_pairing = "启用标点配对"
+enable_symbol_correction = "启用符号校对"
+enable_typos_rule = "启用错别字校对"
+enable_sensitive_word = "启用敏感词匹配"
+skip_code_blocks = "跳过代码块段落"
+skip_quote_blocks = "跳过引用块段落"
+
+# 词库配置
+dictionary_section = "词库配置"
+dictionary_desc = "配置校对词库：错误符号、错别字、敏感词。"
+edit_symbol_mapping = "错误符号"
+edit_typos = "错别字"
+edit_sensitive_words = "敏感词"
+
+# 错误消息
+editor_open_failed = "无法打开编辑器：{error}"
+
+# -----------------------------------------------------------------------------
+# 文档设置选项卡
+# -----------------------------------------------------------------------------
+[settings.document]
+# 内容提取设置
+extraction_section = "图片提取/OCR设置"
+keep_images = "默认勾选\"提取图片\""
+keep_images_tooltip = "文档转MD时默认勾选\"提取图片\""
+enable_ocr = "默认勾选\"图片文字识别\""
+enable_ocr_tooltip = "文档转MD时默认勾选\"图片文字识别\""
+
+# 优化设置
+optimization_section = "优化设置"
+enable_optimization = "默认启用\"针对文档类型优化\""
+optimization_type_label = "默认优化类型:"
+
+# 软件优先级
+software_section = "软件优先级"
+word_processors_label = "文档处理软件优先级"
+odt_conversion_label = "ODT格式转换"
+document_to_pdf_label = "文档转PDF"
+
+# 软件名称
+[settings.document.software]
+wps_writer = "WPS文字"
+msoffice_word = "Word"
+libreoffice = "LibreOffice"
+
+# 序号设置
+[settings.document.numbering]
+section = "小标题序号设置（文档转为MarkDown）"
+remove = "默认清除原有文档小标题序号"
+remove_tooltip = "DOCX转MD时默认清除文档中已有的标题序号"
+add = "默认新增小标题序号到Markdown"
+scheme_label = "默认序号方案:"
+
+# -----------------------------------------------------------------------------
+# 表格设置选项卡
+# -----------------------------------------------------------------------------
+[settings.spreadsheet]
+extraction_section = "图片提取/OCR设置"
+keep_images = "默认勾选\"提取图片\""
+keep_images_tooltip = "表格转MD时默认勾选\"提取图片\""
+enable_ocr = "默认勾选\"图片文字识别\""
+enable_ocr_tooltip = "表格转MD时默认勾选\"图片文字识别\""
+merge_mode_section = "汇总模式设置"
+merge_mode_desc = "设置表格汇总的默认模式"
+software_section = "软件优先级"
+spreadsheet_processors_label = "表格处理软件优先级"
+ods_conversion_label = "ODS格式转换"
+spreadsheet_to_pdf_label = "表格转PDF"
+
+# 汇总模式选项
+[settings.spreadsheet.merge_modes]
+by_row = "按行汇总"
+by_row_tooltip = "将多个表格逐行合并至基准表格"
+by_column = "按列汇总"
+by_column_tooltip = "将多个表格逐列合并至基准表格"
+by_cell = "按单元格汇总"
+by_cell_tooltip = "对应位置的单元格数据相加"
+
+# 软件名称
+[settings.spreadsheet.software]
+wps_spreadsheets = "WPS表格"
+excel = "Excel"
+libreoffice = "LibreOffice"
+
+# -----------------------------------------------------------------------------
+# 图片设置选项卡
+# -----------------------------------------------------------------------------
+[settings.image]
+extraction_section = "图片提取/OCR设置"
+keep_images = "默认勾选\"提取图片\""
+keep_images_tooltip = "图片转MD时默认勾选\"提取图片\""
+enable_ocr = "默认勾选\"图片文字识别\""
+enable_ocr_tooltip = "图片转MD时默认勾选\"图片文字识别\""
+
+# OCR语言设置
+ocr_language_label = "OCR识别语言:"
+ocr_language_tooltip = "选择OCR文字识别使用的语言模型。\n\n• 跟随界面语言：根据当前界面语言自动选择\n• 中文/英文：适合中文和英文混合文档\n• 日语：适合日语文档\n• 拉丁语系：适合德语、法语、葡萄牙语等\n• 西里尔语系：适合俄语等"
+ocr_language_auto = "跟随界面语言"
+ocr_language_chinese = "中文/英文"
+ocr_language_japanese = "日语"
+ocr_language_chinese_cht = "繁体中文"
+ocr_language_english = "纯英文"
+ocr_language_korean = "韩语"
+ocr_language_latin = "拉丁语系 (德/法/葡等)"
+ocr_language_cyrillic = "西里尔语系 (俄语等)"
+
+compress_section = "压缩选项设置"
+compress_desc = "设置图片格式转换时的默认压缩模式"
+compress_lossless = "最高质量"
+compress_lossless_tooltip = "无损或高质量转换（quality=95）"
+compress_limit_size = "限制文件大小"
+compress_limit_size_tooltip = "通过调整quality参数压缩至目标大小"
+size_limit_label = "默认大小上限："
+
+pdf_tiff_section = "PDF/TIFF选项设置"
+pdf_size_label = "图片转PDF默认尺寸"
+pdf_original = "原图嵌入"
+pdf_a4 = "适合A4"
+pdf_a3 = "适合A3"
+tiff_mode_label = "合并为TIFF默认模式"
+tiff_keep_alpha = "保留透明"
+tiff_keep_alpha_tooltip = "保留源图片的透明背景（如果有）"
+tiff_no_alpha = "不保留透明"
+tiff_no_alpha_tooltip = "转为RGB模式，透明背景变为白色"
+
+# -----------------------------------------------------------------------------
+# 版式设置选项卡
+# -----------------------------------------------------------------------------
+[settings.layout]
+extraction_section = "图片提取/OCR设置"
+keep_images = "默认勾选\"提取图片\""
+keep_images_tooltip = "版式文件转MD时默认勾选\"提取图片\""
+enable_ocr = "默认勾选\"图片文字识别\""
+enable_ocr_tooltip = "版式文件转MD时默认勾选\"图片文字识别\""
+dpi_section = "渲染DPI设置"
+dpi_desc = "设置版式文件转图片时的默认DPI（分辨率）"
+dpi_min = "最小(150)"
+dpi_min_tooltip = "文件较小，适合快速预览"
+dpi_medium = "适中(300)"
+dpi_medium_tooltip = "质量和文件大小平衡，推荐用于一般用途"
+dpi_high = "高清(600)"
+dpi_high_tooltip = "高质量输出，文件较大，适合打印"
+software_section = "软件优先级"
+pdf_to_doc_label = "PDF转文档"
+
+# -----------------------------------------------------------------------------
+# 链接设置选项卡
+# -----------------------------------------------------------------------------
+[settings.link]
+# Markdown链接格式区域
+format_section = "Markdown链接格式"
+format_desc = "设置生成的Markdown文件中的链接格式"
+image_link_style_label = "图片链接格式:"
+image_link_style_tooltip = "设置图片在MD文件中的链接格式\n\n• Markdown嵌入显示: ![alt](image.png)\n• Markdown链接: [alt](image.png)\n• Wiki嵌入显示: ![[image.png]] (Obsidian)\n• Wiki链接: [[image.png]] (Obsidian)"
+md_file_link_style_label = "MD文件链接格式:"
+md_file_link_style_tooltip = "设置MD文件在MD文件中的链接格式\n\n• Markdown链接: [file.md](file.md)\n• Wiki嵌入显示: ![[file.md]] (Obsidian)\n• Wiki链接: [[file.md]] (Obsidian)\n\n注：Markdown格式不支持嵌入MD文件内容"
+
+# 非嵌入链接处理区域
+non_embed_section = "非嵌入链接处理"
+non_embed_desc = "设置Markdown转文档/表格时，如何处理普通链接（不带!前缀的链接）"
+wiki_link_mode = "Wiki链接处理:"
+wiki_link_tooltip = "处理 [[link]] 或 [[link|text]] 格式\n\n保留原样: [[link|text]]\n提取文本: text（去除标记）\n完全移除: 删除整个链接"
+markdown_link_mode = "Markdown链接处理:"
+markdown_link_tooltip = "处理 [text](url) 格式\n\n保留原样: [text](url)\n提取文本: text（去除标记）\n完全移除: 删除整个链接"
+
+# 嵌入链接处理区域
+embed_section = "嵌入链接处理"
+embed_desc = "设置Markdown转文档/表格时，如何处理嵌入链接（带!前缀的链接）"
+wiki_embed_image_mode = "Wiki嵌入图片处理:"
+wiki_embed_image_tooltip = "处理 ![[image.png]] 格式\n\n保留原样: ![[image.png]]\n提取文本: image.png\n完全移除: 删除链接\n插入内容: 将图片插入到文档中"
+markdown_embed_image_mode = "Markdown嵌入图片处理:"
+markdown_embed_image_tooltip = "处理 ![alt](image.png) 格式\n\n保留原样: ![alt](image.png)\n提取文本: image.png\n完全移除: 删除链接\n插入内容: 将图片插入到文档中"
+embed_md_file_mode = "Wiki嵌入的其他Markdown文件处理:"
+embed_md_file_tooltip = "处理 ![[file.md]] 格式（仅Wiki支持）\n\n保留原样: ![[file.md]]\n提取文本: file.md\n完全移除: 删除链接\n插入内容: 递归处理后插入"
+max_depth_label = "最大嵌入深度:"
+max_depth_tooltip = "MD文件递归嵌入的最大深度\n防止无限递归和性能问题\n\n例如: A嵌入B，B嵌入C，C嵌入D...\n推荐值: 3-5"
+
+# 子节点：图片链接格式选项
+[settings.link.image_styles]
+wiki_embed = "Wiki嵌入显示"
+wiki_link = "Wiki链接"
+md_embed = "Markdown嵌入显示"
+md_link = "Markdown链接"
+
+# 子节点：MD文件链接格式选项
+[settings.link.md_file_styles]
+wiki_embed = "Wiki嵌入显示"
+wiki_link = "Wiki链接"
+md_link = "Markdown链接"
+
+# 子节点：链接处理模式
+[settings.link.modes]
+keep = "保留原样"
+extract_text = "提取文本"
+remove = "完全移除"
+embed = "插入内容"
+
+# -----------------------------------------------------------------------------
+# 格式设置选项卡
+# -----------------------------------------------------------------------------
+[settings.formatting]
+# 文档转为MarkDown部分
+docx_to_md_section = "文档转为MarkDown"
+format_processing = "格式处理"
+format_processing_tooltip = "配置 Word 文档转换为 Markdown 时的格式处理方式\n\n部分选项对“针对公文优化”的文档转MarkDown不起效"
+body_format_label = "正文格式处理:"
+body_format_tooltip = "保留格式：粗体→**粗体**、斜体→*斜体*、删除线→~~删除线~~等\n丢弃格式：只保留纯文本内容"
+heading_format_label = "小标题格式处理:"
+heading_format_tooltip = "保留格式：标题内的部分加粗转为 **加粗** 等\n丢弃格式：标题只保留纯文本，避免冗余标记\n注意：通常Word标题样式已有固定格式，保留会导致冗余标记"
+table_header_format_label = "表头格式处理:"
+table_header_format_tooltip = "保留格式：表头单元格中的粗体转为 **粗体** 等\n丢弃格式：表头只保留纯文本，避免冗余标记\n注意：表格样式通常已定义表头加粗，保留会导致重复标记"
+
+# 分隔符映射
+separator_mapping = "分隔符映射"
+separator_mapping_tooltip = "配置 Word 分页符/分节符/分隔线转换为哪种 Markdown 分隔符\n\n分页符：Word 中的分页符\n分节符：所有类型的分节符（下一页/连续/奇数页/偶数页）\n分隔线：段落底部边框（用户输入 --- 后回车产生）"
+page_break_label = "分页符:"
+page_break_tooltip = "Word 分页符转换为 Markdown 分隔符\n分页符通常用于在特定位置强制换页"
+section_break_label = "分节符:"
+section_break_tooltip = "Word 分节符转换为 Markdown 分隔符\n所有分节符类型（下一页/连续/奇偶页）统一处理"
+horizontal_rule_label = "分隔线:"
+horizontal_rule_tooltip = "Word 分隔线（Horizontal Rule 1/2/3 样式）转换为 Markdown 分隔符"
+
+# 语法选择
+syntax_selection = "语法选择"
+syntax_selection_tooltip = "选择文档转为Markdown时输出的语法格式\n（输入时会自动识别所有格式语法）"
+bold_syntax_label = "粗体语法:"
+bold_syntax_tooltip = "选择粗体的输出语法格式"
+italic_syntax_label = "斜体语法:"
+italic_syntax_tooltip = "选择斜体的输出语法格式"
+strikethrough_syntax_label = "删除线语法:"
+strikethrough_syntax_tooltip = "选择删除线的输出语法格式"
+highlight_syntax_label = "高亮语法:"
+highlight_syntax_tooltip = "选择高亮的输出语法格式"
+superscript_syntax_label = "上标语法:"
+superscript_syntax_tooltip = "选择上标的输出语法格式"
+subscript_syntax_label = "下标语法:"
+subscript_syntax_tooltip = "选择下标的输出语法格式"
+unordered_list_label = "无序列表:"
+unordered_list_tooltip = "选择无序列表的输出标记符号"
+ordered_list_label = "有序列表:"
+ordered_list_tooltip = "有序列表编号方式（此选项暂未实现，将在后续版本支持）"
+indent_spaces_label = "列表缩进:"
+indent_spaces_tooltip = "Markdown列表每级缩进的空格数，用于识别多级嵌套\n2个空格：Obsidian、Typora 等常用\n4个空格：VS Code 等常用"
+
+# MarkDown转为文档部分
+md_to_docx_section = "MarkDown转为文档"
+md_format_processing = "格式处理"
+md_format_processing_tooltip = "配置 Markdown 转换为 Word 文档时的格式标记处理方式"
+md_body_format_label = "正文格式标记处理:"
+md_body_format_tooltip = '应用格式：**粗体**转为真正的粗体格式\n保留标记：保留**粗体**原样显示\n清理标记：只显示"粗体"文本，无格式'
+md_heading_format_label = "小标题格式标记处理:"
+md_heading_format_tooltip = '应用格式：覆盖标题样式默认格式，可实现部分加粗效果\n保留标记：保留标记原样显示\n清理标记：让Word标题样式格式自然生效\n注意：当标题样式本身是加粗时，"应用格式"可实现部分加粗'
+md_table_header_format_label = "表头格式标记处理:"
+md_table_header_format_tooltip = '应用格式：**粗体**转为真正的粗体（可能与表格样式重复）\n保留标记：保留标记原样显示\n清理标记：让表格样式（如 firstRow 加粗）自然生效\n注意：表格样式通常已定义表头加粗，建议使用"清理标记"'
+
+# MD转文档分隔符映射
+md_separator_mapping = "分隔符映射"
+md_separator_mapping_tooltip = "配置 Markdown 分隔符转换为哪种 Word 分页符/分节符/分隔线\n\n分页符：Word 中的分页符\n分节符：Word 中的分节符（下一页类型）\n分隔线：段落底部边框（视觉分隔线）"
+dash_label = "--- (三个短横线):"
+dash_tooltip = "Markdown --- 分隔符转换为 Word 分页符/分节符"
+asterisk_label = "*** (三个星号):"
+asterisk_tooltip = "Markdown *** 分隔符转换为 Word 分页符/分节符"
+underscore_label = "___ (三个下划线):"
+underscore_tooltip = "Markdown ___ 分隔符转换为 Word 分页符/分节符\n注：分节符(分页) 实际生成为 分节符(下一页)"
+
+# 表格样式
+table_style = "表格样式"
+table_style_tooltip = "配置 Markdown 表格转换为 Word 表格时使用的样式\n\n【内置样式】\n三线表/网格表：自动检测模板是否存在，若不存在则注入样式定义\n\n【自定义样式】\n检测模板中是否存在该样式，若不存在则创建一个网格表格式的同名样式"
+builtin_style_radio = "使用内置样式"
+custom_style_radio = "使用自定义样式名称"
+
+# 列表拼接符
+list_separator_label = "YAML列表拼接符"
+list_separator_tooltip = "YAML字段值为列表时，使用此分隔符拼接为字符串\n\n常见值：\n• 顿号（、）：中文列表常用\n• 逗号（，）：中文通用分隔\n• 逗号空格（, ）：英文风格\n• 空字符串：无分隔符直接拼接"
+
+# 格式处理选项
+[settings.formatting.options]
+preserve_format = "保留格式"
+discard_format = "丢弃格式"
+apply_format = "应用格式"
+keep_markup = "保留标记"
+clean_markup = "清理标记"
+
+# 分隔符选项
+[settings.formatting.separators]
+dash = "---"
+asterisk = "***"
+underscore = "___"
+ignore = "忽略"
+page_break = "分页符"
+section_break = "分节符"
+horizontal_rule_1 = "分隔线 1"
+horizontal_rule_2 = "分隔线 2"
+horizontal_rule_3 = "分隔线 3"
+
+# 语法选项
+[settings.formatting.syntax]
+bold_asterisk = "星号 (**文本**)"
+bold_underscore = "下划线 (__文本__)"
+italic_asterisk = "星号 (*文本*)"
+italic_underscore = "下划线 (_文本_)"
+strikethrough_extended = "扩展 (~~文本~~)"
+strikethrough_html = "HTML (<del>)"
+highlight_extended = "扩展 (==文本==)"
+highlight_html = "HTML (<mark>)"
+superscript_extended = "扩展 (^文本^)"
+superscript_html = "HTML (<sup>)"
+subscript_extended = "扩展 (~文本~)"
+subscript_html = "HTML (<sub>)"
+unordered_dash = "短横线 (- 内容)"
+unordered_asterisk = "星号 (* 内容)"
+unordered_plus = "加号 (+ 内容)"
+ordered_restart = "从1开始"
+ordered_preserve = "保留原编号"
+indent_2_spaces = "2个空格 (推荐)"
+indent_4_spaces = "4个空格"
+
+# 表格样式选项
+[settings.formatting.table_styles]
+three_line_table = "三线表"
+table_grid = "网格表"
+
+# -----------------------------------------------------------------------------
+# 输出设置选项卡
+# -----------------------------------------------------------------------------
+[settings.output]
+# 中间文件区域
+intermediate_section = "中间文件"
+save_intermediate_label = "保存中间文件到输出目录"
+save_intermediate_tooltip = "启用：保存所有中间步骤文件\n禁用：只保存最终结果文件\n\n示例（XLS→XLSX→ODS）：\n• 启用：保存 XLSX 和 ODS\n• 禁用：只保存 ODS"
+save_intermediate_desc = "多步转换时（如 XLS→XLSX→ODS），是否保存中间文件XLSX"
+
+# 输出目录区域
+directory_section = "输出目录"
+output_mode_label = "输出位置:"
+output_mode_tooltip = "原文件位置：输出到原文件所在文件夹\n自定义位置：输出到指定文件夹"
+custom_path_label = "自定义路径:"
+browse_title = "选择输出目录"
+
+# 输出模式选项
+[settings.output.output_modes]
+source = "源文件目录"
+custom = "自定义目录"
+
+# 日期子文件夹区域
+[settings.output.date_folder]
+section = "日期子文件夹"
+create_label = "创建日期子文件夹"
+create_tooltip = "在输出目录下创建日期子文件夹\n例如: 输出目录/2025-01-06/文件.pdf\n此选项对两种输出模式都有效"
+format_label = "日期格式:"
+
+# 日期格式选项
+[settings.output.date_formats]
+iso = "2025-01-06"
+compact = "20250106"
+chinese = "2025年01月06日"
+
+# 输出行为区域
+[settings.output.behavior]
+section = "输出行为"
+auto_open_folder_label = "转换完成后自动打开输出文件夹"
+auto_open_folder_tooltip = "转换或校对成功后自动打开输出文件夹并选中最终文件\n方便快速查看转换结果"
+
+# -----------------------------------------------------------------------------
+# 日志设置选项卡
+# -----------------------------------------------------------------------------
+[settings.logging]
+# 日志系统区域
+system_section = "日志系统"
+enable_logging_label = "启用日志系统"
+enable_logging_tooltip = "启用或禁用整个日志系统。\n禁用后，应用程序将不会记录任何日志信息。\n建议在生产环境中保持启用状态。"
+log_level_label = "日志级别:"
+log_level_tooltip = "设置日志记录的详细程度。\n级别从低到高：debug > info > warning > error > critical\n级别越高，记录的日志信息越少。"
+
+# 文件输出区域
+file_section = "文件输出"
+file_prefix_label = "日志文件前缀:"
+file_prefix_tooltip = "设置日志文件的名称前缀"
+retention_days_label = "日志保留天数:"
+retention_days_tooltip = "设置日志文件保留的天数，超过此天数的日志将被自动删除"
+
+# 控制台输出区域
+console_section = "控制台输出"
+enable_console_label = "在控制台显示日志"
+enable_console_tooltip = "启用后，日志将同时输出到控制台窗口"
+console_level_label = "控制台日志级别:"
+console_level_tooltip = "设置控制台输出的日志级别，可以与文件日志级别不同"
+
+# 日志级别
+[settings.logging.levels]
+debug = "调试 (DEBUG)"
+info = "信息 (INFO)"
+warning = "警告 (WARNING)"
+error = "错误 (ERROR)"
+
+# =============================================================================
+# 关于对话框
+# =============================================================================
+[about]
+title = "关于"
+version_info = "版本 {version}"
+version_tooltip = "本软件禁止联网，需要用户自行检查更新"
+contact = "联系邮箱: {email}"
+copyright = "© {year} {author}"
+acknowledgments = "致谢"
+acknowledgments_intro = "本项目使用了以下优秀的开源项目和工具，特此致谢："
+
+# 开源工具描述
+[about.tools]
+python_docx = "用于实现 docx 与 markdown 的双向转换，处理文档样式和结构"
+openpyxl = "用于实现 xlsx 与 markdown 的双向转换，处理表格数据"
+pymupdf = "用于 PDF/XPS 文档的内容提取和格式转换"
+pymupdf4llm = "用于智能提取 PDF 文档并转换为 Markdown 格式"
+pdf2docx = "用于将 PDF 文档转换为可编辑的 Word 格式"
+easyofd = "用于处理国产 OFD 格式文档的读取和转换"
+rapidocr = "用于图片和 PDF 中的文字识别（OCR），基于ONNX Runtime，支持离线使用"
+onnxruntime = "作为 RapidOCR 的推理引擎，高效跨平台"
+ttkbootstrap = "用于构建现代化的图形用户界面"
+tkinterdnd2 = "用于实现文件拖放功能，提升用户体验"
+pillow = "用于图片格式转换和图标资源处理"
+pillow_heif = "为 Pillow 提供 HEIF 图片格式支持"
+img2pdf = "用于批量将图片文件转换为 PDF 文档"
+pywin32 = "用于通过 COM 接口调用 WPS 和 Office 进行文档格式转换"
+lxml = "用于处理 Office 文档的 XML 结构"
+latex2mathml = "用于将 LaTeX 公式转换为 MathML 格式"
+pyyaml = "用于处理 Markdown frontmatter 元数据"
+tomlkit = "用于读取和保存配置文件"
+pandas = "用于表格数据的处理和分析"
+numpy = "用于数值计算和数据处理的基础支持"
+olefile = "用于识别和处理旧版 Office 文档格式"
+watchdog = "用于监控文件系统变化，实现进程间通信和单实例运行"
+
+# =============================================================================
+# 主界面组件
+# =============================================================================
+[components]
+
+# 文件拖拽区
+[components.file_drop]
+section_title = "输入文件"
+empty_hint_single = "📤 拖拽单个文件到这里"
+empty_hint_batch = "📤 拖拽文件或文件夹到这里"
+add_button = "添加"
+clear_button = "清空"
+single_mode = "单文件"
+batch_mode = "批量"
+unavailable = "文件拖拽区不可用"
+batch_summary = "待批量处理：共{count}个{category}文件"
+
+# 文件选择器
+[components.file_selector]
+empty_hint = "暂无文件\n拖拽文件（文件夹）进入，开始批量处理"
+unavailable = "文件选择器不可用"
+
+# 状态栏
+[components.status_bar]
+unavailable = "状态栏不可用"
+
+# 应用状态
+app_started = "软件启动"
+no_files_in_tab = "{category}选项卡无文件"
+unknown_file_type = "未知文件类型"
+files_cleared = "已清空文件选择"
+
+# 处理状态
+processing_wait = "处理中，请稍候{dots}"
+operation_cancelled = "操作已取消"
+processing_file = "正在处理 {current}/{total}: {filename}"
+batch_completed = "批量处理完成：成功 {success} 个，失败 {failed} 个"
+skipped_same_format = "已跳过: 已是{format}格式"
+
+# 文件类型选择（统一风格）
+selected_text_file = "已选择文本文件"
+selected_document_file = "已选择文档文件"
+selected_spreadsheet_file = "已选择表格文件"
+selected_image_file = "已选择图片文件"
+selected_layout_file = "已选择版式文件"
+
+# GUI状态消息
+operation_success = "操作成功完成！"
+conversion_failed = "转换失败"
+trial_expired_title = "试用期已到期"
+trial_expired_message = "您仍可以完成本次操作，但此软件的测试版本已过期。\n请联系开发者获取正式版本。"
+open_location_title = "打开位置"
+open_location_confirm = "是否打开原文件位置？"
+template_selected = "已选择模板: {name}"
+files_added = "已添加 {count} 个文件到 {category}"
+files_add_failed = "{count} 个文件添加失败"
+file_selected = "已选中: {filename} ({category})"
+
+# 文件状态对话框
+[components.file_dialogs]
+# 跳过对话框
+skip_title = "文件已跳过"
+skip_message = "文件已跳过转换\n\n原因：{reason}\n\n原文件：{filename}\n位置：{location}"
+skip_reason_unknown = "未知原因"
+
+# 错误对话框
+error_title = "转换失败"
+error_message = "文件转换失败\n\n文件：{filename}\n错误：{error}\n\n建议：\n1. 检查文件是否已损坏\n2. 确认相关软件正常运行\n3. 查看日志获取详细信息"
+error_unknown = "未知错误"
+
+# 操作面板
+[components.action_panel]
+section_title = "操作面板"
+unavailable = "操作面板不可用"
+
+# 转换面板
+[components.conversion_panel]
+unavailable = "格式转换面板不可用"
+
+# 模板选择器
+[components.template_selector]
+no_templates = "无可用模板"
+unavailable = "模板选择器不可用"
+
+# 选项卡式模板选择器
+[components.template_selector_tabbed]
+document_templates = "文档模板"
+spreadsheet_templates = "表格模板"
+
+# =============================================================================
+# 文件类型分类
+# =============================================================================
+[file_types]
+document = "文档"
+spreadsheet = "表格"
+image = "图片"
+layout = "版式"
+text = "文本"
+unknown = "未知"
+
+# 带"类"后缀的版本（用于选项卡标签）
+text_category = "文本类"
+document_category = "文档类"
+spreadsheet_category = "表格类"
+layout_category = "版式类"
+image_category = "图片类"
+
+# 格式验证相关
+unknown_type = "未知类型"
+format_mismatch = "⚠️ 实际为 {format} 格式"
+format_unverifiable = "⚠️ 无法验证文件实际格式"
+format_txt = "TXT(纯文本)"
+format_md = "Markdown"
+format_csv = "CSV(表格文本)"
+
+# =============================================================================
+# 转换操作
+# =============================================================================
+[conversion]
+# 文档操作
+
+# 表格操作
+
+# 图片操作
+
+# 生成文件名（用于输出文件命名）
+[conversion.filenames]
+split_part1 = "拆分1"
+split_part2 = "拆分2"
+merged_pdf = "合并PDF"
+merged_table = "汇总表格"
+
+# =============================================================================
+# 消息和提示
+# =============================================================================
+[messages]
+# 文件操作
+file_not_found = "文件未找到: {filename}"
+invalid_file_type = "不支持的文件类型: {ext}"
+unsupported_file_type = "不支持的文件类型"
+unknown_file_category = "未知的文件类别: {category}"
+
+# GUI操作结果
+error_prefix = "错误: {message}"
+operation_failed = "操作失败: {error}"
+processing_exception = "处理异常: {error}"
+system_init_error = "系统初始化错误"
+process_file_failed = "处理文件失败: {error}"
+batch_merge_need_two_layout = "需要批量模式，且至少2个版式文件才能合并"
+batch_merge_need_two_image = "需要批量模式，且至少2个图片文件才能合并"
+batch_merge_need_two_table = "需要批量模式，且至少2个表格文件才能汇总"
+batch_file_list_not_init = "批量文件列表组件未初始化"
+select_base_table_first = "请先点击选择一个基准表格"
+select_merge_mode = "请选择汇总模式（按行/按列/按单元格）"
+process_failed = "处理失败: {error}"
+file_processing_failed = "处理文件失败: {error}"
+template_selection_failed = "选择模板失败: {error}"
+cancel_failed = "取消操作失败: {error}"
+clear_failed = "清空失败: {error}"
+settings_unavailable = "设置功能不可用"
+open_settings_failed = "打开设置失败: {error}"
+apply_settings_failed = "应用设置失败: {error}"
+about_unavailable = "关于信息不可用"
+open_about_failed = "打开关于失败: {error}"
+
+# 转换操作
+
+# 设置
+
+# 确认对话框
+
+# 文件拖拽和选择
+single_file_only = "单文件模式下只能拖入一个文件"
+no_valid_files = "未检测到有效文件"
+no_folder_in_single_mode = "单文件模式下不能拖入文件夹"
+all_supported_files = "所有支持的文件"
+all_files = "所有文件"
+select_multiple_files = "选择多个文件"
+category_mismatch = "只能添加{current_name}文件，不能混合{new_name}文件"
+category_mismatch_detail = "类型不匹配（当前列表为{selected_name}，文件为{file_category_name}）"
+
+# 错误消息
+[messages.errors]
+invalid_docx_template = "模板文件 {template_name} 无效或损坏。请使用 Word 或 WPS 打开该模板，编辑后保存，确保它是有效的 DOCX 文件。"
+
+# 警告消息
+[messages.warnings]
+missing_body_placeholder = '⚠️ 模板中未找到正文占位符（如 {{正文}} 或 {{body}}），Markdown 正文内容未被插入'
+
+# =============================================================================
+# 编辑器对话框
+# =============================================================================
+[editors]
+
+# 序号新增编辑器
+[editors.numbering_add]
+window_title = "序号方案编辑器"
+scheme_list = "方案列表"
+default_scheme = "默认方案:"
+level_format_config = "级别格式配置"
+realtime_preview = "实时预览"
+format_help = "📖 格式说明"
+format_help_title = "格式占位符说明"
+format_help_text = """格式占位符使用说明
+
+占位符格式：{级别.样式}
+
+可用样式：
+  chinese_lower  - 小写中文数字 (一、二、三)
+  chinese_upper  - 大写中文数字 (壹、贰、叁)
+  arabic_half    - 半角阿拉伯数字 (1, 2, 3)
+  arabic_full    - 全角阿拉伯数字 (１、２、３)
+  arabic_circled - 带圈数字 (①②③)
+  letter_upper   - 大写字母 (A, B, C)
+  letter_lower   - 小写字母 (a, b, c)
+  roman_upper    - 大写罗马数字 (I, II, III)
+  roman_lower    - 小写罗马数字 (i, ii, iii)
+
+示例：
+  {1.chinese_lower}、 → 一、二、三、
+  （{2.chinese_lower}） → （一）（二）（三）
+  {3.arabic_half}. → 1. 2. 3.
+  {1.arabic_half}.{2.arabic_half} → 1.1、1.2"""
+
+# 级别名称
+level_1 = "一级标题"
+level_2 = "二级标题"
+level_3 = "三级标题"
+level_4 = "四级标题"
+level_5 = "五级标题"
+level_6 = "六级标题"
+level_7 = "七级标题"
+level_8 = "八级标题"
+level_9 = "九级标题"
+
+# 创建和复制
+new_scheme = "新建方案"
+copy_suffix = "(副本)"
+
+# 预览
+preview_sample = "示例{level_name}"
+no_format = "暂无格式定义"
+preview_failed = "预览生成失败"
+
+# 占位符菜单
+menu_current_level = "── 当前级别 ({level}级) ──"
+menu_decorations = "── 常用装饰 ──"
+menu_hierarchical = "── 层级格式 ──"
+
+# 数字样式
+style_chinese_lower = "小写中文 (一二三)"
+style_chinese_upper = "大写中文 (壹贰叁)"
+style_arabic_half = "阿拉伯数字 (123)"
+style_arabic_circled = "带圈数字 (①②③)"
+style_letter_upper = "大写字母 (ABC)"
+style_roman_upper = "罗马数字 (I II III)"
+
+# 装饰
+decoration_dun = "顿号"
+decoration_dot_space = "点号+空格"
+decoration_bracket = "全角括号"
+decoration_chapter = "章节格式"
+
+# 验证消息
+
+# 错误消息
+load_failed = "加载失败"
+load_failed_message = "无法加载配置文件: {error}"
+save_failed = "保存失败"
+save_failed_message = "无法保存配置文件"
+save_failed_with_error = "保存配置失败: {error}"
+cannot_delete = "无法删除"
+cannot_delete_default_scheme = "默认方案不能删除"
+
+# 方案名称
+[editors.numbering_add.names]
+hierarchical_standard = "层级数字标准"
+hierarchical_h2_start = "层级数字(H2起)"
+
+# 方案描述（用于编辑器中显示）
+[editors.numbering_add.descriptions]
+hierarchical_standard_desc = "层级递进格式：1 、1.1 、1.1.1 ...（序号后带空格）"
+hierarchical_h2_start_desc = "层级递进格式（跳过H1/一级小标题）：从H2/二级小标题开始编号 1 、1.1 、1.1.1 ..."
+
+# 通用编辑器文本（所有编辑器共用）
+[editors.common]
+basic_info = "基本信息"
+name = "名称:"
+description = "说明:"
+add = "新增"
+copy = "复制"
+delete = "删除"
+move_up = "上移"
+move_down = "下移"
+save = "保存"
+cancel = "取消"
+prompt = "提示"
+select_item_first = "请先选择一个项目"
+cannot_delete = "无法删除"
+system_item_hint = "系统预设项目不能删除，只能禁用"
+confirm_delete = "确认删除"
+confirm_delete_message = "确定要删除 '{name}' 吗？"
+confirm_close = "确认关闭"
+unsaved_changes_hint = "有未保存的修改"
+unsaved_close_message = "有未保存的修改，确定要关闭吗？"
+
+# 序号清理编辑器
+[editors.numbering_clean]
+window_title = "清理规则编辑器"
+rule_list = "规则列表"
+rule_edit = "规则编辑"
+name = "名称:"
+description = "说明:"
+regex = "正则:"
+regex_test = "正则测试"
+input = "输入:"
+result = "结果:"
+status = "状态:"
+load_example = "载入示例"
+available_placeholders = "可用占位符"
+new_rule = "新建规则"
+copy_suffix = "(副本)"
+match_success = "匹配成功"
+no_match = "无匹配"
+regex_error = "正则错误"
+test_error = "错误"
+placeholder_info = """占位符说明：
+
+{space}        - 空白字符（空格、全角空格等）
+{sep}          - 分隔符（点号、顿号、逗号等）
+{bracket_open} - 左括号（中英文）
+{bracket_close}- 右括号（中英文）
+{num_arab}     - 阿拉伯数字（半角+全角）
+{num_cn}       - 中文数字（小写+大写+零+㈠-㈩）
+{num_cn_paren} - 带括号中文数字（㈠-㈩）
+{num}          - 所有数字（中文+阿拉伯+㈠-㈩）
+{letter}       - 拉丁字母（大小写）
+{circled}      - 带圈数字（①-㊿、❶-⓴、⓵-⓾等）
+{unit_suffix}  - 中文单位后缀词（章节条款等）
+{unit_prefix}  - 中文单位前缀词（卷篇册等）"""
+prompt = "提示"
+no_example_text = "该规则没有配置示例文本"
+load_failed = "加载失败"
+load_failed_message = "无法加载配置文件: {error}"
+save_failed = "保存失败"
+save_failed_message = "无法保存配置文件"
+save_failed_with_error = "保存配置失败: {error}"
+
+# 清理规则名称
+[editors.numbering_clean.names]
+chinese_unit_suffix = "中文【第X单位】格式"
+chinese_unit_prefix = "中文【单位X】格式"
+circled_numbers = "带圈数字"
+bracket_number = "括号数字"
+hierarchical = "层级数字"
+number_separator = "数字分隔符"
+legal_english = "英文章节格式"
+letter_number = "字母序号"
+
+# 清理规则描述（用于编辑器中显示）
+[editors.numbering_clean.descriptions]
+chinese_unit_suffix_desc = "匹配：第X回/篇/册/卷/部/集/期/编/章/节/条/款/项/目 + 空格"
+chinese_unit_prefix_desc = "匹配：卷/篇/册/部/集/期/编/章/节/回 + 数字 + 空格"
+circled_numbers_desc = "匹配：①-㊿、❶-⓴、⓵-⓾、㈠-㈩ 等带圈数字 + 可选分隔符"
+bracket_number_desc = "匹配：(1)、（一）、1)、一）等 + 可选分隔符"
+hierarchical_desc = "匹配：1.1 / 1.1.1 / 1.1.1.1 等 + 可选分隔符"
+number_separator_desc = "匹配：1. / 2、/ 一、/ 二，等 + 可选空格"
+legal_english_desc = "匹配：Chapter/Part/Volume/Book/Section + 数字/罗马数字"
+letter_number_desc = "匹配：A. / A) / (A) / a. / a) 等字母序号"
+
+# 映射编辑器
+[editors.mapping]
+# 对话框标题
+symbol_editor_title = "标点符号映射编辑器"
+typo_editor_title = "错别字库编辑器"
+sensitive_editor_title = "敏感词库编辑器"
+generic_editor_title = "映射编辑器"
+
+# 列头
+symbol_correct_symbol = "正确符号"
+symbol_error_symbols = "错误符号列表"
+typo_correct_word = "正确词"
+typo_error_words = "错误词列表"
+sensitive_sensitive_word = "敏感词"
+sensitive_exceptions = "例外列表"
+comment = "备注"
+generic_key = "键"
+generic_value_list = "值列表"
+
+# 说明文本
+symbol_description = "配置错误符号到正确符号的映射关系。键是正确的符号，值是错误符号的列表。"
+typo_description = "配置错别字到正确词的映射关系。键是正确的词，值是错别字的列表。"
+sensitive_description = "配置敏感词及其例外列表。键是敏感词，值是不需要标记的例外词列表。"
+generic_description = "配置映射关系。"
+
+# 按钮
+add_entry = "添加条目"
+edit_entry = "编辑条目"
+delete_entry = "删除条目"
+
+# 提示消息
+prompt = "提示"
+select_entry_to_edit = "请先选择要编辑的条目"
+select_entry_to_delete = "请先选择要删除的条目"
+confirm_delete = "确认删除"
+confirm_delete_message = "确定要删除条目 '{entry_key}' 吗？"
+error = "错误"
+save_error = "保存失败: {error}"
+
+# 条目编辑对话框
+add = "添加"
+edit = "编辑"
+symbol_mapping = "符号映射"
+typo_mapping = "错别字映射"
+sensitive_mapping = "敏感词"
+generic_mapping = "映射"
+
+# 标签
+symbol_correct_symbol_label = "正确符号:"
+typo_correct_word_label = "正确词:"
+sensitive_sensitive_word_label = "敏感词:"
+generic_key_label = "键:"
+symbol_error_symbols_label = "错误符号列表（每行一个）:"
+typo_error_words_label = "错误词列表（每行一个）:"
+sensitive_exceptions_label = "例外列表（每行一个）:"
+generic_value_list_label = "值列表（每行一个）:"
+comment_label = "备注:"
+
+# 示例文本
+symbol_example = '示例：正确符号填"，"（中文逗号），错误符号填","（英文逗号）'
+typo_example = '示例：正确词填"决定"，错误词填"绝定"'
+sensitive_example = '示例：敏感词填"某某"，例外填"某某某"（不触发检查的组合）'
+generic_example = "每个值占一行"
+
+# 验证消息
+enter_correct_symbol_or_word = "请输入正确的符号或词语"
+enter_error_symbol_or_word_list = "请输入错误符号或词语列表"
+
+# 键重复处理
+duplicate_key_title = "键已存在"
+duplicate_key_message = "键 \"{entry_key}\" 已存在\n\n当前值：{current_values}\n当前备注：{current_comment}\n\n请选择操作："
+duplicate_key_no_comment = "（无）"
+overwrite = "覆盖"
+overwrite_tooltip = "用新值和新备注完全替换原有内容"
+merge = "合并"
+merge_tooltip = "合并新旧值（去重），备注：新备注为空则保留原备注"
+
+# =============================================================================
+# 样式名（用于文档转换）
+# 这些样式名用于 MD ↔ DOCX 转换时的样式注入和检测
+# =============================================================================
+[styles]
+# 代码样式
+code_block = "代码块"
+inline_code = "行内代码"
+
+# 引用样式（9 级）
+quote_1 = "引用 1"
+quote_2 = "引用 2"
+quote_3 = "引用 3"
+quote_4 = "引用 4"
+quote_5 = "引用 5"
+quote_6 = "引用 6"
+quote_7 = "引用 7"
+quote_8 = "引用 8"
+quote_9 = "引用 9"
+
+# 公式样式
+formula_block = "公式块"
+inline_formula = "行内公式"
+
+# 分隔线样式
+horizontal_rule_1 = "分隔线 1"
+horizontal_rule_2 = "分隔线 2"
+horizontal_rule_3 = "分隔线 3"
+
+# 列表样式
+list_block = "列表块"
+
+# 表格样式
+table_content = "表格内容"
+three_line_table = "三线表"
+table_grid = "网格表"
+
+# 正文段落样式
+body_paragraph = "正文段落"
+
+# =============================================================================
+# 样式格式配置（用于样式注入时的格式属性）
+# =============================================================================
+[style_formats]
+
+# 正文段落格式（与 heading 3-9 相同：仿宋_GB2312、三号、2字符）
+[style_formats.body_paragraph]
+east_asia_font = "仿宋_GB2312"
+ascii_font = "Times New Roman"
+font_size_pt = 16
+first_line_indent_chars = 200
+first_line_indent_cm = 0
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = false
+justification = "both"
+
+# 标题1格式（黑体、三号、2字符）
+[style_formats.heading_1]
+east_asia_font = "黑体"
+ascii_font = "Times New Roman"
+font_size_pt = 16
+first_line_indent_chars = 200
+first_line_indent_cm = 0
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = false
+justification = "both"
+
+# 标题2格式（楷体_GB2312、三号、2字符）
+[style_formats.heading_2]
+east_asia_font = "楷体_GB2312"
+ascii_font = "Times New Roman"
+font_size_pt = 16
+first_line_indent_chars = 200
+first_line_indent_cm = 0
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = false
+justification = "both"
+
+# 标题3-9格式（仿宋_GB2312、三号、2字符）
+[style_formats.heading_3_9]
+east_asia_font = "仿宋_GB2312"
+ascii_font = "Times New Roman"
+font_size_pt = 16
+first_line_indent_chars = 200
+first_line_indent_cm = 0
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = false
+justification = "both"
+
+# =============================================================================
+# 占位符（用于文档模板）
+# 这些占位符用于 MD → DOCX 转换时的模板填充
+# =============================================================================
+[placeholders]
+title = "标题"
+body = "正文"
+
+# =============================================================================
+# YAML 键名（用于元数据）
+# 这些键名用于 DOCX → MD 转换时的 YAML 前置信息输出
+# =============================================================================
+[yaml_keys]
+title = "标题"
+subtitle = "副标题"
+
+# =============================================================================
+# 转换面板区域
+# =============================================================================
+[conversion_panel]
+format_conversion = "格式转换"
+save_as = "另存为"
+select_file_hint = "请先选择文件"
+same_format_tooltip = "当前已是{format}格式"
+compressible_format_tooltip = "支持压缩"
+png_compression_tooltip = "PNG为无损格式，不支持质量压缩"
+bmp_compression_tooltip = "BMP为无损格式，不支持质量压缩"
+gif_compression_tooltip = "GIF为无损格式，不支持质量压缩"
+tif_compression_tooltip = "TIF/TIFF为无损格式，不支持质量压缩"
+other_format_compression_tooltip = "{format}格式不支持质量压缩"
+high_quality_conversion_tooltip = "高质量转换"
+lossless_conversion_tooltip = "无损转换"
+document_conversion_tooltip = "转换为此文档格式"
+csv_conversion_tooltip = "转换为CSV格式（纯文本表格）"
+spreadsheet_conversion_tooltip = "转换为此表格格式"
+pdf_conversion_tooltip = "转换为PDF格式"
+docx_conversion_tooltip = "转换为DOCX格式"
+doc_conversion_tooltip = "转换为DOC格式"
+tif_conversion_tooltip = "渲染为TIF图片"
+jpg_conversion_tooltip = "渲染为JPG图片"
+
+# 文档转换区
+[conversion_panel.document]
+convert_to_other_formats = "转换为其他文档格式"
+convert_to_layout = "转换为版式格式"
+save_as_pdf = "另存为PDF"
+save_as_pdf_tooltip = "将文档转换为PDF版式文件"
+save_as_ofd = "另存为OFD"
+save_as_ofd_tooltip = "暂不支持"
+proofread_document = "文档校对"
+proofread_hint = "对文档进行校对检查"
+proofread_button = "📝 文档校对"
+proofread_button_tooltip = "检查文档中的标点配对、错别字、敏感词等问题"
+proofread_options = "校对选项"
+symbol_pairing = "标点配对"
+symbol_pairing_tooltip = "检查括号、引号等成对标点是否匹配"
+typos_rule = "错别字校对"
+typos_rule_tooltip = "检查常见错别字"
+symbol_correction = "符号校对"
+symbol_correction_tooltip = "检查错误的标点符号"
+sensitive_word = "敏感词匹配"
+sensitive_word_tooltip = "检查敏感词"
+
+# 图片转换区
+[conversion_panel.image]
+convert_to_other_formats = "转换为其他图片格式"
+compression_options = "压缩选项"
+highest_quality = "最高质量"
+highest_quality_tooltip = "无损或高质量转换。JPEG/WebP使用quality=95，PNG/BMP/GIF/TIF使用无损压缩。"
+limit_file_size = "限制文件大小"
+limit_file_size_tooltip = "通过调整quality参数压缩至目标大小，仅对JPEG/WebP有效。其他格式将按最高质量保存。"
+file_size_limit = "文件大小上限："
+enter_size_limit_warning = "请输入文件大小上限"
+kb_range_warning = "请输入10-10000之间的数字（KB）"
+mb_range_warning = "请输入1-100之间的数字（MB）"
+enter_valid_number_warning = "请输入有效的数字"
+convert_to_layout = "转换为版式格式"
+save_as_pdf = "另存为PDF"
+save_as_pdf_tooltip = "将图片转换为PDF版式文件"
+save_as_ofd = "另存为OFD"
+save_as_ofd_tooltip = "暂不支持"
+size_options = "尺寸选项"
+original_embed = "原图嵌入"
+fit_a4 = "适合A4"
+fit_a3 = "适合A3"
+no_pdf_size_option_warning = "请选择PDF尺寸选项"
+merge_images = "合并图片"
+merge_images_hint = "将多张图片合并为一个文件"
+merge_to_tif = "合并为TIF"
+conversion_options = "转换选项"
+preserve_transparency = "保留透明"
+preserve_transparency_tooltip = "保留源图片的透明背景（如果有）"
+no_transparency = "不保留透明"
+no_transparency_tooltip = "转为RGB模式，透明背景变为白色"
+
+# 版式转换区
+[conversion_panel.layout]
+convert_to_other_formats = "转换为其他版式格式"
+save_as_ofd_tooltip = "暂不支持"
+convert_to_document_or_image = "转换为文档或图片"
+save_as_format = "另存为{format}"
+save_as_docx_tooltip = "将版式文件转换为DOCX文档"
+save_as_doc_tooltip = "将版式文件转换为DOC文档"
+render_as_tif = "渲染为TIF"
+render_as_tif_tooltip = "将PDF页面渲染为TIF图片，支持多页TIFF，支持DPI质量选择"
+render_as_jpg = "渲染为JPG"
+render_as_jpg_tooltip = "将PDF渲染为JPG图片（每页一个文件）"
+image_quality_dpi = "图片质量（DPI）"
+minimum_150 = "较低分辨率 (150 DPI) - 适合快速预览"
+moderate_300 = "标准分辨率 (300 DPI) - 推荐日常使用"
+high_definition_600 = "高清分辨率 (600 DPI) - 适合打印输出"
+merge_split = "合并/拆分"
+merge_split_hint = "合并或拆分版式文件"
+merge_to_pdf = "合并PDF"
+merge_to_pdf_tooltip = "将批量列表中的文件按从上到下的顺序合并为一个PDF。选中文件后可用↑↓箭头调整合并顺序。"
+merge_to_ofd = "合并OFD"
+merge_to_ofd_tooltip = "暂不支持"
+split_to_pdf = "拆分PDF"
+split_to_pdf_tooltip = "根据输入的页码范围将当前文件拆分为两个PDF。第一个文件包含输入的页码，第二个文件包含剩余页码（如果有）。"
+split_to_ofd = "拆分OFD"
+split_to_ofd_tooltip = "暂不支持"
+split_page_range = "拆分页码范围："
+page_range_info = "输入页码范围，例如：\n• 1-5：第1到5页\n• 1,3,5：第1、3、5页\n• 1-3,7-9：第1-3页和第7-9页\n• 支持中文分隔符：1~3;5;7至10"
+page_range_placeholder = "例如：1-3,5,7-10"
+selected_split_file = "当前选中的拆分文件（共{pages}页）："
+no_file_selected = "未选中文件"
+cannot_split_all_pages = "❌ 不能拆分全部页面（请保留部分页面）"
+pages_out_of_range_adjusted = "⚠️ 部分页码超出范围，已自动调整（共{pages}页）"
+all_pages_out_of_range = "❌ 所有页码都超出范围（共{pages}页）"
+
+# 表格转换区
+[conversion_panel.spreadsheet]
+convert_to_other_formats = "转换为其他表格格式"
+convert_to_layout = "转换为版式格式"
+save_as_pdf = "另存为PDF"
+save_as_pdf_tooltip = "需要本地Office软件将表格转换为PDF版式文件"
+save_as_ofd = "另存为OFD"
+save_as_ofd_tooltip = "暂不支持"
+merge_tables = "汇总表格"
+merge_tables_hint = "按选定模式合并多个表格"
+merge_tables_button = "📋 汇总表格"
+merge_tables_button_tooltip = "按选定模式将批量列表中的多个表格合并到基准表格。请先选择汇总模式（按行/按列/按单元格）。"
+merge_options = "汇总选项"
+merge_by_row = "按行汇总"
+merge_by_row_tooltip = "将一个或多个表格逐行合并到基准表格"
+merge_by_column = "按列汇总"
+merge_by_column_tooltip = "将一个或多个表格逐列合并到基准表格"
+merge_by_cell = "按单元格汇总"
+merge_by_cell_tooltip = "将对应位置的单元格数据相加"
+selected_reference_table = "当前选中的基准表格："
+no_table_selected = "未选中表格"
+
+# =============================================================================
+# 操作面板区域
+# =============================================================================
+[action_panel]
+export_options = "导出选项"
+extraction_options = "提取选项"
+generation_options = "生成选项"
+extract_images = "提取图片"
+extract_images_tooltip = "转换为MD时提取文件中的图片"
+ocr = "图片文字识别"
+ocr_tooltip = "转换为MD时启用OCR识别图片中的文字"
+
+# 校对选项
+[action_panel.proofread]
+symbol_pairing = "标点配对"
+symbol_pairing_tooltip = "检查括号、引号等成对标点是否匹配"
+typos_rule = "错别字校对"
+typos_rule_tooltip = "检查常见错别字"
+symbol_correction = "符号校对"
+symbol_correction_tooltip = "检查错误的标点符号"
+sensitive_word = "敏感词匹配"
+sensitive_word_tooltip = "检查敏感词"
+
+# 文档转MD面板
+[action_panel.document]
+ready = "就绪"
+export_markdown = "导出 Markdown"
+export_markdown_tooltip = "将文档转换为Markdown格式"
+optimize_for_type = "针对文档类型优化"
+optimize_for_type_tooltip = "根据文档类型进行针对性优化处理"
+remove_existing_numbering = "清除原有文档小标题序号"
+remove_existing_numbering_tooltip = "转换为MD时清除文档中已有的标题序号"
+add_new_numbering = "新增小标题序号"
+add_new_numbering_tooltip = "转换为MD时新增标题序号"
+
+# 表格转MD面板
+[action_panel.spreadsheet]
+ready = "就绪"
+export_markdown = "导出 Markdown"
+export_markdown_tooltip = "将表格转换为Markdown格式"
+
+# 图片转MD面板
+[action_panel.image]
+ready = "就绪"
+export_markdown = "导出 Markdown"
+export_markdown_tooltip = "将图片转换为Markdown格式"
+extract_images_tooltip = "转换为MD时保留图片"
+ocr_tooltip = "转换为MD时启用OCR识别图片中的文字"
+
+# 版式转MD面板
+[action_panel.layout]
+ready = "就绪"
+export_markdown = "导出 Markdown"
+export_markdown_tooltip = "将版式文件转换为Markdown格式"
+
+# MD转文档面板
+[action_panel.md_to_document]
+ready = "就绪"
+generate_docx = "生成 DOCX"
+generate_docx_tooltip = "将Markdown转换为DOCX文档"
+generate_doc = "生成 DOC"
+generate_doc_tooltip = "将Markdown转换为DOC文档（需要本地Office软件）"
+generate_odt = "生成 ODT"
+generate_odt_tooltip = "将Markdown转换为ODT文档（需要LibreOffice）"
+generate_rtf = "生成 RTF"
+generate_rtf_tooltip = "将Markdown转换为RTF文档（需要本地Office软件）"
+remove_existing_numbering = "清除原有Markdown小标题序号"
+remove_existing_numbering_tooltip = "转换为文档时清除Markdown中已有的标题序号"
+add_new_numbering = "新增小标题序号"
+add_new_numbering_tooltip = "转换为文档时新增标题序号"
+
+# MD转表格面板
+[action_panel.md_to_spreadsheet]
+ready = "就绪"
+generate_xlsx = "生成 XLSX"
+generate_xlsx_tooltip = "将Markdown转换为XLSX表格"
+generate_xls = "生成 XLS"
+generate_xls_tooltip = "将Markdown转换为XLS表格（需要本地Office软件）"
+generate_ods = "生成 ODS"
+generate_ods_tooltip = "将Markdown转换为ODS表格（需要LibreOffice）"
+generate_csv = "生成 CSV"
+generate_csv_tooltip = "将Markdown转换为CSV表格（纯文本格式）"
+
+
+
+# =============================================================================
+# 转换进度消息
+# =============================================================================
+[conversion.progress]
+converting_to_format = "正在转换为 {format}..."
+preparing = "准备转换..."
+preparing_format = "准备转换{format}为PDF..."
+detecting_format = "检测实际格式..."
+processing_images = "处理图片..."
+saving_file = "保存文件..."
+csv_completed = "转换完成，共生成 {count} 个CSV文件。"
+tiff_completed = "转换完成，共转换{count}页"
+final_conversion = "正在完成最终格式转换..."
+extracting_pdf_content = "提取PDF内容..."
+images_extracted = "已提取{count}张图片"
+images_extracted_preparing_ocr = "已提取{count}张，OCR识别中..."
+extracting_images = "正在提取图片：{count}"
+ocr_recognizing = "正在OCR识别：{current}/{total}"
+loading_document = "正在加载文档..."
+loading_word_template = "正在加载Word模板..."
+loading_excel_template = "正在读取Excel模板..."
+parsing_markdown = "正在解析Markdown文件..."
+processing_markdown_body = "正在处理Markdown正文..."
+processing_textboxes_tables = "正在处理文本框和表格..."
+extracting_title = "正在提取标题..."
+extracting_markdown_tables = "正在提取Markdown表格..."
+generating_markdown = "正在生成Markdown内容..."
+filling_template = "正在填充模板内容..."
+filling_yaml_data = "正在填充YAML数据..."
+filling_table_data = "正在填充表格数据..."
+saving_excel = "正在保存Excel文件..."
+writing_file = "正在写入..."
+executing_final_proofread = "正在执行最终校对..."
+initializing_proofread = "正在初始化校对引擎..."
+proofreading_progress = "正在校对... {current}/{total}"
+saving_proofread_result = "正在保存校对结果..."
+validating_params = "正在验证参数..."
+preprocessing_base_table = "正在预处理基准表格..."
+merging_table_progress = "正在汇总第 {current}/{total} 个表格..."
+saving_merge_result = "正在保存汇总结果..."
+conversion_to_csv_success = "转换为 CSV 成功，共生成 {count} 个文件。"
+converting_format_to_png = "正在将 {format} 转换为 PNG..."
+converting_format_to_pdf = "正在将 {format} 转换为 PDF..."
+error_no_template = "错误：未提供模板名称。"
+spell_checking = "错别字检查中..."
+extracting_images_start = "正在提取图片..."
+styles_injected = "已注入 {count} 个缺失样式"
+preparing_files = "准备文件..."
+preparing_merge = "准备合并 {count} 个文件..."
+preparing_merge_images = "准备合并 {count} 个图片..."
+preparing_split_pdf = "准备拆分PDF..."
+preparing_proofread = "准备校对..."
+reading_file = "读取文件..."
+processing_numbering = "处理序号..."
+proofreading = "校对中..."
+converting_ofd_to_pdf = "转换OFD为PDF..."
+converting_xps_to_pdf = "转换XPS为PDF..."
+converting_caj_to_pdf = "转换CAJ为PDF..."
+using_external_tool_pdf = "使用外部工具转换PDF..."
+processing_file_progress = "处理文件 {current}/{total}: {filename}"
+merging_pdf_files = "合并PDF文件..."
+merging_file_progress = "合并文件 {current}/{total}"
+creating_pdf_part = "创建第{part}个PDF..."
+rendering_pdf_to_png = "渲染PDF页面为PNG..."
+rendering_pdf_to_jpg = "渲染PDF页面为JPG..."
+rendering_pdf_pages = "渲染PDF页面..."
+rendering_page_progress = "渲染第 {current}/{total} 页..."
+saving_tif_file = "保存TIF文件..."
+step_pdf_to_docx = "步骤1/2: PDF转DOCX..."
+step_docx_to_format = "步骤2/2: DOCX转{format}..."
+extracting_page = "提取第{page}页"
+converting_format_to_target = "转换{format}为{target}..."
+converting_page_to_format = "转换第{page}页为{format}..."
+loading_image_progress = "加载第 {current}/{total} 个图片..."
+determining_color_mode = "确定颜色模式..."
+converting_to_mode = "转换为{mode}模式..."
+generating_tiff_file = "生成TIFF文件..."
+merge_completed = "合并完成。"
+converting_source_to_target = "转换中: {source} → {target}..."
+step_conversion_progress = "步骤 {step}/{total}: {source} → {target}..."
+conversion_completed_with_readonly_warnings = "转换完成，但有 {count} 处数据因只读单元格无法填充"
+fixing_conflict_style = "修正冲突样式: {name} ({from_type}→{to_type})"
+styles_injected_with_conflicts = "已注入 {count} 个样式（修正 {conflicts} 个冲突）"
+
+# =============================================================================
+# 转换结果消息（状态栏/弹窗）
+# =============================================================================
+[conversion.messages]
+# 通用消息
+operation_cancelled = "操作已取消"
+conversion_failed_check_log = "转换失败，请查看日志。"
+conversion_to_format_success = "转换为 {format} 成功。"
+
+# 成功消息
+
+# 校对消息
+proofread_completed = "校对完成。"
+proofread_skipped = "未选择任何校对规则，操作跳过。"
+proofread_failed = "校对失败，请查看日志。"
+
+# 版式转换消息
+file_already_pdf = "文件已是PDF格式"
+ofd_to_pdf_failed = "OFD转PDF失败"
+xps_to_pdf_failed = "XPS转PDF失败"
+ofd_conversion_not_implemented = "OFD转换功能暂未实现"
+txt_conversion_developing = "版式文件转TXT功能开发中，敬请期待。"
+
+# 缺少依赖消息
+missing_pymupdf = "缺少PyMuPDF库，请安装：pip install PyMuPDF"
+missing_office_for_pdf = "未找到Office软件（WPS、Microsoft Office或LibreOffice），无法转换为PDF。"
+missing_office_for_conversion = "未找到Office软件（WPS或Microsoft Office），无法完成转换。"
+doc_format_requires_office = "DOC/WPS格式转换需要安装WPS或Microsoft Office任一软件"
+xls_format_requires_office = "XLS格式转换需要安装WPS或Microsoft Office任一软件"
+external_tool_failed = "外部工具转换失败，请安装Word、LibreOffice或pdf2docx库"
+pdf_to_docx_failed = "PDF转DOCX失败，请安装Word、LibreOffice或pdf2docx库"
+
+# 合并/拆分消息
+no_files_to_merge = "未提供要合并的文件列表"
+need_at_least_two_files = "至少需要2个文件才能合并"
+no_pages_to_split = "未提供要拆分的页码"
+split_failed_all_pages = "拆分失败：输入的页码涵盖了全部页码，无法拆分"
+
+# MD转换消息
+md_to_xlsx_failed = "Markdown到XLSX转换失败。"
+md_to_docx_failed = "MD到DOCX的初始转换失败。"
+spell_check_failed = "错别字检查过程失败。"
+final_format_failed = "最终格式转换失败。"
+final_format_generation_failed = "最终格式生成失败。"
+no_csv_generated = "未生成任何CSV文件（工作表可能为空）"
+
+# 图片转换消息
+no_images_to_merge = "没有要合并的文件"
+no_images_loaded = "没有成功加载任何图片"
+conversion_failed_no_target = "转换失败：未指定目标格式"
+
+# 序号操作消息
+no_numbering_operation = "请至少指定一个操作：--remove-numbering 或 --add-numbering"
+
+# 成功消息（带参数）
+conversion_to_image_success = "已转为{format}，共{count}张"
+conversion_to_tif_success = "已转为TIF，共{pages}页"
+conversion_to_format_pages_success = "已转为{format}，共{count}页"
+merge_pdf_success = "已合并{file_count}个文件，共{page_count}页"
+split_pdf_success_two = "已拆分: {pages1}页 + {pages2}页"
+split_pdf_success_one = "已拆分: 1个文件，{pages}页"
+merge_images_to_tiff_success = "已合并{count}张为TIFF"
+
+# 失败消息（带参数）
+docx_to_format_failed = "DOCX→{format}失败"
+conversion_to_format_failed = "转换为{format}失败"
+conversion_failed_with_error = "转换失败: {error}"
+unsupported_layout_format = "不支持的版式格式: {format}"
+format_to_pdf_not_implemented = "{format}→PDF未实现"
+all_pages_invalid = "页码无效（共{total}页）"
+
+# =============================================================================
+# 校对批注文本（用于文档校对功能的批注内容）
+# =============================================================================
+[proofread]
+
+# 错误类型
+[proofread.error_type]
+typo = "错别字"
+punctuation = "标点符号"
+sensitive = "敏感词"
+unmatched = "符号不匹配"
+
+# 错误来源
+[proofread.source]
+typo = "错别字校对"
+symbol = "符号校对"
+sensitive = "敏感词匹配"
+pairing = "标点配对"
+
+# 修改建议
+[proofread.suggestion]
+sensitive = "检测到敏感词"
+extra_close = "多余的闭符号"
+unclosed = "未闭合的符号"

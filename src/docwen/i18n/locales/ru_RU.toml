@@ -1,0 +1,1607 @@
+# Docwen - Файл русского языка
+# Код языка: ru_RU
+# Кодировка: UTF-8
+
+[meta]
+name = "Russian"
+native_name = "Русский"
+
+# =============================================================================
+# Интерфейс командной строки (CLI)
+# =============================================================================
+[cli]
+description = "DocWen CLI - Конвертация документов/таблиц/изображений/макетов"
+example = "Пример"
+header = "Docwen - Интерактивный режим"
+
+# Текст справки CLI
+[cli.help]
+files = "Путь к входному файлу (поддерживает шаблоны, например, *.docx)"
+action = "Тип действия"
+target = "Целевой формат (для конвертации, например, docx, pdf, jpg)"
+extract_img = "Извлечь изображения"
+ocr = "OCR распознавание текста для изображений"
+optimize_for = "Тип оптимизации: gongwen (Официальный), contract (Контракт), thesis (Диссертация)"
+template = "Имя шаблона (для MD в Документ/Таблицу)"
+check_punct = "Проверить пунктуацию"
+check_typo = "Проверить опечатки"
+check_symbol = "Проверить символы"
+check_sensitive = "Проверить отмеченные термины"
+merge_mode = "Режим слияния: Строка/Столбец/Ячейка"
+base_table = "Путь к базовой таблице"
+pages = "Диапазон страниц PDF (например, 1-3,5,7-10)"
+dpi = "Качество DPI изображения"
+compress = "Режим сжатия"
+size_limit = "Лимит размера файла (например, 200KB, 2MB)"
+quality_mode = "Режим качества PDF (изображение в PDF)"
+batch = "Пакетный режим (одинаковая конфигурация для всех файлов)"
+yes = "Пропустить все подтверждения"
+continue_on_error = "Продолжить при ошибке"
+json = "Вывод в формате JSON (для скриптов)"
+quiet = "Тихий режим (минимальный вывод)"
+verbose = "Подробный режим"
+remove_numbering = "Удалить исходную нумерацию"
+add_numbering = "Добавить новую нумерацию"
+numbering_scheme = "Схема нумерации"
+inspect = "Проверить поддерживаемые действия (Самоописание ИИ)"
+list_actions = "Список всех доступных действий"
+list_numbering_schemes = "Список всех схем нумерации"
+list_templates = "Список всех доступных шаблонов"
+lang = "Временно установить язык"
+keep_alpha = "Сохранить прозрачность для TIFF"
+
+# Группы CLI
+[cli.groups]
+export_options = "Опции экспорта"
+export_options_desc = "Для действия export_md"
+validate_options = "Опции проверки"
+validate_options_desc = "Для действия validate"
+merge_options = "Опции слияния"
+merge_options_desc = "Для действия merge_tables"
+pdf_options = "Опции PDF"
+pdf_options_desc = "Для слияния/разделения PDF"
+image_options = "Опции изображения"
+image_options_desc = "Для конвертации изображений"
+batch_options = "Пакетные опции"
+batch_options_desc = "Пакетная обработка"
+output_options = "Управление выводом"
+output_options_desc = "Формат и детали вывода"
+numbering_options = "Опции нумерации"
+numbering_options_desc = "Для нумерации подзаголовков"
+ai_options = "Функции ИИ"
+ai_options_desc = "Самоописание и запрос"
+
+# Интерактивный режим CLI
+[cli.interactive]
+header = "Docwen - Интерактивный режим"
+select_operation = "Выберите операцию"
+select_format = "Выберите формат вывода"
+select_target_format = "Выберите целевой формат"
+input_target_format = "Целевой формат (docx/pdf/...)"
+select_image_format = "Выберите формат изображения"
+select_pdf_size = "Выберите размер PDF"
+select_numbering_scheme = "Выберите схему нумерации"
+select_optimization_type = "Выберите тип оптимизации"
+select_dpi = "Выберите качество DPI"
+select_compress_mode = "Режим сжатия"
+confirm_convert_pdf = "Подтвердить конвертацию в PDF?"
+confirm_merge = "Подтвердить слияние"
+export_options = "Опции экспорта"
+extraction_options = "Опции извлечения"
+numbering_options = "Опции нумерации"
+numbering_processing = "Обработка нумерации заголовков"
+page_range_label = "Диапазон страниц"
+input_pages = "Введите диапазон страниц"
+input_files = "Введите путь к файлу или перетащите файл"
+input_size_limit = "Лимит размера файла"
+input_other_pdfs = "Введите пути к другим PDF для объединения (поддерживаются шаблоны)"
+image_export_hint = "Примечание: для изображений нужно выбрать хотя бы одну опцию"
+proofread_options = "Опции проверки"
+proofread_toggle_hint = "\nВведите номера для переключения (например: 1 3 4), Enter — подтвердить"
+proofread_input = "Опции проверки"
+
+# Меню
+[cli.interactive.menus]
+markdown_to_docx = "Конвертировать в Word (DOCX/DOC/ODT/RTF)"
+markdown_to_xlsx = "Конвертировать в Excel (XLSX/XLS/ODS/CSV)"
+process_numbering = "Обработать нумерацию"
+export_markdown = "Экспортировать Markdown"
+export_md_ocr = "Экспорт Markdown (OCR)"
+format_convert = "Конвертация формата"
+image_format_convert = "Конвертация формата (PNG/JPG/BMP/GIF/TIF/WebP)"
+save_as_pdf = "Сохранить как PDF"
+convert_to_document = "Конвертировать в документ (DOCX/DOC)"
+document_validate = "Проверка документа"
+render_to_image = "Рендеринг в изображение"
+pdf_tools = "Инструменты PDF (Слияние/Разделение)"
+merge_pdfs = "Слияние PDF"
+split_pdf = "Разделение PDF"
+cancel = "Отмена"
+back = "Назад"
+
+# Форматы
+[cli.interactive.formats]
+docx_recommended = "DOCX (Рекомендуется)"
+doc_office = "DOC (Требуется Office)"
+odt_libre = "ODT (Требуется LibreOffice)"
+rtf_office = "RTF (Требуется Office)"
+xlsx_recommended = "XLSX (Рекомендуется)"
+xls_office = "XLS (Требуется Office)"
+ods_libre = "ODS (Требуется LibreOffice)"
+csv_text = "CSV (Простой текст)"
+tif_multipage = "TIF (Многостраничный)"
+jpg_jpeg = "JPG (JPEG)"
+png_lossless = "PNG (Без потерь)"
+jpg_lossy = "JPG (С потерями)"
+bmp = "BMP (Битмап)"
+gif = "GIF (Анимация)"
+tif = "TIF (Профессиональный)"
+webp = "WebP (Современный)"
+
+# DPI
+[cli.interactive.dpi]
+dpi_150 = "150 DPI (Минимум)"
+dpi_300 = "300 DPI (Среднее, Рекомендуется)"
+dpi_600 = "600 DPI (HD)"
+
+# Сжатие
+[cli.interactive.compress]
+highest_quality = "Лучшее качество"
+limit_size = "Ограничить размер"
+
+[cli.interactive.pdf_sizes]
+original = "Исходный размер"
+fit_a4 = "Под A4"
+fit_a3 = "Под A3"
+
+# Схемы нумерации
+[cli.interactive.numbering_schemes]
+gongwen_standard = "Официальный стандарт"
+hierarchical_standard = "Иерархический числовой"
+hierarchical_h2_start = "Иерархический (с H2) (H1 без номера; с H2: 1 1.1 1.1.1)"
+legal_standard = "Юридический стандарт"
+
+# Типы оптимизации
+[cli.interactive.optimization_types]
+gongwen = "Официальный"
+contract = "Контракт"
+thesis = "Диссертация"
+
+# Опции проверки
+[cli.interactive.proofread]
+symbol_pairing = "Парность символов"
+symbol_correction = "Коррекция символов"
+typos_rule = "Проверка опечаток"
+sensitive_word = "Отмеченные термины"
+
+# Подсказки
+[cli.interactive.prompts]
+extract_images = "Извлечь изображения?"
+embed_image = "Встроить изображения?"
+ocr_recognition = "Включить распознавание OCR?"
+ocr_simple = "OCR?"
+optimize_for_type = "Оптимизировать для типа документа?"
+remove_numbering = "Удалить старую нумерацию?"
+add_numbering = "Добавить новую нумерацию?"
+continue_next = "Обработать следующий файл?"
+apply_to_all = "Применить ко всем файлам?"
+
+# Сообщения CLI
+[cli.messages]
+error_no_files = "Ошибка: Не указаны входные файлы"
+error_no_action = "Ошибка: Безголовый режим требует --action"
+error_no_valid_files = "Ошибка: Нет допустимых файлов"
+error_file_not_found = "Ошибка: Файл не найден"
+error_inspect_no_file = "Ошибка: --inspect требует файл"
+warning_invalid_files = "Внимание: {count} недопустимых файлов"
+warning_format_mismatch = "Внимание: {count} файлов с неверным форматом"
+no_files_selected = "Файлы не выбраны, выход"
+no_operation_selected = "Операция не выбрана"
+program_interrupted = "Программа прервана"
+error_prefix = "Ошибка"
+files_found = "Найдено {count} файлов"
+file_list = "Список файлов"
+file_count_suffix = " файлов"
+more_files = "и ещё {count} файлов"
+no_other_files = "Другие файлы не выбраны"
+error_need_option = "Ошибка: нужно выбрать хотя бы одну опцию"
+no_proofread_selected = "Не выбраны опции проверки"
+error_no_template = "Ошибка: шаблон {type} не найден"
+available_type_templates = "Доступные шаблоны {type}"
+template_list_error = "Ошибка: не удалось загрузить список шаблонов"
+invalid_index = "Неверный номер: {idx}"
+invalid_input = "Неверный ввод, введите номера"
+batch_completed = "Пакетная обработка завершена: {success}/{total} успешно"
+failed_count = "Неудачно: {count} файлов"
+available_actions = "Доступные действия"
+available_schemes = "Доступные схемы"
+available_templates = "Доступные шаблоны"
+document_templates = "Шаблоны документов (DOCX)"
+spreadsheet_templates = "Шаблоны таблиц (XLSX)"
+no_templates = "(Нет)"
+file_info = "Файл"
+category_info = "Категория"
+format_info = "Формат"
+supported_actions = "Поддерживаемые действия"
+example_format = "Пример"
+base_file = "Базовый файл"
+other_pdf_files = "Другие файлы PDF"
+will_merge_files = "Будет объединено {count} файлов"
+page_range_hint = "Формат: 1-3,5,7-10"
+current_file = "Текущий"
+
+# Пакетный режим
+[cli.batch]
+batch_mode = "Пакетный режим"
+process_mode = "Способ обработки"
+processing_category = "Обработка файлов {category}..."
+batch_apply_same = "Пакетная обработка (Одно действие)"
+process_one_by_one = "Обрабатывать по одному"
+detected_same_type = "Обнаружено {count} файлов {category}"
+detected_mixed_types = "Обнаружены смешанные типы файлов"
+process_by_type = "Обрабатывать по типу (Рекомендуется)"
+export_all_to_md = "Экспортировать все в Markdown"
+configure_operation = "Настроить операцию"
+
+# Категории
+[cli.categories]
+markdown = "Markdown"
+document = "Документ"
+spreadsheet = "Таблица"
+image = "Изображение"
+layout = "Макет"
+
+# Подсказки CLI
+[cli.prompts]
+select = "Выбрать"
+default = "По умолчанию"
+invalid_yes_no = "Неверно, введите y/n"
+enter_number_range = "Введите число от 1 до {max}"
+invalid_number = "Неверное число"
+cannot_be_empty = "Не может быть пустым"
+
+# Валидация
+[cli.validation]
+file_not_exists = "Файл не существует"
+not_a_file = "Путь не является файлом"
+file_empty = "Файл пуст"
+unsupported_type = "Тип файла не поддерживается"
+
+# Результаты
+[cli.result]
+success = "Успех"
+failed = "Неудача"
+output = "Вывод"
+
+# Действия
+[cli.actions]
+export_md = "Экспорт в Markdown"
+convert = "Конвертировать"
+validate = "Проверить"
+merge_tables = "Слияние таблиц"
+merge_pdfs = "Слияние PDF"
+split_pdf = "Разделение PDF"
+merge_tiff = "Слияние в TIFF"
+process_numbering = "Обработка нумерации"
+
+# Схемы
+[cli.numbering_schemes]
+gongwen_standard = "Официальный стандарт"
+hierarchical_standard = "Иерархический стандарт"
+hierarchical_h2_start = "Иерархический (с H2)"
+legal_standard = "Юридический стандарт"
+
+# =============================================================================
+# Общие тексты
+# =============================================================================
+[common]
+app_name = "DocWen"
+offline_version = "(Оффлайн версия)"
+close = "Закрыть"
+apply = "Применить"
+cancel = "Отмена"
+ok = "ОК"
+save = "Сохранить"
+error = "Ошибка"
+version = "Версия {version}"
+browse = "Обзор..."
+select = "Выбрать"
+disclaimer = "Тестовое ПО. Точность не гарантируется.\nТолько для тестирования. Коммерческое использование и распространение запрещено."
+
+# =============================================================================
+# Настройки
+# =============================================================================
+[settings]
+title = "Настройки"
+
+# Вкладки
+[settings.tabs]
+general = "Общие"
+text = "Текст"
+document = "Документ"
+spreadsheet = "Таблица"
+image = "Изображение"
+layout = "Макет"
+link = "Ссылка"
+formatting = "Форматирование"
+output = "Вывод"
+logging = "Лог"
+
+# Статус
+[settings.status]
+applied = "Применено"
+apply_failed = "Ошибка, см. лог"
+apply_error = "Ошибка при применении"
+
+# Общие
+[settings.general]
+language_section = "🌐 Язык / Language"
+language_label = "Выберите язык:"
+language_tooltip = "Выберите язык интерфейса.\nТребуется перезапуск."
+language_restart_hint = "Требуется перезапуск."
+
+theme_section = "Тема"
+theme_label = "Выберите тему:"
+theme_tooltip = "Выберите визуальную тему приложения."
+theme_preview = "Предпросмотр:"
+sample_button = "Пример"
+sample_text = "Текст"
+
+# Темы
+[settings.general.themes]
+cerculean = "Cerculean"
+cosmo = "Cosmo"
+cyborg = "Cyborg"
+darkly = "Darkly"
+flatly = "Flatly"
+journal = "Journal"
+litera = "Litera"
+lumen = "Lumen"
+minty = "Minty"
+morph = "Morph"
+pulse = "Pulse"
+sandstone = "Sandstone"
+simplex = "Simplex"
+solar = "Solar"
+superhero = "Superhero"
+united = "United"
+vapor = "Vapor"
+yeti = "Yeti"
+
+[settings.general.transparency]
+section = "Прозрачность"
+enable = "Включить прозрачность окна"
+tooltip = "Включает полупрозрачные окна."
+
+[settings.general.window]
+section = "Поведение окна"
+remember_state = "Запомнить позицию и размер"
+remember_state_tooltip = "Восстановить состояние окна при следующем запуске."
+auto_center = "Автоматически центрировать"
+auto_center_tooltip = "Центрировать окно при запуске."
+default_mode_label = "Режим по умолчанию:"
+default_mode_tooltip = "Режим по умолчанию при запуске."
+single_mode = "Один файл"
+batch_mode = "Пакетный"
+
+# Текст
+[settings.text]
+md_to_docx_section = "Нумерация (MD в DOCX)"
+remove_numbering = "Удалить старую нумерацию"
+remove_numbering_tooltip = "Удаляет существующую нумерацию в Markdown."
+add_numbering = "Добавить новую нумерацию"
+scheme_label = "Схема:"
+
+numbering_settings_section = "Настройки нумерации"
+numbering_settings_desc = "Управление правилами добавления и удаления."
+edit_numbering_schemes = "Схемы добавления"
+edit_patterns = "Шаблоны очистки"
+
+template_section = "Настройки шаблона"
+template_label = "Шаблон по умолчанию для Markdown:"
+template_tooltip = "Шаблон по умолчанию при импорте MD файлов."
+template_docx = "Документ (DOCX)"
+template_xlsx = "Таблица (XLSX)"
+
+validation_section = "Настройки проверки"
+enable_symbol_pairing = "Включить парность символов"
+enable_symbol_correction = "Включить коррекцию символов"
+enable_typos_rule = "Включить проверку опечаток"
+enable_sensitive_word = "Включить отмеченные термины"
+skip_code_blocks = "Пропускать блоки кода"
+skip_quote_blocks = "Пропускать блоки цитат"
+
+dictionary_section = "Словари"
+dictionary_desc = "Управление пользовательскими словарями."
+edit_symbol_mapping = "Символы"
+edit_typos = "Опечатки"
+edit_sensitive_words = "Отмеченные термины"
+
+editor_open_failed = "Не удалось открыть редактор: {error}"
+
+# Документ
+[settings.document]
+extraction_section = "Извлечение/OCR"
+keep_images = "Извлекать изображения"
+keep_images_tooltip = "Извлекать изображения при конвертации."
+enable_ocr = "Включить OCR"
+enable_ocr_tooltip = "Распознавание текста для изображений."
+
+optimization_section = "Оптимизация"
+enable_optimization = "Включить оптимизацию"
+optimization_type_label = "Тип:"
+
+software_section = "Приоритет ПО"
+word_processors_label = "Текстовый процессор"
+odt_conversion_label = "Конвертация ODT"
+document_to_pdf_label = "Документ в PDF"
+
+[settings.document.software]
+wps_writer = "WPS Writer"
+msoffice_word = "Word"
+libreoffice = "LibreOffice"
+
+[settings.document.numbering]
+section = "Нумерация (DOCX в MD)"
+remove = "Удалить старую нумерацию"
+remove_tooltip = "Удаляет существующую нумерацию."
+add = "Добавить новую нумерацию"
+scheme_label = "Схема:"
+
+# Таблица
+[settings.spreadsheet]
+extraction_section = "Извлечение/OCR"
+keep_images = "Извлекать изображения"
+keep_images_tooltip = "Извлекать изображения."
+enable_ocr = "Включить OCR"
+enable_ocr_tooltip = "Включить OCR."
+merge_mode_section = "Режим слияния"
+merge_mode_desc = "Режим по умолчанию для слияния таблиц."
+software_section = "Приоритет ПО"
+spreadsheet_processors_label = "Табличный процессор"
+ods_conversion_label = "Конвертация ODS"
+spreadsheet_to_pdf_label = "Таблица в PDF"
+
+[settings.spreadsheet.merge_modes]
+by_row = "По строке"
+by_row_tooltip = "Добавлять таблицы одну под другой."
+by_column = "По столбцу"
+by_column_tooltip = "Добавлять таблицы рядом."
+by_cell = "По ячейке"
+by_cell_tooltip = "Складывать значения в ячейках."
+
+[settings.spreadsheet.software]
+wps_spreadsheets = "WPS Spreadsheets"
+excel = "Excel"
+libreoffice = "LibreOffice"
+
+# Изображение
+[settings.image]
+extraction_section = "Извлечение/OCR"
+keep_images = "Сохранять изображения"
+keep_images_tooltip = "Сохранять изображения при конвертации."
+enable_ocr = "Включить OCR"
+enable_ocr_tooltip = "Включить OCR."
+
+# Язык OCR
+ocr_language_label = "Язык OCR:"
+ocr_language_tooltip = "Выберите языковую модель для распознавания OCR.\n\n• Следовать языку интерфейса: Автоматический выбор по текущему языку интерфейса\n• Китайский/Английский: Для смешанных китайских и английских документов\n• Японский: Для японских документов\n• Латиница: Для немецкого, французского, португальского и т. д.\n• Кириллица: Для русского и т. д."
+ocr_language_auto = "Следовать языку интерфейса"
+ocr_language_chinese = "Китайский/Английский"
+ocr_language_japanese = "Японский"
+ocr_language_chinese_cht = "Традиционный китайский"
+ocr_language_english = "Только английский"
+ocr_language_korean = "Корейский"
+ocr_language_latin = "Латиница (DE/FR/PT и т. д.)"
+ocr_language_cyrillic = "Кириллица (RU и т. д.)"
+
+compress_section = "Сжатие"
+compress_desc = "Настройки сжатия по умолчанию."
+compress_lossless = "Лучшее качество"
+compress_lossless_tooltip = "Без потерь или высокое качество."
+compress_limit_size = "Ограничить размер"
+compress_limit_size_tooltip = "Настроить качество для целевого размера."
+size_limit_label = "Лимит размера:"
+
+pdf_tiff_section = "Опции PDF/TIFF"
+pdf_size_label = "Размер изображения PDF"
+pdf_original = "Оригинальный размер"
+pdf_a4 = "Вписать в A4"
+pdf_a3 = "Вписать в A3"
+tiff_mode_label = "Режим TIFF"
+tiff_keep_alpha = "Сохранить прозрачность"
+tiff_keep_alpha_tooltip = "Сохранить прозрачность."
+tiff_no_alpha = "Удалить прозрачность"
+tiff_no_alpha_tooltip = "Залить фон белым."
+
+# Макет
+[settings.layout]
+extraction_section = "Извлечение/OCR"
+keep_images = "Извлекать изображения"
+keep_images_tooltip = "Извлекать изображения."
+enable_ocr = "Включить OCR"
+enable_ocr_tooltip = "Включить OCR."
+dpi_section = "DPI рендеринга"
+dpi_desc = "DPI для рендеринга макета."
+dpi_min = "Мин (150)"
+dpi_min_tooltip = "Быстрый просмотр."
+dpi_medium = "Среднее (300)"
+dpi_medium_tooltip = "Рекомендуется."
+dpi_high = "Высокое (600)"
+dpi_high_tooltip = "Качество печати."
+software_section = "Приоритет ПО"
+pdf_to_doc_label = "PDF в Документ"
+
+# Ссылка
+[settings.link]
+format_section = "Формат ссылки Markdown"
+format_desc = "Формат ссылок в Markdown."
+image_link_style_label = "Ссылка изображения:"
+image_link_style_tooltip = "Стиль для встраивания изображения."
+md_file_link_style_label = "Ссылка файла:"
+md_file_link_style_tooltip = "Стиль для ссылок на файлы."
+
+non_embed_section = "Невстроенные ссылки"
+non_embed_desc = "Обработка обычных ссылок."
+wiki_link_mode = "Wiki ссылки:"
+wiki_link_tooltip = "Обработка [[Wiki ссылок]]."
+markdown_link_mode = "Markdown ссылки:"
+markdown_link_tooltip = "Обработка [Markdown ссылок]."
+
+embed_section = "Встроенные ссылки"
+embed_desc = "Обработка встраиваний (!)."
+wiki_embed_image_mode = "Wiki встраивание изображения:"
+wiki_embed_image_tooltip = "![[Изображение]]."
+markdown_embed_image_mode = "Markdown встраивание изображения:"
+markdown_embed_image_tooltip = "![Изображение]."
+embed_md_file_mode = "Встроенные MD файлы:"
+embed_md_file_tooltip = "![[Файл.md]]."
+max_depth_label = "Макс. глубина:"
+max_depth_tooltip = "Предотвращает бесконечные циклы."
+
+[settings.link.image_styles]
+wiki_embed = "Wiki встраивание"
+wiki_link = "Wiki ссылка"
+md_embed = "Markdown встраивание"
+md_link = "Markdown ссылка"
+
+[settings.link.md_file_styles]
+wiki_embed = "Wiki встраивание"
+wiki_link = "Wiki ссылка"
+md_link = "Markdown ссылка"
+
+[settings.link.modes]
+keep = "Оставить"
+extract_text = "Извлечь текст"
+remove = "Удалить"
+embed = "Вставить контент"
+
+# Форматирование
+[settings.formatting]
+docx_to_md_section = "Документ в Markdown"
+format_processing = "Обработка формата"
+format_processing_tooltip = "Как обрабатываются форматирования."
+body_format_label = "Тело текста:"
+body_format_tooltip = "Жирный, Курсив и т.д."
+heading_format_label = "Заголовки:"
+heading_format_tooltip = "Форматирование в заголовках."
+table_header_format_label = "Заголовок таблицы:"
+table_header_format_tooltip = "Форматирование в заголовках таблиц."
+
+separator_mapping = "Отображение разделителей"
+separator_mapping_tooltip = "Отображение разрывов Word в Markdown."
+page_break_label = "Разрыв страницы:"
+page_break_tooltip = "Разрыв страницы Word."
+section_break_label = "Разрыв раздела:"
+section_break_tooltip = "Разрыв раздела Word."
+horizontal_rule_label = "Разделительная линия:"
+horizontal_rule_tooltip = "Нижняя граница Word."
+
+syntax_selection = "Выбор синтаксиса"
+syntax_selection_tooltip = "Синтаксис Markdown для вывода."
+bold_syntax_label = "Жирный:"
+bold_syntax_tooltip = "Синтаксис для Жирного."
+italic_syntax_label = "Курсив:"
+italic_syntax_tooltip = "Синтаксис для Курсива."
+strikethrough_syntax_label = "Зачеркнутый:"
+strikethrough_syntax_tooltip = "Синтаксис для Зачеркнутого."
+highlight_syntax_label = "Выделенный:"
+highlight_syntax_tooltip = "Синтаксис для Выделения."
+superscript_syntax_label = "Надстрочный:"
+superscript_syntax_tooltip = "Синтаксис для Надстрочного."
+subscript_syntax_label = "Подстрочный:"
+subscript_syntax_tooltip = "Синтаксис для Подстрочного."
+unordered_list_label = "Маркированный список:"
+unordered_list_tooltip = "Символ для списков."
+ordered_list_label = "Нумерованный список:"
+ordered_list_tooltip = "Нумерация."
+indent_spaces_label = "Отступ:"
+indent_spaces_tooltip = "Пробелов на уровень."
+
+md_to_docx_section = "Markdown в Документ"
+md_format_processing = "Обработка формата"
+md_format_processing_tooltip = "Как обрабатываются теги Markdown."
+md_body_format_label = "Тело текста:"
+md_body_format_tooltip = "Применить или удалить теги."
+md_heading_format_label = "Заголовки:"
+md_heading_format_tooltip = "Теги в заголовках."
+md_table_header_format_label = "Заголовок таблицы:"
+md_table_header_format_tooltip = "Теги в заголовках таблиц."
+
+md_separator_mapping = "Отображение разделителей"
+md_separator_mapping_tooltip = "Markdown в разрывы Word."
+dash_label = "--- (Тире):"
+dash_tooltip = "Отображение ---."
+asterisk_label = "*** (Звездочки):"
+asterisk_tooltip = "Отображение ***."
+underscore_label = "___ (Подчеркивания):"
+underscore_tooltip = "Отображение ___."
+
+table_style = "Стиль таблицы"
+table_style_tooltip = "Стиль для таблиц."
+builtin_style_radio = "Встроенный"
+custom_style_radio = "Пользовательский"
+
+# Разделитель списка
+list_separator_label = "Разделитель списка YAML"
+list_separator_tooltip = "Разделитель при объединении значений списка YAML в строку\n\nТипичные значения:\n• Китайская запятая（、）\n• Полноширинная запятая（，）\n• Запятая + пробел（, ）\n• Пустая строка：прямое соединение"
+
+[settings.formatting.options]
+preserve_format = "Сохранить формат"
+discard_format = "Отбросить формат"
+apply_format = "Применить формат"
+keep_markup = "Сохранить разметку"
+clean_markup = "Очистить разметку"
+
+[settings.formatting.separators]
+dash = "---"
+asterisk = "***"
+underscore = "___"
+ignore = "Игнорировать"
+page_break = "Разрыв страницы"
+section_break = "Разрыв раздела"
+horizontal_rule_1 = "Разделительная линия 1"
+horizontal_rule_2 = "Разделительная линия 2"
+horizontal_rule_3 = "Разделительная линия 3"
+
+[settings.formatting.syntax]
+bold_asterisk = "Звездочка (**Текст**)"
+bold_underscore = "Подчеркивание (__Текст__)"
+italic_asterisk = "Звездочка (*Текст*)"
+italic_underscore = "Подчеркивание (_Текст_)"
+strikethrough_extended = "Расширенный (~~Текст~~)"
+strikethrough_html = "HTML (<del>)"
+highlight_extended = "Расширенный (==Текст==)"
+highlight_html = "HTML (<mark>)"
+superscript_extended = "Расширенный (^Текст^)"
+superscript_html = "HTML (<sup>)"
+subscript_extended = "Расширенный (~Текст~)"
+subscript_html = "HTML (<sub>)"
+unordered_dash = "Тире (- Элемент)"
+unordered_asterisk = "Звездочка (* Элемент)"
+unordered_plus = "Плюс (+ Элемент)"
+ordered_restart = "Перезапуск с 1"
+ordered_preserve = "Сохранить номер"
+indent_2_spaces = "2 Пробела"
+indent_4_spaces = "4 Пробела"
+
+[settings.formatting.table_styles]
+three_line_table = "Трехлинейная таблица"
+table_grid = "Таблица-сетка"
+
+# Вывод
+[settings.output]
+intermediate_section = "Промежуточные файлы"
+save_intermediate_label = "Сохранять промежуточные файлы"
+save_intermediate_tooltip = "Сохранять все промежуточные этапы."
+save_intermediate_desc = "Сохранение промежуточных форматов."
+
+directory_section = "Каталог вывода"
+output_mode_label = "Место вывода:"
+output_mode_tooltip = "Исходная папка или пользовательская."
+custom_path_label = "Путь:"
+browse_title = "Выбрать папку вывода"
+
+[settings.output.output_modes]
+source = "Исходный каталог"
+custom = "Пользовательский"
+
+[settings.output.date_folder]
+section = "Папка даты"
+create_label = "Создать подпапку даты"
+create_tooltip = "Создает подпапку с текущей датой."
+format_label = "Формат даты:"
+
+[settings.output.date_formats]
+iso = "2025-01-06"
+compact = "20250106"
+chinese = "2025年01月06日"
+
+[settings.output.behavior]
+section = "Поведение"
+auto_open_folder_label = "Открыть папку после"
+auto_open_folder_tooltip = "Открывает папку вывода после конвертации."
+
+# Лог
+[settings.logging]
+system_section = "Система"
+enable_logging_label = "Включить логирование"
+enable_logging_tooltip = "Включает систему логирования."
+log_level_label = "Уровень лога:"
+log_level_tooltip = "Уровень детализации логов."
+
+file_section = "Файл"
+file_prefix_label = "Префикс файла:"
+file_prefix_tooltip = "Префикс для файлов логов."
+retention_days_label = "Хранение (дней):"
+retention_days_tooltip = "Удалять логи через X дней."
+
+console_section = "Консоль"
+enable_console_label = "Вывод в консоль"
+enable_console_tooltip = "Отображать логи в консоли."
+console_level_label = "Уровень консоли:"
+console_level_tooltip = "Уровень для консоли."
+
+[settings.logging.levels]
+debug = "Отладка (DEBUG)"
+info = "Информация (INFO)"
+warning = "Предупреждение (WARNING)"
+error = "Ошибка (ERROR)"
+
+# О программе
+[about]
+title = "О программе"
+version_info = "Версия {version}"
+version_tooltip = "Оффлайн версия. Пожалуйста, обновляйте вручную."
+contact = "Контакт: {email}"
+copyright = "© {year} {author}"
+acknowledgments = "Благодарности"
+acknowledgments_intro = "Спасибо следующим open-source проектам:"
+
+[about.tools]
+python_docx = "Конвертация DOCX/Markdown"
+openpyxl = "Конвертация XLSX/Markdown"
+pymupdf = "Обработка PDF/XPS"
+pymupdf4llm = "Умное извлечение PDF"
+pdf2docx = "PDF в Word"
+easyofd = "Обработка OFD"
+rapidocr = "Оффлайн OCR"
+onnxruntime = "Движок инференса"
+ttkbootstrap = "Современный GUI"
+tkinterdnd2 = "Drag & Drop"
+pillow = "Обработка изображений"
+pillow_heif = "Поддержка HEIF"
+img2pdf = "Изображение в PDF"
+pywin32 = "Интерфейс Office COM"
+lxml = "Обработка XML"
+latex2mathml = "Формулы LaTeX"
+pyyaml = "Метаданные YAML"
+tomlkit = "Конфигурация TOML"
+pandas = "Анализ данных"
+numpy = "Числовые вычисления"
+olefile = "Поддержка Legacy Office"
+watchdog = "Мониторинг файловой системы"
+
+# Компоненты
+[components]
+
+[components.file_drop]
+section_title = "Входные файлы"
+empty_hint_single = "📤 Перетащите один файл сюда"
+empty_hint_batch = "📤 Перетащите файлы/папки сюда"
+add_button = "Добавить"
+clear_button = "Очистить"
+single_mode = "Один"
+batch_mode = "Пакет"
+unavailable = "Недоступно"
+batch_summary = "Пакет: {count} файлов {category}"
+
+[components.file_selector]
+empty_hint = "Нет файлов\nПеретащите файлы сюда для пакетной обработки"
+unavailable = "Недоступно"
+
+[components.status_bar]
+unavailable = "Недоступно"
+
+app_started = "Программа запущена"
+no_files_in_tab = "Нет файлов в {category}"
+unknown_file_type = "Неизвестный тип"
+files_cleared = "Файлы очищены"
+
+processing_wait = "Обработка, пожалуйста, подождите{dots}"
+operation_cancelled = "Отменено"
+processing_file = "Обработка {current}/{total}: {filename}"
+batch_completed = "Пакет завершен: {success} успешно, {failed} ошибок"
+skipped_same_format = "Пропущено: Уже {format}"
+
+selected_text_file = "Выбран текстовый файл"
+selected_document_file = "Выбран документ"
+selected_spreadsheet_file = "Выбрана таблица"
+selected_image_file = "Выбрано изображение"
+selected_layout_file = "Выбран макет"
+
+operation_success = "Операция успешна!"
+conversion_failed = "Конвертация не удалась"
+trial_expired_title = "Пробная версия истекла"
+trial_expired_message = "Пробная версия истекла. Пожалуйста, свяжитесь с разработчиком."
+open_location_title = "Открыть папку"
+open_location_confirm = "Открыть исходную папку?"
+template_selected = "Шаблон: {name}"
+files_added = "{count} файлов добавлено в {category}"
+files_add_failed = "Ошибка добавления {count} файлов"
+file_selected = "Выбрано: {filename} ({category})"
+
+[components.file_dialogs]
+skip_title = "Файл пропущен"
+skip_message = "Пропущено\n\nПричина: {reason}\n\nФайл: {filename}\nМесто: {location}"
+skip_reason_unknown = "Неизвестно"
+
+error_title = "Ошибка"
+error_message = "Неудача\n\nФайл: {filename}\nОшибка: {error}\n\nСовет:\n1. Файл поврежден?\n2. ПО запущено?\n3. См. логи"
+error_unknown = "Неизвестная ошибка"
+
+[components.action_panel]
+section_title = "Действия"
+unavailable = "Недоступно"
+
+[components.conversion_panel]
+unavailable = "Недоступно"
+
+[components.template_selector]
+no_templates = "Нет доступных"
+unavailable = "Недоступно"
+
+[components.template_selector_tabbed]
+document_templates = "Документ"
+spreadsheet_templates = "Таблица"
+
+# Типы файлов
+[file_types]
+document = "Документ"
+spreadsheet = "Таблица"
+image = "Изображение"
+layout = "Макет"
+text = "Текст"
+unknown = "Неизвестно"
+
+text_category = "Текст"
+document_category = "Документ"
+spreadsheet_category = "Таблица"
+layout_category = "Макет"
+image_category = "Изображение"
+
+unknown_type = "Неизвестный тип"
+format_mismatch = "⚠️ Это {format}"
+format_unverifiable = "⚠️ Не проверяется"
+format_txt = "TXT"
+format_md = "Markdown"
+format_csv = "CSV"
+
+# Конвертация
+[conversion]
+
+
+
+# Генерируемые имена файлов (для именования выходных файлов)
+[conversion.filenames]
+split_part1 = "Часть1"
+split_part2 = "Часть2"
+merged_pdf = "ОбъединенныйPDF"
+merged_table = "ОбъединеннаяТаблица"
+
+# Сообщения
+[messages]
+file_not_found = "Не найдено: {filename}"
+invalid_file_type = "Неверный тип: {ext}"
+unsupported_file_type = "Не поддерживается"
+unknown_file_category = "Неизвестная категория: {category}"
+
+error_prefix = "Ошибка: {message}"
+operation_failed = "Операция не удалась: {error}"
+processing_exception = "Исключение: {error}"
+system_init_error = "Ошибка инициализации"
+process_file_failed = "Ошибка обработки: {error}"
+batch_merge_need_two_layout = "Нужно мин. 2 файла макета"
+batch_merge_need_two_image = "Нужно мин. 2 файла изображения"
+batch_merge_need_two_table = "Нужно мин. 2 файла таблицы"
+batch_file_list_not_init = "Список файлов не инициализирован"
+select_base_table_first = "Пожалуйста, сначала выберите базовую таблицу"
+select_merge_mode = "Пожалуйста, выберите режим слияния"
+process_failed = "Ошибка: {error}"
+file_processing_failed = "Не удалось обработать файл: {error}"
+template_selection_failed = "Не удалось выбрать шаблон: {error}"
+cancel_failed = "Не удалось отменить: {error}"
+clear_failed = "Не удалось очистить: {error}"
+settings_unavailable = "Настройки недоступны"
+open_settings_failed = "Не удалось открыть настройки: {error}"
+apply_settings_failed = "Не удалось применить настройки: {error}"
+about_unavailable = "О программе недоступно"
+open_about_failed = "Не удалось открыть «О программе»: {error}"
+
+
+
+
+single_file_only = "Только один файл в одиночном режиме"
+no_valid_files = "Нет допустимых файлов"
+no_folder_in_single_mode = "Нет папок в одиночном режиме"
+all_supported_files = "Все поддерживаемые"
+all_files = "Все файлы"
+select_multiple_files = "Множественный выбор"
+category_mismatch = "Категория не совпадает: {current_name} → {new_name}"
+category_mismatch_detail = "Конфликт типов: {selected_name} vs {file_category_name}"
+
+# Сообщения об ошибках
+[messages.errors]
+invalid_docx_template = "Файл шаблона \"{template_name}\" недействителен или повреждён. Пожалуйста, откройте шаблон в Word или WPS, отредактируйте и сохраните его, чтобы убедиться, что это действительный файл DOCX."
+
+# Предупреждающие сообщения
+[messages.warnings]
+missing_body_placeholder = "⚠️ В шаблоне не найден заполнитель для текста (например, {{正文}} или {{body}}). Содержимое Markdown не было вставлено"
+
+# Редакторы
+[editors]
+
+[editors.numbering_add]
+window_title = "Редактор схем"
+scheme_list = "Схемы"
+default_scheme = "По умолчанию:"
+level_format_config = "Формат уровня"
+realtime_preview = "Предпросмотр"
+format_help = "📖 Помощь"
+format_help_title = "Заполнители"
+format_help_text = "Помощь по заполнителям..."
+
+level_1 = "Уровень 1"
+level_2 = "Уровень 2"
+level_3 = "Уровень 3"
+level_4 = "Уровень 4"
+level_5 = "Уровень 5"
+level_6 = "Уровень 6"
+level_7 = "Уровень 7"
+level_8 = "Уровень 8"
+level_9 = "Уровень 9"
+
+new_scheme = "Новый"
+copy_suffix = "(Копия)"
+
+preview_sample = "Пример {level_name}"
+no_format = "Нет формата"
+preview_failed = "Ошибка"
+
+menu_current_level = "── Текущий ({level}) ──"
+menu_decorations = "── Декорация ──"
+menu_hierarchical = "── Иерархия ──"
+
+style_chinese_lower = "Кит. Мал"
+style_chinese_upper = "Кит. Бол"
+style_arabic_half = "Арабский"
+style_arabic_circled = "В круге"
+style_letter_upper = "Буква Бол"
+style_roman_upper = "Римский Бол"
+
+decoration_dun = "Запятая"
+decoration_dot_space = "Точка+Пробел"
+decoration_bracket = "Скобка"
+decoration_chapter = "Глава"
+
+
+load_failed = "Ошибка загрузки"
+load_failed_message = "Не удалось загрузить: {error}"
+save_failed = "Ошибка сохранения"
+save_failed_message = "Не удалось сохранить"
+save_failed_with_error = "Ошибка: {error}"
+cannot_delete = "Нельзя удалить"
+cannot_delete_default_scheme = "По умолчанию нельзя удалить"
+
+[editors.numbering_add.names]
+hierarchical_standard = "Иерархический"
+hierarchical_h2_start = "Иерархический (с H2)"
+
+[editors.numbering_add.descriptions]
+hierarchical_standard_desc = "1 , 1.1 , 1.1.1 ..."
+hierarchical_h2_start_desc = "С H2: 1 , 1.1 ..."
+
+[editors.common]
+basic_info = "Инфо"
+name = "Имя:"
+description = "Описание:"
+add = "Добавить"
+copy = "Копировать"
+delete = "Удалить"
+move_up = "Вверх"
+move_down = "Вниз"
+save = "Сохранить"
+cancel = "Отмена"
+prompt = "Прим."
+select_item_first = "Пожалуйста, выберите элемент"
+cannot_delete = "Не удаляемый"
+system_item_hint = "Системный элемент"
+confirm_delete = "Подтвердить удаление"
+confirm_delete_message = "Действительно удалить: {name}?"
+confirm_close = "Подтвердить закрытие"
+unsaved_changes_hint = "Несохраненные изменения"
+unsaved_close_message = "Действительно закрыть?"
+
+[editors.numbering_clean]
+window_title = "Правила очистки"
+rule_list = "Правила"
+rule_edit = "Редактировать"
+name = "Имя:"
+description = "Описание:"
+regex = "Регулярное выражение:"
+regex_test = "Тест"
+input = "Ввод:"
+result = "Результат:"
+status = "Статус:"
+load_example = "Загрузить пример"
+available_placeholders = "Заполнители"
+new_rule = "Новый"
+copy_suffix = "(Копия)"
+match_success = "Совпадение"
+no_match = "Нет совпадения"
+regex_error = "Ошибка Regex"
+test_error = "Ошибка"
+placeholder_info = """Информация о плейсхолдерах:
+
+{space}        - Пробелы (пробел, полный пробел и т.п.)
+{sep}          - Разделители (точка, запятая и т.п.)
+{bracket_open} - Открывающие скобки (китайские/английские)
+{bracket_close}- Закрывающие скобки (китайские/английские)
+{num_arab}     - Арабские цифры (полуширин./полнширин.)
+{num_cn}       - Китайские числа (нижн./верхн. регистр)
+{num_cn_paren} - Китайские числа в скобках (㈠-㈩)
+{num}          - Все числа (китайские + арабские + ㈠-㈩)
+{letter}       - Латинские буквы (верхн./нижн. регистр)
+{circled}      - Обведённые числа (①-㊿, ❶-⓴, ⓵-⓾ и т.п.)
+{unit_suffix}  - Китайские суффиксы единиц (глава, раздел и т.п.)
+{unit_prefix}  - Китайские префиксы единиц (том, часть и т.п.)"""
+prompt = "Прим."
+no_example_text = "Нет текста примера"
+load_failed = "Ошибка загрузки"
+load_failed_message = "Ошибка: {error}"
+save_failed = "Ошибка сохранения"
+save_failed_message = "Ошибка при сохранении"
+save_failed_with_error = "Ошибка: {error}"
+
+[editors.numbering_clean.names]
+chinese_unit_suffix = "Суффикс ед. кит."
+chinese_unit_prefix = "Префикс ед. кит."
+circled_numbers = "Числа в круге"
+bracket_number = "Числа в скобках"
+hierarchical = "Иерархический"
+number_separator = "Разделитель числа"
+legal_english = "Английский Юридический"
+letter_number = "Номер буквы"
+
+[editors.numbering_clean.descriptions]
+chinese_unit_suffix_desc = "Глава X и т.д."
+chinese_unit_prefix_desc = "Часть X и т.д."
+circled_numbers_desc = "① и т.д."
+bracket_number_desc = "(1) и т.д."
+hierarchical_desc = "1.1 и т.д."
+number_separator_desc = "1. и т.д."
+legal_english_desc = "Chapter X и т.д."
+letter_number_desc = "A. и т.д."
+
+[editors.mapping]
+symbol_editor_title = "Символы"
+typo_editor_title = "Опечатки"
+sensitive_editor_title = "Отмеченные термины"
+generic_editor_title = "Отображение"
+
+symbol_correct_symbol = "Верно"
+symbol_error_symbols = "Неверно"
+typo_correct_word = "Верно"
+typo_error_words = "Неверно"
+sensitive_sensitive_word = "Отмеченный термин"
+sensitive_exceptions = "Исключения"
+comment = "Комментарий"
+generic_key = "Ключ"
+generic_value_list = "Значения"
+
+symbol_description = "Отображение символов."
+typo_description = "Коррекция опечаток."
+sensitive_description = "Отмеченные термины и исключения."
+generic_description = "Общее отображение."
+
+add_entry = "Добавить запись"
+edit_entry = "Редактировать"
+delete_entry = "Удалить"
+
+prompt = "Прим."
+select_entry_to_edit = "Пожалуйста, выберите"
+select_entry_to_delete = "Пожалуйста, выберите"
+confirm_delete = "Подтвердить удаление"
+confirm_delete_message = "Удалить: {entry_key}?"
+error = "Ошибка"
+save_error = "Ошибка сохранения: {error}"
+
+add = "Добавить"
+edit = "Редактировать"
+symbol_mapping = "Символы"
+typo_mapping = "Опечатки"
+sensitive_mapping = "Отмеченный термин"
+generic_mapping = "Отображение"
+
+symbol_correct_symbol_label = "Верно:"
+typo_correct_word_label = "Верно:"
+sensitive_sensitive_word_label = "Отмеченный термин:"
+generic_key_label = "Ключ:"
+symbol_error_symbols_label = "Неверно (Список):"
+typo_error_words_label = "Неверно (Список):"
+sensitive_exceptions_label = "Исключения (Список):"
+generic_value_list_label = "Значения (Список):"
+comment_label = "Комментарий:"
+
+symbol_example = "Прим: ,"
+typo_example = "Прим: Слово"
+sensitive_example = "Прим: Термин → Исключения"
+generic_example = "Одно значение на строку"
+
+enter_correct_symbol_or_word = "Пожалуйста, введите"
+enter_error_symbol_or_word_list = "Пожалуйста, введите список"
+
+# Обработка дублирующихся ключей
+duplicate_key_title = "Ключ уже существует"
+duplicate_key_message = "Ключ \"{entry_key}\" уже существует\n\nТекущие значения: {current_values}\nТекущий комментарий: {current_comment}\n\nВыберите действие:"
+duplicate_key_no_comment = "(нет)"
+overwrite = "Заменить"
+overwrite_tooltip = "Полностью заменить новыми значениями и комментарием"
+merge = "Объединить"
+merge_tooltip = "Объединить новые и старые значения (без дубликатов), комментарий: сохранить старый если новый пуст"
+
+# Стили
+[styles]
+code_block = "Блок кода"
+inline_code = "Встроенный код"
+
+quote_1 = "Цитата 1"
+quote_2 = "Цитата 2"
+quote_3 = "Цитата 3"
+quote_4 = "Цитата 4"
+quote_5 = "Цитата 5"
+quote_6 = "Цитата 6"
+quote_7 = "Цитата 7"
+quote_8 = "Цитата 8"
+quote_9 = "Цитата 9"
+
+formula_block = "Блок формулы"
+inline_formula = "Встроенная формула"
+
+horizontal_rule_1 = "Разделительная линия 1"
+horizontal_rule_2 = "Разделительная линия 2"
+horizontal_rule_3 = "Разделительная линия 3"
+
+list_block = "Блок списка"
+
+table_content = "Содержимое таблицы"
+three_line_table = "Трехлинейная таблица"
+table_grid = "Таблица-сетка"
+
+# Body Paragraph Style
+body_paragraph = "Основной абзац"
+
+# =============================================================================
+# Style Format Configurations (for style injection format properties)
+# ГОСТ Russian standard: 14pt, 1.25cm indent, justified
+# =============================================================================
+[style_formats]
+
+# Body paragraph format (Times New Roman, 14pt, 1.25cm indent, justified)
+[style_formats.body_paragraph]
+east_asia_font = "SimSun"
+ascii_font = "Times New Roman"
+font_size_pt = 14
+first_line_indent_chars = 0
+first_line_indent_cm = 1.25
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = false
+justification = "both"
+
+# Heading 1-9 format (Arial, 14pt, bold, 1.25cm indent, justified)
+[style_formats.heading_1]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 14
+first_line_indent_chars = 0
+first_line_indent_cm = 1.25
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = true
+justification = "both"
+
+[style_formats.heading_2]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 14
+first_line_indent_chars = 0
+first_line_indent_cm = 1.25
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = true
+justification = "both"
+
+[style_formats.heading_3_9]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 14
+first_line_indent_chars = 0
+first_line_indent_cm = 1.25
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = true
+justification = "both"
+
+# Заполнители
+[placeholders]
+title = "Заголовок"
+body = "Текст"
+
+# YAML
+[yaml_keys]
+title = "Заголовок"
+subtitle = "Подзаголовок"
+
+# Панель конвертации
+[conversion_panel]
+format_conversion = "Конвертация"
+save_as = "Сохранить как"
+select_file_hint = "Выбрать файл"
+same_format_tooltip = "Уже {format}"
+compressible_format_tooltip = "Сжимаемый"
+png_compression_tooltip = "PNG без потерь"
+bmp_compression_tooltip = "BMP без потерь"
+gif_compression_tooltip = "GIF без потерь"
+tif_compression_tooltip = "TIFF без потерь"
+other_format_compression_tooltip = "Нет сжатия для {format}"
+high_quality_conversion_tooltip = "Высокое качество"
+lossless_conversion_tooltip = "Без потерь"
+document_conversion_tooltip = "Конвертировать в Документ"
+csv_conversion_tooltip = "Конвертировать в CSV"
+spreadsheet_conversion_tooltip = "Конвертировать в Таблицу"
+pdf_conversion_tooltip = "Конвертировать в PDF"
+docx_conversion_tooltip = "Конвертировать в DOCX"
+doc_conversion_tooltip = "Конвертировать в DOC"
+tif_conversion_tooltip = "Рендеринг в TIF"
+jpg_conversion_tooltip = "Рендеринг в JPG"
+
+[conversion_panel.document]
+convert_to_other_formats = "Другие форматы"
+convert_to_layout = "В макет"
+save_as_pdf = "В PDF"
+save_as_pdf_tooltip = "Сохранить как PDF"
+save_as_ofd = "В OFD"
+save_as_ofd_tooltip = "Н/Д"
+proofread_document = "Проверка"
+proofread_hint = "Проверить документ"
+proofread_button = "📝 Проверить"
+proofread_button_tooltip = "Проверить документ"
+proofread_options = "Опции"
+symbol_pairing = "Парность"
+symbol_pairing_tooltip = "Парность символов"
+typos_rule = "Опечатки"
+typos_rule_tooltip = "Опечатки"
+symbol_correction = "Символы"
+symbol_correction_tooltip = "Символы"
+sensitive_word = "Отмеченные термины"
+sensitive_word_tooltip = "Проверить отмеченные термины"
+
+[conversion_panel.image]
+convert_to_other_formats = "Другие форматы"
+compression_options = "Сжатие"
+highest_quality = "Лучшее качество"
+highest_quality_tooltip = "Макс качество"
+limit_file_size = "Ограничить размер"
+limit_file_size_tooltip = "Целевой размер"
+file_size_limit = "Лимит:"
+enter_size_limit_warning = "Введите лимит"
+kb_range_warning = "10-10000 KB"
+mb_range_warning = "1-100 MB"
+enter_valid_number_warning = "Введите число"
+convert_to_layout = "В макет"
+save_as_pdf = "В PDF"
+save_as_pdf_tooltip = "PDF"
+save_as_ofd = "В OFD"
+save_as_ofd_tooltip = "Н/Д"
+size_options = "Размер"
+original_embed = "Оригинал"
+fit_a4 = "A4"
+fit_a3 = "A3"
+no_pdf_size_option_warning = "Выберите размер"
+merge_images = "Слияние"
+merge_images_hint = "Слияние изображений"
+merge_to_tif = "В TIF"
+conversion_options = "Опции"
+preserve_transparency = "Сохранить прозрачность"
+preserve_transparency_tooltip = "Сохранить"
+no_transparency = "Удалить"
+no_transparency_tooltip = "Белый фон"
+
+[conversion_panel.layout]
+convert_to_other_formats = "Другие форматы"
+save_as_ofd_tooltip = "Н/Д"
+convert_to_document_or_image = "Документ/Изображение"
+save_as_format = "В {format}"
+save_as_docx_tooltip = "DOCX"
+save_as_doc_tooltip = "DOC"
+render_as_tif = "В TIF"
+render_as_tif_tooltip = "TIF"
+render_as_jpg = "В JPG"
+render_as_jpg_tooltip = "JPG"
+image_quality_dpi = "DPI"
+minimum_150 = "Мин (150)"
+moderate_300 = "Среднее (300)"
+high_definition_600 = "Высокое (600)"
+merge_split = "Слияние/Разделение"
+merge_split_hint = "Слияние/Разделение"
+merge_to_pdf = "Слияние PDF"
+merge_to_pdf_tooltip = "Слияние PDF"
+merge_to_ofd = "Слияние OFD"
+merge_to_ofd_tooltip = "Н/Д"
+split_to_pdf = "Разделение PDF"
+split_to_pdf_tooltip = "Разделение PDF"
+split_to_ofd = "Разделение OFD"
+split_to_ofd_tooltip = "Н/Д"
+split_page_range = "Диапазон:"
+page_range_info = "Страницы (1-5, 7, 9-10)"
+page_range_placeholder = "напр. 1-3"
+selected_split_file = "Выбрано: {pages} страниц"
+no_file_selected = "Нет файла"
+cannot_split_all_pages = "Не все страницы"
+pages_out_of_range_adjusted = "Страницы вне диапазона, скорректировано: {pages}"
+all_pages_out_of_range = "Все страницы вне диапазона: {pages}"
+
+[conversion_panel.spreadsheet]
+convert_to_other_formats = "Другие форматы"
+convert_to_layout = "В макет"
+save_as_pdf = "В PDF"
+save_as_pdf_tooltip = "PDF"
+save_as_ofd = "В OFD"
+save_as_ofd_tooltip = "Н/Д"
+merge_tables = "Слияние таблиц"
+merge_tables_hint = "Слияние"
+merge_tables_button = "📋 Слияние"
+merge_tables_button_tooltip = "Слияние таблиц"
+merge_options = "Опции"
+merge_by_row = "Строка"
+merge_by_row_tooltip = "По строке"
+merge_by_column = "Столбец"
+merge_by_column_tooltip = "По столбцу"
+merge_by_cell = "Ячейка"
+merge_by_cell_tooltip = "По ячейке"
+selected_reference_table = "База:"
+no_table_selected = "Нет таблицы"
+
+[action_panel]
+export_options = "Экспорт"
+extraction_options = "Извлечение"
+generation_options = "Генерация"
+extract_images = "Изображения"
+extract_images_tooltip = "Извлечь изображения"
+ocr = "OCR"
+ocr_tooltip = "OCR"
+
+[action_panel.proofread]
+symbol_pairing = "Парность"
+symbol_pairing_tooltip = "Знаки"
+typos_rule = "Опечатки"
+typos_rule_tooltip = "Опечатки"
+symbol_correction = "Символы"
+symbol_correction_tooltip = "Символы"
+sensitive_word = "Чувствительный"
+sensitive_word_tooltip = "Чувствительный"
+
+[action_panel.document]
+ready = "Готов"
+export_markdown = "Экспорт Markdown"
+export_markdown_tooltip = "В MD"
+optimize_for_type = "Оптимизация"
+optimize_for_type_tooltip = "Тип оптимизации"
+remove_existing_numbering = "Удал. нум."
+remove_existing_numbering_tooltip = "Удалить"
+add_new_numbering = "Доб. нум."
+add_new_numbering_tooltip = "Добавить"
+
+[action_panel.spreadsheet]
+ready = "Готов"
+export_markdown = "Экспорт Markdown"
+export_markdown_tooltip = "В MD"
+
+[action_panel.image]
+ready = "Готов"
+export_markdown = "Экспорт Markdown"
+export_markdown_tooltip = "В MD"
+extract_images_tooltip = "Сохранить изображения"
+ocr_tooltip = "OCR"
+
+[action_panel.layout]
+ready = "Готов"
+export_markdown = "Экспорт Markdown"
+export_markdown_tooltip = "В MD"
+
+[action_panel.md_to_document]
+ready = "Готов"
+generate_docx = "DOCX"
+generate_docx_tooltip = "В DOCX"
+generate_doc = "DOC"
+generate_doc_tooltip = "В DOC"
+generate_odt = "ODT"
+generate_odt_tooltip = "В ODT"
+generate_rtf = "RTF"
+generate_rtf_tooltip = "В RTF"
+remove_existing_numbering = "Удал. нум."
+remove_existing_numbering_tooltip = "Удалить"
+add_new_numbering = "Доб. нум."
+add_new_numbering_tooltip = "Добавить"
+
+[action_panel.md_to_spreadsheet]
+ready = "Готов"
+generate_xlsx = "XLSX"
+generate_xlsx_tooltip = "В XLSX"
+generate_xls = "XLS"
+generate_xls_tooltip = "В XLS"
+generate_ods = "ODS"
+generate_ods_tooltip = "В ODS"
+generate_csv = "CSV"
+generate_csv_tooltip = "В CSV"
+
+[conversion.progress]
+converting_to_format = "В {format}..."
+preparing = "Подготовка..."
+preparing_format = "Подготовка {format}..."
+detecting_format = "Определяю формат..."
+processing_images = "Изображения..."
+saving_file = "Сохраняю..."
+csv_completed = "CSV готово ({count})"
+tiff_completed = "TIFF готово ({count})"
+final_conversion = "Завершаю..."
+extracting_pdf_content = "Извлечение PDF..."
+images_extracted = "{count} изображений"
+images_extracted_preparing_ocr = "Подготовка OCR ({count} изображений)..."
+extracting_images = "Извлекаю изображения: {count}"
+ocr_recognizing = "OCR: {current}/{total}"
+loading_document = "Загружаю документ..."
+loading_word_template = "Загружаю шаблон Word..."
+loading_excel_template = "Загружаю шаблон Excel..."
+parsing_markdown = "Парсинг Markdown..."
+processing_markdown_body = "Обработка содержимого..."
+processing_textboxes_tables = "Обработка таблиц..."
+extracting_title = "Извлечение заголовка..."
+extracting_markdown_tables = "Извлечение таблиц..."
+generating_markdown = "Генерация Markdown..."
+filling_template = "Заполнение шаблона..."
+filling_yaml_data = "Заполнение YAML..."
+filling_table_data = "Заполнение таблицы..."
+saving_excel = "Сохранение Excel..."
+writing_file = "Запись файла..."
+executing_final_proofread = "Финальная проверка..."
+initializing_proofread = "Инит проверки..."
+proofreading_progress = "Проверка... {current}/{total}"
+saving_proofread_result = "Сохранение проверки..."
+validating_params = "Валидация параметров..."
+preprocessing_base_table = "Препроцессинг таблицы..."
+merging_table_progress = "Слияние таблицы {current}/{total}..."
+saving_merge_result = "Сохранение слияния..."
+conversion_to_csv_success = "Успех CSV ({count})."
+converting_format_to_png = "{format} в PNG..."
+converting_format_to_pdf = "{format} в PDF..."
+error_no_template = "Ошибка: Нет шаблона."
+spell_checking = "Проверка орфографии..."
+extracting_images_start = "Извлекаю изображения..."
+styles_injected = "{count} стилей внедрено"
+preparing_files = "Готовлю файлы..."
+preparing_merge = "Подготовка слияния ({count})..."
+preparing_merge_images = "Подготовка изображений ({count})..."
+preparing_split_pdf = "Готовлю разделение..."
+preparing_proofread = "Готовлю проверку..."
+reading_file = "Чтение файла..."
+processing_numbering = "Обработка нумерации..."
+proofreading = "Проверка..."
+converting_ofd_to_pdf = "OFD в PDF..."
+converting_xps_to_pdf = "XPS в PDF..."
+converting_caj_to_pdf = "CAJ в PDF..."
+using_external_tool_pdf = "Внешний инструмент..."
+processing_file_progress = "Файл {current}/{total}: {filename}"
+merging_pdf_files = "Слияние PDF..."
+merging_file_progress = "Слияние {current}/{total}"
+creating_pdf_part = "Создание PDF часть {part}..."
+rendering_pdf_to_png = "Рендер PDF в PNG..."
+rendering_pdf_to_jpg = "Рендер PDF в JPG..."
+rendering_pdf_pages = "Рендер страниц PDF..."
+rendering_page_progress = "Страница {current}/{total}..."
+saving_tif_file = "Сохранение TIF..."
+step_pdf_to_docx = "1/2: PDF в DOCX..."
+step_docx_to_format = "2/2: DOCX в {format}..."
+extracting_page = "Извлечение страницы {page}"
+converting_format_to_target = "{format} в {target}..."
+converting_page_to_format = "Страница {page} в {format}..."
+loading_image_progress = "Загрузка изображения {current}/{total}..."
+determining_color_mode = "Цветовой режим..."
+converting_to_mode = "В {mode}..."
+generating_tiff_file = "Генерация TIFF..."
+merge_completed = "Слияние завершено."
+converting_source_to_target = "{source} → {target}..."
+step_conversion_progress = "Шаг {step}/{total}: {source} → {target}"
+conversion_completed_with_readonly_warnings = "Завершено с предупреждениями (только чтение): {count}"
+fixing_conflict_style = "Исправление конфликта стиля: {name} ({from_type} → {to_type})"
+styles_injected_with_conflicts = "Стили внедрены: {count} (конфликты: {conflicts})"
+
+[conversion.messages]
+operation_cancelled = "Отменено"
+conversion_failed_check_log = "Ошибка. См. лог."
+conversion_to_format_success = "Успех {format}."
+
+
+proofread_completed = "Проверка завершена."
+proofread_skipped = "Пропущено."
+proofread_failed = "Ошибка."
+
+file_already_pdf = "Уже PDF"
+ofd_to_pdf_failed = "Ошибка OFD"
+xps_to_pdf_failed = "Ошибка XPS"
+ofd_conversion_not_implemented = "OFD не реализовано"
+txt_conversion_developing = "TXT в разработке."
+
+missing_pymupdf = "PyMuPDF отсутствует"
+missing_office_for_pdf = "Office отсутствует"
+missing_office_for_conversion = "Office отсутствует"
+doc_format_requires_office = "Требуется Office"
+xls_format_requires_office = "Требуется Office"
+external_tool_failed = "Ошибка внешнего инструмента"
+pdf_to_docx_failed = "Ошибка PDF в DOCX"
+
+no_files_to_merge = "Нет файлов"
+need_at_least_two_files = "Мин. 2 файла"
+no_pages_to_split = "Нет страниц"
+split_failed_all_pages = "Ошибка разделения"
+
+md_to_xlsx_failed = "Ошибка MD в XLSX"
+md_to_docx_failed = "Ошибка MD в DOCX"
+spell_check_failed = "Ошибка орфографии"
+final_format_failed = "Ошибка формата"
+final_format_generation_failed = "Ошибка генерации"
+no_csv_generated = "CSV не сгенерирован"
+
+no_images_to_merge = "Нет изображений"
+no_images_loaded = "Изображения не загружены"
+conversion_failed_no_target = "Нет цели"
+
+no_numbering_operation = "Операция не выбрана"
+
+conversion_to_image_success = "В {format} ({count})"
+conversion_to_tif_success = "В TIF ({pages})"
+conversion_to_format_pages_success = "В {format} ({count})"
+merge_pdf_success = "Объединено: {file_count} файлов, {page_count} страниц"
+split_pdf_success_two = "Разделено: {pages1} страниц + {pages2} страниц"
+split_pdf_success_one = "Разделено: 1 файл, {pages} страниц"
+merge_images_to_tiff_success = "Слияние в TIFF ({count})"
+
+docx_to_format_failed = "Ошибка DOCX в {format}"
+conversion_to_format_failed = "Ошибка в {format}"
+conversion_failed_with_error = "Ошибка: {error}"
+unsupported_layout_format = "Не поддерживается: {format}"
+format_to_pdf_not_implemented = "{format} в PDF Н/Д"
+all_pages_invalid = "Нет допустимых страниц (всего: {total})"
+
+# =============================================================================
+# Текст комментариев проверки
+# =============================================================================
+[proofread]
+
+[proofread.error_type]
+typo = "Опечатка"
+punctuation = "Пунктуация"
+sensitive = "Отмеченный термин"
+unmatched = "Непарный символ"
+
+[proofread.source]
+typo = "Проверка опечаток"
+symbol = "Проверка символов"
+sensitive = "Проверка отмеченных терминов"
+pairing = "Проверка пар"
+
+[proofread.suggestion]
+sensitive = "Обнаружен отмеченный термин"
+extra_close = "Лишний закрывающий символ"
+unclosed = "Незакрытый символ"

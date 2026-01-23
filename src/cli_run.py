@@ -12,10 +12,10 @@ import logging
 import sys
 
 # 日志预初始化（必须最先执行）
-from gongwen_converter.utils.logging_utils import pre_init_logging, init_logging_system
+from docwen.utils.logging_utils import pre_init_logging, init_logging_system
 pre_init_logging()
 
-from gongwen_converter.bootstrap import initialize_app
+from docwen.bootstrap import initialize_app
 
 if __name__ == "__main__":
     logger = logging.getLogger()
@@ -28,7 +28,7 @@ if __name__ == "__main__":
         # 2. 有效期检查（CLI模式：静默检查，过期则退出）
         logger.info("检查软件有效期...")
         try:
-            from gongwen_converter.security.expiration_check import check_expiration
+            from docwen.security.expiration_check import check_expiration
             check_expiration()
         except Exception as e:
             logger.critical(f"软件已过期或有效期检查失败: {e}")
@@ -41,7 +41,7 @@ if __name__ == "__main__":
         
         # 4. 启动CLI主程序
         logger.info("启动CLI主程序...")
-        from gongwen_converter.cli.main import main
+        from docwen.cli.main import main
         sys.exit(main())  # 返回退出码
         
     except KeyboardInterrupt:

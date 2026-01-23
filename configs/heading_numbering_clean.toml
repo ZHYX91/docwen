@@ -45,8 +45,8 @@ order = [
 # 规则1：中文【第X单位】格式（单位后缀）
 # --------------------------------------------
 [rules.chinese_unit_suffix]
-name = "中文【第X单位】格式"
-description = "匹配：第X回/篇/册/卷/部/集/期/编/章/节/条/款/项/目 + 空格（支持内部空格）"
+name_key = "chinese_unit_suffix"
+description_key = "chinese_unit_suffix_desc"
 enabled = true
 is_system = true
 regex = "^{space}*第{space}*{num}+{space}*{unit_suffix}{space}+"
@@ -65,8 +65,8 @@ examples = [
 # 规则2：中文【单位X】格式（单位前缀）
 # --------------------------------------------
 [rules.chinese_unit_prefix]
-name = "中文【单位X】格式"
-description = "匹配：卷/篇/册/部/集/期/编/章/节/回 + 数字 + 空格（支持内部空格）"
+name_key = "chinese_unit_prefix"
+description_key = "chinese_unit_prefix_desc"
 enabled = true
 is_system = true
 regex = "^{space}*{unit_prefix}{space}*{num}+{space}+"
@@ -83,8 +83,8 @@ examples = [
 # 规则3：带圈数字
 # --------------------------------------------
 [rules.circled_numbers]
-name = "带圈数字"
-description = "匹配：①-㊿、❶-⓴、⓵-⓾、㈠-㈩ 等带圈/特殊数字 + 可选分隔符"
+name_key = "circled_numbers"
+description_key = "circled_numbers_desc"
 enabled = true
 is_system = true
 regex = "^{space}*{circled}{sep}?{space}*"
@@ -103,8 +103,8 @@ examples = [
 # 规则4：括号数字（阿拉伯+中文合并，支持前括号可选）
 # --------------------------------------------
 [rules.bracket_number]
-name = "括号数字"
-description = "匹配：(1)、（一）、1)、一）等 + 可选分隔符"
+name_key = "bracket_number"
+description_key = "bracket_number_desc"
 enabled = true
 is_system = true
 regex = "^{space}*{bracket_open}?{num}+{bracket_close}{sep}?{space}*"
@@ -123,8 +123,8 @@ examples = [
 # 规则5：层级数字
 # --------------------------------------------
 [rules.hierarchical]
-name = "层级数字"
-description = "匹配：1.1 / 1.1.1 / 1.1.1.1 等 + 可选分隔符 + 空格"
+name_key = "hierarchical"
+description_key = "hierarchical_desc"
 enabled = true
 is_system = true
 regex = "^{space}*{num_arab}+(?:\\.{num_arab}+)+{sep}?{space}+"
@@ -139,8 +139,8 @@ examples = [
 # 规则6：数字/中文 + 分隔符（合并）
 # --------------------------------------------
 [rules.number_separator]
-name = "数字分隔符"
-description = "匹配：1. / 2、/ 一、/ 二，等 + 可选空格"
+name_key = "number_separator"
+description_key = "number_separator_desc"
 enabled = true
 is_system = true
 regex = "^{space}*{num}+{sep}{space}*"
@@ -162,8 +162,8 @@ examples = [
 # 规则7：英文章节格式
 # --------------------------------------------
 [rules.legal_english]
-name = "英文章节格式"
-description = "匹配：Chapter/Part/Volume/Book/Section + 数字/罗马数字"
+name_key = "legal_english"
+description_key = "legal_english_desc"
 enabled = false
 is_system = true
 regex = "^{space}*(?:Chapter|Part|Volume|Book|Section)\\s+[0-9IVXLCDMivxlcdm]+[\\s\\.:\\-]+"
@@ -178,8 +178,8 @@ examples = [
 # 规则8：字母序号
 # --------------------------------------------
 [rules.letter_number]
-name = "字母序号"
-description = "匹配：A. / A) / (A) / a. / a) 等（需有分隔符，避免误匹配）"
+name_key = "letter_number"
+description_key = "letter_number_desc"
 enabled = false
 is_system = true
 regex = "^{space}*(?:{bracket_open}{letter}{bracket_close}|{letter}{bracket_close}|{letter}{sep}){space}*"

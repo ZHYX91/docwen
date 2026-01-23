@@ -20,11 +20,11 @@ import ctypes
 from typing import Optional, Tuple
 
 # 统一日志系统: 在所有其他导入之前进行预初始化
-from gongwen_converter.utils.logging_utils import pre_init_logging, init_logging_system
+from docwen.utils.logging_utils import pre_init_logging, init_logging_system
 pre_init_logging()
 
-from gongwen_converter.bootstrap import initialize_app
-from gongwen_converter.utils.gui_utils import show_info_dialog, show_error_dialog
+from docwen.bootstrap import initialize_app
+from docwen.utils.gui_utils import show_info_dialog, show_error_dialog
 
 def check_dependencies() -> Tuple[bool, Optional[str]]:
     """
@@ -79,7 +79,7 @@ def load_gui_config() -> bool:
     
     try:
         # 导入配置管理器
-        from gongwen_converter.config.config_manager import config_manager
+        from docwen.config.config_manager import config_manager
         
         # 检查GUI配置是否已加载
         gui_config = config_manager.get_gui_config_block()
@@ -126,10 +126,10 @@ def main() -> int:
     logger = logging.getLogger()
     
     # ==== 阶段0.5: 单实例检查 ====
-    from gongwen_converter.ipc.single_instance import SingleInstance
-    from gongwen_converter.ipc.file_ipc import FileIPC
+    from docwen.ipc.single_instance import SingleInstance
+    from docwen.ipc.file_ipc import FileIPC
     
-    instance_lock = SingleInstance("gongwen_converter")
+    instance_lock = SingleInstance("docwen")
     
     if not instance_lock.acquire():
         # 程序已在运行
@@ -171,7 +171,7 @@ def main() -> int:
     
     try:
         # ==== 阶段2：有效期检查（仅获取状态，不显示弹窗） ====
-        from gongwen_converter.security.expiration_check import get_expiration_status, ExpirationStatus
+        from docwen.security.expiration_check import get_expiration_status, ExpirationStatus
         
         # 获取有效期状态，稍后在主窗口启动后显示
         expiration_status_info = get_expiration_status()
@@ -219,7 +219,7 @@ def main() -> int:
             
             # 设置窗口图标（使用 icon_utils 模块）
             try:
-                from gongwen_converter.utils.icon_utils import get_icon_path
+                from docwen.utils.icon_utils import get_icon_path
                 icon_path = get_icon_path()
                 if icon_path and os.path.exists(icon_path):
                     root.iconbitmap(icon_path)
@@ -232,13 +232,13 @@ def main() -> int:
                 logger.warning(f"设置图标失败: {str(e)}，使用默认图标")
             
             # 在创建主窗口前，导入配置管理器
-            from gongwen_converter.config.config_manager import config_manager
+            from docwen.config.config_manager import config_manager
 
             # 处理命令行参数
             initial_file = sys.argv[1] if len(sys.argv) > 1 else None
             
             # 创建主窗口，并注入config_manager实例
-            from gongwen_converter.gui.core.window import MainWindow
+            from docwen.gui.core.window import MainWindow
             app = MainWindow(root, config_manager=config_manager, initial_file_path=initial_file)
             
             # 延迟显示有效期提醒（在主窗口完全初始化后）
