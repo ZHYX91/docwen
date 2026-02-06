@@ -1,11 +1,35 @@
-# Document Converter - Korean (Korea) Language File
-# Locale Code: ko_KR
-# Encoding: UTF-8
+# DocWen - 한국어(대한민국) 언어 파일
+# 언어 코드: ko_KR
+# 인코딩: UTF-8
 
+# =============================================================================
+# 메타데이터
+# =============================================================================
 [meta]
 name = "Korean"
 native_name = "한국어"
+template_name = "한국어 범용 템플릿"
 
+# =============================================================================
+# 공통 텍스트
+# =============================================================================
+[common]
+app_name = "DocWen"
+offline_version = " (오프라인 버전)"
+close = "닫기"
+apply = "적용"
+cancel = "취소"
+ok = "OK"
+save = "저장"
+error = "오류"
+version = "버전 {version}"
+browse = "찾아보기..."
+select = "선택"
+disclaimer = "테스트 버전. 정확성 보장 안 됨.\nAGPL-3.0 오픈소스."
+
+# =============================================================================
+# CLI(명령줄 인터페이스)
+# =============================================================================
 [cli]
 description = "DocWen CLI - 문서/스프레드시트/이미지/레이아웃 파일 변환 지원"
 example = "예시"
@@ -23,6 +47,7 @@ check_punct = "문장부호 짝 검사"
 check_typo = "오탈자 검사"
 check_symbol = "기호 검사"
 check_sensitive = "주의 용어 검사"
+check_none = "교정 건너뛰기(모든 검사 비활성화)"
 merge_mode = "병합 모드: 행/열/셀"
 base_table = "기준 표 파일 경로"
 pages = "PDF 분할 페이지 범위(예: 1-3,5,7-10)"
@@ -269,20 +294,9 @@ hierarchical_standard = "계층 번호 표준"
 hierarchical_h2_start = "계층( H2부터 )"
 legal_standard = "법률 표준"
 
-[common]
-app_name = "DocWen"
-offline_version = " (오프라인 버전)"
-close = "닫기"
-apply = "적용"
-cancel = "취소"
-ok = "OK"
-save = "저장"
-error = "오류"
-version = "버전 {version}"
-browse = "찾아보기..."
-select = "선택"
-disclaimer = "시험용 소프트웨어입니다. 정확성을 보장하지 않습니다.\n교육 목적으로만 사용하세요. 상업적 사용 및 배포 금지."
-
+# =============================================================================
+# 설정
+# =============================================================================
 [settings]
 title = "설정"
 
@@ -687,6 +701,9 @@ info = "정보(INFO)"
 warning = "경고(WARNING)"
 error = "오류(ERROR)"
 
+# =============================================================================
+# 정보
+# =============================================================================
 [about]
 title = "정보"
 version_info = "버전 {version}"
@@ -704,6 +721,7 @@ pymupdf4llm = "지능형 PDF 추출 및 Markdown 형식 변환"
 pdf2docx = "PDF 문서를 편집 가능한 Word 형식으로 변환"
 easyofd = "중국 OFD 문서 읽기 및 변환"
 rapidocr = "이미지/PDF에서 OCR 텍스트 인식(오프라인 지원)"
+paddleocr = "OCR 모델 출처, PP-OCRv3/v4 모델은 PaddleOCR 프로젝트에서 훈련"
 onnxruntime = "RapidOCR의 추론 엔진"
 ttkbootstrap = "현대적인 GUI 구축"
 tkinterdnd2 = "드래그 앤 드롭 기능 구현"
@@ -719,7 +737,11 @@ pandas = "스프레드시트 데이터 처리 및 분석"
 numpy = "수치 연산 및 데이터 처리 기본 지원"
 olefile = "레거시 Office 문서 형식 식별 및 처리"
 watchdog = "파일 시스템 변경 감시, IPC 및 단일 인스턴스 구현"
+emoji = "이모지 감지 및 처리 라이브러리"
 
+# =============================================================================
+# 구성 요소
+# =============================================================================
 [components]
 
 [components.file_drop]
@@ -788,74 +810,217 @@ unavailable = "템플릿 선택기를 사용할 수 없습니다"
 document_templates = "Doc"
 spreadsheet_templates = "Sheet"
 
-[file_types]
-document = "문서"
-spreadsheet = "스프레드시트"
-image = "이미지"
-layout = "레이아웃"
-text = "텍스트"
-unknown = "알 수 없음"
-text_category = "텍스트"
-document_category = "Doc"
-spreadsheet_category = "Sheet"
-layout_category = "Layout"
-image_category = "Img"
-unknown_type = "알 수 없음"
-format_mismatch = "⚠️ 실제 형식: {format}"
-format_unverifiable = "⚠️ 실제 파일 형식을 확인할 수 없습니다"
-format_txt = "TXT(일반 텍스트)"
-format_md = "Markdown"
-format_csv = "CSV(표 텍스트)"
+# =============================================================================
+# 변환 패널
+# =============================================================================
+[conversion_panel]
+format_conversion = "형식 변환"
+save_as = "다른 이름으로 저장"
+select_file_hint = "먼저 파일을 선택하세요"
+same_format_tooltip = "이미 {format} 형식입니다"
+compressible_format_tooltip = "압축 지원"
+png_compression_tooltip = "PNG는 무손실로 품질 압축을 지원하지 않습니다"
+bmp_compression_tooltip = "BMP는 무손실로 품질 압축을 지원하지 않습니다"
+gif_compression_tooltip = "GIF는 무손실로 품질 압축을 지원하지 않습니다"
+tif_compression_tooltip = "TIF/TIFF는 무손실로 품질 압축을 지원하지 않습니다"
+other_format_compression_tooltip = "{format} 형식은 품질 압축을 지원하지 않습니다"
+high_quality_conversion_tooltip = "고품질 변환"
+lossless_conversion_tooltip = "무손실 변환"
+document_conversion_tooltip = "이 문서 형식으로 변환"
+csv_conversion_tooltip = "CSV 형식으로 변환(일반 텍스트 표)"
+spreadsheet_conversion_tooltip = "이 스프레드시트 형식으로 변환"
+pdf_conversion_tooltip = "PDF 형식으로 변환"
+docx_conversion_tooltip = "DOCX 형식으로 변환"
+doc_conversion_tooltip = "DOC 형식으로 변환"
+tif_conversion_tooltip = "TIF 이미지로 렌더링"
+jpg_conversion_tooltip = "JPG 이미지로 렌더링"
 
-[conversion]
+[conversion_panel.document]
+convert_to_other_formats = "다른 문서 형식으로 변환"
+convert_to_layout = "레이아웃 형식으로 변환"
+save_as_pdf = "PDF로 저장"
+save_as_pdf_tooltip = "문서를 PDF 레이아웃 파일로 변환합니다"
+save_as_ofd = "OFD로 저장"
+save_as_ofd_tooltip = "아직 지원하지 않습니다"
+proofread_document = "문서 교정"
+proofread_hint = "문서를 교정합니다"
+proofread_button = "📝 교정"
+proofread_button_tooltip = "기호 짝, 오탈자, 민감어 등을 검사합니다"
+proofread_options = "교정 옵션"
+symbol_pairing = "기호 짝 맞춤"
+symbol_pairing_tooltip = "괄호/따옴표 등 짝이 맞는지 확인합니다"
+typos_rule = "오탈자 교정"
+typos_rule_tooltip = "자주 발생하는 오탈자를 검사합니다"
+symbol_correction = "기호 교정"
+symbol_correction_tooltip = "잘못된 기호를 검사합니다"
+sensitive_word = "주의 용어 매칭"
+sensitive_word_tooltip = "주의 용어를 검사합니다"
 
-[conversion.filenames]
-split_part1 = "분할1"
-split_part2 = "분할2"
-merged_pdf = "병합PDF"
-merged_table = "병합표"
+[conversion_panel.image]
+convert_to_other_formats = "다른 이미지 형식으로 변환"
+compression_options = "압축 옵션"
+highest_quality = "최고 품질"
+highest_quality_tooltip = "무손실 또는 고품질 변환. JPEG/WebP는 quality=95를 사용하며, PNG/BMP/GIF/TIF는 무손실 압축을 사용합니다."
+limit_file_size = "파일 크기 제한"
+limit_file_size_tooltip = "품질 파라미터를 조절해 목표 크기로 압축합니다( JPEG/WebP에만 적용 ). 다른 형식은 최고 품질로 저장됩니다."
+file_size_limit = "파일 크기 제한:"
+enter_size_limit_warning = "파일 크기 제한을 입력하세요"
+kb_range_warning = "10~10000(KB) 사이의 숫자를 입력하세요"
+mb_range_warning = "1~100(MB) 사이의 숫자를 입력하세요"
+enter_valid_number_warning = "유효한 숫자를 입력하세요"
+convert_to_layout = "레이아웃 형식으로 변환"
+save_as_pdf = "PDF로 저장"
+save_as_pdf_tooltip = "이미지를 PDF 레이아웃 파일로 변환합니다"
+save_as_ofd = "OFD로 저장"
+save_as_ofd_tooltip = "아직 지원하지 않습니다"
+size_options = "크기 옵션"
+original_embed = "원본 삽입"
+fit_a4 = "A4 맞춤"
+fit_a3 = "A3 맞춤"
+no_pdf_size_option_warning = "PDF 크기 옵션을 선택하세요"
+merge_images = "이미지 병합"
+merge_images_hint = "여러 이미지를 하나로 병합합니다"
+merge_to_tif = "TIF로 병합"
+conversion_options = "변환 옵션"
+preserve_transparency = "투명도 유지"
+preserve_transparency_tooltip = "원본 이미지의 투명도를 유지합니다(있는 경우)"
+no_transparency = "투명도 없음"
+no_transparency_tooltip = "RGB 모드로 변환하며, 투명 배경은 흰색이 됩니다"
 
-[messages]
-file_not_found = "파일을 찾을 수 없습니다: {filename}"
-invalid_file_type = "지원하지 않는 파일 형식: {ext}"
-unsupported_file_type = "지원하지 않는 파일 형식"
-unknown_file_category = "알 수 없는 파일 분류: {category}"
-error_prefix = "오류: {message}"
-operation_failed = "작업 실패: {error}"
-processing_exception = "처리 예외: {error}"
-system_init_error = "시스템 초기화 오류"
-process_file_failed = "파일 처리 실패: {error}"
-batch_merge_need_two_layout = "일괄 모드가 필요합니다. 병합하려면 레이아웃 파일이 최소 2개 필요합니다"
-batch_merge_need_two_image = "일괄 모드가 필요합니다. 병합하려면 이미지 파일이 최소 2개 필요합니다"
-batch_merge_need_two_table = "일괄 모드가 필요합니다. 병합하려면 스프레드시트 파일이 최소 2개 필요합니다"
-batch_file_list_not_init = "일괄 파일 목록 컴포넌트가 초기화되지 않았습니다"
-select_base_table_first = "먼저 기준 표를 선택하세요"
-select_merge_mode = "병합 모드를 선택하세요(행/열/셀)"
-process_failed = "처리 실패: {error}"
-file_processing_failed = "파일 처리 실패: {error}"
-template_selection_failed = "템플릿 선택 실패: {error}"
-cancel_failed = "취소 실패: {error}"
-clear_failed = "비우기 실패: {error}"
-settings_unavailable = "설정을 사용할 수 없습니다"
-open_settings_failed = "설정을 여는 데 실패했습니다: {error}"
-apply_settings_failed = "설정 적용에 실패했습니다: {error}"
-about_unavailable = "정보(About)를 사용할 수 없습니다"
-open_about_failed = "정보(About)를 여는 데 실패했습니다: {error}"
-single_file_only = "단일 파일 모드에서는 1개 파일만 허용됩니다"
-no_valid_files = "유효한 파일이 감지되지 않았습니다"
-no_folder_in_single_mode = "단일 파일 모드에서는 폴더를 허용하지 않습니다"
-all_supported_files = "지원되는 모든 파일"
-all_files = "모든 파일"
-select_multiple_files = "여러 파일 선택"
-category_mismatch = "{current_name} 파일만 추가할 수 있으며, {new_name} 파일과 섞을 수 없습니다"
-category_mismatch_detail = "유형 불일치(현재 목록: {selected_name}, 파일: {file_category_name})"
+[conversion_panel.layout]
+convert_to_other_formats = "다른 레이아웃 형식으로 변환"
+save_as_ofd_tooltip = "아직 지원하지 않습니다"
+convert_to_document_or_image = "문서 또는 이미지로 변환"
+save_as_format = "{format}(으)로 저장"
+save_as_docx_tooltip = "레이아웃 파일을 DOCX 문서로 변환합니다"
+save_as_doc_tooltip = "레이아웃 파일을 DOC 문서로 변환합니다"
+render_as_tif = "TIF로 렌더링"
+render_as_tif_tooltip = "PDF 페이지를 TIF 이미지로 렌더링합니다(다중 페이지 TIFF 지원, DPI 품질 선택 가능)"
+render_as_jpg = "JPG로 렌더링"
+render_as_jpg_tooltip = "PDF를 JPG 이미지로 렌더링합니다(페이지당 1개 파일)"
+image_quality_dpi = "이미지 품질(DPI)"
+minimum_150 = "낮음(150 DPI) - 빠른 미리보기"
+moderate_300 = "표준(300 DPI) - 일상 사용"
+high_definition_600 = "높음(600 DPI) - 인쇄용"
+merge_split = "병합/분할"
+merge_split_hint = "레이아웃 파일을 병합 또는 분할합니다"
+merge_to_pdf = "PDF로 병합"
+merge_to_pdf_tooltip = "일괄 목록의 파일을 위에서 아래 순서로 하나의 PDF로 병합합니다. 파일 선택 후 ↑↓로 순서를 조정할 수 있습니다."
+merge_to_ofd = "OFD로 병합"
+merge_to_ofd_tooltip = "아직 지원하지 않습니다"
+split_to_pdf = "PDF로 분할"
+split_to_pdf_tooltip = "입력한 페이지 범위로 현재 파일을 2개의 PDF로 분할합니다. 첫 번째 파일은 입력한 페이지, 두 번째 파일은 나머지 페이지(있는 경우)입니다."
+split_to_ofd = "OFD로 분할"
+split_to_ofd_tooltip = "아직 지원하지 않습니다"
+split_page_range = "분할 페이지 범위:"
+page_range_info = "페이지 범위를 입력하세요. 예:\n• 1-5: 1~5페이지\n• 1,3,5: 1, 3, 5페이지\n• 1-3,7-9: 1-3 및 7-9페이지\n• 중국식 구분자 지원: 1~3;5;7至10"
+page_range_placeholder = "예: 1-3,5,7-10"
+selected_split_file = "분할할 파일({pages}페이지):"
+no_file_selected = "선택된 파일이 없습니다"
+cannot_split_all_pages = "❌ 전체 페이지를 모두 분할할 수 없습니다(일부 페이지를 남겨 주세요)"
+pages_out_of_range_adjusted = "⚠️ 일부 페이지가 범위를 벗어나 자동 조정되었습니다(총 {pages}페이지)"
+all_pages_out_of_range = "❌ 모든 페이지가 범위를 벗어났습니다(총 {pages}페이지)"
 
-[messages.errors]
-invalid_docx_template = "템플릿 파일 {template_name}이(가) 유효하지 않거나 손상되었습니다. Word 또는 WPS로 열어 편집 후 저장하여 유효한 DOCX 파일인지 확인하세요."
+[conversion_panel.spreadsheet]
+convert_to_other_formats = "다른 스프레드시트 형식으로 변환"
+convert_to_layout = "레이아웃 형식으로 변환"
+save_as_pdf = "PDF로 저장"
+save_as_pdf_tooltip = "스프레드시트를 PDF 레이아웃 파일로 변환하려면 로컬 Office가 필요합니다"
+save_as_ofd = "OFD로 저장"
+save_as_ofd_tooltip = "아직 지원하지 않습니다"
+merge_tables = "표 병합"
+merge_tables_hint = "선택한 모드로 여러 표를 병합합니다"
+merge_tables_button = "📋 표 병합"
+merge_tables_button_tooltip = "일괄 목록의 여러 표를 선택한 모드로 기준 표에 병합합니다. 먼저 병합 모드(행/열/셀)를 선택하세요."
+merge_options = "병합 옵션"
+merge_by_row = "행 기준 병합"
+merge_by_row_tooltip = "하나 이상의 표를 행 단위로 기준 표에 병합합니다"
+merge_by_column = "열 기준 병합"
+merge_by_column_tooltip = "하나 이상의 표를 열 단위로 기준 표에 병합합니다"
+merge_by_cell = "셀 기준 병합"
+merge_by_cell_tooltip = "대응하는 셀 위치의 데이터를 추가합니다"
+selected_reference_table = "선택된 기준 표:"
+no_table_selected = "선택된 표가 없습니다"
 
-[messages.warnings]
-missing_body_placeholder = "⚠️ 템플릿에서 본문 플레이스홀더(예: {{body}})를 찾지 못했습니다. 마크다운 본문이 삽입되지 않았습니다."
+# =============================================================================
+# 작업 패널
+# =============================================================================
+[action_panel]
+export_options = "내보내기 옵션"
+extraction_options = "추출 옵션"
+generation_options = "생성 옵션"
+extract_images = "이미지 추출"
+extract_images_tooltip = "MD로 변환할 때 파일에서 이미지를 추출합니다"
+ocr = "이미지 OCR"
+ocr_tooltip = "MD로 변환할 때 이미지의 텍스트를 OCR로 인식합니다"
 
+[action_panel.proofread]
+symbol_pairing = "기호 짝 맞춤"
+symbol_pairing_tooltip = "괄호/따옴표 등 짝이 맞는지 확인합니다"
+typos_rule = "오탈자 교정"
+typos_rule_tooltip = "자주 발생하는 오탈자를 검사합니다"
+symbol_correction = "기호 교정"
+symbol_correction_tooltip = "잘못된 기호를 검사합니다"
+sensitive_word = "주의 용어"
+sensitive_word_tooltip = "주의 용어를 검사합니다"
+
+[action_panel.document]
+ready = "준비"
+export_markdown = "Markdown 내보내기"
+export_markdown_tooltip = "문서를 Markdown 형식으로 변환합니다"
+optimize_for_type = "문서 유형 최적화"
+optimize_for_type_tooltip = "문서 유형에 따라 맞춤 최적화를 수행합니다"
+remove_existing_numbering = "원본 제목 번호 제거"
+remove_existing_numbering_tooltip = "MD로 변환할 때 기존 제목 번호를 제거합니다"
+add_new_numbering = "새 제목 번호 추가"
+add_new_numbering_tooltip = "MD로 변환할 때 새 제목 번호를 추가합니다"
+
+[action_panel.spreadsheet]
+ready = "준비"
+export_markdown = "Markdown 내보내기"
+export_markdown_tooltip = "스프레드시트를 Markdown 형식으로 변환합니다"
+
+[action_panel.image]
+ready = "준비"
+export_markdown = "Markdown 내보내기"
+export_markdown_tooltip = "이미지를 Markdown 형식으로 변환합니다"
+extract_images_tooltip = "MD로 변환할 때 이미지를 유지합니다"
+ocr_tooltip = "MD로 변환할 때 이미지의 텍스트를 OCR로 인식합니다"
+
+[action_panel.layout]
+ready = "준비"
+export_markdown = "Markdown 내보내기"
+export_markdown_tooltip = "레이아웃 파일을 Markdown 형식으로 변환합니다"
+
+[action_panel.md_to_document]
+ready = "준비"
+generate_docx = "DOCX 생성"
+generate_docx_tooltip = "Markdown을 DOCX 문서로 변환합니다"
+generate_doc = "DOC 생성"
+generate_doc_tooltip = "Markdown을 DOC 문서로 변환합니다(로컬 Office 필요)"
+generate_odt = "ODT 생성"
+generate_odt_tooltip = "Markdown을 ODT 문서로 변환합니다(LibreOffice 필요)"
+generate_rtf = "RTF 생성"
+generate_rtf_tooltip = "Markdown을 RTF 문서로 변환합니다(로컬 Office 필요)"
+remove_existing_numbering = "원본 제목 번호 제거"
+remove_existing_numbering_tooltip = "문서로 변환할 때 기존 제목 번호를 제거합니다"
+add_new_numbering = "새 제목 번호 추가"
+add_new_numbering_tooltip = "문서로 변환할 때 새 제목 번호를 추가합니다"
+
+[action_panel.md_to_spreadsheet]
+ready = "준비"
+generate_xlsx = "XLSX 생성"
+generate_xlsx_tooltip = "Markdown을 XLSX 스프레드시트로 변환합니다"
+generate_xls = "XLS 생성"
+generate_xls_tooltip = "Markdown을 XLS 스프레드시트로 변환합니다(로컬 Office 필요)"
+generate_ods = "ODS 생성"
+generate_ods_tooltip = "Markdown을 ODS 스프레드시트로 변환합니다(LibreOffice 필요)"
+generate_csv = "CSV 생성"
+generate_csv_tooltip = "Markdown을 CSV 스프레드시트(일반 텍스트)로 변환합니다"
+
+# =============================================================================
+# 편집기
+# =============================================================================
 [editors]
 
 [editors.numbering_add]
@@ -1066,288 +1231,40 @@ duplicate_key_title = "키가 이미 존재합니다"
 duplicate_key_message = "키 \"{entry_key}\"가 이미 존재합니다\n\n현재 값: {current_values}\n현재 코멘트: {current_comment}\n\n작업을 선택하세요:"
 duplicate_key_no_comment = "(없음)"
 overwrite = "덮어쓰기"
-overwrite_tooltip = "새 값과 코멘트로 완전히 대체"
 merge = "병합"
-merge_tooltip = "새 값과 기존 값을 병합(중복 제거), 코멘트: 새 코멘트가 비어있으면 기존 코멘트 유지"
 
-[styles]
-code_block = "코드 블록"
-inline_code = "인라인 코드"
-quote_1 = "인용 1"
-quote_2 = "인용 2"
-quote_3 = "인용 3"
-quote_4 = "인용 4"
-quote_5 = "인용 5"
-quote_6 = "인용 6"
-quote_7 = "인용 7"
-quote_8 = "인용 8"
-quote_9 = "인용 9"
-formula_block = "수식 블록"
-inline_formula = "인라인 수식"
-horizontal_rule_1 = "수평선 1"
-horizontal_rule_2 = "수평선 2"
-horizontal_rule_3 = "수평선 3"
-list_block = "목록 블록"
-table_content = "표 내용"
-three_line_table = "삼선표"
-table_grid = "격자표"
-body_paragraph = "본문 단락"
+# =============================================================================
+# 파일 유형
+# =============================================================================
+[file_types]
+document = "문서"
+spreadsheet = "스프레드시트"
+image = "이미지"
+layout = "레이아웃"
+text = "텍스트"
+unknown = "알 수 없음"
+text_category = "텍스트"
+document_category = "Doc"
+spreadsheet_category = "Sheet"
+layout_category = "Layout"
+image_category = "Img"
+unknown_type = "알 수 없음"
+format_mismatch = "⚠️ 실제 형식: {format}"
+format_unverifiable = "⚠️ 실제 파일 형식을 확인할 수 없습니다"
+format_txt = "TXT(일반 텍스트)"
+format_md = "Markdown"
+format_csv = "CSV(표 텍스트)"
 
-[style_formats]
+# =============================================================================
+# 변환
+# =============================================================================
+[conversion]
 
-[style_formats.body_paragraph]
-east_asia_font = "Malgun Gothic"
-ascii_font = "Times New Roman"
-font_size_pt = 11
-first_line_indent_chars = 0
-first_line_indent_cm = 0
-spacing_after_twip = 120
-spacing_before_twip = 0
-bold = false
-justification = "both"
-
-[style_formats.heading_1]
-east_asia_font = "Malgun Gothic"
-ascii_font = "Malgun Gothic"
-font_size_pt = 16
-first_line_indent_chars = 0
-first_line_indent_cm = 0
-spacing_after_twip = 120
-spacing_before_twip = 240
-bold = true
-justification = "left"
-
-[style_formats.heading_2]
-east_asia_font = "Malgun Gothic"
-ascii_font = "Malgun Gothic"
-font_size_pt = 14
-first_line_indent_chars = 0
-first_line_indent_cm = 0
-spacing_after_twip = 120
-spacing_before_twip = 240
-bold = true
-justification = "left"
-
-[style_formats.heading_3_9]
-east_asia_font = "Malgun Gothic"
-ascii_font = "Malgun Gothic"
-font_size_pt = 12
-first_line_indent_chars = 0
-first_line_indent_cm = 0
-spacing_after_twip = 120
-spacing_before_twip = 240
-bold = true
-justification = "left"
-
-[placeholders]
-title = "제목"
-body = "본문"
-
-[yaml_keys]
-title = "제목"
-subtitle = "부제"
-
-[conversion_panel]
-format_conversion = "형식 변환"
-save_as = "다른 이름으로 저장"
-select_file_hint = "먼저 파일을 선택하세요"
-same_format_tooltip = "이미 {format} 형식입니다"
-compressible_format_tooltip = "압축 지원"
-png_compression_tooltip = "PNG는 무손실로 품질 압축을 지원하지 않습니다"
-bmp_compression_tooltip = "BMP는 무손실로 품질 압축을 지원하지 않습니다"
-gif_compression_tooltip = "GIF는 무손실로 품질 압축을 지원하지 않습니다"
-tif_compression_tooltip = "TIF/TIFF는 무손실로 품질 압축을 지원하지 않습니다"
-other_format_compression_tooltip = "{format} 형식은 품질 압축을 지원하지 않습니다"
-high_quality_conversion_tooltip = "고품질 변환"
-lossless_conversion_tooltip = "무손실 변환"
-document_conversion_tooltip = "이 문서 형식으로 변환"
-csv_conversion_tooltip = "CSV 형식으로 변환(일반 텍스트 표)"
-spreadsheet_conversion_tooltip = "이 스프레드시트 형식으로 변환"
-pdf_conversion_tooltip = "PDF 형식으로 변환"
-docx_conversion_tooltip = "DOCX 형식으로 변환"
-doc_conversion_tooltip = "DOC 형식으로 변환"
-tif_conversion_tooltip = "TIF 이미지로 렌더링"
-jpg_conversion_tooltip = "JPG 이미지로 렌더링"
-
-[conversion_panel.document]
-convert_to_other_formats = "다른 문서 형식으로 변환"
-convert_to_layout = "레이아웃 형식으로 변환"
-save_as_pdf = "PDF로 저장"
-save_as_pdf_tooltip = "문서를 PDF 레이아웃 파일로 변환합니다"
-save_as_ofd = "OFD로 저장"
-save_as_ofd_tooltip = "아직 지원하지 않습니다"
-proofread_document = "문서 교정"
-proofread_hint = "문서를 교정합니다"
-proofread_button = "📝 교정"
-proofread_button_tooltip = "기호 짝, 오탈자, 민감어 등을 검사합니다"
-proofread_options = "교정 옵션"
-symbol_pairing = "기호 짝 맞춤"
-symbol_pairing_tooltip = "괄호/따옴표 등 짝이 맞는지 확인합니다"
-typos_rule = "오탈자 교정"
-typos_rule_tooltip = "자주 발생하는 오탈자를 검사합니다"
-symbol_correction = "기호 교정"
-symbol_correction_tooltip = "잘못된 기호를 검사합니다"
-sensitive_word = "주의 용어 매칭"
-sensitive_word_tooltip = "주의 용어를 검사합니다"
-
-[conversion_panel.image]
-convert_to_other_formats = "다른 이미지 형식으로 변환"
-compression_options = "압축 옵션"
-highest_quality = "최고 품질"
-highest_quality_tooltip = "무손실 또는 고품질 변환. JPEG/WebP는 quality=95를 사용하며, PNG/BMP/GIF/TIF는 무손실 압축을 사용합니다."
-limit_file_size = "파일 크기 제한"
-limit_file_size_tooltip = "품질 파라미터를 조절해 목표 크기로 압축합니다( JPEG/WebP에만 적용 ). 다른 형식은 최고 품질로 저장됩니다."
-file_size_limit = "파일 크기 제한:"
-enter_size_limit_warning = "파일 크기 제한을 입력하세요"
-kb_range_warning = "10~10000(KB) 사이의 숫자를 입력하세요"
-mb_range_warning = "1~100(MB) 사이의 숫자를 입력하세요"
-enter_valid_number_warning = "유효한 숫자를 입력하세요"
-convert_to_layout = "레이아웃 형식으로 변환"
-save_as_pdf = "PDF로 저장"
-save_as_pdf_tooltip = "이미지를 PDF 레이아웃 파일로 변환합니다"
-save_as_ofd = "OFD로 저장"
-save_as_ofd_tooltip = "아직 지원하지 않습니다"
-size_options = "크기 옵션"
-original_embed = "원본 삽입"
-fit_a4 = "A4 맞춤"
-fit_a3 = "A3 맞춤"
-no_pdf_size_option_warning = "PDF 크기 옵션을 선택하세요"
-merge_images = "이미지 병합"
-merge_images_hint = "여러 이미지를 하나로 병합합니다"
-merge_to_tif = "TIF로 병합"
-conversion_options = "변환 옵션"
-preserve_transparency = "투명도 유지"
-preserve_transparency_tooltip = "원본 이미지의 투명도를 유지합니다(있는 경우)"
-no_transparency = "투명도 없음"
-no_transparency_tooltip = "RGB 모드로 변환하며, 투명 배경은 흰색이 됩니다"
-
-[conversion_panel.layout]
-convert_to_other_formats = "다른 레이아웃 형식으로 변환"
-save_as_ofd_tooltip = "아직 지원하지 않습니다"
-convert_to_document_or_image = "문서 또는 이미지로 변환"
-save_as_format = "{format}(으)로 저장"
-save_as_docx_tooltip = "레이아웃 파일을 DOCX 문서로 변환합니다"
-save_as_doc_tooltip = "레이아웃 파일을 DOC 문서로 변환합니다"
-render_as_tif = "TIF로 렌더링"
-render_as_tif_tooltip = "PDF 페이지를 TIF 이미지로 렌더링합니다(다중 페이지 TIFF 지원, DPI 품질 선택 가능)"
-render_as_jpg = "JPG로 렌더링"
-render_as_jpg_tooltip = "PDF를 JPG 이미지로 렌더링합니다(페이지당 1개 파일)"
-image_quality_dpi = "이미지 품질(DPI)"
-minimum_150 = "낮음(150 DPI) - 빠른 미리보기"
-moderate_300 = "표준(300 DPI) - 일상 사용"
-high_definition_600 = "높음(600 DPI) - 인쇄용"
-merge_split = "병합/분할"
-merge_split_hint = "레이아웃 파일을 병합 또는 분할합니다"
-merge_to_pdf = "PDF로 병합"
-merge_to_pdf_tooltip = "일괄 목록의 파일을 위에서 아래 순서로 하나의 PDF로 병합합니다. 파일 선택 후 ↑↓로 순서를 조정할 수 있습니다."
-merge_to_ofd = "OFD로 병합"
-merge_to_ofd_tooltip = "아직 지원하지 않습니다"
-split_to_pdf = "PDF로 분할"
-split_to_pdf_tooltip = "입력한 페이지 범위로 현재 파일을 2개의 PDF로 분할합니다. 첫 번째 파일은 입력한 페이지, 두 번째 파일은 나머지 페이지(있는 경우)입니다."
-split_to_ofd = "OFD로 분할"
-split_to_ofd_tooltip = "아직 지원하지 않습니다"
-split_page_range = "분할 페이지 범위:"
-page_range_info = "페이지 범위를 입력하세요. 예:\n• 1-5: 1~5페이지\n• 1,3,5: 1, 3, 5페이지\n• 1-3,7-9: 1-3 및 7-9페이지\n• 중국식 구분자 지원: 1~3;5;7至10"
-page_range_placeholder = "예: 1-3,5,7-10"
-selected_split_file = "분할할 파일({pages}페이지):"
-no_file_selected = "선택된 파일이 없습니다"
-cannot_split_all_pages = "❌ 전체 페이지를 모두 분할할 수 없습니다(일부 페이지를 남겨 주세요)"
-pages_out_of_range_adjusted = "⚠️ 일부 페이지가 범위를 벗어나 자동 조정되었습니다(총 {pages}페이지)"
-all_pages_out_of_range = "❌ 모든 페이지가 범위를 벗어났습니다(총 {pages}페이지)"
-
-[conversion_panel.spreadsheet]
-convert_to_other_formats = "다른 스프레드시트 형식으로 변환"
-convert_to_layout = "레이아웃 형식으로 변환"
-save_as_pdf = "PDF로 저장"
-save_as_pdf_tooltip = "스프레드시트를 PDF 레이아웃 파일로 변환하려면 로컬 Office가 필요합니다"
-save_as_ofd = "OFD로 저장"
-save_as_ofd_tooltip = "아직 지원하지 않습니다"
-merge_tables = "표 병합"
-merge_tables_hint = "선택한 모드로 여러 표를 병합합니다"
-merge_tables_button = "📋 표 병합"
-merge_tables_button_tooltip = "일괄 목록의 여러 표를 선택한 모드로 기준 표에 병합합니다. 먼저 병합 모드(행/열/셀)를 선택하세요."
-merge_options = "병합 옵션"
-merge_by_row = "행 기준 병합"
-merge_by_row_tooltip = "하나 이상의 표를 행 단위로 기준 표에 병합합니다"
-merge_by_column = "열 기준 병합"
-merge_by_column_tooltip = "하나 이상의 표를 열 단위로 기준 표에 병합합니다"
-merge_by_cell = "셀 기준 병합"
-merge_by_cell_tooltip = "대응하는 셀 위치의 데이터를 추가합니다"
-selected_reference_table = "선택된 기준 표:"
-no_table_selected = "선택된 표가 없습니다"
-
-[action_panel]
-export_options = "내보내기 옵션"
-extraction_options = "추출 옵션"
-generation_options = "생성 옵션"
-extract_images = "이미지 추출"
-extract_images_tooltip = "MD로 변환할 때 파일에서 이미지를 추출합니다"
-ocr = "이미지 OCR"
-ocr_tooltip = "MD로 변환할 때 이미지의 텍스트를 OCR로 인식합니다"
-
-[action_panel.proofread]
-symbol_pairing = "기호 짝 맞춤"
-symbol_pairing_tooltip = "괄호/따옴표 등 짝이 맞는지 확인합니다"
-typos_rule = "오탈자 교정"
-typos_rule_tooltip = "자주 발생하는 오탈자를 검사합니다"
-symbol_correction = "기호 교정"
-symbol_correction_tooltip = "잘못된 기호를 검사합니다"
-sensitive_word = "주의 용어"
-sensitive_word_tooltip = "주의 용어를 검사합니다"
-
-[action_panel.document]
-ready = "준비"
-export_markdown = "Markdown 내보내기"
-export_markdown_tooltip = "문서를 Markdown 형식으로 변환합니다"
-optimize_for_type = "문서 유형 최적화"
-optimize_for_type_tooltip = "문서 유형에 따라 맞춤 최적화를 수행합니다"
-remove_existing_numbering = "원본 제목 번호 제거"
-remove_existing_numbering_tooltip = "MD로 변환할 때 기존 제목 번호를 제거합니다"
-add_new_numbering = "새 제목 번호 추가"
-add_new_numbering_tooltip = "MD로 변환할 때 새 제목 번호를 추가합니다"
-
-[action_panel.spreadsheet]
-ready = "준비"
-export_markdown = "Markdown 내보내기"
-export_markdown_tooltip = "스프레드시트를 Markdown 형식으로 변환합니다"
-
-[action_panel.image]
-ready = "준비"
-export_markdown = "Markdown 내보내기"
-export_markdown_tooltip = "이미지를 Markdown 형식으로 변환합니다"
-extract_images_tooltip = "MD로 변환할 때 이미지를 유지합니다"
-ocr_tooltip = "MD로 변환할 때 이미지의 텍스트를 OCR로 인식합니다"
-
-[action_panel.layout]
-ready = "준비"
-export_markdown = "Markdown 내보내기"
-export_markdown_tooltip = "레이아웃 파일을 Markdown 형식으로 변환합니다"
-
-[action_panel.md_to_document]
-ready = "준비"
-generate_docx = "DOCX 생성"
-generate_docx_tooltip = "Markdown을 DOCX 문서로 변환합니다"
-generate_doc = "DOC 생성"
-generate_doc_tooltip = "Markdown을 DOC 문서로 변환합니다(로컬 Office 필요)"
-generate_odt = "ODT 생성"
-generate_odt_tooltip = "Markdown을 ODT 문서로 변환합니다(LibreOffice 필요)"
-generate_rtf = "RTF 생성"
-generate_rtf_tooltip = "Markdown을 RTF 문서로 변환합니다(로컬 Office 필요)"
-remove_existing_numbering = "원본 제목 번호 제거"
-remove_existing_numbering_tooltip = "문서로 변환할 때 기존 제목 번호를 제거합니다"
-add_new_numbering = "새 제목 번호 추가"
-add_new_numbering_tooltip = "문서로 변환할 때 새 제목 번호를 추가합니다"
-
-[action_panel.md_to_spreadsheet]
-ready = "준비"
-generate_xlsx = "XLSX 생성"
-generate_xlsx_tooltip = "Markdown을 XLSX 스프레드시트로 변환합니다"
-generate_xls = "XLS 생성"
-generate_xls_tooltip = "Markdown을 XLS 스프레드시트로 변환합니다(로컬 Office 필요)"
-generate_ods = "ODS 생성"
-generate_ods_tooltip = "Markdown을 ODS 스프레드시트로 변환합니다(LibreOffice 필요)"
-generate_csv = "CSV 생성"
-generate_csv_tooltip = "Markdown을 CSV 스프레드시트(일반 텍스트)로 변환합니다"
+[conversion.filenames]
+split_part1 = "분할1"
+split_part2 = "분할2"
+merged_pdf = "병합PDF"
+merged_table = "병합표"
 
 [conversion.progress]
 converting_to_format = "{format}로 변환 중..."
@@ -1378,7 +1295,6 @@ filling_yaml_data = "YAML 데이터 채우는 중..."
 filling_table_data = "표 데이터 채우는 중..."
 saving_excel = "Excel 파일 저장 중..."
 writing_file = "파일 쓰는 중..."
-executing_final_proofread = "최종 교정 실행 중..."
 initializing_proofread = "교정 엔진 초기화 중..."
 proofreading_progress = "교정 중... {current}/{total}"
 saving_proofread_result = "교정 결과 저장 중..."
@@ -1477,6 +1393,53 @@ unsupported_layout_format = "지원하지 않는 형식: {format}"
 format_to_pdf_not_implemented = "{format}→PDF가 구현되지 않았습니다"
 all_pages_invalid = "유효하지 않은 페이지({total}p 전체)"
 
+# =============================================================================
+# 메시지
+# =============================================================================
+[messages]
+file_not_found = "파일을 찾을 수 없습니다: {filename}"
+invalid_file_type = "지원하지 않는 파일 형식: {ext}"
+unsupported_file_type = "지원하지 않는 파일 형식"
+unknown_file_category = "알 수 없는 파일 분류: {category}"
+error_prefix = "오류: {message}"
+operation_failed = "작업 실패: {error}"
+processing_exception = "처리 예외: {error}"
+system_init_error = "시스템 초기화 오류"
+process_file_failed = "파일 처리 실패: {error}"
+batch_merge_need_two_layout = "일괄 모드가 필요합니다. 병합하려면 레이아웃 파일이 최소 2개 필요합니다"
+batch_merge_need_two_image = "일괄 모드가 필요합니다. 병합하려면 이미지 파일이 최소 2개 필요합니다"
+batch_merge_need_two_table = "일괄 모드가 필요합니다. 병합하려면 스프레드시트 파일이 최소 2개 필요합니다"
+batch_file_list_not_init = "일괄 파일 목록 컴포넌트가 초기화되지 않았습니다"
+select_base_table_first = "먼저 기준 표를 선택하세요"
+select_merge_mode = "병합 모드를 선택하세요(행/열/셀)"
+process_failed = "처리 실패: {error}"
+file_processing_failed = "파일 처리 실패: {error}"
+template_selection_failed = "템플릿 선택 실패: {error}"
+cancel_failed = "취소 실패: {error}"
+clear_failed = "비우기 실패: {error}"
+settings_unavailable = "설정을 사용할 수 없습니다"
+open_settings_failed = "설정을 여는 데 실패했습니다: {error}"
+apply_settings_failed = "설정 적용에 실패했습니다: {error}"
+about_unavailable = "정보(About)를 사용할 수 없습니다"
+open_about_failed = "정보(About)를 여는 데 실패했습니다: {error}"
+single_file_only = "단일 파일 모드에서는 1개 파일만 허용됩니다"
+no_valid_files = "유효한 파일이 감지되지 않았습니다"
+no_folder_in_single_mode = "단일 파일 모드에서는 폴더를 허용하지 않습니다"
+all_supported_files = "지원되는 모든 파일"
+all_files = "모든 파일"
+select_multiple_files = "여러 파일 선택"
+category_mismatch = "{current_name} 파일만 추가할 수 있으며, {new_name} 파일과 섞을 수 없습니다"
+category_mismatch_detail = "유형 불일치(현재 목록: {selected_name}, 파일: {file_category_name})"
+
+[messages.errors]
+invalid_docx_template = "템플릿 파일 {template_name}이(가) 유효하지 않거나 손상되었습니다. Word 또는 WPS로 열어 편집 후 저장하여 유효한 DOCX 파일인지 확인하세요."
+
+[messages.warnings]
+missing_body_placeholder = "⚠️ 템플릿에서 본문 플레이스홀더(예: {{body}})를 찾지 못했습니다. 마크다운 본문이 삽입되지 않았습니다."
+
+# =============================================================================
+# 교정
+# =============================================================================
 [proofread]
 
 [proofread.error_type]
@@ -1495,3 +1458,122 @@ pairing = "짝 맞춤 검사"
 sensitive = "주의 용어가 감지되었습니다"
 extra_close = "닫는 기호가 추가로 있습니다"
 unclosed = "닫히지 않은 기호가 있습니다"
+  
+# =============================================================================
+# 링크 처리 플레이스홀더 텍스트(문서 내 오류 메시지 표시용)
+# =============================================================================
+[link_processing]
+file_not_found = "⚠️ 파일을 찾을 수 없습니다: {filename}"
+section_not_found = "⚠️ 섹션을 찾을 수 없습니다: {filename}#{heading}"
+block_not_found = "⚠️ 블록을 찾을 수 없습니다: {filename}#^{block_id}"
+circular_reference = "⚠️ 순환 참조가 감지되었습니다: {filename}"
+max_depth_reached = "⚠️ 최대 임베드 깊이에 도달했습니다"
+
+# =============================================================================
+# 스타일(문서 변환용)
+# 이 스타일 이름은 MD ↔ DOCX 변환 시 스타일 주입/검출에 사용됩니다
+# =============================================================================
+[styles]
+# 단락 스타일
+body_paragraph = "본문 단락"
+image_paragraph = "이미지 단락"
+
+# 코드 스타일
+code_block = "코드 블록"
+inline_code = "인라인 코드"
+
+# 수식 스타일
+formula_block = "수식 블록"
+inline_formula = "인라인 수식"
+
+# 목록 스타일
+list_block = "목록 블록"
+
+# 수평선 스타일
+horizontal_rule_1 = "수평선 1"
+horizontal_rule_2 = "수평선 2"
+horizontal_rule_3 = "수평선 3"
+
+# 표 스타일
+table_content = "표 내용"
+three_line_table = "삼선표"
+table_grid = "격자표"
+
+# 인용 스타일(9단계)
+quote_1 = "인용 1"
+quote_2 = "인용 2"
+quote_3 = "인용 3"
+quote_4 = "인용 4"
+quote_5 = "인용 5"
+quote_6 = "인용 6"
+quote_7 = "인용 7"
+quote_8 = "인용 8"
+quote_9 = "인용 9"
+# =============================================================================
+# 스타일 형식(스타일 주입 시 사용하는 서식 속성)
+# =============================================================================
+[style_formats]
+
+# 본문 단락 서식(Malgun Gothic/Times New Roman, 11pt, 양쪽 정렬)
+[style_formats.body_paragraph]
+east_asia_font = "Malgun Gothic"
+ascii_font = "Times New Roman"
+font_size_pt = 11
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 0
+bold = false
+justification = "both"
+
+# 제목 1 서식(Malgun Gothic, 16pt, 굵게, 왼쪽 정렬)
+[style_formats.heading_1]
+east_asia_font = "Malgun Gothic"
+ascii_font = "Malgun Gothic"
+font_size_pt = 16
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# 제목 2 서식(Malgun Gothic, 14pt, 굵게, 왼쪽 정렬)
+[style_formats.heading_2]
+east_asia_font = "Malgun Gothic"
+ascii_font = "Malgun Gothic"
+font_size_pt = 14
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# 제목 3-9 서식(Malgun Gothic, 12pt, 굵게, 왼쪽 정렬)
+[style_formats.heading_3_9]
+east_asia_font = "Malgun Gothic"
+ascii_font = "Malgun Gothic"
+font_size_pt = 12
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# =============================================================================
+# 플레이스홀더(문서 템플릿용)
+# 이 플레이스홀더는 MD → DOCX 변환 시 템플릿 채우기에 사용됩니다
+# =============================================================================
+[placeholders]
+title = "제목"
+body = "본문"
+
+# =============================================================================
+# YAML 키(메타데이터용)
+# 이 키는 DOCX → MD 변환 시 YAML 프런트 매터 출력에 사용됩니다
+# =============================================================================
+[yaml_keys]
+title = "제목"
+subtitle = "부제"

@@ -78,10 +78,16 @@ class DocxValidationStrategy(BaseStrategy):
             progress_callback(t('conversion.progress.preparing_proofread'))
 
         try:
-            # 检查是否启用了任何校对规则
             proofread_options = options.get("proofread_options")
-            if not proofread_options or not any(proofread_options.values()):
-                return ConversionResult(success=True, output_path=file_path, message=t('conversion.messages.proofread_skipped'))
+            if proofread_options is not None:
+                if not isinstance(proofread_options, dict):
+                    raise TypeError("proofread_options 必须是 dict 或 None")
+                if not any(bool(v) for v in proofread_options.values()):
+                    return ConversionResult(
+                        success=True,
+                        output_path=file_path,
+                        message=t('conversion.messages.proofread_skipped'),
+                    )
 
             cancel_event = options.get("cancel_event")
             actual_format = options.get("actual_format", 'docx')

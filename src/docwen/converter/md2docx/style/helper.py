@@ -193,3 +193,9 @@ def get_horizontal_rule_style_name(doc, hr_num: str) -> str:
     style_name = style_resolver.get_injection_name(style_key)
     logger.debug(f"分隔线样式名: '{style_name}'")
     return style_name
+
+
+def get_image_paragraph_style_name(doc=None) -> str:
+    style_name = style_resolver.get_injection_name("image_paragraph")
+    logger.debug(f"图片段落样式名: '{style_name}'")
+    return style_name

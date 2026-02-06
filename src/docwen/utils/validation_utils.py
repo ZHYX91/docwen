@@ -85,26 +85,3 @@ def validate_date_format(date_str: str) -> bool:
             
     logger.warning(f"无效的日期格式: {date_str}")
     return False
-
-# 模块测试
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    logger.info("验证工具模块测试")
-    
-    # 空值测试
-    assert is_value_empty("") is True
-    assert is_value_empty("  ") is True
-    assert is_value_empty([]) is True
-    assert is_value_empty(["", None]) is True
-    assert is_value_empty("内容") is False
-    
-    # 中文字符测试
-    assert is_chinese("文") is True
-    assert is_chinese("A") is False
-    
-    # 日期验证测试
-    assert validate_date_format("2023年12月31日") is True
-    assert validate_date_format("2023-12-31") is True
-    assert validate_date_format("31/12/2023") is False
-    
-    logger.info("所有测试通过!")

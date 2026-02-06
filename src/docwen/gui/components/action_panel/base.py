@@ -17,7 +17,7 @@
 
 import logging
 import tkinter as tk
-from typing import Callable, Optional, Dict
+from typing import Callable, Optional, Dict, Any
 
 import ttkbootstrap as tb
 from ttkbootstrap.constants import *
@@ -363,14 +363,14 @@ class ActionPanelBase(tb.Frame):
         if self.status_var.get().startswith(t("messages.error_prefix", message="")):
             self.status_label.configure(bootstyle="danger")
     
-    def get_selected_options(self) -> Dict[str, any]:
+    def get_selected_options(self) -> Dict[str, Any]:
         """
         获取当前选中的选项
         
         返回包含校对选项和序号配置的字典。
         
         返回：
-            Dict[str, any]: 包含所有选项的字典
+            Dict[str, Any]: 包含所有选项的字典
         """
         # 基础校对选项
         options = {key: var.get() for key, var in self.checkbox_vars.items()}

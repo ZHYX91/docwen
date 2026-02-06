@@ -71,6 +71,7 @@ def get_font_size_name(sz_val):
 # 定义命名空间映射 - 统一管理
 NAMESPACES = {
     'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main',
+    'm': 'http://schemas.openxmlformats.org/officeDocument/2006/math',
     'wp': 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing',
     'a': 'http://schemas.openxmlformats.org/drawingml/2006/main',
     'pic': 'http://schemas.openxmlformats.org/drawingml/2006/picture',

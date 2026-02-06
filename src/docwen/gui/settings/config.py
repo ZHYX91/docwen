@@ -1,4 +1,4 @@
-﻿"""
+"""
 设置界面配置管理模块
 
 本模块统一管理所有设置界面的布局参数、样式常量和配置选项。
@@ -9,6 +9,8 @@
 - LayoutConfig: 布局参数配置
 - DialogConfig: 对话框配置
 """
+
+from __future__ import annotations
 
 import logging
 from dataclasses import dataclass

@@ -1,4 +1,4 @@
-﻿"""
+"""
 输出设置选项卡模块
 
 实现设置对话框的输出设置选项卡，包含：
@@ -13,6 +13,8 @@
 使用 ConfigCombobox 组件实现配置值与显示文本的分离，
 避免语言切换时的映射问题。
 """
+
+from __future__ import annotations
 
 import logging
 import os
@@ -53,7 +55,7 @@ class OutputTab(BaseSettingsTab):
     包含中间文件、输出目录、日期子文件夹和输出行为四个主要区域。
     """
     
-    def __init__(self, parent, config_manager: any, on_change: Callable[[str, Any], None]):
+    def __init__(self, parent, config_manager: Any, on_change: Callable[[str, Any], None]):
         """初始化输出设置选项卡"""
         super().__init__(parent, config_manager, on_change)
         logger.info("输出设置选项卡初始化完成")

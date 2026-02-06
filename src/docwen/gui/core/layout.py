@@ -6,7 +6,7 @@
 import logging
 import tkinter as tk
 from tkinter import ttk
-from typing import Dict, Any, Tuple, Callable, List
+from typing import Dict, Any, Tuple, Callable, List, Optional, cast
 from docwen.utils.font_utils import get_default_font, get_title_font, get_small_font, get_micro_font
 from docwen.utils.dpi_utils import ScalableMixin
 from docwen.i18n import t  # 导入翻译函数
@@ -30,14 +30,14 @@ class MainWindowLayoutBuilder(ScalableMixin):
     """
     
     def __init__(self, root: tb.Window, main_container: tb.Frame,
-                 on_file_dropped: Callable = None,
-                 on_template_selected: Callable = None,
-                 on_action: Callable = None,
-                 on_cancel: Callable = None,
-                 on_clear_clicked: Callable = None,
-                 on_settings_clicked: Callable = None,
-                 on_about_clicked: Callable = None,
-                 config_manager: any = None,
+                 on_file_dropped: Optional[Callable[..., Any]] = None,
+                 on_template_selected: Optional[Callable[..., Any]] = None,
+                 on_action: Optional[Callable[..., Any]] = None,
+                 on_cancel: Optional[Callable[..., Any]] = None,
+                 on_clear_clicked: Optional[Callable[..., Any]] = None,
+                 on_settings_clicked: Optional[Callable[..., Any]] = None,
+                 on_about_clicked: Optional[Callable[..., Any]] = None,
+                 config_manager: Any = None,
                  window_width: int = 400,
                  file_drop_height: int = 120):
         """
@@ -57,13 +57,13 @@ class MainWindowLayoutBuilder(ScalableMixin):
         self.window_width = self.scale(window_width)
         self.file_drop_height = self.scale(file_drop_height)
         
-        self.on_file_dropped = on_file_dropped
-        self.on_template_selected = on_template_selected
-        self.on_action = on_action
-        self.on_cancel = on_cancel
-        self.on_clear_clicked = on_clear_clicked
-        self.on_settings_clicked = on_settings_clicked
-        self.on_about_clicked = on_about_clicked
+        self.on_file_dropped = on_file_dropped or (lambda *args, **kwargs: None)
+        self.on_template_selected = on_template_selected or (lambda *args, **kwargs: None)
+        self.on_action = on_action or (lambda *args, **kwargs: None)
+        self.on_cancel = on_cancel or (lambda *args, **kwargs: None)
+        self.on_clear_clicked = on_clear_clicked or (lambda *args, **kwargs: None)
+        self.on_settings_clicked = on_settings_clicked or (lambda *args, **kwargs: None)
+        self.on_about_clicked = on_about_clicked or (lambda *args, **kwargs: None)
         
         self.components = {}
         self._initialize_fonts()
@@ -254,9 +254,10 @@ class MainWindowLayoutBuilder(ScalableMixin):
     def _get_show_batch_panel_callback(self):
         """获取显示批量面板的回调函数"""
         # 直接通过主容器获取主窗口引用
-        if hasattr(self.main_container, '_main_window'):
+        main_container_any = cast(Any, self.main_container)
+        if hasattr(main_container_any, '_main_window'):
             logger.debug("找到主窗口引用，返回show_batch_panel方法")
-            return self.main_container._main_window.show_batch_panel
+            return cast(Any, main_container_any._main_window).show_batch_panel
         else:
             logger.warning("无法找到主窗口引用")
             return None
@@ -264,9 +265,10 @@ class MainWindowLayoutBuilder(ScalableMixin):
     def _get_hide_batch_panel_callback(self):
         """获取隐藏批量面板的回调函数"""
         # 直接通过主容器获取主窗口引用
-        if hasattr(self.main_container, '_main_window'):
+        main_container_any = cast(Any, self.main_container)
+        if hasattr(main_container_any, '_main_window'):
             logger.debug("找到主窗口引用，返回hide_batch_panel方法")
-            return self.main_container._main_window.hide_batch_panel
+            return cast(Any, main_container_any._main_window).hide_batch_panel
         else:
             logger.warning("无法找到主窗口引用")
             return None
@@ -274,9 +276,10 @@ class MainWindowLayoutBuilder(ScalableMixin):
     def _get_batch_list_cleared_callback(self):
         """获取批量列表清空的回调函数"""
         # 直接通过主容器获取主窗口引用
-        if hasattr(self.main_container, '_main_window'):
+        main_container_any = cast(Any, self.main_container)
+        if hasattr(main_container_any, '_main_window'):
             logger.debug("找到主窗口引用，返回on_batch_list_cleared方法")
-            return self.main_container._main_window.on_batch_list_cleared
+            return cast(Any, main_container_any._main_window).on_batch_list_cleared
         else:
             logger.warning("无法找到主窗口引用")
             return None
@@ -284,9 +287,10 @@ class MainWindowLayoutBuilder(ScalableMixin):
     def _get_format_selected_callback(self):
         """获取格式选择的回调函数"""
         # 直接通过主容器获取主窗口引用
-        if hasattr(self.main_container, '_main_window'):
+        main_container_any = cast(Any, self.main_container)
+        if hasattr(main_container_any, '_main_window'):
             logger.debug("找到主窗口引用，返回on_format_selected方法")
-            return self.main_container._main_window.on_format_selected
+            return cast(Any, main_container_any._main_window).on_format_selected
         else:
             logger.warning("无法找到主窗口引用")
             return None
@@ -374,27 +378,28 @@ class MainWindowLayoutBuilder(ScalableMixin):
             command=self.on_about_clicked, bootstyle="secondary-link"
         )
         if about_icon:
-            about_button.image = about_icon
+            cast(Any, about_button).image = about_icon
         about_button.grid(row=0, column=0, sticky="w", padx=(0, self.scale(5)))
         
-        disclaimer_label = tb.Label(
-            button_frame, text=t("common.disclaimer"),
-            font=(self.micro_font, self.micro_size), bootstyle="danger", justify="center",
+        from docwen import __version__
+        version_label = tb.Label(
+            button_frame, text=f"v{__version__}",
+            font=(self.micro_font, self.micro_size), bootstyle="secondary",
             anchor="center"
         )
-        disclaimer_label.grid(row=0, column=1, sticky="nsew")
+        version_label.grid(row=0, column=1, sticky="nsew")
         
         settings_button = tb.Button(
             button_frame, image=settings_icon,
             command=self.on_settings_clicked, bootstyle="secondary-link"
         )
         if settings_icon:
-            settings_button.image = settings_icon
+            cast(Any, settings_button).image = settings_icon
         settings_button.grid(row=0, column=2, sticky="e", padx=(self.scale(5), 0))
         
         self.components["about_button"] = about_button
         self.components["settings_button"] = settings_button
-        self.components["disclaimer_label"] = disclaimer_label
+        self.components["version_label"] = version_label
         
         logger.debug("底部按钮框架创建完成")
         return button_frame
@@ -556,28 +561,3 @@ class MainWindowLayoutBuilder(ScalableMixin):
 
         logger.debug("选项卡式批量文件列表区域创建完成")
         return batch_frame, tabbed_batch_file_list
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    
-    root = tb.Window(title="布局构建器测试", themename="morph")
-    main_container = tb.Frame(root, bootstyle="default")
-    main_container.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
-    
-    def test_file_dropped(file_path): logger.info(f"文件拖拽测试: {file_path}")
-    def test_template_selected(template_type, template_name): logger.info(f"模板选择测试: {template_type}/{template_name}")
-    def test_action(action_type, file_path, options): logger.info(f"操作测试: {action_type}, {file_path}, {options}")
-    def test_settings_clicked(): logger.info("设置按钮被点击")
-    
-    builder = MainWindowLayoutBuilder(
-        root, main_container,
-        on_file_dropped=test_file_dropped,
-        on_template_selected=test_template_selected,
-        on_action=test_action,
-        on_settings_clicked=test_settings_clicked
-    )
-    
-    components = builder.build_complete_layout()
-    
-    logger.info("布局构建测试完成")
-    root.mainloop()

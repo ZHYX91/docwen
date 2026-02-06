@@ -18,18 +18,24 @@
 
 import logging
 import tkinter as tk
-from typing import Dict
+from typing import Dict, TYPE_CHECKING
 
 import ttkbootstrap as tb
 
 from docwen.utils.dpi_utils import scale
 from docwen.utils.gui_utils import ToolTip, create_info_icon
 from docwen.i18n import t
+from docwen.proofread_keys import SYMBOL_CORRECTION, SYMBOL_PAIRING, SENSITIVE_WORD, TYPOS_RULE
 
 logger = logging.getLogger(__name__)
 
+if TYPE_CHECKING:
+    from .base import ConversionPanelBase as _ConversionPanelBase
+else:
+    _ConversionPanelBase = object
 
-class DocumentSectionMixin:
+
+class DocumentSectionMixin(_ConversionPanelBase):
     """
     文档类转换功能混入类
     
@@ -201,10 +207,10 @@ class DocumentSectionMixin:
         
         # 校对选项配置
         options = [
-            (t("conversion_panel.document.symbol_pairing"), "symbol_pairing", t("conversion_panel.document.symbol_pairing_tooltip")),
-            (t("conversion_panel.document.typos_rule"), "typos_rule", t("conversion_panel.document.typos_rule_tooltip")),
-            (t("conversion_panel.document.symbol_correction"), "symbol_correction", t("conversion_panel.document.symbol_correction_tooltip")),
-            (t("conversion_panel.document.sensitive_word"), "sensitive_word", t("conversion_panel.document.sensitive_word_tooltip"))
+            (t("conversion_panel.document.symbol_pairing"), SYMBOL_PAIRING, t("conversion_panel.document.symbol_pairing_tooltip")),
+            (t("conversion_panel.document.typos_rule"), TYPOS_RULE, t("conversion_panel.document.typos_rule_tooltip")),
+            (t("conversion_panel.document.symbol_correction"), SYMBOL_CORRECTION, t("conversion_panel.document.symbol_correction_tooltip")),
+            (t("conversion_panel.document.sensitive_word"), SENSITIVE_WORD, t("conversion_panel.document.sensitive_word_tooltip"))
         ]
         
         self.checkbox_vars = {}
@@ -242,27 +248,27 @@ class DocumentSectionMixin:
         """
         if not self.config_manager:
             return {
-                "symbol_pairing": True,
-                "symbol_correction": True,
-                "typos_rule": True,
-                "sensitive_word": False
+                SYMBOL_PAIRING: True,
+                SYMBOL_CORRECTION: True,
+                TYPOS_RULE: True,
+                SENSITIVE_WORD: False
             }
         
         try:
             engine_settings = self.config_manager.get_proofread_engine_config()
             return {
-                "symbol_pairing": engine_settings.get("enable_symbol_pairing", True),
-                "symbol_correction": engine_settings.get("enable_symbol_correction", True),
-                "typos_rule": engine_settings.get("enable_typos_rule", True),
-                "sensitive_word": engine_settings.get("enable_sensitive_word", True),
+                SYMBOL_PAIRING: engine_settings.get("enable_symbol_pairing", True),
+                SYMBOL_CORRECTION: engine_settings.get("enable_symbol_correction", True),
+                TYPOS_RULE: engine_settings.get("enable_typos_rule", True),
+                SENSITIVE_WORD: engine_settings.get("enable_sensitive_word", True),
             }
         except Exception as e:
             logger.error(f"获取默认校对选项失败: {str(e)}")
             return {
-                "symbol_pairing": True,
-                "symbol_correction": True,
-                "typos_rule": True,
-                "sensitive_word": False
+                SYMBOL_PAIRING: True,
+                SYMBOL_CORRECTION: True,
+                TYPOS_RULE: True,
+                SENSITIVE_WORD: False
             }
     
     def _on_validation_option_changed(self):

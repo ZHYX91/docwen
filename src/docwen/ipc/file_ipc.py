@@ -220,33 +220,3 @@ class FileIPC:
         """
         status_file = os.path.join(ipc_dir, "status.json")
         return os.path.exists(status_file)
-
-
-if __name__ == "__main__":
-    # 测试代码
-    logging.basicConfig(level=logging.DEBUG)
-    
-    def test_callback(command):
-        print(f"收到命令: {command}")
-    
-    print("测试文件 IPC...")
-    
-    import tempfile
-    test_dir = os.path.join(tempfile.gettempdir(), "test_ipc")
-    
-    ipc = FileIPC(test_dir, test_callback)
-    
-    if ipc.start():
-        print("✓ IPC 已启动")
-        print(f"命令目录: {ipc.commands_dir}")
-        
-        # 测试发送命令
-        print("\n发送测试命令...")
-        FileIPC.send_command(test_dir, {'action': 'test', 'data': 'hello'})
-        
-        time.sleep(2)
-        
-        ipc.stop()
-        print("✓ IPC 已停止")
-    else:
-        print("✗ IPC 启动失败")

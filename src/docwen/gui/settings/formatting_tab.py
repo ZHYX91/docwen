@@ -13,6 +13,8 @@
 避免语言切换时的映射问题。
 """
 
+from __future__ import annotations
+
 import tkinter as tk
 import ttkbootstrap as tb
 from typing import Dict, Any, Callable

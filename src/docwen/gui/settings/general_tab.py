@@ -1,4 +1,4 @@
-﻿"""
+"""
 通用设置选项卡模块
 
 实现设置对话框的通用设置选项卡，包含：
@@ -13,6 +13,8 @@
 使用 ConfigCombobox 组件实现配置值与显示文本的分离，
 避免语言切换时的映射问题。
 """
+
+from __future__ import annotations
 
 import logging
 import tkinter as tk
@@ -54,7 +56,7 @@ class GeneralTab(BaseSettingsTab):
     包含语言、主题、透明度和窗口行为四个主要区域。
     """
     
-    def __init__(self, parent, config_manager: any, on_change: Callable[[str, Any], None]):
+    def __init__(self, parent, config_manager: Any, on_change: Callable[[str, Any], None]):
         """
         初始化通用设置选项卡
         
@@ -316,7 +318,7 @@ class GeneralTab(BaseSettingsTab):
         
         # 即时应用主题（实时预览）
         try:
-            self.style.theme_use(new_theme)
+            tb.Style().theme_use(new_theme)
             logger.debug(f"主题已切换为: {new_theme}")
         except Exception as e:
             logger.error(f"切换主题失败: {e}")

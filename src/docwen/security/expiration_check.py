@@ -92,30 +92,3 @@ def check_expiration():
     status_info = get_expiration_status()
     # 当前版本暂时不执行任何操作，仅打印日志
     logger.debug(f"启动时有效期检查完成: {status_info}")
-
-# --- CLI 测试入口 ---
-if __name__ == "__main__":
-    print("测试有效期检查模块（重构版）...")
-    
-    # 场景1：正常有效期
-    EXPIRATION_DATE = datetime.datetime.now() + datetime.timedelta(days=100)
-    info = get_expiration_status()
-    print(f"\n设置为远期过期 ({EXPIRATION_DATE.strftime('%Y-%m-%d')}):")
-    print(f"  -> 结果: {info}")
-    assert info.status == ExpirationStatus.VALID
-
-    # 场景2：即将过期
-    EXPIRATION_DATE = datetime.datetime.now() + datetime.timedelta(days=15)
-    info = get_expiration_status()
-    print(f"\n设置为即将过期 ({EXPIRATION_DATE.strftime('%Y-%m-%d')}):")
-    print(f"  -> 结果: {info}")
-    assert info.status == ExpirationStatus.NEARING_EXPIRATION
-    
-    # 场景3：已过期
-    EXPIRATION_DATE = datetime.datetime.now() - datetime.timedelta(days=1)
-    info = get_expiration_status()
-    print(f"\n设置为已过期 ({EXPIRATION_DATE.strftime('%Y-%m-%d')}):")
-    print(f"  -> 结果: {info}")
-    assert info.status == ExpirationStatus.EXPIRED
-    
-    print("\n所有测试场景通过！")

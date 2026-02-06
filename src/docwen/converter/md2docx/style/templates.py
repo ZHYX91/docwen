@@ -977,6 +977,21 @@ def get_custom_table_grid_template(style_name: str) -> str:
 </w:style>'''
 
 
+def get_localized_image_paragraph_template(style_name: str) -> str:
+    return f'''<w:style xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:type="paragraph" w:styleId="ImageParagraph">
+    <w:name w:val="{style_name}"/>
+    <w:basedOn w:val="Normal"/>
+    <w:next w:val="Normal"/>
+    <w:uiPriority w:val="39"/>
+    <w:qFormat/>
+    <w:pPr>
+        <w:ind w:firstLine="0"/>
+        <w:spacing w:before="120" w:after="120" w:line="240" w:lineRule="auto"/>
+        <w:jc w:val="center"/>
+    </w:pPr>
+</w:style>'''
+
+
 # ==============================================================================
 # 国际化样式配置生成函数
 #
@@ -1038,9 +1053,11 @@ def get_localized_style_configs(style_resolver):
     # 表格样式配置
     table_content_name = style_resolver.get_injection_name("table_content")
     three_line_table_name = style_resolver.get_injection_name("three_line_table")
+    table_grid_name = style_resolver.get_injection_name("table_grid")
     configs['table'] = [
         (table_content_name, 'paragraph', 'TableContent', get_localized_table_content_template(table_content_name)),
         (three_line_table_name, 'table', 'ThreeLineTable', get_localized_three_line_table_template(three_line_table_name)),
+        (table_grid_name, 'table', 'TableGrid', get_localized_table_grid_template(table_grid_name)),
     ]
     
     # 引用样式配置
@@ -1113,6 +1130,12 @@ def get_localized_style_configs(style_resolver):
     
     configs['body_paragraph'] = (
         body_paragraph_name, 'paragraph', 'BodyParagraph', body_paragraph_template
+    )
+
+    image_paragraph_name = style_resolver.get_injection_name("image_paragraph")
+    configs['image_paragraph'] = (
+        image_paragraph_name, 'paragraph', 'ImageParagraph',
+        get_localized_image_paragraph_template(image_paragraph_name)
     )
     
     return configs

@@ -70,6 +70,7 @@ class StyleNameResolver:
         # 表格样式
         "table_content": "style_table",
         "three_line_table": "style_table",
+        "table_grid": "style_table",
     }
     
     # 样式键名到别名配置键的映射
@@ -95,8 +96,9 @@ class StyleNameResolver:
         "inline_formula": "character_style_aliases",
         
         # 表格样式
-        "table_content": "paragraph_style_aliases",
-        "three_line_table": "table_style_aliases",
+        "table_content": "table_content_paragraph_style_aliases",
+        "three_line_table": "three_line_table_style_aliases",
+        "table_grid": "table_grid_style_aliases",
     }
     
     def __new__(cls):
@@ -359,16 +361,28 @@ class StyleNameResolver:
             self._alias_cache[style_key] = aliases
             return aliases
         
+        # 配置名称到 getter 方法的映射
+        CONFIG_GETTER_MAPPING = {
+            "style_code": "get_style_code_block",
+            "style_quote": "get_style_quote_block",
+            "style_formula": "get_style_formula_block",
+            "style_table": "get_style_table_block",
+        }
+        
         # 从配置文件加载别名
         try:
-            config = self.config_manager.get_config(config_name)
-            if config:
-                docx_to_md = config.get("docx_to_md", {})
-                aliases = docx_to_md.get(alias_field, [])
-                if isinstance(aliases, list):
-                    logger.debug("从 %s 加载别名: %s -> %s", config_name, alias_field, aliases)
-                else:
-                    aliases = []
+            getter_name = CONFIG_GETTER_MAPPING.get(config_name)
+            if getter_name:
+                getter = getattr(self.config_manager, getter_name, None)
+                if getter:
+                    config = getter()
+                    if config:
+                        docx_to_md = config.get("docx_to_md", {})
+                        aliases = docx_to_md.get(alias_field, [])
+                        if isinstance(aliases, list):
+                            logger.debug("从 %s 加载别名: %s -> %s", config_name, alias_field, aliases)
+                        else:
+                            aliases = []
         except Exception as e:
             logger.warning("加载样式别名失败: %s | 错误: %s", style_key, str(e))
             aliases = []

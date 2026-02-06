@@ -331,6 +331,7 @@ def print_text_result(result: ConversionResult):
 
 def print_json_result(result: ConversionResult, action: str, input_file: str, duration: float):
     """打印JSON格式的结果"""
+    metadata = getattr(result, "metadata", None) or {}
     output = {
         "success": result.success,
         "action": action,
@@ -338,7 +339,7 @@ def print_json_result(result: ConversionResult, action: str, input_file: str, du
         "output_file": result.output_path,
         "message": result.message,
         "duration": round(duration, 2),
-        "metadata": result.metadata or {}
+        "metadata": metadata
     }
     
     print(json.dumps(output, ensure_ascii=False, indent=2))
@@ -459,7 +460,11 @@ def get_supported_actions(category: str, fmt: str) -> List[Dict]:
                 "description": "转换为DOCX文档",
                 "parameters": {
                     "template": {"type": "string", "description": "模板名称"},
-                    "check_typo": {"type": "boolean", "default": False}
+                    "check_punct": {"type": "boolean", "default": False},
+                    "check_typo": {"type": "boolean", "default": False},
+                    "check_symbol": {"type": "boolean", "default": False},
+                    "check_sensitive": {"type": "boolean", "default": False},
+                    "check_none": {"type": "boolean", "default": False}
                 }
             },
             {
@@ -496,8 +501,11 @@ def get_supported_actions(category: str, fmt: str) -> List[Dict]:
                 "name": "validate",
                 "description": "文档校对",
                 "parameters": {
-                    "check_punct": {"type": "boolean", "default": True},
-                    "check_typo": {"type": "boolean", "default": True}
+                    "check_punct": {"type": "boolean", "default": False},
+                    "check_typo": {"type": "boolean", "default": False},
+                    "check_symbol": {"type": "boolean", "default": False},
+                    "check_sensitive": {"type": "boolean", "default": False},
+                    "check_none": {"type": "boolean", "default": False}
                 }
             }
         ]

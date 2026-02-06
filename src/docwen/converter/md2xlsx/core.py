@@ -33,7 +33,7 @@ from .placeholder_processor import (
 logger = logging.getLogger(__name__)
 
 
-def _get_fallback_title(yaml_data: dict, md_path: str = None) -> str:
+def _get_fallback_title(yaml_data: dict, md_path: Optional[str] = None) -> str:
     """
     获取标题的回退值
     
@@ -68,7 +68,7 @@ def _get_fallback_title(yaml_data: dict, md_path: str = None) -> str:
     return "标题"
 
 
-def _ensure_title_fallbacks(yaml_data: dict, md_path: str = None):
+def _ensure_title_fallbacks(yaml_data: dict, md_path: Optional[str] = None):
     """
     为所有语言版本的标题键设置回退值
     
@@ -98,7 +98,7 @@ def convert(
     md_path: str,
     output_path: str,
     *,
-    template_name: str = "报表通用",
+    template_name: str,
     progress_callback: Optional[Callable[[str], None]] = None,
     cancel_event: Optional[threading.Event] = None,
     original_source_path: Optional[str] = None
@@ -116,7 +116,7 @@ def convert(
     参数:
         md_path: Markdown文件路径
         output_path: 输出文件完整路径
-        template_name: 模板名称，默认"报表通用"
+        template_name: 模板名称（必需）
         progress_callback: 进度回调函数
         cancel_event: 取消事件
         original_source_path: 原始源文件路径（用于嵌入功能的路径解析，可选）
@@ -203,7 +203,7 @@ def convert(
         return None
 
 
-def _read_and_parse_md(temp_md_path: str, original_md_path: str = None) -> tuple:
+def _read_and_parse_md(temp_md_path: str, original_md_path: Optional[str] = None) -> tuple:
     """
     读取并解析Markdown文件，返回YAML数据和YAML后的Markdown内容
     
@@ -285,11 +285,7 @@ def _get_template_path(template_name: str) -> str:
         str: 模板完整路径
     """
     try:
-        # 确保模板名称有扩展名
-        if not template_name.lower().endswith('.xlsx'):
-            template_name += '.xlsx'
-        
-        # 使用模板加载器获取路径
+        # 使用模板加载器获取路径（自动处理扩展名）
         from docwen.template.loader import TemplateLoader
         template_loader = TemplateLoader()
         path = template_loader.get_template_path("xlsx", template_name)

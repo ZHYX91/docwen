@@ -15,6 +15,7 @@ import logging
 from typing import Optional, List
 
 from docwen.cli.i18n import cli_t, init_cli_locale
+from docwen.proofread_keys import SYMBOL_CORRECTION, SYMBOL_PAIRING, SENSITIVE_WORD, TYPOS_RULE
 
 logger = logging.getLogger(__name__)
 
@@ -44,13 +45,14 @@ def setup_console_encoding():
     
     # 重新配置stdout/stderr编码
     try:
-        if hasattr(sys.stdout, 'reconfigure'):
+        import io
+
+        if isinstance(sys.stdout, io.TextIOWrapper) and isinstance(sys.stderr, io.TextIOWrapper):
             sys.stdout.reconfigure(encoding='utf-8', errors='replace')
             sys.stderr.reconfigure(encoding='utf-8', errors='replace')
             logger.debug("已重新配置stdout/stderr编码为UTF-8")
         else:
             # Python 3.6兼容
-            import io
             sys.stdout = io.TextIOWrapper(
                 sys.stdout.buffer, 
                 encoding='utf-8', 
@@ -80,7 +82,12 @@ def get_available_locale_codes() -> List[str]:
     """
     try:
         from docwen.i18n.i18n_manager import I18nManager
-        return [l.get("code") for l in I18nManager().get_available_locales() if l.get("code")]
+        codes: List[str] = []
+        for locale in I18nManager().get_available_locales():
+            code = locale.get("code")
+            if isinstance(code, str) and code:
+                codes.append(code)
+        return codes
     except Exception:
         return ['zh_CN', 'en_US']
 
@@ -207,6 +214,12 @@ def create_argument_parser() -> argparse.ArgumentParser:
         '--check-sensitive',
         action='store_true',
         help=cli_t('cli.help.check_sensitive')
+    )
+
+    validate_group.add_argument(
+        '--check-none',
+        action='store_true',
+        help=cli_t('cli.help.check_none')
     )
     
     # ========== 表格汇总选项 ==========
@@ -513,12 +526,18 @@ def build_options(args) -> dict:
         options['template_name'] = args.template
     
     # 校对选项 - 使用布尔字典格式
-    if args.check_punct or args.check_typo or args.check_symbol or args.check_sensitive:
+    has_any_check = args.check_punct or args.check_typo or args.check_symbol or args.check_sensitive
+    if getattr(args, "check_none", False) and has_any_check:
+        raise ValueError("--check-none 不能与 --check-* 同时使用")
+
+    if getattr(args, "check_none", False):
+        options['proofread_options'] = {}
+    elif has_any_check:
         options['proofread_options'] = {
-            'symbol_pairing': args.check_punct,
-            'symbol_correction': args.check_symbol,
-            'typos_rule': args.check_typo,
-            'sensitive_word': args.check_sensitive,
+            SYMBOL_PAIRING: args.check_punct,
+            SYMBOL_CORRECTION: args.check_symbol,
+            TYPOS_RULE: args.check_typo,
+            SENSITIVE_WORD: args.check_sensitive,
         }
     
     # 表格汇总

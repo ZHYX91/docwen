@@ -49,9 +49,13 @@ DEFAULT_PROOFREAD_CONFIG = {
             "enable_symbol_pairing": True,       # 启用符号配对检查
             "enable_symbol_correction": True,    # 启用符号校正
             "enable_sensitive_word": True,       # 启用敏感词检测
-            "skip_code_blocks": True,            # 跳过代码块
-            "skip_quote_blocks": False,          # 跳过引用块
-        }
+        },
+        "skip": {
+            "code_blocks": True,                 # 跳过代码块段落
+            "quote_blocks": False,               # 跳过引用段落
+            "skip_rebuild_on_non_text": True,    # 含非文本内容时跳过重建，改用降级批注
+            "log_skipped": True,                 # 是否记录跳过/降级处理的段落到日志
+        },
     }
 }
 
@@ -170,6 +174,15 @@ class ProofreadConfigMixin:
         """
         return self.get_proofread_config_block().get("engine", {})
 
+    def get_proofread_skip_config(self) -> Dict[str, Any]:
+        """
+        获取校对跳过/降级处理配置
+        
+        返回：
+            Dict[str, Any]: 跳过配置字典
+        """
+        return self.get_proofread_config_block().get("skip", {})
+
     def get_symbol_pairing_config(self) -> Dict[str, Any]:
         """
         获取符号配对子表
@@ -217,8 +230,8 @@ class ProofreadConfigMixin:
         返回：
             bool: 是否跳过代码块
         """
-        config = self.get_proofread_engine_config()
-        enabled = config.get("skip_code_blocks", True)
+        config = self.get_proofread_skip_config()
+        enabled = config.get("code_blocks", True)
         safe_log.debug("校对跳过代码块: %s", enabled)
         return enabled
     
@@ -229,10 +242,33 @@ class ProofreadConfigMixin:
         返回：
             bool: 是否跳过引用块
         """
-        config = self.get_proofread_engine_config()
-        enabled = config.get("skip_quote_blocks", False)
+        config = self.get_proofread_skip_config()
+        enabled = config.get("quote_blocks", False)
         safe_log.debug("校对跳过引用块: %s", enabled)
         return enabled
+
+    def is_skip_rebuild_on_non_text_enabled(self) -> bool:
+        """
+        段落含非文本内容（图片/公式/OLE等）时，是否跳过重建并走降级批注路径
+        
+        返回：
+            bool: True 表示跳过重建，False 表示照常重建
+        """
+        config = self.get_proofread_skip_config()
+        enabled = config.get("skip_rebuild_on_non_text", True)
+        safe_log.debug("校对非文本段落跳过重建: %s", enabled)
+        return bool(enabled)
+
+    def is_log_skipped_enabled(self) -> bool:
+        """
+        是否记录跳过/降级处理的段落
+        
+        返回：
+            bool: 是否记录
+        """
+        config = self.get_proofread_skip_config()
+        enabled = config.get("log_skipped", True)
+        return bool(enabled)
     
     # --------------------------------------------------------------------------
     # 第三层：具体配置值

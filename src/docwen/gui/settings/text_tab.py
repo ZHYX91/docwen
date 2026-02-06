@@ -1,4 +1,4 @@
-﻿"""
+"""
 文本设置选项卡模块
 
 实现设置对话框的文本文件（Markdown）设置选项卡，包含：
@@ -12,6 +12,8 @@
 所有用户可见文本通过 i18n 模块的 t() 函数获取，
 支持中英文界面切换。
 """
+
+from __future__ import annotations
 
 import logging
 import tkinter as tk
@@ -35,7 +37,7 @@ class TextTab(BaseSettingsTab):
     包含MD转DOCX序号设置、序号方案管理、模板设置、校对设置、词库配置。
     """
     
-    def __init__(self, parent, config_manager: any, on_change: Callable[[str, Any], None]):
+    def __init__(self, parent, config_manager: Any, on_change: Callable[[str, Any], None]):
         """初始化文本设置选项卡"""
         super().__init__(parent, config_manager, on_change)
         logger.info("文本设置选项卡初始化完成")
@@ -687,14 +689,17 @@ class TextTab(BaseSettingsTab):
                     success = False
                     logger.error(f"更新校对配置失败: {key} = {settings[key]}")
             
-            # 保存跳过设置到proofread_config.toml的[engine]节
-            skip_keys = ["skip_code_blocks", "skip_quote_blocks"]
-            for key in skip_keys:
+            # 保存跳过设置到proofread_config.toml的[skip]节
+            skip_key_map = {
+                "skip_code_blocks": "code_blocks",
+                "skip_quote_blocks": "quote_blocks",
+            }
+            for settings_key, config_key in skip_key_map.items():
                 if not self.config_manager.update_config_value(
-                    "proofread_config", "engine", key, settings[key]
+                    "proofread_config", "skip", config_key, settings[settings_key]
                 ):
                     success = False
-                    logger.error(f"更新跳过配置失败: {key} = {settings[key]}")
+                    logger.error(f"更新跳过配置失败: {config_key} = {settings[settings_key]}")
             
             if success:
                 logger.info("✓ 文本设置已成功应用")

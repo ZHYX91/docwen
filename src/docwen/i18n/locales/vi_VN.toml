@@ -1,11 +1,35 @@
-# Document Converter - Vietnamese (Vietnam) Language File
-# Locale Code: vi_VN
-# Encoding: UTF-8
+# DocWen - Tệp ngôn ngữ Tiếng Việt (Việt Nam)
+# Mã ngôn ngữ: vi_VN
+# Mã hóa: UTF-8
 
+# =============================================================================
+# Siêu dữ liệu
+# =============================================================================
 [meta]
 name = "Vietnamese"
 native_name = "Tiếng Việt"
+template_name = "Mẫu Chung Tiếng Việt"
 
+# =============================================================================
+# Văn bản chung
+# =============================================================================
+[common]
+app_name = "DocWen"
+offline_version = " (Phiên bản ngoại tuyến)"
+close = "Đóng"
+apply = "Áp dụng"
+cancel = "Hủy"
+ok = "OK"
+save = "Lưu"
+error = "Lỗi"
+version = "Phiên bản {version}"
+browse = "Duyệt..."
+select = "Chọn"
+disclaimer = "Phiên bản thử nghiệm. Không đảm bảo độ chính xác.\nAGPL-3.0 Open Source."
+
+# =============================================================================
+# CLI (giao diện dòng lệnh)
+# =============================================================================
 [cli]
 description = "Trình chuyển đổi tài liệu CLI - Hỗ trợ chuyển đổi tài liệu/bảng tính/hình ảnh/tệp bố cục"
 example = "Ví dụ"
@@ -23,6 +47,7 @@ check_punct = "Kiểm tra cặp dấu câu"
 check_typo = "Kiểm tra lỗi chính tả"
 check_symbol = "Kiểm tra ký hiệu"
 check_sensitive = "Kiểm tra từ nhạy cảm"
+check_none = "Bỏ qua rà soát (tắt tất cả kiểm tra)"
 merge_mode = "Chế độ trộn: hàng/cột/ô"
 base_table = "Đường dẫn bảng tham chiếu"
 pages = "Phạm vi trang tách PDF (vd: 1-3,5,7-10)"
@@ -269,20 +294,9 @@ hierarchical_standard = "Chuẩn phân cấp"
 hierarchical_h2_start = "Phân cấp (Bắt đầu từ H2)"
 legal_standard = "Chuẩn pháp lý"
 
-[common]
-app_name = "DocWen"
-offline_version = " (Phiên bản ngoại tuyến)"
-close = "Đóng"
-apply = "Áp dụng"
-cancel = "Hủy"
-ok = "OK"
-save = "Lưu"
-error = "Lỗi"
-version = "Phiên bản {version}"
-browse = "Duyệt..."
-select = "Chọn"
-disclaimer = "Phần mềm thử nghiệm. Không đảm bảo độ chính xác.\nChỉ dùng cho mục đích học tập. Không sử dụng/Phân phối thương mại."
-
+# =============================================================================
+# Cài đặt
+# =============================================================================
 [settings]
 title = "Cài đặt"
 
@@ -687,6 +701,9 @@ info = "Thông tin (INFO)"
 warning = "Cảnh báo (WARNING)"
 error = "Lỗi (ERROR)"
 
+# =============================================================================
+# Giới thiệu
+# =============================================================================
 [about]
 title = "Giới thiệu"
 version_info = "Phiên bản {version}"
@@ -704,6 +721,7 @@ pymupdf4llm = "Trích xuất PDF thông minh và chuyển đổi sang Markdown"
 pdf2docx = "Chuyển đổi tài liệu PDF sang Word có thể chỉnh sửa"
 easyofd = "Đọc và chuyển đổi tài liệu OFD (Trung Quốc)"
 rapidocr = "Nhận dạng OCR cho ảnh và PDF, hỗ trợ chạy ngoại tuyến"
+paddleocr = "Nguồn mô hình OCR, PP-OCRv3/v4 được đào tạo bởi PaddleOCR"
 onnxruntime = "Engine suy luận cho RapidOCR"
 ttkbootstrap = "Xây dựng giao diện đồ họa hiện đại"
 tkinterdnd2 = "Hiện thực kéo thả, cải thiện trải nghiệm người dùng"
@@ -719,7 +737,11 @@ pandas = "Xử lý và phân tích dữ liệu bảng tính"
 numpy = "Hỗ trợ tính toán số và xử lý dữ liệu cơ bản"
 olefile = "Nhận dạng và xử lý định dạng Office cũ"
 watchdog = "Giám sát thay đổi hệ thống tệp, IPC và chạy một phiên bản"
+emoji = "Thư viện phát hiện và xử lý emoji"
 
+# =============================================================================
+# Thành phần
+# =============================================================================
 [components]
 
 [components.file_drop]
@@ -788,74 +810,217 @@ unavailable = "Không thể sử dụng bộ chọn mẫu"
 document_templates = "Tài"
 spreadsheet_templates = "Bảng"
 
-[file_types]
-document = "Tài liệu"
-spreadsheet = "Bảng tính"
-image = "Hình ảnh"
-layout = "Bố cục"
-text = "Văn bản"
-unknown = "Không xác định"
-text_category = "Văn"
-document_category = "Tài"
-spreadsheet_category = "Bảng"
-layout_category = "Bố"
-image_category = "Ảnh"
-unknown_type = "Không xác định"
-format_mismatch = "⚠️ Định dạng thực tế: {format}"
-format_unverifiable = "⚠️ Không thể xác minh định dạng thực tế"
-format_txt = "TXT (Văn bản thuần)"
-format_md = "Markdown"
-format_csv = "CSV (Văn bản bảng)"
+# =============================================================================
+# Bảng chuyển đổi
+# =============================================================================
+[conversion_panel]
+format_conversion = "Chuyển đổi định dạng"
+save_as = "Lưu thành"
+select_file_hint = "Vui lòng chọn một tệp trước"
+same_format_tooltip = "Đã ở định dạng {format}"
+compressible_format_tooltip = "Hỗ trợ nén"
+png_compression_tooltip = "PNG không mất dữ liệu, không hỗ trợ nén theo chất lượng"
+bmp_compression_tooltip = "BMP không mất dữ liệu, không hỗ trợ nén theo chất lượng"
+gif_compression_tooltip = "GIF không mất dữ liệu, không hỗ trợ nén theo chất lượng"
+tif_compression_tooltip = "TIF/TIFF không mất dữ liệu, không hỗ trợ nén theo chất lượng"
+other_format_compression_tooltip = "Định dạng {format} không hỗ trợ nén theo chất lượng"
+high_quality_conversion_tooltip = "Chuyển đổi chất lượng cao"
+lossless_conversion_tooltip = "Chuyển đổi không mất dữ liệu"
+document_conversion_tooltip = "Chuyển sang định dạng tài liệu này"
+csv_conversion_tooltip = "Chuyển sang CSV (bảng văn bản thuần)"
+spreadsheet_conversion_tooltip = "Chuyển sang định dạng bảng tính này"
+pdf_conversion_tooltip = "Chuyển sang PDF"
+docx_conversion_tooltip = "Chuyển sang DOCX"
+doc_conversion_tooltip = "Chuyển sang DOC"
+tif_conversion_tooltip = "Kết xuất ảnh TIF"
+jpg_conversion_tooltip = "Kết xuất ảnh JPG"
 
-[conversion]
+[conversion_panel.document]
+convert_to_other_formats = "Chuyển sang định dạng tài liệu khác"
+convert_to_layout = "Chuyển sang định dạng bố cục"
+save_as_pdf = "Lưu thành PDF"
+save_as_pdf_tooltip = "Chuyển tài liệu sang tệp bố cục PDF"
+save_as_ofd = "Lưu thành OFD"
+save_as_ofd_tooltip = "Chưa hỗ trợ"
+proofread_document = "Kiểm tra tài liệu"
+proofread_hint = "Kiểm tra tài liệu"
+proofread_button = "📝 Kiểm tra"
+proofread_button_tooltip = "Kiểm tra cặp ký hiệu, lỗi chính tả, từ nhạy cảm, v.v."
+proofread_options = "Tùy chọn kiểm tra"
+symbol_pairing = "Đối soát cặp ký hiệu"
+symbol_pairing_tooltip = "Kiểm tra các ký hiệu cặp (ngoặc, dấu nháy, v.v.) có khớp không"
+typos_rule = "Sửa lỗi chính tả"
+typos_rule_tooltip = "Kiểm tra lỗi chính tả phổ biến"
+symbol_correction = "Sửa ký hiệu"
+symbol_correction_tooltip = "Kiểm tra ký hiệu sai"
+sensitive_word = "Từ nhạy cảm"
+sensitive_word_tooltip = "Kiểm tra từ nhạy cảm"
 
-[conversion.filenames]
-split_part1 = "Tach1"
-split_part2 = "Tach2"
-merged_pdf = "PDFDaTron"
-merged_table = "BangDaTron"
+[conversion_panel.image]
+convert_to_other_formats = "Chuyển sang định dạng ảnh khác"
+compression_options = "Tùy chọn nén"
+highest_quality = "Chất lượng cao nhất"
+highest_quality_tooltip = "Chuyển đổi không mất dữ liệu hoặc chất lượng cao. JPEG/WebP dùng quality=95; PNG/BMP/GIF/TIF dùng nén không mất dữ liệu."
+limit_file_size = "Giới hạn kích thước tệp"
+limit_file_size_tooltip = "Nén đến kích thước mục tiêu bằng tham số chất lượng; chỉ hiệu quả với JPEG/WebP. Định dạng khác sẽ lưu ở chất lượng cao nhất."
+file_size_limit = "Giới hạn kích thước tệp:"
+enter_size_limit_warning = "Vui lòng nhập giới hạn kích thước tệp"
+kb_range_warning = "Vui lòng nhập số từ 10 đến 10000 (KB)"
+mb_range_warning = "Vui lòng nhập số từ 1 đến 100 (MB)"
+enter_valid_number_warning = "Vui lòng nhập số hợp lệ"
+convert_to_layout = "Chuyển sang định dạng bố cục"
+save_as_pdf = "Lưu thành PDF"
+save_as_pdf_tooltip = "Chuyển ảnh sang tệp bố cục PDF"
+save_as_ofd = "Lưu thành OFD"
+save_as_ofd_tooltip = "Chưa hỗ trợ"
+size_options = "Tùy chọn kích thước"
+original_embed = "Nhúng nguyên bản"
+fit_a4 = "Vừa A4"
+fit_a3 = "Vừa A3"
+no_pdf_size_option_warning = "Vui lòng chọn một tùy chọn kích thước PDF"
+merge_images = "Trộn ảnh"
+merge_images_hint = "Trộn nhiều ảnh thành một"
+merge_to_tif = "Trộn thành TIF"
+conversion_options = "Tùy chọn chuyển đổi"
+preserve_transparency = "Giữ độ trong suốt"
+preserve_transparency_tooltip = "Giữ độ trong suốt của ảnh nguồn (nếu có)"
+no_transparency = "Không trong suốt"
+no_transparency_tooltip = "Chuyển sang RGB, nền trong suốt sẽ thành màu trắng"
 
-[messages]
-file_not_found = "Không tìm thấy tệp: {filename}"
-invalid_file_type = "Loại tệp không hỗ trợ: {ext}"
-unsupported_file_type = "Loại tệp không hỗ trợ"
-unknown_file_category = "Danh mục tệp không xác định: {category}"
-error_prefix = "Lỗi: {message}"
-operation_failed = "Thao tác thất bại: {error}"
-processing_exception = "Ngoại lệ xử lý: {error}"
-system_init_error = "Lỗi khởi tạo hệ thống"
-process_file_failed = "Không thể xử lý tệp: {error}"
-batch_merge_need_two_layout = "Cần chế độ hàng loạt, tối thiểu 2 tệp bố cục để trộn"
-batch_merge_need_two_image = "Cần chế độ hàng loạt, tối thiểu 2 tệp ảnh để trộn"
-batch_merge_need_two_table = "Cần chế độ hàng loạt, tối thiểu 2 tệp bảng tính để trộn"
-batch_file_list_not_init = "Thành phần danh sách tệp hàng loạt chưa được khởi tạo"
-select_base_table_first = "Vui lòng chọn bảng tham chiếu trước"
-select_merge_mode = "Vui lòng chọn chế độ trộn (theo hàng/theo cột/theo ô)"
-process_failed = "Xử lý thất bại: {error}"
-file_processing_failed = "Không thể xử lý tệp: {error}"
-template_selection_failed = "Không thể chọn mẫu: {error}"
-cancel_failed = "Không thể hủy: {error}"
-clear_failed = "Không thể xóa: {error}"
-settings_unavailable = "Không thể sử dụng phần cài đặt"
-open_settings_failed = "Không thể mở cài đặt: {error}"
-apply_settings_failed = "Không thể áp dụng cài đặt: {error}"
-about_unavailable = "Không thể hiển thị thông tin Giới thiệu"
-open_about_failed = "Không thể mở Giới thiệu: {error}"
-single_file_only = "Chế độ một tệp chỉ cho phép 1 tệp"
-no_valid_files = "Không phát hiện tệp hợp lệ"
-no_folder_in_single_mode = "Không cho phép thư mục trong chế độ một tệp"
-all_supported_files = "Mọi tệp hỗ trợ"
-all_files = "Mọi tệp"
-select_multiple_files = "Chọn nhiều tệp"
-category_mismatch = "Chỉ có thể thêm tệp {current_name}, không thể trộn với {new_name}"
-category_mismatch_detail = "Không khớp loại (danh sách hiện tại: {selected_name}, tệp: {file_category_name})"
+[conversion_panel.layout]
+convert_to_other_formats = "Chuyển sang định dạng bố cục khác"
+save_as_ofd_tooltip = "Chưa hỗ trợ"
+convert_to_document_or_image = "Chuyển sang tài liệu hoặc ảnh"
+save_as_format = "Lưu thành {format}"
+save_as_docx_tooltip = "Chuyển tệp bố cục sang DOCX"
+save_as_doc_tooltip = "Chuyển tệp bố cục sang DOC"
+render_as_tif = "Kết xuất TIF"
+render_as_tif_tooltip = "Kết xuất trang PDF thành ảnh TIF; hỗ trợ TIFF nhiều trang và chọn DPI"
+render_as_jpg = "Kết xuất JPG"
+render_as_jpg_tooltip = "Kết xuất PDF thành ảnh JPG (mỗi trang một tệp)"
+image_quality_dpi = "Chất lượng ảnh (DPI)"
+minimum_150 = "Thấp (150 DPI) - Xem nhanh"
+moderate_300 = "Chuẩn (300 DPI) - Dùng hằng ngày"
+high_definition_600 = "Cao (600 DPI) - In ấn"
+merge_split = "Trộn/Tách"
+merge_split_hint = "Trộn hoặc tách tệp bố cục"
+merge_to_pdf = "Trộn thành PDF"
+merge_to_pdf_tooltip = "Trộn các tệp trong danh sách hàng loạt thành một PDF theo thứ tự từ trên xuống. Dùng phím ↑↓ để điều chỉnh thứ tự sau khi chọn tệp."
+merge_to_ofd = "Trộn thành OFD"
+merge_to_ofd_tooltip = "Chưa hỗ trợ"
+split_to_pdf = "Tách thành PDF"
+split_to_pdf_tooltip = "Tách tệp hiện tại thành 2 PDF theo phạm vi trang nhập vào. Tệp 1 chứa các trang đã nhập; tệp 2 chứa phần còn lại (nếu có)."
+split_to_ofd = "Tách thành OFD"
+split_to_ofd_tooltip = "Chưa hỗ trợ"
+split_page_range = "Phạm vi trang tách:"
+page_range_info = "Nhập phạm vi trang, ví dụ:\n• 1-5: Trang 1 đến 5\n• 1,3,5: Trang 1, 3, 5\n• 1-3,7-9: Trang 1-3 và 7-9\n• Hỗ trợ dấu phân tách kiểu Trung: 1~3;5;7至10"
+page_range_placeholder = "vd: 1-3,5,7-10"
+selected_split_file = "Đã chọn tệp để tách ({pages} trang):"
+no_file_selected = "Chưa chọn tệp"
+cannot_split_all_pages = "❌ Không thể tách toàn bộ trang (hãy để lại một phần)"
+pages_out_of_range_adjusted = "⚠️ Một số trang vượt phạm vi, đã tự điều chỉnh (tổng {pages} trang)"
+all_pages_out_of_range = "❌ Tất cả trang đều vượt phạm vi (tổng {pages} trang)"
 
-[messages.errors]
-invalid_docx_template = "Tệp mẫu {template_name} không hợp lệ hoặc bị hỏng. Hãy mở bằng Word/WPS, chỉnh sửa và lưu lại để đảm bảo đây là tệp DOCX hợp lệ."
+[conversion_panel.spreadsheet]
+convert_to_other_formats = "Chuyển sang định dạng bảng tính khác"
+convert_to_layout = "Chuyển sang định dạng bố cục"
+save_as_pdf = "Lưu thành PDF"
+save_as_pdf_tooltip = "Cần Office cài tại máy để chuyển bảng tính sang tệp bố cục PDF"
+save_as_ofd = "Lưu thành OFD"
+save_as_ofd_tooltip = "Chưa hỗ trợ"
+merge_tables = "Trộn bảng"
+merge_tables_hint = "Trộn nhiều bảng theo chế độ đã chọn"
+merge_tables_button = "📋 Trộn bảng"
+merge_tables_button_tooltip = "Trộn nhiều bảng trong danh sách hàng loạt vào bảng tham chiếu theo chế độ đã chọn. Trước tiên hãy chọn chế độ trộn (theo hàng/theo cột/theo ô)."
+merge_options = "Tùy chọn trộn"
+merge_by_row = "Trộn theo hàng"
+merge_by_row_tooltip = "Trộn một hoặc nhiều bảng theo hàng vào bảng tham chiếu"
+merge_by_column = "Trộn theo cột"
+merge_by_column_tooltip = "Trộn một hoặc nhiều bảng theo cột vào bảng tham chiếu"
+merge_by_cell = "Trộn theo ô"
+merge_by_cell_tooltip = "Thêm dữ liệu theo vị trí ô tương ứng"
+selected_reference_table = "Bảng tham chiếu hiện tại:"
+no_table_selected = "Chưa chọn bảng"
 
-[messages.warnings]
-missing_body_placeholder = "⚠️ Không tìm thấy placeholder thân bài (vd: {{body}}) trong mẫu. Nội dung thân bài Markdown không được chèn vào."
+# =============================================================================
+# Bảng thao tác
+# =============================================================================
+[action_panel]
+export_options = "Tùy chọn xuất"
+extraction_options = "Tùy chọn trích xuất"
+generation_options = "Tùy chọn tạo"
+extract_images = "Trích xuất ảnh"
+extract_images_tooltip = "Trích xuất ảnh từ tệp khi chuyển sang MD"
+ocr = "OCR ảnh"
+ocr_tooltip = "Bật OCR để nhận dạng chữ trong ảnh khi chuyển sang MD"
 
+[action_panel.proofread]
+symbol_pairing = "Đối soát cặp ký hiệu"
+symbol_pairing_tooltip = "Kiểm tra ký hiệu cặp (ngoặc, dấu nháy, v.v.) có khớp không"
+typos_rule = "Sửa lỗi chính tả"
+typos_rule_tooltip = "Kiểm tra lỗi chính tả phổ biến"
+symbol_correction = "Sửa ký hiệu"
+symbol_correction_tooltip = "Kiểm tra ký hiệu sai"
+sensitive_word = "Từ nhạy cảm"
+sensitive_word_tooltip = "Kiểm tra từ nhạy cảm"
+
+[action_panel.document]
+ready = "Sẵn sàng"
+export_markdown = "Xuất Markdown"
+export_markdown_tooltip = "Chuyển tài liệu sang Markdown"
+optimize_for_type = "Tối ưu theo loại tài liệu"
+optimize_for_type_tooltip = "Tối ưu hóa có mục tiêu theo loại tài liệu"
+remove_existing_numbering = "Xóa số tiêu đề gốc"
+remove_existing_numbering_tooltip = "Xóa đánh số tiêu đề hiện có khi chuyển sang MD"
+add_new_numbering = "Thêm số tiêu đề mới"
+add_new_numbering_tooltip = "Thêm đánh số tiêu đề mới khi chuyển sang MD"
+
+[action_panel.spreadsheet]
+ready = "Sẵn sàng"
+export_markdown = "Xuất Markdown"
+export_markdown_tooltip = "Chuyển bảng tính sang Markdown"
+
+[action_panel.image]
+ready = "Sẵn sàng"
+export_markdown = "Xuất Markdown"
+export_markdown_tooltip = "Chuyển ảnh sang Markdown"
+extract_images_tooltip = "Giữ ảnh khi chuyển sang MD"
+ocr_tooltip = "Bật OCR để nhận dạng chữ trong ảnh khi chuyển sang MD"
+
+[action_panel.layout]
+ready = "Sẵn sàng"
+export_markdown = "Xuất Markdown"
+export_markdown_tooltip = "Chuyển tệp bố cục sang Markdown"
+
+[action_panel.md_to_document]
+ready = "Sẵn sàng"
+generate_docx = "Tạo DOCX"
+generate_docx_tooltip = "Chuyển Markdown sang tài liệu DOCX"
+generate_doc = "Tạo DOC"
+generate_doc_tooltip = "Chuyển Markdown sang tài liệu DOC (cần Office cài tại máy)"
+generate_odt = "Tạo ODT"
+generate_odt_tooltip = "Chuyển Markdown sang tài liệu ODT (cần LibreOffice)"
+generate_rtf = "Tạo RTF"
+generate_rtf_tooltip = "Chuyển Markdown sang tài liệu RTF (cần Office cài tại máy)"
+remove_existing_numbering = "Xóa số tiêu đề gốc"
+remove_existing_numbering_tooltip = "Xóa đánh số tiêu đề hiện có khi chuyển sang tài liệu"
+add_new_numbering = "Thêm số tiêu đề mới"
+add_new_numbering_tooltip = "Thêm đánh số tiêu đề mới khi chuyển sang tài liệu"
+
+[action_panel.md_to_spreadsheet]
+ready = "Sẵn sàng"
+generate_xlsx = "Tạo XLSX"
+generate_xlsx_tooltip = "Chuyển Markdown sang bảng tính XLSX"
+generate_xls = "Tạo XLS"
+generate_xls_tooltip = "Chuyển Markdown sang bảng tính XLS (cần Office cài tại máy)"
+generate_ods = "Tạo ODS"
+generate_ods_tooltip = "Chuyển Markdown sang bảng tính ODS (cần LibreOffice)"
+generate_csv = "Tạo CSV"
+generate_csv_tooltip = "Chuyển Markdown sang bảng tính CSV (văn bản thuần)"
+
+# =============================================================================
+# Trình chỉnh sửa
+# =============================================================================
 [editors]
 
 [editors.numbering_add]
@@ -1066,288 +1231,40 @@ duplicate_key_title = "Khóa đã tồn tại"
 duplicate_key_message = "Khóa \"{entry_key}\" đã tồn tại\n\nGiá trị hiện tại: {current_values}\nGhi chú hiện tại: {current_comment}\n\nVui lòng chọn hành động:"
 duplicate_key_no_comment = "(không có)"
 overwrite = "Ghi đè"
-overwrite_tooltip = "Thay thế hoàn toàn bằng giá trị và ghi chú mới"
 merge = "Trộn"
-merge_tooltip = "Trộn giá trị cũ và mới (loại trùng), ghi chú: giữ cũ nếu mới trống"
 
-[styles]
-code_block = "Khối mã"
-inline_code = "Mã nội tuyến"
-quote_1 = "Trích dẫn 1"
-quote_2 = "Trích dẫn 2"
-quote_3 = "Trích dẫn 3"
-quote_4 = "Trích dẫn 4"
-quote_5 = "Trích dẫn 5"
-quote_6 = "Trích dẫn 6"
-quote_7 = "Trích dẫn 7"
-quote_8 = "Trích dẫn 8"
-quote_9 = "Trích dẫn 9"
-formula_block = "Khối công thức"
-inline_formula = "Công thức nội tuyến"
-horizontal_rule_1 = "Đường ngang 1"
-horizontal_rule_2 = "Đường ngang 2"
-horizontal_rule_3 = "Đường ngang 3"
-list_block = "Khối danh sách"
-table_content = "Nội dung bảng"
-three_line_table = "Bảng ba dòng"
-table_grid = "Bảng lưới"
-body_paragraph = "Đoạn văn bản chính"
+# =============================================================================
+# Loại tệp
+# =============================================================================
+[file_types]
+document = "Tài liệu"
+spreadsheet = "Bảng tính"
+image = "Hình ảnh"
+layout = "Bố cục"
+text = "Văn bản"
+unknown = "Không xác định"
+text_category = "Văn"
+document_category = "Tài"
+spreadsheet_category = "Bảng"
+layout_category = "Bố"
+image_category = "Ảnh"
+unknown_type = "Không xác định"
+format_mismatch = "⚠️ Định dạng thực tế: {format}"
+format_unverifiable = "⚠️ Không thể xác minh định dạng thực tế"
+format_txt = "TXT (Văn bản thuần)"
+format_md = "Markdown"
+format_csv = "CSV (Văn bản bảng)"
 
-[style_formats]
+# =============================================================================
+# Chuyển đổi
+# =============================================================================
+[conversion]
 
-[style_formats.body_paragraph]
-east_asia_font = "Times New Roman"
-ascii_font = "Times New Roman"
-font_size_pt = 13
-first_line_indent_chars = 0
-first_line_indent_cm = 1.27
-spacing_after_twip = 120
-spacing_before_twip = 0
-bold = false
-justification = "both"
-
-[style_formats.heading_1]
-east_asia_font = "Arial"
-ascii_font = "Arial"
-font_size_pt = 14
-first_line_indent_chars = 0
-first_line_indent_cm = 0
-spacing_after_twip = 120
-spacing_before_twip = 240
-bold = true
-justification = "left"
-
-[style_formats.heading_2]
-east_asia_font = "Arial"
-ascii_font = "Arial"
-font_size_pt = 13
-first_line_indent_chars = 0
-first_line_indent_cm = 0
-spacing_after_twip = 120
-spacing_before_twip = 240
-bold = true
-justification = "left"
-
-[style_formats.heading_3_9]
-east_asia_font = "Arial"
-ascii_font = "Arial"
-font_size_pt = 13
-first_line_indent_chars = 0
-first_line_indent_cm = 0
-spacing_after_twip = 120
-spacing_before_twip = 240
-bold = true
-justification = "left"
-
-[placeholders]
-title = "Tiêu đề"
-body = "Nội dung"
-
-[yaml_keys]
-title = "tieu_de"
-subtitle = "phu_de"
-
-[conversion_panel]
-format_conversion = "Chuyển đổi định dạng"
-save_as = "Lưu thành"
-select_file_hint = "Vui lòng chọn một tệp trước"
-same_format_tooltip = "Đã ở định dạng {format}"
-compressible_format_tooltip = "Hỗ trợ nén"
-png_compression_tooltip = "PNG không mất dữ liệu, không hỗ trợ nén theo chất lượng"
-bmp_compression_tooltip = "BMP không mất dữ liệu, không hỗ trợ nén theo chất lượng"
-gif_compression_tooltip = "GIF không mất dữ liệu, không hỗ trợ nén theo chất lượng"
-tif_compression_tooltip = "TIF/TIFF không mất dữ liệu, không hỗ trợ nén theo chất lượng"
-other_format_compression_tooltip = "Định dạng {format} không hỗ trợ nén theo chất lượng"
-high_quality_conversion_tooltip = "Chuyển đổi chất lượng cao"
-lossless_conversion_tooltip = "Chuyển đổi không mất dữ liệu"
-document_conversion_tooltip = "Chuyển sang định dạng tài liệu này"
-csv_conversion_tooltip = "Chuyển sang CSV (bảng văn bản thuần)"
-spreadsheet_conversion_tooltip = "Chuyển sang định dạng bảng tính này"
-pdf_conversion_tooltip = "Chuyển sang PDF"
-docx_conversion_tooltip = "Chuyển sang DOCX"
-doc_conversion_tooltip = "Chuyển sang DOC"
-tif_conversion_tooltip = "Kết xuất ảnh TIF"
-jpg_conversion_tooltip = "Kết xuất ảnh JPG"
-
-[conversion_panel.document]
-convert_to_other_formats = "Chuyển sang định dạng tài liệu khác"
-convert_to_layout = "Chuyển sang định dạng bố cục"
-save_as_pdf = "Lưu thành PDF"
-save_as_pdf_tooltip = "Chuyển tài liệu sang tệp bố cục PDF"
-save_as_ofd = "Lưu thành OFD"
-save_as_ofd_tooltip = "Chưa hỗ trợ"
-proofread_document = "Kiểm tra tài liệu"
-proofread_hint = "Kiểm tra tài liệu"
-proofread_button = "📝 Kiểm tra"
-proofread_button_tooltip = "Kiểm tra cặp ký hiệu, lỗi chính tả, từ nhạy cảm, v.v."
-proofread_options = "Tùy chọn kiểm tra"
-symbol_pairing = "Đối soát cặp ký hiệu"
-symbol_pairing_tooltip = "Kiểm tra các ký hiệu cặp (ngoặc, dấu nháy, v.v.) có khớp không"
-typos_rule = "Sửa lỗi chính tả"
-typos_rule_tooltip = "Kiểm tra lỗi chính tả phổ biến"
-symbol_correction = "Sửa ký hiệu"
-symbol_correction_tooltip = "Kiểm tra ký hiệu sai"
-sensitive_word = "Từ nhạy cảm"
-sensitive_word_tooltip = "Kiểm tra từ nhạy cảm"
-
-[conversion_panel.image]
-convert_to_other_formats = "Chuyển sang định dạng ảnh khác"
-compression_options = "Tùy chọn nén"
-highest_quality = "Chất lượng cao nhất"
-highest_quality_tooltip = "Chuyển đổi không mất dữ liệu hoặc chất lượng cao. JPEG/WebP dùng quality=95; PNG/BMP/GIF/TIF dùng nén không mất dữ liệu."
-limit_file_size = "Giới hạn kích thước tệp"
-limit_file_size_tooltip = "Nén đến kích thước mục tiêu bằng tham số chất lượng; chỉ hiệu quả với JPEG/WebP. Định dạng khác sẽ lưu ở chất lượng cao nhất."
-file_size_limit = "Giới hạn kích thước tệp:"
-enter_size_limit_warning = "Vui lòng nhập giới hạn kích thước tệp"
-kb_range_warning = "Vui lòng nhập số từ 10 đến 10000 (KB)"
-mb_range_warning = "Vui lòng nhập số từ 1 đến 100 (MB)"
-enter_valid_number_warning = "Vui lòng nhập số hợp lệ"
-convert_to_layout = "Chuyển sang định dạng bố cục"
-save_as_pdf = "Lưu thành PDF"
-save_as_pdf_tooltip = "Chuyển ảnh sang tệp bố cục PDF"
-save_as_ofd = "Lưu thành OFD"
-save_as_ofd_tooltip = "Chưa hỗ trợ"
-size_options = "Tùy chọn kích thước"
-original_embed = "Nhúng nguyên bản"
-fit_a4 = "Vừa A4"
-fit_a3 = "Vừa A3"
-no_pdf_size_option_warning = "Vui lòng chọn một tùy chọn kích thước PDF"
-merge_images = "Trộn ảnh"
-merge_images_hint = "Trộn nhiều ảnh thành một"
-merge_to_tif = "Trộn thành TIF"
-conversion_options = "Tùy chọn chuyển đổi"
-preserve_transparency = "Giữ độ trong suốt"
-preserve_transparency_tooltip = "Giữ độ trong suốt của ảnh nguồn (nếu có)"
-no_transparency = "Không trong suốt"
-no_transparency_tooltip = "Chuyển sang RGB, nền trong suốt sẽ thành màu trắng"
-
-[conversion_panel.layout]
-convert_to_other_formats = "Chuyển sang định dạng bố cục khác"
-save_as_ofd_tooltip = "Chưa hỗ trợ"
-convert_to_document_or_image = "Chuyển sang tài liệu hoặc ảnh"
-save_as_format = "Lưu thành {format}"
-save_as_docx_tooltip = "Chuyển tệp bố cục sang DOCX"
-save_as_doc_tooltip = "Chuyển tệp bố cục sang DOC"
-render_as_tif = "Kết xuất TIF"
-render_as_tif_tooltip = "Kết xuất trang PDF thành ảnh TIF; hỗ trợ TIFF nhiều trang và chọn DPI"
-render_as_jpg = "Kết xuất JPG"
-render_as_jpg_tooltip = "Kết xuất PDF thành ảnh JPG (mỗi trang một tệp)"
-image_quality_dpi = "Chất lượng ảnh (DPI)"
-minimum_150 = "Thấp (150 DPI) - Xem nhanh"
-moderate_300 = "Chuẩn (300 DPI) - Dùng hằng ngày"
-high_definition_600 = "Cao (600 DPI) - In ấn"
-merge_split = "Trộn/Tách"
-merge_split_hint = "Trộn hoặc tách tệp bố cục"
-merge_to_pdf = "Trộn thành PDF"
-merge_to_pdf_tooltip = "Trộn các tệp trong danh sách hàng loạt thành một PDF theo thứ tự từ trên xuống. Dùng phím ↑↓ để điều chỉnh thứ tự sau khi chọn tệp."
-merge_to_ofd = "Trộn thành OFD"
-merge_to_ofd_tooltip = "Chưa hỗ trợ"
-split_to_pdf = "Tách thành PDF"
-split_to_pdf_tooltip = "Tách tệp hiện tại thành 2 PDF theo phạm vi trang nhập vào. Tệp 1 chứa các trang đã nhập; tệp 2 chứa phần còn lại (nếu có)."
-split_to_ofd = "Tách thành OFD"
-split_to_ofd_tooltip = "Chưa hỗ trợ"
-split_page_range = "Phạm vi trang tách:"
-page_range_info = "Nhập phạm vi trang, ví dụ:\n• 1-5: Trang 1 đến 5\n• 1,3,5: Trang 1, 3, 5\n• 1-3,7-9: Trang 1-3 và 7-9\n• Hỗ trợ dấu phân tách kiểu Trung: 1~3;5;7至10"
-page_range_placeholder = "vd: 1-3,5,7-10"
-selected_split_file = "Đã chọn tệp để tách ({pages} trang):"
-no_file_selected = "Chưa chọn tệp"
-cannot_split_all_pages = "❌ Không thể tách toàn bộ trang (hãy để lại một phần)"
-pages_out_of_range_adjusted = "⚠️ Một số trang vượt phạm vi, đã tự điều chỉnh (tổng {pages} trang)"
-all_pages_out_of_range = "❌ Tất cả trang đều vượt phạm vi (tổng {pages} trang)"
-
-[conversion_panel.spreadsheet]
-convert_to_other_formats = "Chuyển sang định dạng bảng tính khác"
-convert_to_layout = "Chuyển sang định dạng bố cục"
-save_as_pdf = "Lưu thành PDF"
-save_as_pdf_tooltip = "Cần Office cài tại máy để chuyển bảng tính sang tệp bố cục PDF"
-save_as_ofd = "Lưu thành OFD"
-save_as_ofd_tooltip = "Chưa hỗ trợ"
-merge_tables = "Trộn bảng"
-merge_tables_hint = "Trộn nhiều bảng theo chế độ đã chọn"
-merge_tables_button = "📋 Trộn bảng"
-merge_tables_button_tooltip = "Trộn nhiều bảng trong danh sách hàng loạt vào bảng tham chiếu theo chế độ đã chọn. Trước tiên hãy chọn chế độ trộn (theo hàng/theo cột/theo ô)."
-merge_options = "Tùy chọn trộn"
-merge_by_row = "Trộn theo hàng"
-merge_by_row_tooltip = "Trộn một hoặc nhiều bảng theo hàng vào bảng tham chiếu"
-merge_by_column = "Trộn theo cột"
-merge_by_column_tooltip = "Trộn một hoặc nhiều bảng theo cột vào bảng tham chiếu"
-merge_by_cell = "Trộn theo ô"
-merge_by_cell_tooltip = "Thêm dữ liệu theo vị trí ô tương ứng"
-selected_reference_table = "Bảng tham chiếu hiện tại:"
-no_table_selected = "Chưa chọn bảng"
-
-[action_panel]
-export_options = "Tùy chọn xuất"
-extraction_options = "Tùy chọn trích xuất"
-generation_options = "Tùy chọn tạo"
-extract_images = "Trích xuất ảnh"
-extract_images_tooltip = "Trích xuất ảnh từ tệp khi chuyển sang MD"
-ocr = "OCR ảnh"
-ocr_tooltip = "Bật OCR để nhận dạng chữ trong ảnh khi chuyển sang MD"
-
-[action_panel.proofread]
-symbol_pairing = "Đối soát cặp ký hiệu"
-symbol_pairing_tooltip = "Kiểm tra ký hiệu cặp (ngoặc, dấu nháy, v.v.) có khớp không"
-typos_rule = "Sửa lỗi chính tả"
-typos_rule_tooltip = "Kiểm tra lỗi chính tả phổ biến"
-symbol_correction = "Sửa ký hiệu"
-symbol_correction_tooltip = "Kiểm tra ký hiệu sai"
-sensitive_word = "Từ nhạy cảm"
-sensitive_word_tooltip = "Kiểm tra từ nhạy cảm"
-
-[action_panel.document]
-ready = "Sẵn sàng"
-export_markdown = "Xuất Markdown"
-export_markdown_tooltip = "Chuyển tài liệu sang Markdown"
-optimize_for_type = "Tối ưu theo loại tài liệu"
-optimize_for_type_tooltip = "Tối ưu hóa có mục tiêu theo loại tài liệu"
-remove_existing_numbering = "Xóa số tiêu đề gốc"
-remove_existing_numbering_tooltip = "Xóa đánh số tiêu đề hiện có khi chuyển sang MD"
-add_new_numbering = "Thêm số tiêu đề mới"
-add_new_numbering_tooltip = "Thêm đánh số tiêu đề mới khi chuyển sang MD"
-
-[action_panel.spreadsheet]
-ready = "Sẵn sàng"
-export_markdown = "Xuất Markdown"
-export_markdown_tooltip = "Chuyển bảng tính sang Markdown"
-
-[action_panel.image]
-ready = "Sẵn sàng"
-export_markdown = "Xuất Markdown"
-export_markdown_tooltip = "Chuyển ảnh sang Markdown"
-extract_images_tooltip = "Giữ ảnh khi chuyển sang MD"
-ocr_tooltip = "Bật OCR để nhận dạng chữ trong ảnh khi chuyển sang MD"
-
-[action_panel.layout]
-ready = "Sẵn sàng"
-export_markdown = "Xuất Markdown"
-export_markdown_tooltip = "Chuyển tệp bố cục sang Markdown"
-
-[action_panel.md_to_document]
-ready = "Sẵn sàng"
-generate_docx = "Tạo DOCX"
-generate_docx_tooltip = "Chuyển Markdown sang tài liệu DOCX"
-generate_doc = "Tạo DOC"
-generate_doc_tooltip = "Chuyển Markdown sang tài liệu DOC (cần Office cài tại máy)"
-generate_odt = "Tạo ODT"
-generate_odt_tooltip = "Chuyển Markdown sang tài liệu ODT (cần LibreOffice)"
-generate_rtf = "Tạo RTF"
-generate_rtf_tooltip = "Chuyển Markdown sang tài liệu RTF (cần Office cài tại máy)"
-remove_existing_numbering = "Xóa số tiêu đề gốc"
-remove_existing_numbering_tooltip = "Xóa đánh số tiêu đề hiện có khi chuyển sang tài liệu"
-add_new_numbering = "Thêm số tiêu đề mới"
-add_new_numbering_tooltip = "Thêm đánh số tiêu đề mới khi chuyển sang tài liệu"
-
-[action_panel.md_to_spreadsheet]
-ready = "Sẵn sàng"
-generate_xlsx = "Tạo XLSX"
-generate_xlsx_tooltip = "Chuyển Markdown sang bảng tính XLSX"
-generate_xls = "Tạo XLS"
-generate_xls_tooltip = "Chuyển Markdown sang bảng tính XLS (cần Office cài tại máy)"
-generate_ods = "Tạo ODS"
-generate_ods_tooltip = "Chuyển Markdown sang bảng tính ODS (cần LibreOffice)"
-generate_csv = "Tạo CSV"
-generate_csv_tooltip = "Chuyển Markdown sang bảng tính CSV (văn bản thuần)"
+[conversion.filenames]
+split_part1 = "Tach1"
+split_part2 = "Tach2"
+merged_pdf = "PDFDaTron"
+merged_table = "BangDaTron"
 
 [conversion.progress]
 converting_to_format = "Đang chuyển sang {format}..."
@@ -1378,7 +1295,6 @@ filling_yaml_data = "Đang điền dữ liệu YAML..."
 filling_table_data = "Đang điền dữ liệu bảng..."
 saving_excel = "Đang lưu tệp Excel..."
 writing_file = "Đang ghi tệp..."
-executing_final_proofread = "Đang chạy kiểm tra cuối..."
 initializing_proofread = "Đang khởi tạo bộ máy kiểm tra..."
 proofreading_progress = "Đang kiểm tra... {current}/{total}"
 saving_proofread_result = "Đang lưu kết quả kiểm tra..."
@@ -1477,6 +1393,53 @@ unsupported_layout_format = "Định dạng không hỗ trợ: {format}"
 format_to_pdf_not_implemented = "{format}→PDF chưa được triển khai"
 all_pages_invalid = "Trang không hợp lệ (tổng {total}tr)"
 
+# =============================================================================
+# Thông báo
+# =============================================================================
+[messages]
+file_not_found = "Không tìm thấy tệp: {filename}"
+invalid_file_type = "Loại tệp không hỗ trợ: {ext}"
+unsupported_file_type = "Loại tệp không hỗ trợ"
+unknown_file_category = "Danh mục tệp không xác định: {category}"
+error_prefix = "Lỗi: {message}"
+operation_failed = "Thao tác thất bại: {error}"
+processing_exception = "Ngoại lệ xử lý: {error}"
+system_init_error = "Lỗi khởi tạo hệ thống"
+process_file_failed = "Không thể xử lý tệp: {error}"
+batch_merge_need_two_layout = "Cần chế độ hàng loạt, tối thiểu 2 tệp bố cục để trộn"
+batch_merge_need_two_image = "Cần chế độ hàng loạt, tối thiểu 2 tệp ảnh để trộn"
+batch_merge_need_two_table = "Cần chế độ hàng loạt, tối thiểu 2 tệp bảng tính để trộn"
+batch_file_list_not_init = "Thành phần danh sách tệp hàng loạt chưa được khởi tạo"
+select_base_table_first = "Vui lòng chọn bảng tham chiếu trước"
+select_merge_mode = "Vui lòng chọn chế độ trộn (theo hàng/theo cột/theo ô)"
+process_failed = "Xử lý thất bại: {error}"
+file_processing_failed = "Không thể xử lý tệp: {error}"
+template_selection_failed = "Không thể chọn mẫu: {error}"
+cancel_failed = "Không thể hủy: {error}"
+clear_failed = "Không thể xóa: {error}"
+settings_unavailable = "Không thể sử dụng phần cài đặt"
+open_settings_failed = "Không thể mở cài đặt: {error}"
+apply_settings_failed = "Không thể áp dụng cài đặt: {error}"
+about_unavailable = "Không thể hiển thị thông tin Giới thiệu"
+open_about_failed = "Không thể mở Giới thiệu: {error}"
+single_file_only = "Chế độ một tệp chỉ cho phép 1 tệp"
+no_valid_files = "Không phát hiện tệp hợp lệ"
+no_folder_in_single_mode = "Không cho phép thư mục trong chế độ một tệp"
+all_supported_files = "Mọi tệp hỗ trợ"
+all_files = "Mọi tệp"
+select_multiple_files = "Chọn nhiều tệp"
+category_mismatch = "Chỉ có thể thêm tệp {current_name}, không thể trộn với {new_name}"
+category_mismatch_detail = "Không khớp loại (danh sách hiện tại: {selected_name}, tệp: {file_category_name})"
+
+[messages.errors]
+invalid_docx_template = "Tệp mẫu {template_name} không hợp lệ hoặc bị hỏng. Hãy mở bằng Word/WPS, chỉnh sửa và lưu lại để đảm bảo đây là tệp DOCX hợp lệ."
+
+[messages.warnings]
+missing_body_placeholder = "⚠️ Không tìm thấy placeholder thân bài (vd: {{body}}) trong mẫu. Nội dung thân bài Markdown không được chèn vào."
+
+# =============================================================================
+# Soát lỗi
+# =============================================================================
 [proofread]
 
 [proofread.error_type]
@@ -1495,3 +1458,123 @@ pairing = "Kiểm tra cặp ký hiệu"
 sensitive = "Phát hiện từ nhạy cảm"
 extra_close = "Dư ký hiệu đóng"
 unclosed = "Ký hiệu chưa đóng"
+  
+# =============================================================================
+# Văn bản giữ chỗ xử lý liên kết (dùng để hiển thị lỗi trong tài liệu)
+# =============================================================================
+[link_processing]
+file_not_found = "⚠️ Không tìm thấy tệp: {filename}"
+section_not_found = "⚠️ Không tìm thấy phần: {filename}#{heading}"
+block_not_found = "⚠️ Không tìm thấy khối: {filename}#^{block_id}"
+circular_reference = "⚠️ Phát hiện tham chiếu vòng: {filename}"
+max_depth_reached = "⚠️ Đã đạt độ sâu nhúng tối đa"
+
+# =============================================================================
+# Tên kiểu (dùng cho chuyển đổi tài liệu)
+# Các tên kiểu này dùng cho việc chèn/nhận diện kiểu trong chuyển đổi MD ↔ DOCX
+# =============================================================================
+[styles]
+# Kiểu đoạn văn
+body_paragraph = "Đoạn văn bản chính"
+image_paragraph = "Đoạn hình ảnh"
+
+# Kiểu mã
+code_block = "Khối mã"
+inline_code = "Mã nội tuyến"
+
+# Kiểu công thức
+formula_block = "Khối công thức"
+inline_formula = "Công thức nội tuyến"
+
+# Kiểu danh sách
+list_block = "Khối danh sách"
+
+# Kiểu đường kẻ ngang
+horizontal_rule_1 = "Đường ngang 1"
+horizontal_rule_2 = "Đường ngang 2"
+horizontal_rule_3 = "Đường ngang 3"
+
+# Kiểu bảng
+table_content = "Nội dung bảng"
+three_line_table = "Bảng ba dòng"
+table_grid = "Bảng lưới"
+
+# Kiểu trích dẫn (9 cấp)
+quote_1 = "Trích dẫn 1"
+quote_2 = "Trích dẫn 2"
+quote_3 = "Trích dẫn 3"
+quote_4 = "Trích dẫn 4"
+quote_5 = "Trích dẫn 5"
+quote_6 = "Trích dẫn 6"
+quote_7 = "Trích dẫn 7"
+quote_8 = "Trích dẫn 8"
+quote_9 = "Trích dẫn 9"
+
+# =============================================================================
+# Cấu hình định dạng kiểu (thuộc tính định dạng khi chèn kiểu)
+# =============================================================================
+[style_formats]
+
+# Định dạng đoạn văn bản chính (Times New Roman, 13pt, căn đều hai bên)
+[style_formats.body_paragraph]
+east_asia_font = "Times New Roman"
+ascii_font = "Times New Roman"
+font_size_pt = 13
+first_line_indent_chars = 0
+first_line_indent_cm = 1.27
+spacing_after_twip = 120
+spacing_before_twip = 0
+bold = false
+justification = "both"
+
+# Định dạng tiêu đề 1 (Arial, 14pt, in đậm, căn trái)
+[style_formats.heading_1]
+east_asia_font = "Arial"
+ascii_font = "Arial"
+font_size_pt = 14
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# Định dạng tiêu đề 2 (Arial, 13pt, in đậm, căn trái)
+[style_formats.heading_2]
+east_asia_font = "Arial"
+ascii_font = "Arial"
+font_size_pt = 13
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# Định dạng tiêu đề 3-9 (Arial, 13pt, in đậm, căn trái)
+[style_formats.heading_3_9]
+east_asia_font = "Arial"
+ascii_font = "Arial"
+font_size_pt = 13
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# =============================================================================
+# Placeholder (dùng cho mẫu tài liệu)
+# Các placeholder này dùng để điền mẫu khi chuyển đổi MD → DOCX
+# =============================================================================
+[placeholders]
+title = "Tiêu đề"
+body = "Nội dung"
+
+# =============================================================================
+# Tên khóa YAML (dùng cho metadata)
+# Các khóa này dùng khi xuất YAML front matter trong chuyển đổi DOCX → MD
+# =============================================================================
+[yaml_keys]
+title = "tieu_de"
+subtitle = "phu_de"

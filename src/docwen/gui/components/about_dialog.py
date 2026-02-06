@@ -41,9 +41,9 @@ class AboutDialog(BaseDialog):
         super().__init__(parent, title=title, modal=True)
         logger.debug("初始化关于对话框")
         
-        # 设置对话框属性 - 增加高度以容纳致谢信息（两列布局）
+        # 设置对话框属性
         width = self.scale(400)
-        height = self.scale(600)
+        height = self.scale(680)
         self.geometry(f"{width}x{height}")
         self.resizable(False, False)
         
@@ -87,14 +87,15 @@ class AboutDialog(BaseDialog):
         """
         logger.debug("创建关于对话框界面")
         
-        # 配置对话框网格权重 - 增加致谢部分
+        # 配置对话框网格权重 - 增加致谢部分和免责声明
         self.grid_rowconfigure(0, weight=0)  # 标题
         self.grid_rowconfigure(1, weight=0)  # 副标题
         self.grid_rowconfigure(2, weight=0)  # 版本
         self.grid_rowconfigure(3, weight=0)  # 联系方式
         self.grid_rowconfigure(4, weight=0)  # 版权
-        self.grid_rowconfigure(5, weight=1)  # 致谢
-        self.grid_rowconfigure(6, weight=0)  # 关闭按钮
+        self.grid_rowconfigure(5, weight=0)  # 免责声明
+        self.grid_rowconfigure(6, weight=1)  # 致谢
+        self.grid_rowconfigure(7, weight=0)  # 关闭按钮
         self.grid_columnconfigure(0, weight=1)
         
         # 添加简称标题
@@ -149,6 +150,16 @@ class AboutDialog(BaseDialog):
         )
         copyright_label.grid(row=4, column=0, pady=(self.scale(10), self.scale(5)), sticky="n")
         
+        # 添加免责声明
+        disclaimer_label = tb.Label(
+            self,
+            text=t("common.disclaimer"),
+            font=(self.small_font, self.small_size),
+            bootstyle="warning",
+            justify="center"
+        )
+        disclaimer_label.grid(row=5, column=0, pady=(self.scale(5), self.scale(10)), sticky="n")
+        
         # 添加致谢部分（两列布局）
         acknowledgments_frame = tb.Labelframe(
             self,
@@ -156,7 +167,7 @@ class AboutDialog(BaseDialog):
             bootstyle="info",
             padding=self.scale(15)
         )
-        acknowledgments_frame.grid(row=5, column=0, padx=self.scale(20), pady=self.scale(10), sticky="nsew")
+        acknowledgments_frame.grid(row=6, column=0, padx=self.scale(20), pady=self.scale(10), sticky="nsew")
         
         # 说明文字
         intro_label = tb.Label(
@@ -164,7 +175,8 @@ class AboutDialog(BaseDialog):
             text=t("about.acknowledgments_intro"),
             font=(self.small_font, self.small_size),
             bootstyle="secondary",
-            anchor="w"
+            anchor="w",
+            wraplength=self.scale(330)
         )
         intro_label.pack(fill="x", pady=(0, self.scale(10)))
         
@@ -193,15 +205,16 @@ class AboutDialog(BaseDialog):
             ("pdf2docx", t("about.tools.pdf2docx")),
             ("easyofd", t("about.tools.easyofd")),
             ("RapidOCR", t("about.tools.rapidocr")),
+            ("PaddleOCR", t("about.tools.paddleocr")),
             ("ONNX Runtime", t("about.tools.onnxruntime")),
             ("ttkbootstrap", t("about.tools.ttkbootstrap")),
             ("tkinterdnd2", t("about.tools.tkinterdnd2")),
             ("Pillow (PIL)", t("about.tools.pillow")),
-            ("pillow-heif", t("about.tools.pillow_heif")),
         ]
         
         # 开源工具列表（右列）
         right_tools = [
+            ("pillow-heif", t("about.tools.pillow_heif")),
             ("img2pdf", t("about.tools.img2pdf")),
             ("pywin32", t("about.tools.pywin32")),
             ("lxml", t("about.tools.lxml")),
@@ -212,6 +225,7 @@ class AboutDialog(BaseDialog):
             ("numpy", t("about.tools.numpy")),
             ("olefile", t("about.tools.olefile")),
             ("watchdog", t("about.tools.watchdog")),
+            ("emoji", t("about.tools.emoji")),
         ]
         
         # 创建左列工具列表（使用第1列放工具名称，第2列放信息图标）
@@ -252,7 +266,7 @@ class AboutDialog(BaseDialog):
             bootstyle="secondary",
             width=self.scale(10)
         )
-        close_button.grid(row=6, column=0, pady=(self.scale(10), self.scale(20)), sticky="s")
+        close_button.grid(row=7, column=0, pady=(self.scale(10), self.scale(20)), sticky="s")
         
         logger.debug("关于对话框界面创建完成")
     
@@ -266,33 +280,3 @@ class AboutDialog(BaseDialog):
         logger.debug("显示关于对话框")
         self.deiconify()
         self.wait_window()  # 等待对话框关闭
-
-
-# 模块测试代码
-if __name__ == "__main__":
-    # 配置日志
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    
-    # 创建测试窗口
-    root = tb.Window(title="关于对话框测试", themename="morph")
-    root.geometry("300x200")
-    
-    # 测试按钮回调函数
-    def show_about():
-        about_dialog = AboutDialog(root)
-        about_dialog.show()
-    
-    # 添加测试按钮
-    test_button = tb.Button(
-        root,
-        text=t("about.title"),
-        command=show_about,
-        bootstyle="primary"
-    )
-    test_button.pack(expand=True)
-    
-    logger.info("关于对话框测试启动")
-    root.mainloop()

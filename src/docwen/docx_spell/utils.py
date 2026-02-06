@@ -4,10 +4,37 @@ docx_spell 工具模块
 """
 
 import logging
+import copy
+from docx.enum.text import WD_BREAK
 from docwen.utils.docx_utils import apply_run_style, apply_paragraph_format
 
 # 配置日志
 logger = logging.getLogger(__name__)
+
+def _write_text_with_tabs_and_breaks(run, text: str) -> None:
+    if not text:
+        return
+
+    buffer = []
+    for ch in text:
+        if ch == "\t":
+            if buffer:
+                run.add_text("".join(buffer))
+                buffer = []
+            run.add_tab()
+            continue
+
+        if ch == "\n" or ch == "\r":
+            if buffer:
+                run.add_text("".join(buffer))
+                buffer = []
+            run.add_break(WD_BREAK.LINE)
+            continue
+
+        buffer.append(ch)
+
+    if buffer:
+        run.add_text("".join(buffer))
 
 def find_run_at_position(paragraph, position):
     """
@@ -88,6 +115,20 @@ def copy_paragraph_format(source_para, target_para):
         使用 docx_utils 中的 apply_paragraph_format 函数来复制段落格式。
         与 copy_run_formatting 类似，复用项目已有的通用工具。
     """
+    try:
+        source_pPr = source_para._element.pPr
+        if source_pPr is not None:
+            target_pPr = target_para._element.pPr
+            if target_pPr is not None:
+                target_para._element.remove(target_pPr)
+
+            new_pPr = copy.deepcopy(source_pPr)
+            target_para._element.insert(0, new_pPr)
+            logger.debug("成功深拷贝段落格式（w:pPr）")
+            return
+    except Exception as e:
+        logger.warning(f"深拷贝段落格式(w:pPr)时出现警告: {str(e)}")
+
     apply_paragraph_format(target_para, source_para)
 
 
@@ -261,9 +302,10 @@ def rebuild_paragraph_with_splits(old_paragraph, split_plan, doc):
             
             for split in splits:
                 # 创建新run
-                new_run = new_paragraph.add_run(split['text'])
+                new_run = new_paragraph.add_run()
                 # 复制原run的格式
                 copy_run_formatting(original_run, new_run)
+                _write_text_with_tabs_and_breaks(new_run, split['text'])
                 
                 # 记录错误run
                 if split['is_error'] and split['error_index'] is not None:

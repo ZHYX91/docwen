@@ -1,6 +1,6 @@
 """
 主窗口逻辑模块 - 业务处理部分
-处理公文转换器的核心业务逻辑
+处理核心业务逻辑
 包括文件处理、格式转换和交互逻辑
 
 线程安全说明:
@@ -27,6 +27,7 @@ from queue import Queue, Empty
 from docwen.utils.gui_utils import show_error_dialog
 from docwen.config.config_manager import config_manager
 from docwen.i18n import t
+from docwen.proofread_keys import normalize_proofread_options
 
 # 延迟导入的模块（仅在首次使用时导入，加速启动）
 _strategy_module = None
@@ -243,6 +244,26 @@ class MainWindowLogic:
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         logger.info("✓ 主窗口模板选择处理完成")
         logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+
+    def _try_auto_select_template(self) -> None:
+        try:
+            selector_tabbed = getattr(self.main_window, "template_selector_tabbed", None)
+            if selector_tabbed and hasattr(selector_tabbed, "activate_and_select"):
+                selector_tabbed.activate_and_select("docx")
+                if hasattr(selector_tabbed, "get_selected_template"):
+                    selected = selector_tabbed.get_selected_template()
+                    if selected:
+                        self.main_window.selected_template = selected
+                return
+
+            selector = getattr(self.main_window, "template_selector", None)
+            if selector and hasattr(selector, "reset"):
+                selector.reset()
+                selected_name = selector.get_selected() if hasattr(selector, "get_selected") else None
+                if isinstance(selected_name, str) and selected_name:
+                    self.main_window.selected_template = ("docx", selected_name)
+        except Exception as e:
+            logger.debug(f"自动选择模板失败: {e}")
 
     def handle_cancel(self):
         """处理取消操作的请求。"""
@@ -528,7 +549,8 @@ class MainWindowLogic:
             # 这里的逻辑是：如果options里有 target_format，就用它
             # 如果没有，且 action_type 是转换类型（convert_A_to_B），则尝试解析
             # 如果 action_type 是命名动作（如 validate），则 target_format 为 None
-            target_format = options.get('target_format')
+            raw_target_format = options.get('target_format')
+            target_format = raw_target_format if isinstance(raw_target_format, str) else None
             if not target_format and 'convert_' in action_type and '_to_' in action_type:
                 try:
                     target_format = action_type.split('_to_')[-1]
@@ -687,12 +709,7 @@ class MainWindowLogic:
         返回:
             Dict[str, bool]: 校对选项字典
         """
-        return {
-            "symbol_pairing": options.get("symbol_pairing", False),
-            "symbol_correction": options.get("symbol_correction", False),
-            "typos_rule": options.get("typos_rule", False),
-            "sensitive_word": options.get("sensitive_word", False),
-        }
+        return normalize_proofread_options(options)
     
     def handle_batch_files_added(self, file_list: list):
         """批量模式下添加多个文件"""
@@ -770,7 +787,8 @@ class MainWindowLogic:
                 return
             
             # 解析目标格式（批量处理中目标格式通常是统一的）
-            target_format = options.get('target_format')
+            raw_target_format = options.get('target_format')
+            target_format = raw_target_format if isinstance(raw_target_format, str) else None
             if not target_format and 'convert_' in action_type and '_to_' in action_type:
                 try:
                     target_format = action_type.split('_to_')[-1]
@@ -839,7 +857,7 @@ class MainWindowLogic:
     def _process_single_file_for_batch_new(self, file_path: str, action_type: str,
                                        options: Dict[str, Any], 
                                        cancel_event: threading.Event,
-                                       target_format: str = None) -> Tuple[bool, str, Optional[str], str]:
+                                       target_format: Optional[str] = None) -> Tuple[bool, str, Optional[str], str]:
         """批量处理单文件（新逻辑）"""
         try:
             # 1. 获取文件信息

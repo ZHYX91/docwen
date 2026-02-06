@@ -1,5 +1,5 @@
 """
-公文转换器模板加载器模块
+模板加载器模块
 
 本模块负责模板文件的加载、缓存和管理，提供统一的模板访问接口。
 主要功能包括：
@@ -14,10 +14,8 @@
 import os
 import sys
 import logging
-import hashlib
-import time
 import copy
-from typing import List
+from typing import List, Optional
 from docx import Document
 from openpyxl import load_workbook
 from docwen.utils.path_utils import ensure_dir_exists, get_project_root
@@ -85,23 +83,26 @@ class TemplateLoader:
         
         logger.info(f"模板目录验证通过: {self.template_dir}")
     
-    def get_template_path(self, template_type: str, template_name: str = None) -> str:
+    def _normalize_template_name(self, template_type: str, template_name: str) -> str:
+        if not template_name:
+            raise ValueError("模板名称是必需的，请指定要使用的模板")
+        normalized = template_name.strip()
+        if not normalized:
+            raise ValueError("模板名称是必需的，请指定要使用的模板")
+        if not normalized.lower().endswith(f".{template_type}"):
+            normalized = f"{normalized}.{template_type}"
+        return normalized
+
+    def get_template_path(self, template_type: str, template_name: str) -> str:
         """
         获取模板完整路径
         支持自动添加文件扩展名
         
         :param template_type: 模板类型 ('docx' 或 'xlsx')
-        :param template_name: 自定义模板名 (可选)
+        :param template_name: 模板名 (必需)
         :return: 模板完整路径
         """
-        # 未提供模板名时使用默认模板
-        if not template_name:
-            template_name = self._get_default_template_name(template_type)
-            logger.debug(f"使用默认模板: {template_name}")
-        
-        # 确保模板名称有扩展名
-        if not template_name.lower().endswith(f".{template_type}"):
-            template_name += f".{template_type}"
+        template_name = self._normalize_template_name(template_type, template_name)
         
         # 构建完整路径
         template_path = os.path.join(self.template_dir, template_name)
@@ -113,34 +114,26 @@ class TemplateLoader:
         
         logger.info(f"获取模板路径: {template_path}")
         return template_path
-    
-    def _get_default_template_name(self, template_type: str) -> str:
-        """获取默认模板名称"""
-        if template_type == "docx":
-            return "公文通用"
-        elif template_type == "xlsx":
-            return "报表通用"
-        else:
-            logger.error(f"不支持的模板类型: {template_type}")
-            raise ValueError(f"不支持的模板类型: {template_type}")
         
-    def load_docx_template(self, template_name: str = None) -> Document:
+    def load_docx_template(self, template_name: str):
         """
         加载DOCX模板
         
         参数:
-            template_name: 自定义模板名 (可选)
+            template_name: 模板名 (必需)
             
         返回:
             Document对象（深拷贝）
         """
+        normalized_name = self._normalize_template_name("docx", template_name)
+        template_path = None
         try:
             # 获取模板路径
-            template_path = self.get_template_path("docx", template_name)
+            template_path = self.get_template_path("docx", normalized_name)
             logger.debug(f"DOCX模板路径: {template_path}")
             
             # 生成缓存键
-            cache_key = self._generate_cache_key("docx", template_name)
+            cache_key = self._generate_cache_key("docx", normalized_name)
             logger.debug(f"缓存键: {cache_key}")
             
             # 检查文件是否修改
@@ -185,37 +178,39 @@ class TemplateLoader:
                 return copy.copy(doc)
                 
         except FileNotFoundError as e:
-            logger.error(f"模板文件不存在: {template_path}")
-            raise RuntimeError(f"模板文件不存在: {os.path.basename(template_path)}") from e
+            missing = os.path.basename(template_path) if template_path else normalized_name
+            logger.error(f"模板文件不存在: {missing}")
+            raise RuntimeError(f"模板文件不存在: {os.path.basename(missing)}") from e
         except PermissionError as e:
-            logger.error(f"无权限访问模板文件: {template_path}")
+            logger.error(f"无权限访问模板文件: {template_path or normalized_name}")
             raise RuntimeError("无权限访问模板文件") from e
         except Exception as e:
             error_str = str(e).lower()
             # 检测是否为无效的 DOCX 文件（不是有效的 ZIP 压缩包）
             if "not a zip file" in error_str or "package not found" in error_str:
                 from docwen.i18n import t
-                template_basename = os.path.basename(template_path)
+                template_basename = os.path.basename(template_path) if template_path else os.path.basename(normalized_name)
                 friendly_msg = t('messages.errors.invalid_docx_template', template_name=template_basename)
-                logger.error(f"模板文件无效或损坏: {template_path}")
+                logger.error(f"模板文件无效或损坏: {template_path or normalized_name}")
                 raise RuntimeError(friendly_msg) from e
             logger.error(f"加载DOCX模板失败: {str(e)}", exc_info=True)
             raise RuntimeError(f"加载模板失败: {str(e)}") from e
         
-    def load_xlsx_template(self, template_name: str = None):
+    def load_xlsx_template(self, template_name: str):
         """
         加载Excel模板
         
-        :param template_name: 自定义模板名 (可选)
+        :param template_name: 模板名 (必需)
         :return: Workbook对象
         """
+        normalized_name = self._normalize_template_name("xlsx", template_name)
         try:
             # 获取模板路径
-            template_path = self.get_template_path("xlsx", template_name)
+            template_path = self.get_template_path("xlsx", normalized_name)
             logger.debug(f"Excel模板路径: {template_path}")
             
             # 生成缓存键
-            cache_key = self._generate_cache_key("xlsx", template_name)
+            cache_key = self._generate_cache_key("xlsx", normalized_name)
             
             # 检查文件是否修改
             current_mtime = os.path.getmtime(template_path)
@@ -245,14 +240,10 @@ class TemplateLoader:
             logger.error(f"加载Excel模板失败: {str(e)}")
             raise
     
-    def _generate_cache_key(self, template_type: str, template_name: str = None) -> str:
+    def _generate_cache_key(self, template_type: str, template_name: str) -> str:
         """生成模板缓存键（唯一标识）"""
-        if not template_name:
-            template_name = self._get_default_template_name(template_type)
-        
-        # 使用哈希确保键值唯一
-        key_str = f"{template_type}:{template_name}".lower()
-        return hashlib.md5(key_str.encode()).hexdigest()
+        normalized_name = self._normalize_template_name(template_type, template_name)
+        return f"{template_type}:{normalized_name}".lower()
     
     def get_available_templates(self, template_type: str, name_only: bool = True) -> List[str]:
         """
@@ -335,7 +326,7 @@ class TemplateLoader:
         logger.warning(f"未找到匹配模板: {search_term}")
         return ""
     
-    def clear_cache(self, template_type: str = None, template_name: str = None):
+    def clear_cache(self, template_type: Optional[str] = None, template_name: Optional[str] = None):
         """
         清空模板缓存（可指定类型或特定模板）
         
@@ -354,12 +345,14 @@ class TemplateLoader:
             logger.info(f"清除特定模板缓存: {template_type}/{template_name}")
         elif template_type:
             # 清除特定类型的所有缓存
-            keys_to_remove = [k for k in _TEMPLATE_CACHE.keys() if k.startswith(template_type)]
+            normalized_type = template_type.strip().lower()
+            prefix = f"{normalized_type}:"
+            keys_to_remove = [k for k in _TEMPLATE_CACHE.keys() if k.startswith(prefix)]
             for key in keys_to_remove:
                 del _TEMPLATE_CACHE[key]
                 if key in _TEMPLATE_MTIMES:
                     del _TEMPLATE_MTIMES[key]
-            logger.info(f"清除{template_type.upper()}类型所有模板缓存")
+            logger.info(f"清除{normalized_type.upper()}类型所有模板缓存")
         else:
             # 清空所有缓存
             cache_size = len(_TEMPLATE_CACHE)
@@ -412,60 +405,3 @@ class TemplateLoader:
             self.refresh_cache()
         except Exception as e:
             logger.error(f"初始缓存刷新失败: {str(e)}")
-
-# 模块测试
-if __name__ == "__main__":
-    # 配置日志
-    logging.basicConfig(level=logging.DEBUG)
-    logger.info("模板加载器测试")
-    
-    try:
-        # 创建加载器实例
-        loader = TemplateLoader()
-        
-        # 测试DOCX加载
-        doc1 = loader.load_docx_template()
-        print(f"DOCX模板加载成功: {len(doc1.paragraphs)} 段落")
-        
-        # 测试Excel加载
-        wb1 = loader.load_xlsx_template()
-        print(f"Excel模板加载成功: {wb1.sheetnames} 工作表")
-        
-        # 测试获取模板列表
-        docx_templates = loader.get_available_templates("docx")
-        print(f"可用DOCX模板: {docx_templates}")
-        
-        # 测试获取模板列表（GUI专用）
-        docx_template_list = loader.get_template_list("docx")
-        print(f"GUI专用模板列表: {docx_template_list}")
-                
-        # 测试模糊查找
-        search_result = loader.find_template("docx", "通用")
-        print(f"模糊查找结果: {search_result}")
-        
-        # 测试缓存机制
-        doc2 = loader.load_docx_template()
-        print(f"缓存命中测试: {'相同实例' if id(doc1) == id(doc2) else '不同实例'}")
-        
-        # 模拟修改文件时间
-        template_path = loader.get_template_path("docx", "公文通用")
-        original_mtime = os.path.getmtime(template_path)
-        os.utime(template_path, (time.time(), time.time() + 10))  # 修改时间
-        
-        # 再次加载
-        doc3 = loader.load_docx_template()
-        print(f"修改后加载: {'新实例' if id(doc1) != id(doc3) else '相同实例'}")
-        
-        # 恢复原始时间
-        os.utime(template_path, (original_mtime, original_mtime))
-        
-        # 测试缓存清除
-        loader.clear_cache("docx", "公文通用")
-        doc4 = loader.load_docx_template()
-        print(f"清除后加载: {'新实例' if id(doc3) != id(doc4) else '相同实例'}")
-        
-        # 测试刷新缓存
-        loader.refresh_cache()
-        
-    except Exception as e:
-        logger.error(f"测试失败: {str(e)}")

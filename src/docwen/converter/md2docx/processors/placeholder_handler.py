@@ -948,7 +948,7 @@ def process_attachment_description_placeholder(doc, yaml_data):
     logger.info("附件说明占位符处理完成")
 
 
-def _process_paragraph_images(paragraph, context='document'):
+def _process_paragraph_images(paragraph, context='document', *, doc=None, col_count: int | None = None):
     """
     处理单个段落中的图片占位符（核心处理逻辑）
     
@@ -960,68 +960,193 @@ def _process_paragraph_images(paragraph, context='document'):
         int: 成功插入的图片数量
     """
     import os
-    from docx.shared import Inches
-    
-    text = paragraph.text
-    if not text:
-        return 0
-    
-    # 图片占位符正则：{{IMAGE:路径}}
-    image_pattern = r'\{\{IMAGE:([^}]+)\}\}'
-    matches = re.findall(image_pattern, text)
-    if not matches:
-        return 0
-    
-    logger.debug(f"在{context}段落中找到 {len(matches)} 个图片占位符")
-    inserted_count = 0
-    
-    # 处理每个图片占位符
-    for image_path in matches:
-        placeholder = f"{{{{IMAGE:{image_path}}}}}"
-        
-        # 检查图片文件是否存在
-        if not os.path.exists(image_path):
-            logger.warning(f"图片文件不存在，跳过: {image_path}")
-            # 删除占位符
-            for run in paragraph.runs:
-                if placeholder in run.text:
-                    run.text = run.text.replace(placeholder, "")
-            continue
-        
-        # 检查文件扩展名
-        ext = os.path.splitext(image_path)[1].lower()
-        supported_formats = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.emf', '.wmf'}
-        if ext not in supported_formats:
-            logger.warning(f"不支持的图片格式: {ext}，跳过: {image_path}")
-            # 删除占位符
-            for run in paragraph.runs:
-                if placeholder in run.text:
-                    run.text = run.text.replace(placeholder, "")
-            continue
-        
+    from docx.shared import Emu
+
+    image_placeholder_pattern = re.compile(r'\{\{IMAGE:.*?\}\}')
+
+    def parse_image_placeholder(placeholder: str) -> tuple[str, int | None, int | None]:
+        inner = placeholder[len("{{IMAGE:"):-2]
+        inner = inner.replace('\\|', '|')
+        parts = inner.split('|')
+        image_path = parts[0].strip()
+        width = None
+        height = None
+        if len(parts) >= 2 and parts[1].strip().isdigit():
+            width = int(parts[1].strip())
+        if len(parts) >= 3 and parts[2].strip().isdigit():
+            height = int(parts[2].strip())
+        return image_path, width, height
+
+    def get_page_usable_width_emu(doc) -> int:
+        section = doc.sections[0]
+        usable = section.page_width - section.left_margin - section.right_margin
+        return int(usable)
+
+    def get_table_cell_usable_width_emu(doc, col_count: int, cell_padding_pt: float = 5.4) -> int:
+        if col_count <= 0:
+            return get_page_usable_width_emu(doc)
+        page_usable = get_page_usable_width_emu(doc)
+        cell_width = page_usable // col_count
+        cell_padding_emu = int(Pt(cell_padding_pt))
+        return max(0, cell_width - (cell_padding_emu * 2))
+
+    def calculate_image_size(image_path: str, md_width: int | None, md_height: int | None, usable_width_emu: int | None):
+        from PIL import Image
+
         try:
-            # 清空段落原有内容（包括占位符）
-            for run in paragraph.runs[:]:
-                p = run._element.getparent()
-                p.remove(run._element)
-            
-            # 插入图片（使用默认宽度，保持宽高比）
-            run = paragraph.add_run()
-            run.add_picture(image_path, width=Inches(4.5))
-            
-            # 设置段落行距为1.5倍行距（避免图片被裁剪，同时保持适当的间距）
-            from docx.enum.text import WD_LINE_SPACING
-            paragraph.paragraph_format.line_spacing_rule = WD_LINE_SPACING.ONE_POINT_FIVE
-            logger.debug("已设置图片段落为1.5倍行距")
-            
-            inserted_count += 1
-            logger.info(f"成功插入图片 ({inserted_count}) [{context}]: {os.path.basename(image_path)}")
-            
-        except Exception as e:
-            logger.error(f"插入图片失败: {image_path} | 错误: {str(e)}")
-            # 保留占位符供手动处理
-            paragraph.add_run(placeholder)
-    
+            with Image.open(image_path) as img:
+                original_width_px, original_height_px = img.size
+                dpi = img.info.get("dpi")
+                dpi_x = None
+                if isinstance(dpi, tuple) and dpi and isinstance(dpi[0], (int, float)) and dpi[0] > 0:
+                    dpi_x = float(dpi[0])
+                if dpi_x is None:
+                    dpi_x = 96.0
+        except Exception:
+            return None, None
+
+        px_to_emu = 914400.0 / dpi_x
+        original_width_emu = int(original_width_px * px_to_emu)
+        original_height_emu = int(original_height_px * px_to_emu)
+
+        if md_width is not None:
+            target_width_emu = int(md_width * px_to_emu)
+        else:
+            target_width_emu = original_width_emu
+
+        if usable_width_emu is not None and usable_width_emu > 0 and target_width_emu > usable_width_emu:
+            target_width_emu = usable_width_emu
+
+        if md_height is not None:
+            target_height_emu = int(md_height * px_to_emu)
+        else:
+            if original_width_emu > 0:
+                target_height_emu = int(target_width_emu * (original_height_emu / original_width_emu))
+            else:
+                target_height_emu = original_height_emu
+
+        return Emu(target_width_emu), Emu(target_height_emu)
+
+    def copy_run_format(src_run, dst_run):
+        src_rpr = src_run._element.rPr
+        if src_rpr is None:
+            return
+        dst_rpr = dst_run._element.get_or_add_rPr()
+        for child in list(dst_rpr):
+            dst_rpr.remove(child)
+        for child in src_rpr.getchildren():
+            dst_rpr.append(copy.deepcopy(child))
+
+    text = paragraph.text or ""
+    placeholders = list(image_placeholder_pattern.finditer(text))
+    if not placeholders:
+        return 0
+
+    inserted_count = 0
+    usable_width_emu = None
+    if context == 'document' and doc is not None:
+        try:
+            usable_width_emu = get_page_usable_width_emu(doc)
+        except Exception:
+            usable_width_emu = None
+    if context == 'table' and doc is not None:
+        if isinstance(col_count, int) and col_count > 0:
+            usable_width_emu = get_table_cell_usable_width_emu(doc, col_count)
+
+    image_only = image_placeholder_pattern.sub('', text).strip() == ""
+
+    supported_formats = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.emf', '.wmf'}
+
+    for run in list(paragraph.runs):
+        while True:
+            match = image_placeholder_pattern.search(run.text or "")
+            if not match:
+                break
+
+            placeholder_text = match.group(0)
+            before = (run.text or "")[:match.start()]
+            after = (run.text or "")[match.end():]
+
+            run.text = before
+
+            image_path, md_width, md_height = parse_image_placeholder(placeholder_text)
+            if not os.path.exists(image_path):
+                logger.warning("图片文件不存在，跳过: %s", image_path)
+                if after:
+                    new_run = paragraph.add_run(after)
+                    copy_run_format(run, new_run)
+                    new_run._element.getparent().remove(new_run._element)
+                    run._element.addnext(new_run._element)
+                    run = new_run
+                    continue
+                break
+
+            ext = os.path.splitext(image_path)[1].lower()
+            if ext not in supported_formats:
+                logger.warning("不支持的图片格式: %s，跳过: %s", ext, image_path)
+                if after:
+                    new_run = paragraph.add_run(after)
+                    copy_run_format(run, new_run)
+                    new_run._element.getparent().remove(new_run._element)
+                    run._element.addnext(new_run._element)
+                    run = new_run
+                    continue
+                break
+
+            try:
+                width, height = calculate_image_size(
+                    image_path,
+                    md_width=md_width,
+                    md_height=md_height,
+                    usable_width_emu=usable_width_emu,
+                )
+
+                picture_run = paragraph.add_run()
+                picture_run._element.getparent().remove(picture_run._element)
+                run._element.addnext(picture_run._element)
+                if width is not None and height is not None:
+                    picture_run.add_picture(image_path, width=width, height=height)
+                else:
+                    picture_run.add_picture(image_path)
+
+                inserted_count += 1
+                logger.info(
+                    "成功插入图片 [%s]: %s | 尺寸: %.2fx%.2f 英寸",
+                    context,
+                    os.path.basename(image_path),
+                    width.inches if width is not None else 0.0,
+                    height.inches if height is not None else 0.0,
+                )
+
+                if after:
+                    after_run = paragraph.add_run(after)
+                    copy_run_format(run, after_run)
+                    after_run._element.getparent().remove(after_run._element)
+                    picture_run._element.addnext(after_run._element)
+                    run = after_run
+                else:
+                    run = picture_run
+                    break
+
+            except Exception as e:
+                logger.error("插入图片失败: %s | 错误: %s", image_path, str(e))
+                run.text = (run.text or "") + placeholder_text + after
+                break
+
+    if inserted_count > 0 and image_only:
+        try:
+            from ..style.helper import get_image_paragraph_style_name
+            style_name = get_image_paragraph_style_name()
+            if style_name:
+                paragraph.style = style_name
+        except Exception:
+            pass
+
+        try:
+            paragraph.paragraph_format.first_line_indent = None
+        except Exception:
+            pass
+
     return inserted_count
 
 
@@ -1050,16 +1175,17 @@ def process_image_placeholders(doc):
     # 1. 处理文档段落中的图片
     logger.debug("处理文档段落中的图片...")
     for paragraph in doc.paragraphs:
-        count = _process_paragraph_images(paragraph, 'document')
+        count = _process_paragraph_images(paragraph, 'document', doc=doc)
         total_inserted += count
     
     # 2. 处理表格单元格中的图片
     logger.debug("处理表格单元格中的图片...")
     for table in doc.tables:
+        col_count = len(table.columns)
         for row in table.rows:
             for cell in row.cells:
                 for paragraph in cell.paragraphs:
-                    count = _process_paragraph_images(paragraph, 'table')
+                    count = _process_paragraph_images(paragraph, 'table', doc=doc, col_count=col_count)
                     total_inserted += count
     
     logger.info(f"图片占位符处理完成 | 成功插入: {total_inserted} 个（文档+表格）")

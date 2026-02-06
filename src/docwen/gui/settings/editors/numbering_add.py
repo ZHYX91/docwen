@@ -13,10 +13,12 @@
 支持中英文界面切换。
 """
 
+from __future__ import annotations
+
 import logging
 import re
 import tkinter as tk
-from typing import Dict, List, Tuple, Optional, Callable, Any
+from typing import Dict, List, Tuple, Optional, Callable, Any, cast
 from dataclasses import dataclass, field
 
 import ttkbootstrap as tb
@@ -371,7 +373,7 @@ class HeadingNumberingEditorDialog(BaseEditorDialog):
         # 操作按钮
         self._create_action_buttons(left_frame)
     
-    def _create_default_scheme_selector(self, parent: tb.Frame):
+    def _create_default_scheme_selector(self, parent: tk.Widget):
         """创建默认方案选择器"""
         frame = tb.Frame(parent)
         frame.pack(fill="x", pady=(0, 10))
@@ -626,6 +628,8 @@ class HeadingNumberingEditorDialog(BaseEditorDialog):
     
     def _on_default_scheme_changed(self, event=None):
         """处理默认方案变更"""
+        if not self.default_scheme_var:
+            return
         selected_name = self.default_scheme_var.get()
         
         # 查找对应的ID（使用国际化显示名称匹配）
@@ -875,24 +879,26 @@ class HeadingNumberingEditorDialog(BaseEditorDialog):
             if doc is None:
                 from tomlkit import document
                 doc = document()
+
+            doc_any = cast(Any, doc)
             
             # 更新设置
-            if "settings" not in doc:
-                doc.add("settings", table())
-            doc["settings"]["default_scheme"] = self.default_scheme_id
+            if "settings" not in doc_any:
+                doc_any.add("settings", table())
+            doc_any["settings"]["default_scheme"] = self.default_scheme_id
             
             # 更新方案顺序
             order_array = array()
             for scheme_id in self.item_order:
                 order_array.append(scheme_id)
             order_array.multiline(True)
-            doc["settings"]["order"] = order_array
+            doc_any["settings"]["order"] = order_array
             
             # 更新方案
-            if "schemes" not in doc:
-                doc.add("schemes", table())
+            if "schemes" not in doc_any:
+                doc_any.add("schemes", table())
             
-            schemes_table = doc["schemes"]
+            schemes_table = cast(Any, doc_any["schemes"])
             
             # 获取现有方案ID
             existing_ids = set(schemes_table.keys()) if schemes_table else set()
@@ -944,7 +950,7 @@ class HeadingNumberingEditorDialog(BaseEditorDialog):
                     scheme_table[level_key]["format"] = format_str
             
             # 写入文件
-            success = write_toml_document(str(self.config_file_path), doc)
+            success = write_toml_document(str(self.config_file_path), doc_any)
             
             if success:
                 # 重新加载配置

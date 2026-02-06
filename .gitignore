@@ -1,8 +1,11 @@
 # ==============================
-# 根目录下的隐藏文件
+# 排除所有 . 开头的文件和文件夹
 # ==============================
-/.*
-!/.gitignore
+.*
+# 白名单：需要提交的 dot 文件
+!.gitignore
+!.gitattributes
+!.editorconfig
 
 # ==============================
 # 日志文件 (忽略所有日志文件)
@@ -45,7 +48,6 @@ license.dat
 # 虚拟环境 (通常也需要忽略)
 venv/
 env/
-.venv/
 
 # ==============================
 # 其他常见忽略项
@@ -54,11 +56,19 @@ env/
 *~
 *.swp
 *.swo
-.DS_Store
 
 # 测试覆盖率报告
-.coverage
 htmlcov/
+coverage.xml
+
+# 测试临时文件
+tests/temp/
+tests/output/
+
+# 模板生成临时/输出文件
+templates/空白模板.docx
+samples/generated_templates/
+samples/style_injection_output/
 
 # ==============================
 # Obsidian 插件开发

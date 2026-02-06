@@ -101,25 +101,3 @@ def convert_docx_to_md(
         logger.info("使用简化模式")
         from .simple.converter import convert_docx_to_md_simple
         return convert_docx_to_md_simple(**common_params)
-
-
-    
-# 模块测试代码
-if __name__ == "__main__":
-    # 配置日志
-    logging.basicConfig(level=logging.DEBUG)
-    logger.info("DOCX转MD核心模块测试")
-    
-    # 测试转换功能
-    result = convert_docx_to_md(
-        docx_path="test.docx",
-        config={}
-    )
-    
-    if result['success']:
-        print("转换成功!")
-        print(f"主要内容长度: {len(result['main_content'])}")
-        if result['attachment_content']:
-            print(f"附件内容长度: {len(result['attachment_content'])}")
-    else:
-        print(f"转换失败: {result['error']}")

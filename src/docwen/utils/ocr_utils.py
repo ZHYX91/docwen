@@ -454,32 +454,3 @@ def estimate_font_size(pixel_height: float, image_dpi: int = 96) -> float:
     except Exception as e:
         logger.error(f"字号估算失败: {e}")
         return 12  # 默认返回12磅
-
-
-# 模块测试
-if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s [%(levelname)s] %(name)s:%(lineno)d - %(message)s"
-    )
-    
-    logger.info("OCR工具模块测试开始")
-    
-    # 测试文件路径
-    test_image = "test.jpg"
-    
-    if os.path.exists(test_image):
-        # 测试纯文本提取
-        logger.info("测试纯文本提取...")
-        text = extract_text_simple(test_image)
-        logger.info(f"识别结果:\n{text}")
-        
-        # 测试文字+字号提取
-        logger.info("测试文字+字号提取...")
-        blocks = extract_text_with_sizes(test_image)
-        for block in blocks:
-            logger.info(f"文字: {block['text']}, 字号: {block['font_size']}pt")
-    else:
-        logger.warning(f"测试文件不存在: {test_image}")
-    
-    logger.info("OCR工具模块测试结束")

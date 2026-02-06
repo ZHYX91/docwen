@@ -5,6 +5,24 @@
 [meta]
 name = "Traditional Chinese"
 native_name = "繁體中文"
+template_name = "繁體中文通用模板"
+
+# =============================================================================
+# 通用文字
+# =============================================================================
+[common]
+app_name = "DocWen"
+offline_version = "（離線版）"
+close = "關閉"
+apply = "應用"
+cancel = "取消"
+ok = "確定"
+save = "保存"
+error = "錯誤"
+version = "版本 {version}"
+browse = "瀏覽..."
+select = "選擇"
+disclaimer = "測試版本，準確性不保證。\nAGPL-3.0 開源軟體。"
 
 # =============================================================================
 # CLI 命令行介面
@@ -27,6 +45,7 @@ check_punct = "檢查標點配對"
 check_typo = "檢查錯別字"
 check_symbol = "檢查符號規範"
 check_sensitive = "檢查敏感詞"
+check_none = "跳過校對（停用所有檢查）"
 merge_mode = "匯總模式：按行/按列/按儲存格"
 base_table = "基準表格文件路徑"
 pages = "PDF拆分頁碼範圍（如 1-3,5,7-10）"
@@ -290,23 +309,6 @@ gongwen_standard = "公文標準"
 hierarchical_standard = "層級數字標準"
 hierarchical_h2_start = "層級數字(H2起)"
 legal_standard = "法律條文標準"
-
-# =============================================================================
-# 通用文字
-# =============================================================================
-[common]
-app_name = "DocWen"
-offline_version = "（離線版）"
-close = "關閉"
-apply = "應用"
-cancel = "取消"
-ok = "確定"
-save = "保存"
-error = "錯誤"
-version = "版本 {version}"
-browse = "瀏覽..."
-select = "選擇"
-disclaimer = "測試軟體，不保證轉換準確率。\n僅供學習測試，禁止商用或分發。"
 
 # =============================================================================
 # 設定對話框
@@ -738,58 +740,6 @@ indent_4_spaces = "4個空格"
 three_line_table = "三線表"
 table_grid = "網格表"
 
-# =============================================================================
-# 樣式格式配置（用於樣式注入時的格式屬性）
-# =============================================================================
-[style_formats]
-
-# 正文段落格式（新細明體、12pt、2字符）
-[style_formats.body_paragraph]
-east_asia_font = "新細明體"
-ascii_font = "Times New Roman"
-font_size_pt = 12
-first_line_indent_chars = 200
-first_line_indent_cm = 0
-spacing_after_twip = 0
-spacing_before_twip = 0
-bold = false
-justification = "both"
-
-# 標題1格式（微軟正黑體、16pt、2字符）
-[style_formats.heading_1]
-east_asia_font = "微軟正黑體"
-ascii_font = "Times New Roman"
-font_size_pt = 16
-first_line_indent_chars = 200
-first_line_indent_cm = 0
-spacing_after_twip = 0
-spacing_before_twip = 0
-bold = false
-justification = "both"
-
-# 標題2-9格式（新細明體、14pt、2字符）
-[style_formats.heading_2]
-east_asia_font = "新細明體"
-ascii_font = "Times New Roman"
-font_size_pt = 14
-first_line_indent_chars = 200
-first_line_indent_cm = 0
-spacing_after_twip = 0
-spacing_before_twip = 0
-bold = false
-justification = "both"
-
-[style_formats.heading_3_9]
-east_asia_font = "新細明體"
-ascii_font = "Times New Roman"
-font_size_pt = 14
-first_line_indent_chars = 200
-first_line_indent_cm = 0
-spacing_after_twip = 0
-spacing_before_twip = 0
-bold = false
-justification = "both"
-
 # -----------------------------------------------------------------------------
 # 輸出設定選項卡
 # -----------------------------------------------------------------------------
@@ -884,6 +834,7 @@ pymupdf4llm = "用於智能提取 PDF 文件並轉換為 Markdown 格式"
 pdf2docx = "用於將 PDF 文件轉換為可編輯的 Word 格式"
 easyofd = "用於處理國產 OFD 格式文件的讀取和轉換"
 rapidocr = "用於圖片和 PDF 中的文字識別（OCR），支持離線使用"
+paddleocr = "OCR 模型來源，PP-OCRv3/v4 模型由 PaddleOCR 項目訓練"
 onnxruntime = "作為 RapidOCR 的推理引擎"
 ttkbootstrap = "用於構建現代化的圖形用戶介面"
 tkinterdnd2 = "用於實現文件拖放功能，提升用戶體驗"
@@ -899,6 +850,7 @@ pandas = "用於表格數據的處理和分析"
 numpy = "用於數值計算和數據處理的基礎支持"
 olefile = "用於識別和處理舊版 Office 文件格式"
 watchdog = "用於監控文件系統變化，實現進程間通信和單實例運行"
+emoji = "Emoji 檢測與處理庫"
 
 # =============================================================================
 # 主介面組件
@@ -990,105 +942,223 @@ document_templates = "文件範本"
 spreadsheet_templates = "表格範本"
 
 # =============================================================================
-# 文件類型分類
+# 轉換面板區域
 # =============================================================================
-[file_types]
-document = "文件"
-spreadsheet = "表格"
-image = "圖片"
-layout = "版式"
-text = "文本"
-unknown = "未知"
+[conversion_panel]
+format_conversion = "格式轉換"
+save_as = "另存為"
+select_file_hint = "請先選擇文件"
+same_format_tooltip = "當前已是{format}格式"
+compressible_format_tooltip = "支持壓縮"
+png_compression_tooltip = "PNG為無損格式，不支持品質壓縮"
+bmp_compression_tooltip = "BMP為無損格式，不支持品質壓縮"
+gif_compression_tooltip = "GIF為無損格式，不支持品質壓縮"
+tif_compression_tooltip = "TIF/TIFF為無損格式，不支持品質壓縮"
+other_format_compression_tooltip = "{format}格式不支持品質壓縮"
+high_quality_conversion_tooltip = "高品質轉換"
+lossless_conversion_tooltip = "無損轉換"
+document_conversion_tooltip = "轉換為此文件格式"
+csv_conversion_tooltip = "轉換為CSV格式（純文本表格）"
+spreadsheet_conversion_tooltip = "轉換為此表格格式"
+pdf_conversion_tooltip = "轉換為PDF格式"
+docx_conversion_tooltip = "轉換為DOCX格式"
+doc_conversion_tooltip = "轉換為DOC格式"
+tif_conversion_tooltip = "渲染為TIF圖片"
+jpg_conversion_tooltip = "渲染為JPG圖片"
 
-# 帶"類"後綴的版本（用於選項卡標籤）
-text_category = "文本類"
-document_category = "文件類"
-spreadsheet_category = "表格類"
-layout_category = "版式類"
-image_category = "圖片類"
+# 文件轉換區
+[conversion_panel.document]
+convert_to_other_formats = "轉換為其他文件格式"
+convert_to_layout = "轉換為版式格式"
+save_as_pdf = "另存為PDF"
+save_as_pdf_tooltip = "將文件轉換為PDF版式文件"
+save_as_ofd = "另存為OFD"
+save_as_ofd_tooltip = "暫不支持"
+proofread_document = "文件校對"
+proofread_hint = "對文件進行校對檢查"
+proofread_button = "📝 文件校對"
+proofread_button_tooltip = "檢查文件中的標點配對、錯別字、敏感詞等問題"
+proofread_options = "校對選項"
+symbol_pairing = "標點配對"
+symbol_pairing_tooltip = "檢查括號、引號等成對標點是否匹配"
+typos_rule = "錯別字校對"
+typos_rule_tooltip = "檢查常見錯別字"
+symbol_correction = "符號校對"
+symbol_correction_tooltip = "檢查錯誤的標點符號"
+sensitive_word = "敏感詞匹配"
+sensitive_word_tooltip = "檢查敏感詞"
 
-# 格式驗證相關
-unknown_type = "未知類型"
-format_mismatch = "⚠️ 實際為 {format} 格式"
-format_unverifiable = "⚠️ 無法驗證文件實際格式"
-format_txt = "TXT(純文本)"
-format_md = "Markdown"
-format_csv = "CSV(表格文本)"
+# 圖片轉換區
+[conversion_panel.image]
+convert_to_other_formats = "轉換為其他圖片格式"
+compression_options = "壓縮選項"
+highest_quality = "最高品質"
+highest_quality_tooltip = "無損或高品質轉換。JPEG/WebP使用quality=95，PNG/BMP/GIF/TIF使用無損壓縮。"
+limit_file_size = "限制文件大小"
+limit_file_size_tooltip = "通過調整quality參數壓縮至目標大小，僅對JPEG/WebP有效。其他格式將按最高品質保存。"
+file_size_limit = "文件大小上限："
+enter_size_limit_warning = "請輸入文件大小上限"
+kb_range_warning = "請輸入10-10000之間的數字（KB）"
+mb_range_warning = "請輸入1-100之間的數字（MB）"
+enter_valid_number_warning = "請輸入有效的數字"
+convert_to_layout = "轉換為版式格式"
+save_as_pdf = "另存為PDF"
+save_as_pdf_tooltip = "將圖片轉換為PDF版式文件"
+save_as_ofd = "另存為OFD"
+save_as_ofd_tooltip = "暫不支持"
+size_options = "尺寸選項"
+original_embed = "原圖嵌入"
+fit_a4 = "適合A4"
+fit_a3 = "適合A3"
+no_pdf_size_option_warning = "請選擇PDF尺寸選項"
+merge_images = "合併圖片"
+merge_images_hint = "將多張圖片合併為一個文件"
+merge_to_tif = "合併為TIF"
+conversion_options = "轉換選項"
+preserve_transparency = "保留透明"
+preserve_transparency_tooltip = "保留源圖片的透明背景（如果有）"
+no_transparency = "不保留透明"
+no_transparency_tooltip = "轉為RGB模式，透明背景變為白色"
+
+# 版式轉換區
+[conversion_panel.layout]
+convert_to_other_formats = "轉換為其他版式格式"
+save_as_ofd_tooltip = "暫不支持"
+convert_to_document_or_image = "轉換為文件或圖片"
+save_as_format = "另存為{format}"
+save_as_docx_tooltip = "將版式文件轉換為DOCX文件"
+save_as_doc_tooltip = "將版式文件轉換為DOC文件"
+render_as_tif = "渲染為TIF"
+render_as_tif_tooltip = "將PDF頁面渲染為TIF圖片，支持多頁TIFF，支持DPI品質選擇"
+render_as_jpg = "渲染為JPG"
+render_as_jpg_tooltip = "將PDF渲染為JPG圖片（每頁一個文件）"
+image_quality_dpi = "圖片品質（DPI）"
+minimum_150 = "較低分辨率 (150 DPI) - 適合快速預覽"
+moderate_300 = "標準分辨率 (300 DPI) - 推薦日常使用"
+high_definition_600 = "高清分辨率 (600 DPI) - 適合打印輸出"
+merge_split = "合併/拆分"
+merge_split_hint = "合併或拆分版式文件"
+merge_to_pdf = "合併PDF"
+merge_to_pdf_tooltip = "將批量列表中的文件按從上到下的順序合併為一個PDF。選中文件後可用↑↓箭頭調整合併順序。"
+merge_to_ofd = "合併OFD"
+merge_to_ofd_tooltip = "暫不支持"
+split_to_pdf = "拆分PDF"
+split_to_pdf_tooltip = "根據輸入的頁碼範圍將當前文件拆分為兩個PDF。第一個文件包含輸入的頁碼，第二個文件包含剩餘頁碼（如果有）。"
+split_to_ofd = "拆分OFD"
+split_to_ofd_tooltip = "暫不支持"
+split_page_range = "拆分頁碼範圍："
+page_range_info = "輸入頁碼範圍，例如：\n• 1-5：第1到5頁\n• 1,3,5：第1、3、5頁\n• 1-3,7-9：第1-3頁和第7-9頁\n• 支持中文分隔符：1~3;5;7至10"
+page_range_placeholder = "例如：1-3,5,7-10"
+selected_split_file = "當前選中的拆分文件（共{pages}頁）："
+no_file_selected = "未選中文件"
+cannot_split_all_pages = "❌ 不能拆分全部頁面（請保留部分頁面）"
+pages_out_of_range_adjusted = "⚠️ 部分頁碼超出範圍，已自動調整（共{pages}頁）"
+all_pages_out_of_range = "❌ 所有頁碼都超出範圍（共{pages}頁）"
+
+# 表格轉換區
+[conversion_panel.spreadsheet]
+convert_to_other_formats = "轉換為其他表格格式"
+convert_to_layout = "轉換為版式格式"
+save_as_pdf = "另存為PDF"
+save_as_pdf_tooltip = "需要本地Office軟體將表格轉換為PDF版式文件"
+save_as_ofd = "另存為OFD"
+save_as_ofd_tooltip = "暫不支持"
+merge_tables = "匯總表格"
+merge_tables_hint = "按選定模式合併多個表格"
+merge_tables_button = "📋 匯總表格"
+merge_tables_button_tooltip = "按選定模式將批量列表中的多個表格合併到基準表格。請先選擇匯總模式（按行/按列/按儲存格）。"
+merge_options = "匯總選項"
+merge_by_row = "按行匯總"
+merge_by_row_tooltip = "將一個或多個表格逐行合併到基準表格"
+merge_by_column = "按列匯總"
+merge_by_column_tooltip = "將一個或多個表格逐列合併到基準表格"
+merge_by_cell = "按儲存格匯總"
+merge_by_cell_tooltip = "將對應位置的儲存格數據相加"
+selected_reference_table = "當前選中的基準表格："
+no_table_selected = "未選中表格"
 
 # =============================================================================
-# 轉換操作
+# 操作面板區域
 # =============================================================================
-[conversion]
-# 文件操作
+[action_panel]
+export_options = "導出選項"
+extraction_options = "提取選項"
+generation_options = "生成選項"
+extract_images = "提取圖片"
+extract_images_tooltip = "轉換為MD時提取文件中的圖片"
+ocr = "圖片文字識別"
+ocr_tooltip = "轉換為MD時啟用OCR識別圖片中的文字"
 
-# 表格操作
+# 校對選項
+[action_panel.proofread]
+symbol_pairing = "標點配對"
+symbol_pairing_tooltip = "檢查括號、引號等成對標點是否匹配"
+typos_rule = "錯別字校對"
+typos_rule_tooltip = "檢查常見錯別字"
+symbol_correction = "符號校對"
+symbol_correction_tooltip = "檢查錯誤的標點符號"
+sensitive_word = "敏感詞匹配"
+sensitive_word_tooltip = "檢查敏感詞"
 
-# 圖片操作
+# 文件轉MD面板
+[action_panel.document]
+ready = "就緒"
+export_markdown = "導出 Markdown"
+export_markdown_tooltip = "將文件轉換為Markdown格式"
+optimize_for_type = "針對文件類型優化"
+optimize_for_type_tooltip = "根據文件類型進行針對性優化處理"
+remove_existing_numbering = "清除原有文件小標題序號"
+remove_existing_numbering_tooltip = "轉換為MD時清除文件中已有的標題序號"
+add_new_numbering = "新增小標題序號"
+add_new_numbering_tooltip = "轉換為MD時新增標題序號"
 
-# 生成檔案名（用於輸出檔案命名）
-[conversion.filenames]
-split_part1 = "拆分1"
-split_part2 = "拆分2"
-merged_pdf = "合併PDF"
-merged_table = "彙總表格"
+# 表格轉MD面板
+[action_panel.spreadsheet]
+ready = "就緒"
+export_markdown = "導出 Markdown"
+export_markdown_tooltip = "將表格轉換為Markdown格式"
 
+# 圖片轉MD面板
+[action_panel.image]
+ready = "就緒"
+export_markdown = "導出 Markdown"
+export_markdown_tooltip = "將圖片轉換為Markdown格式"
+extract_images_tooltip = "轉換為MD時保留圖片"
+ocr_tooltip = "轉換為MD時啟用OCR識別圖片中的文字"
 
-# =============================================================================
-# 消息和提示
-# =============================================================================
-[messages]
-# 文件操作
-file_not_found = "文件未找到: {filename}"
-invalid_file_type = "不支持的文件類型: {ext}"
-unsupported_file_type = "不支持的文件類型"
-unknown_file_category = "未知的文件類別: {category}"
+# 版式轉MD面板
+[action_panel.layout]
+ready = "就緒"
+export_markdown = "導出 Markdown"
+export_markdown_tooltip = "將版式文件轉換為Markdown格式"
 
-# GUI操作結果
-error_prefix = "錯誤: {message}"
-operation_failed = "操作失敗: {error}"
-processing_exception = "處理異常: {error}"
-system_init_error = "系統初始化錯誤"
-process_file_failed = "處理文件失敗: {error}"
-batch_merge_need_two_layout = "需要批量模式，且至少2個版式文件才能合併"
-batch_merge_need_two_image = "需要批量模式，且至少2個圖片文件才能合併"
-batch_merge_need_two_table = "需要批量模式，且至少2個表格文件才能匯總"
-batch_file_list_not_init = "批量文件列表組件未初始化"
-select_base_table_first = "請先點擊選擇一個基準表格"
-select_merge_mode = "請選擇匯總模式（按行/按列/按儲存格）"
-process_failed = "處理失敗: {error}"
-file_processing_failed = "處理文件失敗: {error}"
-template_selection_failed = "選擇範本失敗: {error}"
-cancel_failed = "取消操作失敗: {error}"
-clear_failed = "清空失敗: {error}"
-settings_unavailable = "設定功能不可用"
-open_settings_failed = "打開設定失敗: {error}"
-apply_settings_failed = "套用設定失敗: {error}"
-about_unavailable = "關於資訊不可用"
-open_about_failed = "打開關於失敗: {error}"
+# MD轉文件面板
+[action_panel.md_to_document]
+ready = "就緒"
+generate_docx = "生成 DOCX"
+generate_docx_tooltip = "將Markdown轉換為DOCX文件"
+generate_doc = "生成 DOC"
+generate_doc_tooltip = "將Markdown轉換為DOC文件（需要本地Office軟體）"
+generate_odt = "生成 ODT"
+generate_odt_tooltip = "將Markdown轉換為ODT文件（需要LibreOffice）"
+generate_rtf = "生成 RTF"
+generate_rtf_tooltip = "將Markdown轉換為RTF文件（需要本地Office軟體）"
+remove_existing_numbering = "清除原有Markdown小標題序號"
+remove_existing_numbering_tooltip = "轉換為文件時清除Markdown中已有的標題序號"
+add_new_numbering = "新增小標題序號"
+add_new_numbering_tooltip = "轉換為文件時新增標題序號"
 
-# 轉換操作
-
-# 設定
-
-# 確認對話框
-
-# 文件拖拽和選擇
-single_file_only = "單文件模式下只能拖入一個文件"
-no_valid_files = "未檢測到有效文件"
-no_folder_in_single_mode = "單文件模式下不能拖入文件夾"
-all_supported_files = "所有支持的文件"
-all_files = "所有文件"
-select_multiple_files = "選擇多個文件"
-category_mismatch = "只能添加{current_name}文件，不能混合{new_name}文件"
-category_mismatch_detail = "類型不匹配（當前列表為{selected_name}，文件為{file_category_name}）"
-
-# 錯誤消息
-[messages.errors]
-invalid_docx_template = "範本文件 {template_name} 無效或損壞。請使用 Word 或 WPS 打開該範本，編輯後保存，確保它是有效的 DOCX 文件。"
-
-# 警告消息
-[messages.warnings]
-missing_body_placeholder = '⚠️ 範本中未找到正文占位符（如 {{正文}} 或 {{body}}），Markdown 正文內容未被插入'
+# MD轉表格面板
+[action_panel.md_to_spreadsheet]
+ready = "就緒"
+generate_xlsx = "生成 XLSX"
+generate_xlsx_tooltip = "將Markdown轉換為XLSX表格"
+generate_xls = "生成 XLS"
+generate_xls_tooltip = "將Markdown轉換為XLS表格（需要本地Office軟體）"
+generate_ods = "生成 ODS"
+generate_ods_tooltip = "將Markdown轉換為ODS表格（需要LibreOffice）"
+generate_csv = "生成 CSV"
+generate_csv_tooltip = "將Markdown轉換為CSV表格（純文本格式）"
 
 # =============================================================================
 # 編輯器對話框
@@ -1344,284 +1414,50 @@ duplicate_key_title = "鍵已存在"
 duplicate_key_message = "鍵 \"{entry_key}\" 已存在\n\n當前值：{current_values}\n當前備註：{current_comment}\n\n請選擇操作："
 duplicate_key_no_comment = "（無）"
 overwrite = "覆蓋"
-overwrite_tooltip = "用新值和新備註完全替換原有內容"
 merge = "合併"
-merge_tooltip = "合併新舊值（去重），備註：新備註為空則保留原備註"
 
 # =============================================================================
-# 樣式名（用於文件轉換）
-# 這些樣式名用於 MD ↔ DOCX 轉換時的樣式注入和檢測
+# 文件類型分類
 # =============================================================================
-[styles]
-# 代碼樣式
-code_block = "代碼塊"
-inline_code = "行內代碼"
+[file_types]
+document = "文件"
+spreadsheet = "表格"
+image = "圖片"
+layout = "版式"
+text = "文本"
+unknown = "未知"
 
-# 引用樣式（9 級）
-quote_1 = "引用 1"
-quote_2 = "引用 2"
-quote_3 = "引用 3"
-quote_4 = "引用 4"
-quote_5 = "引用 5"
-quote_6 = "引用 6"
-quote_7 = "引用 7"
-quote_8 = "引用 8"
-quote_9 = "引用 9"
+# 帶"類"後綴的版本（用於選項卡標籤）
+text_category = "文本類"
+document_category = "文件類"
+spreadsheet_category = "表格類"
+layout_category = "版式類"
+image_category = "圖片類"
 
-# 公式樣式
-formula_block = "公式塊"
-inline_formula = "行內公式"
-
-# 分隔線樣式
-horizontal_rule_1 = "分隔線 1"
-horizontal_rule_2 = "分隔線 2"
-horizontal_rule_3 = "分隔線 3"
-
-# 列表樣式
-list_block = "列表塊"
-
-# 表格樣式
-table_content = "表格內容"
-three_line_table = "三線表"
-table_grid = "網格表"
-
-# 正文段落樣式
-body_paragraph = "正文段落"
+# 格式驗證相關
+unknown_type = "未知類型"
+format_mismatch = "⚠️ 實際為 {format} 格式"
+format_unverifiable = "⚠️ 無法驗證文件實際格式"
+format_txt = "TXT(純文本)"
+format_md = "Markdown"
+format_csv = "CSV(表格文本)"
 
 # =============================================================================
-# 占位符（用於文件範本）
-# 這些占位符用於 MD → DOCX 轉換時的範本填充
+# 轉換操作
 # =============================================================================
-[placeholders]
-title = "標題"
-body = "正文"
+[conversion]
+# 文件操作
 
-# =============================================================================
-# YAML 鍵名（用於元數據）
-# 這些鍵名用於 DOCX → MD 轉換時的 YAML 前置資訊輸出
-# =============================================================================
-[yaml_keys]
-title = "標題"
-subtitle = "副標題"
+# 表格操作
 
-# =============================================================================
-# 轉換面板區域
-# =============================================================================
-[conversion_panel]
-format_conversion = "格式轉換"
-save_as = "另存為"
-select_file_hint = "請先選擇文件"
-same_format_tooltip = "當前已是{format}格式"
-compressible_format_tooltip = "支持壓縮"
-png_compression_tooltip = "PNG為無損格式，不支持品質壓縮"
-bmp_compression_tooltip = "BMP為無損格式，不支持品質壓縮"
-gif_compression_tooltip = "GIF為無損格式，不支持品質壓縮"
-tif_compression_tooltip = "TIF/TIFF為無損格式，不支持品質壓縮"
-other_format_compression_tooltip = "{format}格式不支持品質壓縮"
-high_quality_conversion_tooltip = "高品質轉換"
-lossless_conversion_tooltip = "無損轉換"
-document_conversion_tooltip = "轉換為此文件格式"
-csv_conversion_tooltip = "轉換為CSV格式（純文本表格）"
-spreadsheet_conversion_tooltip = "轉換為此表格格式"
-pdf_conversion_tooltip = "轉換為PDF格式"
-docx_conversion_tooltip = "轉換為DOCX格式"
-doc_conversion_tooltip = "轉換為DOC格式"
-tif_conversion_tooltip = "渲染為TIF圖片"
-jpg_conversion_tooltip = "渲染為JPG圖片"
+# 圖片操作
 
-# 文件轉換區
-[conversion_panel.document]
-convert_to_other_formats = "轉換為其他文件格式"
-convert_to_layout = "轉換為版式格式"
-save_as_pdf = "另存為PDF"
-save_as_pdf_tooltip = "將文件轉換為PDF版式文件"
-save_as_ofd = "另存為OFD"
-save_as_ofd_tooltip = "暫不支持"
-proofread_document = "文件校對"
-proofread_hint = "對文件進行校對檢查"
-proofread_button = "📝 文件校對"
-proofread_button_tooltip = "檢查文件中的標點配對、錯別字、敏感詞等問題"
-proofread_options = "校對選項"
-symbol_pairing = "標點配對"
-symbol_pairing_tooltip = "檢查括號、引號等成對標點是否匹配"
-typos_rule = "錯別字校對"
-typos_rule_tooltip = "檢查常見錯別字"
-symbol_correction = "符號校對"
-symbol_correction_tooltip = "檢查錯誤的標點符號"
-sensitive_word = "敏感詞匹配"
-sensitive_word_tooltip = "檢查敏感詞"
-
-# 圖片轉換區
-[conversion_panel.image]
-convert_to_other_formats = "轉換為其他圖片格式"
-compression_options = "壓縮選項"
-highest_quality = "最高品質"
-highest_quality_tooltip = "無損或高品質轉換。JPEG/WebP使用quality=95，PNG/BMP/GIF/TIF使用無損壓縮。"
-limit_file_size = "限制文件大小"
-limit_file_size_tooltip = "通過調整quality參數壓縮至目標大小，僅對JPEG/WebP有效。其他格式將按最高品質保存。"
-file_size_limit = "文件大小上限："
-enter_size_limit_warning = "請輸入文件大小上限"
-kb_range_warning = "請輸入10-10000之間的數字（KB）"
-mb_range_warning = "請輸入1-100之間的數字（MB）"
-enter_valid_number_warning = "請輸入有效的數字"
-convert_to_layout = "轉換為版式格式"
-save_as_pdf = "另存為PDF"
-save_as_pdf_tooltip = "將圖片轉換為PDF版式文件"
-save_as_ofd = "另存為OFD"
-save_as_ofd_tooltip = "暫不支持"
-size_options = "尺寸選項"
-original_embed = "原圖嵌入"
-fit_a4 = "適合A4"
-fit_a3 = "適合A3"
-no_pdf_size_option_warning = "請選擇PDF尺寸選項"
-merge_images = "合併圖片"
-merge_images_hint = "將多張圖片合併為一個文件"
-merge_to_tif = "合併為TIF"
-conversion_options = "轉換選項"
-preserve_transparency = "保留透明"
-preserve_transparency_tooltip = "保留源圖片的透明背景（如果有）"
-no_transparency = "不保留透明"
-no_transparency_tooltip = "轉為RGB模式，透明背景變為白色"
-
-# 版式轉換區
-[conversion_panel.layout]
-convert_to_other_formats = "轉換為其他版式格式"
-save_as_ofd_tooltip = "暫不支持"
-convert_to_document_or_image = "轉換為文件或圖片"
-save_as_format = "另存為{format}"
-save_as_docx_tooltip = "將版式文件轉換為DOCX文件"
-save_as_doc_tooltip = "將版式文件轉換為DOC文件"
-render_as_tif = "渲染為TIF"
-render_as_tif_tooltip = "將PDF頁面渲染為TIF圖片，支持多頁TIFF，支持DPI品質選擇"
-render_as_jpg = "渲染為JPG"
-render_as_jpg_tooltip = "將PDF渲染為JPG圖片（每頁一個文件）"
-image_quality_dpi = "圖片品質（DPI）"
-minimum_150 = "較低分辨率 (150 DPI) - 適合快速預覽"
-moderate_300 = "標準分辨率 (300 DPI) - 推薦日常使用"
-high_definition_600 = "高清分辨率 (600 DPI) - 適合打印輸出"
-merge_split = "合併/拆分"
-merge_split_hint = "合併或拆分版式文件"
-merge_to_pdf = "合併PDF"
-merge_to_pdf_tooltip = "將批量列表中的文件按從上到下的順序合併為一個PDF。選中文件後可用↑↓箭頭調整合併順序。"
-merge_to_ofd = "合併OFD"
-merge_to_ofd_tooltip = "暫不支持"
-split_to_pdf = "拆分PDF"
-split_to_pdf_tooltip = "根據輸入的頁碼範圍將當前文件拆分為兩個PDF。第一個文件包含輸入的頁碼，第二個文件包含剩餘頁碼（如果有）。"
-split_to_ofd = "拆分OFD"
-split_to_ofd_tooltip = "暫不支持"
-split_page_range = "拆分頁碼範圍："
-page_range_info = "輸入頁碼範圍，例如：\n• 1-5：第1到5頁\n• 1,3,5：第1、3、5頁\n• 1-3,7-9：第1-3頁和第7-9頁\n• 支持中文分隔符：1~3;5;7至10"
-page_range_placeholder = "例如：1-3,5,7-10"
-selected_split_file = "當前選中的拆分文件（共{pages}頁）："
-no_file_selected = "未選中文件"
-cannot_split_all_pages = "❌ 不能拆分全部頁面（請保留部分頁面）"
-pages_out_of_range_adjusted = "⚠️ 部分頁碼超出範圍，已自動調整（共{pages}頁）"
-all_pages_out_of_range = "❌ 所有頁碼都超出範圍（共{pages}頁）"
-
-# 表格轉換區
-[conversion_panel.spreadsheet]
-convert_to_other_formats = "轉換為其他表格格式"
-convert_to_layout = "轉換為版式格式"
-save_as_pdf = "另存為PDF"
-save_as_pdf_tooltip = "需要本地Office軟體將表格轉換為PDF版式文件"
-save_as_ofd = "另存為OFD"
-save_as_ofd_tooltip = "暫不支持"
-merge_tables = "匯總表格"
-merge_tables_hint = "按選定模式合併多個表格"
-merge_tables_button = "📋 匯總表格"
-merge_tables_button_tooltip = "按選定模式將批量列表中的多個表格合併到基準表格。請先選擇匯總模式（按行/按列/按儲存格）。"
-merge_options = "匯總選項"
-merge_by_row = "按行匯總"
-merge_by_row_tooltip = "將一個或多個表格逐行合併到基準表格"
-merge_by_column = "按列匯總"
-merge_by_column_tooltip = "將一個或多個表格逐列合併到基準表格"
-merge_by_cell = "按儲存格匯總"
-merge_by_cell_tooltip = "將對應位置的儲存格數據相加"
-selected_reference_table = "當前選中的基準表格："
-no_table_selected = "未選中表格"
-
-# =============================================================================
-# 操作面板區域
-# =============================================================================
-[action_panel]
-export_options = "導出選項"
-extraction_options = "提取選項"
-generation_options = "生成選項"
-extract_images = "提取圖片"
-extract_images_tooltip = "轉換為MD時提取文件中的圖片"
-ocr = "圖片文字識別"
-ocr_tooltip = "轉換為MD時啟用OCR識別圖片中的文字"
-
-# 校對選項
-[action_panel.proofread]
-symbol_pairing = "標點配對"
-symbol_pairing_tooltip = "檢查括號、引號等成對標點是否匹配"
-typos_rule = "錯別字校對"
-typos_rule_tooltip = "檢查常見錯別字"
-symbol_correction = "符號校對"
-symbol_correction_tooltip = "檢查錯誤的標點符號"
-sensitive_word = "敏感詞匹配"
-sensitive_word_tooltip = "檢查敏感詞"
-
-# 文件轉MD面板
-[action_panel.document]
-ready = "就緒"
-export_markdown = "導出 Markdown"
-export_markdown_tooltip = "將文件轉換為Markdown格式"
-optimize_for_type = "針對文件類型優化"
-optimize_for_type_tooltip = "根據文件類型進行針對性優化處理"
-remove_existing_numbering = "清除原有文件小標題序號"
-remove_existing_numbering_tooltip = "轉換為MD時清除文件中已有的標題序號"
-add_new_numbering = "新增小標題序號"
-add_new_numbering_tooltip = "轉換為MD時新增標題序號"
-
-# 表格轉MD面板
-[action_panel.spreadsheet]
-ready = "就緒"
-export_markdown = "導出 Markdown"
-export_markdown_tooltip = "將表格轉換為Markdown格式"
-
-# 圖片轉MD面板
-[action_panel.image]
-ready = "就緒"
-export_markdown = "導出 Markdown"
-export_markdown_tooltip = "將圖片轉換為Markdown格式"
-extract_images_tooltip = "轉換為MD時保留圖片"
-ocr_tooltip = "轉換為MD時啟用OCR識別圖片中的文字"
-
-# 版式轉MD面板
-[action_panel.layout]
-ready = "就緒"
-export_markdown = "導出 Markdown"
-export_markdown_tooltip = "將版式文件轉換為Markdown格式"
-
-# MD轉文件面板
-[action_panel.md_to_document]
-ready = "就緒"
-generate_docx = "生成 DOCX"
-generate_docx_tooltip = "將Markdown轉換為DOCX文件"
-generate_doc = "生成 DOC"
-generate_doc_tooltip = "將Markdown轉換為DOC文件（需要本地Office軟體）"
-generate_odt = "生成 ODT"
-generate_odt_tooltip = "將Markdown轉換為ODT文件（需要LibreOffice）"
-generate_rtf = "生成 RTF"
-generate_rtf_tooltip = "將Markdown轉換為RTF文件（需要本地Office軟體）"
-remove_existing_numbering = "清除原有Markdown小標題序號"
-remove_existing_numbering_tooltip = "轉換為文件時清除Markdown中已有的標題序號"
-add_new_numbering = "新增小標題序號"
-add_new_numbering_tooltip = "轉換為文件時新增標題序號"
-
-# MD轉表格面板
-[action_panel.md_to_spreadsheet]
-ready = "就緒"
-generate_xlsx = "生成 XLSX"
-generate_xlsx_tooltip = "將Markdown轉換為XLSX表格"
-generate_xls = "生成 XLS"
-generate_xls_tooltip = "將Markdown轉換為XLS表格（需要本地Office軟體）"
-generate_ods = "生成 ODS"
-generate_ods_tooltip = "將Markdown轉換為ODS表格（需要LibreOffice）"
-generate_csv = "生成 CSV"
-generate_csv_tooltip = "將Markdown轉換為CSV表格（純文本格式）"
+# 生成檔案名（用於輸出檔案命名）
+[conversion.filenames]
+split_part1 = "拆分1"
+split_part2 = "拆分2"
+merged_pdf = "合併PDF"
+merged_table = "彙總表格"
 
 # =============================================================================
 # 轉換進度消息
@@ -1655,7 +1491,6 @@ filling_yaml_data = "正在填充YAML數據..."
 filling_table_data = "正在填充表格數據..."
 saving_excel = "正在保存Excel文件..."
 writing_file = "正在寫入..."
-executing_final_proofread = "正在執行最終校對..."
 initializing_proofread = "正在初始化校對引擎..."
 proofreading_progress = "正在校對... {current}/{total}"
 saving_proofread_result = "正在保存校對結果..."
@@ -1778,6 +1613,64 @@ unsupported_layout_format = "不支持的版式格式: {format}"
 format_to_pdf_not_implemented = "{format}→PDF未實現"
 all_pages_invalid = "頁碼無效（共{total}頁）"
 
+
+# =============================================================================
+# 消息和提示
+# =============================================================================
+[messages]
+# 文件操作
+file_not_found = "文件未找到: {filename}"
+invalid_file_type = "不支持的文件類型: {ext}"
+unsupported_file_type = "不支持的文件類型"
+unknown_file_category = "未知的文件類別: {category}"
+
+# GUI操作結果
+error_prefix = "錯誤: {message}"
+operation_failed = "操作失敗: {error}"
+processing_exception = "處理異常: {error}"
+system_init_error = "系統初始化錯誤"
+process_file_failed = "處理文件失敗: {error}"
+batch_merge_need_two_layout = "需要批量模式，且至少2個版式文件才能合併"
+batch_merge_need_two_image = "需要批量模式，且至少2個圖片文件才能合併"
+batch_merge_need_two_table = "需要批量模式，且至少2個表格文件才能匯總"
+batch_file_list_not_init = "批量文件列表組件未初始化"
+select_base_table_first = "請先點擊選擇一個基準表格"
+select_merge_mode = "請選擇匯總模式（按行/按列/按儲存格）"
+process_failed = "處理失敗: {error}"
+file_processing_failed = "處理文件失敗: {error}"
+template_selection_failed = "選擇範本失敗: {error}"
+cancel_failed = "取消操作失敗: {error}"
+clear_failed = "清空失敗: {error}"
+settings_unavailable = "設定功能不可用"
+open_settings_failed = "打開設定失敗: {error}"
+apply_settings_failed = "套用設定失敗: {error}"
+about_unavailable = "關於資訊不可用"
+open_about_failed = "打開關於失敗: {error}"
+
+# 轉換操作
+
+# 設定
+
+# 確認對話框
+
+# 文件拖拽和選擇
+single_file_only = "單文件模式下只能拖入一個文件"
+no_valid_files = "未檢測到有效文件"
+no_folder_in_single_mode = "單文件模式下不能拖入文件夾"
+all_supported_files = "所有支持的文件"
+all_files = "所有文件"
+select_multiple_files = "選擇多個文件"
+category_mismatch = "只能添加{current_name}文件，不能混合{new_name}文件"
+category_mismatch_detail = "類型不匹配（當前列表為{selected_name}，文件為{file_category_name}）"
+
+# 錯誤消息
+[messages.errors]
+invalid_docx_template = "範本文件 {template_name} 無效或損壞。請使用 Word 或 WPS 打開該範本，編輯後保存，確保它是有效的 DOCX 文件。"
+
+# 警告消息
+[messages.warnings]
+missing_body_placeholder = '⚠️ 範本中未找到正文占位符（如 {{正文}} 或 {{body}}），Markdown 正文內容未被插入'
+
 # =============================================================================
 # 校對批註文本（用於文檔校對功能的批註內容）
 # =============================================================================
@@ -1802,3 +1695,120 @@ pairing = "標點配對"
 sensitive = "檢測到敏感詞"
 extra_close = "多餘的閉符號"
 unclosed = "未閉合的符號"
+  
+# 連結處理佔位符文字
+[link_processing]
+file_not_found = "⚠️ 檔案未找到: {filename}"
+section_not_found = "⚠️ 章節未找到: {filename}#{heading}"
+block_not_found = "⚠️ 區塊未找到: {filename}#^{block_id}"
+circular_reference = "⚠️ 檢測到循環引用: {filename}"
+max_depth_reached = "⚠️ 達到最大嵌入深度"
+
+# =============================================================================
+# 樣式名（用於文件轉換）
+# 這些樣式名用於 MD ↔ DOCX 轉換時的樣式注入和檢測
+# =============================================================================
+[styles]
+# 段落樣式
+
+# 代碼樣式
+
+# 公式樣式
+
+# 列表樣式
+
+# 分隔線樣式
+
+# 表格樣式
+
+# 引用樣式（9 級）
+body_paragraph = "正文段落"
+image_paragraph = "圖片段落"
+code_block = "代碼塊"
+inline_code = "行內代碼"
+formula_block = "公式塊"
+inline_formula = "行內公式"
+list_block = "列表塊"
+horizontal_rule_1 = "分隔線 1"
+horizontal_rule_2 = "分隔線 2"
+horizontal_rule_3 = "分隔線 3"
+table_content = "表格內容"
+three_line_table = "三線表"
+table_grid = "網格表"
+quote_1 = "引用 1"
+quote_2 = "引用 2"
+quote_3 = "引用 3"
+quote_4 = "引用 4"
+quote_5 = "引用 5"
+quote_6 = "引用 6"
+quote_7 = "引用 7"
+quote_8 = "引用 8"
+quote_9 = "引用 9"
+
+# =============================================================================
+# 樣式格式配置（用於樣式注入時的格式屬性）
+# =============================================================================
+[style_formats]
+
+# 正文段落格式（新細明體、12pt、2字符）
+[style_formats.body_paragraph]
+east_asia_font = "新細明體"
+ascii_font = "Times New Roman"
+font_size_pt = 12
+first_line_indent_chars = 200
+first_line_indent_cm = 0
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = false
+justification = "both"
+
+# 標題1格式（微軟正黑體、16pt、2字符）
+[style_formats.heading_1]
+east_asia_font = "微軟正黑體"
+ascii_font = "Times New Roman"
+font_size_pt = 16
+first_line_indent_chars = 200
+first_line_indent_cm = 0
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = false
+justification = "both"
+
+# 標題2-9格式（新細明體、14pt、2字符）
+[style_formats.heading_2]
+east_asia_font = "新細明體"
+ascii_font = "Times New Roman"
+font_size_pt = 14
+first_line_indent_chars = 200
+first_line_indent_cm = 0
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = false
+justification = "both"
+
+[style_formats.heading_3_9]
+east_asia_font = "新細明體"
+ascii_font = "Times New Roman"
+font_size_pt = 14
+first_line_indent_chars = 200
+first_line_indent_cm = 0
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = false
+justification = "both"
+
+# =============================================================================
+# 占位符（用於文件範本）
+# 這些占位符用於 MD → DOCX 轉換時的範本填充
+# =============================================================================
+[placeholders]
+title = "標題"
+body = "正文"
+
+# =============================================================================
+# YAML 鍵名（用於元數據）
+# 這些鍵名用於 DOCX → MD 轉換時的 YAML 前置資訊輸出
+# =============================================================================
+[yaml_keys]
+title = "標題"
+subtitle = "副標題"

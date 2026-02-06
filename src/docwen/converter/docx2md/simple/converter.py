@@ -625,22 +625,3 @@ def _process_table(
         logger.info(f"插入表格 {table_index + 1}")
         return table_md
 
-
-# 模块测试代码
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    logger.info("简化模式DOCX转MD测试")
-    
-    result = convert_docx_to_md_simple(
-        docx_path="test.docx",
-        extract_image=True,
-        extract_ocr=False
-    )
-    
-    if result['success']:
-        print("转换成功!")
-        print(f"标题: {result['metadata'].get('标题', '')}")
-        print(f"副标题: {result['metadata'].get('副标题', '')}")
-        print(f"内容长度: {len(result['main_content'])}")
-    else:
-        print(f"转换失败: {result['error']}")

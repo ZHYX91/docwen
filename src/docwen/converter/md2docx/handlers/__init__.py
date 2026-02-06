@@ -76,7 +76,6 @@ from .text_handler import (
     apply_formats_to_run,
     add_formatted_text_to_paragraph,
     add_formatted_text_to_heading,
-    add_formatted_text_to_paragraph_with_breaks,
 )
 
 __all__ = [
@@ -122,5 +121,4 @@ __all__ = [
     'apply_formats_to_run',
     'add_formatted_text_to_paragraph',
     'add_formatted_text_to_heading',
-    'add_formatted_text_to_paragraph_with_breaks',
 ]

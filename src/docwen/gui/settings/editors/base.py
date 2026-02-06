@@ -10,6 +10,8 @@
 - 唯一ID生成
 """
 
+from __future__ import annotations
+
 import logging
 import random
 import string
@@ -17,7 +19,7 @@ import tkinter as tk
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, cast
 
 import ttkbootstrap as tb
 
@@ -68,7 +70,7 @@ class BaseEditorDialog(tb.Toplevel, ScalableMixin, ABC):
             config_manager: 配置管理器
             on_save: 保存成功后的回调函数
         """
-        super().__init__(parent)
+        cast(Any, super()).__init__(parent)
         
         self.parent = parent
         self.config_manager = config_manager
@@ -121,7 +123,7 @@ class BaseEditorDialog(tb.Toplevel, ScalableMixin, ABC):
         self.minsize(min_width, min_height)
         
         # 使对话框模态
-        self.transient(self.parent)
+        cast(Any, self).transient(self.parent)
         self.grab_set()
         
         # 绑定关闭事件
@@ -155,7 +157,7 @@ class BaseEditorDialog(tb.Toplevel, ScalableMixin, ABC):
         
         return left_frame
     
-    def _create_item_list(self, parent: tb.Frame):
+    def _create_item_list(self, parent: tk.Widget):
         """创建项目列表（带复选框和滚动）"""
         list_frame = tb.Frame(parent)
         list_frame.pack(fill="both", expand=True, pady=(0, 10))
@@ -253,8 +255,9 @@ class BaseEditorDialog(tb.Toplevel, ScalableMixin, ABC):
             label.bind("<Button-1>", lambda e, iid=item_id: self._on_item_clicked(iid))
             
             # 存储标签引用用于高亮
-            row_frame.item_label = label
-            row_frame.item_id = item_id
+            row_frame_any = cast(Any, row_frame)
+            row_frame_any.item_label = label
+            row_frame_any.item_id = item_id
     
     def _update_list_highlight(self):
         """更新列表高亮"""
@@ -262,15 +265,16 @@ class BaseEditorDialog(tb.Toplevel, ScalableMixin, ABC):
             return
         
         for widget in self.item_list_frame.winfo_children():
-            if hasattr(widget, 'item_id') and hasattr(widget, 'item_label'):
-                if widget.item_id == self.current_item_id:
-                    widget.configure(bootstyle="info")
-                    widget.item_label.configure(bootstyle="inverse-info")
+            widget_any = cast(Any, widget)
+            if hasattr(widget_any, 'item_id') and hasattr(widget_any, 'item_label'):
+                if widget_any.item_id == self.current_item_id:
+                    widget_any.configure(bootstyle="info")
+                    widget_any.item_label.configure(bootstyle="inverse-info")
                 else:
-                    widget.configure(bootstyle="default")
-                    widget.item_label.configure(bootstyle="default")
+                    widget_any.configure(bootstyle="default")
+                    widget_any.item_label.configure(bootstyle="default")
     
-    def _create_action_buttons(self, parent: tb.Frame):
+    def _create_action_buttons(self, parent: tk.Widget):
         """创建操作按钮（新增/复制/删除/排序）"""
         # 第一行：新增/复制/删除按钮（居中分散排列）
         action_frame = tb.Frame(parent)
@@ -379,7 +383,7 @@ class BaseEditorDialog(tb.Toplevel, ScalableMixin, ABC):
     
     # ==================== ID 生成方法 ====================
     
-    def _generate_unique_id(self, prefix: str = "custom", existing_ids: set = None) -> str:
+    def _generate_unique_id(self, prefix: str = "custom", existing_ids: Optional[set[str]] = None) -> str:
         """
         生成唯一ID
         

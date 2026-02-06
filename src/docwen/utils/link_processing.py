@@ -48,6 +48,7 @@ from typing import Optional, Set
 from urllib.parse import unquote
 
 from docwen.config.config_manager import config_manager
+from docwen.i18n import t
 
 logger = logging.getLogger(__name__)
 
@@ -324,7 +325,37 @@ MD_EXTENSIONS = {'.md', '.markdown'}
 # 链接识别正则表达式
 # 支持 | 和 \| 作为分隔符（\| 用于Markdown表格中）
 WIKI_EMBED_PATTERN = r'!\[\[((?:[^|\]\\]|\\(?![|]).)*)(?:(?:\\)?\|((?:[^\]\\]|\\(?![|]).)*)?)?\]\]'  # ![[target]] 或 ![[target|text]] 或 ![[target\|text]]
-MD_EMBED_IMAGE_PATTERN = r'!\[([^\]]*)\]\(([^)]+)\)'  # ![alt](url)
+WIKI_EMBED_SIZE_PATTERN = r'!\[\[([^|\]]+)\|(\d+)(?:x(\d+))?\]\]'  # ![[target|300]] 或 ![[target|300x200]]
+MD_EMBED_IMAGE_PATTERN = r'!\[([^\]]*)\]\(([^)\s]+)(?:\s*=\s*(\d*)x(\d*))?\s*\)'  # ![alt](url) 或 ![alt](url =300x200) 或 ![alt](url =300x)
+
+
+def _format_image_placeholder(image_path: str, width: Optional[int] = None, height: Optional[int] = None) -> str:
+    if width is None and height is None:
+        return f"{{{{IMAGE:{image_path}}}}}"
+    w = "" if width is None else str(width)
+    h = "" if height is None else str(height)
+    return f"{{{{IMAGE:{image_path}\\|{w}\\|{h}}}}}"
+
+
+def _split_alt_text_and_size(alt_text: Optional[str]) -> tuple[Optional[str], Optional[int], Optional[int]]:
+    if not alt_text:
+        return None, None, None
+    if '|' not in alt_text:
+        return alt_text, None, None
+    left, right = alt_text.rsplit('|', 1)
+    right = right.strip()
+    if not right:
+        return alt_text, None, None
+    if 'x' in right:
+        w_str, h_str = right.split('x', 1)
+        if w_str.isdigit() and (h_str.isdigit() or h_str == ""):
+            width = int(w_str)
+            height = int(h_str) if h_str.isdigit() else None
+            return left, width, height
+        return alt_text, None, None
+    if right.isdigit():
+        return left, int(right), None
+    return alt_text, None, None
 
 
 def process_markdown_links(
@@ -380,13 +411,50 @@ def process_markdown_links(
     result = text
     embed_count = {'images': 0, 'markdown': 0}
     
+    # 0. 处理带尺寸的 Wiki 嵌入（优先于通用模式）
+    wiki_size_embeds = list(re.finditer(WIKI_EMBED_SIZE_PATTERN, result))
+    for match in wiki_size_embeds:
+        original_link = match.group(0)
+        link_target = match.group(1).strip()
+        width = int(match.group(2)) if match.group(2) else None
+        height = int(match.group(3)) if match.group(3) else None
+        logger.debug("识别到Wiki嵌入链接(带尺寸): %s", original_link)
+        replacement = _process_single_embed(
+            link_target,
+            original_link,
+            source_file_path,
+            visited_files,
+            depth,
+            embed_count,
+            link_type='wiki',
+            display_text=None,
+            width=width,
+            height=height,
+        )
+        if replacement is not None:
+            result = result.replace(original_link, replacement, 1)
+
     # 1. 处理Wiki嵌入链接：![[target]] 或 ![[target|display]]
-    wiki_embeds = re.finditer(WIKI_EMBED_PATTERN, text)
+    wiki_embeds = list(re.finditer(WIKI_EMBED_PATTERN, result))
     for match in wiki_embeds:
         original_link = match.group(0)  # 完整的 ![[target]]
         link_target = _unescape_pipe(match.group(1).strip())  # target，还原转义的竖线
         # 提取显示文本（group(2)是 | 后面的部分）
         display_text = _unescape_pipe(match.group(2).strip()) if match.group(2) else None
+
+        width = None
+        height = None
+        if display_text:
+            dt = display_text.strip()
+            if dt.isdigit():
+                width = int(dt)
+                display_text = None
+            elif 'x' in dt:
+                w_str, h_str = dt.split('x', 1)
+                if w_str.isdigit() and (h_str.isdigit() or h_str == ""):
+                    width = int(w_str)
+                    height = int(h_str) if h_str.isdigit() else None
+                    display_text = None
         
         logger.debug("识别到Wiki嵌入链接: %s", original_link)
         
@@ -394,18 +462,25 @@ def process_markdown_links(
         replacement = _process_single_embed(
             link_target, original_link, source_file_path,
             visited_files, depth, embed_count, link_type='wiki',
-            display_text=display_text
+            display_text=display_text,
+            width=width,
+            height=height
         )
         
         if replacement is not None:
             result = result.replace(original_link, replacement, 1)
     
     # 2. 处理Markdown嵌入图片：![alt](url)
-    md_embeds = re.finditer(MD_EMBED_IMAGE_PATTERN, text)
+    md_embeds = list(re.finditer(MD_EMBED_IMAGE_PATTERN, result))
     for match in md_embeds:
         original_link = match.group(0)  # 完整的 ![alt](url)
         alt_text = match.group(1)  # alt（作为显示文本）
         link_target = match.group(2).strip()  # url
+        md_width = int(match.group(3)) if match.group(3) and match.group(3).isdigit() else None
+        md_height = int(match.group(4)) if match.group(4) and match.group(4).isdigit() else None
+        display_text, alt_width, alt_height = _split_alt_text_and_size(alt_text)
+        width = md_width if (md_width is not None or md_height is not None) else alt_width
+        height = md_height if (md_width is not None or md_height is not None) else alt_height
         
         logger.debug("识别到Markdown嵌入图片: %s", original_link)
         
@@ -413,7 +488,9 @@ def process_markdown_links(
         replacement = _process_single_embed(
             link_target, original_link, source_file_path,
             visited_files, depth, embed_count, link_type='markdown',
-            display_text=alt_text if alt_text else None
+            display_text=display_text,
+            width=width,
+            height=height
         )
         
         if replacement is not None:
@@ -514,7 +591,9 @@ def _process_single_embed(
     depth: int,
     embed_count: dict,
     link_type: str = 'wiki',
-    display_text: Optional[str] = None
+    display_text: Optional[str] = None,
+    width: Optional[int] = None,
+    height: Optional[int] = None
 ) -> Optional[str]:
     """
     处理单个嵌入链接
@@ -559,7 +638,7 @@ def _process_single_embed(
     
     if file_type == 'image':
         embed_count['images'] += 1
-        return process_embedded_image(resolved_path, original_link, link_type, display_text)
+        return process_embedded_image(resolved_path, original_link, link_type, display_text, width=width, height=height)
     
     elif file_type == 'markdown':
         embed_count['markdown'] += 1
@@ -644,7 +723,21 @@ def resolve_file_path(
             logger.debug("相对路径文件不存在: %s", full_path)
             return None
     
-    # 3. 仅文件名：在search_dirs中搜索
+    # 3. 仅文件名：先搜索同名文件夹，再在search_dirs中搜索
+    
+    # 3.1 搜索同名文件夹（如 B.md 对应 B/ 文件夹）
+    # 获取源文件名（不含扩展名）
+    source_basename = os.path.splitext(os.path.basename(source_file_path))[0]
+    same_name_folder = os.path.join(source_dir, source_basename)
+    
+    if os.path.isdir(same_name_folder):
+        search_path = os.path.normpath(os.path.join(same_name_folder, link_target))
+        result = try_find_file(search_path)
+        if result:
+            logger.debug("在同名文件夹 '%s' 中找到文件: %s", source_basename, result)
+            return result
+    
+    # 3.2 在配置的search_dirs中搜索
     search_dirs = config_manager.get_search_dirs()
     logger.debug("搜索文件: %s（在目录: %s）", link_target, search_dirs)
     
@@ -686,7 +779,10 @@ def process_embedded_image(
     image_path: str,
     original_link: str,
     link_type: str = 'wiki',
-    display_text: Optional[str] = None
+    display_text: Optional[str] = None,
+    *,
+    width: Optional[int] = None,
+    height: Optional[int] = None
 ) -> str:
     """
     处理嵌入图片
@@ -712,7 +808,7 @@ def process_embedded_image(
     
     if mode == "embed":
         # 生成图片占位符（后续会被docx_processor替换为实际图片）
-        placeholder = f"{{{{IMAGE:{image_path}}}}}"
+        placeholder = _format_image_placeholder(image_path, width=width, height=height)
         logger.info("生成图片占位符: %s", placeholder)
         return placeholder
     
@@ -739,7 +835,7 @@ def process_embedded_image(
     else:
         # 未知模式，使用默认（embed）
         logger.warning("未知的图片嵌入模式: %s，使用默认embed", mode)
-        return f"{{{{IMAGE:{image_path}}}}}"
+        return _format_image_placeholder(image_path, width=width, height=height)
 
 
 def process_embedded_md_file(
@@ -909,12 +1005,12 @@ def _handle_section_not_found_error(filename: str, heading: str) -> str:
         return original
     
     elif mode == "placeholder":
-        placeholder = f"⚠️ 章节未找到: {filename}#{heading}"
+        placeholder = t('link_processing.section_not_found', filename=filename, heading=heading)
         logger.debug("章节未找到，插入占位符: %s", placeholder)
         return placeholder
     
     else:
-        return f"⚠️ 章节未找到: {filename}#{heading}"
+        return t('link_processing.section_not_found', filename=filename, heading=heading)
 
 
 def _handle_block_not_found_error(filename: str, block_id: str) -> str:
@@ -940,12 +1036,12 @@ def _handle_block_not_found_error(filename: str, block_id: str) -> str:
         return original
     
     elif mode == "placeholder":
-        placeholder = f"⚠️ 块未找到: {filename}#^{block_id}"
+        placeholder = t('link_processing.block_not_found', filename=filename, block_id=block_id)
         logger.debug("块未找到，插入占位符: %s", placeholder)
         return placeholder
     
     else:
-        return f"⚠️ 块未找到: {filename}#^{block_id}"
+        return t('link_processing.block_not_found', filename=filename, block_id=block_id)
 
 
 def _handle_not_found_error(filename: str) -> str:
@@ -972,15 +1068,14 @@ def _handle_not_found_error(filename: str) -> str:
         return original
     
     elif mode == "placeholder":
-        # 插入占位符
-        template = config_manager.get_file_not_found_text()
-        placeholder = template.format(filename=filename)
+        # 插入占位符（使用国际化）
+        placeholder = t('link_processing.file_not_found', filename=filename)
         logger.debug("文件未找到，插入占位符: %s", placeholder)
         return placeholder
     
     else:
         # 默认：占位符
-        return f"⚠️ 文件未找到: {filename}"
+        return t('link_processing.file_not_found', filename=filename)
 
 
 def _handle_circular_error(filename: str) -> str:
@@ -1007,15 +1102,14 @@ def _handle_circular_error(filename: str) -> str:
         return original
     
     elif mode == "placeholder":
-        # 插入占位符
-        template = config_manager.get_circular_text()
-        placeholder = template.format(filename=filename)
+        # 插入占位符（使用国际化）
+        placeholder = t('link_processing.circular_reference', filename=filename)
         logger.debug("循环引用，插入占位符: %s", placeholder)
         return placeholder
     
     else:
         # 默认：占位符
-        return f"⚠️ 检测到循环引用: {filename}"
+        return t('link_processing.circular_reference', filename=filename)
 
 
 def _handle_max_depth_error() -> str:
@@ -1032,11 +1126,11 @@ def _handle_max_depth_error() -> str:
         return ""
     
     elif mode == "placeholder":
-        # 插入占位符
-        text = config_manager.get_max_depth_text()
+        # 插入占位符（使用国际化）
+        text = t('link_processing.max_depth_reached')
         logger.debug("达到最大深度，插入占位符: %s", text)
         return text
     
     else:
         # 默认：占位符
-        return "⚠️ 达到最大嵌入深度"
+        return t('link_processing.max_depth_reached')

@@ -1,5 +1,5 @@
 """
-公文转换器路径处理工具模块
+路径处理工具模块
 
 本模块提供统一的路径处理功能，确保文件路径的安全性和一致性。
 主要功能包括：
@@ -552,64 +552,3 @@ class PathAdapter:
         compatible = old_norm == new_norm
         logger.debug(f"路径兼容性检查: {old_path} vs {new_path} -> {compatible}")
         return compatible
-
-# 模块测试代码
-if __name__ == "__main__":
-    # 配置日志
-    logging.basicConfig(level=logging.DEBUG)
-    logger.info("路径工具模块测试")
-    
-    # 测试目录创建
-    test_dir = "test_dir"
-    ensure_dir_exists(test_dir)
-    
-    # 测试项目根目录
-    root = get_project_root()
-    logger.info(f"项目根目录: {root}")
-    
-    # 测试路径标准化
-    test_path = "~/test"
-    norm_path = normalize_path(test_path)
-    logger.info(f"标准化路径: {test_path} -> {norm_path}")
-    
-    # 测试安全连接路径
-    try:
-        safe_path = safe_join_path(root, "configs", "test.toml")
-        logger.info(f"安全连接路径: {safe_path}")
-    except ValueError as e:
-        logger.error(f"安全连接失败: {str(e)}")
-    
-    # 测试扩展名验证
-    test_file = "document.txt"
-    validated = validate_extension(test_file, "docx")
-    logger.info(f"扩展名验证: {test_file} -> {validated}")
-    
-    # 测试临时目录
-    temp_dir = get_temp_dir()
-    logger.info(f"临时目录: {temp_dir}")
-    
-    # 测试输出路径生成
-    test_input = "/path/to/document.md"
-    test_output = generate_output_path(
-        test_input,
-        output_dir="/output",
-        section="",
-        add_timestamp=True,
-        description="fromMd",
-        file_type="docx"
-    )
-    logger.info(f"输出路径: {test_output}")
-    
-    # 测试路径拆分
-    dir_path, base, ext = split_path(test_output)
-    logger.info(f"路径拆分: dir={dir_path}, base={base}, ext={ext}")
-    
-    # 测试子路径检查
-    is_child = is_subpath("/path/to/file.txt", "/path/to")
-    logger.info(f"子路径检查: {is_child}")
-    
-    # 测试时间戳后缀
-    timestamp = generate_timestamp_suffix()
-    logger.info(f"时间戳后缀: {timestamp}")
-    
-    logger.info("所有测试完成!")

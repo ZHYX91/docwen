@@ -54,18 +54,26 @@ def generate_log_path() -> str:
     开发环境：项目根目录/logs/
     生产环境：软件根目录/logs/
     格式：<前缀>_<日期>.log（如docwen_20250910.log）
-    
-    参数:
-        config: 日志配置字典
         
     返回:
         str: 完整的日志文件路径
     """
-    # 检测开发环境（通过检查是否在 src 目录下运行）
     script_path = os.path.abspath(sys.argv[0])
-    if "src" in script_path and os.path.basename(os.path.dirname(script_path)) == "src":
-        # 开发环境：使用项目根目录
-        base_dir = os.path.dirname(os.path.dirname(script_path))
+    
+    # 检测开发环境：路径中包含 src 目录结构
+    if "src" in script_path:
+        # 向上查找项目根目录（包含 pyproject.toml 的目录）
+        current = os.path.dirname(script_path)
+        base_dir = None
+        while current and current != os.path.dirname(current):
+            if os.path.exists(os.path.join(current, "pyproject.toml")):
+                base_dir = current
+                break
+            current = os.path.dirname(current)
+        
+        # 如果未找到项目根目录，回退到脚本目录
+        if base_dir is None:
+            base_dir = os.path.dirname(script_path)
     else:
         # 生产环境：使用软件根目录
         base_dir = os.path.dirname(script_path)
@@ -271,27 +279,3 @@ def clean_old_logs() -> None:
                     
     except Exception as e:
         logging.error(f"日志清理失败: {str(e)}")
-
-# 模块测试代码
-if __name__ == "__main__":
-    
-    print("--- 预初始化测试 ---")
-    pre_init_logging()
-    logging.getLogger("test.module").info("这条消息应该通过预初始化日志显示")
-
-    print("\n--- 正式初始化测试 ---")
-    # 初始化日志系统
-    logger = init_logging_system()
-    
-    # 测试日志记录
-    logger.debug("调试信息")
-    logger.info("普通信息")
-    logger.warning("警告信息")
-    logger.error("错误信息")
-    logger.critical("严重错误")
-    
-    # 测试日志清理
-    logger.info("测试日志清理...")
-    clean_old_logs()
-    
-    logger.info("日志系统测试完成")

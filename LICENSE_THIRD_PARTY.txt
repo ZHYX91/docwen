@@ -14,105 +14,117 @@
    Copyright: RapidAI Team
    Website: https://github.com/RapidAI/RapidOCR
 
-3. ONNX Runtime
+3. PaddleOCR
+   License: Apache-2.0
+   Copyright: PaddlePaddle Authors
+   Website: https://github.com/PaddlePaddle/PaddleOCR
+   Note: 本项目使用的OCR模型（PP-OCRv3/v4）由PaddleOCR项目训练，
+         并通过RapidOCR转换为ONNX格式使用
+
+4. ONNX Runtime
    License: MIT
    Copyright: Microsoft Corporation
    Website: https://github.com/microsoft/onnxruntime
 
-4. python-docx
+5. python-docx
    License: MIT
    Copyright: Steve Canny
    Website: https://github.com/python-openxml/python-docx
 
-5. openpyxl
+6. openpyxl
    License: MIT
    Copyright: Eric Gazoni, Charlie Clark
    Website: https://openpyxl.readthedocs.io
 
-6. Pillow
+7. Pillow
    License: HPND (Historical Permission Notice and Disclaimer)
    Copyright: Jeffrey A. Clark (Alex) and contributors
    Website: https://github.com/python-pillow/Pillow
 
-7. ttkbootstrap
+8. ttkbootstrap
    License: MIT
    Copyright: Israel Dryer
    Website: https://github.com/israel-dryer/ttkbootstrap
 
-8. pandas
+9. pandas
    License: BSD-3-Clause
    Copyright: AQR Capital Management, LLC, Lambda Foundry, Inc. and PyData Development Team
    Website: https://github.com/pandas-dev/pandas
 
-9. NumPy
-   License: BSD-3-Clause
-   Copyright: NumPy Developers
-   Website: https://github.com/numpy/numpy
+10. NumPy
+    License: BSD-3-Clause
+    Copyright: NumPy Developers
+    Website: https://github.com/numpy/numpy
 
-10. lxml
+11. lxml
     License: BSD-3-Clause
     Copyright: Infrae, lxml dev team
     Website: https://github.com/lxml/lxml
 
-11. PyYAML
+12. PyYAML
     License: MIT
     Copyright: Kirill Simonov
     Website: https://github.com/yaml/pyyaml
 
-12. tomlkit
+13. tomlkit
     License: MIT
     Copyright: Sébastien Eustace
     Website: https://github.com/sdispater/tomlkit
 
-13. watchdog
+14. watchdog
     License: Apache-2.0
     Copyright: Yesudeep Mangalapilly and contributors
     Website: https://github.com/gorakhargosh/watchdog
 
-14. pywin32
+15. pywin32
     License: PSF (Python Software Foundation License)
     Copyright: Mark Hammond
     Website: https://github.com/mhammond/pywin32
 
-15. pdf2docx
+16. pdf2docx
     License: MIT
     Copyright: dothinking
     Website: https://github.com/dothinking/pdf2docx
 
-16. tkinterdnd2
+17. tkinterdnd2
     License: MIT
     Copyright: Petrus Zwart / Philippe Gagné
     Website: https://github.com/pmgagne/tkinterdnd2
 
-17. latex2mathml
+18. latex2mathml
     License: MIT
     Copyright: Ronie Martinez
     Website: https://github.com/roniemartinez/latex2mathml
 
-18. olefile
+19. olefile
     License: BSD-2-Clause
     Copyright: Philippe Lagadec
     Website: https://github.com/decalage2/olefile
 
-19. pymupdf4llm
+20. pymupdf4llm
     License: AGPL-3.0
     Copyright: Artifex Software, Inc.
     Website: https://github.com/pymupdf/pymupdf4llm
 
-20. easyofd
+21. easyofd
     License: MIT
     Copyright: guowanghuai
     Website: https://github.com/guowanghuai/easyofd
 
-21. pillow-heif
+22. pillow-heif
     License: BSD-3-Clause
     Copyright: Alexander Karpov
     Website: https://github.com/bigcat88/pillow_heif
 
-22. img2pdf
+23. img2pdf
     License: LGPL-3.0
     Copyright: Johannes Schauer Marin Rodrigues
     Website: https://gitlab.mister-muffin.de/josch/img2pdf
+
+24. emoji
+    License: BSD License
+    Copyright: Taehoon Kim (carpedm20)
+    Website: https://github.com/carpedm20/emoji
 
 ================================================================================
 
@@ -132,3 +144,5 @@
 - 本软件使用的PyMuPDF采用AGPL-3.0许可证，因此整个项目也采用AGPL-3.0许可证
 - 所有第三方组件的版权归其各自所有者所有
 - 使用本软件即表示您同意遵守上述所有许可证条款
+- 本软件可调用用户系统中已安装的 Microsoft Office、WPS Office 或
+  LibreOffice 进行格式转换，这些软件不包含在本项目中，用户需自行获取授权

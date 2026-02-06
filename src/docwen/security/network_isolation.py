@@ -249,16 +249,3 @@ def get_network_isolation_status():
     }
     
     return status
-
-if __name__ == "__main__":
-    # 测试模式
-    logging.basicConfig(level=logging.DEBUG)
-    print("测试网络隔离模块...")
-    
-    try:
-        initialize_network_isolation()
-        status = get_network_isolation_status()
-        print("网络隔离状态:", status)
-        print("✓ 网络隔离测试完成")
-    except Exception as e:
-        print(f"✗ 网络隔离测试失败: {e}")

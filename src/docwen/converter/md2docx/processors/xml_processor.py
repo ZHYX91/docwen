@@ -348,13 +348,3 @@ def global_text_replacement(docx_path, yaml_data):
         logger.error(f"全局文本替换失败: {str(e)}")
         return docx_path
 
-if __name__ == "__main__":
-    # 测试模式
-    import logging
-    logging.basicConfig(level=logging.DEBUG)
-    
-    print("XML处理器测试模式")
-    test_yaml = {"测试字段": "测试值"}
-    test_docx = "test.docx"
-    result_path = process_docx_file(test_docx, test_yaml)
-    print(f"处理完成，输出文件: {result_path}")

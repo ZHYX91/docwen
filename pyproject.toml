@@ -31,6 +31,7 @@ dependencies = [
     
     # 文档处理
     "python-docx>=1.2.0",
+    "emoji>=2.0.0",
     "openpyxl>=3.1.5",
     "lxml>=6.0.2",
     "latex2mathml>=3.77.0",
@@ -68,6 +69,14 @@ dev = [
     "Cython==3.1.6",
     "pyinstaller==6.16.0",
 ]
+test = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+]
+
+[project.scripts]
+docwen = "docwen.cli_run:main"
+docwen-gui = "docwen.gui_run:main"
 
 [tool.setuptools]
 packages = ["docwen"]
@@ -78,3 +87,27 @@ version = {attr = "docwen.__version__"}
 
 [tool.setuptools.package-data]
 docwen = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short --strict-markers -m \"not integration and not slow\""
+markers = [
+    "unit: 单元测试",
+    "integration: 集成测试（需要真实文件）",
+    "slow: 耗时测试",
+    "windows_only: 仅 Windows 环境",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["docwen"]
+omit = [
+    "*/tests/*",
+    "*/docwen/gui/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 15

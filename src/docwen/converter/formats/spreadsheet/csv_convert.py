@@ -188,17 +188,3 @@ def xlsx_to_csv(
     except Exception as e:
         logger.error(f"XLSX 转换为 CSV 失败: {e}", exc_info=True)
         raise
-
-
-# 模块测试代码
-if __name__ == "__main__":
-    # 配置日志
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    
-    logger.info("表格转换模块测试")
-    
-    # 这里可以添加测试代码
-    logger.info("测试完成")

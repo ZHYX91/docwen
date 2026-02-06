@@ -17,7 +17,6 @@
 - apply_formats_to_run(): 应用格式到Run
 - add_formatted_text_to_paragraph(): 添加格式化文本到段落
 - add_formatted_text_to_heading(): 添加格式化文本到标题
-- add_formatted_text_to_paragraph_with_breaks(): 支持换行的格式化文本
 
 依赖：
 - python-docx: Word文档操作
@@ -26,11 +25,100 @@
 
 import re
 import logging
+import emoji
 from docx.enum.text import WD_UNDERLINE, WD_COLOR_INDEX
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
 logger = logging.getLogger(__name__)
+
+# Emoji 字体名称（Windows 系统）
+EMOJI_FONT = "Segoe UI Emoji"
+
+
+def _split_text_by_emoji(text: str) -> list:
+    """
+    将文本按 emoji 和非 emoji 部分分离
+    
+    参数:
+        text: 待分离的文本
+    
+    返回:
+        list: 分离后的片段列表，每个元素为元组 (text, is_emoji)
+              例如: [("⚠️", True), (" 文件未找到", False)]
+    """
+    if not text:
+        return []
+    
+    result = []
+    last_end = 0
+    
+    for item in emoji.emoji_list(text):
+        start = item["match_start"]
+        end = item["match_end"]
+        emoji_char = item["emoji"]
+        if start > last_end:
+            result.append((text[last_end:start], False))
+        result.append((emoji_char, True))
+        last_end = end
+    
+    # 最后的非 emoji 部分
+    if last_end < len(text):
+        result.append((text[last_end:], False))
+    
+    # 如果没有 emoji，返回整个文本
+    if not result:
+        result.append((text, False))
+    
+    return result
+
+
+def _add_run_with_emoji_support(paragraph, text: str, base_fonts: dict = None):
+    """
+    添加支持 emoji 字体的 run 到段落
+    
+    将文本按 emoji 和非 emoji 分离，分别创建 run：
+    - emoji 部分：使用 Segoe UI Emoji 字体
+    - 非 emoji 部分：使用 base_fonts 或默认字体
+    
+    参数:
+        paragraph: Word 段落对象
+        text: 要添加的文本
+        base_fonts: 基础字体设置字典（可选，用于非 emoji 部分）
+    
+    返回:
+        list: 创建的 run 列表（用于后续格式应用）
+    """
+    from docwen.utils.docx_utils import apply_body_formatting
+    
+    runs = []
+    parts = _split_text_by_emoji(text)
+    
+    for part_text, is_emoji in parts:
+        if not part_text:
+            continue
+        
+        run = paragraph.add_run(part_text)
+        
+        if is_emoji:
+            # emoji 部分：设置 emoji 字体
+            run.font.name = EMOJI_FONT
+            # 确保 rPr 存在
+            rPr = run._element.get_or_add_rPr()
+            rFonts = rPr.get_or_add_rFonts()
+            rFonts.set(qn('w:ascii'), EMOJI_FONT)
+            rFonts.set(qn('w:hAnsi'), EMOJI_FONT)
+            rFonts.set(qn('w:eastAsia'), EMOJI_FONT)
+            rFonts.set(qn('w:cs'), EMOJI_FONT)
+            logger.debug(f"设置 emoji 字体: {EMOJI_FONT}")
+        else:
+            # 非 emoji 部分：应用基础字体（如果提供）
+            if base_fonts:
+                apply_body_formatting(run, base_fonts)
+        
+        runs.append((run, is_emoji))
+    
+    return runs
 
 
 # ==================================
@@ -392,9 +480,12 @@ def add_formatted_text_to_paragraph(paragraph, text: str, base_fonts: dict = Non
     """
     将带Markdown格式的文本添加到段落（用于正文）
     
+    支持 emoji 字符的正确显示（自动分离 emoji 并设置专用字体）
+    支持 <br> 标签转换为 Word 软回车
+    
     参数:
         paragraph: Word段落对象
-        text: 包含Markdown格式标记的文本
+        text: 包含Markdown格式标记的文本（支持 <br> 换行）
         base_fonts: 基础字体设置字典（可选）
         mode: 格式处理模式 ("apply", "keep", "remove")
         doc: Word Document对象（用于获取字符样式，可选）
@@ -409,45 +500,94 @@ def add_formatted_text_to_paragraph(paragraph, text: str, base_fonts: dict = Non
     # 解析格式
     segments = parse_markdown_formatting(text, mode)
     
+    br_pattern = re.compile(r'<br\s*/?>', re.IGNORECASE)
+
+    emitted_any = False
+    run_count = 0
+
+    def add_soft_break():
+        run = paragraph.add_run()
+        br = OxmlElement('w:br')
+        run._r.append(br)
+
+    def add_text_with_formats(seg_text: str, seg_formats: list):
+        nonlocal emitted_any, run_count
+        if not seg_text:
+            return
+
+        emoji_parts = _split_text_by_emoji(seg_text)
+        for part_text, is_emoji in emoji_parts:
+            if not part_text:
+                continue
+
+            run = paragraph.add_run(part_text)
+            run_count += 1
+            emitted_any = True
+
+            if seg_formats and (not is_emoji or 'code' not in seg_formats):
+                apply_formats_to_run(
+                    run,
+                    seg_formats,
+                    doc=doc,
+                    code_font=code_font,
+                    code_bg_color=code_bg_color,
+                    override_style=False
+                )
+
+            if is_emoji:
+                run.font.name = EMOJI_FONT
+                rPr = run._element.get_or_add_rPr()
+                rFonts = rPr.get_or_add_rFonts()
+                rFonts.set(qn('w:ascii'), EMOJI_FONT)
+                rFonts.set(qn('w:hAnsi'), EMOJI_FONT)
+                rFonts.set(qn('w:eastAsia'), EMOJI_FONT)
+                rFonts.set(qn('w:cs'), EMOJI_FONT)
+                logger.debug(f"设置 emoji 字体: {part_text}")
+            else:
+                if base_fonts and 'code' not in seg_formats:
+                    merged_fonts = base_fonts.copy()
+                    if 'bold' in seg_formats or 'bold_italic' in seg_formats:
+                        merged_fonts['b'] = True
+                    if 'italic' in seg_formats or 'bold_italic' in seg_formats:
+                        merged_fonts['i'] = True
+                    if 'underline' in seg_formats:
+                        merged_fonts['u'] = 'single'
+                    if 'strikethrough' in seg_formats:
+                        merged_fonts['strike'] = True
+                    apply_body_formatting(run, merged_fonts)
+
     for segment in segments:
         seg_text = segment['text']
         seg_formats = segment['formats']
-        
+
         if not seg_text:
             continue
-        
-        # 创建Run
-        run = paragraph.add_run(seg_text)
-        
-        # 应用Markdown格式（正文不覆盖样式）
-        # 注意：先应用Markdown格式，再决定是否应用基础字体
-        if seg_formats:
-            apply_formats_to_run(run, seg_formats, doc=doc, code_font=code_font, code_bg_color=code_bg_color, override_style=False)
-        
-        # 应用基础格式（如果提供，且不是代码样式）
-        # 代码样式有自己的字体定义，不应被基础字体覆盖
-        if base_fonts and 'code' not in seg_formats:
-            # 创建 base_fonts 副本，合并 Markdown 格式，避免被覆盖
-            merged_fonts = base_fonts.copy()
-            
-            # 保留 Markdown 标记的格式
-            if 'bold' in seg_formats or 'bold_italic' in seg_formats:
-                merged_fonts['b'] = True
-            if 'italic' in seg_formats or 'bold_italic' in seg_formats:
-                merged_fonts['i'] = True
-            if 'underline' in seg_formats:
-                merged_fonts['u'] = 'single'
-            if 'strikethrough' in seg_formats:
-                merged_fonts['strike'] = True
-            
-            apply_body_formatting(run, merged_fonts)
+
+        if 'code' in seg_formats:
+            add_text_with_formats(seg_text, seg_formats)
+            continue
+
+        last_end = 0
+        for match in br_pattern.finditer(seg_text):
+            before = seg_text[last_end:match.start()]
+            if before:
+                add_text_with_formats(before, seg_formats)
+            if emitted_any:
+                add_soft_break()
+            last_end = match.end()
+
+        remaining = seg_text[last_end:]
+        if remaining:
+            add_text_with_formats(remaining, seg_formats)
     
-    logger.debug(f"添加格式化文本到段落: {len(segments)} 个片段")
+    logger.debug(f"添加格式化文本到段落: {len(segments)} 个片段, {run_count} 个 run")
 
 
 def add_formatted_text_to_heading(paragraph, text: str, mode: str = "apply", doc=None):
     """
     将带Markdown格式的文本添加到标题段落（专用于小标题）
+    
+    支持 <br> 标签转换为 Word 软回车
     
     与 add_formatted_text_to_paragraph 的区别：
     - 不应用正文字体格式
@@ -456,7 +596,7 @@ def add_formatted_text_to_heading(paragraph, text: str, mode: str = "apply", doc
     
     参数:
         paragraph: Word段落对象（已应用标题样式）
-        text: 包含Markdown格式标记的文本
+        text: 包含Markdown格式标记的文本（支持 <br> 换行）
         mode: 格式处理模式
             - "apply": 应用格式，覆盖样式默认格式（实现部分加粗）
             - "keep": 保留标记原样
@@ -477,98 +617,65 @@ def add_formatted_text_to_heading(paragraph, text: str, mode: str = "apply", doc
     has_any_format = any(seg['formats'] for seg in segments)
     override_style = (mode == "apply" and has_any_format)
     
+    br_pattern = re.compile(r'<br\s*/?>', re.IGNORECASE)
+    emitted_any = False
+
+    def add_soft_break():
+        run = paragraph.add_run()
+        br = OxmlElement('w:br')
+        run._r.append(br)
+
+    def add_text_with_formats(seg_text: str, seg_formats: list):
+        nonlocal emitted_any
+        if not seg_text:
+            return
+        emoji_parts = _split_text_by_emoji(seg_text)
+        for part_text, is_emoji in emoji_parts:
+            if not part_text:
+                continue
+            run = paragraph.add_run(part_text)
+            emitted_any = True
+            apply_formats_to_run(
+                run,
+                seg_formats,
+                doc=doc,
+                code_font=code_font,
+                code_bg_color=code_bg_color,
+                override_style=override_style
+            )
+            if is_emoji:
+                run.font.name = EMOJI_FONT
+                rPr = run._element.get_or_add_rPr()
+                rFonts = rPr.get_or_add_rFonts()
+                rFonts.set(qn('w:ascii'), EMOJI_FONT)
+                rFonts.set(qn('w:hAnsi'), EMOJI_FONT)
+                rFonts.set(qn('w:eastAsia'), EMOJI_FONT)
+                rFonts.set(qn('w:cs'), EMOJI_FONT)
+
     for segment in segments:
         seg_text = segment['text']
         seg_formats = segment['formats']
         
         if not seg_text:
             continue
-        
-        # 创建Run
-        run = paragraph.add_run(seg_text)
-        
-        # 应用Markdown格式（标题支持覆盖样式）
-        apply_formats_to_run(run, seg_formats, doc=doc, code_font=code_font, code_bg_color=code_bg_color, override_style=override_style)
+
+        if 'code' in seg_formats:
+            add_text_with_formats(seg_text, seg_formats)
+            continue
+
+        last_end = 0
+        for match in br_pattern.finditer(seg_text):
+            before = seg_text[last_end:match.start()]
+            if before:
+                add_text_with_formats(before, seg_formats)
+            if emitted_any:
+                add_soft_break()
+            last_end = match.end()
+
+        remaining = seg_text[last_end:]
+        if remaining:
+            add_text_with_formats(remaining, seg_formats)
     
     logger.debug(f"添加格式化文本到标题: {len(segments)} 个片段, override_style={override_style}")
 
 
-def add_formatted_text_to_paragraph_with_breaks(paragraph, text: str, base_fonts: dict = None, mode: str = "apply", doc=None):
-    """
-    将带Markdown格式的文本添加到段落，支持 <br> 换行标签
-    
-    参数:
-        paragraph: Word段落对象
-        text: 包含Markdown格式标记和换行标签的文本
-        base_fonts: 基础字体设置字典（可选）
-        mode: 格式处理模式 ("apply", "keep", "remove")
-        doc: Word Document对象（用于获取字符样式，可选）
-    
-    说明:
-        支持的换行标签格式：<br>, <br/>, <br />
-        换行会被转换为Word软回车（行内换行）
-    """
-    from docwen.utils.docx_utils import apply_body_formatting
-    from docwen.config.config_manager import config_manager
-    
-    # 获取代码配置
-    code_font = config_manager.get_code_font()
-    code_bg_color = config_manager.get_code_background_color()
-    
-    # 按 <br> 标签分割文本
-    # 匹配 <br>, <br/>, <br /> 等变体
-    br_pattern = re.compile(r'<br\s*/?>', re.IGNORECASE)
-    parts = br_pattern.split(text)
-    
-    for part_idx, part in enumerate(parts):
-        if not part:
-            # 空部分，只需要添加换行（如果不是第一部分）
-            if part_idx > 0:
-                # 添加软回车
-                run = paragraph.add_run()
-                br = OxmlElement('w:br')
-                run._r.append(br)
-            continue
-        
-        # 解析格式
-        segments = parse_markdown_formatting(part, mode)
-        
-        for segment in segments:
-            seg_text = segment['text']
-            seg_formats = segment['formats']
-            
-            if not seg_text:
-                continue
-            
-            # 创建Run
-            run = paragraph.add_run(seg_text)
-            
-            # 应用Markdown格式
-            if seg_formats:
-                apply_formats_to_run(run, seg_formats, doc=doc, code_font=code_font, code_bg_color=code_bg_color)
-            
-            # 应用基础格式（如果提供，且不是代码样式）
-            # 代码样式有自己的字体定义，不应被基础字体覆盖
-            if base_fonts and 'code' not in seg_formats:
-                # 创建 base_fonts 副本，合并 Markdown 格式，避免被覆盖
-                merged_fonts = base_fonts.copy()
-                
-                # 保留 Markdown 标记的格式
-                if 'bold' in seg_formats or 'bold_italic' in seg_formats:
-                    merged_fonts['b'] = True
-                if 'italic' in seg_formats or 'bold_italic' in seg_formats:
-                    merged_fonts['i'] = True
-                if 'underline' in seg_formats:
-                    merged_fonts['u'] = 'single'
-                if 'strikethrough' in seg_formats:
-                    merged_fonts['strike'] = True
-                
-                apply_body_formatting(run, merged_fonts)
-        
-        # 在非最后一个部分后添加换行
-        if part_idx < len(parts) - 1:
-            run = paragraph.add_run()
-            br = OxmlElement('w:br')
-            run._r.append(br)
-    
-    logger.debug(f"添加格式化文本到段落（含换行）: {len(parts)} 个部分")

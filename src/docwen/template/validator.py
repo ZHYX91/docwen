@@ -139,38 +139,3 @@ class TemplateValidator:
                 if ph in missing:
                     missing.remove(ph)
                 logger.debug(f"找到占位符: {placeholder}")
-
-# 测试代码
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    logger.info("模板验证器测试")
-    
-    try:
-        # 创建加载器和验证器
-        loader = TemplateLoader()
-        validator = TemplateValidator(loader)
-        
-        # 获取测试模板路径
-        docx_path = loader.get_template_path("docx")
-        xlsx_path = loader.get_template_path("xlsx")
-        
-        # 测试DOCX验证
-        is_valid_docx, missing_docx, report_docx = validator.validate_template(
-            docx_path,
-            ["标题", "正文", "发文机关署名"]
-        )
-        print(f"DOCX验证结果: {'通过' if is_valid_docx else '失败'}")
-        if missing_docx:
-            print(f"缺失占位符: {missing_docx}")
-        
-        # 测试Excel验证
-        is_valid_xlsx, missing_xlsx, report_xlsx = validator.validate_template(
-            xlsx_path,
-            ["项目名称", "负责人", "预算金额"]
-        )
-        print(f"Excel验证结果: {'通过' if is_valid_xlsx else '失败'}")
-        if missing_xlsx:
-            print(f"缺失占位符: {missing_xlsx}")
-        
-    except Exception as e:
-        logger.error(f"测试失败: {str(e)}")

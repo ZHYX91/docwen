@@ -1,5 +1,5 @@
 # ==============================================================================
-# 公文校对配置 - 主配置文件
+# 校对配置 - 主配置文件
 # 集中管理所有校对功能的开关和跳过规则
 # ==============================================================================
 
@@ -10,6 +10,8 @@ enable_symbol_pairing = true    # 是否启用标点配对检查
 enable_symbol_correction = true # 是否启用符号校对
 enable_sensitive_word = true    # 是否启用敏感词匹配
 
-# 跳过规则
-skip_code_blocks = true         # 跳过代码块段落（根据样式或灰色底纹识别）
-skip_quote_blocks = false       # 跳过引用段落（根据引用样式识别）
+[skip]
+code_blocks = true           # 跳过代码块段落（根据样式或灰色底纹识别）
+quote_blocks = false         # 跳过引用段落（根据引用样式识别）
+skip_rebuild_on_non_text = true # 段落含非文本内容（图片/公式/OLE）时跳过重建，改用降级批注
+log_skipped = true           # 记录跳过/降级处理的段落到日志

@@ -358,7 +358,24 @@ def ensure_styles(template_path, progress_callback=None, cleanup_callback=None):
     localized_configs = get_localized_style_configs(style_resolver)
     logger.debug(f"已获取国际化样式配置，当前语言: {style_resolver.i18n.get_current_locale()}")
     
-    # ==== 1. 检查并注入标题样式（Heading 1-9，段落样式）====
+    # ==== 1. 检查并注入正文段落样式（Body Paragraph，段落样式）====
+    # 正文段落样式使用国际化名称和语言相关格式
+    body_paragraph_config = localized_configs.get('body_paragraph')
+    if body_paragraph_config:
+        target_name, style_type, default_style_id, style_template = body_paragraph_config
+        adjusted_template = _replace_base_style_refs(style_template, base_ids)
+        injected, _, conflict = _inject_style_if_needed(
+            root, existing_styles, existing_ids,
+            target_name, style_type, default_style_id, adjusted_template,
+            progress_callback
+        )
+        if injected:
+            injected_count += 1
+            logger.info(f"注入正文段落样式: {target_name}")
+        if conflict:
+            conflict_count += 1
+
+    # ==== 2. 检查并注入标题样式（Heading 1-9，段落样式）====
     # 标题样式使用 Word 内置名称，不国际化
     # 现在使用语言相关的格式配置动态生成模板
     heading_configs = localized_configs.get('heading', {})
@@ -394,25 +411,6 @@ def ensure_styles(template_path, progress_callback=None, cleanup_callback=None):
                 if conflict:
                     conflict_count += 1
     
-    # ==== 2. 检查并注入引用样式（Quote 1-9，段落样式）====
-    # 引用样式使用国际化名称
-    quote_configs = localized_configs.get('quote', {})
-    for level in range(1, 10):
-        config = quote_configs.get(level)
-        if config:
-            target_name, style_type, default_style_id, style_template = config
-            adjusted_template = _replace_base_style_refs(style_template, base_ids)
-            injected, _, conflict = _inject_style_if_needed(
-                root, existing_styles, existing_ids,
-                target_name, style_type, default_style_id, adjusted_template,
-                progress_callback
-            )
-            if injected:
-                injected_count += 1
-                logger.debug(f"注入引用样式: {target_name}")
-            if conflict:
-                conflict_count += 1
-    
     # ==== 3. 检查并注入代码样式 ====
     # 代码样式使用国际化名称
     code_configs = localized_configs.get('code', [])
@@ -428,10 +426,11 @@ def ensure_styles(template_path, progress_callback=None, cleanup_callback=None):
             logger.debug(f"注入代码样式: {name}")
         if conflict:
             conflict_count += 1
-    
-    # ==== 4. 检查并注入脚注/尾注样式 ====
-    # 脚注/尾注样式使用 Word 内置名称，不国际化
-    for name, style_type, style_id, template in NOTE_STYLE_CONFIGS:
+
+    # ==== 4. 检查并注入公式样式 ====
+    # 公式样式使用国际化名称
+    formula_configs = localized_configs.get('formula', [])
+    for name, style_type, style_id, template in formula_configs:
         adjusted_template = _replace_base_style_refs(template, base_ids)
         injected, _, conflict = _inject_style_if_needed(
             root, existing_styles, existing_ids,
@@ -440,6 +439,7 @@ def ensure_styles(template_path, progress_callback=None, cleanup_callback=None):
         )
         if injected:
             injected_count += 1
+            logger.debug(f"注入公式样式: {name}")
         if conflict:
             conflict_count += 1
     
@@ -460,23 +460,7 @@ def ensure_styles(template_path, progress_callback=None, cleanup_callback=None):
         if conflict:
             conflict_count += 1
     
-    # ==== 6. 检查并注入公式样式 ====
-    # 公式样式使用国际化名称
-    formula_configs = localized_configs.get('formula', [])
-    for name, style_type, style_id, template in formula_configs:
-        adjusted_template = _replace_base_style_refs(template, base_ids)
-        injected, _, conflict = _inject_style_if_needed(
-            root, existing_styles, existing_ids,
-            name, style_type, style_id, adjusted_template,
-            progress_callback
-        )
-        if injected:
-            injected_count += 1
-            logger.debug(f"注入公式样式: {name}")
-        if conflict:
-            conflict_count += 1
-    
-    # ==== 7. 检查并注入分隔线样式 ====
+    # ==== 6. 检查并注入分隔线样式 ====
     # 分隔线样式使用国际化名称
     hr_configs = localized_configs.get('horizontal_rule', [])
     for name, style_type, style_id, template in hr_configs:
@@ -491,25 +475,8 @@ def ensure_styles(template_path, progress_callback=None, cleanup_callback=None):
             logger.info(f"注入分隔线样式: {name}")
         if conflict:
             conflict_count += 1
-    
-    # ==== 8. 检查并注入正文段落样式（Body Paragraph，段落样式）====
-    # 正文段落样式使用国际化名称和语言相关格式
-    body_paragraph_config = localized_configs.get('body_paragraph')
-    if body_paragraph_config:
-        target_name, style_type, default_style_id, style_template = body_paragraph_config
-        adjusted_template = _replace_base_style_refs(style_template, base_ids)
-        injected, _, conflict = _inject_style_if_needed(
-            root, existing_styles, existing_ids,
-            target_name, style_type, default_style_id, adjusted_template,
-            progress_callback
-        )
-        if injected:
-            injected_count += 1
-            logger.info(f"注入正文段落样式: {target_name}")
-        if conflict:
-            conflict_count += 1
-    
-    # ==== 9. 检查并注入表格样式 ====
+
+    # ==== 7. 检查并注入表格样式 ====
     # 表格样式使用国际化名称
     table_configs = localized_configs.get('table', [])
     for name, style_type, style_id, template in table_configs:
@@ -524,23 +491,56 @@ def ensure_styles(template_path, progress_callback=None, cleanup_callback=None):
             logger.info(f"注入表格样式: {name}")
         if conflict:
             conflict_count += 1
-    
-    # ==== 10. 检查并注入网格表样式（根据配置决定是否需要） ====
-    # 网格表作为备用表格样式，始终注入
-    table_grid_name = style_resolver.get_injection_name("table_grid")
-    from .templates import get_localized_table_grid_template
-    table_grid_template = get_localized_table_grid_template(table_grid_name)
-    adjusted_template = _replace_base_style_refs(table_grid_template, base_ids)
-    injected, _, conflict = _inject_style_if_needed(
-        root, existing_styles, existing_ids,
-        table_grid_name, 'table', 'TableGrid', adjusted_template,
-        progress_callback
-    )
-    if injected:
-        injected_count += 1
-        logger.info(f"注入网格表样式: {table_grid_name}")
-    if conflict:
-        conflict_count += 1
+
+    # ==== 8. 检查并注入图片段落样式 ====
+    # 图片段落样式使用国际化名称
+    image_paragraph_config = localized_configs.get('image_paragraph')
+    if image_paragraph_config:
+        target_name, style_type, default_style_id, style_template = image_paragraph_config
+        adjusted_template = _replace_base_style_refs(style_template, base_ids)
+        injected, _, conflict = _inject_style_if_needed(
+            root, existing_styles, existing_ids,
+            target_name, style_type, default_style_id, adjusted_template,
+            progress_callback
+        )
+        if injected:
+            injected_count += 1
+            logger.info(f"注入图片段落样式: {target_name}")
+        if conflict:
+            conflict_count += 1
+
+    # ==== 9. 检查并注入引用样式（Quote 1-9，段落样式）====
+    # 引用样式使用国际化名称
+    quote_configs = localized_configs.get('quote', {})
+    for level in range(1, 10):
+        config = quote_configs.get(level)
+        if config:
+            target_name, style_type, default_style_id, style_template = config
+            adjusted_template = _replace_base_style_refs(style_template, base_ids)
+            injected, _, conflict = _inject_style_if_needed(
+                root, existing_styles, existing_ids,
+                target_name, style_type, default_style_id, adjusted_template,
+                progress_callback
+            )
+            if injected:
+                injected_count += 1
+                logger.debug(f"注入引用样式: {target_name}")
+            if conflict:
+                conflict_count += 1
+
+    # ==== 10. 检查并注入脚注/尾注样式 ====
+    # 脚注/尾注样式使用 Word 内置名称，不国际化
+    for name, style_type, style_id, template in NOTE_STYLE_CONFIGS:
+        adjusted_template = _replace_base_style_refs(template, base_ids)
+        injected, _, conflict = _inject_style_if_needed(
+            root, existing_styles, existing_ids,
+            name, style_type, style_id, adjusted_template,
+            progress_callback
+        )
+        if injected:
+            injected_count += 1
+        if conflict:
+            conflict_count += 1
     
     # 如果没有注入任何样式，直接返回原路径
     if injected_count == 0:

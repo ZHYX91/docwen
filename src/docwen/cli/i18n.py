@@ -97,7 +97,7 @@ def cli_t(key: str, default: Optional[str] = None, **kwargs) -> str:
         str: 翻译后的文本
         
     示例：
-        cli_t("cli.header")  # 返回 "公文转换器 - 交互模式"
+        cli_t("cli.header")  # 返回 "DocWen - 交互模式"
         cli_t("cli.messages.files_found", count=5)  # 返回 "找到 5 个文件"
     """
     try:

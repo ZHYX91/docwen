@@ -1,4 +1,4 @@
-﻿"""
+"""
 设置选项卡基类模块
 
 本模块提供所有设置选项卡的抽象基类，实现了以下功能：
@@ -28,10 +28,12 @@
             return True
 """
 
+from __future__ import annotations
+
 import logging
 import tkinter as tk
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Callable, List, Optional
+from typing import Dict, Any, Callable, List, Optional, cast
 
 import ttkbootstrap as tb
 from ttkbootstrap.constants import *
@@ -115,9 +117,9 @@ class BaseSettingsTab(tb.Frame, ABC):
         logger.debug(f"{self.__class__.__name__}: 已加载布局配置和字体设置")
         
         # 初始化UI组件引用（稍后创建）
-        self.scrollable_frame: Optional[tb.Frame] = None
-        self.canvas: Optional[tb.Canvas] = None
-        self.scrollbar: Optional[tb.Scrollbar] = None
+        self.scrollable_frame: tb.Frame = cast(tb.Frame, None)
+        self.canvas: tb.Canvas = cast(tb.Canvas, None)
+        self.scrollbar: tb.Scrollbar = cast(tb.Scrollbar, None)
         
         # 执行初始化流程（模板方法）
         self._initialize()
@@ -282,7 +284,7 @@ class BaseSettingsTab(tb.Frame, ABC):
         
         logger.debug(f"{self.__class__.__name__}: 滚动容器创建完成（已启用鼠标滚轮支持）")
     
-    def _bind_mousewheel_recursive(self, widget: tk.Widget) -> None:
+    def _bind_mousewheel_recursive(self, widget: tk.Misc) -> None:
         """
         递归绑定鼠标滚轮事件到所有子组件
         
@@ -712,13 +714,15 @@ class BaseSettingsTab(tb.Frame, ABC):
         logger.debug(f"创建软件卡片: {display_name} (选中: {is_selected})")
         
         # 获取主题颜色
+        colors = cast(Any, None)
         try:
-            style = tb.Style.get_instance()
-            parent_bg = style.colors.bg
+            style = cast(Any, tb.Style.get_instance() or tb.Style())
+            colors = cast(Any, style.colors)
+            parent_bg = colors.bg
             
             # 获取软件对应的语义色作为边框颜色
             bootstyle = SOFTWARE_COLORS.get(software_id, "secondary")
-            software_color = getattr(style.colors, bootstyle, style.colors.secondary)
+            software_color = getattr(colors, bootstyle, colors.secondary)
             
             # 边框颜色使用软件对应的颜色，选中时加粗
             border_color = software_color
@@ -760,19 +764,20 @@ class BaseSettingsTab(tb.Frame, ABC):
                     command=lambda: on_move('left')
                 )
                 try:
-                    primary_color = style.colors.primary
-                    left_btn.configure(
-                        bg=primary_color,
-                        fg="white",
-                        activebackground=primary_color,
-                        activeforeground="white",
-                        relief=tk.FLAT,
-                        borderwidth=0,
-                        padx=scale(0),
-                        pady=scale(6),
-                        cursor="hand2",
-                        font=(self.small_font, self.small_size)
-                    )
+                    if colors is not None:
+                        primary_color = colors.primary
+                        left_btn.configure(
+                            bg=primary_color,
+                            fg="white",
+                            activebackground=primary_color,
+                            activeforeground="white",
+                            relief=tk.FLAT,
+                            borderwidth=0,
+                            padx=scale(0),
+                            pady=scale(6),
+                            cursor="hand2",
+                            font=(self.small_font, self.small_size)
+                        )
                 except Exception:
                     pass
                 left_btn.pack(side="left")
@@ -799,19 +804,20 @@ class BaseSettingsTab(tb.Frame, ABC):
                     command=lambda: on_move('right')
                 )
                 try:
-                    primary_color = style.colors.primary
-                    right_btn.configure(
-                        bg=primary_color,
-                        fg="white",
-                        activebackground=primary_color,
-                        activeforeground="white",
-                        relief=tk.FLAT,
-                        borderwidth=0,
-                        padx=scale(0),
-                        pady=scale(6),
-                        cursor="hand2",
-                        font=(self.small_font, self.small_size)
-                    )
+                    if colors is not None:
+                        primary_color = colors.primary
+                        right_btn.configure(
+                            bg=primary_color,
+                            fg="white",
+                            activebackground=primary_color,
+                            activeforeground="white",
+                            relief=tk.FLAT,
+                            borderwidth=0,
+                            padx=scale(0),
+                            pady=scale(6),
+                            cursor="hand2",
+                            font=(self.small_font, self.small_size)
+                        )
                 except Exception:
                     pass
                 right_btn.pack(side="left")

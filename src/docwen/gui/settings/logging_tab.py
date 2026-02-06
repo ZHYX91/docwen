@@ -12,6 +12,8 @@
 支持中英文界面切换。
 """
 
+from __future__ import annotations
+
 import logging
 import tkinter as tk
 from typing import Dict, Any, Callable
@@ -34,7 +36,7 @@ class LoggingTab(BaseSettingsTab):
     包含日志系统、文件输出和控制台输出三个主要区域。
     """
     
-    def __init__(self, parent, config_manager: any, on_change: Callable[[str, Any], None]):
+    def __init__(self, parent, config_manager: Any, on_change: Callable[[str, Any], None]):
         """
         初始化日志设置选项卡
         

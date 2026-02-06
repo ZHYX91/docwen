@@ -210,7 +210,6 @@ class BaseMdToDocumentStrategy(BaseStrategy):
                 md_path,
                 temp_output,
                 template_name=template_name,
-                spell_check_option=0,
                 progress_callback=progress_callback,
                 cancel_event=cancel_event,
                 original_source_path=original_md_path,
@@ -247,9 +246,15 @@ class BaseMdToDocumentStrategy(BaseStrategy):
         返回:
             (处理后的docx路径, 是否尝试了检查)
         """
-        # 检查是否需要校对
-        has_spell_check = proofread_options and any(proofread_options.values())
-        if not has_spell_check:
+        should_run_spell_check = False
+        if proofread_options is None:
+            should_run_spell_check = True
+        else:
+            if not isinstance(proofread_options, dict):
+                raise TypeError("proofread_options 必须是 dict 或 None")
+            should_run_spell_check = any(bool(v) for v in proofread_options.values())
+
+        if not should_run_spell_check:
             return docx_path, False
         try:
             if progress_callback: 

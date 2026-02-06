@@ -13,10 +13,12 @@
 支持中英文界面切换。
 """
 
+from __future__ import annotations
+
 import logging
 import re
 import tkinter as tk
-from typing import Dict, List, Optional, Callable, Any
+from typing import Dict, List, Optional, Callable, Any, cast
 from dataclasses import dataclass, field
 
 import ttkbootstrap as tb
@@ -458,7 +460,7 @@ class NumberingPatternsEditorDialog(BaseEditorDialog):
             self.test_status_label.configure(text="")
         
         # 如果有示例，加载第一个
-        if item.examples:
+        if item.examples and self.test_input_var:
             self.test_input_var.set(item.examples[0])
             self._run_regex_test()
     
@@ -615,22 +617,24 @@ class NumberingPatternsEditorDialog(BaseEditorDialog):
             if doc is None:
                 from tomlkit import document
                 doc = document()
+
+            doc_any = cast(Any, doc)
             
             # 更新设置 - order
-            if "settings" not in doc:
-                doc.add("settings", table())
+            if "settings" not in doc_any:
+                doc_any.add("settings", table())
             
             order_array = array()
             for rule_id in self.item_order:
                 order_array.append(rule_id)
             order_array.multiline(True)  # 保持多行格式
-            doc["settings"]["order"] = order_array
+            doc_any["settings"]["order"] = order_array
             
             # 更新规则
-            if "rules" not in doc:
-                doc.add("rules", table())
+            if "rules" not in doc_any:
+                doc_any.add("rules", table())
             
-            rules_table = doc["rules"]
+            rules_table = cast(Any, doc_any["rules"])
             
             # 删除不再存在的规则（保护系统规则）
             existing_rule_ids = list(rules_table.keys())
@@ -674,7 +678,7 @@ class NumberingPatternsEditorDialog(BaseEditorDialog):
                     rule_table["examples"] = examples_array
             
             # 写入文件
-            success = write_toml_document(str(self.config_file_path), doc)
+            success = write_toml_document(str(self.config_file_path), doc_any)
             
             if success:
                 # 重新加载配置

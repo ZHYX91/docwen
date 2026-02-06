@@ -1,6 +1,6 @@
 """
 事件处理模块
-处理公文转换器的核心业务逻辑
+处理核心业务逻辑
 """
 
 import logging
@@ -17,7 +17,7 @@ class MainWindowEventHandler:
     处理所有用户交互事件，与界面逻辑分离
     """
     
-    def __init__(self, main_window, config_manager: any):
+    def __init__(self, main_window, config_manager: Any):
         """
         初始化事件处理器
         

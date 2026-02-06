@@ -1,18 +1,36 @@
-# Document Converter - English (US) Language File
+# DocWen - English (US) Language File
 # Locale Code: en_US
 # Encoding: UTF-8
 
 [meta]
 name = "English (US)"
 native_name = "English (US)"
+template_name = "English General Template"
+
+# =============================================================================
+# Common Text
+# =============================================================================
+[common]
+app_name = "DocWen"
+offline_version = " (Offline Version)"
+close = "Close"
+apply = "Apply"
+cancel = "Cancel"
+ok = "OK"
+save = "Save"
+error = "Error"
+version = "Version {version}"
+browse = "Browse..."
+select = "Select"
+disclaimer = "Beta version. Accuracy not guaranteed.\nAGPL-3.0 Open Source."
 
 # =============================================================================
 # CLI Command Line Interface
 # =============================================================================
 [cli]
-description = "Document Converter CLI - Supports document/spreadsheet/image/layout file conversion"
+description = "DocWen CLI - Supports document/spreadsheet/image/layout file conversion"
 example = "Example"
-header = "Document Converter - Interactive Mode"
+header = "DocWen - Interactive Mode"
 
 # CLI Help Text
 [cli.help]
@@ -27,6 +45,7 @@ check_punct = "Check punctuation pairing"
 check_typo = "Check typos"
 check_symbol = "Check symbols"
 check_sensitive = "Check flagged terms"
+check_none = "Skip proofreading (disable all checks)"
 merge_mode = "Merge mode: row/col/cell"
 base_table = "Base table file path"
 pages = "PDF split page range (e.g., 1-3,5,7-10)"
@@ -73,7 +92,7 @@ ai_options_desc = "AI self-describe and query"
 
 # CLI Interactive Mode
 [cli.interactive]
-header = "Document Converter - Interactive Mode"
+header = "DocWen - Interactive Mode"
 select_operation = "Select operation"
 select_format = "Select output format"
 select_target_format = "Select target format"
@@ -290,23 +309,6 @@ gongwen_standard = "Official Document Standard"
 hierarchical_standard = "Hierarchical Number Standard"
 hierarchical_h2_start = "Hierarchical (H2 Start)"
 legal_standard = "Legal Standard"
-
-# =============================================================================
-# Common Text
-# =============================================================================
-[common]
-app_name = "DocWen"
-offline_version = " (Offline Version)"
-close = "Close"
-apply = "Apply"
-cancel = "Cancel"
-ok = "OK"
-save = "Save"
-error = "Error"
-version = "Version {version}"
-browse = "Browse..."
-select = "Select"
-disclaimer = "Testing software. Accuracy not guaranteed.\nFor educational use only. No commercial use or distribution."
 
 # =============================================================================
 # Settings Dialog
@@ -832,6 +834,7 @@ pymupdf4llm = "For intelligent PDF extraction and conversion to Markdown format"
 pdf2docx = "For converting PDF documents to editable Word format"
 easyofd = "For reading and converting Chinese OFD format documents"
 rapidocr = "For OCR text recognition in images and PDFs, supports offline use"
+paddleocr = "Source of OCR models, PP-OCRv3/v4 models trained by PaddleOCR project"
 onnxruntime = "As the inference engine for RapidOCR"
 ttkbootstrap = "For building modern graphical user interfaces"
 tkinterdnd2 = "For implementing drag and drop functionality, enhancing user experience"
@@ -847,6 +850,7 @@ pandas = "For spreadsheet data processing and analysis"
 numpy = "For basic support of numerical computation and data processing"
 olefile = "For identifying and processing legacy Office document formats"
 watchdog = "For monitoring file system changes, implementing IPC and single instance"
+emoji = "Emoji detection and processing library"
 
 # =============================================================================
 # Main Interface Components
@@ -938,104 +942,223 @@ document_templates = "Doc"
 spreadsheet_templates = "Sheet"
 
 # =============================================================================
-# File Type Categories
+# Conversion Panel Sections
 # =============================================================================
-[file_types]
-document = "Document"
-spreadsheet = "Spreadsheet"
-image = "Image"
-layout = "Layout"
-text = "Text"
-unknown = "Unknown"
+[conversion_panel]
+format_conversion = "Format Conversion"
+save_as = "Save As"
+select_file_hint = "Please select a file first"
+same_format_tooltip = "Already in {format} format"
+compressible_format_tooltip = "Compression supported"
+png_compression_tooltip = "PNG is lossless, does not support quality compression"
+bmp_compression_tooltip = "BMP is lossless, does not support quality compression"
+gif_compression_tooltip = "GIF is lossless, does not support quality compression"
+tif_compression_tooltip = "TIF/TIFF is lossless, does not support quality compression"
+other_format_compression_tooltip = "{format} format does not support quality compression"
+high_quality_conversion_tooltip = "High quality conversion"
+lossless_conversion_tooltip = "Lossless conversion"
+document_conversion_tooltip = "Convert to this document format"
+csv_conversion_tooltip = "Convert to CSV format (plain text table)"
+spreadsheet_conversion_tooltip = "Convert to this spreadsheet format"
+pdf_conversion_tooltip = "Convert to PDF format"
+docx_conversion_tooltip = "Convert to DOCX format"
+doc_conversion_tooltip = "Convert to DOC format"
+tif_conversion_tooltip = "Render as TIF image"
+jpg_conversion_tooltip = "Render as JPG image"
 
-# Category names with suffix (for tab labels)
-text_category = "Text"
-document_category = "Doc"
-spreadsheet_category = "Sheet"
-layout_category = "Layout"
-image_category = "Img"
+# Document Conversion Section
+[conversion_panel.document]
+convert_to_other_formats = "Convert to other document formats"
+convert_to_layout = "Convert to layout format"
+save_as_pdf = "Save as PDF"
+save_as_pdf_tooltip = "Convert document to PDF layout file"
+save_as_ofd = "Save as OFD"
+save_as_ofd_tooltip = "Not supported yet"
+proofread_document = "Document Proofreading"
+proofread_hint = "Proofread the document"
+proofread_button = "📝 Proofread"
+proofread_button_tooltip = "Check for symbol pairing, typos, flagged terms, etc."
+proofread_options = "Proofreading Options"
+symbol_pairing = "Symbol Pairing"
+symbol_pairing_tooltip = "Check if paired symbols (brackets, quotes, etc.) match"
+typos_rule = "Typo Correction"
+typos_rule_tooltip = "Check for common typos"
+symbol_correction = "Symbol Correction"
+symbol_correction_tooltip = "Check for incorrect symbols"
+sensitive_word = "Flagged Terms Matching"
+sensitive_word_tooltip = "Check for flagged terms"
 
-# Format validation related
-unknown_type = "Unknown"
-format_mismatch = "⚠️ Actual format: {format}"
-format_unverifiable = "⚠️ Cannot verify actual file format"
-format_txt = "TXT (Plain Text)"
-format_md = "Markdown"
-format_csv = "CSV (Table Text)"
+# Image Conversion Section
+[conversion_panel.image]
+convert_to_other_formats = "Convert to other image formats"
+compression_options = "Compression Options"
+highest_quality = "Highest Quality"
+highest_quality_tooltip = "Lossless or high quality conversion. JPEG/WebP uses quality=95, PNG/BMP/GIF/TIF uses lossless compression."
+limit_file_size = "Limit File Size"
+limit_file_size_tooltip = "Compress to target size by adjusting quality parameter, only effective for JPEG/WebP. Other formats will be saved at highest quality."
+file_size_limit = "File size limit:"
+enter_size_limit_warning = "Please enter a file size limit"
+kb_range_warning = "Please enter a number between 10 and 10000 (KB)"
+mb_range_warning = "Please enter a number between 1 and 100 (MB)"
+enter_valid_number_warning = "Please enter a valid number"
+convert_to_layout = "Convert to layout format"
+save_as_pdf = "Save as PDF"
+save_as_pdf_tooltip = "Convert image to PDF layout file"
+save_as_ofd = "Save as OFD"
+save_as_ofd_tooltip = "Not supported yet"
+size_options = "Size Options"
+original_embed = "Original Embed"
+fit_a4 = "Fit A4"
+fit_a3 = "Fit A3"
+no_pdf_size_option_warning = "Please select a PDF size option"
+merge_images = "Merge Images"
+merge_images_hint = "Merge multiple images into one"
+merge_to_tif = "Merge to TIF"
+conversion_options = "Conversion Options"
+preserve_transparency = "Preserve Transparency"
+preserve_transparency_tooltip = "Preserve source image transparency (if any)"
+no_transparency = "No Transparency"
+no_transparency_tooltip = "Convert to RGB mode, transparent background becomes white"
+
+# Layout Conversion Section
+[conversion_panel.layout]
+convert_to_other_formats = "Convert to other layout formats"
+save_as_ofd_tooltip = "Not supported yet"
+convert_to_document_or_image = "Convert to document or image"
+save_as_format = "Save as {format}"
+save_as_docx_tooltip = "Convert layout file to DOCX document"
+save_as_doc_tooltip = "Convert layout file to DOC document"
+render_as_tif = "Render as TIF"
+render_as_tif_tooltip = "Render PDF pages as TIF images, supports multi-page TIFF, supports DPI quality selection"
+render_as_jpg = "Render as JPG"
+render_as_jpg_tooltip = "Render PDF as JPG images (one file per page)"
+image_quality_dpi = "Image Quality (DPI)"
+minimum_150 = "Low (150 DPI) - Quick Preview"
+moderate_300 = "Standard (300 DPI) - Daily Use"
+high_definition_600 = "High (600 DPI) - For Printing"
+merge_split = "Merge/Split"
+merge_split_hint = "Merge or split layout files"
+merge_to_pdf = "Merge to PDF"
+merge_to_pdf_tooltip = "Merge files in batch list into one PDF in top-to-bottom order. Use ↑↓ arrows to adjust merge order after selecting files."
+merge_to_ofd = "Merge to OFD"
+merge_to_ofd_tooltip = "Not supported yet"
+split_to_pdf = "Split to PDF"
+split_to_pdf_tooltip = "Split current file into two PDFs based on input page range. First file contains input pages, second file contains remaining pages (if any)."
+split_to_ofd = "Split to OFD"
+split_to_ofd_tooltip = "Not supported yet"
+split_page_range = "Split page range:"
+page_range_info = "Input page range, for example:\n• 1-5: Pages 1 to 5\n• 1,3,5: Pages 1, 3, 5\n• 1-3,7-9: Pages 1-3 and 7-9\n• Supports Chinese separators: 1~3;5;7至10"
+page_range_placeholder = "e.g.: 1-3,5,7-10"
+selected_split_file = "Selected file to split ({pages} pages):"
+no_file_selected = "No file selected"
+cannot_split_all_pages = "❌ Cannot split all pages (please leave some pages)"
+pages_out_of_range_adjusted = "⚠️ Some pages out of range, automatically adjusted (total {pages} pages)"
+all_pages_out_of_range = "❌ All pages out of range (total {pages} pages)"
+
+# Spreadsheet Conversion Section
+[conversion_panel.spreadsheet]
+convert_to_other_formats = "Convert to other spreadsheet formats"
+convert_to_layout = "Convert to layout format"
+save_as_pdf = "Save as PDF"
+save_as_pdf_tooltip = "Requires local Office software to convert spreadsheet to PDF layout file"
+save_as_ofd = "Save as OFD"
+save_as_ofd_tooltip = "Not supported yet"
+merge_tables = "Merge Tables"
+merge_tables_hint = "Merge multiple tables by selected mode"
+merge_tables_button = "📋 Merge Tables"
+merge_tables_button_tooltip = "Merge multiple tables in batch list into reference table by selected mode. First select merge mode (by row/by column/by cell)."
+merge_options = "Merge Options"
+merge_by_row = "Merge by Row"
+merge_by_row_tooltip = "Merge one or more tables row by row into reference table"
+merge_by_column = "Merge by Column"
+merge_by_column_tooltip = "Merge one or more tables column by column into reference table"
+merge_by_cell = "Merge by Cell"
+merge_by_cell_tooltip = "Add data from corresponding cell positions"
+selected_reference_table = "Currently selected reference table:"
+no_table_selected = "No table selected"
 
 # =============================================================================
-# Conversion Operations
+# Action Panel Sections
 # =============================================================================
-[conversion]
-# Document Operations
+[action_panel]
+export_options = "Export Options"
+extraction_options = "Extraction Options"
+generation_options = "Generation Options"
+extract_images = "Extract Images"
+extract_images_tooltip = "Extract images from file when converting to MD"
+ocr = "Image OCR"
+ocr_tooltip = "Enable OCR to recognize text in images when converting to MD"
 
-# Spreadsheet Operations
+# Proofreading Options
+[action_panel.proofread]
+symbol_pairing = "Symbol Pairing"
+symbol_pairing_tooltip = "Check if paired symbols (brackets, quotes, etc.) match"
+typos_rule = "Typo Correction"
+typos_rule_tooltip = "Check for common typos"
+symbol_correction = "Symbol Correction"
+symbol_correction_tooltip = "Check for incorrect symbols"
+sensitive_word = "Flagged Terms"
+sensitive_word_tooltip = "Check for flagged terms"
 
-# Image Operations
+# Document to MD Panel
+[action_panel.document]
+ready = "Ready"
+export_markdown = "Export Markdown"
+export_markdown_tooltip = "Convert document to Markdown format"
+optimize_for_type = "Optimize for document type"
+optimize_for_type_tooltip = "Perform targeted optimization based on document type"
+remove_existing_numbering = "Remove original document heading num"
+remove_existing_numbering_tooltip = "Remove existing heading numbering when converting to MD"
+add_new_numbering = "Add new heading num"
+add_new_numbering_tooltip = "Add new heading numbering when converting to MD"
 
-# Generated filenames (for output file naming)
-[conversion.filenames]
-split_part1 = "Split1"
-split_part2 = "Split2"
-merged_pdf = "MergedPDF"
-merged_table = "MergedTable"
+# Spreadsheet to MD Panel
+[action_panel.spreadsheet]
+ready = "Ready"
+export_markdown = "Export Markdown"
+export_markdown_tooltip = "Convert spreadsheet to Markdown format"
 
-# =============================================================================
-# Messages and Prompts
-# =============================================================================
-[messages]
-# File Operations
-file_not_found = "File not found: {filename}"
-invalid_file_type = "Unsupported file type: {ext}"
-unsupported_file_type = "Unsupported file type"
-unknown_file_category = "Unknown file category: {category}"
+# Image to MD Panel
+[action_panel.image]
+ready = "Ready"
+export_markdown = "Export Markdown"
+export_markdown_tooltip = "Convert image to Markdown format"
+extract_images_tooltip = "Keep images when converting to MD"
+ocr_tooltip = "Enable OCR to recognize text in images when converting to MD"
 
-# GUI operation results
-error_prefix = "Error: {message}"
-operation_failed = "Operation failed: {error}"
-processing_exception = "Processing exception: {error}"
-system_init_error = "System initialization error"
-process_file_failed = "Failed to process file: {error}"
-batch_merge_need_two_layout = "Batch mode required, need at least 2 layout files to merge"
-batch_merge_need_two_image = "Batch mode required, need at least 2 image files to merge"
-batch_merge_need_two_table = "Batch mode required, need at least 2 spreadsheet files to merge"
-batch_file_list_not_init = "Batch file list component not initialized"
-select_base_table_first = "Please select a base table first"
-select_merge_mode = "Please select a merge mode (by row/column/cell)"
-process_failed = "Processing failed: {error}"
-file_processing_failed = "Failed to process file: {error}"
-template_selection_failed = "Failed to select template: {error}"
-cancel_failed = "Failed to cancel: {error}"
-clear_failed = "Failed to clear: {error}"
-settings_unavailable = "Settings are unavailable"
-open_settings_failed = "Failed to open settings: {error}"
-apply_settings_failed = "Failed to apply settings: {error}"
-about_unavailable = "About is unavailable"
-open_about_failed = "Failed to open About: {error}"
+# Layout to MD Panel
+[action_panel.layout]
+ready = "Ready"
+export_markdown = "Export Markdown"
+export_markdown_tooltip = "Convert layout file to Markdown format"
 
-# Conversion Operations
+# MD to Document Panel
+[action_panel.md_to_document]
+ready = "Ready"
+generate_docx = "Generate DOCX"
+generate_docx_tooltip = "Convert Markdown to DOCX document"
+generate_doc = "Generate DOC"
+generate_doc_tooltip = "Convert Markdown to DOC document (requires local Office software)"
+generate_odt = "Generate ODT"
+generate_odt_tooltip = "Convert Markdown to ODT document (requires LibreOffice)"
+generate_rtf = "Generate RTF"
+generate_rtf_tooltip = "Convert Markdown to RTF document (requires local Office software)"
+remove_existing_numbering = "Remove original Markdown heading num"
+remove_existing_numbering_tooltip = "Remove existing heading numbering when converting to document"
+add_new_numbering = "Add new heading num"
+add_new_numbering_tooltip = "Add new heading numbering when converting to document"
 
-# Settings
-
-# Confirmation Dialogs
-
-# File Drag and Drop
-single_file_only = "Only one file allowed in single file mode"
-no_valid_files = "No valid files detected"
-no_folder_in_single_mode = "Folders are not allowed in single file mode"
-all_supported_files = "All supported files"
-all_files = "All files"
-select_multiple_files = "Select multiple files"
-category_mismatch = "Can only add {current_name} files, cannot mix with {new_name} files"
-category_mismatch_detail = "Type mismatch (current list: {selected_name}, file: {file_category_name})"
-
-# Error Messages
-[messages.errors]
-invalid_docx_template = "Template file {template_name} is invalid or corrupted. Please open it with Word or WPS, edit and save it to ensure it is a valid DOCX file."
-
-# Warning Messages
-[messages.warnings]
-missing_body_placeholder = "⚠️ Body placeholder (e.g., {{body}}) not found in template. Markdown body content was not inserted."
+# MD to Spreadsheet Panel
+[action_panel.md_to_spreadsheet]
+ready = "Ready"
+generate_xlsx = "Generate XLSX"
+generate_xlsx_tooltip = "Convert Markdown to XLSX spreadsheet"
+generate_xls = "Generate XLS"
+generate_xls_tooltip = "Convert Markdown to XLS spreadsheet (requires local Office software)"
+generate_ods = "Generate ODS"
+generate_ods_tooltip = "Convert Markdown to ODS spreadsheet (requires LibreOffice)"
+generate_csv = "Generate CSV"
+generate_csv_tooltip = "Convert Markdown to CSV spreadsheet (plain text format)"
 
 # =============================================================================
 # Editor Dialogs
@@ -1291,337 +1414,50 @@ duplicate_key_title = "Key Already Exists"
 duplicate_key_message = "Key \"{entry_key}\" already exists\n\nCurrent values: {current_values}\nCurrent comment: {current_comment}\n\nPlease select an action:"
 duplicate_key_no_comment = "(none)"
 overwrite = "Overwrite"
-overwrite_tooltip = "Replace existing values and comment with new ones"
 merge = "Merge"
-merge_tooltip = "Merge new and old values (deduplicated); keep old comment if new is empty"
 
 # =============================================================================
-# Style Names (for document conversion)
-# These style names are used for style injection and detection in MD ↔ DOCX conversion
+# File Type Categories
 # =============================================================================
-[styles]
-# Code Styles
-code_block = "Code Block"
-inline_code = "Inline Code"
+[file_types]
+document = "Document"
+spreadsheet = "Spreadsheet"
+image = "Image"
+layout = "Layout"
+text = "Text"
+unknown = "Unknown"
 
-# Quote Styles (9 levels)
-quote_1 = "Quote 1"
-quote_2 = "Quote 2"
-quote_3 = "Quote 3"
-quote_4 = "Quote 4"
-quote_5 = "Quote 5"
-quote_6 = "Quote 6"
-quote_7 = "Quote 7"
-quote_8 = "Quote 8"
-quote_9 = "Quote 9"
+# Category names with suffix (for tab labels)
+text_category = "Text"
+document_category = "Doc"
+spreadsheet_category = "Sheet"
+layout_category = "Layout"
+image_category = "Img"
 
-# Formula Styles
-formula_block = "Formula Block"
-inline_formula = "Inline Formula"
-
-# Horizontal Rule Styles
-horizontal_rule_1 = "Horizontal Rule 1"
-horizontal_rule_2 = "Horizontal Rule 2"
-horizontal_rule_3 = "Horizontal Rule 3"
-
-# List Styles
-list_block = "List Block"
-
-# Table Styles
-table_content = "Table Content"
-three_line_table = "Three Line Table"
-table_grid = "Table Grid"
-
-# Body Paragraph Style
-body_paragraph = "Body Paragraph"
+# Format validation related
+unknown_type = "Unknown"
+format_mismatch = "⚠️ Actual format: {format}"
+format_unverifiable = "⚠️ Cannot verify actual file format"
+format_txt = "TXT (Plain Text)"
+format_md = "Markdown"
+format_csv = "CSV (Table Text)"
 
 # =============================================================================
-# Style Format Configurations (for style injection format properties)
+# Conversion Operations
 # =============================================================================
-[style_formats]
+[conversion]
+# Document Operations
 
-# Body paragraph format (Times New Roman, 12pt, no indent, left aligned)
-[style_formats.body_paragraph]
-east_asia_font = "SimSun"
-ascii_font = "Times New Roman"
-font_size_pt = 12
-first_line_indent_chars = 0
-first_line_indent_cm = 0
-spacing_after_twip = 120
-spacing_before_twip = 0
-bold = false
-justification = "left"
+# Spreadsheet Operations
 
-# Heading 1 format (Arial, 16pt, bold, left aligned)
-[style_formats.heading_1]
-east_asia_font = "SimSun"
-ascii_font = "Arial"
-font_size_pt = 16
-first_line_indent_chars = 0
-first_line_indent_cm = 0
-spacing_after_twip = 120
-spacing_before_twip = 240
-bold = true
-justification = "left"
+# Image Operations
 
-# Heading 2 format (Arial, 14pt, bold, left aligned)
-[style_formats.heading_2]
-east_asia_font = "SimSun"
-ascii_font = "Arial"
-font_size_pt = 14
-first_line_indent_chars = 0
-first_line_indent_cm = 0
-spacing_after_twip = 120
-spacing_before_twip = 240
-bold = true
-justification = "left"
-
-# Heading 3-9 format (Arial, 12pt, bold, left aligned)
-[style_formats.heading_3_9]
-east_asia_font = "SimSun"
-ascii_font = "Arial"
-font_size_pt = 12
-first_line_indent_chars = 0
-first_line_indent_cm = 0
-spacing_after_twip = 120
-spacing_before_twip = 240
-bold = true
-justification = "left"
-
-# =============================================================================
-# Placeholders (for document templates)
-# These placeholders are used for template filling in MD → DOCX conversion
-# =============================================================================
-[placeholders]
-title = "title"
-body = "body"
-
-# =============================================================================
-# YAML Keys (for metadata)
-# These keys are used for YAML front matter output in DOCX → MD conversion
-# =============================================================================
-[yaml_keys]
-title = "title"
-subtitle = "subtitle"
-
-# =============================================================================
-# Conversion Panel Sections
-# =============================================================================
-[conversion_panel]
-format_conversion = "Format Conversion"
-save_as = "Save As"
-select_file_hint = "Please select a file first"
-same_format_tooltip = "Already in {format} format"
-compressible_format_tooltip = "Compression supported"
-png_compression_tooltip = "PNG is lossless, does not support quality compression"
-bmp_compression_tooltip = "BMP is lossless, does not support quality compression"
-gif_compression_tooltip = "GIF is lossless, does not support quality compression"
-tif_compression_tooltip = "TIF/TIFF is lossless, does not support quality compression"
-other_format_compression_tooltip = "{format} format does not support quality compression"
-high_quality_conversion_tooltip = "High quality conversion"
-lossless_conversion_tooltip = "Lossless conversion"
-document_conversion_tooltip = "Convert to this document format"
-csv_conversion_tooltip = "Convert to CSV format (plain text table)"
-spreadsheet_conversion_tooltip = "Convert to this spreadsheet format"
-pdf_conversion_tooltip = "Convert to PDF format"
-docx_conversion_tooltip = "Convert to DOCX format"
-doc_conversion_tooltip = "Convert to DOC format"
-tif_conversion_tooltip = "Render as TIF image"
-jpg_conversion_tooltip = "Render as JPG image"
-
-# Document Conversion Section
-[conversion_panel.document]
-convert_to_other_formats = "Convert to other document formats"
-convert_to_layout = "Convert to layout format"
-save_as_pdf = "Save as PDF"
-save_as_pdf_tooltip = "Convert document to PDF layout file"
-save_as_ofd = "Save as OFD"
-save_as_ofd_tooltip = "Not supported yet"
-proofread_document = "Document Proofreading"
-proofread_hint = "Proofread the document"
-proofread_button = "📝 Proofread"
-proofread_button_tooltip = "Check for symbol pairing, typos, flagged terms, etc."
-proofread_options = "Proofreading Options"
-symbol_pairing = "Symbol Pairing"
-symbol_pairing_tooltip = "Check if paired symbols (brackets, quotes, etc.) match"
-typos_rule = "Typo Correction"
-typos_rule_tooltip = "Check for common typos"
-symbol_correction = "Symbol Correction"
-symbol_correction_tooltip = "Check for incorrect symbols"
-sensitive_word = "Flagged Terms Matching"
-sensitive_word_tooltip = "Check for flagged terms"
-
-# Image Conversion Section
-[conversion_panel.image]
-convert_to_other_formats = "Convert to other image formats"
-compression_options = "Compression Options"
-highest_quality = "Highest Quality"
-highest_quality_tooltip = "Lossless or high quality conversion. JPEG/WebP uses quality=95, PNG/BMP/GIF/TIF uses lossless compression."
-limit_file_size = "Limit File Size"
-limit_file_size_tooltip = "Compress to target size by adjusting quality parameter, only effective for JPEG/WebP. Other formats will be saved at highest quality."
-file_size_limit = "File size limit:"
-enter_size_limit_warning = "Please enter a file size limit"
-kb_range_warning = "Please enter a number between 10 and 10000 (KB)"
-mb_range_warning = "Please enter a number between 1 and 100 (MB)"
-enter_valid_number_warning = "Please enter a valid number"
-convert_to_layout = "Convert to layout format"
-save_as_pdf = "Save as PDF"
-save_as_pdf_tooltip = "Convert image to PDF layout file"
-save_as_ofd = "Save as OFD"
-save_as_ofd_tooltip = "Not supported yet"
-size_options = "Size Options"
-original_embed = "Original Embed"
-fit_a4 = "Fit A4"
-fit_a3 = "Fit A3"
-no_pdf_size_option_warning = "Please select a PDF size option"
-merge_images = "Merge Images"
-merge_images_hint = "Merge multiple images into one"
-merge_to_tif = "Merge to TIF"
-conversion_options = "Conversion Options"
-preserve_transparency = "Preserve Transparency"
-preserve_transparency_tooltip = "Preserve source image transparency (if any)"
-no_transparency = "No Transparency"
-no_transparency_tooltip = "Convert to RGB mode, transparent background becomes white"
-
-# Layout Conversion Section
-[conversion_panel.layout]
-convert_to_other_formats = "Convert to other layout formats"
-save_as_ofd_tooltip = "Not supported yet"
-convert_to_document_or_image = "Convert to document or image"
-save_as_format = "Save as {format}"
-save_as_docx_tooltip = "Convert layout file to DOCX document"
-save_as_doc_tooltip = "Convert layout file to DOC document"
-render_as_tif = "Render as TIF"
-render_as_tif_tooltip = "Render PDF pages as TIF images, supports multi-page TIFF, supports DPI quality selection"
-render_as_jpg = "Render as JPG"
-render_as_jpg_tooltip = "Render PDF as JPG images (one file per page)"
-image_quality_dpi = "Image Quality (DPI)"
-minimum_150 = "Low (150 DPI) - Quick Preview"
-moderate_300 = "Standard (300 DPI) - Daily Use"
-high_definition_600 = "High (600 DPI) - For Printing"
-merge_split = "Merge/Split"
-merge_split_hint = "Merge or split layout files"
-merge_to_pdf = "Merge to PDF"
-merge_to_pdf_tooltip = "Merge files in batch list into one PDF in top-to-bottom order. Use ↑↓ arrows to adjust merge order after selecting files."
-merge_to_ofd = "Merge to OFD"
-merge_to_ofd_tooltip = "Not supported yet"
-split_to_pdf = "Split to PDF"
-split_to_pdf_tooltip = "Split current file into two PDFs based on input page range. First file contains input pages, second file contains remaining pages (if any)."
-split_to_ofd = "Split to OFD"
-split_to_ofd_tooltip = "Not supported yet"
-split_page_range = "Split page range:"
-page_range_info = "Input page range, for example:\n• 1-5: Pages 1 to 5\n• 1,3,5: Pages 1, 3, 5\n• 1-3,7-9: Pages 1-3 and 7-9\n• Supports Chinese separators: 1~3;5;7至10"
-page_range_placeholder = "e.g.: 1-3,5,7-10"
-selected_split_file = "Selected file to split ({pages} pages):"
-no_file_selected = "No file selected"
-cannot_split_all_pages = "❌ Cannot split all pages (please leave some pages)"
-pages_out_of_range_adjusted = "⚠️ Some pages out of range, automatically adjusted (total {pages} pages)"
-all_pages_out_of_range = "❌ All pages out of range (total {pages} pages)"
-
-# Spreadsheet Conversion Section
-[conversion_panel.spreadsheet]
-convert_to_other_formats = "Convert to other spreadsheet formats"
-convert_to_layout = "Convert to layout format"
-save_as_pdf = "Save as PDF"
-save_as_pdf_tooltip = "Requires local Office software to convert spreadsheet to PDF layout file"
-save_as_ofd = "Save as OFD"
-save_as_ofd_tooltip = "Not supported yet"
-merge_tables = "Merge Tables"
-merge_tables_hint = "Merge multiple tables by selected mode"
-merge_tables_button = "📋 Merge Tables"
-merge_tables_button_tooltip = "Merge multiple tables in batch list into reference table by selected mode. First select merge mode (by row/by column/by cell)."
-merge_options = "Merge Options"
-merge_by_row = "Merge by Row"
-merge_by_row_tooltip = "Merge one or more tables row by row into reference table"
-merge_by_column = "Merge by Column"
-merge_by_column_tooltip = "Merge one or more tables column by column into reference table"
-merge_by_cell = "Merge by Cell"
-merge_by_cell_tooltip = "Add data from corresponding cell positions"
-selected_reference_table = "Currently selected reference table:"
-no_table_selected = "No table selected"
-
-# =============================================================================
-# Action Panel Sections
-# =============================================================================
-[action_panel]
-export_options = "Export Options"
-extraction_options = "Extraction Options"
-generation_options = "Generation Options"
-extract_images = "Extract Images"
-extract_images_tooltip = "Extract images from file when converting to MD"
-ocr = "Image OCR"
-ocr_tooltip = "Enable OCR to recognize text in images when converting to MD"
-
-# Proofreading Options
-[action_panel.proofread]
-symbol_pairing = "Symbol Pairing"
-symbol_pairing_tooltip = "Check if paired symbols (brackets, quotes, etc.) match"
-typos_rule = "Typo Correction"
-typos_rule_tooltip = "Check for common typos"
-symbol_correction = "Symbol Correction"
-symbol_correction_tooltip = "Check for incorrect symbols"
-sensitive_word = "Flagged Terms"
-sensitive_word_tooltip = "Check for flagged terms"
-
-# Document to MD Panel
-[action_panel.document]
-ready = "Ready"
-export_markdown = "Export Markdown"
-export_markdown_tooltip = "Convert document to Markdown format"
-optimize_for_type = "Optimize for document type"
-optimize_for_type_tooltip = "Perform targeted optimization based on document type"
-remove_existing_numbering = "Remove original document heading num"
-remove_existing_numbering_tooltip = "Remove existing heading numbering when converting to MD"
-add_new_numbering = "Add new heading num"
-add_new_numbering_tooltip = "Add new heading numbering when converting to MD"
-
-# Spreadsheet to MD Panel
-[action_panel.spreadsheet]
-ready = "Ready"
-export_markdown = "Export Markdown"
-export_markdown_tooltip = "Convert spreadsheet to Markdown format"
-
-# Image to MD Panel
-[action_panel.image]
-ready = "Ready"
-export_markdown = "Export Markdown"
-export_markdown_tooltip = "Convert image to Markdown format"
-extract_images_tooltip = "Keep images when converting to MD"
-ocr_tooltip = "Enable OCR to recognize text in images when converting to MD"
-
-# Layout to MD Panel
-[action_panel.layout]
-ready = "Ready"
-export_markdown = "Export Markdown"
-export_markdown_tooltip = "Convert layout file to Markdown format"
-
-# MD to Document Panel
-[action_panel.md_to_document]
-ready = "Ready"
-generate_docx = "Generate DOCX"
-generate_docx_tooltip = "Convert Markdown to DOCX document"
-generate_doc = "Generate DOC"
-generate_doc_tooltip = "Convert Markdown to DOC document (requires local Office software)"
-generate_odt = "Generate ODT"
-generate_odt_tooltip = "Convert Markdown to ODT document (requires LibreOffice)"
-generate_rtf = "Generate RTF"
-generate_rtf_tooltip = "Convert Markdown to RTF document (requires local Office software)"
-remove_existing_numbering = "Remove original Markdown heading num"
-remove_existing_numbering_tooltip = "Remove existing heading numbering when converting to document"
-add_new_numbering = "Add new heading num"
-add_new_numbering_tooltip = "Add new heading numbering when converting to document"
-
-# MD to Spreadsheet Panel
-[action_panel.md_to_spreadsheet]
-ready = "Ready"
-generate_xlsx = "Generate XLSX"
-generate_xlsx_tooltip = "Convert Markdown to XLSX spreadsheet"
-generate_xls = "Generate XLS"
-generate_xls_tooltip = "Convert Markdown to XLS spreadsheet (requires local Office software)"
-generate_ods = "Generate ODS"
-generate_ods_tooltip = "Convert Markdown to ODS spreadsheet (requires LibreOffice)"
-generate_csv = "Generate CSV"
-generate_csv_tooltip = "Convert Markdown to CSV spreadsheet (plain text format)"
+# Generated filenames (for output file naming)
+[conversion.filenames]
+split_part1 = "Split1"
+split_part2 = "Split2"
+merged_pdf = "MergedPDF"
+merged_table = "MergedTable"
 
 
 
@@ -1657,7 +1493,6 @@ filling_yaml_data = "Filling YAML data..."
 filling_table_data = "Filling table data..."
 saving_excel = "Saving Excel file..."
 writing_file = "Writing file..."
-executing_final_proofread = "Executing final proofread..."
 initializing_proofread = "Initializing proofreading engine..."
 proofreading_progress = "Proofreading... {current}/{total}"
 saving_proofread_result = "Saving proofread result..."
@@ -1781,6 +1616,63 @@ format_to_pdf_not_implemented = "{format}→PDF not implemented"
 all_pages_invalid = "Invalid pages ({total}p total)"
 
 # =============================================================================
+# Messages and Prompts
+# =============================================================================
+[messages]
+# File Operations
+file_not_found = "File not found: {filename}"
+invalid_file_type = "Unsupported file type: {ext}"
+unsupported_file_type = "Unsupported file type"
+unknown_file_category = "Unknown file category: {category}"
+
+# GUI operation results
+error_prefix = "Error: {message}"
+operation_failed = "Operation failed: {error}"
+processing_exception = "Processing exception: {error}"
+system_init_error = "System initialization error"
+process_file_failed = "Failed to process file: {error}"
+batch_merge_need_two_layout = "Batch mode required, need at least 2 layout files to merge"
+batch_merge_need_two_image = "Batch mode required, need at least 2 image files to merge"
+batch_merge_need_two_table = "Batch mode required, need at least 2 spreadsheet files to merge"
+batch_file_list_not_init = "Batch file list component not initialized"
+select_base_table_first = "Please select a base table first"
+select_merge_mode = "Please select a merge mode (by row/column/cell)"
+process_failed = "Processing failed: {error}"
+file_processing_failed = "Failed to process file: {error}"
+template_selection_failed = "Failed to select template: {error}"
+cancel_failed = "Failed to cancel: {error}"
+clear_failed = "Failed to clear: {error}"
+settings_unavailable = "Settings are unavailable"
+open_settings_failed = "Failed to open settings: {error}"
+apply_settings_failed = "Failed to apply settings: {error}"
+about_unavailable = "About is unavailable"
+open_about_failed = "Failed to open About: {error}"
+
+# Conversion Operations
+
+# Settings
+
+# Confirmation Dialogs
+
+# File Drag and Drop
+single_file_only = "Only one file allowed in single file mode"
+no_valid_files = "No valid files detected"
+no_folder_in_single_mode = "Folders are not allowed in single file mode"
+all_supported_files = "All supported files"
+all_files = "All files"
+select_multiple_files = "Select multiple files"
+category_mismatch = "Can only add {current_name} files, cannot mix with {new_name} files"
+category_mismatch_detail = "Type mismatch (current list: {selected_name}, file: {file_category_name})"
+
+# Error Messages
+[messages.errors]
+invalid_docx_template = "Template file {template_name} is invalid or corrupted. Please open it with Word or WPS, edit and save it to ensure it is a valid DOCX file."
+
+# Warning Messages
+[messages.warnings]
+missing_body_placeholder = "⚠️ Body placeholder (e.g., {{body}}) not found in template. Markdown body content was not inserted."
+
+# =============================================================================
 # Proofread Comment Text (for document proofreading annotations)
 # =============================================================================
 [proofread]
@@ -1804,3 +1696,123 @@ pairing = "Pairing Check"
 sensitive = "Flagged term detected"
 extra_close = "Extra closing symbol"
 unclosed = "Unclosed symbol"
+
+# =============================================================================
+# Link Processing Placeholder Text (for error messages displayed in documents)
+# =============================================================================
+[link_processing]
+file_not_found = "⚠️ File not found: {filename}"
+section_not_found = "⚠️ Section not found: {filename}#{heading}"
+block_not_found = "⚠️ Block not found: {filename}#^{block_id}"
+circular_reference = "⚠️ Circular reference detected: {filename}"
+max_depth_reached = "⚠️ Maximum embed depth reached"
+
+# =============================================================================
+# Style Names (for document conversion)
+# These style names are used for style injection and detection in MD ↔ DOCX conversion
+# =============================================================================
+[styles]
+# Paragraph Styles
+
+# Code Styles
+
+# Formula Styles
+
+# List Styles
+
+# Horizontal Rule Styles
+
+# Table Styles
+
+# Quote Styles (9 levels)
+body_paragraph = "Body Paragraph"
+image_paragraph = "Image Paragraph"
+code_block = "Code Block"
+inline_code = "Inline Code"
+formula_block = "Formula Block"
+inline_formula = "Inline Formula"
+list_block = "List Block"
+horizontal_rule_1 = "Horizontal Rule 1"
+horizontal_rule_2 = "Horizontal Rule 2"
+horizontal_rule_3 = "Horizontal Rule 3"
+table_content = "Table Content"
+three_line_table = "Three Line Table"
+table_grid = "Table Grid"
+quote_1 = "Quote 1"
+quote_2 = "Quote 2"
+quote_3 = "Quote 3"
+quote_4 = "Quote 4"
+quote_5 = "Quote 5"
+quote_6 = "Quote 6"
+quote_7 = "Quote 7"
+quote_8 = "Quote 8"
+quote_9 = "Quote 9"
+
+# =============================================================================
+# Style Format Configurations (for style injection format properties)
+# =============================================================================
+[style_formats]
+
+# Body paragraph format (Times New Roman, 12pt, no indent, left aligned)
+[style_formats.body_paragraph]
+east_asia_font = "SimSun"
+ascii_font = "Times New Roman"
+font_size_pt = 12
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 0
+bold = false
+justification = "left"
+
+# Heading 1 format (Arial, 16pt, bold, left aligned)
+[style_formats.heading_1]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 16
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# Heading 2 format (Arial, 14pt, bold, left aligned)
+[style_formats.heading_2]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 14
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# Heading 3-9 format (Arial, 12pt, bold, left aligned)
+[style_formats.heading_3_9]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 12
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# =============================================================================
+# Placeholders (for document templates)
+# These placeholders are used for template filling in MD → DOCX conversion
+# =============================================================================
+[placeholders]
+title = "title"
+body = "body"
+
+# =============================================================================
+# YAML Keys (for metadata)
+# These keys are used for YAML front matter output in DOCX → MD conversion
+# =============================================================================
+[yaml_keys]
+title = "title"
+subtitle = "subtitle"

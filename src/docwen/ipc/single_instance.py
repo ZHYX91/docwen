@@ -144,20 +144,3 @@ class SingleInstance:
     def __exit__(self, exc_type, exc_val, exc_tb):
         """上下文管理器出口"""
         self.release()
-
-
-if __name__ == "__main__":
-    # 测试代码
-    logging.basicConfig(level=logging.DEBUG)
-    
-    print("测试单实例锁...")
-    lock = SingleInstance("test_app")
-    
-    if lock.acquire():
-        print("✓ 成功获取锁")
-        print(f"IPC 目录: {lock.get_ipc_dir()}")
-        input("按回车键释放锁...")
-        lock.release()
-        print("✓ 已释放锁")
-    else:
-        print("✗ 无法获取锁（程序可能已在运行）")

@@ -17,12 +17,28 @@ WPS 对表格样式的 tblStylePr（条件格式）支持不完整，无法正�
 import logging
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from .formula_handler import process_paragraph_formulas, is_formula_supported
 from docwen.i18n.style_resolver import StyleNameResolver
 
 # 配置日志
 logger = logging.getLogger(__name__)
+
+
+def _apply_cell_alignment(paragraph, alignment: str):
+    if alignment == 'default':
+        return
+    
+    alignment_map = {
+        'left': WD_ALIGN_PARAGRAPH.LEFT,
+        'center': WD_ALIGN_PARAGRAPH.CENTER,
+        'right': WD_ALIGN_PARAGRAPH.RIGHT,
+    }
+    
+    if alignment in alignment_map:
+        paragraph.alignment = alignment_map[alignment]
+        logger.debug(f"设置单元格对齐: {alignment}")
 
 
 def create_word_table(doc, table_data: dict, fonts: dict = None):
@@ -41,7 +57,7 @@ def create_word_table(doc, table_data: dict, fonts: dict = None):
     返回:
         Table: python-docx 表格对象
     """
-    from .text_handler import add_formatted_text_to_paragraph_with_breaks
+    from .text_handler import add_formatted_text_to_paragraph
     from docwen.config.config_manager import config_manager
     
     headers = table_data['headers']
@@ -61,12 +77,29 @@ def create_word_table(doc, table_data: dict, fonts: dict = None):
         table.style = table_style_name
         logger.info(f"成功应用表格样式: {table_style_name}")
     except KeyError:
-        # 样式不存在时，降级到 Normal Table（100% 存在的默认样式）
-        logger.warning(f"表格样式 '{table_style_name}' 应用失败，回退到 Normal Table")
-        table.style = 'Normal Table'
+        logger.warning(f"表格样式 '{table_style_name}' 应用失败，尝试回退到内置表格样式")
+        fallback_applied = False
+        resolver = StyleNameResolver()
+        fallback_candidates = [
+            resolver.get_injection_name("table_grid"),
+            resolver.get_injection_name("three_line_table"),
+        ]
+        for fallback_name in fallback_candidates:
+            if not fallback_name or fallback_name == table_style_name:
+                continue
+            try:
+                table.style = fallback_name
+                logger.info(f"成功回退到表格样式: {fallback_name}")
+                fallback_applied = True
+                break
+            except KeyError:
+                continue
+        if not fallback_applied:
+            logger.warning("未能应用任何回退表格样式，将使用模板默认表格样式")
     
     # 2. 获取表格内容样式名
     content_style_name = get_table_content_style_name()
+    alignments = table_data.get('alignments', [])
     
     # 3. 启用首行条件格式（让表格样式的 firstRow 生效）
     _enable_first_row_formatting(table)
@@ -91,8 +124,11 @@ def create_word_table(doc, table_data: dict, fonts: dict = None):
         except Exception:
             pass  # 样式不存在时忽略
         
+        if col_idx < len(alignments):
+            _apply_cell_alignment(paragraph, alignments[col_idx])
+        
         # 使用表头专用的格式处理模式（支持行内代码和换行）
-        add_formatted_text_to_paragraph_with_breaks(paragraph, header_text, None, table_header_formatting_mode, doc=doc)
+        add_formatted_text_to_paragraph(paragraph, header_text, None, table_header_formatting_mode, doc=doc)
         
         logger.debug(f"设置表头单元格 [0,{col_idx}]: {header}")
     
@@ -119,6 +155,9 @@ def create_word_table(doc, table_data: dict, fonts: dict = None):
                 except Exception:
                     pass  # 样式不存在时忽略
                 
+                if col_idx < len(alignments):
+                    _apply_cell_alignment(paragraph, alignments[col_idx])
+                
                 # 检查是否包含公式
                 has_formula = is_formula_supported() and '$' in cell_text
                 
@@ -129,7 +168,7 @@ def create_word_table(doc, table_data: dict, fonts: dict = None):
                 else:
                     # 使用格式解析（支持行内代码和换行）
                     # 传入 None 避免正文格式覆盖表格内容样式
-                    add_formatted_text_to_paragraph_with_breaks(paragraph, cell_text, None, formatting_mode, doc=doc)
+                    add_formatted_text_to_paragraph(paragraph, cell_text, None, formatting_mode, doc=doc)
                     logger.debug(f"填充数据单元格 [{row_idx+1},{col_idx}]: {cell_value[:30] if cell_value else ''}...")
     
     logger.info(f"Word表格创建完成: {len(headers)}列 x {len(rows)}行数据")

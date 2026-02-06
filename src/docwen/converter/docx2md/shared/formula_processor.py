@@ -263,13 +263,8 @@ def replace_formulas_in_text(text: str, formulas: List[Dict]) -> str:
     
     for idx, formula in enumerate(formulas):
         placeholder = f"[[FORMULA_{idx}]]"
-        
-        if formula['is_inline']:
-            # 行内公式
-            latex_syntax = f"${formula['latex']}$"
-        else:
-            # 块公式（但在同一段落中，仍使用行内语法）
-            latex_syntax = f"${formula['latex']}$"
+
+        latex_syntax = f"${formula['latex']}$"
         
         result = result.replace(placeholder, latex_syntax)
     
@@ -469,31 +464,3 @@ def extract_standalone_formulas(paragraph) -> List[str]:
         return []
 
 
-# 模块测试代码
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    
-    from docx import Document
-    
-    # 测试（需要一个包含公式的DOCX文件）
-    try:
-        doc = Document("test_with_formula.docx")
-        
-        for para in doc.paragraphs:
-            if has_formulas_in_paragraph(para):
-                print(f"\n段落包含公式: {para.text[:50]}...")
-                
-                # 提取公式
-                formulas = extract_formulas_from_paragraph(para)
-                print(f"提取到 {len(formulas)} 个公式")
-                
-                for idx, formula in enumerate(formulas):
-                    print(f"  公式 {idx+1}: {formula['latex']}")
-                
-                # 处理段落
-                md_text = process_paragraph_with_formulas(para)
-                if md_text:
-                    print(f"Markdown输出:\n{md_text}")
-    
-    except FileNotFoundError:
-        print("测试文件不存在，跳过测试")

@@ -1,4 +1,4 @@
-﻿"""
+"""
 映射编辑器对话框模块
 实现错误符号和自定义错别字的可视化编辑功能
 
@@ -13,10 +13,12 @@
 支持中英文界面切换。
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import tkinter as tk
-from typing import Dict, List, Callable, Optional
+from typing import Dict, List, Callable, Optional, Any, cast
 from dataclasses import dataclass
 
 import ttkbootstrap as tb
@@ -72,7 +74,7 @@ class MappingEditorDialog(tb.Toplevel, ScalableMixin):
         mapping_type: str, 
         current_mapping: Dict[str, List[str]],
         on_save: Callable[[Dict[str, List[str]]], None],
-        config_file_path: str = None
+        config_file_path: Optional[str] = None
     ):
         """
         初始化映射编辑器对话框
@@ -84,7 +86,7 @@ class MappingEditorDialog(tb.Toplevel, ScalableMixin):
             on_save: 保存回调函数
             config_file_path: 配置文件路径（用于读取注释）
         """
-        super().__init__(parent)
+        cast(Any, super()).__init__(parent)
         
         # 初始化基本属性
         self.parent = parent
@@ -99,8 +101,8 @@ class MappingEditorDialog(tb.Toplevel, ScalableMixin):
         self._load_comments()
         
         # 初始化UI组件引用
-        self.table: Optional[Tableview] = None
-        self.table_container: Optional[tb.Frame] = None
+        self.table: Tableview = cast(Tableview, None)
+        self.table_container: tb.Frame = cast(tb.Frame, None)
         
         # 配置窗口
         self._configure_window()
@@ -128,7 +130,7 @@ class MappingEditorDialog(tb.Toplevel, ScalableMixin):
         self.minsize(width, height)
         
         # 使对话框模态
-        self.transient(self.parent)
+        cast(Any, self).transient(self.parent)
         self.grab_set()
     
     # ==================== 文本生成方法 ====================
@@ -624,7 +626,7 @@ class DuplicateKeyDialog(tb.Toplevel, ScalableMixin):
     
     def __init__(
         self,
-        parent: tk.Widget,
+        parent: tk.Misc,
         key: str,
         current_values: str,
         current_comment: str
@@ -638,7 +640,7 @@ class DuplicateKeyDialog(tb.Toplevel, ScalableMixin):
             current_values: 当前值字符串（用于显示）
             current_comment: 当前备注（用于显示）
         """
-        super().__init__(parent)
+        cast(Any, super()).__init__(parent)
         
         self.parent = parent
         self.key = key
@@ -664,7 +666,7 @@ class DuplicateKeyDialog(tb.Toplevel, ScalableMixin):
         self.resizable(False, False)
         
         # 使对话框模态
-        self.transient(self.parent)
+        cast(Any, self).transient(self.parent)
         self.grab_set()
         
         # 绑定关闭事件
@@ -758,7 +760,7 @@ class EntryEditDialog(tb.Toplevel, ScalableMixin):
     
     def __init__(
         self, 
-        parent: tk.Widget, 
+        parent: tk.Misc,
         mapping_type: str, 
         operation: str,
         current_key: str = "",
@@ -776,7 +778,7 @@ class EntryEditDialog(tb.Toplevel, ScalableMixin):
             current_values: 当前值字符串（编辑时使用）
             current_comment: 当前备注（编辑时使用）
         """
-        super().__init__(parent)
+        cast(Any, super()).__init__(parent)
         
         self.parent = parent
         self.mapping_type = mapping_type
@@ -790,7 +792,7 @@ class EntryEditDialog(tb.Toplevel, ScalableMixin):
         self.key_value = tk.StringVar(value=current_key)
         self.values_value = tk.StringVar(value=current_values)
         self.comment_value = tk.StringVar(value=current_comment)
-        self.values_text: Optional[tb.Text] = None
+        self.values_text: tb.Text = cast(tb.Text, None)
         self.comment_entry: Optional[tb.Entry] = None
         
         # 配置窗口
@@ -811,7 +813,7 @@ class EntryEditDialog(tb.Toplevel, ScalableMixin):
         self.resizable(False, False)
         
         # 使对话框模态
-        self.transient(self.parent)
+        cast(Any, self).transient(self.parent)
         self.grab_set()
     
     def _get_dialog_title(self) -> str:

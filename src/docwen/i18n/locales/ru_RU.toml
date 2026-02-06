@@ -5,6 +5,24 @@
 [meta]
 name = "Russian"
 native_name = "Русский"
+template_name = "Русский Общий Шаблон"
+
+# =============================================================================
+# Общие тексты
+# =============================================================================
+[common]
+app_name = "DocWen"
+offline_version = "(Оффлайн версия)"
+close = "Закрыть"
+apply = "Применить"
+cancel = "Отмена"
+ok = "ОК"
+save = "Сохранить"
+error = "Ошибка"
+version = "Версия {version}"
+browse = "Обзор..."
+select = "Выбрать"
+disclaimer = "Тестовая версия. Точность не гарантируется.\nAGPL-3.0 Open Source."
 
 # =============================================================================
 # Интерфейс командной строки (CLI)
@@ -27,6 +45,7 @@ check_punct = "Проверить пунктуацию"
 check_typo = "Проверить опечатки"
 check_symbol = "Проверить символы"
 check_sensitive = "Проверить отмеченные термины"
+check_none = "Пропустить проверку (отключить все проверки)"
 merge_mode = "Режим слияния: Строка/Столбец/Ячейка"
 base_table = "Путь к базовой таблице"
 pages = "Диапазон страниц PDF (например, 1-3,5,7-10)"
@@ -290,23 +309,6 @@ gongwen_standard = "Официальный стандарт"
 hierarchical_standard = "Иерархический стандарт"
 hierarchical_h2_start = "Иерархический (с H2)"
 legal_standard = "Юридический стандарт"
-
-# =============================================================================
-# Общие тексты
-# =============================================================================
-[common]
-app_name = "DocWen"
-offline_version = "(Оффлайн версия)"
-close = "Закрыть"
-apply = "Применить"
-cancel = "Отмена"
-ok = "ОК"
-save = "Сохранить"
-error = "Ошибка"
-version = "Версия {version}"
-browse = "Обзор..."
-select = "Выбрать"
-disclaimer = "Тестовое ПО. Точность не гарантируется.\nТолько для тестирования. Коммерческое использование и распространение запрещено."
 
 # =============================================================================
 # Настройки
@@ -766,6 +768,7 @@ pymupdf4llm = "Умное извлечение PDF"
 pdf2docx = "PDF в Word"
 easyofd = "Обработка OFD"
 rapidocr = "Оффлайн OCR"
+paddleocr = "Источник OCR-моделей, PP-OCRv3/v4 обучены PaddleOCR"
 onnxruntime = "Движок инференса"
 ttkbootstrap = "Современный GUI"
 tkinterdnd2 = "Drag & Drop"
@@ -781,6 +784,7 @@ pandas = "Анализ данных"
 numpy = "Числовые вычисления"
 olefile = "Поддержка Legacy Office"
 watchdog = "Мониторинг файловой системы"
+emoji = "Библиотека обнаружения и обработки эмодзи"
 
 # Компоненты
 [components]
@@ -854,394 +858,6 @@ unavailable = "Недоступно"
 [components.template_selector_tabbed]
 document_templates = "Документ"
 spreadsheet_templates = "Таблица"
-
-# Типы файлов
-[file_types]
-document = "Документ"
-spreadsheet = "Таблица"
-image = "Изображение"
-layout = "Макет"
-text = "Текст"
-unknown = "Неизвестно"
-
-text_category = "Текст"
-document_category = "Документ"
-spreadsheet_category = "Таблица"
-layout_category = "Макет"
-image_category = "Изображение"
-
-unknown_type = "Неизвестный тип"
-format_mismatch = "⚠️ Это {format}"
-format_unverifiable = "⚠️ Не проверяется"
-format_txt = "TXT"
-format_md = "Markdown"
-format_csv = "CSV"
-
-# Конвертация
-[conversion]
-
-
-
-# Генерируемые имена файлов (для именования выходных файлов)
-[conversion.filenames]
-split_part1 = "Часть1"
-split_part2 = "Часть2"
-merged_pdf = "ОбъединенныйPDF"
-merged_table = "ОбъединеннаяТаблица"
-
-# Сообщения
-[messages]
-file_not_found = "Не найдено: {filename}"
-invalid_file_type = "Неверный тип: {ext}"
-unsupported_file_type = "Не поддерживается"
-unknown_file_category = "Неизвестная категория: {category}"
-
-error_prefix = "Ошибка: {message}"
-operation_failed = "Операция не удалась: {error}"
-processing_exception = "Исключение: {error}"
-system_init_error = "Ошибка инициализации"
-process_file_failed = "Ошибка обработки: {error}"
-batch_merge_need_two_layout = "Нужно мин. 2 файла макета"
-batch_merge_need_two_image = "Нужно мин. 2 файла изображения"
-batch_merge_need_two_table = "Нужно мин. 2 файла таблицы"
-batch_file_list_not_init = "Список файлов не инициализирован"
-select_base_table_first = "Пожалуйста, сначала выберите базовую таблицу"
-select_merge_mode = "Пожалуйста, выберите режим слияния"
-process_failed = "Ошибка: {error}"
-file_processing_failed = "Не удалось обработать файл: {error}"
-template_selection_failed = "Не удалось выбрать шаблон: {error}"
-cancel_failed = "Не удалось отменить: {error}"
-clear_failed = "Не удалось очистить: {error}"
-settings_unavailable = "Настройки недоступны"
-open_settings_failed = "Не удалось открыть настройки: {error}"
-apply_settings_failed = "Не удалось применить настройки: {error}"
-about_unavailable = "О программе недоступно"
-open_about_failed = "Не удалось открыть «О программе»: {error}"
-
-
-
-
-single_file_only = "Только один файл в одиночном режиме"
-no_valid_files = "Нет допустимых файлов"
-no_folder_in_single_mode = "Нет папок в одиночном режиме"
-all_supported_files = "Все поддерживаемые"
-all_files = "Все файлы"
-select_multiple_files = "Множественный выбор"
-category_mismatch = "Категория не совпадает: {current_name} → {new_name}"
-category_mismatch_detail = "Конфликт типов: {selected_name} vs {file_category_name}"
-
-# Сообщения об ошибках
-[messages.errors]
-invalid_docx_template = "Файл шаблона \"{template_name}\" недействителен или повреждён. Пожалуйста, откройте шаблон в Word или WPS, отредактируйте и сохраните его, чтобы убедиться, что это действительный файл DOCX."
-
-# Предупреждающие сообщения
-[messages.warnings]
-missing_body_placeholder = "⚠️ В шаблоне не найден заполнитель для текста (например, {{正文}} или {{body}}). Содержимое Markdown не было вставлено"
-
-# Редакторы
-[editors]
-
-[editors.numbering_add]
-window_title = "Редактор схем"
-scheme_list = "Схемы"
-default_scheme = "По умолчанию:"
-level_format_config = "Формат уровня"
-realtime_preview = "Предпросмотр"
-format_help = "📖 Помощь"
-format_help_title = "Заполнители"
-format_help_text = "Помощь по заполнителям..."
-
-level_1 = "Уровень 1"
-level_2 = "Уровень 2"
-level_3 = "Уровень 3"
-level_4 = "Уровень 4"
-level_5 = "Уровень 5"
-level_6 = "Уровень 6"
-level_7 = "Уровень 7"
-level_8 = "Уровень 8"
-level_9 = "Уровень 9"
-
-new_scheme = "Новый"
-copy_suffix = "(Копия)"
-
-preview_sample = "Пример {level_name}"
-no_format = "Нет формата"
-preview_failed = "Ошибка"
-
-menu_current_level = "── Текущий ({level}) ──"
-menu_decorations = "── Декорация ──"
-menu_hierarchical = "── Иерархия ──"
-
-style_chinese_lower = "Кит. Мал"
-style_chinese_upper = "Кит. Бол"
-style_arabic_half = "Арабский"
-style_arabic_circled = "В круге"
-style_letter_upper = "Буква Бол"
-style_roman_upper = "Римский Бол"
-
-decoration_dun = "Запятая"
-decoration_dot_space = "Точка+Пробел"
-decoration_bracket = "Скобка"
-decoration_chapter = "Глава"
-
-
-load_failed = "Ошибка загрузки"
-load_failed_message = "Не удалось загрузить: {error}"
-save_failed = "Ошибка сохранения"
-save_failed_message = "Не удалось сохранить"
-save_failed_with_error = "Ошибка: {error}"
-cannot_delete = "Нельзя удалить"
-cannot_delete_default_scheme = "По умолчанию нельзя удалить"
-
-[editors.numbering_add.names]
-hierarchical_standard = "Иерархический"
-hierarchical_h2_start = "Иерархический (с H2)"
-
-[editors.numbering_add.descriptions]
-hierarchical_standard_desc = "1 , 1.1 , 1.1.1 ..."
-hierarchical_h2_start_desc = "С H2: 1 , 1.1 ..."
-
-[editors.common]
-basic_info = "Инфо"
-name = "Имя:"
-description = "Описание:"
-add = "Добавить"
-copy = "Копировать"
-delete = "Удалить"
-move_up = "Вверх"
-move_down = "Вниз"
-save = "Сохранить"
-cancel = "Отмена"
-prompt = "Прим."
-select_item_first = "Пожалуйста, выберите элемент"
-cannot_delete = "Не удаляемый"
-system_item_hint = "Системный элемент"
-confirm_delete = "Подтвердить удаление"
-confirm_delete_message = "Действительно удалить: {name}?"
-confirm_close = "Подтвердить закрытие"
-unsaved_changes_hint = "Несохраненные изменения"
-unsaved_close_message = "Действительно закрыть?"
-
-[editors.numbering_clean]
-window_title = "Правила очистки"
-rule_list = "Правила"
-rule_edit = "Редактировать"
-name = "Имя:"
-description = "Описание:"
-regex = "Регулярное выражение:"
-regex_test = "Тест"
-input = "Ввод:"
-result = "Результат:"
-status = "Статус:"
-load_example = "Загрузить пример"
-available_placeholders = "Заполнители"
-new_rule = "Новый"
-copy_suffix = "(Копия)"
-match_success = "Совпадение"
-no_match = "Нет совпадения"
-regex_error = "Ошибка Regex"
-test_error = "Ошибка"
-placeholder_info = """Информация о плейсхолдерах:
-
-{space}        - Пробелы (пробел, полный пробел и т.п.)
-{sep}          - Разделители (точка, запятая и т.п.)
-{bracket_open} - Открывающие скобки (китайские/английские)
-{bracket_close}- Закрывающие скобки (китайские/английские)
-{num_arab}     - Арабские цифры (полуширин./полнширин.)
-{num_cn}       - Китайские числа (нижн./верхн. регистр)
-{num_cn_paren} - Китайские числа в скобках (㈠-㈩)
-{num}          - Все числа (китайские + арабские + ㈠-㈩)
-{letter}       - Латинские буквы (верхн./нижн. регистр)
-{circled}      - Обведённые числа (①-㊿, ❶-⓴, ⓵-⓾ и т.п.)
-{unit_suffix}  - Китайские суффиксы единиц (глава, раздел и т.п.)
-{unit_prefix}  - Китайские префиксы единиц (том, часть и т.п.)"""
-prompt = "Прим."
-no_example_text = "Нет текста примера"
-load_failed = "Ошибка загрузки"
-load_failed_message = "Ошибка: {error}"
-save_failed = "Ошибка сохранения"
-save_failed_message = "Ошибка при сохранении"
-save_failed_with_error = "Ошибка: {error}"
-
-[editors.numbering_clean.names]
-chinese_unit_suffix = "Суффикс ед. кит."
-chinese_unit_prefix = "Префикс ед. кит."
-circled_numbers = "Числа в круге"
-bracket_number = "Числа в скобках"
-hierarchical = "Иерархический"
-number_separator = "Разделитель числа"
-legal_english = "Английский Юридический"
-letter_number = "Номер буквы"
-
-[editors.numbering_clean.descriptions]
-chinese_unit_suffix_desc = "Глава X и т.д."
-chinese_unit_prefix_desc = "Часть X и т.д."
-circled_numbers_desc = "① и т.д."
-bracket_number_desc = "(1) и т.д."
-hierarchical_desc = "1.1 и т.д."
-number_separator_desc = "1. и т.д."
-legal_english_desc = "Chapter X и т.д."
-letter_number_desc = "A. и т.д."
-
-[editors.mapping]
-symbol_editor_title = "Символы"
-typo_editor_title = "Опечатки"
-sensitive_editor_title = "Отмеченные термины"
-generic_editor_title = "Отображение"
-
-symbol_correct_symbol = "Верно"
-symbol_error_symbols = "Неверно"
-typo_correct_word = "Верно"
-typo_error_words = "Неверно"
-sensitive_sensitive_word = "Отмеченный термин"
-sensitive_exceptions = "Исключения"
-comment = "Комментарий"
-generic_key = "Ключ"
-generic_value_list = "Значения"
-
-symbol_description = "Отображение символов."
-typo_description = "Коррекция опечаток."
-sensitive_description = "Отмеченные термины и исключения."
-generic_description = "Общее отображение."
-
-add_entry = "Добавить запись"
-edit_entry = "Редактировать"
-delete_entry = "Удалить"
-
-prompt = "Прим."
-select_entry_to_edit = "Пожалуйста, выберите"
-select_entry_to_delete = "Пожалуйста, выберите"
-confirm_delete = "Подтвердить удаление"
-confirm_delete_message = "Удалить: {entry_key}?"
-error = "Ошибка"
-save_error = "Ошибка сохранения: {error}"
-
-add = "Добавить"
-edit = "Редактировать"
-symbol_mapping = "Символы"
-typo_mapping = "Опечатки"
-sensitive_mapping = "Отмеченный термин"
-generic_mapping = "Отображение"
-
-symbol_correct_symbol_label = "Верно:"
-typo_correct_word_label = "Верно:"
-sensitive_sensitive_word_label = "Отмеченный термин:"
-generic_key_label = "Ключ:"
-symbol_error_symbols_label = "Неверно (Список):"
-typo_error_words_label = "Неверно (Список):"
-sensitive_exceptions_label = "Исключения (Список):"
-generic_value_list_label = "Значения (Список):"
-comment_label = "Комментарий:"
-
-symbol_example = "Прим: ,"
-typo_example = "Прим: Слово"
-sensitive_example = "Прим: Термин → Исключения"
-generic_example = "Одно значение на строку"
-
-enter_correct_symbol_or_word = "Пожалуйста, введите"
-enter_error_symbol_or_word_list = "Пожалуйста, введите список"
-
-# Обработка дублирующихся ключей
-duplicate_key_title = "Ключ уже существует"
-duplicate_key_message = "Ключ \"{entry_key}\" уже существует\n\nТекущие значения: {current_values}\nТекущий комментарий: {current_comment}\n\nВыберите действие:"
-duplicate_key_no_comment = "(нет)"
-overwrite = "Заменить"
-overwrite_tooltip = "Полностью заменить новыми значениями и комментарием"
-merge = "Объединить"
-merge_tooltip = "Объединить новые и старые значения (без дубликатов), комментарий: сохранить старый если новый пуст"
-
-# Стили
-[styles]
-code_block = "Блок кода"
-inline_code = "Встроенный код"
-
-quote_1 = "Цитата 1"
-quote_2 = "Цитата 2"
-quote_3 = "Цитата 3"
-quote_4 = "Цитата 4"
-quote_5 = "Цитата 5"
-quote_6 = "Цитата 6"
-quote_7 = "Цитата 7"
-quote_8 = "Цитата 8"
-quote_9 = "Цитата 9"
-
-formula_block = "Блок формулы"
-inline_formula = "Встроенная формула"
-
-horizontal_rule_1 = "Разделительная линия 1"
-horizontal_rule_2 = "Разделительная линия 2"
-horizontal_rule_3 = "Разделительная линия 3"
-
-list_block = "Блок списка"
-
-table_content = "Содержимое таблицы"
-three_line_table = "Трехлинейная таблица"
-table_grid = "Таблица-сетка"
-
-# Body Paragraph Style
-body_paragraph = "Основной абзац"
-
-# =============================================================================
-# Style Format Configurations (for style injection format properties)
-# ГОСТ Russian standard: 14pt, 1.25cm indent, justified
-# =============================================================================
-[style_formats]
-
-# Body paragraph format (Times New Roman, 14pt, 1.25cm indent, justified)
-[style_formats.body_paragraph]
-east_asia_font = "SimSun"
-ascii_font = "Times New Roman"
-font_size_pt = 14
-first_line_indent_chars = 0
-first_line_indent_cm = 1.25
-spacing_after_twip = 0
-spacing_before_twip = 0
-bold = false
-justification = "both"
-
-# Heading 1-9 format (Arial, 14pt, bold, 1.25cm indent, justified)
-[style_formats.heading_1]
-east_asia_font = "SimSun"
-ascii_font = "Arial"
-font_size_pt = 14
-first_line_indent_chars = 0
-first_line_indent_cm = 1.25
-spacing_after_twip = 0
-spacing_before_twip = 0
-bold = true
-justification = "both"
-
-[style_formats.heading_2]
-east_asia_font = "SimSun"
-ascii_font = "Arial"
-font_size_pt = 14
-first_line_indent_chars = 0
-first_line_indent_cm = 1.25
-spacing_after_twip = 0
-spacing_before_twip = 0
-bold = true
-justification = "both"
-
-[style_formats.heading_3_9]
-east_asia_font = "SimSun"
-ascii_font = "Arial"
-font_size_pt = 14
-first_line_indent_chars = 0
-first_line_indent_cm = 1.25
-spacing_after_twip = 0
-spacing_before_twip = 0
-bold = true
-justification = "both"
-
-# Заполнители
-[placeholders]
-title = "Заголовок"
-body = "Текст"
-
-# YAML
-[yaml_keys]
-title = "Заголовок"
-subtitle = "Подзаголовок"
 
 # Панель конвертации
 [conversion_panel]
@@ -1446,6 +1062,269 @@ generate_ods_tooltip = "В ODS"
 generate_csv = "CSV"
 generate_csv_tooltip = "В CSV"
 
+# Редакторы
+[editors]
+
+[editors.numbering_add]
+window_title = "Редактор схем"
+scheme_list = "Схемы"
+default_scheme = "По умолчанию:"
+level_format_config = "Формат уровня"
+realtime_preview = "Предпросмотр"
+format_help = "📖 Помощь"
+format_help_title = "Заполнители"
+format_help_text = """Использование форматных заполнителей
+
+Формат заполнителя: {level.style}
+
+Доступные стили:
+  chinese_lower  - Китайские цифры (строчные) (一、二、三)
+  chinese_upper  - Китайские цифры (прописные) (壹、贰、叁)
+  arabic_half    - Арабские цифры (полуширинные) (1, 2, 3)
+  arabic_full    - Арабские цифры (полноширинные) (１、２、３)
+  arabic_circled - Цифры в кружках (①②③)
+  letter_upper   - Латинские буквы (прописные) (A, B, C)
+  letter_lower   - Латинские буквы (строчные) (a, b, c)
+  roman_upper    - Римские цифры (прописные) (I, II, III)
+  roman_lower    - Римские цифры (строчные) (i, ii, iii)
+
+Примеры:
+  {1.chinese_lower}、 → 一、二、三、
+  （{2.chinese_lower}） → （一）（二）（三）
+  {3.arabic_half}. → 1. 2. 3.
+  {1.arabic_half}.{2.arabic_half} → 1.1、1.2"""
+
+level_1 = "Уровень 1"
+level_2 = "Уровень 2"
+level_3 = "Уровень 3"
+level_4 = "Уровень 4"
+level_5 = "Уровень 5"
+level_6 = "Уровень 6"
+level_7 = "Уровень 7"
+level_8 = "Уровень 8"
+level_9 = "Уровень 9"
+
+new_scheme = "Новый"
+copy_suffix = "(Копия)"
+
+preview_sample = "Пример {level_name}"
+no_format = "Нет формата"
+preview_failed = "Ошибка"
+
+menu_current_level = "── Текущий ({level}) ──"
+menu_decorations = "── Декорация ──"
+menu_hierarchical = "── Иерархия ──"
+
+style_chinese_lower = "Кит. Мал"
+style_chinese_upper = "Кит. Бол"
+style_arabic_half = "Арабский"
+style_arabic_circled = "В круге"
+style_letter_upper = "Буква Бол"
+style_roman_upper = "Римский Бол"
+
+decoration_dun = "Запятая"
+decoration_dot_space = "Точка+Пробел"
+decoration_bracket = "Скобка"
+decoration_chapter = "Глава"
+
+
+load_failed = "Ошибка загрузки"
+load_failed_message = "Не удалось загрузить: {error}"
+save_failed = "Ошибка сохранения"
+save_failed_message = "Не удалось сохранить"
+save_failed_with_error = "Ошибка: {error}"
+cannot_delete = "Нельзя удалить"
+cannot_delete_default_scheme = "По умолчанию нельзя удалить"
+
+[editors.numbering_add.names]
+hierarchical_standard = "Иерархический"
+hierarchical_h2_start = "Иерархический (с H2)"
+
+[editors.numbering_add.descriptions]
+hierarchical_standard_desc = "Иерархический формат: 1, 1.1, 1.1.1 ... (с пробелом после номера)"
+hierarchical_h2_start_desc = "Иерархический формат (пропустить H1/уровень 1): начать с H2/уровня 2: 1, 1.1, 1.1.1 ..."
+
+[editors.common]
+basic_info = "Инфо"
+name = "Имя:"
+description = "Описание:"
+add = "Добавить"
+copy = "Копировать"
+delete = "Удалить"
+move_up = "Вверх"
+move_down = "Вниз"
+save = "Сохранить"
+cancel = "Отмена"
+prompt = "Прим."
+select_item_first = "Пожалуйста, выберите элемент"
+cannot_delete = "Не удаляемый"
+system_item_hint = "Системный элемент"
+confirm_delete = "Подтвердить удаление"
+confirm_delete_message = "Действительно удалить: {name}?"
+confirm_close = "Подтвердить закрытие"
+unsaved_changes_hint = "Несохраненные изменения"
+unsaved_close_message = "Действительно закрыть?"
+
+[editors.numbering_clean]
+window_title = "Правила очистки"
+rule_list = "Правила"
+rule_edit = "Редактировать"
+name = "Имя:"
+description = "Описание:"
+regex = "Регулярное выражение:"
+regex_test = "Тест"
+input = "Ввод:"
+result = "Результат:"
+status = "Статус:"
+load_example = "Загрузить пример"
+available_placeholders = "Заполнители"
+new_rule = "Новый"
+copy_suffix = "(Копия)"
+match_success = "Совпадение"
+no_match = "Нет совпадения"
+regex_error = "Ошибка Regex"
+test_error = "Ошибка"
+placeholder_info = """Информация о плейсхолдерах:
+
+{space}        - Пробелы (пробел, полный пробел и т.п.)
+{sep}          - Разделители (точка, запятая и т.п.)
+{bracket_open} - Открывающие скобки (китайские/английские)
+{bracket_close}- Закрывающие скобки (китайские/английские)
+{num_arab}     - Арабские цифры (полуширин./полнширин.)
+{num_cn}       - Китайские числа (нижн./верхн. регистр)
+{num_cn_paren} - Китайские числа в скобках (㈠-㈩)
+{num}          - Все числа (китайские + арабские + ㈠-㈩)
+{letter}       - Латинские буквы (верхн./нижн. регистр)
+{circled}      - Обведённые числа (①-㊿, ❶-⓴, ⓵-⓾ и т.п.)
+{unit_suffix}  - Китайские суффиксы единиц (глава, раздел и т.п.)
+{unit_prefix}  - Китайские префиксы единиц (том, часть и т.п.)"""
+prompt = "Прим."
+no_example_text = "Нет текста примера"
+load_failed = "Ошибка загрузки"
+load_failed_message = "Ошибка: {error}"
+save_failed = "Ошибка сохранения"
+save_failed_message = "Ошибка при сохранении"
+save_failed_with_error = "Ошибка: {error}"
+
+[editors.numbering_clean.names]
+chinese_unit_suffix = "Суффикс ед. кит."
+chinese_unit_prefix = "Префикс ед. кит."
+circled_numbers = "Числа в круге"
+bracket_number = "Числа в скобках"
+hierarchical = "Иерархический"
+number_separator = "Разделитель числа"
+legal_english = "Английский Юридический"
+letter_number = "Номер буквы"
+
+[editors.numbering_clean.descriptions]
+chinese_unit_suffix_desc = "Глава X и т.д."
+chinese_unit_prefix_desc = "Часть X и т.д."
+circled_numbers_desc = "① и т.д."
+bracket_number_desc = "(1) и т.д."
+hierarchical_desc = "1.1 и т.д."
+number_separator_desc = "1. и т.д."
+legal_english_desc = "Chapter X и т.д."
+letter_number_desc = "A. и т.д."
+
+[editors.mapping]
+symbol_editor_title = "Символы"
+typo_editor_title = "Опечатки"
+sensitive_editor_title = "Отмеченные термины"
+generic_editor_title = "Отображение"
+
+symbol_correct_symbol = "Верно"
+symbol_error_symbols = "Неверно"
+typo_correct_word = "Верно"
+typo_error_words = "Неверно"
+sensitive_sensitive_word = "Отмеченный термин"
+sensitive_exceptions = "Исключения"
+comment = "Комментарий"
+generic_key = "Ключ"
+generic_value_list = "Значения"
+
+symbol_description = "Отображение символов."
+typo_description = "Коррекция опечаток."
+sensitive_description = "Отмеченные термины и исключения."
+generic_description = "Общее отображение."
+
+add_entry = "Добавить запись"
+edit_entry = "Редактировать"
+delete_entry = "Удалить"
+
+prompt = "Прим."
+select_entry_to_edit = "Пожалуйста, выберите"
+select_entry_to_delete = "Пожалуйста, выберите"
+confirm_delete = "Подтвердить удаление"
+confirm_delete_message = "Удалить: {entry_key}?"
+error = "Ошибка"
+save_error = "Ошибка сохранения: {error}"
+
+add = "Добавить"
+edit = "Редактировать"
+symbol_mapping = "Символы"
+typo_mapping = "Опечатки"
+sensitive_mapping = "Отмеченный термин"
+generic_mapping = "Отображение"
+
+symbol_correct_symbol_label = "Верно:"
+typo_correct_word_label = "Верно:"
+sensitive_sensitive_word_label = "Отмеченный термин:"
+generic_key_label = "Ключ:"
+symbol_error_symbols_label = "Неверно (Список):"
+typo_error_words_label = "Неверно (Список):"
+sensitive_exceptions_label = "Исключения (Список):"
+generic_value_list_label = "Значения (Список):"
+comment_label = "Комментарий:"
+
+symbol_example = "Прим: ,"
+typo_example = "Прим: Слово"
+sensitive_example = "Прим: Термин → Исключения"
+generic_example = "Одно значение на строку"
+
+enter_correct_symbol_or_word = "Пожалуйста, введите"
+enter_error_symbol_or_word_list = "Пожалуйста, введите список"
+
+# Обработка дублирующихся ключей
+duplicate_key_title = "Ключ уже существует"
+duplicate_key_message = "Ключ \"{entry_key}\" уже существует\n\nТекущие значения: {current_values}\nТекущий комментарий: {current_comment}\n\nВыберите действие:"
+duplicate_key_no_comment = "(нет)"
+overwrite = "Заменить"
+merge = "Объединить"
+
+# Типы файлов
+[file_types]
+document = "Документ"
+spreadsheet = "Таблица"
+image = "Изображение"
+layout = "Макет"
+text = "Текст"
+unknown = "Неизвестно"
+
+text_category = "Текст"
+document_category = "Документ"
+spreadsheet_category = "Таблица"
+layout_category = "Макет"
+image_category = "Изображение"
+
+unknown_type = "Неизвестный тип"
+format_mismatch = "⚠️ Это {format}"
+format_unverifiable = "⚠️ Не проверяется"
+format_txt = "TXT"
+format_md = "Markdown"
+format_csv = "CSV"
+
+# Конвертация
+[conversion]
+
+
+
+# Генерируемые имена файлов (для именования выходных файлов)
+[conversion.filenames]
+split_part1 = "Часть1"
+split_part2 = "Часть2"
+merged_pdf = "ОбъединенныйPDF"
+merged_table = "ОбъединеннаяТаблица"
+
 [conversion.progress]
 converting_to_format = "В {format}..."
 preparing = "Подготовка..."
@@ -1475,7 +1354,6 @@ filling_yaml_data = "Заполнение YAML..."
 filling_table_data = "Заполнение таблицы..."
 saving_excel = "Сохранение Excel..."
 writing_file = "Запись файла..."
-executing_final_proofread = "Финальная проверка..."
 initializing_proofread = "Инит проверки..."
 proofreading_progress = "Проверка... {current}/{total}"
 saving_proofread_result = "Сохранение проверки..."
@@ -1584,6 +1462,55 @@ unsupported_layout_format = "Не поддерживается: {format}"
 format_to_pdf_not_implemented = "{format} в PDF Н/Д"
 all_pages_invalid = "Нет допустимых страниц (всего: {total})"
 
+# Сообщения
+[messages]
+file_not_found = "Не найдено: {filename}"
+invalid_file_type = "Неверный тип: {ext}"
+unsupported_file_type = "Не поддерживается"
+unknown_file_category = "Неизвестная категория: {category}"
+
+error_prefix = "Ошибка: {message}"
+operation_failed = "Операция не удалась: {error}"
+processing_exception = "Исключение: {error}"
+system_init_error = "Ошибка инициализации"
+process_file_failed = "Ошибка обработки: {error}"
+batch_merge_need_two_layout = "Нужно мин. 2 файла макета"
+batch_merge_need_two_image = "Нужно мин. 2 файла изображения"
+batch_merge_need_two_table = "Нужно мин. 2 файла таблицы"
+batch_file_list_not_init = "Список файлов не инициализирован"
+select_base_table_first = "Пожалуйста, сначала выберите базовую таблицу"
+select_merge_mode = "Пожалуйста, выберите режим слияния"
+process_failed = "Ошибка: {error}"
+file_processing_failed = "Не удалось обработать файл: {error}"
+template_selection_failed = "Не удалось выбрать шаблон: {error}"
+cancel_failed = "Не удалось отменить: {error}"
+clear_failed = "Не удалось очистить: {error}"
+settings_unavailable = "Настройки недоступны"
+open_settings_failed = "Не удалось открыть настройки: {error}"
+apply_settings_failed = "Не удалось применить настройки: {error}"
+about_unavailable = "О программе недоступно"
+open_about_failed = "Не удалось открыть «О программе»: {error}"
+
+
+
+
+single_file_only = "Только один файл в одиночном режиме"
+no_valid_files = "Нет допустимых файлов"
+no_folder_in_single_mode = "Нет папок в одиночном режиме"
+all_supported_files = "Все поддерживаемые"
+all_files = "Все файлы"
+select_multiple_files = "Множественный выбор"
+category_mismatch = "Категория не совпадает: {current_name} → {new_name}"
+category_mismatch_detail = "Конфликт типов: {selected_name} vs {file_category_name}"
+
+# Сообщения об ошибках
+[messages.errors]
+invalid_docx_template = "Файл шаблона \"{template_name}\" недействителен или повреждён. Пожалуйста, откройте шаблон в Word или WPS, отредактируйте и сохраните его, чтобы убедиться, что это действительный файл DOCX."
+
+# Предупреждающие сообщения
+[messages.warnings]
+missing_body_placeholder = "⚠️ В шаблоне не найден заполнитель для текста (например, {{正文}} или {{body}}). Содержимое Markdown не было вставлено"
+
 # =============================================================================
 # Текст комментариев проверки
 # =============================================================================
@@ -1605,3 +1532,119 @@ pairing = "Проверка пар"
 sensitive = "Обнаружен отмеченный термин"
 extra_close = "Лишний закрывающий символ"
 unclosed = "Незакрытый символ"
+  
+# Текст заполнителей обработки ссылок
+[link_processing]
+file_not_found = "⚠️ Файл не найден: {filename}"
+section_not_found = "⚠️ Раздел не найден: {filename}#{heading}"
+block_not_found = "⚠️ Блок не найден: {filename}#^{block_id}"
+circular_reference = "⚠️ Обнаружена циклическая ссылка: {filename}"
+max_depth_reached = "⚠️ Достигнута максимальная глубина вложения"
+
+# Стили
+[styles]
+# Стили абзацев
+
+# Стили кода
+
+# Стили формул
+
+# Стили списков
+
+# Стили разделительной линии
+
+# Стили таблиц
+
+# Стили цитат (9 уровней)
+body_paragraph = "Основной абзац"
+image_paragraph = "Абзац изображения"
+code_block = "Блок кода"
+inline_code = "Встроенный код"
+formula_block = "Блок формулы"
+inline_formula = "Встроенная формула"
+list_block = "Блок списка"
+horizontal_rule_1 = "Разделительная линия 1"
+horizontal_rule_2 = "Разделительная линия 2"
+horizontal_rule_3 = "Разделительная линия 3"
+table_content = "Содержимое таблицы"
+three_line_table = "Трехлинейная таблица"
+table_grid = "Таблица-сетка"
+quote_1 = "Цитата 1"
+quote_2 = "Цитата 2"
+quote_3 = "Цитата 3"
+quote_4 = "Цитата 4"
+quote_5 = "Цитата 5"
+quote_6 = "Цитата 6"
+quote_7 = "Цитата 7"
+quote_8 = "Цитата 8"
+quote_9 = "Цитата 9"
+
+# =============================================================================
+# Конфигурации формата стилей (для свойств форматирования при инъекции стилей)
+# ГОСТ (RU): 14pt, отступ 1.25cm, выравнивание по ширине
+# =============================================================================
+[style_formats]
+
+# Формат основного абзаца (Times New Roman, 14pt, отступ 1.25cm, выравнивание по ширине)
+[style_formats.body_paragraph]
+east_asia_font = "SimSun"
+ascii_font = "Times New Roman"
+font_size_pt = 14
+first_line_indent_chars = 0
+first_line_indent_cm = 1.25
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = false
+justification = "both"
+
+# Формат заголовка 1 (Arial, 14pt, жирный, отступ 1.25cm, выравнивание по ширине)
+[style_formats.heading_1]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 14
+first_line_indent_chars = 0
+first_line_indent_cm = 1.25
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = true
+justification = "both"
+
+# Формат заголовка 2 (Arial, 14pt, жирный, отступ 1.25cm, выравнивание по ширине)
+[style_formats.heading_2]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 14
+first_line_indent_chars = 0
+first_line_indent_cm = 1.25
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = true
+justification = "both"
+
+# Формат заголовка 3-9 (Arial, 14pt, жирный, отступ 1.25cm, выравнивание по ширине)
+[style_formats.heading_3_9]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 14
+first_line_indent_chars = 0
+first_line_indent_cm = 1.25
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = true
+justification = "both"
+
+# =============================================================================
+# Заполнители (для шаблонов документов)
+# Эти заполнители используются для заполнения шаблонов при конвертации MD → DOCX
+# =============================================================================
+[placeholders]
+title = "Заголовок"
+body = "Текст"
+
+# =============================================================================
+# Ключи YAML (для метаданных)
+# Эти ключи используются для вывода YAML front matter при конвертации DOCX → MD
+# =============================================================================
+[yaml_keys]
+title = "Заголовок"
+subtitle = "Подзаголовок"

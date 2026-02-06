@@ -1,4 +1,4 @@
-﻿"""
+"""
 设置主对话框模块
 
 实现设置对话框的主窗口，包含通用、文本、文档、表格、图片、版式、链接、格式、输出、日志等选项卡。
@@ -7,6 +7,8 @@
 所有用户可见文本通过 i18n 模块的 t() 函数获取，
 支持中英文界面切换。
 """
+
+from __future__ import annotations
 
 import logging
 import os
@@ -32,7 +34,7 @@ class SettingsDialog(BaseDialog):
     包含通用、转换、校对、日志，四个选项卡
     """
     
-    def __init__(self, main_window, config_manager: any, on_apply: Callable[[Dict[str, Any]], None]):
+    def __init__(self, main_window, config_manager: Any, on_apply: Callable[[Dict[str, Any]], None]):
         """
         初始化设置对话框
         
@@ -761,45 +763,3 @@ class SettingsDialog(BaseDialog):
         
         # 3秒后自动消失
         self.after(DIALOG_CONFIG.status_display_time, lambda: self._status_label.destroy() if hasattr(self, '_status_label') else None)
-
-
-# 模块测试代码
-if __name__ == "__main__":
-    # 配置日志
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    
-    # 创建测试窗口
-    root = tb.Window(title="设置对话框测试", themename="morph")
-    
-    # 定义测试回调函数
-    def test_apply(settings):
-        logger.info(f"应用设置: {settings}")
-    
-    # 创建一个简单的MainWindow模拟对象
-    class MockMainWindow:
-        def __init__(self):
-            self.root = root
-            
-        def get_current_theme(self):
-            return "morph"
-            
-        def refresh_theme(self, theme_name):
-            root.style.theme_use(theme_name)
-            
-        def is_transparency_enabled(self):
-            return True
-            
-        def set_transparency(self, value):
-            root.attributes('-alpha', value)
-    
-    # 创建模拟主窗口
-    mock_main_window = MockMainWindow()
-    
-    # 创建设置对话框
-    dialog = SettingsDialog(mock_main_window, test_apply)
-    
-    logger.info("设置对话框测试启动")
-    root.mainloop()

@@ -22,7 +22,7 @@
 
 import logging
 import tkinter as tk
-from typing import Optional, Callable, Dict, List
+from typing import Optional, Callable, Dict, List, Any
 
 import ttkbootstrap as tb
 from ttkbootstrap.constants import *
@@ -66,7 +66,7 @@ class ConversionPanelBase(tb.Frame):
     def __init__(
         self,
         master,
-        config_manager: any = None,
+        config_manager: Any = None,
         on_action: Optional[Callable] = None,
         height: Optional[int] = None,
         **kwargs
@@ -233,8 +233,8 @@ class ConversionPanelBase(tb.Frame):
         self,
         category: str,
         current_format: str,
-        file_path: str = None,
-        file_list: list = None,
+        file_path: Optional[str] = None,
+        file_list: Optional[List[str]] = None,
         ui_mode: str = 'single'
     ):
         """
@@ -312,11 +312,9 @@ class ConversionPanelBase(tb.Frame):
             return
         
         # 检查压缩模式
-        is_compress_mode = (
-            hasattr(self, 'compress_mode_var') and 
-            self.compress_mode_var and
-            self.compress_mode_var.get() == 'limit_size'
-        )
+        is_compress_mode = False
+        if hasattr(self, 'compress_mode_var') and self.compress_mode_var:
+            is_compress_mode = self.compress_mode_var.get() == 'limit_size'
         
         # 检查压缩输入有效性
         is_compress_input_valid = False

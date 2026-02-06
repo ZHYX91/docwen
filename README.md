@@ -26,31 +26,21 @@ This software was originally designed for the daily work of the printing office 
 - **🔒 Completely Local Operation** - Runs offline, ensuring data security with built-in network isolation mechanisms.
 - **🔗 Single Instance Operation** - Automatically manages program instances and supports integration with the accompanying Obsidian plugin.
 
-## Changelog
+## 📸 Screenshots
 
-### v0.6.0 (2025-01-20)
+| Batch | Markdown |
+| --- | --- |
+| ![Batch panel](assets/screenshots/batch.png) | ![Markdown panel](assets/screenshots/markdown.png) |
 
-- Full internationalization support (GUI and CLI support 11 languages).
-- Replaced PaddleOCR with RapidOCR for better compatibility.
-- Added multilingual Word/Excel templates.
-- Automatic template style detection and injection.
-- Other optimizations and fixes.
+| Document | Spreadsheet |
+| --- | --- |
+| ![Document panel](assets/screenshots/document.png) | ![Spreadsheet panel](assets/screenshots/spreadsheet.png) |
 
-### v0.5.1 (2025-01-01)
+| Image | Layout |
+| --- | --- |
+| ![Image panel](assets/screenshots/image.png) | ![Layout panel](assets/screenshots/layout.png) |
 
-- Added bidirectional math formula conversion (Word OMML ↔ Markdown LaTeX).
-- Added bidirectional footnote/endnote conversion.
-- Added character and paragraph styles for code, quotes, etc.
-- Enhanced list processing (multi-level nesting, automatic numbering).
-- Enhanced table functions (style detection/injection, three-line tables, etc.).
-- Optimized cleaning and adding of subheading numbers.
-- Improved interface interaction and settings linkage.
-
-### v0.4.1 (2025-12-05)
-
-- Refactored CLI to improve user experience.
-- Added support for more document types.
-- Implemented more configurable options.
+Changelog: see [doc/CHANGELOG.md](doc/CHANGELOG.md)
 
 ## 🚀 Quick Start
 
@@ -122,6 +112,23 @@ Supports bidirectional conversion between Markdown separators and Word page brea
 -   **DOCX → MD**: Word page breaks, section breaks, and horizontal lines are automatically converted to Markdown separators.
 -   **MD → DOCX**: Markdown `---`, `***`, `___` are automatically converted to corresponding Word elements.
 -   **Configurable**: Specific mapping relationships can be customized in the settings interface.
+
+### Image Embeds and Sizing
+
+Supports Obsidian/Wiki and standard Markdown image embeds, with optional sizing (px):
+
+```markdown
+![[image.png]]
+![[image.png|300]]
+![[image.png\|300]]
+![alt](image.png =300x200)
+![alt](image.png =300x)
+![alt|300](image.png)
+```
+
+- No size: uses the original image size, capped by available page/cell width
+- With size: allows upscaling, still capped by available width
+- Image-only paragraph: uses the Image paragraph style (centered, single spacing)
 
 ## 📖 Detailed Usage Guide
 

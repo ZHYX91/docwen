@@ -1,7 +1,7 @@
 """
 DOCX文档错别字检查核心处理模块
 
-本模块是公文转换器的校对检查引擎，负责对Word文档进行文本校对和批注添加。
+本模块是校对检查引擎，负责对Word文档进行文本校对和批注添加。
 主要功能包括：
 - 支持多种校对规则（标点配对、符号校对、错别字校对、敏感词匹配）
 - 在DOCX文档中添加详细的批注说明
@@ -18,23 +18,39 @@ import logging
 from docx import Document
 from docx.shared import RGBColor
 from .spell_checker import TextValidator
-from .utils import plan_run_splits, rebuild_paragraph_with_splits
+from .utils import find_run_at_position, plan_run_splits, rebuild_paragraph_with_splits
 from docwen.utils.path_utils import generate_output_path
+from docwen.utils.docx_utils import NAMESPACES as DOCX_NAMESPACES
 from docwen.config.config_manager import config_manager
 from docwen.i18n import t
+from docwen.proofread_keys import SYMBOL_CORRECTION, SYMBOL_PAIRING, SENSITIVE_WORD, TYPOS_RULE
 
 # 配置日志
 logger = logging.getLogger(__name__)
 
+NON_TEXT_XPATHS = [
+    ".//w:drawing",
+    ".//m:oMath",
+    ".//w:oMath",
+    ".//w:hyperlink",
+    ".//w:br[@w:type or @w:clear]",
+    ".//w:fldChar",
+    ".//w:instrText",
+    ".//w:bookmarkStart",
+    ".//w:bookmarkEnd",
+    ".//w:sdt",
+    ".//w:footnoteReference",
+    ".//w:endnoteReference",
+    ".//w:commentReference",
+    ".//w:sym",
+    ".//w:ruby",
+    ".//w:object",
+]
+
 
 def is_code_paragraph(paragraph) -> bool:
     """
-    检测段落是否为代码块段落
-    
-    检测依据：
-    1. 段落样式名称包含代码相关关键词
-    2. 段落有灰色底纹/背景色
-    3. 段落中所有run都使用等宽字体
+    检测段落是否为代码块段落（复用 docx2md 的检测逻辑）
     
     参数:
         paragraph: docx段落对象
@@ -43,55 +59,10 @@ def is_code_paragraph(paragraph) -> bool:
         bool: 是否为代码段落
     """
     try:
-        # 1. 检查段落样式
-        style_name = paragraph.style.name if paragraph.style else ""
-        code_style_keywords = config_manager.get_code_paragraph_styles()
-        
-        # 精确匹配
-        if style_name in code_style_keywords:
-            logger.debug(f"段落匹配代码样式: {style_name}")
-            return True
-        
-        # 模糊匹配（如果启用）
-        if config_manager.get_code_fuzzy_match_enabled():
-            fuzzy_keywords = config_manager.get_code_fuzzy_keywords()
-            style_lower = style_name.lower()
-            for keyword in fuzzy_keywords:
-                if keyword.lower() in style_lower:
-                    logger.debug(f"段落模糊匹配代码样式: {style_name} (关键词: {keyword})")
-                    return True
-        
-        # 2. 检查灰色背景（如果启用）
-        if config_manager.is_code_gray_background_enabled():
-            gray_colors = config_manager.get_code_gray_colors()
-            
-            # 检查段落底纹
-            if hasattr(paragraph, '_element'):
-                pPr = paragraph._element.find('.//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}pPr')
-                if pPr is not None:
-                    shd = pPr.find('.//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}shd')
-                    if shd is not None:
-                        fill_color = shd.get('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}fill')
-                        if fill_color and fill_color.upper() in [c.upper() for c in gray_colors]:
-                            logger.debug(f"段落有灰色底纹: {fill_color}")
-                            return True
-        
-        # 3. 检查是否所有run都使用等宽字体
-        code_font = config_manager.get_code_font()
-        if paragraph.runs:
-            all_code_font = True
-            for run in paragraph.runs:
-                if run.text.strip():  # 只检查有内容的run
-                    font_name = run.font.name if run.font else None
-                    if font_name != code_font:
-                        all_code_font = False
-                        break
-            if all_code_font and len(paragraph.runs) > 0:
-                logger.debug(f"段落所有run使用代码字体: {code_font}")
-                return True
-        
-        return False
-        
+        # 延迟导入，避免循环导入
+        from docwen.converter.docx2md.shared.style_detector import detect_paragraph_style_type
+        style_type, _ = detect_paragraph_style_type(paragraph, config_manager)
+        return style_type == 'code_block'
     except Exception as e:
         logger.warning(f"检测代码段落时出错: {e}")
         return False
@@ -99,11 +70,7 @@ def is_code_paragraph(paragraph) -> bool:
 
 def is_quote_paragraph(paragraph) -> bool:
     """
-    检测段落是否为引用段落
-    
-    检测依据：
-    1. 段落样式名称包含引用相关关键词
-    2. 段落样式是分级引用样式
+    检测段落是否为引用段落（复用 docx2md 的检测逻辑）
     
     参数:
         paragraph: docx段落对象
@@ -112,47 +79,37 @@ def is_quote_paragraph(paragraph) -> bool:
         bool: 是否为引用段落
     """
     try:
-        # 1. 检查段落样式
-        style_name = paragraph.style.name if paragraph.style else ""
-        
-        # 检查分级引用样式
-        level_styles = config_manager.get_quote_level_styles()
-        if style_name in level_styles:
-            logger.debug(f"段落匹配分级引用样式: {style_name}")
-            return True
-        
-        # 检查通用引用样式
-        quote_styles = config_manager.get_quote_paragraph_styles()
-        if style_name in quote_styles:
-            logger.debug(f"段落匹配引用样式: {style_name}")
-            return True
-        
-        # 模糊匹配（如果启用）
-        if config_manager.get_quote_fuzzy_match_enabled():
-            fuzzy_keywords = config_manager.get_quote_fuzzy_keywords()
-            style_lower = style_name.lower()
-            for keyword in fuzzy_keywords:
-                if keyword.lower() in style_lower:
-                    logger.debug(f"段落模糊匹配引用样式: {style_name} (关键词: {keyword})")
-                    return True
-        
-        return False
-        
+        # 延迟导入，避免循环导入
+        from docwen.converter.docx2md.shared.style_detector import detect_paragraph_style_type
+        style_type, _ = detect_paragraph_style_type(paragraph, config_manager)
+        return style_type == 'quote'
     except Exception as e:
         logger.warning(f"检测引用段落时出错: {e}")
         return False
 
-from typing import Callable, Optional, Dict, Any, Union
+
+def has_non_text_content(paragraph) -> bool:
+    element = paragraph._element
+    try:
+        for xpath in NON_TEXT_XPATHS:
+            if element.xpath(xpath, namespaces=DOCX_NAMESPACES):
+                return True
+        return False
+    except Exception as e:
+        logger.warning(f"检测段落非文本节点时出错，保守降级为非文本段落: {e}")
+        return True
+
+from typing import Callable, Optional, Dict, Any, Union, List
 import threading
 
 def process_docx(
     docx_path: str,
-    output_path: str = None,
-    output_dir: str = None,
-    proofread_options: Dict[str, bool] = None,
+    output_path: Optional[str] = None,
+    output_dir: Optional[str] = None,
+    proofread_options: Optional[Dict[str, bool]] = None,
     progress_callback: Optional[Callable[[str], None]] = None,
     cancel_event: Optional[threading.Event] = None
-) -> str:
+) -> Optional[str]:
     """
     处理DOCX文件，添加错别字批注
     
@@ -261,7 +218,7 @@ def process_docx(
         logger.error(f"处理文档失败: {str(e)}", exc_info=True)
         raise RuntimeError(f"处理文档失败: {str(e)}") from e
     
-def create_validator_with_options(proofread_options: Dict[str, bool] = None) -> TextValidator:
+def create_validator_with_options(proofread_options: Optional[Dict[str, bool]] = None) -> TextValidator:
     """
     根据校对选项创建文本验证器
     
@@ -284,10 +241,10 @@ def create_validator_with_options(proofread_options: Dict[str, bool] = None) -> 
         return TextValidator()
     
     # 从字典中提取选项值
-    symbol_pairing_enabled = proofread_options.get("symbol_pairing", False)
-    symbol_correction_enabled = proofread_options.get("symbol_correction", False)
-    typos_rule_enabled = proofread_options.get("typos_rule", False)
-    sensitive_word_enabled = proofread_options.get("sensitive_word", False)
+    symbol_pairing_enabled = proofread_options.get(SYMBOL_PAIRING, False)
+    symbol_correction_enabled = proofread_options.get(SYMBOL_CORRECTION, False)
+    typos_rule_enabled = proofread_options.get(TYPOS_RULE, False)
+    sensitive_word_enabled = proofread_options.get(SENSITIVE_WORD, False)
     
     logger.info("使用校对规则初始化验证器:")
     logger.info(f"  标点配对: {symbol_pairing_enabled}")
@@ -303,7 +260,7 @@ def create_validator_with_options(proofread_options: Dict[str, bool] = None) -> 
         sensitive_word=sensitive_word_enabled
     )
 
-def batch_process_docx(directory_path: str, output_dir: str = None) -> list:
+def batch_process_docx(directory_path: str, output_dir: Optional[str] = None) -> List[str]:
     """
     批量处理目录中的所有DOCX文件（添加时间戳后缀）
     
@@ -453,6 +410,37 @@ def add_comments_for_errors(paragraph, doc, errors) -> int:
     """
     try:
         logger.info(f"开始为 {len(errors)} 个错误添加批注")
+
+        if has_non_text_content(paragraph) and config_manager.is_skip_rebuild_on_non_text_enabled():
+            if config_manager.is_log_skipped_enabled():
+                try:
+                    para_text = paragraph.text or ""
+                    para_info = para_text[:30] + "..." if len(para_text) > 30 else para_text
+                    logger.warning(f"段落包含非文本节点，跳过重建并降级批注: '{para_info}'")
+                except Exception:
+                    logger.warning("段落包含非文本节点，跳过重建并降级批注")
+
+            success_count = 0
+            for idx, error in enumerate(errors):
+                error_run = find_run_at_position(paragraph, error.start_pos)
+                if error_run is None:
+                    error_run = paragraph.add_run("")
+
+                comment_text = f"{error.error_type}：{error.error_text} → {error.suggestion}"
+                try:
+                    doc.add_comment(
+                        error_run,
+                        text=comment_text,
+                        author=f"DocWen-{error.source}",
+                        initials="Sys"
+                    )
+                    logger.info(f"成功添加批注 [{idx+1}/{len(errors)}] (来源: {error.source})")
+                    success_count += 1
+                except Exception as e:
+                    logger.error(f"添加批注失败 [{idx+1}/{len(errors)}]: {str(e)}")
+
+            logger.info(f"批注添加完成: {success_count}/{len(errors)}")
+            return success_count
         
         # 1. 规划所有错误的run拆分方案
         split_plan = plan_run_splits(paragraph, errors)
@@ -494,49 +482,3 @@ def add_comments_for_errors(paragraph, doc, errors) -> int:
         return 0
 
 
-# 模块测试代码
-if __name__ == "__main__":
-    # 配置日志
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
-        handlers=[
-            logging.StreamHandler(),
-            logging.FileHandler("docx_spell_core_test.log")
-        ]
-    )
-    
-    logger.info("docx_spell.core模块测试开始")
-    
-    # 测试单文件处理
-    test_file = "test.docx"
-    if os.path.exists(test_file):
-        logger.info(f"测试单文件处理: {test_file}")
-        try:
-            # 测试校对（启用标点配对、符号校对、错别字校对）
-            test_options = {
-                "symbol_pairing": True,
-                "symbol_correction": True,
-                "typos_rule": True,
-                "sensitive_word": False
-            }
-            result = process_docx(test_file, proofread_options=test_options)
-            logger.info(f"测试成功，输出文件: {result}")
-        except Exception as e:
-            logger.error(f"测试失败: {str(e)}")
-    else:
-        logger.warning(f"测试文件不存在: {test_file}")
-    
-    # 测试批量处理
-    test_dir = "test_docs"
-    if os.path.isdir(test_dir):
-        logger.info(f"测试批量处理: {test_dir}")
-        try:
-            results = batch_process_docx(test_dir)
-            logger.info(f"批量处理完成，成功处理 {len(results)} 个文件")
-        except Exception as e:
-            logger.error(f"批量处理失败: {str(e)}")
-    else:
-        logger.warning(f"测试目录不存在: {test_dir}")
-    
-    logger.info("docx_spell.core模块测试结束")

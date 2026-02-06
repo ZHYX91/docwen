@@ -1,4 +1,4 @@
-﻿"""
+"""
 图片设置选项卡模块
 
 实现设置对话框的图片设置选项卡，包含：
@@ -6,6 +6,8 @@
 - 压缩选项默认设置
 - PDF/TIFF选项默认设置
 """
+
+from __future__ import annotations
 
 import logging
 import tkinter as tk
@@ -46,7 +48,7 @@ class ImageTab(BaseSettingsTab):
     包含提取/OCR设置、压缩选项和PDF/TIFF选项。
     """
     
-    def __init__(self, parent, config_manager: any, on_change: Callable[[str, Any], None]):
+    def __init__(self, parent, config_manager: Any, on_change: Callable[[str, Any], None]):
         """初始化图片设置选项卡"""
         # 联动逻辑标志位和状态记录
         self._updating_image_options: bool = False
@@ -332,7 +334,7 @@ class ImageTab(BaseSettingsTab):
             "info"
         ).pack(side="left", padx=(5, 0))
     
-    def _create_ocr_language_selector(self, parent: tb.Frame, initial_value: str):
+    def _create_ocr_language_selector(self, parent: tk.Widget, initial_value: str):
         """
         创建OCR语言选择器
         

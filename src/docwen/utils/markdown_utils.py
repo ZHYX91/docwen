@@ -163,6 +163,42 @@ def parse_table_row(line: str) -> list:
     return cleaned_cells
 
 
+def parse_table_alignments(separator_line: str) -> list[str]:
+    """
+    解析Markdown表格分隔行，提取每列的对齐方式
+    
+    参数:
+        separator_line: 分隔行字符串，如 "|:---|:---:|---:|"
+        
+    返回:
+        list[str]: 对齐方式列表，值为 'default' / 'left' / 'center' / 'right'
+        
+    示例:
+        >>> parse_table_alignments("|------|:----:|-----:|")
+        ['default', 'center', 'right']
+        >>> parse_table_alignments("| :--- | --- | ---: |")
+        ['left', 'default', 'right']
+    """
+    cells = parse_table_row(separator_line)
+    
+    alignments: list[str] = []
+    for cell in cells:
+        cell = cell.strip()
+        has_left_colon = cell.startswith(':')
+        has_right_colon = cell.endswith(':')
+        
+        if has_left_colon and has_right_colon:
+            alignments.append('center')
+        elif has_left_colon:
+            alignments.append('left')
+        elif has_right_colon:
+            alignments.append('right')
+        else:
+            alignments.append('default')
+    
+    return alignments
+
+
 def is_table_separator(line: str) -> bool:
     """
     判断是否是Markdown表格分隔行
@@ -240,6 +276,7 @@ def extract_markdown_tables(md_body: str) -> list:
                 ['数据1', '数据2', ...],
                 ['数据3', '数据4', ...]
             ],
+            'alignments': ['default'|'left'|'center'|'right', ...],
             'start_line': 起始行号,
             'end_line': 结束行号
         }
@@ -286,6 +323,12 @@ def extract_markdown_tables(md_body: str) -> list:
                 if not is_table_separator(lines[1]):
                     logger.debug(f"跳过表格 {match_idx+1}: 第二行不是有效的分隔行")
                     continue
+
+                alignments = parse_table_alignments(lines[1])
+                if len(alignments) < len(headers):
+                    alignments.extend(['default'] * (len(headers) - len(alignments)))
+                elif len(alignments) > len(headers):
+                    alignments = alignments[:len(headers)]
                 
                 # 解析数据行（第三行及以后）
                 rows = []
@@ -315,12 +358,13 @@ def extract_markdown_tables(md_body: str) -> list:
                     'raw_text': table_text,
                     'headers': headers,
                     'rows': rows,
+                    'alignments': alignments,
                     'start_line': start_line,
                     'end_line': end_line
                 }
                 
                 tables.append(table_data)
-                logger.info(f"提取表格 {match_idx+1}: {len(headers)}列 x {len(rows)}行")
+                logger.info(f"提取表格 {match_idx+1}: {len(headers)}列 x {len(rows)}行, 对齐: {alignments}")
                 
             except Exception as e:
                 logger.warning(f"跳过表格 {match_idx+1}: {str(e)}")
@@ -332,30 +376,3 @@ def extract_markdown_tables(md_body: str) -> list:
     except Exception as e:
         logger.error(f"表格提取失败: {str(e)}", exc_info=True)
         return []
-
-
-# 模块测试代码
-if __name__ == "__main__":
-    # 配置日志
-    logging.basicConfig(level=logging.DEBUG)
-    logger.info("Markdown工具模块测试")
-    
-    # 测试YAML提取
-    test_content = """---
-title: 测试文档
-date: 2023-01-15
----
-# 标题内容
-正文内容"""
-    
-    yaml_part, md_part = extract_yaml(test_content)
-    assert yaml_part == "title: 测试文档\ndate: 2023-01-15"
-    assert md_part == "# 标题内容\n正文内容"
-    logger.debug("YAML提取测试通过")
-    
-    # 测试标题清理
-    assert clean_heading("1. 测试标题") == "测试标题"
-    assert clean_heading("（一）二级标题") == "二级标题"
-    logger.debug("标题清理测试通过")
-    
-    logger.info("所有测试通过!")

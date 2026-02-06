@@ -1,4 +1,4 @@
-﻿"""
+"""
 文档设置选项卡模块
 
 实现设置对话框的文档设置选项卡，包含：
@@ -11,6 +11,8 @@
 所有用户可见文本通过 i18n 模块的 t() 函数获取，
 支持中英文界面切换。
 """
+
+from __future__ import annotations
 
 import logging
 import tkinter as tk
@@ -46,7 +48,7 @@ class DocumentTab(BaseSettingsTab):
     包含提取/OCR设置、校对设置、词库配置和软件优先级。
     """
     
-    def __init__(self, parent, config_manager: any, on_change: Callable[[str, Any], None]):
+    def __init__(self, parent, config_manager: Any, on_change: Callable[[str, Any], None]):
         """初始化文档设置选项卡"""
         # 软件名称映射（国际化）
         self.software_names = {
@@ -86,19 +88,19 @@ class DocumentTab(BaseSettingsTab):
             # 加载软件优先级
             word_processors = config_manager.get_word_processors_priority()
             self.word_processors = [
-                SoftwareInfo(sw_id, self.software_names.get(sw_id, sw_id), i + 1)
+                SoftwareInfo(sw_id, self.software_names.get(sw_id) or sw_id, i + 1)
                 for i, sw_id in enumerate(word_processors)
             ]
             
             odt_priority = config_manager.get_special_conversion_priority("odt")
             self.odt_software = [
-                SoftwareInfo(sw_id, self.software_names.get(sw_id, sw_id), i + 1)
+                SoftwareInfo(sw_id, self.software_names.get(sw_id) or sw_id, i + 1)
                 for i, sw_id in enumerate(odt_priority)
             ]
             
             doc_to_pdf_priority = config_manager.get_document_to_pdf_priority()
             self.document_to_pdf_software = [
-                SoftwareInfo(sw_id, self.software_names.get(sw_id, sw_id), i + 1)
+                SoftwareInfo(sw_id, self.software_names.get(sw_id) or sw_id, i + 1)
                 for i, sw_id in enumerate(doc_to_pdf_priority)
             ]
             
@@ -374,6 +376,9 @@ class DocumentTab(BaseSettingsTab):
             cards_frame = self.document_to_pdf_cards_frame
             software_list = self.document_to_pdf_software
         else:
+            return
+
+        if not cards_frame:
             return
         
         # 清空并重建

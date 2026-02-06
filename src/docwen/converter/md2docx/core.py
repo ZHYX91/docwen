@@ -12,7 +12,9 @@ import shutil
 import tempfile
 import threading
 from typing import Callable, Optional
-from docx import Document
+
+from docx import Document as open_docx
+from docx.document import Document as DocxDocument
 
 from .processors import md_processor
 from .processors import docx_processor
@@ -22,7 +24,6 @@ from .handlers.numbering_handler import ensure_numbering_part
 from docwen.template.loader import TemplateLoader
 from docwen.utils.validation_utils import is_value_empty
 from docwen.utils.heading_utils import convert_to_halfwidth
-from docwen.docx_spell.core import process_docx
 from docwen.utils.workspace_manager import prepare_input_file, should_save_intermediate_files
 from docwen.utils.path_utils import generate_output_path
 from docwen.utils import yaml_utils
@@ -46,8 +47,7 @@ def convert(
     md_path: str,
     output_path: str,
     *,
-    template_name: str = "公文通用",
-    spell_check_option: int = 0,
+    template_name: str,
     progress_callback: Optional[Callable[[str], None]] = None,
     cancel_event: Optional[threading.Event] = None,
     original_source_path: Optional[str] = None,
@@ -66,8 +66,7 @@ def convert(
     参数:
         md_path: Markdown文件路径
         output_path: 输出文件完整路径
-        template_name: 模板名称，默认"公文通用"
-        spell_check_option: 拼写检查选项，0表示不检查
+        template_name: 模板名称（必需）
         progress_callback: 进度回调函数
         cancel_event: 取消事件
         original_source_path: 原始源文件路径（用于嵌入功能的路径解析，可选）
@@ -80,7 +79,6 @@ def convert(
         logger.info("=" * 60)
         logger.info(f"开始MD转DOCX: {os.path.basename(md_path)}")
         logger.info(f"使用模板: {template_name}")
-        logger.info(f"错别字检查选项: {spell_check_option}")
         logger.info("=" * 60)
         
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -106,7 +104,7 @@ def convert(
             # 4. 在临时目录转换（传递原始文件路径用于标题提取和options）
             success = _convert_internal(
                 yaml_data, md_body, temp_output,
-                template_name, spell_check_option,
+                template_name,
                 progress_callback, cancel_event,
                 original_source_path if original_source_path else md_path,
                 options
@@ -142,16 +140,13 @@ def convert(
             return output_path
         
     except ValueError:
-        # 精确放行：让ValueError（如样式缺失）向上冒泡，以便上层捕获并显示给用户
-        raise
-    except ValueError:
         raise
     except Exception as e:
         logger.error(f"MD转DOCX失败: {e}", exc_info=True)
         return None
 
 
-def _read_and_parse_md(temp_md_path: str, original_md_path: str = None) -> tuple:
+def _read_and_parse_md(temp_md_path: str, original_md_path: Optional[str] = None) -> tuple:
     """
     读取并解析Markdown文件，返回YAML数据和YAML后的Markdown内容
     
@@ -227,10 +222,9 @@ def _convert_internal(
     md_body: str,
     output_path: str,
     template_name: str,
-    spell_check_option: int,
     progress_callback,
     cancel_event,
-    md_path: str = None,
+    md_path: Optional[str] = None,
     options: Optional[dict] = None
 ) -> bool:
     """
@@ -243,7 +237,6 @@ def _convert_internal(
         md_body: Markdown正文
         output_path: 输出文件路径
         template_name: 模板名称
-        spell_check_option: 拼写检查选项
         progress_callback: 进度回调
         cancel_event: 取消事件
         md_path: 原始MD文件路径（用于从文件名提取标题）
@@ -324,8 +317,7 @@ def _convert_internal(
         
         # 如果返回了临时路径（说明注入了样式或添加了Part），使用临时路径加载
         if processed_template_path != original_template_path:
-            from docx import Document as DocxDocument
-            doc = DocxDocument(processed_template_path)
+            doc = open_docx(processed_template_path)
             logger.info(f"使用增强后的临时模板: {processed_template_path}")
         else:
             doc = template_loader.load_docx_template(template_name)
@@ -345,24 +337,7 @@ def _convert_internal(
         if cancel_event and cancel_event.is_set():
             logger.info("操作被用户取消")
             return False
-        
-        # 6. 根据选项执行错别字检查
-        if spell_check_option is None:
-            logger.info("使用配置文件默认设置进行错别字检查")
-            process_docx(output_path)
-        elif spell_check_option > 0:
-            if progress_callback:
-                progress_callback(t('conversion.progress.executing_final_proofread'))
-            logger.info(f"使用用户指定的规则进行错别字检查: {spell_check_option}")
-            process_docx(
-                output_path, 
-                spell_check_options=spell_check_option, 
-                progress_callback=progress_callback, 
-                cancel_event=cancel_event
-            )
-        else:
-            logger.info("用户选择不进行错别字检查")
-        
+
         logger.info(f"转换成功! DOCX文件已保存到: {output_path}")
         return True
         
@@ -382,7 +357,7 @@ def _convert_internal(
                 logger.warning(f"清理临时目录失败: {temp_dir}, 错误: {e}")
 
 
-def _get_fallback_title(yaml_data: dict, md_path: str = None) -> str:
+def _get_fallback_title(yaml_data: dict, md_path: Optional[str] = None) -> str:
     """
     获取标题的回退值
     
@@ -417,7 +392,7 @@ def _get_fallback_title(yaml_data: dict, md_path: str = None) -> str:
     return "标题"
 
 
-def _ensure_title_fallbacks(yaml_data: dict, md_path: str = None):
+def _ensure_title_fallbacks(yaml_data: dict, md_path: Optional[str] = None):
     """
     为所有语言版本的标题键设置回退值
     
@@ -443,8 +418,15 @@ def _ensure_title_fallbacks(yaml_data: dict, md_path: str = None):
             logger.debug(f"为 '{title_key}' 设置回退值: {fallback_value}")
 
 
-def _process_docx_template(doc: Document, output_path: str, yaml_data: dict, body_data: list, 
-                           template_name: str = None, footnotes: dict = None, endnotes: dict = None) -> bool:
+def _process_docx_template(
+    doc: DocxDocument,
+    output_path: str,
+    yaml_data: dict,
+    body_data: list,
+    template_name: Optional[str] = None,
+    footnotes: Optional[dict] = None,
+    endnotes: Optional[dict] = None,
+) -> bool:
     """
     处理DOCX模板并保存结果
     

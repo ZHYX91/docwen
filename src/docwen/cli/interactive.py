@@ -12,7 +12,7 @@
 
 import os
 import logging
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Any
 
 from docwen.cli import utils, executor
 from docwen.cli.i18n import cli_t
@@ -728,7 +728,7 @@ def handle_mixed_types(categories: Dict[str, List[str]]) -> int:
 
 # ==================== 序号选项辅助函数 ====================
 
-def get_numbering_options(direction: str) -> Dict[str, any]:
+def get_numbering_options(direction: str) -> Dict[str, Any]:
     """
     获取序号处理选项
     
@@ -825,7 +825,7 @@ def select_numbering_scheme() -> Optional[str]:
         return scheme_map.get(choice)
 
 
-def get_optimize_options() -> Dict[str, any]:
+def get_optimize_options() -> Dict[str, Any]:
     """
     获取文档优化选项
     
@@ -891,12 +891,14 @@ def get_proofread_options() -> Dict[str, bool]:
     Returns:
         Dict[str, bool]: 校对选项字典，None表示使用默认配置
     """
+    from docwen.proofread_keys import SYMBOL_CORRECTION, SYMBOL_PAIRING, SENSITIVE_WORD, TYPOS_RULE
+
     # 定义校对规则
     rules = [
-        ("symbol_pairing", cli_t('cli.interactive.proofread.symbol_pairing')),
-        ("symbol_correction", cli_t('cli.interactive.proofread.symbol_correction')),
-        ("typos_rule", cli_t('cli.interactive.proofread.typos_rule')),
-        ("sensitive_word", cli_t('cli.interactive.proofread.sensitive_word')),
+        (SYMBOL_PAIRING, cli_t('cli.interactive.proofread.symbol_pairing')),
+        (SYMBOL_CORRECTION, cli_t('cli.interactive.proofread.symbol_correction')),
+        (TYPOS_RULE, cli_t('cli.interactive.proofread.typos_rule')),
+        (SENSITIVE_WORD, cli_t('cli.interactive.proofread.sensitive_word')),
     ]
     
     # 从配置获取默认值
@@ -904,17 +906,17 @@ def get_proofread_options() -> Dict[str, bool]:
         from docwen.config.config_manager import config_manager
         engine_config = config_manager.get_proofread_engine_config()
         default_states = {
-            "symbol_pairing": engine_config.get("enable_symbol_pairing", True),
-            "symbol_correction": engine_config.get("enable_symbol_correction", True),
-            "typos_rule": engine_config.get("enable_typos_rule", True),
-            "sensitive_word": engine_config.get("enable_sensitive_word", False),
+            SYMBOL_PAIRING: engine_config.get("enable_symbol_pairing", True),
+            SYMBOL_CORRECTION: engine_config.get("enable_symbol_correction", True),
+            TYPOS_RULE: engine_config.get("enable_typos_rule", True),
+            SENSITIVE_WORD: engine_config.get("enable_sensitive_word", True),
         }
     except Exception:
         default_states = {
-            "symbol_pairing": True,
-            "symbol_correction": True,
-            "typos_rule": True,
-            "sensitive_word": False,
+            SYMBOL_PAIRING: True,
+            SYMBOL_CORRECTION: True,
+            TYPOS_RULE: True,
+            SENSITIVE_WORD: True,
         }
     
     # 当前选中状态（初始化为默认值）

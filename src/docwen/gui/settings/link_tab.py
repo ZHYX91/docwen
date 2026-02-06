@@ -1,4 +1,4 @@
-﻿"""
+"""
 链接设置选项卡模块
 
 实现设置对话框的链接设置选项卡，包含：
@@ -14,6 +14,8 @@
 使用 ConfigCombobox 组件实现配置值与显示文本的分离，
 避免语言切换时的映射问题。
 """
+
+from __future__ import annotations
 
 import logging
 import tkinter as tk
@@ -73,7 +75,7 @@ class LinkTab(BaseSettingsTab):
     所有配置对MD的生成和转换都有效（文档、表格、版式、图片OCR等）。
     """
     
-    def __init__(self, parent, config_manager: any, on_change: Callable[[str, Any], None]):
+    def __init__(self, parent, config_manager: Any, on_change: Callable[[str, Any], None]):
         """初始化链接设置选项卡"""
         super().__init__(parent, config_manager, on_change)
         logger.info("链接设置选项卡初始化完成")

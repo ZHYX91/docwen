@@ -10,21 +10,54 @@
 - t_all_locales(): 获取所有语言版本的翻译
 """
 
+from typing import TYPE_CHECKING
+
 from .i18n_manager import I18nManager
 from .style_resolver import StyleNameResolver, style_resolver
 
-# 创建全局实例
-_i18n = I18nManager()
+if TYPE_CHECKING:
+    _i18n: I18nManager | None
 
-# 导出翻译函数
-t = _i18n.t
-t_locale = _i18n.t_locale
-t_all_locales = _i18n.t_all_locales
-get_available_locales = _i18n.get_available_locales
-get_current_locale = _i18n.get_current_locale
-get_detection_priority = _i18n.get_detection_priority
-set_locale = _i18n.set_locale
-reload_translations = _i18n.reload_translations
+_i18n = None
+
+
+def _get_i18n() -> I18nManager:
+    global _i18n
+    if _i18n is None:
+        _i18n = I18nManager()
+    return _i18n
+
+
+def t(key: str, default: str | None = None, **kwargs) -> str:
+    return _get_i18n().t(key, default=default, **kwargs)
+
+
+def t_locale(key: str, locale: str, **kwargs) -> str:
+    return _get_i18n().t_locale(key, locale, **kwargs)
+
+
+def t_all_locales(key: str) -> dict[str, str]:
+    return _get_i18n().t_all_locales(key)
+
+
+def get_available_locales() -> list[dict[str, str]]:
+    return _get_i18n().get_available_locales()
+
+
+def get_current_locale() -> str:
+    return _get_i18n().get_current_locale()
+
+
+def get_detection_priority() -> list[str]:
+    return _get_i18n().get_detection_priority()
+
+
+def set_locale(locale: str) -> bool:
+    return _get_i18n().set_locale(locale)
+
+
+def reload_translations() -> None:
+    _get_i18n().reload_translations()
 
 __all__ = [
     # 类

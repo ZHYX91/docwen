@@ -26,31 +26,21 @@ Este software foi originalmente projetado para o trabalho diário do escritório
 - **🔒 Operação Completamente Local** - Executa offline, garantindo a segurança dos dados com mecanismos integrados de isolamento de rede.
 - **🔗 Operação de Instância Única** - Gerencia automaticamente instâncias do programa e suporta integração com o plugin Obsidian acompanhante.
 
-## Registro de Alterações
+## 📸 Capturas de tela
 
-### v0.6.0 (2025-01-20)
+| Lote | Markdown |
+| --- | --- |
+| ![Painel de lote](assets/screenshots/batch.png) | ![Painel de Markdown](assets/screenshots/markdown.png) |
 
-- Suporte completo à internacionalização (GUI e CLI suportam 11 idiomas).
-- Substituição do PaddleOCR pelo RapidOCR para melhor compatibilidade.
-- Adição de modelos Word/Excel multilíngues.
-- Detecção e injeção automática de estilos de modelo.
-- Outras otimizações e correções.
+| Documento | Planilha |
+| --- | --- |
+| ![Painel de documento](assets/screenshots/document.png) | ![Painel de planilha](assets/screenshots/spreadsheet.png) |
 
-### v0.5.1 (2025-01-01)
+| Imagem | Arquivos de layout |
+| --- | --- |
+| ![Painel de imagem](assets/screenshots/image.png) | ![Painel de layout](assets/screenshots/layout.png) |
 
-- Adicionada conversão bidirecional de fórmulas matemáticas (Word OMML ↔ Markdown LaTeX).
-- Adicionada conversão bidirecional de notas de rodapé/notas de fim.
-- Adicionados estilos de caracteres e parágrafos para código, citações, etc.
-- Processamento de lista aprimorado (aninhamento multinível, numeração automática).
-- Funções de tabela aprimoradas (detecção/injeção de estilo, tabelas de três linhas, etc.).
-- Otimizada a limpeza e adição de números de subtítulos.
-- Interação de interface e vinculação de configurações melhoradas.
-
-### v0.4.1 (2025-12-05)
-
-- CLI refatorada para melhorar a experiência do usuário.
-- Adicionado suporte para mais tipos de documentos.
-- Implementadas mais opções configuráveis.
+Registro de alterações: veja [doc/CHANGELOG.md](doc/CHANGELOG.md)
 
 ## 🚀 Início Rápido
 
@@ -122,6 +112,23 @@ Suporta conversão bidirecional entre separadores Markdown e quebras de página/
 -   **DOCX → MD**: Quebras de página, quebras de seção e linhas horizontais do Word são automaticamente convertidas para separadores Markdown.
 -   **MD → DOCX**: Markdown `---`, `***`, `___` são automaticamente convertidos para elementos correspondentes do Word.
 -   **Configurável**: Relações de mapeamento específicas podem ser personalizadas na interface de configurações.
+
+### Inserção de Imagens e Tamanho
+
+Suporta imagens incorporadas estilo Obsidian/Wiki e Markdown padrão, com tamanho opcional (px):
+
+```markdown
+![[image.png]]
+![[image.png|300]]
+![[image.png\|300]]
+![alt](image.png =300x200)
+![alt](image.png =300x)
+![alt|300](image.png)
+```
+
+- Sem tamanho: tamanho original, limitado pela largura disponível (página/célula)
+- Com tamanho: permite ampliar, ainda limitado pela largura disponível
+- Parágrafo só com imagem: usa o estilo de parágrafo “Image” (centralizado, espaçamento simples)
 
 ## 📖 Guia de Uso Detalhado
 

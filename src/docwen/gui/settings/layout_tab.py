@@ -1,4 +1,4 @@
-﻿"""
+"""
 版式设置选项卡模块
 
 实现设置对话框的版式设置选项卡，包含：
@@ -10,6 +10,8 @@
 所有用户可见文本通过 i18n 模块的 t() 函数获取，
 支持中英文界面切换。
 """
+
+from __future__ import annotations
 
 import logging
 import tkinter as tk
@@ -44,7 +46,7 @@ class LayoutTab(BaseSettingsTab):
     包含提取/OCR设置、渲染DPI设置和软件优先级。
     """
     
-    def __init__(self, parent, config_manager: any, on_change: Callable[[str, Any], None]):
+    def __init__(self, parent, config_manager: Any, on_change: Callable[[str, Any], None]):
         """初始化版式设置选项卡"""
         # 软件名称映射
         self.software_names = {
@@ -78,7 +80,7 @@ class LayoutTab(BaseSettingsTab):
         try:
             pdf_to_office_priority = config_manager.get_special_conversion_priority("pdf_to_office")
             self.pdf_to_office_software = [
-                SoftwareInfo(sw_id, self.software_names.get(sw_id, sw_id), i + 1)
+                SoftwareInfo(sw_id, self.software_names.get(sw_id) or sw_id, i + 1)
                 for i, sw_id in enumerate(pdf_to_office_priority)
             ]
             
@@ -294,6 +296,9 @@ class LayoutTab(BaseSettingsTab):
             cards_frame = self.pdf_to_office_cards_frame
             software_list = self.pdf_to_office_software
         else:
+            return
+
+        if not cards_frame:
             return
         
         for widget in cards_frame.winfo_children():

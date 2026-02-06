@@ -26,31 +26,21 @@
 - **🔒 完全本地運行** - 離線運行，數據安全，內置網絡隔離機制。
 - **🔗 單實例運行** - 自動管理程式實例，支持與配套 Obsidian 插件集成。
 
-## 更新日誌
+## 📸 介面截圖
 
-### v0.6.0 (2025-01-20)
+| 批次處理 | Markdown |
+| --- | --- |
+| ![批次處理介面](assets/screenshots/batch.png) | ![Markdown 介面](assets/screenshots/markdown.png) |
 
-- 完整的國際化支援（GUI 和 CLI 支援 11 種語言）
-- 使用 RapidOCR 替代 PaddleOCR，提升相容性
-- 新增多語言 Word/Excel 範本
-- 範本樣式自動檢測與注入
-- 其他優化和修復
+| 文檔 | 表格 |
+| --- | --- |
+| ![文檔介面](assets/screenshots/document.png) | ![表格介面](assets/screenshots/spreadsheet.png) |
 
-### v0.5.1 (2025-01-01)
+| 圖片 | 版式檔案 |
+| --- | --- |
+| ![圖片介面](assets/screenshots/image.png) | ![版式檔案介面](assets/screenshots/layout.png) |
 
-- 新增數學公式雙向轉換（Word OMML ↔ Markdown LaTeX）
-- 新增腳註/尾註雙向轉換
-- 新增代碼、引用等字符和段落樣式
-- 增強列表處理（多級嵌套、自動編號）
-- 增強表格功能（樣式檢測/注入、三線表等）
-- 優化小標題序號清理和添加
-- 改進介面交互和設定聯動
-
-### v0.4.1 (2025-12-05)
-
-- 重構命令行介面，提升用戶體驗
-- 添加對更多文檔類型的支持
-- 實現更多選項配置化
+更新日誌：見 [doc/CHANGELOG.md](doc/CHANGELOG.md)
 
 ## 🚀 快速開始
 
@@ -122,6 +112,23 @@
 - **DOCX → MD**：Word 中的分頁符、分節符、分隔線自動轉換為 Markdown 分隔線
 - **MD → DOCX**：Markdown 中的 `---`、`***`、`___` 自動轉換為對應的 Word 元素
 - **可配置**：具體映射關係可在設定介面自定義
+
+### 圖片嵌入與尺寸
+
+支持 Obsidian/Wiki 與標準 Markdown 圖片嵌入，並可指定寬高（單位：px）：
+
+```markdown
+![[image.png]]
+![[image.png|300]]
+![[image.png\|300]]
+![alt](image.png =300x200)
+![alt](image.png =300x)
+![alt|300](image.png)
+```
+
+- 未指定尺寸：使用圖片原始尺寸，但不超過頁面/單元格可用寬度
+- 指定尺寸：允許放大，但仍受可用寬度上限限制
+- 純圖片段落：自動使用「圖片」段落樣式（置中、單倍行距）
 
 ## 📖 詳細使用指南
 

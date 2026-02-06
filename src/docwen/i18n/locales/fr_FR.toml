@@ -5,6 +5,24 @@
 [meta]
 name = "French"
 native_name = "Français"
+template_name = "Modèle Général Français"
+
+# =============================================================================
+# Textes généraux
+# =============================================================================
+[common]
+app_name = "DocWen"
+offline_version = "(Version hors ligne)"
+close = "Fermer"
+apply = "Appliquer"
+cancel = "Annuler"
+ok = "OK"
+save = "Enregistrer"
+error = "Erreur"
+version = "Version {version}"
+browse = "Parcourir..."
+select = "Sélectionner"
+disclaimer = "Version test. Précision non garantie.\nAGPL-3.0 Open Source."
 
 # =============================================================================
 # Interface en ligne de commande (CLI)
@@ -27,6 +45,7 @@ check_punct = "Vérifier la ponctuation"
 check_typo = "Vérifier les fautes de frappe"
 check_symbol = "Vérifier les symboles"
 check_sensitive = "Vérifier les termes signalés"
+check_none = "Ignorer la relecture (désactiver toutes les vérifications)"
 merge_mode = "Mode de fusion: Ligne/Colonne/Cellule"
 base_table = "Chemin de la table de base"
 pages = "Plage de pages PDF (ex: 1-3,5,7-10)"
@@ -290,23 +309,6 @@ gongwen_standard = "Standard Officiel"
 hierarchical_standard = "Standard Hiérarchique"
 hierarchical_h2_start = "Hiérarchique (depuis H2)"
 legal_standard = "Standard Juridique"
-
-# =============================================================================
-# Textes généraux
-# =============================================================================
-[common]
-app_name = "DocWen"
-offline_version = "(Version hors ligne)"
-close = "Fermer"
-apply = "Appliquer"
-cancel = "Annuler"
-ok = "OK"
-save = "Enregistrer"
-error = "Erreur"
-version = "Version {version}"
-browse = "Parcourir..."
-select = "Sélectionner"
-disclaimer = "Logiciel de test. Aucune garantie de précision.\nPour tests uniquement. Pas d'utilisation commerciale ni de distribution."
 
 # =============================================================================
 # Paramètres
@@ -642,7 +644,7 @@ table_style_tooltip = "Style pour les tableaux."
 builtin_style_radio = "Intégré"
 custom_style_radio = "Personnalisé"
 
-# List separator
+# Séparateur de liste
 list_separator_label = "Séparateur de Liste YAML"
 list_separator_tooltip = "Séparateur utilisé pour joindre les valeurs de listes YAML en une chaîne\n\nValeurs courantes :\n• Virgule d'énumération chinoise (、)\n• Virgule (，)\n• Virgule + espace (, )\n• Chaîne vide : concaténation directe"
 
@@ -766,6 +768,7 @@ pymupdf4llm = "Extraction PDF intelligente"
 pdf2docx = "PDF vers Word"
 easyofd = "Traitement OFD"
 rapidocr = "OCR hors ligne"
+paddleocr = "Source des modèles OCR, PP-OCRv3/v4 entraînés par PaddleOCR"
 onnxruntime = "Moteur d'inférence"
 ttkbootstrap = "GUI moderne"
 tkinterdnd2 = "Glisser-déposer"
@@ -781,6 +784,7 @@ pandas = "Analyse de données"
 numpy = "Calcul numérique"
 olefile = "Support Office Legacy"
 watchdog = "Surveillance du système de fichiers"
+emoji = "Bibliothèque de détection et traitement des emojis"
 
 # Composants
 [components]
@@ -854,395 +858,6 @@ unavailable = "Non disponible"
 [components.template_selector_tabbed]
 document_templates = "Document"
 spreadsheet_templates = "Tableau"
-
-# Types de fichiers
-[file_types]
-document = "Document"
-spreadsheet = "Tableau"
-image = "Image"
-layout = "Mise en page"
-text = "Texte"
-unknown = "Inconnu"
-
-text_category = "Texte"
-document_category = "Document"
-spreadsheet_category = "Tableau"
-layout_category = "Mise en page"
-image_category = "Image"
-
-unknown_type = "Type inconnu"
-format_mismatch = "⚠️ Est {format}"
-format_unverifiable = "⚠️ Non vérifiable"
-format_txt = "TXT"
-format_md = "Markdown"
-format_csv = "CSV"
-
-# Conversion
-[conversion]
-
-
-
-# Noms de fichiers générés (pour la dénomination des fichiers de sortie)
-[conversion.filenames]
-split_part1 = "Partie1"
-split_part2 = "Partie2"
-merged_pdf = "PDFFusionné"
-merged_table = "TableauFusionné"
-
-# Messages
-[messages]
-file_not_found = "Non trouvé : {filename}"
-invalid_file_type = "Type invalide : {ext}"
-unsupported_file_type = "Non supporté"
-unknown_file_category = "Catégorie inconnue : {category}"
-
-error_prefix = "Erreur : {message}"
-operation_failed = "Opération échouée : {error}"
-processing_exception = "Exception : {error}"
-system_init_error = "Erreur d'initialisation"
-process_file_failed = "Échec du traitement : {error}"
-batch_merge_need_two_layout = "Nécessite min. 2 fichiers de mise en page"
-batch_merge_need_two_image = "Nécessite min. 2 fichiers image"
-batch_merge_need_two_table = "Nécessite min. 2 fichiers tableau"
-batch_file_list_not_init = "Liste de fichiers non initialisée"
-select_base_table_first = "Veuillez d'abord choisir un tableau de base"
-select_merge_mode = "Veuillez choisir le mode de fusion"
-process_failed = "Erreur : {error}"
-file_processing_failed = "Échec du traitement du fichier : {error}"
-template_selection_failed = "Échec de la sélection du modèle : {error}"
-cancel_failed = "Échec de l’annulation : {error}"
-clear_failed = "Échec de l’effacement : {error}"
-settings_unavailable = "Les paramètres ne sont pas disponibles"
-open_settings_failed = "Impossible d’ouvrir les paramètres : {error}"
-apply_settings_failed = "Impossible d’appliquer les paramètres : {error}"
-about_unavailable = "La fenêtre À propos n’est pas disponible"
-open_about_failed = "Impossible d’ouvrir À propos : {error}"
-
-
-
-
-single_file_only = "Un seul fichier en mode unique"
-no_valid_files = "Aucun fichier valide"
-no_folder_in_single_mode = "Pas de dossier en mode unique"
-all_supported_files = "Tous supportés"
-all_files = "Tous les fichiers"
-select_multiple_files = "Sélection multiple"
-category_mismatch = "Catégorie non conforme : {current_name} → {new_name}"
-category_mismatch_detail = "Conflit de type : {selected_name} vs {file_category_name}"
-
-# Messages d'erreur
-[messages.errors]
-invalid_docx_template = "Le fichier modèle \"{template_name}\" est invalide ou corrompu. Veuillez ouvrir le modèle avec Word ou WPS, le modifier et l'enregistrer pour vous assurer qu'il s'agit d'un fichier DOCX valide."
-
-# Messages d'avertissement
-[messages.warnings]
-missing_body_placeholder = "⚠️ Aucun espace réservé pour le corps (tel que {{正文}} ou {{body}}) n'a été trouvé dans le modèle. Le contenu Markdown n'a pas été inséré"
-
-# Éditeurs
-[editors]
-
-[editors.numbering_add]
-window_title = "Éditeur de schéma"
-scheme_list = "Schémas"
-default_scheme = "Défaut :"
-level_format_config = "Format de niveau"
-realtime_preview = "Aperçu"
-format_help = "📖 Aide"
-format_help_title = "Espaces réservés"
-format_help_text = "Aide sur les espaces réservés..."
-
-level_1 = "Niveau 1"
-level_2 = "Niveau 2"
-level_3 = "Niveau 3"
-level_4 = "Niveau 4"
-level_5 = "Niveau 5"
-level_6 = "Niveau 6"
-level_7 = "Niveau 7"
-level_8 = "Niveau 8"
-level_9 = "Niveau 9"
-
-new_scheme = "Nouveau"
-copy_suffix = "(Copie)"
-
-preview_sample = "Exemple {level_name}"
-no_format = "Aucun format"
-preview_failed = "Erreur"
-
-menu_current_level = "── Actuel ({level}) ──"
-menu_decorations = "── Décoration ──"
-menu_hierarchical = "── Hiérarchie ──"
-
-style_chinese_lower = "Chin. Min"
-style_chinese_upper = "Chin. Maj"
-style_arabic_half = "Arabe"
-style_arabic_circled = "Encercle"
-style_letter_upper = "Lettre Maj"
-style_roman_upper = "Romain Maj"
-
-decoration_dun = "Virgule"
-decoration_dot_space = "Point+Espace"
-decoration_bracket = "Parenthèse"
-decoration_chapter = "Chapitre"
-
-
-load_failed = "Erreur de chargement"
-load_failed_message = "Impossible de charger : {error}"
-save_failed = "Erreur d'enregistrement"
-save_failed_message = "Impossible d'enregistrer"
-save_failed_with_error = "Erreur : {error}"
-cannot_delete = "Impossible de supprimer"
-cannot_delete_default_scheme = "Le défaut ne peut pas être supprimé"
-
-[editors.numbering_add.names]
-hierarchical_standard = "Hiérarchique"
-hierarchical_h2_start = "Hiérarchique (depuis H2)"
-
-[editors.numbering_add.descriptions]
-hierarchical_standard_desc = "1 , 1.1 , 1.1.1 ..."
-hierarchical_h2_start_desc = "Depuis H2 : 1 , 1.1 ..."
-
-[editors.common]
-basic_info = "Info"
-name = "Nom :"
-description = "Description :"
-add = "Ajouter"
-copy = "Copier"
-delete = "Supprimer"
-move_up = "Monter"
-move_down = "Descendre"
-save = "Enregistrer"
-cancel = "Annuler"
-prompt = "Note"
-select_item_first = "Veuillez sélectionner un élément"
-cannot_delete = "Non supprimable"
-system_item_hint = "Élément système"
-confirm_delete = "Confirmer la suppression"
-confirm_delete_message = "Vraiment supprimer : {name} ?"
-confirm_close = "Confirmer la fermeture"
-unsaved_changes_hint = "Modifications non enregistrées"
-unsaved_close_message = "Vraiment fermer ?"
-
-[editors.numbering_clean]
-window_title = "Règles de nettoyage"
-rule_list = "Règles"
-rule_edit = "Modifier"
-name = "Nom :"
-description = "Description :"
-regex = "Regex :"
-regex_test = "Test"
-input = "Entrée :"
-result = "Résultat :"
-status = "Statut :"
-load_example = "Charger l'exemple"
-available_placeholders = "Espaces réservés"
-new_rule = "Nouveau"
-copy_suffix = "(Copie)"
-match_success = "Correspondance"
-no_match = "Pas de correspondance"
-regex_error = "Erreur Regex"
-test_error = "Erreur"
-placeholder_info = """Infos sur les espaces réservés :
-
-{space}        - Espaces (espace, espace pleine largeur, etc.)
-{sep}          - Séparateurs (point, virgule, etc.)
-{bracket_open} - Crochets/parenthèses ouvrants (chinois/anglais)
-{bracket_close}- Crochets/parenthèses fermants (chinois/anglais)
-{num_arab}     - Chiffres arabes (demi/pleine largeur)
-{num_cn}       - Chiffres chinois (min./maj.)
-{num_cn_paren} - Chiffres chinois entre parenthèses (㈠-㈩)
-{num}          - Tous les nombres (chinois + arabes + ㈠-㈩)
-{letter}       - Lettres latines (maj./min.)
-{circled}      - Nombres encerclés (①-㊿, ❶-⓴, ⓵-⓾, etc.)
-{unit_suffix}  - Suffixes d’unités chinoises (chapitre, section, etc.)
-{unit_prefix}  - Préfixes d’unités chinoises (volume, partie, etc.)"""
-prompt = "Note"
-no_example_text = "Pas de texte d'exemple"
-load_failed = "Erreur de chargement"
-load_failed_message = "Erreur : {error}"
-save_failed = "Erreur d'enregistrement"
-save_failed_message = "Erreur lors de l'enregistrement"
-save_failed_with_error = "Erreur : {error}"
-
-[editors.numbering_clean.names]
-chinese_unit_suffix = "Suffixe unité chin."
-chinese_unit_prefix = "Préfixe unité chin."
-circled_numbers = "Nombres encerclés"
-bracket_number = "Nombres entre parenthèses"
-hierarchical = "Hiérarchique"
-number_separator = "Séparateur de nombre"
-legal_english = "Anglais Juridique"
-letter_number = "Numéro lettre"
-
-[editors.numbering_clean.descriptions]
-chinese_unit_suffix_desc = "Chapitre X etc."
-chinese_unit_prefix_desc = "Partie X etc."
-circled_numbers_desc = "① etc."
-bracket_number_desc = "(1) etc."
-hierarchical_desc = "1.1 etc."
-number_separator_desc = "1. etc."
-legal_english_desc = "Chapter X etc."
-letter_number_desc = "A. etc."
-
-[editors.mapping]
-symbol_editor_title = "Symboles"
-typo_editor_title = "Fautes"
-sensitive_editor_title = "Termes signalés"
-generic_editor_title = "Mappage"
-
-symbol_correct_symbol = "Correct"
-symbol_error_symbols = "Incorrect"
-typo_correct_word = "Correct"
-typo_error_words = "Incorrect"
-sensitive_sensitive_word = "Terme signalé"
-sensitive_exceptions = "Exceptions"
-comment = "Commentaire"
-generic_key = "Clé"
-generic_value_list = "Valeurs"
-
-symbol_description = "Mappage de symboles."
-typo_description = "Correction de fautes."
-sensitive_description = "Termes signalés et exceptions."
-generic_description = "Mappage général."
-
-add_entry = "Ajouter une entrée"
-edit_entry = "Modifier"
-delete_entry = "Supprimer"
-
-prompt = "Note"
-select_entry_to_edit = "Veuillez choisir"
-select_entry_to_delete = "Veuillez choisir"
-confirm_delete = "Confirmer la suppression"
-confirm_delete_message = "Supprimer : {entry_key} ?"
-error = "Erreur"
-save_error = "Erreur d'enregistrement : {error}"
-
-add = "Ajouter"
-edit = "Modifier"
-symbol_mapping = "Symboles"
-typo_mapping = "Fautes"
-sensitive_mapping = "Terme signalé"
-generic_mapping = "Mappage"
-
-symbol_correct_symbol_label = "Correct :"
-typo_correct_word_label = "Correct :"
-sensitive_sensitive_word_label = "Terme signalé :"
-generic_key_label = "Clé :"
-symbol_error_symbols_label = "Incorrect (Liste) :"
-typo_error_words_label = "Incorrect (Liste) :"
-sensitive_exceptions_label = "Exceptions (Liste) :"
-generic_value_list_label = "Valeurs (Liste) :"
-comment_label = "Commentaire :"
-
-symbol_example = "Ex : ,"
-typo_example = "Ex : Mot"
-sensitive_example = "Ex : Terme → Exceptions"
-generic_example = "Une valeur par ligne"
-
-enter_correct_symbol_or_word = "Veuillez entrer"
-enter_error_symbol_or_word_list = "Veuillez entrer la liste"
-
-# Gestion des clés en double
-duplicate_key_title = "La clé existe déjà"
-duplicate_key_message = "La clé \"{entry_key}\" existe déjà\n\nValeurs actuelles : {current_values}\nCommentaire actuel : {current_comment}\n\nVeuillez sélectionner une action :"
-duplicate_key_no_comment = "(aucun)"
-overwrite = "Écraser"
-overwrite_tooltip = "Remplacer complètement par les nouvelles valeurs et le commentaire"
-merge = "Fusionner"
-merge_tooltip = "Fusionner les nouvelles et anciennes valeurs (dédupliquées), commentaire : conserver l'ancien si le nouveau est vide"
-
-# Styles
-[styles]
-code_block = "Bloc de code"
-inline_code = "Code en ligne"
-
-quote_1 = "Citation 1"
-quote_2 = "Citation 2"
-quote_3 = "Citation 3"
-quote_4 = "Citation 4"
-quote_5 = "Citation 5"
-quote_6 = "Citation 6"
-quote_7 = "Citation 7"
-quote_8 = "Citation 8"
-quote_9 = "Citation 9"
-
-formula_block = "Bloc de formule"
-inline_formula = "Formule en ligne"
-
-horizontal_rule_1 = "Ligne de séparation 1"
-horizontal_rule_2 = "Ligne de séparation 2"
-horizontal_rule_3 = "Ligne de séparation 3"
-
-list_block = "Bloc de liste"
-
-table_content = "Contenu du tableau"
-three_line_table = "Tableau à trois lignes"
-table_grid = "Tableau grille"
-
-# Body Paragraph Style
-body_paragraph = "Paragraphe du corps"
-
-# =============================================================================
-# Style Format Configurations (for style injection format properties)
-# =============================================================================
-[style_formats]
-
-# Body paragraph format (Times New Roman, 12pt, no indent, left aligned)
-[style_formats.body_paragraph]
-east_asia_font = "SimSun"
-ascii_font = "Times New Roman"
-font_size_pt = 12
-first_line_indent_chars = 0
-first_line_indent_cm = 0
-spacing_after_twip = 120
-spacing_before_twip = 0
-bold = false
-justification = "left"
-
-# Heading 1 format (Arial, 16pt, bold, left aligned)
-[style_formats.heading_1]
-east_asia_font = "SimSun"
-ascii_font = "Arial"
-font_size_pt = 16
-first_line_indent_chars = 0
-first_line_indent_cm = 0
-spacing_after_twip = 120
-spacing_before_twip = 240
-bold = true
-justification = "left"
-
-# Heading 2 format (Arial, 14pt, bold, left aligned)
-[style_formats.heading_2]
-east_asia_font = "SimSun"
-ascii_font = "Arial"
-font_size_pt = 14
-first_line_indent_chars = 0
-first_line_indent_cm = 0
-spacing_after_twip = 120
-spacing_before_twip = 240
-bold = true
-justification = "left"
-
-# Heading 3-9 format (Arial, 12pt, bold, left aligned)
-[style_formats.heading_3_9]
-east_asia_font = "SimSun"
-ascii_font = "Arial"
-font_size_pt = 12
-first_line_indent_chars = 0
-first_line_indent_cm = 0
-spacing_after_twip = 120
-spacing_before_twip = 240
-bold = true
-justification = "left"
-
-# Espaces réservés
-[placeholders]
-title = "Titre"
-body = "Corps"
-
-# YAML
-[yaml_keys]
-title = "Titre"
-subtitle = "Sous-titre"
 
 # Panneau de conversion
 [conversion_panel]
@@ -1447,6 +1062,269 @@ generate_ods_tooltip = "Vers ODS"
 generate_csv = "CSV"
 generate_csv_tooltip = "Vers CSV"
 
+# Éditeurs
+[editors]
+
+[editors.numbering_add]
+window_title = "Éditeur de schéma"
+scheme_list = "Schémas"
+default_scheme = "Défaut :"
+level_format_config = "Format de niveau"
+realtime_preview = "Aperçu"
+format_help = "📖 Aide"
+format_help_title = "Espaces réservés"
+format_help_text = """Utilisation des espaces réservés de format
+
+Format d'espace réservé : {level.style}
+
+Styles disponibles :
+  chinese_lower  - Chiffres chinois minuscules (一、二、三)
+  chinese_upper  - Chiffres chinois majuscules (壹、贰、叁)
+  arabic_half    - Chiffres arabes (demi-largeur) (1, 2, 3)
+  arabic_full    - Chiffres arabes (pleine largeur) (１、２、３)
+  arabic_circled - Chiffres cerclés (①②③)
+  letter_upper   - Lettres majuscules (A, B, C)
+  letter_lower   - Lettres minuscules (a, b, c)
+  roman_upper    - Chiffres romains (majuscules) (I, II, III)
+  roman_lower    - Chiffres romains (minuscules) (i, ii, iii)
+
+Exemples :
+  {1.chinese_lower}、 → 一、二、三、
+  （{2.chinese_lower}） → （一）（二）（三）
+  {3.arabic_half}. → 1. 2. 3.
+  {1.arabic_half}.{2.arabic_half} → 1.1、1.2"""
+
+level_1 = "Niveau 1"
+level_2 = "Niveau 2"
+level_3 = "Niveau 3"
+level_4 = "Niveau 4"
+level_5 = "Niveau 5"
+level_6 = "Niveau 6"
+level_7 = "Niveau 7"
+level_8 = "Niveau 8"
+level_9 = "Niveau 9"
+
+new_scheme = "Nouveau"
+copy_suffix = "(Copie)"
+
+preview_sample = "Exemple {level_name}"
+no_format = "Aucun format"
+preview_failed = "Erreur"
+
+menu_current_level = "── Actuel ({level}) ──"
+menu_decorations = "── Décoration ──"
+menu_hierarchical = "── Hiérarchie ──"
+
+style_chinese_lower = "Chin. Min"
+style_chinese_upper = "Chin. Maj"
+style_arabic_half = "Arabe"
+style_arabic_circled = "Encercle"
+style_letter_upper = "Lettre Maj"
+style_roman_upper = "Romain Maj"
+
+decoration_dun = "Virgule"
+decoration_dot_space = "Point+Espace"
+decoration_bracket = "Parenthèse"
+decoration_chapter = "Chapitre"
+
+
+load_failed = "Erreur de chargement"
+load_failed_message = "Impossible de charger : {error}"
+save_failed = "Erreur d'enregistrement"
+save_failed_message = "Impossible d'enregistrer"
+save_failed_with_error = "Erreur : {error}"
+cannot_delete = "Impossible de supprimer"
+cannot_delete_default_scheme = "Le défaut ne peut pas être supprimé"
+
+[editors.numbering_add.names]
+hierarchical_standard = "Hiérarchique"
+hierarchical_h2_start = "Hiérarchique (depuis H2)"
+
+[editors.numbering_add.descriptions]
+hierarchical_standard_desc = "Format hiérarchique : 1, 1.1, 1.1.1 ... (avec un espace après le numéro)"
+hierarchical_h2_start_desc = "Format hiérarchique (ignorer H1/niveau 1) : démarrer à partir de H2/niveau 2 avec 1, 1.1, 1.1.1 ..."
+
+[editors.common]
+basic_info = "Info"
+name = "Nom :"
+description = "Description :"
+add = "Ajouter"
+copy = "Copier"
+delete = "Supprimer"
+move_up = "Monter"
+move_down = "Descendre"
+save = "Enregistrer"
+cancel = "Annuler"
+prompt = "Note"
+select_item_first = "Veuillez sélectionner un élément"
+cannot_delete = "Non supprimable"
+system_item_hint = "Élément système"
+confirm_delete = "Confirmer la suppression"
+confirm_delete_message = "Vraiment supprimer : {name} ?"
+confirm_close = "Confirmer la fermeture"
+unsaved_changes_hint = "Modifications non enregistrées"
+unsaved_close_message = "Vraiment fermer ?"
+
+[editors.numbering_clean]
+window_title = "Règles de nettoyage"
+rule_list = "Règles"
+rule_edit = "Modifier"
+name = "Nom :"
+description = "Description :"
+regex = "Regex :"
+regex_test = "Test"
+input = "Entrée :"
+result = "Résultat :"
+status = "Statut :"
+load_example = "Charger l'exemple"
+available_placeholders = "Espaces réservés"
+new_rule = "Nouveau"
+copy_suffix = "(Copie)"
+match_success = "Correspondance"
+no_match = "Pas de correspondance"
+regex_error = "Erreur Regex"
+test_error = "Erreur"
+placeholder_info = """Infos sur les espaces réservés :
+
+{space}        - Espaces (espace, espace pleine largeur, etc.)
+{sep}          - Séparateurs (point, virgule, etc.)
+{bracket_open} - Crochets/parenthèses ouvrants (chinois/anglais)
+{bracket_close}- Crochets/parenthèses fermants (chinois/anglais)
+{num_arab}     - Chiffres arabes (demi/pleine largeur)
+{num_cn}       - Chiffres chinois (min./maj.)
+{num_cn_paren} - Chiffres chinois entre parenthèses (㈠-㈩)
+{num}          - Tous les nombres (chinois + arabes + ㈠-㈩)
+{letter}       - Lettres latines (maj./min.)
+{circled}      - Nombres encerclés (①-㊿, ❶-⓴, ⓵-⓾, etc.)
+{unit_suffix}  - Suffixes d’unités chinoises (chapitre, section, etc.)
+{unit_prefix}  - Préfixes d’unités chinoises (volume, partie, etc.)"""
+prompt = "Note"
+no_example_text = "Pas de texte d'exemple"
+load_failed = "Erreur de chargement"
+load_failed_message = "Erreur : {error}"
+save_failed = "Erreur d'enregistrement"
+save_failed_message = "Erreur lors de l'enregistrement"
+save_failed_with_error = "Erreur : {error}"
+
+[editors.numbering_clean.names]
+chinese_unit_suffix = "Suffixe unité chin."
+chinese_unit_prefix = "Préfixe unité chin."
+circled_numbers = "Nombres encerclés"
+bracket_number = "Nombres entre parenthèses"
+hierarchical = "Hiérarchique"
+number_separator = "Séparateur de nombre"
+legal_english = "Anglais Juridique"
+letter_number = "Numéro lettre"
+
+[editors.numbering_clean.descriptions]
+chinese_unit_suffix_desc = "Chapitre X etc."
+chinese_unit_prefix_desc = "Partie X etc."
+circled_numbers_desc = "① etc."
+bracket_number_desc = "(1) etc."
+hierarchical_desc = "1.1 etc."
+number_separator_desc = "1. etc."
+legal_english_desc = "Chapter X etc."
+letter_number_desc = "A. etc."
+
+[editors.mapping]
+symbol_editor_title = "Symboles"
+typo_editor_title = "Fautes"
+sensitive_editor_title = "Termes signalés"
+generic_editor_title = "Mappage"
+
+symbol_correct_symbol = "Correct"
+symbol_error_symbols = "Incorrect"
+typo_correct_word = "Correct"
+typo_error_words = "Incorrect"
+sensitive_sensitive_word = "Terme signalé"
+sensitive_exceptions = "Exceptions"
+comment = "Commentaire"
+generic_key = "Clé"
+generic_value_list = "Valeurs"
+
+symbol_description = "Mappage de symboles."
+typo_description = "Correction de fautes."
+sensitive_description = "Termes signalés et exceptions."
+generic_description = "Mappage général."
+
+add_entry = "Ajouter une entrée"
+edit_entry = "Modifier"
+delete_entry = "Supprimer"
+
+prompt = "Note"
+select_entry_to_edit = "Veuillez choisir"
+select_entry_to_delete = "Veuillez choisir"
+confirm_delete = "Confirmer la suppression"
+confirm_delete_message = "Supprimer : {entry_key} ?"
+error = "Erreur"
+save_error = "Erreur d'enregistrement : {error}"
+
+add = "Ajouter"
+edit = "Modifier"
+symbol_mapping = "Symboles"
+typo_mapping = "Fautes"
+sensitive_mapping = "Terme signalé"
+generic_mapping = "Mappage"
+
+symbol_correct_symbol_label = "Correct :"
+typo_correct_word_label = "Correct :"
+sensitive_sensitive_word_label = "Terme signalé :"
+generic_key_label = "Clé :"
+symbol_error_symbols_label = "Incorrect (Liste) :"
+typo_error_words_label = "Incorrect (Liste) :"
+sensitive_exceptions_label = "Exceptions (Liste) :"
+generic_value_list_label = "Valeurs (Liste) :"
+comment_label = "Commentaire :"
+
+symbol_example = "Ex : ,"
+typo_example = "Ex : Mot"
+sensitive_example = "Ex : Terme → Exceptions"
+generic_example = "Une valeur par ligne"
+
+enter_correct_symbol_or_word = "Veuillez entrer"
+enter_error_symbol_or_word_list = "Veuillez entrer la liste"
+
+# Gestion des clés en double
+duplicate_key_title = "La clé existe déjà"
+duplicate_key_message = "La clé \"{entry_key}\" existe déjà\n\nValeurs actuelles : {current_values}\nCommentaire actuel : {current_comment}\n\nVeuillez sélectionner une action :"
+duplicate_key_no_comment = "(aucun)"
+overwrite = "Écraser"
+merge = "Fusionner"
+
+# Types de fichiers
+[file_types]
+document = "Document"
+spreadsheet = "Tableau"
+image = "Image"
+layout = "Mise en page"
+text = "Texte"
+unknown = "Inconnu"
+
+text_category = "Texte"
+document_category = "Document"
+spreadsheet_category = "Tableau"
+layout_category = "Mise en page"
+image_category = "Image"
+
+unknown_type = "Type inconnu"
+format_mismatch = "⚠️ Est {format}"
+format_unverifiable = "⚠️ Non vérifiable"
+format_txt = "TXT"
+format_md = "Markdown"
+format_csv = "CSV"
+
+# Conversion
+[conversion]
+
+
+
+# Noms de fichiers générés (pour la dénomination des fichiers de sortie)
+[conversion.filenames]
+split_part1 = "Partie1"
+split_part2 = "Partie2"
+merged_pdf = "PDFFusionné"
+merged_table = "TableauFusionné"
+
 [conversion.progress]
 converting_to_format = "Vers {format}..."
 preparing = "Préparation..."
@@ -1476,7 +1354,6 @@ filling_yaml_data = "Remplit YAML..."
 filling_table_data = "Remplit tableau..."
 saving_excel = "Enregistre Excel..."
 writing_file = "Écrit fichier..."
-executing_final_proofread = "Vérification finale..."
 initializing_proofread = "Init vérification..."
 proofreading_progress = "Vérifie... {current}/{total}"
 saving_proofread_result = "Enregistre vérification..."
@@ -1585,6 +1462,55 @@ unsupported_layout_format = "Non supporté : {format}"
 format_to_pdf_not_implemented = "{format} vers PDF N/A"
 all_pages_invalid = "Aucune page valide (total : {total})"
 
+# Messages
+[messages]
+file_not_found = "Non trouvé : {filename}"
+invalid_file_type = "Type invalide : {ext}"
+unsupported_file_type = "Non supporté"
+unknown_file_category = "Catégorie inconnue : {category}"
+
+error_prefix = "Erreur : {message}"
+operation_failed = "Opération échouée : {error}"
+processing_exception = "Exception : {error}"
+system_init_error = "Erreur d'initialisation"
+process_file_failed = "Échec du traitement : {error}"
+batch_merge_need_two_layout = "Nécessite min. 2 fichiers de mise en page"
+batch_merge_need_two_image = "Nécessite min. 2 fichiers image"
+batch_merge_need_two_table = "Nécessite min. 2 fichiers tableau"
+batch_file_list_not_init = "Liste de fichiers non initialisée"
+select_base_table_first = "Veuillez d'abord choisir un tableau de base"
+select_merge_mode = "Veuillez choisir le mode de fusion"
+process_failed = "Erreur : {error}"
+file_processing_failed = "Échec du traitement du fichier : {error}"
+template_selection_failed = "Échec de la sélection du modèle : {error}"
+cancel_failed = "Échec de l’annulation : {error}"
+clear_failed = "Échec de l’effacement : {error}"
+settings_unavailable = "Les paramètres ne sont pas disponibles"
+open_settings_failed = "Impossible d’ouvrir les paramètres : {error}"
+apply_settings_failed = "Impossible d’appliquer les paramètres : {error}"
+about_unavailable = "La fenêtre À propos n’est pas disponible"
+open_about_failed = "Impossible d’ouvrir À propos : {error}"
+
+
+
+
+single_file_only = "Un seul fichier en mode unique"
+no_valid_files = "Aucun fichier valide"
+no_folder_in_single_mode = "Pas de dossier en mode unique"
+all_supported_files = "Tous supportés"
+all_files = "Tous les fichiers"
+select_multiple_files = "Sélection multiple"
+category_mismatch = "Catégorie non conforme : {current_name} → {new_name}"
+category_mismatch_detail = "Conflit de type : {selected_name} vs {file_category_name}"
+
+# Messages d'erreur
+[messages.errors]
+invalid_docx_template = "Le fichier modèle \"{template_name}\" est invalide ou corrompu. Veuillez ouvrir le modèle avec Word ou WPS, le modifier et l'enregistrer pour vous assurer qu'il s'agit d'un fichier DOCX valide."
+
+# Messages d'avertissement
+[messages.warnings]
+missing_body_placeholder = "⚠️ Aucun espace réservé pour le corps (tel que {{正文}} ou {{body}}) n'a été trouvé dans le modèle. Le contenu Markdown n'a pas été inséré"
+
 # =============================================================================
 # Texte des commentaires de relecture
 # =============================================================================
@@ -1606,3 +1532,118 @@ pairing = "Vérification d'appariement"
 sensitive = "Terme signalé détecté"
 extra_close = "Symbole fermant en trop"
 unclosed = "Symbole non fermé"
+  
+# Texte de remplacement de traitement de lien
+[link_processing]
+file_not_found = "⚠️ Fichier non trouvé : {filename}"
+section_not_found = "⚠️ Section non trouvée : {filename}#{heading}"
+block_not_found = "⚠️ Bloc non trouvé : {filename}#^{block_id}"
+circular_reference = "⚠️ Référence circulaire détectée : {filename}"
+max_depth_reached = "⚠️ Profondeur maximale d'intégration atteinte"
+
+# Styles
+[styles]
+# Styles de paragraphe
+
+# Styles de code
+
+# Styles de formule
+
+# Styles de liste
+
+# Styles de ligne de séparation
+
+# Styles de tableau
+
+# Styles de citation (9 niveaux)
+body_paragraph = "Paragraphe du corps"
+image_paragraph = "Paragraphe d'image"
+code_block = "Bloc de code"
+inline_code = "Code en ligne"
+formula_block = "Bloc de formule"
+inline_formula = "Formule en ligne"
+list_block = "Bloc de liste"
+horizontal_rule_1 = "Ligne de séparation 1"
+horizontal_rule_2 = "Ligne de séparation 2"
+horizontal_rule_3 = "Ligne de séparation 3"
+table_content = "Contenu du tableau"
+three_line_table = "Tableau à trois lignes"
+table_grid = "Tableau grille"
+quote_1 = "Citation 1"
+quote_2 = "Citation 2"
+quote_3 = "Citation 3"
+quote_4 = "Citation 4"
+quote_5 = "Citation 5"
+quote_6 = "Citation 6"
+quote_7 = "Citation 7"
+quote_8 = "Citation 8"
+quote_9 = "Citation 9"
+
+# =============================================================================
+# Configurations de format de style (pour les propriétés de format lors de l'injection de styles)
+# =============================================================================
+[style_formats]
+
+# Format du paragraphe principal (Times New Roman, 12pt, sans retrait, aligné à gauche)
+[style_formats.body_paragraph]
+east_asia_font = "SimSun"
+ascii_font = "Times New Roman"
+font_size_pt = 12
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 0
+bold = false
+justification = "left"
+
+# Format du titre 1 (Arial, 16pt, gras, aligné à gauche)
+[style_formats.heading_1]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 16
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# Format du titre 2 (Arial, 14pt, gras, aligné à gauche)
+[style_formats.heading_2]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 14
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# Format du titre 3-9 (Arial, 12pt, gras, aligné à gauche)
+[style_formats.heading_3_9]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 12
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# =============================================================================
+# Espaces réservés (pour les modèles de documents)
+# Ces espaces réservés sont utilisés pour le remplissage des modèles lors de la conversion MD → DOCX
+# =============================================================================
+[placeholders]
+title = "Titre"
+body = "Corps"
+
+# =============================================================================
+# Clés YAML (pour les métadonnées)
+# Ces clés sont utilisées pour la sortie YAML front matter lors de la conversion DOCX → MD
+# =============================================================================
+[yaml_keys]
+title = "Titre"
+subtitle = "Sous-titre"

@@ -1,4 +1,4 @@
-﻿"""
+"""
 表格设置选项卡模块
 
 实现设置对话框的表格设置选项卡，包含：
@@ -6,6 +6,8 @@
 - 汇总模式默认设置
 - 表格处理软件优先级
 """
+
+from __future__ import annotations
 
 import logging
 import tkinter as tk
@@ -40,7 +42,7 @@ class SpreadsheetTab(BaseSettingsTab):
     包含提取/OCR设置、汇总模式设置和软件优先级。
     """
     
-    def __init__(self, parent, config_manager: any, on_change: Callable[[str, Any], None]):
+    def __init__(self, parent, config_manager: Any, on_change: Callable[[str, Any], None]):
         """初始化表格设置选项卡"""
         # 软件名称映射（使用国际化）
         self.software_names = {
@@ -80,19 +82,19 @@ class SpreadsheetTab(BaseSettingsTab):
             # 加载软件优先级
             spreadsheet_processors = config_manager.get_spreadsheet_processors_priority()
             self.spreadsheet_processors = [
-                SoftwareInfo(sw_id, self.software_names.get(sw_id, sw_id), i + 1)
+                SoftwareInfo(sw_id, self.software_names.get(sw_id) or sw_id, i + 1)
                 for i, sw_id in enumerate(spreadsheet_processors)
             ]
             
             ods_priority = config_manager.get_special_conversion_priority("ods")
             self.ods_software = [
-                SoftwareInfo(sw_id, self.software_names.get(sw_id, sw_id), i + 1)
+                SoftwareInfo(sw_id, self.software_names.get(sw_id) or sw_id, i + 1)
                 for i, sw_id in enumerate(ods_priority)
             ]
             
             sheet_to_pdf_priority = config_manager.get_spreadsheet_to_pdf_priority()
             self.spreadsheet_to_pdf_software = [
-                SoftwareInfo(sw_id, self.software_names.get(sw_id, sw_id), i + 1)
+                SoftwareInfo(sw_id, self.software_names.get(sw_id) or sw_id, i + 1)
                 for i, sw_id in enumerate(sheet_to_pdf_priority)
             ]
             
@@ -346,6 +348,9 @@ class SpreadsheetTab(BaseSettingsTab):
             cards_frame = self.spreadsheet_to_pdf_cards_frame
             software_list = self.spreadsheet_to_pdf_software
         else:
+            return
+
+        if not cards_frame:
             return
         
         for widget in cards_frame.winfo_children():

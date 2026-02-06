@@ -1,11 +1,35 @@
-# Document Converter - Spanish (Spain) Language File
-# Locale Code: es_ES
-# Encoding: UTF-8
+# DocWen - Archivo de idioma Español (España)
+# Código de idioma: es_ES
+# Codificación: UTF-8
 
+# =============================================================================
+# Metadatos
+# =============================================================================
 [meta]
 name = "Spanish"
 native_name = "Español"
+template_name = "Plantilla General Española"
 
+# =============================================================================
+# Texto Común
+# =============================================================================
+[common]
+app_name = "DocWen"
+offline_version = " (Totalmente sin conexión)"
+close = "Cerrar"
+apply = "Aplicar"
+cancel = "Cancelar"
+ok = "OK"
+save = "Guardar"
+error = "Error"
+version = "Versión {version}"
+browse = "Examinar..."
+select = "Seleccionar"
+disclaimer = "Versión de prueba. Sin garantía de precisión.\nAGPL-3.0 Open Source."
+
+# =============================================================================
+# CLI (Interfaz de Línea de Comandos)
+# =============================================================================
 [cli]
 description = "CLI de DocWen: admite conversión de documentos/hojas de cálculo/imágenes/archivos de maquetación"
 example = "Ejemplo"
@@ -23,6 +47,7 @@ check_punct = "Comprobar emparejamiento de signos"
 check_typo = "Comprobar erratas"
 check_symbol = "Comprobar símbolos"
 check_sensitive = "Comprobar términos marcados"
+check_none = "Omitir corrección (desactivar todas las comprobaciones)"
 merge_mode = "Modo de combinación: row/col/cell"
 base_table = "Ruta del archivo de tabla base"
 pages = "Rango de páginas para dividir PDF (p. ej.: 1-3,5,7-10)"
@@ -269,20 +294,9 @@ hierarchical_standard = "Estándar de numeración jerárquica"
 hierarchical_h2_start = "Jerárquico (desde H2)"
 legal_standard = "Estándar legal"
 
-[common]
-app_name = "DocWen"
-offline_version = " (Totalmente sin conexión)"
-close = "Cerrar"
-apply = "Aplicar"
-cancel = "Cancelar"
-ok = "OK"
-save = "Guardar"
-error = "Error"
-version = "Versión {version}"
-browse = "Examinar..."
-select = "Seleccionar"
-disclaimer = "Software en prueba. No se garantiza la precisión.\nSolo para uso educativo. Sin uso comercial ni distribución."
-
+# =============================================================================
+# Configuración
+# =============================================================================
 [settings]
 title = "Configuración"
 
@@ -687,6 +701,9 @@ info = "Información (INFO)"
 warning = "Aviso (WARNING)"
 error = "Error (ERROR)"
 
+# =============================================================================
+# Acerca De
+# =============================================================================
 [about]
 title = "Acerca de"
 version_info = "Versión {version}"
@@ -704,6 +721,7 @@ pymupdf4llm = "Extracción inteligente de PDF y conversión a Markdown"
 pdf2docx = "Conversión de PDF a Word editable"
 easyofd = "Lectura y conversión de documentos OFD (China)"
 rapidocr = "Reconocimiento de texto OCR en imágenes y PDF, compatible con uso sin conexión"
+paddleocr = "Fuente de modelos OCR, PP-OCRv3/v4 entrenados por PaddleOCR"
 onnxruntime = "Motor de inferencia de RapidOCR"
 ttkbootstrap = "Construcción de interfaces gráficas modernas"
 tkinterdnd2 = "Funcionalidad de arrastrar y soltar para mejorar la experiencia"
@@ -719,7 +737,11 @@ pandas = "Procesamiento y análisis de datos de hojas de cálculo"
 numpy = "Soporte básico para cálculo numérico y procesamiento de datos"
 olefile = "Identificación y procesamiento de formatos antiguos de Office"
 watchdog = "Monitorización del sistema de archivos, IPC y ejecución de instancia única"
+emoji = "Biblioteca de detección y procesamiento de emojis"
 
+# =============================================================================
+# Componentes
+# =============================================================================
 [components]
 
 [components.file_drop]
@@ -788,74 +810,217 @@ unavailable = "Selector de plantillas no disponible"
 document_templates = "Doc"
 spreadsheet_templates = "Hoja"
 
-[file_types]
-document = "Documento"
-spreadsheet = "Hoja de cálculo"
-image = "Imagen"
-layout = "Maquetación"
-text = "Texto"
-unknown = "Desconocido"
-text_category = "Texto"
-document_category = "Doc"
-spreadsheet_category = "Hoja"
-layout_category = "Maq"
-image_category = "Img"
-unknown_type = "Desconocido"
-format_mismatch = "⚠️ Formato real: {format}"
-format_unverifiable = "⚠️ No se puede verificar el formato real del archivo"
-format_txt = "TXT (Texto sin formato)"
-format_md = "Markdown"
-format_csv = "CSV (Texto de tabla)"
+# =============================================================================
+# Panel de Conversión
+# =============================================================================
+[conversion_panel]
+format_conversion = "Conversión de formato"
+save_as = "Guardar como"
+select_file_hint = "Seleccione primero un archivo"
+same_format_tooltip = "Ya está en formato {format}"
+compressible_format_tooltip = "Compresión disponible"
+png_compression_tooltip = "PNG no tiene pérdidas; no admite compresión por calidad"
+bmp_compression_tooltip = "BMP no tiene pérdidas; no admite compresión por calidad"
+gif_compression_tooltip = "GIF no tiene pérdidas; no admite compresión por calidad"
+tif_compression_tooltip = "TIF/TIFF no tiene pérdidas; no admite compresión por calidad"
+other_format_compression_tooltip = "El formato {format} no admite compresión por calidad"
+high_quality_conversion_tooltip = "Conversión de alta calidad"
+lossless_conversion_tooltip = "Conversión sin pérdidas"
+document_conversion_tooltip = "Convertir a este formato de documento"
+csv_conversion_tooltip = "Convertir a CSV (tabla de texto sin formato)"
+spreadsheet_conversion_tooltip = "Convertir a este formato de hoja de cálculo"
+pdf_conversion_tooltip = "Convertir a PDF"
+docx_conversion_tooltip = "Convertir a DOCX"
+doc_conversion_tooltip = "Convertir a DOC"
+tif_conversion_tooltip = "Renderizar como imagen TIF"
+jpg_conversion_tooltip = "Renderizar como imagen JPG"
 
-[conversion]
+[conversion_panel.document]
+convert_to_other_formats = "Convertir a otros formatos de documento"
+convert_to_layout = "Convertir a formato de maquetación"
+save_as_pdf = "Guardar como PDF"
+save_as_pdf_tooltip = "Convierte el documento a un archivo de maquetación PDF"
+save_as_ofd = "Guardar como OFD"
+save_as_ofd_tooltip = "Aún no compatible"
+proofread_document = "Revisión del documento"
+proofread_hint = "Revisar el documento"
+proofread_button = "📝 Revisar"
+proofread_button_tooltip = "Comprueba emparejamiento de símbolos, erratas, palabras sensibles, etc."
+proofread_options = "Opciones de revisión"
+symbol_pairing = "Emparejamiento de símbolos"
+symbol_pairing_tooltip = "Comprueba si los símbolos emparejados (paréntesis, comillas, etc.) coinciden"
+typos_rule = "Corrección de erratas"
+typos_rule_tooltip = "Comprueba erratas comunes"
+symbol_correction = "Corrección de símbolos"
+symbol_correction_tooltip = "Comprueba símbolos incorrectos"
+sensitive_word = "Detección de términos marcados"
+sensitive_word_tooltip = "Comprueba términos marcados"
 
-[conversion.filenames]
-split_part1 = "Dividir1"
-split_part2 = "Dividir2"
-merged_pdf = "PDFCombinado"
-merged_table = "TablaCombinada"
+[conversion_panel.image]
+convert_to_other_formats = "Convertir a otros formatos de imagen"
+compression_options = "Opciones de compresión"
+highest_quality = "Máxima calidad"
+highest_quality_tooltip = "Conversión sin pérdidas o de alta calidad. JPEG/WebP usa quality=95; PNG/BMP/GIF/TIF usa compresión sin pérdidas."
+limit_file_size = "Limitar tamaño de archivo"
+limit_file_size_tooltip = "Comprime al tamaño objetivo ajustando el parámetro de calidad; solo efectivo para JPEG/WebP. Otros formatos se guardarán con máxima calidad."
+file_size_limit = "Límite de tamaño de archivo:"
+enter_size_limit_warning = "Introduzca un límite de tamaño de archivo"
+kb_range_warning = "Introduzca un número entre 10 y 10000 (KB)"
+mb_range_warning = "Introduzca un número entre 1 y 100 (MB)"
+enter_valid_number_warning = "Introduzca un número válido"
+convert_to_layout = "Convertir a formato de maquetación"
+save_as_pdf = "Guardar como PDF"
+save_as_pdf_tooltip = "Convierte la imagen a un archivo de maquetación PDF"
+save_as_ofd = "Guardar como OFD"
+save_as_ofd_tooltip = "Aún no compatible"
+size_options = "Opciones de tamaño"
+original_embed = "Insertar original"
+fit_a4 = "Ajustar a A4"
+fit_a3 = "Ajustar a A3"
+no_pdf_size_option_warning = "Seleccione una opción de tamaño de PDF"
+merge_images = "Combinar imágenes"
+merge_images_hint = "Combina varias imágenes en una"
+merge_to_tif = "Combinar a TIF"
+conversion_options = "Opciones de conversión"
+preserve_transparency = "Conservar transparencia"
+preserve_transparency_tooltip = "Conserva la transparencia de la imagen origen (si existe)"
+no_transparency = "Sin transparencia"
+no_transparency_tooltip = "Convertir a RGB; el fondo transparente pasa a blanco"
 
-[messages]
-file_not_found = "Archivo no encontrado: {filename}"
-invalid_file_type = "Tipo de archivo no admitido: {ext}"
-unsupported_file_type = "Tipo de archivo no admitido"
-unknown_file_category = "Categoría de archivo desconocida: {category}"
-error_prefix = "Error: {message}"
-operation_failed = "Operación fallida: {error}"
-processing_exception = "Excepción durante el procesamiento: {error}"
-system_init_error = "Error de inicialización del sistema"
-process_file_failed = "No se pudo procesar el archivo: {error}"
-batch_merge_need_two_layout = "Se requiere modo por lotes; se necesitan al menos 2 archivos de maquetación para combinar"
-batch_merge_need_two_image = "Se requiere modo por lotes; se necesitan al menos 2 imágenes para combinar"
-batch_merge_need_two_table = "Se requiere modo por lotes; se necesitan al menos 2 hojas de cálculo para combinar"
-batch_file_list_not_init = "El componente de lista por lotes no está inicializado"
-select_base_table_first = "Seleccione primero una tabla base"
-select_merge_mode = "Seleccione un modo de combinación (por fila/columna/celda)"
-process_failed = "Procesamiento fallido: {error}"
-file_processing_failed = "No se pudo procesar el archivo: {error}"
-template_selection_failed = "No se pudo seleccionar la plantilla: {error}"
-cancel_failed = "No se pudo cancelar: {error}"
-clear_failed = "No se pudo limpiar: {error}"
-settings_unavailable = "La configuración no está disponible"
-open_settings_failed = "No se pudo abrir la configuración: {error}"
-apply_settings_failed = "No se pudo aplicar la configuración: {error}"
-about_unavailable = "La información de Acerca de no está disponible"
-open_about_failed = "No se pudo abrir Acerca de: {error}"
-single_file_only = "En modo de archivo único solo se permite 1 archivo"
-no_valid_files = "No se detectaron archivos válidos"
-no_folder_in_single_mode = "No se permiten carpetas en modo de archivo único"
-all_supported_files = "Todos los archivos admitidos"
-all_files = "Todos los archivos"
-select_multiple_files = "Seleccionar varios archivos"
-category_mismatch = "Solo se pueden añadir archivos de {current_name}; no se pueden mezclar con {new_name}"
-category_mismatch_detail = "Tipo no coincidente (lista actual: {selected_name}, archivo: {file_category_name})"
+[conversion_panel.layout]
+convert_to_other_formats = "Convertir a otros formatos de maquetación"
+save_as_ofd_tooltip = "Aún no compatible"
+convert_to_document_or_image = "Convertir a documento o imagen"
+save_as_format = "Guardar como {format}"
+save_as_docx_tooltip = "Convertir el archivo de maquetación a documento DOCX"
+save_as_doc_tooltip = "Convertir el archivo de maquetación a documento DOC"
+render_as_tif = "Renderizar como TIF"
+render_as_tif_tooltip = "Renderiza páginas PDF como imágenes TIF; admite TIFF multipágina y selección de DPI"
+render_as_jpg = "Renderizar como JPG"
+render_as_jpg_tooltip = "Renderiza PDF como imágenes JPG (un archivo por página)"
+image_quality_dpi = "Calidad de imagen (DPI)"
+minimum_150 = "Baja (150 DPI) - Vista rápida"
+moderate_300 = "Estándar (300 DPI) - Uso diario"
+high_definition_600 = "Alta (600 DPI) - Para impresión"
+merge_split = "Combinar/Dividir"
+merge_split_hint = "Combina o divide archivos de maquetación"
+merge_to_pdf = "Combinar a PDF"
+merge_to_pdf_tooltip = "Combina los archivos de la lista por lotes en un PDF de arriba a abajo. Usa ↑↓ para ajustar el orden tras seleccionar archivos."
+merge_to_ofd = "Combinar a OFD"
+merge_to_ofd_tooltip = "Aún no compatible"
+split_to_pdf = "Dividir a PDF"
+split_to_pdf_tooltip = "Divide el archivo actual en dos PDF según el rango de páginas. El primer archivo contiene las páginas indicadas; el segundo contiene el resto (si lo hay)."
+split_to_ofd = "Dividir a OFD"
+split_to_ofd_tooltip = "Aún no compatible"
+split_page_range = "Rango de páginas a dividir:"
+page_range_info = "Introduzca un rango de páginas, por ejemplo:\n• 1-5: Páginas 1 a 5\n• 1,3,5: Páginas 1, 3, 5\n• 1-3,7-9: Páginas 1-3 y 7-9\n• Admite separadores chinos: 1~3;5;7至10"
+page_range_placeholder = "p. ej.: 1-3,5,7-10"
+selected_split_file = "Archivo seleccionado para dividir ({pages} páginas):"
+no_file_selected = "No hay archivo seleccionado"
+cannot_split_all_pages = "❌ No se pueden dividir todas las páginas (deje algunas)"
+pages_out_of_range_adjusted = "⚠️ Algunas páginas estaban fuera de rango; se ajustaron automáticamente (total {pages} páginas)"
+all_pages_out_of_range = "❌ Todas las páginas están fuera de rango (total {pages} páginas)"
 
-[messages.errors]
-invalid_docx_template = "El archivo de plantilla {template_name} no es válido o está dañado. Ábrelo con Word o WPS, edítalo y guárdalo para asegurar que sea un DOCX válido."
+[conversion_panel.spreadsheet]
+convert_to_other_formats = "Convertir a otros formatos de hoja de cálculo"
+convert_to_layout = "Convertir a formato de maquetación"
+save_as_pdf = "Guardar como PDF"
+save_as_pdf_tooltip = "Requiere Office local para convertir la hoja de cálculo a un archivo de maquetación PDF"
+save_as_ofd = "Guardar como OFD"
+save_as_ofd_tooltip = "Aún no compatible"
+merge_tables = "Combinar tablas"
+merge_tables_hint = "Combina varias tablas según el modo seleccionado"
+merge_tables_button = "📋 Combinar tablas"
+merge_tables_button_tooltip = "Combina varias tablas de la lista por lotes en la tabla de referencia según el modo seleccionado. Primero seleccione el modo (por fila/columna/celda)."
+merge_options = "Opciones de combinación"
+merge_by_row = "Combinar por filas"
+merge_by_row_tooltip = "Combina una o más tablas fila a fila en la tabla de referencia"
+merge_by_column = "Combinar por columnas"
+merge_by_column_tooltip = "Combina una o más tablas columna a columna en la tabla de referencia"
+merge_by_cell = "Combinar por celdas"
+merge_by_cell_tooltip = "Añade datos desde posiciones de celdas correspondientes"
+selected_reference_table = "Tabla de referencia seleccionada:"
+no_table_selected = "No hay tabla seleccionada"
 
-[messages.warnings]
-missing_body_placeholder = "⚠️ No se encontró el marcador del cuerpo (p. ej.: {{body}}) en la plantilla. No se insertó el contenido del cuerpo en Markdown."
+# =============================================================================
+# Panel de Acciones
+# =============================================================================
+[action_panel]
+export_options = "Opciones de exportación"
+extraction_options = "Opciones de extracción"
+generation_options = "Opciones de generación"
+extract_images = "Extraer imágenes"
+extract_images_tooltip = "Extrae imágenes del archivo al convertir a MD"
+ocr = "OCR de imagen"
+ocr_tooltip = "Activa OCR para reconocer texto en imágenes al convertir a MD"
 
+[action_panel.proofread]
+symbol_pairing = "Emparejamiento de símbolos"
+symbol_pairing_tooltip = "Comprueba si los símbolos emparejados (paréntesis, comillas, etc.) coinciden"
+typos_rule = "Corrección de erratas"
+typos_rule_tooltip = "Comprueba erratas comunes"
+symbol_correction = "Corrección de símbolos"
+symbol_correction_tooltip = "Comprueba símbolos incorrectos"
+sensitive_word = "Términos marcados"
+sensitive_word_tooltip = "Comprueba términos marcados"
+
+[action_panel.document]
+ready = "Listo"
+export_markdown = "Exportar Markdown"
+export_markdown_tooltip = "Convierte el documento a formato Markdown"
+optimize_for_type = "Optimizar según tipo de documento"
+optimize_for_type_tooltip = "Realiza optimización específica según el tipo de documento"
+remove_existing_numbering = "Eliminar numeración original"
+remove_existing_numbering_tooltip = "Elimina la numeración existente al convertir a MD"
+add_new_numbering = "Añadir nueva numeración"
+add_new_numbering_tooltip = "Añade nueva numeración de encabezados al convertir a MD"
+
+[action_panel.spreadsheet]
+ready = "Listo"
+export_markdown = "Exportar Markdown"
+export_markdown_tooltip = "Convierte la hoja de cálculo a formato Markdown"
+
+[action_panel.image]
+ready = "Listo"
+export_markdown = "Exportar Markdown"
+export_markdown_tooltip = "Convierte la imagen a formato Markdown"
+extract_images_tooltip = "Conservar imágenes al convertir a MD"
+ocr_tooltip = "Activa OCR para reconocer texto en imágenes al convertir a MD"
+
+[action_panel.layout]
+ready = "Listo"
+export_markdown = "Exportar Markdown"
+export_markdown_tooltip = "Convierte el archivo de maquetación a formato Markdown"
+
+[action_panel.md_to_document]
+ready = "Listo"
+generate_docx = "Generar DOCX"
+generate_docx_tooltip = "Convierte Markdown a documento DOCX"
+generate_doc = "Generar DOC"
+generate_doc_tooltip = "Convierte Markdown a documento DOC (requiere Office local)"
+generate_odt = "Generar ODT"
+generate_odt_tooltip = "Convierte Markdown a documento ODT (requiere LibreOffice)"
+generate_rtf = "Generar RTF"
+generate_rtf_tooltip = "Convierte Markdown a documento RTF (requiere Office local)"
+remove_existing_numbering = "Eliminar numeración original"
+remove_existing_numbering_tooltip = "Elimina la numeración existente al convertir a documento"
+add_new_numbering = "Añadir nueva numeración"
+add_new_numbering_tooltip = "Añade nueva numeración al convertir a documento"
+
+[action_panel.md_to_spreadsheet]
+ready = "Listo"
+generate_xlsx = "Generar XLSX"
+generate_xlsx_tooltip = "Convierte Markdown a hoja de cálculo XLSX"
+generate_xls = "Generar XLS"
+generate_xls_tooltip = "Convierte Markdown a hoja de cálculo XLS (requiere Office local)"
+generate_ods = "Generar ODS"
+generate_ods_tooltip = "Convierte Markdown a hoja de cálculo ODS (requiere LibreOffice)"
+generate_csv = "Generar CSV"
+generate_csv_tooltip = "Convierte Markdown a CSV (formato de texto sin formato)"
+
+# =============================================================================
+# Editores
+# =============================================================================
 [editors]
 
 [editors.numbering_add]
@@ -1066,288 +1231,40 @@ duplicate_key_title = "La clave ya existe"
 duplicate_key_message = "La clave \"{entry_key}\" ya existe\n\nValores actuales: {current_values}\nComentario actual: {current_comment}\n\nSeleccione una acción:"
 duplicate_key_no_comment = "(ninguno)"
 overwrite = "Sobrescribir"
-overwrite_tooltip = "Reemplazar completamente con nuevos valores y comentario"
 merge = "Combinar"
-merge_tooltip = "Combinar valores nuevos y antiguos (sin duplicados), comentario: mantener el antiguo si el nuevo está vacío"
 
-[styles]
-code_block = "Bloque de código"
-inline_code = "Código en línea"
-quote_1 = "Cita 1"
-quote_2 = "Cita 2"
-quote_3 = "Cita 3"
-quote_4 = "Cita 4"
-quote_5 = "Cita 5"
-quote_6 = "Cita 6"
-quote_7 = "Cita 7"
-quote_8 = "Cita 8"
-quote_9 = "Cita 9"
-formula_block = "Bloque de fórmula"
-inline_formula = "Fórmula en línea"
-horizontal_rule_1 = "Línea horizontal 1"
-horizontal_rule_2 = "Línea horizontal 2"
-horizontal_rule_3 = "Línea horizontal 3"
-list_block = "Bloque de lista"
-table_content = "Contenido de tabla"
-three_line_table = "Tabla de tres líneas"
-table_grid = "Tabla de cuadrícula"
-body_paragraph = "Párrafo del cuerpo"
+# =============================================================================
+# Tipos de Archivo
+# =============================================================================
+[file_types]
+document = "Documento"
+spreadsheet = "Hoja de cálculo"
+image = "Imagen"
+layout = "Maquetación"
+text = "Texto"
+unknown = "Desconocido"
+text_category = "Texto"
+document_category = "Doc"
+spreadsheet_category = "Hoja"
+layout_category = "Maq"
+image_category = "Img"
+unknown_type = "Desconocido"
+format_mismatch = "⚠️ Formato real: {format}"
+format_unverifiable = "⚠️ No se puede verificar el formato real del archivo"
+format_txt = "TXT (Texto sin formato)"
+format_md = "Markdown"
+format_csv = "CSV (Texto de tabla)"
 
-[style_formats]
+# =============================================================================
+# Conversión
+# =============================================================================
+[conversion]
 
-[style_formats.body_paragraph]
-east_asia_font = "SimSun"
-ascii_font = "Times New Roman"
-font_size_pt = 12
-first_line_indent_chars = 0
-first_line_indent_cm = 0
-spacing_after_twip = 120
-spacing_before_twip = 0
-bold = false
-justification = "left"
-
-[style_formats.heading_1]
-east_asia_font = "SimSun"
-ascii_font = "Arial"
-font_size_pt = 16
-first_line_indent_chars = 0
-first_line_indent_cm = 0
-spacing_after_twip = 120
-spacing_before_twip = 240
-bold = true
-justification = "left"
-
-[style_formats.heading_2]
-east_asia_font = "SimSun"
-ascii_font = "Arial"
-font_size_pt = 14
-first_line_indent_chars = 0
-first_line_indent_cm = 0
-spacing_after_twip = 120
-spacing_before_twip = 240
-bold = true
-justification = "left"
-
-[style_formats.heading_3_9]
-east_asia_font = "SimSun"
-ascii_font = "Arial"
-font_size_pt = 12
-first_line_indent_chars = 0
-first_line_indent_cm = 0
-spacing_after_twip = 120
-spacing_before_twip = 240
-bold = true
-justification = "left"
-
-[placeholders]
-title = "título"
-body = "cuerpo"
-
-[yaml_keys]
-title = "título"
-subtitle = "subtítulo"
-
-[conversion_panel]
-format_conversion = "Conversión de formato"
-save_as = "Guardar como"
-select_file_hint = "Seleccione primero un archivo"
-same_format_tooltip = "Ya está en formato {format}"
-compressible_format_tooltip = "Compresión disponible"
-png_compression_tooltip = "PNG no tiene pérdidas; no admite compresión por calidad"
-bmp_compression_tooltip = "BMP no tiene pérdidas; no admite compresión por calidad"
-gif_compression_tooltip = "GIF no tiene pérdidas; no admite compresión por calidad"
-tif_compression_tooltip = "TIF/TIFF no tiene pérdidas; no admite compresión por calidad"
-other_format_compression_tooltip = "El formato {format} no admite compresión por calidad"
-high_quality_conversion_tooltip = "Conversión de alta calidad"
-lossless_conversion_tooltip = "Conversión sin pérdidas"
-document_conversion_tooltip = "Convertir a este formato de documento"
-csv_conversion_tooltip = "Convertir a CSV (tabla de texto sin formato)"
-spreadsheet_conversion_tooltip = "Convertir a este formato de hoja de cálculo"
-pdf_conversion_tooltip = "Convertir a PDF"
-docx_conversion_tooltip = "Convertir a DOCX"
-doc_conversion_tooltip = "Convertir a DOC"
-tif_conversion_tooltip = "Renderizar como imagen TIF"
-jpg_conversion_tooltip = "Renderizar como imagen JPG"
-
-[conversion_panel.document]
-convert_to_other_formats = "Convertir a otros formatos de documento"
-convert_to_layout = "Convertir a formato de maquetación"
-save_as_pdf = "Guardar como PDF"
-save_as_pdf_tooltip = "Convierte el documento a un archivo de maquetación PDF"
-save_as_ofd = "Guardar como OFD"
-save_as_ofd_tooltip = "Aún no compatible"
-proofread_document = "Revisión del documento"
-proofread_hint = "Revisar el documento"
-proofread_button = "📝 Revisar"
-proofread_button_tooltip = "Comprueba emparejamiento de símbolos, erratas, palabras sensibles, etc."
-proofread_options = "Opciones de revisión"
-symbol_pairing = "Emparejamiento de símbolos"
-symbol_pairing_tooltip = "Comprueba si los símbolos emparejados (paréntesis, comillas, etc.) coinciden"
-typos_rule = "Corrección de erratas"
-typos_rule_tooltip = "Comprueba erratas comunes"
-symbol_correction = "Corrección de símbolos"
-symbol_correction_tooltip = "Comprueba símbolos incorrectos"
-sensitive_word = "Detección de términos marcados"
-sensitive_word_tooltip = "Comprueba términos marcados"
-
-[conversion_panel.image]
-convert_to_other_formats = "Convertir a otros formatos de imagen"
-compression_options = "Opciones de compresión"
-highest_quality = "Máxima calidad"
-highest_quality_tooltip = "Conversión sin pérdidas o de alta calidad. JPEG/WebP usa quality=95; PNG/BMP/GIF/TIF usa compresión sin pérdidas."
-limit_file_size = "Limitar tamaño de archivo"
-limit_file_size_tooltip = "Comprime al tamaño objetivo ajustando el parámetro de calidad; solo efectivo para JPEG/WebP. Otros formatos se guardarán con máxima calidad."
-file_size_limit = "Límite de tamaño de archivo:"
-enter_size_limit_warning = "Introduzca un límite de tamaño de archivo"
-kb_range_warning = "Introduzca un número entre 10 y 10000 (KB)"
-mb_range_warning = "Introduzca un número entre 1 y 100 (MB)"
-enter_valid_number_warning = "Introduzca un número válido"
-convert_to_layout = "Convertir a formato de maquetación"
-save_as_pdf = "Guardar como PDF"
-save_as_pdf_tooltip = "Convierte la imagen a un archivo de maquetación PDF"
-save_as_ofd = "Guardar como OFD"
-save_as_ofd_tooltip = "Aún no compatible"
-size_options = "Opciones de tamaño"
-original_embed = "Insertar original"
-fit_a4 = "Ajustar a A4"
-fit_a3 = "Ajustar a A3"
-no_pdf_size_option_warning = "Seleccione una opción de tamaño de PDF"
-merge_images = "Combinar imágenes"
-merge_images_hint = "Combina varias imágenes en una"
-merge_to_tif = "Combinar a TIF"
-conversion_options = "Opciones de conversión"
-preserve_transparency = "Conservar transparencia"
-preserve_transparency_tooltip = "Conserva la transparencia de la imagen origen (si existe)"
-no_transparency = "Sin transparencia"
-no_transparency_tooltip = "Convertir a RGB; el fondo transparente pasa a blanco"
-
-[conversion_panel.layout]
-convert_to_other_formats = "Convertir a otros formatos de maquetación"
-save_as_ofd_tooltip = "Aún no compatible"
-convert_to_document_or_image = "Convertir a documento o imagen"
-save_as_format = "Guardar como {format}"
-save_as_docx_tooltip = "Convertir el archivo de maquetación a documento DOCX"
-save_as_doc_tooltip = "Convertir el archivo de maquetación a documento DOC"
-render_as_tif = "Renderizar como TIF"
-render_as_tif_tooltip = "Renderiza páginas PDF como imágenes TIF; admite TIFF multipágina y selección de DPI"
-render_as_jpg = "Renderizar como JPG"
-render_as_jpg_tooltip = "Renderiza PDF como imágenes JPG (un archivo por página)"
-image_quality_dpi = "Calidad de imagen (DPI)"
-minimum_150 = "Baja (150 DPI) - Vista rápida"
-moderate_300 = "Estándar (300 DPI) - Uso diario"
-high_definition_600 = "Alta (600 DPI) - Para impresión"
-merge_split = "Combinar/Dividir"
-merge_split_hint = "Combina o divide archivos de maquetación"
-merge_to_pdf = "Combinar a PDF"
-merge_to_pdf_tooltip = "Combina los archivos de la lista por lotes en un PDF de arriba a abajo. Usa ↑↓ para ajustar el orden tras seleccionar archivos."
-merge_to_ofd = "Combinar a OFD"
-merge_to_ofd_tooltip = "Aún no compatible"
-split_to_pdf = "Dividir a PDF"
-split_to_pdf_tooltip = "Divide el archivo actual en dos PDF según el rango de páginas. El primer archivo contiene las páginas indicadas; el segundo contiene el resto (si lo hay)."
-split_to_ofd = "Dividir a OFD"
-split_to_ofd_tooltip = "Aún no compatible"
-split_page_range = "Rango de páginas a dividir:"
-page_range_info = "Introduzca un rango de páginas, por ejemplo:\n• 1-5: Páginas 1 a 5\n• 1,3,5: Páginas 1, 3, 5\n• 1-3,7-9: Páginas 1-3 y 7-9\n• Admite separadores chinos: 1~3;5;7至10"
-page_range_placeholder = "p. ej.: 1-3,5,7-10"
-selected_split_file = "Archivo seleccionado para dividir ({pages} páginas):"
-no_file_selected = "No hay archivo seleccionado"
-cannot_split_all_pages = "❌ No se pueden dividir todas las páginas (deje algunas)"
-pages_out_of_range_adjusted = "⚠️ Algunas páginas estaban fuera de rango; se ajustaron automáticamente (total {pages} páginas)"
-all_pages_out_of_range = "❌ Todas las páginas están fuera de rango (total {pages} páginas)"
-
-[conversion_panel.spreadsheet]
-convert_to_other_formats = "Convertir a otros formatos de hoja de cálculo"
-convert_to_layout = "Convertir a formato de maquetación"
-save_as_pdf = "Guardar como PDF"
-save_as_pdf_tooltip = "Requiere Office local para convertir la hoja de cálculo a un archivo de maquetación PDF"
-save_as_ofd = "Guardar como OFD"
-save_as_ofd_tooltip = "Aún no compatible"
-merge_tables = "Combinar tablas"
-merge_tables_hint = "Combina varias tablas según el modo seleccionado"
-merge_tables_button = "📋 Combinar tablas"
-merge_tables_button_tooltip = "Combina varias tablas de la lista por lotes en la tabla de referencia según el modo seleccionado. Primero seleccione el modo (por fila/columna/celda)."
-merge_options = "Opciones de combinación"
-merge_by_row = "Combinar por filas"
-merge_by_row_tooltip = "Combina una o más tablas fila a fila en la tabla de referencia"
-merge_by_column = "Combinar por columnas"
-merge_by_column_tooltip = "Combina una o más tablas columna a columna en la tabla de referencia"
-merge_by_cell = "Combinar por celdas"
-merge_by_cell_tooltip = "Añade datos desde posiciones de celdas correspondientes"
-selected_reference_table = "Tabla de referencia seleccionada:"
-no_table_selected = "No hay tabla seleccionada"
-
-[action_panel]
-export_options = "Opciones de exportación"
-extraction_options = "Opciones de extracción"
-generation_options = "Opciones de generación"
-extract_images = "Extraer imágenes"
-extract_images_tooltip = "Extrae imágenes del archivo al convertir a MD"
-ocr = "OCR de imagen"
-ocr_tooltip = "Activa OCR para reconocer texto en imágenes al convertir a MD"
-
-[action_panel.proofread]
-symbol_pairing = "Emparejamiento de símbolos"
-symbol_pairing_tooltip = "Comprueba si los símbolos emparejados (paréntesis, comillas, etc.) coinciden"
-typos_rule = "Corrección de erratas"
-typos_rule_tooltip = "Comprueba erratas comunes"
-symbol_correction = "Corrección de símbolos"
-symbol_correction_tooltip = "Comprueba símbolos incorrectos"
-sensitive_word = "Términos marcados"
-sensitive_word_tooltip = "Comprueba términos marcados"
-
-[action_panel.document]
-ready = "Listo"
-export_markdown = "Exportar Markdown"
-export_markdown_tooltip = "Convierte el documento a formato Markdown"
-optimize_for_type = "Optimizar según tipo de documento"
-optimize_for_type_tooltip = "Realiza optimización específica según el tipo de documento"
-remove_existing_numbering = "Eliminar numeración original"
-remove_existing_numbering_tooltip = "Elimina la numeración existente al convertir a MD"
-add_new_numbering = "Añadir nueva numeración"
-add_new_numbering_tooltip = "Añade nueva numeración de encabezados al convertir a MD"
-
-[action_panel.spreadsheet]
-ready = "Listo"
-export_markdown = "Exportar Markdown"
-export_markdown_tooltip = "Convierte la hoja de cálculo a formato Markdown"
-
-[action_panel.image]
-ready = "Listo"
-export_markdown = "Exportar Markdown"
-export_markdown_tooltip = "Convierte la imagen a formato Markdown"
-extract_images_tooltip = "Conservar imágenes al convertir a MD"
-ocr_tooltip = "Activa OCR para reconocer texto en imágenes al convertir a MD"
-
-[action_panel.layout]
-ready = "Listo"
-export_markdown = "Exportar Markdown"
-export_markdown_tooltip = "Convierte el archivo de maquetación a formato Markdown"
-
-[action_panel.md_to_document]
-ready = "Listo"
-generate_docx = "Generar DOCX"
-generate_docx_tooltip = "Convierte Markdown a documento DOCX"
-generate_doc = "Generar DOC"
-generate_doc_tooltip = "Convierte Markdown a documento DOC (requiere Office local)"
-generate_odt = "Generar ODT"
-generate_odt_tooltip = "Convierte Markdown a documento ODT (requiere LibreOffice)"
-generate_rtf = "Generar RTF"
-generate_rtf_tooltip = "Convierte Markdown a documento RTF (requiere Office local)"
-remove_existing_numbering = "Eliminar numeración original"
-remove_existing_numbering_tooltip = "Elimina la numeración existente al convertir a documento"
-add_new_numbering = "Añadir nueva numeración"
-add_new_numbering_tooltip = "Añade nueva numeración al convertir a documento"
-
-[action_panel.md_to_spreadsheet]
-ready = "Listo"
-generate_xlsx = "Generar XLSX"
-generate_xlsx_tooltip = "Convierte Markdown a hoja de cálculo XLSX"
-generate_xls = "Generar XLS"
-generate_xls_tooltip = "Convierte Markdown a hoja de cálculo XLS (requiere Office local)"
-generate_ods = "Generar ODS"
-generate_ods_tooltip = "Convierte Markdown a hoja de cálculo ODS (requiere LibreOffice)"
-generate_csv = "Generar CSV"
-generate_csv_tooltip = "Convierte Markdown a CSV (formato de texto sin formato)"
+[conversion.filenames]
+split_part1 = "Dividir1"
+split_part2 = "Dividir2"
+merged_pdf = "PDFCombinado"
+merged_table = "TablaCombinada"
 
 [conversion.progress]
 converting_to_format = "Convirtiendo a {format}..."
@@ -1378,7 +1295,6 @@ filling_yaml_data = "Rellenando datos YAML..."
 filling_table_data = "Rellenando datos de tabla..."
 saving_excel = "Guardando archivo Excel..."
 writing_file = "Escribiendo archivo..."
-executing_final_proofread = "Ejecutando revisión final..."
 initializing_proofread = "Inicializando motor de revisión..."
 proofreading_progress = "Revisando... {current}/{total}"
 saving_proofread_result = "Guardando resultado de revisión..."
@@ -1477,6 +1393,53 @@ unsupported_layout_format = "Formato no admitido: {format}"
 format_to_pdf_not_implemented = "{format}→PDF no está implementado"
 all_pages_invalid = "Páginas no válidas (total {total}p)"
 
+# =============================================================================
+# Mensajes
+# =============================================================================
+[messages]
+file_not_found = "Archivo no encontrado: {filename}"
+invalid_file_type = "Tipo de archivo no admitido: {ext}"
+unsupported_file_type = "Tipo de archivo no admitido"
+unknown_file_category = "Categoría de archivo desconocida: {category}"
+error_prefix = "Error: {message}"
+operation_failed = "Operación fallida: {error}"
+processing_exception = "Excepción durante el procesamiento: {error}"
+system_init_error = "Error de inicialización del sistema"
+process_file_failed = "No se pudo procesar el archivo: {error}"
+batch_merge_need_two_layout = "Se requiere modo por lotes; se necesitan al menos 2 archivos de maquetación para combinar"
+batch_merge_need_two_image = "Se requiere modo por lotes; se necesitan al menos 2 imágenes para combinar"
+batch_merge_need_two_table = "Se requiere modo por lotes; se necesitan al menos 2 hojas de cálculo para combinar"
+batch_file_list_not_init = "El componente de lista por lotes no está inicializado"
+select_base_table_first = "Seleccione primero una tabla base"
+select_merge_mode = "Seleccione un modo de combinación (por fila/columna/celda)"
+process_failed = "Procesamiento fallido: {error}"
+file_processing_failed = "No se pudo procesar el archivo: {error}"
+template_selection_failed = "No se pudo seleccionar la plantilla: {error}"
+cancel_failed = "No se pudo cancelar: {error}"
+clear_failed = "No se pudo limpiar: {error}"
+settings_unavailable = "La configuración no está disponible"
+open_settings_failed = "No se pudo abrir la configuración: {error}"
+apply_settings_failed = "No se pudo aplicar la configuración: {error}"
+about_unavailable = "La información de Acerca de no está disponible"
+open_about_failed = "No se pudo abrir Acerca de: {error}"
+single_file_only = "En modo de archivo único solo se permite 1 archivo"
+no_valid_files = "No se detectaron archivos válidos"
+no_folder_in_single_mode = "No se permiten carpetas en modo de archivo único"
+all_supported_files = "Todos los archivos admitidos"
+all_files = "Todos los archivos"
+select_multiple_files = "Seleccionar varios archivos"
+category_mismatch = "Solo se pueden añadir archivos de {current_name}; no se pueden mezclar con {new_name}"
+category_mismatch_detail = "Tipo no coincidente (lista actual: {selected_name}, archivo: {file_category_name})"
+
+[messages.errors]
+invalid_docx_template = "El archivo de plantilla {template_name} no es válido o está dañado. Ábrelo con Word o WPS, edítalo y guárdalo para asegurar que sea un DOCX válido."
+
+[messages.warnings]
+missing_body_placeholder = "⚠️ No se encontró el marcador del cuerpo (p. ej.: {{body}}) en la plantilla. No se insertó el contenido del cuerpo en Markdown."
+
+# =============================================================================
+# Revisión
+# =============================================================================
 [proofread]
 
 [proofread.error_type]
@@ -1495,3 +1458,122 @@ pairing = "Comprobación de emparejamiento"
 sensitive = "Se detectó un término marcado"
 extra_close = "Símbolo de cierre extra"
 unclosed = "Símbolo sin cerrar"
+  
+# =============================================================================
+# Texto de marcador de procesamiento de enlaces (para mostrar errores en el documento)
+# =============================================================================
+[link_processing]
+file_not_found = "⚠️ Archivo no encontrado: {filename}"
+section_not_found = "⚠️ Sección no encontrada: {filename}#{heading}"
+block_not_found = "⚠️ Bloque no encontrado: {filename}#^{block_id}"
+circular_reference = "⚠️ Referencia circular detectada: {filename}"
+max_depth_reached = "⚠️ Profundidad máxima de incrustación alcanzada"
+
+# =============================================================================
+# Estilos (para conversión de documentos)
+# Estos nombres de estilo se usan para inyección/detección en la conversión MD ↔ DOCX
+# =============================================================================
+[styles]
+# Estilos de párrafo
+body_paragraph = "Párrafo del cuerpo"
+image_paragraph = "Párrafo de imagen"
+
+# Estilos de código
+code_block = "Bloque de código"
+inline_code = "Código en línea"
+
+# Estilos de fórmula
+formula_block = "Bloque de fórmula"
+inline_formula = "Fórmula en línea"
+
+# Estilos de lista
+list_block = "Bloque de lista"
+
+# Estilos de línea horizontal
+horizontal_rule_1 = "Línea horizontal 1"
+horizontal_rule_2 = "Línea horizontal 2"
+horizontal_rule_3 = "Línea horizontal 3"
+
+# Estilos de tabla
+table_content = "Contenido de tabla"
+three_line_table = "Tabla de tres líneas"
+table_grid = "Tabla de cuadrícula"
+
+# Estilos de cita (9 niveles)
+quote_1 = "Cita 1"
+quote_2 = "Cita 2"
+quote_3 = "Cita 3"
+quote_4 = "Cita 4"
+quote_5 = "Cita 5"
+quote_6 = "Cita 6"
+quote_7 = "Cita 7"
+quote_8 = "Cita 8"
+quote_9 = "Cita 9"
+# =============================================================================
+# Formatos de estilo (propiedades de formato para la inyección de estilos)
+# =============================================================================
+[style_formats]
+
+# Formato de párrafo del cuerpo (SimSun/Times New Roman, 12pt, alineado a la izquierda)
+[style_formats.body_paragraph]
+east_asia_font = "SimSun"
+ascii_font = "Times New Roman"
+font_size_pt = 12
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 0
+bold = false
+justification = "left"
+
+# Formato de título 1 (SimSun/Arial, 16pt, negrita, alineado a la izquierda)
+[style_formats.heading_1]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 16
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# Formato de título 2 (SimSun/Arial, 14pt, negrita, alineado a la izquierda)
+[style_formats.heading_2]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 14
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# Formato de título 3-9 (SimSun/Arial, 12pt, negrita, alineado a la izquierda)
+[style_formats.heading_3_9]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 12
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# =============================================================================
+# Marcadores de posición (para plantillas de documentos)
+# Estos marcadores de posición se usan para rellenar plantillas en la conversión MD → DOCX
+# =============================================================================
+[placeholders]
+title = "título"
+body = "cuerpo"
+
+# =============================================================================
+# Claves YAML (para metadatos)
+# Estas claves se usan para la salida de YAML front matter en la conversión DOCX → MD
+# =============================================================================
+[yaml_keys]
+title = "título"
+subtitle = "subtítulo"

@@ -26,31 +26,21 @@ Diese Software wurde ursprünglich für die tägliche Arbeit der Druckerei entwi
 - **🔒 Vollständig lokaler Betrieb** - Läuft offline und gewährleistet Datensicherheit mit integrierten Netzwerkisolationsmechanismen.
 - **🔗 Einzelinstanzbetrieb** - Verwaltet automatisch Programminstanzen und unterstützt die Integration mit dem begleitenden Obsidian-Plugin.
 
-## Änderungsprotokoll
+## 📸 Screenshots
 
-### v0.6.0 (2025-01-20)
+| Batch | Markdown |
+| --- | --- |
+| ![Batch-Ansicht](assets/screenshots/batch.png) | ![Markdown-Ansicht](assets/screenshots/markdown.png) |
 
-- Vollständige Internationalisierungsunterstützung (GUI und CLI unterstützen 11 Sprachen).
-- PaddleOCR durch RapidOCR für bessere Kompatibilität ersetzt.
-- Mehrsprachige Word/Excel-Vorlagen hinzugefügt.
-- Automatische Vorlagenstil-Erkennung und -Injektion.
-- Weitere Optimierungen und Fehlerbehebungen.
+| Dokument | Tabelle |
+| --- | --- |
+| ![Dokument-Ansicht](assets/screenshots/document.png) | ![Tabellen-Ansicht](assets/screenshots/spreadsheet.png) |
 
-### v0.5.1 (2025-01-01)
+| Bild | Layout-Dateien |
+| --- | --- |
+| ![Bild-Ansicht](assets/screenshots/image.png) | ![Layout-Ansicht](assets/screenshots/layout.png) |
 
-- Bidirektionale mathematische Formelkonvertierung hinzugefügt (Word OMML ↔ Markdown LaTeX).
-- Bidirektionale Fußnoten-/Endnotenkonvertierung hinzugefügt.
-- Zeichen- und Absatzstile für Code, Zitate usw. hinzugefügt.
-- Verbesserte Listenverarbeitung (mehrstufige Verschachtelung, automatische Nummerierung).
-- Verbesserte Tabellenfunktionen (Stilerkennung/-injektion, Dreilinientabellen usw.).
-- Optimierte Bereinigung und Hinzufügung von Untertitelnummern.
-- Verbesserte Schnittstelleninteraktion und Einstellungsverknüpfung.
-
-### v0.4.1 (2025-12-05)
-
-- CLI refaktoriert, um die Benutzererfahrung zu verbessern.
-- Unterstützung für weitere Dokumenttypen hinzugefügt.
-- Mehr konfigurierbare Optionen implementiert.
+Changelog: siehe [doc/CHANGELOG.md](doc/CHANGELOG.md)
 
 ## 🚀 Schnellstart
 
@@ -122,6 +112,23 @@ Unterstützt die bidirektionale Konvertierung zwischen Markdown-Trennzeichen und
 -   **DOCX → MD**: Word-Seitenumbrüche, Abschnittswechsel und horizontale Linien werden automatisch in Markdown-Trennzeichen konvertiert.
 -   **MD → DOCX**: Markdown `---`, `***`, `___` werden automatisch in entsprechende Word-Elemente konvertiert.
 -   **Konfigurierbar**: Spezifische Zuordnungsbeziehungen können in der Einstellungsoberfläche angepasst werden.
+
+### Bildeinbettung und Größe
+
+Unterstützt Obsidian/Wiki- und Standard-Markdown-Bildeinbettung mit optionaler Größenangabe (px):
+
+```markdown
+![[image.png]]
+![[image.png|300]]
+![[image.png\|300]]
+![alt](image.png =300x200)
+![alt](image.png =300x)
+![alt|300](image.png)
+```
+
+- Ohne Größe: Originalgröße, begrenzt durch verfügbare Seiten-/Zellenbreite
+- Mit Größe: Vergrößerung erlaubt, weiterhin durch verfügbare Breite begrenzt
+- Nur-Bild-Absatz: verwendet den Absatzstil „Image“ (zentriert, einfacher Zeilenabstand)
 
 ## 📖 Detaillierte Bedienungsanleitung
 

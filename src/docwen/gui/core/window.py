@@ -1,5 +1,5 @@
 """
-公文转换器图形用户界面主窗口模块
+图形用户界面主窗口模块
 """
 import os
 import logging
@@ -20,7 +20,7 @@ logger = logging.getLogger()
 
 class MainWindow(ScalableMixin):
     """
-    公文转换器主窗口类
+    主窗口类
     """
     
     def __init__(self, root: tb.Window, config_manager: Any, initial_file_path: Optional[str] = None):

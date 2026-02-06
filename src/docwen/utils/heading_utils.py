@@ -250,26 +250,3 @@ def convert_to_halfwidth(text: str) -> str:
     # 全角数字范围: U+FF10 到 U+FF19
     full_to_half = {chr(0xFF10 + i): chr(0x30 + i) for i in range(10)}
     return ''.join(full_to_half.get(char, char) for char in text)
-
-# 模块测试代码
-if __name__ == "__main__":
-    # 配置日志
-    logging.basicConfig(level=logging.DEBUG)
-    logger.info("标题工具模块测试")
-    
-    # 测试全角数字标题
-    test_text = "１．全角数字标题"
-    cleaned, level = detect_heading_level(test_text)
-    print(f"测试: '{test_text}' -> 清理后: '{cleaned}', 级别: {level}")
-    
-    # 测试全角括号标题
-    test_text = "（１）全角括号标题"
-    cleaned, level = detect_heading_level(test_text)
-    print(f"测试: '{test_text}' -> 清理后: '{cleaned}', 级别: {level}")
-    
-    # 测试分割功能
-    test_text = "一级标题：正文内容"
-    part1, part2 = split_content_by_delimiters(test_text)
-    print(f"分割测试: '{part1}' | '{part2}'")
-    
-    logger.info("模块测试完成!")

@@ -170,38 +170,3 @@ def generate_basic_yaml_frontmatter(file_stem: str) -> str:
     lines.append("")
     
     return "\n".join(lines)
-
-
-# 模块测试
-if __name__ == "__main__":
-    # 配置日志
-    logging.basicConfig(level=logging.DEBUG)
-    logger.info("YAML处理器模块测试")
-    
-    # 测试数据
-    test_yaml = """
-标题: 关于[[2023年]]重点工作安排
-负责人:
-  - "[[张三]]"
-  - "[[李四]]"
-金额: 1234.56
-"""
-    
-    # 解析并处理YAML
-    logger.info("测试YAML解析和处理")
-    parsed_data = parse_yaml(test_yaml)
-    
-    # 打印处理结果
-    print("\n--- 解析后原始数据 ---")
-    for key, value in parsed_data.items():
-        print(f"{key}: {value} (类型: {type(value).__name__})")
-
-    # 测试 process_list_field
-    logger.info("\n--- 测试 process_list_field ---")
-    list_value = parsed_data.get("负责人")
-    processed_list = process_list_field(list_value)
-    print(f"原始列表: {list_value}")
-    print(f"处理结果: {processed_list}")
-    
-    logger.info("\n模块测试完成!")
-    
