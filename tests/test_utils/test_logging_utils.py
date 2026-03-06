@@ -1,3 +1,5 @@
+"""utils 单元测试。"""
+
 from __future__ import annotations
 
 import os
@@ -9,11 +11,33 @@ import pytest
 import docwen.utils.logging_utils as logging_utils
 
 
+pytestmark = pytest.mark.unit
+
 @pytest.mark.unit
 def test_pre_init_logging_resets_handlers() -> None:
     root = logging_utils.pre_init_logging()
     assert root is not None
     assert len(root.handlers) == 1
+
+
+@pytest.mark.unit
+def test_configure_console_handler_uses_stderr(monkeypatch: pytest.MonkeyPatch) -> None:
+    logger = logging_utils.logging.getLogger("docwen.test.console")
+    logger.handlers = []
+    logger.propagate = False
+
+    monkeypatch.setattr(
+        logging_utils.config_manager,
+        "get_logging_config",
+        lambda: {"console_level": "info"},
+        raising=True,
+    )
+
+    ok = logging_utils.configure_console_handler(logger)
+    assert ok is True
+    handlers = [h for h in logger.handlers if h.__class__.__name__ == "StreamHandler"]
+    assert handlers
+    assert handlers[-1].stream is logging_utils.sys.stderr
 
 
 @pytest.mark.unit
@@ -34,7 +58,7 @@ def test_generate_log_path_uses_safe_prefix(tmp_path: Path, monkeypatch: pytest.
     log_path = logging_utils.generate_log_path()
     assert str(tmp_path).lower() in log_path.lower()
     assert "logs" in log_path.lower()
-    base = os.path.basename(log_path)
+    base = Path(log_path).name
     assert base.endswith(".log")
     assert base.startswith("docwen_")
     for ch in '\\/*?:"<>|':
@@ -59,7 +83,13 @@ def test_init_logging_system_and_clean_old_logs(tmp_path: Path, monkeypatch: pyt
     monkeypatch.setattr(
         logging_utils.config_manager,
         "get_logging_config",
-        lambda: {"enable": True, "console_enable": False, "level": "info", "retention_days": 1, "file_prefix": "docwen"},
+        lambda: {
+            "enable": True,
+            "console_enable": False,
+            "level": "info",
+            "retention_days": 1,
+            "file_prefix": "docwen",
+        },
         raising=True,
     )
 

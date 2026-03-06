@@ -1,0 +1,30 @@
+{
+  "schema_version": 2,
+  "success": false,
+  "command": "convert",
+  "data": {
+    "action": "convert",
+    "total": 2,
+    "processed_count": 1,
+    "success_count": 0,
+    "failed_count": 1,
+    "interrupted": true,
+    "results": [
+      {
+        "file": "a.docx",
+        "success": false,
+        "error": "用户中断",
+        "interrupted": true,
+        "duration": 0.0,
+        "metadata": {}
+      }
+    ]
+  },
+  "error": {
+    "error_code": null,
+    "message": "用户中断",
+    "details": null
+  },
+  "warnings": [],
+  "timing": null
+}

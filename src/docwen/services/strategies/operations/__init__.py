@@ -9,10 +9,10 @@
 """
 
 # 导入策略类（自动注册）
-from .merge_tables import MergeTablesStrategy
 from .md_numbering import MdNumberingStrategy
+from .merge_tables import MergeTablesStrategy
 
 __all__ = [
-    'MergeTablesStrategy',
-    'MdNumberingStrategy',
+    "MdNumberingStrategy",
+    "MergeTablesStrategy",
 ]

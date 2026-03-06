@@ -24,43 +24,67 @@ MD转DOCX子包入口
 """
 
 # 脚注/尾注处理（从 handlers 模块导入）
+# 分页/分节/分隔线处理（从 handlers 模块导入）
+from .handlers.break_handler import (
+    append_horizontal_rule_to_paragraph,
+    append_page_break_to_paragraph,
+    append_section_break_to_paragraph,
+    insert_horizontal_rule,
+    insert_page_break,
+    insert_section_break,
+)
 from .handlers.note_handler import (
-    extract_notes,
-    find_note_references,
-    is_endnote_id,
-    get_clean_endnote_id,
     NOTE_REF_REGEX,
     NoteContext,
+    extract_notes,
+    find_note_references,
+    get_clean_endnote_id,
+    is_endnote_id,
 )
-
 from .handlers.notes_part_handler import (
-    ensure_notes_parts,
     check_notes_parts,
-)
-
-# 样式查找辅助函数（从 style 模块导入）
-from .style.helper import (
-    get_heading_style_name,
-    get_code_block_style_name,
-    get_quote_style_name,
-    get_formula_block_style_name,
-    get_list_block_style_name,
-    get_horizontal_rule_style_name,
+    ensure_notes_parts,
 )
 
 # 表格处理（从 handlers 模块导入）
 from .handlers.table_handler import (
     create_word_table,
-    get_table_style_name,
     get_table_content_style_name,
+    get_table_style_name,
 )
 
-# 分页/分节/分隔线处理（从 handlers 模块导入）
-from .handlers.break_handler import (
-    insert_page_break,
-    insert_section_break,
-    insert_horizontal_rule,
-    append_page_break_to_paragraph,
-    append_section_break_to_paragraph,
-    append_horizontal_rule_to_paragraph,
+# 样式查找辅助函数（从 style 模块导入）
+from .style.helper import (
+    get_code_block_style_name,
+    get_formula_block_style_name,
+    get_heading_style_name,
+    get_horizontal_rule_style_name,
+    get_list_block_style_name,
+    get_quote_style_name,
 )
+
+__all__ = [
+    "NOTE_REF_REGEX",
+    "NoteContext",
+    "append_horizontal_rule_to_paragraph",
+    "append_page_break_to_paragraph",
+    "append_section_break_to_paragraph",
+    "check_notes_parts",
+    "create_word_table",
+    "ensure_notes_parts",
+    "extract_notes",
+    "find_note_references",
+    "get_clean_endnote_id",
+    "get_code_block_style_name",
+    "get_formula_block_style_name",
+    "get_heading_style_name",
+    "get_horizontal_rule_style_name",
+    "get_list_block_style_name",
+    "get_quote_style_name",
+    "get_table_content_style_name",
+    "get_table_style_name",
+    "insert_horizontal_rule",
+    "insert_page_break",
+    "insert_section_break",
+    "is_endnote_id",
+]

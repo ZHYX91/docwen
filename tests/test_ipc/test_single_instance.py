@@ -1,3 +1,5 @@
+"""ipc 单元测试。"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -6,6 +8,8 @@ import pytest
 
 from docwen.ipc.single_instance import SingleInstance
 
+
+pytestmark = pytest.mark.unit
 
 @pytest.mark.unit
 def test_single_instance_acquire_and_release(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -31,4 +35,3 @@ def test_single_instance_context_manager(tmp_path: Path, monkeypatch: pytest.Mon
     inst = SingleInstance("app2")
     with inst as acquired:
         assert acquired in (True, False)
-

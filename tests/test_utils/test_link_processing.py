@@ -8,24 +8,22 @@ link_processing 单元测试
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
 
 from docwen.utils.link_processing import (
-    _unescape_pipe,
+    _extract_block_by_id,
+    _extract_section_by_heading,
+    _format_image_placeholder,
     _normalize_link_target,
     _parse_anchor,
-    _extract_section_by_heading,
-    _extract_block_by_id,
-    _strip_yaml_front_matter,
-    _format_image_placeholder,
     _split_alt_text_and_size,
+    _strip_yaml_front_matter,
+    _unescape_pipe,
     get_file_type,
     resolve_file_path,
 )
-
 
 pytestmark = pytest.mark.unit
 
@@ -33,6 +31,7 @@ pytestmark = pytest.mark.unit
 # ============================================================
 # _unescape_pipe
 # ============================================================
+
 
 class TestUnescapePipe:
     """还原转义竖线"""
@@ -56,6 +55,7 @@ class TestUnescapePipe:
 # ============================================================
 # _normalize_link_target
 # ============================================================
+
 
 class TestNormalizeLinkTarget:
     """规范化链接目标路径"""
@@ -88,6 +88,7 @@ class TestNormalizeLinkTarget:
 # _parse_anchor
 # ============================================================
 
+
 class TestParseAnchor:
     """解析链接锚点"""
 
@@ -117,12 +118,12 @@ class TestParseAnchor:
 
     def test_no_file_path_with_heading(self) -> None:
         """仅锚点，无文件路径"""
-        path, heading, block_id = _parse_anchor("#标题")
+        path, heading, _block_id = _parse_anchor("#标题")
         assert path == ""
         assert heading == "标题"
 
     def test_no_file_path_with_block_id(self) -> None:
-        path, heading, block_id = _parse_anchor("#^myblock")
+        path, _heading, block_id = _parse_anchor("#^myblock")
         assert path == ""
         assert block_id == "myblock"
 
@@ -131,19 +132,11 @@ class TestParseAnchor:
 # _extract_section_by_heading
 # ============================================================
 
+
 class TestExtractSectionByHeading:
     """从内容中提取指定标题的章节"""
 
-    SAMPLE_CONTENT = (
-        "# 一级标题\n"
-        "一级内容\n"
-        "## 二级标题A\n"
-        "二级A内容\n"
-        "### 三级标题\n"
-        "三级内容\n"
-        "## 二级标题B\n"
-        "二级B内容\n"
-    )
+    SAMPLE_CONTENT = "# 一级标题\n一级内容\n## 二级标题A\n二级A内容\n### 三级标题\n三级内容\n## 二级标题B\n二级B内容\n"
 
     def test_extract_second_level(self) -> None:
         result = _extract_section_by_heading(self.SAMPLE_CONTENT, "二级标题A")
@@ -179,6 +172,7 @@ class TestExtractSectionByHeading:
 # _extract_block_by_id
 # ============================================================
 
+
 class TestExtractBlockById:
     """从内容中提取指定块ID的段落"""
 
@@ -204,6 +198,7 @@ class TestExtractBlockById:
 # ============================================================
 # _strip_yaml_front_matter
 # ============================================================
+
 
 class TestStripYamlFrontMatter:
     """移除 YAML front matter"""
@@ -231,10 +226,16 @@ class TestStripYamlFrontMatter:
         result = _strip_yaml_front_matter(content)
         assert result.startswith("正文")
 
+    def test_with_yaml_crlf(self) -> None:
+        content = "---\r\ntitle: 测试\r\n---\r\n正文"
+        result = _strip_yaml_front_matter(content)
+        assert result.startswith("正文")
+
 
 # ============================================================
 # _format_image_placeholder
 # ============================================================
+
 
 class TestFormatImagePlaceholder:
     """图片占位符生成"""
@@ -257,6 +258,7 @@ class TestFormatImagePlaceholder:
 # ============================================================
 # _split_alt_text_and_size
 # ============================================================
+
 
 class TestSplitAltTextAndSize:
     """分离 alt 文本和尺寸"""
@@ -292,13 +294,13 @@ class TestSplitAltTextAndSize:
         assert h is None
 
     def test_empty_string(self) -> None:
-        alt, w, h = _split_alt_text_and_size("")
+        alt, w, _h = _split_alt_text_and_size("")
         assert alt is None
         assert w is None
 
     def test_non_numeric_after_pipe(self) -> None:
         """竖线后不是数字，保持原样"""
-        alt, w, h = _split_alt_text_and_size("alt|caption")
+        alt, w, _h = _split_alt_text_and_size("alt|caption")
         assert alt == "alt|caption"
         assert w is None
 
@@ -306,6 +308,7 @@ class TestSplitAltTextAndSize:
 # ============================================================
 # get_file_type
 # ============================================================
+
 
 class TestGetFileType:
     """文件类型判断"""
@@ -338,6 +341,7 @@ class TestGetFileType:
 # resolve_file_path（需要文件系统）
 # ============================================================
 
+
 class TestResolveFilePath:
     """文件路径解析"""
 
@@ -349,7 +353,7 @@ class TestResolveFilePath:
 
         result = resolve_file_path(str(target), source)
         assert result is not None
-        assert os.path.isabs(result)
+        assert Path(result).is_absolute()
 
     def test_absolute_path_not_exists(self, tmp_path: Path) -> None:
         """绝对路径但文件不存在"""

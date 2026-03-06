@@ -46,7 +46,7 @@ Changelog: see [doc/CHANGELOG.md](doc/CHANGELOG.md)
 
 ### Launch Program
 
-Double-click `DocWen.exe` to start the graphical interface.
+On the Windows packaged release, double-click `DocWen.exe` to start the graphical interface. If installed from source / pip, run `docwen-gui`.
 
 ### Quick Start Guide
 
@@ -345,7 +345,7 @@ The program uses an **adaptive three-column layout**:
 
 ### Basic Operation Flow
 
-1.  **Launch Program**: Double-click `DocWen.exe`.
+1.  **Launch Program**: Double-click `DocWen.exe` (Windows packaged release) or run `docwen-gui`.
 2.  **Import File**:
     -   Method 1: Drag and drop files directly into the window.
     -   Method 2: Click the "Add" button in the drag-and-drop area to select files.
@@ -404,46 +404,57 @@ In addition to the GUI, the program provides a Command Line Interface (CLI), sui
 
 ### Running Modes
 
--   **Interactive Mode**: Displays a menu guide after passing in a file, similar to GUI operation.
--   **Headless Mode**: Execute directly by adding `--action` parameter, suitable for script invocation.
+-   **CLI Mode**: Use subcommands (e.g. `convert`, `validate`) for automation scripts and batch processing.
 
 ### Common Examples
 
 ```bash
-# Interactive Mode
-DocWen.exe document.docx
+# Packaged release (Windows)
+DocWenCLI.exe convert document.docx --to md
 
 # Export Word to Markdown (Extract Images + OCR)
-DocWen.exe report.docx --action export_md --extract-img --ocr
+DocWenCLI.exe convert report.docx --to md --extract-img --ocr
 
 # Markdown to Word (Specify Template)
-DocWen.exe document.md --action convert --target docx --template "Template Name"
+DocWenCLI.exe convert document.md --to docx --template "Template Name"
 
 # Batch Conversion (Skip confirmation, continue on error)
-DocWen.exe *.docx --action export_md --batch --yes --continue-on-error
+DocWenCLI.exe convert *.docx --to md --batch --yes --continue-on-error
 
 # Document Proofreading
-DocWen.exe document.docx --action validate --check-typo --check-punct
+DocWenCLI.exe validate document.docx --check typo --check punct
 
 # PDF Merge/Split
-DocWen.exe *.pdf --action merge_pdfs
-DocWen.exe report.pdf --action split_pdf --pages "1-3,5,7-10"
+DocWenCLI.exe merge-pdfs *.pdf
+DocWenCLI.exe split-pdf report.pdf --pages "1-3,5,7-10"
+
+# From source / pip
+docwen convert document.docx --to md
+docwen convert report.docx --to md --extract-img --ocr
 ```
 
-### Main Arguments
+### Main Commands & Options
 
-| Argument | Description |
+| Command / Option | Description |
 | :--- | :--- |
-| `--action` | Operation type: `export_md`, `convert`, `validate`, `merge_pdfs`, `split_pdf` |
-| `--target` | Target format: `pdf`, `docx`, `xlsx`, `md` |
-| `--template` | Template name (e.g., `Template Name`) |
-| `--extract-img` | Extract images during export |
-| `--ocr` | Enable OCR recognition |
-| `--batch` | Batch processing mode |
-| `--yes` / `-y` | Skip confirmation prompts |
-| `--continue-on-error` | Continue processing next item on error |
+| `convert <files...> --to <fmt>` | Convert files to target format (including `md`) |
+| `validate <files...> --check ...` | Proofread documents (`--check typo/punct/symbol/sensitive/all/none`) |
+| `merge-pdfs <files...>` | Merge PDF/OFD/XPS files |
+| `split-pdf <file> --pages ...` | Split PDF by page ranges |
+| `merge-tables <files...> --mode row|col|cell` | Merge spreadsheet tables |
+| `merge-images-to-tiff <files...>` | Merge images into TIFF |
+| `md-numbering <files...>` | Process Markdown heading numbering |
+| `templates list [--for docx|xlsx]` | List available templates |
+| `optimizations list [--scope ...]` | List available optimization types |
+| `formats list [--for-source document|spreadsheet|layout|image|markdown]` | List available target formats |
+| `inspect <file>` | Inspect file category/format and supported actions |
+| `--template <name>` | Template name (used with `convert`) |
+| `--extract-img` / `--no-extract-img` / `--ocr` | Options for `convert --to md` |
+| `--optimize-for <id>` | Enable optimization explicitly (e.g. `gongwen`, `invoice_cn`) |
+| `--batch` / `--jobs` / `--continue-on-error` | Batch processing controls |
 | `--json` | Output result in JSON format |
 | `--quiet` / `-q` | Quiet mode, reduce output |
+| `--lang` | Switch UI language (affects help/messages) |
 
 ## 🔌 Obsidian Plugin
 
@@ -514,6 +525,7 @@ This is expected behavior. The program reads the **cached values** of cells rath
 -   **Completely Local Operation**: All processing is done locally, no network dependency.
 -   **Network Isolation**: Built-in network isolation mechanism prevents data leakage.
 -   **No Data Upload**: User files are never uploaded to any server.
+-   **Strict Security Mode**: Enabled by default; the app exits if security checks fail. See [doc/技术文档.md](doc/技术文档.md).
 
 ## 📜 License
 

@@ -14,48 +14,48 @@ md2docx 元素处理器模块
 
 # break_handler - 分页/分节/分隔线处理
 from .break_handler import (
-    insert_page_break,
-    insert_section_break,
-    insert_horizontal_rule,
+    append_horizontal_rule_to_paragraph,
     append_page_break_to_paragraph,
     append_section_break_to_paragraph,
-    append_horizontal_rule_to_paragraph,
+    insert_horizontal_rule,
+    insert_page_break,
+    insert_section_break,
 )
 
 # formula_handler - 公式处理
 from .formula_handler import (
-    process_paragraph_formulas,
-    is_formula_supported,
     has_latex_formulas,
+    is_formula_supported,
+    process_paragraph_formulas,
 )
 
 # list_handler - 列表处理
 from .list_handler import (
-    ListFormatManager,
-    apply_list_to_paragraph,
-    analyze_list_structure,
-    group_consecutive_list_items,
     BASE_INDENT,
     INDENT_INCREMENT,
+    ListFormatManager,
+    analyze_list_structure,
+    apply_list_to_paragraph,
+    group_consecutive_list_items,
 )
 
 # note_handler - 脚注/尾注逻辑
 from .note_handler import (
+    ENDNOTE_PREFIX,
+    NOTE_REF_REGEX,
     NoteContext,
     extract_notes,
     find_note_references,
-    is_endnote_id,
     get_clean_endnote_id,
-    write_notes_to_docx,
+    is_endnote_id,
     process_text_with_note_references,
-    NOTE_REF_REGEX,
-    ENDNOTE_PREFIX,
+    write_notes_to_docx,
 )
 
 # notes_part_handler - notes.xml部件处理
 from .notes_part_handler import (
-    ensure_notes_parts,
     check_notes_parts,
+    ensure_notes_parts,
 )
 
 # numbering_handler - 编号部件处理
@@ -66,59 +66,59 @@ from .numbering_handler import (
 # table_handler - 表格处理
 from .table_handler import (
     create_word_table,
-    get_table_style_name,
     get_table_content_style_name,
+    get_table_style_name,
 )
 
 # text_handler - 文本格式化处理
 from .text_handler import (
-    parse_markdown_formatting,
-    apply_formats_to_run,
-    add_formatted_text_to_paragraph,
     add_formatted_text_to_heading,
+    add_formatted_text_to_paragraph,
+    apply_formats_to_run,
+    parse_markdown_formatting,
 )
 
 __all__ = [
-    # break_handler
-    'insert_page_break',
-    'insert_section_break',
-    'insert_horizontal_rule',
-    'append_page_break_to_paragraph',
-    'append_section_break_to_paragraph',
-    'append_horizontal_rule_to_paragraph',
-    # formula_handler
-    'process_paragraph_formulas',
-    'is_formula_supported',
-    'has_latex_formulas',
+    "BASE_INDENT",
+    "ENDNOTE_PREFIX",
+    "INDENT_INCREMENT",
+    "NOTE_REF_REGEX",
     # list_handler
-    'ListFormatManager',
-    'apply_list_to_paragraph',
-    'analyze_list_structure',
-    'group_consecutive_list_items',
-    'BASE_INDENT',
-    'INDENT_INCREMENT',
+    "ListFormatManager",
     # note_handler
-    'NoteContext',
-    'extract_notes',
-    'find_note_references',
-    'is_endnote_id',
-    'get_clean_endnote_id',
-    'write_notes_to_docx',
-    'process_text_with_note_references',
-    'NOTE_REF_REGEX',
-    'ENDNOTE_PREFIX',
-    # notes_part_handler
-    'ensure_notes_parts',
-    'check_notes_parts',
-    # numbering_handler
-    'ensure_numbering_part',
+    "NoteContext",
+    "add_formatted_text_to_heading",
+    "add_formatted_text_to_paragraph",
+    "analyze_list_structure",
+    "append_horizontal_rule_to_paragraph",
+    "append_page_break_to_paragraph",
+    "append_section_break_to_paragraph",
+    "apply_formats_to_run",
+    "apply_list_to_paragraph",
+    "check_notes_parts",
     # table_handler
-    'create_word_table',
-    'get_table_style_name',
-    'get_table_content_style_name',
+    "create_word_table",
+    # notes_part_handler
+    "ensure_notes_parts",
+    # numbering_handler
+    "ensure_numbering_part",
+    "extract_notes",
+    "find_note_references",
+    "get_clean_endnote_id",
+    "get_table_content_style_name",
+    "get_table_style_name",
+    "group_consecutive_list_items",
+    "has_latex_formulas",
+    "insert_horizontal_rule",
+    # break_handler
+    "insert_page_break",
+    "insert_section_break",
+    "is_endnote_id",
+    "is_formula_supported",
     # text_handler
-    'parse_markdown_formatting',
-    'apply_formats_to_run',
-    'add_formatted_text_to_paragraph',
-    'add_formatted_text_to_heading',
+    "parse_markdown_formatting",
+    # formula_handler
+    "process_paragraph_formulas",
+    "process_text_with_note_references",
+    "write_notes_to_docx",
 ]

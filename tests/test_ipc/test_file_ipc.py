@@ -1,3 +1,5 @@
+"""ipc 单元测试。"""
+
 from __future__ import annotations
 
 import json
@@ -7,6 +9,8 @@ import pytest
 
 from docwen.ipc.file_ipc import CommandHandler, FileIPC
 
+
+pytestmark = pytest.mark.unit
 
 class _DummyEvent:
     def __init__(self, src_path: str, is_directory: bool = False) -> None:
@@ -52,4 +56,3 @@ def test_check_instance_running_uses_status_file(tmp_path: Path) -> None:
     assert FileIPC.check_instance_running(ipc_dir) is False
     (tmp_path / "status.json").write_text("{}", encoding="utf-8")
     assert FileIPC.check_instance_running(ipc_dir) is True
-

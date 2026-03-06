@@ -46,7 +46,7 @@ Journal des modifications : voir [doc/CHANGELOG.md](doc/CHANGELOG.md)
 
 ### Lancer le programme
 
-Double-cliquez sur `DocWen.exe` pour démarrer l'interface graphique.
+Pour la version packagée Windows : double-cliquez sur `DocWen.exe` pour démarrer l'interface graphique. Pour une installation depuis le code source / via pip : exécutez `docwen-gui`.
 
 ### Guide de démarrage rapide
 
@@ -345,7 +345,7 @@ Le programme utilise une **mise en page adaptative à trois colonnes** :
 
 ### Flux d'opération de base
 
-1.  **Lancer le programme** : Double-cliquez sur `DocWen.exe`.
+1.  **Lancer le programme** : Double-cliquez sur `DocWen.exe` (version Windows packagée) ou exécutez `docwen-gui`.
 2.  **Importer le fichier** :
     -   Méthode 1 : Faites glisser et déposez les fichiers directement dans la fenêtre.
     -   Méthode 2 : Cliquez sur le bouton "Ajouter" dans la zone de glisser-déposer pour sélectionner des fichiers.
@@ -404,46 +404,57 @@ En plus de l'interface graphique, le programme fournit une interface en ligne de
 
 ### Modes d'exécution
 
--   **Mode interactif** : Affiche un guide de menu après avoir passé un fichier, similaire à l'opération GUI.
--   **Mode Headless** : Exécutez directement en ajoutant le paramètre `--action`, adapté à l'appel de script.
+-   **Mode CLI** : Utilisez des sous-commandes (par ex. `convert`, `validate`) pour les scripts d'automatisation et le traitement par lots.
 
 ### Exemples courants
 
 ```bash
-# Mode interactif
-DocWen.exe document.docx
+# Version packagée (Windows)
+DocWenCLI.exe convert document.docx --to md
 
 # Exporter Word en Markdown (Extraire images + OCR)
-DocWen.exe report.docx --action export_md --extract-img --ocr
+DocWenCLI.exe convert report.docx --to md --extract-img --ocr
 
 # Markdown vers Word (Spécifier modèle)
-DocWen.exe document.md --action convert --target docx --template "Nom du modèle"
+DocWenCLI.exe convert document.md --to docx --template "Nom du modèle"
 
 # Conversion par lots (Sauter confirmation, continuer sur erreur)
-DocWen.exe *.docx --action export_md --batch --yes --continue-on-error
+DocWenCLI.exe convert *.docx --to md --batch --yes --continue-on-error
 
 # Correction de document
-DocWen.exe document.docx --action validate --check-typo --check-punct
+DocWenCLI.exe validate document.docx --check typo --check punct
 
 # Fusion/Division PDF
-DocWen.exe *.pdf --action merge_pdfs
-DocWen.exe report.pdf --action split_pdf --pages "1-3,5,7-10"
+DocWenCLI.exe merge-pdfs *.pdf
+DocWenCLI.exe split-pdf report.pdf --pages "1-3,5,7-10"
+
+# Depuis le code source / pip
+docwen convert document.docx --to md
+docwen convert report.docx --to md --extract-img --ocr
 ```
 
-### Arguments principaux
+### Commandes & options principales
 
-| Argument | Description |
+| Commande / Option | Description |
 | :--- | :--- |
-| `--action` | Type d'opération : `export_md`, `convert`, `validate`, `merge_pdfs`, `split_pdf` |
-| `--target` | Format cible : `pdf`, `docx`, `xlsx`, `md` |
-| `--template` | Nom du modèle (ex : `Nom du modèle`) |
-| `--extract-img` | Extraire les images lors de l'exportation |
-| `--ocr` | Activer la reconnaissance OCR |
-| `--batch` | Mode de traitement par lots |
-| `--yes` / `-y` | Sauter les invites de confirmation |
-| `--continue-on-error` | Continuer le traitement de l'élément suivant en cas d'erreur |
-| `--json` | Sortir le résultat au format JSON |
+| `convert <files...> --to <fmt>` | Convertir vers un format cible (y compris `md`) |
+| `validate <files...> --check ...` | Corriger/contrôler les documents (`--check typo/punct/symbol/sensitive/all/none`) |
+| `merge-pdfs <files...>` | Fusionner des fichiers PDF/OFD/XPS |
+| `split-pdf <file> --pages ...` | Diviser un PDF par plages de pages |
+| `merge-tables <files...> --mode row|col|cell` | Fusionner des tableaux |
+| `merge-images-to-tiff <files...>` | Fusionner des images en TIFF |
+| `md-numbering <files...>` | Traiter la numérotation des titres Markdown |
+| `templates list [--for docx|xlsx]` | Lister les modèles disponibles |
+| `optimizations list [--scope ...]` | Lister les optimisations disponibles |
+| `formats list [--for-source document|spreadsheet|layout|image|markdown]` | Lister les formats cibles disponibles |
+| `inspect <file>` | Inspecter la catégorie/format et les actions supportées |
+| `--template <name>` | Nom du modèle (utilisé avec `convert`) |
+| `--extract-img` / `--no-extract-img` / `--ocr` | Options pour `convert --to md` |
+| `--optimize-for <id>` | Activer une optimisation explicitement (ex. `gongwen`, `invoice_cn`) |
+| `--batch` / `--jobs` / `--continue-on-error` | Contrôles de traitement par lots |
+| `--json` | Sortie du résultat au format JSON |
 | `--quiet` / `-q` | Mode silencieux, réduire la sortie |
+| `--lang` | Changer la langue (affecte help/messages) |
 
 ## 🔌 Plugin Obsidian
 
@@ -514,6 +525,7 @@ C'est un comportement attendu. Le programme lit les **valeurs mises en cache** d
 -   **Fonctionnement local** : Tout le traitement est effectué localement, aucune dépendance réseau.
 -   **Isolation réseau** : Le mécanisme d'isolation réseau intégré empêche les fuites de données.
 -   **Pas de téléchargement de données** : Les fichiers utilisateur ne sont jamais téléchargés sur aucun serveur.
+-   **Mode de sécurité strict** : activé par défaut ; l'application se ferme si les contrôles de sécurité échouent. Voir [doc/技术文档.md](doc/技术文档.md).
 
 ## 📜 Licence
 

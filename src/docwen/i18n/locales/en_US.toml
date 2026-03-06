@@ -25,6 +25,17 @@ select = "Select"
 disclaimer = "Beta version. Accuracy not guaranteed.\nAGPL-3.0 Open Source."
 
 # =============================================================================
+# Status Bar
+# =============================================================================
+[status_bar]
+copy_path = "Copy path"
+path_copied = "Path copied to clipboard"
+copy_failed = "Copy failed"
+cannot_locate_no_path = "Cannot locate: no file path"
+cannot_locate_no_callback = "Cannot locate: callback not configured"
+file_missing = "File no longer exists: {path}"
+
+# =============================================================================
 # CLI Command Line Interface
 # =============================================================================
 [cli]
@@ -34,13 +45,18 @@ header = "DocWen - Interactive Mode"
 
 # CLI Help Text
 [cli.help]
+file = "Input file path"
 files = "Input file path(s) (supports wildcards like *.docx)"
 action = "Action type"
 target = "Target format (for convert action, e.g., docx, pdf, jpg)"
 extract_img = "Extract images"
+no_extract_img = "Do not extract images"
 ocr = "OCR text recognition"
-optimize_for = "Optimization type: gongwen (official), contract, thesis"
+optimize_for = "Optimization type: gongwen (DOCX→MD), invoice_cn (PDF/OFD→MD)"
+scope = "Scope filter for optimization types (e.g. document_to_md, layout_to_md)"
 template = "Template name (for MD to document/spreadsheet)"
+list_formats = "List available target formats"
+format_source = "Filter by source category (document/spreadsheet/layout/image/markdown)"
 check_punct = "Check punctuation pairing"
 check_typo = "Check typos"
 check_symbol = "Check symbols"
@@ -56,23 +72,25 @@ quality_mode = "PDF quality mode (for image to PDF)"
 batch = "Batch mode (same config for all files)"
 yes = "Skip all confirmation prompts"
 continue_on_error = "Continue on error"
+jobs = "Batch concurrency (default: 1)"
 json = "JSON output format (for AI/script parsing)"
 quiet = "Quiet mode (minimal output)"
 verbose = "Verbose mode (show more information)"
-remove_numbering = "Remove existing heading numbers"
-add_numbering = "Add new heading numbers"
-numbering_scheme = "Numbering scheme"
+timing = "Include per-file timing (JSON duration)"
+clean_numbering = "Clean numbering mode: default=follow config, remove=force clean, keep=keep as-is"
+add_numbering = "Add numbering mode: default=follow config, none=don't add, or a scheme ID"
 inspect = "Query supported operations (AI self-describe)"
 list_actions = "List all available actions"
 list_numbering_schemes = "List all available numbering schemes"
 list_templates = "List all available templates"
+doctor = "Run diagnostics"
 lang = "Temporarily set interface language (does not save to config)"
 keep_alpha = "Preserve transparency when merging TIFF"
 
 # CLI Argument Group Titles
 [cli.groups]
 export_options = "Export Options"
-export_options_desc = "For export_md action"
+export_options_desc = "For convert --to md"
 validate_options = "Proofread Options"
 validate_options_desc = "For validate action"
 merge_options = "Merge Options"
@@ -125,7 +143,6 @@ markdown_to_docx = "Convert to Word Document (DOCX/DOC/ODT/RTF)"
 markdown_to_xlsx = "Convert to Excel Spreadsheet (XLSX/XLS/ODS/CSV)"
 process_numbering = "Process Heading Numbers"
 export_markdown = "Export Markdown"
-export_md_ocr = "Export Markdown (OCR)"
 format_convert = "Format Conversion"
 image_format_convert = "Format Conversion (PNG/JPG/BMP/GIF/TIF/WebP)"
 save_as_pdf = "Save as PDF"
@@ -223,6 +240,7 @@ file_list = "File list"
 file_count_suffix = " file(s)"
 more_files = "and {count} more file(s)"
 no_other_files = "No other files selected"
+available_formats = "Available target formats"
 error_need_option = "Error: At least one option must be selected"
 no_proofread_selected = "No proofread options selected"
 error_no_template = "Error: No {type} template found"
@@ -234,6 +252,8 @@ batch_completed = "Batch completed: {success}/{total} succeeded"
 failed_count = "Failed: {count} file(s)"
 available_actions = "Available Actions"
 available_schemes = "Available Numbering Schemes"
+available_optimizations = "Available Optimization Types"
+no_optimizations = "(No optimization types available for current language)"
 available_templates = "Available Templates"
 document_templates = "Document Templates (DOCX)"
 spreadsheet_templates = "Spreadsheet Templates (XLSX)"
@@ -294,7 +314,6 @@ output = "Output"
 
 # CLI Action Descriptions
 [cli.actions]
-export_md = "Export to Markdown"
 convert = "Format conversion"
 validate = "Document proofreading"
 merge_tables = "Merge tables"
@@ -320,6 +339,7 @@ title = "Settings"
 [settings.tabs]
 general = "General"
 text = "Text"
+export = "Export"
 document = "Document"
 spreadsheet = "Spreadsheet"
 image = "Image"
@@ -334,6 +354,9 @@ logging = "Logging"
 applied = "Settings applied"
 apply_failed = "Failed to apply settings. Please check the logs."
 apply_error = "Apply failed"
+
+[settings.errors]
+tab_load_failed_message = "Failed to load {tab}\n\nError: {error}"
 
 # -----------------------------------------------------------------------------
 # General Settings Tab
@@ -387,6 +410,8 @@ remember_state = "Remember window position and size"
 remember_state_tooltip = "Remember the position and size of the application window.\nThe window will restore to its last state on next startup.\nThis helps maintain your preferred working environment."
 auto_center = "Auto-center window on startup"
 auto_center_tooltip = "Automatically center the window on screen when the application starts.\nIf 'Remember window position' is also enabled, this setting takes priority."
+expand_side_panels = "Expand side panels with window"
+expand_side_panels_tooltip = "When the window becomes wider, allow the left/right side panels to expand too.\nWhen disabled, only the center panel expands."
 default_mode_label = "Default file processing mode:"
 default_mode_tooltip = "Set the default file processing mode when the application starts.\nSingle File Mode: Process one file at a time\nBatch Mode: Process multiple files simultaneously"
 single_mode = "Single File Mode"
@@ -438,6 +463,29 @@ editor_open_failed = "Failed to open editor: {error}"
 # -----------------------------------------------------------------------------
 # Document Settings Tab
 # -----------------------------------------------------------------------------
+[settings.extraction]
+image_extraction_mode_label = "Image extraction mode:"
+image_extraction_mode_tooltip = "Choose how images are embedded in Markdown.\n\n• Image files: save as separate images and reference in MD\n• Base64 inline: encode images as Base64 and embed directly in MD"
+image_extraction_mode_file = "Image files"
+image_extraction_mode_base64 = "Base64 inline"
+ocr_placement_mode_label = "OCR placement:"
+ocr_placement_mode_tooltip = "Choose where OCR text is stored.\n\n• Image MD: generate a separate MD file for each image containing the image and OCR text\n• Main document: insert OCR text as a blockquote below the image in the main MD (many images may make the main MD very long)"
+ocr_placement_mode_image_md = "Image MD"
+ocr_placement_mode_main_md = "Main document"
+ocr_blockquote_title_enabled_label = "Main MD OCR title line"
+ocr_blockquote_title_enabled_tooltip = "Global setting: when OCR placement is \"Main document\", show a title line at the top of the OCR blockquote. The title text comes from the current locale."
+ocr_blockquote_title_text_label = "Title text (current language):"
+ocr_blockquote_title_text_tooltip = "Only affects the current UI language.\nLeave empty or equal to the default to use the locale text."
+ocr_blockquote_title_text_reset = "Reset"
+
+[settings.export]
+md_export_section = "Export to Markdown (Images/OCR)"
+base64_compress_section = "Base64 compatibility (Base64 inline only)"
+base64_compress_tooltip = "Base64 increases size and may not render in some editors.\nWhen enabled: images over the threshold will be compressed to JPG before embedding."
+base64_compress_enabled = "Auto-compress large images"
+base64_compress_threshold_label = "Threshold"
+base64_jpeg_quality_label = "JPG quality"
+
 [settings.document]
 # Content Extraction Settings
 extraction_section = "Image Extraction/OCR Settings"
@@ -552,6 +600,9 @@ keep_images = "Check \"Extract images\" by default"
 keep_images_tooltip = "Check \"Extract images\" by default when converting layout files to MD"
 enable_ocr = "Check \"Image OCR\" by default"
 enable_ocr_tooltip = "Check \"Image OCR\" by default when converting layout files to MD"
+optimization_section = "Optimization"
+enable_optimization = "Enable \"Optimize for layout type\" by default"
+optimization_type_label = "Default optimization type:"
 dpi_section = "Rendering DPI Settings"
 dpi_desc = "Set the default DPI (resolution) when converting layout files to images"
 dpi_min = "Minimum (150)"
@@ -901,8 +952,6 @@ selected_layout_file = "Layout file selected"
 # GUI status messages
 operation_success = "Operation completed successfully!"
 conversion_failed = "Conversion failed"
-trial_expired_title = "Trial Expired"
-trial_expired_message = "You can still complete this operation, but the trial version of this software has expired.\nPlease contact the developer for a licensed version."
 open_location_title = "Open Location"
 open_location_confirm = "Open original file location?"
 template_selected = "Template selected: {name}"
@@ -940,6 +989,8 @@ unavailable = "Template selector unavailable"
 [components.template_selector_tabbed]
 document_templates = "Doc"
 spreadsheet_templates = "Sheet"
+document_short = "Doc"
+spreadsheet_short = "Sheet"
 
 # =============================================================================
 # Conversion Panel Sections
@@ -1043,17 +1094,18 @@ merge_to_pdf_tooltip = "Merge files in batch list into one PDF in top-to-bottom 
 merge_to_ofd = "Merge to OFD"
 merge_to_ofd_tooltip = "Not supported yet"
 split_to_pdf = "Split to PDF"
-split_to_pdf_tooltip = "Split current file into two PDFs based on input page range. First file contains input pages, second file contains remaining pages (if any)."
+split_to_pdf_tooltip = "Split by page input. Supports:\n• Page ranges: 1-3,5,7-10\n• Split every page: *\n• Split odd/even pages: #"
 split_to_ofd = "Split to OFD"
 split_to_ofd_tooltip = "Not supported yet"
 split_page_range = "Split page range:"
 page_range_info = "Input page range, for example:\n• 1-5: Pages 1 to 5\n• 1,3,5: Pages 1, 3, 5\n• 1-3,7-9: Pages 1-3 and 7-9\n• Supports Chinese separators: 1~3;5;7至10"
-page_range_placeholder = "e.g.: 1-3,5,7-10"
+page_range_placeholder = "1-3,5  *  #"
 selected_split_file = "Selected file to split ({pages} pages):"
 no_file_selected = "No file selected"
 cannot_split_all_pages = "❌ Cannot split all pages (please leave some pages)"
 pages_out_of_range_adjusted = "⚠️ Some pages out of range, automatically adjusted (total {pages} pages)"
 all_pages_out_of_range = "❌ All pages out of range (total {pages} pages)"
+split_mode_single_page_warning = "⚠️ This file has only 1 page; no split needed"
 
 # Spreadsheet Conversion Section
 [conversion_panel.spreadsheet]
@@ -1117,6 +1169,8 @@ add_new_numbering_tooltip = "Add new heading numbering when converting to MD"
 ready = "Ready"
 export_markdown = "Export Markdown"
 export_markdown_tooltip = "Convert spreadsheet to Markdown format"
+optimize_for_type = "Optimize for table type"
+optimize_for_type_tooltip = "Apply table-type-specific optimizations"
 
 # Image to MD Panel
 [action_panel.image]
@@ -1125,12 +1179,16 @@ export_markdown = "Export Markdown"
 export_markdown_tooltip = "Convert image to Markdown format"
 extract_images_tooltip = "Keep images when converting to MD"
 ocr_tooltip = "Enable OCR to recognize text in images when converting to MD"
+optimize_for_type = "Optimize for image type"
+optimize_for_type_tooltip = "Apply image-type-specific optimizations"
 
 # Layout to MD Panel
 [action_panel.layout]
 ready = "Ready"
 export_markdown = "Export Markdown"
 export_markdown_tooltip = "Convert layout file to Markdown format"
+optimize_for_type = "Optimize for layout type"
+optimize_for_type_tooltip = "Apply layout-type-specific optimizations"
 
 # MD to Document Panel
 [action_panel.md_to_document]
@@ -1426,6 +1484,7 @@ image = "Image"
 layout = "Layout"
 text = "Text"
 unknown = "Unknown"
+unknown_type = "Unknown"
 
 # Category names with suffix (for tab labels)
 text_category = "Text"
@@ -1434,8 +1493,14 @@ spreadsheet_category = "Sheet"
 layout_category = "Layout"
 image_category = "Img"
 
-# Format validation related
-unknown_type = "Unknown"
+[file_category]
+text_short = "Text"
+document_short = "Doc"
+spreadsheet_short = "Sheet"
+layout_short = "Layout"
+image_short = "Img"
+
+[file_format_validation]
 format_mismatch = "⚠️ Actual format: {format}"
 format_unverifiable = "⚠️ Cannot verify actual file format"
 format_txt = "TXT (Plain Text)"
@@ -1456,7 +1521,11 @@ format_csv = "CSV (Table Text)"
 [conversion.filenames]
 split_part1 = "Split1"
 split_part2 = "Split2"
+page_n = "Page{n}"
+odd_pages = "OddPages"
+even_pages = "EvenPages"
 merged_pdf = "MergedPDF"
+merged_tiff = "MergedTIFF"
 merged_table = "MergedTable"
 
 
@@ -1464,6 +1533,9 @@ merged_table = "MergedTable"
 # =============================================================================
 # Conversion Progress Messages
 # =============================================================================
+[conversion.ocr_output]
+blockquote_prefix = "🖼️ **Image OCR**:"
+
 [conversion.progress]
 converting_to_format = "Converting to {format}..."
 preparing = "Preparing..."
@@ -1564,7 +1636,7 @@ proofread_failed = "Proofreading failed, please check log."
 file_already_pdf = "File is already in PDF format"
 ofd_to_pdf_failed = "Failed to convert OFD to PDF"
 xps_to_pdf_failed = "Failed to convert XPS to PDF"
-ofd_conversion_not_implemented = "OFD conversion not implemented"
+ofd_conversion_not_implemented = "Document to OFD is not implemented (PDF is supported)"
 txt_conversion_developing = "Layout to TXT feature is under development."
 
 # Missing dependency messages
@@ -1581,6 +1653,7 @@ no_files_to_merge = "No files provided for merging"
 need_at_least_two_files = "At least 2 files required for merging"
 no_pages_to_split = "No page numbers provided for splitting"
 split_failed_all_pages = "Split failed: input page numbers cover all pages, cannot split"
+split_pdf_single_page_not_needed = "This file has only 1 page; no split needed"
 
 # MD conversion messages
 md_to_xlsx_failed = "Failed to convert Markdown to XLSX."
@@ -1596,15 +1669,17 @@ no_images_loaded = "No images loaded successfully"
 conversion_failed_no_target = "Conversion failed: no target format specified"
 
 # Numbering operation messages
-no_numbering_operation = "Please specify at least one operation: --remove-numbering or --add-numbering"
+no_numbering_operation = "No numbering operation selected. Use --clean-numbering remove to clean, or --add-numbering <scheme_id> to add."
 
 # Success messages (with parameters)
 conversion_to_image_success = "{format} saved, {count} images"
 conversion_to_tif_success = "TIF saved, {pages} pages"
 conversion_to_format_pages_success = "{format} saved, {count} pages"
 merge_pdf_success = "Merged {file_count} files, {page_count} pages"
+invoice_md_multi_page_success = "Success: generated {count} invoice Markdown files"
 split_pdf_success_two = "Split: {pages1}p + {pages2}p"
 split_pdf_success_one = "Split: 1 file, {pages}p"
+split_pdf_success_many = "Split: generated {count} files"
 merge_images_to_tiff_success = "Merged {count} images to TIFF"
 
 # Failure messages (with parameters)

@@ -3,11 +3,12 @@
 提供反调试功能
 """
 
-import sys
 import logging
 import os
+import sys
 
 logger = logging.getLogger()
+
 
 def check_debugger():
     """
@@ -21,16 +22,18 @@ def check_debugger():
             os._exit(1)
 
         # 方法二: Windows API层面的检查 (仅限Windows)
-        if sys.platform == 'win32':
+        if sys.platform == "win32":
             import ctypes
+
             is_debugger_present = ctypes.windll.kernel32.IsDebuggerPresent()
             if is_debugger_present:
                 logger.critical("检测到调试器活动 (IsDebuggerPresent)，程序将立即终止。")
                 os._exit(1)
-                
+
     except Exception:
         # 在极端情况下，如果检查失败，也选择退出以策安全
         os._exit(1)
+
 
 def run_all_protections():
     """

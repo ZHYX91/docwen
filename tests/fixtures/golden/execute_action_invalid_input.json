@@ -1,0 +1,22 @@
+{
+  "schema_version": 2,
+  "success": false,
+  "command": "convert",
+  "data": {
+    "action": "convert",
+    "input_file": "REPLACE_AT_RUNTIME",
+    "output_file": null,
+    "message": "bad",
+    "error_code": "invalid_input",
+    "details": "d",
+    "duration": 0.0,
+    "metadata": {}
+  },
+  "error": {
+    "error_code": "invalid_input",
+    "message": "bad",
+    "details": "d"
+  },
+  "warnings": [],
+  "timing": null
+}

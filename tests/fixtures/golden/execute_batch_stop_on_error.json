@@ -1,0 +1,31 @@
+{
+  "schema_version": 2,
+  "success": false,
+  "command": "convert",
+  "data": {
+    "action": "convert",
+    "total": 2,
+    "processed_count": 1,
+    "success_count": 0,
+    "failed_count": 1,
+    "interrupted": false,
+    "results": [
+      {
+        "file": "a.docx",
+        "success": false,
+        "error": "nope",
+        "error_code": "invalid_input",
+        "details": "d",
+        "duration": 0.0,
+        "metadata": {}
+      }
+    ]
+  },
+  "error": {
+    "error_code": null,
+    "message": "1/2 文件处理失败",
+    "details": null
+  },
+  "warnings": [],
+  "timing": null
+}

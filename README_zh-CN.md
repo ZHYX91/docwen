@@ -46,7 +46,7 @@
 
 ### 启动程序
 
-双击 `DocWen.exe` 启动图形界面。
+Windows 打包版可双击 `DocWen.exe` 启动图形界面；源码/`pip` 安装可运行 `docwen-gui`。
 
 ### 快速入门指南
 
@@ -358,7 +358,7 @@ Excel 模板中的 `{{→月份}}` 会依次向右填充"1月"、"2月"、"3月"
 
 ### 基本操作流程
 
-1. **启动程序**：双击 `DocWen.exe`
+1. **启动程序**：双击 `DocWen.exe`（Windows 打包版）或运行 `docwen-gui`
 2. **导入文件**：
    - 方式一：直接拖拽文件到窗口
    - 方式二：点击拖拽区域的"添加"按钮选择文件
@@ -417,46 +417,57 @@ Excel 模板中的 `{{→月份}}` 会依次向右填充"1月"、"2月"、"3月"
 
 ### 运行模式
 
-- **交互模式**：传入文件后显示菜单引导，类似GUI操作
-- **Headless模式**：添加 `--action` 参数直接执行，适合脚本调用
+- **CLI 子命令模式**：使用子命令（如 `convert`、`validate`）直接执行，适合脚本调用
 
 ### 常用示例
 
 ```bash
-# 交互模式
-DocWen.exe document.docx
+# Windows 打包版
+DocWenCLI.exe convert document.docx --to md
 
 # 导出Word为Markdown（提取图片+OCR）
-DocWen.exe report.docx --action export_md --extract-img --ocr
+DocWenCLI.exe convert report.docx --to md --extract-img --ocr
 
 # Markdown转Word（指定模板）
-DocWen.exe document.md --action convert --target docx --template 公文通用
+DocWenCLI.exe convert document.md --to docx --template 公文通用
 
 # 批量转换（跳过确认，遇错继续）
-DocWen.exe *.docx --action export_md --batch --yes --continue-on-error
+DocWenCLI.exe convert *.docx --to md --batch --yes --continue-on-error
 
 # 文档校对
-DocWen.exe document.docx --action validate --check-typo --check-punct
+DocWenCLI.exe validate document.docx --check typo --check punct
 
 # PDF合并/拆分
-DocWen.exe *.pdf --action merge_pdfs
-DocWen.exe report.pdf --action split_pdf --pages "1-3,5,7-10"
+DocWenCLI.exe merge-pdfs *.pdf
+DocWenCLI.exe split-pdf report.pdf --pages "1-3,5,7-10"
+
+# 源码 / pip 安装
+docwen convert document.docx --to md
+docwen convert report.docx --to md --extract-img --ocr
 ```
 
-### 主要参数
+### 主要命令与选项
 
-| 参数 | 说明 |
+| 命令/选项 | 说明 |
 |-----|------|
-| `--action` | 操作类型：`export_md`, `convert`, `validate`, `merge_pdfs`, `split_pdf` |
-| `--target` | 目标格式：`pdf`, `docx`, `xlsx`, `md` |
-| `--template` | 模板名称（如 `公文通用`） |
-| `--extract-img` | 导出时提取图片 |
-| `--ocr` | 启用OCR识别 |
-| `--batch` | 批量处理模式 |
-| `--yes` / `-y` | 跳过确认提示 |
-| `--continue-on-error` | 遇错继续处理下一个 |
-| `--json` | 输出JSON格式结果 |
+| `convert <files...> --to <fmt>` | 转换到目标格式（包含 `md`） |
+| `validate <files...> --check ...` | 文档校对（`typo/punct/symbol/sensitive/all/none`） |
+| `merge-pdfs <files...>` | 合并 PDF/OFD/XPS |
+| `split-pdf <file> --pages ...` | 按页码范围拆分 PDF |
+| `merge-tables <files...> --mode row|col|cell` | 表格汇总 |
+| `merge-images-to-tiff <files...>` | 合并图片为 TIFF |
+| `md-numbering <files...>` | 处理 Markdown 小标题序号 |
+| `templates list [--for docx|xlsx]` | 列出可用模板 |
+| `optimizations list [--scope ...]` | 列出可用优化类型 |
+| `formats list [--for-source document|spreadsheet|layout|image|markdown]` | 列出可用目标格式 |
+| `inspect <file>` | 查询文件类别/格式与支持的操作 |
+| `--template <name>` | 模板名称（用于 `convert`） |
+| `--extract-img` / `--no-extract-img` / `--ocr` | `convert --to md` 的图片/OCR 选项 |
+| `--optimize-for <id>` | 显式启用优化（如 `gongwen`, `invoice_cn`） |
+| `--batch` / `--jobs` / `--continue-on-error` | 批量处理控制 |
+| `--json` | 输出 JSON 格式结果 |
 | `--quiet` / `-q` | 安静模式，减少输出 |
+| `--lang` | 切换语言（影响 help/提示文案） |
 
 ## 🔌 Obsidian 插件
 
@@ -527,6 +538,7 @@ DocWen.exe report.pdf --action split_pdf --pages "1-3,5,7-10"
 - **完全本地运行**：所有处理在本地完成，不依赖网络
 - **网络隔离**：内置网络隔离机制，防止数据泄露
 - **无数据上传**：用户文件不会上传到任何服务器
+- **严格安全模式**：默认启用；安全检查失败时程序将终止。高级配置与排障请参阅 [doc/技术文档.md](doc/技术文档.md)。
 
 ## 📜 许可证
 

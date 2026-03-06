@@ -7,10 +7,10 @@
 
 使用示例:
     from docwen.gui.components.common import ButtonFactory, ExportOptionHandler
-    
+
     # 创建格式转换按钮
     button = ButtonFactory.create_format_button(parent, 'DOCX', command)
-    
+
     # 创建选项联动处理器
     handler = ExportOptionHandler(image_var, ocr_var)
 """
@@ -18,8 +18,4 @@
 from .button_factory import ButtonFactory
 from .option_handler import ExportOptionHandler, NumberingOptionHandler
 
-__all__ = [
-    'ButtonFactory',
-    'ExportOptionHandler',
-    'NumberingOptionHandler'
-]
+__all__ = ["ButtonFactory", "ExportOptionHandler", "NumberingOptionHandler"]

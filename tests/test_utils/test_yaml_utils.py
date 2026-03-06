@@ -1,3 +1,5 @@
+"""utils 单元测试。"""
+
 from __future__ import annotations
 
 import pytest
@@ -7,9 +9,11 @@ from docwen.utils.text_utils import format_yaml_value
 from docwen.utils.yaml_utils import generate_basic_yaml_frontmatter, parse_yaml, process_list_field
 
 
+pytestmark = pytest.mark.unit
+
 @pytest.mark.unit
 def test_parse_yaml_basic() -> None:
-    raw = "标题: 关于[[2023年]]重点工作安排\n负责人:\n  - \"[[张三]]\"\n  - \"[[李四]]\"\n金额: 1234.56\n"
+    raw = '标题: 关于[[2023年]]重点工作安排\n负责人:\n  - "[[张三]]"\n  - "[[李四]]"\n金额: 1234.56\n'
     data = parse_yaml(raw)
     assert data["标题"] == "关于[[2023年]]重点工作安排"
     assert data["负责人"] == ["[[张三]]", "[[李四]]"]
@@ -42,4 +46,3 @@ def test_generate_basic_yaml_frontmatter_contains_title_key() -> None:
     assert f"  - {safe_value}\n" in front
     assert f"{t('yaml_keys.title')}: {safe_value}\n" in front
     assert front.endswith("---\n")
-

@@ -8,4 +8,4 @@ XLSX转MD子包
 
 from .core import convert_spreadsheet_to_md
 
-__all__ = ['convert_spreadsheet_to_md']
+__all__ = ["convert_spreadsheet_to_md"]

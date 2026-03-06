@@ -9,16 +9,15 @@ from __future__ import annotations
 import pytest
 
 from docwen.utils.number_utils import (
+    number_to_arabic_full,
     number_to_chinese,
     number_to_chinese_upper,
     number_to_circled,
-    number_to_arabic_full,
-    number_to_letter_upper,
     number_to_letter_lower,
-    number_to_roman_upper,
+    number_to_letter_upper,
     number_to_roman_lower,
+    number_to_roman_upper,
 )
-
 
 pytestmark = pytest.mark.unit
 
@@ -26,6 +25,7 @@ pytestmark = pytest.mark.unit
 # ============================================================
 # number_to_chinese
 # ============================================================
+
 
 class TestNumberToChinese:
     """小写中文数字转换"""
@@ -61,6 +61,7 @@ class TestNumberToChinese:
 # number_to_chinese_upper
 # ============================================================
 
+
 class TestNumberToChineseUpper:
     """大写中文数字（财务用）转换"""
 
@@ -91,6 +92,7 @@ class TestNumberToChineseUpper:
 # number_to_circled
 # ============================================================
 
+
 class TestNumberToCircled:
     """带圈数字转换"""
 
@@ -115,6 +117,7 @@ class TestNumberToCircled:
 # number_to_arabic_full
 # ============================================================
 
+
 class TestNumberToArabicFull:
     """全角阿拉伯数字转换"""
 
@@ -135,6 +138,7 @@ class TestNumberToArabicFull:
 # ============================================================
 # number_to_letter_upper / lower
 # ============================================================
+
 
 class TestNumberToLetter:
     """拉丁字母转换"""
@@ -173,6 +177,7 @@ class TestNumberToLetter:
 # ============================================================
 # number_to_roman_upper / lower
 # ============================================================
+
 
 class TestNumberToRoman:
     """罗马数字转换"""

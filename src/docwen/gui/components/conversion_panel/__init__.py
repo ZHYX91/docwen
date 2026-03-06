@@ -11,7 +11,7 @@
 
 使用示例:
     from docwen.gui.components.conversion_panel import ConversionPanel
-    
+
     panel = ConversionPanel(
         parent,
         config_manager=config_manager,
@@ -29,11 +29,11 @@
 """
 
 from .base import ConversionPanelBase
+from .decoration import DecorationMixin
 from .document_section import DocumentSectionMixin
-from .spreadsheet_section import SpreadsheetSectionMixin
 from .image_section import ImageSectionMixin
 from .layout_section import LayoutSectionMixin
-from .decoration import DecorationMixin
+from .spreadsheet_section import SpreadsheetSectionMixin
 
 
 class ConversionPanel(
@@ -42,18 +42,18 @@ class ConversionPanel(
     ImageSectionMixin,
     SpreadsheetSectionMixin,
     DocumentSectionMixin,
-    ConversionPanelBase
+    ConversionPanelBase,
 ):
     """
     格式转换面板组件
-    
+
     通过多继承组合各功能模块，提供完整的格式转换面板功能。
-    
+
     MRO（方法解析顺序）：
-    ConversionPanel -> DecorationMixin -> LayoutSectionMixin 
-    -> ImageSectionMixin -> SpreadsheetSectionMixin 
+    ConversionPanel -> DecorationMixin -> LayoutSectionMixin
+    -> ImageSectionMixin -> SpreadsheetSectionMixin
     -> DocumentSectionMixin -> ConversionPanelBase -> Frame -> object
-    
+
     属性（继承自 ConversionPanelBase）：
         config_manager: 配置管理器实例
         on_action: 操作回调函数
@@ -61,7 +61,7 @@ class ConversionPanel(
         current_format: 当前文件格式
         current_file_path: 当前文件路径
         format_buttons: 格式按钮字典
-    
+
     公共方法：
         set_file_info(): 设置文件信息并更新显示
         show(): 显示面板
@@ -71,7 +71,6 @@ class ConversionPanel(
         set_reference_table(): 设置基准表格（表格类）
         set_pdf_info(): 设置PDF信息（版式类）
     """
-    pass
 
 
-__all__ = ['ConversionPanel']
+__all__ = ["ConversionPanel"]

@@ -8,7 +8,7 @@
 - converter: 文档转换核心（Word/Markdown/Excel多向转换）
 - docx_spell: 文档校对引擎（4种校对规则）
 - gui: 图形用户界面（MVP架构）
-- security: 安全模块（网络隔离 + 试用期检查）
+- security: 安全模块（网络隔离）
 - services: 服务策略层（策略模式）
 - template: 模板管理（工厂模式 + 缓存）
 - utils: 工具函数库
@@ -18,4 +18,4 @@
 # 0.1.0: 基础开发版本
 # YYYYMMDD: 构建日期
 # REV: 当天修订号（从1开始）
-__version__ = "0.7.0.20260206.1"
+__version__ = "0.8.1.20260306.1"

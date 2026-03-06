@@ -1,3 +1,5 @@
+"""utils 单元测试。"""
+
 from __future__ import annotations
 
 import pytest
@@ -7,8 +9,11 @@ from docwen.utils.validation_utils import (
     is_chinese,
     is_value_empty,
     validate_date_format,
+    validate_ocr_requires_images,
 )
 
+
+pytestmark = pytest.mark.unit
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
@@ -54,3 +59,21 @@ def test_is_chinese_and_contains_chinese() -> None:
 def test_validate_date_format(raw: str, expected: bool) -> None:
     assert validate_date_format(raw) is expected
 
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("extract_images", "extract_ocr", "ok"),
+    [
+        (True, True, True),
+        (True, False, True),
+        (False, False, True),
+        (False, True, True),
+    ],
+)
+def test_validate_ocr_requires_images(extract_images: bool, extract_ocr: bool, ok: bool) -> None:
+    actual_ok, reason = validate_ocr_requires_images(extract_images, extract_ocr)
+    assert actual_ok is ok
+    if ok:
+        assert reason == ""
+    else:
+        assert reason

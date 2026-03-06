@@ -7,41 +7,44 @@ Markdown 策略子包
 
 使用方式：
     from docwen.services.strategies import get_strategy
-    
+
     strategy_class = get_strategy(source_format='md', target_format='docx')
 """
 
-# 导入子模块以触发策略注册
-from . import to_document
-from . import to_spreadsheet
-
-# 导出所有策略类（便于直接导入）
-from .to_document import (
-    BaseMdToDocumentStrategy,
-    MdToDocxStrategy,
-    MdToDocStrategy,
-    MdToOdtStrategy,
-    MdToRtfStrategy,
-)
 from .to_spreadsheet import (
     BaseMdToSpreadsheetStrategy,
-    MdToXlsxStrategy,
-    MdToXlsStrategy,
-    MdToOdsStrategy,
     MdToCsvStrategy,
+    MdToOdsStrategy,
+    MdToXlsStrategy,
+    MdToXlsxStrategy,
 )
+
+try:
+    from .to_document import (
+        BaseMdToDocumentStrategy,
+        MdToDocStrategy,
+        MdToDocxStrategy,
+        MdToOdtStrategy,
+        MdToRtfStrategy,
+    )
+except Exception:
+    BaseMdToDocumentStrategy = None
+    MdToDocStrategy = None
+    MdToDocxStrategy = None
+    MdToOdtStrategy = None
+    MdToRtfStrategy = None
 
 __all__ = [
     # 文档转换策略
-    'BaseMdToDocumentStrategy',
-    'MdToDocxStrategy',
-    'MdToDocStrategy',
-    'MdToOdtStrategy',
-    'MdToRtfStrategy',
+    "BaseMdToDocumentStrategy",
     # 表格转换策略
-    'BaseMdToSpreadsheetStrategy',
-    'MdToXlsxStrategy',
-    'MdToXlsStrategy',
-    'MdToOdsStrategy',
-    'MdToCsvStrategy',
+    "BaseMdToSpreadsheetStrategy",
+    "MdToCsvStrategy",
+    "MdToDocStrategy",
+    "MdToDocxStrategy",
+    "MdToOdsStrategy",
+    "MdToOdtStrategy",
+    "MdToRtfStrategy",
+    "MdToXlsStrategy",
+    "MdToXlsxStrategy",
 ]

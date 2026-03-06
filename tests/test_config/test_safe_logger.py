@@ -1,9 +1,13 @@
+"""config 单元测试。"""
+
 from __future__ import annotations
 
 import pytest
 
 from docwen.config.safe_logger import SafeLogger, disable, enable, info, safe_log
 
+
+pytestmark = pytest.mark.unit
 
 @pytest.mark.unit
 def test_safe_logger_disable_enable() -> None:
@@ -32,4 +36,3 @@ def test_safe_logger_log_does_not_crash(monkeypatch: pytest.MonkeyPatch, capsys:
 @pytest.mark.unit
 def test_module_level_info_does_not_raise() -> None:
     info("x")
-

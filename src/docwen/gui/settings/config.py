@@ -23,26 +23,27 @@ logger = logging.getLogger(__name__)
 class SectionStyle(Enum):
     """
     设置区域样式枚举
-    
+
     定义了所有可用的区域框样式，对应ttkbootstrap的bootstyle。
     使用枚举确保样式值的类型安全。
     """
-    PRIMARY = "primary"      # 主要：蓝色系
-    INFO = "info"           # 信息：青色系
-    SUCCESS = "success"     # 成功：绿色系
-    WARNING = "warning"     # 警告：橙色系
-    DANGER = "danger"       # 危险：红色系
-    SECONDARY = "secondary" # 次要：灰色系
+
+    PRIMARY = "primary"  # 主要：蓝色系
+    INFO = "info"  # 信息：青色系
+    SUCCESS = "success"  # 成功：绿色系
+    WARNING = "warning"  # 警告：橙色系
+    DANGER = "danger"  # 危险：红色系
+    SECONDARY = "secondary"  # 次要：灰色系
 
 
 @dataclass(frozen=True)
 class LayoutConfig:
     """
     布局参数配置类
-    
+
     统一管理所有UI布局相关的间距、尺寸参数。
     使用frozen=True确保配置不可变。
-    
+
     属性：
         section_spacing_top: Section顶部间距（像素）
         section_spacing_bottom: Section底部间距（像素）
@@ -52,6 +53,7 @@ class LayoutConfig:
         canvas_padding: 画布边距（像素）
         scrollbar_spacing: Section右侧与滚动条的间距（像素）
     """
+
     section_spacing_top: int = 15
     section_spacing_bottom: int = 0
     section_padding: int = 10
@@ -65,9 +67,9 @@ class LayoutConfig:
 class DialogConfig:
     """
     对话框参数配置类
-    
+
     管理设置对话框窗口的尺寸和行为参数。
-    
+
     属性：
         default_width: 默认宽度（像素）
         default_height: 默认高度（像素）
@@ -77,6 +79,7 @@ class DialogConfig:
         button_spacing: 按钮间距（像素）
         status_display_time: 状态消息显示时长（毫秒）
     """
+
     default_width: int = 700
     default_height: int = 800
     min_width: int = 510

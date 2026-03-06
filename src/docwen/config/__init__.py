@@ -9,24 +9,24 @@
 
 使用方式：
     from docwen.config import config_manager
-    
+
     # 获取配置
     theme = config_manager.get_default_theme()
-    
+
     # 导入常量
     from docwen.config import SOFTWARE_ID_MAPPING
 """
 
 from .config_manager import config_manager
 from .schemas import (
-    SOFTWARE_ID_MAPPING,
-    DEFAULT_CONFIG,
     CONFIG_FILES,
+    DEFAULT_CONFIG,
+    SOFTWARE_ID_MAPPING,
 )
 
 __all__ = [
-    "config_manager",
-    "SOFTWARE_ID_MAPPING",
-    "DEFAULT_CONFIG",
     "CONFIG_FILES",
+    "DEFAULT_CONFIG",
+    "SOFTWARE_ID_MAPPING",
+    "config_manager",
 ]

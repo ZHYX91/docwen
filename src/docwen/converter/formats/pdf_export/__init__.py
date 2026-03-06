@@ -16,6 +16,6 @@ from .document import docx_to_pdf
 from .spreadsheet import xlsx_to_pdf
 
 __all__ = [
-    'docx_to_pdf',
-    'xlsx_to_pdf',
+    "docx_to_pdf",
+    "xlsx_to_pdf",
 ]

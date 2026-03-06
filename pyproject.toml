@@ -21,6 +21,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
 ]
 
 dependencies = [
@@ -43,6 +44,7 @@ dependencies = [
     # PDF/OFD处理
     "pymupdf>=1.26.6",
     "pymupdf4llm>=0.1.8",
+    "pymupdf_layout>=1.27.1",
     "pdf2docx>=0.5.6",
     "easyofd>=0.5.6",  # OFD文件转PDF
     
@@ -57,7 +59,7 @@ dependencies = [
     "rapidocr_onnxruntime>=1.4.0",
     
     # Windows COM 自动化
-    "pywin32>=311",
+    "pywin32>=311; platform_system == 'Windows'",
     
     # IPC 进程间通信
     "watchdog>=6.0.0",
@@ -68,6 +70,13 @@ dev = [
     # 构建与打包
     "Cython==3.1.6",
     "pyinstaller==6.16.0",
+    "pre-commit>=4.0.0",
+    "ruff>=0.15.1",
+    "pyright>=1.1.408",
+]
+lint = [
+    "ruff>=0.15.1",
+    "pyright>=1.1.408",
 ]
 test = [
     "pytest>=8.0.0",
@@ -79,8 +88,11 @@ docwen = "docwen.cli_run:main"
 docwen-gui = "docwen.gui_run:main"
 
 [tool.setuptools]
-packages = ["docwen"]
 package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["docwen*"]
 
 [tool.setuptools.dynamic]
 version = {attr = "docwen.__version__"}
@@ -110,4 +122,106 @@ omit = [
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
-fail_under = 15
+fail_under = 35
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "basic"
+include = ["src"]
+executionEnvironments = [
+    { root = "src", extraPaths = ["src"] },
+    { root = "src/docwen/gui", extraPaths = ["src"], reportAttributeAccessIssue = "warning" },
+]
+exclude = [
+    "**/__pycache__",
+    ".git",
+    ".ruff_cache",
+    ".pytest_cache",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+    "assets",
+    "templates",
+    "configs",
+    "tests",
+]
+stubPath = "typings"
+
+reportMissingTypeStubs = "none"
+reportMissingImports = "none"
+reportMissingModuleSource = "none"
+reportUnusedImport = "error"
+reportUnusedVariable = "error"
+reportUnusedExpression = "none"
+reportInvalidStringEscapeSequence = "error"
+reportPrivateUsage = "warning"
+reportUntypedFunctionDecorator = "none"
+reportUntypedClassDecorator = "none"
+
+reportUnknownMemberType = "none"
+reportUnknownVariableType = "none"
+reportUnknownArgumentType = "none"
+reportUnknownParameterType = "none"
+reportUnknownLambdaType = "none"
+
+reportWildcardImportFromLibrary = "none"
+
+reportUnnecessaryIsInstance = "warning"
+reportUnnecessaryCast = "warning"
+reportUnnecessaryComparison = "warning"
+reportUnnecessaryContains = "warning"
+
+reportGeneralTypeIssues = "error"
+reportArgumentType = "error"
+reportAssignmentType = "error"
+reportCallIssue = "error"
+reportIndexIssue = "error"
+reportOptionalMemberAccess = "error"
+reportOptionalOperand = "error"
+reportOptionalSubscript = "error"
+reportOptionalIterable = "error"
+reportOperatorIssue = "error"
+reportAttributeAccessIssue = "error"
+reportReturnType = "error"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+src = ["src"]
+extend-exclude = ["assets", "templates", "configs"]
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "W",
+    "UP",
+    "B",
+    "SIM",
+    "C4",
+    "PIE",
+    "RUF",
+    "T20",
+]
+ignore = [
+    "E501",
+    "RUF001",
+    "RUF002",
+    "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"src/docwen/gui/**/*.py" = ["F403", "F405"]
+"src/docwen/gui_run.py" = ["SIM115"]
+"src/docwen/ipc/single_instance.py" = ["SIM115"]
+"src/docwen/cli/**/*.py" = ["T201"]
+"src/docwen/cli_run.py" = ["T201"]
+"src/docwen/i18n/locale_validator.py" = ["T201"]
+"src/docwen/config/safe_logger.py" = ["T201"]
+"tools/**/*.py" = ["T201"]
+"tests/**/*.py" = ["B011"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["docwen"]

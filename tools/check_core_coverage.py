@@ -4,7 +4,6 @@ import argparse
 import subprocess
 import sys
 
-
 CORE_INCLUDE = ",".join(
     [
         "*/src/docwen/cli/executor.py",
@@ -44,4 +43,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))
-

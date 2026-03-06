@@ -1,0 +1,18 @@
+{
+  "schema_version": 2,
+  "success": true,
+  "command": "convert",
+  "data": {
+    "action": "convert",
+    "input_file": "REPLACE_AT_RUNTIME",
+    "output_file": "out",
+    "message": "ok",
+    "error_code": null,
+    "details": null,
+    "duration": 0.0,
+    "metadata": {}
+  },
+  "error": null,
+  "warnings": [],
+  "timing": null
+}

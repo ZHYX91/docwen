@@ -1,16 +1,20 @@
+"""security 单元测试。"""
+
 from __future__ import annotations
 
+import ftplib
 import http.client
+import smtplib
 import socket
 import ssl
 import urllib.request
-import ftplib
-import smtplib
 
 import pytest
 
 import docwen.security.network_isolation as ni
 
+
+pytestmark = pytest.mark.unit
 
 @pytest.mark.unit
 def test_blocked_socket_raises() -> None:

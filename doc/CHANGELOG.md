@@ -1,5 +1,29 @@
 # Changelog / 更新日志
 
+## v0.8.1 (2026-03-06)
+
+### 更新日志（中文）
+
+- 新增中国发票（PDF/OFD）识别与结构化转换
+- 扩展 service 层，新增批量并发、错误注册表与统一转换请求模型
+- 新增 CLI JSON 输出规范与 doctor 环境诊断命令
+- 重构策略加载为显式注册表 + 按需加载
+- 优化高 DPI 适配与 GUI 导出设置
+- 移除试用期检查，统一结构化错误码体系
+- 修复图片、版式文件、MD↔DOCX/XLSX 等大量转换 bug
+- 大幅提升单元测试覆盖率（新增 100+ 测试文件）
+
+### Changelog (English)
+
+- Added Chinese invoice (PDF/OFD) recognition and structured conversion.
+- Expanded service layer with batch concurrency, error registry and unified conversion request models.
+- Added CLI JSON output schema and doctor diagnostics command.
+- Refactored strategy loading to explicit registry + on-demand imports.
+- Improved high-DPI adaptation and GUI export settings.
+- Removed trial expiration check; unified structured error code system.
+- Fixed numerous conversion bugs across image, layout, MD↔DOCX/XLSX, etc.
+- Significantly expanded unit test coverage (100+ new test files).
+
 ## v0.7.0 (2025-02-06)
 
 ### 更新日志（中文）
@@ -77,4 +101,3 @@
 - Refactored CLI to improve user experience.
 - Added support for more document types.
 - Implemented more configurable options.
-

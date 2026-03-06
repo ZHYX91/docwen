@@ -13,51 +13,32 @@ DOCX文档转Markdown格式核心处理模块
 转换过程采用智能分析算法，能够准确识别公文的标准格式元素。
 """
 
-import os
-import re
 import logging
-import datetime
-from docx import Document
-from .shared.content_injector import process_document_with_special_content
-from docwen.utils.docx_utils import extract_format_from_paragraph_style, get_effective_run_format
-from .gongwen.scorer import create_element_scorer
-from docwen.utils.heading_utils import split_content_by_delimiters, add_markdown_heading, detect_heading_level
-from docwen.utils.path_utils import ensure_dir_exists, generate_output_path
-from docwen.utils.validation_utils import contains_chinese
-from docwen.utils.date_utils import convert_date_format
-from docwen.utils.text_utils import (
-    remove_colon,
-    extract_after_colon,
-    remove_brackets,
-    process_copy_to,
-    process_attachment_item,
-    is_pure_number
-)
+import threading
+from collections.abc import Callable
 
 # 配置日志
 logger = logging.getLogger(__name__)
 
-import threading
-from typing import Callable, Optional
 
 def convert_docx_to_md(
     docx_path: str,
     extract_image: bool = True,
     extract_ocr: bool = False,
-    optimize_for_type: str = None,
-    progress_callback: Optional[Callable[[str], None]] = None,
-    cancel_event: Optional[threading.Event] = None,
-    output_folder: Optional[str] = None,
-    original_file_path: Optional[str] = None,
-    options: Optional[dict] = None
+    optimize_for_type: str | None = None,
+    progress_callback: Callable[[str], None] | None = None,
+    cancel_event: threading.Event | None = None,
+    output_folder: str | None = None,
+    original_file_path: str | None = None,
+    options: dict | None = None,
 ):
     """
     DOCX转MD路由函数
-    
+
     根据optimize_for_type参数选择转换模式：
     - None: 简化模式（默认） - 基础样式转换
     - "gongwen": 公文优化模式 - 元素识别+YAML元数据
-    
+
     参数:
         docx_path: DOCX文件路径（可能是临时副本）
         extract_image: 是否保留图片（由GUI传入，默认True）
@@ -68,7 +49,7 @@ def convert_docx_to_md(
         output_folder: 输出文件夹路径，用于保存图片 (可选)
         original_file_path: 原始文件路径（用于图片命名，可选）
         options: 转换选项字典，包含序号配置等
-    
+
     返回:
         dict: 转换结果字典，包含以下键：
             - success: bool - 转换是否成功
@@ -78,26 +59,28 @@ def convert_docx_to_md(
             - error: str or None - 错误信息（如果失败）
     """
     logger.info(f"DOCX转MD路由: 优化类型={optimize_for_type}, 文件={docx_path}")
-    
+
     # 准备公共参数
     common_params = {
-        'docx_path': docx_path,
-        'extract_image': extract_image,
-        'extract_ocr': extract_ocr,
-        'progress_callback': progress_callback,
-        'cancel_event': cancel_event,
-        'output_folder': output_folder,
-        'original_file_path': original_file_path,
-        'options': options
+        "docx_path": docx_path,
+        "extract_image": extract_image,
+        "extract_ocr": extract_ocr,
+        "progress_callback": progress_callback,
+        "cancel_event": cancel_event,
+        "output_folder": output_folder,
+        "original_file_path": original_file_path,
+        "options": options,
     }
-    
+
     # 路由到对应转换器
     if optimize_for_type == "gongwen":
         logger.info("使用公文优化模式")
         from .gongwen.converter import convert_docx_to_md_gongwen
+
         return convert_docx_to_md_gongwen(**common_params)
     else:
         # 默认使用简化模式
         logger.info("使用简化模式")
         from .simple.converter import convert_docx_to_md_simple
+
         return convert_docx_to_md_simple(**common_params)

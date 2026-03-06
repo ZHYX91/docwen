@@ -17,22 +17,22 @@
 
 使用示例：
     from docwen.converter.docx2md.simple import convert_docx_to_md_simple
-    
+
     result = convert_docx_to_md_simple('document.docx')
     if result['success']:
         print(result['main_content'])
 """
 
 from .converter import convert_docx_to_md_simple
-from .yaml_builder import build_yaml_header, build_yaml_header_string
 from .paragraph_handler import ParagraphHandler
+from .yaml_builder import build_yaml_header, build_yaml_header_string
 
 __all__ = [
-    # 主转换函数
-    'convert_docx_to_md_simple',
-    # YAML生成
-    'build_yaml_header',
-    'build_yaml_header_string',
     # 段落处理器
-    'ParagraphHandler',
+    "ParagraphHandler",
+    # YAML生成
+    "build_yaml_header",
+    "build_yaml_header_string",
+    # 主转换函数
+    "convert_docx_to_md_simple",
 ]

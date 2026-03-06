@@ -7,5 +7,6 @@
 
 # 日志配置
 import logging
+
 logger = logging.getLogger(__name__)
 logger.info("服务层包初始化")

@@ -46,7 +46,7 @@ Nhật ký thay đổi: xem [doc/CHANGELOG.md](doc/CHANGELOG.md)
 
 ### Khởi chạy chương trình
 
-Nhấp đúp `DocWen.exe` để mở giao diện đồ hoạ.
+Với bản đóng gói trên Windows: nhấp đúp `DocWen.exe` để mở GUI. Nếu cài từ mã nguồn / pip: chạy `docwen-gui`.
 
 ### Hướng dẫn nhanh
 
@@ -343,7 +343,7 @@ Chương trình dùng **bố cục 3 cột thích ứng**:
 
 ### Quy trình thao tác cơ bản
 
-1.  **Khởi chạy**: Nhấp đúp `DocWen.exe`.
+1.  **Khởi chạy**: Nhấp đúp `DocWen.exe` (Windows đóng gói) hoặc chạy `docwen-gui`.
 2.  **Nhập file**:
     -   Cách 1: Kéo thả file vào cửa sổ.
     -   Cách 2: Nhấn nút "Add" trong vùng kéo thả để chọn file.
@@ -402,46 +402,57 @@ Ngoài GUI, chương trình cung cấp CLI phù hợp tự động hoá và xử
 
 ### Chế độ chạy
 
--   **Chế độ tương tác**: Hiển thị menu hướng dẫn sau khi truyền file, tương tự GUI.
--   **Chế độ headless**: Chạy trực tiếp bằng tham số `--action`, phù hợp cho script.
+-   **Chế độ CLI**: Dùng subcommand (ví dụ `convert`, `validate`) cho tự động hoá và xử lý theo lô.
 
 ### Ví dụ thường dùng
 
 ```bash
-# Chế độ tương tác
-DocWen.exe document.docx
+# Bản đóng gói (Windows)
+DocWenCLI.exe convert document.docx --to md
 
 # Xuất Word sang Markdown (Trích ảnh + OCR)
-DocWen.exe report.docx --action export_md --extract-img --ocr
+DocWenCLI.exe convert report.docx --to md --extract-img --ocr
 
 # Markdown sang Word (Chỉ định template)
-DocWen.exe document.md --action convert --target docx --template "Template Name"
+DocWenCLI.exe convert document.md --to docx --template "Template Name"
 
 # Chuyển đổi theo lô (Bỏ xác nhận, tiếp tục khi lỗi)
-DocWen.exe *.docx --action export_md --batch --yes --continue-on-error
+DocWenCLI.exe convert *.docx --to md --batch --yes --continue-on-error
 
 # Kiểm tra lỗi tài liệu
-DocWen.exe document.docx --action validate --check-typo --check-punct
+DocWenCLI.exe validate document.docx --check typo --check punct
 
 # Gộp/Tách PDF
-DocWen.exe *.pdf --action merge_pdfs
-DocWen.exe report.pdf --action split_pdf --pages "1-3,5,7-10"
+DocWenCLI.exe merge-pdfs *.pdf
+DocWenCLI.exe split-pdf report.pdf --pages "1-3,5,7-10"
+
+# Cài từ mã nguồn / pip
+docwen convert document.docx --to md
+docwen convert report.docx --to md --extract-img --ocr
 ```
 
-### Tham số chính
+### Lệnh và tuỳ chọn chính
 
-| Tham số | Mô tả |
+| Lệnh / Tuỳ chọn | Mô tả |
 | :--- | :--- |
-| `--action` | Loại thao tác: `export_md`, `convert`, `validate`, `merge_pdfs`, `split_pdf` |
-| `--target` | Định dạng đích: `pdf`, `docx`, `xlsx`, `md` |
-| `--template` | Tên template (ví dụ: `Template Name`) |
-| `--extract-img` | Trích xuất ảnh |
-| `--ocr` | Bật OCR |
-| `--batch` | Chế độ theo lô |
-| `--yes` / `-y` | Bỏ qua hỏi xác nhận |
-| `--continue-on-error` | Lỗi vẫn tiếp tục |
+| `convert <files...> --to <fmt>` | Chuyển sang định dạng đích (bao gồm `md`) |
+| `validate <files...> --check ...` | Kiểm tra lỗi tài liệu (`--check typo/punct/symbol/sensitive/all/none`) |
+| `merge-pdfs <files...>` | Gộp file PDF/OFD/XPS |
+| `split-pdf <file> --pages ...` | Tách PDF theo khoảng trang |
+| `merge-tables <files...> --mode row|col|cell` | Gộp bảng |
+| `merge-images-to-tiff <files...>` | Gộp ảnh thành TIFF |
+| `md-numbering <files...>` | Xử lý đánh số tiêu đề Markdown |
+| `templates list [--for docx|xlsx]` | Liệt kê template có sẵn |
+| `optimizations list [--scope ...]` | Liệt kê tối ưu hoá có sẵn |
+| `formats list [--for-source document|spreadsheet|layout|image|markdown]` | Liệt kê định dạng đích khả dụng |
+| `inspect <file>` | Xem loại/định dạng file và thao tác hỗ trợ |
+| `--template <name>` | Tên template (dùng với `convert`) |
+| `--extract-img` / `--no-extract-img` / `--ocr` | Tùy chọn cho `convert --to md` |
+| `--optimize-for <id>` | Bật tối ưu hoá rõ ràng (ví dụ `gongwen`, `invoice_cn`) |
+| `--batch` / `--jobs` / `--continue-on-error` | Điều khiển xử lý theo lô |
 | `--json` | Xuất kết quả dạng JSON |
-| `--quiet` / `-q` | Chế độ yên lặng |
+| `--quiet` / `-q` | Chế độ yên lặng, giảm output |
+| `--lang` | Đổi ngôn ngữ (ảnh hưởng help/thông báo) |
 
 ## 🔌 Plugin Obsidian
 
@@ -512,6 +523,7 @@ Plugin được phát hành ở repo riêng. Xem [docwen-obsidian](https://githu
 -   **Chạy hoàn toàn cục bộ**: Mọi xử lý diễn ra trên máy, không phụ thuộc mạng.
 -   **Cách ly mạng**: Cơ chế cách ly mạng tích hợp để tránh rò rỉ dữ liệu.
 -   **Không upload dữ liệu**: File của người dùng không được upload lên bất kỳ server nào.
+-   **Chế độ bảo mật nghiêm ngặt**: bật mặc định; chương trình sẽ thoát nếu kiểm tra bảo mật thất bại. Xem [doc/技术文档.md](doc/技术文档.md).
 
 ## 📜 Giấy phép
 

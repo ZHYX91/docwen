@@ -1,0 +1,39 @@
+{
+  "schema_version": 2,
+  "success": false,
+  "command": "convert",
+  "data": {
+    "action": "convert",
+    "total": 2,
+    "processed_count": 2,
+    "success_count": 1,
+    "failed_count": 1,
+    "interrupted": false,
+    "results": [
+      {
+        "file": "a.docx",
+        "success": true,
+        "output_file": "out1",
+        "message": "ok",
+        "duration": 1.23,
+        "metadata": {}
+      },
+      {
+        "file": "b.docx",
+        "success": false,
+        "error": "nope",
+        "error_code": "invalid_input",
+        "details": "d",
+        "duration": 0.45,
+        "metadata": {}
+      }
+    ]
+  },
+  "error": {
+    "error_code": null,
+    "message": "1/2 文件处理失败",
+    "details": null
+  },
+  "warnings": [],
+  "timing": null
+}

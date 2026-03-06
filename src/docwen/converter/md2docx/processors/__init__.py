@@ -11,9 +11,9 @@ md2docx 核心处理器模块
 # docx_processor - DOCX文档处理
 from .docx_processor import (
     load_document,
-    replace_placeholders,
     process_main_content,
     remove_marked_elements,
+    replace_placeholders,
     save_and_process_temp_file,
 )
 
@@ -25,16 +25,15 @@ from .md_processor import (
 
 # placeholder_handler - 占位符替换
 from .placeholder_handler import (
-    mark_special_placeholders,
+    extract_placeholder_keys,
     is_special_marked,
-    remove_special_mark,
-    process_paragraph_placeholders,
-    process_table_cell_placeholders,
+    mark_special_placeholders,
     process_attachment_description_placeholder,
     process_image_placeholders,
+    process_paragraph_placeholders,
+    process_table_cell_placeholders,
+    remove_special_mark,
     try_remove_element,
-    extract_placeholder_keys,
-    SPECIAL_PLACEHOLDERS,
 )
 
 # xml_processor - XML级别操作
@@ -43,26 +42,25 @@ from .xml_processor import (
 )
 
 __all__ = [
+    "extract_placeholder_keys",
+    "is_special_marked",
     # docx_processor
-    'load_document',
-    'replace_placeholders',
-    'process_main_content',
-    'remove_marked_elements',
-    'save_and_process_temp_file',
-    # md_processor
-    'process_md_body',
-    'process_md_body_with_notes',
+    "load_document",
     # placeholder_handler
-    'mark_special_placeholders',
-    'is_special_marked',
-    'remove_special_mark',
-    'process_paragraph_placeholders',
-    'process_table_cell_placeholders',
-    'process_attachment_description_placeholder',
-    'process_image_placeholders',
-    'try_remove_element',
-    'extract_placeholder_keys',
-    'SPECIAL_PLACEHOLDERS',
+    "mark_special_placeholders",
+    "process_attachment_description_placeholder",
     # xml_processor
-    'process_docx_file',
+    "process_docx_file",
+    "process_image_placeholders",
+    "process_main_content",
+    # md_processor
+    "process_md_body",
+    "process_md_body_with_notes",
+    "process_paragraph_placeholders",
+    "process_table_cell_placeholders",
+    "remove_marked_elements",
+    "remove_special_mark",
+    "replace_placeholders",
+    "save_and_process_temp_file",
+    "try_remove_element",
 ]

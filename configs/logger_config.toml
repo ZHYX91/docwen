@@ -5,7 +5,7 @@
 enable = true          # true=启用日志系统, false=禁用
 
 # 日志级别选项 (debug/info/warning/error/critical)
-level = "debug"         # 默认info级别，开发时可设为debug
+level = "debug"         # 文件日志级别（同时作为root级别）
 
 # 文件输出设置
 file_prefix = "docwen"  # 日志文件名前缀（如docwen_20250910.log）
@@ -13,4 +13,4 @@ retention_days = 30       # 日志保留天数（按天轮转）
 
 # 控制台输出设置
 console_enable = true   # 是否在控制台显示日志
-console_level = "debug"  # 控制台日志级别（可与文件级别不同，debug/info/warning/error/critical)
+console_level = "info"  # 控制台日志级别（建议默认info，debug写入文件；debug/info/warning/error/critical）

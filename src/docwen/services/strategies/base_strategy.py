@@ -4,8 +4,11 @@
 """
 
 import abc
-from typing import Dict, Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
+
 from docwen.services.result import ConversionResult
+
 
 class BaseStrategy(abc.ABC):
     """
@@ -16,8 +19,8 @@ class BaseStrategy(abc.ABC):
     def execute(
         self,
         file_path: str,
-        options: Optional[Dict[str, Any]] = None,
-        progress_callback: Optional[Callable[[str], None]] = None
+        options: dict[str, Any] | None = None,
+        progress_callback: Callable[[str], None] | None = None,
     ) -> ConversionResult:
         """
         执行策略的核心方法。
@@ -32,4 +35,17 @@ class BaseStrategy(abc.ABC):
         Returns:
             ConversionResult: 包含操作结果的标准化对象。
         """
-        pass
+
+    def _t(self, options: dict[str, Any] | None, key: str, default: str | None = None, **kwargs: Any) -> str:
+        translator = None
+        if isinstance(options, dict):
+            candidate = options.get("t")
+            if callable(candidate):
+                translator = candidate
+        if translator is not None:
+            return str(translator(key, default=default, **kwargs))
+        text = default if default is not None else key
+        try:
+            return str(text).format(**kwargs)
+        except Exception:
+            return str(text)

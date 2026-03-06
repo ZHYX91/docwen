@@ -12,13 +12,13 @@ import pytest
 
 from docwen.utils.date_utils import convert_date_format, generate_timestamp
 
-
 pytestmark = pytest.mark.unit
 
 
 # ============================================================
 # convert_date_format
 # ============================================================
+
 
 class TestConvertDateFormat:
     """日期格式转换"""
@@ -59,6 +59,7 @@ class TestConvertDateFormat:
 # ============================================================
 # generate_timestamp
 # ============================================================
+
 
 class TestGenerateTimestamp:
     """时间戳生成"""
