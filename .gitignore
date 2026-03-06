@@ -14,6 +14,8 @@
 *.log.*
 *.out
 *.tmp
+pyright-*.out.json
+pyright-one.json
 logs/
 *.logs/
 
@@ -42,7 +44,6 @@ license.dat
 
 # 安装包
 *.tar.gz
-*.egg-info/
 *.dist-info/
 
 # 虚拟环境 (通常也需要忽略)
@@ -73,7 +74,7 @@ samples/style_injection_output/
 # ==============================
 # Obsidian 插件开发
 # ==============================
-/obsidian-plugin/
+/docwen-obsidian/
 
 # ==============================
 # 私有脚本目录

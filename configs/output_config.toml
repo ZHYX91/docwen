@@ -52,3 +52,15 @@ auto_open_folder = false
 # - 临时工作目录中的文件无论如何都会被自动删除
 # - 此选项不影响临时目录的自动清理
 save_to_output = false
+
+[manifest]
+# 是否在输出目录生成 manifest.json（用于排障/追踪一次转换的输入、预处理链路与中间产物）
+# - true:  在输出目录写入 manifest.json；失败时写 manifest_failed_*.json
+# - false: 不写入（默认，避免影响用户目录）
+#
+# manifest 可能包含本机路径信息；若担心泄露，请保持 mask_input_path = true
+save_to_output = false
+# 是否对输入路径脱敏
+# - true:  input.path 只保留文件名（形如 <redacted>/<filename>）
+# - false: 写入完整输入路径（不推荐）
+mask_input_path = true

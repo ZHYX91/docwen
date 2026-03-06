@@ -19,20 +19,16 @@ GUI组件包 - 可重用的用户界面组件
 """
 
 # 导出核心组件类，供外部模块直接导入使用
-from .file_drop import FileDropArea
-from .action_panel import ActionPanel
 from .about_dialog import AboutDialog
+from .action_panel import ActionPanel
 from .conversion_panel import ConversionPanel
+from .file_drop import FileDropArea
 
 # 模块导出列表
-__all__ = [
-    'FileDropArea',
-    'ActionPanel',
-    'AboutDialog',
-    'ConversionPanel'
-]
+__all__ = ["AboutDialog", "ActionPanel", "ConversionPanel", "FileDropArea"]
 
 # 包初始化日志
 import logging
+
 logger = logging.getLogger(__name__)
 logger.info("GUI组件包初始化完成 - 所有UI组件已加载")

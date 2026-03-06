@@ -7,15 +7,12 @@ config_manager 单元测试
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
-from typing import Dict, Any
 
 import pytest
 
 from docwen.config.config_manager import ConfigManager
 from docwen.config.schemas import CONFIG_FILES, DEFAULT_CONFIG
-
 
 pytestmark = pytest.mark.unit
 
@@ -24,10 +21,11 @@ pytestmark = pytest.mark.unit
 # _deep_merge（核心合并逻辑）
 # ============================================================
 
+
 class TestDeepMerge:
     """深度合并两个字典"""
 
-    def _merge(self, default: Dict, user: Dict) -> Dict:
+    def _merge(self, default: dict, user: dict) -> dict:
         """通过临时实例调用 _deep_merge"""
         # 直接访问未绑定方法（_deep_merge 是普通方法）
         cm = ConfigManager.__new__(ConfigManager)
@@ -83,6 +81,7 @@ class TestDeepMerge:
 # get_config_file_path
 # ============================================================
 
+
 class TestGetConfigFilePath:
     """获取配置文件路径"""
 
@@ -91,7 +90,7 @@ class TestGetConfigFilePath:
         cm = ConfigManager()
         path = cm.get_config_file_path("gui_config")
         assert path.endswith("gui_config.toml")
-        assert os.path.isabs(path)
+        assert Path(path).is_absolute()
 
     def test_unknown_config_raises(self) -> None:
         """未知配置名称抛出 ValueError"""
@@ -103,6 +102,7 @@ class TestGetConfigFilePath:
 # ============================================================
 # CONFIG_FILES 与 DEFAULT_CONFIG 完整性
 # ============================================================
+
 
 class TestConfigIntegrity:
     """配置完整性校验"""
@@ -129,6 +129,7 @@ class TestConfigIntegrity:
 # ConfigManager 单例
 # ============================================================
 
+
 class TestConfigManagerSingleton:
     """单例行为"""
 
@@ -147,6 +148,7 @@ class TestConfigManagerSingleton:
 # ============================================================
 # _load_single_config
 # ============================================================
+
 
 class TestLoadSingleConfig:
     """加载单个配置文件"""
@@ -181,6 +183,7 @@ class TestLoadSingleConfig:
 # update_config_value
 # ============================================================
 
+
 class TestUpdateConfigValue:
     """更新配置值"""
 
@@ -188,3 +191,22 @@ class TestUpdateConfigValue:
         cm = ConfigManager()
         result = cm.update_config_value("nonexistent", "section", "key", "value")
         assert result is False
+
+
+class TestDefaultsMergeAndReload:
+    def _new_cm(self, tmp_path: Path) -> ConfigManager:
+        cm = ConfigManager.__new__(ConfigManager)
+        cm._config_dir = str(tmp_path)
+        cm._configs = {}
+        return cm
+
+    def test_reload_config_block_applies_defaults_when_file_missing(self, tmp_path: Path) -> None:
+        cm = self._new_cm(tmp_path)
+        cm._reload_config_block("gui_config")
+        assert cm._configs["gui_config"]["window"]["min_height"] == 720
+
+    def test_update_config_value_keeps_defaults_in_memory(self, tmp_path: Path) -> None:
+        cm = self._new_cm(tmp_path)
+        assert cm.update_config_value("gui_config", "window", "center_panel_width", 123) is True
+        assert cm._configs["gui_config"]["window"]["center_panel_width"] == 123
+        assert cm._configs["gui_config"]["window"]["min_height"] == 720

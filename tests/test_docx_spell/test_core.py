@@ -1,3 +1,5 @@
+"""docx_spell 单元测试。"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -7,10 +9,12 @@ from docx import Document
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
-from docwen.docx_spell.core import add_comments_for_errors, process_docx
+from docwen.docx_spell.core import add_comments_for_errors, create_validator_with_options, process_docx
 from docwen.docx_spell.spell_checker import TextError
 from docwen.docx_spell.utils import plan_run_splits, rebuild_paragraph_with_splits
 
+
+pytestmark = pytest.mark.unit
 
 @pytest.mark.unit
 def test_process_docx_missing_file_raises(tmp_path: Path) -> None:
@@ -28,6 +32,34 @@ def test_process_docx_no_rules_just_saves(tmp_path: Path) -> None:
     assert out is not None
     assert Path(out).exists() is True
     assert Path(out).name != src.name
+
+
+@pytest.mark.unit
+def test_create_validator_with_options_partial_dict_falls_back_to_config_defaults(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import docwen.docx_spell.core as core
+
+    monkeypatch.setattr(
+        core.config_manager,
+        "get_proofread_engine_config",
+        lambda: {
+            "enable_symbol_pairing": False,
+            "enable_symbol_correction": True,
+            "enable_typos_rule": True,
+            "enable_sensitive_word": False,
+        },
+        raising=True,
+    )
+
+    validator = create_validator_with_options({"typos_rule": False})
+
+    assert validator.overrides == {
+        "enable_symbol_pairing": False,
+        "enable_symbol_correction": True,
+        "enable_typos_rule": False,
+        "enable_sensitive_word": False,
+    }
 
 
 @pytest.mark.unit

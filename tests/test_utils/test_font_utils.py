@@ -1,9 +1,13 @@
+"""utils 单元测试。"""
+
 from __future__ import annotations
 
 import pytest
 
 import docwen.utils.font_utils as font_utils
 
+
+pytestmark = pytest.mark.unit
 
 @pytest.mark.unit
 def test_get_available_font_exact_match(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -29,4 +33,3 @@ def test_get_default_font_falls_back_to_tk_default(monkeypatch: pytest.MonkeyPat
     name, size = font_utils.get_default_font()
     assert name == "TkDefaultFont"
     assert size == font_utils.DEFAULT_FONT_SIZE
-

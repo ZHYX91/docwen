@@ -59,19 +59,20 @@ def set_locale(locale: str) -> bool:
 def reload_translations() -> None:
     _get_i18n().reload_translations()
 
+
 __all__ = [
     # 类
-    'I18nManager',
-    'StyleNameResolver',
-    'style_resolver',
-    # 翻译函数
-    't',
-    't_locale',
-    't_all_locales',
+    "I18nManager",
+    "StyleNameResolver",
     # 语言管理
-    'get_available_locales',
-    'get_current_locale',
-    'get_detection_priority',
-    'set_locale',
-    'reload_translations',
+    "get_available_locales",
+    "get_current_locale",
+    "get_detection_priority",
+    "reload_translations",
+    "set_locale",
+    "style_resolver",
+    # 翻译函数
+    "t",
+    "t_all_locales",
+    "t_locale",
 ]

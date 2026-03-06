@@ -8,36 +8,48 @@
 - 智能转换链（自动规划转换路径）
 """
 
-# 主要转换子包
-from . import docx2md
-from . import md2docx
-from . import md2xlsx
-from . import xlsx2md
-from . import pdf2md
-from . import formats
+import importlib
 
-# 核心功能
-from .md2docx.core import convert as convert_md_to_docx
-from .md2xlsx.core import convert as convert_md_to_xlsx
-from .smart_converter import SmartConverter, OfficeSoftwareNotFoundError
-from .formats.spreadsheet import csv_to_xlsx, xlsx_to_csv
+from .smart_converter import OfficeSoftwareNotFoundError, SmartConverter
+
+
+def __getattr__(name: str):
+    if name in {"docx2md", "formats", "md2docx", "md2xlsx", "pdf2md", "xlsx2md"}:
+        return importlib.import_module(f"{__name__}.{name}")
+    if name == "csv_to_xlsx":
+        from .formats.spreadsheet import csv_to_xlsx
+
+        return csv_to_xlsx
+    if name == "xlsx_to_csv":
+        from .formats.spreadsheet import xlsx_to_csv
+
+        return xlsx_to_csv
+    if name == "convert_md_to_docx":
+        from .md2docx.core import convert as convert_md_to_docx
+
+        return convert_md_to_docx
+    if name == "convert_md_to_xlsx":
+        from .md2xlsx.core import convert as convert_md_to_xlsx
+
+        return convert_md_to_xlsx
+    raise AttributeError(name)
 
 __all__ = [
-    # 子包
-    'docx2md',
-    'md2docx',
-    'md2xlsx',
-    'xlsx2md',
-    'pdf2md',
-    'formats',
-    # Markdown转换
-    'convert_md_to_docx',
-    'convert_md_to_xlsx',
-    # 智能转换
-    'SmartConverter',
-    # 表格转换
-    'csv_to_xlsx',
-    'xlsx_to_csv',
     # 异常
-    'OfficeSoftwareNotFoundError',
+    "OfficeSoftwareNotFoundError",
+    # 智能转换
+    "SmartConverter",
+    # Markdown转换
+    "convert_md_to_docx",
+    "convert_md_to_xlsx",
+    # 表格转换
+    "csv_to_xlsx",
+    # 子包
+    "docx2md",
+    "formats",
+    "md2docx",
+    "md2xlsx",
+    "pdf2md",
+    "xlsx2md",
+    "xlsx_to_csv",
 ]

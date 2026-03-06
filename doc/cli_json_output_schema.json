@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://docwen.local/schema/cli-json-output.schema.json",
+  "title": "DocWen CLI JSON Output v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "success", "command", "data", "error", "warnings", "timing"],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "success": { "type": "boolean" },
+    "command": { "type": "string" },
+    "data": { "type": "object" },
+    "error": {
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["error_code", "message", "details"],
+          "properties": {
+            "error_code": { "type": ["string", "null"] },
+            "message": { "type": ["string", "null"] },
+            "details": {}
+          }
+        }
+      ]
+    },
+    "warnings": { "type": "array" },
+    "timing": { "anyOf": [{ "type": "null" }, { "type": "object" }] }
+  }
+}

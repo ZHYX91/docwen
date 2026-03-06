@@ -9,24 +9,23 @@
 """
 
 from .detection import (
-    check_office_availability,
     OfficeSoftwareNotFoundError,
+    check_office_availability,
 )
-
 from .fallback import (
+    build_com_converters,
     convert_with_fallback,
     convert_with_libreoffice,
     try_com_conversion,
-    build_com_converters,
 )
 
 __all__ = [
+    "OfficeSoftwareNotFoundError",
+    "build_com_converters",
     # detection
-    'check_office_availability',
-    'OfficeSoftwareNotFoundError',
+    "check_office_availability",
     # fallback
-    'convert_with_fallback',
-    'convert_with_libreoffice',
-    'try_com_conversion',
-    'build_com_converters',
+    "convert_with_fallback",
+    "convert_with_libreoffice",
+    "try_com_conversion",
 ]

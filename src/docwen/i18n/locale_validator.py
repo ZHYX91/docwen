@@ -3,13 +3,11 @@ from __future__ import annotations
 import argparse
 import ast
 import re
-import sys
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
 import tomlkit
-
 
 HEADER_RE = re.compile(r"^\[(?P<name>[A-Za-z0-9_.-]+)\]\s*$")
 ASSIGN_RE = re.compile(r"^(?P<key>[A-Za-z0-9_]+)\s*=")
@@ -356,9 +354,9 @@ def scan_styles_dynamic_keys(src_root: Path) -> set[str]:
                 continue
             func = node.func
             is_injection_call = False
-            if isinstance(func, ast.Name) and func.id == "get_injection_name":
-                is_injection_call = True
-            elif isinstance(func, ast.Attribute) and func.attr == "get_injection_name":
+            if (isinstance(func, ast.Name) and func.id == "get_injection_name") or (
+                isinstance(func, ast.Attribute) and func.attr == "get_injection_name"
+            ):
                 is_injection_call = True
             if not is_injection_call:
                 continue
@@ -371,15 +369,31 @@ def scan_styles_dynamic_keys(src_root: Path) -> set[str]:
 
             if isinstance(arg0, ast.JoinedStr):
                 parts = arg0.values
-                prefix = parts[0].value if parts and isinstance(parts[0], ast.Constant) and isinstance(parts[0].value, str) else ""
-                var = parts[1].value.id if len(parts) >= 2 and isinstance(parts[1], ast.FormattedValue) and isinstance(parts[1].value, ast.Name) else ""
-                suffix = parts[2].value if len(parts) >= 3 and isinstance(parts[2], ast.Constant) and isinstance(parts[2].value, str) else ""
+                prefix = (
+                    parts[0].value
+                    if parts and isinstance(parts[0], ast.Constant) and isinstance(parts[0].value, str)
+                    else ""
+                )
+                var = (
+                    parts[1].value.id
+                    if len(parts) >= 2
+                    and isinstance(parts[1], ast.FormattedValue)
+                    and isinstance(parts[1].value, ast.Name)
+                    else ""
+                )
+                suffix = (
+                    parts[2].value
+                    if len(parts) >= 3 and isinstance(parts[2], ast.Constant) and isinstance(parts[2].value, str)
+                    else ""
+                )
                 if prefix and var and suffix == "":
                     patterns.append((prefix, var, suffix))
         return literal, patterns
 
     def collect_style_keys_from_mapping(tree: ast.AST, var_name: str) -> set[str]:
         keys: set[str] = set()
+        if not isinstance(tree, ast.Module):
+            return keys
         for node in tree.body:
             if not isinstance(node, ast.ClassDef) or node.name != "StyleNameResolver":
                 continue
@@ -403,7 +417,11 @@ def scan_styles_dynamic_keys(src_root: Path) -> set[str]:
             if not isinstance(node.target, ast.Name):
                 continue
             var = node.target.id
-            if not isinstance(node.iter, ast.Call) or not isinstance(node.iter.func, ast.Name) or node.iter.func.id != "range":
+            if (
+                not isinstance(node.iter, ast.Call)
+                or not isinstance(node.iter.func, ast.Name)
+                or node.iter.func.id != "range"
+            ):
                 continue
 
             args = node.iter.args
@@ -411,7 +429,13 @@ def scan_styles_dynamic_keys(src_root: Path) -> set[str]:
             end = None
             if len(args) == 1 and isinstance(args[0], ast.Constant) and isinstance(args[0].value, int):
                 end = args[0].value
-            elif len(args) >= 2 and isinstance(args[0], ast.Constant) and isinstance(args[0].value, int) and isinstance(args[1], ast.Constant) and isinstance(args[1].value, int):
+            elif (
+                len(args) >= 2
+                and isinstance(args[0], ast.Constant)
+                and isinstance(args[0].value, int)
+                and isinstance(args[1], ast.Constant)
+                and isinstance(args[1].value, int)
+            ):
                 start = args[0].value
                 end = args[1].value
             if end is None:
@@ -601,7 +625,7 @@ def _group_by_top_level(text: str) -> tuple[list[str], dict[str, list[str]]]:
 
         groups.setdefault(current_top, []).extend(current_lines)
         current_top = top
-        current_lines = trail + [line]
+        current_lines = [*trail, line]
 
     if current_top is None:
         preamble.extend(current_lines)
@@ -748,10 +772,7 @@ def _cmd_check_completeness(args: argparse.Namespace) -> int:
 def _cmd_sync_order(args: argparse.Namespace) -> int:
     ref = get_reference_locale_path()
     targets = []
-    if args.file:
-        targets = [get_locales_dir() / args.file]
-    else:
-        targets = [p for p in get_all_locale_paths() if p != ref]
+    targets = [get_locales_dir() / args.file] if args.file else [p for p in get_all_locale_paths() if p != ref]
     for path in targets:
         sync_order_to_reference(path)
         print(path.name)

@@ -1,3 +1,5 @@
+"""i18n 单元测试。"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -7,7 +9,6 @@ import tomlkit
 
 from docwen.config.toml_operations import read_toml_file, validate_toml_syntax
 from docwen.i18n.locale_validator import get_reference_locale_path
-
 
 LOCALES_DIR = Path(__file__).resolve().parents[2] / "src" / "docwen" / "i18n" / "locales"
 
@@ -39,9 +40,11 @@ def test_key_groups_order_and_styles_key_order() -> None:
 
     key_sections = ["styles", "style_formats", "placeholders", "yaml_keys"]
     missing_reference_sections = [name for name in key_sections if name not in reference_doc]
-    assert not missing_reference_sections, f"Missing required sections in {reference_path.name}: {missing_reference_sections}"
+    assert not missing_reference_sections, (
+        f"Missing required sections in {reference_path.name}: {missing_reference_sections}"
+    )
 
-    reference_section_order = [k for k in reference_doc.keys() if k in key_sections]
+    reference_section_order = [k for k in reference_doc if k in key_sections]
     assert reference_section_order == key_sections
 
     toml_files = sorted(LOCALES_DIR.glob("*.toml"))
@@ -51,7 +54,7 @@ def test_key_groups_order_and_styles_key_order() -> None:
         missing = [name for name in key_sections if name not in actual_doc]
         assert not missing, f"Missing sections in {toml_path.name}: {missing}"
 
-        actual_section_order = [k for k in actual_doc.keys() if k in key_sections]
+        actual_section_order = [k for k in actual_doc if k in key_sections]
         assert actual_section_order == reference_section_order, (
             f"Section order mismatch in {toml_path.name}: {actual_section_order} != {reference_section_order}"
         )

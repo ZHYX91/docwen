@@ -18,14 +18,15 @@
 
 import logging
 import tkinter as tk
-from typing import Dict, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import ttkbootstrap as tb
 
+from docwen.gui.core.mixins_protocols import ConversionPanelHost
+from docwen.i18n import t
+from docwen.proofread_keys import SENSITIVE_WORD, SYMBOL_CORRECTION, SYMBOL_PAIRING, TYPOS_RULE
 from docwen.utils.dpi_utils import scale
 from docwen.utils.gui_utils import ToolTip, create_info_icon
-from docwen.i18n import t
-from docwen.proofread_keys import SYMBOL_CORRECTION, SYMBOL_PAIRING, SENSITIVE_WORD, TYPOS_RULE
 
 logger = logging.getLogger(__name__)
 
@@ -38,222 +39,224 @@ else:
 class DocumentSectionMixin(_ConversionPanelBase):
     """
     文档类转换功能混入类
-    
+
     提供文档类文件的格式转换按钮和校对功能。
     需要与 ConversionPanelBase 一起使用。
     """
-    
-    def _create_document_buttons(self):
+
+    def _create_document_buttons(self: ConversionPanelHost):
         """
         创建文档类格式转换按钮
-        
+
         布局：
         - 格式转换section: DOCX/DOC/ODT/RTF按钮（2行2列）
         - 另存为section: PDF/OFD按钮
         - 扩展section: 校对选项
         """
         logger.debug("创建文档类格式按钮 - 拆分布局")
-        
+
         # === 格式转换 section ===
         hint_label = tb.Label(
             self.conversion_container,
             text=t("conversion_panel.document.convert_to_other_formats"),
             font=(self.default_font, self.default_size),
             bootstyle="secondary",
-            anchor=tk.CENTER
+            anchor=tk.CENTER,
         )
-        hint_label.grid(row=0, column=0, columnspan=2, sticky="ew", padx=5, pady=(0, 5))
-        
+        hint_label.grid(row=0, column=0, columnspan=2, sticky="ew", padx=scale(5), pady=(0, scale(5)))
+
         # 配置网格布局
         for col in range(2):
             self.conversion_container.grid_columnconfigure(col, weight=1, uniform="format_col")
         for row in range(1, 3):
             self.conversion_container.grid_rowconfigure(row, weight=1)
-        
+
         # 第一行：DOCX、DOC
-        formats_row1 = ['DOCX', 'DOC']
+        formats_row1 = ["DOCX", "DOC"]
         for idx, fmt in enumerate(formats_row1):
             button = tb.Button(
                 self.conversion_container,
                 text=fmt,
-                command=lambda f=fmt: self._on_format_clicked(f),
+                command=lambda f=fmt: self.on_format_clicked(f),
                 bootstyle=self.button_colors[fmt],
-                **self.button_style_2col
+                **self.button_style_2col,
             )
             button.grid(row=1, column=idx, padx=scale(5), pady=scale(5), sticky="ew")
             self.format_buttons[fmt] = button
             logger.debug(f"  创建按钮: {fmt} at (1, {idx})")
-        
+
         # 第二行：ODT、RTF
-        formats_row2 = ['ODT', 'RTF']
+        formats_row2 = ["ODT", "RTF"]
         for idx, fmt in enumerate(formats_row2):
             button = tb.Button(
                 self.conversion_container,
                 text=fmt,
-                command=lambda f=fmt: self._on_format_clicked(f),
+                command=lambda f=fmt: self.on_format_clicked(f),
                 bootstyle=self.button_colors[fmt],
-                **self.button_style_2col
+                **self.button_style_2col,
             )
             button.grid(row=2, column=idx, padx=scale(5), pady=scale(5), sticky="ew")
             self.format_buttons[fmt] = button
             logger.debug(f"  创建按钮: {fmt} at (2, {idx})")
-        
+
         # === 另存为 section ===
         saveas_hint_label = tb.Label(
             self.saveas_container,
             text=t("conversion_panel.document.convert_to_layout"),
             font=(self.default_font, self.default_size),
             bootstyle="secondary",
-            anchor=tk.CENTER
+            anchor=tk.CENTER,
         )
-        saveas_hint_label.grid(row=0, column=0, columnspan=2, sticky="ew", padx=5, pady=(0, 5))
-        
+        saveas_hint_label.grid(row=0, column=0, columnspan=2, sticky="ew", padx=scale(5), pady=(0, scale(5)))
+
         for col in range(2):
             self.saveas_container.grid_columnconfigure(col, weight=1, uniform="format_col")
-        
+
         # PDF按钮
         pdf_button = tb.Button(
             self.saveas_container,
             text=t("conversion_panel.document.save_as_pdf"),
-            command=lambda: self._on_format_clicked("PDF"),
-            bootstyle=self.button_colors['PDF'],
-            **self.button_style_2col
+            command=lambda: self.on_format_clicked("PDF"),
+            bootstyle=self.button_colors["PDF"],
+            **self.button_style_2col,
         )
         pdf_button.grid(row=1, column=0, padx=scale(5), pady=scale(5), sticky="ew")
-        self.format_buttons['PDF'] = pdf_button
+        self.format_buttons["PDF"] = pdf_button
         ToolTip(pdf_button, t("conversion_panel.document.save_as_pdf_tooltip"))
-        
+
         # OFD按钮（禁用）
         ofd_button = tb.Button(
             self.saveas_container,
             text=t("conversion_panel.document.save_as_ofd"),
             command=lambda: None,
-            bootstyle='secondary',
+            bootstyle="secondary",
             **self.button_style_2col,
-            state='disabled'
+            state="disabled",
         )
         ofd_button.grid(row=1, column=1, padx=scale(5), pady=scale(5), sticky="ew")
-        self.format_buttons['OFD'] = ofd_button
-        ToolTip(ofd_button, t("conversion_panel.document.save_as_ofd_tooltip"))
-        
+        self.format_buttons["OFD"] = ofd_button
+        ToolTip(ofd_button, t("conversion.messages.ofd_conversion_not_implemented"))
+
         # 更新按钮状态
-        self._update_button_states()
-        
+        self.update_button_states()
+
         # 创建校对section
         self._create_document_validation_section()
-        
+
         logger.info("文档类格式按钮创建完成")
-    
-    def _create_document_validation_section(self):
+
+    def _create_document_validation_section(self: ConversionPanelHost):
         """创建文档校对section"""
         logger.debug("创建文档校对section")
-        
+
         # 显示扩展框架
         self.extra_frame.config(text=t("conversion_panel.document.proofread_document"))
         self.extra_frame.grid()
-        
+
         # 清空容器
         for widget in self.extra_container.winfo_children():
             widget.destroy()
-        
+
         # 配置布局
         self.extra_container.grid_rowconfigure(0, weight=0)
         self.extra_container.grid_rowconfigure(1, weight=0)
         self.extra_container.grid_rowconfigure(2, weight=0)
         self.extra_container.grid_columnconfigure(0, weight=1)
-        
+
         # 说明文字
         hint_label = tb.Label(
             self.extra_container,
             text=t("conversion_panel.document.proofread_hint"),
             font=(self.default_font, self.default_size),
             bootstyle="secondary",
-            anchor=tk.CENTER
+            anchor=tk.CENTER,
         )
-        hint_label.grid(row=0, column=0, sticky="ew", padx=5, pady=(0, 5))
-        
+        hint_label.grid(row=0, column=0, sticky="ew", padx=scale(5), pady=(0, scale(5)))
+
         # 校对按钮
         self.validate_button = tb.Button(
             self.extra_container,
             text=t("conversion_panel.document.proofread_button"),
             command=self._on_validate_clicked,
-            bootstyle='info',
+            bootstyle="info",
             **self.button_style_1col,
-            state="disabled"
+            state="disabled",
         )
         self.validate_button.grid(row=1, column=0, pady=scale(5))
-        ToolTip(
-            self.validate_button,
-            t("conversion_panel.document.proofread_button_tooltip")
-        )
-        
+        ToolTip(self.validate_button, t("conversion_panel.document.proofread_button_tooltip"))
+
         # 校对选项边框
         validation_options_frame = tb.Labelframe(
-            self.extra_container,
-            text=t("conversion_panel.document.proofread_options"),
-            bootstyle="info"
+            self.extra_container, text=t("conversion_panel.document.proofread_options"), bootstyle="info"
         )
         validation_options_frame.grid(row=2, column=0, sticky="ew", padx=scale(5), pady=scale(5))
         validation_options_frame.grid_rowconfigure(0, weight=1)
         validation_options_frame.grid_columnconfigure(0, weight=1)
-        
+
         # 复选框容器（单列布局）
         checkbox_container = tb.Frame(validation_options_frame, bootstyle="default")
         checkbox_container.grid(row=0, column=0, sticky="", padx=scale(10), pady=scale(10))
         checkbox_container.grid_columnconfigure(0, weight=1)
-        
+
         # 获取默认选项
         default_options = self._get_default_validation_options()
-        
+
         # 校对选项配置
         options = [
-            (t("conversion_panel.document.symbol_pairing"), SYMBOL_PAIRING, t("conversion_panel.document.symbol_pairing_tooltip")),
+            (
+                t("conversion_panel.document.symbol_pairing"),
+                SYMBOL_PAIRING,
+                t("conversion_panel.document.symbol_pairing_tooltip"),
+            ),
             (t("conversion_panel.document.typos_rule"), TYPOS_RULE, t("conversion_panel.document.typos_rule_tooltip")),
-            (t("conversion_panel.document.symbol_correction"), SYMBOL_CORRECTION, t("conversion_panel.document.symbol_correction_tooltip")),
-            (t("conversion_panel.document.sensitive_word"), SENSITIVE_WORD, t("conversion_panel.document.sensitive_word_tooltip"))
+            (
+                t("conversion_panel.document.symbol_correction"),
+                SYMBOL_CORRECTION,
+                t("conversion_panel.document.symbol_correction_tooltip"),
+            ),
+            (
+                t("conversion_panel.document.sensitive_word"),
+                SENSITIVE_WORD,
+                t("conversion_panel.document.sensitive_word_tooltip"),
+            ),
         ]
-        
+
         self.checkbox_vars = {}
         for i, (text, key, tooltip_text) in enumerate(options):
             var = tk.BooleanVar(value=default_options.get(key, False))
             self.checkbox_vars[key] = var
-            
+
             option_frame = tb.Frame(checkbox_container, bootstyle="default")
             # 一行一个选项
             option_frame.grid(row=i, column=0, sticky="w", padx=scale(10), pady=scale(3))
-            
+
             checkbox = tb.Checkbutton(
                 option_frame,
                 text=text,
                 variable=var,
                 command=self._on_validation_option_changed,
-                bootstyle="round-toggle"
+                bootstyle="round-toggle",
             )
             checkbox.pack(side=tk.LEFT, padx=(0, scale(5)))
-            
+
             info_icon = create_info_icon(option_frame, tooltip_text, bootstyle="info")
             info_icon.pack(side=tk.LEFT)
-        
+
         # 初始化按钮状态
         self._on_validation_option_changed()
-        
+
         logger.debug("文档校对section创建完成")
-    
-    def _get_default_validation_options(self) -> Dict[str, bool]:
+
+    def _get_default_validation_options(self: ConversionPanelHost) -> dict[str, bool]:
         """
         从配置文件获取默认校对选项
-        
+
         返回：
             Dict[str, bool]: 校对选项字典
         """
         if not self.config_manager:
-            return {
-                SYMBOL_PAIRING: True,
-                SYMBOL_CORRECTION: True,
-                TYPOS_RULE: True,
-                SENSITIVE_WORD: False
-            }
-        
+            return {SYMBOL_PAIRING: True, SYMBOL_CORRECTION: True, TYPOS_RULE: True, SENSITIVE_WORD: False}
+
         try:
             engine_settings = self.config_manager.get_proofread_engine_config()
             return {
@@ -263,22 +266,17 @@ class DocumentSectionMixin(_ConversionPanelBase):
                 SENSITIVE_WORD: engine_settings.get("enable_sensitive_word", True),
             }
         except Exception as e:
-            logger.error(f"获取默认校对选项失败: {str(e)}")
-            return {
-                SYMBOL_PAIRING: True,
-                SYMBOL_CORRECTION: True,
-                TYPOS_RULE: True,
-                SENSITIVE_WORD: False
-            }
-    
-    def _on_validation_option_changed(self):
+            logger.error(f"获取默认校对选项失败: {e!s}")
+            return {SYMBOL_PAIRING: True, SYMBOL_CORRECTION: True, TYPOS_RULE: True, SENSITIVE_WORD: False}
+
+    def _on_validation_option_changed(self: ConversionPanelHost):
         """处理校对选项变更事件"""
-        if hasattr(self, 'validate_button') and self.validate_button:
+        if hasattr(self, "validate_button") and self.validate_button:
             any_selected = any(var.get() for var in self.checkbox_vars.values())
             self.validate_button.config(state="normal" if any_selected else "disabled")
             logger.debug(f"校对按钮状态: {'启用' if any_selected else '禁用'}")
-    
-    def _on_validate_clicked(self):
+
+    def _on_validate_clicked(self: ConversionPanelHost):
         """处理校对按钮点击事件"""
         if self.on_action and self.current_file_path:
             options = {key: var.get() for key, var in self.checkbox_vars.items()}

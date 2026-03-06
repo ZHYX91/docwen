@@ -20,6 +20,14 @@ min_height = 860                # 最小窗口高度
 # 窗口行为设置
 auto_center = false             # 是否自动居中窗口
 remember_gui_state = true       # 是否记住窗口关闭时的位置、大小、主题等
+expand_side_panels = false      # 窗口变宽时左右栏是否参与扩展（默认仅中栏扩展）
+
+[dpi]
+# UI DPI缩放设置
+# enable_dpi_scaling = false 会禁用DPI缩放（强制按原始设计尺寸渲染UI）
+# ui_scale = 0 表示自动检测；非0表示强制缩放系数（例如 1.25 / 1.5 / 2.0，或写 150 / \"150%\"）
+enable_dpi_scaling = true
+ui_scale = 0
 
 [component]
 file_drop_height = 200   # 文件拖拽区域高度
@@ -47,4 +55,4 @@ md_default_template = "docx"
 # 可选值：
 #   "zh_CN" - 简体中文
 #   "en_US" - English (US)
-locale = "en_US"
+locale = "zh_CN"

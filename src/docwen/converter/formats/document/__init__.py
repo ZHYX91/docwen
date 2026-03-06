@@ -12,19 +12,19 @@
 """
 
 from .external import (
+    docx_to_doc,
+    docx_to_odt,
+    docx_to_rtf,
+    odt_to_docx,
     office_to_docx,
     rtf_to_docx,
-    odt_to_docx,
-    docx_to_odt,
-    docx_to_doc,
-    docx_to_rtf,
 )
 
 __all__ = [
-    'office_to_docx',
-    'rtf_to_docx',
-    'odt_to_docx',
-    'docx_to_odt',
-    'docx_to_doc',
-    'docx_to_rtf',
+    "docx_to_doc",
+    "docx_to_odt",
+    "docx_to_rtf",
+    "odt_to_docx",
+    "office_to_docx",
+    "rtf_to_docx",
 ]

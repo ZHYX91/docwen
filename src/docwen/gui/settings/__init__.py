@@ -16,5 +16,6 @@ from __future__ import annotations
 
 # 包初始化日志
 import logging
+
 logger = logging.getLogger(__name__)
 logger.info("GUI设置包初始化完成 - 设置界面模块已加载")

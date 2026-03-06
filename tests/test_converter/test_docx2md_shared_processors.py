@@ -1,15 +1,16 @@
+"""converter 单元测试。"""
+
 from __future__ import annotations
 
 from pathlib import Path
 
 import pytest
+from docx import Document
 from lxml import etree
 from PIL import Image
-from docx import Document
 
 from docwen.converter.docx2md.shared import formula_processor as fp
 from docwen.converter.docx2md.shared import image_processor as ip
-
 
 pytestmark = pytest.mark.unit
 

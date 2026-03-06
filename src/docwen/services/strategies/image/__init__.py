@@ -13,27 +13,30 @@
 - extract_tiff_pages: 提取TIFF页面
 """
 
-# 导入辅助函数
+# 导入策略类（自动注册）
+from .to_markdown import ImageToMarkdownStrategy
+
+try:
+    from .format_conversion import ImageFormatConversionStrategy
+    from .merge import MergeImagesToTiffStrategy
+    from .to_pdf import ImageToPdfStrategy
+except Exception:
+    ImageFormatConversionStrategy = None
+    MergeImagesToTiffStrategy = None
+    ImageToPdfStrategy = None
 from .utils import (
+    extract_tiff_pages,
     get_image_format_description,
     is_multipage_tiff,
-    extract_tiff_pages,
 )
 
-# 导入策略类（自动注册）
-from .to_pdf import ImageToPdfStrategy
-from .to_markdown import ImageToMarkdownStrategy
-from .format_conversion import ImageFormatConversionStrategy
-from .merge import MergeImagesToTiffStrategy
-
 __all__ = [
-    # 辅助函数
-    'get_image_format_description',
-    'is_multipage_tiff',
-    'extract_tiff_pages',
+    "ImageToMarkdownStrategy",
     # 策略类
-    'ImageToPdfStrategy',
-    'ImageToMarkdownStrategy',
-    'ImageFormatConversionStrategy',
-    'MergeImagesToTiffStrategy',
+    "ImageToPdfStrategy",
+    "MergeImagesToTiffStrategy",
+    "extract_tiff_pages",
+    # 辅助函数
+    "get_image_format_description",
+    "is_multipage_tiff",
 ]

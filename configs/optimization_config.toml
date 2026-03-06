@@ -20,7 +20,7 @@
 default_type = "gongwen"
 
 # 优化类型显示顺序
-order = ["gongwen"]
+order = ["gongwen", "invoice_cn"]
 
 # ============================================
 # 优化类型定义
@@ -33,6 +33,18 @@ order = ["gongwen"]
 name = "公文"
 description = "针对中国公文格式进行优化处理，包括标题识别、序号处理、红头文件解析等"
 locales = ["zh_CN"]
+scopes = ["document_to_md"]
+enabled = true
+is_system = true
+
+# --------------------------------------------
+# 类型2：发票优化（中国）
+# --------------------------------------------
+[types.invoice_cn]
+name = "发票"
+description = "针对中国发票版式进行结构化提取，输出扁平化YAML元数据与商品明细表格"
+locales = ["zh_CN"]
+scopes = ["layout_to_md", "image_to_md"]
 enabled = true
 is_system = true
 

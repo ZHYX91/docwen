@@ -1,9 +1,13 @@
+"""utils 单元测试。"""
+
 from __future__ import annotations
 
 import pytest
 
 from docwen.utils.text_utils import clean_text, clean_text_in_data
 
+
+pytestmark = pytest.mark.unit
 
 @pytest.mark.unit
 @pytest.mark.parametrize(
@@ -15,7 +19,7 @@ from docwen.utils.text_utils import clean_text, clean_text_in_data
         ("<div>这是<span>嵌套的</span>HTML标签</div>", "这是嵌套的HTML标签"),
         ("空格&nbsp;小于&lt;大于&gt;和号&amp;引号&quot;", '空格 小于<大于>和号&引号"'),
         ("十进制&#20013;&#25991;和十六进制&#x4E2D;&#x6587;", "十进制中文和十六进制中文"),
-        ("文本\u200B零\u200C宽\u200D字\uFEFF符\u2060测试", "文本零宽字符测试"),
+        ("文本\u200b零\u200c宽\u200d字\ufeff符\u2060测试", "文本零宽字符测试"),
         ("A<br/>B<br />C<br>D", "A\nB\nC\nD"),
     ],
 )
@@ -37,4 +41,3 @@ def test_clean_text_in_data_recursive() -> None:
     assert result["items"][0] == "项目1"
     assert result["items"][1] == "普通 文本"
     assert result["nested"]["key"] == "嵌套<内容>"
-

@@ -13,5 +13,6 @@ GUI核心包 - 核心功能和业务逻辑
 
 # 包初始化日志
 import logging
+
 logger = logging.getLogger(__name__)
 logger.info("GUI核心包初始化完成 - 核心功能模块已加载")

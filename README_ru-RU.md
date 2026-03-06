@@ -46,7 +46,7 @@
 
 ### Запуск программы
 
-Дважды щелкните `DocWen.exe`, чтобы запустить графический интерфейс.
+Для упакованной версии Windows: дважды щелкните `DocWen.exe`, чтобы запустить GUI. Для установки из исходников / через pip: запустите `docwen-gui`.
 
 ### Руководство по быстрому старту
 
@@ -345,7 +345,7 @@ Unit: Отдел продаж
 
 ### Основной рабочий процесс
 
-1.  **Запуск программы**: Дважды щелкните `DocWen.exe`.
+1.  **Запуск программы**: Дважды щелкните `DocWen.exe` (Windows пакет) или запустите `docwen-gui`.
 2.  **Импорт файла**:
     -   Способ 1: Перетащите файлы прямо в окно.
     -   Способ 2: Нажмите кнопку "Добавить" в области перетаскивания, чтобы выбрать файлы.
@@ -404,46 +404,57 @@ Unit: Отдел продаж
 
 ### Режимы выполнения
 
--   **Интерактивный режим**: Отображает меню-гид после передачи файла, аналогично работе в GUI.
--   **Безголовый режим**: Выполняется напрямую путем добавления параметра `--action`, подходит для вызова скриптов.
+-   **CLI режим**: Используйте подкоманды (например, `convert`, `validate`) для автоматизации и пакетной обработки.
 
 ### Распространенные примеры
 
 ```bash
-# Интерактивный режим
-Docwen.exe document.docx
+# Пакетная версия (Windows)
+DocWenCLI.exe convert document.docx --to md
 
 # Экспорт Word в Markdown (Извлечь изображения + OCR)
-Docwen.exe report.docx --action export_md --extract-img --ocr
+DocWenCLI.exe convert report.docx --to md --extract-img --ocr
 
 # Markdown в Word (Указать шаблон)
-Docwen.exe document.md --action convert --target docx --template "Имя шаблона"
+DocWenCLI.exe convert document.md --to docx --template "Название шаблона"
 
 # Пакетная конвертация (Пропустить подтверждение, продолжить при ошибке)
-Docwen.exe *.docx --action export_md --batch --yes --continue-on-error
+DocWenCLI.exe convert *.docx --to md --batch --yes --continue-on-error
 
 # Корректура документа
-Docwen.exe document.docx --action validate --check-typo --check-punct
+DocWenCLI.exe validate document.docx --check typo --check punct
 
 # Слияние/Разделение PDF
-Docwen.exe *.pdf --action merge_pdfs
-Docwen.exe report.pdf --action split_pdf --pages "1-3,5,7-10"
+DocWenCLI.exe merge-pdfs *.pdf
+DocWenCLI.exe split-pdf report.pdf --pages "1-3,5,7-10"
+
+# Из исходников / pip
+docwen convert document.docx --to md
+docwen convert report.docx --to md --extract-img --ocr
 ```
 
-### Основные аргументы
+### Основные команды и опции
 
-| Аргумент | Описание |
+| Команда / Опция | Описание |
 | :--- | :--- |
-| `--action` | Тип операции: `export_md`, `convert`, `validate`, `merge_pdfs`, `split_pdf` |
-| `--target` | Целевой формат: `pdf`, `docx`, `xlsx`, `md` |
-| `--template` | Имя шаблона (например, `Имя шаблона`) |
-| `--extract-img` | Извлекать изображения при экспорте |
-| `--ocr` | Включить распознавание OCR |
-| `--batch` | Режим пакетной обработки |
-| `--yes` / `-y` | Пропускать запросы подтверждения |
-| `--continue-on-error` | Продолжить обработку следующего элемента при ошибке |
+| `convert <files...> --to <fmt>` | Конвертировать в целевой формат (включая `md`) |
+| `validate <files...> --check ...` | Проверить/корректировать документы (`--check typo/punct/symbol/sensitive/all/none`) |
+| `merge-pdfs <files...>` | Объединить PDF/OFD/XPS файлы |
+| `split-pdf <file> --pages ...` | Разделить PDF по диапазонам страниц |
+| `merge-tables <files...> --mode row|col|cell` | Объединить таблицы |
+| `merge-images-to-tiff <files...>` | Объединить изображения в TIFF |
+| `md-numbering <files...>` | Обработать нумерацию заголовков Markdown |
+| `templates list [--for docx|xlsx]` | Показать доступные шаблоны |
+| `optimizations list [--scope ...]` | Показать доступные оптимизации |
+| `formats list [--for-source document|spreadsheet|layout|image|markdown]` | Показать доступные целевые форматы |
+| `inspect <file>` | Проверить категорию/формат и поддерживаемые действия |
+| `--template <name>` | Имя шаблона (используется с `convert`) |
+| `--extract-img` / `--no-extract-img` / `--ocr` | Опции для `convert --to md` |
+| `--optimize-for <id>` | Явно включить оптимизацию (например `gongwen`, `invoice_cn`) |
+| `--batch` / `--jobs` / `--continue-on-error` | Управление пакетной обработкой |
 | `--json` | Вывести результат в формате JSON |
 | `--quiet` / `-q` | Тихий режим, уменьшить вывод |
+| `--lang` | Переключить язык (влияет на help/сообщения) |
 
 ## 🔌 Плагин Obsidian
 
@@ -514,6 +525,7 @@ Docwen.exe report.pdf --action split_pdf --pages "1-3,5,7-10"
 -   **Полностью локальная работа**: Вся обработка выполняется локально, нет зависимости от сети.
 -   **Сетевая изоляция**: Встроенный механизм сетевой изоляции предотвращает утечку данных.
 -   **Нет загрузки данных**: Файлы пользователя никогда не загружаются ни на какой сервер.
+-   **Строгий режим безопасности**: включён по умолчанию; приложение завершится, если проверка безопасности не пройдена. См. [doc/技术文档.md](doc/技术文档.md).
 
 ## 📜 Лицензия
 

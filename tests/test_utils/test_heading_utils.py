@@ -1,9 +1,13 @@
+"""utils 单元测试。"""
+
 from __future__ import annotations
 
 import pytest
 
 from docwen.utils.heading_utils import convert_to_halfwidth, detect_heading_level, split_content_by_delimiters
 
+
+pytestmark = pytest.mark.unit
 
 @pytest.mark.unit
 def test_detect_heading_level_fullwidth_digits() -> None:
@@ -29,4 +33,3 @@ def test_split_content_by_delimiters() -> None:
 @pytest.mark.unit
 def test_convert_to_halfwidth() -> None:
     assert convert_to_halfwidth("１2３") == "123"
-

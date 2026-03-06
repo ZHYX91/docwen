@@ -5,9 +5,5 @@
 """
 
 from .loader import TemplateLoader
-from .validator import TemplateValidator
 
-__all__ = [
-    'TemplateLoader',
-    'TemplateValidator'
-]
+__all__ = ["TemplateLoader"]

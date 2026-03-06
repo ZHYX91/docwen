@@ -46,7 +46,7 @@ Changelog: siehe [doc/CHANGELOG.md](doc/CHANGELOG.md)
 
 ### Programm starten
 
-Doppelklicken Sie auf `DocWen.exe`, um die grafische Oberfläche zu starten.
+Für das Windows-Paket: Doppelklicken Sie auf `DocWen.exe`, um die grafische Oberfläche zu starten. Bei Installation aus Quellcode / via pip: `docwen-gui` ausführen.
 
 ### Schnellstartanleitung
 
@@ -345,7 +345,7 @@ Das Programm verwendet ein **adaptives dreispaltiges Layout**:
 
 ### Grundlegender Arbeitsablauf
 
-1.  **Programm starten**: Doppelklicken Sie auf `DocWen.exe`.
+1.  **Programm starten**: Doppelklicken Sie auf `DocWen.exe` (Windows-Paket) oder führen Sie `docwen-gui` aus.
 2.  **Datei importieren**:
     -   Methode 1: Ziehen Sie Dateien direkt in das Fenster.
     -   Methode 2: Klicken Sie auf die Schaltfläche "Hinzufügen" im Drag-and-Drop-Bereich, um Dateien auszuwählen.
@@ -404,46 +404,57 @@ Zusätzlich zur GUI bietet das Programm eine Befehlszeilenschnittstelle (CLI), d
 
 ### Ausführungsmodi
 
--   **Interaktiver Modus**: Zeigt eine Menüführung nach dem Übergeben einer Datei an, ähnlich wie bei der GUI-Bedienung.
--   **Headless-Modus**: Direkt durch Hinzufügen des `--action` Parameters ausführen, geeignet für Skriptaufrufe.
+-   **CLI-Modus**: Verwenden Sie Subcommands (z. B. `convert`, `validate`) für Automatisierungsskripte und Stapelverarbeitung.
 
 ### Häufige Beispiele
 
 ```bash
-# Interaktiver Modus
-DocWen.exe document.docx
+# Paketierte Release-Version (Windows)
+DocWenCLI.exe convert document.docx --to md
 
 # Word in Markdown exportieren (Bilder extrahieren + OCR)
-DocWen.exe report.docx --action export_md --extract-img --ocr
+DocWenCLI.exe convert report.docx --to md --extract-img --ocr
 
 # Markdown zu Word (Vorlage angeben)
-DocWen.exe document.md --action convert --target docx --template "Vorlagenname"
+DocWenCLI.exe convert document.md --to docx --template "Vorlagenname"
 
 # Stapelkonvertierung (Bestätigung überspringen, bei Fehler fortfahren)
-DocWen.exe *.docx --action export_md --batch --yes --continue-on-error
+DocWenCLI.exe convert *.docx --to md --batch --yes --continue-on-error
 
 # Dokumentenprüfung
-DocWen.exe document.docx --action validate --check-typo --check-punct
+DocWenCLI.exe validate document.docx --check typo --check punct
 
 # PDF Zusammenführen/Teilen
-DocWen.exe *.pdf --action merge_pdfs
-DocWen.exe report.pdf --action split_pdf --pages "1-3,5,7-10"
+DocWenCLI.exe merge-pdfs *.pdf
+DocWenCLI.exe split-pdf report.pdf --pages "1-3,5,7-10"
+
+# Aus Quellcode / pip
+docwen convert document.docx --to md
+docwen convert report.docx --to md --extract-img --ocr
 ```
 
-### Hauptargumente
+### Hauptbefehle & Optionen
 
-| Argument | Beschreibung |
+| Befehl / Option | Beschreibung |
 | :--- | :--- |
-| `--action` | Operationstyp: `export_md`, `convert`, `validate`, `merge_pdfs`, `split_pdf` |
-| `--target` | Zielformat: `pdf`, `docx`, `xlsx`, `md` |
-| `--template` | Vorlagenname (z.B. `Vorlagenname`) |
-| `--extract-img` | Bilder beim Export extrahieren |
-| `--ocr` | OCR-Erkennung aktivieren |
-| `--batch` | Stapelverarbeitungsmodus |
-| `--yes` / `-y` | Bestätigungsaufforderungen überspringen |
-| `--continue-on-error` | Bei Fehler mit dem nächsten Element fortfahren |
+| `convert <files...> --to <fmt>` | Dateien in Zielformat konvertieren (einschließlich `md`) |
+| `validate <files...> --check ...` | Dokumente prüfen (`--check typo/punct/symbol/sensitive/all/none`) |
+| `merge-pdfs <files...>` | PDF/OFD/XPS Dateien zusammenführen |
+| `split-pdf <file> --pages ...` | PDF nach Seitenbereichen teilen |
+| `merge-tables <files...> --mode row|col|cell` | Tabellen zusammenführen |
+| `merge-images-to-tiff <files...>` | Bilder zu TIFF zusammenführen |
+| `md-numbering <files...>` | Markdown-Überschriftennummerierung verarbeiten |
+| `templates list [--for docx|xlsx]` | Verfügbare Vorlagen auflisten |
+| `optimizations list [--scope ...]` | Verfügbare Optimierungen auflisten |
+| `formats list [--for-source document|spreadsheet|layout|image|markdown]` | Verfügbare Zielformate auflisten |
+| `inspect <file>` | Dateikategorie/-format und unterstützte Aktionen anzeigen |
+| `--template <name>` | Vorlagenname (mit `convert`) |
+| `--extract-img` / `--no-extract-img` / `--ocr` | Optionen für `convert --to md` |
+| `--optimize-for <id>` | Optimierung explizit aktivieren (z. B. `gongwen`, `invoice_cn`) |
+| `--batch` / `--jobs` / `--continue-on-error` | Stapelverarbeitungssteuerung |
 | `--json` | Ergebnis im JSON-Format ausgeben |
 | `--quiet` / `-q` | Stiller Modus, Ausgabe reduzieren |
+| `--lang` | Sprache umschalten (beeinflusst help/Meldungen) |
 
 ## 🔌 Obsidian-Plugin
 
@@ -452,7 +463,7 @@ Das Projekt enthält ein passendes Obsidian-Plugin, um mit dem Konverter zusamme
 ### Kernfunktionen
 
 -   **🚀 Ein-Klick-Start** - Seitenleistensymbol zum schnellen Starten des Konverters.
--   **� Automatische Übergabe** - Übergibt automatisch den aktuell geöffneten Dateipfad.
+-   **📂 Automatische Übergabe** - Übergibt automatisch den aktuell geöffneten Dateipfad.
 -   **🔄 Einzelinstanzverwaltung** - Sendet Datei automatisch, wenn das Programm bereits läuft, kein Neustart erforderlich.
 -   **💪 Absturzwiederherstellung** - Erkennt automatisch den Prozessstatus und bereinigt automatisch verbleibende Dateien.
 
@@ -514,6 +525,7 @@ Dies ist ein erwartetes Verhalten. Das Programm liest die **zwischengespeicherte
 -   **Vollständig lokaler Betrieb**: Alle Verarbeitungen erfolgen lokal, keine Netzwerkabhängigkeit.
 -   **Netzwerkisolation**: Eingebauter Netzwerkisolationsmechanismus verhindert Datenlecks.
 -   **Kein Daten-Upload**: Benutzerdateien werden niemals auf einen Server hochgeladen.
+-   **Strikter Sicherheitsmodus**: Standardmäßig aktiviert; das Programm beendet sich, wenn Sicherheitsprüfungen fehlschlagen. Siehe [doc/技术文档.md](doc/技术文档.md).
 
 ## 📜 Lizenz
 

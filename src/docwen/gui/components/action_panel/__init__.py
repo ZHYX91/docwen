@@ -18,38 +18,33 @@
 
 使用方式：
     from docwen.gui.components.action_panel import ActionPanel
-    
+
     panel = ActionPanel(master, config_manager, on_action=callback)
     panel.setup_for_md_to_document(file_path)
 """
 
 from .base import ActionPanelBase
+from .file_to_md import FileToMdMixin
 from .md_to_document import MdToDocumentMixin
 from .md_to_spreadsheet import MdToSpreadsheetMixin
-from .file_to_md import FileToMdMixin
 
 
-class ActionPanel(
-    FileToMdMixin,
-    MdToSpreadsheetMixin,
-    MdToDocumentMixin,
-    ActionPanelBase
-):
+class ActionPanel(FileToMdMixin, MdToSpreadsheetMixin, MdToDocumentMixin, ActionPanelBase):
     """
     操作面板组件
-    
+
     根据文件类型动态显示相应的转换按钮和选项。
-    
+
     继承顺序说明（MRO）：
-    ActionPanel -> FileToMdMixin -> MdToSpreadsheetMixin 
+    ActionPanel -> FileToMdMixin -> MdToSpreadsheetMixin
     -> MdToDocumentMixin -> ActionPanelBase -> Frame -> object
-    
+
     Mixin 类按功能分组：
     - ActionPanelBase: 基础框架、公共属性、显示/隐藏管理
     - MdToDocumentMixin: MD转DOCX/DOC/ODT/RTF 按钮和校对选项
     - MdToSpreadsheetMixin: MD转XLSX/XLS/ODS/CSV 按钮
     - FileToMdMixin: 文档/表格/图片/版式 转MD 按钮和导出选项
-    
+
     特性：
     - 使用ttkbootstrap统一管理样式
     - 按钮水平居中排列
@@ -57,7 +52,7 @@ class ActionPanel(
     - 提供Markdown导出功能
     - 支持文档生成的校对选项
     - 使用grid布局管理器
-    
+
     使用示例：
         # 创建面板
         panel = ActionPanel(
@@ -66,16 +61,15 @@ class ActionPanel(
             on_action=self._on_action_callback,
             on_cancel=self._on_cancel_callback
         )
-        
+
         # 根据文件类型设置模式
         panel.setup_for_md_to_document(md_file_path)
         # 或
         panel.setup_for_document_file(docx_file_path)
-        
+
         # 显示面板
         panel.show()
     """
-    pass
 
 
-__all__ = ['ActionPanel']
+__all__ = ["ActionPanel"]

@@ -13,7 +13,7 @@ PDF转Markdown模块
 
 使用方式：
     from docwen.converter.pdf2md import extract_pdf_with_pymupdf4llm
-    
+
     result = extract_pdf_with_pymupdf4llm(
         pdf_path="input.pdf",
         extract_images=True,
@@ -26,7 +26,7 @@ from .core import extract_pdf_with_pymupdf4llm
 from .docx_extractor import extract_content_from_docx
 
 __all__ = [
+    "extract_content_from_docx",
     # 核心功能
-    'extract_pdf_with_pymupdf4llm',
-    'extract_content_from_docx',
+    "extract_pdf_with_pymupdf4llm",
 ]

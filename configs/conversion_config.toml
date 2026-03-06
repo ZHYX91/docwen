@@ -125,3 +125,16 @@ horizontal_rule = "___"      # 分隔线（Horizontal Rule 1/2/3 样式）→ __
 dash = "page_break"              # --- → 分页符
 asterisk = "section_break"       # *** → 分节符（下一页）
 underscore = "horizontal_rule_1" # ___ → 分隔线（Horizontal Rule 1 样式）
+
+# ==================================
+#  OCR 输出格式配置
+# ==================================
+[ocr_output]
+# OCR 文本以引用块形式写入主 Markdown 时的“标题行”（只影响第一行标题，不影响后续 OCR 内容的引用块格式）
+# show_blockquote_title = false 时不输出标题行；OCR 内容仍会按引用块逐行输出
+show_blockquote_title = true
+blockquote_title_override_by_locale = {}
+
+[export]
+base64_compress_enabled = true
+base64_compress_threshold_kb = 100

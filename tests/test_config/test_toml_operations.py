@@ -1,3 +1,5 @@
+"""config 单元测试。"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -14,6 +16,8 @@ from docwen.config.toml_operations import (
     write_toml_file,
 )
 
+
+pytestmark = pytest.mark.unit
 
 @pytest.mark.unit
 def test_read_write_update_get(tmp_path: Path) -> None:
@@ -49,9 +53,7 @@ def test_validate_toml_syntax(tmp_path: Path) -> None:
 def test_extract_inline_comments(tmp_path: Path) -> None:
     toml_path = tmp_path / "c.toml"
     toml_path.write_text(
-        "[section]\n"
-        'a = "x" # comment a\n'
-        "b = 2\n",
+        '[section]\na = "x" # comment a\nb = 2\n',
         encoding="utf-8",
     )
 
@@ -78,4 +80,3 @@ def test_save_mapping_with_comments(tmp_path: Path) -> None:
     assert data["mapping"]["k"] == ["v1", "v2"]
     comments = extract_inline_comments(toml_path, "mapping")
     assert comments["k"] == "hello"
-

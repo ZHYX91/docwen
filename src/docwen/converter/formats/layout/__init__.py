@@ -12,21 +12,20 @@
 - external: PDF → DOCX 转换（Word/LibreOffice/pdf2docx 三级容错）
 """
 
-from .preprocess import (
-    ofd_to_pdf,
-    xps_to_pdf,
-    caj_to_pdf,
-)
-
 from .external import (
     pdf_to_docx,
 )
+from .preprocess import (
+    caj_to_pdf,
+    ofd_to_pdf,
+    xps_to_pdf,
+)
 
 __all__ = [
+    "caj_to_pdf",
     # 预处理
-    'ofd_to_pdf',
-    'xps_to_pdf',
-    'caj_to_pdf',
+    "ofd_to_pdf",
     # PDF → DOCX
-    'pdf_to_docx',
+    "pdf_to_docx",
+    "xps_to_pdf",
 ]

@@ -12,13 +12,13 @@ import pytest
 
 from docwen.utils.heading_numbering import HeadingFormatter, remove_numbering_from_md
 
-
 pytestmark = pytest.mark.unit
 
 
 # ============================================================
 # HeadingFormatter 初始化
 # ============================================================
+
 
 class TestHeadingFormatterInit:
     """初始化与参数校验"""
@@ -43,15 +43,18 @@ class TestHeadingFormatterInit:
 # HeadingFormatter 计数器
 # ============================================================
 
+
 class TestHeadingFormatterCounters:
     """计数器递增与重置"""
 
     def _make_formatter(self) -> HeadingFormatter:
-        return HeadingFormatter({
-            "level_1": {"format": "{1.arabic_half}."},
-            "level_2": {"format": "{1.arabic_half}.{2.arabic_half}"},
-            "level_3": {"format": "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}"},
-        })
+        return HeadingFormatter(
+            {
+                "level_1": {"format": "{1.arabic_half}."},
+                "level_2": {"format": "{1.arabic_half}.{2.arabic_half}"},
+                "level_3": {"format": "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}"},
+            }
+        )
 
     def test_increment_and_format(self) -> None:
         fmt = self._make_formatter()
@@ -90,7 +93,7 @@ class TestHeadingFormatterCounters:
 
     def test_invalid_level_ignored(self) -> None:
         fmt = self._make_formatter()
-        fmt.increment_level(0)   # 无效
+        fmt.increment_level(0)  # 无效
         fmt.increment_level(10)  # 无效
         assert fmt.counters == [0] * 9
 
@@ -98,6 +101,7 @@ class TestHeadingFormatterCounters:
 # ============================================================
 # HeadingFormatter 数字样式
 # ============================================================
+
 
 class TestHeadingFormatterStyles:
     """不同数字样式的模板解析"""
@@ -130,6 +134,7 @@ class TestHeadingFormatterStyles:
 # ============================================================
 # HeadingFormatter 格式化边界
 # ============================================================
+
 
 class TestHeadingFormatterEdgeCases:
     """边界情况"""
@@ -176,6 +181,7 @@ class TestHeadingFormatterEdgeCases:
 # ============================================================
 # remove_numbering_from_md
 # ============================================================
+
 
 class TestRemoveNumberingFromMd:
     """Markdown 标题序号去除"""

@@ -1,3 +1,5 @@
+"""converter 单元测试。"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -7,6 +9,8 @@ import pytest
 
 from docwen.converter.formats.spreadsheet.csv_convert import csv_to_xlsx, xlsx_to_csv
 
+
+pytestmark = pytest.mark.unit
 
 @pytest.mark.unit
 def test_csv_to_xlsx_creates_workbook(tmp_path: Path) -> None:
@@ -53,4 +57,3 @@ def test_xlsx_to_csv_creates_one_file_per_sheet(tmp_path: Path) -> None:
 
     text = out_paths[0].read_text(encoding="utf-8-sig")
     assert "1,2" in text
-
