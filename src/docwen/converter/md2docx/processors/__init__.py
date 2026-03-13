@@ -28,7 +28,6 @@ from .placeholder_handler import (
     extract_placeholder_keys,
     is_special_marked,
     mark_special_placeholders,
-    process_attachment_description_placeholder,
     process_image_placeholders,
     process_paragraph_placeholders,
     process_table_cell_placeholders,
@@ -48,7 +47,6 @@ __all__ = [
     "load_document",
     # placeholder_handler
     "mark_special_placeholders",
-    "process_attachment_description_placeholder",
     # xml_processor
     "process_docx_file",
     "process_image_placeholders",

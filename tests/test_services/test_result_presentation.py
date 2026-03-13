@@ -55,7 +55,9 @@ def test_format_result_message_includes_details_when_present() -> None:
 
 
 def test_format_result_message_falls_back_to_default_message() -> None:
-    result = ConversionResult(success=False, message=None, error=None, error_code=ERROR_CODE_UNKNOWN_ERROR, details=None)
+    result = ConversionResult(
+        success=False, message=None, error=None, error_code=ERROR_CODE_UNKNOWN_ERROR, details=None
+    )
     assert format_result_message(result, "default") == "default"
 
 

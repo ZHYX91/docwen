@@ -412,11 +412,7 @@ class SpreadsheetTab(BaseSettingsTab):
             success = True
 
             # 保存到conversion_defaults.toml
-            conversion_defaults_keys = [
-                "to_md_keep_images",
-                "to_md_enable_ocr",
-                "merge_mode"
-            ]
+            conversion_defaults_keys = ["to_md_keep_images", "to_md_enable_ocr", "merge_mode"]
             for key in conversion_defaults_keys:
                 if not self.config_manager.update_config_value(
                     "conversion_defaults", "spreadsheet", key, settings[key]

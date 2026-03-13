@@ -111,7 +111,9 @@ def test_invoice_cn_pdf_scanpage_falls_back_to_ocr(tmp_path: Path, monkeypatch: 
     assert "33333333" in md_text
 
 
-def test_invoice_cn_pdf_scanpage_ocr_normalizes_common_misreads(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_invoice_cn_pdf_scanpage_ocr_normalizes_common_misreads(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     pdf_path = tmp_path / "scan.pdf"
     doc = fitz.open()
     doc.new_page()

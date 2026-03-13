@@ -489,7 +489,9 @@ def test_convert_multi_step_uses_fallback_when_output_dir_fails(
 
     monkeypatch.setattr(SmartConverter, "_execute_conversion", _exec, raising=True)
 
-    def _fake_move_with_retry(source: str, destination: str, max_retries: int = 3, retry_delay: float = 0.5) -> str | None:
+    def _fake_move_with_retry(
+        source: str, destination: str, max_retries: int = 3, retry_delay: float = 0.5
+    ) -> str | None:
         if str(Path(destination)).startswith(str(out_dir)):
             return None
         Path(destination).parent.mkdir(parents=True, exist_ok=True)

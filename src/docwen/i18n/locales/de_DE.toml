@@ -408,6 +408,12 @@ remove_numbering_tooltip = "Entfernt vorhandene Nummerierung im Markdown."
 add_numbering = "Neue Nummerierung hinzufügen"
 scheme_label = "Schema:"
 
+field_processors_section = "Feldoptimierungen"
+field_processors_empty = "Keine Feldoptimierungen für die aktuelle Sprache verfügbar."
+field_processors_load_failed = "Feldoptimierungen konnten nicht geladen werden."
+field_processors_load_error = "Ladefehler: {error}"
+field_processors_toggle_failed = "„{name}“ konnte nicht aktualisiert werden. Der vorherige Wert wurde wiederhergestellt."
+
 numbering_settings_section = "Nummerierungseinstellungen"
 numbering_settings_desc = "Regeln für Hinzufügen und Entfernen verwalten."
 edit_numbering_schemes = "Hinzufügeschemata"

@@ -479,6 +479,13 @@ docwen convert report.docx --to md --extract-img --ocr
 
 プラグインは独立したリポジトリで公開されています。インストール手順と最新バージョンについては、[docwen-obsidian](https://github.com/ZHYX91/docwen-obsidian) をご覧ください。
 
+## 🔌 OpenClaw (Plugin + Skill)
+
+DocWen は OpenClaw でもローカルツールとして利用できます（Plugin + Skill）：
+
+- OpenClaw プラグイン（`docwen_*` ツールを登録）と ClawHub skill（エージェントの使用ガイド）をインストールします。
+- セットアップと設定: [docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw)
+
 ## ❓ FAQ
 
 ### 変換に失敗した場合は？

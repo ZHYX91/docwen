@@ -11,6 +11,7 @@ from docwen.converter.formats.layout import external as layout_external
 
 pytestmark = pytest.mark.unit
 
+
 @pytest.mark.unit
 def test_pdf_to_docx_headless_skips_dialog(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     pdf = tmp_path / "a.pdf"

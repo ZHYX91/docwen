@@ -19,6 +19,7 @@ from docwen.config.toml_operations import (
 
 pytestmark = pytest.mark.unit
 
+
 @pytest.mark.unit
 def test_read_write_update_get(tmp_path: Path) -> None:
     toml_path = tmp_path / "config.toml"

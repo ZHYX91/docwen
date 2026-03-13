@@ -9,6 +9,7 @@ import docwen.utils.font_utils as font_utils
 
 pytestmark = pytest.mark.unit
 
+
 @pytest.mark.unit
 def test_get_available_font_exact_match(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(font_utils, "get_system_fonts", lambda: ["Arial", "SimSun"], raising=True)

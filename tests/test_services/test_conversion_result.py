@@ -15,6 +15,7 @@ def test_conversion_result_fail_rejects_non_exception() -> None:
     with pytest.raises(TypeError):
         ConversionResult.fail("x", error="boom", error_code=ERROR_CODE_UNKNOWN_ERROR)  # type: ignore[arg-type]
 
+
 def test_conversion_result_fail_requires_error_code() -> None:
     with pytest.raises(ValueError):
         ConversionResult.fail("x", error_code="")

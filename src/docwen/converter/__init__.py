@@ -34,6 +34,7 @@ def __getattr__(name: str):
         return convert_md_to_xlsx
     raise AttributeError(name)
 
+
 __all__ = [
     # 异常
     "OfficeSoftwareNotFoundError",

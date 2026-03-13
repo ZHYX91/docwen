@@ -23,7 +23,9 @@ class ExportTab(BaseSettingsTab):
     export_ocr_placement_combo: "ConfigCombobox | None" = None
 
     def _create_interface(self):
-        frame = self.create_section_frame(self.scrollable_frame, t("settings.export.md_export_section"), SectionStyle.PRIMARY)
+        frame = self.create_section_frame(
+            self.scrollable_frame, t("settings.export.md_export_section"), SectionStyle.PRIMARY
+        )
 
         try:
             ext_mode = self.config_manager.get_export_to_md_image_extraction_mode()

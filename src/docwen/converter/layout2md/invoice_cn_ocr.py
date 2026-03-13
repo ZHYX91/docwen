@@ -34,7 +34,7 @@ def build_invoice_md_text(
     metadata_yaml: dict[str, str | None] = {}
     for k in invoice_cn.INVOICE_CN_YAML_SCHEMA:
         v = metadata.get(k)
-        metadata_yaml[k] = (str(v).strip() if v is not None else "")
+        metadata_yaml[k] = str(v).strip() if v is not None else ""
 
     yaml_frontmatter = invoice_cn.build_yaml_frontmatter(
         file_stem=file_stem,

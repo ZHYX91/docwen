@@ -14,6 +14,7 @@ from docwen.utils.workspace_manager import (
 
 pytestmark = pytest.mark.unit
 
+
 @pytest.mark.unit
 def test_collect_intermediate_items_excludes_input_and_respects_excludes(tmp_path: Path) -> None:
     work = tmp_path / "work"

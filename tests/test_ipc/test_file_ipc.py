@@ -12,6 +12,7 @@ from docwen.ipc.file_ipc import CommandHandler, FileIPC
 
 pytestmark = pytest.mark.unit
 
+
 class _DummyEvent:
     def __init__(self, src_path: str, is_directory: bool = False) -> None:
         self.src_path = src_path

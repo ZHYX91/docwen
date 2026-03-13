@@ -1,0 +1,10 @@
+[settings]
+order = ["gongwen"]
+
+[processors.gongwen]
+module = "docwen.converter.md2docx.fields.gongwen"
+name = "公文字段优化"
+description = "附件说明悬挂缩进、抄送机关拼接、印发日期/成文日期格式化、附注去括号等"
+locales = ["zh_CN"]
+enabled = true
+is_system = true

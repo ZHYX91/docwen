@@ -408,6 +408,12 @@ remove_numbering_tooltip = "Удаляет существующую нумера
 add_numbering = "Добавить новую нумерацию"
 scheme_label = "Схема:"
 
+field_processors_section = "Оптимизации полей"
+field_processors_empty = "Для текущего языка нет доступных оптимизаций полей."
+field_processors_load_failed = "Не удалось загрузить оптимизации полей."
+field_processors_load_error = "Ошибка загрузки: {error}"
+field_processors_toggle_failed = "Не удалось обновить «{name}». Предыдущее значение восстановлено."
+
 numbering_settings_section = "Настройки нумерации"
 numbering_settings_desc = "Управление правилами добавления и удаления."
 edit_numbering_schemes = "Схемы добавления"

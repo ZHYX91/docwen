@@ -408,6 +408,12 @@ remove_numbering_tooltip = "Supprime la numérotation existante dans Markdown."
 add_numbering = "Ajouter une nouvelle numérotation"
 scheme_label = "Schéma :"
 
+field_processors_section = "Optimisations de champs"
+field_processors_empty = "Aucune optimisation de champs disponible pour la langue actuelle."
+field_processors_load_failed = "Échec du chargement des optimisations de champs."
+field_processors_load_error = "Erreur de chargement : {error}"
+field_processors_toggle_failed = "Impossible de mettre à jour « {name} ». La valeur précédente a été restaurée."
+
 numbering_settings_section = "Paramètres de numérotation"
 numbering_settings_desc = "Gérer les règles d'ajout et de suppression."
 edit_numbering_schemes = "Schémas d'ajout"

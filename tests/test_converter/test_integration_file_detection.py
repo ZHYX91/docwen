@@ -11,6 +11,7 @@ from docwen.utils.file_type_utils import detect_actual_file_format
 
 pytestmark = pytest.mark.unit
 
+
 @pytest.mark.integration
 def test_detect_actual_file_format_for_markdown(project_root: Path) -> None:
     file_path = project_root / "tests" / "fixtures" / "files" / "sample.md"

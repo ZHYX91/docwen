@@ -11,6 +11,7 @@ from docwen.utils.yaml_utils import generate_basic_yaml_frontmatter, parse_yaml,
 
 pytestmark = pytest.mark.unit
 
+
 @pytest.mark.unit
 def test_parse_yaml_basic() -> None:
     raw = '标题: 关于[[2023年]]重点工作安排\n负责人:\n  - "[[张三]]"\n  - "[[李四]]"\n金额: 1234.56\n'

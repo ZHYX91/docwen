@@ -26,6 +26,8 @@ from docx.text.paragraph import Paragraph
 from docwen.config.config_manager import config_manager
 from docwen.utils import docx_utils
 
+from ..field_registry import get_active_special_placeholders, run_special_handlers
+
 # 分页/分节/分隔线处理（从 handlers 模块导入）
 from ..handlers.break_handler import (
     append_page_break_to_paragraph,
@@ -66,7 +68,6 @@ from .placeholder_handler import (
     get_body_placeholder_variants,
     is_special_marked,
     mark_special_placeholders,
-    process_attachment_description_placeholder,
     process_paragraph_placeholders,
     process_table_cell_placeholders,
     remove_special_mark,
@@ -114,7 +115,7 @@ def replace_placeholders(doc, yaml_data, body_data, template_name=None, *, footn
     logger.info("开始处理文档占位符...")
 
     # 第一步：标记特殊占位符段落
-    mark_special_placeholders(doc)
+    mark_special_placeholders(doc, get_active_special_placeholders())
 
     # 第二步：处理常规段落占位符
     paragraphs_to_remove = []
@@ -169,8 +170,8 @@ def replace_placeholders(doc, yaml_data, body_data, template_name=None, *, footn
 
         warnings.append(t("messages.warnings.missing_body_placeholder"))
 
-    # 第五步：处理附件说明占位符
-    process_attachment_description_placeholder(doc, yaml_data)
+    # 第五步：处理特殊占位符
+    run_special_handlers(doc, yaml_data)
 
     # 第六步：处理图片占位符
     from .placeholder_handler import process_image_placeholders

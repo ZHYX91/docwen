@@ -522,7 +522,9 @@ class MdToCsvStrategy(BaseStrategy):
 
                 if not csv_files:
                     msg = t("conversion.messages.no_csv_generated")
-                    return ConversionResult(success=False, message=msg, error_code=ERROR_CODE_CONVERSION_FAILED, details=msg)
+                    return ConversionResult(
+                        success=False, message=msg, error_code=ERROR_CODE_CONVERSION_FAILED, details=msg
+                    )
 
                 logger.info(f"已生成 {len(csv_files)} 个CSV文件到临时子文件夹")
 

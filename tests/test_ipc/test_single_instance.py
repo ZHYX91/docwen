@@ -11,6 +11,7 @@ from docwen.ipc.single_instance import SingleInstance
 
 pytestmark = pytest.mark.unit
 
+
 @pytest.mark.unit
 def test_single_instance_acquire_and_release(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))

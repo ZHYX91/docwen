@@ -72,7 +72,7 @@ def main() -> int:
         results.append(CheckResult(file=f.name, ok=ok, missing_fields=missing, total_mismatch=mismatch))
 
     ok_count = sum(1 for r in results if r.ok)
-    print(f"checked={len(results)} ok={ok_count} fail={len(results)-ok_count}")
+    print(f"checked={len(results)} ok={ok_count} fail={len(results) - ok_count}")
     for r in results:
         if r.ok:
             continue
@@ -87,4 +87,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

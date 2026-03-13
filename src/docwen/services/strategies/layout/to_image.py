@@ -383,7 +383,7 @@ class LayoutToJpgStrategy(BaseStrategy):
                     return ConversionResult(
                         success=False,
                         message=t("conversion.messages.operation_cancelled"),
-                            error_code=ERROR_CODE_OPERATION_CANCELLED,
+                        error_code=ERROR_CODE_OPERATION_CANCELLED,
                     )
 
                 # 步骤2：生成输出文件夹路径
@@ -645,7 +645,7 @@ class LayoutToTifStrategy(BaseStrategy):
                     return ConversionResult(
                         success=False,
                         message=t("conversion.messages.operation_cancelled"),
-                            error_code=ERROR_CODE_OPERATION_CANCELLED,
+                        error_code=ERROR_CODE_OPERATION_CANCELLED,
                     )
 
                 # 步骤2：生成输出文件路径（直接在临时目录，无需子文件夹）
@@ -729,7 +729,7 @@ class LayoutToTifStrategy(BaseStrategy):
                     return ConversionResult(
                         success=False,
                         message=t("conversion.messages.operation_cancelled"),
-                            error_code=ERROR_CODE_OPERATION_CANCELLED,
+                        error_code=ERROR_CODE_OPERATION_CANCELLED,
                     )
 
                 # 步骤4：保存为TIF（自动多页）

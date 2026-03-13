@@ -52,4 +52,3 @@ def test_normalize_md_options_forces_main_md_when_base64_from_config() -> None:
     _normalize_md_options(options, category="document", ctx=_make_ctx("base64", "image_md"))
     assert options["to_md_image_extraction_mode"] == "base64"
     assert options["to_md_ocr_placement_mode"] == "main_md"
-

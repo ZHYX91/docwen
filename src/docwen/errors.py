@@ -14,6 +14,7 @@ from docwen.services.error_codes import (
     ERROR_CODE_STRATEGY_NOT_FOUND,
 )
 
+
 class ExitCode(IntEnum):
     OK = 0
     UNKNOWN_ERROR = 1

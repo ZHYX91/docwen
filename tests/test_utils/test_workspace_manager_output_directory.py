@@ -11,6 +11,7 @@ from docwen.utils import workspace_manager
 
 pytestmark = pytest.mark.unit
 
+
 @pytest.mark.unit
 def test_get_output_directory_prefers_custom_dir_param(tmp_path: Path) -> None:
     input_file = tmp_path / "in.docx"

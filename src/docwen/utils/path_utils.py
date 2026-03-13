@@ -603,4 +603,3 @@ def collect_files_from_folder(folder_path: str) -> list[str]:
     except Exception as e:
         logger.error(f"收集文件夹文件失败: {folder_path}, 错误: {e!s}")
         return []
-

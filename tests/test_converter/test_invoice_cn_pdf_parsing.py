@@ -53,7 +53,17 @@ def test_invoice_cn_pdf_parses_long_invoice_number_and_rows(
     ]:
         spans.append((x0, header_y, x0 + 10.0, header_y + 10.0, s))
 
-    def add_row(y0: float, name: str, spec: str, unit: str, qty: str, unit_price: str, amount: str, tax_rate: str, tax_amount: str) -> None:
+    def add_row(
+        y0: float,
+        name: str,
+        spec: str,
+        unit: str,
+        qty: str,
+        unit_price: str,
+        amount: str,
+        tax_rate: str,
+        tax_amount: str,
+    ) -> None:
         spans.append((72.0, y0, 200.0, y0 + 10.0, name))
         spans.append((220.0, y0, 280.0, y0 + 10.0, spec))
         spans.append((300.0, y0, 320.0, y0 + 10.0, unit))

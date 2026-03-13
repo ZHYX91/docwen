@@ -261,13 +261,13 @@ def _read_pdf_text_and_spans(file_path: str) -> tuple[str, list[tuple[float, flo
         for page in doc:
             text_parts.append(str(page.get_text("text")))
             d = cast(dict[str, Any], page.get_text("dict"))
-            for block in (d.get("blocks") or []):
+            for block in d.get("blocks") or []:
                 if not isinstance(block, dict):
                     continue
-                for line in (block.get("lines") or []):
+                for line in block.get("lines") or []:
                     if not isinstance(line, dict):
                         continue
-                    for span in (line.get("spans") or []):
+                    for span in line.get("spans") or []:
                         if not isinstance(span, dict):
                             continue
                         s = (span.get("text") or "").strip()
@@ -363,13 +363,13 @@ def _read_pdf_text_and_spans_single_page(
         text = str(page.get_text("text"))
         spans: list[tuple[float, float, float, float, str]] = []
         d = cast(dict[str, Any], page.get_text("dict"))
-        for block in (d.get("blocks") or []):
+        for block in d.get("blocks") or []:
             if not isinstance(block, dict):
                 continue
-            for line in (block.get("lines") or []):
+            for line in block.get("lines") or []:
                 if not isinstance(line, dict):
                     continue
-                for span in (line.get("spans") or []):
+                for span in line.get("spans") or []:
                     if not isinstance(span, dict):
                         continue
                     s = (span.get("text") or "").strip()
@@ -555,7 +555,11 @@ def _parse_invoice_metadata_from_pdf_spans(spans: list[tuple[float, float, float
     if total_label:
         total_label.sort(key=lambda t: (t[0], t[1]))
         y0, x0, _x1, _t = total_label[0]
-        money = [(abs(y - y0), x, s) for y, x, _x1, s in items if re.fullmatch(r"[0-9]+(?:\.[0-9]{2})?", _compact_text(s)) and abs(y - y0) <= 30 and x > x0]
+        money = [
+            (abs(y - y0), x, s)
+            for y, x, _x1, s in items
+            if re.fullmatch(r"[0-9]+(?:\.[0-9]{2})?", _compact_text(s)) and abs(y - y0) <= 30 and x > x0
+        ]
         if money:
             money.sort()
             amount_with_tax = money[0][2]
@@ -970,6 +974,7 @@ def _extract_ofd_items(file_path: str) -> list[tuple[float, float, str]]:
     items.sort(key=lambda t: (t[0], t[1]))
     return items
 
+
 def _group_items_by_y(
     items: list[tuple[float, float, str]],
     *,
@@ -996,6 +1001,7 @@ def _group_items_by_y(
     if current_line:
         lines.append(current_line)
     return lines
+
 
 def _extract_ofd_text_from_items(items: list[tuple[float, float, str]]) -> str:
     if not items:
@@ -1209,7 +1215,10 @@ def _parse_invoice_rows_from_pdf_spans(
     for y0, x0, col, t in entries:
         if current_y is None or abs(y0 - current_y) > y_tol:
             if line_bucket:
-                cols = {k: " ".join([s for _x, s in sorted(v, key=lambda it: it[0])]).strip() for k, v in line_bucket.items()}
+                cols = {
+                    k: " ".join([s for _x, s in sorted(v, key=lambda it: it[0])]).strip()
+                    for k, v in line_bucket.items()
+                }
                 cols = {k: v for k, v in cols.items() if v}
                 if cols:
                     lines_sorted.append(cols)
@@ -1432,7 +1441,6 @@ def _parse_invoice_rows_from_pdf_text(text: str, *, prefer_marked: bool = False)
         qty = parts.pop().strip() if parts and is_qty(parts[-1]) else ""
         unit = parts.pop().strip() if parts and is_unit(parts[-1]) else ""
 
-
         parts = [p for p in parts if (p or "").strip()] + tail_extras
 
         spec_parts: list[str] = []
@@ -1559,9 +1567,11 @@ def convert_invoice_cn_layout_to_md(
             metadata_yaml: dict[str, str | None] = {}
             for k in INVOICE_CN_YAML_SCHEMA:
                 v = metadata.get(k)
-                metadata_yaml[k] = (str(v).strip() if v is not None else "")
+                metadata_yaml[k] = str(v).strip() if v is not None else ""
 
-            yaml_frontmatter = _build_yaml_frontmatter(file_stem=effective_stem, metadata=metadata_yaml, include_empty=True)
+            yaml_frontmatter = _build_yaml_frontmatter(
+                file_stem=effective_stem, metadata=metadata_yaml, include_empty=True
+            )
             table_md = _render_markdown_table(headers=headers, rows=rows)
             md_text = yaml_frontmatter + "## 商品明细\n\n" + table_md
 
@@ -1581,7 +1591,10 @@ def convert_invoice_cn_layout_to_md(
                     text = str(doc[0].get_text("text"))
 
                 if _is_scanpage(text):
-                    from docwen.converter.layout2md.invoice_cn_ocr import build_invoice_md_text, parse_invoice_from_image
+                    from docwen.converter.layout2md.invoice_cn_ocr import (
+                        build_invoice_md_text,
+                        parse_invoice_from_image,
+                    )
 
                     png_path = str(temp_output_folder / "__page_1.png")
                     _render_pdf_page_to_png(file_path=file_path, page_index=0, png_path=png_path)
@@ -1601,7 +1614,7 @@ def convert_invoice_cn_layout_to_md(
                     metadata_yaml = {}
                     for k in INVOICE_CN_YAML_SCHEMA:
                         v = metadata.get(k)
-                        metadata_yaml[k] = (str(v).strip() if v is not None else "")
+                        metadata_yaml[k] = str(v).strip() if v is not None else ""
 
                     yaml_frontmatter = _build_yaml_frontmatter(
                         file_stem=effective_stem,
@@ -1626,13 +1639,13 @@ def convert_invoice_cn_layout_to_md(
                         text = str(page.get_text("text"))
                         spans: list[tuple[float, float, float, float, str]] = []
                         d = cast(dict[str, Any], page.get_text("dict"))
-                        for block in (d.get("blocks") or []):
+                        for block in d.get("blocks") or []:
                             if not isinstance(block, dict):
                                 continue
-                            for line in (block.get("lines") or []):
+                            for line in block.get("lines") or []:
                                 if not isinstance(line, dict):
                                     continue
-                                for span in (line.get("spans") or []):
+                                for span in line.get("spans") or []:
                                     if not isinstance(span, dict):
                                         continue
                                     s = (span.get("text") or "").strip()
@@ -1650,7 +1663,10 @@ def convert_invoice_cn_layout_to_md(
                         md_filename = f"{page_output_stem}.md"
 
                         if _is_scanpage(text):
-                            from docwen.converter.layout2md.invoice_cn_ocr import build_invoice_md_text, parse_invoice_from_image
+                            from docwen.converter.layout2md.invoice_cn_ocr import (
+                                build_invoice_md_text,
+                                parse_invoice_from_image,
+                            )
 
                             png_path = str(temp_output_folder / f"__page_{page_num}.png")
                             _render_pdf_page_to_png(file_path=file_path, page_index=page_idx, png_path=png_path)
@@ -1670,7 +1686,7 @@ def convert_invoice_cn_layout_to_md(
                             metadata_yaml = {}
                             for k in INVOICE_CN_YAML_SCHEMA:
                                 v = metadata.get(k)
-                                metadata_yaml[k] = (str(v).strip() if v is not None else "")
+                                metadata_yaml[k] = str(v).strip() if v is not None else ""
 
                             yaml_frontmatter = _build_yaml_frontmatter(
                                 file_stem=page_stem_for_yaml,

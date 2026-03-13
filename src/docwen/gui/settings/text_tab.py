@@ -94,11 +94,120 @@ class TextTab(BaseSettingsTab):
 
         self._create_numbering_section()
         self._create_md_to_docx_numbering_section()
+        self._create_field_processors_section()
         self._create_template_section()
         self._create_validation_section()
         self._create_dictionary_section()
 
         logger.debug("文本设置选项卡界面创建完成")
+
+    def _create_field_processors_section(self):
+        """创建字段处理器（字段优化）设置区域"""
+        frame = self.create_section_frame(
+            self.scrollable_frame, t("settings.text.field_processors_section"), SectionStyle.WARNING
+        )
+
+        try:
+            from docwen.converter.md2docx.field_registry import get_available_processors
+
+            processors = get_available_processors()
+        except Exception as e:
+            logger.error(f"读取字段处理器列表失败: {e}", exc_info=True)
+            desc = tb.Label(frame, text=t("settings.text.field_processors_load_failed"), bootstyle="secondary")
+            desc.pack(anchor="w")
+            self.bind_label_wraplength(desc, frame, min_wraplength=scale(320))
+            return
+
+        if not processors:
+            desc = tb.Label(frame, text=t("settings.text.field_processors_empty"), bootstyle="secondary")
+            desc.pack(anchor="w")
+            self.bind_label_wraplength(desc, frame, min_wraplength=scale(320))
+            return
+
+        self._field_processor_vars: dict[str, tk.BooleanVar] = {}
+
+        for proc in processors:
+            proc_id = str(proc.get("id") or "")
+            if not proc_id:
+                continue
+
+            name = str(proc.get("name") or "").strip()
+            name_key = str(proc.get("name_key") or "").strip()
+            if not name and name_key:
+                translated = t(f"field_processors.names.{name_key}")
+                name = translated if translated != f"field_processors.names.{name_key}" else name_key
+            if not name:
+                name = proc_id
+
+            description = str(proc.get("description") or "").strip()
+            enabled = bool(proc.get("enabled", True))
+            load_error = proc.get("load_error")
+
+            proc_frame = tb.Frame(frame)
+            proc_frame.pack(fill="x", pady=(0, scale(5)))
+
+            var = tk.BooleanVar(value=enabled)
+            self._field_processor_vars[proc_id] = var
+
+            checkbox = tb.Checkbutton(
+                proc_frame,
+                text=name,
+                variable=var,
+                command=lambda pid=proc_id, v=var, n=name: self._on_field_processor_toggled(pid, v, n),
+                bootstyle="round-toggle",
+            )
+            checkbox.pack(side="left")
+
+            if description:
+                desc_label = tb.Label(
+                    frame,
+                    text=description,
+                    bootstyle="secondary",
+                    font=(self.small_font, self.small_size),
+                )
+                desc_label.pack(anchor="w", padx=(scale(28), 0), pady=(0, scale(5)))
+                self.bind_label_wraplength(desc_label, frame, min_wraplength=scale(320))
+
+            if load_error:
+                err_label = tb.Label(
+                    frame,
+                    text=t("settings.text.field_processors_load_error", error=str(load_error)),
+                    bootstyle="danger",
+                    font=(self.small_font, self.small_size),
+                )
+                err_label.pack(anchor="w", padx=(scale(28), 0), pady=(0, scale(5)))
+                self.bind_label_wraplength(err_label, frame, min_wraplength=scale(320))
+
+    def _on_field_processor_toggled(self, processor_id: str, var: tk.BooleanVar, display_name: str) -> None:
+        enabled = bool(var.get())
+        try:
+            from docwen.converter.md2docx.field_registry import set_processor_enabled
+        except Exception as e:
+            logger.error(f"导入字段处理器开关API失败: {e}", exc_info=True)
+            var.set(not enabled)
+            return
+
+        success = False
+        try:
+            success = bool(set_processor_enabled(processor_id, enabled))
+        except Exception as e:
+            logger.error(f"更新字段处理器状态失败: {e}", exc_info=True)
+
+        if success:
+            logger.info(f"字段处理器 '{processor_id}' 已{'启用' if enabled else '禁用'}")
+            return
+
+        var.set(not enabled)
+        try:
+            from docwen.gui.components.base_dialog import MessageBox
+
+            MessageBox.showerror(
+                t("common.error"),
+                t("settings.text.field_processors_toggle_failed", name=display_name),
+                parent=self,
+            )
+        except Exception:
+            pass
 
     def _create_md_to_docx_numbering_section(self):
         """创建MD转DOCX序号设置区域"""

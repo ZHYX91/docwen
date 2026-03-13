@@ -5,9 +5,7 @@ MD转DOCX转换器核心模块
 """
 
 import contextlib
-import datetime
 import logging
-import re
 import shutil
 import tempfile
 import threading
@@ -20,8 +18,6 @@ from docx.document import Document as DocxDocument
 from docwen.translation import t, t_all_locales
 from docwen.template.loader import TemplateLoader
 from docwen.utils import yaml_utils
-from docwen.utils.heading_utils import convert_to_halfwidth
-from docwen.utils.validation_utils import is_value_empty
 from docwen.utils.workspace_manager import (
     move_file_with_retry,
     prepare_input_file,
@@ -31,21 +27,11 @@ from docwen.utils.workspace_manager import (
 
 from .handlers.notes_part_handler import ensure_notes_parts
 from .handlers.numbering_handler import ensure_numbering_part
+from .field_registry import run_yaml_processors
 from .processors import docx_processor, md_processor
 from .style.injector import ensure_styles
 
 logger = logging.getLogger(__name__)
-
-# 附件序号清理正则
-ATTACH_NUM_PATTERN = re.compile(
-    r"^[一二三四五六七八九十㈠㈡㈢㈣㈤㈥㈦㈧㈨㈩]+、|"  # 中文序号（含带括号中文数字）
-    r"^（[一二三四五六七八九十]+）|"  # 带括号中文序号
-    r"^\d+[\.．]\s*|"  # 半角数字 + 点
-    r"^[０１２３４５６７８９]+[\.．]\s*|"  # 全角数字 + 点
-    r"^（\d+）\s*|"  # 带括号半角数字
-    r"^（[０１２３４５６７８９]+）\s*|"  # 带括号全角数字
-    r"^[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳㉑㉒㉓㉔㉕㉖㉗㉘㉙㉚㉛㉜㉝㉞㉟㊱㊲㊳㊴㊵㊶㊷㊸㊹㊺㊻㊼㊽㊾㊿⓪⓵⓶⓷⓸⓹⓺⓻⓼⓽⓾⓿❶❷❸❹❺❻❼❽❾❿⓫⓬⓭⓮⓯⓰⓱⓲⓳⓴]\s*"  # 带圈数字
-)
 
 
 def convert(
@@ -260,7 +246,7 @@ def _convert_internal(
     try:
         # 1. 预处理DOCX相关的YAML数据
         logger.debug("预处理DOCX相关的YAML数据...")
-        process_docx_specific_yaml(yaml_data)
+        run_yaml_processors(yaml_data)
 
         # 2. 为所有语言版本的标题键设置回退值
         _ensure_title_fallbacks(yaml_data, md_path)
@@ -499,118 +485,3 @@ def _process_docx_template(
         if temp_path and Path(temp_path).exists():
             with contextlib.suppress(Exception):
                 Path(temp_path).unlink(missing_ok=True)
-
-
-# --- DOCX相关的YAML处理函数 ---
-
-
-def process_docx_specific_yaml(data: dict):
-    """处理DOCX输出特有的YAML字段"""
-    logger.info("处理DOCX特定的YAML字段...")
-    process_attachment_description(data)
-    process_cc_orgs(data)
-    process_special_fields(data)
-
-
-def process_attachment_description(data: dict):
-    """
-    处理附件说明字段
-    第2行起添加全角空格对齐，配合悬挂缩进使用
-    """
-    if "附件说明" not in data:
-        return
-
-    attachments = data["附件说明"]
-    if is_value_empty(attachments):
-        data["附件说明"] = []
-        return
-
-    if not isinstance(attachments, list):
-        attachments = [attachments]
-
-    # 清理序号
-    cleaned_attachments = []
-    for item in attachments:
-        content = str(item).strip() if item is not None else ""
-        normalized_content = convert_to_halfwidth(content)
-        cleaned = ATTACH_NUM_PATTERN.sub("", normalized_content).strip()
-        if cleaned == "" and content != "":
-            cleaned = content
-        cleaned_attachments.append(cleaned)
-
-    # 构建附件说明列表
-    formatted = []
-    for i, content in enumerate(cleaned_attachments, 1):
-        if len(cleaned_attachments) == 1:
-            # 单附件：附件：<内容>
-            formatted.append(f"附件：{content}")
-        else:
-            # 多附件
-            if i == 1:
-                formatted.append(f"附件：{i}. {content}")
-            else:
-                # 第2行起：加3个全角空格（序号10开始，加两个全角空格和一个半角空格）
-                indent = "\u3000\u3000\u3000" if i < 10 else "\u3000\u3000 "
-                formatted.append(f"{indent}{i}. {content}")
-
-    data["附件说明"] = formatted
-    logger.debug(f"处理附件说明完成，共 {len(formatted)} 项")
-
-
-def process_cc_orgs(data: dict):
-    """处理抄送机关字段"""
-    if "抄送机关" in data:
-        cc_orgs = data["抄送机关"]
-        if is_value_empty(cc_orgs):
-            data["抄送机关"] = ""
-        else:
-            if not isinstance(cc_orgs, list):
-                cc_orgs = [cc_orgs]
-
-            # 使用format_display_value处理可能的嵌套列表
-            from docwen.utils.text_utils import format_display_value
-
-            valid_orgs = [format_display_value(org).strip() for org in cc_orgs if not is_value_empty(org)]
-            data["抄送机关"] = "，".join(valid_orgs)
-
-
-def process_special_fields(data: dict):
-    """处理特殊字段"""
-    if "附注" in data:
-        data["附注"] = process_notes(data["附注"])
-    if "印发日期" in data:
-        data["印发日期"] = format_date(data["印发日期"], suffix="印发")
-    if "成文日期" in data:
-        data["成文日期"] = format_date(data["成文日期"])
-
-
-def process_notes(notes: str) -> str:
-    """处理附注字段"""
-    if not notes:
-        return ""
-    if re.match(r"^[（(].*?[)）]$", notes):
-        return notes[1:-1]
-    return notes
-
-
-def format_date(date_str, suffix: str = "") -> str:
-    """格式化日期字段"""
-    if not date_str:
-        return ""
-    if isinstance(date_str, (datetime.date, datetime.datetime)):
-        date_obj = date_str
-    else:
-        date_formats = ["%Y-%m-%d", "%Y/%m/%d", "%Y年%m月%d日", "%Y.%m.%d", "%Y年%m月%d号"]
-        date_obj = None
-        for fmt in date_formats:
-            try:
-                date_obj = datetime.datetime.strptime(str(date_str), fmt)
-                break
-            except ValueError:
-                continue
-    if date_obj:
-        formatted = f"{date_obj.year}年{date_obj.month}月{date_obj.day}日"
-        if suffix:
-            formatted += suffix
-        return formatted
-    return str(date_str)

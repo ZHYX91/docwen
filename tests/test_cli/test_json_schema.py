@@ -80,7 +80,9 @@ def _validate_required_and_types(schema_def: dict, instance: dict) -> None:
         if not expected:
             continue
         types = expected if isinstance(expected, list) else [expected]
-        assert any(_is_type(instance[key], t) for t in types), f"type mismatch for {key}: {instance[key]!r} not in {types}"
+        assert any(_is_type(instance[key], t) for t in types), (
+            f"type mismatch for {key}: {instance[key]!r} not in {types}"
+        )
 
 
 def test_cli_json_output_schema_doc_exists() -> None:

@@ -479,6 +479,13 @@ Le plugin interagit avec le convertisseur via IPC basé sur le système de fichi
 
 Le plugin a été publié dans un référentiel séparé. Veuillez visiter [docwen-obsidian](https://github.com/ZHYX91/docwen-obsidian) pour les instructions d'installation et la dernière version.
 
+## 🔌 OpenClaw (Plugin + Skill)
+
+DocWen peut aussi être utilisé dans OpenClaw comme outil local (Plugin + Skill) :
+
+- Installez le plugin OpenClaw (enregistre les outils `docwen_*`) et le skill ClawHub (guide l’agent).
+- Installation et configuration : [docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw)
+
 ## ❓ FAQ
 
 ### Que faire si la conversion échoue ?

@@ -32,7 +32,7 @@ def build_base64_image_link(image_path: str, style: str = "wiki_embed") -> str:
                     target_size=threshold_kb,
                     unit="KB",
                 )
-                
+
                 # 检查压缩结果
                 if len(compressed_bytes) >= original_size:
                     logger.warning(
@@ -45,7 +45,7 @@ def build_base64_image_link(image_path: str, style: str = "wiki_embed") -> str:
                 else:
                     use_bytes = compressed_bytes
                     mime_type = "image/jpeg"
-                    
+
                     if len(use_bytes) > threshold_kb * 1024:
                         logger.warning(
                             "Base64 图片压缩后仍超出阈值: %s (%sKB > %sKB)",

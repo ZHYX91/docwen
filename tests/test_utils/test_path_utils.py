@@ -25,6 +25,7 @@ from docwen.utils.path_utils import (
 
 pytestmark = pytest.mark.unit
 
+
 @pytest.mark.unit
 def test_ensure_dir_exists(tmp_path: Path) -> None:
     target = tmp_path / "a" / "b"

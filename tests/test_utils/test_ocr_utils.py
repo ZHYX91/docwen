@@ -15,6 +15,7 @@ import docwen.utils.ocr_utils as ocr_utils
 
 pytestmark = pytest.mark.unit
 
+
 @pytest.mark.unit
 def test_resolve_ocr_language_auto_by_locale(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(ocr_utils, "get_configured_ocr_language", lambda: ocr_utils.OCR_LANGUAGE_AUTO, raising=True)

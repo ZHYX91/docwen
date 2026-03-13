@@ -97,7 +97,7 @@ def test_execute_headless_json_invalid_files_warning_goes_to_stderr(
         lambda _files: (["ok.docx"], [("bad.bin", "unsupported")], []),
         raising=True,
     )
-    monkeypatch.setattr("docwen.cli.utils.create_progress_callback", lambda **_kwargs: (lambda _msg: None), raising=True)
+    monkeypatch.setattr("docwen.cli.utils.create_progress_callback", lambda **_kwargs: lambda _msg: None, raising=True)
 
     def _stub_execute_action(_action, _file, _options, *, json_mode, **_kwargs):
         assert json_mode is True
@@ -125,11 +125,15 @@ def _run_main_with_args(monkeypatch: pytest.MonkeyPatch, args: SimpleNamespace) 
     monkeypatch.setattr(cli_main, "init_cli_locale", lambda _lang=None: None, raising=True)
     monkeypatch.setattr("docwen.translation.set_translator", lambda _t: None, raising=True)
     monkeypatch.setattr(cli_main, "create_argument_parser", lambda: _Parser(), raising=True)
-    monkeypatch.setattr(cli_main, "cli_t", lambda key, **_kwargs: "错误" if key == "cli.messages.error_prefix" else key, raising=True)
+    monkeypatch.setattr(
+        cli_main, "cli_t", lambda key, **_kwargs: "错误" if key == "cli.messages.error_prefix" else key, raising=True
+    )
     return int(cli_main.main())
 
 
-def test_convert_md_to_docx_requires_template_json(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path) -> None:
+def test_convert_md_to_docx_requires_template_json(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
     f = tmp_path / "a.md"
     f.write_text("# t\n", encoding="utf-8")
 

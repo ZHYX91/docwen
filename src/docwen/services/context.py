@@ -7,6 +7,7 @@ from typing import Any, Protocol
 class Translator(Protocol):
     def __call__(self, key: str, default: str | None = None, **kwargs: Any) -> str: ...
 
+
 class ActualFormatDetector(Protocol):
     def __call__(self, file_path: str) -> str: ...
 

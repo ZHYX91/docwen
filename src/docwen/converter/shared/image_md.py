@@ -112,7 +112,9 @@ def process_image_with_ocr(
     filename = img["filename"]
     image_path = img["image_path"]
 
-    logger.debug(f"处理图片: {filename}, 保留图片: {keep_images}, OCR: {enable_ocr}, 提取方式: {extraction_mode}, OCR位置: {ocr_placement_mode}")
+    logger.debug(
+        f"处理图片: {filename}, 保留图片: {keep_images}, OCR: {enable_ocr}, 提取方式: {extraction_mode}, OCR位置: {ocr_placement_mode}"
+    )
 
     # 组合 1: 关 关
     if not keep_images and not enable_ocr:

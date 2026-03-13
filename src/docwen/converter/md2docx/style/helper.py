@@ -29,6 +29,7 @@ def _style(name: str) -> str:
     key = f"styles.{name}"
     return t(key, default=t_locale(key, "zh_CN", default=name))
 
+
 def get_heading_style_name(doc, level: int) -> str:
     """
     智能获取标题样式名称

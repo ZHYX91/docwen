@@ -19,7 +19,9 @@ class DoctorCheck:
 
 def _check_module(name: str) -> DoctorCheck:
     spec = find_spec(name)
-    return DoctorCheck(name=f"module:{name}", ok=spec is not None, details=None if spec is not None else "not_installed")
+    return DoctorCheck(
+        name=f"module:{name}", ok=spec is not None, details=None if spec is not None else "not_installed"
+    )
 
 
 def _check_path_writable(path: str) -> DoctorCheck:
@@ -44,7 +46,7 @@ def run_doctor(*, json_mode: bool = False) -> int:
     try:
         from docwen.config.config_manager import config_manager
 
-        config_manager.get_output_config()
+        config_manager.get_output_config_block()
         checks.append(DoctorCheck(name="config:load", ok=True))
     except Exception as e:
         checks.append(DoctorCheck(name="config:load", ok=False, details=str(e) or "error"))

@@ -64,7 +64,7 @@ def _get_format_groups() -> dict[str, set[str]]:
 
         category_names = {"document", "spreadsheet", "layout", "image", "markdown"}
         groups: dict[str, set[str]] = {}
-        for (src, tgt) in registry.keys():
+        for src, tgt in registry.keys():
             src_norm = (src or "").strip().lower()
             if not src_norm:
                 continue
@@ -666,7 +666,11 @@ def get_supported_actions(category: str, fmt: str) -> list[dict]:
                 "name": "convert",
                 "description": "格式转换",
                 "parameters": {
-                    "target_format": {"type": "choice", "choices": ["md", "docx", "doc", "odt", "rtf"], "required": True}
+                    "target_format": {
+                        "type": "choice",
+                        "choices": ["md", "docx", "doc", "odt", "rtf"],
+                        "required": True,
+                    }
                 },
             },
             {
@@ -686,7 +690,11 @@ def get_supported_actions(category: str, fmt: str) -> list[dict]:
                 "name": "convert",
                 "description": "格式转换",
                 "parameters": {
-                    "target_format": {"type": "choice", "choices": ["md", "xlsx", "xls", "ods", "csv"], "required": True}
+                    "target_format": {
+                        "type": "choice",
+                        "choices": ["md", "xlsx", "xls", "ods", "csv"],
+                        "required": True,
+                    }
                 },
             },
             {
@@ -975,11 +983,7 @@ def list_formats(json_mode: bool = True, source: str | None = None) -> int:
                 hint = f"；可选：{', '.join(suggestions)}" if suggestions else ""
                 raise InvalidInputError(f"无效类别: {source}{hint}")
 
-        formats_out = [
-            {"source": src, "targets": sorted(targets)}
-            for src, targets in groups.items()
-            if targets
-        ]
+        formats_out = [{"source": src, "targets": sorted(targets)} for src, targets in groups.items() if targets]
 
         if json_mode:
             output = make_json_envelope(command="formats", success=True, data={"formats": formats_out})

@@ -13,6 +13,7 @@ from docwen.utils.workspace_manager import IntermediateItem
 
 pytestmark = pytest.mark.unit
 
+
 @pytest.mark.unit
 def test_preprocess_layout_file_pdf_creates_copy(tmp_path: Path) -> None:
     src = tmp_path / "a.pdf"

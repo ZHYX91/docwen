@@ -71,7 +71,6 @@ def is_numeric_string(value: object) -> bool:
         return False
 
 
-
 _is_numeric_string = is_numeric_string
 
 
@@ -366,6 +365,7 @@ def process_image_placeholders(wb):
                 for image_payload in matches:
                     placeholder = f"{{{{IMAGE:{image_payload}}}}}"
                     from docwen.converter.shared.image_placeholder import parse_image_payload
+
                     image_path, width, height = parse_image_payload(image_payload)
 
                     # 检查图片文件是否存在

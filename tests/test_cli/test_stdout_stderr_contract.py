@@ -8,7 +8,9 @@ import pytest
 pytestmark = pytest.mark.unit
 
 
-def test_cli_run_does_not_print_to_stdout_in_main(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_run_does_not_print_to_stdout_in_main(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     import importlib
 
     cli_main_module = importlib.import_module("docwen.cli.main")

@@ -25,4 +25,3 @@ def test_exit_code_from_error_code_uses_registry_mapping() -> None:
     assert exit_code_from_error_code(ERROR_CODE_INVALID_INPUT) == ExitCode.INVALID_INPUT
     assert exit_code_from_error_code(ERROR_CODE_STRATEGY_NOT_FOUND) == ExitCode.STRATEGY_NOT_FOUND
     assert exit_code_from_error_code(ERROR_CODE_DEPENDENCY_MISSING) == ExitCode.DEPENDENCY_MISSING
-

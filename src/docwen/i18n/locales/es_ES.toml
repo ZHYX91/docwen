@@ -385,6 +385,13 @@ remove_numbering = "Eliminar por defecto la numeración de encabezados en Markdo
 remove_numbering_tooltip = "Elimina la numeración existente al convertir MD → DOCX"
 add_numbering = "Añadir por defecto nueva numeración de encabezados"
 scheme_label = "Esquema de numeración predeterminado:"
+
+field_processors_section = "Optimizaciones de campos"
+field_processors_empty = "No hay optimizaciones de campos disponibles para el idioma actual."
+field_processors_load_failed = "No se pudieron cargar las optimizaciones de campos."
+field_processors_load_error = "Error de carga: {error}"
+field_processors_toggle_failed = "No se pudo actualizar «{name}». Se restauró el valor anterior."
+
 numbering_settings_section = "Ajustes de numeración"
 numbering_settings_desc = "Gestiona reglas de limpieza y esquemas de numeración para Markdown y conversión de documentos."
 edit_numbering_schemes = "Añadir numeración"

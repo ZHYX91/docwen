@@ -428,6 +428,13 @@ remove_numbering_tooltip = "Remove existing heading numbering in Markdown when c
 add_numbering = "Add new heading numbering by default"
 scheme_label = "Default numbering scheme:"
 
+# Field optimizations (field processors)
+field_processors_section = "Field Optimizations"
+field_processors_empty = "No field optimizations available for the current language."
+field_processors_load_failed = "Failed to load field optimizations."
+field_processors_load_error = "Load error: {error}"
+field_processors_toggle_failed = "Failed to update “{name}”. The previous value has been restored."
+
 # Numbering Settings Section
 numbering_settings_section = "Numbering Settings"
 numbering_settings_desc = "Manage heading numbering cleanup and addition schemes for MarkDown and document conversion."

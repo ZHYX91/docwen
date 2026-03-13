@@ -385,6 +385,13 @@ remove_numbering = "Mặc định xóa đánh số tiêu đề trong Markdown"
 remove_numbering_tooltip = "Xóa đánh số tiêu đề hiện có trong Markdown khi chuyển MD → DOCX"
 add_numbering = "Mặc định thêm đánh số tiêu đề mới"
 scheme_label = "Sơ đồ đánh số mặc định:"
+
+field_processors_section = "Tối ưu trường"
+field_processors_empty = "Không có tối ưu trường nào cho ngôn ngữ hiện tại."
+field_processors_load_failed = "Không thể tải danh sách tối ưu trường."
+field_processors_load_error = "Lỗi tải: {error}"
+field_processors_toggle_failed = "Không thể cập nhật “{name}”. Đã khôi phục giá trị trước đó."
+
 numbering_settings_section = "Thiết lập đánh số"
 numbering_settings_desc = "Quản lý các sơ đồ thêm số và quy tắc xóa số cho Markdown và chuyển đổi tài liệu."
 edit_numbering_schemes = "Thêm số tiêu đề"

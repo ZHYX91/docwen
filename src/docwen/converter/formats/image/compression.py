@@ -264,9 +264,7 @@ def compress_file_to_bytes(
             elif img.mode != "RGB":
                 img = img.convert("RGB")
 
-        target_bytes = (
-            int(target_size) * 1024 if unit == "KB" else int(target_size) * 1024 * 1024
-        )
+        target_bytes = int(target_size) * 1024 if unit == "KB" else int(target_size) * 1024 * 1024
 
         quality_min = 15
         quality_max = 95

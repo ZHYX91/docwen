@@ -377,7 +377,9 @@ class SplitPdfStrategy(BaseStrategy):
                             "conversion.messages.split_pdf_single_page_not_needed",
                             default="当前文件只有1页，无需拆分",
                         )
-                        return ConversionResult(success=False, message=msg, error_code=ERROR_CODE_INVALID_INPUT, details=msg)
+                        return ConversionResult(
+                            success=False, message=msg, error_code=ERROR_CODE_INVALID_INPUT, details=msg
+                        )
 
                     # 检查取消
                     if cancel_event and cancel_event.is_set():

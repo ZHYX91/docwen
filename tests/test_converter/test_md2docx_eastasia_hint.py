@@ -7,7 +7,10 @@ from docx import Document
 from docx.oxml.ns import qn
 
 from docwen.converter.md2docx.handlers.note_handler import WORD_NS, create_footnote_element
-from docwen.converter.md2docx.handlers.text_handler import add_formatted_text_to_heading, add_formatted_text_to_paragraph
+from docwen.converter.md2docx.handlers.text_handler import (
+    add_formatted_text_to_heading,
+    add_formatted_text_to_paragraph,
+)
 from docwen.utils.docx_utils import DEFAULT_FONTS
 
 pytestmark = pytest.mark.unit

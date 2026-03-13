@@ -34,6 +34,7 @@ def __getattr__(name: str):
         return importlib.import_module(f"{__name__}.preprocess").heic_to_png
     raise AttributeError(name)
 
+
 __all__ = [
     "bmp_to_png",
     "bytes_to_kb",

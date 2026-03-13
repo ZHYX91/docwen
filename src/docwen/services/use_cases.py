@@ -116,7 +116,9 @@ def _normalize_md_options(options: dict[str, Any], *, category: str, ctx: AppCon
 
     if "to_md_image_extraction_mode" not in options or options.get("to_md_image_extraction_mode") is None:
         try:
-            options["to_md_image_extraction_mode"] = str(ctx.config_manager.get_export_to_md_image_extraction_mode() or "file")
+            options["to_md_image_extraction_mode"] = str(
+                ctx.config_manager.get_export_to_md_image_extraction_mode() or "file"
+            )
         except Exception:
             options["to_md_image_extraction_mode"] = "file"
     else:
@@ -124,7 +126,9 @@ def _normalize_md_options(options: dict[str, Any], *, category: str, ctx: AppCon
 
     if "to_md_ocr_placement_mode" not in options or options.get("to_md_ocr_placement_mode") is None:
         try:
-            options["to_md_ocr_placement_mode"] = str(ctx.config_manager.get_export_to_md_ocr_placement_mode() or "image_md")
+            options["to_md_ocr_placement_mode"] = str(
+                ctx.config_manager.get_export_to_md_ocr_placement_mode() or "image_md"
+            )
         except Exception:
             options["to_md_ocr_placement_mode"] = "image_md"
     else:
@@ -214,7 +218,9 @@ def _normalize_numbering_options(
     add_mode_lower = add_mode.lower()
     if add_mode_lower == "default":
         add_numbering = _coerce_bool(defaults.get(f"{prefix}_add_numbering", False))
-        scheme_id = str(defaults.get(f"{prefix}_default_scheme", "gongwen_standard") or "gongwen_standard").strip().lower()
+        scheme_id = (
+            str(defaults.get(f"{prefix}_default_scheme", "gongwen_standard") or "gongwen_standard").strip().lower()
+        )
     elif add_mode_lower == "none":
         add_numbering = False
         scheme_id = ""
@@ -241,7 +247,9 @@ def _normalize_numbering_options(
             details: dict[str, Any] = {"scheme_id": scheme_id}
             if matches:
                 details["close_matches"] = matches
-            logger.debug(f"序号归一化：序号方案不存在 scheme_id={scheme_id}, close_matches={details.get('close_matches')}")
+            logger.debug(
+                f"序号归一化：序号方案不存在 scheme_id={scheme_id}, close_matches={details.get('close_matches')}"
+            )
             raise InvalidInputError("序号方案不存在", details=details)
 
     options.pop("clean_numbering", None)

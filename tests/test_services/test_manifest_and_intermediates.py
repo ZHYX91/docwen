@@ -15,6 +15,7 @@ from docwen.utils.workspace_manager import IntermediateItem
 
 pytestmark = pytest.mark.unit
 
+
 @pytest.mark.unit
 def test_layout_to_markdown_keeps_intermediate_pdf_and_writes_manifest(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch

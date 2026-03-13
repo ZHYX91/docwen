@@ -676,14 +676,16 @@ class BaseSettingsTab(tb.Frame, ABC):
         logger.debug(f"标签+信息图标创建完成: {text}")
         return label_frame
 
-    def _create_extraction_mode_selectors(self, parent: tk.Widget, initial_ext_mode: str, initial_ocr_place: str, prefix: str):
+    def _create_extraction_mode_selectors(
+        self, parent: tk.Widget, initial_ext_mode: str, initial_ocr_place: str, prefix: str
+    ):
         """
         创建提取方式与OCR位置选择器
         """
         from docwen.utils.gui_utils import create_info_icon
         from docwen.gui.components.config_combobox import ConfigCombobox
         from docwen.i18n import t
-        
+
         toplevel = parent.winfo_toplevel()
         var_name = "docwen_ocr_show_blockquote_title"
         try:
@@ -732,16 +734,18 @@ class BaseSettingsTab(tb.Frame, ABC):
         # 提取方式
         container1 = tb.Frame(parent)
         container1.pack(fill="x", pady=(scale(10), 0))
-        
+
         label_frame1 = tb.Frame(container1)
         label_frame1.pack(fill="x", pady=(0, self.layout_config.label_spacing))
-        
-        label1 = tb.Label(label_frame1, text=t("settings.extraction.image_extraction_mode_label"), bootstyle="secondary")
+
+        label1 = tb.Label(
+            label_frame1, text=t("settings.extraction.image_extraction_mode_label"), bootstyle="secondary"
+        )
         label1.pack(side="left")
-        
+
         info1 = create_info_icon(label_frame1, t("settings.extraction.image_extraction_mode_tooltip"), "info")
         info1.pack(side="left", padx=(self.layout_config.widget_spacing, 0))
-        
+
         ext_combo = ConfigCombobox(
             container1,
             config_values=["file", "base64"],
@@ -754,20 +758,20 @@ class BaseSettingsTab(tb.Frame, ABC):
         )
         ext_combo.pack(fill="x")
         setattr(self, f"{prefix}_image_ext_mode_combo", ext_combo)
-        
+
         # OCR位置
         container2 = tb.Frame(parent)
         container2.pack(fill="x", pady=(scale(10), 0))
-        
+
         label_frame2 = tb.Frame(container2)
         label_frame2.pack(fill="x", pady=(0, self.layout_config.label_spacing))
-        
+
         label2 = tb.Label(label_frame2, text=t("settings.extraction.ocr_placement_mode_label"), bootstyle="secondary")
         label2.pack(side="left")
-        
+
         info2 = create_info_icon(label_frame2, t("settings.extraction.ocr_placement_mode_tooltip"), "info")
         info2.pack(side="left", padx=(self.layout_config.widget_spacing, 0))
-        
+
         ocr_combo = ConfigCombobox(
             container2,
             config_values=["image_md", "main_md"],
@@ -776,7 +780,7 @@ class BaseSettingsTab(tb.Frame, ABC):
                 "main_md": "settings.extraction.ocr_placement_mode_main_md",
             },
             initial_value=initial_ocr_place,
-            on_change=lambda v: self.on_change("to_md_ocr_placement_mode", v)
+            on_change=lambda v: self.on_change("to_md_ocr_placement_mode", v),
         )
         ocr_combo.pack(fill="x")
         setattr(self, f"{prefix}_ocr_placement_combo", ocr_combo)

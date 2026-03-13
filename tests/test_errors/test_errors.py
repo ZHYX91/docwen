@@ -30,7 +30,9 @@ def test_strategy_not_found_error_details_variants() -> None:
     assert e3.details == "action='convert' conversion='a->b'"
 
 
-def test_exit_code_from_error_code_returns_unknown_when_registry_exit_code_is_invalid(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_exit_code_from_error_code_returns_unknown_when_registry_exit_code_is_invalid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     class _Def:
         exit_code = "not-an-int"
 

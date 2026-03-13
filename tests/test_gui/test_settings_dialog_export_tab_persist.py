@@ -41,4 +41,3 @@ def test_apply_all_settings_fails_when_export_tab_fails() -> None:
 
     assert success is False
     assert export_tab.called == 1
-

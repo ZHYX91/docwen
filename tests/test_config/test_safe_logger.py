@@ -9,6 +9,7 @@ from docwen.config.safe_logger import SafeLogger, disable, enable, info, safe_lo
 
 pytestmark = pytest.mark.unit
 
+
 @pytest.mark.unit
 def test_safe_logger_disable_enable() -> None:
     safe_log.enable()

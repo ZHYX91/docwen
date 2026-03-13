@@ -1,0 +1,212 @@
+name: release-assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag (e.g. v0.8.2). Required for manual runs."
+        required: false
+        default: ""
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    env:
+      RELEASE_TAG: ${{ inputs.version != '' && inputs.version || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip
+          python -m pip install ".[dev]"
+
+      - name: Build GUI+CLI (Windows)
+        run: |
+          python scripts/build/build.py --skip-cython --version "${{ env.RELEASE_TAG }}"
+
+      - name: Self-check DocWenCLI
+        shell: pwsh
+        run: |
+          $tag = "${{ env.RELEASE_TAG }}".Trim()
+          if ("${{ github.event_name }}" -eq "workflow_dispatch" -and -not $tag.StartsWith("v")) { throw "workflow_dispatch_requires_version_input_like_v0.8.2" }
+          $ver = $tag
+          if ($ver.StartsWith("v")) { $ver = $ver.Substring(1) }
+          $cliDeploy = "dist/DocWenCLI_v${ver}_win"
+          if (!(Test-Path $cliDeploy)) { throw "cli_deploy_dir_not_found: $cliDeploy" }
+          Push-Location $cliDeploy
+          try {
+            .\DocWenCLI.exe doctor --json --quiet | Out-Null
+          } finally {
+            Pop-Location
+          }
+
+      - name: Package release assets (Windows)
+        shell: pwsh
+        run: |
+          $ref = "${{ env.RELEASE_TAG }}".Trim()
+          if ("${{ github.event_name }}" -eq "workflow_dispatch" -and -not $ref.StartsWith("v")) { throw "workflow_dispatch_requires_version_input_like_v0.8.2" }
+          $ver = $ref
+          if ($ver.StartsWith("v")) { $ver = $ver.Substring(1) }
+          $deploy = "dist/DocWen_v${ver}_win"
+          if (!(Test-Path $deploy)) { throw "deploy_dir_not_found: $deploy" }
+
+          $cliDeploy = "dist/DocWenCLI_v${ver}_win"
+          if (!(Test-Path $cliDeploy)) { throw "cli_deploy_dir_not_found: $cliDeploy" }
+          Push-Location $cliDeploy
+          try {
+            Compress-Archive -Path "*" -DestinationPath "$PWD/../DocWenCLI-win-x64.zip" -Force
+          } finally {
+            Pop-Location
+          }
+          Move-Item "$cliDeploy/../DocWenCLI-win-x64.zip" "DocWenCLI-win-x64.zip" -Force
+
+          Push-Location $deploy
+          try {
+            Compress-Archive -Path "*" -DestinationPath "$PWD/../DocWen-win-x64.zip" -Force
+          } finally {
+            Pop-Location
+          }
+          Move-Item "$deploy/../DocWen-win-x64.zip" "DocWen-win-x64.zip" -Force
+
+      - name: Verify zip contains required files (Windows)
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $zipPath = (Resolve-Path "DocWenCLI-win-x64.zip").Path
+          $requiredPrefixes = @(
+            "_internal/",
+            "templates/",
+            "configs/",
+            "docwen/i18n/locales/"
+          )
+          $requiredExact = @(
+            "DocWenCLI.exe"
+          )
+          $zip = [System.IO.Compression.ZipFile]::OpenRead($zipPath)
+          try {
+            foreach ($e in $requiredExact) {
+              $found = $zip.Entries | Where-Object { ($_.FullName -replace '\\','/') -eq $e } | Select-Object -First 1
+              if (-not $found) { throw "zip_missing_required_entry:$e" }
+            }
+            foreach ($p in $requiredPrefixes) {
+              $found = $zip.Entries | Where-Object { ($_.FullName -replace '\\','/') -like "$p*" } | Select-Object -First 1
+              if (-not $found) { throw "zip_missing_required_prefix:$p" }
+            }
+          } finally {
+            $zip.Dispose()
+          }
+
+      - name: Upload artifacts (Windows)
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-assets
+          path: |
+            DocWenCLI-win-x64.zip
+            DocWen-win-x64.zip
+
+  build-linux:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.version != '' && inputs.version || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip
+          python -m pip install ".[dev]"
+
+      - name: Build CLI only (Linux)
+        run: |
+          python scripts/build/build.py --cli-only --skip-cython --version "${{ env.RELEASE_TAG }}"
+
+      - name: Self-check DocWenCLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [[ "${{ env.RELEASE_TAG }}" != v* ]]; then
+            echo "workflow_dispatch_requires_version_input_like_v0.8.2" >&2
+            exit 2
+          fi
+          ver="${{ env.RELEASE_TAG }}"
+          ver="${ver#v}"
+          cd "dist/DocWenCLI_v${ver}_linux"
+          chmod +x ./DocWenCLI || true
+          ./DocWenCLI doctor --json --quiet > /dev/null
+
+      - name: Package release asset (Linux)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [[ "${{ env.RELEASE_TAG }}" != v* ]]; then
+            echo "workflow_dispatch_requires_version_input_like_v0.8.2" >&2
+            exit 2
+          fi
+          ver="${{ env.RELEASE_TAG }}"
+          ver="${ver#v}"
+          tar -C "dist/DocWenCLI_v${ver}_linux" -czf "DocWenCLI-linux-x64.tar.gz" .
+
+      - name: Verify tar contains required files (Linux)
+        shell: bash
+        run: |
+          set -euo pipefail
+          listing=$(tar -tzf "DocWenCLI-linux-x64.tar.gz")
+          echo "$listing" | grep -qE '^(\./)?DocWenCLI$'
+          echo "$listing" | grep -qE '^(\./)?_internal/'
+          echo "$listing" | grep -qE '^(\./)?templates/'
+          echo "$listing" | grep -qE '^(\./)?configs/'
+          echo "$listing" | grep -qE '^(\./)?docwen/i18n/locales/'
+
+      - name: Upload artifact (Linux)
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-assets
+          path: DocWenCLI-linux-x64.tar.gz
+
+  release:
+    runs-on: ubuntu-latest
+    needs:
+      - build-windows
+      - build-linux
+    env:
+      RELEASE_TAG: ${{ inputs.version != '' && inputs.version || github.ref_name }}
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Generate SHA256SUMS
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd artifacts
+          sha256sum DocWenCLI-win-x64.zip DocWen-win-x64.zip DocWenCLI-linux-x64.tar.gz > SHA256SUMS.txt
+
+      - name: Publish release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          files: |
+            artifacts/DocWenCLI-win-x64.zip
+            artifacts/DocWen-win-x64.zip
+            artifacts/DocWenCLI-linux-x64.tar.gz
+            artifacts/SHA256SUMS.txt

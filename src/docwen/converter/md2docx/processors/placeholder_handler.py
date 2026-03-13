@@ -49,7 +49,7 @@ def _get_all_placeholder_variants(placeholder_key: str) -> list:
     return variants
 
 
-def _get_special_placeholders() -> dict:
+def _get_special_placeholders(extra_placeholders: set[str] | None = None) -> dict:
     """
     获取特殊处理的占位符（所有语言版本）
 
@@ -57,7 +57,7 @@ def _get_special_placeholders() -> dict:
         dict: {占位符键名: [所有语言变体列表], ...}
     """
     # 特殊占位符键名列表
-    special_keys = ["body"]  # 目前只有 body 是特殊占位符
+    special_keys = ["body"]
 
     result = {}
     for key in special_keys:
@@ -65,24 +65,24 @@ def _get_special_placeholders() -> dict:
         if variants:
             result[key] = variants
 
+    for placeholder in extra_placeholders or set():
+        result[placeholder] = [placeholder]
+
     return result
 
 
-def _get_special_placeholder_list() -> list:
+def _get_special_placeholder_list(extra_placeholders: set[str] | None = None) -> list:
     """
     获取所有特殊占位符的扁平列表（用于检测）
 
     返回:
         list: 所有特殊占位符的列表
     """
-    special = _get_special_placeholders()
+    special = _get_special_placeholders(extra_placeholders)
     result = []
     for variants in special.values():
         result.extend(variants)
     return result
-
-
-ATTACHMENT_DESCRIPTION_PLACEHOLDER = "{{附件说明}}"
 
 
 # 占位符处理规则配置
@@ -103,30 +103,10 @@ ATTACHMENT_DESCRIPTION_PLACEHOLDER = "{{附件说明}}"
 # - ["密级和保密期限"]：单字段组，该字段为空时删除段落
 # - ["印发机关", "印发日期"]：多字段组，两个字段都为空，且在同一行时，才删除表格行
 PLACEHOLDER_RULES = {
-    "delete_paragraph_if_empty": [
-        ["密级和保密期限"],  # 单字段组
-        ["紧急程度"],
-        ["发文字号"],
-        ["公开方式"],
-        ["主送机关"],
-        ["附注"],
-        ["抄送机关"],
-        ["附件说明"],
-        ["份号", "发文字号"],  # 多字段组：两个字段都为空，且在同一段，才删除段落
-    ],
-    "delete_cell_if_empty": [
-        # 清空单元格规则：组内所有字段都在同一单元格中且都为空时，清空该单元格
-        # 示例：["字段1", "字段2"] - 两个字段都在同一单元格且都为空时清空单元格
-    ],
-    "delete_row_if_empty": [
-        ["抄送机关"],  # 单字段组
-        ["印发机关", "印发日期"],  # 多字段组：两个字段都为空且在同一行，才删除表格行
-    ],
-    "delete_table_if_empty": [
-        # 注意：当表格所有行都被delete_row_if_empty规则删除时，
-        # 会自动触发删除整个表格的逻辑（在docx_processor.py中实现）
-        # 此配置保留用于未来可能的明确指定场景
-    ],
+    "delete_paragraph_if_empty": [],
+    "delete_cell_if_empty": [],
+    "delete_row_if_empty": [],
+    "delete_table_if_empty": [],
 }
 
 
@@ -142,7 +122,7 @@ def get_body_placeholder_variants() -> list:
     return _get_all_placeholder_variants("body")
 
 
-def _find_placeholder_type(ph_text: str) -> str | None:
+def _find_placeholder_type(ph_text: str, extra_placeholders: set[str] | None = None) -> str | None:
     """
     根据占位符文本查找其类型名称
 
@@ -155,36 +135,31 @@ def _find_placeholder_type(ph_text: str) -> str | None:
         str: 类型名称（如 "正文"），未找到返回 None
     """
     # 获取所有特殊占位符及其变体
-    special_placeholders = _get_special_placeholders()
+    special_placeholders = _get_special_placeholders(extra_placeholders)
 
     # 遍历查找匹配的类型
     for key, variants in special_placeholders.items():
         if ph_text in variants:
             # 将 key 映射为中文类型名（用于标记）
             # body -> 正文
-            type_mapping = {
-                "body": "正文",
-            }
+            type_mapping = {"body": "正文"}
             ph_type = type_mapping.get(key, key)
+            if isinstance(ph_type, str) and ph_type.startswith("{{") and ph_type.endswith("}}"):
+                ph_type = ph_type[2:-2].strip()
             logger.debug(f"占位符 '{ph_text}' 匹配类型: {ph_type} (key={key})")
             return ph_type
-
-    # 检查附件说明（目前未国际化）
-    if ph_text == ATTACHMENT_DESCRIPTION_PLACEHOLDER:
-        return "附件说明"
 
     return None
 
 
-def mark_special_placeholders(doc):
+def mark_special_placeholders(doc, extra_placeholders: set[str] | None = None):
     """
     标记特殊占位符段落 - 使用隐藏文本标记方案
     在包含特殊占位符的段落末尾添加隐藏标记Run
     """
     logger.info("开始标记特殊占位符段落 (使用隐藏文本标记方案)...")
 
-    special_texts = _get_special_placeholder_list()
-    special_texts.append(ATTACHMENT_DESCRIPTION_PLACEHOLDER)
+    special_texts = _get_special_placeholder_list(extra_placeholders)
     logger.debug(f"特殊占位符列表: {special_texts}")
 
     # 遍历所有段落
@@ -197,7 +172,7 @@ def mark_special_placeholders(doc):
         for ph_text in special_texts:
             if ph_text in text:
                 # 获取占位符类型名称（支持所有语言变体）
-                ph_type = _find_placeholder_type(ph_text)
+                ph_type = _find_placeholder_type(ph_text, extra_placeholders)
 
                 if not ph_type:
                     logger.warning(f"未找到占位符类型: {ph_text}")
@@ -341,9 +316,9 @@ def get_placeholder_rules(key: str):
               如果不属于任何规则，返回空列表，表示使用默认行为（替换为空字符串）
     """
     rules = []
+    effective_rules = _get_effective_placeholder_rules()
 
-    # 遍历所有规则类型和组
-    for rule_type, groups in PLACEHOLDER_RULES.items():
+    for rule_type, groups in effective_rules.items():
         for group in groups:
             if key in group:
                 rules.append((rule_type, group))
@@ -354,6 +329,17 @@ def get_placeholder_rules(key: str):
         logger.debug(f"占位符 '{key}' 不属于任何特殊规则，将替换为空字符串")
 
     return rules
+
+
+def _get_effective_placeholder_rules() -> dict:
+    from ..field_registry import get_merged_placeholder_rules
+
+    merged = get_merged_placeholder_rules()
+    result = {rule_type: list(groups) for rule_type, groups in PLACEHOLDER_RULES.items()}
+    for rule_type, groups in merged.items():
+        result.setdefault(rule_type, [])
+        result[rule_type].extend(groups)
+    return result
 
 
 def check_group_all_empty(group: list, yaml_data: dict):
@@ -801,115 +787,6 @@ def try_remove_element(element):
         logger.warning(f"移除元素失败: {e!s}")
 
 
-def process_attachment_description_placeholder(doc, yaml_data):
-    """
-    处理附件说明占位符
-    根据附件数量自动调整悬挂缩进
-    """
-    logger.info("开始处理附件说明占位符...")
-
-    attach_desc_ph = ATTACHMENT_DESCRIPTION_PLACEHOLDER
-    attach_desc_para = None
-
-    # 查找占位符段落
-    for para_idx, para in enumerate(doc.paragraphs):
-        if attach_desc_ph in para.text:
-            remove_special_mark(para)
-            logger.debug(f"在第 {para_idx + 1} 段找到附件说明占位符")
-            attach_desc_para = para
-            break
-
-    if not attach_desc_para:
-        logger.info("未找到附件说明占位符")
-        return
-
-    # 获取附件说明数据
-    attachment_desc = yaml_data.get("附件说明")
-
-    # 如果为空，删除占位符段落
-    if is_value_empty(attachment_desc):
-        logger.info("附件说明为空，删除占位符段落")
-        try_remove_element(attach_desc_para._element)
-        return
-
-    # 确保是列表
-    if not isinstance(attachment_desc, list):
-        attachment_desc = [attachment_desc]
-
-    # 保存原始段落样式和格式
-    base_style = attach_desc_para.style
-    base_rpr = None
-    if attach_desc_para.runs:
-        base_rpr = attach_desc_para.runs[0]._element.rPr
-
-    # 【关键】从模板段落的左侧缩进计算字符宽度
-    left_indent = attach_desc_para.paragraph_format.left_indent
-    if left_indent:
-        char_width = left_indent / 2  # 左侧缩进2字符，所以除以2得到单字符宽度
-        logger.info(f"从模板获取字符宽度: {char_width} (左侧缩进: {left_indent})")
-    else:
-        # 如果模板未设置left_indent，使用默认值
-        char_width = Pt(16)  # 默认按三号字计算
-        logger.warning(f"模板未设置左侧缩进，使用默认字符宽度: {char_width}")
-        # 设置默认左侧缩进
-        left_indent = 2 * char_width
-
-    # 获取插入位置
-    parent = attach_desc_para._element.getparent()
-    index = parent.index(attach_desc_para._element)
-
-    # 判断是单附件还是多附件
-    is_single = len(attachment_desc) == 1
-
-    # 计算悬挂缩进
-    # 注意：python-docx要求缩进值必须是整数，所以需要转换
-    # 使用方案A（文本加空格）+ 悬挂缩进：
-    #   - 单附件：悬挂缩进3字符
-    #   - 多附件：所有行悬挂缩进4.5字符（第2行起文本中已加空格）
-
-    hanging_indent_single = int(3 * char_width)
-    hanging_indent_multi = int(4.5 * char_width)
-    if is_single:
-        logger.info(f"单附件：left_indent = {left_indent}, hanging_indent = {hanging_indent_single}")
-    else:
-        logger.info(f"多附件：left_indent = {left_indent}, hanging_indent = {hanging_indent_multi}")
-
-    # 插入附件说明行
-    for i, line in enumerate(attachment_desc):
-        new_p = doc.add_paragraph(style=base_style)
-        new_run = new_p.add_run(str(line))
-
-        # 应用基本run样式
-        if base_rpr is not None:
-            new_rPr = new_run._element.get_or_add_rPr()
-            for child in base_rpr.getchildren():
-                new_child = copy.deepcopy(child)
-                new_rPr.append(new_child)
-
-        # 设置段落格式：保持模板的左侧缩进，设置悬挂缩进
-        pf = new_p.paragraph_format
-        pf.left_indent = left_indent  # 保持模板的2字符左侧缩进
-
-        # 设置悬挂缩进（通过负的first_line_indent实现）
-        if is_single:
-            # 单附件：悬挂3字符
-            pf.first_line_indent = -hanging_indent_single
-        else:
-            # 多附件：所有行悬挂4.5字符
-            pf.first_line_indent = -hanging_indent_multi
-
-        # 插入到正确位置
-        new_p._p.getparent().remove(new_p._p)
-        parent.insert(index + i, new_p._p)
-        logger.debug(f"在第 {index + i} 位置插入附件说明行: {line[:20]}...")
-
-    # 删除原始占位符段落
-    logger.debug("删除附件说明占位符段落")
-    parent.remove(attach_desc_para._element)
-
-    logger.info("附件说明占位符处理完成")
-
-
 def _process_paragraph_images(paragraph, context="document", *, doc=None, col_count: int | None = None):
     """
     处理单个段落中的图片占位符（核心处理逻辑）
@@ -928,6 +805,7 @@ def _process_paragraph_images(paragraph, context="document", *, doc=None, col_co
     def parse_image_placeholder(placeholder: str) -> tuple[str, int | None, int | None]:
         inner = placeholder[len("{{IMAGE:") : -2]
         from docwen.converter.shared.image_placeholder import parse_image_payload
+
         return parse_image_payload(inner)
 
     def get_page_usable_width_emu(doc) -> int:

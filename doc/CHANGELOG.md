@@ -1,5 +1,21 @@
 # Changelog / 更新日志
 
+## v0.8.2 (2026-03-13)
+
+### 更新日志（中文）
+
+- 新增字段注册表与公文字段处理器，支持 YAML 处理器/占位符规则/特殊处理器的注册式管理
+- 新增 OpenClaw 插件集成（CLI wrapper），支持自动下载与 SHA256 校验
+- 新增 GitHub Actions CI/CD（release 自动构建 + tests lint/typecheck/pytest）
+- 版本号迁移至纯 SemVer 格式
+
+### Changelog (English)
+
+- Added field registry and gongwen field processors with registration-based management for YAML processors, placeholder rules and special handlers.
+- Added OpenClaw plugin integration (CLI wrapper) with auto-download and SHA256 verification.
+- Added GitHub Actions CI/CD (release asset builds + tests with lint/typecheck/pytest).
+- Migrated version numbering to pure SemVer format.
+
 ## v0.8.1 (2026-03-06)
 
 ### 更新日志（中文）

@@ -9,6 +9,7 @@ from docwen.utils.heading_utils import convert_to_halfwidth, detect_heading_leve
 
 pytestmark = pytest.mark.unit
 
+
 @pytest.mark.unit
 def test_detect_heading_level_fullwidth_digits() -> None:
     cleaned, level = detect_heading_level("１．全角数字标题")

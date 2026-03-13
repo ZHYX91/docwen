@@ -77,7 +77,9 @@ def test_document_to_md_remove_and_scheme() -> None:
 
 def test_md_numbering_uses_text_docx_defaults() -> None:
     options: dict = {}
-    _normalize_numbering_options(options, category="markdown", target_format=None, action_type="process_md_numbering", ctx=_ctx())
+    _normalize_numbering_options(
+        options, category="markdown", target_format=None, action_type="process_md_numbering", ctx=_ctx()
+    )
     assert options["remove_numbering"] is True
     assert options["add_numbering"] is False
 

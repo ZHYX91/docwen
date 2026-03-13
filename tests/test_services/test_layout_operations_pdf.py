@@ -135,7 +135,9 @@ def test_split_pdf_strategy_odd_even_generates_two_files(tmp_path: Path, monkeyp
     assert sorted(page_counts) == [1, 2]
 
 
-def test_split_pdf_strategy_every_page_single_page_returns_failure(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_split_pdf_strategy_every_page_single_page_returns_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     pytest.importorskip("fitz")
 
     src = tmp_path / "src.pdf"
@@ -151,7 +153,9 @@ def test_split_pdf_strategy_every_page_single_page_returns_failure(tmp_path: Pat
     assert result.success is False
 
 
-def test_split_pdf_strategy_odd_even_single_page_returns_failure(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_split_pdf_strategy_odd_even_single_page_returns_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     pytest.importorskip("fitz")
 
     src = tmp_path / "src.pdf"

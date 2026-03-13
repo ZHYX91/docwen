@@ -13,6 +13,7 @@ import docwen.utils.logging_utils as logging_utils
 
 pytestmark = pytest.mark.unit
 
+
 @pytest.mark.unit
 def test_pre_init_logging_resets_handlers() -> None:
     root = logging_utils.pre_init_logging()

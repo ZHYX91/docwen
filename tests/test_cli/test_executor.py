@@ -290,8 +290,12 @@ def test_list_templates_json(monkeypatch: pytest.MonkeyPatch, capsys: pytest.Cap
     payload = json.loads(out)
     assert payload["command"] == "templates"
     assert isinstance(payload["data"].get("templates"), list)
-    assert {"id": "a", "name": "a", "target": "docx", "description": None, "example": None} in payload["data"]["templates"]
-    assert {"id": "c", "name": "c", "target": "xlsx", "description": None, "example": None} in payload["data"]["templates"]
+    assert {"id": "a", "name": "a", "target": "docx", "description": None, "example": None} in payload["data"][
+        "templates"
+    ]
+    assert {"id": "c", "name": "c", "target": "xlsx", "description": None, "example": None} in payload["data"][
+        "templates"
+    ]
 
 
 def test_list_optimizations_json(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
@@ -301,7 +305,9 @@ def test_list_optimizations_json(monkeypatch: pytest.MonkeyPatch, capsys: pytest
     monkeypatch.setattr(
         cm.config_manager,
         "get_optimization_types",
-        lambda: {"x": {"enabled": True, "name": "X", "description": "D", "scopes": ["document_to_md"], "locales": ["*"]}},
+        lambda: {
+            "x": {"enabled": True, "name": "X", "description": "D", "scopes": ["document_to_md"], "locales": ["*"]}
+        },
         raising=True,
     )
     monkeypatch.setattr(cm.config_manager, "get_optimization_settings", lambda: {"order": ["x"]}, raising=True)
@@ -474,7 +480,9 @@ def test_execute_action_fills_error_code_from_docwenerror_in_result(
     assert (payload.get("error") or {}).get("error_code") == ERROR_CODE_INVALID_INPUT
 
 
-def test_execute_action_keyboard_interrupt_returns_130_json(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+def test_execute_action_keyboard_interrupt_returns_130_json(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     def _stub_execute_action_core(*, action: str, file_path: str, options: dict, progress_callback=None):
         raise KeyboardInterrupt()
 
@@ -491,7 +499,9 @@ def test_execute_action_keyboard_interrupt_returns_130_json(monkeypatch: pytest.
     assert (payload.get("error") or {}).get("details", {}).get("interrupted") is True
 
 
-def test_execute_action_keyboard_interrupt_returns_130_text(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+def test_execute_action_keyboard_interrupt_returns_130_text(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     def _stub_execute_action_core(*, action: str, file_path: str, options: dict, progress_callback=None):
         raise KeyboardInterrupt()
 

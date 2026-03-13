@@ -71,7 +71,9 @@ def extract_images_from_docx(
     counter = {"val": 1}
 
     para_index_by_element_id = {
-        id(p._element): idx for idx, p in enumerate(getattr(doc, "paragraphs", [])) if getattr(p, "_element", None) is not None
+        id(p._element): idx
+        for idx, p in enumerate(getattr(doc, "paragraphs", []))
+        if getattr(p, "_element", None) is not None
     }
 
     # 内部递归处理函数
@@ -177,7 +179,9 @@ def _process_paragraph_images(
 
                     # 记录图片信息，关键是存储 paragraph 对象用于后续匹配
                     para_index = (
-                        para_index_by_element_id.get(id(para._element), -1) if getattr(para, "_element", None) is not None else -1
+                        para_index_by_element_id.get(id(para._element), -1)
+                        if getattr(para, "_element", None) is not None
+                        else -1
                     )
                     images_info.append(
                         {

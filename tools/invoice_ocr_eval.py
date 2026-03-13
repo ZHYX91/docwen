@@ -163,7 +163,9 @@ def main() -> int:
                 ocr_text_len=ocr_text_len,
                 mismatched_fields=mismatched,
                 text_fields=_safe_fields(text_fields, unsafe_show_values=bool(args.unsafe_show_values)),
-                ocr_fields=(_safe_fields(ocr_fields, unsafe_show_values=bool(args.unsafe_show_values)) if ocr_fields else None),
+                ocr_fields=(
+                    _safe_fields(ocr_fields, unsafe_show_values=bool(args.unsafe_show_values)) if ocr_fields else None
+                ),
                 notes=notes,
             )
         )

@@ -16,6 +16,7 @@ from docwen.docx_spell.utils import plan_run_splits, rebuild_paragraph_with_spli
 
 pytestmark = pytest.mark.unit
 
+
 @pytest.mark.unit
 def test_process_docx_missing_file_raises(tmp_path: Path) -> None:
     missing = tmp_path / "missing.docx"

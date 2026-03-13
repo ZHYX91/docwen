@@ -9,6 +9,7 @@ from docwen.utils.markdown_utils import clean_heading, extract_yaml
 
 pytestmark = pytest.mark.unit
 
+
 @pytest.mark.unit
 def test_extract_yaml_with_front_matter() -> None:
     content = "---\ntitle: 测试文档\ndate: 2023-01-15\n---\n# 标题内容\n正文内容"

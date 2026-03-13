@@ -109,7 +109,9 @@ class MdNumberingStrategy(BaseStrategy):
             ext = input_file.suffix.lower()
             if ext not in [".md", ".markdown"]:
                 msg = f"不支持的文件格式: {ext}，仅支持 .md/.markdown 文件"
-                return ConversionResult(success=False, message=msg, error_code=ERROR_CODE_UNSUPPORTED_FORMAT, details=msg)
+                return ConversionResult(
+                    success=False, message=msg, error_code=ERROR_CODE_UNSUPPORTED_FORMAT, details=msg
+                )
 
             # 读取MD文件
             if progress_callback:

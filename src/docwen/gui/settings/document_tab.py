@@ -72,7 +72,6 @@ class DocumentTab(BaseSettingsTab):
         self.odt_cards_frame: tb.Frame | None = None
         self.document_to_pdf_cards_frame: tb.Frame | None = None
 
-
         # 加载配置数据
         self._load_settings_data(config_manager)
 
@@ -186,8 +185,6 @@ class DocumentTab(BaseSettingsTab):
             t("settings.document.enable_ocr_tooltip"),
             self._on_doc_ocr_changed,
         )
-
-
 
     def _create_optimization_section(self):
         """创建优化设置区域（仅在当前语言有可用优化类型时显示）"""

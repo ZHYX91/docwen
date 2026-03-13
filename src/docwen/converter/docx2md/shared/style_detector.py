@@ -138,7 +138,7 @@ def detect_run_style_type(run, config_manager):
 
         # 3. 关联字符样式检测（使用 startswith）
         # WPS 会自动创建关联字符样式，如 "Code Block Char"、"代码块 Char"
-        for para_style in (config_manager.get_code_paragraph_styles() or []):
+        for para_style in config_manager.get_code_paragraph_styles() or []:
             if style_name_lower.startswith(para_style.lower()):
                 logger.debug("Run样式 '%s' 是代码段落样式 '%s' 的关联字符样式", style_name, para_style)
                 return "code"

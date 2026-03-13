@@ -12,6 +12,7 @@ from docwen.utils import workspace_manager
 
 pytestmark = pytest.mark.unit
 
+
 @pytest.mark.unit
 def test_save_output_with_fallback_uses_source_dir_when_target_fails(tmp_path, monkeypatch) -> None:
     temp_file = tmp_path / "temp.txt"

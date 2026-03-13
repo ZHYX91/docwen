@@ -511,7 +511,9 @@ class FileToMdMixin(_ActionPanelBase):
         extract_ocr_info.pack(side=tk.LEFT)
 
         try:
-            self._table_optimization_types = self.config_manager.get_localized_optimization_types(scope="spreadsheet_to_md")
+            self._table_optimization_types = self.config_manager.get_localized_optimization_types(
+                scope="spreadsheet_to_md"
+            )
         except Exception:
             self._table_optimization_types = {}
 
@@ -983,7 +985,11 @@ class FileToMdMixin(_ActionPanelBase):
             else:
                 optimize_for_type = None
 
-            options = {"extract_image": extract_image, "extract_ocr": extract_ocr, "optimize_for_type": optimize_for_type}
+            options = {
+                "extract_image": extract_image,
+                "extract_ocr": extract_ocr,
+                "optimize_for_type": optimize_for_type,
+            }
 
             logger.info(
                 f"版式文件转Markdown - 提取选项: 图片={extract_image}, OCR={extract_ocr}, 优化类型={optimize_for_type}"

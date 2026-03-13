@@ -83,7 +83,8 @@ def contains_east_asian(text: str) -> bool:
             or 0x3000 <= cp <= 0x303F  # CJK Symbols and Punctuation
             or 0xFF00 <= cp <= 0xFFEF  # Halfwidth and Fullwidth Forms
             or 0x3100 <= cp <= 0x312F  # Bopomofo
-            or cp in {
+            or cp
+            in {
                 0x2018,  # ‘
                 0x2019,  # ’
                 0x201C,  # “

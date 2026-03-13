@@ -16,4 +16,3 @@ def test_no_egg_info_under_src() -> None:
 
     egg_infos = sorted(p for p in src_dir.rglob("*.egg-info") if p.is_dir())
     assert not egg_infos, f"Found build artifacts under src/: {[str(p) for p in egg_infos]}"
-

@@ -385,6 +385,13 @@ remove_numbering = "기본으로 마크다운 제목 번호 제거"
 remove_numbering_tooltip = "MD → DOCX 변환 시 마크다운의 기존 제목 번호를 제거합니다"
 add_numbering = "기본으로 새 제목 번호 추가"
 scheme_label = "기본 번호 매김 스킴:"
+
+field_processors_section = "필드 최적화"
+field_processors_empty = "현재 언어에서 사용할 수 있는 필드 최적화가 없습니다."
+field_processors_load_failed = "필드 최적화를 불러오지 못했습니다."
+field_processors_load_error = "로드 오류: {error}"
+field_processors_toggle_failed = "“{name}”을(를) 업데이트하지 못했습니다. 이전 값으로 복원했습니다."
+
 numbering_settings_section = "번호 매김 설정"
 numbering_settings_desc = "마크다운 및 문서 변환을 위한 제목 번호 정리/추가 스킴을 관리합니다."
 edit_numbering_schemes = "제목 번호 추가"

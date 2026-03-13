@@ -201,7 +201,10 @@ class ImageToMarkdownStrategy(BaseStrategy):
                 cancel_event = options.get("cancel_event")
 
                 if optimize_for_type == "invoice_cn":
-                    from docwen.converter.layout2md.invoice_cn_ocr import build_invoice_md_text, parse_invoice_from_image
+                    from docwen.converter.layout2md.invoice_cn_ocr import (
+                        build_invoice_md_text,
+                        parse_invoice_from_image,
+                    )
 
                     def _insert_section_before_timestamp(stem: str, section: str) -> str:
                         import re
@@ -226,10 +229,14 @@ class ImageToMarkdownStrategy(BaseStrategy):
 
                         section = t("conversion.filenames.page_n", n=idx) if total_images > 1 else ""
                         file_stem = f"{original_basename}_{section}" if section else original_basename
-                        output_stem = _insert_section_before_timestamp(final_basename, section) if section else final_basename
+                        output_stem = (
+                            _insert_section_before_timestamp(final_basename, section) if section else final_basename
+                        )
 
                         metadata, rows = parse_invoice_from_image(img_path, cancel_event=cancel_event)
-                        md_text = build_invoice_md_text(file_stem=file_stem, metadata=metadata, rows=rows, include_empty=True)
+                        md_text = build_invoice_md_text(
+                            file_stem=file_stem, metadata=metadata, rows=rows, include_empty=True
+                        )
 
                         md_filename = f"{output_stem}.md"
                         (folder_path / md_filename).write_text(md_text, encoding="utf-8")
@@ -286,6 +293,7 @@ class ImageToMarkdownStrategy(BaseStrategy):
                 md_content = generate_basic_yaml_frontmatter(original_basename)
 
                 from docwen.converter.shared.image_md import process_image_with_ocr
+
                 link_settings = config_manager.get_markdown_link_style_settings()
                 image_link_style = link_settings.get("image_link_style", "wiki_embed")
                 md_file_link_style = link_settings.get("md_file_link_style", "wiki_embed")

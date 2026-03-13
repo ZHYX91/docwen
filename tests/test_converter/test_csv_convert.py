@@ -12,6 +12,7 @@ from docwen.converter.formats.spreadsheet.csv_convert import csv_to_xlsx, xlsx_t
 
 pytestmark = pytest.mark.unit
 
+
 @pytest.mark.unit
 def test_csv_to_xlsx_creates_workbook(tmp_path: Path) -> None:
     csv_path = tmp_path / "a.csv"

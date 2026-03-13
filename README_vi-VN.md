@@ -477,6 +477,13 @@ Plugin tương tác với bộ chuyển đổi thông qua IPC dựa trên hệ t
 
 Plugin được phát hành ở repo riêng. Xem [docwen-obsidian](https://github.com/ZHYX91/docwen-obsidian) để biết cách cài và phiên bản mới nhất.
 
+## 🔌 OpenClaw (Plugin + Skill)
+
+DocWen cũng có thể dùng trong OpenClaw như một công cụ chạy cục bộ (Plugin + Skill):
+
+- Cài OpenClaw plugin (đăng ký các tool `docwen_*`) + cài ClawHub skill (hướng dẫn agent sử dụng).
+- Hướng dẫn cài đặt & cấu hình: [docwen-openclaw](https://github.com/ZHYX91/docwen-openclaw)
+
 ## ❓ FAQ
 
 ### Nếu chuyển đổi thất bại thì sao?

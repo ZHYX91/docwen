@@ -184,7 +184,9 @@ def create_argument_parser() -> argparse.ArgumentParser:
 
     merge_tables = subparsers.add_parser("merge-tables", parents=[common], help=cli_t("cli.actions.merge_tables"))
     merge_tables.add_argument("files", nargs="+", help=cli_t("cli.help.files"))
-    merge_tables.add_argument("--mode", required=True, choices=["row", "col", "cell"], help=cli_t("cli.help.merge_mode"))
+    merge_tables.add_argument(
+        "--mode", required=True, choices=["row", "col", "cell"], help=cli_t("cli.help.merge_mode")
+    )
     merge_tables.add_argument("--base-table", help=cli_t("cli.help.base_table"))
 
     merge_pdfs = subparsers.add_parser("merge-pdfs", parents=[common], help=cli_t("cli.actions.merge_pdfs"))
@@ -224,7 +226,9 @@ def create_argument_parser() -> argparse.ArgumentParser:
     actions_sub = actions.add_subparsers(dest="actions_command", required=True)
     actions_sub.add_parser("list", parents=[common], help=cli_t("cli.help.list_actions"))
 
-    numbering = subparsers.add_parser("numbering-schemes", parents=[common], help=cli_t("cli.help.list_numbering_schemes"))
+    numbering = subparsers.add_parser(
+        "numbering-schemes", parents=[common], help=cli_t("cli.help.list_numbering_schemes")
+    )
     numbering_sub = numbering.add_subparsers(dest="numbering_command", required=True)
     numbering_sub.add_parser("list", parents=[common], help=cli_t("cli.help.list_numbering_schemes"))
 
@@ -236,11 +240,19 @@ def create_argument_parser() -> argparse.ArgumentParser:
     optimizations = subparsers.add_parser("optimizations", parents=[common], help=cli_t("cli.help.optimize_for"))
     optimizations_sub = optimizations.add_subparsers(dest="optimizations_command", required=True)
     optimizations_list = optimizations_sub.add_parser("list", parents=[common], help=cli_t("cli.help.optimize_for"))
-    optimizations_list.add_argument("--scope", choices=["document_to_md", "layout_to_md", "image_to_md", "spreadsheet_to_md"], help=cli_t("cli.help.scope"))
+    optimizations_list.add_argument(
+        "--scope",
+        choices=["document_to_md", "layout_to_md", "image_to_md", "spreadsheet_to_md"],
+        help=cli_t("cli.help.scope"),
+    )
 
-    formats = subparsers.add_parser("formats", parents=[common], help=cli_t("cli.help.list_formats", default="列出可用目标格式"))
+    formats = subparsers.add_parser(
+        "formats", parents=[common], help=cli_t("cli.help.list_formats", default="列出可用目标格式")
+    )
     formats_sub = formats.add_subparsers(dest="formats_command", required=True)
-    formats_list = formats_sub.add_parser("list", parents=[common], help=cli_t("cli.help.list_formats", default="列出可用目标格式"))
+    formats_list = formats_sub.add_parser(
+        "list", parents=[common], help=cli_t("cli.help.list_formats", default="列出可用目标格式")
+    )
     formats_list.add_argument(
         "--for",
         dest="for_source",
@@ -293,7 +305,9 @@ def _run_action_for_files(action: str, raw_files: list[str], options: dict, args
         print(cli_t("cli.messages.error_no_valid_files"), file=sys.stderr)
         return int(ExitCode.INVALID_INPUT)
 
-    progress_callback = utils.create_progress_callback(quiet=getattr(args, "quiet", False), verbose=getattr(args, "verbose", False))
+    progress_callback = utils.create_progress_callback(
+        quiet=getattr(args, "quiet", False), verbose=getattr(args, "verbose", False)
+    )
     include_timing = bool(getattr(args, "timing", False))
 
     if len(valid_files) == 1 and not getattr(args, "batch", False):
@@ -503,7 +517,9 @@ def main() -> int:
             try:
                 options = build_options(action, args)
             except ValueError as e:
-                return _print_invalid_input(action=action, args=args, message=str(e), input_file=(args.files[0] if args.files else ""))
+                return _print_invalid_input(
+                    action=action, args=args, message=str(e), input_file=(args.files[0] if args.files else "")
+                )
             supported = set(executor.get_supported_convert_targets())
             target_fmt = str(options.get("target_format") or "").strip().lower()
             if target_fmt and target_fmt not in supported:
@@ -569,7 +585,9 @@ def main() -> int:
                             from docwen.config import config_manager
 
                             types = config_manager.get_optimization_types()
-                            available = sorted([k for k, v in (types or {}).items() if isinstance(v, dict) and v.get("enabled", True)])
+                            available = sorted(
+                                [k for k, v in (types or {}).items() if isinstance(v, dict) and v.get("enabled", True)]
+                            )
                         except Exception:
                             available = []
                         suggestions = get_close_matches(str(optimize_for_type), available, n=5, cutoff=0.2)
@@ -593,42 +611,54 @@ def main() -> int:
             try:
                 options = build_options(action, args)
             except ValueError as e:
-                return _print_invalid_input(action=action, args=args, message=str(e), input_file=(args.files[0] if args.files else ""))
+                return _print_invalid_input(
+                    action=action, args=args, message=str(e), input_file=(args.files[0] if args.files else "")
+                )
             return _run_action_for_files(action, args.files, options, args)
         if cmd == "merge-tables":
             action = "merge_tables"
             try:
                 options = build_options(action, args)
             except ValueError as e:
-                return _print_invalid_input(action=action, args=args, message=str(e), input_file=(args.files[0] if args.files else ""))
+                return _print_invalid_input(
+                    action=action, args=args, message=str(e), input_file=(args.files[0] if args.files else "")
+                )
             return _run_action_for_files(action, args.files, options, args)
         if cmd == "merge-pdfs":
             action = "merge_pdfs"
             try:
                 options = build_options(action, args)
             except ValueError as e:
-                return _print_invalid_input(action=action, args=args, message=str(e), input_file=(args.files[0] if args.files else ""))
+                return _print_invalid_input(
+                    action=action, args=args, message=str(e), input_file=(args.files[0] if args.files else "")
+                )
             return _run_action_for_files(action, args.files, options, args)
         if cmd == "split-pdf":
             action = "split_pdf"
             try:
                 options = build_options(action, args)
             except ValueError as e:
-                return _print_invalid_input(action=action, args=args, message=str(e), input_file=str(getattr(args, "file", "") or ""))
+                return _print_invalid_input(
+                    action=action, args=args, message=str(e), input_file=str(getattr(args, "file", "") or "")
+                )
             return _run_action_for_files(action, [args.file], options, args)
         if cmd == "merge-images-to-tiff":
             action = "merge_images_to_tiff"
             try:
                 options = build_options(action, args)
             except ValueError as e:
-                return _print_invalid_input(action=action, args=args, message=str(e), input_file=(args.files[0] if args.files else ""))
+                return _print_invalid_input(
+                    action=action, args=args, message=str(e), input_file=(args.files[0] if args.files else "")
+                )
             return _run_action_for_files(action, args.files, options, args)
         if cmd == "md-numbering":
             action = "process_md_numbering"
             try:
                 options = build_options(action, args)
             except ValueError as e:
-                return _print_invalid_input(action=action, args=args, message=str(e), input_file=(args.files[0] if args.files else ""))
+                return _print_invalid_input(
+                    action=action, args=args, message=str(e), input_file=(args.files[0] if args.files else "")
+                )
             return _run_action_for_files(action, args.files, options, args)
 
         raise ValueError(f"未知命令: {cmd}")

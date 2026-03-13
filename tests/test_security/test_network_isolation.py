@@ -16,6 +16,7 @@ import docwen.security.network_isolation as ni
 
 pytestmark = pytest.mark.unit
 
+
 @pytest.mark.unit
 def test_blocked_socket_raises() -> None:
     with pytest.raises(ni.NetworkIsolationError):

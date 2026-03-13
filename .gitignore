@@ -6,6 +6,10 @@
 !.gitignore
 !.gitattributes
 !.editorconfig
+!.github/
+!.github/workflows/
+!.github/workflows/*.yml
+!.github/workflows/*.yaml
 
 # ==============================
 # 日志文件 (忽略所有日志文件)
@@ -77,11 +81,7 @@ samples/style_injection_output/
 /docwen-obsidian/
 
 # ==============================
-# 私有脚本目录
+# OpenClaw 插件/Skill
 # ==============================
-/scripts/
+/docwen-openclaw/
 
-# ==============================
-# OCR模型文件
-# ==============================
-/models/

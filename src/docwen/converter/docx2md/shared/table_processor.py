@@ -459,7 +459,12 @@ def convert_table_to_md_with_images(
 
     # 默认选项
     if options is None:
-        options = {"keep_images": True, "enable_ocr": False, "extraction_mode": "file", "ocr_placement_mode": "image_md"}
+        options = {
+            "keep_images": True,
+            "enable_ocr": False,
+            "extraction_mode": "file",
+            "ocr_placement_mode": "image_md",
+        }
 
     # 获取格式保留配置
     preserve_formatting = config_manager.get_docx_to_md_preserve_formatting()

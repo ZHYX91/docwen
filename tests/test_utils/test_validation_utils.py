@@ -15,6 +15,7 @@ from docwen.utils.validation_utils import (
 
 pytestmark = pytest.mark.unit
 
+
 @pytest.mark.unit
 @pytest.mark.parametrize(
     ("value", "expected"),
