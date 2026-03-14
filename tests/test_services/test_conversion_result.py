@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from docwen.services.result import ConversionResult
 from docwen.services.error_codes import ERROR_CODE_UNKNOWN_ERROR
+from docwen.services.result import ConversionResult
 from docwen.services.result_presentation import normalize_result_error_fields
 
 pytestmark = pytest.mark.unit

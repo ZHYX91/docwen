@@ -85,6 +85,11 @@ def test_invoice_cn_pdf_parses_long_invoice_number_and_rows(
         lambda _p: (text, spans),
         raising=True,
     )
+    monkeypatch.setattr(
+        "docwen.converter.layout2md.invoice_cn._is_scanpage",
+        lambda _t: False,
+        raising=True,
+    )
 
     out_dir = tmp_path / "out"
     out_dir.mkdir()
@@ -174,6 +179,7 @@ def test_invoice_cn_pdf_spans_handles_split_heji_and_footer(tmp_path: Path, monk
         return ("", spans)
 
     monkeypatch.setattr(invoice_cn, "_read_pdf_text_and_spans", fake_read)
+    monkeypatch.setattr(invoice_cn, "_is_scanpage", lambda _t: False)
 
     out_dir = tmp_path / "out"
     result = convert_invoice_cn_layout_to_md(
@@ -238,6 +244,11 @@ def test_invoice_cn_pdf_spans_footer_detects_heji_with_punctuation(
         lambda _p: ("", spans),
         raising=True,
     )
+    monkeypatch.setattr(
+        "docwen.converter.layout2md.invoice_cn._is_scanpage",
+        lambda _t: False,
+        raising=True,
+    )
 
     out_dir = tmp_path / "out"
     result = convert_invoice_cn_layout_to_md(
@@ -249,7 +260,7 @@ def test_invoice_cn_pdf_spans_footer_detects_heji_with_punctuation(
     )
 
     md_text = Path(result["md_path"]).read_text(encoding="utf-8")
-    row_line = next(l for l in md_text.splitlines() if l.strip().startswith("| *服务类*示例服务 |"))
+    row_line = next(line for line in md_text.splitlines() if line.strip().startswith("| *服务类*示例服务 |"))
     cells = [c.strip() for c in row_line.split("|")[1:-1]]
     assert cells[0] == "*服务类*示例服务"
     assert "合计" not in cells[0]

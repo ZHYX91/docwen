@@ -9,7 +9,6 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from docwen.translation import t
 from docwen.services.error_codes import (
     ERROR_CODE_CONVERSION_FAILED,
     ERROR_CODE_INVALID_INPUT,
@@ -17,6 +16,7 @@ from docwen.services.error_codes import (
 )
 from docwen.services.result import ConversionResult
 from docwen.table_merger import TableMerger
+from docwen.translation import t
 
 from .. import register_action
 from ..base_strategy import BaseStrategy

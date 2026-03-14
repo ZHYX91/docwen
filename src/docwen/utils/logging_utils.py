@@ -14,6 +14,7 @@ import logging
 import os
 import re
 import sys
+import tempfile
 import time
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
@@ -67,8 +68,6 @@ def generate_log_path() -> str:
     if env_log_dir:
         base_dir = Path(env_log_dir)
     elif env_force_temp:
-        import tempfile
-
         base_dir = Path(tempfile.gettempdir()) / "docwen"
     else:
         script_path = Path(sys.argv[0]).resolve()
@@ -100,8 +99,6 @@ def generate_log_path() -> str:
         logging.getLogger().debug(f"创建/确认日志目录: {log_dir}")
     except Exception:
         # 回退到临时目录
-        import tempfile
-
         log_dir = Path(tempfile.gettempdir())
         logging.getLogger().warning(f"创建日志目录失败，使用临时目录: {log_dir}")
 
@@ -131,14 +128,37 @@ def configure_file_handler(logger: logging.Logger) -> bool:
     """
     try:
         config = config_manager.get_logging_config()
+        filename = generate_log_path()
         # 创建按天轮转的日志处理器
-        file_handler = TimedRotatingFileHandler(
-            filename=generate_log_path(),
-            when="midnight",  # 每天午夜轮转
-            interval=1,  # 每天一次
-            backupCount=config.get("retention_days", 7),
-            encoding="utf-8",
-        )
+        try:
+            file_handler = TimedRotatingFileHandler(
+                filename=filename,
+                when="midnight",  # 每天午夜轮转
+                interval=1,  # 每天一次
+                backupCount=config.get("retention_days", 7),
+                encoding="utf-8",
+            )
+        except FileNotFoundError:
+            try:
+                Path(filename).parent.mkdir(parents=True, exist_ok=True)
+                file_handler = TimedRotatingFileHandler(
+                    filename=filename,
+                    when="midnight",
+                    interval=1,
+                    backupCount=config.get("retention_days", 7),
+                    encoding="utf-8",
+                )
+            except Exception:
+                fallback_dir = Path(tempfile.gettempdir()) / "docwen" / "logs"
+                fallback_dir.mkdir(parents=True, exist_ok=True)
+                fallback_filename = fallback_dir / Path(filename).name
+                file_handler = TimedRotatingFileHandler(
+                    filename=str(fallback_filename),
+                    when="midnight",
+                    interval=1,
+                    backupCount=config.get("retention_days", 7),
+                    encoding="utf-8",
+                )
 
         # 设置日志格式（硬编码）
         formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s:%(lineno)d - %(message)s")

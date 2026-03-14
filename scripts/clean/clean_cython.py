@@ -19,7 +19,7 @@ def clean_c_files(project_root):
     print("=" * 50)
 
     c_files = []
-    for root, dirs, files in os.walk(project_root):
+    for root, _dirs, files in os.walk(project_root):
         for file in files:
             if file.endswith(".c"):
                 c_files.append(os.path.join(root, file))
@@ -44,7 +44,7 @@ def clean_pyd_files(project_root):
     print("=" * 50)
 
     pyd_files = []
-    for root, dirs, files in os.walk(project_root):
+    for root, _dirs, files in os.walk(project_root):
         for file in files:
             if file.endswith(".pyd"):
                 pyd_files.append(os.path.join(root, file))
@@ -69,7 +69,7 @@ def clean_so_files(project_root):
     print("=" * 50)
 
     so_files = []
-    for root, dirs, files in os.walk(project_root):
+    for root, _dirs, files in os.walk(project_root):
         for file in files:
             if file.endswith(".so"):
                 so_files.append(os.path.join(root, file))
@@ -94,7 +94,7 @@ def clean_pyx_files(project_root):
     print("=" * 50)
 
     pyx_files = []
-    for root, dirs, files in os.walk(project_root):
+    for root, _dirs, files in os.walk(project_root):
         for file in files:
             if file.endswith(".pyx"):
                 pyx_files.append(os.path.join(root, file))

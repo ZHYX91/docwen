@@ -36,6 +36,7 @@
 - scorer.py: 元素评分器
 """
 
+import contextlib
 import logging
 import re
 import tempfile
@@ -226,10 +227,8 @@ def convert_docx_to_md_gongwen(
 
         if output_folder and images_info and (not keep_images or extraction_mode == "base64"):
             for img in images_info:
-                try:
+                with contextlib.suppress(Exception):
                     Path(img.get("image_path", "")).unlink(missing_ok=True)
-                except Exception:
-                    pass
 
         return {
             "success": True,

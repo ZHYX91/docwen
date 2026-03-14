@@ -182,7 +182,7 @@ def replace_placeholders(doc, yaml_data, body_data, template_name=None, *, footn
     # 先删除表格（如果表格需要删除）
     for table in tables_to_remove:
         try:
-            table_element = getattr(table, "_element")
+            table_element = table._element
             table_element.getparent().remove(table_element)
             logger.info("已删除整个表格（只剩一行且需要删除）")
         except Exception as e:
@@ -203,7 +203,7 @@ def _iter_body_paragraphs(doc):
     normal = []
     in_table = []
     in_textbox = []
-    for p in getattr(doc, "_element").body.iter(qn("w:p")):
+    for p in doc._element.body.iter(qn("w:p")):
         parent = p
         is_in_table = False
         is_in_textbox = False
@@ -273,7 +273,7 @@ def process_main_content(doc, body_data, yaml_data, template_name=None, *, note_
             logger.info(f"正文格式提取结果 - 字体: {fonts['eastAsia']}, 字号: {fonts['sz']}")
 
             # 准备插入新内容
-            paragraph_element = getattr(paragraph, "_element")
+            paragraph_element = paragraph._element
             parent = paragraph_element.getparent()
             index = parent.index(paragraph_element)
 
@@ -290,7 +290,7 @@ def process_main_content(doc, body_data, yaml_data, template_name=None, *, note_
                     table_data = item.get("table_data")
                     word_table = create_word_table(doc, table_data, fonts)
                     # 插入表格到正确位置
-                    parent.insert(index + insert_offset, getattr(word_table, "_element"))
+                    parent.insert(index + insert_offset, word_table._element)
                     insert_offset += 1
                     logger.info(f"插入Word表格: {len(table_data['headers'])}列 x {len(table_data['rows'])}行")
                     continue
@@ -683,7 +683,7 @@ def process_main_content(doc, body_data, yaml_data, template_name=None, *, note_
                 insert_offset += 1
 
             # 移除原始占位符段落
-            parent.remove(getattr(paragraph, "_element"))
+            parent.remove(paragraph._element)
             return True  # 找到了正文占位符
 
     # 遍历所有段落后仍未找到任何正文占位符
@@ -695,12 +695,12 @@ def remove_marked_elements(paragraphs_to_remove, rows_to_remove):
     """移除标记为需要删除的段落和表格行"""
     # 移除段落
     for para in paragraphs_to_remove:
-        try_remove_element(getattr(para, "_element"))
+        try_remove_element(para._element)
 
     # 移除表格行
     for row in rows_to_remove:
         try:
-            row_element = getattr(row, "_element")
+            row_element = row._element
             parent = row_element.getparent()
             if parent is not None:
                 parent.remove(row_element)
@@ -760,13 +760,13 @@ def _apply_code_block_style(paragraph, run, config_mgr):
     # 应用等宽字体到Run
     run.font.name = code_font
     # 确保rPr存在
-    run_element = getattr(run, "_element")
+    run_element = run._element
     if run_element.rPr is None:
         run_element.get_or_add_rPr()
     run_element.rPr.rFonts.set(qn("w:eastAsia"), code_font)
 
     # 应用段落底纹（整行灰色背景）
-    pPr = getattr(paragraph, "_element").get_or_add_pPr()
+    pPr = paragraph._element.get_or_add_pPr()
 
     # 检查是否已有shd元素
     existing_shd = pPr.find(".//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}shd")

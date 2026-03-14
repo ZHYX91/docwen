@@ -25,10 +25,8 @@ from .validation import DocxValidationStrategy
 __all__ = [
     "DocumentToOfdStrategy",
     "DocumentToPdfStrategy",
-    # 策略类
     "DocxToMdStrategy",
     "DocxValidationStrategy",
-    # 辅助函数
-    "preprocess_document_file",
     "format_conversion",
+    "preprocess_document_file",
 ]

@@ -17,8 +17,8 @@ from typing import Any
 
 from docwen.services.error_codes import (
     ERROR_CODE_INVALID_INPUT,
-    ERROR_CODE_UNSUPPORTED_FORMAT,
     ERROR_CODE_UNKNOWN_ERROR,
+    ERROR_CODE_UNSUPPORTED_FORMAT,
 )
 from docwen.services.result import ConversionResult
 

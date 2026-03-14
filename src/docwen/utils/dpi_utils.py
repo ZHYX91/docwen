@@ -87,8 +87,11 @@ class DPIManager:
             # 尝试通过窗口句柄获取DPI（最准确）
             if self._root_window:
                 self._root_window.update_idletasks()
-                hwnd = ctypes.windll.user32.GetParent(self._root_window.winfo_id())
-                dpi = ctypes.windll.user32.GetDpiForWindow(hwnd)
+                windll = getattr(ctypes, "windll", None)
+                if windll is None:
+                    raise AttributeError("ctypes.windll is not available")
+                hwnd = windll.user32.GetParent(self._root_window.winfo_id())
+                dpi = windll.user32.GetDpiForWindow(hwnd)
                 self.scaling_factor = dpi / 96.0
                 logger.info(f"Windows DPI检测: {dpi}, 缩放因子: {self.scaling_factor:.2f}")
                 return

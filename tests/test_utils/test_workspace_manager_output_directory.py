@@ -8,7 +8,6 @@ import pytest
 
 from docwen.utils import workspace_manager
 
-
 pytestmark = pytest.mark.unit
 
 

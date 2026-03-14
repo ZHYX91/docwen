@@ -28,11 +28,9 @@ except Exception:
 
 __all__ = [
     "CsvToXlsxStrategy",
-    # 策略类
     "SpreadsheetToMarkdownStrategy",
     "SpreadsheetToPdfStrategy",
     "XlsxToCsvStrategy",
-    # 辅助函数
-    "preprocess_table_file",
     "format_conversion",
+    "preprocess_table_file",
 ]

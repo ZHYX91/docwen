@@ -6,7 +6,6 @@ import pytest
 
 from docwen.config.safe_logger import SafeLogger, disable, enable, info, safe_log
 
-
 pytestmark = pytest.mark.unit
 
 

@@ -27,7 +27,7 @@ def clean_tests_pycache(project_root):
         return 0
 
     deleted_count = 0
-    for root, dirs, files in os.walk(tests_root):
+    for root, dirs, _files in os.walk(tests_root):
         if "__pycache__" in dirs:
             pycache_path = os.path.join(root, "__pycache__")
             if safe_remove_directory(pycache_path):
@@ -48,11 +48,10 @@ def clean_tests_pyc_files(project_root):
         return 0
 
     deleted_count = 0
-    for root, dirs, files in os.walk(tests_root):
+    for root, _dirs, files in os.walk(tests_root):
         for file in files:
-            if file.endswith(".pyc"):
-                if safe_remove_file(os.path.join(root, file)):
-                    deleted_count += 1
+            if file.endswith(".pyc") and safe_remove_file(os.path.join(root, file)):
+                deleted_count += 1
 
     print(f"总计删除 {deleted_count} 个 tests/**/*.pyc 文件")
     return deleted_count
@@ -82,9 +81,8 @@ def clean_tests_temp_dirs(project_root):
     deleted_count = 0
     for rel in ("tests/temp", "tests/output"):
         path = os.path.join(project_root, *rel.split("/"))
-        if os.path.isdir(path):
-            if safe_remove_directory(path):
-                deleted_count += 1
+        if os.path.isdir(path) and safe_remove_directory(path):
+            deleted_count += 1
 
     if deleted_count == 0:
         print("未找到 tests/temp 或 tests/output 目录")

@@ -158,6 +158,7 @@ def ofd_to_pdf(ofd_path: str, cancel_event: threading.Event | None = None, outpu
     """
     try:
         from easyofd import OFD
+
         from docwen.compat import apply_easyofd_patches
 
         apply_easyofd_patches()

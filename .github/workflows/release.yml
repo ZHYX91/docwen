@@ -168,11 +168,11 @@ jobs:
         run: |
           set -euo pipefail
           listing=$(tar -tzf "DocWenCLI-linux-x64.tar.gz")
-          echo "$listing" | grep -qE '^(\./)?DocWenCLI$'
-          echo "$listing" | grep -qE '^(\./)?_internal/'
-          echo "$listing" | grep -qE '^(\./)?templates/'
-          echo "$listing" | grep -qE '^(\./)?configs/'
-          echo "$listing" | grep -qE '^(\./)?docwen/i18n/locales/'
+          grep -qE '^(\./)?DocWenCLI$' <<< "$listing"
+          grep -qE '^(\./)?_internal/' <<< "$listing"
+          grep -qE '^(\./)?templates/' <<< "$listing"
+          grep -qE '^(\./)?configs/' <<< "$listing"
+          grep -qE '^(\./)?docwen/i18n/locales/' <<< "$listing"
 
       - name: Upload artifact (Linux)
         uses: actions/upload-artifact@v4

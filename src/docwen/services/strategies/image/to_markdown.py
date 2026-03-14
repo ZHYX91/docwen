@@ -15,13 +15,13 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from docwen.translation import t
 from docwen.services.error_codes import (
     ERROR_CODE_CONVERSION_FAILED,
     ERROR_CODE_INVALID_INPUT,
     ERROR_CODE_OPERATION_CANCELLED,
 )
 from docwen.services.result import ConversionResult
+from docwen.translation import t
 from docwen.utils.path_utils import generate_output_path
 from docwen.utils.validation_utils import validate_ocr_requires_images
 from docwen.utils.yaml_utils import generate_basic_yaml_frontmatter

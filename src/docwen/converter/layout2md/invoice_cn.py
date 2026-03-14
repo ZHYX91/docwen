@@ -1,13 +1,13 @@
+import contextlib
 import logging
 import re
 import tempfile
 import threading
+import xml.etree.ElementTree as etree
 import zipfile
 from bisect import bisect_right
 from pathlib import Path
 from typing import Any, cast
-
-import xml.etree.ElementTree as etree
 
 from docwen.translation import t
 from docwen.utils.text_utils import format_yaml_value
@@ -343,7 +343,8 @@ def _render_pdf_page_to_png(*, file_path: str, page_index: int, png_path: str) -
                         threshold = i
 
                 t = max(90, min(210, int(threshold)))
-                img = img.point(lambda x: 255 if x >= t else 0, mode="L")
+                table = [255 if i >= t else 0 for i in range(256)]
+                img = img.point(table, mode="L")
                 img.save(png_path, format="PNG", optimize=True)
         except Exception:
             pass
@@ -512,7 +513,7 @@ def _parse_invoice_metadata_from_pdf_spans(spans: list[tuple[float, float, float
     buyer_name = ""
     seller_name = ""
     if split_x is not None:
-        for y, x0, x1 in name_labels:
+        for y, x0, _x1 in name_labels:
             if x0 < split_x and not buyer_name:
                 buyer_name = pick_name_after_label(y, x0, side_left=True)
             if x0 >= split_x and not seller_name:
@@ -531,15 +532,15 @@ def _parse_invoice_metadata_from_pdf_spans(spans: list[tuple[float, float, float
             tail = _compact_text(tail).upper()
             if re.fullmatch(r"[0-9A-Z]{15,20}", tail or ""):
                 return tail
-            for y2, x02, _x12, t2 in items:
+            for y2, _x02, _x12, t2 in items:
                 if abs(y2 - y) > 2.5:
                     continue
-                if x02 <= x0 + 5:
+                if _x02 <= x0 + 5:
                     continue
                 v = _compact_text(t2).upper()
                 if re.fullmatch(r"[0-9A-Z]{15,20}", v):
                     return v
-            for y2, x02, _x12, t2 in items:
+            for y2, _x02, _x12, t2 in items:
                 if not (y + 1.0 <= y2 <= y + 25.0):
                     continue
                 v = _compact_text(t2).upper()
@@ -1011,7 +1012,7 @@ def _extract_ofd_text_from_items(items: list[tuple[float, float, str]]) -> str:
     for line in lines:
         line_sorted = sorted(line, key=lambda t: t[0])
         out_lines.append("".join([s for _x, s in line_sorted]).strip())
-    return "\n".join([l for l in out_lines if l])
+    return "\n".join(line for line in out_lines if line)
 
 
 def _parse_invoice_rows_from_ofd_items(items: list[tuple[float, float, str]]) -> list[dict[str, str]]:
@@ -1079,7 +1080,7 @@ def _parse_invoice_rows_from_ofd_items(items: list[tuple[float, float, str]]) ->
 
     row_keys = ["商品名称", "规格型号", "单位", "数量", "单价", "金额", "税率", "税额"]
     rows: list[dict[str, str]] = []
-    current = {k: "" for k in row_keys}
+    current = dict.fromkeys(row_keys, "")
 
     def append(k: str, v: str) -> None:
         v = (v or "").strip()
@@ -1094,7 +1095,7 @@ def _parse_invoice_rows_from_ofd_items(items: list[tuple[float, float, str]]) ->
         nonlocal current
         if any((current.get("商品名称") or "").strip() for _k in ["商品名称"]):
             rows.append({k: (current.get(k) or "").strip() for k in row_keys})
-        current = {k: "" for k in row_keys}
+        current = dict.fromkeys(row_keys, "")
 
     star_chars = ("*", "＊", "∗", "﹡")
     saw_marker = False
@@ -1144,7 +1145,7 @@ def _parse_invoice_rows_from_pdf_spans(
         "数量": {"数量", "数 量"},
         "单价": {"单价", "单 价"},
         "金额": {"金额"},
-        "税率": {"税率/征收率", "税率", "税率/征收率"},
+        "税率": {"税率/征收率", "税率"},
         "税额": {"税额", "税 额"},
     }
 
@@ -1235,13 +1236,13 @@ def _parse_invoice_rows_from_pdf_spans(
 
     row_keys = ["商品名称", "规格型号", "单位", "数量", "单价", "金额", "税率", "税额"]
     rows: list[dict[str, str]] = []
-    row_bucket = {k: "" for k in row_keys}
+    row_bucket = dict.fromkeys(row_keys, "")
 
     def flush() -> None:
         nonlocal row_bucket
         if any((row_bucket.get("商品名称") or "").strip() for _k in ["商品名称"]):
             rows.append({k: (row_bucket.get(k) or "").strip() for k in row_keys})
-        row_bucket = {k: "" for k in row_keys}
+        row_bucket = dict.fromkeys(row_keys, "")
 
     def append(k: str, v: str) -> None:
         v = (v or "").strip()
@@ -1280,8 +1281,8 @@ def _parse_invoice_rows_from_pdf_spans(
 
 def _parse_invoice_rows_from_pdf_text(text: str, *, prefer_marked: bool = False) -> list[dict[str, str]]:
     strip_prefix = "\ufeff\u200b\u200c\u200d"
-    lines = [((l or "").strip().lstrip(strip_prefix)) for l in (text or "").splitlines()]
-    lines = [l for l in lines if l]
+    lines = [((line or "").strip().lstrip(strip_prefix)) for line in (text or "").splitlines()]
+    lines = [line for line in lines if line]
     star_chars = ("*", "＊", "∗", "﹡")
 
     header_aliases = {
@@ -1300,8 +1301,8 @@ def _parse_invoice_rows_from_pdf_text(text: str, *, prefer_marked: bool = False)
     headers = {_compact_text(h) for h in header_aliases}
 
     start = None
-    for i, l in enumerate(lines):
-        c = _compact_text(l)
+    for i, line in enumerate(lines):
+        c = _compact_text(line)
         if c in headers or "项目名称" in c or "货物或应税劳务" in c:
             start = i
             break
@@ -1310,28 +1311,28 @@ def _parse_invoice_rows_from_pdf_text(text: str, *, prefer_marked: bool = False)
 
     data_lines: list[str] = []
     seen_header = False
-    for l in lines[start:]:
-        c = _compact_text(l)
+    for line in lines[start:]:
+        c = _compact_text(line)
         if c in headers or "项目名称" in c or "货物或应税劳务" in c:
             seen_header = True
             continue
         if not seen_header:
             continue
-        if "合计" in _compact_text(l):
+        if "合计" in _compact_text(line):
             break
         marker_split: list[str] | None = None
         for m in star_chars:
-            if m in l and not l.startswith(m) and l.count(m) >= 2:
-                idx = l.find(m)
-                prefix = l[:idx].strip()
-                rest = l[idx:].strip()
+            if m in line and not line.startswith(m) and line.count(m) >= 2:
+                idx = line.find(m)
+                prefix = line[:idx].strip()
+                rest = line[idx:].strip()
                 marker_split = []
                 if prefix:
                     marker_split.append(prefix)
                 if rest:
                     marker_split.append(rest)
                 break
-        data_lines.extend(marker_split or [l])
+        data_lines.extend(marker_split or [line])
 
     merged_lines: list[str] = []
     i = 0
@@ -1383,9 +1384,7 @@ def _parse_invoice_rows_from_pdf_text(text: str, *, prefer_marked: bool = False)
         c = _compact_text(s)
         if not c or len(c) > 3:
             return False
-        if is_number(c) or is_tax_rate(c) or bool(re.fullmatch(r"[*＊\\-—–·•]+", c)):
-            return False
-        return True
+        return not (is_number(c) or is_tax_rate(c) or bool(re.fullmatch(r"[*＊\\-—–·•]+", c)))
 
     def looks_like_spec(s: str) -> bool:
         c = _compact_text(s)
@@ -1434,7 +1433,7 @@ def _parse_invoice_rows_from_pdf_text(text: str, *, prefer_marked: bool = False)
         tax_amount = (chunk[end] or "").strip()
         tax_rate = (chunk[rate_idx] or "").strip()
 
-        parts = [chunk[i] for i in range(0, end) if i != rate_idx]
+        parts = [chunk[i] for i in range(end) if i != rate_idx]
         tail_extras = [s for s in chunk[end + 1 :] if (s or "").strip()]
         amount = parts.pop().strip() if parts and is_number(parts[-1]) else ""
         unit_price = parts.pop().strip() if parts and is_number(parts[-1]) else ""
@@ -1468,14 +1467,14 @@ def _parse_invoice_rows_from_pdf_text(text: str, *, prefer_marked: bool = False)
     chunks: list[list[str]] = []
     current: list[str] = []
     saw_marker = False
-    for l in data_lines:
-        if l.startswith(star_chars):
+    for line in data_lines:
+        if line.startswith(star_chars):
             saw_marker = True
             if current:
                 chunks.append(current)
-            current = [l]
+            current = [line]
             continue
-        current.append(l)
+        current.append(line)
     if current:
         chunks.append(current)
 
@@ -1488,9 +1487,9 @@ def _parse_invoice_rows_from_pdf_text(text: str, *, prefer_marked: bool = False)
 
         rows_stream: list[dict[str, str]] = []
         stream_buf: list[str] = []
-        for l in data_lines:
-            stream_buf.append(l)
-            if is_tax_amount(l) and len(stream_buf) >= 2 and is_tax_rate(stream_buf[-2]):
+        for line in data_lines:
+            stream_buf.append(line)
+            if is_tax_amount(line) and len(stream_buf) >= 2 and is_tax_rate(stream_buf[-2]):
                 maybe = build_row(stream_buf)
                 if maybe:
                     rows_stream.append(maybe)
@@ -1501,9 +1500,9 @@ def _parse_invoice_rows_from_pdf_text(text: str, *, prefer_marked: bool = False)
         return rows_stream if len(rows_stream) > len(rows_marked) else rows_marked
 
     buf: list[str] = []
-    for l in data_lines:
-        buf.append(l)
-        if is_tax_amount(l) and len(buf) >= 2 and is_tax_rate(buf[-2]):
+    for line in data_lines:
+        buf.append(line)
+        if is_tax_amount(line) and len(buf) >= 2 and is_tax_rate(buf[-2]):
             maybe = build_row(buf)
             if maybe:
                 rows.append(maybe)
@@ -1632,7 +1631,8 @@ def convert_invoice_cn_layout_to_md(
                 import fitz
 
                 with fitz.open(file_path) as doc:
-                    for page_idx, page in enumerate(doc):
+                    for page_idx in range(doc.page_count):
+                        page = doc[page_idx]
                         if cancel_event and cancel_event.is_set():
                             raise InterruptedError("操作已被取消")
 
@@ -1711,10 +1711,8 @@ def convert_invoice_cn_layout_to_md(
         if not final_folder:
             raise RuntimeError("保存输出文件夹失败")
         if progress_callback:
-            try:
+            with contextlib.suppress(Exception):
                 progress_callback(t("conversion.progress.writing_file"))
-            except Exception:
-                pass
         md_paths = [str(Path(final_folder) / name) for name in md_filenames]
         return {
             "md_path": md_paths[0],

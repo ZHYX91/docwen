@@ -16,7 +16,6 @@ from docwen.config.toml_operations import (
     write_toml_file,
 )
 
-
 pytestmark = pytest.mark.unit
 
 

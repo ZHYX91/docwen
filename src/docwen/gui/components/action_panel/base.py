@@ -403,19 +403,25 @@ class ActionPanelBase(tb.Frame):
 
         # 添加序号参数
         numbering_source = self._get_numbering_option_source()
-        if numbering_source == "md":
-            if self.md_remove_numbering_var is not None and self.md_add_numbering_var is not None:
-                options["remove_numbering"] = self.md_remove_numbering_var.get()
-                options["add_numbering"] = self.md_add_numbering_var.get()
-                if self.md_numbering_scheme_var is not None:
-                    scheme_name = self.md_numbering_scheme_var.get()
-                    options["numbering_scheme"] = scheme_name_to_id.get(scheme_name, default_scheme_id)
-        elif numbering_source == "doc":
-            if self.doc_remove_numbering_var is not None and self.doc_add_numbering_var is not None:
-                options["remove_numbering"] = self.doc_remove_numbering_var.get()
-                options["add_numbering"] = self.doc_add_numbering_var.get()
-                if self.doc_numbering_scheme_var is not None:
-                    scheme_name = self.doc_numbering_scheme_var.get()
-                    options["numbering_scheme"] = scheme_name_to_id.get(scheme_name, default_scheme_id)
+        if (
+            numbering_source == "md"
+            and self.md_remove_numbering_var is not None
+            and self.md_add_numbering_var is not None
+        ):
+            options["remove_numbering"] = self.md_remove_numbering_var.get()
+            options["add_numbering"] = self.md_add_numbering_var.get()
+            if self.md_numbering_scheme_var is not None:
+                scheme_name = self.md_numbering_scheme_var.get()
+                options["numbering_scheme"] = scheme_name_to_id.get(scheme_name, default_scheme_id)
+        elif (
+            numbering_source == "doc"
+            and self.doc_remove_numbering_var is not None
+            and self.doc_add_numbering_var is not None
+        ):
+            options["remove_numbering"] = self.doc_remove_numbering_var.get()
+            options["add_numbering"] = self.doc_add_numbering_var.get()
+            if self.doc_numbering_scheme_var is not None:
+                scheme_name = self.doc_numbering_scheme_var.get()
+                options["numbering_scheme"] = scheme_name_to_id.get(scheme_name, default_scheme_id)
 
         return options

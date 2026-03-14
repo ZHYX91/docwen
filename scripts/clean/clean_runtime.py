@@ -32,7 +32,7 @@ def clean_pycache_dirs(project_root):
     print("=" * 50)
 
     pycache_dirs = []
-    for root, dirs, files in os.walk(project_root):
+    for root, dirs, _files in os.walk(project_root):
         dirs[:] = [d for d in dirs if d not in _SKIP_DIR_NAMES]
         if "__pycache__" in dirs:
             pycache_path = os.path.join(root, "__pycache__")
@@ -103,7 +103,7 @@ def clean_pytest_artifacts(project_root):
 
     # 清理 .pytest_cache 目录（可能存在于多个位置）
     pytest_cache_dirs = []
-    for root, dirs, files in os.walk(project_root):
+    for root, dirs, _files in os.walk(project_root):
         dirs[:] = [d for d in dirs if d not in _SKIP_DIR_NAMES]
         if ".pytest_cache" in dirs:
             cache_path = os.path.join(root, ".pytest_cache")
@@ -124,9 +124,8 @@ def clean_pytest_artifacts(project_root):
     ]
 
     for coverage_file in coverage_files:
-        if os.path.isfile(coverage_file):
-            if safe_remove_file(coverage_file):
-                deleted_count += 1
+        if os.path.isfile(coverage_file) and safe_remove_file(coverage_file):
+            deleted_count += 1
 
     # 清理 htmlcov 目录
     htmlcov_path = os.path.join(project_root, "htmlcov")
@@ -251,9 +250,8 @@ def clean_generated_output(project_root):
     ]
 
     for gen_file in generated_files:
-        if os.path.isfile(gen_file):
-            if safe_remove_file(gen_file):
-                deleted_count += 1
+        if os.path.isfile(gen_file) and safe_remove_file(gen_file):
+            deleted_count += 1
 
     if deleted_count == 0:
         print("未找到生成的输出目录或文件")

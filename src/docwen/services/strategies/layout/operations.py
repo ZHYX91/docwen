@@ -18,7 +18,6 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from docwen.translation import t
 from docwen.services.error_codes import (
     ERROR_CODE_CONVERSION_FAILED,
     ERROR_CODE_DEPENDENCY_MISSING,
@@ -29,6 +28,7 @@ from docwen.services.error_codes import (
 from docwen.services.result import ConversionResult
 from docwen.services.strategies import register_action
 from docwen.services.strategies.base_strategy import BaseStrategy
+from docwen.translation import t
 
 from .utils import preprocess_layout_file
 
@@ -389,9 +389,8 @@ class SplitPdfStrategy(BaseStrategy):
                             error_code=ERROR_CODE_OPERATION_CANCELLED,
                         )
 
-                    from docwen.utils.workspace_manager import get_output_directory
-                    from docwen.utils.workspace_manager import finalize_output
                     from docwen.utils.path_utils import generate_named_output_path, generate_timestamp
+                    from docwen.utils.workspace_manager import finalize_output, get_output_directory
 
                     output_dir = get_output_directory(file_path)
                     base_name = Path(file_path).stem

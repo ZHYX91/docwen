@@ -8,7 +8,6 @@ import pytest
 
 from docwen.ipc.single_instance import SingleInstance
 
-
 pytestmark = pytest.mark.unit
 
 

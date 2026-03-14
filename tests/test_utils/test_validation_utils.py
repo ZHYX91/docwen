@@ -12,7 +12,6 @@ from docwen.utils.validation_utils import (
     validate_ocr_requires_images,
 )
 
-
 pytestmark = pytest.mark.unit
 
 

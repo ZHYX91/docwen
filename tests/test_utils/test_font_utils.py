@@ -6,7 +6,6 @@ import pytest
 
 import docwen.utils.font_utils as font_utils
 
-
 pytestmark = pytest.mark.unit
 
 

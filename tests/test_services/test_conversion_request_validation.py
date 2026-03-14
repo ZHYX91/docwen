@@ -9,7 +9,6 @@ import pytest
 from docwen.errors import InvalidInputError
 from docwen.services.requests import ConversionRequest
 
-
 pytestmark = pytest.mark.unit
 
 

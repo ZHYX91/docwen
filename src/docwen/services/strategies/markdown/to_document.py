@@ -34,7 +34,6 @@ from docwen.converter.formats.document import (
 # 导入核心转换和处理函数
 from docwen.converter.md2docx.core import convert as convert_md_to_docx
 from docwen.docx_spell.core import process_docx
-from docwen.translation import t
 from docwen.services.error_codes import (
     ERROR_CODE_CONVERSION_FAILED,
     ERROR_CODE_DEPENDENCY_MISSING,
@@ -45,6 +44,7 @@ from docwen.services.error_codes import (
 from docwen.services.result import ConversionResult
 from docwen.services.strategies import CATEGORY_MARKDOWN, register_conversion
 from docwen.services.strategies.base_strategy import BaseStrategy
+from docwen.translation import t
 from docwen.utils.path_utils import generate_output_path
 
 logger = logging.getLogger(__name__)
@@ -327,11 +327,7 @@ class BaseMdToDocumentStrategy(BaseStrategy):
         返回:
             (处理后的docx路径, 是否尝试了检查)
         """
-        should_run_spell_check = False
-        if proofread_options is None:
-            should_run_spell_check = True
-        else:
-            should_run_spell_check = any(bool(v) for v in proofread_options.values())
+        should_run_spell_check = True if proofread_options is None else any(bool(v) for v in proofread_options.values())
 
         if not should_run_spell_check:
             return docx_path, False

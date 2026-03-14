@@ -17,7 +17,6 @@ import pytest
 from docwen.errors import InvalidInputError
 from docwen.services.use_cases import _normalize_numbering_options
 
-
 pytestmark = pytest.mark.unit
 
 

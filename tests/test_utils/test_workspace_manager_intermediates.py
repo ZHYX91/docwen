@@ -11,7 +11,6 @@ from docwen.utils.workspace_manager import (
     save_intermediates_from_temp_dir,
 )
 
-
 pytestmark = pytest.mark.unit
 
 

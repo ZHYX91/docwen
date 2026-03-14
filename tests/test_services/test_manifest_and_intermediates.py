@@ -12,7 +12,6 @@ from docwen.services.strategies.layout.to_markdown import LayoutToMarkdownStrate
 from docwen.services.strategies.layout.utils import LayoutPreprocessResult
 from docwen.utils.workspace_manager import IntermediateItem
 
-
 pytestmark = pytest.mark.unit
 
 

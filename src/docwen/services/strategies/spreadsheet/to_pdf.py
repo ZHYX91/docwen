@@ -14,13 +14,13 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from docwen.translation import t
 from docwen.services.error_codes import (
     ERROR_CODE_CONVERSION_FAILED,
     ERROR_CODE_DEPENDENCY_MISSING,
     ERROR_CODE_OPERATION_CANCELLED,
 )
 from docwen.services.result import ConversionResult
+from docwen.translation import t
 from docwen.utils.path_utils import generate_output_path
 
 from .. import CATEGORY_SPREADSHEET, register_conversion

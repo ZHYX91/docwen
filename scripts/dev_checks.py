@@ -25,10 +25,10 @@ def main() -> int:
     logging.getLogger("config_manager").setLevel(logging.WARNING)
     logging.getLogger("safe_log").setLevel(logging.WARNING)
 
-    import docwen.utils.gui_utils
+    import docwen.config.schemas.gui
     import docwen.gui.core.window
     import docwen.gui.settings.general_tab
-    import docwen.config.schemas.gui
+    import docwen.utils.gui_utils
 
     parse_all_toml(Path("configs"))
     parse_all_toml(Path("src/docwen/i18n/locales"))

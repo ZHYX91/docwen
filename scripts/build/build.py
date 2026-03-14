@@ -24,20 +24,21 @@
     - Cython: pip install cython（可选，用于编译核心模块）
 """
 
+import argparse
+import contextlib
+import datetime
+import importlib.metadata
+import logging
 import os
-import sys
+import platform
 import re
 import shutil
-import datetime
-import time
 import stat
 import subprocess
-import platform
-import logging
-import importlib.metadata
-import argparse
+import sys
+import time
 from pathlib import Path, PurePosixPath
-from typing import Optional, cast
+from typing import cast
 
 try:
     import PyInstaller.__main__ as pyinstaller_main
@@ -300,10 +301,7 @@ def force_remove_directory(path: Path) -> bool:
     for attempt in range(max_attempts):
         try:
             # Python 3.12+ 使用 onexc 替代已弃用的 onerror
-            if sys.version_info >= (3, 12):
-                shutil.rmtree(path, onexc=_remove_readonly_onexc)
-            else:
-                shutil.rmtree(path, onerror=_remove_readonly_onerror)
+            shutil.rmtree(path, onexc=_remove_readonly_onexc)
             logger.info(f"成功删除目录: {path}")
             return True
         except PermissionError as e:
@@ -331,6 +329,25 @@ def force_remove_directory(path: Path) -> bool:
             return False
 
     return False
+
+
+def copytree_robust(src: Path, dst: Path) -> None:
+    try:
+        shutil.copytree(src, dst, dirs_exist_ok=True)
+        return
+    except OSError as e:
+        if not isinstance(e, PermissionError) and getattr(e, "winerror", None) != 5:
+            raise
+    dst.mkdir(parents=True, exist_ok=True)
+    for root, dirs, files in os.walk(src):
+        src_root = Path(root)
+        rel = src_root.relative_to(src)
+        dst_root = dst / rel
+        dst_root.mkdir(parents=True, exist_ok=True)
+        for d in dirs:
+            (dst_root / d).mkdir(parents=True, exist_ok=True)
+        for f in files:
+            shutil.copy2(src_root / f, dst_root / f)
 
 
 def compile_cython_modules() -> bool:
@@ -384,10 +401,8 @@ def compile_cython_modules() -> bool:
 
         if result.returncode == 0:
             logger.info("Cython 编译成功完成!")
-            try:
+            with contextlib.suppress(Exception):
                 force_remove_directory(work_dir)
-            except Exception:
-                pass
             return True
         else:
             logger.error(f"Cython 编译失败，返回码: {result.returncode}")
@@ -541,7 +556,7 @@ def build_app(
     with_cli: bool = True,
     with_gui: bool = True,
     version_override: str | None = None,
-) -> Optional[tuple[str, Path]]:
+) -> tuple[str, Path] | None:
     """
     构建应用程序（文件夹模式）
 
@@ -604,10 +619,7 @@ def build_app(
     models_src = PROJECT_ROOT / "models"
     samples_src = PROJECT_ROOT / "samples"
     i18n_locales_src = effective_src_dir / "docwen" / "i18n" / "locales"
-    if IS_WINDOWS:
-        icon_path = assets_src / "icon.ico"
-    else:
-        icon_path = assets_src / "icon.png"
+    icon_path = assets_src / "icon.ico" if IS_WINDOWS else assets_src / "icon.png"
 
     gui_entry = effective_src_dir / "docwen" / "gui_run.py"
     cli_entry = effective_src_dir / "docwen" / "cli_run.py"
@@ -668,22 +680,8 @@ def build_app(
 
     # 数据文件
     data_files = [
-        f"{templates_src}{os.pathsep}templates",
-        f"{configs_src}{os.pathsep}configs",
         f"{i18n_locales_src}{os.pathsep}docwen/i18n/locales",
     ]
-
-    if models_src.exists():
-        data_files.append(f"{models_src}{os.pathsep}models")
-        logger.info(f"添加 OCR 模型目录: {models_src}")
-    else:
-        logger.warning("OCR 模型目录不存在，请手动添加")
-
-    if samples_src.exists():
-        data_files.append(f"{samples_src}{os.pathsep}samples")
-        logger.info(f"添加示例文件目录: {samples_src}")
-    else:
-        logger.warning("示例文件目录不存在，跳过")
 
     for data_file in data_files:
         if with_gui:
@@ -726,10 +724,8 @@ def build_app(
             logger.end_step()
 
         if effective_src_dir != SRC_DIR:
-            try:
+            with contextlib.suppress(Exception):
                 force_remove_directory(BUILD_DIR / "staging_src")
-            except Exception:
-                pass
 
         # 5. 部署文件整理
         logger.start_step("部署文件整理")
@@ -763,7 +759,7 @@ def build_app(
             src_internal = cli_output_dir / "_internal"
             dst_internal = deploy_dir / "_internal"
             if src_internal.exists():
-                shutil.copytree(src_internal, dst_internal, dirs_exist_ok=True)
+                copytree_robust(src_internal, dst_internal)
 
         # 补充复制资源文件
         resource_mappings = [
@@ -775,20 +771,20 @@ def build_app(
 
         for src, dst in resource_mappings:
             if not dst.exists() and src.exists():
-                shutil.copytree(src, dst)
+                copytree_robust(src, dst)
                 logger.info(f"复制: {src.name} -> {dst}")
 
         # 国际化文件
         i18n_dest = deploy_dir / "docwen" / "i18n" / "locales"
         if not i18n_dest.exists() and i18n_locales_src.exists():
             i18n_dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copytree(i18n_locales_src, i18n_dest)
+            copytree_robust(i18n_locales_src, i18n_dest)
             logger.info(f"复制国际化文件到: {i18n_dest}")
 
         # OCR 模型
         models_dest = deploy_dir / "models"
         if not models_dest.exists() and models_src.exists() and list(models_src.iterdir()):
-            shutil.copytree(models_src, models_dest)
+            copytree_robust(models_src, models_dest)
             logger.info(f"复制 OCR 模型到: {models_dest}")
 
         # CLI 独立目录资源补充
@@ -799,17 +795,19 @@ def build_app(
         if with_cli and cli_output_dir.exists():
             cli_resource_mappings = [
                 (templates_src, cli_output_dir / "templates"),
+                (models_src, cli_output_dir / "models"),
+                (samples_src, cli_output_dir / "samples"),
                 (configs_src, cli_output_dir / "configs"),
             ]
             for src, dst in cli_resource_mappings:
                 if not dst.exists() and src.exists():
-                    shutil.copytree(src, dst)
+                    copytree_robust(src, dst)
                     logger.info(f"补充复制到 CLI 目录: {src.name} -> {dst}")
 
             cli_i18n_dest = cli_output_dir / "docwen" / "i18n" / "locales"
             if not cli_i18n_dest.exists() and i18n_locales_src.exists():
                 cli_i18n_dest.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copytree(i18n_locales_src, cli_i18n_dest)
+                copytree_robust(i18n_locales_src, cli_i18n_dest)
                 logger.info(f"补充复制国际化文件到 CLI 目录: {cli_i18n_dest}")
 
         # 复制 README 文件（所有语言版本，同级目录）
@@ -826,6 +824,20 @@ def build_app(
                 license_copied += 1
 
         logger.info(f"许可证文件已复制 ({license_copied} 个)")
+
+        if with_cli and cli_output_dir.exists():
+            copy_readme_files(cli_output_dir)
+            for license_file in license_files:
+                src = PROJECT_ROOT / license_file
+                if src.exists():
+                    shutil.copy2(src, cli_output_dir / license_file)
+
+        if IS_WINDOWS and with_gui and with_cli and cli_output_dir.exists():
+            cli_deploy_dir_name = f"DocWenCLI_v{version}_{PLATFORM_TAG}"
+            cli_deploy_dir = DIST_DIR / cli_deploy_dir_name
+            if cli_deploy_dir.exists():
+                force_remove_directory(cli_deploy_dir)
+            shutil.move(str(cli_output_dir), str(cli_deploy_dir))
         logger.end_step()
 
     except Exception as e:

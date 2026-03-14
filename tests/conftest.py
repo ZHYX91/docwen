@@ -5,7 +5,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-
 _ROOT = Path(__file__).resolve().parents[1]
 _SRC = _ROOT / "src"
 if str(_SRC) not in sys.path:
@@ -77,7 +76,4 @@ def pytest_ignore_collect(collection_path: Path, config: Any) -> bool:
         return True
     if not _WATCHDOG_OK and any(part in _WATCHDOG_REQUIRED_DIR_NAMES for part in collection_path.parts):
         return True
-    if not _FITZ_OK and name in _FITZ_REQUIRED_BASENAMES:
-        return True
-
-    return False
+    return (not _FITZ_OK) and (name in _FITZ_REQUIRED_BASENAMES)
