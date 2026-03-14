@@ -22,8 +22,8 @@ from pathlib import Path
 from docx import Document
 
 from docwen.config.config_manager import config_manager
-from docwen.translation import t
 from docwen.proofread_keys import SENSITIVE_WORD, SYMBOL_CORRECTION, SYMBOL_PAIRING, TYPOS_RULE
+from docwen.translation import t
 from docwen.utils.docx_utils import NAMESPACES as DOCX_NAMESPACES
 from docwen.utils.path_utils import generate_output_path
 

@@ -122,9 +122,9 @@ class NumberingPatternsEditorDialog(BaseEditorDialog):
     """
 
     # 覆盖基类属性
-    WINDOW_TITLE = t("editors.numbering_clean.window_title")
+    WINDOW_TITLE_KEY = "editors.numbering_clean.window_title"
     CONFIG_FILE_NAME = "heading_numbering_clean.toml"
-    LEFT_PANEL_TITLE = t("editors.numbering_clean.rule_list")
+    LEFT_PANEL_TITLE_KEY = "editors.numbering_clean.rule_list"
 
     def __init__(self, parent: tk.Widget, config_manager: Any, on_save: Callable[[], None] | None = None):
         """

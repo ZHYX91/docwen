@@ -8,7 +8,6 @@ from docwen.i18n import t
 from docwen.utils.text_utils import format_yaml_value
 from docwen.utils.yaml_utils import generate_basic_yaml_frontmatter, parse_yaml, process_list_field
 
-
 pytestmark = pytest.mark.unit
 
 

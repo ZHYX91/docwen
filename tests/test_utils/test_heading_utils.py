@@ -6,7 +6,6 @@ import pytest
 
 from docwen.utils.heading_utils import convert_to_halfwidth, detect_heading_level, split_content_by_delimiters
 
-
 pytestmark = pytest.mark.unit
 
 

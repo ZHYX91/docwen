@@ -492,8 +492,8 @@ def _apply_image_rules(
 ) -> tuple[str, int]:
     import re
 
-    from docwen.converter.shared.image_md import process_image_with_ocr
     from docwen.config.config_manager import config_manager
+    from docwen.converter.shared.image_md import process_image_with_ocr
 
     link_settings = config_manager.get_markdown_link_style_settings()
     image_link_style = link_settings.get("image_link_style", "wiki_embed")
@@ -589,8 +589,8 @@ def _create_image_md_file(
     返回:
         str: 创建的md文件名（如 'image_1.md'）
     """
-    from docwen.converter.shared.image_md import create_image_md_file as shared_create_image_md_file
     from docwen.config.config_manager import config_manager
+    from docwen.converter.shared.image_md import create_image_md_file as shared_create_image_md_file
 
     link_settings = config_manager.get_markdown_link_style_settings()
     image_link_style = link_settings.get("image_link_style", "wiki_embed")

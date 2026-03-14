@@ -7,9 +7,9 @@
     python scripts/clean/clean_all.py
 """
 
+import os
 import subprocess
 import sys
-import os
 
 
 def run_script(script_name):

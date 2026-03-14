@@ -24,7 +24,7 @@ def _iter_backticked(text: str) -> list[str]:
 
 
 def _resolve_repo_path(root: Path, token: str) -> Path | None:
-    if token.startswith("http://") or token.startswith("https://"):
+    if token.startswith(("http://", "https://")):
         return None
 
     if "\\" in token:
@@ -36,19 +36,21 @@ def _resolve_repo_path(root: Path, token: str) -> Path | None:
             return None
 
     rp = token
-    if (
-        rp.startswith("converter/")
-        or rp.startswith("services/")
-        or rp.startswith("utils/")
-        or rp.startswith("gui/")
-        or rp.startswith("cli/")
-        or rp.startswith("config/")
-        or rp.startswith("ipc/")
-        or rp.startswith("security/")
-        or rp.startswith("template/")
-        or rp.startswith("i18n/")
-        or rp.startswith("docx_spell/")
-        or rp.startswith("table_merger/")
+    if rp.startswith(
+        (
+            "converter/",
+            "services/",
+            "utils/",
+            "gui/",
+            "cli/",
+            "config/",
+            "ipc/",
+            "security/",
+            "template/",
+            "i18n/",
+            "docx_spell/",
+            "table_merger/",
+        )
     ):
         rp = "src/docwen/" + rp
     elif rp.startswith(

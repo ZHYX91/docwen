@@ -15,9 +15,9 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from docwen.translation import t
 from docwen.services.error_codes import ERROR_CODE_CONVERSION_FAILED
 from docwen.services.result import ConversionResult
+from docwen.translation import t
 from docwen.utils.path_utils import generate_output_path
 
 from .. import CATEGORY_IMAGE, register_conversion
@@ -173,7 +173,7 @@ class ImageToPdfStrategy(BaseStrategy):
                         move=True,
                         include_dirs=False,
                     )
-                    for item, saved_path in saved_items:
+                    for item, _saved_path in saved_items:
                         filename = Path(item.path).name
                         logger.debug(f"保留中间文件: {filename}")
                 else:

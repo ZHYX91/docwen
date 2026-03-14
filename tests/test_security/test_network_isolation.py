@@ -13,7 +13,6 @@ import pytest
 
 import docwen.security.network_isolation as ni
 
-
 pytestmark = pytest.mark.unit
 
 

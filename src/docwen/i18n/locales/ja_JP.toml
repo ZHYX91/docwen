@@ -24,6 +24,14 @@ browse = "参照..."
 select = "選択"
 disclaimer = "テスト版。精度は保証されません。\nAGPL-3.0 オープンソース。"
 
+[status_bar]
+copy_path = "パスをコピー"
+path_copied = "パスをクリップボードにコピーしました"
+copy_failed = "コピーに失敗しました"
+cannot_locate_no_path = "場所を開けません：ファイルパスが未設定です"
+cannot_locate_no_callback = "場所を開けません：コールバックが設定されていません"
+file_missing = "ファイルが存在しません：{path}"
+
 # =============================================================================
 # CLI（コマンドラインインターフェース）
 # =============================================================================
@@ -1531,6 +1539,7 @@ blockquote_prefix = "🖼️ **画像OCR**："
 # =============================================================================
 # 変換進捗メッセージ
 # =============================================================================
+[conversion.progress]
 preparing = "準備中..."
 preparing_format = "{format} をPDFに変換する準備中..."
 detecting_format = "実際の形式を検出中..."
@@ -1566,6 +1575,7 @@ preprocessing_base_table = "ベーステーブルを前処理中..."
 merging_table_progress = "テーブル {current}/{total} を結合中..."
 saving_merge_result = "結合結果を保存中..."
 conversion_to_csv_success = "CSVに変換しました ({count} ファイル)。"
+converting_to_format = "{format} に変換中..."
 converting_format_to_png = "{format} をPNGに変換中..."
 converting_format_to_pdf = "{format} をPDFに変換中..."
 error_no_template = "エラー：テンプレート名が指定されていません。"

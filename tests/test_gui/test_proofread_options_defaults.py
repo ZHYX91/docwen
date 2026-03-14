@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+
 import pytest
 
 from docwen.services.context import get_default_context
@@ -24,6 +25,12 @@ def test_service_merges_proofread_defaults_when_missing_keys(monkeypatch: pytest
                 "enable_typos_rule": True,
                 "enable_sensitive_word": False,
             }
+
+        def get_conversion_defaults(self, _section: str) -> dict:
+            return {}
+
+        def get_heading_schemes(self) -> dict:
+            return {}
 
     def _fake_get_strategy(*, action_type=None, source_format=None, target_format=None):
         class _Strategy:
@@ -60,6 +67,12 @@ def test_service_proofread_overrides_config_defaults_when_keys_present(
                 "enable_typos_rule": True,
                 "enable_sensitive_word": True,
             }
+
+        def get_conversion_defaults(self, _section: str) -> dict:
+            return {}
+
+        def get_heading_schemes(self) -> dict:
+            return {}
 
     def _fake_get_strategy(*, action_type=None, source_format=None, target_format=None):
         class _Strategy:

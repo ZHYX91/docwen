@@ -10,7 +10,6 @@ import pytest
 
 import docwen.utils.logging_utils as logging_utils
 
-
 pytestmark = pytest.mark.unit
 
 

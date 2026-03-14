@@ -82,7 +82,7 @@ def clean_egg_info_dirs(project_root):
     print("=" * 50)
 
     egg_info_dirs = []
-    for root, dirs, files in os.walk(project_root):
+    for root, dirs, _files in os.walk(project_root):
         for d in dirs:
             if d.endswith(".egg-info"):
                 egg_info_dirs.append(os.path.join(root, d))

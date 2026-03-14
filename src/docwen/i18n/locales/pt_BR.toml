@@ -24,6 +24,14 @@ browse = "Procurar..."
 select = "Selecionar"
 disclaimer = "Versão de teste. Sem garantia de precisão.\nAGPL-3.0 Open Source."
 
+[status_bar]
+copy_path = "Copiar caminho"
+path_copied = "Caminho copiado para a área de transferência"
+copy_failed = "Falha ao copiar"
+cannot_locate_no_path = "Não é possível localizar: caminho não definido"
+cannot_locate_no_callback = "Não é possível localizar: callback não configurado"
+file_missing = "O arquivo não existe mais: {path}"
+
 # =============================================================================
 # Interface de Linha de Comando (CLI)
 # =============================================================================

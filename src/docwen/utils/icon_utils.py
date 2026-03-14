@@ -61,9 +61,11 @@ def get_asset_path(asset_name: str) -> str | None:
 
 def get_icon_path() -> str | None:
     """
-    获取主应用程序图标 (.ico) 的路径
+    获取主应用程序图标的路径（跨平台）
     """
-    return get_asset_path("icon.ico")
+    if sys.platform == "win32":
+        return get_asset_path("icon.ico")
+    return get_asset_path("icon.png")
 
 
 class IconManager:
@@ -73,6 +75,7 @@ class IconManager:
     """
 
     _icon_path = None  # 图标路径缓存
+    _icon_photo_ref: Any | None = None
     _initialized = False  # 初始化标记
 
     @classmethod
@@ -91,11 +94,19 @@ class IconManager:
             logger.debug("图标管理器已初始化，跳过重复初始化")
             return True
 
-        icon_path = get_asset_path("icon.ico")
+        icon_path = get_icon_path()
         if icon_path and Path(icon_path).exists():
             try:
                 # 设置应用级默认图标，所有后续窗口自动继承
-                root_window.iconbitmap(default=icon_path)
+                if sys.platform == "win32":
+                    root_window.iconbitmap(default=icon_path)
+                else:
+                    from PIL import Image, ImageTk
+
+                    img = Image.open(icon_path)
+                    photo = ImageTk.PhotoImage(img)
+                    root_window.iconphoto(True, photo)
+                    cls._icon_photo_ref = photo
                 cls._icon_path = icon_path
                 cls._initialized = True
                 logger.info(f"已设置应用默认图标: {icon_path}")
@@ -116,7 +127,7 @@ class IconManager:
             str: 图标文件路径，如果找不到则返回None
         """
         if cls._icon_path is None:
-            cls._icon_path = get_asset_path("icon.ico")
+            cls._icon_path = get_icon_path()
         return cls._icon_path
 
 

@@ -16,7 +16,6 @@ from typing import Any
 
 from docwen.config import config_manager
 from docwen.converter.docx2md.core import convert_docx_to_md
-from docwen.translation import t
 from docwen.services.error_codes import (
     ERROR_CODE_CONVERSION_FAILED,
     ERROR_CODE_INVALID_INPUT,
@@ -24,6 +23,7 @@ from docwen.services.error_codes import (
     ERROR_CODE_UNKNOWN_ERROR,
 )
 from docwen.services.result import ConversionResult
+from docwen.translation import t
 from docwen.utils.path_utils import generate_output_path
 from docwen.utils.validation_utils import validate_ocr_requires_images
 

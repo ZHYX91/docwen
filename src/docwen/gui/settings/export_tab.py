@@ -19,8 +19,8 @@ if TYPE_CHECKING:
 
 
 class ExportTab(BaseSettingsTab):
-    export_image_ext_mode_combo: "ConfigCombobox | None" = None
-    export_ocr_placement_combo: "ConfigCombobox | None" = None
+    export_image_ext_mode_combo: ConfigCombobox | None = None
+    export_ocr_placement_combo: ConfigCombobox | None = None
 
     def _create_interface(self):
         frame = self.create_section_frame(

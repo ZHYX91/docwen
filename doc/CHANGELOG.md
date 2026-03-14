@@ -1,5 +1,23 @@
 # Changelog / 更新日志
 
+## v0.8.3 (2026-03-15)
+
+### 更新日志（中文）
+
+- 修复 Release CI：Windows CLI 部署目录生成；Linux tar 校验 Broken pipe 假失败
+- 构建去重：减少 Windows GUI/CLI 构建产物重复，降低包体积
+- 日志系统增强：文件日志创建失败时自动重试并回退到临时目录
+- 修复 Linux/macOS 窗口图标（改用 `iconphoto` + PNG）
+- Release CI 新增 Linux GUI 发布产物，构建结构与 Windows 对称
+
+### Changelog (English)
+
+- Fixed Release CI: Windows CLI deploy dir generation; Linux tar verification false failure (Broken pipe).
+- Build deduplication: reduced duplicate resources in Windows GUI/CLI outputs and shrank release size.
+- Logging improvements: file logging retries on failure and falls back to a temp directory.
+- Fixed Linux/macOS window icon (switched to `iconphoto` + PNG).
+- Added Linux GUI release artifact; Linux build structure now mirrors Windows.
+
 ## v0.8.2 (2026-03-13)
 
 ### 更新日志（中文）

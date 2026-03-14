@@ -24,6 +24,14 @@ browse = "Durchsuchen..."
 select = "Auswählen"
 disclaimer = "Testversion. Keine Genauigkeitsgarantie.\nAGPL-3.0 Open Source."
 
+[status_bar]
+copy_path = "Pfad kopieren"
+path_copied = "Pfad wurde in die Zwischenablage kopiert"
+copy_failed = "Kopieren fehlgeschlagen"
+cannot_locate_no_path = "Nicht lokalisierbar: Dateipfad nicht gesetzt"
+cannot_locate_no_callback = "Nicht lokalisierbar: Kein Callback konfiguriert"
+file_missing = "Datei existiert nicht mehr: {path}"
+
 # =============================================================================
 # CLI Kommandozeilenschnittstelle
 # =============================================================================

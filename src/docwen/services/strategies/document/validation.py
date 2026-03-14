@@ -15,13 +15,13 @@ from pathlib import Path
 from typing import Any
 
 from docwen.docx_spell.core import process_docx
-from docwen.translation import t
 from docwen.services.error_codes import (
     ERROR_CODE_CONVERSION_FAILED,
     ERROR_CODE_OPERATION_CANCELLED,
     ERROR_CODE_UNKNOWN_ERROR,
 )
 from docwen.services.result import ConversionResult
+from docwen.translation import t
 from docwen.utils.path_utils import generate_output_path
 
 from .. import register_action

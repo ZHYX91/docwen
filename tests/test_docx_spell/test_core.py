@@ -13,7 +13,6 @@ from docwen.docx_spell.core import add_comments_for_errors, create_validator_wit
 from docwen.docx_spell.spell_checker import TextError
 from docwen.docx_spell.utils import plan_run_splits, rebuild_paragraph_with_splits
 
-
 pytestmark = pytest.mark.unit
 
 

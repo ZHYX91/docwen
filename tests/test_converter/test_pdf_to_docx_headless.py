@@ -8,7 +8,6 @@ import pytest
 
 from docwen.converter.formats.layout import external as layout_external
 
-
 pytestmark = pytest.mark.unit
 
 

@@ -200,14 +200,14 @@ class HeadingNumberingEditorDialog(BaseEditorDialog):
     """
 
     # 覆盖基类属性
-    WINDOW_TITLE = t("editors.numbering_add.window_title")
+    WINDOW_TITLE_KEY = "editors.numbering_add.window_title"
     CONFIG_FILE_NAME = "heading_numbering_add.toml"
     WINDOW_WIDTH = 1000
     WINDOW_HEIGHT = 700
     MIN_WIDTH = 850
     MIN_HEIGHT = 550
     LEFT_PANEL_WIDTH = 280
-    LEFT_PANEL_TITLE = t("editors.numbering_add.scheme_list")
+    LEFT_PANEL_TITLE_KEY = "editors.numbering_add.scheme_list"
 
     # 预览区高度
     PREVIEW_HEIGHT = 180

@@ -10,7 +10,6 @@ from docwen.converter.formats import layout as layout_mod
 from docwen.services.strategies.layout.utils import preprocess_layout_file
 from docwen.utils.workspace_manager import IntermediateItem
 
-
 pytestmark = pytest.mark.unit
 
 

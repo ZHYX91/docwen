@@ -27,6 +27,14 @@ browse = "Examinar..."
 select = "Seleccionar"
 disclaimer = "Versión de prueba. Sin garantía de precisión.\nAGPL-3.0 Open Source."
 
+[status_bar]
+copy_path = "Copiar ruta"
+path_copied = "La ruta se copió al portapapeles"
+copy_failed = "Error al copiar"
+cannot_locate_no_path = "No se puede localizar: ruta no configurada"
+cannot_locate_no_callback = "No se puede localizar: callback no configurado"
+file_missing = "El archivo ya no existe: {path}"
+
 # =============================================================================
 # CLI (Interfaz de Línea de Comandos)
 # =============================================================================

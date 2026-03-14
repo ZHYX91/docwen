@@ -9,10 +9,10 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import shutil
 import stat
-import sys
 import time
 from pathlib import Path
 
@@ -30,18 +30,14 @@ def _ensure_within_repo(target: Path) -> None:
 
 
 def remove_readonly(func, path, exc_info) -> None:
-    try:
+    with contextlib.suppress(Exception):
         os.chmod(path, stat.S_IWRITE)
-    except Exception:
-        pass
     func(path)
 
 
 def _remove_readonly_onexc(func, path, exc_info) -> None:
-    try:
+    with contextlib.suppress(Exception):
         os.chmod(path, stat.S_IWRITE)
-    except Exception:
-        pass
     func(path)
 
 
@@ -50,10 +46,8 @@ def safe_remove_file(file_path: str | Path) -> bool:
     if not target.exists():
         return True
     _ensure_within_repo(target)
-    try:
+    with contextlib.suppress(Exception):
         target.chmod(stat.S_IWRITE)
-    except Exception:
-        pass
     try:
         target.unlink()
         print(f"[OK] 删除文件: {target}")
@@ -72,10 +66,7 @@ def safe_remove_directory(dir_path: str | Path) -> bool:
     max_attempts = 3
     for attempt in range(1, max_attempts + 1):
         try:
-            if sys.version_info >= (3, 12):
-                shutil.rmtree(str(target), onexc=_remove_readonly_onexc)
-            else:
-                shutil.rmtree(str(target), onerror=remove_readonly)
+            shutil.rmtree(str(target), onexc=_remove_readonly_onexc)
             print(f"[OK] 删除目录: {target}")
             return True
         except PermissionError as e:

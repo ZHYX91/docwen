@@ -41,6 +41,7 @@ class BaseEditorDialog(tb.Toplevel, ScalableMixin, ABC):
 
     # 子类需要覆盖的类属性
     WINDOW_TITLE: str = "编辑器"
+    WINDOW_TITLE_KEY: str = ""
     CONFIG_FILE_NAME: str = "config.toml"
 
     # 窗口尺寸配置（子类可覆盖）
@@ -56,6 +57,7 @@ class BaseEditorDialog(tb.Toplevel, ScalableMixin, ABC):
 
     # 左侧面板标题（子类可覆盖）
     LEFT_PANEL_TITLE: str = "列表"
+    LEFT_PANEL_TITLE_KEY: str = ""
 
     def __init__(self, parent: tk.Widget, config_manager: Any, on_save: Callable[[], None] | None = None):
         """
@@ -114,7 +116,8 @@ class BaseEditorDialog(tb.Toplevel, ScalableMixin, ABC):
         min_width = self.scale(self.MIN_WIDTH)
         min_height = self.scale(self.MIN_HEIGHT)
 
-        self.title(self.WINDOW_TITLE)
+        title = t(self.WINDOW_TITLE_KEY) if self.WINDOW_TITLE_KEY else self.WINDOW_TITLE
+        self.title(title)
         self.geometry(f"{width}x{height}")
         self.minsize(min_width, min_height)
 
@@ -137,7 +140,8 @@ class BaseEditorDialog(tb.Toplevel, ScalableMixin, ABC):
 
         返回：左侧面板frame，子类可以在其中添加额外内容
         """
-        left_frame = tb.Labelframe(parent, text=self.LEFT_PANEL_TITLE, padding=self.scale(self.SECTION_PADDING))
+        panel_title = t(self.LEFT_PANEL_TITLE_KEY) if self.LEFT_PANEL_TITLE_KEY else self.LEFT_PANEL_TITLE
+        left_frame = tb.Labelframe(parent, text=panel_title, padding=self.scale(self.SECTION_PADDING))
         left_frame.pack(side="left", fill="y", padx=(0, self.scale(self.PADDING)))
         left_frame.pack_propagate(False)
         left_frame.configure(width=self.scale(self.LEFT_PANEL_WIDTH))

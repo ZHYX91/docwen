@@ -682,9 +682,9 @@ class BaseSettingsTab(tb.Frame, ABC):
         """
         创建提取方式与OCR位置选择器
         """
-        from docwen.utils.gui_utils import create_info_icon
         from docwen.gui.components.config_combobox import ConfigCombobox
         from docwen.i18n import t
+        from docwen.utils.gui_utils import create_info_icon
 
         toplevel = parent.winfo_toplevel()
         var_name = "docwen_ocr_show_blockquote_title"

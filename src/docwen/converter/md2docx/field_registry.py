@@ -16,8 +16,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from docwen.config.toml_operations import read_toml_file
-from docwen.config.toml_operations import update_toml_value
+from docwen.config.toml_operations import read_toml_file, update_toml_value
 from docwen.translation import get_current_locale
 from docwen.utils.path_utils import get_project_root
 

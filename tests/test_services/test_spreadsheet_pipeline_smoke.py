@@ -132,8 +132,8 @@ def test_cli_spreadsheet_convert_csv_smoke(
 
     assert exit_code == 0
     assert payload["success"] is True
-    assert Path(payload["output_file"]).exists() is True
-    assert Path(payload["output_file"]).suffix == ".csv"
+    assert Path(payload["data"]["output_file"]).exists() is True
+    assert Path(payload["data"]["output_file"]).suffix == ".csv"
 
 
 def test_cli_spreadsheet_merge_tables_smoke(
@@ -162,8 +162,8 @@ def test_cli_spreadsheet_merge_tables_smoke(
 
     assert exit_code == 0
     assert payload["success"] is True
-    assert Path(payload["output_file"]).exists() is True
-    assert Path(payload["output_file"]).suffix == ".xlsx"
+    assert Path(payload["data"]["output_file"]).exists() is True
+    assert Path(payload["data"]["output_file"]).suffix == ".xlsx"
 
 
 def test_spreadsheet_to_pdf_strategy_smoke_without_office(

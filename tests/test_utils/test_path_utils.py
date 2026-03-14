@@ -22,7 +22,6 @@ from docwen.utils.path_utils import (
     validate_extension,
 )
 
-
 pytestmark = pytest.mark.unit
 
 

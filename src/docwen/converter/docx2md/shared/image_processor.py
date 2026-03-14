@@ -240,8 +240,8 @@ def process_image_with_ocr(
     返回:
         str: Markdown链接（图片链接或图片md文件链接）
     """
-    from docwen.converter.shared.image_md import process_image_with_ocr as shared_process_image_with_ocr
     from docwen.config.config_manager import config_manager
+    from docwen.converter.shared.image_md import process_image_with_ocr as shared_process_image_with_ocr
     from docwen.translation import t
 
     link_settings = config_manager.get_markdown_link_style_settings()
@@ -305,8 +305,8 @@ def create_image_md_file(
     返回:
         str: 创建的md文件名（如 'image_1.md'）
     """
-    from docwen.converter.shared.image_md import create_image_md_file as shared_create_image_md_file
     from docwen.config.config_manager import config_manager
+    from docwen.converter.shared.image_md import create_image_md_file as shared_create_image_md_file
     from docwen.translation import t
 
     link_settings = config_manager.get_markdown_link_style_settings()

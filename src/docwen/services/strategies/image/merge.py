@@ -16,13 +16,13 @@ from typing import Any
 
 from PIL import Image
 
-from docwen.translation import t
 from docwen.services.error_codes import (
     ERROR_CODE_CONVERSION_FAILED,
     ERROR_CODE_INVALID_INPUT,
     ERROR_CODE_OPERATION_CANCELLED,
 )
 from docwen.services.result import ConversionResult
+from docwen.translation import t
 
 from .. import register_action
 from ..base_strategy import BaseStrategy

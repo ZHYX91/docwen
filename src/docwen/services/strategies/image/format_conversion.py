@@ -17,9 +17,9 @@ from typing import Any
 
 from PIL import Image
 
-from docwen.translation import t
 from docwen.services.error_codes import ERROR_CODE_CONVERSION_FAILED, ERROR_CODE_INVALID_INPUT
 from docwen.services.result import ConversionResult
+from docwen.translation import t
 from docwen.utils.path_utils import generate_output_path
 
 from .. import CATEGORY_IMAGE, register_conversion

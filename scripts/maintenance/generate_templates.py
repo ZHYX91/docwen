@@ -21,6 +21,7 @@
 """
 
 import argparse
+import contextlib
 import logging
 import os
 import shutil
@@ -212,10 +213,8 @@ def convert_one_locale(locale: str, output_path: str) -> bool:
         return result is not None
     finally:
         # 清理临时 MD 文件
-        try:
+        with contextlib.suppress(OSError):
             os.unlink(tmp_md_path)
-        except OSError:
-            pass
 
 
 def setup_blank_template():

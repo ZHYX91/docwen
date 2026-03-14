@@ -14,6 +14,9 @@ on:
 permissions:
   contents: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -84,29 +87,40 @@ jobs:
         shell: pwsh
         run: |
           Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $zipPath = (Resolve-Path "DocWenCLI-win-x64.zip").Path
-          $requiredPrefixes = @(
+          function Assert-ZipStructure {
+            param(
+              [string]$ZipPath,
+              [string[]]$RequiredExact,
+              [string[]]$RequiredPrefixes
+            )
+            $zip = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
+            try {
+              foreach ($e in $RequiredExact) {
+                $found = $zip.Entries | Where-Object { ($_.FullName -replace '\\','/') -eq $e } | Select-Object -First 1
+                if (-not $found) { throw "zip_missing_required_entry:$e" }
+              }
+              foreach ($p in $RequiredPrefixes) {
+                $found = $zip.Entries | Where-Object { ($_.FullName -replace '\\','/') -like "$p*" } | Select-Object -First 1
+                if (-not $found) { throw "zip_missing_required_prefix:$p" }
+              }
+            } finally {
+              $zip.Dispose()
+            }
+          }
+
+          $requiredPrefixesCommon = @(
             "_internal/",
             "templates/",
             "configs/",
-            "docwen/i18n/locales/"
+            "models/",
+            "_internal/docwen/i18n/locales/"
           )
-          $requiredExact = @(
-            "DocWenCLI.exe"
-          )
-          $zip = [System.IO.Compression.ZipFile]::OpenRead($zipPath)
-          try {
-            foreach ($e in $requiredExact) {
-              $found = $zip.Entries | Where-Object { ($_.FullName -replace '\\','/') -eq $e } | Select-Object -First 1
-              if (-not $found) { throw "zip_missing_required_entry:$e" }
-            }
-            foreach ($p in $requiredPrefixes) {
-              $found = $zip.Entries | Where-Object { ($_.FullName -replace '\\','/') -like "$p*" } | Select-Object -First 1
-              if (-not $found) { throw "zip_missing_required_prefix:$p" }
-            }
-          } finally {
-            $zip.Dispose()
-          }
+
+          $cliZipPath = (Resolve-Path "DocWenCLI-win-x64.zip").Path
+          Assert-ZipStructure -ZipPath $cliZipPath -RequiredExact @("DocWenCLI.exe") -RequiredPrefixes $requiredPrefixesCommon
+
+          $guiZipPath = (Resolve-Path "DocWen-win-x64.zip").Path
+          Assert-ZipStructure -ZipPath $guiZipPath -RequiredExact @("DocWen.exe", "DocWenCLI.exe") -RequiredPrefixes $requiredPrefixesCommon
 
       - name: Upload artifacts (Windows)
         uses: actions/upload-artifact@v4
@@ -128,14 +142,27 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
+      - name: Install system dependencies (GUI)
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends python3-tk tk-dev xvfb
+
       - name: Install dependencies
         run: |
           python -m pip install -U pip
           python -m pip install ".[dev]"
 
-      - name: Build CLI only (Linux)
+      - name: Build GUI+CLI (Linux)
+        shell: bash
         run: |
-          python scripts/build/build.py --cli-only --skip-cython --version "${{ env.RELEASE_TAG }}"
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [[ "${{ env.RELEASE_TAG }}" != v* ]]; then
+            echo "workflow_dispatch_requires_version_input_like_v0.8.2" >&2
+            exit 2
+          fi
+          xvfb-run -a python scripts/build/build.py --skip-cython --version "${{ env.RELEASE_TAG }}"
 
       - name: Self-check DocWenCLI
         shell: bash
@@ -151,7 +178,7 @@ jobs:
           chmod +x ./DocWenCLI || true
           ./DocWenCLI doctor --json --quiet > /dev/null
 
-      - name: Package release asset (Linux)
+      - name: Package release assets (Linux)
         shell: bash
         run: |
           set -euo pipefail
@@ -162,23 +189,37 @@ jobs:
           ver="${{ env.RELEASE_TAG }}"
           ver="${ver#v}"
           tar -C "dist/DocWenCLI_v${ver}_linux" -czf "DocWenCLI-linux-x64.tar.gz" .
+          tar -C "dist/DocWen_v${ver}_linux" -czf "DocWen-linux-x64.tar.gz" .
 
       - name: Verify tar contains required files (Linux)
         shell: bash
         run: |
           set -euo pipefail
-          listing=$(tar -tzf "DocWenCLI-linux-x64.tar.gz")
-          echo "$listing" | grep -qE '^(\./)?DocWenCLI$'
-          echo "$listing" | grep -qE '^(\./)?_internal/'
-          echo "$listing" | grep -qE '^(\./)?templates/'
-          echo "$listing" | grep -qE '^(\./)?configs/'
-          echo "$listing" | grep -qE '^(\./)?docwen/i18n/locales/'
 
-      - name: Upload artifact (Linux)
+          cli_listing=$(tar -tzf "DocWenCLI-linux-x64.tar.gz")
+          grep -qE '^(\./)?DocWenCLI$' <<< "$cli_listing"
+          grep -qE '^(\./)?_internal/' <<< "$cli_listing"
+          grep -qE '^(\./)?templates/' <<< "$cli_listing"
+          grep -qE '^(\./)?configs/' <<< "$cli_listing"
+          grep -qE '^(\./)?models/' <<< "$cli_listing"
+          grep -qE '^(\./)?_internal/docwen/i18n/locales/' <<< "$cli_listing"
+
+          gui_listing=$(tar -tzf "DocWen-linux-x64.tar.gz")
+          grep -qE '^(\./)?DocWen$' <<< "$gui_listing"
+          grep -qE '^(\./)?DocWenCLI$' <<< "$gui_listing"
+          grep -qE '^(\./)?_internal/' <<< "$gui_listing"
+          grep -qE '^(\./)?templates/' <<< "$gui_listing"
+          grep -qE '^(\./)?configs/' <<< "$gui_listing"
+          grep -qE '^(\./)?models/' <<< "$gui_listing"
+          grep -qE '^(\./)?_internal/docwen/i18n/locales/' <<< "$gui_listing"
+
+      - name: Upload artifacts (Linux)
         uses: actions/upload-artifact@v4
         with:
           name: linux-assets
-          path: DocWenCLI-linux-x64.tar.gz
+          path: |
+            DocWenCLI-linux-x64.tar.gz
+            DocWen-linux-x64.tar.gz
 
   release:
     runs-on: ubuntu-latest
@@ -199,7 +240,7 @@ jobs:
         run: |
           set -euo pipefail
           cd artifacts
-          sha256sum DocWenCLI-win-x64.zip DocWen-win-x64.zip DocWenCLI-linux-x64.tar.gz > SHA256SUMS.txt
+          sha256sum DocWenCLI-win-x64.zip DocWen-win-x64.zip DocWenCLI-linux-x64.tar.gz DocWen-linux-x64.tar.gz > SHA256SUMS.txt
 
       - name: Publish release assets
         uses: softprops/action-gh-release@v2
@@ -209,4 +250,5 @@ jobs:
             artifacts/DocWenCLI-win-x64.zip
             artifacts/DocWen-win-x64.zip
             artifacts/DocWenCLI-linux-x64.tar.gz
+            artifacts/DocWen-linux-x64.tar.gz
             artifacts/SHA256SUMS.txt

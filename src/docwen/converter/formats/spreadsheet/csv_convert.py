@@ -8,8 +8,8 @@
 - 多工作表XLSX转CSV（每个工作表生成一个CSV文件）
 """
 
-import logging
 import csv
+import logging
 import re
 from pathlib import Path
 
@@ -77,9 +77,11 @@ def csv_to_xlsx(
 
         wb = openpyxl.Workbook()
         ws = wb.active
+        if ws is None:
+            ws = wb.create_sheet()
         ws.title = "Sheet1"
 
-        with open(csv_path, "r", encoding="utf-8-sig", newline="") as f:
+        with open(csv_path, encoding="utf-8-sig", newline="") as f:
             reader = csv.reader(f)
             for r_idx, row in enumerate(reader, 1):
                 for c_idx, value in enumerate(row, 1):

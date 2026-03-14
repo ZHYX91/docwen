@@ -1,20 +1,21 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+import json
 import logging
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from docwen.errors import DocWenError, InvalidInputError
 from docwen.proofread_keys import PROOFREAD_OPTION_KEYS, SENSITIVE_WORD, SYMBOL_CORRECTION, SYMBOL_PAIRING, TYPOS_RULE
+
 from .batch import BatchEvent, BatchResult, execute_batch
 from .cancellation import CancellationToken
 from .context import AppContext, get_default_context
-from .requests import BatchRequest, ConversionRequest
 from .error_codes import ERROR_CODE_SKIPPED_SAME_FORMAT, ERROR_CODE_UNKNOWN_ERROR
+from .requests import BatchRequest, ConversionRequest
 from .result import ConversionResult
 from .result_presentation import normalize_result_error_fields
-
 
 logger = logging.getLogger(__name__)
 
@@ -191,7 +192,10 @@ def _normalize_numbering_options(
             )
             raise InvalidInputError(
                 "当前输入类型不支持序号参数",
-                details={"category": category, "target_format": target_format, "action_type": action_type},
+                details=json.dumps(
+                    {"category": category, "target_format": target_format, "action_type": action_type},
+                    ensure_ascii=False,
+                ),
             )
         logger.debug(
             f"序号归一化：未命中支持场景且用户未显式传参，直接跳过，category={category}, target_format={target_format}, action_type={action_type}"
@@ -240,17 +244,20 @@ def _normalize_numbering_options(
                 )
                 raise InvalidInputError(
                     "新增序号参数疑似拼写错误",
-                    details={"add_numbering": add_mode, "did_you_mean": keyword_matches[0]},
+                    details=json.dumps(
+                        {"add_numbering": add_mode, "did_you_mean": keyword_matches[0]},
+                        ensure_ascii=False,
+                    ),
                 )
 
             matches = get_close_matches(scheme_id, list(schemes.keys()), n=5, cutoff=0.5)
-            details: dict[str, Any] = {"scheme_id": scheme_id}
+            details_obj: dict[str, Any] = {"scheme_id": scheme_id}
             if matches:
-                details["close_matches"] = matches
+                details_obj["close_matches"] = matches
             logger.debug(
-                f"序号归一化：序号方案不存在 scheme_id={scheme_id}, close_matches={details.get('close_matches')}"
+                f"序号归一化：序号方案不存在 scheme_id={scheme_id}, close_matches={details_obj.get('close_matches')}"
             )
-            raise InvalidInputError("序号方案不存在", details=details)
+            raise InvalidInputError("序号方案不存在", details=json.dumps(details_obj, ensure_ascii=False))
 
     options.pop("clean_numbering", None)
     options.pop("add_numbering_mode", None)
@@ -278,7 +285,6 @@ class ConversionService:
             if request.action_type:
                 request.action_type = request.action_type.strip()
             normalized_action = request.action_type if request.action_type else None
-            original_action = normalized_action
             options: dict[str, Any] = dict(request.options or {})
             if request.file_list is None and isinstance(options.get("file_list"), list):
                 request.file_list = list(options.get("file_list") or [])

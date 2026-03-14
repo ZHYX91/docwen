@@ -6,7 +6,6 @@ import pytest
 
 from docwen.utils.text_utils import clean_text, clean_text_in_data
 
-
 pytestmark = pytest.mark.unit
 
 

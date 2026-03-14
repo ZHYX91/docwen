@@ -9,8 +9,8 @@ ConversionResult 的结构化错误归一与用户提示生成
 from __future__ import annotations
 
 from docwen.errors import DocWenError
-from docwen.services.result import ConversionResult
 from docwen.services.error_codes import ERROR_CODE_UNKNOWN_ERROR
+from docwen.services.result import ConversionResult
 
 
 def normalize_result_error_fields(result: ConversionResult) -> ConversionResult:

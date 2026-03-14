@@ -9,7 +9,6 @@ import pytest
 
 from docwen.ipc.file_ipc import CommandHandler, FileIPC
 
-
 pytestmark = pytest.mark.unit
 
 

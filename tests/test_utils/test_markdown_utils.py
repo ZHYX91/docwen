@@ -6,7 +6,6 @@ import pytest
 
 from docwen.utils.markdown_utils import clean_heading, extract_yaml
 
-
 pytestmark = pytest.mark.unit
 
 

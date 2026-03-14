@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Any
 
 from docwen.converter.formats.common import OfficeSoftwareNotFoundError, check_office_availability
-from docwen.translation import t
 from docwen.services.error_codes import (
     ERROR_CODE_CONVERSION_FAILED,
     ERROR_CODE_DEPENDENCY_MISSING,
@@ -27,6 +26,7 @@ from docwen.services.error_codes import (
 )
 from docwen.services.result import ConversionResult
 from docwen.services.strategies.base_strategy import BaseStrategy
+from docwen.translation import t
 
 from .utils import preprocess_layout_file, should_keep_intermediates
 

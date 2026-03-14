@@ -19,7 +19,6 @@ from pathlib import Path
 from docx.shared import Pt, RGBColor
 
 from docwen.config.config_manager import config_manager
-
 from docwen.translation import t_all_locales
 from docwen.utils import docx_utils
 from docwen.utils.text_utils import format_display_value

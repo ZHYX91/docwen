@@ -15,8 +15,8 @@ from pathlib import Path
 from docx import Document as open_docx
 from docx.document import Document as DocxDocument
 
-from docwen.translation import t, t_all_locales
 from docwen.template.loader import TemplateLoader
+from docwen.translation import t, t_all_locales
 from docwen.utils import yaml_utils
 from docwen.utils.workspace_manager import (
     move_file_with_retry,
@@ -25,9 +25,9 @@ from docwen.utils.workspace_manager import (
     should_save_intermediate_files,
 )
 
+from .field_registry import run_yaml_processors
 from .handlers.notes_part_handler import ensure_notes_parts
 from .handlers.numbering_handler import ensure_numbering_part
-from .field_registry import run_yaml_processors
 from .processors import docx_processor, md_processor
 from .style.injector import ensure_styles
 

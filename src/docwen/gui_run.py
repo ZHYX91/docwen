@@ -4,7 +4,6 @@ import faulthandler
 import importlib.util
 import logging
 import os
-import platform
 import sys
 import tempfile
 import time
@@ -136,12 +135,14 @@ def _setup_gui_hang_diagnostics(root) -> tuple[str, TextIO | None]:
 
 
 def main() -> int:
-    if platform.system() == "Windows":
-        try:
-            ctypes.windll.shcore.SetProcessDpiAwareness(2)
-        except (AttributeError, OSError):
-            with contextlib.suppress(AttributeError, OSError):
-                ctypes.windll.user32.SetProcessDPIAware()
+    if sys.platform == "win32":
+        windll = getattr(ctypes, "windll", None)
+        if windll is not None:
+            try:
+                windll.shcore.SetProcessDpiAwareness(2)
+            except (AttributeError, OSError):
+                with contextlib.suppress(AttributeError, OSError):
+                    windll.user32.SetProcessDPIAware()
 
     logger = logging.getLogger()
     try:
@@ -228,11 +229,9 @@ def main() -> int:
             )
 
             try:
-                from docwen.utils.icon_utils import get_icon_path
+                from docwen.utils.icon_utils import IconManager
 
-                icon_path = get_icon_path()
-                if icon_path and Path(icon_path).exists():
-                    root.iconbitmap(icon_path)
+                IconManager.initialize(root)
             except Exception:
                 pass
 

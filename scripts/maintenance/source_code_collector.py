@@ -9,9 +9,9 @@ DocWen 源代码汇总脚本
 4. 输出适合软著申请的源代码文档
 """
 
+import datetime
 import os
 import sys
-import datetime
 from pathlib import Path
 
 
@@ -41,7 +41,7 @@ class SourceCodeCollector:
 
                     try:
                         # 读取文件内容
-                        with open(file_path, "r", encoding="utf-8") as f:
+                        with open(file_path, encoding="utf-8") as f:
                             content = f.read()
 
                         # 统计行数
@@ -135,10 +135,7 @@ class SourceCodeCollector:
 
         for dir_path in sorted_dirs:
             # 处理根目录的特殊情况
-            if dir_path == ".":
-                display_dir = "根目录"
-            else:
-                display_dir = dir_path
+            display_dir = "根目录" if dir_path == "." else dir_path
 
             index_content += f"### {display_dir}\n\n"
 
@@ -197,7 +194,7 @@ class SourceCodeCollector:
         modules = {k: v for k, v in tree.items() if not isinstance(v, dict) or "path" in v}
 
         # 处理模块文件（5级标题）
-        for name, file_data in sorted(modules.items()):
+        for _name, file_data in sorted(modules.items()):
             if isinstance(file_data, dict) and "path" in file_data:  # 确保是文件数据
                 content += f"##### {file_data['path']}\n\n"
                 content += f"```python\n{file_data['content']}\n```\n\n"
@@ -237,7 +234,7 @@ class SourceCodeCollector:
         self.generate_markdown()
 
         print("=" * 60)
-        print(f"汇总完成!")
+        print("汇总完成!")
         print(f"- 输出文件: {self.output_file}")
         print(f"- 总文件数: {self.total_files}")
         print(f"- 总代码行数: {self.total_lines}")

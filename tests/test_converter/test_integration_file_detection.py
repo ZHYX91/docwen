@@ -8,7 +8,6 @@ import pytest
 
 from docwen.utils.file_type_utils import detect_actual_file_format
 
-
 pytestmark = pytest.mark.unit
 
 

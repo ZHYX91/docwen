@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import json
 import importlib
-from types import SimpleNamespace
+import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 

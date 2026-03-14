@@ -5,6 +5,7 @@
 旧格式（xls, et）应在策略层预处理
 """
 
+import contextlib
 import csv
 import logging
 from collections import deque
@@ -485,10 +486,8 @@ def convert_spreadsheet_to_md(
 
             if output_folder and images_info and (not extract_image or extraction_mode_s == "base64"):
                 for img in images_info:
-                    try:
+                    with contextlib.suppress(Exception):
                         Path(img.get("image_path", "")).unlink(missing_ok=True)
-                    except Exception:
-                        pass
         else:
             raise ValueError(f"不支持的表格格式: {input_format}")
 

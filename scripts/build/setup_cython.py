@@ -25,13 +25,13 @@ Cython 构建脚本
 """
 
 import os
-import sys
 import shutil
+import sys
 from pathlib import Path
 
-from setuptools import setup, Extension
 from Cython.Build import cythonize
 from Cython.Compiler import Options
+from setuptools import Extension, setup
 
 # ==================== 项目路径配置 ====================
 # 脚本位于 scripts/build/，项目根目录向上两级

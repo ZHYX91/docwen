@@ -14,8 +14,8 @@ import sys
 import time
 import traceback
 from collections.abc import Callable
-from pathlib import Path
 from difflib import get_close_matches
+from pathlib import Path
 
 from docwen.cli.i18n import cli_t
 from docwen.errors import DocWenError, ExitCode, InvalidInputError, exit_code_from_error_code
@@ -64,7 +64,7 @@ def _get_format_groups() -> dict[str, set[str]]:
 
         category_names = {"document", "spreadsheet", "layout", "image", "markdown"}
         groups: dict[str, set[str]] = {}
-        for src, tgt in registry.keys():
+        for src, tgt in registry:
             src_norm = (src or "").strip().lower()
             if not src_norm:
                 continue
@@ -567,10 +567,7 @@ def print_json_batch_summary(
     }
     error_message = None
     if not ok:
-        if interrupted:
-            error_message = "用户中断"
-        else:
-            error_message = f"{len(failed)}/{requested_total} 文件处理失败"
+        error_message = "用户中断" if interrupted else f"{len(failed)}/{requested_total} 文件处理失败"
     output = make_json_envelope(command=str(action), success=ok, data=data, message=error_message)
     print(json.dumps(output, ensure_ascii=False, indent=2))
 

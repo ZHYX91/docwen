@@ -12,7 +12,6 @@ import pytest
 
 import docwen.utils.ocr_utils as ocr_utils
 
-
 pytestmark = pytest.mark.unit
 
 

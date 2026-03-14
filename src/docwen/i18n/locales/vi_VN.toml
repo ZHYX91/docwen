@@ -27,6 +27,14 @@ browse = "Duyệt..."
 select = "Chọn"
 disclaimer = "Phiên bản thử nghiệm. Không đảm bảo độ chính xác.\nAGPL-3.0 Open Source."
 
+[status_bar]
+copy_path = "Sao chép đường dẫn"
+path_copied = "Đã sao chép đường dẫn vào bộ nhớ tạm"
+copy_failed = "Sao chép thất bại"
+cannot_locate_no_path = "Không thể định vị: chưa đặt đường dẫn tệp"
+cannot_locate_no_callback = "Không thể định vị: chưa cấu hình callback"
+file_missing = "Tệp không còn tồn tại: {path}"
+
 # =============================================================================
 # CLI (giao diện dòng lệnh)
 # =============================================================================

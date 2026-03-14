@@ -31,12 +31,11 @@ from .utils import (
 )
 
 __all__ = [
+    "ImageFormatConversionStrategy",
     "ImageToMarkdownStrategy",
-    # 策略类
     "ImageToPdfStrategy",
     "MergeImagesToTiffStrategy",
     "extract_tiff_pages",
-    # 辅助函数
     "get_image_format_description",
     "is_multipage_tiff",
 ]

@@ -6,6 +6,9 @@
 """
 
 import logging
+import tomllib
+from importlib import resources
+from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Any
 
@@ -68,9 +71,44 @@ class I18nManager:
             return
         self._scan_available_locales()
 
-    def _get_locales_dir(self) -> str:
-        """获取语言文件目录路径"""
-        return str(Path(__file__).resolve().parent / "locales")
+    def _get_locales_dir(self) -> Traversable:
+        return resources.files(__package__).joinpath("locales")
+
+    def _iter_locale_files(self) -> list[Traversable]:
+        items: list[Traversable] = []
+        try:
+            for entry in self._locales_dir.iterdir():
+                if entry.is_file() and entry.name.endswith(".toml"):
+                    items.append(entry)
+        except Exception as e:
+            logger.error("扫描语言目录失败: %s", str(e))
+        return sorted(items, key=lambda x: x.name)
+
+    def _parse_locale_meta(self, toml_file: Traversable) -> dict[str, Any] | None:
+        meta_lines: list[str] = []
+        in_meta = False
+        for line in toml_file.read_text(encoding="utf-8").splitlines(keepends=True):
+            stripped = line.strip()
+            if stripped.startswith("[") and stripped.endswith("]"):
+                if stripped == "[meta]":
+                    in_meta = True
+                    meta_lines.append(line)
+                    continue
+                if in_meta:
+                    break
+            if in_meta:
+                meta_lines.append(line)
+
+        if not meta_lines:
+            logger.warning("语言文件 %s 缺少 [meta] 元数据，跳过", toml_file.name)
+            return None
+
+        data = tomllib.loads("".join(meta_lines))
+        meta = data.get("meta")
+        if not isinstance(meta, dict):
+            logger.warning("语言文件 %s 的 [meta] 元数据无效，跳过", toml_file.name)
+            return None
+        return meta
 
     def _scan_available_locales(self):
         """扫描语言目录，动态加载可用语言列表"""
@@ -80,53 +118,22 @@ class I18nManager:
         default_locale_info = {"code": self.DEFAULT_LOCALE, "name": "Simplified Chinese", "native_name": "简体中文"}
 
         try:
-            import tomllib
-
-            toml_files = list(Path(self._locales_dir).glob("*.toml"))
-
-            for file_path in toml_files:
+            for file_path in self._iter_locale_files():
                 try:
-                    # 获取文件名作为语言代码
-                    filename = file_path.name
-                    code = file_path.stem
-
-                    meta_lines: list[str] = []
-                    in_meta = False
-                    with file_path.open(encoding="utf-8") as f:
-                        for line in f:
-                            stripped = line.strip()
-                            if stripped.startswith("[") and stripped.endswith("]"):
-                                if stripped == "[meta]":
-                                    in_meta = True
-                                    meta_lines.append(line)
-                                    continue
-                                if in_meta:
-                                    break
-                            if in_meta:
-                                meta_lines.append(line)
-
-                    if not meta_lines:
-                        logger.warning("语言文件 %s 缺少 [meta] 元数据，跳过", filename)
+                    code = file_path.name.rsplit(".", 1)[0]
+                    meta = self._parse_locale_meta(file_path)
+                    if meta is None:
                         continue
-
-                    data = tomllib.loads("".join(meta_lines))
-                    meta = data.get("meta")
-                    if not isinstance(meta, dict):
-                        logger.warning("语言文件 %s 的 [meta] 元数据无效，跳过", filename)
-                        continue
-
                     name = meta.get("name", code)
                     native_name = meta.get("native_name", name)
                     self.AVAILABLE_LOCALES.append({"code": code, "name": name, "native_name": native_name})
                 except Exception as e:
-                    logger.error("扫描语言文件 %s 失败: %s", str(file_path), str(e))
+                    logger.error("扫描语言文件 %s 失败: %s", file_path.name, str(e))
 
-            # 如果没有扫描到任何语言，添加默认语言作为兜底
             if not self.AVAILABLE_LOCALES:
                 logger.warning("未扫描到任何有效语言文件，使用默认列表")
                 self.AVAILABLE_LOCALES.append(default_locale_info)
             else:
-                # 按语言代码排序，确保顺序稳定
                 self.AVAILABLE_LOCALES.sort(key=lambda x: x["code"])
 
             logger.info(
@@ -134,10 +141,6 @@ class I18nManager:
                 len(self.AVAILABLE_LOCALES),
                 ", ".join([loc["code"] for loc in self.AVAILABLE_LOCALES]),
             )
-
-        except Exception as e:
-            logger.error("扫描语言目录失败: %s", str(e))
-            self.AVAILABLE_LOCALES = [default_locale_info]
         finally:
             self._available_locales_scanned = True
 
@@ -159,28 +162,28 @@ class I18nManager:
         """检查语言代码是否有效"""
         if not locale:
             return False
-        return (Path(self._locales_dir) / f"{locale}.toml").exists()
+        try:
+            return self._locales_dir.joinpath(f"{locale}.toml").is_file()
+        except Exception:
+            return False
 
     def _load_translations(self):
         """加载当前语言的翻译文件"""
-        locale_file = Path(self._locales_dir) / f"{self._locale}.toml"
-
-        if not locale_file.exists():
+        locale_file = self._locales_dir.joinpath(f"{self._locale}.toml")
+        if not locale_file.is_file():
             logger.warning("语言文件不存在: %s，尝试加载默认语言", locale_file)
             # 尝试加载默认语言
             if self._locale != self.DEFAULT_LOCALE:
-                locale_file = Path(self._locales_dir) / f"{self.DEFAULT_LOCALE}.toml"
+                locale_file = self._locales_dir.joinpath(f"{self.DEFAULT_LOCALE}.toml")
                 self._locale = self.DEFAULT_LOCALE
 
-        if not locale_file.exists():
+        if not locale_file.is_file():
             logger.error("默认语言文件也不存在: %s", locale_file)
             self._translations = {}
             return
 
         try:
-            from docwen.config.toml_operations import read_toml_file
-
-            self._translations = read_toml_file(str(locale_file)) or {}
+            self._translations = tomllib.loads(locale_file.read_text(encoding="utf-8")) or {}
             logger.info("成功加载语言文件: %s，共 %d 个顶级键", locale_file, len(self._translations))
         except Exception as e:
             logger.error("加载语言文件失败: %s | 错误: %s", locale_file, str(e))
@@ -444,7 +447,7 @@ class I18nManager:
             return self._locale_cache[locale]
 
         # 加载翻译文件
-        locale_file = Path(self._locales_dir) / f"{locale}.toml"
+        locale_file = Path(str(self._locales_dir)) / f"{locale}.toml"
 
         if not locale_file.exists():
             logger.warning("语言文件不存在: %s", str(locale_file))

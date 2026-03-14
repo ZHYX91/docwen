@@ -28,7 +28,6 @@ from docwen.converter.formats.spreadsheet import (
     xlsx_to_xls,
 )
 from docwen.converter.md2xlsx.core import convert as convert_md_to_xlsx
-from docwen.translation import t
 from docwen.services.error_codes import (
     ERROR_CODE_CONVERSION_FAILED,
     ERROR_CODE_DEPENDENCY_MISSING,
@@ -39,6 +38,7 @@ from docwen.services.error_codes import (
 from docwen.services.result import ConversionResult
 from docwen.services.strategies import CATEGORY_MARKDOWN, register_conversion
 from docwen.services.strategies.base_strategy import BaseStrategy
+from docwen.translation import t
 from docwen.utils.path_utils import generate_output_path
 
 logger = logging.getLogger(__name__)
