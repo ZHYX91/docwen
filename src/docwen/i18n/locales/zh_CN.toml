@@ -730,6 +730,8 @@ md_heading_format_label = "小标题格式标记处理:"
 md_heading_format_tooltip = '应用格式：覆盖标题样式默认格式，可实现部分加粗效果\n保留标记：保留标记原样显示\n清理标记：让Word标题样式格式自然生效\n注意：当标题样式本身是加粗时，"应用格式"可实现部分加粗'
 md_table_header_format_label = "表头格式标记处理:"
 md_table_header_format_tooltip = '应用格式：**粗体**转为真正的粗体（可能与表格样式重复）\n保留标记：保留标记原样显示\n清理标记：让表格样式（如 firstRow 加粗）自然生效\n注意：表格样式通常已定义表头加粗，建议使用"清理标记"'
+heading_merge_mode_label = "标题+正文合并模式:"
+heading_merge_mode_tooltip = "控制小标题与紧邻下一行普通正文是否合并为同一段落\n有标点才合并：标题末尾有结束标点且下一行是普通正文时合并（默认）\n紧邻正文就合并：下一行是普通正文时合并（不要求结束标点）\n永不合并：标题与正文按普通解析分段\n注：列表/代码块/表格/引用/分隔线等不会被合并"
 
 # MD转文档分隔符映射
 md_separator_mapping = "分隔符映射"
@@ -758,6 +760,9 @@ discard_format = "丢弃格式"
 apply_format = "应用格式"
 keep_markup = "保留标记"
 clean_markup = "清理标记"
+heading_merge_punct_required = "有标点才合并（默认）"
+heading_merge_always = "紧邻正文就合并"
+heading_merge_never = "永不合并"
 
 # 分隔符选项
 [settings.formatting.separators]

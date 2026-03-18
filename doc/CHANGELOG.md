@@ -1,5 +1,31 @@
 # Changelog / 更新日志
 
+## v0.8.4 (2026-03-19)
+
+### 更新日志（中文）
+
+- 修复校对模块 `has_non_text_content()` 的 xpath 调用兼容性，避免所有段落误走降级路径
+- 新增批注锚点分析报告工具（`anchor_report`），支持跨段/未闭合锚点检测与多语言脱敏
+- 新增"标题+正文合并模式"设置，支持三种行为：有标点才合并（默认）、紧邻正文就合并、永不合并
+- 修正 README 中对标题+正文合并行为的错误描述
+- macOS 跨平台支持：LibreOffice 路径自动查找（适配 macOS `.app` 安装）、Release CI 补充 python-tk 安装、README 补充 macOS/Linux GUI 使用说明
+- 公共 API 分层重构：各域新增 `api.py` 入口层，tests/tools 统一通过公开 API 访问，消除 reportPrivateUsage 告警
+- ConfigManager 去除单例代理，改为普通类 + 模块级实例，提取 `deep_merge_dicts()` 为模块级函数
+- `tools/qa.py` 新增私有符号边界扫描（AST 级别，检测 tests/tools 是否直接访问 `_xxx`）
+- 新增 `doc/私有符号与公共API边界规范.md` 规范文档
+
+### Changelog (English)
+
+- Fixed proofreading `has_non_text_content()` xpath call compatibility with python-docx, preventing all paragraphs from falling through to the degraded path.
+- Added comment anchor analysis report tool (`anchor_report`) with cross-paragraph/unclosed anchor detection and multilingual redaction.
+- Added `heading_merge_mode` setting for MD-to-DOCX conversion with three options: merge only when heading ends with punctuation (default), always merge when adjacent, or never merge.
+- Fixed incorrect README description of heading+body merge behavior.
+- macOS cross-platform: auto-locate LibreOffice soffice in macOS .app paths; fixed python-tk in CI; updated READMEs with macOS and Linux GUI notes.
+- Public API layer refactor: added `api.py` entry point per domain; tests/tools now import only public APIs, eliminating reportPrivateUsage noise.
+- ConfigManager: removed singleton proxy, converted to plain class with module-level instance; extracted `deep_merge_dicts()` as module-level function.
+- `tools/qa.py`: added AST-based private symbol boundary scan for tests/tools directories.
+- Added `doc/私有符号与公共API边界规范.md` coding convention document.
+
 ## v0.8.3 (2026-03-15)
 
 ### 更新日志（中文）

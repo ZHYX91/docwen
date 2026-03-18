@@ -48,6 +48,34 @@ Registro de alterações: veja [doc/CHANGELOG.md](doc/CHANGELOG.md)
 
 Na versão empacotada do Windows: clique duas vezes em `DocWen.exe` para iniciar a GUI. Se instalado a partir do código-fonte / via pip: execute `docwen-gui`.
 
+### Observações para macOS
+
+**Suporte ao LibreOffice (Opcional)**
+
+Para converter formatos legados como `.doc` e `.xls`, instale o LibreOffice:  
+Download: https://www.libreoffice.org/download/
+
+**Suporte a imagens HEIC (Opcional)**
+
+Para processar imagens HEIC/HEIF:
+
+```bash
+brew install libheif
+pip install pillow-heif
+```
+
+### Pré-requisitos do GUI no Linux
+
+- Ambiente de desktop instalado (GNOME, KDE, XFCE, etc.)
+- Suporte ao Python Tk instalado:
+  ```bash
+  # Ubuntu/Debian
+  sudo apt-get install python3-tk
+  # Fedora/RHEL
+  sudo dnf install python3-tkinter
+  ```
+- Para servidores headless (sem ambiente gráfico), use `DocWenCLI` em vez de `DocWen`
+
 ### Guia de Início Rápido
 
 1.  **Prepare um Arquivo Markdown**:
@@ -89,7 +117,7 @@ Para facilitar a memorização por colegas sem conhecimento prévio, os cabeçal
 
 **Regra Básica**: Cada linha não vazia é tratada como um parágrafo separado por padrão.
 
-**Parágrafos Mistos**: Quando um subtítulo precisa ser misturado com o corpo do texto no mesmo parágrafo, as seguintes condições devem ser atendidas:
+**Parágrafos Mistos**: Quando um subtítulo precisa ser misturado com o corpo do texto no mesmo parágrafo (modo padrão: "Pontuação obrigatória"), as seguintes condições devem ser atendidas:
 1.  O subtítulo termina com um sinal de pontuação de fim (suporta pontuação multilíngue, incluindo pontos, pontos de interrogação, pontos de exclamação e outros sinais de pontuação de fim comuns).
 2.  O corpo do texto está localizado na **linha imediatamente seguinte** do subtítulo.
 3.  A linha do corpo do texto não pode ser um elemento Markdown especial (como cabeçalhos, blocos de código, tabelas, listas, citações, blocos de fórmula, separadores, etc.).
@@ -103,7 +131,8 @@ As duas linhas acima serão mescladas no mesmo parágrafo, onde "I. Requisitos d
 
 **Nota**:
 - Não pode haver uma linha vazia entre o subtítulo e o corpo do texto; caso contrário, serão reconhecidos como parágrafos separados.
-- Se o subtítulo não terminar com um sinal de pontuação e não houver linha vazia antes do corpo do texto, o corpo do texto será mesclado na linha do cabeçalho com formatação ajustada.
+- Por padrão (modo "Pontuação obrigatória"), se o subtítulo não terminar com um sinal de pontuação de fim, ele não será mesclado com a próxima linha mesmo sem linha em branco.
+- Você pode alterar isso em Configurações → Formatação → "MarkDown para Documento" → "Heading + body merge mode".
 
 ### Conversão Bidirecional de Separadores
 

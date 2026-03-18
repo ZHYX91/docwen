@@ -1516,10 +1516,12 @@ parse_invoice_metadata_from_compact_text = _parse_invoice_metadata_from_compact_
 parse_invoice_rows_from_pdf_text = _parse_invoice_rows_from_pdf_text
 build_yaml_frontmatter = _build_yaml_frontmatter
 render_markdown_table = _render_markdown_table
+read_pdf_text_and_spans = _read_pdf_text_and_spans
+is_scanpage = _is_scanpage
 
 
 def _parse_pdf_invoice(file_path: str) -> tuple[dict[str, str | None], list[dict[str, str]]]:
-    text, spans = _read_pdf_text_and_spans(file_path)
+    text, spans = read_pdf_text_and_spans(file_path)
     return _parse_pdf_invoice_from_text_and_spans(text, spans)
 
 
@@ -1589,7 +1591,7 @@ def convert_invoice_cn_layout_to_md(
                 with fitz.open(file_path) as doc:
                     text = str(doc[0].get_text("text"))
 
-                if _is_scanpage(text):
+                if is_scanpage(text):
                     from docwen.converter.layout2md.invoice_cn_ocr import (
                         build_invoice_md_text,
                         parse_invoice_from_image,
@@ -1662,7 +1664,7 @@ def convert_invoice_cn_layout_to_md(
                         page_output_stem = _insert_section_before_timestamp(basename_for_output, section)
                         md_filename = f"{page_output_stem}.md"
 
-                        if _is_scanpage(text):
+                        if is_scanpage(text):
                             from docwen.converter.layout2md.invoice_cn_ocr import (
                                 build_invoice_md_text,
                                 parse_invoice_from_image,

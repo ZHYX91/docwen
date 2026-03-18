@@ -14,6 +14,7 @@ import logging
 import lxml.etree as etree
 
 from docwen.config.config_manager import config_manager
+from docwen.utils.docx_utils import get_oxml_element
 from docwen.utils.formula_utils import (
     OMML_NS,
     is_formula_supported,
@@ -147,14 +148,14 @@ def insert_formula_to_paragraph(paragraph, latex_str: str, is_inline: bool = Tru
         # 与文本 Run (w:r) 并列，而不是嵌套在 Run 内部
         if is_inline:
             # 行内公式：直接将 oMath 作为段落的子元素插入
-            paragraph._element.append(omml_tree)
+            get_oxml_element(paragraph).append(omml_tree)
         else:
             # 块公式：使用 oMathPara 包装
             omath_para = etree.Element("{{{}}}oMathPara".format(OMML_NS["m"]), nsmap={"m": OMML_NS["m"]})
             omath_para.append(omml_tree)
 
             # 插入到段落
-            paragraph._element.append(omath_para)
+            get_oxml_element(paragraph).append(omath_para)
 
         logger.debug(f"成功插入公式: {latex_str[:50]}...")
         return True

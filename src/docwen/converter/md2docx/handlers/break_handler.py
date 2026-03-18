@@ -25,6 +25,8 @@ import logging
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
+from docwen.utils.docx_utils import get_oxml_element, get_paragraph_oxml
+
 # 配置日志
 logger = logging.getLogger(__name__)
 
@@ -55,7 +57,7 @@ def insert_page_break(doc):
     # 创建分页符元素 <w:br w:type="page"/>
     br = OxmlElement("w:br")
     br.set(qn("w:type"), "page")
-    run._element.append(br)
+    get_oxml_element(run).append(br)
 
     logger.debug("创建分页符段落")
     return new_p
@@ -100,7 +102,7 @@ def insert_section_break(doc, section_type: str = "next"):
     new_p = doc.add_paragraph()
 
     # 获取或创建段落属性 <w:pPr>
-    pPr = new_p._p.get_or_add_pPr()
+    pPr = get_paragraph_oxml(new_p).get_or_add_pPr()
 
     # 创建分节属性 <w:sectPr>
     sectPr = OxmlElement("w:sectPr")
@@ -323,7 +325,7 @@ def _apply_bottom_border_to_paragraph(paragraph, hr_num: str):
     sz = sz_mapping.get(hr_num, "4")
 
     # 获取或创建段落属性
-    pPr = paragraph._p.get_or_add_pPr()
+    pPr = get_paragraph_oxml(paragraph).get_or_add_pPr()
 
     # 创建段落边框容器
     pBdr = OxmlElement("w:pBdr")

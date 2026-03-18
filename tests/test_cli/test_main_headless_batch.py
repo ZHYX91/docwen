@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from docwen.cli.main import _run_action_for_files
+from docwen.cli.api import run_action_for_files
 
 pytestmark = pytest.mark.unit
 
@@ -49,7 +49,7 @@ def test_execute_headless_batch_flag_forces_batch(monkeypatch: pytest.MonkeyPatc
         timing=True,
     )
 
-    assert _run_action_for_files("convert", args.files, options={}, args=args) == 0
+    assert run_action_for_files("convert", args.files, options={}, args=args) == 0
     assert called == {"action": 0, "batch": 1}
     assert passed.get("max_workers") == 3
     assert passed.get("include_timing") is True
@@ -84,5 +84,5 @@ def test_execute_headless_without_batch_flag_uses_single_file_path(monkeypatch: 
         batch=False,
     )
 
-    assert _run_action_for_files("convert", args.files, options={}, args=args) == 0
+    assert run_action_for_files("convert", args.files, options={}, args=args) == 0
     assert called == {"action": 1, "batch": 0}

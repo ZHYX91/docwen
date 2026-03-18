@@ -18,6 +18,8 @@ import lxml.etree as etree
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
+from docwen.utils.docx_utils import get_oxml_element
+
 from .numbering_handler import WORD_NS, get_max_abstract_num_id, get_max_num_id, get_numbering_xml_root
 
 logger = logging.getLogger(__name__)
@@ -415,7 +417,7 @@ def apply_list_to_paragraph(paragraph, num_id: str, level: int):
         level: 列表级别 (0-8)
     """
     # 获取或创建 pPr
-    pPr = paragraph._element.get_or_add_pPr()
+    pPr = get_oxml_element(paragraph).get_or_add_pPr()
 
     # 移除现有的 numPr（如果有）
     existing_numPr = pPr.find(f".//{{{WORD_NS}}}numPr")

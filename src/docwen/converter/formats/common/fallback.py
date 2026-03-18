@@ -17,7 +17,10 @@
 """
 
 import logging
+import os
+import shutil
 import subprocess
+import sys
 import threading
 from collections.abc import Callable
 from pathlib import Path
@@ -37,6 +40,32 @@ logger = logging.getLogger(__name__)
 
 
 # ==================== LibreOffice 转换 ====================
+
+
+def find_soffice_path() -> str:
+    """
+    查找 soffice 可执行文件路径（跨平台）
+
+    优先检查 PATH，其次检查 macOS 默认安装路径。
+
+    返回:
+        str: soffice 的可执行路径，找不到则返回 "soffice"（依赖 PATH 兜底）
+    """
+    soffice_path = shutil.which("soffice")
+    if soffice_path:
+        return soffice_path
+
+    if sys.platform == "darwin":
+        mac_paths = [
+            "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+            os.path.expanduser("~/Applications/LibreOffice.app/Contents/MacOS/soffice"),
+        ]
+        for path in mac_paths:
+            if os.path.isfile(path):
+                logger.debug(f"找到 macOS LibreOffice 路径: {path}")
+                return path
+
+    return "soffice"
 
 
 def convert_with_libreoffice(
@@ -65,7 +94,7 @@ def convert_with_libreoffice(
         if output_dir is None:
             output_dir = str(Path(input_path).parent)
 
-        cmd = ["soffice", "--headless", "--convert-to", output_format, "--outdir", output_dir, input_path]
+        cmd = [find_soffice_path(), "--headless", "--convert-to", output_format, "--outdir", output_dir, input_path]
 
         logger.info(f"使用 LibreOffice 转换: {Path(input_path).name} → {output_format}")
         logger.debug(f"LibreOffice 命令: {' '.join(cmd)}")

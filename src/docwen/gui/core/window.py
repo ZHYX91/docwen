@@ -520,7 +520,7 @@ class MainWindow(ScalableMixin):
         }
 
     def _on_close(self):
-        self._save_gui_state()
+        self.save_gui_state()
         self.event_handler.on_close()
 
     def show_template_selector(self):
@@ -774,7 +774,7 @@ class MainWindow(ScalableMixin):
         if self.status_bar:
             self.status_bar.clear_all_transient_messages()
 
-    def _save_gui_state(self):
+    def save_gui_state(self):
         """
         保存GUI状态
         使用跟踪的位置值，确保准确性

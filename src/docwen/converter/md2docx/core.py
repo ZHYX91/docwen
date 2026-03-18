@@ -83,7 +83,7 @@ def convert(
 
             # 如果提供了original_source_path，使用它；否则使用md_path
             path_for_resolve = original_source_path if original_source_path else md_path
-            yaml_data, md_body = _read_and_parse_md(temp_input, path_for_resolve, temp_dir=temp_dir)
+            yaml_data, md_body = read_and_parse_md(temp_input, path_for_resolve, temp_dir=temp_dir)
 
             if cancel_event and cancel_event.is_set():
                 logger.info("操作已取消")
@@ -147,7 +147,7 @@ def convert(
         return None
 
 
-def _read_and_parse_md(temp_md_path: str, original_md_path: str | None = None, temp_dir: str | None = None) -> tuple:
+def read_and_parse_md(temp_md_path: str, original_md_path: str | None = None, temp_dir: str | None = None) -> tuple:
     """
     读取并解析Markdown文件，返回YAML数据和YAML后的Markdown内容
 
@@ -261,6 +261,8 @@ def _convert_internal(
         if options is None:
             options = {}
 
+        from docwen.config.config_manager import config_manager
+
         remove_numbering = options.get("remove_numbering", options.get("md_remove_numbering", False))
         add_numbering = options.get("add_numbering", options.get("md_add_numbering", False))
         scheme_name = options.get("numbering_scheme", options.get("md_numbering_scheme", "gongwen_standard"))
@@ -268,7 +270,6 @@ def _convert_internal(
         # 创建序号格式化器（如果需要添加序号）
         formatter = None
         if add_numbering:
-            from docwen.config.config_manager import config_manager
             from docwen.utils.heading_numbering import get_formatter_from_config
 
             formatter = get_formatter_from_config(config_manager, scheme_name)
@@ -278,9 +279,16 @@ def _convert_internal(
 
         logger.info(f"处理Markdown正文：清除序号={remove_numbering}, 添加序号={add_numbering}")
 
+        heading_merge_mode = config_manager.get_md_to_docx_heading_merge_mode()
+        logger.info(f"处理Markdown正文：标题+正文合并模式={heading_merge_mode}")
+
         # 统一调用 process_md_body_with_notes（处理正文并提取脚注/尾注）
         processed_body, footnotes, endnotes = md_processor.process_md_body_with_notes(
-            md_body, remove_numbering=remove_numbering, add_numbering=add_numbering, formatter=formatter
+            md_body,
+            remove_numbering=remove_numbering,
+            add_numbering=add_numbering,
+            formatter=formatter,
+            heading_merge_mode=heading_merge_mode,
         )
 
         logger.info(
@@ -329,9 +337,7 @@ def _convert_internal(
         if progress_callback:
             progress_callback(t("conversion.progress.filling_template"))
         logger.debug("处理模板占位符...")
-        success = _process_docx_template(
-            doc, output_path, yaml_data, processed_body, template_name, footnotes, endnotes
-        )
+        success = process_docx_template(doc, output_path, yaml_data, processed_body, template_name, footnotes, endnotes)
 
         if not success:
             logger.error("在模板处理过程中发生错误")
@@ -421,7 +427,7 @@ def _ensure_title_fallbacks(yaml_data: dict, md_path: str | None = None):
             logger.debug(f"为 '{title_key}' 设置回退值: {fallback_value}")
 
 
-def _process_docx_template(
+def process_docx_template(
     doc: DocxDocument,
     output_path: str,
     yaml_data: dict,

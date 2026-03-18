@@ -806,7 +806,17 @@ def list_numbering_schemes(json_mode: bool = True) -> int:
     """
     from docwen.config.config_manager import config_manager
 
-    localized = config_manager.get_localized_numbering_schemes(include_description=True)
+    try:
+        localized = config_manager.get_localized_numbering_schemes(include_description=True)
+    except Exception:
+        from docwen.config.schemas.numbering import DEFAULT_HEADING_NUMBERING_CONFIG
+
+        schemes_cfg = DEFAULT_HEADING_NUMBERING_CONFIG.get("heading_numbering_add", {}).get("schemes", {})
+        localized = {
+            scheme_id: {"name": str(cfg.get("name", scheme_id)), "description": str(cfg.get("description", ""))}
+            for scheme_id, cfg in schemes_cfg.items()
+            if isinstance(cfg, dict)
+        }
     schemes = [{"id": scheme_id, **info} for scheme_id, info in localized.items()]
 
     if json_mode:

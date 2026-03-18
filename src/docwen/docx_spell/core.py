@@ -24,7 +24,7 @@ from docx import Document
 from docwen.config.config_manager import config_manager
 from docwen.proofread_keys import SENSITIVE_WORD, SYMBOL_CORRECTION, SYMBOL_PAIRING, TYPOS_RULE
 from docwen.translation import t
-from docwen.utils.docx_utils import NAMESPACES as DOCX_NAMESPACES
+from docwen.utils.docx_utils import get_oxml_element
 from docwen.utils.path_utils import generate_output_path
 
 from .spell_checker import TextValidator
@@ -96,9 +96,9 @@ def is_quote_paragraph(paragraph) -> bool:
 
 
 def has_non_text_content(paragraph) -> bool:
-    element = paragraph._element
+    element = get_oxml_element(paragraph)
     try:
-        return any(element.xpath(xpath, namespaces=DOCX_NAMESPACES) for xpath in NON_TEXT_XPATHS)
+        return any(element.xpath(xpath) for xpath in NON_TEXT_XPATHS)
     except Exception as e:
         logger.warning(f"检测段落非文本节点时出错，保守降级为非文本段落: {e}")
         return True

@@ -73,7 +73,7 @@ _DATA_URI_IMAGE_MIME_TO_EXT = {
 # ============================================================
 
 
-def _unescape_pipe(text: str | None) -> str | None:
+def unescape_pipe(text: str | None) -> str | None:
     """
     还原Markdown表格中转义的竖线
 
@@ -88,7 +88,7 @@ def _unescape_pipe(text: str | None) -> str | None:
     return text.replace(r"\|", "|") if text else text
 
 
-def _normalize_link_target(link_target: str) -> str:
+def normalize_link_target(link_target: str) -> str:
     """
     规范化链接目标路径（不含锚点部分）
 
@@ -217,7 +217,7 @@ def _resolve_data_uri_image_to_temp_file(data_uri: str, *, temp_dir: str | None)
         return None
 
 
-def _parse_anchor(link_target: str) -> tuple:
+def parse_anchor(link_target: str) -> tuple:
     """
     解析链接目标，分离文件路径、标题锚点、块ID
 
@@ -261,7 +261,7 @@ def _parse_anchor(link_target: str) -> tuple:
         return (file_path, anchor, None)
 
 
-def _extract_section_by_heading(content: str, heading: str) -> str | None:
+def extract_section_by_heading(content: str, heading: str) -> str | None:
     """
     从内容中提取指定标题的章节
 
@@ -329,7 +329,7 @@ def _extract_section_by_heading(content: str, heading: str) -> str | None:
     return result
 
 
-def _extract_block_by_id(content: str, block_id: str) -> str | None:
+def extract_block_by_id(content: str, block_id: str) -> str | None:
     """
     从内容中提取带有指定块ID的段落
 
@@ -407,7 +407,7 @@ def _extract_block_by_id(content: str, block_id: str) -> str | None:
     return None
 
 
-def _strip_yaml_front_matter(content: str) -> str:
+def strip_yaml_front_matter(content: str) -> str:
     """
     移除 Markdown 文件开头的 YAML front matter
 
@@ -450,7 +450,7 @@ MD_EMBED_IMAGE_PATTERN = (
 )
 
 
-def _format_image_placeholder(image_path: str, width: int | None = None, height: int | None = None) -> str:
+def format_image_placeholder(image_path: str, width: int | None = None, height: int | None = None) -> str:
     if width is None and height is None:
         return f"{{{{IMAGE:{image_path}}}}}"
     w = "" if width is None else str(width)
@@ -458,7 +458,7 @@ def _format_image_placeholder(image_path: str, width: int | None = None, height:
     return f"{{{{IMAGE:{image_path}\\|{w}\\|{h}}}}}"
 
 
-def _split_alt_text_and_size(alt_text: str | None) -> tuple[str | None, int | None, int | None]:
+def split_alt_text_and_size(alt_text: str | None) -> tuple[str | None, int | None, int | None]:
     if not alt_text:
         return None, None, None
     if "|" not in alt_text:
@@ -592,9 +592,9 @@ def process_markdown_links(
     wiki_embeds = list(re.finditer(WIKI_EMBED_PATTERN, result))
     for match in wiki_embeds:
         original_link = match.group(0)  # 完整的 ![[target]]
-        link_target = _unescape_pipe(match.group(1).strip()) or ""  # target，还原转义的竖线
+        link_target = unescape_pipe(match.group(1).strip()) or ""  # target，还原转义的竖线
         # 提取显示文本（group(2)是 | 后面的部分）
-        display_text = _unescape_pipe(match.group(2).strip()) if match.group(2) else None
+        display_text = unescape_pipe(match.group(2).strip()) if match.group(2) else None
 
         start_index = result.find(original_link)
         in_table = table_safe and start_index != -1 and _is_table_context(result, start_index)
@@ -642,7 +642,7 @@ def process_markdown_links(
         link_target = match.group(2).strip()  # url
         md_width = int(match.group(3)) if match.group(3) and match.group(3).isdigit() else None
         md_height = int(match.group(4)) if match.group(4) and match.group(4).isdigit() else None
-        display_text, alt_width, alt_height = _split_alt_text_and_size(alt_text)
+        display_text, alt_width, alt_height = split_alt_text_and_size(alt_text)
         width = md_width if (md_width is not None or md_height is not None) else alt_width
         height = md_height if (md_width is not None or md_height is not None) else alt_height
 
@@ -719,7 +719,7 @@ def _process_non_embed_links(text: str) -> str:
     elif wiki_mode == "extract_text":
         # 提取显示文本（group(2)是显示文本），还原转义的竖线
         logger.debug("Wiki链接模式: extract_text（提取文本）")
-        result = re.sub(wiki_pattern, lambda m: _unescape_pipe(m.group(2)) or "", result)
+        result = re.sub(wiki_pattern, lambda m: unescape_pipe(m.group(2)) or "", result)
         logger.debug(f"Wiki链接处理后: {result[:200]}")
     elif wiki_mode == "remove":
         # 完全移除
@@ -805,7 +805,7 @@ def _process_single_embed(
         return display_text or ""
 
     # 解析锚点（提取文件路径、标题、块ID）
-    file_path_part, heading, block_id = _parse_anchor(link_target)
+    file_path_part, heading, block_id = parse_anchor(link_target)
 
     if heading:
         logger.debug("检测到章节嵌入: %s#%s", file_path_part, heading)
@@ -873,7 +873,7 @@ def resolve_file_path(link_target: str, source_file_path: str) -> str | None:
     logger.debug("解析文件路径: %s", link_target)
 
     # 规范化链接目标（URL解码、移除锚点和查询参数）
-    link_target = _normalize_link_target(link_target)
+    link_target = normalize_link_target(link_target)
     logger.debug("规范化后: %s", link_target)
 
     # 获取源文件所在目录
@@ -1000,7 +1000,7 @@ def process_embedded_image(
 
     if mode == "embed":
         # 生成图片占位符（后续会被docx_processor替换为实际图片）
-        placeholder = _format_image_placeholder(image_path, width=width, height=height)
+        placeholder = format_image_placeholder(image_path, width=width, height=height)
         logger.info("生成图片占位符: %s", placeholder)
         return placeholder
 
@@ -1027,7 +1027,7 @@ def process_embedded_image(
     else:
         # 未知模式，使用默认（embed）
         logger.warning("未知的图片嵌入模式: %s，使用默认embed", mode)
-        return _format_image_placeholder(image_path, width=width, height=height)
+        return format_image_placeholder(image_path, width=width, height=height)
 
 
 def process_embedded_md_file(
@@ -1093,18 +1093,18 @@ def process_embedded_md_file(
             # 如需保留 YAML，手动改为 False
             strip_yaml = True
             if strip_yaml:
-                content = _strip_yaml_front_matter(content)
+                content = strip_yaml_front_matter(content)
 
             # 精确提取：根据 heading 或 block_id 提取特定内容
             if heading:
-                extracted = _extract_section_by_heading(content, heading)
+                extracted = extract_section_by_heading(content, heading)
                 if extracted is None:
                     logger.warning("章节未找到: %s#%s", Path(md_path).name, heading)
                     return _handle_section_not_found_error(Path(md_path).name, heading)
                 content = extracted
                 logger.info("已提取章节: %s#%s（%d 字符）", Path(md_path).name, heading, len(content))
             elif block_id:
-                extracted = _extract_block_by_id(content, block_id)
+                extracted = extract_block_by_id(content, block_id)
                 if extracted is None:
                     logger.warning("块未找到: %s#^%s", Path(md_path).name, block_id)
                     return _handle_block_not_found_error(Path(md_path).name, block_id)

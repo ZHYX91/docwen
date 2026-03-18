@@ -22,7 +22,7 @@ def test_convert_to_simple_paths_keeps_images(monkeypatch: pytest.MonkeyPatch) -
     )
 
     md_text = "before ![alt](C:/temp/image_1.png) after"
-    out = pdf2md_core._convert_to_simple_paths(md_text)
+    out = pdf2md_core.convert_to_simple_paths(md_text)
 
     assert "![image_1.png](image_1.png)" in out
     assert "C:/temp" not in out
@@ -43,7 +43,7 @@ def test_convert_to_simple_paths_handles_title_variants(monkeypatch: pytest.Monk
         raising=True,
     )
 
-    out = pdf2md_core._convert_to_simple_paths(md_text)
+    out = pdf2md_core.convert_to_simple_paths(md_text)
 
     assert "![image_1.png](image_1.png)" in out
     assert "C:/temp" not in out
@@ -63,7 +63,7 @@ def test_add_ocr_after_images_replaces_image_with_md_link_and_creates_image_md(
     (tmp_path / "image_1.png").write_bytes(b"fake")
 
     md_text = "before ![alt](image_1.png) after"
-    out, ocr_count = pdf2md_core._add_ocr_after_images(md_text, str(tmp_path))
+    out, ocr_count = pdf2md_core.add_ocr_after_images(md_text, str(tmp_path))
 
     assert ocr_count == 1
     assert "[image_1.md](image_1.md)" in out
@@ -89,7 +89,7 @@ def test_add_ocr_after_images_handles_title_variant(tmp_path: Path, monkeypatch:
     (tmp_path / "image_1.png").write_bytes(b"fake")
 
     md_text = 'before ![alt](image_1.png "title") after'
-    out, ocr_count = pdf2md_core._add_ocr_after_images(md_text, str(tmp_path))
+    out, ocr_count = pdf2md_core.add_ocr_after_images(md_text, str(tmp_path))
 
     assert ocr_count == 1
     assert "[image_1.md](image_1.md)" in out
@@ -102,7 +102,7 @@ def test_count_images_in_folder_counts_more_extensions(tmp_path: Path) -> None:
     (tmp_path / "c.tif").write_bytes(b"fake")
     (tmp_path / "not_image.txt").write_text("x", encoding="utf-8")
 
-    assert pdf2md_core._count_images_in_folder(str(tmp_path)) == 3
+    assert pdf2md_core.count_images_in_folder(str(tmp_path)) == 3
 
 
 def test_replace_images_with_ocr_blockquote_replaces_image_with_blockquote(
@@ -115,7 +115,7 @@ def test_replace_images_with_ocr_blockquote_replaces_image_with_blockquote(
     (tmp_path / "image_1.png").write_bytes(b"fake")
 
     md_text = "before ![alt](image_1.png) after"
-    out, ocr_count = pdf2md_core._replace_images_with_ocr_blockquote(md_text, str(tmp_path))
+    out, ocr_count = pdf2md_core.replace_images_with_ocr_blockquote(md_text, str(tmp_path))
 
     assert ocr_count == 1
     assert "image_1.png" not in out
@@ -132,7 +132,7 @@ def test_replace_images_with_ocr_blockquote_can_hide_title_line(
     (tmp_path / "image_1.png").write_bytes(b"fake")
 
     md_text = "before ![alt](image_1.png) after"
-    out, ocr_count = pdf2md_core._replace_images_with_ocr_blockquote(md_text, str(tmp_path))
+    out, ocr_count = pdf2md_core.replace_images_with_ocr_blockquote(md_text, str(tmp_path))
 
     assert ocr_count == 1
     assert "> OCR_LINE" in out
@@ -154,7 +154,7 @@ def test_add_ocr_blockquote_after_images_keeps_image_and_appends_blockquote(
     (tmp_path / "image_1.png").write_bytes(b"fake")
 
     md_text = "before ![alt](image_1.png) after"
-    out, ocr_count = pdf2md_core._add_ocr_blockquote_after_images(md_text, str(tmp_path))
+    out, ocr_count = pdf2md_core.add_ocr_blockquote_after_images(md_text, str(tmp_path))
 
     assert ocr_count == 1
     assert "![image_1.png](image_1.png)" in out
@@ -175,7 +175,7 @@ def test_convert_images_to_base64_converts_multiple_link_styles(
     )
 
     md_text = "\n".join(["![alt](image_1.png)", "[doc](doc.md)"])
-    out, _ = pdf2md_core._apply_image_rules(
+    out, _ = pdf2md_core.apply_image_rules(
         md_text,
         str(tmp_path),
         keep_images=True,
@@ -202,7 +202,7 @@ def test_add_ocr_after_images_supports_base64_image_md(
     (tmp_path / "image_1.png").write_bytes(b"fake")
 
     md_text = "before ![alt](image_1.png) after"
-    out, ocr_count = pdf2md_core._add_ocr_after_images(
+    out, ocr_count = pdf2md_core.add_ocr_after_images(
         md_text,
         str(tmp_path),
         extraction_mode="base64",

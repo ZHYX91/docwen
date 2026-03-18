@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from docwen.converter.layout2md import invoice_cn
-from docwen.converter.layout2md.invoice_cn import convert_invoice_cn_layout_to_md
+from docwen.converter.layout2md.api import convert_invoice_cn_layout_to_md
 
 pytestmark = pytest.mark.unit
 
@@ -81,12 +81,12 @@ def test_invoice_cn_pdf_parses_long_invoice_number_and_rows(
     spans.append((72.0, 220.0, 90.0, 230.0, "合计"))
 
     monkeypatch.setattr(
-        "docwen.converter.layout2md.invoice_cn._read_pdf_text_and_spans",
+        "docwen.converter.layout2md.invoice_cn.read_pdf_text_and_spans",
         lambda _p: (text, spans),
         raising=True,
     )
     monkeypatch.setattr(
-        "docwen.converter.layout2md.invoice_cn._is_scanpage",
+        "docwen.converter.layout2md.invoice_cn.is_scanpage",
         lambda _t: False,
         raising=True,
     )
@@ -178,8 +178,8 @@ def test_invoice_cn_pdf_spans_handles_split_heji_and_footer(tmp_path: Path, monk
     def fake_read(_file_path: str):
         return ("", spans)
 
-    monkeypatch.setattr(invoice_cn, "_read_pdf_text_and_spans", fake_read)
-    monkeypatch.setattr(invoice_cn, "_is_scanpage", lambda _t: False)
+    monkeypatch.setattr(invoice_cn, "read_pdf_text_and_spans", fake_read)
+    monkeypatch.setattr(invoice_cn, "is_scanpage", lambda _t: False)
 
     out_dir = tmp_path / "out"
     result = convert_invoice_cn_layout_to_md(
@@ -240,12 +240,12 @@ def test_invoice_cn_pdf_spans_footer_detects_heji_with_punctuation(
     add(536.0, 119.5, "6.00")
 
     monkeypatch.setattr(
-        "docwen.converter.layout2md.invoice_cn._read_pdf_text_and_spans",
+        "docwen.converter.layout2md.invoice_cn.read_pdf_text_and_spans",
         lambda _p: ("", spans),
         raising=True,
     )
     monkeypatch.setattr(
-        "docwen.converter.layout2md.invoice_cn._is_scanpage",
+        "docwen.converter.layout2md.invoice_cn.is_scanpage",
         lambda _t: False,
         raising=True,
     )

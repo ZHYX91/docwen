@@ -8,7 +8,7 @@ import pytest
 from docx import Document
 
 from docwen.config.config_manager import config_manager
-from docwen.converter.docx2md.shared.table_processor import convert_table_to_md_with_images
+from docwen.converter.docx2md.api import convert_table_to_md_with_images
 
 pytestmark = pytest.mark.unit
 

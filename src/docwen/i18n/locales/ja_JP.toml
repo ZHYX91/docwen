@@ -726,6 +726,8 @@ md_heading_format_label = "見出しフォーマットマークアップ処理�
 md_heading_format_tooltip = 'フォーマット適用：デフォルトの見出しスタイルフォーマットを上書きし、部分的な太字効果を有効にします\nマークアップ保持：マークアップをそのまま表示\nマークアップ削除：Wordの見出しスタイルフォーマットを自然に適用\n注：見出しスタイル自体が太字の場合、"フォーマット適用" で部分的な太字を実現できます'
 md_table_header_format_label = "テーブルヘッダーフォーマットマークアップ処理："
 md_table_header_format_tooltip = 'フォーマット適用：**太字** を実際の太字に変換（テーブルスタイルと重複する可能性があります）\nマークアップ保持：マークアップをそのまま表示\nマークアップ削除：テーブルスタイル（例：最初の行を太字）を自然に適用\n注：テーブルスタイルは通常ヘッダーの太字を定義しているため、"マークアップ削除" を推奨します'
+heading_merge_mode_label = "Heading + body merge mode:"
+heading_merge_mode_tooltip = "Controls whether a heading and the adjacent next line of plain body text are merged into one paragraph\nPunctuation required: Merge only when heading ends with a sentence-ending punctuation and next line is plain body text (default)\nAlways merge: Merge when next line is plain body text (punctuation not required)\nNever merge: Never merge; parse heading/body as separate paragraphs\nNote: Lists/code blocks/tables/quotes/separators are not merged"
 
 # Markdown → ドキュメント：セパレーター対応表
 md_separator_mapping = "セパレーターマッピング"
@@ -754,6 +756,9 @@ discard_format = "フォーマット破棄"
 apply_format = "フォーマット適用"
 keep_markup = "マークアップ保持"
 clean_markup = "マークアップ削除"
+heading_merge_punct_required = "Punctuation required (default)"
+heading_merge_always = "Always merge"
+heading_merge_never = "Never merge"
 
 # セパレーターの選択肢
 [settings.formatting.separators]

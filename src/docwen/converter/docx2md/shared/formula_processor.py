@@ -13,7 +13,7 @@ import logging
 
 import lxml.etree as etree
 
-from docwen.utils.docx_utils import is_inside_fallback
+from docwen.utils.docx_utils import get_oxml_element, is_inside_fallback
 from docwen.utils.formula_utils import OMML_NS, is_formula_supported, mathml_to_latex, omml_to_mathml
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 WORD_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 
 
-def _is_boolean_format_enabled(rPr, tag_name: str) -> bool:
+def is_boolean_format_enabled(rPr, tag_name: str) -> bool:
     """
     检测布尔型格式属性是否启用（如粗体、斜体、删除线）
 
@@ -48,7 +48,7 @@ def _is_boolean_format_enabled(rPr, tag_name: str) -> bool:
     return val not in ("false", "0")
 
 
-def _apply_format_markers_from_xml(
+def apply_format_markers_from_xml(
     run_elem, text: str, preserve_formatting: bool = True, syntax_config: dict | None = None
 ) -> str:
     """
@@ -76,9 +76,9 @@ def _apply_format_markers_from_xml(
             return text
 
         # 检测各种格式属性（使用正确的布尔检测逻辑）
-        is_bold = _is_boolean_format_enabled(rPr, "b")
-        is_italic = _is_boolean_format_enabled(rPr, "i")
-        is_strike = _is_boolean_format_enabled(rPr, "strike")
+        is_bold = is_boolean_format_enabled(rPr, "b")
+        is_italic = is_boolean_format_enabled(rPr, "i")
+        is_strike = is_boolean_format_enabled(rPr, "strike")
 
         # 下划线检测：<w:u w:val="single"/> = 启用，<w:u w:val="none"/> = 禁用
         is_underline = False
@@ -151,7 +151,7 @@ def has_formulas_in_paragraph(paragraph) -> bool:
     """
     try:
         # 访问底层XML
-        p_elem = paragraph._element
+        p_elem = get_oxml_element(paragraph)
 
         # 查找所有oMath元素
         omaths = p_elem.findall(".//{{{}}}oMath".format(OMML_NS["m"]))
@@ -184,7 +184,7 @@ def extract_formulas_from_paragraph(paragraph) -> list[dict]:
 
     try:
         # 访问底层XML
-        p_elem = paragraph._element
+        p_elem = get_oxml_element(paragraph)
 
         # 查找所有oMath元素
         all_omaths = p_elem.findall(".//{{{}}}oMath".format(OMML_NS["m"]))
@@ -288,7 +288,7 @@ def process_paragraph_with_formulas(
 
         # 按顺序遍历段落中的所有子元素（包括 run 和 oMath）
         result_parts = []
-        p_elem = paragraph._element
+        p_elem = get_oxml_element(paragraph)
 
         # 定义命名空间
         w_ns = OMML_NS["w"]
@@ -310,7 +310,7 @@ def process_paragraph_with_formulas(
                     if run_child.tag == f"{{{w_ns}}}t":
                         # 处理文本，应用格式标记
                         if run_child.text:
-                            formatted_text = _apply_format_markers_from_xml(
+                            formatted_text = apply_format_markers_from_xml(
                                 elem, run_child.text, preserve_formatting, syntax_config
                             )
                             result_parts.append(formatted_text)

@@ -7,6 +7,7 @@ import re
 
 from docx.shared import Pt
 
+from docwen.utils.docx_utils import get_oxml_element, get_paragraph_oxml
 from docwen.utils.heading_utils import convert_to_halfwidth
 from docwen.utils.validation_utils import is_value_empty
 
@@ -167,14 +168,14 @@ def process_attachment_description_placeholder(doc, yaml_data: dict) -> None:
     attachment_desc = yaml_data.get("附件说明")
     if is_value_empty(attachment_desc):
         logger.info("附件说明为空，删除占位符段落")
-        try_remove_element(attach_desc_para._element)
+        try_remove_element(get_oxml_element(attach_desc_para))
         return
 
     if not isinstance(attachment_desc, list):
         attachment_desc = [attachment_desc]
 
     base_style = attach_desc_para.style
-    base_rpr = attach_desc_para.runs[0]._element.rPr if attach_desc_para.runs else None
+    base_rpr = get_oxml_element(attach_desc_para.runs[0]).rPr if attach_desc_para.runs else None
 
     left_indent = attach_desc_para.paragraph_format.left_indent
     if left_indent:
@@ -183,8 +184,8 @@ def process_attachment_description_placeholder(doc, yaml_data: dict) -> None:
         char_width = Pt(16)
         left_indent = 2 * char_width
 
-    parent = attach_desc_para._element.getparent()
-    index = parent.index(attach_desc_para._element)
+    parent = get_oxml_element(attach_desc_para).getparent()
+    index = parent.index(get_oxml_element(attach_desc_para))
     is_single = len(attachment_desc) == 1
     hanging_indent_single = int(3 * char_width)
     hanging_indent_multi = int(4.5 * char_width)
@@ -193,16 +194,16 @@ def process_attachment_description_placeholder(doc, yaml_data: dict) -> None:
         new_p = doc.add_paragraph(style=base_style)
         new_run = new_p.add_run(str(line))
         if base_rpr is not None:
-            new_rpr = new_run._element.get_or_add_rPr()
+            new_rpr = get_oxml_element(new_run).get_or_add_rPr()
             for child in base_rpr.getchildren():
                 new_rpr.append(copy.deepcopy(child))
         pf = new_p.paragraph_format
         pf.left_indent = left_indent
         pf.first_line_indent = -hanging_indent_single if is_single else -hanging_indent_multi
-        new_p._p.getparent().remove(new_p._p)
-        parent.insert(index + i, new_p._p)
+        get_paragraph_oxml(new_p).getparent().remove(get_paragraph_oxml(new_p))
+        parent.insert(index + i, get_paragraph_oxml(new_p))
 
-    parent.remove(attach_desc_para._element)
+    parent.remove(get_oxml_element(attach_desc_para))
     logger.info("附件说明占位符处理完成")
 
 

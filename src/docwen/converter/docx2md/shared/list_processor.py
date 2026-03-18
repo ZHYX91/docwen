@@ -14,7 +14,7 @@
 
 import logging
 
-from docwen.utils.docx_utils import NAMESPACES
+from docwen.utils.docx_utils import NAMESPACES, get_oxml_element
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ def detect_list_item(para):
     """
     try:
         # 获取段落属性
-        pPr = para._element.pPr
+        pPr = get_oxml_element(para).pPr
         if pPr is None:
             return None, None, None
 
@@ -108,7 +108,7 @@ def _get_list_type_from_numbering(para, num_id, level):
         if numbering_part is None:
             return "bullet"
 
-        numbering_xml = numbering_part._element
+        numbering_xml = get_oxml_element(numbering_part)
 
         # 查找对应的 num 元素
         num_elem = numbering_xml.find(f'.//{{{NAMESPACES["w"]}}}num[@{{{NAMESPACES["w"]}}}numId="{num_id}"]')

@@ -47,13 +47,23 @@ except ModuleNotFoundError:
 
 # ==================== 平台常量 ====================
 _system = platform.system()
+_machine = platform.machine()
 IS_WINDOWS = _system == "Windows"
 IS_LINUX = _system == "Linux"
+IS_MACOS = _system == "Darwin"
+
+ARCH_TAG = {
+    "x86_64": "x64",
+    "AMD64": "x64",
+    "aarch64": "arm64",
+    "arm64": "arm64",
+}.get(_machine, _machine.lower())
+
 PLATFORM_TAG = {
-    "Windows": "win",
-    "Linux": "linux",
-    "Darwin": "macos",
-}.get(_system, _system.lower())
+    "Windows": f"win-{ARCH_TAG}",
+    "Linux": f"linux-{ARCH_TAG}",
+    "Darwin": f"macos-{ARCH_TAG}",
+}.get(_system, f"{_system.lower()}-{ARCH_TAG}")
 
 EXE_NAME = "DocWen.exe" if IS_WINDOWS else "DocWen"
 CLI_EXE_NAME = "DocWenCLI.exe" if IS_WINDOWS else "DocWenCLI"
@@ -646,7 +656,7 @@ def build_app(
         "--exclude-module=nntplib",
         "--exclude-module=xmlrpc",
     ]
-    if IS_LINUX:
+    if IS_LINUX or IS_MACOS:
         common_excludes.extend(
             [
                 "--exclude-module=win32com",

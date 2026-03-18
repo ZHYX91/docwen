@@ -5,6 +5,8 @@
 
 import logging
 
+from docwen.utils.docx_utils import get_oxml_element
+
 from .table_processor import extract_tables_from_document
 from .textbox_processor import extract_textboxes_from_document
 
@@ -238,10 +240,9 @@ def insert_contents_into_document(doc, sorted_contents):
                     logger.warning(f"设置段落样式失败: {style_error}")
 
         # 删除锚点段落
-        if anchor_paragraph._element is not None:
-            p = anchor_paragraph._element
-            p.getparent().remove(p)
-            logger.debug("已删除锚点段落")
+        p = get_oxml_element(anchor_paragraph)
+        p.getparent().remove(p)
+        logger.debug("已删除锚点段落")
 
         logger.info(f"成功插入 {len(insert_operations)} 个特殊内容段落")
         return doc

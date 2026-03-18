@@ -21,6 +21,8 @@ import zipfile
 
 import lxml.etree as etree
 
+from docwen.utils.docx_utils import get_oxml_element, get_run_oxml
+
 logger = logging.getLogger(__name__)
 
 # OOXML 命名空间
@@ -135,7 +137,7 @@ def extract_footnotes_from_docx(doc, docx_path: str | None = None) -> dict[int, 
             logger.info("文档无脚注部分（python-docx返回None）")
             use_fallback = True
         else:
-            footnotes_xml = footnotes_part._element
+            footnotes_xml = get_oxml_element(footnotes_part)
 
             for footnote in footnotes_xml.findall(".//w:footnote", NSMAP):
                 # 跳过系统保留项
@@ -199,7 +201,7 @@ def extract_endnotes_from_docx(doc, docx_path: str | None = None) -> dict[int, s
             logger.info("文档无尾注部分（python-docx返回None）")
             use_fallback = True
         else:
-            endnotes_xml = endnotes_part._element
+            endnotes_xml = get_oxml_element(endnotes_part)
 
             for endnote in endnotes_xml.findall(".//w:endnote", NSMAP):
                 # 跳过系统保留项
@@ -284,7 +286,7 @@ def find_footnote_references_in_paragraph(paragraph) -> list[tuple[int, int]]:
     references = []
 
     for run_idx, run in enumerate(paragraph.runs):
-        footnote_refs = run._r.findall(".//w:footnoteReference", NSMAP)
+        footnote_refs = get_run_oxml(run).findall(".//w:footnoteReference", NSMAP)
         for ref in footnote_refs:
             footnote_id_str = ref.get(f"{{{WORD_NS}}}id")
             if footnote_id_str:
@@ -307,7 +309,7 @@ def find_endnote_references_in_paragraph(paragraph) -> list[tuple[int, int]]:
     references = []
 
     for run_idx, run in enumerate(paragraph.runs):
-        endnote_refs = run._r.findall(".//w:endnoteReference", NSMAP)
+        endnote_refs = get_run_oxml(run).findall(".//w:endnoteReference", NSMAP)
         for ref in endnote_refs:
             endnote_id_str = ref.get(f"{{{WORD_NS}}}id")
             if endnote_id_str:
@@ -331,14 +333,14 @@ def find_all_note_references_in_paragraph(paragraph) -> list[tuple[str, int, int
 
     for run_idx, run in enumerate(paragraph.runs):
         # 查找脚注引用
-        for ref in run._r.findall(".//w:footnoteReference", NSMAP):
+        for ref in get_run_oxml(run).findall(".//w:footnoteReference", NSMAP):
             id_str = ref.get(f"{{{WORD_NS}}}id")
             if id_str:
                 with contextlib.suppress(ValueError):
                     references.append(("footnote", int(id_str), run_idx))
 
         # 查找尾注引用
-        for ref in run._r.findall(".//w:endnoteReference", NSMAP):
+        for ref in get_run_oxml(run).findall(".//w:endnoteReference", NSMAP):
             id_str = ref.get(f"{{{WORD_NS}}}id")
             if id_str:
                 with contextlib.suppress(ValueError):

@@ -48,6 +48,34 @@ Registro de cambios: ver [doc/CHANGELOG.md](doc/CHANGELOG.md)
 
 En la versión empaquetada de Windows: haz doble clic en `DocWen.exe` para abrir la interfaz gráfica. Si instalas desde el código fuente / pip: ejecuta `docwen-gui`.
 
+### Notas para macOS
+
+**Soporte de LibreOffice (Opcional)**
+
+Para convertir formatos heredados como `.doc` y `.xls`, instala LibreOffice:  
+Descarga: https://www.libreoffice.org/download/
+
+**Soporte de imágenes HEIC (Opcional)**
+
+Para procesar imágenes HEIC/HEIF:
+
+```bash
+brew install libheif
+pip install pillow-heif
+```
+
+### Requisitos previos del GUI en Linux
+
+- Entorno de escritorio instalado (GNOME, KDE, XFCE, etc.)
+- Soporte de Python Tk instalado:
+  ```bash
+  # Ubuntu/Debian
+  sudo apt-get install python3-tk
+  # Fedora/RHEL
+  sudo dnf install python3-tkinter
+  ```
+- Para servidores headless (sin entorno gráfico), usa `DocWenCLI` en lugar de `DocWen`
+
 ### Guía de inicio rápido
 
 1.  **Prepara un archivo Markdown**:
@@ -89,7 +117,7 @@ Para facilitar el uso a compañeros sin conocimientos técnicos, los encabezados
 
 **Regla básica**: Cada línea no vacía se trata como un párrafo independiente por defecto.
 
-**Párrafos mixtos**: Cuando un subencabezado debe mezclarse con el texto del cuerpo en el mismo párrafo, deben cumplirse estas condiciones:
+**Párrafos mixtos**: Cuando un subencabezado debe mezclarse con el texto del cuerpo en el mismo párrafo (modo predeterminado: "Se requiere puntuación"), deben cumplirse estas condiciones:
 1.  El subencabezado termina con un signo de puntuación final (admite puntuación multilingüe).
 2.  El texto del cuerpo está en la **línea inmediatamente siguiente**.
 3.  La línea del cuerpo no puede ser un elemento especial de Markdown (encabezados, bloques de código, tablas, listas, citas, bloques de fórmula, separadores, etc.).
@@ -103,7 +131,8 @@ Las dos líneas anteriores se fusionarán en un solo párrafo: "I. Work Requirem
 
 **Nota**:
 - No puede haber una línea vacía entre el subencabezado y el cuerpo; de lo contrario, se reconocerán como párrafos separados.
-- Si el subencabezado no termina con puntuación final y no hay línea vacía antes del cuerpo, el cuerpo se fusionará con la línea del encabezado y se ajustará el formato.
+- De forma predeterminada (modo "Se requiere puntuación"), si el subencabezado no termina con un signo de puntuación final, no se fusionará con la línea siguiente aunque no haya línea en blanco.
+- Puedes cambiarlo en Configuración → Formato → "MarkDown a documento" → "Heading + body merge mode".
 
 ### Conversión bidireccional de separadores
 

@@ -730,6 +730,8 @@ md_heading_format_label = "Heading format markup handling:"
 md_heading_format_tooltip = 'Apply format: Override default heading style formatting, enabling partial bold effects\nKeep markup: Keep markup displayed as-is\nClean markup: Let Word heading style formatting take effect naturally\nNote: When heading style itself is bold, "Apply format" can achieve partial bold'
 md_table_header_format_label = "Table header format markup handling:"
 md_table_header_format_tooltip = 'Apply format: **Bold** converted to actual bold (may duplicate with table style)\nKeep markup: Keep markup displayed as-is\nClean markup: Let table style (e.g., firstRow bold) take effect naturally\nNote: Table styles usually define header bold, recommended to use "Clean markup"'
+heading_merge_mode_label = "Heading + body merge mode:"
+heading_merge_mode_tooltip = "Controls whether a heading and the adjacent next line of plain body text are merged into one paragraph\nPunctuation required: Merge only when heading ends with a sentence-ending punctuation and next line is plain body text (default)\nAlways merge: Merge when next line is plain body text (punctuation not required)\nNever merge: Never merge; parse heading/body as separate paragraphs\nNote: Lists/code blocks/tables/quotes/separators are not merged"
 
 # MD to Document Separator Mapping
 md_separator_mapping = "Separator Mapping"
@@ -758,6 +760,9 @@ discard_format = "Discard format"
 apply_format = "Apply format"
 keep_markup = "Keep markup"
 clean_markup = "Clean markup"
+heading_merge_punct_required = "Punctuation required (default)"
+heading_merge_always = "Always merge"
+heading_merge_never = "Never merge"
 
 # Separator Options
 [settings.formatting.separators]

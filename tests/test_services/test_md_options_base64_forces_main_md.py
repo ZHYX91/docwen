@@ -6,8 +6,8 @@ from typing import Any
 
 import pytest
 
+from docwen.services.api import normalize_md_options
 from docwen.services.context import AppContext
-from docwen.services.use_cases import _normalize_md_options
 
 pytestmark = pytest.mark.unit
 
@@ -42,13 +42,13 @@ def test_normalize_md_options_forces_main_md_when_base64_provided() -> None:
         "to_md_image_extraction_mode": "base64",
         "to_md_ocr_placement_mode": "image_md",
     }
-    _normalize_md_options(options, category="document", ctx=_make_ctx("file", "image_md"))
+    normalize_md_options(options, category="document", ctx=_make_ctx("file", "image_md"))
     assert options["to_md_image_extraction_mode"] == "base64"
     assert options["to_md_ocr_placement_mode"] == "main_md"
 
 
 def test_normalize_md_options_forces_main_md_when_base64_from_config() -> None:
     options: dict[str, Any] = {"extract_image": True, "extract_ocr": True}
-    _normalize_md_options(options, category="document", ctx=_make_ctx("base64", "image_md"))
+    normalize_md_options(options, category="document", ctx=_make_ctx("base64", "image_md"))
     assert options["to_md_image_extraction_mode"] == "base64"
     assert options["to_md_ocr_placement_mode"] == "main_md"

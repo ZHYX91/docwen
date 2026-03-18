@@ -99,7 +99,7 @@ def _coerce_bool(value: Any) -> bool:
     return bool(value)
 
 
-def _normalize_md_options(options: dict[str, Any], *, category: str, ctx: AppContext) -> None:
+def normalize_md_options(options: dict[str, Any], *, category: str, ctx: AppContext) -> None:
     if "extract_image" not in options or options.get("extract_image") is None:
         options["extract_image"] = category in {"document", "markdown", "image"}
     else:
@@ -143,7 +143,7 @@ def _normalize_md_options(options: dict[str, Any], *, category: str, ctx: AppCon
         options["to_md_ocr_placement_mode"] = str(options.get("to_md_ocr_placement_mode") or "image_md").lower()
 
 
-def _normalize_numbering_options(
+def normalize_numbering_options(
     options: dict[str, Any],
     *,
     category: str,
@@ -345,7 +345,7 @@ class ConversionService:
             if category in {"markdown", "document"}:
                 options["proofread_options"] = _merge_proofread_options(options, ctx=self._ctx)
 
-            _normalize_numbering_options(
+            normalize_numbering_options(
                 options,
                 category=category,
                 target_format=request.target_format,
@@ -364,7 +364,7 @@ class ConversionService:
                     raise InvalidInputError("无法确定源格式", details="source_format")
 
                 if target_format == "md":
-                    _normalize_md_options(options, category=category, ctx=self._ctx)
+                    normalize_md_options(options, category=category, ctx=self._ctx)
 
                 is_same_format = actual_format and target_format and actual_format.lower() == target_format.lower()
                 is_image_compress = category == "image" and (

@@ -23,7 +23,7 @@ def test_process_docx_template_removes_temp_file_when_move_fails(
     monkeypatch.setattr(md2docx_core.docx_processor, "replace_placeholders", fake_replace_placeholders, raising=True)
     monkeypatch.setattr(md2docx_core, "move_file_with_retry", lambda *_args, **_kwargs: None, raising=True)
 
-    ok = md2docx_core._process_docx_template(
+    ok = md2docx_core.process_docx_template(
         doc=None,
         output_path=str(tmp_path / "out.docx"),
         yaml_data={},

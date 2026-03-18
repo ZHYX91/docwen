@@ -27,7 +27,7 @@ def test_apply_all_settings_includes_export_tab() -> None:
     export_tab = _Tab(ok=True)
     fake = types.SimpleNamespace(tabs={"export": export_tab})
 
-    success = SettingsDialog._apply_all_settings(fake)  # type: ignore[misc]
+    success = SettingsDialog.apply_all_settings(fake)  # type: ignore[misc]
 
     assert success is True
     assert export_tab.called == 1
@@ -37,7 +37,7 @@ def test_apply_all_settings_fails_when_export_tab_fails() -> None:
     export_tab = _Tab(ok=False)
     fake = types.SimpleNamespace(tabs={"export": export_tab})
 
-    success = SettingsDialog._apply_all_settings(fake)  # type: ignore[misc]
+    success = SettingsDialog.apply_all_settings(fake)  # type: ignore[misc]
 
     assert success is False
     assert export_tab.called == 1

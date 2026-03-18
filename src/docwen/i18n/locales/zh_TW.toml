@@ -727,6 +727,8 @@ md_heading_format_label = "小標題格式標記處理:"
 md_heading_format_tooltip = '應用格式：覆蓋標題樣式默認格式，可實現部分加粗效果\n保留標記：保留標記原樣顯示\n清理標記：讓Word標題樣式格式自然生效\n注意：當標題樣式本身是加粗時，"應用格式"可實現部分加粗'
 md_table_header_format_label = "表頭格式標記處理:"
 md_table_header_format_tooltip = '應用格式：**粗體**轉為真正的粗體（可能與表格樣式重複）\n保留標記：保留標記原樣顯示\n清理標記：讓表格樣式（如 firstRow 加粗）自然生效\n注意：表格樣式通常已定義表頭加粗，建議使用"清理標記"'
+heading_merge_mode_label = "標題+正文合併模式:"
+heading_merge_mode_tooltip = "控制小標題與緊鄰下一行普通正文是否合併為同一段落\n有標點才合併：標題末尾有結束標點且下一行是普通正文時合併（預設）\n緊鄰正文就合併：下一行是普通正文時合併（不要求結束標點）\n永不合併：標題與正文按普通解析分段\n註：列表/程式碼區塊/表格/引用/分隔線等不會被合併"
 
 # MD轉文件分隔符映射
 md_separator_mapping = "分隔符映射"
@@ -755,6 +757,9 @@ discard_format = "丟棄格式"
 apply_format = "應用格式"
 keep_markup = "保留標記"
 clean_markup = "清理標記"
+heading_merge_punct_required = "有標點才合併（預設）"
+heading_merge_always = "緊鄰正文就合併"
+heading_merge_never = "永不合併"
 
 # 分隔符選項
 [settings.formatting.separators]

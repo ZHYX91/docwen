@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from docwen.converter.md2docx.core import _read_and_parse_md as read_md_for_docx
-from docwen.converter.md2xlsx.core import _read_and_parse_md as read_md_for_xlsx
+from docwen.converter.md2docx.api import read_and_parse_md as read_md_for_docx
+from docwen.converter.md2xlsx.api import read_and_parse_md as read_md_for_xlsx
 
 pytestmark = pytest.mark.unit
 

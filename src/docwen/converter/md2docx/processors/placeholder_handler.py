@@ -266,8 +266,8 @@ def remove_special_mark(paragraph):
         last_run_text = last_run.text.strip()
         if last_run_text.startswith(SPECIAL_MARKER_PREFIX) and last_run_text.endswith(SPECIAL_MARKER_SUFFIX):
             # 删除标记Run
-            p = last_run._element.getparent()
-            p.remove(last_run._element)
+            p = docx_utils.get_oxml_element(last_run).getparent()
+            p.remove(docx_utils.get_oxml_element(last_run))
             logger.debug("已移除隐藏标记")
     except Exception as e:
         logger.warning(f"移除标记失败: {e!s}")
@@ -605,7 +605,7 @@ def process_table_cell_placeholders(paragraph, yaml_data, row, rows_to_remove, r
     # 步骤4：如果需要清空单元格，清空所有内容
     if cell_should_clear:
         # 获取单元格元素（tc元素）
-        cell_element = paragraph._element.getparent()
+        cell_element = docx_utils.get_oxml_element(paragraph).getparent()
         # 遍历单元格中的所有段落
         for para_element in cell_element.findall(".//w:p", docx_utils.NAMESPACES):
             # 遍历段落中的所有run
@@ -689,7 +689,7 @@ def replace_placeholder_in_paragraph(paragraph, placeholder, value):
         new_run = paragraph.add_run(new_text)
 
         # 应用原始样式
-        if first_run and first_run._element.rPr is not None:
+        if first_run and docx_utils.get_oxml_element(first_run).rPr is not None:
             logger.debug("应用原始样式到新run")
             docx_utils.apply_run_style(new_run, first_run)
 
@@ -722,17 +722,17 @@ def merge_similar_runs(paragraph):
     for run in paragraph.runs:
         # 如果是第一个run，直接开始新组
         if current_run is None:
-            current_run = {"text": run.text, "rPr": run._element.rPr}
+            current_run = {"text": run.text, "rPr": docx_utils.get_oxml_element(run).rPr}
             continue
 
         # 检查当前run是否与前一个样式相同
-        if docx_utils.is_rPr_equal(current_run["rPr"], run._element.rPr):
+        if docx_utils.is_rPr_equal(current_run["rPr"], docx_utils.get_oxml_element(run).rPr):
             logger.debug(f"合并相同样式run: '{current_run['text']}' + '{run.text}'")
             current_run["text"] += run.text
         else:
             # 保存当前组并开始新组
             merged_runs.append(current_run)
-            current_run = {"text": run.text, "rPr": run._element.rPr}
+            current_run = {"text": run.text, "rPr": docx_utils.get_oxml_element(run).rPr}
 
     # 添加最后一组
     if current_run is not None:
@@ -742,8 +742,8 @@ def merge_similar_runs(paragraph):
 
     # 清空原始run
     for run in paragraph.runs[:]:
-        p = run._element.getparent()
-        p.remove(run._element)
+        p = docx_utils.get_oxml_element(run).getparent()
+        p.remove(docx_utils.get_oxml_element(run))
 
     # 创建新的合并后的run
     new_runs = []
@@ -857,10 +857,10 @@ def _process_paragraph_images(paragraph, context="document", *, doc=None, col_co
         return Emu(target_width_emu), Emu(target_height_emu)
 
     def copy_run_format(src_run, dst_run):
-        src_rpr = src_run._element.rPr
+        src_rpr = docx_utils.get_oxml_element(src_run).rPr
         if src_rpr is None:
             return
-        dst_rpr = dst_run._element.get_or_add_rPr()
+        dst_rpr = docx_utils.get_oxml_element(dst_run).get_or_add_rPr()
         for child in list(dst_rpr):
             dst_rpr.remove(child)
         for child in src_rpr.getchildren():
@@ -903,8 +903,8 @@ def _process_paragraph_images(paragraph, context="document", *, doc=None, col_co
                 if after:
                     new_run = paragraph.add_run(after)
                     copy_run_format(run, new_run)
-                    new_run._element.getparent().remove(new_run._element)
-                    run._element.addnext(new_run._element)
+                    docx_utils.get_oxml_element(new_run).getparent().remove(docx_utils.get_oxml_element(new_run))
+                    docx_utils.get_oxml_element(run).addnext(docx_utils.get_oxml_element(new_run))
                     run = new_run
                     continue
                 break
@@ -915,8 +915,8 @@ def _process_paragraph_images(paragraph, context="document", *, doc=None, col_co
                 if after:
                     new_run = paragraph.add_run(after)
                     copy_run_format(run, new_run)
-                    new_run._element.getparent().remove(new_run._element)
-                    run._element.addnext(new_run._element)
+                    docx_utils.get_oxml_element(new_run).getparent().remove(docx_utils.get_oxml_element(new_run))
+                    docx_utils.get_oxml_element(run).addnext(docx_utils.get_oxml_element(new_run))
                     run = new_run
                     continue
                 break
@@ -930,8 +930,8 @@ def _process_paragraph_images(paragraph, context="document", *, doc=None, col_co
                 )
 
                 picture_run = paragraph.add_run()
-                picture_run._element.getparent().remove(picture_run._element)
-                run._element.addnext(picture_run._element)
+                docx_utils.get_oxml_element(picture_run).getparent().remove(docx_utils.get_oxml_element(picture_run))
+                docx_utils.get_oxml_element(run).addnext(docx_utils.get_oxml_element(picture_run))
                 if width is not None and height is not None:
                     picture_run.add_picture(image_path, width=width, height=height)
                 else:
@@ -949,8 +949,8 @@ def _process_paragraph_images(paragraph, context="document", *, doc=None, col_co
                 if after:
                     after_run = paragraph.add_run(after)
                     copy_run_format(run, after_run)
-                    after_run._element.getparent().remove(after_run._element)
-                    picture_run._element.addnext(after_run._element)
+                    docx_utils.get_oxml_element(after_run).getparent().remove(docx_utils.get_oxml_element(after_run))
+                    docx_utils.get_oxml_element(picture_run).addnext(docx_utils.get_oxml_element(after_run))
                     run = after_run
                 else:
                     run = picture_run

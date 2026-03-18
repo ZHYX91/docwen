@@ -68,7 +68,7 @@ def test_save_gui_state_writes_unscaled_logical_values(monkeypatch: pytest.Monke
     fake.current_y = 300
     fake.root = _Root(x=10, y=20, height=900)
 
-    MainWindow._save_gui_state(fake)  # type: ignore[misc]
+    MainWindow.save_gui_state(fake)  # type: ignore[misc]
 
     assert _get_saved_value(fake.config_manager, "center_panel_screen_x") == 1000
     assert _get_saved_value(fake.config_manager, "window_y") == 200
@@ -84,6 +84,6 @@ def test_save_gui_state_noop_when_remember_gui_state_disabled(monkeypatch: pytes
     fake.current_y = 200
     fake.root = _Root(x=0, y=0, height=1000)
 
-    MainWindow._save_gui_state(fake)  # type: ignore[misc]
+    MainWindow.save_gui_state(fake)  # type: ignore[misc]
 
     assert fake.config_manager.calls == []

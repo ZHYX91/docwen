@@ -17,6 +17,8 @@ import logging
 
 from docx.enum.text import WD_UNDERLINE
 
+from docwen.utils.docx_utils import get_oxml_element, get_run_oxml
+
 logger = logging.getLogger(__name__)
 
 
@@ -54,7 +56,7 @@ def detect_note_reference_in_run(run) -> tuple:
 
     try:
         # 检查脚注引用
-        footnote_refs = run._r.findall(".//w:footnoteReference", NSMAP)
+        footnote_refs = get_run_oxml(run).findall(".//w:footnoteReference", NSMAP)
         for ref in footnote_refs:
             id_str = ref.get(f"{{{WORD_NS}}}id")
             if id_str:
@@ -66,7 +68,7 @@ def detect_note_reference_in_run(run) -> tuple:
                     logger.warning(f"无效的脚注引用ID: {id_str}")
 
         # 检查尾注引用
-        endnote_refs = run._r.findall(".//w:endnoteReference", NSMAP)
+        endnote_refs = get_run_oxml(run).findall(".//w:endnoteReference", NSMAP)
         for ref in endnote_refs:
             id_str = ref.get(f"{{{WORD_NS}}}id")
             if id_str:
@@ -103,7 +105,7 @@ def has_gray_shading(run, wps_enabled=True, word_enabled=True):
         return False
 
     try:
-        rPr = run._element.rPr
+        rPr = get_oxml_element(run).rPr
         if rPr is None:
             return False
 
@@ -146,7 +148,7 @@ def has_paragraph_gray_shading(para, wps_enabled=True, word_enabled=True):
         return False
 
     try:
-        pPr = para._element.pPr
+        pPr = get_oxml_element(para).pPr
         if pPr is None:
             return False
 

@@ -48,6 +48,34 @@ Journal des modifications : voir [doc/CHANGELOG.md](doc/CHANGELOG.md)
 
 Pour la version packagée Windows : double-cliquez sur `DocWen.exe` pour démarrer l'interface graphique. Pour une installation depuis le code source / via pip : exécutez `docwen-gui`.
 
+### Notes pour macOS
+
+**Support LibreOffice (Optionnel)**
+
+Pour convertir des formats hérités comme `.doc` et `.xls`, installez LibreOffice :  
+Téléchargement : https://www.libreoffice.org/download/
+
+**Support des images HEIC (Optionnel)**
+
+Pour traiter les images HEIC/HEIF :
+
+```bash
+brew install libheif
+pip install pillow-heif
+```
+
+### Prérequis GUI sous Linux
+
+- Environnement de bureau installé (GNOME, KDE, XFCE, etc.)
+- Support Python Tk installé :
+  ```bash
+  # Ubuntu/Debian
+  sudo apt-get install python3-tk
+  # Fedora/RHEL
+  sudo dnf install python3-tkinter
+  ```
+- Pour les serveurs headless (sans environnement graphique), utilisez `DocWenCLI` plutôt que `DocWen`
+
 ### Guide de démarrage rapide
 
 1.  **Préparer un fichier Markdown** :
@@ -89,7 +117,7 @@ Pour faciliter la mémorisation pour les collègues sans connaissances de base, 
 
 **Règle de base** : Chaque ligne non vide est traitée par défaut comme un paragraphe séparé.
 
-**Paragraphes mixtes** : Lorsqu'un sous-titre doit être mélangé avec le corps du texte dans le même paragraphe, les conditions suivantes doivent être remplies :
+**Paragraphes mixtes** : Lorsqu'un sous-titre doit être mélangé avec le corps du texte dans le même paragraphe (mode par défaut : « Ponctuation requise »), les conditions suivantes doivent être remplies :
 1.  Le sous-titre se termine par un signe de ponctuation de fin (prend en charge la ponctuation multilingue, y compris les points, les points d'interrogation, les points d'exclamation et autres signes de ponctuation de fin courants).
 2.  Le corps du texte est situé sur la **ligne immédiatement suivante** du sous-titre.
 3.  La ligne du corps du texte ne peut pas être un élément Markdown spécial (comme les en-têtes, blocs de code, tableaux, listes, citations, blocs de formule, séparateurs, etc.).
@@ -103,7 +131,8 @@ Les deux lignes ci-dessus seront fusionnées dans le même paragraphe, où "I. E
 
 **Remarque** :
 - Il ne peut pas y avoir de ligne vide entre le sous-titre et le corps du texte ; sinon, ils seront reconnus comme des paragraphes séparés.
-- Si le sous-titre ne se termine pas par un signe de ponctuation et qu'il n'y a pas de ligne vide avec le corps du texte, le corps du texte sera fusionné dans la ligne d'en-tête avec un formatage ajusté.
+- Par défaut (mode « Ponctuation requise »), si le sous-titre ne se termine pas par une ponctuation de fin, il ne fusionne pas avec la ligne suivante même sans ligne vide.
+- Vous pouvez modifier ce comportement dans Paramètres → Formatage → « MarkDown vers document » → « Heading + body merge mode ».
 
 ### Conversion bidirectionnelle des séparateurs
 

@@ -182,7 +182,7 @@ def replace_placeholders(doc, yaml_data, body_data, template_name=None, *, footn
     # 先删除表格（如果表格需要删除）
     for table in tables_to_remove:
         try:
-            table_element = table._element
+            table_element = docx_utils.get_oxml_element(table)
             table_element.getparent().remove(table_element)
             logger.info("已删除整个表格（只剩一行且需要删除）")
         except Exception as e:
@@ -203,7 +203,7 @@ def _iter_body_paragraphs(doc):
     normal = []
     in_table = []
     in_textbox = []
-    for p in doc._element.body.iter(qn("w:p")):
+    for p in docx_utils.get_oxml_element(doc).body.iter(qn("w:p")):
         parent = p
         is_in_table = False
         is_in_textbox = False
@@ -273,7 +273,7 @@ def process_main_content(doc, body_data, yaml_data, template_name=None, *, note_
             logger.info(f"正文格式提取结果 - 字体: {fonts['eastAsia']}, 字号: {fonts['sz']}")
 
             # 准备插入新内容
-            paragraph_element = paragraph._element
+            paragraph_element = docx_utils.get_oxml_element(paragraph)
             parent = paragraph_element.getparent()
             index = parent.index(paragraph_element)
 
@@ -290,7 +290,7 @@ def process_main_content(doc, body_data, yaml_data, template_name=None, *, note_
                     table_data = item.get("table_data")
                     word_table = create_word_table(doc, table_data, fonts)
                     # 插入表格到正确位置
-                    parent.insert(index + insert_offset, word_table._element)
+                    parent.insert(index + insert_offset, docx_utils.get_oxml_element(word_table))
                     insert_offset += 1
                     logger.info(f"插入Word表格: {len(table_data['headers'])}列 x {len(table_data['rows'])}行")
                     continue
@@ -338,8 +338,8 @@ def process_main_content(doc, body_data, yaml_data, template_name=None, *, note_
                                 logger.debug(f"代码块在列表上下文中: level={list_level}, indent={indent_value}")
 
                         # 插入到正确位置（每行递增偏移量）
-                        new_p._p.getparent().remove(new_p._p)
-                        parent.insert(index + insert_offset, new_p._p)
+                        docx_utils.get_paragraph_oxml(new_p).getparent().remove(docx_utils.get_paragraph_oxml(new_p))
+                        parent.insert(index + insert_offset, docx_utils.get_paragraph_oxml(new_p))
                         insert_offset += 1
 
                     logger.debug(f"插入代码块（{len(code_lines)}行，语言: {language or '无'}）")
@@ -373,8 +373,8 @@ def process_main_content(doc, body_data, yaml_data, template_name=None, *, note_
                         add_formatted_text_to_paragraph(new_p, quote_content, fonts, formatting_mode, doc=doc)
 
                     # 插入到正确位置
-                    new_p._p.getparent().remove(new_p._p)
-                    parent.insert(index + insert_offset, new_p._p)
+                    docx_utils.get_paragraph_oxml(new_p).getparent().remove(docx_utils.get_paragraph_oxml(new_p))
+                    parent.insert(index + insert_offset, docx_utils.get_paragraph_oxml(new_p))
                     insert_offset += 1
 
                     logger.debug(f"插入引用块（{quote_level}级）: {quote_content[:30]}...")
@@ -412,8 +412,10 @@ def process_main_content(doc, body_data, yaml_data, template_name=None, *, note_
                                 # 因为样式段落无法附加到其他段落
                                 hr_num = target.split("_")[2]  # 提取数字 1/2/3
                                 new_p = insert_horizontal_rule(doc, hr_num)
-                                new_p._p.getparent().remove(new_p._p)
-                                parent.insert(index + insert_offset, new_p._p)
+                                docx_utils.get_paragraph_oxml(new_p).getparent().remove(
+                                    docx_utils.get_paragraph_oxml(new_p)
+                                )
+                                parent.insert(index + insert_offset, docx_utils.get_paragraph_oxml(new_p))
                                 insert_offset += 1
                                 logger.debug(f"插入分隔线（Horizontal Rule {hr_num}，来自 {hr_type} 分隔符）")
                             else:
@@ -439,8 +441,10 @@ def process_main_content(doc, body_data, yaml_data, template_name=None, *, note_
                                 continue
 
                             # 插入到正确位置
-                            new_p._p.getparent().remove(new_p._p)
-                            parent.insert(index + insert_offset, new_p._p)
+                            docx_utils.get_paragraph_oxml(new_p).getparent().remove(
+                                docx_utils.get_paragraph_oxml(new_p)
+                            )
+                            parent.insert(index + insert_offset, docx_utils.get_paragraph_oxml(new_p))
                             insert_offset += 1
                     else:
                         logger.debug("分隔符转换已禁用，跳过")
@@ -501,8 +505,8 @@ def process_main_content(doc, body_data, yaml_data, template_name=None, *, note_
                         logger.warning("无法创建列表定义，列表项作为普通段落处理")
 
                     # 插入到正确位置
-                    new_p._p.getparent().remove(new_p._p)
-                    parent.insert(index + insert_offset, new_p._p)
+                    docx_utils.get_paragraph_oxml(new_p).getparent().remove(docx_utils.get_paragraph_oxml(new_p))
+                    parent.insert(index + insert_offset, docx_utils.get_paragraph_oxml(new_p))
                     insert_offset += 1
                     continue
 
@@ -546,8 +550,8 @@ def process_main_content(doc, body_data, yaml_data, template_name=None, *, note_
                     logger.debug(f"插入列表续行内容（{continuation_level}级）: {continuation_content[:30]}...")
 
                     # 插入到正确位置
-                    new_p._p.getparent().remove(new_p._p)
-                    parent.insert(index + insert_offset, new_p._p)
+                    docx_utils.get_paragraph_oxml(new_p).getparent().remove(docx_utils.get_paragraph_oxml(new_p))
+                    parent.insert(index + insert_offset, docx_utils.get_paragraph_oxml(new_p))
                     insert_offset += 1
                     continue
 
@@ -678,12 +682,12 @@ def process_main_content(doc, body_data, yaml_data, template_name=None, *, note_
                         logger.debug(f"组合段落正文已使用格式解析添加，模式: {formatting_mode}")
 
                 # 插入到正确位置（使用偏移量计数器）
-                new_p._p.getparent().remove(new_p._p)
-                parent.insert(index + insert_offset, new_p._p)
+                docx_utils.get_paragraph_oxml(new_p).getparent().remove(docx_utils.get_paragraph_oxml(new_p))
+                parent.insert(index + insert_offset, docx_utils.get_paragraph_oxml(new_p))
                 insert_offset += 1
 
             # 移除原始占位符段落
-            parent.remove(paragraph._element)
+            parent.remove(docx_utils.get_oxml_element(paragraph))
             return True  # 找到了正文占位符
 
     # 遍历所有段落后仍未找到任何正文占位符
@@ -695,12 +699,12 @@ def remove_marked_elements(paragraphs_to_remove, rows_to_remove):
     """移除标记为需要删除的段落和表格行"""
     # 移除段落
     for para in paragraphs_to_remove:
-        try_remove_element(para._element)
+        try_remove_element(docx_utils.get_oxml_element(para))
 
     # 移除表格行
     for row in rows_to_remove:
         try:
-            row_element = row._element
+            row_element = docx_utils.get_oxml_element(row)
             parent = row_element.getparent()
             if parent is not None:
                 parent.remove(row_element)
@@ -760,13 +764,13 @@ def _apply_code_block_style(paragraph, run, config_mgr):
     # 应用等宽字体到Run
     run.font.name = code_font
     # 确保rPr存在
-    run_element = run._element
+    run_element = docx_utils.get_oxml_element(run)
     if run_element.rPr is None:
         run_element.get_or_add_rPr()
     run_element.rPr.rFonts.set(qn("w:eastAsia"), code_font)
 
     # 应用段落底纹（整行灰色背景）
-    pPr = paragraph._element.get_or_add_pPr()
+    pPr = docx_utils.get_oxml_element(paragraph).get_or_add_pPr()
 
     # 检查是否已有shd元素
     existing_shd = pPr.find(".//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}shd")

@@ -75,6 +75,6 @@ def test_file_drop_area_simulate_drop_single_mode_passes_list() -> None:
     dummy = _Dummy()
     dummy.on_file_dropped = lambda files: captured.append(files)
 
-    FileDropArea._simulate_drop(dummy, ["a.docx"])
+    FileDropArea.simulate_drop(dummy, ["a.docx"])
 
     assert captured == [["a.docx"]]

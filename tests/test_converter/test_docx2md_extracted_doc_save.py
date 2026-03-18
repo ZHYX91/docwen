@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from docx import Document
 
-from docwen.converter.docx2md.shared.content_injector import save_extracted_document
+from docwen.converter.docx2md.api import save_extracted_document
 
 pytestmark = pytest.mark.unit
 

@@ -47,6 +47,14 @@ FORMATTING_MODE_TRANSLATE_KEYS = {
     "remove": "settings.formatting.options.clean_markup",
 }
 
+# MD → DOCX 标题+正文合并模式
+HEADING_MERGE_MODE_CONFIG_VALUES = ["punct_required", "always", "never"]
+HEADING_MERGE_MODE_TRANSLATE_KEYS = {
+    "punct_required": "settings.formatting.options.heading_merge_punct_required",
+    "always": "settings.formatting.options.heading_merge_always",
+    "never": "settings.formatting.options.heading_merge_never",
+}
+
 # DOCX → MD 分隔符映射选项
 DOCX_TO_MD_HR_CONFIG_VALUES = ["---", "***", "___", "ignore"]
 DOCX_TO_MD_HR_TRANSLATE_KEYS = {
@@ -569,6 +577,7 @@ class FormattingTab(BaseSettingsTab):
         formatting_mode = self.config_manager.get_md_to_docx_formatting_mode()
         heading_formatting_mode = self.config_manager.get_md_to_docx_heading_formatting_mode()
         table_header_formatting_mode = self.config_manager.get_md_to_docx_table_header_formatting_mode()
+        heading_merge_mode = self.config_manager.get_md_to_docx_heading_merge_mode()
 
         # 格式处理小标题
         from docwen.utils.gui_utils import create_info_icon
@@ -640,6 +649,25 @@ class FormattingTab(BaseSettingsTab):
             table_header_formatting_mode,
             t("settings.formatting.md_table_header_format_tooltip"),
             lambda v: self.on_change("table_header_formatting_mode", v),
+        )
+
+        columns_frame2 = tb.Frame(frame)
+        columns_frame2.pack(fill="x", pady=(scale(5), 0))
+        columns_frame2.columnconfigure(0, weight=1)
+        columns_frame2.columnconfigure(1, weight=1)
+        columns_frame2.columnconfigure(2, weight=1)
+
+        merge_mode_column = tb.Frame(columns_frame2)
+        merge_mode_column.grid(row=0, column=0, sticky="nsew", padx=(0, scale(5)))
+
+        self.heading_merge_mode_combo = self._create_config_combobox(
+            merge_mode_column,
+            t("settings.formatting.heading_merge_mode_label"),
+            HEADING_MERGE_MODE_CONFIG_VALUES,
+            HEADING_MERGE_MODE_TRANSLATE_KEYS,
+            heading_merge_mode,
+            t("settings.formatting.heading_merge_mode_tooltip"),
+            lambda v: self.on_change("heading_merge_mode", v),
         )
 
         # ========== YAML列表拼接符配置 ==========
@@ -933,6 +961,7 @@ class FormattingTab(BaseSettingsTab):
             "formatting_mode": self.formatting_mode_combo.get_config_value(),
             "heading_formatting_mode": self.heading_formatting_mode_combo.get_config_value(),
             "table_header_formatting_mode": self.table_header_formatting_mode_combo.get_config_value(),
+            "heading_merge_mode": self.heading_merge_mode_combo.get_config_value(),
             # YAML列表拼接符
             "list_separator": self.list_separator_var.get(),
             # Markdown 语法设置
@@ -1015,6 +1044,12 @@ class FormattingTab(BaseSettingsTab):
                 settings["table_header_formatting_mode"],
             ):
                 logger.error("保存 table_header_formatting_mode 失败")
+                return False
+
+            if not self.config_manager.update_config_value(
+                "conversion_config", "md_to_docx", "heading_merge_mode", settings["heading_merge_mode"]
+            ):
+                logger.error("保存 heading_merge_mode 失败")
                 return False
 
             # === YAML列表拼接符 ===

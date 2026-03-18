@@ -48,6 +48,34 @@
 
 Windows 打包版可雙擊 `DocWen.exe` 啟動圖形介面；原始碼/`pip` 安裝可執行 `docwen-gui`。
 
+### macOS 安裝說明
+
+**LibreOffice 支援（可選）**
+
+如需轉換 `.doc`、`.xls` 等舊格式，請安裝 LibreOffice：  
+下載地址：https://www.libreoffice.org/download/
+
+**HEIC 圖片支援（可選）**
+
+如需處理 HEIC/HEIF 格式圖片：
+
+```bash
+brew install libheif
+pip install pillow-heif
+```
+
+### Linux GUI 版本前置條件
+
+- 已安裝桌面環境（GNOME、KDE、XFCE 等均可）
+- 已安裝 Python Tk 支援：
+  ```bash
+  # Ubuntu/Debian
+  sudo apt-get install python3-tk
+  # Fedora/RHEL
+  sudo dnf install python3-tkinter
+  ```
+- 純伺服器（無顯示環境）請使用 `DocWenCLI` 而非 `DocWen`
+
 ### 快速入門指南
 
 1. **準備一個 Markdown 文件**：
@@ -89,7 +117,7 @@ Windows 打包版可雙擊 `DocWen.exe` 啟動圖形介面；原始碼/`pip` 安
 
 **基本規則**：每個非空行默認作為獨立段落處理。
 
-**混合段落**：當小標題需要與正文混合在同一段時，需滿足以下條件：
+**混合段落**：當小標題需要與正文混合在同一段時（預設「有標點才合併」模式），需滿足以下條件：
 1. 小標題末尾有結束標點符號（支持多語言標點，包括句號、問號、嘆號等常見結束標點）
 2. 正文文本位於小標題的**緊鄰下一行**
 3. 正文行不能是特殊 Markdown 元素（如標題、代碼塊、表格、列表、引用、公式塊、分隔線等）
@@ -103,7 +131,8 @@ Windows 打包版可雙擊 `DocWen.exe` 啟動圖形介面；原始碼/`pip` 安
 
 **注意**：
 - 小標題和正文之間不能有空行，否則會被識別為獨立段落
-- 如果小標題末尾沒有標點符號且與正文之間無空行，正文將合併到標題行，並調整格式（占位符格式）
+- 預設情況下（有標點才合併模式），若小標題末尾沒有結束標點符號，即使與正文之間無空行，也會被識別為獨立段落，不會合併
+- 可在設定介面「格式」→「MarkDown轉為文檔」中調整「標題+正文合併模式」
 
 ### 分隔線雙向轉換
 

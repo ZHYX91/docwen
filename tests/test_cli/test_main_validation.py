@@ -106,7 +106,7 @@ def test_execute_headless_json_invalid_files_warning_goes_to_stderr(
 
     monkeypatch.setattr("docwen.cli.executor.execute_action", _stub_execute_action, raising=True)
 
-    exit_code = cli_main._run_action_for_files("convert", args.files, options={}, args=args)
+    exit_code = cli_main.run_action_for_files("convert", args.files, options={}, args=args)
     captured = capsys.readouterr()
 
     assert exit_code == 0
@@ -220,7 +220,7 @@ def test_convert_to_md_allows_ocr_without_extract_img_passes_options_to_executor
         captured["options"] = dict(options)
         return 0
 
-    monkeypatch.setattr(cli_main, "_run_action_for_files", _stub_run_action_for_files, raising=True)
+    monkeypatch.setattr(cli_main, "run_action_for_files", _stub_run_action_for_files, raising=True)
 
     exit_code = _run_main_with_args(monkeypatch, args)
     assert exit_code == 0

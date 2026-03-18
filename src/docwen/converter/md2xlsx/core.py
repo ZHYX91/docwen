@@ -144,7 +144,7 @@ def convert(
 
             # 如果提供了original_source_path，使用它；否则使用md_path
             path_for_resolve = original_source_path if original_source_path else md_path
-            yaml_data, md_body = _read_and_parse_md(temp_input, path_for_resolve, temp_dir=temp_dir)
+            yaml_data, md_body = read_and_parse_md(temp_input, path_for_resolve, temp_dir=temp_dir)
 
             # 为所有语言版本的标题键设置回退值
             _ensure_title_fallbacks(yaml_data, path_for_resolve)
@@ -213,7 +213,7 @@ def convert(
         return None
 
 
-def _read_and_parse_md(temp_md_path: str, original_md_path: str | None = None, temp_dir: str | None = None) -> tuple:
+def read_and_parse_md(temp_md_path: str, original_md_path: str | None = None, temp_dir: str | None = None) -> tuple:
     """
     读取并解析Markdown文件，返回YAML数据和YAML后的Markdown内容
 

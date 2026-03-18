@@ -27,4 +27,4 @@ def test_registry_categories_match_formats_constants() -> None:
         formats.CATEGORY_IMAGE,
         formats.CATEGORY_MARKDOWN,
     }
-    assert set(registry._CATEGORY_TO_PACKAGE.keys()) == expected
+    assert registry.list_registered_categories() == expected

@@ -18,7 +18,7 @@ def test_find_blocks_does_not_merge_diagonal_cells() -> None:
         ]
     )
 
-    blocks = xlsx2md_core._find_blocks(df)
+    blocks = xlsx2md_core.find_blocks(df)
 
     assert len(blocks) == 2
 
@@ -30,7 +30,7 @@ def test_find_blocks_treats_whitespace_only_cells_as_empty() -> None:
         ]
     )
 
-    blocks = xlsx2md_core._find_blocks(df)
+    blocks = xlsx2md_core.find_blocks(df)
 
     assert len(blocks) == 1
     assert blocks[0].iat[0, 0] == "A"

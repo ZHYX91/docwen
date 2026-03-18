@@ -46,7 +46,7 @@ jobs:
           if ("${{ github.event_name }}" -eq "workflow_dispatch" -and -not $tag.StartsWith("v")) { throw "workflow_dispatch_requires_version_input_like_v0.8.2" }
           $ver = $tag
           if ($ver.StartsWith("v")) { $ver = $ver.Substring(1) }
-          $cliDeploy = "dist/DocWenCLI_v${ver}_win"
+          $cliDeploy = "dist/DocWenCLI_v${ver}_win-x64"
           if (!(Test-Path $cliDeploy)) { throw "cli_deploy_dir_not_found: $cliDeploy" }
           Push-Location $cliDeploy
           try {
@@ -62,26 +62,26 @@ jobs:
           if ("${{ github.event_name }}" -eq "workflow_dispatch" -and -not $ref.StartsWith("v")) { throw "workflow_dispatch_requires_version_input_like_v0.8.2" }
           $ver = $ref
           if ($ver.StartsWith("v")) { $ver = $ver.Substring(1) }
-          $deploy = "dist/DocWen_v${ver}_win"
+          $deploy = "dist/DocWen_v${ver}_win-x64"
           if (!(Test-Path $deploy)) { throw "deploy_dir_not_found: $deploy" }
 
-          $cliDeploy = "dist/DocWenCLI_v${ver}_win"
+          $cliDeploy = "dist/DocWenCLI_v${ver}_win-x64"
           if (!(Test-Path $cliDeploy)) { throw "cli_deploy_dir_not_found: $cliDeploy" }
           Push-Location $cliDeploy
           try {
-            Compress-Archive -Path "*" -DestinationPath "$PWD/../DocWenCLI-win-x64.zip" -Force
+            Compress-Archive -Path "*" -DestinationPath "$PWD/../DocWenCLI-windows-x64.zip" -Force
           } finally {
             Pop-Location
           }
-          Move-Item "$cliDeploy/../DocWenCLI-win-x64.zip" "DocWenCLI-win-x64.zip" -Force
+          Move-Item "$cliDeploy/../DocWenCLI-windows-x64.zip" "DocWenCLI-windows-x64.zip" -Force
 
           Push-Location $deploy
           try {
-            Compress-Archive -Path "*" -DestinationPath "$PWD/../DocWen-win-x64.zip" -Force
+            Compress-Archive -Path "*" -DestinationPath "$PWD/../DocWen-windows-x64.zip" -Force
           } finally {
             Pop-Location
           }
-          Move-Item "$deploy/../DocWen-win-x64.zip" "DocWen-win-x64.zip" -Force
+          Move-Item "$deploy/../DocWen-windows-x64.zip" "DocWen-windows-x64.zip" -Force
 
       - name: Verify zip contains required files (Windows)
         shell: pwsh
@@ -116,10 +116,10 @@ jobs:
             "_internal/docwen/i18n/locales/"
           )
 
-          $cliZipPath = (Resolve-Path "DocWenCLI-win-x64.zip").Path
+          $cliZipPath = (Resolve-Path "DocWenCLI-windows-x64.zip").Path
           Assert-ZipStructure -ZipPath $cliZipPath -RequiredExact @("DocWenCLI.exe") -RequiredPrefixes $requiredPrefixesCommon
 
-          $guiZipPath = (Resolve-Path "DocWen-win-x64.zip").Path
+          $guiZipPath = (Resolve-Path "DocWen-windows-x64.zip").Path
           Assert-ZipStructure -ZipPath $guiZipPath -RequiredExact @("DocWen.exe", "DocWenCLI.exe") -RequiredPrefixes $requiredPrefixesCommon
 
       - name: Upload artifacts (Windows)
@@ -127,8 +127,8 @@ jobs:
         with:
           name: windows-assets
           path: |
-            DocWenCLI-win-x64.zip
-            DocWen-win-x64.zip
+            DocWenCLI-windows-x64.zip
+            DocWen-windows-x64.zip
 
   build-linux:
     runs-on: ubuntu-latest
@@ -174,7 +174,7 @@ jobs:
           fi
           ver="${{ env.RELEASE_TAG }}"
           ver="${ver#v}"
-          cd "dist/DocWenCLI_v${ver}_linux"
+          cd "dist/DocWenCLI_v${ver}_linux-x64"
           chmod +x ./DocWenCLI || true
           ./DocWenCLI doctor --json --quiet > /dev/null
 
@@ -188,8 +188,8 @@ jobs:
           fi
           ver="${{ env.RELEASE_TAG }}"
           ver="${ver#v}"
-          tar -C "dist/DocWenCLI_v${ver}_linux" -czf "DocWenCLI-linux-x64.tar.gz" .
-          tar -C "dist/DocWen_v${ver}_linux" -czf "DocWen-linux-x64.tar.gz" .
+          tar -C "dist/DocWenCLI_v${ver}_linux-x64" -czf "DocWenCLI-linux-x64.tar.gz" .
+          tar -C "dist/DocWen_v${ver}_linux-x64" -czf "DocWen-linux-x64.tar.gz" .
 
       - name: Verify tar contains required files (Linux)
         shell: bash
@@ -221,11 +221,183 @@ jobs:
             DocWenCLI-linux-x64.tar.gz
             DocWen-linux-x64.tar.gz
 
+  build-macos-arm64:
+    runs-on: macos-14
+    env:
+      RELEASE_TAG: ${{ inputs.version != '' && inputs.version || github.ref_name }}
+      ARCH_SUFFIX: arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install system dependencies (GUI)
+        shell: bash
+        run: |
+          set -euo pipefail
+          brew install python-tk@3.12 || true
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install -U pip
+          python -m pip install ".[dev]"
+
+      - name: Build GUI+CLI (macOS ARM64)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [[ "${{ env.RELEASE_TAG }}" != v* ]]; then
+            echo "workflow_dispatch_requires_version_input_like_v0.8.2" >&2
+            exit 2
+          fi
+          python scripts/build/build.py --skip-cython --version "${{ env.RELEASE_TAG }}"
+
+      - name: Self-check DocWenCLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          ver="${{ env.RELEASE_TAG }}"
+          ver="${ver#v}"
+          cd "dist/DocWenCLI_v${ver}_macos-${ARCH_SUFFIX}"
+          chmod +x ./DocWenCLI || true
+          ./DocWenCLI doctor --json --quiet > /dev/null
+
+      - name: Package release assets (macOS ARM64)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ver="${{ env.RELEASE_TAG }}"
+          ver="${ver#v}"
+          tar -C "dist/DocWenCLI_v${ver}_macos-${ARCH_SUFFIX}" -czf "DocWenCLI-macos-${ARCH_SUFFIX}.tar.gz" .
+          tar -C "dist/DocWen_v${ver}_macos-${ARCH_SUFFIX}" -czf "DocWen-macos-${ARCH_SUFFIX}.tar.gz" .
+
+      - name: Verify tar contains required files (macOS ARM64)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cli_listing=$(tar -tzf "DocWenCLI-macos-${ARCH_SUFFIX}.tar.gz")
+          grep -qE '^(\./)?DocWenCLI$' <<< "$cli_listing"
+          grep -qE '^(\./)?_internal/' <<< "$cli_listing"
+          grep -qE '^(\./)?templates/' <<< "$cli_listing"
+          grep -qE '^(\./)?configs/' <<< "$cli_listing"
+          grep -qE '^(\./)?models/' <<< "$cli_listing"
+          grep -qE '^(\./)?_internal/docwen/i18n/locales/' <<< "$cli_listing"
+
+          gui_listing=$(tar -tzf "DocWen-macos-${ARCH_SUFFIX}.tar.gz")
+          grep -qE '^(\./)?DocWen$' <<< "$gui_listing"
+          grep -qE '^(\./)?DocWenCLI$' <<< "$gui_listing"
+          grep -qE '^(\./)?_internal/' <<< "$gui_listing"
+          grep -qE '^(\./)?templates/' <<< "$gui_listing"
+          grep -qE '^(\./)?configs/' <<< "$gui_listing"
+          grep -qE '^(\./)?models/' <<< "$gui_listing"
+          grep -qE '^(\./)?_internal/docwen/i18n/locales/' <<< "$gui_listing"
+
+      - name: Upload artifacts (macOS ARM64)
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-arm64-assets
+          path: |
+            DocWenCLI-macos-arm64.tar.gz
+            DocWen-macos-arm64.tar.gz
+
+  build-macos-intel:
+    runs-on: macos-15-intel
+    env:
+      RELEASE_TAG: ${{ inputs.version != '' && inputs.version || github.ref_name }}
+      ARCH_SUFFIX: x64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install system dependencies (GUI)
+        shell: bash
+        run: |
+          set -euo pipefail
+          brew install python-tk@3.12 || true
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install -U pip
+          python -m pip install ".[dev]"
+
+      - name: Build GUI+CLI (macOS x64)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [[ "${{ env.RELEASE_TAG }}" != v* ]]; then
+            echo "workflow_dispatch_requires_version_input_like_v0.8.2" >&2
+            exit 2
+          fi
+          python scripts/build/build.py --skip-cython --version "${{ env.RELEASE_TAG }}"
+
+      - name: Self-check DocWenCLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          ver="${{ env.RELEASE_TAG }}"
+          ver="${ver#v}"
+          cd "dist/DocWenCLI_v${ver}_macos-${ARCH_SUFFIX}"
+          chmod +x ./DocWenCLI || true
+          ./DocWenCLI doctor --json --quiet > /dev/null
+
+      - name: Package release assets (macOS x64)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ver="${{ env.RELEASE_TAG }}"
+          ver="${ver#v}"
+          tar -C "dist/DocWenCLI_v${ver}_macos-${ARCH_SUFFIX}" -czf "DocWenCLI-macos-${ARCH_SUFFIX}.tar.gz" .
+          tar -C "dist/DocWen_v${ver}_macos-${ARCH_SUFFIX}" -czf "DocWen-macos-${ARCH_SUFFIX}.tar.gz" .
+
+      - name: Verify tar contains required files (macOS x64)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cli_listing=$(tar -tzf "DocWenCLI-macos-${ARCH_SUFFIX}.tar.gz")
+          grep -qE '^(\./)?DocWenCLI$' <<< "$cli_listing"
+          grep -qE '^(\./)?_internal/' <<< "$cli_listing"
+          grep -qE '^(\./)?templates/' <<< "$cli_listing"
+          grep -qE '^(\./)?configs/' <<< "$cli_listing"
+          grep -qE '^(\./)?models/' <<< "$cli_listing"
+          grep -qE '^(\./)?_internal/docwen/i18n/locales/' <<< "$cli_listing"
+
+          gui_listing=$(tar -tzf "DocWen-macos-${ARCH_SUFFIX}.tar.gz")
+          grep -qE '^(\./)?DocWen$' <<< "$gui_listing"
+          grep -qE '^(\./)?DocWenCLI$' <<< "$gui_listing"
+          grep -qE '^(\./)?_internal/' <<< "$gui_listing"
+          grep -qE '^(\./)?templates/' <<< "$gui_listing"
+          grep -qE '^(\./)?configs/' <<< "$gui_listing"
+          grep -qE '^(\./)?models/' <<< "$gui_listing"
+          grep -qE '^(\./)?_internal/docwen/i18n/locales/' <<< "$gui_listing"
+
+      - name: Upload artifacts (macOS x64)
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-x64-assets
+          path: |
+            DocWenCLI-macos-x64.tar.gz
+            DocWen-macos-x64.tar.gz
+
   release:
     runs-on: ubuntu-latest
     needs:
       - build-windows
       - build-linux
+      - build-macos-intel
+      - build-macos-arm64
     env:
       RELEASE_TAG: ${{ inputs.version != '' && inputs.version || github.ref_name }}
     steps:
@@ -240,15 +412,19 @@ jobs:
         run: |
           set -euo pipefail
           cd artifacts
-          sha256sum DocWenCLI-win-x64.zip DocWen-win-x64.zip DocWenCLI-linux-x64.tar.gz DocWen-linux-x64.tar.gz > SHA256SUMS.txt
+          sha256sum DocWenCLI-windows-x64.zip DocWen-windows-x64.zip DocWenCLI-linux-x64.tar.gz DocWen-linux-x64.tar.gz DocWenCLI-macos-x64.tar.gz DocWen-macos-x64.tar.gz DocWenCLI-macos-arm64.tar.gz DocWen-macos-arm64.tar.gz > SHA256SUMS.txt
 
       - name: Publish release assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           files: |
-            artifacts/DocWenCLI-win-x64.zip
-            artifacts/DocWen-win-x64.zip
+            artifacts/DocWenCLI-windows-x64.zip
+            artifacts/DocWen-windows-x64.zip
             artifacts/DocWenCLI-linux-x64.tar.gz
             artifacts/DocWen-linux-x64.tar.gz
+            artifacts/DocWenCLI-macos-x64.tar.gz
+            artifacts/DocWen-macos-x64.tar.gz
+            artifacts/DocWenCLI-macos-arm64.tar.gz
+            artifacts/DocWen-macos-arm64.tar.gz
             artifacts/SHA256SUMS.txt

@@ -31,6 +31,8 @@ from docx.enum.text import WD_COLOR_INDEX, WD_UNDERLINE
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
+from docwen.utils.docx_utils import get_oxml_element, get_run_oxml
+
 logger = logging.getLogger(__name__)
 
 # Emoji 字体名称（Windows 系统）
@@ -105,7 +107,7 @@ def _add_run_with_emoji_support(paragraph, text: str, base_fonts: dict | None = 
             # emoji 部分：设置 emoji 字体
             run.font.name = EMOJI_FONT
             # 确保 rPr 存在
-            rPr = run._element.get_or_add_rPr()
+            rPr = get_oxml_element(run).get_or_add_rPr()
             rFonts = rPr.get_or_add_rFonts()
             rFonts.set(qn("w:ascii"), EMOJI_FONT)
             rFonts.set(qn("w:hAnsi"), EMOJI_FONT)
@@ -476,10 +478,10 @@ def apply_formats_to_run(
             # 如果样式不存在或未传入doc，使用底纹兼容
             if not style_applied:
                 run.font.name = code_font
-                run._element.rPr.rFonts.set(qn("w:eastAsia"), code_font)
+                get_oxml_element(run).rPr.rFonts.set(qn("w:eastAsia"), code_font)
 
                 # 添加灰色背景（字符底纹）
-                rPr = run._element.get_or_add_rPr()
+                rPr = get_oxml_element(run).get_or_add_rPr()
                 shd = OxmlElement("w:shd")
                 shd.set(qn("w:val"), "clear")
                 shd.set(qn("w:fill"), code_bg_color)
@@ -522,7 +524,7 @@ def add_formatted_text_to_paragraph(
     def add_soft_break():
         run = paragraph.add_run()
         br = OxmlElement("w:br")
-        run._r.append(br)
+        get_run_oxml(run).append(br)
 
     def add_text_with_formats(seg_text: str, seg_formats: list):
         nonlocal emitted_any, run_count
@@ -545,7 +547,7 @@ def add_formatted_text_to_paragraph(
 
             if is_emoji:
                 run.font.name = EMOJI_FONT
-                rPr = run._element.get_or_add_rPr()
+                rPr = get_oxml_element(run).get_or_add_rPr()
                 rFonts = rPr.get_or_add_rFonts()
                 rFonts.set(qn("w:ascii"), EMOJI_FONT)
                 rFonts.set(qn("w:hAnsi"), EMOJI_FONT)
@@ -634,7 +636,7 @@ def add_formatted_text_to_heading(paragraph, text: str, mode: str = "apply", doc
     def add_soft_break():
         run = paragraph.add_run()
         br = OxmlElement("w:br")
-        run._r.append(br)
+        get_run_oxml(run).append(br)
 
     def add_text_with_formats(seg_text: str, seg_formats: list):
         nonlocal emitted_any
@@ -656,7 +658,7 @@ def add_formatted_text_to_heading(paragraph, text: str, mode: str = "apply", doc
             )
             if is_emoji:
                 run.font.name = EMOJI_FONT
-                rPr = run._element.get_or_add_rPr()
+                rPr = get_oxml_element(run).get_or_add_rPr()
                 rFonts = rPr.get_or_add_rFonts()
                 rFonts.set(qn("w:ascii"), EMOJI_FONT)
                 rFonts.set(qn("w:hAnsi"), EMOJI_FONT)
@@ -664,7 +666,7 @@ def add_formatted_text_to_heading(paragraph, text: str, mode: str = "apply", doc
                 rFonts.set(qn("w:cs"), EMOJI_FONT)
             else:
                 if "code" not in seg_formats and contains_east_asian(part_text):
-                    rPr = run._element.get_or_add_rPr()
+                    rPr = get_oxml_element(run).get_or_add_rPr()
                     fonts = extract_format_from_paragraph_style(paragraph)
                     set_font_family(rPr, fonts, hint_east_asia=True)
 

@@ -15,6 +15,8 @@ from pathlib import Path
 
 import lxml.etree as etree
 
+from docwen.utils.docx_utils import get_oxml_element
+
 logger = logging.getLogger(__name__)
 
 # 命名空间定义
@@ -186,7 +188,7 @@ def get_numbering_xml_root(doc):
     try:
         numbering_part = doc.part.numbering_part
         if numbering_part is not None:
-            return numbering_part._element
+            return get_oxml_element(numbering_part)
     except (AttributeError, KeyError, NotImplementedError):
         # NotImplementedError: python-docx 在文档没有 numbering.xml 时抛出此异常
         pass

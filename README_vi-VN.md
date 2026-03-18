@@ -48,6 +48,34 @@ Nhật ký thay đổi: xem [doc/CHANGELOG.md](doc/CHANGELOG.md)
 
 Với bản đóng gói trên Windows: nhấp đúp `DocWen.exe` để mở GUI. Nếu cài từ mã nguồn / pip: chạy `docwen-gui`.
 
+### Ghi chú cho macOS
+
+**Hỗ trợ LibreOffice (Tùy chọn)**
+
+Nếu cần chuyển đổi các định dạng cũ như `.doc`, `.xls`, hãy cài LibreOffice:  
+Tải về: https://www.libreoffice.org/download/
+
+**Hỗ trợ ảnh HEIC (Tùy chọn)**
+
+Để xử lý ảnh HEIC/HEIF:
+
+```bash
+brew install libheif
+pip install pillow-heif
+```
+
+### Yêu cầu cho bản GUI trên Linux
+
+- Có môi trường desktop (GNOME, KDE, XFCE, ...)
+- Có hỗ trợ Python Tk:
+  ```bash
+  # Ubuntu/Debian
+  sudo apt-get install python3-tk
+  # Fedora/RHEL
+  sudo dnf install python3-tkinter
+  ```
+- Với máy chủ không có hiển thị, hãy dùng `DocWenCLI` thay vì `DocWen`
+
 ### Hướng dẫn nhanh
 
 1.  **Chuẩn bị file Markdown**:
@@ -89,7 +117,7 @@ Với bản đóng gói trên Windows: nhấp đúp `DocWen.exe` để mở GUI.
 
 **Quy tắc cơ bản**: Mỗi dòng không rỗng được xem là một đoạn riêng theo mặc định.
 
-**Đoạn trộn**: Khi một tiêu đề phụ cần trộn với nội dung trong cùng một đoạn, phải thỏa các điều kiện:
+**Đoạn trộn**: Khi một tiêu đề phụ cần trộn với nội dung trong cùng một đoạn (mặc định: chế độ "Cần dấu kết câu"), phải thỏa các điều kiện:
 1.  Tiêu đề phụ kết thúc bằng dấu kết câu (hỗ trợ dấu kết câu đa ngôn ngữ).
 2.  Nội dung nằm ở **dòng ngay bên dưới** tiêu đề phụ.
 3.  Dòng nội dung không được là phần tử Markdown đặc biệt (tiêu đề, code block, bảng, danh sách, trích dẫn, khối công thức, dấu phân cách, ...).
@@ -103,7 +131,8 @@ Hai dòng trên sẽ được gộp thành một đoạn: "I. Work Requirements.
 
 **Lưu ý**:
 - Không được có dòng trống giữa tiêu đề phụ và nội dung; nếu có sẽ bị nhận diện thành hai đoạn riêng.
-- Nếu tiêu đề phụ không kết thúc bằng dấu kết câu và nội dung không có dòng trống, nội dung sẽ bị gộp vào dòng tiêu đề và định dạng sẽ được điều chỉnh.
+- Theo mặc định (chế độ "Cần dấu kết câu"), nếu tiêu đề phụ không kết thúc bằng dấu kết câu, sẽ không gộp với dòng kế tiếp dù không có dòng trống.
+- Bạn có thể đổi trong Cài đặt → Định dạng → "MarkDown sang Word" → "Heading + body merge mode".
 
 ### Chuyển đổi dấu phân cách hai chiều
 

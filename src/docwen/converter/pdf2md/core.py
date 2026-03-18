@@ -215,14 +215,14 @@ def extract_pdf_with_pymupdf4llm(
                 raise InterruptedError("操作已被取消")
 
             # 统计图片数量
-            image_count = _count_images_in_folder(str(temp_output_folder))
+            image_count = count_images_in_folder(str(temp_output_folder))
             logger.info(f"提取了{image_count}张图片")
 
             # 提示图片提取完成的总数
             if progress_callback:
                 progress_callback(t("conversion.progress.images_extracted", count=image_count))
 
-            md_text, _ = _apply_image_rules(
+            md_text, _ = apply_image_rules(
                 md_text,
                 str(temp_output_folder),
                 keep_images=True,
@@ -293,14 +293,14 @@ def extract_pdf_with_pymupdf4llm(
                 raise InterruptedError("操作已被取消")
 
             # 统计图片数量
-            image_count = _count_images_in_folder(str(temp_output_folder))
+            image_count = count_images_in_folder(str(temp_output_folder))
             logger.info(f"提取了{image_count}张图片")
 
             # 提示图片提取完成的总数
             if progress_callback:
                 progress_callback(t("conversion.progress.images_extracted_preparing_ocr", count=image_count))
 
-            md_text, ocr_count = _apply_image_rules(
+            md_text, ocr_count = apply_image_rules(
                 md_text,
                 str(temp_output_folder),
                 keep_images=True,
@@ -362,13 +362,13 @@ def extract_pdf_with_pymupdf4llm(
                 raise InterruptedError("操作已被取消")
 
             # 统计图片数量
-            image_count = _count_images_in_folder(str(temp_output_folder))
+            image_count = count_images_in_folder(str(temp_output_folder))
             logger.info(f"提取了{image_count}张图片用于OCR")
 
             if progress_callback:
                 progress_callback(t("conversion.progress.images_extracted_preparing_ocr", count=image_count))
 
-            md_text, ocr_count = _apply_image_rules(
+            md_text, ocr_count = apply_image_rules(
                 md_text,
                 str(temp_output_folder),
                 keep_images=False,
@@ -409,7 +409,7 @@ def extract_pdf_with_pymupdf4llm(
         raise ValueError("无效的提取选项组合")
 
 
-def _count_images_in_folder(folder_path: str) -> int:
+def count_images_in_folder(folder_path: str) -> int:
     """
     统计文件夹中的图片数量
 
@@ -435,7 +435,7 @@ def _delete_images_in_folder(folder_path: str):
             logger.debug(f"删除图片: {f.name}")
 
 
-def _convert_to_simple_paths(md_text: str) -> str:
+def convert_to_simple_paths(md_text: str) -> str:
     """
     将Markdown中的图片路径转换为纯文件名，并应用配置的链接格式
 
@@ -479,7 +479,7 @@ def _convert_to_simple_paths(md_text: str) -> str:
     return result
 
 
-def _apply_image_rules(
+def apply_image_rules(
     md_text: str,
     images_folder: str,
     keep_images: bool,
@@ -636,7 +636,7 @@ def _replace_images_with_ocr(
         tuple: (更新后的Markdown文本, OCR识别数量)
     """
     logger.info("开始OCR识别并生成图片md文件...")
-    result, ocr_count = _apply_image_rules(
+    result, ocr_count = apply_image_rules(
         md_text,
         images_folder,
         keep_images=False,
@@ -649,13 +649,13 @@ def _replace_images_with_ocr(
     return result, ocr_count
 
 
-def _replace_images_with_ocr_blockquote(
+def replace_images_with_ocr_blockquote(
     md_text: str,
     images_folder: str,
     cancel_event: threading.Event | None = None,
     progress_callback: Callable[[str], Any] | None = None,
 ) -> tuple[str, int]:
-    return _apply_image_rules(
+    return apply_image_rules(
         md_text,
         images_folder,
         keep_images=False,
@@ -666,13 +666,13 @@ def _replace_images_with_ocr_blockquote(
     )
 
 
-def _add_ocr_blockquote_after_images(
+def add_ocr_blockquote_after_images(
     md_text: str,
     images_folder: str,
     cancel_event: threading.Event | None = None,
     progress_callback: Callable[[str], Any] | None = None,
 ) -> tuple[str, int]:
-    return _apply_image_rules(
+    return apply_image_rules(
         md_text,
         images_folder,
         keep_images=True,
@@ -683,7 +683,7 @@ def _add_ocr_blockquote_after_images(
     )
 
 
-def _add_ocr_after_images(
+def add_ocr_after_images(
     md_text: str,
     images_folder: str,
     cancel_event: threading.Event | None = None,
@@ -706,7 +706,7 @@ def _add_ocr_after_images(
         tuple: (更新后的Markdown文本, OCR识别数量)
     """
     logger.info("开始OCR识别并生成图片md文件...")
-    result, ocr_count = _apply_image_rules(
+    result, ocr_count = apply_image_rules(
         md_text,
         images_folder,
         keep_images=True,

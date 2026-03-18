@@ -48,6 +48,34 @@ Changelog: see [doc/CHANGELOG.md](doc/CHANGELOG.md)
 
 On the Windows packaged release, double-click `DocWen.exe` to start the graphical interface. If installed from source / pip, run `docwen-gui`.
 
+### macOS Notes
+
+**LibreOffice support (Optional)**
+
+To convert legacy formats like `.doc` and `.xls`, install LibreOffice:  
+Download: https://www.libreoffice.org/download/
+
+**HEIC image support (Optional)**
+
+To process HEIC/HEIF images:
+
+```bash
+brew install libheif
+pip install pillow-heif
+```
+
+### Linux GUI Prerequisites
+
+- Desktop environment installed (GNOME, KDE, XFCE, etc.)
+- Python Tk support installed:
+  ```bash
+  # Ubuntu/Debian
+  sudo apt-get install python3-tk
+  # Fedora/RHEL
+  sudo dnf install python3-tkinter
+  ```
+- For headless servers, use `DocWenCLI` instead of `DocWen`
+
 ### Quick Start Guide
 
 1.  **Prepare a Markdown File**:
@@ -89,7 +117,7 @@ To make it easier for colleagues without background knowledge to remember, the M
 
 **Basic Rule**: Every non-empty line is treated as a separate paragraph by default.
 
-**Mixed Paragraphs**: When a subheading needs to be mixed with the body text in the same paragraph, the following conditions must be met:
+**Mixed Paragraphs**: When a subheading needs to be mixed with the body text in the same paragraph (default mode: "Punctuation required"), the following conditions must be met:
 1.  The subheading ends with a terminating punctuation mark (supports multilingual punctuation, including periods, question marks, exclamation marks, and other common terminating punctuation).
 2.  The body text is located on the **immediate next line** of the subheading.
 3.  The body text line cannot be a special Markdown element (such as headings, code blocks, tables, lists, quotes, formula blocks, separators, etc.).
@@ -103,7 +131,8 @@ The above two lines will be merged into the same paragraph, where "I. Work Requi
 
 **Note**:
 - There cannot be an empty line between the subheading and the body text; otherwise, they will be recognized as separate paragraphs.
-- If the subheading does not end with a punctuation mark and has no empty line before the body text, the body text will be merged into the heading line with adjusted formatting.
+- By default ("Punctuation required" mode), if the subheading does not end with a terminating punctuation mark, it will not merge with the next line even without an empty line.
+- You can change this in Settings → Formatting → "MarkDown to Document" → "Heading + body merge mode".
 
 ### Bidirectional Separator Conversion
 

@@ -48,6 +48,34 @@ Word/Markdown/Excel 양방향 변환을 지원하는 문서·표 변환 도구�
 
 Windows 패키지 버전에서는 `DocWen.exe`를 더블클릭하여 GUI를 실행합니다. 소스 / pip 설치의 경우 `docwen-gui`를 실행합니다.
 
+### macOS 설치 안내
+
+**LibreOffice 지원(선택)**
+
+`.doc`, `.xls` 같은 구형 포맷 변환이 필요하다면 LibreOffice를 설치하세요:  
+다운로드: https://www.libreoffice.org/download/
+
+**HEIC 이미지 지원(선택)**
+
+HEIC/HEIF 이미지를 처리하려면:
+
+```bash
+brew install libheif
+pip install pillow-heif
+```
+
+### Linux GUI 버전 사전 준비
+
+- 데스크톱 환경이 설치되어 있어야 합니다(GNOME, KDE, XFCE 등)
+- Python Tk 지원이 설치되어 있어야 합니다:
+  ```bash
+  # Ubuntu/Debian
+  sudo apt-get install python3-tk
+  # Fedora/RHEL
+  sudo dnf install python3-tkinter
+  ```
+- 헤드리스 서버(디스플레이 환경 없음)에서는 `DocWen` 대신 `DocWenCLI`를 사용하세요
+
 ### 빠른 시작 가이드
 
 1.  **Markdown 파일 준비**:
@@ -89,7 +117,7 @@ Markdown 제목은 Word 제목과 **1:1**로 대응됩니다:
 
 **기본 규칙**: 비어 있지 않은 각 줄은 기본적으로 독립된 단락으로 처리됩니다.
 
-**혼합 단락**: 소제목을 본문 텍스트와 같은 단락으로 섞어야 하는 경우, 아래 조건을 만족해야 합니다:
+**혼합 단락**: 소제목을 본문 텍스트와 같은 단락으로 섞어야 하는 경우(기본 모드: "문장부호 필요"), 아래 조건을 만족해야 합니다:
 1.  소제목이 종결 문장부호로 끝납니다(마침표/물음표/느낌표 등 다국어 종결 문장부호 지원).
 2.  본문 텍스트가 소제목의 **바로 다음 줄**에 위치합니다.
 3.  본문 줄은 특수 Markdown 요소(제목, 코드 블록, 표, 목록, 인용, 수식 블록, 구분선 등)가 아니어야 합니다.
@@ -103,7 +131,8 @@ This meeting requires all units to earnestly implement...
 
 **주의**:
 - 소제목과 본문 사이에 빈 줄이 있으면 별도 단락으로 인식됩니다.
-- 소제목이 종결 문장부호로 끝나지 않고 빈 줄 없이 본문이 이어지면, 본문은 제목 줄에 합쳐지고 형식이 조정됩니다.
+- 기본(“문장부호 필요” 모드)에서는 소제목이 종결 문장부호로 끝나지 않으면 빈 줄이 없어도 다음 줄과 병합되지 않습니다.
+- 이 동작은 설정 → 서식 → “MarkDown→문서” → “Heading + body merge mode”에서 변경할 수 있습니다.
 
 ### 구분선 양방향 변환
 

@@ -224,11 +224,46 @@ def _determine_hr_attach_mode(lines: list, current_idx: int, total_lines: int) -
         return "none"
 
 
+def _check_can_merge_next_line(lines: list, current_idx: int, total_lines: int) -> tuple[bool, str | None]:
+    if current_idx + 1 >= total_lines:
+        return False, None
+
+    next_line_raw = lines[current_idx + 1]
+    next_line_content = next_line_raw.strip()
+    if not next_line_content:
+        return False, None
+
+    is_next_heading = next_line_content.startswith("#")
+    is_next_formula = next_line_content.startswith("$$")
+    is_next_table = next_line_content.startswith("|")
+    is_next_quote = next_line_content.startswith(">")
+    is_next_code_block = next_line_content.startswith(("```", "~~~"))
+    is_next_unordered_list = UNORDERED_LIST_REGEX.match(next_line_raw)
+    is_next_ordered_list = ORDERED_LIST_REGEX.match(next_line_raw)
+    is_next_hr = bool(re.match(r"^[-*_]{3,}\s*$", next_line_content))
+
+    is_special_element = (
+        is_next_heading
+        or is_next_formula
+        or is_next_table
+        or is_next_quote
+        or is_next_code_block
+        or is_next_unordered_list
+        or is_next_ordered_list
+        or is_next_hr
+    )
+    if is_special_element:
+        return False, None
+
+    return True, next_line_content
+
+
 def process_md_body(
     md_body: str,
     remove_numbering: bool = False,
     add_numbering: bool = False,
     formatter: HeadingFormatter | None = None,
+    heading_merge_mode: str = "punct_required",
 ) -> list:
     """
     处理YAML后的Markdown内容 - 支持序号配置化
@@ -238,6 +273,10 @@ def process_md_body(
         remove_numbering: 是否清除Markdown中的原有序号（默认False）
         add_numbering: 是否添加新序号（默认False）
         formatter: HeadingFormatter实例，用于生成序号（当add_numbering=True时使用）
+        heading_merge_mode: 标题+正文合并模式（默认 "punct_required"）
+            - "punct_required": 标题末尾有结束标点且下一行是普通正文时合并
+            - "always": 下一行是普通正文时合并（不要求结束标点）
+            - "never": 永不合并（标题与正文按普通解析分段）
 
     返回:
         list: 处理后的段落列表 [{
@@ -258,7 +297,12 @@ def process_md_body(
     # 这对于表格行号计算和正则匹配至关重要
     md_body = md_body.replace("\r\n", "\n").replace("\r", "\n")
 
-    logger.info(f"开始处理Markdown内容（序号配置：清除={remove_numbering}, 添加={add_numbering}）...")
+    if heading_merge_mode not in ["punct_required", "always", "never"]:
+        heading_merge_mode = "punct_required"
+
+    logger.info(
+        f"开始处理Markdown内容（序号配置：清除={remove_numbering}, 添加={add_numbering} | 合并模式={heading_merge_mode}）..."
+    )
 
     if add_numbering and formatter:
         logger.info("将使用序号方案生成标题序号")
@@ -427,42 +471,13 @@ def process_md_body(
 
             heading_count += 1
 
-            # 检查标题末尾是否有符号（用于判断是否与正文合并）
-            if final_text and final_text[-1] in PUNCTUATION_SET:
-                # 有符号，检查下一行是否是普通正文文本（没有空行，且不是特殊Markdown元素）
-                can_merge = False
-                if i + 1 < n and lines[i + 1].strip():
-                    next_line_content = lines[i + 1].strip()
-                    next_line_raw = lines[i + 1]  # 保留原始行（列表检测需要缩进信息）
+            if heading_merge_mode == "never":
+                processed.append({"text": final_text, "level": heading_level, "type": "heading"})
+                logger.debug(f"创建独立标题段落 ({heading_level}级): {final_text[:30]}... [never模式]")
 
-                    # 排除所有特殊 Markdown 元素
-                    is_next_heading = next_line_content.startswith("#")
-                    is_next_formula = next_line_content.startswith("$$")
-                    is_next_table = next_line_content.startswith("|")
-                    is_next_quote = next_line_content.startswith(">")
-                    is_next_code_block = next_line_content.startswith(("```", "~~~"))
-                    is_next_unordered_list = UNORDERED_LIST_REGEX.match(next_line_raw)
-                    is_next_ordered_list = ORDERED_LIST_REGEX.match(next_line_raw)
-                    is_next_hr = bool(re.match(r"^[-*_]{3,}\s*$", next_line_content))
-
-                    is_special_element = (
-                        is_next_heading
-                        or is_next_formula
-                        or is_next_table
-                        or is_next_quote
-                        or is_next_code_block
-                        or is_next_unordered_list
-                        or is_next_ordered_list
-                        or is_next_hr
-                    )
-
-                    can_merge = not is_special_element
-
-                if can_merge:
-                    # 获取正文内容
-                    content_text = lines[i + 1].strip()
-
-                    # 如果标题末尾是半角标点（英文），在正文前添加空格
+            elif heading_merge_mode == "always":
+                can_merge, content_text = _check_can_merge_next_line(lines, i, n)
+                if can_merge and final_text and content_text:
                     if final_text[-1] in HALFWIDTH_PUNCT_NEED_SPACE:
                         content_text = " " + content_text
                         logger.debug("半角标点后自动添加空格")
@@ -475,46 +490,44 @@ def process_md_body(
                             "content": content_text,
                         }
                     )
-                    i += 1  # 跳过正文行
+                    i += 1
                     combined_count += 1
-                    logger.debug(f"创建组合标题段落 ({heading_level}级): {final_text[:30]}... + 正文")
+                    logger.debug(f"创建组合标题段落 ({heading_level}级): {final_text[:30]}... + 正文 [always模式]")
+                else:
+                    processed.append({"text": final_text, "level": heading_level, "type": "heading"})
+                    logger.debug(f"创建独立标题段落 ({heading_level}级): {final_text[:30]}... [always模式]")
+
+            else:
+                if final_text and final_text[-1] in PUNCTUATION_SET:
+                    can_merge, content_text = _check_can_merge_next_line(lines, i, n)
+                    if can_merge and content_text:
+                        if final_text[-1] in HALFWIDTH_PUNCT_NEED_SPACE:
+                            content_text = " " + content_text
+                            logger.debug("半角标点后自动添加空格")
+
+                        processed.append(
+                            {
+                                "text": final_text,
+                                "level": heading_level,
+                                "type": "heading_with_content",
+                                "content": content_text,
+                            }
+                        )
+                        i += 1
+                        combined_count += 1
+                        logger.debug(f"创建组合标题段落 ({heading_level}级): {final_text[:30]}... + 正文")
+                    else:
+                        processed.append({"text": final_text, "level": heading_level, "type": "heading"})
+                        logger.debug(f"创建独立标题段落 ({heading_level}级): {final_text[:30]}...")
                 else:
                     processed.append({"text": final_text, "level": heading_level, "type": "heading"})
                     logger.debug(f"创建独立标题段落 ({heading_level}级): {final_text[:30]}...")
-            else:
-                # 没有符号，即使下一行是正文也不合并
-                processed.append({"text": final_text, "level": heading_level, "type": "heading"})
-                logger.debug(f"创建独立标题段落 ({heading_level}级): {final_text[:30]}...")
 
                 # 下一行是正文时，单独处理（但需要排除特殊Markdown元素，让它们走正常处理流程）
-                if i + 1 < n:
-                    next_line_content = lines[i + 1].strip()
-                    next_line_raw = lines[i + 1]  # 保留原始行（列表检测需要缩进信息）
-
-                    # 排除所有特殊 Markdown 元素
-                    is_next_heading = next_line_content.startswith("#")
-                    is_next_formula = next_line_content.startswith("$$")
-                    is_next_table = next_line_content.startswith("|")
-                    is_next_quote = next_line_content.startswith(">")
-                    is_next_code_block = next_line_content.startswith(("```", "~~~"))
-                    is_next_unordered_list = UNORDERED_LIST_REGEX.match(next_line_raw)
-                    is_next_ordered_list = ORDERED_LIST_REGEX.match(next_line_raw)
-                    # 分隔符/水平线：三个或更多的 -, *, _（可能有空格）
-                    is_next_hr = bool(re.match(r"^[-*_]{3,}\s*$", next_line_content))
-
-                    is_special_element = (
-                        is_next_heading
-                        or is_next_formula
-                        or is_next_table
-                        or is_next_quote
-                        or is_next_code_block
-                        or is_next_unordered_list
-                        or is_next_ordered_list
-                        or is_next_hr
-                    )
-
-                    if next_line_content and not is_special_element:
-                        processed.append({"text": next_line_content, "level": 0, "type": "content"})
+                if not (final_text and final_text[-1] in PUNCTUATION_SET):
+                    can_consume, next_content_text = _check_can_merge_next_line(lines, i, n)
+                    if can_consume and next_content_text:
+                        processed.append({"text": next_content_text, "level": 0, "type": "content"})
                         i += 1
                         content_count += 1
                         logger.debug("标题后添加正文文本")
@@ -822,6 +835,7 @@ def process_md_body_with_notes(
     remove_numbering: bool = False,
     add_numbering: bool = False,
     formatter: HeadingFormatter | None = None,
+    heading_merge_mode: str = "punct_required",
 ) -> tuple[list[dict], dict[str, str], dict[str, str]]:
     """
     处理YAML后的Markdown内容，同时提取脚注和尾注
@@ -833,6 +847,7 @@ def process_md_body_with_notes(
         remove_numbering: 是否清除Markdown中的原有序号（默认False）
         add_numbering: 是否添加新序号（默认False）
         formatter: HeadingFormatter实例，用于生成序号
+        heading_merge_mode: 标题+正文合并模式（默认 "punct_required"）
 
     返回:
         Tuple[List[dict], Dict[str, str], Dict[str, str]]:
@@ -852,7 +867,11 @@ def process_md_body_with_notes(
 
     # 2. 处理清理后的Markdown内容
     processed = process_md_body(
-        cleaned_body, remove_numbering=remove_numbering, add_numbering=add_numbering, formatter=formatter
+        cleaned_body,
+        remove_numbering=remove_numbering,
+        add_numbering=add_numbering,
+        formatter=formatter,
+        heading_merge_mode=heading_merge_mode,
     )
 
     return processed, footnotes, endnotes

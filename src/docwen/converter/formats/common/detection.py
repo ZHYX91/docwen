@@ -13,6 +13,8 @@
 import logging
 import subprocess
 
+from docwen.converter.formats.common.fallback import find_soffice_path
+
 try:
     import pythoncom  # type: ignore
     import win32com.client  # type: ignore
@@ -125,7 +127,7 @@ def _check_libreoffice_available() -> bool:
         bool: True 表示可用，False 表示不可用
     """
     try:
-        result = subprocess.run(["soffice", "--version"], capture_output=True, timeout=5, text=True)
+        result = subprocess.run([find_soffice_path(), "--version"], capture_output=True, timeout=5, text=True)
         if result.returncode == 0:
             logger.debug(f"检测到 LibreOffice: {result.stdout.strip()}")
             return True

@@ -22,6 +22,8 @@
 
 import logging
 
+from docwen.utils.docx_utils import get_oxml_element, get_run_oxml
+
 logger = logging.getLogger(__name__)
 
 
@@ -81,7 +83,7 @@ def extract_paragraph_border_info(para) -> dict:
         return found_any
 
     try:
-        para_xml = para._element
+        para_xml = get_oxml_element(para)
         pPr = para_xml.find(f"{WORD_NS}pPr")
 
         # 1. 首先检查段落直接定义的边框
@@ -101,7 +103,7 @@ def extract_paragraph_border_info(para) -> dict:
                 style = para.style
                 if style is not None:
                     # 通过样式的 _element 访问样式XML
-                    style_xml = style._element
+                    style_xml = get_oxml_element(style)
                     if style_xml is not None:
                         style_pPr = style_xml.find(f"{WORD_NS}pPr")
                         if style_pPr is not None:
@@ -153,7 +155,7 @@ def detect_horizontal_rule_in_paragraph(para) -> bool:
     WORD_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 
     try:
-        para_xml = para._element
+        para_xml = get_oxml_element(para)
         pPr = para_xml.find(f"{WORD_NS}pPr")
         if pPr is None:
             return False
@@ -204,7 +206,7 @@ def detect_page_or_section_break(para):
     WORD_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 
     try:
-        para_xml = para._element
+        para_xml = get_oxml_element(para)
 
         # 1. 检测分页符 <w:br w:type="page"/>
         for br in para_xml.iter(f"{WORD_NS}br"):
@@ -255,7 +257,7 @@ def detect_page_break_in_run(run):
     WORD_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 
     try:
-        run_xml = run._r
+        run_xml = get_run_oxml(run)
 
         for br in run_xml.iter(f"{WORD_NS}br"):
             br_type = br.get(f"{WORD_NS}type")
@@ -285,7 +287,7 @@ def detect_section_break_in_paragraph(para):
     WORD_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 
     try:
-        para_xml = para._element
+        para_xml = get_oxml_element(para)
 
         pPr = para_xml.find(f"{WORD_NS}pPr")
         if pPr is not None:
@@ -330,7 +332,7 @@ def detect_all_breaks_in_paragraph(para):
     breaks = []
 
     try:
-        para_xml = para._element
+        para_xml = get_oxml_element(para)
 
         # 1. 检测所有分页符
         for br in para_xml.iter(f"{WORD_NS}br"):

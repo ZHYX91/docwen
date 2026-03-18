@@ -11,6 +11,7 @@ from docx.oxml.ns import qn
 from docwen.utils.docx_utils import (
     NAMESPACES,
     extract_format_from_paragraph,
+    get_oxml_element,
 )
 
 from .formula_processor import has_formulas_in_paragraph, is_formula_supported, process_paragraph_with_formulas
@@ -160,7 +161,7 @@ def extract_table_content(table, table_index):
                         "cell_index": cell_idx,
                         "para_index": 0,  # 单元格级别，不再区分段落
                         "source_type": "table",
-                        "element": first_para._element if first_para else None,
+                        "element": get_oxml_element(first_para) if first_para else None,
                     }
 
                     table_data.append(cell_data)
@@ -188,7 +189,7 @@ def get_table_position(table, table_index):
     """
     try:
         # 获取表格元素
-        table_element = table._element
+        table_element = get_oxml_element(table)
 
         # 获取表格在文档中的位置
         body = table_element.getparent()
@@ -536,7 +537,7 @@ def convert_table_to_md_with_images(
                     para_images = []
                     for img in images_info:
                         img_para = img.get("paragraph")
-                        if img_para is not None and para._element is not None and img_para._element == para._element:
+                        if img_para is not None and get_oxml_element(img_para) == get_oxml_element(para):
                             para_images.append(img)
                             logger.debug(f"单元格匹配到图片: {img.get('filename')}")
 

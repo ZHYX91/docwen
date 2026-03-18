@@ -48,6 +48,14 @@ heading_formatting_mode = "remove"
 # 注意：表格样式通常已定义表头加粗，建议使用 "remove" 避免冗余
 table_header_formatting_mode = "remove"
 
+# 标题+正文合并模式（MD → DOCX 时生效）
+# 控制小标题与紧邻下一行普通正文是否合并为同一段落
+# "punct_required" - 标题末尾有结束标点且下一行是普通正文时合并（默认）
+# "always"         - 下一行是普通正文时合并（不要求结束标点）
+# "never"          - 永不合并（标题与正文按普通解析分段）
+# 注：列表、代码块、表格、引用、分隔线等特殊 Markdown 元素不会被合并，无论此设置如何
+heading_merge_mode = "punct_required"
+
 # YAML列表值拼接符
 # 当YAML字段值为列表时，使用此分隔符拼接为字符串
 # 常见值: "、"（中文顿号）、"，"（中文逗号）、", "（英文逗号+空格）

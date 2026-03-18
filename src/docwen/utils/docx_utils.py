@@ -23,6 +23,19 @@ from docwen.utils.validation_utils import contains_chinese, contains_east_asian
 # 配置日志
 logger = logging.getLogger(__name__)
 
+
+def get_oxml_element(obj: Any):
+    return obj._element  # type: ignore[reportPrivateUsage] - python-docx only exposes low-level XML via protected member
+
+
+def get_paragraph_oxml(paragraph: Any):
+    return paragraph._p  # type: ignore[reportPrivateUsage] - python-docx only exposes low-level XML via protected member
+
+
+def get_run_oxml(run: Any):
+    return run._r  # type: ignore[reportPrivateUsage] - python-docx only exposes low-level XML via protected member
+
+
 # 字号映射表（半磅值 -> 中文名称）
 FONT_SIZE_MAP = {
     10: "八号",  # 5磅
@@ -176,13 +189,13 @@ def extract_format_from_rpr(rPr, source_name=""):
         # 提取加粗
         b = rPr.find(".//w:b", namespaces=NAMESPACES)
         fonts["b"] = b is not None
-        if source_name and b:
+        if source_name and b is not None:
             logger.debug(f"从{source_name}提取加粗属性")
 
         # 提取倾斜
         i = rPr.find(".//w:i", namespaces=NAMESPACES)
         fonts["i"] = i is not None
-        if source_name and i:
+        if source_name and i is not None:
             logger.debug(f"从{source_name}提取倾斜属性")
 
         # 提取下划线

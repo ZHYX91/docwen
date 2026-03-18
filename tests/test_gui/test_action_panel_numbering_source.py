@@ -13,14 +13,14 @@ pytestmark = pytest.mark.unit
 
 def test_action_panel_numbering_source_for_md_to_docx() -> None:
     panel = SimpleNamespace(file_type="docx")
-    assert ActionPanelBase._get_numbering_option_source(panel) == "md"
+    assert ActionPanelBase.get_numbering_option_source(panel) == "md"
 
 
 def test_action_panel_numbering_source_for_doc_to_md() -> None:
     panel = SimpleNamespace(file_type="document")
-    assert ActionPanelBase._get_numbering_option_source(panel) == "doc"
+    assert ActionPanelBase.get_numbering_option_source(panel) == "doc"
 
 
 def test_action_panel_numbering_source_for_other_panels() -> None:
     panel = SimpleNamespace(file_type="xlsx")
-    assert ActionPanelBase._get_numbering_option_source(panel) is None
+    assert ActionPanelBase.get_numbering_option_source(panel) is None

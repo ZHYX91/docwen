@@ -15,7 +15,7 @@ from types import SimpleNamespace
 import pytest
 
 from docwen.errors import InvalidInputError
-from docwen.services.use_cases import _normalize_numbering_options
+from docwen.services.api import normalize_numbering_options
 
 pytestmark = pytest.mark.unit
 
@@ -52,7 +52,7 @@ def _ctx() -> SimpleNamespace:
 
 def test_document_to_md_default_from_config() -> None:
     options: dict = {}
-    _normalize_numbering_options(options, category="document", target_format="md", action_type=None, ctx=_ctx())
+    normalize_numbering_options(options, category="document", target_format="md", action_type=None, ctx=_ctx())
     assert options["remove_numbering"] is True
     assert options["add_numbering"] is False
     assert options["numbering_scheme"] == ""
@@ -60,7 +60,7 @@ def test_document_to_md_default_from_config() -> None:
 
 def test_document_to_md_keep_and_none() -> None:
     options: dict = {"clean_numbering": "keep", "add_numbering_mode": "none"}
-    _normalize_numbering_options(options, category="document", target_format="md", action_type=None, ctx=_ctx())
+    normalize_numbering_options(options, category="document", target_format="md", action_type=None, ctx=_ctx())
     assert options["remove_numbering"] is False
     assert options["add_numbering"] is False
     assert options["numbering_scheme"] == ""
@@ -68,7 +68,7 @@ def test_document_to_md_keep_and_none() -> None:
 
 def test_document_to_md_remove_and_scheme() -> None:
     options: dict = {"clean_numbering": "remove", "add_numbering_mode": "gongwen_standard"}
-    _normalize_numbering_options(options, category="document", target_format="md", action_type=None, ctx=_ctx())
+    normalize_numbering_options(options, category="document", target_format="md", action_type=None, ctx=_ctx())
     assert options["remove_numbering"] is True
     assert options["add_numbering"] is True
     assert options["numbering_scheme"] == "gongwen_standard"
@@ -76,7 +76,7 @@ def test_document_to_md_remove_and_scheme() -> None:
 
 def test_md_numbering_uses_text_docx_defaults() -> None:
     options: dict = {}
-    _normalize_numbering_options(
+    normalize_numbering_options(
         options, category="markdown", target_format=None, action_type="process_md_numbering", ctx=_ctx()
     )
     assert options["remove_numbering"] is True
@@ -86,11 +86,11 @@ def test_md_numbering_uses_text_docx_defaults() -> None:
 def test_unsupported_category_rejects_user_provided_modes() -> None:
     options: dict = {"clean_numbering": "remove"}
     with pytest.raises(InvalidInputError):
-        _normalize_numbering_options(options, category="layout", target_format="md", action_type=None, ctx=_ctx())
+        normalize_numbering_options(options, category="layout", target_format="md", action_type=None, ctx=_ctx())
 
 
 def test_add_numbering_suspected_typo_is_reported() -> None:
     options: dict = {"clean_numbering": "default", "add_numbering_mode": "defalt"}
     with pytest.raises(InvalidInputError) as ei:
-        _normalize_numbering_options(options, category="document", target_format="md", action_type=None, ctx=_ctx())
+        normalize_numbering_options(options, category="document", target_format="md", action_type=None, ctx=_ctx())
     assert "疑似拼写错误" in str(ei.value)

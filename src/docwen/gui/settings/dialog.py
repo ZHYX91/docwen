@@ -581,7 +581,7 @@ class SettingsDialog(BaseDialog):
         try:
             # 1. 保存所有选项卡的设置到配置文件
             logger.info("步骤1: 保存所有设置到配置文件...")
-            success = self._apply_all_settings()
+            success = self.apply_all_settings()
             logger.info(f"步骤1完成: 保存结果 = {success}")
 
             if success:
@@ -617,7 +617,7 @@ class SettingsDialog(BaseDialog):
             self._show_status(f"{t('settings.status.apply_error')}: {e!s}", "danger")
             logger.error("=" * 60)
 
-    def _apply_all_settings(self) -> bool:
+    def apply_all_settings(self) -> bool:
         """应用所有选项卡的设置到配置文件"""
         logger.debug("应用所有选项卡的设置")
 
@@ -719,7 +719,7 @@ class SettingsDialog(BaseDialog):
         try:
             # 1. 保存所有设置到配置文件
             logger.info("步骤1: 保存所有设置到配置文件...")
-            success = self._apply_all_settings()
+            success = self.apply_all_settings()
             logger.info(f"步骤1完成: 保存结果 = {success}")
 
             # 2. 在对话框关闭前应用设置（与"应用"按钮逻辑一致）

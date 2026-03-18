@@ -163,8 +163,6 @@ def test_non_text_paragraph_skips_rebuild_for_math(monkeypatch: pytest.MonkeyPat
 
 @pytest.mark.unit
 def test_non_text_detection_exception_is_conservative(monkeypatch: pytest.MonkeyPatch) -> None:
-    import docwen.docx_spell.core as core
-
     class DummyDoc:
         def __init__(self) -> None:
             self.comments = []
@@ -176,10 +174,10 @@ def test_non_text_detection_exception_is_conservative(monkeypatch: pytest.Monkey
         raise AssertionError("rebuild_paragraph_with_splits 不应在检测异常时被调用")
 
     monkeypatch.setattr("docwen.docx_spell.core.rebuild_paragraph_with_splits", _should_not_be_called)
-    monkeypatch.delitem(core.DOCX_NAMESPACES, "m", raising=False)
 
     doc = DummyDoc()
     paragraph = Document().add_paragraph("普通段落文本")
+    monkeypatch.setattr(paragraph._element, "xpath", lambda *_args, **_kwargs: (_ for _ in ()).throw(Exception("boom")))
 
     errors = [
         TextError(

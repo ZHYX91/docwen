@@ -25,30 +25,9 @@ import threading
 from collections.abc import Callable
 from pathlib import Path
 
+from docwen.converter.formats.common.fallback import find_soffice_path
+
 logger = logging.getLogger(__name__)
-
-
-# ==================== LibreOffice支持 ====================
-
-
-def _check_libreoffice_available() -> bool:
-    """
-    检查系统中是否安装了LibreOffice
-
-    返回:
-        bool: True表示可用，False表示不可用
-    """
-    try:
-        result = subprocess.run(["soffice", "--version"], capture_output=True, timeout=5, text=True)
-        if result.returncode == 0:
-            logger.debug(f"检测到LibreOffice: {result.stdout.strip()}")
-            return True
-        return False
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        return False
-    except Exception as e:
-        logger.debug(f"检测LibreOffice时出错: {e}")
-        return False
 
 
 def _convert_pdf_with_libreoffice(
@@ -70,7 +49,7 @@ def _convert_pdf_with_libreoffice(
             logger.info("LibreOffice转换被取消")
             return None
 
-        cmd = ["soffice", "--headless", "--convert-to", "docx", "--outdir", output_dir, pdf_path]
+        cmd = [find_soffice_path(), "--headless", "--convert-to", "docx", "--outdir", output_dir, pdf_path]
 
         logger.info(f"使用LibreOffice转换PDF: {Path(pdf_path).name}")
         logger.debug(f"LibreOffice命令: {' '.join(cmd)}")

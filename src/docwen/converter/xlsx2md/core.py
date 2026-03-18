@@ -33,7 +33,7 @@ def _cell_has_value(value: Any) -> bool:
     return bool(pd.notna(value))
 
 
-def _find_blocks(df: pd.DataFrame) -> list[pd.DataFrame]:
+def find_blocks(df: pd.DataFrame) -> list[pd.DataFrame]:
     """
     在DataFrame中查找所有不相连的数据“块”。
     一个“块”被定义为一个周围被空行/空列或DataFrame边缘包围的数据区域。
@@ -112,7 +112,7 @@ def _fill_merged_cells(ws: Any) -> None:
                 ws.cell(row=row, column=col).value = top_left_value
 
 
-def _worksheet_to_dataframe(ws: Any, sheet_images: list[dict[str, Any]] | None = None) -> pd.DataFrame:
+def worksheet_to_dataframe(ws: Any, sheet_images: list[dict[str, Any]] | None = None) -> pd.DataFrame:
     """
     将openpyxl工作表转换为DataFrame，并处理合并单元格
 
@@ -387,7 +387,7 @@ def convert_spreadsheet_to_md(
             md_content += f"# {file_stem}\n\n"
 
             df = _read_csv_flexible(file_path)
-            blocks = _find_blocks(df)
+            blocks = find_blocks(df)
             for _i, block in enumerate(blocks):
                 # 处理单元格换行符
                 block = _process_cell_newlines(block)
@@ -444,8 +444,8 @@ def convert_spreadsheet_to_md(
                 sheet_images = images_by_sheet.get(sheet_name, [])
 
                 # 转换DataFrame并插入图片标记
-                df = _worksheet_to_dataframe(ws, sheet_images)
-                blocks = _find_blocks(df)
+                df = worksheet_to_dataframe(ws, sheet_images)
+                blocks = find_blocks(df)
 
                 if not blocks:
                     md_content += " (此工作表为空)\n\n"

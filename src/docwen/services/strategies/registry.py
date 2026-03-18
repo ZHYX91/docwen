@@ -45,6 +45,10 @@ _ALL_PACKAGES: set[str] = set(_CATEGORY_TO_PACKAGE.values()) | {
 _loaded_modules: set[str] = set()
 
 
+def list_registered_categories() -> set[str]:
+    return set(_CATEGORY_TO_PACKAGE.keys())
+
+
 def validate_registry_specs() -> dict[str, str]:
     """
     校验内置策略清单是否可被解析（不导入模块）。

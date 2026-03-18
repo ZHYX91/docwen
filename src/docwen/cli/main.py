@@ -263,7 +263,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _run_action_for_files(action: str, raw_files: list[str], options: dict, args) -> int:
+def run_action_for_files(action: str, raw_files: list[str], options: dict, args) -> int:
     from docwen.cli import executor, utils
 
     files = utils.expand_paths(raw_files)
@@ -605,7 +605,7 @@ def main() -> int:
                             message="无法读取优化类型配置，请先运行：docwen doctor",
                             input_file=(args.files[0] if args.files else ""),
                         )
-            return _run_action_for_files(action, args.files, options, args)
+            return run_action_for_files(action, args.files, options, args)
         if cmd == "validate":
             action = "validate"
             try:
@@ -614,7 +614,7 @@ def main() -> int:
                 return _print_invalid_input(
                     action=action, args=args, message=str(e), input_file=(args.files[0] if args.files else "")
                 )
-            return _run_action_for_files(action, args.files, options, args)
+            return run_action_for_files(action, args.files, options, args)
         if cmd == "merge-tables":
             action = "merge_tables"
             try:
@@ -623,7 +623,7 @@ def main() -> int:
                 return _print_invalid_input(
                     action=action, args=args, message=str(e), input_file=(args.files[0] if args.files else "")
                 )
-            return _run_action_for_files(action, args.files, options, args)
+            return run_action_for_files(action, args.files, options, args)
         if cmd == "merge-pdfs":
             action = "merge_pdfs"
             try:
@@ -632,7 +632,7 @@ def main() -> int:
                 return _print_invalid_input(
                     action=action, args=args, message=str(e), input_file=(args.files[0] if args.files else "")
                 )
-            return _run_action_for_files(action, args.files, options, args)
+            return run_action_for_files(action, args.files, options, args)
         if cmd == "split-pdf":
             action = "split_pdf"
             try:
@@ -641,7 +641,7 @@ def main() -> int:
                 return _print_invalid_input(
                     action=action, args=args, message=str(e), input_file=str(getattr(args, "file", "") or "")
                 )
-            return _run_action_for_files(action, [args.file], options, args)
+            return run_action_for_files(action, [args.file], options, args)
         if cmd == "merge-images-to-tiff":
             action = "merge_images_to_tiff"
             try:
@@ -650,7 +650,7 @@ def main() -> int:
                 return _print_invalid_input(
                     action=action, args=args, message=str(e), input_file=(args.files[0] if args.files else "")
                 )
-            return _run_action_for_files(action, args.files, options, args)
+            return run_action_for_files(action, args.files, options, args)
         if cmd == "md-numbering":
             action = "process_md_numbering"
             try:
@@ -659,7 +659,7 @@ def main() -> int:
                 return _print_invalid_input(
                     action=action, args=args, message=str(e), input_file=(args.files[0] if args.files else "")
                 )
-            return _run_action_for_files(action, args.files, options, args)
+            return run_action_for_files(action, args.files, options, args)
 
         raise ValueError(f"未知命令: {cmd}")
 

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from docwen.converter.layout2md.invoice_cn import convert_invoice_cn_layout_to_md
+from docwen.converter.layout2md.api import convert_invoice_cn_layout_to_md
 
 pytestmark = pytest.mark.unit
 

@@ -28,6 +28,7 @@ import re
 
 import lxml.etree as etree
 
+from docwen.utils.docx_utils import get_oxml_element, get_paragraph_oxml
 from docwen.utils.validation_utils import contains_east_asian
 
 logger = logging.getLogger(__name__)
@@ -489,7 +490,7 @@ def get_style_id_by_name(doc, style_name: str) -> str:
         # 这是最可靠的方式，支持所有 python-docx 版本
         for style in doc.styles:
             # 获取样式的 XML 元素
-            style_element = style._element
+            style_element = get_oxml_element(style)
             name_elem = style_element.find(".//w:name", NSMAP)
             if name_elem is not None:
                 name_val = name_elem.get(f"{{{WORD_NS}}}val", "")
@@ -506,7 +507,7 @@ def get_style_id_by_name(doc, style_name: str) -> str:
         try:
             styles_part = doc.part.part_related_by(RT.STYLES)
             if styles_part is not None:
-                styles_element = styles_part._element
+                styles_element = get_oxml_element(styles_part)
                 for style in styles_element.findall(".//w:style", NSMAP):
                     name_elem = style.find("w:name", NSMAP)
                     if name_elem is not None:
@@ -862,7 +863,7 @@ def process_text_with_note_references(
             clean_id = get_clean_endnote_id(note_id)
             ref_run = note_ctx.create_endnote_ref_run(clean_id)
             if ref_run is not None:
-                paragraph._p.append(ref_run)
+                get_paragraph_oxml(paragraph).append(ref_run)
                 logger.debug(f"插入尾注引用: [^{note_id}]")
             else:
                 # 尾注未定义，保留原始文本
@@ -872,7 +873,7 @@ def process_text_with_note_references(
             # 脚注引用
             ref_run = note_ctx.create_footnote_ref_run(note_id)
             if ref_run is not None:
-                paragraph._p.append(ref_run)
+                get_paragraph_oxml(paragraph).append(ref_run)
                 logger.debug(f"插入脚注引用: [^{note_id}]")
             else:
                 # 脚注未定义，保留原始文本

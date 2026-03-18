@@ -116,7 +116,7 @@ def test_worksheet_to_dataframe_limits_iter_rows_to_effective_used_range(
 
     monkeypatch.setattr(Worksheet, "iter_rows", _spy_iter_rows, raising=True)
 
-    df = xlsx2md_core._worksheet_to_dataframe(ws)
+    df = xlsx2md_core.worksheet_to_dataframe(ws)
 
     wb.close()
 

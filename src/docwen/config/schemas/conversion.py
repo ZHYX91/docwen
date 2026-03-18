@@ -97,6 +97,7 @@ DEFAULT_CONVERSION_CONFIG = {
             "formatting_mode": "apply",
             "heading_formatting_mode": "remove",
             "table_header_formatting_mode": "remove",
+            "heading_merge_mode": "punct_required",
             "list_separator": "、",
         },
         # Markdown格式语法配置（输出时使用）
@@ -907,6 +908,23 @@ class ConversionConfigMixin(NumberingConfigMixin):
         if mode not in ["apply", "keep", "remove"]:
             mode = "remove"
         safe_log.debug("MD转DOCX小标题格式处理模式: %s", mode)
+        return mode
+
+    def get_md_to_docx_heading_merge_mode(self) -> str:
+        """
+        获取MD转DOCX小标题+正文合并模式
+
+        返回:
+            str: 合并模式
+                - "punct_required": 标题末尾有结束标点且下一行是普通正文时合并（默认）
+                - "always": 下一行是普通正文时合并（不要求结束标点）
+                - "never": 永不合并（标题与正文按普通解析分段）
+        """
+        config = self.get_md_to_docx_config()
+        mode = config.get("heading_merge_mode", "punct_required")
+        if mode not in ["punct_required", "always", "never"]:
+            mode = "punct_required"
+        safe_log.debug("MD转DOCX标题+正文合并模式: %s", mode)
         return mode
 
     def get_md_to_docx_table_header_formatting_mode(self) -> str:

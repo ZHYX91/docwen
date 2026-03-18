@@ -1198,7 +1198,7 @@ class FileDropArea(tb.Frame):
             if file_path:
                 logger.info(f"用户选择了文件: {file_path}")
                 # 模拟拖拽事件，复用现有的文件处理逻辑
-                self._simulate_drop([file_path])
+                self.simulate_drop([file_path])
 
         else:
             # 批量模式：选择多个文件（不能选择文件夹）
@@ -1221,9 +1221,9 @@ class FileDropArea(tb.Frame):
             if file_paths:
                 logger.info(f"用户选择了 {len(file_paths)} 个文件")
                 # 模拟拖拽事件，复用现有的文件处理逻辑
-                self._simulate_drop(list(file_paths))
+                self.simulate_drop(list(file_paths))
 
-    def _simulate_drop(self, file_paths: list[str]):
+    def simulate_drop(self, file_paths: list[str]):
         """
         模拟文件拖拽事件，处理选择的文件
 

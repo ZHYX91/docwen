@@ -369,7 +369,7 @@ class ActionPanelBase(tb.Frame):
         if self.status_var.get().startswith(t("messages.error_prefix", message="")):
             self.status_label.configure(bootstyle="danger")
 
-    def _get_numbering_option_source(self) -> str | None:
+    def get_numbering_option_source(self) -> str | None:
         file_type = (self.file_type or "").strip().lower()
         if file_type == "docx":
             return "md"
@@ -402,7 +402,7 @@ class ActionPanelBase(tb.Frame):
             default_scheme_id = "gongwen_standard"
 
         # 添加序号参数
-        numbering_source = self._get_numbering_option_source()
+        numbering_source = self.get_numbering_option_source()
         if (
             numbering_source == "md"
             and self.md_remove_numbering_var is not None

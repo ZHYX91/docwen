@@ -9,6 +9,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from docwen.translation import t
+from docwen.utils.docx_utils import get_oxml_element
 from docwen.utils.path_utils import generate_output_path
 
 logger = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ def get_paragraph_images(para, images_info):
     for img in images_info:
         img_para = img.get("paragraph")
         # 使用底层 XML 元素比较确保匹配准确性
-        if img_para is not None and para._element is not None and img_para._element == para._element:
+        if img_para is not None and get_oxml_element(img_para) == get_oxml_element(para):
             para_images.append(img)
     return para_images
 
@@ -70,11 +71,7 @@ def extract_images_from_docx(
     # 使用可变对象存储计数器，以便在递归函数中修改
     counter = {"val": 1}
 
-    para_index_by_element_id = {
-        id(p._element): idx
-        for idx, p in enumerate(getattr(doc, "paragraphs", []))
-        if getattr(p, "_element", None) is not None
-    }
+    para_index_by_element_id = {id(get_oxml_element(p)): idx for idx, p in enumerate(getattr(doc, "paragraphs", []))}
 
     # 内部递归处理函数
     def _process_container(container):
@@ -131,7 +128,7 @@ def _process_paragraph_images(
 
     try:
         # 1. 处理 <w:drawing> 元素（Office 2007+ 新格式）
-        drawings = para._element.findall(f".//{NS_W}drawing")
+        drawings = get_oxml_element(para).findall(f".//{NS_W}drawing")
         for drawing in drawings:
             blips = drawing.findall(f".//{NS_A}blip")
             for blip in blips:
@@ -140,7 +137,7 @@ def _process_paragraph_images(
                     image_rIds.append(rId)
 
         # 2. 处理 <w:pict> 元素（兼容模式/VML 格式）
-        picts = para._element.findall(f".//{NS_W}pict")
+        picts = get_oxml_element(para).findall(f".//{NS_W}pict")
         for pict in picts:
             # VML 图片数据在 <v:imagedata> 元素中
             imagedatas = pict.findall(f".//{NS_V}imagedata")
@@ -178,11 +175,7 @@ def _process_paragraph_images(
                     logger.debug(f"提取图片: {filename}")
 
                     # 记录图片信息，关键是存储 paragraph 对象用于后续匹配
-                    para_index = (
-                        para_index_by_element_id.get(id(para._element), -1)
-                        if getattr(para, "_element", None) is not None
-                        else -1
-                    )
+                    para_index = para_index_by_element_id.get(id(get_oxml_element(para)), -1)
                     images_info.append(
                         {
                             "paragraph": para,  # 关键：存储对象引用

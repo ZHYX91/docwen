@@ -48,6 +48,34 @@ Changelog: siehe [doc/CHANGELOG.md](doc/CHANGELOG.md)
 
 Für das Windows-Paket: Doppelklicken Sie auf `DocWen.exe`, um die grafische Oberfläche zu starten. Bei Installation aus Quellcode / via pip: `docwen-gui` ausführen.
 
+### Hinweise für macOS
+
+**LibreOffice-Unterstützung (Optional)**
+
+Um ältere Formate wie `.doc` und `.xls` zu konvertieren, installieren Sie LibreOffice:  
+Download: https://www.libreoffice.org/download/
+
+**HEIC-Bildunterstützung (Optional)**
+
+Um HEIC/HEIF-Bilder zu verarbeiten:
+
+```bash
+brew install libheif
+pip install pillow-heif
+```
+
+### Voraussetzungen für die Linux-GUI
+
+- Eine Desktop-Umgebung ist installiert (GNOME, KDE, XFCE usw.)
+- Python-Tk-Unterstützung ist installiert:
+  ```bash
+  # Ubuntu/Debian
+  sudo apt-get install python3-tk
+  # Fedora/RHEL
+  sudo dnf install python3-tkinter
+  ```
+- Auf headless Servern (ohne Anzeigeumgebung) verwenden Sie `DocWenCLI` statt `DocWen`
+
 ### Schnellstartanleitung
 
 1.  **Bereiten Sie eine Markdown-Datei vor**:
@@ -89,7 +117,7 @@ Um es Kollegen ohne Hintergrundwissen leichter zu machen, entsprechen die Markdo
 
 **Grundregel**: Jede nicht leere Zeile wird standardmäßig als separater Absatz behandelt.
 
-**Gemischte Absätze**: Wenn ein Untertitel mit dem Fließtext im selben Absatz gemischt werden muss, müssen folgende Bedingungen erfüllt sein:
+**Gemischte Absätze**: Wenn ein Untertitel mit dem Fließtext im selben Absatz gemischt werden muss (Standardmodus: „Satzzeichen erforderlich“), müssen folgende Bedingungen erfüllt sein:
 1.  Der Untertitel endet mit einem Satzzeichen (unterstützt mehrsprachige Satzzeichen, einschließlich Punkte, Fragezeichen, Ausrufezeichen und andere gängige Schlusssatzzeichen).
 2.  Der Fließtext befindet sich in der **unmittelbar nächsten Zeile** des Untertitels.
 3.  Die Fließtextzeile darf kein spezielles Markdown-Element sein (wie Überschriften, Codeblöcke, Tabellen, Listen, Zitate, Formelblöcke, Trennzeichen usw.).
@@ -103,7 +131,8 @@ Die obigen zwei Zeilen werden zu einem Absatz zusammengeführt, wobei "I. Arbeit
 
 **Hinweis**:
 - Zwischen Untertitel und Fließtext darf keine Leerzeile stehen; andernfalls werden sie als separate Absätze erkannt.
-- Wenn der Untertitel nicht mit einem Satzzeichen endet und keine Leerzeile zum Fließtext hat, wird der Fließtext in die Überschriftenzeile mit angepasster Formatierung zusammengeführt.
+- Standardmäßig (Modus „Satzzeichen erforderlich“): Wenn der Untertitel nicht mit einem abschließenden Satzzeichen endet, wird er auch ohne Leerzeile nicht mit der nächsten Zeile zusammengeführt.
+- Sie können dies in Einstellungen → Formatierung → „Markdown zu Dokument“ → „Heading + body merge mode“ ändern.
 
 ### Bidirektionale Trennzeichenkonvertierung
 

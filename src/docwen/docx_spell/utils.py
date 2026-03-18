@@ -8,7 +8,7 @@ import logging
 
 from docx.enum.text import WD_BREAK
 
-from docwen.utils.docx_utils import apply_paragraph_format, apply_run_style
+from docwen.utils.docx_utils import apply_paragraph_format, apply_run_style, get_oxml_element
 
 # 配置日志
 logger = logging.getLogger(__name__)
@@ -101,7 +101,7 @@ def copy_run_formatting(source_run, target_run):
     try:
         # 使用项目已有的 apply_run_style 函数
         # 它会深拷贝整个 rPr 元素，确保所有格式属性都被复制
-        source_rPr = source_run._element.rPr
+        source_rPr = get_oxml_element(source_run).rPr
         apply_run_style(target_run, source_rPr)
         logger.debug("成功复制run格式（使用apply_run_style）")
     except Exception as e:
@@ -121,14 +121,14 @@ def copy_paragraph_format(source_para, target_para):
         与 copy_run_formatting 类似，复用项目已有的通用工具。
     """
     try:
-        source_pPr = source_para._element.pPr
+        source_pPr = get_oxml_element(source_para).pPr
         if source_pPr is not None:
-            target_pPr = target_para._element.pPr
+            target_pPr = get_oxml_element(target_para).pPr
             if target_pPr is not None:
-                target_para._element.remove(target_pPr)
+                get_oxml_element(target_para).remove(target_pPr)
 
             new_pPr = copy.deepcopy(source_pPr)
-            target_para._element.insert(0, new_pPr)
+            get_oxml_element(target_para).insert(0, new_pPr)
             logger.debug("成功深拷贝段落格式（w:pPr）")
             return
     except Exception as e:
@@ -275,8 +275,8 @@ def rebuild_paragraph_with_splits(old_paragraph, split_plan, doc):
 
     try:
         # 1. 获取原段落在文档中的位置
-        parent = old_paragraph._element.getparent()
-        old_para_index = parent.index(old_paragraph._element)
+        parent = get_oxml_element(old_paragraph).getparent()
+        old_para_index = parent.index(get_oxml_element(old_paragraph))
         logger.debug(f"原段落在文档中的索引: {old_para_index}")
 
         # 2. 创建新段落（在原段落后面）
@@ -304,11 +304,11 @@ def rebuild_paragraph_with_splits(old_paragraph, split_plan, doc):
                     logger.debug(f"标记错误run[{split['error_index']}]: '{split['text']}'")
 
         # 5. 将新段落移动到原段落位置
-        parent.insert(old_para_index, new_paragraph._element)
+        parent.insert(old_para_index, get_oxml_element(new_paragraph))
         logger.debug("新段落已插入到原位置")
 
         # 6. 删除原段落
-        parent.remove(old_paragraph._element)
+        parent.remove(get_oxml_element(old_paragraph))
         logger.debug("原段落已删除")
 
         logger.info(f"段落重建完成，共标记 {len(error_runs)} 个错误run")
