@@ -36,22 +36,22 @@ from ..safe_logger import safe_log
 DEFAULT_GUI_CONFIG = {
     "gui_config": {
         "window": {
-            "center_panel_width": 400,
+            "center_panel_width": 460,
             "left_panel_width": 400,  # 批量面板宽度
             "right_panel_width": 300,  # 模板面板宽度
-            "center_panel_screen_x": 0,
+            "center_panel_screen_x": 420,
             "window_y": 0,
             "default_mode": "single",
-            "default_height": 740,
+            "default_height": 860,
             "min_height": 720,
-            "auto_center": True,
+            "auto_center": False,
             "remember_gui_state": True,
             "expand_side_panels": False,
         },
         "dpi": {"enable_dpi_scaling": True, "ui_scale": 0},
         "component": {"file_drop_height": 200},
-        "theme": {"default_theme": "morph"},
-        "transparency": {"enabled": True, "default_value": 0.95, "min_value": 0.8, "max_value": 1.0},
+        "theme": {"default_theme": "flatly"},
+        "transparency": {"enabled": False, "default_value": 0.95, "min_value": 0.8, "max_value": 1.0},
         "template": {"md_default_template": "docx"},
         "language": {
             "locale": "zh_CN"  # 默认语言: zh_CN（简体中文）, en_US（英文）

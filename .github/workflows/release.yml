@@ -238,7 +238,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          brew install python-tk@3.12 || true
+          python -c "import tkinter; import _tkinter" && exit 0
+          echo "tkinter/_tkinter 不可用，尝试安装 Homebrew python-tk@3.12" >&2
+          brew install python-tk@3.12 2>&1 | sed 's/^##\\[error\\]/[brew-error]/'
+          python -c "import tkinter; import _tkinter"
 
       - name: Install dependencies
         shell: bash
@@ -323,7 +326,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          brew install python-tk@3.12 || true
+          python -c "import tkinter; import _tkinter" && exit 0
+          echo "tkinter/_tkinter 不可用，尝试安装 Homebrew python-tk@3.12" >&2
+          brew install python-tk@3.12 2>&1 | sed 's/^##\\[error\\]/[brew-error]/'
+          python -c "import tkinter; import _tkinter"
 
       - name: Install dependencies
         shell: bash

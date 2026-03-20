@@ -159,14 +159,10 @@ class TextTab(BaseSettingsTab):
             checkbox.pack(side="left")
 
             if description:
-                desc_label = tb.Label(
-                    frame,
-                    text=description,
-                    bootstyle="secondary",
-                    font=(self.small_font, self.small_size),
-                )
-                desc_label.pack(anchor="w", padx=(scale(28), 0), pady=(0, scale(5)))
-                self.bind_label_wraplength(desc_label, frame, min_wraplength=scale(320))
+                from docwen.utils.gui_utils import create_info_icon
+
+                info = create_info_icon(proc_frame, description, "info")
+                info.pack(side="left", padx=(self.layout_config.widget_spacing, 0))
 
             if load_error:
                 err_label = tb.Label(
@@ -784,3 +780,90 @@ class TextTab(BaseSettingsTab):
         except Exception as e:
             logger.error(f"应用文本设置失败: {e}", exc_info=True)
             return False
+
+    def get_reset_ops(self) -> list[tuple[str, str | None, str | None]]:
+        return [
+            ("conversion_defaults", "text", "to_docx_remove_numbering"),
+            ("conversion_defaults", "text", "to_docx_add_numbering"),
+            ("conversion_defaults", "text", "to_docx_default_scheme"),
+            ("gui_config", "template", "md_default_template"),
+            ("conversion_defaults", "document", "enable_symbol_pairing"),
+            ("conversion_defaults", "document", "enable_symbol_correction"),
+            ("conversion_defaults", "document", "enable_typos_rule"),
+            ("conversion_defaults", "document", "enable_sensitive_word"),
+            ("proofread_config", "skip", "code_blocks"),
+            ("proofread_config", "skip", "quote_blocks"),
+        ]
+
+    def _reload_ui_from_config(self) -> None:
+        try:
+            remove_numbering = bool(self.config_manager.get_md_to_docx_remove_numbering())
+        except Exception:
+            remove_numbering = True
+        if getattr(self, "md_to_docx_remove_var", None) is not None:
+            self.md_to_docx_remove_var.set(remove_numbering)
+
+        try:
+            add_numbering = bool(self.config_manager.get_md_to_docx_add_numbering())
+        except Exception:
+            add_numbering = True
+        if getattr(self, "md_to_docx_add_var", None) is not None:
+            self.md_to_docx_add_var.set(add_numbering)
+
+        try:
+            scheme_id = str(self.config_manager.get_md_to_docx_default_scheme() or "gongwen_standard")
+        except Exception:
+            scheme_id = "gongwen_standard"
+        scheme_id_to_name, _ = self._get_scheme_mappings()
+        scheme_name = scheme_id_to_name.get(scheme_id, next(iter(scheme_id_to_name.values()), scheme_id))
+        if getattr(self, "md_to_docx_scheme_var", None) is not None:
+            self.md_to_docx_scheme_var.set(scheme_name)
+        try:
+            scheme_names = self.config_manager.get_scheme_names()
+            if getattr(self, "md_to_docx_scheme_combo", None) is not None and scheme_names:
+                self.md_to_docx_scheme_combo.configure(values=scheme_names)
+        except Exception:
+            pass
+
+        try:
+            template_type = str(self.config_manager.get_default_md_template_type() or "docx")
+        except Exception:
+            template_type = "docx"
+        template_display = (
+            t("settings.text.template_docx") if template_type == "docx" else t("settings.text.template_xlsx")
+        )
+        if getattr(self, "template_type_var", None) is not None:
+            self.template_type_var.set(template_display)
+
+        try:
+            document_config = self.config_manager.get_document_defaults() or {}
+            symbol_pairing = bool(document_config.get("enable_symbol_pairing", True))
+            symbol_correction = bool(document_config.get("enable_symbol_correction", True))
+            typos_rule = bool(document_config.get("enable_typos_rule", True))
+            sensitive_word = bool(document_config.get("enable_sensitive_word", True))
+        except Exception:
+            symbol_pairing, symbol_correction = True, True
+            typos_rule, sensitive_word = True, True
+
+        if getattr(self, "symbol_pairing_var", None) is not None:
+            self.symbol_pairing_var.set(symbol_pairing)
+        if getattr(self, "symbol_correction_var", None) is not None:
+            self.symbol_correction_var.set(symbol_correction)
+        if getattr(self, "typos_rule_var", None) is not None:
+            self.typos_rule_var.set(typos_rule)
+        if getattr(self, "sensitive_word_var", None) is not None:
+            self.sensitive_word_var.set(sensitive_word)
+
+        try:
+            skip_code_blocks = bool(self.config_manager.is_skip_code_blocks_enabled())
+        except Exception:
+            skip_code_blocks = True
+        try:
+            skip_quote_blocks = bool(self.config_manager.is_skip_quote_blocks_enabled())
+        except Exception:
+            skip_quote_blocks = False
+
+        if getattr(self, "skip_code_blocks_var", None) is not None:
+            self.skip_code_blocks_var.set(skip_code_blocks)
+        if getattr(self, "skip_quote_blocks_var", None) is not None:
+            self.skip_quote_blocks_var.set(skip_quote_blocks)

@@ -466,3 +466,43 @@ class OutputTab(BaseSettingsTab):
         except Exception as e:
             logger.error(f"应用输出设置失败: {e}", exc_info=True)
             return False
+
+    def get_reset_ops(self) -> list[tuple[str, str | None, str | None]]:
+        return [
+            ("output_config", "intermediate_files", "save_to_output"),
+            ("output_config", "directory", "mode"),
+            ("output_config", "directory", "custom_path"),
+            ("output_config", "directory", "create_date_subfolder"),
+            ("output_config", "directory", "date_folder_format"),
+            ("output_config", "behavior", "auto_open_folder"),
+        ]
+
+    def _reload_ui_from_config(self) -> None:
+        try:
+            intermediate = self.config_manager.get_output_intermediate_files_config() or {}
+            save_intermediate = bool(intermediate.get("save_to_output", False))
+        except Exception:
+            save_intermediate = False
+        if getattr(self, "save_intermediate_var", None) is not None:
+            self.save_intermediate_var.set(save_intermediate)
+
+        try:
+            directory = self.config_manager.get_output_directory_settings() or {}
+        except Exception:
+            directory = {}
+        if getattr(self, "output_mode_combo", None) is not None:
+            self.output_mode_combo.set_config_value(str(directory.get("mode", "source_dir")))
+        if getattr(self, "custom_path_var", None) is not None:
+            self.custom_path_var.set(str(directory.get("custom_path", "")))
+        if getattr(self, "date_subfolder_var", None) is not None:
+            self.date_subfolder_var.set(bool(directory.get("create_date_subfolder", True)))
+        if getattr(self, "date_format_combo", None) is not None:
+            self.date_format_combo.set_config_value(str(directory.get("date_folder_format", "YYYY-MM-DD")))
+
+        try:
+            behavior = self.config_manager.get_output_behavior_settings() or {}
+            auto_open = bool(behavior.get("auto_open_folder", True))
+        except Exception:
+            auto_open = True
+        if getattr(self, "auto_open_folder_var", None) is not None:
+            self.auto_open_folder_var.set(auto_open)

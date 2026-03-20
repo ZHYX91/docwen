@@ -1,14 +1,57 @@
-import logging
+import contextlib
 import sys
 
-from docwen.bootstrap import initialize_app
-from docwen.errors import DocWenError, ExitCode, SecurityCheckFailedError
-from docwen.services.error_codes import (
+
+def _early_reconfigure_stdio() -> None:
+    try:
+        if sys.platform == "win32":
+            try:
+                import ctypes
+
+                kernel32 = ctypes.windll.kernel32
+                kernel32.SetConsoleOutputCP(65001)
+                kernel32.SetConsoleCP(65001)
+            except Exception:
+                pass
+
+        try:
+            import io
+
+            stdout_reconfigure = getattr(sys.stdout, "reconfigure", None)
+            stderr_reconfigure = getattr(sys.stderr, "reconfigure", None)
+            if callable(stdout_reconfigure):
+                with contextlib.suppress(Exception):
+                    stdout_reconfigure(encoding="utf-8", errors="replace")
+            if callable(stderr_reconfigure):
+                with contextlib.suppress(Exception):
+                    stderr_reconfigure(encoding="utf-8", errors="replace")
+
+            if isinstance(sys.stdout, io.TextIOWrapper) and getattr(sys.stdout, "encoding", None) != "utf-8":
+                sys.stdout = io.TextIOWrapper(
+                    sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True
+                )
+            if isinstance(sys.stderr, io.TextIOWrapper) and getattr(sys.stderr, "encoding", None) != "utf-8":
+                sys.stderr = io.TextIOWrapper(
+                    sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True
+                )
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+
+_early_reconfigure_stdio()
+
+import logging  # noqa: E402
+
+from docwen.bootstrap import initialize_app  # noqa: E402
+from docwen.errors import DocWenError, ExitCode, SecurityCheckFailedError  # noqa: E402
+from docwen.services.error_codes import (  # noqa: E402
     ERROR_CODE_DEPENDENCY_MISSING,
     ERROR_CODE_INVALID_INPUT,
     ERROR_CODE_STRATEGY_NOT_FOUND,
 )
-from docwen.utils.logging_utils import init_logging_system, pre_init_logging
+from docwen.utils.logging_utils import init_logging_system, pre_init_logging  # noqa: E402
 
 pre_init_logging()
 

@@ -23,7 +23,7 @@ from .numbering import NumberingConfigMixin
 DEFAULT_CONVERSION_DEFAULTS_CONFIG = {
     "conversion_defaults": {
         "export": {
-            "to_md_image_extraction_mode": "base64",
+            "to_md_image_extraction_mode": "file",
             "to_md_ocr_placement_mode": "main_md",
         },
         "document": {
@@ -33,7 +33,7 @@ DEFAULT_CONVERSION_DEFAULTS_CONFIG = {
             "to_md_ocr_placement_mode": "image_md",
             "to_md_remove_numbering": True,
             "to_md_add_numbering": False,
-            "to_md_default_scheme": "gongwen_standard",
+            "to_md_default_scheme": "hierarchical_standard",
             "to_md_enable_optimization": False,
             "to_md_optimization_type": "gongwen",
             "enable_symbol_pairing": True,
@@ -71,8 +71,8 @@ DEFAULT_CONVERSION_DEFAULTS_CONFIG = {
         },
         "text": {
             "to_docx_remove_numbering": True,
-            "to_docx_add_numbering": True,
-            "to_docx_default_scheme": "gongwen_standard",
+            "to_docx_add_numbering": False,
+            "to_docx_default_scheme": "hierarchical_standard",
             "to_xlsx_remove_numbering": True,
             "to_xlsx_add_numbering": False,
             "to_xlsx_default_scheme": "hierarchical_standard",
@@ -110,13 +110,13 @@ DEFAULT_CONVERSION_CONFIG = {
             "subscript": "html",
             "unordered_list": "dash",
             "ordered_list": "restart",
-            "indent_spaces": 2,
+            "indent_spaces": 4,
         },
         # 代码识别配置
         "code_detection": {"code_font": "Consolas", "code_background_color": "E7E6E6"},
         "export": {
             "base64_compress_enabled": True,
-            "base64_compress_threshold_kb": 200,
+            "base64_compress_threshold_kb": 100,
         },
         # 分隔符/分页符/分隔线双向转换配置
         "horizontal_rule": {

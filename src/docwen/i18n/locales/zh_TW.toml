@@ -352,6 +352,17 @@ applied = "設定已應用"
 apply_failed = "應用設定失敗，請查看日誌"
 apply_error = "應用失敗"
 
+[settings.reset]
+tab_button = "Reset Tab"
+all_button = "Reset All"
+tab_confirm_title = "Confirm Reset"
+tab_confirm_message = "Reset all settings in \"{tab_name}\" tab to defaults? This cannot be undone."
+all_confirm_title = "Confirm Reset All"
+all_confirm_message = "Reset all settings to defaults? (Dictionary data is not affected.) This cannot be undone."
+success = "All settings have been reset to defaults"
+tab_success = "\"{tab_name}\" tab settings have been reset to defaults"
+failed = "Failed to reset settings. Please check the logs."
+
 [settings.errors]
 tab_load_failed_message = "{tab}載入失敗\n\n錯誤：{error}"
 
@@ -426,7 +437,7 @@ add_numbering = "默認新增小標題序號"
 scheme_label = "默認序號方案:"
 
 # 欄位優化（欄位處理器）
-field_processors_section = "欄位優化"
+field_processors_section = "欄位優化（MarkDown轉為文件）"
 field_processors_empty = "當前語言暫無可用的欄位優化。"
 field_processors_load_failed = "讀取欄位優化列表失敗。"
 field_processors_load_error = "載入失敗：{error}"
@@ -499,7 +510,7 @@ enable_ocr = "默認勾選\"圖片文字識別\""
 enable_ocr_tooltip = "文件轉MD時默認勾選\"圖片文字識別\""
 
 # 優化設定
-optimization_section = "優化設定"
+optimization_section = "優化設定（文件轉MarkDown）"
 enable_optimization = "默認啟用\"針對文件類型優化\""
 optimization_type_label = "默認優化類型:"
 
@@ -604,7 +615,7 @@ keep_images = "默認勾選\"提取圖片\""
 keep_images_tooltip = "版式文件轉MD時默認勾選\"提取圖片\""
 enable_ocr = "默認勾選\"圖片文字識別\""
 enable_ocr_tooltip = "版式文件轉MD時默認勾選\"圖片文字識別\""
-optimization_section = "優化設定"
+optimization_section = "優化設定（版式轉MarkDown）"
 enable_optimization = "默認啟用\"針對版式類型優化\""
 optimization_type_label = "默認優化類型:"
 dpi_section = "渲染DPI設定"

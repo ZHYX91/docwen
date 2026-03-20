@@ -32,7 +32,7 @@
 #   "markdown_link"  - Markdown链接：[image.png](image.png) - 只显示可点击的链接
 #   "wiki_embed"     - Wiki嵌入显示：![[image.png]] - 图片会直接显示（适用于Obsidian）
 #   "wiki_link"      - Wiki链接：[[image.png]] - 只显示可点击的链接（适用于Obsidian）
-image_link_style = "markdown_embed"
+image_link_style = "wiki_embed"
 
 # MD文件链接样式
 # 可选值：

@@ -216,3 +216,68 @@ class ExportTab(BaseSettingsTab):
         except Exception as e:
             logger.error(f"应用导出设置失败: {e}", exc_info=True)
             return False
+
+    def get_reset_ops(self) -> list[tuple[str, str | None, str | None]]:
+        return [
+            ("conversion_defaults", "export", "to_md_image_extraction_mode"),
+            ("conversion_defaults", "export", "to_md_ocr_placement_mode"),
+            ("conversion_config", "ocr_output", "show_blockquote_title"),
+            ("conversion_config", "ocr_output", "blockquote_title_override_by_locale"),
+            ("conversion_config", "export", "base64_compress_enabled"),
+            ("conversion_config", "export", "base64_compress_threshold_kb"),
+        ]
+
+    def _reload_ui_from_config(self) -> None:
+        try:
+            ext_mode = self.config_manager.get_export_to_md_image_extraction_mode()
+        except Exception:
+            ext_mode = "base64"
+        combo = getattr(self, "export_image_ext_mode_combo", None)
+        if combo is not None:
+            set_value = getattr(combo, "set_config_value", None)
+            if callable(set_value):
+                set_value(ext_mode)
+
+        try:
+            ocr_place = self.config_manager.get_export_to_md_ocr_placement_mode()
+        except Exception:
+            ocr_place = "main_md"
+        combo = getattr(self, "export_ocr_placement_combo", None)
+        if combo is not None:
+            set_value = getattr(combo, "set_config_value", None)
+            if callable(set_value):
+                set_value(ocr_place)
+
+        try:
+            enabled = bool(self.config_manager.get_ocr_blockquote_title_enabled())
+        except Exception:
+            enabled = True
+        if getattr(self, "_ocr_blockquote_title_enabled_var", None) is not None:
+            self._ocr_blockquote_title_enabled_var.set(enabled)
+
+        try:
+            from docwen.i18n import t as t_runtime
+
+            default_text = t_runtime("conversion.ocr_output.blockquote_prefix", default="")
+        except Exception:
+            default_text = ""
+        try:
+            current = self.config_manager.get_ocr_blockquote_title_override_text() or ""
+        except Exception:
+            current = ""
+        if getattr(self, "ocr_title_text_var", None) is not None:
+            self.ocr_title_text_var.set(current or default_text)
+
+        try:
+            compress_enabled = bool(self.config_manager.get_export_base64_compress_enabled())
+        except Exception:
+            compress_enabled = True
+        if getattr(self, "base64_compress_enabled_var", None) is not None:
+            self.base64_compress_enabled_var.set(compress_enabled)
+
+        try:
+            threshold_kb = int(self.config_manager.get_export_base64_compress_threshold_kb())
+        except Exception:
+            threshold_kb = 200
+        if getattr(self, "base64_threshold_var", None) is not None:
+            self.base64_threshold_var.set(threshold_kb)

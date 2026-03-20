@@ -1,5 +1,19 @@
 # Changelog / 更新日志
 
+## v0.8.5 (2026-03-20)
+
+### 更新日志（中文）
+
+- 新增"一键还原设置"功能：设置对话框新增按选项卡或整体恢复默认值的按钮
+- CLI 新增 `settings reset` 子命令，支持 `--tab`、`--yes`、`--json` 参数
+- 修复 Windows CLI 中文输出乱码问题
+
+### Changelog (English)
+
+- Added one-click settings reset: new buttons in the settings dialog to reset the current tab or all settings to defaults.
+- Added CLI `settings reset` subcommand with `--tab`, `--yes`, and `--json` support.
+- Fixed garbled output in Windows CLI (UTF-8 encoding).
+
 ## v0.8.4 (2026-03-19)
 
 ### 更新日志（中文）

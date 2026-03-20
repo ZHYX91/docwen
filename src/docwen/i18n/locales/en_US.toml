@@ -355,6 +355,17 @@ applied = "Settings applied"
 apply_failed = "Failed to apply settings. Please check the logs."
 apply_error = "Apply failed"
 
+[settings.reset]
+tab_button = "Reset Tab"
+all_button = "Reset All"
+tab_confirm_title = "Confirm Reset"
+tab_confirm_message = "Reset all settings in \"{tab_name}\" tab to defaults? This cannot be undone."
+all_confirm_title = "Confirm Reset All"
+all_confirm_message = "Reset all settings to defaults? (Dictionary data is not affected.) This cannot be undone."
+success = "All settings have been reset to defaults"
+tab_success = "\"{tab_name}\" tab settings have been reset to defaults"
+failed = "Failed to reset settings. Please check the logs."
+
 [settings.errors]
 tab_load_failed_message = "Failed to load {tab}\n\nError: {error}"
 
@@ -429,7 +440,7 @@ add_numbering = "Add new heading numbering by default"
 scheme_label = "Default numbering scheme:"
 
 # Field optimizations (field processors)
-field_processors_section = "Field Optimizations"
+field_processors_section = "Field Optimizations (MarkDown to Document)"
 field_processors_empty = "No field optimizations available for the current language."
 field_processors_load_failed = "Failed to load field optimizations."
 field_processors_load_error = "Load error: {error}"
@@ -502,7 +513,7 @@ enable_ocr = "Check \"Image OCR\" by default"
 enable_ocr_tooltip = "Check \"Image OCR\" by default when converting document to MD"
 
 # Optimization Settings
-optimization_section = "Optimization Settings"
+optimization_section = "Optimization Settings (Document to MarkDown)"
 enable_optimization = "Enable \"Optimize for document type\" by default"
 optimization_type_label = "Default optimization type:"
 
@@ -607,7 +618,7 @@ keep_images = "Check \"Extract images\" by default"
 keep_images_tooltip = "Check \"Extract images\" by default when converting layout files to MD"
 enable_ocr = "Check \"Image OCR\" by default"
 enable_ocr_tooltip = "Check \"Image OCR\" by default when converting layout files to MD"
-optimization_section = "Optimization"
+optimization_section = "Optimization (Layout to MarkDown)"
 enable_optimization = "Enable \"Optimize for layout type\" by default"
 optimization_type_label = "Default optimization type:"
 dpi_section = "Rendering DPI Settings"

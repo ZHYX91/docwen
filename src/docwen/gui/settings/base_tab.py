@@ -367,6 +367,39 @@ class BaseSettingsTab(tb.Frame, ABC):
                     return False
         """
 
+    @abstractmethod
+    def get_reset_ops(self) -> list[tuple[str, str | None, str | None]]:
+        pass
+
+    @abstractmethod
+    def _reload_ui_from_config(self) -> None:
+        pass
+
+    def reset_to_defaults(self) -> bool:
+        ops = list(self.get_reset_ops() or [])
+        seen: set[tuple[str, str | None, str | None]] = set()
+        deduped: list[tuple[str, str | None, str | None]] = []
+        for op in ops:
+            if op in seen:
+                continue
+            seen.add(op)
+            deduped.append(op)
+
+        ok = True
+        for config_name, section, key in deduped:
+            if section is None:
+                success = self.config_manager.restore_config_to_defaults(config_name)
+            elif key is None:
+                success = self.config_manager.restore_config_section_to_defaults(config_name, section)
+            else:
+                success = self.config_manager.restore_config_value_to_defaults(config_name, section, key)
+            if not success:
+                ok = False
+
+        if ok:
+            self._reload_ui_from_config()
+        return ok
+
     # ========== 可选的钩子方法 ==========
 
     def _post_initialize(self) -> None:

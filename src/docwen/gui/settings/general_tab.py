@@ -606,3 +606,69 @@ class GeneralTab(BaseSettingsTab):
         except Exception as e:
             logger.error(f"应用通用设置失败: {e}", exc_info=True)
             return False
+
+    def get_reset_ops(self) -> list[tuple[str, str | None, str | None]]:
+        return [
+            ("gui_config", "theme", None),
+            ("gui_config", "window", None),
+            ("gui_config", "transparency", None),
+            ("gui_config", "language", None),
+        ]
+
+    def _reload_ui_from_config(self) -> None:
+        try:
+            locale_code = (self.config_manager.get_language_config() or {}).get("locale", "zh_CN")
+        except Exception:
+            locale_code = "zh_CN"
+        locale_display = getattr(self, "locale_code_to_name", {}).get(locale_code, locale_code)
+        if getattr(self, "language_var", None) is not None:
+            self.language_var.set(locale_display)
+
+        try:
+            theme = self.config_manager.get_default_theme()
+        except Exception:
+            theme = "morph"
+        if getattr(self, "theme_combo", None) is not None:
+            self.theme_combo.set_config_value(theme)
+
+        try:
+            transparency_enabled = bool(self.config_manager.is_transparency_enabled())
+        except Exception:
+            transparency_enabled = True
+        if getattr(self, "transparency_enabled_var", None) is not None:
+            self.transparency_enabled_var.set(transparency_enabled)
+
+        try:
+            transparency_value = float(self.config_manager.get_default_transparency())
+        except Exception:
+            transparency_value = 0.95
+        if getattr(self, "transparency_var", None) is not None:
+            self.transparency_var.set(transparency_value)
+
+        try:
+            remember = bool(self.config_manager.should_remember_gui_state())
+        except Exception:
+            remember = True
+        if getattr(self, "remember_state_var", None) is not None:
+            self.remember_state_var.set(remember)
+
+        try:
+            auto_center = bool(self.config_manager.should_auto_center())
+        except Exception:
+            auto_center = True
+        if getattr(self, "auto_center_var", None) is not None:
+            self.auto_center_var.set(auto_center)
+
+        try:
+            expand = bool(self.config_manager.should_expand_side_panels())
+        except Exception:
+            expand = False
+        if getattr(self, "expand_side_panels_var", None) is not None:
+            self.expand_side_panels_var.set(expand)
+
+        try:
+            default_mode = str(self.config_manager.get_default_mode() or "single")
+        except Exception:
+            default_mode = "single"
+        if getattr(self, "default_mode_combo", None) is not None:
+            self.default_mode_combo.set_config_value(default_mode)

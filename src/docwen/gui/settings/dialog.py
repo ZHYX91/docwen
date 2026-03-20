@@ -12,13 +12,13 @@ from __future__ import annotations
 
 import logging
 import tkinter as tk
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from typing import Any
 
 import ttkbootstrap as tb
 from ttkbootstrap.constants import *
 
-from docwen.gui.components.base_dialog import BaseDialog
+from docwen.gui.components.base_dialog import BaseDialog, MessageBox
 from docwen.gui.core.theme_manager import get_theme_manager
 from docwen.gui.settings.config import DIALOG_CONFIG
 from docwen.i18n import t
@@ -49,6 +49,7 @@ class SettingsDialog(BaseDialog):
         logger.info("初始化设置主对话框")
 
         self.is_closing = False
+        self.is_reloading = False
         self.modified_settings = {}
         self.initial_theme = main_window.get_current_theme()
         self.tabs = {}
@@ -476,29 +477,48 @@ class SettingsDialog(BaseDialog):
         button_frame.grid(row=1, column=0, sticky="ew")
 
         # 配置按钮框架网格
-        button_frame.grid_columnconfigure(0, weight=1)
+        button_frame.grid_columnconfigure(0, weight=0)
         button_frame.grid_columnconfigure(1, weight=0)
-        button_frame.grid_columnconfigure(2, weight=0)
+        button_frame.grid_columnconfigure(2, weight=1)
         button_frame.grid_columnconfigure(3, weight=0)
+        button_frame.grid_columnconfigure(4, weight=0)
+        button_frame.grid_columnconfigure(5, weight=0)
 
-        # 空白标签（用于左对齐）
-        tb.Label(button_frame).grid(row=0, column=0, sticky="ew")
+        reset_tab_button = tb.Button(
+            button_frame,
+            text=t("settings.reset.tab_button"),
+            command=self._on_reset_current_tab,
+            bootstyle="warning",
+            width=14,
+        )
+        reset_tab_button.grid(row=0, column=0, padx=(0, DIALOG_CONFIG.button_spacing))
+
+        reset_all_button = tb.Button(
+            button_frame,
+            text=t("settings.reset.all_button"),
+            command=self._on_reset_all,
+            bootstyle="danger",
+            width=12,
+        )
+        reset_all_button.grid(row=0, column=1, padx=(0, DIALOG_CONFIG.button_spacing))
+
+        tb.Label(button_frame).grid(row=0, column=2, sticky="ew")
 
         # 应用按钮
         apply_button = tb.Button(
             button_frame, text=t("common.apply"), command=self._on_apply, bootstyle="success", width=10
         )
-        apply_button.grid(row=0, column=1, padx=(0, DIALOG_CONFIG.button_spacing))
+        apply_button.grid(row=0, column=3, padx=(0, DIALOG_CONFIG.button_spacing))
 
         # 确定按钮（应用并关闭）
         ok_button = tb.Button(button_frame, text=t("common.ok"), command=self._on_ok, bootstyle="primary", width=10)
-        ok_button.grid(row=0, column=2, padx=(0, DIALOG_CONFIG.button_spacing))
+        ok_button.grid(row=0, column=4, padx=(0, DIALOG_CONFIG.button_spacing))
 
         # 取消按钮
         cancel_button = tb.Button(
             button_frame, text=t("common.cancel"), command=self._on_cancel, bootstyle="secondary", width=10
         )
-        cancel_button.grid(row=0, column=3)
+        cancel_button.grid(row=0, column=5)
 
         logger.debug("按钮区域创建完成")
 
@@ -526,6 +546,8 @@ class SettingsDialog(BaseDialog):
             key: 设置键
             value: 设置值
         """
+        if self.is_reloading:
+            return
         logger.info(f"设置变更: {category}.{key} = {value}")
 
         # 更新修改的设置
@@ -541,6 +563,8 @@ class SettingsDialog(BaseDialog):
         """应用预览设置（立即生效但不保存）"""
         # 如果正在关闭，不执行任何操作
         if self.is_closing:
+            return
+        if self.is_reloading:
             return
 
         logger.debug(f"设置变更记录: {category}.{key} = {value}")
@@ -571,6 +595,141 @@ class SettingsDialog(BaseDialog):
                 logger.error(f"预览设置失败 (TclError): {error_msg}")
         except Exception as e:
             logger.error(f"预览设置失败: {e!s}")
+
+    def _get_current_tab_key(self) -> str:
+        try:
+            current_index = self.notebook.index(self.notebook.select())
+            tab_keys = list(self.tabs.keys())
+            if 0 <= current_index < len(tab_keys):
+                return tab_keys[current_index]
+        except Exception:
+            return ""
+        return ""
+
+    def _get_tab_display_name(self, tab_key: str) -> str:
+        tab_key_to_i18n = {
+            "general": "settings.tabs.general",
+            "text": "settings.tabs.text",
+            "export": "settings.tabs.export",
+            "document": "settings.tabs.document",
+            "spreadsheet": "settings.tabs.spreadsheet",
+            "image": "settings.tabs.image",
+            "layout": "settings.tabs.layout",
+            "link": "settings.tabs.link",
+            "formatting": "settings.tabs.formatting",
+            "output": "settings.tabs.output",
+            "logging": "settings.tabs.logging",
+        }
+        return t(tab_key_to_i18n.get(tab_key, ""), default=tab_key)
+
+    def _get_tab_modified_category(self, tab_key: str) -> str | None:
+        mapping = {
+            "general": "gui_config",
+            "text": "conversion_defaults",
+            "export": "conversion_defaults",
+            "document": "conversion_defaults",
+            "spreadsheet": "conversion_defaults",
+            "image": "conversion_defaults",
+            "layout": "conversion_defaults",
+            "link": "link_config",
+            "formatting": "conversion_config",
+            "output": "output_config",
+            "logging": "logger_config",
+        }
+        return mapping.get(tab_key)
+
+    def _run_silent_reload(self, fn) -> Any:
+        self.is_reloading = True
+        try:
+            return fn()
+        finally:
+            self.is_reloading = False
+
+    def _on_reset_current_tab(self):
+        tab_key = self._get_current_tab_key()
+        if not tab_key:
+            return
+
+        tab_display_name = self._get_tab_display_name(tab_key)
+        confirmed = MessageBox.askyesno(
+            t("settings.reset.tab_confirm_title"),
+            t("settings.reset.tab_confirm_message", tab_name=tab_display_name),
+            parent=self,
+        )
+        if not confirmed:
+            return
+
+        tab = self.tabs.get(tab_key)
+        if tab is None or not hasattr(tab, "reset_to_defaults"):
+            return
+
+        ok = bool(self._run_silent_reload(lambda: tab.reset_to_defaults()))
+        category = self._get_tab_modified_category(tab_key)
+        if category and category in self.modified_settings:
+            self.modified_settings.pop(category, None)
+
+        if ok:
+            self._show_status(t("settings.reset.tab_success", tab_name=tab_display_name), "success")
+        else:
+            self._show_status(t("settings.reset.failed"), "danger")
+
+    def _on_reset_all(self):
+        confirmed = MessageBox.askyesno(
+            t("settings.reset.all_confirm_title"),
+            t("settings.reset.all_confirm_message"),
+            parent=self,
+        )
+        if not confirmed:
+            return
+
+        tabs = list(self.tabs.values())
+
+        def do_reset():
+            all_ok = True
+            ops: list[tuple[str, str | None, str | None]] = []
+            for tab in tabs:
+                get_ops = getattr(tab, "get_reset_ops", None)
+                if callable(get_ops):
+                    raw_ops = get_ops()
+                    if raw_ops is None:
+                        continue
+                    if isinstance(raw_ops, list):
+                        ops.extend(raw_ops)
+                    elif isinstance(raw_ops, (tuple, Iterable)):
+                        ops.extend(list(raw_ops))
+                    else:
+                        all_ok = False
+
+            seen: set[tuple[str, str | None, str | None]] = set()
+            deduped: list[tuple[str, str | None, str | None]] = []
+            for op in ops:
+                if op in seen:
+                    continue
+                seen.add(op)
+                deduped.append(op)
+
+            for config_name, section, key in deduped:
+                if section is None:
+                    ok = self.config_manager.restore_config_to_defaults(config_name)
+                elif key is None:
+                    ok = self.config_manager.restore_config_section_to_defaults(config_name, section)
+                else:
+                    ok = self.config_manager.restore_config_value_to_defaults(config_name, section, key)
+                if not ok:
+                    all_ok = False
+
+            for tab in tabs:
+                reload_ui = getattr(tab, "_reload_ui_from_config", None)
+                if callable(reload_ui):
+                    reload_ui()
+            return all_ok
+
+        ok = bool(self._run_silent_reload(do_reset))
+        if ok:
+            self.modified_settings = {}
+            self._show_status(t("settings.reset.success"), "success")
+        else:
+            self._show_status(t("settings.reset.failed"), "danger")
 
     def _on_apply(self):
         """处理应用按钮点击事件"""

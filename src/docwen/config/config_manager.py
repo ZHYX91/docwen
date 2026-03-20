@@ -36,7 +36,15 @@ from .schemas import (
     SoftwareConfigMixin,
     StyleConfigMixin,
 )
-from .toml_operations import read_toml_file, update_toml_value
+from .toml_operations import read_toml_file, update_toml_value, write_toml_file
+
+RESET_EXCLUDED_CONFIGS = frozenset(
+    {
+        "proofread_typos",
+        "proofread_sensitive",
+        "proofread_symbols",
+    }
+)
 
 
 class ConfigManager(
@@ -200,29 +208,23 @@ class ConfigManager(
         if config_name not in CONFIG_FILES:
             safe_log.error("未知的配置名称: %s", config_name)
             return False
-
         filename = CONFIG_FILES[config_name]
         filepath = str(Path(self._config_dir) / filename)
 
         try:
-            # 读取现有配置（保留注释）
             from .toml_operations import read_toml_document, write_toml_document
 
             doc = read_toml_document(filepath)
             if doc is None:
-                # 如果文件不存在或读取失败，创建新文档
                 from tomlkit import document
 
                 doc = document()
 
-            # 分割多级节名称
             section_parts = section.split(".")
 
-            # 导航到目标节
             current: Any = doc
             for part in section_parts:
                 if part not in current:
-                    # 创建不存在的节
                     from tomlkit import table
 
                     current[part] = table()
@@ -230,28 +232,20 @@ class ConfigManager(
                 else:
                     current = current[part]
 
-            # 更新整个节 - 保留注释和原有顺序
-            # 1. 获取原有的所有键（保持顺序）
             existing_keys = list(current.keys())
 
-            # 2. 先更新已存在的键（保留注释，保持原有顺序）
             for key in existing_keys:
                 if key in data:
-                    # 键存在于新数据中，更新其值（保留注释）
                     current[key] = data[key]
                 else:
-                    # 键不存在于新数据中，删除它
                     del current[key]
 
-            # 3. 再添加新键（原来不存在的键添加到末尾）
             for key in data:
                 if key not in existing_keys:
                     current[key] = data[key]
 
-            # 写回文件（保留注释）
             success = write_toml_document(filepath, doc)
             if success:
-                # 重新加载该配置文件以更新内存中的配置
                 self._reload_config_block(config_name)
                 safe_log.info("配置节更新成功: %s -> %s", config_name, section)
 
@@ -260,6 +254,65 @@ class ConfigManager(
         except Exception as e:
             safe_log.error("更新配置节失败: %s -> %s | 错误: %s", config_name, section, str(e))
             return False
+
+    def _get_default_section_data(self, config_name: str, section: str) -> dict[str, Any] | None:
+        default_config = DEFAULT_CONFIG.get(config_name, {})
+        current: Any = default_config
+        for part in (section or "").split("."):
+            if not part:
+                continue
+            if isinstance(current, dict) and part in current:
+                current = current[part]
+            else:
+                return None
+        return current if isinstance(current, dict) else None
+
+    def restore_config_value_to_defaults(self, config_name: str, section: str, key: str) -> bool:
+        if config_name in RESET_EXCLUDED_CONFIGS:
+            safe_log.warning("词库配置不参与还原: %s", config_name)
+            return False
+        if config_name not in CONFIG_FILES:
+            safe_log.error("未知的配置名称: %s", config_name)
+            return False
+
+        default_section = self._get_default_section_data(config_name, section)
+        if default_section is None or key not in default_section:
+            safe_log.error("默认配置不存在: %s -> %s.%s", config_name, section, key)
+            return False
+
+        return self.update_config_value(config_name, section, key, default_section[key])
+
+    def restore_config_section_to_defaults(self, config_name: str, section: str) -> bool:
+        if config_name in RESET_EXCLUDED_CONFIGS:
+            safe_log.warning("词库配置不参与还原: %s", config_name)
+            return False
+        if config_name not in CONFIG_FILES:
+            safe_log.error("未知的配置名称: %s", config_name)
+            return False
+
+        default_section = self._get_default_section_data(config_name, section)
+        if default_section is None:
+            safe_log.error("默认配置不存在: %s -> %s", config_name, section)
+            return False
+
+        return self.update_config_section(config_name, section, default_section)
+
+    def restore_config_to_defaults(self, config_name: str) -> bool:
+        if config_name in RESET_EXCLUDED_CONFIGS:
+            safe_log.warning("词库配置不参与还原: %s", config_name)
+            return False
+        if config_name not in CONFIG_FILES:
+            safe_log.error("未知的配置名称: %s", config_name)
+            return False
+
+        filename = CONFIG_FILES[config_name]
+        filepath = str(Path(self._config_dir) / filename)
+        default_config = DEFAULT_CONFIG.get(config_name, {})
+        success = write_toml_file(filepath, default_config)
+        if success:
+            self._reload_config_block(config_name)
+            safe_log.info("配置已还原为默认值: %s", config_name)
+        return success
 
 
 def deep_merge_dicts(default: dict, user: dict) -> dict:

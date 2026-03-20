@@ -579,3 +579,87 @@ class DocumentTab(BaseSettingsTab):
         except Exception as e:
             logger.error(f"应用文档设置失败: {e}", exc_info=True)
             return False
+
+    def get_reset_ops(self) -> list[tuple[str, str | None, str | None]]:
+        return [
+            ("conversion_defaults", "document", "to_md_keep_images"),
+            ("conversion_defaults", "document", "to_md_enable_ocr"),
+            ("conversion_defaults", "document", "to_md_enable_optimization"),
+            ("conversion_defaults", "document", "to_md_optimization_type"),
+            ("conversion_defaults", "document", "to_md_remove_numbering"),
+            ("conversion_defaults", "document", "to_md_add_numbering"),
+            ("conversion_defaults", "document", "to_md_default_scheme"),
+            ("software_priority", "default_priority", "word_processors"),
+            ("software_priority", "special_conversions", "odt"),
+            ("software_priority", "special_conversions", "document_to_pdf"),
+        ]
+
+    def _reload_ui_from_config(self) -> None:
+        try:
+            doc_keep = bool(self.config_manager.get_docx_to_md_keep_images())
+        except Exception:
+            doc_keep = True
+        if getattr(self, "doc_keep_var", None) is not None:
+            self.doc_keep_var.set(doc_keep)
+
+        try:
+            doc_ocr = bool(self.config_manager.get_docx_to_md_enable_ocr())
+        except Exception:
+            doc_ocr = False
+        if getattr(self, "doc_ocr_var", None) is not None:
+            self.doc_ocr_var.set(doc_ocr)
+
+        optimization_types_dict = self.config_manager.get_localized_optimization_types(scope="document_to_md")
+        self._doc_optimization_types = optimization_types_dict
+        if optimization_types_dict:
+            try:
+                enable_opt = bool(self.config_manager.get_document_to_md_enable_optimization())
+                opt_type_id = str(self.config_manager.get_document_to_md_optimization_type() or "")
+            except Exception:
+                enable_opt = False
+                opt_type_id = ""
+            opt_type = optimization_types_dict.get(opt_type_id, next(iter(optimization_types_dict.values()), ""))
+            if getattr(self, "doc_enable_opt_var", None) is not None:
+                self.doc_enable_opt_var.set(enable_opt)
+            if getattr(self, "doc_opt_type_var", None) is not None:
+                self.doc_opt_type_var.set(opt_type)
+        else:
+            if getattr(self, "doc_enable_opt_var", None) is not None:
+                self.doc_enable_opt_var.set(False)
+            if getattr(self, "doc_opt_type_var", None) is not None:
+                self.doc_opt_type_var.set("")
+
+        try:
+            remove_numbering = bool(self.config_manager.get_docx_to_md_remove_numbering())
+        except Exception:
+            remove_numbering = True
+        if getattr(self, "docx_to_md_remove_var", None) is not None:
+            self.docx_to_md_remove_var.set(remove_numbering)
+
+        try:
+            add_numbering = bool(self.config_manager.get_docx_to_md_add_numbering())
+        except Exception:
+            add_numbering = False
+        if getattr(self, "docx_to_md_add_var", None) is not None:
+            self.docx_to_md_add_var.set(add_numbering)
+
+        try:
+            scheme_id = str(self.config_manager.get_docx_to_md_default_scheme() or "hierarchical_standard")
+        except Exception:
+            scheme_id = "hierarchical_standard"
+        scheme_id_to_name, _ = self._get_scheme_mappings()
+        scheme_name = scheme_id_to_name.get(scheme_id, next(iter(scheme_id_to_name.values()), scheme_id))
+        if getattr(self, "docx_to_md_scheme_var", None) is not None:
+            self.docx_to_md_scheme_var.set(scheme_name)
+        try:
+            scheme_names = self.config_manager.get_scheme_names()
+            if getattr(self, "docx_to_md_scheme_combo", None) is not None and scheme_names:
+                self.docx_to_md_scheme_combo.configure(values=scheme_names)
+        except Exception:
+            pass
+
+        try:
+            self._load_settings_data(self.config_manager)
+            self._refresh_all_categories()
+        except Exception:
+            pass

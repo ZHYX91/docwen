@@ -469,3 +469,61 @@ class LayoutTab(BaseSettingsTab):
         except Exception as e:
             logger.error(f"应用版式设置失败: {e}", exc_info=True)
             return False
+
+    def get_reset_ops(self) -> list[tuple[str, str | None, str | None]]:
+        return [
+            ("conversion_defaults", "layout", "to_md_keep_images"),
+            ("conversion_defaults", "layout", "to_md_enable_ocr"),
+            ("conversion_defaults", "layout", "to_md_enable_optimization"),
+            ("conversion_defaults", "layout", "to_md_optimization_type"),
+            ("conversion_defaults", "layout", "render_dpi"),
+            ("software_priority", "special_conversions", "pdf_to_office"),
+        ]
+
+    def _reload_ui_from_config(self) -> None:
+        try:
+            layout_keep = bool(self.config_manager.get_layout_to_md_keep_images())
+        except Exception:
+            layout_keep = True
+        if getattr(self, "layout_keep_var", None) is not None:
+            self.layout_keep_var.set(layout_keep)
+
+        try:
+            layout_ocr = bool(self.config_manager.get_layout_to_md_enable_ocr())
+        except Exception:
+            layout_ocr = False
+        if getattr(self, "layout_ocr_var", None) is not None:
+            self.layout_ocr_var.set(layout_ocr)
+
+        optimization_types_dict = self.config_manager.get_localized_optimization_types(scope="layout_to_md")
+        self._layout_optimization_types = optimization_types_dict
+        if optimization_types_dict:
+            try:
+                enable_opt = bool(self.config_manager.get_layout_to_md_enable_optimization())
+                opt_type_id = str(self.config_manager.get_layout_to_md_optimization_type() or "")
+            except Exception:
+                enable_opt = False
+                opt_type_id = ""
+            opt_type = optimization_types_dict.get(opt_type_id, next(iter(optimization_types_dict.values()), ""))
+            if getattr(self, "layout_enable_opt_var", None) is not None:
+                self.layout_enable_opt_var.set(enable_opt)
+            if getattr(self, "layout_opt_type_var", None) is not None:
+                self.layout_opt_type_var.set(opt_type)
+        else:
+            if getattr(self, "layout_enable_opt_var", None) is not None:
+                self.layout_enable_opt_var.set(False)
+            if getattr(self, "layout_opt_type_var", None) is not None:
+                self.layout_opt_type_var.set("")
+
+        try:
+            render_dpi = int(self.config_manager.get_layout_render_dpi())
+        except Exception:
+            render_dpi = 300
+        if getattr(self, "render_dpi_var", None) is not None:
+            self.render_dpi_var.set(render_dpi)
+
+        try:
+            self._load_settings_data(self.config_manager)
+            self._refresh_category("pdf_to_office")
+        except Exception:
+            pass

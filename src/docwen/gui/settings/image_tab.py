@@ -419,3 +419,63 @@ class ImageTab(BaseSettingsTab):
         except Exception as e:
             logger.error(f"应用图片设置失败: {e}", exc_info=True)
             return False
+
+    def get_reset_ops(self) -> list[tuple[str, str | None, str | None]]:
+        return [("conversion_defaults", "image", None)]
+
+    def _reload_ui_from_config(self) -> None:
+        try:
+            image_keep = bool(self.config_manager.get_image_to_md_keep_images())
+        except Exception:
+            image_keep = True
+        if getattr(self, "image_keep_var", None) is not None:
+            self.image_keep_var.set(image_keep)
+
+        try:
+            image_ocr = bool(self.config_manager.get_image_to_md_enable_ocr())
+        except Exception:
+            image_ocr = True
+        if getattr(self, "image_ocr_var", None) is not None:
+            self.image_ocr_var.set(image_ocr)
+
+        try:
+            ocr_language = str(self.config_manager.get_ocr_language() or "auto")
+        except Exception:
+            ocr_language = "auto"
+        if getattr(self, "ocr_language_combo", None) is not None:
+            self.ocr_language_combo.set_config_value(ocr_language)
+
+        try:
+            compress_mode = str(self.config_manager.get_image_compress_mode() or "lossless")
+        except Exception:
+            compress_mode = "lossless"
+        if getattr(self, "compress_mode_var", None) is not None:
+            self.compress_mode_var.set(compress_mode)
+
+        try:
+            size_limit = int(self.config_manager.get_image_size_limit())
+        except Exception:
+            size_limit = 200
+        if getattr(self, "size_limit_var", None) is not None:
+            self.size_limit_var.set(size_limit)
+
+        try:
+            size_unit = str(self.config_manager.get_image_size_unit() or "KB")
+        except Exception:
+            size_unit = "KB"
+        if getattr(self, "size_unit_var", None) is not None:
+            self.size_unit_var.set(size_unit)
+
+        try:
+            pdf_quality = str(self.config_manager.get_image_pdf_quality() or "original")
+        except Exception:
+            pdf_quality = "original"
+        if getattr(self, "pdf_quality_var", None) is not None:
+            self.pdf_quality_var.set(pdf_quality)
+
+        try:
+            tiff_mode = str(self.config_manager.get_image_tiff_mode() or "lossless")
+        except Exception:
+            tiff_mode = "lossless"
+        if getattr(self, "tiff_mode_var", None) is not None:
+            self.tiff_mode_var.set(tiff_mode)

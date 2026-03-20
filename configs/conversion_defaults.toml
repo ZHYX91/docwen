@@ -17,7 +17,7 @@ to_md_ocr_placement_mode = "main_md"
 # 转MD时的默认设置
 to_md_keep_images = true       # 默认勾选"提取图片"（在MD中包含图片信息，无论采用文件方式还是Base64内联方式）
 to_md_enable_ocr = false       # 默认勾选"图片文字识别"
-to_md_image_extraction_mode = "base64"  # 提取方式: file(图片文件) / base64(Base64编码)
+to_md_image_extraction_mode = "file"  # 提取方式: file(图片文件) / base64(Base64编码)
 to_md_ocr_placement_mode = "main_md" # OCR位置: image_md(图片对应MD) / main_md(主文档)
 
 # 转MD时的序号设置
@@ -98,7 +98,7 @@ render_dpi = 300               # 渲染DPI: 150/300/600
 [text]
 # MD转DOCX序号设置
 to_docx_remove_numbering = true             # 默认清除MD中的原序号
-to_docx_add_numbering = false                # 默认添加新序号到DOCX
+to_docx_add_numbering = false               # 默认添加新序号到DOCX
 to_docx_default_scheme = "hierarchical_standard" # 默认使用的序号方案（引用heading_numbering.toml中的方案）
 
 # MD转XLSX序号设置（预留）

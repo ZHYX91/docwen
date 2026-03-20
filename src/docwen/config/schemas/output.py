@@ -28,7 +28,7 @@ DEFAULT_OUTPUT_CONFIG = {
             "auto_open_folder": False  # 转换完成后是否自动打开文件夹
         },
         "intermediate_files": {
-            "save_to_output": True  # 是否保存中间文件到输出目录
+            "save_to_output": False  # 是否保存中间文件到输出目录
         },
         "manifest": {"save_to_output": False, "mask_input_path": True},
     }

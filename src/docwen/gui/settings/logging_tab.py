@@ -335,3 +335,43 @@ class LoggingTab(BaseSettingsTab):
         except Exception as e:
             logger.error(f"应用日志设置失败: {e}", exc_info=True)
             return False
+
+    def get_reset_ops(self) -> list[tuple[str, str | None, str | None]]:
+        return [
+            ("logger_config", "logging", "enable"),
+            ("logger_config", "logging", "level"),
+            ("logger_config", "logging", "file_prefix"),
+            ("logger_config", "logging", "retention_days"),
+            ("logger_config", "logging", "console_enable"),
+            ("logger_config", "logging", "console_level"),
+        ]
+
+    def _reload_ui_from_config(self) -> None:
+        try:
+            settings = self.config_manager.get_logging_config() or {}
+        except Exception:
+            settings = {}
+
+        if getattr(self, "logging_enabled_var", None) is not None:
+            self.logging_enabled_var.set(bool(settings.get("enable", True)))
+
+        level_value = str(settings.get("level", "info"))
+        level_display = getattr(self, "_log_level_value_to_display", {}).get(level_value, level_value)
+        if getattr(self, "log_level_var", None) is not None:
+            self.log_level_var.set(level_display)
+
+        if getattr(self, "file_prefix_var", None) is not None:
+            self.file_prefix_var.set(str(settings.get("file_prefix", "docwen")))
+
+        if getattr(self, "retention_days_var", None) is not None:
+            self.retention_days_var.set(str(settings.get("retention_days", 30)))
+
+        if getattr(self, "console_enabled_var", None) is not None:
+            self.console_enabled_var.set(bool(settings.get("console_enable", True)))
+
+        console_level_value = str(settings.get("console_level", "debug"))
+        console_level_display = getattr(self, "_log_level_value_to_display", {}).get(
+            console_level_value, console_level_value
+        )
+        if getattr(self, "console_level_var", None) is not None:
+            self.console_level_var.set(console_level_display)

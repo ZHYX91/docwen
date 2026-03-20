@@ -519,3 +519,67 @@ class LinkTab(BaseSettingsTab):
         except Exception as e:
             logger.error(f"应用链接设置失败: {e}", exc_info=True)
             return False
+
+    def get_reset_ops(self) -> list[tuple[str, str | None, str | None]]:
+        return [
+            ("link_config", "format", "image_link_style"),
+            ("link_config", "format", "md_file_link_style"),
+            ("link_config", "non_embed_links", "wiki_mode"),
+            ("link_config", "non_embed_links", "markdown_mode"),
+            ("link_config", "embed_links", "wiki_image_mode"),
+            ("link_config", "embed_links", "markdown_image_mode"),
+            ("link_config", "embed_links", "md_file_mode"),
+            ("link_config", "embedding", "max_depth"),
+        ]
+
+    def _reload_ui_from_config(self) -> None:
+        try:
+            settings = self.config_manager.get_markdown_link_style_settings()
+        except Exception:
+            settings = {"image_link_style": "wiki_embed", "md_file_link_style": "wiki_embed"}
+        if getattr(self, "image_link_style_combo", None) is not None:
+            self.image_link_style_combo.set_config_value(str(settings.get("image_link_style", "wiki_embed")))
+        if getattr(self, "md_file_link_style_combo", None) is not None:
+            self.md_file_link_style_combo.set_config_value(str(settings.get("md_file_link_style", "wiki_embed")))
+
+        try:
+            wiki_mode = self.config_manager.get_wiki_link_mode()
+        except Exception:
+            wiki_mode = "extract_text"
+        if getattr(self, "wiki_link_mode_combo", None) is not None:
+            self.wiki_link_mode_combo.set_config_value(str(wiki_mode))
+
+        try:
+            markdown_mode = self.config_manager.get_markdown_link_mode()
+        except Exception:
+            markdown_mode = "extract_text"
+        if getattr(self, "markdown_link_mode_combo", None) is not None:
+            self.markdown_link_mode_combo.set_config_value(str(markdown_mode))
+
+        try:
+            wiki_image_mode = self.config_manager.get_wiki_embed_image_mode()
+        except Exception:
+            wiki_image_mode = "embed"
+        if getattr(self, "wiki_embed_image_mode_combo", None) is not None:
+            self.wiki_embed_image_mode_combo.set_config_value(str(wiki_image_mode))
+
+        try:
+            markdown_image_mode = self.config_manager.get_markdown_embed_image_mode()
+        except Exception:
+            markdown_image_mode = "embed"
+        if getattr(self, "markdown_embed_image_mode_combo", None) is not None:
+            self.markdown_embed_image_mode_combo.set_config_value(str(markdown_image_mode))
+
+        try:
+            md_file_mode = self.config_manager.get_embed_md_file_mode()
+        except Exception:
+            md_file_mode = "embed"
+        if getattr(self, "embed_md_file_mode_combo", None) is not None:
+            self.embed_md_file_mode_combo.set_config_value(str(md_file_mode))
+
+        try:
+            max_depth = int(self.config_manager.get_max_embed_depth())
+        except Exception:
+            max_depth = 3
+        if getattr(self, "max_depth_var", None) is not None:
+            self.max_depth_var.set(str(max_depth))

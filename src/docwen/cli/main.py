@@ -260,6 +260,29 @@ def create_argument_parser() -> argparse.ArgumentParser:
         help=cli_t("cli.help.format_source", default="按源类别过滤（document/spreadsheet/layout/image/markdown）"),
     )
 
+    settings = subparsers.add_parser("settings", parents=[common], help=cli_t("cli.help.settings", default="设置管理"))
+    settings_sub = settings.add_subparsers(dest="settings_command", required=True)
+    settings_reset = settings_sub.add_parser(
+        "reset", parents=[common], help=cli_t("cli.help.settings_reset", default="还原设置为默认值")
+    )
+    settings_reset.add_argument(
+        "--tab",
+        choices=[
+            "general",
+            "text",
+            "export",
+            "document",
+            "spreadsheet",
+            "image",
+            "layout",
+            "link",
+            "formatting",
+            "output",
+            "logging",
+        ],
+        help=cli_t("cli.help.settings_reset_tab", default="仅还原指定选项卡的设置"),
+    )
+
     return parser
 
 
@@ -511,6 +534,13 @@ def main() -> int:
             )
         if cmd == "formats" and getattr(args, "formats_command", None) == "list":
             return executor.list_formats(json_mode=bool(args.json), source=getattr(args, "for_source", None))
+        if cmd == "settings" and getattr(args, "settings_command", None) == "reset":
+            return executor.reset_settings(
+                tab=getattr(args, "tab", None),
+                json_mode=bool(args.json),
+                quiet=bool(args.quiet),
+                yes=bool(args.yes),
+            )
 
         if cmd == "convert":
             action = "convert"

@@ -355,6 +355,17 @@ applied = "设置已应用"
 apply_failed = "应用设置失败，请查看日志"
 apply_error = "应用失败"
 
+[settings.reset]
+tab_button = "还原当前选项卡"
+all_button = "还原所有设置"
+tab_confirm_title = "确认还原"
+tab_confirm_message = "确定要将「{tab_name}」选项卡的设置还原为默认值吗？此操作不可撤销。"
+all_confirm_title = "确认还原所有设置"
+all_confirm_message = "确定要将所有设置还原为默认值吗？（词库数据不受影响）此操作不可撤销。"
+success = "所有设置已还原为默认值"
+tab_success = "「{tab_name}」选项卡设置已还原为默认值"
+failed = "设置还原失败，请查看日志"
+
 [settings.errors]
 tab_load_failed_message = "{tab}加载失败\n\n错误：{error}"
 
@@ -429,7 +440,7 @@ add_numbering = "默认新增小标题序号"
 scheme_label = "默认序号方案:"
 
 # 字段优化（字段处理器）
-field_processors_section = "字段优化"
+field_processors_section = "字段优化（MarkDown转为文档）"
 field_processors_empty = "当前语言暂无可用字段优化。"
 field_processors_load_failed = "读取字段优化列表失败。"
 field_processors_load_error = "加载失败：{error}"
@@ -502,7 +513,7 @@ enable_ocr = "默认勾选\"图片文字识别\""
 enable_ocr_tooltip = "文档转MD时默认勾选\"图片文字识别\""
 
 # 优化设置
-optimization_section = "优化设置"
+optimization_section = "优化设置（文档转MarkDown）"
 enable_optimization = "默认启用\"针对文档类型优化\""
 optimization_type_label = "默认优化类型:"
 
@@ -607,7 +618,7 @@ keep_images = "默认勾选\"提取图片\""
 keep_images_tooltip = "版式文件转MD时默认勾选\"提取图片\""
 enable_ocr = "默认勾选\"图片文字识别\""
 enable_ocr_tooltip = "版式文件转MD时默认勾选\"图片文字识别\""
-optimization_section = "优化设置"
+optimization_section = "优化设置（版式转MarkDown）"
 enable_optimization = "默认启用\"针对版式类型优化\""
 optimization_type_label = "默认优化类型:"
 dpi_section = "渲染DPI设置"

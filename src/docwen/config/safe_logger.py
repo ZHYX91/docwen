@@ -32,6 +32,7 @@
     error("这是一条错误")
 """
 
+import contextlib
 import logging
 import sys
 
@@ -74,6 +75,22 @@ class SafeLogger:
                 # 如果设置失败，保持 self._logger 为 None
                 self._logger = None
 
+    @staticmethod
+    def _safe_write(stream, text: str) -> bool:
+        try:
+            if stream is None:
+                return False
+            encoding = getattr(stream, "encoding", None) or "utf-8"
+            safe_text = text.encode(encoding, errors="replace").decode(encoding, errors="replace")
+            if not safe_text.endswith("\n"):
+                safe_text += "\n"
+            stream.write(safe_text)
+            with contextlib.suppress(Exception):
+                stream.flush()
+            return True
+        except Exception:
+            return False
+
     def log(self, level: str, message: str, *args) -> None:
         """
         安全记录日志
@@ -93,8 +110,13 @@ class SafeLogger:
         if not self._enabled:
             return
 
-        # 格式化消息
-        formatted_message = message % args if args else message
+        try:
+            formatted_message = message % args if args else message
+        except Exception:
+            try:
+                formatted_message = f"{message} {args!r}"
+            except Exception:
+                formatted_message = "<log_format_failed>"
         formatted_output = f"[{self._name}] {level.upper()}: {formatted_message}"
 
         try:
@@ -107,18 +129,15 @@ class SafeLogger:
                     log_method(formatted_message)
                     return
 
-            # 回退到简单打印
             if level in ("error", "critical", "warning"):
-                print(formatted_output, file=sys.stderr)
+                if not self._safe_write(sys.stderr, formatted_output):
+                    self._safe_write(getattr(sys, "__stderr__", None), formatted_output)
             else:
-                print(formatted_output)
+                if not self._safe_write(sys.stdout, formatted_output):
+                    self._safe_write(getattr(sys, "__stdout__", None), formatted_output)
 
         except Exception:
-            # 最终回退到简单打印
-            if level in ("error", "critical", "warning"):
-                print(formatted_output, file=sys.stderr)
-            else:
-                print(formatted_output)
+            return
 
     def debug(self, message: str, *args) -> None:
         """

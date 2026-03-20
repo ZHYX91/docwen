@@ -971,6 +971,210 @@ def list_optimizations(json_mode: bool = True, scope: str | None = None) -> int:
         return 1
 
 
+def reset_settings(tab: str | None = None, *, json_mode: bool = False, quiet: bool = False, yes: bool = False) -> int:
+    from docwen.config.config_manager import RESET_EXCLUDED_CONFIGS, config_manager
+
+    tab_ops: dict[str, list[tuple[str, str | None, str | None]]] = {
+        "general": [
+            ("gui_config", "theme", None),
+            ("gui_config", "window", None),
+            ("gui_config", "transparency", None),
+            ("gui_config", "language", None),
+        ],
+        "text": [
+            ("conversion_defaults", "text", "to_docx_remove_numbering"),
+            ("conversion_defaults", "text", "to_docx_add_numbering"),
+            ("conversion_defaults", "text", "to_docx_default_scheme"),
+            ("gui_config", "template", "md_default_template"),
+            ("conversion_defaults", "document", "enable_symbol_pairing"),
+            ("conversion_defaults", "document", "enable_symbol_correction"),
+            ("conversion_defaults", "document", "enable_typos_rule"),
+            ("conversion_defaults", "document", "enable_sensitive_word"),
+            ("proofread_config", "skip", "code_blocks"),
+            ("proofread_config", "skip", "quote_blocks"),
+        ],
+        "export": [
+            ("conversion_defaults", "export", "to_md_image_extraction_mode"),
+            ("conversion_defaults", "export", "to_md_ocr_placement_mode"),
+            ("conversion_config", "ocr_output", "show_blockquote_title"),
+            ("conversion_config", "ocr_output", "blockquote_title_override_by_locale"),
+            ("conversion_config", "export", "base64_compress_enabled"),
+            ("conversion_config", "export", "base64_compress_threshold_kb"),
+        ],
+        "document": [
+            ("conversion_defaults", "document", "to_md_keep_images"),
+            ("conversion_defaults", "document", "to_md_enable_ocr"),
+            ("conversion_defaults", "document", "to_md_enable_optimization"),
+            ("conversion_defaults", "document", "to_md_optimization_type"),
+            ("conversion_defaults", "document", "to_md_remove_numbering"),
+            ("conversion_defaults", "document", "to_md_add_numbering"),
+            ("conversion_defaults", "document", "to_md_default_scheme"),
+            ("software_priority", "default_priority", "word_processors"),
+            ("software_priority", "special_conversions", "odt"),
+            ("software_priority", "special_conversions", "document_to_pdf"),
+        ],
+        "spreadsheet": [
+            ("conversion_defaults", "spreadsheet", "to_md_keep_images"),
+            ("conversion_defaults", "spreadsheet", "to_md_enable_ocr"),
+            ("conversion_defaults", "spreadsheet", "merge_mode"),
+            ("software_priority", "default_priority", "spreadsheet_processors"),
+            ("software_priority", "special_conversions", "ods"),
+            ("software_priority", "special_conversions", "spreadsheet_to_pdf"),
+        ],
+        "image": [("conversion_defaults", "image", None)],
+        "layout": [
+            ("conversion_defaults", "layout", "to_md_keep_images"),
+            ("conversion_defaults", "layout", "to_md_enable_ocr"),
+            ("conversion_defaults", "layout", "to_md_enable_optimization"),
+            ("conversion_defaults", "layout", "to_md_optimization_type"),
+            ("conversion_defaults", "layout", "render_dpi"),
+            ("software_priority", "special_conversions", "pdf_to_office"),
+        ],
+        "link": [
+            ("link_config", "format", "image_link_style"),
+            ("link_config", "format", "md_file_link_style"),
+            ("link_config", "non_embed_links", "wiki_mode"),
+            ("link_config", "non_embed_links", "markdown_mode"),
+            ("link_config", "embed_links", "wiki_image_mode"),
+            ("link_config", "embed_links", "markdown_image_mode"),
+            ("link_config", "embed_links", "md_file_mode"),
+            ("link_config", "embedding", "max_depth"),
+        ],
+        "formatting": [
+            ("conversion_config", "docx_to_md", "preserve_formatting"),
+            ("conversion_config", "docx_to_md", "preserve_heading_formatting"),
+            ("conversion_config", "docx_to_md", "preserve_table_header_formatting"),
+            ("conversion_config", "md_to_docx", "formatting_mode"),
+            ("conversion_config", "md_to_docx", "heading_formatting_mode"),
+            ("conversion_config", "md_to_docx", "table_header_formatting_mode"),
+            ("conversion_config", "md_to_docx", "heading_merge_mode"),
+            ("conversion_config", "md_to_docx", "list_separator"),
+            ("conversion_config", "syntax", "bold"),
+            ("conversion_config", "syntax", "italic"),
+            ("conversion_config", "syntax", "strikethrough"),
+            ("conversion_config", "syntax", "highlight"),
+            ("conversion_config", "syntax", "superscript"),
+            ("conversion_config", "syntax", "subscript"),
+            ("conversion_config", "syntax", "unordered_list"),
+            ("conversion_config", "syntax", "indent_spaces"),
+            ("conversion_config", "horizontal_rule.docx_to_md", "page_break"),
+            ("conversion_config", "horizontal_rule.docx_to_md", "section_break"),
+            ("conversion_config", "horizontal_rule.docx_to_md", "horizontal_rule"),
+            ("conversion_config", "horizontal_rule.md_to_docx", "dash"),
+            ("conversion_config", "horizontal_rule.md_to_docx", "asterisk"),
+            ("conversion_config", "horizontal_rule.md_to_docx", "underscore"),
+            ("style_table", "md_to_docx", "table_style_mode"),
+            ("style_table", "md_to_docx", "builtin_style_key"),
+            ("style_table", "md_to_docx", "custom_style_name"),
+        ],
+        "output": [
+            ("output_config", "intermediate_files", "save_to_output"),
+            ("output_config", "directory", "mode"),
+            ("output_config", "directory", "custom_path"),
+            ("output_config", "directory", "create_date_subfolder"),
+            ("output_config", "directory", "date_folder_format"),
+            ("output_config", "behavior", "auto_open_folder"),
+        ],
+        "logging": [
+            ("logger_config", "logging", "enable"),
+            ("logger_config", "logging", "level"),
+            ("logger_config", "logging", "file_prefix"),
+            ("logger_config", "logging", "retention_days"),
+            ("logger_config", "logging", "console_enable"),
+            ("logger_config", "logging", "console_level"),
+        ],
+    }
+
+    if tab is not None:
+        tab = str(tab).strip().lower()
+        if tab not in tab_ops:
+            msg = cli_t("cli.messages.invalid_tab", default="无效的选项卡: {tab}", tab=tab)
+            if json_mode:
+                print_json_error("settings reset", "", msg, error_code=ERROR_CODE_INVALID_INPUT)
+            else:
+                print(f"{cli_t('cli.messages.error_prefix')}: {msg}", file=sys.stderr)
+            return int(ExitCode.INVALID_INPUT)
+
+    if json_mode and not yes:
+        msg = cli_t("cli.messages.confirm_required", default="JSON 模式下需要显式传入 --yes 才能执行还原")
+        print_json_error("settings reset", "", msg, error_code=ERROR_CODE_INVALID_INPUT)
+        return int(ExitCode.INVALID_INPUT)
+
+    if not yes:
+        if tab:
+            prompt = cli_t(
+                "cli.messages.confirm_reset_tab",
+                default="确认将 {tab} 选项卡设置还原为默认值？输入 y 继续：",
+                tab=tab,
+            )
+        else:
+            prompt = cli_t(
+                "cli.messages.confirm_reset_all",
+                default="确认将所有设置还原为默认值？（词库不受影响）输入 y 继续：",
+            )
+        try:
+            answer = input(f"{prompt} ").strip().lower()
+        except EOFError:
+            answer = ""
+        if answer not in {"y", "yes"}:
+            if not json_mode and not quiet:
+                print(cli_t("cli.messages.cancelled", default="已取消"), file=sys.stderr)
+            return 0
+
+    ops = tab_ops[tab] if tab else [op for ops_list in tab_ops.values() for op in ops_list]
+    seen: set[tuple[str, str | None, str | None]] = set()
+    deduped: list[tuple[str, str | None, str | None]] = []
+    for op in ops:
+        if op in seen:
+            continue
+        seen.add(op)
+        deduped.append(op)
+
+    failed: list[dict[str, str | None]] = []
+    for config_name, section, key in deduped:
+        if config_name in RESET_EXCLUDED_CONFIGS:
+            continue
+        if section is None:
+            ok = config_manager.restore_config_to_defaults(config_name)
+        elif key is None:
+            ok = config_manager.restore_config_section_to_defaults(config_name, section)
+        else:
+            ok = config_manager.restore_config_value_to_defaults(config_name, section, key)
+        if not ok:
+            failed.append({"config": config_name, "section": section, "key": key})
+
+    success = not failed
+    if json_mode:
+        output = make_json_envelope(
+            command="settings reset",
+            success=success,
+            data={
+                "tab": tab,
+                "reset_ops": len(deduped),
+                "failed": failed,
+                "excluded": sorted(RESET_EXCLUDED_CONFIGS),
+            },
+            error_code=(None if success else ERROR_CODE_UNKNOWN_ERROR),
+            message=(None if success else cli_t("cli.messages.reset_failed", default="还原失败")),
+        )
+        print(json.dumps(output, ensure_ascii=False, indent=2))
+    else:
+        if not quiet:
+            if success:
+                if tab:
+                    print(cli_t("cli.messages.reset_tab_ok", default="已还原「{tab}」选项卡设置为默认值", tab=tab))
+                else:
+                    print(cli_t("cli.messages.reset_all_ok", default="已还原所有设置为默认值（词库不受影响）"))
+            else:
+                print(cli_t("cli.messages.reset_failed", default="还原失败"), file=sys.stderr)
+                for item in failed:
+                    cfg = item.get("config") or ""
+                    sec = item.get("section") or ""
+                    k = item.get("key") or ""
+                    print(f"  ✗ {cfg} {sec} {k}".strip(), file=sys.stderr)
+    return 0 if success else 1
+
+
 def get_supported_convert_targets() -> list[str]:
     targets: set[str] = set()
     for items in _get_format_groups().values():

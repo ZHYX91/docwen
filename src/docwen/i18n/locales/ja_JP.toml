@@ -352,6 +352,17 @@ applied = "設定が適用されました"
 apply_failed = "設定の適用に失敗しました。ログを確認してください。"
 apply_error = "適用エラー"
 
+[settings.reset]
+tab_button = "Reset Tab"
+all_button = "Reset All"
+tab_confirm_title = "Confirm Reset"
+tab_confirm_message = "Reset all settings in \"{tab_name}\" tab to defaults? This cannot be undone."
+all_confirm_title = "Confirm Reset All"
+all_confirm_message = "Reset all settings to defaults? (Dictionary data is not affected.) This cannot be undone."
+success = "All settings have been reset to defaults"
+tab_success = "\"{tab_name}\" tab settings have been reset to defaults"
+failed = "Failed to reset settings. Please check the logs."
+
 [settings.errors]
 tab_load_failed_message = "{tab} の読み込みに失敗しました\n\nエラー: {error}"
 
@@ -425,7 +436,7 @@ remove_numbering_tooltip = "MDをDOCXに変換する際、既存の見出し番�
 add_numbering = "デフォルトで新しい見出し番号を追加"
 scheme_label = "デフォルトの番号付けスキーム："
 
-field_processors_section = "フィールド最適化"
+field_processors_section = "フィールド最適化（MarkDownからドキュメント）"
 field_processors_empty = "現在の言語で利用できるフィールド最適化はありません。"
 field_processors_load_failed = "フィールド最適化の読み込みに失敗しました。"
 field_processors_load_error = "読み込みエラー：{error}"
@@ -498,7 +509,7 @@ enable_ocr = "デフォルトで「画像OCR」をチェック"
 enable_ocr_tooltip = "ドキュメントをMDに変換する際、デフォルトで「画像OCR」をチェックします"
 
 # 最適化設定
-optimization_section = "最適化設定"
+optimization_section = "最適化設定（ドキュメントからMarkDown）"
 enable_optimization = "デフォルトで「ドキュメントタイプに合わせて最適化」を有効にする"
 optimization_type_label = "デフォルトの最適化タイプ："
 
@@ -603,7 +614,7 @@ keep_images = "デフォルトで「画像を抽出」をチェック"
 keep_images_tooltip = "レイアウトファイルをMDに変換する際、デフォルトで「画像を抽出」をチェックします"
 enable_ocr = "デフォルトで「画像OCR」をチェック"
 enable_ocr_tooltip = "レイアウトファイルをMDに変換する際、デフォルトで「画像OCR」をチェックします"
-optimization_section = "最適化"
+optimization_section = "最適化（レイアウトからMarkDown）"
 enable_optimization = "デフォルトで「レイアウト種別に最適化」を有効化"
 optimization_type_label = "デフォルト最適化種別："
 dpi_section = "レンダリングDPI設定"

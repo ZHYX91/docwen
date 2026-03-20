@@ -448,3 +448,41 @@ class SpreadsheetTab(BaseSettingsTab):
         except Exception as e:
             logger.error(f"应用表格设置失败: {e}", exc_info=True)
             return False
+
+    def get_reset_ops(self) -> list[tuple[str, str | None, str | None]]:
+        return [
+            ("conversion_defaults", "spreadsheet", "to_md_keep_images"),
+            ("conversion_defaults", "spreadsheet", "to_md_enable_ocr"),
+            ("conversion_defaults", "spreadsheet", "merge_mode"),
+            ("software_priority", "default_priority", "spreadsheet_processors"),
+            ("software_priority", "special_conversions", "ods"),
+            ("software_priority", "special_conversions", "spreadsheet_to_pdf"),
+        ]
+
+    def _reload_ui_from_config(self) -> None:
+        try:
+            sheet_keep = bool(self.config_manager.get_xlsx_to_md_keep_images())
+        except Exception:
+            sheet_keep = True
+        if getattr(self, "sheet_keep_var", None) is not None:
+            self.sheet_keep_var.set(sheet_keep)
+
+        try:
+            sheet_ocr = bool(self.config_manager.get_xlsx_to_md_enable_ocr())
+        except Exception:
+            sheet_ocr = False
+        if getattr(self, "sheet_ocr_var", None) is not None:
+            self.sheet_ocr_var.set(sheet_ocr)
+
+        try:
+            merge_mode = int(self.config_manager.get_spreadsheet_merge_mode())
+        except Exception:
+            merge_mode = 3
+        if getattr(self, "merge_mode_var", None) is not None:
+            self.merge_mode_var.set(merge_mode)
+
+        try:
+            self._load_settings_data(self.config_manager)
+            self._refresh_all_categories()
+        except Exception:
+            pass

@@ -15,7 +15,7 @@ default_mode = "single"         # 默认启动模式："single"（单文件）�
 
 # 窗口尺寸设置
 default_height = 860            # 窗口默认高度
-min_height = 860                # 最小窗口高度
+min_height = 720                # 最小窗口高度
 
 # 窗口行为设置
 auto_center = false             # 是否自动居中窗口

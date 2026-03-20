@@ -352,6 +352,17 @@ applied = "Применено"
 apply_failed = "Ошибка, см. лог"
 apply_error = "Ошибка при применении"
 
+[settings.reset]
+tab_button = "Reset Tab"
+all_button = "Reset All"
+tab_confirm_title = "Confirm Reset"
+tab_confirm_message = "Reset all settings in \"{tab_name}\" tab to defaults? This cannot be undone."
+all_confirm_title = "Confirm Reset All"
+all_confirm_message = "Reset all settings to defaults? (Dictionary data is not affected.) This cannot be undone."
+success = "All settings have been reset to defaults"
+tab_success = "\"{tab_name}\" tab settings have been reset to defaults"
+failed = "Failed to reset settings. Please check the logs."
+
 [settings.errors]
 tab_load_failed_message = "Не удалось загрузить {tab}\n\nОшибка: {error}"
 
@@ -416,7 +427,7 @@ remove_numbering_tooltip = "Удаляет существующую нумера
 add_numbering = "Добавить новую нумерацию"
 scheme_label = "Схема:"
 
-field_processors_section = "Оптимизации полей"
+field_processors_section = "Оптимизации полей (Markdown → Документ)"
 field_processors_empty = "Для текущего языка нет доступных оптимизаций полей."
 field_processors_load_failed = "Не удалось загрузить оптимизации полей."
 field_processors_load_error = "Ошибка загрузки: {error}"
@@ -480,7 +491,7 @@ keep_images_tooltip = "Извлекать изображения при конв
 enable_ocr = "Включить OCR"
 enable_ocr_tooltip = "Распознавание текста для изображений."
 
-optimization_section = "Оптимизация"
+optimization_section = "Оптимизация (Документ → MarkDown)"
 enable_optimization = "Включить оптимизацию"
 optimization_type_label = "Тип:"
 
@@ -574,7 +585,7 @@ keep_images = "Извлекать изображения"
 keep_images_tooltip = "Извлекать изображения."
 enable_ocr = "Включить OCR"
 enable_ocr_tooltip = "Включить OCR."
-optimization_section = "Оптимизация"
+optimization_section = "Оптимизация (Макет → MarkDown)"
 enable_optimization = "Включать \"Оптимизация по типу макета\" по умолчанию"
 optimization_type_label = "Тип оптимизации по умолчанию:"
 dpi_section = "DPI рендеринга"

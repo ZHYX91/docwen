@@ -1143,3 +1143,163 @@ class FormattingTab(BaseSettingsTab):
         except Exception as e:
             logger.error(f"保存格式配置失败: {e}")
             return False
+
+    def get_reset_ops(self) -> list[tuple[str, str | None, str | None]]:
+        return [
+            ("conversion_config", "docx_to_md", "preserve_formatting"),
+            ("conversion_config", "docx_to_md", "preserve_heading_formatting"),
+            ("conversion_config", "docx_to_md", "preserve_table_header_formatting"),
+            ("conversion_config", "md_to_docx", "formatting_mode"),
+            ("conversion_config", "md_to_docx", "heading_formatting_mode"),
+            ("conversion_config", "md_to_docx", "table_header_formatting_mode"),
+            ("conversion_config", "md_to_docx", "heading_merge_mode"),
+            ("conversion_config", "md_to_docx", "list_separator"),
+            ("conversion_config", "syntax", "bold"),
+            ("conversion_config", "syntax", "italic"),
+            ("conversion_config", "syntax", "strikethrough"),
+            ("conversion_config", "syntax", "highlight"),
+            ("conversion_config", "syntax", "superscript"),
+            ("conversion_config", "syntax", "subscript"),
+            ("conversion_config", "syntax", "unordered_list"),
+            ("conversion_config", "syntax", "indent_spaces"),
+            ("conversion_config", "horizontal_rule.docx_to_md", "page_break"),
+            ("conversion_config", "horizontal_rule.docx_to_md", "section_break"),
+            ("conversion_config", "horizontal_rule.docx_to_md", "horizontal_rule"),
+            ("conversion_config", "horizontal_rule.md_to_docx", "dash"),
+            ("conversion_config", "horizontal_rule.md_to_docx", "asterisk"),
+            ("conversion_config", "horizontal_rule.md_to_docx", "underscore"),
+            ("style_table", "md_to_docx", "table_style_mode"),
+            ("style_table", "md_to_docx", "builtin_style_key"),
+            ("style_table", "md_to_docx", "custom_style_name"),
+        ]
+
+    def _reload_ui_from_config(self) -> None:
+        try:
+            preserve_formatting = bool(self.config_manager.get_docx_to_md_preserve_formatting())
+        except Exception:
+            preserve_formatting = True
+        if getattr(self, "preserve_formatting_combo", None) is not None:
+            self.preserve_formatting_combo.set_config_value("true" if preserve_formatting else "false")
+
+        try:
+            preserve_heading = bool(self.config_manager.get_docx_to_md_preserve_heading_formatting())
+        except Exception:
+            preserve_heading = False
+        if getattr(self, "preserve_heading_formatting_combo", None) is not None:
+            self.preserve_heading_formatting_combo.set_config_value("true" if preserve_heading else "false")
+
+        try:
+            preserve_table_header = bool(self.config_manager.get_docx_to_md_preserve_table_header_formatting())
+        except Exception:
+            preserve_table_header = False
+        if getattr(self, "preserve_table_header_formatting_combo", None) is not None:
+            self.preserve_table_header_formatting_combo.set_config_value("true" if preserve_table_header else "false")
+
+        try:
+            hr_docx_to_md = self.config_manager.get_horizontal_rule_docx_to_md_config() or {}
+        except Exception:
+            hr_docx_to_md = {}
+        if getattr(self, "docx_hr_page_break_combo", None) is not None:
+            self.docx_hr_page_break_combo.set_config_value(str(hr_docx_to_md.get("page_break", "---")))
+        if getattr(self, "docx_hr_section_break_combo", None) is not None:
+            self.docx_hr_section_break_combo.set_config_value(str(hr_docx_to_md.get("section_break", "***")))
+        if getattr(self, "docx_hr_horizontal_rule_combo", None) is not None:
+            self.docx_hr_horizontal_rule_combo.set_config_value(str(hr_docx_to_md.get("horizontal_rule", "___")))
+
+        try:
+            bold = self.config_manager.get_syntax_setting("bold", "asterisk")
+            italic = self.config_manager.get_syntax_setting("italic", "asterisk")
+            strikethrough = self.config_manager.get_syntax_setting("strikethrough", "tilde")
+            highlight = self.config_manager.get_syntax_setting("highlight", "double_equal")
+            superscript = self.config_manager.get_syntax_setting("superscript", "caret")
+            subscript = self.config_manager.get_syntax_setting("subscript", "tilde")
+            unordered_list = self.config_manager.get_syntax_setting("unordered_list", "dash")
+            indent_spaces = self.config_manager.get_syntax_setting("indent_spaces", "2")
+        except Exception:
+            bold = "asterisk"
+            italic = "asterisk"
+            strikethrough = "tilde"
+            highlight = "double_equal"
+            superscript = "caret"
+            subscript = "tilde"
+            unordered_list = "dash"
+            indent_spaces = "2"
+
+        if getattr(self, "bold_combo", None) is not None:
+            self.bold_combo.set_config_value(str(bold))
+        if getattr(self, "italic_combo", None) is not None:
+            self.italic_combo.set_config_value(str(italic))
+        if getattr(self, "strikethrough_combo", None) is not None:
+            self.strikethrough_combo.set_config_value(str(strikethrough))
+        if getattr(self, "highlight_combo", None) is not None:
+            self.highlight_combo.set_config_value(str(highlight))
+        if getattr(self, "superscript_combo", None) is not None:
+            self.superscript_combo.set_config_value(str(superscript))
+        if getattr(self, "subscript_combo", None) is not None:
+            self.subscript_combo.set_config_value(str(subscript))
+        if getattr(self, "unordered_list_combo", None) is not None:
+            self.unordered_list_combo.set_config_value(str(unordered_list))
+        if getattr(self, "indent_spaces_combo", None) is not None:
+            self.indent_spaces_combo.set_config_value(str(indent_spaces))
+
+        try:
+            formatting_mode = self.config_manager.get_md_to_docx_formatting_mode()
+        except Exception:
+            formatting_mode = "apply"
+        if getattr(self, "formatting_mode_combo", None) is not None:
+            self.formatting_mode_combo.set_config_value(str(formatting_mode))
+
+        try:
+            heading_formatting_mode = self.config_manager.get_md_to_docx_heading_formatting_mode()
+        except Exception:
+            heading_formatting_mode = "remove"
+        if getattr(self, "heading_formatting_mode_combo", None) is not None:
+            self.heading_formatting_mode_combo.set_config_value(str(heading_formatting_mode))
+
+        try:
+            table_header_mode = self.config_manager.get_md_to_docx_table_header_formatting_mode()
+        except Exception:
+            table_header_mode = "remove"
+        if getattr(self, "table_header_formatting_mode_combo", None) is not None:
+            self.table_header_formatting_mode_combo.set_config_value(str(table_header_mode))
+
+        try:
+            heading_merge_mode = self.config_manager.get_md_to_docx_heading_merge_mode()
+        except Exception:
+            heading_merge_mode = "punct_required"
+        if getattr(self, "heading_merge_mode_combo", None) is not None:
+            self.heading_merge_mode_combo.set_config_value(str(heading_merge_mode))
+
+        try:
+            separator = self.config_manager.get_yaml_list_separator()
+        except Exception:
+            separator = "、"
+        if getattr(self, "list_separator_var", None) is not None:
+            self.list_separator_var.set(str(separator))
+
+        try:
+            hr_md_to_docx = self.config_manager.get_horizontal_rule_md_to_docx_config() or {}
+        except Exception:
+            hr_md_to_docx = {}
+        if getattr(self, "md_hr_dash_combo", None) is not None:
+            self.md_hr_dash_combo.set_config_value(str(hr_md_to_docx.get("dash", "page_break")))
+        if getattr(self, "md_hr_asterisk_combo", None) is not None:
+            self.md_hr_asterisk_combo.set_config_value(str(hr_md_to_docx.get("asterisk", "section_break")))
+        if getattr(self, "md_hr_underscore_combo", None) is not None:
+            self.md_hr_underscore_combo.set_config_value(str(hr_md_to_docx.get("underscore", "horizontal_rule_1")))
+
+        try:
+            style_mode = self.config_manager.get_table_style_mode()
+            builtin_key = self.config_manager.get_builtin_table_style_key()
+            custom_name = self.config_manager.get_custom_table_style_name()
+        except Exception:
+            style_mode = "builtin"
+            builtin_key = ""
+            custom_name = ""
+
+        if getattr(self, "table_style_mode_var", None) is not None:
+            self.table_style_mode_var.set(str(style_mode))
+        if getattr(self, "builtin_style_combo", None) is not None:
+            self.builtin_style_combo.set_config_value(str(builtin_key))
+        if getattr(self, "custom_style_var", None) is not None:
+            self.custom_style_var.set(str(custom_name))
