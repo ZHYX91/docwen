@@ -208,8 +208,9 @@ package manifest/binary digest.
 - Capability discovery exposes output cardinality, artifact kinds, possible relations, options schema, dependency
   availability, and limitations without requiring a conversion.
 
-The current source/package/consumer results are local non-candidate evidence. Any schema, capability, consumer,
-adapter, or packaging-input change invalidates the affected result and requires the corresponding gate to rerun.
+The 0.9.0 package and the 2.0.0 consumer releases record the hosted release evidence for this contract. Any schema,
+capability, consumer, adapter, or packaging-input change invalidates the affected result and requires the corresponding
+gate to rerun.
 
-当前源码/包/消费者结果属于本地非候选证据。schema、capability、消费者、adapter 或打包输入变化后，
-受影响结果立即失效并须重跑相应门。
+0.9.0 包与两个 2.0.0 消费者 Release 已记录本合同的托管发布证据。schema、capability、消费者、adapter
+或打包输入变化后，受影响结果立即失效并须重跑相应门。

@@ -22,6 +22,7 @@ def test_vis155_keeps_the_existing_lint_gate_strict_and_reachable() -> None:
     workflow = _read(".github/workflows/tests.yml")
     ruff = pyproject["tool"]["ruff"]
 
+    assert "workflow_dispatch:" in workflow
     assert ruff["line-length"] == 120
     assert ruff["target-version"] == "py312"
     assert ruff["extend-exclude"] == ["assets", "templates", "configs", ".acceptance-runtime"]

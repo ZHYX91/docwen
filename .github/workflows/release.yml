@@ -371,7 +371,14 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 10); do
-            if gh release view "$RELEASE_VERSION" --repo "$GITHUB_REPOSITORY" --json isImmutable >/tmp/final.json 2>/dev/null && [[ "$(jq -r '.isImmutable' /tmp/final.json)" == "true" ]]; then
+            release_status="$(curl --silent --show-error --location --output /tmp/final.json --write-out '%{http_code}' \
+              --header "Accept: application/vnd.github+json" \
+              --header "Authorization: Bearer $GH_TOKEN" \
+              --header "X-GitHub-Api-Version: 2026-03-10" \
+              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_VERSION")"
+            if [[ "$release_status" == "200" ]] && jq --exit-status --arg version "$RELEASE_VERSION" \
+              '.tag_name == $version and .draft == false and .prerelease == false and .immutable == true and ((.published_at | type) == "string") and ((.published_at | length) > 0)' \
+              /tmp/final.json >/dev/null; then
               break
             fi
             test "$attempt" -lt 10

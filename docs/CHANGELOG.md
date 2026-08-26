@@ -3,7 +3,12 @@
 - 本文档只记录版本演进和对外可见变更，不作为当前功能边界、架构约束或规范条款的事实源。
 - 长期有效的项目说明以 README 体系为准，设计与维护边界以 `docs/architecture.md` 为准，强约束规则以 `docs/specs/` 为准。
 
-## 0.9.0 (Unreleased)
+## Unreleased / 未发布
+
+- 发布后的治理维护改用 GitHub REST `immutable: true` 字段复核不可变 Release，避免依赖已移除的 GraphQL 字段，并为普通 CI 增加手动恢复入口。
+- Post-release governance now verifies immutable Releases through the GitHub REST `immutable: true` field instead of the removed GraphQL field and adds a manual recovery trigger for ordinary CI.
+
+## 0.9.0 (2026-08-26)
 
 ### 破坏性变化（中文）
 
@@ -22,7 +27,7 @@
   `docwen_cli`/公开 protocol 3 边界与 typed outcomes（`dependency_missing`、`conversion_failed`、
   `operation_cancelled`），不再直接导入旧内部模块。
 - Windows 打包 CLI 与源码 CLI 使用同一 fixture 验证；DocWen Assistant 2.0 和 OpenClaw 2.0
-  仍须在最终 0.9 候选冻结后分别完成组合验证，当前未发布章节不把旧候选证据当作最终结论。
+  已分别通过针对不可变 DocWen 0.9.0 Release 的组合发布门禁。
 - 脚注/尾注 Markdown 合同统一为 `[^id]`、`[^footnote:id]` 与 `[^endnote:id]`；已废弃的
   `[^endnote-id]` 输入会被拒绝。两类注释按首次引用独立编号，缺失、重复或规范化冲突安全失败。
 
@@ -59,15 +64,14 @@
   (`dependency_missing`, `conversion_failed`, and `operation_cancelled`) instead of importing legacy
   internal modules.
 - Source and packaged CLIs use the same contract fixtures. DocWen Assistant 2.0 and OpenClaw 2.0
-  still require separate combination validation after the final 0.9 candidate is frozen; evidence from
-  superseded local candidates is not a final result.
+  each passed their combination release gates against the immutable DocWen 0.9.0 Release.
 - Markdown notes now use `[^id]` or `[^footnote:id]` for footnotes and `[^endnote:id]` for endnotes;
   the retired `[^endnote-id]` input is rejected. Each note domain numbers by first reference and
   fails closed on missing, duplicate, or normalized-collision definitions.
 
 Update all CLI scripts and integrations when upgrading from `0.8.x`; no legacy command compatibility
 layer is provided. The final artifacts, supported platforms, code-signing status, and known boundaries
-will be listed in the `0.9.0` Release notes.
+are listed in the `0.9.0` Release notes.
 
 ### Other changes (English)
 

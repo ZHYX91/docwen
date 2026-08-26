@@ -6,8 +6,8 @@ DocWen 0.9 正式发布一个 Windows x64 完整包和两个 Ubuntu 24.04 x64 �
 
 | Platform / 平台 | 0.9 distribution status / 发行状态 | Evidence boundary / 证据边界 |
 | --- | --- | --- |
-| Windows x64 | Public release target / 正式发布目标 | Exact packaged candidate plus automated and manual Windows acceptance / 精确打包候选及 Windows 自动与人工验收 |
-| Ubuntu 24.04 x64 | Public release target / 正式发布目标 | Exact manifest-bound package, post-extract automation and Ubuntu desktop acceptance / 精确清单绑定包、解压后自动化及 Ubuntu 桌面验收 |
+| Windows x64 | Published in 0.9.0 / 已随 0.9.0 发布 | Exact packaged candidate plus automated and manual Windows acceptance / 精确打包候选及 Windows 自动与人工验收 |
+| Ubuntu 24.04 x64 | Published in 0.9.0 / 已随 0.9.0 发布 | Exact manifest-bound package, post-extract automation and Ubuntu desktop acceptance / 精确清单绑定包、解压后自动化及 Ubuntu 桌面验收 |
 | macOS x64/arm64 | No 0.9 release asset / 无 0.9 正式附件 | Source CI and opt-in packaging experiment only; primary document operations are unavailable / 仅源码 CI 与手动打包实验，主要文档操作不可用 |
 
 ## Required contents / 必需内容
@@ -30,6 +30,10 @@ The Windows production builder limits PyInstaller's DLL search path to the clean
 Windows 生产构建器把 PyInstaller 的 DLL 搜索路径限制为干净项目环境、清单验证过的 CPython 基础目录和 Windows 系统目录。载荷禁止包含由宿主偶然选中的 `api-ms-win-*` 转发 DLL 与 `ucrtbase.dll`，这些系统组件由受支持的 Windows 提供；随包发布的四个 MSVC 运行库文件则在冻结载荷白名单检查前统一替换为锁定 `pikepdf` wheel 中的副本。
 
 ## Release gates / 发布门禁
+
+Repository settings must enable Immutable Releases and an active no-update/no-delete ruleset for numeric `x.y.z`
+tags before a version tag is pushed. 仓库设置必须在推送版本标签前启用 Immutable Releases，并启用禁止更新或
+删除数字 `x.y.z` 标签的 ruleset。
 
 The hosted GitHub Release workflow enforces this deterministic baseline before publishing one Windows archive and two Ubuntu 24.04 x64 archives:
 

@@ -53,8 +53,8 @@ Changelog: see [CHANGELOG.md](docs/CHANGELOG.md)
 
 **Prerequisites**: Python 3.12
 
-**0.9 target boundary**: This source checkout builds one Windows x64 GUI+CLI package and separate
-Ubuntu 24.04 x64 GUI+CLI and CLI-only packages. No 0.9 Release is published yet. Other Linux
+**0.9 release boundary**: The [0.9.0 Release](https://github.com/ZHYX91/docwen/releases/tag/0.9.0) publishes one Windows x64 GUI+CLI package and separate
+Ubuntu 24.04 x64 GUI+CLI and CLI-only packages. Other Linux
 distributions and macOS remain source/development paths and are not implied by the Ubuntu package.
 
 **Option 1: Using uv (Recommended)**
@@ -74,8 +74,8 @@ DocWen 0.9's source/test/build contract is the checked-in lock with exactly `uv 
 
 On the Windows packaged release, double-click `DocWen.exe` to start the graphical interface. On
 Ubuntu 24.04 x64, extract `DocWen-0.9.0-linux-x64.tar.gz` and run `./DocWen`; the companion
-`DocWenCLI-0.9.0-linux-x64.tar.gz` is the CLI-only package. These assets become installable only
-after the 0.9.0 Release is published. If installed from source, run:
+`DocWenCLI-0.9.0-linux-x64.tar.gz` is the CLI-only package. These assets are installable from the
+immutable 0.9.0 Release. If installed from source, run:
 
 ```bash
 docwen-gui  # GUI mode
