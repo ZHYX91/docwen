@@ -1,0 +1,110 @@
+{
+  "golden_id": "GOLDEN-006",
+  "case_id": "old_system_cli_batch_mixed_invalid_stream_contract",
+  "source": "2026-07-02 local source-tree stubbed old CLI probes against docwen-ref-tk and docwen-ref-pyside6",
+  "input_files": [
+    "sample.docx",
+    "sheet.xlsx",
+    "notes.bad"
+  ],
+  "probe_scope": "CLI validation and batch JSON stream shape only; conversion execution was stubbed to avoid external Office dependencies.",
+  "projects": {
+    "docwen-ref-tk": {
+      "exit_code": 0,
+      "stdout_json_payload": {
+        "schema_version": 2,
+        "success": true,
+        "command": "convert",
+        "data": {
+          "action": "convert",
+          "total": 2,
+          "processed_count": 2,
+          "success_count": 2,
+          "failed_count": 0,
+          "interrupted": false,
+          "results": [
+            {
+              "file": "sample.docx",
+              "success": true,
+              "output_file": "out-docx",
+              "message": "ok",
+              "duration": 0.0,
+              "metadata": {}
+            },
+            {
+              "file": "sheet.xlsx",
+              "success": true,
+              "output_file": "out-xlsx",
+              "message": "ok",
+              "duration": 0.0,
+              "metadata": {}
+            }
+          ]
+        },
+        "error": null,
+        "warnings": [],
+        "timing": null
+      },
+      "stdout_note": "The local Tk probe emitted config-manager debug lines before the JSON payload; comparison must extract the JSON object from stdout.",
+      "stderr_contains": [
+        "1",
+        "notes.bad",
+        "unsupported"
+      ],
+      "execute_batch_valid_files": [
+        "sample.docx",
+        "sheet.xlsx"
+      ],
+      "invalid_files_enter_results": false
+    },
+    "docwen-ref-pyside6": {
+      "exit_code": 0,
+      "stdout_json_payload": {
+        "schema_version": 2,
+        "success": true,
+        "command": "convert",
+        "data": {
+          "action": "convert",
+          "total": 2,
+          "processed_count": 2,
+          "success_count": 2,
+          "failed_count": 0,
+          "interrupted": false,
+          "results": [
+            {
+              "file": "sample.docx",
+              "success": true,
+              "output_file": "out-docx",
+              "message": "ok",
+              "duration": 0.0,
+              "metadata": {}
+            },
+            {
+              "file": "sheet.xlsx",
+              "success": true,
+              "output_file": "out-xlsx",
+              "message": "ok",
+              "duration": 0.0,
+              "metadata": {}
+            }
+          ]
+        },
+        "error": null,
+        "warnings": [],
+        "timing": null
+      },
+      "stdout_note": "The local PySide6 probe emitted a clean JSON payload on stdout.",
+      "stderr_contains": [
+        "1",
+        "notes.bad",
+        "unsupported"
+      ],
+      "execute_batch_valid_files": [
+        "sample.docx",
+        "sheet.xlsx"
+      ],
+      "invalid_files_enter_results": false
+    }
+  },
+  "comparison_implication": "Current v2 execute_batch_mixed_summary.json intentionally records the invalid input as a failed result with total=3; old systems filter the invalid file before execute_batch and report it on stderr while stdout JSON covers only the two valid files."
+}

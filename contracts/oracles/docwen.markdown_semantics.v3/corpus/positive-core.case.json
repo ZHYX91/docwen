@@ -1,0 +1,15 @@
+{
+  "case_id": "positive-core",
+  "category": "positive",
+  "input_id": "positive-core.md",
+  "source": "# Introduction ^section-a\n\nFigure: System architecture ^visual-a\n\n![[image.png]] ^raw-image\n\nSee [[Paper#^raw-image]], ![[Paper#^raw-image]], @[[#^visual-a|System architecture]], @[[#Introduction|Introduction]], @fig-legacy and [@smith; @wang].\n",
+  "expected": {
+    "target_kind_ids": [["heading", "section-a"], ["figure", "visual-a"]],
+    "anchor_kind_ids": [["raw-image", "image", "inline"]],
+    "link_kinds": ["embed", "link", "embed"],
+    "reference_statuses": ["resolved", "resolved"],
+    "citation_keys": ["fig-legacy", "smith", "wang"],
+    "diagnostics": [],
+    "source_unchanged": true
+  }
+}

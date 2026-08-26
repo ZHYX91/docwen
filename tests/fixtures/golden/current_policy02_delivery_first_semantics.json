@@ -1,0 +1,118 @@
+{
+  "golden_id": "POLICY-02",
+  "stage": "VIS-2026-07-23-203",
+  "created_at": "2026-07-23",
+  "status": "PASS_WITH_USER_ACCEPTED_BOUNDARY",
+  "user_selection": "POLICY-02 link=B,password=B",
+  "scope": "Direct XLSX-to-ODS delivery-first handling for external workbook formulas and workbook or sheet password protection",
+  "source_corpus": {
+    "reused_stage": "VIS-2026-07-17-115",
+    "root": "D:/docwen-parity/vis115-poi-xlsx-link-protection-435bb86-v1/source",
+    "files": {
+      "link-external-workbook-a.xlsx": "930049ddea88c58fbef66620fcba333790aed8da9a003ab209da6955fee1f5c2",
+      "link-external-workbook-b.xlsx": "6e0e5c2aa3bf870cfeba03cb2350c312c639f2875b6501029d0bc134916b2361",
+      "workbookProtection-workbook_password-2013.xlsx": "0ca1ab7d0e90087316072f89d181067c91c170f0718b109a8ee20867b23c58c2",
+      "workbookProtection-sheet_password-2013.xlsx": "829b200dfdb5047764edd88201e565036ddeb45b70f0796e4b45dad5ada2666f",
+      "sheetProtection_allLocked.xlsx": "ea89db75ac2ab78d1dced2ccd6f57d8ad200f015ac9e49b988f1a9df2fc36d83"
+    },
+    "source_immutability": true
+  },
+  "request_contract": {
+    "password_key": "spreadsheet_password",
+    "password_request_scoped_and_redacted": true,
+    "consent_key": "allow_spreadsheet_protection_loss",
+    "consent_explicit_and_default_false": true,
+    "batch_password_reuse": false
+  },
+  "diagnostic_contract": {
+    "external_link_success": "EXTERNAL_LINK_FLATTENED",
+    "protection_removed_success": "PROTECTION_REMOVED_FOR_TARGET",
+    "password_missing": "PROTECTION_PASSWORD_REQUIRED",
+    "password_invalid": "PROTECTION_PASSWORD_INVALID",
+    "consent_missing": "PROTECTION_LOSS_CONSENT_REQUIRED",
+    "installed_backend_failure": "SHEETFMT-BACKEND-FAILED",
+    "backend_unavailable": "SHEETFMT-BACKEND"
+  },
+  "fixed_oracle": {
+    "backend": {
+      "msoffice_excel": {
+        "available": true,
+        "matrix_expected": 11,
+        "matrix_passed": 11
+      },
+      "libreoffice": {
+        "available": false,
+        "counted_as_pass": false,
+        "detail": "soffice not found"
+      }
+    },
+    "link_target_present": {
+      "success": true,
+      "cached_value": 30,
+      "external_formula_or_link": false,
+      "ref_error": false,
+      "absolute_file_uri": false
+    },
+    "link_target_absent": {
+      "success": true,
+      "same_semantic_projection": true,
+      "target_accessed": false
+    },
+    "workbook_and_sheet_password_cases": {
+      "correct_password_with_consent_passed": 2,
+      "missing_password_rejected": 2,
+      "wrong_password_rejected": 2,
+      "correct_password_without_consent_rejected": 2,
+      "published_ods_unprotected": true
+    },
+    "no_password_control": {
+      "success": true,
+      "protection_preserved": true,
+      "protection_loss_warning": false
+    },
+    "cli": {
+      "expected": 3,
+      "passed": 3,
+      "typed_failure_details": true,
+      "credential_redacted": true
+    },
+    "gui": {
+      "expected": 1,
+      "passed": 1,
+      "password_masked": true,
+      "password_cleared_after_emit": true,
+      "durable_context_redacted": true,
+      "warning_history_visible": true
+    },
+    "pass_threshold": "100% of every applicable configured backend and cross-surface slot",
+    "pass": true
+  },
+  "three_project_interpretation": {
+    "tk_and_old_pyside6_rerun": false,
+    "reused_baseline": "VIS-115",
+    "legacy_behavior": "The reference routes rely on backend behavior and provide no shared cached-value flattening, request-scoped credential, explicit protection-loss consent, or typed cross-surface warning contract.",
+    "current_behavior": "Current converts a private transformed copy, delivers cached external values offline, removes validated password protection only with explicit consent, and reports irreversible loss.",
+    "classification": "Delivery-first truth is an intentional current improvement over the reference silence and generic backend failure."
+  },
+  "accepted_boundary": {
+    "classification": "USER_ACCEPTED_BOUNDARY",
+    "statement": "External links become static cached values and cannot receive future updates. Password-protected workbook or sheet controls are removed only from a private conversion copy after a correct request-scoped password and explicit loss consent; the published ODS is intentionally unprotected.",
+    "not_claimed": [
+      "future external-link updates",
+      "live linked-workbook identity",
+      "password protection in the ODS result",
+      "LibreOffice execution on the current host"
+    ]
+  },
+  "external_evidence": {
+    "root": "D:/docwen-parity/vis203-policy02-flatten-unlock-7785875-v6",
+    "files": 9,
+    "bytes": 43683,
+    "ods_files": 7,
+    "result_file": "result.json",
+    "result_bytes": 19031,
+    "result_sha256": "45636c4146725331a779969ef0e0e3b79d7bd3ae2ed80bccde0a6378660c8ee8",
+    "binaries_checked_in": false
+  },
+  "completion_effect": "POLICY-02 link=B,password=B is closed for its frozen corpus and oracle. POLICY-03, unrelated completion-contract blockers, packaged physical UX, unavailable LibreOffice execution, and overall parity remain NOT PASSED YET."
+}

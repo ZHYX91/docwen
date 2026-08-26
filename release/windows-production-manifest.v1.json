@@ -1,0 +1,247 @@
+{
+  "schemaVersion": 1,
+  "manifestId": "docwen-windows-production",
+  "product": {
+    "name": "DocWen",
+    "version": "0.9.0",
+    "stableSemverOnly": true,
+    "cliJsonProtocolVersion": 3,
+    "releaseTagFormat": "{version}"
+  },
+  "target": {
+    "os": "windows",
+    "arch": "x86_64",
+    "platformTag": "win-x64"
+  },
+  "sourceContracts": {
+    "versionProjectionPaths": [
+      "pyproject.toml",
+      "packages/core/pyproject.toml",
+      "packages/application/pyproject.toml",
+      "packages/runtime/pyproject.toml",
+      "packages/bundle/pyproject.toml",
+      "packages/apps/cli/pyproject.toml",
+      "packages/apps/gui/pyproject.toml"
+    ],
+    "protocol": {
+      "path": "packages/apps/cli/src/docwen_cli/protocol.py",
+      "sha256": "e9a29d849b6f3f1a2d96d7c61b9650d3ae713c741229bb1e00eb8acf69562e34"
+    },
+    "schema": {
+      "path": "docs/specs/json-contracts.schema.json",
+      "sha256": "b02e588b9e329a39c5bdbbe6975fa157f9b4c5e977d8a304291f27ea02c0ae06"
+    },
+    "fixtures": [
+      {
+        "path": "tests/fixtures/golden/cli_protocol_v3_success.json",
+        "sha256": "b143d7651e63d655f678c46b01d4f8439566cabd101360d40395209e56b4e683"
+      },
+      {
+        "path": "tests/fixtures/golden/cli_protocol_v3_error.json",
+        "sha256": "621d9a989c9174c340c5f8358bff7c0c709793528ccd93f9599ba7946bc01803"
+      },
+      {
+        "path": "tests/fixtures/golden/cli_protocol_v3_batch.json",
+        "sha256": "5252ca264dfd9b3d7d39cdcdd042618a6fa6cb7c5671b0f5951c9d59759ffbc2"
+      }
+    ],
+    "machineContractFiles": [
+      {
+        "path": "contracts/schemas/docwen.machine.v1.schema.json",
+        "sha256": "fa3ce3409d3f8dd30ddf1ceea626e452d82497b2685fde985b7819e5a8a3f409"
+      },
+      {
+        "path": "contracts/schemas/docwen.machine.diagnostic_evidence.v1.schema.json",
+        "sha256": "e9e62faed773ce503923eb004ed3b4660861a012a7f5bab0753456a807c36303"
+      },
+      {
+        "path": "contracts/schemas/docwen.artifact_bundle.v2.schema.json",
+        "sha256": "027c6f324ec4677b731aa5e5c4c2340b06b78f0ad0116e4d2ef2b9d8e4246265"
+      },
+      {
+        "path": "contracts/schemas/docwen.proofread_report.v2.schema.json",
+        "sha256": "ff5bd9e88c3a34ea15f05fa0d4a2b49136013ca0f4074fb0600eb560ea98a8b4"
+      },
+      {
+        "path": "contracts/schemas/docwen.semantic_bibliography.v1.schema.json",
+        "sha256": "fdb25f27fc750f683aea9f6b7364437e8e0b832fa7d03f45b531bc938832b373"
+      },
+      {
+        "path": "contracts/conformance-manifest.json",
+        "sha256": "cc86429f4421ecbeeafc72cda6bc206d89737e8a8ec816de5104a36cd4aaefa1"
+      },
+      {
+        "path": "contracts/fixtures/valid/semantic-bibliography.rich.json",
+        "sha256": "0131cd535a3b7757daf282b2f89e18ac641cf00e63b8d754383ca80f27aefccd"
+      },
+      {
+        "path": "contracts/fixtures/invalid/semantic-bibliography.unknown-field.json",
+        "sha256": "2e4514d52bc4805db6931a9602ae1272bfc52dce2833a701901c7a62be02d67e"
+      },
+      {
+        "path": "contracts/fixtures/valid/machine.capability-list.response.json",
+        "sha256": "7d5d39866a2f43b52876ea091a21c41ecff51c1b2082a3d49155c3ab909abfdc"
+      },
+      {
+        "path": "contracts/fixtures/valid/machine.task-lifecycle.trace.json",
+        "sha256": "b48ba56604e518c9a03abcec41dd04d59691ed6f38e9fc1b5dd24c0cb72839c7"
+      },
+      {
+        "path": "contracts/fixtures/valid/machine.v4-diagnostic-evidence.trace.json",
+        "sha256": "7bddf90e17ec7bb111f25b2652de18360095ffa27e4a6bf90d0b162f9e1f3532"
+      },
+      {
+        "path": "contracts/fixtures/valid/artifact-bundle.ocr.json",
+        "sha256": "365a191b81e70be11afbe01389dddd0a8eb99e9970374f3ed57a164eaeec25c4"
+      },
+      {
+        "path": "contracts/fixtures/invalid/artifact-bundle.missing-page-fragment-semantics.json",
+        "sha256": "e9ed754fe6c649a549caa8f99c8ea5cd56012c15063a97c3e9d73ac9dc5d83c9"
+      },
+      {
+        "path": "contracts/fixtures/invalid/artifact-bundle.unexpected-page-semantics.json",
+        "sha256": "9b2cc7eb016d79ebd58c33b27d2aedbc61ad74dc80b6770f0d1f35d09eceeb08"
+      },
+      {
+        "path": "contracts/fixtures/invalid/artifact-bundle.invalid-page-range.json",
+        "sha256": "b897d371173f208253d1226e5cf82fb4d756d6564726b8bf854f88148caf17ad"
+      },
+      {
+        "path": "contracts/fixtures/invalid/artifact-bundle.page-ordinal-mismatch.json",
+        "sha256": "eb73c07949e9d24e4d41831e6ec67bfd3f5fa59d66822f2850c0b18a9b589c5e"
+      },
+      {
+        "path": "contracts/fixtures/invalid/artifact-bundle.page-count-mismatch.json",
+        "sha256": "a688d63c9a05b409d8e84725aa5e01efead2e3c12420ccee2a88acd76d607998"
+      },
+      {
+        "path": "contracts/fixtures/invalid/artifact-bundle.duplicate-page-index.json",
+        "sha256": "651839e2fc1238d9ee777d140f81ee76752b2e1647e9a0ecb779229df65bea44"
+      },
+      {
+        "path": "contracts/fixtures/invalid/artifact-bundle.incomplete-page-sequence.json",
+        "sha256": "7e94a6e92ca320fca9dd001112b1d0b9a85c75150d2a9c38d1f7fc5cf6c6c5a6"
+      },
+      {
+        "path": "contracts/fixtures/invalid/artifact-bundle.page-source-mismatch.json",
+        "sha256": "bbcfcef22843fad4b28990f974a33bb5e7667b761ac2333b8cbb926c1d52978e"
+      },
+      {
+        "path": "contracts/fixtures/invalid/artifact-bundle.resource-page-mismatch.json",
+        "sha256": "4b85e5013270a050c089bf3b54e349d8211a16db028185019f567bb7dc62bcbb"
+      },
+      {
+        "path": "contracts/fixtures/invalid/artifact-bundle.page-semantics-unknown-field.json",
+        "sha256": "d2955aaf6251e62e38d7c59de7fc2cfbaa7585adc839a27975ccecce841e53bd"
+      },
+      {
+        "path": "contracts/fixtures/invalid/artifact-bundle.duplicate-relation-ordinal.json",
+        "sha256": "e46cf9fdc320d6625de7161839b89ce0958e9a6463761f07b9ad9d92635a3897"
+      },
+      {
+        "path": "contracts/fixtures/invalid/machine.dangling-diagnostic-artifact.trace.json",
+        "sha256": "020b960ac58a38b47e258caca7cebc16256e0f6f4f105d29c3ca625e9a4832db"
+      },
+      {
+        "path": "contracts/fixtures/invalid/machine.partial-diagnostic-evidence.json",
+        "sha256": "ff411ade8d306c09fa8e11665ea7183c5172ff8b6fceb920fc5409497897486a"
+      },
+      {
+        "path": "contracts/fixtures/invalid/machine.duplicate-input-logical-path.trace.json",
+        "sha256": "011e84a387f1634914611ac3b50a4f51fe80c1e1861a15e06807603aa6a9bf9c"
+      },
+      {
+        "path": "contracts/fixtures/invalid/machine.input-slot-cardinality-mismatch.trace.json",
+        "sha256": "92553ec72ac3e9022bffc64f309a221a89d153acd03ee39c0d118be9b89158e4"
+      },
+      {
+        "path": "contracts/fixtures/invalid/machine.input-slot-kind-mismatch.trace.json",
+        "sha256": "d68c2d7d720580b45eab1750eac1ad2d17d3da5eca734d99433f1f718f299112"
+      },
+      {
+        "path": "contracts/fixtures/invalid/machine.input-slot-media-type-mismatch.trace.json",
+        "sha256": "759460636d051d13e052473c3903ae78dee6b9c36a2b7857438189c50ac922cc"
+      },
+      {
+        "path": "contracts/fixtures/invalid/machine.invalid-input-logical-path.trace.json",
+        "sha256": "1d0cc728a80d45de62799d2dd404e9873be465b28a03fa93b39fd6faedb6845a"
+      },
+      {
+        "path": "contracts/fixtures/invalid/machine.undeclared-input-role.trace.json",
+        "sha256": "d2badf1390584df8b7a226d287d887fb9950cc2a4ba8a3cb216df6f7df74a1a8"
+      }
+    ]
+  },
+  "build": {
+    "mode": "pure-python",
+    "entry": "scripts/release/build_production_candidate.py",
+    "primitive": "scripts/build/build.py",
+    "network": "offline",
+    "sourceMustBeClean": true,
+    "outputsMustBeOutsideSource": true,
+    "environment": {
+      "PYTHONHASHSEED": "0",
+      "TZ": "UTC",
+      "DOCWEN_GUI_DISABLE_STATE_SAVE": "1"
+    },
+    "reproducibilityEpoch": 1704067200
+  },
+  "toolchain": {
+    "python": {
+      "implementation": "CPython",
+      "fullVersion": "3.12.13",
+      "arch": "x86_64",
+      "baseExecutableSha256": "02c3bcf63782cc34665ff39ea73d029128ef0849c5a67fe4bbb03748a63fb4f1"
+    },
+    "uv": {
+      "version": "0.12.0",
+      "build": "b88d7c5c4",
+      "binarySha256": "268cd62b99395eb53825795518e067e4b27ec4b445175df343824689f307c807"
+    },
+    "lock": {
+      "path": "uv.lock",
+      "sha256": "2a906b61e39042afaad046af49c2c89db7eac2907d781d2888d2e5e96d8ba305"
+    },
+    "pyinstallerVersion": "6.16.0"
+  },
+  "payload": {
+    "layout": "unified-gui-cli-onedir",
+    "rootExecutables": [
+      "DocWen.exe",
+      "DocWenCLI.exe"
+    ],
+    "excluded": [
+      "assets/screenshots/**"
+    ],
+    "readmeSourceGlob": "docs/user-guides/README.*.md",
+    "allowlist": {
+      "path": "release/windows-payload-allowlist.v1.json",
+      "status": "FROZEN",
+      "sha256": "0f05c33fd3efb19f7ecd1d4b7e864a0f87f438366faff437344f388309f60d00",
+      "rejectMissing": true,
+      "rejectUnexpected": true,
+      "rejectCaseFoldCollision": true,
+      "rejectLinksAndNonRegular": true
+    }
+  },
+  "channels": {
+    "offlineZip": {
+      "assetName": "DocWen-windows-x64.zip",
+      "entryOrder": "utf8-byte-lexicographic",
+      "timestamp": "fixed-reproducibility-epoch",
+      "fileModes": "0644-and-0755",
+      "compression": "deflate-9",
+      "comment": ""
+    },
+    "releaseChecksums": {
+      "assetName": "SHA256SUMS.txt",
+      "algorithm": "sha256"
+    }
+  },
+  "releaseAssetAllowlist": [
+    "DocWen-windows-x64.zip",
+    "DocWenCLI-0.9.0-linux-x64.tar.gz",
+    "DocWen-0.9.0-linux-x64.tar.gz",
+    "SHA256SUMS.txt"
+  ]
+}

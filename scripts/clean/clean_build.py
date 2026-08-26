@@ -75,6 +75,19 @@ def clean_spec_files(project_root):
     return deleted_count
 
 
+_SKIP_DIR_NAMES = {
+    ".git",
+    ".venv",
+    ".workspace-links",
+    "build",
+    "dist",
+    "env",
+    "gui_tk",
+    "node_modules",
+    "venv",
+}
+
+
 def clean_egg_info_dirs(project_root):
     """清理 *.egg-info/ 目录（setuptools 生成的元数据）"""
     print("\n" + "=" * 50)
@@ -83,6 +96,7 @@ def clean_egg_info_dirs(project_root):
 
     egg_info_dirs = []
     for root, dirs, _files in os.walk(project_root):
+        dirs[:] = [d for d in dirs if d not in _SKIP_DIR_NAMES]
         for d in dirs:
             if d.endswith(".egg-info"):
                 egg_info_dirs.append(os.path.join(root, d))
@@ -110,7 +124,6 @@ def clean_package_files(project_root):
     target_files = []
     for pattern in patterns:
         target_files.extend(glob.glob(os.path.join(project_root, pattern)))
-        target_files.extend(glob.glob(os.path.join(project_root, "dist", pattern)))
 
     if not target_files:
         print("未找到 *.egg / *.whl 文件")

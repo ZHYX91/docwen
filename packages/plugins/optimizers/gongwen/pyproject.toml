@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "docwen-plugin-optimizer-gongwen"
+version = "0.1.0"
+description = "DocWen optimizer: Chinese official document (公文) recognition"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "docwen-core>=0.1.0",
+    "python-docx>=1.2.0",
+    "lxml>=6.0.2",
+    "PyYAML>=6.0.2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/docwen_plugin_optimizer_gongwen"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

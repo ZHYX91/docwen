@@ -1,0 +1,178 @@
+{
+  "golden_id": "GOLDEN-004",
+  "evidence_id": "VIS-2026-07-15-032",
+  "scope": "Three-project English OCR quality comparison over a deterministic five-page slice of the official FUNSD noisy scanned-form test set, plus one current ImagePlugin runtime/finalizer projection.",
+  "source": {
+    "dataset": "FUNSD: A Dataset for Form Understanding in Noisy Scanned Documents",
+    "paper_url": "https://arxiv.org/abs/1905.13538",
+    "project_url": "https://guillaumejaume.github.io/FUNSD/",
+    "download_url": "https://guillaumejaume.github.io/FUNSD/dataset.zip",
+    "retrieved_on": "2026-07-15",
+    "license_boundary": "non-commercial_research_and_educational_use_only",
+    "redistribution": "external_dataset_retained_only_in_workspace_bound_temporary_probe",
+    "zip_bytes": 16838830,
+    "zip_sha256": "c31735649e4f441bcbb4fd0f379574f7520b42286e80b01d80b445649d54761f",
+    "actual_image_count": 199,
+    "training_image_count": 149,
+    "testing_image_count": 50,
+    "selection_rule_fixed_before_execution": "first five non-AppleDouble PNG files from testing_data/images in lexicographic filename order",
+    "selected_page_count": 5,
+    "source_characteristics": [
+      "real forms sampled from RVL-CDIP/Truth Tobacco Industry Documents",
+      "100-DPI grayscale pages",
+      "noise from repeated scanning and printing",
+      "word-level human annotations with bounding boxes"
+    ]
+  },
+  "execution_contract": {
+    "ocr_language": "english",
+    "current_locale": "en_US",
+    "rapidocr_onnxruntime_version": "1.4.4",
+    "onnxruntime_version": "1.24.4",
+    "valid_project_executions": 15,
+    "all_valid_project_executions_successful": true,
+    "docwen_ref_tk_entry": "Production docwen.utils.ocr_utils.extract_text_simple with benchmark-only configured-language injection returning english.",
+    "docwen_ref_pyside6_entry": "Production docwen.utils.ocr_utils.extract_text_simple with benchmark-only configured-language injection returning english.",
+    "docwen_current_entry": "Production docwen_core.text.ocr.run_ocr_outcome with explicit english/en_US.",
+    "model_files_byte_identical_across_three_projects": true,
+    "model_sha256": {
+      "ch_PP-OCRv4_det_infer.onnx": "d2a7720d45a54257208b1e13e36a8479894cb74155a5efe29462512d42f49da9",
+      "en_PP-OCRv4_rec_infer.onnx": "e8770c967605983d1570cdf5352041dfb68fa0c21664f49f47b155abd3e0e318",
+      "ch_ppocr_mobile_v2.0_cls_infer.onnx": "e47acedf663230f8863ff1ab0e64dd2d82b838fceb5957146dab185a89d6215c"
+    }
+  },
+  "quality_metric_contract": {
+    "normalization": "Unicode NFKC plus casefold; exact-token metrics split on Unicode alphanumeric runs, while character metrics compare alphanumeric character multisets to avoid treating form reading-order differences as recognition loss.",
+    "thresholds_fixed_before_results": {
+      "every_page_nonempty": true,
+      "minimum_per_page_normalized_character_f1": 0.6,
+      "minimum_micro_normalized_character_f1": 0.75,
+      "minimum_micro_exact_token_recall": 0.5
+    },
+    "threshold_purpose": "Minimum useful text-reachability gate for noisy scans; not a layout, reading-order, handwriting, or general OCR accuracy claim."
+  },
+  "selected_pages": [
+    {
+      "id": "82092117",
+      "image_sha256": "279654591d7de3745e5efaf39d3be413baab267be7170082d1922690566c5ad1",
+      "annotation_sha256": "4a492dc09486d4aec7c8ed6cfa780e7779f16572db0845f4d2f6c52057d236a8",
+      "image_size": [754, 1000],
+      "annotated_word_count": 223,
+      "output_sha256": "379533ba6250ccfa83af11570faee8031a2716b6bf6e075d789b152fb063469f",
+      "output_utf8_bytes": 1256,
+      "output_line_count": 40,
+      "exact_token_recall": 0.756757,
+      "exact_token_precision": 0.827586,
+      "normalized_character_f1": 0.977121
+    },
+    {
+      "id": "82200067_0069",
+      "image_sha256": "c48d22b3c6692f8b1c08398d66fc9a3f9cc8b5bf0ff6641336228ae3cd117e23",
+      "annotation_sha256": "a6a40b60914548b3df12d27f1a27dd2e356f4131924500f0284f038e0d3d9677",
+      "image_size": [754, 1000],
+      "annotated_word_count": 167,
+      "output_sha256": "a51e46a9058183bab03a208bebee9edbfa8f32a181dac40051de3f66160c0fd6",
+      "output_utf8_bytes": 752,
+      "output_line_count": 69,
+      "exact_token_recall": 0.662252,
+      "exact_token_precision": 0.769231,
+      "normalized_character_f1": 0.95246
+    },
+    {
+      "id": "82250337_0338",
+      "image_sha256": "5b5083f4127a00a212fcc5c1cbb580e9d1851180f4fbb888ca7c5911baa6da4f",
+      "annotation_sha256": "25daa180c7bf67db2b9493bd350c0ecce9811f372e66ff7acef5ab285d264838",
+      "image_size": [754, 1000],
+      "annotated_word_count": 214,
+      "output_sha256": "911c6cbeb744f5236f4b91a8dde0930d5d9a03a0bf1fb016900cc5e1733ed685",
+      "output_utf8_bytes": 1230,
+      "output_line_count": 47,
+      "exact_token_recall": 0.816901,
+      "exact_token_precision": 0.901554,
+      "normalized_character_f1": 0.965213
+    },
+    {
+      "id": "82251504",
+      "image_sha256": "8fd472ccbdbd5349d8fbc6adf52311d69d47651a289b482b9850db20e9c43354",
+      "annotation_sha256": "e89724ad3b5fc8acbf5b06208c49310dc1eea89c36c42d70e5894de9dee74df1",
+      "image_size": [754, 1000],
+      "annotated_word_count": 222,
+      "output_sha256": "5b4b63f094a7f89ecc29a34b081a00c13bcefe8ff0e4cbe11657cfaefcfe9ddf",
+      "output_utf8_bytes": 1328,
+      "output_line_count": 48,
+      "exact_token_recall": 0.891892,
+      "exact_token_precision": 0.887892,
+      "normalized_character_f1": 0.989534
+    },
+    {
+      "id": "82252956_2958",
+      "image_sha256": "ec6f99f85a76659911e73871ca158240d6ac083088b5b88b337609c649e08772",
+      "annotation_sha256": "b9857bc49a8640e0686e71b0d80b00619c06b454c3651829f0a50b1c8583e75e",
+      "image_size": [754, 1000],
+      "annotated_word_count": 108,
+      "output_sha256": "74f493a031a70669c1a7173fe347eb7dee24b9ae7f86ddce4305c07090c2366f",
+      "output_utf8_bytes": 655,
+      "output_line_count": 48,
+      "exact_token_recall": 0.892857,
+      "exact_token_precision": 0.884956,
+      "normalized_character_f1": 0.990291
+    }
+  ],
+  "three_project_result": {
+    "all_five_outputs_byte_identical_across_three_projects": true,
+    "combined_output_text_sha256": "f19d1e73f1bd24be11455b6ba4844d0596250f90464cd5538279c6e62506a975",
+    "micro_exact_token_metrics": {
+      "reference": 920,
+      "predicted": 862,
+      "matched": 748,
+      "recall": 0.813043,
+      "precision": 0.867749,
+      "f1": 0.839506
+    },
+    "micro_normalized_character_metrics": {
+      "reference": 4311,
+      "predicted": 4159,
+      "matched": 4153,
+      "recall": 0.96335,
+      "precision": 0.998557,
+      "f1": 0.980638
+    },
+    "minimum_page_normalized_character_f1": 0.95246,
+    "all_projects_pass_fixed_thresholds": true
+  },
+  "current_only_regression_fixed": {
+    "description": "Both reference extractors explicitly discard confidence scores at or below 0.5; current accepted every parseable result item, allowing low-confidence noise from custom or legacy engines to leak into every OCR-consuming plugin.",
+    "owner": "packages/core/src/docwen_core/text/ocr.py",
+    "direct_test": "packages/core/tests/test_ocr.py::test_run_ocr_filters_low_confidence_results_like_old_projects",
+    "red_result": "current emitted box at threshold, legacy low and legacy unknown in addition to trusted lines",
+    "post_fix_policy": "numeric confidence must be greater than 0.5 for both box/text/score and legacy text/score shapes; numeric strings are accepted and unknown or non-finite NaN scores are rejected",
+    "real_corpus_output_unchanged_after_fix": true,
+    "post_fix_combined_output_text_sha256": "f19d1e73f1bd24be11455b6ba4844d0596250f90464cd5538279c6e62506a975"
+  },
+  "current_runtime_projection": {
+    "representative_page": "82092117.png",
+    "entry": "ImagePlugin -> TaskManager -> OutputFinalizer with image_mode=file, OCR enabled, image_md placement and english/en_US",
+    "success": true,
+    "artifacts": [
+      {"kind": "primary", "name": "82092117.md", "bytes": 93, "sha256": "db0ea2df3fff6c8ac671659843f58c1cd4da1bee482286765d64c3e37093ff95"},
+      {"kind": "image", "name": "82092117.png", "bytes": 111080, "sha256": "279654591d7de3745e5efaf39d3be413baab267be7170082d1922690566c5ad1"},
+      {"kind": "auxiliary", "name": "82092117_ocr.md", "bytes": 1492, "sha256": "d6b731498655dbee13ce8ec9382da0c4154760e4031fdfe3fffbe7deb6214842"}
+    ],
+    "input_bytes": 111080,
+    "output_bytes": 112665,
+    "ocr_chars": 1256,
+    "diagnostic_codes": ["IMG2MD-OK", "IMG2MD-OCR-OK", "FINALIZER_DONE"],
+    "all_direct_ocr_lines_reachable_in_sidecar": true,
+    "workspace_paths_leaked": false,
+    "invalid_harness_attempts_excluded": [
+      "A first route probe used concrete FileRef.format=png instead of the Image plugin category route format=image and was rejected before plugin execution with no artifacts.",
+      "A subsequent valid conversion omitted FileRef.size_bytes, so its finalizer input-byte observation was zero; the artifacts were deleted and the canonical rerun supplied the real 111080-byte size."
+    ]
+  },
+  "known_limits": [
+    "Five English FUNSD pages are a focused noisy-form slice, not the full 50-page test set or a broad business corpus.",
+    "Character-multiset F1 and exact-token multiset metrics measure text reachability, not reading order, bounding-box accuracy, layout reconstruction or field relationships.",
+    "The slice does not establish handwriting quality, Chinese or other configured-language real-world quality, photo/perspective/illumination robustness, scanned-PDF breadth, packaged-binary quality or performance thresholds.",
+    "GOLDEN-004 and overall final artifact parity remain NOT PASSED YET."
+  ]
+}

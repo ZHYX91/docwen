@@ -1,0 +1,18 @@
+[
+  {
+    "jsonrpc": "2.0",
+    "id": 9,
+    "method": "task/execute",
+    "params": {
+      "plan_id": "plan.missing.terminal"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 9,
+    "result": {
+      "task_id": "task.missing.terminal",
+      "state": "accepted"
+    }
+  }
+]

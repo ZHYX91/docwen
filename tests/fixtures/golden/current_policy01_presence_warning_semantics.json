@@ -1,0 +1,113 @@
+{
+  "golden_id": "POLICY-01",
+  "stage": "VIS-2026-07-23-202",
+  "created_at": "2026-07-23",
+  "status": "PASS_WITH_USER_ACCEPTED_BOUNDARY",
+  "user_selection": "POLICY-01=B",
+  "scope": "Presence-only OOXML signature graph detection, delivery-first conversion warnings, CLI inspect, and GUI admission/history for DOCX/XLSX/PPTX",
+  "source_corpus": {
+    "reused_stage": "VIS-2026-07-17-116",
+    "root": "D:/docwen-parity/vis116-poi-ooxml-signature-3dff575-v1/source",
+    "signed": {
+      "hello-world-signed.docx": "9b29a40d57508d1f53d1066792c2da0064a4c36110949d1fad52119ede0ab05e",
+      "hello-world-signed.xlsx": "22e2d0f6f1a413d011fbdeba4c386ce842570f1cffc66c4f85956137d86a8f1d",
+      "hello-world-signed.pptx": "d119d8160dc912d639cbe8047c526c6dc58ca9dcd6b51bd5870c247d64413163"
+    },
+    "unsigned": {
+      "hello-world-unsigned.docx": "2a45959eb038c1e601f925fe79b56b6d9e861a9f914a4dbf136957275bcbe7a5",
+      "hello-world-unsigned.xlsx": "44b471a6ec07f38c6e4c71a3f2637a1b232029099020e22fa82a121ccc6a8d40",
+      "hello-world-unsigned.pptx": "13738e3ed8cc14aadbc982d4c00e7bea9c154aab0387fd3d15d966285ad9e838"
+    },
+    "source_immutability": true
+  },
+  "invalid_siblings": {
+    "docx": {
+      "sha256": "3d0197f970ebcaad38745080ff3c5c8eefb21159d17fabd58afea8e2e22390fd",
+      "mutated_part": "word/document.xml",
+      "mutation": "first equal-length Hello to Jello"
+    },
+    "xlsx": {
+      "sha256": "bbfe3cade5a0a8ea90ceddade12ccae264c270d71469d724fd7e5d8d3ed7fdf3",
+      "mutated_part": "xl/sharedStrings.xml",
+      "mutation": "first equal-length Hello to Jello"
+    },
+    "pptx": {
+      "sha256": "002f02c904b2244371f14c99a0c161e3a2dd592cf77a0650da0419b5f1f39af0",
+      "mutated_part": "ppt/slides/slide1.xml",
+      "mutation": "first equal-length Hello to Jello"
+    },
+    "entry_order_preserved": true,
+    "all_other_entry_payloads_preserved": true,
+    "signature_graph_payloads_preserved": true,
+    "expected_structural_state": "complete"
+  },
+  "diagnostic_contract": {
+    "signature_presence_code": "OOXML_SIGNATURE_VALIDATION_UNAVAILABLE",
+    "derived_output_code": "OOXML_SIGNATURE_DERIVED_OUTPUT_UNSIGNED",
+    "signed_or_invalid_success_codes": [
+      "OOXML_SIGNATURE_VALIDATION_UNAVAILABLE",
+      "OOXML_SIGNATURE_DERIVED_OUTPUT_UNSIGNED"
+    ],
+    "unsigned_success_codes": [],
+    "unreadable_without_signature_markers_codes": [],
+    "failed_conversion_derived_output_code": false,
+    "wording_requires": [
+      "intact and tampered inputs cannot be distinguished",
+      "derived and unsigned",
+      "did not preserve or transfer"
+    ]
+  },
+  "fixed_oracle": {
+    "conversion_slots": {
+      "expected": 15,
+      "passed": 15,
+      "owners_to_markdown": 9,
+      "docx_xlsx_to_pdf": 6,
+      "artifacts_present": 15
+    },
+    "inspect_slots": {
+      "expected": 9,
+      "passed": 9,
+      "json_and_text": true,
+      "unsigned_warning_free": true
+    },
+    "gui_slots": {
+      "expected": 9,
+      "passed": 9,
+      "admission": true,
+      "batch_admission": true,
+      "durable_history": true
+    },
+    "pass_threshold": "100%",
+    "pass": true
+  },
+  "three_project_interpretation": {
+    "tk_and_old_pyside6_rerun": false,
+    "reused_negative_baseline": "VIS-116",
+    "legacy_behavior": "Both references accept the sources but silently drop signature truth from derived outputs.",
+    "current_behavior": "Current continues delivery and adds shared presence-only and derived-unsigned truth.",
+    "classification": "The legacy silence is a reference defect, not a parity requirement."
+  },
+  "accepted_boundary": {
+    "classification": "USER_ACCEPTED_BOUNDARY",
+    "statement": "Presence-only structure detection cannot distinguish an intact signature from tampering and provides no signer, integrity, trust-chain, timestamp, or revocation assurance.",
+    "not_claimed": [
+      "cryptographic integrity validation",
+      "valid or trusted signer identity",
+      "certificate time validity",
+      "timestamp validation",
+      "revocation status",
+      "signature preservation in the derived artifact"
+    ]
+  },
+  "external_evidence": {
+    "root": "D:/docwen-parity/vis202-policy01-presence-warning-637a314-v5",
+    "files": 19,
+    "bytes": 268541,
+    "result_file": "result.json",
+    "result_bytes": 61588,
+    "result_sha256": "7aaf4845ea69560f07fba15faa41e0228c38758f766cc08b0d4d003480ebbc16",
+    "binaries_checked_in": false
+  },
+  "completion_effect": "POLICY-01=B is closed for its finite corpus and oracle. POLICY-02, POLICY-03, unrelated completion-contract blockers, packaged physical UX, and overall parity remain NOT PASSED YET."
+}

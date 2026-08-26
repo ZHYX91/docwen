@@ -1,0 +1,284 @@
+{
+  "generated_at": "2026-07-14",
+  "golden_id": "GOLDEN-004",
+  "probe_scope": "Generated 48x32 CMYK, 1-bit, 16-bit grayscale, and float image inputs converted to PNG, WebP, and TIFF through the real old Tk, old PySide6, and current Image-to-Image production entry points. Temporary binaries were decoded in one Pillow environment and removed; this file stores the normalized projection.",
+  "input_size": [
+    48,
+    32
+  ],
+  "inputs": {
+    "cmyk": {
+      "name": "cmyk.tif",
+      "format": "TIFF",
+      "mode": "CMYK",
+      "extrema": [[0, 235], [0, 252], [0, 255], [0, 79]],
+      "rgba_sha256": "54f94b8f64da63ca56e01b677e609d0a5b5c780ec268cb5b57c3f058bdb147b5",
+      "generation": "CMYK pixels ((x*5)%256, (y*9)%256, ((x+y)*7)%256, ((x*3+y*2)%80)); TIFF LZW"
+    },
+    "binary_1": {
+      "name": "binary_1.png",
+      "format": "PNG",
+      "mode": "1",
+      "extrema": [0, 255],
+      "rgba_sha256": "a17fb748967a3c80fcd1282097ac75643e1b70d0b79ea9a5ff917f2b229d7bff",
+      "generation": "4x4 checker blocks using (x//4+y//4)%2"
+    },
+    "gray16": {
+      "name": "gray16.png",
+      "format": "PNG",
+      "mode": "I;16",
+      "extrema": [0, 65510],
+      "rgba_sha256": "f7e2946ae558337843a6aee09b0e45d6c4b8aac039feb47b625d1814208d0f4d",
+      "generation": "little-endian uint16 values (x*1301+y*2089)%65536"
+    },
+    "float_f": {
+      "name": "float_f.tif",
+      "format": "TIFF",
+      "mode": "F",
+      "extrema": [0.0, 159.75],
+      "rgba_sha256": "c07419a78dac940be3f542f9e134b683bc512bec8adc1c386427452fd40d84db",
+      "generation": "float values ((x*1.75)+(y*2.5))%255.0"
+    }
+  },
+  "targets": [
+    "png",
+    "webp",
+    "tif"
+  ],
+  "shared_n_frames": 1,
+  "old_projects_share_projection": true,
+  "old_pyside6_projection": {
+    "same_as": "docwen-ref-tk"
+  },
+  "initial_current_failures": {
+    "cmyk_to_png": {
+      "diagnostic_code": "IMAGEFMT-CONVERT-ERROR",
+      "error": "cannot write mode CMYK as PNG"
+    },
+    "float_f_to_png": {
+      "diagnostic_code": "IMAGEFMT-CONVERT-ERROR",
+      "error": "cannot write mode F as PNG"
+    }
+  },
+  "scenarios": {
+    "binary_1_to_png": {
+      "classification": "same_visible_pixels_current_native_one_bit_enhancement",
+      "old_projection": {
+        "format": "PNG",
+        "mode": "RGB",
+        "extrema": [[0, 255], [0, 255], [0, 255]],
+        "observed_output_bytes": 130,
+        "rgba_sha256": "a17fb748967a3c80fcd1282097ac75643e1b70d0b79ea9a5ff917f2b229d7bff"
+      },
+      "current_projection": {
+        "format": "PNG",
+        "mode": "1",
+        "extrema": [0, 255],
+        "observed_output_bytes": 83,
+        "rgba_sha256": "a17fb748967a3c80fcd1282097ac75643e1b70d0b79ea9a5ff917f2b229d7bff"
+      }
+    },
+    "binary_1_to_webp": {
+      "classification": "same_old_current_encoder_projection",
+      "old_projection": {
+        "format": "WEBP",
+        "mode": "RGB",
+        "extrema": [[0, 255], [0, 255], [0, 255]],
+        "observed_output_bytes": 78,
+        "rgba_sha256": "a17fb748967a3c80fcd1282097ac75643e1b70d0b79ea9a5ff917f2b229d7bff"
+      },
+      "current_projection": {
+        "format": "WEBP",
+        "mode": "RGB",
+        "extrema": [[0, 255], [0, 255], [0, 255]],
+        "observed_output_bytes": 78,
+        "rgba_sha256": "a17fb748967a3c80fcd1282097ac75643e1b70d0b79ea9a5ff917f2b229d7bff"
+      }
+    },
+    "binary_1_to_tif": {
+      "classification": "same_visible_pixels_current_native_one_bit_enhancement",
+      "old_projection": {
+        "format": "TIFF",
+        "mode": "RGB",
+        "extrema": [[0, 255], [0, 255], [0, 255]],
+        "observed_output_bytes": 562,
+        "rgba_sha256": "a17fb748967a3c80fcd1282097ac75643e1b70d0b79ea9a5ff917f2b229d7bff"
+      },
+      "current_projection": {
+        "format": "TIFF",
+        "mode": "1",
+        "extrema": [0, 255],
+        "observed_output_bytes": 162,
+        "rgba_sha256": "a17fb748967a3c80fcd1282097ac75643e1b70d0b79ea9a5ff917f2b229d7bff"
+      }
+    },
+    "cmyk_to_png": {
+      "classification": "restored_old_current_rgb_png_projection",
+      "old_projection": {
+        "format": "PNG",
+        "mode": "RGB",
+        "extrema": [[14, 255], [2, 255], [0, 255]],
+        "observed_output_bytes": 1520,
+        "rgba_sha256": "54f94b8f64da63ca56e01b677e609d0a5b5c780ec268cb5b57c3f058bdb147b5"
+      },
+      "current_projection": {
+        "format": "PNG",
+        "mode": "RGB",
+        "extrema": [[14, 255], [2, 255], [0, 255]],
+        "observed_output_bytes": 1520,
+        "rgba_sha256": "54f94b8f64da63ca56e01b677e609d0a5b5c780ec268cb5b57c3f058bdb147b5"
+      }
+    },
+    "cmyk_to_webp": {
+      "classification": "same_old_current_explicit_rgb_encoder_projection",
+      "old_projection": {
+        "format": "WEBP",
+        "mode": "RGB",
+        "extrema": [[0, 255], [5, 253], [0, 255]],
+        "observed_output_bytes": 708,
+        "rgba_sha256": "26fb71025f0af6a97b59519fb124a02315e08c908315cfa57f452c596908ea82"
+      },
+      "current_projection": {
+        "format": "WEBP",
+        "mode": "RGB",
+        "extrema": [[0, 255], [5, 253], [0, 255]],
+        "observed_output_bytes": 708,
+        "rgba_sha256": "26fb71025f0af6a97b59519fb124a02315e08c908315cfa57f452c596908ea82"
+      }
+    },
+    "cmyk_to_tif": {
+      "classification": "same_visible_pixels_current_native_cmyk_tiff_enhancement",
+      "old_projection": {
+        "format": "TIFF",
+        "mode": "RGB",
+        "extrema": [[14, 255], [2, 255], [0, 255]],
+        "observed_output_bytes": 6344,
+        "rgba_sha256": "54f94b8f64da63ca56e01b677e609d0a5b5c780ec268cb5b57c3f058bdb147b5"
+      },
+      "current_projection": {
+        "format": "TIFF",
+        "mode": "CMYK",
+        "extrema": [[0, 235], [0, 252], [0, 255], [0, 79]],
+        "observed_output_bytes": 8480,
+        "rgba_sha256": "54f94b8f64da63ca56e01b677e609d0a5b5c780ec268cb5b57c3f058bdb147b5"
+      }
+    },
+    "float_f_to_png": {
+      "classification": "restored_old_current_rgb_png_projection",
+      "old_projection": {
+        "format": "PNG",
+        "mode": "RGB",
+        "extrema": [[0, 159], [0, 159], [0, 159]],
+        "observed_output_bytes": 121,
+        "rgba_sha256": "c07419a78dac940be3f542f9e134b683bc512bec8adc1c386427452fd40d84db"
+      },
+      "current_projection": {
+        "format": "PNG",
+        "mode": "RGB",
+        "extrema": [[0, 159], [0, 159], [0, 159]],
+        "observed_output_bytes": 121,
+        "rgba_sha256": "c07419a78dac940be3f542f9e134b683bc512bec8adc1c386427452fd40d84db"
+      }
+    },
+    "float_f_to_webp": {
+      "classification": "same_old_current_explicit_rgb_encoder_projection",
+      "old_projection": {
+        "format": "WEBP",
+        "mode": "RGB",
+        "extrema": [[1, 158], [1, 158], [1, 158]],
+        "observed_output_bytes": 132,
+        "rgba_sha256": "9d0a78531b0305abbae6dcd20bb99640b37d27e87dceba3b909e94da33f7ff2c"
+      },
+      "current_projection": {
+        "format": "WEBP",
+        "mode": "RGB",
+        "extrema": [[1, 158], [1, 158], [1, 158]],
+        "observed_output_bytes": 132,
+        "rgba_sha256": "9d0a78531b0305abbae6dcd20bb99640b37d27e87dceba3b909e94da33f7ff2c"
+      }
+    },
+    "float_f_to_tif": {
+      "classification": "same_visible_pixels_current_native_float_tiff_enhancement",
+      "old_projection": {
+        "format": "TIFF",
+        "mode": "RGB",
+        "extrema": [[0, 159], [0, 159], [0, 159]],
+        "observed_output_bytes": 2346,
+        "rgba_sha256": "c07419a78dac940be3f542f9e134b683bc512bec8adc1c386427452fd40d84db"
+      },
+      "current_projection": {
+        "format": "TIFF",
+        "mode": "F",
+        "extrema": [0.0, 159.75],
+        "observed_output_bytes": 3604,
+        "rgba_sha256": "c07419a78dac940be3f542f9e134b683bc512bec8adc1c386427452fd40d84db"
+      }
+    },
+    "gray16_to_png": {
+      "classification": "same_visible_pixels_current_native_16bit_png_enhancement",
+      "old_projection": {
+        "format": "PNG",
+        "mode": "RGB",
+        "extrema": [[0, 255], [0, 255], [0, 255]],
+        "observed_output_bytes": 162,
+        "rgba_sha256": "f7e2946ae558337843a6aee09b0e45d6c4b8aac039feb47b625d1814208d0f4d"
+      },
+      "current_projection": {
+        "format": "PNG",
+        "mode": "I;16",
+        "extrema": [0, 65510],
+        "observed_output_bytes": 302,
+        "rgba_sha256": "f7e2946ae558337843a6aee09b0e45d6c4b8aac039feb47b625d1814208d0f4d"
+      }
+    },
+    "gray16_to_webp": {
+      "classification": "same_old_current_explicit_rgb_encoder_projection",
+      "old_projection": {
+        "format": "WEBP",
+        "mode": "RGB",
+        "extrema": [[1, 255], [1, 255], [1, 255]],
+        "observed_output_bytes": 170,
+        "rgba_sha256": "ab042f1af4693d378a0646af041f79de6cb2376afbdeb89a86e171cbd9cda76c"
+      },
+      "current_projection": {
+        "format": "WEBP",
+        "mode": "RGB",
+        "extrema": [[1, 255], [1, 255], [1, 255]],
+        "observed_output_bytes": 170,
+        "rgba_sha256": "ab042f1af4693d378a0646af041f79de6cb2376afbdeb89a86e171cbd9cda76c"
+      }
+    },
+    "gray16_to_tif": {
+      "classification": "same_visible_pixels_current_native_16bit_tiff_enhancement",
+      "old_projection": {
+        "format": "TIFF",
+        "mode": "RGB",
+        "extrema": [[0, 255], [0, 255], [0, 255]],
+        "observed_output_bytes": 272,
+        "rgba_sha256": "f7e2946ae558337843a6aee09b0e45d6c4b8aac039feb47b625d1814208d0f4d"
+      },
+      "current_projection": {
+        "format": "TIFF",
+        "mode": "I;16",
+        "extrema": [0, 65510],
+        "observed_output_bytes": 4330,
+        "rgba_sha256": "f7e2946ae558337843a6aee09b0e45d6c4b8aac039feb47b625d1814208d0f4d"
+      }
+    }
+  },
+  "current_artifact_contract": {
+    "media_types": {
+      "png": "image/png",
+      "webp": "image/webp",
+      "tif": "image/tiff"
+    },
+    "suggested_name_pattern": "{input_stem}.{target}",
+    "metadata_target_format_matches_target": true
+  },
+  "old_tk_code_evidence": "docwen-ref-tk/src/docwen/converter/formats/image/core.py::convert_image converts every non-RGB/RGBA/L source mode to RGB before saving.",
+  "old_pyside6_code_evidence": "docwen-ref-pyside6/src/docwen/converter/image/core.py::convert_image retains the same non-RGB/RGBA/L to RGB normalization policy.",
+  "current_code_evidence": "packages/plugins/image/src/docwen_plugin_image/_common.py::convert_mode_for_format now keeps PNG/TIFF-native 1-bit, 16-bit, CMYK, and float modes where the target supports them, converts PNG-incompatible CMYK/F modes to RGB, and explicitly normalizes non-alpha WebP inputs to RGB.",
+  "current_regression_test": "packages/plugins/image/tests/test_image_conversions.py::TestImageFormatConversion::test_extended_native_mode_matrix_matches_recorded_projection",
+  "observed_byte_and_lossy_hash_boundary": "Observed byte counts and WebP hashes are same-environment evidence, not cross-Pillow-version contracts. The current guard asserts format, mode, dimensions, frame count, native extrema, artifact metadata, and lossless PNG/TIFF visible-pixel digests; it does not require WebP byte/hash equality.",
+  "comparison_implication": "The current rewrite initially failed CMYK-to-PNG and float-F-to-PNG while both old projects succeeded; explicit target-compatible RGB normalization restores those routes. Current native-mode preservation for 1-bit PNG/TIFF, 16-bit PNG/TIFF, CMYK TIFF, and float TIFF retains more source fidelity than both old projects and remains an accepted current enhancement. This generated matrix is focused evidence and does not close real color-profile/device-sample or final Image artifact parity."
+}

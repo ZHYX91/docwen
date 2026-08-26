@@ -1,8 +1,0 @@
-PRIMARY: str
-SECONDARY: str
-SUCCESS: str
-INFO: str
-WARNING: str
-DANGER: str
-LIGHT: str
-DARK: str

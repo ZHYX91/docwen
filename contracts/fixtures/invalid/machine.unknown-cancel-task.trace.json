@@ -1,0 +1,18 @@
+[
+  {
+    "jsonrpc": "2.0",
+    "id": 5,
+    "method": "task/cancel",
+    "params": {
+      "task_id": "task.unknown.cancel"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 5,
+    "result": {
+      "task_id": "task.unknown.cancel",
+      "state": "cancellation_requested"
+    }
+  }
+]

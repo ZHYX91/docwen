@@ -1,15 +1,36 @@
 # ==============================
-# 排除所有 . 开头的文件和文件夹
+# 本机密钥、工具状态与缓存
 # ==============================
-.*
-# 白名单：需要提交的 dot 文件
-!.gitignore
-!.gitattributes
-!.editorconfig
-!.github/
-!.github/workflows/
-!.github/workflows/*.yml
-!.github/workflows/*.yaml
+.env
+.env.*
+!.env.example
+
+/.agents/
+/.acceptance-runtime/
+/.claude/
+/.opencode/
+/.playwright-mcp/
+/.workspace-links/
+/.vscode/
+/.idea/
+
+.coverage
+.coverage.*
+/.docwen-tmp/
+/.import_linter_cache/
+/.ruff_cache/
+/.mypy_cache/
+/.pyright/
+/.slim/
+/.test-temp/
+/.tmp/
+/.tmp-*/
+/.pytest-*/
+/.pytest_*/
+/.pytest_cache*/
+**/.pytest_cache*/
+**/.venv/
+*.docwen-config.lock
 
 # ==============================
 # 日志文件 (忽略所有日志文件)
@@ -20,6 +41,7 @@
 *.tmp
 pyright-*.out.json
 pyright-one.json
+_pyright_dump.json
 logs/
 *.logs/
 
@@ -69,6 +91,7 @@ coverage.xml
 # 测试临时文件
 tests/temp/
 tests/output/
+/tmp/
 
 # 模板生成临时/输出文件
 templates/空白模板.docx
@@ -84,4 +107,3 @@ samples/style_injection_output/
 # OpenClaw 插件/Skill
 # ==============================
 /docwen-openclaw/
-

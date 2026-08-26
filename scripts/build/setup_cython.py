@@ -36,7 +36,6 @@ from setuptools import Extension, setup
 # ==================== 项目路径配置 ====================
 # 脚本位于 scripts/build/，项目根目录向上两级
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-SRC_DIR = PROJECT_ROOT / "src"
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "build" / "cython_out"
 DEFAULT_WORK_DIR = PROJECT_ROOT / "build" / "cython_work"
 
@@ -62,31 +61,28 @@ COMPILE_OPTIONS = {
     "nthreads": os.cpu_count() or 4,  # 并行编译线程数
 }
 
-# ==================== 核心模块列表（约 10 个）====================
-# 选择原则：
-#   🔴 必须编译：安全相关模块
-#   🟡 推荐编译：核心转换逻辑
-#   🟢 可选编译：高频调用的工具函数
-#   ❌ 不编译：入口文件、GUI、配置、外部库封装（避免杀软误报）
+# ==================== 核心模块列表 ====================
+# 只编译 workspace 架构中的稳定核心模块；入口文件、GUI widget 大文件
+# 和脚本层保持 Python 源码，避免产物膨胀与调试成本。
 
 CORE_MODULES = [
-    # ==================== 🔴 安全模块（必须编译）====================
-    "src/docwen/security/network_isolation.py",
-    "src/docwen/security/protection_utils.py",
-    # ⚠️ 入口文件（gui_run.py, cli_run.py）不可编译为 .pyd：
-    #   - python -m 需要 code object，.pyd 是原生 DLL 无法提供
-    #   - 会导致 "No code object available for docwen.gui_run" 错误
-    #   - 入口模块非性能瓶颈，安全保护由 PyInstaller 打包实现
-    # ==================== 🟡 核心转换器（推荐编译）====================
-    "src/docwen/converter/smart_converter.py",
-    "src/docwen/converter/md2docx/core.py",
-    "src/docwen/converter/docx2md/core.py",
-    "src/docwen/converter/md2xlsx/core.py",
-    "src/docwen/converter/xlsx2md/core.py",
-    # ==================== 🟢 高频工具函数（可选编译）====================
-    "src/docwen/utils/text_utils.py",
-    "src/docwen/utils/validation_utils.py",
-    "src/docwen/utils/number_utils.py",
+    # Core 公共模型/协议
+    "packages/core/src/docwen_core/models/result.py",
+    "packages/core/src/docwen_core/models/request.py",
+    "packages/core/src/docwen_core/models/task.py",
+    "packages/core/src/docwen_core/errors.py",
+    "packages/core/src/docwen_core/cancellation.py",
+    # Application controller + workflows
+    "packages/application/src/docwen_application/controller.py",
+    "packages/application/src/docwen_application/workflows/single_file.py",
+    "packages/application/src/docwen_application/workflows/batch.py",
+    # Runtime engine + output
+    "packages/runtime/src/docwen_runtime/engine/route_resolver.py",
+    "packages/runtime/src/docwen_runtime/engine/task_manager.py",
+    "packages/runtime/src/docwen_runtime/output/finalizer.py",
+    # Plugin registry + IPC
+    "packages/runtime/src/docwen_runtime/plugin_registry/registry.py",
+    "packages/runtime/src/docwen_runtime/ipc/single_instance.py",
 ]
 
 
@@ -104,28 +100,31 @@ class CythonBuilder:
         self.output_dir = output_dir
         self.work_dir = work_dir
         self.valid_modules: list[Path] = []
-        self.skipped_modules: list[str] = []
         self._validate_modules()
 
     def _validate_modules(self) -> None:
-        """验证模块存在性，分类有效和无效模块"""
-        for mod_str in CORE_MODULES:
-            mod_path = self.project_root / mod_str
-            if mod_path.exists():
-                self.valid_modules.append(mod_path)
-            else:
-                self.skipped_modules.append(mod_str)
+        """验证权威模块清单；任何漂移都必须使构建失败。"""
+        missing_modules = [module for module in CORE_MODULES if not (self.project_root / module).is_file()]
+        if missing_modules:
+            formatted = "\n".join(f"   - {module}" for module in missing_modules)
+            raise FileNotFoundError("Cython 核心模块清单包含不存在的文件；拒绝生成不完整构建:\n" + formatted)
 
-        if self.skipped_modules:
-            print(f"⚠️ 以下 {len(self.skipped_modules)} 个模块不存在，已跳过:")
-            for mod in self.skipped_modules:
-                print(f"   - {mod}")
+        self.valid_modules = [self.project_root / module for module in CORE_MODULES]
 
         print(f"✅ 有效模块: {len(self.valid_modules)} 个")
 
+    def _source_root_for(self, py_path: Path) -> Path:
+        for parent in py_path.parents:
+            if parent.name == "src":
+                return parent
+        return self.project_root
+
+    def _module_relative_path(self, py_path: Path) -> Path:
+        return py_path.relative_to(self._source_root_for(py_path))
+
     def _compiled_files(self, py_path: Path) -> list[Path]:
         stem = py_path.stem
-        rel_path = py_path.relative_to(self.project_root / "src")
+        rel_path = self._module_relative_path(py_path)
         out_parent = self.output_dir / rel_path.parent
         return list(out_parent.glob(f"{stem}*.pyd")) + list(out_parent.glob(f"{stem}*.so"))
 
@@ -162,14 +161,8 @@ class CythonBuilder:
         Returns:
             配置好的 Extension 对象
         """
-        # 计算模块名（相对于 src/ 目录）
-        # 例如: src/docwen/utils/text_utils.py → docwen.utils.text_utils
-        try:
-            rel_path = py_path.relative_to(self.project_root / "src")
-            module_name = str(rel_path.with_suffix("")).replace(os.sep, ".")
-        except ValueError:
-            # 如果不在 src/ 下（如 src/gui_run.py 直接在 src/ 根目录）
-            module_name = py_path.stem
+        rel_path = self._module_relative_path(py_path)
+        module_name = str(rel_path.with_suffix("")).replace(os.sep, ".")
 
         # 平台特定的编译参数
         if os.name == "nt":  # Windows
@@ -201,7 +194,7 @@ class CythonBuilder:
         """
         pairs = []
         for py_path in modules:
-            rel_path = py_path.relative_to(self.project_root / "src")
+            rel_path = py_path.relative_to(self.project_root)
             pyx_path = (self.work_dir / rel_path).with_suffix(".pyx")
             pyx_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(py_path, pyx_path)
@@ -304,10 +297,7 @@ class CythonBuilder:
             print(f"\n❌ Cython 编译失败: {e}")
             # 尝试清理中间文件
             self._cleanup_intermediate(
-                [
-                    (self.work_dir / py_path.relative_to(self.project_root / "src")).with_suffix(".pyx")
-                    for py_path in to_compile
-                ]
+                [(self.work_dir / py_path.relative_to(self.project_root)).with_suffix(".pyx") for py_path in to_compile]
             )
             return False
 

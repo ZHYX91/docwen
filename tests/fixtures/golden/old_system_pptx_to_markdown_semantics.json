@@ -1,0 +1,981 @@
+{
+  "golden_id": "GOLDEN-021",
+  "route": "PPTX->Markdown",
+  "probe_date": "2026-07-02",
+  "probe_scope": "Same generated PPTX converted through docwen-ref-tk convert_pptx_to_md(), docwen-ref-pyside6 convert_pptx_to_md() after initialize_runtime(), and current docwen runtime presentation route.",
+  "input_pptx": {
+    "filename": "golden_021.pptx",
+    "title": "PPTX Golden Sample",
+    "slides": [
+      {
+        "layout": "title",
+        "title": "Presentation Title",
+        "subtitle": "A subtitle for parity smoke"
+      },
+      {
+        "layout": "title_and_content",
+        "title": "Agenda",
+        "paragraphs": [
+          "First item",
+          "Second item",
+          "Third item"
+        ]
+      },
+      {
+        "layout": "title_and_content",
+        "title": "Data Summary",
+        "table": {
+          "headers": [
+            "Category",
+            "Q1",
+            "Q2"
+          ],
+          "rows": [
+            [
+              "Alpha",
+              "100",
+              "200"
+            ],
+            [
+              "Beta",
+              "150",
+              "250"
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  "old_systems": {
+    "docwen-ref-tk": {
+      "converter": "docwen.converter.pptx2md.core.convert_pptx_to_md",
+      "status": "converted",
+      "output_shape": "single Markdown string with YAML frontmatter",
+      "required_markdown_tokens": [
+        "PPTX Golden Sample",
+        "# PPTX Golden Sample",
+        "## Presentation Title",
+        "A subtitle for parity smoke",
+        "## Agenda",
+        "First item",
+        "Second item",
+        "Third item",
+        "## Data Summary",
+        "| Category | Q1 | Q2 |",
+        "| --- | --- | --- |",
+        "| Alpha | 100 | 200 |",
+        "| Beta | 150 | 250 |"
+      ]
+    },
+    "docwen-ref-pyside6": {
+      "converter": "docwen.converter.pptx.to_md.core.convert_pptx_to_md",
+      "status": "converted",
+      "output_shape": "single Markdown string with YAML frontmatter",
+      "required_markdown_tokens": [
+        "PPTX Golden Sample",
+        "# PPTX Golden Sample",
+        "## Presentation Title",
+        "A subtitle for parity smoke",
+        "## Agenda",
+        "First item",
+        "Second item",
+        "Third item",
+        "## Data Summary",
+        "| Category | Q1 | Q2 |",
+        "| --- | --- | --- |",
+        "| Alpha | 100 | 200 |",
+        "| Beta | 150 | 250 |"
+      ]
+    }
+  },
+  "current_expected_semantics": {
+    "route_owner": "docwen_plugin_presentation.pptx_md.converter.PptxToMarkdownConverter",
+    "output_shape": "one runtime primary Markdown artifact",
+    "required_markdown_tokens": [
+      "PPTX Golden Sample",
+      "# PPTX Golden Sample",
+      "## Presentation Title",
+      "A subtitle for parity smoke",
+      "## Agenda",
+      "First item",
+      "Second item",
+      "Third item",
+      "## Data Summary",
+      "| Category | Q1 | Q2 |",
+      "| --- | --- | --- |",
+      "| Alpha | 100 | 200 |",
+      "| Beta | 150 | 250 |"
+    ],
+    "artifact_metadata": {
+      "media_type": "text/markdown",
+      "title": "PPTX Golden Sample",
+      "slide_count": 3,
+      "table_count": 1,
+      "image_count": 0
+    }
+  },
+  "image_artifact_scope": {
+    "multi_image_probe": {
+      "classification": "same_old_current_pptx_multi_image_order_projection",
+      "input": {
+        "filename": "pptx_multi_image_probe.pptx",
+        "title": "PPTX Multi Image Probe",
+        "slide_text": "Multi Image Slide",
+        "image_count": 2,
+        "image_size_px": [
+          2,
+          2
+        ],
+        "image_format": "png",
+        "options": {
+          "keep_images": true,
+          "enable_ocr": false,
+          "image_link_style": "markdown_embed"
+        }
+      },
+      "old_tk_projection": {
+        "success": true,
+        "image_file_count": 2,
+        "image_files": [
+          "pptx_multi_image_probe_slide1_image1_YYYYMMDD_HHMMSS_fromPptx.png",
+          "pptx_multi_image_probe_slide1_image2_YYYYMMDD_HHMMSS_fromPptx.png"
+        ],
+        "markdown_contains_title": true,
+        "markdown_contains_slide_text": true,
+        "markdown_contains_two_image_links": true,
+        "image_links_in_order": true,
+        "required_markdown_tokens": [
+          "PPTX Multi Image Probe",
+          "# PPTX Multi Image Probe",
+          "## Slide 1",
+          "Multi Image Slide",
+          "pptx_multi_image_probe_slide1_image1_YYYYMMDD_HHMMSS_fromPptx.png",
+          "pptx_multi_image_probe_slide1_image2_YYYYMMDD_HHMMSS_fromPptx.png"
+        ]
+      },
+      "old_pyside6_projection": {
+        "success": true,
+        "image_file_count": 2,
+        "image_files": [
+          "pptx_multi_image_probe_slide1_image1_YYYYMMDD_HHMMSS_fromPptx.png",
+          "pptx_multi_image_probe_slide1_image2_YYYYMMDD_HHMMSS_fromPptx.png"
+        ],
+        "markdown_contains_title": true,
+        "markdown_contains_slide_text": true,
+        "markdown_contains_two_image_links": true,
+        "image_links_in_order": true,
+        "required_markdown_tokens": [
+          "PPTX Multi Image Probe",
+          "# PPTX Multi Image Probe",
+          "## Slide 1",
+          "Multi Image Slide",
+          "pptx_multi_image_probe_slide1_image1_YYYYMMDD_HHMMSS_fromPptx.png",
+          "pptx_multi_image_probe_slide1_image2_YYYYMMDD_HHMMSS_fromPptx.png"
+        ]
+      },
+      "current_projection": {
+        "success": true,
+        "diagnostic_codes": [
+          "PPTX2MD-OK",
+          "FINALIZER_DONE"
+        ],
+        "artifact_count": 3,
+        "primary_artifact_count": 1,
+        "image_artifact_count": 2,
+        "image_suggested_name_patterns": [
+          "^pptx_multi_image_probe_slide1_img1_[0-9a-f]{12}\\.png$",
+          "^pptx_multi_image_probe_slide1_img2_[0-9a-f]{12}\\.png$"
+        ],
+        "primary_metadata": {
+          "slide_count": 1,
+          "hidden_slide_count": 0,
+          "table_count": 0,
+          "image_count": 2,
+          "smartart_text_count": 0,
+          "title": "PPTX Multi Image Probe"
+        },
+        "markdown_contains_title": true,
+        "markdown_contains_slide_text": true,
+        "markdown_contains_two_image_links": true,
+        "image_links_in_order": true,
+        "primary_output_parent_is_requested_output_dir": true,
+        "image_output_parent_is_requested_output_dir": true,
+        "required_markdown_tokens": [
+          "PPTX Multi Image Probe",
+          "# PPTX Multi Image Probe",
+          "## Slide 1",
+          "Multi Image Slide"
+        ]
+      },
+      "current_regression_test": "packages/plugins/presentation/tests/test_presentation_to_md.py::TestPptxToMd::test_pptx_multi_image_order_matches_old_system_projection",
+      "comparison_implication": "Focused PPTX multi-image evidence proves old Tk, old PySide6, and current all preserve two slide image links in top/left shape order while current finalizes two image artifacts beside primary Markdown. Old timestamped/source-name image files and current source-traceable content-addressed image names are normalized as accepted artifact naming differences; the current names additionally prevent cross-link corruption when same-named presentations share an output directory. Broader real-world presentation media matrices remain open."
+    },
+    "multi_ocr_sidecar_probe": {
+      "classification": "same_old_current_pptx_multi_ocr_sidecar_with_image_projection",
+      "input": {
+        "filename": "pptx_multi_ocr_probe.pptx",
+        "title": "PPTX Multi OCR Probe",
+        "slide_text": "Multi OCR Slide",
+        "image_count": 2,
+        "image_size_px": [
+          2,
+          2
+        ],
+        "image_format": "png",
+        "stubbed_ocr_text": "PPTX OCR MULTI TEXT",
+        "options": {
+          "keep_images": true,
+          "enable_ocr": true,
+          "ocr_placement": "image_md",
+          "image_link_style": "markdown_embed"
+        }
+      },
+      "old_tk_projection": {
+        "success": true,
+        "image_file_count": 2,
+        "sidecar_file_count": 2,
+        "image_files": [
+          "pptx_multi_ocr_probe_slide1_image1_YYYYMMDD_HHMMSS_fromPptx.png",
+          "pptx_multi_ocr_probe_slide1_image2_YYYYMMDD_HHMMSS_fromPptx.png"
+        ],
+        "sidecar_files": [
+          "pptx_multi_ocr_probe_slide1_image1_YYYYMMDD_HHMMSS_fromPptx.md",
+          "pptx_multi_ocr_probe_slide1_image2_YYYYMMDD_HHMMSS_fromPptx.md"
+        ],
+        "primary_markdown_contains_ocr_text": false,
+        "primary_markdown_contains_sidecar_links": true,
+        "sidecar_links_in_order": true,
+        "sidecars_contain_ocr_text": true,
+        "sidecars_contain_image_markdown": true,
+        "required_primary_markdown_tokens": [
+          "PPTX Multi OCR Probe",
+          "# PPTX Multi OCR Probe",
+          "## Slide 1",
+          "Multi OCR Slide",
+          "[[pptx_multi_ocr_probe_slide1_image1_YYYYMMDD_HHMMSS_fromPptx.md]]",
+          "[[pptx_multi_ocr_probe_slide1_image2_YYYYMMDD_HHMMSS_fromPptx.md]]"
+        ],
+        "required_sidecar_markdown_tokens": [
+          ".png)",
+          "PPTX OCR MULTI TEXT"
+        ]
+      },
+      "old_pyside6_projection": {
+        "success": true,
+        "image_file_count": 2,
+        "sidecar_file_count": 2,
+        "image_files": [
+          "pptx_multi_ocr_probe_slide1_image1_YYYYMMDD_HHMMSS_fromPptx.png",
+          "pptx_multi_ocr_probe_slide1_image2_YYYYMMDD_HHMMSS_fromPptx.png"
+        ],
+        "sidecar_files": [
+          "pptx_multi_ocr_probe_slide1_image1_YYYYMMDD_HHMMSS_fromPptx.md",
+          "pptx_multi_ocr_probe_slide1_image2_YYYYMMDD_HHMMSS_fromPptx.md"
+        ],
+        "primary_markdown_contains_ocr_text": false,
+        "primary_markdown_contains_sidecar_links": true,
+        "sidecar_links_in_order": true,
+        "sidecars_contain_ocr_text": true,
+        "sidecars_contain_image_markdown": true,
+        "required_primary_markdown_tokens": [
+          "PPTX Multi OCR Probe",
+          "# PPTX Multi OCR Probe",
+          "## Slide 1",
+          "Multi OCR Slide",
+          "[[pptx_multi_ocr_probe_slide1_image1_YYYYMMDD_HHMMSS_fromPptx.md]]",
+          "[[pptx_multi_ocr_probe_slide1_image2_YYYYMMDD_HHMMSS_fromPptx.md]]"
+        ],
+        "required_sidecar_markdown_tokens": [
+          ".png)",
+          "PPTX OCR MULTI TEXT"
+        ]
+      },
+      "current_projection": {
+        "success": true,
+        "diagnostic_codes": [
+          "PPTX2MD-OK",
+          "OCR-BEST-EFFORT",
+          "OCR-BEST-EFFORT",
+          "FINALIZER_DONE"
+        ],
+        "artifact_count": 5,
+        "primary_artifact_count": 1,
+        "image_artifact_count": 2,
+        "auxiliary_artifact_count": 2,
+        "image_suggested_name_patterns": [
+          "^pptx_multi_ocr_probe_slide1_img1_[0-9a-f]{12}\\.png$",
+          "^pptx_multi_ocr_probe_slide1_img2_[0-9a-f]{12}\\.png$"
+        ],
+        "sidecar_suggested_name_patterns": [
+          "^pptx_multi_ocr_probe_slide1_img1_[0-9a-f]{12}_ocr_[0-9a-f]{12}\\.md$",
+          "^pptx_multi_ocr_probe_slide1_img2_[0-9a-f]{12}_ocr_[0-9a-f]{12}\\.md$"
+        ],
+        "primary_metadata": {
+          "slide_count": 1,
+          "hidden_slide_count": 0,
+          "table_count": 0,
+          "image_count": 2,
+          "smartart_text_count": 0,
+          "title": "PPTX Multi OCR Probe"
+        },
+        "primary_markdown_contains_ocr_text": false,
+        "primary_markdown_contains_sidecar_links": true,
+        "sidecar_links_in_order": true,
+        "sidecars_contain_ocr_text": true,
+        "sidecars_contain_image_markdown": true,
+        "primary_output_parent_is_requested_output_dir": true,
+        "image_output_parent_is_requested_output_dir": true,
+        "sidecar_output_parent_is_requested_output_dir": true,
+        "required_primary_markdown_tokens": [
+          "PPTX Multi OCR Probe",
+          "# PPTX Multi OCR Probe",
+          "## Slide 1",
+          "Multi OCR Slide"
+        ],
+        "required_sidecar_markdown_tokens": [
+          "source_format: pptx",
+          "ocr: True",
+          "![slide1_img",
+          ".png)",
+          "> PPTX OCR MULTI TEXT"
+        ]
+      },
+      "current_regression_test": "packages/plugins/presentation/tests/test_presentation_to_md.py::TestPptxToMd::test_pptx_multi_ocr_sidecar_matches_old_system_projection",
+      "comparison_implication": "Focused PPTX multi-image OCR sidecar evidence proves old Tk, old PySide6, and current all create one OCR Markdown sidecar per retained slide image in top/left shape order. Old timestamped/source-name PNG and sidecar names, old wiki links versus current wiki embeds for sidecar references, and current source-traceable content-addressed image/sidecar names are normalized as accepted artifact/link-style differences; checked final consumer views use image-byte and generated-sidecar SHA-12 prefixes to keep identical-image/different-OCR sidecars distinct. Truncated-digest collision impossibility, real OCR quality and broader presentation media matrices remain open."
+    }
+  },
+  "real_world_rich_presentation_addendum": {
+    "evidence_id": "VIS-2026-07-17-127",
+    "source": {
+      "name": "60810.pptx",
+      "repository": "apache/poi",
+      "commit": "86e967d9b28d6a322a87ae8fcbf2a7eeb56cef96",
+      "git_blob": "3e4e22be5f4911be6d9935246d32f5f76907ba4f",
+      "bytes": 874522,
+      "sha256": "61afceb0365523ceba6fc00a525157148c2ddbdb3b5d843992ac3c107e9921bf",
+      "title": "3.7.1 HRBP Process overview",
+      "slide_count": 28,
+      "hidden_slide_indexes": [
+        4,
+        21,
+        22
+      ],
+      "section_names": [
+        "Core layouts"
+      ],
+      "notes_part_count": 17,
+      "nonempty_notes_count": 6,
+      "nonempty_notes_chars": 5544,
+      "package_media_count": 17,
+      "picture_occurrence_count": 19,
+      "diagram_part_count": 20,
+      "python_pptx_accessible_text_count": 60,
+      "smartart_text_count": 11
+    },
+    "project_heads": {
+      "docwen-ref-tk": "ec9298286cfe1379d5c5470db381577ea43ca0fa",
+      "docwen-ref-pyside6": "63db927c5ded920d4994bfede5c7b34c55e2f43e",
+      "docwen-current_pre_fix": "67db5090baedb542ae0cd95d638e73d0c2e71578"
+    },
+    "execution": {
+      "route": "pptx->md",
+      "options": {
+        "export_notes": true,
+        "to_md_keep_images": true,
+        "to_md_enable_ocr": false,
+        "image_mode": "file",
+        "image_link_style": "markdown_embed",
+        "locale": "zh_CN",
+        "yaml_title_label": "标题"
+      },
+      "success_count": 3,
+      "expected_success_count": 3,
+      "conversion_process_added": [],
+      "conversion_process_removed": []
+    },
+    "outputs": {
+      "docwen-ref-tk": {
+        "markdown_bytes": 24146,
+        "markdown_sha256": "68eb503d13a9d39ef27642b9f05fc2e1caf955df2ceacdb00bcd0ba8a15839d4",
+        "h1_count": 1,
+        "h2_count": 28,
+        "notes_block_count": 6,
+        "image_link_count": 19,
+        "image_artifact_count": 19
+      },
+      "docwen-ref-pyside6": {
+        "markdown_bytes": 24146,
+        "markdown_sha256": "68eb503d13a9d39ef27642b9f05fc2e1caf955df2ceacdb00bcd0ba8a15839d4",
+        "h1_count": 1,
+        "h2_count": 28,
+        "notes_block_count": 6,
+        "image_link_count": 19,
+        "image_artifact_count": 19
+      },
+      "docwen-current": {
+        "markdown_bytes": 23338,
+        "markdown_sha256": "d29a7a3f094157eaaeb6121538066200d36fc4e61798d7c689c079ee2390e2a7",
+        "h1_count": 2,
+        "h2_count": 28,
+        "notes_block_count": 6,
+        "image_link_count": 19,
+        "image_artifact_count": 19,
+        "image_media_types": {
+          "image/jpeg": 4,
+          "image/png": 15
+        },
+        "diagnostic_codes": [
+          "PPTX2MD-OK",
+          "FINALIZER_DONE"
+        ]
+      }
+    },
+    "comparison": {
+      "old_markdown_raw_exact": true,
+      "semantic_line_count": 294,
+      "semantic_sha256": "e61f6828a791425b3ba57ed7e650898fb6bd1b43718cf32af22d9667bbbe8d9c",
+      "three_project_semantic_lines_exact_after_documented_normalization": true,
+      "three_project_resource_bytes_exact": true,
+      "resource_sha256_multiset_sha256": "550ede115ee14b25e9fdf85b94f455f33e68bca29a0ccf22a8fcbc09e101f03a",
+      "source_accessible_text_matches": {
+        "docwen-ref-tk": 60,
+        "docwen-ref-pyside6": 60,
+        "docwen-current": 60
+      },
+      "source_notes_matches": {
+        "docwen-ref-tk": 6,
+        "docwen-ref-pyside6": 6,
+        "docwen-current": 6
+      },
+      "normalization": [
+        "replace project-specific image link names with exact output SHA-256",
+        "strip trailing whitespace and empty quote/blank lines only",
+        "remove current-only body H1 equal to the core-property title while retaining YAML title, section H1 and all slide H2 headings"
+      ]
+    },
+    "physical_source_oracle": {
+      "consumer": "Microsoft PowerPoint",
+      "version": "16.0",
+      "build": "20131",
+      "visible_pdf_page_count": 25,
+      "page_rgb_sequence_sha256": "f3a50b15f1f277aa9d796a14937c6a75e0a12f6c9f7ca8f0b8620d5717bc33b5",
+      "contact_sheet_bytes": 1238822,
+      "contact_sheet_sha256": "2181420f8d45802b1a3452cced20d3e0795e980971222dc23921e442732fdddd",
+      "render_process_added": [],
+      "render_process_removed": []
+    },
+    "current_fix": {
+      "classification": "real_current_only_artifact_metadata_defect_fixed",
+      "before": "JPEG image artifacts were labeled image/jpg",
+      "after": "JPEG image artifacts use docwen_core.formats.categories.get_media_type() and are labeled image/jpeg",
+      "production": "packages/plugins/presentation/src/docwen_plugin_presentation/pptx_md/converter.py",
+      "regression": "packages/plugins/presentation/tests/test_presentation_to_md.py::TestPptxToMd::test_pptx_jpeg_image_uses_standard_media_type"
+    },
+    "shared_unaccepted_boundary": {
+      "classification": "shared_source_fidelity_gap_not_current_regression",
+      "detail": "The source has one SmartArt object whose 11 visible group texts are absent from all three Markdown outputs. All three outputs also include the three hidden slides although the ordinary PowerPoint PDF exposes only 25 visible pages; no hidden-slide policy is defined. The matrix proves equal public-route behavior, not source-faithful SmartArt extraction or an accepted hidden-slide policy.",
+      "acceptance_condition": "Implement and test deliberate SmartArt/diagram extraction and hidden-slide policies, or explicitly accept those surfaces as outside PPTX-to-Markdown product scope."
+    },
+    "external_evidence": {
+      "root": "D:/docwen-parity/vis127-apache-poi-presentation-rich-67db509-v1",
+      "evidence_summary_sha256": "9b5481ba504e56e8d51e62ef74f57589d23f4a4be4e1db5e52ac7898a659238a",
+      "conversion_ledger_sha256": "3e2e88402b3c6b383da517457c7e5f410481d6055287ac9671821a1167402ac0",
+      "source_physical_projection_sha256": "72ab077c65106247efae5aea74c934f4b115c6439b394414068994e341331e81"
+    }
+  },
+  "chart_audio_video_addendum": {
+    "evidence_id": "VIS-2026-07-17-129",
+    "source_repository": "apache/poi",
+    "source_commit": "86e967d9b28d6a322a87ae8fcbf2a7eeb56cef96",
+    "sources": {
+      "bar-chart.pptx": {
+        "git_blob": "e4d2613046ab69e2d0a5c529b41cbcaa49ac4e30",
+        "bytes": 44410,
+        "sha256": "79e1d218bfb2903e8dc8425a6b1997d9c1976f5a5f025bada85b0c47b5777969",
+        "package_entry_count": 40,
+        "chart_xml": {
+          "name": "ppt/charts/chart1.xml",
+          "bytes": 2929,
+          "sha256": "c6f133f62ccab33ad855c6399408439e3e7d780ec9191f01a421a909259bb4d3"
+        },
+        "embedded_workbook": {
+          "name": "ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx",
+          "bytes": 8813,
+          "sha256": "89673f803b955c3f553900ddfd406a80babe5a543e8f8401bfa7b2b7834cae22"
+        }
+      },
+      "EmbeddedAudio.pptx": {
+        "git_blob": "ab12d00acbea0f74607b8fc9f077f26a2d1953ea",
+        "bytes": 90047,
+        "sha256": "c5ae4274e2bf5504a56aef9c8d7c5d2381ece69c9bf68f7749ad5eae3e675edb",
+        "package_entry_count": 39,
+        "poster": {
+          "name": "ppt/media/image1.png",
+          "bytes": 4717,
+          "sha256": "b0151c2c2e3cf64bc37a7bb9d8b8b98d4c4fccf7b6af4c08c4f847a79f9db0da"
+        },
+        "audio": {
+          "name": "ppt/media/media1.mp3",
+          "bytes": 52079,
+          "sha256": "0244590f2b4bcb62352b574e78bea940e8d89cfa69823b5208ef4c43e0abcb44"
+        }
+      },
+      "EmbeddedVideo.pptx": {
+        "git_blob": "f7954228a8d95e05bcaa50364b220e9780c68e92",
+        "bytes": 201418,
+        "sha256": "7940e3b1a339db11f00b65399a2fe77e0e85a5da3a30ac8d6c8a0a77527b2ab2",
+        "package_entry_count": 39,
+        "poster": {
+          "name": "ppt/media/image1.png",
+          "bytes": 65215,
+          "sha256": "f5516c6cae484df63ce03db77fb69b778660916b9207de5a4e04aa5e3b72908d"
+        },
+        "video": {
+          "name": "ppt/media/media1.mp4",
+          "bytes": 101799,
+          "sha256": "21c3b5d779abe3bc2ee886a6d2455202800537fa31fe367d11563da16cbf8040"
+        }
+      }
+    },
+    "project_heads": {
+      "docwen-ref-tk": "ec9298286cfe1379d5c5470db381577ea43ca0fa",
+      "docwen-ref-pyside6": "63db927c5ded920d4994bfede5c7b34c55e2f43e",
+      "docwen-current": "a041d593acf4a9b1b57412dce4cbb68f110b1c24"
+    },
+    "execution": {
+      "public_route": "pptx->md",
+      "success_count": 9,
+      "expected_success_count": 9,
+      "conversion_process_added": [],
+      "conversion_process_removed": [],
+      "termination_command_used": false
+    },
+    "outputs": {
+      "bar-chart.pptx": {
+        "old_markdown_raw_exact": true,
+        "three_project_raw_markdown_exact": true,
+        "three_project_semantic_exact_after_resource_hash_normalization": true,
+        "three_project_resource_bytes_exact": true,
+        "markdown_bytes_each": [
+          111,
+          111,
+          111
+        ],
+        "markdown_sha256_each": "ad2ad0b3d8d721d80ea3420ed54a807a39ad6f57a01c94727dba40a44de85bb3",
+        "semantic_sha256_each": "0dd1d82e97344ac2582f56341829af550d88338a8887822c4f911c401532bd09",
+        "resource_count_each": [
+          0,
+          0,
+          0
+        ]
+      },
+      "EmbeddedAudio.pptx": {
+        "old_markdown_raw_exact": true,
+        "three_project_raw_markdown_exact": false,
+        "three_project_semantic_exact_after_resource_hash_normalization": true,
+        "three_project_resource_bytes_exact": true,
+        "old_markdown_bytes_each": 226,
+        "current_markdown_bytes": 162,
+        "semantic_sha256_each": "0b6f50d7f5916dea8f093d9ad2e3561b4e7b6bb391f8655b9e5680132633dd66",
+        "resource_count_each": [
+          1,
+          1,
+          1
+        ],
+        "resource_sha256_each": "b0151c2c2e3cf64bc37a7bb9d8b8b98d4c4fccf7b6af4c08c4f847a79f9db0da"
+      },
+      "EmbeddedVideo.pptx": {
+        "old_markdown_raw_exact": true,
+        "three_project_raw_markdown_exact": true,
+        "three_project_semantic_exact_after_resource_hash_normalization": true,
+        "three_project_resource_bytes_exact": true,
+        "markdown_bytes_each": [
+          123,
+          123,
+          123
+        ],
+        "markdown_sha256_each": "4d385ee1cb2a0a6f061d1c35bf1f33e04df12b9a419c0f40f80a360e4f32f8fc",
+        "semantic_sha256_each": "c5b1f48ca729d73c949c53d2465d615a06ee8fb50dd203fa89bb000e54e34e2a",
+        "resource_count_each": [
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "source_fidelity": {
+      "chart": {
+        "powerpoint_shape_type": 3,
+        "chart_type": 57,
+        "series_count": 1,
+        "chart_title": "Sales",
+        "visible_tokens_absent_from_all_outputs": [
+          "Sales",
+          "1st Qtr",
+          "2nd Qtr",
+          "3rd Qtr",
+          "4th Qtr",
+          "0",
+          "2",
+          "4",
+          "6",
+          "8",
+          "10"
+        ],
+        "source_slide_title_retained_by_all_projects": true,
+        "output_chart_snapshot_count_each": [
+          0,
+          0,
+          0
+        ]
+      },
+      "audio": {
+        "powerpoint_shape_type": 16,
+        "powerpoint_media_type": 2,
+        "poster_png_retained_by_all_projects": true,
+        "mp3_artifact_count_each": [
+          0,
+          0,
+          0
+        ]
+      },
+      "video": {
+        "powerpoint_shape_type": 16,
+        "powerpoint_media_type": 3,
+        "mp4_artifact_count_each": [
+          0,
+          0,
+          0
+        ],
+        "visible_poster_artifact_count_each": [
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "current_runtime": {
+      "diagnostic_codes_each": [
+        "PPTX2MD-OK",
+        "FINALIZER_DONE"
+      ],
+      "bar_chart_artifact_count": 1,
+      "audio_artifact_count": 2,
+      "video_artifact_count": 1
+    },
+    "physical_source_oracle": {
+      "consumer": "Microsoft PowerPoint",
+      "version": "16.0",
+      "build": "20131",
+      "pdf_page_count": 3,
+      "contact_sheet_bytes": 35874,
+      "contact_sheet_sha256": "f10f2a992d111648e0325f777d4f1d3df8100bd933efdbd9f12d32056a465ae9",
+      "render_process_after_wait_added": [],
+      "render_process_after_wait_removed": []
+    },
+    "representation_difference": {
+      "classification": "accepted_resource_naming_representation",
+      "detail": "Old audio Markdown uses a source/timestamp resource name while current at the VIS-129 evidence commit used slide1_img1.png; exact normalized semantic lines and the retained poster PNG bytes are equal. VIS-132 supersedes that generic current name with a source-traceable content-addressed name without changing the SHA-normalized content conclusion."
+    },
+    "shared_unaccepted_boundary": {
+      "classification": "known_blocker_not_accepted_difference",
+      "detail": "All three projects omit visible chart series/category/axis/title semantics and produce no chart snapshot; retain the audio poster but omit the embedded MP3; and omit both the embedded MP4 and visible video poster. Equal omission is not source-faithful conversion and is not accepted as parity completion.",
+      "acceptance_condition": "Define and test explicit chart and embedded-media extraction/preservation policies, or explicitly accept each surface as outside the PPTX-to-Markdown route contract."
+    },
+    "classification": {
+      "current_only_functional_gap_found": false,
+      "current_only_visual_or_resource_regression_found": false,
+      "production_change_made": false,
+      "broad_presentation_or_overall_parity": "not_proven"
+    },
+    "external_evidence": {
+      "root": "D:/docwen-parity/vis129-apache-poi-presentation-media-a041d59-v1",
+      "file_count": 48,
+      "total_bytes": 804472,
+      "evidence_summary_bytes": 20855,
+      "evidence_summary_sha256": "b766354227db143b9ffb9c565ac359270307012f8a6ddfda41cb56353e39449b",
+      "conversion_ledger_bytes": 14108,
+      "conversion_ledger_sha256": "a911179d1941005eff1ee91a4709893d2b430f39f64d9c52595e4a36ae39d56b",
+      "source_physical_projection_bytes": 8753,
+      "source_physical_projection_sha256": "98874571b1718efbef414a273896dbe5e914517701a7fd570b86ddfdc98c1dbe"
+    }
+  },
+  "legacy_ppt_addendum": {
+    "evidence_id": "VIS-2026-07-17-130",
+    "source_repository": "apache/poi",
+    "source_commit": "86e967d9b28d6a322a87ae8fcbf2a7eeb56cef96",
+    "screened_source_count": 5,
+    "selected_sources": {
+      "54880_chinese.ppt": {
+        "git_blob": "b9830f523ebc14e0b22540989b2c1609455d2ad9",
+        "bytes": 103936,
+        "sha256": "c6a7769355bd678958fcd74eada9cd556a2d863014729e69b270e8679b6f484d",
+        "slides": 1,
+        "surface": "Unicode, half-width Katakana and supplementary-plane text"
+      },
+      "basic_test_ppt_file.ppt": {
+        "git_blob": "af16393f44e0f315c212b60392e2bae2130987bc",
+        "bytes": 15360,
+        "sha256": "e8fd4c38ad72ce3735acbca0b60dd5870fb60f819c169e3947d166f4f1bcc79d",
+        "slides": 2,
+        "surface": "title, subtitle and multi-slide body text"
+      },
+      "pictures.ppt": {
+        "git_blob": "9f6ce6dea18f1c2e0b1fdf7fda9e8edf1bb4e46d",
+        "bytes": 75776,
+        "sha256": "5318e8486f47c7d9e838eaa4edfe385ba27d7d0ce145364792df53488430e98c",
+        "slides": 5,
+        "surface": "five picture occurrences across JPEG, PNG and legacy metafiles"
+      },
+      "table_test.ppt": {
+        "git_blob": "d1c688a3ac6f7c221e724a832518ab6c836a5f59",
+        "bytes": 122368,
+        "sha256": "4e5c3e64cb0de2b98e7f5d8f8259b4689cc52a3793bd4e0f011493284ee39d77",
+        "slides": 1,
+        "surface": "one physically visible empty 6x3 formatted table"
+      }
+    },
+    "project_heads": {
+      "docwen-ref-tk": "ec9298286cfe1379d5c5470db381577ea43ca0fa",
+      "docwen-ref-pyside6": "63db927c5ded920d4994bfede5c7b34c55e2f43e",
+      "docwen-current_pre_fix": "4fa6936a34ded374bd931f23ee564092ce4146c3"
+    },
+    "powerpoint_source_oracle": {
+      "consumer": "Microsoft PowerPoint",
+      "version": "16.0",
+      "build": "20131",
+      "screened_open_pptx_pdf_success_count": 5,
+      "screened_expected_count": 5,
+      "selected_pdf_page_count": 9,
+      "contact_sheet_bytes": 128909,
+      "contact_sheet_sha256": "712a9d1cf632c3bb368eb10c3988d8019c80d53ac992d8e3f258fc19c4bef20b",
+      "manual_review": "No black or clipped pages; Unicode text, two-slide text, five pictures and the empty formatted table are visibly present."
+    },
+    "public_ppt_route": {
+      "options": {
+        "actual_format": "ppt",
+        "export_notes": false,
+        "keep_images": true,
+        "enable_ocr": false,
+        "image_mode": "file",
+        "ocr_placement": "main_md"
+      },
+      "docwen_ref_tk_success_count": 0,
+      "docwen_ref_pyside6_success_count": 0,
+      "docwen_current_pre_fix_success_count": 4,
+      "docwen_current_post_fix_success_count": 4,
+      "expected_case_count_each": 4,
+      "current_diagnostic_codes_each": [
+        "PPTX2MD-OK",
+        "FINALIZER_DONE"
+      ]
+    },
+    "reference_environment_boundary": {
+      "classification": "legacy_reference_defect_not_current_regression",
+      "tk_debug_message": "Application.Visible : Invalid request.  Hiding the application window is not allowed.",
+      "old_pyside6_debug_message": "Application.Visible : Invalid request.  Hiding the application window is not allowed.",
+      "detail": "Both unmodified reference bridges set PowerPoint Application.Visible=False without suppressing this Office 16 COM error, swallow the exception and fail all four public PPT routes even though PowerPoint opens and projects all sources directly.",
+      "accepted_as_public_route_success": false
+    },
+    "wps_bridge_oracle": {
+      "backend": "WPS Presentation",
+      "success_count": 4,
+      "expected_success_count": 4,
+      "pptx_sha256": {
+        "54880_chinese.ppt": "633a452af15c293d724c51593254e207a815d8030bb1ab1d3540083474c99eb0",
+        "basic_test_ppt_file.ppt": "6093c23dbb6cff4205bc1158ca65d8b1ca73532e7c4ccf73e71b20dd6a779d9a",
+        "pictures.ppt": "3f074a69f20a6a8ed0d66543e938087829c5b4e20fd814c43287582c2a5862c8",
+        "table_test.ppt": "55d6691cd09e517034b612b9fec97c8faf95025b25444100a5fcee00c8dbfda0"
+      }
+    },
+    "same_wps_pptx_downstream": {
+      "success_count": 12,
+      "expected_success_count": 12,
+      "three_project_normalized_markdown_exact_each": true,
+      "three_project_resource_bytes_exact_each": true,
+      "current_public_ppt_matches_same_wps_pptx_each": true,
+      "normalization": "Replace old timestamp/source image names with the current stable name only when exact resource SHA-256 matches.",
+      "cases": {
+        "54880_chinese.ppt": {
+          "normalized_markdown_sha256": "22d06254520527ab69a6c468a88b9c26c9762341c4fcea195bbe786057f04413",
+          "resource_count_each": 0
+        },
+        "basic_test_ppt_file.ppt": {
+          "normalized_markdown_sha256": "8845687e029ac555abac27fab4c98901eaa6cdc7a6733045065a92d8788e4b3b",
+          "resource_count_each": 0
+        },
+        "pictures.ppt": {
+          "normalized_markdown_sha256": "4f76b0845bd9ec696d98fc35405555b0a3f8d68fa192599529a0f02b872391bc",
+          "resource_count_each": 5,
+          "resource_sha256": [
+            "8345fcf9642a79651ea36935f736e753e355a4df2d85eaaa1589837143b8f2f0",
+            "90a2c8be87924f2bf36439fec40969eb74fcc314dce8b9f9c627167d7d425663",
+            "e298ce815556e6fd7a4d01aa198d41b8383fbe08ce55d2e7c49c5145dc5bfa2f",
+            "093bf08d3844767ee0065258a4d0c16e9cd131bfeacfcec5ee228fea9714eb74",
+            "3c9e27e68d0322daaff3477a957d46ae5b32b23f058d29e65d3947b6eeafb2cb"
+          ]
+        },
+        "table_test.ppt": {
+          "normalized_markdown_sha256": "e68a70d2814a4fbff5e08da8ecd735c70f30bcafac728da0ab826bb0b7e25492",
+          "resource_count_each": 0
+        }
+      }
+    },
+    "current_fix": {
+      "classification": "real_current_only_final_artifact_defect_fixed",
+      "before": "The pictures PPT route finalized one Markdown file containing five image links but finalized zero image artifacts.",
+      "after": "The same route finalizes one primary Markdown plus five exact image artifacts; FINALIZER_DONE reports six artifacts.",
+      "cause": "HubWorkspaceHandle delegated add_artifact but did not expose the delegate registered_artifacts collection consumed by downstream converters.",
+      "production": [
+        "packages/core/src/docwen_core/protocols/execution_context.py",
+        "packages/core/src/docwen_core/protocols/hub_context.py"
+      ],
+      "regression": "packages/plugins/presentation/tests/test_presentation_to_md.py::TestPptToMd::test_ppt_to_md_finalizes_images_registered_through_hub_workspace",
+      "pre_fix_picture_final_file_count": 1,
+      "post_fix_picture_final_file_count": 6
+    },
+    "process_boundary": {
+      "screen_powerpoint_still_present_after_30_seconds": true,
+      "wps_bridge_wpp_present_immediately_after": true,
+      "post_settlement_only_preexisting_wps_pid": 11388,
+      "harness_termination_command_used": false
+    },
+    "classification": {
+      "current_only_functional_gap_found": true,
+      "current_only_gap_fixed": true,
+      "reference_public_route_environment_boundary_accepted_as_success": false,
+      "focused_legacy_ppt_parity": "pass_after_fix_with_reference_environment_boundary",
+      "broad_presentation_or_overall_parity": "not_proven"
+    },
+    "external_evidence": {
+      "root": "D:/docwen-parity/vis130-apache-poi-legacy-ppt-4fa6936-v1",
+      "matrix_summary_bytes": 9405,
+      "matrix_summary_sha256": "716c754a70e16442acac0d58a1d195fc0b06c42b812a795008ce4eb79f1bde54",
+      "screen_analysis_sha256": "2588969880c8ede910ff6f86ad4a8fef08e14d4221cd01f0e5cebd826c902622",
+      "bridge_oracle_sha256": "da5923dd23c117890d793af2e1d13bb58d41f391e129461d4a39bd09e7541df1",
+      "post_settlement_sha256": "97c2ad3bedb73fa1fcccf299e4157c51261a0891b186a0bc9f18e009f8500b89"
+    }
+  },
+  "smartart_hidden_policy_addendum": {
+    "evidence_id": "VIS-2026-07-17-131",
+    "source_repository": "apache/poi",
+    "source_commit": "86e967d9b28d6a322a87ae8fcbf2a7eeb56cef96",
+    "source": {
+      "filename": "60810.pptx",
+      "git_blob": "3e4e22be5f4911be6d9935246d32f5f76907ba4f",
+      "bytes": 874522,
+      "sha256": "61afceb0365523ceba6fc00a525157148c2ddbdb3b5d843992ac3c107e9921bf"
+    },
+    "project_heads": {
+      "docwen-ref-tk": "ec9298286cfe1379d5c5470db381577ea43ca0fa",
+      "docwen-ref-pyside6": "63db927c5ded920d4994bfede5c7b34c55e2f43e",
+      "docwen-current_pre_fix": "6500aac31ad9d2d3994ce09115b287cd1958a863"
+    },
+    "powerpoint_source_oracle": {
+      "consumer": "Microsoft PowerPoint",
+      "version": "16.0",
+      "build": "20131",
+      "slide_count": 28,
+      "hidden_slide_indexes": [
+        4,
+        21,
+        22
+      ],
+      "smartart_slide_indexes": [
+        8,
+        13,
+        22
+      ],
+      "smartart_diagram_count": 4,
+      "smartart_text_count": 34,
+      "smartart_text_count_by_slide": {
+        "8": 7,
+        "13": 11,
+        "22": 16
+      },
+      "package_order_exact_after_com_encoding_normalization": true
+    },
+    "pre_fix_three_project_matrix": {
+      "success_count": 3,
+      "expected_success_count": 3,
+      "old_markdown_raw_exact": true,
+      "smartart_bullet_count": {
+        "docwen-ref-tk": 0,
+        "docwen-ref-pyside6": 0,
+        "docwen-current-pre": 0
+      },
+      "classification": "shared_unaccepted_source_fidelity_gap"
+    },
+    "current_enhancement": {
+      "classification": "current_enhancement_closes_shared_unaccepted_boundary",
+      "production": "packages/plugins/presentation/src/docwen_plugin_presentation/pptx_md/converter.py",
+      "regression": "packages/plugins/presentation/tests/test_smartart_hidden_policy.py",
+      "diagnostic_codes": [
+        "PPTX2MD-OK",
+        "FINALIZER_DONE"
+      ],
+      "primary_metadata": {
+        "slide_count": 28,
+        "hidden_slide_count": 3,
+        "table_count": 0,
+        "image_count": 19,
+        "smartart_text_count": 34,
+        "title": "3.7.1 HRBP Process overview"
+      },
+      "smartart_bullet_count": 34,
+      "smartart_bullet_order_exact": true,
+      "base_nonempty_lines_unchanged": true,
+      "current_resource_names_hashes_exact": true,
+      "three_project_resource_hash_multisets_exact": true,
+      "final_markdown_bytes": 26131,
+      "final_markdown_sha256": "5816c5bc0f44a84e540ac09b3477f801a29c0d1199de8cefcd966f7f9fed42c9"
+    },
+    "hidden_slide_policy": {
+      "policy": "include_all_source_slides_and_report_hidden_count",
+      "reason": "Markdown is an archival content-reachability projection; source content is not silently discarded and the hidden count makes the choice observable.",
+      "config_or_request_option_added": false
+    },
+    "process_boundary": {
+      "powerpoint_pid_present_immediately_after_quit": 20668,
+      "powerpoint_present_post_settlement": false,
+      "post_settlement_only_preexisting_wps_pid": 11388,
+      "harness_termination_command_used": false
+    },
+    "classification": {
+      "current_only_regression_found": false,
+      "smartart_content": "closed_for_pinned_real_source",
+      "hidden_slide_policy": "explicit_and_regression_tested",
+      "broad_presentation_or_overall_parity": "not_proven"
+    },
+    "remaining_unaccepted_boundaries": [
+      "chart semantics and snapshot",
+      "embedded audio/video payload and video poster",
+      "OCR breadth",
+      "broader Presentation producers and object families",
+      "OS-wide Explorer/notification/long-task UX",
+      "missing old-PySide6 history"
+    ],
+    "external_evidence": {
+      "root": "D:/docwen-parity/vis131-smartart-hidden-policy-6500aac-v1",
+      "file_count": 130,
+      "total_bytes": 6586303,
+      "matrix_summary_bytes": 19873,
+      "matrix_summary_sha256": "068859ec26da3532c0364869804fe44b338dded1aa5ea409d43f9f519f853982",
+      "source_oracle_sha256": "10dfacd9cf28a8f0b4046d9d1527d29aea5110723ea4751ed59c1430eabf3a27",
+      "current_post_v3_ledger_sha256": "6c59234dae4374bb21205c2b1ff3212d116f37ba519b4a8a8be3785892addbe8",
+      "post_settlement_sha256": "bd7928a3663caee2b95db26cc353b35282b32a2a803a755ea993769c627e5d21"
+    }
+  },
+  "accepted_differences": [
+    {
+      "difference": "Old systems return a Markdown string directly; current runtime writes a primary Markdown ArtifactManifest.",
+      "classification": "current_runtime_output_contract",
+      "reason": "Runtime staging/finalizer owns artifact materialization in the rewrite. Markdown content semantics and artifact metadata are preserved."
+    }
+  ],
+  "probe_outputs": {
+    "local_summary": "tmp/pptx_md_probe_20260702",
+    "current_first_non_empty_line": "---",
+    "outputs_core_semantics_match": true
+  }
+}

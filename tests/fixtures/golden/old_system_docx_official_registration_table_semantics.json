@@ -1,0 +1,494 @@
+{
+  "golden_id": "GOLDEN-002",
+  "evidence_id": "VIS-2026-07-15-030",
+  "scope": "Three-project DOCX-to-Markdown comparison using an official Chinese company-registration form with 20 complex tables.",
+  "source": {
+    "title": "公司登记（备案）申请书（完整）",
+    "publisher": "无锡市数据局",
+    "disclosure_page": "https://bigdata.wuxi.gov.cn/doc/2024/08/21/4267062.shtml",
+    "attachment_url": "https://bigdata.wuxi.gov.cn/uploadfiles/202604/30/202604301410478373010.docx",
+    "retrieved_on": "2026-07-15",
+    "redistribution": "external_binary_retained_only_in_workspace_bound_temporary_probe",
+    "bytes": 73173,
+    "sha256": "07aadb0f403095b33c7e1e61c037ae4a8194be660c9f4bc9c6bdb521564e6eea",
+    "top_level_paragraph_count": 36,
+    "top_level_nonempty_paragraph_count": 1,
+    "section_count": 13,
+    "table_count": 20,
+    "table_row_count": 259,
+    "table_shapes_rows_columns": [
+      [
+        14,
+        7
+      ],
+      [
+        20,
+        4
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        9,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        10,
+        5
+      ],
+      [
+        18,
+        7
+      ],
+      [
+        21,
+        5
+      ],
+      [
+        5,
+        5
+      ],
+      [
+        10,
+        5
+      ],
+      [
+        6,
+        4
+      ],
+      [
+        14,
+        4
+      ],
+      [
+        18,
+        6
+      ],
+      [
+        20,
+        5
+      ],
+      [
+        11,
+        6
+      ],
+      [
+        12,
+        4
+      ],
+      [
+        17,
+        4
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        10,
+        4
+      ],
+      [
+        21,
+        4
+      ]
+    ],
+    "normalized_table_cell_position_count": 1143,
+    "unique_nonempty_table_paragraph_count": 230,
+    "grid_span_count": 200,
+    "vertical_merge_count": 23,
+    "numbered_paragraph_count": 28,
+    "direct_outline_paragraph_count": 1,
+    "body_title": "公司登记（备案）申请书",
+    "body_title_outline_level": 1,
+    "complex_hyperlink_field_count": 2,
+    "field_char_count": 6,
+    "instruction_text_count": 2,
+    "image_count": 0,
+    "footer_drawing_count": 1,
+    "footer_vml_shape_count": 1,
+    "footer_textbox_count": 2,
+    "footer_textbox_nonempty_text_count": 0,
+    "absent_features": [
+      "word/media/*",
+      "word/comments.xml",
+      "tracked revisions",
+      "structured document tags",
+      "simple fields",
+      "altChunk"
+    ]
+  },
+  "execution_contract": {
+    "valid_project_executions": 3,
+    "all_valid_executions_successful": true,
+    "docwen_ref_tk_entry": "Production convert_docx_to_md after gui_run.py translator injection.",
+    "docwen_ref_pyside6_entry": "Production convert_docx_to_md after docwen.bootstrap.initialize_runtime().",
+    "docwen_current_entry": "DocumentPlugin -> TaskManager -> OutputFinalizer with remove_numbering=false and yaml_key_labels.",
+    "office_application_required": false,
+    "invalid_harness_attempts_excluded": [
+      "Old PySide6 was first invoked with the current virtualenv, which lacks its pydantic dependency.",
+      "The first current runner read nonexistent ArtifactManifest name/final_path attributes.",
+      "The first current alias-label run passed an incorrect localized aliases key."
+    ]
+  },
+  "pre_fix_current_regressions": [
+    {
+      "description": "Vertical-merge continuation cells were pre-skipped and then consumed again, creating phantom Markdown columns.",
+      "affected_table_indices_one_based": [
+        1,
+        2,
+        6,
+        13
+      ],
+      "source_and_old_pyside6_column_counts": [
+        7,
+        4,
+        5,
+        6
+      ],
+      "current_pre_fix_column_counts": [
+        10,
+        6,
+        7,
+        7
+      ],
+      "current_default_on_disk_bytes": 53460,
+      "current_default_on_disk_sha256": "e25d70dc010556c15c104f5aaf16cdda444d78e6fa3835de44d07f8d7cacea27",
+      "current_empty_on_disk_bytes": 20037,
+      "current_empty_on_disk_sha256": "8f4aebe9574969aaeb3516448a5c6293e3bab5bc177e688c9bbaaae29e47a2b7"
+    },
+    {
+      "description": "Table and SDT paragraphs were absent from the high-level paragraph lookup, and distinct cell paragraphs were flattened with spaces, losing inline formatting and paragraph boundaries.",
+      "red_expected": "| <u>Underlined</u><br>Second paragraph |",
+      "red_actual": "| Underlined Second paragraph |"
+    }
+  ],
+  "regressions_fixed": [
+    {
+      "owner": "packages/plugins/document/src/docwen_plugin_document/to_markdown/converter.py::_process_table",
+      "direct_test": "packages/plugins/document/tests/test_to_markdown_standard_parity.py::test_vertical_merge_continuation_does_not_add_a_phantom_column"
+    },
+    {
+      "owners": [
+        "packages/plugins/document/src/docwen_plugin_document/to_markdown/converter.py::convert",
+        "packages/plugins/document/src/docwen_plugin_document/to_markdown/converter.py::_get_cell_text"
+      ],
+      "direct_test": "packages/plugins/document/tests/test_document_to_md_golden.py::TestDocxToMdGolden::test_table_cell_paragraph_breaks_and_formatting_survive_finalizer"
+    }
+  ],
+  "post_fix_projects": {
+    "docwen-ref-tk": {
+      "success": true,
+      "on_disk_bytes": 20653,
+      "on_disk_sha256": "436612f8199b001ac453c99f1942415d35d442dcefe14663d7234d964d9942e6",
+      "body_sha256": "c2f9f0945cbe73ba4e523e8677116388d142169720683dfbb5960aa3135126f1",
+      "body_line_count": 346,
+      "table_count": 20,
+      "table_row_count": 259,
+      "html_break_count": 69,
+      "underline_marker_count": 17,
+      "heading_line_count": 0
+    },
+    "docwen-ref-pyside6": {
+      "success": true,
+      "on_disk_bytes": 20212,
+      "on_disk_sha256": "266ffa1a45fe0acde9e60e3e454cee182267b3fa4320e4f3de092cd4fc94c9fb",
+      "body_sha256": "c7305488daf1ca0d40e0997b0bc5b57c2d63acc5209cc985d69114b9b641257d",
+      "body_line_count": 346,
+      "table_count": 20,
+      "table_row_count": 259,
+      "html_break_count": 69,
+      "underline_marker_count": 17,
+      "heading_line_count": 0,
+      "table_shapes_match_source": true
+    },
+    "docwen-current-default-fill": {
+      "success": true,
+      "on_disk_bytes": 55345,
+      "on_disk_sha256": "60b1ea4e047bd9371eba8505c070991d8ab4c1114ef5c1df05789601dfebfa63",
+      "body_sha256": "ff5a403e66c3a96257e930870e5f4cd8e30669d691fa928f08effeee621ecc93",
+      "body_line_count": 308,
+      "table_count": 20,
+      "table_row_count": 259,
+      "html_break_count": 221,
+      "underline_marker_count": 74,
+      "heading_line_count": 1,
+      "covered_cells_filled_from_merge_anchor": 326,
+      "table_shapes_match_source": true
+    },
+    "docwen-current-explicit-empty": {
+      "success": true,
+      "on_disk_bytes": 20315,
+      "on_disk_sha256": "84023e011aba5330f0fc03e0be498106ae113486808181ca6ed0a71671ecec8c",
+      "body_sha256": "62a31738a4cd8ef7a0666417451d79a6c7272b9f6898e09f287a8d3b07e4594b",
+      "body_line_count": 308,
+      "table_count": 20,
+      "table_row_count": 259,
+      "html_break_count": 69,
+      "underline_marker_count": 26,
+      "heading_line_count": 1,
+      "table_shapes_match_source": true,
+      "normalized_cell_positions_equal_to_old_pyside6": 1143,
+      "normalized_cell_positions_current_only": 0,
+      "normalized_cell_positions_old_only": 0,
+      "normalized_cell_position_conflicts": 0,
+      "primary_name": "company-registration-application-complete.md",
+      "primary_in_requested_output_directory": true,
+      "metadata": {
+        "paragraph_count": 0,
+        "heading_count": 1,
+        "table_count": 20,
+        "image_count": 0
+      },
+      "diagnostic_codes": [
+        "DOCX2MD-OK",
+        "FINALIZER_DONE"
+      ]
+    }
+  },
+  "normalized_contract": {
+    "frontmatter_dictionaries_equal_across_all_outputs": true,
+    "all_230_unique_source_table_paragraphs_reachable_across_all_outputs": true,
+    "current_post_fix_table_shapes_equal_source_and_old_pyside6": true,
+    "current_empty_and_old_pyside6_table_position_count": 1143,
+    "current_empty_and_old_pyside6_all_normalized_table_positions_equal": true,
+    "current_default_vs_empty_difference_is_configured_merge_fill_only": true
+  },
+  "evidence_backed_current_improvements": [
+    "Current maps the source direct outlineLvl=1 title to Markdown H2; both old projects flatten it to body text.",
+    "Current explicit-empty preserves nine additional underlined fields versus old PySide6: seven blank entry slots and two date fields.",
+    "Current finalizes a stable source-owned primary name in the requested output directory with metadata and diagnostics."
+  ],
+  "shared_reference_limits": [
+    "All three keep the two complex HYPERLINK display texts but drop their target URLs.",
+    "Standard DOCX-to-Markdown does not export header/footer content; the source footer textboxes are empty.",
+    "Old Tk table 13 contains one row with an unescaped pipe and five parsed cells; old PySide6 is the stronger old-system table oracle for this sample."
+  ],
+  "accepted_limits": [
+    "The checked-in evidence records official URLs, SHA-256, OOXML profile and normalized projections; the external DOCX binary is not redistributed.",
+    "Current default fill repeats merge-anchor content in covered cells, while explicit empty reproduces old-system blank covered cells; this is an existing configured semantic, not data loss."
+  ],
+  "remaining_scope": [
+    "This is one official registration form, not a broad government/business document corpus.",
+    "The source does not exercise media extraction, comments, revisions, SDT content, simple fields or altChunk.",
+    "Complex field URL fidelity and header/footer extraction remain shared product limits.",
+    "VIS-2026-07-17-124 adds focused Word physical rendering and visual inspection for DOC/RTF/ODT, but not broad Office/WPS/LibreOffice corpus coverage.",
+    "GOLDEN-002 and overall final artifact parity remain NOT PASSED YET."
+  ],
+  "physical_matrix_addendum": {
+    "evidence_id": "VIS-2026-07-17-124",
+    "source_identity_exact_to_semantic_fixture": true,
+    "project_heads": {
+      "docwen-ref-tk": "ec9298286cfe1379d5c5470db381577ea43ca0fa",
+      "docwen-ref-pyside6": "63db927c5ded920d4994bfede5c7b34c55e2f43e",
+      "docwen-current": "2ef03928d6b4d75f94ec9ce870c46cfdaadd3987"
+    },
+    "source_geometry": {
+      "sections": 13,
+      "page_twips": {
+        "width": 11906,
+        "height": 16838
+      },
+      "default_usable_content_twips": {
+        "width": 8306,
+        "height": 13958
+      },
+      "section_5_usable_content_twips": {
+        "width": 9353,
+        "height": 13958
+      },
+      "all_sections_have_positive_usable_content_area": true
+    },
+    "execution": {
+      "targets": [
+        "doc",
+        "rtf",
+        "odt"
+      ],
+      "production_conversions": 9,
+      "all_conversions_successful": true,
+      "all_target_signatures_valid": true,
+      "word_documents_opened": 10,
+      "word_pdf_exports": 10,
+      "rendered_views": 10,
+      "rendered_pages": 150,
+      "contact_sheets": 3,
+      "all_contact_sheets_inspected": true
+    },
+    "same_target_three_project": {
+      "doc": {
+        "page_counts": [
+          15,
+          15,
+          15
+        ],
+        "page_count_equal": true,
+        "render_size_equal": true,
+        "visible_text_equal": true,
+        "pixels_equal": true
+      },
+      "rtf": {
+        "page_counts": [
+          15,
+          15,
+          15
+        ],
+        "page_count_equal": true,
+        "render_size_equal": true,
+        "visible_text_equal": true,
+        "pixels_equal": true
+      },
+      "odt": {
+        "page_counts": [
+          15,
+          15,
+          15
+        ],
+        "page_count_equal": true,
+        "render_size_equal": true,
+        "visible_text_equal": true,
+        "pixels_equal": true
+      }
+    },
+    "source_relative_projection": {
+      "doc": {
+        "word_story_paragraph_table_section_projection_exact": true,
+        "source_and_output_pages": [
+          15,
+          15
+        ],
+        "pdf_joined_text_sequence_ratio": 0.999762413875,
+        "mean_common_page_pixel_change_ratio": 0.029817841733,
+        "max_common_page_pixel_change_ratio": 0.14844223
+      },
+      "rtf": {
+        "source_and_output_pages": [
+          15,
+          15
+        ],
+        "paragraph_counts": [
+          1076,
+          1076
+        ],
+        "table_counts": [
+          20,
+          19
+        ],
+        "field_counts": [
+          2,
+          2
+        ],
+        "section_counts": [
+          13,
+          13
+        ],
+        "source_tables_17_and_18_become_output_table_17_without_content_loss": true,
+        "fullwidth_square_brackets_become_tortoise_shell_brackets": 4,
+        "all_nonempty_table_cell_text_bracket_canonical_exact_in_order": true,
+        "pdf_joined_text_sequence_ratio": 0.998257563757,
+        "mean_common_page_pixel_change_ratio": 0.019448341667,
+        "max_common_page_pixel_change_ratio": 0.040253283
+      },
+      "odt": {
+        "source_and_output_pages": [
+          15,
+          15
+        ],
+        "paragraph_counts": [
+          1076,
+          1075
+        ],
+        "nonempty_paragraph_counts": [
+          307,
+          307
+        ],
+        "compact_nonempty_paragraphs_exact_in_order": true,
+        "table_counts": [
+          20,
+          20
+        ],
+        "table_13_has_one_extra_empty_cell": true,
+        "all_nonempty_table_cell_text_exact_in_order": true,
+        "field_counts": [
+          2,
+          2
+        ],
+        "section_counts": [
+          13,
+          13
+        ],
+        "pdf_joined_text_sequence_ratio": 0.965858328015,
+        "mean_common_page_pixel_change_ratio": 0.129507645533,
+        "max_common_page_pixel_change_ratio": 0.199754406
+      },
+      "rtf_and_odt_visible_existing_header_footer_ranges_exact": true,
+      "rtf_and_odt_inactive_linked_header_range_difference_sections": [
+        9,
+        10,
+        11,
+        12,
+        13
+      ]
+    },
+    "manual_observation": {
+      "same_target_three_project_columns_visually_exact": true,
+      "current_only_clip_overlap_black_block_missing_text_or_page": false,
+      "doc_closest_to_source": true,
+      "rtf_visually_close_with_shared_minor_reflow": true,
+      "odt_shared_font_spacing_width_and_wrapping_changes_more_visible": true
+    },
+    "process_boundary": {
+      "pre_existing_process": {
+        "name": "wps.exe",
+        "pid": 11388
+      },
+      "conversion_added": [],
+      "conversion_removed": [],
+      "word_render_added": [],
+      "word_render_removed": [],
+      "termination_command_used": false
+    },
+    "external_evidence": {
+      "root": "D:/docwen-parity/vis124-official-registration-physical-2ef0392-v1",
+      "inventory_excluding_five_harness_scripts_summary_and_pycache": {
+        "files": 200,
+        "bytes": 34810184
+      },
+      "evidence_summary": {
+        "bytes": 30613,
+        "sha256": "a86753e0b9e7cc4a46248991ccc671db0d636c155d25667d6dacc45f3b2b190d"
+      },
+      "key_file_sha256": {
+        "analysis-summary.json": "98b635acbeff273ea20f85916e5140610ccc3e54ead7fd4ded13a78c4d0d1e96",
+        "conversion-docwen-current.json": "7ecb44211443866f8f2e5966c65d7d27f7bdc45800145a7d3cb2c5e9a4dd7916",
+        "conversion-docwen-ref-pyside6.json": "bd6ee1602661b68d3d0d9cb4f9e9d6d12db703e1ac6d55d1562a3061848271c0",
+        "conversion-docwen-ref-tk.json": "672190aa0822536bc0906d7791fbfd547039613088bb16acabf2084dafabdd3d",
+        "physical-projection.json": "cb5ac53414972974f9e3feaa90750dd9b30a9af8618e9808398dc8e28951a672",
+        "preflight.json": "b0fffa8a94a93b08872886a8fbd0bdfc19eb64e3b42b1cb9d679a87055dace8a",
+        "process-boundary.json": "787abb39b89ce4871526193b8f6609687b908f94743d70030022e40e006c5d5e",
+        "word-object-projection.json": "aaeb134edc425a02cd79114192f5733406040eb95ae386326defb96419bae27b",
+        "word-render-process-boundary.json": "604c4db1df8cd73677de7d0ae229c922a9f746f8e802bc4f7877707971e515fb"
+      },
+      "contact_sheet_sha256": {
+        "doc": "622e67bc1a9ae157dd5e9a57465aedbab883777e403272b8a971af30ff02299a",
+        "rtf": "cca3efbc44ad15aa663d041b7aeaff52e99199963563bdadf1d678b9e8f74906",
+        "odt": "d87867191e2aff6e2a08e89a69524c0799e211c4ce1f38aaa5025e016a8dd67f"
+      }
+    },
+    "classification": {
+      "focused_complex_registration_table_physical_parity_strong": true,
+      "current_only_conversion_object_or_physical_regression_found": false,
+      "doc_source_object_projection_exact": true,
+      "rtf_shared_table_grouping_and_four_glyph_substitutions_are_accepted_source_fidelity": false,
+      "odt_shared_empty_object_and_layout_changes_are_accepted_source_fidelity": false,
+      "production_change_made": false,
+      "broad_doc_docx_rtf_odt_physical_parity_closed": false,
+      "overall_parity_closed": false
+    }
+  }
+}

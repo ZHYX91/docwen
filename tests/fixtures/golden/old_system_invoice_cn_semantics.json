@@ -1,0 +1,175 @@
+{
+  "golden_id": "GOLDEN-023",
+  "description": "Normalized old-system semantic smoke for Chinese invoice optimization.",
+  "probe_date": "2026-07-02",
+  "probe_scope": "Generated PDF text invoice and OFD InvoiceData.xml invoice run through old Tk, old PySide6, and current invoice_cn optimizer; volatile output paths and timestamps are omitted.",
+  "comparison_implication": "This fixture proves focused invoice_cn PDF/OFD field and table semantics plus the localized-title/fixed-Chinese-business-schema boundary. VIS-386 closes the finite real-invoice family through an external private masked oracle; raw private bytes and text are not fixture content.",
+  "input_fixtures": {
+    "pdf": "packages/plugins/optimizers/invoice_cn/tests/conftest.py::sample_invoice_pdf_path",
+    "ofd": "packages/plugins/optimizers/invoice_cn/tests/conftest.py::sample_invoice_ofd_path"
+  },
+  "schema_field_count": 20,
+  "expected_semantics": {
+    "pdf": {
+      "scope": "text-PDF baseline fields and table skeleton",
+      "row_count": 0,
+      "yaml_subset": {
+        "发票代码": "123456789012",
+        "发票号码": "87654321",
+        "开票日期": "2024年01月15日",
+        "购买方名称": "",
+        "销售方名称": "",
+        "金额": "",
+        "税额": "",
+        "价税合计": ""
+      },
+      "required_markdown_tokens": [
+        "## 商品明细",
+        "| 商品名称 |",
+        "123456789012",
+        "87654321"
+      ],
+      "accepted_limits": [
+        "The focused generated PDF preserves core invoice identifiers across all three projects but does not produce detail rows; this matches old Tk, old PySide6, and current behavior for this simple text-layout sample."
+      ]
+    },
+    "ofd": {
+      "scope": "InvoiceData.xml structured fields and detail rows",
+      "row_count": 2,
+      "yaml_subset": {
+        "发票代码": "123456789012",
+        "发票号码": "87654321",
+        "开票日期": "2024年01月15日",
+        "购买方名称": "测试购买方公司",
+        "销售方名称": "测试销售方公司",
+        "金额": "700.00",
+        "税额": "91.00",
+        "价税合计": "791.00"
+      },
+      "required_markdown_tokens": [
+        "## 商品明细",
+        "| 商品名称 |",
+        "测试商品一",
+        "测试商品二",
+        "123456789012",
+        "87654321",
+        "791.00"
+      ],
+      "table_row_lines": [
+        "| 商品名称 | 规格型号 | 单位 | 数量 | 单价 | 金额 | 税率 | 税额 |",
+        "| 测试商品一 |  | 件 | 2 | 100.00 | 200.00 | 13% | 26.00 |",
+        "| 测试商品二 |  | 箱 | 1 | 500.00 | 500.00 | 13% | 65.00 |"
+      ]
+    }
+  },
+  "shared_behavior_evidence": {
+    "localized_title_fixed_business_schema_scope": {
+      "classification": "localized_generic_title_key_with_fixed_chinese_invoice_business_fields",
+      "old_tk_code_evidence": "docwen-ref-tk/src/docwen/converter/layout2md/invoice_cn.py::_build_yaml_frontmatter resolves only t('yaml_keys.title', default='标题') for the generic title key, then writes the metadata dict keys unchanged from the fixed Chinese INVOICE_CN_YAML_SCHEMA/table headers.",
+      "old_pyside6_code_evidence": "docwen-ref-pyside6/src/docwen/converter/invoice/invoice_cn/markdown_writer.py::_build_yaml_frontmatter resolves only t('yaml_keys.title', default='标题') for the generic title key, while entry.py defines fixed Chinese INVOICE_CN_YAML_SCHEMA and table headers.",
+      "current_code_evidence": "packages/plugins/optimizers/invoice_cn/src/docwen_plugin_optimizer_invoice_cn/invoice_cn/markdown_writer.py::_build_yaml_frontmatter consumes yaml_key_labels['title'] for the generic title key, while yaml_schema.py keeps the 20 invoice business fields and table headers as the old fixed Chinese schema.",
+      "parity_decision": "Non-Chinese locale output should localize the generic Markdown title key for invoice_cn, but invoice business field names such as 发票代码/发票号码/价税合计 and table headers such as 商品名称 remain the old-system Chinese schema; translating those business fields would be a future product expansion, not a current parity fix.",
+      "current_tests": [
+        "packages/plugins/optimizers/invoice_cn/tests/test_invoice_conversions.py::TestPdfInvoiceToMarkdown::test_invoice_cn_pdf_fixture_finalizes_through_runtime",
+        "packages/plugins/optimizers/invoice_cn/tests/test_invoice_conversions.py::TestRowParser::test_yaml_writer_structure",
+        "tests/test_repo/test_golden_docs.py::test_golden_docs_track_invoice_cn_old_system_semantic_fixture"
+      ]
+    }
+  },
+  "fa13_private_final_artifact_contract_addendum": {
+    "stage_id": "VIS-2026-07-26-386",
+    "classification": "FIXED_AND_VERIFIED_WITH_USER_ACCEPTED_DERIVED_IMAGE_ACCURACY_BOUNDARY",
+    "privacy": {
+      "raw_private_bytes_checked_in": false,
+      "raw_private_text_checked_in": false,
+      "private_hmac_key_checked_in": false,
+      "external_evidence_contains_only_masked_projections": true
+    },
+    "corpus": {
+      "electronic_pdf_cases": 10,
+      "original_ofd_cases": 4,
+      "pdf_derived_image_cases": 3,
+      "three_project_route_slots": 51
+    },
+    "result": {
+      "route_success_count": 51,
+      "current_strict_electronic_pass": "14/14",
+      "old_tk_strict_electronic_pass": "8/14",
+      "old_pyside6_strict_electronic_pass": "8/14",
+      "image_current_not_worse": "3/3",
+      "exact_normalized_projection_equal": "10/17",
+      "source_immutable": true,
+      "artifacts_reachable": true,
+      "private_absolute_path_leak": false
+    },
+    "external_masked_evidence": {
+      "source_anchor_manifest_sha256": "64A1CEB392C655FFFE46BA8AD5518251CCFC9575F37E7FC997666A5802C9324F",
+      "final_comparison_sha256": "C969149C35617F6E467AF2B9FC55E0EF52507F67EA44E551EE3E08DA8B1CAEB8"
+    },
+    "accepted_boundary": "The three image inputs are labelled PDF derivatives rather than original camera/scanner evidence. Low absolute recognition is accepted only for non-electronic image delivery; route success, non-empty output, privacy, artifact reachability, truthful diagnostics, source immutability and current-not-worse behavior remain mandatory. Electronic PDF/OFD thresholds are unchanged.",
+    "current_repairs": [
+      "Character-position reconstruction for split or combined PDF invoice headers.",
+      "Currency-prefixed positional grand-total extraction.",
+      "Buyer/seller tax-label cluster inference without cross-column identifiers."
+    ]
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "entrypoint": "docwen.converter.layout2md.invoice_cn.convert_invoice_cn_layout_to_md",
+      "success": true,
+      "schema_field_count": 20,
+      "pdf": {
+        "line_count": 0,
+        "page_count": 1,
+        "matches_expected": true
+      },
+      "ofd": {
+        "line_count": 2,
+        "page_count": 1,
+        "matches_expected": true
+      }
+    },
+    "docwen-ref-pyside6": {
+      "entrypoint": "docwen.converter.invoice.invoice_cn.convert_invoice_cn_layout_to_md",
+      "success": true,
+      "schema_field_count": 20,
+      "pdf": {
+        "line_count": 0,
+        "page_count": 1,
+        "matches_expected": true
+      },
+      "ofd": {
+        "line_count": 2,
+        "page_count": 1,
+        "matches_expected": true
+      }
+    },
+    "docwen-current": {
+      "entrypoint": "docwen_plugin_optimizer_invoice_cn.invoice_cn.converter.InvoiceCnConverter.convert",
+      "success": true,
+      "schema_field_count": 20,
+      "pdf": {
+        "artifact_metadata": {
+          "source_format": "pdf",
+          "row_count": 0,
+          "yaml_fields": 20
+        },
+        "diagnostic_codes": [
+          "INVOICE-OK"
+        ],
+        "matches_expected": true
+      },
+      "ofd": {
+        "artifact_metadata": {
+          "source_format": "ofd",
+          "row_count": 2,
+          "yaml_fields": 20
+        },
+        "diagnostic_codes": [
+          "INVOICE-OK"
+        ],
+        "matches_expected": true
+      }
+    }
+  }
+}

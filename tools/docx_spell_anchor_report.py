@@ -11,7 +11,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from docwen.docx_spell.api import build_anchor_report_markdown
+from docwen_plugin_proofread.anchor_report import build_anchor_report_markdown
 
 
 def main(argv: list[str]) -> int:

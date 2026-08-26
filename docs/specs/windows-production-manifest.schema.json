@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://docwen.dev/schemas/windows-production-manifest.v1.json",
+  "title": "DocWen Windows production manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "manifestId", "product", "target", "sourceContracts", "build", "toolchain", "payload", "channels", "releaseAssetAllowlist"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "manifestId": {"const": "docwen-windows-production"},
+    "product": {"type": "object"},
+    "target": {"type": "object"},
+    "sourceContracts": {"type": "object"},
+    "build": {"type": "object"},
+    "toolchain": {"type": "object"},
+    "payload": {"type": "object"},
+    "channels": {"type": "object"},
+    "releaseAssetAllowlist": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+  }
+}

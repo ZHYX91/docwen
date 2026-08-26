@@ -1,0 +1,372 @@
+{
+  "golden_id": ["GOLDEN-015", "GOLDEN-016"],
+  "fixture_scope": "Normalized old-system proofread text-engine semantics plus current DOCX/Markdown carrier smoke and DOCX carrier scope boundary.",
+  "comparison_implication": "This fixture proves focused text-engine issue projection, Markdown sanitizer cases, multi-pattern behavior, the DOCX body-paragraph carrier boundary, and one real dictionary-backed official Chinese DOCX through JSON/comment/anchor-report artifacts. Broader dictionaries and non-body carriers remain open.",
+  "probe_date": "2026-07-02",
+  "input_text": "这是己个测试（缺少右括号。数字１２３，含敏感词，例外敏感词可用。",
+  "rules": {
+    "symbol_pairs": [["（", "）"]],
+    "symbol_map": {
+      "1": ["１"],
+      "2": ["２"],
+      "3": ["３"]
+    },
+    "typos_map": {
+      "一个": ["己个"]
+    },
+    "sensitive_words": {
+      "敏感词": ["例外敏感词"]
+    },
+    "checks_enabled": {
+      "symbol_pairing": true,
+      "symbol_correction": true,
+      "typos_rule": true,
+      "sensitive_word": true
+    }
+  },
+  "expected_issues": [
+    {
+      "rule_key": "sensitive",
+      "source": "sensitive",
+      "start_pos": 20,
+      "end_pos": 23,
+      "error_text": "敏感词",
+      "suggestion": "sensitive"
+    },
+    {
+      "rule_key": "typo",
+      "source": "typo",
+      "start_pos": 2,
+      "end_pos": 4,
+      "error_text": "己个",
+      "suggestion": "一个"
+    },
+    {
+      "rule_key": "symbol_correct",
+      "source": "symbol",
+      "start_pos": 15,
+      "end_pos": 16,
+      "error_text": "１",
+      "suggestion": "1"
+    },
+    {
+      "rule_key": "symbol_correct",
+      "source": "symbol",
+      "start_pos": 16,
+      "end_pos": 17,
+      "error_text": "２",
+      "suggestion": "2"
+    },
+    {
+      "rule_key": "symbol_correct",
+      "source": "symbol",
+      "start_pos": 17,
+      "end_pos": 18,
+      "error_text": "３",
+      "suggestion": "3"
+    },
+    {
+      "rule_key": "symbol_pair",
+      "source": "pairing",
+      "start_pos": 6,
+      "end_pos": 7,
+      "error_text": "（",
+      "suggestion": "unclosed"
+    }
+  ],
+  "expected_summary": {
+    "sensitive": 1,
+    "typo": 1,
+    "symbol_correct": 3,
+    "symbol_pair": 1
+  },
+  "docx_carrier_scope": {
+    "scope": "body_paragraphs_only",
+    "classification": "not_a_current_parity_regression",
+    "source_evidence": {
+      "docwen-ref-tk": "src/docwen/docx_spell/core.py uses len(doc.paragraphs) and for i, para in enumerate(doc.paragraphs) in process_docx().",
+      "docwen-ref-pyside6": "src/docwen/docx_spell/core.py uses len(doc.paragraphs) and for i, para in enumerate(doc.paragraphs) in process_docx().",
+      "docwen-current": "packages/plugins/proofread/src/docwen_plugin_proofread/docx_validator.py uses len(doc.paragraphs) and for i, para in enumerate(doc.paragraphs) in DocxValidator.convert()."
+    },
+    "not_covered_by_old_or_current_docx_carrier": [
+      "table_cell_paragraphs",
+      "headers",
+      "footers",
+      "footnotes",
+      "textboxes"
+    ],
+    "accepted_boundary": "Old Tk, old PySide6, and the current rewrite all validate python-docx document body paragraphs for the DOCX proofreading carrier. Extending proofreading to table cells, headers, footers, footnotes, or text boxes would be a product enhancement or broader parity decision, not a missing feature introduced by the rewrite."
+  },
+  "old_system_markdown_sanitizer_cases": [
+    {
+      "case_id": "visible_link_text_preserved_markers_and_code_blanked",
+      "source_evidence": [
+        "docwen-ref-pyside6/tests/test_md_spell/test_text_slicer.py::test_sanitize_markdown_keeps_visible_text_and_blanks_markers",
+        "docwen-ref-tk/src/docwen/md_spell/text_slicer.py::sanitize_markdown_for_proofread",
+        "docwen-ref-pyside6/src/docwen/md_spell/text_slicer.py::sanitize_markdown_for_proofread"
+      ],
+      "input_markdown": "---\ntitle: x\n---\nHello [LinkText](http://a.com) and ![Alt](img.png)\nInline `code [x](y)` end\n```python\n[notlink](url)\n```\n",
+      "sanitized_contains": ["LinkText", "Alt"],
+      "sanitized_absent": [
+        "http://a.com",
+        "img.png",
+        "notlink",
+        "```",
+        "[",
+        "]",
+        "(",
+        ")",
+        "!"
+      ]
+    },
+    {
+      "case_id": "link_text_offset_uses_original_file_line_numbers",
+      "source_evidence": [
+        "docwen-ref-pyside6/tests/test_md_spell/test_text_slicer.py::test_offset_to_line_col_uses_file_line_numbers",
+        "docwen-ref-tk/src/docwen/md_spell/text_slicer.py::SanitizedMarkdown.offset_to_line_col",
+        "docwen-ref-pyside6/src/docwen/md_spell/text_slicer.py::SanitizedMarkdown.offset_to_line_col"
+      ],
+      "input_markdown": "---\ntitle: x\n---\nHello [LinkText](http://a.com)\n",
+      "needle": "LinkText",
+      "expected_line": 4,
+      "expected_col": 8
+    }
+  ],
+  "old_pyside6_multi_pattern_regression_cases": [
+    {
+      "case_id": "typo_long_match_priority",
+      "source_evidence": "docwen-ref-pyside6/tests/test_text_rules/test_validator_multi_pattern.py::TestTyposCheck::test_long_match_priority",
+      "input_text": "地地分明",
+      "rules": {
+        "symbol_pairs": [],
+        "symbol_map": {},
+        "typos_map": {
+          "的的": ["地地"],
+          "的": ["地"]
+        },
+        "sensitive_words": {}
+      },
+      "checks_enabled": {
+        "symbol_pairing": false,
+        "symbol_correction": false,
+        "typos_rule": true,
+        "sensitive_word": false
+      },
+      "expected_issues": [
+        {
+          "rule_key": "typo",
+          "source": "typo",
+          "start_pos": 0,
+          "end_pos": 2,
+          "error_text": "地地",
+          "suggestion": "的的"
+        }
+      ]
+    },
+    {
+      "case_id": "typo_multiple_hits",
+      "source_evidence": "docwen-ref-pyside6/tests/test_text_rules/test_validator_multi_pattern.py::TestTyposCheck::test_multiple_hits_each_reported",
+      "input_text": "帐号A 帐号B",
+      "rules": {
+        "symbol_pairs": [],
+        "symbol_map": {},
+        "typos_map": {
+          "账号": ["帐号"]
+        },
+        "sensitive_words": {}
+      },
+      "checks_enabled": {
+        "symbol_pairing": false,
+        "symbol_correction": false,
+        "typos_rule": true,
+        "sensitive_word": false
+      },
+      "expected_issues": [
+        {
+          "rule_key": "typo",
+          "source": "typo",
+          "start_pos": 0,
+          "end_pos": 2,
+          "error_text": "帐号",
+          "suggestion": "账号"
+        },
+        {
+          "rule_key": "typo",
+          "source": "typo",
+          "start_pos": 4,
+          "end_pos": 6,
+          "error_text": "帐号",
+          "suggestion": "账号"
+        }
+      ]
+    },
+    {
+      "case_id": "sensitive_case_insensitive_lookup",
+      "source_evidence": "docwen-ref-pyside6/tests/test_text_rules/test_validator_multi_pattern.py::TestSensitiveWordsCheck::test_case_insensitive_lookup",
+      "input_text": "a Foo b FOO c",
+      "rules": {
+        "symbol_pairs": [],
+        "symbol_map": {},
+        "typos_map": {},
+        "sensitive_words": {
+          "foo": []
+        }
+      },
+      "checks_enabled": {
+        "symbol_pairing": false,
+        "symbol_correction": false,
+        "typos_rule": false,
+        "sensitive_word": true
+      },
+      "expected_issues": [
+        {
+          "rule_key": "sensitive",
+          "source": "sensitive",
+          "start_pos": 2,
+          "end_pos": 5,
+          "error_text": "Foo",
+          "suggestion": "sensitive"
+        },
+        {
+          "rule_key": "sensitive",
+          "source": "sensitive",
+          "start_pos": 8,
+          "end_pos": 11,
+          "error_text": "FOO",
+          "suggestion": "sensitive"
+        }
+      ]
+    },
+    {
+      "case_id": "sensitive_exception_window_suppresses_hit",
+      "source_evidence": "docwen-ref-pyside6/tests/test_text_rules/test_validator_multi_pattern.py::TestSensitiveWordsCheck::test_exception_window_suppresses_hit",
+      "input_text": "启用敏感词检测功能",
+      "rules": {
+        "symbol_pairs": [],
+        "symbol_map": {},
+        "typos_map": {},
+        "sensitive_words": {
+          "敏感": ["敏感词检测"]
+        }
+      },
+      "checks_enabled": {
+        "symbol_pairing": false,
+        "symbol_correction": false,
+        "typos_rule": false,
+        "sensitive_word": true
+      },
+      "expected_issues": []
+    }
+  ],
+  "real_dictionary_official_docx_probe": {
+    "classification": "current_matches_ref_pyside6_and_exposes_ref_tk_dictionary_consumer_defect",
+    "probe_id": "FA-11-N1-2026-07-22",
+    "external_source": {
+      "url": "https://public.jinshui.gov.cn/u/cms/publicjs/202407/010941060n2v.docx",
+      "local_path": "D:/docwen-parity/vis093-gongwen-real/010941060n2v.docx",
+      "sha256": "67D955F1AD1C71CA18221AC342093DCE90C6D233AE9D48077AFBC7EF6AD53A03",
+      "body_paragraphs": 93,
+      "nonempty_body_paragraphs": 81
+    },
+    "markdown_projection": {
+      "sha256": "EEDEDA39297E8A2770735DA6631417C211687671C1A1D89A8C4C9467084C27C3",
+      "offending_line": 73,
+      "offending_paragraph_index": 79,
+      "offending_paragraph_text": "如需标注份号、密级和保密期限、紧急程度，应当顶格居版心左边缘编排在第一条红色双线下，按照份号、密级和保密期限、紧急程度的顺序自上而下分行排列。发文字号顶格居版心右边缘编排在第一条红色双线下。标题居中编排，与其上最后一个要素相距2行。首页不显示页码。版记不加印发机关和印发日期、分割线。"
+    },
+    "dictionary": {
+      "semantic_entry": {
+        "分隔线": ["分割线"]
+      },
+      "current_fixture": "tests/fixtures/files/proofread_numbering_real/typos-current.toml",
+      "current_sha256": "C79745B91253790BC4ED7BE06DE6F797F11F9AF02D37F82AD7F2EDA1BE844151",
+      "legacy_fixture": "tests/fixtures/files/proofread_numbering_real/typos-legacy.toml",
+      "legacy_sha256": "D5DBBF13351B1E868D407E4E21AD3EE50455BABC2D7B3E1FF523615824BD52B0",
+      "loaded_by_all_projects": true
+    },
+    "expected_normalized_issue": {
+      "rule_key": "typo",
+      "line": 73,
+      "col_start": 139,
+      "col_end": 141,
+      "error_text": "分割线",
+      "suggestion": "分隔线",
+      "docx_anchor_paragraph_index": 79
+    },
+    "projects": {
+      "docwen-ref-tk": {
+        "head": "ec9298286cfe1379d5c5470db381577ea43ca0fa",
+        "dictionary_loaded": true,
+        "markdown_issue_count": 0,
+        "docx_comment_count": 0,
+        "matches_expected": false,
+        "defect": "ConfigManager.get_typos_config() already returns the typos table, but TextValidator._load_resources() asks that table for a second nested typos key and therefore discards the file-backed dictionary."
+      },
+      "docwen-ref-pyside6": {
+        "head": "63db927c5ded920d4994bfede5c7b34c55e2f43e",
+        "dictionary_loaded": true,
+        "markdown_issue_count": 1,
+        "docx_comment_count": 1,
+        "matches_expected": true
+      },
+      "docwen-current": {
+        "head": "0de553952609d9359a3fb4e83feaa66cbb1f171b",
+        "dictionary_loaded": true,
+        "markdown_issue_count": 1,
+        "docx_comment_count": 1,
+        "matches_expected": true
+      }
+    },
+    "final_artifacts": {
+      "external_evidence_dir": "D:/docwen-parity/vis162-proofread-numbering-fa11-0de5539-v6",
+      "per_project_outputs": [
+        "official-government-checked.docx",
+        "official-government-proofread-report.json",
+        "official-government-anchor-report.md"
+      ],
+      "current_and_ref_pyside6_reachable": true,
+      "ref_tk_outputs_reachable_but_without_issue": true
+    },
+    "current_regression_tests": [
+      "packages/plugins/proofread/tests/test_proofread_plugin.py::TestOldSystemProofreadFixture::test_real_dictionary_official_paragraph_matches_pyside6_projection",
+      "packages/plugins/proofread/tests/test_proofread_plugin.py::TestOldSystemProofreadFixture::test_real_dictionary_official_paragraph_reaches_docx_and_markdown_carriers"
+    ],
+    "comparison_implication": "The current rewrite consumes the real file-backed dictionary and matches the corrected old PySide6 engine at issue order, position, JSON report, DOCX comment anchor, and final placement. Reproducing old Tk's double-unwrapping defect would silently disable user dictionaries and is rejected as a parity regression."
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "probe": "src/docwen/text_rules/validator.py TextValidator with injected in-memory rules",
+      "normalized_issue_sequence": ["sensitive", "typo", "symbol_correct", "symbol_correct", "symbol_correct", "symbol_pair"],
+      "raw_source_labels": [
+        "proofread.source.sensitive",
+        "proofread.source.typo",
+        "proofread.source.symbol",
+        "proofread.source.symbol",
+        "proofread.source.symbol",
+        "proofread.source.pairing"
+      ],
+      "notes": "Tk probe returned untranslated i18n keys in this headless run; positions, error_text, suggestions for typo/symbol, and rule order match the normalized semantics."
+    },
+    "docwen-ref-pyside6": {
+      "probe": "src/docwen/text_rules/validator.py TextValidator with injected in-memory rules",
+      "normalized_issue_sequence": ["sensitive", "typo", "symbol_correct", "symbol_correct", "symbol_correct", "symbol_pair"],
+      "raw_source_labels": ["敏感词匹配", "错别字校对", "符号校对", "符号校对", "符号校对", "标点配对"],
+      "notes": "PySide6 probe returned localized Chinese labels; positions, error_text, suggestions for typo/symbol, and rule order match the normalized semantics."
+    },
+    "docwen-current": {
+      "probe": "packages/plugins/proofread/src/docwen_plugin_proofread/text_validator.py TextValidator with injected pure rule bundle",
+      "normalized_issue_sequence": ["sensitive", "typo", "symbol_correct", "symbol_correct", "symbol_correct", "symbol_pair"],
+      "raw_source_labels": ["sensitive", "typo", "symbol", "symbol", "symbol", "pairing"],
+      "notes": "Current rewrite uses stable English source labels and injects proofread rules through context.proofread_rules instead of reading plugin-local config."
+    }
+  },
+  "accepted_differences": [
+    "Localized source/error labels differ between old Tk, old PySide6, and current rewrite.",
+    "Old PySide6 adds explicit multi-pattern scan regressions (longest match priority, repeated hits, case-insensitive sensitive lookup, exception suppression). Current rewrite preserves those improvements; old Tk remains the visual/UX baseline and is not mechanically restored for this implementation detail.",
+    "DOCX proofreading carrier scope is body paragraphs only in old Tk, old PySide6, and current rewrite; table cells, headers, footers, footnotes, and text boxes are recorded as broader enhancement/final-artifact scope rather than a current parity regression.",
+    "Markdown proofreading sanitizer semantics match the old md_spell/text_slicer baseline: YAML frontmatter and fenced/inline code are blanked while preserving line offsets, Markdown link URLs/markers are blanked, and visible link/image alt text remains proofreadable.",
+    "The real dictionary-backed official DOCX probe includes old/current DOCX, Markdown JSON, and Markdown anchor-report artifacts under the hash-pinned external evidence directory; output DOCX hashes are not equality oracles because package timestamps vary.",
+    "Old Tk's file-backed dictionary consumer double-unwraps the already-unwrapped typos table and produces zero issues. Current deliberately matches the corrected old PySide6 behavior rather than preserving this silent user-dictionary failure.",
+    "Current DOCX/Markdown carrier tests verify that file-backed rules reach comments and JSON reports through the new plugin architecture."
+  ]
+}

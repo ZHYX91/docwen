@@ -1,0 +1,253 @@
+{
+  "golden_id": "GOLDEN-010",
+  "scope": "focused SmartSheet ET to XLSX real external-office smoke",
+  "generated_at": "2026-07-03",
+  "input_workbook": {
+    "source_fixture": "tmp/smart-sheet-et-real-smoke-2026-07-03/docwen-current-cli/smart-sheet-probe.et",
+    "origin": "valid ET/OLE-compatible workbook produced by the focused XLSX to ET current controlled smoke",
+    "source_cells": {
+      "A1": "Title",
+      "B1": "Smart Sheet Smoke",
+      "A2": "Item",
+      "B2": "Qty",
+      "A3": "Apple",
+      "B3": 2.0,
+      "A4": "Pear",
+      "B4": 5.0,
+      "C4": 7.0
+    }
+  },
+  "route": {
+    "source_format": "et",
+    "target_format": "xlsx",
+    "category": "spreadsheet"
+  },
+  "expected_semantics": {
+    "output_extension": ".xlsx",
+    "zip_magic": "504b0304",
+    "entry_count": 17,
+    "sheet": "Data",
+    "rows_formula_mode": [
+      [
+        "Title",
+        "Smart Sheet Smoke",
+        null
+      ],
+      [
+        "Item",
+        "Qty",
+        null
+      ],
+      [
+        "Apple",
+        2,
+        null
+      ],
+      [
+        "Pear",
+        5,
+        "=SUM(B3:B4)"
+      ]
+    ],
+    "rows_data_only": [
+      [
+        "Title",
+        "Smart Sheet Smoke",
+        null
+      ],
+      [
+        "Item",
+        "Qty",
+        null
+      ],
+      [
+        "Apple",
+        2,
+        null
+      ],
+      [
+        "Pear",
+        5,
+        7
+      ]
+    ],
+    "formulas": {
+      "C4": "=SUM(B3:B4)"
+    }
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "entry": "docwen.converter.formats.spreadsheet.office_to_xlsx",
+      "success": true,
+      "output_size_bytes": 9021,
+      "zip_magic": "504b0304",
+      "entry_count": 17,
+      "sheet": "Data",
+      "rows_formula_mode": [
+        [
+          "Title",
+          "Smart Sheet Smoke",
+          null
+        ],
+        [
+          "Item",
+          "Qty",
+          null
+        ],
+        [
+          "Apple",
+          2,
+          null
+        ],
+        [
+          "Pear",
+          5,
+          "=SUM(B3:B4)"
+        ]
+      ],
+      "rows_data_only": [
+        [
+          "Title",
+          "Smart Sheet Smoke",
+          null
+        ],
+        [
+          "Item",
+          "Qty",
+          null
+        ],
+        [
+          "Apple",
+          2,
+          null
+        ],
+        [
+          "Pear",
+          5,
+          7
+        ]
+      ],
+      "formulas": {
+        "C4": "=SUM(B3:B4)"
+      }
+    },
+    "docwen-ref-pyside6": {
+      "entry": "docwen.converter.spreadsheet.external.office_to_xlsx",
+      "success": true,
+      "output_size_bytes": 9022,
+      "zip_magic": "504b0304",
+      "entry_count": 17,
+      "sheet": "Data",
+      "rows_formula_mode": [
+        [
+          "Title",
+          "Smart Sheet Smoke",
+          null
+        ],
+        [
+          "Item",
+          "Qty",
+          null
+        ],
+        [
+          "Apple",
+          2,
+          null
+        ],
+        [
+          "Pear",
+          5,
+          "=SUM(B3:B4)"
+        ]
+      ],
+      "rows_data_only": [
+        [
+          "Title",
+          "Smart Sheet Smoke",
+          null
+        ],
+        [
+          "Item",
+          "Qty",
+          null
+        ],
+        [
+          "Apple",
+          2,
+          null
+        ],
+        [
+          "Pear",
+          5,
+          7
+        ]
+      ],
+      "formulas": {
+        "C4": "=SUM(B3:B4)"
+      }
+    },
+    "docwen-current": {
+      "entry": "uv run docwen run smart-sheet-probe.et --to xlsx --json",
+      "success": true,
+      "output_size_bytes": 9021,
+      "zip_magic": "504b0304",
+      "entry_count": 17,
+      "sheet": "Data",
+      "rows_formula_mode": [
+        [
+          "Title",
+          "Smart Sheet Smoke",
+          null
+        ],
+        [
+          "Item",
+          "Qty",
+          null
+        ],
+        [
+          "Apple",
+          2,
+          null
+        ],
+        [
+          "Pear",
+          5,
+          "=SUM(B3:B4)"
+        ]
+      ],
+      "rows_data_only": [
+        [
+          "Title",
+          "Smart Sheet Smoke",
+          null
+        ],
+        [
+          "Item",
+          "Qty",
+          null
+        ],
+        [
+          "Apple",
+          2,
+          null
+        ],
+        [
+          "Pear",
+          5,
+          7
+        ]
+      ],
+      "formulas": {
+        "C4": "=SUM(B3:B4)"
+      }
+    }
+  },
+  "accepted_limits": [
+    "The ET input comes from the current controlled XLSX to ET focused smoke; that sibling fixture proves the produced ET/OLE-compatible workbook has the same key cell and formula semantics across old Tk, old PySide6, and current rewrite.",
+    "This is a focused real-environment smoke for ET to XLSX only; it does not close LibreOffice-only, styles, merged cells, or broad binary artifact comparison.",
+    "Output byte sizes differ across projects and are recorded as metadata only; semantic parity is based on sheet name, normalized cell values, and formula preservation."
+  ],
+  "evidence": {
+    "transient_output_dir": "tmp/smart-sheet-et-xlsx-real-smoke-2026-07-03"
+  }
+}

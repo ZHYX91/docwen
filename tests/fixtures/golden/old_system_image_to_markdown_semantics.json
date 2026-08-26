@@ -1,0 +1,144 @@
+{
+  "generated_at": "2026-07-02",
+  "golden_id": "GOLDEN-024",
+  "input_image": {
+    "mode": "RGB",
+    "name": "sample_rgb.png",
+    "size": [
+      2,
+      2
+    ]
+  },
+  "probe_scope": "Normalized Image-to-Markdown semantic smoke across old Tk, old PySide6, and the current rewrite. The probe uses the actual old ImageToMarkdownStrategy entry points and the current ImageToMarkdownConverter route, with OCR disabled and markdown_embed link semantics forced. It stores stable Markdown/artifact semantics rather than timestamped output folders.",
+  "comparison_implication": "This fixture proves focused Image-to-Markdown file/base64 retention semantics with OCR disabled; broader OCR quality, EXIF/resource policy, and real-world image batches remain outside this fixture.",
+  "projects": {
+    "docwen-current": {
+      "base64_no_ocr": {
+        "contains_data_uri": true,
+        "contains_markdown_image_link": true,
+        "contains_sample_png": true,
+        "contains_source_format": true,
+        "contains_wiki_image_link": false,
+        "has_yaml_frontmatter": true,
+        "image_suggested_names": [],
+        "md_file_count": 1,
+        "metadata_image_mode": "base64",
+        "metadata_keep_images": true,
+        "metadata_ocr_enabled": false,
+        "metrics_artifact_count": 1,
+        "metrics_ocr_enabled": false,
+        "output_suffix": ".md",
+        "png_file_count": 0,
+        "primary_media_type": "text/markdown",
+        "primary_suggested_name": "sample_rgb.md",
+        "success": true
+      },
+      "file_no_ocr": {
+        "contains_data_uri": false,
+        "contains_markdown_image_link": true,
+        "contains_sample_png": true,
+        "contains_source_format": true,
+        "contains_wiki_image_link": false,
+        "has_yaml_frontmatter": true,
+        "image_suggested_names": [
+          "sample_rgb.png"
+        ],
+        "md_file_count": 1,
+        "metadata_image_mode": "file",
+        "metadata_keep_images": true,
+        "metadata_ocr_enabled": false,
+        "metrics_artifact_count": 2,
+        "metrics_ocr_enabled": false,
+        "output_suffix": ".md",
+        "png_file_count": 1,
+        "primary_media_type": "text/markdown",
+        "primary_suggested_name": "sample_rgb.md",
+        "success": true
+      }
+    },
+    "docwen-ref-pyside6": {
+      "base64_no_ocr": {
+        "contains_data_uri": true,
+        "contains_markdown_image_link": true,
+        "contains_sample_png": true,
+        "contains_wiki_image_link": false,
+        "has_yaml_frontmatter": true,
+        "image_files": [],
+        "md_file_count": 1,
+        "output_suffix": ".md",
+        "png_file_count": 0,
+        "primary_md_name_suffix": ".md",
+        "success": true
+      },
+      "file_no_ocr": {
+        "contains_data_uri": false,
+        "contains_markdown_image_link": true,
+        "contains_sample_png": true,
+        "contains_wiki_image_link": false,
+        "has_yaml_frontmatter": true,
+        "image_files": [
+          "sample_rgb.png"
+        ],
+        "md_file_count": 1,
+        "output_suffix": ".md",
+        "png_file_count": 1,
+        "primary_md_name_suffix": ".md",
+        "success": true
+      }
+    },
+    "docwen-ref-tk": {
+      "base64_no_ocr": {
+        "contains_data_uri": true,
+        "contains_markdown_image_link": true,
+        "contains_sample_png": true,
+        "contains_wiki_image_link": false,
+        "has_yaml_frontmatter": true,
+        "image_files": [],
+        "md_file_count": 1,
+        "output_suffix": ".md",
+        "png_file_count": 0,
+        "primary_md_name_suffix": ".md",
+        "success": true
+      },
+      "file_no_ocr": {
+        "contains_data_uri": false,
+        "contains_markdown_image_link": true,
+        "contains_sample_png": true,
+        "contains_wiki_image_link": false,
+        "has_yaml_frontmatter": true,
+        "image_files": [
+          "sample_rgb.png"
+        ],
+        "md_file_count": 1,
+        "output_suffix": ".md",
+        "png_file_count": 1,
+        "primary_md_name_suffix": ".md",
+        "success": true
+      }
+    }
+  },
+  "scenarios": [
+    "file_no_ocr",
+    "base64_no_ocr"
+  ],
+  "shared_behavior_evidence": {
+    "omit_keep_images_false_scope": {
+      "classification": "old_exposed_keep_images_false_current_comment_placeholder_enhancement",
+      "old_tk_code_evidence": "docwen-ref-tk/src/docwen/services/strategies/image/to_markdown.py reads extract_image from config/options and converter/shared/image_md.py::process_image_with_ocr returns an empty string when keep_images is false and enable_ocr is false; the temporary image is then deleted.",
+      "old_pyside6_code_evidence": "docwen-ref-pyside6/src/docwen/services/strategies/image/to_markdown.py reads md.extract_image and converter/image_md.py::process_image_with_ocr returns an empty string when keep_images is false and enable_ocr is false; the temporary image is then deleted.",
+      "current_code_evidence": "packages/plugins/image/src/docwen_plugin_image/to_markdown/converter.py maps image_mode='omit' or to_md_keep_images=false with file mode to an HTML comment placeholder and registers only the primary Markdown artifact.",
+      "parity_decision": "Old systems exposed the keep-images toggle but did not expose an explicit omit image mode or placeholder text. Current omit/comment output is a traceable enhancement, not a missing old-system feature; old/current parity for this fixture remains file/base64 no-OCR retention semantics.",
+      "current_tests": [
+        "packages/plugins/image/tests/test_image_conversions.py::TestImageToMarkdown::test_image_to_markdown_omit_mode_produces_html_comment",
+        "packages/plugins/image/tests/test_image_conversions.py::TestImageToMarkdown::test_keep_images_false_with_file_mode_produces_omit_comment"
+      ]
+    },
+    "exif_metadata_scope": {
+      "classification": "not_standard_old_current_image_to_markdown_output",
+      "old_tk_code_evidence": "docwen-ref-tk ImageToMarkdownStrategy and shared image_md helpers render YAML frontmatter plus image links/OCR text; they do not extract EXIF fields into standard Image-to-Markdown output.",
+      "old_pyside6_code_evidence": "docwen-ref-pyside6 ImageToMarkdownStrategy and converter/image_md helpers render YAML frontmatter plus image links/OCR text; they do not extract EXIF fields into standard Image-to-Markdown output.",
+      "current_code_evidence": "Current ImageToMarkdownConverter records route metadata such as source_format/image_mode/keep_images/ocr_enabled but does not parse EXIF fields into Markdown frontmatter.",
+      "remaining_scope": "EXIF orientation/metadata samples remain useful for a broader image matrix, but missing EXIF frontmatter is not a current parity regression for GOLDEN-024 unless a future old-output artifact proves it was part of the old standard output."
+    }
+  }
+}

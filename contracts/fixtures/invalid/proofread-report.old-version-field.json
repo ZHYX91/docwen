@@ -1,0 +1,26 @@
+{
+  "schema_version": "2.0",
+  "file": "note.md",
+  "source": {
+    "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "encoding": "utf-8",
+    "decode_errors": "replace"
+  },
+  "location_contract": {
+    "id": "docwen.proofread-text-range",
+    "version": 1,
+    "coordinate_system": "unicode_code_point",
+    "offset_base": 0,
+    "line_base": 0,
+    "column_base": 0,
+    "range_end": "exclusive"
+  },
+  "checks_enabled": {
+    "symbol_pairing": true,
+    "symbol_correction": true,
+    "typos_rule": true,
+    "sensitive_word": true
+  },
+  "issues": [],
+  "summary": {}
+}

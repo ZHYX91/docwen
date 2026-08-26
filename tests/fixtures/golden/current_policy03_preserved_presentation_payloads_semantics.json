@@ -1,0 +1,114 @@
+{
+  "evidence_id": "VIS-2026-07-23-204",
+  "policy": "POLICY-03=A",
+  "classification": "FIXED_AND_VERIFIED",
+  "scope": "Frozen Apache POI chart, embedded-audio, and embedded-video PPTX payload preservation in current PPTX-to-Markdown",
+  "stage_start": {
+    "parent": "d20a6d7dd373d1ec6175236d6dd0c9076da577a0",
+    "tree": "50ec0a2ea251a0065b1d10d53b306733de1b774d"
+  },
+  "reused_reference_evidence": {
+    "root": "D:/docwen-parity/vis129-apache-poi-presentation-media-a041d59-v1",
+    "three_project_conversions": "9/9",
+    "disposition": "Tk and old PySide6 silently omit the same selected payloads; those omissions are reference defects and were not rerun."
+  },
+  "authoritative_current_evidence": {
+    "root": "D:/docwen-parity/vis204-policy03-preserve-payloads-d20a6d7-v3",
+    "file_count": 20,
+    "total_bytes": 825745,
+    "result_json_bytes": 22943,
+    "result_json_sha256": "6e21a7fa6f438e3a0b4f8ffc47f6206d89b04b649ff0acd087b4800a4e5907d4",
+    "passed": true
+  },
+  "sources": {
+    "bar-chart.pptx": {
+      "bytes": 44410,
+      "sha256": "79e1d218bfb2903e8dc8425a6b1997d9c1976f5a5f025bada85b0c47b5777969",
+      "current": {
+        "success": true,
+        "chart_count": 1,
+        "ordered_rows": [
+          ["1st Qtr", "8.200000000000001"],
+          ["2nd Qtr", "3.2"],
+          ["3rd Qtr", "1.4"],
+          ["4th Qtr", "1.2"]
+        ],
+        "embedded_workbook": {
+          "bytes": 8813,
+          "sha256": "89673f803b955c3f553900ddfd406a80babe5a543e8f8401bfa7b2b7834cae22",
+          "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "exact": true,
+          "linked": true
+        },
+        "snapshot_artifact_count": 0,
+        "snapshot_warning": {
+          "code": "PPTX-CHART-SNAPSHOT-UNAVAILABLE",
+          "count": 1,
+          "location": "slide 1: chart 1"
+        }
+      }
+    },
+    "EmbeddedAudio.pptx": {
+      "bytes": 90047,
+      "sha256": "c5ae4274e2bf5504a56aef9c8d7c5d2381ece69c9bf68f7749ad5eae3e675edb",
+      "current": {
+        "success": true,
+        "audio": {
+          "bytes": 52079,
+          "sha256": "0244590f2b4bcb62352b574e78bea940e8d89cfa69823b5208ef4c43e0abcb44",
+          "media_type": "audio/mpeg",
+          "exact": true,
+          "linked": true
+        },
+        "poster": {
+          "bytes": 4717,
+          "sha256": "b0151c2c2e3cf64bc37a7bb9d8b8b98d4c4fccf7b6af4c08c4f847a79f9db0da",
+          "media_type": "image/png",
+          "exact": true,
+          "linked": true
+        }
+      }
+    },
+    "EmbeddedVideo.pptx": {
+      "bytes": 201418,
+      "sha256": "7940e3b1a339db11f00b65399a2fe77e0e85a5da3a30ac8d6c8a0a77527b2ab2",
+      "current": {
+        "success": true,
+        "video": {
+          "bytes": 101799,
+          "sha256": "21c3b5d779abe3bc2ee886a6d2455202800537fa31fe367d11563da16cbf8040",
+          "media_type": "video/mp4",
+          "exact": true,
+          "linked": true
+        },
+        "poster": {
+          "bytes": 65215,
+          "sha256": "f5516c6cae484df63ce03db77fb69b778660916b9207de5a4e04aa5e3b72908d",
+          "media_type": "image/png",
+          "exact": true,
+          "linked": true
+        }
+      }
+    }
+  },
+  "same_basename": {
+    "conversion_count": 3,
+    "primary_names": ["same.md", "same_001.md", "same_002.md"],
+    "primary_names_unique": true,
+    "all_payload_targets_reachable": true,
+    "payloads_exact": true
+  },
+  "boundaries": {
+    "source_immutable": true,
+    "new_office_processes": [],
+    "chart_snapshot_renderer": "No deterministic supported renderer is declared; typed warning is required and verified.",
+    "accepted_payload_omission": false,
+    "generated_binaries_checked_in": false
+  },
+  "verdict": {
+    "applicable_oracle": "6/6 conversions and all object predicates",
+    "policy03": "FIXED_AND_VERIFIED",
+    "fa12": "NOT PASSED YET",
+    "overall_parity": "NOT PASSED YET"
+  }
+}

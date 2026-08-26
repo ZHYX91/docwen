@@ -1,0 +1,184 @@
+{
+  "golden_id": "GOLDEN-009",
+  "scope": "three-project real SmartDoc rich RTF to ODT two-hop artifact and finalization parity",
+  "generated_at": "2026-07-14",
+  "classification": "focused_real_external_artifact_evidence_not_overall_smartdoc_pass",
+  "route": {
+    "source_format": "rtf",
+    "hub_format": "docx",
+    "target_format": "odt",
+    "candidate_policy": {
+      "first_leg": [
+        "WPS Writer",
+        "Microsoft Word",
+        "LibreOffice"
+      ],
+      "second_leg": [
+        "Microsoft Word",
+        "LibreOffice"
+      ]
+    },
+    "current_observed_backend": "WPS Writer -> Microsoft Word",
+    "target_signature_hex_prefix": "504b0304"
+  },
+  "input_document": {
+    "filename": "smartdoc-rich-rtf-input.rtf",
+    "size_bytes": 62215,
+    "sha256": "7548f563c27065434cd75770532cbf89ec4459863e9ba5a6535ec4cce4780017",
+    "signature_hex_prefix": "7b5c72746631",
+    "generation_backend": "WPS Writer",
+    "generation_note": "A deterministic rich DOCX was converted once to RTF through the shared WPS-first bridge; fixture generation is separate from the three production RTF-to-ODT probes."
+  },
+  "normalized_common_projection": {
+    "visible_markers": [
+      "BOLD-RTF-ODT",
+      "COMMENTED-RTF-ODT",
+      "DOCWEN RICH RTF TO ODT PARITY 2026",
+      "FIELD-RTF-ODT",
+      "ITALIC-RTF-ODT",
+      "LANDSCAPE-RTF-ODT-MARKER",
+      "Legacy Input to Standard Output",
+      "TABLE-RTF-ODT"
+    ],
+    "paragraph_styles": {
+      "DOCWEN RICH RTF TO ODT PARITY 2026": "Title",
+      "Legacy Input to Standard Output": "Heading 1",
+      "Styled markers: BOLD-RTF-ODT and ITALIC-RTF-ODT.": "DocWen RTF ODT Body",
+      "Landscape RTF ODT Section": "Heading 1"
+    },
+    "styled_runs": [
+      {
+        "text": "BOLD-RTF-ODT",
+        "bold": true,
+        "italic": false
+      },
+      {
+        "text": "ITALIC-RTF-ODT",
+        "bold": false,
+        "italic": true
+      }
+    ],
+    "table": [
+      [
+        "Item",
+        "Qty",
+        "Note"
+      ],
+      [
+        "RtfOrange",
+        "22",
+        "TABLE-RTF-ODT"
+      ]
+    ],
+    "headers": [
+      "DOCWEN RTF ODT HEADER 2026",
+      "DOCWEN RTF ODT LANDSCAPE HEADER 2026"
+    ],
+    "footers": [
+      "DOCWEN RTF ODT FOOTER 2026",
+      "DOCWEN RTF ODT LANDSCAPE FOOTER 2026"
+    ],
+    "section_landscape": [
+      false,
+      true
+    ],
+    "comments": [
+      "DOCWEN RTF ODT COMMENT 2026"
+    ],
+    "field_count": 1,
+    "media_count": 1,
+    "media_size_bytes": 2006,
+    "media_sha256": "acff2b06fddc6f2f6c6d4723f8890dbcc2776dbdd16968e485abaf8388f82b26"
+  },
+  "odt_package_projection": {
+    "is_zip": true,
+    "mimetype": "application/vnd.oasis.opendocument.text",
+    "annotation_count": 1,
+    "draw_image_count": 1,
+    "embedded_media_path": "media/image1.png",
+    "embedded_media_size_bytes": 2006,
+    "embedded_media_sha256": "acff2b06fddc6f2f6c6d4723f8890dbcc2776dbdd16968e485abaf8388f82b26",
+    "tracked_changes_count": 0,
+    "content_xml_strict_parse": false,
+    "content_xml_strict_parse_boundary": "All three Microsoft Word-produced ODT outputs use a numeric xml:id that is not an XML NCName; recover-mode ODF inspection and Microsoft Word roundtrip succeed with identical rich semantics."
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "entrypoint": "docwen.converter.smart_converter.SmartConverter.convert",
+      "path": "rtf -> docx -> odt",
+      "filename_pattern": "smartdoc-rich-rtf-input_<timestamp>_fromRtf.odt",
+      "duration_seconds": 7.816,
+      "size_bytes": 12492,
+      "sha256": "c1a6eeacaaf1575e6d82a6e5e6a1aa0fbae016b387fa925a5dd6a4f056ae2d41",
+      "roundtrip_docx_size_bytes": 27930,
+      "roundtrip_docx_sha256": "22a7dbf72d8747af409efc4ec1383eda82673c4aee3c506814e88866a53171fb",
+      "projection_matches_common": true,
+      "odt_package_matches_common": true
+    },
+    "docwen-ref-pyside6": {
+      "entrypoint": "docwen.converter.smart_converter.SmartConverter.convert",
+      "path": "rtf -> docx -> odt",
+      "filename_pattern": "smartdoc-rich-rtf-input_<timestamp>_fromRtf.odt",
+      "duration_seconds": 7.568,
+      "size_bytes": 12497,
+      "sha256": "86ee82e73f0878d0b2b59b2a66e48fb76db37a942ccb942196ab8637ab7418f6",
+      "roundtrip_docx_size_bytes": 27935,
+      "roundtrip_docx_sha256": "406427fe989a14eca2a1eb6cb7eba0e194b1f9ef24e9a2337a2b26ec71ed8dd4",
+      "projection_matches_common": true,
+      "odt_package_matches_common": true
+    },
+    "docwen-current": {
+      "entrypoint": "DocumentPlugin -> TaskManager -> OutputFinalizer",
+      "path": "rtf -> private auxiliary docx -> primary odt",
+      "filename": "smartdoc-rich-rtf-input.odt",
+      "duration_seconds": 9.759,
+      "size_bytes": 12490,
+      "sha256": "055053764d66861bea80d15f2a3276dac90352fd248fc382c94581d61a0bb231",
+      "roundtrip_docx_size_bytes": 27940,
+      "roundtrip_docx_sha256": "e028a27f4d25b78043a0b9cd990d4c0799686a6db1f2740a12dd2a7c2d75a374",
+      "projection_matches_common": true,
+      "odt_package_matches_common": true,
+      "artifact": {
+        "suggested_name": "smartdoc-rich-rtf-input.odt",
+        "source_format": "rtf",
+        "target_format": "odt",
+        "backend": "WPS Writer -> Microsoft Word"
+      },
+      "metrics": {
+        "input_bytes": 62215,
+        "output_bytes": 12490,
+        "backend": "WPS Writer -> Microsoft Word"
+      },
+      "diagnostic_codes": [
+        "DOCX-SMARTDOC-OK",
+        "FINALIZER_DONE"
+      ]
+    }
+  },
+  "naming_decision": {
+    "old_behavior": "Both old projects expose a timestamped fromRtf filename across the multi-step conversion.",
+    "current_behavior": "The current plugin keeps the DOCX hub private and restores the original RTF stem for the final ODT artifact.",
+    "classification": "current_architecture_improvement_not_a_parity_gap"
+  },
+  "process_governance": {
+    "preexisting_process_ids": [
+      1796,
+      18764
+    ],
+    "new_relevant_processes_after_conversion_and_readback": []
+  },
+  "environment_boundary": {
+    "wps_writer": "installed; used for fixture generation and current first leg",
+    "microsoft_word": "installed; used for every ODT-producing second leg and all normalized readback",
+    "libreoffice": "not installed or discoverable; LibreOffice-only two-hop execution remains open"
+  },
+  "accepted_limits": [
+    "Raw ODT and roundtrip DOCX hashes are traceability evidence, not equality gates, because external Office metadata and numeric identifiers are nondeterministic.",
+    "This fixture closes one rich non-DOCX-to-non-DOCX RTF-to-ODT route, not all 20 SmartDoc routes or a broad real-world batch.",
+    "The shared Microsoft Word numeric xml:id limitation remains explicit and is neither a current-only regression nor an accepted overall ODT-quality pass.",
+    "Installed LibreOffice, large-document progress and cancellation feel, complex floating layout, macros, signatures, protection, and overall final artifact parity remain open."
+  ],
+  "evidence": {
+    "guard": "tests/test_repo/test_smartdoc_rtf_odt_evidence.py"
+  }
+}

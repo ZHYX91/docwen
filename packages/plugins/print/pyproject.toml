@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "docwen-plugin-print"
+version = "0.1.0"
+description = "DocWen Print Plugin — paged output generation (Document/Spreadsheet to PDF/OFD/XPS)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "docwen-core",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/docwen_plugin_print"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+markers = [
+    "unit: 单元测试（纯逻辑、替身或内存态验证）",
+    "contract: 契约测试（CLI/配置/输出结构/仓库约束）",
+    "integration: 集成测试（真实文件、真实链路或跨模块协作）",
+    "golden: Golden/parity 用例（语义输出一致性验证）",
+    "slow: 耗时测试",
+]

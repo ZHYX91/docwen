@@ -1,0 +1,73 @@
+{
+  "schema": "docwen.artifact_bundle.v2",
+  "bundle_id": "bundle.invalid.page.resource",
+  "task_id": "task.invalid.page.resource",
+  "producer": {
+    "name": "DocWen",
+    "product_version": "0.9.0",
+    "machine_protocol": "docwen.machine.v1"
+  },
+  "artifacts": [
+    {
+      "artifact_id": "document.main",
+      "kind": "document",
+      "locator": "main.md",
+      "suggested_name": "main.md",
+      "media_type": "text/markdown",
+      "size_bytes": 1,
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "logical_path": "main.md"
+    },
+    {
+      "artifact_id": "fragment.page.1",
+      "kind": "fragment",
+      "locator": "page-001.md",
+      "suggested_name": "page-001.md",
+      "media_type": "text/markdown",
+      "size_bytes": 1,
+      "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "logical_path": "page-001.md"
+    },
+    {
+      "artifact_id": "resource.page.1",
+      "kind": "resource",
+      "locator": "page-001.png",
+      "suggested_name": "page-001.png",
+      "media_type": "image/png",
+      "size_bytes": 1,
+      "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+      "logical_path": "page-001.png"
+    }
+  ],
+  "entries": [
+    {
+      "artifact_id": "document.main",
+      "role": "primary",
+      "ordinal": 0,
+      "preferred": true
+    }
+  ],
+  "relations": [
+    {
+      "type": "fragment_of",
+      "source_artifact_id": "fragment.page.1",
+      "target_artifact_id": "document.main",
+      "role": "ocr_page",
+      "ordinal": 0,
+      "page_fragment": {
+        "fragment_kind": "page",
+        "page_index": 1,
+        "page_count": 1,
+        "ocr_status": "success",
+        "source_page": 1
+      }
+    },
+    {
+      "type": "resource_of",
+      "source_artifact_id": "resource.page.1",
+      "target_artifact_id": "fragment.page.1",
+      "role": "image"
+    }
+  ],
+  "layout_schema": "docwen.artifact_layout.v1"
+}

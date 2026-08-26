@@ -1,0 +1,194 @@
+{
+  "golden_id": "GOLDEN-014",
+  "generated_at": "2026-07-02",
+  "probe_scope": "normalized semantic smoke for merge_images_to_tiff with two generated RGB PNG inputs; binary TIFF outputs are not checked in because old project names are timestamped and path-policy-specific",
+  "input_images": [
+    {
+      "name": "red.png",
+      "mode": "RGB",
+      "size": [
+        16,
+        12
+      ]
+    },
+    {
+      "name": "blue.png",
+      "mode": "RGB",
+      "size": [
+        10,
+        8
+      ]
+    }
+  ],
+  "projects": {
+    "docwen-ref-tk": {
+      "success": true,
+      "output_suffix": ".tif",
+      "format": "TIFF",
+      "n_frames": 2,
+      "frames": [
+        {
+          "size": [
+            16,
+            12
+          ],
+          "mode": "RGB"
+        },
+        {
+          "size": [
+            10,
+            8
+          ],
+          "mode": "RGB"
+        }
+      ]
+    },
+    "docwen-ref-pyside6": {
+      "success": true,
+      "output_suffix": ".tif",
+      "format": "TIFF",
+      "n_frames": 2,
+      "frames": [
+        {
+          "size": [
+            16,
+            12
+          ],
+          "mode": "RGB"
+        },
+        {
+          "size": [
+            10,
+            8
+          ],
+          "mode": "RGB"
+        }
+      ]
+    },
+    "docwen-current": {
+      "success": true,
+      "output_suffix": ".tif",
+      "format": "TIFF",
+      "n_frames": 2,
+      "frames": [
+        {
+          "size": [
+            16,
+            12
+          ],
+          "mode": "RGB"
+        },
+        {
+          "size": [
+            10,
+            8
+          ],
+          "mode": "RGB"
+        }
+      ],
+      "artifact_media_type": "image/tiff",
+      "metadata_image_count": 2,
+      "metrics_image_count": 2,
+      "metrics_mode": "smart",
+      "suggested_name": "red_merged.tif"
+    }
+  },
+  "additional_scenarios": [
+    {
+      "scenario_id": "all_rgba_smart_preserves_alpha",
+      "input_images": [
+        {
+          "name": "alpha-red.png",
+          "mode": "RGBA",
+          "size": [
+            12,
+            9
+          ],
+          "alpha": 96
+        },
+        {
+          "name": "alpha-blue.png",
+          "mode": "RGBA",
+          "size": [
+            7,
+            5
+          ],
+          "alpha": 160
+        }
+      ],
+      "projects": {
+        "docwen-ref-tk": {
+          "success": true,
+          "output_suffix": ".tif",
+          "format": "TIFF",
+          "n_frames": 2,
+          "frames": [
+            {
+              "size": [
+                12,
+                9
+              ],
+              "mode": "RGBA"
+            },
+            {
+              "size": [
+                7,
+                5
+              ],
+              "mode": "RGBA"
+            }
+          ]
+        },
+        "docwen-ref-pyside6": {
+          "success": true,
+          "output_suffix": ".tif",
+          "format": "TIFF",
+          "n_frames": 2,
+          "frames": [
+            {
+              "size": [
+                12,
+                9
+              ],
+              "mode": "RGBA"
+            },
+            {
+              "size": [
+                7,
+                5
+              ],
+              "mode": "RGBA"
+            }
+          ]
+        },
+        "docwen-current": {
+          "success": true,
+          "output_suffix": ".tif",
+          "format": "TIFF",
+          "n_frames": 2,
+          "frames": [
+            {
+              "size": [
+                12,
+                9
+              ],
+              "mode": "RGBA"
+            },
+            {
+              "size": [
+                7,
+                5
+              ],
+              "mode": "RGBA"
+            }
+          ],
+          "artifact_media_type": "image/tiff",
+          "metadata_image_count": 2,
+          "metrics_mode": "smart",
+          "suggested_name": "alpha-red_merged.tif"
+        }
+      }
+    }
+  ],
+  "comparison_implication": "All three projects produce successful two-frame TIFF output preserving input order and per-frame sizes for RGB PNG inputs, and all three preserve RGBA frames when every smart-mode input has an alpha channel. Current artifact naming and metadata differ by design because the rewrite uses runtime ArtifactManifest instead of old timestamped output files."
+}

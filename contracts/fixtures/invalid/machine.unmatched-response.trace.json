@@ -1,0 +1,10 @@
+[
+  {
+    "jsonrpc": "2.0",
+    "id": 2,
+    "result": {
+      "task_id": "task.unmatched.response",
+      "state": "accepted"
+    }
+  }
+]

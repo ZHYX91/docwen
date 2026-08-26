@@ -1,16 +1,23 @@
-"""CLI JSON 输出 schema 的单元测试与契约校验。"""
+"""CLI protocol 3 JSON schema and entry-point integration checks."""
 
 from __future__ import annotations
 
 import json
 import os
-import subprocess
-import sys
 from pathlib import Path
 
 import pytest
+from tests.support.cli import bundle_cli_command
+from tests.support.subprocess_runner import run_subprocess
 
-pytestmark = pytest.mark.unit
+
+@pytest.fixture(autouse=True)
+def _isolate_cli_process_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep source CLI subprocesses away from the real user's data roots."""
+
+    runtime_root = tmp_path.parent / f"{tmp_path.name}-runtime"
+    monkeypatch.setenv("DOCWEN_CONFIG_DIR", str(runtime_root / "config_home"))
+    monkeypatch.setenv("DOCWEN_LOG_DIR", str(runtime_root / "log_home"))
 
 
 def _repo_root() -> Path:
@@ -18,157 +25,54 @@ def _repo_root() -> Path:
 
 
 def _load_schema() -> dict:
-    path = _repo_root() / "doc" / "cli_json_output_schema.json"
+    path = _repo_root() / "docs" / "specs" / "json-contracts.schema.json"
     return json.loads(path.read_text(encoding="utf-8"))
-
-
-def _load_json(path: Path) -> object:
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
 
 
 def _extract_json_code_blocks(markdown: str) -> list[str]:
     blocks: list[str] = []
     in_json = False
-    buf: list[str] = []
-
+    buffer: list[str] = []
     for line in markdown.splitlines():
         if not in_json and line.strip() == "```json":
             in_json = True
-            buf = []
+            buffer = []
             continue
         if in_json and line.strip() == "```":
-            blocks.append("\n".join(buf).strip())
+            blocks.append("\n".join(buffer).strip())
             in_json = False
-            buf = []
             continue
         if in_json:
-            buf.append(line)
-
-    return [b for b in blocks if b]
-
-
-def _is_type(value: object, schema_type: str) -> bool:
-    if schema_type == "null":
-        return value is None
-    if schema_type == "boolean":
-        return isinstance(value, bool)
-    if schema_type == "string":
-        return isinstance(value, str)
-    if schema_type == "object":
-        return isinstance(value, dict)
-    if schema_type == "array":
-        return isinstance(value, list)
-    if schema_type == "integer":
-        return isinstance(value, int) and not isinstance(value, bool)
-    if schema_type == "number":
-        return isinstance(value, (int, float)) and not isinstance(value, bool)
-    return False
+            buffer.append(line)
+    return [block for block in blocks if block]
 
 
-def _validate_required_and_types(schema_def: dict, instance: dict) -> None:
-    required = schema_def.get("required") or []
-    props = schema_def.get("properties") or {}
-
-    for key in required:
-        assert key in instance, f"missing required key: {key}"
-
-    for key, prop in props.items():
-        if key not in instance:
-            continue
-        expected = prop.get("type")
-        if not expected:
-            continue
-        types = expected if isinstance(expected, list) else [expected]
-        assert any(_is_type(instance[key], t) for t in types), (
-            f"type mismatch for {key}: {instance[key]!r} not in {types}"
-        )
-
-
-def test_cli_json_output_schema_doc_exists() -> None:
-    repo_root = _repo_root()
-    path = repo_root / "doc" / "cli_json_output_schema.md"
-    assert path.is_file()
-    text = path.read_text(encoding="utf-8")
-    assert "CLI JSON 输出契约" in text
-
-
-def test_cli_json_schema_file_exists_and_has_expected_defs() -> None:
+def _assert_protocol_3_envelope(payload: dict[str, object]) -> None:
     schema = _load_schema()
+    required = set(schema["required"])
+    assert set(payload) == required
+    assert payload["protocol_version"] == 3
+    assert isinstance(payload["product_version"], str)
+    assert isinstance(payload["success"], bool)
+    assert isinstance(payload["command"], str)
+    assert isinstance(payload["data"], dict)
+    assert isinstance(payload["warnings"], list)
+    assert isinstance(payload["meta"], dict)
+    error = payload["error"]
+    if error is not None:
+        assert isinstance(error, dict)
+        assert set(error) == {"category", "code", "message", "details", "hint"}
+        categories = set(schema["properties"]["error"]["anyOf"][1]["properties"]["category"]["enum"])
+        assert error["category"] in categories
 
-    assert schema.get("$schema")
-    assert schema.get("type") == "object"
-    props = schema.get("properties") or {}
-    assert isinstance(props, dict)
-    assert props.get("schema_version", {}).get("const") == 2
-    for key in ["schema_version", "success", "command", "data", "error", "warnings", "timing"]:
-        assert key in props
 
-
-def test_json_schema_required_keys_match_golden_fixtures() -> None:
+def _run_cli(*args: str) -> dict[str, object]:
     repo_root = _repo_root()
-    schema_path = repo_root / "doc" / "cli_json_output_schema.json"
-    golden_dir = repo_root / "tests" / "fixtures" / "golden"
-
-    schema = _load_json(schema_path)
-    assert isinstance(schema, dict)
-    required = set(schema.get("required") or [])
-    assert required
-
-    for path in sorted(golden_dir.glob("*.json")):
-        data = _load_json(path)
-        assert isinstance(data, dict)
-        keys = set(data.keys())
-        assert required.issubset(keys), f"{path.name} missing {sorted(required - keys)}"
-
-
-def test_cli_json_output_schema_md_examples_conform_to_schema() -> None:
-    repo_root = _repo_root()
-    schema = _load_schema()
-
-    md_path = repo_root / "doc" / "cli_json_output_schema.md"
-    markdown = md_path.read_text(encoding="utf-8")
-
-    blocks = _extract_json_code_blocks(markdown)
-    assert blocks
-
-    for raw in blocks:
-        data = json.loads(raw)
-        assert isinstance(data, dict)
-        _validate_required_and_types(schema, data)
-        assert data.get("schema_version") == 2
-        error = data.get("error")
-        assert (error is None) or (
-            isinstance(error, dict) and {"error_code", "message", "details"}.issubset(set(error.keys()))
-        )
-
-
-@pytest.mark.integration
-def test_cli_json_output_conforms_to_schema_on_invalid_input(tmp_path: Path) -> None:
-    repo_root = _repo_root()
-    schema = _load_schema()
-
-    missing_file = tmp_path / "missing.docx"
-    assert not missing_file.exists()
-
     env = os.environ.copy()
     env["PYTHONUTF8"] = "1"
     env["PYTHONIOENCODING"] = "utf-8"
-    env["PYTHONPATH"] = f"{repo_root / 'src'}{os.pathsep}{env.get('PYTHONPATH', '')}"
-
-    cmd = [
-        sys.executable,
-        "-m",
-        "docwen.cli_run",
-        "convert",
-        str(missing_file),
-        "--to",
-        "md",
-        "--json",
-        "--quiet",
-    ]
-    proc = subprocess.run(
-        cmd,
+    proc = run_subprocess(
+        [*bundle_cli_command(), *args],
         cwd=str(repo_root),
         env=env,
         capture_output=True,
@@ -177,101 +81,108 @@ def test_cli_json_output_conforms_to_schema_on_invalid_input(tmp_path: Path) -> 
         errors="replace",
         check=False,
     )
-
     assert proc.returncode != 0
-    stdout = proc.stdout.strip()
-    assert stdout
+    assert proc.stderr == ""
+    payload = json.loads(proc.stdout)
+    assert isinstance(payload, dict)
+    return payload
 
-    data = json.loads(stdout)
-    assert isinstance(data, dict)
-    _validate_required_and_types(schema, data)
+
+@pytest.mark.contract
+def test_json_contracts_doc_exists() -> None:
+    path = _repo_root() / "docs" / "specs" / "json-contracts.md"
+    assert path.is_file()
+    assert "JSON contracts / JSON 契约" in path.read_text(encoding="utf-8")
+
+
+@pytest.mark.contract
+def test_cli_json_schema_is_exact_protocol_3_envelope() -> None:
+    schema = _load_schema()
+    assert schema["type"] == "object"
+    assert schema["additionalProperties"] is False
+    assert schema["properties"]["protocol_version"]["const"] == 3
+    assert set(schema["required"]) == {
+        "protocol_version",
+        "product_version",
+        "success",
+        "command",
+        "data",
+        "error",
+        "warnings",
+        "meta",
+    }
+
+
+@pytest.mark.contract
+def test_json_contracts_md_examples_conform_to_protocol_3_shape() -> None:
+    markdown = (_repo_root() / "docs" / "specs" / "json-contracts.md").read_text(encoding="utf-8")
+    blocks = _extract_json_code_blocks(markdown)
+    assert len(blocks) >= 2
+    for raw in blocks:
+        payload = json.loads(raw)
+        assert isinstance(payload, dict)
+        _assert_protocol_3_envelope(payload)
+
+
+@pytest.mark.contract
+def test_protocol_3_golden_fixtures_use_the_exact_envelope() -> None:
+    golden_dir = _repo_root() / "tests" / "fixtures" / "golden"
+    paths = sorted(golden_dir.glob("cli_protocol_v3_*.json"))
+    assert [path.name for path in paths] == [
+        "cli_protocol_v3_batch.json",
+        "cli_protocol_v3_error.json",
+        "cli_protocol_v3_success.json",
+    ]
+    for path in paths:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        assert isinstance(payload, dict)
+        _assert_protocol_3_envelope(payload)
 
 
 @pytest.mark.integration
-def test_cli_json_output_conforms_to_schema_on_invalid_option_combo(tmp_path: Path) -> None:
-    repo_root = _repo_root()
-    schema = _load_schema()
-
-    missing_file = tmp_path / "missing.docx"
-    assert not missing_file.exists()
-
-    env = os.environ.copy()
-    env["PYTHONUTF8"] = "1"
-    env["PYTHONIOENCODING"] = "utf-8"
-    env["PYTHONPATH"] = f"{repo_root / 'src'}{os.pathsep}{env.get('PYTHONPATH', '')}"
-
-    cmd = [
-        sys.executable,
-        "-m",
-        "docwen.cli_run",
+@pytest.mark.pr_gate
+def test_invalid_input_uses_protocol_3_schema(tmp_path: Path) -> None:
+    payload = _run_cli(
         "convert",
-        str(missing_file),
+        str(tmp_path / "missing.docx"),
         "--to",
         "md",
+        "--output",
+        str(tmp_path / "out.md"),
+        "--json",
+    )
+    _assert_protocol_3_envelope(payload)
+    assert payload["command"] == "convert"
+    assert payload["error"]["category"] == "invalid_input"
+
+
+@pytest.mark.integration
+def test_invalid_option_combo_uses_protocol_3_schema(tmp_path: Path) -> None:
+    payload = _run_cli(
+        "convert",
+        str(tmp_path / "missing.docx"),
+        "--to",
+        "md",
+        "--output",
+        str(tmp_path / "out.md"),
         "--ocr",
         "--no-extract-img",
         "--json",
-        "--quiet",
-    ]
-    proc = subprocess.run(
-        cmd,
-        cwd=str(repo_root),
-        env=env,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        check=False,
     )
-
-    assert proc.returncode != 0
-    stdout = proc.stdout.strip()
-    assert stdout
-
-    data = json.loads(stdout)
-    assert isinstance(data, dict)
-    _validate_required_and_types(schema, data)
+    _assert_protocol_3_envelope(payload)
+    assert payload["error"]["category"] == "invalid_input"
 
 
 @pytest.mark.integration
-def test_cli_json_output_conforms_to_schema_on_convert_invalid_to(tmp_path: Path) -> None:
-    repo_root = _repo_root()
-    schema = _load_schema()
-
-    missing_file = tmp_path / "missing.docx"
-    assert not missing_file.exists()
-
-    env = os.environ.copy()
-    env["PYTHONUTF8"] = "1"
-    env["PYTHONIOENCODING"] = "utf-8"
-    env["PYTHONPATH"] = f"{repo_root / 'src'}{os.pathsep}{env.get('PYTHONPATH', '')}"
-
-    cmd = [
-        sys.executable,
-        "-m",
-        "docwen.cli_run",
+def test_invalid_format_uses_protocol_3_schema(tmp_path: Path) -> None:
+    payload = _run_cli(
         "convert",
-        str(missing_file),
+        str(tmp_path / "missing.docx"),
         "--to",
         "nope",
+        "--output",
+        str(tmp_path / "out.nope"),
         "--json",
-        "--quiet",
-    ]
-    proc = subprocess.run(
-        cmd,
-        cwd=str(repo_root),
-        env=env,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        check=False,
     )
-
-    assert proc.returncode != 0
-    stdout = proc.stdout.strip()
-    assert stdout
-
-    data = json.loads(stdout)
-    assert isinstance(data, dict)
-    _validate_required_and_types(schema, data)
+    _assert_protocol_3_envelope(payload)
+    assert payload["error"]["category"] == "invalid_input"

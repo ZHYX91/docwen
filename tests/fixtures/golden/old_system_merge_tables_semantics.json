@@ -1,0 +1,176 @@
+{
+  "golden_id": "GOLDEN-013",
+  "generated_at": "2026-07-02",
+  "probe_scope": "normalized function-level smoke for merge_tables row/col/cell modes using generated XLSX workbooks; binary outputs are not checked in because old project output names and directories are timestamped/path-policy-specific",
+  "input_workbooks": {
+    "base.xlsx": [
+      ["ID", "Name", "Score"],
+      [1, "Alice", 90],
+      [2, "Bob", 80]
+    ],
+    "collect.xlsx": [
+      ["ID", "Name", "Score"],
+      [3, "Charlie", 78]
+    ]
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "row": {
+        "success": true,
+        "output_suffix": ".xlsx",
+        "values": [
+          ["ID", "Name", "Score"],
+          [3, "Charlie", 78],
+          [1, "Alice", 90],
+          [2, "Bob", 80]
+        ]
+      },
+      "col": {
+        "success": true,
+        "output_suffix": ".xlsx",
+        "values": [
+          ["ID", "ID", "Name", "Name", "Score", "Score"],
+          [1, 3, "Alice", "Charlie", 90, 78],
+          [2, null, "Bob", null, 80, null]
+        ]
+      },
+      "cell": {
+        "success": true,
+        "output_suffix": ".xlsx",
+        "values": [
+          ["ID", "Name", "Score"],
+          [4, "Alice,Charlie", 168],
+          [2, "Bob", 80]
+        ]
+      }
+    },
+    "docwen-ref-pyside6": {
+      "row": {
+        "success": true,
+        "output_suffix": ".xlsx",
+        "values": [
+          ["ID", "Name", "Score"],
+          [3, "Charlie", 78],
+          [1, "Alice", 90],
+          [2, "Bob", 80]
+        ]
+      },
+      "col": {
+        "success": true,
+        "output_suffix": ".xlsx",
+        "values": [
+          ["ID", "ID", "Name", "Name", "Score", "Score"],
+          [1, 3, "Alice", "Charlie", 90, 78],
+          [2, null, "Bob", null, 80, null]
+        ]
+      },
+      "cell": {
+        "success": true,
+        "output_suffix": ".xlsx",
+        "values": [
+          ["ID", "Name", "Score"],
+          [4, "Alice,Charlie", 168],
+          [2, "Bob", 80]
+        ]
+      }
+    },
+    "docwen-current": {
+      "row": {
+        "success": true,
+        "suggested_name": "base_row_merged.xlsx",
+        "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "metadata": {
+          "base_file": "base_row.xlsx",
+          "collect_count": 1,
+          "merge_mode": "row"
+        },
+        "metrics": {
+          "collect_count": 1,
+          "mode": "row"
+        },
+        "values": [
+          ["ID", "Name", "Score"],
+          [3, "Charlie", 78],
+          [1, "Alice", 90],
+          [2, "Bob", 80]
+        ]
+      },
+      "col": {
+        "success": true,
+        "suggested_name": "base_col_merged.xlsx",
+        "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "metadata": {
+          "base_file": "base_col.xlsx",
+          "collect_count": 1,
+          "merge_mode": "col"
+        },
+        "metrics": {
+          "collect_count": 1,
+          "mode": "col"
+        },
+        "values": [
+          ["ID", "ID", "Name", "Name", "Score", "Score"],
+          [1, 3, "Alice", "Charlie", 90, 78],
+          [2, null, "Bob", null, 80, null]
+        ]
+      },
+      "cell": {
+        "success": true,
+        "suggested_name": "base_cell_merged.xlsx",
+        "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "metadata": {
+          "base_file": "base_cell.xlsx",
+          "collect_count": 1,
+          "merge_mode": "cell"
+        },
+        "metrics": {
+          "collect_count": 1,
+          "mode": "cell"
+        },
+        "values": [
+          ["ID", "Name", "Score"],
+          [4, "Alice,Charlie", 168],
+          [2, "Bob", 80]
+        ]
+      }
+    }
+  },
+  "output_policy_semantics": {
+    "old_tk": {
+      "save_collision_suffix": "_001",
+      "fallback_behavior": "If moving to the configured output directory fails, _save_result falls back beside the base workbook."
+    },
+    "old_pyside6": {
+      "save_collision_suffix": "_001",
+      "output_behavior": "_save_result writes directly to the configured output directory instead of using finalize_output."
+    },
+    "current": {
+      "save_collision_suffix": "_001",
+      "output_behavior": "The spreadsheet plugin writes only to runtime staging and suggests base_merged.xlsx; OutputFinalizer owns final placement and rename-on-collision."
+    }
+  },
+  "shared_behavior_evidence": {
+    "merged_cell_preprocessing": {
+      "classification": "same_old_current_pre_merge_semantics",
+      "old_tk_source": "docwen-ref-tk/src/docwen/table_merger/core.py::_unmerge_all_cells",
+      "old_pyside6_source": "docwen-ref-pyside6/src/docwen/converter/table_merger/core.py::_unmerge_all_cells",
+      "current_source": "packages/plugins/spreadsheet/src/docwen_plugin_spreadsheet/table_merger/converter.py::_unmerge_all_cells",
+      "current_guard": "packages/plugins/spreadsheet/tests/test_csv_xlsx.py::TestTableMerge::test_merge_preprocesses_merged_cells_like_old_systems",
+      "input_merged_range": "A1:B1",
+      "semantics": "Before row/column/cell merge logic, all three implementations unmerge each worksheet and copy the top-left merged-cell value into every cell covered by the range.",
+      "filled_values": [
+        ["Merged Header", "Merged Header", "Score"],
+        ["Alice", "Team A", 90]
+      ]
+    },
+    "formula_and_collect_style_scope": {
+      "classification": "same_old_current_value_only_merge_boundary",
+      "old_tk_source": "docwen-ref-tk/src/docwen/table_merger/core.py::TableMerger.merge_tables",
+      "old_pyside6_source": "docwen-ref-pyside6/src/docwen/converter/table_merger/core.py::TableMerger.merge_tables",
+      "current_source": "packages/plugins/spreadsheet/src/docwen_plugin_spreadsheet/table_merger/converter.py::TableMergerConverter.convert",
+      "semantics": "All three implementations load base and collection workbooks with data_only=True and merge by assigning cell.value. They do not copy formula objects or collection-cell style objects during row/column/cell merge operations.",
+      "comparison_implication": "Formula/style/protection cases remain part of the broader final artifact matrix, but lack of formula-object or collection-style copying is not a current rewrite regression relative to the two old projects."
+    }
+  },
+  "comparison_implication": "All three projects preserve the same focused merge semantics for a generated base/collect workbook pair: row mode inserts the collect data row before base data rows, column mode interleaves collect columns beside matching base columns, and cell mode adds numeric values while comma-joining differing text. All three also share the same pre-merge behavior for merged cells: ranges are unmerged and the anchor value is filled across the covered cells before merging. Current artifact naming and metadata differ by design because the rewrite uses runtime ArtifactManifest instead of old timestamped output files; final output collision handling remains old-compatible through the shared runtime finalizer rather than table-merger-specific save logic."
+}

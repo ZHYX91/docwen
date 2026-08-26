@@ -1,0 +1,168 @@
+{
+  "case_id": "old_system_cli_batch_layout_image_production_smoke_semantics",
+  "source": "2026-07-04 local source-tree production CLI probes against docwen-ref-tk, docwen-ref-pyside6, and docwen-current",
+  "golden_id": "GOLDEN-006",
+  "probe_scope": "True CLI entrypoint smoke with real PDF->Markdown and PNG->Markdown conversions plus one unsupported notes.bad input; no external Office dependency.",
+  "input_files": [
+    "layout_mix.pdf",
+    "layout_mix.png",
+    "notes.bad"
+  ],
+  "shared_input_semantics": {
+    "layout_mix.pdf": {
+      "required_markdown_tokens": [
+        "Batch PDF Layout Smoke",
+        "PDF batch production smoke text.",
+        "Alpha PDF 42"
+      ]
+    },
+    "layout_mix.png": {
+      "required_markdown_tokens": [
+        "![[layout_mix.png]]"
+      ],
+      "expected_cli_default_ocr": false
+    },
+    "notes.bad": {
+      "content": "unsupported extension",
+      "expected_current_behavior": "prevalidation invalid_input failure is included in JSON batch results but is not sent to runtime",
+      "old_system_production_behavior": "old source-tree CLIs sniff the text content as markdown and then fail the markdown->md strategy route"
+    }
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "command_shape": "uv run docwen convert --to md --batch --json --continue-on-error layout_mix.pdf layout_mix.png notes.bad",
+      "exit_code": 3,
+      "stdout_json_payload": {
+        "command": "convert",
+        "success": false,
+        "total": 3,
+        "processed_count": 3,
+        "success_count": 2,
+        "failed_count": 1,
+        "result_files": [
+          "layout_mix.pdf",
+          "layout_mix.png",
+          "notes.bad"
+        ],
+        "result_success": [
+          true,
+          true,
+          false
+        ],
+        "failure_error_code": "strategy_not_found",
+        "failure_details": "conversion='markdown->md'"
+      },
+      "output_path_style": "timestamped folders beside inputs, e.g. layout_mix_YYYYMMDD_HHMMSS_fromPdf/layout_mix_YYYYMMDD_HHMMSS_fromPdf.md",
+      "stdout_json_prefix_noise": "config-manager debug lines and converter logs can precede the JSON object",
+      "invalid_files_enter_results": true,
+      "invalid_failure_stage": "runtime route lookup",
+      "successful_output_semantics": {
+        "layout_mix.pdf": {
+          "required_markdown_tokens": [
+            "Batch PDF Layout Smoke",
+            "PDF batch production smoke text.",
+            "Alpha PDF 42"
+          ]
+        },
+        "layout_mix.png": {
+          "required_markdown_tokens": [
+            "![[layout_mix.png]]"
+          ],
+          "ocr_text_present": false
+        }
+      }
+    },
+    "docwen-ref-pyside6": {
+      "command_shape": "uv run docwen convert --to md --batch --json --continue-on-error layout_mix.pdf layout_mix.png notes.bad",
+      "exit_code": 3,
+      "stdout_json_payload": {
+        "command": "convert",
+        "success": false,
+        "total": 3,
+        "processed_count": 3,
+        "success_count": 2,
+        "failed_count": 1,
+        "result_files": [
+          "layout_mix.pdf",
+          "layout_mix.png",
+          "notes.bad"
+        ],
+        "result_success": [
+          true,
+          true,
+          false
+        ],
+        "failure_error_code": "strategy_not_found",
+        "failure_details": "conversion='markdown->md'"
+      },
+      "output_path_style": "timestamped folders beside inputs, e.g. layout_mix_YYYYMMDD_HHMMSS_fromPdf/layout_mix_YYYYMMDD_HHMMSS_fromPdf.md",
+      "stdout_json_prefix_noise": "startup and converter logs can precede the JSON object",
+      "invalid_files_enter_results": true,
+      "invalid_failure_stage": "runtime route lookup",
+      "successful_output_semantics": {
+        "layout_mix.pdf": {
+          "required_markdown_tokens": [
+            "Batch PDF Layout Smoke",
+            "PDF batch production smoke text.",
+            "Alpha PDF 42"
+          ]
+        },
+        "layout_mix.png": {
+          "required_markdown_tokens": [
+            "![[layout_mix.png]]"
+          ],
+          "ocr_text_present": false
+        }
+      }
+    },
+    "docwen-current": {
+      "command_shape": "uv run docwen run --to md --batch --json --continue-on-error layout_mix.pdf layout_mix.png notes.bad",
+      "exit_code": 2,
+      "stdout_json_payload": {
+        "command": "run",
+        "success": false,
+        "total": 3,
+        "processed_count": 3,
+        "success_count": 2,
+        "failed_count": 1,
+        "result_files": [
+          "layout_mix.pdf",
+          "layout_mix.png",
+          "notes.bad"
+        ],
+        "result_success": [
+          true,
+          true,
+          false
+        ],
+        "failure_error_code": "invalid_input",
+        "failure_details": "unsupported_extension"
+      },
+      "output_path_style": "stable files beside inputs, e.g. layout_mix.md and layout_mix_001.md",
+      "stderr_warning_contains": [
+        "1",
+        "notes.bad",
+        ".bad"
+      ],
+      "invalid_files_enter_results": true,
+      "invalid_failure_stage": "CLI prevalidation; invalid file is not sent to runtime",
+      "successful_output_semantics": {
+        "layout_mix.pdf": {
+          "required_markdown_tokens": [
+            "Batch PDF Layout Smoke",
+            "PDF batch production smoke text.",
+            "Alpha PDF 42"
+          ]
+        },
+        "layout_mix.png": {
+          "required_markdown_tokens": [
+            "![[layout_mix.png]]"
+          ],
+          "ocr_text_present": false
+        }
+      }
+    }
+  },
+  "focused_scope_decision": "For this PDF/PNG/bad focused smoke, the old=3/current=2 process exit-code difference is accepted as the same stage-specific architecture difference recorded by the DOCX/XLSX/bad and DOCX/PNG/bad smokes: the user-visible batch projection remains aligned, while current keeps the earlier invalid_input prevalidation boundary.",
+  "comparison_implication": "This broadens GOLDEN-006 with a layout/PDF route that all three projects can convert without external Office. It also records the same CLI image boundary as the DOCX/PNG/bad smoke: without --ocr, image->Markdown preserves the image link and should not OCR. Broader CLI artifact matrices still remain open."
+}

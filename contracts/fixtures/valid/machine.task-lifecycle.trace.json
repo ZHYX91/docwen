@@ -1,0 +1,207 @@
+[
+  {
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "task/plan",
+    "params": {
+      "capability_id": "convert.pdf.to_markdown",
+      "inputs": [
+        {
+          "input_id": "input.scan",
+          "kind": "resource",
+          "role": "source",
+          "logical_path": "scan.pdf",
+          "locator": {
+            "kind": "local_path",
+            "path": "D:\\requests\\42\\scan.pdf"
+          },
+          "media_type": "application/pdf",
+          "size_bytes": 8192,
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ],
+      "output": {
+        "staging_root": {
+          "kind": "local_path",
+          "path": "D:\\requests\\42\\output"
+        },
+        "staging_policy": "require_empty"
+      },
+      "options": {
+        "ocr_language": "chinese",
+        "preserve_resources": false,
+        "recognize_text": true
+      }
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 3,
+    "result": {
+      "plan_id": "plan.ocr.001",
+      "capability_id": "convert.pdf.to_markdown",
+      "effective_options": {
+        "ocr_language": "chinese",
+        "preserve_resources": false,
+        "recognize_text": true,
+        "image_mode": "file",
+        "render_dpi": 200
+      },
+      "output_shape": {
+        "cardinality": "many",
+        "artifact_kinds": [
+          "document",
+          "fragment",
+          "resource"
+        ],
+        "relation_types": [
+          "fragment_of",
+          "resource_of"
+        ],
+        "atomic_bundle": true,
+        "relation_payloads": [
+          "page_fragment",
+          "page_resource"
+        ]
+      },
+      "warnings": [],
+      "limitations": [
+        {
+          "severity": "warning",
+          "code": "physical_page_ocr.best_effort",
+          "message": "When OCR is enabled it is best effort: every physical page or frame retains an ordered fragment and typed status even when recognition is blank or unavailable."
+        },
+        {
+          "severity": "warning",
+          "code": "physical_page_ocr.consumer_owned_import",
+          "message": "The Bundle reports page and resource facts only; Node layout, basenames, and import strategy remain consumer-owned."
+        }
+      ],
+      "requires_confirmation": false
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 4,
+    "method": "task/execute",
+    "params": {
+      "plan_id": "plan.ocr.001"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 4,
+    "result": {
+      "task_id": "task.ocr.001",
+      "state": "accepted"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "method": "task/progress",
+    "params": {
+      "task_id": "task.ocr.001",
+      "sequence": 1,
+      "phase": "conversion",
+      "completed": 50,
+      "total": 100,
+      "unit": "percent",
+      "message": "Conversion progress 50 percent"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "method": "task/completed",
+    "params": {
+      "task_id": "task.ocr.001",
+      "sequence": 2,
+      "bundle": {
+        "schema": "docwen.artifact_bundle.v2",
+        "bundle_id": "bundle.ocr.001",
+        "task_id": "task.ocr.001",
+        "producer": {
+          "name": "DocWen",
+          "product_version": "0.9.0",
+          "machine_protocol": "docwen.machine.v1"
+        },
+        "layout_schema": "docwen.document_node.v1",
+        "artifacts": [
+          {
+            "artifact_id": "document.ocr",
+            "kind": "document",
+            "locator": "documents/scanned-contract.md",
+            "logical_path": "scanned-contract/scanned-contract.md",
+            "suggested_name": "scanned-contract.md",
+            "media_type": "text/markdown",
+            "size_bytes": 128,
+            "sha256": "4444444444444444444444444444444444444444444444444444444444444444"
+          },
+          {
+            "artifact_id": "fragment.page.1",
+            "kind": "fragment",
+            "locator": "fragments/page-001.md",
+            "logical_path": "scanned-contract/page-001/page-001.md",
+            "suggested_name": "page-001.md",
+            "media_type": "text/markdown",
+            "size_bytes": 64,
+            "sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+          },
+          {
+            "artifact_id": "fragment.page.2",
+            "kind": "fragment",
+            "locator": "fragments/page-002.md",
+            "logical_path": "scanned-contract/page-002/page-002.md",
+            "suggested_name": "page-002.md",
+            "media_type": "text/markdown",
+            "size_bytes": 64,
+            "sha256": "6666666666666666666666666666666666666666666666666666666666666666"
+          }
+        ],
+        "entries": [
+          {
+            "artifact_id": "document.ocr",
+            "role": "primary",
+            "ordinal": 0,
+            "preferred": true
+          }
+        ],
+        "relations": [
+          {
+            "type": "fragment_of",
+            "source_artifact_id": "fragment.page.1",
+            "target_artifact_id": "document.ocr",
+            "role": "ocr_page",
+            "ordinal": 0,
+            "page_fragment": {
+              "fragment_kind": "page",
+              "page_index": 1,
+              "page_count": 2,
+              "ocr_status": "success",
+              "source_page": 1
+            }
+          },
+          {
+            "type": "fragment_of",
+            "source_artifact_id": "fragment.page.2",
+            "target_artifact_id": "document.ocr",
+            "role": "ocr_page",
+            "ordinal": 1,
+            "page_fragment": {
+              "fragment_kind": "page",
+              "page_index": 2,
+              "page_count": 2,
+              "ocr_status": "no_text",
+              "source_page": 2
+            }
+          }
+        ]
+      },
+      "diagnostics": [],
+      "metrics": {
+        "duration_ms": 1200,
+        "input_bytes": 8192,
+        "output_bytes": 256
+      }
+    }
+  }
+]

@@ -1,0 +1,1584 @@
+# DocWen - locale file
+# Locale: pt_BR
+# Encoding: UTF-8
+
+[meta]
+name = "Portuguese (Brazil)"
+native_name = "Português (Brasil)"
+template_name = "Modelo Geral Português"
+
+# =============================================================================
+# Janela principal
+# =============================================================================
+[main_window]
+route_catalog_failed = "Não foi possível carregar as operações disponíveis; a solicitação não foi iniciada."
+route_unavailable = "Não há operação compatível disponível para este arquivo."
+output_settings_unavailable = "Não foi possível carregar as configurações de saída; a tarefa não foi iniciada."
+template_catalog_failed = "Não foi possível carregar os modelos."
+window_title = "DocWen (Versao Offline)"
+version_offline = "Versao Offline"
+settings_tooltip = "Configuracoes (Ctrl+,)"
+about_tooltip = "Sobre o DocWen"
+font_size_tooltip = "Alternar tamanho da fonte"
+no_file_for_locate = "Nenhum arquivo selecionado, nao e possivel localizar a saida."
+runtime_unavailable = "Runtime indisponivel, nao e possivel iniciar a conversao."
+task_already_running = "Ja existe uma tarefa em execucao. Cancele a tarefa atual primeiro."
+cancelling = "Cancelando..."
+task_processing_prefix = "Processando:"
+task_progress_prefix = "Progresso:"
+task_failed_prefix = "Falha:"
+task_processing_status = "Processando: {message}"
+task_progress_status = "Progresso: {percent}% {message}"
+task_completed_status = "Concluido"
+task_failed_status = "Falha: {message}"
+task_cancelled_status = "Cancelado"
+error_copied = "Detalhes do erro copiados."
+no_error_available = "Nenhuma informacao de erro disponivel."
+no_failed_to_retry = "Nenhuma tarefa com falha para tentar novamente."
+retry_context_unavailable = "Contexto de repeticao indisponivel."
+path_not_exist = "Caminho nao existe: {path}"
+open_path_failed = "Nao foi possivel abrir o caminho: {path}"
+template_not_found = "Modelo não encontrado: {name}"
+template_dir_unavailable = "O diretório de modelos não está disponível."
+system_tray_show = "Mostrar janela"
+system_tray_hide = "Ocultar janela"
+system_tray_quit = "Sair"
+ipc_file_received = "Arquivo recebido de outra instância: {filename}"
+batch_add_failed_title = "Falha ao adicionar em lote"
+batch_add_failed_message = "Não foi possível adicionar {count} arquivo(s) à lista do lote."
+batch_add_failed_reason = "Motivo"
+file_admission_invalid = "Os dados de inspeção do arquivo são inválidos."
+file_admission_changed = "O arquivo foi alterado depois de ser adicionado. Remova-o da lista e adicione-o novamente para verificá-lo de novo; depois, tente novamente."
+file_admission_blocked = "O arquivo selecionado não pode ser processado."
+file_admission_confirm_title = "Confirmar formato de arquivo detectado"
+file_admission_confirm_message = "O nome do arquivo e o conteúdo detectado usam formatos diferentes. Processar com o formato detectado?"
+file_admission_confirm_action = "Processar como formato detectado"
+file_admission_cancelled = "O processamento foi cancelado; o formato detectado não foi aceito."
+# =============================================================================
+# 通用文本
+# =============================================================================
+[common]
+app_name = "DocWen"
+default = "Padrão"
+close = "Fechar"
+apply = "Aplicar"
+cancel = "Cancelar"
+ok = "OK"
+save = "Salvar"
+error = "Erro"
+browse = "Procurar..."
+disclaimer = "Versão de teste. Sem garantia de precisão.\nSoftware de código aberto AGPL-3.0."
+ready = "Pronto"
+reload = "Recarregar"
+save_failed = "Falha ao salvar configurações"
+
+# =============================================================================
+# 状态栏
+# =============================================================================
+[info_area]
+copy_path = "Copiar caminho"
+open_location = "Abrir local do arquivo: {path}"
+ipc_file_missing = "Arquivo IPC nao encontrado: {path}"
+font_size_applied = "Tamanho do texto: {label}"
+
+transient_title = "Status atual"
+transient_meta = "{count} ativas"
+history_title = "Mensagens recentes"
+history_meta = "{count} registros"
+task_state_active = "Em andamento"
+task_state_success = "Concluído"
+history_completed = "Concluído: {name}"
+task_state_partial = "Falha parcial"
+task_state_failed = "Falhou"
+task_state_cancelled = "Cancelado"
+task_current_file = "Arquivo atual: {name}"
+task_progress_detail = "Concluídos {completed}/{total}, falhas {failed}, ID da tarefa: {operation_id}"
+task_skipped_count = "Ignorados: {skipped}"
+task_cancelled_count = "Cancelados: {cancelled}"
+task_guide_open_output_dir = "Abrir pasta de saída"
+task_guide_view_failed_details = "Ver detalhes da falha"
+task_guide_retry_failed = "Tentar novamente os itens com falha"
+task_guide_add_more_files = "Continuar adicionando arquivos"
+window_topmost_enabled = "A janela fica sempre por cima. Pressione Ctrl+Shift+T para desativar."
+window_topmost_disabled = "A janela nao fica mais sempre por cima. Pressione Ctrl+Shift+T para ativar novamente."
+# =============================================================================
+# CLI 命令行界面
+# =============================================================================
+[cli]
+description = "DocWen CLI - Conversão de documentos/tabelas/imagens/layouts"
+example = "Exemplo"
+
+# CLI帮助文本
+[cli.help]
+settings = "Gerenciar configurações"
+settings_reset = "Redefinir configurações para os padrões"
+files = "Caminho do arquivo de entrada (suporta curingas, ex: *.docx)"
+template = "ID canônico do recurso de modelo de resources list templates (preferido no protocol 3); nome, arquivo ou caminho legado apenas para compatibilidade do Core"
+inspect = "Inspecionar ações suportadas (Auto-descrição IA)"
+doctor = "Executar diagnóstico"
+
+# CLI参数组标题
+[cli.groups]
+
+# CLI交互模式
+[cli.interactive]
+
+# 文件类型菜单
+[cli.interactive.menus]
+
+# 格式选项
+[cli.interactive.formats]
+
+# DPI选项
+[cli.interactive.dpi]
+
+# 压缩选项
+[cli.interactive.compress]
+
+[cli.interactive.pdf_sizes]
+
+# 序号方案
+[cli.interactive.numbering_schemes]
+
+# 优化类型
+[cli.interactive.optimization_types]
+gongwen = "Oficial"
+
+# 校对选项
+invoice_cn = "Fatura chinesa (invoice_cn)"
+[cli.interactive.proofread]
+
+# 提示文本
+[cli.interactive.prompts]
+
+# CLI消息
+[cli.messages]
+error_aggregate_need_two = "São necessários pelo menos dois arquivos correspondentes (encontrados: {count})."
+error_no_valid_files = "Erro: Nenhum arquivo válido"
+error_file_not_found = "Erro: Arquivo não encontrado"
+warning_invalid_files = "Aviso: {count} arquivos inválidos"
+error_prefix = "Erro"
+invalid_tab = "Aba de configurações desconhecida: {tab}"
+
+# 批处理模式
+[cli.batch]
+
+# CLI 提示文本
+[cli.prompts]
+
+# CLI 验证消息
+[cli.validation]
+
+# CLI 结果消息
+[cli.result]
+
+# CLI 操作描述
+[cli.actions]
+
+# CLI 序号方案名称
+[cli.numbering_schemes]
+
+# =============================================================================
+# 设置对话框
+# =============================================================================
+[settings]
+title = "Configurações"
+
+# 选项卡标题
+[settings.tabs]
+general = "Geral"
+text = "Texto"
+proofread = "Revisão"
+export = "Exportar"
+document = "Documento"
+spreadsheet = "Planilha"
+image = "Imagem"
+layout = "Layout"
+other = "Outros"
+link = "Link"
+formatting = "Formatação"
+output = "Saída"
+logging = "Log"
+
+[settings.descriptions]
+general = "Configurações globais de idioma, tema e interface"
+
+# 设置状态消息
+[settings.status]
+
+[settings.reset]
+tab_button = "Redefinir aba"
+all_button = "Redefinir tudo"
+tab_confirm_title = "Confirmar redefinicao"
+tab_confirm_message = "Redefinir todas as configuracoes da aba \"{tab_name}\" para o padrao? Esta acao nao pode ser desfeita."
+all_confirm_title = "Confirmar redefinicao total"
+all_confirm_message = "Redefinir todas as configuracoes para o padrao? (Os dados do dicionario nao sao afetados.) Esta acao nao pode ser desfeita."
+success = "Todas as configuracoes foram redefinidas para o padrao"
+tab_success = "As configuracoes da aba \"{tab_name}\" foram redefinidas para o padrao"
+failed = "Falha ao redefinir as configuracoes. Verifique os logs."
+
+[settings.changes]
+summary = "Alterações não salvas ({count})"
+more = "… e mais {count}"
+
+[settings.errors]
+tab_load_failed_message = "Falha ao carregar {tab}\n\nErro: {error}"
+
+[settings.toml_editor]
+config_label = "Configuracao"
+hint = "Dica: esta pagina edita TOML diretamente. A sintaxe e validada antes de salvar."
+toml_syntax_error = "Erro de sintaxe TOML"
+save_failed = "Falha ao salvar a configuracao"
+save_success_title = "Salvo"
+save_success_message = "Configuracao salva e recarregada."
+
+# -----------------------------------------------------------------------------
+# 通用设置选项卡
+# -----------------------------------------------------------------------------
+[settings.general]
+# 语言设置区域
+language_section = "Idioma"
+language_label = "Escolher idioma:"
+language_tooltip = "Escolha o idioma de exibição.\nReinicialização necessária."
+language_restart_hint = "Reinicialização necessária."
+
+# 主题设置区域
+theme_section = "Tema"
+theme_description = "Escolha entre o tema claro, escuro ou o tema do sistema."
+theme_label = "Escolher tema:"
+theme_tooltip = "Escolha o tema visual do aplicativo."
+theme_preview = "Visualização:"
+sample_button = "Exemplo"
+sample_text = "Texto"
+
+[settings.general.languages]
+zh_CN = "Chinês (simplificado)"
+en_US = "Inglês"
+de_DE = "Alemão"
+es_ES = "Espanhol"
+fr_FR = "Francês"
+ja_JP = "Japonês"
+ko_KR = "Coreano"
+pt_BR = "Português (Brasil)"
+ru_RU = "Russo"
+vi_VN = "Vietnamita"
+zh_TW = "Chinês (tradicional)"
+
+# 主题名称
+[settings.general.themes]
+light = "Claro"
+dark = "Escuro"
+system = "Seguir sistema"
+
+# 透明度设置区域
+[settings.general.transparency]
+section = "Transparência"
+enable = "Ativar transparência da janela"
+tooltip = "Ativa janelas semitransparentes."
+opacity_value_tooltip = "Ajuste a opacidade da janela (0,20 = mais transparente; 1,00 = totalmente opaca)"
+
+# 窗口行为设置区域
+[settings.general.window]
+section = "Comportamento da janela"
+description = "Configure o estado da janela e o modo padrão."
+remember_state = "Lembrar posição e tamanho"
+remember_state_tooltip = "Restaurar estado da janela na próxima inicialização."
+auto_center = "Centralizar automaticamente"
+auto_center_tooltip = "Centralizar janela na inicialização."
+expand_side_panels = "Expandir painéis laterais"
+expand_side_panels_tooltip = "Quando a janela ficar mais larga, permitir que os painéis esquerdo/direito também se expandam.\nQuando desativado, apenas o painel central se expande."
+default_mode_label = "Modo padrão:"
+default_mode_tooltip = "Modo padrão na inicialização."
+single_mode = "Arquivo único"
+batch_mode = "Lote"
+
+# -----------------------------------------------------------------------------
+# 文本设置选项卡
+# -----------------------------------------------------------------------------
+[settings.text]
+# MD转文档序号设置
+md_to_docx_section = "Numeração (MD para DOCX)"
+remove_numbering = "Remover numeração antiga"
+remove_numbering_tooltip = "Remove a numeração existente no Markdown."
+add_numbering = "Adicionar nova numeração"
+add_numbering_tooltip = "Adicionar numeração hierárquica aos títulos do DOCX de saída"
+scheme_label = "Esquema:"
+scheme_tooltip = "Escolher o esquema de numeração dos títulos"
+render_mode_label = "Modo de saída da numeração dos títulos:"
+render_mode_tooltip = "Escolher se os números dos títulos serão gravados no texto ou gerados pela numeração nativa do Word"
+render_mode_text = "Texto"
+render_mode_word_native = "Nativa do Word"
+render_mode_hint = "Texto = gravar os números nos títulos; nativa do Word = usar listas de vários níveis do Word"
+
+# 字段优化（字段处理器）
+field_processors_section = "Otimizações de campos (Markdown para Documento)"
+field_processors_empty = "Não há otimizações de campos disponíveis para o idioma atual."
+field_processors_load_error = "Erro de carregamento: {error}"
+field_processors_toggle_failed = "Falha ao atualizar “{name}”. O valor anterior foi restaurado."
+
+# 序号设置区域
+numbering_settings_section = "Configurações de numeração"
+numbering_settings_desc = "Gerenciar regras de adição e remoção."
+edit_numbering_add = "Editar esquemas de adição"
+edit_numbering_clean = "Editar regras de limpeza"
+
+# 模板设置
+template_section = "Configurações de modelo"
+template_tooltip = "Modelo padrão ao importar arquivos MD."
+
+# 校对设置
+
+# 词库配置
+
+# 错误消息
+save_numbering_schemes_failed = "Não foi possível salvar os esquemas de numeração. As alterações não foram mantidas."
+save_numbering_clean_rules_failed = "Não foi possível salvar as regras de limpeza da numeração. As alterações não foram mantidas."
+
+# -----------------------------------------------------------------------------
+# 文档设置选项卡
+# -----------------------------------------------------------------------------
+[settings.proofread]
+validation_section = "Regras de revisão"
+enable_symbol_pairing = "Ativar verificação de pares de símbolos"
+enable_symbol_correction = "Ativar correção de símbolos"
+enable_typos_rule = "Ativar detecção de erros de digitação"
+enable_sensitive_word = "Ativar verificação de termos sinalizados"
+skip_code_blocks = "Ignorar blocos de código"
+skip_quote_blocks = "Ignorar blocos de citação"
+symbol_mapping_section = "Editor de mapeamento de símbolos"
+symbol_mapping_desc = "Gerenciar regras de pareamento e correção de símbolos."
+symbol_correction_section = "Editor de correção de símbolos"
+symbol_correction_desc = "Gerenciar correções de símbolos de largura inteira e meia largura."
+typos_section = "Editor do dicionário de erros de digitação"
+typos_desc = "Gerenciar correções de erros de digitação comuns."
+sensitive_words_section = "Editor de termos sinalizados"
+sensitive_words_desc = "Gerenciar entradas para detectar termos sinalizados."
+edit = "Editar"
+
+[settings.extraction]
+image_extraction_mode_label = "Modo de extração de imagens:"
+image_extraction_mode_tooltip = "Escolha como as imagens são incorporadas no Markdown.\n\n• Arquivos de imagem: salvar como arquivos separados e referenciá-los no MD\n• Base64 embutido: codificar imagens em Base64 e incorporá-las diretamente no MD"
+image_extraction_mode_file = "Arquivos de imagem"
+image_extraction_mode_base64 = "Base64 embutido"
+ocr_placement_mode_label = "Local do OCR:"
+ocr_placement_mode_tooltip = "Escolha onde o texto do OCR é armazenado.\n\n• MD da imagem: gerar um arquivo MD separado por imagem contendo a imagem e o texto do OCR\n• Documento principal: inserir o texto do OCR como citação abaixo da imagem no MD principal (muitas imagens podem deixar o MD principal muito longo)"
+ocr_placement_mode_image_md = "MD da imagem"
+ocr_placement_mode_main_md = "Documento principal"
+ocr_blockquote_title_enabled_label = "Linha de título do OCR (MD principal)"
+ocr_blockquote_title_enabled_tooltip = "Configuração global: quando o local do OCR for \"Documento principal\", mostrar uma linha de título no início do bloco de citação do OCR. O texto do título vem do idioma atual."
+ocr_blockquote_title_text_label = "Texto do título (idioma atual):"
+ocr_blockquote_title_text_tooltip = "Afeta apenas o idioma atual da interface.\nDeixe vazio ou igual ao padrão para usar o texto do idioma."
+ocr_blockquote_title_text_reset = "Redefinir"
+
+[settings.export]
+md_export_section = "Exportar para Markdown (Imagens/OCR)"
+md_export_desc = "Configure como imagens e texto OCR são tratados na saída Markdown."
+base64_compress_section = "Compatibilidade Base64 (somente Base64 embutido)"
+base64_compress_desc = "Compactar imagens antes de incorporá-las em Base64."
+base64_compress_tooltip = "Base64 aumenta o tamanho e pode não renderizar em alguns editores.\nAo ativar: imagens acima do limite serão comprimidas em JPG antes de embutir."
+base64_compress_enabled = "Comprimir automaticamente imagens grandes"
+base64_compress_threshold_label = "Limite"
+base64_compress_threshold_tooltip = "Limite de tamanho em KB. Imagens maiores são compactadas antes da incorporação."
+
+
+[settings.optimization_types]
+
+
+[settings.table_export]
+section = "Exportação de células mescladas"
+desc = "Controla como células mescladas são representadas na saída Markdown."
+merge_strategy_label = "Estratégia de exportação de células mescladas:"
+
+[settings.table_export.strategies]
+fill = "Preencher"
+empty = "Deixar vazio"
+marker = "Marcador"
+
+[settings.document]
+# 内容提取设置
+extraction_section = "Extração/OCR"
+keep_images = "Extrair imagens"
+keep_images_tooltip = "Extrair imagens ao converter."
+enable_ocr = "Ativar OCR"
+enable_ocr_tooltip = "Reconhecimento de texto para imagens."
+
+# 优化设置
+optimization_section = "Otimização (Documento → Markdown)"
+enable_optimization = "Ativar otimização"
+optimization_type_label = "Tipo:"
+
+# 软件优先级
+software_section = "Prioridade de software"
+word_processors_label = "Processador de texto"
+odt_conversion_label = "Conversão ODT"
+document_to_pdf_label = "Documento para PDF"
+
+# 软件名称
+[settings.document.software]
+wps_writer = "WPS Writer"
+msoffice_word = "Word"
+libreoffice = "LibreOffice"
+
+# 序号设置
+[settings.document.numbering]
+section = "Numeração (DOCX para MD)"
+remove = "Remover numeração antiga"
+remove_tooltip = "Remove numeração existente."
+add = "Adicionar nova numeração"
+scheme_label = "Esquema:"
+
+# -----------------------------------------------------------------------------
+# 表格设置选项卡
+# -----------------------------------------------------------------------------
+[settings.spreadsheet]
+extraction_section = "Extração/OCR"
+keep_images = "Extrair imagens"
+keep_images_tooltip = "Extrair imagens."
+enable_ocr = "Ativar OCR"
+enable_ocr_tooltip = "Ativar OCR."
+merge_mode_section = "Modo de mesclagem"
+merge_mode_desc = "Modo padrão para mesclagem de tabelas."
+default_merge_mode_label = "Modo de mesclagem padrão:"
+software_section = "Prioridade de software"
+spreadsheet_processors_label = "Planilha"
+ods_conversion_label = "Conversão ODS"
+spreadsheet_to_pdf_label = "Planilha para PDF"
+
+# 汇总模式选项
+[settings.spreadsheet.merge_modes]
+by_row = "Por linha"
+by_column = "Por coluna"
+by_cell = "Por célula"
+
+# 软件名称
+[settings.spreadsheet.software]
+wps_spreadsheets = "WPS Spreadsheets"
+excel = "Excel"
+libreoffice = "LibreOffice"
+
+# -----------------------------------------------------------------------------
+# 图片设置选项卡
+# -----------------------------------------------------------------------------
+[settings.image]
+extraction_section = "Extração/OCR"
+keep_images = "Manter imagens"
+enable_ocr = "Ativar OCR"
+size_unit_label = "Unidade:"
+optimization_section = "Otimização (Imagem → Markdown)"
+enable_optimization = "Ativar \"Otimizar por tipo de imagem\" por padrão"
+optimization_type_label = "Tipo de otimização padrão:"
+
+# OCR语言设置
+ocr_language_label = "Idioma do OCR:"
+ocr_language_tooltip = "Selecione o modelo de idioma usado no reconhecimento OCR.\n\n• Seguir idioma da interface: seleciona automaticamente conforme o idioma atual\n• Chinês/Inglês: indicado para documentos mistos em chinês e inglês\n• Japonês: indicado para documentos em japonês\n• Alfabeto latino: indicado para alemão, francês, português etc.\n• Alfabeto cirílico: indicado para russo etc."
+ocr_language_auto = "Seguir idioma da interface"
+ocr_language_chinese = "Chinês/Inglês"
+ocr_language_japanese = "Japonês"
+ocr_language_chinese_cht = "Chinês tradicional"
+ocr_language_english = "Apenas inglês"
+ocr_language_korean = "Coreano"
+ocr_language_latin = "Alfabeto latino (DE/FR/PT etc.)"
+ocr_language_cyrillic = "Alfabeto cirílico (RU etc.)"
+
+compress_section = "Compressão"
+compress_desc = "Configurações de compressão padrão."
+compress_mode_label = "Modo de compactação:"
+compress_lossless = "Melhor qualidade"
+compress_limit_size = "Limitar tamanho"
+size_limit_label = "Limite de tamanho:"
+
+pdf_tiff_section = "Opções PDF/TIFF"
+pdf_size_label = "Tamanho imagem PDF"
+pdf_original = "Tamanho original"
+pdf_a4 = "Ajustar para A4"
+pdf_a3 = "Ajustar para A3"
+tiff_mode_label = "Modo TIFF"
+tiff_keep_alpha = "Manter transparência"
+tiff_no_alpha = "Remover transparência"
+
+# -----------------------------------------------------------------------------
+# 版式设置选项卡
+# -----------------------------------------------------------------------------
+[settings.layout]
+extraction_section = "Extração/OCR"
+keep_images = "Extrair imagens"
+enable_ocr = "Ativar OCR"
+optimization_section = "Otimização (Layout → Markdown)"
+enable_optimization = "Ativar \"Otimizar por tipo de layout\" por padrão"
+optimization_type_label = "Tipo de otimização padrão:"
+dpi_section = "DPI de renderização"
+dpi_desc = "DPI para renderização de layout."
+render_dpi_label = "Render DPI:"
+dpi_min = "Min (150)"
+dpi_medium = "Médio (300)"
+dpi_high = "Alto (600)"
+software_section = "Prioridade de software"
+pdf_to_doc_label = "PDF para Documento"
+
+# -----------------------------------------------------------------------------
+# 其他文件设置选项卡
+# -----------------------------------------------------------------------------
+[settings.other]
+extraction_section = "Configurações de extração de imagens/OCR"
+keep_images = "Marcar \"Extrair imagens\" por padrão"
+keep_images_tooltip = "Marcar a extração de imagens por padrão ao converter outros arquivos para MD"
+enable_ocr = "Marcar \"OCR de imagens\" por padrão"
+enable_ocr_tooltip = "Marcar o OCR de imagens por padrão ao converter outros arquivos para MD"
+
+# -----------------------------------------------------------------------------
+# 链接设置选项卡
+# -----------------------------------------------------------------------------
+[settings.link]
+# Markdown链接格式区域
+format_section = "Formato de link Markdown"
+format_desc = "Formato para links no Markdown."
+image_link_style_label = "Link de imagem:"
+image_link_style_tooltip = "Estilo para incorporação de imagem."
+md_file_link_style_label = "Link de arquivo:"
+md_file_link_style_tooltip = "Estilo para links de arquivos."
+
+# 非嵌入链接处理区域
+non_embed_section = "Links não incorporados"
+non_embed_desc = "Tratamento de links normais."
+wiki_link_mode = "Links Wiki:"
+wiki_link_tooltip = "Tratamento de [[Links Wiki]]."
+markdown_link_mode = "Links Markdown:"
+markdown_link_tooltip = "Tratamento de [Links Markdown]."
+
+# 嵌入链接处理区域
+embed_section = "Links incorporados"
+embed_desc = "Tratamento de incorporações (!)."
+wiki_embed_image_mode = "Incorporação imagem Wiki:"
+wiki_embed_image_tooltip = "![[Imagem]]."
+markdown_embed_image_mode = "Incorporação imagem Markdown:"
+markdown_embed_image_tooltip = "![Imagem]."
+embed_md_file_mode = "Arquivos MD incorporados:"
+embed_md_file_tooltip = "![[Arquivo.md]]."
+max_depth_label = "Profundidade máx:"
+max_depth_tooltip = "Evita loops infinitos."
+
+# 子节点：图片链接格式选项
+[settings.link.image_styles]
+wiki_embed = "Incorporação Wiki"
+wiki_link = "Link Wiki"
+md_embed = "Incorporação Markdown"
+md_link = "Link Markdown"
+
+# 子节点：MD文件链接格式选项
+[settings.link.md_file_styles]
+wiki_embed = "Incorporação Wiki"
+wiki_link = "Link Wiki"
+md_link = "Link Markdown"
+
+# 子节点：链接处理模式
+[settings.link.modes]
+keep = "Manter"
+extract_text = "Extrair texto"
+remove = "Remover"
+hyperlink = "Hiperlink"
+embed = "Inserir conteúdo"
+
+# -----------------------------------------------------------------------------
+# 格式设置选项卡
+# -----------------------------------------------------------------------------
+[settings.formatting]
+# 文档转为Markdown部分
+docx_to_md_section = "Documento para Markdown"
+format_processing = "Processamento de formato"
+format_processing_tooltip = "Como as formatações são tratadas."
+body_format_label = "Corpo do texto:"
+body_format_tooltip = "Negrito, Itálico, etc."
+heading_format_label = "Cabeçalhos:"
+heading_format_tooltip = "Formatação em cabeçalhos."
+table_header_format_label = "Cabeçalho de tabela:"
+table_header_format_tooltip = "Formatação em cabeçalhos de tabela."
+
+# 分隔符映射
+separator_mapping = "Mapeamento de separadores"
+separator_mapping_tooltip = "Mapeamento de quebras Word para Markdown."
+page_break_label = "Quebra de página:"
+page_break_tooltip = "Quebra de página Word."
+section_break_label = "Quebra de seção:"
+section_break_tooltip = "Quebra de seção Word."
+horizontal_rule_label = "Linha divisória:"
+horizontal_rule_tooltip = "Borda inferior Word."
+
+# 语法选择
+syntax_selection = "Escolha de sintaxe"
+syntax_selection_tooltip = "Sintaxe Markdown para saída."
+bold_syntax_label = "Negrito:"
+bold_syntax_tooltip = "Sintaxe para Negrito."
+italic_syntax_label = "Itálico:"
+italic_syntax_tooltip = "Sintaxe para Itálico."
+strikethrough_syntax_label = "Tachado:"
+strikethrough_syntax_tooltip = "Sintaxe para Tachado."
+highlight_syntax_label = "Realçado:"
+highlight_syntax_tooltip = "Sintaxe para Realce."
+superscript_syntax_label = "Sobrescrito:"
+superscript_syntax_tooltip = "Sintaxe para Sobrescrito."
+subscript_syntax_label = "Subscrito:"
+subscript_syntax_tooltip = "Sintaxe para Subscrito."
+unordered_list_label = "Lista não ordenada:"
+unordered_list_tooltip = "Símbolo para listas."
+indent_spaces_label = "Indentação:"
+indent_spaces_tooltip = "Controla o número de espaços por nível de lista ao exportar DOCX para Markdown\n2 espaços: saída mais compacta\n4 espaços: saída mais espaçada\nObservação: Markdown para DOCX usa atualmente detecção por indentação relativa e não depende desta configuração"
+
+# Markdown转为文档部分
+md_to_docx_section = "Markdown para Documento"
+md_format_processing = "Processamento de formato"
+md_format_processing_tooltip = "Como tags Markdown são tratadas."
+md_body_format_label = "Corpo do texto:"
+md_body_format_tooltip = "Aplicar ou remover tags."
+md_heading_format_label = "Cabeçalhos:"
+md_heading_format_tooltip = "Tags em cabeçalhos."
+md_table_header_format_label = "Cabeçalho de tabela:"
+md_table_header_format_tooltip = "Tags em cabeçalhos de tabela."
+heading_merge_mode_label = "Modo de fusao entre titulo e corpo:"
+heading_merge_mode_tooltip = "Controla se um titulo e a linha de texto comum logo abaixo devem ser fundidos em um unico paragrafo\nPontuacao obrigatoria: funde apenas quando o titulo termina com pontuacao de encerramento e a linha seguinte e texto comum (padrao)\nSempre fundir: funde quando a linha seguinte e texto comum (sem exigir pontuacao final)\nNunca fundir: titulo e texto sao sempre analisados como paragrafos separados\nObservacao: listas/blocos de codigo/tabelas/citacoes/separadores nao sao fundidos"
+heading_merge_punctuation_label = "Pontuação para fusão:"
+heading_merge_punctuation_tooltip = "Caracteres que acionam a fusão entre título e corpo no modo Pontuação obrigatória. Um valor vazio desativa a fusão por pontuação."
+
+# MD转文档分隔符映射
+md_separator_mapping = "Mapeamento de separadores"
+md_separator_mapping_tooltip = "Markdown para quebras Word."
+dash_label = "--- (Traços):"
+dash_tooltip = "Mapeamento ---."
+asterisk_label = "*** (Asteriscos):"
+asterisk_tooltip = "Mapeamento ***."
+underscore_label = "___ (Sublinhados):"
+underscore_tooltip = "Mapeamento ___."
+
+# 表格样式
+table_style = "Estilo de tabela"
+table_style_tooltip = "Estilo para tabelas."
+builtin_style_radio = "Embutido"
+custom_style_radio = "Personalizado"
+
+# 列表拼接符
+list_separator_label = "Separador de lista YAML"
+list_separator_tooltip = "Separador usado ao concatenar valores de lista YAML em string\n\nValores comuns:\n• Vírgula chinesa（、）\n• Vírgula de largura total（，）\n• Vírgula + espaço（, ）\n• String vazia：concatenação direta"
+
+# 格式处理选项
+[settings.formatting.options]
+preserve_format = "Manter formato"
+discard_format = "Descartar formato"
+apply_format = "Aplicar formato"
+keep_markup = "Manter marcação"
+clean_markup = "Limpar marcação"
+heading_merge_punct_required = "Pontuacao obrigatoria (padrao)"
+heading_merge_always = "Sempre fundir"
+heading_merge_never = "Nunca fundir"
+
+# 分隔符选项
+[settings.formatting.separators]
+dash = "---"
+asterisk = "***"
+underscore = "___"
+ignore = "Ignorar"
+page_break = "Quebra de página"
+section_break = "Quebra de seção"
+horizontal_rule_1 = "Linha divisória 1"
+horizontal_rule_2 = "Linha divisória 2"
+horizontal_rule_3 = "Linha divisória 3"
+
+# 语法选项
+[settings.formatting.syntax]
+bold_asterisk = "Asterisco (**Texto**)"
+bold_underscore = "Sublinhado (__Texto__)"
+italic_asterisk = "Asterisco (*Texto*)"
+italic_underscore = "Sublinhado (_Texto_)"
+strikethrough_extended = "Estendido (~~Texto~~)"
+strikethrough_html = "HTML (<del>)"
+highlight_extended = "Estendido (==Texto==)"
+highlight_html = "HTML (<mark>)"
+superscript_extended = "Estendido (^Texto^)"
+superscript_html = "HTML (<sup>)"
+subscript_extended = "Estendido (~Texto~)"
+subscript_html = "HTML (<sub>)"
+unordered_dash = "Traço (- Item)"
+unordered_asterisk = "Asterisco (* Item)"
+unordered_plus = "Mais (+ Item)"
+indent_2_spaces = "2 Espaços"
+indent_4_spaces = "4 Espaços"
+
+# 表格样式选项
+[settings.formatting.table_styles]
+three_line_table = "Tabela de três linhas"
+table_grid = "Tabela grade"
+
+# -----------------------------------------------------------------------------
+# 输出设置选项卡
+# -----------------------------------------------------------------------------
+[settings.output]
+# 中间文件区域
+intermediate_section = "Arquivos intermediários"
+save_intermediate_label = "Salvar arquivos intermediários"
+save_intermediate_tooltip = "Salvar todas as etapas intermediárias."
+save_intermediate_desc = "Salvamento de formatos intermediários."
+
+# 输出目录区域
+directory_section = "Diretório de saída"
+output_mode_label = "Local de saída:"
+output_mode_tooltip = "Pasta de origem ou personalizada."
+custom_path_label = "Caminho:"
+browse_title = "Escolher pasta de saída"
+
+# 输出模式选项
+[settings.output.output_modes]
+source = "Diretório de origem"
+custom = "Personalizado"
+
+# 日期子文件夹区域
+[settings.output.date_folder]
+section = "Pasta de data"
+create_label = "Criar subpasta de data"
+create_tooltip = "Cria subpasta com a data atual."
+format_label = "Formato de data:"
+
+# 日期格式选项
+[settings.output.date_formats]
+iso = "2025-01-06"
+compact = "20250106"
+chinese = "2025年01月06日"
+
+# 输出行为区域
+[settings.output.behavior]
+section = "Comportamento"
+auto_open_folder_label = "Abrir pasta após"
+auto_open_folder_tooltip = "Abre a pasta de saída após a conversão."
+
+# -----------------------------------------------------------------------------
+# 日志设置选项卡
+# -----------------------------------------------------------------------------
+[settings.logging]
+# 日志系统区域
+system_section = "Sistema"
+system_desc = "Ativar ou desativar o registro e definir o nível."
+enable_logging_label = "Ativar log"
+enable_logging_tooltip = "Ativa o sistema de log."
+log_level_label = "Nível de log:"
+log_level_tooltip = "Nível de detalhe dos logs."
+
+# 文件输出区域
+file_section = "Arquivo"
+file_desc = "Configurar o nome e a retenção dos arquivos de registro."
+file_prefix_label = "Prefixo do arquivo:"
+file_prefix_tooltip = "Prefixo para arquivos de log."
+retention_days_label = "Retenção (dias):"
+retention_days_tooltip = "Excluir logs após X dias."
+
+# 控制台输出区域
+console_section = "Console"
+console_desc = "Controlar a saída e a formatação dos registros no console."
+enable_console_label = "Saída do console"
+enable_console_tooltip = "Exibir logs no console."
+console_level_label = "Nível do console:"
+console_level_tooltip = "Nível para o console."
+validation_custom_directory_required = "O modo de diretório personalizado requer um caminho não vazio."
+validation_prefix_invalid = 'O prefixo do arquivo de registro contém caracteres inválidos: \ / : * ? " < > |'
+validation_prefix_required = "O prefixo do arquivo de registro não pode ficar vazio."
+directory_auto_notice = "O modo determina o diretório automaticamente; a entrada personalizada está desativada."
+directory_env_override_notice = "Uma variável de ambiente controla o diretório de registros; os controles de diretório estão desativados."
+console_format_tooltip = "Formato do console (vazio = reutilizar o formato do arquivo)"
+console_format_label = "Formato do console:"
+console_colorize_label = "Cor do console:"
+console_colorize_tooltip = "Controlar a política de cores dos registros no console."
+open_directory = "Abrir diretório"
+directory_notice_label = "Aviso do diretório:"
+override_source_label = "Origem da substituição:"
+fallback_reason_label = "Motivo da alternativa:"
+actual_log_file_label = "Arquivo de registro usado:"
+custom_directory_tooltip = "Diretório de registros personalizado (somente no modo personalizado)"
+custom_directory_label = "Diretório personalizado:"
+directory_mode_tooltip = "Modo de diretório"
+directory_mode_label = "Modo de diretório:"
+location_desc = "Controlar onde os arquivos de registro são gravados."
+location_section = "Local de saída"
+
+# 日志级别
+
+[settings.logging.dir_modes]
+user = "Padrão do sistema"
+temp = "Diretório temporário"
+custom = "Diretório personalizado"
+
+[settings.logging.console_colorize]
+auto = "Automático"
+always = "Sempre"
+never = "Nunca"
+
+[settings.logging.levels]
+debug = "Depuração (DEBUG)"
+info = "Informação (INFO)"
+warning = "Aviso (WARNING)"
+error = "Erro (ERROR)"
+critical = "Crítico (CRITICAL)"
+
+# =============================================================================
+# 关于对话框
+# =============================================================================
+[about]
+title = "Sobre"
+version_info = "Versão {version}"
+version_tooltip = "Versão offline. Por favor, atualize manualmente."
+contact = "Contato: {email}"
+copyright = "© {year} {author}"
+acknowledgments = "Agradecimentos"
+acknowledgments_intro = "Obrigado aos seguintes projetos open-source:"
+subtitle = "Software de conversao de formatos de documentos e graficos oficiais (Conversor de Documentos Oficiais)"
+
+# 开源工具描述
+[about.tools]
+python_docx = "Conversão DOCX/Markdown"
+openpyxl = "Conversão XLSX/Markdown"
+pymupdf = "Processamento PDF/XPS"
+pymupdf4llm = "Extração inteligente PDF"
+pdf2docx = "PDF para Word"
+easyofd = "Processamento OFD"
+rapidocr = "OCR Offline"
+paddleocr = "Fonte dos modelos OCR, PP-OCRv3/v4 treinados pelo PaddleOCR"
+onnxruntime = "Motor de inferência"
+pyside6 = "Framework Qt de interface gráfica (GUI)"
+pillow = "Processamento de Imagem"
+pillow_heif = "Suporte HEIF"
+img2pdf = "Imagem para PDF"
+pywin32 = "Interface Office COM"
+lxml = "Processamento XML"
+latex2mathml = "Fórmulas LaTeX"
+pyyaml = "Metadados YAML"
+tomlkit = "Configuração TOML"
+pandas = "Análise de Dados"
+numpy = "Cálculo Numérico"
+olefile = "Suporte Legacy Office"
+emoji = "Biblioteca de detecção e processamento de emojis"
+
+[core.theme_manager]
+
+# =============================================================================
+# 主界面组件
+# =============================================================================
+[components]
+
+# Tamanho do texto
+[components.font_size]
+small = "Pequeno"
+default = "Padrao"
+large = "Grande"
+xlarge = "Extra grande"
+
+# 文件拖拽区
+[components.file_drop]
+empty_hint_single = "Arraste um arquivo aqui"
+empty_hint_batch = "Arraste arquivos/pastas aqui"
+add_button = "Adicionar"
+add_file_action = "Adicionar arquivos"
+add_folder_action = "Adicionar pasta"
+recent_files_action = "Recentes"
+clear_recent_files_action = "Limpar recentes"
+select_folder_dialog = "Selecionar pasta"
+clear_button = "Limpar"
+single_mode = "Único"
+batch_mode = "Lote"
+file_selected_msg = "Selecionado: {filename}"
+files_added_msg = "{count} arquivo(s) adicionados"
+files_added_with_skipped_msg = "{added} arquivo(s) adicionados, {skipped} ignorados"
+no_supported_files = "Nenhum arquivo suportado encontrado."
+unsupported_type_msg = "Tipo de arquivo nao suportado: {filename}"
+single_mode_only_one = "O modo unico suporta apenas um arquivo."
+select_file_dialog = "Selecionar arquivo"
+all_supported_filter = "Todos os arquivos suportados"
+all_files_filter = "Todos os arquivos"
+drag_preview_single = "Prestes a selecionar: {filename}"
+drag_preview_summary = "Prestes a adicionar {added}, ignorar {skipped}"
+drag_preview_summary_recursive = "{summary}, incluindo varredura recursiva de pastas"
+drag_preview_summary_degraded = "{summary}; visualizacao em grande lote, resultado resumido"
+drag_preview_skipped_title = "Sera ignorado:"
+drag_preview_skipped_unsupported = "Nao suportado: {name}"
+drag_preview_skipped_unreadable = "Inacessivel: {path}"
+
+# 批量文件列表
+[components.file_drop.batch_list]
+no_batch_files = "Nenhum arquivo em lote"
+retry_selected_failed = "Tentar novamente a entrada com falha selecionada"
+retry_all_failed = "Tentar novamente todas as entradas com falha desta guia"
+total_files = "{total} arquivo(s) no total"
+total_files_selected = "{total} arquivo(s) no total, selecionado: {current_name}"
+action_open_output = "Abrir saída"
+action_view_skip = "Ver ignorado"
+action_view_error = "Ver erro"
+action_remove = "Remover"
+action_move_up = "Mover para cima"
+action_move_down = "Mover para baixo"
+sort_button = "Ordenar"
+sort_button_with_label = "Ordenar: {label}"
+sort_custom = "Ordem personalizada"
+sort_name = "Nome do arquivo"
+sort_type = "Tipo"
+sort_size = "Tamanho"
+sort_mtime = "Data de modificação"
+sort_ascending = "Crescente"
+sort_descending = "Decrescente"
+filter_all = "Todos"
+filter_failed = "Falhou"
+filter_pending = "Pendente"
+filter_processing = "Processando"
+filter_completed = "Concluido"
+action_remove_selected = "Remover itens selecionados ({count})"
+action_open_selected_locations = "Abrir diretorio dos itens selecionados ({count})"
+filter_button = "Filtrar"
+filter_button_with_label = "Filtrar: {label}"
+
+# 批量操作面板
+filter_skipped = "Ignorado"
+filter_cancelled = "Cancelado"
+[components.file_drop.batch_action]
+
+# 状态文本
+[components.file_drop.status]
+pending = "Pendente"
+processing = "Processando"
+completed = "Concluido"
+skipped = "Ignorado"
+failed = "Falhou"
+cancelled = "Cancelado"
+
+# 文件选择器
+[components.file_selector]
+
+# 状态栏
+[components.info_area]
+
+# 应用状态
+
+# 处理状态
+batch_completed = "Lote finalizado: {success} com sucesso, {failed} com falha, {skipped} ignorados, {cancelled} cancelados"
+
+# logic.py 状态消息
+
+# 文件类型选择（统一风格）
+
+# GUI状态消息
+task_completion_notification_title = "Tarefa concluida"
+task_completion_notification_success = "Tarefa concluida: processados {completed}/{total} arquivos."
+task_completion_notification_partial = "Tarefa concluida: processados {completed}/{total} arquivos, {failed} falhas."
+task_completion_notification_failed = "Tarefa encerrada: {total} arquivos, {failed} falhas."
+task_completion_notification_cancelled = "Tarefa cancelada: {completed}/{total} arquivos processados."
+
+# 文件状态对话框
+[components.file_dialogs]
+# 跳过对话框
+
+# 错误对话框
+
+# 操作面板
+[components.action_area]
+cancel_hint = "Há uma tarefa em execução. Pressione Esc para cancelá-la."
+
+# 转换面板
+[components.conversion_panel]
+
+# 模板选择器
+[components.template_selector]
+no_templates = "Nenhum disponível"
+empty_hint = "Se não houver modelos disponíveis, abra a pasta de modelos para revisar ou adicionar arquivos."
+open_template_dir = "Abrir pasta de modelos"
+unavailable = "Indisponível"
+
+# 选项卡式模板选择器
+usage_line = "Uso: {value}"
+source_line = "Origem: {value}"
+updated_line = "Atualizado: {value}"
+source_tooltip = "Pasta de origem: {value}"
+auto_selected_reason = "A primeira opção disponível em {template_kind} foi selecionada automaticamente conforme a configuração padrão."
+open_location = "Abrir local do arquivo"
+
+[components.template_selector_tabbed]
+document_templates = "Documento"
+spreadsheet_templates = "Planilha"
+
+# =============================================================================
+# 转换面板区域
+# =============================================================================
+[conversion_panel]
+route_options_unavailable = "Não foi possível carregar as operações disponíveis; as ações estão desativadas para evitar uma solicitação incorreta."
+no_compatible_operation = "Não há operação compatível disponível para este arquivo."
+format_conversion = "Conversão"
+save_as = "Salvar como"
+convert = "Converter"
+save_as_action = "Salvar como"
+export = "Exportar"
+render = "Renderizar"
+select_file_hint = "Selecionar arquivo"
+
+# 文档转换区
+[conversion_panel.document]
+convert_to_other_formats = "Outros formatos"
+convert_to_layout = "Para layout"
+proofread_document = "Verificação"
+proofread_hint = "Verificar documento"
+proofread_button = "Verificar"
+proofread_options = "Opções"
+symbol_pairing = "Emparelhamento"
+symbol_pairing_tooltip = "Emparelhamento de símbolos"
+typos_rule = "Erros"
+typos_rule_tooltip = "Erros"
+symbol_correction = "Símbolos"
+symbol_correction_tooltip = "Símbolos"
+sensitive_word = "Termos sinalizados"
+sensitive_word_tooltip = "Verificar termos sinalizados"
+
+# 图片转换区
+[conversion_panel.image]
+convert_to_other_formats = "Outros formatos"
+compression_options = "Compressão"
+highest_quality = "Melhor qualidade"
+limit_file_size = "Limitar tamanho"
+file_size_limit = "Limite:"
+enter_size_limit_warning = "Digite o limite"
+kb_range_warning = "10-10000 KB"
+mb_range_warning = "1-100 MB"
+enter_valid_number_warning = "Digite um número"
+convert_to_layout = "Para layout"
+size_options = "Tamanho"
+original_embed = "Original"
+fit_a4 = "A4"
+fit_a3 = "A3"
+merge_images = "Mesclar"
+merge_images_hint = "Mesclar imagens"
+merge_to_tif = "Para TIF"
+conversion_options = "Opções"
+preserve_transparency = "Manter transparência"
+no_transparency = "Remover"
+
+# 版式转换区
+[conversion_panel.layout]
+convert_to_other_formats = "Outros formatos"
+convert_to_document_or_image = "Documento/Imagem"
+merge_split = "Mesclar/Dividir"
+merge_split_hint = "Mesclar/Dividir"
+merge_to_pdf = "Mesclar PDF"
+merge_to_ofd = "Mesclar OFD"
+split_to_pdf = "Dividir PDF"
+split_to_ofd = "Dividir OFD"
+split_page_range = "Intervalo:"
+page_range_placeholder = "1-3,5  *  #"
+selected_split_file = "Escolhido: {pages} páginas"
+invalid_page_range = "Intervalo de páginas inválido: {part}"
+invalid_page = "Página inválida: {part}"
+split_mode_single_page_warning = "⚠️ Este arquivo tem apenas 1 pagina; nao precisa dividir"
+
+# 表格转换区
+[conversion_panel.spreadsheet]
+ods_delivery_options = "Opções de entrega ODS"
+ods_delivery_hint = "Fórmulas externas usam valores em cache. Arquivos protegidos exigem senha e consentimento para publicação sem proteção."
+protection_password = "Senha de proteção (opcional)"
+allow_protection_loss = "Entendo que o ODS entregue não manterá a proteção por senha"
+protected_batch_single_only = "As senhas não são reutilizadas em lotes. Converta arquivos protegidos individualmente."
+convert_to_other_formats = "Outros formatos"
+convert_to_layout = "Para layout"
+merge_tables = "Mesclar tabelas"
+merge_tables_hint = "Mesclar"
+merge_tables_button = "📋 Mesclar"
+merge_options = "Opções"
+merge_by_row = "Linha"
+merge_by_column = "Coluna"
+merge_by_cell = "Célula"
+no_table_selected = "Sem tabela"
+
+# =============================================================================
+# 操作面板区域
+# =============================================================================
+[action_area]
+route_options_unavailable = "Não foi possível carregar as operações disponíveis; a geração está desativada para evitar uma solicitação incorreta."
+no_compatible_output = "Não há formato de saída compatível disponível para este arquivo."
+export_options = "Opções de exportação"
+generation_options = "Geração"
+extract_images = "Imagens"
+ocr = "OCR"
+optimization_unavailable = "As opções de otimização estão indisponíveis; a conversão padrão continua disponível."
+generate = "Gerar"
+
+# 校对选项
+[action_area.proofread]
+
+# 文档转MD面板
+[action_area.document]
+export_markdown = "Exportar Markdown"
+export_markdown_tooltip = "Para MD"
+optimize_for_type = "Otimização"
+remove_existing_numbering = "Remover num."
+add_new_numbering = "Add num."
+
+# 表格转MD面板
+[action_area.spreadsheet]
+export_markdown_tooltip = "Para MD"
+optimize_for_type = "Otimizar (tabela)"
+
+# 图片转MD面板
+[action_area.image]
+export_markdown_tooltip = "Para MD"
+optimize_for_type = "Otimizar (imagem)"
+
+# 版式转MD面板
+[action_area.layout]
+export_markdown_tooltip = "Para MD"
+optimize_for_type = "Otimizar por tipo de layout"
+
+# 其他文件转MD面板
+[action_area.other]
+
+# MD转文档面板
+[action_area.md_to_document]
+remove_existing_numbering = "Remover num."
+add_new_numbering = "Add num."
+format_combo_tooltip = "Selecionar formato de documento de destino"
+generate_tooltip = "Gerar documento no formato selecionado"
+
+# MD转表格面板
+[action_area.md_to_spreadsheet]
+format_combo_tooltip = "Selecionar formato de planilha de destino"
+generate_tooltip = "Gerar planilha no formato selecionado"
+
+# =============================================================================
+# 编辑器对话框
+# =============================================================================
+[editors]
+
+# 序号新增编辑器
+[editors.numbering_add]
+window_title = "Editor de esquema"
+scheme_list = "Esquemas"
+default_scheme = "Padrão:"
+level_format_config = "Formato de nível"
+realtime_preview = "Visualização"
+format_help = "📖 Ajuda"
+format_help_title = "Espaços reservados"
+format_help_text = """Uso de placeholders de formato
+
+占位符格式：{级别.样式}
+
+可用样式：
+  chinese_lower  - 小写中文数字 (一、二、三)
+  chinese_upper  - 大写中文数字 (壹、贰、叁)
+  arabic_half    - 半角阿拉伯数字 (1, 2, 3)
+  arabic_full    - 全角阿拉伯数字 (１、２、３)
+  arabic_circled - 带圈数字 (①②③)
+  letter_upper   - 大写字母 (A, B, C)
+  letter_lower   - 小写字母 (a, b, c)
+  roman_upper    - 大写罗马数字 (I, II, III)
+  roman_lower    - 小写罗马数字 (i, ii, iii)
+
+示例：
+  {1.chinese_lower}、 → 一、二、三、
+  （{2.chinese_lower}） → （一）（二）（三）
+  {3.arabic_half}. → 1. 2. 3.
+  {1.arabic_half}.{2.arabic_half} → 1.1、1.2"""
+
+# 级别名称
+level_1 = "Nível 1"
+level_2 = "Nível 2"
+level_3 = "Nível 3"
+level_4 = "Nível 4"
+level_5 = "Nível 5"
+level_6 = "Nível 6"
+level_7 = "Nível 7"
+level_8 = "Nível 8"
+level_9 = "Nível 9"
+
+# 创建和复制
+new_scheme = "Novo"
+copy_suffix = "(Cópia)"
+
+# 预览
+preview_sample = "Exemplo {level_name}"
+no_format = "Sem formato"
+
+# 占位符菜单
+menu_current_level = "── Atual ({level}) ──"
+menu_decorations = "── Decoração ──"
+menu_hierarchical = "── Hierarquia ──"
+
+# 数字样式
+style_chinese_lower = "Chin. Min"
+style_chinese_upper = "Chin. Mai"
+style_arabic_half = "Árabe"
+style_arabic_circled = "Circulado"
+style_letter_upper = "Letra Mai"
+style_roman_upper = "Romano Mai"
+
+# 装饰
+decoration_dun = "Vírgula"
+decoration_dot_space = "Ponto+Espaço"
+decoration_bracket = "Parêntese"
+decoration_chapter = "Capítulo"
+
+# 验证消息
+validation_ok = "O formato é válido"
+validation_fixed_text = "Nenhum marcador foi encontrado. Este nível exibirá apenas texto fixo."
+validation_invalid_level = "O nível '{level}' não é um número válido."
+validation_level_out_of_range = "O nível {level} está fora do intervalo. Use 1-9."
+validation_unknown_style = "Estilo desconhecido '{style}'."
+word_native_unavailable = "Compatibilidade com a numeração nativa do Word: (não foi possível verificar)"
+word_native_full = "Compatibilidade com a numeração nativa do Word: totalmente compatível"
+word_native_approximate = "Compatibilidade com a numeração nativa do Word: aproximadamente compatível ({reason})"
+word_native_incompatible = "Compatibilidade com a numeração nativa do Word: incompatível ({reason})"
+
+
+# 错误消息
+cannot_delete_default_scheme = "O padrão não pode ser excluído"
+
+# 方案名称
+[editors.numbering_add.names]
+hierarchical_standard = "Hierárquico"
+hierarchical_h2_start = "Hierárquico (de H2)"
+
+# 方案描述（用于编辑器中显示）
+[editors.numbering_add.descriptions]
+hierarchical_standard_desc = "Formato hierárquico progressivo: 1, 1.1, 1.1.1 ... (com espaço após o número)"
+hierarchical_h2_start_desc = "Formato hierárquico (pular H1/nível 1): iniciar a partir de H2/nível 2 com 1, 1.1, 1.1.1 ..."
+
+# 通用编辑器文本（所有编辑器共用）
+[editors.common]
+name = "Nome:"
+description = "Descrição:"
+copy = "Copiar"
+delete = "Excluir"
+move_up = "Cima"
+move_down = "Baixo"
+save = "Salvar"
+cancel = "Cancelar"
+prompt = "Nota"
+select_item_first = "Selecione um item"
+cannot_delete = "Não excluível"
+system_item_hint = "Item do sistema"
+confirm_delete = "Confirmar exclusão"
+confirm_delete_message = "Realmente excluir: {name}?"
+confirm_close = "Confirmar fechamento"
+unsaved_changes_hint = "Alterações não salvas"
+unsaved_close_message = "Realmente fechar?"
+
+# 序号清理编辑器
+[editors.numbering_clean]
+window_title = "Regras de limpeza"
+rule_list = "Regras"
+description = "Descrição:"
+regex = "Expressão regular:"
+regex_test = "Teste"
+input = "Entrada:"
+result = "Resultado:"
+new_rule = "Novo"
+copy_suffix = "(Cópia)"
+match_success = "Correspondência"
+no_match = "Sem correspondência"
+regex_error = "Erro Regex"
+prompt = "Nota"
+enabled = "Regra ativada"
+
+# 清理规则名称
+[editors.numbering_clean.names]
+chinese_unit_suffix = "Sufixo unid. chin."
+chinese_unit_prefix = "Prefixo unid. chin."
+circled_numbers = "Números circulados"
+bracket_number = "Números entre parênteses"
+hierarchical = "Hierárquico"
+number_separator = "Separador de número"
+legal_english = "Inglês Legal"
+letter_number = "Número letra"
+
+# 清理规则描述（用于编辑器中显示）
+[editors.numbering_clean.descriptions]
+chinese_unit_suffix_desc = "Capítulo X etc."
+chinese_unit_prefix_desc = "Parte X etc."
+circled_numbers_desc = "① etc."
+bracket_number_desc = "(1) etc."
+hierarchical_desc = "1.1 etc."
+number_separator_desc = "1. etc."
+legal_english_desc = "Chapter X etc."
+letter_number_desc = "A. etc."
+
+# 映射编辑器
+[editors.mapping]
+# 对话框标题
+symbol_editor_title = "Símbolos"
+typo_editor_title = "Erros"
+sensitive_editor_title = "Termos sinalizados"
+# 下拉选择标签
+
+# 列头
+symbol_correct_symbol = "Correto"
+symbol_error_symbols = "Incorreto"
+sensitive_sensitive_word = "Termo sinalizado"
+sensitive_exceptions = "Exceções"
+comment = "Comentário"
+
+# 说明文本
+
+# 按钮
+add_entry = "Adicionar entrada"
+delete_entry = "Excluir"
+
+# 提示消息
+
+# 条目编辑对话框
+
+# 标签
+
+# 示例文本
+
+# 验证消息
+
+# 键重复处理
+duplicate_key_title = "Chave já existe"
+duplicate_key_message = "A chave \"{entry_key}\" já existe\n\nValores atuais: {current_values}\nComentário atual: {current_comment}\n\nSelecione uma ação:"
+duplicate_key_no_comment = "(nenhum)"
+overwrite = "Substituir"
+merge = "Mesclar"
+search_placeholder = "Pesquisar chave, valor ou comentario"
+source_symbol = "Símbolo de origem"
+target_symbol = "Símbolo de destino"
+typo = "Erro de digitação"
+corrections = "Correção ou correções"
+multi_value_hint = "Dica: use | para separar vários valores (por exemplo: valor1|valor2|valor3)"
+save_typos_failed = "Não foi possível salvar o dicionário de erros de digitação."
+save_symbol_correction_failed = "Não foi possível salvar as correções de símbolos."
+save_sensitive_words_failed = "Não foi possível salvar o dicionário de termos sinalizados."
+
+# =============================================================================
+# 文件类型分类
+# =============================================================================
+[file_types]
+document = "Documento"
+spreadsheet = "Planilha"
+image = "Imagem"
+layout = "Layout"
+other = "Outros"
+text = "Texto"
+
+# 带"类"后缀的版本（用于选项卡标签）
+
+[file_category]
+text_short = "Texto"
+document_short = "Documento"
+spreadsheet_short = "Planilha"
+layout_short = "Layout"
+image_short = "Img"
+other_short = "Outros"
+
+[file_format_validation]
+
+[file_admission]
+compatible_text = "O nome do arquivo declara {declared_format}, mas o conteúdo foi detectado como {detected_format}; ambos usam o mesmo fluxo de texto."
+same_family_mismatch = "O nome do arquivo declara {declared_format}, mas o conteúdo foi detectado como {detected_format}. Os dois formatos pertencem à mesma família de processamento; o formato detectado será usado."
+cross_family_mismatch = "O nome do arquivo declara {declared_format}, mas o conteúdo foi detectado como {detected_format}. Os formatos pertencem a famílias de processamento diferentes; confirme o uso do formato detectado."
+unknown_extension = "A extensão declara o formato não compatível {declared_format}, mas o conteúdo foi detectado como {detected_format}. Confirme o uso do formato detectado."
+empty = "O arquivo selecionado está vazio."
+container_invalid = "O contêiner do arquivo está corrompido ou sua estrutura é inválida (declarado: {declared_format}, detectado: {detected_format})."
+container_unsupported = "O contêiner {detected_format} detectado não é um pacote de documentos compatível (declarado: {declared_format})."
+container_unrecognized = "Não foi possível reconhecer o contêiner do arquivo (declarado: {declared_format}, detectado: {detected_format})."
+content_unrecognized = "Não foi possível reconhecer o conteúdo do arquivo (declarado: {declared_format}, detectado: {detected_format})."
+read_error = "Não foi possível ler o arquivo (declarado: {declared_format}, detectado: {detected_format})."
+unsupported_format = "O formato de conteúdo detectado {detected_format} não é compatível (declarado: {declared_format})."
+
+# =============================================================================
+# 转换操作
+# =============================================================================
+[conversion]
+# 文档操作
+
+# 表格操作
+
+# 图片操作
+
+# 生成文件名（用于输出文件命名）
+[conversion.filenames]
+
+[conversion.ocr_output]
+blockquote_prefix = "🖼️ **OCR da imagem**:"
+
+# =============================================================================
+# 转换进度消息
+# =============================================================================
+[conversion.progress]
+
+# =============================================================================
+# 转换结果消息（状态栏/弹窗）
+# =============================================================================
+[conversion.messages]
+# 通用消息
+
+# 成功消息
+
+# 校对消息
+
+# 版式转换消息
+
+# 缺少依赖消息
+
+# 合并/拆分消息
+
+# MD转换消息
+
+# 图片转换消息
+
+# 序号操作消息
+
+# 成功消息（带参数）
+
+# 失败消息（带参数）
+
+# =============================================================================
+# 消息和提示
+# =============================================================================
+[messages]
+# 文件操作
+
+# GUI操作结果
+
+# 转换操作
+
+# 设置
+
+# 确认对话框
+
+# 文件拖拽和选择
+no_folder_in_single_mode = "Sem pastas no modo único"
+
+# 错误消息
+[messages.errors]
+
+# 警告消息
+[messages.warnings]
+
+# =============================================================================
+# 校对批注文本（用于文档校对功能的批注内容）
+# =============================================================================
+[proofread]
+
+# 错误类型
+[proofread.error_type]
+
+# 错误来源
+[proofread.source]
+
+# 修改建议
+[proofread.suggestion]
+
+# =============================================================================
+# 链接处理占位符文本（用于文档中显示的错误提示）
+# =============================================================================
+[link_processing]
+
+# =============================================================================
+# 样式名（用于文档转换）
+# 这些样式名用于 MD ↔ DOCX 转换时的样式注入和检测
+# =============================================================================
+[styles]
+# 段落样式
+body_paragraph = "Parágrafo do corpo"
+image_paragraph = "Parágrafo de imagem"
+
+# 代码样式
+code_block = "Bloco de código"
+inline_code = "Código em linha"
+
+# 公式样式
+formula_block = "Bloco de fórmula"
+inline_formula = "Fórmula em linha"
+
+# 列表样式
+list_block = "Bloco de lista"
+
+# 分隔线样式
+horizontal_rule_1 = "Linha divisória 1"
+horizontal_rule_2 = "Linha divisória 2"
+horizontal_rule_3 = "Linha divisória 3"
+
+# 表格样式
+table_content = "Conteúdo da tabela"
+table_header = "Cabeçalho da tabela"
+three_line_table = "Tabela de três linhas"
+table_grid = "Tabela grade"
+
+# 引用样式（9 级）
+quote_1 = "Citação 1"
+quote_2 = "Citação 2"
+quote_3 = "Citação 3"
+quote_4 = "Citação 4"
+quote_5 = "Citação 5"
+quote_6 = "Citação 6"
+quote_7 = "Citação 7"
+quote_8 = "Citação 8"
+quote_9 = "Citação 9"
+figure_caption = "Legenda de figura"
+table_caption = "Legenda de tabela"
+equation_caption = "Legenda de equação"
+code_block_caption = "Legenda de bloco de código"
+
+# =============================================================================
+# 样式格式配置（用于样式注入时的格式属性）
+# =============================================================================
+[style_formats]
+
+# 正文段落格式（与 heading 3-9 相同：仿宋_GB2312、三号、2字符）
+[style_formats.body_paragraph]
+east_asia_font = "SimSun"
+ascii_font = "Times New Roman"
+font_size_pt = 12
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 0
+bold = false
+justification = "left"
+
+# 标题1格式（黑体、三号、2字符）
+[style_formats.heading_1]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 16
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# 标题2格式（楷体_GB2312、三号、2字符）
+[style_formats.heading_2]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 14
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# 标题3-9格式（仿宋_GB2312、三号、2字符）
+[style_formats.heading_3_9]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 12
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# =============================================================================
+# 占位符（用于文档模板）
+# 这些占位符用于 MD → DOCX 转换时的模板填充
+# =============================================================================
+[placeholders]
+title = "Título"
+body = "Corpo"
+
+# =============================================================================
+# YAML 键名（用于元数据）
+# 这些键名用于 DOCX → MD 转换时的 YAML 前置信息输出
+# =============================================================================
+[yaml_keys]
+title = "Título"
+subtitle = "Subtítulo"

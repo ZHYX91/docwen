@@ -1,0 +1,135 @@
+{
+  "golden_id": "GOLDEN-009",
+  "scope": "focused SmartDoc WPS to DOCX real external-office smoke",
+  "generated_at": "2026-07-03",
+  "input_document": {
+    "filename": "smart-doc-wps-boundary.wps",
+    "origin": "Produced by current rewrite DOCX to WPS enhancement boundary probe from smart-doc-wps-boundary.docx; used here as a real OLE/WPS input for old/current inbound verification.",
+    "paragraphs": [
+      "Smart Doc WPS Boundary",
+      "This document checks DOCX to WPS support boundaries."
+    ],
+    "table": [
+      [
+        "Item",
+        "Qty"
+      ],
+      [
+        "Grape",
+        "7"
+      ]
+    ],
+    "magic_hex": "d0cf11e0a1b11ae1",
+    "input_size_bytes": 102853
+  },
+  "route": {
+    "source_format": "wps",
+    "target_format": "docx",
+    "category": "document"
+  },
+  "expected_semantics": {
+    "output_extension": ".docx",
+    "paragraphs": [
+      "Smart Doc WPS Boundary",
+      "This document checks DOCX to WPS support boundaries."
+    ],
+    "tables": [
+      [
+        [
+          "Item",
+          "Qty"
+        ],
+        [
+          "Grape",
+          "7"
+        ]
+      ]
+    ]
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "entry": "docwen.converter.formats.document.office_to_docx(..., actual_format='wps')",
+      "success": true,
+      "output_size_bytes": 30655,
+      "paragraphs": [
+        "Smart Doc WPS Boundary",
+        "This document checks DOCX to WPS support boundaries."
+      ],
+      "tables": [
+        [
+          [
+            "Item",
+            "Qty"
+          ],
+          [
+            "Grape",
+            "7"
+          ]
+        ]
+      ]
+    },
+    "docwen-ref-pyside6": {
+      "entry": "docwen.converter.doc_interop.office_to_docx(..., actual_format='wps')",
+      "success": true,
+      "output_size_bytes": 30653,
+      "paragraphs": [
+        "Smart Doc WPS Boundary",
+        "This document checks DOCX to WPS support boundaries."
+      ],
+      "tables": [
+        [
+          [
+            "Item",
+            "Qty"
+          ],
+          [
+            "Grape",
+            "7"
+          ]
+        ]
+      ]
+    },
+    "docwen-current": {
+      "entry": "uv run docwen run smart-doc-wps-boundary.wps --to docx --output <dir> --json",
+      "success": true,
+      "output_size_bytes": 30647,
+      "paragraphs": [
+        "Smart Doc WPS Boundary",
+        "This document checks DOCX to WPS support boundaries."
+      ],
+      "tables": [
+        [
+          [
+            "Item",
+            "Qty"
+          ],
+          [
+            "Grape",
+            "7"
+          ]
+        ]
+      ]
+    }
+  },
+  "accepted_limits": [
+    "This is a focused inbound WPS to DOCX smoke using a valid OLE/WPS input produced by the current DOCX to WPS enhancement probe; old systems have no successful DOCX to WPS artifact baseline.",
+    "The checked-in fixture stores normalized python-docx readback semantics and output sizes rather than committing generated DOCX binaries with environment-specific metadata.",
+    "The smoke proves WPS inbound support for one representative document; it does not close LibreOffice-only fallback, WPS application fidelity beyond focused rich roundtrip, comments/fields/revisions/complex layout, or broad old-system binary artifact comparison."
+  ],
+  "evidence": {
+    "transient_output_dir": "tmp/smart-doc-wps-inbound-2026-07-03",
+    "source_input": "tmp/smart-doc-wps-boundary-2026-07-03/docwen-current-cli/smart-doc-wps-boundary.wps",
+    "process_cleanup": {
+      "residual_processes_seen_after_combined_old_current_probe": [
+        "wps.exe"
+      ],
+      "cleanup_action": "terminated two headless WPS processes started during the old-system direct converter probe window",
+      "residual_processes_after_cleanup": [],
+      "current_only_followup": {
+        "command": "uv run docwen run smart-doc-wps-boundary.wps --to docx --json",
+        "success": true,
+        "new_office_processes_after_current_only_probe": []
+      }
+    }
+  }
+}

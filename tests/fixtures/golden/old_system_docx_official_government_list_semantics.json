@@ -1,0 +1,499 @@
+{
+  "golden_id": "GOLDEN-002",
+  "related_golden_ids": [
+    "GOLDEN-002",
+    "GOLDEN-008"
+  ],
+  "evidence_id": "VIS-2026-07-15-029",
+  "scope": "Three-project DOCX-to-Markdown comparison using a publicly downloadable official Chinese government document.",
+  "source": {
+    "title": "郑州市人民政府公文形式与格式细则",
+    "publisher": "金水区人民政府",
+    "disclosure_page": "https://public.jinshui.gov.cn/D0104X/8508629.jhtml",
+    "attachment_url": "https://public.jinshui.gov.cn/u/cms/publicjs/202407/010941060n2v.docx",
+    "retrieved_on": "2026-07-15",
+    "redistribution": "external_binary_retained_only_in_workspace_bound_temporary_probe",
+    "bytes": 29246,
+    "sha256": "67d955f1ad1c71ca18221ac342093dce90c6d233ae9d48077afbc7ef6ad53a03",
+    "paragraph_count": 93,
+    "nonempty_paragraph_count": 81,
+    "normal_style_nonempty_paragraph_count": 81,
+    "section_count": 1,
+    "table_count": 0,
+    "image_count": 0,
+    "outline_level_9_nonempty_paragraph_count": 81,
+    "numpr_paragraph_count": 6,
+    "num_id_1_paragraph_count": 1,
+    "num_id_0_paragraph_count": 5,
+    "numbering_definition": {
+      "num_id": "1",
+      "abstract_num_id": "0",
+      "start": 14,
+      "num_fmt": "chineseCounting",
+      "lvl_text": "（%1）"
+    },
+    "absent_parts": [
+      "word/media/*",
+      "word/comments.xml",
+      "word/footnotes.xml",
+      "word/endnotes.xml",
+      "word/header*.xml",
+      "word/footer*.xml"
+    ]
+  },
+  "execution_contract": {
+    "valid_project_executions": 3,
+    "all_valid_executions_successful": true,
+    "docwen_ref_tk_entry": "Production convert_docx_to_md after gui_run.py translator injection.",
+    "docwen_ref_pyside6_entry": "Production convert_docx_to_md after docwen.bootstrap.initialize_runtime().",
+    "docwen_current_entry": "DocumentPlugin -> TaskManager -> OutputFinalizer with remove_numbering=false and Chinese yaml_key_labels.",
+    "office_application_required": false,
+    "new_office_processes": []
+  },
+  "pre_fix_current_regressions": {
+    "logical_markdown_utf8_bytes": 19453,
+    "logical_markdown_sha256": "abd6f2723675c50fe5fae9337a0648a2083d961d8c3d3bc0c213cc4678b7655a",
+    "on_disk_bytes_with_windows_newlines": 19621,
+    "on_disk_sha256": "ef3af95e52df7e1ca4b2f53e5f140ed9dcc4fd505690d3c0e01020faffaf9b6c",
+    "paragraph_metadata_count": 0,
+    "heading_metadata_count": 81,
+    "markdown_heading_line_count": 81,
+    "spurious_num_id_zero_bullet_count": 5,
+    "classification": "two_confirmed_current_only_ooxml_sentinel_regressions"
+  },
+  "post_fix_projects": {
+    "docwen-ref-tk": {
+      "success": true,
+      "logical_markdown_utf8_bytes": 18892,
+      "logical_markdown_sha256": "8789f6fb92f8937fba14488297a4bd5b905c70478a9f44aee413fc3cd7de5698",
+      "on_disk_bytes_with_windows_newlines": 19059,
+      "on_disk_sha256": "527217b5cce5f286b90edd0c0fbd1406bb5112cb863916ea1a8b492f0292d6da",
+      "source_nonempty_paragraphs_reachable": 81,
+      "heading_line_count": 0,
+      "valid_ordered_list_line_count": 1,
+      "spurious_body_bullet_count": 0,
+      "ends_with_newline": false
+    },
+    "docwen-ref-pyside6": {
+      "success": true,
+      "logical_markdown_utf8_bytes": 18892,
+      "logical_markdown_sha256": "8789f6fb92f8937fba14488297a4bd5b905c70478a9f44aee413fc3cd7de5698",
+      "on_disk_bytes_with_windows_newlines": 19059,
+      "on_disk_sha256": "527217b5cce5f286b90edd0c0fbd1406bb5112cb863916ea1a8b492f0292d6da",
+      "source_nonempty_paragraphs_reachable": 81,
+      "heading_line_count": 0,
+      "valid_ordered_list_line_count": 1,
+      "spurious_body_bullet_count": 0,
+      "ends_with_newline": false
+    },
+    "docwen-current": {
+      "success": true,
+      "logical_markdown_utf8_bytes": 18893,
+      "logical_markdown_sha256": "5f59fcc6de08d118d76baf65942015234b247fefc363f3d64e8a93c1842050f8",
+      "on_disk_bytes_with_windows_newlines": 19061,
+      "on_disk_sha256": "0c9940860f24d970acfe2e0d6b5f8f56fd78fb7355c647d3ec610bf2f558408b",
+      "source_nonempty_paragraphs_reachable": 81,
+      "heading_line_count": 0,
+      "valid_ordered_list_line_count": 1,
+      "spurious_body_bullet_count": 0,
+      "ends_with_newline": true,
+      "primary_name": "zhengzhou-government-document-format-rules.md",
+      "primary_in_requested_output_directory": true,
+      "metadata": {
+        "paragraph_count": 81,
+        "heading_count": 0,
+        "table_count": 0,
+        "image_count": 0
+      },
+      "diagnostic_codes": [
+        "DOCX2MD-OK",
+        "FINALIZER_DONE"
+      ]
+    }
+  },
+  "normalized_contract": {
+    "frontmatter_dictionaries_equal_across_three_projects": true,
+    "bodies_equal_after_eof_newline_normalization": true,
+    "normalized_body_sha256": "2a9e89d542df4129d54b409a2bdbd5cedf6645defc4600e1123237c3c13a1bd7",
+    "all_source_nonempty_paragraphs_reachable_across_three_projects": true,
+    "source_nonempty_paragraph_count": 81,
+    "heading_line_count_per_project": 0,
+    "valid_ordered_list_line_count_per_project": 1,
+    "spurious_body_bullet_count_per_project": 0,
+    "no_unicode_replacement_characters": true
+  },
+  "regressions_fixed": [
+    {
+      "description": "Word Body Text outlineLvl=9 was clamped to Markdown H6.",
+      "owners": [
+        "packages/core/src/docwen_core/docx_parsing/format_features.py::extract_outline_level",
+        "packages/plugins/document/src/docwen_plugin_document/to_markdown/converter.py::_get_outline_level"
+      ],
+      "direct_tests": [
+        "packages/plugins/document/tests/test_shared_format_features.py::test_extract_outline_level_treats_level_nine_as_body_text",
+        "packages/plugins/document/tests/test_to_markdown_standard_parity.py::test_word_body_text_outline_sentinel_does_not_become_h6",
+        "packages/plugins/document/tests/test_to_markdown_standard_parity.py::test_real_outline_level_zero_still_becomes_h1"
+      ]
+    },
+    {
+      "description": "Numbering-disabled numId=0 paragraphs fell through to the default bullet marker.",
+      "owner": "packages/plugins/document/src/docwen_plugin_document/shared/list_processing.py::detect_list_item",
+      "direct_test": "packages/plugins/document/tests/test_shared_list_processing.py::test_detect_list_item_treats_num_id_zero_as_numbering_disabled"
+    }
+  ],
+  "runtime_regression_test": "packages/plugins/document/tests/test_document_to_md_golden.py::TestDocxToMdGolden::test_body_text_outline_sentinel_stays_body_through_finalizer",
+  "gongwen_optimizer_probe": {
+    "evidence_id": "VIS-2026-07-16-093",
+    "scope": "Three-project Gongwen optimizer execution of the same hash-pinned official government DOCX, focused on missing-field tolerance, source-text reachability, review-signal propagation and current final artifact placement.",
+    "source_reference": "$.source",
+    "retrieved_on": "2026-07-16",
+    "execution_contract": {
+      "docwen_ref_tk_entry": "docwen.converter.docx2md.gongwen.converter.convert_docx_to_md_gongwen",
+      "docwen_ref_pyside6_entry": "docwen.converter.docx.to_md.gongwen.converter.entry.convert_docx_to_md_gongwen after docwen.bootstrap.initialize_runtime()",
+      "docwen_current_pipeline_entry": "docwen_plugin_optimizer_gongwen.pipeline.convert_docx_to_md_gongwen",
+      "docwen_current_runtime_entry": "GongwenOptimizerPlugin -> TaskManager -> OutputFinalizer",
+      "office_application_required": false,
+      "external_binary_redistributed": false
+    },
+    "projects": {
+      "docwen-ref-tk": {
+        "success": true,
+        "yaml_field_count": 18,
+        "metadata_non_empty": {
+          "aliases": [
+            "郑州市人民政府公文形式与格式细则"
+          ],
+          "标题": "郑州市人民政府公文形式与格式细则",
+          "主送机关": "形式"
+        },
+        "logical_markdown_characters": 6826,
+        "logical_markdown_utf8_bytes": 19220,
+        "logical_markdown_sha256": "1f85881445006851d25baca9d5c831fe6bb14d0a130b21e97b2567c465e9aae0",
+        "source_nonempty_paragraph_count": 81,
+        "source_paragraphs_reachable_after_whitespace_normalization": 80,
+        "attachment_markdown_present": false,
+        "structured_missing_field_feedback_available": false
+      },
+      "docwen-ref-pyside6": {
+        "success": true,
+        "yaml_field_count": 18,
+        "metadata_non_empty": {
+          "aliases": [
+            "郑州市人民政府公文形式与格式细则"
+          ],
+          "标题": "郑州市人民政府公文形式与格式细则",
+          "主送机关": "形式"
+        },
+        "logical_markdown_characters": 6826,
+        "logical_markdown_utf8_bytes": 19220,
+        "logical_markdown_sha256": "1f85881445006851d25baca9d5c831fe6bb14d0a130b21e97b2567c465e9aae0",
+        "source_nonempty_paragraph_count": 81,
+        "source_paragraphs_reachable_after_whitespace_normalization": 80,
+        "attachment_markdown_present": false,
+        "validation_status": "needs_review",
+        "missing_required": [
+          "issue_date",
+          "issuing_authority_signature"
+        ],
+        "warning_count": 1
+      },
+      "docwen-current": {
+        "success": true,
+        "yaml_field_count": 18,
+        "metadata_non_empty": {
+          "标题": "郑州市人民政府公文形式与格式细则",
+          "主送机关": "（三）以市政府名义，向省政府的请示、报告，提请市人民代表大会或其常务委员会审议的议案，批转县（市、区）、市政府部门的重要文件，对县（市、区）、市政府部门的通知事项等，用《郑州市人民政府文件》（代字为“郑政文”）的形式印发。"
+        },
+        "logical_markdown_characters": 6547,
+        "logical_markdown_utf8_bytes": 18787,
+        "logical_markdown_sha256": "5720666b644ef09da5856a34b451f57c44da64e3e831e7a6f2e9fcf6e50e689c",
+        "on_disk_bytes_with_windows_newlines": 18949,
+        "source_nonempty_paragraph_count": 81,
+        "source_paragraphs_reachable_after_whitespace_normalization": 81,
+        "attachment_markdown_present": false,
+        "validation_status": "needs_review",
+        "missing_required": [
+          "issue_date",
+          "issuing_authority_signature"
+        ],
+        "review_reasons": [
+          "low_confidence_pass"
+        ],
+        "primary_name": "010941060n2v.md",
+        "primary_in_requested_output_directory": true,
+        "workspace_path_leaked": false,
+        "artifact_metadata": {
+          "paragraph_count": 81,
+          "gongwen_fields": 2,
+          "gongwen_confidence": "medium",
+          "gongwen_needs_review": true,
+          "gongwen_missing_required": [
+            "issue_date",
+            "issuing_authority_signature"
+          ],
+          "gongwen_review_reasons": [
+            "low_confidence_pass"
+          ]
+        },
+        "diagnostic_codes": [
+          "GONGWEN-OK",
+          "GONGWEN-NEEDS-REVIEW",
+          "FINALIZER_DONE"
+        ],
+        "review_diagnostic_level": "warning",
+        "review_diagnostic_message": "缺少必需字段：成文日期、发文机关署名；识别提示：存在低置信度识别"
+      }
+    },
+    "confirmed_current_gap_and_fix": {
+      "classification": "existing_pipeline_review_capability_not_wired_to_runtime_result",
+      "pre_fix_runtime_diagnostic_codes": [
+        "GONGWEN-OK",
+        "FINALIZER_DONE"
+      ],
+      "pre_fix_pipeline_missing_required": [
+        "issue_date",
+        "issuing_authority_signature"
+      ],
+      "fix": "Project pipeline needs_review, missing_required and review-reason contracts into a warning diagnostic and primary artifact metadata while keeping conversion success true; preserve the old-system round-group order for equal-score recognition ties and sort set-derived missing fields for deterministic diagnostics and evidence.",
+      "recognition_determinism": {
+        "pre_fix_observation": "The generated Gongwen fixture varied between missing only issue_date and missing both issue_date/issuing_authority_signature in separate Python processes because unordered round-group sets decided equal-score winners.",
+        "old_system_contract": "Old Tk and old PySide6 define ordered round-group lists and retain the first equal-score candidate.",
+        "post_fix_contract": "Current round groups are ordered tuples matching the old priority; stable score sorting preserves that tie-break.",
+        "verified_python_hash_seeds": [
+          1,
+          999
+        ],
+        "official_sample_sha256_at_both_seeds": "5720666b644ef09da5856a34b451f57c44da64e3e831e7a6f2e9fcf6e50e689c",
+        "official_sample_missing_required_at_both_seeds": [
+          "issue_date",
+          "issuing_authority_signature"
+        ]
+      },
+      "direct_tests": [
+        "packages/plugins/optimizers/gongwen/tests/test_gongwen_golden.py::TestGongwenGolden::test_gongwen_old_system_fixture_finalizes_through_runtime",
+        "packages/plugins/optimizers/gongwen/tests/test_gongwen_recognition.py::TestElementScorer::test_round_groups_preserve_old_system_tie_break_order",
+        "packages/plugins/optimizers/gongwen/tests/test_gongwen_rendering.py::TestValidation::test_validates_required_fields"
+      ]
+    },
+    "comparison_decisions": [
+      "The source is an official rules document rather than a complete issued gongwen, so missing signature/date must remain a successful conversion with explicit needs-review feedback rather than a fatal error.",
+      "Old Tk has no structured missing-field feedback; old PySide6 and current agree on the two missing required elements, while current additionally preserves low-confidence review context through runtime.",
+      "Both old recognizers and current produce a recipient false positive on this noncanonical input. This sample proves tolerance and visibility, not recipient-recognition accuracy; the false positive is not accepted as a final accuracy oracle.",
+      "No attachment artifact is expected because this source describes attachment formatting but contains no separate attachment body.",
+      "Current preserves all 81 source paragraphs after whitespace normalization and is not required to match the old projects' byte layout or weaker 80-of-81 normalized reachability."
+    ],
+    "remaining_scope": [
+      "One hash-pinned real official rules document is not a broad real gongwen corpus.",
+      "Real issued gongwen with attachment artifacts, seal/signature-like content and noisier layout remain open.",
+      "Current generic CLI and GUI success presenters do not yet project ConversionResult warning diagnostics; this probe closes plugin-to-runtime preservation, not end-user warning visibility.",
+      "The external binary remains availability-dependent and is not redistributed.",
+      "GOLDEN-008 and overall final artifact parity remain NOT PASSED YET."
+    ]
+  },
+  "real_document_physical_addendum": {
+    "evidence_id": "VIS-2026-07-17-123",
+    "scope": "Three-project DOCX-to-DOC/RTF/ODT production conversion and fixed Microsoft Word 120-DPI physical projection of the same hash-pinned official government source.",
+    "source_reference": "$.source",
+    "source_geometry": {
+      "page_twips": {
+        "width": 11906,
+        "height": 16838
+      },
+      "page_inches": {
+        "width": 8.268056,
+        "height": 11.693056
+      },
+      "margins_twips": {
+        "top": 1440,
+        "right": 1800,
+        "bottom": 1440,
+        "left": 1800,
+        "header": 851,
+        "footer": 992,
+        "gutter": 0
+      },
+      "usable_content_twips": {
+        "width": 8306,
+        "height": 13958
+      },
+      "valid_positive_content_area": true
+    },
+    "project_heads": {
+      "docwen-ref-tk": "ec9298286cfe1379d5c5470db381577ea43ca0fa",
+      "docwen-ref-pyside6": "63db927c5ded920d4994bfede5c7b34c55e2f43e",
+      "docwen-current": "5640acca8b5414b17a060a5d9a6920ca95934713"
+    },
+    "execution": {
+      "targets": [
+        "doc",
+        "rtf",
+        "odt"
+      ],
+      "production_conversions": 9,
+      "all_conversions_successful": true,
+      "all_target_signatures_valid": true,
+      "word_documents_opened": 10,
+      "word_pdf_exports": 10,
+      "rendered_views": 10,
+      "rendered_pages": 133,
+      "contact_sheets": 3,
+      "all_contact_sheets_inspected": true
+    },
+    "same_target_three_project": {
+      "doc": {
+        "page_counts": [
+          13,
+          13,
+          13
+        ],
+        "page_count_equal": true,
+        "render_size_equal": true,
+        "visible_text_equal": true,
+        "pixels_equal": true
+      },
+      "rtf": {
+        "page_counts": [
+          13,
+          13,
+          13
+        ],
+        "page_count_equal": true,
+        "render_size_equal": true,
+        "visible_text_equal": true,
+        "pixels_equal": true
+      },
+      "odt": {
+        "page_counts": [
+          14,
+          14,
+          14
+        ],
+        "page_count_equal": true,
+        "render_size_equal": true,
+        "visible_text_equal": true,
+        "pixels_equal": true
+      }
+    },
+    "word_object_projection": {
+      "source_pages": 13,
+      "source_paragraph_count": 93,
+      "source_table_count": 0,
+      "source_field_count": 0,
+      "source_comment_count": 0,
+      "source_revision_count": 0,
+      "source_inline_shape_count": 0,
+      "source_shape_count": 0,
+      "source_section_count": 1,
+      "main_story_sha256": "bc59b9440bcc3ed77cc26be046fb5e014f544c3e978e75aedb9c21c9f680d7a7",
+      "main_story_characters": 6464,
+      "all_nine_outputs_have_93_paragraphs": true,
+      "all_nine_outputs_main_story_exact_to_source": true,
+      "all_nine_outputs_paragraphs_exact_to_source": true,
+      "all_nine_outputs_object_counts_exact_to_source": true
+    },
+    "source_relative_physical_projection": {
+      "doc": {
+        "source_pages": 13,
+        "output_pages": [
+          13,
+          13,
+          13
+        ],
+        "pdf_joined_text_exact_to_source": true,
+        "pdf_joined_text_sequence_ratio": 1.0,
+        "mean_common_page_pixel_change_ratio": 2.9463e-05,
+        "max_common_page_pixel_change_ratio": 0.000159234,
+        "classification": "near_source_layout"
+      },
+      "rtf": {
+        "source_pages": 13,
+        "output_pages": [
+          13,
+          13,
+          13
+        ],
+        "word_main_story_exact_to_source": true,
+        "pdf_joined_text_sequence_ratio": 0.99903953,
+        "mean_common_page_pixel_change_ratio": 0.022978789,
+        "max_common_page_pixel_change_ratio": 0.050954975,
+        "classification": "shared_line_reflow_without_story_loss_not_accepted_source_fidelity"
+      },
+      "odt": {
+        "source_pages": 13,
+        "output_pages": [
+          14,
+          14,
+          14
+        ],
+        "word_main_story_exact_to_source": true,
+        "pdf_joined_text_sequence_ratio": 0.95562328,
+        "mean_common_page_pixel_change_ratio": 0.102039998,
+        "max_common_page_pixel_change_ratio": 0.123085243,
+        "classification": "shared_one_page_expansion_without_story_loss_not_accepted_source_fidelity"
+      }
+    },
+    "manual_physical_observation": {
+      "doc_near_source_layout": true,
+      "rtf_shared_line_reflow_without_story_loss": true,
+      "odt_shared_one_page_expansion_without_story_loss": true,
+      "current_only_clip_overlap_black_block_missing_text_or_page": false
+    },
+    "process_boundary": {
+      "conversion_added_processes": [],
+      "conversion_removed_processes": [],
+      "word_render_added_processes": [],
+      "word_render_removed_processes": [],
+      "only_preexisting_wps_pid_before_and_after": 11388,
+      "termination_command_used": false
+    },
+    "external_evidence": {
+      "root": "D:/docwen-parity/vis123-official-government-docx-physical-5640acc-v1",
+      "inventory_excluding_three_harness_scripts_summary_and_pycache": {
+        "files": 181,
+        "bytes": 43782412
+      },
+      "evidence_summary": {
+        "bytes": 10941,
+        "sha256": "f7c33cefc7088bd77c802f1fc17f4104ecc616d94279b39169f3b23e7eaade38"
+      },
+      "key_file_sha256": {
+        "conversion-docwen-current.json": "81666b7949df175df971ff4d556ef6eac6f7e6140d4812d1cad946491bbf8379",
+        "conversion-docwen-ref-pyside6.json": "d014350a924e3299c15e81d8faf40230dfb23beec0844f5934bba29b4bbc4d0d",
+        "conversion-docwen-ref-tk.json": "080e4ebe3f97c14fbafd165fcef4a1694c471c0ba25b81a629671a06506e328e",
+        "physical-projection.json": "a903e3fcd8670aff08f28c57fb45573e245336602027f5938e937fa28ae1e0e3",
+        "process-boundary.json": "393b64eb1cc760b9ee42f4eb2497deaa9cd1e3eccac0143b3bc506729feabbe2",
+        "word-object-projection.json": "129de5dee22e33e97e4a64d549802c81e4c6b97ffb6d0542ac52be9aca1726a3",
+        "word-render-process-boundary.json": "604c4db1df8cd73677de7d0ae229c922a9f746f8e802bc4f7877707971e515fb"
+      },
+      "contact_sheet_sha256": {
+        "010941060n2v-doc-content.png": "d8726a5f149838a74bd0b3d0ac67862d8a9e2baedf50a818669d388e9914d977",
+        "010941060n2v-rtf-content.png": "9b3d04881701385b50f37a3c977847bd548369ee063c6c88d90255bfe485b860",
+        "010941060n2v-odt-content.png": "4b73e33d79aa2175a43fa284526260639e8c668fe28303919431a9510f34612f"
+      }
+    },
+    "classification": {
+      "focused_official_government_source_physical_parity_strong": true,
+      "current_only_conversion_object_or_physical_regression_found": false,
+      "shared_rtf_line_reflow_is_accepted_source_fidelity": false,
+      "shared_odt_one_page_expansion_is_accepted_source_fidelity": false,
+      "production_change_made": false,
+      "broad_doc_docx_rtf_odt_physical_parity_closed": false,
+      "overall_parity_closed": false
+    }
+  },
+  "accepted_limits": [
+    "Current writes one final newline while both old projects do not; normalized bodies are otherwise byte-identical.",
+    "The externally sourced DOCX is identified by official URLs and SHA-256 but is not redistributed as a checked-in test binary.",
+    "No heading demotion, body-to-heading promotion, false numId=0 bullet, paragraph loss or valid-list loss is accepted."
+  ],
+  "shared_reference_limits": [
+    "All three converters normalize the live chineseCounting start=14, lvlText=（%1） list item to Markdown 1.; broader start-value and numbering-format fidelity remains open."
+  ],
+  "remaining_scope": [
+    "This is one real government rules document, not a broad business/gongwen corpus.",
+    "The source has no table, image/resource, comment, revision, field, formula, complex layout or attachment artifact.",
+    "VIS-029 exercises standard DOCX-to-Markdown; the separate VIS-093 gongwen_optimizer_probe exercises the Gongwen action without turning this one source into broad corpus proof.",
+    "External attachment availability is not guaranteed; a redistribution-approved versioned corpus remains open.",
+    "GOLDEN-002 and overall final artifact parity remain NOT PASSED YET."
+  ]
+}

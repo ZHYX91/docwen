@@ -1,0 +1,93 @@
+{
+  "golden_id": "GOLDEN-010",
+  "scope": "focused SmartSheet XLSX to XLS real external-office smoke",
+  "generated_at": "2026-07-03",
+  "input_workbook": {
+    "filename": "smart-sheet-probe.xlsx",
+    "sheet": "Data",
+    "cells": {
+      "A1": "Title",
+      "B1": "Smart Sheet Smoke",
+      "A2": "Item",
+      "B2": "Qty",
+      "A3": "Apple",
+      "B3": 2,
+      "A4": "Pear",
+      "B4": 5,
+      "C4": "=SUM(B3:B4)"
+    }
+  },
+  "route": {
+    "source_format": "xlsx",
+    "target_format": "xls",
+    "category": "spreadsheet"
+  },
+  "expected_semantics": {
+    "output_extension": ".xls",
+    "output_size_bytes": 18432,
+    "cells": {
+      "A1": "Title",
+      "B1": "Smart Sheet Smoke",
+      "A2": "Item",
+      "B2": "Qty",
+      "A3": "Apple",
+      "B3": 2.0,
+      "A4": "Pear",
+      "B4": 5.0
+    }
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "entry": "docwen.converter.formats.spreadsheet.xlsx_to_xls",
+      "success": true,
+      "output_size_bytes": 18432,
+      "cells": {
+        "A1": "Title",
+        "B1": "Smart Sheet Smoke",
+        "A2": "Item",
+        "B2": "Qty",
+        "A3": "Apple",
+        "B3": 2.0,
+        "A4": "Pear",
+        "B4": 5.0
+      }
+    },
+    "docwen-ref-pyside6": {
+      "entry": "docwen.converter.spreadsheet.external.xlsx_to_xls",
+      "success": true,
+      "output_size_bytes": 18432,
+      "cells": {
+        "A1": "Title",
+        "B1": "Smart Sheet Smoke",
+        "A2": "Item",
+        "B2": "Qty",
+        "A3": "Apple",
+        "B3": 2.0,
+        "A4": "Pear",
+        "B4": 5.0
+      }
+    },
+    "docwen-current": {
+      "entry": "uv run docwen run smart-sheet-probe.xlsx --to xls --json",
+      "success": true,
+      "output_size_bytes": 18432,
+      "cells": {
+        "A1": "Title",
+        "B1": "Smart Sheet Smoke",
+        "A2": "Item",
+        "B2": "Qty",
+        "A3": "Apple",
+        "B3": 2.0,
+        "A4": "Pear",
+        "B4": 5.0
+      }
+    }
+  },
+  "accepted_limits": [
+    "This is a focused real-environment smoke for XLSX to XLS only; it does not close ODS, ET, XLS inbound, LibreOffice, formulas, styles, merged cells, or broad binary artifact comparison.",
+    "The checked-in fixture stores normalized cells and output sizes rather than committing generated XLS binaries with environment-specific metadata."
+  ],
+  "evidence": {
+    "transient_output_dir": "tmp/smart-sheet-real-smoke-2026-07-03"
+  }
+}

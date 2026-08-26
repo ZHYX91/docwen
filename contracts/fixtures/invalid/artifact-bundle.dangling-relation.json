@@ -1,0 +1,50 @@
+{
+  "schema": "docwen.artifact_bundle.v2",
+  "bundle_id": "bundle.invalid.dangling",
+  "task_id": "task.invalid.dangling",
+  "producer": {
+    "name": "DocWen",
+    "product_version": "0.9.0",
+    "machine_protocol": "docwen.machine.v1"
+  },
+  "artifacts": [
+    {
+      "artifact_id": "document.main",
+      "kind": "document",
+      "locator": "main.md",
+      "suggested_name": "main.md",
+      "media_type": "text/markdown",
+      "size_bytes": 1,
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "logical_path": "main.md"
+    },
+    {
+      "artifact_id": "document.attachment",
+      "kind": "document",
+      "locator": "attachment.md",
+      "suggested_name": "attachment.md",
+      "media_type": "text/markdown",
+      "size_bytes": 1,
+      "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "logical_path": "attachment.md"
+    }
+  ],
+  "entries": [
+    {
+      "artifact_id": "document.main",
+      "role": "primary",
+      "ordinal": 0,
+      "preferred": true
+    }
+  ],
+  "relations": [
+    {
+      "type": "attachment_of",
+      "source_artifact_id": "document.attachment",
+      "target_artifact_id": "document.missing",
+      "role": "attachment",
+      "ordinal": 0
+    }
+  ],
+  "layout_schema": "docwen.artifact_layout.v1"
+}

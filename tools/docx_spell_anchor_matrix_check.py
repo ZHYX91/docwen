@@ -13,7 +13,9 @@ import base64
 import contextlib
 import datetime as _dt
 import logging
+import os
 import re
+import shutil
 import sys
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -22,26 +24,12 @@ from pathlib import Path
 from docx import Document
 from docx.shared import Inches
 
-
-def _ensure_src_on_path() -> None:
-    """确保 src/ 在 sys.path 中，以便导入 docwen 包。"""
-    repo_root = Path(__file__).resolve().parents[1]
-    src = str(repo_root / "src")
-    if src not in sys.path:
-        sys.path.insert(0, src)
-
-
-_ensure_src_on_path()
-
-
-from docwen.docx_spell.api import (  # noqa: E402
+from docwen_plugin_proofread.anchor_report import (
     build_anchor_report_markdown,
     extract_comment_texts_from_comments_xml,
     extract_occurrences_from_document_xml,
     read_docx_part,
 )
-from docwen.docx_spell.core import process_docx  # noqa: E402
-from docwen.proofread_keys import SENSITIVE_WORD, SYMBOL_CORRECTION, SYMBOL_PAIRING, TYPOS_RULE  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -98,11 +86,57 @@ def _write_png_1x1(path: Path) -> None:
 
 def _all_rules_enabled() -> dict[str, bool]:
     return {
-        SYMBOL_PAIRING: True,
-        SYMBOL_CORRECTION: True,
-        TYPOS_RULE: True,
-        SENSITIVE_WORD: False,
+        "enable_symbol_pairing": True,
+        "enable_symbol_correction": True,
+        "enable_typos_rule": True,
+        "enable_sensitive_word": False,
     }
+
+
+def _run_current_proofread(
+    input_docx: Path,
+    output_docx: Path,
+    proofread_options: dict[str, bool],
+) -> Path:
+    """Run the canonical current runtime in an output-local config boundary."""
+    from docwen_bundle.runtime_factory import create_runtime_port
+    from docwen_core.models.file_ref import FileRef
+    from docwen_core.models.request import ConversionRequest, OutputPolicy
+    from docwen_runtime.config.loader import ConfigLoader
+
+    repo_root = Path(__file__).resolve().parents[1]
+    user_dir = output_docx.parent / "user-config"
+    proofread_dir = user_dir / "proofread"
+    proofread_dir.mkdir(parents=True, exist_ok=True)
+    (proofread_dir / "typos.toml").write_text('[entries]\n"材料" = ["才料"]\n', encoding="utf-8")
+    log_dir = output_docx.parent / "runtime-logs"
+    previous_log_dir = os.environ.get("DOCWEN_LOG_DIR")
+    os.environ["DOCWEN_LOG_DIR"] = str(log_dir)
+    try:
+        loader = ConfigLoader(
+            base_dir=repo_root / "configs",
+            user_dir=user_dir,
+        )
+        runtime = create_runtime_port(config_loader=loader)
+        request = ConversionRequest(
+            request_id=f"anchor-matrix-{output_docx.parent.name}",
+            input_refs=[FileRef(path=str(input_docx.resolve()), format="document", category="document")],
+            target_format="docx",
+            action_name="validate",
+            options=proofread_options,
+            output_policy=OutputPolicy(output_dir=str(output_docx.parent / "runtime-output")),
+        )
+        result = runtime.execute(request)
+    finally:
+        if previous_log_dir is None:
+            os.environ.pop("DOCWEN_LOG_DIR", None)
+        else:
+            os.environ["DOCWEN_LOG_DIR"] = previous_log_dir
+    if not result.success or not result.artifacts:
+        raise RuntimeError(f"current DOCX proofread failed: {result.error}")
+    staging_path = Path(result.artifacts[0].staging_path)
+    shutil.copyfile(staging_path, output_docx)
+    return output_docx
 
 
 def _grep_key_log_lines(log_text: str) -> list[str]:
@@ -317,6 +351,7 @@ def main(argv: list[str]) -> int:
     index_lines.append(f"- 生成时间：`{_dt.datetime.now().isoformat(timespec='seconds')}`")
     index_lines.append(f"- 输出目录：`{base_out.as_posix()}`")
     index_lines.append("")
+    failed_cases: list[str] = []
 
     for case in _cases(base_out):
         case_dir = base_out / case.slug
@@ -335,7 +370,7 @@ def main(argv: list[str]) -> int:
         doc.save(input_docx)
 
         logger.info("运行校对并生成带批注 DOCX")
-        out_path = process_docx(str(input_docx), output_path=str(checked_docx), proofread_options=all_rules)
+        out_path = _run_current_proofread(input_docx, checked_docx, all_rules)
         if not out_path:
             raise RuntimeError("process_docx 返回空路径")
 
@@ -344,21 +379,25 @@ def main(argv: list[str]) -> int:
         report_md.write_text(md, encoding="utf-8")
 
         occurrences, diagnostics, comments = _extract_structured_report(
-            checked_docx, context_chars=args.context_chars, redact=args.redact
+            checked_docx, context_chars=args.context_chars, redact=False
         )
+        issues = _evaluate_expectations(occurrences, comments, case.expectations)
         if diagnostics.cross_paragraph or diagnostics.start_without_end_ids or diagnostics.end_without_start_ids:
             logger.warning("检测到跨段/未闭合锚点异常，详见锚点报告")
+            issues.append("生成的批注锚点包含跨段或未闭合的结构异常")
 
         log_text = log_path.read_text(encoding="utf-8", errors="replace")
         key_lines = _grep_key_log_lines(log_text)
-        issues = _evaluate_expectations(occurrences, comments, case.expectations)
 
         summary_md.write_text(
             _render_case_summary_md(case, input_docx, checked_docx, report_md, key_lines, issues),
             encoding="utf-8",
         )
 
-        index_lines.append(f"- {case.slug}: `{(summary_md.relative_to(base_out)).as_posix()}`")
+        status = "FAIL" if issues else "PASS"
+        index_lines.append(f"- {case.slug}: **{status}** `{(summary_md.relative_to(base_out)).as_posix()}`")
+        if issues:
+            failed_cases.append(case.slug)
 
         if not args.keep:
             with contextlib.suppress(Exception):
@@ -366,6 +405,9 @@ def main(argv: list[str]) -> int:
 
     (base_out / "index.md").write_text("\n".join(index_lines) + "\n", encoding="utf-8")
     print(str((base_out / "index.md").resolve()))
+    if failed_cases:
+        logger.error("锚点矩阵失败: %s", ", ".join(failed_cases))
+        return 1
     return 0
 
 

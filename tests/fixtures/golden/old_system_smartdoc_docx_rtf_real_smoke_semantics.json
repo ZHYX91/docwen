@@ -1,0 +1,146 @@
+{
+  "golden_id": "GOLDEN-009",
+  "scope": "focused SmartDoc DOCX to RTF real external-office smoke",
+  "generated_at": "2026-07-03",
+  "input_document": {
+    "filename": "smart-doc-rtf-probe.docx",
+    "paragraphs": [
+      "Smart Doc RTF Smoke",
+      "This document checks DOCX to RTF conversion."
+    ],
+    "table": [
+      [
+        "Item",
+        "Qty"
+      ],
+      [
+        "Pear",
+        "5"
+      ]
+    ]
+  },
+  "route": {
+    "source_format": "docx",
+    "target_format": "rtf",
+    "category": "document"
+  },
+  "expected_semantics": {
+    "output_extension": ".rtf",
+    "paragraphs": [
+      "Smart Doc RTF Smoke",
+      "This document checks DOCX to RTF conversion.",
+      "Item",
+      "Qty",
+      "Pear",
+      "5"
+    ],
+    "tables": [
+      [
+        [
+          "Item",
+          "Qty"
+        ],
+        [
+          "Pear",
+          "5"
+        ]
+      ]
+    ]
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "entry": "docwen.converter.formats.document.docx_to_rtf",
+      "success": true,
+      "output_size_bytes": 45243,
+      "paragraphs": [
+        "Smart Doc RTF Smoke",
+        "This document checks DOCX to RTF conversion.",
+        "Item",
+        "Qty",
+        "Pear",
+        "5"
+      ],
+      "tables": [
+        [
+          [
+            "Item",
+            "Qty"
+          ],
+          [
+            "Pear",
+            "5"
+          ]
+        ]
+      ]
+    },
+    "docwen-ref-pyside6": {
+      "entry": "docwen.converter.doc_interop.docx_to_rtf",
+      "success": true,
+      "output_size_bytes": 45484,
+      "paragraphs": [
+        "Smart Doc RTF Smoke",
+        "This document checks DOCX to RTF conversion.",
+        "Item",
+        "Qty",
+        "Pear",
+        "5"
+      ],
+      "tables": [
+        [
+          [
+            "Item",
+            "Qty"
+          ],
+          [
+            "Pear",
+            "5"
+          ]
+        ]
+      ]
+    },
+    "docwen-current": {
+      "entry": "uv run docwen run smart-doc-rtf-probe.docx --to rtf --json",
+      "success": true,
+      "output_size_bytes": 45958,
+      "paragraphs": [
+        "Smart Doc RTF Smoke",
+        "This document checks DOCX to RTF conversion.",
+        "Item",
+        "Qty",
+        "Pear",
+        "5"
+      ],
+      "tables": [
+        [
+          [
+            "Item",
+            "Qty"
+          ],
+          [
+            "Pear",
+            "5"
+          ]
+        ]
+      ]
+    }
+  },
+  "accepted_limits": [
+    "This is a focused real-environment smoke for DOCX to RTF only; it does not close DOCX to WPS quality policy, LibreOffice-only fallback, styles, comments, images, headers/footers, or broad binary artifact comparison.",
+    "RTF output size differs across the three projects in this environment, so the checked-in fixture treats size as recorded metadata and compares normalized Word COM readback semantics instead of byte equality."
+  ],
+  "evidence": {
+    "transient_output_dir": "tmp/smart-doc-rtf-real-smoke-2026-07-03",
+    "process_cleanup": {
+      "residual_processes_seen_after_probe": [
+        "WINWORD.EXE"
+      ],
+      "cleanup_action": "terminated two headless WINWORD processes observed after the combined probe",
+      "residual_processes_after_cleanup": [],
+      "current_only_followup": {
+        "command": "uv run docwen run current-smart-doc-rtf-process.docx --to rtf --json",
+        "success": true,
+        "new_office_processes_after_current_only_probe": []
+      }
+    }
+  }
+}

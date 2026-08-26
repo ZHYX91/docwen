@@ -1,0 +1,276 @@
+{
+  "golden_id": "GOLDEN-010",
+  "scope": "focused SmartSheet ODS to XLSX real external-office smoke",
+  "generated_at": "2026-07-03",
+  "input_workbook": {
+    "source_fixture": "tmp/smart-sheet-ods-real-smoke-2026-07-03/docwen-current-cli/smart-sheet-ods-probe.ods",
+    "origin": "valid ODS produced by the focused XLSX to ODS current controlled smoke",
+    "rows": [
+      [
+        "Title",
+        "Smart Sheet ODS Smoke",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "Item",
+        "Qty",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "Apple",
+        "2",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "Pear",
+        "5",
+        "7",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  "route": {
+    "source_format": "ods",
+    "target_format": "xlsx",
+    "category": "spreadsheet"
+  },
+  "expected_semantics": {
+    "output_extension": ".xlsx",
+    "zip_magic": "504b0304",
+    "entry_count": 11,
+    "sheet": "Data",
+    "rows_formula_mode": [
+      [
+        "Title",
+        "Smart Sheet ODS Smoke",
+        null
+      ],
+      [
+        "Item",
+        "Qty",
+        null
+      ],
+      [
+        "Apple",
+        2,
+        null
+      ],
+      [
+        "Pear",
+        5,
+        "=SUM(B3:B4)"
+      ]
+    ],
+    "rows_data_only": [
+      [
+        "Title",
+        "Smart Sheet ODS Smoke",
+        null
+      ],
+      [
+        "Item",
+        "Qty",
+        null
+      ],
+      [
+        "Apple",
+        2,
+        null
+      ],
+      [
+        "Pear",
+        5,
+        7
+      ]
+    ],
+    "formulas": {
+      "C4": "=SUM(B3:B4)"
+    }
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "entry": "docwen.converter.formats.spreadsheet.ods_to_xlsx",
+      "success": true,
+      "output_size_bytes": 9263,
+      "zip_magic": "504b0304",
+      "entry_count": 11,
+      "sheet": "Data",
+      "rows_formula_mode": [
+        [
+          "Title",
+          "Smart Sheet ODS Smoke",
+          null
+        ],
+        [
+          "Item",
+          "Qty",
+          null
+        ],
+        [
+          "Apple",
+          2,
+          null
+        ],
+        [
+          "Pear",
+          5,
+          "=SUM(B3:B4)"
+        ]
+      ],
+      "rows_data_only": [
+        [
+          "Title",
+          "Smart Sheet ODS Smoke",
+          null
+        ],
+        [
+          "Item",
+          "Qty",
+          null
+        ],
+        [
+          "Apple",
+          2,
+          null
+        ],
+        [
+          "Pear",
+          5,
+          7
+        ]
+      ],
+      "formulas": {
+        "C4": "=SUM(B3:B4)"
+      }
+    },
+    "docwen-ref-pyside6": {
+      "entry": "docwen.converter.spreadsheet.external.ods_to_xlsx",
+      "success": true,
+      "output_size_bytes": 9266,
+      "zip_magic": "504b0304",
+      "entry_count": 11,
+      "sheet": "Data",
+      "rows_formula_mode": [
+        [
+          "Title",
+          "Smart Sheet ODS Smoke",
+          null
+        ],
+        [
+          "Item",
+          "Qty",
+          null
+        ],
+        [
+          "Apple",
+          2,
+          null
+        ],
+        [
+          "Pear",
+          5,
+          "=SUM(B3:B4)"
+        ]
+      ],
+      "rows_data_only": [
+        [
+          "Title",
+          "Smart Sheet ODS Smoke",
+          null
+        ],
+        [
+          "Item",
+          "Qty",
+          null
+        ],
+        [
+          "Apple",
+          2,
+          null
+        ],
+        [
+          "Pear",
+          5,
+          7
+        ]
+      ],
+      "formulas": {
+        "C4": "=SUM(B3:B4)"
+      }
+    },
+    "docwen-current": {
+      "entry": "uv run docwen run smart-sheet-ods-probe.ods --to xlsx --json",
+      "success": true,
+      "output_size_bytes": 9274,
+      "zip_magic": "504b0304",
+      "entry_count": 11,
+      "sheet": "Data",
+      "rows_formula_mode": [
+        [
+          "Title",
+          "Smart Sheet ODS Smoke",
+          null
+        ],
+        [
+          "Item",
+          "Qty",
+          null
+        ],
+        [
+          "Apple",
+          2,
+          null
+        ],
+        [
+          "Pear",
+          5,
+          "=SUM(B3:B4)"
+        ]
+      ],
+      "rows_data_only": [
+        [
+          "Title",
+          "Smart Sheet ODS Smoke",
+          null
+        ],
+        [
+          "Item",
+          "Qty",
+          null
+        ],
+        [
+          "Apple",
+          2,
+          null
+        ],
+        [
+          "Pear",
+          5,
+          7
+        ]
+      ],
+      "formulas": {
+        "C4": "=SUM(B3:B4)"
+      }
+    }
+  },
+  "accepted_limits": [
+    "This is a focused real-environment smoke for ODS to XLSX only; it does not close XLS inbound, ET, LibreOffice-only, styles, merged cells, or broad binary artifact comparison.",
+    "The ODS input comes from the current controlled XLSX to ODS focused smoke; it is valid ODS and had already been compared against old-system XLSX to ODS outputs in the sibling fixture.",
+    "Output byte sizes differ across projects and are recorded as metadata only; semantic parity is based on sheet name, normalized cell values, and formula preservation."
+  ],
+  "evidence": {
+    "transient_output_dir": "tmp/smart-sheet-ods-xlsx-real-smoke-2026-07-03"
+  }
+}

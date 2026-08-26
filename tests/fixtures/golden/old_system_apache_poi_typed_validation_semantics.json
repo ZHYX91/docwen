@@ -1,0 +1,356 @@
+{
+  "golden_id": "GOLDEN-003",
+  "scope": "focused three-project Apache POI typed data-validation workbook batch",
+  "created_at": "2026-07-15",
+  "source_repository": {
+    "owner": "apache",
+    "repository": "poi",
+    "commit": "86e967d9b28d6a322a87ae8fcbf2a7eeb56cef96",
+    "repository_url": "https://github.com/apache/poi",
+    "workbook_paths_screened": 383,
+    "unique_workbook_blobs": 378,
+    "features_screened_before_docwen_execution": true,
+    "redistribution": "external official test binaries retained only in workspace-bound temporary probe"
+  },
+  "sources": {
+    "DataValidationEvaluations.xlsx": {
+      "repository_path": "test-data/spreadsheet/DataValidationEvaluations.xlsx",
+      "blob_sha": "5bf8872bf96931139184c37c5a37e19e038683e2",
+      "bytes": 13679,
+      "sha256": "ea5706d9afc031a8c2afef880559483bad30ab2c18e2857aca5f3cfaa74decf4",
+      "package_entries": 16,
+      "sheets": [{"name": "Sheet1", "max_row": 35, "max_column": 9}],
+      "formula_count": 1,
+      "validation_count": 17,
+      "validation_types": {"textLength": 4, "whole": 1, "decimal": 5, "list": 1, "date": 2, "time": 2, "custom": 2},
+      "validation_operators": {"greaterThan": 9},
+      "representative_rules": [
+        {"type": "whole", "operator": "greaterThan", "sqref": "B5:B7", "formula1": "0"},
+        {"type": "list", "operator": null, "sqref": "B10:B16", "formula1": "ValueTable"},
+        {"type": "date", "operator": "greaterThan", "sqref": "B17", "formula1": "36161"},
+        {"type": "custom", "operator": null, "sqref": "B25:B28", "formula1": "I5"}
+      ]
+    },
+    "DataValidations-49244.xlsx": {
+      "repository_path": "test-data/spreadsheet/DataValidations-49244.xlsx",
+      "blob_sha": "ee3f6ef9685ea9d99a1faea0a9282b2413e294e0",
+      "bytes": 10705,
+      "sha256": "8066b12c878d74aa35b55b22dc9daba9a56e91332a35cf96c4fc0f6af6bd3bd1",
+      "package_entries": 12,
+      "sheets": [{"name": "Sheet1", "max_row": 39, "max_column": 6}],
+      "formula_count": 0,
+      "validation_count": 52,
+      "validation_types": {"whole": 17, "decimal": 16, "textLength": 16, "custom": 1, "list": 2},
+      "validation_operators": {"greaterThan": 7, "greaterThanOrEqual": 6, "lessThan": 6, "lessThanOrEqual": 6, "equal": 6, "notEqual": 6, "notBetween": 6},
+      "representative_rules": [
+        {"type": "list", "sqref": "B2", "formula1": "\"IN,US,UK\"", "error_title": "Invalid Country Code"},
+        {"type": "list", "sqref": "C2", "formula1": "$D$1:$F$1", "error_title": "Invalid Country code"},
+        {"type": "decimal", "operator": "notBetween", "sqref": "B26", "formula1": "1.01", "formula2": "4.99"},
+        {"type": "custom", "sqref": "B40", "formula1": "\"c66 < b66 and b66 < d66\""}
+      ]
+    },
+    "dataValidationTableRange.xlsx": {
+      "repository_path": "test-data/spreadsheet/dataValidationTableRange.xlsx",
+      "blob_sha": "76e24344e215528967c879bc5e53165e72462897",
+      "bytes": 116554,
+      "sha256": "2a41971477de7c0af993a6a8bc3082145230ef04d087170797d167e563da84da",
+      "package_entries": 52,
+      "sheets": [{"name": "County Ranking", "max_row": 46, "max_column": 34}, {"name": "xdropdown", "max_row": 3118, "max_column": 25}],
+      "formula_count": 87,
+      "validation_count": 5,
+      "validation_types": {"list": 5},
+      "named_list_formulas": ["states", "years", "Measures", "highlight", "highlight_list"]
+    }
+  },
+  "validation_contract": {
+    "total_typed_rules": 74,
+    "types_covered": ["custom", "date", "decimal", "list", "textLength", "time", "whole"],
+    "comparison_operators_covered": ["equal", "greaterThan", "greaterThanOrEqual", "lessThan", "lessThanOrEqual", "notBetween", "notEqual"],
+    "formula_source_forms": ["literal", "inline list", "cell reference", "cell range", "named range", "custom expression"],
+    "rule_preservation_in_markdown": false,
+    "classification": "source-rule presence and conversion-stability parity, not validation execution or Markdown preservation"
+  },
+  "execution_contract": {
+    "valid_three_project_executions": 9,
+    "all_executions_successful": true,
+    "aligned_options": ["no images", "no OCR"],
+    "docwen-ref-tk": "project venv plus production docwen.converter.xlsx2md.convert_spreadsheet_to_md",
+    "docwen-ref-pyside6": "project venv plus production SpreadsheetPlugin.convert",
+    "docwen-current": "project venv plus production SpreadsheetPlugin.convert",
+    "office_processes_started": false
+  },
+  "normalized_projections": {
+    "normalization": ["newline", "YAML presentation", "Markdown separators", "Tk nan/current ColN blank presentation", "numeric-equivalent integer/float spelling"],
+    "DataValidationEvaluations.xlsx": {"all_three_projects_equal": true, "entries": 60, "headings": 1, "table_rows": 59, "cells": 175, "blank_cells": 36, "projection_sha256": "ce91377bf1e62897792bf54a7016cc6f6c368aabc510de6566ec02b065e53823", "old_pyside6_current_raw_equal": true, "old_pyside6_current_raw": {"bytes": 5699, "sha256": "6d89f283dfd156cf5efbda524a483ef062857865d22be76933480d85120b0405"}},
+    "DataValidations-49244.xlsx": {"all_three_projects_equal": true, "entries": 35, "headings": 1, "table_rows": 34, "cells": 193, "blank_cells": 53, "projection_sha256": "210a57abd4a2746055361d9c5c5f6c8b6eb333877f4128f5cb54e67ba9e61ff0", "old_pyside6_current_raw_equal": true, "old_pyside6_current_raw": {"bytes": 3696, "sha256": "86afa8f50ac7b9a45a2b3ca71d14abbd2d9c5c290e86eb751d2fb7456b23dd18"}},
+    "dataValidationTableRange.xlsx": {"all_three_projects_equal": true, "entries": 3340, "headings": 2, "table_rows": 3338, "cells": 6630, "blank_cells": 46, "projection_sha256": "96f679637454129cd20b8c5d447957fb87bcde93fa5be4eaaa64d68d34bc3815", "old_pyside6_current_raw_equal": true, "old_pyside6_current_raw": {"bytes": 195420, "sha256": "ac467cb1c83af6fa2f48435a416988f93a84a77643865729eb22683d2c8f5ede"}, "tk_only_numeric_spelling": {"source_cell": "xdropdown!W2", "source_value": 1000, "tk": "1000.0", "old_pyside6_current": "1000", "classification": "old PySide6/current source-faithful presentation improvement"}}
+  },
+  "current_runtime_finalizer": {"representative_source": "dataValidationTableRange.xlsx", "success": true, "artifact_count": 1, "primary_name": "dataValidationTableRange.md", "primary_bytes": 195420, "primary_sha256": "ac467cb1c83af6fa2f48435a416988f93a84a77643865729eb22683d2c8f5ede", "input_bytes": 116554, "output_bytes": 195420, "sheet_count": 2, "row_count": 3164, "column_count": 25, "block_count": 15, "image_count": 0, "diagnostics": ["SHEET2MD-OK", "FINALIZER_DONE"], "workspace_paths_leaked": false},
+  "final_artifact_ui_addendum": {
+    "stage": "VIS-2026-07-17-117",
+    "created_at": "2026-07-17",
+    "source_fixture_reused": true,
+    "project_heads": {
+      "docwen-ref-tk": "ec9298286cfe1379d5c5470db381577ea43ca0fa",
+      "docwen-ref-pyside6": "63db927c5ded920d4994bfede5c7b34c55e2f43e",
+      "docwen-current": "243b996adcf7bafdbfff07fc22faa249078354c2"
+    },
+    "route_contract": {
+      "docwen-ref-tk": "production docwen.converter.formats.spreadsheet xlsx_to_xls/xlsx_to_ods",
+      "docwen-ref-pyside6": "production docwen.converter.spreadsheet xlsx_to_xls/xlsx_to_ods",
+      "docwen-current": "public docwen CLI run --to xls/ods",
+      "target_count": 2,
+      "source_count": 3,
+      "project_count": 3,
+      "valid_conversions": 18,
+      "successful_conversions": 18,
+      "timings_comparable": false
+    },
+    "artifact_sizes": {
+      "DataValidationEvaluations.xlsx": {
+        "xls": {"docwen-ref-tk": 26112, "docwen-ref-pyside6": 26112, "docwen-current": 26112},
+        "ods": {"docwen-ref-tk": 6432, "docwen-ref-pyside6": 6431, "docwen-current": 6432}
+      },
+      "DataValidations-49244.xlsx": {
+        "xls": {"docwen-ref-tk": 25600, "docwen-ref-pyside6": 25600, "docwen-current": 25600},
+        "ods": {"docwen-ref-tk": 6012, "docwen-ref-pyside6": 6012, "docwen-current": 6013}
+      },
+      "dataValidationTableRange.xlsx": {
+        "xls": {"docwen-ref-tk": 400384, "docwen-ref-pyside6": 400384, "docwen-current": 400384},
+        "ods": {"docwen-ref-tk": 53894, "docwen-ref-pyside6": 53893, "docwen-current": 53893}
+      }
+    },
+    "excel_com_projection": {
+      "application": "Microsoft Excel 16.0",
+      "source_rule_counts": {"DataValidationEvaluations.xlsx": 17, "DataValidations-49244.xlsx": 52, "dataValidationTableRange.xlsx": 5},
+      "source_validated_cell_counts": {"DataValidationEvaluations.xlsx": 33, "DataValidations-49244.xlsx": 53, "dataValidationTableRange.xlsx": 6},
+      "distinct_source_rules": 74,
+      "output_rule_probes": 444,
+      "output_range_probes": 444,
+      "fields_compared": ["address", "present", "type", "operator", "formula1", "formula2", "error_title", "error_message", "show_error", "alert_style", "ignore_blank", "in_cell_dropdown"],
+      "all_18_outputs_exact_to_source_rule_projection": true,
+      "all_six_source_target_cross_project_projections_exact": true
+    },
+    "physical_excel_ui": {
+      "test_owned_copies": true,
+      "cell": "B2",
+      "xls_projects_observed": ["docwen-ref-tk", "docwen-ref-pyside6", "docwen-current"],
+      "current_ods_observed": true,
+      "dropdown_values": ["IN", "US", "UK"],
+      "input_prompt_title": "Country Code Selection",
+      "input_prompt_message": "Choose a Country Code.",
+      "invalid_keyboard_value": "zz",
+      "invalid_error_title": "Invalid Country Code",
+      "invalid_error_message": "The specified country code is not a valid option.",
+      "dropdown_passes": 4,
+      "invalid_input_rejection_passes": 4,
+      "all_copies_closed_without_save": true,
+      "post_observation_readonly_b2": "IN",
+      "screenshots_persisted": false
+    },
+    "saved_view_projection": {
+      "source_xlsx": {"active_cell": "C37", "scroll_row": 15, "scroll_column": 1, "zoom": 100},
+      "all_three_xls": {"active_cell": "C37", "scroll_row": 15, "scroll_column": 1, "zoom": 100},
+      "all_three_ods": {"active_cell": "A1", "scroll_row": 1, "scroll_column": 1, "zoom": 100},
+      "cross_project_exact_by_target": true,
+      "classification": "shared ODS saved-view reset, not a current-only regression or accepted broad source fidelity"
+    },
+    "shared_boundaries_not_accepted": [
+      "ODS renames visible sheet County Ranking to County_Ranking in all three projects.",
+      "ODS resets the saved active cell and scroll position in all three projects.",
+      "ODS-generated hidden table names can render as mojibake through Excel COM while visible named rules remain usable.",
+      "Raw XLS/ODS SHA-256 values vary with metadata and are not a fidelity oracle.",
+      "Physical UI observation samples one representative inline-list rule; the 74-rule Excel COM projection supplies breadth."
+    ],
+    "external_evidence": {
+      "root": "D:/docwen-parity/vis117-poi-validation-final-artifact-243b996-v1",
+      "files": 40,
+      "bytes": 3267367,
+      "analysis": {"bytes": 6256, "sha256": "81732fd1cb442db5092b9a622aab2a7ada8bcd7763bb023085ff3390846e72f3"},
+      "validation_projection": {"bytes": 1346424, "sha256": "23f86595f1c3dd9c75eab300d3893a7d2f5db5199b08c0c22b39059bedd87fbb"},
+      "view_projection": {"bytes": 8922, "sha256": "2f3003ca6a7eadf06248bd5429d0e31f064dfab217910663a0b799b6fce6400c"},
+      "ui_observations": {"bytes": 2804, "sha256": "dae21c2dbe15a473e79f5f602e46566b80b3f341cb2eeab0dd73404f4ae03aea"},
+      "source_rules": {"bytes": 32245, "sha256": "7ce5e7f0e5b1460b5a4736e849b6f337b2e684b709f21cf0290952d560a98ddb"}
+    },
+    "classification": {
+      "current_only_functional_or_ui_regression_found": false,
+      "production_change_made": false,
+      "focused_typed_validation_final_artifact_evidence": "strong",
+      "markdown_validation_preservation": false,
+      "broad_spreadsheet_final_artifact_parity": false,
+      "overall_parity": false
+    }
+  },
+  "wps_physical_ui_addendum": {
+    "stage": "VIS-2026-07-17-118",
+    "created_at": "2026-07-17",
+    "source_final_artifact_stage": "VIS-2026-07-17-117",
+    "source_fixture_reused": true,
+    "project_heads": {
+      "docwen-ref-tk": "ec9298286cfe1379d5c5470db381577ea43ca0fa",
+      "docwen-ref-pyside6": "63db927c5ded920d4994bfede5c7b34c55e2f43e",
+      "docwen-current": "5fcae33dd2d385bf55c3093cd3bdc87c9f68630b"
+    },
+    "environment": {
+      "os": "Microsoft Windows 11 Pro 10.0.26200 build 26200",
+      "application": "WPS Office Spreadsheet",
+      "file_version": "12.1.0.26899",
+      "test_owned_copies": true,
+      "screenshots_persisted": false
+    },
+    "physical_wps_xls": {
+      "b2_projects_observed": ["docwen-ref-tk", "docwen-ref-pyside6", "docwen-current"],
+      "cell": "B2",
+      "rule": "inline list",
+      "dropdown_values": ["IN", "US", "UK"],
+      "input_prompt_title": "Country Code Selection",
+      "input_prompt_message": "Choose a Country Code.",
+      "invalid_keyboard_value": "zz",
+      "invalid_error_title": "Invalid Country Code",
+      "invalid_error_message": "The specified country code is not a valid option.",
+      "dropdown_passes": 3,
+      "invalid_input_rejection_passes": 3,
+      "cross_project_behavior_exact": true,
+      "current_additional_rule": {
+        "cell": "B6",
+        "rule": "whole number greater than zero",
+        "input_prompt_title": "Integer Input",
+        "input_prompt_message": "Enter an integer value.",
+        "invalid_keyboard_value": "0",
+        "invalid_error_title": "错误提示",
+        "invalid_error_message": "您输入的内容，不符合限制条件。",
+        "invalid_value_rejected": true,
+        "cross_project_physical_comparison": false
+      },
+      "all_test_copies_closed_without_save": true
+    },
+    "wps_ods_boundary": {
+      "project_attempted": "docwen-current",
+      "file": "current-49244.ods",
+      "opened_locally": false,
+      "online_service_required": true,
+      "prompt_title": "允许文件转换?",
+      "action": "cancelled before allowing conversion",
+      "user_data_transfer_authorized": false,
+      "cross_project_ods_ui_observed": false,
+      "classification": "current-environment WPS offline ODS UI unavailable; not a current-only regression and not an ODS UI pass"
+    },
+    "process_boundary": {
+      "pre_observation_wps_pids": [4872, 11388],
+      "post_observation_wps_pids": [11388],
+      "process_termination_command_used": false,
+      "test_owned_window_closed": true,
+      "note": "PID 4872 exited after the test-owned WPS window was closed; no process was killed and PID 11388 remained."
+    },
+    "external_evidence": {
+      "root": "D:/docwen-parity/vis118-wps-validation-ui-5fcae33-v1",
+      "files": 1,
+      "bytes": 4752,
+      "wps_ui_observations": {
+        "bytes": 4752,
+        "sha256": "3c36e2a97253761dd0b48b9a64af3a014a731fad52c2bb1ac24375fdfb4c9ccc"
+      }
+    },
+    "classification": {
+      "current_only_xls_validation_regression_found": false,
+      "focused_wps_xls_physical_parity": "strong",
+      "wps_ods_physical_parity": "unavailable_without_online_transfer",
+      "production_change_made": false,
+      "broad_spreadsheet_final_artifact_parity": false,
+      "overall_parity": false
+    }
+  },
+  "libreoffice_ods_physical_ui_addendum": {
+    "stage": "VIS-2026-07-17-119",
+    "created_at": "2026-07-17",
+    "source_final_artifact_stage": "VIS-2026-07-17-117",
+    "source_wps_boundary_stage": "VIS-2026-07-17-118",
+    "source_fixture_reused": true,
+    "project_heads": {
+      "docwen-ref-tk": "ec9298286cfe1379d5c5470db381577ea43ca0fa",
+      "docwen-ref-pyside6": "63db927c5ded920d4994bfede5c7b34c55e2f43e",
+      "docwen-current": "8b66399d74ee9366ba2dafd663b41123533eb96a"
+    },
+    "environment": {
+      "os": "Microsoft Windows 11 Pro 10.0.26200 build 26200",
+      "application": "LibreOffice Calc",
+      "version": "26.2.4.2 0229ac93fcf0d7cbc6376066c6f35021cef002dc",
+      "official_process_local_administrative_image": "D:/docwen-parity/toolchains/libreoffice-26.2.4/image",
+      "bootstrap_user_installation": "$ORIGIN/../Data/settings",
+      "system_wide_installation_claimed": false,
+      "online_service_used": false,
+      "test_owned_copies": true,
+      "screenshots_persisted": false
+    },
+    "physical_libreoffice_ods": {
+      "projects_observed": ["docwen-ref-tk", "docwen-ref-pyside6", "docwen-current"],
+      "b2_inline_list": {
+        "initial_value": "IN",
+        "input_prompt_title": "Country Code Selection",
+        "input_prompt_message": "Choose a Country Code.",
+        "dropdown_values": ["IN", "US", "UK"],
+        "invalid_keyboard_value": "zz",
+        "invalid_error_title": "Invalid Country Code",
+        "invalid_error_message": "The specified country code is not a valid option.",
+        "invalid_value_rejected": true,
+        "post_rejection_value": "IN",
+        "project_passes": 3,
+        "cross_project_behavior_exact": true
+      },
+      "b6_whole_number_greater_than_zero": {
+        "initial_value": 1,
+        "input_prompt_title": "Integer Input",
+        "input_prompt_message": "Enter an integer value.",
+        "invalid_keyboard_value": 0,
+        "invalid_error_title": "LibreOffice Calc",
+        "invalid_error_message": "无效的值。",
+        "invalid_value_rejected": true,
+        "post_rejection_value": 1,
+        "project_passes": 3,
+        "cross_project_behavior_exact": true,
+        "source_custom_error_preserved": false,
+        "classification": "shared LibreOffice-localized generic validation error, not a current-only regression or accepted broad source fidelity"
+      },
+      "all_test_copies_closed_without_save": true,
+      "all_post_observation_sizes_and_hashes_unchanged": true
+    },
+    "interaction_evidence_boundary": {
+      "authoritative_invalid_entry": "individual keyboard events followed by Return",
+      "literal_text_injection_used_for_verdict": false,
+      "excluded_diagnostic": "Whole-string text injection appeared to bypass validation; it was rejected as an oracle and superseded by the per-key rerun.",
+      "classification": "fail-closed automation-method correction, not a product result"
+    },
+    "process_boundary": {
+      "pre_observation_soffice_processes": [],
+      "post_observation_soffice_processes": [],
+      "process_termination_command_used": false,
+      "private_profile_used": true
+    },
+    "external_evidence": {
+      "root": "D:/docwen-parity/vis119-libreoffice-validation-ui-8b66399-v1",
+      "files": 4,
+      "bytes": 23531,
+      "libreoffice_ui_observations": {
+        "bytes": 5494,
+        "sha256": "f15ffa99ac6afa4d8f5eada2c336c10d56053a89d5a6c9ec5e4a8f1ce80dded0"
+      },
+      "test_copy_sha256": {
+        "docwen-ref-tk": "dc7fbf5a246985dc17389435186df46bc4ed7af9dbf7785827f291346fa4e95c",
+        "docwen-ref-pyside6": "64f0dfb64bc1abfbc2569e40a793aff74f4489e18e529654fc87ed54e58e7775",
+        "docwen-current": "cae214efcf85c39f2177d88913f42084cbc0ee5eef0a3d62e5269c32fe485092"
+      }
+    },
+    "classification": {
+      "current_only_ods_validation_regression_found": false,
+      "focused_libreoffice_ods_physical_parity": "strong",
+      "b2_source_custom_error_preserved": true,
+      "b6_source_custom_error_preserved": false,
+      "b6_shared_consumer_localization_boundary": true,
+      "production_change_made": false,
+      "broad_spreadsheet_final_artifact_parity": false,
+      "overall_parity": false
+    }
+  },
+  "classification": {"current_only_functional_gap_found": false, "route_or_option_wiring_gap_found": false, "old_pyside6_current_raw_outputs_equal_for_all_three": true, "production_change_made": false},
+  "known_limits": ["Typed rule presence does not imply validation rules are preserved or executed in Markdown.", "VIS-039 static conversion did not exercise Excel UI; VIS-117 adds one representative physical dropdown/error sample plus all-rule COM projection.", "VIS-118 adds focused WPS XLS UI evidence; WPS ODS remains unavailable offline because this installation requires online conversion.", "VIS-119 adds focused three-project LibreOffice ODS UI evidence for B2 and B6; the shared B6 generic localized error remains an unaccepted source-fidelity boundary.", "This is focused strong typed-validation source/conversion/final-artifact evidence, not broad GOLDEN-003 or overall parity PASS."]
+}

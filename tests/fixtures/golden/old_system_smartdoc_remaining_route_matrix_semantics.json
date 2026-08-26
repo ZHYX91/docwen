@@ -1,0 +1,284 @@
+{
+  "golden_id": "GOLDEN-009",
+  "scope": "focused remaining ten-route SmartDoc three-project matrix",
+  "created_at": "2026-07-14",
+  "routes": [
+    "doc->odt",
+    "doc->rtf",
+    "doc->wps",
+    "odt->doc",
+    "odt->wps",
+    "rtf->doc",
+    "rtf->wps",
+    "wps->doc",
+    "wps->odt",
+    "wps->rtf"
+  ],
+  "coverage_context": {
+    "previously_evidenced_routes": [
+      "docx->doc",
+      "docx->odt",
+      "docx->rtf",
+      "docx->wps",
+      "doc->docx",
+      "odt->docx",
+      "odt->rtf",
+      "rtf->docx",
+      "rtf->odt",
+      "wps->docx"
+    ],
+    "focused_real_route_breadth_after_this_fixture": "20/20",
+    "interpretation": "Every declared SmartDoc route now has at least one focused real artifact or an executable old-system unsupported/current-enhancement boundary."
+  },
+  "source_generation": {
+    "policy": "One deterministic DOCX was converted once through current production routes into exact DOC, ODT, RTF, and WPS source bytes. Source generation is recorded separately and is not counted as a project-under-test result.",
+    "docx": {
+      "size_bytes": 40990,
+      "sha256": "f23686bfbb578acb54b01e4d3f4a087f474c644d0d19cfbe8b6735e043091a86"
+    },
+    "doc": {
+      "backend": "WPS Writer",
+      "size_bytes": 198875,
+      "sha256": "4737fe69e428f0b2f8c7b049e0ca805c7c5b0aa74f4e9806efd95aa0ae6bede4"
+    },
+    "odt": {
+      "backend": "Microsoft Word",
+      "size_bytes": 11139,
+      "sha256": "a079a677396a8a612c24228f9d235c997039c164f6da12c098450e1ec041583e"
+    },
+    "rtf": {
+      "backend": "WPS Writer",
+      "size_bytes": 58503,
+      "sha256": "59d8a36200d4ac12bd790f5065d2c05e97ec68787cd3c0616c7fb7a34dbc74e0"
+    },
+    "wps": {
+      "backend": "WPS Writer",
+      "size_bytes": 198875,
+      "sha256": "f7778d23107be657281aafa198353bcf4c7689e215c65eaad45789fa0f0b9fda"
+    }
+  },
+  "normalized_source_projection": {
+    "all_four_source_formats_equal": true,
+    "markers": [
+      "VIS-026 Remaining SmartDoc Matrix",
+      "Semantic Heading",
+      "BODY_MARKER",
+      "BOLD_MARKER",
+      "ITALIC_MARKER",
+      "IMAGE_MARKER",
+      "SECTION_TWO_MARKER"
+    ],
+    "styles": {
+      "VIS-026 Remaining SmartDoc Matrix": "Title",
+      "Semantic Heading": "Heading 1",
+      "BODY_MARKER": "Normal"
+    },
+    "bold_marker_direct": true,
+    "italic_marker_direct": true,
+    "table": [
+      ["Item", "Qty", "Note"],
+      ["Alpha", "7", "MATRIX_MARKER"]
+    ],
+    "headers": ["VIS026 HEADER ONE", "VIS026 HEADER TWO"],
+    "footers": ["VIS026 FOOTER ONE", "VIS026 FOOTER TWO"],
+    "sections": ["portrait", "landscape"],
+    "media_count": 1,
+    "media_sha256": "4b0fb27a4544be263d6aca9649f2544464acf970b85911857f19467cd9b26623"
+  },
+  "matrix": {
+    "doc->odt": {
+      "classification": "three-project-supported",
+      "docwen-ref-tk": {"success": true, "artifact_count": 1, "size_bytes": 11043},
+      "docwen-ref-pyside6": {"success": true, "artifact_count": 1, "size_bytes": 11043},
+      "docwen-current": {
+        "success": true,
+        "artifact_count": 1,
+        "name": "vis026-rich.odt",
+        "size_bytes": 11043,
+        "backend": "WPS Writer -> Microsoft Word",
+        "input_bytes": 198875,
+        "output_bytes": 11043
+      },
+      "all_project_projections_equal": true,
+      "all_project_projections_match_source": true
+    },
+    "doc->rtf": {
+      "classification": "three-project-supported",
+      "docwen-ref-tk": {"success": true, "artifact_count": 1, "size_bytes": 58472},
+      "docwen-ref-pyside6": {"success": true, "artifact_count": 1, "size_bytes": 59736},
+      "docwen-current": {
+        "success": true,
+        "artifact_count": 1,
+        "name": "vis026-rich.rtf",
+        "size_bytes": 58286,
+        "backend": "WPS Writer -> WPS Writer",
+        "input_bytes": 198875,
+        "output_bytes": 58286
+      },
+      "all_project_projections_equal": true,
+      "all_project_projections_match_source": true
+    },
+    "doc->wps": {
+      "classification": "current-enhancement",
+      "docwen-ref-tk": {"success": false, "artifact_count": 0, "returned_none": true},
+      "docwen-ref-pyside6": {"success": false, "artifact_count": 0, "returned_none": true},
+      "docwen-current": {
+        "success": true,
+        "artifact_count": 1,
+        "name": "vis026-rich.wps",
+        "size_bytes": 199351,
+        "backend": "WPS Writer -> WPS Writer",
+        "input_bytes": 198875,
+        "output_bytes": 199351
+      },
+      "current_projection_matches_source": true
+    },
+    "odt->doc": {
+      "classification": "three-project-supported",
+      "docwen-ref-tk": {"success": true, "artifact_count": 1, "size_bytes": 20692},
+      "docwen-ref-pyside6": {"success": true, "artifact_count": 1, "size_bytes": 20692},
+      "docwen-current": {
+        "success": true,
+        "artifact_count": 1,
+        "name": "vis026-rich.doc",
+        "size_bytes": 20692,
+        "backend": "Microsoft Word -> WPS Writer",
+        "input_bytes": 11139,
+        "output_bytes": 20692
+      },
+      "all_project_projections_equal": true,
+      "all_project_projections_match_source": true
+    },
+    "odt->wps": {
+      "classification": "current-enhancement",
+      "docwen-ref-tk": {"success": false, "artifact_count": 0, "returned_none": true},
+      "docwen-ref-pyside6": {"success": false, "artifact_count": 0, "returned_none": true},
+      "docwen-current": {
+        "success": true,
+        "artifact_count": 1,
+        "name": "vis026-rich.wps",
+        "size_bytes": 20692,
+        "backend": "Microsoft Word -> WPS Writer",
+        "input_bytes": 11139,
+        "output_bytes": 20692
+      },
+      "current_projection_matches_source": true
+    },
+    "rtf->doc": {
+      "classification": "three-project-supported",
+      "docwen-ref-tk": {"success": true, "artifact_count": 1, "size_bytes": 22850},
+      "docwen-ref-pyside6": {"success": true, "artifact_count": 1, "size_bytes": 22850},
+      "docwen-current": {
+        "success": true,
+        "artifact_count": 1,
+        "name": "vis026-rich.doc",
+        "size_bytes": 22850,
+        "backend": "WPS Writer -> WPS Writer",
+        "input_bytes": 58503,
+        "output_bytes": 22850
+      },
+      "all_project_projections_equal": true,
+      "all_project_projections_match_source": true
+    },
+    "rtf->wps": {
+      "classification": "current-enhancement",
+      "docwen-ref-tk": {"success": false, "artifact_count": 0, "returned_none": true},
+      "docwen-ref-pyside6": {"success": false, "artifact_count": 0, "returned_none": true},
+      "docwen-current": {
+        "success": true,
+        "artifact_count": 1,
+        "name": "vis026-rich.wps",
+        "size_bytes": 22850,
+        "backend": "WPS Writer -> WPS Writer",
+        "input_bytes": 58503,
+        "output_bytes": 22850
+      },
+      "current_projection_matches_source": true
+    },
+    "wps->doc": {
+      "classification": "three-project-supported",
+      "docwen-ref-tk": {"success": true, "artifact_count": 1, "size_bytes": 199351},
+      "docwen-ref-pyside6": {"success": true, "artifact_count": 1, "size_bytes": 199351},
+      "docwen-current": {
+        "success": true,
+        "artifact_count": 1,
+        "name": "vis026-rich.doc",
+        "size_bytes": 199351,
+        "backend": "WPS Writer -> WPS Writer",
+        "input_bytes": 198875,
+        "output_bytes": 199351
+      },
+      "all_project_projections_equal": true,
+      "all_project_projections_match_source": true
+    },
+    "wps->odt": {
+      "classification": "three-project-supported",
+      "docwen-ref-tk": {"success": true, "artifact_count": 1, "size_bytes": 11042},
+      "docwen-ref-pyside6": {"success": true, "artifact_count": 1, "size_bytes": 11044},
+      "docwen-current": {
+        "success": true,
+        "artifact_count": 1,
+        "name": "vis026-rich.odt",
+        "size_bytes": 11043,
+        "backend": "WPS Writer -> Microsoft Word",
+        "input_bytes": 198875,
+        "output_bytes": 11043
+      },
+      "all_project_projections_equal": true,
+      "all_project_projections_match_source": true
+    },
+    "wps->rtf": {
+      "classification": "three-project-supported",
+      "docwen-ref-tk": {"success": true, "artifact_count": 1, "size_bytes": 58406},
+      "docwen-ref-pyside6": {"success": true, "artifact_count": 1, "size_bytes": 58656},
+      "docwen-current": {
+        "success": true,
+        "artifact_count": 1,
+        "name": "vis026-rich.rtf",
+        "size_bytes": 58185,
+        "backend": "WPS Writer -> WPS Writer",
+        "input_bytes": 198875,
+        "output_bytes": 58185
+      },
+      "all_project_projections_equal": true,
+      "all_project_projections_match_source": true
+    }
+  },
+  "container_projection": {
+    "doc_and_current_wps_magic": "d0cf11e0a1b11ae1",
+    "rtf_prefix": "7b5c72746631205c",
+    "odt_magic": "504b03040a000000",
+    "odt_mimetype": "application/vnd.oasis.opendocument.text",
+    "all_successful_artifacts_match_their_target_container": true
+  },
+  "current_runtime_contract": {
+    "all_successful": true,
+    "all_names_source_owned": true,
+    "all_metadata_matches_route_endpoints": true,
+    "all_diagnostics": ["DOCX-SMARTDOC-OK", "FINALIZER_DONE"],
+    "all_metrics_match_final_input_and_output_bytes": true,
+    "private_docx_hubs_exposed_as_final_artifacts": false
+  },
+  "old_target_wps_boundary": {
+    "routes": ["doc->wps", "odt->wps", "rtf->wps"],
+    "planner_behavior": "Both old projects plan source->docx->wps because wps is listed in the document format set.",
+    "execution_behavior": "Both old execution layers have WPS input support but no DOCX-to-WPS output branch; every route returns None and writes no artifact.",
+    "current_decision": "Current WPS output remains the already documented product-scope enhancement and preserves the normalized source projection."
+  },
+  "process_evidence": {
+    "pre_existing": [
+      {"pid": 1796, "name": "wps.exe", "started": "2026-07-14T11:44:44+08:00"},
+      {"pid": 18764, "name": "wps.exe", "started": "2026-07-14T11:44:34+08:00"},
+      {"pid": 20176, "name": "wpscloudsvr.exe", "started": "2026-07-14T11:44:33+08:00"}
+    ],
+    "new_after_final_settle": [],
+    "policy": "Only processes absent from the pre-probe snapshot were eligible for cleanup; no probe-created process remained or required termination."
+  },
+  "accepted_limits": [
+    "Combined with the ten prior route fixtures, this closes focused real route breadth for all 20 declared SmartDoc routes; it is not a final GOLDEN-009 pass.",
+    "The sample proves selected text/styles, direct bold/italic runs, a table, exact inline image bytes, two header/footer pairs, section count and portrait/landscape orientation. It does not prove floating layout, content controls, equations, notes, macros, signatures, protection, or every editable feature.",
+    "Current WPS targets use the existing DOC-compatible OLE WPS enhancement contract; byte equality is not required, and the normalized Word/WPS readback is the acceptance surface.",
+    "LibreOffice is not installed, so LibreOffice-only execution remains environment-bound.",
+    "Broader real-world document batches and real large-document progress/cancellation feel remain open."
+  ]
+}

@@ -1,0 +1,14 @@
+[
+  {
+    "jsonrpc": "2.0",
+    "method": "task/progress",
+    "params": {
+      "task_id": "task.not.accepted",
+      "sequence": 1,
+      "phase": "conversion",
+      "completed": 0,
+      "total": 100,
+      "unit": "percent"
+    }
+  }
+]

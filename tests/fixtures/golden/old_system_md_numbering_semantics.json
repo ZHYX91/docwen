@@ -1,0 +1,262 @@
+{
+  "golden_id": "GOLDEN-017",
+  "feature": "Markdown heading numbering remove/add semantics",
+  "probe_scope": "normalized function-level smoke; no old-system timestamped output artifact",
+  "input_markdown": "# 一、总则\n\n正文。\n\n## （一）适用范围\n\n### 1. 具体事项\n\n```md\n# 一、代码块标题\n## 2. 代码块子标题\n```\n\n## 第一条 法律条文\n\n# Plain Title\n",
+  "cases": {
+    "remove_only": {
+      "options": {
+        "remove_numbering": true,
+        "add_numbering": false,
+        "numbering_scheme": "gongwen_standard"
+      },
+      "expected_markdown": "# 总则\n\n正文。\n\n## 适用范围\n\n### 具体事项\n\n```md\n# 一、代码块标题\n## 2. 代码块子标题\n```\n\n## 法律条文\n\n# Plain Title\n"
+    },
+    "add_gongwen": {
+      "options": {
+        "remove_numbering": false,
+        "add_numbering": true,
+        "numbering_scheme": "gongwen_standard"
+      },
+      "expected_markdown": "# 一、一、总则\n\n正文。\n\n## （一）（一）适用范围\n\n### 1. 1. 具体事项\n\n```md\n# 一、代码块标题\n## 2. 代码块子标题\n```\n\n## （二）第一条 法律条文\n\n# 二、Plain Title\n"
+    },
+    "remove_add_gongwen": {
+      "options": {
+        "remove_numbering": true,
+        "add_numbering": true,
+        "numbering_scheme": "gongwen_standard"
+      },
+      "expected_markdown": "# 一、总则\n\n正文。\n\n## （一）适用范围\n\n### 1. 具体事项\n\n```md\n# 一、代码块标题\n## 2. 代码块子标题\n```\n\n## （二）法律条文\n\n# 二、Plain Title\n"
+    },
+    "add_hierarchical": {
+      "options": {
+        "remove_numbering": false,
+        "add_numbering": true,
+        "numbering_scheme": "hierarchical_standard"
+      },
+      "expected_markdown": "# 1 一、总则\n\n正文。\n\n## 1.1 （一）适用范围\n\n### 1.1.1 1. 具体事项\n\n```md\n# 一、代码块标题\n## 2. 代码块子标题\n```\n\n## 1.2 第一条 法律条文\n\n# 2 Plain Title\n"
+    },
+    "invalid_scheme_falls_back_gongwen": {
+      "options": {
+        "remove_numbering": false,
+        "add_numbering": true,
+        "numbering_scheme": "missing_scheme"
+      },
+      "expected_markdown": "# 一、一、总则\n\n正文。\n\n## （一）（一）适用范围\n\n### 1. 1. 具体事项\n\n```md\n# 一、代码块标题\n## 2. 代码块子标题\n```\n\n## （二）第一条 法律条文\n\n# 二、Plain Title\n"
+    }
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "source": "src/docwen/utils/heading_numbering.py::process_md_numbering",
+      "matches_expected_cases": [
+        "remove_only",
+        "add_gongwen",
+        "remove_add_gongwen",
+        "add_hierarchical",
+        "invalid_scheme_falls_back_gongwen"
+      ]
+    },
+    "docwen-ref-pyside6": {
+      "source": "src/docwen/utils/heading_numbering.py::process_md_numbering",
+      "matches_expected_cases": [
+        "remove_only",
+        "add_gongwen",
+        "remove_add_gongwen",
+        "add_hierarchical",
+        "invalid_scheme_falls_back_gongwen"
+      ]
+    },
+    "docwen-current": {
+      "source": "docwen_plugin_markdown.numbering.converter::MdNumberingProcessor",
+      "matches_expected_cases": [
+        "remove_only",
+        "add_gongwen",
+        "remove_add_gongwen",
+        "add_hierarchical",
+        "invalid_scheme_falls_back_gongwen"
+      ]
+    }
+  },
+  "scheme_matrix_probe": {
+    "classification": "same_old_current_builtin_add_scheme_matrix_projection",
+    "input_markdown": "# Title\n\n## Chapter\n\n### Section\n\n#### Article\n\n##### Item\n\n```md\n## Code\n```\n",
+    "cases": {
+      "add_legal_standard": {
+        "options": {
+          "remove_numbering": false,
+          "add_numbering": true,
+          "numbering_scheme": "legal_standard"
+        },
+        "expected_markdown": "# 第一编　Title\n\n## 第一章　Chapter\n\n### 第一节　Section\n\n#### 第一条　Article\n\n##### （一）Item\n\n```md\n## Code\n```\n"
+      },
+      "add_hierarchical_h2_start": {
+        "options": {
+          "remove_numbering": false,
+          "add_numbering": true,
+          "numbering_scheme": "hierarchical_h2_start"
+        },
+        "expected_markdown": "# Title\n\n## 1 Chapter\n\n### 1.1 Section\n\n#### 1.1.1 Article\n\n##### 1.1.1.1 Item\n\n```md\n## Code\n```\n"
+      }
+    },
+    "projects": {
+      "docwen-ref-tk": {
+        "source": "src/docwen/utils/heading_numbering.py::process_md_numbering",
+        "matches_expected_cases": [
+          "add_legal_standard",
+          "add_hierarchical_h2_start"
+        ]
+      },
+      "docwen-ref-pyside6": {
+        "source": "src/docwen/utils/heading_numbering.py::process_md_numbering",
+        "matches_expected_cases": [
+          "add_legal_standard",
+          "add_hierarchical_h2_start"
+        ]
+      },
+      "docwen-current": {
+        "source": "docwen_plugin_markdown.common_utils::add_md_numbering",
+        "matches_expected_cases": [
+          "add_legal_standard",
+          "add_hierarchical_h2_start"
+        ]
+      }
+    },
+    "config_sources": {
+      "docwen-ref-tk": "configs/heading_numbering_add.toml",
+      "docwen-ref-pyside6": "configs/heading_numbering_add.toml",
+      "docwen-current": "configs/numbering/add.toml"
+    },
+    "current_regression_test": "packages/plugins/markdown/tests/test_md_numbering.py::TestOldSystemMdNumberingFixture::test_builtin_numbering_scheme_matrix_matches_old_systems",
+    "comparison_implication": "A focused built-in scheme matrix now proves legal_standard and hierarchical_h2_start add-numbering output matches old Tk, old PySide6, and current for generated Markdown headings while fenced code remains untouched. Broader custom/user-edited schemes, GUI numbering editor behavior, and file-level old-system artifacts remain open."
+  },
+  "custom_scheme_probe": {
+    "classification": "same_old_current_custom_user_scheme_projection",
+    "input_markdown": "# Alpha\n\n## Bravo\n\n### Charlie\n\n```md\n## Code\n```\n\n## Delta\n\n# Echo\n",
+    "scheme_id": "custom_roman_letter_probe",
+    "scheme_config": {
+      "level_1": {
+        "format": "第{1.roman_upper}部 "
+      },
+      "level_2": {
+        "format": "{1.roman_upper}-{2.letter_upper} "
+      },
+      "level_3": {
+        "format": "({3.letter_lower}) "
+      }
+    },
+    "options": {
+      "remove_numbering": false,
+      "add_numbering": true,
+      "numbering_scheme": "custom_roman_letter_probe"
+    },
+    "expected_markdown": "# 第I部 Alpha\n\n## I-A Bravo\n\n### (a) Charlie\n\n```md\n## Code\n```\n\n## I-B Delta\n\n# 第II部 Echo\n",
+    "projects": {
+      "docwen-ref-tk": {
+        "source": "src/docwen/utils/heading_numbering.py::process_md_numbering with config_manager.get_heading_schemes() returning the custom scheme",
+        "matches_expected": true
+      },
+      "docwen-ref-pyside6": {
+        "source": "src/docwen/utils/heading_numbering.py::process_md_numbering with config_manager.numbering_add.schemes containing the custom scheme",
+        "matches_expected": true
+      },
+      "docwen-current": {
+        "source": "docwen_plugin_markdown.common_utils::add_md_numbering with a NumberingSchemeRegistry-provided custom scheme",
+        "matches_expected": true
+      }
+    },
+    "config_sources": {
+      "docwen-ref-tk": "configs/heading_numbering_add.toml user-editable schemes",
+      "docwen-ref-pyside6": "configs/heading_numbering_add.toml user-editable schemes",
+      "docwen-current": "configs/numbering/add.toml user-editable schemes via runtime NumberingSchemeRegistry"
+    },
+    "current_regression_test": "packages/plugins/markdown/tests/test_md_numbering.py::TestOldSystemMdNumberingFixture::test_custom_numbering_scheme_matches_old_system_projection",
+    "comparison_implication": "A focused custom/user scheme now proves old Tk, old PySide6, and current all apply user-editable numbering formats with roman, letter, and cross-level placeholders while fenced-code pseudo-headings remain untouched. Broader GUI numbering editor behavior, persistence UX, malformed custom schemes, and file-level old-system artifacts remain open."
+  },
+  "malformed_scheme_probe": {
+    "classification": "same_old_current_malformed_custom_scheme_projection_after_current_fix",
+    "input_markdown": "# Alpha\n\n## Bravo\n\n```md\n# Code\n```\n",
+    "scheme_id": "malformed_invalid_ref_probe",
+    "scheme_config": {
+      "level_1": {
+        "format": "X{10.arabic_half} "
+      },
+      "level_2": {
+        "format": "Y{1.not_a_style} "
+      }
+    },
+    "options": {
+      "remove_numbering": false,
+      "add_numbering": true,
+      "numbering_scheme": "malformed_invalid_ref_probe"
+    },
+    "expected_markdown": "# X10 Alpha\n\n## Y1 Bravo\n\n```md\n# Code\n```\n",
+    "projects": {
+      "docwen-ref-tk": {
+        "source": "src/docwen/utils/heading_numbering.py::HeadingFormatter returns str(ref_level) for invalid placeholder levels and str(counter) for unknown styles",
+        "matches_expected": true
+      },
+      "docwen-ref-pyside6": {
+        "source": "src/docwen/utils/heading_numbering.py::HeadingFormatter returns str(ref_level) for invalid placeholder levels and str(counter) for unknown styles",
+        "matches_expected": true
+      },
+      "docwen-current": {
+        "source": "docwen_core.text.heading_numbering::HeadingFormatter now matches old invalid-placeholder projection",
+        "matches_expected": true,
+        "pre_fix_projection": "# X{10.arabic_half} Alpha\n\n## Y1 Bravo\n\n```md\n# Code\n```\n"
+      }
+    },
+    "config_sources": {
+      "docwen-ref-tk": "configs/heading_numbering_add.toml user-editable schemes",
+      "docwen-ref-pyside6": "configs/heading_numbering_add.toml user-editable schemes",
+      "docwen-current": "configs/numbering/add.toml user-editable schemes via runtime NumberingSchemeRegistry"
+    },
+    "current_regression_test": "packages/plugins/markdown/tests/test_md_numbering.py::TestOldSystemMdNumberingFixture::test_malformed_numbering_scheme_matches_old_system_projection",
+    "comparison_implication": "A focused malformed custom scheme now proves invalid placeholder level references collapse to the referenced number and unknown styles collapse to the active counter, matching old Tk and old PySide6 after the current core formatter fix. Broader GUI validation, persistence UX, and file-level old-system artifacts remain open."
+  },
+  "broader_malformed_custom_document_probe": {
+    "classification": "same_old_current_broader_malformed_custom_file_artifact",
+    "probe_id": "FA-11-N2-2026-07-22",
+    "input_fixture": "tests/fixtures/files/proofread_numbering_real/malformed-custom-numbering.md",
+    "input_sha256": "16847B2F457CD4716FDB8319449EF6D8ED4343DC82ED25BB25F9A0E357B70079",
+    "coverage": [
+      "frontmatter pseudo-heading",
+      "leading level-2 heading",
+      "existing numbering remove-then-add",
+      "skipped level",
+      "fenced code pseudo-headings",
+      "repeated level-1 reset",
+      "missing level-5 template",
+      "invalid level-10 placeholder",
+      "unknown numbering style",
+      "inline hash in body text"
+    ],
+    "scheme_id": "fa11_malformed_custom",
+    "scheme_config": {
+      "level_1": {"format": "卷{1.roman_upper} "},
+      "level_2": {"format": "{1.roman_upper}-{2.letter_upper} "},
+      "level_3": {"format": "X{10.arabic_half}/{3.not_a_style} "},
+      "level_4": {"format": "{1.roman_upper}.{2.letter_upper}.{4.arabic_half} "},
+      "level_6": {"format": "[{6.letter_lower}] "}
+    },
+    "options": {
+      "remove_numbering": true,
+      "add_numbering": true,
+      "numbering_scheme": "fa11_malformed_custom"
+    },
+    "expected_markdown": "---\ntitle: \"# 元数据中的伪标题\"\n---\n\n## I-A 前置二级标题\n\n# 卷I 总则\n\n### X10/1 跳级三级标题\n\n## I-A 第二节\n\n#### I.A.1 深层标题\n\n```md\n# 一、代码块一级标题\n## （一）代码块二级标题\n```\n\n# 卷II 重新开始\n\n###### [a] 六级标题\n\n普通正文里的 # 不是标题。\n",
+    "projects": {
+      "docwen-ref-tk": {"matches_expected": true},
+      "docwen-ref-pyside6": {"matches_expected": true},
+      "docwen-current": {"matches_expected": true}
+    },
+    "output_sha256": "D80E25061B2907D10B1B51A34FCA3A644F8E2B41DE429985D3A33B9C80F10202",
+    "external_evidence_dir": "D:/docwen-parity/vis162-proofread-numbering-fa11-0de5539-v6",
+    "current_regression_test": "packages/plugins/markdown/tests/test_md_numbering.py::TestOldSystemMdNumberingFixture::test_broader_malformed_custom_document_matches_three_project_artifacts",
+    "comparison_implication": "All three projects produce byte-identical file-level Markdown for the broader malformed/custom document. This closes the frozen N2 text oracle while GUI validation and persistence UX remain separate UX scope."
+  },
+  "accepted_differences": [
+    "Fixture compares normalized Markdown text only; artifact names, logs, progress text, and output paths are ignored.",
+    "Focused function-level smokes plus one broader file-level malformed/custom document are covered; larger custom/user-edited scheme matrices, GUI editor behavior, and malformed scheme validation UI remain follow-up work.",
+    "Old Tk and old PySide6 fall back to gongwen_standard when add numbering is requested with an unknown scheme; current rewrite preserves that user-visible behavior through the runtime numbering registry."
+  ]
+}

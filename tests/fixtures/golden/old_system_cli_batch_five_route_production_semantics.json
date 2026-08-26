@@ -1,0 +1,153 @@
+{
+  "golden_id": "GOLDEN-006",
+  "case_id": "old_system_cli_batch_five_route_production_semantics",
+  "contract_case_id": "FA-04-N1",
+  "source": "2026-07-22 real three-project production CLI probe using one hash-pinned five-item batch",
+  "stage_start": {
+    "current_head": "d4ab410dcdde7869dac32f459772ac021cfc0c92",
+    "current_tree": "fdd92998ceca487513b7075632cada35eccf456c",
+    "docwen_ref_tk_head": "ec9298286cfe1379d5c5470db381577ea43ca0fa",
+    "docwen_ref_pyside6_head": "63db927c5ded920d4994bfede5c7b34c55e2f43e"
+  },
+  "input_files": [
+    {
+      "name": "sample.docx",
+      "bytes": 36792,
+      "sha256": "1714F2248A27135F1BE945F253736737D6885489BC4D708C8638F9186A7A987A"
+    },
+    {
+      "name": "sheet.xlsx",
+      "bytes": 4878,
+      "sha256": "E2DC0748692820D66DC4871B311D4EDC9A917A7E01327D9AD97527B5226B26C6"
+    },
+    {
+      "name": "image_mix.png",
+      "bytes": 1511,
+      "sha256": "28EAB95EE484BA9A1BEE73D00D88E99188A810CEF6A4F17C5B7B8F3FAA98B093"
+    },
+    {
+      "name": "layout_mix.pdf",
+      "bytes": 856,
+      "sha256": "7A8A4B7BF964C9B40806DEBCE6E1592E19F27CD0BC5EC9F1F100A30D3C730A05"
+    },
+    {
+      "name": "notes.bad",
+      "bytes": 21,
+      "sha256": "0C7C3E8DDAD687ADA7E5F9F86A31D4509C289DB27704297A7111D50CC62450F6"
+    }
+  ],
+  "required_result_order": [
+    "sample.docx",
+    "sheet.xlsx",
+    "image_mix.png",
+    "layout_mix.pdf",
+    "notes.bad"
+  ],
+  "required_content": {
+    "sample.md": [
+      "Batch Doc Smoke",
+      "DOCX batch production smoke text.",
+      "Alpha",
+      "42"
+    ],
+    "sheet.md": [
+      "Sheet1",
+      "Apple",
+      "Pear"
+    ],
+    "image_mix.md": [
+      "![[image_mix.png]]"
+    ],
+    "layout_mix.md": [
+      "PDF batch production smoke text."
+    ]
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "command": "convert --to md --batch --json --continue-on-error",
+      "exit_code": 3,
+      "summary": {
+        "total": 5,
+        "processed_count": 5,
+        "success_count": 4,
+        "failed_count": 1
+      },
+      "result_order_matches": true,
+      "failure": {
+        "file": "notes.bad",
+        "error_code": "strategy_not_found",
+        "details": "conversion='markdown->md'"
+      },
+      "all_json_output_paths_reachable": true,
+      "all_required_content_present": true,
+      "retained_image_link_reachable": true,
+      "retained_image_is_self_contained": true,
+      "image_ocr_text_absent": true,
+      "output_naming": "timestamped subdirectories"
+    },
+    "docwen-ref-pyside6": {
+      "command": "convert --to md --batch --json --continue-on-error",
+      "exit_code": 3,
+      "summary": {
+        "total": 5,
+        "processed_count": 5,
+        "success_count": 4,
+        "failed_count": 1
+      },
+      "result_order_matches": true,
+      "failure": {
+        "file": "notes.bad",
+        "error_code": "strategy_not_found",
+        "details": "conversion='markdown->md'"
+      },
+      "all_json_output_paths_reachable": true,
+      "all_required_content_present": true,
+      "retained_image_link_reachable": true,
+      "retained_image_is_self_contained": true,
+      "image_ocr_text_absent": true,
+      "output_naming": "timestamped subdirectories"
+    },
+    "current": {
+      "command": "run --to md --batch --json --continue-on-error",
+      "exit_code": 2,
+      "summary": {
+        "total": 5,
+        "processed_count": 5,
+        "success_count": 4,
+        "failed_count": 1
+      },
+      "result_order_matches": true,
+      "failure": {
+        "file": "notes.bad",
+        "error_code": "invalid_input",
+        "details": "unsupported_extension"
+      },
+      "all_json_output_paths_reachable": true,
+      "all_required_content_present": true,
+      "retained_image_link_reachable": true,
+      "retained_image_reused_input": true,
+      "orphan_collision_artifact_absent": true,
+      "image_ocr_text_absent": true,
+      "output_naming": "stable source-owned names"
+    }
+  },
+  "exit_code_disposition": {
+    "classification": "verified_current_architecture_improvement",
+    "decision": "Keep current prevalidation exit 2 and invalid_input/unsupported_extension instead of routing a known bad extension into runtime to reproduce reference exit 3 and strategy_not_found.",
+    "user_visible_alignment": "All projects truthfully report one failure in the fifth aligned slot and return a non-zero process exit.",
+    "user_accepted_boundary_required": false
+  },
+  "current_defect_repaired": {
+    "classification": "current_only_final_artifact_registry_link_collision",
+    "before": "The current runtime renamed the registered retained image to image_mix_001.png while Markdown linked image_mix.png; reachability depended on the untouched source and left an orphan duplicate.",
+    "after": "Same-directory rename mode reuses an identical non-primary retained input, records reused_input=true, writes no duplicate, and fails closed if the retained bytes differ.",
+    "focused_tests": [
+      "packages/runtime/tests/test_output_finalizer.py::TestOutputFinalizer::test_finalize_reuses_identical_nonprimary_input_in_same_dir",
+      "packages/runtime/tests/test_output_finalizer.py::TestOutputFinalizer::test_finalize_fails_closed_for_changed_retained_input_collision",
+      "packages/plugins/image/tests/test_image_conversions.py::TestImageToMarkdown::test_image_to_markdown_same_dir_reuses_retained_input_without_orphan_collision"
+    ]
+  },
+  "focused_scope_decision": "FA-04-N1 is the single frozen five-route delta. Existing three-item batch evidence is reused, and no broader CLI matrix is required to close this finite family.",
+  "disposition": "FIXED_AND_VERIFIED",
+  "boundary": "Closes only CONTRACT-2026-07-22-001 FA-04. The other twelve final-artifact families and overall parity remain open."
+}

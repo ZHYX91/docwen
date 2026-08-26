@@ -1,0 +1,450 @@
+{
+  "golden_id": "GOLDEN-002",
+  "scope": "focused three-project Apache POI tracked-revision and OLE/attachment DOCX batch with current production fixes",
+  "created_at": "2026-07-16",
+  "source_repository": {
+    "owner": "apache",
+    "repository": "poi",
+    "commit": "86e967d9b28d6a322a87ae8fcbf2a7eeb56cef96",
+    "repository_url": "https://github.com/apache/poi",
+    "docx_paths_in_tree": 128,
+    "unique_docx_blobs": 127,
+    "tree_truncated": false,
+    "package_screened_candidates_before_docwen_execution": 3,
+    "redistribution": "external official test binaries retained only in workspace-bound temporary probe"
+  },
+  "sources": {
+    "delins.docx": {
+      "repository_path": "test-data/document/delins.docx",
+      "blob_sha": "b53069135b573f226bc594a47ff368bdb8de8c6f",
+      "bytes": 17720,
+      "sha256": "7ecad102602586be7f1371f117fc567ea47f3ed0ca703b353e003002f1ff8d3f",
+      "package_entries": 15,
+      "track_revisions": true,
+      "insertion_nodes": 32,
+      "insertion_bearing_paragraphs": 13,
+      "insertion_only_paragraphs": 12,
+      "deletion_nodes": 4,
+      "deletion_only_paragraphs": 2,
+      "hyperlinks": 7,
+      "representative_insertions": [
+        "March 2009: Apache Tika Release",
+        "Apache Tika 0.3 has been released. Please see the download page for more details.",
+        "Apache Droids - an intelligent standalone robot framework - Thorsten Scherler. March 26th @ 15:00"
+      ],
+      "deleted_text_prefixes": [
+        "A pendant worn in place of the red spot",
+        "Tika Waylan, a major character"
+      ]
+    },
+    "EmbeddedDocument.docx": {
+      "repository_path": "test-data/document/EmbeddedDocument.docx",
+      "blob_sha": "1cb35a5cf7b48bd4b8fc4a13571a46591b60798f",
+      "bytes": 13268,
+      "sha256": "3cb521da0faab3b8a9e7c5d155961b4f5506fb2ceda8e69e0790d03ee01767f2",
+      "package_entries": 13,
+      "visible_body": "Let me see what happens if I insert a worksheet.",
+      "embeddings": [
+        {
+          "part": "word/embeddings/Microsoft_Office_Excel_97-2003_Worksheet1.xls",
+          "bytes": 18432,
+          "sha256": "723f430df655ae9066dfcf1910df08d4010c284b5d8033b1db872c0ba5bdc8b0",
+          "magic": "d0cf11e0a1b11ae1"
+        }
+      ],
+      "preview_media": [
+        {
+          "part": "word/media/image1.emf",
+          "bytes": 2972,
+          "sha256": "18e97787405ba97f9890668d282c87bc9bcdb31954826e51b551d71920ce062d"
+        }
+      ]
+    },
+    "WordWithAttachments.docx": {
+      "repository_path": "test-data/document/WordWithAttachments.docx",
+      "blob_sha": "ebefabc4432b1efed38102ad456ca45ad873ecb3",
+      "bytes": 144959,
+      "sha256": "90352263823e6d3d39a4ec88212134b74bcb0f86b603bc3b51d712a3ec3df9f2",
+      "package_entries": 31,
+      "embedding_count": 5,
+      "preview_media_count": 5,
+      "hyperlinks": 3,
+      "textbox_paragraphs": [
+        "Словарь",
+        "dictionary",
+        "Луғат"
+      ],
+      "current_body_anchor_index": 5,
+      "embeddings": [
+        {
+          "part": "word/embeddings/_____Microsoft_Office_Excel1.xlsx",
+          "bytes": 9557,
+          "sha256": "471dcecbca53c35f33255df5b0207345f30109a034030c7d4077b3097351b1ec"
+        },
+        {
+          "part": "word/embeddings/_____Microsoft_Office_Excel_97-20033.xls",
+          "bytes": 16384,
+          "sha256": "1f96a031de409cc44210f58f76ce0af170cfe01ef1fa1befe3e33b9f4d1a5125"
+        },
+        {
+          "part": "word/embeddings/_________Microsoft_Office_Word_97_-_20031.doc",
+          "bytes": 19968,
+          "sha256": "6287c5b818126f14eb37a467aecd5702ba90bd3f8199bf644e4503f25facbc74"
+        },
+        {
+          "part": "word/embeddings/_________Microsoft_Office_Word_97_-_20032.doc",
+          "bytes": 24064,
+          "sha256": "6bd07e1dfe7e3d6518013d38f2a7d24cd49220a29395f34c704f2e14178e2e36"
+        },
+        {
+          "part": "word/embeddings/oleObject1.bin",
+          "bytes": 104448,
+          "sha256": "e541237987a4e472acb72b245a0353ec86daef0734eee9ff9b6f65c100fa9d5f"
+        }
+      ],
+      "preview_media": [
+        {
+          "part": "word/media/image1.wmf",
+          "bytes": 3726,
+          "sha256": "90f616810030696b8b3b1cd2686a603e484262d00b8dc0eeba0266b28cca857d"
+        },
+        {
+          "part": "word/media/image2.emf",
+          "bytes": 1952,
+          "sha256": "2156195ef201015167ead7b09b568042142520ff0d5618eeddb6ba5b169e095f"
+        },
+        {
+          "part": "word/media/image3.emf",
+          "bytes": 5396,
+          "sha256": "8e362ed597728fa8a3eedc95785f2375b9d87cfc5e727de4f6dd597a4f809f16"
+        },
+        {
+          "part": "word/media/image4.emf",
+          "bytes": 5132,
+          "sha256": "cc90707a7aab5dcb25ce2cb5fdefe6fd611d5c3d632ee5d4d18373cc7d672add"
+        },
+        {
+          "part": "word/media/image5.emf",
+          "bytes": 3392,
+          "sha256": "f35ded1fae0aa91c50f3f8846401d5565e940246f15bf03c38a5c1fb38118a03"
+        }
+      ]
+    }
+  },
+  "execution_contract": {
+    "baseline_three_project_executions": 9,
+    "post_fix_current_executions": 3,
+    "valid_production_executions": 12,
+    "all_executions_successful": true,
+    "aligned_options": [
+      "keep images",
+      "no OCR",
+      "standard DOCX to Markdown",
+      "aligned GUI YAML labels"
+    ],
+    "docwen-ref-tk": "project venv plus production convert_docx_to_md after GUI translator injection",
+    "docwen-ref-pyside6": "project venv plus initialize_runtime and production convert_docx_to_md",
+    "docwen-current": "project venv plus DocumentPlugin, TaskManager, and OutputFinalizer",
+    "office_processes_started": false
+  },
+  "revision_projection": {
+    "docwen-ref-tk": {
+      "raw_bytes": 492,
+      "raw_sha256": "9a78220ace57ffe804ab30e28e0fc1bda6f790e1bb9a1df54f7b703bd18942e1",
+      "insertion_only_paragraphs_visible": 0,
+      "deletion_only_paragraphs_visible": 0,
+      "markdown_links": 0
+    },
+    "docwen-ref-pyside6": {
+      "raw_bytes": 908,
+      "raw_sha256": "a3551b71eca1693fa897a6f748487124306cef3147571e00f6c8755e91a59404",
+      "insertion_only_paragraphs_visible": 0,
+      "deletion_only_paragraphs_visible": 0,
+      "markdown_links": 7
+    },
+    "docwen-current-before-fix": {
+      "raw_bytes": 920,
+      "raw_sha256": "74969e187eabf973eef8611dc4c0983c926e5e111ee7d236577e5947d547d1d2",
+      "paragraph_count": 9,
+      "insertion_only_paragraphs_visible": 0,
+      "deletion_only_paragraphs_visible": 0,
+      "markdown_links": 7
+    },
+    "docwen-current-after-fix": {
+      "raw_bytes": 1881,
+      "raw_sha256": "e8e99820af1b4abf3948545ef7c2746afd5ac45ece131ce32d9df2ae9b222960",
+      "body_sha256": "8598353ef44e851194f6bb6635e6cf5608902d3e5022d4ceef373936080962ea",
+      "paragraph_count": 21,
+      "insertion_only_paragraphs_visible": 12,
+      "deletion_only_paragraphs_visible": 0,
+      "markdown_links": 7
+    },
+    "accepted_policy": "current renders accepted insertions, omits deletions, and retains old PySide6 hyperlink improvement"
+  },
+  "attachment_projection": {
+    "EmbeddedDocument.docx": {
+      "docwen-ref-tk": {
+        "raw_bytes": 124,
+        "raw_sha256": "a9843d26d0d7983f81397ac27a8c1fda2255bd7896292ddf93b5ec686a6e60d8"
+      },
+      "docwen-ref-pyside6": {
+        "raw_bytes": 124,
+        "raw_sha256": "a9843d26d0d7983f81397ac27a8c1fda2255bd7896292ddf93b5ec686a6e60d8"
+      },
+      "docwen-current": {
+        "raw_bytes": 133,
+        "raw_sha256": "8da0207957bd08b61726a9b73cb7d13a4c2729872380a9510d8ecbe7fbff75c7"
+      },
+      "normalized_body_equal_across_three_projects": true
+    },
+    "WordWithAttachments.docx": {
+      "docwen-ref-tk": {
+        "raw_bytes": 1183,
+        "raw_sha256": "e36925fd44a18bce285605c9d4c2f032a1ed142d631ee6ac72c34e511086c878",
+        "hyperlinks_visible": false,
+        "textbox_order": "after table before body poems"
+      },
+      "docwen-ref-pyside6": {
+        "raw_bytes": 1361,
+        "raw_sha256": "1d4025ba10c9984b0ebe19a3cda085f9c89f1b151c9caa2749501014d1f54e5c",
+        "hyperlinks_visible": true,
+        "textbox_order": "after table before body poems"
+      },
+      "docwen-current-before-fix": {
+        "raw_bytes": 1405,
+        "raw_sha256": "a0565f2d21b0311030fd19c92dbcd57907a4dd450c554fc5353591a45967e5f4",
+        "hyperlinks_visible": true,
+        "textbox_order": "document end"
+      },
+      "docwen-current-after-fix": {
+        "raw_bytes": 1405,
+        "raw_sha256": "74a910d6c172bec3e414bbb8d7e85de94fdc929fd29b49f97b7095122f306492",
+        "body_sha256": "ef3fabfb90088205bd0e338e9bc7272bd934d8c542d78868c2cbf0610c3b2d82",
+        "hyperlinks_visible": true,
+        "textbox_order": "after source body anchor before table"
+      }
+    },
+    "artifact_count_per_project_per_source": 1,
+    "attachment_artifacts_emitted": 0,
+    "preview_image_artifacts_emitted": 0,
+    "embedded_filenames_emitted_in_markdown": 0,
+    "shared_omission_is_accepted_final_fidelity": false
+  },
+  "current_runtime_finalizer": {
+    "delins.docx": {
+      "success": true,
+      "primary_name": "delins.md",
+      "primary_bytes": 1881,
+      "primary_sha256": "e8e99820af1b4abf3948545ef7c2746afd5ac45ece131ce32d9df2ae9b222960",
+      "paragraph_count": 21,
+      "heading_count": 0,
+      "table_count": 0,
+      "image_count": 0
+    },
+    "EmbeddedDocument.docx": {
+      "success": true,
+      "primary_name": "EmbeddedDocument.md",
+      "primary_bytes": 133,
+      "primary_sha256": "8da0207957bd08b61726a9b73cb7d13a4c2729872380a9510d8ecbe7fbff75c7",
+      "paragraph_count": 1,
+      "heading_count": 0,
+      "table_count": 0,
+      "image_count": 0
+    },
+    "WordWithAttachments.docx": {
+      "success": true,
+      "primary_name": "WordWithAttachments.md",
+      "primary_bytes": 1405,
+      "primary_sha256": "74a910d6c172bec3e414bbb8d7e85de94fdc929fd29b49f97b7095122f306492",
+      "paragraph_count": 19,
+      "heading_count": 0,
+      "table_count": 1,
+      "image_count": 0
+    },
+    "artifact_count_per_source": 1,
+    "diagnostics_per_source": [
+      "DOCX2MD-OK",
+      "FINALIZER_DONE"
+    ],
+    "workspace_paths_leaked": false
+  },
+  "smartdoc_physical_addendum": {
+    "evidence_id": "VIS-2026-07-17-113",
+    "shared_external_evidence": {
+      "root": "D:/docwen-parity/vis113-smartdoc-poi-physical-b757cee-v1",
+      "files": 133,
+      "bytes": 13293276,
+      "production_artifacts": 27,
+      "word_pdfs": 30,
+      "rendered_page_pngs": 40,
+      "contact_sheets": 9,
+      "physical_projection_sha256": "ebdae3ef82a4d905e7d9ad695a49d77c039449c7c6e6c96bc90c0b27c65c533e",
+      "word_object_projection_sha256": "9843ae129a5561c27eabb56b5265c2e42841cd192471fde867005e55e4e0020f"
+    },
+    "execution": {
+      "sources_in_this_fixture": 2,
+      "targets": [
+        "doc",
+        "rtf",
+        "odt"
+      ],
+      "projects": [
+        "docwen-ref-tk",
+        "docwen-ref-pyside6",
+        "docwen-current"
+      ],
+      "production_conversions": 18,
+      "all_successful": true,
+      "renderer": "Microsoft Word ExportAsFixedFormat PDF",
+      "rasterizer": "Poppler 120 DPI",
+      "all_contact_sheets_inspected": true
+    },
+    "delins.docx": {
+      "same_target_three_project": {
+        "doc": {
+          "pages": 1,
+          "page_sizes_equal": true,
+          "text_equal": true,
+          "pixels_equal": true
+        },
+        "rtf": {
+          "pages": 1,
+          "page_sizes_equal": true,
+          "text_equal": true,
+          "pixels_equal": true
+        },
+        "odt": {
+          "pages": 1,
+          "page_sizes_equal": true,
+          "text_equal": true,
+          "pixels_equal": true
+        }
+      },
+      "source_fidelity": {
+        "doc": {
+          "page_count_equal": true,
+          "global_pdf_text_equal": true,
+          "changed_pixel_ratio": [
+            0.00294512
+          ]
+        },
+        "rtf": {
+          "page_count_equal": true,
+          "global_pdf_text_equal": true,
+          "changed_pixel_ratio": [
+            0.00285402
+          ]
+        },
+        "odt": {
+          "page_count_equal": true,
+          "global_pdf_text_equal": true,
+          "changed_pixel_ratio": [
+            0.089225
+          ]
+        }
+      },
+      "word_object_projection": {
+        "source": {
+          "paragraphs": 25,
+          "fields": 21
+        },
+        "doc_all_projects": {
+          "paragraphs": 25,
+          "fields": 21
+        },
+        "rtf_all_projects": {
+          "paragraphs": 25,
+          "fields": 21
+        },
+        "odt_all_projects": {
+          "paragraphs": 23,
+          "fields": 18
+        }
+      },
+      "classification": "accepted inserted text and page count stay visible; ODT has a shared denser reflow and reduced Word object counts, not accepted revision-metadata fidelity"
+    },
+    "WordWithAttachments.docx": {
+      "same_target_three_project": {
+        "doc": {
+          "pages": 2,
+          "page_sizes_equal": true,
+          "text_equal": true,
+          "pixels_equal": true
+        },
+        "rtf": {
+          "pages": 2,
+          "page_sizes_equal": true,
+          "text_equal": true,
+          "pixels_equal": true
+        },
+        "odt": {
+          "pages": 2,
+          "page_sizes_equal": true,
+          "text_equal": true,
+          "pixels_equal": true
+        }
+      },
+      "source_fidelity": {
+        "doc": {
+          "page_count_equal": true,
+          "global_pdf_text_equal": true,
+          "changed_pixel_ratio": [
+            0.00321768,
+            0.00202988
+          ]
+        },
+        "rtf": {
+          "page_count_equal": true,
+          "global_pdf_text_equal": false,
+          "text_sequence_ratio": 0.939612,
+          "changed_pixel_ratio": [
+            0.08156741,
+            0.00995645
+          ]
+        },
+        "odt": {
+          "page_count_equal": true,
+          "global_pdf_text_equal": false,
+          "text_sequence_ratio": 0.908371,
+          "changed_pixel_ratio": [
+            0.0799765,
+            0.00975633
+          ]
+        }
+      },
+      "word_object_counts_all_targets_all_projects": {
+        "pages": 2,
+        "paragraphs": 53,
+        "tables": 1,
+        "sections": 1,
+        "shapes": 1,
+        "inline_shapes": 8
+      },
+      "manual_boundary": "DOC closely retains the source page; RTF and ODT identically move the visible embedded-Word icon from page 2 to page 1 and reorder or respace textbox/page text without clipping, black blocks, missing pages, or a current-only loss",
+      "classification": "current has exact old-Tk/old-PySide6 physical parity; visible preview survival is not attachment-byte extraction, embedded-file opening, or accepted broad floating-layout fidelity"
+    }
+  },
+  "fixes": {
+    "wrapped_visible_text_production_gate": "Paragraph.text empty fallback now consumes the shared XML display renderer",
+    "body_textbox_anchor_consumption": "core resolves top-level body anchor indexes and Document plugin emits anchored textbox paragraphs in body order",
+    "layer_boundary_preserved": true,
+    "direct_regression_tests_added": 4
+  },
+  "classification": {
+    "current_only_production_gap_found": true,
+    "existing_capability_but_real_entry_not_wired_found": true,
+    "documentation_or_test_evidence_drift_found": true,
+    "route_or_option_wiring_gap_found": false,
+    "production_change_made": true,
+    "old_pyside6_hyperlink_improvement_retained": true,
+    "source_order_textbox_improvement_retained": true,
+    "shared_attachment_omission_is_accepted_final_fidelity": false
+  },
+  "known_limits": [
+    "All three standard Markdown paths omit embedded Office attachment bytes and their EMF/WMF previews.",
+    "The shared attachment omission is a product-scope boundary, not a current regression and not accepted final attachment fidelity.",
+    "Current preserves accepted insertion display text and omits deleted text, but does not export revision metadata, authors, timestamps or review UI.",
+    "Textbox source-anchor order is not Word floating-shape geometry or physical page-layout proof.",
+    "Broader attachment types, revision metadata, layout, large documents, LibreOffice and physical UX remain open."
+  ]
+}

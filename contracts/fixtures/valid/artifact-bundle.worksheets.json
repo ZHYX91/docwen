@@ -1,0 +1,48 @@
+{
+  "schema": "docwen.artifact_bundle.v2",
+  "bundle_id": "bundle.worksheets.001",
+  "task_id": "task.worksheets.001",
+  "producer": {
+    "name": "DocWen",
+    "product_version": "0.9.0",
+    "machine_protocol": "docwen.machine.v1"
+  },
+  "layout_schema": "docwen.artifact_layout.v1",
+  "artifacts": [
+    {
+      "artifact_id": "resource.sheet.summary",
+      "kind": "resource",
+      "locator": "worksheets/summary.csv",
+      "logical_path": "worksheets/summary.csv",
+      "suggested_name": "summary.csv",
+      "media_type": "text/csv",
+      "size_bytes": 256,
+      "sha256": "8888888888888888888888888888888888888888888888888888888888888888"
+    },
+    {
+      "artifact_id": "resource.sheet.details",
+      "kind": "resource",
+      "locator": "worksheets/details.csv",
+      "logical_path": "worksheets/details.csv",
+      "suggested_name": "details.csv",
+      "media_type": "text/csv",
+      "size_bytes": 1024,
+      "sha256": "9999999999999999999999999999999999999999999999999999999999999999"
+    }
+  ],
+  "entries": [
+    {
+      "artifact_id": "resource.sheet.summary",
+      "role": "worksheet",
+      "ordinal": 0,
+      "preferred": true
+    },
+    {
+      "artifact_id": "resource.sheet.details",
+      "role": "worksheet",
+      "ordinal": 1,
+      "preferred": false
+    }
+  ],
+  "relations": []
+}

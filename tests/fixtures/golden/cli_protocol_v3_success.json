@@ -1,0 +1,22 @@
+{
+  "protocol_version": 3,
+  "product_version": "0.9.0",
+  "success": true,
+  "command": "convert",
+  "data": {
+    "inputs": ["C:\\work\\source.docx"],
+    "output": "C:\\work\\result.md",
+    "artifacts": [
+      {
+        "path": "C:\\work\\result.md",
+        "kind": "markdown",
+        "media_type": "text/markdown",
+        "primary": true
+      }
+    ],
+    "details": {}
+  },
+  "error": null,
+  "warnings": [],
+  "meta": {}
+}

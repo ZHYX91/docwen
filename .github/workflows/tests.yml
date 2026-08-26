@@ -6,130 +6,164 @@ on:
       - main
   pull_request:
 
-jobs:
-  i18n:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: "pip"
-      - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install tomlkit
-      - name: Locales completeness
-        run: |
-          python src/docwen/i18n/locale_validator.py check-completeness
+env:
+  PYTHONIOENCODING: utf-8
+  PYTHONUTF8: "1"
 
+jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
-          python-version: "3.12"
-          cache: "pip"
-          cache-dependency-path: pyproject.toml
+          version: "0.12.0"
+          enable-cache: true
       - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install ".[lint]"
+        run: uv sync --frozen --extra lint
       - name: Ruff format (check)
         run: |
-          ruff format --check .
+          uv run ruff format --check .
       - name: Ruff check
         run: |
-          ruff check .
+          uv run ruff check .
+      - name: Test governance consistency
+        run: |
+          uv run python tools/check_test_governance_consistency.py
+      - name: Import-Linter
+        run: |
+          uv run python tools/run_import_linter.py
+      - name: Architecture cleanliness
+        run: |
+          uv run python tools/validation/check_architecture_cleanliness.py --repo-root .
 
   typecheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
-          python-version: "3.12"
-          cache: "pip"
-          cache-dependency-path: pyproject.toml
+          version: "0.12.0"
+          enable-cache: true
       - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install ".[lint]"
+        run: uv sync --frozen --extra lint
       - name: Pyright
         run: |
-          pyright --level error
+          uv run pyright --level error
 
-  pytest_windows_pr:
+  pytest_windows_pr_integration:
     if: github.event_name == 'pull_request'
     runs-on: windows-latest
+    env:
+      DOCWEN_GUI_DISABLE_STATE_SAVE: "1"
+      DOCWEN_PYTEST_XDIST: "1"
+      DOCWEN_PYTEST_XDIST_WORKERS: "auto"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
-          python-version: "3.12"
-          cache: "pip"
-          cache-dependency-path: pyproject.toml
+          version: "0.12.0"
+          enable-cache: true
       - name: Install
+        run: uv sync --frozen --extra test --extra dev
+      - name: QA (declarative pr_gate)
+        env:
+          DOCWEN_PYTEST_RUNTIME_ROOT: ${{ runner.temp }}/docwen-pytest-runtime
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install ".[test]"
-      - name: Clean build artifacts
-        run: python -c "import shutil, pathlib; [shutil.rmtree(p) for p in pathlib.Path('src').rglob('*.egg-info')]"
-      - name: Pytest (fast)
-        run: |
-          python -m pytest -m "not integration and not slow"
+          uv run python tools/qa.py --skip-ruff --skip-pyright --suite pr-integration
+      - name: Upload visibility reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-windows-pr-integration-visibility-reports
+          path: |
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/skip_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/not_collected_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/slow_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/subprocess_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/missing_marker_report.json
 
   pytest_windows_push:
     if: github.event_name == 'push'
     runs-on: windows-latest
+    env:
+      DOCWEN_PYTEST_XDIST: "1"
+      DOCWEN_PYTEST_XDIST_WORKERS: "auto"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
-          python-version: "3.12"
-          cache: "pip"
-          cache-dependency-path: pyproject.toml
+          version: "0.12.0"
+          enable-cache: true
       - name: Install
+        run: uv sync --frozen --extra test --extra dev
+      - name: QA (full)
+        env:
+          DOCWEN_PYTEST_RUNTIME_ROOT: ${{ runner.temp }}/docwen-pytest-runtime
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install ".[test]"
-      - name: Clean build artifacts
-        run: python -c "import shutil, pathlib; [shutil.rmtree(p) for p in pathlib.Path('src').rglob('*.egg-info')]"
-      - name: Pytest (full)
-        run: |
-          python -m pytest
+          uv run python tools/qa.py --skip-ruff --skip-pyright --suite full
+      - name: Upload visibility reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-windows-push-visibility-reports
+          path: |
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/skip_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/not_collected_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/slow_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/subprocess_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/missing_marker_report.json
 
   pytest_ubuntu:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    env:
+      QT_QPA_PLATFORM: offscreen
+      DOCWEN_PYTEST_XDIST: "1"
+      DOCWEN_PYTEST_XDIST_WORKERS: "auto"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
-          python-version: "3.12"
-          cache: "pip"
-          cache-dependency-path: pyproject.toml
+          version: "0.12.0"
+          enable-cache: true
+      - name: Install system dependencies (Qt)
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libegl1 libgl1 libxkbcommon-x11-0 libxcb-cursor0
       - name: Install
+        run: uv sync --frozen --extra test --extra dev
+      - name: QA (fast / unit+contract)
+        env:
+          DOCWEN_PYTEST_RUNTIME_ROOT: ${{ runner.temp }}/docwen-pytest-runtime
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install ".[test]"
-      - name: Clean build artifacts
-        run: python -c "import shutil, pathlib; [shutil.rmtree(p) for p in pathlib.Path('src').rglob('*.egg-info')]"
-      - name: Pytest
-        run: |
-          python -m pytest -m "not integration and not slow and not windows_only"
+          uv run python tools/qa.py --skip-ruff --skip-pyright --suite fast
+      - name: Upload visibility reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-ubuntu-visibility-reports
+          path: |
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/skip_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/not_collected_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/slow_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/subprocess_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/missing_marker_report.json
 
   pytest_macos:
     if: github.event_name == 'pull_request'
     runs-on: macos-latest
+    env:
+      DOCWEN_PYTEST_XDIST: "1"
+      DOCWEN_PYTEST_XDIST_WORKERS: "auto"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
-          python-version: "3.12"
-          cache: "pip"
-          cache-dependency-path: pyproject.toml
+          version: "0.12.0"
+          enable-cache: true
       - name: Install system dependencies
         shell: bash
         run: |
@@ -138,41 +172,116 @@ jobs:
             brew install libheif || true
           fi
       - name: Install
+        run: uv sync --frozen --extra test --extra dev
+      - name: QA (fast / unit+contract)
+        env:
+          DOCWEN_PYTEST_RUNTIME_ROOT: ${{ runner.temp }}/docwen-pytest-runtime
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install ".[test]"
-      - name: Clean build artifacts
-        run: python -c "import shutil, pathlib; [shutil.rmtree(p) for p in pathlib.Path('src').rglob('*.egg-info')]"
-      - name: Pytest
-        run: |
-          python -m pytest -m "not integration and not slow and not windows_only"
+          uv run python tools/qa.py --skip-ruff --skip-pyright --suite fast
+      - name: Upload visibility reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-macos-visibility-reports
+          path: |
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/skip_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/not_collected_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/slow_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/subprocess_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/missing_marker_report.json
 
   coverage:
     if: github.event_name == 'pull_request'
     runs-on: windows-latest
+    env:
+      DOCWEN_TEST_ALLOW_COVERAGE_TRACE: "1"
+      DOCWEN_PYTEST_XDIST: "1"
+      DOCWEN_PYTEST_XDIST_WORKERS: "auto"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
-          python-version: "3.12"
-          cache: "pip"
-          cache-dependency-path: pyproject.toml
+          version: "0.12.0"
+          enable-cache: true
       - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install ".[test]"
-      - name: Clean build artifacts
-        run: python -c "import shutil, pathlib; [shutil.rmtree(p) for p in pathlib.Path('src').rglob('*.egg-info')]"
+        run: uv sync --frozen --extra test --extra dev
       - name: Coverage
+        env:
+          DOCWEN_PYTEST_REPORT_DIR: ${{ runner.temp }}/docwen-pytest-runtime/reports
         run: |
-          python -m pytest -m "not integration and not slow" --cov=docwen --cov-report=xml --cov-report=html --cov-fail-under=35
+          New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP/docwen-pytest-runtime" | Out-Null
+          uv run pytest -m "(unit or contract) and not slow" -n "$env:DOCWEN_PYTEST_XDIST_WORKERS" --dist loadfile --cov --cov-config=pyproject.toml --cov-report=term-missing:skip-covered --cov-report="xml:$env:RUNNER_TEMP/docwen-pytest-runtime/coverage.xml" --cov-report="html:$env:RUNNER_TEMP/docwen-pytest-runtime/htmlcov" --cov-fail-under=81 --basetemp "$env:RUNNER_TEMP/docwen-pytest-runtime/basetemp" -o "cache_dir=$env:RUNNER_TEMP/docwen-pytest-runtime/cache"
+      - name: Coverage source manifest
+        if: always()
+        run: |
+          uv run python tools/check_coverage_source_manifest.py "$env:RUNNER_TEMP/docwen-pytest-runtime/coverage.xml"
+      - name: Core domain coverage summary
+        if: always()
+        run: |
+          uv run python tools/check_core_coverage.py "$env:RUNNER_TEMP/docwen-pytest-runtime/coverage.xml" --soft-gate
+      - name: Upload visibility reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-visibility-reports
+          path: |
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/skip_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/not_collected_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/slow_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/subprocess_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/missing_marker_report.json
       - name: Upload coverage.xml
         uses: actions/upload-artifact@v4
         with:
           name: coverage-xml
-          path: coverage.xml
+          path: ${{ runner.temp }}/docwen-pytest-runtime/coverage.xml
       - name: Upload htmlcov
         uses: actions/upload-artifact@v4
         with:
           name: coverage-html
-          path: htmlcov
+          path: ${{ runner.temp }}/docwen-pytest-runtime/htmlcov
+
+  coverage_gui:
+    if: github.event_name == 'pull_request'
+    runs-on: windows-latest
+    env:
+      DOCWEN_TEST_ALLOW_COVERAGE_TRACE: "1"
+      DOCWEN_GUI_DISABLE_STATE_SAVE: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: "0.12.0"
+          enable-cache: true
+      - name: Install
+        run: uv sync --frozen --extra test
+      - name: GUI coverage
+        env:
+          DOCWEN_PYTEST_REPORT_DIR: ${{ runner.temp }}/docwen-pytest-runtime/reports
+        run: |
+          New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP/docwen-pytest-runtime" | Out-Null
+          uv run pytest packages/apps/gui/tests --cov=docwen_gui --cov-report=term-missing:skip-covered --cov-report="xml:$env:RUNNER_TEMP/docwen-pytest-runtime/coverage-gui.xml" --cov-report="html:$env:RUNNER_TEMP/docwen-pytest-runtime/htmlcov-gui" -o addopts="-v --tb=short --strict-markers --import-mode=importlib -ra" --basetemp "$env:RUNNER_TEMP/docwen-pytest-runtime/basetemp" -o "cache_dir=$env:RUNNER_TEMP/docwen-pytest-runtime/cache"
+      - name: GUI coverage summary
+        run: |
+          uv run python tools/check_gui_coverage.py "$env:RUNNER_TEMP/docwen-pytest-runtime/coverage-gui.xml"
+      - name: Upload visibility reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-gui-visibility-reports
+          path: |
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/skip_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/not_collected_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/slow_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/subprocess_report.json
+            ${{ runner.temp }}/docwen-pytest-runtime/reports/missing_marker_report.json
+      - name: Upload coverage-gui.xml
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-gui-xml
+          path: ${{ runner.temp }}/docwen-pytest-runtime/coverage-gui.xml
+      - name: Upload htmlcov-gui
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-gui-html
+          path: ${{ runner.temp }}/docwen-pytest-runtime/htmlcov-gui

@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:docwen:schema:proofread-report:v2",
+  "title": "DocWen Proofread Report v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "file",
+    "source",
+    "location_contract",
+    "checks_enabled",
+    "issues",
+    "summary"
+  ],
+  "properties": {
+    "schema": { "const": "docwen.proofread_report.v2" },
+    "file": { "type": "string", "minLength": 1 },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["content_sha256", "encoding", "decode_errors"],
+      "properties": {
+        "content_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "encoding": { "const": "utf-8" },
+        "decode_errors": { "const": "replace" }
+      }
+    },
+    "location_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "version",
+        "coordinate_system",
+        "offset_base",
+        "line_base",
+        "column_base",
+        "range_end"
+      ],
+      "properties": {
+        "id": { "const": "docwen.proofread-text-range" },
+        "version": { "const": 1 },
+        "coordinate_system": { "const": "unicode_code_point" },
+        "offset_base": { "const": 0 },
+        "line_base": { "const": 0 },
+        "column_base": { "const": 0 },
+        "range_end": { "const": "exclusive" }
+      }
+    },
+    "checks_enabled": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["symbol_pairing", "symbol_correction", "typos_rule", "sensitive_word"],
+      "properties": {
+        "symbol_pairing": { "type": "boolean" },
+        "symbol_correction": { "type": "boolean" },
+        "typos_rule": { "type": "boolean" },
+        "sensitive_word": { "type": "boolean" }
+      }
+    },
+    "issues": { "type": "array", "items": { "$ref": "#/$defs/issue" } },
+    "summary": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    }
+  },
+  "$defs": {
+    "position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["offset", "line", "column"],
+      "properties": {
+        "offset": { "type": "integer", "minimum": 0 },
+        "line": { "type": "integer", "minimum": 0 },
+        "column": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "$ref": "#/$defs/position" },
+        "end": { "$ref": "#/$defs/position" }
+      }
+    },
+    "fix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "replacement", "applicable"],
+      "properties": {
+        "kind": { "const": "replace_text" },
+        "replacement": { "type": "string" },
+        "applicable": { "const": true }
+      }
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["range", "matched_text", "error_text", "suggestion", "error_type", "source", "rule_key"],
+      "properties": {
+        "range": { "$ref": "#/$defs/range" },
+        "matched_text": { "type": "string", "minLength": 1 },
+        "error_text": { "type": "string" },
+        "suggestion": { "type": "string" },
+        "error_type": { "type": "string" },
+        "source": { "enum": ["typo", "symbol", "pairing", "sensitive"] },
+        "rule_key": { "enum": ["typo", "symbol_correct", "symbol_pair", "sensitive"] },
+        "fix": { "$ref": "#/$defs/fix" }
+      },
+      "allOf": [
+        {
+          "if": { "required": ["fix"] },
+          "then": { "properties": { "source": { "enum": ["typo", "symbol"] } } }
+        }
+      ]
+    }
+  }
+}

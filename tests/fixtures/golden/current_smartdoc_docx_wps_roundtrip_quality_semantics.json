@@ -1,0 +1,84 @@
+{
+  "golden_id": "GOLDEN-009",
+  "scope": "current SmartDoc DOCX to WPS enhancement roundtrip quality smoke",
+  "generated_at": "2026-07-03",
+  "classification": {
+    "kind": "current_enhancement_quality_policy_not_old_system_parity",
+    "notes": [
+      "Old Tk and old PySide6 do not have a successful DOCX to WPS artifact baseline.",
+      "The current rewrite exposes WPS as an output target, so its quality policy is checked by converting DOCX to WPS and then converting the produced WPS back to DOCX.",
+      "This fixture proves focused heading/body/table roundtrip semantics only; it is not a broad WPS fidelity matrix."
+    ]
+  },
+  "input_document": {
+    "filename": "smart-doc-wps-boundary.docx",
+    "paragraphs": [
+      "Smart Doc WPS Boundary",
+      "This document checks DOCX to WPS support boundaries."
+    ],
+    "table": [
+      [
+        "Item",
+        "Qty"
+      ],
+      [
+        "Grape",
+        "7"
+      ]
+    ]
+  },
+  "route": {
+    "source_format": "docx",
+    "target_format": "wps",
+    "category": "document",
+    "roundtrip_target_format": "docx"
+  },
+  "current_rewrite": {
+    "step1_docx_to_wps": {
+      "entry": "uv run docwen run smart-doc-wps-boundary.docx --to wps --output <dir> --json",
+      "success": true,
+      "output_file": "smart-doc-wps-boundary.wps",
+      "output_size_bytes": 102853,
+      "magic_hex": "d0cf11e0a1b11ae1"
+    },
+    "step2_wps_to_docx": {
+      "entry": "uv run docwen run smart-doc-wps-boundary.wps --to docx --output <dir> --json",
+      "success": true,
+      "output_file": "smart-doc-wps-boundary.docx",
+      "output_size_bytes": 30710,
+      "paragraphs": [
+        "Smart Doc WPS Boundary",
+        "This document checks DOCX to WPS support boundaries."
+      ],
+      "tables": [
+        [
+          [
+            "Item",
+            "Qty"
+          ],
+          [
+            "Grape",
+            "7"
+          ]
+        ]
+      ]
+    }
+  },
+  "quality_policy": {
+    "focused_acceptance": [
+      "DOCX to WPS must produce a non-empty OLE compound-file output with .wps extension.",
+      "The produced WPS must be accepted by the current WPS to DOCX route.",
+      "The roundtripped DOCX must preserve the focused heading, body paragraph, and 2x2 table text."
+    ],
+    "accepted_limits": [
+      "Byte equality is not required for the generated WPS or roundtripped DOCX because Office/WPS metadata is environment-specific.",
+      "This basic focused policy does not by itself prove rich styling, image, header/footer, comment, field, revision, or broader WPS application fidelity; rich focused coverage is tracked separately."
+    ]
+  },
+  "evidence": {
+    "transient_output_dir": "tmp/smart-doc-wps-roundtrip-2026-07-03",
+    "process_cleanup": {
+      "residual_processes_after_six_second_wait": []
+    }
+  }
+}

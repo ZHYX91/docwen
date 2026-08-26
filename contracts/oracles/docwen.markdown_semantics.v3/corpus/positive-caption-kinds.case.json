@@ -1,0 +1,15 @@
+{
+  "case_id": "positive-caption-kinds",
+  "category": "positive",
+  "input_id": "positive-caption-kinds.md",
+  "source": "Figure: Figure text\n\n![image](image.png)\n\nTable: Table text ^shared-name\n\n| A |\n|---|\n| 1 |\n\nEquation: Equation text\n\n$$x=1$$\n\nCode: Code text ^code-name\n\n```python\nprint(1)\n```\n",
+  "expected": {
+    "target_kind_ids": [["figure", null], ["table", "shared-name"], ["equation", null], ["code_block", "code-name"]],
+    "anchor_kind_ids": [],
+    "link_kinds": [],
+    "reference_statuses": [],
+    "citation_keys": [],
+    "diagnostics": [],
+    "source_unchanged": true
+  }
+}

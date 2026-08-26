@@ -1,0 +1,15 @@
+{
+  "case_id": "invalid-dangling",
+  "category": "negative",
+  "input_id": "invalid-dangling.md",
+  "source": "^dangling\n",
+  "expected": {
+    "target_kind_ids": [],
+    "anchor_kind_ids": [],
+    "link_kinds": [],
+    "reference_statuses": [],
+    "citation_keys": [],
+    "diagnostics": [{"severity": "error", "code": "docwen.markdown.anchor.dangling", "range": {"start": 0, "end": 9}}],
+    "source_unchanged": true
+  }
+}

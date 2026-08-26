@@ -1,0 +1,25 @@
+{
+  "protocol_version": 3,
+  "product_version": "0.9.0",
+  "success": true,
+  "command": "batch convert",
+  "data": {
+    "total": 1,
+    "processed": 1,
+    "succeeded": 1,
+    "failed": 0,
+    "interrupted": false,
+    "results": [
+      {
+        "input": "C:\\work\\source.docx",
+        "success": true,
+        "output": "C:\\work\\source.md",
+        "error": null,
+        "details": {}
+      }
+    ]
+  },
+  "error": null,
+  "warnings": [],
+  "meta": {"duration_ms": 12.5}
+}

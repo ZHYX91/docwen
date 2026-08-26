@@ -1,0 +1,16 @@
+{
+  "protocol_version": 3,
+  "product_version": "0.9.0",
+  "success": false,
+  "command": "convert",
+  "data": {},
+  "error": {
+    "category": "invalid_input",
+    "code": "invalid_input",
+    "message": "Invalid input.",
+    "details": "d",
+    "hint": null
+  },
+  "warnings": [],
+  "meta": {}
+}

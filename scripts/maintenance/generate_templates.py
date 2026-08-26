@@ -1,381 +1,206 @@
+"""Generate localized DOCX templates from the blank template.
+
+The current workspace no longer has the old monolithic package layout or
+converter API.  This dev-only tool reads locale metadata from
+``i18n/locales/*.toml`` and rewrites the placeholder text in
+``scripts/maintenance/空白模板.docx`` while preserving the blank template's
+paragraph/run formatting.
 """
-多语言模板生成脚本
 
-从空白模板出发，为每种支持的语言生成带有本地化样式和占位符的 DOCX 模板。
-生成结果默认输出到 samples/generated_templates/，确认无误后可手动替换 templates/ 中的模板，
-或使用 --install 参数直接覆盖。
-
-依赖：
-- docwen.i18n: 国际化管理（样式名、占位符、YAML 键名）
-- docwen.converter.md2docx: MD → DOCX 转换核心
-
-使用方式：
-    # 生成所有语言模板到 samples/generated_templates/
-    python scripts/maintenance/generate_templates.py
-
-    # 只生成指定语言
-    python scripts/maintenance/generate_templates.py --locale en_US ja_JP
-
-    # 生成后直接覆盖 templates/ 中的同名模板
-    python scripts/maintenance/generate_templates.py --install
-"""
+from __future__ import annotations
 
 import argparse
-import contextlib
 import logging
-import os
 import shutil
-import sys
-import tempfile
-import time
+from pathlib import Path
+from typing import Any
 
-# 路径配置
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(os.path.dirname(SCRIPT_DIR))
+from docx import Document
 
-# 确保 src 在 sys.path 中
-SRC_DIR = os.path.join(PROJECT_ROOT, "src")
-if SRC_DIR not in sys.path:
-    sys.path.insert(0, SRC_DIR)
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+SCRIPT_DIR = Path(__file__).resolve().parent
+LOCALES_DIR = PROJECT_ROOT / "i18n" / "locales"
+TEMPLATES_DIR = PROJECT_ROOT / "templates"
+BLANK_TEMPLATE_SRC = SCRIPT_DIR / "空白模板.docx"
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "samples" / "generated_templates"
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)s - %(name)s - %(message)s",
-)
+logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(name)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# 空白模板源文件（存放在脚本同级目录）
-BLANK_TEMPLATE_SRC = os.path.join(SCRIPT_DIR, "空白模板.docx")
 
-# templates 目录（运行时临时放置空白模板的位置）
-TEMPLATES_DIR = os.path.join(PROJECT_ROOT, "templates")
-BLANK_TEMPLATE_DST = os.path.join(TEMPLATES_DIR, "空白模板.docx")
+def _read_toml(path: Path) -> dict[str, Any]:
+    """Read a locale TOML file with the repo's preferred TOML reader."""
+    try:
+        from docwen_runtime.toml_io import read_toml_file
+    except Exception:
+        import tomllib
 
-# 默认输出目录
-DEFAULT_OUTPUT_DIR = os.path.join(PROJECT_ROOT, "samples", "generated_templates")
-
-# 语言代码 → 模板文件名（不含扩展名）
-# 从 locale TOML 的 [meta].template_name 自动发现
-LOCALE_TEMPLATE_NAMES = None  # 延迟初始化
+        return tomllib.loads(path.read_text(encoding="utf-8"))
+    return read_toml_file(path)
 
 
-def discover_locale_template_names() -> dict:
-    """
-    扫描 locales/ 目录，读取每个 TOML 的 meta.template_name。
+def discover_locale_template_names() -> dict[str, str]:
+    """Return ``{locale_code: template_name}`` from locale ``[meta]`` tables."""
+    if not LOCALES_DIR.is_dir():
+        raise FileNotFoundError(f"Locale directory not found: {LOCALES_DIR}")
 
-    新增语言只需在 TOML 里填 template_name，无需修改本脚本。
-
-    返回：
-        {locale_code: template_name, ...}
-    """
-    import tomllib
-
-    locales_dir = os.path.join(PROJECT_ROOT, "src", "docwen", "i18n", "locales")
-    result = {}
-    for filename in sorted(os.listdir(locales_dir)):
-        if not filename.endswith(".toml"):
-            continue
-        locale_code = filename[:-5]  # 去掉 .toml
-        filepath = os.path.join(locales_dir, filename)
-        with open(filepath, "rb") as f:
-            data = tomllib.load(f)
-        template_name = data.get("meta", {}).get("template_name")
-        if template_name:
-            result[locale_code] = template_name
+    result: dict[str, str] = {}
+    for path in sorted(LOCALES_DIR.glob("*.toml"), key=lambda item: item.name.casefold()):
+        data = _read_toml(path)
+        meta = data.get("meta", {})
+        template_name = meta.get("template_name") if isinstance(meta, dict) else None
+        if isinstance(template_name, str) and template_name.strip():
+            result[path.stem] = template_name.strip()
         else:
-            logger.debug("跳过 %s（未定义 meta.template_name）", locale_code)
-    logger.info("自动发现 %d 个语言模板: %s", len(result), ", ".join(result))
+            logger.debug("Skipping %s: [meta].template_name is missing", path.name)
+
+    logger.info("Discovered %d locale templates: %s", len(result), ", ".join(result))
     return result
 
 
-def reset_singletons():
-    """
-    重置 I18nManager 和 StyleNameResolver 状态，确保语言切换生效。
+def get_locale_placeholders(locale: str) -> dict[str, str]:
+    """Return the localized title/body placeholders for *locale*."""
+    locale_path = LOCALES_DIR / f"{locale}.toml"
+    if not locale_path.is_file():
+        raise FileNotFoundError(f"Locale file not found: {locale_path}")
 
-    关键：不销毁 StyleNameResolver 单例，而是就地刷新其内部状态。
-    因为 injector.py 在模块加载时通过 from docwen.i18n import style_resolver
-    持有了对该对象的引用，销毁后创建新实例不会更新 injector 中的引用。
-    """
-    import docwen.i18n as i18n_module
-    from docwen.i18n import style_resolver
-    from docwen.i18n.i18n_manager import I18nManager
-
-    # 重置 I18nManager 单例
-    I18nManager._instance = None
-    I18nManager._initialized = False
-    i18n_module._i18n = None
-
-    # 就地刷新 StyleNameResolver（清除 _i18n 引用 + 缓存）
-    style_resolver._i18n = None
-    style_resolver.clear_cache()
+    data = _read_toml(locale_path)
+    placeholders = data.get("placeholders", {})
+    if not isinstance(placeholders, dict):
+        placeholders = {}
+    title = str(placeholders.get("title") or "title").strip()
+    body = str(placeholders.get("body") or "body").strip()
+    return {"title": title or "title", "body": body or "body"}
 
 
-def set_locale(locale: str):
-    """
-    在内存中设置语言（不写配置文件）。
-
-    参数：
-        locale: 语言代码，如 'en_US'
-    """
-    from docwen.i18n.i18n_manager import I18nManager
-
-    i18n = I18nManager()
-    i18n._locale = locale
-    i18n._load_translations()
-    logger.info("语言已切换为: %s (%s)", locale, i18n.get_current_locale_name())
-
-
-def get_locale_placeholders(locale: str) -> dict:
-    """
-    读取指定语言的占位符和 YAML 键名。
-
-    参数：
-        locale: 语言代码
-
-    返回：
-        字典，包含 placeholders 和 yaml_keys
-    """
-    import tomllib
-
-    locale_path = os.path.join(PROJECT_ROOT, "src", "docwen", "i18n", "locales", f"{locale}.toml")
-    with open(locale_path, "rb") as f:
-        data = tomllib.load(f)
-
-    return {
-        "placeholders": data.get("placeholders", {}),
-        "yaml_keys": data.get("yaml_keys", {}),
-    }
-
-
-def generate_md_content(locale_data: dict) -> str:
-    """
-    根据语言的占位符信息生成 MD 内容。
-
-    使用 aliases 字段传递本地化标题占位符，利用 _get_fallback_title 的最高
-    优先级回退机制，自动填充所有语言版本的标题键。正文使用本地化的 body 占位符。
-
-    参数：
-        locale_data: get_locale_placeholders() 返回的字典
-
-    返回：
-        Markdown 字符串
-    """
-    placeholders = locale_data["placeholders"]
-
-    placeholder_title = placeholders.get("title", "title")
-    placeholder_body = placeholders.get("body", "body")
-
-    md_lines = [
-        "---",
-        f'aliases: "{{{{{placeholder_title}}}}}"',
-        "---",
-        "",
-        f"{{{{{placeholder_body}}}}}",
-    ]
-
-    return "\n".join(md_lines)
-
-
-def convert_one_locale(locale: str, output_path: str) -> bool:
-    """
-    使用指定语言转换 MD 到 DOCX。
-
-    参数：
-        locale: 语言代码
-        output_path: 输出 DOCX 路径
-
-    返回：
-        是否成功
-    """
-    from docwen.converter.md2docx.core import convert
-
-    # 重置单例 + 切换语言
-    reset_singletons()
-    set_locale(locale)
-
-    # 读取该语言的占位符
-    locale_data = get_locale_placeholders(locale)
-    md_content = generate_md_content(locale_data)
-    logger.info("生成 MD 内容:\n%s", md_content)
-
-    # 写临时 MD 文件
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as tmp:
-        tmp.write(md_content)
-        tmp_md_path = tmp.name
-
-    try:
-        result = convert(
-            md_path=tmp_md_path,
-            output_path=output_path,
-            template_name="空白模板",
-            progress_callback=lambda msg: logger.info("[%s] %s", locale, msg),
-        )
-        return result is not None
-    finally:
-        # 清理临时 MD 文件
-        with contextlib.suppress(OSError):
-            os.unlink(tmp_md_path)
-
-
-def setup_blank_template():
-    """
-    将空白模板从 scripts/maintenance/ 复制到 templates/（供 TemplateLoader 使用）。
-
-    返回：
-        bool: 是否需要在结束时清理（即 templates/ 中原本没有空白模板）
-    """
-    if not os.path.exists(BLANK_TEMPLATE_SRC):
-        logger.error("空白模板不存在: %s", BLANK_TEMPLATE_SRC)
-        raise FileNotFoundError(f"空白模板不存在: {BLANK_TEMPLATE_SRC}")
-
-    already_exists = os.path.exists(BLANK_TEMPLATE_DST)
-    shutil.copy2(BLANK_TEMPLATE_SRC, BLANK_TEMPLATE_DST)
-    logger.info("已复制空白模板到: %s", BLANK_TEMPLATE_DST)
-
-    # 等待文件系统同步（OneDrive 可能有延迟）
-    for i in range(10):
-        if os.path.exists(BLANK_TEMPLATE_DST):
-            logger.info("空白模板验证通过 (尝试 %d)", i + 1)
-            break
-        logger.warning("等待空白模板文件可见... (%d/10)", i + 1)
-        time.sleep(1)
+def _replace_paragraph_text(paragraph: Any, text: str) -> None:
+    """Replace paragraph text while keeping the first run's formatting."""
+    if paragraph.runs:
+        first_run = paragraph.runs[0]
+        first_run.text = text
+        for run in paragraph.runs[1:]:
+            run.text = ""
     else:
-        raise FileNotFoundError(f"复制后空白模板仍不可见: {BLANK_TEMPLATE_DST}")
-
-    return not already_exists
+        paragraph.add_run(text)
 
 
-def cleanup_blank_template(should_cleanup: bool):
-    """
-    清理 templates/ 中的临时空白模板。
+def _replace_placeholder_text(doc: Any, old_text: str, new_text: str) -> int:
+    """Replace placeholder paragraphs/cells and return the replacement count."""
+    replacements = 0
+    needle = f"{{{{{old_text}}}}}"
+    replacement = f"{{{{{new_text}}}}}"
 
-    参数：
-        should_cleanup: 是否需要清理（仅当之前不存在时才删除）
-    """
-    if should_cleanup and os.path.exists(BLANK_TEMPLATE_DST):
-        try:
-            os.remove(BLANK_TEMPLATE_DST)
-            logger.info("已清理临时空白模板: %s", BLANK_TEMPLATE_DST)
-        except OSError as e:
-            logger.warning("清理空白模板失败: %s", e)
+    for paragraph in doc.paragraphs:
+        if paragraph.text.strip() == needle:
+            _replace_paragraph_text(paragraph, replacement)
+            replacements += 1
+
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for paragraph in cell.paragraphs:
+                    if paragraph.text.strip() == needle:
+                        _replace_paragraph_text(paragraph, replacement)
+                        replacements += 1
+
+    return replacements
 
 
-def install_templates(output_dir: str):
-    """
-    将生成的模板从输出目录复制到 templates/ 目录。
+def generate_template(locale: str, output_path: Path) -> None:
+    """Generate one localized DOCX template."""
+    if not BLANK_TEMPLATE_SRC.is_file():
+        raise FileNotFoundError(f"Blank template not found: {BLANK_TEMPLATE_SRC}")
 
-    参数：
-        output_dir: 生成模板所在的目录
-    """
+    placeholders = get_locale_placeholders(locale)
+    doc = Document(str(BLANK_TEMPLATE_SRC))
+
+    title_count = _replace_placeholder_text(doc, "标题", placeholders["title"])
+    body_count = _replace_placeholder_text(doc, "正文", placeholders["body"])
+
+    if title_count == 0:
+        raise RuntimeError("Blank template does not contain {{标题}}")
+    if body_count == 0:
+        raise RuntimeError("Blank template does not contain {{正文}}")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    doc.save(str(output_path))
+
+
+def install_templates(output_dir: Path) -> int:
+    """Copy generated DOCX templates into the runtime templates directory."""
+    TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
     installed = 0
-    for filename in os.listdir(output_dir):
-        if filename.endswith(".docx"):
-            src = os.path.join(output_dir, filename)
-            dst = os.path.join(TEMPLATES_DIR, filename)
-            shutil.copy2(src, dst)
-            logger.info("已安装模板: %s", filename)
-            installed += 1
-    logger.info("共安装 %d 个模板到 %s", installed, TEMPLATES_DIR)
+    for src in sorted(output_dir.glob("*.docx"), key=lambda item: item.name.casefold()):
+        shutil.copy2(src, TEMPLATES_DIR / src.name)
+        logger.info("Installed template: %s", src.name)
+        installed += 1
+    return installed
 
 
-def main():
-    """主函数：解析参数并执行模板生成"""
-    global LOCALE_TEMPLATE_NAMES
-    LOCALE_TEMPLATE_NAMES = discover_locale_template_names()
-
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    locale_template_names = discover_locale_template_names()
     parser = argparse.ArgumentParser(
-        description="从空白模板生成多语言 DOCX 模板",
+        description="Generate localized DOCX templates from the blank template",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "--locale",
         nargs="+",
-        choices=list(LOCALE_TEMPLATE_NAMES.keys()),
-        default=list(LOCALE_TEMPLATE_NAMES.keys()),
-        help="要生成的语言（默认全部）",
+        choices=sorted(locale_template_names),
+        default=sorted(locale_template_names),
+        help="Locales to generate (default: all discovered locales)",
     )
     parser.add_argument(
         "--output-dir",
+        type=Path,
         default=DEFAULT_OUTPUT_DIR,
-        help=f"输出目录（默认: {DEFAULT_OUTPUT_DIR}）",
+        help=f"Output directory (default: {DEFAULT_OUTPUT_DIR})",
     )
     parser.add_argument(
         "--install",
         action="store_true",
-        help="生成后直接复制到 templates/ 目录覆盖同名模板",
+        help="Copy generated templates into templates/ after generation",
     )
+    parser.set_defaults(locale_template_names=locale_template_names)
+    return parser.parse_args(argv)
 
-    args = parser.parse_args()
-    output_dir = args.output_dir
-    locales = args.locale
 
-    # 准备输出目录
-    os.makedirs(output_dir, exist_ok=True)
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    locale_template_names: dict[str, str] = args.locale_template_names
+    output_dir: Path = args.output_dir
+    results: dict[str, bool] = {}
 
     logger.info("=" * 60)
-    logger.info("多语言模板生成")
-    logger.info("空白模板: %s", BLANK_TEMPLATE_SRC)
-    logger.info("输出目录: %s", output_dir)
-    logger.info("目标语言: %s", ", ".join(locales))
+    logger.info("Localized DOCX template generation")
+    logger.info("Blank template: %s", BLANK_TEMPLATE_SRC)
+    logger.info("Output directory: %s", output_dir)
+    logger.info("Locales: %s", ", ".join(args.locale))
     logger.info("=" * 60)
 
-    # 复制空白模板到 templates/
-    should_cleanup = setup_blank_template()
+    for locale in args.locale:
+        template_name = locale_template_names[locale]
+        output_path = output_dir / f"{template_name}.docx"
+        try:
+            generate_template(locale, output_path)
+        except Exception as exc:
+            results[locale] = False
+            logger.error("%s failed: %s", locale, exc, exc_info=True)
+            continue
 
-    results = {}
-    try:
-        for locale in locales:
-            template_name = LOCALE_TEMPLATE_NAMES[locale]
-            output_path = os.path.join(output_dir, f"{template_name}.docx")
+        results[locale] = True
+        logger.info("%s generated: %s (%d bytes)", locale, output_path, output_path.stat().st_size)
 
-            logger.info("-" * 40)
-            logger.info("生成模板: %s (%s)", template_name, locale)
-
-            try:
-                success = convert_one_locale(locale, output_path)
-                results[locale] = success
-                if success:
-                    file_size = os.path.getsize(output_path)
-                    logger.info(
-                        "✅ %s 成功 → %s (%d bytes)",
-                        locale,
-                        template_name,
-                        file_size,
-                    )
-                else:
-                    logger.error("❌ %s 失败 (convert 返回 None)", locale)
-            except Exception as e:
-                results[locale] = False
-                logger.error("❌ %s 异常: %s", locale, str(e), exc_info=True)
-    finally:
-        # 清理临时空白模板
-        cleanup_blank_template(should_cleanup)
-
-    # 打印汇总
-    logger.info("=" * 60)
-    logger.info("生成结果汇总")
-    logger.info("=" * 60)
-    success_count = sum(1 for v in results.values() if v)
+    success_count = sum(1 for ok in results.values() if ok)
     fail_count = len(results) - success_count
 
-    for locale, success in results.items():
-        name = LOCALE_TEMPLATE_NAMES[locale]
-        status = "✅ 成功" if success else "❌ 失败"
-        logger.info("  %s (%s): %s", locale, name, status)
+    if args.install and success_count:
+        installed = install_templates(output_dir)
+        logger.info("Installed %d templates into %s", installed, TEMPLATES_DIR)
 
-    logger.info("-" * 40)
-    logger.info("成功: %d / %d, 失败: %d", success_count, len(results), fail_count)
-    logger.info("输出目录: %s", output_dir)
-
-    # 如果指定 --install，复制到 templates/
-    if args.install and success_count > 0:
-        logger.info("-" * 40)
-        logger.info("正在安装模板到 templates/ ...")
-        install_templates(output_dir)
-
-    if fail_count > 0:
-        sys.exit(1)
+    logger.info("Generation summary: success=%d / %d, failed=%d", success_count, len(results), fail_count)
+    return 1 if fail_count else 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -1,0 +1,147 @@
+{
+  "golden_id": "GOLDEN-009",
+  "scope": "focused SmartDoc DOCX to DOC real external-office smoke",
+  "generated_at": "2026-07-03",
+  "input_document": {
+    "filename": "smart-doc-probe.docx",
+    "paragraphs": [
+      "Smart Doc Smoke",
+      "This document checks DOCX to DOC conversion."
+    ],
+    "table": [
+      [
+        "Item",
+        "Qty"
+      ],
+      [
+        "Apple",
+        "2"
+      ]
+    ]
+  },
+  "route": {
+    "source_format": "docx",
+    "target_format": "doc",
+    "category": "document"
+  },
+  "expected_semantics": {
+    "output_extension": ".doc",
+    "output_size_bytes": 101829,
+    "paragraphs": [
+      "Smart Doc Smoke",
+      "This document checks DOCX to DOC conversion.",
+      "Item",
+      "Qty",
+      "Apple",
+      "2"
+    ],
+    "tables": [
+      [
+        [
+          "Item",
+          "Qty"
+        ],
+        [
+          "Apple",
+          "2"
+        ]
+      ]
+    ]
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "entry": "docwen.converter.formats.document.docx_to_doc",
+      "success": true,
+      "output_size_bytes": 101829,
+      "paragraphs": [
+        "Smart Doc Smoke",
+        "This document checks DOCX to DOC conversion.",
+        "Item",
+        "Qty",
+        "Apple",
+        "2"
+      ],
+      "tables": [
+        [
+          [
+            "Item",
+            "Qty"
+          ],
+          [
+            "Apple",
+            "2"
+          ]
+        ]
+      ]
+    },
+    "docwen-ref-pyside6": {
+      "entry": "docwen.converter.doc_interop.docx_to_doc",
+      "success": true,
+      "output_size_bytes": 101829,
+      "paragraphs": [
+        "Smart Doc Smoke",
+        "This document checks DOCX to DOC conversion.",
+        "Item",
+        "Qty",
+        "Apple",
+        "2"
+      ],
+      "tables": [
+        [
+          [
+            "Item",
+            "Qty"
+          ],
+          [
+            "Apple",
+            "2"
+          ]
+        ]
+      ]
+    },
+    "docwen-current": {
+      "entry": "uv run docwen run smart-doc-probe.docx --to doc --json",
+      "success": true,
+      "output_size_bytes": 101829,
+      "paragraphs": [
+        "Smart Doc Smoke",
+        "This document checks DOCX to DOC conversion.",
+        "Item",
+        "Qty",
+        "Apple",
+        "2"
+      ],
+      "tables": [
+        [
+          [
+            "Item",
+            "Qty"
+          ],
+          [
+            "Apple",
+            "2"
+          ]
+        ]
+      ]
+    }
+  },
+  "accepted_limits": [
+    "This is a focused real-environment smoke for DOCX to DOC only; it does not close ODT, RTF, WPS, DOC inbound, LibreOffice, styles, comments, images, headers/footers, or broad binary artifact comparison.",
+    "The checked-in fixture stores normalized Word COM readback semantics and output sizes rather than committing generated DOC binaries with environment-specific metadata."
+  ],
+  "evidence": {
+    "transient_output_dir": "tmp/smart-doc-real-smoke-2026-07-03",
+    "process_cleanup": {
+      "residual_processes_seen_after_probe": [
+        "wps.exe"
+      ],
+      "cleanup_action": "terminated two headless WPS processes started during the probe",
+      "residual_processes_after_cleanup": [],
+      "current_only_followup": {
+        "command": "uv run docwen run current-smart-doc-process.docx --to doc --json",
+        "success": true,
+        "new_office_processes_after_current_only_probe": []
+      }
+    }
+  }
+}

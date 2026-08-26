@@ -1,0 +1,1331 @@
+{
+  "golden_id": "GOLDEN-011-GOLDEN-012",
+  "generated_at": "2026-07-02",
+  "probe_scope": "normalized function-level smoke for PDF merge/split operations using generated text PDFs; binary outputs are not checked in because old project output names and directories are timestamped/path-policy-specific",
+  "input_pdfs": {
+    "merge": [
+      {
+        "name": "first.pdf",
+        "page_texts": [
+          "MERGE-FIRST"
+        ]
+      },
+      {
+        "name": "second.pdf",
+        "page_texts": [
+          "MERGE-SECOND"
+        ]
+      }
+    ],
+    "split": {
+      "name": "sample.pdf",
+      "page_texts": [
+        "PAGE-1",
+        "PAGE-2",
+        "PAGE-3",
+        "PAGE-4"
+      ]
+    },
+    "single_page": {
+      "name": "one.pdf",
+      "page_texts": [
+        "ONLY-PAGE"
+      ]
+    }
+  },
+  "metadata_boundary_probe": {
+    "classification": "same_old_current_pdf_operations_clear_document_metadata",
+    "metadata_fields": [
+      "title",
+      "author",
+      "subject",
+      "keywords",
+      "creator",
+      "producer"
+    ],
+    "input_pdfs": {
+      "merge": [
+        {
+          "name": "meta-first.pdf",
+          "page_texts": [
+            "META-MERGE-FIRST"
+          ],
+          "metadata": {
+            "title": "FirstTitle",
+            "author": "FirstAuthor",
+            "subject": "FirstSubject",
+            "keywords": "first,key",
+            "creator": "DocWenProbe",
+            "producer": "DocWenProbe"
+          }
+        },
+        {
+          "name": "meta-second.pdf",
+          "page_texts": [
+            "META-MERGE-SECOND"
+          ],
+          "metadata": {
+            "title": "SecondTitle",
+            "author": "SecondAuthor",
+            "subject": "SecondSubject",
+            "keywords": "second,key",
+            "creator": "DocWenProbe",
+            "producer": "DocWenProbe"
+          }
+        }
+      ],
+      "split": {
+        "name": "meta-sample.pdf",
+        "page_texts": [
+          "META-PAGE-1",
+          "META-PAGE-2",
+          "META-PAGE-3",
+          "META-PAGE-4"
+        ],
+        "metadata": {
+          "title": "SplitTitle",
+          "author": "SplitAuthor",
+          "subject": "SplitSubject",
+          "keywords": "split,key",
+          "creator": "DocWenProbe",
+          "producer": "DocWenProbe"
+        }
+      }
+    },
+    "expected_empty_metadata": {
+      "title": "",
+      "author": "",
+      "subject": "",
+      "keywords": "",
+      "creator": "",
+      "producer": ""
+    },
+    "projects": {
+      "docwen-ref-tk": {
+        "source": "src/docwen/services/strategies/layout/operations.py::MergePdfsStrategy/SplitPdfStrategy",
+        "merge_page_texts": [
+          "META-MERGE-FIRST",
+          "META-MERGE-SECOND"
+        ],
+        "merge_metadata": "expected_empty_metadata",
+        "split_custom_returned_page_texts": [
+          "META-PAGE-1",
+          "META-PAGE-3"
+        ],
+        "split_custom_returned_metadata": "expected_empty_metadata"
+      },
+      "docwen-ref-pyside6": {
+        "source": "src/docwen/services/strategies/layout/operations.py::MergePdfsStrategy/SplitPdfStrategy",
+        "merge_page_texts": [
+          "META-MERGE-FIRST",
+          "META-MERGE-SECOND"
+        ],
+        "merge_metadata": "expected_empty_metadata",
+        "split_custom_returned_page_texts": [
+          "META-PAGE-1",
+          "META-PAGE-3"
+        ],
+        "split_custom_returned_metadata": "expected_empty_metadata"
+      },
+      "docwen-current": {
+        "source": "docwen_plugin_layout.operations.converter::PdfMerger/PdfSplitter",
+        "merge_page_texts": [
+          "META-MERGE-FIRST",
+          "META-MERGE-SECOND"
+        ],
+        "merge_metadata": "expected_empty_metadata",
+        "split_custom_artifact_page_groups": [
+          [
+            "META-PAGE-1",
+            "META-PAGE-3"
+          ],
+          [
+            "META-PAGE-2",
+            "META-PAGE-4"
+          ]
+        ],
+        "split_custom_artifact_metadata": [
+          "expected_empty_metadata",
+          "expected_empty_metadata"
+        ]
+      }
+    },
+    "current_regression_test": "packages/plugins/layout/tests/test_layout_conversions.py::TestPluginDispatch::test_pdf_operations_metadata_boundary_matches_old_system_projection",
+    "comparison_implication": "Old Tk, old PySide6, and current merge/split PDFs with a new PyMuPDF document plus insert_pdf(), so page text/grouping is preserved but selected document metadata is not propagated. This is a shared old/current operation boundary, not a current regression; metadata-preserving merge/split would be a future enhancement."
+  },
+  "rotated_page_boundary_probe": {
+    "classification": "same_old_current_pdf_operations_preserve_rotated_page_geometry",
+    "projection_fields": [
+      "text",
+      "rotation",
+      "rect",
+      "mediabox"
+    ],
+    "input_pdfs": {
+      "merge": [
+        {
+          "name": "rotated-first.pdf",
+          "page_texts": [
+            "ROTATED-MERGE-FIRST"
+          ],
+          "page_size": [
+            120,
+            80
+          ],
+          "rotation": 90,
+          "expected_source_projection": [
+            {
+              "text": "ROTATED-MERGE-FIRST",
+              "rotation": 90,
+              "rect": [
+                0.0,
+                0.0,
+                80.0,
+                120.0
+              ],
+              "mediabox": [
+                0.0,
+                0.0,
+                120.0,
+                80.0
+              ]
+            }
+          ]
+        },
+        {
+          "name": "normal-second.pdf",
+          "page_texts": [
+            "NORMAL-MERGE-SECOND"
+          ],
+          "page_size": [
+            100,
+            70
+          ],
+          "rotation": 0,
+          "expected_source_projection": [
+            {
+              "text": "NORMAL-MERGE-SECOND",
+              "rotation": 0,
+              "rect": [
+                0.0,
+                0.0,
+                100.0,
+                70.0
+              ],
+              "mediabox": [
+                0.0,
+                0.0,
+                100.0,
+                70.0
+              ]
+            }
+          ]
+        }
+      ],
+      "split": {
+        "name": "rotated-sample.pdf",
+        "page_texts": [
+          "ROTATED-SPLIT-SELECTED",
+          "ROTATED-SPLIT-REMAINDER"
+        ],
+        "page_size": [
+          120,
+          80
+        ],
+        "rotation": 90,
+        "expected_source_projection": [
+          {
+            "text": "ROTATED-SPLIT-SELECTED",
+            "rotation": 90,
+            "rect": [
+              0.0,
+              0.0,
+              80.0,
+              120.0
+            ],
+            "mediabox": [
+              0.0,
+              0.0,
+              120.0,
+              80.0
+            ]
+          },
+          {
+            "text": "ROTATED-SPLIT-REMAINDER",
+            "rotation": 90,
+            "rect": [
+              0.0,
+              0.0,
+              80.0,
+              120.0
+            ],
+            "mediabox": [
+              0.0,
+              0.0,
+              120.0,
+              80.0
+            ]
+          }
+        ]
+      }
+    },
+    "projects": {
+      "docwen-ref-tk": {
+        "source": "src/docwen/services/strategies/layout/operations.py::MergePdfsStrategy/SplitPdfStrategy",
+        "implementation": "fresh PyMuPDF document plus insert_pdf() for merge and split",
+        "merge_page_projection": [
+          {
+            "text": "ROTATED-MERGE-FIRST",
+            "rotation": 90,
+            "rect": [
+              0.0,
+              0.0,
+              80.0,
+              120.0
+            ],
+            "mediabox": [
+              0.0,
+              0.0,
+              120.0,
+              80.0
+            ]
+          },
+          {
+            "text": "NORMAL-MERGE-SECOND",
+            "rotation": 0,
+            "rect": [
+              0.0,
+              0.0,
+              100.0,
+              70.0
+            ],
+            "mediabox": [
+              0.0,
+              0.0,
+              100.0,
+              70.0
+            ]
+          }
+        ],
+        "split_custom_returned_projection": [
+          {
+            "text": "ROTATED-SPLIT-SELECTED",
+            "rotation": 90,
+            "rect": [
+              0.0,
+              0.0,
+              80.0,
+              120.0
+            ],
+            "mediabox": [
+              0.0,
+              0.0,
+              120.0,
+              80.0
+            ]
+          }
+        ],
+        "source_code_remaining_projection": [
+          {
+            "text": "ROTATED-SPLIT-REMAINDER",
+            "rotation": 90,
+            "rect": [
+              0.0,
+              0.0,
+              80.0,
+              120.0
+            ],
+            "mediabox": [
+              0.0,
+              0.0,
+              120.0,
+              80.0
+            ]
+          }
+        ]
+      },
+      "docwen-ref-pyside6": {
+        "source": "src/docwen/services/strategies/layout/operations.py::MergePdfsStrategy/SplitPdfStrategy",
+        "implementation": "fresh PyMuPDF document plus insert_pdf() for merge and split",
+        "merge_page_projection": [
+          {
+            "text": "ROTATED-MERGE-FIRST",
+            "rotation": 90,
+            "rect": [
+              0.0,
+              0.0,
+              80.0,
+              120.0
+            ],
+            "mediabox": [
+              0.0,
+              0.0,
+              120.0,
+              80.0
+            ]
+          },
+          {
+            "text": "NORMAL-MERGE-SECOND",
+            "rotation": 0,
+            "rect": [
+              0.0,
+              0.0,
+              100.0,
+              70.0
+            ],
+            "mediabox": [
+              0.0,
+              0.0,
+              100.0,
+              70.0
+            ]
+          }
+        ],
+        "split_custom_returned_projection": [
+          {
+            "text": "ROTATED-SPLIT-SELECTED",
+            "rotation": 90,
+            "rect": [
+              0.0,
+              0.0,
+              80.0,
+              120.0
+            ],
+            "mediabox": [
+              0.0,
+              0.0,
+              120.0,
+              80.0
+            ]
+          }
+        ],
+        "source_code_remaining_projection": [
+          {
+            "text": "ROTATED-SPLIT-REMAINDER",
+            "rotation": 90,
+            "rect": [
+              0.0,
+              0.0,
+              80.0,
+              120.0
+            ],
+            "mediabox": [
+              0.0,
+              0.0,
+              120.0,
+              80.0
+            ]
+          }
+        ]
+      },
+      "docwen-current": {
+        "source": "docwen_plugin_layout.operations.converter::PdfMerger/PdfSplitter",
+        "implementation": "fresh PyMuPDF document plus insert_pdf() for merge and split",
+        "merge_page_projection": [
+          {
+            "text": "ROTATED-MERGE-FIRST",
+            "rotation": 90,
+            "rect": [
+              0.0,
+              0.0,
+              80.0,
+              120.0
+            ],
+            "mediabox": [
+              0.0,
+              0.0,
+              120.0,
+              80.0
+            ]
+          },
+          {
+            "text": "NORMAL-MERGE-SECOND",
+            "rotation": 0,
+            "rect": [
+              0.0,
+              0.0,
+              100.0,
+              70.0
+            ],
+            "mediabox": [
+              0.0,
+              0.0,
+              100.0,
+              70.0
+            ]
+          }
+        ],
+        "split_custom_artifact_projections": [
+          [
+            {
+              "text": "ROTATED-SPLIT-SELECTED",
+              "rotation": 90,
+              "rect": [
+                0.0,
+                0.0,
+                80.0,
+                120.0
+              ],
+              "mediabox": [
+                0.0,
+                0.0,
+                120.0,
+                80.0
+              ]
+            }
+          ],
+          [
+            {
+              "text": "ROTATED-SPLIT-REMAINDER",
+              "rotation": 90,
+              "rect": [
+                0.0,
+                0.0,
+                80.0,
+                120.0
+              ],
+              "mediabox": [
+                0.0,
+                0.0,
+                120.0,
+                80.0
+              ]
+            }
+          ]
+        ]
+      }
+    },
+    "current_regression_test": "packages/plugins/layout/tests/test_layout_conversions.py::TestPluginDispatch::test_pdf_operations_rotated_page_boundary_matches_old_system_projection",
+    "comparison_implication": "Old Tk, old PySide6, and current merge/split PDFs with insert_pdf(), so rotated page rotation, visible rect, media box, and page text are preserved. This is a shared old/current operation boundary, not a current regression; broader PDF page geometry batches remain future artifact parity evidence."
+  },
+  "interactive_geometry_boundary_probe": {
+    "classification": "same_old_current_pdf_operations_preserve_heterogeneous_geometry_uri_links_and_text_annotations",
+    "executed_at": "2026-07-14",
+    "runtime": "PyMuPDF 1.27.2.2 in the current uv environment; both old source trees were imported and executed in isolated subprocesses",
+    "projection_fields": [
+      "text",
+      "rotation",
+      "rect",
+      "mediabox",
+      "cropbox",
+      "links(kind,uri,from)",
+      "annotations(type,content,title,rect)"
+    ],
+    "page_profiles": {
+      "wide_rotation_0": {
+        "page_size": [
+          400,
+          300
+        ],
+        "cropbox": [
+          20.0,
+          30.0,
+          380.0,
+          270.0
+        ],
+        "rotation": 0,
+        "expected_insert_pdf_geometry": {
+          "rect": [
+            0.0,
+            0.0,
+            360.0,
+            240.0
+          ],
+          "mediabox": [
+            0.0,
+            0.0,
+            400.0,
+            300.0
+          ],
+          "cropbox": [
+            20.0,
+            30.0,
+            380.0,
+            270.0
+          ],
+          "link_from": [
+            25.0,
+            60.0,
+            160.0,
+            82.0
+          ],
+          "annotation_rect": [
+            180.0,
+            90.0,
+            196.0,
+            106.0
+          ]
+        }
+      },
+      "tall_rotation_90": {
+        "page_size": [
+          300,
+          500
+        ],
+        "cropbox": [
+          10.0,
+          20.0,
+          285.0,
+          480.0
+        ],
+        "rotation": 90,
+        "expected_insert_pdf_geometry": {
+          "rect": [
+            0.0,
+            0.0,
+            460.0,
+            275.0
+          ],
+          "mediabox": [
+            0.0,
+            0.0,
+            300.0,
+            500.0
+          ],
+          "cropbox": [
+            10.0,
+            20.0,
+            285.0,
+            480.0
+          ],
+          "link_from": [
+            280.0,
+            368.0,
+            415.0,
+            390.0
+          ],
+          "annotation_rect": [
+            180.0,
+            74.0,
+            196.0,
+            90.0
+          ]
+        }
+      },
+      "square_rotation_180": {
+        "page_size": [
+          250,
+          250
+        ],
+        "cropbox": [
+          5.0,
+          10.0,
+          240.0,
+          245.0
+        ],
+        "rotation": 180,
+        "expected_insert_pdf_geometry": {
+          "rect": [
+            0.0,
+            0.0,
+            235.0,
+            235.0
+          ],
+          "mediabox": [
+            0.0,
+            0.0,
+            250.0,
+            250.0
+          ],
+          "cropbox": [
+            5.0,
+            10.0,
+            240.0,
+            245.0
+          ],
+          "link_from": [
+            30.0,
+            55.0,
+            165.0,
+            77.0
+          ],
+          "annotation_rect": [
+            164.0,
+            74.0,
+            180.0,
+            90.0
+          ]
+        }
+      },
+      "letter_rotation_270": {
+        "page_size": [
+          612,
+          792
+        ],
+        "cropbox": [
+          12.0,
+          16.0,
+          600.0,
+          780.0
+        ],
+        "rotation": 270,
+        "expected_insert_pdf_geometry": {
+          "rect": [
+            0.0,
+            0.0,
+            764.0,
+            588.0
+          ],
+          "mediabox": [
+            0.0,
+            0.0,
+            612.0,
+            792.0
+          ],
+          "cropbox": [
+            12.0,
+            16.0,
+            600.0,
+            780.0
+          ],
+          "link_from": [
+            440.0,
+            518.0,
+            575.0,
+            540.0
+          ],
+          "annotation_rect": [
+            164.0,
+            90.0,
+            180.0,
+            106.0
+          ]
+        }
+      }
+    },
+    "input_pdfs": {
+      "merge": [
+        {
+          "name": "interactive-a.pdf",
+          "pages": [
+            {
+              "profile": "wide_rotation_0",
+              "text": "INTERACTIVE-A1",
+              "uri": "https://example.com/a1",
+              "note": "NOTE-A1"
+            },
+            {
+              "profile": "tall_rotation_90",
+              "text": "INTERACTIVE-A2",
+              "uri": "https://example.com/a2",
+              "note": "NOTE-A2"
+            }
+          ]
+        },
+        {
+          "name": "interactive-b.pdf",
+          "pages": [
+            {
+              "profile": "letter_rotation_270",
+              "text": "INTERACTIVE-B1",
+              "uri": "https://example.com/b1",
+              "note": "NOTE-B1"
+            }
+          ]
+        }
+      ],
+      "split": {
+        "name": "interactive-split.pdf",
+        "pages": [
+          {
+            "profile": "wide_rotation_0",
+            "text": "INTERACTIVE-S1",
+            "uri": "https://example.com/s1",
+            "note": "NOTE-S1"
+          },
+          {
+            "profile": "tall_rotation_90",
+            "text": "INTERACTIVE-S2",
+            "uri": "https://example.com/s2",
+            "note": "NOTE-S2"
+          },
+          {
+            "profile": "square_rotation_180",
+            "text": "INTERACTIVE-S3",
+            "uri": "https://example.com/s3",
+            "note": "NOTE-S3"
+          },
+          {
+            "profile": "letter_rotation_270",
+            "text": "INTERACTIVE-S4",
+            "uri": "https://example.com/s4",
+            "note": "NOTE-S4"
+          }
+        ]
+      }
+    },
+    "projects": {
+      "docwen-ref-tk": {
+        "source": "src/docwen/services/strategies/layout/operations.py::MergePdfsStrategy/SplitPdfStrategy",
+        "merge_success": true,
+        "merge_page_order": [
+          "INTERACTIVE-A1",
+          "INTERACTIVE-A2",
+          "INTERACTIVE-B1"
+        ],
+        "split_success": true,
+        "split_custom_page_groups": [
+          [
+            "INTERACTIVE-S1",
+            "INTERACTIVE-S3"
+          ],
+          [
+            "INTERACTIVE-S2",
+            "INTERACTIVE-S4"
+          ]
+        ],
+        "projection_matches_page_profiles": true
+      },
+      "docwen-ref-pyside6": {
+        "source": "src/docwen/services/strategies/layout/operations.py::MergePdfsStrategy/SplitPdfStrategy",
+        "merge_success": true,
+        "merge_page_order": [
+          "INTERACTIVE-A1",
+          "INTERACTIVE-A2",
+          "INTERACTIVE-B1"
+        ],
+        "split_success": true,
+        "split_custom_page_groups": [
+          [
+            "INTERACTIVE-S1",
+            "INTERACTIVE-S3"
+          ],
+          [
+            "INTERACTIVE-S2",
+            "INTERACTIVE-S4"
+          ]
+        ],
+        "projection_matches_page_profiles": true,
+        "environment_note": "The isolated source import emitted a pydantic-missing output-directory warning, but both strategies succeeded and all timestamped temporary PDF outputs were discovered and projected."
+      },
+      "docwen-current": {
+        "source": "docwen_plugin_layout.operations.converter::PdfMerger/PdfSplitter",
+        "merge_success": true,
+        "merge_page_order": [
+          "INTERACTIVE-A1",
+          "INTERACTIVE-A2",
+          "INTERACTIVE-B1"
+        ],
+        "split_success": true,
+        "split_custom_page_groups": [
+          [
+            "INTERACTIVE-S1",
+            "INTERACTIVE-S3"
+          ],
+          [
+            "INTERACTIVE-S2",
+            "INTERACTIVE-S4"
+          ]
+        ],
+        "projection_matches_page_profiles": true,
+        "split_artifact_metadata_pages": [
+          [
+            1,
+            3
+          ],
+          [
+            2,
+            4
+          ]
+        ]
+      }
+    },
+    "current_regression_test": "packages/plugins/layout/tests/test_layout_conversions.py::TestPluginDispatch::test_pdf_operations_interactive_geometry_matches_old_system_projection",
+    "comparison_implication": "The three real implementations preserve heterogeneous page size/crop/rotation, external URI targets, normalized link rectangles, and Text annotation type/content/title/rectangle through merge and custom split. The rotated-link rectangle normalization is the same insert_pdf() behavior in all three projects, not a current regression. This focused generated matrix strengthens final-artifact evidence but does not close real OFD/XPS, scanned/image-only PDF, OCR-quality, or broader PDF annotation/form-action parity."
+  },
+  "forms_actions_boundary_probe": {
+    "classification": "same_old_current_merge_preserves_text_widgets_attachments_and_internal_goto_while_pagewise_split_drops_internal_goto",
+    "executed_at": "2026-07-14",
+    "runtime": "PyMuPDF 1.27.2.2 in the current uv environment; both old source trees were imported and executed in isolated subprocesses",
+    "projection_fields": [
+      "page text",
+      "internal GOTO target page/text",
+      "Text widget name/label/type/value/rect",
+      "FileAttachment content/title/filename/rect/payload size/SHA-256"
+    ],
+    "page_contract": {
+      "widget_rect": [
+        36.0,
+        80.0,
+        220.0,
+        110.0
+      ],
+      "attachment_rect": [
+        280.0,
+        90.0,
+        296.0,
+        106.0
+      ],
+      "payload_size": 14,
+      "payload_sha256_by_page": {
+        "A1": "224bf500e6aaac13c622f9563c393926c59a2155ee94f1aaeed970589167e607",
+        "A2": "e2266bbfc3b7ea10663244305636d4197b02d8f740c0efc4c906444e837e8e6b",
+        "B1": "7b24d7d6134ac623ab38bb385ccfacc670097e78b2d34be90806dcc28507b247",
+        "S1": "950ab4ca2b5be2bb5c259958c66a6dff0b8455fd03b8b88f994ce1da1b71a8d8",
+        "S2": "5d570c989e3f62e4e61094a8a7d97b71800faada38b168344152635c453a7284",
+        "S3": "1613233f37e467ff5ff2177664aaed179dfc5de9902154704c779cd114179bae",
+        "S4": "40e036724bd03072c557b79ac661ddac4a4af5004157e5a90c34ce8b64acb07e"
+      }
+    },
+    "input_pdfs": {
+      "merge": [
+        {
+          "name": "forms-actions-a.pdf",
+          "page_ids": [
+            "A1",
+            "A2"
+          ],
+          "internal_goto_links": [
+            {
+              "source_page": 0,
+              "target_page": 1
+            }
+          ]
+        },
+        {
+          "name": "forms-actions-b.pdf",
+          "page_ids": [
+            "B1"
+          ],
+          "internal_goto_links": []
+        }
+      ],
+      "split": {
+        "name": "forms-actions-split.pdf",
+        "page_ids": [
+          "S1",
+          "S2",
+          "S3",
+          "S4"
+        ],
+        "internal_goto_links": [
+          {
+            "source_page": 0,
+            "target_page": 2
+          },
+          {
+            "source_page": 1,
+            "target_page": 3
+          }
+        ]
+      }
+    },
+    "projects": {
+      "docwen-ref-tk": {
+        "source": "src/docwen/services/strategies/layout/operations.py::MergePdfsStrategy/SplitPdfStrategy",
+        "merge_success": true,
+        "merge_page_order": [
+          "A1",
+          "A2",
+          "B1"
+        ],
+        "merge_internal_goto_targets": {
+          "A1": "A2"
+        },
+        "split_success": true,
+        "split_custom_page_groups": [
+          [
+            "S1",
+            "S3"
+          ],
+          [
+            "S2",
+            "S4"
+          ]
+        ],
+        "split_internal_goto_targets": {},
+        "text_widgets_and_file_attachments_match_page_contract": true
+      },
+      "docwen-ref-pyside6": {
+        "source": "src/docwen/services/strategies/layout/operations.py::MergePdfsStrategy/SplitPdfStrategy",
+        "merge_success": true,
+        "merge_page_order": [
+          "A1",
+          "A2",
+          "B1"
+        ],
+        "merge_internal_goto_targets": {
+          "A1": "A2"
+        },
+        "split_success": true,
+        "split_custom_page_groups": [
+          [
+            "S1",
+            "S3"
+          ],
+          [
+            "S2",
+            "S4"
+          ]
+        ],
+        "split_internal_goto_targets": {},
+        "text_widgets_and_file_attachments_match_page_contract": true,
+        "environment_note": "The isolated source import emitted a pydantic-missing output-directory warning, but both strategies succeeded and all timestamped temporary PDF outputs were discovered and projected."
+      },
+      "docwen-current": {
+        "source": "docwen_plugin_layout.operations.converter::PdfMerger/PdfSplitter",
+        "merge_success": true,
+        "merge_page_order": [
+          "A1",
+          "A2",
+          "B1"
+        ],
+        "merge_internal_goto_targets": {
+          "A1": "A2"
+        },
+        "split_success": true,
+        "split_custom_page_groups": [
+          [
+            "S1",
+            "S3"
+          ],
+          [
+            "S2",
+            "S4"
+          ]
+        ],
+        "split_internal_goto_targets": {},
+        "text_widgets_and_file_attachments_match_page_contract": true,
+        "split_artifact_metadata_pages": [
+          [
+            1,
+            3
+          ],
+          [
+            2,
+            4
+          ]
+        ]
+      }
+    },
+    "current_regression_test": "packages/plugins/layout/tests/test_layout_conversions.py::TestPluginDispatch::test_pdf_operations_forms_actions_match_old_system_projection",
+    "comparison_implication": "All three real implementations preserve a Text form widget and FileAttachment annotation payload/identity on every copied page, and whole-document merge preserves an internal GOTO action. Custom split copies selected/remainder pages one at a time, so internal GOTO actions are dropped even when source and destination pages remain in the same output group. This is a shared old/current implementation boundary, not a current regression. Preserving split-internal actions would be a future enhancement requiring explicit page-remapping policy and broader action safety review."
+  },
+  "fa09_completion_addendum": {
+    "stage_id": "VIS-2026-07-23-192",
+    "executed_at": "2026-07-23",
+    "classification": "current_fa09_fixed_and_verified_with_exact_reference_defects",
+    "contract_slots": 27,
+    "reused_b1_slots": 6,
+    "reused_b2_slots": 6,
+    "new_n1_n2_slots": 15,
+    "current_new_slots_green": 5,
+    "current_custom_split_internal_goto_targets": {
+      "S1": "S3",
+      "S2": "S4"
+    },
+    "current_omitted_target_policy": "Do not synthesize a GOTO when its target page is absent from that split artifact.",
+    "reference_custom_split_internal_goto_targets": {
+      "docwen-ref-tk": {},
+      "docwen-ref-pyside6": {}
+    },
+    "reference_n1_defect": {
+      "routes_per_project": [
+        "pdf",
+        "png",
+        "md"
+      ],
+      "exit_code": 1,
+      "source_relative_error": "easyofd.parser_ofd.file_content_parser.ContentFileParser.fetch_cell_info clips_pos float('')",
+      "current_same_routes_green": true
+    },
+    "n2_png": {
+      "pages_per_project": 5,
+      "geometry": [
+        1241,
+        1754
+      ],
+      "dpi": 150,
+      "decoded_pixels_equal_across_projects": true
+    },
+    "n2_markdown": {
+      "frozen_anchors_green_per_project": 10,
+      "current_page_resources": 5,
+      "docwen_ref_tk_page_resources": 2,
+      "docwen_ref_pyside6_page_resources": 2,
+      "reference_defect": "The legacy Markdown exporters preserve all frozen OCR anchors but expose only two image resources from the five-page scanned PDF."
+    },
+    "current_n1_markdown": {
+      "frozen_anchors_green": 9,
+      "resources": 5,
+      "embedded_text_recovery_policy": "When same-page OCR and embedded PDF text have identical alphanumeric content, preserve the embedded Unicode punctuation and spacing.",
+      "output_sha256": "31931D35A035F4662B675ECEEFDC76F37C063C6A805B633B66E6CBD93AE0B174"
+    },
+    "external_evidence": {
+      "matrix_runs_bytes": 23999,
+      "matrix_runs_sha256": "5280A5D8ADA4F5FCBCA26C225A8199054708A3DF579F4630779FFD35AFC02A18",
+      "matrix_projection_bytes": 25167,
+      "matrix_projection_sha256": "1ADD0084CA59296E764D900A091D880E139664B2226EE068EA3D050431CD2E0C",
+      "current_n1_markdown_rerun_record_bytes": 2036,
+      "current_n1_markdown_rerun_record_sha256": "41E4DCC6921746BF69FAEBBB8CFA8E842200B3E1EE1D072F24ED4CFB6D417A14"
+    },
+    "current_regression_tests": [
+      "packages/plugins/layout/tests/test_layout_conversions.py::TestPluginDispatch::test_pdf_operations_forms_actions_match_old_system_projection",
+      "packages/plugins/layout/tests/test_layout_conversions.py::TestPluginDispatch::test_pdf_custom_split_does_not_crosslink_omitted_goto_target",
+      "packages/plugins/layout/tests/test_layout_conversions.py::TestPreprocessChain::test_pdf_to_md_ocr_prefers_matching_embedded_text_punctuation"
+    ],
+    "user_accepted_boundary": false,
+    "fa09_status": "FIXED_AND_VERIFIED",
+    "overall_status": "NOT_PASSED_YET"
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "merge": {
+        "success": true,
+        "output_suffix": ".pdf",
+        "page_texts": [
+          "MERGE-FIRST",
+          "MERGE-SECOND"
+        ]
+      },
+      "split_custom": {
+        "success": true,
+        "options": {
+          "split_mode": "custom",
+          "pages": [
+            1,
+            3
+          ]
+        },
+        "returned_output_suffix": ".pdf",
+        "returned_page_texts": [
+          "PAGE-1",
+          "PAGE-3"
+        ],
+        "source_code_remaining_page_texts": [
+          "PAGE-2",
+          "PAGE-4"
+        ]
+      },
+      "split_every_page": {
+        "success": true,
+        "returned_output_suffix": ".pdf",
+        "returned_page_texts": [
+          "PAGE-1"
+        ],
+        "source_code_artifact_count": 4,
+        "source_code_page_groups": [
+          [
+            "PAGE-1"
+          ],
+          [
+            "PAGE-2"
+          ],
+          [
+            "PAGE-3"
+          ],
+          [
+            "PAGE-4"
+          ]
+        ]
+      },
+      "split_odd_even": {
+        "success": true,
+        "returned_output_suffix": ".pdf",
+        "returned_page_texts": [
+          "PAGE-1",
+          "PAGE-3"
+        ],
+        "source_code_page_groups": [
+          [
+            "PAGE-1",
+            "PAGE-3"
+          ],
+          [
+            "PAGE-2",
+            "PAGE-4"
+          ]
+        ]
+      },
+      "split_single_page_every_page": {
+        "success": false,
+        "error_code": "invalid_input"
+      }
+    },
+    "docwen-ref-pyside6": {
+      "merge": {
+        "success": true,
+        "output_suffix": ".pdf",
+        "page_texts": [
+          "MERGE-FIRST",
+          "MERGE-SECOND"
+        ]
+      },
+      "split_custom": {
+        "success": true,
+        "options": {
+          "split_mode": "custom",
+          "pages": [
+            1,
+            3
+          ]
+        },
+        "returned_output_suffix": ".pdf",
+        "returned_page_texts": [
+          "PAGE-1",
+          "PAGE-3"
+        ],
+        "source_code_remaining_page_texts": [
+          "PAGE-2",
+          "PAGE-4"
+        ]
+      },
+      "split_every_page": {
+        "success": true,
+        "returned_output_suffix": ".pdf",
+        "returned_page_texts": [
+          "PAGE-1"
+        ],
+        "source_code_artifact_count": 4,
+        "source_code_page_groups": [
+          [
+            "PAGE-1"
+          ],
+          [
+            "PAGE-2"
+          ],
+          [
+            "PAGE-3"
+          ],
+          [
+            "PAGE-4"
+          ]
+        ]
+      },
+      "split_odd_even": {
+        "success": true,
+        "returned_output_suffix": ".pdf",
+        "returned_page_texts": [
+          "PAGE-1",
+          "PAGE-3"
+        ],
+        "source_code_page_groups": [
+          [
+            "PAGE-1",
+            "PAGE-3"
+          ],
+          [
+            "PAGE-2",
+            "PAGE-4"
+          ]
+        ]
+      },
+      "split_single_page_every_page": {
+        "success": false,
+        "error_code": "invalid_input"
+      }
+    },
+    "docwen-current": {
+      "merge": {
+        "success": true,
+        "output_suffix": ".pdf",
+        "page_texts": [
+          "MERGE-FIRST",
+          "MERGE-SECOND"
+        ],
+        "artifact_media_type": "application/pdf",
+        "metadata_input_count": 2,
+        "metrics_input_count": 2,
+        "suggested_name": "merged.pdf"
+      },
+      "split_custom": {
+        "success": true,
+        "options": {
+          "split_mode": "custom",
+          "pages": [
+            1,
+            3
+          ]
+        },
+        "artifact_page_groups": [
+          [
+            "PAGE-1",
+            "PAGE-3"
+          ],
+          [
+            "PAGE-2",
+            "PAGE-4"
+          ]
+        ],
+        "artifact_suggested_names": [
+          "sample_part1.pdf",
+          "sample_part2.pdf"
+        ],
+        "artifact_metadata_pages": [
+          [
+            1,
+            3
+          ],
+          [
+            2,
+            4
+          ]
+        ],
+        "metrics_split_mode": "custom",
+        "metrics_part1_pages": 2,
+        "metrics_part2_pages": 2
+      },
+      "split_every_page": {
+        "success": true,
+        "artifact_page_groups": [
+          [
+            "PAGE-1"
+          ],
+          [
+            "PAGE-2"
+          ],
+          [
+            "PAGE-3"
+          ],
+          [
+            "PAGE-4"
+          ]
+        ],
+        "artifact_suggested_names": [
+          "sample_p1.pdf",
+          "sample_p2.pdf",
+          "sample_p3.pdf",
+          "sample_p4.pdf"
+        ],
+        "metrics_split_mode": "every_page",
+        "metrics_page_count": 4
+      },
+      "split_odd_even": {
+        "success": true,
+        "artifact_page_groups": [
+          [
+            "PAGE-1",
+            "PAGE-3"
+          ],
+          [
+            "PAGE-2",
+            "PAGE-4"
+          ]
+        ],
+        "artifact_suggested_names": [
+          "sample_odd.pdf",
+          "sample_even.pdf"
+        ],
+        "artifact_metadata_pages": [
+          [
+            1,
+            3
+          ],
+          [
+            2,
+            4
+          ]
+        ],
+        "metrics_split_mode": "odd_even",
+        "metrics_odd_pages": 2,
+        "metrics_even_pages": 2
+      },
+      "split_single_page_every_page": {
+        "success": false,
+        "error_type": "invalid_input",
+        "diagnostic_code": "PDF-SPLIT-INVALID-INPUT"
+      }
+    }
+  },
+  "comparison_implication": "All three projects merge PDFs by concatenating input pages in caller order. The old projects return the first split output path while writing additional split outputs through timestamped path policy; the current rewrite exposes those outputs as ArtifactManifest entries. Stable parity is therefore asserted on page grouping, output suffix, invalid single-page rejection, and current artifact metadata rather than byte identity or timestamped names."
+}

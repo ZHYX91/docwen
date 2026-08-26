@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "docwen-plugin-markup"
+version = "0.1.0"
+description = "DocWen Markup Plugin — HTML/ENEX/EPUB structured text to Markdown conversion"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "docwen-core",
+    "markdownify>=0.14.0",
+]
+
+[project.optional-dependencies]
+epub = ["ebooklib", "beautifulsoup4"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/docwen_plugin_markup"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+markers = [
+    "unit: 单元测试（纯逻辑、替身或内存态验证）",
+    "contract: 契约测试（CLI/配置/输出结构/仓库约束）",
+    "integration: 集成测试（真实文件、真实链路或跨模块协作）",
+    "golden: Golden/parity 用例（语义输出一致性验证）",
+    "slow: 耗时测试",
+]

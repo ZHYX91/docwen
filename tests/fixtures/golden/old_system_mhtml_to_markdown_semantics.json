@@ -1,0 +1,318 @@
+{
+  "golden_id": "GOLDEN-020",
+  "route": "MHTML->Markdown",
+  "probe_date": "2026-07-04",
+  "probe_scope": "Same generated MHTML converted through docwen-ref-tk parse_mhtml()+html_to_markdown(), docwen-ref-pyside6 parse_mhtml()+html_to_markdown(), and current docwen runtime markup route.",
+  "input_mhtml": {
+    "filename": "sample.mhtml",
+    "subject": "MHTML Golden Sample",
+    "html_content_location": "sample.html",
+    "html_title": "MHTML Golden Sample",
+    "html_body": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>MHTML Golden Sample</title></head>\n<body>\n<h1>MHTML Heading</h1>\n<p>This is from an <strong>embedded image</strong> archive with a <a href=\"https://example.com/mhtml\">link inside MHTML</a>.</p>\n<ul><li>Archive item</li><li>Second archive item</li></ul>\n<p><img src=\"cid:golden-image\"></p>\n</body>\n</html>\n",
+    "image": {
+      "content_id": "golden-image",
+      "content_location": "embedded.png",
+      "filename": "embedded.png",
+      "media_type": "image/png",
+      "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4DwQACfsD/WMmx7QAAAAASUVORK5CYII="
+    }
+  },
+  "old_systems": {
+    "docwen-ref-tk": {
+      "converter": "docwen.converter.html2md.mhtml_parser.parse_mhtml + docwen.converter.html2md.core.html_to_markdown",
+      "status": "converted",
+      "title_handling": "YAML frontmatter aliases/title-label from old i18n config; body starts at MHTML Heading",
+      "resource_handling": "Content-ID cid:golden-image is replaced with a local resource name, then html_to_markdown copies the image into the output folder using the old timestamped sample_image1_*_fromMhtml.png pattern. With the locked old-project markdownify 1.2.2 dependency, the underscore placeholder can remain escaped in Markdown instead of being replaced with that copied image link; current rewrite intentionally keeps a readable finalized link.",
+      "required_markdown_tokens": [
+        "MHTML Golden Sample",
+        "MHTML Heading",
+        "**embedded image**",
+        "[link inside MHTML](https://example.com/mhtml)",
+        "Archive item"
+      ],
+      "forbidden_markdown_fragments": [
+        "cid:golden-image",
+        "Content-Location:",
+        "Content-Type:"
+      ]
+    },
+    "docwen-ref-pyside6": {
+      "converter": "docwen.converter.html.to_md.mhtml_parser.parse_mhtml + docwen.converter.html.to_md.core.html_to_markdown",
+      "status": "converted",
+      "title_handling": "YAML frontmatter aliases/title-label from old i18n config; body starts at MHTML Heading",
+      "resource_handling": "Content-ID cid:golden-image is replaced with a local resource name, then html_to_markdown copies the image into the output folder using the old timestamped sample_image1_*_fromMhtml.png pattern. With the locked old-project markdownify 1.2.2 dependency, the underscore placeholder can remain escaped in Markdown instead of being replaced with that copied image link; current rewrite intentionally keeps a readable finalized link.",
+      "required_markdown_tokens": [
+        "MHTML Golden Sample",
+        "MHTML Heading",
+        "**embedded image**",
+        "[link inside MHTML](https://example.com/mhtml)",
+        "Archive item"
+      ],
+      "forbidden_markdown_fragments": [
+        "cid:golden-image",
+        "Content-Location:",
+        "Content-Type:"
+      ]
+    }
+  },
+  "current_expected_semantics": {
+    "route_owner": "docwen_plugin_markup.web_archive.converter.HtmlToMarkdownConverter",
+    "title_handling": "Current architecture preserves old-system YAML frontmatter semantics while routing key labels through runtime yaml_key_labels.",
+    "resource_handling": "Current architecture replaces MHTML Content-ID references through MarkdownResourceWriter, registers the image as an artifact, and keeps the final Markdown link readable as embedded.png instead of restoring old timestamped image names.",
+    "title_occurrences": 2,
+    "first_non_empty_lines": [
+      "---",
+      "title: MHTML Golden Sample"
+    ],
+    "required_markdown_tokens": [
+      "title: MHTML Golden Sample",
+      "aliases:",
+      "MHTML Heading",
+      "**embedded image**",
+      "[link inside MHTML](https://example.com/mhtml)",
+      "Archive item",
+      "embedded.png"
+    ],
+    "forbidden_markdown_fragments": [
+      "cid:golden-image",
+      "Content-Location:",
+      "Content-Type:",
+      "DOCWENHTMLIMAGE"
+    ],
+    "image_count": 1,
+    "expected_image_artifacts": [
+      {
+        "suggested_name": "embedded.png",
+        "media_type": "image/png"
+      }
+    ]
+  },
+  "accepted_differences": [
+    {
+      "difference": "Old systems rename extracted MHTML images with timestamped sample_imageN_*_fromMhtml names; current rewrite preserves the source basename embedded.png.",
+      "classification": "accepted_current_architecture_improvement",
+      "reason": "The runtime artifact manifest and finalizer already own collision handling. Preserving the resource basename keeps Markdown links readable while retaining the old-system guarantee that cid: references do not leak and image files are emitted beside Markdown."
+    },
+    {
+      "difference": "Old Tk/PySide6 MHTML image files are emitted, but the Markdown image placeholder may remain as escaped __DOCWEN_IMAGE_N__ text under markdownify 1.2.2; current rewrite uses unescaped resource tokens and writes readable relative image links.",
+      "classification": "accepted_current_architecture_improvement",
+      "reason": "The user-visible goal is a readable Markdown file with extracted resources finalized beside it. Recreating the old escaped-placeholder bug would be a UI/UX regression and would add technical debt."
+    }
+  ],
+  "image_artifact_scope": {
+    "multi_resource_probe": {
+      "classification": "current_enhancement_over_old_mhtml_escaped_image_placeholder",
+      "probe_date": "2026-07-05",
+      "filename": "multi_resource_probe.mhtml",
+      "subject": "MHTML Multi Resource Probe",
+      "html_content_location": "index.html",
+      "html_title": "MHTML Multi Resource Probe",
+      "html_body": "<!doctype html>\n<html><head><meta charset=\"utf-8\"><title>MHTML Multi Resource Probe</title></head>\n<body>\n<h1>MHTML Multi Resource Probe</h1>\n<p>First resource</p><img src=\"cid:first-image\">\n<p>Second resource</p><img src=\"cid:second-image\">\n</body></html>\n",
+      "images": [
+        {
+          "content_id": "first-image",
+          "content_location": "first.png",
+          "filename": "first.png",
+          "media_type": "image/png",
+          "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"
+        },
+        {
+          "content_id": "second-image",
+          "content_location": "second.png",
+          "filename": "second.png",
+          "media_type": "image/png",
+          "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGNkYPgPAAEDAQC3G4vfAAAAAElFTkSuQmCC"
+        }
+      ],
+      "old_system_projection": {
+        "docwen-ref-tk": {
+          "status": "converted",
+          "output_image_count": 2,
+          "output_image_name_tokens": [
+            "multi_resource_probe_image1_",
+            "multi_resource_probe_image2_"
+          ],
+          "markdown_contains_escaped_placeholder": true,
+          "forbidden_markdown_fragments": [
+            "cid:first-image",
+            "cid:second-image",
+            "Content-Location:",
+            "Content-Type:"
+          ]
+        },
+        "docwen-ref-pyside6": {
+          "status": "converted",
+          "output_image_count": 2,
+          "output_image_name_tokens": [
+            "multi_resource_probe_image1_",
+            "multi_resource_probe_image2_"
+          ],
+          "markdown_contains_escaped_placeholder": true,
+          "forbidden_markdown_fragments": [
+            "cid:first-image",
+            "cid:second-image",
+            "Content-Location:",
+            "Content-Type:"
+          ]
+        }
+      },
+      "current_expected_semantics": {
+        "diagnostics": [
+          "HTML2MD-OK",
+          "FINALIZER_DONE"
+        ],
+        "artifact_count": 3,
+        "image_count": 2,
+        "expected_image_artifacts": [
+          {
+            "suggested_name": "first.png",
+            "media_type": "image/png"
+          },
+          {
+            "suggested_name": "second.png",
+            "media_type": "image/png"
+          }
+        ],
+        "required_markdown_tokens": [
+          "title: MHTML Multi Resource Probe",
+          "aliases:",
+          "MHTML Multi Resource Probe",
+          "First resource",
+          "Second resource",
+          "![first.png](first.png)",
+          "![second.png](second.png)"
+        ],
+        "ordered_markdown_tokens": [
+          "![first.png](first.png)",
+          "![second.png](second.png)"
+        ],
+        "forbidden_markdown_fragments": [
+          "cid:first-image",
+          "cid:second-image",
+          "DOCWENHTMLIMAGE",
+          "__DOCWEN_IMAGE_",
+          "\\_\\_DOCWEN\\_IMAGE"
+        ]
+      }
+    }
+  },
+  "probe_outputs": {
+    "local_summary": "ephemeral probe run on 2026-07-04; not checked in because old-system output paths contain temp directories and timestamped filenames",
+    "old_body_start": "MHTML Heading",
+    "current_body_start_after_yaml": "MHTML Heading"
+  },
+  "fa12_final_artifact_contract_addendum": {
+    "contract_id": "CONTRACT-2026-07-22-001/FA-12",
+    "stage_id": "VIS-2026-07-22-176",
+    "stage_start_parent": "4accc12",
+    "status": "fixed_and_verified",
+    "vis176_historical_status": "current_n1_fixed_strict_reference_and_policy_boundary_unaccepted",
+    "n1": {
+      "url": "https://www.w3.org/TR/CSS2/",
+      "acquisition": "Chromium CDP Page.captureSnapshot(format=mhtml)",
+      "bytes": 231561,
+      "sha256": "9f575b1306d0153ec95900744a05c063999701a62d0c80905aca058dc2a62615",
+      "html_charset": "windows-1252",
+      "html_bytes": 157727,
+      "html_sha256": "65c34f31e55bff4780c3c03a18e93e0f184ad70e65dd25c98961f0887fbd48b1",
+      "body_word_count": 8579,
+      "body_word_ordered_sha256": "060d5a171fdf90c9e6584e7fb67f546fe7dd84cdd317d6c3956ec8eef402d494",
+      "link_count": 917,
+      "link_unique_count": 886,
+      "link_ordered_sha256": "aa971bcb721f8db6aed7cf8cb813bb87650733c96915c3f34c9e8ff018cc387b",
+      "body_image": {
+        "media_type": "image/svg+xml",
+        "bytes": 50388,
+        "sha256": "5234e0fef3f924131c5b0092358e9eada4e576fe4031069faf11fa03ed48df94"
+      }
+    },
+    "first_run": {
+      "docwen_current": {
+        "artifact_count": 5,
+        "literal_title_entity": "CSS&nbsp;2.1",
+        "orphan_artifacts": [
+          "logo-REC",
+          "W3C-REC.css",
+          "default.css"
+        ]
+      }
+    },
+    "current_post_fix": {
+      "artifact_count": 2,
+      "diagnostics": [
+        "HTML2MD-OK",
+        "FINALIZER_DONE"
+      ],
+      "frontmatter_title_decoded": true,
+      "body_word_count": 8579,
+      "body_word_order_exact": true,
+      "link_count": 917,
+      "link_order_exact": true,
+      "replacement_character_count": 0,
+      "readable_image_link_count": 1,
+      "missing_linked_files": 0,
+      "orphan_artifacts": 0,
+      "markdown_sha256": "6cc1650b26b84eb7e56e895e01befba6f7a4f934c1e8ce0b65f36700ae6ce8ad",
+      "image_sha256": "5234e0fef3f924131c5b0092358e9eada4e576fe4031069faf11fa03ed48df94"
+    },
+    "references": {
+      "docwen_ref_tk": {
+        "link_count": 917,
+        "link_order_exact": true,
+        "replacement_character_count": 12,
+        "body_word_order_exact": false,
+        "readable_image_link_count": 0,
+        "orphan_image_files": 1,
+        "markdown_sha256": "852edb5f0df2054901ff2c95f4d1ffcf0cf54a4cb1740015b8dafa1c6f906d55"
+      },
+      "docwen_ref_pyside6": {
+        "link_count": 917,
+        "link_order_exact": true,
+        "replacement_character_count": 12,
+        "body_word_order_exact": false,
+        "readable_image_link_count": 0,
+        "orphan_image_files": 1,
+        "markdown_sha256": "852edb5f0df2054901ff2c95f4d1ffcf0cf54a4cb1740015b8dafa1c6f906d55"
+      }
+    },
+    "reused_n2": {
+      "source_sha256": "61afceb0365523ceba6fc00a525157148c2ddbdb3b5d843992ac3c107e9921bf",
+      "vis127_evidence_summary_sha256": "9b5481ba504e56e8d51e62ef74f57589d23f4a4be4e1db5e52ac7898a659238a",
+      "normalized_semantic_lines": "294/294",
+      "ordinary_text_matches": "60/60",
+      "nonempty_note_matches": "6/6",
+      "retained_image_matches": "19/19",
+      "smartart_and_hidden_slide_policy_accepted": false
+    },
+    "vis176_historical_classification": {
+      "current_n1_defects_fixed": true,
+      "current_n1_strict_oracle_green": true,
+      "all_three_n1_100_percent_threshold_green": false,
+      "strict_reference_body_and_image_boundary": true,
+      "policy_03_disposition_complete": false,
+      "user_accepted_boundary": false,
+      "fa12_pass": false,
+      "overall_parity_closed": false
+    },
+    "reconciliation": {
+      "stage_id": "VIS-2026-07-23-205",
+      "vis131_smartart_text": "34/34",
+      "vis131_hidden_slide_policy": "include_all_source_slides_and_report_hidden_count",
+      "vis131_retained_image_payloads": "19/19",
+      "vis204_policy_03_current_oracle": "6/6",
+      "reference_n1_disposition": "legacy_reference_defects_not_accepted_loss"
+    },
+    "classification": {
+      "current_n1_defects_fixed": true,
+      "current_n1_strict_oracle_green": true,
+      "all_three_n1_100_percent_threshold_green": false,
+      "strict_reference_body_and_image_boundary": true,
+      "legacy_reference_defects_dispositioned": true,
+      "current_n2_smartart_hidden_policy_verified": true,
+      "policy_03_disposition_complete": true,
+      "user_accepted_boundary": false,
+      "fa12_pass": true,
+      "overall_parity_closed": false
+    }
+  }
+}

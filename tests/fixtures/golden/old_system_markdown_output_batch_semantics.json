@@ -1,0 +1,184 @@
+{
+  "golden_id": "GOLDEN-001",
+  "case_id": "old_system_markdown_output_batch_semantics",
+  "generated_at": "2026-07-16",
+  "scope": "One comprehensive three-project samples/sample.md batch through the Simplified Chinese DOCX template and English XLSX template, including DOCX, XLSX, CSV and current OutputFinalizer placement.",
+  "comparison_implication": "This fixture closes one broad representative GOLDEN-001 batch and three current-only defects. It is not byte-equality policy, physical Word/WPS rendering proof, or final parity for every Markdown/template corpus.",
+  "projects": {
+    "old_tk": {
+      "path": "D:/docwen-parity/docwen-ref-tk",
+      "head": "ec9298286cfe1379d5c5470db381577ea43ca0fa",
+      "entrypoints": [
+        "docwen.converter.md2docx.core.convert",
+        "docwen.converter.md2xlsx.core.convert",
+        "docwen.converter.formats.spreadsheet.csv_convert.xlsx_to_csv"
+      ]
+    },
+    "old_pyside6": {
+      "path": "D:/docwen-parity/docwen-ref-pyside6",
+      "head": "63db927c5ded920d4994bfede5c7b34c55e2f43e",
+      "entrypoints": [
+        "docwen.converter.md.to_docx.core.convert",
+        "docwen.converter.md.to_xlsx.core.convert",
+        "docwen.converter.spreadsheet.csv_convert.xlsx_to_csv"
+      ],
+      "environment_boundary": "The pre-existing configs/gui_config.toml modification and damaged Git object history were not changed; the working-tree production entrypoints remain usable."
+    },
+    "current": {
+      "path": "D:/docwen-parity/docwen",
+      "head_before_fix": "1eb416b3e65cc8b09b7bd71b4e1a0bccf9f5f801",
+      "entrypoint": ".venv/Scripts/docwen.exe run",
+      "finalizer": "MarkdownPlugin -> TaskManager -> OutputFinalizer"
+    }
+  },
+  "source": {
+    "path": "samples/sample.md",
+    "logical_size_bytes": 2529,
+    "sha256": "8F0E6B330EC6912D8CF694D0B6DDFC3C05601EF73FF0840A9AAA52687E1A8854",
+    "same_logical_bytes_in_all_projects": true
+  },
+  "templates": {
+    "docx": {
+      "path": "templates/简体中文通用模板.docx",
+      "size_bytes": 12021,
+      "sha256": "399A2D1337B326F97BDAB390F9E465446A26F88A3E2329602EAA7C961460C3B9",
+      "same_bytes_in_all_projects": true
+    },
+    "xlsx": {
+      "path": "templates/English Sample Sheet Template.xlsx",
+      "size_bytes": 10357,
+      "sha256": "8964940D95BCDFCE8388AEDFE3A48A895B8671527A194BC913BFBFE0B8CFBBD8",
+      "same_bytes_in_all_projects": true
+    }
+  },
+  "template_contract": {
+    "docx_templates": [
+      "Deutsche Allgemeine Vorlage.docx",
+      "English General Template.docx",
+      "Modelo Geral Português.docx",
+      "Modèle Général Français.docx",
+      "Mẫu Chung Tiếng Việt.docx",
+      "Plantilla General Española.docx",
+      "Русский Общий Шаблон.docx",
+      "日本語汎用テンプレート.docx",
+      "简体中文通用模板.docx",
+      "繁體中文通用模板.docx",
+      "한국어 범용 템플릿.docx"
+    ],
+    "required_title_source": "first non-empty aliases item, then source filename stem when a selected template has no localized title value",
+    "required_body_behavior": "localized whole-paragraph body placeholder is removed and converted body remains in source order"
+  },
+  "artifact_provenance": {
+    "old_tk": {
+      "docx": {"size_bytes": 14112, "sha256": "0AFC4D42190CF35EF303A7C6FAACEEE197BEE8E747FD3F8DCE9E60AA9FA50866"},
+      "xlsx": {"size_bytes": 7797, "sha256": "6016F6B74B5E73C36052DBCF221F045E7888A2D0185DAFD39C074323782D6883"}
+    },
+    "old_pyside6": {
+      "docx": {"size_bytes": 14057, "sha256": "CA1603B7A60246FD30F78FD5B97572CAB97E6743BDD8C8FB09DEE7C1A2E35F05"},
+      "xlsx": {"size_bytes": 7797, "sha256": "6016F6B74B5E73C36052DBCF221F045E7888A2D0185DAFD39C074323782D6883"}
+    },
+    "current": {
+      "docx": {"size_bytes": 13856, "sha256": "6672DFA3D6B921B5D0189D0FC6CEB4D7E7AC6E6D908CEC9A7A449341F2813C2F"},
+      "xlsx": {"size_bytes": 7808, "sha256": "029A5F652542E5B0CEB72EEF0070BAF72BC4689D48614211C19D297872E76BD8"}
+    },
+    "normalized_projection": {
+      "size_bytes": 68307,
+      "sha256": "890A00C9F9814A98CC477FBED729AE5BFB8BD2E18EA5F8F89EC6FF3F25036072",
+      "location_boundary": "Retained outside the repository under D:/docwen-parity/vis099-golden001-final; this compact fixture is the checked-in semantic oracle."
+    }
+  },
+  "shared_docx_projection": {
+    "title": "Test File",
+    "visible_paragraph_count": 83,
+    "heading_count_including_title": 35,
+    "table_count": 2,
+    "numbered_list_item_count": 21,
+    "hyperlink_count": 1,
+    "hyperlink_targets": ["https://example.com"],
+    "omml_math_node_count": 3,
+    "footnote_text_count": 1,
+    "endnote_text_count": 1
+  },
+  "docx_classified_differences": {
+    "heading_merge": {
+      "old_tk_and_pyside6": "One Heading 2 paragraph combines the punctuation-ending heading and immediately following body text.",
+      "current": "One Heading 2 paragraph combines the punctuation-ending heading and immediately following body text; body runs use direct body formatting.",
+      "current_default_trigger_characters": "。：！？.:!?",
+      "default_policy": "Only strong sentence-ending punctuation triggers punct_required mode by default; users may explicitly add weaker or other Unicode characters.",
+      "classification": "current_matches_classic_mixed_paragraph_contract",
+      "must_preserve": "The heading and adjacent body remain one Word paragraph with distinct heading/body run formatting."
+    },
+    "horizontal_rule": {
+      "old_tk": {"page_breaks": 1, "section_properties": 2},
+      "old_pyside6": {"page_breaks": 0, "section_properties": 1},
+      "current": {"page_breaks": 1, "section_properties": 2, "paragraph_borders": 1},
+      "classification": "current_matches_tk_primary_and_adds_explicit_rule_border"
+    }
+  },
+  "xlsx_projection": {
+    "sheet_names": ["Sheet1", "Sheet2", "Sheet3"],
+    "same_normalized_cells_in_all_projects": true,
+    "cells": {
+      "A1": "TITLE",
+      "B1": "Test File",
+      "A2": "SUBTITLE",
+      "B2": "MD to DOCX Test",
+      "A5": "FOOD",
+      "B5": "Apple",
+      "D5": "Banana",
+      "A6": "PRICE",
+      "B6": "$1",
+      "C6": "$2",
+      "D6": "$3",
+      "A9": "NAME",
+      "B9": "AGE",
+      "A10": "Tom",
+      "B10": "5",
+      "A11": "Bob",
+      "B11": "10",
+      "A12": "Amy",
+      "B12": "15"
+    }
+  },
+  "csv_projection": {
+    "same_normalized_rows_in_all_projects": true,
+    "sheet1_sha256": "0FCE113F61027C26D6D7BBCE254E7F3238F9A1D3AE43580F14A7A4E31681DF78",
+    "empty_sheet_sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+    "sheet1_rows": [
+      ["TITLE", "Test File", "", ""],
+      ["SUBTITLE", "MD to DOCX Test", "", ""],
+      ["", "", "", ""],
+      ["", "", "", ""],
+      ["FOOD", "Apple", "", "Banana"],
+      ["PRICE", "$1", "$2", "$3"],
+      ["", "", "", ""],
+      ["", "", "", ""],
+      ["NAME", "AGE", "", ""],
+      ["Tom", "5", "", ""],
+      ["Bob", "10", "", ""],
+      ["Amy", "15", "", ""]
+    ],
+    "empty_sheets": ["Sheet2", "Sheet3"]
+  },
+  "current_finalizer_projection": {
+    "paths": [
+      "sample.docx",
+      "sample.xlsx",
+      "sample_fromMd/sample_Sheet1_fromMd.csv",
+      "sample_fromMd/sample_Sheet2_fromMd.csv",
+      "sample_fromMd/sample_Sheet3_fromMd.csv"
+    ],
+    "workspace_or_staging_path_leak": false
+  },
+  "defects_closed": [
+    "Merged heading body was rendered but not returned to template relocation, moving visible content to the DOCX tail.",
+    "The aliases[0] title fallback present in both reference worktrees was absent from current DOCX/XLSX/CSV template output.",
+    "Current DOCX placeholder scanning/body relocation only recognized no-space word placeholders and Chinese/English body names, breaking distributed localized templates."
+  ],
+  "boundary": [
+    "Artifact hashes record provenance and drift; OOXML byte equality is not the acceptance oracle.",
+    "The checked historical sample_golden.docx lacks the title now produced by both reference worktrees, so the current golden comparator permits exactly one leading title while remaining strict about ordered visible body text.",
+    "This batch does not prove physical Word/WPS rendering, every Markdown construct/template combination, or overall parity.",
+    "Broader real-world corpus and external Office/LibreOffice artifact evidence remain open."
+  ]
+}

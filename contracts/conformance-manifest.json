@@ -1,0 +1,594 @@
+{
+  "contract_set": "docwen.contracts.v1",
+  "schemas": [
+    {
+      "name": "artifact_bundle",
+      "id": "urn:docwen:schema:artifact-bundle:v2",
+      "path": "schemas/docwen.artifact_bundle.v2.schema.json"
+    },
+    {
+      "name": "machine",
+      "id": "urn:docwen:schema:machine-protocol:v1",
+      "path": "schemas/docwen.machine.v1.schema.json"
+    },
+    {
+      "name": "machine_diagnostic_evidence",
+      "id": "urn:docwen:schema:machine-diagnostic-evidence:v1",
+      "path": "schemas/docwen.machine.diagnostic_evidence.v1.schema.json"
+    },
+    {
+      "name": "numbering_export_plan",
+      "id": "urn:docwen:schema:numbering-export-plan:v1",
+      "path": "schemas/docwen.numbering_export_plan.v1.schema.json"
+    },
+    {
+      "name": "proofread_report",
+      "id": "urn:docwen:schema:proofread-report:v2",
+      "path": "schemas/docwen.proofread_report.v2.schema.json"
+    },
+    {
+      "name": "candidate_evidence_index",
+      "id": "urn:docwen:schema:candidate-evidence-index:v4",
+      "path": "schemas/docwen.candidate_evidence_index.v4.schema.json"
+    },
+    {
+      "name": "candidate_receipt",
+      "id": "urn:docwen:schema:candidate-receipt:v4",
+      "path": "schemas/docwen.candidate_receipt.v4.schema.json"
+    },
+    {
+      "name": "resolved_document",
+      "id": "urn:docwen:schema:resolved-document:v1",
+      "path": "schemas/docwen.resolved_document.v1.schema.json"
+    },
+    {
+      "name": "semantic_bibliography",
+      "id": "urn:docwen:schema:semantic-bibliography:v1",
+      "path": "schemas/docwen.semantic_bibliography.v1.schema.json"
+    }
+  ],
+  "fixtures": [
+    {
+      "path": "fixtures/valid/artifact-bundle.gongwen.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "valid"
+    },
+    {
+      "path": "fixtures/valid/artifact-bundle.image-md.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "valid"
+    },
+    {
+      "path": "fixtures/valid/artifact-bundle.ocr.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "valid"
+    },
+    {
+      "path": "fixtures/valid/artifact-bundle.pdf-split.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "valid"
+    },
+    {
+      "path": "fixtures/valid/artifact-bundle.worksheets.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "valid"
+    },
+    {
+      "path": "fixtures/valid/machine.initialize.request.json",
+      "schema": "machine",
+      "document_type": "message",
+      "expect": "valid"
+    },
+    {
+      "path": "fixtures/valid/machine.initialize.response.json",
+      "schema": "machine",
+      "document_type": "message",
+      "expect": "valid"
+    },
+    {
+      "path": "fixtures/valid/machine.capability-list.response.json",
+      "schema": "machine",
+      "document_type": "message",
+      "expect": "valid"
+    },
+    {
+      "path": "fixtures/valid/machine.framing.json",
+      "schema": "machine",
+      "document_type": "framing",
+      "expect": "valid"
+    },
+    {
+      "path": "fixtures/valid/machine.task-lifecycle.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "valid",
+      "requires_terminal": true
+    },
+    {
+      "path": "fixtures/valid/machine.task-failed.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "valid",
+      "requires_terminal": true
+    },
+    {
+      "path": "fixtures/valid/machine.v4-diagnostic-evidence.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "valid",
+      "requires_terminal": true
+    },
+    {
+      "path": "fixtures/valid/machine.task-cancelled.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "valid",
+      "requires_terminal": true
+    },
+    {
+      "path": "fixtures/valid/machine.resolved-numbering.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "valid"
+    },
+    {
+      "path": "fixtures/valid/semantic-bibliography.rich.json",
+      "schema": "semantic_bibliography",
+      "document_type": "bibliography",
+      "expect": "valid"
+    },
+    {
+      "path": "fixtures/valid/numbering-export-plan.numeric-source-id.json",
+      "schema": "numbering_export_plan",
+      "document_type": "numbering_export_plan",
+      "expect": "valid"
+    },
+    {
+      "path": "fixtures/valid/resolved-document.empty.json",
+      "schema": "resolved_document",
+      "document_type": "resolved_document",
+      "expect": "valid"
+    },
+    {
+      "path": "fixtures/valid/proofread-report.empty.json",
+      "schema": "proofread_report",
+      "document_type": "proofread_report",
+      "expect": "valid"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.duplicate-id.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "duplicate_artifact_id"
+    },
+    {
+      "path": "fixtures/invalid/machine.partial-diagnostic-evidence.json",
+      "schema": "machine",
+      "document_type": "message",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.path-traversal.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.dangling-relation.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "dangling_relation"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.invalid-kind.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.multiple-preferred-entries.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "preferred_entry_count"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.incompatible-relation.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "incompatible_relation"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.duplicate-locator.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "duplicate_artifact_locator"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.invalid-suggested-name.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "invalid_suggested_name"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.duplicate-entry.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "duplicate_entry"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.duplicate-entry-ordinal.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "duplicate_entry_ordinal"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.dangling-entry.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "dangling_entry"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.incompatible-entry-role.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "incompatible_entry_role"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.self-relation.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "self_relation"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.multiple-structural-owners.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "multiple_structural_owners"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.owned-entry.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "owned_entry"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.missing-relation-ordinal.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "missing_relation_ordinal"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.duplicate-relation-ordinal.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "duplicate_relation_ordinal"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.relation-cycle.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "relation_cycle"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.orphan-artifact.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "orphan_artifact"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.missing-page-fragment-semantics.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "missing_page_fragment_semantics"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.unexpected-page-semantics.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "unexpected_page_semantics"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.invalid-page-range.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "invalid_page_range"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.page-ordinal-mismatch.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "page_ordinal_mismatch"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.page-count-mismatch.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "page_count_mismatch"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.duplicate-page-index.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "duplicate_page_index"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.incomplete-page-sequence.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "incomplete_page_sequence"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.page-source-mismatch.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "page_source_mismatch"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.resource-page-mismatch.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_semantic",
+      "error_code": "resource_page_mismatch"
+    },
+    {
+      "path": "fixtures/invalid/artifact-bundle.page-semantics-unknown-field.json",
+      "schema": "artifact_bundle",
+      "document_type": "bundle",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/machine.unknown-method.json",
+      "schema": "machine",
+      "document_type": "message",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/machine.completed-without-bundle.json",
+      "schema": "machine",
+      "document_type": "message",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/machine.dangling-diagnostic-artifact.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "invalid_semantic",
+      "error_code": "dangling_diagnostic_artifact",
+      "requires_terminal": true
+    },
+    {
+      "path": "fixtures/invalid/machine.framing-length-mismatch.json",
+      "schema": "machine",
+      "document_type": "framing",
+      "expect": "invalid_semantic",
+      "error_code": "frame_length_mismatch"
+    },
+    {
+      "path": "fixtures/invalid/machine.framing-lf-only.json",
+      "schema": "machine",
+      "document_type": "framing",
+      "expect": "invalid_semantic",
+      "error_code": "invalid_frame_header"
+    },
+    {
+      "path": "fixtures/invalid/machine.framing-too-large.json",
+      "schema": "machine",
+      "document_type": "framing",
+      "expect": "invalid_semantic",
+      "error_code": "frame_too_large"
+    },
+    {
+      "path": "fixtures/invalid/machine.framing-invalid-payload.json",
+      "schema": "machine",
+      "document_type": "framing",
+      "expect": "invalid_semantic",
+      "error_code": "invalid_frame_payload"
+    },
+    {
+      "path": "fixtures/invalid/machine.duplicate-terminal.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "invalid_semantic",
+      "error_code": "notification_after_terminal",
+      "requires_terminal": true
+    },
+    {
+      "path": "fixtures/invalid/machine.nonmonotonic-sequence.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "invalid_semantic",
+      "error_code": "nonmonotonic_sequence",
+      "requires_terminal": true
+    },
+    {
+      "path": "fixtures/invalid/machine.duplicate-request-id.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "invalid_semantic",
+      "error_code": "duplicate_request_id",
+      "requires_terminal": true
+    },
+    {
+      "path": "fixtures/invalid/machine.unmatched-response.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "invalid_semantic",
+      "error_code": "unmatched_response",
+      "requires_terminal": true
+    },
+    {
+      "path": "fixtures/invalid/machine.duplicate-task-id.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "invalid_semantic",
+      "error_code": "duplicate_task_id",
+      "requires_terminal": true
+    },
+    {
+      "path": "fixtures/invalid/machine.unknown-cancel-task.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "invalid_semantic",
+      "error_code": "unknown_cancel_task",
+      "requires_terminal": true
+    },
+    {
+      "path": "fixtures/invalid/machine.notification-before-acceptance.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "invalid_semantic",
+      "error_code": "notification_before_acceptance",
+      "requires_terminal": true
+    },
+    {
+      "path": "fixtures/invalid/machine.invalid-progress.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "invalid_schema",
+      "requires_terminal": true
+    },
+    {
+      "path": "fixtures/invalid/machine.bundle-task-mismatch.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "invalid_semantic",
+      "error_code": "bundle_task_mismatch",
+      "requires_terminal": true
+    },
+    {
+      "path": "fixtures/invalid/machine.unmatched-request.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "invalid_semantic",
+      "error_code": "unmatched_request",
+      "requires_terminal": true
+    },
+    {
+      "path": "fixtures/invalid/machine.missing-terminal.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "invalid_semantic",
+      "error_code": "missing_terminal",
+      "requires_terminal": true
+    },
+    {
+      "path": "fixtures/invalid/machine.undeclared-input-role.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "invalid_semantic",
+      "error_code": "undeclared_input_role"
+    },
+    {
+      "path": "fixtures/invalid/machine.input-slot-kind-mismatch.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "invalid_semantic",
+      "error_code": "input_slot_kind_mismatch"
+    },
+    {
+      "path": "fixtures/invalid/machine.input-slot-media-type-mismatch.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "invalid_semantic",
+      "error_code": "input_slot_media_type_mismatch"
+    },
+    {
+      "path": "fixtures/invalid/machine.input-slot-cardinality-mismatch.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "invalid_semantic",
+      "error_code": "input_slot_cardinality_mismatch"
+    },
+    {
+      "path": "fixtures/invalid/machine.duplicate-input-logical-path.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "invalid_semantic",
+      "error_code": "duplicate_input_logical_path"
+    },
+    {
+      "path": "fixtures/invalid/machine.invalid-input-logical-path.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/semantic-bibliography.unknown-field.json",
+      "schema": "semantic_bibliography",
+      "document_type": "bibliography",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/numbering-export-plan.invalid-source-id.json",
+      "schema": "numbering_export_plan",
+      "document_type": "numbering_export_plan",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/numbering-export-plan.heading-list-level-10.json",
+      "schema": "numbering_export_plan",
+      "document_type": "numbering_export_plan",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/numbering-export-plan.restart-level-10.json",
+      "schema": "numbering_export_plan",
+      "document_type": "numbering_export_plan",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/numbering-export-plan.chapter-level-10.json",
+      "schema": "numbering_export_plan",
+      "document_type": "numbering_export_plan",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/resolved-document.heading-level-10.json",
+      "schema": "resolved_document",
+      "document_type": "resolved_document",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/resolved-document.unknown-field.json",
+      "schema": "resolved_document",
+      "document_type": "resolved_document",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/proofread-report.old-version-field.json",
+      "schema": "proofread_report",
+      "document_type": "proofread_report",
+      "expect": "invalid_schema"
+    }
+  ]
+}

@@ -1,0 +1,152 @@
+{
+  "$schema": "./linux-production-manifest.v1.schema.json",
+  "schemaVersion": 1,
+  "manifestId": "docwen-linux-production",
+  "product": {
+    "name": "DocWen",
+    "version": "0.9.0"
+  },
+  "target": {
+    "os": "linux",
+    "distribution": "ubuntu",
+    "version": "24.04",
+    "arch": "x86_64",
+    "platformTag": "linux-x64"
+  },
+  "archive": {
+    "format": "tar.gz",
+    "tarFormat": "pax",
+    "entryOrder": "utf8-byte-lexicographic",
+    "reproducibilityEpoch": 1704067200,
+    "uid": 0,
+    "gid": 0,
+    "uname": "",
+    "gname": "",
+    "directoryMode": "0755",
+    "entryPointMode": "0755",
+    "executableFileMode": "0755",
+    "regularFileMode": "0644",
+    "symlinkMode": "0777",
+    "compressionLevel": 9,
+    "gzipHeaderFilename": "",
+    "gzipHeaderExtraFlags": 2,
+    "gzipHeaderOperatingSystem": 255
+  },
+  "symlinks": {
+    "policy": "relative-internal-files-only",
+    "preserve": true,
+    "rejectAbsolute": true,
+    "rejectEscape": true,
+    "rejectDangling": true,
+    "rejectCycles": true,
+    "rejectDirectoryTargets": true
+  },
+  "generatedMetadata": {
+    "payloadManifestPath": "manifest.json",
+    "payloadManifestSchema": "docwen.linux.payload.v1",
+    "checksumsPath": "SHA256SUMS.txt",
+    "checksumsCoverage": "all-regular-files-except-self"
+  },
+  "artifacts": [
+    {
+      "artifactId": "gui-cli",
+      "payloadLayout": "unified-gui-cli-onedir",
+      "sourceDirectory": "DocWen_v0.9.0_linux-x64",
+      "archiveName": "DocWen-0.9.0-linux-x64.tar.gz",
+      "topLevelDirectory": "DocWen-0.9.0-linux-x64",
+      "entryPoints": [
+        "DocWen",
+        "DocWenCLI"
+      ],
+      "requiredFiles": [
+        "DocWen",
+        "DocWenCLI",
+        "LICENSE",
+        "LICENSE_THIRD_PARTY.txt",
+        "NOTICE.txt",
+        "README.md"
+      ],
+      "requiredDirectories": [
+        "_internal",
+        "assets",
+        "configs",
+        "models",
+        "templates"
+      ],
+      "allowedTopLevelFiles": [
+        "DocWen",
+        "DocWenCLI",
+        "LICENSE",
+        "LICENSE_THIRD_PARTY.txt",
+        "NOTICE.txt",
+        "README.md",
+        "README_de_DE.md",
+        "README_es_ES.md",
+        "README_fr_FR.md",
+        "README_ja_JP.md",
+        "README_ko_KR.md",
+        "README_pt_BR.md",
+        "README_ru_RU.md",
+        "README_vi_VN.md",
+        "README_zh_CN.md",
+        "README_zh_TW.md"
+      ],
+      "allowedTopLevelDirectories": [
+        "_internal",
+        "assets",
+        "configs",
+        "models",
+        "samples",
+        "templates"
+      ]
+    },
+    {
+      "artifactId": "cli-only",
+      "payloadLayout": "cli-only-onedir",
+      "sourceDirectory": "DocWenCLI_v0.9.0_linux-x64",
+      "archiveName": "DocWenCLI-0.9.0-linux-x64.tar.gz",
+      "topLevelDirectory": "DocWenCLI-0.9.0-linux-x64",
+      "entryPoints": [
+        "DocWenCLI"
+      ],
+      "requiredFiles": [
+        "DocWenCLI",
+        "LICENSE",
+        "LICENSE_THIRD_PARTY.txt",
+        "NOTICE.txt",
+        "README.md"
+      ],
+      "requiredDirectories": [
+        "_internal",
+        "configs",
+        "models",
+        "templates"
+      ],
+      "allowedTopLevelFiles": [
+        "DocWenCLI",
+        "LICENSE",
+        "LICENSE_THIRD_PARTY.txt",
+        "NOTICE.txt",
+        "README.md",
+        "README_de_DE.md",
+        "README_es_ES.md",
+        "README_fr_FR.md",
+        "README_ja_JP.md",
+        "README_ko_KR.md",
+        "README_pt_BR.md",
+        "README_ru_RU.md",
+        "README_vi_VN.md",
+        "README_zh_CN.md",
+        "README_zh_TW.md"
+      ],
+      "allowedTopLevelDirectories": [
+        "_internal",
+        "assets",
+        "configs",
+        "models",
+        "samples",
+        "templates"
+      ]
+    }
+  ]
+}

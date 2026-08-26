@@ -1,0 +1,625 @@
+{
+  "golden_id": "GOLDEN-002",
+  "scope": "Normalized richer old-system DOCX to Markdown semantic smoke.",
+  "probe": {
+    "input_docx": "golden002-rich-probe.docx",
+    "transient_dir": "tmp/golden002-rich-smoke-2026-07-03",
+    "features": [
+      "heading",
+      "bold run",
+      "italic run",
+      "embedded png image",
+      "footnote",
+      "endnote",
+      "VML textbox",
+      "OMML formula",
+      "nested table"
+    ]
+  },
+  "expected_semantics": {
+    "contains": [
+      "Rich DOCX Probe",
+      "bold marker",
+      "italic marker",
+      "Footnote marker rich note",
+      "Endnote marker rich note",
+      "Textbox marker from VML shape",
+      "$x^{2}+y$",
+      "Outer Header",
+      "Outer Value",
+      "Nested Holder"
+    ],
+    "image_file_count": 1,
+    "footnote_ref": true,
+    "endnote_ref": true,
+    "textbox": true,
+    "formula_text": true
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "success": true,
+      "entry": "docwen.converter.docx2md.simple.converter.convert_docx_to_md_simple",
+      "markdown_length": 617,
+      "image_file_count": 1,
+      "contains": {
+        "heading": true,
+        "bold": true,
+        "italic": true,
+        "image_ref": true,
+        "footnote_ref": true,
+        "endnote_ref": true,
+        "textbox": true,
+        "nested_table_text": false,
+        "formula_text": true
+      },
+      "nested_table_output": "linked markdown sidecar",
+      "selected_lines": [
+        "# Rich DOCX Probe",
+        "Body before rich content with **bold marker** and *italic marker*.",
+        "![[golden002-rich-probe_image1_<timestamp>_fromDocx.png]]",
+        "Footnote anchor[^1] and endnote anchor[^endnote-1]",
+        "Formula paragraph: $x^{2}+y$",
+        "| Nested Holder | ![[golden002-rich-probe_nested_table_1_<timestamp>_fromDocx.md]] |",
+        "Textbox marker from VML shape",
+        "[^1]: Footnote marker rich note",
+        "[^endnote-1]: Endnote marker rich note"
+      ]
+    },
+    "docwen-ref-pyside6": {
+      "success": true,
+      "entry": "docwen.converter.docx.to_md.standard.converter.convert_docx_to_md_standard",
+      "runtime_setup": "docwen.bootstrap.initialize_runtime() before converter import/use",
+      "markdown_length": 589,
+      "image_file_count": 1,
+      "contains": {
+        "heading": true,
+        "bold": true,
+        "italic": true,
+        "image_ref": true,
+        "footnote_ref": true,
+        "endnote_ref": true,
+        "textbox": true,
+        "nested_table_text": false,
+        "formula_text": true
+      },
+      "nested_table_output": "linked markdown sidecar",
+      "selected_lines": [
+        "# Rich DOCX Probe",
+        "Body before rich content with **bold marker** and *italic marker*.",
+        "![[golden002-rich-probe_image1_<timestamp>_fromDocx.png]]",
+        "Footnote anchor[^1] and endnote anchor[^endnote-1]",
+        "Formula paragraph: $x^{2}+y$",
+        "| Nested Holder | ![[golden002-rich-probe_nested_table_1_<timestamp>_fromDocx.md]] |",
+        "Textbox marker from VML shape",
+        "[^1]: Footnote marker rich note",
+        "[^endnote-1]: Endnote marker rich note"
+      ]
+    },
+    "docwen-current": {
+      "success": true,
+      "entry": "uv run docwen run golden002-rich-probe.docx --to md --json --extract-img --image-mode file",
+      "markdown_length": 545,
+      "image_file_count": 1,
+      "contains": {
+        "heading": true,
+        "bold": true,
+        "italic": true,
+        "image_ref": true,
+        "footnote_ref": true,
+        "endnote_ref": true,
+        "textbox": true,
+        "nested_table_text": true,
+        "formula_text": true
+      },
+      "nested_table_output": "inline flattened table text",
+      "selected_lines": [
+        "# Rich DOCX Probe",
+        "Body before rich content with **bold marker** and *italic marker*.",
+        "Image paragraph: ![[docx-image_1_rId9.png]]",
+        "Footnote anchor[^1] and endnote anchor[^endnote-1]",
+        "Formula paragraph: $x^{2}+y$",
+        "| Nested Holder |   | Nested A | Nested B |   | --- | --- |   | Nested 1 | Nested 2 |  |",
+        "Textbox marker from VML shape",
+        "[^1]: Footnote marker rich note",
+        "[^endnote-1]: Endnote marker rich note"
+      ],
+      "fix_verified": {
+        "docx_image_artifact_finalized": true,
+        "markdown_uses_final_relative_image_name": true,
+        "no_staging_absolute_image_path": true
+      }
+    }
+  },
+  "accepted_differences": [
+    "Old Tk and old PySide6 place nested tables in timestamped Markdown sidecar files referenced from the parent table; current rewrite renders the nested table text inline in the parent table cell. The nested table text remains reachable and is treated as an implementation difference for this focused smoke.",
+    "Old Tk uses yaml_keys.title/yaml_keys.subtitle labels in this direct import smoke; old PySide6 and current use localized title/subtitle labels. Body and resource semantics are the comparison surface.",
+    "Old-system image and nested-table sidecar filenames contain timestamps; the fixture records normalized filename patterns rather than checking in timestamped generated artifacts."
+  ],
+  "regression_fixed": {
+    "description": "The first current CLI probe succeeded but wrote Markdown image links to the runtime staging directory and did not finalize the extracted image file. The document plugin now returns extracted images as image ArtifactManifest entries and writes Markdown links with final suggested filenames.",
+    "code": "packages/plugins/document/src/docwen_plugin_document/to_markdown/converter.py",
+    "test": "packages/plugins/document/tests/test_document_to_md_golden.py::TestDocxToMdGolden::test_docx_images_are_finalized_as_relative_markdown_artifacts"
+  },
+  "review_feature_boundary": {
+    "classification": "existing_current_xml_handling_but_not_final_review_feature_parity",
+    "old_system_code_evidence": {
+      "docwen-ref-tk": [
+        "docwen-ref-tk/src/docwen/converter/docx2md/shared/markdown_converter.py",
+        "docwen-ref-tk/src/docwen/converter/docx2md/shared/note_processor.py",
+        "docwen-ref-tk/src/docwen/converter/docx2md/shared/textbox_processor.py",
+        "docwen-ref-tk/src/docwen/converter/docx2md/shared/formula_processor.py"
+      ],
+      "docwen-ref-pyside6": [
+        "docwen-ref-pyside6/src/docwen/converter/docx/to_md/shared/markdown_converter.py",
+        "docwen-ref-pyside6/src/docwen/converter/docx/to_md/shared/note_processor.py",
+        "docwen-ref-pyside6/src/docwen/converter/docx/to_md/shared/textbox_processor.py",
+        "docwen-ref-pyside6/src/docwen/converter/docx/to_md/shared/formula_processor.py"
+      ]
+    },
+    "comments_code_scope": {
+      "classification": "auxiliary_docx_spell_report_not_standard_docx_to_markdown_output",
+      "old_tk_evidence": "docwen-ref-tk/src/docwen/docx_spell/anchor_report.py",
+      "old_pyside6_evidence": "docwen-ref-pyside6/src/docwen/docx_spell/anchor_report.py",
+      "current_parity_note": "comments.xml/commentRange remains a wider review-feature or artifact-matrix scope, not a confirmed regression in the standard DOCX->Markdown converter."
+    },
+    "current_code_evidence": {
+      "renderer": "packages/plugins/document/src/docwen_plugin_document/shared/markdown_runs.py::render_paragraph_runs",
+      "test": "packages/plugins/document/tests/test_to_markdown_standard_parity.py::test_revision_and_simple_field_xml_boundary_is_explicit"
+    },
+    "current_explicit_behavior": {
+      "tracked_insertions": "included",
+      "tracked_deletions": "skipped",
+      "simple_fields": "display text rendered recursively",
+      "comments": "not claimed as parity-complete"
+    },
+    "remaining_scope": [
+      "comments.xml/commentRange review-feature artifacts if product scope expands beyond the old standard DOCX->Markdown converter",
+      "complex field code matrix beyond fldSimple display text",
+      "track-changes acceptance policy for insert/delete/move/revision metadata",
+      "full old-system timestamped output comparison for review-heavy DOCX files"
+    ]
+  },
+  "physical_matrix_addendum": {
+    "evidence_id": "VIS-2026-07-17-125",
+    "source_identity": {
+      "bytes": 38864,
+      "sha256": "01cf29adae831f8b8c3e1af7285f83d9f36132750ce4e9af57b11e2376970b5f",
+      "exact_to_surviving_transient_probe": true,
+      "classification": "controlled generated probe, not an official real-world document"
+    },
+    "project_heads": {
+      "docwen-ref-tk": "ec9298286cfe1379d5c5470db381577ea43ca0fa",
+      "docwen-ref-pyside6": "63db927c5ded920d4994bfede5c7b34c55e2f43e",
+      "docwen-current": "d31f7ad0548041f3799b1fb1280f269b9ebb489a"
+    },
+    "source_geometry": {
+      "sections": 1,
+      "page_twips": {
+        "width": 12240,
+        "height": 15840
+      },
+      "usable_content_twips": {
+        "width": 8640,
+        "height": 12960
+      },
+      "positive_usable_content_area": true
+    },
+    "source_package": {
+      "media_parts": 1,
+      "drawingml_drawings": 1,
+      "vml_pictures": 1,
+      "vml_textboxes": 1,
+      "omml_equations": 1,
+      "footnote_references": 1,
+      "endnote_references": 1,
+      "nested_table_elements": 2
+    },
+    "execution": {
+      "targets": [
+        "doc",
+        "rtf",
+        "odt"
+      ],
+      "production_conversions": 9,
+      "all_conversions_successful": true,
+      "all_target_signatures_valid": true,
+      "word_documents_opened": 10,
+      "word_pdf_exports": 10,
+      "rendered_views": 10,
+      "rendered_pages": 10,
+      "contact_sheets": 3,
+      "all_contact_sheets_inspected": true
+    },
+    "same_target_three_project": {
+      "doc": {
+        "page_counts": [
+          1,
+          1,
+          1
+        ],
+        "page_count_equal": true,
+        "render_size_equal": true,
+        "visible_text_equal": true,
+        "pixels_equal": true,
+        "complete_word_projection_equal": true
+      },
+      "rtf": {
+        "page_counts": [
+          1,
+          1,
+          1
+        ],
+        "page_count_equal": true,
+        "render_size_equal": true,
+        "visible_text_equal": true,
+        "pixels_equal": true,
+        "complete_word_projection_equal": true
+      },
+      "odt": {
+        "page_counts": [
+          1,
+          1,
+          1
+        ],
+        "page_count_equal": true,
+        "render_size_equal": true,
+        "visible_text_equal": true,
+        "pixels_equal": true,
+        "complete_word_projection_equal": true
+      }
+    },
+    "source_relative_projection": {
+      "preserved_all_targets": {
+        "embedded_image_geometry": true,
+        "visible_textbox_geometry_and_text": true,
+        "nested_table_projection": true,
+        "footnote_and_endnote_objects": true,
+        "single_page_and_render_geometry": true
+      },
+      "doc": {
+        "source_and_output_omath_counts": [
+          1,
+          0
+        ],
+        "source_and_output_inline_shape_counts": [
+          1,
+          2
+        ],
+        "equation_visibly_preserved_as_picture": true,
+        "equation_pdf_text_remains_searchable": false,
+        "pdf_visible_text_ratio": 0.992779783394,
+        "pixel_change_ratio": 0.015689988
+      },
+      "rtf": {
+        "source_and_output_omath_counts": [
+          1,
+          0
+        ],
+        "source_and_output_inline_shape_counts": [
+          1,
+          2
+        ],
+        "equation_visibly_preserved_as_picture": true,
+        "equation_pdf_text_remains_searchable": false,
+        "pdf_visible_text_ratio": 0.992779783394,
+        "pixel_change_ratio": 0.015721182
+      },
+      "odt": {
+        "source_and_output_omath_counts": [
+          1,
+          1
+        ],
+        "equation_visibly_and_structurally_preserved": true,
+        "source_and_output_field_counts": [
+          1,
+          0
+        ],
+        "note_marker_first_character_changes": [
+          "Footnote -> 1ootnote",
+          "Endnote -> indnote"
+        ],
+        "pdf_visible_text_ratio": 0.992831541219,
+        "pixel_change_ratio": 0.009270648
+      }
+    },
+    "process_boundary": {
+      "pre_existing_process": {
+        "name": "wps.exe",
+        "pid": 11388
+      },
+      "conversion_added": [],
+      "conversion_removed": [],
+      "word_render_added": [],
+      "word_render_removed": [],
+      "termination_command_used": false
+    },
+    "official_rich_media_source_boundary": {
+      "candidate": "Cambridge Rich Picture conversation templates",
+      "expected_bytes": 59369,
+      "expected_sha256": "4a0607a5a5c4eaa7da9e88cabe76c69267a8f954af8810de184b887a3dd03915",
+      "current_environment_result": "exact source unavailable after TLS and browser runtime failures",
+      "different_version_substitution_allowed": false,
+      "official_real_world_rich_media_physical_acceptance_closed": false
+    },
+    "external_evidence": {
+      "root": "D:/docwen-parity/vis125-golden002-rich-physical-d31f7ad-v1",
+      "inventory_excluding_five_harness_scripts_summary_and_pycache": {
+        "files": 60,
+        "bytes": 3551199
+      },
+      "evidence_summary": {
+        "bytes": 27395,
+        "sha256": "adfccd2384460f9a076f8cd2516ea558de935c40527a01e38ab63356e0aad598"
+      },
+      "key_file_sha256": {
+        "analysis-summary.json": "db8e999f8aec696d7dbd53a668f912983272bb336ca004dae61efbe326b74b15",
+        "conversion-docwen-current.json": "68ee524e8ff6c0e5d438e56f7ce56594b104cedbb49cab6cba73a5275e3ca238",
+        "conversion-docwen-ref-pyside6.json": "97cb325106b036155fbcecd462c56508910720a34e450b049896d7a07a1a60a5",
+        "conversion-docwen-ref-tk.json": "41db26ba3ab69f37944833e39f11a54fb9226390e264e882257a22991dd2c36d",
+        "physical-projection.json": "305fd04e69e5c67479507778e683b0292c31a7c6ac1461453221f33b7630a339",
+        "preflight.json": "5d93d587593e9a20eec4824fdc1683529d0e82acb79511d30793bba58d920eee",
+        "process-boundary.json": "fa5b6ac4c8617ca6190479669c921e44a59c8cdfb07466ac3bb110b853420b21",
+        "word-object-projection.json": "3416ddb8cfe544b6b7c0e9a1d00c5a0b76cdaef756b30bc9985b141443dca495",
+        "word-render-process-boundary.json": "604c4db1df8cd73677de7d0ae229c922a9f746f8e802bc4f7877707971e515fb"
+      },
+      "contact_sheet_sha256": {
+        "doc": "a2b7376fc514a841d8c6e5cc9eb9dc4dc2b4209727f82d2506da80f06a60806e",
+        "rtf": "551689176345576d7ce33a8de854bb859b58b3156c1ba0e7e7d9608e96d30138",
+        "odt": "95292593e7ea01bdeb6c442555e2d7f819593cadab984d985c976cb9fea84fa4"
+      }
+    },
+    "classification": {
+      "focused_controlled_rich_media_object_physical_parity_strong": true,
+      "current_only_conversion_object_or_physical_regression_found": false,
+      "doc_or_rtf_equation_remains_searchable_as_text": false,
+      "odt_note_marker_projection_is_source_exact": false,
+      "shared_source_relative_differences_are_accepted_source_fidelity": false,
+      "official_real_world_rich_media_physical_parity_proven": false,
+      "production_change_made": false,
+      "broad_doc_docx_rtf_odt_physical_parity_closed": false,
+      "overall_parity_closed": false
+    }
+  },
+  "evidence": {
+    "current_runtime_test": "packages/plugins/document/tests/test_document_to_md_golden.py::TestDocxToMdGolden::test_docx_images_are_finalized_as_relative_markdown_artifacts",
+    "transient_output_dir": "tmp/golden002-rich-smoke-2026-07-03"
+  },
+  "not_final_pass": [
+    "This is a focused richer DOCX smoke, not a real-template file-level diff.",
+    "It records current XML handling for tracked insertions, tracked deletions, and simple field display text, but does not close comments, complex fields, full revision metadata policy, complex layout, gongwen-like real documents, or full old-system timestamped artifact comparison."
+  ],
+  "fa02_final_artifact_contract_addendum": {
+    "contract_id": "CONTRACT-2026-07-22-001/FA-02",
+    "stage_id": "VIS-2026-07-22-175",
+    "stage_start_parent": "147c9a5",
+    "status": "fixed_and_verified",
+    "frozen_preexecution_card_sha256": "013e20c8e65ff1c50a00c513b8dbb31c8d583be6005be90685361cc511cbf3d1",
+    "b1_reused": true,
+    "n1": {
+      "official_page": "https://www.ema.europa.eu/en/medicines/human/EPAR/opuviz",
+      "bytes": 1996270,
+      "sha256": "2c2be666a9b04d0af84a1d378a2c46c81f50e575f3332cae8a7fd3bd6e77ff36",
+      "repository_redistribution": false,
+      "main_story_complex_field_nodes": 24,
+      "word_main_story_fields": 16,
+      "insertions": 2917,
+      "deletions": 37,
+      "top_level_tables": 12,
+      "footer_parts": 8,
+      "header_parts": 0,
+      "main_document_image_relationships": 21,
+      "raster_image_relationships": 20,
+      "emf_image_relationships": 1
+    },
+    "source_projection": {
+      "body_unique": 850,
+      "list_unique": 322,
+      "table_cells_unique": 322,
+      "inserted_unique": 887,
+      "deleted_unique": 16,
+      "mandatory_anchor_total": 16,
+      "deleted_negative_total": 5
+    },
+    "first_run": {
+      "docwen_ref_tk": {
+        "mandatory_anchors": 13,
+        "missing_mandatory_anchors": [
+          "13 November 2024",
+          "Appendix V",
+          "https://www.ema.europa.eu/en"
+        ],
+        "normalized_body": [
+          632,
+          850
+        ],
+        "normalized_lists": [
+          244,
+          322
+        ],
+        "normalized_table_cells": [
+          202,
+          322
+        ],
+        "image_link_occurrences": 41,
+        "image_files": 41,
+        "unique_image_hashes": 20,
+        "all_image_files_linked": true
+      },
+      "docwen_ref_pyside6": {
+        "mandatory_anchors": 15,
+        "missing_mandatory_anchors": [
+          "13 November 2024"
+        ],
+        "normalized_body": [
+          632,
+          850
+        ],
+        "normalized_lists": [
+          245,
+          322
+        ],
+        "normalized_table_cells": [
+          202,
+          322
+        ],
+        "image_link_occurrences": 41,
+        "image_files": 41,
+        "unique_image_hashes": 20,
+        "all_image_files_linked": true
+      },
+      "docwen_current": {
+        "mandatory_anchors": 16,
+        "missing_mandatory_anchors": [],
+        "normalized_body": [
+          791,
+          850
+        ],
+        "normalized_lists": [
+          309,
+          322
+        ],
+        "normalized_table_cells": [
+          209,
+          322
+        ],
+        "image_link_occurrences": 22,
+        "image_unique_targets": 10,
+        "image_files": 20,
+        "unique_image_hashes": 20,
+        "unlinked_image_files": 10
+      }
+    },
+    "current_post_fix": {
+      "mandatory_anchors": 16,
+      "deleted_negative_checks": 5,
+      "normalized_body": [
+        791,
+        850
+      ],
+      "normalized_lists": [
+        309,
+        322
+      ],
+      "normalized_table_cells": [
+        209,
+        322
+      ],
+      "image_link_occurrences": 41,
+      "image_unique_targets": 20,
+      "image_files": 20,
+      "unique_image_hashes": 20,
+      "all_image_links_exist": true,
+      "all_image_files_linked": true,
+      "unlinked_image_files": 0,
+      "contains_absolute_workspace_path": false,
+      "markdown_sha256": "84310b9baca309bf4caeeb72540ea0b33dacd7027f4bfa6231dca73536091fa7"
+    },
+    "external_evidence": {
+      "root": "D:/docwen-parity/vis175-fa02-docx-n1-screen-147c9a5-v1",
+      "first_run_analysis_sha256": "81bc4383ea6c0f601f4d760b068287d43001ebf165a24984883fab8a60f11010",
+      "tk_capture_sha256": "c610687dc368830aaa6b206d598c08ed1099fa350b43d4c81c556d01b9fb760d",
+      "pyside6_capture_sha256": "81c1a338188dba0eb2b92e8a8523e534cda54d9f4201e6ba74e0f463eeda9a88"
+    },
+    "complete_source_projection": {
+      "stage_id": "VIS-2026-07-23-189",
+      "stage_start_parent": "13780f4da0811ff16ff93bbca76a95f54ef389c2",
+      "external_root": "D:/docwen-parity/vis189-fa02-source-projection-13780f4-v1",
+      "projector_sha256": "2037380422d7788d6818ed549b3ed7ff102ef687fcbc80e0a6c8bcc1a42d88f6",
+      "result_sha256": "0b63dd8b8a02948dc272cf19c479de665bcbf3ab4874283f92edfad9d0f95c2c",
+      "current_markdown_sha256": "021ac0fcda3cc2eb9a253c5658d2d6dec9551a9cac61567e5129776ac6981b58",
+      "source_instances": {
+        "body": 1473,
+        "lists": 435,
+        "table_cells": 473
+      },
+      "docwen_ref_tk_ordered": {
+        "body": [
+          371,
+          1473
+        ],
+        "lists": [
+          98,
+          435
+        ],
+        "table_cells": [
+          234,
+          473
+        ]
+      },
+      "docwen_ref_pyside6_ordered": {
+        "body": [
+          376,
+          1473
+        ],
+        "lists": [
+          100,
+          435
+        ],
+        "table_cells": [
+          234,
+          473
+        ]
+      },
+      "docwen_current_ordered": {
+        "body": [
+          1473,
+          1473
+        ],
+        "lists": [
+          435,
+          435
+        ],
+        "table_cells": [
+          473,
+          473
+        ]
+      },
+      "docwen_current_multiplicity": {
+        "body": [
+          1473,
+          1473
+        ],
+        "lists": [
+          435,
+          435
+        ],
+        "table_cells": [
+          473,
+          473
+        ]
+      },
+      "current_mandatory_anchors": [
+        16,
+        16
+      ],
+      "current_deleted_negative_checks": [
+        5,
+        5
+      ],
+      "current_images": {
+        "occurrences": 41,
+        "unique_targets": 20,
+        "files": 20,
+        "missing_targets": 0,
+        "orphan_files": 0,
+        "absolute_or_leaked_targets": 0
+      },
+      "current_applicable_oracle_pass": true,
+      "references_100_percent": false,
+      "reference_defects_verified": true,
+      "user_accepted_boundary": false,
+      "legal_disposition": "FIXED_AND_VERIFIED",
+      "fa02_pass": true
+    },
+    "classification": {
+      "current_resource_defect_fixed": true,
+      "current_full_strict_oracle_proven": true,
+      "all_three_100_percent_threshold_green": false,
+      "reference_mandatory_insertion_loss": true,
+      "legacy_reference_defects_verified": true,
+      "user_accepted_boundary": false,
+      "fa02_pass": true,
+      "overall_parity_closed": false
+    }
+  }
+}

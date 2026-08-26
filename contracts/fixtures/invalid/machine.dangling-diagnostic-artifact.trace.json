@@ -1,0 +1,57 @@
+[
+  {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "task/execute",
+    "params": {"plan_id": "plan.diagnostic.001"}
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "result": {"task_id": "task.diagnostic.001", "state": "accepted"}
+  },
+  {
+    "jsonrpc": "2.0",
+    "method": "task/completed",
+    "params": {
+      "task_id": "task.diagnostic.001",
+      "sequence": 1,
+      "bundle": {
+        "schema": "docwen.artifact_bundle.v2",
+        "layout_schema": "docwen.document_node.v1",
+        "bundle_id": "bundle.diagnostic.001",
+        "task_id": "task.diagnostic.001",
+        "producer": {
+          "name": "DocWen",
+          "product_version": "0.9.0",
+          "machine_protocol": "docwen.machine.v1"
+        },
+        "artifacts": [
+          {
+            "artifact_id": "document.main",
+            "kind": "document",
+            "locator": "main.md",
+            "logical_path": "main_20260820_120000_fromMarkdown/main_20260820_120000_fromMarkdown.md",
+            "suggested_name": "main.md",
+            "media_type": "text/markdown",
+            "size_bytes": 1,
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "entries": [
+          {"artifact_id": "document.main", "role": "primary", "ordinal": 0, "preferred": true}
+        ],
+        "relations": []
+      },
+      "diagnostics": [
+        {
+          "severity": "warning",
+          "code": "resource_page_unresolved",
+          "message": "Page ownership could not be proven.",
+          "artifact_id": "resource.missing"
+        }
+      ],
+      "metrics": {"duration_ms": 1, "input_bytes": 1, "output_bytes": 1}
+    }
+  }
+]

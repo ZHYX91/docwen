@@ -1,0 +1,1454 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:docwen:schema:machine-protocol:v1",
+  "title": "DocWen Machine Protocol v1 Messages",
+  "description": "JSON-RPC 2.0 messages carried over Content-Length framed stdio.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/initializeRequest"
+    },
+    {
+      "$ref": "#/$defs/initializeResponse"
+    },
+    {
+      "$ref": "#/$defs/capabilityListRequest"
+    },
+    {
+      "$ref": "#/$defs/capabilityListResponse"
+    },
+    {
+      "$ref": "#/$defs/healthCheckRequest"
+    },
+    {
+      "$ref": "#/$defs/healthCheckResponse"
+    },
+    {
+      "$ref": "#/$defs/fileInspectRequest"
+    },
+    {
+      "$ref": "#/$defs/fileInspectResponse"
+    },
+    {
+      "$ref": "#/$defs/resourceListRequest"
+    },
+    {
+      "$ref": "#/$defs/resourceListResponse"
+    },
+    {
+      "$ref": "#/$defs/guiRequest"
+    },
+    {
+      "$ref": "#/$defs/guiResponse"
+    },
+    {
+      "$ref": "#/$defs/taskPlanRequest"
+    },
+    {
+      "$ref": "#/$defs/taskPlanResponse"
+    },
+    {
+      "$ref": "#/$defs/taskExecuteRequest"
+    },
+    {
+      "$ref": "#/$defs/taskExecuteResponse"
+    },
+    {
+      "$ref": "#/$defs/taskCancelRequest"
+    },
+    {
+      "$ref": "#/$defs/taskCancelResponse"
+    },
+    {
+      "$ref": "#/$defs/taskProgressNotification"
+    },
+    {
+      "$ref": "#/$defs/taskCompletedNotification"
+    },
+    {
+      "$ref": "#/$defs/taskFailedNotification"
+    },
+    {
+      "$ref": "#/$defs/taskCancelledNotification"
+    },
+    {
+      "$ref": "#/$defs/errorResponse"
+    }
+  ],
+  "$defs": {
+    "requestId": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        {
+          "type": "integer"
+        }
+      ]
+    },
+    "responseId": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/requestId"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "protocolDescriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "major",
+        "minor"
+      ],
+      "properties": {
+        "name": {
+          "const": "docwen.machine"
+        },
+        "major": {
+          "const": 1
+        },
+        "minor": {
+          "const": 0
+        }
+      }
+    },
+    "peer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      }
+    },
+    "featureSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "progress",
+        "cancellation"
+      ],
+      "properties": {
+        "progress": {
+          "type": "boolean"
+        },
+        "cancellation": {
+          "type": "boolean"
+        }
+      }
+    },
+    "localPathLocator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "path"
+      ],
+      "properties": {
+        "kind": {
+          "const": "local_path"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32767
+        }
+      }
+    },
+    "inputHandle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_id",
+        "kind",
+        "role",
+        "logical_path",
+        "locator",
+        "media_type",
+        "size_bytes",
+        "sha256"
+      ],
+      "properties": {
+        "input_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "kind": {
+          "enum": [
+            "document",
+            "resource"
+          ]
+        },
+        "role": {
+          "enum": [
+            "source",
+            "linked_resource",
+            "bibliography",
+            "citation_style",
+            "neutral_document",
+            "numbering_export_plan"
+          ]
+        },
+        "logical_path": {
+          "$ref": "#/$defs/logicalInputPath"
+        },
+        "locator": {
+          "$ref": "#/$defs/localPathLocator"
+        },
+        "media_type": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 255
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "logicalInputPath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "pattern": "^(?!/)(?![A-Za-z][A-Za-z0-9+.-]*:)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)[^\\u0000]+$"
+    },
+    "inputSlot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "kind",
+        "media_types",
+        "min_items"
+      ],
+      "properties": {
+        "role": {
+          "enum": [
+            "source",
+            "linked_resource",
+            "bibliography",
+            "citation_style",
+            "neutral_document",
+            "numbering_export_plan"
+          ]
+        },
+        "kind": {
+          "enum": [
+            "document",
+            "resource"
+          ]
+        },
+        "media_types": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 255
+          }
+        },
+        "min_items": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_items": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "inputShape": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slots",
+        "undeclared_roles"
+      ],
+      "properties": {
+        "slots": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/inputSlot"
+          }
+        },
+        "undeclared_roles": {
+          "const": "reject"
+        }
+      }
+    },
+    "outputTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "staging_root",
+        "staging_policy"
+      ],
+      "properties": {
+        "staging_root": {
+          "$ref": "#/$defs/localPathLocator"
+        },
+        "staging_policy": {
+          "const": "require_empty"
+        }
+      }
+    },
+    "outputShape": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cardinality",
+        "artifact_kinds",
+        "relation_types",
+        "atomic_bundle"
+      ],
+      "properties": {
+        "cardinality": {
+          "enum": [
+            "one",
+            "many"
+          ]
+        },
+        "artifact_kinds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "document",
+              "fragment",
+              "resource"
+            ]
+          }
+        },
+        "relation_types": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "attachment_of",
+              "fragment_of",
+              "resource_of",
+              "derived_from"
+            ]
+          }
+        },
+        "relation_payloads": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "page_fragment",
+              "page_resource"
+            ]
+          }
+        },
+        "atomic_bundle": {
+          "const": true
+        }
+      }
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capability_id",
+        "operation",
+        "input_shape",
+        "output_media_types",
+        "output_shape",
+        "options_schema",
+        "availability"
+      ],
+      "properties": {
+        "capability_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "operation": {
+          "enum": [
+            "convert",
+            "render",
+            "inspect",
+            "validate",
+            "transform",
+            "merge"
+          ]
+        },
+        "input_shape": {
+          "$ref": "#/$defs/inputShape"
+        },
+        "output_media_types": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 3
+          }
+        },
+        "output_shape": {
+          "$ref": "#/$defs/outputShape"
+        },
+        "options_schema": {
+          "type": "object"
+        },
+        "availability": {
+          "enum": [
+            "available",
+            "limited",
+            "unavailable"
+          ]
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "dependency_id",
+              "required",
+              "available"
+            ],
+            "properties": {
+              "dependency_id": {
+                "$ref": "#/$defs/identifier"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "available": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/diagnostic"
+          }
+        }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "severity",
+        "code",
+        "message"
+      ],
+      "properties": {
+        "severity": {
+          "enum": [
+            "info",
+            "warning",
+            "error"
+          ]
+        },
+        "code": {
+          "$ref": "#/$defs/identifier"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "artifact_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "evidence_schema": {
+          "const": "docwen.machine.diagnostic_evidence.v1"
+        },
+        "source": {
+          "$ref": "urn:docwen:schema:machine-diagnostic-evidence:v1#/$defs/source"
+        },
+        "range": {
+          "$ref": "urn:docwen:schema:machine-diagnostic-evidence:v1#/$defs/range"
+        },
+        "related_ranges": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {"$ref": "urn:docwen:schema:machine-diagnostic-evidence:v1#/$defs/range"}
+        },
+        "fixes": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {"$ref": "urn:docwen:schema:machine-diagnostic-evidence:v1#/$defs/fix"}
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "anyOf": [
+              {"required": ["evidence_schema"]},
+              {"required": ["source"]},
+              {"required": ["range"]},
+              {"required": ["related_ranges"]},
+              {"required": ["fixes"]}
+            ]
+          },
+          "then": {
+            "$ref": "urn:docwen:schema:machine-diagnostic-evidence:v1"
+          }
+        }
+      ]
+    },
+    "taskError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "category",
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "category": {
+          "enum": [
+            "invalid_request",
+            "unsupported",
+            "unavailable",
+            "dependency",
+            "security",
+            "conflict",
+            "timeout",
+            "resource_exhausted",
+            "conversion_failed",
+            "internal"
+          ]
+        },
+        "code": {
+          "$ref": "#/$defs/identifier"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "details": {
+          "type": "object"
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "duration_ms",
+        "input_bytes",
+        "output_bytes"
+      ],
+      "properties": {
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "input_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "output_bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "initializeRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "id",
+        "method",
+        "params"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/requestId"
+        },
+        "method": {
+          "const": "initialize"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "protocol",
+            "client",
+            "features"
+          ],
+          "properties": {
+            "protocol": {
+              "$ref": "#/$defs/protocolDescriptor"
+            },
+            "client": {
+              "$ref": "#/$defs/peer"
+            },
+            "features": {
+              "$ref": "#/$defs/featureSet"
+            }
+          }
+        }
+      }
+    },
+    "initializeResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "id",
+        "result"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/requestId"
+        },
+        "result": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "protocol",
+            "server",
+            "features",
+            "methods",
+            "artifact_bundle_schema",
+            "max_concurrent_tasks"
+          ],
+          "properties": {
+            "protocol": {
+              "$ref": "#/$defs/protocolDescriptor"
+            },
+            "server": {
+              "$ref": "#/$defs/peer"
+            },
+            "features": {
+              "$ref": "#/$defs/featureSet"
+            },
+            "methods": {
+              "const": [
+                "initialize",
+                "capability/list",
+                "health/check",
+                "file/inspect",
+                "resource/list",
+                "gui/status",
+                "gui/activate",
+                "gui/open",
+                "task/plan",
+                "task/execute",
+                "task/cancel"
+              ]
+            },
+            "artifact_bundle_schema": {
+              "const": "docwen.artifact_bundle.v2"
+            },
+            "max_concurrent_tasks": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      }
+    },
+    "capabilityListRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "id",
+        "method",
+        "params"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/requestId"
+        },
+        "method": {
+          "const": "capability/list"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      }
+    },
+    "capabilityListResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "id",
+        "result"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/requestId"
+        },
+        "result": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "capabilities"
+          ],
+          "properties": {
+            "capabilities": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/capability"
+              }
+            }
+          }
+        }
+      }
+    },
+    "healthCheckRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["jsonrpc", "id", "method", "params"],
+      "properties": {
+        "jsonrpc": {"const": "2.0"},
+        "id": {"$ref": "#/$defs/requestId"},
+        "method": {"const": "health/check"},
+        "params": {"type": "object", "additionalProperties": false}
+      }
+    },
+    "healthCheckResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["jsonrpc", "id", "result"],
+      "properties": {
+        "jsonrpc": {"const": "2.0"},
+        "id": {"$ref": "#/$defs/requestId"},
+        "result": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["all_ok", "checks"],
+          "properties": {
+            "all_ok": {"type": "boolean"},
+            "checks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "kind", "label", "status", "reason"],
+                "properties": {
+                  "id": {"$ref": "#/$defs/identifier"},
+                  "kind": {"type": "string", "minLength": 1},
+                  "label": {"type": "string", "minLength": 1},
+                  "status": {"enum": ["ok", "fail"]},
+                  "reason": {"type": ["string", "null"]}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "fileInspectRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["jsonrpc", "id", "method", "params"],
+      "properties": {
+        "jsonrpc": {"const": "2.0"},
+        "id": {"$ref": "#/$defs/requestId"},
+        "method": {"const": "file/inspect"},
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["input"],
+          "properties": {"input": {"$ref": "#/$defs/inputHandle"}}
+        }
+      }
+    },
+    "fileInspectResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["jsonrpc", "id", "result"],
+      "properties": {
+        "jsonrpc": {"const": "2.0"},
+        "id": {"$ref": "#/$defs/requestId"},
+        "result": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "file_path", "size_bytes", "content_sha256", "decision", "supported_actions",
+            "declared_format", "detected_format", "warning_code", "reason_code", "workflow_category"
+          ],
+          "properties": {
+            "file_path": {"type": "string", "minLength": 1},
+            "size_bytes": {"type": "integer", "minimum": 0},
+            "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "decision": {"type": "string", "minLength": 1},
+            "supported_actions": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+            "declared_format": {"type": "string"},
+            "detected_format": {"type": "string"},
+            "warning_code": {"type": "string"},
+            "reason_code": {"type": "string"},
+            "workflow_category": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    },
+    "resourceListRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["jsonrpc", "id", "method", "params"],
+      "properties": {
+        "jsonrpc": {"const": "2.0"},
+        "id": {"$ref": "#/$defs/requestId"},
+        "method": {"const": "resource/list"},
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": {
+            "kind": {"enum": ["formats", "optimizations", "templates", "numbering-schemes"]},
+            "target": {"type": "string", "minLength": 1},
+            "locale": {"type": "string", "minLength": 2, "maxLength": 32}
+          }
+        }
+      }
+    },
+    "resourceRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "source", "target", "operation", "action", "available", "state", "options"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "source": {"type": "string", "minLength": 1},
+        "target": {"type": "string", "minLength": 1},
+        "operation": {"enum": ["conversion", "action"]},
+        "action": {"type": ["string", "null"]},
+        "available": {"type": "boolean"},
+        "state": {"type": "string", "minLength": 1},
+        "options": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "resourceItem": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "category", "available", "routes"],
+          "properties": {
+            "id": {"$ref": "#/$defs/identifier"},
+            "category": {"type": "string", "minLength": 1},
+            "available": {"type": "boolean"},
+            "routes": {"type": "array", "items": {"$ref": "#/$defs/resourceRoute"}}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "name", "description", "scopes"],
+          "properties": {
+            "id": {"$ref": "#/$defs/identifier"},
+            "name": {"type": "string"},
+            "description": {"type": "string"},
+            "scopes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "name", "description"],
+          "properties": {
+            "id": {"$ref": "#/$defs/identifier"},
+            "name": {"type": "string"},
+            "description": {"type": "string"},
+            "target": {"type": "string", "minLength": 1}
+          }
+        }
+      ]
+    },
+    "resourceListResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["jsonrpc", "id", "result"],
+      "properties": {
+        "jsonrpc": {"const": "2.0"},
+        "id": {"$ref": "#/$defs/requestId"},
+        "result": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "resources"],
+          "properties": {
+            "kind": {"enum": ["formats", "optimizations", "templates", "numbering-schemes"]},
+            "resources": {"type": "array", "items": {"$ref": "#/$defs/resourceItem"}}
+          }
+        }
+      }
+    },
+    "guiRequest": {
+      "oneOf": [
+        {"$ref": "#/$defs/guiStatusRequest"},
+        {"$ref": "#/$defs/guiActivateRequest"},
+        {"$ref": "#/$defs/guiOpenRequest"}
+      ]
+    },
+    "guiStatusRequest": {
+      "type": "object", "additionalProperties": false,
+      "required": ["jsonrpc", "id", "method", "params"],
+      "properties": {
+        "jsonrpc": {"const": "2.0"}, "id": {"$ref": "#/$defs/requestId"}, "method": {"const": "gui/status"},
+        "params": {"type": "object", "additionalProperties": false, "required": ["timeout_seconds"], "properties": {"timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 1800}}}
+      }
+    },
+    "guiActivateRequest": {
+      "type": "object", "additionalProperties": false,
+      "required": ["jsonrpc", "id", "method", "params"],
+      "properties": {
+        "jsonrpc": {"const": "2.0"}, "id": {"$ref": "#/$defs/requestId"}, "method": {"const": "gui/activate"},
+        "params": {"type": "object", "additionalProperties": false, "required": ["timeout_seconds"], "properties": {"timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 1800}}}
+      }
+    },
+    "guiOpenRequest": {
+      "type": "object", "additionalProperties": false,
+      "required": ["jsonrpc", "id", "method", "params"],
+      "properties": {
+        "jsonrpc": {"const": "2.0"}, "id": {"$ref": "#/$defs/requestId"}, "method": {"const": "gui/open"},
+        "params": {"type": "object", "additionalProperties": false, "required": ["timeout_seconds"], "properties": {"timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 1800}, "file_path": {"type": "string", "minLength": 1}}}
+      }
+    },
+    "guiResponse": {
+      "type": "object", "additionalProperties": false,
+      "required": ["jsonrpc", "id", "result"],
+      "properties": {
+        "jsonrpc": {"const": "2.0"}, "id": {"$ref": "#/$defs/requestId"},
+        "result": {
+          "type": "object", "additionalProperties": false,
+          "required": ["action", "accepted"],
+          "properties": {"action": {"enum": ["status", "activate", "open"]}, "accepted": {"type": "boolean"}, "running": {"type": "boolean"}}
+        }
+      }
+    },
+    "taskPlanRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "id",
+        "method",
+        "params"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/requestId"
+        },
+        "method": {
+          "const": "task/plan"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "capability_id",
+            "inputs",
+            "output",
+            "options"
+          ],
+          "properties": {
+            "capability_id": {
+              "$ref": "#/$defs/identifier"
+            },
+            "inputs": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/inputHandle"
+              }
+            },
+            "output": {
+              "$ref": "#/$defs/outputTarget"
+            },
+            "options": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "taskPlanResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "id",
+        "result"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/requestId"
+        },
+        "result": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "plan_id",
+            "capability_id",
+            "effective_options",
+            "output_shape",
+            "warnings",
+            "limitations",
+            "requires_confirmation"
+          ],
+          "properties": {
+            "plan_id": {
+              "$ref": "#/$defs/identifier"
+            },
+            "capability_id": {
+              "$ref": "#/$defs/identifier"
+            },
+            "effective_options": {
+              "type": "object"
+            },
+            "output_shape": {
+              "$ref": "#/$defs/outputShape"
+            },
+            "warnings": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/diagnostic"
+              }
+            },
+            "limitations": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/diagnostic"
+              }
+            },
+            "requires_confirmation": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "taskExecuteRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "id",
+        "method",
+        "params"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/requestId"
+        },
+        "method": {
+          "const": "task/execute"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "plan_id"
+          ],
+          "properties": {
+            "plan_id": {
+              "$ref": "#/$defs/identifier"
+            }
+          }
+        }
+      }
+    },
+    "taskExecuteResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "id",
+        "result"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/requestId"
+        },
+        "result": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "task_id",
+            "state"
+          ],
+          "properties": {
+            "task_id": {
+              "$ref": "#/$defs/identifier"
+            },
+            "state": {
+              "const": "accepted"
+            }
+          }
+        }
+      }
+    },
+    "taskCancelRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "id",
+        "method",
+        "params"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/requestId"
+        },
+        "method": {
+          "const": "task/cancel"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "task_id"
+          ],
+          "properties": {
+            "task_id": {
+              "$ref": "#/$defs/identifier"
+            }
+          }
+        }
+      }
+    },
+    "taskCancelResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "id",
+        "result"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/requestId"
+        },
+        "result": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "task_id",
+            "state"
+          ],
+          "properties": {
+            "task_id": {
+              "$ref": "#/$defs/identifier"
+            },
+            "state": {
+              "enum": [
+                "cancellation_requested",
+                "already_terminal",
+                "not_found"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "taskProgressNotification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "method",
+        "params"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "method": {
+          "const": "task/progress"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "task_id",
+            "sequence",
+            "phase",
+            "completed",
+            "total",
+            "unit"
+          ],
+          "properties": {
+            "task_id": {
+              "$ref": "#/$defs/identifier"
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "phase": {
+              "const": "conversion"
+            },
+            "completed": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "total": {
+              "const": 100
+            },
+            "unit": {
+              "const": "percent"
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 31
+            }
+          }
+        }
+      }
+    },
+    "taskCompletedNotification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "method",
+        "params"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "method": {
+          "const": "task/completed"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "task_id",
+            "sequence",
+            "bundle",
+            "diagnostics",
+            "metrics"
+          ],
+          "properties": {
+            "task_id": {
+              "$ref": "#/$defs/identifier"
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "bundle": {
+              "$ref": "urn:docwen:schema:artifact-bundle:v2"
+            },
+            "diagnostics": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/diagnostic"
+              }
+            },
+            "metrics": {
+              "$ref": "#/$defs/metrics"
+            }
+          }
+        }
+      }
+    },
+    "taskFailedNotification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "method",
+        "params"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "method": {
+          "const": "task/failed"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "task_id",
+            "sequence",
+            "error",
+            "diagnostics"
+          ],
+          "properties": {
+            "task_id": {
+              "$ref": "#/$defs/identifier"
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "error": {
+              "$ref": "#/$defs/taskError"
+            },
+            "diagnostics": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/diagnostic"
+              }
+            }
+          }
+        }
+      }
+    },
+    "taskCancelledNotification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "method",
+        "params"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "method": {
+          "const": "task/cancelled"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "task_id",
+            "sequence",
+            "reason",
+            "diagnostics"
+          ],
+          "properties": {
+            "task_id": {
+              "$ref": "#/$defs/identifier"
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "diagnostics": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/diagnostic"
+              }
+            }
+          }
+        }
+      }
+    },
+    "errorResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "id",
+        "error"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/responseId"
+        },
+        "error": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message"
+          ],
+          "properties": {
+            "code": {
+              "enum": [
+                -32700,
+                -32600,
+                -32601,
+                -32602,
+                -32603
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "data": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  }
+}

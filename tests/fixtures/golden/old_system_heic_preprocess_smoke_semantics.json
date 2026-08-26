@@ -1,0 +1,212 @@
+{
+  "case_id": "old_system_heic_preprocess_smoke_semantics",
+  "generated_at": "2026-07-04",
+  "golden_ids": [
+    "GOLDEN-004",
+    "GOLDEN-024",
+    "GOLDEN-025"
+  ],
+  "probe_scope": "Focused three-project HEIC/HEIF preprocessing production smoke. Programmatic RGB HEIC/HEIF inputs were generated with pillow-heif, then old Tk, old PySide6, and the current rewrite were run through real CLI entrypoints. The fixture stores normalized semantics rather than timestamped old output paths.",
+  "inputs": {
+    "sample.heic": {
+      "mode": "RGB",
+      "size": [
+        18,
+        12
+      ],
+      "bytes": 447
+    },
+    "sample.heif": {
+      "mode": "RGB",
+      "size": [
+        20,
+        10
+      ],
+      "bytes": 446
+    }
+  },
+  "shared_semantics": {
+    "heic_to_pdf": {
+      "input": "sample.heic",
+      "target": "pdf",
+      "expected_success": true,
+      "pdf_magic": true,
+      "page_count": 1,
+      "page_rect": [
+        0.0,
+        0.0,
+        13.5,
+        9.0
+      ]
+    },
+    "heif_to_markdown": {
+      "input": "sample.heif",
+      "target": "md",
+      "expected_success": true,
+      "expected_image_artifact": "sample.png",
+      "expected_image_format": "PNG",
+      "expected_image_mode": "RGB",
+      "expected_image_size": [
+        20,
+        10
+      ],
+      "expected_markdown_token": "![[sample.png]]",
+      "expected_cli_default_ocr": false
+    },
+    "heic_to_jpg": {
+      "input": "sample.heic",
+      "target": "jpg",
+      "classification": "current_enhancement_or_old_format_route_limitation",
+      "reason": "Old Tk and old PySide6 image-to-PDF and image-to-Markdown strategies preconvert HEIC/HEIF to PNG, but the old image-format conversion production CLI path attempted to open HEIC directly with Pillow and failed in this environment. Current preconverts HEIC at the plugin boundary, so HEIC->JPG succeeds. This is not a current parity regression."
+    }
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "command_shapes": {
+        "heic_to_pdf": "uv run docwen convert --to pdf sample.heic --json --quiet",
+        "heif_to_markdown": "uv run docwen convert --to md sample.heif --json --quiet",
+        "heic_to_jpg": "uv run docwen convert --to jpg sample.heic --json --quiet"
+      },
+      "heic_to_pdf": {
+        "exit_code": 0,
+        "success": true,
+        "output_suffix": ".pdf",
+        "timestamped_output_style": true,
+        "pdf_magic": true,
+        "page_count": 1,
+        "page_rect": [
+          0.0,
+          0.0,
+          13.5,
+          9.0
+        ]
+      },
+      "heif_to_markdown": {
+        "exit_code": 0,
+        "success": true,
+        "timestamped_output_directory": true,
+        "has_yaml_frontmatter": true,
+        "contains_markdown_image_link": true,
+        "contains_sample_png": true,
+        "image_files": [
+          "sample.png"
+        ],
+        "image_format": "PNG",
+        "image_mode": "RGB",
+        "image_size": [
+          20,
+          10
+        ],
+        "ocr_text_present": false
+      },
+      "heic_to_jpg": {
+        "exit_code": 1,
+        "success": false,
+        "error_code": "conversion_failed",
+        "error_contains": "cannot identify image file"
+      }
+    },
+    "docwen-ref-pyside6": {
+      "command_shapes": {
+        "heic_to_pdf": "uv run docwen convert --to pdf sample.heic --json --quiet",
+        "heif_to_markdown": "uv run docwen convert --to md sample.heif --json --quiet",
+        "heic_to_jpg": "uv run docwen convert --to jpg sample.heic --json --quiet"
+      },
+      "heic_to_pdf": {
+        "exit_code": 0,
+        "success": true,
+        "output_suffix": ".pdf",
+        "timestamped_output_style": true,
+        "pdf_magic": true,
+        "page_count": 1,
+        "page_rect": [
+          0.0,
+          0.0,
+          13.5,
+          9.0
+        ]
+      },
+      "heif_to_markdown": {
+        "exit_code": 0,
+        "success": true,
+        "timestamped_output_directory": true,
+        "has_yaml_frontmatter": true,
+        "contains_markdown_image_link": true,
+        "contains_sample_png": true,
+        "image_files": [
+          "sample.png"
+        ],
+        "image_format": "PNG",
+        "image_mode": "RGB",
+        "image_size": [
+          20,
+          10
+        ],
+        "ocr_text_present": false
+      },
+      "heic_to_jpg": {
+        "exit_code": 1,
+        "success": false,
+        "error_code": "conversion_failed",
+        "error_contains": "cannot identify image file"
+      }
+    },
+    "docwen-current": {
+      "command_shapes": {
+        "heic_to_pdf": "uv run docwen run --to pdf sample.heic --json --quiet --output current-pdf",
+        "heif_to_markdown": "uv run docwen run --to md sample.heif --json --quiet --output current-md",
+        "heic_to_jpg": "uv run docwen run --to jpg sample.heic --json --quiet --output current-jpg"
+      },
+      "heic_to_pdf": {
+        "exit_code": 0,
+        "success": true,
+        "output_suffix": ".pdf",
+        "stable_output_style": true,
+        "pdf_magic": true,
+        "page_count": 1,
+        "page_rect": [
+          0.0,
+          0.0,
+          13.5,
+          9.0
+        ],
+        "suggested_name": "sample.pdf"
+      },
+      "heif_to_markdown": {
+        "exit_code": 0,
+        "success": true,
+        "stable_output_style": true,
+        "has_yaml_frontmatter": true,
+        "contains_markdown_image_link": true,
+        "contains_sample_png": true,
+        "image_files": [
+          "sample.png"
+        ],
+        "image_format": "PNG",
+        "image_mode": "RGB",
+        "image_size": [
+          20,
+          10
+        ],
+        "ocr_text_present": false,
+        "current_extra_frontmatter": [
+          "source_format: png"
+        ]
+      },
+      "heic_to_jpg": {
+        "exit_code": 0,
+        "success": true,
+        "output_suffix": ".jpg",
+        "stable_output_style": true,
+        "image_format": "JPEG",
+        "image_mode": "RGB",
+        "image_size": [
+          18,
+          12
+        ],
+        "suggested_name": "sample.jpg"
+      }
+    }
+  },
+  "comparison_implication": "Generated HEIC/HEIF preprocessing evidence is no longer blank for GOLDEN-024/GOLDEN-025: old Tk, old PySide6, and current all preconvert successfully for HEIC->PDF and HEIF->Markdown file-mode no-OCR. HEIC->JPG remains a current enhancement over the old production image-format path rather than a parity requirement. Real iPhone/EXIF orientation and broader image matrices still remain open."
+}

@@ -1,0 +1,14 @@
+{
+  "jsonrpc": "2.0",
+  "method": "task/completed",
+  "params": {
+    "task_id": "task.invalid.completed",
+    "sequence": 1,
+    "diagnostics": [],
+    "metrics": {
+      "duration_ms": 1,
+      "input_bytes": 1,
+      "output_bytes": 0
+    }
+  }
+}

@@ -1,0 +1,18 @@
+[
+  {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "task/execute",
+    "params": {
+      "plan_id": "plan.duplicate.request.one"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "task/execute",
+    "params": {
+      "plan_id": "plan.duplicate.request.two"
+    }
+  }
+]

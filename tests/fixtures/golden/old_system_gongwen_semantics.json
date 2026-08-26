@@ -1,0 +1,170 @@
+{
+  "golden_id": "GOLDEN-008",
+  "description": "Normalized old-system semantic smoke for DOCX to Markdown in gongwen mode.",
+  "probe_date": "2026-07-30",
+  "probe_scope": "Generated minimal gongwen DOCX run through old Tk, old PySide6, and current optimizer pipeline; volatile output paths and timestamps are omitted.",
+  "comparison_implication": "This fixture proves focused gongwen metadata, main Markdown, attachment Markdown, and fixed Chinese schema semantics for one generated sample; broader real-world gongwen artifact parity remains open.",
+  "input_docx": {
+    "source_fixture": "packages/plugins/optimizers/gongwen/tests/test_gongwen_golden.py::gongwen_docx_path",
+    "paragraphs": [
+      "关于进一步规范公文处理工作的通知",
+      "国办发〔2024〕5号",
+      "各省、自治区、直辖市人民政府办公厅：",
+      "为进一步规范公文处理工作，现就有关事项通知如下：",
+      "一、严格公文格式标准。",
+      "二、规范公文流转程序。",
+      "附件：1. 公文格式标准",
+      "          2. 公文流转程序",
+      "抄送：省委组织部、省人民政府办公厅",
+      "国务院办公厅　　　　2024年1月15日印发"
+    ]
+  },
+  "expected_semantics": {
+    "yaml_field_count": 18,
+    "title": "关于进一步规范公文处理工作的通知",
+    "doc_number": "国办发〔2024〕5号",
+    "recipient": "各省、自治区、直辖市人民政府办公厅",
+    "attachment_description": [
+      "公文格式标准",
+      "公文流转程序"
+    ],
+    "printing_line": "国务院办公厅　　　　2024年1月15日印发",
+    "printing_authority": "国务院办公厅",
+    "printing_date": "2024年1月15日",
+    "attachment_markdown_present": false,
+    "markdown_contains": [
+      "关于进一步规范公文处理工作的通知",
+      "国办发〔2024〕5号",
+      "各省、自治区、直辖市人民政府办公厅",
+      "附件",
+      "抄送"
+    ],
+    "accepted_differences": [
+      "Old Tk does not extract the document number for this minimal synthetic sample, while old PySide6 and current do; the comparison requires current to preserve the stronger PySide6/current behavior.",
+      "The synthetic sample lacks an explicit issue date, so old PySide6 and current mark the result as needs_review/missing issue_date.",
+      "The synthetic sample also lacks a separate issuing-authority signature; a copy-to row ending in an authority suffix must not fill that field.",
+      "Attachment descriptions alone stay in YAML and do not create a duplicate attachment artifact."
+    ]
+  },
+  "shared_behavior_evidence": {
+    "fixed_chinese_schema_scope": {
+      "classification": "fixed_chinese_public_document_metadata_and_attachment_frontmatter_schema",
+      "old_tk_code_evidence": "docwen-ref-tk/src/docwen/converter/docx2md/gongwen/converter.py documents gongwen-specific UI/progress as Chinese-only; content_generator.py builds the main 18-field Chinese YAML metadata and fixed attachment frontmatter keys 来源文件/提取时间/类型.",
+      "old_pyside6_code_evidence": "docwen-ref-pyside6/src/docwen/converter/docx/to_md/gongwen/converter/yaml_extraction.py initializes the same fixed Chinese 18-field YAML metadata; content_generator.py builds fixed Chinese main and attachment Markdown frontmatter.",
+      "current_code_evidence": "packages/plugins/optimizers/gongwen/src/docwen_plugin_optimizer_gongwen/constants.py and models.py define/to_dict the same fixed Chinese 18-field metadata; rendering/markdown_renderer.py dumps those keys unchanged and attachment_renderer.py keeps 来源文件/提取时间/类型.",
+      "parity_decision": "Gongwen is a Chinese public-document optimizer, so generic yaml_key_labels title/subtitle localization should not be mechanically applied to its 18-field metadata or attachment frontmatter. Multilingual gongwen field labels would be a future product enhancement, not a current regression against old Tk/PySide6.",
+      "current_tests": [
+        "packages/plugins/optimizers/gongwen/tests/test_gongwen_golden.py::TestOldSystemGongwenFixture::test_gongwen_matches_old_system_semantic_fixture",
+        "packages/plugins/optimizers/gongwen/tests/test_gongwen_golden.py::TestOldSystemGongwenFixture::test_gongwen_old_system_fixture_finalizes_through_runtime",
+        "tests/test_repo/test_golden_docs.py::test_golden_docs_track_current_gongwen_and_smartconverter_partial_status"
+      ]
+    }
+  },
+  "fa05_final_artifact_contract_addendum": {
+    "audit_id": "VIS-2026-07-23-191",
+    "status": "FIXED_AND_VERIFIED",
+    "scope": "Frozen FA-05 B1 plus the hash-pinned Jing'an N1 issued document; reference artifacts are reused byte-for-byte from VIS-174 and current artifacts are freshly executed.",
+    "visible_schema_oracle": {
+      "ordered_key_count": 18,
+      "require_every_key_once_when_any_metadata_exists": true,
+      "omit_frontmatter_when_all_metadata_is_empty": true
+    },
+    "n1_source_sha256": "9798406C1B328E57A2E47481EFC538B2D9237509BEC647DD1FAA5F8AA91AE3D0",
+    "n1_seal_sha256": "7DC5645592C08B5478F4E007D8D6BF94108DE91D7D0CE6C91F4F77DE7FC8DBC5",
+    "reference_results": {
+      "docwen-ref-tk": {
+        "visible_schema_key_count": 18,
+        "mandatory_anchor_count": "13/16",
+        "attachment_nonempty": false,
+        "seal_link_reachable": false,
+        "disposition": "legacy_reference_defect"
+      },
+      "docwen-ref-pyside6": {
+        "visible_schema_key_count": 18,
+        "mandatory_anchor_count": "13/16",
+        "attachment_nonempty": true,
+        "seal_link_reachable": true,
+        "disposition": "legacy_reference_defect"
+      }
+    },
+    "current_results": {
+      "logical_visible_schema_key_count": 18,
+      "runtime_visible_schema_key_count": 18,
+      "mandatory_anchor_count": "16/16",
+      "attachment_nonempty": true,
+      "seal_source_exact_and_reachable": true,
+      "truthful_review_warning": "GONGWEN-NEEDS-REVIEW",
+      "absolute_or_workspace_path_leak": false
+    },
+    "evidence_projection": {
+      "relative_external_path": "../vis191-fa05-visible-schema-3fb4e5b-v1/complete-disposition.json",
+      "bytes": 5819,
+      "sha256": "B9BAC6F814263B2994E24CA51998443E53B1DC14186F6EB9F2CA780627A08FBA"
+    },
+    "user_accepted_boundary": false,
+    "comparison_implication": "Current satisfies the frozen FA-05 visible-schema and N1 artifact oracle. The two unchanged reference losses are explicit legacy reference defects, not accepted current data loss and not evidence that overall parity is complete."
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "success": true,
+      "entrypoint": "docwen.converter.docx2md.gongwen.converter.convert_docx_to_md_gongwen",
+      "yaml_field_count": 18,
+      "metadata_non_empty": {
+        "标题": "关于进一步规范公文处理工作的通知",
+        "发文机关署名": "抄送：省委组织部、省人民政府办公厅",
+        "主送机关": "各省、自治区、直辖市人民政府办公厅",
+        "附件说明": [
+          "公文格式标准",
+          "公文流转程序"
+        ]
+      },
+      "contains_core_markdown": true,
+      "attachment_markdown_present": true
+    },
+    "docwen-ref-pyside6": {
+      "success": true,
+      "entrypoint": "docwen.converter.docx.to_md.gongwen.converter.convert_docx_to_md_gongwen",
+      "yaml_field_count": 18,
+      "metadata_non_empty": {
+        "标题": "关于进一步规范公文处理工作的通知",
+        "发文字号": "国办发〔2024〕5号",
+        "发文机关署名": "抄送：省委组织部、省人民政府办公厅",
+        "主送机关": "各省、自治区、直辖市人民政府办公厅",
+        "附件说明": [
+          "公文格式标准",
+          "公文流转程序"
+        ]
+      },
+      "validation_status": "needs_review",
+      "missing_required": [
+        "issue_date"
+      ],
+      "contains_core_markdown": true,
+      "attachment_markdown_present": true
+    },
+    "docwen-current": {
+      "success": true,
+      "entrypoint": "docwen_plugin_optimizer_gongwen.pipeline.convert_docx_to_md_gongwen",
+      "yaml_field_count": 18,
+      "metadata_non_empty_expected": {
+        "标题": "关于进一步规范公文处理工作的通知",
+        "发文字号": "国办发〔2024〕5号",
+        "主送机关": "各省、自治区、直辖市人民政府办公厅",
+        "印发机关": "国务院办公厅",
+        "印发日期": "2024年1月15日",
+        "附件说明": [
+          "公文格式标准",
+          "公文流转程序"
+        ]
+      },
+      "validation_status": "needs_review",
+      "missing_required": [
+        "issuing_authority_signature",
+        "issue_date"
+      ],
+      "contains_core_markdown": true,
+      "attachment_markdown_present": false,
+      "fixed_regression": "Do not treat 抄送 as 发文机关署名, do not duplicate attachment descriptions into an attachment artifact, and split the combined printing line into 印发机关/印发日期."
+    }
+  }
+}

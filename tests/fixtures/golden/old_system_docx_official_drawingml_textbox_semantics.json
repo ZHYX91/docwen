@@ -1,0 +1,162 @@
+{
+  "golden_id": "GOLDEN-002",
+  "evidence_id": "VIS-2026-07-15-031",
+  "scope": "Three-project DOCX-to-Markdown comparison using an official English local-government template whose visible body is almost entirely DrawingML textboxes.",
+  "source": {
+    "title": "Cambridge Rich Picture conversation templates",
+    "publisher": "Cambridge City Council",
+    "disclosure_page": "https://www.cambridge.gov.uk/cambridge-rich-picture",
+    "attachment_url": "https://www.cambridge.gov.uk/media/fmbfhyaz/rich-picture-templates.docx",
+    "retrieved_on": "2026-07-15",
+    "redistribution": "external_binary_retained_only_in_workspace_bound_temporary_probe",
+    "bytes": 59369,
+    "sha256": "4a0607a5a5c4eaa7da9e88cabe76c69267a8f954af8810de184b887a3dd03915",
+    "top_level_paragraph_count": 3,
+    "top_level_nonempty_paragraph_count": 0,
+    "body_xml_paragraph_count": 53,
+    "body_nonempty_text_node_count": 56,
+    "section_count": 1,
+    "table_count": 0,
+    "drawing_count": 15,
+    "alternate_content_count": 15,
+    "drawingml_textbox_count": 16,
+    "vml_fallback_textbox_count": 16,
+    "textbox_content_count": 32,
+    "unique_choice_paragraph_count": 21,
+    "media_file_count": 0,
+    "footer_texts": [
+      "Cambridge Rich Picture Facilitation",
+      "Workshop Templates",
+      "October 2023"
+    ],
+    "absent_features": [
+      "word/media/*",
+      "word/comments.xml",
+      "tracked revisions",
+      "hyperlinks",
+      "field codes",
+      "tables"
+    ]
+  },
+  "execution_contract": {
+    "valid_project_executions": 3,
+    "all_valid_executions_successful": true,
+    "docwen_ref_tk_entry": "Production convert_docx_to_md after gui_run.py translator injection.",
+    "docwen_ref_pyside6_entry": "Production convert_docx_to_md after docwen.bootstrap.initialize_runtime().",
+    "docwen_current_entry": "DocumentPlugin -> TaskManager -> OutputFinalizer with source-owned naming and yaml_key_labels.",
+    "office_application_required": false,
+    "invalid_harness_attempts_excluded": [
+      "The first current result reader assumed artifact kind=markdown instead of the canonical primary kind plus text/markdown media type; conversion succeeded, but that harness result was deleted and rerun fresh."
+    ]
+  },
+  "pre_fix_current_regressions": [
+    {
+      "description": "Element deduplication retained id(lxml_wrapper) without retaining the wrapper; CPython reused ids and 17 distinct textbox paragraphs were silently skipped.",
+      "source_unique_choice_paragraphs": 21,
+      "current_reachable_unique_source_paragraphs": 4,
+      "current_utf8_bytes": 160,
+      "current_sha256": "287b8aa93a06f26813e532913a9d034758599298c84ad47fbc62162ba5503e1d"
+    },
+    {
+      "description": "Raw w:t concatenation discarded w:br and joined two visible multiline textbox paragraphs.",
+      "after_element_fix_before_break_fix_utf8_bytes": 463,
+      "after_element_fix_before_break_fix_sha256": "92c8d0be71b3c2b3377139e58df8af880df17ed7bc6630826c9279562552dd9f",
+      "joined_examples": [
+        "Describe the outcome:- specific",
+        "What needs to be in place?(Enablers)"
+      ]
+    },
+    {
+      "description": "Exported textbox paragraphs did not contribute to ArtifactManifest paragraph_count.",
+      "pre_fix_paragraph_metadata_count": 0,
+      "post_fix_paragraph_metadata_count": 21
+    }
+  ],
+  "regressions_fixed": [
+    {
+      "owner": "packages/core/src/docwen_core/docx_parsing/textbox_extraction.py",
+      "direct_tests": [
+        "packages/core/tests/test_docx_textbox_extraction.py::test_distinct_drawingml_textboxes_are_not_lost_to_wrapper_id_reuse",
+        "packages/core/tests/test_docx_textbox_extraction.py::test_drawingml_textbox_preserves_manual_line_breaks"
+      ]
+    },
+    {
+      "owner": "packages/plugins/document/src/docwen_plugin_document/to_markdown/converter.py",
+      "direct_test": "packages/plugins/document/tests/test_document_to_md_golden.py::TestDocxToMdGolden::test_drawingml_textbox_paragraph_is_counted_through_finalizer"
+    }
+  ],
+  "post_fix_projects": {
+    "docwen-ref-tk": {
+      "success": true,
+      "utf8_bytes": 452,
+      "sha256": "61e1e0b63c08d09ce854c010d2f369dcdb2ed1037827a00f019c644b07187bee",
+      "body_sha256": "41d780d74994fcd9c92442b2885867336781ebcde3e09f357f76d76147ff2391",
+      "body_line_count": 43,
+      "reachable_unique_source_paragraphs": 19,
+      "missing_unique_source_paragraphs": ["What needs to be true?", "Coordinator"],
+      "source_unique_paragraphs_appear_in_xml_order": false,
+      "image_files": []
+    },
+    "docwen-ref-pyside6": {
+      "success": true,
+      "utf8_bytes": 452,
+      "sha256": "61e1e0b63c08d09ce854c010d2f369dcdb2ed1037827a00f019c644b07187bee",
+      "body_sha256": "41d780d74994fcd9c92442b2885867336781ebcde3e09f357f76d76147ff2391",
+      "body_line_count": 43,
+      "reachable_unique_source_paragraphs": 19,
+      "missing_unique_source_paragraphs": ["What needs to be true?", "Coordinator"],
+      "source_unique_paragraphs_appear_in_xml_order": false,
+      "image_files": []
+    },
+    "docwen-current": {
+      "success": true,
+      "utf8_bytes": 467,
+      "sha256": "b9250e166abf36cfa52545652542e78945fb034a0a708cc4f16086ccc7da8902",
+      "body_sha256": "0ed8ddb7a4024ef27e1556751e420f60257cc10bb646be08d282bcbb2fd3ee31",
+      "body_line_count": 45,
+      "reachable_unique_source_paragraphs": 21,
+      "missing_unique_source_paragraphs": [],
+      "source_unique_paragraphs_appear_in_xml_order": true,
+      "primary_name": "cambridge-rich-picture-templates.md",
+      "primary_in_requested_output_directory": true,
+      "artifact_kinds": ["primary"],
+      "metadata": {
+        "paragraph_count": 21,
+        "heading_count": 0,
+        "table_count": 0,
+        "image_count": 0
+      },
+      "diagnostic_codes": ["DOCX2MD-OK", "FINALIZER_DONE"]
+    }
+  },
+  "normalized_contract": {
+    "frontmatter_dictionaries_equal_across_three_projects": true,
+    "old_outputs_byte_identical": true,
+    "current_all_unique_choice_paragraphs_reachable": true,
+    "current_preserves_source_unique_paragraph_order": true,
+    "current_preserves_manual_breaks": true,
+    "no_project_emits_image_artifacts_for_non_image_shapes": true,
+    "no_project_emits_ordinary_footer_text": true
+  },
+  "evidence_backed_current_improvements": [
+    "Current preserves all 21 unique Choice-branch textbox paragraphs; both old projects preserve 19 and omit What needs to be true? plus Coordinator.",
+    "Current keeps the unique textbox paragraphs in source XML order; both old projects reorder anchored textboxes.",
+    "Current finalizes a stable source-owned name with accurate 21-paragraph metadata and diagnostics."
+  ],
+  "shared_reference_limits": [
+    "All three omit the ordinary footer texts Cambridge Rich Picture Facilitation, Workshop Templates and October 2023.",
+    "Markdown preserves textbox text semantics, not DrawingML geometry, grouping, colors, connector relationships or page layout.",
+    "The 15 drawings are WordprocessingShape textboxes with no word/media files, so zero image artifacts is correct."
+  ],
+  "accepted_limits": [
+    "The official source URL, SHA-256, OOXML profile and normalized projection are checked in; the external DOCX binary is not redistributed.",
+    "Current additional source paragraphs and source-order preservation are evidence-backed improvements, not regressions against the old output byte stream."
+  ],
+  "remaining_scope": [
+    "This is one English local-government template, not a broad DrawingML or business-document corpus.",
+    "The sample does not exercise raster/vector media, comments, revisions, fields, hyperlinks or tables.",
+    "Physical Word/WPS/LibreOffice rendering and visible shape-layout fidelity are not exercised.",
+    "Ordinary header/footer extraction remains a shared product limitation.",
+    "GOLDEN-002 and overall final artifact parity remain NOT PASSED YET."
+  ]
+}

@@ -1,0 +1,202 @@
+{
+  "golden_id": "GOLDEN-010",
+  "scope": "focused SmartSheet XLSX to ODS real external-office smoke",
+  "generated_at": "2026-07-03",
+  "input_workbook": {
+    "filename": "smart-sheet-ods-probe.xlsx",
+    "sheet": "Data",
+    "cells": {
+      "A1": "Title",
+      "B1": "Smart Sheet ODS Smoke",
+      "A2": "Item",
+      "B2": "Qty",
+      "A3": "Apple",
+      "B3": 2,
+      "A4": "Pear",
+      "B4": 5,
+      "C4": "=SUM(B3:B4)"
+    }
+  },
+  "route": {
+    "source_format": "xlsx",
+    "target_format": "ods",
+    "category": "spreadsheet"
+  },
+  "expected_semantics": {
+    "output_extension": ".ods",
+    "zip_magic": "504b0304",
+    "entry_count": 5,
+    "has_content_xml": true,
+    "rows": [
+      [
+        "Title",
+        "Smart Sheet ODS Smoke",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "Item",
+        "Qty",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "Apple",
+        "2",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "Pear",
+        "5",
+        "7",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "entry": "docwen.converter.formats.spreadsheet.xlsx_to_ods",
+      "success": true,
+      "probe_note": "Function-level probe required absolute input/output paths; relative paths returned None in this legacy Tk function.",
+      "output_size_bytes": 3007,
+      "zip_magic": "504b0304",
+      "entry_count": 5,
+      "has_content_xml": true,
+      "rows": [
+        [
+          "Title",
+          "Smart Sheet ODS Smoke",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "Item",
+          "Qty",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "Apple",
+          "2",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "Pear",
+          "5",
+          "7",
+          "",
+          "",
+          ""
+        ]
+      ]
+    },
+    "docwen-ref-pyside6": {
+      "entry": "docwen.converter.spreadsheet.external.xlsx_to_ods",
+      "success": true,
+      "output_size_bytes": 3006,
+      "zip_magic": "504b0304",
+      "entry_count": 5,
+      "has_content_xml": true,
+      "rows": [
+        [
+          "Title",
+          "Smart Sheet ODS Smoke",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "Item",
+          "Qty",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "Apple",
+          "2",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "Pear",
+          "5",
+          "7",
+          "",
+          "",
+          ""
+        ]
+      ]
+    },
+    "docwen-current": {
+      "entry": "uv run docwen run smart-sheet-ods-probe.xlsx --to ods --json",
+      "success": true,
+      "output_size_bytes": 3005,
+      "zip_magic": "504b0304",
+      "entry_count": 5,
+      "has_content_xml": true,
+      "rows": [
+        [
+          "Title",
+          "Smart Sheet ODS Smoke",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "Item",
+          "Qty",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "Apple",
+          "2",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "Pear",
+          "5",
+          "7",
+          "",
+          "",
+          ""
+        ]
+      ]
+    }
+  },
+  "accepted_limits": [
+    "This is a focused real-environment smoke for XLSX to ODS only; it does not close ODS inbound, ET, XLS inbound, LibreOffice-only, formulas beyond a calculated display value, styles, merged cells, or broad binary artifact comparison.",
+    "Output byte sizes differ by one to two bytes across projects and are recorded as metadata only; semantic parity is based on valid ODS zip structure and normalized content.xml rows.",
+    "The checked-in fixture stores normalized ODS semantics rather than committing generated ODS binaries with environment-specific metadata."
+  ],
+  "evidence": {
+    "transient_output_dir": "tmp/smart-sheet-ods-real-smoke-2026-07-03"
+  }
+}

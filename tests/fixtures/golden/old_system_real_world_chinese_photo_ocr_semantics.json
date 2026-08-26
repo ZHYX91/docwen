@@ -1,0 +1,207 @@
+{
+  "golden_id": "GOLDEN-004",
+  "evidence_id": "VIS-2026-07-15-033",
+  "scope": "Three-project Chinese OCR quality comparison over five deterministic CCPD2020/CCPD-Green real road-scene photos and exact annotation-box crops, plus one current ImagePlugin runtime/finalizer projection.",
+  "source": {
+    "dataset": "CCPD2020 / CCPD-Green",
+    "original_project_url": "https://github.com/detectRecog/CCPD",
+    "archived_record_url": "https://zenodo.org/records/15647076",
+    "archive_url": "https://zenodo.org/records/15647076/files/CCPD2020.zip?download=1",
+    "retrieved_on": "2026-07-15",
+    "archive_bytes": 907711344,
+    "archive_md5": "eb93e88c5988879f8da6f92bbf083324",
+    "original_project_commit": "02aaea15137c4d2fe662e57d257c6822356e9304",
+    "license_boundary": "CC-BY-4.0 on the archived Zenodo record; the original project describes CCPD as MIT",
+    "redistribution": "external_dataset_retained_only_in_workspace_bound_temporary_probe",
+    "archive_jpeg_count": 11776,
+    "selection_rule_fixed_before_execution": "first five JPEG entries in lexicographic full-path order from the remote ZIP central directory; all resolve to CCPD2020/ccpd_green/test",
+    "selected_photo_count": 5,
+    "remote_access_boundary": "Only the ZIP central directory and five selected entries were fetched with HTTP byte ranges; the 907,711,344-byte archive was not downloaded in full.",
+    "source_characteristics": [
+      "real 720x1160 RGB road or parking photographs",
+      "small green new-energy license plates with perspective, distance, illumination and background clutter",
+      "ground-truth plate labels and inclusive axis-aligned bounding boxes encoded by the official filename convention"
+    ]
+  },
+  "execution_contract": {
+    "contract_created_before_any_docwen_ocr_execution": true,
+    "ocr_language": "chinese",
+    "current_locale": "zh_CN",
+    "rapidocr_onnxruntime_version": "1.4.4",
+    "onnxruntime_version": "1.24.4",
+    "valid_project_executions": 30,
+    "all_valid_project_executions_successful": true,
+    "docwen_ref_tk_entry": "Production docwen.utils.ocr_utils.extract_text_simple with benchmark-only configured-language injection returning chinese.",
+    "docwen_ref_pyside6_entry": "Production docwen.utils.ocr_utils.extract_text_simple with benchmark-only configured-language injection returning chinese.",
+    "docwen_current_entry": "Production docwen_core.text.ocr.run_ocr_outcome with explicit chinese/zh_CN.",
+    "input_variants": {
+      "full_frame": "Unmodified 720x1160 RGB source JPEG, exercising generic text detection and recognition.",
+      "bbox_crop": "Exact inclusive ground-truth axis-aligned bbox converted only to Pillow-exclusive right/bottom coordinates; no padding, resizing, enhancement or perspective correction."
+    },
+    "model_files_byte_identical_across_three_projects": true,
+    "model_sha256": {
+      "ch_PP-OCRv4_det_infer.onnx": "d2a7720d45a54257208b1e13e36a8479894cb74155a5efe29462512d42f49da9",
+      "ch_PP-OCRv4_rec_infer.onnx": "48fc40f24f6d2a207a2b1091d3437eb3cc3eb6b676dc3ef9c37384005483683b",
+      "ch_ppocr_mobile_v2.0_cls_infer.onnx": "e47acedf663230f8863ff1ab0e64dd2d82b838fceb5957146dab185a89d6215c"
+    }
+  },
+  "quality_metric_contract": {
+    "normalization": "Unicode NFKC plus casefold, retaining only Unicode letters and numbers. Each label is compared with every nonempty OCR line using normalized Levenshtein similarity; the best line is used.",
+    "thresholds_fixed_before_results": {
+      "all_three_projects_outputs_byte_identical_per_input": true,
+      "full_frame": {
+        "every_page_nonempty": true,
+        "minimum_pages_with_best_line_similarity_at_least_0_50": 3,
+        "minimum_mean_best_line_similarity": 0.55,
+        "minimum_pages_with_province_character_present": 3
+      },
+      "bbox_crop": {
+        "every_page_nonempty": true,
+        "minimum_per_page_best_line_similarity": 0.5,
+        "minimum_mean_best_line_similarity": 0.75,
+        "minimum_exact_label_matches": 2
+      }
+    },
+    "threshold_purpose": "A deliberately modest useful-text reachability gate for a distinct Chinese photo/perspective slice; failed gates remain failed and were not tuned after observing output."
+  },
+  "selected_inputs": [
+    {
+      "index": 0,
+      "archive_path": "CCPD2020/ccpd_green/test/0014128352490421455-90_90-212&467_271&489-271&489_212&489_212&467_271&467-0_0_3_30_30_25_31_32-79-4.jpg",
+      "label": "皖AD66178",
+      "bbox_xyxy_inclusive": [212, 467, 271, 489],
+      "source_size": [720, 1160],
+      "source_bytes": 98705,
+      "source_sha256": "bb0df650fc1a7e5cf30cac336c02e503658648a0e5713877b7b57ed2a6f23634",
+      "crop_size": [60, 23],
+      "crop_bytes": 2699,
+      "crop_sha256": "21c566f6f8ea18ab804e62571bfc7d8b7d4105f8d5501fbf0d452f02f71e5f58",
+      "full_frame_output": "米奇生活馆\n香爵生活\n吉命品人家",
+      "full_frame_output_sha256": "ea5d93eaaf69390d40417c864cec4096e865d5c571d0ebfdb23055a137e5fd66",
+      "full_frame_best_line_similarity": 0.0,
+      "bbox_crop_output": "",
+      "bbox_crop_best_line_similarity": 0.0
+    },
+    {
+      "index": 1,
+      "archive_path": "CCPD2020/ccpd_green/test/0016594827586206896-90_90-341&550_407&573-407&573_341&571_341&550_407&550-0_0_3_27_26_32_25_32-63-3.jpg",
+      "label": "皖AD32818",
+      "bbox_xyxy_inclusive": [341, 550, 407, 573],
+      "source_size": [720, 1160],
+      "source_bytes": 63818,
+      "source_sha256": "49d8a143f8ad14cac756079b18b64a038172d78d041cbf2d90905fa4b16bbd43",
+      "crop_size": [67, 24],
+      "crop_bytes": 2739,
+      "crop_sha256": "0f3314c25edb75f7b0cfdf4db6541c8e0113c66592912b50d56106e0b60384c1",
+      "full_frame_output": "皖A·32818",
+      "full_frame_output_sha256": "463b17eae491c45b40899b7badaafd95c5aebf53e65a75365a45d36d506d57bd",
+      "full_frame_best_line_similarity": 0.875,
+      "bbox_crop_output": "",
+      "bbox_crop_best_line_similarity": 0.0
+    },
+    {
+      "index": 2,
+      "archive_path": "CCPD2020/ccpd_green/test/0017959770114942528-89_265-240&542_315&564-313&563_240&564_241&544_315&542-0_0_5_24_25_24_30_24-68-6.jpg",
+      "label": "皖AF01060",
+      "bbox_xyxy_inclusive": [240, 542, 315, 564],
+      "source_size": [720, 1160],
+      "source_bytes": 70548,
+      "source_sha256": "787c42fc89780e0c0b00485350bdc4fdffd4722bb9ccc7506277794e4596ea4f",
+      "crop_size": [76, 23],
+      "crop_bytes": 3411,
+      "crop_sha256": "69191453cfd08fc2936a0a8bbfd1ca9e2f4ab2300e770a3b425a6dcb8cd2c423",
+      "full_frame_output": "",
+      "full_frame_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "full_frame_best_line_similarity": 0.0,
+      "bbox_crop_output": "",
+      "bbox_crop_best_line_similarity": 0.0
+    },
+    {
+      "index": 3,
+      "archive_path": "CCPD2020/ccpd_green/test/0021264367816091955-90_267-311&542_385&569-385&567_312&569_311&542_382&543-0_0_3_30_31_32_32_31-120-9.jpg",
+      "label": "皖AD67887",
+      "bbox_xyxy_inclusive": [311, 542, 385, 569],
+      "source_size": [720, 1160],
+      "source_bytes": 109487,
+      "source_sha256": "00b93816f81bbf85ac9d7cd7d63153303142d89eb6c7024716ca2ff0d5c794ae",
+      "crop_size": [75, 28],
+      "crop_bytes": 4309,
+      "crop_sha256": "7406b16f053e2ef9d134bd847b833cb4fc659effd803372aa8eeeda0deae18ae",
+      "full_frame_output": "渭河路\n540m\n规划路\n270m史河路\n请按规定车道行驶\n前方路口\n减速慢行",
+      "full_frame_output_sha256": "5af2ef1920a42fa59639ccd700ea475a6a5caedd8f56cb30621cd3ce792115a7",
+      "full_frame_best_line_similarity": 0.0,
+      "bbox_crop_output": "",
+      "bbox_crop_best_line_similarity": 0.0
+    },
+    {
+      "index": 4,
+      "archive_path": "CCPD2020/ccpd_green/test/0021264367816091955-92_264-333&534_407&560-405&560_334&554_333&534_407&537-0_0_3_1_24_25_26_33-128-13.jpg",
+      "label": "皖ADB0129",
+      "bbox_xyxy_inclusive": [333, 534, 407, 560],
+      "source_size": [720, 1160],
+      "source_bytes": 129021,
+      "source_sha256": "3868bac1106897e8f56cce73b672726c36b3c069fa81308459e62c6dca2ea4b1",
+      "crop_size": [75, 27],
+      "crop_bytes": 4414,
+      "crop_sha256": "3bf221ed236022407a920f32f8d41a3e41ccebdc2834dc5e0053591b79e7baeb",
+      "full_frame_output": "S\n皖AD80T29",
+      "full_frame_output_sha256": "7301a1022a9334386db8bd930fd4de591d85b208c2400479f82d62188a02fb73",
+      "full_frame_best_line_similarity": 0.75,
+      "bbox_crop_output": "",
+      "bbox_crop_best_line_similarity": 0.0
+    }
+  ],
+  "three_project_result": {
+    "all_ten_outputs_byte_identical_across_three_projects": true,
+    "canonical_outputs_sha256": "14403e20d43940c362b6a2caa98519510acb76d31c6330babf6f6c49fd786db5",
+    "full_frame": {
+      "every_page_nonempty": false,
+      "nonempty_pages": 4,
+      "pages_with_best_line_similarity_at_least_0_50": 2,
+      "mean_best_line_similarity": 0.325,
+      "pages_with_province_character_present": 2
+    },
+    "bbox_crop": {
+      "every_page_nonempty": false,
+      "nonempty_pages": 0,
+      "minimum_per_page_best_line_similarity": 0.0,
+      "mean_best_line_similarity": 0.0,
+      "exact_label_matches": 0
+    },
+    "identity_threshold_passed": true,
+    "all_quality_thresholds_passed": false,
+    "thresholds_changed_after_results": false
+  },
+  "current_runtime_projection": {
+    "representative_photo": "ccpd2020_test_00.jpg",
+    "entry": "ImagePlugin -> TaskManager -> OutputFinalizer with category format=image, input size, image_mode=file, OCR enabled, image_md placement and chinese/zh_CN",
+    "success": true,
+    "artifacts": [
+      {"kind": "primary", "name": "ccpd2020_test_00.md", "bytes": 118, "sha256": "ef59ba6fdbe72a2ab128b672542842543209175f3b8994a3500ac890f84bd863"},
+      {"kind": "image", "name": "ccpd2020_test_00.jpg", "bytes": 98705, "sha256": "bb0df650fc1a7e5cf30cac336c02e503658648a0e5713877b7b57ed2a6f23634"},
+      {"kind": "auxiliary", "name": "ccpd2020_test_00_ocr.md", "bytes": 194, "sha256": "e8d767eb9eeff5069d38604efc45f9a593bef0ae10736d3d63add18ac6cbe4e0"}
+    ],
+    "input_bytes": 98705,
+    "output_bytes": 99017,
+    "ocr_chars": 16,
+    "diagnostic_codes": ["IMG2MD-OK", "IMG2MD-OCR-OK", "FINALIZER_DONE"],
+    "all_direct_ocr_lines_reachable_in_sidecar": true,
+    "primary_references_sidecar": true,
+    "sidecar_references_retained_image": true,
+    "workspace_paths_leaked": false
+  },
+  "classification": {
+    "current_only_functional_gap_found": false,
+    "route_or_option_wiring_gap_found": false,
+    "shared_upstream_model_quality_boundary_found": true,
+    "production_change_made": false,
+    "reason": "All ten outputs are byte-identical across the three production wrappers and all three projects use byte-identical model files. The current runtime also consumes chinese/zh_CN and finalizes the reachable OCR text. The failed photo/plate quality gates are therefore a shared model/pipeline capability boundary, not evidence of a current rewrite regression."
+  },
+  "known_limits": [
+    "Five CCPD-Green photos are a focused Chinese new-energy plate slice, not a broad Chinese document or general scene-text corpus.",
+    "The exact annotation crops are only 60-76 pixels wide and 23-28 pixels high; no post-result resizing, padding, enhancement or perspective rectification was introduced.",
+    "This does not establish handwriting, general document OCR, scanned-PDF, reading-order/layout, bounding-box accuracy, packaged-binary quality, latency or performance parity.",
+    "The failed quality thresholds remain an open shared OCR-quality boundary; they are not an accepted difference and were not converted into a PASS.",
+    "GOLDEN-004 and overall final artifact parity remain NOT PASSED YET."
+  ]
+}

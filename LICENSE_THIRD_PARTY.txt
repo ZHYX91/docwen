@@ -41,10 +41,10 @@
    Copyright: Jeffrey A. Clark (Alex) and contributors
    Website: https://github.com/python-pillow/Pillow
 
-8. ttkbootstrap
-   License: MIT
-   Copyright: Israel Dryer
-   Website: https://github.com/israel-dryer/ttkbootstrap
+8. PySide6
+   License: LGPL-3.0
+   Copyright: Qt Company / Qt for Python contributors
+   Website: https://doc.qt.io/qtforpython-6/
 
 9. pandas
    License: BSD-3-Clause
@@ -86,45 +86,62 @@
     Copyright: dothinking
     Website: https://github.com/dothinking/pdf2docx
 
-17. tkinterdnd2
-    License: MIT
-    Copyright: Petrus Zwart / Philippe Gagné
-    Website: https://github.com/pmgagne/tkinterdnd2
-
-18. latex2mathml
+17. latex2mathml
     License: MIT
     Copyright: Ronie Martinez
     Website: https://github.com/roniemartinez/latex2mathml
 
-19. olefile
+18. olefile
     License: BSD-2-Clause
     Copyright: Philippe Lagadec
     Website: https://github.com/decalage2/olefile
 
-20. pymupdf4llm
+19. pymupdf4llm
     License: AGPL-3.0
     Copyright: Artifex Software, Inc.
     Website: https://github.com/pymupdf/pymupdf4llm
 
-21. easyofd
+20. easyofd
     License: MIT
     Copyright: guowanghuai
     Website: https://github.com/guowanghuai/easyofd
 
-22. pillow-heif
+21. pillow-heif
     License: BSD-3-Clause
     Copyright: Alexander Karpov
     Website: https://github.com/bigcat88/pillow_heif
 
-23. img2pdf
+22. img2pdf
     License: LGPL-3.0
     Copyright: Johannes Schauer Marin Rodrigues
     Website: https://gitlab.mister-muffin.de/josch/img2pdf
 
-24. emoji
+23. emoji
     License: BSD License
     Copyright: Taehoon Kim (carpedm20)
     Website: https://github.com/carpedm20/emoji
+
+24. PySide6-Fluent-Widgets (QFluentWidgets)
+    License: GPL-3.0-or-later / Commercial
+    Copyright: zhiyiYo
+    Website: https://github.com/zhiyiYo/PyQt-Fluent-Widgets
+    Note: 本项目当前按 AGPL 开源分发，GUI Fluent 组件层使用其开源许可证路径；
+          若未来发行方式变化，需重新评估该依赖的许可证边界
+
+25. loguru
+    License: MIT
+    Copyright: Delgan
+    Website: https://github.com/Delgan/loguru
+
+26. pydantic
+    License: MIT
+    Copyright: Pydantic contributors
+    Website: https://github.com/pydantic/pydantic
+
+27. platformdirs
+    License: MIT
+    Copyright: platformdirs contributors
+    Website: https://github.com/tox-dev/platformdirs
 
 ================================================================================
 
@@ -135,6 +152,7 @@
 - BSD-2-Clause: https://opensource.org/licenses/BSD-2-Clause
 - BSD-3-Clause: https://opensource.org/licenses/BSD-3-Clause
 - LGPL-3.0: https://www.gnu.org/licenses/lgpl-3.0.txt
+- GPL-3.0-or-later: https://www.gnu.org/licenses/gpl-3.0.txt
 - HPND: https://opensource.org/licenses/HPND
 - PSF: https://opensource.org/licenses/Python-2.0
 

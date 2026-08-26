@@ -1,0 +1,15 @@
+{
+  "case_id": "invalid-duplicate",
+  "category": "negative",
+  "input_id": "invalid-duplicate.md",
+  "source": "# One ^same\n\nParagraph ^same\n",
+  "expected": {
+    "target_kind_ids": [["heading", "same"]],
+    "anchor_kind_ids": [["same", "paragraph", "inline"]],
+    "link_kinds": [],
+    "reference_statuses": [],
+    "citation_keys": [],
+    "diagnostics": [{"severity": "error", "code": "docwen.markdown.anchor.duplicate", "range": {"start": 23, "end": 28}, "related_ranges": [{"start": 6, "end": 11}]}],
+    "source_unchanged": true
+  }
+}

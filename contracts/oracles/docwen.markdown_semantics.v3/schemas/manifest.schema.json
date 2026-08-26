@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:docwen:schema:markdown-semantics-manifest:v1",
+  "title": "DocWen Markdown Semantics Oracle Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "oracle", "final_spec_baseline", "evidence_layer", "migration_boundary", "files", "case_ids", "excluded"],
+  "properties": {
+    "schema": {"const": "docwen.markdown_semantics_manifest.v1"},
+    "oracle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["semantics", "semantics_schema_id", "diagnostics", "diagnostics_schema_id"],
+      "properties": {
+        "semantics": {"const": "docwen.markdown_semantics.v3"},
+        "semantics_schema_id": {"const": "urn:docwen:schema:markdown-semantics:v3"},
+        "diagnostics": {"const": "docwen.markdown_diagnostics.v3"},
+        "diagnostics_schema_id": {"const": "urn:docwen:schema:markdown-diagnostics:v3"}
+      }
+    },
+    "final_spec_baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit", "tree"],
+      "properties": {
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "tree": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "evidence_layer": {"const": "source_oracle"},
+    "migration_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["normal_parser_calls_migration", "authenticated_historical_source_version", "workflow"],
+      "properties": {
+        "normal_parser_calls_migration": {"const": false},
+        "authenticated_historical_source_version": {"const": "v3"},
+        "workflow": {"const": "Inventory->Preview->WorkspaceTransaction"}
+      }
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "bytes", "sha256"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "bytes": {"type": "integer", "minimum": 1},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    },
+    "case_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"}},
+    "excluded": {
+      "const": ["docwen.markdown_semantics.v1", "docwen.markdown_semantics.v2", "consumer.interop.v3", "attempt04"]
+    }
+  }
+}

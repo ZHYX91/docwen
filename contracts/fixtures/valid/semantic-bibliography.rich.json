@@ -1,0 +1,17 @@
+{
+  "schema": "docwen.semantic_bibliography.v1",
+  "entries": [
+    {
+      "item_id": "smith2025",
+      "runs": [
+        {"text": "Smith, A. ", "bold": true},
+        {
+          "text": "Neutral documents",
+          "italic": true,
+          "href": "https://example.org/neutral-documents"
+        },
+        {"text": "."}
+      ]
+    }
+  ]
+}

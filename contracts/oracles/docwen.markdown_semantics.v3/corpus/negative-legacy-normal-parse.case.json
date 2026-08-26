@@ -1,0 +1,15 @@
+{
+  "case_id": "negative-legacy-normal-parse",
+  "category": "negative",
+  "input_id": "negative-legacy-normal-parse.md",
+  "source": "Figure: Legacy {#fig-legacy}\n\n![image](image.png)\n\nListing: Legacy {#lst-legacy}\n\n```text\nbody\n```\n\nList: No semantic kind {#list-legacy}\n\n@fig-legacy\n",
+  "expected": {
+    "target_kind_ids": [],
+    "anchor_kind_ids": [],
+    "link_kinds": [],
+    "reference_statuses": [],
+    "citation_keys": ["fig-legacy"],
+    "diagnostics": [],
+    "source_unchanged": true
+  }
+}

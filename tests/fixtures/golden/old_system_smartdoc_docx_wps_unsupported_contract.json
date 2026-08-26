@@ -1,0 +1,64 @@
+{
+  "golden_id": "GOLDEN-009",
+  "scope": "SmartDoc DOCX to WPS old-system unsupported contract and current enhancement boundary",
+  "generated_at": "2026-07-03",
+  "input_document": {
+    "filename": "smart-doc-wps-boundary.docx",
+    "paragraphs": [
+      "Smart Doc WPS Boundary",
+      "This document checks DOCX to WPS support boundaries."
+    ],
+    "table": [
+      [
+        "Item",
+        "Qty"
+      ],
+      [
+        "Grape",
+        "7"
+      ]
+    ]
+  },
+  "route": {
+    "source_format": "docx",
+    "target_format": "wps",
+    "category": "document"
+  },
+  "old_system_contract": {
+    "docwen-ref-tk": {
+      "entry": "docwen.converter.smart_converter.SmartConverter.convert(..., target_format='wps', category='document', actual_format='docx')",
+      "success": false,
+      "result": null,
+      "files": [],
+      "stderr_contains": "不支持的转换: docx → wps"
+    },
+    "docwen-ref-pyside6": {
+      "entry": "docwen.converter.SmartConverter.convert(..., target_format='wps', category='document', actual_format='docx')",
+      "success": false,
+      "result": null,
+      "files": [],
+      "stderr_contains": "不支持的转换: docx → wps"
+    }
+  },
+  "current_rewrite": {
+    "entry": "uv run docwen run smart-doc-wps-boundary.docx --to wps --output <dir> --json",
+    "success": true,
+    "output_file": "smart-doc-wps-boundary.wps",
+    "output_size_bytes": 102853,
+    "magic_hex": "d0cf11e0a1b11ae1"
+  },
+  "classification": {
+    "kind": "current_enhancement_not_old_system_parity_gap",
+    "notes": [
+      "Old Tk and old PySide6 batch-register the document-format wps target but their SmartConverter execution layer has no docx to wps branch and returns no output.",
+      "Current rewrite can emit a .wps target by saving a Word 97-2003/OLE document and renaming the produced bridge output to .wps.",
+      "Because old systems do not have a successful DOCX to WPS artifact baseline, DOCX to WPS should not remain a required old-system artifact blocker for GOLDEN-009. WPS inbound routes and current enhancement quality remain separate product-scope evidence."
+    ]
+  },
+  "evidence": {
+    "transient_output_dir": "tmp/smart-doc-wps-boundary-2026-07-03",
+    "process_cleanup": {
+      "residual_processes_after_probe": []
+    }
+  }
+}

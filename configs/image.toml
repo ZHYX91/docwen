@@ -1,0 +1,38 @@
+# ==============================================================================
+#  DocWen 图片默认配置
+# ==============================================================================
+
+# 转MD时的默认设置
+# 默认勾选"提取图片"（在MD中包含图片信息，无论采用文件方式还是Base64内联方式）
+to_md_keep_images = true
+# 默认勾选"图片文字识别"
+to_md_enable_ocr = true
+# Optional content optimization is disabled until explicitly enabled.
+to_md_enable_optimization = false
+to_md_optimization_type = "invoice_cn"
+# 提取方式: file(复制文件) / base64(内联编码)
+# OCR位置迁移回退：仅当全局 export 同名键缺失/留空时供 GUI 使用；生产默认见 export.toml
+
+# OCR语言设置
+# auto: 跟随界面语言自动选择
+# chinese: 中文/英文
+# japanese: 日语
+# latin: 拉丁语系(德语/法语/葡萄牙语等)
+# cyrillic: 西里尔语系(俄语等)
+ocr_language = "auto"
+
+# 压缩选项默认设置
+# 压缩模式: lossless/limit_size
+compress_mode = "lossless"
+# 大小限制（当compress_mode=limit_size时）
+size_limit = 200
+# 单位: KB/MB
+size_unit = "KB"
+
+# PDF选项默认设置
+# PDF尺寸: original/a4/a3
+pdf_quality = "original"
+
+# TIFF选项默认设置
+# TIFF模式: smart/RGB
+tiff_mode = "smart"

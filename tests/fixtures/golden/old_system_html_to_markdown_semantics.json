@@ -1,0 +1,177 @@
+{
+  "golden_id": "GOLDEN-020",
+  "route": "HTML->Markdown",
+  "probe_date": "2026-07-02",
+  "probe_scope": "Same generated HTML converted through docwen-ref-tk html_to_markdown(), docwen-ref-pyside6 html_to_markdown() after initialize_runtime(), and current docwen runtime markup route.",
+  "input_html": {
+    "filename": "sample.html",
+    "title": "HTML Golden Sample",
+    "body": "<!doctype html>\n<html>\n<head><meta charset=\"utf-8\"><title>HTML Golden Sample</title></head>\n<body>\n<h1>Main Heading</h1>\n<p>This is a <strong>bold</strong> paragraph with an <a href=\"https://example.com/path\">example link</a>.</p>\n<h2>Checklist</h2>\n<ul><li>Alpha item</li><li>Beta item</li></ul>\n<ol><li>First step</li><li>Second step</li></ol>\n<table>\n<thead><tr><th>Name</th><th>Value</th></tr></thead>\n<tbody><tr><td>Foo</td><td>42</td></tr><tr><td>Bar</td><td>99</td></tr></tbody>\n</table>\n</body>\n</html>\n"
+  },
+  "old_systems": {
+    "docwen-ref-tk": {
+      "converter": "docwen.converter.html2md.core.html_to_markdown",
+      "status": "converted",
+      "title_handling": "YAML frontmatter aliases/title; body starts at Main Heading",
+      "required_markdown_tokens": [
+        "HTML Golden Sample",
+        "Main Heading",
+        "**bold**",
+        "[example link](https://example.com/path)",
+        "Alpha item",
+        "First step",
+        "| Name | Value |",
+        "| Foo | 42 |",
+        "| Bar | 99 |"
+      ]
+    },
+    "docwen-ref-pyside6": {
+      "converter": "docwen.converter.html.to_md.core.html_to_markdown",
+      "status": "converted",
+      "title_handling": "YAML frontmatter aliases/title; body starts at Main Heading",
+      "required_markdown_tokens": [
+        "HTML Golden Sample",
+        "Main Heading",
+        "**bold**",
+        "[example link](https://example.com/path)",
+        "Alpha item",
+        "First step",
+        "| Name | Value |",
+        "| Foo | 42 |",
+        "| Bar | 99 |"
+      ]
+    }
+  },
+  "current_expected_semantics": {
+    "route_owner": "docwen_plugin_markup.web_archive.converter.HtmlToMarkdownConverter",
+    "title_handling": "Current architecture now restores old-system YAML frontmatter for the HTML title while keeping the body conversion body-only.",
+    "title_occurrences": 2,
+    "first_non_empty_lines": [
+      "---",
+      "title: HTML Golden Sample"
+    ],
+    "required_markdown_tokens": [
+      "title: HTML Golden Sample",
+      "aliases:",
+      "Main Heading",
+      "**bold**",
+      "[example link](https://example.com/path)",
+      "Alpha item",
+      "First step",
+      "| Name | Value |",
+      "| Foo | 42 |",
+      "| Bar | 99 |"
+    ],
+    "forbidden_markdown_fragments": [
+      "# HTML Golden Sample",
+      "# HTML Golden Sample\n\nHTML Golden Sample",
+      "HTML Golden Sample\n\n\nMain Heading"
+    ],
+    "image_count": 0
+  },
+  "accepted_differences": [
+    {
+      "difference": "Old systems and current rewrite both materialize title metadata as YAML frontmatter; current runtime still owns artifact metadata and finalization instead of writing directly to the old timestamped output directory.",
+      "classification": "current_runtime_output_contract",
+      "reason": "Restoring YAML preserves old-system Markdown metadata/i18n behavior, while the runtime artifact contract remains the current architecture boundary."
+    },
+    {
+      "difference": "Old Tk/PySide6 HTML local-image files are emitted, but the Markdown image placeholder may remain as escaped __DOCWEN_IMAGE_N__ text under markdownify 1.2.2; current rewrite writes readable relative image links.",
+      "classification": "accepted_current_architecture_improvement",
+      "reason": "The user-visible goal is a readable Markdown file with local resources finalized beside it. Recreating the old escaped-placeholder bug would be a UI/UX regression and would add technical debt."
+    }
+  ],
+  "image_artifact_scope": {
+    "multi_resource_probe": {
+      "classification": "current_enhancement_over_old_html_escaped_image_placeholder",
+      "probe_date": "2026-07-05",
+      "filename": "multi_resource.html",
+      "resource_dirname": "multi_resource_files",
+      "title": "HTML Multi Resource Probe",
+      "body": "<!doctype html>\n<html><head><meta charset=\"utf-8\"><title>HTML Multi Resource Probe</title></head>\n<body><h1>HTML Multi Resource Probe</h1><p>First local</p><img src=\"first.png\"><p>Second local</p><img src=\"second.png\"></body></html>\n",
+      "images": [
+        {
+          "filename": "first.png",
+          "media_type": "image/png",
+          "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"
+        },
+        {
+          "filename": "second.png",
+          "media_type": "image/png",
+          "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGNkYPgPAAEDAQC3G4vfAAAAAElFTkSuQmCC"
+        }
+      ],
+      "old_system_projection": {
+        "docwen-ref-tk": {
+          "status": "converted",
+          "output_image_count": 2,
+          "output_image_name_tokens": [
+            "multi_resource_image1_",
+            "multi_resource_image2_"
+          ],
+          "markdown_contains_escaped_placeholder": true,
+          "required_markdown_tokens": [
+            "HTML Multi Resource Probe",
+            "First local",
+            "Second local"
+          ]
+        },
+        "docwen-ref-pyside6": {
+          "status": "converted",
+          "output_image_count": 2,
+          "output_image_name_tokens": [
+            "multi_resource_image1_",
+            "multi_resource_image2_"
+          ],
+          "markdown_contains_escaped_placeholder": true,
+          "required_markdown_tokens": [
+            "HTML Multi Resource Probe",
+            "First local",
+            "Second local"
+          ]
+        }
+      },
+      "current_expected_semantics": {
+        "diagnostics": [
+          "HTML2MD-OK",
+          "FINALIZER_DONE"
+        ],
+        "artifact_count": 3,
+        "image_count": 2,
+        "expected_image_artifacts": [
+          {
+            "suggested_name": "first.png",
+            "media_type": "image/png"
+          },
+          {
+            "suggested_name": "second.png",
+            "media_type": "image/png"
+          }
+        ],
+        "required_markdown_tokens": [
+          "title: HTML Multi Resource Probe",
+          "aliases:",
+          "HTML Multi Resource Probe",
+          "First local",
+          "Second local",
+          "![first.png](first.png)",
+          "![second.png](second.png)"
+        ],
+        "ordered_markdown_tokens": [
+          "![first.png](first.png)",
+          "![second.png](second.png)"
+        ],
+        "forbidden_markdown_fragments": [
+          "DOCWENHTMLIMAGE",
+          "__DOCWEN_IMAGE_",
+          "\\_\\_DOCWEN\\_IMAGE"
+        ]
+      }
+    }
+  },
+  "probe_outputs": {
+    "local_summary": "tmp/html_md_probe_20260702/probe-summary.json",
+    "old_body_start": "Main Heading",
+    "current_body_start_after_yaml": "Main Heading"
+  }
+}

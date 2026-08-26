@@ -1,0 +1,472 @@
+{
+  "golden_id": "GOLDEN-003",
+  "scope": "focused three-project official Office Scripts workbook and cached-formula batch",
+  "created_at": "2026-07-15",
+  "source_repository": {
+    "owner": "OfficeDev",
+    "repository": "office-scripts-docs",
+    "commit": "5d360fa60fb2297a69a039c83e3deb5a97af3939",
+    "official_docs_root": "https://learn.microsoft.com/en-us/office/dev/scripts/resources/samples/samples-overview",
+    "redistribution": "external_official_binaries_retained_only_in_workspace_bound_temporary_probe",
+    "features_screened_before_docwen_execution": true
+  },
+  "sources": {
+    "email-chart-table.xlsx": {
+      "repository_path": "docs/resources/samples/email-chart-table.xlsx",
+      "documentation_path": "docs/resources/samples/email-images-chart-table.md",
+      "bytes": 11526,
+      "sha256": "1da5a2011f4f1e6f2e4407f148e814cae47e93d97335c6819d582b6cf433e1be",
+      "package_entries": 13,
+      "sheet_names": [
+        "InvoiceAmounts"
+      ],
+      "rows": [
+        9
+      ],
+      "columns": [
+        6
+      ],
+      "formula_count": 9,
+      "formula_with_cached_value_count": 9,
+      "formula_samples": {
+        "F2": {
+          "formula": "=D2-(D2*E2)",
+          "cached": 124.8
+        },
+        "D9": {
+          "formula": "=SUBTOTAL(109,Table1[Amount])",
+          "cached": 1291
+        },
+        "F9": {
+          "formula": "=SUM(F2:F8)",
+          "cached": 978.0999999999999
+        }
+      },
+      "table_count": 1,
+      "chart_count": 0,
+      "data_validation_count": 0,
+      "conditional_formatting_range_count": 0
+    },
+    "hr-schedule.xlsx": {
+      "repository_path": "docs/resources/scenarios/hr-schedule.xlsx",
+      "documentation_path": "docs/resources/scenarios/schedule-interviews-in-teams.md",
+      "bytes": 13698,
+      "sha256": "370b8b9b76d8a8c9173de9920ff7fdc92a179874ee0f097cc588e4874293447a",
+      "package_entries": 16,
+      "sheet_names": [
+        "Interviews",
+        "Constants"
+      ],
+      "rows": [
+        7,
+        2
+      ],
+      "columns": [
+        7,
+        2
+      ],
+      "formula_count": 3,
+      "formula_with_cached_value_count": 3,
+      "formula_samples": {
+        "G2": {
+          "formula": "=INT((TODAY()/14)+1)*14 + 0.375",
+          "cached": "2021-06-05 09:00:00"
+        },
+        "G3": {
+          "formula": "=INT((TODAY()/14)+1)*14 + 0.5",
+          "cached": "2021-06-05 12:00:00"
+        },
+        "G4": {
+          "formula": "=INT((TODAY()/14)+1)*14 + 0.625",
+          "cached": "2021-06-05 15:00:00"
+        }
+      },
+      "table_count": 1,
+      "hyperlink_count": 6,
+      "chart_count": 0,
+      "data_validation_count": 0
+    },
+    "conditional-formatting-samples.xlsx": {
+      "repository_path": "docs/resources/samples/conditional-formatting-samples.xlsx",
+      "documentation_path": "docs/resources/samples/conditional-formatting-samples.md",
+      "bytes": 16445,
+      "sha256": "fa17f45f47e0766f13b9cbbf9e63b83962ea7852606bfe0b33807fbfbae5ec64",
+      "package_entries": 18,
+      "sheet_names": [
+        "CellValue",
+        "ColorScale",
+        "DataBar",
+        "IconSet",
+        "Preset",
+        "TextComparison",
+        "TopBottom",
+        "Custom"
+      ],
+      "rows": [
+        12,
+        3,
+        5,
+        12,
+        5,
+        6,
+        5,
+        2
+      ],
+      "columns": [
+        2,
+        13,
+        4,
+        2,
+        4,
+        2,
+        4,
+        8
+      ],
+      "formula_count": 0,
+      "chart_count": 0,
+      "data_validation_count": 0,
+      "conditional_formatting_range_count": 0,
+      "boundary": "The accompanying Office Script adds conditional formatting; the static input workbook itself contains value matrices but no conditional-formatting rules."
+    },
+    "task-reminders.xlsx": {
+      "repository_path": "docs/resources/scenarios/task-reminders.xlsx",
+      "documentation_path": "docs/resources/scenarios/task-reminders.md",
+      "bytes": 194945,
+      "sha256": "b9ad09dfa594fb7397d5a772ed2ed96b865f466680877cf482cc0daaeb516abb",
+      "package_entries": 25,
+      "sheet_names": [
+        "June Status"
+      ],
+      "rows": [
+        15
+      ],
+      "columns": [
+        7
+      ],
+      "formula_count": 0,
+      "table_count": 1,
+      "image_count": 1,
+      "merge_count": 2,
+      "hyperlink_count": 11,
+      "chart_count": 0,
+      "data_validation_count": 0
+    }
+  },
+  "execution_contract": {
+    "valid_three_project_executions": 12,
+    "all_executions_successful": true,
+    "docwen-ref-tk": "project venv plus production docwen.converter.xlsx2md.convert_spreadsheet_to_md",
+    "docwen-ref-pyside6": "project venv plus production SpreadsheetPlugin.convert",
+    "docwen-current": "project venv plus production SpreadsheetPlugin.convert",
+    "aligned_options": [
+      "no images",
+      "no OCR"
+    ],
+    "office_processes_started": false
+  },
+  "normalized_projections": {
+    "normalization": [
+      "newline",
+      "YAML title-label",
+      "YAML field order",
+      "Markdown separator rows",
+      "Tk nan/current Col0 blank-header presentation"
+    ],
+    "email-chart-table.xlsx": {
+      "all_three_projects_equal": true,
+      "entries": 10,
+      "headings": 1,
+      "table_rows_including_header": 9,
+      "projection_sha256": "89c279818d262cb572d1f9592edc983a470eb3da0aa2b30bdd15dcd6f3e9bcd1",
+      "old_pyside6_current_raw_equal": true,
+      "old_pyside6_current_raw_sha256": "fa5de70240390d161a64ba45f65aae7527fa546052f6ad775d1907c61574611d"
+    },
+    "hr-schedule.xlsx": {
+      "all_three_projects_equal": true,
+      "entries": 8,
+      "headings": 2,
+      "table_rows_including_headers": 6,
+      "projection_sha256": "3cc010ad6c4955eec82eb6cd78aed3cb2aec1e28531da37803f0a006171a2c61",
+      "old_pyside6_current_raw_equal": true,
+      "old_pyside6_current_raw_sha256": "aea798c473fa4644ea6c2471e507158554731e6054b6bad9f86f3b55a0d326ad"
+    },
+    "conditional-formatting-samples.xlsx": {
+      "all_three_projects_equal": true,
+      "entries": 58,
+      "headings": 8,
+      "table_rows_including_headers": 50,
+      "projection_sha256": "0b378b78e75fee04ce6582c281d6a0e9b1f63e59ff7f93bb75141cade2bbf174",
+      "old_pyside6_current_raw_equal": true,
+      "old_pyside6_current_raw_sha256": "3fc5e62d86d608645459d2a4f3dda5a74f85e18f282e71fcfd67ae132ecd1956"
+    },
+    "task-reminders.xlsx": {
+      "all_three_projects_equal": true,
+      "entries": 15,
+      "headings": 1,
+      "table_rows_including_header": 14,
+      "projection_sha256": "08ca1c345240846fbfe2bb35bf63be22f4b06388b7a76a77cc585e67310aab64",
+      "old_pyside6_current_raw_equal": true,
+      "old_pyside6_current_raw_sha256": "6160a56abcbad4d8c99b1e6d950621c9253a546ec4b2e573ac495fd22dd426f6"
+    }
+  },
+  "cached_formula_contract": {
+    "source_formula_cells": 12,
+    "source_formula_cells_with_cached_values": 12,
+    "all_three_projects_emit_cached_values_not_formula_text": true,
+    "email_cached_tokens": [
+      "124.8",
+      "279.5",
+      "1291",
+      "978.1"
+    ],
+    "hr_cached_tokens": [
+      "2021-06-05 09:00:00",
+      "2021-06-05 12:00:00",
+      "2021-06-05 15:00:00"
+    ],
+    "classification": "broader official-sample confirmation of the existing shared cached-value policy, not formula-text preservation"
+  },
+  "current_runtime_finalizer": {
+    "representative_source": "email-chart-table.xlsx",
+    "success": true,
+    "artifact_count": 1,
+    "primary_name": "email-chart-table.md",
+    "primary_bytes": 1061,
+    "primary_sha256": "fa5de70240390d161a64ba45f65aae7527fa546052f6ad775d1907c61574611d",
+    "input_bytes": 11526,
+    "output_bytes": 1061,
+    "sheet_count": 1,
+    "row_count": 9,
+    "column_count": 6,
+    "block_count": 1,
+    "image_count": 0,
+    "diagnostics": [
+      "SHEET2MD-OK",
+      "FINALIZER_DONE"
+    ],
+    "workspace_paths_leaked": false
+  },
+  "xls_ods_physical_addendum": {
+    "evidence_id": "VIS-2026-07-17-128",
+    "external_evidence_root": "D:/docwen-parity/vis128-office-scripts-physical-f98fb9d-v1",
+    "project_heads": {
+      "docwen-ref-tk": "ec929828",
+      "docwen-ref-pyside6": "63db927c",
+      "docwen-current": "f98fb9d"
+    },
+    "execution": {
+      "source_count": 4,
+      "target_formats": [
+        "xls",
+        "ods"
+      ],
+      "expected_conversion_count": 24,
+      "successful_conversion_count": 24,
+      "excel_readonly_projection_count": 28,
+      "successful_excel_readonly_projection_count": 28,
+      "output_pdf_page_count": 96,
+      "source_pdf_page_count": 16,
+      "rendered_page_count_including_sources": 112,
+      "contact_sheet_count": 4,
+      "same_target_three_project_groups": 8,
+      "same_target_workbook_semantic_exact_groups": 8,
+      "same_target_pdf_projection_exact_groups": 8,
+      "same_target_pdf_text_exact_groups": 8
+    },
+    "cross_project_projections": {
+      "conditional-formatting-samples.xlsx": {
+        "xls": {
+          "workbook_semantic_sha256": "e9a80a5d9a5cf4bb1f0ae0626baa02bc2db8f0d9bafd44c04712e3cc5d6a9415",
+          "pdf_projection_sha256": "14d882fb7b8fb74c9d2931f35ee56a64237024a652d45b620d16d4c0e0bce84f",
+          "page_count_each": 9
+        },
+        "ods": {
+          "workbook_semantic_sha256": "e9a80a5d9a5cf4bb1f0ae0626baa02bc2db8f0d9bafd44c04712e3cc5d6a9415",
+          "pdf_projection_sha256": "e601467f1e9922e39debe194b74a7e54e528161d2f4b77f0c9c55f6b13a02683",
+          "page_count_each": 9
+        }
+      },
+      "email-chart-table.xlsx": {
+        "xls": {
+          "workbook_semantic_sha256": "db1c701c5d82b3b65be27268cf9c532394bb756391eddc4b2cae771e91447810",
+          "pdf_projection_sha256": "ecaa76094b5389be6708f120c534c12f902ce4ba5d4881988ad5ab76c4f1b4d4",
+          "page_count_each": 2
+        },
+        "ods": {
+          "workbook_semantic_sha256": "0146413b2fc8704669d87833ab573975bfd0589cfe86d4894fcb8ebde1b1bc52",
+          "pdf_projection_sha256": "20ac61a3adda35a242ba54ebdcaa98955c85525fc0e6deaaaec64c65443e357b",
+          "page_count_each": 2
+        }
+      },
+      "hr-schedule.xlsx": {
+        "xls": {
+          "workbook_semantic_sha256": "c36abf28d7930ca64bdeb95bb35e2c0a854fdd817039815760dd73e6050f5089",
+          "pdf_projection_sha256": "9f6b546707bc9a5b4d77c0bb0a1f0aa3acec29cb3690a1895fa7fa2a01ae6790",
+          "page_count_each": 3
+        },
+        "ods": {
+          "workbook_semantic_sha256": "a69b4396c24446da5d7bdcacfb80feb6863b17aaebe511b63d2eb9e0e0aaa08f",
+          "pdf_projection_sha256": "d6037ab9fdfe625465067c9e92560d9240240997cd32086f82925a8d08b6e670",
+          "page_count_each": 3
+        }
+      },
+      "task-reminders.xlsx": {
+        "xls": {
+          "workbook_semantic_sha256": "dc34ea06464d32b19c64f2ff9bd26d17889b0b77f98b4729b7e1542c371f6fb2",
+          "pdf_projection_sha256": "a1debfcfb554e1943dfcda1ee21b48218b406918962c07eea0be44651840ac92",
+          "page_count_each": 2
+        },
+        "ods": {
+          "workbook_semantic_sha256": "b1b1df6ca29c707d6bb5ef93f3fad2d67e64bfa3a7fb49d27e60afa90223660c",
+          "pdf_projection_sha256": "cff74ea742d9901fd073639c2604a0c0f7c6392216c3f52e505a17eb44162ea8",
+          "page_count_each": 2
+        }
+      }
+    },
+    "source_relative_retention": {
+      "all_eight_target_outputs_retain_source_visible_pdf_text": true,
+      "all_eight_target_outputs_retain_source_pdf_page_count": true,
+      "conditional-formatting-samples": {
+        "xls_non_shape_structure_exact": true,
+        "ods_non_shape_structure_exact": true,
+        "ods_source_pdf_pixels_exact": true,
+        "source_format_condition_count": 0,
+        "boundary": "The static tutorial input has no conditional-formatting rules; this does not prove conditional-formatting retention."
+      },
+      "email-chart-table": {
+        "source_formula_count": 9,
+        "source_table_count": 1,
+        "source_form_control": "Drop Down 1",
+        "xls_retains_form_control": true,
+        "ods_retains_form_control": false,
+        "xls_formula_rewrite": "SUBTOTAL(109,Table1[Amount]) -> SUBTOTAL(109,D2:D8)",
+        "ods_formula_rewrite": "SUBTOTAL(109,Table1[Amount]) -> SUBTOTAL(109,InvoiceAmounts!$D$2:$D$8)",
+        "formula_result_values_retained": true
+      },
+      "hr-schedule": {
+        "source_formula_count": 3,
+        "source_table_count": 1,
+        "source_hyperlink_count": 6,
+        "source_defined_name": "MeetingDuration",
+        "all_targets_retain_formula_cells_table_hyperlink_set_and_defined_name": true,
+        "today_values_recalculated_during_excel_projection": "2026-07-25",
+        "saved_source_cache_authority": "cached_formula_contract retains the original 2021 values"
+      },
+      "task-reminders": {
+        "source_table_count": 1,
+        "source_hyperlink_count": 11,
+        "source_merge_count": 2,
+        "source_picture_count": 1,
+        "all_targets_retain_table_hyperlink_set_merges_and_picture": true,
+        "ods_sheet_name_rewrite": "June Status -> June_Status"
+      }
+    },
+    "shared_unaccepted_boundaries": [
+      {
+        "surface": "ODS form control",
+        "detail": "All three ODS outputs lose the source Drop Down 1 form control.",
+        "classification": "shared_target_format_source_fidelity_gap_not_current_regression"
+      },
+      {
+        "surface": "ODS sheet name",
+        "detail": "All three task-reminders ODS outputs rewrite June Status to June_Status.",
+        "classification": "shared_target_format_source_fidelity_gap_not_current_regression"
+      },
+      {
+        "surface": "ODS table styling",
+        "detail": "All three ODS outputs share visible table-style loss in hr-schedule and task-reminders; the maximum source-relative changed-pixel ratio is 8.986863% on task-reminders.",
+        "classification": "shared_target_format_visual_fidelity_gap_not_current_regression"
+      },
+      {
+        "surface": "formula text",
+        "detail": "All three XLS/ODS outputs preserve values but rewrite the email structured-reference SUBTOTAL formula text.",
+        "classification": "shared_target_format_formula_fidelity_gap_not_current_regression"
+      },
+      {
+        "surface": "volatile formula physical oracle",
+        "detail": "Excel recalculated TODAY formulas during read/render, so the physical projection is not an oracle for the saved 2021 cache values.",
+        "classification": "environment_recalculation_boundary"
+      }
+    ],
+    "process_boundary": {
+      "before_projection": [
+        {
+          "pid": 11388,
+          "name": "wps.exe"
+        }
+      ],
+      "after_excel_quit_immediate": [
+        {
+          "pid": 16556,
+          "name": "excel.exe"
+        },
+        {
+          "pid": 11388,
+          "name": "wps.exe"
+        }
+      ],
+      "after_script_wait": [
+        {
+          "pid": 16556,
+          "name": "excel.exe"
+        },
+        {
+          "pid": 11388,
+          "name": "wps.exe"
+        }
+      ],
+      "post_settlement": [
+        {
+          "pid": 11388,
+          "name": "wps.exe"
+        }
+      ],
+      "termination_command_used": false,
+      "classification": "Excel quit settled asynchronously after the script wait; no Excel process remained at post-settlement observation."
+    },
+    "external_integrity": {
+      "file_count": 68,
+      "total_bytes": 6363306,
+      "evidence_summary": {
+        "bytes": 25608,
+        "sha256": "830359e628976aad5b8d36785434c0a74564042584f88b6bf2247ec318b7b63d"
+      },
+      "workbook_physical_projection": {
+        "bytes": 260741,
+        "sha256": "b733dd204a933e12568a848b3e2e9ae59133e06ddbe823d6f03a71c9263f74ce"
+      },
+      "conversion_summary_sha256": {
+        "docwen-ref-tk": "b95020834ba3f2cf3f6007f5347d092cbed1dfd3220d922f2bd4bc1198a083ba",
+        "docwen-ref-pyside6": "9a0993923686a5f7f948a705c312ebf94d036a1878dc890155c7d1f28b44dc91",
+        "docwen-current": "04fd77e81cce4a520a8e2a79ca8e1e74d0237b905d0c474e76de6f95dae08cba"
+      },
+      "contact_sheet_sha256": {
+        "conditional-formatting-samples": "4246f082886f236474c5faa460cdbbf645334f1c992807322a472667852eaf61",
+        "email-chart-table": "7aaa7d839c99af10bd04c71432df2ae4ffc15f6808a717649107331cd385e081",
+        "hr-schedule": "eea90508a2e387d9b442376e36e241dcbfe0df142191f6b93f360c2a6145ed30",
+        "task-reminders": "694401c519ef1d24cb6102761ed9f2e53f876efabd08622cb1b65142f552b88f"
+      }
+    },
+    "classification": {
+      "current_only_functional_gap_found": false,
+      "current_only_visual_regression_found": false,
+      "route_or_option_wiring_gap_found": false,
+      "production_change_made": false,
+      "focused_final_artifact_parity": "strong",
+      "broad_golden_003_or_overall_parity": "not_proven"
+    }
+  },
+  "classification": {
+    "current_only_functional_gap_found": false,
+    "route_or_option_wiring_gap_found": false,
+    "old_pyside6_current_raw_outputs_equal_for_all_four": true,
+    "production_change_made": false
+  },
+  "known_limits": [
+    "The four static sources contain no data validation and no ordinary chart, so this batch does not close either surface.",
+    "The email/conditional sample names describe the accompanying scripts' generated effects; those effects are not present in the input XLSX packages.",
+    "Formula text is intentionally not emitted by any of the three standard XLSX-to-Markdown paths; only saved cached values are compared.",
+    "Conditional-formatting visual semantics, hyperlink targets, and the task workbook image are outside the aligned no-image Markdown value projection.",
+    "This is focused strong official-workbook evidence, not broad GOLDEN-003, final artifact, or overall parity PASS."
+  ]
+}

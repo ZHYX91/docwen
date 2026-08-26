@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security policy
+    url: https://github.com/ZHYX91/docwen/security/policy
+    about: Do not disclose vulnerabilities or private document data in a public issue.
+  - name: DocWen Assistant issues
+    url: https://github.com/ZHYX91/docwen-obsidian/issues
+    about: Report problems that occur only in the Obsidian integration.

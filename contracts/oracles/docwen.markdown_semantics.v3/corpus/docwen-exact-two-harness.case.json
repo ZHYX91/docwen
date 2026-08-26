@@ -1,0 +1,15 @@
+{
+  "case_id": "docwen-exact-two-harness",
+  "category": "positive",
+  "input_id": "docwen-exact-two.md",
+  "source": "# Architecture ^h-7f3a\n\nFigure: System overview ^system-overview\n\n![[system.png]]\n\nTable: Results ^results-main\n\n| Metric | Value |\n|---|---|\n| Score | 95 |\n\nEquation: ^energy-main\n\n$$\nE = mc^2\n$$\n\nCode: Entry point ^entry-main\n\n```rust\nfn main() {}\n```\n\nStable: @[[#^h-7f3a]] and @[[#^system-overview|System overview]].\nOrdinary: [[#^system-overview]] and ![[Guide#^h-7f3a]].\nCitation: @cite-one.\n",
+  "expected": {
+    "target_kind_ids": [["heading", "h-7f3a"], ["figure", "system-overview"], ["table", "results-main"], ["equation", "energy-main"], ["code_block", "entry-main"]],
+    "anchor_kind_ids": [],
+    "link_kinds": ["embed", "link", "embed"],
+    "reference_statuses": ["resolved", "resolved"],
+    "citation_keys": ["cite-one"],
+    "diagnostics": [],
+    "source_unchanged": true
+  }
+}

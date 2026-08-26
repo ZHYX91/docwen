@@ -1,0 +1,167 @@
+{
+  "golden_id": "GOLDEN-009",
+  "scope": "three-project real SmartDoc ODT to RTF two-hop artifact and runtime finalization parity",
+  "generated_at": "2026-07-14",
+  "classification": "focused_real_external_artifact_evidence_not_overall_smartdoc_pass",
+  "route": {
+    "source_format": "odt",
+    "hub_format": "docx",
+    "target_format": "rtf",
+    "old_candidate_policy": {
+      "first_leg": [
+        "Microsoft Word",
+        "LibreOffice"
+      ],
+      "second_leg": [
+        "WPS Writer",
+        "Microsoft Word",
+        "LibreOffice"
+      ]
+    },
+    "current_observed_backend": "Microsoft Word -> WPS Writer",
+    "signature_hex_prefix": "7b5c72746631"
+  },
+  "input_document": {
+    "filename": "smartdoc-two-hop-rich.odt",
+    "size_bytes": 12012,
+    "sha256": "188ed73f96f40dda6def98a48df3c36ed0945decc3778315214e2aaa60fc3568",
+    "generation_backend": "Microsoft Word",
+    "generation_note": "A deterministic rich DOCX was converted once to ODT through Microsoft Word; this fixture-generation step is separate from the three production ODT-to-RTF probes."
+  },
+  "normalized_common_projection": {
+    "visible_markers": [
+      "BOLD-TWO-HOP",
+      "COMMENTED-TWO-HOP",
+      "DOCWEN SMARTDOC TWO-HOP PARITY 2026",
+      "FIELD-TWO-HOP",
+      "ITALIC-TWO-HOP",
+      "LANDSCAPE-TWO-HOP-MARKER",
+      "ODT to RTF Route",
+      "TABLE-TWO-HOP"
+    ],
+    "paragraph_styles": {
+      "DOCWEN SMARTDOC TWO-HOP PARITY 2026": "Title",
+      "ODT to RTF Route": "Heading 1",
+      "Styled run check: BOLD-TWO-HOP and ITALIC-TWO-HOP.": "DocWen Two Hop Body",
+      "Landscape Two-Hop Section": "Heading 1"
+    },
+    "styled_runs": [
+      {
+        "text": "BOLD-TWO-HOP",
+        "bold": true,
+        "italic": false
+      },
+      {
+        "text": "ITALIC-TWO-HOP",
+        "bold": false,
+        "italic": true
+      }
+    ],
+    "table": [
+      [
+        "Item",
+        "Qty",
+        "Note"
+      ],
+      [
+        "TwoHopApple",
+        "21",
+        "TABLE-TWO-HOP"
+      ]
+    ],
+    "headers": [
+      "DOCWEN TWO-HOP HEADER 2026",
+      "DOCWEN TWO-HOP LANDSCAPE HEADER 2026"
+    ],
+    "footers": [
+      "DOCWEN TWO-HOP FOOTER 2026",
+      "DOCWEN TWO-HOP LANDSCAPE FOOTER 2026"
+    ],
+    "section_landscape": [
+      false,
+      true
+    ],
+    "comments": [
+      "DOCWEN TWO-HOP COMMENT 2026"
+    ],
+    "media_count": 1,
+    "field_display_marker_retained": true,
+    "field_container_after_odt_normalization": 0
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "entrypoint": "docwen.converter.smart_converter.SmartConverter.convert",
+      "path": "odt -> docx -> rtf",
+      "filename_pattern": "smartdoc-two-hop-rich_<timestamp>_fromOdt.rtf",
+      "duration_seconds": 5.886,
+      "size_bytes": 70235,
+      "sha256": "694f0fb13c505b000d3e5ec5feec9bb2ca1dad58e340d7547f9b3f7f61e161e3",
+      "roundtrip_docx_size_bytes": 28558,
+      "roundtrip_docx_sha256": "7c7922443641ef3b8d6aae210c0f6e0b7d56adcad13b084f1601e8a72afac487",
+      "projection_matches_common": true
+    },
+    "docwen-ref-pyside6": {
+      "entrypoint": "docwen.converter.smart_converter.SmartConverter.convert",
+      "path": "odt -> docx -> rtf",
+      "filename_pattern": "smartdoc-two-hop-rich_<timestamp>_fromOdt.rtf",
+      "duration_seconds": 5.522,
+      "size_bytes": 70155,
+      "sha256": "365b04f5f9425677511a5fcd295ab475b455160ac1d3ad1834591a40f781ca92",
+      "roundtrip_docx_size_bytes": 28544,
+      "roundtrip_docx_sha256": "3bcde03b0c0bbb985eea3f41e444964f07fc18dcfdfdae0c64bef23b1c66b595",
+      "projection_matches_common": true
+    },
+    "docwen-current": {
+      "entrypoint": "DocumentPlugin -> TaskManager -> OutputFinalizer",
+      "path": "odt -> private auxiliary docx -> primary rtf",
+      "filename": "smartdoc-two-hop-rich.rtf",
+      "duration_seconds": 8.839,
+      "size_bytes": 70146,
+      "sha256": "4ceeb942b9cbeb7f87518f802afbcf35cbe289a5e00c9b239638199bc8629215",
+      "roundtrip_docx_size_bytes": 28554,
+      "roundtrip_docx_sha256": "64a0936e74451c78d43a07ae419455af8cbc618abdc3333c9876b3823bcf775f",
+      "projection_matches_common": true,
+      "artifact": {
+        "suggested_name": "smartdoc-two-hop-rich.rtf",
+        "source_format": "odt",
+        "target_format": "rtf",
+        "backend": "Microsoft Word -> WPS Writer"
+      },
+      "metrics": {
+        "input_bytes": 12012,
+        "output_bytes": 70146,
+        "backend": "Microsoft Word -> WPS Writer"
+      },
+      "diagnostic_codes": [
+        "DOCX-SMARTDOC-OK",
+        "FINALIZER_DONE"
+      ]
+    }
+  },
+  "naming_decision": {
+    "old_behavior": "Both old projects expose a timestamped fromOdt filename derived across the multi-step conversion.",
+    "current_behavior": "The current plugin keeps the DOCX hub private and restores the original ODT stem for the final RTF artifact.",
+    "classification": "current_architecture_improvement_not_a_parity_gap"
+  },
+  "process_governance": {
+    "preexisting_process_ids": [
+      1796,
+      18764
+    ],
+    "new_relevant_processes_after_conversion_and_readback": []
+  },
+  "environment_boundary": {
+    "microsoft_word": "installed; used for ODT production, every first leg, and normalized readback",
+    "wps_writer": "installed; current recorded WPS Writer on the second leg and both old implementations share the WPS-first policy",
+    "libreoffice": "not installed or discoverable; LibreOffice-only two-hop execution remains open"
+  },
+  "accepted_limits": [
+    "Raw RTF and roundtrip DOCX hashes are traceability evidence, not equality gates, because external Office metadata is nondeterministic.",
+    "This fixture closes one rich non-DOCX-to-non-DOCX ODT-to-RTF route, not all 20 SmartDoc routes or a broad real-world batch.",
+    "The source ODT already normalized the original fldSimple field container; the visible field display marker is covered, but active field semantics are not claimed.",
+    "Installed LibreOffice, large-document progress and cancellation feel, complex floating layout, macros, signatures, protection, and overall final artifact parity remain open."
+  ],
+  "evidence": {
+    "guard": "tests/test_repo/test_smartdoc_two_hop_evidence.py"
+  }
+}

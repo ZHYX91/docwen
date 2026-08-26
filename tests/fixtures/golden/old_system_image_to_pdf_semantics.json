@@ -1,0 +1,366 @@
+{
+  "generated_at": "2026-07-02",
+  "golden_id": "GOLDEN-025",
+  "inputs": {
+    "multi_rgb.tif": {
+      "frame_count": 3,
+      "frame_size": [
+        64,
+        64
+      ],
+      "mode": "RGB"
+    },
+    "exif_pdf_probe.jpg": {
+      "format": "JPEG",
+      "mode": "RGB",
+      "size": [
+        36,
+        24
+      ],
+      "selected_exif_tags": {
+        "271": "DocwenProbeCam",
+        "272": "PDF-EXIF-Probe",
+        "274": 6,
+        "306": "2026:07:05 12:34:56",
+        "315": "Docwen"
+      },
+      "selected_exif_tag_count": 5
+    },
+    "sample_rgb.png": {
+      "mode": "RGB",
+      "size": [
+        32,
+        24
+      ]
+    }
+  },
+  "probe_scope": "Normalized Image-to-PDF semantic smoke across old Tk, old PySide6, and the current rewrite. The probe uses the actual old ImageToPdfStrategy entry points and the current ImageToPdfConverter route, but stores only stable PDF metadata rather than generated binary artifacts.",
+  "comparison_implication": "This fixture proves focused PNG/TIFF-to-PDF page geometry and frame-count semantics, plus generated EXIF JPEG original-mode PDF embedding semantics; broader image/PDF artifact matrices, real-device EXIF samples, and raw PDF binary equality are outside this fixture.",
+  "projects": {
+    "docwen-current": {
+      "jpeg_exif_original": {
+        "artifact_media_type": "application/pdf",
+        "bytes_gt_zero": true,
+        "embedded_image_projection": {
+          "exif_tag_count": 5,
+          "ext": "jpeg",
+          "format": "JPEG",
+          "selected_exif_tags": {
+            "271": "DocwenProbeCam",
+            "272": "PDF-EXIF-Probe",
+            "274": 6,
+            "315": "Docwen"
+          },
+          "size": [
+            36,
+            24
+          ]
+        },
+        "metadata_quality_mode": "original",
+        "metrics_quality_mode": "original",
+        "output_suffix": ".pdf",
+        "page_count": 1,
+        "page_rects": [
+          [
+            0.0,
+            0.0,
+            24.0,
+            36.0
+          ]
+        ],
+        "pdf_document_metadata": {
+          "author": "",
+          "creator": "",
+          "keywords": "",
+          "producer": "",
+          "subject": "",
+          "title": ""
+        },
+        "pdf_magic": true,
+        "quality_mode": "original",
+        "success": true,
+        "suggested_name": "exif_pdf_probe.pdf"
+      },
+      "multipage_tiff_original": {
+        "artifact_media_type": "application/pdf",
+        "bytes_gt_zero": true,
+        "metadata_quality_mode": "original",
+        "metrics_quality_mode": "original",
+        "output_suffix": ".pdf",
+        "page_count": 3,
+        "page_rects": [
+          [
+            0.0,
+            0.0,
+            48.0,
+            48.0
+          ],
+          [
+            0.0,
+            0.0,
+            48.0,
+            48.0
+          ],
+          [
+            0.0,
+            0.0,
+            48.0,
+            48.0
+          ]
+        ],
+        "pdf_magic": true,
+        "quality_mode": "original",
+        "success": true,
+        "suggested_name": "multi_rgb.pdf"
+      },
+      "png_a4": {
+        "artifact_media_type": "application/pdf",
+        "bytes_gt_zero": true,
+        "metadata_quality_mode": "a4",
+        "metrics_quality_mode": "a4",
+        "output_suffix": ".pdf",
+        "page_count": 1,
+        "page_rects": [
+          [
+            0.0,
+            0.0,
+            841.89,
+            595.28
+          ]
+        ],
+        "pdf_magic": true,
+        "quality_mode": "a4",
+        "success": true,
+        "suggested_name": "sample_rgb.pdf"
+      },
+      "png_original": {
+        "artifact_media_type": "application/pdf",
+        "bytes_gt_zero": true,
+        "metadata_quality_mode": "original",
+        "metrics_quality_mode": "original",
+        "output_suffix": ".pdf",
+        "page_count": 1,
+        "page_rects": [
+          [
+            0.0,
+            0.0,
+            24.0,
+            18.0
+          ]
+        ],
+        "pdf_magic": true,
+        "quality_mode": "original",
+        "success": true,
+        "suggested_name": "sample_rgb.pdf"
+      }
+    },
+    "docwen-ref-pyside6": {
+      "jpeg_exif_original": {
+        "bytes_gt_zero": true,
+        "embedded_image_projection": {
+          "exif_tag_count": 5,
+          "ext": "jpeg",
+          "format": "JPEG",
+          "selected_exif_tags": {
+            "271": "DocwenProbeCam",
+            "272": "PDF-EXIF-Probe",
+            "274": 6,
+            "315": "Docwen"
+          },
+          "size": [
+            36,
+            24
+          ]
+        },
+        "output_suffix": ".pdf",
+        "page_count": 1,
+        "page_rects": [
+          [
+            0.0,
+            0.0,
+            24.0,
+            36.0
+          ]
+        ],
+        "pdf_document_metadata": {
+          "author": "",
+          "creator": "",
+          "keywords": "",
+          "producer": "",
+          "subject": "",
+          "title": ""
+        },
+        "pdf_magic": true,
+        "quality_mode": "original",
+        "success": true
+      },
+      "multipage_tiff_original": {
+        "bytes_gt_zero": true,
+        "output_suffix": ".pdf",
+        "page_count": 3,
+        "page_rects": [
+          [
+            0.0,
+            0.0,
+            48.0,
+            48.0
+          ],
+          [
+            0.0,
+            0.0,
+            48.0,
+            48.0
+          ],
+          [
+            0.0,
+            0.0,
+            48.0,
+            48.0
+          ]
+        ],
+        "pdf_magic": true,
+        "quality_mode": "original",
+        "success": true
+      },
+      "png_a4": {
+        "bytes_gt_zero": true,
+        "output_suffix": ".pdf",
+        "page_count": 1,
+        "page_rects": [
+          [
+            0.0,
+            0.0,
+            841.89,
+            595.28
+          ]
+        ],
+        "pdf_magic": true,
+        "quality_mode": "a4",
+        "success": true
+      },
+      "png_original": {
+        "bytes_gt_zero": true,
+        "output_suffix": ".pdf",
+        "page_count": 1,
+        "page_rects": [
+          [
+            0.0,
+            0.0,
+            24.0,
+            18.0
+          ]
+        ],
+        "pdf_magic": true,
+        "quality_mode": "original",
+        "success": true
+      }
+    },
+    "docwen-ref-tk": {
+      "jpeg_exif_original": {
+        "bytes_gt_zero": true,
+        "embedded_image_projection": {
+          "exif_tag_count": 5,
+          "ext": "jpeg",
+          "format": "JPEG",
+          "selected_exif_tags": {
+            "271": "DocwenProbeCam",
+            "272": "PDF-EXIF-Probe",
+            "274": 6,
+            "315": "Docwen"
+          },
+          "size": [
+            36,
+            24
+          ]
+        },
+        "output_suffix": ".pdf",
+        "page_count": 1,
+        "page_rects": [
+          [
+            0.0,
+            0.0,
+            24.0,
+            36.0
+          ]
+        ],
+        "pdf_document_metadata": {
+          "author": "",
+          "creator": "",
+          "keywords": "",
+          "producer": "",
+          "subject": "",
+          "title": ""
+        },
+        "pdf_magic": true,
+        "quality_mode": "original",
+        "success": true
+      },
+      "multipage_tiff_original": {
+        "bytes_gt_zero": true,
+        "output_suffix": ".pdf",
+        "page_count": 3,
+        "page_rects": [
+          [
+            0.0,
+            0.0,
+            48.0,
+            48.0
+          ],
+          [
+            0.0,
+            0.0,
+            48.0,
+            48.0
+          ],
+          [
+            0.0,
+            0.0,
+            48.0,
+            48.0
+          ]
+        ],
+        "pdf_magic": true,
+        "quality_mode": "original",
+        "success": true
+      },
+      "png_a4": {
+        "bytes_gt_zero": true,
+        "output_suffix": ".pdf",
+        "page_count": 1,
+        "page_rects": [
+          [
+            0.0,
+            0.0,
+            841.89,
+            595.28
+          ]
+        ],
+        "pdf_magic": true,
+        "quality_mode": "a4",
+        "success": true
+      },
+      "png_original": {
+        "bytes_gt_zero": true,
+        "output_suffix": ".pdf",
+        "page_count": 1,
+        "page_rects": [
+          [
+            0.0,
+            0.0,
+            24.0,
+            18.0
+          ]
+        ],
+        "pdf_magic": true,
+        "quality_mode": "original",
+        "success": true
+      }
+    }
+  },
+  "scenarios": [
+    "png_original",
+    "png_a4",
+    "multipage_tiff_original",
+    "jpeg_exif_original"
+  ]
+}

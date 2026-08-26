@@ -1,0 +1,252 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:docwen:schema:candidate-receipt:v4",
+  "title": "DocWen v4 immutable candidate receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "candidateId",
+    "state",
+    "consumerEligible",
+    "productVersion",
+    "authority",
+    "package",
+    "machineConsumerContract",
+    "evidence",
+    "hashDag"
+  ],
+  "properties": {
+    "schema": {"const": "docwen.candidate_receipt.v4"},
+    "candidateId": {
+      "type": "string",
+      "pattern": "^docwen-0\\.9\\.0-v4-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{12}$"
+    },
+    "state": {
+      "enum": ["local_unpublished_complete", "local_unpublished_host_validation_pending"]
+    },
+    "consumerEligible": {"type": "boolean"},
+    "productVersion": {"const": "0.9.0"},
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "activeSemantics",
+        "authorityBaseline",
+        "finalSpecIdentity",
+        "docwen",
+        "exclusions"
+      ],
+      "properties": {
+        "activeSemantics": {"$ref": "#/$defs/jsonObject"},
+        "authorityBaseline": {"$ref": "#/$defs/fileIdentity"},
+        "finalSpecIdentity": {"$ref": "#/$defs/finalSpecIdentity"},
+        "docwen": {"$ref": "#/$defs/sourceAuthority"},
+        "exclusions": {"type": "array", "minItems": 4, "items": {"$ref": "#/$defs/jsonObject"}}
+      }
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manifest", "standaloneCli", "bundledCli", "cliBytesIdentical"],
+      "properties": {
+        "manifest": {"$ref": "#/$defs/fileIdentity"},
+        "standaloneCli": {"$ref": "#/$defs/fileIdentity"},
+        "bundledCli": {"$ref": "#/$defs/fileIdentity"},
+        "cliBytesIdentical": {"const": true}
+      }
+    },
+    "machineConsumerContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["optionsSchemas", "bundleMatrices", "syntaxObservability", "diagnostics"],
+      "properties": {
+        "optionsSchemas": {"$ref": "#/$defs/jsonObject"},
+        "bundleMatrices": {"$ref": "#/$defs/jsonObject"},
+        "syntaxObservability": {"$ref": "#/$defs/jsonObject"},
+        "diagnostics": {"$ref": "#/$defs/jsonObject"}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "layerStatus", "records", "sixIndependentInvalidIdRecords"],
+      "properties": {
+        "index": {"$ref": "#/$defs/fileIdentity"},
+        "layerStatus": {"$ref": "#/$defs/layerStatus"},
+        "records": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/evidenceRecord"}},
+        "sixIndependentInvalidIdRecords": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["dot", "slash", "underscore", "over128", "duplicate", "kindMismatch"],
+          "properties": {
+            "dot": {"type": "string"},
+            "slash": {"type": "string"},
+            "underscore": {"type": "string"},
+            "over128": {"type": "string"},
+            "duplicate": {"type": "string"},
+            "kindMismatch": {"type": "string"}
+          }
+        }
+      }
+    },
+    "hashDag": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["acyclic", "receiptOmitsPostReceiptRecords", "candidateBindsReceipt", "outerManifestBindsBoth"],
+      "properties": {
+        "acyclic": {"const": true},
+        "receiptOmitsPostReceiptRecords": {
+          "type": "array",
+          "prefixItems": [{"const": "candidate"}, {"const": "outer_manifest"}],
+          "items": false
+        },
+        "candidateBindsReceipt": {"const": true},
+        "outerManifestBindsBoth": {"const": true}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "evidence": {
+            "properties": {
+              "layerStatus": {
+                "properties": {
+                  "word_host": {"const": "passed"},
+                  "wps_host": {"const": "passed"},
+                  "libreoffice_host": {"const": "passed"}
+                },
+                "required": ["word_host", "wps_host", "libreoffice_host"]
+              }
+            },
+            "required": ["layerStatus"]
+          }
+        },
+        "required": ["evidence"]
+      },
+      "then": {
+        "properties": {
+          "state": {"const": "local_unpublished_complete"},
+          "consumerEligible": {"const": true}
+        }
+      },
+      "else": {
+        "properties": {
+          "state": {"const": "local_unpublished_host_validation_pending"},
+          "consumerEligible": {"const": false}
+        }
+      }
+    },
+    {"$ref": "#/$defs/wordHostCardinality"},
+    {"$ref": "#/$defs/wpsHostCardinality"},
+    {"$ref": "#/$defs/libreofficeHostCardinality"}
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "fileIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relativePath", "bytes", "sha256"],
+      "properties": {
+        "relativePath": {"type": "string", "minLength": 1},
+        "bytes": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "layerStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_oracle", "machine_wire", "source_wire_comparison", "packaged", "roundtrip", "headless_ooxml", "word_host", "wps_host", "libreoffice_host"],
+      "properties": {
+        "source_oracle": {"const": "passed"},
+        "machine_wire": {"const": "passed"},
+        "source_wire_comparison": {"const": "passed"},
+        "packaged": {"const": "passed"},
+        "roundtrip": {"const": "passed"},
+        "headless_ooxml": {"const": "passed"},
+        "word_host": {"enum": ["passed", "not_run"]},
+        "wps_host": {"enum": ["passed", "not_run"]},
+        "libreoffice_host": {"enum": ["passed", "not_run"]}
+      }
+    },
+    "identityPointer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "relativePath", "bytes", "sha256"],
+      "properties": {
+        "role": {"enum": ["source_manifest", "wire_schema", "comparison_manifest", "package_manifest", "roundtrip_manifest", "headless_ooxml_manifest", "host_manifest"]},
+        "relativePath": {"type": "string", "minLength": 1},
+        "bytes": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "evidenceRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["caseId", "layer", "relativePath", "bytes", "sha256", "identityPointers"],
+      "properties": {
+        "caseId": {"type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{0,127}$"},
+        "layer": {"enum": ["source_oracle", "machine_wire", "source_wire_comparison", "packaged", "roundtrip", "headless_ooxml", "word_host", "wps_host", "libreoffice_host"]},
+        "relativePath": {"type": "string", "minLength": 1},
+        "bytes": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "identityPointers": {"type": "array", "minItems": 1, "maxItems": 1, "items": {"$ref": "#/$defs/identityPointer"}}
+      },
+      "allOf": [
+        {"if": {"properties": {"layer": {"const": "source_oracle"}}}, "then": {"properties": {"identityPointers": {"items": {"properties": {"role": {"const": "source_manifest"}}}}}}},
+        {"if": {"properties": {"layer": {"const": "machine_wire"}}}, "then": {"properties": {"identityPointers": {"items": {"properties": {"role": {"const": "wire_schema"}}}}}}},
+        {"if": {"properties": {"layer": {"const": "source_wire_comparison"}}}, "then": {"properties": {"identityPointers": {"items": {"properties": {"role": {"const": "comparison_manifest"}}}}}}},
+        {"if": {"properties": {"layer": {"const": "packaged"}}}, "then": {"properties": {"identityPointers": {"items": {"properties": {"role": {"const": "package_manifest"}}}}}}},
+        {"if": {"properties": {"layer": {"const": "roundtrip"}}}, "then": {"properties": {"identityPointers": {"items": {"properties": {"role": {"const": "roundtrip_manifest"}}}}}}},
+        {"if": {"properties": {"layer": {"const": "headless_ooxml"}}}, "then": {"properties": {"identityPointers": {"items": {"properties": {"role": {"const": "headless_ooxml_manifest"}}}}}}},
+        {"if": {"properties": {"layer": {"enum": ["word_host", "wps_host", "libreoffice_host"]}}}, "then": {"properties": {"identityPointers": {"items": {"properties": {"role": {"const": "host_manifest"}}}}}}}
+      ]
+    },
+    "wordHostCardinality": {
+      "if": {"properties": {"evidence": {"properties": {"layerStatus": {"properties": {"word_host": {"const": "passed"}}, "required": ["word_host"]}}, "required": ["layerStatus"]}}, "required": ["evidence"]},
+      "then": {"properties": {"evidence": {"properties": {"records": {"contains": {"properties": {"layer": {"const": "word_host"}}, "required": ["layer"]}, "minContains": 1, "maxContains": 1}}}}},
+      "else": {"properties": {"evidence": {"properties": {"records": {"not": {"contains": {"properties": {"layer": {"const": "word_host"}}, "required": ["layer"]}}}}}}}
+    },
+    "wpsHostCardinality": {
+      "if": {"properties": {"evidence": {"properties": {"layerStatus": {"properties": {"wps_host": {"const": "passed"}}, "required": ["wps_host"]}}, "required": ["layerStatus"]}}, "required": ["evidence"]},
+      "then": {"properties": {"evidence": {"properties": {"records": {"contains": {"properties": {"layer": {"const": "wps_host"}}, "required": ["layer"]}, "minContains": 1, "maxContains": 1}}}}},
+      "else": {"properties": {"evidence": {"properties": {"records": {"not": {"contains": {"properties": {"layer": {"const": "wps_host"}}, "required": ["layer"]}}}}}}}
+    },
+    "libreofficeHostCardinality": {
+      "if": {"properties": {"evidence": {"properties": {"layerStatus": {"properties": {"libreoffice_host": {"const": "passed"}}, "required": ["libreoffice_host"]}}, "required": ["layerStatus"]}}, "required": ["evidence"]},
+      "then": {"properties": {"evidence": {"properties": {"records": {"contains": {"properties": {"layer": {"const": "libreoffice_host"}}, "required": ["layer"]}, "minContains": 1, "maxContains": 1}}}}},
+      "else": {"properties": {"evidence": {"properties": {"records": {"not": {"contains": {"properties": {"layer": {"const": "libreoffice_host"}}, "required": ["layer"]}}}}}}}
+    },
+    "gitIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit", "tree"],
+      "properties": {
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "tree": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "sourceAuthority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["specBaseline", "implementationBaseline", "final"],
+      "properties": {
+        "specBaseline": {"$ref": "#/$defs/gitIdentity"},
+        "implementationBaseline": {"$ref": "#/$defs/gitIdentity"},
+        "final": {"$ref": "#/$defs/gitIdentity"}
+      }
+    },
+    "finalSpecIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["files", "sha256"],
+      "properties": {
+        "files": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/fileIdentity"}},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "jsonObject": {"type": "object"}
+  }
+}

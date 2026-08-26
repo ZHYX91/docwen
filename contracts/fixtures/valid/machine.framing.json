@@ -1,0 +1,13 @@
+{
+  "chunks": [
+    "Content-Length: 63\r\n\r\n{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"capability/list\",\"params\":{}}"
+  ],
+  "expected_messages": [
+    {
+      "jsonrpc": "2.0",
+      "id": 2,
+      "method": "capability/list",
+      "params": {}
+    }
+  ]
+}

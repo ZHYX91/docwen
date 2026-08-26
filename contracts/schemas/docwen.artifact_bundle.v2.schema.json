@@ -1,0 +1,277 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:docwen:schema:artifact-bundle:v2",
+  "title": "DocWen Artifact Bundle v2",
+  "description": "Consumer-neutral artifact graph with portable logical placement emitted by DocWen Machine Protocol v1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "bundle_id",
+    "task_id",
+    "producer",
+    "layout_schema",
+    "artifacts",
+    "entries",
+    "relations"
+  ],
+  "properties": {
+    "schema": {
+      "const": "docwen.artifact_bundle.v2"
+    },
+    "bundle_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "task_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "producer": {
+      "$ref": "#/$defs/producer"
+    },
+    "layout_schema": {
+      "enum": [
+        "docwen.artifact_layout.v1",
+        "docwen.document_node.v1"
+      ]
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/artifact"
+      }
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/entry"
+      }
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/relation"
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "product_version",
+        "machine_protocol"
+      ],
+      "properties": {
+        "name": {
+          "const": "DocWen"
+        },
+        "product_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "machine_protocol": {
+          "const": "docwen.machine.v1"
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "kind",
+        "locator",
+        "logical_path",
+        "suggested_name",
+        "media_type",
+        "size_bytes",
+        "sha256"
+      ],
+      "properties": {
+        "artifact_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "kind": {
+          "enum": [
+            "document",
+            "fragment",
+            "resource"
+          ]
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\).+$"
+        },
+        "logical_path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.?($|/)).+$"
+        },
+        "suggested_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "pattern": "^[^/\\\\\u0000]+$"
+        },
+        "media_type": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 255,
+          "pattern": "^[A-Za-z0-9!#$&^_.+-]+/[A-Za-z0-9!#$&^_.+-]+(?:;.*)?$"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "role",
+        "ordinal",
+        "preferred"
+      ],
+      "properties": {
+        "artifact_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "role": {
+          "enum": [
+            "primary",
+            "supplementary",
+            "ocr_page",
+            "section",
+            "worksheet",
+            "image",
+            "original"
+          ]
+        },
+        "ordinal": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "preferred": {
+          "type": "boolean"
+        }
+      }
+    },
+    "relation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "source_artifact_id",
+        "target_artifact_id",
+        "role"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "attachment_of",
+            "fragment_of",
+            "resource_of",
+            "derived_from"
+          ]
+        },
+        "source_artifact_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "target_artifact_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "role": {
+          "enum": [
+            "attachment",
+            "ocr_page",
+            "ocr_text",
+            "section",
+            "worksheet",
+            "image",
+            "original",
+            "preview",
+            "source",
+            "manifest"
+          ]
+        },
+        "ordinal": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "page_fragment": {
+          "$ref": "#/$defs/pageFragment"
+        },
+        "page_resource": {
+          "$ref": "#/$defs/pageResource"
+        }
+      }
+    },
+    "pageFragment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fragment_kind",
+        "page_index",
+        "page_count",
+        "ocr_status",
+        "source_page"
+      ],
+      "properties": {
+        "fragment_kind": {
+          "const": "page"
+        },
+        "page_index": {
+          "type": "integer"
+        },
+        "page_count": {
+          "type": "integer"
+        },
+        "ocr_status": {
+          "enum": [
+            "success",
+            "no_text",
+            "input_missing",
+            "unavailable",
+            "model_missing",
+            "initialization_failed",
+            "recognition_failed"
+          ]
+        },
+        "source_page": {
+          "type": "integer"
+        }
+      }
+    },
+    "pageResource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_page"
+      ],
+      "properties": {
+        "source_page": {
+          "type": "integer"
+        }
+      }
+    }
+  }
+}

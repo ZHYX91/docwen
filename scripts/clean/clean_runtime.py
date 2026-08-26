@@ -20,7 +20,9 @@ _SKIP_DIR_NAMES = {
     "build",
     "dist",
     "env",
+    "gui_tk",
     "node_modules",
+    "tests",
     "venv",
 }
 
@@ -52,16 +54,12 @@ def clean_pycache_dirs(project_root):
 
 
 def clean_logs_directory(project_root):
-    """清理logs文件夹（包括项目根目录和src/docwen下的日志目录）"""
+    """清理项目根目录的运行日志目录。"""
     print("\n" + "=" * 50)
     print("步骤 2: 清理 logs 文件夹")
     print("=" * 50)
 
-    # 需要清理的日志目录列表
-    logs_paths = [
-        os.path.join(project_root, "logs"),
-        os.path.join(project_root, "src", "docwen", "logs"),
-    ]
+    logs_paths = [os.path.join(project_root, "logs")]
 
     deleted_count = 0
     found_any = False
@@ -72,10 +70,7 @@ def clean_logs_directory(project_root):
 
         found_any = True
         if safe_remove_directory(logs_path):
-            print(f"[OK] 成功删除 logs 文件夹: {logs_path}")
             deleted_count += 1
-        else:
-            print(f"[FAIL] 删除 logs 文件夹失败: {logs_path}")
 
     if not found_any:
         print("未找到 logs 文件夹")
@@ -85,15 +80,13 @@ def clean_logs_directory(project_root):
 
 def clean_pytest_artifacts(project_root):
     """
-    清理 pytest 产生的文件和目录
+    清理 pytest 在仓库根（非 tests/）产生的文件和目录
 
     清理项：
-    - .pytest_cache/ 目录（递归查找所有）
+    - 仓库范围内的 .pytest_cache/ 目录（不含 tests/，tests/ 由 clean_tests 处理）
     - .coverage 文件
     - coverage.xml 文件
     - htmlcov/ 目录
-    - tests/temp/ 目录
-    - tests/output/ 目录
     """
     print("\n" + "=" * 50)
     print("步骤 3: 清理 pytest 产物")
@@ -101,7 +94,6 @@ def clean_pytest_artifacts(project_root):
 
     deleted_count = 0
 
-    # 清理 .pytest_cache 目录（可能存在于多个位置）
     pytest_cache_dirs = []
     for root, dirs, _files in os.walk(project_root):
         dirs[:] = [d for d in dirs if d not in _SKIP_DIR_NAMES]
@@ -111,13 +103,11 @@ def clean_pytest_artifacts(project_root):
 
     for cache_dir in pytest_cache_dirs:
         if safe_remove_directory(cache_dir):
-            print(f"[OK] 删除 .pytest_cache: {cache_dir}")
             deleted_count += 1
 
     if not pytest_cache_dirs:
         print("未找到 .pytest_cache 目录")
 
-    # 清理根目录下的覆盖率文件
     coverage_files = [
         os.path.join(project_root, ".coverage"),
         os.path.join(project_root, "coverage.xml"),
@@ -127,28 +117,9 @@ def clean_pytest_artifacts(project_root):
         if os.path.isfile(coverage_file) and safe_remove_file(coverage_file):
             deleted_count += 1
 
-    # 清理 htmlcov 目录
     htmlcov_path = os.path.join(project_root, "htmlcov")
-    if os.path.isdir(htmlcov_path):
-        if safe_remove_directory(htmlcov_path):
-            print(f"[OK] 删除 htmlcov 目录: {htmlcov_path}")
-            deleted_count += 1
-        else:
-            print(f"[FAIL] 删除 htmlcov 目录失败: {htmlcov_path}")
-
-    # 清理 tests/temp 和 tests/output 目录
-    test_temp_dirs = [
-        os.path.join(project_root, "tests", "temp"),
-        os.path.join(project_root, "tests", "output"),
-    ]
-
-    for temp_dir in test_temp_dirs:
-        if os.path.isdir(temp_dir):
-            if safe_remove_directory(temp_dir):
-                print(f"[OK] 删除测试临时目录: {temp_dir}")
-                deleted_count += 1
-            else:
-                print(f"[FAIL] 删除测试临时目录失败: {temp_dir}")
+    if os.path.isdir(htmlcov_path) and safe_remove_directory(htmlcov_path):
+        deleted_count += 1
 
     print(f"总计删除 {deleted_count} 个 pytest 产物")
     return deleted_count
@@ -173,10 +144,7 @@ def clean_lint_cache(project_root):
 
         found_any = True
         if safe_remove_directory(cache_dir):
-            print(f"[OK] 删除缓存目录: {cache_dir}")
             deleted_count += 1
-        else:
-            print(f"[FAIL] 删除缓存目录失败: {cache_dir}")
 
     if not found_any:
         print("未找到 lint 缓存目录")
@@ -192,15 +160,17 @@ def clean_stray_temp_files(project_root):
     - *.log / *.log.* 日志文件
     - *.out 输出文件
     - *.tmp 临时文件
+    - .tmp_* 调试探针/日志（点开头，需单独 pattern：glob 不会用 *.log 匹配点开头文件）
     """
     print("\n" + "=" * 50)
     print("步骤 5: 清理散落的临时文件")
     print("=" * 50)
 
-    patterns = ["*.log", "*.log.*", "*.out", "*.tmp"]
+    patterns = ["*.log", "*.log.*", "*.out", "*.tmp", ".tmp_*"]
     target_files = []
     for pattern in patterns:
         target_files.extend(glob.glob(os.path.join(project_root, pattern)))
+    target_files = [f for f in target_files if os.path.isfile(f)]
 
     if not target_files:
         print("未找到散落的临时文件")
@@ -230,21 +200,15 @@ def clean_generated_output(project_root):
 
     deleted_count = 0
 
-    # 清理生成的输出目录
     output_dirs = [
         os.path.join(project_root, "samples", "generated_templates"),
         os.path.join(project_root, "samples", "style_injection_output"),
     ]
 
     for output_dir in output_dirs:
-        if os.path.isdir(output_dir):
-            if safe_remove_directory(output_dir):
-                print(f"[OK] 删除输出目录: {output_dir}")
-                deleted_count += 1
-            else:
-                print(f"[FAIL] 删除输出目录失败: {output_dir}")
+        if os.path.isdir(output_dir) and safe_remove_directory(output_dir):
+            deleted_count += 1
 
-    # 清理生成的空白模板文件
     generated_files = [
         os.path.join(project_root, "templates", "空白模板.docx"),
     ]

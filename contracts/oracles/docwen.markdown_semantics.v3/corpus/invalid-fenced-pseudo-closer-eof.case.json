@@ -1,0 +1,22 @@
+{
+  "case_id": "invalid-fenced-pseudo-closer-eof",
+  "category": "negative",
+  "input_id": "invalid-fenced-pseudo-closer-eof.md",
+  "source": "```rust\nbody\n``` ^bad-code",
+  "expected": {
+    "target_kind_ids": [],
+    "anchor_kind_ids": [],
+    "fenced_sources": [],
+    "link_kinds": [],
+    "reference_statuses": [],
+    "citation_keys": [],
+    "diagnostics": [
+      {
+        "severity": "error",
+        "code": "docwen.markdown.anchor.invalid_id",
+        "range": {"start": 17, "end": 26}
+      }
+    ],
+    "source_unchanged": true
+  }
+}

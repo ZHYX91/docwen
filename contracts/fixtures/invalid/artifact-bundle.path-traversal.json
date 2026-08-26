@@ -1,0 +1,32 @@
+{
+  "schema": "docwen.artifact_bundle.v2",
+  "bundle_id": "bundle.invalid.path",
+  "task_id": "task.invalid.path",
+  "producer": {
+    "name": "DocWen",
+    "product_version": "0.9.0",
+    "machine_protocol": "docwen.machine.v1"
+  },
+  "artifacts": [
+    {
+      "artifact_id": "document.escape",
+      "kind": "document",
+      "locator": "../escape.md",
+      "suggested_name": "escape.md",
+      "media_type": "text/markdown",
+      "size_bytes": 1,
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "logical_path": "../escape.md"
+    }
+  ],
+  "entries": [
+    {
+      "artifact_id": "document.escape",
+      "role": "primary",
+      "ordinal": 0,
+      "preferred": true
+    }
+  ],
+  "relations": [],
+  "layout_schema": "docwen.artifact_layout.v1"
+}

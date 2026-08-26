@@ -1,0 +1,1586 @@
+# DocWen - locale file
+# Locale: vi_VN
+# Encoding: UTF-8
+
+[meta]
+name = "Vietnamese"
+native_name = "Tiếng Việt"
+template_name = "Mẫu Chung Tiếng Việt"
+
+
+# =============================================================================
+# Cua so chinh
+# =============================================================================
+[main_window]
+route_catalog_failed = "Không thể tải các thao tác khả dụng; yêu cầu chưa được bắt đầu."
+route_unavailable = "Không có thao tác tương thích cho tệp này."
+output_settings_unavailable = "Không thể tải cài đặt đầu ra nên tác vụ chưa được bắt đầu."
+template_catalog_failed = "Không thể tải mẫu."
+window_title = "DocWen (Phien ban ngoai tuyen)"
+version_offline = "Phien ban ngoai tuyen"
+settings_tooltip = "Cai dat (Ctrl+,)"
+about_tooltip = "Gioi thieu ve DocWen"
+font_size_tooltip = "Chuyen doi co chu"
+no_file_for_locate = "Chua chon tep, khong the dinh vi dau ra."
+runtime_unavailable = "Runtime khong kha dung, khong the bat dau chuyen doi."
+task_already_running = "Da co tac vu dang chay, vui long huy tac vu hien tai truoc."
+cancelling = "Dang huy..."
+task_processing_prefix = "Dang xu ly:"
+task_progress_prefix = "Tien do:"
+task_failed_prefix = "That bai:"
+task_processing_status = "Dang xu ly: {message}"
+task_progress_status = "Tien do: {percent}% {message}"
+task_completed_status = "Hoan tat"
+task_failed_status = "That bai: {message}"
+task_cancelled_status = "Da huy"
+error_copied = "Da sao chep chi tiet loi."
+no_error_available = "Hien khong co thong tin loi."
+no_failed_to_retry = "Khong co tac vu that bai de thu lai."
+retry_context_unavailable = "Ngu canh thu lai khong kha dung."
+path_not_exist = "Duong dan khong ton tai: {path}"
+open_path_failed = "Khong the mo duong dan: {path}"
+template_not_found = "Không tìm thấy mẫu: {name}"
+template_dir_unavailable = "Không thể truy cập thư mục mẫu."
+system_tray_show = "Hien cua so"
+system_tray_hide = "An cua so"
+system_tray_quit = "Thoat"
+ipc_file_received = "Đã nhận tệp từ một phiên bản khác: {filename}"
+batch_add_failed_title = "Không thể thêm hàng loạt"
+batch_add_failed_message = "Không thể thêm {count} tệp vào danh sách hàng loạt."
+batch_add_failed_reason = "Lý do"
+file_admission_invalid = "Dữ liệu kiểm tra tệp không hợp lệ."
+file_admission_changed = "Tệp đã thay đổi sau khi được thêm. Hãy xóa tệp khỏi danh sách rồi thêm lại để kiểm tra lại, sau đó thử lại."
+file_admission_blocked = "Không thể xử lý tệp đã chọn."
+file_admission_confirm_title = "Xác nhận định dạng tệp đã phát hiện"
+file_admission_confirm_message = "Tên tệp và nội dung đã phát hiện có định dạng khác nhau. Xử lý theo định dạng đã phát hiện?"
+file_admission_confirm_action = "Xử lý theo định dạng đã phát hiện"
+file_admission_cancelled = "Đã hủy xử lý; định dạng đã phát hiện chưa được chấp nhận."
+# =============================================================================
+# 通用文本
+# =============================================================================
+[common]
+app_name = "DocWen"
+default = "Mặc định"
+close = "Đóng"
+apply = "Áp dụng"
+cancel = "Hủy"
+ok = "OK"
+save = "Lưu"
+error = "Lỗi"
+browse = "Duyệt..."
+disclaimer = "Phiên bản thử nghiệm. Không đảm bảo độ chính xác.\nPhần mềm nguồn mở AGPL-3.0."
+ready = "Sẵn sàng"
+reload = "Tai lai"
+save_failed = "Lưu cài đặt thất bại"
+
+# =============================================================================
+# 状态栏
+# =============================================================================
+[info_area]
+copy_path = "Sao chep duong dan"
+open_location = "Mo vi tri tep: {path}"
+ipc_file_missing = "Tep IPC khong ton tai: {path}"
+font_size_applied = "Co chu: {label}"
+
+transient_title = "Trang thai hien tai"
+transient_meta = "{count} muc dang hien"
+history_title = "Tin nhan gan day"
+history_meta = "{count} muc"
+task_state_active = "Đang xử lý"
+task_state_success = "Hoàn tất"
+history_completed = "Hoàn tất: {name}"
+task_state_partial = "Lỗi một phần"
+task_state_failed = "Thất bại"
+task_state_cancelled = "Đã hủy"
+task_current_file = "Tệp hiện tại: {name}"
+task_progress_detail = "Hoàn tất {completed}/{total}, lỗi {failed}, ID tác vụ: {operation_id}"
+task_skipped_count = "Đã bỏ qua: {skipped}"
+task_cancelled_count = "Đã hủy: {cancelled}"
+task_guide_open_output_dir = "Mở thư mục đầu ra"
+task_guide_view_failed_details = "Xem chi tiết lỗi"
+task_guide_retry_failed = "Thử lại các mục lỗi"
+task_guide_add_more_files = "Tiếp tục thêm tệp"
+window_topmost_enabled = "Cua so duoc ghim luon o tren. Nhan Ctrl+Shift+T de tat."
+window_topmost_disabled = "Da tat ghim cua so o tren cung. Nhan Ctrl+Shift+T de bat lai."
+# =============================================================================
+# CLI 命令行界面
+# =============================================================================
+[cli]
+description = "Trình chuyển đổi tài liệu CLI - Hỗ trợ chuyển đổi tài liệu/bảng tính/hình ảnh/tệp bố cục"
+example = "Ví dụ"
+
+# CLI帮助文本
+[cli.help]
+settings = "Quản lý cài đặt"
+settings_reset = "Đặt lại cài đặt về mặc định"
+files = "Đường dẫn tệp đầu vào (hỗ trợ ký tự đại diện như *.docx)"
+template = "ID tài nguyên mẫu chuẩn từ resources list templates (ưu tiên cho protocol 3); tên, tên tệp hoặc đường dẫn cũ chỉ để Core tương thích"
+inspect = "Truy vấn thao tác hỗ trợ (AI tự mô tả)"
+doctor = "Chạy chẩn đoán"
+
+# CLI参数组标题
+[cli.groups]
+
+# CLI交互模式
+[cli.interactive]
+
+# 文件类型菜单
+[cli.interactive.menus]
+
+# 格式选项
+[cli.interactive.formats]
+
+# DPI选项
+[cli.interactive.dpi]
+
+# 压缩选项
+[cli.interactive.compress]
+
+[cli.interactive.pdf_sizes]
+
+# 序号方案
+[cli.interactive.numbering_schemes]
+
+# 优化类型
+[cli.interactive.optimization_types]
+gongwen = "Công văn"
+
+# 校对选项
+invoice_cn = "Hóa đơn Trung Quốc (invoice_cn)"
+[cli.interactive.proofread]
+
+# 提示文本
+[cli.interactive.prompts]
+
+# CLI消息
+[cli.messages]
+error_aggregate_need_two = "Cần ít nhất hai tệp phù hợp (đã tìm thấy: {count})."
+error_no_valid_files = "Lỗi: Không có tệp hợp lệ"
+error_file_not_found = "Lỗi: Không tìm thấy tệp hợp lệ"
+warning_invalid_files = "Cảnh báo: {count} tệp không hợp lệ"
+error_prefix = "Lỗi"
+invalid_tab = "Không nhận dạng được tab cài đặt: {tab}"
+
+# 批处理模式
+[cli.batch]
+
+# CLI 提示文本
+[cli.prompts]
+
+# CLI 验证消息
+[cli.validation]
+
+# CLI 结果消息
+[cli.result]
+
+# CLI 操作描述
+[cli.actions]
+
+# CLI 序号方案名称
+[cli.numbering_schemes]
+
+# =============================================================================
+# 设置对话框
+# =============================================================================
+[settings]
+title = "Cài đặt"
+
+# 选项卡标题
+[settings.tabs]
+general = "Chung"
+text = "Văn bản"
+proofread = "Kiểm tra"
+export = "Xuất"
+document = "Tài liệu"
+spreadsheet = "Bảng tính"
+image = "Hình ảnh"
+layout = "Bố cục"
+other = "Khác"
+link = "Liên kết"
+formatting = "Định dạng"
+output = "Đầu ra"
+logging = "Ghi log"
+
+[settings.descriptions]
+general = "Cài đặt toàn cục như ngôn ngữ và giao diện"
+
+# 设置状态消息
+[settings.status]
+
+[settings.reset]
+tab_button = "Dat lai tab"
+all_button = "Dat lai tat ca"
+tab_confirm_title = "Xac nhan dat lai"
+tab_confirm_message = "Dat lai tat ca cai dat trong tab \"{tab_name}\" ve mac dinh? Hanh dong nay khong the hoan tac."
+all_confirm_title = "Xac nhan dat lai tat ca"
+all_confirm_message = "Dat lai tat ca cai dat ve mac dinh? (Du lieu tu dien khong bi anh huong.) Hanh dong nay khong the hoan tac."
+success = "Tat ca cai dat da duoc dat lai ve mac dinh"
+tab_success = "Cai dat cua tab \"{tab_name}\" da duoc dat lai ve mac dinh"
+failed = "Dat lai cai dat that bai. Vui long kiem tra nhat ky."
+
+[settings.changes]
+summary = "Thay đổi chưa lưu ({count})"
+more = "… và thêm {count} mục"
+
+[settings.errors]
+tab_load_failed_message = "Khong the tai {tab}\n\nLoi: {error}"
+
+[settings.toml_editor]
+config_label = "Cau hinh"
+hint = "Goi y: Trang nay chinh sua truc tiep TOML. Cu phap se duoc kiem tra truoc khi luu."
+toml_syntax_error = "Loi cu phap TOML"
+save_failed = "Luu cau hinh that bai"
+save_success_title = "Da luu"
+save_success_message = "Cau hinh da duoc luu va tai lai."
+
+# -----------------------------------------------------------------------------
+# 通用设置选项卡
+# -----------------------------------------------------------------------------
+[settings.general]
+# 语言设置区域
+language_section = "Ngôn ngữ"
+language_label = "Chọn ngôn ngữ giao diện:"
+language_tooltip = "Chọn ngôn ngữ hiển thị của ứng dụng.\nThay đổi sẽ có hiệu lực sau khi khởi động lại."
+language_restart_hint = "Thay đổi sẽ có hiệu lực sau khi khởi động lại."
+
+# 主题设置区域
+theme_section = "Chủ đề giao diện"
+theme_description = "Chọn giao diện sáng, tối hoặc theo hệ thống."
+theme_label = "Chọn chủ đề ứng dụng:"
+theme_tooltip = "Chọn chủ đề hiển thị của ứng dụng.\nMỗi chủ đề có bảng màu và phong cách giao diện khác nhau.\nThay đổi sẽ có hiệu lực sau khi lưu."
+theme_preview = "Xem trước chủ đề:"
+sample_button = "Nút mẫu"
+sample_text = "Văn bản mẫu"
+
+[settings.general.languages]
+zh_CN = "Tiếng Trung (Giản thể)"
+en_US = "Tiếng Anh"
+de_DE = "Tiếng Đức"
+es_ES = "Tiếng Tây Ban Nha"
+fr_FR = "Tiếng Pháp"
+ja_JP = "Tiếng Nhật"
+ko_KR = "Tiếng Hàn"
+pt_BR = "Tiếng Bồ Đào Nha (Brasil)"
+ru_RU = "Tiếng Nga"
+vi_VN = "Tiếng Việt"
+zh_TW = "Tiếng Trung (Phồn thể)"
+
+# 主题名称
+[settings.general.themes]
+light = "Sáng"
+dark = "Tối"
+system = "Theo hệ thống"
+
+# 透明度设置区域
+[settings.general.transparency]
+section = "Độ trong suốt cửa sổ"
+enable = "Bật độ trong suốt cửa sổ"
+tooltip = "Bật hiệu ứng trong suốt.\nKhi bật, bạn có thể điều chỉnh mức trong suốt\nđể cửa sổ ứng dụng bán trong suốt."
+opacity_value_tooltip = "Điều chỉnh độ mờ cửa sổ (0,20 = trong suốt nhất; 1,00 = hoàn toàn không trong suốt)"
+
+# 窗口行为设置区域
+[settings.general.window]
+section = "Hành vi cửa sổ"
+description = "Cấu hình trạng thái cửa sổ và chế độ mặc định."
+remember_state = "Ghi nhớ vị trí và kích thước cửa sổ"
+remember_state_tooltip = "Ghi nhớ vị trí và kích thước cửa sổ ứng dụng.\nCửa sổ sẽ khôi phục trạng thái lần trước khi khởi động lại.\nGiúp duy trì môi trường làm việc ưa thích."
+auto_center = "Tự căn giữa khi khởi động"
+auto_center_tooltip = "Tự động căn giữa cửa sổ khi ứng dụng khởi động.\nNếu cũng bật 'Ghi nhớ vị trí cửa sổ', thiết lập này sẽ được ưu tiên."
+expand_side_panels = "Mở rộng panel hai bên"
+expand_side_panels_tooltip = "Khi cửa sổ rộng hơn, cho phép panel trái/phải cũng mở rộng.\nNếu tắt, chỉ panel trung tâm mở rộng."
+default_mode_label = "Chế độ xử lý tệp mặc định:"
+default_mode_tooltip = "Đặt chế độ xử lý tệp mặc định khi ứng dụng khởi động.\nChế độ một tệp: xử lý từng tệp\nChế độ hàng loạt: xử lý nhiều tệp cùng lúc"
+single_mode = "Chế độ một tệp"
+batch_mode = "Chế độ hàng loạt"
+
+# -----------------------------------------------------------------------------
+# 文本设置选项卡
+# -----------------------------------------------------------------------------
+[settings.text]
+# MD转文档序号设置
+md_to_docx_section = "Đánh số tiêu đề (Markdown → Tài liệu)"
+remove_numbering = "Mặc định xóa đánh số tiêu đề trong Markdown"
+remove_numbering_tooltip = "Xóa đánh số tiêu đề hiện có trong Markdown khi chuyển MD → DOCX"
+add_numbering = "Mặc định thêm đánh số tiêu đề mới"
+add_numbering_tooltip = "Thêm đánh số phân cấp cho tiêu đề trong DOCX đầu ra"
+scheme_label = "Sơ đồ đánh số mặc định:"
+scheme_tooltip = "Chọn lược đồ đánh số cho tiêu đề"
+render_mode_label = "Chế độ xuất số tiêu đề:"
+render_mode_tooltip = "Chọn ghi số trực tiếp vào tiêu đề hay tạo bằng tính năng đánh số gốc của Word"
+render_mode_text = "Văn bản"
+render_mode_word_native = "Gốc của Word"
+render_mode_hint = "Văn bản = ghi số vào tiêu đề; gốc của Word = dùng danh sách đa cấp của Word"
+
+# 字段优化（字段处理器）
+field_processors_section = "Tối ưu trường (Markdown → Tài liệu)"
+field_processors_empty = "Không có tối ưu trường nào cho ngôn ngữ hiện tại."
+field_processors_load_error = "Lỗi tải: {error}"
+field_processors_toggle_failed = "Không thể cập nhật “{name}”. Đã khôi phục giá trị trước đó."
+
+# 序号设置区域
+numbering_settings_section = "Thiết lập đánh số"
+numbering_settings_desc = "Quản lý các sơ đồ thêm số và quy tắc xóa số cho Markdown và chuyển đổi tài liệu."
+edit_numbering_add = "Sửa sơ đồ thêm số"
+edit_numbering_clean = "Sửa quy tắc xóa số"
+
+# 模板设置
+template_section = "Thiết lập mẫu"
+template_tooltip = "Đặt lựa chọn mẫu mặc định cho tệp MD\n• DOCX: mẫu tài liệu\n• XLSX: mẫu bảng tính"
+
+# 校对设置
+
+# 词库配置
+
+# 错误消息
+save_numbering_schemes_failed = "Không thể lưu các lược đồ đánh số. Các thay đổi không được giữ lại."
+save_numbering_clean_rules_failed = "Không thể lưu các quy tắc xóa số. Các thay đổi không được giữ lại."
+
+# -----------------------------------------------------------------------------
+# 文档设置选项卡
+# -----------------------------------------------------------------------------
+[settings.proofread]
+validation_section = "Quy tắc kiểm lỗi"
+enable_symbol_pairing = "Bật kiểm tra cặp ký hiệu"
+enable_symbol_correction = "Bật sửa ký hiệu"
+enable_typos_rule = "Bật phát hiện lỗi chính tả"
+enable_sensitive_word = "Bật kiểm tra thuật ngữ được đánh dấu"
+skip_code_blocks = "Bỏ qua khối mã"
+skip_quote_blocks = "Bỏ qua khối trích dẫn"
+symbol_mapping_section = "Trình sửa ánh xạ ký hiệu"
+symbol_mapping_desc = "Quản lý quy tắc ghép cặp và sửa ký hiệu."
+symbol_correction_section = "Trình sửa ký hiệu"
+symbol_correction_desc = "Quản lý các mục sửa ký hiệu toàn chiều rộng và nửa chiều rộng."
+typos_section = "Trình sửa từ điển lỗi chính tả"
+typos_desc = "Quản lý các mục sửa lỗi chính tả thường gặp."
+sensitive_words_section = "Trình sửa thuật ngữ được đánh dấu"
+sensitive_words_desc = "Quản lý các mục phát hiện thuật ngữ được đánh dấu."
+edit = "Sửa"
+
+[settings.extraction]
+image_extraction_mode_label = "Chế độ trích xuất ảnh:"
+image_extraction_mode_tooltip = "Chọn cách ảnh được nhúng vào Markdown.\n\n• Tệp ảnh: lưu thành tệp ảnh riêng và tham chiếu trong MD\n• Base64 nội tuyến: mã hóa ảnh Base64 và nhúng trực tiếp vào MD"
+image_extraction_mode_file = "Tệp ảnh"
+image_extraction_mode_base64 = "Base64 nội tuyến"
+ocr_placement_mode_label = "Vị trí OCR:"
+ocr_placement_mode_tooltip = "Chọn nơi lưu văn bản OCR.\n\n• MD ảnh: tạo một tệp MD riêng cho mỗi ảnh chứa ảnh và văn bản OCR\n• Tài liệu chính: chèn OCR dạng trích dẫn dưới ảnh trong MD chính (nhiều ảnh có thể khiến MD chính rất dài)"
+ocr_placement_mode_image_md = "MD ảnh"
+ocr_placement_mode_main_md = "Tài liệu chính"
+ocr_blockquote_title_enabled_label = "Dòng tiêu đề OCR (MD chính)"
+ocr_blockquote_title_enabled_tooltip = "Thiết lập toàn cục: khi vị trí OCR là \"Tài liệu chính\", hiển thị một dòng tiêu đề ở đầu khối trích dẫn OCR. Nội dung tiêu đề lấy theo ngôn ngữ hiện tại."
+ocr_blockquote_title_text_label = "Nội dung tiêu đề (ngôn ngữ hiện tại):"
+ocr_blockquote_title_text_tooltip = "Chỉ ảnh hưởng tới ngôn ngữ giao diện hiện tại.\nĐể trống hoặc giống mặc định để dùng nội dung ngôn ngữ."
+ocr_blockquote_title_text_reset = "Khôi phục"
+
+[settings.export]
+md_export_section = "Xuất Markdown (Hình ảnh/OCR)"
+md_export_desc = "Cấu hình cách xử lý hình ảnh và văn bản OCR trong đầu ra Markdown."
+base64_compress_section = "Tương thích Base64 (chỉ Base64 nội tuyến)"
+base64_compress_desc = "Nén hình ảnh trước khi nhúng bằng Base64."
+base64_compress_tooltip = "Base64 làm tăng kích thước và có thể không hiển thị ở một số trình soạn thảo.\nBật: ảnh vượt ngưỡng sẽ được nén thành JPG trước khi nhúng."
+base64_compress_enabled = "Tự động nén ảnh lớn"
+base64_compress_threshold_label = "Ngưỡng"
+base64_compress_threshold_tooltip = "Ngưỡng kích thước tính bằng KB. Hình ảnh lớn hơn sẽ được nén trước khi nhúng."
+
+
+[settings.optimization_types]
+
+
+[settings.table_export]
+section = "Xuất ô đã hợp nhất"
+desc = "Kiểm soát cách thể hiện ô đã hợp nhất trong đầu ra Markdown."
+merge_strategy_label = "Cách xuất ô đã hợp nhất:"
+
+[settings.table_export.strategies]
+fill = "Điền"
+empty = "Để trống"
+marker = "Dấu hiệu"
+
+[settings.document]
+# 内容提取设置
+extraction_section = "Thiết lập trích xuất ảnh/OCR"
+keep_images = "Mặc định chọn \"Trích xuất hình ảnh\""
+keep_images_tooltip = "Mặc định bật \"Trích xuất hình ảnh\" khi chuyển tài liệu → MD"
+enable_ocr = "Mặc định chọn \"OCR hình ảnh\""
+enable_ocr_tooltip = "Mặc định bật \"OCR hình ảnh\" khi chuyển tài liệu → MD"
+
+# 优化设置
+optimization_section = "Tối ưu hóa (Tài liệu → Markdown)"
+enable_optimization = "Mặc định bật \"Tối ưu theo loại tài liệu\""
+optimization_type_label = "Loại tối ưu mặc định:"
+
+# 软件优先级
+software_section = "Ưu tiên phần mềm"
+word_processors_label = "Ưu tiên phần mềm xử lý tài liệu"
+odt_conversion_label = "Chuyển đổi định dạng ODT"
+document_to_pdf_label = "Tài liệu → PDF"
+
+# 软件名称
+[settings.document.software]
+wps_writer = "WPS Writer"
+msoffice_word = "Word"
+libreoffice = "LibreOffice"
+
+# 序号设置
+[settings.document.numbering]
+section = "Đánh số tiêu đề (Tài liệu → Markdown)"
+remove = "Mặc định xóa đánh số tiêu đề trong tài liệu"
+remove_tooltip = "Xóa đánh số tiêu đề hiện có trong tài liệu khi chuyển DOCX → MD"
+add = "Mặc định thêm đánh số vào Markdown"
+scheme_label = "Sơ đồ đánh số mặc định:"
+
+# -----------------------------------------------------------------------------
+# 表格设置选项卡
+# -----------------------------------------------------------------------------
+[settings.spreadsheet]
+extraction_section = "Thiết lập trích xuất ảnh/OCR"
+keep_images = "Mặc định chọn \"Trích xuất hình ảnh\""
+keep_images_tooltip = "Mặc định bật \"Trích xuất hình ảnh\" khi chuyển bảng tính → MD"
+enable_ocr = "Mặc định chọn \"OCR hình ảnh\""
+enable_ocr_tooltip = "Mặc định bật \"OCR hình ảnh\" khi chuyển bảng tính → MD"
+merge_mode_section = "Thiết lập chế độ trộn"
+merge_mode_desc = "Đặt chế độ mặc định để trộn bảng"
+default_merge_mode_label = "Chế độ hợp nhất mặc định:"
+software_section = "Ưu tiên phần mềm"
+spreadsheet_processors_label = "Ưu tiên phần mềm xử lý bảng tính"
+ods_conversion_label = "Chuyển đổi định dạng ODS"
+spreadsheet_to_pdf_label = "Bảng tính → PDF"
+
+# 汇总模式选项
+[settings.spreadsheet.merge_modes]
+by_row = "Trộn theo hàng"
+by_column = "Trộn theo cột"
+by_cell = "Trộn theo ô"
+
+# 软件名称
+[settings.spreadsheet.software]
+wps_spreadsheets = "WPS Spreadsheets"
+excel = "Excel"
+libreoffice = "LibreOffice"
+
+# -----------------------------------------------------------------------------
+# 图片设置选项卡
+# -----------------------------------------------------------------------------
+[settings.image]
+extraction_section = "Thiết lập trích xuất ảnh/OCR"
+keep_images = "Mặc định chọn \"Trích xuất hình ảnh\""
+enable_ocr = "Mặc định chọn \"OCR hình ảnh\""
+size_unit_label = "Don vi:"
+optimization_section = "Tối ưu hóa (Hình ảnh → Markdown)"
+enable_optimization = "Mặc định bật \"Tối ưu theo loại hình ảnh\""
+optimization_type_label = "Loại tối ưu mặc định:"
+
+# OCR语言设置
+ocr_language_label = "Ngôn ngữ OCR:"
+ocr_language_tooltip = "Chọn mô hình ngôn ngữ dùng cho nhận dạng OCR.\n\n• Theo ngôn ngữ giao diện: tự động chọn theo ngôn ngữ giao diện hiện tại\n• Trung/Anh: phù hợp tài liệu pha trộn tiếng Trung và tiếng Anh\n• Tiếng Nhật: phù hợp tài liệu tiếng Nhật\n• Chữ cái Latinh: phù hợp tiếng Đức, Pháp, Bồ Đào Nha, v.v.\n• Chữ cái Cyrillic: phù hợp tiếng Nga, v.v."
+ocr_language_auto = "Theo ngôn ngữ giao diện"
+ocr_language_chinese = "Trung/Anh"
+ocr_language_japanese = "Tiếng Nhật"
+ocr_language_chinese_cht = "Tiếng Trung phồn thể"
+ocr_language_english = "Chỉ tiếng Anh"
+ocr_language_korean = "Tiếng Hàn"
+ocr_language_latin = "Chữ cái Latinh (Đức/Pháp/Bồ Đào Nha, v.v.)"
+ocr_language_cyrillic = "Chữ cái Cyrillic (Nga, v.v.)"
+
+compress_section = "Thiết lập tùy chọn nén"
+compress_desc = "Đặt chế độ nén mặc định khi chuyển đổi định dạng ảnh"
+compress_mode_label = "Chế độ nén:"
+compress_lossless = "Chất lượng cao nhất"
+compress_limit_size = "Giới hạn kích thước tệp"
+size_limit_label = "Giới hạn kích thước mặc định:"
+
+pdf_tiff_section = "Thiết lập PDF/TIFF"
+pdf_size_label = "Kích thước mặc định khi ảnh → PDF"
+pdf_original = "Nhúng nguyên bản"
+pdf_a4 = "Vừa A4"
+pdf_a3 = "Vừa A3"
+tiff_mode_label = "Chế độ mặc định khi trộn thành TIFF"
+tiff_keep_alpha = "Giữ độ trong suốt"
+tiff_no_alpha = "Không trong suốt"
+
+# -----------------------------------------------------------------------------
+# 版式设置选项卡
+# -----------------------------------------------------------------------------
+[settings.layout]
+extraction_section = "Thiết lập trích xuất ảnh/OCR"
+keep_images = "Mặc định chọn \"Trích xuất hình ảnh\""
+enable_ocr = "Mặc định chọn \"OCR hình ảnh\""
+optimization_section = "Tối ưu hóa (Bố cục → Markdown)"
+enable_optimization = "Mặc định bật \"Tối ưu theo loại bố cục\""
+optimization_type_label = "Loại tối ưu mặc định:"
+dpi_section = "Thiết lập DPI kết xuất"
+dpi_desc = "Đặt DPI (độ phân giải) mặc định khi chuyển tệp bố cục → ảnh"
+render_dpi_label = "Render DPI:"
+dpi_min = "Tối thiểu (150)"
+dpi_medium = "Trung bình (300)"
+dpi_high = "Chất lượng cao (600)"
+software_section = "Ưu tiên phần mềm"
+pdf_to_doc_label = "PDF → Tài liệu"
+
+# -----------------------------------------------------------------------------
+# 其他文件设置选项卡
+# -----------------------------------------------------------------------------
+[settings.other]
+extraction_section = "Thiết lập trích xuất ảnh/OCR"
+keep_images = "Mặc định chọn \"Trích xuất hình ảnh\""
+keep_images_tooltip = "Mặc định bật \"Trích xuất hình ảnh\" khi chuyển tệp khác → MD"
+enable_ocr = "Mặc định chọn \"OCR hình ảnh\""
+enable_ocr_tooltip = "Mặc định bật \"OCR hình ảnh\" khi chuyển tệp khác → MD"
+
+# -----------------------------------------------------------------------------
+# 链接设置选项卡
+# -----------------------------------------------------------------------------
+[settings.link]
+# Markdown链接格式区域
+format_section = "Định dạng liên kết Markdown"
+format_desc = "Đặt định dạng liên kết trong tệp Markdown tạo ra"
+image_link_style_label = "Định dạng liên kết ảnh:"
+image_link_style_tooltip = "Đặt định dạng liên kết cho ảnh trong tệp MD\n\n• Nhúng Markdown: ![alt](image.png)\n• Liên kết Markdown: [alt](image.png)\n• Nhúng Wiki: ![[image.png]] (Obsidian)\n• Liên kết Wiki: [[image.png]] (Obsidian)"
+md_file_link_style_label = "Định dạng liên kết tệp MD:"
+md_file_link_style_tooltip = "Đặt định dạng liên kết cho tệp MD trong tệp MD\n\n• Liên kết Markdown: [file.md](file.md)\n• Nhúng Wiki: ![[file.md]] (Obsidian)\n• Liên kết Wiki: [[file.md]] (Obsidian)\n\nLưu ý: Markdown không hỗ trợ nhúng nội dung tệp MD"
+
+# 非嵌入链接处理区域
+non_embed_section = "Xử lý liên kết không nhúng"
+non_embed_desc = "Đặt cách xử lý liên kết thường (không có tiền tố !) khi chuyển MD → tài liệu/bảng"
+wiki_link_mode = "Xử lý liên kết Wiki:"
+wiki_link_tooltip = "Xử lý định dạng [[link]] hoặc [[link|text]]\n\nGiữ nguyên: [[link|text]]\nTrích văn bản: text (bỏ markup)\nXóa: Xóa toàn bộ liên kết"
+markdown_link_mode = "Xử lý liên kết Markdown:"
+markdown_link_tooltip = "Xử lý định dạng [text](url)\n\nGiữ nguyên: [text](url)\nTrích văn bản: text (bỏ markup)\nXóa: Xóa toàn bộ liên kết"
+
+# 嵌入链接处理区域
+embed_section = "Xử lý liên kết nhúng"
+embed_desc = "Đặt cách xử lý liên kết nhúng (có tiền tố !) khi chuyển MD → tài liệu/bảng"
+wiki_embed_image_mode = "Xử lý ảnh nhúng Wiki:"
+wiki_embed_image_tooltip = "Xử lý định dạng ![[image.png]]\n\nGiữ nguyên: ![[image.png]]\nTrích văn bản: image.png\nXóa: Xóa liên kết\nNhúng nội dung: Chèn ảnh vào tài liệu"
+markdown_embed_image_mode = "Xử lý ảnh nhúng Markdown:"
+markdown_embed_image_tooltip = "Xử lý định dạng ![alt](image.png)\n\nGiữ nguyên: ![alt](image.png)\nTrích văn bản: image.png\nXóa: Xóa liên kết\nNhúng nội dung: Chèn ảnh vào tài liệu"
+embed_md_file_mode = "Xử lý nhúng tệp MD (Wiki):"
+embed_md_file_tooltip = "Xử lý định dạng ![[file.md]] (chỉ Wiki)\n\nGiữ nguyên: ![[file.md]]\nTrích văn bản: file.md\nXóa: Xóa liên kết\nNhúng nội dung: Xử lý đệ quy và chèn vào"
+max_depth_label = "Độ sâu nhúng tối đa:"
+max_depth_tooltip = "Độ sâu đệ quy tối đa khi nhúng tệp MD\nTránh đệ quy vô hạn và vấn đề hiệu năng\n\nVí dụ: A nhúng B, B nhúng C, C nhúng D...\nKhuyến nghị: 3-5"
+
+# 子节点：图片链接格式选项
+[settings.link.image_styles]
+wiki_embed = "Nhúng Wiki"
+wiki_link = "Liên kết Wiki"
+md_embed = "Nhúng Markdown"
+md_link = "Liên kết Markdown"
+
+# 子节点：MD文件链接格式选项
+[settings.link.md_file_styles]
+wiki_embed = "Nhúng Wiki"
+wiki_link = "Liên kết Wiki"
+md_link = "Liên kết Markdown"
+
+# 子节点：链接处理模式
+[settings.link.modes]
+keep = "Giữ nguyên"
+extract_text = "Trích văn bản"
+remove = "Xóa"
+hyperlink = "Siêu liên kết"
+embed = "Nhúng nội dung"
+
+# -----------------------------------------------------------------------------
+# 格式设置选项卡
+# -----------------------------------------------------------------------------
+[settings.formatting]
+# 文档转为Markdown部分
+docx_to_md_section = "Tài liệu → Markdown"
+format_processing = "Xử lý định dạng"
+format_processing_tooltip = "Cấu hình cách xử lý định dạng khi chuyển tài liệu Word → Markdown\n\nMột số tùy chọn không hoạt động trong chế độ 'Tối ưu công văn' khi chuyển tài liệu → Markdown"
+body_format_label = "Xử lý định dạng thân bài:"
+body_format_tooltip = "Giữ định dạng: In đậm→**Bold**, In nghiêng→*Italic*, Gạch ngang→~~Strikethrough~~, v.v.\nBỏ định dạng: Chỉ giữ nội dung văn bản thuần"
+heading_format_label = "Xử lý định dạng tiêu đề:"
+heading_format_tooltip = "Giữ định dạng: In đậm trong tiêu đề sẽ chuyển thành **Bold**, v.v.\nBỏ định dạng: Tiêu đề chỉ giữ văn bản thuần, tránh markup dư thừa\nLưu ý: Style tiêu đề của Word thường có định dạng cố định, giữ định dạng có thể gây markup dư"
+table_header_format_label = "Xử lý định dạng tiêu đề bảng:"
+table_header_format_tooltip = "Giữ định dạng: In đậm trong ô tiêu đề bảng sẽ chuyển thành **Bold**, v.v.\nBỏ định dạng: Ô tiêu đề chỉ giữ văn bản thuần, tránh markup dư thừa\nLưu ý: Style bảng thường đặt tiêu đề in đậm, giữ định dạng có thể gây trùng lặp"
+
+# 分隔符映射
+separator_mapping = "Ánh xạ phân cách"
+separator_mapping_tooltip = "Cấu hình chuyển ký hiệu phân cách Markdown ↔ phần tử Word\n\nNgắt trang: Page break trong Word\nNgắt đoạn: Mọi loại section break (trang mới/liên tục/trang lẻ/trang chẵn)\nĐường ngang: Viền dưới đoạn (khi gõ --- rồi Enter)"
+page_break_label = "Ngắt trang:"
+page_break_tooltip = "Chuyển ngắt trang Word thành phân cách Markdown\nNgắt trang thường dùng để ép xuống trang tại vị trí nhất định"
+section_break_label = "Ngắt đoạn:"
+section_break_tooltip = "Chuyển section break Word thành phân cách Markdown\nMọi loại section break được xử lý thống nhất"
+horizontal_rule_label = "Đường ngang:"
+horizontal_rule_tooltip = "Chuyển đường ngang Word (Horizontal Rule 1/2/3) thành phân cách Markdown"
+
+# 语法选择
+syntax_selection = "Chọn cú pháp"
+syntax_selection_tooltip = "Chọn cú pháp đầu ra khi chuyển tài liệu → Markdown\n(Mọi cú pháp định dạng sẽ được tự động nhận dạng khi đọc vào)"
+bold_syntax_label = "Cú pháp in đậm:"
+bold_syntax_tooltip = "Chọn cú pháp đầu ra cho chữ in đậm"
+italic_syntax_label = "Cú pháp in nghiêng:"
+italic_syntax_tooltip = "Chọn cú pháp đầu ra cho chữ in nghiêng"
+strikethrough_syntax_label = "Cú pháp gạch ngang:"
+strikethrough_syntax_tooltip = "Chọn cú pháp đầu ra cho chữ gạch ngang"
+highlight_syntax_label = "Cú pháp tô sáng:"
+highlight_syntax_tooltip = "Chọn cú pháp đầu ra cho chữ tô sáng"
+superscript_syntax_label = "Cú pháp chỉ số trên:"
+superscript_syntax_tooltip = "Chọn cú pháp đầu ra cho chỉ số trên"
+subscript_syntax_label = "Cú pháp chỉ số dưới:"
+subscript_syntax_tooltip = "Chọn cú pháp đầu ra cho chỉ số dưới"
+unordered_list_label = "Danh sách không thứ tự:"
+unordered_list_tooltip = "Chọn ký hiệu đầu dòng cho danh sách không thứ tự"
+indent_spaces_label = "Thụt lề danh sách:"
+indent_spaces_tooltip = "Điều khiển số khoảng trắng cho mỗi cấp danh sách khi xuất DOCX sang Markdown\n2 khoảng trắng: đầu ra gọn hơn\n4 khoảng trắng: đầu ra thoáng hơn\nLưu ý: Markdown sang DOCX hiện dùng nhận diện thụt lề tương đối và không phụ thuộc vào thiết lập này"
+
+# Markdown转为文档部分
+md_to_docx_section = "Markdown → Tài liệu"
+md_format_processing = "Xử lý định dạng"
+md_format_processing_tooltip = "Cấu hình cách xử lý markup định dạng khi chuyển Markdown → tài liệu Word"
+md_body_format_label = "Xử lý markup thân bài:"
+md_body_format_tooltip = "Áp dụng định dạng: **Bold** chuyển thành chữ in đậm thực\nGiữ markup: Hiển thị **Bold** nguyên dạng\nLàm sạch markup: Chỉ hiển thị chữ \"Bold\", không có định dạng"
+md_heading_format_label = "Xử lý markup tiêu đề:"
+md_heading_format_tooltip = "Áp dụng định dạng: Ghi đè định dạng tiêu đề, cho phép in đậm cục bộ\nGiữ markup: Hiển thị markup nguyên dạng\nLàm sạch markup: Để định dạng style tiêu đề Word tự áp dụng\nLưu ý: Khi tiêu đề vốn đã in đậm, 'Áp dụng định dạng' giúp đạt hiệu ứng in đậm từng phần"
+md_table_header_format_label = "Xử lý markup tiêu đề bảng:"
+md_table_header_format_tooltip = "Áp dụng định dạng: **Bold** chuyển thành in đậm thực (có thể trùng với style bảng)\nGiữ markup: Hiển thị markup nguyên dạng\nLàm sạch markup: Để style bảng (vd: firstRow in đậm) tự áp dụng\nLưu ý: Style bảng thường đã in đậm tiêu đề, khuyến nghị dùng 'Làm sạch markup'"
+heading_merge_mode_label = "Che do gop tieu de va noi dung:"
+heading_merge_mode_tooltip = "Dieu khien viec gop tieu de va dong noi dung thuong ngay ben duoi thanh mot doan\nChi gop khi co dau cau: Chi gop khi tieu de ket thuc bang dau cau va dong sau la noi dung thuong (mac dinh)\nGap noi dung la gop: Gop neu dong sau la noi dung thuong (khong can dau cau)\nKhong bao gio gop: Tieu de va noi dung luon duoc phan tach\nLuu y: danh sach/khoi ma/bang/trich dan/duong ngan cach se khong duoc gop"
+heading_merge_punctuation_label = "Dấu câu để gộp:"
+heading_merge_punctuation_tooltip = "Các ký tự kích hoạt việc gộp tiêu đề và nội dung trong chế độ Chỉ gộp khi có dấu câu. Giá trị rỗng sẽ tắt việc gộp theo dấu câu."
+
+# MD转文档分隔符映射
+md_separator_mapping = "Ánh xạ phân cách"
+md_separator_mapping_tooltip = "Cấu hình chuyển phân cách Markdown → phần tử Word\n\nNgắt trang: Page break trong Word\nNgắt đoạn: Section break trong Word (trang mới)\nĐường ngang: Viền dưới đoạn (phân cách trực quan)"
+dash_label = "--- (ba dấu gạch):"
+dash_tooltip = "Chuyển phân cách --- của Markdown thành ngắt trang/ngắt đoạn Word"
+asterisk_label = "*** (ba dấu sao):"
+asterisk_tooltip = "Chuyển phân cách *** của Markdown thành ngắt trang/ngắt đoạn Word"
+underscore_label = "___ (ba dấu gạch dưới):"
+underscore_tooltip = "Chuyển phân cách ___ của Markdown thành ngắt trang/ngắt đoạn Word\nLưu ý: section break (page) thực tế được tạo như Section break (next page)"
+
+# 表格样式
+table_style = "Style bảng"
+table_style_tooltip = "Cấu hình style dùng khi chuyển bảng Markdown → bảng Word\n\n【Style có sẵn】\nBảng ba dòng/Bảng lưới: tự phát hiện template có hay không, nếu không sẽ tự chèn style\n\n【Style tùy chỉnh】\nNếu template không có style này, sẽ tạo style dạng bảng lưới với cùng tên"
+builtin_style_radio = "Dùng style có sẵn"
+custom_style_radio = "Dùng tên style tùy chỉnh"
+
+# 列表拼接符
+list_separator_label = "Dấu phân cách danh sách YAML"
+list_separator_tooltip = "Dấu phân cách khi nối các giá trị danh sách YAML thành chuỗi\n\nGiá trị phổ biến:\n• Dấu phẩy Trung（、）\n• Dấu phẩy toàn chiều rộng（，）\n• Dấu phẩy + khoảng trắng（, ）\n• Chuỗi rỗng：nối trực tiếp"
+
+# 格式处理选项
+[settings.formatting.options]
+preserve_format = "Giữ định dạng"
+discard_format = "Bỏ định dạng"
+apply_format = "Áp dụng định dạng"
+keep_markup = "Giữ markup"
+clean_markup = "Làm sạch markup"
+heading_merge_punct_required = "Chi gop khi co dau cau (mac dinh)"
+heading_merge_always = "Gap noi dung la gop"
+heading_merge_never = "Khong bao gio gop"
+
+# 分隔符选项
+[settings.formatting.separators]
+dash = "---"
+asterisk = "***"
+underscore = "___"
+ignore = "Bỏ qua"
+page_break = "Ngắt trang"
+section_break = "Ngắt đoạn"
+horizontal_rule_1 = "Đường ngang 1"
+horizontal_rule_2 = "Đường ngang 2"
+horizontal_rule_3 = "Đường ngang 3"
+
+# 语法选项
+[settings.formatting.syntax]
+bold_asterisk = "Dấu sao (**text**)"
+bold_underscore = "Gạch dưới (__text__)"
+italic_asterisk = "Dấu sao (*text*)"
+italic_underscore = "Gạch dưới (_text_)"
+strikethrough_extended = "Mở rộng (~~text~~)"
+strikethrough_html = "HTML (<del>)"
+highlight_extended = "Mở rộng (==text==)"
+highlight_html = "HTML (<mark>)"
+superscript_extended = "Mở rộng (^text^)"
+superscript_html = "HTML (<sup>)"
+subscript_extended = "Mở rộng (~text~)"
+subscript_html = "HTML (<sub>)"
+unordered_dash = "Gạch ngang (- item)"
+unordered_asterisk = "Dấu sao (* item)"
+unordered_plus = "Dấu cộng (+ item)"
+indent_2_spaces = "2 khoảng trắng (khuyến nghị)"
+indent_4_spaces = "4 khoảng trắng"
+
+# 表格样式选项
+[settings.formatting.table_styles]
+three_line_table = "Bảng ba dòng"
+table_grid = "Bảng lưới"
+
+# -----------------------------------------------------------------------------
+# 输出设置选项卡
+# -----------------------------------------------------------------------------
+[settings.output]
+# 中间文件区域
+intermediate_section = "Tệp trung gian"
+save_intermediate_label = "Lưu tệp trung gian vào thư mục đầu ra"
+save_intermediate_tooltip = "Bật: Lưu mọi tệp ở các bước trung gian\nTắt: Chỉ lưu tệp kết quả cuối cùng\n\nVí dụ (XLS→XLSX→ODS):\n• Bật: Lưu cả XLSX và ODS\n• Tắt: Chỉ lưu ODS"
+save_intermediate_desc = "Có lưu tệp trung gian như XLSX khi chuyển đổi nhiều bước (vd: XLS→XLSX→ODS) hay không"
+
+# 输出目录区域
+directory_section = "Thư mục đầu ra"
+output_mode_label = "Vị trí đầu ra:"
+output_mode_tooltip = "Theo tệp nguồn: xuất cùng thư mục với tệp nguồn\nTùy chỉnh: xuất vào một thư mục chỉ định"
+custom_path_label = "Đường dẫn tùy chỉnh:"
+browse_title = "Chọn thư mục đầu ra"
+
+# 输出模式选项
+[settings.output.output_modes]
+source = "Thư mục của tệp nguồn"
+custom = "Thư mục tùy chỉnh"
+
+# 日期子文件夹区域
+[settings.output.date_folder]
+section = "Thư mục con theo ngày"
+create_label = "Tạo thư mục con theo ngày"
+create_tooltip = "Tạo thư mục con theo ngày trong thư mục đầu ra\nVí dụ: Thư mục đầu ra/2025-01-06/file.pdf\nTùy chọn này áp dụng cho cả hai chế độ đầu ra"
+format_label = "Định dạng ngày:"
+
+# 日期格式选项
+[settings.output.date_formats]
+iso = "2025-01-06"
+compact = "20250106"
+chinese = "2025年01月06日"
+
+# 输出行为区域
+[settings.output.behavior]
+section = "Hành vi đầu ra"
+auto_open_folder_label = "Tự mở thư mục đầu ra sau khi hoàn tất"
+auto_open_folder_tooltip = "Tự động mở thư mục đầu ra và chọn tệp kết quả sau khi chuyển đổi/kiểm tra thành công\nGiúp xem kết quả nhanh chóng"
+
+# -----------------------------------------------------------------------------
+# 日志设置选项卡
+# -----------------------------------------------------------------------------
+[settings.logging]
+# 日志系统区域
+system_section = "Hệ thống log"
+system_desc = "Bật hoặc tắt ghi nhật ký và đặt mức nhật ký."
+enable_logging_label = "Bật hệ thống log"
+enable_logging_tooltip = "Bật hoặc tắt toàn bộ hệ thống log.\nKhi tắt, ứng dụng sẽ không ghi lại thông tin log.\nKhuyến nghị giữ bật khi chạy thực tế."
+log_level_label = "Mức log:"
+log_level_tooltip = "Đặt mức chi tiết của log.\nTừ thấp đến cao: debug > info > warning > error > critical\nMức càng cao ghi càng ít thông tin."
+
+# 文件输出区域
+file_section = "Ghi ra tệp"
+file_desc = "Cấu hình tên và thời gian lưu tệp nhật ký."
+file_prefix_label = "Tiền tố tên tệp log:"
+file_prefix_tooltip = "Đặt tiền tố cho tên tệp log"
+retention_days_label = "Số ngày lưu log:"
+retention_days_tooltip = "Đặt số ngày giữ tệp log. Log cũ hơn sẽ tự động bị xóa."
+
+# 控制台输出区域
+console_section = "Hiển thị console"
+console_desc = "Điều khiển đầu ra và định dạng nhật ký trên bảng điều khiển."
+enable_console_label = "Hiển thị log trong console"
+enable_console_tooltip = "Khi bật, log cũng sẽ được in ra cửa sổ console"
+console_level_label = "Mức log console:"
+console_level_tooltip = "Đặt mức log cho console; có thể khác mức ghi ra tệp"
+validation_custom_directory_required = "Chế độ thư mục tùy chỉnh yêu cầu đường dẫn không được để trống."
+validation_prefix_invalid = 'Tiền tố tệp nhật ký chứa ký tự không hợp lệ: \ / : * ? " < > |'
+validation_prefix_required = "Tiền tố tệp nhật ký không được để trống."
+directory_auto_notice = "Chế độ tự xác định thư mục; phần nhập tùy chỉnh đã bị tắt."
+directory_env_override_notice = "Biến môi trường đang kiểm soát thư mục nhật ký; các tùy chọn thư mục đã bị tắt."
+console_format_tooltip = "Chuỗi định dạng bảng điều khiển (để trống = dùng lại định dạng tệp)"
+console_format_label = "Định dạng bảng điều khiển:"
+console_colorize_label = "Màu bảng điều khiển:"
+console_colorize_tooltip = "Điều khiển cách tô màu nhật ký trên bảng điều khiển."
+open_directory = "Mở thư mục"
+directory_notice_label = "Thông báo thư mục:"
+override_source_label = "Nguồn ghi đè:"
+fallback_reason_label = "Lý do dùng phương án dự phòng:"
+actual_log_file_label = "Tệp nhật ký thực tế:"
+custom_directory_tooltip = "Thư mục nhật ký tùy chỉnh (chỉ dùng trong chế độ tùy chỉnh)"
+custom_directory_label = "Thư mục tùy chỉnh:"
+directory_mode_tooltip = "Chế độ thư mục"
+directory_mode_label = "Chế độ thư mục:"
+location_desc = "Kiểm soát nơi ghi các tệp nhật ký."
+location_section = "Vị trí đầu ra"
+
+# 日志级别
+
+[settings.logging.dir_modes]
+user = "Mặc định hệ thống"
+temp = "Thư mục tạm"
+custom = "Thư mục tùy chỉnh"
+
+[settings.logging.console_colorize]
+auto = "Tự động"
+always = "Luôn luôn"
+never = "Không bao giờ"
+
+[settings.logging.levels]
+debug = "Gỡ lỗi (DEBUG)"
+info = "Thông tin (INFO)"
+warning = "Cảnh báo (WARNING)"
+error = "Lỗi (ERROR)"
+critical = "Nghiêm trọng (CRITICAL)"
+
+# =============================================================================
+# 关于对话框
+# =============================================================================
+[about]
+title = "Giới thiệu"
+version_info = "Phiên bản {version}"
+subtitle = "Phan mem chuyen doi dinh dang van ban, bieu do va bang tinh (Bo chuyen doi cong van)"
+version_tooltip = "Phần mềm này chỉ chạy ngoại tuyến. Vui lòng tự kiểm tra cập nhật."
+contact = "Liên hệ: {email}"
+copyright = "© {year} {author}"
+acknowledgments = "Lời cảm ơn"
+acknowledgments_intro = "Dự án sử dụng các dự án mã nguồn mở và công cụ sau. Xin chân thành cảm ơn:"
+
+# 开源工具描述
+[about.tools]
+python_docx = "Chuyển đổi hai chiều giữa docx và markdown, xử lý style và cấu trúc tài liệu"
+openpyxl = "Chuyển đổi hai chiều giữa xlsx và markdown, xử lý dữ liệu bảng tính"
+pymupdf = "Trích xuất nội dung tài liệu PDF/XPS và chuyển đổi định dạng"
+pymupdf4llm = "Trích xuất PDF thông minh và chuyển đổi sang Markdown"
+pdf2docx = "Chuyển đổi tài liệu PDF sang Word có thể chỉnh sửa"
+easyofd = "Đọc và chuyển đổi tài liệu OFD (Trung Quốc)"
+rapidocr = "Nhận dạng OCR cho ảnh và PDF, hỗ trợ chạy ngoại tuyến"
+paddleocr = "Nguồn mô hình OCR, PP-OCRv3/v4 được đào tạo bởi PaddleOCR"
+onnxruntime = "Engine suy luận cho RapidOCR"
+pyside6 = "Framework Qt cho giao diện đồ họa (GUI)"
+pillow = "Chuyển đổi định dạng ảnh và xử lý tài nguyên biểu tượng"
+pillow_heif = "Hỗ trợ định dạng ảnh HEIF cho Pillow"
+img2pdf = "Chuyển đổi hàng loạt ảnh sang PDF"
+pywin32 = "Gọi WPS/Office qua COM để chuyển đổi định dạng tài liệu"
+lxml = "Xử lý cấu trúc XML của tài liệu Office"
+latex2mathml = "Chuyển công thức LaTeX sang MathML"
+pyyaml = "Xử lý metadata frontmatter Markdown"
+tomlkit = "Đọc và lưu tệp cấu hình TOML"
+pandas = "Xử lý và phân tích dữ liệu bảng tính"
+numpy = "Hỗ trợ tính toán số và xử lý dữ liệu cơ bản"
+olefile = "Nhận dạng và xử lý định dạng Office cũ"
+emoji = "Thư viện phát hiện và xử lý emoji"
+
+[core.theme_manager]
+
+# =============================================================================
+# 主界面组件
+# =============================================================================
+[components]
+
+# Co chu
+[components.font_size]
+small = "Nho"
+default = "Mac dinh"
+large = "Lon"
+xlarge = "Rat lon"
+
+# 文件拖拽区
+[components.file_drop]
+empty_hint_single = "Kéo thả một tệp vào đây"
+empty_hint_batch = "Kéo thả tệp hoặc thư mục vào đây"
+add_button = "Thêm"
+add_file_action = "Them tep"
+add_folder_action = "Them thu muc"
+recent_files_action = "Gần đây"
+clear_recent_files_action = "Xóa gần đây"
+select_folder_dialog = "Chon thu muc"
+clear_button = "Xóa sạch"
+single_mode = "Một"
+batch_mode = "Hàng loạt"
+file_selected_msg = "Da chon: {filename}"
+files_added_msg = "Da them {count} tep"
+files_added_with_skipped_msg = "Da them {added} tep, bo qua {skipped}"
+no_supported_files = "Khong tim thay tep duoc ho tro."
+unsupported_type_msg = "Loai tep khong duoc ho tro: {filename}"
+single_mode_only_one = "Che do don tep chi ho tro mot tep."
+select_file_dialog = "Chon tep"
+drag_preview_single = "Sap chon: {filename}"
+drag_preview_summary = "Sap them {added}, bo qua {skipped}"
+drag_preview_summary_recursive = "{summary}, bao gom quet de quy thu muc"
+drag_preview_summary_degraded = "{summary}; dang o che do xem truoc so luong lon, ket qua da duoc tom tat"
+drag_preview_skipped_title = "Se bo qua:"
+drag_preview_skipped_unsupported = "Khong ho tro: {name}"
+drag_preview_skipped_unreadable = "Khong the truy cap: {path}"
+all_supported_filter = "Tat ca tep duoc ho tro"
+all_files_filter = "Tat ca tep"
+
+# 批量文件列表
+[components.file_drop.batch_list]
+no_batch_files = "Khong co tep hang loat"
+retry_selected_failed = "Thử lại mục lỗi đang chọn"
+retry_all_failed = "Thử lại tất cả mục lỗi trong thẻ này"
+total_files = "Tong cong {total} tep"
+total_files_selected = "Tong cong {total} tep, da chon: {current_name}"
+action_open_output = "Mở đầu ra"
+action_view_skip = "Xem bỏ qua"
+action_view_error = "Xem lỗi"
+action_remove = "Xóa"
+action_move_up = "Lên"
+action_move_down = "Xuống"
+sort_button = "Sắp xếp"
+sort_button_with_label = "Sắp xếp: {label}"
+sort_custom = "Thứ tự tùy chỉnh"
+sort_name = "Tên tệp"
+sort_type = "Loại"
+sort_size = "Kích thước"
+sort_mtime = "Ngày sửa đổi"
+sort_ascending = "Tăng dần"
+sort_descending = "Giảm dần"
+filter_button = "Loc"
+filter_button_with_label = "Loc: {label}"
+filter_all = "Tat ca"
+filter_failed = "That bai"
+filter_pending = "Dang cho"
+filter_processing = "Dang xu ly"
+filter_completed = "Da hoan tat"
+action_remove_selected = "Xoa muc da chon ({count})"
+action_open_selected_locations = "Mo thu muc chua muc da chon ({count})"
+
+# 批量操作面板
+filter_skipped = "Da bo qua"
+filter_cancelled = "Da huy"
+[components.file_drop.batch_action]
+
+# 状态文本
+[components.file_drop.status]
+pending = "Dang cho"
+processing = "Dang xu ly"
+completed = "Da hoan tat"
+skipped = "Da bo qua"
+failed = "That bai"
+cancelled = "Da huy"
+
+# 文件选择器
+[components.file_selector]
+
+# 状态栏
+[components.info_area]
+
+task_completion_notification_title = "Tac vu hoan tat"
+task_completion_notification_success = "Tac vu da hoan tat: da xu ly {completed}/{total} tep."
+task_completion_notification_partial = "Tac vu da hoan tat: da xu ly {completed}/{total} tep, that bai {failed}."
+task_completion_notification_failed = "Tac vu da ket thuc: tong {total} tep, that bai {failed}."
+task_completion_notification_cancelled = "Tac vu da huy: da xu ly {completed}/{total} tep."
+# 应用状态
+
+# 处理状态
+batch_completed = "Xử lý hàng loạt kết thúc: thành công {success}, thất bại {failed}, bỏ qua {skipped}, hủy {cancelled}"
+
+# logic.py 状态消息
+
+# 文件类型选择（统一风格）
+
+# GUI状态消息
+
+# 文件状态对话框
+[components.file_dialogs]
+# 跳过对话框
+
+# 错误对话框
+
+# 操作面板
+[components.action_area]
+cancel_hint = "Tác vụ đang chạy. Nhấn Esc để hủy tác vụ hiện tại."
+
+# 转换面板
+[components.conversion_panel]
+
+# 模板选择器
+[components.template_selector]
+no_templates = "Không có mẫu khả dụng"
+empty_hint = "Khi chưa có mẫu, hãy mở thư mục mẫu để kiểm tra hoặc bổ sung tệp."
+open_template_dir = "Mở thư mục mẫu"
+unavailable = "Không thể sử dụng bộ chọn mẫu"
+
+# 选项卡式模板选择器
+usage_line = "Dùng cho: {value}"
+source_line = "Nguồn: {value}"
+updated_line = "Cập nhật: {value}"
+source_tooltip = "Thư mục nguồn: {value}"
+auto_selected_reason = "Đã tự động chọn tùy chọn khả dụng đầu tiên trong {template_kind} theo thiết lập mặc định."
+
+open_location = "Mo vi tri tep"
+
+[components.template_selector_tabbed]
+document_templates = "Tài"
+spreadsheet_templates = "Bảng"
+
+# =============================================================================
+# 转换面板区域
+# =============================================================================
+[conversion_panel]
+route_options_unavailable = "Không thể tải các thao tác khả dụng; các thao tác đã bị tắt để tránh yêu cầu sai."
+no_compatible_operation = "Không có thao tác tương thích cho tệp này."
+format_conversion = "Chuyển đổi định dạng"
+save_as = "Lưu thành"
+convert = "Chuyển đổi"
+save_as_action = "Lưu thành"
+export = "Xuất"
+render = "Kết xuất"
+select_file_hint = "Vui lòng chọn một tệp trước"
+
+# 文档转换区
+[conversion_panel.document]
+convert_to_other_formats = "Chuyển sang định dạng tài liệu khác"
+convert_to_layout = "Chuyển sang định dạng bố cục"
+proofread_document = "Kiểm tra tài liệu"
+proofread_hint = "Kiểm tra tài liệu"
+proofread_button = "Kiểm tra"
+proofread_options = "Tùy chọn kiểm tra"
+symbol_pairing = "Đối soát cặp ký hiệu"
+symbol_pairing_tooltip = "Kiểm tra các ký hiệu cặp (ngoặc, dấu nháy, v.v.) có khớp không"
+typos_rule = "Sửa lỗi chính tả"
+typos_rule_tooltip = "Kiểm tra lỗi chính tả phổ biến"
+symbol_correction = "Sửa ký hiệu"
+symbol_correction_tooltip = "Kiểm tra ký hiệu sai"
+sensitive_word = "Từ nhạy cảm"
+sensitive_word_tooltip = "Kiểm tra từ nhạy cảm"
+
+# 图片转换区
+[conversion_panel.image]
+convert_to_other_formats = "Chuyển sang định dạng ảnh khác"
+compression_options = "Tùy chọn nén"
+highest_quality = "Chất lượng cao nhất"
+limit_file_size = "Giới hạn kích thước tệp"
+file_size_limit = "Giới hạn kích thước tệp:"
+enter_size_limit_warning = "Vui lòng nhập giới hạn kích thước tệp"
+kb_range_warning = "Vui lòng nhập số từ 10 đến 10000 (KB)"
+mb_range_warning = "Vui lòng nhập số từ 1 đến 100 (MB)"
+enter_valid_number_warning = "Vui lòng nhập số hợp lệ"
+convert_to_layout = "Chuyển sang định dạng bố cục"
+size_options = "Tùy chọn kích thước"
+original_embed = "Nhúng nguyên bản"
+fit_a4 = "Vừa A4"
+fit_a3 = "Vừa A3"
+merge_images = "Trộn ảnh"
+merge_images_hint = "Trộn nhiều ảnh thành một"
+merge_to_tif = "Trộn thành TIF"
+conversion_options = "Tùy chọn chuyển đổi"
+preserve_transparency = "Giữ độ trong suốt"
+no_transparency = "Không trong suốt"
+
+# 版式转换区
+[conversion_panel.layout]
+convert_to_other_formats = "Chuyển sang định dạng bố cục khác"
+convert_to_document_or_image = "Chuyển sang tài liệu hoặc ảnh"
+merge_split = "Trộn/Tách"
+merge_split_hint = "Trộn hoặc tách tệp bố cục"
+merge_to_pdf = "Trộn thành PDF"
+merge_to_ofd = "Trộn thành OFD"
+split_to_pdf = "Tách thành PDF"
+split_to_ofd = "Tách thành OFD"
+split_page_range = "Phạm vi trang tách:"
+page_range_placeholder = "1-3,5  *  #"
+selected_split_file = "Đã chọn tệp để tách ({pages} trang):"
+invalid_page_range = "Phạm vi trang không hợp lệ: {part}"
+invalid_page = "Trang không hợp lệ: {part}"
+split_mode_single_page_warning = "⚠️ Tep nay chi co 1 trang; khong can tach"
+
+# 表格转换区
+[conversion_panel.spreadsheet]
+ods_delivery_options = "Tùy chọn bàn giao ODS"
+ods_delivery_hint = "Công thức ngoài dùng giá trị đã lưu đệm. Tệp được bảo vệ cần mật khẩu và sự đồng ý xuất bản không còn bảo vệ."
+protection_password = "Mật khẩu bảo vệ (tùy chọn)"
+allow_protection_loss = "Tôi hiểu rằng ODS được bàn giao sẽ không giữ bảo vệ bằng mật khẩu"
+protected_batch_single_only = "Mật khẩu không được dùng lại trong lô. Hãy chuyển đổi từng tệp được bảo vệ."
+convert_to_other_formats = "Chuyển sang định dạng bảng tính khác"
+convert_to_layout = "Chuyển sang định dạng bố cục"
+merge_tables = "Trộn bảng"
+merge_tables_hint = "Trộn nhiều bảng theo chế độ đã chọn"
+merge_tables_button = "📋 Trộn bảng"
+merge_options = "Tùy chọn trộn"
+merge_by_row = "Trộn theo hàng"
+merge_by_column = "Trộn theo cột"
+merge_by_cell = "Trộn theo ô"
+no_table_selected = "Chưa chọn bảng"
+
+# =============================================================================
+# 操作面板区域
+# =============================================================================
+[action_area]
+route_options_unavailable = "Không thể tải các thao tác khả dụng; chức năng tạo đã bị tắt để tránh yêu cầu sai."
+no_compatible_output = "Không có định dạng đầu ra tương thích cho tệp này."
+export_options = "Tùy chọn xuất"
+generation_options = "Tùy chọn tạo"
+extract_images = "Trích xuất ảnh"
+generate = "Tao"
+ocr = "OCR ảnh"
+optimization_unavailable = "Các tùy chọn tối ưu hóa hiện không khả dụng; chuyển đổi tiêu chuẩn vẫn dùng được."
+
+# 校对选项
+[action_area.proofread]
+
+# 文档转MD面板
+[action_area.document]
+export_markdown = "Xuất Markdown"
+export_markdown_tooltip = "Chuyển tài liệu sang Markdown"
+optimize_for_type = "Tối ưu theo loại tài liệu"
+remove_existing_numbering = "Xóa số tiêu đề gốc"
+add_new_numbering = "Thêm số tiêu đề mới"
+
+# 表格转MD面板
+[action_area.spreadsheet]
+export_markdown_tooltip = "Chuyển bảng tính sang Markdown"
+optimize_for_type = "Tối ưu (bảng)"
+
+# 图片转MD面板
+[action_area.image]
+export_markdown_tooltip = "Chuyển ảnh sang Markdown"
+optimize_for_type = "Tối ưu (ảnh)"
+
+# 版式转MD面板
+[action_area.layout]
+export_markdown_tooltip = "Chuyển tệp bố cục sang Markdown"
+optimize_for_type = "Tối ưu theo loại bố cục"
+
+# 其他文件转MD面板
+[action_area.other]
+
+# MD转文档面板
+[action_area.md_to_document]
+generate_tooltip = "Tao tai lieu theo dinh dang da chon"
+format_combo_tooltip = "Chon dinh dang tai lieu dich"
+remove_existing_numbering = "Xóa số tiêu đề gốc"
+add_new_numbering = "Thêm số tiêu đề mới"
+
+# MD转表格面板
+[action_area.md_to_spreadsheet]
+generate_tooltip = "Tao bang tinh theo dinh dang da chon"
+format_combo_tooltip = "Chon dinh dang bang tinh dich"
+
+# =============================================================================
+# 编辑器对话框
+# =============================================================================
+[editors]
+
+# 序号新增编辑器
+[editors.numbering_add]
+window_title = "Trình chỉnh sửa sơ đồ đánh số"
+scheme_list = "Danh sách sơ đồ"
+default_scheme = "Sơ đồ mặc định:"
+level_format_config = "Cấu hình định dạng cấp"
+realtime_preview = "Xem trước thời gian thực"
+format_help = "📖 Trợ giúp định dạng"
+format_help_title = "Trợ giúp placeholder định dạng"
+format_help_text = """Cách dùng placeholder định dạng
+
+占位符格式：{级别.样式}
+
+可用样式：
+  chinese_lower  - 小写中文数字 (一、二、三)
+  chinese_upper  - 大写中文数字 (壹、贰、叁)
+  arabic_half    - 半角阿拉伯数字 (1, 2, 3)
+  arabic_full    - 全角阿拉伯数字 (１、２、３)
+  arabic_circled - 带圈数字 (①②③)
+  letter_upper   - 大写字母 (A, B, C)
+  letter_lower   - 小写字母 (a, b, c)
+  roman_upper    - 大写罗马数字 (I, II, III)
+  roman_lower    - 小写罗马数字 (i, ii, iii)
+
+示例：
+  {1.chinese_lower}、 → 一、二、三、
+  （{2.chinese_lower}） → （一）（二）（三）
+  {3.arabic_half}. → 1. 2. 3.
+  {1.arabic_half}.{2.arabic_half} → 1.1、1.2"""
+
+# 级别名称
+level_1 = "Tiêu đề cấp 1"
+level_2 = "Tiêu đề cấp 2"
+level_3 = "Tiêu đề cấp 3"
+level_4 = "Tiêu đề cấp 4"
+level_5 = "Tiêu đề cấp 5"
+level_6 = "Tiêu đề cấp 6"
+level_7 = "Tiêu đề cấp 7"
+level_8 = "Tiêu đề cấp 8"
+level_9 = "Tiêu đề cấp 9"
+
+# 创建和复制
+new_scheme = "Sơ đồ mới"
+copy_suffix = "(Bản sao)"
+
+# 预览
+preview_sample = "Mẫu {level_name}"
+no_format = "Chưa định nghĩa định dạng"
+
+# 占位符菜单
+menu_current_level = "── Cấp hiện tại ({level}) ──"
+menu_decorations = "── Trang trí chung ──"
+menu_hierarchical = "── Định dạng phân cấp ──"
+
+# 数字样式
+style_chinese_lower = "Trung dạng thường (一二三)"
+style_chinese_upper = "Trung dạng hoa (壹贰叁)"
+style_arabic_half = "Số Ả Rập (123)"
+style_arabic_circled = "Số khoanh tròn (①②③)"
+style_letter_upper = "Chữ cái in hoa (ABC)"
+style_roman_upper = "Số La Mã (I II III)"
+
+# 装饰
+decoration_dun = "Dấu phẩy Trung"
+decoration_dot_space = "Dấu chấm + khoảng trắng"
+decoration_bracket = "Ngoặc toàn chiều rộng"
+decoration_chapter = "Dạng chương"
+
+# 验证消息
+validation_ok = "Định dạng hợp lệ"
+validation_fixed_text = "Không tìm thấy chỗ giữ chỗ. Cấp này sẽ chỉ hiển thị văn bản cố định."
+validation_invalid_level = "Cấp '{level}' không phải là số hợp lệ."
+validation_level_out_of_range = "Cấp {level} nằm ngoài phạm vi. Hãy dùng 1-9."
+validation_unknown_style = "Kiểu không xác định '{style}'."
+word_native_unavailable = "Khả năng tương thích với đánh số gốc của Word: (không thể kiểm tra)"
+word_native_full = "Khả năng tương thích với đánh số gốc của Word: tương thích hoàn toàn"
+word_native_approximate = "Khả năng tương thích với đánh số gốc của Word: tương thích gần đúng ({reason})"
+word_native_incompatible = "Khả năng tương thích với đánh số gốc của Word: không tương thích ({reason})"
+
+
+# 错误消息
+cannot_delete_default_scheme = "Không thể xóa sơ đồ mặc định"
+
+# 方案名称
+[editors.numbering_add.names]
+hierarchical_standard = "Chuẩn phân cấp"
+hierarchical_h2_start = "Phân cấp (Bắt đầu từ H2)"
+
+# 方案描述（用于编辑器中显示）
+[editors.numbering_add.descriptions]
+hierarchical_standard_desc = "Định dạng phân cấp: 1, 1.1, 1.1.1... (có khoảng trắng sau số)"
+hierarchical_h2_start_desc = "Định dạng phân cấp (bỏ H1/Tiêu đề cấp 1): bắt đầu từ H2/Tiêu đề cấp 2 với 1, 1.1, 1.1.1..."
+
+# 通用编辑器文本（所有编辑器共用）
+[editors.common]
+name = "Tên:"
+description = "Mô tả:"
+copy = "Sao chép"
+delete = "Xóa"
+move_up = "Lên"
+move_down = "Xuống"
+save = "Lưu"
+cancel = "Hủy"
+prompt = "Thông tin"
+select_item_first = "Vui lòng chọn một mục trước"
+cannot_delete = "Không thể xóa"
+system_item_hint = "Mục hệ thống không thể xóa, chỉ có thể tắt"
+confirm_delete = "Xác nhận xóa"
+confirm_delete_message = "Bạn có chắc muốn xóa '{name}' không?"
+confirm_close = "Xác nhận đóng"
+unsaved_changes_hint = "Thay đổi chưa lưu"
+unsaved_close_message = "Có thay đổi chưa lưu. Bạn có chắc muốn đóng không?"
+
+# 序号清理编辑器
+[editors.numbering_clean]
+window_title = "Trình chỉnh sửa quy tắc làm sạch"
+rule_list = "Danh sách quy tắc"
+description = "Mô tả:"
+regex = "Biểu thức chính quy (Regex):"
+enabled = "Bat quy tac"
+regex_test = "Kiểm thử Regex"
+input = "Đầu vào:"
+result = "Kết quả:"
+new_rule = "Quy tắc mới"
+copy_suffix = "(Bản sao)"
+match_success = "Khớp thành công"
+no_match = "Không khớp"
+regex_error = "Lỗi Regex"
+prompt = "Thông tin"
+
+# 清理规则名称
+[editors.numbering_clean.names]
+chinese_unit_suffix = "Trung: Định dạng [第XĐơn vị]"
+chinese_unit_prefix = "Trung: Định dạng [Đơn vịX]"
+circled_numbers = "Số khoanh tròn"
+bracket_number = "Số có ngoặc"
+hierarchical = "Số phân cấp"
+number_separator = "Số kèm dấu phân tách"
+legal_english = "Tiếng Anh: dạng Chapter"
+letter_number = "Chữ cái + số"
+
+# 清理规则描述（用于编辑器中显示）
+[editors.numbering_clean.descriptions]
+chinese_unit_suffix_desc = "Khớp: 第X回/篇/册/卷/部/集/期/编/章/节/条/款/项/目 + khoảng trắng"
+chinese_unit_prefix_desc = "Khớp: 卷/篇/册/部/集/期/编/章/节/回 + số + khoảng trắng"
+circled_numbers_desc = "Khớp: ①-㊿, ❶-⓴, ⓵-⓾, ㈠-㈩ + dấu phân tách tùy chọn"
+bracket_number_desc = "Khớp: (1), （一）, 1), 一）... + dấu phân tách tùy chọn"
+hierarchical_desc = "Khớp: 1.1 / 1.1.1 / 1.1.1.1... + dấu phân tách tùy chọn"
+number_separator_desc = "Khớp: 1. / 2、/ 一、/ 二,... + khoảng trắng tùy chọn"
+legal_english_desc = "Khớp: Chapter/Part/Volume/Book/Section + số/số La Mã"
+letter_number_desc = "Khớp: A. / A) / (A) / a. / a) kiểu đánh số chữ cái"
+
+# 映射编辑器
+[editors.mapping]
+# 对话框标题
+symbol_editor_title = "Trình chỉnh sửa ánh xạ dấu câu"
+typo_editor_title = "Trình chỉnh sửa từ điển lỗi chính tả"
+sensitive_editor_title = "Trình chỉnh sửa từ nhạy cảm"
+# 下拉选择标签
+
+search_placeholder = "Tim kiem khoa, gia tri hoac ghi chu"
+source_symbol = "Ký hiệu nguồn"
+target_symbol = "Ký hiệu đích"
+typo = "Lỗi chính tả"
+corrections = "Nội dung sửa"
+multi_value_hint = "Mẹo: dùng | để phân tách nhiều giá trị (ví dụ: giá_trị1|giá_trị2|giá_trị3)"
+save_typos_failed = "Không thể lưu từ điển lỗi chính tả."
+save_symbol_correction_failed = "Không thể lưu các mục sửa ký hiệu."
+save_sensitive_words_failed = "Không thể lưu từ điển thuật ngữ được đánh dấu."
+# 列头
+symbol_correct_symbol = "Ký hiệu đúng"
+symbol_error_symbols = "Danh sách ký hiệu sai"
+sensitive_sensitive_word = "Từ nhạy cảm"
+sensitive_exceptions = "Danh sách ngoại lệ"
+comment = "Ghi chú"
+
+# 说明文本
+
+# 按钮
+add_entry = "Thêm mục"
+delete_entry = "Xóa mục"
+
+# 提示消息
+
+# 条目编辑对话框
+
+# 标签
+
+# 示例文本
+
+# 验证消息
+
+# 键重复处理
+duplicate_key_title = "Khóa đã tồn tại"
+duplicate_key_message = "Khóa \"{entry_key}\" đã tồn tại\n\nGiá trị hiện tại: {current_values}\nGhi chú hiện tại: {current_comment}\n\nVui lòng chọn hành động:"
+duplicate_key_no_comment = "(không có)"
+overwrite = "Ghi đè"
+merge = "Trộn"
+
+# =============================================================================
+# 文件类型分类
+# =============================================================================
+[file_types]
+document = "Tài liệu"
+spreadsheet = "Bảng tính"
+image = "Hình ảnh"
+layout = "Bố cục"
+other = "Khác"
+text = "Văn bản"
+
+# 带"类"后缀的版本（用于选项卡标签）
+
+[file_category]
+text_short = "Văn"
+document_short = "Tài"
+spreadsheet_short = "Bảng"
+layout_short = "Bố"
+image_short = "Ảnh"
+other_short = "Khác"
+
+[file_format_validation]
+
+[file_admission]
+compatible_text = "Tên tệp khai báo định dạng {declared_format}, nhưng nội dung được phát hiện là {detected_format}; cả hai dùng cùng quy trình xử lý văn bản."
+same_family_mismatch = "Tên tệp khai báo định dạng {declared_format}, nhưng nội dung được phát hiện là {detected_format}. Hai định dạng thuộc cùng nhóm xử lý; định dạng đã phát hiện sẽ được dùng."
+cross_family_mismatch = "Tên tệp khai báo định dạng {declared_format}, nhưng nội dung được phát hiện là {detected_format}. Hai định dạng thuộc các nhóm xử lý khác nhau; hãy xác nhận xử lý theo định dạng đã phát hiện."
+unknown_extension = "Phần mở rộng khai báo định dạng không được hỗ trợ {declared_format}, nhưng nội dung được phát hiện là {detected_format}. Hãy xác nhận xử lý theo định dạng đã phát hiện."
+empty = "Tệp đã chọn đang trống."
+container_invalid = "Bộ chứa tệp bị hỏng hoặc có cấu trúc không hợp lệ (khai báo: {declared_format}, phát hiện: {detected_format})."
+container_unsupported = "Bộ chứa {detected_format} đã phát hiện không phải là gói tài liệu được hỗ trợ (khai báo: {declared_format})."
+container_unrecognized = "Không thể nhận dạng bộ chứa tệp (khai báo: {declared_format}, phát hiện: {detected_format})."
+content_unrecognized = "Không thể nhận dạng nội dung tệp (khai báo: {declared_format}, phát hiện: {detected_format})."
+read_error = "Không thể đọc tệp (khai báo: {declared_format}, phát hiện: {detected_format})."
+unsupported_format = "Định dạng nội dung đã phát hiện {detected_format} không được hỗ trợ (khai báo: {declared_format})."
+
+# =============================================================================
+# 转换操作
+# =============================================================================
+[conversion]
+# 文档操作
+
+# 表格操作
+
+# 图片操作
+
+# 生成文件名（用于输出文件命名）
+[conversion.filenames]
+
+[conversion.ocr_output]
+blockquote_prefix = "🖼️ **OCR hình ảnh**:"
+
+# =============================================================================
+# 转换进度消息
+# =============================================================================
+[conversion.progress]
+
+# =============================================================================
+# 转换结果消息（状态栏/弹窗）
+# =============================================================================
+[conversion.messages]
+# 通用消息
+
+# 成功消息
+
+# 校对消息
+
+# 版式转换消息
+
+# 缺少依赖消息
+
+# 合并/拆分消息
+
+# MD转换消息
+
+# 图片转换消息
+
+# 序号操作消息
+
+# 成功消息（带参数）
+
+# 失败消息（带参数）
+
+# =============================================================================
+# 消息和提示
+# =============================================================================
+[messages]
+# 文件操作
+
+# GUI操作结果
+
+# 转换操作
+
+# 设置
+
+# 确认对话框
+
+# 文件拖拽和选择
+no_folder_in_single_mode = "Không cho phép thư mục trong chế độ một tệp"
+
+# 错误消息
+[messages.errors]
+
+# 警告消息
+[messages.warnings]
+
+# =============================================================================
+# 校对批注文本（用于文档校对功能的批注内容）
+# =============================================================================
+[proofread]
+
+# 错误类型
+[proofread.error_type]
+
+# 错误来源
+[proofread.source]
+
+# 修改建议
+[proofread.suggestion]
+
+# =============================================================================
+# 链接处理占位符文本（用于文档中显示的错误提示）
+# =============================================================================
+[link_processing]
+
+# =============================================================================
+# 样式名（用于文档转换）
+# 这些样式名用于 MD ↔ DOCX 转换时的样式注入和检测
+# =============================================================================
+[styles]
+# 段落样式
+body_paragraph = "Đoạn văn bản chính"
+image_paragraph = "Đoạn hình ảnh"
+
+# 代码样式
+code_block = "Khối mã"
+inline_code = "Mã nội tuyến"
+
+# 公式样式
+formula_block = "Khối công thức"
+inline_formula = "Công thức nội tuyến"
+
+# 列表样式
+list_block = "Khối danh sách"
+
+# 分隔线样式
+horizontal_rule_1 = "Đường ngang 1"
+horizontal_rule_2 = "Đường ngang 2"
+horizontal_rule_3 = "Đường ngang 3"
+
+# 表格样式
+table_content = "Nội dung bảng"
+table_header = "Tiêu đề bảng"
+three_line_table = "Bảng ba dòng"
+table_grid = "Bảng lưới"
+
+# 引用样式（9 级）
+quote_1 = "Trích dẫn 1"
+quote_2 = "Trích dẫn 2"
+quote_3 = "Trích dẫn 3"
+quote_4 = "Trích dẫn 4"
+quote_5 = "Trích dẫn 5"
+quote_6 = "Trích dẫn 6"
+quote_7 = "Trích dẫn 7"
+quote_8 = "Trích dẫn 8"
+quote_9 = "Trích dẫn 9"
+figure_caption = "Chú thích hình"
+table_caption = "Chú thích bảng"
+equation_caption = "Chú thích phương trình"
+code_block_caption = "Chú thích khối mã"
+
+# =============================================================================
+# 样式格式配置（用于样式注入时的格式属性）
+# =============================================================================
+[style_formats]
+
+# 正文段落格式（与 heading 3-9 相同：仿宋_GB2312、三号、2字符）
+[style_formats.body_paragraph]
+east_asia_font = "Times New Roman"
+ascii_font = "Times New Roman"
+font_size_pt = 13
+first_line_indent_chars = 0
+first_line_indent_cm = 1.27
+spacing_after_twip = 120
+spacing_before_twip = 0
+bold = false
+justification = "both"
+
+# 标题1格式（黑体、三号、2字符）
+[style_formats.heading_1]
+east_asia_font = "Arial"
+ascii_font = "Arial"
+font_size_pt = 14
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# 标题2格式（楷体_GB2312、三号、2字符）
+[style_formats.heading_2]
+east_asia_font = "Arial"
+ascii_font = "Arial"
+font_size_pt = 13
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# 标题3-9格式（仿宋_GB2312、三号、2字符）
+[style_formats.heading_3_9]
+east_asia_font = "Arial"
+ascii_font = "Arial"
+font_size_pt = 13
+first_line_indent_chars = 0
+first_line_indent_cm = 0
+spacing_after_twip = 120
+spacing_before_twip = 240
+bold = true
+justification = "left"
+
+# =============================================================================
+# 占位符（用于文档模板）
+# 这些占位符用于 MD → DOCX 转换时的模板填充
+# =============================================================================
+[placeholders]
+title = "Tiêu đề"
+body = "Nội dung"
+
+# =============================================================================
+# YAML 键名（用于元数据）
+# 这些键名用于 DOCX → MD 转换时的 YAML 前置信息输出
+# =============================================================================
+[yaml_keys]
+title = "tieu_de"
+subtitle = "phu_de"

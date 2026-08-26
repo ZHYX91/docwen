@@ -1,0 +1,224 @@
+{
+  "golden_id": "GOLDEN-018",
+  "route": "EPUB->Markdown",
+  "probe_date": "2026-07-02",
+  "probe_scope": "Same generated EPUB converted through docwen-ref-tk convert_epub_to_md(), docwen-ref-pyside6 convert_epub_to_md() after initialize_runtime(), and current docwen runtime markup route.",
+  "input_epub": {
+    "filename": "golden_018.epub",
+    "identifier": "docwen-golden-018",
+    "title": "EPUB Golden Sample",
+    "author": "DocWen Author",
+    "language": "en",
+    "chapter_title": "Chapter One",
+    "chapter_filename": "chapter.xhtml",
+    "chapter_html": "<html><body>\n<h1>Chapter Heading</h1>\n<p>This is a <strong>bold</strong> paragraph with <em>italic</em> text and an <a href=\"https://example.com/epub\">example link</a>.</p>\n<ul><li>Alpha item</li><li>Beta item</li></ul>\n<ol><li>First step</li><li>Second step</li></ol>\n<table><tr><th>Name</th><th>Value</th></tr><tr><td>Foo</td><td>42</td></tr><tr><td>Bar</td><td>99</td></tr></table>\n</body></html>"
+  },
+  "old_systems": {
+    "docwen-ref-tk": {
+      "converter": "docwen.converter.epub2md.core.convert_epub_to_md",
+      "status": "converted_with_ebooklib_constant_compat_patch",
+      "direct_current_dependency_status": "ImportError without monkeypatch because ebooklib.epub no longer exports ITEM_DOCUMENT in this environment.",
+      "output_shape": "single Markdown string with YAML frontmatter",
+      "required_markdown_tokens": [
+        "EPUB Golden Sample",
+        "Chapter Heading",
+        "**bold**",
+        "*italic*",
+        "[example link](https://example.com/epub)",
+        "Alpha item",
+        "First step",
+        "| Name | Value |",
+        "| --- | --- |",
+        "| Foo | 42 |",
+        "| Bar | 99 |"
+      ]
+    },
+    "docwen-ref-pyside6": {
+      "converter": "docwen.converter.epub.to_md.core.convert_epub_to_md",
+      "status": "converted_with_ebooklib_constant_compat_patch",
+      "direct_current_dependency_status": "ImportError without monkeypatch because ebooklib.epub no longer exports ITEM_DOCUMENT in this environment.",
+      "output_shape": "single Markdown string with YAML frontmatter",
+      "required_markdown_tokens": [
+        "EPUB Golden Sample",
+        "Chapter Heading",
+        "**bold**",
+        "*italic*",
+        "[example link](https://example.com/epub)",
+        "Alpha item",
+        "First step",
+        "| Name | Value |",
+        "| --- | --- |",
+        "| Foo | 42 |",
+        "| Bar | 99 |"
+      ]
+    }
+  },
+  "current_expected_semantics": {
+    "route_owner": "docwen_plugin_markup.publication.converter.EpubToMarkdownConverter",
+    "output_shape": "one runtime primary Markdown artifact with YAML frontmatter",
+    "required_markdown_tokens": [
+      "title: EPUB Golden Sample",
+      "aliases:",
+      "# EPUB Golden Sample",
+      "*Author: DocWen Author*",
+      "## Table of Contents",
+      "Chapter One",
+      "# Chapter Heading",
+      "**bold**",
+      "*italic*",
+      "[example link](https://example.com/epub)",
+      "Alpha item",
+      "First step",
+      "| Name | Value |",
+      "| --- | --- |",
+      "| Foo | 42 |",
+      "| Bar | 99 |"
+    ],
+    "forbidden_markdown_fragments": [
+      "xml version='1.0' encoding='utf-8'?",
+      "xml version=\"1.0\" encoding=\"UTF-8\"?",
+      "\nhtml\n",
+      "## nav"
+    ],
+    "artifact_metadata": {
+      "media_type": "text/markdown",
+      "title": "EPUB Golden Sample",
+      "author": "DocWen Author",
+      "image_count": 0
+    }
+  },
+  "image_artifact_scope": {
+    "multi_resource_probe": {
+      "classification": "current_enhancement_over_old_epub_escaped_image_placeholder",
+      "probe_date": "2026-07-05",
+      "filename": "multi.epub",
+      "identifier": "docwen-epub-multi-resource-probe",
+      "title": "EPUB Multi Resource Probe",
+      "author": "DocWen Probe",
+      "language": "en",
+      "chapter_title": "Probe Chapter",
+      "chapter_filename": "chapter.xhtml",
+      "chapter_html": "<html><body>\n<h1>EPUB Multi Resource Probe</h1>\n<p>First image</p>\n<p><img src=\"images/first.png\" alt=\"first image\" /></p>\n<p>Second image</p>\n<p><img src=\"images/second.png\" alt=\"second image\" /></p>\n</body></html>",
+      "images": [
+        {
+          "uid": "first-image",
+          "filename": "images/first.png",
+          "suggested_name": "first.png",
+          "media_type": "image/png",
+          "md5": "36b179752ed986f683f3e42909ecdd11",
+          "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNk+M8AAAICAQB7q8kWAAAAAElFTkSuQmCC"
+        },
+        {
+          "uid": "second-image",
+          "filename": "images/second.png",
+          "suggested_name": "second.png",
+          "media_type": "image/png",
+          "md5": "20b9ebf79cface55df2ee16e3ce74403",
+          "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGOsfP0PAAMBAgC7Ddq6AAAAAElFTkSuQmCC"
+        }
+      ],
+      "old_system_projection": {
+        "docwen-ref-tk": {
+          "status": "converted_with_ebooklib_constant_compat_patch",
+          "output_image_count": 2,
+          "output_image_name_tokens": [
+            "multi_image1_20260705_probe.png",
+            "multi_image2_20260705_probe.png"
+          ],
+          "markdown_contains_escaped_placeholder": true,
+          "escaped_placeholder_tokens": [
+            "\\\\_\\\\_DOCWEN\\\\_EPUB\\\\_IMG\\\\_chapter\\\\_0\\\\_1\\\\_\\\\_",
+            "\\\\_\\\\_DOCWEN\\\\_EPUB\\\\_IMG\\\\_chapter\\\\_0\\\\_2\\\\_\\\\_"
+          ],
+          "required_markdown_tokens": [
+            "EPUB Multi Resource Probe",
+            "First image",
+            "Second image"
+          ]
+        },
+        "docwen-ref-pyside6": {
+          "status": "converted_with_ebooklib_constant_compat_patch",
+          "output_image_count": 2,
+          "output_image_name_tokens": [
+            "multi_image1_20260705_probe.png",
+            "multi_image2_20260705_probe.png"
+          ],
+          "markdown_contains_escaped_placeholder": true,
+          "escaped_placeholder_tokens": [
+            "\\\\_\\\\_DOCWEN\\\\_EPUB\\\\_IMG\\\\_chapter\\\\_0\\\\_1\\\\_\\\\_",
+            "\\\\_\\\\_DOCWEN\\\\_EPUB\\\\_IMG\\\\_chapter\\\\_0\\\\_2\\\\_\\\\_"
+          ],
+          "required_markdown_tokens": [
+            "EPUB Multi Resource Probe",
+            "First image",
+            "Second image"
+          ]
+        }
+      },
+      "current_expected_semantics": {
+        "diagnostics": [
+          "EPUB2MD-CONVERTED",
+          "FINALIZER_DONE"
+        ],
+        "artifact_count": 3,
+        "image_count": 2,
+        "expected_image_artifacts": [
+          {
+            "suggested_name": "first.png",
+            "media_type": "image/png"
+          },
+          {
+            "suggested_name": "second.png",
+            "media_type": "image/png"
+          }
+        ],
+        "required_markdown_tokens": [
+          "title: EPUB Multi Resource Probe",
+          "aliases:",
+          "# EPUB Multi Resource Probe",
+          "*Author: DocWen Probe*",
+          "## Table of Contents",
+          "Probe Chapter",
+          "First image",
+          "Second image",
+          "![[first.png]]",
+          "![[second.png]]"
+        ],
+        "ordered_markdown_tokens": [
+          "![[first.png]]",
+          "![[second.png]]"
+        ],
+        "forbidden_markdown_fragments": [
+          "__DOCWEN_EPUB_IMG_",
+          "\\\\_\\\\_DOCWEN",
+          "![first image]]",
+          "![second image]]",
+          "images/first.png",
+          "images/second.png"
+        ]
+      }
+    }
+  },
+  "accepted_differences": [
+    {
+      "difference": "Old systems and current rewrite both materialize EPUB title metadata as YAML frontmatter; current runtime also emits a Markdown title heading, author line, and generated table of contents while skipping the nav document body.",
+      "classification": "current_runtime_output_contract",
+      "reason": "Restored YAML preserves old-system Markdown metadata/i18n behavior; current runtime still owns artifact metadata and TOC rendering, and skipping nav avoids duplicate navigation text while preserving the book title and chapter content."
+    },
+    {
+      "difference": "Old systems require a compatibility monkeypatch for ebooklib ITEM_DOCUMENT/ITEM_IMAGE constants in this environment; current implementation imports constants from the stable top-level ebooklib module.",
+      "classification": "current_architecture_improvement",
+      "reason": "The rewrite should stay compatible with the installed dependency without carrying old import fragility."
+    },
+    {
+      "difference": "Old systems can emit escaped EPUB image placeholders after markdownify processes converter tokens, while current finalizes EPUB resources as stable image artifacts and keeps wiki image links readable even when source img elements carry alt text.",
+      "classification": "current_enhancement_over_old_epub_escaped_image_placeholder",
+      "reason": "Readable finalized resource links are the intended current runtime contract; preserving old escaped placeholders or the transient malformed alt-text wiki link would be a UX regression."
+    }
+  ],
+  "probe_outputs": {
+    "local_summary": "tmp/epub_md_probe_20260702",
+    "old_direct_failure": "ImportError: cannot import name 'ITEM_DOCUMENT' from 'ebooklib.epub'",
+    "current_first_non_empty_line": "---"
+  }
+}

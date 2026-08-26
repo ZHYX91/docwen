@@ -1,0 +1,119 @@
+{
+  "golden_id": "GOLDEN-010",
+  "scope": "focused SmartSheet XLSX to ET style and merged-cell real external-office smoke",
+  "created_at": "2026-07-03",
+  "route": {
+    "source_format": "xlsx",
+    "target_format": "et",
+    "category": "spreadsheet"
+  },
+  "input_workbook": {
+    "source_fixture": "tmp/smart-sheet-style-real-smoke-2026-07-03/smart-sheet-style-probe.xlsx",
+    "sheet": "Styled",
+    "merge_range": "A1:C1",
+    "formula_cell": "C5",
+    "formula": "=SUM(B3:B4)",
+    "number_format": "0.00"
+  },
+  "expected_semantics": {
+    "output_extension": ".et",
+    "ole_magic": "d0cf11e0a1b11ae1",
+    "output_size_bytes": 19456,
+    "sheet": "Styled",
+    "merged_title_area": "$A$1:$C$1",
+    "cells": {
+      "A1": {
+        "value": "Merged Style Smoke",
+        "bold": true,
+        "italic": false,
+        "interior_color": 13998939,
+        "merge_cells": true,
+        "merge_area": "$A$1:$C$1"
+      },
+      "A2": {
+        "value": "Item",
+        "bold": true,
+        "interior_color": 13888217
+      },
+      "B2": {
+        "value": "Qty",
+        "bold": true,
+        "interior_color": 13888217
+      },
+      "C2": {
+        "value": "Total",
+        "bold": true,
+        "interior_color": 13888217
+      },
+      "A3": {
+        "value": "Apple"
+      },
+      "B3": {
+        "value": 2
+      },
+      "A4": {
+        "value": "Pear"
+      },
+      "B4": {
+        "value": 7
+      },
+      "A5": {
+        "value": "Total"
+      },
+      "C5": {
+        "value": 9,
+        "formula": "=SUM(B3:B4)",
+        "bold": true,
+        "italic": true,
+        "interior_color": 13431551,
+        "number_format": "0.00",
+        "merge_cells": false,
+        "merge_area": "$C$5"
+      }
+    },
+    "column_widths": {
+      "A": 17.4,
+      "B": 9.4,
+      "C": 13.4
+    }
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "success": true,
+      "output_path": "tmp/smart-sheet-style-et-real-smoke-2026-07-03/docwen-ref-tk/smart-sheet-style-probe.et",
+      "output_size_bytes": 19456,
+      "ole_magic": "d0cf11e0a1b11ae1",
+      "sheet": "Styled",
+      "merged_title_area": "$A$1:$C$1",
+      "cells_match_expected": true,
+      "column_widths_match_expected": true
+    },
+    "docwen-ref-pyside6": {
+      "success": true,
+      "output_path": "tmp/smart-sheet-style-et-real-smoke-2026-07-03/docwen-ref-pyside6/smart-sheet-style-probe.et",
+      "output_size_bytes": 19456,
+      "ole_magic": "d0cf11e0a1b11ae1",
+      "sheet": "Styled",
+      "merged_title_area": "$A$1:$C$1",
+      "cells_match_expected": true,
+      "column_widths_match_expected": true
+    },
+    "docwen-current": {
+      "success": true,
+      "output_path": "tmp/smart-sheet-style-et-real-smoke-2026-07-03/docwen-current-cli/smart-sheet-style-probe.et",
+      "output_size_bytes": 19456,
+      "ole_magic": "d0cf11e0a1b11ae1",
+      "sheet": "Styled",
+      "merged_title_area": "$A$1:$C$1",
+      "cells_match_expected": true,
+      "column_widths_match_expected": true
+    }
+  },
+  "accepted_limits": [
+    "This is focused real environment evidence, not a final GOLDEN-010 pass.",
+    "Old Tk and old PySide6 implement XLSX to ET through the XLS/OLE-compatible save path with an .et output name; the current rewrite does the same via its clean SmartSheet bridge path.",
+    "Excel COM readback localized the General number format label; the fixture checks the route-specific numeric format only for C5.",
+    "The COM readback probe left two no-window Excel processes; both were identified after capture and stopped, and the final process check was clean.",
+    "The probe covers XLSX to ET style and merged-cell preservation only; LibreOffice-only execution and the broader SmartSheet route matrix remain open."
+  ]
+}

@@ -1,0 +1,196 @@
+{
+  "golden_id": "GOLDEN-019",
+  "route": "ENEX->Markdown",
+  "probe_date": "2026-07-02",
+  "probe_scope": "Same generated ENEX note converted through docwen-ref-tk convert_enex_to_md(), docwen-ref-pyside6 convert_enex_to_md() after initialize_runtime(), and current docwen runtime markup route.",
+  "input_enex": {
+    "filename": "golden_019.enex",
+    "note_title": "Test Note Title",
+    "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE en-export SYSTEM \"http://xml.evernote.com/pub/evernote-export3.dtd\">\n<en-export export-date=\"20260101T000000Z\" application=\"Evernote\" version=\"10.x\">\n<note>\n    <title>Test Note Title</title>\n    <content>\n        <![CDATA[<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE en-note SYSTEM \"http://xml.evernote.com/pub/enml2.dtd\">\n<en-note>\n    <h1>Welcome</h1>\n    <p>This is a <b>bold</b> paragraph with <i>italic</i> text.</p>\n    <ul>\n        <li>Item One</li>\n        <li>Item Two</li>\n    </ul>\n    <p>A plain paragraph.</p>\n</en-note>\n]]>\n    </content>\n    <created>20260101T000000Z</created>\n    <updated>20260101T000000Z</updated>\n</note>\n</en-export>"
+  },
+  "old_systems": {
+    "docwen-ref-tk": {
+      "converter": "docwen.converter.enex2md.core.convert_enex_to_md",
+      "status": "converted",
+      "output_shape": "one Markdown file per ENEX note with YAML frontmatter",
+      "observed_warning": "markdownify emitted XMLParsedAsHTMLWarning because the old converter passed the ENML XML declaration/en-note envelope to BeautifulSoup.",
+      "observed_noise_fragments": [
+        "xml version=\"1.0\" encoding=\"UTF-8\"?"
+      ],
+      "required_markdown_tokens": [
+        "Test Note Title",
+        "Welcome",
+        "**bold**",
+        "*italic*",
+        "Item One",
+        "Item Two",
+        "A plain paragraph."
+      ]
+    },
+    "docwen-ref-pyside6": {
+      "converter": "docwen.converter.enex.to_md.core.convert_enex_to_md",
+      "status": "converted",
+      "output_shape": "one Markdown file per ENEX note with YAML frontmatter",
+      "observed_warning": "markdownify emitted XMLParsedAsHTMLWarning because the old converter passed the ENML XML declaration/en-note envelope to BeautifulSoup.",
+      "observed_noise_fragments": [
+        "xml version=\"1.0\" encoding=\"UTF-8\"?"
+      ],
+      "required_markdown_tokens": [
+        "Test Note Title",
+        "Welcome",
+        "**bold**",
+        "*italic*",
+        "Item One",
+        "Item Two",
+        "A plain paragraph."
+      ]
+    }
+  },
+  "current_expected_semantics": {
+    "route_owner": "docwen_plugin_markup.note_export.converter.EnexToMarkdownConverter",
+    "output_shape": "one runtime primary Markdown artifact containing YAML frontmatter and the converted note",
+    "required_markdown_tokens": [
+      "title: Test Note Title",
+      "aliases:",
+      "# Test Note Title",
+      "Welcome",
+      "**bold**",
+      "*italic*",
+      "Item One",
+      "Item Two",
+      "A plain paragraph."
+    ],
+    "forbidden_markdown_fragments": [
+      "xml version=\"1.0\" encoding=\"UTF-8\"?",
+      "<?xml",
+      "<!DOCTYPE",
+      "<en-note",
+      "</en-note>"
+    ],
+    "artifact_metadata": {
+      "media_type": "text/markdown",
+      "note_count": 1,
+      "resource_count": 0
+    }
+  },
+  "accepted_differences": [
+    {
+      "difference": "Old systems preserve YAML frontmatter and leak the ENML XML declaration into Markdown body; current runtime now preserves YAML frontmatter, keeps a Markdown note heading for the single-artifact runtime contract, and strips the ENML XML/DOCTYPE/en-note envelope before markdownify.",
+      "classification": "current_architecture_improvement",
+      "reason": "The old leak is parser noise, not user-authored note content. Current output preserves the note title and body semantics while avoiding XMLParsedAsHTMLWarning-style body noise."
+    },
+    {
+      "difference": "Old systems write one Markdown file per note directly to the output folder; current runtime returns one primary ArtifactManifest for this single-note smoke.",
+      "classification": "current_runtime_output_contract",
+      "reason": "Runtime staging/finalizer owns artifact materialization in the rewrite. The single-note semantic content and metadata are preserved."
+    },
+    {
+      "difference": "Old Tk/PySide6 ENEX image resources can become nested Markdown image syntax after markdownify converts the generated img tag and the converter then replaces the token with another image link; current rewrite strips the ENML envelope and replaces resource tokens with one readable link per finalized image.",
+      "classification": "accepted_current_architecture_improvement",
+      "reason": "The user-visible goal is readable Markdown with extracted resources finalized beside it. Recreating old nested image syntax and XML declaration noise would be a UI/UX regression."
+    }
+  ],
+  "image_artifact_scope": {
+    "multi_resource_probe": {
+      "classification": "current_enhancement_over_old_enex_nested_image_link",
+      "probe_date": "2026-07-05",
+      "filename": "multi.enex",
+      "note_title": "ENEX Multi Resource Probe",
+      "resources": [
+        {
+          "filename": "first.png",
+          "media_type": "image/png",
+          "md5": "b0a9b7a05769fc15e444fd29cb28f08e",
+          "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"
+        },
+        {
+          "filename": "second.png",
+          "media_type": "image/png",
+          "md5": "a8dc5e6fbdca0cbcf13860bc90ac32d9",
+          "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGNkYPgPAAEDAQC3G4vfAAAAAElFTkSuQmCC"
+        }
+      ],
+      "body_template": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE en-export SYSTEM \"http://xml.evernote.com/pub/evernote-export3.dtd\">\n<en-export export-date=\"20260101T000000Z\" application=\"Evernote\" version=\"10.x\">\n<note>\n<title>ENEX Multi Resource Probe</title>\n<content><![CDATA[<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE en-note SYSTEM \"http://xml.evernote.com/pub/enml2.dtd\">\n<en-note><p>First resource</p><en-media hash=\"b0a9b7a05769fc15e444fd29cb28f08e\" type=\"image/png\"/><p>Second resource</p><en-media hash=\"a8dc5e6fbdca0cbcf13860bc90ac32d9\" type=\"image/png\"/></en-note>]]></content>\n<resource><data encoding=\"base64\">iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC</data><mime>image/png</mime><resource-attributes><file-name>first.png</file-name></resource-attributes></resource>\n<resource><data encoding=\"base64\">iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGNkYPgPAAEDAQC3G4vfAAAAAElFTkSuQmCC</data><mime>image/png</mime><resource-attributes><file-name>second.png</file-name></resource-attributes></resource>\n</note>\n</en-export>\n",
+      "old_system_projection": {
+        "docwen-ref-tk": {
+          "status": "converted",
+          "output_image_count": 2,
+          "output_image_name_tokens": [
+            "ENEX Multi Resource Probe_res1_",
+            "ENEX Multi Resource Probe_res2_"
+          ],
+          "markdown_contains_nested_image_link": true,
+          "observed_noise_fragments": [
+            "xml version=\"1.0\" encoding=\"UTF-8\"?"
+          ],
+          "required_markdown_tokens": [
+            "ENEX Multi Resource Probe",
+            "First resource",
+            "Second resource"
+          ]
+        },
+        "docwen-ref-pyside6": {
+          "status": "converted",
+          "output_image_count": 2,
+          "output_image_name_tokens": [
+            "ENEX Multi Resource Probe_res1_",
+            "ENEX Multi Resource Probe_res2_"
+          ],
+          "markdown_contains_nested_image_link": true,
+          "observed_noise_fragments": [
+            "xml version=\"1.0\" encoding=\"UTF-8\"?"
+          ],
+          "required_markdown_tokens": [
+            "ENEX Multi Resource Probe",
+            "First resource",
+            "Second resource"
+          ]
+        }
+      },
+      "current_expected_semantics": {
+        "diagnostics": [
+          "ENEX2MD-OK",
+          "FINALIZER_DONE"
+        ],
+        "artifact_count": 3,
+        "image_count": 2,
+        "expected_image_artifacts": [
+          {
+            "suggested_name": "first.png",
+            "media_type": "image/png"
+          },
+          {
+            "suggested_name": "second.png",
+            "media_type": "image/png"
+          }
+        ],
+        "required_markdown_tokens": [
+          "title: ENEX Multi Resource Probe",
+          "aliases:",
+          "# ENEX Multi Resource Probe",
+          "First resource",
+          "Second resource",
+          "![[first.png]]",
+          "![[second.png]]"
+        ],
+        "ordered_markdown_tokens": [
+          "![[first.png]]",
+          "![[second.png]]"
+        ],
+        "forbidden_markdown_fragments": [
+          "xml version=\"1.0\" encoding=\"UTF-8\"?",
+          "<?xml",
+          "<!DOCTYPE",
+          "<en-note",
+          "__DOCWEN_RES_",
+          "![](!["
+        ]
+      }
+    }
+  },
+  "probe_outputs": {
+    "local_summary": "tmp/enex_md_probe_20260702",
+    "old_body_noise": "xml version=\"1.0\" encoding=\"UTF-8\"?",
+    "current_first_non_empty_line": "---"
+  }
+}

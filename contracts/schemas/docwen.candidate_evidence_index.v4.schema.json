@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:docwen:schema:candidate-evidence-index:v4",
+  "title": "DocWen v4 candidate evidence index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "candidateId", "layerStatus", "records"],
+  "properties": {
+    "schema": {"const": "docwen.candidate_evidence_index.v4"},
+    "candidateId": {
+      "type": "string",
+      "pattern": "^docwen-0\\.9\\.0-v4-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{12}$"
+    },
+    "layerStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_oracle",
+        "machine_wire",
+        "source_wire_comparison",
+        "packaged",
+        "roundtrip",
+        "headless_ooxml",
+        "word_host",
+        "wps_host",
+        "libreoffice_host"
+      ],
+      "properties": {
+        "source_oracle": {"const": "passed"},
+        "machine_wire": {"const": "passed"},
+        "source_wire_comparison": {"const": "passed"},
+        "packaged": {"const": "passed"},
+        "roundtrip": {"const": "passed"},
+        "headless_ooxml": {"const": "passed"},
+        "word_host": {"enum": ["passed", "not_run"]},
+        "wps_host": {"enum": ["passed", "not_run"]},
+        "libreoffice_host": {"enum": ["passed", "not_run"]}
+      }
+    },
+    "records": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/evidenceRecord"}
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "fileIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relativePath", "bytes", "sha256"],
+      "properties": {
+        "relativePath": {"type": "string", "minLength": 1},
+        "bytes": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "identityPointer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "relativePath", "bytes", "sha256"],
+      "properties": {
+        "role": {
+          "enum": [
+            "source_manifest",
+            "wire_schema",
+            "comparison_manifest",
+            "package_manifest",
+            "roundtrip_manifest",
+            "headless_ooxml_manifest",
+            "host_manifest"
+          ]
+        },
+        "relativePath": {"type": "string", "minLength": 1},
+        "bytes": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "evidenceRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["caseId", "layer", "relativePath", "bytes", "sha256", "identityPointers"],
+      "properties": {
+        "caseId": {"type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{0,127}$"},
+        "layer": {
+          "enum": [
+            "source_oracle",
+            "machine_wire",
+            "source_wire_comparison",
+            "packaged",
+            "roundtrip",
+            "headless_ooxml",
+            "word_host",
+            "wps_host",
+            "libreoffice_host"
+          ]
+        },
+        "relativePath": {"type": "string", "minLength": 1},
+        "bytes": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "identityPointers": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {"$ref": "#/$defs/identityPointer"}
+        }
+      },
+      "allOf": [
+        {"$ref": "#/$defs/sourcePointerRole"},
+        {"$ref": "#/$defs/wirePointerRole"},
+        {"$ref": "#/$defs/comparisonPointerRole"},
+        {"$ref": "#/$defs/packagePointerRole"},
+        {"$ref": "#/$defs/roundtripPointerRole"},
+        {"$ref": "#/$defs/headlessPointerRole"},
+        {"$ref": "#/$defs/hostPointerRole"}
+      ]
+    },
+    "sourcePointerRole": {
+      "if": {"properties": {"layer": {"const": "source_oracle"}}, "required": ["layer"]},
+      "then": {"properties": {"identityPointers": {"items": {"properties": {"role": {"const": "source_manifest"}}, "required": ["role"]}}}}
+    },
+    "wirePointerRole": {
+      "if": {"properties": {"layer": {"const": "machine_wire"}}, "required": ["layer"]},
+      "then": {"properties": {"identityPointers": {"items": {"properties": {"role": {"const": "wire_schema"}}, "required": ["role"]}}}}
+    },
+    "comparisonPointerRole": {
+      "if": {"properties": {"layer": {"const": "source_wire_comparison"}}, "required": ["layer"]},
+      "then": {"properties": {"identityPointers": {"items": {"properties": {"role": {"const": "comparison_manifest"}}, "required": ["role"]}}}}
+    },
+    "packagePointerRole": {
+      "if": {"properties": {"layer": {"const": "packaged"}}, "required": ["layer"]},
+      "then": {"properties": {"identityPointers": {"items": {"properties": {"role": {"const": "package_manifest"}}, "required": ["role"]}}}}
+    },
+    "roundtripPointerRole": {
+      "if": {"properties": {"layer": {"const": "roundtrip"}}, "required": ["layer"]},
+      "then": {"properties": {"identityPointers": {"items": {"properties": {"role": {"const": "roundtrip_manifest"}}, "required": ["role"]}}}}
+    },
+    "headlessPointerRole": {
+      "if": {"properties": {"layer": {"const": "headless_ooxml"}}, "required": ["layer"]},
+      "then": {"properties": {"identityPointers": {"items": {"properties": {"role": {"const": "headless_ooxml_manifest"}}, "required": ["role"]}}}}
+    },
+    "hostPointerRole": {
+      "if": {"properties": {"layer": {"enum": ["word_host", "wps_host", "libreoffice_host"]}}, "required": ["layer"]},
+      "then": {"properties": {"identityPointers": {"items": {"properties": {"role": {"const": "host_manifest"}}, "required": ["role"]}}}}
+    },
+    "wordHostCardinality": {
+      "if": {"properties": {"layerStatus": {"properties": {"word_host": {"const": "passed"}}, "required": ["word_host"]}}, "required": ["layerStatus"]},
+      "then": {"properties": {"records": {"contains": {"properties": {"layer": {"const": "word_host"}}, "required": ["layer"]}, "minContains": 1, "maxContains": 1}}},
+      "else": {"properties": {"records": {"not": {"contains": {"properties": {"layer": {"const": "word_host"}}, "required": ["layer"]}}}}}
+    },
+    "wpsHostCardinality": {
+      "if": {"properties": {"layerStatus": {"properties": {"wps_host": {"const": "passed"}}, "required": ["wps_host"]}}, "required": ["layerStatus"]},
+      "then": {"properties": {"records": {"contains": {"properties": {"layer": {"const": "wps_host"}}, "required": ["layer"]}, "minContains": 1, "maxContains": 1}}},
+      "else": {"properties": {"records": {"not": {"contains": {"properties": {"layer": {"const": "wps_host"}}, "required": ["layer"]}}}}}
+    },
+    "libreofficeHostCardinality": {
+      "if": {"properties": {"layerStatus": {"properties": {"libreoffice_host": {"const": "passed"}}, "required": ["libreoffice_host"]}}, "required": ["layerStatus"]},
+      "then": {"properties": {"records": {"contains": {"properties": {"layer": {"const": "libreoffice_host"}}, "required": ["layer"]}, "minContains": 1, "maxContains": 1}}},
+      "else": {"properties": {"records": {"not": {"contains": {"properties": {"layer": {"const": "libreoffice_host"}}, "required": ["layer"]}}}}}
+    }
+  },
+  "allOf": [
+    {"$ref": "#/$defs/wordHostCardinality"},
+    {"$ref": "#/$defs/wpsHostCardinality"},
+    {"$ref": "#/$defs/libreofficeHostCardinality"}
+  ]
+}

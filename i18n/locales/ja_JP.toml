@@ -1,0 +1,1589 @@
+# DocWen - locale file
+# Locale: ja_JP
+# Encoding: UTF-8
+
+[meta]
+name = "Japanese"
+native_name = "日本語"
+template_name = "日本語汎用テンプレート"
+
+# =============================================================================
+# 通用文本
+# =============================================================================
+[common]
+app_name = "DocWen"
+default = "デフォルト"
+close = "閉じる"
+apply = "適用"
+cancel = "キャンセル"
+ok = "OK"
+save = "保存"
+error = "エラー"
+browse = "参照..."
+disclaimer = "テスト版。精度は保証されません。\nAGPL-3.0 オープンソース。"
+ready = "準備完了"
+reload = "再読み込み"
+save_failed = "設定の保存に失敗しました"
+
+# =============================================================================
+# 状态栏
+# =============================================================================
+[info_area]
+copy_path = "パスをコピー"
+open_location = "ファイルの場所を開く: {path}"
+ipc_file_missing = "IPC ファイルが存在しません: {path}"
+font_size_applied = "文字サイズ：{label}"
+
+transient_title = "現在の状態"
+transient_meta = "{count} 件表示中"
+history_title = "最近のメッセージ"
+history_meta = "{count} 件"
+task_state_active = "処理中"
+task_state_success = "完了"
+history_completed = "完了：{name}"
+task_state_partial = "一部失敗"
+task_state_failed = "失敗"
+task_state_cancelled = "キャンセル済み"
+task_current_file = "現在のファイル: {name}"
+task_progress_detail = "完了 {completed}/{total}、失敗 {failed}、タスク ID: {operation_id}"
+task_skipped_count = "スキップ：{skipped}"
+task_cancelled_count = "キャンセル：{cancelled}"
+task_guide_open_output_dir = "出力フォルダーを開く"
+task_guide_view_failed_details = "失敗詳細を表示"
+task_guide_retry_failed = "失敗項目を再試行"
+task_guide_add_more_files = "ファイルを追加"
+window_topmost_enabled = "ウィンドウを最前面に固定しました。Ctrl+Shift+T でもう一度切り替えられます。"
+window_topmost_disabled = "ウィンドウの最前面固定を解除しました。Ctrl+Shift+T で再度固定できます。"
+# =============================================================================
+# CLI 命令行界面
+# =============================================================================
+[cli]
+description = "ドキュメントコンバーター CLI - ドキュメント/スプレッドシート/画像/レイアウトファイルの変換をサポート"
+example = "例"
+
+# CLI帮助文本
+[cli.help]
+settings = "設定を管理"
+settings_reset = "設定を既定値に戻す"
+files = "入力ファイルパス（*.docx などのワイルドカードをサポート）"
+template = "resources list templates が返す正規テンプレートリソース ID（protocol 3 推奨）。旧名称・ファイル名・パスは Core 内部互換のみ"
+inspect = "サポートされている操作を照会（AI自己記述）"
+doctor = "診断を実行"
+
+# CLI参数组标题
+[cli.groups]
+
+# CLI交互模式
+[cli.interactive]
+
+# 文件类型菜单
+[cli.interactive.menus]
+
+# 格式选项
+[cli.interactive.formats]
+
+# DPI选项
+[cli.interactive.dpi]
+
+# 压缩选项
+[cli.interactive.compress]
+
+[cli.interactive.pdf_sizes]
+
+# 序号方案
+[cli.interactive.numbering_schemes]
+
+# 优化类型
+[cli.interactive.optimization_types]
+gongwen = "公文書"
+
+# 校对选项
+invoice_cn = "中国の請求書（invoice_cn）"
+[cli.interactive.proofread]
+
+# 提示文本
+[cli.interactive.prompts]
+
+# CLI消息
+[cli.messages]
+error_aggregate_need_two = "一致するファイルが少なくとも2つ必要です（検出: {count}）。"
+error_no_valid_files = "エラー：有効なファイルがありません"
+error_file_not_found = "エラー：有効なファイルが見つかりません"
+warning_invalid_files = "警告：{count} 個のファイルが無効です"
+error_prefix = "エラー"
+invalid_tab = "不明な設定タブ: {tab}"
+
+# 批处理模式
+[cli.batch]
+
+# CLI 提示文本
+[cli.prompts]
+
+# CLI 验证消息
+[cli.validation]
+
+# CLI 结果消息
+[cli.result]
+
+# CLI 操作描述
+[cli.actions]
+
+# CLI 序号方案名称
+[cli.numbering_schemes]
+
+# =============================================================================
+# 设置对话框
+# =============================================================================
+[settings]
+title = "設定"
+
+# 选项卡标题
+[settings.tabs]
+general = "一般"
+text = "テキスト"
+proofread = "校正"
+export = "エクスポート"
+document = "ドキュメント"
+spreadsheet = "スプレッドシート"
+image = "画像"
+layout = "レイアウト"
+other = "その他"
+link = "リンク"
+formatting = "フォーマット"
+output = "出力"
+logging = "ログ"
+
+[settings.descriptions]
+general = "言語やテーマなどの全体設定"
+
+# 设置状态消息
+[settings.status]
+
+[settings.reset]
+tab_button = "このタブをリセット"
+all_button = "すべてリセット"
+tab_confirm_title = "リセットの確認"
+tab_confirm_message = "\"{tab_name}\" タブのすべての設定を既定値に戻しますか？この操作は元に戻せません。"
+all_confirm_title = "全体リセットの確認"
+all_confirm_message = "すべての設定を既定値に戻しますか？（辞書データは影響を受けません。）この操作は元に戻せません。"
+success = "すべての設定を既定値に戻しました"
+tab_success = "\"{tab_name}\" タブの設定を既定値に戻しました"
+failed = "設定のリセットに失敗しました。ログを確認してください。"
+
+[settings.changes]
+summary = "未保存の変更（{count} 件）"
+more = "…ほか {count} 件"
+
+[settings.errors]
+tab_load_failed_message = "{tab} を読み込めませんでした\n\nエラー: {error}"
+
+[settings.toml_editor]
+config_label = "設定"
+hint = "ヒント: このページでは TOML を直接編集します。保存前に構文を検証します。"
+toml_syntax_error = "TOML 構文エラー"
+save_failed = "設定の保存に失敗しました"
+save_success_title = "保存完了"
+save_success_message = "設定を保存し、再読み込みしました。"
+
+# -----------------------------------------------------------------------------
+# 通用设置选项卡
+# -----------------------------------------------------------------------------
+[settings.general]
+# 语言设置区域
+language_section = "言語"
+language_label = "インターフェース言語を選択："
+language_tooltip = "アプリケーションの表示言語を選択します。\n変更は再起動後に有効になります。"
+language_restart_hint = "変更は再起動後に有効になります。"
+
+# 主题设置区域
+theme_section = "インターフェーステーマ"
+theme_description = "ライト、ダーク、またはシステムに合わせるテーマを選択します。"
+theme_label = "アプリケーションテーマを選択："
+theme_tooltip = "アプリケーションの視覚テーマを選択します。\nテーマによって配色やインターフェーススタイルが異なります。\n変更は保存後に有効になります。"
+theme_preview = "テーマプレビュー："
+sample_button = "サンプルボタン"
+sample_text = "サンプルテキスト"
+
+[settings.general.languages]
+zh_CN = "中国語（簡体字）"
+en_US = "英語"
+de_DE = "ドイツ語"
+es_ES = "スペイン語"
+fr_FR = "フランス語"
+ja_JP = "日本語"
+ko_KR = "韓国語"
+pt_BR = "ポルトガル語（ブラジル）"
+ru_RU = "ロシア語"
+vi_VN = "ベトナム語"
+zh_TW = "中国語（繁体字）"
+
+# 主题名称
+[settings.general.themes]
+light = "ライト"
+dark = "ダーク"
+system = "システムに従う"
+
+# 透明度设置区域
+[settings.general.transparency]
+section = "ウィンドウの透明度"
+enable = "ウィンドウの透明度を有効にする"
+tooltip = "ウィンドウの透明効果を有効にします。\n有効にすると、透明度レベルを調整して\nアプリケーションウィンドウを半透明にできます。"
+opacity_value_tooltip = "ウィンドウの不透明度を調整します（0.20 = 最も透明、1.00 = 完全に不透明）"
+
+# 窗口行为设置区域
+[settings.general.window]
+section = "ウィンドウの動作"
+description = "ウィンドウの状態と既定のモードを設定します。"
+remember_state = "ウィンドウの位置とサイズを記憶"
+remember_state_tooltip = "アプリケーションウィンドウの位置とサイズを記憶します。\n次回起動時にウィンドウは最後の状態に復元されます。\nこれは好みの作業環境を維持するのに役立ちます。"
+auto_center = "起動時にウィンドウを自動的に中央揃え"
+auto_center_tooltip = "アプリケーション起動時にウィンドウを画面の中央に自動的に配置します。\n「ウィンドウ位置を記憶」も有効になっている場合、この設定が優先されます。"
+expand_side_panels = "ウィンドウ幅に合わせて左右パネルも拡張"
+expand_side_panels_tooltip = "ウィンドウが広くなったとき、左/右パネルも一緒に広げます。\n無効の場合は中央パネルのみ拡張します。"
+default_mode_label = "デフォルトのファイル処理モード："
+default_mode_tooltip = "アプリケーション起動時のデフォルトのファイル処理モードを設定します。\n単一ファイルモード：一度に1つのファイルを処理\nバッチモード：複数のファイルを同時に処理"
+single_mode = "単一ファイルモード"
+batch_mode = "バッチモード"
+
+# -----------------------------------------------------------------------------
+# 文本设置选项卡
+# -----------------------------------------------------------------------------
+[settings.text]
+# MD转文档序号设置
+md_to_docx_section = "見出し番号付け (Markdownからドキュメント)"
+remove_numbering = "デフォルトで元のMarkdown見出し番号を削除"
+remove_numbering_tooltip = "MDをDOCXに変換する際、既存の見出し番号を削除します"
+add_numbering = "デフォルトで新しい見出し番号を追加"
+add_numbering_tooltip = "出力する DOCX の見出しに階層番号を追加します"
+scheme_label = "デフォルトの番号付けスキーム："
+scheme_tooltip = "見出し番号に使用する番号体系を選択します"
+render_mode_label = "見出し番号の出力方式："
+render_mode_tooltip = "見出し番号をテキストに書き込むか、Word のネイティブ番号機能で生成するかを選択します"
+render_mode_text = "テキスト"
+render_mode_word_native = "Word ネイティブ"
+render_mode_hint = "テキスト = 見出しに番号を書き込む；Word ネイティブ = Word のアウトライン番号を使用する"
+
+# 字段优化（字段处理器）
+field_processors_section = "フィールド最適化（Markdownからドキュメント）"
+field_processors_empty = "現在の言語で利用できるフィールド最適化はありません。"
+field_processors_load_error = "読み込みエラー：{error}"
+field_processors_toggle_failed = "「{name}」を更新できませんでした。元の値に戻しました。"
+
+# 序号设置区域
+numbering_settings_section = "番号付け設定"
+numbering_settings_desc = "Markdownとドキュメント変換のための見出し番号のクリーンアップと追加スキームを管理します。"
+edit_numbering_add = "見出し番号追加を編集"
+edit_numbering_clean = "見出し番号削除ルールを編集"
+
+# 模板设置
+template_section = "テンプレート設定"
+template_tooltip = "MDファイルのデフォルトテンプレート選択を設定します\n• DOCX：ドキュメントテンプレート\n• XLSX：スプレッドシートテンプレート"
+
+# 校对设置
+
+# 词库配置
+
+# 错误消息
+save_numbering_schemes_failed = "番号体系を保存できませんでした。変更は保持されていません。"
+save_numbering_clean_rules_failed = "番号除去ルールを保存できませんでした。変更は保持されていません。"
+
+# -----------------------------------------------------------------------------
+# 文档设置选项卡
+# -----------------------------------------------------------------------------
+[settings.proofread]
+validation_section = "校正ルール"
+enable_symbol_pairing = "記号の対応チェックを有効にする"
+enable_symbol_correction = "記号の補正を有効にする"
+enable_typos_rule = "誤字の検出を有効にする"
+enable_sensitive_word = "要注意語のチェックを有効にする"
+skip_code_blocks = "コードブロックを除外する"
+skip_quote_blocks = "引用ブロックを除外する"
+symbol_mapping_section = "記号対応エディター"
+symbol_mapping_desc = "記号の対応と補正のルールを管理します。"
+symbol_correction_section = "記号補正エディター"
+symbol_correction_desc = "全角・半角記号の補正項目を管理します。"
+typos_section = "誤字辞書エディター"
+typos_desc = "よくある誤字の補正項目を管理します。"
+sensitive_words_section = "要注意語エディター"
+sensitive_words_desc = "要注意語の検出項目を管理します。"
+edit = "編集"
+
+[settings.extraction]
+image_extraction_mode_label = "画像抽出方式:"
+image_extraction_mode_tooltip = "Markdown に画像を埋め込む方法を選択します。\n\n• 画像ファイル：個別の画像として保存し MD から参照\n• Base64 埋め込み：画像を Base64 に変換して MD に直接埋め込み"
+image_extraction_mode_file = "画像ファイル"
+image_extraction_mode_base64 = "Base64 埋め込み"
+ocr_placement_mode_label = "OCR 配置:"
+ocr_placement_mode_tooltip = "OCR テキストの保存場所を選択します。\n\n• 画像MD：画像ごとに画像+OCR を含む独立 MD を生成\n• メイン文書：メイン MD の画像の下に引用ブロックとして OCR を挿入（画像が多いとメイン MD が長くなります）"
+ocr_placement_mode_image_md = "画像MD"
+ocr_placement_mode_main_md = "メイン文書"
+ocr_blockquote_title_enabled_label = "OCR タイトル行（主MD）"
+ocr_blockquote_title_enabled_tooltip = "グローバル設定：OCR の保存先が「メイン文書」の場合、OCR 引用ブロックの先頭にタイトル行を表示します。タイトル文言は現在の言語に従います。"
+ocr_blockquote_title_text_label = "タイトル文言（現在の言語）:"
+ocr_blockquote_title_text_tooltip = "現在のUI言語のみに影響します。\n空欄または既定値と同じ場合は言語の既定文言を使用します。"
+ocr_blockquote_title_text_reset = "既定に戻す"
+
+[settings.export]
+md_export_section = "Markdownへエクスポート（画像/OCR）"
+md_export_desc = "Markdown 出力での画像と OCR テキストの扱いを設定します。"
+base64_compress_section = "Base64互換性（Base64埋め込みのみ）"
+base64_compress_desc = "Base64 で埋め込む前に画像を圧縮します。"
+base64_compress_tooltip = "Base64 はサイズが増え、一部エディタで表示できない場合があります。\n有効時：しきい値を超える画像は埋め込み前に JPG に圧縮されます。"
+base64_compress_enabled = "大きい画像を自動圧縮"
+base64_compress_threshold_label = "しきい値"
+base64_compress_threshold_tooltip = "サイズのしきい値（KB）。これを超える画像は埋め込み前に圧縮されます。"
+
+
+[settings.optimization_types]
+
+
+[settings.table_export]
+section = "結合セルのエクスポート"
+desc = "Markdown 出力で結合セルをどのように表現するかを設定します。"
+merge_strategy_label = "結合セルのエクスポート方式："
+
+[settings.table_export.strategies]
+fill = "埋める"
+empty = "空にする"
+marker = "マーカー"
+
+[settings.document]
+# 内容提取设置
+extraction_section = "画像抽出/OCR設定"
+keep_images = "デフォルトで「画像を抽出」をチェック"
+keep_images_tooltip = "ドキュメントをMDに変換する際、デフォルトで「画像を抽出」をチェックします"
+enable_ocr = "デフォルトで「画像OCR」をチェック"
+enable_ocr_tooltip = "ドキュメントをMDに変換する際、デフォルトで「画像OCR」をチェックします"
+
+# 优化设置
+optimization_section = "最適化設定（ドキュメントからMarkdown）"
+enable_optimization = "デフォルトで「ドキュメントタイプに合わせて最適化」を有効にする"
+optimization_type_label = "デフォルトの最適化タイプ："
+
+# 软件优先级
+software_section = "ソフトウェア優先順位"
+word_processors_label = "ドキュメント処理ソフトウェアの優先順位"
+odt_conversion_label = "ODT形式変換"
+document_to_pdf_label = "ドキュメントからPDF"
+
+# 软件名称
+[settings.document.software]
+wps_writer = "WPS Writer"
+msoffice_word = "Word"
+libreoffice = "LibreOffice"
+
+# 序号设置
+[settings.document.numbering]
+section = "見出し番号付け (ドキュメントからMarkdown)"
+remove = "デフォルトで元のドキュメント見出し番号を削除"
+remove_tooltip = "DOCXをMDに変換する際、既存の見出し番号を削除します"
+add = "デフォルトでMarkdownに見出し番号を追加"
+scheme_label = "デフォルトの番号付けスキーム："
+
+# -----------------------------------------------------------------------------
+# 表格设置选项卡
+# -----------------------------------------------------------------------------
+[settings.spreadsheet]
+extraction_section = "画像抽出/OCR設定"
+keep_images = "デフォルトで「画像を抽出」をチェック"
+keep_images_tooltip = "スプレッドシートをMDに変換する際、デフォルトで「画像を抽出」をチェックします"
+enable_ocr = "デフォルトで「画像OCR」をチェック"
+enable_ocr_tooltip = "スプレッドシートをMDに変換する際、デフォルトで「画像OCR」をチェックします"
+merge_mode_section = "結合モード設定"
+merge_mode_desc = "テーブル結合のデフォルトモードを設定します"
+default_merge_mode_label = "既定の結合モード："
+software_section = "ソフトウェア優先順位"
+spreadsheet_processors_label = "スプレッドシート処理ソフトウェアの優先順位"
+ods_conversion_label = "ODS形式変換"
+spreadsheet_to_pdf_label = "スプレッドシートからPDF"
+
+# 汇总模式选项
+[settings.spreadsheet.merge_modes]
+by_row = "行で結合"
+by_column = "列で結合"
+by_cell = "セルで結合"
+
+# 软件名称
+[settings.spreadsheet.software]
+wps_spreadsheets = "WPS Spreadsheets"
+excel = "Excel"
+libreoffice = "LibreOffice"
+
+# -----------------------------------------------------------------------------
+# 图片设置选项卡
+# -----------------------------------------------------------------------------
+[settings.image]
+extraction_section = "画像抽出/OCR設定"
+keep_images = "デフォルトで「画像を抽出」をチェック"
+enable_ocr = "デフォルトで「画像OCR」をチェック"
+size_unit_label = "単位:"
+optimization_section = "最適化（画像からMarkdown）"
+enable_optimization = "デフォルトで「画像タイプに合わせて最適化」を有効化"
+optimization_type_label = "デフォルトの最適化タイプ："
+
+# OCR语言设置
+ocr_language_label = "OCR認識言語:"
+ocr_language_tooltip = "OCR文字認識で使用する言語モデルを選択します。\n\n• UI言語に従う：現在のUI言語に合わせて自動選択\n• 中国語/英語：中国語と英語の混在文書に適しています\n• 日本語：日本語文書に適しています\n• ラテン文字系：ドイツ語・フランス語・ポルトガル語などに適しています\n• キリル文字系：ロシア語などに適しています"
+ocr_language_auto = "UI言語に従う"
+ocr_language_chinese = "中国語/英語"
+ocr_language_japanese = "日本語"
+ocr_language_chinese_cht = "繁体字中国語"
+ocr_language_english = "英語のみ"
+ocr_language_korean = "韓国語"
+ocr_language_latin = "ラテン文字系（独/仏/葡など）"
+ocr_language_cyrillic = "キリル文字系（露など）"
+
+compress_section = "圧縮オプション設定"
+compress_desc = "画像形式変換のデフォルト圧縮モードを設定します"
+compress_mode_label = "圧縮モード："
+compress_lossless = "最高品質"
+compress_limit_size = "ファイルサイズを制限"
+size_limit_label = "デフォルトサイズ制限："
+
+pdf_tiff_section = "PDF/TIFFオプション設定"
+pdf_size_label = "画像からPDFへのデフォルトサイズ"
+pdf_original = "オリジナル埋め込み"
+pdf_a4 = "A4に合わせる"
+pdf_a3 = "A3に合わせる"
+tiff_mode_label = "TIFF結合のデフォルトモード"
+tiff_keep_alpha = "透明度を保持"
+tiff_no_alpha = "透明度なし"
+
+# -----------------------------------------------------------------------------
+# 版式设置选项卡
+# -----------------------------------------------------------------------------
+[settings.layout]
+extraction_section = "画像抽出/OCR設定"
+keep_images = "デフォルトで「画像を抽出」をチェック"
+enable_ocr = "デフォルトで「画像OCR」をチェック"
+optimization_section = "最適化（レイアウトからMarkdown）"
+enable_optimization = "デフォルトで「レイアウト種別に最適化」を有効化"
+optimization_type_label = "デフォルト最適化種別："
+dpi_section = "レンダリングDPI設定"
+dpi_desc = "レイアウトファイルを画像に変換する際のデフォルトDPI（解像度）を設定します"
+render_dpi_label = "Render DPI:"
+dpi_min = "最小 (150)"
+dpi_medium = "中 (300)"
+dpi_high = "高品質 (600)"
+software_section = "ソフトウェア優先順位"
+pdf_to_doc_label = "PDFからドキュメント"
+
+# -----------------------------------------------------------------------------
+# 其他文件设置选项卡
+# -----------------------------------------------------------------------------
+[settings.other]
+extraction_section = "画像抽出/OCR設定"
+keep_images = "デフォルトで「画像を抽出」をチェック"
+keep_images_tooltip = "その他のファイルをMDに変換する際、デフォルトで「画像を抽出」をチェックします"
+enable_ocr = "デフォルトで「画像OCR」をチェック"
+enable_ocr_tooltip = "その他のファイルをMDに変換する際、デフォルトで「画像OCR」をチェックします"
+
+# -----------------------------------------------------------------------------
+# 链接设置选项卡
+# -----------------------------------------------------------------------------
+[settings.link]
+# Markdown链接格式区域
+format_section = "Markdownリンク形式"
+format_desc = "生成されるMarkdownファイル内のリンク形式を設定します"
+image_link_style_label = "画像リンク形式："
+image_link_style_tooltip = "MDファイル内の画像のリンク形式を設定します\n\n• Markdown埋め込み：![alt](image.png)\n• Markdownリンク：[alt](image.png)\n• Wiki埋め込み：![[image.png]] (Obsidian)\n• Wikiリンク：[[image.png]] (Obsidian)"
+md_file_link_style_label = "MDファイルリンク形式："
+md_file_link_style_tooltip = "MDファイル内のMDファイルのリンク形式を設定します\n\n• Markdownリンク：[file.md](file.md)\n• Wiki埋め込み：![[file.md]] (Obsidian)\n• Wikiリンク：[[file.md]] (Obsidian)\n\n注：Markdown形式はMDファイルコンテンツの埋め込みをサポートしていません"
+
+# 非嵌入链接处理区域
+non_embed_section = "非埋め込みリンク処理"
+non_embed_desc = "MDをドキュメント/テーブルに変換する際の通常のリンク（! 接頭辞なし）の処理方法を設定します"
+wiki_link_mode = "Wikiリンク処理："
+wiki_link_tooltip = "[[link]] または [[link|text]] 形式を処理します\n\nそのまま保持：[[link|text]]\nテキスト抽出：text（マークアップを削除）\n削除：リンク全体を削除"
+markdown_link_mode = "Markdownリンク処理："
+markdown_link_tooltip = "[text](url) 形式を処理します\n\nそのまま保持：[text](url)\nテキスト抽出：text（マークアップを削除）\n削除：リンク全体を削除"
+
+# 嵌入链接处理区域
+embed_section = "埋め込みリンク処理"
+embed_desc = "MDをドキュメント/テーブルに変換する際の埋め込みリンク（! 接頭辞あり）の処理方法を設定します"
+wiki_embed_image_mode = "Wiki埋め込み画像処理："
+wiki_embed_image_tooltip = "![[image.png]] 形式を処理します\n\nそのまま保持：![[image.png]]\nテキスト抽出：image.png\n削除：リンクを削除\nコンテンツ埋め込み：ドキュメントに画像を挿入"
+markdown_embed_image_mode = "Markdown埋め込み画像処理："
+markdown_embed_image_tooltip = "![alt](image.png) 形式を処理します\n\nそのまま保持：![alt](image.png)\nテキスト抽出：image.png\n削除：リンクを削除\nコンテンツ埋め込み：ドキュメントに画像を挿入"
+embed_md_file_mode = "Wiki埋め込みMDファイル処理："
+embed_md_file_tooltip = "![[file.md]] 形式を処理します（Wikiのみ）\n\nそのまま保持：![[file.md]]\nテキスト抽出：file.md\n削除：リンクを削除\nコンテンツ埋め込み：再帰的に処理して挿入"
+max_depth_label = "最大埋め込み深度："
+max_depth_tooltip = "MDファイル埋め込みの最大再帰深度\n無限再帰とパフォーマンスの問題を防ぎます\n\n例：AがBを埋め込み、BがCを埋め込み、CがDを埋め込み...\n推奨：3-5"
+
+# 子节点：图片链接格式选项
+[settings.link.image_styles]
+wiki_embed = "Wiki埋め込み"
+wiki_link = "Wikiリンク"
+md_embed = "Markdown埋め込み"
+md_link = "Markdownリンク"
+
+# 子节点：MD文件链接格式选项
+[settings.link.md_file_styles]
+wiki_embed = "Wiki埋め込み"
+wiki_link = "Wikiリンク"
+md_link = "Markdownリンク"
+
+# 子节点：链接处理模式
+[settings.link.modes]
+keep = "そのまま保持"
+extract_text = "テキスト抽出"
+remove = "削除"
+hyperlink = "ハイパーリンク"
+embed = "コンテンツ埋め込み"
+
+# -----------------------------------------------------------------------------
+# 格式设置选项卡
+# -----------------------------------------------------------------------------
+[settings.formatting]
+# 文档转为Markdown部分
+docx_to_md_section = "ドキュメントからMarkdown"
+format_processing = "フォーマット処理"
+format_processing_tooltip = "WordドキュメントをMarkdownに変換する際のフォーマット処理を構成します\n\n一部のオプションは「公文書最適化」ドキュメントからMarkdownへの変換では機能しません"
+body_format_label = "本文フォーマット処理："
+body_format_tooltip = "フォーマット保持：太字→**太字**、斜体→*斜体*、取り消し線→~~取り消し線~~など\nフォーマット破棄：プレーンテキストコンテンツのみ保持"
+heading_format_label = "見出しフォーマット処理："
+heading_format_tooltip = "フォーマット保持：見出し内の太字を**太字**に変換など\nフォーマット破棄：見出しはプレーンテキストのみ保持し、冗長なマークアップを回避\n注：Wordの見出しスタイルは通常固定のフォーマットを持っており、保持すると冗長なマークアップが発生する可能性があります"
+table_header_format_label = "テーブルヘッダーフォーマット処理："
+table_header_format_tooltip = "フォーマット保持：ヘッダーセルの太字を**太字**に変換など\nフォーマット破棄：ヘッダーはプレーンテキストのみ保持し、冗長なマークアップを回避\n注：テーブルスタイルは通常ヘッダーの太字を定義しており、保持すると重複したマークアップが発生する可能性があります"
+
+# 分隔符映射
+separator_mapping = "セパレーターマッピング"
+separator_mapping_tooltip = "Wordの改ページ/セクション区切り/水平線をどのMarkdownセパレーターに変換するかを構成します\n\n改ページ：Wordの改ページ\nセクション区切り：すべてのタイプのセクション区切り（次のページ/連続/奇数ページ/偶数ページ）\n水平線：段落の下の境界線（ユーザーが---と入力してEnterを押すと生成される）"
+page_break_label = "改ページ："
+page_break_tooltip = "Wordの改ページをMarkdownセパレーターに変換します\n改ページは通常、特定の場所で改ページを強制するために使用されます"
+section_break_label = "セクション区切り："
+section_break_tooltip = "Wordのセクション区切りをMarkdownセパレーターに変換します\nすべてのセクション区切りタイプ（次のページ/連続/奇数/偶数ページ）は一律に処理されます"
+horizontal_rule_label = "水平線："
+horizontal_rule_tooltip = "Wordの水平線（水平線1/2/3スタイル）をMarkdownセパレーターに変換します"
+
+# 语法选择
+syntax_selection = "構文選択"
+syntax_selection_tooltip = "ドキュメントをMarkdownに変換する際に出力する構文形式を選択します\n（すべてのフォーマット構文は入力時に自動的に認識されます）"
+bold_syntax_label = "太字構文："
+bold_syntax_tooltip = "太字テキストの出力構文形式を選択します"
+italic_syntax_label = "斜体構文："
+italic_syntax_tooltip = "斜体テキストの出力構文形式を選択します"
+strikethrough_syntax_label = "取り消し線構文："
+strikethrough_syntax_tooltip = "取り消し線テキストの出力構文形式を選択します"
+highlight_syntax_label = "ハイライト構文："
+highlight_syntax_tooltip = "ハイライトテキストの出力構文形式を選択します"
+superscript_syntax_label = "上付き文字構文："
+superscript_syntax_tooltip = "上付き文字テキストの出力構文形式を選択します"
+subscript_syntax_label = "下付き文字構文："
+subscript_syntax_tooltip = "下付き文字テキストの出力構文形式を選択します"
+unordered_list_label = "順序なしリスト："
+unordered_list_tooltip = "順序なしリストの出力マーカー記号を選択します"
+indent_spaces_label = "リストインデント："
+indent_spaces_tooltip = "DOCX から Markdown へ出力する際の、リスト階層ごとのスペース数を制御します\n2 スペース: よりコンパクトな出力\n4 スペース: よりゆとりのある出力\n注意: Markdown から DOCX では現在、相対インデントで階層を認識するため、この設定は使いません"
+
+# Markdown转为文档部分
+md_to_docx_section = "Markdownからドキュメント"
+md_format_processing = "フォーマット処理"
+md_format_processing_tooltip = "MarkdownをWordドキュメントに変換する際のフォーマットマークアップ処理を構成します"
+md_body_format_label = "本文フォーマットマークアップ処理："
+md_body_format_tooltip = 'フォーマット適用：**太字** を実際の太字フォーマットに変換\nマークアップ保持：**太字** をそのまま表示\nマークアップ削除："太字" テキストのみ表示し、フォーマットなし'
+md_heading_format_label = "見出しフォーマットマークアップ処理："
+md_heading_format_tooltip = 'フォーマット適用：デフォルトの見出しスタイルフォーマットを上書きし、部分的な太字効果を有効にします\nマークアップ保持：マークアップをそのまま表示\nマークアップ削除：Wordの見出しスタイルフォーマットを自然に適用\n注：見出しスタイル自体が太字の場合、"フォーマット適用" で部分的な太字を実現できます'
+md_table_header_format_label = "テーブルヘッダーフォーマットマークアップ処理："
+md_table_header_format_tooltip = 'フォーマット適用：**太字** を実際の太字に変換（テーブルスタイルと重複する可能性があります）\nマークアップ保持：マークアップをそのまま表示\nマークアップ削除：テーブルスタイル（例：最初の行を太字）を自然に適用\n注：テーブルスタイルは通常ヘッダーの太字を定義しているため、"マークアップ削除" を推奨します'
+heading_merge_mode_label = "見出し+本文の結合モード:"
+heading_merge_mode_tooltip = "見出しと直後の通常本文行を1つの段落として結合するかを制御します\n句読点がある場合のみ結合: 見出し末尾に文末記号があり、次の行が通常本文の場合のみ結合します（既定）\n本文が続けば結合: 次の行が通常本文なら結合します（文末記号は不要）\n結合しない: 見出しと本文を常に別段落として解析します\n注: リスト/コードブロック/表/引用/区切り線などは結合されません"
+heading_merge_punctuation_label = "結合を判定する句読点:"
+heading_merge_punctuation_tooltip = "「句読点がある場合のみ結合」モードで見出しと本文の結合を開始する文字です。空欄にすると句読点による結合を無効にします。"
+
+# MD转文档分隔符映射
+md_separator_mapping = "セパレーターマッピング"
+md_separator_mapping_tooltip = "MarkdownセパレーターをどのWordの改ページ/セクション区切り/水平線に変換するかを構成します\n\n改ページ：Wordの改ページ\nセクション区切り：Wordのセクション区切り（次のページタイプ）\n水平線：段落の下の境界線（視覚的な区切り）"
+dash_label = "--- (3つのダッシュ):"
+dash_tooltip = "Markdownの --- セパレーターをWordの改ページ/セクション区切りに変換します"
+asterisk_label = "*** (3つのアスタリスク):"
+asterisk_tooltip = "Markdownの *** セパレーターをWordの改ページ/セクション区切りに変換します"
+underscore_label = "___ (3つのアンダースコア):"
+underscore_tooltip = "Markdownの ___ セパレーターをWordの改ページ/セクション区切りに変換します\n注：セクション区切り（ページ）は実際にはセクション区切り（次のページ）として生成されます"
+
+# 表格样式
+table_style = "テーブルスタイル"
+table_style_tooltip = "MarkdownテーブルをWordテーブルに変換する際に使用するスタイルを構成します\n\n【組み込みスタイル】\n三線表/グリッド表：テンプレートが存在するか自動検出し、存在しない場合はスタイル定義を注入します\n\n【カスタムスタイル】\nテンプレートにこのスタイルがあるか検出し、ない場合は同じ名前のグリッド表形式スタイルを作成します"
+builtin_style_radio = "組み込みスタイルを使用"
+custom_style_radio = "カスタムスタイル名を使用"
+
+# 列表拼接符
+list_separator_label = "YAMLリストセパレーター"
+list_separator_tooltip = "YAMLリスト値を文字列に結合する際に使用するセパレーター\n\n一般的な値：\n• 読点（、）\n• カンマ（，）\n• カンマ + スペース（, ）\n• 空文字列：直接連結"
+
+# 格式处理选项
+[settings.formatting.options]
+preserve_format = "フォーマット保持"
+discard_format = "フォーマット破棄"
+apply_format = "フォーマット適用"
+keep_markup = "マークアップ保持"
+clean_markup = "マークアップ削除"
+heading_merge_punct_required = "句読点がある場合のみ結合（既定）"
+heading_merge_always = "本文が続けば結合"
+heading_merge_never = "結合しない"
+
+# 分隔符选项
+[settings.formatting.separators]
+dash = "---"
+asterisk = "***"
+underscore = "___"
+ignore = "無視"
+page_break = "改ページ"
+section_break = "セクション区切り"
+horizontal_rule_1 = "水平線 1"
+horizontal_rule_2 = "水平線 2"
+horizontal_rule_3 = "水平線 3"
+
+# 语法选项
+[settings.formatting.syntax]
+bold_asterisk = "アスタリスク (**text**)"
+bold_underscore = "アンダースコア (__text__)"
+italic_asterisk = "アスタリスク (*text*)"
+italic_underscore = "アンダースコア (_text_)"
+strikethrough_extended = "拡張 (~~text~~)"
+strikethrough_html = "HTML (<del>)"
+highlight_extended = "拡張 (==text==)"
+highlight_html = "HTML (<mark>)"
+superscript_extended = "拡張 (^text^)"
+superscript_html = "HTML (<sup>)"
+subscript_extended = "拡張 (~text~)"
+subscript_html = "HTML (<sub>)"
+unordered_dash = "ダッシュ (- item)"
+unordered_asterisk = "アスタリスク (* item)"
+unordered_plus = "プラス (+ item)"
+indent_2_spaces = "2スペース (推奨)"
+indent_4_spaces = "4スペース"
+
+# 表格样式选项
+[settings.formatting.table_styles]
+three_line_table = "三線表"
+table_grid = "テーブルグリッド"
+
+# -----------------------------------------------------------------------------
+# 输出设置选项卡
+# -----------------------------------------------------------------------------
+[settings.output]
+# 中间文件区域
+intermediate_section = "中間ファイル"
+save_intermediate_label = "中間ファイルを出力ディレクトリに保存"
+save_intermediate_tooltip = "有効：すべての中間ステップファイルを保存\n無効：最終結果ファイルのみ保存\n\n例 (XLS→XLSX→ODS)：\n• 有効：XLSXとODSの両方を保存\n• 無効：ODSのみ保存"
+save_intermediate_desc = "マルチステップ変換（例：XLS→XLSX→ODS）中にXLSXのような中間ファイルを保存するかどうか"
+
+# 输出目录区域
+directory_section = "出力ディレクトリ"
+output_mode_label = "出力場所："
+output_mode_tooltip = "ソース場所：ソースファイルと同じフォルダに出力\nカスタム場所：指定されたフォルダに出力"
+custom_path_label = "カスタムパス："
+browse_title = "出力ディレクトリを選択"
+
+# 输出模式选项
+[settings.output.output_modes]
+source = "ソースファイルディレクトリ"
+custom = "カスタムディレクトリ"
+
+# 日期子文件夹区域
+[settings.output.date_folder]
+section = "日付サブフォルダ"
+create_label = "日付サブフォルダを作成"
+create_tooltip = "出力ディレクトリに日付サブフォルダを作成します\n例：Output Directory/2025-01-06/file.pdf\nこのオプションは両方の出力モードで機能します"
+format_label = "日付形式："
+
+# 日期格式选项
+[settings.output.date_formats]
+iso = "2025-01-06"
+compact = "20250106"
+chinese = "2025年01月06日"
+
+# 输出行为区域
+[settings.output.behavior]
+section = "出力動作"
+auto_open_folder_label = "変換後に出力フォルダを自動的に開く"
+auto_open_folder_tooltip = "変換または校正が成功した後、出力フォルダを自動的に開き、最終ファイルを選択します\n結果をすばやく確認するのに便利です"
+
+# -----------------------------------------------------------------------------
+# 日志设置选项卡
+# -----------------------------------------------------------------------------
+[settings.logging]
+# 日志系统区域
+system_section = "ログシステム"
+system_desc = "ログ記録の有効・無効とログレベルを設定します。"
+enable_logging_label = "ログシステムを有効にする"
+enable_logging_tooltip = "ログシステム全体を有効または無効にします。\n無効にすると、アプリケーションはログ情報を記録しません。\n本番環境では有効にしておくことをお勧めします。"
+log_level_label = "ログレベル："
+log_level_tooltip = "ログの詳細度を設定します。\nレベル（低から高）：debug > info > warning > error > critical\nレベルが高いほど、記録される情報は少なくなります。"
+
+# 文件输出区域
+file_section = "ファイル出力"
+file_desc = "ログファイル名と保存期間を設定します。"
+file_prefix_label = "ログファイル接頭辞："
+file_prefix_tooltip = "ログファイル名の接頭辞を設定します"
+retention_days_label = "ログ保持日数："
+retention_days_tooltip = "ログファイルを保持する日数を設定します。これより古いログは自動的に削除されます。"
+
+# 控制台输出区域
+console_section = "コンソール出力"
+console_desc = "コンソールログの出力と書式を設定します。"
+enable_console_label = "コンソールにログを表示"
+enable_console_tooltip = "有効にすると、ログはコンソールウィンドウにも出力されます"
+console_level_label = "コンソールログレベル："
+console_level_tooltip = "コンソール出力のログレベルを設定します。ファイルログレベルとは異なる場合があります"
+validation_custom_directory_required = "カスタムディレクトリモードでは、空でないディレクトリパスが必要です。"
+validation_prefix_invalid = 'ログファイルの接頭辞に使用できない文字が含まれています：\ / : * ? " < > |'
+validation_prefix_required = "ログファイルの接頭辞は空にできません。"
+directory_auto_notice = "ディレクトリはモードに応じて自動決定されるため、カスタム入力は無効です。"
+directory_env_override_notice = "ログディレクトリは環境変数で指定されているため、ディレクトリ設定は無効です。"
+console_format_tooltip = "コンソールの書式文字列（空の場合はファイルの書式を使用）"
+console_format_label = "コンソールの書式："
+console_colorize_label = "コンソールの色："
+console_colorize_tooltip = "コンソールログの色付け方法を設定します。"
+open_directory = "ディレクトリを開く"
+directory_notice_label = "ディレクトリの通知："
+override_source_label = "上書き元："
+fallback_reason_label = "代替処理の理由："
+actual_log_file_label = "実際のログファイル："
+custom_directory_tooltip = "カスタムログディレクトリ（カスタムモードでのみ使用）"
+custom_directory_label = "カスタムディレクトリ："
+directory_mode_tooltip = "ディレクトリモード"
+directory_mode_label = "ディレクトリモード："
+location_desc = "ログファイルの保存先を設定します。"
+location_section = "出力先"
+
+# 日志级别
+
+[settings.logging.dir_modes]
+user = "システム既定"
+temp = "一時ディレクトリ"
+custom = "カスタムディレクトリ"
+
+[settings.logging.console_colorize]
+auto = "自動"
+always = "常に"
+never = "使用しない"
+
+[settings.logging.levels]
+debug = "デバッグ (DEBUG)"
+info = "情報 (INFO)"
+warning = "警告 (WARNING)"
+error = "エラー (ERROR)"
+critical = "重大 (CRITICAL)"
+
+# =============================================================================
+# 关于对话框
+# =============================================================================
+[about]
+title = "バージョン情報"
+version_info = "バージョン {version}"
+version_tooltip = "このソフトウェアはオフライン専用です。更新を手動で確認してください。"
+contact = "連絡先：{email}"
+copyright = "© {year} {author}"
+acknowledgments = "謝辞"
+acknowledgments_intro = "このプロジェクトは以下の優れたオープンソースプロジェクトとツールを使用しています。以下に感謝します："
+
+# 开源工具描述
+subtitle = "公文書・図表変換ソフトウェア（公文書コンバーター）"
+
+[about.tools]
+python_docx = "docxとmarkdownの双方向変換用、ドキュメントスタイルと構造を処理"
+openpyxl = "xlsxとmarkdownの双方向変換用、スプレッドシートデータを処理"
+pymupdf = "PDF/XPSドキュメントのコンテンツ抽出と形式変換用"
+pymupdf4llm = "インテリジェントなPDF抽出とMarkdown形式への変換用"
+pdf2docx = "PDFドキュメントを編集可能なWord形式に変換するため"
+easyofd = "中国のOFD形式のドキュメントを読み取り、変換するため"
+rapidocr = "画像とPDFのOCRテキスト認識用、オフライン使用をサポート"
+paddleocr = "OCRモデルの出典、PP-OCRv3/v4モデルはPaddleOCRプロジェクトで訓練"
+onnxruntime = "RapidOCRの推論エンジンとして"
+pyside6 = "Qt GUI フレームワーク（GUI）"
+pillow = "画像形式の変換とアイコンリソースの処理用"
+pillow_heif = "PillowにHEIF画像形式のサポートを提供"
+img2pdf = "画像ファイルを一括してPDFドキュメントに変換するため"
+pywin32 = "ドキュメント形式変換のためにCOMインターフェースを介してWPSとOfficeを呼び出すため"
+lxml = "OfficeドキュメントのXML構造を処理するため"
+latex2mathml = "LaTeX数式をMathML形式に変換するため"
+pyyaml = "Markdownフロントマターのメタデータを処理するため"
+tomlkit = "構成ファイルの読み取りと保存用"
+pandas = "スプレッドシートデータの処理と分析用"
+numpy = "数値計算とデータ処理の基本的なサポート用"
+olefile = "レガシーOfficeドキュメント形式の識別と処理用"
+emoji = "絵文字検出・処理ライブラリ"
+
+[core.theme_manager]
+
+# =============================================================================
+# 主界面组件
+# =============================================================================
+[components]
+
+# 文字サイズ
+[components.font_size]
+small = "小"
+default = "標準"
+large = "大"
+xlarge = "特大"
+
+# 文件拖拽区
+[components.file_drop]
+empty_hint_single = "ここにファイルをドラッグ"
+empty_hint_batch = "ここにファイルまたはフォルダをドラッグ"
+add_button = "追加"
+add_file_action = "ファイルを追加"
+add_folder_action = "フォルダを追加"
+recent_files_action = "最近使った項目"
+clear_recent_files_action = "最近使った項目をクリア"
+select_folder_dialog = "フォルダを選択"
+clear_button = "クリア"
+single_mode = "単一"
+batch_mode = "バッチ"
+file_selected_msg = "選択中: {filename}"
+files_added_msg = "{count} 件のファイルを追加しました"
+files_added_with_skipped_msg = "{added} 件のファイルを追加、{skipped} 件スキップ"
+no_supported_files = "対応ファイルが見つかりません。"
+unsupported_type_msg = "未対応のファイル形式です: {filename}"
+single_mode_only_one = "単一モードでは 1 つのファイルのみ処理できます。"
+select_file_dialog = "ファイルを選択"
+all_supported_filter = "すべての対応ファイル"
+all_files_filter = "すべてのファイル"
+
+# 批量文件列表
+drag_preview_single = "選択対象：{filename}"
+drag_preview_summary = "{added} 件追加、{skipped} 件スキップ"
+drag_preview_summary_recursive = "{summary}（フォルダを再帰的にスキャン）"
+drag_preview_summary_degraded = "{summary}；大量プレビューのため結果は要約されています"
+drag_preview_skipped_title = "スキップ対象："
+drag_preview_skipped_unsupported = "未対応：{name}"
+drag_preview_skipped_unreadable = "アクセス不可：{path}"
+
+[components.file_drop.batch_list]
+no_batch_files = "バッチファイルがありません"
+retry_selected_failed = "選択した失敗項目を再試行"
+retry_all_failed = "このタブの失敗項目をすべて再試行"
+total_files = "合計 {total} 件"
+total_files_selected = "合計 {total} 件、選択中: {current_name}"
+action_open_output = "出力を開く"
+action_view_skip = "スキップ理由"
+action_view_error = "エラー詳細"
+action_remove = "削除"
+action_move_up = "上へ"
+action_move_down = "下へ"
+sort_button = "並び替え"
+sort_button_with_label = "並び替え：{label}"
+sort_custom = "カスタム順"
+sort_name = "ファイル名"
+sort_type = "種類"
+sort_size = "サイズ"
+sort_mtime = "更新日時"
+sort_ascending = "昇順"
+sort_descending = "降順"
+
+# 批量操作面板
+filter_button = "フィルター"
+filter_button_with_label = "フィルター：{label}"
+filter_all = "すべて"
+filter_failed = "失敗"
+filter_pending = "未処理"
+filter_processing = "処理中"
+filter_completed = "完了"
+action_remove_selected = "選択項目を削除（{count}）"
+action_open_selected_locations = "選択項目のフォルダを開く（{count}）"
+filter_skipped = "スキップ"
+filter_cancelled = "キャンセル済み"
+[components.file_drop.batch_action]
+
+# 状态文本
+[components.file_drop.status]
+pending = "待機中"
+processing = "処理中"
+completed = "完了"
+skipped = "スキップ"
+failed = "失敗"
+cancelled = "キャンセル済み"
+
+# 文件选择器
+[components.file_selector]
+
+# 状态栏
+[components.info_area]
+
+# 应用状态
+
+# 处理状态
+batch_completed = "一括処理が終了しました: 成功 {success} 件、失敗 {failed} 件、スキップ {skipped} 件、キャンセル {cancelled} 件"
+
+# logic.py 状态消息
+
+# 文件类型选择（统一风格）
+
+# GUI状态消息
+
+# 文件状态对话框
+task_completion_notification_title = "タスク完了"
+task_completion_notification_success = "タスクが完了しました：{completed}/{total} 件処理済み。"
+task_completion_notification_partial = "タスクが完了しました：{completed}/{total} 件処理済み、失敗 {failed} 件。"
+task_completion_notification_failed = "タスクが終了しました：合計 {total} 件、失敗 {failed} 件。"
+task_completion_notification_cancelled = "タスクがキャンセルされました：{completed}/{total} 件処理済み。"
+[components.file_dialogs]
+# 跳过对话框
+
+# 错误对话框
+
+# 操作面板
+[components.action_area]
+cancel_hint = "タスクを実行中です。Esc キーを押すと現在のタスクを中止できます。"
+
+# 转换面板
+[components.conversion_panel]
+
+# 模板选择器
+[components.template_selector]
+no_templates = "利用可能なテンプレートはありません"
+empty_hint = "テンプレートがない場合は、テンプレートフォルダーを開いて確認または追加してください。"
+open_template_dir = "テンプレートフォルダーを開く"
+unavailable = "テンプレートセレクターは利用できません"
+
+# 选项卡式模板选择器
+usage_line = "用途: {value}"
+source_line = "ソース: {value}"
+updated_line = "更新: {value}"
+source_tooltip = "参照元フォルダー：{value}"
+auto_selected_reason = "既定の設定に基づき、{template_kind} の最初の利用可能な項目を自動選択しました。"
+open_location = "ファイルの場所を開く"
+
+[components.template_selector_tabbed]
+document_templates = "文書"
+spreadsheet_templates = "表"
+
+# =============================================================================
+# 转换面板区域
+# =============================================================================
+[conversion_panel]
+route_options_unavailable = "利用可能な操作を読み込めなかったため、誤った要求を防ぐために操作を無効にしました。"
+no_compatible_operation = "このファイルで利用できる互換操作はありません。"
+format_conversion = "形式変換"
+save_as = "名前を付けて保存"
+convert = "変換"
+save_as_action = "名前を付けて保存"
+export = "エクスポート"
+render = "レンダリング"
+select_file_hint = "最初にファイルを選択してください"
+
+# 文档转换区
+[conversion_panel.document]
+convert_to_other_formats = "他のドキュメント形式に変換"
+convert_to_layout = "レイアウト形式に変換"
+proofread_document = "ドキュメント校正"
+proofread_hint = "ドキュメントを校正"
+proofread_button = "校正"
+proofread_options = "校正オプション"
+symbol_pairing = "記号ペアリング"
+symbol_pairing_tooltip = "ペアの記号（括弧、引用符など）が一致するか確認します"
+typos_rule = "誤字修正"
+typos_rule_tooltip = "一般的な誤字を確認します"
+symbol_correction = "記号修正"
+symbol_correction_tooltip = "誤った記号を確認します"
+sensitive_word = "注意用語マッチング"
+sensitive_word_tooltip = "注意用語を確認します"
+
+# 图片转换区
+[conversion_panel.image]
+convert_to_other_formats = "他の画像形式に変換"
+compression_options = "圧縮オプション"
+highest_quality = "最高品質"
+limit_file_size = "ファイルサイズを制限"
+file_size_limit = "ファイルサイズ制限："
+enter_size_limit_warning = "ファイルサイズ制限を入力してください"
+kb_range_warning = "10から10000（KB）の数値を入力してください"
+mb_range_warning = "1から100（MB）の数値を入力してください"
+enter_valid_number_warning = "有効な数値を入力してください"
+convert_to_layout = "レイアウト形式に変換"
+size_options = "サイズオプション"
+original_embed = "オリジナル埋め込み"
+fit_a4 = "A4に合わせる"
+fit_a3 = "A3に合わせる"
+merge_images = "画像を結合"
+merge_images_hint = "複数の画像を1つに結合"
+merge_to_tif = "TIFに結合"
+conversion_options = "変換オプション"
+preserve_transparency = "透明度を保持"
+no_transparency = "透明度なし"
+
+# 版式转换区
+[conversion_panel.layout]
+convert_to_other_formats = "他のレイアウト形式に変換"
+convert_to_document_or_image = "ドキュメントまたは画像に変換"
+merge_split = "結合/分割"
+merge_split_hint = "レイアウトファイルを結合または分割"
+merge_to_pdf = "PDFに結合"
+merge_to_ofd = "OFDに結合"
+split_to_pdf = "PDFに分割"
+split_to_ofd = "OFDに分割"
+split_page_range = "分割ページ範囲："
+page_range_placeholder = "1-3,5  *  #"
+selected_split_file = "分割する選択されたファイル（{pages} ページ）："
+invalid_page_range = "無効なページ範囲: {part}"
+invalid_page = "無効なページ: {part}"
+split_mode_single_page_warning = "⚠️ このファイルは1ページのみのため、分割は不要です"
+
+# 表格转换区
+[conversion_panel.spreadsheet]
+ods_delivery_options = "ODS 配信オプション"
+ods_delivery_hint = "外部数式にはキャッシュ値を使用します。保護されたファイルには、パスワードと保護なしで公開することへの同意が必要です。"
+protection_password = "保護パスワード（任意）"
+allow_protection_loss = "配信される ODS にパスワード保護が保持されないことを理解しています"
+protected_batch_single_only = "パスワードはバッチ内で再利用されません。保護されたファイルは個別に変換してください。"
+convert_to_other_formats = "他のスプレッドシート形式に変換"
+convert_to_layout = "レイアウト形式に変換"
+merge_tables = "テーブル結合"
+merge_tables_hint = "選択したモードで複数のテーブルを結合"
+merge_tables_button = "📋 テーブル結合"
+merge_options = "結合オプション"
+merge_by_row = "行で結合"
+merge_by_column = "列で結合"
+merge_by_cell = "セルで結合"
+no_table_selected = "テーブルが選択されていません"
+
+# =============================================================================
+# 操作面板区域
+# =============================================================================
+[action_area]
+route_options_unavailable = "利用可能な操作を読み込めなかったため、誤った要求を防ぐために生成を無効にしました。"
+no_compatible_output = "このファイルで利用できる互換出力形式はありません。"
+export_options = "エクスポートオプション"
+generation_options = "生成オプション"
+extract_images = "画像を抽出"
+ocr = "画像OCR"
+optimization_unavailable = "最適化オプションは利用できません。標準変換は引き続き利用できます。"
+
+# 校对选项
+generate = "生成"
+
+[action_area.proofread]
+
+# 文档转MD面板
+[action_area.document]
+export_markdown = "Markdownをエクスポート"
+export_markdown_tooltip = "ドキュメントをMarkdown形式に変換"
+optimize_for_type = "ドキュメントタイプに合わせて最適化"
+remove_existing_numbering = "元のドキュメント見出し番号を削除"
+add_new_numbering = "新しい見出し番号を追加"
+
+# 表格转MD面板
+[action_area.spreadsheet]
+export_markdown_tooltip = "スプレッドシートをMarkdown形式に変換"
+optimize_for_type = "表種別に最適化"
+
+# 图片转MD面板
+[action_area.image]
+export_markdown_tooltip = "画像をMarkdown形式に変換"
+optimize_for_type = "画像種別に最適化"
+
+# 版式转MD面板
+[action_area.layout]
+export_markdown_tooltip = "レイアウトファイルをMarkdown形式に変換"
+optimize_for_type = "レイアウト種別に最適化"
+
+# 其他文件转MD面板
+[action_area.other]
+
+# MD转文档面板
+[action_area.md_to_document]
+remove_existing_numbering = "元のMarkdown見出し番号を削除"
+add_new_numbering = "新しい見出し番号を追加"
+
+# MD转表格面板
+format_combo_tooltip = "ターゲットドキュメント形式を選択"
+generate_tooltip = "選択した形式でドキュメントを生成"
+[action_area.md_to_spreadsheet]
+
+# =============================================================================
+# 编辑器对话框
+# =============================================================================
+format_combo_tooltip = "ターゲットスプレッドシート形式を選択"
+generate_tooltip = "選択した形式でスプレッドシートを生成"
+[editors]
+
+# 序号新增编辑器
+[editors.numbering_add]
+window_title = "番号付けスキームエディタ"
+scheme_list = "スキームリスト"
+default_scheme = "デフォルトスキーム："
+level_format_config = "レベルフォーマット構成"
+realtime_preview = "リアルタイムプレビュー"
+format_help = "📖 フォーマットヘルプ"
+format_help_title = "フォーマットプレースホルダーヘルプ"
+format_help_text = """フォーマットプレースホルダーの使用法
+
+占位符格式：{级别.样式}
+
+可用样式：
+  chinese_lower  - 小写中文数字 (一、二、三)
+  chinese_upper  - 大写中文数字 (壹、贰、叁)
+  arabic_half    - 半角阿拉伯数字 (1, 2, 3)
+  arabic_full    - 全角阿拉伯数字 (１、２、３)
+  arabic_circled - 带圈数字 (①②③)
+  letter_upper   - 大写字母 (A, B, C)
+  letter_lower   - 小写字母 (a, b, c)
+  roman_upper    - 大写罗马数字 (I, II, III)
+  roman_lower    - 小写罗马数字 (i, ii, iii)
+
+示例：
+  {1.chinese_lower}、 → 一、二、三、
+  （{2.chinese_lower}） → （一）（二）（三）
+  {3.arabic_half}. → 1. 2. 3.
+  {1.arabic_half}.{2.arabic_half} → 1.1、1.2"""
+
+# 级别名称
+level_1 = "レベル1見出し"
+level_2 = "レベル2見出し"
+level_3 = "レベル3見出し"
+level_4 = "レベル4見出し"
+level_5 = "レベル5見出し"
+level_6 = "レベル6見出し"
+level_7 = "レベル7見出し"
+level_8 = "レベル8見出し"
+level_9 = "レベル9見出し"
+
+# 创建和复制
+new_scheme = "新しいスキーム"
+copy_suffix = "(コピー)"
+
+# 预览
+preview_sample = "サンプル {level_name}"
+no_format = "フォーマット定義なし"
+
+# 占位符菜单
+menu_current_level = "── 現在のレベル ({level}) ──"
+menu_decorations = "── 一般的な装飾 ──"
+menu_hierarchical = "── 階層形式 ──"
+
+# 数字样式
+style_chinese_lower = "小文字漢数字 (一二三)"
+style_chinese_upper = "大文字漢数字 (壹贰叁)"
+style_arabic_half = "アラビア数字 (123)"
+style_arabic_circled = "丸数字 (①②③)"
+style_letter_upper = "大文字アルファベット (ABC)"
+style_roman_upper = "ローマ数字 (I II III)"
+
+# 装饰
+decoration_dun = "読点（、）"
+decoration_dot_space = "ドット + スペース"
+decoration_bracket = "全角括弧"
+decoration_chapter = "章形式"
+
+# 验证消息
+validation_ok = "形式は有効です"
+validation_fixed_text = "プレースホルダーが見つかりません。このレベルは固定テキストのみ表示します。"
+validation_invalid_level = "レベル '{level}' は有効な数字ではありません。"
+validation_level_out_of_range = "レベル {level} は範囲外です。1-9 を使用してください。"
+validation_unknown_style = "不明なスタイル '{style}' です。"
+word_native_unavailable = "Word ネイティブ番号との互換性：（確認できません）"
+word_native_full = "Word ネイティブ番号との互換性：完全互換"
+word_native_approximate = "Word ネイティブ番号との互換性：おおむね互換（{reason}）"
+word_native_incompatible = "Word ネイティブ番号との互換性：非互換（{reason}）"
+
+
+# 错误消息
+cannot_delete_default_scheme = "デフォルトのスキームは削除できません"
+
+# 方案名称
+[editors.numbering_add.names]
+hierarchical_standard = "階層番号標準"
+hierarchical_h2_start = "階層 (H2開始)"
+
+# 方案描述（用于编辑器中显示）
+[editors.numbering_add.descriptions]
+hierarchical_standard_desc = "階層形式：1, 1.1, 1.1.1...（数字の後にスペースあり）"
+hierarchical_h2_start_desc = "階層形式（H1/レベル1見出しをスキップ）：H2/レベル2見出しから1, 1.1, 1.1.1...で開始"
+
+# 通用编辑器文本（所有编辑器共用）
+[editors.common]
+name = "名前："
+description = "説明："
+copy = "コピー"
+delete = "削除"
+move_up = "上へ移動"
+move_down = "下へ移動"
+save = "保存"
+cancel = "キャンセル"
+prompt = "情報"
+select_item_first = "最初に項目を選択してください"
+cannot_delete = "削除できません"
+system_item_hint = "システム項目は削除できません。無効にすることのみ可能です"
+confirm_delete = "削除確認"
+confirm_delete_message = "'{name}' を削除してもよろしいですか？"
+confirm_close = "閉じる確認"
+unsaved_changes_hint = "保存されていない変更"
+unsaved_close_message = "保存されていない変更があります。閉じてもよろしいですか？"
+
+# 序号清理编辑器
+[editors.numbering_clean]
+window_title = "クリーンアップルールエディタ"
+rule_list = "ルールリスト"
+description = "説明："
+regex = "正規表現："
+regex_test = "正規表現テスト"
+input = "入力："
+result = "結果："
+new_rule = "新しいルール"
+copy_suffix = "(コピー)"
+match_success = "マッチ成功"
+no_match = "マッチなし"
+regex_error = "正規表現エラー"
+prompt = "情報"
+
+# 清理规则名称
+enabled = "ルールを有効化"
+
+[editors.numbering_clean.names]
+chinese_unit_suffix = "中国語 [第X単位] 形式"
+chinese_unit_prefix = "中国語 [単位-X] 形式"
+circled_numbers = "丸数字"
+bracket_number = "括弧付き数字"
+hierarchical = "階層数字"
+number_separator = "セパレーター付き数字"
+legal_english = "英語の章形式"
+letter_number = "文字番号"
+
+# 清理规则描述（用于编辑器中显示）
+[editors.numbering_clean.descriptions]
+chinese_unit_suffix_desc = "マッチ：第X回/篇/册/卷/部/集/期/编/章/节/条/款/项/目 + スペース"
+chinese_unit_prefix_desc = "マッチ：卷/篇/册/部/集/期/编/章/节/回 + 数字 + スペース"
+circled_numbers_desc = "マッチ：①-㊿, ❶-⓴, ⓵-⓾, ㈠-㈩ 丸数字 + オプションのセパレーター"
+bracket_number_desc = "マッチ：(1), （一）, 1), 一） など + オプションのセパレーター"
+hierarchical_desc = "マッチ：1.1 / 1.1.1 / 1.1.1.1 など + オプションのセパレーター"
+number_separator_desc = "マッチ：1. / 2、/ 一、/ 二, など + オプションのスペース"
+legal_english_desc = "マッチ：Chapter/Part/Volume/Book/Section + 数字/ローマ数字"
+letter_number_desc = "マッチ：A. / A) / (A) / a. / a) 文字番号"
+
+# 映射编辑器
+[editors.mapping]
+# 对话框标题
+symbol_editor_title = "句読点マッピングエディタ"
+typo_editor_title = "誤字辞書エディタ"
+sensitive_editor_title = "注意用語エディタ"
+# 下拉选择标签
+
+# 列头
+symbol_correct_symbol = "正しい記号"
+symbol_error_symbols = "エラー記号リスト"
+sensitive_sensitive_word = "注意用語"
+sensitive_exceptions = "例外リスト"
+comment = "コメント"
+
+# 说明文本
+
+# 按钮
+add_entry = "エントリを追加"
+delete_entry = "エントリを削除"
+
+# 提示消息
+
+# 条目编辑对话框
+
+# 标签
+
+# 示例文本
+
+# 验证消息
+
+# 键重复处理
+duplicate_key_title = "キーが既に存在します"
+duplicate_key_message = "キー \"{entry_key}\" は既に存在します\n\n現在の値：{current_values}\n現在のコメント：{current_comment}\n\n操作を選択してください："
+duplicate_key_no_comment = "（なし）"
+overwrite = "上書き"
+merge = "マージ"
+
+# =============================================================================
+# 文件类型分类
+# =============================================================================
+search_placeholder = "キー、値、コメントを検索"
+source_symbol = "変換元の記号"
+target_symbol = "変換先の記号"
+typo = "誤字"
+corrections = "修正候補"
+multi_value_hint = "ヒント：複数の値は | で区切ります（例：値1|値2|値3）"
+save_typos_failed = "誤字辞書を保存できませんでした。"
+save_symbol_correction_failed = "記号補正の項目を保存できませんでした。"
+save_sensitive_words_failed = "要注意語辞書を保存できませんでした。"
+[file_types]
+document = "ドキュメント"
+spreadsheet = "スプレッドシート"
+image = "画像"
+layout = "レイアウト"
+other = "その他"
+text = "テキスト"
+
+# 带"类"后缀的版本（用于选项卡标签）
+
+[file_category]
+text_short = "テキスト"
+document_short = "文書"
+spreadsheet_short = "表"
+layout_short = "レイアウト"
+image_short = "画像"
+other_short = "その他"
+
+[file_format_validation]
+
+[file_admission]
+compatible_text = "ファイル名は {declared_format} ですが、内容は {detected_format} と検出されました。どちらも同じテキスト処理を使用します。"
+same_family_mismatch = "ファイル名は {declared_format} ですが、内容は {detected_format} と検出されました。どちらも同じ処理種別のため、検出した形式を使用します。"
+cross_family_mismatch = "ファイル名は {declared_format} ですが、内容は {detected_format} と検出されました。処理種別が異なるため、検出した形式で処理することを確認してください。"
+unknown_extension = "拡張子が示す {declared_format} はサポートされていませんが、内容は {detected_format} と検出されました。検出した形式で処理することを確認してください。"
+empty = "選択したファイルは空です。"
+container_invalid = "ファイルコンテナーが破損しているか、構造が無効です（宣言：{declared_format}、検出：{detected_format}）。"
+container_unsupported = "検出した {detected_format} コンテナーは、サポートされている文書パッケージではありません（宣言：{declared_format}）。"
+container_unrecognized = "ファイルコンテナーを認識できませんでした（宣言：{declared_format}、検出：{detected_format}）。"
+content_unrecognized = "ファイル内容を認識できませんでした（宣言：{declared_format}、検出：{detected_format}）。"
+read_error = "ファイルを読み取れませんでした（宣言：{declared_format}、検出：{detected_format}）。"
+unsupported_format = "検出した内容形式 {detected_format} はサポートされていません（宣言：{declared_format}）。"
+
+# =============================================================================
+# 转换操作
+# =============================================================================
+[conversion]
+# 文档操作
+
+# 表格操作
+
+# 图片操作
+
+# 生成文件名（用于输出文件命名）
+[conversion.filenames]
+
+[conversion.ocr_output]
+blockquote_prefix = "🖼️ **画像OCR**："
+
+# =============================================================================
+# 转换进度消息
+# =============================================================================
+[conversion.progress]
+
+# =============================================================================
+# 转换结果消息（状态栏/弹窗）
+# =============================================================================
+[conversion.messages]
+# 通用消息
+
+# 成功消息
+
+# 校对消息
+
+# 版式转换消息
+
+# 缺少依赖消息
+
+# 合并/拆分消息
+
+# MD转换消息
+
+# 图片转换消息
+
+# 序号操作消息
+
+# 成功消息（带参数）
+
+# 失败消息（带参数）
+
+# =============================================================================
+# 消息和提示
+# =============================================================================
+[messages]
+# 文件操作
+
+# GUI操作结果
+
+# 转换操作
+
+# 设置
+
+# 确认对话框
+
+# 文件拖拽和选择
+no_folder_in_single_mode = "単一ファイルモードではフォルダは許可されていません"
+
+# 错误消息
+[messages.errors]
+
+# 警告消息
+[messages.warnings]
+
+# =============================================================================
+# 校对批注文本（用于文档校对功能的批注内容）
+# =============================================================================
+[proofread]
+
+# 错误类型
+[proofread.error_type]
+
+# 错误来源
+[proofread.source]
+
+# 修改建议
+[proofread.suggestion]
+
+# =============================================================================
+# 链接处理占位符文本（用于文档中显示的错误提示）
+# =============================================================================
+[link_processing]
+
+# =============================================================================
+# 样式名（用于文档转换）
+# 这些样式名用于 MD ↔ DOCX 转换时的样式注入和检测
+# =============================================================================
+[styles]
+# 段落样式
+body_paragraph = "本文段落"
+image_paragraph = "画像段落"
+
+# 代码样式
+code_block = "コードブロック"
+inline_code = "インラインコード"
+
+# 公式样式
+formula_block = "数式ブロック"
+inline_formula = "インライン数式"
+
+# 列表样式
+list_block = "リストブロック"
+
+# 分隔线样式
+horizontal_rule_1 = "水平線 1"
+horizontal_rule_2 = "水平線 2"
+horizontal_rule_3 = "水平線 3"
+
+# 表格样式
+table_content = "テーブル内容"
+table_header = "テーブルヘッダー"
+three_line_table = "三線表"
+table_grid = "テーブルグリッド"
+
+# 引用样式（9 级）
+quote_1 = "引用 1"
+quote_2 = "引用 2"
+quote_3 = "引用 3"
+quote_4 = "引用 4"
+quote_5 = "引用 5"
+quote_6 = "引用 6"
+quote_7 = "引用 7"
+quote_8 = "引用 8"
+quote_9 = "引用 9"
+figure_caption = "図キャプション"
+table_caption = "表キャプション"
+equation_caption = "数式キャプション"
+code_block_caption = "コードブロックキャプション"
+
+# =============================================================================
+# 样式格式配置（用于样式注入时的格式属性）
+# =============================================================================
+[style_formats]
+
+# 正文段落格式（与 heading 3-9 相同：仿宋_GB2312、三号、2字符）
+[style_formats.body_paragraph]
+east_asia_font = "MS 明朝"
+ascii_font = "Times New Roman"
+font_size_pt = 10.5
+first_line_indent_chars = 100
+first_line_indent_cm = 0
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = false
+justification = "both"
+
+# 标题1格式（黑体、三号、2字符）
+[style_formats.heading_1]
+east_asia_font = "MS ゴシック"
+ascii_font = "Times New Roman"
+font_size_pt = 14
+first_line_indent_chars = 100
+first_line_indent_cm = 0
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = false
+justification = "both"
+
+# 标题2格式（楷体_GB2312、三号、2字符）
+[style_formats.heading_2]
+east_asia_font = "MS 明朝"
+ascii_font = "Times New Roman"
+font_size_pt = 12
+first_line_indent_chars = 100
+first_line_indent_cm = 0
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = false
+justification = "both"
+
+# 标题3-9格式（仿宋_GB2312、三号、2字符）
+[style_formats.heading_3_9]
+east_asia_font = "MS 明朝"
+ascii_font = "Times New Roman"
+font_size_pt = 12
+first_line_indent_chars = 100
+first_line_indent_cm = 0
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = false
+justification = "both"
+
+# =============================================================================
+# 占位符（用于文档模板）
+# 这些占位符用于 MD → DOCX 转换时的模板填充
+# =============================================================================
+[placeholders]
+title = "タイトル"
+body = "本文"
+
+# =============================================================================
+# YAML 键名（用于元数据）
+# 这些键名用于 DOCX → MD 转换时的 YAML 前置信息输出
+# =============================================================================
+[yaml_keys]
+title = "タイトル"
+subtitle = "サブタイトル"
+
+
+
+
+[main_window]
+route_catalog_failed = "利用可能な操作を読み込めなかったため、要求は開始されませんでした。"
+route_unavailable = "このファイルで利用できる互換操作はありません。"
+output_settings_unavailable = "出力設定を読み込めなかったため、処理を開始しませんでした。"
+template_catalog_failed = "テンプレートを読み込めませんでした。"
+window_title = "DocWen オフライン版"
+version_offline = "オフライン版"
+settings_tooltip = "設定 (Ctrl+,)"
+about_tooltip = "DocWen について"
+font_size_tooltip = "フォントサイズを切り替え"
+no_file_for_locate = "ファイルが選択されていません。出力場所を特定できません。"
+runtime_unavailable = "ランタイムが利用できません。変換を開始できません。"
+task_already_running = "既にタスクが実行中です。先に現在のタスクをキャンセルしてください。"
+cancelling = "キャンセル中..."
+task_processing_prefix = "処理中："
+task_progress_prefix = "進捗："
+task_failed_prefix = "失敗："
+task_processing_status = "処理中：{message}"
+task_progress_status = "進捗：{percent}% {message}"
+task_completed_status = "完了"
+task_failed_status = "失敗：{message}"
+task_cancelled_status = "キャンセル済み"
+error_copied = "エラー詳細をコピーしました。"
+no_error_available = "エラー情報はありません。"
+no_failed_to_retry = "再試行可能な失敗タスクはありません。"
+retry_context_unavailable = "再試行コンテキストが利用できません。"
+path_not_exist = "パスが存在しません：{path}"
+open_path_failed = "パスを開けません：{path}"
+template_not_found = "テンプレートが見つかりません：{name}"
+template_dir_unavailable = "テンプレートディレクトリを利用できません。"
+system_tray_show = "ウィンドウを表示"
+system_tray_hide = "ウィンドウを隠す"
+system_tray_quit = "終了"
+ipc_file_received = "別のインスタンスからファイルを受信しました：{filename}"
+batch_add_failed_title = "一括追加に失敗しました"
+batch_add_failed_message = "{count} 件のファイルを一括リストに追加できませんでした。"
+batch_add_failed_reason = "理由"
+file_admission_invalid = "ファイル検査データが無効です。"
+file_admission_changed = "追加後にファイルが変更されました。一覧から削除して再追加し、もう一度検査してから再試行してください。"
+file_admission_blocked = "選択したファイルは処理できません。"
+file_admission_confirm_title = "検出したファイル形式を確認"
+file_admission_confirm_message = "ファイル名と検出した内容の形式が異なります。検出した形式として処理しますか？"
+file_admission_confirm_action = "検出した形式で処理"
+file_admission_cancelled = "処理をキャンセルしました。検出した形式は承認されていません。"

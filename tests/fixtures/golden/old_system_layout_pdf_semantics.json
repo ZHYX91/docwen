@@ -1,0 +1,965 @@
+{
+  "golden_id": [
+    "GOLDEN-005",
+    "GOLDEN-026"
+  ],
+  "description": "Normalized old-system semantic smoke for PDF to Markdown text extraction, PDF to PDF passthrough/copy behavior, focused PDF metadata passthrough, and real generated XPS to PDF/PNG/JPG/TIF visual semantics.",
+  "input_pdf": {
+    "name": "layout_probe.pdf",
+    "page_texts": [
+      "LAYOUT-GOLDEN-PROBE"
+    ],
+    "page_size": [
+      240,
+      120
+    ]
+  },
+  "expected": {
+    "pdf_to_md": {
+      "success": true,
+      "markdown_contains": [
+        "LAYOUT-GOLDEN-PROBE"
+      ],
+      "yaml_frontmatter": {
+        "title_key": "title",
+        "title_value": "layout_probe",
+        "aliases": [
+          "layout_probe"
+        ]
+      },
+      "image_count": 0,
+      "ocr_count": 0
+    },
+    "layout_to_pdf": {
+      "success": true,
+      "pdf_magic": "%PDF-",
+      "page_count": 1,
+      "page_texts": [
+        "LAYOUT-GOLDEN-PROBE"
+      ]
+    }
+  },
+  "preprocess_boundary": {
+    "classification": "closed_for_route_preprocess_parity_open_for_real_artifact_matrix",
+    "docwen-ref-tk": {
+      "source_code": [
+        "docwen-ref-tk/src/docwen/services/strategies/layout/utils.py::preprocess_layout_file",
+        "docwen-ref-tk/src/docwen/converter/formats/layout/preprocess.py"
+      ],
+      "pdf": {
+        "behavior": "copies input PDF into the layout working directory",
+        "preprocess_chain": [
+          "pdf"
+        ]
+      },
+      "ofd": {
+        "behavior": "converts OFD to an intermediate PDF through easyofd",
+        "preprocess_chain": [
+          "ofd",
+          "pdf"
+        ],
+        "intermediate_kind": "layout_pdf"
+      },
+      "xps": {
+        "behavior": "converts XPS to an intermediate PDF through PyMuPDF",
+        "preprocess_chain": [
+          "xps",
+          "pdf"
+        ],
+        "intermediate_kind": "layout_pdf"
+      },
+      "caj": {
+        "behavior": "route exists at the layout category level but CAJ to PDF raises a not-implemented runtime error",
+        "implemented": false
+      }
+    },
+    "docwen-ref-pyside6": {
+      "source_code": [
+        "docwen-ref-pyside6/src/docwen/services/strategies/layout/base.py",
+        "docwen-ref-pyside6/src/docwen/converter/layout/preprocess.py"
+      ],
+      "pdf": {
+        "behavior": "copies input PDF into the layout working directory",
+        "preprocess_chain": [
+          "pdf"
+        ]
+      },
+      "ofd": {
+        "behavior": "converts OFD to an intermediate PDF through easyofd",
+        "preprocess_chain": [
+          "ofd",
+          "pdf"
+        ],
+        "intermediate_kind": "layout_pdf"
+      },
+      "xps": {
+        "behavior": "converts XPS to an intermediate PDF through PyMuPDF",
+        "preprocess_chain": [
+          "xps",
+          "pdf"
+        ],
+        "intermediate_kind": "layout_pdf"
+      },
+      "caj": {
+        "behavior": "converter module documents CAJ to PDF as not implemented",
+        "implemented": false
+      }
+    },
+    "docwen-current": {
+      "source_code": [
+        "packages/plugins/layout/src/docwen_plugin_layout/preprocess.py",
+        "packages/plugins/layout/src/docwen_plugin_layout/to_pdf/converter.py",
+        "packages/plugins/layout/src/docwen_plugin_layout/manifest.py"
+      ],
+      "pdf": {
+        "behavior": "passes through/copies PDF into runtime staging as a primary artifact",
+        "preprocess_chain": [
+          "pdf"
+        ]
+      },
+      "ofd": {
+        "behavior": "preprocesses OFD to PDF through easyofd before markdown/image/document routes and exposes direct OFD to PDF",
+        "effective_source_format": "pdf"
+      },
+      "xps": {
+        "behavior": "preprocesses XPS to PDF through PyMuPDF before markdown/image/document routes and exposes direct XPS to PDF",
+        "effective_source_format": "pdf"
+      }
+    },
+    "remaining_scope": [
+      "real OFD old-system output artifacts with installed dependencies and broader real-world XPS routes/samples beyond the focused generated XPS to PDF/PNG/JPG/TIF/Markdown probes",
+      "OFD/XPS dependency-missing and conversion-failure UX matrix",
+      "scanned/image-only PDF OCR quality matrix",
+      "broader metadata-sensitive PDF cases beyond the focused PDF passthrough metadata probe"
+    ]
+  },
+  "real_xps_to_pdf_probe": {
+    "classification": "same_old_current_generated_real_xps_to_pdf_visual_projection",
+    "input_xps": {
+      "name": "minimal.xps",
+      "construction": "deterministic font-free OPC/XPS package with two 816x1056 fixed pages and distinct vector paths",
+      "page_count": 2,
+      "page_size_xps_units": [
+        816,
+        1056
+      ]
+    },
+    "expected_projection": {
+      "pdf_magic": "%PDF-",
+      "page_count": 2,
+      "pages": [
+        {
+          "rect": [
+            0.0,
+            0.0,
+            612.0,
+            792.0
+          ],
+          "text": "",
+          "drawings": [
+            {
+              "rect": [
+                72.0,
+                96.0,
+                252.0,
+                216.0
+              ],
+              "fill": [
+                0.862745,
+                0.078431,
+                0.235294
+              ]
+            },
+            {
+              "rect": [
+                225.0,
+                135.0,
+                315.0,
+                225.0
+              ],
+              "fill": [
+                1.0,
+                0.843137,
+                0.0
+              ]
+            }
+          ],
+          "pix_sha256": "527505cb83094b5f7dcfdc5f32fde8a91a963eef7d7ac92f83cfc8b183b74edf"
+        },
+        {
+          "rect": [
+            0.0,
+            0.0,
+            612.0,
+            792.0
+          ],
+          "text": "",
+          "drawings": [
+            {
+              "rect": [
+                72.0,
+                96.0,
+                252.0,
+                216.0
+              ],
+              "fill": [
+                0.254902,
+                0.411765,
+                0.882353
+              ]
+            },
+            {
+              "rect": [
+                225.0,
+                270.0,
+                315.0,
+                360.0
+              ],
+              "fill": [
+                1.0,
+                0.843137,
+                0.0
+              ]
+            }
+          ],
+          "pix_sha256": "28b315aa6f783d69a65cb87a060fc75c7ca2d9529449d7d53099c3c32e1df265"
+        }
+      ]
+    },
+    "projects": {
+      "docwen-ref-tk": {
+        "success": true,
+        "pdf_magic": "%PDF-",
+        "page_count": 2,
+        "uses_pymupdf_convert_to_pdf": true
+      },
+      "docwen-ref-pyside6": {
+        "success": true,
+        "pdf_magic": "%PDF-",
+        "page_count": 2,
+        "uses_pymupdf_convert_to_pdf": true
+      },
+      "docwen-current": {
+        "success": true,
+        "pdf_magic": "%PDF-",
+        "page_count": 2,
+        "artifact_media_type": "application/pdf",
+        "suggested_name": "minimal.pdf",
+        "artifact_metadata": {
+          "source_format": "xps"
+        },
+        "metrics": {
+          "source_format": "xps"
+        },
+        "uses_direct_plugin_route": true
+      }
+    },
+    "old_tk_code_evidence": "docwen-ref-tk/src/docwen/converter/formats/layout/preprocess.py::xps_to_pdf opens XPS with PyMuPDF, calls convert_to_pdf, and saves a PDF document.",
+    "old_pyside6_code_evidence": "docwen-ref-pyside6/src/docwen/converter/layout/preprocess.py::xps_to_pdf opens XPS with PyMuPDF, calls convert_to_pdf, and saves a PDF document.",
+    "current_code_evidence": "packages/plugins/layout/src/docwen_plugin_layout/to_pdf/converter.py::XpsToPdfConverter dispatches the direct xps to pdf plugin route through PyMuPDF convert_to_pdf and records an ArtifactManifest.",
+    "current_regression_test": "packages/plugins/layout/tests/test_layout_conversions.py::TestOldSystemLayoutPdfFixture::test_real_xps_to_pdf_matches_old_system_projection",
+    "comparison_implication": "The generated standards-shaped XPS is a real XPS package rather than a PDF substitute. Old Tk, old PySide6, and current produce the same normalized page size, vector drawing rectangles/fills, and rendered page digests. This closes the focused direct XPS to PDF artifact slice only; broader XPS samples/routes and real OFD artifacts remain open."
+  },
+  "real_xps_to_png_probe": {
+    "classification": "fixed_current_preprocess_stem_leak_same_old_current_png_visual_projection",
+    "input_xps": {
+      "name": "minimal.xps",
+      "construction": "same deterministic font-free two-page OPC/XPS package used by real_xps_to_pdf_probe",
+      "render_dpi": 150
+    },
+    "expected_projection": {
+      "image_count": 2,
+      "images": [
+        {
+          "page": 1,
+          "format": "PNG",
+          "mode": "RGBA",
+          "size": [
+            1275,
+            1650
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "rgba_sha256": "0b6aab93bb99aef24b3ea65700d996dfe1610a7a4ee5d274c60e2ccb421d81c7"
+        },
+        {
+          "page": 2,
+          "format": "PNG",
+          "mode": "RGBA",
+          "size": [
+            1275,
+            1650
+          ],
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "rgba_sha256": "779cafefa04842c4af68ea04aefc1336f1c2ca332c2b6c59f2daea1b1f29da20"
+        }
+      ]
+    },
+    "projects": {
+      "docwen-ref-tk": {
+        "success": true,
+        "file_names": [
+          "page_1.png",
+          "page_2.png"
+        ],
+        "output_folder_pattern": "minimal_<timestamp>_fromXps"
+      },
+      "docwen-ref-pyside6": {
+        "success": true,
+        "file_names": [
+          "page_1.png",
+          "page_2.png"
+        ],
+        "output_folder_pattern": "minimal_<timestamp>_fromXps"
+      },
+      "docwen-current": {
+        "success": true,
+        "artifact_suggested_names": [
+          "minimal_page_01.png",
+          "minimal_page_02.png"
+        ],
+        "artifact_media_type": "image/png",
+        "artifact_metadata": [
+          {
+            "page": 1,
+            "total_pages": 2,
+            "width": 1275,
+            "height": 1650,
+            "dpi": 150
+          },
+          {
+            "page": 2,
+            "total_pages": 2,
+            "width": 1275,
+            "height": 1650,
+            "dpi": 150
+          }
+        ],
+        "metrics": {
+          "page_count": 2,
+          "dpi": 150
+        }
+      }
+    },
+    "observed_pre_fix_current_boundary": {
+      "artifact_suggested_name_pattern": "_preprocess_xps_<uuid>_page_<nn>.png",
+      "classification": "real_user_visible_staging_name_leak",
+      "visual_projection_already_matched": true
+    },
+    "old_tk_code_evidence": "docwen-ref-tk/src/docwen/services/strategies/layout/to_image.py::LayoutToPngStrategy preprocesses the XPS and renders every PDF page at the requested DPI while keeping output ownership under the original input path.",
+    "old_pyside6_code_evidence": "docwen-ref-pyside6/src/docwen/services/strategies/layout/to_image.py::LayoutToPngStrategy retains the old input-owned timestamped folder and page_N.png naming model after XPS preprocessing.",
+    "current_code_evidence": "packages/plugins/layout/src/docwen_plugin_layout/to_image/converter.py::LayoutToImageConverter now reads the effective preprocessed PDF but derives suggested names from context.workspace.input_path; Markdown and Document sibling converters apply the same original-input naming ownership rule.",
+    "current_regression_test": "packages/plugins/layout/tests/test_layout_conversions.py::TestOldSystemLayoutPdfFixture::test_real_xps_to_png_matches_old_system_projection",
+    "comparison_implication": "Old Tk, old PySide6, and current produce the same two RGBA PNG pixel projections at 150 DPI. Current keeps its cleaner flat ArtifactManifest naming model, but names now use the original minimal stem instead of leaking a random internal preprocessing stem. Old page_N.png files inside timestamped folders versus current minimal_page_NN.png artifacts are an architecture/output-ownership difference, not a content regression."
+  },
+  "real_xps_to_jpg_tif_probe": {
+    "classification": "same_old_current_generated_real_xps_jpg_tif_visual_projection",
+    "input_xps": {
+      "name": "minimal.xps",
+      "construction": "same deterministic font-free two-page OPC/XPS package used by real_xps_to_pdf_probe",
+      "render_dpi": 150
+    },
+    "expected_projection": {
+      "jpg": {
+        "container_count": 2,
+        "container_formats": [
+          "JPEG",
+          "JPEG"
+        ],
+        "frame_count": 2,
+        "frames": [
+          {
+            "page": 1,
+            "format": "JPEG",
+            "mode": "RGB",
+            "size": [
+              1275,
+              1650
+            ],
+            "rgb_sha256": "9103d100268fe8ee231a41aeeae532b74db378e5cba3a91f7488490bd616422c"
+          },
+          {
+            "page": 2,
+            "format": "JPEG",
+            "mode": "RGB",
+            "size": [
+              1275,
+              1650
+            ],
+            "rgb_sha256": "a014a986b45943773e1f0d6ed2a10ea76bab82ed59f692f8b93a4779b7323cf8"
+          }
+        ]
+      },
+      "tif": {
+        "container_count": 1,
+        "container_formats": [
+          "TIFF"
+        ],
+        "frame_count": 2,
+        "frames": [
+          {
+            "page": 1,
+            "format": "TIFF",
+            "mode": "RGB",
+            "size": [
+              1275,
+              1650
+            ],
+            "rgb_sha256": "7366ae2456c65a8eb65f20cf8145ccf5a4835072fc3f8f3ddcad8a7ba3c04fd2"
+          },
+          {
+            "page": 2,
+            "format": "TIFF",
+            "mode": "RGB",
+            "size": [
+              1275,
+              1650
+            ],
+            "rgb_sha256": "23656a19f0d8bd79d420eeebf84f9938a984ef57beb4232bbadfdef50c753f32"
+          }
+        ]
+      }
+    },
+    "projects": {
+      "docwen-ref-tk": {
+        "jpg": {
+          "success": true,
+          "file_names": [
+            "page_1.jpg",
+            "page_2.jpg"
+          ],
+          "output_folder_pattern": "minimal_<timestamp>_fromXps"
+        },
+        "tif": {
+          "success": true,
+          "file_name_pattern": "minimal_<timestamp>_fromXps.tif",
+          "frame_count": 2
+        }
+      },
+      "docwen-ref-pyside6": {
+        "jpg": {
+          "success": true,
+          "file_names": [
+            "page_1.jpg",
+            "page_2.jpg"
+          ],
+          "output_folder_pattern": "minimal_<timestamp>_fromXps"
+        },
+        "tif": {
+          "success": true,
+          "file_name_pattern": "minimal_<timestamp>_fromXps.tif",
+          "frame_count": 2
+        },
+        "environment_note": "Optional output-directory/manifest lookup emitted a missing-pydantic warning in the isolated source-tree probe; both strategy conversions still succeeded and all artifacts were projected."
+      },
+      "docwen-current": {
+        "jpg": {
+          "success": true,
+          "artifact_suggested_names": [
+            "minimal_page_01.jpg",
+            "minimal_page_02.jpg"
+          ],
+          "artifact_media_types": [
+            "image/jpeg",
+            "image/jpeg"
+          ],
+          "artifact_metadata": [
+            {
+              "page": 1,
+              "total_pages": 2,
+              "width": 1275,
+              "height": 1650,
+              "dpi": 150
+            },
+            {
+              "page": 2,
+              "total_pages": 2,
+              "width": 1275,
+              "height": 1650,
+              "dpi": 150
+            }
+          ]
+        },
+        "tif": {
+          "success": true,
+          "artifact_suggested_names": [
+            "minimal.tif"
+          ],
+          "artifact_media_types": [
+            "image/tiff"
+          ],
+          "artifact_metadata": [
+            {
+              "page_count": 2,
+              "dpi": 150
+            }
+          ]
+        }
+      }
+    },
+    "old_tk_code_evidence": "docwen-ref-tk/src/docwen/services/strategies/layout/to_image.py::LayoutToJpgStrategy and LayoutToTifStrategy preprocess XPS to PDF, render at the requested DPI, and emit per-page JPG or a multi-page LZW TIF.",
+    "old_pyside6_code_evidence": "docwen-ref-pyside6/src/docwen/services/strategies/layout/to_image.py::LayoutToJpgStrategy and LayoutToTifStrategy retain the same typed CommonOptions/ImageOpOptions rendering semantics.",
+    "current_code_evidence": "packages/plugins/layout/src/docwen_plugin_layout/to_image/converter.py::LayoutToImageConverter reads the preprocessed PDF, renders per-page JPG or one multi-page LZW TIF, preserves original-input naming ownership, and returns ArtifactManifest metadata for OutputFinalizer.",
+    "current_regression_test": "packages/plugins/layout/tests/test_layout_conversions.py::TestOldSystemLayoutPdfFixture::test_real_xps_to_jpg_tif_matches_old_system_projection",
+    "comparison_implication": "Old Tk, old PySide6, and current produce the same decoded RGB page projections at 150 DPI for both two-file JPG output and one-container/two-frame TIF output. Current flat source-owned names and ArtifactManifest metadata replace old timestamped folders/files without losing source identity, page order, dimensions, format, or visible pixels. This closes only the focused generated XPS to JPG/TIF slice."
+  },
+  "real_xps_to_markdown_probe": {
+    "classification": "current_preprocessed_asset_name_fix_with_full_image_retention_enhancement",
+    "input_xps": {
+      "name": "image-pages.xps",
+      "page_count": 2,
+      "embedded_bitmap_size": [
+        640,
+        320
+      ],
+      "normalized_visible_text": [
+        "DOCWENXPSPAGEONE",
+        "DOCWENXPSPAGETWO"
+      ],
+      "ocr_language": "latin",
+      "ocr_placement": "main_md"
+    },
+    "expected_projection": {
+      "success": true,
+      "page_count": 2,
+      "image_reference_count": 2,
+      "requested_ocr_result_count": 2,
+      "normalized_visible_text": [
+        "DOCWENXPSPAGEONE",
+        "DOCWENXPSPAGETWO"
+      ]
+    },
+    "projects": {
+      "docwen-ref-tk": {
+        "success": true,
+        "output_kind": "timestamped_folder_md",
+        "image_reference_count": 2,
+        "requested_ocr_result_count": 2,
+        "native_ocr_normalized_text": [
+          "DOCWENXPSPAGEONE",
+          "DOCWENXPSPAGETWO"
+        ],
+        "image_name_shape": "input_<timestamp>_fromXps.pdf-000N-00.png",
+        "observed_same_environment_images": [
+          {
+            "page": 1,
+            "format": "PNG",
+            "mode": "RGB",
+            "size": [
+              295,
+              20
+            ],
+            "alpha_extrema": [
+              255,
+              255
+            ],
+            "rgba_sha256": "4f6ef22a59ad438f30facb4a51aa98dd932744686d014da19bc1174a5972bc5e"
+          },
+          {
+            "page": 2,
+            "format": "PNG",
+            "mode": "RGB",
+            "size": [
+              298,
+              19
+            ],
+            "alpha_extrema": [
+              255,
+              255
+            ],
+            "rgba_sha256": "5395391902912b9e0c1fc9729c466115525d186e676664ef5227a5a503606d02"
+          }
+        ]
+      },
+      "docwen-ref-pyside6": {
+        "success": true,
+        "output_kind": "timestamped_folder_md",
+        "image_reference_count": 2,
+        "requested_ocr_result_count": 2,
+        "native_ocr_normalized_text": [
+          "DOCWENXPSPAGEONE",
+          "DOCWENXPSPAGETWO"
+        ],
+        "image_name_shape": "input_<timestamp>_fromXps.pdf-000N-00.png",
+        "observed_same_environment_images": [
+          {
+            "page": 1,
+            "format": "PNG",
+            "mode": "RGB",
+            "size": [
+              295,
+              20
+            ],
+            "alpha_extrema": [
+              255,
+              255
+            ],
+            "rgba_sha256": "4f6ef22a59ad438f30facb4a51aa98dd932744686d014da19bc1174a5972bc5e"
+          },
+          {
+            "page": 2,
+            "format": "PNG",
+            "mode": "RGB",
+            "size": [
+              298,
+              19
+            ],
+            "alpha_extrema": [
+              255,
+              255
+            ],
+            "rgba_sha256": "5395391902912b9e0c1fc9729c466115525d186e676664ef5227a5a503606d02"
+          }
+        ]
+      },
+      "docwen-current": {
+        "success": true,
+        "output_kind": "request_output_dir_artifact_manifest",
+        "artifact_suggested_names": [
+          "image-pages.md",
+          "image-pages__page_0001_ocr.md",
+          "image-pages__page_0002_ocr.md",
+          "image-pages.xps-0001-00.png",
+          "image-pages.xps-0002-00.png"
+        ],
+        "image_reference_count": 2,
+        "requested_ocr_result_count": 2,
+        "primary_contains_ocr": false,
+        "page_fragment_metadata": [
+          {
+            "page_index": 1,
+            "page_count": 2,
+            "source_page": 1,
+            "ocr_status": "success"
+          },
+          {
+            "page_index": 2,
+            "page_count": 2,
+            "source_page": 2,
+            "ocr_status": "success"
+          }
+        ],
+        "page_fragment_ocr_normalized_text": [
+          "DOCWENXPSPAGEONE",
+          "DOCWENXPSPAGETWO"
+        ],
+        "staging_name_leak": false,
+        "observed_same_environment_images": [
+          {
+            "page": 1,
+            "format": "PNG",
+            "mode": "RGB",
+            "size": [
+              1001,
+              501
+            ],
+            "alpha_extrema": [
+              255,
+              255
+            ],
+            "rgba_sha256": "c5ea0f790101d966adbf5ebc4b29e26154de1ccbe8791891b6d8e95dbe70cb08"
+          },
+          {
+            "page": 2,
+            "format": "PNG",
+            "mode": "RGB",
+            "size": [
+              1001,
+              501
+            ],
+            "alpha_extrema": [
+              255,
+              255
+            ],
+            "rgba_sha256": "a99247873ab35892c6570bf3cb16b8a57a2065fc3751cd0aacec354370ff33f5"
+          }
+        ]
+      }
+    },
+    "old_tk_code_evidence": "docwen-ref-tk/src/docwen/services/strategies/layout/to_markdown.py preprocesses XPS and docwen.converter.pdf2md.core extracts images/OCR into a timestamped folder.",
+    "old_pyside6_code_evidence": "docwen-ref-pyside6/src/docwen/services/strategies/layout/to_markdown.py retains the typed XPS preprocessing and image/OCR Markdown flow.",
+    "current_code_evidence": "packages/plugins/layout/src/docwen_plugin_layout/to_markdown/converter.py keeps pymupdf4llm implicit OCR disabled, emits one independent OCR fragment per physical page, retains full extracted bitmaps as separate resources, and renames preprocessed image prefixes from the internal PDF to the original XPS filename before ArtifactManifest finalization.",
+    "current_regression_test": "packages/plugins/layout/tests/test_layout_conversions.py::TestPreprocessChain::test_real_xps_to_markdown_images_use_original_input_name",
+    "comparison_implication": "All three projects preserve two page contents under alphanumeric-normalized OCR. The old paths place requested OCR in the main Markdown; the reopened current D04 contract instead emits two physical-page fragments and keeps the primary free of duplicate OCR, so legacy main_md is only an input alias. Current also avoids duplicate implicit OCR and retains full embedded page images as independent resources. Initial current artifacts leaked _preprocess_xps_<uuid>.pdf prefixes; the focused fix restores original-input ownership. OCR spacing and image bytes/hashes are same-environment observations, not cross-version contracts."
+  },
+  "real_xps_to_docx_probe": {
+    "classification": "same_old_current_pdf2docx_fallback_with_current_runtime_metrics_fix_and_external_word_timeout_boundary",
+    "input_xps": {
+      "name": "image-pages.xps",
+      "page_count": 2,
+      "embedded_bitmap_size": [
+        640,
+        320
+      ]
+    },
+    "controlled_backend_boundary": "After the current full CLI probe started a hidden WINWORD process and made no progress for more than 120 seconds, the comparison probes explicitly skipped Word and the locally absent LibreOffice backend so that each project's production pdf2docx final fallback could be compared without another unbounded COM wait.",
+    "expected_semantic_projection": {
+      "zip_valid": true,
+      "package_part_count": 19,
+      "required_parts_present": true,
+      "paragraph_count": 5,
+      "paragraph_texts": [
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "section_count": 2,
+      "sections": [
+        {
+          "width_emu": 7772400,
+          "height_emu": 10058400,
+          "orientation": 0
+        },
+        {
+          "width_emu": 7772400,
+          "height_emu": 10058400,
+          "orientation": 0
+        }
+      ],
+      "table_count": 0,
+      "inline_shape_count": 0,
+      "page_break_count": 0,
+      "anchored_shape_count": 2,
+      "drawing_count": 2,
+      "media": [
+        {
+          "format": "PNG",
+          "size": [
+            640,
+            320
+          ],
+          "rgba_sha256": "f1c8a3b8dd95cc2095a655e505cb775932e92d81a3e349ef29897b93fab77e2a"
+        },
+        {
+          "format": "PNG",
+          "size": [
+            640,
+            320
+          ],
+          "rgba_sha256": "9a2f2961c6d6aa626757bfa88d84efc3adb6b8980619c137a71d5b522893acfc"
+        }
+      ]
+    },
+    "projects": {
+      "docwen-ref-tk": {
+        "success": true,
+        "backend": "pdf2docx",
+        "artifact_name": "image-pages.docx",
+        "observed_same_environment_bytes": 42495,
+        "observed_same_environment_sha256": "c0bd2341e7bf72603ac9f027602a25a279d343e4a8cc5814dae56e4c572f1f35",
+        "semantic_projection": "same_as_expected_semantic_projection"
+      },
+      "docwen-ref-pyside6": {
+        "success": true,
+        "backend": "pdf2docx",
+        "artifact_name": "image-pages.docx",
+        "observed_same_environment_bytes": 42495,
+        "observed_same_environment_sha256": "dd2357043cb50ea608f366db8d619fca1b05502314c39cade5609c86303badd3c",
+        "semantic_projection": "same_as_expected_semantic_projection"
+      },
+      "docwen-current": {
+        "success": true,
+        "backend": "pdf2docx",
+        "engine": "pdf2docx",
+        "artifact_suggested_name": "image-pages.docx",
+        "staging_name_leak": false,
+        "observed_same_environment_bytes": 42495,
+        "observed_same_environment_sha256": "ed7683cf6563ac6c7c0d267ac514ef8c5af84b1df2c02fa1bcfa4ec25e12fb3c",
+        "semantic_projection": "same_as_expected_semantic_projection"
+      }
+    },
+    "external_word_environment_probe": {
+      "entry": "uv run docwen run tmp/layout-real-xps-docx-probe-2026-07-14/minimal.xps --to docx --output tmp/layout-real-xps-docx-probe-2026-07-14/current --json",
+      "winword_started": true,
+      "progress_after_120_seconds": false,
+      "docx_created": false,
+      "termination": "manual process termination after the bounded audit wait",
+      "post_termination_probe_processes_remaining": false,
+      "verdict": "current_environment_unresolved_external_com_long_task_blocker"
+    },
+    "old_tk_code_evidence": "docwen-ref-tk/src/docwen/services/strategies/layout/to_document.py preprocesses XPS to PDF and docwen.converter.formats.layout.external.pdf_to_docx tries Word, LibreOffice, then pdf2docx.",
+    "old_pyside6_code_evidence": "docwen-ref-pyside6/src/docwen/services/strategies/layout/to_document.py retains the same XPS-to-PDF and Word/LibreOffice/pdf2docx fallback chain.",
+    "current_code_evidence": "packages/plugins/layout/src/docwen_plugin_layout/to_document/converter.py consumes the preprocessed PDF while preserving the original XPS stem, tries configured Word/LibreOffice backends, and uses pdf2docx as the final route-local fallback. packages/runtime/src/docwen_runtime/engine/task_manager.py preserves plugin-owned engine/backend metrics while merging finalizer-owned output_dir and byte metrics.",
+    "current_regression_test": "packages/plugins/layout/tests/test_layout_conversions.py::TestPreprocessChain::test_real_xps_to_docx_pdf2docx_fallback_matches_old_system_projection",
+    "comparison_implication": "The controlled production pdf2docx fallback produces matching valid two-section DOCX structure, two anchored drawings, and exact decoded media pixels across all three projects. Different raw ZIP hashes prove that byte identity is not the contract. The initial current runtime-finalized result dropped plugin engine/backend metrics; TaskManager now merges plugin semantic metrics with finalizer-owned output_dir and byte metrics. This closes only the focused fallback artifact and metrics-preservation slice. The full current CLI's hidden Word import made no progress for more than 120 seconds on the generated XPS-derived PDF, so external Word success, timeout, cancellation feel, broader editable-text fidelity, LibreOffice execution, and final Layout/Document parity remain open."
+  },
+  "metadata_passthrough_probe": {
+    "classification": "same_old_current_pdf_passthrough_metadata_boundary",
+    "input_pdf": {
+      "name": "layout_metadata_probe.pdf",
+      "page_texts": [
+        "LAYOUT-METADATA-PROBE"
+      ],
+      "page_size": [
+        240,
+        120
+      ],
+      "metadata": {
+        "title": "DocWen Metadata Probe",
+        "author": "DocWen Parity Audit",
+        "subject": "PDF passthrough metadata boundary",
+        "keywords": "docwen,parity,metadata",
+        "creator": "docwen-test-fixture",
+        "producer": "docwen-test-producer"
+      }
+    },
+    "expected_projection": {
+      "success": true,
+      "pdf_magic": "%PDF-",
+      "page_count": 1,
+      "page_texts": [
+        "LAYOUT-METADATA-PROBE"
+      ],
+      "metadata": {
+        "title": "DocWen Metadata Probe",
+        "author": "DocWen Parity Audit",
+        "subject": "PDF passthrough metadata boundary",
+        "keywords": "docwen,parity,metadata",
+        "creator": "docwen-test-fixture",
+        "producer": "docwen-test-producer"
+      }
+    },
+    "projects": {
+      "docwen-ref-tk": {
+        "success": true,
+        "returns_original_pdf_path_for_pdf_input": true,
+        "pdf_magic": "%PDF-",
+        "page_count": 1,
+        "page_texts": [
+          "LAYOUT-METADATA-PROBE"
+        ],
+        "metadata": {
+          "title": "DocWen Metadata Probe",
+          "author": "DocWen Parity Audit",
+          "subject": "PDF passthrough metadata boundary",
+          "keywords": "docwen,parity,metadata",
+          "creator": "docwen-test-fixture",
+          "producer": "docwen-test-producer"
+        }
+      },
+      "docwen-ref-pyside6": {
+        "success": true,
+        "returns_original_pdf_path_for_pdf_input": true,
+        "pdf_magic": "%PDF-",
+        "page_count": 1,
+        "page_texts": [
+          "LAYOUT-METADATA-PROBE"
+        ],
+        "metadata": {
+          "title": "DocWen Metadata Probe",
+          "author": "DocWen Parity Audit",
+          "subject": "PDF passthrough metadata boundary",
+          "keywords": "docwen,parity,metadata",
+          "creator": "docwen-test-fixture",
+          "producer": "docwen-test-producer"
+        }
+      },
+      "docwen-current": {
+        "success": true,
+        "copies_pdf_to_runtime_staging": true,
+        "artifact_media_type": "application/pdf",
+        "suggested_name": "layout_metadata_probe.pdf",
+        "artifact_metadata": {
+          "source_format": "pdf"
+        },
+        "metrics": {
+          "source_format": "pdf"
+        },
+        "pdf_magic": "%PDF-",
+        "page_count": 1,
+        "page_texts": [
+          "LAYOUT-METADATA-PROBE"
+        ],
+        "metadata": {
+          "title": "DocWen Metadata Probe",
+          "author": "DocWen Parity Audit",
+          "subject": "PDF passthrough metadata boundary",
+          "keywords": "docwen,parity,metadata",
+          "creator": "docwen-test-fixture",
+          "producer": "docwen-test-producer"
+        }
+      }
+    },
+    "old_tk_code_evidence": "docwen-ref-tk/src/docwen/services/strategies/layout/to_pdf.py::LayoutToPdfStrategy.execute returns the input file_path for actual_format='pdf'.",
+    "old_pyside6_code_evidence": "docwen-ref-pyside6/src/docwen/services/strategies/layout/to_pdf.py::LayoutToPdfStrategy.execute returns the input file_path for actual_format='pdf'.",
+    "current_code_evidence": "packages/plugins/layout/src/docwen_plugin_layout/to_pdf/converter.py::LayoutToPdfConverter._copy_pdf uses shutil.copy2 into runtime staging and records an ArtifactManifest.",
+    "current_regression_test": "packages/plugins/layout/tests/test_layout_conversions.py::TestOldSystemLayoutPdfFixture::test_layout_pdf_metadata_passthrough_matches_old_system_projection",
+    "comparison_implication": "Old Tk, old PySide6, and current all preserve the selected PyMuPDF metadata fields for PDF to PDF passthrough/copy. The old projects return the original input path, while current copies to runtime staging and finalizer ownership; this is an architecture difference, not a user-visible metadata regression."
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "pdf_to_md": {
+        "success": true,
+        "markdown_contains": [
+          "# LAYOUT-GOLDEN-PROBE"
+        ],
+        "output_kind": "timestamped_folder_md"
+      },
+      "layout_to_pdf": {
+        "success": true,
+        "returns_original_pdf_path_for_pdf_input": true
+      }
+    },
+    "docwen-ref-pyside6": {
+      "pdf_to_md": {
+        "success": true,
+        "markdown_contains": [
+          "# LAYOUT-GOLDEN-PROBE"
+        ],
+        "output_kind": "timestamped_folder_md"
+      },
+      "layout_to_pdf": {
+        "success": true,
+        "returns_original_pdf_path_for_pdf_input": true
+      }
+    },
+    "docwen-current": {
+      "pdf_to_md": {
+        "success": true,
+        "artifact_media_type": "text/markdown",
+        "suggested_name": "layout_probe.md",
+        "yaml_frontmatter": {
+          "title_key": "title",
+          "title_value": "layout_probe"
+        },
+        "metadata": {
+          "source_format": "pdf",
+          "physical_page_count": 1,
+          "keep_images": false,
+          "ocr_enabled": false
+        },
+        "metrics": {
+          "image_count": 0,
+          "ocr_enabled": false,
+          "ocr_pages": 0,
+          "ocr_images": 0
+        }
+      },
+      "layout_to_pdf": {
+        "success": true,
+        "artifact_media_type": "application/pdf",
+        "suggested_name": "layout_probe.pdf",
+        "metadata": {
+          "source_format": "pdf"
+        },
+        "metrics": {
+          "source_format": "pdf"
+        },
+        "copies_pdf_to_runtime_staging": true
+      }
+    }
+  },
+  "accepted_differences": [
+    "Old Tk and old PySide6 return the original PDF path for PDF to PDF because no conversion is needed; current runtime copies the PDF into staging and records an ArtifactManifest.",
+    "Old systems write PDF to Markdown into timestamped output folders; current runtime writes a staging Markdown artifact with a stable suggested name.",
+    "Old XPS to Markdown uses pymupdf4llm implicit OCR and may retain cropped OCR regions; current disables duplicate implicit OCR, retains full extracted images, and routes requested OCR through the shared core OCR path.",
+    "This fixture is a normalized semantic smoke, not a checked-in old-system binary/timestamped output directory."
+  ]
+}

@@ -1,0 +1,192 @@
+{
+  "schema_version": 1,
+  "stage_id": "VIS-2026-07-24-213",
+  "contract_id": "CONTRACT-2026-07-22-001/FA-07",
+  "stage_start": {
+    "head": "325bc8c15b4a61528d3ced2ae2b3fab0a74fd41e",
+    "tree": "b15d10f02f6e33fc3597f3a8ccfdc19b6f87224a"
+  },
+  "sources": {
+    "FA-07-B1": {
+      "bytes": 10705,
+      "sha256": "8066B12C878D74AA35B55B22DC9DABA9A56E91332A35CF96C4FC0F6AF6BD3BD1",
+      "sheets": 1,
+      "data_validations": 52
+    },
+    "FA-07-N1": {
+      "bytes": 24758455,
+      "sha256": "F284453E69F014A60C2732D2344BFE32EE114015784590D5BF729EF72CC42870",
+      "sheets": 176,
+      "cells": 4137880,
+      "formulas": 1098552,
+      "data_validations": 136,
+      "conditional_formatting_ranges": 481,
+      "charts": 31,
+      "tables": 8,
+      "defined_names": 8836,
+      "external_link_parts": 7,
+      "protection_nodes": 7
+    }
+  },
+  "matrix": {
+    "logical_slots": 24,
+    "successful_slots": 20,
+    "failed_or_blocked_slots": 4,
+    "source_immutability": {
+      "FA-07-B1": true,
+      "FA-07-N1": true
+    },
+    "external_evidence": {
+      "root": "D:\\docwen-parity\\vis213-fa07-complete-matrix-325bc8c-v1",
+      "matrix_revision": "v5-current-n1-ods-compaction-and-private-profile",
+      "matrix_bytes": 46600,
+      "matrix_sha256": "28E49C61B353E8A7015DCBFAF94BAD1D6E6F1B641872562AAFDCC3F671E9A6CB"
+    },
+    "reference_n1_ods": {
+      "docwen-ref-tk": "HOP1_FAILED_LIBREOFFICE_TIMEOUT_HOP2_BLOCKED",
+      "docwen-ref-pyside6": "HOP1_FAILED_LIBREOFFICE_TIMEOUT_HOP2_BLOCKED"
+    },
+    "current_n1_ods": {
+      "intermediate_bytes": 12815283,
+      "intermediate_sha256": "1EBA54F5436CFF16FF22717DF075DB0124860585809B441E5F10538A5B0D494E",
+      "intermediate_seconds": 296.002,
+      "returned_xlsx_bytes": 68916426,
+      "returned_xlsx_sha256": "B9D75F4A39E28B8426006AEE08921367428998AE1AD7DB7FBDD194B84D414261",
+      "returned_xlsx_seconds": 276.723,
+      "process_residue": false
+    }
+  },
+  "delivery_warning": {
+    "diagnostic_codes": [
+      "EXTERNAL_LINK_FLATTENED",
+      "ODS_FEATURE_FIDELITY_RISK"
+    ],
+    "risk_counts": {
+      "data_validations": 136,
+      "conditional_formatting_ranges": 481,
+      "charts": 31,
+      "drawings": 34,
+      "tables": 8,
+      "pivot_or_slicer_parts": 10,
+      "defined_names": 8735
+    },
+    "removed_external_defined_names": 101,
+    "policy_prepared_bytes": 20260673,
+    "policy_prepared_sha256": "ACB45DC492CB9182B14F18C89866656DFFF55FED576138EB4BFF9628589CA3F2",
+    "prepared_bytes_match_pre_warning_evidence": true,
+    "artifact_generation_reused": true,
+    "external_projection": "ods-fidelity-warning-projection.json"
+  },
+  "returned_xlsx_projection": {
+    "index_sha256": "DF150FC31682130C2975F730E6FF8EFEDFE1D888D9E95037FE06218C3A9C2CF5",
+    "comparison_sha256": "05A9D29E7477C99C340554DA594CE0EE135E2E6944A8282E4F2B13DAB38D1E4A",
+    "current_n1_xls": {
+      "sheets": 176,
+      "cells": 3930520,
+      "formulas": 921144,
+      "data_validations": 136,
+      "conditional_formatting_ranges": 481,
+      "charts": 31,
+      "external_link_parts": 7,
+      "tables": 8
+    },
+    "current_n1_ods": {
+      "sheets": 177,
+      "cells": 4669246,
+      "formulas": 1098550,
+      "data_validations": 0,
+      "conditional_formatting_ranges": 478,
+      "charts": 132,
+      "external_link_parts": 0,
+      "tables": 12,
+      "hidden_cache_sheet": {
+        "name": "DPCache_Scheme_Volume_Calc",
+        "dimension": "A1:Y20001",
+        "cells": 500025,
+        "formulas": 0,
+        "cached_values": 490025
+      }
+    },
+    "current_n1_ods_delta_from_source": {
+      "sheets": 1,
+      "cells": 531366,
+      "formulas": -2,
+      "data_validations": -136,
+      "conditional_formatting_ranges": -3,
+      "charts": 101,
+      "drawings": 150,
+      "defined_names": -190,
+      "external_link_parts": -7,
+      "tables": 4
+    },
+    "legacy_xls_fallback_is_more_destructive": {
+      "direct_formulas": 1098550,
+      "fallback_formulas": 921144,
+      "direct_minus_fallback_formulas": 177406
+    }
+  },
+  "physical_consumers": {
+    "excel_returned_xlsx": {
+      "opened": 10,
+      "expected": 10,
+      "repair_or_open_errors": 0,
+      "current_n1_ods_sheet_count": 177,
+      "sha256": "E31960A8E16A17709021F0FB3596F11EA6C773E4078259611F84256368EF0D82"
+    },
+    "wps_intermediates": {
+      "consumed": 1,
+      "expected": 4,
+      "timeouts": 3,
+      "sha256": "D3877795FFD7AB5A22433F92A68676B98670BEF4788F4612D5E6C0BBA2CDA12E"
+    },
+    "libreoffice_intermediates": {
+      "consumed": 3,
+      "expected": 4,
+      "timeouts": 1,
+      "sha256": "C67D59CEB504A0680A898046D1F71DA1D1DDC64B3B8FCD73800A8FF2814948E6"
+    },
+    "excel_render": {
+      "pdf_files": 52,
+      "expected_pdf_files": 52,
+      "pages": 72,
+      "contact_sheets": 12,
+      "errors": 0,
+      "sha256": "45DFE9E386F7FAB36A499327502DF55BF04D6F4ED9D14F50BD2A09DD95544142"
+    }
+  },
+  "visual_oracle": {
+    "pixel_comparison_sha256": "7EE3B838775684AB0362A000DC6E7D5DA21AA779A56DA63B9F7CCD75CF603E39",
+    "b1_current_ods_vs_source": {
+      "exact_pages": 1,
+      "common_pages": 1
+    },
+    "n1_current_xls_vs_docwen_ref_tk": {
+      "exact_pages": 11,
+      "common_pages": 13,
+      "changed_pixels_per_data_flow_page": 62
+    },
+    "n1_current_xls_vs_docwen_ref_pyside6": {
+      "exact_pages": 11,
+      "common_pages": 13,
+      "changed_pixels_per_data_flow_page": 61
+    },
+    "n1_current_ods_vs_source": {
+      "exact_pages": 0,
+      "common_pages": 11,
+      "left_only_chart_pages": 3,
+      "right_only_pass_through_pages": 1,
+      "maximum_changed_pixel_fraction": 0.2690397017910928,
+      "observed_problem": "CHART_AND_DRAWING_OVERLAY_OR_MATERIALIZATION"
+    }
+  },
+  "disposition": {
+    "FA-07-B1": "PASS",
+    "FA-07-N1-XLS": "REFERENCE_PARITY_WITH_SHARED_TARGET_LOSS",
+    "FA-07-N1-ODS": "DELIVERED_WITH_WARNING_USER_ACCEPTED_BOUNDARY",
+    "FA-07": "PASS_WITH_USER_ACCEPTED_BOUNDARY",
+    "decision_stage_id": "VIS-2026-07-26-385",
+    "user_decision_date": "2026-07-26",
+    "user_decision_quote": "那就接受",
+    "overall": "NOT PASSED YET"
+  }
+}

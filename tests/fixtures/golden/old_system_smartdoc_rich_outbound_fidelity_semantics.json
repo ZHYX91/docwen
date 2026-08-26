@@ -1,0 +1,265 @@
+{
+  "golden_id": "GOLDEN-009",
+  "scope": "three-project rich SmartDoc DOCX outbound fidelity projection",
+  "generated_at": "2026-07-14",
+  "classification": "focused_real_external_artifact_evidence_not_overall_smartdoc_pass",
+  "input_document": {
+    "filename": "smartdoc-rich-parity.docx",
+    "size_bytes": 42591,
+    "sha256": "7f17662cca68b1668bbfd1c46bb6cddf87a4c0fd17bc92d0a8737472976c8a0f",
+    "features": [
+      "Title and Heading 1 hierarchy",
+      "custom DocWen Rich Body paragraph style",
+      "bold and italic runs",
+      "2x3 Table Grid table",
+      "one PNG image",
+      "two distinct headers and footers",
+      "portrait then landscape sections",
+      "one Word comment",
+      "one tracked insertion and deletion",
+      "one fldSimple hyperlink display"
+    ]
+  },
+  "routes": {
+    "doc": {
+      "source_format": "docx",
+      "target_format": "doc",
+      "candidate_chain": [
+        "WPS Writer",
+        "Microsoft Word",
+        "LibreOffice"
+      ],
+      "signature_hex_prefix": "d0cf11e0a1b11ae1"
+    },
+    "rtf": {
+      "source_format": "docx",
+      "target_format": "rtf",
+      "candidate_chain": [
+        "WPS Writer",
+        "Microsoft Word",
+        "LibreOffice"
+      ],
+      "signature_hex_prefix": "7b5c72746631"
+    },
+    "odt": {
+      "source_format": "docx",
+      "target_format": "odt",
+      "candidate_chain": [
+        "Microsoft Word",
+        "LibreOffice"
+      ],
+      "signature_hex_prefix": "504b0304",
+      "is_zip": true
+    }
+  },
+  "normalized_common_projection": {
+    "visible_markers": [
+      "DOCWEN SMARTDOC RICH PARITY 2026",
+      "Rich Structure Section",
+      "BOLD-MARKER",
+      "ITALIC-MARKER",
+      "COMMENTED-MARKER",
+      "INSERTED-MARKER",
+      "FIELD-DISPLAY-MARKER",
+      "TABLE-MARKER",
+      "LANDSCAPE-BODY-MARKER"
+    ],
+    "deleted_marker_visible": false,
+    "paragraph_styles": {
+      "DOCWEN SMARTDOC RICH PARITY 2026": "Title",
+      "Rich Structure Section": "Heading 1",
+      "Styled run check: BOLD-MARKER and ITALIC-MARKER.": "DocWen Rich Body",
+      "Landscape Section": "Heading 1"
+    },
+    "styled_runs": [
+      {
+        "text": "BOLD-MARKER",
+        "bold": true,
+        "italic": false
+      },
+      {
+        "text": "ITALIC-MARKER",
+        "bold": false,
+        "italic": true
+      }
+    ],
+    "table": [
+      [
+        "Item",
+        "Qty",
+        "Note"
+      ],
+      [
+        "RichApple",
+        "11",
+        "TABLE-MARKER"
+      ]
+    ],
+    "headers": [
+      "DOCWEN HEADER MARKER 2026",
+      "DOCWEN LANDSCAPE HEADER 2026"
+    ],
+    "footers": [
+      "DOCWEN FOOTER MARKER 2026",
+      "DOCWEN LANDSCAPE FOOTER 2026"
+    ],
+    "section_landscape": [
+      false,
+      true
+    ],
+    "comments": [
+      "DOCWEN COMMENT BODY 2026"
+    ],
+    "hyperlink_count": 1,
+    "media_count": 1,
+    "media_sha256": "cea0e700deb7e3b8e3934924520c806944d5da7755bb17335c0e5b42de7a9a81"
+  },
+  "format_boundaries": {
+    "doc": {
+      "roundtrip_inline_shapes": 0,
+      "roundtrip_media_count": 1,
+      "revision_counts": {
+        "insertions": 1,
+        "deletions": 1
+      }
+    },
+    "rtf": {
+      "roundtrip_inline_shapes": 0,
+      "roundtrip_media_count": 1,
+      "revision_counts": {
+        "insertions": 1,
+        "deletions": 1
+      }
+    },
+    "odt": {
+      "roundtrip_inline_shapes": 1,
+      "roundtrip_media_count": 1,
+      "revision_counts": {
+        "insertions": 0,
+        "deletions": 0
+      },
+      "direct_annotation_count": 1,
+      "direct_draw_image_count": 1,
+      "direct_tracked_changes_count": 0,
+      "content_xml_strict_parse": false,
+      "content_xml_strict_parse_boundary": "Microsoft Word emits a numeric xml:id that is not an XML NCName in all three project artifacts; recover-mode XML and Microsoft Word roundtrip both read the package. This shared backend limitation is not a current-only regression or an accepted overall ODT quality pass."
+    }
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "entrypoints": {
+        "doc": "docwen.converter.formats.document.docx_to_doc",
+        "rtf": "docwen.converter.formats.document.docx_to_rtf",
+        "odt": "docwen.converter.formats.document.docx_to_odt"
+      },
+      "artifacts": {
+        "doc": {
+          "size_bytes": 312355,
+          "sha256": "ae9fb933f10f475b7931cf352fb794ea6ba3ed01fa928eab961a2b116e9229e4",
+          "roundtrip_docx_size_bytes": 36877,
+          "roundtrip_docx_sha256": "901f85af8526ee85b30b97dda4eef0fd33dc30153b29fa8d1c98668e7e54399b"
+        },
+        "rtf": {
+          "size_bytes": 64396,
+          "sha256": "66ccb7fb51b6e5bf656d1f1590887467b8ae166213da08921d8e192042879929",
+          "roundtrip_docx_size_bytes": 28394,
+          "roundtrip_docx_sha256": "63e77f6d2321d579514ab23d546549471d87556430ff8a5c1764222fcb55c2f3"
+        },
+        "odt": {
+          "size_bytes": 12437,
+          "sha256": "b6a66f18b7452885eb8a0522f0ec8da01835e45358e8a9ef0d8ae70af7a2e927",
+          "roundtrip_docx_size_bytes": 27508,
+          "roundtrip_docx_sha256": "4e565be5df6f064e8bcbbf623f780752877400e1a01a22c5d6e72ae244770a90"
+        }
+      }
+    },
+    "docwen-ref-pyside6": {
+      "entrypoints": {
+        "doc": "docwen.converter.doc_interop.docx_to_doc",
+        "rtf": "docwen.converter.doc_interop.docx_to_rtf",
+        "odt": "docwen.converter.doc_interop.docx_to_odt"
+      },
+      "artifacts": {
+        "doc": {
+          "size_bytes": 312355,
+          "sha256": "2f1b0001b9c3a7885a5623f63856cb29eae74ac0438ac6c8f4269266edbf5c37",
+          "roundtrip_docx_size_bytes": 36877,
+          "roundtrip_docx_sha256": "30877ef0a5a308e8f402d921d3e51dcf9050ebcdfcc91fc9ac97c4a84aaddf4c"
+        },
+        "rtf": {
+          "size_bytes": 64308,
+          "sha256": "c868481dcaf10216a7001163f098b6909a2cf2139989b2e64fcaf681b0849af5",
+          "roundtrip_docx_size_bytes": 28378,
+          "roundtrip_docx_sha256": "28495fec79ce742a809943d558af051b0ae08b0817199a2e216ec1a8c3875347"
+        },
+        "odt": {
+          "size_bytes": 12447,
+          "sha256": "a59584361b59cb05759f60acb2d26bdf8a46798039007f688d4a08db3ac53334",
+          "roundtrip_docx_size_bytes": 27505,
+          "roundtrip_docx_sha256": "2b872b117ff8b95d890f360c305ecc3c4a720453233bdba548f7da6d7deccf01"
+        }
+      }
+    },
+    "docwen-current": {
+      "entrypoints": {
+        "doc": "uv run docwen run smartdoc-rich-parity.docx --to doc --output <dir> --json",
+        "rtf": "uv run docwen run smartdoc-rich-parity.docx --to rtf --output <dir> --json",
+        "odt": "uv run docwen run smartdoc-rich-parity.docx --to odt --output <dir> --json"
+      },
+      "cli_duration_seconds": {
+        "doc": 1.877,
+        "rtf": 1.808,
+        "odt": 6.539
+      },
+      "artifacts": {
+        "doc": {
+          "size_bytes": 312355,
+          "sha256": "2411661d54406cac41b7d94cb99948e2c8f2be804ca3b4f565667c4b134eaab0",
+          "roundtrip_docx_size_bytes": 36948,
+          "roundtrip_docx_sha256": "ba6a5249da64835509c7eb42d709a33341522d9e854f37f2c81eb7a48f4e718c"
+        },
+        "rtf": {
+          "size_bytes": 64066,
+          "sha256": "8d6efef5798943ef137c719ae2d0bdf0b3e6d25d24970d40171e04bab143f2bb",
+          "roundtrip_docx_size_bytes": 28339,
+          "roundtrip_docx_sha256": "93beb0958bce66741d67c20b4821d417745167a05120c172945f7d484d5715d8"
+        },
+        "odt": {
+          "size_bytes": 12438,
+          "sha256": "4483d8da9e9c9b1589cc56796578e045798f4578129f1b65bcdd0b071b0e18be",
+          "roundtrip_docx_size_bytes": 27523,
+          "roundtrip_docx_sha256": "945b3bc0177fb2f3c5e6d4e43868543c371b96f467d8515c144d693733e532fc"
+        }
+      }
+    }
+  },
+  "process_governance": {
+    "preexisting_processes": [
+      {
+        "name": "wps.exe",
+        "pid": 1796,
+        "started": "2026-07-14 11:44"
+      },
+      {
+        "name": "wps.exe",
+        "pid": 18764,
+        "started": "2026-07-14 11:44"
+      }
+    ],
+    "new_relevant_processes_after_conversion_and_readback": []
+  },
+  "environment_boundary": {
+    "microsoft_word": "installed and used for all normalized readback plus ODT production",
+    "wps_writer": "installed and available in the shared DOC/RTF candidate chain",
+    "libreoffice": "not installed or discoverable; LibreOffice-only execution remains open"
+  },
+  "accepted_limits": [
+    "Raw external artifact and roundtrip DOCX hashes differ because Office metadata is nondeterministic; normalized semantic projection is the parity contract.",
+    "This fixture closes one rich DOCX outbound slice for DOC, RTF, and ODT, not all 20 SmartDoc routes or broad real-world document batches.",
+    "The shared Microsoft Word ODT xml:id strict-parse limitation remains explicit and is not represented as current-only technical debt or overall ODT acceptance.",
+    "Large-document progress and cancellation feel, installed LibreOffice, complex floating layout, content controls, equations, footnotes/endnotes, macros, signatures, protection, and broader review-feature matrices remain open."
+  ],
+  "evidence": {
+    "transient_output_dir": "tmp/vis020-smartdoc-rich/artifacts"
+  }
+}

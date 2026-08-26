@@ -1,0 +1,127 @@
+{
+  "golden_id": "GOLDEN-010",
+  "scope": "focused SmartSheet XLS to XLSX style and merged-cell real external-office smoke",
+  "created_at": "2026-07-03",
+  "route": {
+    "source_format": "xls",
+    "target_format": "xlsx",
+    "category": "spreadsheet"
+  },
+  "input_workbook": {
+    "source_fixture": "tmp/smart-sheet-style-real-smoke-2026-07-03/docwen-current-cli/smart-sheet-style-probe.xls",
+    "source_fixture_evidence": "tests/fixtures/golden/old_system_smartsheet_xlsx_xls_style_real_smoke_semantics.json",
+    "sheet": "Styled",
+    "merge_range": "A1:C1",
+    "formula_cell": "C5",
+    "formula": "=SUM(B3:B4)",
+    "number_format": "0.00"
+  },
+  "expected_semantics": {
+    "output_extension": ".xlsx",
+    "zip_magic": "504b0304",
+    "entry_count": 17,
+    "sheet": "Styled",
+    "merged_ranges": [
+      "A1:C1"
+    ],
+    "cells": {
+      "A1": {
+        "value": "Merged Style Smoke",
+        "data_only": "Merged Style Smoke",
+        "bold": true,
+        "italic": false,
+        "fill": "FF5B9BD5",
+        "number_format": "General"
+      },
+      "A2": {
+        "value": "Item",
+        "data_only": "Item",
+        "bold": true,
+        "italic": false,
+        "fill": "FFD9EAD3",
+        "number_format": "General"
+      },
+      "B2": {
+        "value": "Qty",
+        "data_only": "Qty",
+        "bold": true,
+        "italic": false,
+        "fill": "FFD9EAD3",
+        "number_format": "General"
+      },
+      "C2": {
+        "value": "Total",
+        "data_only": "Total",
+        "bold": true,
+        "italic": false,
+        "fill": "FFD9EAD3",
+        "number_format": "General"
+      },
+      "A3": {
+        "value": "Apple",
+        "data_only": "Apple"
+      },
+      "B3": {
+        "value": 2,
+        "data_only": 2
+      },
+      "A4": {
+        "value": "Pear",
+        "data_only": "Pear"
+      },
+      "B4": {
+        "value": 7,
+        "data_only": 7
+      },
+      "A5": {
+        "value": "Total",
+        "data_only": "Total"
+      },
+      "C5": {
+        "value": "=SUM(B3:B4)",
+        "data_only": 9,
+        "bold": true,
+        "italic": true,
+        "fill": "FFFFF2CC",
+        "number_format": "0.00"
+      }
+    },
+    "column_widths": {
+      "A": 18.0,
+      "B": 10.0,
+      "C": 14.0
+    }
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "success": true,
+      "output_path": "tmp/smart-sheet-style-xls-xlsx-real-smoke-2026-07-03/docwen-ref-tk/smart-sheet-style-probe.xlsx",
+      "output_size_bytes": 9354,
+      "zip_magic": "504b0304",
+      "entry_count": 17,
+      "semantics_match_expected": true
+    },
+    "docwen-ref-pyside6": {
+      "success": true,
+      "output_path": "tmp/smart-sheet-style-xls-xlsx-real-smoke-2026-07-03/docwen-ref-pyside6/smart-sheet-style-probe.xlsx",
+      "output_size_bytes": 9352,
+      "zip_magic": "504b0304",
+      "entry_count": 17,
+      "semantics_match_expected": true
+    },
+    "docwen-current": {
+      "success": true,
+      "output_path": "tmp/smart-sheet-style-xls-xlsx-real-smoke-2026-07-03/docwen-current-cli/smart-sheet-style-probe.xlsx",
+      "output_size_bytes": 9353,
+      "zip_magic": "504b0304",
+      "entry_count": 17,
+      "semantics_match_expected": true
+    }
+  },
+  "accepted_limits": [
+    "This is focused real environment evidence, not a final GOLDEN-010 pass.",
+    "Output sizes differ by 2 bytes across old/current routes and are treated as metadata only.",
+    "The input XLS is the current controlled output from the paired XLSX to XLS style smoke, already proven equivalent to old Tk and old PySide6 for the checked style semantics.",
+    "The probe covers XLS to XLSX style and merged-cell preservation only; LibreOffice-only execution and the broader SmartSheet route matrix remain open."
+  ]
+}

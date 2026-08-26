@@ -1,0 +1,37 @@
+{
+  "case_id": "positive-anchor-topology",
+  "category": "positive",
+  "input_id": "anchor-topology.md",
+  "source": "> ```mermaid\n> graph TD\n> ```\n>\n> ^inner-fence\n\n^outer-quote\n\n> - one\n> - two\n>\n> ^inner-list\n\n^quote-list-outer\n\n- > quote\n  > continuation\n\n  ^inner-quote\n\n^outer-list\n\nTop A ^top-a\n\nTop B ^top-b\n",
+  "expected": {
+    "target_kind_ids": [],
+    "anchor_kind_ids": [
+      ["inner-fence", "fenced_block", "post_block"],
+      ["outer-quote", "block_quote", "post_block"],
+      ["inner-list", "list", "post_block"],
+      ["quote-list-outer", "block_quote", "post_block"],
+      ["inner-quote", "block_quote", "post_block"],
+      ["outer-list", "list", "post_block"],
+      ["top-a", "paragraph", "inline"],
+      ["top-b", "paragraph", "inline"]
+    ],
+    "anchor_container_paths": [
+      [{"block_kind": "block_quote", "block_range": {"start": 0, "end": 47}}],
+      [],
+      [{"block_kind": "block_quote", "block_range": {"start": 62, "end": 94}}],
+      [],
+      [
+        {"block_kind": "list", "block_range": {"start": 114, "end": 158}},
+        {"block_kind": "list_item", "block_range": {"start": 114, "end": 158}}
+      ],
+      [],
+      [],
+      []
+    ],
+    "link_kinds": [],
+    "reference_statuses": [],
+    "citation_keys": [],
+    "diagnostics": [],
+    "source_unchanged": true
+  }
+}

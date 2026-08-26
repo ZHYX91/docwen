@@ -1,0 +1,256 @@
+{
+  "golden_id": "GOLDEN-003",
+  "scope": "focused three-project real financial workbook XLSX-to-Markdown batch",
+  "created_at": "2026-07-15",
+  "sources": {
+    "financial_sample": {
+      "publisher": "Microsoft",
+      "official_page": "https://learn.microsoft.com/en-us/power-bi/create-reports/sample-financial-download",
+      "download_url": "https://download.microsoft.com/download/1/4/E/14EDED28-6C58-4055-A65C-23B4DA81C4DE/Financial%20Sample.xlsx",
+      "filename": "Financial Sample.xlsx",
+      "size_bytes": 83418,
+      "sha256": "c3f17156ab7c192571ecfc742e88c16a4b7243a4d4b4a420fcb68dec44e10196",
+      "ooxml_package_entries": 26,
+      "sheet_names": ["Sheet1"],
+      "table_names": ["financials"],
+      "rows": 701,
+      "columns": 16,
+      "nonempty_cells": 11216,
+      "data_rows": 700,
+      "countries": 5,
+      "products": 6,
+      "segments": 5
+    },
+    "contoso_pnl": {
+      "publisher": "Microsoft",
+      "official_page": "https://www.microsoft.com/en-us/download/details.aspx?id=38838",
+      "download_url": "https://download.microsoft.com/download/b/e/c/becf5873-6b88-4920-9096-2c10ba98de60/ContosoPnL_Excel2013.zip",
+      "archive_filename": "ContosoPnL_Excel2013.zip",
+      "archive_size_bytes": 6592017,
+      "archive_sha256": "a4e8ab694927bd8e394a5c18bc06349093cd96452c5195bffddcc5192d6af65c",
+      "workbook_filename": "ContosoPnL_Excel2013.xlsx",
+      "workbook_size_bytes": 7361732,
+      "workbook_sha256": "d9a77819ed43a93cda82ab7ba08dd6406981d9d3eae7cfb7cae4720a40f87ac5",
+      "ooxml_package_entries": 260,
+      "sheet_names": [
+        "Cost Per Head",
+        "VTB $ By Sub Class",
+        "PV VTF People Analysis",
+        "PV Budget by Exec Org",
+        "PV Headcount",
+        "YoY Rate & Volume",
+        "PV OPEX Analysis",
+        "PV VTB People",
+        "PV OPEX by Region"
+      ],
+      "defined_names": ["Slicer_Fiscal_Year", "Slicer_Month", "Slicer_Sub_Class"],
+      "openpyxl_visible_charts": 1,
+      "openpyxl_visible_images": 6,
+      "official_feature_claims": ["PowerPivot", "PivotTables", "Power View"]
+    },
+    "redistribution": "external_official_binaries_retained_only_in_workspace_bound_temporary_probe"
+  },
+  "execution_contract": {
+    "docwen-ref-tk": "project venv plus production docwen.converter.xlsx2md.convert_spreadsheet_to_md",
+    "docwen-ref-pyside6": "project venv plus production SpreadsheetPlugin.convert",
+    "docwen-current-direct": "project venv plus production SpreadsheetPlugin.convert",
+    "docwen-current-runtime": "SpreadsheetPlugin -> TaskManager -> OutputFinalizer",
+    "aligned_options": ["no images and no OCR", "keep images and no OCR"],
+    "office_processes_started": false,
+    "valid_project_executions_successful": true
+  },
+  "financial_sample_projection": {
+    "all_four_paths_semantically_equal": true,
+    "normalization": ["newline", "YAML title-label", "YAML field order"],
+    "entries": 702,
+    "headings": 1,
+    "table_rows_including_header": 701,
+    "data_rows": 700,
+    "projection_sha256": "a016ce6370c09c23c8f270e8dabc5330158f2ab4023e77b834bf49fe484a83b5",
+    "normalized_body_sha256": "9a7939360802b4fea8cd15cca93f9eb7b0d2d5fa43b0fe38aa7ff5e66f1fd6e8"
+  },
+  "contoso_no_image_projection": {
+    "old_pyside6_current_text_equal_after_newline_normalization": true,
+    "old_pyside6_current_text_sha256": "493976dc935bebef208ba1e54a63deeb9b7acd5013fd5d15c5bc72c539ae6274",
+    "tk_text_sha256": "b95103dffd37b14cca0abfe12d8d3ae56f365bc7f4ba3104a5a7e6b8d6d08840",
+    "semantic_normalization": [
+      "localized YAML",
+      "Tk literal nan to blank",
+      "localized empty-sheet marker",
+      "Markdown separator rows"
+    ],
+    "all_three_project_semantic_projections_equal": true,
+    "entries": 82,
+    "headings": 9,
+    "table_rows_including_headers": 72,
+    "empty_sheet_markers": 1,
+    "projection_sha256": "1f2817bc1dc0aa01bd591f031c2a9711bebd2998867343cdb102708bd25f6c64",
+    "old_pyside6_improvement_retained": "blank cells remain blank instead of rendering literal nan"
+  },
+  "contoso_keep_images_projection": {
+    "docwen-ref-tk_image_count": 6,
+    "docwen-ref-pyside6_image_count": 0,
+    "docwen-current_image_count": 6,
+    "tk_current_image_bytes_equal": true,
+    "image_size_bytes_each": 16528,
+    "image_sha256_each": "956bc5cb06cad6196955b6d5dc34130bdef297c328e44721f5970c81d266a4f0",
+    "current_image_names": [
+      "PV VTF People Analysis_image1.png",
+      "PV Budget by Exec Org_image2.png",
+      "PV Headcount_image3.png",
+      "PV OPEX Analysis_image4.png",
+      "PV VTB People_image5.png",
+      "PV OPEX by Region_image6.png"
+    ],
+    "classification": "current restores Tk-primary image extraction and improves the old partial PySide6 omission"
+  },
+  "current_runtime_finalizer": {
+    "financial_sample": {
+      "artifact_count": 1,
+      "primary_name": "Financial Sample.md",
+      "primary_bytes": 190323,
+      "primary_sha256": "6877c300ac86933180766c00e1aadbbcb678c8089e2a91a2f51cc8b5bce6eedb",
+      "input_bytes": 83418,
+      "output_bytes": 190323,
+      "sheet_count": 1,
+      "row_count": 701,
+      "column_count": 16,
+      "block_count": 1,
+      "image_count": 0,
+      "diagnostics": ["SHEET2MD-OK", "FINALIZER_DONE"],
+      "workspace_paths_leaked": false
+    },
+    "contoso_keep_images": {
+      "artifact_count": 7,
+      "primary_name": "ContosoPnL_Excel2013.md",
+      "primary_bytes": 6667,
+      "primary_sha256": "70b997e29c5ba46df0df904d84f1d22c34e29fcde2f31fa64b13630790b9d769",
+      "image_artifact_count": 6,
+      "input_bytes": 7361732,
+      "output_bytes": 105835,
+      "sheet_count": 9,
+      "row_count": 6075,
+      "column_count": 26,
+      "block_count": 16,
+      "image_count": 6,
+      "diagnostics": ["SHEET2MD-OK", "FINALIZER_DONE"],
+      "all_artifacts_under_requested_output_directory": true,
+      "workspace_paths_leaked": false
+    }
+  },
+  "contoso_pivot_slicer_pdf_addendum": {
+    "audit_id": "VIS-2026-07-17-107",
+    "scope": "same official Contoso workbook, three projects, Excel/WPS/LibreOffice XLSX-to-PDF physical parity and current Print priority consumption",
+    "heads": {
+      "docwen-ref-tk": "ec9298286cfe1379d5c5470db381577ea43ca0fa",
+      "docwen-ref-pyside6": "63db927c5ded920d4994bfede5c7b34c55e2f43e",
+      "docwen-current-base": "5c9906725e3fe674cc6e4c9cc6418a5d99aee3ce"
+    },
+    "source_package_profile": {
+      "package_entries": 260,
+      "sheet_count": 9,
+      "pivot_table_parts": 3,
+      "pivot_cache_definition_parts": 4,
+      "slicer_cache_parts": 3,
+      "slicer_parts": 1,
+      "slicer_defined_names": ["Slicer_Fiscal_Year", "Slicer_Month", "Slicer_Sub_Class"],
+      "connection_names": ["Access ContosoPnLData", "Connection", "ThisWorkbookDataModel"],
+      "model_item_bytes": 6094848,
+      "model_item_sha256": "1ECE8FB5A7350EE45677452BE5F1461C3DC7563C489B6CC852AA945CA956ED0D"
+    },
+    "current_priority_consumer_fix": {
+      "reproduced_gap": "Settings and base config persisted document_to_pdf/spreadsheet_to_pdf priorities, but current Print conversion hard-coded Microsoft Office before WPS and never read context.config.",
+      "config_keys": [
+        "software.special_conversions.document_to_pdf",
+        "software.special_conversions.spreadsheet_to_pdf"
+      ],
+      "fixed_behavior": "Print resolves each configured backend in order, including LibreOffice at its configured position, and preserves plugin/core/runtime ownership boundaries.",
+      "default_spreadsheet_order": ["wps_spreadsheets", "msoffice_excel", "libreoffice"],
+      "default_document_order": ["wps_writer", "msoffice_word", "libreoffice"],
+      "initial_regression_result": "3 failed before production repair",
+      "post_fix_print_package_result": "19 passed"
+    },
+    "pdf_matrix": {
+      "excel": {
+        "all_three_successful": true,
+        "page_count_each": 10,
+        "all_three_ordered_page_pixels_equal": true,
+        "all_three_pypdf_text_equal": true,
+        "all_three_pdfplumber_text_equal": true,
+        "page_2_slicer_anchors": ["Fiscal Year", "Month", "Sub Class"],
+        "power_view_message_pages": [4, 5, 6, 8, 9, 10],
+        "raw_pdf_bytes": {"tk": 125988, "pyside6": 125988, "current": 125994}
+      },
+      "wps": {
+        "all_three_successful": true,
+        "page_count_each": 10,
+        "tk_current_ordered_page_pixels_equal": true,
+        "all_three_ordered_page_pixels_equal": false,
+        "all_three_pypdf_text_equal": true,
+        "all_three_pdfplumber_text_equal": true,
+        "page_2_slicer_anchors_present": false,
+        "old_pyside6_secondary_pixel_difference": "pages 1-6 and 8-10 differ while page 7 is exact; visual content remains the same",
+        "raw_pdf_bytes": {"tk": 178949, "pyside6": 172921, "current": 178935}
+      },
+      "libreoffice": {
+        "all_three_successful": true,
+        "page_count_each": 10,
+        "all_three_ordered_page_pixels_equal": true,
+        "all_three_pypdf_text_equal": true,
+        "all_three_pdfplumber_text_equal": true,
+        "page_2_slicer_anchors_present": false,
+        "raw_pdf_bytes_each": 254565
+      }
+    },
+    "manual_visual_review": {
+      "unique_pixel_sets_reviewed": [
+        "Excel current (equal to both references)",
+        "WPS current (equal to Tk)",
+        "WPS old PySide6 secondary set",
+        "LibreOffice current (equal to both references)"
+      ],
+      "excel_page_2": "Fiscal Year, Month and Sub Class slicers plus the pivot chart are visible; WPS and LibreOffice do not preserve this surface.",
+      "shared_source_print_boundaries": [
+        "Power View single-sheet message on pages 4-6 and 8-10",
+        "source-width number overflow shown as hashes",
+        "some chart titles or chart edges are clipped by the source print layout"
+      ],
+      "current_only_visual_regression_found": false
+    },
+    "external_evidence": {
+      "root": "D:/docwen-parity/vis107-contoso-pivot-5c99067-v1",
+      "files": 110,
+      "bytes": 21829887,
+      "projection_sha256": "EA1AE9DBA75FA32C32E111CFD11C35E795F6BDC76F63F712427E7C50AF4F4E54",
+      "raw_pdf_hash_policy": "provenance only; ordered rendered page pixels and normalized text are the equality oracles"
+    },
+    "classification": {
+      "current_only_config_consumer_gap_found_and_fixed": true,
+      "tk_primary_default_wps_physical_parity": true,
+      "excel_high_fidelity_option_parity": true,
+      "production_change_made": true,
+      "broad_editable_pivot_powerpivot_slicer_fidelity_closed": false,
+      "overall_parity_closed": false
+    },
+    "known_limits": [
+      "PDF proves a physical output surface but cannot prove editable PowerPivot model, interactive PivotTable or slicer preservation.",
+      "The single official workbook does not close macros, external links, protection, signatures or broader chart/print-layout fidelity.",
+      "The Power View multi-sheet messages and source print clipping remain explicit source/toolchain boundaries, not accepted broad fidelity differences.",
+      "Long-task physical progress and cancellation UX remain open."
+    ]
+  },
+  "classification": {
+    "current_only_functional_gap_found": false,
+    "route_or_option_wiring_gap_found": false,
+    "old_pyside6_improvement_retained": true,
+    "tk_primary_image_ability_retained": true,
+    "production_change_made": false
+  },
+  "known_limits": [
+    "This is focused strong real-workbook evidence, not broad XLSX-to-Markdown or final artifact parity.",
+    "PowerPivot model fidelity, interactive PivotTables, slicers, and chart rendering or extraction remain unverified.",
+    "Formula and cached-formula behavior plus validation breadth remain open.",
+    "External SmartSheet round trips and installed LibreOffice execution remain environment-bound.",
+    "Large-workbook physical progress and cancellation UX remain open."
+  ]
+}

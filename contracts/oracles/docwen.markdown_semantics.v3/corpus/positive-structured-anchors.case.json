@@ -1,0 +1,15 @@
+{
+  "case_id": "positive-structured-anchors",
+  "category": "positive",
+  "input_id": "positive-structured-anchors.md",
+  "source": "- one\n- two\n\n^whole-list\n\n> quote\n> continuation\n^quote-anchor\n\n> [!note] Callout\n> body\n\n^callout-anchor\n\n| A |\n|---|\n| 1 |\n^table-anchor\n\n$$\nx=1\n$$\n\n^equation-anchor\n\n```python\nprint(1)\n```\n^code-anchor\n\n```mermaid\ngraph TD\n```\n\n^mermaid-anchor\n\n```query\ntag:#project\n```\n^query-anchor\n\n```view\ncolumns: 2\n```\n\n^view-anchor\n",
+  "expected": {
+    "target_kind_ids": [],
+    "anchor_kind_ids": [["whole-list", "list", "post_block"], ["quote-anchor", "block_quote", "post_block"], ["callout-anchor", "callout", "post_block"], ["table-anchor", "table", "post_block"], ["equation-anchor", "equation", "post_block"], ["code-anchor", "code_block", "post_block"], ["mermaid-anchor", "fenced_block", "post_block"], ["query-anchor", "fenced_block", "post_block"], ["view-anchor", "fenced_block", "post_block"]],
+    "link_kinds": [],
+    "reference_statuses": [],
+    "citation_keys": [],
+    "diagnostics": [],
+    "source_unchanged": true
+  }
+}

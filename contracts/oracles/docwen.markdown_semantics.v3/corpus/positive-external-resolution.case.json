@@ -1,0 +1,22 @@
+{
+  "case_id": "positive-external-resolution",
+  "category": "positive",
+  "input_id": "positive-external-resolution.md",
+  "source": "@[[Other#^external-id|External title]] @[[Other#Parent#Child]] @external-cite\n",
+  "external_references": [
+    {"page_locator": "Other", "selector_kind": "stable_id", "target_id": "external-id", "resolved_document_id": "document:stable-1", "resolved_document_sha256": "f0bd3d700cd9b81984808c0a85dd4a9f5d595276ad12f2e05a955d2ebf89683a", "resolved_kind": "table", "cached_number": "4", "current_title": "External title"},
+    {"page_locator": "Other", "selector_kind": "heading_path", "heading_path": ["Parent", "Child"], "resolved_document_id": "document:stable-1", "resolved_document_sha256": "f0bd3d700cd9b81984808c0a85dd4a9f5d595276ad12f2e05a955d2ebf89683a", "resolved_kind": "heading", "cached_number": "2.3", "current_title": "Child"}
+  ],
+  "external_citations": [
+    {"key": "external-cite", "record_id": "reference-record:98", "record_sha256": "31932b86c631e229cd21d88319e2799b13058d3c2185d69ba5f01294f23573bd", "presentation": "External, 2026"}
+  ],
+  "expected": {
+    "target_kind_ids": [],
+    "anchor_kind_ids": [],
+    "link_kinds": [],
+    "reference_statuses": ["resolved", "resolved"],
+    "citation_keys": ["external-cite"],
+    "diagnostics": [],
+    "source_unchanged": true
+  }
+}

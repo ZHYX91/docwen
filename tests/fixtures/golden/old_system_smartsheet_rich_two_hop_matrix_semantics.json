@@ -1,0 +1,466 @@
+{
+  "golden_id": "GOLDEN-010",
+  "scope": "rich three-project SmartSheet non-XLSX two-hop matrix",
+  "created_at": "2026-07-14",
+  "routes": [
+    "xls->ods",
+    "xls->et",
+    "ods->xls",
+    "ods->et",
+    "et->xls",
+    "et->ods"
+  ],
+  "fixture_generation": {
+    "policy": "The XLS, ODS, and ET source files were generated once from the same deterministic XLSX through current production single-hop routes, then the exact same source bytes were supplied to all three projects. Generation is not counted as a project-under-test result.",
+    "xlsx": {
+      "size_bytes": 10791,
+      "sha256": "20cdced1c2b331b6297d65f274d726e654ff8755d0b5f5073ac6ed7abcff83e1"
+    },
+    "xls": {
+      "size_bytes": 31744,
+      "sha256": "f7340bbb0ce82198c089bca7c7ccbfe75413f866a46e63a18f06c982e694e7cc"
+    },
+    "ods": {
+      "size_bytes": 8988,
+      "sha256": "745b6430405266d8e74852a73b0f1359d51ad3274b03d0fbf45c9d39b2cfed63"
+    },
+    "et": {
+      "size_bytes": 31744,
+      "sha256": "c83efb6fb0aebe51ea86d692cf8772c79325b3ec9bd7cb14e8d931e11f2a8dc3"
+    }
+  },
+  "normalized_rich_projection": {
+    "sheet_names": [
+      "Data",
+      "Lookup",
+      "_Meta"
+    ],
+    "sheet_visibility": {
+      "Data": -1,
+      "Lookup": -1,
+      "_Meta": 0
+    },
+    "used_range": "$A$1:$G$7",
+    "merge_area": "$A$1:$E$1",
+    "representative_cells": {
+      "A1": {
+        "value": "VIS-024 Rich SmartSheet",
+        "bold": true,
+        "fill": 12874308,
+        "merge_area": "$A$1:$E$1"
+      },
+      "A2": {
+        "value": "Item",
+        "bold": true,
+        "fill": 4697456
+      },
+      "B3": {
+        "value": "North"
+      },
+      "C3": {
+        "value": 2
+      },
+      "D3": {
+        "value": 12.5,
+        "number_format_semantic": "$0.00"
+      },
+      "E3": {
+        "value": 25,
+        "formula": "=C3*D3",
+        "number_format_semantic": "$0.00"
+      },
+      "C7": {
+        "value": 14,
+        "formula": "=SUM(C3:C6)"
+      },
+      "E7": {
+        "value": 95.75,
+        "formula": "=SUM(E3:E6)",
+        "bold": true,
+        "italic": true,
+        "fill": 13431551,
+        "number_format_semantic": "$0.00"
+      },
+      "G2": {
+        "value": "Project link"
+      }
+    },
+    "column_widths": {
+      "A": 17.4,
+      "B": 11.4,
+      "C": 9.4,
+      "D": 13.4,
+      "E": 13.4,
+      "G": 15.4
+    },
+    "chart_count": 1,
+    "shape_count": 3,
+    "hyperlink_count": 1,
+    "comment_count": 1,
+    "validation_type_b3": 3,
+    "auto_filter_mode": true
+  },
+  "accepted_normalization": {
+    "currency_number_format": {
+      "source_forms": [
+        "$0.00",
+        "\"$\"0.00"
+      ],
+      "normalized": "$0.00",
+      "reason": "Excel ODS serialization quotes the currency literal while preserving the same values and displayed text in all three projects."
+    },
+    "binary_hashes": "Binary hashes differ because external producers rewrite container metadata. Normalized workbook and package projections are the contract."
+  },
+  "matrix": {
+    "xls->ods": {
+      "all_project_projections_equal": true,
+      "retained_rich_projection": true,
+      "projects": {
+        "docwen-ref-tk": {
+          "output_size_bytes": 9073,
+          "sha256": "c9043f67b20cfd31028a366a20f8e7d7efdcf8c24cf20be3bba580cf2289dcef",
+          "elapsed_seconds": 6.703
+        },
+        "docwen-ref-pyside6": {
+          "output_size_bytes": 9073,
+          "sha256": "0ea2243319cbc1c5f2f16245c5d222d12c1aa85df404dc6fcfef6ef095099ebb",
+          "elapsed_seconds": 6.546
+        },
+        "docwen-current": {
+          "output_name": "vis024-rich.ods",
+          "output_size_bytes": 9075,
+          "sha256": "08d0ad8609c4dc74f8925f91409b1963131cd5b80d453e9953977c30f4883351",
+          "elapsed_seconds": 16.584,
+          "cli_success": true
+        }
+      }
+    },
+    "xls->et": {
+      "all_project_projections_equal": true,
+      "retained_rich_projection": true,
+      "projects": {
+        "docwen-ref-tk": {
+          "output_size_bytes": 33280,
+          "sha256": "fd5d072522babefba8aa4a1739a0675077b41e0bed6cb87e6edd5e625dbf285a",
+          "elapsed_seconds": 2.557
+        },
+        "docwen-ref-pyside6": {
+          "output_size_bytes": 33280,
+          "sha256": "079d61b55792fb3da492461dbf0beae5b8301e13a61dd24c3265170b0367b4d9",
+          "elapsed_seconds": 2.358
+        },
+        "docwen-current": {
+          "output_name": "vis024-rich.et",
+          "output_size_bytes": 33280,
+          "sha256": "2ecf752439956afa1f20555623487f524188362d92158beaac8141419503ae02",
+          "elapsed_seconds": 13.848,
+          "cli_success": true
+        }
+      }
+    },
+    "ods->xls": {
+      "all_project_projections_equal": true,
+      "retained_rich_projection": true,
+      "projects": {
+        "docwen-ref-tk": {
+          "output_size_bytes": 37888,
+          "sha256": "3a4761dcc02866a93e1a73a2bcd2eae688430c54f221cfba0dd23ad3dccd4e32",
+          "elapsed_seconds": 5.72
+        },
+        "docwen-ref-pyside6": {
+          "output_size_bytes": 37888,
+          "sha256": "70babc92f6995ed72993a8902de7155a8ff82712604aec12cd483bf54c2e3ba0",
+          "elapsed_seconds": 5.389
+        },
+        "docwen-current": {
+          "output_name": "vis024-rich.xls",
+          "output_size_bytes": 37888,
+          "sha256": "8754e6a8302a7d5609473da4c5020410570ddda6311bfa5576c8d94a4b21cd47",
+          "elapsed_seconds": 16.722,
+          "cli_success": true
+        }
+      }
+    },
+    "ods->et": {
+      "all_project_projections_equal": true,
+      "retained_rich_projection": true,
+      "projects": {
+        "docwen-ref-tk": {
+          "output_size_bytes": 37888,
+          "sha256": "a51a52ca3b46f4686beca906020d201c53e125fb1f985c15fffb6833ef3b2776",
+          "elapsed_seconds": 5.588
+        },
+        "docwen-ref-pyside6": {
+          "output_size_bytes": 37888,
+          "sha256": "d5add35b6cee3bdd0fbe05df3e0c1bdc262475a290dd6f93d4cf1af684c01b22",
+          "elapsed_seconds": 5.438
+        },
+        "docwen-current": {
+          "output_name": "vis024-rich.et",
+          "output_size_bytes": 37888,
+          "sha256": "5e07fb2bb82329a3c628aaff473ae283e871c3a2c3d14c671c168e23d498c529",
+          "elapsed_seconds": 16.736,
+          "cli_success": true
+        }
+      }
+    },
+    "et->xls": {
+      "all_project_projections_equal": true,
+      "retained_rich_projection": true,
+      "projects": {
+        "docwen-ref-tk": {
+          "output_size_bytes": 33280,
+          "sha256": "0547e91e39509b80160e77ba71a070ecaf3b18a89bbc7d646288bc1c6bf9d5bd",
+          "elapsed_seconds": 2.466
+        },
+        "docwen-ref-pyside6": {
+          "output_size_bytes": 33280,
+          "sha256": "71f8e252a09620697c4e35ed5b18bf281b29ab6efe9b958c86967cf1bd180758",
+          "elapsed_seconds": 2.442
+        },
+        "docwen-current": {
+          "output_name": "vis024-rich.xls",
+          "output_size_bytes": 33280,
+          "sha256": "fc35546dd47f76b952475c6f8bf6e78e737262745785cdbdcf37737b94b9fd2c",
+          "elapsed_seconds": 13.748,
+          "cli_success": true
+        }
+      }
+    },
+    "et->ods": {
+      "all_project_projections_equal": true,
+      "retained_rich_projection": true,
+      "projects": {
+        "docwen-ref-tk": {
+          "output_size_bytes": 9074,
+          "sha256": "94dd7b15a0b4170929564decb2351e4e963e068a36c997cdef53c95bacf18b8e",
+          "elapsed_seconds": 6.762
+        },
+        "docwen-ref-pyside6": {
+          "output_size_bytes": 9075,
+          "sha256": "ec5777b1568be7b2ceb4960a673ed63d21b0b500fbf19f9eea1652a8be057a5f",
+          "elapsed_seconds": 6.601
+        },
+        "docwen-current": {
+          "output_name": "vis024-rich.ods",
+          "output_size_bytes": 9075,
+          "sha256": "ebdbd04f5aae364ebf2ca6928fa7706fe80a78c3cb40e85d28d6c316f97d2900",
+          "elapsed_seconds": 16.655,
+          "cli_success": true
+        }
+      }
+    }
+  },
+  "ods_output_package_projection": {
+    "applies_to": [
+      "xls->ods",
+      "et->ods"
+    ],
+    "all_projects": {
+      "magic": "504b03040a000000",
+      "mimetype": "application/vnd.oasis.opendocument.spreadsheet",
+      "entry_count": 8,
+      "formula_count": 6,
+      "has_content_validations": true,
+      "has_embedded_chart_object": true,
+      "media": {
+        "media/image1.png": "8d45b06f6c8ea81217ef1d660565828afa4a74b42ddf749c3c1e63caa21a09ff"
+      }
+    }
+  },
+  "current_runtime_observability": {
+    "representative_route": "xls->ods",
+    "success": true,
+    "final_name": "vis024-rich.ods",
+    "suggested_name": "vis024-rich.ods",
+    "media_type": "application/vnd.oasis.opendocument.spreadsheet",
+    "metadata": {
+      "source_format": "xls",
+      "target_format": "ods",
+      "backend": "WPS Spreadsheets -> Microsoft Excel"
+    },
+    "metrics": {
+      "input_bytes": 31744,
+      "output_bytes": 9074,
+      "backend": "WPS Spreadsheets -> Microsoft Excel"
+    },
+    "diagnostics": [
+      "SHEETFMT-OK",
+      "FINALIZER_DONE"
+    ],
+    "process_remaining": []
+  },
+  "process_evidence": {
+    "pre_existing": [
+      {
+        "pid": 1796,
+        "name": "wps",
+        "started": "2026-07-14T11:44:44+08:00"
+      },
+      {
+        "pid": 18764,
+        "name": "wps",
+        "started": "2026-07-14T11:44:34+08:00"
+      }
+    ],
+    "all_routes_final_new_processes": [],
+    "policy": "Only PIDs absent from each pre-route snapshot were eligible for cleanup. The two pre-existing WPS addon PIDs were never terminated."
+  },
+  "libreoffice_only_two_hop_addendum": {
+    "vis_id": "VIS-2026-07-17-105",
+    "project_heads": {
+      "docwen-ref-tk": "ec9298286cfe1379d5c5470db381577ea43ca0fa",
+      "docwen-ref-pyside6": "63db927c5ded920d4994bfede5c7b34c55e2f43e",
+      "docwen-current": "a11ddf67dff6177e7fd5bb90f6908308604d2353"
+    },
+    "toolchain": {
+      "version": "LibreOffice 26.2.4.2 0229ac93fcf0d7cbc6376066c6f35021cef002dc",
+      "official_msi_sha256": "202F26CDA071C5AA4996A5A28412FDDCEB3891DCEB0366982C62650456C0730F",
+      "process_local_administrative_image": "D:/docwen-parity/toolchains/libreoffice-26.2.4/image",
+      "system_wide_install_claimed": false,
+      "explicit_empty_com_candidate_lists": true
+    },
+    "source": {
+      "xlsx_bytes": 7106,
+      "xlsx_sha256": "8E8B3996091C3120A0252CAB955244025172E8FE9862549F4E1D132F05B9E10E",
+      "generated_xls_bytes": 9216,
+      "generated_xls_sha256": "7E0DD558EB467AD875AC6FCB979DCB2A1CE2881303AFA2C460A39F7A22548685",
+      "generated_ods_bytes": 24369,
+      "generated_ods_sha256": "9C45738ADBBA71E81660E5E23E131827EB8240DF138919374F1FF48BE87C5E26",
+      "surface": [
+        "two sheets",
+        "merged A1:E1 title",
+        "six formulas with cached values",
+        "selected fills/fonts/number formats/column widths",
+        "one list validation",
+        "one color-scale conditional format",
+        "one native chart"
+      ]
+    },
+    "matrix": {
+      "xls->ods": {
+        "attempts": 3,
+        "successes": 3,
+        "backend_per_hop": [
+          "LibreOffice",
+          "LibreOffice"
+        ],
+        "all_project_projections_equal": true,
+        "normalized_projection_sha256": "B270046F91B34F284B975DE72E3A8132FA642DEF34823F78989565972509C011",
+        "final_artifacts": {
+          "docwen-ref-tk": {
+            "bytes": 24413,
+            "sha256": "8C3FD808FD1961C435AB924F1822B802B79AFA976409ABE5E33566573CDE77DA"
+          },
+          "docwen-ref-pyside6": {
+            "bytes": 24412,
+            "sha256": "4D52C7574548769749C895FA19313503EA40778EEC075D03AD1780BAAB826E25"
+          },
+          "docwen-current": {
+            "bytes": 24413,
+            "sha256": "879DA85B8E92EC7FFB728169086FFCD002ECE7549F49E15C9532082CCAE42994"
+          }
+        },
+        "ods_package_projection": {
+          "entry_count": 13,
+          "formula_count": 6,
+          "validation_count": 1,
+          "chart_object_entries": 3,
+          "required_text_present": true
+        },
+        "physical_projection": {
+          "page_count_per_project": 3,
+          "all_project_pixels_equal": true,
+          "ordered_page_sha256": "3DCE690318864444714D84F699A919FEC3E69252DDEEA31DD6C388CE252916DC"
+        }
+      },
+      "ods->xls": {
+        "attempts": 3,
+        "successes": 3,
+        "backend_per_hop": [
+          "LibreOffice",
+          "LibreOffice"
+        ],
+        "all_project_projections_equal": true,
+        "normalized_projection_sha256": "B270046F91B34F284B975DE72E3A8132FA642DEF34823F78989565972509C011",
+        "final_artifacts": {
+          "docwen-ref-tk": {
+            "bytes": 9728,
+            "sha256": "12A5E2E6024792D6FDFAAA4DBC637DC5915F6B7BD0B3C8842843CAE07A728822"
+          },
+          "docwen-ref-pyside6": {
+            "bytes": 9728,
+            "sha256": "12A5E2E6024792D6FDFAAA4DBC637DC5915F6B7BD0B3C8842843CAE07A728822"
+          },
+          "docwen-current": {
+            "bytes": 9728,
+            "sha256": "12A5E2E6024792D6FDFAAA4DBC637DC5915F6B7BD0B3C8842843CAE07A728822"
+          }
+        },
+        "physical_projection": {
+          "page_count_per_project": 3,
+          "all_project_pixels_equal": true,
+          "ordered_page_sha256": "EAEAC9A4005A26D63A1AA8F5B130667CE12FCBF88403979B7612D28F61C2D4A8"
+        }
+      }
+    },
+    "shared_projection": {
+      "sheet_names": [
+        "Data",
+        "Lookup"
+      ],
+      "dimensions": {
+        "Data": "A1:E7",
+        "Lookup": "A1:A5"
+      },
+      "merged_ranges": [
+        "A1:E1"
+      ],
+      "formula_values": {
+        "E3": 25,
+        "C7": 14,
+        "E7": 95.5
+      },
+      "formula_text": {
+        "E3": "=C3*D3",
+        "C7": "=SUM(C3:C6)",
+        "E7": "=SUM(E3:E6)"
+      },
+      "list_validation": {
+        "range": "B3:B6",
+        "formula": "Lookup!$A$2:$A$5"
+      },
+      "chart_count": 1,
+      "chart_series_count": 2,
+      "conditional_format_count": 0,
+      "number_format_normalization": "quoted dollar literal becomes escaped dollar",
+      "selected_style_and_width_semantics_retained": true
+    },
+    "physical_baseline": {
+      "target_xls_ordered_page_sha256": "240A11230A8F16A0F05BBF70B5967FEBF65836E203A345D89F95BE642C513563",
+      "target_ods_ordered_page_sha256": "4870557F0DB6E1558D324291E22CD7D8EFEC541913B0FCEB716F9E6A8E968858",
+      "shared_boundary": "The target-format baselines and two-hop outputs all render as three A4 pages, but the additional LibreOffice round trip shifts the chart split across Data pages 1-2. All categories remain visible and each route is pixel-identical across projects. This is focused parity evidence, not broad source-fidelity acceptance."
+    },
+    "process_evidence": {
+      "soffice_before": [],
+      "soffice_after": [],
+      "no_new_lingering_processes": true
+    },
+    "external_evidence": {
+      "root": "D:/docwen-parity/vis105-smartsheet-libreoffice-a11ddf6-v1",
+      "file_count": 41,
+      "byte_count": 1194575,
+      "projection_sha256": "CB7FF7B5B78554980A3AEBBD629C215AAF20E289E401EAB16BDEA4DF4E08882C",
+      "physical_projection_sha256": "9FC5F67FC6E590C5AEE23E2B2A7E77BA7E5BC0C4F50358A990A3B05B8B718606",
+      "raw_binaries_checked_in": false
+    }
+  },
+  "accepted_limits": [
+    "This closes the six real XLS/ODS/ET non-XLSX two-hop routes for one deterministic rich workbook; it is not a final GOLDEN-010 pass.",
+    "The projection proves values, formulas and cached values, merged cells, selected styles and widths, hidden-sheet state, chart and shape counts, one image, one hyperlink, one comment, one list validation, and auto-filter state. It does not prove chart series/title internals, pivots, macros, external links, protection, signatures, or every spreadsheet feature.",
+    "VIS-024 ran before a discoverable LibreOffice toolchain existed. VIS-105 supersedes that environment statement with a focused official LibreOffice-only XLS->ODS and ODS->XLS two-hop addendum; system-wide installation and broader fidelity remain unclaimed.",
+    "Old Tk and old PySide6 timestamped output names are not required in current; current stable source-owned names are an architecture and UX improvement.",
+    "The old PySide6 direct probe explicitly configured keep_intermediates=false because the unbootstrapped workspace helper defaults true; this matches the product default and avoids treating a harness-only auxiliary XLSX as a final artifact.",
+    "Two harness incidents were corrected before acceptance: GB18030 old-log decoding and a cleanup race where an Excel process exited between snapshot and termination. Neither incident was a production conversion failure."
+  ]
+}

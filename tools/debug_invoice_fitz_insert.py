@@ -1,13 +1,31 @@
 from __future__ import annotations
 
+import sys
 import tempfile
 from pathlib import Path
 
 
+def _ensure_workspace_packages_on_path() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    package_srcs = [
+        repo_root / "packages" / "plugins" / "optimizers" / "invoice_cn" / "src",
+        repo_root / "packages" / "core" / "src",
+    ]
+    for src in reversed(package_srcs):
+        src_text = str(src)
+        if src_text not in sys.path:
+            sys.path.insert(0, src_text)
+
+
 def main() -> int:
+    _ensure_workspace_packages_on_path()
+
     import fitz
 
-    from docwen.converter.layout2md import invoice_cn
+    from docwen_plugin_optimizer_invoice_cn.invoice_cn.metadata import (
+        parse_invoice_metadata_from_compact_text,
+    )
+    from docwen_plugin_optimizer_invoice_cn.invoice_cn.ocr_normalize import _compact_text
 
     with tempfile.TemporaryDirectory() as td:
         pdf = Path(td) / "m.pdf"
@@ -21,8 +39,8 @@ def main() -> int:
         try:
             page = d[0]
             text = str(page.get_text("text"))
-            compact = invoice_cn.compact_text(text)
-            meta = invoice_cn.parse_invoice_metadata_from_compact_text(compact)
+            compact = _compact_text(text)
+            meta = parse_invoice_metadata_from_compact_text(compact)
             print(repr(text))
             print(repr(compact))
             print(meta)

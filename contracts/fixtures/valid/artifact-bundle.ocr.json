@@ -1,0 +1,213 @@
+{
+  "schema": "docwen.artifact_bundle.v2",
+  "bundle_id": "bundle.ocr.001",
+  "task_id": "task.ocr.001",
+  "producer": {
+    "name": "DocWen",
+    "product_version": "0.9.0",
+    "machine_protocol": "docwen.machine.v1"
+  },
+  "layout_schema": "docwen.document_node.v1",
+  "artifacts": [
+    {
+      "artifact_id": "document.ocr",
+      "kind": "document",
+      "locator": "documents/scanned-contract.md",
+      "logical_path": "scanned-contract/scanned-contract.md",
+      "suggested_name": "scanned-contract.md",
+      "media_type": "text/markdown",
+      "size_bytes": 128,
+      "sha256": "4444444444444444444444444444444444444444444444444444444444444444"
+    },
+    {
+      "artifact_id": "fragment.page.1",
+      "kind": "fragment",
+      "locator": "fragments/page-001.md",
+      "logical_path": "scanned-contract/page-001/page-001.md",
+      "suggested_name": "page-001.md",
+      "media_type": "text/markdown",
+      "size_bytes": 64,
+      "sha256": "5151515151515151515151515151515151515151515151515151515151515151"
+    },
+    {
+      "artifact_id": "fragment.page.2",
+      "kind": "fragment",
+      "locator": "fragments/page-002.md",
+      "logical_path": "scanned-contract/page-002/page-002.md",
+      "suggested_name": "page-002.md",
+      "media_type": "text/markdown",
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "artifact_id": "fragment.page.3",
+      "kind": "fragment",
+      "locator": "fragments/page-003.md",
+      "logical_path": "scanned-contract/page-003/page-003.md",
+      "suggested_name": "page-003.md",
+      "media_type": "text/markdown",
+      "size_bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "artifact_id": "fragment.page.4",
+      "kind": "fragment",
+      "locator": "fragments/page-004.md",
+      "logical_path": "scanned-contract/page-004/page-004.md",
+      "suggested_name": "page-004.md",
+      "media_type": "text/markdown",
+      "size_bytes": 64,
+      "sha256": "5454545454545454545454545454545454545454545454545454545454545454"
+    },
+    {
+      "artifact_id": "resource.page.1",
+      "kind": "resource",
+      "locator": "resources/page-001.png",
+      "logical_path": "scanned-contract/page-001.png",
+      "suggested_name": "page-001.png",
+      "media_type": "image/png",
+      "size_bytes": 2048,
+      "sha256": "6161616161616161616161616161616161616161616161616161616161616161"
+    },
+    {
+      "artifact_id": "resource.page.2",
+      "kind": "resource",
+      "locator": "resources/page-002.png",
+      "logical_path": "scanned-contract/page-002.png",
+      "suggested_name": "page-002.png",
+      "media_type": "image/png",
+      "size_bytes": 2048,
+      "sha256": "6262626262626262626262626262626262626262626262626262626262626262"
+    },
+    {
+      "artifact_id": "resource.page.3",
+      "kind": "resource",
+      "locator": "resources/page-003.png",
+      "logical_path": "scanned-contract/page-003.png",
+      "suggested_name": "page-003.png",
+      "media_type": "image/png",
+      "size_bytes": 2048,
+      "sha256": "6363636363636363636363636363636363636363636363636363636363636363"
+    },
+    {
+      "artifact_id": "resource.page.4",
+      "kind": "resource",
+      "locator": "resources/page-004.png",
+      "logical_path": "scanned-contract/page-004.png",
+      "suggested_name": "page-004.png",
+      "media_type": "image/png",
+      "size_bytes": 2048,
+      "sha256": "6464646464646464646464646464646464646464646464646464646464646464"
+    },
+    {
+      "artifact_id": "resource.unresolved.5",
+      "kind": "resource",
+      "locator": "resources/embedded-005.png",
+      "logical_path": "scanned-contract/embedded-005.png",
+      "suggested_name": "embedded-005.png",
+      "media_type": "image/png",
+      "size_bytes": 1024,
+      "sha256": "6565656565656565656565656565656565656565656565656565656565656565"
+    }
+  ],
+  "entries": [
+    {
+      "artifact_id": "document.ocr",
+      "role": "primary",
+      "ordinal": 0,
+      "preferred": true
+    }
+  ],
+  "relations": [
+    {
+      "type": "fragment_of",
+      "source_artifact_id": "fragment.page.1",
+      "target_artifact_id": "document.ocr",
+      "role": "ocr_page",
+      "ordinal": 0,
+      "page_fragment": {
+        "fragment_kind": "page",
+        "page_index": 1,
+        "page_count": 4,
+        "ocr_status": "success",
+        "source_page": 1
+      }
+    },
+    {
+      "type": "fragment_of",
+      "source_artifact_id": "fragment.page.2",
+      "target_artifact_id": "document.ocr",
+      "role": "ocr_page",
+      "ordinal": 1,
+      "page_fragment": {
+        "fragment_kind": "page",
+        "page_index": 2,
+        "page_count": 4,
+        "ocr_status": "no_text",
+        "source_page": 2
+      }
+    },
+    {
+      "type": "fragment_of",
+      "source_artifact_id": "fragment.page.3",
+      "target_artifact_id": "document.ocr",
+      "role": "ocr_page",
+      "ordinal": 2,
+      "page_fragment": {
+        "fragment_kind": "page",
+        "page_index": 3,
+        "page_count": 4,
+        "ocr_status": "recognition_failed",
+        "source_page": 3
+      }
+    },
+    {
+      "type": "fragment_of",
+      "source_artifact_id": "fragment.page.4",
+      "target_artifact_id": "document.ocr",
+      "role": "ocr_page",
+      "ordinal": 3,
+      "page_fragment": {
+        "fragment_kind": "page",
+        "page_index": 4,
+        "page_count": 4,
+        "ocr_status": "success",
+        "source_page": 4
+      }
+    },
+    {
+      "type": "resource_of",
+      "source_artifact_id": "resource.page.1",
+      "target_artifact_id": "fragment.page.1",
+      "role": "image",
+      "page_resource": {"source_page": 1}
+    },
+    {
+      "type": "resource_of",
+      "source_artifact_id": "resource.page.2",
+      "target_artifact_id": "fragment.page.2",
+      "role": "image",
+      "page_resource": {"source_page": 2}
+    },
+    {
+      "type": "resource_of",
+      "source_artifact_id": "resource.page.3",
+      "target_artifact_id": "fragment.page.3",
+      "role": "image",
+      "page_resource": {"source_page": 3}
+    },
+    {
+      "type": "resource_of",
+      "source_artifact_id": "resource.page.4",
+      "target_artifact_id": "fragment.page.4",
+      "role": "image",
+      "page_resource": {"source_page": 4}
+    },
+    {
+      "type": "resource_of",
+      "source_artifact_id": "resource.unresolved.5",
+      "target_artifact_id": "document.ocr",
+      "role": "image"
+    }
+  ]
+}

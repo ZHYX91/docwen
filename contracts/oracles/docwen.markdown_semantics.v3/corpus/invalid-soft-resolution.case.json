@@ -1,0 +1,18 @@
+{
+  "case_id": "invalid-soft-resolution",
+  "category": "negative",
+  "input_id": "invalid-soft-resolution.md",
+  "source": "# One\n## Repeat\n# Two\n## Repeat\n\n@[[#Repeat]] @[[#Missing]]\n",
+  "expected": {
+    "target_kind_ids": [["heading", null], ["heading", null], ["heading", null], ["heading", null]],
+    "anchor_kind_ids": [],
+    "link_kinds": [],
+    "reference_statuses": ["ambiguous", "missing"],
+    "citation_keys": [],
+    "diagnostics": [
+      {"severity": "error", "code": "docwen.markdown.cross_reference.ambiguous", "range": {"start": 33, "end": 45}, "related_ranges": [{"start": 6, "end": 16}, {"start": 22, "end": 32}]},
+      {"severity": "error", "code": "docwen.markdown.cross_reference.missing", "range": {"start": 46, "end": 59}}
+    ],
+    "source_unchanged": true
+  }
+}

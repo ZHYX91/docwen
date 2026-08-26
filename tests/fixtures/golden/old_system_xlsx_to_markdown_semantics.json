@@ -1,0 +1,1255 @@
+{
+  "golden_id": "GOLDEN-003",
+  "description": "Normalized old-system semantic smoke for standard XLSX to Markdown conversion.",
+  "input_xlsx": {
+    "name": "golden_test.xlsx",
+    "source_fixture": "packages/plugins/spreadsheet/tests/conftest.py::sample_xlsx_path",
+    "sheets": [
+      {
+        "name": "Sales",
+        "table": {
+          "headers": [
+            "Product",
+            "Quantity",
+            "Price",
+            "Total"
+          ],
+          "rows": [
+            [
+              "Alpha",
+              "10",
+              "9.99",
+              "99.9"
+            ],
+            [
+              "Beta",
+              "5",
+              "19.5",
+              "97.5"
+            ],
+            [
+              "Gamma",
+              "20",
+              "4.5",
+              "90"
+            ]
+          ]
+        },
+        "merged_block": [
+          "Q1 Sales Summary",
+          "Q1 Sales Summary",
+          "Q1 Sales Summary",
+          "Q1 Sales Summary"
+        ]
+      },
+      {
+        "name": "Summary",
+        "table": {
+          "headers": [
+            "Metric",
+            "Value"
+          ],
+          "rows": [
+            [
+              "Total Revenue",
+              "287.4"
+            ],
+            [
+              "Total Units",
+              "35"
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  "expected_markdown_semantics": {
+    "contains": [
+      "# Sales",
+      "# Summary",
+      "| Product   |   Quantity |   Price |   Total |",
+      "| Alpha     |         10 |    9.99 |    99.9 |",
+      "| Beta      |          5 |   19.5  |    97.5 |",
+      "| Gamma     |         20 |    4.5  |    90   |",
+      "| Q1 Sales Summary   | Q1 Sales Summary   | Q1 Sales Summary   | Q1 Sales Summary   |",
+      "| Metric        |   Value |",
+      "| Total Revenue |   287.4 |",
+      "| Total Units   |    35   |"
+    ],
+    "sheet_headings": [
+      "# Sales",
+      "# Summary"
+    ],
+    "sheet_count": 2,
+    "row_count": 9,
+    "col_count": 4,
+    "block_count": 3,
+    "image_count": 0,
+    "merge_strategy": "fill"
+  },
+  "shared_behavior_evidence": {
+    "formula_style_protection_scope": {
+      "classification": "same_old_current_markdown_value_only_boundary",
+      "old_tk_code_evidence": "docwen-ref-tk/src/docwen/converter/xlsx2md/core.py::convert_spreadsheet_to_md loads openpyxl.load_workbook(file_path, data_only=True) and worksheet_to_dataframe reads cell.value only",
+      "old_pyside6_code_evidence": "docwen-ref-pyside6/src/docwen/converter/xlsx/to_md/core.py::convert_spreadsheet_to_md loads openpyxl.load_workbook(file_path, data_only=True) and worksheet_to_dataframe reads cell.value only",
+      "current_code_evidence": "packages/plugins/spreadsheet/src/docwen_plugin_spreadsheet/to_markdown/converter.py::SpreadsheetToMarkdownConverter._convert_xlsx loads openpyxl.load_workbook(input_path, data_only=True) and _worksheet_to_dataframe reads cell.value only",
+      "formula_policy": "XLSX formulas are exported through cached/data-only cell values when present; formula objects/text are not emitted as Markdown by the old Tk, old PySide6, or current standard XLSX-to-Markdown path.",
+      "cached_formula_probe": {
+        "classification": "same_old_current_cached_formula_value_projection",
+        "input": {
+          "name": "cached_formula_probe.xlsx",
+          "worksheet": "Formula",
+          "formula_cell": "B4",
+          "formula_text": "=SUM(B2:B3)",
+          "cached_value": 15,
+          "oo_xml_patch": "Generated XLSX stores B4 as <f>SUM(B2:B3)</f><v>15</v> so openpyxl data_only=True can read the cached value without requiring an external spreadsheet engine."
+        },
+        "old_tk_projection": {
+          "success": true,
+          "contains_formula_text": false,
+          "contains_cached_value": true,
+          "table_lines": [
+            "| Item   |   Value |",
+            "|:-------|--------:|",
+            "| Alpha  |      10 |",
+            "| Beta   |       5 |",
+            "| Total  |      15 |"
+          ]
+        },
+        "old_pyside6_projection": {
+          "success": true,
+          "contains_formula_text": false,
+          "contains_cached_value": true,
+          "table_lines": [
+            "| Item   |   Value |",
+            "|:-------|--------:|",
+            "| Alpha  |      10 |",
+            "| Beta   |       5 |",
+            "| Total  |      15 |"
+          ]
+        },
+        "current_projection": {
+          "success": true,
+          "artifact_media_type": "text/markdown",
+          "suggested_name": "cached_formula_probe.md",
+          "artifact_metadata": {
+            "sheet_count": 1,
+            "row_count": 4,
+            "col_count": 2,
+            "block_count": 1,
+            "image_count": 0,
+            "merge_strategy": "fill"
+          },
+          "metrics": {
+            "sheets": 1,
+            "rows": 4,
+            "cols": 2,
+            "blocks": 1,
+            "images": 0
+          },
+          "contains_formula_text": false,
+          "contains_cached_value": true,
+          "table_lines": [
+            "| Item   |   Value |",
+            "|:-------|--------:|",
+            "| Alpha  |      10 |",
+            "| Beta   |       5 |",
+            "| Total  |      15 |"
+          ]
+        },
+        "current_regression_test": "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdDirect::test_convert_xlsx_cached_formula_value_matches_old_system_projection",
+        "comparison_implication": "A focused cached-formula XLSX now proves old Tk, old PySide6, and current all render cached/data-only value 15 and do not leak formula text. Broader real workbook batches with formulas remain open for final parity."
+      },
+      "style_protection_policy": "Cell styles, workbook protection, and sheet protection are not represented in the old/current standard Markdown table output; preserving them belongs to spreadsheet format-conversion or a future richer Markdown export, not to current parity for GOLDEN-003.",
+      "current_regression_tests": [
+        "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdDirect::test_convert_xlsx_uses_data_only_formula_values_not_formula_text",
+        "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdDirect::test_convert_xlsx_cached_formula_value_matches_old_system_projection"
+      ]
+    },
+    "image_ocr_scope": {
+      "classification": "current_clean_artifact_pipeline_preserves_old_image_ocr_capability_surface",
+      "old_tk_code_evidence": "docwen-ref-tk/src/docwen/converter/xlsx2md/image_processor.py extracts worksheet images and delegates OCR/link rendering through shared image Markdown helpers",
+      "old_pyside6_code_evidence": "docwen-ref-pyside6/src/docwen/converter/xlsx/to_md/image_processor.py extracts worksheet images and delegates OCR/link rendering through shared image Markdown helpers",
+      "current_code_evidence": "packages/plugins/spreadsheet/src/docwen_plugin_spreadsheet/to_markdown/converter.py extracts worksheet images, optionally runs OCR, registers image/sidecar artifacts, and injects Markdown at worksheet positions",
+      "embedded_image_probe": {
+        "classification": "same_old_current_embedded_image_reachability_with_normalized_artifact_names",
+        "input": {
+          "name": "embedded_image_probe.xlsx",
+          "worksheet": "ImageSheet",
+          "image_anchor": "C3",
+          "image_format": "png",
+          "image_size_px": [
+            1,
+            1
+          ]
+        },
+        "old_tk_projection": {
+          "success": true,
+          "output_kind": "timestamped_folder_md_with_image",
+          "image_file_count": 1,
+          "image_name_pattern": "embedded_image_probe_image1_YYYYMMDD_HHMMSS_fromXlsx.png",
+          "markdown_link_style": "wiki_embed",
+          "markdown_contains_image_file_name": true,
+          "required_markdown_tokens": [
+            "# ImageSheet",
+            "Before image",
+            "42"
+          ]
+        },
+        "old_pyside6_projection": {
+          "success": true,
+          "output_kind": "timestamped_folder_md_with_image",
+          "image_file_count": 1,
+          "image_name_pattern": "embedded_image_probe_image1_YYYYMMDD_HHMMSS_fromXlsx.png",
+          "markdown_link_style": "wiki_embed",
+          "markdown_contains_image_file_name": true,
+          "required_markdown_tokens": [
+            "# ImageSheet",
+            "Before image",
+            "42"
+          ]
+        },
+        "current_projection": {
+          "success": true,
+          "diagnostic_codes": [
+            "SHEET2MD-OK",
+            "FINALIZER_DONE"
+          ],
+          "artifact_count": 2,
+          "image_artifact_count": 1,
+          "markdown_image_count": 1,
+          "image_suggested_name": "ImageSheet_image1.png",
+          "markdown_link_style": "markdown_embed",
+          "markdown_output_parent_is_requested_output_dir": true,
+          "image_output_parent_is_requested_output_dir": true,
+          "required_markdown_tokens": [
+            "# ImageSheet",
+            "Before image",
+            "42",
+            "![ImageSheet_image1.png](ImageSheet_image1.png)"
+          ]
+        },
+        "current_regression_test": "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdPipeline::test_pipeline_xlsx_embedded_image_matches_old_system_projection",
+        "comparison_implication": "Focused embedded-image XLSX evidence proves all three projects preserve image reachability in Markdown. Old timestamped wiki-embed image names and current stable Markdown-embed artifact names are normalized as accepted artifact/link-style differences; broader image/OCR matrices remain open."
+      },
+      "multi_image_probe": {
+        "classification": "same_old_current_multi_embedded_image_order_projection",
+        "input": {
+          "name": "multi_image_probe.xlsx",
+          "worksheet": "ImageSheet",
+          "image_anchors": [
+            "C3",
+            "D5"
+          ],
+          "image_format": "png",
+          "image_size_px": [
+            1,
+            1
+          ],
+          "image_count": 2
+        },
+        "old_tk_projection": {
+          "success": true,
+          "output_kind": "timestamped_folder_md_with_images",
+          "image_file_count": 2,
+          "image_name_patterns": [
+            "multi_image_probe_image1_YYYYMMDD_HHMMSS_fromXlsx.png",
+            "multi_image_probe_image2_YYYYMMDD_HHMMSS_fromXlsx.png"
+          ],
+          "markdown_link_style": "wiki_embed",
+          "wiki_embed_count": 2,
+          "markdown_contains_image1_token": true,
+          "markdown_contains_image2_token": true,
+          "required_markdown_tokens": [
+            "# ImageSheet",
+            "Before image",
+            "42",
+            "Second image",
+            "84"
+          ]
+        },
+        "old_pyside6_projection": {
+          "success": true,
+          "output_kind": "timestamped_folder_md_with_images",
+          "image_file_count": 2,
+          "image_name_patterns": [
+            "multi_image_probe_image1_YYYYMMDD_HHMMSS_fromXlsx.png",
+            "multi_image_probe_image2_YYYYMMDD_HHMMSS_fromXlsx.png"
+          ],
+          "markdown_link_style": "wiki_embed",
+          "wiki_embed_count": 2,
+          "markdown_contains_image1_token": true,
+          "markdown_contains_image2_token": true,
+          "required_markdown_tokens": [
+            "# ImageSheet",
+            "Before image",
+            "42",
+            "Second image",
+            "84"
+          ]
+        },
+        "current_projection": {
+          "success": true,
+          "diagnostic_codes": [
+            "SHEET2MD-OK",
+            "FINALIZER_DONE"
+          ],
+          "artifact_count": 3,
+          "image_artifact_count": 2,
+          "markdown_image_count": 2,
+          "image_suggested_names": [
+            "ImageSheet_image1.png",
+            "ImageSheet_image2.png"
+          ],
+          "artifact_metadata": {
+            "sheet_count": 1,
+            "row_count": 5,
+            "col_count": 4,
+            "block_count": 4,
+            "image_count": 2,
+            "merge_strategy": "fill"
+          },
+          "markdown_link_style": "markdown_embed",
+          "markdown_output_parent_is_requested_output_dir": true,
+          "image_output_parent_is_requested_output_dir": true,
+          "required_markdown_tokens": [
+            "# ImageSheet",
+            "Before image",
+            "42",
+            "Second image",
+            "84",
+            "![ImageSheet_image1.png](ImageSheet_image1.png)",
+            "![ImageSheet_image2.png](ImageSheet_image2.png)"
+          ]
+        },
+        "current_regression_test": "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdPipeline::test_pipeline_xlsx_multi_image_matches_old_system_projection",
+        "comparison_implication": "Focused multi-image XLSX evidence proves old Tk, old PySide6, and current all preserve two embedded image references in worksheet order while keeping surrounding worksheet text/table content. Old timestamped wiki-embed names and current stable Markdown-embed artifact names are normalized as accepted artifact/link-style differences; broader image/OCR workbook matrices remain open."
+      },
+      "multi_sheet_image_probe": {
+        "classification": "same_old_current_multi_sheet_embedded_image_order_projection",
+        "input": {
+          "name": "multi_sheet_image_probe.xlsx",
+          "worksheets": [
+            "FirstSheet",
+            "SecondSheet"
+          ],
+          "image_anchors": {
+            "FirstSheet": "C3",
+            "SecondSheet": "C3"
+          },
+          "image_format": "png",
+          "image_size_px": [
+            1,
+            1
+          ],
+          "image_count": 2
+        },
+        "old_tk_projection": {
+          "success": true,
+          "output_kind": "timestamped_folder_md_with_images",
+          "image_file_count": 2,
+          "image_name_patterns": [
+            "multi_sheet_image_probe_image1_YYYYMMDD_HHMMSS_fromXlsx.png",
+            "multi_sheet_image_probe_image2_YYYYMMDD_HHMMSS_fromXlsx.png"
+          ],
+          "markdown_link_style": "wiki_embed",
+          "wiki_embed_count": 2,
+          "markdown_contains_image1_token": true,
+          "markdown_contains_image2_token": true,
+          "image1_before_image2": true,
+          "required_markdown_tokens": [
+            "# FirstSheet",
+            "First image",
+            "11",
+            "# SecondSheet",
+            "Second image",
+            "22"
+          ]
+        },
+        "old_pyside6_projection": {
+          "success": true,
+          "output_kind": "timestamped_folder_md_with_images",
+          "image_file_count": 2,
+          "image_name_patterns": [
+            "multi_sheet_image_probe_image1_YYYYMMDD_HHMMSS_fromXlsx.png",
+            "multi_sheet_image_probe_image2_YYYYMMDD_HHMMSS_fromXlsx.png"
+          ],
+          "markdown_link_style": "wiki_embed",
+          "wiki_embed_count": 2,
+          "markdown_contains_image1_token": true,
+          "markdown_contains_image2_token": true,
+          "image1_before_image2": true,
+          "required_markdown_tokens": [
+            "# FirstSheet",
+            "First image",
+            "11",
+            "# SecondSheet",
+            "Second image",
+            "22"
+          ]
+        },
+        "current_projection": {
+          "success": true,
+          "diagnostic_codes": [
+            "SHEET2MD-OK",
+            "FINALIZER_DONE"
+          ],
+          "artifact_count": 3,
+          "image_artifact_count": 2,
+          "markdown_image_count": 2,
+          "image_suggested_names": [
+            "FirstSheet_image1.png",
+            "SecondSheet_image2.png"
+          ],
+          "artifact_metadata": {
+            "sheet_count": 2,
+            "row_count": 6,
+            "col_count": 3,
+            "block_count": 4,
+            "image_count": 2,
+            "merge_strategy": "fill"
+          },
+          "markdown_link_style": "markdown_embed",
+          "markdown_output_parent_is_requested_output_dir": true,
+          "image_output_parent_is_requested_output_dir": true,
+          "required_markdown_tokens": [
+            "# FirstSheet",
+            "First image",
+            "11",
+            "# SecondSheet",
+            "Second image",
+            "22",
+            "![FirstSheet_image1.png](FirstSheet_image1.png)",
+            "![SecondSheet_image2.png](SecondSheet_image2.png)"
+          ],
+          "images_in_order": true
+        },
+        "current_regression_test": "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdPipeline::test_pipeline_xlsx_multi_sheet_image_matches_old_system_projection",
+        "comparison_implication": "Focused multi-sheet image XLSX evidence proves old Tk, old PySide6, and current all preserve two embedded image references across worksheet order while keeping surrounding worksheet text/table content. Old timestamped wiki-embed names and current stable Markdown-embed artifact names are normalized as accepted artifact/link-style differences; broader image/OCR workbook matrices remain open."
+      },
+      "base64_image_mode_probe": {
+        "classification": "same_old_current_xlsx_base64_image_mode_projection",
+        "input": {
+          "name": "base64_image_probe.xlsx",
+          "worksheet": "ImageSheet",
+          "image_anchor": "C3",
+          "image_format": "png",
+          "image_size_px": [
+            1,
+            1
+          ],
+          "options": {
+            "keep_images": true,
+            "enable_ocr": false,
+            "image_mode": "base64",
+            "image_link_style": "wiki_embed"
+          }
+        },
+        "old_tk_projection": {
+          "success": true,
+          "contains_data_uri": true,
+          "image_file_count": 0,
+          "markdown_link_style": "wiki_embed_data_uri",
+          "required_markdown_tokens": [
+            "# ImageSheet",
+            "Before image",
+            "42",
+            "data:image/png;base64,"
+          ]
+        },
+        "old_pyside6_projection": {
+          "success": true,
+          "contains_data_uri": true,
+          "image_file_count": 0,
+          "markdown_link_style": "wiki_embed_data_uri",
+          "required_markdown_tokens": [
+            "# ImageSheet",
+            "Before image",
+            "42",
+            "data:image/png;base64,"
+          ]
+        },
+        "current_projection": {
+          "success": true,
+          "diagnostic_codes": [
+            "SHEET2MD-OK",
+            "FINALIZER_DONE"
+          ],
+          "artifact_count": 1,
+          "image_artifact_count": 0,
+          "markdown_image_count": 1,
+          "markdown_link_style": "wiki_embed_data_uri",
+          "markdown_output_parent_is_requested_output_dir": true,
+          "required_markdown_tokens": [
+            "# ImageSheet",
+            "Before image",
+            "42",
+            "![[data:image/png;base64,"
+          ]
+        },
+        "current_regression_test": "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdPipeline::test_pipeline_xlsx_base64_image_mode_matches_old_system_projection",
+        "comparison_implication": "Focused XLSX base64 image-mode evidence proves all three projects can embed worksheet images as data URI Markdown without producing a separate image output file/artifact. This narrows image-mode parity only; OCR placement and broader image/OCR matrices remain open."
+      },
+      "suppress_image_probe": {
+        "classification": "same_old_current_xlsx_image_suppression_projection",
+        "input": {
+          "name": "suppress_image_probe.xlsx",
+          "worksheet": "ImageSheet",
+          "image_anchor": "C3",
+          "image_format": "png",
+          "image_size_px": [
+            1,
+            1
+          ],
+          "options": {
+            "keep_images": false,
+            "enable_ocr": false,
+            "image_mode": "file",
+            "image_link_style": "wiki_embed"
+          }
+        },
+        "old_tk_projection": {
+          "success": true,
+          "contains_data_uri": false,
+          "contains_wiki_image": false,
+          "contains_markdown_image": false,
+          "contains_png_token": false,
+          "image_file_count": 0,
+          "required_markdown_tokens": [
+            "# ImageSheet",
+            "Before image",
+            "42"
+          ]
+        },
+        "old_pyside6_projection": {
+          "success": true,
+          "contains_data_uri": false,
+          "contains_wiki_image": false,
+          "contains_markdown_image": false,
+          "contains_png_token": false,
+          "image_file_count": 0,
+          "required_markdown_tokens": [
+            "# ImageSheet",
+            "Before image",
+            "42"
+          ]
+        },
+        "current_projection": {
+          "success": true,
+          "diagnostic_codes": [
+            "SHEET2MD-OK",
+            "FINALIZER_DONE"
+          ],
+          "artifact_count": 1,
+          "image_artifact_count": 0,
+          "markdown_image_count": 0,
+          "contains_data_uri": false,
+          "contains_wiki_image": false,
+          "contains_markdown_image": false,
+          "contains_png_token": false,
+          "markdown_output_parent_is_requested_output_dir": true,
+          "required_markdown_tokens": [
+            "# ImageSheet",
+            "Before image",
+            "42"
+          ]
+        },
+        "current_regression_test": "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdPipeline::test_pipeline_xlsx_suppresses_images_matches_old_system_projection",
+        "comparison_implication": "Focused XLSX image suppression evidence proves old Tk, old PySide6, and current all omit image Markdown, data URIs, PNG tokens, and separate image outputs/artifacts when keep_images is false and OCR is disabled, while preserving worksheet text/table content. OCR-enabled no-image placement and broader image/OCR matrices remain open."
+      },
+      "ocr_no_image_sidecar_probe": {
+        "classification": "same_old_current_xlsx_ocr_sidecar_no_image_projection",
+        "input": {
+          "name": "ocr_no_image_probe.xlsx",
+          "worksheet": "ImageSheet",
+          "image_anchor": "C3",
+          "image_format": "png",
+          "image_size_px": [
+            1,
+            1
+          ],
+          "stubbed_ocr_text": "OCR PROBE TEXT",
+          "options": {
+            "keep_images": false,
+            "enable_ocr": true,
+            "image_mode": "file",
+            "ocr_placement": "image_md",
+            "image_link_style": "wiki_embed"
+          }
+        },
+        "old_tk_projection": {
+          "success": true,
+          "main_markdown_contains_ocr_text": false,
+          "main_markdown_contains_md_sidecar_link": true,
+          "main_markdown_contains_png_token": false,
+          "image_file_count": 0,
+          "sidecar_file_count": 1,
+          "sidecar_contains_ocr_text": true,
+          "main_md_request_effective_placement": "image_md_sidecar",
+          "required_markdown_tokens": [
+            "# ImageSheet",
+            "Before image",
+            "42",
+            "![[ocr_no_image_probe_image1.md]]"
+          ]
+        },
+        "old_pyside6_projection": {
+          "success": true,
+          "main_markdown_contains_ocr_text": false,
+          "main_markdown_contains_md_sidecar_link": true,
+          "main_markdown_contains_png_token": false,
+          "image_file_count": 0,
+          "sidecar_file_count": 1,
+          "sidecar_contains_ocr_text": true,
+          "main_md_request_effective_placement": "image_md_sidecar",
+          "required_markdown_tokens": [
+            "# ImageSheet",
+            "Before image",
+            "42",
+            "![[ocr_no_image_probe_image1.md]]"
+          ]
+        },
+        "current_projection": {
+          "success": true,
+          "diagnostic_codes": [
+            "SHEET2MD-OK",
+            "OCR-BEST-EFFORT",
+            "FINALIZER_DONE"
+          ],
+          "artifact_count": 2,
+          "primary_artifact_count": 1,
+          "auxiliary_artifact_count": 1,
+          "image_artifact_count": 0,
+          "primary_metadata_image_count": 1,
+          "primary_markdown_contains_ocr_text": false,
+          "primary_markdown_contains_md_sidecar_link": true,
+          "primary_markdown_contains_png_token": false,
+          "sidecar_contains_ocr_text": true,
+          "sidecar_contains_image_markdown": false,
+          "primary_output_parent_is_requested_output_dir": true,
+          "sidecar_output_parent_is_requested_output_dir": true,
+          "required_primary_markdown_tokens": [
+            "# ImageSheet",
+            "Before image",
+            "42",
+            "![[ocr_no_image_probe__img_001_ocr.md]]"
+          ],
+          "required_sidecar_markdown_tokens": [
+            "source_format: xlsx",
+            "ocr: True",
+            "> OCR PROBE TEXT"
+          ]
+        },
+        "current_regression_test": "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdPipeline::test_pipeline_xlsx_ocr_sidecar_without_images_matches_old_system_projection",
+        "comparison_implication": "Focused XLSX OCR no-image sidecar evidence proves old Tk, old PySide6, and current all can write OCR text to a Markdown sidecar without retaining a separate image file/artifact. Old Tk/PySide6 force an XLSX main_md request into image_md sidecar placement; current main_md inline OCR remains a current enhancement and should not be removed for mechanical parity."
+      },
+      "multi_ocr_no_image_sidecar_probe": {
+        "classification": "same_old_current_xlsx_multi_ocr_sidecar_no_image_projection",
+        "input": {
+          "name": "multi_ocr_no_image_probe.xlsx",
+          "worksheet": "ImageSheet",
+          "image_anchors": [
+            "C3",
+            "D5"
+          ],
+          "image_format": "png",
+          "image_size_px": [
+            1,
+            1
+          ],
+          "image_count": 2,
+          "stubbed_ocr_text": "OCR MULTI TEXT",
+          "options": {
+            "keep_images": false,
+            "enable_ocr": true,
+            "image_mode": "file",
+            "ocr_placement": "image_md",
+            "image_link_style": "wiki_embed"
+          }
+        },
+        "old_tk_projection": {
+          "success": true,
+          "main_markdown_contains_ocr_text": false,
+          "main_markdown_contains_md_sidecar_link": true,
+          "main_markdown_contains_png_token": false,
+          "image_file_count": 0,
+          "sidecar_file_count": 2,
+          "sidecar_names": [
+            "multi_ocr_no_image_probe_image1.md",
+            "multi_ocr_no_image_probe_image2.md"
+          ],
+          "sidecars_contain_ocr_text": true,
+          "sidecars_contain_image_markdown": false,
+          "sidecar_links_in_order": true,
+          "required_markdown_tokens": [
+            "# ImageSheet",
+            "First OCR",
+            "101",
+            "Second OCR",
+            "202",
+            "![[multi_ocr_no_image_probe_image1.md]]",
+            "![[multi_ocr_no_image_probe_image2.md]]"
+          ]
+        },
+        "old_pyside6_projection": {
+          "success": true,
+          "main_markdown_contains_ocr_text": false,
+          "main_markdown_contains_md_sidecar_link": true,
+          "main_markdown_contains_png_token": false,
+          "image_file_count": 0,
+          "sidecar_file_count": 2,
+          "sidecar_names": [
+            "multi_ocr_no_image_probe_image1.md",
+            "multi_ocr_no_image_probe_image2.md"
+          ],
+          "sidecars_contain_ocr_text": true,
+          "sidecars_contain_image_markdown": false,
+          "sidecar_links_in_order": true,
+          "required_markdown_tokens": [
+            "# ImageSheet",
+            "First OCR",
+            "101",
+            "Second OCR",
+            "202",
+            "![[multi_ocr_no_image_probe_image1.md]]",
+            "![[multi_ocr_no_image_probe_image2.md]]"
+          ]
+        },
+        "current_projection": {
+          "success": true,
+          "diagnostic_codes": [
+            "SHEET2MD-OK",
+            "OCR-BEST-EFFORT",
+            "OCR-BEST-EFFORT",
+            "FINALIZER_DONE"
+          ],
+          "artifact_count": 3,
+          "primary_artifact_count": 1,
+          "auxiliary_artifact_count": 2,
+          "image_artifact_count": 0,
+          "sidecar_suggested_names": [
+            "multi_ocr_no_image_probe__img_001_ocr.md",
+            "multi_ocr_no_image_probe__img_002_ocr.md"
+          ],
+          "primary_metadata": {
+            "sheet_count": 1,
+            "row_count": 5,
+            "col_count": 4,
+            "block_count": 4,
+            "image_count": 2,
+            "merge_strategy": "fill"
+          },
+          "primary_markdown_contains_ocr_text": false,
+          "primary_markdown_contains_md_sidecar_link": true,
+          "primary_markdown_contains_png_token": false,
+          "sidecars_contain_ocr_text": true,
+          "sidecars_contain_image_markdown": false,
+          "sidecar_links_in_order": true,
+          "primary_output_parent_is_requested_output_dir": true,
+          "sidecar_output_parent_is_requested_output_dir": true,
+          "required_primary_markdown_tokens": [
+            "# ImageSheet",
+            "First OCR",
+            "101",
+            "Second OCR",
+            "202",
+            "![[multi_ocr_no_image_probe__img_001_ocr.md]]",
+            "![[multi_ocr_no_image_probe__img_002_ocr.md]]"
+          ],
+          "required_sidecar_markdown_tokens": [
+            "source_format: xlsx",
+            "ocr: True",
+            "> OCR MULTI TEXT"
+          ]
+        },
+        "current_regression_test": "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdPipeline::test_pipeline_xlsx_multi_ocr_sidecar_without_images_matches_old_system_projection",
+        "comparison_implication": "Focused XLSX multi-image OCR no-image sidecar evidence proves old Tk, old PySide6, and current all can write one OCR Markdown sidecar per embedded image without retaining separate image files/artifacts. Old timestamped/source-name sidecars and current stable finalizer sidecar names are normalized as accepted artifact naming differences; broader real OCR quality and placement matrices remain open."
+      },
+      "multi_ocr_with_images_sidecar_probe": {
+        "classification": "same_old_current_xlsx_multi_ocr_sidecar_with_image_projection",
+        "input": {
+          "name": "multi_ocr_with_images_probe.xlsx",
+          "worksheet": "ImageSheet",
+          "image_anchors": [
+            "C3",
+            "D5"
+          ],
+          "image_format": "png",
+          "image_size_px": [
+            1,
+            1
+          ],
+          "image_count": 2,
+          "stubbed_ocr_text": "OCR RETAIN TEXT",
+          "options": {
+            "keep_images": true,
+            "enable_ocr": true,
+            "image_mode": "file",
+            "ocr_placement": "image_md",
+            "image_link_style": "wiki_embed"
+          }
+        },
+        "old_tk_projection": {
+          "success": true,
+          "main_markdown_contains_ocr_text": false,
+          "main_markdown_contains_md_sidecar_link": true,
+          "main_markdown_contains_png_token": false,
+          "image_file_count": 2,
+          "sidecar_file_count": 2,
+          "image_names": [
+            "multi_ocr_with_images_probe_image1_YYYYMMDD_HHMMSS_fromXlsx.png",
+            "multi_ocr_with_images_probe_image2_YYYYMMDD_HHMMSS_fromXlsx.png"
+          ],
+          "sidecar_names": [
+            "multi_ocr_with_images_probe_image1.md",
+            "multi_ocr_with_images_probe_image2.md"
+          ],
+          "sidecars_contain_ocr_text": true,
+          "sidecars_contain_image_markdown": true,
+          "sidecar_links_in_order": true,
+          "required_markdown_tokens": [
+            "# ImageSheet",
+            "First OCR image",
+            "301",
+            "Second OCR image",
+            "302",
+            "![[multi_ocr_with_images_probe_image1.md]]",
+            "![[multi_ocr_with_images_probe_image2.md]]"
+          ],
+          "required_sidecar_tokens": [
+            ".png]]",
+            "OCR RETAIN TEXT"
+          ]
+        },
+        "old_pyside6_projection": {
+          "success": true,
+          "main_markdown_contains_ocr_text": false,
+          "main_markdown_contains_md_sidecar_link": true,
+          "main_markdown_contains_png_token": false,
+          "image_file_count": 2,
+          "sidecar_file_count": 2,
+          "image_names": [
+            "multi_ocr_with_images_probe_image1_YYYYMMDD_HHMMSS_fromXlsx.png",
+            "multi_ocr_with_images_probe_image2_YYYYMMDD_HHMMSS_fromXlsx.png"
+          ],
+          "sidecar_names": [
+            "multi_ocr_with_images_probe_image1.md",
+            "multi_ocr_with_images_probe_image2.md"
+          ],
+          "sidecars_contain_ocr_text": true,
+          "sidecars_contain_image_markdown": true,
+          "sidecar_links_in_order": true,
+          "required_markdown_tokens": [
+            "# ImageSheet",
+            "First OCR image",
+            "301",
+            "Second OCR image",
+            "302",
+            "![[multi_ocr_with_images_probe_image1.md]]",
+            "![[multi_ocr_with_images_probe_image2.md]]"
+          ],
+          "required_sidecar_tokens": [
+            ".png]]",
+            "OCR RETAIN TEXT"
+          ]
+        },
+        "current_projection": {
+          "success": true,
+          "diagnostic_codes": [
+            "SHEET2MD-OK",
+            "OCR-BEST-EFFORT",
+            "OCR-BEST-EFFORT",
+            "FINALIZER_DONE"
+          ],
+          "artifact_count": 5,
+          "primary_artifact_count": 1,
+          "auxiliary_artifact_count": 2,
+          "image_artifact_count": 2,
+          "image_suggested_names": [
+            "ImageSheet_image1.png",
+            "ImageSheet_image2.png"
+          ],
+          "sidecar_suggested_names": [
+            "multi_ocr_with_images_probe__img_001_ocr.md",
+            "multi_ocr_with_images_probe__img_002_ocr.md"
+          ],
+          "primary_metadata": {
+            "sheet_count": 1,
+            "row_count": 5,
+            "col_count": 4,
+            "block_count": 4,
+            "image_count": 2,
+            "merge_strategy": "fill"
+          },
+          "primary_markdown_contains_ocr_text": false,
+          "primary_markdown_contains_md_sidecar_link": true,
+          "primary_markdown_contains_png_token": false,
+          "sidecars_contain_ocr_text": true,
+          "sidecars_contain_image_markdown": true,
+          "sidecar_links_in_order": true,
+          "primary_output_parent_is_requested_output_dir": true,
+          "sidecar_output_parent_is_requested_output_dir": true,
+          "image_output_parent_is_requested_output_dir": true,
+          "required_primary_markdown_tokens": [
+            "# ImageSheet",
+            "First OCR image",
+            "301",
+            "Second OCR image",
+            "302",
+            "![[multi_ocr_with_images_probe__img_001_ocr.md]]",
+            "![[multi_ocr_with_images_probe__img_002_ocr.md]]"
+          ],
+          "required_sidecar_markdown_tokens": [
+            "source_format: xlsx",
+            "ocr: True",
+            "![[ImageSheet_image",
+            ".png]]",
+            "> OCR RETAIN TEXT"
+          ]
+        },
+        "current_regression_test": "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdPipeline::test_pipeline_xlsx_multi_ocr_sidecar_with_images_matches_old_system_projection",
+        "comparison_implication": "Focused XLSX multi-image OCR sidecar with-image evidence proves old Tk, old PySide6, and current all can write one OCR Markdown sidecar per embedded image while retaining separate image files/artifacts. Old timestamped/source-name PNG and sidecar names and current stable finalizer names are normalized as accepted artifact naming differences; broader real OCR quality and placement matrices remain open."
+      },
+      "current_finalizer_tests": [
+        "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdPipeline::test_pipeline_xlsx_images_are_finalized_as_relative_markdown_artifacts",
+        "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdPipeline::test_pipeline_xlsx_embedded_image_matches_old_system_projection",
+        "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdPipeline::test_pipeline_xlsx_multi_image_matches_old_system_projection",
+        "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdPipeline::test_pipeline_xlsx_multi_sheet_image_matches_old_system_projection",
+        "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdPipeline::test_pipeline_xlsx_base64_image_mode_matches_old_system_projection",
+        "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdPipeline::test_pipeline_xlsx_suppresses_images_matches_old_system_projection",
+        "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdPipeline::test_pipeline_xlsx_ocr_sidecar_without_images_matches_old_system_projection",
+        "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdPipeline::test_pipeline_xlsx_multi_ocr_sidecar_without_images_matches_old_system_projection",
+        "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdPipeline::test_pipeline_xlsx_multi_ocr_sidecar_with_images_matches_old_system_projection",
+        "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdPipeline::test_pipeline_xlsx_image_mode_falls_back_to_export_semantics"
+      ]
+    },
+    "csv_tsv_scope": {
+      "classification": "existing_current_direct_plugin_route_replaces_old_service_preconversion_boundary",
+      "old_tk_csv_code_evidence": "docwen-ref-tk/src/docwen/converter/xlsx2md/core.py supports input_format == 'csv' directly through _read_csv_flexible()",
+      "old_pyside6_csv_code_evidence": "docwen-ref-pyside6/src/docwen/converter/xlsx/to_md/core.py supports input_format == 'csv' directly through _read_csv_flexible()",
+      "old_tk_tsv_code_evidence": "docwen-ref-tk/src/docwen/services/strategies/spreadsheet/utils.py preprocess_table_file() converts actual_format == 'tsv' to XLSX before SpreadsheetToMarkdownStrategy calls convert_spreadsheet_to_md()",
+      "old_pyside6_tsv_code_evidence": "docwen-ref-pyside6/src/docwen/services/strategies/spreadsheet/utils.py preprocess_table_file() converts actual_format == 'tsv' to XLSX before SpreadsheetToMarkdownStrategy calls convert_spreadsheet_to_md()",
+      "current_route_evidence": "packages/plugins/spreadsheet/src/docwen_plugin_spreadsheet/manifest.py declares csv->md and tsv->md routes, and to_markdown/converter.py handles .csv/.tsv through the same _convert_csv() path",
+      "current_architecture_boundary": "Current keeps CSV/TSV as lightweight plugin-owned direct routes and does not send them through application preconversion; this replaces the old TSV service-preconversion path without requiring Office/WPS/LibreOffice.",
+      "current_tests": [
+        "packages/plugins/spreadsheet/tests/test_plugin_spreadsheet_imports.py::test_spreadsheet_plugin_manifest_routes",
+        "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdDirect::test_convert_tsv_preserves_old_preconversion_blank_row_blocks",
+        "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdPipeline::test_pipeline_csv_to_md",
+        "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdPipeline::test_pipeline_tsv_to_md",
+        "packages/application/tests/test_preconversion_chain.py::TestResolveChain::test_delimited_spreadsheets_use_direct_plugin_routes",
+        "packages/application/tests/test_controller.py::TestExecuteMethods::test_execute_single_delimited_spreadsheet_to_md_does_not_preconvert"
+      ],
+      "remaining_scope": "Broader old-system timestamped CSV/TSV output directories are still final-artifact evidence, but CSV/TSV route reachability and current no-preconversion behavior are not open parity gaps."
+    },
+    "delimited_block_projection_scope": {
+      "classification": "real_current_tsv_direct_route_regression_restored",
+      "probe_input": "Generated delimited_probe.tsv with two tab-delimited tables separated by one blank row; generated control CSV with the same logical rows.",
+      "old_tk_tsv_projection": {
+        "route": "service preprocess_table_file(actual_format='tsv') -> tsv_to_xlsx -> convert_spreadsheet_to_md()",
+        "preprocess_chain": [
+          "tsv",
+          "xlsx"
+        ],
+        "markdown_heading": "# Sheet1",
+        "block_count": 2,
+        "semantic_tokens": [
+          "| North    | Alpha     | line1 line2   |       10 |",
+          "| South    | Beta      | pipe \\| value |       20 |",
+          "| East     | Gamma     | semi;colon |        5 |"
+        ]
+      },
+      "old_pyside6_tsv_projection": {
+        "route": "service preprocess_table_file(actual_format='tsv') -> tsv_to_xlsx -> convert_spreadsheet_to_md()",
+        "preprocess_chain": [
+          "tsv",
+          "xlsx"
+        ],
+        "markdown_heading": "# Sheet1",
+        "block_count": 2
+      },
+      "current_before_fix": "The direct TSV route read through pandas with skip_blank_lines=True, collapsed the blank row, reported block_count=1, and rendered the second table header as a data row.",
+      "current_fix": "packages/plugins/spreadsheet/src/docwen_plugin_spreadsheet/to_markdown/converter.py::_read_csv_flexible now preserves blank rows for .tsv or sniffed tab-delimited input, while keeping CSV blank-row behavior unchanged.",
+      "current_regression_test": "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdDirect::test_convert_tsv_preserves_old_preconversion_blank_row_blocks",
+      "csv_control": "Old Tk, old PySide6, and current direct CSV all skip the blank separator in the simple control CSV and produce one Markdown table; no CSV behavior change was required.",
+      "remaining_scope": "This restores the focused TSV blank-row table-block boundary only. Broader old/current CSV/TSV batches, encoding variants, current-enhancement quoted multiline CSV breadth, and final artifact output-directory projections remain open."
+    },
+    "quoted_multiline_csv_scope": {
+      "classification": "current_enhancement_over_old_content_detection_failure",
+      "input": {
+        "name": "quoted_multiline.csv",
+        "encoding": "utf-8",
+        "text": "Name,Note,Amount\nAlpha,\"line one\nline two\",10\nBeta,\"pipe | value\",20\nGamma,\"semi;colon\",30\n"
+      },
+      "old_tk_projection": {
+        "route": "SpreadsheetToMarkdownStrategy.execute(..., actual_format='csv') -> convert_spreadsheet_to_md()",
+        "success": false,
+        "error_code": "conversion_failed",
+        "detected_format": "txt",
+        "stderr_tail_contains": "ValueError",
+        "comparison_implication": "Old Tk's strategy-level actual_format does not reach the core converter's second detect_actual_file_format() call, so this quoted multiline CSV is rejected as txt before _read_csv_flexible() can parse it."
+      },
+      "old_pyside6_projection": {
+        "route": "SpreadsheetToMarkdownStrategy.execute(..., common.actual_format='csv') -> convert_spreadsheet_to_md()",
+        "success": false,
+        "error_code": "conversion_failed",
+        "detected_format": "txt",
+        "stderr_tail_contains": "ValueError",
+        "comparison_implication": "Old PySide6 has the same strategy/core detection split as old Tk and rejects this quoted multiline CSV as txt before _read_csv_flexible() can parse it."
+      },
+      "current_projection": {
+        "route": "SpreadsheetToMarkdownConverter.convert() dispatches .csv by extension before content-sniff fallback",
+        "success": true,
+        "artifact_media_type": "text/markdown",
+        "suggested_name": "quoted_multiline.md",
+        "artifact_metadata": {
+          "sheet_count": 1,
+          "row_count": 4,
+          "col_count": 3,
+          "block_count": 1,
+          "image_count": 0,
+          "merge_strategy": "fill"
+        },
+        "metrics": {
+          "sheets": 1,
+          "rows": 4,
+          "cols": 3,
+          "blocks": 1,
+          "images": 0
+        },
+        "required_markdown_tokens": [
+          "# quoted_multiline",
+          "line one<br>line two",
+          "pipe \\| value",
+          "semi;colon"
+        ],
+        "table_lines": [
+          "| Name   | Note                 |   Amount |",
+          "|:-------|:---------------------|---------:|",
+          "| Alpha  | line one<br>line two |       10 |",
+          "| Beta   | pipe \\| value        |       20 |",
+          "| Gamma  | semi;colon           |       30 |"
+        ]
+      },
+      "old_tk_code_evidence": "docwen-ref-tk/src/docwen/services/strategies/spreadsheet/to_markdown.py forwards actual_format to preprocess_table_file(), but docwen-ref-tk/src/docwen/converter/xlsx2md/core.py::convert_spreadsheet_to_md calls detect_actual_file_format(file_path) again and rejects this probe as txt.",
+      "old_pyside6_code_evidence": "docwen-ref-pyside6/src/docwen/services/strategies/spreadsheet/to_markdown.py forwards common.actual_format to preprocess_table_file(), but docwen-ref-pyside6/src/docwen/converter/xlsx/to_md/core.py::convert_spreadsheet_to_md calls detect_actual_file_format(file_path) again and rejects this probe as txt.",
+      "current_code_evidence": "packages/plugins/spreadsheet/src/docwen_plugin_spreadsheet/to_markdown/converter.py::SpreadsheetToMarkdownConverter._convert() dispatches .csv/.tsv paths to _convert_csv() before content-sniff fallback, preserving current direct-route behavior for valid CSV files whose content sniffer is ambiguous.",
+      "current_regression_test": "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdDirect::test_convert_csv_quoted_multiline_is_current_enhancement_boundary",
+      "comparison_implication": "Current quoted multiline CSV support is a user-visible direct-route enhancement over both old projects, not a parity regression. It should remain guarded while broader CSV/TSV artifact batches and encoding variants stay open for final parity."
+    },
+    "csv_encoding_delimiter_scope": {
+      "classification": "same_old_current_csv_encoding_and_delimiter_boundary",
+      "probe_inputs": [
+        {
+          "name": "gbk_simple.csv",
+          "encoding": "gbk",
+          "text": "Name,City,Amount\nAlpha,北京,10\nBeta,上海,20\n"
+        },
+        {
+          "name": "utf16_simple.csv",
+          "encoding": "utf-16",
+          "text": "Name,City,Amount\nAlpha,北京,10\nBeta,上海,20\n"
+        },
+        {
+          "name": "semicolon_simple.csv",
+          "encoding": "utf-8",
+          "text": "Name;City;Amount\nAlpha;北京;10\nBeta;上海;20\n"
+        }
+      ],
+      "old_tk_projection": {
+        "route": "SpreadsheetToMarkdownStrategy.execute(..., actual_format='csv') -> preprocess_table_file() -> convert_spreadsheet_to_md()",
+        "success": true,
+        "message": "conversion.messages.conversion_to_format_success",
+        "all_cases_contain_required_semantics": true,
+        "table_line_count": 4
+      },
+      "old_pyside6_projection": {
+        "route": "SpreadsheetToMarkdownStrategy.execute(..., common.actual_format='csv') -> preprocess_table_file() -> convert_spreadsheet_to_md()",
+        "success": true,
+        "message": "转换为 Markdown 成功。",
+        "all_cases_contain_required_semantics": true,
+        "table_line_count": 4
+      },
+      "current_projection": {
+        "route": "SpreadsheetToMarkdownConverter.convert() dispatches .csv by extension and _read_csv_flexible() tries utf-8-sig/utf-8/gbk/utf-16 plus delimiter sniffing",
+        "success": true,
+        "artifact_media_type": "text/markdown",
+        "artifact_metadata": {
+          "sheet_count": 1,
+          "row_count": 3,
+          "col_count": 3,
+          "block_count": 1,
+          "image_count": 0,
+          "merge_strategy": "fill"
+        },
+        "metrics": {
+          "sheets": 1,
+          "rows": 3,
+          "cols": 3,
+          "blocks": 1,
+          "images": 0
+        },
+        "required_markdown_tokens": [
+          "北京",
+          "上海",
+          "| Name   | City   |   Amount |",
+          "| Alpha  | 北京     |       10 |",
+          "| Beta   | 上海     |       20 |"
+        ],
+        "table_lines": [
+          "| Name   | City   |   Amount |",
+          "|:-------|:-------|---------:|",
+          "| Alpha  | 北京     |       10 |",
+          "| Beta   | 上海     |       20 |"
+        ]
+      },
+      "old_tk_code_evidence": "docwen-ref-tk/src/docwen/converter/xlsx2md/core.py::_read_csv_flexible tries utf-8-sig, utf-8, gbk, and utf-16, then sniffs delimiters including comma and semicolon.",
+      "old_pyside6_code_evidence": "docwen-ref-pyside6/src/docwen/converter/xlsx/to_md/core.py::_read_csv_flexible keeps the same encoding candidates and delimiter sniffing surface as old Tk.",
+      "current_code_evidence": "packages/plugins/spreadsheet/src/docwen_plugin_spreadsheet/to_markdown/converter.py::_read_csv_flexible keeps the same encoding candidates and delimiter sniffing surface while preserving the current plugin-owned direct CSV route.",
+      "current_regression_test": "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdDirect::test_convert_csv_encoding_and_delimiter_variants_match_old_current_projection",
+      "comparison_implication": "Focused GBK, UTF-16, and semicolon-delimited CSV probes are now proven same-behavior across old Tk, old PySide6, and current. This closes the focused encoding/delimiter ambiguity, while broader CSV/TSV timestamped output-directory batches and final artifact parity remain open."
+    },
+    "delimited_output_directory_batch_scope": {
+      "classification": "focused_old_current_csv_tsv_output_directory_batch_evidence",
+      "probe_cases": [
+        {
+          "name": "utf8_simple.csv",
+          "actual_format": "csv",
+          "encoding": "utf-8",
+          "text": "Name,City,Amount\nAlpha,北京,10\nBeta,上海,20\n",
+          "expected_current_suggested_name": "utf8_simple.md"
+        },
+        {
+          "name": "gbk_simple.csv",
+          "actual_format": "csv",
+          "encoding": "gbk",
+          "text": "Name,City,Amount\nAlpha,北京,10\nBeta,上海,20\n",
+          "expected_current_suggested_name": "gbk_simple.md"
+        },
+        {
+          "name": "semicolon_simple.csv",
+          "actual_format": "csv",
+          "encoding": "utf-8",
+          "text": "Name;City;Amount\nAlpha;北京;10\nBeta;上海;20\n",
+          "expected_current_suggested_name": "semicolon_simple.md"
+        },
+        {
+          "name": "two_blocks.tsv",
+          "actual_format": "tsv",
+          "encoding": "utf-8",
+          "text": "Region\tProduct\tNote\tAmount\nNorth\tAlpha\tline1 line2\t10\nSouth\tBeta\tpipe | value\t20\n\nRegion\tProduct\tNote\tAmount\nEast\tGamma\tsemi;colon\t5\nWest\tDelta\tplain\t7\n",
+          "expected_current_suggested_name": "two_blocks.md"
+        }
+      ],
+      "old_tk_projection": {
+        "success": true,
+        "output_kind": "timestamped_folder_md",
+        "csv_output_name_pattern": "<stem>_YYYYMMDD_HHMMSS_fromCsv/<stem>_YYYYMMDD_HHMMSS_fromCsv.md",
+        "tsv_output_name_pattern": "<stem>_YYYYMMDD_HHMMSS_fromTsv/<stem>_YYYYMMDD_HHMMSS_fromTsv.md",
+        "output_parent_is_input_parent": true,
+        "csv_table_line_count": 4,
+        "csv_separator_line_count": 1,
+        "tsv_table_line_count": 8,
+        "tsv_separator_line_count": 2
+      },
+      "old_pyside6_projection": {
+        "success": true,
+        "output_kind": "timestamped_folder_md",
+        "csv_output_name_pattern": "<stem>_YYYYMMDD_HHMMSS_fromCsv/<stem>_YYYYMMDD_HHMMSS_fromCsv.md",
+        "tsv_output_name_pattern": "<stem>_YYYYMMDD_HHMMSS_fromTsv/<stem>_YYYYMMDD_HHMMSS_fromTsv.md",
+        "output_parent_is_input_parent": true,
+        "csv_table_line_count": 4,
+        "csv_separator_line_count": 1,
+        "tsv_table_line_count": 8,
+        "tsv_separator_line_count": 2
+      },
+      "current_projection": {
+        "success": true,
+        "diagnostic_codes": [
+          "SHEET2MD-OK",
+          "FINALIZER_DONE"
+        ],
+        "output_kind": "request_output_dir_markdown_artifact",
+        "output_parent_is_requested_output_dir": true,
+        "artifact_media_type": "text/markdown",
+        "csv_artifact_metadata": {
+          "sheet_count": 1,
+          "row_count": 3,
+          "col_count": 3,
+          "block_count": 1,
+          "image_count": 0,
+          "merge_strategy": "fill"
+        },
+        "tsv_artifact_metadata": {
+          "sheet_count": 1,
+          "row_count": 7,
+          "col_count": 4,
+          "block_count": 2,
+          "image_count": 0,
+          "merge_strategy": "fill"
+        },
+        "csv_table_line_count": 4,
+        "csv_separator_line_count": 1,
+        "tsv_table_line_count": 8,
+        "tsv_separator_line_count": 2
+      },
+      "required_csv_tokens": [
+        "北京",
+        "上海",
+        "| Name   | City   |   Amount |",
+        "| Alpha  | 北京     |       10 |",
+        "| Beta   | 上海     |       20 |"
+      ],
+      "required_tsv_tokens": [
+        "North",
+        "East",
+        "pipe \\| value",
+        "semi;colon",
+        "| Region   | Product   | Note          |   Amount |"
+      ],
+      "current_regression_test": "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdPipeline::test_pipeline_delimited_output_directory_batch_matches_old_system_projection",
+      "comparison_implication": "Focused CSV/TSV final-output evidence now exists for old Tk, old PySide6, and current. Old timestamped folder names and current stable suggested names are normalized as acceptable artifact-placement differences; content semantics and final output placement are guarded. Broader CSV/TSV batches remain open."
+    }
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "success": true,
+      "metadata": {
+        "aliases": [
+          "golden_test"
+        ],
+        "title_key": "标题"
+      },
+      "markdown_contains_all_expected_semantics": true
+    },
+    "docwen-ref-pyside6": {
+      "success": true,
+      "runtime_setup": "docwen.bootstrap.initialize_runtime() before converter use",
+      "metadata": {
+        "aliases": [
+          "golden_test"
+        ],
+        "title_key": "标题"
+      },
+      "markdown_contains_all_expected_semantics": true
+    },
+    "docwen-current": {
+      "success": true,
+      "artifact_media_type": "text/markdown",
+      "suggested_name": "golden_test.md",
+      "metadata": {
+        "sheet_count": 2,
+        "row_count": 9,
+        "col_count": 4,
+        "block_count": 3,
+        "image_count": 0,
+        "merge_strategy": "fill"
+      },
+      "markdown_contains_all_expected_semantics": true
+    }
+  },
+  "accepted_differences": [
+    "Old Tk, old PySide6, and current rewrite use different YAML title key labels or ordering; XLSX to Markdown semantic parity is judged on sheet headings, table cells, merged-cell fill output, and current ArtifactManifest metadata.",
+    "Old systems return Markdown text through legacy converter functions/timestamped output folders; current runtime writes a staging Markdown artifact with a stable suggested name.",
+    "This fixture is a normalized semantic smoke, not a checked-in old-system timestamped output directory or binary XLSX artifact comparison."
+  ]
+}

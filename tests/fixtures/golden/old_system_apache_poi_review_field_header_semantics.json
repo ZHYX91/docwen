@@ -1,0 +1,443 @@
+{
+  "golden_id": "GOLDEN-002",
+  "scope": "focused three-project Apache POI complex-field, review-media, and header/footer DOCX batch",
+  "created_at": "2026-07-15",
+  "source_repository": {
+    "owner": "apache",
+    "repository": "poi",
+    "commit": "86e967d9b28d6a322a87ae8fcbf2a7eeb56cef96",
+    "repository_url": "https://github.com/apache/poi",
+    "docx_paths_in_tree": 128,
+    "unique_docx_blobs": 127,
+    "tree_truncated": false,
+    "package_screened_candidates_before_docwen_execution": 4,
+    "redistribution": "external official test binaries retained only in workspace-bound temporary probe"
+  },
+  "sources": {
+    "FieldCodes.docx": {
+      "repository_path": "test-data/document/FieldCodes.docx",
+      "blob_sha": "3db97f5ce76768ab5c530fc78ff7d31c26703d2d",
+      "bytes": 17034,
+      "sha256": "9247f85ab90b15f11d0cf14d0070fdcb5cdf47c65d6bc77cc32cb7ee682aad24",
+      "package_entries": 16,
+      "field_chars": 6,
+      "instruction_text_nodes": 2,
+      "simple_fields": 0,
+      "instructions": [
+        "AUTHOR  \\* Upper  \\* MERGEFORMAT",
+        "CREATEDATE  \\@ \"d MMMM yyyy\"  \\* MERGEFORMAT"
+      ],
+      "saved_display_values": [
+        "ANTONI",
+        "16 June 2010"
+      ]
+    },
+    "headerFooter.docx": {
+      "repository_path": "test-data/document/headerFooter.docx",
+      "blob_sha": "87a86c302f3b9c1dc08dc9670a7135ab66491a31",
+      "bytes": 28423,
+      "sha256": "0ad90c6ee8ec8b9fab1ae8219387eca8d934b739580918d76a1b6c911bc41913",
+      "package_entries": 18,
+      "header_parts": 3,
+      "footer_parts": 3,
+      "nonempty_header_text": "This is a simple header…",
+      "nonempty_footer_text": "… and this is a simple footer.",
+      "top_level_body_text": []
+    },
+    "headerPic.docx": {
+      "repository_path": "test-data/document/headerPic.docx",
+      "blob_sha": "01072e547e44e8dc1b7364ecae20d888a116ad3f",
+      "bytes": 16206,
+      "sha256": "50d9b17f7575c8a91129fd8a3e6a70feec886480ab9f089e29a7f8ac7e5ed51a",
+      "package_entries": 16,
+      "header_parts": 1,
+      "top_level_body_text": [],
+      "media": {
+        "part": "word/media/image1.jpeg",
+        "relationship_owner": "word/header1.xml",
+        "bytes": 2188,
+        "sha256": "4799801a6351128527f0bb7b4a406ee8fc3893ad334141c942839f6e4a51f5b0"
+      }
+    },
+    "testComment.docx": {
+      "repository_path": "test-data/document/testComment.docx",
+      "blob_sha": "d27bb7e9b993d9c8c9104b6c4ddc51cac5a3dacb",
+      "bytes": 65298,
+      "sha256": "06b63b13f0b78a7179151af52c2282557c1ed204899feee9fcef4ca575344f97",
+      "package_entries": 17,
+      "comment_count": 1,
+      "comment_range_start_count": 1,
+      "comment_range_end_count": 1,
+      "comment_reference_count": 1,
+      "comment_text": "comment content",
+      "body_text": "this is a comment paragraph!",
+      "media": {
+        "part": "word/media/image1.png",
+        "relationship_owner": "word/comments.xml",
+        "bytes": 48724,
+        "sha256": "ee1633f0032a29e970528567327aff815faf291fdb66e83e79cdf1ac8b1ea0ef"
+      }
+    }
+  },
+  "execution_contract": {
+    "valid_three_project_executions": 12,
+    "all_executions_successful": true,
+    "aligned_options": [
+      "keep images",
+      "no OCR",
+      "standard DOCX to Markdown",
+      "aligned GUI YAML labels"
+    ],
+    "docwen-ref-tk": "project venv plus production convert_docx_to_md after GUI translator injection",
+    "docwen-ref-pyside6": "project venv plus initialize_runtime and production convert_docx_to_md",
+    "docwen-current": "project venv plus DocumentPlugin, TaskManager, and OutputFinalizer",
+    "office_processes_started": false,
+    "excluded_harness_attempts": [
+      "package inventory passed a literal -- path before any DocWen execution and was rerun correctly",
+      "first current request translated aliases to 别名 instead of matching the old GUI aliases label and was rerun into a fresh output root"
+    ]
+  },
+  "normalized_projections": {
+    "normalization": [
+      "newline style",
+      "final trailing blank lines",
+      "parsed YAML mapping"
+    ],
+    "FieldCodes.docx": {
+      "all_three_projects_equal": true,
+      "body_lines": [
+        "ANTONI",
+        "",
+        "16 June 2010"
+      ],
+      "canonical_sha256": "2ad95b91e24f211e3ec9e992900a6579390b314744e470522bd5c9ca3761bd75",
+      "tk_old_pyside6_raw_equal": true,
+      "old_raw": {
+        "bytes": 84,
+        "sha256": "f73a2aba86f1b45f6fbc3a6f0bc84eb1cde1b7cf079b05acd8a88d5181c38f50"
+      }
+    },
+    "headerFooter.docx": {
+      "all_three_projects_equal": true,
+      "body_lines": [],
+      "canonical_sha256": "0a8801ac16afb402e1f93d1c57db68f08126cc8a7348d8642816d130bbba14dc",
+      "tk_old_pyside6_raw_equal": true,
+      "old_raw": {
+        "bytes": 67,
+        "sha256": "200ff6e1790f6cbf2e392aac59dc8f0dbea1fd9271cb044289d4e16a0a78e316"
+      }
+    },
+    "headerPic.docx": {
+      "all_three_projects_equal": true,
+      "body_lines": [],
+      "canonical_sha256": "b689c3007762e0f867a643012659b6b1ed2fdef031f45e0eed125fec8b6b1a14",
+      "tk_old_pyside6_raw_equal": true,
+      "old_raw": {
+        "bytes": 61,
+        "sha256": "974cda83a055cc95f5cbc3ae54b40fcd148a905735b4cc1b54a65e26f164c061"
+      }
+    },
+    "testComment.docx": {
+      "all_three_projects_equal": true,
+      "body_lines": [
+        "this is a comment paragraph!"
+      ],
+      "canonical_sha256": "e047450a2fc60f95ebc3f0e36c415e3ac34f1971d958f5563b591d67b2cd5857",
+      "tk_old_pyside6_raw_equal": true,
+      "old_raw": {
+        "bytes": 94,
+        "sha256": "4e34ba2e44873c89e686c369784e7b541765c508be4383e5a2285dfdabd1380d"
+      }
+    },
+    "current_raw_difference": "current finalizer uses CRLF and terminal blank lines; parsed YAML and normalized body are equal"
+  },
+  "feature_projection": {
+    "complex_field_saved_values_visible_in_all_projects": true,
+    "complex_field_instruction_text_emitted": false,
+    "comment_anchor_body_visible_in_all_projects": true,
+    "comment_text_emitted": false,
+    "comment_owned_image_emitted": false,
+    "header_footer_text_emitted": false,
+    "header_owned_image_emitted": false,
+    "classification": "equal saved-value/body conversion plus shared richer-export boundary, not review/header fidelity"
+  },
+  "current_runtime_finalizer": {
+    "FieldCodes.docx": {
+      "success": true,
+      "primary_name": "FieldCodes.md",
+      "primary_bytes": 95,
+      "primary_sha256": "c7525f88f51c6e568a3afee2f09f70ad0c44ef2605c5d661abdf5083651c2054",
+      "paragraph_count": 2,
+      "heading_count": 0,
+      "table_count": 0,
+      "image_count": 0
+    },
+    "headerFooter.docx": {
+      "success": true,
+      "primary_name": "headerFooter.md",
+      "primary_bytes": 77,
+      "primary_sha256": "bc3584432b2e94d39fc69bd9b9163e7a1c2b965075d9a9d7b50a2bd4a8e2bad5",
+      "paragraph_count": 0,
+      "heading_count": 0,
+      "table_count": 0,
+      "image_count": 0
+    },
+    "headerPic.docx": {
+      "success": true,
+      "primary_name": "headerPic.md",
+      "primary_bytes": 71,
+      "primary_sha256": "cc12c04af105a9cc8cb6d41cb8cdec6e71e49f1955957e0bd05e61e43cfc8ba7",
+      "paragraph_count": 0,
+      "heading_count": 0,
+      "table_count": 0,
+      "image_count": 0
+    },
+    "testComment.docx": {
+      "success": true,
+      "primary_name": "testComment.md",
+      "primary_bytes": 103,
+      "primary_sha256": "0e71861bdd21b0df6870e55ba200d0fa71bd49a65877ddb45adb1a702a6a0222",
+      "paragraph_count": 1,
+      "heading_count": 0,
+      "table_count": 0,
+      "image_count": 0
+    },
+    "artifact_count_per_source": 1,
+    "diagnostics_per_source": [
+      "DOCX2MD-OK",
+      "FINALIZER_DONE"
+    ],
+    "workspace_paths_leaked": false
+  },
+  "smartdoc_physical_addendum": {
+    "evidence_id": "VIS-2026-07-17-113",
+    "shared_external_evidence": {
+      "root": "D:/docwen-parity/vis113-smartdoc-poi-physical-b757cee-v1",
+      "files": 133,
+      "bytes": 13293276,
+      "production_artifacts": 27,
+      "word_pdfs": 30,
+      "rendered_page_pngs": 40,
+      "contact_sheets": 9,
+      "physical_projection_sha256": "ebdae3ef82a4d905e7d9ad695a49d77c039449c7c6e6c96bc90c0b27c65c533e",
+      "word_object_projection_sha256": "9843ae129a5561c27eabb56b5265c2e42841cd192471fde867005e55e4e0020f"
+    },
+    "execution": {
+      "sources_in_this_fixture": 1,
+      "targets": [
+        "doc",
+        "rtf",
+        "odt"
+      ],
+      "projects": [
+        "docwen-ref-tk",
+        "docwen-ref-pyside6",
+        "docwen-current"
+      ],
+      "production_conversions": 9,
+      "all_successful": true,
+      "renderer": "Microsoft Word ExportAsFixedFormat PDF",
+      "rasterizer": "Poppler 120 DPI",
+      "all_contact_sheets_inspected": true
+    },
+    "FieldCodes.docx": {
+      "same_target_three_project": {
+        "doc": {
+          "pages": 1,
+          "page_sizes_equal": true,
+          "text_equal": true,
+          "pixels_equal": true
+        },
+        "rtf": {
+          "pages": 1,
+          "page_sizes_equal": true,
+          "text_equal": true,
+          "pixels_equal": true
+        },
+        "odt": {
+          "pages": 1,
+          "page_sizes_equal": true,
+          "text_equal": true,
+          "pixels_equal": true
+        }
+      },
+      "source_fidelity": {
+        "doc": {
+          "page_count_equal": true,
+          "global_text_equal": false,
+          "changed_pixel_ratio": [
+            0.00113257
+          ]
+        },
+        "rtf": {
+          "page_count_equal": true,
+          "global_text_equal": true,
+          "changed_pixel_ratio": [
+            0.0
+          ]
+        },
+        "odt": {
+          "page_count_equal": true,
+          "global_text_equal": true,
+          "changed_pixel_ratio": [
+            0.0
+          ]
+        }
+      },
+      "word_field_type_ids": {
+        "source": [
+          17,
+          21
+        ],
+        "doc_all_projects": [
+          17,
+          3
+        ],
+        "rtf_all_projects": [
+          17,
+          21
+        ],
+        "odt_all_projects": [
+          17,
+          21
+        ]
+      },
+      "doc_print_update_boundary": "the converted DOC keeps the saved 16 June 2010 result but exposes CREATEDATE as Word field type 3, so Word PDF export updates it to Error! Bookmark not defined identically for all projects",
+      "classification": "current has exact old-Tk/old-PySide6 physical parity; the DOC field-type mutation is a shared backend-format defect, not accepted broad field fidelity"
+    }
+  },
+  "review_header_physical_addendum": {
+    "evidence_id": "VIS-2026-07-17-121",
+    "source_commit": "86e967d9b28d6a322a87ae8fcbf2a7eeb56cef96",
+    "project_heads": {
+      "docwen-ref-tk": "ec9298286cfe1379d5c5470db381577ea43ca0fa",
+      "docwen-ref-pyside6": "63db927c5ded920d4994bfede5c7b34c55e2f43e",
+      "docwen-current": "6a50d6a4a7941f7bce269641a11d2a853fa8858d"
+    },
+    "external_evidence": {
+      "root": "D:/docwen-parity/vis121-smartdoc-review-physical-6a50d6a-v1",
+      "inventory_excluding_harness_and_summary": {
+        "files": 183,
+        "bytes": 4584889
+      },
+      "root_including_harness_and_summary": {
+        "files": 187,
+        "bytes": 4621920
+      },
+      "evidence_summary": {
+        "bytes": 7155,
+        "sha256": "09b7c020bfdb3e25c1698ca66a9302d60f8b20aaaf7ed5f139e74b66e326999b"
+      },
+      "key_file_sha256": {
+        "conversion-docwen-ref-tk.json": "1d7502bc237c1f2479dc76cefbb23e853840680ac13bee481227a4dfda900b05",
+        "conversion-docwen-ref-pyside6.json": "45201b4544626f4ea838b8d223398fcc89a4c61f769956b329b45b0662715b07",
+        "conversion-docwen-current.json": "b14efdbfd817a05bf66f2560cf46446d39dc2b6a4583647d75f828e546127c1a",
+        "process-boundary.json": "f445009b1ba8173432cc92cd9ce4d501d970ccd31aebbd71f3a2e68ea8dc210e",
+        "word-object-projection.json": "56151b55b62d72b2111c3c15b4386d3f72e88faa5a2b87ba6402e62687662f02",
+        "word-render-process-boundary.json": "604c4db1df8cd73677de7d0ae229c922a9f746f8e802bc4f7877707971e515fb",
+        "physical-projection.json": "1b3a0e69907183781a414eefe83b93d1690a1b08069e7f6f0a505fc162d404f4"
+      }
+    },
+    "execution": {
+      "sources": [
+        "headerFooter.docx",
+        "headerPic.docx",
+        "testComment.docx"
+      ],
+      "targets": [
+        "doc",
+        "rtf",
+        "odt"
+      ],
+      "projects": [
+        "docwen-ref-tk",
+        "docwen-ref-pyside6",
+        "docwen-current"
+      ],
+      "production_conversions": 27,
+      "all_successful": true,
+      "word_documents_opened": 30,
+      "word_pdf_exports": 40,
+      "rendered_views": 40,
+      "rendered_pages": 40,
+      "contact_sheets": 12,
+      "all_contact_sheets_inspected": true,
+      "renderer": "Microsoft Word ExportAsFixedFormat PDF",
+      "rasterizer": "PyMuPDF 120 DPI"
+    },
+    "same_target_three_project": {
+      "triples": 12,
+      "content_triples": 9,
+      "comment_markup_triples": 3,
+      "page_count_equal": true,
+      "render_size_equal": true,
+      "visible_text_equal": true,
+      "pixels_equal": true
+    },
+    "word_object_preservation": {
+      "header_footer_outputs_with_expected_text": 9,
+      "header_picture_outputs_with_one_header_inline_shape": 9,
+      "comment_outputs_with_one_comment_and_expected_text": 9
+    },
+    "source_relative_pixel_change_ratio_all_projects": {
+      "headerFooter.docx": {
+        "doc": 0.0,
+        "rtf": 0.000175909,
+        "odt": 0.0
+      },
+      "headerPic.docx": {
+        "doc": 7.2444e-05,
+        "rtf": 0.007035,
+        "odt": 7.2444e-05
+      },
+      "testComment.docx_content": {
+        "doc": 0.0,
+        "rtf": 0.0,
+        "odt": 0.0
+      },
+      "testComment.docx_markup": {
+        "doc": 0.001729055,
+        "rtf": 0.002083333,
+        "odt": 0.011747623
+      }
+    },
+    "manual_physical_observation": {
+      "header_footer_visible_in_all_outputs": true,
+      "header_picture_visible_in_all_outputs": true,
+      "comment_anchor_and_text_visible_in_all_markup_outputs": true,
+      "comment_owned_picture_visible_in_doc_outputs": true,
+      "comment_owned_picture_visible_in_rtf_outputs": true,
+      "comment_owned_picture_visible_in_odt_outputs": false,
+      "current_only_clip_overlap_black_block_missing_page_or_displacement": false
+    },
+    "process_boundary": {
+      "pre_existing_process": {
+        "name": "wps.exe",
+        "pid": 11388
+      },
+      "conversion_added": [],
+      "conversion_removed": [],
+      "render_added": [],
+      "render_removed": []
+    },
+    "classification": {
+      "current_only_functional_or_physical_regression_found": false,
+      "production_change_made": false,
+      "shared_odt_comment_owned_picture_loss": true,
+      "shared_odt_comment_owned_picture_loss_is_accepted_final_fidelity": false,
+      "broad_smartdoc_or_review_ui_pass": false
+    }
+  },
+  "classification": {
+    "current_only_functional_gap_found": false,
+    "route_or_option_wiring_gap_found": false,
+    "production_change_made": false,
+    "shared_omission_is_accepted_final_fidelity": false
+  },
+  "known_limits": [
+    "Saved field display values are preserved, but field instructions are not exported.",
+    "Comment content, comment-owned media, header/footer text, and header-owned media are omitted by all three standard Markdown paths.",
+    "Shared omissions are a richer-export/product-scope boundary, not a current regression and not final DOCX review/header fidelity.",
+    "Broader revision, field, attachment, layout, large-document, LibreOffice, and physical UX evidence remains open."
+  ]
+}

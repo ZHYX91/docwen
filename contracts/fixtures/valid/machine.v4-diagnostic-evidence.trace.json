@@ -1,0 +1,54 @@
+[
+  {
+    "jsonrpc": "2.0",
+    "id": 7,
+    "method": "task/execute",
+    "params": {
+      "plan_id": "plan.v4.diagnostic"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 7,
+    "result": {
+      "task_id": "task.v4.diagnostic",
+      "state": "accepted"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "method": "task/failed",
+    "params": {
+      "task_id": "task.v4.diagnostic",
+      "sequence": 1,
+      "error": {
+        "category": "invalid_request",
+        "code": "invalid_document_semantics",
+        "message": "Markdown semantics are invalid.",
+        "retryable": false
+      },
+      "diagnostics": [
+        {
+          "severity": "error",
+          "code": "docwen.markdown.anchor.dangling",
+          "message": "Standalone block anchor has no preceding structured block.",
+          "evidence_schema": "docwen.machine.diagnostic_evidence.v1",
+          "source": {
+            "input_id": "input.source",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "encoding": "utf-8",
+            "coordinate_system": "unicode_code_point",
+            "offset_base": 0,
+            "range_end": "exclusive"
+          },
+          "range": {
+            "start": 6,
+            "end": 14
+          },
+          "related_ranges": [],
+          "fixes": []
+        }
+      ]
+    }
+  }
+]

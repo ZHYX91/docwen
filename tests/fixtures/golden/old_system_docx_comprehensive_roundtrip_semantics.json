@@ -1,0 +1,257 @@
+{
+  "golden_id": "GOLDEN-002",
+  "evidence_id": "VIS-2026-07-15-028",
+  "scope": "Three-project DOCX-to-Markdown comparison using the checked-in old-system MD-to-DOCX comprehensive artifact.",
+  "source": {
+    "path": "tests/fixtures/golden/md_to_docx_old/sample_golden.docx",
+    "provenance": "Old-system MD-to-DOCX output generated from the 183-line samples/sample.md acceptance sample.",
+    "bytes": 39146,
+    "sha256": "7903834d9cadddf48287695e3ab1b2f65b5cc052bbabdb92a97e8be139eadd53",
+    "paragraph_count": 86,
+    "nonempty_paragraph_count": 82,
+    "heading_count": 34,
+    "heading_levels_present": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "table_shapes": [
+      [
+        4,
+        2
+      ],
+      [
+        4,
+        2
+      ]
+    ],
+    "footnote_reference_count": 2,
+    "endnote_reference_count": 2,
+    "omath_count": 3,
+    "omath_para_count": 0,
+    "bottom_border_paragraph_count": 3,
+    "hyperlink_count": 1,
+    "has_footnotes_part": true,
+    "has_endnotes_part": true
+  },
+  "execution_contract": {
+    "valid_project_executions": 3,
+    "all_valid_executions_successful": true,
+    "docwen_ref_tk_entry": "Production convert_docx_to_md after gui_run.py translator injection.",
+    "docwen_ref_pyside6_entry": "Production convert_docx_to_md after docwen.bootstrap.initialize_runtime().",
+    "docwen_current_entry": "DocumentPlugin -> TaskManager -> OutputFinalizer with Chinese yaml_key_labels.",
+    "office_application_required": false
+  },
+  "pre_fix_current_regressions": {
+    "raw_markdown_utf8_bytes": 2165,
+    "raw_markdown_sha256": "b42a160cae8a14ec053c3ef98208f49103246fe36b8fcdcec250c5f6b022d5e9",
+    "horizontal_rule_count": 0,
+    "expected_horizontal_rule_count_from_both_old_projects": 3,
+    "first_standalone_formula": "$a^{2}+b^{2}=c^{2}$",
+    "expected_formula_classification_from_both_old_projects": "block formula",
+    "classification": "two_confirmed_current_only_regressions"
+  },
+  "post_fix_projects": {
+    "docwen-ref-tk": {
+      "success": true,
+      "raw_markdown_utf8_bytes": 2157,
+      "raw_markdown_sha256": "df0ebc761b241e0cd1e0840a67f1868d25140d73b2ac8ad8f3f072a279af5cbf",
+      "line_count": 205,
+      "hyperlink_preserved": false
+    },
+    "docwen-ref-pyside6": {
+      "success": true,
+      "raw_markdown_utf8_bytes": 2184,
+      "raw_markdown_sha256": "4dd0a28fe58edd9b2fdb7d710b806b5912942aaedafbe989696c2b45aa81a94b",
+      "line_count": 205,
+      "hyperlink_preserved": true
+    },
+    "docwen-current": {
+      "success": true,
+      "raw_markdown_utf8_bytes": 2182,
+      "raw_markdown_sha256": "27cb3fd34f55dac1fa907d5980dfb026ce2cf8066156e215eee8910d99f49924",
+      "line_count": 198,
+      "hyperlink_preserved": true,
+      "primary_name": "sample_golden.md",
+      "primary_in_requested_output_directory": true,
+      "metadata": {
+        "paragraph_count": 47,
+        "heading_count": 34,
+        "table_count": 2,
+        "image_count": 0
+      },
+      "diagnostic_codes": [
+        "DOCX2MD-OK",
+        "FINALIZER_DONE"
+      ]
+    }
+  },
+  "normalized_contract": {
+    "frontmatter_dictionaries_equal_across_three_projects": true,
+    "old_pyside6_and_current_bodies_equal_after_narrow_syntax_normalization": true,
+    "narrow_syntax_normalization": [
+      "collapse blank-line multiplicity",
+      "treat three-line and standalone one-line double-dollar delimiters as equivalent block math",
+      "normalize whitespace after footnote-definition colons"
+    ],
+    "heading_level_sequence_equal_across_three_projects": true,
+    "heading_count": 34,
+    "table_count": 2,
+    "horizontal_rule_count": 3,
+    "footnote_definition_count": 2,
+    "endnote_definition_count": 2,
+    "all_three_formula_values_preserved": true,
+    "bold_italic_strikethrough_and_code_preserved": true,
+    "no_unicode_replacement_characters": true,
+    "old_tk_hyperlink_loss_not_required_of_current": true
+  },
+  "regressions_fixed": [
+    {
+      "description": "Bottom-border-only Word horizontal-rule paragraphs were dropped.",
+      "owner": "packages/core/src/docwen_core/docx_parsing/break_utils.py::BorderGroupTracker",
+      "direct_tests": [
+        "packages/plugins/document/tests/test_shared_break_utils.py::test_border_group_tracker_bottom_only_rule_emits_before_following_paragraph",
+        "packages/plugins/document/tests/test_shared_break_utils.py::test_border_group_tracker_bottom_only_rule_finalizes_at_document_end"
+      ]
+    },
+    {
+      "description": "A text-free bare oMath paragraph was emitted as inline rather than block math.",
+      "owner": "packages/plugins/document/src/docwen_plugin_document/to_markdown/converter.py::_build_paragraph_text_with_formulas",
+      "direct_tests": [
+        "packages/plugins/document/tests/test_to_markdown_standard_parity.py::test_standalone_omath_paragraph_without_omathpara_emits_block_formula",
+        "packages/plugins/document/tests/test_to_markdown_standard_parity.py::test_mixed_text_and_omath_paragraph_remains_inline_formula"
+      ]
+    }
+  ],
+  "runtime_regression_test": "packages/plugins/document/tests/test_document_to_md_golden.py::TestDocxToMdGolden::test_old_system_comprehensive_docx_preserves_rules_and_formula_block",
+  "historical_roundtrip_boundary": {
+    "path": "tests/fixtures/golden/md_to_docx_old/sample_roundtrip.md",
+    "classification": "valuable_old_provenance_not_exact_oracle_for_current_reference_snapshots",
+    "reason": "Fresh executions of both current reference repositories differ from the older roundtrip in list/quote markers, a combined heading and some formatting; the live three-project production entries remain the parity comparison for this slice."
+  },
+  "physical_oracle_boundary": {
+    "evidence_id": "VIS-2026-07-17-122",
+    "project_heads": {
+      "docwen-ref-tk": "ec9298286cfe1379d5c5470db381577ea43ca0fa",
+      "docwen-ref-pyside6": "63db927c5ded920d4994bfede5c7b34c55e2f43e",
+      "docwen-current": "9e5886169d52c85511aeace9723a6b31c635ce98"
+    },
+    "source_geometry": {
+      "page_twips": {
+        "width": 1875,
+        "height": 2652
+      },
+      "page_inches": {
+        "width": 1.302083,
+        "height": 1.841667
+      },
+      "margins_twips": {
+        "top": 1440,
+        "right": 1440,
+        "bottom": 1440,
+        "left": 1440
+      },
+      "usable_content_twips": {
+        "width": -1005,
+        "height": -228
+      },
+      "usable_content_area_is_nonpositive": true
+    },
+    "source_word_projection": {
+      "pages": 1516,
+      "pdf_page_points": {
+        "width": 93.72,
+        "height": 132.6
+      },
+      "nonempty_pdf_pages": 1159,
+      "paragraph_count": 110,
+      "table_count": 2,
+      "field_count": 1,
+      "footnote_count": 2,
+      "endnote_count": 2,
+      "hyperlink_count": 1,
+      "omath_count": 3
+    },
+    "three_project_execution": {
+      "production_conversions": 9,
+      "all_conversions_successful": true,
+      "targets": [
+        "doc",
+        "rtf",
+        "odt"
+      ],
+      "same_word_object_projection_per_target": true,
+      "doc_pages_per_project": 601,
+      "doc_repaginate_and_pdf_export_failures": 3,
+      "rtf_pages_per_project": 1513,
+      "rtf_pdf_exports": 3,
+      "odt_pages_per_project": 1324,
+      "odt_pdf_exports": 3
+    },
+    "process_cleanup": {
+      "initial_batch_transient_word_teardown_observed": true,
+      "isolated_cleanup_probes": 3,
+      "all_isolated_probes_cleaned_within_30_seconds": true,
+      "maximum_observed_cleanup_seconds": 2,
+      "termination_command_used": false
+    },
+    "external_evidence": {
+      "root": "D:/docwen-parity/vis122-comprehensive-docx-physical-9e58861-v1",
+      "inventory_excluding_five_harness_scripts_summary_and_pycache": {
+        "files": 45,
+        "bytes": 11544310
+      },
+      "evidence_summary": {
+        "bytes": 9291,
+        "sha256": "3965a59d6f7f27c84afcb4dfbd5fe9a64ac1aadfb3fea0fc3f53d93fbca40089"
+      },
+      "word_export_isolation_sha256": "6730cfce8c954cede8a57c639a824cb02314b0b7643c49fad25eb9f3a2410ddf",
+      "cleanup_probe_sha256": "8eace2ee2b80ec39acd5458099715093a3459e96848dd40c6f735ba709adeb0c"
+    },
+    "classification": {
+      "historical_source_is_valid_semantic_fixture": true,
+      "historical_source_is_valid_physical_or_pagination_oracle": false,
+      "current_only_conversion_or_object_regression_found": false,
+      "production_change_made": false,
+      "vis101_fresh_a4_output_evidence_remains_valid": true,
+      "broad_doc_docx_rtf_odt_physical_parity_closed": false,
+      "overall_parity_closed": false
+    }
+  },
+  "process_evidence": {
+    "new_office_processes": [],
+    "pre_existing_processes_unchanged": [
+      {
+        "pid": 1796,
+        "name": "wps.exe",
+        "started": "2026-07-14T11:44:44+08:00"
+      },
+      {
+        "pid": 18764,
+        "name": "wps.exe",
+        "started": "2026-07-14T11:44:34+08:00"
+      },
+      {
+        "pid": 20176,
+        "name": "wpscloudsvr.exe",
+        "started": "2026-07-14T11:44:33+08:00"
+      }
+    ]
+  },
+  "accepted_limits": [
+    "Raw Markdown equality is not required for blank-line multiplicity, equivalent double-dollar delimiter line layout, or whitespace after note-definition colons.",
+    "Current preserves the hyperlink retained by old PySide6 rather than reproducing old Tk hyperlink loss.",
+    "The older sample_roundtrip.md is provenance rather than an exact oracle where both live reference snapshots differ.",
+    "No content loss, horizontal-rule loss, formula-value loss, or formula block-to-inline demotion is accepted."
+  ],
+  "remaining_scope": [
+    "This is an old-system-generated comprehensive acceptance artifact, not a real business or gongwen document corpus.",
+    "The source has no images/resources, comments, tracked revisions, complex field codes or complex layout.",
+    "Broader representative DOCX list/resource matrices and historical-roundtrip drift remain open.",
+    "Larger documents and real long-task progress/cancellation UX remain open.",
+    "GOLDEN-002 and overall final artifact parity remain NOT PASSED YET."
+  ]
+}

@@ -1,0 +1,57 @@
+[
+  {
+    "jsonrpc": "2.0",
+    "id": 40,
+    "method": "task/execute",
+    "params": {
+      "plan_id": "plan.invalid.sequence"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 40,
+    "result": {
+      "task_id": "task.invalid.sequence",
+      "state": "accepted"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "method": "task/progress",
+    "params": {
+      "task_id": "task.invalid.sequence",
+      "sequence": 2,
+      "phase": "conversion",
+      "completed": 50,
+      "total": 100,
+      "unit": "percent"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "method": "task/progress",
+    "params": {
+      "task_id": "task.invalid.sequence",
+      "sequence": 1,
+      "phase": "conversion",
+      "completed": 100,
+      "total": 100,
+      "unit": "percent"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "method": "task/failed",
+    "params": {
+      "task_id": "task.invalid.sequence",
+      "sequence": 3,
+      "error": {
+        "category": "conversion_failed",
+        "code": "conversion.failed",
+        "message": "Conversion failed.",
+        "retryable": false
+      },
+      "diagnostics": []
+    }
+  }
+]

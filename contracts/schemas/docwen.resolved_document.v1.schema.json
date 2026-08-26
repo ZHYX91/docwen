@@ -1,0 +1,246 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:docwen:schema:resolved-document:v1",
+  "title": "DocWen Resolved Document v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "input_id", "source_sha256", "plan_sha256", "document"],
+  "properties": {
+    "$schema": {"const": "urn:docwen:schema:resolved-document:v1"},
+    "schema": {"const": "docwen.resolved_document.v1"},
+    "input_id": {"type": "string", "minLength": 1, "maxLength": 256},
+    "source_sha256": {"$ref": "#/$defs/sha256"},
+    "plan_sha256": {"$ref": "#/$defs/sha256"},
+    "document": {"$ref": "#/$defs/document"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "targetId": {
+      "oneOf": [
+        {"type": "string", "pattern": "^[A-Za-z0-9-]{1,128}$"},
+        {"type": "null"}
+      ]
+    },
+    "targetKind": {"enum": ["heading", "figure", "table", "equation", "code_block"]},
+    "document": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authored_markdown",
+        "targets",
+        "references",
+        "resource_occurrences",
+        "citations",
+        "resources"
+      ],
+      "properties": {
+        "authored_markdown": {"type": "string"},
+        "targets": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/target"}
+        },
+        "references": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/reference"}
+        },
+        "resource_occurrences": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/resourceOccurrence"}
+        },
+        "citations": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/citation"}
+        },
+        "resources": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/resource"}
+        }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_start",
+        "source_end",
+        "source_slice_sha256",
+        "kind",
+        "target_id",
+        "heading_level",
+        "authored_text"
+      ],
+      "properties": {
+        "source_start": {"type": "integer", "minimum": 0, "maximum": 9223372036854775807},
+        "source_end": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
+        "source_slice_sha256": {"$ref": "#/$defs/sha256"},
+        "kind": {"$ref": "#/$defs/targetKind"},
+        "target_id": {"$ref": "#/$defs/targetId"},
+        "heading_level": {
+          "oneOf": [
+            {"type": "integer", "minimum": 1, "maximum": 9},
+            {"type": "null"}
+          ]
+        },
+        "authored_text": {"type": "string"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"kind": {"const": "heading"}}, "required": ["kind"]},
+          "then": {"properties": {"heading_level": {"type": "integer", "minimum": 1, "maximum": 9}}},
+          "else": {"properties": {"heading_level": {"type": "null"}}}
+        }
+      ]
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_start",
+        "source_end",
+        "source_slice_sha256",
+        "authored_token",
+        "target_source_start",
+        "target_source_end",
+        "target_kind",
+        "target_id",
+        "cached_number",
+        "alias"
+      ],
+      "properties": {
+        "source_start": {"type": "integer", "minimum": 0, "maximum": 9223372036854775807},
+        "source_end": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
+        "source_slice_sha256": {"$ref": "#/$defs/sha256"},
+        "authored_token": {"type": "string", "minLength": 6},
+        "target_source_start": {"type": "integer", "minimum": 0, "maximum": 9223372036854775807},
+        "target_source_end": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
+        "target_kind": {"$ref": "#/$defs/targetKind"},
+        "target_id": {"$ref": "#/$defs/targetId"},
+        "cached_number": {"type": "string", "minLength": 1},
+        "alias": {
+          "oneOf": [
+            {"type": "string", "minLength": 1},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "resourceId": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9-]{0,63}$"},
+    "resourceOccurrence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_start",
+        "source_end",
+        "source_slice_sha256",
+        "authored_token",
+        "authored_locator",
+        "resource_id"
+      ],
+      "properties": {
+        "source_start": {"type": "integer", "minimum": 0, "maximum": 9223372036854775807},
+        "source_end": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
+        "source_slice_sha256": {"$ref": "#/$defs/sha256"},
+        "authored_token": {"type": "string", "minLength": 5, "maxLength": 8192},
+        "authored_locator": {"type": "string", "minLength": 1, "maxLength": 4096},
+        "resource_id": {"$ref": "#/$defs/resourceId"}
+      }
+    },
+    "base64": {
+      "type": "string",
+      "maxLength": 8000000,
+      "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resource_id",
+        "role",
+        "media_type",
+        "size_bytes",
+        "sha256",
+        "content_base64"
+      ],
+      "properties": {
+        "resource_id": {"$ref": "#/$defs/resourceId"},
+        "role": {"enum": ["linked_resource", "bibliography"]},
+        "media_type": {
+          "enum": [
+            "image/png",
+            "image/jpeg",
+            "image/gif",
+            "image/bmp",
+            "image/webp",
+            "application/vnd.docwen.semantic-bibliography+json"
+          ]
+        },
+        "size_bytes": {"type": "integer", "minimum": 1, "maximum": 6000000},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "content_base64": {"$ref": "#/$defs/base64"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"role": {"const": "bibliography"}}, "required": ["role"]},
+          "then": {
+            "properties": {
+              "media_type": {"const": "application/vnd.docwen.semantic-bibliography+json"}
+            }
+          },
+          "else": {
+            "properties": {
+              "media_type": {
+                "enum": [
+                  "image/png",
+                  "image/jpeg",
+                  "image/gif",
+                  "image/bmp",
+                  "image/webp"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "citationItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["citation_key", "record_id", "record_sha256", "presentation"],
+      "properties": {
+        "citation_key": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"},
+        "record_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$"},
+        "record_sha256": {"$ref": "#/$defs/sha256"},
+        "presentation": {"type": "string", "minLength": 1, "maxLength": 4096}
+      }
+    },
+    "citation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_start",
+        "source_end",
+        "source_slice_sha256",
+        "authored_token",
+        "form",
+        "cluster_id",
+        "items",
+        "cached_result"
+      ],
+      "properties": {
+        "source_start": {"type": "integer", "minimum": 0, "maximum": 9223372036854775807},
+        "source_end": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
+        "source_slice_sha256": {"$ref": "#/$defs/sha256"},
+        "authored_token": {"type": "string", "minLength": 2, "maxLength": 4096},
+        "form": {"enum": ["narrative", "parenthetical"]},
+        "cluster_id": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9-]{0,63}$"},
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {"$ref": "#/$defs/citationItem"}
+        },
+        "cached_result": {"type": "string", "minLength": 1, "maxLength": 4096}
+      }
+    }
+  }
+}

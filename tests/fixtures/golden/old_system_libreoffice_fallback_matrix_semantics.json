@@ -1,0 +1,211 @@
+{
+  "golden_id": "GOLDEN-009/GOLDEN-010 focused external bridge slice",
+  "case_id": "old_system_libreoffice_fallback_matrix_semantics",
+  "generated_at": "2026-07-17",
+  "scope": "Official LibreOffice 26.2.4.2 isolated administrative image exposed through PATH: five representative fallback conversions across old Tk, old PySide6, and current, plus current filtered-PDF repair, live cancellation, semantic projection, and physical PDF rendering.",
+  "comparison_implication": "This closes the representative installed/discoverable LibreOffice-only fallback slice. It is not a broad document corpus, system-wide installer, Explorer OLE, all external-route, or overall parity PASS.",
+  "projects": {
+    "old_tk": {
+      "path": "D:/docwen-parity/docwen-ref-tk",
+      "head": "ec9298286cfe1379d5c5470db381577ea43ca0fa",
+      "entrypoint": "docwen.converter.formats.common.fallback.convert_with_fallback",
+      "cancellation_boundary": "Cancellation is checked before LibreOffice starts; subprocess.run(timeout=60) does not poll cancellation while LibreOffice is running."
+    },
+    "old_pyside6": {
+      "path": "D:/docwen-parity/docwen-ref-pyside6",
+      "head": "63db927c5ded920d4994bfede5c7b34c55e2f43e",
+      "entrypoint": "docwen.converter.shared.fallback.convert_with_fallback",
+      "worktree_boundary": "Pre-existing configs/gui_config.toml modification and damaged history were not changed.",
+      "cancellation_boundary": "Cancellation is checked before LibreOffice starts; subprocess.run(timeout=60) does not poll cancellation while LibreOffice is running."
+    },
+    "current": {
+      "path": "D:/docwen-parity/docwen",
+      "head_at_probe_start": "713e610",
+      "entrypoint": "docwen_core.office_bridge.convert_with_fallback",
+      "worktree_boundary": "The filtered-output repair and direct regression are part of the same VIS-103 checkpoint.",
+      "cancellation_boundary": "Popen is polled during execution; cancellation terminates the process and escalates to kill after five seconds if required."
+    }
+  },
+  "toolchain": {
+    "product": "LibreOffice",
+    "version": "26.2.4.2 0229ac93fcf0d7cbc6376066c6f35021cef002dc",
+    "official_msi_url": "https://download.documentfoundation.org/libreoffice/stable/26.2.4/win/x86_64/LibreOffice_26.2.4_Win_x86-64.msi",
+    "msi_size_bytes": 372539392,
+    "msi_sha256": "202F26CDA071C5AA4996A5A28412FDDCEB3891DCEB0366982C62650456C0730F",
+    "isolation": {
+      "method": "Windows Installer administrative extraction outside all repositories",
+      "image_root": "D:/docwen-parity/toolchains/libreoffice-26.2.4/image",
+      "program_on_path": true,
+      "bootstrap_user_installation": "$ORIGIN/../Data/settings",
+      "system_winget_registration": false,
+      "winget_result": "No installed package found matching input criteria.",
+      "roaming_profile_created": false,
+      "pythonhome": "D:/docwen-parity/toolchains/libreoffice-26.2.4/image/program/python-core-3.12.13",
+      "sal_use_vclplugin": "svp"
+    },
+    "official_parallel_install_guidance": "https://wiki.documentfoundation.org/Installing_in_parallel/Windows",
+    "official_start_parameter_guidance": "https://help.libreoffice.org/latest/en-US/text/shared/guide/start_parameters.html"
+  },
+  "sources": {
+    "document": {
+      "path": "inputs/comprehensive-document-current-head.docx",
+      "origin": "VIS-102 current English General Template output",
+      "size_bytes": 13783,
+      "sha256": "99439CD7109E3E8CDFEB2641B6FA013F241A75AA30BA6A0BDB361E8A11DB517A"
+    },
+    "spreadsheet": {
+      "path": "inputs/styled-sheet.xlsx",
+      "size_bytes": 5221,
+      "sha256": "CD7A9450A735B9F0EE76583B7F3D51385CF632A27BAC4F1150E928ECB72A4D54"
+    },
+    "presentation": {
+      "path": "inputs/legacy-slides.ppt",
+      "size_bytes": 102912,
+      "sha256": "D11313B91C1BB5BC460E46E9C039E2646B3FC7D5CC17733A5DBEB322F56C86C5"
+    }
+  },
+  "matrix": {
+    "project_count": 3,
+    "case_count_per_project": 5,
+    "attempt_count": 15,
+    "success_count": 15,
+    "all_backends": "LibreOffice",
+    "explicit_empty_com_candidates": true,
+    "no_new_lingering_soffice_processes": true,
+    "elapsed_seconds_observed_range": {
+      "old_tk": [3.375, 4.297],
+      "old_pyside6": [3.953, 4.406],
+      "current": [3.281, 3.890]
+    },
+    "shared_semantic_projection_sha256": "D436059D9AB340C9DEC4D0A5CD8E2520E88E958BE12E75FC5FE393DBC0F24B6A",
+    "cases": [
+      {
+        "case": "document_odt",
+        "route": "DOCX to ODT",
+        "libreoffice_format": {"old_tk": "odt", "old_pyside6": "odt", "current": "odt"},
+        "semantic_sha256": "9404AB0E08C3EDF5C81A6821C5F24512202D677CCCD64D63A1972BF657CC08CF",
+        "semantic_projection": {"text_blocks": 101, "table_count": 2, "table_rows": [4, 4], "image_count": 3},
+        "artifacts": {
+          "old_tk": {"size_bytes": 29337, "sha256": "A279E1B62FBD0CFE4B1452272C53754DDD7765AEA29984E76C4C28F9D8F6C553"},
+          "old_pyside6": {"size_bytes": 29338, "sha256": "95C699F8288884CBB3F0DBE2E39D4255CE99471668367F85A172AF0E342754C4"},
+          "current": {"size_bytes": 29338, "sha256": "F02F1AFDCEB13E122E62BFF4FCB92D327D3472136E821CB8202F880EA058ED9D"}
+        }
+      },
+      {
+        "case": "document_pdf",
+        "route": "DOCX to PDF",
+        "libreoffice_format": {"old_tk": "pdf", "old_pyside6": "pdf", "current": "pdf:writer_pdf_Export"},
+        "semantic_sha256": "A608493DDCA0B55530493152217026C4CCCD53B9EBE9390EB2ECB8CC817D5451",
+        "semantic_projection": {"page_count": 6, "all_pages_a4": true},
+        "artifacts": {
+          "old_tk": {"size_bytes": 199688, "sha256": "6CA7032DCF387AE4B88AA3A6DCFFEA7B81C45682A0826530907D143421443221"},
+          "old_pyside6": {"size_bytes": 199688, "sha256": "684EAC7639CEB9CFCF47F9C24ADE96462B57C98E4123C7D5F302993D22D69AF9"},
+          "current": {"size_bytes": 199688, "sha256": "989DB5A2059DD2A638DD20D470876D9DED06DC380116F237602D0DC81BC14941"}
+        }
+      },
+      {
+        "case": "spreadsheet_ods",
+        "route": "XLSX to ODS",
+        "libreoffice_format": {"old_tk": "ods", "old_pyside6": "ods", "current": "ods"},
+        "semantic_sha256": "D1751DC06E4411F28E3A3EFFC0BDC192816B225AADD07DA11E6908C013338BD2",
+        "semantic_projection": {"table_count": 1, "row_count": 5, "formula": "of:=SUM([.B3:.B4])"},
+        "artifacts": {
+          "old_tk": {"size_bytes": 13561, "sha256": "888B8EDDA87C030F5A231C6E2635BC1F6D19EFFECD77B5A52452D6A567FFCD29"},
+          "old_pyside6": {"size_bytes": 13561, "sha256": "D7AEA91F6EEA6DDFEAA697566060831CEC90513362E716FCFC4CE2C7ABCD70A8"},
+          "current": {"size_bytes": 13561, "sha256": "365F49BCD2483F8550091524212E0274E73234EABF1F3DF598E5829127D426E9"}
+        }
+      },
+      {
+        "case": "spreadsheet_pdf",
+        "route": "XLSX to PDF",
+        "libreoffice_format": {"old_tk": "pdf", "old_pyside6": "pdf", "current": "pdf:calc_pdf_Export"},
+        "semantic_sha256": "688F5AAA4AF4ED173085709DDC55686A73B3FAA0D5F3F46F79DF3A404ECA4731",
+        "semantic_projection": {"page_count": 1, "all_pages_a4": true},
+        "artifacts": {
+          "old_tk": {"size_bytes": 41830, "sha256": "8C9EC0A43E841839914F0D70D68F9652C875AADE292F97A9F9D9017CE4A448E6"},
+          "old_pyside6": {"size_bytes": 41830, "sha256": "44BC0F23C8958963E835177414D31A277D20AADBEE7AFA8F0693A22B7E4FAA52"},
+          "current": {"size_bytes": 41830, "sha256": "47C14B10C9610E81D1048E5B1EC1863BBB12558F3205CA3988AFDED2488201A3"}
+        }
+      },
+      {
+        "case": "presentation_pptx",
+        "route": "PPT to PPTX",
+        "libreoffice_format": {"old_tk": "pptx", "old_pyside6": "pptx", "current": "pptx"},
+        "semantic_sha256": "2B1A399006011DEC331314C5E76BDB709FD1461BEA785AC6B549EB8F067A99B8",
+        "semantic_projection": {"slide_count": 2, "shape_counts": [2, 2], "required_text_present": true},
+        "artifacts": {
+          "old_tk": {"size_bytes": 10150, "sha256": "45C16BB4157E413FA95A95D78C42317C894F5D793FA4140BF72245E1C255DD87"},
+          "old_pyside6": {"size_bytes": 10149, "sha256": "C24636E03A8BD66BF063B3FCA06D96BA2A53CFDA879A177CBB446F827358F159"},
+          "current": {"size_bytes": 10147, "sha256": "19CF5F4D59EC32C05ED00FF08DF73B70326281C3522FD5B53EAD4BBF12B97CBB"}
+        }
+      }
+    ]
+  },
+  "filtered_pdf_repair": {
+    "reproduced_before_fix": true,
+    "format": "pdf:writer_pdf_Export",
+    "libreoffice_created": "English General Template.pdf",
+    "libreoffice_created_size_bytes": 32664,
+    "old_current_expectation": "English General Template.pdf:writer_pdf_Export",
+    "failure": "The process exited successfully and wrote a valid PDF, but the bridge returned failure because it treated the entire filter expression as a file extension.",
+    "repair": "Derive the generated output extension from the text before the first colon, then rename that file to the requested output path.",
+    "direct_regression": "test_libreoffice_conversion_uses_extension_before_filter_name"
+  },
+  "current_cancellation": {
+    "cancel_after_seconds": 0.5,
+    "elapsed_seconds": 0.61,
+    "success": false,
+    "message": "cancelled",
+    "output_exists": false,
+    "output_directory_entry_count": 0,
+    "new_lingering_process_count": 0,
+    "comparison_boundary": "Current proves mid-process cancellation. The reference implementations only prove pre-call cancellation by source trace and are not claimed equivalent."
+  },
+  "physical_projection": {
+    "rendered_page_count": 45,
+    "dpi": 120,
+    "cross_project_page_pixels_equal": true,
+    "ordered_page_hash_algorithm": "SHA-256 over newline-joined per-page SHA-256 values sorted by page filename",
+    "surfaces": {
+      "document_pdf": {"pages_per_project": 6, "ordered_page_hash_sha256": "8D4E2F135256BD83EFB1737B3060D4E8995333A2662597FF8B60388AF446F13E"},
+      "spreadsheet_pdf": {"pages_per_project": 1, "ordered_page_hash_sha256": "F7344FC97D84A3EFA66E548834C3BDF96EB0D9497BEE1DFDD3992FB381885CA4"},
+      "document_odt_render": {"pages_per_project": 6, "ordered_page_hash_sha256": "558D1476D73920A09B345CD6A87019265E2C955F2ABD33F524216304027CFD0D"},
+      "presentation_pptx_render": {"pages_per_project": 2, "ordered_page_hash_sha256": "9DD5FC9FAEA1E1C24DCA559A17F493C154D6D8F848494F0051E2F9D4896A0F41"}
+    },
+    "visual_review": "Latest Poppler renders and three authoritative contact sheets were inspected. No clipping, overlap, black block, broken table, illegible spreadsheet cell, missing slide text, or abnormal page transition was found.",
+    "shared_formula_boundary": {
+      "glyph": "U+2751",
+      "occurrences": {"old_tk": 1, "old_pyside6": 1, "current": 1},
+      "pages": {"old_tk": 6, "old_pyside6": 4, "current": 6},
+      "classification": "Shared LibreOffice/OMML rendering limitation, not a current-only regression and not an accepted broad-fidelity PASS."
+    }
+  },
+  "external_evidence": {
+    "root": "D:/docwen-parity/vis103-libreoffice-26.2.4-713e610-v1",
+    "root_file_count_including_diagnostics": 89,
+    "root_size_bytes_including_diagnostics": 7630840,
+    "authoritative_subset_file_count": 30,
+    "authoritative_subset_size_bytes": 3165756,
+    "authoritative_directories": [
+      "inputs (three named sources only)",
+      "matrix-authoritative",
+      "physical-authoritative-clean",
+      "source-docx-physical",
+      "contact-sheets-authoritative",
+      "current-cancel-authoritative (expected empty output directory)"
+    ],
+    "contact_sheets": {
+      "current-document-12-pages.png": {"size_bytes": 625642, "sha256": "25202370C89FF6B4115E65A8883665BCF45ECC0062AAE826DA3ED9EEA7646313"},
+      "current-sheet-presentation-3-pages.png": {"size_bytes": 83362, "sha256": "9BD37537A9925D520CA81ECD096A354AE813EBE1B6504D8D865E8ED73156456E"},
+      "source-docx-formula-triplet.png": {"size_bytes": 116017, "sha256": "0E541DBF674B26702DD3CEA5A6FAF7BFB891912EFBE252896DA1E0512B0F0BB5"}
+    },
+    "diagnostic_boundary": "matrix, matrix-final, physical, physical-final, and similarly named diagnostic directories are retained for provenance but excluded from the authoritative acceptance subset."
+  },
+  "boundary": [
+    "The official administrative image was production-discoverable through PATH but was not registered as a system-wide installed package; its profile remained inside the external toolchain root.",
+    "The five-case matrix is representative Document, Spreadsheet, Presentation, and Print fallback evidence, not an exhaustive route or broad real-world corpus.",
+    "Raw ODF/PDF/PPTX hashes are provenance only; normalized package semantics and rendered page pixels are the comparison oracle.",
+    "The shared LibreOffice U+2751 formula glyph remains a focused upstream-rendering boundary and must not be hidden or described as current-only.",
+    "Explorer OLE, broader final-artifact fidelity, system-wide installer behavior, and overall parity remain open or governed elsewhere."
+  ]
+}

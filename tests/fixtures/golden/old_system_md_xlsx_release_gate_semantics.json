@@ -1,0 +1,84 @@
+{
+  "golden_id": "GOLDEN-001",
+  "case_id": "old_system_md_xlsx_release_gate_semantics",
+  "scope": "Normalized old Tk/PySide6 Markdown to XLSX release-gate semantics for table-cell source preservation, table-safe embedded Markdown, autolinks, fenced-code exclusion, and merge-marker degradation boundaries.",
+  "sources": {
+    "old_tk": [
+      "S:\\OneDrive\\Projects\\docwen-ref-tk\\tests\\test_utils\\test_link_processing_table_safe.py",
+      "S:\\OneDrive\\Projects\\docwen-ref-tk\\src\\docwen\\converter\\md2xlsx\\core.py"
+    ],
+    "old_pyside6": [
+      "S:\\OneDrive\\Projects\\docwen-ref-pyside6\\tests\\test_converter\\test_md2xlsx_workbook_values.py",
+      "S:\\OneDrive\\Projects\\docwen-ref-pyside6\\tests\\test_utils\\test_link_processing_table_safe.py"
+    ],
+    "current": [
+      "packages/core/tests/test_links_markdown_orchestrator.py",
+      "packages/plugins/markdown/tests/test_md_to_spreadsheet.py"
+    ]
+  },
+  "cases": {
+    "inline_source_text": {
+      "input_markdown": "| Name | Age |\n| --- | --- |\n| [Google](https://example.com) | 18 |\n| `a|b` | 20 |\n",
+      "expected_cells": {
+        "A1": "[Google](https://example.com)",
+        "B1": "18",
+        "A2": "`a|b`",
+        "B2": "20"
+      }
+    },
+    "table_safe_embedded_md_file": {
+      "embedded_markdown": "第一行\n第二行 | 三",
+      "input_markdown": "| Name | Age |\n| --- | --- |\n| ![[embed.md]] | <https://example.com> |\n| <user@example.com> | 20 |\n",
+      "expected_cells": {
+        "A1": "第一行\n第二行 | 三",
+        "B1": "https://example.com",
+        "A2": "user@example.com",
+        "B2": "20"
+      }
+    },
+    "fenced_code_table_ignored": {
+      "input_markdown": "```\n| Name | Age |\n| --- | --- |\n| Alice | 18 |\n```\n",
+      "expected_cells": {
+        "A1": null,
+        "B1": null
+      },
+      "expected_metadata": {
+        "table_count": 0
+      }
+    },
+    "invalid_merge_degrades_to_plain_text": {
+      "input_markdown": "| A | B | C |\n| --- | --- | --- |\n| merged | < | tail |\n| ^ | nope | next |\n",
+      "expected_cells": {
+        "A1": "merged",
+        "B1": "<",
+        "C1": "tail",
+        "A2": "^",
+        "B2": "nope",
+        "C2": "next"
+      },
+      "expected_merged_ranges": [],
+      "expected_metadata": {
+        "markdown_table_merges": 0,
+        "markdown_table_merge_warnings": 1
+      }
+    },
+    "template_merge_conflict_keeps_template_merge": {
+      "input_markdown": "| A | B |\n| --- | --- |\n| merged | < |\n",
+      "expected_cells": {
+        "A1": "merged",
+        "B1": "<"
+      },
+      "expected_merged_ranges": [
+        "A1:A2"
+      ],
+      "expected_metadata": {
+        "markdown_table_merges": 0,
+        "markdown_table_merge_warnings": 1
+      }
+    }
+  },
+  "boundary": [
+    "This fixture records normalized semantic release gates, not final old-system timestamped binary artifacts.",
+    "The broader GOLDEN-001 final artifact matrix remains open until file-level old/current outputs are generated and compared."
+  ]
+}

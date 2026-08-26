@@ -1,0 +1,72 @@
+{
+  "schema": "docwen.artifact_bundle.v2",
+  "bundle_id": "bundle.image-md.001",
+  "task_id": "task.image-md.001",
+  "producer": {
+    "name": "DocWen",
+    "product_version": "0.9.0",
+    "machine_protocol": "docwen.machine.v1"
+  },
+  "artifacts": [
+    {
+      "artifact_id": "document.image-index",
+      "kind": "document",
+      "locator": "documents/photo.md",
+      "suggested_name": "photo.md",
+      "media_type": "text/markdown",
+      "size_bytes": 128,
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "logical_path": "documents/photo.md"
+    },
+    {
+      "artifact_id": "fragment.image-ocr",
+      "kind": "fragment",
+      "locator": "fragments/photo.ocr.md",
+      "suggested_name": "photo.ocr.md",
+      "media_type": "text/markdown",
+      "size_bytes": 64,
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "logical_path": "fragments/photo.ocr.md"
+    },
+    {
+      "artifact_id": "resource.original-image",
+      "kind": "resource",
+      "locator": "resources/photo.png",
+      "suggested_name": "photo.png",
+      "media_type": "image/png",
+      "size_bytes": 2048,
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "logical_path": "resources/photo.png"
+    }
+  ],
+  "entries": [
+    {
+      "artifact_id": "document.image-index",
+      "role": "primary",
+      "ordinal": 0,
+      "preferred": true
+    }
+  ],
+  "relations": [
+    {
+      "type": "fragment_of",
+      "source_artifact_id": "fragment.image-ocr",
+      "target_artifact_id": "document.image-index",
+      "role": "ocr_text",
+      "ordinal": 0
+    },
+    {
+      "type": "resource_of",
+      "source_artifact_id": "resource.original-image",
+      "target_artifact_id": "document.image-index",
+      "role": "original"
+    },
+    {
+      "type": "derived_from",
+      "source_artifact_id": "document.image-index",
+      "target_artifact_id": "resource.original-image",
+      "role": "source"
+    }
+  ],
+  "layout_schema": "docwen.artifact_layout.v1"
+}

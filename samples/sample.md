@@ -32,12 +32,12 @@ This text has another footnote[^note].
 
 # Endnote Test
 
-This text has an endnote[^endnote-1].
+This text has an endnote[^endnote:1].
 
-This text has another endnote[^endnote-ref].
+This text has another endnote[^endnote:ref].
 
-[^endnote-1]: This is endnote 1, will appear at the end of document.
-[^endnote-ref]: This is a named endnote.
+[^endnote:1]: This is endnote 1, will appear at the end of document.
+[^endnote:ref]: This is a named endnote.
 
 
 # Heading with Text Test

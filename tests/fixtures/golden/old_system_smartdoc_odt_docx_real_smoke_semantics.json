@@ -1,0 +1,150 @@
+{
+  "golden_id": "GOLDEN-009",
+  "scope": "focused SmartDoc ODT to DOCX real external-office smoke",
+  "generated_at": "2026-07-03",
+  "input_document": {
+    "filename": "smart-doc-odt-probe.odt",
+    "origin": "Produced by a current rewrite DOCX to ODT controlled rerun from smart-doc-odt-probe.docx after the ODT route fix; used here as a real valid ODT input for old/current inbound verification.",
+    "paragraphs": [
+      "Smart Doc ODT Smoke",
+      "This document checks DOCX to ODT conversion."
+    ],
+    "table": [
+      [
+        "Item",
+        "Qty"
+      ],
+      [
+        "Orange",
+        "3"
+      ]
+    ],
+    "odt_zip": {
+      "is_zip": true,
+      "content_xml_selected_texts": [
+        "Smart Doc ODT Smoke",
+        "This document checks DOCX to ODT conversion.",
+        "Item",
+        "Qty",
+        "Orange",
+        "3"
+      ]
+    },
+    "input_size_bytes": 8640
+  },
+  "route": {
+    "source_format": "odt",
+    "target_format": "docx",
+    "category": "document"
+  },
+  "expected_semantics": {
+    "output_extension": ".docx",
+    "paragraphs": [
+      "Smart Doc ODT Smoke",
+      "This document checks DOCX to ODT conversion."
+    ],
+    "tables": [
+      [
+        [
+          "Item",
+          "Qty"
+        ],
+        [
+          "Orange",
+          "3"
+        ]
+      ]
+    ]
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "entry": "docwen.converter.formats.document.odt_to_docx(..., actual_format='odt')",
+      "success": true,
+      "output_size_bytes": 17791,
+      "paragraphs": [
+        "Smart Doc ODT Smoke",
+        "This document checks DOCX to ODT conversion."
+      ],
+      "tables": [
+        [
+          [
+            "Item",
+            "Qty"
+          ],
+          [
+            "Orange",
+            "3"
+          ]
+        ]
+      ]
+    },
+    "docwen-ref-pyside6": {
+      "entry": "docwen.converter.doc_interop.odt_to_docx(..., actual_format='odt')",
+      "success": true,
+      "output_size_bytes": 17793,
+      "paragraphs": [
+        "Smart Doc ODT Smoke",
+        "This document checks DOCX to ODT conversion."
+      ],
+      "tables": [
+        [
+          [
+            "Item",
+            "Qty"
+          ],
+          [
+            "Orange",
+            "3"
+          ]
+        ]
+      ]
+    },
+    "docwen-current": {
+      "entry": "uv run docwen run smart-doc-odt-probe.odt --to docx --output <dir> --json",
+      "success": true,
+      "output_size_bytes": 17783,
+      "paragraphs": [
+        "Smart Doc ODT Smoke",
+        "This document checks DOCX to ODT conversion."
+      ],
+      "tables": [
+        [
+          [
+            "Item",
+            "Qty"
+          ],
+          [
+            "Orange",
+            "3"
+          ]
+        ]
+      ]
+    }
+  },
+  "accepted_limits": [
+    "This is a focused inbound ODT to DOCX smoke using a valid ODT zip input produced by a controlled current DOCX to ODT rerun after the ODT route fix.",
+    "The checked-in fixture stores normalized python-docx readback semantics and output sizes rather than committing generated DOCX binaries with environment-specific metadata.",
+    "The smoke proves ODT inbound support for one representative document; it does not close LibreOffice-only fallback, WPS application fidelity beyond focused rich roundtrip, comments/fields/revisions/complex layout, or broad old-system binary artifact comparison."
+  ],
+  "evidence": {
+    "transient_output_dir": "tmp/smart-doc-odt-inbound-2026-07-03",
+    "source_input": "tmp/smart-doc-odt-rerun-2026-07-03/docwen-current-cli/smart-doc-odt-probe.odt",
+    "source_input_validation": {
+      "command": "uv run docwen run tmp/smart-doc-odt-real-smoke-2026-07-03/smart-doc-odt-probe.docx --to odt --output tmp/smart-doc-odt-rerun-2026-07-03/docwen-current-cli --json",
+      "success": true,
+      "output_size_bytes": 8640,
+      "magic_hex_prefix": "504b0304",
+      "is_zip": true,
+      "content_xml_selected_texts_present": true
+    },
+    "process_cleanup": {
+      "residual_processes_seen_after_combined_old_current_probe": [],
+      "residual_processes_after_six_second_wait": [],
+      "combined_probe": {
+        "command": "old Tk / old PySide6 odt_to_docx direct calls plus current uv run docwen run smart-doc-odt-probe.odt --to docx --json",
+        "success": true,
+        "new_office_processes_after_probe": []
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "docwen-bundle"
+version = "0.9.0"
+description = "DocWen Bundle — default distribution assembly and entry points"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "docwen-core",
+    "docwen-application",
+    "docwen-runtime",
+    "docwen-gui",
+    "docwen-cli",
+    "docwen-plugin-document",
+    "docwen-plugin-spreadsheet",
+    "docwen-plugin-image",
+    "docwen-plugin-print",
+    "docwen-plugin-layout",
+    "docwen-plugin-markdown",
+    "docwen-plugin-markup",
+    "docwen-plugin-presentation",
+    "docwen-plugin-proofread",
+    "docwen-plugin-optimizer-gongwen",
+    "docwen-plugin-optimizer-invoice-cn",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/docwen_bundle"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+markers = [
+    "unit: 单元测试（纯逻辑、替身或内存态验证）",
+    "contract: 契约测试（CLI/配置/输出结构/仓库约束）",
+    "integration: 集成测试（真实文件、真实链路或跨模块协作）",
+    "gui: GUI 组件/界面测试（不一定启动真实子进程）",
+    "gui_smoke: GUI 冒烟测试（真实 GUI 启动链路、子进程 GUI 或主窗口关键路径）",
+    "e2e: 端到端测试（从 CLI/GUI 用户入口走完整流程）",
+    "pr_gate: PR 精简门禁测试（声明式选入 integration/gui_smoke/e2e 高价值样本）",
+    "release_gate: 发布前源码态回归（声明式选入 integration/gui_smoke/e2e 高价值样本）",
+    "golden: Golden/parity 用例（语义输出一致性验证）",
+    "slow: 耗时测试",
+    "macos_only: 仅 macOS 环境",
+    "windows_only: 仅 Windows 环境",
+]

@@ -1,0 +1,34 @@
+[
+  {
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "task/execute",
+    "params": {
+      "plan_id": "plan.duplicate.task.one"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 3,
+    "result": {
+      "task_id": "task.duplicate",
+      "state": "accepted"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 4,
+    "method": "task/execute",
+    "params": {
+      "plan_id": "plan.duplicate.task.two"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 4,
+    "result": {
+      "task_id": "task.duplicate",
+      "state": "accepted"
+    }
+  }
+]

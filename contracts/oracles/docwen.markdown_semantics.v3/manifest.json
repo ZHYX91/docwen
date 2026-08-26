@@ -1,0 +1,205 @@
+{
+  "schema": "docwen.markdown_semantics_manifest.v1",
+  "oracle": {
+    "semantics": "docwen.markdown_semantics.v3",
+    "semantics_schema_id": "urn:docwen:schema:markdown-semantics:v3",
+    "diagnostics": "docwen.markdown_diagnostics.v3",
+    "diagnostics_schema_id": "urn:docwen:schema:markdown-diagnostics:v3"
+  },
+  "final_spec_baseline": {
+    "commit": "cbb33dba6509c43912bef2df744ad8d8654f628c",
+    "tree": "151e15aa1757c9d9a45a2eaab25e6cb101117db8"
+  },
+  "evidence_layer": "source_oracle",
+  "migration_boundary": {
+    "normal_parser_calls_migration": false,
+    "authenticated_historical_source_version": "v3",
+    "workflow": "Inventory->Preview->WorkspaceTransaction"
+  },
+  "files": [
+    {
+      "path": "schemas/corpus-case.schema.json",
+      "bytes": 4714,
+      "sha256": "7bfd83d48f6e287774840dbea155f5579c4f1aae920caf1e7811c8e547076993"
+    },
+    {
+      "path": "schemas/diagnostics.schema.json",
+      "bytes": 3010,
+      "sha256": "01df1fe2c3d4cee475353d6100bcac5b2df0a3271317081595eae3778f9fee06"
+    },
+    {
+      "path": "schemas/manifest.schema.json",
+      "bytes": 2423,
+      "sha256": "d152ad0f4ed13b4c7ed1dc01121bc16051ca1133b38f6edd6ceea37497482328"
+    },
+    {
+      "path": "schemas/projection.schema.json",
+      "bytes": 9600,
+      "sha256": "34a5eb35ec787f7771e77bfebc5a6974cd0f9e428c8e33144d8ccc772f14190f"
+    },
+    {
+      "path": "corpus/docwen-exact-two-harness.case.json",
+      "bytes": 946,
+      "sha256": "db24a897718d1771bd38de589e6aeeaa857991900ed5b8ec5885468ca73ef937"
+    },
+    {
+      "path": "corpus/invalid-caption-content.case.json",
+      "bytes": 471,
+      "sha256": "619eebf56ce039a5e0e7d7eda9b860efd210d2d46a54cc3c679acff213f41731"
+    },
+    {
+      "path": "corpus/invalid-dangling.case.json",
+      "bytes": 427,
+      "sha256": "5433c00750bbbcebc72e4b3a9d3c877128ca8d8eca782acdcff6a29bcb176bf6"
+    },
+    {
+      "path": "corpus/invalid-duplicate.case.json",
+      "bytes": 548,
+      "sha256": "af329dc6afe3f7f0f6cacb7bc8d4a18b70c9e1d2d9e2909be6122db45172e177"
+    },
+    {
+      "path": "corpus/invalid-empty-equation.case.json",
+      "bytes": 473,
+      "sha256": "77291f974c55e44698c5df053c15c95cb9ad03253e2e4158ff4590178b404d48"
+    },
+    {
+      "path": "corpus/invalid-fenced-pseudo-closer-eof.case.json",
+      "bytes": 550,
+      "sha256": "02eecf4caeed216acf072796a02a186f71ef118e8f4eaa942ea0a182f05ea604"
+    },
+    {
+      "path": "corpus/invalid-id-dot.case.json",
+      "bytes": 435,
+      "sha256": "8c57572837460824ef20baf86446cbf26f1b18fbf2ec995b9f792420a2dbcc70"
+    },
+    {
+      "path": "corpus/invalid-id-slash.case.json",
+      "bytes": 439,
+      "sha256": "53ca840b21c2e61eb718ae84ad5e2ff2bd2c2d58441482666b2d6dcd819d4f2e"
+    },
+    {
+      "path": "corpus/invalid-id-too-long.case.json",
+      "bytes": 569,
+      "sha256": "190f067d81fc8f4901cddf09928d3a53fe5b4592fdbfd5ba826af166aa3eaf90"
+    },
+    {
+      "path": "corpus/invalid-id-underscore.case.json",
+      "bytes": 449,
+      "sha256": "8e3118a357c89c374676690592568208c063eb7e4f8030c7deb48d119cba1f5b"
+    },
+    {
+      "path": "corpus/invalid-kind-mismatch.case.json",
+      "bytes": 474,
+      "sha256": "a3c319648ffd8d36e12faf20d35066439339faa98b9d0fa3852e995f6fd6b946"
+    },
+    {
+      "path": "corpus/invalid-nonsemantic-reference.case.json",
+      "bytes": 546,
+      "sha256": "41711b318684b3d4eba500a3293ea312e14e54f7a141e21d0fe0f396081a3a6b"
+    },
+    {
+      "path": "corpus/invalid-soft-resolution.case.json",
+      "bytes": 802,
+      "sha256": "6f1b30fe6bdb4c769de4869e3ecf5eb3a48fe3150e7f940384a459228c9d9df6"
+    },
+    {
+      "path": "corpus/negative-legacy-normal-parse.case.json",
+      "bytes": 519,
+      "sha256": "10161acf1478d0376bf66808a6b29cadb2caa24fa1ea111bbf632a62c296700d"
+    },
+    {
+      "path": "corpus/positive-anchor-topology.case.json",
+      "bytes": 1353,
+      "sha256": "7ca73b7d20b0fceb37b68dae5eea6709ef0a15c5d6af618de4653ca8e9aa7fe6"
+    },
+    {
+      "path": "corpus/positive-caption-kinds.case.json",
+      "bytes": 619,
+      "sha256": "fd63a8ff2d9669d3e9462d4cd416f07aba322e34fd01ae16f6482db8c0474950"
+    },
+    {
+      "path": "corpus/positive-core.case.json",
+      "bytes": 720,
+      "sha256": "4964e0b39f81d9305dbe2b6256f5f17e45d8a16c920ce5dc1e53d2b9bf70d5f9"
+    },
+    {
+      "path": "corpus/positive-external-resolution.case.json",
+      "bytes": 1338,
+      "sha256": "292e31a10d650fc17dc0ab9ca8980db79740b2059fb99bcef0afb39cbfc2272d"
+    },
+    {
+      "path": "corpus/positive-fenced-sources.case.json",
+      "bytes": 4131,
+      "sha256": "29d67c799d9af6b136c9fdaf2e703f0821fc43008daa0297505773070f832ff3"
+    },
+    {
+      "path": "corpus/positive-structured-anchors.case.json",
+      "bytes": 1119,
+      "sha256": "b5b971eab6edd9ee14db2c49baebcda099f8dcf6c36da6c6ea66faaa0bdc088f"
+    },
+    {
+      "path": "corpus/warning-alias-stale.case.json",
+      "bytes": 533,
+      "sha256": "e4c4bc10230f4dd898bb86150b9607400e65ef4952693f71cf36e633a336a162"
+    },
+    {
+      "path": "../../../packages/plugins/markdown/src/docwen_plugin_markdown/document_semantics_v3.py",
+      "bytes": 68314,
+      "sha256": "11ceffd9eb80c1d3f29da38e8eede7504529e542592b6e5df95232113d688c72"
+    },
+    {
+      "path": "../../../packages/plugins/markdown/src/docwen_plugin_markdown/document_semantics_v3_fenced_source.py",
+      "bytes": 8015,
+      "sha256": "cf931724c4883eec4b85bdb9c42cfb943730293a9a90297e7bb591bed0ca4cdb"
+    },
+    {
+      "path": "../../../packages/plugins/markdown/tests/test_document_semantics_v3.py",
+      "bytes": 20606,
+      "sha256": "dec19e0dacdc69f6fe6f84d4f906887d36cfa2546b027d5e96a93c0cfaf9a4b8"
+    },
+    {
+      "path": "../../../packages/plugins/markdown/tests/test_document_semantics_v3_anchor_topology.py",
+      "bytes": 3136,
+      "sha256": "b2c24d1aa62f91232618042f61c45f3bfda900ae0d449480b4bbb8f5b1da9657"
+    },
+    {
+      "path": "../../../packages/plugins/markdown/tests/test_document_semantics_v3_fenced_source.py",
+      "bytes": 6594,
+      "sha256": "4393714689dcab0487355f1c20bfd4a91b4ec51c796fa2fb0215a2b494118e1c"
+    },
+    {
+      "path": "../../../tests/test_repo/test_markdown_semantics_v3_oracle.py",
+      "bytes": 7171,
+      "sha256": "3bf7ebd3c8573ccb0ee80e798960b191c8730c3d62fa6410bba4beb7da567568"
+    }
+  ],
+  "case_ids": [
+    "docwen-exact-two-harness",
+    "invalid-caption-content",
+    "invalid-dangling",
+    "invalid-duplicate",
+    "invalid-empty-equation",
+    "invalid-fenced-pseudo-closer-eof",
+    "invalid-id-dot",
+    "invalid-id-slash",
+    "invalid-id-too-long",
+    "invalid-id-underscore",
+    "invalid-kind-mismatch",
+    "invalid-nonsemantic-reference",
+    "invalid-soft-resolution",
+    "negative-legacy-normal-parse",
+    "positive-anchor-topology",
+    "positive-caption-kinds",
+    "positive-core",
+    "positive-external-resolution",
+    "positive-fenced-sources",
+    "positive-structured-anchors",
+    "warning-alias-stale"
+  ],
+  "excluded": [
+    "docwen.markdown_semantics.v1",
+    "docwen.markdown_semantics.v2",
+    "consumer.interop.v3",
+    "attempt04"
+  ]
+}

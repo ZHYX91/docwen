@@ -1,0 +1,207 @@
+# ==============================================================================
+#  DocWen 标题序号配置（MD转DOCX时添加序号）
+#  定义MD转DOCX时的标题编号格式
+#
+#  国际化说明
+#  locales: 指定方案适用的语言
+#    - ["zh_CN"]: 仅在中文界面显示
+#    - ["*"]: 在所有语言界面显示
+#
+#  name vs name_key:
+#    - name: 直接存储显示名称（用于语言专属方案，无需翻译）
+#    - name_key: 翻译键，从 i18n 文件获取名称（用于通用方案，需要多语言翻译）
+#
+#  示例：
+#    - gongwen_standard: locales=["zh_CN"]，使用 name，因为只有中文用户看到
+#    - hierarchical_standard: locales=["*"]，使用 name_key，因为所有语言都显示
+# ==============================================================================
+
+# 全局设置
+[settings]
+# MD转DOCX时使用的默认序号方案
+default_scheme = "gongwen_standard"
+
+# 方案显示顺序
+order = ["gongwen_standard", "hierarchical_standard", "hierarchical_h2_start", "legal_standard"]
+
+# 数字样式定义（供模板占位符使用）
+[number_styles.chinese_lower]
+name = "小写中文数字"
+description = "一、二、三、四、五、六、七、八、九、十、十一、十二..."
+
+[number_styles.chinese_upper]
+name = "大写中文数字"
+description = "壹、贰、叁、肆、伍、陆、柒、捌、玖、拾、拾壹、拾贰..."
+
+[number_styles.arabic_half]
+name = "半角阿拉伯数字"
+description = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10..."
+
+[number_styles.arabic_full]
+name = "全角阿拉伯数字"
+description = "１、２、３、４、５、６、７、８、９、１０..."
+
+[number_styles.arabic_circled]
+name = "带圈阿拉伯数字"
+description = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫... (最多50)"
+
+[number_styles.letter_upper]
+name = "大写拉丁字母"
+description = "A, B, C, D, E, F, G..."
+
+[number_styles.letter_lower]
+name = "小写拉丁字母"
+description = "a, b, c, d, e, f, g..."
+
+[number_styles.roman_upper]
+name = "大写罗马数字"
+description = "I, II, III, IV, V, VI, VII..."
+
+[number_styles.roman_lower]
+name = "小写罗马数字"
+description = "i, ii, iii, iv, v, vi, vii..."
+
+# 方案1：公文标准
+[schemes.gongwen_standard]
+name = "公文标准"
+description = "中国公文标准序号格式（1-5级为标准格式，6-9级为备用层级格式）"
+enabled = true
+is_system = true
+locales = ["zh_CN"]
+
+# 标准格式（1-5级）
+[schemes.gongwen_standard.level_1]
+format = "{1.chinese_lower}、"
+
+[schemes.gongwen_standard.level_2]
+format = "（{2.chinese_lower}）"
+
+[schemes.gongwen_standard.level_3]
+format = "{3.arabic_half}. "
+
+[schemes.gongwen_standard.level_4]
+format = "（{4.arabic_half}）"
+
+[schemes.gongwen_standard.level_5]
+format = "{5.arabic_circled}"
+
+# 备用层级格式（6-9级，通常不使用）
+# 注：公文标准通常不超过5级，此处为兼容Markdown和Word的多级标题
+[schemes.gongwen_standard.level_6]
+format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half} "
+
+[schemes.gongwen_standard.level_7]
+format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half} "
+
+[schemes.gongwen_standard.level_8]
+format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half}.{8.arabic_half} "
+
+[schemes.gongwen_standard.level_9]
+format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half}.{8.arabic_half}.{9.arabic_half} "
+
+# 方案2：层级数字标准
+[schemes.hierarchical_standard]
+name_key = "hierarchical_standard"
+description_key = "hierarchical_standard_desc"
+enabled = true
+is_system = true
+locales = ["*"]
+
+[schemes.hierarchical_standard.level_1]
+format = "{1.arabic_half} "
+
+[schemes.hierarchical_standard.level_2]
+format = "{1.arabic_half}.{2.arabic_half} "
+
+[schemes.hierarchical_standard.level_3]
+format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half} "
+
+[schemes.hierarchical_standard.level_4]
+format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half} "
+
+[schemes.hierarchical_standard.level_5]
+format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half} "
+
+[schemes.hierarchical_standard.level_6]
+format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half} "
+
+[schemes.hierarchical_standard.level_7]
+format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half} "
+
+[schemes.hierarchical_standard.level_8]
+format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half}.{8.arabic_half} "
+
+[schemes.hierarchical_standard.level_9]
+format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half}.{8.arabic_half}.{9.arabic_half} "
+
+# 方案3：法律条文标准
+[schemes.legal_standard]
+name = "法律条文标准"
+description = "中国法律文本格式（1-5级为标准格式，6-9级为备用层级格式）"
+enabled = true
+is_system = true
+locales = ["zh_CN"]
+
+# 标准格式（1-5级）
+[schemes.legal_standard.level_1]
+format = "第{1.chinese_lower}编　"
+
+[schemes.legal_standard.level_2]
+format = "第{2.chinese_lower}章　"
+
+[schemes.legal_standard.level_3]
+format = "第{3.chinese_lower}节　"
+
+[schemes.legal_standard.level_4]
+format = "第{4.chinese_lower}条　"
+
+[schemes.legal_standard.level_5]
+format = "（{5.chinese_lower}）"
+
+# 备用层级格式（6-9级，通常不使用）
+[schemes.legal_standard.level_6]
+format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half} "
+
+[schemes.legal_standard.level_7]
+format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half} "
+
+[schemes.legal_standard.level_8]
+format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half}.{8.arabic_half} "
+
+[schemes.legal_standard.level_9]
+format = "{1.arabic_half}.{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half}.{8.arabic_half}.{9.arabic_half} "
+
+# 方案4：层级数字(H2起)
+[schemes.hierarchical_h2_start]
+name_key = "hierarchical_h2_start"
+description_key = "hierarchical_h2_start_desc"
+enabled = true
+is_system = true
+locales = ["*"]
+
+[schemes.hierarchical_h2_start.level_1]
+format = ""
+
+[schemes.hierarchical_h2_start.level_2]
+format = "{2.arabic_half} "
+
+[schemes.hierarchical_h2_start.level_3]
+format = "{2.arabic_half}.{3.arabic_half} "
+
+[schemes.hierarchical_h2_start.level_4]
+format = "{2.arabic_half}.{3.arabic_half}.{4.arabic_half} "
+
+[schemes.hierarchical_h2_start.level_5]
+format = "{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half} "
+
+[schemes.hierarchical_h2_start.level_6]
+format = "{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half} "
+
+[schemes.hierarchical_h2_start.level_7]
+format = "{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half} "
+
+[schemes.hierarchical_h2_start.level_8]
+format = "{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half}.{8.arabic_half} "
+
+[schemes.hierarchical_h2_start.level_9]
+format = "{2.arabic_half}.{3.arabic_half}.{4.arabic_half}.{5.arabic_half}.{6.arabic_half}.{7.arabic_half}.{8.arabic_half}.{9.arabic_half} "

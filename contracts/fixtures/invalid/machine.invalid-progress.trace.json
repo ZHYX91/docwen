@@ -1,0 +1,30 @@
+[
+  {
+    "jsonrpc": "2.0",
+    "id": 6,
+    "method": "task/execute",
+    "params": {
+      "plan_id": "plan.invalid.progress"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 6,
+    "result": {
+      "task_id": "task.invalid.progress",
+      "state": "accepted"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "method": "task/progress",
+    "params": {
+      "task_id": "task.invalid.progress",
+      "sequence": 1,
+      "phase": "convert",
+      "completed": 2,
+      "total": 1,
+      "unit": "items"
+    }
+  }
+]

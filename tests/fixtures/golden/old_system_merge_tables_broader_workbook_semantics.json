@@ -1,0 +1,796 @@
+{
+  "golden_id": "GOLDEN-013",
+  "generated_at": "2026-07-05",
+  "probe_scope": "broader normalized Merge Tables workbook projection for cell mode, covering active-sheet-only processing, base extra-sheet preservation, collect extra-sheet ignore behavior, protected sheet retention, rectangular merged-cell expansion, base style retention, covered-cell non-style-copying, formula-object loss under the shared data_only value-only baseline, and cached formula values from generated externally-calculated-style XLSX files",
+  "input_workbooks": {
+    "broader_base.xlsx": {
+      "active_sheet": "Main",
+      "cells": {
+        "A1": "Merged Top",
+        "C1": "Amount",
+        "D1": "Note",
+        "E1": "=SUM(C3:C4)",
+        "A3": "North",
+        "B3": "Alpha",
+        "C3": 10,
+        "D3": "base",
+        "A4": "South",
+        "B4": "Beta",
+        "C4": 20,
+        "D4": "keep"
+      },
+      "merged_ranges": [
+        "A1:B2"
+      ],
+      "styles": {
+        "A1": {
+          "fill": "FFCC00",
+          "bold": true
+        }
+      },
+      "sheet_protection": true,
+      "extra_sheets": {
+        "BaseExtra": [
+          [
+            "base-extra-kept"
+          ]
+        ]
+      }
+    },
+    "broader_collect.xlsx": {
+      "active_sheet": "Main",
+      "cells": {
+        "A1": "Merged Top",
+        "C1": "Amount",
+        "D1": "Note",
+        "E1": "Formula Label",
+        "A3": "East",
+        "B3": "Gamma",
+        "C3": 5,
+        "D3": "collect",
+        "A5": "Far",
+        "B5": "Delta",
+        "C5": 7,
+        "D5": "new"
+      },
+      "merged_ranges": [
+        "A1:B2"
+      ],
+      "styles": {
+        "A1": {
+          "fill": "99CCFF",
+          "italic": true
+        }
+      },
+      "sheet_protection": false,
+      "extra_sheets": {
+        "CollectExtra": [
+          [
+            "collect-extra-ignored"
+          ]
+        ]
+      }
+    }
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "cell": {
+        "success": true,
+        "output_suffix": ".xlsx",
+        "projection": {
+          "sheetnames": [
+            "Main",
+            "BaseExtra"
+          ],
+          "active_values": [
+            [
+              "Merged Top",
+              "Merged Top",
+              "Amount",
+              "Note",
+              "Formula Label"
+            ],
+            [
+              "Merged Top",
+              "Merged Top",
+              null,
+              null,
+              null
+            ],
+            [
+              "North,East",
+              "Alpha,Gamma",
+              15,
+              "base,collect",
+              null
+            ],
+            [
+              "South",
+              "Beta",
+              20,
+              "keep",
+              null
+            ],
+            [
+              "Far",
+              "Delta",
+              7,
+              "new",
+              null
+            ]
+          ],
+          "active_formulas": [
+            [
+              "Merged Top",
+              "Merged Top",
+              "Amount",
+              "Note",
+              "Formula Label"
+            ],
+            [
+              "Merged Top",
+              "Merged Top",
+              null,
+              null,
+              null
+            ],
+            [
+              "North,East",
+              "Alpha,Gamma",
+              15,
+              "base,collect",
+              null
+            ],
+            [
+              "South",
+              "Beta",
+              20,
+              "keep",
+              null
+            ],
+            [
+              "Far",
+              "Delta",
+              7,
+              "new",
+              null
+            ]
+          ],
+          "merged_ranges": [],
+          "sheet_protection": true,
+          "a1_fill": "00FFCC00",
+          "a1_bold": true,
+          "b1_fill": "00000000",
+          "b1_bold": false,
+          "sheets": {
+            "Main": [
+              [
+                "Merged Top",
+                "Merged Top",
+                "Amount"
+              ],
+              [
+                "Merged Top",
+                "Merged Top",
+                null
+              ],
+              [
+                "North,East",
+                "Alpha,Gamma",
+                15
+              ]
+            ],
+            "BaseExtra": [
+              [
+                "base-extra-kept"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "docwen-ref-pyside6": {
+      "cell": {
+        "success": true,
+        "output_suffix": ".xlsx",
+        "projection": {
+          "sheetnames": [
+            "Main",
+            "BaseExtra"
+          ],
+          "active_values": [
+            [
+              "Merged Top",
+              "Merged Top",
+              "Amount",
+              "Note",
+              "Formula Label"
+            ],
+            [
+              "Merged Top",
+              "Merged Top",
+              null,
+              null,
+              null
+            ],
+            [
+              "North,East",
+              "Alpha,Gamma",
+              15,
+              "base,collect",
+              null
+            ],
+            [
+              "South",
+              "Beta",
+              20,
+              "keep",
+              null
+            ],
+            [
+              "Far",
+              "Delta",
+              7,
+              "new",
+              null
+            ]
+          ],
+          "active_formulas": [
+            [
+              "Merged Top",
+              "Merged Top",
+              "Amount",
+              "Note",
+              "Formula Label"
+            ],
+            [
+              "Merged Top",
+              "Merged Top",
+              null,
+              null,
+              null
+            ],
+            [
+              "North,East",
+              "Alpha,Gamma",
+              15,
+              "base,collect",
+              null
+            ],
+            [
+              "South",
+              "Beta",
+              20,
+              "keep",
+              null
+            ],
+            [
+              "Far",
+              "Delta",
+              7,
+              "new",
+              null
+            ]
+          ],
+          "merged_ranges": [],
+          "sheet_protection": true,
+          "a1_fill": "00FFCC00",
+          "a1_bold": true,
+          "b1_fill": "00000000",
+          "b1_bold": false,
+          "sheets": {
+            "Main": [
+              [
+                "Merged Top",
+                "Merged Top",
+                "Amount"
+              ],
+              [
+                "Merged Top",
+                "Merged Top",
+                null
+              ],
+              [
+                "North,East",
+                "Alpha,Gamma",
+                15
+              ]
+            ],
+            "BaseExtra": [
+              [
+                "base-extra-kept"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "docwen-current": {
+      "cell": {
+        "success": true,
+        "suggested_name": "broader_base_merged.xlsx",
+        "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "metadata": {
+          "base_file": "broader_base.xlsx",
+          "collect_count": 1,
+          "merge_mode": "cell"
+        },
+        "metrics": {
+          "collect_count": 1,
+          "mode": "cell"
+        },
+        "projection": {
+          "sheetnames": [
+            "Main",
+            "BaseExtra"
+          ],
+          "active_values": [
+            [
+              "Merged Top",
+              "Merged Top",
+              "Amount",
+              "Note",
+              "Formula Label"
+            ],
+            [
+              "Merged Top",
+              "Merged Top",
+              null,
+              null,
+              null
+            ],
+            [
+              "North,East",
+              "Alpha,Gamma",
+              15,
+              "base,collect",
+              null
+            ],
+            [
+              "South",
+              "Beta",
+              20,
+              "keep",
+              null
+            ],
+            [
+              "Far",
+              "Delta",
+              7,
+              "new",
+              null
+            ]
+          ],
+          "active_formulas": [
+            [
+              "Merged Top",
+              "Merged Top",
+              "Amount",
+              "Note",
+              "Formula Label"
+            ],
+            [
+              "Merged Top",
+              "Merged Top",
+              null,
+              null,
+              null
+            ],
+            [
+              "North,East",
+              "Alpha,Gamma",
+              15,
+              "base,collect",
+              null
+            ],
+            [
+              "South",
+              "Beta",
+              20,
+              "keep",
+              null
+            ],
+            [
+              "Far",
+              "Delta",
+              7,
+              "new",
+              null
+            ]
+          ],
+          "merged_ranges": [],
+          "sheet_protection": true,
+          "a1_fill": "00FFCC00",
+          "a1_bold": true,
+          "b1_fill": "00000000",
+          "b1_bold": false,
+          "sheets": {
+            "Main": [
+              [
+                "Merged Top",
+                "Merged Top",
+                "Amount"
+              ],
+              [
+                "Merged Top",
+                "Merged Top",
+                null
+              ],
+              [
+                "North,East",
+                "Alpha,Gamma",
+                15
+              ]
+            ],
+            "BaseExtra": [
+              [
+                "base-extra-kept"
+              ]
+            ]
+          }
+        }
+      }
+    }
+  },
+  "cached_formula_value_probe": {
+    "classification": "same_old_current_merge_tables_cached_formula_value_projection",
+    "input_workbooks": {
+      "cached_base.xlsx": {
+        "worksheet": "Formula",
+        "formula_cell": "B4",
+        "formula_text": "=SUM(B2:B3)",
+        "cached_value": 15,
+        "rows": [
+          [
+            "Item",
+            "Value"
+          ],
+          [
+            "Alpha",
+            10
+          ],
+          [
+            "Beta",
+            5
+          ],
+          [
+            "Total",
+            "=SUM(B2:B3)"
+          ]
+        ]
+      },
+      "cached_collect.xlsx": {
+        "worksheet": "Formula",
+        "formula_cell": "B4",
+        "formula_text": "=SUM(B2:B3)",
+        "cached_value": 5,
+        "rows": [
+          [
+            "Item",
+            "Value"
+          ],
+          [
+            "Alpha",
+            2
+          ],
+          [
+            "Beta",
+            3
+          ],
+          [
+            "Total",
+            "=SUM(B2:B3)"
+          ]
+        ]
+      }
+    },
+    "projects": {
+      "docwen-ref-tk": {
+        "cell": {
+          "success": true,
+          "output_suffix": ".xlsx",
+          "projection": {
+            "active_values": [
+              [
+                "Item",
+                "Value"
+              ],
+              [
+                "Alpha",
+                12
+              ],
+              [
+                "Beta",
+                8
+              ],
+              [
+                "Total",
+                20
+              ]
+            ],
+            "active_formulas": [
+              [
+                "Item",
+                "Value"
+              ],
+              [
+                "Alpha",
+                12
+              ],
+              [
+                "Beta",
+                8
+              ],
+              [
+                "Total",
+                20
+              ]
+            ],
+            "contains_formula_text": false,
+            "contains_cached_value_sum": true
+          }
+        }
+      },
+      "docwen-ref-pyside6": {
+        "cell": {
+          "success": true,
+          "output_suffix": ".xlsx",
+          "projection": {
+            "active_values": [
+              [
+                "Item",
+                "Value"
+              ],
+              [
+                "Alpha",
+                12
+              ],
+              [
+                "Beta",
+                8
+              ],
+              [
+                "Total",
+                20
+              ]
+            ],
+            "active_formulas": [
+              [
+                "Item",
+                "Value"
+              ],
+              [
+                "Alpha",
+                12
+              ],
+              [
+                "Beta",
+                8
+              ],
+              [
+                "Total",
+                20
+              ]
+            ],
+            "contains_formula_text": false,
+            "contains_cached_value_sum": true
+          }
+        }
+      },
+      "docwen-current": {
+        "cell": {
+          "success": true,
+          "suggested_name": "cached_base_merged.xlsx",
+          "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "metadata": {
+            "base_file": "cached_base.xlsx",
+            "collect_count": 1,
+            "merge_mode": "cell"
+          },
+          "metrics": {
+            "collect_count": 1,
+            "mode": "cell"
+          },
+          "projection": {
+            "active_values": [
+              [
+                "Item",
+                "Value"
+              ],
+              [
+                "Alpha",
+                12
+              ],
+              [
+                "Beta",
+                8
+              ],
+              [
+                "Total",
+                20
+              ]
+            ],
+            "active_formulas": [
+              [
+                "Item",
+                "Value"
+              ],
+              [
+                "Alpha",
+                12
+              ],
+              [
+                "Beta",
+                8
+              ],
+              [
+                "Total",
+                20
+              ]
+            ],
+            "contains_formula_text": false,
+            "contains_cached_value_sum": true
+          }
+        }
+      }
+    },
+    "current_regression_test": "packages/plugins/spreadsheet/tests/test_csv_xlsx.py::TestTableMerge::test_merge_by_cell_cached_formula_values_match_old_systems",
+    "comparison_implication": "A focused cached-formula Merge Tables probe now proves old Tk, old PySide6, and current all read cached/data-only formula values and merge them as values in cell mode, producing 20 for the generated Total row while not preserving formula text. Broader externally calculated workbooks and larger formula batches remain open for final parity."
+  },
+  "final_artifact_contract_addendum": {
+    "contract": "CONTRACT-2026-07-22-001 / FA-10",
+    "probe_id": "FA-10-B1-N1-2026-07-22",
+    "evidence_root": "D:/docwen-parity/vis163-merge-tables-fa10-11fbbf8-v1",
+    "probe_tool": "tools/validation/probe_merge_tables_parity.py",
+    "frozen_inputs": {
+      "B1_base": "922F528886CC952A58576335612996F3C469857AC58043CD9FBF45D93DF53CEC",
+      "B1_collect": "9EA0C8B88A44226F51FB339174C0766EB172193C512A069B2357D10F69B252A9",
+      "N1_protected_base": "A9AF7615B03715427C5E68A71250C028C78F2A946D13E9655B977B29426185FF",
+      "N1_legacy_collect": "7E0DD558EB467AD875AC6FCB979DCB2A1CE2881303AFA2C460A39F7A22548685"
+    },
+    "B1_projection": {
+      "sheetnames": [
+        "Formula",
+        "BaseExtra"
+      ],
+      "active_sheet": "Formula",
+      "dimensions": "A1:D4",
+      "used_values": [
+        [
+          "Item",
+          "Value",
+          "Base note,Collect note",
+          "Base note,Collect note"
+        ],
+        [
+          "Alpha",
+          12,
+          null,
+          null
+        ],
+        [
+          "Beta",
+          8,
+          null,
+          null
+        ],
+        [
+          "Total",
+          20,
+          null,
+          null
+        ]
+      ],
+      "contains_formula_text": false,
+      "merged_ranges": [],
+      "sheet_protection": true,
+      "base_style": {
+        "a1_style_id": 1,
+        "a1_fill_type": "solid",
+        "a1_fill_rgb": "00FFCC00",
+        "a1_bold": true
+      }
+    },
+    "N1_projection": {
+      "sheetnames": [
+        "Data",
+        "Lookup"
+      ],
+      "active_sheet": "Data",
+      "dimensions": "A1:E7",
+      "used_values": [
+        [
+          "VIS-105 LibreOffice SmartSheet Matrix",
+          "VIS-105 LibreOffice SmartSheet Matrix",
+          "VIS-105 LibreOffice SmartSheet Matrix",
+          "VIS-105 LibreOffice SmartSheet Matrix",
+          "VIS-105 LibreOffice SmartSheet Matrix"
+        ],
+        [
+          "Item",
+          "Region",
+          "Quantity",
+          "Unit Price",
+          "Amount"
+        ],
+        [
+          "Alpha",
+          "North",
+          4,
+          25,
+          50
+        ],
+        [
+          "Beta",
+          "South",
+          10,
+          14.5,
+          72.5
+        ],
+        [
+          "Gamma",
+          "East",
+          6,
+          9.5,
+          28.5
+        ],
+        [
+          "Delta",
+          "West",
+          8,
+          10,
+          40
+        ],
+        [
+          "Total",
+          null,
+          28,
+          null,
+          191
+        ]
+      ],
+      "contains_formula_text": false,
+      "merged_ranges": [],
+      "sheet_protection": true,
+      "base_style": {
+        "a1_style_id": 4,
+        "a1_fill_type": "solid",
+        "a1_fill_rgb": "FF1F4E78",
+        "a1_bold": true
+      }
+    },
+    "artifact_sha256": {
+      "docwen-ref-tk": {
+        "B1": "8E55936356EC31A611C3C731B0413B39E980C0F3BC988BBA8672C8A33E79C1AD",
+        "N1": "E5BA0E54FD28162B56CF8BA1829B878B661DC3F85D414DAFA97880DD23559288"
+      },
+      "docwen-ref-pyside6": {
+        "B1": "6DB6756D7C4432238DAC9F14256D704CD9CCFAB38DB9DCDE2C0C3AC34B6117B2",
+        "N1": "8F5B8151DBCA8DF7F2936B13593AC1CB0F121155DDD74CC96BD67F3A47D0F72E"
+      },
+      "docwen-current": {
+        "B1": "F5324EF0AA71E64F8906DC648CE2C656A867F285C22FD1CB0C279B9CF2A9A00B",
+        "N1": "DB7AD288D9A7A00E7B66F5147E83F1A0EACB5E756F12086D9072CF70FE295A08"
+      }
+    },
+    "normalized_projection_equal": {
+      "B1": true,
+      "N1": true
+    },
+    "expected_oracle_matches": {
+      "B1": true,
+      "N1": true
+    },
+    "cache_requirements_met": true,
+    "final_placement_met": true,
+    "reference_defect_observed": true,
+    "final_workbooks": 6,
+    "process_residue_after_bounded_settle": 0,
+    "collision_evidence": "packages/plugins/spreadsheet/tests/test_csv_xlsx.py::TestTableMerge::test_merge_tables_pipeline_finalizes_collision_with_legacy_suffix",
+    "current_regression_test": "packages/plugins/spreadsheet/tests/test_csv_xlsx.py::TestTableMerge::test_merge_preconverts_legacy_collect_workbook_through_spreadsheet_hub",
+    "old_reference_disposition": "The old PySide6 public CLI drops ConversionRequest.file_list before MergeTablesStrategy and fails with invalid_input. This is an old-reference CLI wiring defect; its artifact projection was captured through production docwen.converter.TableMerger in the isolated reference venv.",
+    "external_condition": "The hash-pinned VIS105 XLSX already contained 6/6 cached formula values. A new Excel native-dialog attempt was not accepted and is not counted as external acceptance.",
+    "pass": true
+  },
+  "comparison_implication": "CONTRACT-2026-07-22-001 FA-10 is FIXED_AND_VERIFIED. B1 and the hash-pinned VIS105-derived N1 set produce six final XLSX artifacts whose mandatory normalized projections are equal across old Tk, old PySide6, and current. N1 exercises real XLS preconversion, six externally materialized cached formula values, merged-cell expansion, base style, sheet protection, active-sheet policy, and final placement; the existing current runtime guard owns the frozen collision suffix requirement. The old PySide6 public CLI file-list wiring failure is explicitly retained as a reference defect rather than presented as a passing public route. This closes only FA-10, not other artifact families, GUI large-workbook feel, or overall parity."
+}

@@ -1,0 +1,130 @@
+{
+  "golden_id": "GOLDEN-022",
+  "title": "i18n YAML key labels for Markdown frontmatter output",
+  "scope": "DOCX/document, spreadsheet, image, presentation, markup, layout, and invoice_cn-to-Markdown YAML frontmatter key labels",
+  "baseline": {
+    "docwen-ref-tk": {
+      "code_paths": [
+        "src/docwen/converter/docx2md/simple/yaml_builder.py",
+        "src/docwen/converter/xlsx2md/core.py",
+        "src/docwen/services/strategies/image/to_markdown.py",
+        "src/docwen/converter/pptx2md/core.py",
+        "src/docwen/converter/html2md/core.py",
+        "src/docwen/converter/enex2md/core.py",
+        "src/docwen/converter/epub2md/core.py",
+        "src/docwen/converter/pdf2md/core.py",
+        "src/docwen/converter/layout2md/invoice_cn.py",
+        "src/docwen/converter/docx2md/gongwen/converter.py",
+        "src/docwen/converter/docx2md/gongwen/content_generator.py",
+        "src/docwen/utils/yaml_utils.py",
+        "src/docwen/i18n/locales/en_US.toml",
+        "src/docwen/i18n/locales/de_DE.toml",
+        "src/docwen/i18n/locales/ja_JP.toml",
+        "src/docwen/i18n/locales/zh_TW.toml"
+      ],
+      "behavior": "DOCX-to-Markdown YAML title/subtitle keys are resolved through yaml_keys.title and yaml_keys.subtitle; spreadsheet, image, PPTX, HTML/MHTML, ENEX, EPUB, PDF-to-Markdown, and invoice_cn Markdown YAML title keys are resolved through yaml_keys.title. Gongwen uses a fixed Chinese 18-field public-document schema and fixed Chinese attachment frontmatter rather than the generic yaml_keys title/subtitle helper."
+    },
+    "docwen-ref-pyside6": {
+      "code_paths": [
+        "src/docwen/converter/docx/to_md/standard/yaml_builder.py",
+        "src/docwen/converter/xlsx/to_md/core.py",
+        "src/docwen/services/strategies/image/to_markdown.py",
+        "src/docwen/converter/pptx/to_md/core.py",
+        "src/docwen/converter/html/to_md/core.py",
+        "src/docwen/converter/enex/to_md/core.py",
+        "src/docwen/converter/epub/to_md/core.py",
+        "src/docwen/converter/pdf/to_md/core.py",
+        "src/docwen/converter/invoice/invoice_cn/markdown_writer.py",
+        "src/docwen/converter/docx/to_md/gongwen/converter/yaml_extraction.py",
+        "src/docwen/converter/docx/to_md/gongwen/content_generator.py",
+        "src/docwen/utils/yaml_utils.py",
+        "src/docwen/i18n/locales/en_US.toml",
+        "src/docwen/i18n/locales/de_DE.toml",
+        "src/docwen/i18n/locales/ja_JP.toml",
+        "src/docwen/i18n/locales/zh_TW.toml"
+      ],
+      "behavior": "DOCX-to-Markdown YAML title/subtitle keys are resolved through yaml_keys.title and yaml_keys.subtitle; spreadsheet, image, PPTX, HTML/MHTML, ENEX, EPUB, PDF-to-Markdown, and invoice_cn Markdown YAML title keys are resolved through yaml_keys.title. Gongwen uses a fixed Chinese 18-field public-document schema and fixed Chinese attachment frontmatter rather than the generic yaml_keys title/subtitle helper."
+    }
+  },
+  "expected_locale_labels": {
+    "en_US": {
+      "title": "title",
+      "subtitle": "subtitle"
+    },
+    "de_DE": {
+      "title": "Titel",
+      "subtitle": "Untertitel"
+    },
+    "ja_JP": {
+      "title": "タイトル",
+      "subtitle": "サブタイトル"
+    },
+    "zh_TW": {
+      "title": "標題",
+      "subtitle": "副標題"
+    }
+  },
+  "current_rewrite": {
+    "code_paths": [
+      "packages/apps/cli/src/docwen_cli/commands/convert.py",
+      "packages/apps/gui/src/docwen_gui/main_window.py",
+      "packages/core/src/docwen_core/yaml_tools.py",
+      "packages/plugins/document/src/docwen_plugin_document/to_markdown/converter.py",
+      "packages/plugins/spreadsheet/src/docwen_plugin_spreadsheet/to_markdown/converter.py",
+      "packages/plugins/image/src/docwen_plugin_image/to_markdown/converter.py",
+      "packages/plugins/presentation/src/docwen_plugin_presentation/pptx_md/converter.py",
+      "packages/plugins/markup/src/docwen_plugin_markup/web_archive/converter.py",
+      "packages/plugins/markup/src/docwen_plugin_markup/note_export/converter.py",
+      "packages/plugins/markup/src/docwen_plugin_markup/publication/converter.py",
+      "packages/plugins/layout/src/docwen_plugin_layout/to_markdown/converter.py",
+      "packages/plugins/optimizers/invoice_cn/src/docwen_plugin_optimizer_invoice_cn/invoice_cn/markdown_writer.py",
+      "packages/plugins/optimizers/gongwen/src/docwen_plugin_optimizer_gongwen/constants.py",
+      "packages/plugins/optimizers/gongwen/src/docwen_plugin_optimizer_gongwen/rendering/markdown_renderer.py",
+      "packages/plugins/optimizers/gongwen/src/docwen_plugin_optimizer_gongwen/rendering/attachment_renderer.py",
+      "i18n/locales/de_DE.toml",
+      "i18n/locales/ja_JP.toml",
+      "i18n/locales/zh_TW.toml"
+    ],
+    "behavior": "CLI/GUI resolve yaml_keys at the application edge and pass yaml_key_labels through ConversionRequest.options for Markdown targets; the document plugin consumes title/subtitle labels and the spreadsheet, image, presentation, markup, layout, and invoice_cn plugins consume title labels without importing runtime resources. The document DOCX, spreadsheet XLSX, image file-mode, presentation PPTX, markup HTML/MHTML/ENEX/EPUB, layout PDF, and invoice_cn PDF locale-label tests run through TaskManager -> OutputFinalizer and prove finalized Markdown in the user output directory retains the localized title label without workspace/staging path leaks. Gongwen remains a fixed Chinese public-document metadata and attachment-frontmatter schema in old and current systems."
+  },
+  "tests": [
+    "packages/core/tests/test_yaml_markdown_utils.py::TestGenerateBasicYamlFrontmatter::test_uses_resolved_title_label",
+    "packages/plugins/document/tests/test_document_to_md_metadata.py::TestBuildYamlHeader::test_locale_yaml_key_labels_are_consumed",
+    "packages/plugins/document/tests/test_document_to_md_golden.py::TestDocxToMdGolden::test_docx_to_md_matches_old_system_semantic_fixture",
+    "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden.py::TestSpreadsheetToMdDirect::test_convert_xlsx_uses_locale_yaml_title_label",
+    "packages/plugins/image/tests/test_markdown_assets.py::TestImageToMarkdownEmbedMode::test_embed_mode_consumes_locale_yaml_title_label",
+    "packages/plugins/image/tests/test_markdown_assets.py::TestImageToMarkdownOcrPlacementImageMd::test_image_md_placement_auxiliary_has_yaml_frontmatter",
+    "packages/plugins/presentation/tests/test_presentation_to_md.py::TestPptxToMd::test_pptx_yaml_frontmatter_consumes_locale_title_label",
+    "packages/plugins/markup/tests/test_input_routes.py::TestHtmlToMd::test_html_yaml_frontmatter_consumes_locale_title_label",
+    "packages/plugins/markup/tests/test_input_routes.py::TestMhtmlToMd::test_mhtml_yaml_frontmatter_consumes_locale_title_label",
+    "packages/plugins/markup/tests/test_input_routes.py::TestEnexToMd::test_enex_yaml_frontmatter_consumes_locale_title_label",
+    "packages/plugins/markup/tests/test_input_routes.py::TestEpubToMd::test_epub_yaml_frontmatter_consumes_locale_title_label",
+    "packages/plugins/layout/tests/test_layout_conversions.py::TestOldSystemLayoutPdfFixture::test_pdf_to_md_yaml_frontmatter_consumes_locale_title_label",
+    "packages/plugins/optimizers/invoice_cn/tests/test_invoice_conversions.py::TestPdfInvoiceToMarkdown::test_invoice_cn_pdf_fixture_finalizes_through_runtime",
+    "packages/plugins/optimizers/invoice_cn/tests/test_invoice_conversions.py::TestRowParser::test_yaml_writer_structure",
+    "packages/apps/cli/tests/test_cli_contract.py::TestExecuteConvertActionPath::test_document_to_markdown_request_carries_cli_locale_yaml_labels",
+    "packages/apps/cli/tests/test_cli_contract.py::TestExecuteConvertActionPath::test_spreadsheet_to_markdown_request_carries_cli_locale_yaml_labels",
+    "packages/apps/cli/tests/test_cli_contract.py::TestExecuteConvertActionPath::test_image_to_markdown_request_carries_cli_locale_yaml_labels",
+    "packages/apps/cli/tests/test_cli_contract.py::TestExecuteConvertActionPath::test_markup_to_markdown_request_carries_cli_locale_yaml_labels",
+    "packages/apps/cli/tests/test_cli_contract.py::TestExecuteConvertActionPath::test_layout_to_markdown_request_carries_cli_locale_yaml_labels",
+    "packages/apps/cli/tests/test_cli_contract.py::TestExecuteConvertActionPath::test_invoice_cn_to_markdown_request_carries_cli_locale_yaml_labels",
+    "packages/apps/gui/tests/test_main_window_projection_binding.py::TestRuntimeRequestBinding::test_document_to_markdown_request_carries_locale_yaml_labels",
+    "packages/apps/gui/tests/test_main_window_projection_binding.py::TestRuntimeRequestBinding::test_spreadsheet_to_markdown_request_carries_locale_yaml_labels",
+    "packages/apps/gui/tests/test_main_window_projection_binding.py::TestRuntimeRequestBinding::test_image_to_markdown_request_carries_locale_yaml_labels",
+    "packages/apps/gui/tests/test_main_window_projection_binding.py::TestRuntimeRequestBinding::test_markup_to_markdown_request_carries_locale_yaml_labels",
+    "packages/apps/gui/tests/test_main_window_projection_binding.py::TestRuntimeRequestBinding::test_layout_to_markdown_request_carries_locale_yaml_labels",
+    "packages/apps/gui/tests/test_main_window_projection_binding.py::TestRuntimeRequestBinding::test_invoice_cn_to_markdown_request_carries_locale_yaml_labels",
+    "tests/test_repo/test_golden_docs.py::test_golden_docs_track_i18n_yaml_keys_semantic_fixture"
+  ],
+  "status": "partial",
+  "accepted_limits": [
+    "This fixture covers DOCX/document-to-Markdown YAML title/subtitle labels plus spreadsheet, image, presentation, markup, layout, and invoice_cn-to-Markdown YAML title labels, not every Markdown-producing route.",
+    "invoice_cn keeps the old-system fixed Chinese invoice business fields; only the generic YAML title key follows yaml_keys.title.",
+    "Gongwen keeps the old-system fixed Chinese 18-field public-document schema and fixed Chinese attachment frontmatter, and is not asserted as a generic yaml_keys title/subtitle consumer.",
+    "Aliases remain compatibility-oriented and are not asserted as a localized yaml_keys field because the old systems did not define yaml_keys.aliases."
+  ],
+  "remaining_work": [
+    "Generate full old-system file-level artifacts for non-Chinese DOCX, spreadsheet, image, presentation, markup, layout, and invoice_cn-to-Markdown conversions.",
+    "Audit future or less common Markdown-producing routes before declaring full i18n output parity."
+  ]
+}

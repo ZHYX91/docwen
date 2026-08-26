@@ -2,12 +2,68 @@
 requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+# The root distribution is an entry-point/dependency metapackage. Runtime
+# packages are owned by the explicit uv workspace members below.
+packages = []
+
+[tool.uv]
+required-version = "==0.12.0"
+# Both upstream consumers import only the shared ``cv2`` module.  pdf2docx
+# already selects the headless wheel, which is also the correct variant when
+# another GUI toolkit (PySide6 here) owns the application windows.  RapidOCR
+# 1.4.4 declares the mutually-exclusive GUI wheel, so replace that one exact
+# transitive edge and fail closed again when its version changes.
+exclude-dependencies = [
+    { package = { name = "rapidocr-onnxruntime", version = "1.4.4" }, dependencies = ["opencv-python"] },
+]
+
+[tool.uv.workspace]
+members = [
+    "packages/core",
+    "packages/application",
+    "packages/runtime",
+    "packages/apps/gui",
+    "packages/apps/cli",
+    "packages/plugins/document",
+    "packages/plugins/spreadsheet",
+    "packages/plugins/image",
+    "packages/plugins/print",
+    "packages/plugins/layout",
+    "packages/plugins/markdown",
+    "packages/plugins/markup",
+    "packages/plugins/presentation",
+    "packages/plugins/proofread",
+    "packages/plugins/optimizers/gongwen",
+    "packages/plugins/optimizers/invoice_cn",
+    "packages/bundle",
+]
+
+[tool.uv.sources]
+docwen-core = { workspace = true }
+docwen-application = { workspace = true }
+docwen-runtime = { workspace = true }
+docwen-gui = { workspace = true }
+docwen-cli = { workspace = true }
+docwen-plugin-document = { workspace = true }
+docwen-plugin-spreadsheet = { workspace = true }
+docwen-plugin-image = { workspace = true }
+docwen-plugin-print = { workspace = true }
+docwen-plugin-layout = { workspace = true }
+docwen-plugin-markdown = { workspace = true }
+docwen-plugin-markup = { workspace = true }
+docwen-plugin-presentation = { workspace = true }
+docwen-plugin-proofread = { workspace = true }
+docwen-plugin-optimizer-gongwen = { workspace = true }
+docwen-plugin-optimizer-invoice-cn = { workspace = true }
+docwen-bundle = { workspace = true }
+
 [project]
 name = "docwen"
-dynamic = ["version"]
-description = "公文图表格式转换软件 - 支持 Word/Markdown/Excel 互转"
+version = "0.9.0"
+description = "DocWen - 支持 Word/Markdown/Excel 互转"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 license = {text = "AGPL-3.0-or-later"}
 authors = [
     {name = "ZhengYX", email = "zhengyx91@hotmail.com"}
@@ -22,15 +78,14 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
-    "Operating System :: MacOS :: MacOS X",
 ]
 
 dependencies = [
+    # Source-tree console scripts delegate to the bundle composition root.
+    "docwen-bundle",
     # 图形界面
-    "ttkbootstrap>=1.18.0",
-    "tkinterdnd2>=0.4.3",
+    "pyside6>=6.8.0",
     "Pillow>=11.3.0,<12.0.0",
-    
     # 文档处理
     "python-docx>=1.2.0",
     "emoji>=2.0.0",
@@ -39,31 +94,35 @@ dependencies = [
     "latex2mathml>=3.77.0",
     "PyYAML>=6.0.2",
     "tomlkit>=0.13.3",
+    "platformdirs>=4.3.0",
     "pandas>=2.3.3",
     "olefile>=0.47",  # OLE文件格式解析，用于精确识别DOC/XLS
-    
+    "markdownify>=0.13.0",
+    "ebooklib>=0.18",
+    "python-pptx>=1.0.0",
     # PDF/OFD处理
     "pymupdf>=1.26.6",
     "pymupdf4llm>=0.1.8",
-    "pymupdf_layout>=1.27.1",
     "pdf2docx>=0.5.6",
-    "easyofd>=0.5.6",  # OFD文件转PDF
-    
+    "easyofd>=20260427",  # OFD文件转PDF
     # 数值计算
     "numpy>=2.3.4,<3.0.0",
-    
     # 图片转换
     "img2pdf>=0.6.1",
     "pillow-heif>=1.1.1",
-    
     # OCR支持
     "rapidocr_onnxruntime>=1.4.0",
-    
+    # ONNX Runtime 1.24.x emits a hard-coded Linux device-discovery warning
+    # while its Python extension is importing, before its logging API exists.
+    # Conversely, 1.23.x misclassifies Windows Server 2025 during import. The
+    # Machine Protocol owns a silent stderr transport, so pin the clean release
+    # for each supported platform instead of filtering process diagnostics.
+    "onnxruntime==1.23.2; sys_platform == 'linux'",
+    "onnxruntime==1.24.4; sys_platform != 'linux'",
+    "opencv-python-headless==4.13.0.92",
     # Windows COM 自动化
     "pywin32>=311; platform_system == 'Windows'",
-    
-    # IPC 进程间通信
-    "watchdog>=6.0.0",
+    "pyside6-fluent-widgets>=1.11.2",
 ]
 
 [project.optional-dependencies]
@@ -72,42 +131,73 @@ dev = [
     "Cython==3.1.6",
     "pyinstaller==6.16.0",
     "pre-commit>=4.0.0",
+    "setuptools>=45",
     "ruff>=0.15.1",
     "pyright>=1.1.408",
+    "lxml-stubs>=0.5.1",
 ]
 lint = [
     "ruff>=0.15.1",
     "pyright>=1.1.408",
+    "import-linter==2.11",
+    "grimp==3.14",
+    "lxml-stubs>=0.5.1",
 ]
 test = [
+    "jsonschema>=4.23.0,<5.0.0",
     "pytest>=8.0.0",
     "pytest-cov>=4.0.0",
+    "pytest-qt>=4.4.0",
+    "pytest-xdist>=3.8.0",
 ]
 
 [project.scripts]
-docwen = "docwen.cli_run:main"
-docwen-gui = "docwen.gui_run:main"
-
-[tool.setuptools]
-package-dir = {"" = "src"}
-
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["docwen*"]
-
-[tool.setuptools.dynamic]
-version = {attr = "docwen.__version__"}
-
-[tool.setuptools.package-data]
-docwen = ["py.typed", "i18n/locales/*.toml"]
+docwen = "docwen_bundle.cli_entry:main"
+docwen-gui = "docwen_bundle.gui_entry:main"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+pythonpath = ["."]
+testpaths = [
+    "tests",
+    "packages/core/tests",
+    "packages/application/tests",
+    "packages/runtime/tests",
+    "packages/apps/gui/tests",
+    "packages/apps/cli/tests",
+    "packages/bundle/tests",
+    "packages/plugins/document/tests",
+    "packages/plugins/spreadsheet/tests",
+    "packages/plugins/image/tests",
+    "packages/plugins/layout/tests",
+    "packages/plugins/markdown/tests",
+    "packages/plugins/markup/tests",
+    "packages/plugins/presentation/tests",
+    "packages/plugins/print/tests",
+    "packages/plugins/proofread/tests",
+    "packages/plugins/optimizers/gongwen/tests",
+    "packages/plugins/optimizers/invoice_cn/tests",
+]
 python_files = ["test_*.py"]
-addopts = "-v --tb=short --strict-markers -m \"not integration and not slow\""
+addopts = "-v --tb=short --strict-markers --import-mode=importlib -ra -m \"(unit or contract) and not slow\""
+filterwarnings = [
+    "error:Module .* was never imported.*:coverage.exceptions.CoverageWarning",
+    "error:No data was collected.*:coverage.exceptions.CoverageWarning",
+    "error:Failed to generate report.*No data to report.*:pytest_cov.CovReportWarning",
+]
 markers = [
-    "unit: 单元测试",
-    "integration: 集成测试（需要真实文件）",
+    "unit: 单元测试（纯逻辑、替身或内存态验证）",
+    "contract: 契约测试（CLI/配置/输出结构/仓库约束）",
+    "integration: 集成测试（真实文件、真实链路或跨模块协作）",
+    "gui: GUI 组件/界面测试（不一定启动真实子进程）",
+    "gui_smoke: GUI 冒烟测试（真实 GUI 启动链路、子进程 GUI 或主窗口关键路径）",
+    "e2e: 端到端测试（从 CLI/GUI 用户入口走完整流程）",
+    "packaged: 打包态测试（只消费冻结候选，不以源码替身代替）",
+    "host: 真实宿主测试（Office、viewer、Obsidian、Gateway 或桌面环境）",
+    "office: Microsoft Office／WPS／LibreOffice 边界测试",
+    "linux_only: 仅 Linux 环境",
+    "pr_gate: PR 精简门禁测试（声明式选入 integration/gui_smoke/e2e 高价值样本）",
+    "release_gate: 发布前源码态回归（声明式选入 integration/gui_smoke/e2e 高价值样本）",
+    "golden: Golden/parity 用例（语义输出一致性验证）",
     "slow: 耗时测试",
     "macos_only: 仅 macOS 环境",
     "windows_only: 仅 Windows 环境",
@@ -115,30 +205,45 @@ markers = [
 
 [tool.coverage.run]
 branch = true
-source = ["docwen"]
+relative_files = true
+source = [
+    "docwen_application",
+    "docwen_bundle",
+    "docwen_cli",
+    "docwen_core",
+    "docwen_gui",
+    "docwen_plugin_document",
+    "docwen_plugin_image",
+    "docwen_plugin_layout",
+    "docwen_plugin_markdown",
+    "docwen_plugin_markup",
+    "docwen_plugin_optimizer_gongwen",
+    "docwen_plugin_optimizer_invoice_cn",
+    "docwen_plugin_presentation",
+    "docwen_plugin_print",
+    "docwen_plugin_proofread",
+    "docwen_plugin_spreadsheet",
+    "docwen_runtime",
+]
 omit = [
     "*/tests/*",
-    "*/docwen/gui/*",
 ]
 
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
-fail_under = 35
+fail_under = 81
 
 [tool.pyright]
+venvPath = "."
+venv = ".venv"
 pythonVersion = "3.12"
 typeCheckingMode = "basic"
-include = ["src"]
-executionEnvironments = [
-    { root = "src", extraPaths = ["src"] },
-    { root = "src/docwen/gui", extraPaths = ["src"], reportAttributeAccessIssue = "warning" },
-]
+include = ["packages"]
 exclude = [
+    "**/node_modules",
     "**/__pycache__",
-    ".git",
-    ".ruff_cache",
-    ".pytest_cache",
+    "**/.*",
     ".venv",
     "venv",
     "build",
@@ -157,7 +262,7 @@ reportUnusedImport = "error"
 reportUnusedVariable = "error"
 reportUnusedExpression = "none"
 reportInvalidStringEscapeSequence = "error"
-reportPrivateUsage = "warning"
+reportPrivateUsage = "none"
 reportUntypedFunctionDecorator = "none"
 reportUntypedClassDecorator = "none"
 
@@ -171,7 +276,7 @@ reportWildcardImportFromLibrary = "none"
 
 reportUnnecessaryIsInstance = "warning"
 reportUnnecessaryCast = "warning"
-reportUnnecessaryComparison = "warning"
+reportUnnecessaryComparison = "none"
 reportUnnecessaryContains = "warning"
 
 reportGeneralTypeIssues = "error"
@@ -190,8 +295,11 @@ reportReturnType = "error"
 [tool.ruff]
 line-length = 120
 target-version = "py312"
-src = ["src"]
-extend-exclude = ["assets", "templates", "configs"]
+src = ["src", "packages"]
+extend-exclude = ["assets", "templates", "configs", ".acceptance-runtime"]
+
+[tool.ruff.format]
+line-ending = "lf"
 
 [tool.ruff.lint]
 select = [
@@ -215,16 +323,212 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"src/docwen/gui/**/*.py" = ["F403", "F405"]
-"src/docwen/gui_run.py" = ["SIM115"]
-"src/docwen/ipc/single_instance.py" = ["SIM115"]
-"src/docwen/cli/**/*.py" = ["T201"]
-"src/docwen/cli_run.py" = ["T201"]
-"src/docwen/i18n/locale_validator.py" = ["T201"]
-"src/docwen/config/safe_logger.py" = ["T201"]
+# CLI tools use print() for user-facing output — T201 is expected.
+"packages/apps/cli/src/docwen_cli/**/*.py" = ["T201"]
+"packages/bundle/src/docwen_bundle/**/*.py" = ["T201"]
+# Scripts and tools are developer utilities; print() is fine.
 "scripts/**/*.py" = ["T201"]
 "tools/**/*.py" = ["T201"]
-"tests/**/*.py" = ["B011", "T201"]
+# Test files: print(), B011 (assert False), and E402 (pytestmark above imports) are fine.
+"tests/**/*.py" = ["B011", "T201", "E402"]
+"packages/**/tests/**/*.py" = ["E402"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["docwen"]
+known-first-party = [
+    "docwen_core",
+    "docwen_application",
+    "docwen_runtime",
+    "docwen_gui",
+    "docwen_cli",
+    "docwen_bundle",
+    "docwen_plugin_document",
+    "docwen_plugin_spreadsheet",
+    "docwen_plugin_image",
+    "docwen_plugin_print",
+    "docwen_plugin_layout",
+    "docwen_plugin_markdown",
+    "docwen_plugin_markup",
+    "docwen_plugin_presentation",
+    "docwen_plugin_proofread",
+    "docwen_plugin_optimizer_gongwen",
+    "docwen_plugin_optimizer_invoice_cn",
+]
+
+[tool.importlinter]
+root_packages = [
+    "docwen_core",
+    "docwen_application",
+    "docwen_runtime",
+    "docwen_gui",
+    "docwen_cli",
+    "docwen_bundle",
+    "docwen_plugin_document",
+    "docwen_plugin_spreadsheet",
+    "docwen_plugin_image",
+    "docwen_plugin_print",
+    "docwen_plugin_layout",
+    "docwen_plugin_markdown",
+    "docwen_plugin_markup",
+    "docwen_plugin_presentation",
+    "docwen_plugin_proofread",
+    "docwen_plugin_optimizer_gongwen",
+    "docwen_plugin_optimizer_invoice_cn",
+]
+
+[[tool.importlinter.contracts]]
+name = "core must not depend on application/runtime/apps/plugins/bundle"
+type = "forbidden"
+source_modules = ["docwen_core"]
+forbidden_modules = [
+    "docwen_application",
+    "docwen_runtime",
+    "docwen_gui",
+    "docwen_cli",
+    "docwen_bundle",
+    "docwen_plugin_document",
+    "docwen_plugin_spreadsheet",
+    "docwen_plugin_image",
+    "docwen_plugin_print",
+    "docwen_plugin_layout",
+    "docwen_plugin_markdown",
+    "docwen_plugin_markup",
+    "docwen_plugin_presentation",
+    "docwen_plugin_optimizer_gongwen",
+    "docwen_plugin_optimizer_invoice_cn",
+    "docwen_plugin_proofread",
+]
+
+[[tool.importlinter.contracts]]
+name = "application must not depend on runtime/apps/plugins/bundle"
+type = "forbidden"
+source_modules = ["docwen_application"]
+forbidden_modules = [
+    "docwen_runtime",
+    "docwen_gui",
+    "docwen_cli",
+    "docwen_bundle",
+    "docwen_plugin_document",
+    "docwen_plugin_spreadsheet",
+    "docwen_plugin_image",
+    "docwen_plugin_print",
+    "docwen_plugin_layout",
+    "docwen_plugin_markdown",
+    "docwen_plugin_markup",
+    "docwen_plugin_presentation",
+    "docwen_plugin_optimizer_gongwen",
+    "docwen_plugin_optimizer_invoice_cn",
+    "docwen_plugin_proofread",
+]
+
+[[tool.importlinter.contracts]]
+name = "runtime must not depend on application/apps/bundle"
+type = "forbidden"
+source_modules = ["docwen_runtime"]
+forbidden_modules = [
+    "docwen_application",
+    "docwen_gui",
+    "docwen_cli",
+    "docwen_bundle",
+]
+
+[[tool.importlinter.contracts]]
+name = "plugins must not depend on application/runtime/apps/bundle"
+type = "forbidden"
+source_modules = [
+    "docwen_plugin_document",
+    "docwen_plugin_spreadsheet",
+    "docwen_plugin_image",
+    "docwen_plugin_print",
+    "docwen_plugin_layout",
+    "docwen_plugin_markdown",
+    "docwen_plugin_markup",
+    "docwen_plugin_presentation",
+    "docwen_plugin_optimizer_invoice_cn",
+    "docwen_plugin_optimizer_gongwen",
+    "docwen_plugin_proofread",
+]
+forbidden_modules = [
+    "docwen_application",
+    "docwen_runtime",
+    "docwen_gui",
+    "docwen_cli",
+    "docwen_bundle",
+]
+
+[[tool.importlinter.contracts]]
+name = "gui must not depend on runtime internals, plugins, or bundle"
+type = "forbidden"
+source_modules = ["docwen_gui"]
+forbidden_modules = [
+    "docwen_runtime.adapters",
+    "docwen_runtime.output_finalizer",
+    "docwen_bundle",
+    "docwen_plugin_document",
+    "docwen_plugin_spreadsheet",
+    "docwen_plugin_image",
+    "docwen_plugin_print",
+    "docwen_plugin_layout",
+    "docwen_plugin_markdown",
+    "docwen_plugin_markup",
+    "docwen_plugin_presentation",
+    "docwen_plugin_optimizer_gongwen",
+    "docwen_plugin_optimizer_invoice_cn",
+    "docwen_plugin_proofread",
+]
+# docwen_gui.__main__ is the `python -m docwen_gui` execution entry. It
+# forwards to the bundle composition root (docwen_bundle.gui_entry.main),
+# which owns IPC bootstrap, controller wiring, and the task-event bridge.
+# This single entry-forwarding import is explicitly allowed; all other
+# gui modules remain forbidden from importing bundle/runtime-internals.
+ignore_imports = ["docwen_gui.__main__ -> docwen_bundle.gui_entry"]
+unmatched_ignore_imports_alerting = "warn"
+
+[[tool.importlinter.contracts]]
+name = "optimizer_plugins_can_only_import_core"
+type = "forbidden"
+source_modules = ["docwen_plugin_optimizer_gongwen", "docwen_plugin_optimizer_invoice_cn"]
+forbidden_modules = [
+    "docwen_plugin_document",
+    "docwen_plugin_image",
+    "docwen_plugin_layout",
+    "docwen_plugin_markdown",
+    "docwen_plugin_markup",
+    "docwen_plugin_presentation",
+    "docwen_plugin_print",
+    "docwen_plugin_proofread",
+    "docwen_plugin_spreadsheet",
+    "docwen_application",
+    "docwen_gui",
+    "docwen_cli",
+    "docwen_bundle",
+]
+
+[[tool.importlinter.contracts]]
+name = "document_must_not_import_optimizer"
+type = "forbidden"
+source_modules = ["docwen_plugin_document"]
+forbidden_modules = [
+    "docwen_plugin_optimizer_gongwen",
+    "docwen_plugin_optimizer_invoice_cn",
+]
+
+[[tool.importlinter.contracts]]
+name = "cli must not depend on runtime internals, plugins, or bundle"
+type = "forbidden"
+source_modules = ["docwen_cli"]
+forbidden_modules = [
+    "docwen_runtime.adapters",
+    "docwen_runtime.output_finalizer",
+    "docwen_bundle",
+    "docwen_plugin_document",
+    "docwen_plugin_spreadsheet",
+    "docwen_plugin_image",
+    "docwen_plugin_print",
+    "docwen_plugin_layout",
+    "docwen_plugin_markdown",
+    "docwen_plugin_markup",
+    "docwen_plugin_presentation",
+    "docwen_plugin_optimizer_gongwen",
+    "docwen_plugin_optimizer_invoice_cn",
+    "docwen_plugin_proofread",
+]

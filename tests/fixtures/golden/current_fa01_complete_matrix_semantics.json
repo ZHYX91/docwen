@@ -1,0 +1,180 @@
+{
+  "case_id": "current_fa01_complete_matrix_semantics",
+  "stage_id": "VIS-2026-07-24-208",
+  "status": "PASS_WITH_USER_ACCEPTED_BOUNDARY",
+  "overall_parity": "NOT_PASSED_YET",
+  "user_selection": "FA-01=TEMPLATE-FREEZE-B",
+  "stage_start": {
+    "parent": "b761a1dcb2d6412d84fd5a5985c81174e4b2ef9c",
+    "tree": "900bb6957eb4a7b22156fc9864708b9fb71008d9"
+  },
+  "accounting": {
+    "family_logical_outputs": 18,
+    "reused_b1_outputs": 9,
+    "fresh_n1_outputs": 9,
+    "fresh_n1_by_project": {
+      "current": 3,
+      "tk": 3,
+      "pyside6": 3
+    }
+  },
+  "frozen_inputs": {
+    "markdown": {
+      "bytes": 21005,
+      "sha256": "d78a2bd8483184f8d9b3c3100b9a3b6d8dad6ea6569b63d2d22a916bf7a41d39"
+    },
+    "image": {
+      "bytes": 141190,
+      "sha256": "5baa96d93e1f611d5bac1ca2379302049b2673d9d57aa2ff0582b51767028c31"
+    },
+    "corrected_template": {
+      "bytes": 4434,
+      "sha256": "282b3cfdbd76235cf5e8ddb7ef3eabcd7c915187f875a1accbeb84f31f3e40bb",
+      "formula": "=COUNTA(A5:E7)",
+      "source_data_rows": 3,
+      "formula_result_in_excel": 15
+    }
+  },
+  "projects": {
+    "current": {
+      "docx": {
+        "bytes": 153910,
+        "sha256": "c52e6c297a4215463f15e2a793939ad8c13b4c87fc71c4c03f0c33046b6e7c08",
+        "pages_word": 14,
+        "pages_wps": 14,
+        "hyperlink_relationships": 6,
+        "math_objects": 26,
+        "source_image_exact": true
+      },
+      "xlsx": {
+        "bytes": 139063,
+        "sha256": "874aeefb7c1b8e43a47ea7355524593b3525ace3f826a1b96d115e045386ac89",
+        "formula": "=COUNTA(A5:E7)",
+        "image_exact": true,
+        "freeze_panes": null
+      },
+      "csv": {
+        "bytes": 316,
+        "sha256": "6d6d5b9ffea26e9ce423fbf6ee063185b610390d13465ad5fd45d389def9c26a",
+        "formula_cells": [
+          "=COUNTA(A5:E7)"
+        ]
+      }
+    },
+    "tk": {
+      "docx": {
+        "bytes": 154540,
+        "sha256": "0a8be72576957be75901f43a26e2adf608ceb3f3849a381dbc048f457584d6e7",
+        "pages_word": 17,
+        "pages_wps": 17,
+        "hyperlink_relationships": 6,
+        "math_objects": 26,
+        "source_image_exact": true
+      },
+      "xlsx": {
+        "bytes": 139063,
+        "sha256": "731476f0f0ccf11f84fee3603639feee5df5b293a2d42370d5421638f5bfb4a4",
+        "formula": "=COUNTA(A5:E7)",
+        "image_exact": true,
+        "freeze_panes": null
+      },
+      "csv": {
+        "bytes": 302,
+        "sha256": "9178ea07541721a438aecdce863e41bbc09ab6f51ade2564ef4c791b57af7cc5",
+        "formula_cells": []
+      }
+    },
+    "pyside6": {
+      "docx": {
+        "bytes": 154561,
+        "sha256": "56682ccdaa529b3ad1265ce87d3b8a11568f296022947ba49e8931ec476c0b21",
+        "pages_word": 17,
+        "pages_wps": 17,
+        "hyperlink_relationships": 5,
+        "math_objects": 26,
+        "source_image_exact": true
+      },
+      "xlsx": {
+        "bytes": 139063,
+        "sha256": "f9a750008abe18fad129e1874b01b3b2653f6ffd223289d7cc7a4df64e02e800",
+        "formula": "=COUNTA(A5:E7)",
+        "image_exact": true,
+        "freeze_panes": null
+      },
+      "csv": {
+        "bytes": 302,
+        "sha256": "9178ea07541721a438aecdce863e41bbc09ab6f51ade2564ef4c791b57af7cc5",
+        "formula_cells": []
+      }
+    }
+  },
+  "office": {
+    "word_docx_pages": {
+      "current": 14,
+      "tk": 17,
+      "pyside6": 17
+    },
+    "wps_docx_pages": {
+      "current": 14,
+      "tk": 17,
+      "pyside6": 17
+    },
+    "excel_pdf_pages_per_project": 3,
+    "excel_cross_project_render_pixels_equal": true,
+    "rendered_pdfs": 9,
+    "rendered_pages": 105,
+    "contact_sheets_manually_inspected": 9,
+    "preexisting_wps_pids": [
+      6496,
+      13884
+    ],
+    "process_delta": 0
+  },
+  "dispositions": {
+    "accepted_boundary": [
+      "N1 template and all three derived XLSX artifacts omit the A5 freeze pane"
+    ],
+    "shared_disclosed_layout": [
+      "Excel prints the wide one-sheet workbook across three pages with cross-project pixel-identical output"
+    ],
+    "current_improvements": [
+      "current omits four raw remote HTML figure tags that both references render as visible markup",
+      "current and Tk preserve the lambdify hyperlink while old PySide6 renders raw Markdown link syntax",
+      "current CSV retains the corrected COUNTA formula text while both references leave the uncached field blank"
+    ],
+    "not_accepted": [
+      "missing, invalid or empty artifact",
+      "source or template mutation",
+      "mandatory content loss",
+      "wrong formula or formula result",
+      "wrong or missing source image",
+      "path leak",
+      "Office repair prompt",
+      "process residue",
+      "undisclosed defect"
+    ]
+  },
+  "mandatory_predicates": {
+    "all_18_outputs_accounted": true,
+    "all_9_fresh_routes_succeeded": true,
+    "all_packages_valid": true,
+    "source_and_templates_immutable": true,
+    "docx_mandatory_anchors_complete": true,
+    "docx_source_image_exact": true,
+    "xlsx_three_rows_formula_merge_image_exact": true,
+    "csv_three_rows_exact": true,
+    "excel_formula_value_15": true,
+    "word_and_wps_open_without_repair": true,
+    "current_only_regression_remaining": false,
+    "path_leak": false,
+    "process_residue": false
+  },
+  "external_evidence": {
+    "root": "D:/docwen-parity/vis208-fa01-complete-b761a1d-v1",
+    "carrier_files_excluding_dependency_junction": 158,
+    "carrier_bytes_excluding_dependency_junction": 28338339,
+    "final_oracle_bytes": 5007,
+    "final_oracle_sha256": "9759bb57822ee941f4bd5da66016c711dfb0976e0ca05f93cb791dc256a44f9d",
+    "binaries_checked_in": false
+  }
+}

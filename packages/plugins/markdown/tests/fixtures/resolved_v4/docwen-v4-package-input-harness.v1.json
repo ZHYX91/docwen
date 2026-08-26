@@ -1,0 +1,54 @@
+{
+  "schema": "docwen.v4_package_input_harness.v1",
+  "harness": {
+    "id": "docwen-v4-exact-two-numbering",
+    "version": 1
+  },
+  "requiredCaseIds": [
+    "rich-semantics-composite"
+  ],
+  "pendingCaseIds": [],
+  "cases": [
+    {
+      "caseId": "rich-semantics-composite",
+      "sourceOracleCaseId": "docwen-exact-two-harness",
+      "coverage": [
+        "citation",
+        "embedded-raster",
+        "five-kind-enabled",
+        "ordinary-wikilink-preserved",
+        "semantic-bibliography",
+        "semantic-cross-reference"
+      ],
+      "source": {
+        "relativePath": "packages/plugins/markdown/tests/fixtures/resolved_v4/docwen-exact-two.md",
+        "bytes": 398,
+        "sha256": "1d28a20836a07c7818a289b51a7ef4ca2b1dc8d731175e02b831750dc27ab962"
+      },
+      "neutralDocument": {
+        "relativePath": "packages/plugins/markdown/tests/fixtures/resolved_v4/resolved-document.rich.json",
+        "bytes": 3943,
+        "sha256": "dcbea329bf485caaf5cb17a39e5a90562789970f4bcee4cf12907a78326146f5"
+      },
+      "numberingExportPlan": {
+        "relativePath": "packages/plugins/markdown/tests/fixtures/resolved_v4/numbering-export-plan.rich.json",
+        "bytes": 2915,
+        "sha256": "f47bfa88966fca1994f05b25f277d8c7ad5792bfad8b5629ece3f3bc8b465085"
+      },
+      "expectedOoxml": {
+        "abstractNumCount": 1,
+        "numCount": 1,
+        "bookmarkCount": 6,
+        "seqFieldCount": 4,
+        "styleRefFieldCount": 0,
+        "refFieldCount": 2,
+        "citationFieldCount": 1
+      },
+      "expectedRoundtrip": {
+        "relativePath": "packages/plugins/markdown/tests/fixtures/resolved_v4/docwen-exact-two.md",
+        "bytes": 398,
+        "sha256": "1d28a20836a07c7818a289b51a7ef4ca2b1dc8d731175e02b831750dc27ab962"
+      }
+    }
+  ]
+}

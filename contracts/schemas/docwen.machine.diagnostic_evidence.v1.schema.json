@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:docwen:schema:machine-diagnostic-evidence:v1",
+  "title": "DocWen Machine source diagnostic evidence v1",
+  "description": "Closed nested objects and bounded source edits for optional source-backed fields on a Machine v1 diagnostic object.",
+  "type": "object",
+  "required": [
+    "evidence_schema",
+    "source",
+    "range"
+  ],
+  "properties": {
+    "evidence_schema": {
+      "const": "docwen.machine.diagnostic_evidence.v1"
+    },
+    "source": {
+      "$ref": "#/$defs/source"
+    },
+    "range": {
+      "$ref": "#/$defs/range"
+    },
+    "related_ranges": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "$ref": "#/$defs/range"
+      }
+    },
+    "fixes": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/$defs/fix"
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start",
+        "end"
+      ],
+      "properties": {
+        "start": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_id",
+        "sha256",
+        "encoding",
+        "coordinate_system",
+        "offset_base",
+        "range_end"
+      ],
+      "properties": {
+        "input_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "encoding": {
+          "const": "utf-8"
+        },
+        "coordinate_system": {
+          "const": "unicode_code_point"
+        },
+        "offset_base": {
+          "const": 0
+        },
+        "range_end": {
+          "const": "exclusive"
+        }
+      }
+    },
+    "edit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "range",
+        "replacement"
+      ],
+      "properties": {
+        "range": {
+          "$ref": "#/$defs/range"
+        },
+        "replacement": {
+          "type": "string",
+          "maxLength": 4096
+        }
+      }
+    },
+    "fix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fix_id",
+        "edits"
+      ],
+      "properties": {
+        "fix_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "edits": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/edit"
+          }
+        }
+      }
+    }
+  }
+}

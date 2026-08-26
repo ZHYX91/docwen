@@ -1,7 +1,42 @@
+* text=auto eol=lf
+
 *.py text eol=lf
+*.pyi text eol=lf
 *.toml text eol=lf
 *.md text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
 *.json text eol=lf
 *.txt text eol=lf
+*.csv text eol=lf
+*.tsv text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+*.lock text eol=lf
+
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+*.png -text
+*.jpg -text
+*.jpeg -text
+*.gif -text
+*.webp -text
+*.bmp -text
+*.ico -text
+*.pdf -text
+*.zip -text
+*.7z -text
+*.exe -text
+*.dll -text
+*.pyd -text
+*.so -text
+*.dylib -text
+*.woff -text
+*.woff2 -text
+*.ttf -text
+*.otf -text
+*.eot -text
+*.docx -text
+*.xlsx -text
+*.pptx -text

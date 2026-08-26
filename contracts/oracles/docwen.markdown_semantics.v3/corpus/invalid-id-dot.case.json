@@ -1,0 +1,15 @@
+{
+  "case_id": "invalid-id-dot",
+  "category": "negative",
+  "input_id": "invalid-id-dot.md",
+  "source": "Paragraph ^bad.id\n",
+  "expected": {
+    "target_kind_ids": [],
+    "anchor_kind_ids": [],
+    "link_kinds": [],
+    "reference_statuses": [],
+    "citation_keys": [],
+    "diagnostics": [{"severity": "error", "code": "docwen.markdown.anchor.invalid_id", "range": {"start": 10, "end": 17}}],
+    "source_unchanged": true
+  }
+}

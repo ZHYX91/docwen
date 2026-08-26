@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:docwen:schema:markdown-semantics-corpus-case:v3",
+  "title": "DocWen Markdown Semantics v3 Corpus Case",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["case_id", "category", "input_id", "source", "expected"],
+  "properties": {
+    "case_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+    "category": {"enum": ["positive", "negative", "migration"]},
+    "input_id": {"type": "string", "minLength": 1, "maxLength": 256},
+    "source": {"type": "string"},
+    "external_references": {"type": "array", "items": {"$ref": "#/$defs/externalReference"}},
+    "external_citations": {"type": "array", "items": {"$ref": "#/$defs/externalCitation"}},
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target_kind_ids", "anchor_kind_ids", "link_kinds", "reference_statuses", "citation_keys", "diagnostics"],
+      "properties": {
+        "target_kind_ids": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "prefixItems": [
+              {"enum": ["heading", "figure", "table", "equation", "code_block"]},
+              {"type": ["string", "null"]}
+            ],
+            "items": false
+          }
+        },
+        "anchor_kind_ids": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "prefixItems": [{"type": "string"}, {"type": "string"}, {"enum": ["inline", "post_block"]}],
+            "items": false
+          }
+        },
+        "anchor_container_paths": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {"$ref": "urn:docwen:schema:markdown-semantics:v3#/$defs/containerPathSegment"}
+          }
+        },
+        "fenced_sources": {
+          "type": "array",
+          "items": {"$ref": "urn:docwen:schema:markdown-semantics:v3#/$defs/fencedSource"}
+        },
+        "link_kinds": {"type": "array", "items": {"enum": ["link", "embed"]}},
+        "reference_statuses": {
+          "type": "array",
+          "items": {"enum": ["resolved", "missing", "ambiguous", "non_semantic", "unnumbered", "external_unresolved"]}
+        },
+        "citation_keys": {"type": "array", "items": {"type": "string"}},
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["severity", "code", "range"],
+            "properties": {
+              "severity": {"enum": ["warning", "error"]},
+              "code": {"type": "string"},
+              "range": {"$ref": "urn:docwen:schema:markdown-semantics:v3#/$defs/range"},
+              "related_ranges": {"type": "array", "items": {"$ref": "urn:docwen:schema:markdown-semantics:v3#/$defs/range"}},
+              "fix_ids": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        },
+        "source_unchanged": {"const": true}
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "externalReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["page_locator", "selector_kind", "resolved_document_id", "resolved_document_sha256", "resolved_kind", "cached_number", "current_title"],
+      "properties": {
+        "page_locator": {"type": "string", "minLength": 1},
+        "selector_kind": {"enum": ["stable_id", "heading_path"]},
+        "target_id": {"type": "string", "pattern": "^[A-Za-z0-9-]{1,128}$"},
+        "heading_path": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "resolved_document_id": {"type": "string", "minLength": 1},
+        "resolved_document_sha256": {"$ref": "#/$defs/sha256"},
+        "resolved_kind": {"enum": ["heading", "figure", "table", "equation", "code_block"]},
+        "cached_number": {"type": ["string", "null"]},
+        "current_title": {"type": "string"}
+      },
+      "oneOf": [
+        {"required": ["target_id"], "properties": {"selector_kind": {"const": "stable_id"}}},
+        {"required": ["heading_path"], "properties": {"selector_kind": {"const": "heading_path"}, "resolved_kind": {"const": "heading"}}}
+      ]
+    },
+    "externalCitation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "record_id", "record_sha256", "presentation"],
+      "properties": {
+        "key": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"},
+        "record_id": {"type": "string", "minLength": 1},
+        "record_sha256": {"$ref": "#/$defs/sha256"},
+        "presentation": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

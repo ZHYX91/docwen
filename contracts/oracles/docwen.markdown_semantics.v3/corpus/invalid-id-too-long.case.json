@@ -1,0 +1,15 @@
+{
+  "case_id": "invalid-id-too-long",
+  "category": "negative",
+  "input_id": "invalid-id-too-long.md",
+  "source": "Paragraph ^xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n",
+  "expected": {
+    "target_kind_ids": [],
+    "anchor_kind_ids": [],
+    "link_kinds": [],
+    "reference_statuses": [],
+    "citation_keys": [],
+    "diagnostics": [{"severity": "error", "code": "docwen.markdown.anchor.invalid_id", "range": {"start": 10, "end": 140}}],
+    "source_unchanged": true
+  }
+}

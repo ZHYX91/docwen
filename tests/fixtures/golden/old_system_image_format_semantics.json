@@ -1,0 +1,1251 @@
+{
+  "generated_at": "2026-07-02",
+  "golden_id": "GOLDEN-004",
+  "input_image": {
+    "alpha": 128,
+    "mode": "RGBA",
+    "name": "sample_rgba.png",
+    "size": [
+      32,
+      24
+    ]
+  },
+  "probe_scope": "Normalized image-format semantic smoke across old Tk, old PySide6, and the current rewrite. The probe uses the actual old convert_image entry points and the current ImageFormatConverter route, but stores only stable semantic output rather than generated binary artifacts.",
+  "comparison_implication": "This fixture proves representative PNG/RGBA image-format semantics, the broadened PNG/RGB to BMP/GIF/TIF matrix projection, generated grayscale/palette mode boundaries, selected multiframe input boundaries, limit_size compression success/failure boundaries, stable output projections, focused generated EXIF orientation and EXIF metadata boundaries, and the finite FA-08 real-device final-artifact addenda. The VIS-164 addendum preserves the historical equal three-project failures. VIS-201 repairs current orientation, selected EXIF, and ICC behavior and records the user's bounded MPO auxiliary-page choice with a truthful warning; the matching old-project flat-output losses are reference defects. Broader arbitrary image/codec matrices and byte-level lossy equality remain outside this fixture.",
+  "grayscale_palette_mode_probe": {
+    "classification": "shared_grayscale_representation_plus_current_transparency_enhancement",
+    "generated_at": "2026-07-14",
+    "input_size": [
+      48,
+      32
+    ],
+    "inputs": {
+      "gray_l.png": {
+        "mode": "L",
+        "alpha_extrema": [
+          255,
+          255
+        ],
+        "rgba_sha256": "3274c90f0a86d8a49bca243a2d9a7be07e8ea868eead39231d547a70b2b179c3"
+      },
+      "palette_opaque.png": {
+        "mode": "P",
+        "alpha_extrema": [
+          255,
+          255
+        ],
+        "rgba_sha256": "4486e9e98806a4b37f0b66daa24866d69ebf159870c815f8eb14442ac452d6f9"
+      },
+      "palette_transparent.png": {
+        "mode": "P",
+        "alpha_extrema": [
+          0,
+          255
+        ],
+        "rgba_sha256": "feb38264e01af18e1cc6e672a6a0188ad6e44bb08a118c349a442a42f703455a"
+      }
+    },
+    "targets": [
+      "jpg",
+      "png",
+      "webp"
+    ],
+    "shared_output_size": [
+      48,
+      32
+    ],
+    "shared_n_frames": 1,
+    "old_projects_share_projection": true,
+    "projects": {
+      "docwen-ref-tk": {
+        "gray_l_to_jpg": {
+          "format": "JPEG",
+          "mode": "L",
+          "alpha_extrema": [
+            255,
+            255
+          ],
+          "observed_output_bytes": 706,
+          "rgba_sha256": "b3d44b4b4cb1ca12a464f2491eac773d7cb6e7f8a993ac3122f1a28a1737ea2c"
+        },
+        "gray_l_to_png": {
+          "format": "PNG",
+          "mode": "L",
+          "alpha_extrema": [
+            255,
+            255
+          ],
+          "observed_output_bytes": 152,
+          "rgba_sha256": "3274c90f0a86d8a49bca243a2d9a7be07e8ea868eead39231d547a70b2b179c3"
+        },
+        "gray_l_to_webp": {
+          "format": "WEBP",
+          "mode": "RGB",
+          "alpha_extrema": [
+            255,
+            255
+          ],
+          "observed_output_bytes": 410,
+          "rgba_sha256": "9f3a092cfbeef5a3a0ca81980ee9d1ff8898d33f204acfb926dfc731d247fbf3"
+        },
+        "palette_opaque_to_jpg": {
+          "format": "JPEG",
+          "mode": "RGB",
+          "alpha_extrema": [
+            255,
+            255
+          ],
+          "observed_output_bytes": 1261,
+          "rgba_sha256": "593ce8c902ff1f264191da6f9f0418d875c0f9c616a8b41a18ed8a2ac1d8fff7"
+        },
+        "palette_opaque_to_png": {
+          "format": "PNG",
+          "mode": "RGB",
+          "alpha_extrema": [
+            255,
+            255
+          ],
+          "observed_output_bytes": 225,
+          "rgba_sha256": "4486e9e98806a4b37f0b66daa24866d69ebf159870c815f8eb14442ac452d6f9"
+        },
+        "palette_opaque_to_webp": {
+          "format": "WEBP",
+          "mode": "RGB",
+          "alpha_extrema": [
+            255,
+            255
+          ],
+          "observed_output_bytes": 1080,
+          "rgba_sha256": "45848ba464a50a91535d80d4a257d4381f9f4b4dfb0a42bc10d510e08889099d"
+        },
+        "palette_transparent_to_jpg": {
+          "format": "JPEG",
+          "mode": "RGB",
+          "alpha_extrema": [
+            255,
+            255
+          ],
+          "observed_output_bytes": 1557,
+          "rgba_sha256": "2cde3662054f28b98e740e7e5d6d4b201dd53ca56f7070e4744f4ef8435b4119"
+        },
+        "palette_transparent_to_png": {
+          "format": "PNG",
+          "mode": "RGB",
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "observed_output_bytes": 243,
+          "rgba_sha256": "feb38264e01af18e1cc6e672a6a0188ad6e44bb08a118c349a442a42f703455a"
+        },
+        "palette_transparent_to_webp": {
+          "format": "WEBP",
+          "mode": "RGB",
+          "alpha_extrema": [
+            255,
+            255
+          ],
+          "observed_output_bytes": 1080,
+          "rgba_sha256": "45848ba464a50a91535d80d4a257d4381f9f4b4dfb0a42bc10d510e08889099d"
+        }
+      },
+      "docwen-ref-pyside6": {
+        "same_as": "docwen-ref-tk"
+      },
+      "docwen-current": {
+        "gray_l_to_jpg": {
+          "format": "JPEG",
+          "mode": "L",
+          "alpha_extrema": [
+            255,
+            255
+          ],
+          "observed_output_bytes": 706,
+          "rgba_sha256": "b3d44b4b4cb1ca12a464f2491eac773d7cb6e7f8a993ac3122f1a28a1737ea2c"
+        },
+        "gray_l_to_png": {
+          "format": "PNG",
+          "mode": "L",
+          "alpha_extrema": [
+            255,
+            255
+          ],
+          "observed_output_bytes": 152,
+          "rgba_sha256": "3274c90f0a86d8a49bca243a2d9a7be07e8ea868eead39231d547a70b2b179c3"
+        },
+        "gray_l_to_webp": {
+          "format": "WEBP",
+          "mode": "RGB",
+          "alpha_extrema": [
+            255,
+            255
+          ],
+          "observed_output_bytes": 410,
+          "rgba_sha256": "9f3a092cfbeef5a3a0ca81980ee9d1ff8898d33f204acfb926dfc731d247fbf3"
+        },
+        "palette_opaque_to_jpg": {
+          "format": "JPEG",
+          "mode": "RGB",
+          "alpha_extrema": [
+            255,
+            255
+          ],
+          "observed_output_bytes": 1261,
+          "rgba_sha256": "593ce8c902ff1f264191da6f9f0418d875c0f9c616a8b41a18ed8a2ac1d8fff7"
+        },
+        "palette_opaque_to_png": {
+          "format": "PNG",
+          "mode": "RGBA",
+          "alpha_extrema": [
+            255,
+            255
+          ],
+          "observed_output_bytes": 241,
+          "rgba_sha256": "4486e9e98806a4b37f0b66daa24866d69ebf159870c815f8eb14442ac452d6f9"
+        },
+        "palette_opaque_to_webp": {
+          "format": "WEBP",
+          "mode": "RGB",
+          "alpha_extrema": [
+            255,
+            255
+          ],
+          "observed_output_bytes": 1080,
+          "rgba_sha256": "45848ba464a50a91535d80d4a257d4381f9f4b4dfb0a42bc10d510e08889099d"
+        },
+        "palette_transparent_to_jpg": {
+          "format": "JPEG",
+          "mode": "RGB",
+          "alpha_extrema": [
+            255,
+            255
+          ],
+          "observed_output_bytes": 1557,
+          "rgba_sha256": "2cde3662054f28b98e740e7e5d6d4b201dd53ca56f7070e4744f4ef8435b4119"
+        },
+        "palette_transparent_to_png": {
+          "format": "PNG",
+          "mode": "RGBA",
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "observed_output_bytes": 248,
+          "rgba_sha256": "feb38264e01af18e1cc6e672a6a0188ad6e44bb08a118c349a442a42f703455a"
+        },
+        "palette_transparent_to_webp": {
+          "format": "WEBP",
+          "mode": "RGBA",
+          "alpha_extrema": [
+            0,
+            255
+          ],
+          "observed_output_bytes": 1098,
+          "rgba_sha256": "7a198fbfcc08e2459f2930195ec39b9990d5f6c29db7acb346b1081874be8392"
+        }
+      }
+    },
+    "scenario_classifications": {
+      "gray_l_to_jpg": "same_old_current_grayscale_representation_after_fix",
+      "gray_l_to_png": "same_old_current_grayscale_representation_after_fix",
+      "gray_l_to_webp": "same_old_current_encoder_projection",
+      "palette_opaque_to_jpg": "same_old_current_projection",
+      "palette_opaque_to_png": "same_visible_pixels_current_rgba_representation",
+      "palette_opaque_to_webp": "same_old_current_projection",
+      "palette_transparent_to_jpg": "same_old_current_white_flattening_projection",
+      "palette_transparent_to_png": "same_transparency_current_explicit_rgba_representation",
+      "palette_transparent_to_webp": "current_transparency_preservation_enhancement"
+    },
+    "current_regression_test": "packages/plugins/image/tests/test_image_conversions.py::TestImageFormatConversion::test_grayscale_palette_mode_matrix_matches_recorded_projection",
+    "observed_byte_and_lossy_hash_boundary": "Observed byte counts and lossy hashes are evidence from the same Pillow environment, not cross-version byte-equality contracts. The current regression guard uses format, mode, dimensions, frame count, alpha extrema, and lossless PNG visible-pixel digests.",
+    "comparison_implication": "The initial current probe expanded grayscale L inputs to RGB JPEG and RGBA PNG (834 and 223 bytes) while both old projects preserved L (706 and 152 bytes). The current mode conversion now preserves L for JPEG/PNG/WebP-compatible paths, restoring the old representation and avoiding needless expansion. Palette PNG mode differences preserve the same visible pixels and alpha. For transparent palette WebP, current deliberately preserves alpha while both old projects lose it; this is a current enhancement, not a parity regression. This focused generated matrix does not close broader real-device image artifact parity."
+  },
+  "exif_orientation_probe": {
+    "classification": "same_old_current_raw_pixel_orientation_boundary",
+    "input_image": {
+      "name": "exif_orientation_6.jpg",
+      "format": "JPEG",
+      "size": [
+        40,
+        20
+      ],
+      "mode": "RGB",
+      "exif_orientation": 6
+    },
+    "target": "png",
+    "expected_projection": {
+      "format": "PNG",
+      "size": [
+        40,
+        20
+      ],
+      "mode": "RGB",
+      "exif_orientation": null
+    },
+    "old_tk_code_evidence": "docwen-ref-tk/src/docwen/converter/formats/image/core.py::convert_image opens with PIL.Image.open(), converts modes, and saves without ImageOps.exif_transpose() in the ordinary Image->Image path.",
+    "old_pyside6_code_evidence": "docwen-ref-pyside6/src/docwen/converter/image/core.py::convert_image opens with PIL.Image.open(), converts modes, and saves without ImageOps.exif_transpose() in the ordinary Image->Image path.",
+    "current_code_evidence": "packages/plugins/image/src/docwen_plugin_image/format_conversion/converter.py::ImageFormatConverter opens with PIL.Image.open(), loads, and saves through save_image_with_options() without ImageOps.exif_transpose().",
+    "current_regression_test": "packages/plugins/image/tests/test_image_conversions.py::TestImageFormatConversion::test_exif_orientation_probe_matches_old_system_raw_pixel_boundary",
+    "comparison_implication": "Old Tk, old PySide6, and current all convert the generated orientation=6 JPEG to PNG as raw 40x20 pixels rather than auto-rotating to 20x40. Auto-orienting ordinary image conversion would be a future enhancement or a broader real-device policy decision, not a current parity fix."
+  },
+  "exif_metadata_probe": {
+    "classification": "same_old_current_exif_metadata_not_preserved_boundary",
+    "current_classification": "selected_current_preservation_supersedes_historical_boundary",
+    "input_image": {
+      "name": "exif_metadata_probe.jpg",
+      "format": "JPEG",
+      "size": [
+        36,
+        24
+      ],
+      "mode": "RGB",
+      "exif": {
+        "make": "DocWenMake",
+        "model": "DocWenModel",
+        "orientation": 1,
+        "datetime": "2026:07:05 12:34:56",
+        "artist": "DocWenArtist"
+      },
+      "exif_tag_count": 5
+    },
+    "target": "jpg",
+    "expected_projection": {
+      "format": "JPEG",
+      "size": [
+        36,
+        24
+      ],
+      "mode": "RGB",
+      "exif": {
+        "make": null,
+        "model": null,
+        "orientation": null,
+        "datetime": null,
+        "artist": null
+      },
+      "exif_tag_count": 0
+    },
+    "projects": {
+      "docwen-ref-tk": {
+        "success": true,
+        "format": "JPEG",
+        "mode": "RGB",
+        "size": [
+          36,
+          24
+        ],
+        "exif_tag_count": 0
+      },
+      "docwen-ref-pyside6": {
+        "success": true,
+        "format": "JPEG",
+        "mode": "RGB",
+        "size": [
+          36,
+          24
+        ],
+        "exif_tag_count": 0
+      },
+      "docwen-current": {
+        "success": true,
+        "artifact_media_type": "image/jpeg",
+        "suggested_name": "exif_metadata_probe.jpg",
+        "metadata_target_format": "jpg",
+        "format": "JPEG",
+        "mode": "RGB",
+        "size": [
+          36,
+          24
+        ],
+        "exif": {
+          "make": "DocWenMake",
+          "model": "DocWenModel",
+          "orientation": 1,
+          "datetime": "2026:07:05 12:34:56",
+          "artist": null
+        },
+        "exif_tag_count": 4
+      }
+    },
+    "old_tk_code_evidence": "docwen-ref-tk/src/docwen/converter/formats/image/core.py::convert_image opens with PIL.Image.open(), converts modes, and saves without passing exif=img.info.get('exif') in the ordinary Image->Image path.",
+    "old_pyside6_code_evidence": "docwen-ref-pyside6/src/docwen/converter/image/core.py::convert_image uses the same ordinary save path and does not pass EXIF bytes to Image.save().",
+    "current_code_evidence": "packages/plugins/image/src/docwen_plugin_image/format_conversion/converter.py::ImageFormatConverter uses prepare_flat_export() for JPG/WebP; _common.py preserves Make/Model/Software/DateTime, normalizes Orientation, omits unsupported/private tags, and passes exact ICC bytes.",
+    "current_regression_test": "packages/plugins/image/tests/test_image_conversions.py::TestImageFormatConversion::test_exif_metadata_probe_matches_old_system_clearing_boundary",
+    "comparison_implication": "Old Tk and old PySide6 convert the generated EXIF-bearing JPEG to JPEG while clearing selected EXIF tags. Under VIS-201's selected E-A policy, current preserves Make/Model/DateTime plus normalized Orientation and deliberately omits unsupported Artist; this is a verified current source-fidelity improvement and the matching reference loss is a reference defect."
+  },
+  "expanded_format_matrix_probe": {
+    "classification": "broadened_old_current_image_format_matrix_projection",
+    "input_image": {
+      "name": "matrix_rgb.png",
+      "format": "PNG",
+      "size": [
+        32,
+        24
+      ],
+      "mode": "RGB"
+    },
+    "targets": [
+      "bmp",
+      "gif",
+      "tif"
+    ],
+    "projects": {
+      "docwen-current": {
+        "bmp": {
+          "artifact_media_type": "image/bmp",
+          "bytes_gt_zero": true,
+          "format": "BMP",
+          "metadata_target_format": "bmp",
+          "metrics_target_format": "bmp",
+          "mode": "RGB",
+          "n_frames": 1,
+          "size": [
+            32,
+            24
+          ],
+          "success": true,
+          "suffix": ".bmp",
+          "suggested_name": "matrix_rgb.bmp"
+        },
+        "gif": {
+          "artifact_media_type": "image/gif",
+          "bytes_gt_zero": true,
+          "format": "GIF",
+          "metadata_target_format": "gif",
+          "metrics_target_format": "gif",
+          "mode": "P",
+          "n_frames": 1,
+          "size": [
+            32,
+            24
+          ],
+          "success": true,
+          "suffix": ".gif",
+          "suggested_name": "matrix_rgb.gif"
+        },
+        "tif": {
+          "artifact_media_type": "image/tiff",
+          "bytes_gt_zero": true,
+          "format": "TIFF",
+          "metadata_target_format": "tif",
+          "metrics_target_format": "tif",
+          "mode": "RGB",
+          "n_frames": 1,
+          "size": [
+            32,
+            24
+          ],
+          "success": true,
+          "suffix": ".tif",
+          "suggested_name": "matrix_rgb.tif"
+        }
+      },
+      "docwen-ref-pyside6": {
+        "bmp": {
+          "bytes_gt_zero": true,
+          "format": "BMP",
+          "mode": "RGB",
+          "n_frames": 1,
+          "size": [
+            32,
+            24
+          ],
+          "success": true,
+          "suffix": ".bmp"
+        },
+        "gif": {
+          "bytes_gt_zero": true,
+          "format": "GIF",
+          "mode": "P",
+          "n_frames": 1,
+          "size": [
+            32,
+            24
+          ],
+          "success": true,
+          "suffix": ".gif"
+        },
+        "tif": {
+          "bytes_gt_zero": true,
+          "format": "TIFF",
+          "mode": "RGB",
+          "n_frames": 1,
+          "size": [
+            32,
+            24
+          ],
+          "success": true,
+          "suffix": ".tif"
+        }
+      },
+      "docwen-ref-tk": {
+        "bmp": {
+          "bytes_gt_zero": true,
+          "format": "BMP",
+          "mode": "RGB",
+          "n_frames": 1,
+          "size": [
+            32,
+            24
+          ],
+          "success": true,
+          "suffix": ".bmp"
+        },
+        "gif": {
+          "bytes_gt_zero": true,
+          "format": "GIF",
+          "mode": "P",
+          "n_frames": 1,
+          "size": [
+            32,
+            24
+          ],
+          "success": true,
+          "suffix": ".gif"
+        },
+        "tif": {
+          "bytes_gt_zero": true,
+          "format": "TIFF",
+          "mode": "RGB",
+          "n_frames": 1,
+          "size": [
+            32,
+            24
+          ],
+          "success": true,
+          "suffix": ".tif"
+        }
+      }
+    },
+    "current_regression_test": "packages/plugins/image/tests/test_image_conversions.py::TestImageFormatConversion::test_expanded_bmp_gif_tif_matrix_matches_old_system_projection",
+    "comparison_implication": "Old Tk, old PySide6, and current all convert the generated RGB PNG to BMP, GIF, and TIF with matching stable image semantics: BMP/TIF remain RGB, GIF becomes palette mode P, all outputs keep 32x24 size and one frame. This broadens the image-format matrix without claiming final image artifact parity."
+  },
+  "multiframe_input_boundary_probe": {
+    "classification": "mixed_shared_boundary_and_current_enhancement",
+    "inputs": {
+      "animated_rgb.gif": {
+        "format": "GIF",
+        "size": [
+          24,
+          16
+        ],
+        "n_frames": 3
+      },
+      "multi_rgb.tif": {
+        "format": "TIFF",
+        "size": [
+          24,
+          16
+        ],
+        "n_frames": 3
+      }
+    },
+    "scenarios": {
+      "animated_gif_to_gif": {
+        "input": "animated_rgb.gif",
+        "target": "gif",
+        "classification": "shared_animation_not_preserved_boundary"
+      },
+      "animated_gif_to_png": {
+        "input": "animated_rgb.gif",
+        "target": "png",
+        "classification": "current_transparency_safe_mode_difference"
+      },
+      "multipage_tiff_to_png": {
+        "input": "multi_rgb.tif",
+        "target": "png",
+        "classification": "current_multiframe_split_enhancement"
+      },
+      "multipage_tiff_to_tif": {
+        "input": "multi_rgb.tif",
+        "target": "tif",
+        "classification": "shared_multipage_not_preserved_in_format_conversion_boundary"
+      }
+    },
+    "projects": {
+      "docwen-current": {
+        "animated_gif_to_gif": {
+          "success": true,
+          "artifact_count": 1,
+          "metrics_frame_count": 1,
+          "artifacts": [
+            {
+              "kind": "primary",
+              "is_primary": true,
+              "suggested_name": "animated_rgb.gif",
+              "media_type": "image/gif",
+              "format": "GIF",
+              "mode": "P",
+              "size": [
+                24,
+                16
+              ],
+              "n_frames": 1,
+              "suffix": ".gif",
+              "bytes_gt_zero": true
+            }
+          ]
+        },
+        "animated_gif_to_png": {
+          "success": true,
+          "artifact_count": 1,
+          "metrics_frame_count": 1,
+          "artifacts": [
+            {
+              "kind": "primary",
+              "is_primary": true,
+              "suggested_name": "animated_rgb.png",
+              "media_type": "image/png",
+              "format": "PNG",
+              "mode": "RGBA",
+              "size": [
+                24,
+                16
+              ],
+              "n_frames": 1,
+              "suffix": ".png",
+              "bytes_gt_zero": true
+            }
+          ]
+        },
+        "multipage_tiff_to_png": {
+          "success": true,
+          "artifact_count": 3,
+          "metrics_frame_count": 3,
+          "artifacts": [
+            {
+              "kind": "primary",
+              "is_primary": true,
+              "suggested_name": "multi_rgb_page1.png",
+              "media_type": "image/png",
+              "format": "PNG",
+              "mode": "RGB",
+              "size": [
+                24,
+                16
+              ],
+              "n_frames": 1,
+              "suffix": ".png",
+              "bytes_gt_zero": true
+            },
+            {
+              "kind": "auxiliary",
+              "is_primary": false,
+              "suggested_name": "multi_rgb_page2.png",
+              "media_type": "image/png",
+              "format": "PNG",
+              "mode": "RGB",
+              "size": [
+                24,
+                16
+              ],
+              "n_frames": 1,
+              "suffix": ".png",
+              "bytes_gt_zero": true
+            },
+            {
+              "kind": "auxiliary",
+              "is_primary": false,
+              "suggested_name": "multi_rgb_page3.png",
+              "media_type": "image/png",
+              "format": "PNG",
+              "mode": "RGB",
+              "size": [
+                24,
+                16
+              ],
+              "n_frames": 1,
+              "suffix": ".png",
+              "bytes_gt_zero": true
+            }
+          ]
+        },
+        "multipage_tiff_to_tif": {
+          "success": true,
+          "artifact_count": 1,
+          "metrics_frame_count": 1,
+          "artifacts": [
+            {
+              "kind": "primary",
+              "is_primary": true,
+              "suggested_name": "multi_rgb.tif",
+              "media_type": "image/tiff",
+              "format": "TIFF",
+              "mode": "RGB",
+              "size": [
+                24,
+                16
+              ],
+              "n_frames": 1,
+              "suffix": ".tif",
+              "bytes_gt_zero": true
+            }
+          ]
+        }
+      },
+      "docwen-ref-pyside6": {
+        "animated_gif_to_gif": {
+          "success": true,
+          "artifact_count": 1,
+          "artifacts": [
+            {
+              "format": "GIF",
+              "mode": "P",
+              "size": [
+                24,
+                16
+              ],
+              "n_frames": 1,
+              "suffix": ".gif",
+              "bytes_gt_zero": true
+            }
+          ]
+        },
+        "animated_gif_to_png": {
+          "success": true,
+          "artifact_count": 1,
+          "artifacts": [
+            {
+              "format": "PNG",
+              "mode": "RGB",
+              "size": [
+                24,
+                16
+              ],
+              "n_frames": 1,
+              "suffix": ".png",
+              "bytes_gt_zero": true
+            }
+          ]
+        },
+        "multipage_tiff_to_png": {
+          "success": true,
+          "artifact_count": 1,
+          "artifacts": [
+            {
+              "format": "PNG",
+              "mode": "RGB",
+              "size": [
+                24,
+                16
+              ],
+              "n_frames": 1,
+              "suffix": ".png",
+              "bytes_gt_zero": true
+            }
+          ]
+        },
+        "multipage_tiff_to_tif": {
+          "success": true,
+          "artifact_count": 1,
+          "artifacts": [
+            {
+              "format": "TIFF",
+              "mode": "RGB",
+              "size": [
+                24,
+                16
+              ],
+              "n_frames": 1,
+              "suffix": ".tif",
+              "bytes_gt_zero": true
+            }
+          ]
+        }
+      },
+      "docwen-ref-tk": {
+        "animated_gif_to_gif": {
+          "success": true,
+          "artifact_count": 1,
+          "artifacts": [
+            {
+              "format": "GIF",
+              "mode": "P",
+              "size": [
+                24,
+                16
+              ],
+              "n_frames": 1,
+              "suffix": ".gif",
+              "bytes_gt_zero": true
+            }
+          ]
+        },
+        "animated_gif_to_png": {
+          "success": true,
+          "artifact_count": 1,
+          "artifacts": [
+            {
+              "format": "PNG",
+              "mode": "RGB",
+              "size": [
+                24,
+                16
+              ],
+              "n_frames": 1,
+              "suffix": ".png",
+              "bytes_gt_zero": true
+            }
+          ]
+        },
+        "multipage_tiff_to_png": {
+          "success": true,
+          "artifact_count": 1,
+          "artifacts": [
+            {
+              "format": "PNG",
+              "mode": "RGB",
+              "size": [
+                24,
+                16
+              ],
+              "n_frames": 1,
+              "suffix": ".png",
+              "bytes_gt_zero": true
+            }
+          ]
+        },
+        "multipage_tiff_to_tif": {
+          "success": true,
+          "artifact_count": 1,
+          "artifacts": [
+            {
+              "format": "TIFF",
+              "mode": "RGB",
+              "size": [
+                24,
+                16
+              ],
+              "n_frames": 1,
+              "suffix": ".tif",
+              "bytes_gt_zero": true
+            }
+          ]
+        }
+      }
+    },
+    "current_regression_test": "packages/plugins/image/tests/test_image_conversions.py::TestImageFormatConversion::test_multiframe_input_boundary_matches_recorded_projection",
+    "comparison_implication": "Old Tk, old PySide6, and current all collapse animated GIF format conversion to one frame; current GIF->PNG uses RGBA as a transparency-safe policy while old systems use RGB. Current multipage TIFF->PNG intentionally splits frames into primary plus auxiliary PNG artifacts, a current enhancement over the old single-frame output. TIFF->TIF format conversion still collapses to one frame across all three projects. These are recorded boundaries, not current regressions."
+  },
+  "compression_limit_probe": {
+    "classification": "old_current_limit_size_projection",
+    "input_image": {
+      "name": "compression_probe.png",
+      "format": "PNG",
+      "size": [
+        120,
+        90
+      ],
+      "mode": "RGB",
+      "source_bytes": 2290,
+      "generation": "deterministic RGB pattern: ((x*37+y*17)%256, (x*13+y*57)%256, (x*91+y*23)%256)"
+    },
+    "scenarios": [
+      {
+        "id": "jpg_limit_10kb",
+        "target": "jpg",
+        "suffix": ".jpg",
+        "options": {
+          "compress_mode": "limit_size",
+          "size_limit": 10,
+          "size_unit": "KB"
+        },
+        "limit_bytes": 10240
+      },
+      {
+        "id": "webp_limit_10kb",
+        "target": "webp",
+        "suffix": ".webp",
+        "options": {
+          "compress_mode": "limit_size",
+          "size_limit": 10,
+          "size_unit": "KB"
+        },
+        "limit_bytes": 10240
+      },
+      {
+        "id": "png_limit_1kb",
+        "target": "png",
+        "suffix": ".png",
+        "options": {
+          "compress_mode": "limit_size",
+          "size_limit": 1,
+          "size_unit": "KB"
+        },
+        "limit_bytes": 1024
+      }
+    ],
+    "projects": {
+      "docwen-current": {
+        "jpg_limit_10kb": {
+          "success": true,
+          "format": "JPEG",
+          "mode": "RGB",
+          "size": [
+            120,
+            90
+          ],
+          "output_bytes": 10106,
+          "bytes_le_limit": true,
+          "artifact_media_type": "image/jpeg",
+          "suggested_name": "compression_probe.jpg",
+          "metadata_target_format": "jpg"
+        },
+        "webp_limit_10kb": {
+          "success": true,
+          "format": "WEBP",
+          "mode": "RGB",
+          "size": [
+            120,
+            90
+          ],
+          "output_bytes": 10012,
+          "bytes_le_limit": true,
+          "artifact_media_type": "image/webp",
+          "suggested_name": "compression_probe.webp",
+          "metadata_target_format": "webp"
+        },
+        "png_limit_1kb": {
+          "success": false,
+          "diagnostic_code": "IMAGEFMT-CONVERT-ERROR",
+          "error_contains_unreliable_or_target": true,
+          "artifact_count": 0
+        }
+      },
+      "docwen-ref-pyside6": {
+        "jpg_limit_10kb": {
+          "success": true,
+          "format": "JPEG",
+          "mode": "RGB",
+          "size": [
+            120,
+            90
+          ],
+          "output_bytes": 10106,
+          "bytes_le_limit": true
+        },
+        "webp_limit_10kb": {
+          "success": true,
+          "format": "WEBP",
+          "mode": "RGB",
+          "size": [
+            120,
+            90
+          ],
+          "output_bytes": 10012,
+          "bytes_le_limit": true
+        },
+        "png_limit_1kb": {
+          "success": false,
+          "error_type": "RuntimeError",
+          "error_contains_unreliable_or_target": true,
+          "output_exists": true,
+          "output_bytes": 1886
+        }
+      },
+      "docwen-ref-tk": {
+        "jpg_limit_10kb": {
+          "success": true,
+          "format": "JPEG",
+          "mode": "RGB",
+          "size": [
+            120,
+            90
+          ],
+          "output_bytes": 10106,
+          "bytes_le_limit": true
+        },
+        "webp_limit_10kb": {
+          "success": true,
+          "format": "WEBP",
+          "mode": "RGB",
+          "size": [
+            120,
+            90
+          ],
+          "output_bytes": 10012,
+          "bytes_le_limit": true
+        },
+        "png_limit_1kb": {
+          "success": false,
+          "error_type": "RuntimeError",
+          "error_contains_unreliable_or_target": true,
+          "output_exists": true,
+          "output_bytes": 1886
+        }
+      }
+    },
+    "old_tk_code_evidence": "docwen-ref-tk/src/docwen/converter/formats/image/core.py::convert_image dispatches limit_size to compress_to_size() for JPG/JPEG/WEBP and save-then-size-check failure for PNG/TIF/GIF/BMP.",
+    "old_pyside6_code_evidence": "docwen-ref-pyside6/src/docwen/converter/image/core.py::convert_image uses the same ImageOpRuntime limit_size split: JPG/JPEG/WEBP binary quality search, other formats save then fail when still above the requested size.",
+    "current_code_evidence": "packages/plugins/image/src/docwen_plugin_image/_common.py::save_image_with_options keeps the same split, returning a structured IMAGEFMT-CONVERT-ERROR without registering artifacts on failure.",
+    "current_regression_test": "packages/plugins/image/tests/test_image_conversions.py::TestImageFormatConversion::test_compression_limit_probe_matches_old_system_projection",
+    "comparison_implication": "Old Tk, old PySide6, and current all compress the generated RGB PNG to JPEG and WebP within a 10 KB limit and all reject PNG at a 1 KB limit because PNG cannot be reliably target-size compressed. Current failure returns a structured diagnostic with no artifact, while old systems leave the over-limit output path behind; that is a cleaner current runtime failure projection, not a missing feature."
+  },
+  "fa08_final_artifact_contract_addendum": {
+    "contract_id": "CONTRACT-2026-07-22-001/FA-08",
+    "stage_id": "VIS-2026-07-22-164",
+    "stage_start_parent": "d3ae0a7",
+    "status": "pending_user_decision_shared_source_fidelity",
+    "canonical_route_slots": 60,
+    "targeted_repair_route_replacements": 2,
+    "stage_contract_sha256": "c1299d3a4e76007ef3ad21efecf8b9ad1773cb55562ebdfee39c652bfd7f8909",
+    "probe_input_manifest_sha256": "12926e14550c8e3484364502f68a43b0627d30e5e95129e92a4704a3425018f4",
+    "probe_result_sha256": "25aa6d3c2516537e7a4fa10a5b0193763531c57c3cd4990b24c011d98667f7b5",
+    "repair_reruns_sha256": "d5480bc85afeac5fb1f3df3fb41e4e0e4425aeac7e544dcd2fd8f7fb269e694a",
+    "inputs": {
+      "B1": {
+        "kind": "generated_exif_orientation_6_jpeg",
+        "sha256": "2de0c4bf5b6710ac022e1ecadcdd7144ad91f20116608a9fe50912bac7c2e78f"
+      },
+      "B2": {
+        "kind": "generated_three_frame_gif",
+        "sha256": "706ad21615639cc4677128fd8083cedd8f1629238056b5d5bab8e349b7a9e3e2"
+      },
+      "N1": {
+        "kind": "cc0_iphone_14_mpo_bus_photo",
+        "sha256": "a416b2d5265506396eb54784613c6cb7791d3d05d6a2c1c770d5c217e8426a43"
+      },
+      "N2": {
+        "kind": "cc_by_4_iphone_14_pro_mpo_road_sign_photo",
+        "sha256": "f2f852060f4980d140e10dcf4bcb10852d8cb4ba85e7961e327d1063458b3d72"
+      }
+    },
+    "routes": [
+      "jpg",
+      "webp",
+      "pdf-original",
+      "markdown-file",
+      "markdown-image-md"
+    ],
+    "current_only_repair": {
+      "classification": "fixed_empty_ocr_image_md_companion_parity",
+      "affected_slots": [
+        "B1/markdown-image-md",
+        "B2/markdown-image-md"
+      ],
+      "before": "current emitted retained image plus primary Markdown while both references also emitted and linked an empty OCR companion",
+      "after": "current emits primary, retained image and companion Markdown whenever OCR is enabled with image_md placement",
+      "regression_test": "packages/plugins/image/tests/test_markdown_assets.py::TestImageToMarkdownOcrPlacementImageMd::test_image_md_placement_empty_ocr_still_creates_auxiliary"
+    },
+    "cross_project_results": {
+      "truthful_success_slots": 60,
+      "normalized_case_route_projections_equal": 20,
+      "markdown_links_relative_reachable_wiki_embed": true,
+      "markdown_retained_source_bytes_identical": true,
+      "n1_ocr_exact_equal_nonempty": true,
+      "n2_ocr_exact_equal_nonempty": true,
+      "b2_pdf_frame_page_order": [
+        3,
+        3,
+        3
+      ],
+      "process_residue": 0
+    },
+    "shared_failed_slots": {
+      "B1/jpg": [
+        "display_oriented_rgb_fidelity",
+        "orientation_fidelity"
+      ],
+      "B1/webp": [
+        "display_oriented_rgb_fidelity",
+        "orientation_fidelity"
+      ],
+      "N1/jpg": [
+        "selected_exif_fidelity",
+        "icc_fidelity"
+      ],
+      "N1/webp": [
+        "selected_exif_fidelity",
+        "icc_fidelity"
+      ],
+      "N1/pdf-original": [
+        "pdf_page_2_render_fidelity"
+      ],
+      "N2/jpg": [
+        "display_oriented_rgb_fidelity",
+        "orientation_fidelity",
+        "selected_exif_fidelity",
+        "icc_fidelity"
+      ],
+      "N2/webp": [
+        "display_oriented_rgb_fidelity",
+        "orientation_fidelity",
+        "selected_exif_fidelity",
+        "icc_fidelity"
+      ]
+    },
+    "pass": false,
+    "legal_next_disposition": "verified current source-fidelity repair with explicit reference-defect disposition, or user-accepted boundary with visible and metadata impact recorded"
+  },
+  "fa08_delivery_first_closure_addendum": {
+    "contract_id": "CONTRACT-2026-07-22-001/FA-08",
+    "stage_id": "VIS-2026-07-23-201",
+    "stage_start_parent": "55339b9dbd3846b06edf1c922aab0393b212b5f3",
+    "policy": "FA-08=O-A,E-A,C-A,M-B",
+    "status": "fixed_and_verified_with_user_accepted_mpo_auxiliary_page_boundary",
+    "affected_current_slots": 8,
+    "affected_current_slots_passed": 8,
+    "flat_export_contract": {
+      "display_orientation_applied_once": true,
+      "output_orientation": "1_or_absent",
+      "preserved_exif_tags": [
+        271,
+        272,
+        305,
+        306
+      ],
+      "normalized_orientation_tag": 274,
+      "unsupported_private_gps_tags_copied": false,
+      "icc_payload_exact": true,
+      "minimum_display_similarity": 0.95
+    },
+    "mpo_pdf_contract": {
+      "all_frames_delivered_as_pages": true,
+      "warning_code": "IMG2PDF-MPO-AUXILIARY-FRAMES",
+      "warning_count_per_multiframe_mpo": 1,
+      "n1_source_frames": 2,
+      "n1_pdf_pages": 2,
+      "n1_auxiliary_page_render_score": 0.79880938,
+      "n2_source_frames": 2,
+      "n2_pdf_pages": 2
+    },
+    "reference_disposition": "old Tk and old PySide6 matching flat orientation, selected EXIF, and ICC losses are explicit reference defects",
+    "accepted_boundary": "M-B keeps every MPO frame as a PDF page, including the exact N1 auxiliary-page impact, with a truthful successful-result warning",
+    "source_files_unchanged": true,
+    "post_choice_oracle_sha256": "0e65f92df2fb5dfee2c3ac4d42f796e2843c4a8ad137f2e17423757e4e40eaee",
+    "pass": true
+  },
+  "projects": {
+    "docwen-current": {
+      "jpg": {
+        "artifact_media_type": "image/jpeg",
+        "bytes_gt_zero": true,
+        "format": "JPEG",
+        "metadata_target_format": "jpg",
+        "metrics_target_format": "jpg",
+        "mode": "RGB",
+        "n_frames": 1,
+        "size": [
+          32,
+          24
+        ],
+        "success": true,
+        "suffix": ".jpg",
+        "suggested_name": "sample_rgba.jpg"
+      },
+      "png": {
+        "artifact_media_type": "image/png",
+        "bytes_gt_zero": true,
+        "format": "PNG",
+        "metadata_target_format": "png",
+        "metrics_target_format": "png",
+        "mode": "RGBA",
+        "n_frames": 1,
+        "size": [
+          32,
+          24
+        ],
+        "success": true,
+        "suffix": ".png",
+        "suggested_name": "sample_rgba.png"
+      },
+      "webp": {
+        "artifact_media_type": "image/webp",
+        "bytes_gt_zero": true,
+        "format": "WEBP",
+        "metadata_target_format": "webp",
+        "metrics_target_format": "webp",
+        "mode": "RGBA",
+        "n_frames": 1,
+        "size": [
+          32,
+          24
+        ],
+        "success": true,
+        "suffix": ".webp",
+        "suggested_name": "sample_rgba.webp"
+      }
+    },
+    "docwen-ref-pyside6": {
+      "jpg": {
+        "bytes_gt_zero": true,
+        "format": "JPEG",
+        "mode": "RGB",
+        "n_frames": 1,
+        "size": [
+          32,
+          24
+        ],
+        "success": true,
+        "suffix": ".jpg"
+      },
+      "png": {
+        "bytes_gt_zero": true,
+        "format": "PNG",
+        "mode": "RGBA",
+        "n_frames": 1,
+        "size": [
+          32,
+          24
+        ],
+        "success": true,
+        "suffix": ".png"
+      },
+      "webp": {
+        "bytes_gt_zero": true,
+        "format": "WEBP",
+        "mode": "RGBA",
+        "n_frames": 1,
+        "size": [
+          32,
+          24
+        ],
+        "success": true,
+        "suffix": ".webp"
+      }
+    },
+    "docwen-ref-tk": {
+      "jpg": {
+        "bytes_gt_zero": true,
+        "format": "JPEG",
+        "mode": "RGB",
+        "n_frames": 1,
+        "size": [
+          32,
+          24
+        ],
+        "success": true,
+        "suffix": ".jpg"
+      },
+      "png": {
+        "bytes_gt_zero": true,
+        "format": "PNG",
+        "mode": "RGBA",
+        "n_frames": 1,
+        "size": [
+          32,
+          24
+        ],
+        "success": true,
+        "suffix": ".png"
+      },
+      "webp": {
+        "bytes_gt_zero": true,
+        "format": "WEBP",
+        "mode": "RGBA",
+        "n_frames": 1,
+        "size": [
+          32,
+          24
+        ],
+        "success": true,
+        "suffix": ".webp"
+      }
+    }
+  },
+  "targets": [
+    "jpg",
+    "png",
+    "webp"
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "golden_id": "GOLDEN-009",
+  "scope": "focused SmartDoc DOCX to ODT real external-office smoke",
+  "generated_at": "2026-07-03",
+  "input_document": {
+    "filename": "smart-doc-odt-probe.docx",
+    "paragraphs": [
+      "Smart Doc ODT Smoke",
+      "This document checks DOCX to ODT conversion."
+    ],
+    "table": [
+      [
+        "Item",
+        "Qty"
+      ],
+      [
+        "Orange",
+        "3"
+      ]
+    ]
+  },
+  "route": {
+    "source_format": "docx",
+    "target_format": "odt",
+    "category": "document"
+  },
+  "expected_semantics": {
+    "output_extension": ".odt",
+    "output_size_bytes": 8640,
+    "odt_zip": {
+      "is_zip": true,
+      "content_xml_selected_texts": [
+        "Smart Doc ODT Smoke",
+        "This document checks DOCX to ODT conversion.",
+        "Item",
+        "Qty",
+        "Orange",
+        "3"
+      ]
+    }
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "entry": "docwen.converter.formats.document.docx_to_odt",
+      "success": true,
+      "output_size_bytes": 8640,
+      "odt_zip": {
+        "is_zip": true,
+        "content_xml_selected_texts": [
+          "Smart Doc ODT Smoke",
+          "This document checks DOCX to ODT conversion.",
+          "Item",
+          "Qty",
+          "Orange",
+          "3"
+        ]
+      }
+    },
+    "docwen-ref-pyside6": {
+      "entry": "docwen.converter.doc_interop.docx_to_odt",
+      "success": true,
+      "output_size_bytes": 8640,
+      "odt_zip": {
+        "is_zip": true,
+        "content_xml_selected_texts": [
+          "Smart Doc ODT Smoke",
+          "This document checks DOCX to ODT conversion.",
+          "Item",
+          "Qty",
+          "Orange",
+          "3"
+        ]
+      }
+    },
+    "docwen-current": {
+      "entry": "uv run docwen run smart-doc-odt-probe.docx --to odt --output <dir> --json",
+      "success": true,
+      "output_size_bytes": 8640,
+      "odt_zip": {
+        "is_zip": true,
+        "content_xml_selected_texts": [
+          "Smart Doc ODT Smoke",
+          "This document checks DOCX to ODT conversion.",
+          "Item",
+          "Qty",
+          "Orange",
+          "3"
+        ]
+      }
+    }
+  },
+  "accepted_limits": [
+    "This is a focused real-environment smoke for DOCX to ODT only; it does not close WPS application fidelity beyond focused rich roundtrip, LibreOffice-only fallback, comments, fields, revisions, complex layout, or broad binary artifact comparison.",
+    "ODT output is validated as a real zip package with content.xml selected text. Size is recorded as environment metadata; this smoke does not require broad byte parity.",
+    "Old Tk and old PySide6 explicitly route DOCX to ODT as Word then LibreOffice and do not include WPS. The current rewrite now skips WPS for any ODT source/target route to preserve that old-system/product boundary."
+  ],
+  "evidence": {
+    "transient_output_dir": "tmp/smart-doc-odt-real-smoke-2026-07-03-controlled",
+    "pre_fix_current_risk": {
+      "observed": "current DOCX to ODT previously allowed WPS Writer as the first COM candidate and could return success with a non-zip .odt output",
+      "fix": "docwen_plugin_document.to_document.converter._word_candidates now returns only Microsoft Word for ODT source or target routes; LibreOffice fallback remains wired through docwen_core.office_bridge"
+    },
+    "process_cleanup": {
+      "residual_processes_seen_after_controlled_probe": [],
+      "residual_processes_after_six_second_wait": [],
+      "controlled_probe": {
+        "command": "isolated old Tk / old PySide6 conversion functions plus current uv run docwen run smart-doc-odt-probe.docx --to odt --json",
+        "success": true,
+        "new_office_processes_after_probe": []
+      }
+    }
+  }
+}

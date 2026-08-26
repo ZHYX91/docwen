@@ -1,0 +1,204 @@
+{
+  "golden_id": "GOLDEN-003",
+  "scope": "focused three-project official Open XML chart, conditional-formatting, prompt-only validation, and missing-formula-cache batch",
+  "created_at": "2026-07-15",
+  "source_repository": {
+    "owner": "dotnet",
+    "repository": "Open-XML-SDK",
+    "commit": "00967dc871f06776ae969762c6703d062308a6c9",
+    "repository_url": "https://github.com/dotnet/Open-XML-SDK",
+    "redistribution": "external_official_test binaries retained only in workspace-bound temporary probe",
+    "features_screened_before_docwen_execution": true
+  },
+  "screening_contract": {
+    "workbook_paths": 109,
+    "unique_workbook_blobs": 96,
+    "unique_chart_assets": 20,
+    "chart_parts": 49,
+    "unique_data_validation_assets": 1,
+    "data_validation_elements": 32,
+    "unique_conditional_formatting_assets": 15,
+    "selected_sources": 2
+  },
+  "sources": {
+    "basicspreadsheet.xlsx": {
+      "repository_path": "test/DocumentFormat.OpenXml.Tests.Assets/assets/TestFiles/basicspreadsheet.xlsx",
+      "blob_sha": "399848870cd789bd7b67d734e427562039dcf080",
+      "bytes": 26610,
+      "sha256": "13221d4d2569b6f8822fc17d9a1720a272628e914dc8025465285059e4b97d92",
+      "package_entries": 30,
+      "sheets": [
+        {"name": "Sheet1", "max_row": 45, "max_column": 11},
+        {"name": "Sheet2", "max_row": 4, "max_column": 3},
+        {"name": "Sheet3", "max_row": 1, "max_column": 1}
+      ],
+      "table_count": 2,
+      "merge_count": 1,
+      "image_count": 0,
+      "formula_count": 0,
+      "data_validation_count": 0,
+      "chart_count": 1,
+      "charts": [
+        {
+          "sheet": "Sheet1",
+          "class": "BarChart",
+          "series_count": 1,
+          "values": "Sheet1!$G$1:$G$3",
+          "anchor": "OneCellAnchor"
+        }
+      ],
+      "conditional_formatting": [
+        {"sheet": "Sheet1", "sqref": "G1:G3", "types": ["dataBar"]},
+        {"sheet": "Sheet1", "sqref": "H1:H3", "types": ["colorScale"]},
+        {"sheet": "Sheet1", "sqref": "I1:I3", "types": ["cellIs"]},
+        {"sheet": "Sheet1", "sqref": "J1:J3", "types": ["cellIs"]},
+        {"sheet": "Sheet1", "sqref": "K1:K3", "types": ["top10"]}
+      ]
+    },
+    "missingcalcchainpart.xlsx": {
+      "repository_path": "test/DocumentFormat.OpenXml.Tests.Assets/assets/TestFiles/missingcalcchainpart.xlsx",
+      "blob_sha": "cd55a7c3d164292b847b46452debb2b80c906afe",
+      "bytes": 51622,
+      "sha256": "8157632b6baee46941f615f98507380b3081269e2b2f8f0fecfb509ad8b04067",
+      "package_entries": 34,
+      "sheets": [
+        {"name": "Start", "max_row": 41, "max_column": 3},
+        {"name": "Overview", "max_row": 40, "max_column": 3},
+        {"name": "Start-Up Costs Template", "max_row": 38, "max_column": 7},
+        {"name": "Start-Up Costs Example", "max_row": 38, "max_column": 7},
+        {"name": "P&L Template", "max_row": 42, "max_column": 16},
+        {"name": "P&L Example", "max_row": 41, "max_column": 62}
+      ],
+      "table_count": 6,
+      "merge_count": 4,
+      "image_count": 0,
+      "chart_count": 0,
+      "conditional_formatting_range_count": 0,
+      "calc_chain_part_present": false,
+      "formula_count": 218,
+      "formula_with_cached_value_count": 182,
+      "formula_without_cached_value_count": 36,
+      "formula_by_sheet": {
+        "Start-Up Costs Template": {"total": 7, "cached": 7, "missing": 0},
+        "Start-Up Costs Example": {"total": 8, "cached": 8, "missing": 0},
+        "P&L Template": {"total": 102, "cached": 66, "missing": 36},
+        "P&L Example": {"total": 101, "cached": 101, "missing": 0}
+      },
+      "missing_cache_samples": [
+        {"sheet": "P&L Template", "cell": "C19", "formula": "=IF(SUM(C14:C18)=0,\"\",SUM(C14:C18))"},
+        {"sheet": "P&L Template", "cell": "N19", "formula": "=IF(SUM(N14:N18)=0,\"\",SUM(N14:N18))"},
+        {"sheet": "P&L Template", "cell": "C20", "formula": "=IFERROR('P&L Template'!$C$11-SampleExpenses[[#Totals],[JAN]],\"\")"},
+        {"sheet": "P&L Template", "cell": "N23", "formula": "=IFERROR(N20-'P&L Template'!$N$21,\"\")"}
+      ],
+      "data_validation_count": 32,
+      "data_validation_by_sheet": {
+        "Overview": 7,
+        "Start-Up Costs Template": 3,
+        "Start-Up Costs Example": 3,
+        "P&L Template": 10,
+        "P&L Example": 9
+      },
+      "validation_elements_with_prompt": 32,
+      "unique_validation_prompts": 28,
+      "typed_validation_count": 0,
+      "validation_elements_with_formula": 0,
+      "validation_boundary": "All 32 elements are prompt-only dataValidation records with no type, operator, formula1, or formula2; they do not prove list/range/numeric rule enforcement."
+    }
+  },
+  "execution_contract": {
+    "no_image_three_project_executions": 6,
+    "chart_image_enabled_three_project_executions": 3,
+    "valid_three_project_executions": 9,
+    "all_executions_successful": true,
+    "docwen-ref-tk": "project venv plus production docwen.converter.xlsx2md.convert_spreadsheet_to_md",
+    "docwen-ref-pyside6": "project venv plus production SpreadsheetPlugin.convert",
+    "docwen-current": "project venv plus production SpreadsheetPlugin.convert",
+    "ocr_enabled": false,
+    "office_processes_started": false
+  },
+  "normalized_projections": {
+    "normalization": [
+      "newline",
+      "YAML title-label and field order",
+      "Markdown separator rows",
+      "Tk nan/current ColN blank-cell presentation",
+      "localized empty-sheet message"
+    ],
+    "basicspreadsheet.xlsx": {
+      "all_three_projects_equal": true,
+      "entries": 46,
+      "headings": 3,
+      "table_rows": 42,
+      "cells": 105,
+      "blank_cells": 6,
+      "projection_sha256": "bbc0bf99f153b64fee2f4ffe98c5d609c08daaab397d3cab06fe313c8cfc1184",
+      "tk_raw": {"bytes": 2303, "sha256": "e809bb1bbefba8bd957f67ffe8ac74c5403fadfa2f0260babcff8960a5386819"},
+      "old_pyside6_current_raw_equal": true,
+      "old_pyside6_current_raw": {"bytes": 2307, "sha256": "32bda1f8ef5f9fdea705931839b9e7e152d640b062d8908831b307d0a7991a98"}
+    },
+    "missingcalcchainpart.xlsx": {
+      "all_three_projects_equal": true,
+      "entries": 79,
+      "headings": 6,
+      "table_rows": 73,
+      "cells": 639,
+      "blank_cells": 91,
+      "projection_sha256": "f70007bdc5d26aa51005b695e1eb9dd2a42dab0d99ff4c8d2b874adae12644eb",
+      "tk_raw": {"bytes": 18405, "sha256": "70272b854be8f21fae67fe1fe7c08b70928cbadb26ba92782ae6c7d7ba884ddb"},
+      "old_pyside6_current_raw_equal": true,
+      "old_pyside6_current_raw": {"bytes": 18408, "sha256": "793a79415e1a9c9d64e3cadd30be9cc0bdd9d33b3cdc4936d3ad02ce93d9db0d"}
+    }
+  },
+  "missing_cache_contract": {
+    "source_formula_cells": 218,
+    "source_formula_cells_with_cached_values": 182,
+    "source_formula_cells_without_cached_values": 36,
+    "all_three_projects_emit_cached_values_or_blank_not_formula_text": true,
+    "formula_text_leaks": {"docwen-ref-tk": 0, "docwen-ref-pyside6": 0, "docwen-current": 0},
+    "classification": "shared data_only behavior: missing saved results remain blank; this is parity evidence, not formula evaluation or preservation"
+  },
+  "chart_image_option_contract": {
+    "source": "basicspreadsheet.xlsx",
+    "source_chart_count": 1,
+    "source_embedded_image_count": 0,
+    "all_three_image_enabled_executions_successful": true,
+    "docwen-ref-tk_artifacts": ["basicspreadsheet.md"],
+    "docwen-ref-pyside6_artifact_kinds": ["primary"],
+    "docwen-current_artifact_kinds": ["primary"],
+    "image_artifact_count_by_project": {"docwen-ref-tk": 0, "docwen-ref-pyside6": 0, "docwen-current": 0},
+    "markdown_equal_to_respective_no_image_run": true,
+    "classification": "ordinary chart is not raster-image extraction in any project; no current-only regression, but chart rendering/extraction remains unproven"
+  },
+  "current_runtime_finalizer": {
+    "representative_source": "missingcalcchainpart.xlsx",
+    "success": true,
+    "artifact_count": 1,
+    "primary_name": "missingcalcchainpart.md",
+    "primary_bytes": 18408,
+    "primary_sha256": "793a79415e1a9c9d64e3cadd30be9cc0bdd9d33b3cdc4936d3ad02ce93d9db0d",
+    "input_bytes": 51622,
+    "output_bytes": 18408,
+    "sheet_count": 6,
+    "row_count": 80,
+    "column_count": 15,
+    "block_count": 15,
+    "image_count": 0,
+    "diagnostics": ["SHEET2MD-OK", "FINALIZER_DONE"],
+    "workspace_paths_leaked": false
+  },
+  "classification": {
+    "current_only_functional_gap_found": false,
+    "route_or_option_wiring_gap_found": false,
+    "old_pyside6_current_raw_outputs_equal_for_all_selected_runs": true,
+    "shared_chart_extraction_boundary_found": true,
+    "prompt_only_validation_is_typed_validation_evidence": false,
+    "production_change_made": false
+  },
+  "known_limits": [
+    "The selected chart proves source-package presence, conversion stability, and shared option behavior, not visual chart rendering fidelity.",
+    "The 32 dataValidation elements are input prompts without a rule type or formula; typed/list/range/numeric validation remains open.",
+    "Conditional-formatting rule presence is inventoried, but appearance is not represented by the Markdown value projection.",
+    "Missing formula caches remain blank under the shared data_only policy; no project evaluates formulas or preserves formula text.",
+    "This is focused strong official-test-workbook evidence, not broad GOLDEN-003, final artifact, or overall parity PASS."
+  ]
+}

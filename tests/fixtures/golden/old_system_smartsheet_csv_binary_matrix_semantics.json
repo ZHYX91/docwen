@@ -1,0 +1,140 @@
+{
+  "golden_id": "GOLDEN-010",
+  "scope": "focused three-project SmartSheet CSV and binary matrix",
+  "created_at": "2026-07-14",
+  "routes": [
+    "csv->xls",
+    "csv->ods",
+    "xls->csv",
+    "ods->csv",
+    "et->csv"
+  ],
+  "source_fixtures": {
+    "csv": {
+      "name": "vis025-source.csv",
+      "size_bytes": 65,
+      "sha256": "55511901c0fd7be1bf2a7f36b29b10410bbf75d5b4836d50562e7e397e71f2fe",
+      "rows": [
+        ["Name", "Value", "Note"],
+        ["Alpha", "11", "first"],
+        ["Beta", "22", "second"],
+        ["Gamma", "33", "third"]
+      ]
+    },
+    "binary_workbooks": {
+      "sheet_names": ["Alpha Data", "Beta-Summary", "Hidden Sheet"],
+      "sheet_visibility": [true, true, false],
+      "markers": ["ALPHA_MARKER", "BETA_MARKER", "HIDDEN_MARKER"],
+      "xls": {
+        "size_bytes": 19456,
+        "sha256": "85ed69707d5bcd25b06b7ce6d3ab97b3001bf18730e6673e039e50202fd423a3"
+      },
+      "ods": {
+        "size_bytes": 3100,
+        "sha256": "ff92cf564b37c91834e3beb2a6807ceeeead62a1931a6a6df87f7a7ff3db5e8b"
+      },
+      "et": {
+        "size_bytes": 19456,
+        "sha256": "7301c99ecdca3cc8c9c855d0cdecc7684cc0bc7dcf9d715f49e0b44eb3ebf881"
+      }
+    }
+  },
+  "pre_fix_regressions": {
+    "binary_to_csv_sheet_loss": {
+      "route": "xls->csv",
+      "docwen_ref_tk_artifact_count": 3,
+      "docwen_ref_pyside6_artifact_count": 3,
+      "docwen_current_artifact_count": 1,
+      "current_retained_markers": ["ALPHA_MARKER"]
+    },
+    "csv_to_binary_numeric_cells_became_text": {
+      "affected_current_routes": ["csv->xls", "csv->ods"],
+      "old_numeric_values": [11, 22, 33],
+      "current_pre_fix_values": ["11", "22", "33"],
+      "current_post_fix_values": [11, 22, 33]
+    }
+  },
+  "matrix": {
+    "csv->xls": {
+      "docwen-ref-tk": {"success": true, "artifact_count": 1, "numeric_values": [11, 22, 33]},
+      "docwen-ref-pyside6": {"success": true, "artifact_count": 1, "numeric_values": [11, 22, 33]},
+      "docwen-current": {"success": true, "artifact_count": 1, "numeric_values": [11, 22, 33]},
+      "accepted_projection_equal": true
+    },
+    "csv->ods": {
+      "docwen-ref-tk": {"success": true, "artifact_count": 1, "numeric_values": [11, 22, 33]},
+      "docwen-ref-pyside6": {
+        "success": false,
+        "artifact_count": 0,
+        "boundary": ["Excel COM Open.SaveAs failed", "LibreOffice is not installed"]
+      },
+      "docwen-current": {"success": true, "artifact_count": 1, "numeric_values": [11, 22, 33]},
+      "current_matches_tk_and_exceeds_old_pyside6": true
+    },
+    "xls->csv": {
+      "docwen-ref-tk": {"success": true, "artifact_count": 3},
+      "docwen-ref-pyside6": {"success": true, "artifact_count": 3},
+      "docwen-current": {"success": true, "artifact_count": 3},
+      "all_marker_projections_equal": true
+    },
+    "ods->csv": {
+      "docwen-ref-tk": {"success": true, "artifact_count": 3},
+      "docwen-ref-pyside6": {"success": true, "artifact_count": 3},
+      "docwen-current": {"success": true, "artifact_count": 3},
+      "all_marker_projections_equal": true
+    },
+    "et->csv": {
+      "docwen-ref-tk": {"success": true, "artifact_count": 3},
+      "docwen-ref-pyside6": {"success": true, "artifact_count": 3},
+      "docwen-current": {"success": true, "artifact_count": 3},
+      "all_marker_projections_equal": true
+    }
+  },
+  "binary_to_csv_projection": {
+    "artifact_count": 3,
+    "markers": ["ALPHA_MARKER", "BETA_MARKER", "HIDDEN_MARKER"],
+    "row_counts": [2, 2, 2],
+    "sha256": [
+      "cf8bbb5904efbfccb5ab9944d4bf8fdaa2dd8b65fc9991feca0a697199de5a55",
+      "e6f2cd30852a183792019946c57ad7865c36a6369f018c8beda194e032a33bc7",
+      "32881c48de3e3999d0ad5220df7794bcdb3ccb33b56be12d3bc282db40e9527b"
+    ],
+    "old_naming": "timestamped per-sheet names inside a conversion folder",
+    "current_naming": [
+      "vis025-multi-sheet_Alpha_Data.csv",
+      "vis025-multi-sheet_Beta-Summary.csv",
+      "vis025-multi-sheet_Hidden_Sheet.csv"
+    ]
+  },
+  "current_runtime_observability": {
+    "representative_route": "xls->csv",
+    "success": true,
+    "artifact_kinds": ["primary", "auxiliary", "auxiliary"],
+    "sheet_names": ["Alpha Data", "Beta-Summary", "Hidden Sheet"],
+    "sheet_count_metadata": [3, 3, 3],
+    "backend": "WPS Spreadsheets",
+    "metrics": {
+      "input_bytes": 19456,
+      "output_bytes": 128,
+      "sheet_count": 3,
+      "total_rows": 6
+    },
+    "diagnostics": ["SHEETFMT-OK", "FINALIZER_DONE"]
+  },
+  "production_fixes": [
+    "Binary SmartSheet inputs now delegate hub XLSX export to the canonical one-CSV-per-sheet converter and keep hidden sheets.",
+    "CSV and TSV private hub workbooks now share the canonical encoding and numeric-cell parser instead of a second pandas semantics source."
+  ],
+  "process_evidence": {
+    "pre_existing_wps_pids": [1796, 18764],
+    "final_new_relevant_processes": [],
+    "policy": "Only processes absent from the pre-probe snapshot were eligible for cleanup."
+  },
+  "accepted_limits": [
+    "This closes one deterministic-sample artifact slice for all five previously missing CSV/binary routes; it is not a final GOLDEN-010 pass.",
+    "Old timestamped CSV folder names are not required; current stable source-owned multi-artifact names are the accepted architecture and UX improvement.",
+    "The old PySide6 CSV-to-ODS failure is a reference-project weakness in this environment, not an accepted current boundary; current succeeds and matches Tk semantics.",
+    "LibreOffice is not installed, so LibreOffice-only execution remains environment-bound.",
+    "Larger workbooks, dialect/encoding breadth, formulas and rich features on CSV boundaries, and real large-task progress/cancellation feel remain open."
+  ]
+}

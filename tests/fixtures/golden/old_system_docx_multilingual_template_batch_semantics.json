@@ -1,0 +1,234 @@
+{
+  "golden_id": "GOLDEN-002",
+  "evidence_id": "VIS-2026-07-15-027",
+  "generated_at": "2026-07-15T00:18:41+08:00",
+  "scope": "Three-project DOCX-to-Markdown batch over all eleven checked-in multilingual distribution templates.",
+  "execution_contract": {
+    "valid_project_template_executions": 33,
+    "all_valid_executions_successful": true,
+    "docwen_ref_tk_entry": "Production convert_docx_to_md core after the same gui_run.py translator injection used by the Tk GUI.",
+    "docwen_ref_pyside6_entry": "Production convert_docx_to_md core after required docwen.bootstrap.initialize_runtime().",
+    "docwen_current_entry": "DocumentPlugin -> TaskManager -> OutputFinalizer with zh-CN yaml_key_labels request projection.",
+    "excluded_harness_attempts": [
+      "The first old PySide6 attempt omitted initialize_runtime and was rejected 0/11 by its fail-closed runtime guard; it is not conversion evidence and was fully rerun after official bootstrap.",
+      "The first old Tk attempt omitted gui_run.py translator injection and produced literal yaml_keys.* labels; it is not locale-output evidence and was fully rerun after official translator wiring.",
+      "A current request-label rerun initially shared the prior output directory and correctly produced _001 collision-safe names; those collision artifacts were removed and the final evidence was rerun into a fresh output root."
+    ]
+  },
+  "normalized_contract": {
+    "all_eleven_yaml_semantics_equal": true,
+    "all_eleven_frontmatter_values_equal": true,
+    "all_eleven_body_lines_equal": true,
+    "all_eleven_placeholder_token_sets_equal": true,
+    "no_unicode_replacement_characters": true,
+    "old_tk_and_old_pyside6_raw_markdown_equal_for_all_templates": true,
+    "raw_current_byte_equality_required": false,
+    "raw_current_difference": "Current emits semantically equivalent double-quoted YAML scalars where both old projects emit single-quoted scalars; yaml.safe_load dictionaries, values and Markdown body lines are equal."
+  },
+  "current_runtime_contract": {
+    "all_primary_names_preserve_unicode_source_stems": true,
+    "all_primary_artifacts_in_requested_output_directories": true,
+    "all_have_docx2md_and_finalizer_diagnostics": true,
+    "all_metadata": {
+      "paragraph_count": 1,
+      "heading_count": 0,
+      "table_count": 0,
+      "image_count": 0
+    }
+  },
+  "process_evidence": {
+    "pre_existing": [
+      {
+        "pid": 1796,
+        "name": "wps.exe",
+        "started": "2026-07-14T11:44:44+08:00"
+      },
+      {
+        "pid": 18764,
+        "name": "wps.exe",
+        "started": "2026-07-14T11:44:34+08:00"
+      },
+      {
+        "pid": 20176,
+        "name": "wpscloudsvr.exe",
+        "started": "2026-07-14T11:44:33+08:00"
+      }
+    ],
+    "new_after_final_settle": [],
+    "note": "This pure DOCX parser batch did not launch Office; all relevant processes remained the pre-existing set."
+  },
+  "accepted_limits": [
+    "This closes a real checked-in multilingual template batch for GOLDEN-002; it does not make broader complex-document or overall final artifact parity a PASS.",
+    "The eleven templates broaden locale, Unicode filename and localized style-name coverage, but each source is intentionally small and has no table, image, field, revision or complex layout.",
+    "Old projects were compared at the production converter-core content boundary; current additionally proves runtime finalizer placement. Existing old strategy evidence remains the placement evidence for old timestamped output folders.",
+    "YAML scalar quote style is syntax-only and is compared through yaml.safe_load semantics rather than bytes.",
+    "Gongwen-like documents, complex field codes, full revision policy, list/resource breadth, comments review artifacts, larger documents and long-task UX remain open."
+  ],
+  "input_contract": {
+    "template_count": 11,
+    "templates_are_checked_in_distribution_assets": true,
+    "source_bytes_are_identical_across_all_three_projects": true,
+    "source_shape": "Each template contains one localized Title-style placeholder and one localized body-style placeholder; no table or image.",
+    "project_order": [
+      "docwen-ref-tk",
+      "docwen-ref-pyside6",
+      "docwen-current"
+    ],
+    "templates": [
+      {
+        "name": "Deutsche Allgemeine Vorlage.docx",
+        "source_bytes": 11898,
+        "source_sha256": "4c13650734dc0697111336a61fcf51402a34565f2a879ce2b2beec3e39ca6e05",
+        "styles": ["Title", "Textkörper-Absatz"],
+        "tokens": ["{{Titel}}", "{{Inhalt}}"],
+        "markdown_utf8_bytes": [76, 76, 77],
+        "markdown_sha256": [
+          "acd1a5280fa8cfa6c60e347c522e5c99afdb7f7de87848257c8ffe0d71007248",
+          "acd1a5280fa8cfa6c60e347c522e5c99afdb7f7de87848257c8ffe0d71007248",
+          "0b8337c39f12d6f99a4fcdb98488fbff06b5f4336ea6fe98cb6fb7ad57dada1d"
+        ],
+        "current_primary_name": "Deutsche Allgemeine Vorlage.md"
+      },
+      {
+        "name": "English General Template.docx",
+        "source_bytes": 11870,
+        "source_sha256": "ee5483b3c8229e41ca88c63fd02027c47679851204ac776d14c5941e8d131e04",
+        "styles": ["Title", "Body Paragraph"],
+        "tokens": ["{{title}}", "{{body}}"],
+        "markdown_utf8_bytes": [74, 74, 75],
+        "markdown_sha256": [
+          "491397725f82fe10d5de0d25c88b5dbda4100f768397b97b2d7dbdbbd1e2a506",
+          "491397725f82fe10d5de0d25c88b5dbda4100f768397b97b2d7dbdbbd1e2a506",
+          "a3550a27dbbf26b805fbf613c7a5f5ef263fd045e069767f921bf4198cfbc0e2"
+        ],
+        "current_primary_name": "English General Template.md"
+      },
+      {
+        "name": "Modelo Geral Português.docx",
+        "source_bytes": 11937,
+        "source_sha256": "87d9b580955a45606e2c00658e8937a6b030b928fffa14dc3a391067a92e0600",
+        "styles": ["Title", "Parágrafo do corpo"],
+        "tokens": ["{{Título}}", "{{Corpo}}"],
+        "markdown_utf8_bytes": [79, 79, 80],
+        "markdown_sha256": [
+          "d533a53efd2547f635e564ef26ebd365bf748f7bf950576555129e24cb99fa3d",
+          "d533a53efd2547f635e564ef26ebd365bf748f7bf950576555129e24cb99fa3d",
+          "3c45bf8ab7cb720a20a5b008ea005c50c93d0dd1e3af215f0fbda959b8ba69f1"
+        ],
+        "current_primary_name": "Modelo Geral Português.md"
+      },
+      {
+        "name": "Modèle Général Français.docx",
+        "source_bytes": 11916,
+        "source_sha256": "6bf38c14b0ee8491c85fe0d74b0859c9e21a4eae9376b251fad7e32548acbc2f",
+        "styles": ["Title", "Paragraphe du corps"],
+        "tokens": ["{{Titre}}", "{{Corps}}"],
+        "markdown_utf8_bytes": [75, 75, 76],
+        "markdown_sha256": [
+          "36a7a46c3a1d4105eed2599926dee5ebb463bde28d8657823b98485ed73e11ae",
+          "36a7a46c3a1d4105eed2599926dee5ebb463bde28d8657823b98485ed73e11ae",
+          "b11fdd013355bb9e6bff16d5fc79fa00879ad5070e4fa8843fd73aae8da6e141"
+        ],
+        "current_primary_name": "Modèle Général Français.md"
+      },
+      {
+        "name": "Mẫu Chung Tiếng Việt.docx",
+        "source_bytes": 11969,
+        "source_sha256": "a53b164ab4a40a7c6232a4c0a6a3962c5d0f8155359e97c3eba83879afab455c",
+        "styles": ["Title", "Đoạn văn bản chính"],
+        "tokens": ["{{Tiêu đề}}", "{{Nội dung}}"],
+        "markdown_utf8_bytes": [92, 92, 93],
+        "markdown_sha256": [
+          "e65d66797a5dc7dbd0c58a549232daf194fb7c30a1eec66067ef5efca1eb56f8",
+          "e65d66797a5dc7dbd0c58a549232daf194fb7c30a1eec66067ef5efca1eb56f8",
+          "773c2e55d67001748099e138a573db1751574ef6412befd9415fa00b9e5ae54b"
+        ],
+        "current_primary_name": "Mẫu Chung Tiếng Việt.md"
+      },
+      {
+        "name": "Plantilla General Española.docx",
+        "source_bytes": 11923,
+        "source_sha256": "c679d482ed6b8ff39b1c1fd2afcab1b7ed34f85f8796fd60199ccdd83ea12ca5",
+        "styles": ["Title", "Párrafo del cuerpo"],
+        "tokens": ["{{título}}", "{{cuerpo}}"],
+        "markdown_utf8_bytes": [80, 80, 81],
+        "markdown_sha256": [
+          "62050802335df6f40a753a8336c0049d3614e293dffeb57feaab1dd73347588d",
+          "62050802335df6f40a753a8336c0049d3614e293dffeb57feaab1dd73347588d",
+          "d5b7e26140d5e7369b5ecd8a091260735bad58fb6512c2996448ee71c1d1ecf7"
+        ],
+        "current_primary_name": "Plantilla General Española.md"
+      },
+      {
+        "name": "Русский Общий Шаблон.docx",
+        "source_bytes": 12047,
+        "source_sha256": "bb60955407e23fde6b2cdf052903b8fc49cae25e1293e41ff85c514050762a74",
+        "styles": ["Title", "Основной абзац"],
+        "tokens": ["{{Заголовок}}", "{{Текст}}"],
+        "markdown_utf8_bytes": [106, 106, 107],
+        "markdown_sha256": [
+          "e319511845f36c0ac5a34b2869a723182d340c42726f2cc2ff2b548e64fc2408",
+          "e319511845f36c0ac5a34b2869a723182d340c42726f2cc2ff2b548e64fc2408",
+          "6cdf0177ef4f2ecf17b21f3ff9714cd30a803317e53822b1aa6fe29979291030"
+        ],
+        "current_primary_name": "Русский Общий Шаблон.md"
+      },
+      {
+        "name": "日本語汎用テンプレート.docx",
+        "source_bytes": 12122,
+        "source_sha256": "d59e15471ca1139228fd558379f94dc63be5279d23066dd8ae71865e90107eb5",
+        "styles": ["Title", "本文段落"],
+        "tokens": ["{{タイトル}}", "{{本文}}"],
+        "markdown_utf8_bytes": [90, 90, 91],
+        "markdown_sha256": [
+          "a592aba7d347fd5db3825063f79dfc1c3dca478decef3e124e6737f58710528a",
+          "a592aba7d347fd5db3825063f79dfc1c3dca478decef3e124e6737f58710528a",
+          "19225cc7af3cac566f8ec77ef15392571c908045aa7700533e52e3021fcc3e5b"
+        ],
+        "current_primary_name": "日本語汎用テンプレート.md"
+      },
+      {
+        "name": "简体中文通用模板.docx",
+        "source_bytes": 12021,
+        "source_sha256": "399a2d1337b326f97bdab390f9e465446a26f88a3e2329602eaa7c961460c3b9",
+        "styles": ["Title", "正文段落"],
+        "tokens": ["{{标题}}", "{{正文}}"],
+        "markdown_utf8_bytes": [78, 78, 79],
+        "markdown_sha256": [
+          "1427670b82381f23375342b060ef529717ba496ba930de525d954aaa57347624",
+          "1427670b82381f23375342b060ef529717ba496ba930de525d954aaa57347624",
+          "c8e3e74e3aa5c106355629a87a3c88005d4261497525e5095911a69751af403d"
+        ],
+        "current_primary_name": "简体中文通用模板.md"
+      },
+      {
+        "name": "繁體中文通用模板.docx",
+        "source_bytes": 12105,
+        "source_sha256": "cb3bd3962ea64dfd45a456a3f59f39269d54735ee51e40b105a08ef48f2bb64b",
+        "styles": ["Title", "正文段落"],
+        "tokens": ["{{標題}}", "{{正文}}"],
+        "markdown_utf8_bytes": [78, 78, 79],
+        "markdown_sha256": [
+          "2bed2e274a69e1998991ae561bd04394d198d5db4c34c1dc208dff6699eed013",
+          "2bed2e274a69e1998991ae561bd04394d198d5db4c34c1dc208dff6699eed013",
+          "04a904e33b2178591ab919fb0103bfc86bdac625deb3bc628ceb6d4e93377d2c"
+        ],
+        "current_primary_name": "繁體中文通用模板.md"
+      },
+      {
+        "name": "한국어 범용 템플릿.docx",
+        "source_bytes": 12015,
+        "source_sha256": "d06cce71c06045b8c9c53996deedf39b8175b71908f8b6dca98866bc84b79720",
+        "styles": ["Title", "본문 단락"],
+        "tokens": ["{{제목}}", "{{본문}}"],
+        "markdown_utf8_bytes": [78, 78, 79],
+        "markdown_sha256": [
+          "efc5a2df474aaf8d9760d72097af290cca80025b956394b3fbda7b2c754870eb",
+          "efc5a2df474aaf8d9760d72097af290cca80025b956394b3fbda7b2c754870eb",
+          "7c76f62e999f550080618aa86c6ed74ed6e535fbcfdabc93ec6d21265b846c53"
+        ],
+        "current_primary_name": "한국어 범용 템플릿.md"
+      }
+    ]
+  }
+}

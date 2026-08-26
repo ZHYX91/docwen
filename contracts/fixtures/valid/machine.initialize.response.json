@@ -1,0 +1,34 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocol": {
+      "name": "docwen.machine",
+      "major": 1,
+      "minor": 0
+    },
+    "server": {
+      "name": "DocWen",
+      "version": "0.9.0"
+    },
+    "features": {
+      "progress": true,
+      "cancellation": true
+    },
+    "methods": [
+      "initialize",
+      "capability/list",
+      "health/check",
+      "file/inspect",
+      "resource/list",
+      "gui/status",
+      "gui/activate",
+      "gui/open",
+      "task/plan",
+      "task/execute",
+      "task/cancel"
+    ],
+    "artifact_bundle_schema": "docwen.artifact_bundle.v2",
+    "max_concurrent_tasks": 1
+  }
+}

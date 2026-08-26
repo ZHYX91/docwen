@@ -1,0 +1,26 @@
+# ==============================================================================
+#  DocWen 日志配置
+# ==============================================================================
+
+# 是否启用文件日志
+enable = true
+# 文件日志级别: debug/info/warning/error/critical
+level = "debug"
+# 日志文件名前缀
+file_prefix = "docwen"
+# 文件日志保留天数
+retention_days = 30
+# 文件日志格式
+format = "%(asctime)s.%(msecs)03d | %(levelname)s | %(name)s:%(lineno)d - %(message)s"
+# 是否启用控制台日志
+console_enable = true
+# 控制台日志级别
+console_level = "info"
+# 控制台日志格式，留空时复用文件日志格式
+console_format = ""
+# 控制台日志颜色策略: auto/always/never
+console_colorize = "auto"
+# 日志目录模式: user/temp/custom
+directory_mode = "user"
+# 自定义目录，仅在 directory_mode = "custom" 时生效
+directory = ""

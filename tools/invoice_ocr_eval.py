@@ -8,18 +8,23 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 
-def _ensure_src_on_path() -> None:
+def _ensure_workspace_packages_on_path() -> None:
     try:
-        import docwen  # noqa: F401
+        import docwen_plugin_optimizer_invoice_cn  # noqa: F401
 
         return
     except Exception:
         pass
 
     repo_root = Path(__file__).resolve().parents[1]
-    src = str(repo_root / "src")
-    if src not in sys.path:
-        sys.path.insert(0, src)
+    package_srcs = [
+        repo_root / "packages" / "plugins" / "optimizers" / "invoice_cn" / "src",
+        repo_root / "packages" / "core" / "src",
+    ]
+    for src in reversed(package_srcs):
+        src_text = str(src)
+        if src_text not in sys.path:
+            sys.path.insert(0, src_text)
 
 
 @dataclass(slots=True)
@@ -72,19 +77,20 @@ def _render_first_page_to_png(pdf_path: str, png_path: str, *, dpi: int) -> None
 def _extract_from_pdf_text(pdf_path: str) -> tuple[dict[str, str], int, int]:
     import fitz
 
-    from docwen.converter.layout2md import invoice_cn
+    from docwen_plugin_optimizer_invoice_cn.invoice_cn.pdf_parser import (
+        parse_pdf_invoice,
+        read_pdf_text_and_spans,
+    )
+    from docwen_plugin_optimizer_invoice_cn.invoice_cn.yaml_schema import (
+        INVOICE_CN_YAML_SCHEMA,
+    )
 
     doc = fitz.open(pdf_path)
     try:
-        texts: list[str] = []
-        for page in doc:
-            texts.append(page.get_text("text") or "")
-        joined = "\n".join(texts)
-        compact = invoice_cn.compact_text(joined)
-        metadata = invoice_cn.parse_invoice_metadata_from_compact_text(compact)
-        rows = invoice_cn.parse_invoice_rows_from_pdf_text(joined, prefer_marked=True)
+        joined, _spans = read_pdf_text_and_spans(pdf_path)
+        metadata, rows = parse_pdf_invoice(pdf_path)
         out: dict[str, str] = {}
-        for k in invoice_cn.INVOICE_CN_YAML_SCHEMA:
+        for k in INVOICE_CN_YAML_SCHEMA:
             out[k] = _normalize(str(metadata.get(k) or ""))
         out["_rows"] = str(len(rows))
         return out, doc.page_count, len(_normalize(joined))
@@ -93,14 +99,18 @@ def _extract_from_pdf_text(pdf_path: str) -> tuple[dict[str, str], int, int]:
 
 
 def _extract_from_ocr_image(image_path: str) -> tuple[dict[str, str], int]:
-    from docwen.converter.layout2md import invoice_cn
-    from docwen.converter.layout2md.invoice_cn_ocr import parse_invoice_from_image
-    from docwen.utils.ocr_utils import extract_text_simple
+    from docwen_plugin_optimizer_invoice_cn.invoice_cn.image_parser import (
+        parse_image_invoice,
+        read_image_invoice_ocr_text,
+    )
+    from docwen_plugin_optimizer_invoice_cn.invoice_cn.yaml_schema import (
+        INVOICE_CN_YAML_SCHEMA,
+    )
 
-    ocr_text = extract_text_simple(image_path)
-    metadata, rows = parse_invoice_from_image(image_path)
+    ocr_text = read_image_invoice_ocr_text(image_path)
+    metadata, rows = parse_image_invoice(image_path)
     out: dict[str, str] = {}
-    for k in invoice_cn.INVOICE_CN_YAML_SCHEMA:
+    for k in INVOICE_CN_YAML_SCHEMA:
         out[k] = _normalize(str(metadata.get(k) or ""))
     out["_rows"] = str(len(rows))
     return out, len(_normalize(ocr_text))
@@ -128,7 +138,7 @@ def main() -> int:
     parser.add_argument("--unsafe-show-values", action="store_true")
     args = parser.parse_args()
 
-    _ensure_src_on_path()
+    _ensure_workspace_packages_on_path()
 
     root = Path(args.path)
     files = [p for p in sorted(root.glob(args.glob)) if p.is_file()]

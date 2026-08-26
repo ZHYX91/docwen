@@ -1,0 +1,159 @@
+{
+  "golden_id": "GOLDEN-090",
+  "evidence_id": "VIS-2026-07-24-206",
+  "status": "PASS_WITH_USER_ACCEPTED_BOUNDARY",
+  "overall_parity": "NOT_PASSED_YET",
+  "scope": "FA-06 frozen DOCX to DOC, RTF and ODT outbound plus target to DOCX inbound matrix",
+  "user_selection": "FA-06=DOC-B,RTF-B,ODT-B",
+  "stage_start": {
+    "parent": "6328cbdd52dcc5d091d0240f6d2bb4d40cb857b9",
+    "tree": "6ca63f8037a2a46b8b0a63a3eef84e6908e35ecd"
+  },
+  "frozen_sources": {
+    "FA-06-B1": {
+      "bytes": 29246,
+      "sha256": "67d955f1ad1c71ca18221ac342093dce90c6d233ae9d48077afbc7ef6ad53a03"
+    },
+    "FA-06-N1": {
+      "bytes": 151733,
+      "sha256": "a27f2b9244f5147cce25a05d4cddb1eec9c72259a41d52a7bf5eb3806b28207c"
+    }
+  },
+  "execution_accounting": {
+    "logical_slots": 36,
+    "reused_reference_outbound": 12,
+    "first_pass_fresh": 24,
+    "previously_unexecuted_completed": 21,
+    "current_n1_outbound_revalidated": 3,
+    "repair_pass_fresh": 12,
+    "reference_inbound_reused_from_first_pass": 12,
+    "final_outbound_artifacts": 18,
+    "final_inbound_artifacts": 18,
+    "pass_threshold": "100% of 36 logical slots accounted with valid non-empty artifacts and every mandatory predicate true"
+  },
+  "initial_current_only_red": {
+    "classification": "CONVERTER_CREATED_TRACKED_REVISIONS",
+    "source_revision_count": 9,
+    "current_doc_outbound_revision_count": 12,
+    "current_rtf_outbound_revision_count": 11,
+    "unexpected_author": "Yuxiang Zheng",
+    "disposition": "FIXED_AND_REAL_ARTIFACT_VERIFIED"
+  },
+  "fix": {
+    "summary": "SmartDoc Word-family conversions disable recording converter-created revisions only on the private staged copy before SaveAs.",
+    "source_revisions_preserved": true,
+    "generic_bridge_default_unchanged": true,
+    "current_n1_doc_revision_count_after_fix": 9,
+    "current_n1_rtf_revision_count_after_fix": 9
+  },
+  "mandatory_predicates": {
+    "all_36_slots_accounted": true,
+    "all_artifacts_nonempty_and_container_valid": true,
+    "source_immutable": true,
+    "reused_reference_outbound_immutable": true,
+    "current_outbound_warning_code": "DOCX-SMARTDOC-BEST-EFFORT-LOSS",
+    "current_outbound_warning_count": 6,
+    "conversion_process_delta": 0,
+    "projection_process_delta": 0,
+    "word_documents_opened_without_repair_or_save": 26,
+    "pdf_exports": 39,
+    "rendered_pages": 363,
+    "contact_sheets_manually_inspected": 9,
+    "current_only_regression_remaining": false
+  },
+  "object_projection": {
+    "b1_source": {
+      "pages": 13,
+      "paragraphs": 93,
+      "tables": 0,
+      "fields": 0,
+      "comments": 0,
+      "revisions": 0,
+      "sections": 1
+    },
+    "n1_source": {
+      "pages": 7,
+      "paragraphs": 173,
+      "tables": 3,
+      "fields": 20,
+      "comments": 1,
+      "revisions": 9,
+      "inline_shapes": 5,
+      "shapes": 9,
+      "sections": 3
+    },
+    "n1_current_doc_inbound": {
+      "pages": 7,
+      "paragraphs": 173,
+      "tables": 3,
+      "fields": 19,
+      "comments": 1,
+      "revisions": 9,
+      "inline_shapes": 6,
+      "shapes": 9,
+      "sections": 3
+    },
+    "n1_current_rtf_inbound": {
+      "pages": 7,
+      "paragraphs": 173,
+      "tables": 3,
+      "fields": 20,
+      "comments": 1,
+      "revisions": 9,
+      "inline_shapes": 6,
+      "shapes": 9,
+      "sections": 3
+    },
+    "n1_current_odt_inbound": {
+      "pages": 7,
+      "paragraphs": 158,
+      "tables": 2,
+      "fields": 11,
+      "comments": 1,
+      "revisions": 0,
+      "inline_shapes": 5,
+      "shapes": 9,
+      "sections": 1
+    }
+  },
+  "physical_projection": {
+    "b1_doc": "all projects 13 pages and exact extracted text; minor render differences",
+    "b1_rtf": "all projects 13 pages and exact extracted text; minor line and render reflow",
+    "b1_odt": "all projects 14 pages with pixel-exact parity; shared 13-to-14-page source-relative expansion",
+    "n1_doc": "all projects 7 pages with equivalent content text; markup and field identity differences remain",
+    "n1_rtf": "current returns to the 7-page source layout while both references reflow to 9 pages",
+    "n1_odt": "all projects 7 pages and pixel-exact parity with the same shared rich-object losses"
+  },
+  "accepted_boundary": {
+    "classification": "USER_ACCEPTED_BOUNDARY",
+    "delivery_rule": "Deliver the least-divergent valid artifact, preserve the source and disclose target-specific fidelity loss instead of rejecting solely for that loss.",
+    "b1": [
+      "DOC and RTF may have minor render or line reflow while preserving 13 pages and exact extracted text.",
+      "ODT may expand the 13-page source to 14 pages; all three projects share the same result."
+    ],
+    "n1": [
+      "DOC may change field and inline-object identities while retaining nine original revisions and one comment.",
+      "RTF may change field and inline-object identities; current preserves the source seven-page layout and nine original revisions.",
+      "ODT may reduce paragraphs, tables, fields, revisions and sections exactly as recorded by the frozen projection."
+    ],
+    "not_accepted": [
+      "backend failure",
+      "timeout",
+      "unreadable input",
+      "invalid or empty output",
+      "source mutation",
+      "undisclosed loss",
+      "converter-created tracked revisions"
+    ]
+  },
+  "external_evidence": {
+    "authoritative_root": "D:/docwen-parity/vis206-fa06-complete-matrix-6328cbd-v3",
+    "initial_red_root": "D:/docwen-parity/vis206-fa06-complete-matrix-6328cbd-v1",
+    "aborted_harness_root_not_evidence": "D:/docwen-parity/vis206-fa06-complete-matrix-6328cbd-v2",
+    "normalized_evidence_bytes": 29334,
+    "normalized_evidence_sha256": "a5c8572a03430ceca7ca4369d56694e7c0ae7745efafc31933f9a0776be77e78",
+    "carrier_payload_files_excluding_normalized_evidence": 468,
+    "carrier_payload_bytes_excluding_normalized_evidence": 78959851,
+    "binaries_checked_in": false
+  }
+}

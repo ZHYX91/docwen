@@ -1,0 +1,112 @@
+[settings]
+order = ["legal_unit", "chinese_顿号", "chinese_bracket", "arabic_separator", "arabic_space", "arabic_bracket", "circled", "hierarchical", "chinese_unit_prefix", "legal_english", "letter_number"]
+
+[[rules]]
+id = "legal_unit"
+name_key = "chinese_unit_suffix"
+description_key = "chinese_unit_suffix_desc"
+enabled = true
+is_system = true
+pattern = "^[\\s ]*第[\\s ]*[一二三四五六七八九十百千万\\d]+[\\s ]*[编章节条回][\\s ]+"
+description = "匹配法律条文格式，如 第一章、第一条"
+level = 1
+
+[[rules]]
+id = "chinese_顿号"
+name_key = "number_separator"
+description_key = "number_separator_desc"
+enabled = true
+is_system = true
+pattern = "^[一二三四五六七八九十百千万]+、"
+description = "匹配一级中文序号，如 一、"
+level = 1
+
+[[rules]]
+id = "chinese_bracket"
+name_key = "bracket_number"
+description_key = "bracket_number_desc"
+enabled = true
+is_system = true
+pattern = "^[（(][一二三四五六七八九十百千万]+[)）]"
+description = "匹配二级中文序号，如 （一）"
+level = 2
+
+[[rules]]
+id = "arabic_separator"
+name_key = "number_separator"
+description_key = "number_separator_desc"
+enabled = true
+is_system = true
+pattern = "^[0-9\\uFF10-\\uFF19]+[\\.．、，,。](?![0-9\\uFF10-\\uFF19])"
+description = "匹配阿拉伯数字+分隔符，如 1. １、"
+level = 3
+
+[[rules]]
+id = "arabic_space"
+name_key = "number_separator"
+description_key = "number_separator_desc"
+enabled = true
+is_system = true
+pattern = "^[0-9\\uFF10-\\uFF19]+[\\s\\u3000]+"
+description = "匹配阿拉伯数字+空格，如层级数字方案的一级序号 1 "
+level = 3
+
+[[rules]]
+id = "arabic_bracket"
+name_key = "bracket_number"
+description_key = "bracket_number_desc"
+enabled = true
+is_system = true
+pattern = "^[（(][0-9\\uFF10-\\uFF19]+[)）]"
+description = "匹配括号阿拉伯数字，如 （1）"
+level = 4
+
+[[rules]]
+id = "circled"
+name_key = "circled_numbers"
+description_key = "circled_numbers_desc"
+enabled = true
+is_system = true
+pattern = "^[\\u2460-\\u32BF\\u2776-\\u277F\\u24EB-\\u24F4\\u24F5-\\u24FE\\u3220-\\u3229]"
+description = "匹配带圈数字，如 ① ❶"
+level = 5
+
+[[rules]]
+id = "hierarchical"
+name_key = "hierarchical"
+description_key = "hierarchical_desc"
+enabled = true
+is_system = true
+pattern = "^[0-9\\uFF10-\\uFF19]+(?:[\\.．][0-9\\uFF10-\\uFF19]+)+[\\.．\\s ]*"
+description = "匹配层级数字，如 1.1 1.1.1"
+level = 3
+
+[[rules]]
+id = "chinese_unit_prefix"
+name_key = "chinese_unit_prefix"
+description_key = "chinese_unit_prefix_desc"
+enabled = false
+is_system = true
+pattern = "^[\\s\\u3000]*[卷篇册部集期编章节回][\\s]*[一二三四五六七八九十百千万\\d]+[\\s]+"
+description = "匹配中文单位前缀格式，如 卷一、篇三"
+level = 1
+
+[[rules]]
+id = "legal_english"
+name_key = "legal_english"
+description_key = "legal_english_desc"
+enabled = false
+is_system = true
+pattern = "^[\\s]*(?:Chapter|Part|Volume|Book|Section)\\s+[0-9IVXLCDMivxlcdm]+[\\s.:-]+"
+description = "匹配英文章节格式，如 Chapter 1"
+level = 1
+
+[[rules]]
+id = "letter_number"
+name_key = "letter_number"
+description_key = "letter_number_desc"
+enabled = false
+is_system = true
+pattern = "^[A-Z]+[\\.\\)]\\s*"
+description = "匹配字母序号，如 A. B)"
+level = 3

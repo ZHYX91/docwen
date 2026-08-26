@@ -1,0 +1,174 @@
+{
+  "golden_id": "GOLDEN-002/GOLDEN-003/GOLDEN-004",
+  "stage": "VIS-2026-07-17-116",
+  "created_at": "2026-07-17",
+  "scope": "Apache POI signed/unsigned OOXML source recognition, three-project Markdown semantics, and DOCX/XLSX PDF final-artifact boundary",
+  "projects": {
+    "tk_head": "ec9298286cfe1379d5c5470db381577ea43ca0fa",
+    "old_pyside6_head": "63db927c5ded920d4994bfede5c7b34c55e2f43e",
+    "current_head": "3dff575973b02154ddcfab116fde3c9831badde5"
+  },
+  "source_repository": {
+    "owner": "apache",
+    "repository": "poi",
+    "commit": "86e967d9b28d6a322a87ae8fcbf2a7eeb56cef96",
+    "tree": "712aa87cce1ca0416313b0f604372cd92b6befa6",
+    "tree_entries": 6405,
+    "tree_truncated": false,
+    "path": "test-data/xmldsign"
+  },
+  "sources": {
+    "hello-world-signed.docx": {
+      "bytes": 13244,
+      "sha256": "9b29a40d57508d1f53d1066792c2da0064a4c36110949d1fad52119ede0ab05e",
+      "git_blob_sha": "79a7bbb81ff78b843a3760c2ee5481e4f5e29c6a",
+      "signature_xml_count": 1
+    },
+    "hello-world-signed.pptx": {
+      "bytes": 36107,
+      "sha256": "d119d8160dc912d639cbe8047c526c6dc58ca9dcd6b51bd5870c247d64413163",
+      "git_blob_sha": "9b37033f5486ac9dc8ad1674594c84c3f76b27d8",
+      "signature_xml_count": 1
+    },
+    "hello-world-signed.xlsx": {
+      "bytes": 13072,
+      "sha256": "22e2d0f6f1a413d011fbdeba4c386ce842570f1cffc66c4f85956137d86a8f1d",
+      "git_blob_sha": "0d45c53ede3435b2062d12973436d8eef8c52e63",
+      "signature_xml_count": 1
+    },
+    "hello-world-signed-twice.docx": {
+      "bytes": 16099,
+      "sha256": "e95ff2845328a023bb326f99c01a6acbe156a834aec4dd965944adbd03a5277a",
+      "git_blob_sha": "96c91e957e68c929c0a3cbd10fa0d8b03fcee463",
+      "signature_xml_count": 2
+    },
+    "hello-world-unsigned.docx": {
+      "bytes": 9898,
+      "sha256": "2a45959eb038c1e601f925fe79b56b6d9e861a9f914a4dbf136957275bcbe7a5",
+      "git_blob_sha": "1790c961ceb1329fc6f39e70b605fbbbb3f8e2be",
+      "signature_xml_count": 0
+    },
+    "hello-world-unsigned.pptx": {
+      "bytes": 32220,
+      "sha256": "13738e3ed8cc14aadbc982d4c00e7bea9c154aab0387fd3d15d966285ad9e838",
+      "git_blob_sha": "ca42529a9a8f359bad0075b8118dee6a4ff4f0f3",
+      "signature_xml_count": 0
+    },
+    "hello-world-unsigned.xlsx": {
+      "bytes": 9748,
+      "sha256": "44b471a6ec07f38c6e4c71a3f2637a1b232029099020e22fa82a121ccc6a8d40",
+      "git_blob_sha": "b99143e92c780306d52eeee28a61e17ae5c8809b",
+      "signature_xml_count": 0
+    },
+    "ms-office-2010-signed.docx": {
+      "bytes": 16142,
+      "sha256": "bc55c0362722818823a6dd95f8e0ca9869e179ace972a0915241feb4677bde5f",
+      "git_blob_sha": "61e4e2a1b8fc6dc1c8da6ac748f6b7031f253c48",
+      "signature_xml_count": 1
+    },
+    "ms-office-2010-signed.pptx": {
+      "bytes": 38874,
+      "sha256": "4d925d282dcca86e62b6716647a458246f8b9ea0eae0ec6664bbbf5a3f91bce1",
+      "git_blob_sha": "c70f153248994741b2bbc12821de05815649a6bb",
+      "signature_xml_count": 1
+    },
+    "ms-office-2010-signed.xlsx": {
+      "bytes": 12180,
+      "sha256": "4cbd8cbe613f036b7a0c779ffaaec7c5838710896c6ef26b3f27410d25d5ce45",
+      "git_blob_sha": "d8ba05b1da78c9de9e2e2578ae6c571ffe353105",
+      "signature_xml_count": 1
+    }
+  },
+  "signature_source_facts": {
+    "ordinary_signed_signature_parts": 3,
+    "double_signed_signature_parts": 4,
+    "unsigned_signature_parts": 0,
+    "signature_method": "http://www.w3.org/2000/09/xmldsig#rsa-sha1",
+    "digest_method": "http://www.w3.org/2000/09/xmldsig#sha1",
+    "embedded_certificate_per_signature": 1,
+    "office_16_signature_counts": {
+      "ordinary_signed": 1,
+      "double_signed_docx": 2,
+      "unsigned": 0
+    },
+    "office_16_applications": [
+      "Microsoft Word 16.0",
+      "Microsoft Excel 16.0",
+      "Microsoft PowerPoint 16.0"
+    ],
+    "office_reports_all_historical_signatures_valid_now": false,
+    "office_reports_all_historical_certificates_expired": true,
+    "trust_boundary": "samples prove signature-bearing source recognition, not a currently valid or trusted signer chain"
+  },
+  "public_contract": {
+    "all_three_accept_docx_xlsx_pptx": true,
+    "all_three_expose_signature_validation": false,
+    "all_three_expose_signature_preservation": false,
+    "current_inspect_distinguishes_signed_from_unsigned": false,
+    "current_dry_run_distinguishes_signed_from_unsigned": false,
+    "pptx_to_pdf_public_route": false,
+    "classification": "signature packages are source metadata outside all three conversion contracts; format/category/route detection remains correct"
+  },
+  "markdown_matrix": {
+    "sources": 10,
+    "projects": 3,
+    "production_conversions": 30,
+    "successes": 30,
+    "tk_old_raw_byte_equal": 10,
+    "cross_project_normalized_body_equal": 10,
+    "normalization": [
+      "CRLF/LF",
+      "localized YAML aliases key",
+      "localized empty-sheet marker"
+    ],
+    "source_signature_marker_exposed": false
+  },
+  "pdf_matrix": {
+    "sources_per_project": 7,
+    "projects": 3,
+    "production_conversions": 21,
+    "successes": 21,
+    "docx_cross_project_exact_page_text_geometry_pixel_equal": 4,
+    "xlsx_ms_office_cross_project_exact_page_text_geometry_pixel_equal": true,
+    "xlsx_hello_world_page_count_size_text_font_equal": true,
+    "xlsx_hello_world_max_origin_delta_points": {
+      "x": 0.25,
+      "y": 0.1
+    },
+    "xlsx_hello_world_differing_pixels_at_144dpi": 554,
+    "xlsx_hello_world_total_pixels_at_144dpi": 2005644,
+    "current_repeat_same_xlsx_runs": 4,
+    "current_repeat_same_xlsx_pixel_projection_equal": 4,
+    "raw_pdf_sha_is_nondeterministic": true,
+    "signed_unsigned_docx_visible_projection_equal_in_all_projects": true,
+    "current_signed_unsigned_xlsx_visible_projection_equal": true,
+    "pdf_signature_fields_present": false,
+    "final_new_wps_processes": 0,
+    "interpretation": "current lies within the two old-project WPS print variants and has no visible signature-source regression"
+  },
+  "external_evidence": {
+    "root": "D:/docwen-parity/vis116-poi-ooxml-signature-3dff575-v1",
+    "files": 96,
+    "bytes": 1127647,
+    "analysis_file": "analysis.json",
+    "analysis_bytes": 34789,
+    "analysis_sha256": "3dbf670c6031d52b1f3d78e3adbcd3c8fcba6717708010f8cf97eb914d59c8ab",
+    "office_file": "office-signatures.json",
+    "office_bytes": 9963,
+    "office_sha256": "60ca1ad5810309710909eb14896c0f561d710414e0cd0c8b9f89d3e1762e00be",
+    "binaries_checked_in": false
+  },
+  "classification": {
+    "current_only_functional_regression_found": false,
+    "production_change_made": false,
+    "focused_source_content_conversion_evidence": "strong",
+    "signature_validation_preservation_evidence": "explicitly unsupported shared boundary",
+    "known_blockers_not_accepted": [
+      "none of the three projects validates signer trust, reports signature state, or warns that transformed outputs are no longer source-signed",
+      "all historical sample certificates are expired, so this stage cannot establish currently valid trusted-signature handling",
+      "PPTX has Markdown evidence only because no project exposes a PPTX-to-PDF public route",
+      "broader signed/encrypted documents, timestamped signatures, revocation/network policy, tamper cases, package-preserving targets, and physical warning UX remain unproved"
+    ],
+    "completion_effect": "focused signed-OOXML content/final-artifact parity evidence only; signature-aware security UX and broader final-artifact parity remain open"
+  }
+}

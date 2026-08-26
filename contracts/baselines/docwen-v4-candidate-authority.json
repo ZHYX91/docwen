@@ -1,0 +1,75 @@
+{
+  "schema": "docwen.candidate_authority.v4",
+  "productVersion": "0.9.0",
+  "activeSemantics": {
+    "id": "docwen.markdown_semantics.v3",
+    "diagnostics": "docwen.markdown_diagnostics.v3",
+    "oracleManifestPath": "contracts/oracles/docwen.markdown_semantics.v3/manifest.json"
+  },
+  "docwenSpecBaseline": {
+    "commit": "adebd0c93c5d2c16727d7db456c91504b54e099e",
+    "tree": "1adab70aad02733adfd69930aaf39f473d773e43"
+  },
+  "docwenImplementationBaseline": {
+    "status": "pending",
+    "commit": null,
+    "tree": null
+  },
+  "finalSpecFiles": [
+    "contracts/README.md",
+    "contracts/schemas/docwen.artifact_bundle.v2.schema.json",
+    "contracts/schemas/docwen.machine.diagnostic_evidence.v1.schema.json",
+    "contracts/schemas/docwen.machine.v1.schema.json",
+    "contracts/schemas/docwen.candidate_evidence_index.v4.schema.json",
+    "contracts/schemas/docwen.candidate_receipt.v4.schema.json",
+    "contracts/oracles/docwen.markdown_semantics.v3/manifest.json",
+    "docs/specs/golden-regression-suite.md",
+    "docs/specs/machine-protocol-v1.md",
+    "docs/specs/markdown-compatibility.md",
+    "docs/specs/physical-page-ocr.md",
+    "docs/specs/templates-and-styles.md"
+  ],
+  "exclusions": [
+    {
+      "id": "docwen.markdown_semantics.v1",
+      "kind": "legacy_semantic_authority",
+      "consumerEligible": false,
+      "reason": "superseded_by_docwen.markdown_semantics.v3"
+    },
+    {
+      "id": "docwen.markdown_semantics.v2",
+      "kind": "legacy_semantic_authority",
+      "consumerEligible": false,
+      "reason": "superseded_by_docwen.markdown_semantics.v3"
+    },
+    {
+      "id": "docwen-v3-dirty-audit-head",
+      "kind": "historical_source_only",
+      "sourceCommit": "43b3b716956c07ba7ec1f273e2de4ee9bddaf1e5",
+      "sourceTree": "7bf2a0bd23e941a77744b39e8f858fbcc84d1bbc",
+      "candidateId": null,
+      "docWenCli": {
+        "present": false,
+        "bytes": null,
+        "sha256": null
+      },
+      "consumerEligible": false,
+      "reason": "dirty_v3_audit_state_never_became_a_v4_candidate"
+    },
+    {
+      "id": "Attempt04",
+      "kind": "excluded_attempt",
+      "sourceCommit": "5fffc86549df22d62057a4cbfa062ca26281ff93",
+      "sourceTree": "1344a6ea6d54c9f82c4d02536488c77a43a23450",
+      "candidateId": "docwen-0.9.0-c6v-20260813T094356Z-5fffc86549df",
+      "packageProduced": false,
+      "docWenCli": {
+        "present": false,
+        "bytes": null,
+        "sha256": null
+      },
+      "consumerEligible": false,
+      "reason": "pre_v4_typed_anchor_caption_semantics"
+    }
+  ]
+}

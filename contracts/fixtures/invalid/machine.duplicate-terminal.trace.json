@@ -1,0 +1,43 @@
+[
+  {
+    "jsonrpc": "2.0",
+    "id": 30,
+    "method": "task/execute",
+    "params": {
+      "plan_id": "plan.invalid.terminal"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 30,
+    "result": {
+      "task_id": "task.invalid.terminal",
+      "state": "accepted"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "method": "task/failed",
+    "params": {
+      "task_id": "task.invalid.terminal",
+      "sequence": 1,
+      "error": {
+        "category": "conversion_failed",
+        "code": "conversion.failed",
+        "message": "Conversion failed.",
+        "retryable": false
+      },
+      "diagnostics": []
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "method": "task/cancelled",
+    "params": {
+      "task_id": "task.invalid.terminal",
+      "sequence": 2,
+      "reason": "Too late.",
+      "diagnostics": []
+    }
+  }
+]

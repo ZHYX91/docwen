@@ -1,0 +1,44 @@
+[
+  {
+    "jsonrpc": "2.0",
+    "id": 20,
+    "method": "task/execute",
+    "params": {
+      "plan_id": "plan.cancelled.001"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 20,
+    "result": {
+      "task_id": "task.cancelled.001",
+      "state": "accepted"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 21,
+    "method": "task/cancel",
+    "params": {
+      "task_id": "task.cancelled.001"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 21,
+    "result": {
+      "task_id": "task.cancelled.001",
+      "state": "cancellation_requested"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "method": "task/cancelled",
+    "params": {
+      "task_id": "task.cancelled.001",
+      "sequence": 1,
+      "reason": "Cancellation requested by client.",
+      "diagnostics": []
+    }
+  }
+]

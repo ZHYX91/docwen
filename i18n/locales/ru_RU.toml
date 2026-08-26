@@ -1,0 +1,1589 @@
+# DocWen - locale file
+# Locale: ru_RU
+# Encoding: UTF-8
+
+[meta]
+name = "Russian"
+native_name = "Русский"
+template_name = "Русский Общий Шаблон"
+
+# =============================================================================
+# 通用文本
+# =============================================================================
+[common]
+app_name = "DocWen"
+default = "По умолчанию"
+close = "Закрыть"
+apply = "Применить"
+cancel = "Отмена"
+ok = "ОК"
+save = "Сохранить"
+error = "Ошибка"
+browse = "Обзор..."
+disclaimer = "Тестовая версия. Точность не гарантируется.\nПО с открытым исходным кодом по лицензии AGPL-3.0."
+ready = "Готов"
+reload = "Перезагрузить"
+save_failed = "Не удалось сохранить настройки"
+
+# =============================================================================
+# 状态栏
+# =============================================================================
+[info_area]
+copy_path = "Копировать путь"
+open_location = "Открыть расположение файла: {path}"
+ipc_file_missing = "Файл IPC не найден: {path}"
+font_size_applied = "Размер текста: {label}"
+
+transient_title = "Текущий статус"
+transient_meta = "{count} активн."
+history_title = "Последние сообщения"
+history_meta = "{count} записей"
+task_state_active = "В процессе"
+task_state_success = "Завершено"
+history_completed = "Завершено: {name}"
+task_state_partial = "Частичный сбой"
+task_state_failed = "Сбой"
+task_state_cancelled = "Отменено"
+task_current_file = "Текущий файл: {name}"
+task_progress_detail = "Выполнено {completed}/{total}, ошибок {failed}, ID задачи: {operation_id}"
+task_skipped_count = "Пропущено: {skipped}"
+task_cancelled_count = "Отменено: {cancelled}"
+task_guide_open_output_dir = "Открыть папку вывода"
+task_guide_view_failed_details = "Показать детали ошибки"
+task_guide_retry_failed = "Повторить проблемные элементы"
+task_guide_add_more_files = "Добавить еще файлы"
+window_topmost_enabled = "Окно закреплено поверх остальных. Нажмите Ctrl+Shift+T, чтобы отключить."
+window_topmost_disabled = "Закрепление поверх остальных отключено. Нажмите Ctrl+Shift+T, чтобы включить снова."
+# =============================================================================
+# CLI 命令行界面
+# =============================================================================
+[cli]
+description = "DocWen CLI - Конвертация документов/таблиц/изображений/макетов"
+example = "Пример"
+
+# CLI帮助文本
+[cli.help]
+settings = "Управление настройками"
+settings_reset = "Сбросить настройки до значений по умолчанию"
+files = "Путь к входному файлу (поддерживает шаблоны, например, *.docx)"
+template = "Канонический ID ресурса шаблона из resources list templates (предпочтительно для protocol 3); старое имя, имя файла или путь только для совместимости Core"
+inspect = "Проверить поддерживаемые действия (Самоописание ИИ)"
+doctor = "Запустить диагностику"
+
+# CLI参数组标题
+[cli.groups]
+
+# CLI交互模式
+[cli.interactive]
+
+# 文件类型菜单
+[cli.interactive.menus]
+
+# 格式选项
+[cli.interactive.formats]
+
+# DPI选项
+[cli.interactive.dpi]
+
+# 压缩选项
+[cli.interactive.compress]
+
+[cli.interactive.pdf_sizes]
+
+# 序号方案
+[cli.interactive.numbering_schemes]
+
+# 优化类型
+[cli.interactive.optimization_types]
+gongwen = "Официальный"
+
+# 校对选项
+invoice_cn = "Китайский счёт (invoice_cn)"
+[cli.interactive.proofread]
+
+# 提示文本
+[cli.interactive.prompts]
+
+# CLI消息
+[cli.messages]
+error_aggregate_need_two = "Требуется не менее двух подходящих файлов (найдено: {count})."
+error_no_valid_files = "Ошибка: Нет допустимых файлов"
+error_file_not_found = "Ошибка: Файл не найден"
+warning_invalid_files = "Внимание: {count} недопустимых файлов"
+error_prefix = "Ошибка"
+invalid_tab = "Неизвестная вкладка настроек: {tab}"
+
+# 批处理模式
+[cli.batch]
+
+# CLI 提示文本
+[cli.prompts]
+
+# CLI 验证消息
+[cli.validation]
+
+# CLI 结果消息
+[cli.result]
+
+# CLI 操作描述
+[cli.actions]
+
+# CLI 序号方案名称
+[cli.numbering_schemes]
+
+# =============================================================================
+# 设置对话框
+# =============================================================================
+[settings]
+title = "Настройки"
+
+# 选项卡标题
+[settings.tabs]
+general = "Общие"
+text = "Текст"
+proofread = "Проверка"
+export = "Экспорт"
+document = "Документ"
+spreadsheet = "Таблица"
+image = "Изображение"
+layout = "Макет"
+other = "Другое"
+link = "Ссылка"
+formatting = "Форматирование"
+output = "Вывод"
+logging = "Лог"
+
+[settings.descriptions]
+general = "Глобальные настройки языка, темы и интерфейса"
+
+# 设置状态消息
+[settings.status]
+
+[settings.reset]
+tab_button = "Сбросить вкладку"
+all_button = "Сбросить все"
+tab_confirm_title = "Подтвердить сброс"
+tab_confirm_message = "Сбросить все настройки во вкладке \"{tab_name}\" к значениям по умолчанию? Это действие нельзя отменить."
+all_confirm_title = "Подтвердить полный сброс"
+all_confirm_message = "Сбросить все настройки к значениям по умолчанию? (Данные словарей не затрагиваются.) Это действие нельзя отменить."
+success = "Все настройки сброшены к значениям по умолчанию"
+tab_success = "Настройки вкладки \"{tab_name}\" сброшены к значениям по умолчанию"
+failed = "Не удалось сбросить настройки. Проверьте журнал."
+
+[settings.changes]
+summary = "Несохранённые изменения ({count})"
+more = "…и ещё {count}"
+
+[settings.errors]
+tab_load_failed_message = "Не удалось загрузить {tab}\n\nОшибка: {error}"
+
+[settings.toml_editor]
+config_label = "Конфигурация"
+hint = "Подсказка: эта страница редактирует TOML напрямую. Перед сохранением проверяется синтаксис."
+toml_syntax_error = "Синтаксическая ошибка TOML"
+save_failed = "Не удалось сохранить конфигурацию"
+save_success_title = "Сохранено"
+save_success_message = "Конфигурация сохранена и перезагружена."
+
+# -----------------------------------------------------------------------------
+# 通用设置选项卡
+# -----------------------------------------------------------------------------
+[settings.general]
+# 语言设置区域
+language_section = "Язык"
+language_label = "Выберите язык:"
+language_tooltip = "Выберите язык интерфейса.\nТребуется перезапуск."
+language_restart_hint = "Требуется перезапуск."
+
+# 主题设置区域
+theme_section = "Тема"
+theme_description = "Выберите светлую, тёмную или системную тему."
+theme_label = "Выберите тему:"
+theme_tooltip = "Выберите визуальную тему приложения."
+theme_preview = "Предпросмотр:"
+sample_button = "Пример"
+sample_text = "Текст"
+
+[settings.general.languages]
+zh_CN = "Китайский (упрощённый)"
+en_US = "Английский"
+de_DE = "Немецкий"
+es_ES = "Испанский"
+fr_FR = "Французский"
+ja_JP = "Японский"
+ko_KR = "Корейский"
+pt_BR = "Португальский (Бразилия)"
+ru_RU = "Русский"
+vi_VN = "Вьетнамский"
+zh_TW = "Китайский (традиционный)"
+
+# 主题名称
+[settings.general.themes]
+light = "Светлая"
+dark = "Тёмная"
+system = "Как в системе"
+
+# 透明度设置区域
+[settings.general.transparency]
+section = "Прозрачность"
+enable = "Включить прозрачность окна"
+tooltip = "Включает полупрозрачные окна."
+opacity_value_tooltip = "Настройте непрозрачность окна (0,20 = наиболее прозрачное; 1,00 = полностью непрозрачное)"
+
+# 窗口行为设置区域
+[settings.general.window]
+section = "Поведение окна"
+description = "Настроить состояние окна и режим по умолчанию."
+remember_state = "Запомнить позицию и размер"
+remember_state_tooltip = "Восстановить состояние окна при следующем запуске."
+auto_center = "Автоматически центрировать"
+auto_center_tooltip = "Центрировать окно при запуске."
+expand_side_panels = "Расширять боковые панели"
+expand_side_panels_tooltip = "Когда окно становится шире, разрешить левой/правой панели тоже расширяться.\nЕсли отключено, расширяется только центральная панель."
+default_mode_label = "Режим по умолчанию:"
+default_mode_tooltip = "Режим по умолчанию при запуске."
+single_mode = "Один файл"
+batch_mode = "Пакетный"
+
+# -----------------------------------------------------------------------------
+# 文本设置选项卡
+# -----------------------------------------------------------------------------
+[settings.text]
+# MD转文档序号设置
+md_to_docx_section = "Нумерация (MD в DOCX)"
+remove_numbering = "Удалить старую нумерацию"
+remove_numbering_tooltip = "Удаляет существующую нумерацию в Markdown."
+add_numbering = "Добавить новую нумерацию"
+add_numbering_tooltip = "Добавить иерархическую нумерацию к заголовкам выходного DOCX"
+scheme_label = "Схема:"
+scheme_tooltip = "Выбрать схему нумерации заголовков"
+render_mode_label = "Способ вывода нумерации заголовков:"
+render_mode_tooltip = "Выберите, записывать ли номера в текст заголовков или создавать их штатной нумерацией Word"
+render_mode_text = "Текст"
+render_mode_word_native = "Штатная нумерация Word"
+render_mode_hint = "Текст = записать номера в заголовки; штатная нумерация Word = использовать многоуровневый список Word"
+
+# 字段优化（字段处理器）
+field_processors_section = "Оптимизации полей (Markdown → Документ)"
+field_processors_empty = "Для текущего языка нет доступных оптимизаций полей."
+field_processors_load_error = "Ошибка загрузки: {error}"
+field_processors_toggle_failed = "Не удалось обновить «{name}». Предыдущее значение восстановлено."
+
+# 序号设置区域
+numbering_settings_section = "Настройки нумерации"
+numbering_settings_desc = "Управление правилами добавления и удаления."
+edit_numbering_add = "Изменить схемы добавления"
+edit_numbering_clean = "Изменить правила очистки"
+
+# 模板设置
+template_section = "Настройки шаблона"
+template_tooltip = "Шаблон по умолчанию при импорте MD файлов."
+
+# 校对设置
+
+# 词库配置
+
+# 错误消息
+save_numbering_schemes_failed = "Не удалось сохранить схемы нумерации. Изменения не были сохранены."
+save_numbering_clean_rules_failed = "Не удалось сохранить правила очистки нумерации. Изменения не были сохранены."
+
+# -----------------------------------------------------------------------------
+# 文档设置选项卡
+# -----------------------------------------------------------------------------
+[settings.proofread]
+validation_section = "Правила проверки"
+enable_symbol_pairing = "Включить проверку парных символов"
+enable_symbol_correction = "Включить исправление символов"
+enable_typos_rule = "Включить обнаружение опечаток"
+enable_sensitive_word = "Включить проверку отмеченных терминов"
+skip_code_blocks = "Пропускать блоки кода"
+skip_quote_blocks = "Пропускать блоки цитат"
+symbol_mapping_section = "Редактор соответствий символов"
+symbol_mapping_desc = "Управление правилами парности и исправления символов."
+symbol_correction_section = "Редактор исправлений символов"
+symbol_correction_desc = "Управление исправлениями полноширинных и полуширинных символов."
+typos_section = "Редактор словаря опечаток"
+typos_desc = "Управление исправлениями распространённых опечаток."
+sensitive_words_section = "Редактор отмеченных терминов"
+sensitive_words_desc = "Управление записями для обнаружения отмеченных терминов."
+edit = "Изменить"
+
+[settings.extraction]
+image_extraction_mode_label = "Режим извлечения изображений:"
+image_extraction_mode_tooltip = "Выберите, как изображения встраиваются в Markdown.\n\n• Файлы изображений: сохранять отдельные файлы и ссылаться на них в MD\n• Base64 (встроенно): кодировать изображения в Base64 и встраивать прямо в MD"
+image_extraction_mode_file = "Файлы изображений"
+image_extraction_mode_base64 = "Base64 (встроенно)"
+ocr_placement_mode_label = "Расположение OCR:"
+ocr_placement_mode_tooltip = "Выберите, где хранится текст OCR.\n\n• MD для изображения: создавать отдельный MD-файл для каждого изображения с изображением и OCR\n• Основной документ: вставлять OCR как цитату под изображением в основном MD (много изображений сделают основной MD очень длинным)"
+ocr_placement_mode_image_md = "MD для изображения"
+ocr_placement_mode_main_md = "Основной документ"
+ocr_blockquote_title_enabled_label = "Заголовок OCR (основной MD)"
+ocr_blockquote_title_enabled_tooltip = "Глобальная настройка: когда размещение OCR — \"Основной документ\", показывать строку заголовка в начале OCR-блока цитаты. Текст заголовка берётся из текущего языка."
+ocr_blockquote_title_text_label = "Текст заголовка (текущий язык):"
+ocr_blockquote_title_text_tooltip = "Влияет только на текущий язык интерфейса.\nОставьте пустым или равным значению по умолчанию, чтобы использовать текст языка."
+ocr_blockquote_title_text_reset = "Сброс"
+
+[settings.export]
+md_export_section = "Экспорт в Markdown (Изображения/OCR)"
+md_export_desc = "Настроить обработку изображений и текста OCR в выводе Markdown."
+base64_compress_section = "Совместимость Base64 (только Base64 inline)"
+base64_compress_desc = "Сжимать изображения перед встраиванием в Base64."
+base64_compress_tooltip = "Base64 увеличивает размер и может не отображаться в некоторых редакторах.\nЕсли включено: изображения выше порога будут сжаты в JPG перед встраиванием."
+base64_compress_enabled = "Автосжатие больших изображений"
+base64_compress_threshold_label = "Порог"
+base64_compress_threshold_tooltip = "Порог размера в КБ. Более крупные изображения сжимаются перед встраиванием."
+
+
+[settings.optimization_types]
+
+
+[settings.table_export]
+section = "Экспорт объединённых ячеек"
+desc = "Настраивает представление объединённых ячеек в выводе Markdown."
+merge_strategy_label = "Стратегия экспорта объединённых ячеек:"
+
+[settings.table_export.strategies]
+fill = "Заполнить"
+empty = "Оставить пустыми"
+marker = "Маркер"
+
+[settings.document]
+# 内容提取设置
+extraction_section = "Извлечение/OCR"
+keep_images = "Извлекать изображения"
+keep_images_tooltip = "Извлекать изображения при конвертации."
+enable_ocr = "Включить OCR"
+enable_ocr_tooltip = "Распознавание текста для изображений."
+
+# 优化设置
+optimization_section = "Оптимизация (Документ → Markdown)"
+enable_optimization = "Включить оптимизацию"
+optimization_type_label = "Тип:"
+
+# 软件优先级
+software_section = "Приоритет ПО"
+word_processors_label = "Текстовый процессор"
+odt_conversion_label = "Конвертация ODT"
+document_to_pdf_label = "Документ в PDF"
+
+# 软件名称
+[settings.document.software]
+wps_writer = "WPS Writer"
+msoffice_word = "Word"
+libreoffice = "LibreOffice"
+
+# 序号设置
+[settings.document.numbering]
+section = "Нумерация (DOCX в MD)"
+remove = "Удалить старую нумерацию"
+remove_tooltip = "Удаляет существующую нумерацию."
+add = "Добавить новую нумерацию"
+scheme_label = "Схема:"
+
+# -----------------------------------------------------------------------------
+# 表格设置选项卡
+# -----------------------------------------------------------------------------
+[settings.spreadsheet]
+extraction_section = "Извлечение/OCR"
+keep_images = "Извлекать изображения"
+keep_images_tooltip = "Извлекать изображения."
+enable_ocr = "Включить OCR"
+enable_ocr_tooltip = "Включить OCR."
+merge_mode_section = "Режим слияния"
+merge_mode_desc = "Режим по умолчанию для слияния таблиц."
+default_merge_mode_label = "Режим объединения по умолчанию:"
+software_section = "Приоритет ПО"
+spreadsheet_processors_label = "Табличный процессор"
+ods_conversion_label = "Конвертация ODS"
+spreadsheet_to_pdf_label = "Таблица в PDF"
+
+# 汇总模式选项
+[settings.spreadsheet.merge_modes]
+by_row = "По строке"
+by_column = "По столбцу"
+by_cell = "По ячейке"
+
+# 软件名称
+[settings.spreadsheet.software]
+wps_spreadsheets = "WPS Spreadsheets"
+excel = "Excel"
+libreoffice = "LibreOffice"
+
+# -----------------------------------------------------------------------------
+# 图片设置选项卡
+# -----------------------------------------------------------------------------
+[settings.image]
+extraction_section = "Извлечение/OCR"
+keep_images = "Сохранять изображения"
+enable_ocr = "Включить OCR"
+size_unit_label = "Единица:"
+optimization_section = "Оптимизация (Изображение → Markdown)"
+enable_optimization = "Включать \"Оптимизация по типу изображения\" по умолчанию"
+optimization_type_label = "Тип оптимизации по умолчанию:"
+
+# OCR语言设置
+ocr_language_label = "Язык OCR:"
+ocr_language_tooltip = "Выберите языковую модель для распознавания OCR.\n\n• Следовать языку интерфейса: Автоматический выбор по текущему языку интерфейса\n• Китайский/Английский: Для смешанных китайских и английских документов\n• Японский: Для японских документов\n• Латиница: Для немецкого, французского, португальского и т. д.\n• Кириллица: Для русского и т. д."
+ocr_language_auto = "Следовать языку интерфейса"
+ocr_language_chinese = "Китайский/Английский"
+ocr_language_japanese = "Японский"
+ocr_language_chinese_cht = "Традиционный китайский"
+ocr_language_english = "Только английский"
+ocr_language_korean = "Корейский"
+ocr_language_latin = "Латиница (DE/FR/PT и т. д.)"
+ocr_language_cyrillic = "Кириллица (RU и т. д.)"
+
+compress_section = "Сжатие"
+compress_desc = "Настройки сжатия по умолчанию."
+compress_mode_label = "Режим сжатия:"
+compress_lossless = "Лучшее качество"
+compress_limit_size = "Ограничить размер"
+size_limit_label = "Лимит размера:"
+
+pdf_tiff_section = "Опции PDF/TIFF"
+pdf_size_label = "Размер изображения PDF"
+pdf_original = "Оригинальный размер"
+pdf_a4 = "Вписать в A4"
+pdf_a3 = "Вписать в A3"
+tiff_mode_label = "Режим TIFF"
+tiff_keep_alpha = "Сохранить прозрачность"
+tiff_no_alpha = "Удалить прозрачность"
+
+# -----------------------------------------------------------------------------
+# 版式设置选项卡
+# -----------------------------------------------------------------------------
+[settings.layout]
+extraction_section = "Извлечение/OCR"
+keep_images = "Извлекать изображения"
+enable_ocr = "Включить OCR"
+optimization_section = "Оптимизация (Макет → Markdown)"
+enable_optimization = "Включать \"Оптимизация по типу макета\" по умолчанию"
+optimization_type_label = "Тип оптимизации по умолчанию:"
+dpi_section = "DPI рендеринга"
+dpi_desc = "DPI для рендеринга макета."
+render_dpi_label = "Render DPI:"
+dpi_min = "Мин (150)"
+dpi_medium = "Среднее (300)"
+dpi_high = "Высокое (600)"
+software_section = "Приоритет ПО"
+pdf_to_doc_label = "PDF в Документ"
+
+# -----------------------------------------------------------------------------
+# 其他文件设置选项卡
+# -----------------------------------------------------------------------------
+[settings.other]
+extraction_section = "Настройки извлечения изображений/OCR"
+keep_images = "Включать \"Извлекать изображения\" по умолчанию"
+keep_images_tooltip = "Включать извлечение изображений по умолчанию при преобразовании прочих файлов в MD"
+enable_ocr = "Включать \"OCR изображений\" по умолчанию"
+enable_ocr_tooltip = "Включать OCR изображений по умолчанию при преобразовании прочих файлов в MD"
+
+# -----------------------------------------------------------------------------
+# 链接设置选项卡
+# -----------------------------------------------------------------------------
+[settings.link]
+# Markdown链接格式区域
+format_section = "Формат ссылки Markdown"
+format_desc = "Формат ссылок в Markdown."
+image_link_style_label = "Ссылка изображения:"
+image_link_style_tooltip = "Стиль для встраивания изображения."
+md_file_link_style_label = "Ссылка файла:"
+md_file_link_style_tooltip = "Стиль для ссылок на файлы."
+
+# 非嵌入链接处理区域
+non_embed_section = "Невстроенные ссылки"
+non_embed_desc = "Обработка обычных ссылок."
+wiki_link_mode = "Wiki ссылки:"
+wiki_link_tooltip = "Обработка [[Wiki ссылок]]."
+markdown_link_mode = "Markdown ссылки:"
+markdown_link_tooltip = "Обработка [Markdown ссылок]."
+
+# 嵌入链接处理区域
+embed_section = "Встроенные ссылки"
+embed_desc = "Обработка встраиваний (!)."
+wiki_embed_image_mode = "Wiki встраивание изображения:"
+wiki_embed_image_tooltip = "![[Изображение]]."
+markdown_embed_image_mode = "Markdown встраивание изображения:"
+markdown_embed_image_tooltip = "![Изображение]."
+embed_md_file_mode = "Встроенные MD файлы:"
+embed_md_file_tooltip = "![[Файл.md]]."
+max_depth_label = "Макс. глубина:"
+max_depth_tooltip = "Предотвращает бесконечные циклы."
+
+# 子节点：图片链接格式选项
+[settings.link.image_styles]
+wiki_embed = "Wiki встраивание"
+wiki_link = "Wiki ссылка"
+md_embed = "Markdown встраивание"
+md_link = "Markdown ссылка"
+
+# 子节点：MD文件链接格式选项
+[settings.link.md_file_styles]
+wiki_embed = "Wiki встраивание"
+wiki_link = "Wiki ссылка"
+md_link = "Markdown ссылка"
+
+# 子节点：链接处理模式
+[settings.link.modes]
+keep = "Оставить"
+extract_text = "Извлечь текст"
+remove = "Удалить"
+hyperlink = "Гиперссылка"
+embed = "Вставить контент"
+
+# -----------------------------------------------------------------------------
+# 格式设置选项卡
+# -----------------------------------------------------------------------------
+[settings.formatting]
+# 文档转为Markdown部分
+docx_to_md_section = "Документ в Markdown"
+format_processing = "Обработка формата"
+format_processing_tooltip = "Как обрабатываются форматирования."
+body_format_label = "Тело текста:"
+body_format_tooltip = "Жирный, Курсив и т.д."
+heading_format_label = "Заголовки:"
+heading_format_tooltip = "Форматирование в заголовках."
+table_header_format_label = "Заголовок таблицы:"
+table_header_format_tooltip = "Форматирование в заголовках таблиц."
+
+# 分隔符映射
+separator_mapping = "Отображение разделителей"
+separator_mapping_tooltip = "Отображение разрывов Word в Markdown."
+page_break_label = "Разрыв страницы:"
+page_break_tooltip = "Разрыв страницы Word."
+section_break_label = "Разрыв раздела:"
+section_break_tooltip = "Разрыв раздела Word."
+horizontal_rule_label = "Разделительная линия:"
+horizontal_rule_tooltip = "Нижняя граница Word."
+
+# 语法选择
+syntax_selection = "Выбор синтаксиса"
+syntax_selection_tooltip = "Синтаксис Markdown для вывода."
+bold_syntax_label = "Жирный:"
+bold_syntax_tooltip = "Синтаксис для Жирного."
+italic_syntax_label = "Курсив:"
+italic_syntax_tooltip = "Синтаксис для Курсива."
+strikethrough_syntax_label = "Зачеркнутый:"
+strikethrough_syntax_tooltip = "Синтаксис для Зачеркнутого."
+highlight_syntax_label = "Выделенный:"
+highlight_syntax_tooltip = "Синтаксис для Выделения."
+superscript_syntax_label = "Надстрочный:"
+superscript_syntax_tooltip = "Синтаксис для Надстрочного."
+subscript_syntax_label = "Подстрочный:"
+subscript_syntax_tooltip = "Синтаксис для Подстрочного."
+unordered_list_label = "Маркированный список:"
+unordered_list_tooltip = "Символ для списков."
+indent_spaces_label = "Отступ:"
+indent_spaces_tooltip = "Управляет количеством пробелов на уровень списка при экспорте DOCX в Markdown\n2 пробела: более компактный вывод\n4 пробела: более свободный вывод\nПримечание: Markdown в DOCX сейчас использует распознавание по относительному отступу и не зависит от этой настройки"
+
+# Markdown转为文档部分
+md_to_docx_section = "Markdown в Документ"
+md_format_processing = "Обработка формата"
+md_format_processing_tooltip = "Как обрабатываются теги Markdown."
+md_body_format_label = "Тело текста:"
+md_body_format_tooltip = "Применить или удалить теги."
+md_heading_format_label = "Заголовки:"
+md_heading_format_tooltip = "Теги в заголовках."
+md_table_header_format_label = "Заголовок таблицы:"
+md_table_header_format_tooltip = "Теги в заголовках таблиц."
+heading_merge_mode_label = "Режим объединения заголовка и основного текста:"
+heading_merge_mode_tooltip = "Управляет тем, объединять ли заголовок и соседнюю следующую строку обычного текста в один абзац\nТребуется пунктуация: объединять только если заголовок заканчивается завершающим знаком препинания, а следующая строка является обычным текстом (по умолчанию)\nВсегда объединять: объединять, если следующая строка является обычным текстом (знак препинания не требуется)\nНикогда не объединять: заголовок и текст всегда разбираются как отдельные абзацы\nПримечание: списки/блоки кода/таблицы/цитаты/разделители не объединяются"
+heading_merge_punctuation_label = "Пунктуация для объединения:"
+heading_merge_punctuation_tooltip = "Символы, запускающие объединение заголовка и текста в режиме Требуется пунктуация. Пустое значение отключает объединение по пунктуации."
+
+# MD转文档分隔符映射
+md_separator_mapping = "Отображение разделителей"
+md_separator_mapping_tooltip = "Markdown в разрывы Word."
+dash_label = "--- (Тире):"
+dash_tooltip = "Отображение ---."
+asterisk_label = "*** (Звездочки):"
+asterisk_tooltip = "Отображение ***."
+underscore_label = "___ (Подчеркивания):"
+underscore_tooltip = "Отображение ___."
+
+# 表格样式
+table_style = "Стиль таблицы"
+table_style_tooltip = "Стиль для таблиц."
+builtin_style_radio = "Встроенный"
+custom_style_radio = "Пользовательский"
+
+# 列表拼接符
+list_separator_label = "Разделитель списка YAML"
+list_separator_tooltip = "Разделитель при объединении значений списка YAML в строку\n\nТипичные значения:\n• Китайская запятая（、）\n• Полноширинная запятая（，）\n• Запятая + пробел（, ）\n• Пустая строка：прямое соединение"
+
+# 格式处理选项
+[settings.formatting.options]
+preserve_format = "Сохранить формат"
+discard_format = "Отбросить формат"
+apply_format = "Применить формат"
+keep_markup = "Сохранить разметку"
+clean_markup = "Очистить разметку"
+heading_merge_punct_required = "Объединять только при наличии знака препинания (по умолчанию)"
+heading_merge_always = "Всегда объединять с соседним текстом"
+heading_merge_never = "Никогда не объединять"
+
+# 分隔符选项
+[settings.formatting.separators]
+dash = "---"
+asterisk = "***"
+underscore = "___"
+ignore = "Игнорировать"
+page_break = "Разрыв страницы"
+section_break = "Разрыв раздела"
+horizontal_rule_1 = "Разделительная линия 1"
+horizontal_rule_2 = "Разделительная линия 2"
+horizontal_rule_3 = "Разделительная линия 3"
+
+# 语法选项
+[settings.formatting.syntax]
+bold_asterisk = "Звездочка (**Текст**)"
+bold_underscore = "Подчеркивание (__Текст__)"
+italic_asterisk = "Звездочка (*Текст*)"
+italic_underscore = "Подчеркивание (_Текст_)"
+strikethrough_extended = "Расширенный (~~Текст~~)"
+strikethrough_html = "HTML (<del>)"
+highlight_extended = "Расширенный (==Текст==)"
+highlight_html = "HTML (<mark>)"
+superscript_extended = "Расширенный (^Текст^)"
+superscript_html = "HTML (<sup>)"
+subscript_extended = "Расширенный (~Текст~)"
+subscript_html = "HTML (<sub>)"
+unordered_dash = "Тире (- Элемент)"
+unordered_asterisk = "Звездочка (* Элемент)"
+unordered_plus = "Плюс (+ Элемент)"
+indent_2_spaces = "2 Пробела"
+indent_4_spaces = "4 Пробела"
+
+# 表格样式选项
+[settings.formatting.table_styles]
+three_line_table = "Трехлинейная таблица"
+table_grid = "Таблица-сетка"
+
+# -----------------------------------------------------------------------------
+# 输出设置选项卡
+# -----------------------------------------------------------------------------
+[settings.output]
+# 中间文件区域
+intermediate_section = "Промежуточные файлы"
+save_intermediate_label = "Сохранять промежуточные файлы"
+save_intermediate_tooltip = "Сохранять все промежуточные этапы."
+save_intermediate_desc = "Сохранение промежуточных форматов."
+
+# 输出目录区域
+directory_section = "Каталог вывода"
+output_mode_label = "Место вывода:"
+output_mode_tooltip = "Исходная папка или пользовательская."
+custom_path_label = "Путь:"
+browse_title = "Выбрать папку вывода"
+
+# 输出模式选项
+[settings.output.output_modes]
+source = "Исходный каталог"
+custom = "Пользовательский"
+
+# 日期子文件夹区域
+[settings.output.date_folder]
+section = "Папка даты"
+create_label = "Создать подпапку даты"
+create_tooltip = "Создает подпапку с текущей датой."
+format_label = "Формат даты:"
+
+# 日期格式选项
+[settings.output.date_formats]
+iso = "2025-01-06"
+compact = "20250106"
+chinese = "2025年01月06日"
+
+# 输出行为区域
+[settings.output.behavior]
+section = "Поведение"
+auto_open_folder_label = "Открыть папку после"
+auto_open_folder_tooltip = "Открывает папку вывода после конвертации."
+
+# -----------------------------------------------------------------------------
+# 日志设置选项卡
+# -----------------------------------------------------------------------------
+[settings.logging]
+# 日志系统区域
+system_section = "Система"
+system_desc = "Включить или отключить журналирование и задать уровень."
+enable_logging_label = "Включить логирование"
+enable_logging_tooltip = "Включает систему логирования."
+log_level_label = "Уровень лога:"
+log_level_tooltip = "Уровень детализации логов."
+
+# 文件输出区域
+file_section = "Файл"
+file_desc = "Настроить имена и срок хранения файлов журнала."
+file_prefix_label = "Префикс файла:"
+file_prefix_tooltip = "Префикс для файлов логов."
+retention_days_label = "Хранение (дней):"
+retention_days_tooltip = "Удалять логи через X дней."
+
+# 控制台输出区域
+console_section = "Консоль"
+console_desc = "Настроить вывод и формат журналов в консоли."
+enable_console_label = "Вывод в консоль"
+enable_console_tooltip = "Отображать логи в консоли."
+console_level_label = "Уровень консоли:"
+console_level_tooltip = "Уровень для консоли."
+validation_custom_directory_required = "Для пользовательского каталога необходимо указать непустой путь."
+validation_prefix_invalid = 'Префикс файла журнала содержит недопустимые символы: \ / : * ? " < > |'
+validation_prefix_required = "Префикс файла журнала не может быть пустым."
+directory_auto_notice = "Каталог определяется выбранным режимом автоматически; ручной ввод отключён."
+directory_env_override_notice = "Каталог журналов задан переменной среды; настройки каталога отключены."
+console_format_tooltip = "Строка формата консоли (пусто = использовать формат файла)"
+console_format_label = "Формат консоли:"
+console_colorize_label = "Цвет консоли:"
+console_colorize_tooltip = "Настроить цветовое оформление журналов в консоли."
+open_directory = "Открыть каталог"
+directory_notice_label = "Сведения о каталоге:"
+override_source_label = "Источник переопределения:"
+fallback_reason_label = "Причина резервного выбора:"
+actual_log_file_label = "Фактический файл журнала:"
+custom_directory_tooltip = "Пользовательский каталог журналов (только в пользовательском режиме)"
+custom_directory_label = "Пользовательский каталог:"
+directory_mode_tooltip = "Режим каталога"
+directory_mode_label = "Режим каталога:"
+location_desc = "Указать место записи файлов журнала."
+location_section = "Расположение вывода"
+
+# 日志级别
+
+[settings.logging.dir_modes]
+user = "Системное значение"
+temp = "Временный каталог"
+custom = "Пользовательский каталог"
+
+[settings.logging.console_colorize]
+auto = "Автоматически"
+always = "Всегда"
+never = "Никогда"
+
+[settings.logging.levels]
+debug = "Отладка (DEBUG)"
+info = "Информация (INFO)"
+warning = "Предупреждение (WARNING)"
+error = "Ошибка (ERROR)"
+critical = "Критический (CRITICAL)"
+
+# =============================================================================
+# 关于对话框
+# =============================================================================
+[about]
+title = "О программе"
+version_info = "Версия {version}"
+version_tooltip = "Оффлайн версия. Пожалуйста, обновляйте вручную."
+contact = "Контакт: {email}"
+copyright = "© {year} {author}"
+acknowledgments = "Благодарности"
+acknowledgments_intro = "Спасибо следующим open-source проектам:"
+
+# 开源工具描述
+subtitle = "Программа для конвертации форматов документов и таблиц (Конвертер документов)"
+
+[about.tools]
+python_docx = "Конвертация DOCX/Markdown"
+openpyxl = "Конвертация XLSX/Markdown"
+pymupdf = "Обработка PDF/XPS"
+pymupdf4llm = "Умное извлечение PDF"
+pdf2docx = "PDF в Word"
+easyofd = "Обработка OFD"
+rapidocr = "Оффлайн OCR"
+paddleocr = "Источник OCR-моделей, PP-OCRv3/v4 обучены PaddleOCR"
+onnxruntime = "Движок инференса"
+pyside6 = "Фреймворк Qt для GUI"
+pillow = "Обработка изображений"
+pillow_heif = "Поддержка HEIF"
+img2pdf = "Изображение в PDF"
+pywin32 = "Интерфейс Office COM"
+lxml = "Обработка XML"
+latex2mathml = "Формулы LaTeX"
+pyyaml = "Метаданные YAML"
+tomlkit = "Конфигурация TOML"
+pandas = "Анализ данных"
+numpy = "Числовые вычисления"
+olefile = "Поддержка Legacy Office"
+emoji = "Библиотека обнаружения и обработки эмодзи"
+
+[core.theme_manager]
+
+# =============================================================================
+# 主界面组件
+# =============================================================================
+[components]
+
+# Размер текста
+[components.font_size]
+small = "Маленький"
+default = "По умолчанию"
+large = "Большой"
+xlarge = "Очень большой"
+
+# 文件拖拽区
+[components.file_drop]
+empty_hint_single = "Перетащите один файл сюда"
+empty_hint_batch = "Перетащите файлы/папки сюда"
+add_button = "Добавить"
+add_file_action = "Dobavit fayly"
+add_folder_action = "Dobavit papku"
+recent_files_action = "Недавние"
+clear_recent_files_action = "Очистить недавние"
+select_folder_dialog = "Vybrat papku"
+clear_button = "Очистить"
+single_mode = "Один"
+batch_mode = "Пакет"
+file_selected_msg = "Выбран: {filename}"
+files_added_msg = "Добавлено файлов: {count}"
+files_added_with_skipped_msg = "Добавлено файлов: {added}, пропущено: {skipped}"
+no_supported_files = "Поддерживаемые файлы не найдены."
+unsupported_type_msg = "Неподдерживаемый тип файла: {filename}"
+single_mode_only_one = "Одиночный режим поддерживает только один файл."
+select_file_dialog = "Выбрать файл"
+all_supported_filter = "Все поддерживаемые файлы"
+all_files_filter = "Все файлы"
+
+# 批量文件列表
+drag_preview_single = "Будет выбран: {filename}"
+drag_preview_summary = "Будет добавлено: {added}, пропущено: {skipped}"
+drag_preview_summary_recursive = "{summary}, включая рекурсивное сканирование папок"
+drag_preview_summary_degraded = "{summary}; предпросмотр сокращён из-за большого объёма"
+drag_preview_skipped_title = "Будет пропущено:"
+drag_preview_skipped_unsupported = "Не поддерживается: {name}"
+drag_preview_skipped_unreadable = "Нет доступа: {path}"
+
+[components.file_drop.batch_list]
+no_batch_files = "Нет пакетных файлов"
+retry_selected_failed = "Повторить выбранную неудачную запись"
+retry_all_failed = "Повторить все неудачные записи на этой вкладке"
+total_files = "Всего файлов: {total}"
+total_files_selected = "Всего файлов: {total}, выбран: {current_name}"
+action_open_output = "Открыть результат"
+action_view_skip = "Показать пропуск"
+action_view_error = "Показать ошибку"
+action_remove = "Удалить"
+action_move_up = "Вверх"
+action_move_down = "Вниз"
+sort_button = "Сортировать"
+sort_button_with_label = "Сортировка: {label}"
+sort_custom = "Пользовательский порядок"
+sort_name = "Имя файла"
+sort_type = "Тип"
+sort_size = "Размер"
+sort_mtime = "Дата изменения"
+sort_ascending = "По возрастанию"
+sort_descending = "По убыванию"
+
+# 批量操作面板
+filter_button = "Фильтр"
+filter_button_with_label = "Фильтр: {label}"
+filter_all = "Все"
+filter_failed = "Ошибка"
+filter_pending = "В ожидании"
+filter_processing = "Обрабатывается"
+filter_completed = "Завершено"
+action_remove_selected = "Удалить выбранное ({count})"
+action_open_selected_locations = "Открыть папки выбранного ({count})"
+filter_skipped = "Пропущено"
+filter_cancelled = "Отменено"
+[components.file_drop.batch_action]
+
+# 状态文本
+[components.file_drop.status]
+pending = "В ожидании"
+processing = "Обрабатывается"
+completed = "Завершено"
+skipped = "Пропущено"
+failed = "Ошибка"
+cancelled = "Отменено"
+
+# 文件选择器
+[components.file_selector]
+
+# 状态栏
+[components.info_area]
+
+# 应用状态
+
+# 处理状态
+batch_completed = "Пакетная обработка завершена: успешно {success}, ошибок {failed}, пропущено {skipped}, отменено {cancelled}"
+
+# logic.py 状态消息
+
+# 文件类型选择（统一风格）
+
+# GUI状态消息
+
+# 文件状态对话框
+task_completion_notification_title = "Задача завершена"
+task_completion_notification_success = "Задача завершена: обработано {completed}/{total} файлов."
+task_completion_notification_partial = "Задача завершена: обработано {completed}/{total} файлов, ошибок {failed}."
+task_completion_notification_failed = "Задача завершена: всего {total} файлов, ошибок {failed}."
+task_completion_notification_cancelled = "Задача отменена: обработано {completed}/{total} файлов."
+[components.file_dialogs]
+# 跳过对话框
+
+# 错误对话框
+
+# 操作面板
+[components.action_area]
+cancel_hint = "Задача выполняется. Нажмите Esc, чтобы отменить текущую задачу."
+
+# 转换面板
+[components.conversion_panel]
+
+# 模板选择器
+[components.template_selector]
+no_templates = "Нет доступных"
+empty_hint = "Если шаблоны недоступны, откройте папку шаблонов, чтобы проверить или добавить файлы."
+open_template_dir = "Открыть папку шаблонов"
+unavailable = "Недоступно"
+
+# 选项卡式模板选择器
+usage_line = "Использование: {value}"
+source_line = "Источник: {value}"
+updated_line = "Обновлено: {value}"
+source_tooltip = "Исходная папка: {value}"
+auto_selected_reason = "По настройке по умолчанию автоматически выбран первый доступный вариант в {template_kind}."
+open_location = "Открыть расположение файла"
+
+[components.template_selector_tabbed]
+document_templates = "Документ"
+spreadsheet_templates = "Таблица"
+
+# =============================================================================
+# 转换面板区域
+# =============================================================================
+[conversion_panel]
+route_options_unavailable = "Не удалось загрузить доступные операции; действия отключены, чтобы избежать неверного запроса."
+no_compatible_operation = "Для этого файла нет совместимой операции."
+format_conversion = "Конвертация"
+save_as = "Сохранить как"
+convert = "Конвертировать"
+save_as_action = "Сохранить как"
+export = "Экспорт"
+render = "Рендеринг"
+select_file_hint = "Выбрать файл"
+
+# 文档转换区
+[conversion_panel.document]
+convert_to_other_formats = "Другие форматы"
+convert_to_layout = "В макет"
+proofread_document = "Проверка"
+proofread_hint = "Проверить документ"
+proofread_button = "Проверить"
+proofread_options = "Опции"
+symbol_pairing = "Парность"
+symbol_pairing_tooltip = "Парность символов"
+typos_rule = "Опечатки"
+typos_rule_tooltip = "Опечатки"
+symbol_correction = "Символы"
+symbol_correction_tooltip = "Символы"
+sensitive_word = "Отмеченные термины"
+sensitive_word_tooltip = "Проверить отмеченные термины"
+
+# 图片转换区
+[conversion_panel.image]
+convert_to_other_formats = "Другие форматы"
+compression_options = "Сжатие"
+highest_quality = "Лучшее качество"
+limit_file_size = "Ограничить размер"
+file_size_limit = "Лимит:"
+enter_size_limit_warning = "Введите лимит"
+kb_range_warning = "10-10000 KB"
+mb_range_warning = "1-100 MB"
+enter_valid_number_warning = "Введите число"
+convert_to_layout = "В макет"
+size_options = "Размер"
+original_embed = "Оригинал"
+fit_a4 = "A4"
+fit_a3 = "A3"
+merge_images = "Слияние"
+merge_images_hint = "Слияние изображений"
+merge_to_tif = "В TIF"
+conversion_options = "Опции"
+preserve_transparency = "Сохранить прозрачность"
+no_transparency = "Удалить"
+
+# 版式转换区
+[conversion_panel.layout]
+convert_to_other_formats = "Другие форматы"
+convert_to_document_or_image = "Документ/Изображение"
+merge_split = "Слияние/Разделение"
+merge_split_hint = "Слияние/Разделение"
+merge_to_pdf = "Слияние PDF"
+merge_to_ofd = "Слияние OFD"
+split_to_pdf = "Разделение PDF"
+split_to_ofd = "Разделение OFD"
+split_page_range = "Диапазон:"
+page_range_placeholder = "1-3,5  *  #"
+selected_split_file = "Выбрано: {pages} страниц"
+invalid_page_range = "Недопустимый диапазон страниц: {part}"
+invalid_page = "Недопустимая страница: {part}"
+split_mode_single_page_warning = "⚠️ В этом файле только 1 страница; деление не требуется"
+
+# 表格转换区
+[conversion_panel.spreadsheet]
+ods_delivery_options = "Параметры выдачи ODS"
+ods_delivery_hint = "Внешние формулы используют кэшированные значения. Для защищённых файлов нужны пароль и согласие на публикацию без защиты."
+protection_password = "Пароль защиты (необязательно)"
+allow_protection_loss = "Я понимаю, что выданный ODS не сохранит защиту паролем"
+protected_batch_single_only = "Пароли не используются повторно в пакетах. Преобразуйте защищённые файлы по отдельности."
+convert_to_other_formats = "Другие форматы"
+convert_to_layout = "В макет"
+merge_tables = "Слияние таблиц"
+merge_tables_hint = "Слияние"
+merge_tables_button = "📋 Слияние"
+merge_options = "Опции"
+merge_by_row = "Строка"
+merge_by_column = "Столбец"
+merge_by_cell = "Ячейка"
+no_table_selected = "Нет таблицы"
+
+# =============================================================================
+# 操作面板区域
+# =============================================================================
+[action_area]
+route_options_unavailable = "Не удалось загрузить доступные операции; создание отключено, чтобы избежать неверного запроса."
+no_compatible_output = "Для этого файла нет совместимого формата вывода."
+export_options = "Экспорт"
+generation_options = "Генерация"
+extract_images = "Изображения"
+ocr = "OCR"
+optimization_unavailable = "Параметры оптимизации недоступны; стандартное преобразование по-прежнему доступно."
+
+# 校对选项
+generate = "Сгенерировать"
+
+[action_area.proofread]
+
+# 文档转MD面板
+[action_area.document]
+export_markdown = "Экспорт Markdown"
+export_markdown_tooltip = "В MD"
+optimize_for_type = "Оптимизация"
+remove_existing_numbering = "Удал. нум."
+add_new_numbering = "Доб. нум."
+
+# 表格转MD面板
+[action_area.spreadsheet]
+export_markdown_tooltip = "В MD"
+optimize_for_type = "Оптимизация (таблица)"
+
+# 图片转MD面板
+[action_area.image]
+export_markdown_tooltip = "В MD"
+optimize_for_type = "Оптимизация (изображение)"
+
+# 版式转MD面板
+[action_area.layout]
+export_markdown_tooltip = "В MD"
+optimize_for_type = "Оптимизация по типу макета"
+
+# 其他文件转MD面板
+[action_area.other]
+
+# MD转文档面板
+[action_area.md_to_document]
+remove_existing_numbering = "Удал. нум."
+add_new_numbering = "Доб. нум."
+
+# MD转表格面板
+generate_tooltip = "Сгенерировать документ в выбранном формате"
+format_combo_tooltip = "Выберите целевой формат документа"
+[action_area.md_to_spreadsheet]
+
+# =============================================================================
+# 编辑器对话框
+# =============================================================================
+generate_tooltip = "Сгенерировать таблицу в выбранном формате"
+format_combo_tooltip = "Выберите целевой формат таблицы"
+[editors]
+
+# 序号新增编辑器
+[editors.numbering_add]
+window_title = "Редактор схем"
+scheme_list = "Схемы"
+default_scheme = "По умолчанию:"
+level_format_config = "Формат уровня"
+realtime_preview = "Предпросмотр"
+format_help = "📖 Помощь"
+format_help_title = "Заполнители"
+format_help_text = """Использование форматных заполнителей
+
+占位符格式：{级别.样式}
+
+可用样式：
+  chinese_lower  - 小写中文数字 (一、二、三)
+  chinese_upper  - 大写中文数字 (壹、贰、叁)
+  arabic_half    - 半角阿拉伯数字 (1, 2, 3)
+  arabic_full    - 全角阿拉伯数字 (１、２、３)
+  arabic_circled - 带圈数字 (①②③)
+  letter_upper   - 大写字母 (A, B, C)
+  letter_lower   - 小写字母 (a, b, c)
+  roman_upper    - 大写罗马数字 (I, II, III)
+  roman_lower    - 小写罗马数字 (i, ii, iii)
+
+示例：
+  {1.chinese_lower}、 → 一、二、三、
+  （{2.chinese_lower}） → （一）（二）（三）
+  {3.arabic_half}. → 1. 2. 3.
+  {1.arabic_half}.{2.arabic_half} → 1.1、1.2"""
+
+# 级别名称
+level_1 = "Уровень 1"
+level_2 = "Уровень 2"
+level_3 = "Уровень 3"
+level_4 = "Уровень 4"
+level_5 = "Уровень 5"
+level_6 = "Уровень 6"
+level_7 = "Уровень 7"
+level_8 = "Уровень 8"
+level_9 = "Уровень 9"
+
+# 创建和复制
+new_scheme = "Новый"
+copy_suffix = "(Копия)"
+
+# 预览
+preview_sample = "Пример {level_name}"
+no_format = "Нет формата"
+
+# 占位符菜单
+menu_current_level = "── Текущий ({level}) ──"
+menu_decorations = "── Декорация ──"
+menu_hierarchical = "── Иерархия ──"
+
+# 数字样式
+style_chinese_lower = "Кит. Мал"
+style_chinese_upper = "Кит. Бол"
+style_arabic_half = "Арабский"
+style_arabic_circled = "В круге"
+style_letter_upper = "Буква Бол"
+style_roman_upper = "Римский Бол"
+
+# 装饰
+decoration_dun = "Запятая"
+decoration_dot_space = "Точка+Пробел"
+decoration_bracket = "Скобка"
+decoration_chapter = "Глава"
+
+# 验证消息
+validation_ok = "Формат корректен"
+validation_fixed_text = "Плейсхолдер не найден. На этом уровне будет показан только фиксированный текст."
+validation_invalid_level = "Уровень '{level}' не является корректным числом."
+validation_level_out_of_range = "Уровень {level} вне диапазона. Используйте 1-9."
+validation_unknown_style = "Неизвестный стиль '{style}'."
+word_native_unavailable = "Совместимость со штатной нумерацией Word: (не удалось проверить)"
+word_native_full = "Совместимость со штатной нумерацией Word: полная"
+word_native_approximate = "Совместимость со штатной нумерацией Word: приблизительная ({reason})"
+word_native_incompatible = "Совместимость со штатной нумерацией Word: отсутствует ({reason})"
+
+
+# 错误消息
+cannot_delete_default_scheme = "По умолчанию нельзя удалить"
+
+# 方案名称
+[editors.numbering_add.names]
+hierarchical_standard = "Иерархический"
+hierarchical_h2_start = "Иерархический (с H2)"
+
+# 方案描述（用于编辑器中显示）
+[editors.numbering_add.descriptions]
+hierarchical_standard_desc = "Иерархический формат: 1, 1.1, 1.1.1 ... (с пробелом после номера)"
+hierarchical_h2_start_desc = "Иерархический формат (пропустить H1/уровень 1): начать с H2/уровня 2: 1, 1.1, 1.1.1 ..."
+
+# 通用编辑器文本（所有编辑器共用）
+[editors.common]
+name = "Имя:"
+description = "Описание:"
+copy = "Копировать"
+delete = "Удалить"
+move_up = "Вверх"
+move_down = "Вниз"
+save = "Сохранить"
+cancel = "Отмена"
+prompt = "Прим."
+select_item_first = "Пожалуйста, выберите элемент"
+cannot_delete = "Не удаляемый"
+system_item_hint = "Системный элемент"
+confirm_delete = "Подтвердить удаление"
+confirm_delete_message = "Действительно удалить: {name}?"
+confirm_close = "Подтвердить закрытие"
+unsaved_changes_hint = "Несохраненные изменения"
+unsaved_close_message = "Действительно закрыть?"
+
+# 序号清理编辑器
+[editors.numbering_clean]
+window_title = "Правила очистки"
+rule_list = "Правила"
+description = "Описание:"
+regex = "Регулярное выражение:"
+regex_test = "Тест"
+input = "Ввод:"
+result = "Результат:"
+new_rule = "Новый"
+copy_suffix = "(Копия)"
+match_success = "Совпадение"
+no_match = "Нет совпадения"
+regex_error = "Ошибка Regex"
+prompt = "Прим."
+
+# 清理规则名称
+enabled = "Включить правило"
+
+[editors.numbering_clean.names]
+chinese_unit_suffix = "Суффикс ед. кит."
+chinese_unit_prefix = "Префикс ед. кит."
+circled_numbers = "Числа в круге"
+bracket_number = "Числа в скобках"
+hierarchical = "Иерархический"
+number_separator = "Разделитель числа"
+legal_english = "Английский Юридический"
+letter_number = "Номер буквы"
+
+# 清理规则描述（用于编辑器中显示）
+[editors.numbering_clean.descriptions]
+chinese_unit_suffix_desc = "Глава X и т.д."
+chinese_unit_prefix_desc = "Часть X и т.д."
+circled_numbers_desc = "① и т.д."
+bracket_number_desc = "(1) и т.д."
+hierarchical_desc = "1.1 и т.д."
+number_separator_desc = "1. и т.д."
+legal_english_desc = "Chapter X и т.д."
+letter_number_desc = "A. и т.д."
+
+# 映射编辑器
+[editors.mapping]
+# 对话框标题
+symbol_editor_title = "Символы"
+typo_editor_title = "Опечатки"
+sensitive_editor_title = "Отмеченные термины"
+# 下拉选择标签
+
+# 列头
+symbol_correct_symbol = "Верно"
+symbol_error_symbols = "Неверно"
+sensitive_sensitive_word = "Отмеченный термин"
+sensitive_exceptions = "Исключения"
+comment = "Комментарий"
+
+# 说明文本
+
+# 按钮
+add_entry = "Добавить запись"
+delete_entry = "Удалить"
+
+# 提示消息
+
+# 条目编辑对话框
+
+# 标签
+
+# 示例文本
+
+# 验证消息
+
+# 键重复处理
+duplicate_key_title = "Ключ уже существует"
+duplicate_key_message = "Ключ \"{entry_key}\" уже существует\n\nТекущие значения: {current_values}\nТекущий комментарий: {current_comment}\n\nВыберите действие:"
+duplicate_key_no_comment = "(нет)"
+overwrite = "Заменить"
+merge = "Объединить"
+
+# =============================================================================
+# 文件类型分类
+# =============================================================================
+search_placeholder = "Поиск ключа, значения или комментария"
+source_symbol = "Исходный символ"
+target_symbol = "Целевой символ"
+typo = "Опечатка"
+corrections = "Исправления"
+multi_value_hint = "Совет: разделяйте несколько значений символом | (например: значение1|значение2|значение3)"
+save_typos_failed = "Не удалось сохранить словарь опечаток."
+save_symbol_correction_failed = "Не удалось сохранить записи исправления символов."
+save_sensitive_words_failed = "Не удалось сохранить словарь отмеченных терминов."
+[file_types]
+document = "Документ"
+spreadsheet = "Таблица"
+image = "Изображение"
+layout = "Макет"
+other = "Другое"
+text = "Текст"
+
+# 带"类"后缀的版本（用于选项卡标签）
+
+[file_category]
+text_short = "Текст"
+document_short = "Док"
+spreadsheet_short = "Таб"
+layout_short = "Макет"
+image_short = "Изобр"
+other_short = "Другое"
+
+[file_format_validation]
+
+[file_admission]
+compatible_text = "Имя файла указывает формат {declared_format}, но содержимое определено как {detected_format}; оба формата используют один процесс обработки текста."
+same_family_mismatch = "Имя файла указывает формат {declared_format}, но содержимое определено как {detected_format}. Оба формата относятся к одной категории обработки; будет использован обнаруженный формат."
+cross_family_mismatch = "Имя файла указывает формат {declared_format}, но содержимое определено как {detected_format}. Форматы относятся к разным категориям обработки; подтвердите обработку в обнаруженном формате."
+unknown_extension = "Расширение указывает неподдерживаемый формат {declared_format}, но содержимое определено как {detected_format}. Подтвердите обработку в обнаруженном формате."
+empty = "Выбранный файл пуст."
+container_invalid = "Контейнер файла повреждён или имеет недопустимую структуру (заявлено: {declared_format}, обнаружено: {detected_format})."
+container_unsupported = "Обнаруженный контейнер {detected_format} не является поддерживаемым пакетом документов (заявлено: {declared_format})."
+container_unrecognized = "Не удалось распознать контейнер файла (заявлено: {declared_format}, обнаружено: {detected_format})."
+content_unrecognized = "Не удалось распознать содержимое файла (заявлено: {declared_format}, обнаружено: {detected_format})."
+read_error = "Не удалось прочитать файл (заявлено: {declared_format}, обнаружено: {detected_format})."
+unsupported_format = "Обнаруженный формат содержимого {detected_format} не поддерживается (заявлено: {declared_format})."
+
+# =============================================================================
+# 转换操作
+# =============================================================================
+[conversion]
+# 文档操作
+
+# 表格操作
+
+# 图片操作
+
+# 生成文件名（用于输出文件命名）
+[conversion.filenames]
+
+[conversion.ocr_output]
+blockquote_prefix = "🖼️ **OCR изображения**:"
+
+# =============================================================================
+# 转换进度消息
+# =============================================================================
+[conversion.progress]
+
+# =============================================================================
+# 转换结果消息（状态栏/弹窗）
+# =============================================================================
+[conversion.messages]
+# 通用消息
+
+# 成功消息
+
+# 校对消息
+
+# 版式转换消息
+
+# 缺少依赖消息
+
+# 合并/拆分消息
+
+# MD转换消息
+
+# 图片转换消息
+
+# 序号操作消息
+
+# 成功消息（带参数）
+
+# 失败消息（带参数）
+
+# =============================================================================
+# 消息和提示
+# =============================================================================
+[messages]
+# 文件操作
+
+# GUI操作结果
+
+# 转换操作
+
+# 设置
+
+# 确认对话框
+
+# 文件拖拽和选择
+no_folder_in_single_mode = "Нет папок в одиночном режиме"
+
+# 错误消息
+[messages.errors]
+
+# 警告消息
+[messages.warnings]
+
+# =============================================================================
+# 校对批注文本（用于文档校对功能的批注内容）
+# =============================================================================
+[proofread]
+
+# 错误类型
+[proofread.error_type]
+
+# 错误来源
+[proofread.source]
+
+# 修改建议
+[proofread.suggestion]
+
+# =============================================================================
+# 链接处理占位符文本（用于文档中显示的错误提示）
+# =============================================================================
+[link_processing]
+
+# =============================================================================
+# 样式名（用于文档转换）
+# 这些样式名用于 MD ↔ DOCX 转换时的样式注入和检测
+# =============================================================================
+[styles]
+# 段落样式
+body_paragraph = "Основной абзац"
+image_paragraph = "Абзац изображения"
+
+# 代码样式
+code_block = "Блок кода"
+inline_code = "Встроенный код"
+
+# 公式样式
+formula_block = "Блок формулы"
+inline_formula = "Встроенная формула"
+
+# 列表样式
+list_block = "Блок списка"
+
+# 分隔线样式
+horizontal_rule_1 = "Разделительная линия 1"
+horizontal_rule_2 = "Разделительная линия 2"
+horizontal_rule_3 = "Разделительная линия 3"
+
+# 表格样式
+table_content = "Содержимое таблицы"
+table_header = "Заголовок таблицы"
+three_line_table = "Трехлинейная таблица"
+table_grid = "Таблица-сетка"
+
+# 引用样式（9 级）
+quote_1 = "Цитата 1"
+quote_2 = "Цитата 2"
+quote_3 = "Цитата 3"
+quote_4 = "Цитата 4"
+quote_5 = "Цитата 5"
+quote_6 = "Цитата 6"
+quote_7 = "Цитата 7"
+quote_8 = "Цитата 8"
+quote_9 = "Цитата 9"
+figure_caption = "Подпись к рисунку"
+table_caption = "Подпись к таблице"
+equation_caption = "Подпись к формуле"
+code_block_caption = "Подпись к блоку кода"
+
+# =============================================================================
+# 样式格式配置（用于样式注入时的格式属性）
+# =============================================================================
+[style_formats]
+
+# 正文段落格式（与 heading 3-9 相同：仿宋_GB2312、三号、2字符）
+[style_formats.body_paragraph]
+east_asia_font = "SimSun"
+ascii_font = "Times New Roman"
+font_size_pt = 14
+first_line_indent_chars = 0
+first_line_indent_cm = 1.25
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = false
+justification = "both"
+
+# 标题1格式（黑体、三号、2字符）
+[style_formats.heading_1]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 14
+first_line_indent_chars = 0
+first_line_indent_cm = 1.25
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = true
+justification = "both"
+
+# 标题2格式（楷体_GB2312、三号、2字符）
+[style_formats.heading_2]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 14
+first_line_indent_chars = 0
+first_line_indent_cm = 1.25
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = true
+justification = "both"
+
+# 标题3-9格式（仿宋_GB2312、三号、2字符）
+[style_formats.heading_3_9]
+east_asia_font = "SimSun"
+ascii_font = "Arial"
+font_size_pt = 14
+first_line_indent_chars = 0
+first_line_indent_cm = 1.25
+spacing_after_twip = 0
+spacing_before_twip = 0
+bold = true
+justification = "both"
+
+# =============================================================================
+# 占位符（用于文档模板）
+# 这些占位符用于 MD → DOCX 转换时的模板填充
+# =============================================================================
+[placeholders]
+title = "Заголовок"
+body = "Текст"
+
+# =============================================================================
+# YAML 键名（用于元数据）
+# 这些键名用于 DOCX → MD 转换时的 YAML 前置信息输出
+# =============================================================================
+[yaml_keys]
+title = "Заголовок"
+subtitle = "Подзаголовок"
+
+
+
+
+[main_window]
+route_catalog_failed = "Не удалось загрузить доступные операции; запрос не был запущен."
+route_unavailable = "Для этого файла нет совместимой операции."
+output_settings_unavailable = "Не удалось загрузить настройки вывода; задача не была запущена."
+template_catalog_failed = "Не удалось загрузить шаблоны."
+window_title = "DocWen (Оффлайн версия)"
+version_offline = "Оффлайн версия"
+settings_tooltip = "Настройки (Ctrl+,)"
+about_tooltip = "О программе DocWen"
+font_size_tooltip = "Переключить размер шрифта"
+no_file_for_locate = "Файл не выбран, вывод не найден."
+runtime_unavailable = "Среда выполнения недоступна, невозможно начать конвертацию."
+task_already_running = "Задача уже выполняется. Отмените текущую задачу."
+cancelling = "Отмена..."
+task_processing_prefix = "Обработка:"
+task_progress_prefix = "Прогресс:"
+task_failed_prefix = "Ошибка:"
+task_processing_status = "Обработка: {message}"
+task_progress_status = "Прогресс: {percent}% {message}"
+task_completed_status = "Завершено"
+task_failed_status = "Ошибка: {message}"
+task_cancelled_status = "Отменено"
+error_copied = "Детали ошибки скопированы."
+no_error_available = "Нет информации об ошибке."
+no_failed_to_retry = "Нет неудачных задач для повтора."
+retry_context_unavailable = "Контекст повтора недоступен."
+path_not_exist = "Путь не существует: {path}"
+open_path_failed = "Не удалось открыть путь: {path}"
+template_not_found = "Шаблон не найден: {name}"
+template_dir_unavailable = "Каталог шаблонов недоступен."
+system_tray_show = "Показать окно"
+system_tray_hide = "Скрыть окно"
+system_tray_quit = "Выход"
+ipc_file_received = "Файл получен из другого экземпляра: {filename}"
+batch_add_failed_title = "Ошибка пакетного добавления"
+batch_add_failed_message = "Не удалось добавить файлов в пакетный список: {count}."
+batch_add_failed_reason = "Причина"
+file_admission_invalid = "Данные проверки файла недействительны."
+file_admission_changed = "Файл был изменён после добавления. Удалите его из списка и добавьте снова для повторной проверки, затем повторите попытку."
+file_admission_blocked = "Выбранный файл невозможно обработать."
+file_admission_confirm_title = "Подтвердить обнаруженный формат файла"
+file_admission_confirm_message = "Имя файла и обнаруженное содержимое имеют разные форматы. Обработать файл в обнаруженном формате?"
+file_admission_confirm_action = "Обработать в обнаруженном формате"
+file_admission_cancelled = "Обработка отменена; обнаруженный формат не принят."

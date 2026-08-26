@@ -1,0 +1,15 @@
+{
+  "case_id": "invalid-empty-equation",
+  "category": "negative",
+  "input_id": "invalid-empty-equation.md",
+  "source": "Equation:\n\n$$x=1$$\n",
+  "expected": {
+    "target_kind_ids": [],
+    "anchor_kind_ids": [],
+    "link_kinds": [],
+    "reference_statuses": [],
+    "citation_keys": [],
+    "diagnostics": [{"severity": "error", "code": "docwen.markdown.caption.empty_equation_target_required", "range": {"start": 0, "end": 8}}],
+    "source_unchanged": true
+  }
+}

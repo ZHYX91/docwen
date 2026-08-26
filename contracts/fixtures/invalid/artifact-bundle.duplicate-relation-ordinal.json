@@ -1,0 +1,83 @@
+{
+  "schema": "docwen.artifact_bundle.v2",
+  "bundle_id": "bundle.ocr.001",
+  "task_id": "task.ocr.001",
+  "producer": {
+    "name": "DocWen",
+    "product_version": "0.9.0",
+    "machine_protocol": "docwen.machine.v1"
+  },
+  "artifacts": [
+    {
+      "artifact_id": "document.ocr",
+      "kind": "document",
+      "locator": "documents/scanned-contract.md",
+      "suggested_name": "scanned-contract.md",
+      "media_type": "text/markdown",
+      "size_bytes": 128,
+      "sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+      "logical_path": "documents/scanned-contract.md"
+    },
+    {
+      "artifact_id": "fragment.page.1",
+      "kind": "fragment",
+      "locator": "fragments/page-001.md",
+      "suggested_name": "page-001.md",
+      "media_type": "text/markdown",
+      "size_bytes": 64,
+      "sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+      "logical_path": "fragments/page-001.md"
+    },
+    {
+      "artifact_id": "fragment.page.2",
+      "kind": "fragment",
+      "locator": "fragments/page-002.md",
+      "suggested_name": "page-002.md",
+      "media_type": "text/markdown",
+      "size_bytes": 64,
+      "sha256": "6666666666666666666666666666666666666666666666666666666666666666",
+      "logical_path": "fragments/page-002.md"
+    },
+    {
+      "artifact_id": "resource.page.1",
+      "kind": "resource",
+      "locator": "resources/page-001.png",
+      "suggested_name": "page-001.png",
+      "media_type": "image/png",
+      "size_bytes": 2048,
+      "sha256": "7777777777777777777777777777777777777777777777777777777777777777",
+      "logical_path": "resources/page-001.png"
+    }
+  ],
+  "entries": [
+    {
+      "artifact_id": "document.ocr",
+      "role": "primary",
+      "ordinal": 0,
+      "preferred": true
+    }
+  ],
+  "relations": [
+    {
+      "type": "fragment_of",
+      "source_artifact_id": "fragment.page.1",
+      "target_artifact_id": "document.ocr",
+      "role": "section",
+      "ordinal": 0
+    },
+    {
+      "type": "fragment_of",
+      "source_artifact_id": "fragment.page.2",
+      "target_artifact_id": "document.ocr",
+      "role": "section",
+      "ordinal": 0
+    },
+    {
+      "type": "resource_of",
+      "source_artifact_id": "resource.page.1",
+      "target_artifact_id": "fragment.page.1",
+      "role": "image"
+    }
+  ],
+  "layout_schema": "docwen.artifact_layout.v1"
+}

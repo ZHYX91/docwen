@@ -1,0 +1,75 @@
+"""Public façade for the frozen Markdown-semantics v3 DOCX projection."""
+
+from docwen_core._docx_semantics_v3_fenced import (
+    FENCED_SOURCE_MAP_NAMESPACE,
+    FENCED_SOURCE_TAG_PREFIX,
+    FencedSourceIdentityV3,
+    derive_fenced_source_identity_v3,
+)
+from docwen_core._docx_semantics_v3_fenced_map import (
+    fenced_source_identity_from_mapping_v3,
+    fenced_source_mapping_v3,
+)
+from docwen_core._docx_semantics_v3_model import (
+    ANCHOR_TAG_PREFIX,
+    ANCHOR_TOPOLOGY_MAP_NAMESPACE,
+    CAPTION_STYLE_BINDING_MAP_NAMESPACE,
+    REFERENCE_OCCURRENCE_MAP_NAMESPACE,
+    REFERENCE_OCCURRENCE_TAG_PREFIX,
+    SOFT_REFERENCE_MAP_NAMESPACE,
+    SOFT_REFERENCE_TAG_PREFIX,
+    TARGET_MAP_NAMESPACE,
+    TARGET_TAG_PREFIX,
+    AnchorIdentityV3,
+    AnchorTopologyEdgeV3,
+    CaptionStyleBindingV3,
+    DocxSemanticsV3Error,
+    OrdinaryAnchorGroupV3,
+    ReferenceOccurrenceIdentityV3,
+    SoftReferenceIdentityV3,
+    SourceAnchorV3,
+    TargetIdentityV3,
+    derive_anchor_identity_v3,
+    derive_anchor_topology_edge_v3,
+    derive_reference_occurrence_identity_v3,
+    derive_soft_reference_identity_v3,
+    derive_target_identity_v3,
+)
+from docwen_core._docx_semantics_v3_ooxml import append_complex_field
+from docwen_core._docx_semantics_v3_recovery import DocxSemanticsV3Recovery
+from docwen_core._docx_semantics_v3_session import DocxSemanticsV3Session
+
+__all__ = [
+    "ANCHOR_TAG_PREFIX",
+    "ANCHOR_TOPOLOGY_MAP_NAMESPACE",
+    "CAPTION_STYLE_BINDING_MAP_NAMESPACE",
+    "FENCED_SOURCE_MAP_NAMESPACE",
+    "FENCED_SOURCE_TAG_PREFIX",
+    "REFERENCE_OCCURRENCE_MAP_NAMESPACE",
+    "REFERENCE_OCCURRENCE_TAG_PREFIX",
+    "SOFT_REFERENCE_MAP_NAMESPACE",
+    "SOFT_REFERENCE_TAG_PREFIX",
+    "TARGET_MAP_NAMESPACE",
+    "TARGET_TAG_PREFIX",
+    "AnchorIdentityV3",
+    "AnchorTopologyEdgeV3",
+    "CaptionStyleBindingV3",
+    "DocxSemanticsV3Error",
+    "DocxSemanticsV3Recovery",
+    "DocxSemanticsV3Session",
+    "FencedSourceIdentityV3",
+    "OrdinaryAnchorGroupV3",
+    "ReferenceOccurrenceIdentityV3",
+    "SoftReferenceIdentityV3",
+    "SourceAnchorV3",
+    "TargetIdentityV3",
+    "append_complex_field",
+    "derive_anchor_identity_v3",
+    "derive_anchor_topology_edge_v3",
+    "derive_fenced_source_identity_v3",
+    "derive_reference_occurrence_identity_v3",
+    "derive_soft_reference_identity_v3",
+    "derive_target_identity_v3",
+    "fenced_source_identity_from_mapping_v3",
+    "fenced_source_mapping_v3",
+]

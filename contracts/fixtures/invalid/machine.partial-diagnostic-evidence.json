@@ -1,0 +1,22 @@
+{
+  "jsonrpc": "2.0",
+  "method": "task/failed",
+  "params": {
+    "task_id": "task.invalid.diagnostic",
+    "sequence": 1,
+    "error": {
+      "category": "invalid_request",
+      "code": "invalid_document_semantics",
+      "message": "Markdown semantics are invalid.",
+      "retryable": false
+    },
+    "diagnostics": [
+      {
+        "severity": "error",
+        "code": "docwen.markdown.anchor.dangling",
+        "message": "Missing source-bound evidence fields.",
+        "evidence_schema": "docwen.machine.diagnostic_evidence.v1"
+      }
+    ]
+  }
+}

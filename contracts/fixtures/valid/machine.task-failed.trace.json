@@ -1,0 +1,36 @@
+[
+  {
+    "jsonrpc": "2.0",
+    "id": 10,
+    "method": "task/execute",
+    "params": {
+      "plan_id": "plan.failed.001"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "id": 10,
+    "result": {
+      "task_id": "task.failed.001",
+      "state": "accepted"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "method": "task/failed",
+    "params": {
+      "task_id": "task.failed.001",
+      "sequence": 1,
+      "error": {
+        "category": "dependency",
+        "code": "dependency.libreoffice_unavailable",
+        "message": "LibreOffice is unavailable.",
+        "retryable": true,
+        "details": {
+          "dependency_id": "libreoffice"
+        }
+      },
+      "diagnostics": []
+    }
+  }
+]

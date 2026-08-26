@@ -1,0 +1,345 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:docwen:schema:numbering-export-plan:v1",
+  "title": "DocWen Numbering Export Plan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "input_id", "source_sha256", "plan_sha256", "plan"],
+  "properties": {
+    "$schema": {"const": "urn:docwen:schema:numbering-export-plan:v1"},
+    "schema": {"const": "docwen.numbering_export_plan.v1"},
+    "input_id": {"type": "string", "minLength": 1, "maxLength": 256},
+    "source_sha256": {"$ref": "#/$defs/sha256"},
+    "plan_sha256": {"$ref": "#/$defs/sha256"},
+    "plan": {"$ref": "#/$defs/plan"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "id": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9-]{0,63}$"},
+    "targetId": {
+      "oneOf": [
+        {"type": "string", "pattern": "^[A-Za-z0-9-]{1,128}$"},
+        {"type": "null"}
+      ]
+    },
+    "targetKind": {"enum": ["heading", "figure", "table", "equation", "code_block"]},
+    "headingNumberFormat": {
+      "enum": [
+        "chinese_lower",
+        "chinese_upper",
+        "arabic_half",
+        "arabic_full",
+        "arabic_circled",
+        "letter_upper",
+        "letter_lower",
+        "roman_upper",
+        "roman_lower"
+      ]
+    },
+    "captionNumberFormat": {
+      "enum": ["arabic_half", "letter_upper", "letter_lower", "roman_upper", "roman_lower"]
+    },
+    "displaySegment": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["counter"],
+          "properties": {
+            "counter": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["level", "number_format"],
+              "properties": {
+                "level": {"type": "integer", "minimum": 1, "maximum": 9},
+                "number_format": {"$ref": "#/$defs/headingNumberFormat"}
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["literal"],
+          "properties": {
+            "literal": {"type": "string", "minLength": 1, "maxLength": 32, "pattern": "^[^%]*$"}
+          }
+        }
+      ]
+    },
+    "headingLevel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "start", "number_format", "display", "suffix", "restart_after_level"],
+      "properties": {
+        "level": {"type": "integer", "minimum": 1, "maximum": 9},
+        "start": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+        "number_format": {"$ref": "#/$defs/headingNumberFormat"},
+        "display": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 19,
+          "items": {"$ref": "#/$defs/displaySegment"}
+        },
+        "suffix": {"enum": ["nothing", "space", "tab"]},
+        "restart_after_level": {
+          "oneOf": [
+            {"type": "integer", "minimum": 1, "maximum": 8},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "headingDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["definition_id", "levels"],
+      "properties": {
+        "definition_id": {"$ref": "#/$defs/id"},
+        "levels": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 9,
+          "items": {"$ref": "#/$defs/headingLevel"}
+        }
+      }
+    },
+    "headingStart": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "value"],
+      "properties": {
+        "level": {"type": "integer", "minimum": 1, "maximum": 9},
+        "value": {"type": "integer", "minimum": 1, "maximum": 2147483647}
+      }
+    },
+    "headingInstance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["instance_id", "definition_id", "starts"],
+      "properties": {
+        "instance_id": {"$ref": "#/$defs/id"},
+        "definition_id": {"$ref": "#/$defs/id"},
+        "starts": {
+          "type": "array",
+          "maxItems": 9,
+          "items": {"$ref": "#/$defs/headingStart"}
+        }
+      }
+    },
+    "headingMaterialization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "definition_id", "instance_id", "level"],
+      "properties": {
+        "type": {"const": "heading_list"},
+        "definition_id": {"$ref": "#/$defs/id"},
+        "instance_id": {"$ref": "#/$defs/id"},
+        "level": {"type": "integer", "minimum": 1, "maximum": 9}
+      }
+    },
+    "captionMaterialization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "counter",
+        "number_format",
+        "sequence_action",
+        "start_value",
+        "restart_heading_level",
+        "restart_heading_style",
+        "chapter_heading_level",
+        "chapter_heading_style",
+        "chapter_separator",
+        "chapter_cached_number",
+        "sequence_cached_number",
+        "localized_label",
+        "label_separator"
+      ],
+      "properties": {
+        "type": {"enum": ["simple_seq", "chapter_seq"]},
+        "counter": {"enum": ["Figure", "Table", "Equation", "Code"]},
+        "number_format": {"$ref": "#/$defs/captionNumberFormat"},
+        "sequence_action": {"enum": ["continue", "reset_to_start", "restart_by_heading_level"]},
+        "start_value": {
+          "oneOf": [
+            {"type": "integer", "minimum": 1, "maximum": 2147483647},
+            {"type": "null"}
+          ]
+        },
+        "restart_heading_level": {
+          "oneOf": [
+            {"type": "integer", "minimum": 1, "maximum": 9},
+            {"type": "null"}
+          ]
+        },
+        "restart_heading_style": {
+          "oneOf": [
+            {"type": "string", "pattern": "^heading_[1-9]$"},
+            {"type": "null"}
+          ]
+        },
+        "chapter_heading_level": {
+          "oneOf": [
+            {"type": "integer", "minimum": 1, "maximum": 9},
+            {"type": "null"}
+          ]
+        },
+        "chapter_heading_style": {
+          "oneOf": [
+            {"type": "string", "pattern": "^heading_[1-9]$"},
+            {"type": "null"}
+          ]
+        },
+        "chapter_separator": {
+          "oneOf": [
+            {"type": "string", "minLength": 1, "maxLength": 8},
+            {"type": "null"}
+          ]
+        },
+        "chapter_cached_number": {
+          "oneOf": [
+            {"type": "string", "minLength": 1},
+            {"type": "null"}
+          ]
+        },
+        "sequence_cached_number": {"type": "string", "minLength": 1},
+        "localized_label": {"type": "string", "minLength": 1, "maxLength": 64},
+        "label_separator": {"type": "string", "maxLength": 8}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"type": {"const": "chapter_seq"}}, "required": ["type"]},
+          "then": {
+            "properties": {
+              "chapter_heading_level": {"type": "integer", "minimum": 1, "maximum": 9},
+              "chapter_heading_style": {"type": "string", "pattern": "^heading_[1-9]$"},
+              "chapter_separator": {"type": "string", "minLength": 1, "maxLength": 8},
+              "chapter_cached_number": {"type": "string", "minLength": 1}
+            }
+          },
+          "else": {
+            "properties": {
+              "chapter_heading_level": {"type": "null"},
+              "chapter_heading_style": {"type": "null"},
+              "chapter_separator": {"type": "null"},
+              "chapter_cached_number": {"type": "null"}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"sequence_action": {"const": "continue"}}, "required": ["sequence_action"]},
+          "then": {
+            "properties": {
+              "start_value": {"type": "null"},
+              "restart_heading_level": {"type": "null"},
+              "restart_heading_style": {"type": "null"}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"sequence_action": {"const": "reset_to_start"}}, "required": ["sequence_action"]},
+          "then": {
+            "properties": {
+              "start_value": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+              "restart_heading_level": {"type": "null"},
+              "restart_heading_style": {"type": "null"}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"sequence_action": {"const": "restart_by_heading_level"}}, "required": ["sequence_action"]},
+          "then": {
+            "properties": {
+              "start_value": {"const": 1},
+              "restart_heading_level": {"type": "integer", "minimum": 1, "maximum": 9},
+              "restart_heading_style": {"type": "string", "pattern": "^heading_[1-9]$"}
+            }
+          }
+        }
+      ]
+    },
+    "materialization": {
+      "oneOf": [
+        {"$ref": "#/$defs/headingMaterialization"},
+        {"$ref": "#/$defs/captionMaterialization"}
+      ]
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_start",
+        "source_end",
+        "kind",
+        "enabled",
+        "target_id",
+        "derived_number",
+        "materialization"
+      ],
+      "properties": {
+        "source_start": {"type": "integer", "minimum": 0, "maximum": 9223372036854775807},
+        "source_end": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
+        "kind": {"$ref": "#/$defs/targetKind"},
+        "enabled": {"type": "boolean"},
+        "target_id": {"$ref": "#/$defs/targetId"},
+        "derived_number": {"oneOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "materialization": {"oneOf": [{"$ref": "#/$defs/materialization"}, {"type": "null"}]}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"enabled": {"const": true}}, "required": ["enabled"]},
+          "then": {
+            "properties": {
+              "derived_number": {"type": "string", "minLength": 1},
+              "materialization": {"$ref": "#/$defs/materialization"}
+            }
+          },
+          "else": {
+            "properties": {
+              "derived_number": {"type": "null"},
+              "materialization": {"type": "null"}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"kind": {"const": "heading"}}, "required": ["kind"]},
+          "then": {
+            "properties": {
+              "materialization": {
+                "oneOf": [{"$ref": "#/$defs/headingMaterialization"}, {"type": "null"}]
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "materialization": {
+                "oneOf": [{"$ref": "#/$defs/captionMaterialization"}, {"type": "null"}]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["heading_definitions", "heading_instances", "targets"],
+      "properties": {
+        "heading_definitions": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/headingDefinition"}
+        },
+        "heading_instances": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/headingInstance"}
+        },
+        "targets": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/target"}
+        }
+      }
+    }
+  }
+}

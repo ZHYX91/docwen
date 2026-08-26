@@ -1,0 +1,48 @@
+{
+  "schema": "docwen.artifact_bundle.v2",
+  "bundle_id": "bundle.invalid.preferred",
+  "task_id": "task.invalid.preferred",
+  "producer": {
+    "name": "DocWen",
+    "product_version": "0.9.0",
+    "machine_protocol": "docwen.machine.v1"
+  },
+  "artifacts": [
+    {
+      "artifact_id": "document.part.1",
+      "kind": "document",
+      "locator": "part-001.pdf",
+      "suggested_name": "part-001.pdf",
+      "media_type": "application/pdf",
+      "size_bytes": 1,
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "logical_path": "part-001.pdf"
+    },
+    {
+      "artifact_id": "document.part.2",
+      "kind": "document",
+      "locator": "part-002.pdf",
+      "suggested_name": "part-002.pdf",
+      "media_type": "application/pdf",
+      "size_bytes": 1,
+      "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "logical_path": "part-002.pdf"
+    }
+  ],
+  "entries": [
+    {
+      "artifact_id": "document.part.1",
+      "role": "section",
+      "ordinal": 0,
+      "preferred": true
+    },
+    {
+      "artifact_id": "document.part.2",
+      "role": "section",
+      "ordinal": 1,
+      "preferred": true
+    }
+  ],
+  "relations": [],
+  "layout_schema": "docwen.artifact_layout.v1"
+}

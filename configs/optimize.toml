@@ -1,0 +1,16 @@
+# DocWen optimization-resource user policy.
+#
+# Runtime capabilities are the sole source of truth for resource existence,
+# display-name fallback, action binding, scopes, formats and availability.
+# This file may only choose a default, order known Runtime IDs, or disable a
+# known ID.  Unknown IDs are preserved as dormant policy and never create UI
+# options or executable actions.
+
+[settings]
+order = ["gongwen", "invoice_cn"]
+
+[types.gongwen]
+enabled = true
+
+[types.invoice_cn]
+enabled = true

@@ -1,0 +1,18 @@
+# ==============================================================================
+#  DocWen 文本/标题序号配置
+# ==============================================================================
+
+# MD转DOCX序号设置
+# 默认清除MD中的原序号
+remove_numbering = true
+# 默认添加新序号到DOCX
+add_numbering = false
+# 默认使用的序号方案
+numbering_scheme = "hierarchical_standard"
+# 标题编号渲染模式: text / word_native
+heading_numbering_render_mode = "text"
+
+# MD转XLSX序号设置（预留）
+to_xlsx_remove_numbering = true
+to_xlsx_add_numbering = false
+to_xlsx_default_scheme = "hierarchical_standard"

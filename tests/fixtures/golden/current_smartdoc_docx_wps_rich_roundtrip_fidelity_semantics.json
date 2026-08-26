@@ -1,0 +1,169 @@
+{
+  "golden_id": "GOLDEN-009",
+  "scope": "current SmartDoc DOCX to WPS rich roundtrip fidelity smoke",
+  "generated_at": "2026-07-03",
+  "classification": {
+    "kind": "current_enhancement_rich_fidelity_not_old_system_parity",
+    "notes": [
+      "Old Tk and old PySide6 do not have a successful DOCX to WPS artifact baseline.",
+      "This fixture extends the current-only DOCX to WPS quality policy beyond heading/body/table into focused rich DOCX semantics.",
+      "It proves selected bold/italic runs, header/footer text, an embedded image relationship, and table text after DOCX to WPS to DOCX roundtrip; it is not a full WPS application fidelity matrix."
+    ]
+  },
+  "input_document": {
+    "filename": "smart-doc-wps-rich.docx",
+    "input_docx_size_bytes": 39458,
+    "paragraphs": [
+      "Smart Doc WPS Rich Fidelity",
+      "Styled run check: bold word and italic word.",
+      "Plain body paragraph survives the roundtrip."
+    ],
+    "styled_runs": [
+      {
+        "text": "bold word",
+        "bold": true,
+        "italic": false
+      },
+      {
+        "text": "italic word",
+        "bold": false,
+        "italic": true
+      }
+    ],
+    "table": [
+      [
+        "Item",
+        "Qty",
+        "Note"
+      ],
+      [
+        "Grape",
+        "7",
+        "roundtrip"
+      ]
+    ],
+    "header_text": [
+      "WPS rich header marker"
+    ],
+    "footer_text": [
+      "WPS rich footer marker"
+    ],
+    "image_fixture": "smart-doc-wps-rich-image.png"
+  },
+  "route": {
+    "source_format": "docx",
+    "target_format": "wps",
+    "category": "document",
+    "roundtrip_target_format": "docx"
+  },
+  "current_rewrite": {
+    "step1_docx_to_wps": {
+      "entry": "uv run docwen run smart-doc-wps-rich.docx --to wps --output <dir> --json",
+      "success": true,
+      "output_file": "smart-doc-wps-rich.wps",
+      "output_size_bytes": 259633,
+      "magic_hex": "d0cf11e0a1b11ae1"
+    },
+    "step2_wps_to_docx": {
+      "entry": "uv run docwen run smart-doc-wps-rich.wps --to docx --output <dir> --json",
+      "success": true,
+      "output_file": "smart-doc-wps-rich.docx",
+      "output_size_bytes": 38667,
+      "paragraphs": [
+        "Smart Doc WPS Rich Fidelity",
+        "Styled run check: bold word and italic word.",
+        "Plain body paragraph survives the roundtrip."
+      ],
+      "styled_runs": [
+        {
+          "text": "Styled run check: ",
+          "bold": false,
+          "italic": false
+        },
+        {
+          "text": "bold word",
+          "bold": true,
+          "italic": false
+        },
+        {
+          "text": " and ",
+          "bold": false,
+          "italic": false
+        },
+        {
+          "text": "italic word",
+          "bold": false,
+          "italic": true
+        },
+        {
+          "text": ".",
+          "bold": false,
+          "italic": false
+        }
+      ],
+      "tables": [
+        [
+          [
+            "Item",
+            "Qty",
+            "Note"
+          ],
+          [
+            "Grape",
+            "7",
+            "roundtrip"
+          ]
+        ]
+      ],
+      "header_text": [
+        "WPS rich header marker"
+      ],
+      "footer_text": [
+        "WPS rich footer marker"
+      ],
+      "media_count": 1,
+      "media_parts": [
+        "word/media/image1.png"
+      ],
+      "header_parts": [
+        "word/header1.xml"
+      ],
+      "footer_parts": [
+        "word/footer1.xml"
+      ]
+    }
+  },
+  "quality_policy": {
+    "focused_acceptance": [
+      "DOCX to WPS must produce a non-empty OLE compound-file output with .wps extension.",
+      "The produced WPS must be accepted by the current WPS to DOCX route.",
+      "The roundtripped DOCX must preserve the focused heading, body paragraph, bold run, italic run, table text, header text, footer text, and one embedded image part."
+    ],
+    "accepted_limits": [
+      "Byte equality is not required for the generated WPS or roundtripped DOCX because Office/WPS metadata is environment-specific.",
+      "This policy still does not prove comments, fields, revisions, track changes, complex section layout, application-specific WPS behavior, or a broad old-system artifact matrix."
+    ]
+  },
+  "process_governance": {
+    "pre_fix_observation": {
+      "residual_processes_after_six_second_wait": [
+        "wps.exe"
+      ],
+      "cleanup_action": "terminated the WPS processes started during the rich roundtrip probe"
+    },
+    "fix": {
+      "files": [
+        "packages/core/src/docwen_core/office_bridge.py",
+        "packages/core/tests/test_office_bridge.py"
+      ],
+      "summary": "COM cleanup now snapshots target Office/WPS processes before DispatchEx/Dispatch and terminates only new PIDs that remain after Quit, including Dispatch fallback when a PID is unavailable.",
+      "test": "packages/core/tests/test_office_bridge.py::test_try_com_conversion_terminates_new_dispatch_fallback_process_when_pid_is_unavailable"
+    },
+    "post_fix_rerun": {
+      "residual_processes_after_six_second_wait": []
+    }
+  },
+  "evidence": {
+    "transient_output_dir": "tmp/smart-doc-wps-rich-roundtrip-2026-07-03"
+  }
+}

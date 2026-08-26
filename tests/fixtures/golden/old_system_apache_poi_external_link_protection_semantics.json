@@ -1,0 +1,144 @@
+{
+  "golden_id": "GOLDEN-003",
+  "stage": "VIS-2026-07-17-115",
+  "created_at": "2026-07-17",
+  "scope": "Apache POI XLSX external-link/protection to ODS final-artifact boundary and three-project macro-route contract",
+  "projects": {
+    "tk_head": "ec9298286cfe1379d5c5470db381577ea43ca0fa",
+    "old_pyside6_head": "63db927c5ded920d4994bfede5c7b34c55e2f43e",
+    "current_head": "435bb8661a4a5bdf27e6623dbaf623d32ef05b93"
+  },
+  "source_repository": {
+    "owner": "apache",
+    "repository": "poi",
+    "commit": "86e967d9b28d6a322a87ae8fcbf2a7eeb56cef96",
+    "tree": "712aa87cce1ca0416313b0f604372cd92b6befa6",
+    "tree_entries": 6405,
+    "tree_truncated": false
+  },
+  "sources": {
+    "45431.xlsm": {
+      "bytes": 13817,
+      "sha256": "b3518c4e22f19e14781999fa74f9c849c8548d757a3c5c3d7c6b995371dbc94c",
+      "git_blob_sha": "fabbd0df3955d1599d4778767e293dc61f85e5d3",
+      "vba_part": "xl/vbaProject.bin"
+    },
+    "link-external-workbook-a.xlsx": {
+      "bytes": 3274,
+      "sha256": "930049ddea88c58fbef66620fcba333790aed8da9a003ab209da6955fee1f5c2",
+      "git_blob_sha": "fc983ccb08613967cf0325976fc47379f935f615"
+    },
+    "link-external-workbook-b.xlsx": {
+      "bytes": 4080,
+      "sha256": "6e0e5c2aa3bf870cfeba03cb2350c312c639f2875b6501029d0bc134916b2361",
+      "git_blob_sha": "30d08f310c34106881673a8a7d57800318eee4a1",
+      "formula": "SUM('[link-external-workbook-a.xlsx]Sheet0'!A1:B1)",
+      "cached_value": 30.0
+    },
+    "workbookProtection-workbook_password-2013.xlsx": {
+      "bytes": 8171,
+      "sha256": "0ca1ab7d0e90087316072f89d181067c91c170f0718b109a8ee20867b23c58c2",
+      "git_blob_sha": "978210787c5f033b350fe8c52c9584416c554423",
+      "protection": "SHA-512 workbook password; lockStructure=1"
+    },
+    "workbookProtection-sheet_password-2013.xlsx": {
+      "bytes": 9196,
+      "sha256": "829b200dfdb5047764edd88201e565036ddeb45b70f0796e4b45dad5ada2666f",
+      "git_blob_sha": "691b2cc2190086a2b2eeb33b8ed041c9ff9958d8",
+      "protection": "SHA-512 sheet password"
+    },
+    "sheetProtection_allLocked.xlsx": {
+      "bytes": 7871,
+      "sha256": "ea89db75ac2ab78d1dced2ccd6f57d8ad200f015ac9e49b988f1a9df2fc36d83",
+      "git_blob_sha": "8afd70acaf1c1e0593cc72c6d1cbc02c9380a5b8",
+      "protection": "sheet protection without password"
+    }
+  },
+  "macro_contract": {
+    "format": "xlsm",
+    "sample_has_vba_project": true,
+    "tk_supported": false,
+    "old_pyside6_supported": false,
+    "current_core_supported": false,
+    "current_gui_supported": false,
+    "current_cli_dry_run_error": "invalid_input",
+    "classification": "not in any three-project public route or GUI contract; dormant parser branches are unreachable residue, not a current-only parity gap"
+  },
+  "ods_execution_matrix": {
+    "tk": {
+      "external_link": "success",
+      "workbook_password": "failed",
+      "sheet_password": "failed",
+      "all_locked_after_two_failures": "failed",
+      "all_locked_isolated": "success"
+    },
+    "old_pyside6": {
+      "plugin_route": "NOT_IMPLEMENTED",
+      "legacy_external_link_probe": "hung_without_result",
+      "test_owned_processes_cleaned": true,
+      "final_excel_processes": 0
+    },
+    "current": {
+      "external_link": "success",
+      "workbook_password": {
+        "success": false,
+        "error_code": "dependency_missing",
+        "exit_code": 4
+      },
+      "sheet_password": {
+        "success": false,
+        "error_code": "dependency_missing",
+        "exit_code": 4
+      },
+      "all_locked": "success",
+      "final_excel_processes": 0
+    }
+  },
+  "semantic_projection": {
+    "tk_current_external_equal": true,
+    "external_projection_sha256": "6af65ee9544e69405aef0d198094430f6c47d4c315f0e2ad4f7ae3de09623661",
+    "source_cached_value": 30.0,
+    "output_cached_value": "#REF!",
+    "relative_target_rewritten_to_absolute_file_uri": true,
+    "tk_current_all_locked_equal": true,
+    "all_locked_projection_sha256": "01e59b09f4f8b49cd129e67dc7ff76e0e7f53394fb0cfcc5be0f9cda0f236694",
+    "all_locked_protection_preserved": true
+  },
+  "direct_excel_diagnostics": {
+    "password_protected_sources_opened": true,
+    "save_as_ods_hresult": -2146827284,
+    "password_boundary": "Excel rejects password-protected workbook or sheet SaveAs to ODS unless protection is removed",
+    "default_external_value": "#REF!",
+    "update_links_0_external_value": "#REF!",
+    "update_links_3_external_value": 30.0,
+    "update_links_3_embedded_external_values": [
+      10.0,
+      20.0
+    ],
+    "security_boundary": "UpdateLinks=3 actively accesses external workbook targets and is not safe as an unconditional parity fix"
+  },
+  "external_evidence": {
+    "root": "D:/docwen-parity/vis115-poi-xlsx-link-protection-435bb86-v1",
+    "files": 15,
+    "bytes": 84190,
+    "projection_file": "projection-authoritative.json",
+    "projection_bytes": 13657,
+    "projection_sha256": "9a18517ac2cb8258b68b2670dbbacf01d6e6b810c5ef5a842a7d50f5ce1fd9e2",
+    "binaries_checked_in": false
+  },
+  "classification": {
+    "current_only_functional_regression_found": false,
+    "production_change_made": false,
+    "retained_current_improvements": [
+      "bounded COM worker returns and cleans up after protected SaveAs failure",
+      "isolated external-link and unpassworded protected-sheet XLSX-to-ODS conversions complete without Excel residue"
+    ],
+    "known_blockers_not_accepted": [
+      "default Excel conversion loses the cached external value to #REF! and makes the relative target machine-absolute",
+      "password-protected XLSX cannot be saved as ODS without removing protection",
+      "dependency_missing does not distinguish an installed-backend target-format incompatibility",
+      "old PySide6 final SmartSheet route is NOT_IMPLEMENTED and its legacy compatibility probe hung"
+    ],
+    "completion_effect": "focused external-link/protection final-artifact evidence only; other targets/backends, signatures, validation UI, editable Pivot/Slicer, broad final artifacts, and overall parity remain open"
+  }
+}

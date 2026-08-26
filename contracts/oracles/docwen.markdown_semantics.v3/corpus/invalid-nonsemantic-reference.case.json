@@ -1,0 +1,15 @@
+{
+  "case_id": "invalid-nonsemantic-reference",
+  "category": "negative",
+  "input_id": "invalid-nonsemantic-reference.md",
+  "source": "![[image.png]] ^raw\n\n@[[#^raw]]\n",
+  "expected": {
+    "target_kind_ids": [],
+    "anchor_kind_ids": [["raw", "image", "inline"]],
+    "link_kinds": ["embed"],
+    "reference_statuses": ["non_semantic"],
+    "citation_keys": [],
+    "diagnostics": [{"severity": "error", "code": "docwen.markdown.cross_reference.non_semantic_target", "range": {"start": 21, "end": 31}}],
+    "source_unchanged": true
+  }
+}

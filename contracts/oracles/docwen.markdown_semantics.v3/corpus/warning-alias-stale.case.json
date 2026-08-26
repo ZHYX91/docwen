@@ -1,0 +1,15 @@
+{
+  "case_id": "warning-alias-stale",
+  "category": "negative",
+  "input_id": "warning-alias-stale.md",
+  "source": "# Current title ^heading-id\n\n@[[#^heading-id|Old title]]\n",
+  "expected": {
+    "target_kind_ids": [["heading", "heading-id"]],
+    "anchor_kind_ids": [],
+    "link_kinds": [],
+    "reference_statuses": ["resolved"],
+    "citation_keys": [],
+    "diagnostics": [{"severity": "warning", "code": "docwen.markdown.cross_reference.alias_stale", "range": {"start": 45, "end": 54}}],
+    "source_unchanged": true
+  }
+}

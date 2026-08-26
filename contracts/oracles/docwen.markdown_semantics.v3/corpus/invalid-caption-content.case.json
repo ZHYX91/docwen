@@ -1,0 +1,15 @@
+{
+  "case_id": "invalid-caption-content",
+  "category": "negative",
+  "input_id": "invalid-caption-content.md",
+  "source": "Figure:\n\n![image](image.png)\n",
+  "expected": {
+    "target_kind_ids": [],
+    "anchor_kind_ids": [],
+    "link_kinds": [],
+    "reference_statuses": [],
+    "citation_keys": [],
+    "diagnostics": [{"severity": "error", "code": "docwen.markdown.caption.content_required", "range": {"start": 0, "end": 6}}],
+    "source_unchanged": true
+  }
+}

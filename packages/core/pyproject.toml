@@ -1,0 +1,24 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "docwen-core"
+version = "0.9.0"
+description = "DocWen Core — shared models, protocols, errors, events, and format definitions"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "Pillow>=11.3.0,<12.0.0",
+    "tomlkit",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/docwen_core"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+markers = [
+    "unit: 单元测试（纯逻辑、替身或内存态验证）",
+    "contract: 契约测试（CLI/配置/输出结构/仓库约束）",
+]

@@ -1,0 +1,119 @@
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "capabilities": [
+      {
+        "capability_id": "convert.pdf.to_markdown",
+        "operation": "convert",
+        "input_shape": {
+          "slots": [
+            {
+              "role": "source",
+              "kind": "resource",
+              "media_types": [
+                "application/pdf"
+              ],
+              "min_items": 1,
+              "max_items": 1
+            }
+          ],
+          "undeclared_roles": "reject"
+        },
+        "output_media_types": [
+          "text/markdown"
+        ],
+        "output_shape": {
+          "cardinality": "many",
+          "artifact_kinds": [
+            "document",
+            "fragment",
+            "resource"
+          ],
+          "relation_types": [
+            "fragment_of",
+            "resource_of"
+          ],
+          "atomic_bundle": true,
+          "relation_payloads": [
+            "page_fragment",
+            "page_resource"
+          ]
+        },
+        "options_schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "preserve_resources": {
+              "type": "boolean",
+              "default": true
+            },
+            "recognize_text": {
+              "type": "boolean",
+              "default": false
+            },
+            "ocr_language": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "chinese",
+                "chinese_cht",
+                "english",
+                "japanese",
+                "korean",
+                "latin",
+                "cyrillic"
+              ],
+              "default": "auto"
+            },
+            "image_mode": {
+              "type": "string",
+              "enum": [
+                "file"
+              ],
+              "default": "file"
+            },
+            "render_dpi": {
+              "type": "integer",
+              "minimum": 72,
+              "maximum": 600,
+              "default": 200
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "availability": "available",
+        "dependencies": [
+          {
+            "dependency_id": "python.pymupdf4llm",
+            "required": true,
+            "available": true
+          },
+          {
+            "dependency_id": "python.rapidocr",
+            "required": false,
+            "available": true
+          }
+        ],
+        "limitations": [
+          {
+            "severity": "warning",
+            "code": "physical_page_ocr.best_effort",
+            "message": "When OCR is enabled it is best effort: every physical page or frame retains an ordered fragment and typed status even when recognition is blank or unavailable."
+          },
+          {
+            "severity": "warning",
+            "code": "physical_page_ocr.consumer_owned_import",
+            "message": "The Bundle reports page and resource facts only; Node layout, basenames, and import strategy remain consumer-owned."
+          },
+          {
+            "severity": "warning",
+            "code": "runtime_route_limitation",
+            "message": "OCR options require the optional RapidOCR capability"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,7 +1,7 @@
 """
 执行所有清理任务
 
-按顺序调用各清理子脚本：构建产物 → Cython 编译文件 → 运行时缓存 → 测试产物。
+按顺序调用各清理子脚本：构建产物 → 运行时缓存 → 测试产物。
 
 使用方式：
     python scripts/clean/clean_all.py
@@ -39,7 +39,6 @@ def main():
 
     # 按顺序运行所有清理脚本
     run_script("clean_build.py")
-    run_script("clean_cython.py")
     run_script("clean_runtime.py")
     run_script("clean_tests.py")
 

@@ -1,0 +1,49 @@
+name: Bug report
+description: Report a reproducible DocWen problem
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: Remove private document content, paths, credentials, and personal data before attaching logs or screenshots.
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: DocWen and operating-system versions
+      placeholder: DocWen 0.9.0; Windows 11
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the actual and expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Open or run ...
+        2. Choose ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics
+      description: Include doctor output or logs only after removing private paths and content.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I reproduced this with the latest DocWen release.
+          required: true
+        - label: I removed private content, paths, credentials, and personal data.
+          required: true

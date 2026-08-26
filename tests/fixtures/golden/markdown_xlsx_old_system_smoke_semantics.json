@@ -1,0 +1,97 @@
+{
+  "golden_id": "GOLDEN-001",
+  "case_id": "markdown_xlsx_old_system_smoke_semantics",
+  "probe_scope": "Focused old-system Markdown-to-XLSX/CSV semantic smoke for the English sample sheet template; volatile workbook metadata and broader document/template matrices are outside this fixture.",
+  "comparison_implication": "This fixture proves a representative template-driven XLSX/CSV projection and finalizer contract, not final GOLDEN-001 artifact parity by itself.",
+  "template": "templates/English Sample Sheet Template.xlsx",
+  "input_markdown": "---\ntitle: Golden Sheet\nsubtitle: Smoke\n---\n\n| Food | Price |\n| --- | --- |\n| Apple | 3 |\n| Pear | 4 |\n\n| Name | Age |\n| --- | --- |\n| Alice | 30 |\n| Bob | 25 |\n",
+  "xlsx_cells": {
+    "B1": "Golden Sheet",
+    "B2": "Smoke",
+    "B5": "Apple",
+    "C5": "Pear",
+    "B6": "3",
+    "C6": "4",
+    "A10": "Alice",
+    "A11": "Bob",
+    "B10": "30",
+    "B11": "25"
+  },
+  "csv_suggested_names": [
+    "canonical-template-smoke_fromMd/canonical-template-smoke_Sheet1_fromMd.csv",
+    "canonical-template-smoke_fromMd/canonical-template-smoke_Sheet2_fromMd.csv",
+    "canonical-template-smoke_fromMd/canonical-template-smoke_Sheet3_fromMd.csv"
+  ],
+  "csv_sheet1_rows": [
+    [
+      "TITLE",
+      "Golden Sheet",
+      "",
+      ""
+    ],
+    [
+      "SUBTITLE",
+      "Smoke",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "FOOD",
+      "Apple",
+      "Pear",
+      ""
+    ],
+    [
+      "PRICE",
+      "3",
+      "4",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "NAME",
+      "AGE",
+      "",
+      ""
+    ],
+    [
+      "Alice",
+      "30",
+      "",
+      ""
+    ],
+    [
+      "Bob",
+      "25",
+      "",
+      ""
+    ]
+  ],
+  "empty_csv_sheet_names": [
+    "Sheet2",
+    "Sheet3"
+  ]
+}

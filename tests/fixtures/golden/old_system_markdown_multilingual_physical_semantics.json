@@ -1,0 +1,113 @@
+{
+  "golden_id": "GOLDEN-001",
+  "case_id": "old_system_markdown_multilingual_physical_semantics",
+  "generated_at": "2026-07-16",
+  "scope": "All eleven bundled localized DOCX templates using the same comprehensive samples/sample.md input: 33 real Markdown-to-DOCX production runs, 44 real Word/WPS PDFs, and 246 rendered PDF pages.",
+  "comparison_implication": "This closes every-template physical Word/WPS evidence for the comprehensive GOLDEN-001 sample and proves current pagination matches the Tk primary baseline for all eleven templates. It is not installed-LibreOffice, broader-corpus, Explorer OLE, other-final-artifact, or overall parity PASS.",
+  "projects": {
+    "old_tk": {
+      "path": "D:/docwen-parity/docwen-ref-tk",
+      "head": "ec9298286cfe1379d5c5470db381577ea43ca0fa",
+      "entrypoint": "docwen.converter.md2docx.core.convert",
+      "worktree_boundary": "clean"
+    },
+    "old_pyside6": {
+      "path": "D:/docwen-parity/docwen-ref-pyside6",
+      "head": "63db927c5ded920d4994bfede5c7b34c55e2f43e",
+      "entrypoint": "docwen.converter.md.to_docx.core.convert",
+      "worktree_boundary": "Pre-existing configs/gui_config.toml modification and damaged history were not changed."
+    },
+    "current": {
+      "path": "D:/docwen-parity/docwen",
+      "head": "07e3a02",
+      "entrypoint": ".venv/Scripts/docwen.exe run"
+    }
+  },
+  "source": {
+    "path": "samples/sample.md",
+    "size_bytes": 2529,
+    "sha256": "8F0E6B330EC6912D8CF694D0B6DDFC3C05601EF73FF0840A9AAA52687E1A8854"
+  },
+  "external_evidence": {
+    "root": "D:/docwen-parity/vis102-markdown-multilingual-07e3a02-v1",
+    "file_count": 422,
+    "size_bytes": 44620098,
+    "manifests": {
+      "tk_docx": {"size_bytes": 4862, "sha256": "2DC44E019499C7E9318EAFEB18D199075A39794859AD8897B18E216ADD96C477"},
+      "old_pyside6_docx": {"size_bytes": 4874, "sha256": "604C9E84A486644B7C0934FA665588A9AA845550550371ED4602C531F7E65858"},
+      "current_docx": {"size_bytes": 5633, "sha256": "3FF4E150F1C5107ACDDF516C871C2C229DBC45587F09E4E46A87F3A5A777C5E6"},
+      "tk_word": {"size_bytes": 9099, "sha256": "CEA9A2C739E034D9885EBAE38810E72812321E987444220A9AA1878267F33AA7"},
+      "old_pyside6_word": {"size_bytes": 9105, "sha256": "226963E32893A96B7937AE11DA687E434F60BBD36AE0DAF51C51DD9F9E7D8384"},
+      "current_word": {"size_bytes": 9078, "sha256": "1F06C0217E7DB06337C832FAAEC33FC83DF948B2E045387916B72B66F50A7FCF"},
+      "current_wps": {"size_bytes": 9087, "sha256": "CC5288CB9C8016C6AFE57107A76D046F52DA15E0DA331FA8F18CB9BF4D63C925"}
+    },
+    "semantic_projection": {
+      "size_bytes": 879315,
+      "sha256": "4AA5CF0C72719709706EA54415BBC9A5B14B13BD036E80B796ABD464C1BA2F58"
+    },
+    "physical_projection": {
+      "size_bytes": 281757,
+      "sha256": "EB5DA1F7C2FC26956555CBB0A9EBF793FA3D763ED51651208B14C43C2E703D12"
+    },
+    "rendered_pngs": {
+      "count": 270,
+      "page_count": 246,
+      "size_bytes": 17309275,
+      "dpi": 120
+    }
+  },
+  "semantic_projection": {
+    "docx_artifact_count": 33,
+    "shared_projection_matches": 33,
+    "all_sections_a4": true,
+    "all_canonical_text_streams_equal": true,
+    "canonical_text_sha256": "A7DAFC18D2383E0283BFC4FFA609BDCB2770EE843D7A4747C4A9F3233DF8174B",
+    "all_table_projections_equal": true,
+    "table_projection_sha256": "25CF058AEC9CBA40AD9ED4570E9533BC6909A2816FE09EA468C5DD3C7737BC92",
+    "all_note_text_projections_equal": true,
+    "visible_paragraph_grouping": {"old_tk": 83, "old_pyside6": 83, "current": 82},
+    "grouping_classification": "Current keeps quote/code soft breaks inside semantic paragraphs while preserving an equal canonical text stream; this is representation, not missing content.",
+    "old_core_title_boundary": true,
+    "current_core_title_complete": true
+  },
+  "physical_projection": {
+    "pdf_count": 44,
+    "rendered_page_count": 246,
+    "all_pages_a4": true,
+    "all_pages_nonblank": true,
+    "no_content_touches_raster_edge": true,
+    "all_required_text_anchors_present": true,
+    "no_literal_double_dollar": true,
+    "current_word_matches_tk_page_count": 11,
+    "current_word_wps_page_counts_equal": 11,
+    "current_metadata": {"title": "Test File", "subject": "MD to DOCX Test"},
+    "old_metadata_boundary": {"title": "", "subject": ""},
+    "visual_review": "All contact sheets and high-risk locale/page sheets were inspected; no clipping, overlap, black glyphs, formula loss, broken table/quote borders, literal dollars, or abnormal headers/footers were seen.",
+    "text_extractor_boundary": "pypdf found every required anchor in 44/44 PDFs. pdfplumber missed the final underscore-rule anchor in eight WPS PDFs although pypdf and rendered pages retained it; this is an extractor-specific observation, not a visual or content loss."
+  },
+  "template_matrix": [
+    {"index": 1, "name": "Deutsche Allgemeine Vorlage.docx", "template_bytes": 11898, "template_sha256": "4C13650734DC0697111336A61FCF51402A34565F2A879CE2B2BEEC3E39CA6E05", "current_docx_bytes": 13795, "current_docx_sha256": "D3B8308D6222DFE35C00A66863AAC87EDBB1DD9BF6CAF8B3EF2B5DE9E8F29D2A", "pages": {"tk_word": 6, "old_pyside6_word": 4, "current_word": 6, "current_wps": 6}},
+    {"index": 2, "name": "English General Template.docx", "template_bytes": 11870, "template_sha256": "EE5483B3C8229E41CA88C63FD02027C47679851204AC776D14C5941E8D131E04", "current_docx_bytes": 13783, "current_docx_sha256": "99439CD7109E3E8CDFEB2641B6FA013F241A75AA30BA6A0BDB361E8A11DB517A", "pages": {"tk_word": 6, "old_pyside6_word": 4, "current_word": 6, "current_wps": 6}},
+    {"index": 3, "name": "Modelo Geral Português.docx", "template_bytes": 11937, "template_sha256": "87D9B580955A45606E2C00658E8937A6B030B928FFFA14DC3A391067A92E0600", "current_docx_bytes": 13830, "current_docx_sha256": "1C524762B5339619C4277C032B4072C76100A94C36983E0864A2D889D89A7383", "pages": {"tk_word": 6, "old_pyside6_word": 4, "current_word": 6, "current_wps": 6}},
+    {"index": 4, "name": "Modèle Général Français.docx", "template_bytes": 11916, "template_sha256": "6BF38C14B0EE8491C85FE0D74B0859C9E21A4EAE9376B251FAD7E32548ACBC2F", "current_docx_bytes": 13806, "current_docx_sha256": "BFD6B501541E86D90E6824F21F6E9AE9C72D19FE222C872F633657DC8B24C433", "pages": {"tk_word": 6, "old_pyside6_word": 4, "current_word": 6, "current_wps": 6}},
+    {"index": 5, "name": "Mẫu Chung Tiếng Việt.docx", "template_bytes": 11969, "template_sha256": "A53B164AB4A40A7C6232A4C0A6A3962C5D0F8155359E97C3EBA83879AFAB455C", "current_docx_bytes": 13837, "current_docx_sha256": "4E50CABCBD1664F107C0E29C06F26FEA0CD13F60B399A7318CB983807871D66C", "pages": {"tk_word": 6, "old_pyside6_word": 4, "current_word": 6, "current_wps": 6}},
+    {"index": 6, "name": "Plantilla General Española.docx", "template_bytes": 11923, "template_sha256": "C679D482ED6B8FF39B1C1FD2AFCAB1B7ED34F85F8796FD60199CCDD83EA12CA5", "current_docx_bytes": 13811, "current_docx_sha256": "8FD1DF8A74B288F9FE6C8B31B3A288987F5B8E5B26B7A506DB80F42E1AA49EDA", "pages": {"tk_word": 6, "old_pyside6_word": 4, "current_word": 6, "current_wps": 6}},
+    {"index": 7, "name": "Русский Общий Шаблон.docx", "template_bytes": 12047, "template_sha256": "BB60955407E23FDE6B2CDF052903B8FC49CAE25E1293E41FF85C514050762A74", "current_docx_bytes": 13918, "current_docx_sha256": "1652268FD40E6CEFA70C80EDA0170F426CF3B52154EC966BDF1D99223454D372", "pages": {"tk_word": 7, "old_pyside6_word": 5, "current_word": 7, "current_wps": 7}},
+    {"index": 8, "name": "日本語汎用テンプレート.docx", "template_bytes": 12122, "template_sha256": "D59E15471CA1139228FD558379F94DC63BE5279D23066DD8AE71865E90107EB5", "current_docx_bytes": 13972, "current_docx_sha256": "E6C190714EF1402AEB1E48B5BCACBF4E36648C6683923117F45F6E5D656F5633", "pages": {"tk_word": 5, "old_pyside6_word": 3, "current_word": 5, "current_wps": 5}},
+    {"index": 9, "name": "简体中文通用模板.docx", "template_bytes": 12021, "template_sha256": "399A2D1337B326F97BDAB390F9E465446A26F88A3E2329602EAA7C961460C3B9", "current_docx_bytes": 13921, "current_docx_sha256": "FD5C049FF02C3866B25CB102ACCEE340105589C9F208BC9B6CBCFE24D63581D0", "pages": {"tk_word": 7, "old_pyside6_word": 5, "current_word": 7, "current_wps": 7}},
+    {"index": 10, "name": "繁體中文通用模板.docx", "template_bytes": 12105, "template_sha256": "CB3BD3962EA64DFD45A456A3F59F39269D54735EE51E40B105A08EF48F2BB64B", "current_docx_bytes": 13941, "current_docx_sha256": "B515066C3D795A29A6DC0F9CEDC156F54171823C5C1B902BCDBD9338A693DB2C", "pages": {"tk_word": 6, "old_pyside6_word": 4, "current_word": 6, "current_wps": 6}},
+    {"index": 11, "name": "한국어 범용 템플릿.docx", "template_bytes": 12015, "template_sha256": "D06CCE71C06045B8C9C53996DEEDF39B8175B71908F8B6DCA98866BC84B79720", "current_docx_bytes": 13902, "current_docx_sha256": "21E766C8DEE12C38BC6E05BA7D559EEF61A6AC442D2B6B912DFD4DBF96B2E244", "pages": {"tk_word": 6, "old_pyside6_word": 4, "current_word": 6, "current_wps": 6}}
+  ],
+  "process_boundary": {
+    "pre_existing_wps_pids": [4872, 11388],
+    "pre_existing_start_date": "2026-07-15",
+    "new_lingering_process_count_after_each_batch": 0,
+    "pre_existing_processes_were_not_terminated": true
+  },
+  "boundary": [
+    "Raw DOCX/PDF/PNG hashes are provenance; normalized content, page geometry, pagination, metadata and inspected rendering are the acceptance surface.",
+    "The old PySide6 output is consistently two pages shorter than Tk/current for every template and is not the Tk-primary visual baseline.",
+    "This evidence covers one comprehensive Markdown sample across every distributed DOCX template, not a broad real-world Markdown corpus.",
+    "Installed LibreOffice, Explorer OLE delivery, other final-artifact families and overall parity remain open or environment-unavailable."
+  ]
+}

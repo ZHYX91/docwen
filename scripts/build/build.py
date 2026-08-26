@@ -10,8 +10,7 @@
     3. Cython 编译核心模块
     4. PyInstaller 打包
     5. 部署文件整理（资源、README、许可证）
-    6. 源文件清理（移除已编译模块的 .py）
-    7. 构建验证
+    6. 构建验证
 
 使用方式：
     python scripts/build/build.py              # 完整构建（从项目根目录执行）
@@ -28,6 +27,7 @@ import argparse
 import contextlib
 import datetime
 import importlib.metadata
+import importlib.util
 import logging
 import os
 import platform
@@ -37,8 +37,14 @@ import stat
 import subprocess
 import sys
 import time
+import tomllib
 from pathlib import Path, PurePosixPath
 from typing import cast
+
+try:
+    from scripts.build.payload_normalization import normalize_base_library_zip, normalize_packaged_record_files
+except ModuleNotFoundError:  # Direct ``python scripts/build/build.py`` execution.
+    from payload_normalization import normalize_base_library_zip, normalize_packaged_record_files
 
 try:
     import PyInstaller.__main__ as pyinstaller_main
@@ -72,10 +78,139 @@ ICON_REL_PATH = "assets/icon.ico" if IS_WINDOWS else "assets/icon.png"
 # ==================== 路径配置 ====================
 # 构建脚本在 scripts/build 目录，项目根目录向上两级
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-SRC_DIR = PROJECT_ROOT / "src"
 DIST_DIR = PROJECT_ROOT / "dist"
 BUILD_DIR = PROJECT_ROOT / "build"
 LOGS_DIR = PROJECT_ROOT / "logs"
+
+
+def configure_build_work_root(work_root: Path) -> None:
+    """Redirect mutable build, dist, spec, and log state to one isolated root."""
+
+    global DIST_DIR, BUILD_DIR, LOGS_DIR
+    if not work_root.is_absolute():
+        raise ValueError("build_work_root_must_be_absolute")
+    work_root.mkdir(parents=True, exist_ok=True)
+    if work_root.is_symlink() or (hasattr(work_root, "is_junction") and work_root.is_junction()):
+        raise ValueError("build_work_root_must_not_be_link")
+    DIST_DIR = work_root / "dist"
+    BUILD_DIR = work_root / "build"
+    LOGS_DIR = work_root / "logs"
+
+
+def _pyinstaller_output_args() -> list[str]:
+    """Return output paths that keep every PyInstaller artifact under ``BUILD_DIR``."""
+
+    spec_dir = BUILD_DIR / "spec"
+    spec_dir.mkdir(parents=True, exist_ok=True)
+    return [
+        f"--distpath={DIST_DIR}",
+        f"--workpath={BUILD_DIR}",
+        f"--specpath={spec_dir}",
+    ]
+
+
+# Workspace package source roots used by PyInstaller.
+_PACKAGES_DIR = PROJECT_ROOT / "packages"
+_PACKAGE_SRC_DIRS: list[Path] = sorted(
+    source_root
+    for source_root in _PACKAGES_DIR.rglob("src")
+    if source_root.is_dir() and (source_root.parent / "pyproject.toml").is_file()
+)
+
+_PYMUPDF_LAYOUT_IMPORT_PACKAGE = "pymupdf.layout"
+_PYINSTALLER_COMMON_COLLECT_ALL_TARGETS = (
+    "rapidocr_onnxruntime",
+    "pymupdf4llm",
+    _PYMUPDF_LAYOUT_IMPORT_PACKAGE,
+    "easyofd",
+)
+# qfluentwidgets exposes the widgets DocWen imports through ordinary Python
+# imports.  Collecting the whole distribution also pulls its unused multimedia
+# surface and, transitively, QtNetwork/TLS into the frozen GUI.
+_PYINSTALLER_GUI_COLLECT_ALL_TARGETS: tuple[str, ...] = ()
+_PYINSTALLER_COMMON_COLLECT_DATA_TARGETS = (
+    "onnxruntime",
+    "latex2mathml",
+    "docx",
+)
+_PYINSTALLER_COMMON_COLLECT_SUBMODULE_TARGETS = ("docwen_runtime.ipc",)
+_PYINSTALLER_EGRESS_RUNTIME_HOOK = _PACKAGES_DIR / "bundle" / "src" / "docwen_bundle" / "pyi_runtime_egress_guard.py"
+_PYINSTALLER_HOOKS_DIR = PROJECT_ROOT / "scripts" / "build" / "pyinstaller_hooks"
+
+
+def _pyinstaller_collection_args(option: str, targets: tuple[str, ...]) -> list[str]:
+    return [f"--{option}={target}" for target in targets]
+
+
+def _validate_pyinstaller_package_targets(targets: tuple[str, ...]) -> None:
+    """Fail before packaging when a PyInstaller collection target is invalid."""
+
+    invalid_targets: list[str] = []
+    for target in dict.fromkeys(targets):
+        try:
+            spec = importlib.util.find_spec(target)
+        except (ImportError, ModuleNotFoundError, AttributeError, ValueError):
+            spec = None
+        if spec is None or spec.submodule_search_locations is None:
+            invalid_targets.append(target)
+    if invalid_targets:
+        raise RuntimeError(f"pyinstaller_collection_targets_invalid: {invalid_targets}")
+
+
+def _validate_pymupdf_layout_pyinstaller_data_collection() -> None:
+    """Prove PyInstaller will collect every resource in the split distribution."""
+
+    from PyInstaller.utils.hooks import collect_data_files
+
+    from docwen_runtime.pymupdf_layout_resources import (
+        PYMUPDF_LAYOUT_SOURCE_RESOURCE_ROOT,
+        pymupdf_layout_resource_paths,
+        verify_installed_pymupdf_layout_distribution,
+    )
+
+    source_verification = verify_installed_pymupdf_layout_distribution()
+    if not source_verification.available:
+        raise RuntimeError(f"pyinstaller_pymupdf_layout_source_contract_failed:{source_verification.reason}")
+
+    collected_resources: set[str] = set()
+    for source, destination in collect_data_files(_PYMUPDF_LAYOUT_IMPORT_PACKAGE):
+        destination_path = PurePosixPath(destination.replace("\\", "/"))
+        try:
+            relative_destination = destination_path.relative_to(PYMUPDF_LAYOUT_SOURCE_RESOURCE_ROOT)
+        except ValueError:
+            continue
+        collected_resources.add((relative_destination / Path(source).name).as_posix())
+
+    required_resources = set(pymupdf_layout_resource_paths())
+    missing_resources = sorted(required_resources - collected_resources)
+    if missing_resources:
+        raise RuntimeError(f"pyinstaller_pymupdf_layout_data_collection_incomplete: {missing_resources}")
+
+
+def _verify_pyinstaller_runtime_hook_order(build_name: str, *, entry_name: str) -> None:
+    """Require DocWen's guard hook to precede every built-in runtime hook."""
+
+    toc_candidates = sorted((BUILD_DIR / build_name).glob("PKG-*.toc"))
+    if not toc_candidates:
+        raise RuntimeError(f"pyinstaller_runtime_hook_toc_unavailable:{build_name}")
+    if len(toc_candidates) != 1:
+        names = ",".join(path.name for path in toc_candidates)
+        raise RuntimeError(f"pyinstaller_runtime_hook_toc_ambiguous:{build_name}:{names}")
+    toc_path = toc_candidates[0]
+    try:
+        toc_text = toc_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise RuntimeError(f"pyinstaller_runtime_hook_toc_unavailable:{build_name}") from exc
+
+    guard_index = toc_text.find("pyi_runtime_egress_guard")
+    entry_index = toc_text.find(entry_name)
+    built_in_indices = [
+        index for match in re.finditer(r"['\"]pyi_rth_[^'\"]+['\"]", toc_text) if (index := match.start()) >= 0
+    ]
+    if guard_index < 0 or entry_index < 0:
+        raise RuntimeError(f"pyinstaller_runtime_hook_or_entry_missing:{build_name}")
+    if guard_index >= entry_index or (built_in_indices and guard_index >= min(built_in_indices)):
+        raise RuntimeError(f"pyinstaller_runtime_hook_order_invalid:{build_name}")
 
 
 # ==================== 日志系统配置 ====================
@@ -220,28 +355,24 @@ def init_logger() -> BuildLogger:
     return logger
 
 
-def get_version() -> str:
-    """
-    获取或更新版本号
-
-    版本格式: X.Y.Z.YYYYMMDD.R
-    - X.Y.Z: 主版本.次版本.修订版本
-    - YYYYMMDD: 构建日期
-    - R: 当日修订号（从1开始）
-
-    Returns:
-        新版本号字符串
-    """
-    raise RuntimeError("get_version() 已弃用，请使用 read_version()/resolve_build_version()")
-
-
 def read_version() -> str:
     """
-    从源码读取版本号（不写回文件）。
+    从当前项目元数据读取版本号（不写回文件）。
 
     版本号应为纯语义化版本（SemVer），例如：0.8.1
     """
-    version_file = SRC_DIR / "docwen" / "__init__.py"
+    project_file = PROJECT_ROOT / "pyproject.toml"
+    if project_file.is_file():
+        data = tomllib.loads(project_file.read_text(encoding="utf-8"))
+        project = data.get("project")
+        if isinstance(project, dict):
+            version = project.get("version")
+            if isinstance(version, str) and version.strip():
+                return version.strip()
+
+    version_file = _PACKAGES_DIR / "bundle" / "src" / "docwen_bundle" / "__init__.py"
+    if not version_file.is_file():
+        raise FileNotFoundError(f"未找到当前架构版本文件: {project_file} 或 {version_file}")
     content = version_file.read_text(encoding="utf-8")
     version_pattern = r'__version__\s*=\s*["\']([^"\']+)["\']'
     match = re.search(version_pattern, content)
@@ -423,85 +554,47 @@ def compile_cython_modules() -> bool:
         return False
 
 
-def prepare_staging_src(src_dir: Path, *, cython_out_dir: Path) -> Path:
-    staging_src = BUILD_DIR / "staging_src"
-    if staging_src.exists():
-        force_remove_directory(staging_src)
-    shutil.copytree(
-        src_dir,
-        staging_src,
-        ignore=shutil.ignore_patterns("*.pyd", "*.so", "*.pyx", "*.c"),
-    )
+def prepare_staging_package_root(
+    package_src_dirs: list[Path],
+    *,
+    cython_out_dir: Path,
+) -> Path:
+    """Create one deterministic import root with compiled modules overlaid."""
 
-    compiled_docwen = cython_out_dir / "docwen"
-    staging_docwen = staging_src / "docwen"
-    if compiled_docwen.exists() and staging_docwen.exists():
-        shutil.copytree(compiled_docwen, staging_docwen, dirs_exist_ok=True)
-    return staging_src
+    staging_root = BUILD_DIR / "staging_packages"
+    if staging_root.exists():
+        force_remove_directory(staging_root)
+    staging_root.mkdir(parents=True)
 
+    for source_root in package_src_dirs:
+        for entry in sorted(source_root.iterdir(), key=lambda item: item.name):
+            if entry.name == "__pycache__" or entry.name.endswith(".egg-info"):
+                continue
+            destination = staging_root / entry.name
+            if destination.exists():
+                raise RuntimeError(f"duplicate top-level package in build roots: {entry.name}")
+            if entry.is_dir():
+                shutil.copytree(
+                    entry,
+                    destination,
+                    ignore=shutil.ignore_patterns("*.pyd", "*.so", "*.pyx", "*.c", "__pycache__"),
+                )
+            elif entry.is_file():
+                shutil.copy2(entry, destination)
 
-def clean_cython_artifacts_in_src() -> int:
-    try:
-        sys.path.insert(0, str(Path(__file__).parent))
-        from setup_cython import CORE_MODULES
-    except Exception:
-        return 0
-
-    deleted = 0
-    for module_path in CORE_MODULES:
-        try:
-            posix_rel = PurePosixPath(module_path).relative_to("src")
-        except Exception:
-            posix_rel = PurePosixPath(module_path)
-
-        src_py = SRC_DIR / Path(*posix_rel.parts)
-        parent = src_py.parent
-        stem = src_py.stem
-        for pattern in (f"{stem}*.pyd", f"{stem}*.so"):
-            for compiled in parent.glob(pattern):
-                try:
-                    compiled.unlink()
-                    deleted += 1
-                except Exception:
-                    pass
-    return deleted
+    if cython_out_dir.is_dir():
+        shutil.copytree(cython_out_dir, staging_root, dirs_exist_ok=True)
+    return staging_root
 
 
 def copy_readme_files(deploy_dir: Path) -> int:
-    """
-    复制所有 README 文件到部署目录（同级放置）
-
-    Args:
-        deploy_dir: 部署目录路径
-
-    Returns:
-        复制的文件数量
-    """
-    readme_files = [
-        "README.md",  # 英文主版本
-        "README_zh-CN.md",  # 简体中文
-        "README_zh-TW.md",  # 繁体中文
-        "README_de-DE.md",  # 德语
-        "README_es-ES.md",  # 西班牙语
-        "README_fr-FR.md",  # 法语
-        "README_ja-JP.md",  # 日语
-        "README_ko-KR.md",  # 韩语
-        "README_pt-BR.md",  # 葡萄牙语
-        "README_ru-RU.md",  # 俄语
-        "README_vi-VN.md",  # 越南语
-    ]
-
-    copied = 0
-    for readme in readme_files:
-        src = PROJECT_ROOT / readme
-        if src.exists():
-            dst = deploy_dir / readme
-            shutil.copy2(src, dst)
-            logger.debug(f"复制 README: {readme}")
-            copied += 1
-
-    logger.info(f"README 文件已复制 ({copied} 个)")
-    return copied
+    """Copy the single canonical README into the deployment root."""
+    source = PROJECT_ROOT / "README.md"
+    if not source.is_file():
+        raise FileNotFoundError(f"canonical README is missing: {source}")
+    shutil.copy2(source, deploy_dir / source.name)
+    logger.info("README 文件已复制 (1 个)")
+    return 1
 
 
 def verify_build(deploy_dir: Path, *, with_cli: bool = True, with_gui: bool = True) -> bool:
@@ -525,10 +618,7 @@ def verify_build(deploy_dir: Path, *, with_cli: bool = True, with_gui: bool = Tr
         required.insert(1 if with_gui else 0, CLI_EXE_NAME)
 
     # 可选文件/目录
-    optional = [
-        "samples",
-        "README_zh-CN.md",
-    ]
+    optional = ["samples"]
 
     missing_required = []
     missing_optional = []
@@ -557,6 +647,37 @@ def verify_build(deploy_dir: Path, *, with_cli: bool = True, with_gui: bool = Tr
                 duplicated.append(f"_internal/{name}")
     if duplicated:
         logger.error(f"❌ 检测到资源重复（去重回归）: {duplicated}")
+        return False
+
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+    try:
+        from scripts.release.packaged_resources import (
+            REQUIRED_ASSET_FILES,
+            missing_files,
+            verify_common_resource_layout,
+        )
+
+        verify_common_resource_layout(deploy_dir, error_prefix="build")
+        if with_gui:
+            missing_assets = missing_files(deploy_dir / "assets", REQUIRED_ASSET_FILES)
+            if missing_assets:
+                raise RuntimeError(f"build_assets_missing: {missing_assets}")
+            from scripts.release.verify_packaged_gui import main as verify_packaged_gui_main
+
+            settings_gate_exit = verify_packaged_gui_main(
+                [
+                    "--binary-dir",
+                    str(deploy_dir),
+                    "--binary-name",
+                    EXE_NAME,
+                    "--settings-smoke",
+                ]
+            )
+            if settings_gate_exit != 0:
+                raise RuntimeError(f"build_settings_smoke_failed: exit={settings_gate_exit}")
+    except RuntimeError as exc:
+        logger.error(f"❌ 发布资源逐文件验证失败: {exc}")
         return False
 
     # 检查可执行文件大小
@@ -591,6 +712,19 @@ def build_app(
         logger.error("缺少 PyInstaller 依赖，请先安装 pyinstaller 后再运行构建")
         return None
 
+    collection_targets = (
+        *_PYINSTALLER_COMMON_COLLECT_ALL_TARGETS,
+        *_PYINSTALLER_COMMON_COLLECT_DATA_TARGETS,
+        *_PYINSTALLER_COMMON_COLLECT_SUBMODULE_TARGETS,
+        *(_PYINSTALLER_GUI_COLLECT_ALL_TARGETS if with_gui else ()),
+    )
+    try:
+        _validate_pyinstaller_package_targets(collection_targets)
+        _validate_pymupdf_layout_pyinstaller_data_collection()
+    except RuntimeError as exc:
+        logger.error(f"PyInstaller 收集目标预检失败: {exc}")
+        return None
+
     # 1. 版本管理（只读，不写回源码）
     logger.start_step("版本管理")
     version = resolve_build_version(version_override)
@@ -600,11 +734,9 @@ def build_app(
     # 2. 清理构建目录
     logger.start_step("清理构建目录")
     logger.info("清理 dist 和 build 目录...")
-    force_remove_directory(DIST_DIR)
-    force_remove_directory(BUILD_DIR)
-    removed = clean_cython_artifacts_in_src()
-    if removed:
-        logger.info(f"已从源码目录清理旧的 Cython 编译产物: {removed} 个")
+    if not force_remove_directory(DIST_DIR) or not force_remove_directory(BUILD_DIR):
+        logger.error("无法清理既有构建目录；为避免混入陈旧产物，已中止构建")
+        return None
     logger.end_step()
 
     # 3. Cython 编译
@@ -613,23 +745,29 @@ def build_app(
         logger.start_step("Cython 编译")
         cython_ok = compile_cython_modules()
         if not cython_ok:
-            logger.warning("Cython 编译失败，将继续使用纯 Python 模块构建")
-        else:
-            logger.info("Cython 编译成功，将使用编译后的模块构建")
+            logger.error("Cython 编译失败；如需纯 Python 构建，请显式使用 --skip-cython")
+            return None
+        logger.info("Cython 编译成功，将使用编译后的模块构建")
         logger.end_step()
     else:
         logger.info("跳过 Cython 编译")
 
-    effective_src_dir = SRC_DIR
+    package_src_dirs = list(_PACKAGE_SRC_DIRS)
+    staging_package_root: Path | None = None
     if cython_ok:
         try:
-            effective_src_dir = prepare_staging_src(SRC_DIR, cython_out_dir=BUILD_DIR / "cython_out")
+            staging_package_root = prepare_staging_package_root(
+                package_src_dirs,
+                cython_out_dir=BUILD_DIR / "cython_out",
+            )
         except Exception as e:
-            logger.warning(f"创建 staging 源码目录失败，将回退使用纯源码构建: {e}")
-            effective_src_dir = SRC_DIR
+            logger.error(f"创建 Cython staging package root 失败: {e}")
+            return None
+        package_src_dirs = [staging_package_root]
 
     # 创建构建目录
     DIST_DIR.mkdir(exist_ok=True)
+    BUILD_DIR.mkdir(exist_ok=True)
 
     # 资源路径
     templates_src = PROJECT_ROOT / "templates"
@@ -637,16 +775,25 @@ def build_app(
     assets_src = PROJECT_ROOT / "assets"
     models_src = PROJECT_ROOT / "models"
     samples_src = PROJECT_ROOT / "samples"
-    i18n_locales_src = effective_src_dir / "docwen" / "i18n" / "locales"
+    i18n_locales_src = PROJECT_ROOT / "i18n" / "locales"
+    contract_schemas_src = PROJECT_ROOT / "contracts" / "schemas"
     icon_path = assets_src / "icon.ico" if IS_WINDOWS else assets_src / "icon.png"
 
-    gui_entry = effective_src_dir / "docwen" / "gui_run.py"
-    cli_entry = effective_src_dir / "docwen" / "cli_run.py"
+    gui_entry = _PACKAGES_DIR / "bundle" / "src" / "docwen_bundle" / "pyi_gui_entry.py"
+    cli_entry = _PACKAGES_DIR / "bundle" / "src" / "docwen_bundle" / "pyi_cli_entry.py"
+    logger.info(f"使用 GUI PyInstaller 入口: {gui_entry}")
+    logger.info(f"使用 CLI PyInstaller 入口: {cli_entry}")
     if with_gui and not gui_entry.exists():
         logger.error(f"GUI 入口脚本不存在: {gui_entry}")
         return None
     if with_cli and not cli_entry.exists():
         logger.error(f"CLI 入口脚本不存在: {cli_entry}")
+        return None
+    if not _PYINSTALLER_EGRESS_RUNTIME_HOOK.is_file():
+        logger.error(f"出站保护 runtime hook 不存在: {_PYINSTALLER_EGRESS_RUNTIME_HOOK}")
+        return None
+    if not _PYINSTALLER_HOOKS_DIR.is_dir():
+        logger.error(f"PyInstaller hooks 目录不存在: {_PYINSTALLER_HOOKS_DIR}")
         return None
 
     common_excludes = [
@@ -655,6 +802,11 @@ def build_app(
         "--exclude-module=telnetlib",
         "--exclude-module=nntplib",
         "--exclude-module=xmlrpc",
+        "--exclude-module=PySide6.QtMultimedia",
+        "--exclude-module=PySide6.QtMultimediaWidgets",
+        "--exclude-module=PySide6.QtNetwork",
+        "--exclude-module=PySide6.QtNetworkAuth",
+        "--exclude-module=PySide6.QtWebSockets",
     ]
     if IS_LINUX or IS_MACOS:
         common_excludes.extend(
@@ -666,6 +818,12 @@ def build_app(
             ]
         )
 
+    # Canonical package roots (PyInstaller --paths).
+    _pkg_path_args: list[str] = []
+    for _d in package_src_dirs:
+        _pkg_path_args.append("--paths")
+        _pkg_path_args.append(str(_d))
+
     gui_build_args: list[str] = []
     if with_gui:
         gui_build_args = [
@@ -674,17 +832,35 @@ def build_app(
             "--onedir",
             "--clean",
             "--noconfirm",
+            *_pyinstaller_output_args(),
+            f"--additional-hooks-dir={_PYINSTALLER_HOOKS_DIR}",
+            f"--runtime-hook={_PYINSTALLER_EGRESS_RUNTIME_HOOK}",
             *common_excludes,
-            "--collect-all=rapidocr_onnxruntime",
-            "--collect-data=onnxruntime",
-            "--collect-data=latex2mathml",
+            *_pyinstaller_collection_args("collect-all", _PYINSTALLER_COMMON_COLLECT_ALL_TARGETS),
+            *_pyinstaller_collection_args("collect-all", _PYINSTALLER_GUI_COLLECT_ALL_TARGETS),
+            *_pyinstaller_collection_args("collect-data", _PYINSTALLER_COMMON_COLLECT_DATA_TARGETS),
             "--copy-metadata=PyYAML",
-            "--collect-data=ttkbootstrap",
-            "--collect-data=docx",
-            "--collect-all=pymupdf4llm",
-            "--collect-all=pymupdf_layout",
-            "--collect-all=easyofd",
-            "--collect-submodules=docwen.services.strategies",
+            "--copy-metadata=tabulate",
+            *_pyinstaller_collection_args("collect-submodules", _PYINSTALLER_COMMON_COLLECT_SUBMODULE_TARGETS),
+            # 新架构 packages — 显式收集以支持 PyInstaller 静态分析
+            "--hidden-import=docwen_core",
+            "--hidden-import=docwen_application",
+            "--hidden-import=docwen_runtime",
+            "--hidden-import=docwen_bundle",
+            "--hidden-import=docwen_gui",
+            "--hidden-import=docwen_cli",
+            "--hidden-import=docwen_plugin_document",
+            "--hidden-import=docwen_plugin_presentation",
+            "--hidden-import=docwen_plugin_spreadsheet",
+            "--hidden-import=docwen_plugin_markup",
+            "--hidden-import=docwen_plugin_image",
+            "--hidden-import=docwen_plugin_print",
+            "--hidden-import=docwen_plugin_layout",
+            "--hidden-import=docwen_plugin_markdown",
+            "--hidden-import=docwen_plugin_optimizer_gongwen",
+            "--hidden-import=docwen_plugin_optimizer_invoice_cn",
+            "--hidden-import=docwen_plugin_proofread",
+            *_pkg_path_args,
         ]
 
         if icon_path.exists():
@@ -700,6 +876,7 @@ def build_app(
     # 数据文件
     data_files = [
         f"{i18n_locales_src}{os.pathsep}docwen/i18n/locales",
+        f"{contract_schemas_src}{os.pathsep}docwen_cli/contracts",
     ]
 
     for data_file in data_files:
@@ -712,6 +889,7 @@ def build_app(
         if with_gui:
             logger.info("开始 PyInstaller 构建 (GUI)...")
             pyinstaller_main.run(gui_build_args)
+            _verify_pyinstaller_runtime_hook_order("DocWen", entry_name="pyi_gui_entry")
             logger.info("PyInstaller GUI 构建成功完成!")
         logger.end_step()
 
@@ -723,28 +901,44 @@ def build_app(
                 "--onedir",
                 "--clean",
                 "--noconfirm",
+                *_pyinstaller_output_args(),
+                f"--additional-hooks-dir={_PYINSTALLER_HOOKS_DIR}",
+                f"--runtime-hook={_PYINSTALLER_EGRESS_RUNTIME_HOOK}",
                 *common_excludes,
-                "--collect-all=rapidocr_onnxruntime",
-                "--collect-data=onnxruntime",
-                "--collect-data=latex2mathml",
+                *_pyinstaller_collection_args("collect-all", _PYINSTALLER_COMMON_COLLECT_ALL_TARGETS),
+                *_pyinstaller_collection_args("collect-data", _PYINSTALLER_COMMON_COLLECT_DATA_TARGETS),
                 "--copy-metadata=PyYAML",
-                "--collect-data=ttkbootstrap",
-                "--collect-data=docx",
-                "--collect-all=pymupdf4llm",
-                "--collect-all=pymupdf_layout",
-                "--collect-all=easyofd",
-                # 策略模块通过 importlib.import_module() 动态加载，PyInstaller 无法静态分析，需显式收集
-                "--collect-submodules=docwen.services.strategies",
+                "--copy-metadata=tabulate",
+                *_pyinstaller_collection_args("collect-submodules", _PYINSTALLER_COMMON_COLLECT_SUBMODULE_TARGETS),
+                # 新架构 packages — 显式收集以支持 PyInstaller 静态分析
+                "--hidden-import=docwen_core",
+                "--hidden-import=docwen_application",
+                "--hidden-import=docwen_runtime",
+                "--hidden-import=docwen_bundle",
+                "--hidden-import=docwen_cli",
+                "--hidden-import=docwen_plugin_document",
+                "--hidden-import=docwen_plugin_presentation",
+                "--hidden-import=docwen_plugin_spreadsheet",
+                "--hidden-import=docwen_plugin_markup",
+                "--hidden-import=docwen_plugin_image",
+                "--hidden-import=docwen_plugin_print",
+                "--hidden-import=docwen_plugin_layout",
+                "--hidden-import=docwen_plugin_markdown",
+                "--hidden-import=docwen_plugin_optimizer_gongwen",
+                "--hidden-import=docwen_plugin_optimizer_invoice_cn",
+                "--hidden-import=docwen_plugin_proofread",
+                *_pkg_path_args,
             ]
             for data_file in data_files:
                 cli_build_args.append(f"--add-data={data_file}")
             pyinstaller_main.run(cli_build_args)
+            _verify_pyinstaller_runtime_hook_order("DocWenCLI", entry_name="pyi_cli_entry")
             logger.info("PyInstaller CLI 构建成功完成!")
             logger.end_step()
 
-        if effective_src_dir != SRC_DIR:
+        if staging_package_root is not None:
             with contextlib.suppress(Exception):
-                force_remove_directory(BUILD_DIR / "staging_src")
+                force_remove_directory(staging_package_root)
 
         # 5. 部署文件整理
         logger.start_step("部署文件整理")
@@ -838,12 +1032,24 @@ def build_app(
                 if src.exists():
                     shutil.copy2(src, cli_output_dir / license_file)
 
+        cli_deploy_dir: Path | None = None
         if with_gui and with_cli and cli_output_dir.exists():
             cli_deploy_dir_name = f"DocWenCLI_v{version}_{PLATFORM_TAG}"
             cli_deploy_dir = DIST_DIR / cli_deploy_dir_name
             if cli_deploy_dir.exists():
                 force_remove_directory(cli_deploy_dir)
             shutil.move(str(cli_output_dir), str(cli_deploy_dir))
+
+        normalization_targets = [deploy_dir]
+        if cli_deploy_dir is not None:
+            normalization_targets.append(cli_deploy_dir)
+        for target in normalization_targets:
+            record_result = normalize_packaged_record_files(target)
+            base_library_result = normalize_base_library_zip(target)
+            logger.info(f"规范化冻结载荷: {target.name}; RECORD={record_result}; base_library={base_library_result}")
+
+        if cli_deploy_dir is not None and not verify_build(cli_deploy_dir, with_cli=True, with_gui=False):
+            return None
         logger.end_step()
 
     except Exception as e:
@@ -854,57 +1060,6 @@ def build_app(
         return None
 
     return version, deploy_dir
-
-
-def clean_source_files_from_dist(deploy_dir: Path):
-    """
-    从部署目录中删除已被 Cython 编译的 .py 源文件
-
-    Args:
-        deploy_dir: 部署目录路径
-    """
-    logger.info("开始清理部署目录中的 Python 源文件...")
-
-    try:
-        # 同目录导入 setup_cython 模块
-        sys.path.insert(0, str(Path(__file__).parent))
-        from setup_cython import CORE_MODULES
-
-        deleted_count = 0
-        for module_path in CORE_MODULES:
-            try:
-                posix_rel = PurePosixPath(module_path).relative_to("src")
-            except Exception:
-                posix_rel = PurePosixPath(module_path)
-
-            file_to_delete = deploy_dir / Path(*posix_rel.parts)
-
-            if file_to_delete.exists():
-                try:
-                    file_to_delete.unlink()
-                    logger.debug(f"已删除: {posix_rel}")
-                    deleted_count += 1
-                except Exception as e:
-                    logger.warning(f"无法删除 {file_to_delete}: {e}")
-
-        # 删除 .c 文件
-        for c_file in deploy_dir.rglob("*.c"):
-            # 跳过 Cython 运行时目录
-            if "_internal" in str(c_file) and "Cython" in str(c_file):
-                continue
-            try:
-                c_file.unlink()
-                logger.debug(f"已删除 C 文件: {c_file.relative_to(deploy_dir)}")
-                deleted_count += 1
-            except Exception as e:
-                logger.warning(f"无法删除 C 文件 {c_file}: {e}")
-
-        logger.info(f"源文件清理完成，共删除 {deleted_count} 个文件")
-
-    except ImportError:
-        logger.warning("无法导入 CORE_MODULES 列表，跳过源文件清理")
-    except Exception as e:
-        logger.error(f"源文件清理过程中发生错误: {e}")
 
 
 def main():
@@ -921,19 +1076,28 @@ def main():
         except Exception:
             pass
 
+    parser = argparse.ArgumentParser(add_help=True)
+    parser.add_argument("--skip-cython", action="store_true", help="跳过 Cython 编译")
+    parser.add_argument("--gui-only", action="store_true", help="仅构建 GUI（不构建 CLI）")
+    parser.add_argument("--cli-only", action="store_true", help="仅构建 CLI（不构建 GUI）")
+    parser.add_argument("--version", type=str, default=None, help="构建版本号（覆盖源码 __version__，可带 v 前缀）")
+    parser.add_argument(
+        "--work-root",
+        type=Path,
+        default=None,
+        help="将 build/spec/dist/logs 写入一个隔离的绝对目录",
+    )
+    args = parser.parse_args()
+
+    if args.work_root is not None:
+        configure_build_work_root(args.work_root.resolve())
+
     # 初始化日志
     init_logger()
 
     logger.info("=" * 70)
     logger.info("开始构建 DocWen")
     logger.info("=" * 70)
-
-    parser = argparse.ArgumentParser(add_help=True)
-    parser.add_argument("--skip-cython", action="store_true", help="跳过 Cython 编译")
-    parser.add_argument("--gui-only", action="store_true", help="仅构建 GUI（不构建 CLI）")
-    parser.add_argument("--cli-only", action="store_true", help="仅构建 CLI（不构建 GUI）")
-    parser.add_argument("--version", type=str, default=None, help="构建版本号（覆盖源码 __version__，可带 v 前缀）")
-    args = parser.parse_args()
 
     skip_cython = bool(args.skip_cython)
     if args.gui_only and args.cli_only:
@@ -953,16 +1117,14 @@ def main():
 
         if result:
             _version, deploy_dir = result
-            # 清理源文件
-            logger.start_step("清理源文件")
-            if deploy_dir.is_dir():
-                clean_source_files_from_dist(deploy_dir)
-            logger.end_step()
-
             # 验证构建
             logger.start_step("构建验证")
-            verify_build(deploy_dir, with_cli=with_cli, with_gui=with_gui)
+            build_verified = verify_build(deploy_dir, with_cli=with_cli, with_gui=with_gui)
             logger.end_step()
+            if not build_verified:
+                logger.error("构建验证失败!")
+                logger.print_summary()
+                sys.exit(1)
 
             logger.info("\n" + "=" * 70)
             logger.info(f"✅ 构建成功完成! 软件已部署到 dist/{deploy_dir.name}")

@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://docwen.local/schema/cli-json-output-v3.schema.json",
+  "title": "DocWen CLI JSON Output Protocol 3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "product_version",
+    "success",
+    "command",
+    "data",
+    "error",
+    "warnings",
+    "meta"
+  ],
+  "properties": {
+    "protocol_version": { "const": 3 },
+    "product_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$"
+    },
+    "success": { "type": "boolean" },
+    "command": { "type": "string" },
+    "data": { "type": "object" },
+    "error": {
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["category", "code", "message", "details", "hint"],
+          "properties": {
+            "category": {
+              "enum": [
+                "internal",
+                "invalid_input",
+                "not_found",
+                "dependency",
+                "security",
+                "unavailable",
+                "conflict",
+                "timeout",
+                "partial_failure",
+                "cancelled"
+              ]
+            },
+            "code": { "type": "string", "minLength": 1 },
+            "message": { "type": "string" },
+            "details": {},
+            "hint": { "type": ["string", "null"] }
+          }
+        }
+      ]
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "duration_ms": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "templateResource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "target", "description", "path", "size_bytes", "modified_ns"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^template\\.(docx|xlsx)\\.[0-9a-f]{64}$"
+        },
+        "name": { "type": "string", "minLength": 1 },
+        "target": { "enum": ["docx", "xlsx"] },
+        "description": { "type": "string" },
+        "path": { "type": "string", "minLength": 1 },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "modified_ns": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "templateResourceListData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "resources", "total"],
+      "properties": {
+        "type": { "const": "templates" },
+        "resources": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/templateResource" }
+        },
+        "total": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "templateResourceShowData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "resource"],
+      "properties": {
+        "type": { "const": "templates" },
+        "resource": { "$ref": "#/$defs/templateResource" }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "success": { "const": true } },
+        "required": ["success"]
+      },
+      "then": { "properties": { "error": { "type": "null" } } }
+    },
+    {
+      "if": {
+        "properties": { "success": { "const": false } },
+        "required": ["success"]
+      },
+      "then": { "properties": { "error": { "type": "object" } } }
+    },
+    {
+      "if": {
+        "properties": {
+          "command": { "const": "resources list" },
+          "data": {
+            "type": "object",
+            "properties": { "type": { "const": "templates" } },
+            "required": ["type"]
+          }
+        },
+        "required": ["command", "data"]
+      },
+      "then": {
+        "properties": { "data": { "$ref": "#/$defs/templateResourceListData" } }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "command": { "const": "resources show" },
+          "data": {
+            "type": "object",
+            "properties": { "type": { "const": "templates" } },
+            "required": ["type"]
+          }
+        },
+        "required": ["command", "data"]
+      },
+      "then": {
+        "properties": { "data": { "$ref": "#/$defs/templateResourceShowData" } }
+      }
+    }
+  ]
+}

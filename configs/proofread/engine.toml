@@ -1,0 +1,8 @@
+# ==============================================================================
+#  校对引擎开关配置
+# ==============================================================================
+
+enable_typos_rule = true
+enable_symbol_pairing = true
+enable_symbol_correction = true
+enable_sensitive_word = true

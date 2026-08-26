@@ -1,0 +1,159 @@
+{
+  "golden_id": "GOLDEN-002",
+  "description": "Normalized old-system semantic smoke for standard DOCX to Markdown conversion.",
+  "input_docx": {
+    "name": "golden_test.docx",
+    "source_fixture": "packages/plugins/document/tests/conftest.py::sample_docx_path",
+    "headings": [
+      {
+        "level": 1,
+        "text": "Test Document"
+      },
+      {
+        "level": 2,
+        "text": "Section One"
+      },
+      {
+        "level": 2,
+        "text": "Table Section"
+      }
+    ],
+    "paragraphs": [
+      "This is a test document used for golden parity testing.",
+      "This text is bold. This text is normal.",
+      "This text is italic.",
+      "A plain paragraph with no special formatting."
+    ],
+    "table": {
+      "headers": [
+        "Name",
+        "Value",
+        "Description"
+      ],
+      "rows": [
+        [
+          "Alpha",
+          "100",
+          "First item"
+        ],
+        [
+          "Beta",
+          "200",
+          "Second item"
+        ]
+      ]
+    }
+  },
+  "expected_markdown_semantics": {
+    "contains": [
+      "# Test Document",
+      "## Section One",
+      "## Table Section",
+      "This is a test document used for golden parity testing.",
+      "**This text is bold.** This text is normal.",
+      "*This text is italic.*",
+      "A plain paragraph with no special formatting.",
+      "| Name | Value | Description |",
+      "| Alpha | 100 | First item |",
+      "| Beta | 200 | Second item |"
+    ],
+    "heading_counts": {
+      "1": 1,
+      "2": 2
+    },
+    "table_count": 1,
+    "image_count": 0
+  },
+  "old_system_release_gate_semantics": {
+    "horizontal_merged_table_empty_strategy": {
+      "old_tests": {
+        "docwen-ref-tk": "tests/test_converter/test_docx_table_merges.py::test_convert_table_to_md_with_images_horizontal_merged_cell_outputs_blank_for_repeat",
+        "docwen-ref-pyside6": "tests/test_converter/test_docx_table_merges.py::test_convert_table_to_md_with_images_horizontal_merged_cell_outputs_blank_for_repeat"
+      },
+      "input_table": [
+        [
+          "H",
+          ""
+        ],
+        [
+          "A",
+          "B"
+        ]
+      ],
+      "expected_lines_when_table_merge_strategy_empty": [
+        "| H |  |",
+        "| --- | --- |",
+        "| A | B |"
+      ],
+      "current_test": "packages/plugins/document/tests/test_document_to_md_golden.py::TestDocxToMdGolden::test_docx_table_merge_strategy_empty_matches_old_system_blank_repeat",
+      "current_boundary": "Current default table merge export strategy remains fill for unified export semantics; the old-system blank-repeat behavior is available through the existing empty strategy and is now wired through document manifest, runtime options, CLI/GUI option builder, and converter rendering."
+    },
+    "adjacent_same_style_run_merge": {
+      "old_tests": {
+        "docwen-ref-tk": "tests/test_converter/test_docx2md_run_merge.py::test_convert_docx_to_md_simple_end_to_end_merges_split_bold_runs",
+        "docwen-ref-pyside6": "tests/test_converter/test_docx2md_run_merge.py::test_convert_docx_to_md_simple_end_to_end_merges_split_bold_runs"
+      },
+      "expected_contains": [
+        "**Hello World**",
+        "`abcd`x"
+      ],
+      "expected_not_contains": [
+        "**Hello ****World**",
+        "`ab``cd`x"
+      ],
+      "current_test": "packages/plugins/document/tests/test_document_to_md_golden.py::TestDocxToMdGolden::test_docx_to_md_merges_adjacent_same_style_runs",
+      "current_boundary": "Adjacent DOCX runs with identical Markdown formatting are merged in the shared run renderer; note references and plain text remain natural boundaries."
+    }
+  },
+  "projects": {
+    "docwen-ref-tk": {
+      "success": true,
+      "conversion_mode": "simple",
+      "runtime_setup": "direct function import without bootstrap",
+      "metadata": {
+        "aliases": [
+          "golden_test"
+        ],
+        "title_key": "yaml_keys.title",
+        "subtitle_key": "yaml_keys.subtitle"
+      },
+      "markdown_contains_all_expected_semantics": true
+    },
+    "docwen-ref-pyside6": {
+      "success": true,
+      "conversion_mode": "standard",
+      "runtime_setup": "docwen.bootstrap.initialize_runtime() before converter import/use",
+      "metadata": {
+        "aliases": [
+          "golden_test"
+        ],
+        "title_key": "标题",
+        "subtitle_key": "副标题"
+      },
+      "artifacts": [
+        {
+          "extension": "md",
+          "is_primary": true
+        }
+      ],
+      "markdown_contains_all_expected_semantics": true
+    },
+    "docwen-current": {
+      "success": true,
+      "artifact_media_type": "text/markdown",
+      "suggested_name": "golden_test.md",
+      "metadata": {
+        "paragraph_count": 4,
+        "heading_count": 3,
+        "table_count": 1,
+        "image_count": 0
+      },
+      "markdown_contains_all_expected_semantics": true
+    }
+  },
+  "accepted_differences": [
+    "Old Tk, old PySide6, and current rewrite use different YAML title/subtitle key labels; DOCX to Markdown semantic parity is judged on body text, heading levels, formatting markers, table cells, and current ArtifactManifest metadata.",
+    "Old systems return or write Markdown content through legacy converter dictionaries/timestamped output folders; current runtime writes a staging Markdown artifact with a stable suggested name.",
+    "This fixture is a normalized semantic smoke, not a checked-in old-system timestamped output directory or binary DOCX artifact comparison."
+  ]
+}
