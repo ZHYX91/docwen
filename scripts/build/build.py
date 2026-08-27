@@ -109,6 +109,47 @@ def _pyinstaller_output_args() -> list[str]:
     ]
 
 
+@contextlib.contextmanager
+def _isolated_pyinstaller_path():
+    """Keep unrelated native toolchains from contaminating Windows payloads.
+
+    PyInstaller resolves transitive DLL names through ``PATH``. Developer
+    shells commonly prepend Poppler, Qt, or media toolchains whose DLLs can
+    share names with Windows system libraries. The frozen program would then
+    bundle whichever unrelated copy happened to appear first.
+    """
+
+    if not IS_WINDOWS:
+        yield
+        return
+
+    original_path = os.environ.get("PATH")
+    system_root = Path(os.environ.get("SYSTEMROOT", r"C:\Windows"))
+    candidates = (
+        Path(sys.executable).resolve().parent,
+        Path(sys.base_prefix).resolve(),
+        Path(sys.base_prefix).resolve() / "DLLs",
+        system_root / "System32",
+        system_root,
+    )
+    safe_entries: list[str] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        normalized = os.path.normcase(str(candidate))
+        if candidate.is_dir() and normalized not in seen:
+            safe_entries.append(str(candidate))
+            seen.add(normalized)
+
+    os.environ["PATH"] = os.pathsep.join(safe_entries)
+    try:
+        yield
+    finally:
+        if original_path is None:
+            os.environ.pop("PATH", None)
+        else:
+            os.environ["PATH"] = original_path
+
+
 # Workspace package source roots used by PyInstaller.
 _PACKAGES_DIR = PROJECT_ROOT / "packages"
 _PACKAGE_SRC_DIRS: list[Path] = sorted(
@@ -888,7 +929,8 @@ def build_app(
     try:
         if with_gui:
             logger.info("开始 PyInstaller 构建 (GUI)...")
-            pyinstaller_main.run(gui_build_args)
+            with _isolated_pyinstaller_path():
+                pyinstaller_main.run(gui_build_args)
             _verify_pyinstaller_runtime_hook_order("DocWen", entry_name="pyi_gui_entry")
             logger.info("PyInstaller GUI 构建成功完成!")
         logger.end_step()
@@ -931,7 +973,8 @@ def build_app(
             ]
             for data_file in data_files:
                 cli_build_args.append(f"--add-data={data_file}")
-            pyinstaller_main.run(cli_build_args)
+            with _isolated_pyinstaller_path():
+                pyinstaller_main.run(cli_build_args)
             _verify_pyinstaller_runtime_hook_order("DocWenCLI", entry_name="pyi_cli_entry")
             logger.info("PyInstaller CLI 构建成功完成!")
             logger.end_step()

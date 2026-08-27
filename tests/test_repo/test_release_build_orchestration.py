@@ -163,7 +163,9 @@ def test_release_workflow_builds_each_supported_package_twice_and_runs_packaged_
     assert "--proofread-report-smoke" in windows_commands
     assert "verify_packaged_gui.py" in windows_commands
     assert "--settings-smoke" in windows_commands
-    assert windows_commands.count("if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }") == 3
+    assert "scripts/release/build_msix.py" in windows_commands
+    assert "windows-store-msix.v1.json" in windows_commands
+    assert windows_commands.count("if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }") == 4
     assert '$env:PYTHONUTF8 = "1"' in windows_commands
     assert '$env:PYTHONIOENCODING = "utf-8"' in windows_commands
 
@@ -238,6 +240,8 @@ def test_release_workflow_publishes_supported_windows_and_ubuntu_assets() -> Non
     project_metadata = Path("pyproject.toml").read_text(encoding="utf-8")
     assert "DocWenCLI-windows-x64.zip" not in workflow
     assert "DocWen-windows-x64.zip" in workflow
+    assert "DocWen-windows-x64.msix" in workflow
+    assert "docwen-microsoft-store-${{ github.run_id }}-${{ github.run_attempt }}" in workflow
     assert "DocWenCLI-${RELEASE_VERSION}-linux-x64.tar.gz" in workflow
     assert "DocWen-${RELEASE_VERSION}-linux-x64.tar.gz" in workflow
     assert "DocWen-macos" not in workflow

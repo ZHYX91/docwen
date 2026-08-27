@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import os
 import textwrap
 from pathlib import Path
 from unittest.mock import Mock
@@ -138,6 +139,29 @@ def test_pyinstaller_specs_follow_isolated_build_root(
 
     source = Path("scripts/build/build.py").read_text(encoding="utf-8")
     assert source.count("*_pyinstaller_output_args(),") == 2
+
+
+def test_windows_pyinstaller_path_excludes_ambient_native_toolchains(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from scripts.build import build
+
+    system_root = tmp_path / "Windows"
+    (system_root / "System32").mkdir(parents=True)
+    foreign_native = tmp_path / "foreign-poppler" / "bin"
+    foreign_native.mkdir(parents=True)
+    original = os.pathsep.join((str(foreign_native), str(system_root / "System32")))
+    monkeypatch.setattr(build, "IS_WINDOWS", True)
+    monkeypatch.setenv("SYSTEMROOT", str(system_root))
+    monkeypatch.setenv("PATH", original)
+
+    with build._isolated_pyinstaller_path():  # pyright: ignore[reportPrivateUsage]
+        isolated = os.environ["PATH"].split(os.pathsep)
+        assert str(foreign_native) not in isolated
+        assert str(system_root / "System32") in isolated
+
+    assert os.environ["PATH"] == original
 
 
 def test_build_fails_closed_for_cleanup_and_cython_errors() -> None:

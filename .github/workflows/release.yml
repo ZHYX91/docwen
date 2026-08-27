@@ -132,11 +132,25 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           uv run python scripts/release/verify_packaged_gui.py --binary-dir "$output/payload" --settings-smoke
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $msixArguments = @(
+            "scripts/release/build_msix.py",
+            "--payload-root", "$output/payload",
+            "--config", (Resolve-Path "release/windows-store-msix.v1.json").Path,
+            "--source-version", $env:RELEASE_VERSION,
+            "--output-root", $output,
+            "--work-root", (Join-Path $env:RUNNER_TEMP "docwen-msix-work"),
+            "--metadata-output", "$output/DocWen-windows-x64.msix.json"
+          )
+          & $python @msixArguments
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload clean Windows build evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: docwen-windows-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.replica }}
-          path: ${{ runner.temp }}/docwen-candidate/DocWen-windows-x64.zip
+          path: |
+            ${{ runner.temp }}/docwen-candidate/DocWen-windows-x64.zip
+            ${{ runner.temp }}/docwen-candidate/DocWen-windows-x64.msix
+            ${{ runner.temp }}/docwen-candidate/DocWen-windows-x64.msix.json
           compression-level: 0
           if-no-files-found: error
           overwrite: false
@@ -251,6 +265,24 @@ jobs:
         run: |
           set -euo pipefail
           cmp builds/windows-a/DocWen-windows-x64.zip builds/windows-b/DocWen-windows-x64.zip
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          records = []
+          for replica in ("a", "b"):
+              root = Path(f"builds/windows-{replica}")
+              package = root / "DocWen-windows-x64.msix"
+              record = json.loads((root / "DocWen-windows-x64.msix.json").read_text(encoding="utf-8"))
+              actual_sha256 = hashlib.file_digest(package.open("rb"), "sha256").hexdigest()
+              if record["sha256"] != actual_sha256:
+                  raise SystemExit(f"MSIX raw digest mismatch for Windows build {replica}")
+              record.pop("sha256")
+              records.append(record)
+          if records[0] != records[1]:
+              raise SystemExit("independent MSIX package contents differ")
+          PY
           cmp "builds/linux-a/DocWenCLI-${RELEASE_VERSION}-linux-x64.tar.gz" "builds/linux-b/DocWenCLI-${RELEASE_VERSION}-linux-x64.tar.gz"
           cmp "builds/linux-a/DocWen-${RELEASE_VERSION}-linux-x64.tar.gz" "builds/linux-b/DocWen-${RELEASE_VERSION}-linux-x64.tar.gz"
           mkdir publication
@@ -262,6 +294,17 @@ jobs:
             sha256sum DocWen-windows-x64.zip "DocWenCLI-${RELEASE_VERSION}-linux-x64.tar.gz" "DocWen-${RELEASE_VERSION}-linux-x64.tar.gz" > SHA256SUMS.txt
             test "$(find . -maxdepth 1 -type f | wc -l)" -eq 4
           )
+      - name: Upload Microsoft Store submission package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: docwen-microsoft-store-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            builds/windows-a/DocWen-windows-x64.msix
+            builds/windows-a/DocWen-windows-x64.msix.json
+          compression-level: 0
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 30
       - name: Upload the sole current-run publication artifact
         if: github.event_name == 'push'
         id: publication
