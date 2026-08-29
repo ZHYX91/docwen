@@ -4,5 +4,5 @@ contact_links:
     url: https://github.com/ZHYX91/docwen/security/policy
     about: Do not disclose vulnerabilities or private document data in a public issue.
   - name: DocWen Assistant issues
-    url: https://github.com/ZHYX91/docwen-obsidian/issues
+    url: https://github.com/ZHYX91/obsidian-docwen-assistant/issues
     about: Report problems that occur only in the Obsidian integration.

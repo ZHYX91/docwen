@@ -74,7 +74,7 @@ jobs:
           uv run python tools/qa.py --skip-ruff --skip-pyright --suite pr-integration
       - name: Upload visibility reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: pytest-windows-pr-integration-visibility-reports
           path: |
@@ -105,7 +105,7 @@ jobs:
           uv run python tools/qa.py --skip-ruff --skip-pyright --suite full
       - name: Upload visibility reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: pytest-windows-push-visibility-reports
           path: |
@@ -143,7 +143,7 @@ jobs:
           uv run python tools/qa.py --skip-ruff --skip-pyright --suite fast
       - name: Upload visibility reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: pytest-ubuntu-visibility-reports
           path: |
@@ -181,7 +181,7 @@ jobs:
           uv run python tools/qa.py --skip-ruff --skip-pyright --suite fast
       - name: Upload visibility reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: pytest-macos-visibility-reports
           path: |
@@ -222,7 +222,7 @@ jobs:
           uv run python tools/check_core_coverage.py "$env:RUNNER_TEMP/docwen-pytest-runtime/coverage.xml" --soft-gate
       - name: Upload visibility reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-visibility-reports
           path: |
@@ -232,12 +232,12 @@ jobs:
             ${{ runner.temp }}/docwen-pytest-runtime/reports/subprocess_report.json
             ${{ runner.temp }}/docwen-pytest-runtime/reports/missing_marker_report.json
       - name: Upload coverage.xml
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-xml
           path: ${{ runner.temp }}/docwen-pytest-runtime/coverage.xml
       - name: Upload htmlcov
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-html
           path: ${{ runner.temp }}/docwen-pytest-runtime/htmlcov
@@ -267,7 +267,7 @@ jobs:
           uv run python tools/check_gui_coverage.py "$env:RUNNER_TEMP/docwen-pytest-runtime/coverage-gui.xml"
       - name: Upload visibility reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-gui-visibility-reports
           path: |
@@ -277,12 +277,12 @@ jobs:
             ${{ runner.temp }}/docwen-pytest-runtime/reports/subprocess_report.json
             ${{ runner.temp }}/docwen-pytest-runtime/reports/missing_marker_report.json
       - name: Upload coverage-gui.xml
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-gui-xml
           path: ${{ runner.temp }}/docwen-pytest-runtime/coverage-gui.xml
       - name: Upload htmlcov-gui
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-gui-html
           path: ${{ runner.temp }}/docwen-pytest-runtime/htmlcov-gui
