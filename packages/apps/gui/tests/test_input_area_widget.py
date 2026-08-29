@@ -81,6 +81,19 @@ class TestConstruction:
         btn = widget.clear_button
         assert btn is not None
 
+    def test_action_buttons_share_minimum_geometry(self, widget: InputArea, qapp: QApplication) -> None:
+        from docwen_gui.styles.design_tokens import Sizing
+        from docwen_gui.widgets.input_area import _ACTION_BUTTON_MIN_WIDTH
+
+        widget.resize(720, 480)
+        widget.show()
+        qapp.processEvents()
+
+        add_button = widget.add_button
+        clear_button = widget.clear_button
+        assert add_button.minimumWidth() == clear_button.minimumWidth() == _ACTION_BUTTON_MIN_WIDTH
+        assert add_button.minimumHeight() == clear_button.minimumHeight() == Sizing.CONTROL_HEIGHT
+
     def test_mode_switch_exists(self, widget: InputArea) -> None:
         switch = widget.mode_switch
         assert switch is not None

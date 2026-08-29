@@ -57,6 +57,7 @@ from PySide6.QtWidgets import (
 
 from docwen_gui.font_utils import DEFAULT_FONT_SIZE, resolve_font_size_preset
 from docwen_gui.i18n import t as _t
+from docwen_gui.styles.design_tokens import Sizing
 from docwen_gui.styles.theme_semantics import apply_theme_class
 
 if TYPE_CHECKING:
@@ -1114,6 +1115,7 @@ class BatchList(QWidget):
 
         self.filter_button = QPushButton(_t("components.file_drop.batch_list.filter_button", "Filter: All"))
         self.filter_button.setObjectName("batchFilterButton")
+        self.filter_button.setMinimumHeight(Sizing.CONTROL_HEIGHT)
         self.filter_button.clicked.connect(self._show_filter_menu)
         header_row.addWidget(self.filter_button, 0, 0, alignment=Qt.AlignmentFlag.AlignLeft)
         header_row.setColumnStretch(0, 1)
@@ -1127,6 +1129,8 @@ class BatchList(QWidget):
         self.move_down_button = QPushButton(_t("components.file_drop.batch_list.action_move_down", "Move Down"))
         self.move_up_button.setObjectName("batchReorderButton")
         self.move_down_button.setObjectName("batchReorderButton")
+        self.move_up_button.setMinimumHeight(Sizing.CONTROL_HEIGHT)
+        self.move_down_button.setMinimumHeight(Sizing.CONTROL_HEIGHT)
         move_up_hint = f"{self.move_up_button.text()} (Ctrl+↑)"
         move_down_hint = f"{self.move_down_button.text()} (Ctrl+↓)"
         self.move_up_button.setToolTip(move_up_hint)
@@ -1142,6 +1146,7 @@ class BatchList(QWidget):
 
         self.sort_button = QPushButton(_t("components.file_drop.batch_list.sort_button", "Sort: Custom"))
         self.sort_button.setObjectName("batchSortButton")
+        self.sort_button.setMinimumHeight(Sizing.CONTROL_HEIGHT)
         self.sort_button.clicked.connect(self._show_sort_menu)
         reorder_row.addWidget(self.sort_button)
 

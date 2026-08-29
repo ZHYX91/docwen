@@ -190,6 +190,28 @@ def test_settings_dialog_sidebar_items_are_reachable_and_click_through(qapp) -> 
         dialog.close()
 
 
+def test_settings_dialog_sidebar_width_fits_longest_localized_label(qapp) -> None:
+    from PySide6.QtGui import QFontMetrics
+
+    from docwen_gui.view_models.settings_vm import SettingsViewModel
+    from docwen_gui.widgets.settings.dialog import (
+        NAVIGATION_TEXT_CHROME_WIDTH,
+        TAB_NAMES,
+        SettingsDialog,
+    )
+
+    dialog = SettingsDialog(view_model=SettingsViewModel())
+    try:
+        navigation = dialog._navigation  # pyright: ignore[reportPrivateUsage]
+        assert navigation is not None
+        longest_label_width = max(
+            QFontMetrics(navigation.font()).horizontalAdvance(title) for title in TAB_NAMES.values()
+        )
+        assert navigation.width() >= longest_label_width + NAVIGATION_TEXT_CHROME_WIDTH
+    finally:
+        dialog.close()
+
+
 def test_settings_dialog_isolates_one_page_construction_failure(
     qapp, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:

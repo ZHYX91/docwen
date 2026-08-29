@@ -147,6 +147,17 @@ class TestConstruction:
         assert widget.move_up_button is not None
         assert widget.move_down_button is not None
 
+    def test_summary_toolbar_buttons_use_control_height_token(self, widget: BatchList) -> None:
+        from docwen_gui.styles.design_tokens import Sizing
+
+        controls = (
+            widget.filter_button,
+            widget.move_up_button,
+            widget.move_down_button,
+            widget.sort_button,
+        )
+        assert all(control.minimumHeight() == Sizing.CONTROL_HEIGHT for control in controls)
+
     def test_summary_label_exists(self, widget: BatchList) -> None:
         assert widget.summary_label is not None
 

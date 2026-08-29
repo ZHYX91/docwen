@@ -2,7 +2,7 @@
 
 Replicates the user-visible behavior of the old ``SettingsDialog``:
 - 700x800 initial, 510x750 minimum, modal
-- FluentNavigationInterface sidebar (136px fixed) + hidden QTabWidget tabBar
+- FluentNavigationInterface sidebar sized for the active locale + hidden QTabWidget tabBar
 - 13 tabs: general, text, proofread, document, spreadsheet, image, layout,
   link, formatting, output, export, logging, other
 - Bottom bar: Reset Tab + Reset All + Ok/Cancel/Apply (QDialogButtonBox)
@@ -21,7 +21,7 @@ from typing import Any, NamedTuple
 from typing import cast as _cast
 
 from PySide6.QtCore import QSignalBlocker, Qt, QTimer, Signal
-from PySide6.QtGui import QCloseEvent, QIcon
+from PySide6.QtGui import QCloseEvent, QFontMetrics, QIcon
 from PySide6.QtWidgets import (
     QAbstractButton,
     QCheckBox,
@@ -57,6 +57,8 @@ ACTION_BUTTON_MIN_HEIGHT = 32
 RESET_TAB_BUTTON_MIN_WIDTH = 116
 RESET_ALL_BUTTON_MIN_WIDTH = 104
 STATUS_DISPLAY_MS = 3000
+NAVIGATION_MIN_WIDTH = 168
+NAVIGATION_TEXT_CHROME_WIDTH = 72
 
 
 def _safe_settings_error_detail(error: Exception) -> str:
@@ -450,10 +452,12 @@ class SettingsDialog(QDialog):
 
             nav = NavigationInterface(self, showMenuButton=False, showReturnButton=False, collapsible=True)
             nav.setObjectName("settingsFluentNavigation")
-            nav.setExpandWidth(136)
+            text_width = max(QFontMetrics(nav.font()).horizontalAdvance(title) for title in TAB_NAMES.values())
+            navigation_width = max(NAVIGATION_MIN_WIDTH, text_width + NAVIGATION_TEXT_CHROME_WIDTH)
+            nav.setExpandWidth(navigation_width)
             nav.setMinimumExpandWidth(0)
             nav.setCollapsible(False)
-            nav.setFixedWidth(136)
+            nav.setFixedWidth(navigation_width)
             self._navigation = nav
             self._nav_position = NavigationItemPosition.TOP
             content_row.addWidget(nav, 0)

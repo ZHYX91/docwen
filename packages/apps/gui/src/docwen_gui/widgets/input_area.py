@@ -58,6 +58,7 @@ from qfluentwidgets import (
 )
 
 from docwen_gui.i18n import t
+from docwen_gui.styles.design_tokens import Sizing
 
 from .batch_list import _MiddleElidedLabel
 
@@ -72,6 +73,7 @@ _SPACING_XS = 4
 _SPACING_SM = 8
 _SPACING_MD = 12
 _PYRAMID_INDENTS = (72, 58, 44, 30, 18, 8)
+_ACTION_BUTTON_MIN_WIDTH = 72
 
 _SUPPORTED_TYPE_ROWS: tuple[tuple[str, str, str], ...] = (
     ("file_category.text_short", "Text", "MD, TXT"),
@@ -212,12 +214,14 @@ class InputArea(QFrame):
         # Add button
         self._add_button = PrimaryPushButton(_i18n(_I_ADD_BUTTON, "Add"), self._drop_group)
         self._add_button.setObjectName("fileDropPrimaryButton")
+        self._add_button.setMinimumSize(_ACTION_BUTTON_MIN_WIDTH, Sizing.CONTROL_HEIGHT)
         self._add_button.clicked.connect(self._on_add_clicked)
         action_layout.addWidget(self._add_button)
 
         # Clear button (danger theme for destructive action)
         self._clear_button = PushButton(_i18n(_I_CLEAR_BUTTON, "Clear"), self._drop_group)
         self._clear_button.setObjectName("fileDropClearButton")
+        self._clear_button.setMinimumSize(_ACTION_BUTTON_MIN_WIDTH, Sizing.CONTROL_HEIGHT)
         self._clear_button.setProperty("danger", True)
         self._clear_button.setToolTip(_i18n(_I_CLEAR_BUTTON, "Clear"))
         self._clear_button.setAccessibleName(_i18n(_I_CLEAR_BUTTON, "Clear"))
@@ -718,9 +722,10 @@ class InputArea(QFrame):
             self._clear_button.setText(_i18n(_I_CLEAR_BUTTON, "Clear"))
             self._clear_button.setIcon(QIcon())
 
-        # Ensure buttons are well-sized
-        self._add_button.setMinimumWidth(56)
-        self._clear_button.setMinimumWidth(36 if compact else 56)
+        # Keep the two text actions visually balanced at normal widths.  The
+        # icon-only clear action remains intentionally smaller in compact mode.
+        self._add_button.setMinimumWidth(56 if compact else _ACTION_BUTTON_MIN_WIDTH)
+        self._clear_button.setMinimumWidth(36 if compact else _ACTION_BUTTON_MIN_WIDTH)
         self.height_changed.emit(self.minimumHeight())
 
     def _sync_supported_type_layout(self) -> None:

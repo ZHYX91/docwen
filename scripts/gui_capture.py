@@ -134,9 +134,17 @@ def _prepare_widget(widget: QWidget, size: QSize) -> None:
     widget.resize(size)
     widget.show()
     widget.raise_()
+    widget.ensurePolished()
+    layout = widget.layout()
+    if layout is not None:
+        layout.activate()
     app = QApplication.instance()
     if isinstance(app, QApplication):
-        app.processEvents()
+        # Fluent widgets schedule parts of their geometry update.  Settle those
+        # queued passes before grabbing so captures represent the final layout.
+        for _ in range(3):
+            app.sendPostedEvents()
+            app.processEvents()
 
 
 def _capture_widget(widget: QWidget, output_path: Path) -> None:
@@ -170,11 +178,8 @@ def _capture_settings_dialog(theme_name: str, output_dir: Path, size: QSize) -> 
     vm = _create_settings_view_model(SettingsViewModel)
     dialog = SettingsDialog(parent=None, view_model=vm)
     try:
-        dialog.resize(size)
-        dialog.show()
+        _prepare_widget(dialog, size)
         app = QApplication.instance()
-        if isinstance(app, QApplication):
-            app.processEvents()
         output_paths: list[Path] = []
         output_path = output_dir / f"settings-{theme_name}.png"
         _capture_widget(dialog, output_path)
