@@ -29,6 +29,57 @@ direct `outlineLvl=0..8` values and outline levels inherited through paragraph s
 - Unsupported constructs remain visible as text or emit a warning; they must not disappear silently.
 - Configuration and per-request options have one precedence chain and no process-global fallback after admission.
 
+## Obsidian extension interoperability / Obsidian 扩展互通
+
+The round-trip contract is: an unchanged DOCX recovers the authenticated authored Markdown byte-for-byte; after a
+DOCX edit, DocWen preserves the represented semantics and writes canonical Markdown. Exact recovery is never claimed
+from visual similarity alone. It requires an authentic resolved-numbering v4 projection plus the adjacent owned
+`<document>.docwen` artifact. That artifact has media type
+`application/vnd.docwen.round-trip-sidecar+zip`, schema `docwen.round_trip_sidecar.v1`, and exactly four ZIP members
+in order: `authored-source.md`, `neutral-document.json`, `numbering-export-plan.json`, and `manifest.json`. The
+canonical manifest binds the exact DOCX byte count/SHA-256 and the byte count, SHA-256, and strict media type of each
+of the three payloads. The producer fixes member order, timestamps, permissions, comments, and storage encoding for
+deterministic bytes. The reader rejects extra or duplicate members, absolute or parent paths, links, encryption,
+non-canonical metadata, and oversized or unsafe compression. The whole sidecar is additionally integrity-pinned by
+Artifact Bundle v2. A missing, foreign, invalid, stale, linked, structurally unsafe, oversized, or DOCX-mismatched
+sidecar falls back to canonical semantic recovery with an explicit diagnostic. UTF-8 BOM, CRLF/LF choice, blank
+lines, and final-newline presence are therefore retained only on the authenticated unchanged path. A Word edit
+disables byte-exact recovery before the old source can be considered; it does not prevent authenticated semantic
+normalization when the semantic carriers still prove.
+
+往返合同为：DOCX 未修改时，恢复经过认证的 Markdown 原文字节；在 Word 中修改后，保留可表达的语义并
+输出规范化 Markdown。系统不会因视觉相似就声称精确恢复。精确路径要求 DOCX 中有效的 resolved-numbering
+v4 投影，以及相邻且归属明确的单文件 `<document>.docwen` ZIP artifact。它的媒体类型为
+`application/vnd.docwen.round-trip-sidecar+zip`、schema 为 `docwen.round_trip_sidecar.v1`，并按固定顺序仅含
+`authored-source.md`、`neutral-document.json`、`numbering-export-plan.json` 与 `manifest.json`。manifest 绑定
+DOCX 及三份数据的字节数和 SHA-256；Artifact Bundle v2 另行绑定整个 sidecar。sidecar 缺失、外来、损坏、
+过期、不安全、过大或与 DOCX 不匹配时，系统会带明确诊断退回语义规范化。Word 编辑会先关闭逐字恢复，
+不会套用旧源码；只要语义载体仍通过认证，就继续规范化恢复。因此 BOM、换行风格、空行和文末换行只在
+经过认证的未修改路径中逐字节保留。
+
+DocWen accepts the Structural Tables pipe-table dialect in addition to ordinary GFM tables:
+
+- consecutive equal-width rows before the delimiter are column-header rows;
+- one adjacent `||` inside the delimiter marks the columns to its left as row headers and adds no column;
+- an exact `<` merges left and an exact `^` merges up; `\<` and `\^` are literal cell text;
+- escaped pipes and pipes inside code spans do not split cells; and
+- invalid widths or structures remain visible source text instead of being guessed.
+
+DOCX export maps these roles and merge rectangles to native table semantics. DOCX import emits the canonical
+Structural Tables spelling when native table metadata requires multiple column-header rows or row-header columns;
+ordinary tables remain ordinary GFM. Number Suite interoperation is consumer-neutral: an Obsidian adapter supplies
+authenticated heading/caption/reference facts and their effective displayed counters in DocWen's resolved document
+and exact-two numbering plan. DocWen does not import Number Suite code, scan a Vault, or infer numbers from visible
+prefixes.
+
+除普通 GFM 表格外，DocWen 还接受 Structural Tables 管道表格语法：分隔行前连续且等宽的行是多行列表头；
+分隔行内唯一相邻的 `||` 标记其左侧为行表头且不增加列；严格匹配的 `<` 向左合并、`^` 向上合并，`\<` 与
+`\^` 表示字面量；转义管道和代码跨度中的管道不会切分单元格；无效宽度或结构保持为可见源码而不猜测。
+DOCX 导出把这些角色与矩形合并映射为原生表格语义；导入在原生表格元数据要求多行列表头或行表头时输出
+规范 Structural Tables 写法，普通表格仍输出普通 GFM。Number Suite 互通通过消费者无关数据完成：Obsidian
+适配器提供经过认证的标题、题注、引用和实际显示计数；DocWen 不导入 Number Suite 代码、不扫描 Vault，
+也不从可见前缀猜测编号。
+
 ## Anchors and semantic targets / 锚点与语义目标
 
 DocWen's canonical Markdown is self-contained and has no Pandoc dependency. Pandoc-style `{#id}` attributes are not
@@ -101,9 +152,19 @@ one or more carriers adds the artifact-bound warning `DOCX2MD-IMAGE-OWNER-RESOUR
 describes output recovery rather than an authored-source defect, it has no Markdown `range`, `fixes`, or source
 evidence claim.
 
-A captioned semantic object exists when an exact declaration is immediately followed by its matching object.
-Its ID is optional, except that an Equation with empty caption text must have an ID. Only a declaration that carries
-an ID is addressable by `@[[...#^id]]`, has a Word bookmark, or receives an entry in the semantic-target map:
+A captioned semantic object exists when one exact declaration has one unique adjacent captionable object. The
+semantic declaration kind (`Figure`, `Table`, `Equation`, or `Code`) and the carrier's native structure are
+independent: any declaration kind may own an image paragraph, native table, block equation, or fenced code block.
+The declaration may be above or below the carrier in authored input, with zero or one blank line between them; two
+or more blank lines break ownership. A carrier on both sides of one declaration, or declarations on both sides of
+one carrier, is ambiguous and fails closed. Canonical DOCX recovery always writes the declaration above the carrier.
+
+Its ID is optional, except that Equation and Code with empty caption text must have an ID. The ID may be the trailing
+token on the declaration line or an ID-only line immediately after it; a blank or intervening line is not the same
+target. In `resolved_document.v1`, the authenticated target range remains the short physical declaration line and
+the adapter separately authenticates the immediately following ID line against the typed `target_id` and complete
+source hash. Only a declaration that carries an ID is addressable by `@[[...#^id]]`, has a Word bookmark, or receives
+an entry in the semantic-target map:
 
 ```md
 Figure: System architecture ^system-architecture
@@ -118,18 +179,18 @@ The four closed kinds are:
 | `Figure:` | `figure` | non-empty text; type-neutral ID optional |
 | `Table:` | `table` | non-empty text; type-neutral ID optional |
 | `Equation:` | `equation` | text may be empty; an empty-text declaration requires a type-neutral ID |
-| `Code:` | `code_block` | non-empty text; type-neutral ID optional |
+| `Code:` | `code_block` | text may be empty; an empty-text declaration requires a type-neutral ID |
 
-`Equation: ^energy` is therefore valid, as is `Equation: Energy relation` without an ID; bare `Equation:` is not.
-Figure, Table, and Code always require visible caption text. A caption without an ID is still styled and numbered,
+`Equation: ^energy` and `Code: ^snippet` are therefore valid; bare `Equation:` and bare `Code:` are not. Figure and
+Table always require visible caption text. A caption without an ID is still styled and numbered,
 but is not an addressable target. The declaration binds the complete declaration-plus-object pair.
 `@[[#^system-architecture]]`, for example, is a semantic cross-reference, while
 `[[Page#^system-architecture]]` is ordinary navigation whose source and Word landing position is the declaration
 line. If the raw object also needs its own navigation target, it may carry a different ordinary ID; DocWen does not
 generate that second ID by default and the declaration ID must not be repeated on the object.
 
-A Heading with an inline `^id` is also an addressable semantic target. A Heading without an ID remains a heading and
-may be numbered, but is not addressable through the stable semantic-reference grammar. Paragraph and raw-object
+A Heading with an inline or immediately following ID-only `^id` is also an addressable semantic target. A Heading
+without an ID remains a heading and may be numbered, but is not addressable through the stable semantic-reference grammar. Paragraph and raw-object
 anchors never become semantic targets merely because their spelling resembles a historical typed prefix.
 
 After stripping only an already-parsed CommonMark container prefix, the declaration matcher recognizes exactly the
@@ -311,9 +372,9 @@ Machine diagnostic shape and make no source-coordinate or fix claim.
 `source` contains the exact `input_id`, lowercase 64-hex content SHA-256, `encoding="utf-8"`,
 `coordinate_system="unicode_code_point"`, `offset_base=0`, and `range_end="exclusive"`. Primary and related ranges
 are `{start,end}` pairs into the authenticated authored source. A primary range is non-empty; an ID-token range
-includes its leading `^`, a semantic cross-reference range includes its leading `@`, and an object mismatch covers
-the complete mismatching object block. Missing caption content or an ID on an empty Equation selects the non-empty
-declaration keyword without its colon. Only a fix edit insertion may be zero-width.
+includes its leading `^`, and a semantic cross-reference range includes its leading `@`. Missing required Figure or
+Table content, or a missing ID on empty Equation/Code, selects the non-empty declaration keyword without its colon.
+Only a fix edit insertion may be zero-width.
 
 Fixes are closed objects `{fix_id,edits}`. `edits` contains 1..16 ordered, non-overlapping objects
 `{range,replacement}`; `replacement` is at most 4096 Unicode code points and every range uses the diagnostic's same
@@ -326,9 +387,9 @@ series use the following exact codes:
 | `docwen.markdown.anchor.dangling` | an anchor-only line has no attachable preceding block in the same container/depth; range is that `^id` | none; DocWen does not search farther backward |
 | `docwen.markdown.anchor.duplicate` | an ID already has an owner in the shared namespace; primary range is the later `^id`, with the first owner as related range | `docwen.markdown.fix.rename_anchor` when the caller supplies one conflict-free replacement |
 | `docwen.markdown.anchor.invalid_id` | a `^id` has an empty suffix, illegal character, invalid placement, or exceeds 128 characters; range is the complete candidate token | `docwen.markdown.fix.rename_anchor` only with one preselected valid replacement |
-| `docwen.markdown.caption.content_required` | Figure/Table/Code has empty trimmed caption content; primary range is the non-empty declaration keyword | none; DocWen does not invent prose |
-| `docwen.markdown.caption.object_mismatch` | declaration kind and the immediately following object differ, or an intervening block/container boundary prevents binding; range is the object or boundary that prevents binding | none; DocWen does not change object kind by guess |
-| `docwen.markdown.caption.empty_equation_target_required` | Equation has both empty trimmed caption content and no ID; primary range is `Equation` | `docwen.markdown.fix.add_semantic_id`, whose insertion edit alone has a zero-width range at declaration end |
+| `docwen.markdown.caption.content_required` | Figure/Table has empty trimmed caption content; primary range is the non-empty declaration keyword | none; DocWen does not invent prose |
+| `docwen.markdown.caption.object_mismatch` | no unique adjacent captionable object exists within zero or one blank line, including two-sided ambiguity or an intervening block/container boundary; primary range identifies the declaration/boundary | none; DocWen does not guess ownership |
+| `docwen.markdown.caption.empty_equation_target_required` | Equation or Code has both empty trimmed caption content and no ID; primary range is the declaration keyword | `docwen.markdown.fix.add_semantic_id`, whose insertion edit alone has a zero-width range at declaration end |
 | `docwen.markdown.cross_reference.missing` | the supplied locator has no target; range is the complete `@[[...]]` | `docwen.markdown.fix.add_semantic_id` only when one intended ID-less semantic object is already uniquely selected by the caller |
 | `docwen.markdown.cross_reference.ambiguous` | a same-document soft Heading path selects more than one Heading; range is the complete `@[[...]]` and related ranges identify all matching Heading declarations | none; the caller must select a full path or establish a stable ID |
 | `docwen.markdown.cross_reference.non_semantic_target` | the resolved ID belongs only to an ordinary block anchor; range is the complete `@[[...]]` | `docwen.markdown.fix.move_anchor_to_declaration` only for one adjacent, matching, ID-less declaration; otherwise none |
@@ -386,12 +447,15 @@ runs are appended outside the REF field. An unnumbered semantic reference fails 
 `REF`. Ordinary navigation to a semantic ID lands in the declaration/Heading paragraph regardless of numbering
 enablement. A caption or Heading without an ID may still be numbered, but creates no bookmark or target-map entry.
 
-DOCX caption/object order is fixed and is not selected by a profile or Export Style. A Figure logical object is
-immediately followed by its `DocWenFigureCaption` paragraph. A `DocWenTableCaption`, `DocWenEquationCaption`, or
-`DocWenCodeBlockCaption` paragraph is immediately followed by exactly one matching Table, Equation, or Code logical
-object, respectively. A fenced Code object's consecutive Word paragraphs count as one logical object. Direct
-adjacency is measured between logical blocks; an ordinary-anchor SDT that wraps the object is the same object, not
-an intervening block. DOCX-to-Markdown always restores the canonical source order of declaration followed by object.
+DOCX caption/object order is fixed by the declaration's semantic kind and is not selected by a profile or Export
+Style. A Figure-labelled carrier is immediately followed by its `DocWenFigureCaption` paragraph. A
+`DocWenTableCaption`, `DocWenEquationCaption`, or `DocWenCodeBlockCaption` paragraph is immediately followed by its
+one native carrier. Semantic kind and carrier structure are independent: the carrier may be an image paragraph,
+native table, block equation, or fenced code block; Figure plus a native multi-image table therefore remains a
+Figure-labelled native table rather than becoming a Table caption or rasterized image. A fenced Code carrier's
+consecutive Word paragraphs count as one logical object. Direct adjacency is measured between logical blocks; an
+ordinary-anchor SDT that wraps the carrier is the same carrier, not an intervening block. DOCX-to-Markdown always
+restores the canonical source order of declaration followed by carrier.
 
 An ID-less caption is recovered only from that fixed direct adjacency and the one exact request-resolved managed
 caption style authenticated by the caption-style binding map below. When enabled, it additionally requires exactly
@@ -399,10 +463,10 @@ one closed simple-`SEQ` or chapter-`STYLEREF`+separator+`SEQ` materialization an
 resolved numbering/export plan. A disabled ID-less declaration requires the independent occurrence authority below;
 style plus adjacency alone is never proof of a declaration. An ID-less caption has no
 `docwen-target-v1:` pairing SDT, target-map or reference-occurrence-map record, hidden/generated ID, bookmark,
-hyperlink target, or `REF`. Import fails closed when the caption is on the opposite side, a logical block intervenes,
-the neighboring object is missing or has the wrong kind, the style or `SEQ` kind/count/cached number is inconsistent,
-or one caption/object participates in multiple pairing claims, including claims from both sides. It never guesses a
-pair or invents an ID.
+hyperlink target, or `REF`. Import fails closed when the semantic-kind-defined DOCX order is reversed, a logical block
+intervenes, the native carrier proof is absent, the style or `SEQ` kind/count/cached number is inconsistent, or one
+caption/carrier participates in multiple pairing claims, including claims from both sides. It never guesses a pair,
+coerces the carrier structure to the semantic kind, or invents an ID.
 
 #### Caption-style binding map / 题注样式绑定表
 
@@ -436,8 +500,9 @@ caption and proves the reopened map and `styles.xml` before artifact registratio
 
 Every disabled Figure/Table/Equation/Code declaration without an ID has exactly one independent block-level
 `w:sdt` tagged `docwen-numbering-occurrence-v1:<digest32>`. Its `w:sdtContent` contains exactly the caption paragraph
-and one matching logical object in the fixed physical order above, with no third block. A fenced Code object's
-paragraphs count as one object; an ordinary-anchor SDT may wrap the object and still occupies that one slot. This
+and one authenticated native carrier in the semantic-kind-defined physical order above, with no third block. A
+fenced Code carrier's paragraphs count as one carrier; an ordinary-anchor SDT may wrap the carrier and still occupies
+that one slot. This
 wrapper is source-recovery pairing only. It creates no target, hidden ID, bookmark, `SEQ`, `REF`, or number.
 
 The full digest is lowercase SHA-256 over exact UTF-8
@@ -610,10 +675,10 @@ before this lowering may enter a packaged candidate.
 Every addressable semantic target also has exactly one outer block-level `w:sdt`. Its `w:tag/@w:val` is
 `docwen-target-v1:<pair-digest>`, where `<pair-digest>` is the first 32 lowercase hexadecimal characters of the same
 complete target digest used for its `DW_T_` bookmark. A Heading target SDT contains exactly one heading paragraph. A
-caption target SDT contains exactly one caption paragraph and exactly one matching logical object, in the physical
-order frozen above, with direct adjacency and no third block. A fenced code
-object's Word paragraphs collectively count as that one logical object. If the object has a distinct ordinary
-anchor, that anchor's SDT may occupy the object slot inside this outer SDT and still counts as one object. The outer
+caption target SDT contains exactly one caption paragraph and exactly one authenticated native carrier, in the
+semantic-kind-defined physical order frozen above, with direct adjacency and no third block. A fenced code carrier's
+Word paragraphs collectively count as that one carrier. If the carrier has a distinct ordinary anchor, that anchor's
+SDT may occupy the carrier slot inside this outer SDT and still counts as one carrier. The outer
 SDT is required reversible internal pairing, not a source anchor, public target, or optional extra marker; it never
 emits a Markdown token. Import rejects a missing, duplicate, mistagged, wrong-kind, or wrong-cardinality pairing SDT.
 

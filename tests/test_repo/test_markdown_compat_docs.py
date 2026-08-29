@@ -51,9 +51,10 @@ def test_markdown_compatibility_freezes_caption_order_and_fenced_anchor_kind() -
     text = (ROOT / "docs" / "specs" / "markdown-compatibility.md").read_text(encoding="utf-8")
     normalized = " ".join(text.split())
 
-    assert "A Figure logical object is immediately followed by its `DocWenFigureCaption` paragraph" in normalized
+    assert "A Figure-labelled carrier is immediately followed by its `DocWenFigureCaption` paragraph" in normalized
+    assert "Semantic kind and carrier structure are independent" in normalized
     assert "An ID-less caption is recovered only from that fixed direct adjacency" in normalized
-    assert "It never guesses a pair or invents an ID" in normalized
+    assert "It never guesses a pair, coerces the carrier structure to the semantic kind, or invents an ID" in normalized
     assert "Every ordinary anchor on a CommonMark fenced block uses `code_block`" in normalized
     assert "`fenced_block` is never serialized in this DOCX map" in normalized
 
