@@ -2651,6 +2651,10 @@ class DocxToMarkdownConverter:
             render_docx_table_rows,
         )
 
+        table_metadata = extract_semantic_table_metadata(tbl_element)
+        structural = table_metadata.header_rows > 1 or table_metadata.header_columns > 0
+        resolved_round_trip = self._resolved_v4_recovery is not None or bool(self._resolved_v4_diagnostics)
+        use_merge_markers = table_merge_strategy == "marker" or structural or resolved_round_trip
         rendered = render_docx_table_rows(
             tbl_element,
             cell_text_resolver=lambda cell, row_index, _virtual_col: self._get_cell_text(
@@ -2663,9 +2667,18 @@ class DocxToMarkdownConverter:
                 ),
                 paragraph_image_renderer=paragraph_image_renderer,
             ),
-            strategy=table_merge_strategy,
+            strategy="marker" if use_merge_markers else table_merge_strategy,
+            # Once the Structural Tables dialect is recognized, uncovered
+            # literal marker cells must always be escaped.  In fill mode the
+            # repeated values are literals too; in marker mode covered cells
+            # remain the structural carriers.
+            escape_literal_merge_markers=True,
         )
-        lines = markdown_table_lines(rendered)
+        lines = markdown_table_lines(
+            rendered,
+            header_rows=table_metadata.header_rows if structural else 1,
+            header_columns=table_metadata.header_columns if structural else 0,
+        )
         if lines:
             lines.append("")
         return lines, 0

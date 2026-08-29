@@ -59,6 +59,53 @@ def test_shared_table_geometry_marks_a_horizontal_merge_once() -> None:
     ]
 
 
+def test_structural_markdown_projection_places_delimiter_after_all_headers() -> None:
+    rendered = [
+        ["Region", "Sales", "<"],
+        ["Quarter", "Q1", "Q2"],
+        ["North", "10", "12"],
+    ]
+
+    assert markdown_table_lines(rendered, header_rows=2, header_columns=1) == [
+        "| Region | Sales | < |",
+        "| Quarter | Q1 | Q2 |",
+        "| --- || --- | --- |",
+        "| North | 10 | 12 |",
+    ]
+
+
+def test_structural_row_rendering_escapes_literal_merge_markers_only() -> None:
+    doc = Document()
+    table = doc.add_table(rows=2, cols=2)
+    table.cell(0, 0).text = "literal"
+    table.cell(0, 1).text = "<"
+    table.cell(1, 0).merge(table.cell(1, 1)).text = "merged"
+
+    rendered = render_docx_table_rows(
+        table._tbl,
+        cell_text_resolver=_plain_text,
+        strategy="marker",
+        escape_literal_merge_markers=True,
+    )
+
+    assert rendered == [["literal", "\\<"], ["merged", "<"]]
+
+
+def test_fill_row_rendering_escapes_repeated_literal_merge_markers() -> None:
+    doc = Document()
+    table = doc.add_table(rows=1, cols=2)
+    table.cell(0, 0).merge(table.cell(0, 1)).text = "^"
+
+    rendered = render_docx_table_rows(
+        table._tbl,
+        cell_text_resolver=_plain_text,
+        strategy="fill",
+        escape_literal_merge_markers=True,
+    )
+
+    assert rendered == [["\\^", "\\^"]]
+
+
 def test_shared_table_geometry_preserves_a_rectangular_horizontal_vertical_merge() -> None:
     document = Document()
     table = document.add_table(rows=2, cols=2)

@@ -161,6 +161,7 @@ def render_docx_table_rows(
     *,
     cell_text_resolver: DocxCellTextResolver,
     strategy: str = "fill",
+    escape_literal_merge_markers: bool = False,
 ) -> list[list[str]]:
     """Render an OOXML table through the shared semantic-grid policy."""
 
@@ -172,22 +173,60 @@ def render_docx_table_rows(
     )
     if not grid:
         return []
-    return render_table_semantic_grid(grid, strategy=strategy)
+    rendered = render_table_semantic_grid(grid, strategy=strategy)
+    if not escape_literal_merge_markers:
+        return rendered
+    return [
+        [
+            (f"\\{value}" if value in {"<", "^"} and (strategy != "marker" or not cell.is_covered) else value)
+            for cell, value in zip(row_cells, rendered_row, strict=True)
+        ]
+        for row_cells, rendered_row in zip(grid, rendered, strict=True)
+    ]
 
 
-def markdown_table_lines(rendered: list[list[str]]) -> list[str]:
+def markdown_table_lines(
+    rendered: list[list[str]],
+    *,
+    header_rows: int = 1,
+    header_columns: int = 0,
+) -> list[str]:
     """Project rendered semantic rows into a Markdown table."""
 
     if not rendered or not any(any(cell for cell in row) for row in rendered):
         return []
-    header = rendered[0]
-    lines = [
-        "| " + " | ".join(header) + " |",
-        "| " + " | ".join("---" for _ in header) + " |",
-    ]
-    for row in rendered[1:]:
-        padded = [*row, *([""] * (len(header) - len(row)))]
-        lines.append("| " + " | ".join(padded[: len(header)]) + " |")
+    width = len(rendered[0])
+    bounded_header_rows = max(1, min(header_rows, len(rendered)))
+    bounded_header_columns = max(0, min(header_columns, width))
+    lines: list[str] = []
+    for row_index, row in enumerate(rendered):
+        if row_index == bounded_header_rows:
+            delimiters = ["---"] * width
+            if 0 < bounded_header_columns < width:
+                line = (
+                    "| "
+                    + " | ".join(delimiters[:bounded_header_columns])
+                    + " || "
+                    + " | ".join(delimiters[bounded_header_columns:])
+                    + " |"
+                )
+            else:
+                line = "| " + " | ".join(delimiters) + " |"
+            lines.append(line)
+        padded = [*row, *([""] * (width - len(row)))]
+        lines.append("| " + " | ".join(padded[:width]) + " |")
+    if bounded_header_rows == len(rendered):
+        delimiters = ["---"] * width
+        if 0 < bounded_header_columns < width:
+            lines.append(
+                "| "
+                + " | ".join(delimiters[:bounded_header_columns])
+                + " || "
+                + " | ".join(delimiters[bounded_header_columns:])
+                + " |"
+            )
+        else:
+            lines.append("| " + " | ".join(delimiters) + " |")
     return lines
 
 

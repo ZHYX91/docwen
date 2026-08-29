@@ -374,6 +374,64 @@ def test_vertical_merge_continuation_does_not_add_a_phantom_column():
     assert image_count == 0
 
 
+def test_structural_table_roles_export_the_structural_tables_dialect():
+    from docwen_core.docx_semantics import apply_semantic_table_roles
+
+    doc = Document()
+    table = doc.add_table(rows=4, cols=3)
+    values = [
+        ["Region", "Sales", ""],
+        ["Quarter", "Q1", "Q2"],
+        ["North", "10", "12"],
+        ["", "8", "11"],
+    ]
+    for row_index, row in enumerate(values):
+        for column_index, value in enumerate(row):
+            table.cell(row_index, column_index).text = value
+    table.cell(0, 1).merge(table.cell(0, 2))
+    table.cell(2, 0).merge(table.cell(3, 0))
+    apply_semantic_table_roles(
+        table,
+        header_rows=2,
+        header_columns=1,
+        repeat_header="inherit",
+    )
+
+    lines, image_count = DocxToMarkdownConverter()._process_table(table._tbl)
+
+    assert lines[:5] == [
+        "| Region | Sales | < |",
+        "| Quarter | Q1 | Q2 |",
+        "| --- || --- | --- |",
+        "| North | 10 | 12 |",
+        "| ^ | 8 | 11 |",
+    ]
+    assert image_count == 0
+
+
+def test_resolved_round_trip_semantic_fallback_preserves_single_header_merges():
+    doc = Document()
+    table = doc.add_table(rows=2, cols=3)
+    table.cell(0, 0).text = "Header"
+    table.cell(0, 1).merge(table.cell(0, 2)).text = "Merged"
+    table.cell(1, 0).text = "literal"
+    table.cell(1, 1).text = "<"
+    table.cell(1, 2).text = "value"
+
+    converter = DocxToMarkdownConverter()
+    converter._resolved_v4_diagnostics.append(  # pyright: ignore[reportPrivateUsage]
+        ("changed", "changed", "package")
+    )
+    lines, image_count = converter._process_table(table._tbl)
+
+    assert lines[:3] == [
+        "| Header | Merged | < |",
+        "| --- | --- | --- |",
+        "| literal | \\< | value |",
+    ]
+    assert image_count == 0
+
+
 def test_inline_markdown_syntax_consumes_request_config():
     """DOCX->MD inline markers honor syntax frozen onto the converter request."""
     from docwen_core.docx_parsing.format_features import (

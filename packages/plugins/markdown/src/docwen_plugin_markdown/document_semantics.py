@@ -315,11 +315,14 @@ def _analyze_table(
     row_count = len(rows)
     column_count = max((len(row) for row in rows), default=0)
     attributes = attributes or {}
+    structural = node.get("_structural_table")
+    structural_header_rows = structural.get("header_rows", 1) if isinstance(structural, dict) else 1
+    structural_header_columns = structural.get("header_columns", 0) if isinstance(structural, dict) else 0
 
     attribute_error = bool(set(attributes) - {"header-rows", "header-cols", "repeat-header"})
     try:
-        header_rows = int(attributes.get("header-rows", "1"))
-        header_columns = int(attributes.get("header-cols", "0"))
+        header_rows = int(attributes.get("header-rows", structural_header_rows))
+        header_columns = int(attributes.get("header-cols", structural_header_columns))
     except ValueError:
         header_rows = 1
         header_columns = 0
@@ -415,7 +418,9 @@ def _table_anchor_cells(
             cell = row[column_index] if column_index < len(row) else {"type": "table_cell", "children": []}
             cell_nodes[(row_index, column_index)] = cell
             raw = _plain_inline_text(cell.get("children", [])).strip()
-            if raw in {"<", "^"}:
+            attributes = cell.get("attrs", {})
+            literal_marker = isinstance(attributes, dict) and attributes.get("docwen_literal_merge_marker") is True
+            if raw in {"<", "^"} and not literal_marker:
                 markers[(row_index, column_index)] = raw
 
     resolved: dict[tuple[int, int], tuple[int, int] | None] = {}

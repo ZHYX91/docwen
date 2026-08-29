@@ -35,6 +35,11 @@ from mistune.plugins.formatting import (
 )
 
 _EXTENDED_ATX_HEADING_TRIM = re.compile(r"(\s+|^)#+\s*$")
+_STRUCTURAL_TABLE_DELIMITER_CELL = re.compile(r"^:?-{3,}:?$")
+_STRUCTURAL_TABLE_BLOCK = (
+    r"^ {0,3}(?P<structural_table_rows>"
+    r"(?:\|[^\n]*\|[ \t]*(?:\n|$)){2,})"
+)
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Custom plugin: <u>underline</u>
@@ -136,6 +141,169 @@ def plugin_extended_atx_headings(md: mistune.Markdown) -> None:
     )
 
 
+def _structural_pipe_row(line: str) -> list[str] | None:
+    """Split one Structural Tables row without consuming escaped/code pipes."""
+
+    if "|" not in line:
+        return None
+    segments: list[str] = []
+    current: list[str] = []
+    escaped = False
+    code_ticks = 0
+    index = 0
+    while index < len(line):
+        character = line[index]
+        if escaped:
+            current.append(character)
+            escaped = False
+            index += 1
+            continue
+        if character == "\\":
+            current.append(character)
+            escaped = True
+            index += 1
+            continue
+        if character == "`":
+            run = 1
+            while index + run < len(line) and line[index + run] == "`":
+                run += 1
+            current.extend("`" * run)
+            if code_ticks == 0:
+                code_ticks = run
+            elif code_ticks == run:
+                code_ticks = 0
+            index += run
+            continue
+        if character == "|" and code_ticks == 0:
+            segments.append("".join(current))
+            current = []
+        else:
+            current.append(character)
+        index += 1
+    segments.append("".join(current))
+    if segments and not segments[0].strip():
+        segments.pop(0)
+    if segments and not segments[-1].strip():
+        segments.pop()
+    return segments or None
+
+
+def _structural_delimiter(line: str) -> tuple[list[str | None], int] | None:
+    cells = _structural_pipe_row(line)
+    if cells is None:
+        return None
+    boundaries = [index for index, cell in enumerate(cells) if cell == ""]
+    if any(not cell and cell != "" for cell in cells):  # pragma: no cover - defensive type boundary
+        return None
+    if any(cell != "" and not cell.strip() for cell in cells):
+        return None
+    if len(boundaries) > 1:
+        return None
+    boundary = boundaries[0] if boundaries else None
+    if boundary is not None and (boundary == 0 or boundary == len(cells) - 1):
+        return None
+    tokens = [cell for index, cell in enumerate(cells) if index != boundary]
+    if not tokens or any(_STRUCTURAL_TABLE_DELIMITER_CELL.fullmatch(token.strip()) is None for token in tokens):
+        return None
+    alignments: list[str | None] = []
+    for token in tokens:
+        stripped = token.strip()
+        if stripped.startswith(":") and stripped.endswith(":"):
+            alignments.append("center")
+        elif stripped.startswith(":"):
+            alignments.append("left")
+        elif stripped.endswith(":"):
+            alignments.append("right")
+        else:
+            alignments.append(None)
+    return alignments, 0 if boundary is None else boundary
+
+
+def _structural_table_cell(text: str, alignment: str | None, *, head: bool) -> dict[str, Any]:
+    stripped = text.strip()
+    return {
+        "type": "table_cell",
+        "text": stripped,
+        "attrs": {
+            "align": alignment,
+            "head": head,
+            "docwen_literal_merge_marker": stripped in {r"\<", r"\^"},
+        },
+    }
+
+
+def plugin_structural_tables(md: mistune.Markdown) -> None:
+    """Parse the Obsidian Structural Tables source dialect.
+
+    The extension owns only structurally distinctive tables: multiple header
+    rows, a delimiter ``||`` row-header boundary, or merge markers. Ordinary
+    GFM tables continue through Mistune's built-in table plugin.
+    """
+
+    def parse_structural_table(block, match, state):
+        raw = match.group("structural_table_rows")
+        physical_lines = raw.rstrip("\n").splitlines()
+        rows = [_structural_pipe_row(line) for line in physical_lines]
+        delimiters = [
+            (index, parsed)
+            for index, line in enumerate(physical_lines)
+            if (parsed := _structural_delimiter(line)) is not None
+        ]
+        if len(delimiters) != 1:
+            return None
+        delimiter_index, (alignments, header_columns) = delimiters[0]
+        column_count = len(alignments)
+        if delimiter_index < 1:
+            return None
+        content_rows = [*rows[:delimiter_index], *rows[delimiter_index + 1 :]]
+        if any(row is None or len(row) != column_count for row in content_rows):
+            return None
+        concrete_rows = [row for row in content_rows if row is not None]
+        marker_found = any(cell.strip() in {"<", "^"} for row in concrete_rows for cell in row)
+        structural = marker_found or delimiter_index > 1 or header_columns > 0
+
+        head_rows = [
+            {
+                "type": "table_row",
+                "children": [
+                    _structural_table_cell(cell, alignments[column], head=True) for column, cell in enumerate(row or [])
+                ],
+            }
+            for row in rows[:delimiter_index]
+        ]
+        body_rows = [
+            {
+                "type": "table_row",
+                "children": [
+                    _structural_table_cell(cell, alignments[column], head=False)
+                    for column, cell in enumerate(row or [])
+                ],
+            }
+            for row in rows[delimiter_index + 1 :]
+        ]
+        token: dict[str, Any] = {
+            "type": "table",
+            "children": [
+                {"type": "table_head", "children": head_rows},
+                {"type": "table_body", "children": body_rows},
+            ],
+        }
+        if structural:
+            token["_structural_table"] = {
+                "header_rows": delimiter_index,
+                "header_columns": header_columns,
+            }
+        state.append_token(token)
+        return match.end()
+
+    md.block.register(
+        "structural_table",
+        _STRUCTURAL_TABLE_BLOCK,
+        parse_structural_table,
+        before="table",
+    )
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Factory
 # ═══════════════════════════════════════════════════════════════════════════
@@ -160,6 +328,7 @@ def create_extended_markdown(*, auto_link_bare_url: bool = False) -> mistune.Mar
         "strikethrough",
         "task_lists",
         "math",
+        plugin_structural_tables,
         _mark,
         _insert,
         _superscript,
