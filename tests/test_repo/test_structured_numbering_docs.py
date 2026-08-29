@@ -224,7 +224,7 @@ def test_disabled_idless_caption_has_executable_occurrence_authority() -> None:
         "tag,source_sha256,source_start,source_end,kind,enabled,target_id,derived_number,plan_sha256,sha256" in markdown
     )
     assert "independently allocated canonical custom-XML trio" in markdown
-    assert "exactly the caption paragraph and one matching logical object" in markdown
+    assert "exactly one caption paragraph and exactly one authenticated native carrier" in markdown
     assert "It creates no target, hidden ID, bookmark, `SEQ`, `REF`, or number" in markdown
 
 

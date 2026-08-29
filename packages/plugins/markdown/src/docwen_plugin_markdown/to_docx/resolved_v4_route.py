@@ -28,7 +28,7 @@ from docwen_core.docx_resolved_numbering import (
 from docwen_core.docx_semantics import DocxSemanticRenderer
 from docwen_core.docx_semantics_v3 import CaptionStyleBindingV3
 from docwen_core.docx_styles import SHIPPED_STYLE_LOCALES
-from docwen_core.models.artifact import ARTIFACT_KIND_PRIMARY, ArtifactManifest
+from docwen_core.models.artifact import ARTIFACT_KIND_AUXILIARY, ARTIFACT_KIND_PRIMARY, ArtifactManifest
 from docwen_core.models.result import (
     ConversionDiagnostic,
     ConversionErrorInfo,
@@ -42,6 +42,13 @@ from docwen_core.models.semantic_document import (
 from docwen_core.resolved_resource_staging import (
     ResolvedResourceStagingError,
     bind_resolved_document_resources,
+)
+from docwen_core.round_trip_sidecar import (
+    ROUND_TRIP_SIDECAR_MEDIA_TYPE,
+    ROUND_TRIP_SIDECAR_OWNER_METADATA,
+    ROUND_TRIP_SIDECAR_SCHEMA,
+    ROUND_TRIP_SIDECAR_SCHEMA_METADATA,
+    write_round_trip_sidecar,
 )
 from docwen_plugin_markdown.ast_transforms import (
     annotate_ast_with_hr_attachments,
@@ -141,7 +148,7 @@ def convert_resolved_v4_to_docx(
     candidate_path: Path | None = None
     input_bytes = 0
     published = False
-    state: dict[str, Any] = {"resource_root": None, "output_path": None}
+    state: dict[str, Any] = {"resource_root": None, "output_path": None, "sidecar_path": None}
 
     def failed_with_resource_cleanup(result: ConversionResult) -> ConversionResult:
         """Preserve the primary failure while reporting an unclean request scope."""
@@ -242,6 +249,8 @@ def convert_resolved_v4_to_docx(
             output_path.unlink(missing_ok=True)
         if state["output_path"] is not None and not published:
             Path(state["output_path"]).unlink(missing_ok=True)
+        if state["sidecar_path"] is not None and not published:
+            Path(state["sidecar_path"]).unlink(missing_ok=True)
         resource_root = state["resource_root"]
         if resource_root is not None:
             # The failed result already records this cleanup failure.  Retry
@@ -360,6 +369,17 @@ def _render_resolved_v4_docx(
         source_stem=prepared.port.input_id,
     )
 
+    recovery_input = ResolvedV4RecoveryInput(
+        neutral_raw=prepared.neutral_document_path.read_bytes(),
+        plan_raw=prepared.numbering_export_plan_path.read_bytes(),
+        authored_source=prepared.port.document.authored_markdown.encode("utf-8"),
+        neutral_name="neutral-document.json",
+        plan_name="numbering-export-plan.json",
+        authored_name="authored-source.md",
+        bibliography_owner="",
+        bibliography_placeholder="",
+        bibliography_media_type="",
+    )
     session = ResolvedNumberingDocxSession(
         doc,
         prepared.port,
@@ -375,17 +395,7 @@ def _render_resolved_v4_docx(
             )
             for semantic_key in _CAPTION_STYLE_KEYS
         ),
-        recovery_input=ResolvedV4RecoveryInput(
-            neutral_raw=prepared.neutral_document_path.read_bytes(),
-            plan_raw=prepared.numbering_export_plan_path.read_bytes(),
-            authored_source=prepared.port.document.authored_markdown.encode("utf-8"),
-            neutral_name="neutral-document.json",
-            plan_name="numbering-export-plan.json",
-            authored_name="authored-source.md",
-            bibliography_owner="",
-            bibliography_placeholder="",
-            bibliography_media_type="",
-        ),
+        recovery_input=recovery_input,
     )
 
     renderer = _renderer(
@@ -447,20 +457,45 @@ def _render_resolved_v4_docx(
     validate_managed_style_package(candidate_path.read_bytes(), style_catalog, managed_styles)
     session.prove_package(candidate_path)
     os.replace(candidate_path, output_path)
+    # The sidecar is a separate artifact, but its staging locator is already
+    # adjacent to the DOCX.  Machine consumers can therefore use the pair in
+    # request-owned staging directly, while CLI/GUI finalization preserves the
+    # same ``<document>.docx.docwen`` relationship after any output rename.
+    sidecar_path = Path(f"{output_path}.docwen")
+    write_round_trip_sidecar(
+        sidecar_path,
+        docx_path=output_path,
+        authored_source=recovery_input.authored_source,
+        neutral_document=recovery_input.neutral_raw,
+        numbering_export_plan=recovery_input.plan_raw,
+    )
+    state["sidecar_path"] = str(sidecar_path)
     _remove_request_resource_root(Path(workspace.staging_dir), resource_root)
     state["resource_root"] = None
 
+    suggested_name = f"{Path(prepared.port.input_id).name}.docx"
     artifact = ArtifactManifest(
         artifact_id=f"{task_id}-docx",
         kind=ARTIFACT_KIND_PRIMARY,
         staging_path=str(output_path),
-        suggested_name=f"{Path(prepared.port.input_id).name}.docx",
+        suggested_name=suggested_name,
         media_type=MEDIA_TYPE_DOCX,
         is_primary=True,
         metadata={
             "source_format": "markdown",
             "target_format": "docx",
             "resolved_numbering": "v4",
+        },
+    )
+    sidecar_artifact = ArtifactManifest(
+        artifact_id=f"{task_id}-round-trip-sidecar",
+        kind=ARTIFACT_KIND_AUXILIARY,
+        staging_path=str(sidecar_path),
+        suggested_name=f"{suggested_name}.docwen",
+        media_type=ROUND_TRIP_SIDECAR_MEDIA_TYPE,
+        metadata={
+            ROUND_TRIP_SIDECAR_SCHEMA_METADATA: ROUND_TRIP_SIDECAR_SCHEMA,
+            ROUND_TRIP_SIDECAR_OWNER_METADATA: artifact.artifact_id,
         },
     )
 
@@ -485,16 +520,16 @@ def _render_resolved_v4_docx(
     result = ConversionResult(
         task_id=task_id,
         success=True,
-        artifacts=[artifact],
+        artifacts=[artifact, sidecar_artifact],
         metrics=ConversionMetrics(
             duration_ms=(time.monotonic() - started_at) * 1000.0,
             input_bytes=input_bytes,
-            output_bytes=output_path.stat().st_size,
+            output_bytes=output_path.stat().st_size + sidecar_path.stat().st_size,
         ),
         diagnostics=diagnostics,
     )
     context.progress.report_progress(100.0, "Done")
-    return _ResolvedV4RenderedOutput(output_path, input_bytes, (artifact,), result)
+    return _ResolvedV4RenderedOutput(output_path, input_bytes, (artifact, sidecar_artifact), result)
 
 
 def _validated_resolved_v4_options(options: dict[str, Any], style_catalog: Any) -> tuple[str, str, str]:

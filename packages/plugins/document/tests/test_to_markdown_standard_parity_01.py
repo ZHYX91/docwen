@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pytest
 
+from docwen_core.round_trip_sidecar import write_round_trip_sidecar
+
 from ._to_markdown_standard_parity_support import (
     WD_COLOR_INDEX,
     WD_STYLE_TYPE,
@@ -430,6 +432,47 @@ def test_resolved_round_trip_semantic_fallback_preserves_single_header_merges():
         "| literal | \\< | value |",
     ]
     assert image_count == 0
+
+
+def test_exact_round_trip_sidecar_preserves_bom_crlf_and_final_newline(tmp_path):
+    docx_path = tmp_path / "round-trip.docx"
+    docx_path.write_bytes(b"package")
+    sidecar = tmp_path / "round-trip.docx.docwen"
+    expected = "\ufeff# Title\r\n\r\nBody\r\n"
+    neutral_raw = b'{"schema":"docwen.resolved_document.v1"}\n'
+    plan_raw = b'{"schema":"docwen.numbering_export_plan.v1"}\n'
+    write_round_trip_sidecar(
+        sidecar,
+        docx_path=docx_path,
+        authored_source=expected.encode("utf-8"),
+        neutral_document=neutral_raw,
+        numbering_export_plan=plan_raw,
+    )
+
+    class Recovery:
+        source_recovery_available = True
+
+        @staticmethod
+        def prove_exact_recovery_raw(*, neutral_raw, plan_raw, authored_source):
+            assert neutral_raw == b'{"schema":"docwen.resolved_document.v1"}\n'
+            assert plan_raw == b'{"schema":"docwen.numbering_export_plan.v1"}\n'
+            assert authored_source == expected.encode("utf-8")
+
+    class Progress:
+        @staticmethod
+        def report_diagnostic(*_args, **_kwargs):
+            raise AssertionError("exact recovery must not report a downgrade")
+
+    converter = DocxToMarkdownConverter()
+    converter._resolved_v4_recovery = Recovery()  # pyright: ignore[reportPrivateUsage, reportAttributeAccessIssue]
+
+    assert (
+        converter._recover_exact_round_trip_source(  # pyright: ignore[reportPrivateUsage]
+            str(docx_path),
+            type("Context", (), {"progress": Progress()})(),
+        )
+        == expected
+    )
 
 
 def test_inline_markdown_syntax_consumes_request_config():

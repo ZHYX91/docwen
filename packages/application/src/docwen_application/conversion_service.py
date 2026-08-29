@@ -282,6 +282,12 @@ _SINGLE_DOCUMENT_SHAPE = OutputShape(
     relation_types=(),
 )
 
+_DOCUMENT_WITH_ROUND_TRIP_SIDECAR_SHAPE = OutputShape(
+    cardinality="many",
+    artifact_kinds=("document", "resource"),
+    relation_types=("resource_of",),
+)
+
 _DOCUMENT_WITH_RESOURCES_SHAPE = OutputShape(
     cardinality="many",
     artifact_kinds=("document", "fragment", "resource"),
@@ -577,6 +583,8 @@ _CAPABILITY_BINDINGS = (
         target_format="docx",
         output_media_type=DOCX_MEDIA_TYPE,
         runtime_route_id="docwen_plugin_markdown:markdown:docx:convert",
+        output_shape=_DOCUMENT_WITH_ROUND_TRIP_SIDECAR_SHAPE,
+        bundle_profile="document_with_round_trip_sidecar",
         options_schema=_MARKDOWN_TO_DOCX_OPTIONS,
         limitations=_RESOLVED_DOCUMENT_MACHINE_LIMITATIONS,
     ),

@@ -42,6 +42,11 @@
       "path": "schemas/docwen.resolved_document.v1.schema.json"
     },
     {
+      "name": "round_trip_sidecar",
+      "id": "urn:docwen:schema:round-trip-sidecar:v1",
+      "path": "schemas/docwen.round_trip_sidecar.v1.schema.json"
+    },
+    {
       "name": "semantic_bibliography",
       "id": "urn:docwen:schema:semantic-bibliography:v1",
       "path": "schemas/docwen.semantic_bibliography.v1.schema.json"

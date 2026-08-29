@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from docwen_core.round_trip_sidecar import ROUND_TRIP_SIDECAR_MEDIA_TYPE, read_round_trip_sidecar
+
 from ._machine_stdio_e2e_support import (
     MACHINE_DOCUMENT_SEMANTICS_FIXTURE,
     MACHINE_DOCUMENT_SEMANTICS_LIMITATIONS,
@@ -182,6 +184,12 @@ def test_real_stdio_process_emits_integrity_pinned_docx_bundle(tmp_path: Path) -
         ],
         "undeclared_roles": "reject",
     }
+    assert capabilities["convert.markdown.to_docx"]["output_shape"] == {
+        "cardinality": "many",
+        "artifact_kinds": ["document", "resource"],
+        "relation_types": ["resource_of"],
+        "atomic_bundle": True,
+    }
     for capability_id in (
         "convert.pdf.to_markdown",
         "convert.ofd.to_markdown",
@@ -247,21 +255,40 @@ def test_real_stdio_process_emits_integrity_pinned_docx_bundle(tmp_path: Path) -
 
     assert terminal["method"] == "task/completed", terminal
     bundle = terminal["params"]["bundle"]
-    assert len(bundle["artifacts"]) == 1
+    assert len(bundle["artifacts"]) == 2
+    artifact = next(item for item in bundle["artifacts"] if item["kind"] == "document")
+    sidecar_artifact = next(item for item in bundle["artifacts"] if item["kind"] == "resource")
+    assert sidecar_artifact["media_type"] == ROUND_TRIP_SIDECAR_MEDIA_TYPE
     assert bundle["entries"] == [
         {
-            "artifact_id": bundle["artifacts"][0]["artifact_id"],
+            "artifact_id": artifact["artifact_id"],
             "role": "primary",
             "ordinal": 0,
             "preferred": True,
         }
     ]
-    assert bundle["relations"] == []
-    artifact = bundle["artifacts"][0]
+    assert bundle["relations"] == [
+        {
+            "type": "resource_of",
+            "source_artifact_id": sidecar_artifact["artifact_id"],
+            "target_artifact_id": artifact["artifact_id"],
+            "role": "manifest",
+            "ordinal": 0,
+        }
+    ]
     output = staging / Path(artifact["locator"])
+    sidecar_output = staging / Path(sidecar_artifact["locator"])
     assert output.is_file()
+    assert sidecar_output == Path(f"{output}.docwen")
+    assert sidecar_artifact["suggested_name"] == f"{artifact['suggested_name']}.docwen"
     assert output.stat().st_size == artifact["size_bytes"]
     assert hashlib.sha256(output.read_bytes()).hexdigest() == artifact["sha256"]
+    assert sidecar_output.stat().st_size == sidecar_artifact["size_bytes"]
+    assert hashlib.sha256(sidecar_output.read_bytes()).hexdigest() == sidecar_artifact["sha256"]
+    sidecar = read_round_trip_sidecar(sidecar_output, docx_path=output)
+    assert sidecar.neutral_document == neutral_bytes
+    assert sidecar.numbering_export_plan == numbering_plan_bytes
+    assert sidecar.authored_source == MACHINE_EXACT_TWO_NEUTRAL_DOCUMENT["document"]["authored_markdown"].encode()
     with zipfile.ZipFile(output) as archive:
         assert "word/document.xml" in archive.namelist()
         assert any(name.startswith("word/media/") for name in archive.namelist())

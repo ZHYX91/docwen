@@ -10,6 +10,7 @@ import os
 import random
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -60,6 +61,13 @@ _DOCTOR_BASE_CHECK_IDS = frozenset(
 )
 _WORDPROCESSINGML_NAMESPACE = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 _WORD_TAG = f"{{{_WORDPROCESSINGML_NAMESPACE}}}"
+_ROUND_TRIP_SIDECAR_MEDIA_TYPE = "application/vnd.docwen.round-trip-sidecar+zip"
+_ROUND_TRIP_SIDECAR_MEMBERS = (
+    "authored-source.md",
+    "neutral-document.json",
+    "numbering-export-plan.json",
+    "manifest.json",
+)
 MACHINE_DOCUMENT_SEMANTICS_LIMITATIONS = (
     {
         "severity": "warning",
@@ -95,17 +103,17 @@ MACHINE_EXACT_TWO_NEUTRAL_DOCUMENT = {
     "$schema": "urn:docwen:schema:resolved-document:v1",
     "schema": "docwen.resolved_document.v1",
     "input_id": "fixture-1d28a20836a07c7818a289b51a7ef4ca",
-    "source_sha256": "14923b0fd8c0e37641aaa761786ead494d5fda46d18d53704634e1010a7a7db0",
-    "plan_sha256": "2aecfd6cfa60bf788eecae7fbb7494642fff79af5988969ad34926f0e2425054",
+    "source_sha256": "f722882667e245eafa09ec945b9997835ebf773df2695ae3f480ea395fdf4e2e",
+    "plan_sha256": "8afec2632746106f04180c85d61296fc4a64e594ef4bf0f54fa0725192ed2355",
     "document": {
         "authored_markdown": (
             "# Architecture ^h-7f3a\n\n"
             "Figure: System overview ^system-overview\n\n"
-            "![[system.png]]\n\n"
+            "![[system.png]]\n\n\n"
             "Table: Results ^results-main\n\n"
-            "| Metric | Value |\n|---|---|\n| Score | 95 |\n\n"
+            "| Metric | Value |\n|---|---|\n| Score | 95 |\n\n\n"
             "Equation: ^energy-main\n\n"
-            "$$\nE = mc^2\n$$\n\n"
+            "$$\nE = mc^2\n$$\n\n\n"
             "Code: Entry point ^entry-main\n\n"
             "```rust\nfn main() {}\n```\n\n"
             "Stable: @[[#^h-7f3a]] and @[[#^system-overview|System overview]].\n"
@@ -139,8 +147,8 @@ MACHINE_EXACT_TWO_NEUTRAL_DOCUMENT = {
                 "authored_text": "System overview",
             },
             {
-                "source_start": 83,
-                "source_end": 111,
+                "source_start": 84,
+                "source_end": 112,
                 "source_slice_sha256": "82c070f6467923aa51bc75b9fa5aed5eb7f99232b19b099657a9aa2f9737fcc1",
                 "kind": "table",
                 "target_id": "results-main",
@@ -148,8 +156,8 @@ MACHINE_EXACT_TWO_NEUTRAL_DOCUMENT = {
                 "authored_text": "Results",
             },
             {
-                "source_start": 158,
-                "source_end": 180,
+                "source_start": 160,
+                "source_end": 182,
                 "source_slice_sha256": "52484aa20fbf4788aebc2f7343dd7b4b375711b4b720210b0e6ca802cc07297a",
                 "kind": "equation",
                 "target_id": "energy-main",
@@ -157,8 +165,8 @@ MACHINE_EXACT_TWO_NEUTRAL_DOCUMENT = {
                 "authored_text": "",
             },
             {
-                "source_start": 198,
-                "source_end": 227,
+                "source_start": 201,
+                "source_end": 230,
                 "source_slice_sha256": "2a756b8a621ec190b9eea85a367a410eb5cd0654a301c31d50f999490a87694a",
                 "kind": "code_block",
                 "target_id": "entry-main",
@@ -168,8 +176,8 @@ MACHINE_EXACT_TWO_NEUTRAL_DOCUMENT = {
         ],
         "references": [
             {
-                "source_start": 263,
-                "source_end": 276,
+                "source_start": 266,
+                "source_end": 279,
                 "source_slice_sha256": "850ccceb2327d91136ce996a3577d080a287988504857907e32f679a3819959c",
                 "authored_token": "@[[#^h-7f3a]]",
                 "target_source_start": 0,
@@ -180,8 +188,8 @@ MACHINE_EXACT_TWO_NEUTRAL_DOCUMENT = {
                 "alias": None,
             },
             {
-                "source_start": 281,
-                "source_end": 319,
+                "source_start": 284,
+                "source_end": 322,
                 "source_slice_sha256": "391f374d10a10a9deb0bf5306378e6a55e271355a3a9b8128394c1bd947976ee",
                 "authored_token": "@[[#^system-overview|System overview]]",
                 "target_source_start": 24,
@@ -204,8 +212,8 @@ MACHINE_EXACT_TWO_NEUTRAL_DOCUMENT = {
         ],
         "citations": [
             {
-                "source_start": 387,
-                "source_end": 396,
+                "source_start": 390,
+                "source_end": 399,
                 "source_slice_sha256": "5f6357be6410398a73822925e446d175effed3cdab0d5d5ad38e28ad262eae28",
                 "authored_token": "@cite-one",
                 "form": "narrative",
@@ -252,8 +260,8 @@ MACHINE_EXACT_TWO_NUMBERING_PLAN = {
     "$schema": "urn:docwen:schema:numbering-export-plan:v1",
     "schema": "docwen.numbering_export_plan.v1",
     "input_id": "fixture-1d28a20836a07c7818a289b51a7ef4ca",
-    "source_sha256": "14923b0fd8c0e37641aaa761786ead494d5fda46d18d53704634e1010a7a7db0",
-    "plan_sha256": "2aecfd6cfa60bf788eecae7fbb7494642fff79af5988969ad34926f0e2425054",
+    "source_sha256": "f722882667e245eafa09ec945b9997835ebf773df2695ae3f480ea395fdf4e2e",
+    "plan_sha256": "8afec2632746106f04180c85d61296fc4a64e594ef4bf0f54fa0725192ed2355",
     "plan": {
         "heading_definitions": [
             {
@@ -330,8 +338,8 @@ MACHINE_EXACT_TWO_NUMBERING_PLAN = {
                     "start_value": None,
                     "type": "simple_seq",
                 },
-                "source_end": 111,
-                "source_start": 83,
+                "source_end": 112,
+                "source_start": 84,
                 "target_id": "results-main",
             },
             {
@@ -354,8 +362,8 @@ MACHINE_EXACT_TWO_NUMBERING_PLAN = {
                     "start_value": None,
                     "type": "simple_seq",
                 },
-                "source_end": 180,
-                "source_start": 158,
+                "source_end": 182,
+                "source_start": 160,
                 "target_id": "energy-main",
             },
             {
@@ -378,8 +386,8 @@ MACHINE_EXACT_TWO_NUMBERING_PLAN = {
                     "start_value": None,
                     "type": "simple_seq",
                 },
-                "source_end": 227,
-                "source_start": 198,
+                "source_end": 230,
+                "source_start": 201,
                 "target_id": "entry-main",
             },
         ],
@@ -479,6 +487,67 @@ Machine semantic tail.
 
 def _default_binary_name() -> str:
     return "DocWenCLI.exe" if os.name == "nt" else "DocWenCLI"
+
+
+def _verify_round_trip_sidecar(
+    sidecar_path: Path,
+    *,
+    docx_path: Path,
+    authored_source: bytes,
+    neutral_document: bytes,
+    numbering_export_plan: bytes,
+) -> None:
+    docx_bytes = _read_bytes_with_long_path(docx_path)
+    expected_payloads = {
+        "authored-source.md": authored_source,
+        "neutral-document.json": neutral_document,
+        "numbering-export-plan.json": numbering_export_plan,
+    }
+    with _zipfile_with_long_path(sidecar_path) as archive:
+        infos = archive.infolist()
+        if archive.comment or tuple(item.filename for item in infos) != _ROUND_TRIP_SIDECAR_MEMBERS:
+            raise RuntimeError("packaged_machine_round_trip_sidecar_inventory_invalid")
+        for info in infos:
+            mode = (info.external_attr >> 16) & 0xFFFF
+            if (
+                info.date_time != (1980, 1, 1, 0, 0, 0)
+                or info.extra
+                or info.comment
+                or info.create_system != 3
+                or mode != stat.S_IFREG | 0o600
+                or info.compress_type != zipfile.ZIP_STORED
+            ):
+                raise RuntimeError("packaged_machine_round_trip_sidecar_metadata_invalid")
+        payloads = {name: archive.read(name) for name in _ROUND_TRIP_SIDECAR_MEMBERS}
+    for name, expected in expected_payloads.items():
+        if payloads[name] != expected:
+            raise RuntimeError(f"packaged_machine_round_trip_sidecar_payload_invalid:{name}")
+    expected_manifest = {
+        "schema": "docwen.round_trip_sidecar.v1",
+        "docx": {
+            "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "bytes": len(docx_bytes),
+            "sha256": hashlib.sha256(docx_bytes).hexdigest(),
+        },
+        "files": [
+            {
+                "path": name,
+                "media_type": media_type,
+                "bytes": len(expected_payloads[name]),
+                "sha256": hashlib.sha256(expected_payloads[name]).hexdigest(),
+            }
+            for name, media_type in (
+                ("authored-source.md", "text/markdown; charset=utf-8"),
+                ("neutral-document.json", MACHINE_RESOLVED_DOCUMENT_MEDIA_TYPE),
+                ("numbering-export-plan.json", MACHINE_NUMBERING_EXPORT_PLAN_MEDIA_TYPE),
+            )
+        ],
+    }
+    expected_manifest_bytes = (json.dumps(expected_manifest, ensure_ascii=False, separators=(",", ":")) + "\n").encode(
+        "utf-8"
+    )
+    if payloads["manifest.json"] != expected_manifest_bytes:
+        raise RuntimeError("packaged_machine_round_trip_sidecar_manifest_invalid")
 
 
 def _verify_resource_layout(binary_dir: Path) -> None:
@@ -2610,6 +2679,13 @@ def _run_machine_protocol_smoke_impl(
     if (
         not isinstance(markdown_capability, dict)
         or markdown_capability.get("input_shape") != expected_markdown_input_shape
+        or markdown_capability.get("output_shape")
+        != {
+            "cardinality": "many",
+            "artifact_kinds": ["document", "resource"],
+            "relation_types": ["resource_of"],
+            "atomic_bundle": True,
+        }
     ):
         raise RuntimeError(
             "packaged_machine_protocol_markdown_input_shape_mismatch:"
@@ -2948,13 +3024,34 @@ def _run_machine_protocol_smoke_impl(
         if isinstance(semantic_artifacts, list)
         else []
     )
+    semantic_sidecars = (
+        [
+            item
+            for item in semantic_artifacts
+            if isinstance(item, dict)
+            and item.get("kind") == "resource"
+            and item.get("media_type") == _ROUND_TRIP_SIDECAR_MEDIA_TYPE
+        ]
+        if isinstance(semantic_artifacts, list)
+        else []
+    )
     if (
         not isinstance(semantic_bundle, dict)
         or semantic_bundle.get("task_id") != task_id
         or not isinstance(semantic_artifacts, list)
-        or len(semantic_artifacts) != 1
+        or len(semantic_artifacts) != 2
         or len(semantic_documents) != 1
-        or semantic_bundle.get("relations") != []
+        or len(semantic_sidecars) != 1
+        or semantic_bundle.get("relations")
+        != [
+            {
+                "type": "resource_of",
+                "source_artifact_id": semantic_sidecars[0].get("artifact_id"),
+                "target_artifact_id": semantic_documents[0].get("artifact_id"),
+                "role": "manifest",
+                "ordinal": 0,
+            }
+        ]
     ):
         raise RuntimeError(f"packaged_machine_protocol_semantic_artifact_invalid:{semantic_bundle}")
     expected_entries = [
@@ -2976,6 +3073,27 @@ def _run_machine_protocol_smoke_impl(
         semantic_output_bytes
     ).hexdigest() != semantic_documents[0].get("sha256"):
         raise RuntimeError("packaged_machine_protocol_semantic_integrity_mismatch")
+    semantic_sidecar_locator = semantic_sidecars[0].get("locator")
+    if (
+        not isinstance(semantic_sidecar_locator, str)
+        or semantic_sidecar_locator != f"{semantic_locator}.docwen"
+        or "\\" in semantic_sidecar_locator
+        or ".." in semantic_sidecar_locator.split("/")
+    ):
+        raise RuntimeError(f"packaged_machine_protocol_sidecar_locator_invalid:{semantic_sidecar_locator}")
+    semantic_sidecar = staging / Path(semantic_sidecar_locator)
+    semantic_sidecar_bytes = _read_bytes_with_long_path(semantic_sidecar)
+    if len(semantic_sidecar_bytes) != semantic_sidecars[0].get("size_bytes") or hashlib.sha256(
+        semantic_sidecar_bytes
+    ).hexdigest() != semantic_sidecars[0].get("sha256"):
+        raise RuntimeError("packaged_machine_protocol_sidecar_integrity_mismatch")
+    _verify_round_trip_sidecar(
+        semantic_sidecar,
+        docx_path=semantic_output,
+        authored_source=MACHINE_EXACT_TWO_NEUTRAL_DOCUMENT["document"]["authored_markdown"].encode("utf-8"),
+        neutral_document=neutral_bytes,
+        numbering_export_plan=numbering_plan_bytes,
+    )
     verify_machine_document_semantics_docx(semantic_output)
     semantic_reverse_task_id, semantic_reverse_terminal = execute_additional_task(
         plan_request_id=7,

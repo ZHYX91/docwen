@@ -67,8 +67,12 @@
         "sha256": "fdb25f27fc750f683aea9f6b7364437e8e0b832fa7d03f45b531bc938832b373"
       },
       {
+        "path": "contracts/schemas/docwen.round_trip_sidecar.v1.schema.json",
+        "sha256": "063441e3978b771c3a87e14f53c26da384cc5530f573c3a7f1a9f0b0c350579f"
+      },
+      {
         "path": "contracts/conformance-manifest.json",
-        "sha256": "cc86429f4421ecbeeafc72cda6bc206d89737e8a8ec816de5104a36cd4aaefa1"
+        "sha256": "eaed98e6a099d6e8bfc2a04d82164f2e75f24f80759f045bb8147353c84c6bef"
       },
       {
         "path": "contracts/fixtures/valid/semantic-bibliography.rich.json",

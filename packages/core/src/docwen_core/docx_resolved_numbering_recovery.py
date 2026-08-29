@@ -169,13 +169,19 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         and generic proof-only recovery never touches them.
         """
 
-        physical = compute_physical_projection(package_path, exclude_item_numbers={item_number})
-        if physical != value.physical_sha256:
-            raise DocxSemanticsV3Error("resolved-v4 recovery projection digest differs from the package")
         if not re.fullmatch(r"[0-9a-f]{64}", value.source_sha256) or not re.fullmatch(
             r"[0-9a-f]{64}", value.plan_sha256
         ):
             raise DocxSemanticsV3Error("resolved-v4 recovery map identity digests are invalid")
+        physical = compute_physical_projection(package_path, exclude_item_numbers={item_number})
+        if physical != value.physical_sha256:
+            # The semantic evidence above has already been fully proven by
+            # ``_load_proven``.  A remaining whole-package byte difference
+            # disables only byte-exact source recovery; callers continue from
+            # the authenticated semantic projection.  Semantic-map, field,
+            # bookmark, caption, REF-cache, and identity errors never reach
+            # this downgrade path and still fail closed.
+            return
         self._recovery_map = value
         self._recovery_item_number = item_number
         self.has_complete_source_snapshot = True

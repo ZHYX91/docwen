@@ -41,6 +41,7 @@ MACHINE_CONTRACT_PATHS = (
     "contracts/schemas/docwen.artifact_bundle.v2.schema.json",
     "contracts/schemas/docwen.proofread_report.v2.schema.json",
     "contracts/schemas/docwen.semantic_bibliography.v1.schema.json",
+    "contracts/schemas/docwen.round_trip_sidecar.v1.schema.json",
     "contracts/conformance-manifest.json",
     "contracts/fixtures/valid/semantic-bibliography.rich.json",
     "contracts/fixtures/invalid/semantic-bibliography.unknown-field.json",

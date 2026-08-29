@@ -38,9 +38,10 @@ from docwen_core.docx_parsing.format_features import (
 )
 from docwen_core.docx_parsing.textbox_extraction import extract_textbox_paragraphs
 from docwen_core.docx_resolved_numbering_recovery import ResolvedNumberingV4Recovery
-from docwen_core.docx_semantics_v3 import DocxSemanticsV3Recovery
+from docwen_core.docx_semantics_v3 import DocxSemanticsV3Error, DocxSemanticsV3Recovery
 from docwen_core.export_semantics import MarkdownExportSemantics
 from docwen_core.formula.constants import OMML_NS
+from docwen_core.round_trip_sidecar import RoundTripSidecarError, read_round_trip_sidecar
 from docwen_core.text.heading_numbering import (
     HeadingFormatter,
     NumberingSchemeResolutionError,
@@ -271,7 +272,7 @@ class DocxToMarkdownConverter:
             )
 
             # Prepend YAML front matter to the markdown output
-            if yaml_header:
+            if yaml_header and not stats.get("exact_source_recovered"):
                 markdown_content = yaml_header + markdown_content
         except Exception as exc:
             self._discard_pending_artifacts()
@@ -470,17 +471,20 @@ class DocxToMarkdownConverter:
         doc = Document(input_path)
         self._resolved_v4_recovery = ResolvedNumberingV4Recovery.load_if_present(input_path, doc)
         if self._resolved_v4_recovery is None:
-            self._semantic_v3_recovery = DocxSemanticsV3Recovery.load(input_path, doc)
+            if not self._resolved_v4_diagnostics:
+                self._semantic_v3_recovery = DocxSemanticsV3Recovery.load(input_path, doc)
         else:
             self._semantic_v3_recovery = self._resolved_v4_recovery
-            diagnostic = self._resolved_v4_recovery.source_recovery_diagnostic
-            self._resolved_v4_diagnostics.append((diagnostic.code, diagnostic.message, "DOCX package"))
-            context.progress.report_diagnostic(
-                "warning",
-                diagnostic.message,
-                code=diagnostic.code,
-                location="DOCX package",
-            )
+            exact_source = self._recover_exact_round_trip_source(input_path, context)
+            if exact_source is not None:
+                return exact_source, {
+                    "paragraphs": 0,
+                    "headings": 0,
+                    "tables": 0,
+                    "images": 0,
+                    "image_owner_resource_omitted_count": 0,
+                    "exact_source_recovered": 1,
+                }
         lines: list[str] = []
         exact_fenced_fragments: dict[str, str] = {}
 
@@ -1009,6 +1013,51 @@ class DocxToMarkdownConverter:
         if any(token in markdown for token in exact_fenced_fragments):
             raise ValueError("fenced source recovery left an internal token in output")
         return markdown, stats
+
+    def _recover_exact_round_trip_source(self, input_path: str, context: Any) -> str | None:
+        """Use a verified adjacent sidecar only while the DOCX is byte-bound unchanged."""
+
+        recovery = self._resolved_v4_recovery
+        if recovery is None or not recovery.source_recovery_available:
+            diagnostic = recovery.source_recovery_diagnostic if recovery is not None else None
+            code = diagnostic.code if diagnostic is not None else "docwen.docx.resolved_v4.source_snapshot_missing"
+            message = (
+                diagnostic.message
+                if diagnostic is not None
+                else "The resolved-v4 package has no authenticated source recovery map."
+            )
+        else:
+            sidecar_path = Path(f"{input_path}.docwen")
+            if sidecar_path.exists() or sidecar_path.is_symlink():
+                try:
+                    sidecar = read_round_trip_sidecar(sidecar_path, docx_path=input_path)
+                    recovery.prove_exact_recovery_raw(
+                        neutral_raw=sidecar.neutral_document,
+                        plan_raw=sidecar.numbering_export_plan,
+                        authored_source=sidecar.authored_source,
+                    )
+                    return sidecar.authored_source.decode("utf-8", errors="strict")
+                except (OSError, UnicodeDecodeError, DocxSemanticsV3Error, RoundTripSidecarError) as exc:
+                    suffix = f".{exc.code}" if isinstance(exc, RoundTripSidecarError) else ""
+                    code = f"docwen.docx.resolved_v4.sidecar_invalid{suffix}"
+                    message = (
+                        "The adjacent DocWen round-trip sidecar failed authentication; semantic Markdown "
+                        f"normalization is being used ({exc})."
+                    )
+            else:
+                code = "docwen.docx.resolved_v4.sidecar_missing"
+                message = (
+                    "The DOCX is unchanged, but its adjacent .docwen round-trip sidecar is unavailable; "
+                    "semantic Markdown normalization is being used."
+                )
+        self._resolved_v4_diagnostics.append((code, message, "DOCX round-trip sidecar"))
+        context.progress.report_diagnostic(
+            "warning",
+            message,
+            code=code,
+            location="DOCX round-trip sidecar",
+        )
+        return None
 
     @staticmethod
     def _format_yaml_value(value: Any) -> str:

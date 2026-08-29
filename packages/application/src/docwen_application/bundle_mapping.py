@@ -18,11 +18,19 @@ from docwen_core.models import (
     PageOcrStatus,
     PageResourceSemantics,
 )
+from docwen_core.round_trip_sidecar import (
+    DOCX_MEDIA_TYPE,
+    ROUND_TRIP_SIDECAR_MEDIA_TYPE,
+    ROUND_TRIP_SIDECAR_OWNER_METADATA,
+    ROUND_TRIP_SIDECAR_SCHEMA,
+    ROUND_TRIP_SIDECAR_SCHEMA_METADATA,
+)
 
 MARKDOWN_MEDIA_TYPE = "text/markdown"
 DOCUMENT_NODE_MANIFEST_MEDIA_TYPE = "application/vnd.docwen.document-node+json"
 BundleProfile = Literal[
     "single_document",
+    "document_with_round_trip_sidecar",
     "document_with_resources",
     "image_to_markdown",
     "physical_page_ocr",
@@ -232,6 +240,8 @@ def build_bundle_draft(
                 entries=(BundleEntry(preferred.artifact_id, "primary", 0, True),),
             )
         )
+    if profile == "document_with_round_trip_sidecar":
+        return finish(_build_document_with_round_trip_sidecar(preferred, artifacts))
     if profile == "image_to_markdown":
         return finish(_build_image_to_markdown(preferred, artifacts))
     if profile == "physical_page_ocr":
@@ -510,6 +520,54 @@ def _build_document_with_resources(
         entries=(BundleEntry(preferred.artifact_id, "primary", 0, True),),
         relations=tuple(relations),
     )
+
+
+def _build_document_with_round_trip_sidecar(
+    preferred: ArtifactManifest,
+    artifacts: tuple[ArtifactManifest, ...],
+) -> BundleDraft:
+    sidecars = [
+        artifact
+        for artifact in artifacts
+        if artifact.kind == "auxiliary" and artifact.media_type == ROUND_TRIP_SIDECAR_MEDIA_TYPE
+    ]
+    if len(artifacts) != 2 or len(sidecars) != 1:
+        raise BundleMappingError(
+            "conversion_failed",
+            "round_trip_sidecar_output_shape_invalid",
+            "resolved Markdown to DOCX must produce one document and one round-trip sidecar",
+            details={"artifact_count": len(artifacts), "sidecar_count": len(sidecars)},
+        )
+    sidecar = sidecars[0]
+    if (
+        sidecar.metadata.get(ROUND_TRIP_SIDECAR_SCHEMA_METADATA) != ROUND_TRIP_SIDECAR_SCHEMA
+        or sidecar.metadata.get(ROUND_TRIP_SIDECAR_OWNER_METADATA) != preferred.artifact_id
+        or sidecar.suggested_name != f"{preferred.suggested_name}.docwen"
+        or preferred.media_type != DOCX_MEDIA_TYPE
+    ):
+        raise BundleMappingError(
+            "conversion_failed",
+            "round_trip_sidecar_owner_invalid",
+            "round-trip sidecar ownership metadata or suggested name is invalid",
+        )
+    draft = BundleDraft(
+        artifacts=(
+            _draft_artifact(preferred, "document"),
+            _draft_artifact(sidecar, "resource"),
+        ),
+        entries=(BundleEntry(preferred.artifact_id, "primary", 0, True),),
+        relations=(
+            BundleRelation(
+                type="resource_of",
+                source_artifact_id=sidecar.artifact_id,
+                target_artifact_id=preferred.artifact_id,
+                role="manifest",
+                ordinal=0,
+            ),
+        ),
+    )
+    _validate_mapped_draft(draft)
+    return draft
 
 
 def _build_ordered_entries(

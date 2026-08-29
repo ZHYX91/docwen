@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:docwen:schema:round-trip-sidecar:v1",
+  "title": "DocWen Round-trip Sidecar v1 Manifest",
+  "description": "Canonical manifest stored as manifest.json in one application/vnd.docwen.round-trip-sidecar+zip artifact.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "docx",
+    "files"
+  ],
+  "properties": {
+    "schema": {
+      "const": "docwen.round_trip_sidecar.v1"
+    },
+    "docx": {
+      "$ref": "#/$defs/docxIdentity"
+    },
+    "files": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "$ref": "#/$defs/authoredSource"
+        },
+        {
+          "$ref": "#/$defs/neutralDocument"
+        },
+        {
+          "$ref": "#/$defs/numberingExportPlan"
+        }
+      ],
+      "items": false,
+      "minItems": 3,
+      "maxItems": 3
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "positiveBytes": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "docxIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "media_type",
+        "bytes",
+        "sha256"
+      ],
+      "properties": {
+        "media_type": {
+          "const": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        },
+        "bytes": {
+          "$ref": "#/$defs/positiveBytes"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "authoredSource": {
+      "$ref": "#/$defs/authoredSourceRecord"
+    },
+    "neutralDocument": {
+      "$ref": "#/$defs/neutralDocumentRecord"
+    },
+    "numberingExportPlan": {
+      "$ref": "#/$defs/numberingExportPlanRecord"
+    },
+    "authoredSourceRecord": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/fileIdentity"
+        },
+        {
+          "properties": {
+            "path": {
+              "const": "authored-source.md"
+            },
+            "media_type": {
+              "const": "text/markdown; charset=utf-8"
+            }
+          }
+        }
+      ]
+    },
+    "neutralDocumentRecord": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/fileIdentity"
+        },
+        {
+          "properties": {
+            "path": {
+              "const": "neutral-document.json"
+            },
+            "media_type": {
+              "const": "application/vnd.docwen.resolved-document+json"
+            }
+          }
+        }
+      ]
+    },
+    "numberingExportPlanRecord": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/fileIdentity"
+        },
+        {
+          "properties": {
+            "path": {
+              "const": "numbering-export-plan.json"
+            },
+            "media_type": {
+              "const": "application/vnd.docwen.numbering-export-plan+json"
+            }
+          }
+        }
+      ]
+    },
+    "fileIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "media_type",
+        "bytes",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "media_type": {
+          "type": "string"
+        },
+        "bytes": {
+          "$ref": "#/$defs/positiveBytes"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    }
+  }
+}

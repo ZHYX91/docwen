@@ -62,6 +62,20 @@ The v4 plan-aware Markdown→DOCX capability requires exactly two input resource
 | `neutral_document` | `application/vnd.docwen.resolved-document+json` | exactly 1 | `docwen.resolved_document.v1` / `urn:docwen:schema:resolved-document:v1` |
 | `numbering_export_plan` | `application/vnd.docwen.numbering-export-plan+json` | exactly 1 | `docwen.numbering_export_plan.v1` / `urn:docwen:schema:numbering-export-plan:v1` |
 
+The successful output is one atomic many-artifact Bundle: the preferred DOCX `document` plus exactly one `resource`
+with media type `application/vnd.docwen.round-trip-sidecar+zip`. The resource has one
+`resource_of(role=manifest, ordinal=0)` relation to the DOCX and suggested name `<DOCX suggested name>.docwen`.
+`docwen.round_trip_sidecar.v1` is DocWen-owned; consumers do not recreate it from private inputs. Its ZIP inventory is
+exactly `authored-source.md`, `neutral-document.json`, `numbering-export-plan.json`, `manifest.json` in that order. The
+manifest binds the exact DOCX and all three payload identities. A consumer publishes or moves the DOCX and sidecar as
+a pair, preserving the adjacent basename; Artifact Bundle locators and SHA-256 values remain the authority while the
+files are in request staging.
+
+成功输出是一个原子多 artifact Bundle：首选 DOCX `document`，以及唯一的
+`application/vnd.docwen.round-trip-sidecar+zip` `resource`。它通过
+`resource_of(role=manifest, ordinal=0)` 归属于 DOCX，建议文件名为 `<DOCX 建议文件名>.docwen`。sidecar 的
+四成员、manifest、DOCX/数据哈希全部由 DocWen 生成；消费者只校验并成对发布，不自行用私有数据重建。
+
 Both are strict UTF-8 JSON, at most 8 MiB each, reject duplicate keys/non-finite numbers, and are closed at every
 object. Each envelope requires exactly `$schema,schema,input_id,source_sha256,plan_sha256` plus its schema-owned
 payload (`document` or `plan`). The identity strings equal the table above; both resources carry the same `input_id`,

@@ -84,7 +84,7 @@ def test_machine_protocol_v1_contract_set_is_conformant() -> None:
 
     summary = validator.validate_contract_set(contracts_root)
 
-    assert summary.schemas == 9
+    assert summary.schemas == 10
     assert summary.valid_fixtures == 18
     assert summary.invalid_fixtures == 62
     manifest = validator_json(contracts_root / "conformance-manifest.json")
@@ -128,6 +128,11 @@ def test_machine_protocol_v1_contract_set_is_conformant() -> None:
             "resolved_document",
             "urn:docwen:schema:resolved-document:v1",
             "schemas/docwen.resolved_document.v1.schema.json",
+        ),
+        (
+            "round_trip_sidecar",
+            "urn:docwen:schema:round-trip-sidecar:v1",
+            "schemas/docwen.round_trip_sidecar.v1.schema.json",
         ),
         (
             "semantic_bibliography",

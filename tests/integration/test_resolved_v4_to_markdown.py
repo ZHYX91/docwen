@@ -39,9 +39,11 @@ from docwen_core.models.resolved_numbering import (
     ResolvedNumberingPlan,
     ResolvedNumberingPort,
 )
+from docwen_core.round_trip_sidecar import ROUND_TRIP_SIDECAR_MEDIA_TYPE
 from docwen_plugin_document.to_markdown.converter import DocxToMarkdownConverter
 from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
 from docwen_runtime.config.document_styles import build_document_style_catalog
+from docwen_runtime.output.finalizer import OutputFinalizer
 from tests.support.cancellation import FakeCancellationTokenView
 from tests.support.config import FakeConfigView
 from tests.support.execution import FakeExecutionContext
@@ -137,7 +139,16 @@ def _reverse_context(tmp_path: Path, source: Path, *, request_id: str) -> FakeEx
 def _forward_representative(tmp_path: Path) -> Path:
     result = MdToDocxConverter().convert(_forward_context(tmp_path))
     assert result.success, result.error
-    return Path(result.artifacts[0].staging_path)
+    assert any(item.media_type == ROUND_TRIP_SIDECAR_MEDIA_TYPE for item in result.artifacts)
+    finalized = OutputFinalizer().finalize(
+        "resolved-v4-forward-for-reverse",
+        result.artifacts,
+        OutputPolicy(output_dir=str(tmp_path / "published"), overwrite_mode="error"),
+    )
+    assert finalized.success, finalized.error
+    primary = next(item for item in finalized.artifacts if item.is_primary)
+    assert Path(f"{primary.staging_path}.docwen").is_file()
+    return Path(primary.staging_path)
 
 
 def test_representative_proves_four_kinds_refs_citation_and_preserves_tokens_without_exact_claim(
@@ -152,9 +163,9 @@ def test_representative_proves_four_kinds_refs_citation_and_preserves_tokens_wit
     primary = Path(next(item.staging_path for item in result.artifacts if item.is_primary))
     markdown = primary.read_text(encoding="utf-8")
     expected_source = json.loads(_NEUTRAL.read_text(encoding="utf-8"))["document"]["authored_markdown"]
-    assert len(expected_source.encode()) == 398
-    assert markdown != expected_source
-    assert RESOLVED_V4_SOURCE_SNAPSHOT_MISSING_DIAGNOSTIC in [item[2] for item in context.progress.diagnostics]
+    assert len(expected_source.encode()) == 401
+    assert markdown == expected_source
+    assert not context.progress.diagnostics
     assert "# Architecture ^h-7f3a" in markdown
     assert "Figure: System overview ^system-overview" in markdown
     assert "Table: Results ^results-main" in markdown
@@ -212,6 +223,49 @@ def test_reference_cache_tamper_fails_before_artifact_or_staging_publish(tmp_pat
     assert result.artifacts == []
     assert context.workspace.registered_artifacts == []
     assert list(Path(context.workspace.staging_dir).iterdir()) == []
+
+
+@pytest.mark.parametrize("sidecar_state", ["missing", "damaged"])
+def test_missing_or_damaged_sidecar_falls_back_to_authenticated_semantic_markdown(
+    tmp_path: Path,
+    sidecar_state: str,
+) -> None:
+    source = _forward_representative(tmp_path)
+    sidecar = Path(f"{source}.docwen")
+    if sidecar_state == "missing":
+        sidecar.unlink()
+    else:
+        sidecar.write_bytes(b"not-a-sidecar")
+    context = _reverse_context(tmp_path, source, request_id=f"sidecar-{sidecar_state}")
+
+    result = DocxToMarkdownConverter().convert(context)
+
+    assert result.success, result.error
+    markdown = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
+    expected_source = json.loads(_NEUTRAL.read_text(encoding="utf-8"))["document"]["authored_markdown"]
+    assert markdown != expected_source
+    diagnostics = [item[2] for item in context.progress.diagnostics]
+    expected_code = (
+        "docwen.docx.resolved_v4.sidecar_missing"
+        if sidecar_state == "missing"
+        else "docwen.docx.resolved_v4.sidecar_invalid.archive_invalid"
+    )
+    assert expected_code in diagnostics
+
+
+def test_modified_docx_never_reuses_old_sidecar_source(tmp_path: Path) -> None:
+    source = _forward_representative(tmp_path)
+    _replace_zip_member_bytes(source, member="word/document.xml", old=b"<w:t>95</w:t>", new=b"<w:t>96</w:t>")
+    context = _reverse_context(tmp_path, source, request_id="edited-docx")
+
+    result = DocxToMarkdownConverter().convert(context)
+
+    assert result.success, result.error
+    markdown = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
+    expected_source = json.loads(_NEUTRAL.read_text(encoding="utf-8"))["document"]["authored_markdown"]
+    assert markdown != expected_source
+    assert "| Score | 96 |" in markdown
+    assert RESOLVED_V4_SOURCE_SNAPSHOT_MISSING_DIAGNOSTIC in [item[2] for item in context.progress.diagnostics]
 
 
 def _caption_bindings(document: Any) -> tuple[CaptionStyleBindingV3, ...]:
@@ -329,6 +383,19 @@ def _tamper_first_reference_cached_result(path: Path) -> None:
         xml_declaration=True,
         standalone=True,
     )
+    rewritten = path.with_suffix(".rewrite.docx")
+    with ZipFile(rewritten, "w", compression=ZIP_DEFLATED) as output:
+        for info in infos:
+            output.writestr(info, members[info.filename])
+    rewritten.replace(path)
+
+
+def _replace_zip_member_bytes(path: Path, *, member: str, old: bytes, new: bytes) -> None:
+    with ZipFile(path) as package:
+        infos = package.infolist()
+        members = {item.filename: package.read(item.filename) for item in infos}
+    assert members[member].count(old) == 1
+    members[member] = members[member].replace(old, new)
     rewritten = path.with_suffix(".rewrite.docx")
     with ZipFile(rewritten, "w", compression=ZIP_DEFLATED) as output:
         for info in infos:

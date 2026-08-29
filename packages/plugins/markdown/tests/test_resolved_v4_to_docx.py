@@ -45,6 +45,7 @@ from docwen_core.models.resolved_numbering import (
     ResolvedReference,
     canonicalize_numbering_plan,
 )
+from docwen_core.round_trip_sidecar import ROUND_TRIP_SIDECAR_MEDIA_TYPE, read_round_trip_sidecar
 from docwen_plugin_markdown import renderer as markdown_renderer
 from docwen_plugin_markdown.manifest import RESOLVED_V4_MD_TO_DOCX_OPTIONS_SCHEMA
 from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
@@ -182,9 +183,19 @@ def test_representative_exact_two_materializes_all_physical_semantics_without_le
 
     assert result.success, result.error
     assert [item.code for item in result.diagnostics if item.level == "error"] == []
-    assert len(result.artifacts) == len(workspace.registered_artifacts) == 1
-    output = Path(result.artifacts[0].staging_path)
-    assert sorted(item.name for item in Path(workspace.staging_dir).iterdir()) == [output.name]
+    assert len(result.artifacts) == len(workspace.registered_artifacts) == 2
+    output = Path(next(item.staging_path for item in result.artifacts if item.is_primary))
+    sidecar = next(item for item in result.artifacts if item.media_type == ROUND_TRIP_SIDECAR_MEDIA_TYPE)
+    assert sorted(item.name for item in Path(workspace.staging_dir).iterdir()) == sorted(
+        [output.name, Path(sidecar.staging_path).name]
+    )
+    recovered = read_round_trip_sidecar(sidecar.staging_path, docx_path=output)
+    assert recovered.neutral_document == _NEUTRAL.read_bytes()
+    assert recovered.numbering_export_plan == _PLAN.read_bytes()
+    assert (
+        recovered.authored_source
+        == json.loads(_NEUTRAL.read_text(encoding="utf-8"))["document"]["authored_markdown"].encode()
+    )
     with ZipFile(output) as package:
         names = package.namelist()
         document_bytes = package.read("word/document.xml")
@@ -239,7 +250,7 @@ def test_exact_two_preserves_nested_fence_anchor_and_topology_carriers(tmp_path:
     assert "^inner-fence" not in visible
     assert "^outer-quote" not in visible
     assert "^top-a" not in visible
-    assert len(workspace.registered_artifacts) == 1
+    assert len(workspace.registered_artifacts) == 2
 
 
 def test_partial_claim_and_legacy_options_fail_before_source_pipeline(
@@ -375,6 +386,20 @@ def test_preexisting_resource_directory_is_rejected_without_deleting_it(tmp_path
     assert workspace.registered_artifacts == []
     assert sentinel.read_text(encoding="utf-8") == "owned-before-request"
     assert sorted(item.name for item in Path(workspace.staging_dir).iterdir()) == ["resolved-v4-resources"]
+
+
+def test_preexisting_sidecar_is_rejected_without_deleting_it(tmp_path: Path) -> None:
+    context, workspace = _context(tmp_path, _refs(_NEUTRAL, _PLAN))
+    preexisting = Path(workspace.staging_dir) / "artifact_1.docx.docwen"
+    preexisting.write_bytes(b"owned-before-request")
+
+    result = MdToDocxConverter().convert(context)
+
+    assert not result.success
+    assert result.error is not None
+    assert workspace.registered_artifacts == []
+    assert preexisting.read_bytes() == b"owned-before-request"
+    assert sorted(item.name for item in Path(workspace.staging_dir).iterdir()) == [preexisting.name]
 
 
 @pytest.mark.parametrize("failure_stage", ["renderer", "success_cleanup"])

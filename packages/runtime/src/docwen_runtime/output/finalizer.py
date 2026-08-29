@@ -29,6 +29,13 @@ from docwen_core.models.result import (
     ConversionMetrics,
     ConversionResult,
 )
+from docwen_core.round_trip_sidecar import (
+    DOCX_MEDIA_TYPE,
+    ROUND_TRIP_SIDECAR_MEDIA_TYPE,
+    ROUND_TRIP_SIDECAR_OWNER_METADATA,
+    ROUND_TRIP_SIDECAR_SCHEMA,
+    ROUND_TRIP_SIDECAR_SCHEMA_METADATA,
+)
 from docwen_runtime.output.document_node import (
     DOCUMENT_NODE_MANIFEST_MEDIA_TYPE,
     DocumentNodeLayoutPlan,
@@ -162,6 +169,11 @@ class OutputFinalizer:
                     input_bytes=input_bytes,
                     cancellation=cancellation,
                 )
+            artifacts = self._project_round_trip_sidecars(
+                artifacts,
+                output_dir=output_dir,
+                overwrite_mode=policy.overwrite_mode,
+            )
             return self._finalize_locked(
                 task_id,
                 artifacts,
@@ -197,6 +209,11 @@ class OutputFinalizer:
         total_output_bytes = 0
         failed_artifacts = 0
         prepared: list[_PreparedArtifact] = []
+        blocked_pairs = self._blocked_round_trip_pairs(
+            artifacts,
+            output_dir=output_dir,
+            overwrite_mode=policy.overwrite_mode,
+        )
 
         try:
             cleaned_parents: set[str] = set()
@@ -215,6 +232,8 @@ class OutputFinalizer:
             for artifact in artifacts:
                 try:
                     self._check_cancellation(cancellation)
+                    if artifact.artifact_id in blocked_pairs:
+                        raise FileExistsError("round-trip DOCX and sidecar must be placed as one matched pair")
                     prepared.append(
                         self._prepare_artifact(
                             artifact,
@@ -1253,6 +1272,91 @@ class OutputFinalizer:
         index = primary_indexes[0]
         projected[index] = replace(projected[index], suggested_name=output_name)
         return projected
+
+    @classmethod
+    def _project_round_trip_sidecars(
+        cls,
+        artifacts: list[ArtifactManifest],
+        *,
+        output_dir: str,
+        overwrite_mode: str,
+    ) -> list[ArtifactManifest]:
+        """Keep every public sidecar adjacent to its final DOCX basename."""
+
+        projected = list(artifacts)
+        indexes = {artifact.artifact_id: index for index, artifact in enumerate(projected)}
+        pairs: list[tuple[int, int]] = []
+        for sidecar_index, sidecar in enumerate(projected):
+            if sidecar.media_type != ROUND_TRIP_SIDECAR_MEDIA_TYPE:
+                continue
+            owner_id = sidecar.metadata.get(ROUND_TRIP_SIDECAR_OWNER_METADATA)
+            owner_index = indexes.get(owner_id) if isinstance(owner_id, str) else None
+            if (
+                sidecar.metadata.get(ROUND_TRIP_SIDECAR_SCHEMA_METADATA) != ROUND_TRIP_SIDECAR_SCHEMA
+                or owner_index is None
+                or owner_index == sidecar_index
+                or not projected[owner_index].is_primary
+                or projected[owner_index].media_type != DOCX_MEDIA_TYPE
+            ):
+                raise ValueError("round-trip sidecar ownership metadata is invalid")
+            pairs.append((owner_index, sidecar_index))
+
+        if len({owner for owner, _sidecar in pairs}) != len(pairs):
+            raise ValueError("one DOCX artifact cannot own multiple round-trip sidecars")
+        for owner_index, sidecar_index in pairs:
+            owner_name = projected[owner_index].suggested_name
+            if overwrite_mode == "rename":
+                owner_name = cls._available_round_trip_owner_name(output_dir, owner_name)
+            projected[owner_index] = replace(projected[owner_index], suggested_name=owner_name)
+            projected[sidecar_index] = replace(
+                projected[sidecar_index],
+                suggested_name=f"{owner_name}.docwen",
+            )
+        return projected
+
+    @classmethod
+    def _available_round_trip_owner_name(cls, output_dir: str, owner_name: str) -> str:
+        owner_path, safe_name = cls._safe_final_path(output_dir, owner_name)
+        sidecar_path, _safe_sidecar = cls._safe_final_path(output_dir, f"{safe_name}.docwen")
+        if not cls._io_path(owner_path).exists() and not cls._io_path(sidecar_path).exists():
+            return safe_name
+        base, extension = os.path.splitext(safe_name)
+        counter = 1
+        while True:
+            candidate = f"{base}_{counter:03d}{extension}"
+            owner_path, _safe_owner = cls._safe_final_path(output_dir, candidate)
+            sidecar_path, _safe_sidecar = cls._safe_final_path(output_dir, f"{candidate}.docwen")
+            if not cls._io_path(owner_path).exists() and not cls._io_path(sidecar_path).exists():
+                return candidate
+            counter += 1
+
+    @classmethod
+    def _blocked_round_trip_pairs(
+        cls,
+        artifacts: list[ArtifactManifest],
+        *,
+        output_dir: str,
+        overwrite_mode: str,
+    ) -> set[str]:
+        """Prevent error/skip policies from publishing only half of a pair."""
+
+        if overwrite_mode not in {"error", "skip"}:
+            return set()
+        by_id = {artifact.artifact_id: artifact for artifact in artifacts}
+        blocked: set[str] = set()
+        for sidecar in artifacts:
+            if sidecar.media_type != ROUND_TRIP_SIDECAR_MEDIA_TYPE:
+                continue
+            owner_id = sidecar.metadata.get(ROUND_TRIP_SIDECAR_OWNER_METADATA)
+            owner = by_id.get(owner_id) if isinstance(owner_id, str) else None
+            if owner is None:
+                continue
+            owner_path, _ = cls._safe_final_path(output_dir, owner.suggested_name)
+            sidecar_path, _ = cls._safe_final_path(output_dir, sidecar.suggested_name)
+            exists = (cls._io_path(owner_path).exists(), cls._io_path(sidecar_path).exists())
+            if (overwrite_mode == "error" and any(exists)) or (overwrite_mode == "skip" and exists[0] != exists[1]):
+                blocked.update({owner.artifact_id, sidecar.artifact_id})
+        return blocked
 
     @staticmethod
     def _safe_final_path(output_dir: str, suggested_name: str) -> tuple[str, str]:

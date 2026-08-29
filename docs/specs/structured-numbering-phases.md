@@ -244,22 +244,28 @@ semantics prove a separate number.
 
 This addendum freezes the exact-neutral DOCX recovery authority that the generic proof-only reader deliberately
 does not claim. A package without this authority still produces generic extraction plus the stable
-`docwen.docx.resolved_v4.source_snapshot_missing` diagnostic and never claims an exact Markdown round-trip. The
-exact-neutral capability is a separate advertised capability with its own media types and fail-closed semantics;
-it never degrades to generic DOCX-to-Markdown and a missing/partial map yields zero artifacts.
+`docwen.docx.resolved_v4.source_snapshot_missing` diagnostic and never claims an exact Markdown round-trip. Exact
+authored-source recovery is an optional, authenticated path inside the normal DOCX-to-Markdown capability. The
+resolved Markdown-to-DOCX capability publishes the DOCX together with one DocWen-owned
+`application/vnd.docwen.round-trip-sidecar+zip` resource. Missing or invalid sidecar evidence disables only exact
+bytes and continues through authenticated canonical semantic recovery; invalid semantic carriers still fail closed.
 
-#### Admission and capability separation / 准入与能力分离
+#### Admission and artifact separation / 准入与 artifact 分离
 
-- The exact-neutral capability is `docwen.docx.resolved_v4.exact_neutral_recovery`. It is advertised only when the
-  packaged converter can emit and prove the recovery map below.
+- `convert.markdown.to_docx` advertises a many-artifact output shape: one preferred DOCX document and one public
+  round-trip sidecar resource related by `resource_of(role=manifest, ordinal=0)`. There is no private exact-recovery
+  capability and no consumer-authored sidecar contract.
 - Admission requires the exact two Machine inputs already frozen by this contract: one neutral document
   (`application/vnd.docwen.resolved-document+json`) and one numbering export plan
   (`application/vnd.docwen.numbering-export-plan+json`) with matching `input_id`, `source_sha256`, and
   `plan_sha256`. There is no third or substitute input; Machine options never carry source text, a second semantic
   bag, or a pointer to external storage.
-- The writer emits the recovery map in the same request-owned session as the resolved-v4 carriers. No map part is
-  emitted when the request renders no resolved-v4 content, and a package that carries any part of the map without
-  the complete authenticated trio fails closed.
+- The writer emits the recovery map in the same request-owned session as the resolved-v4 carriers, proves the final
+  DOCX, then deterministically emits `<DOCX suggested name>.docwen`. The ZIP has exactly four ordered regular-file
+  members: `authored-source.md`, `neutral-document.json`, `numbering-export-plan.json`, and `manifest.json`. It has no
+  directory, link, absolute/parent path, duplicate/extra member, encryption, unsupported compression, or unbounded
+  expansion. The canonical `docwen.round_trip_sidecar.v1` manifest binds the final DOCX bytes/SHA-256 plus the three
+  payload byte counts, media types, and SHA-256 values. Artifact Bundle v2 separately hashes the complete ZIP.
 
 #### Recovery map package shape / 恢复映射包形状
 
@@ -275,7 +281,7 @@ one-final-LF framing). The map namespace is `https://docwen.dev/schema/resolved-
 
 1. `pointers` — three pointers, each `pointer` element with attributes in exact order
    `role,relative_path,bytes,sha256`; `role` is exactly one of `neutral_raw`, `plan_raw`, or `authored_source`.
-   `relative_path` is a non-empty relative path inside the request-owned staging tree, never absolute, never
+   `relative_path` is one of the three fixed sidecar member names, never absolute, never
    `..`-escaping, never a Windows/UNC drive, never a symlink or reparse point. `bytes` is the positive integer
    byte count and `sha256` the complete lowercase 64-hex digest of the pointed-to raw file at publish time:
    - `neutral_raw` points to the exact bytes of the neutral document input file (not the authenticated internal
@@ -283,9 +289,8 @@ one-final-LF framing). The map namespace is `https://docwen.dev/schema/resolved-
    - `plan_raw` points to the exact bytes of the numbering export plan input file; and
    - `authored_source` points to the exact bytes of the authored Markdown source bound by the neutral document
      envelope.
-   The three raw files are copied into the request-owned staging tree before the map is written, rehashed at
-   publish, and their digests are also proven against the two input envelopes' `source_sha256`/`plan_sha256` where
-   applicable.
+   The three raw files are written once into the request-owned public sidecar after the DOCX is proven. Their
+   sidecar-manifest identities and recovery-map pointer identities must agree before exact source is exposed.
 2. `projection` — the whole-package physical projection summary. `projection` has attributes in exact order
    `version,algorithm,physical_sha256`; `version` is `1`, `algorithm` is exactly `docwen-ooxml-physical-v1`, and
    `physical_sha256` is the complete lowercase SHA-256 over the canonical physical projection described below. This
@@ -314,9 +319,10 @@ The digest stream is the concatenation, for each contributing item in the fixed 
 `<utf-8 part name>\0<decimal byte count>\0<64-hex part sha256>\0` plus, for XML parts,
 `<utf-8 part name>\0<decimal canonical byte count>\0<64-hex canonical sha256>\0`. The complete stream is hashed
 with SHA-256 to produce `physical_sha256`. Recovery recomputes the identical stream from the reopened package
-under the same exclusion rule and requires an exact match. Any byte change in any body, YAML-like text, table,
-formula, object, style, numbering part, relationship, content-type Override, or owned map changes the digest and
-fails closed; there is no relaxed comparison and no host-derived bypass.
+under the same exclusion rule. An exact match is mandatory before the adjacent sidecar can expose old authored
+bytes. Any Word edit changes the digest and disables exact recovery; after all semantic maps, fields, bookmarks,
+captions, and REF caches independently prove, canonical semantic recovery may continue. A semantic proof failure
+still fails closed before artifact publication; there is no host-derived bypass.
 
 The map's `recovery_sha256` is the complete lowercase SHA-256 over the exact UTF-8 bytes of the map's three
 child elements (`pointers`, `projection`, `bibliography`) serialized in canonical order with no leading/trailing
@@ -326,24 +332,22 @@ for the complete owned-carrier set including the recovery map.
 
 #### Recovery semantics and fail-closed rules / 恢复语义与失败关闭规则
 
-On import, the reader first authenticates the recovery map trio, recomputes every record digest, and proves
-`source_sha256`/`plan_sha256` against both input envelopes and the three raw pointers. It then recomputes the
-whole-package physical projection from the reopened package and requires an exact match with the stored
-`physical_sha256`. It proves the `neutral_raw` bytes against `authored_source` through the authenticated
-`authored_markdown` and resource identities, and proves that the referenced `bibliography` owner still exists with
-the frozen v3 identity. Only after all of these do the neutral raw bytes become the exact-neutral output; nothing
-is guessed, repaired, or merged from a second source.
+On import, the reader first authenticates every resolved-v4 semantic carrier. It then recomputes the whole-package
+physical projection. Only an unchanged projection may proceed to the adjacent `<document>.docwen` file. The sidecar
+reader requires a regular non-link ZIP, exact member inventory/order, bounded archive/member/expanded sizes and
+compression ratio, canonical manifest schema/media types, complete hashes, and an exact DOCX byte-count/SHA-256
+match. Finally, the three payload hashes are proved again against the DOCX recovery map. Only after every layer passes
+is `authored-source.md` returned byte-for-byte; nothing is guessed, repaired, or merged from a second source.
 
-Any missing part, wrong media type, wrong root/record attribute or child order, duplicate relationship, changed
-`itemN`/`rId`/UUID, drift of any pointer or raw file, physical projection mismatch, stale or self-signed snapshot,
-bibliography owner drift, or any attempt to substitute a different package is a hard failure before artifact or
-staging publish. The exact-neutral capability never falls back to the generic reader's diagnostics; a map that
-exists but fails proof is a failure, and a package without the map is generic extraction with the stable
-source-snapshot-missing diagnostic. Word/WPS/LibreOffice host preservation of the semantic carriers (bookmarks,
+Any wrong semantic-map media type, root/record shape, duplicate relationship, changed `itemN`/`rId`/UUID, bookmark,
+caption, field, REF cache, bibliography owner, or semantic identity is a hard failure before artifact or staging
+publish. A missing/damaged/foreign/stale sidecar, sidecar-to-DOCX mismatch, absent recovery map, or physical projection
+change never exposes old source bytes; it emits a stable diagnostic and uses canonical semantic recovery only when
+the semantic proof itself remains valid. Word/WPS/LibreOffice host preservation of the semantic carriers (bookmarks,
 SDTs, map trio identities, relationships, content types, styles) is proven in a separate host layer against the
-same candidate; a host save/readback that changes any byte is not re-admitted into the exact-neutral capability
-because the physical projection is byte-bound. Host evidence never replaces headless XML proof, and the exact-neutral
-capability never uses a relaxed byte comparison for host compatibility.
+same candidate; a host save/readback that changes any byte is not re-admitted into exact authored-source recovery
+because the physical projection is byte-bound. Host evidence never replaces headless XML proof, and no relaxed byte
+comparison can re-enable sidecar source recovery.
 
 ## Required matrix / 必须矩阵
 

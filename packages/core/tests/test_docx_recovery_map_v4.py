@@ -262,7 +262,7 @@ def test_session_rejects_recovery_when_port_has_no_recovery_input(tmp_path: Path
     assert not recovery.source_recovery_available
 
 
-def test_recovery_rejects_tampered_package_physical_bytes(tmp_path: Path) -> None:
+def test_recovery_disables_exact_source_for_a_semantically_proven_package_edit(tmp_path: Path) -> None:
     document = Document()
     port = _port()
     session = ResolvedNumberingDocxSession(
@@ -292,8 +292,10 @@ def test_recovery_rejects_tampered_package_physical_bytes(tmp_path: Path) -> Non
             rewritten.writestr(info, members[info.filename])
 
     reopened = Document(str(output))
-    with pytest.raises(DocxSemanticsV3Error, match="projection digest"):
-        ResolvedNumberingV4Recovery.load_if_present(output, reopened)
+    recovery = ResolvedNumberingV4Recovery.load_if_present(output, reopened)
+    assert recovery is not None
+    assert not recovery.source_recovery_available
+    assert recovery.caption_signatures == (("table", "table-a", "One", "1"),)
 
 
 def _caption_bindings(document: Any) -> tuple[CaptionStyleBindingV3, ...]:

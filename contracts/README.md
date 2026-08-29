@@ -197,6 +197,14 @@ most 6,000,000 bytes. Every linked raster is non-empty, hash/media/content check
 Unicode source range plus opaque resource ID. The exact dependency and numbering grammars are frozen in
 [`structured-numbering-phases.md`](../docs/specs/structured-numbering-phases.md).
 
+A successful conversion returns one atomic two-artifact Bundle: the preferred DOCX `document` and one
+`application/vnd.docwen.round-trip-sidecar+zip` `resource`, related by
+`resource_of(role=manifest, ordinal=0)`. DocWen alone produces the adjacent `<name>.docx.docwen` artifact. Its
+`docwen.round_trip_sidecar.v1` manifest authenticates the exact DOCX plus `authored-source.md`,
+`neutral-document.json`, and `numbering-export-plan.json`; consumers publish the pair and must not reconstruct the
+sidecar from private inputs. Missing or mismatched sidecars disable byte-exact source recovery without disabling
+authenticated semantic normalization.
+
 The `remove_numbering`, `add_numbering`, `numbering_scheme`, and
 `heading_numbering_render_mode` controls are available only on separately identified capabilities
 that still declare them. They are undeclared and rejected on `convert.markdown.to_docx`; the v4 provider consumes
@@ -231,6 +239,7 @@ These mappings describe DocWen output meaning, not a consumer's import plan:
 | Physical-page OCR | capability output shape advertises `relation_payloads=[page_fragment,page_resource]`; primary Markdown is the only entry; every recognition-enabled physical page/frame is a `fragment fragment_of` with `ocr_page`, ordinal, and complete `page_fragment`; preserved images are resource-only sidecars with proven `page_resource` or an artifact-bound unresolved-page diagnostic |
 | `image_md` OCR companions | main Markdown is `document`; companion Markdown is `fragment` with `ocr_text`; retained image is `resource`, and provenance may add `derived_from` |
 | DOCX/PPTX/HTML/MHTML/EPUB/XLSX extracted images | each image is `resource resource_of` its owning document/fragment, with optional ordinal |
+| Resolved Markdown to DOCX | preferred DOCX `document`; one adjacent `.docwen` `resource resource_of(role=manifest, ordinal=0)` |
 | XLSX multi-sheet Markdown | each self-contained sheet Markdown may be a `document` entry with role `worksheet`; a composition-only sheet is `fragment` |
 | XLSX/ODS/ET to per-sheet CSV/TSV chain | each CSV/TSV is a `resource` entry with role and ordinal `worksheet`; one entry is preferred |
 | PDF split outputs | independently usable PDFs are `document` entries with role `section` and deterministic ordinal |
