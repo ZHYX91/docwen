@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Literal
 
 from docwen_core.models.resolved_numbering import (
@@ -36,9 +36,22 @@ type RuntimeMarkerPayloadV4 = ResolvedDocumentTarget | ResolvedReference | Resol
 _TARGET_NODE = "_docwen_resolved_v4_target_marker"
 _TARGET_KEY = "_docwen_resolved_v4_target"
 _CAPTION_CHILDREN_KEY = "_docwen_resolved_v4_caption_children"
+_INLINE_IMAGE_CHILDREN_KEY = "_docwen_resolved_v4_inline_image_children"
+_INLINE_IMAGE_BEFORE_KEY = "_docwen_resolved_v4_inline_image_before"
+_CAPTION_DIRECTIONS_KEY = "_docwen_resolved_v4_caption_directions"
 _REFERENCE_KEY = "_docwen_resolved_v4_reference"
 _CITATION_KEY = "_docwen_resolved_v4_citation"
-_RESERVED_KEYS = frozenset({_TARGET_KEY, _CAPTION_CHILDREN_KEY, _REFERENCE_KEY, _CITATION_KEY})
+_RESERVED_KEYS = frozenset(
+    {
+        _TARGET_KEY,
+        _CAPTION_CHILDREN_KEY,
+        _INLINE_IMAGE_CHILDREN_KEY,
+        _INLINE_IMAGE_BEFORE_KEY,
+        _CAPTION_DIRECTIONS_KEY,
+        _REFERENCE_KEY,
+        _CITATION_KEY,
+    }
+)
 
 _ATX_HEADING_RE = re.compile(r"^(?P<indent> {0,3})(?P<marks>#{1,9})(?!#)[ \t]+(?P<body>.*?)[ \t]*$")
 _CAPTION_RE = re.compile(r"^(?P<keyword>Figure|Table|Equation|Code):(?P<body>.*)$", re.IGNORECASE)
@@ -48,17 +61,12 @@ _HISTORICAL_ATTRIBUTE_RE = re.compile(r"\{#[^{}\s]+\}[ \t]*$")
 _QUOTE_PREFIX_RE = re.compile(r" {0,3}>[ \t]?")
 _LIST_PREFIX_RE = re.compile(r"[ \t]*(?:[-+*]|\d{1,9}[.)])[ \t]+")
 _ORDINARY_ID_TEXT_RE = re.compile(r"\^[A-Za-z0-9-]{1,128}")
+_STANDALONE_ID_RE = re.compile(r"(?P<token>\^(?P<id>[^\s]+))[ \t]*$")
 _KIND_BY_KEYWORD = {
     "figure": "figure",
     "table": "table",
     "equation": "equation",
     "code": "code_block",
-}
-_OBJECT_TYPE_BY_KIND = {
-    "figure": "paragraph",
-    "table": "table",
-    "equation": "block_math",
-    "code_block": "block_code",
 }
 
 
@@ -86,6 +94,8 @@ class RuntimeMarkerV4:
     payload: RuntimeMarkerPayloadV4
     edit: RuntimeMarkerEditV4
     trim_preceding_space: bool = False
+    standalone_target_id: bool = False
+    caption_carrier_directions: tuple[Literal[-1, 1], ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -111,6 +121,8 @@ class _MarkerSpec:
     role: RuntimeMarkerRoleV4
     payload: RuntimeMarkerPayloadV4
     trim_preceding_space: bool = False
+    standalone_target_id: bool = False
+    caption_carrier_directions: tuple[Literal[-1, 1], ...] = ()
 
 
 def prepare_resolved_runtime_v4(port: ResolvedNumberingPort) -> ResolvedRuntimeV4Plan:
@@ -142,6 +154,8 @@ def prepare_resolved_runtime_v4(port: ResolvedNumberingPort) -> ResolvedRuntimeV
                 payload=spec.payload,
                 edit=edit,
                 trim_preceding_space=spec.trim_preceding_space,
+                standalone_target_id=spec.standalone_target_id,
+                caption_carrier_directions=spec.caption_carrier_directions,
             )
         )
     marker_tuple = tuple(markers)
@@ -166,6 +180,7 @@ def apply_resolved_runtime_v4(
     restored = [
         _restore_node(node, marker_map=marker_map, marker_prefix=plan.marker_prefix, found=found) for node in ast_nodes
     ]
+    restored = _attach_standalone_target_markers(restored)
     bound_targets: set[tuple[int, int, str]] = set()
     for node in restored:
         _bind_target_markers(node, bound_targets)
@@ -238,12 +253,31 @@ def _require_authenticated_slice(
 
 
 def _target_marker_spec(source: str, target: ResolvedDocumentTarget) -> _MarkerSpec:
-    line, line_start = _first_target_line(source, target)
-    content_offset = _commonmark_container_prefix_length(line)
-    content = line[content_offset:]
     if target.kind == "heading":
-        return _heading_marker_spec(content, line_start + content_offset, target)
-    return _caption_marker_spec(content, line_start + content_offset, target)
+        target_lines = _target_lines(source, target)
+        line, line_start = target_lines[0]
+        content_offset = _commonmark_container_prefix_length(line)
+        content = line[content_offset:]
+        standalone_id = _standalone_target_id(source, line_start, target)
+        return _heading_marker_spec(content, line_start + content_offset, target, standalone_id=standalone_id)
+    target_lines = _target_lines(source, target)
+    declarations: list[tuple[int, str, int]] = []
+    for index, (line, line_start) in enumerate(target_lines):
+        content_offset = _commonmark_container_prefix_length(line)
+        content = line[content_offset:]
+        match = _CAPTION_RE.fullmatch(content)
+        if match is None or _KIND_BY_KEYWORD[match.group("keyword").casefold()] != target.kind:
+            continue
+        declarations.append((index, content, line_start + content_offset))
+    if len(declarations) != 1:
+        raise ResolvedRuntimeV4Unsupported("resolved caption range does not contain one exact declaration kind")
+    declaration_index, content, absolute_start = declarations[0]
+    standalone_id = _standalone_target_id(source, target_lines[declaration_index][1], target)
+    spec = _caption_marker_spec(content, absolute_start, target, standalone_id=standalone_id)
+    directions = _caption_source_directions(source, target, spec.source_start, standalone_id=standalone_id)
+    if not directions:
+        raise ResolvedRuntimeV4Unsupported("resolved caption has no object within one blank source line")
+    return replace(spec, caption_carrier_directions=directions)
 
 
 def _first_target_line(source: str, target: ResolvedDocumentTarget) -> tuple[str, int]:
@@ -255,6 +289,103 @@ def _first_target_line(source: str, target: ResolvedDocumentTarget) -> tuple[str
     if line_end > target.source_start and source[line_end - 1] == "\r":
         line_end -= 1
     return source[target.source_start : line_end], target.source_start
+
+
+def _target_lines(source: str, target: ResolvedDocumentTarget) -> tuple[tuple[str, int], ...]:
+    if target.source_start > 0 and source[target.source_start - 1] != "\n":
+        raise ResolvedRuntimeV4Unsupported("resolved target does not start at a source line boundary")
+    output: list[tuple[str, int]] = []
+    cursor = target.source_start
+    while cursor < target.source_end:
+        line_end = source.find("\n", cursor, target.source_end)
+        physical_end = target.source_end if line_end < 0 else line_end
+        content_end = physical_end - 1 if physical_end > cursor and source[physical_end - 1] == "\r" else physical_end
+        output.append((source[cursor:content_end], cursor))
+        if line_end < 0:
+            break
+        cursor = line_end + 1
+    return tuple(output)
+
+
+def _standalone_target_id(
+    source: str,
+    owner_line_start: int,
+    target: ResolvedDocumentTarget,
+) -> tuple[int, int, str] | None:
+    owner_line_end = source.find("\n", owner_line_start)
+    if owner_line_end < 0:
+        return None
+    line_start = owner_line_end + 1
+    line_end = source.find("\n", line_start)
+    if line_end < 0:
+        line_end = len(source)
+    content_end = line_end - 1 if line_end > line_start and source[line_end - 1] == "\r" else line_end
+    line = source[line_start:content_end]
+    content_offset = _commonmark_container_prefix_length(line)
+    content = line[content_offset:]
+    match = _STANDALONE_ID_RE.fullmatch(content)
+    if match is None:
+        return None
+    if target.target_id is None or match.group("id") != target.target_id:
+        raise ResolvedRuntimeV4Unsupported("resolved target standalone ID differs from its typed identity")
+    token_start = line_start + content_offset + match.start("token")
+    return token_start, token_start + len(match.group("token")), match.group("token")
+
+
+def _caption_source_directions(
+    source: str,
+    target: ResolvedDocumentTarget,
+    declaration_marker_start: int,
+    *,
+    standalone_id: tuple[int, int, str] | None,
+) -> tuple[Literal[-1, 1], ...]:
+    """Return source sides reachable through at most one blank line."""
+
+    lines: list[tuple[str, int]] = []
+    cursor = 0
+    while cursor < len(source):
+        line_end = source.find("\n", cursor)
+        physical_end = len(source) if line_end < 0 else line_end
+        content_end = physical_end - 1 if physical_end > cursor and source[physical_end - 1] == "\r" else physical_end
+        lines.append((source[cursor:content_end], cursor))
+        if line_end < 0:
+            break
+        cursor = line_end + 1
+    declaration_index = next(
+        (
+            index
+            for index, (_line, start) in enumerate(lines)
+            if start <= declaration_marker_start < start + len(_line) + 1
+        ),
+        None,
+    )
+    if declaration_index is None:
+        raise ResolvedRuntimeV4Unsupported("resolved caption declaration is outside its target range")
+
+    def adjacent(direction: Literal[-1, 1]) -> bool:
+        blanks = 0
+        skipped_target_id = False
+        stop = len(lines) if direction > 0 else -1
+        for index in range(declaration_index + direction, stop, direction):
+            line = lines[index][0]
+            content = line[_commonmark_container_prefix_length(line) :]
+            line_start = lines[index][1]
+            if (
+                not skipped_target_id
+                and standalone_id is not None
+                and line_start <= standalone_id[0] < line_start + len(line) + 1
+            ):
+                skipped_target_id = True
+                continue
+            if not content.strip():
+                blanks += 1
+                if blanks > 1:
+                    return False
+                continue
+            return True
+        return False
+
+    return tuple(direction for direction in (-1, 1) if adjacent(direction))
 
 
 def _commonmark_container_prefix_length(line: str) -> int:
@@ -276,6 +407,8 @@ def _heading_marker_spec(
     content: str,
     absolute_start: int,
     target: ResolvedDocumentTarget,
+    *,
+    standalone_id: tuple[int, int, str] | None,
 ) -> _MarkerSpec:
     match = _ATX_HEADING_RE.fullmatch(content)
     if match is None or len(match.group("marks")) != target.heading_level:
@@ -284,7 +417,17 @@ def _heading_marker_spec(
     body_start = absolute_start + match.start("body")
     trailing_id = _TRAILING_ID_RE.search(body)
     if target.target_id is not None:
-        if trailing_id is None or trailing_id.group("id") != target.target_id:
+        if trailing_id is None and standalone_id is not None:
+            source_start, source_end, original = standalone_id
+            return _MarkerSpec(
+                source_start=source_start,
+                source_end=source_end,
+                original=original,
+                role="target",
+                payload=target,
+                standalone_target_id=True,
+            )
+        if trailing_id is None or trailing_id.group("id") != target.target_id or standalone_id is not None:
             raise ResolvedRuntimeV4Unsupported("resolved Heading target ID is not its exact trailing source token")
         return _MarkerSpec(
             source_start=body_start + trailing_id.start("token"),
@@ -311,6 +454,8 @@ def _caption_marker_spec(
     content: str,
     absolute_start: int,
     target: ResolvedDocumentTarget,
+    *,
+    standalone_id: tuple[int, int, str] | None,
 ) -> _MarkerSpec:
     match = _CAPTION_RE.fullmatch(content)
     if match is None or _KIND_BY_KEYWORD[match.group("keyword").casefold()] != target.kind:
@@ -321,7 +466,19 @@ def _caption_marker_spec(
     if _HISTORICAL_ATTRIBUTE_RE.search(body) is not None:
         raise ResolvedRuntimeV4Unsupported("historical caption attributes are not current v4 declarations")
     if target.target_id is not None:
-        if trailing_id is None or trailing_id.group("id") != target.target_id:
+        if trailing_id is None and standalone_id is not None:
+            authored_source = body.strip(" \t")
+            _validate_caption_content(target, authored_source)
+            source_start, source_end, original = standalone_id
+            return _MarkerSpec(
+                source_start=source_start,
+                source_end=source_end,
+                original=original,
+                role="target",
+                payload=target,
+                standalone_target_id=True,
+            )
+        if trailing_id is None or trailing_id.group("id") != target.target_id or standalone_id is not None:
             raise ResolvedRuntimeV4Unsupported("resolved caption target ID is not its exact trailing source token")
         authored_source = body[: trailing_id.start("space")].strip(" \t")
         _validate_caption_content(target, authored_source)
@@ -347,10 +504,10 @@ def _caption_marker_spec(
 
 
 def _validate_caption_content(target: ResolvedDocumentTarget, authored_source: str) -> None:
-    if target.kind in {"figure", "table", "code_block"} and not authored_source:
-        raise ResolvedRuntimeV4Unsupported("Figure, Table, and Code captions require authored content")
-    if target.kind == "equation" and not authored_source and target.target_id is None:
-        raise ResolvedRuntimeV4Unsupported("an empty Equation caption requires an explicit source ID")
+    if target.kind in {"figure", "table"} and not authored_source:
+        raise ResolvedRuntimeV4Unsupported("Figure and Table captions require authored content")
+    if target.kind in {"equation", "code_block"} and not authored_source and target.target_id is None:
+        raise ResolvedRuntimeV4Unsupported("an empty Equation or Code caption requires an explicit source ID")
 
 
 def _inline_marker_spec(
@@ -520,6 +677,65 @@ def _marker_node(marker: RuntimeMarkerV4) -> dict[str, Any]:
     }
 
 
+def _attach_standalone_target_markers(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Attach an authenticated next-line target ID to its preceding owner."""
+
+    output: list[dict[str, Any]] = []
+    for node in nodes:
+        children = node.get("children")
+        if isinstance(children, list):
+            node["children"] = _attach_standalone_target_markers(children)
+            children = node["children"]
+
+        marker_indices = [
+            index
+            for index, child in enumerate(children if isinstance(children, list) else [])
+            if _is_standalone_target_marker(child)
+        ]
+        if marker_indices and node.get("type") in {"paragraph", "block_text"}:
+            if len(marker_indices) != 1:
+                raise ResolvedRuntimeV4Unsupported("one source block contains multiple standalone target IDs")
+            marker_index = marker_indices[0]
+            assert isinstance(children, list)
+            before = children[:marker_index]
+            after = children[marker_index + 1 :]
+            meaningful_before = [item for item in before if not _is_inline_separator_or_blank(item)]
+            meaningful_after = [item for item in after if not _is_inline_separator_or_blank(item)]
+            if not meaningful_before and not meaningful_after:
+                owner_index = len(output) - 1
+                while owner_index >= 0 and output[owner_index].get("type") == "blank_line":
+                    owner_index -= 1
+                if owner_index < 0 or output[owner_index].get("type") not in {"heading", "paragraph", "block_text"}:
+                    raise ResolvedRuntimeV4Unsupported("standalone target ID has no immediately preceding target owner")
+                owner_children = output[owner_index].get("children")
+                if not isinstance(owner_children, list):
+                    raise ResolvedRuntimeV4Unsupported("standalone target ID owner has no inline children")
+                owner_children.append(children[marker_index])
+                continue
+            if meaningful_after:
+                raise ResolvedRuntimeV4Unsupported("standalone target ID is not an isolated next-line token")
+            while marker_index > 0 and _is_inline_separator_or_blank(children[marker_index - 1]):
+                del children[marker_index - 1]
+                marker_index -= 1
+        output.append(node)
+    return output
+
+
+def _is_standalone_target_marker(node: dict[str, Any]) -> bool:
+    if node.get("type") != _TARGET_NODE:
+        return False
+    marker = node.get("marker")
+    return isinstance(marker, RuntimeMarkerV4) and marker.standalone_target_id
+
+
+def _is_inline_separator_or_blank(node: dict[str, Any]) -> bool:
+    if node.get("type") in {"softbreak", "linebreak"}:
+        return True
+    if node.get("type") == "text":
+        return not str(node.get("raw") or node.get("text") or "").strip()
+    return False
+
+
 def _bind_target_markers(
     node: dict[str, Any],
     bound_targets: set[tuple[int, int, str]],
@@ -557,17 +773,32 @@ def _bind_target_markers(
     else:
         if node.get("type") not in {"paragraph", "block_text"}:
             return
-        if marker.trim_preceding_space:
+        inline_image_before = _split_inline_image_before_caption_children(children, index, target)
+        if marker.standalone_target_id:
+            if index != len(children) - 1:
+                raise ResolvedRuntimeV4Unsupported("standalone caption target ID is not at the declaration boundary")
+        elif marker.trim_preceding_space:
             if index != len(children) - 1:
                 raise ResolvedRuntimeV4Unsupported("caption target ID marker is not at the declaration boundary")
         elif (
-            authored_inline_text(children[:index]).casefold()
+            inline_image_before is None
+            and authored_inline_text(children[:index]).casefold()
             != ({"code_block": "Code"}.get(target.kind, target.kind.title()) + ":").casefold()
         ):
             raise ResolvedRuntimeV4Unsupported("ID-less caption target marker moved away from its kind colon")
         node["type"] = "_docwen_resolved_v4_caption_declaration"
         node[_TARGET_KEY] = target
-        caption_children = _caption_content_children(children, index, target)
+        node[_CAPTION_DIRECTIONS_KEY] = marker.caption_carrier_directions
+        if inline_image_before is not None:
+            image_children, caption_children = inline_image_before
+            node[_INLINE_IMAGE_CHILDREN_KEY] = image_children
+            node[_INLINE_IMAGE_BEFORE_KEY] = True
+        else:
+            caption_children = _caption_content_children(children, index, target)
+            inline_image = _split_inline_caption_image_children(caption_children, target)
+            if inline_image is not None:
+                caption_children, image_children = inline_image
+                node[_INLINE_IMAGE_CHILDREN_KEY] = image_children
         if authored_inline_text(caption_children) != target.authored_text:
             raise ResolvedRuntimeV4Unsupported("caption authored_text differs from its parsed declaration content")
         node[_CAPTION_CHILDREN_KEY] = caption_children
@@ -627,39 +858,143 @@ def _trim_edge_text(children: list[dict[str, Any]]) -> None:
         children.pop()
 
 
+def _split_inline_caption_image_children(
+    children: list[dict[str, Any]],
+    target: ResolvedDocumentTarget,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]] | None:
+    """Split the zero-blank caption+image paragraph produced by Mistune."""
+
+    for index, child in enumerate(children):
+        if child.get("type") not in {"softbreak", "linebreak"}:
+            continue
+        caption_children = children[:index]
+        image_children = children[index + 1 :]
+        if authored_inline_text(caption_children) != target.authored_text:
+            continue
+        if _is_image_paragraph({"type": "paragraph", "children": image_children}):
+            return caption_children, image_children
+    return None
+
+
+def _split_inline_image_before_caption_children(
+    children: list[dict[str, Any]],
+    marker_index: int,
+    target: ResolvedDocumentTarget,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]] | None:
+    """Split an image followed immediately by a caption in one paragraph."""
+
+    separator = next(
+        (
+            index
+            for index in range(marker_index - 1, -1, -1)
+            if children[index].get("type") in {"softbreak", "linebreak"}
+        ),
+        None,
+    )
+    if separator is None:
+        return None
+    image_children = children[:separator]
+    if not _is_image_paragraph({"type": "paragraph", "children": image_children}):
+        return None
+    caption_line = list(children[separator + 1 :])
+    caption_children = _caption_content_children(caption_line, marker_index - separator - 1, target)
+    return image_children, caption_children
+
+
 def _bind_caption_targets(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for node in nodes:
         children = node.get("children")
         if isinstance(children, list):
             node["children"] = _bind_caption_targets(children)
-    output: list[dict[str, Any]] = []
-    index = 0
-    while index < len(nodes):
-        declaration = nodes[index]
-        if declaration.get("type") != "_docwen_resolved_v4_caption_declaration":
-            output.append(declaration)
-            index += 1
-            continue
+    nodes = _expand_inline_caption_images(nodes)
+    declarations = [
+        index for index, node in enumerate(nodes) if node.get("type") == "_docwen_resolved_v4_caption_declaration"
+    ]
+    candidate_sets: dict[int, set[int]] = {}
+    for declaration_index in declarations:
+        declaration = nodes[declaration_index]
         target = declaration.get(_TARGET_KEY)
         if not isinstance(target, ResolvedDocumentTarget) or target.kind == "heading":
             raise ResolvedRuntimeV4Unsupported("caption declaration has no typed caption target")
-        object_index = index + 1
-        while object_index < len(nodes) and nodes[object_index].get("type") == "blank_line":
-            object_index += 1
-        if object_index >= len(nodes):
-            raise ResolvedRuntimeV4Unsupported("caption declaration has no directly adjacent object")
+        directions = declaration.get(_CAPTION_DIRECTIONS_KEY)
+        if not isinstance(directions, tuple) or any(direction not in {-1, 1} for direction in directions):
+            raise ResolvedRuntimeV4Unsupported("caption declaration lost its authenticated source adjacency")
+        candidates = {
+            candidate
+            for direction in directions
+            for candidate in (_adjacent_caption_node(nodes, declaration_index + direction, direction),)
+            if candidate is not None and _captionable_node_kind(nodes[candidate]) is not None
+        }
+        candidate_sets[declaration_index] = candidates
+    bindings = _require_unique_caption_bindings(candidate_sets)
+
+    removed = set(declarations)
+    for declaration_index, object_index in bindings.items():
+        declaration = nodes[declaration_index]
         object_node = nodes[object_index]
-        if object_node.get("type") != _OBJECT_TYPE_BY_KIND[target.kind]:
-            raise ResolvedRuntimeV4Unsupported("caption declaration object kind differs from its typed target")
-        if target.kind == "figure" and not _is_image_paragraph(object_node):
-            raise ResolvedRuntimeV4Unsupported("Figure declaration does not own one image paragraph")
         if _TARGET_KEY in object_node or _CAPTION_CHILDREN_KEY in object_node:
             raise ResolvedRuntimeV4Unsupported("one Markdown object participates in multiple caption claims")
-        object_node[_TARGET_KEY] = target
+        object_node[_TARGET_KEY] = declaration[_TARGET_KEY]
         object_node[_CAPTION_CHILDREN_KEY] = declaration[_CAPTION_CHILDREN_KEY]
-        output.append(object_node)
-        index = object_index + 1
+        for between in range(min(declaration_index, object_index) + 1, max(declaration_index, object_index)):
+            if nodes[between].get("type") == "blank_line":
+                removed.add(between)
+    return [node for index, node in enumerate(nodes) if index not in removed]
+
+
+def _expand_inline_caption_images(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    output: list[dict[str, Any]] = []
+    for node in nodes:
+        image_children = node.get(_INLINE_IMAGE_CHILDREN_KEY)
+        if node.get("type") != "_docwen_resolved_v4_caption_declaration" or not isinstance(image_children, list):
+            output.append(node)
+            continue
+        declaration = dict(node)
+        declaration.pop(_INLINE_IMAGE_CHILDREN_KEY, None)
+        image_before = bool(declaration.pop(_INLINE_IMAGE_BEFORE_KEY, False))
+        image_node: dict[str, Any] = {"type": "paragraph", "children": image_children}
+        for key in ("_docwen_v3_ordinary_anchor", "_docwen_v3_ordinary_anchor_parent_source_id"):
+            if key in declaration:
+                image_node[key] = declaration.pop(key)
+        output.extend((image_node, declaration) if image_before else (declaration, image_node))
     return output
+
+
+def _adjacent_caption_node(nodes: list[dict[str, Any]], start: int, direction: int) -> int | None:
+    blanks = 0
+    stop = len(nodes) if direction > 0 else -1
+    for index in range(start, stop, direction):
+        if nodes[index].get("type") == "blank_line":
+            blanks += 1
+            if blanks > 1:
+                return None
+            continue
+        return index
+    return None
+
+
+def _captionable_node_kind(node: dict[str, Any]) -> str | None:
+    node_type = node.get("type")
+    if node_type == "table":
+        return "table"
+    if node_type in {"block_math", "block_latex"}:
+        return "equation"
+    if node_type == "block_code":
+        return "code_block"
+    if node_type == "paragraph" and _is_image_paragraph(node):
+        return "figure"
+    return None
+
+
+def _require_unique_caption_bindings(candidate_sets: dict[int, set[int]]) -> dict[int, int]:
+    """Require one local carrier per declaration and one claimant per carrier."""
+
+    if any(len(candidates) != 1 for candidates in candidate_sets.values()):
+        raise ResolvedRuntimeV4Unsupported("caption declarations do not have one unique object matching")
+    bindings = {caption: next(iter(candidates)) for caption, candidates in candidate_sets.items()}
+    if len(set(bindings.values())) != len(bindings):
+        raise ResolvedRuntimeV4Unsupported("caption declarations do not have one unique object matching")
+    return bindings
 
 
 def _is_image_paragraph(node: dict[str, Any]) -> bool:

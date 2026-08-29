@@ -2,14 +2,14 @@
   "case_id": "invalid-kind-mismatch",
   "category": "negative",
   "input_id": "invalid-kind-mismatch.md",
-  "source": "Figure: Wrong\n\n| A |\n|---|\n| 1 |\n",
+  "source": "Figure: Wrong\n\nordinary paragraph\n",
   "expected": {
     "target_kind_ids": [],
     "anchor_kind_ids": [],
     "link_kinds": [],
     "reference_statuses": [],
     "citation_keys": [],
-    "diagnostics": [{"severity": "error", "code": "docwen.markdown.caption.object_mismatch", "range": {"start": 15, "end": 33}}],
+    "diagnostics": [{"severity": "error", "code": "docwen.markdown.caption.object_mismatch", "range": {"start": 0, "end": 6}}],
     "source_unchanged": true
   }
 }

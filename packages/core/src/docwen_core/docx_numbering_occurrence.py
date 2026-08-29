@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from itertools import pairwise
 from typing import Any, Literal
 
+from docwen_core._docx_caption_carrier import captionable_logical_elements
 from docwen_core._docx_semantics_v3_model import DocxSemanticsV3Error, require_sha256
 from docwen_core._docx_semantics_v3_ooxml import sdt_tag, wrap_direct_body_group
 
@@ -257,20 +258,9 @@ def _is_inside_allowed_carrier(element: Any, allowed: set[Any]) -> bool:
 
 
 def _prove_object_slot(element: Any, kind: CaptionKind) -> None:
-    from docx.oxml.ns import qn
-
-    logical = _unwrap_ordinary_anchor(element)
-    if kind == "table" and logical.tag != qn("w:tbl"):
-        raise DocxSemanticsV3Error("table occurrence has no table object")
-    if kind == "figure" and not list(logical.iter(qn("w:drawing"))):
-        raise DocxSemanticsV3Error("figure occurrence has no drawing object")
-    if kind == "equation" and not (
-        list(logical.iter("{http://schemas.openxmlformats.org/officeDocument/2006/math}oMath"))
-        or list(logical.iter("{http://schemas.openxmlformats.org/officeDocument/2006/math}oMathPara"))
-    ):
-        raise DocxSemanticsV3Error("equation occurrence has no OMML object")
-    if kind == "code_block" and logical.tag not in {qn("w:p"), qn("w:sdt")}:
-        raise DocxSemanticsV3Error("code-block occurrence has no logical block object")
+    if kind not in {"figure", "table", "equation", "code_block"}:
+        raise DocxSemanticsV3Error("numbering occurrence has an unsupported caption kind")
+    captionable_logical_elements((element,))
 
 
 def _unwrap_ordinary_anchor(element: Any) -> Any:

@@ -406,26 +406,32 @@ class MdToDocxRenderer:
             direct_parent_source_id=node.get("_docwen_v3_ordinary_anchor_parent_source_id"),
         )
 
-    def _resolved_target(self, node: dict[str, Any], kind: str) -> ResolvedDocumentTarget | None:
+    def _resolved_target(self, node: dict[str, Any], kind: str | None = None) -> ResolvedDocumentTarget | None:
         target = node.get(_RESOLVED_TARGET_KEY)
         if target is None:
             return None
         if self._resolved_numbering_session is None:
             raise ValueError("resolved-v4 target requires a request-owned DOCX session")
-        if not isinstance(target, ResolvedDocumentTarget) or target.kind != kind:
+        if not isinstance(target, ResolvedDocumentTarget) or (kind is not None and target.kind != kind):
             raise ValueError("resolved-v4 AST target kind is not typed or does not match its owner")
+        return target
+
+    def _resolved_caption_target(self, node: dict[str, Any]) -> ResolvedDocumentTarget | None:
+        target = self._resolved_target(node)
+        if target is not None and target.kind == "heading":
+            raise ValueError("resolved-v4 caption owner carries a Heading target")
         return target
 
     def _create_resolved_caption(
         self,
         node: dict[str, Any],
         *,
-        kind: str,
         object_elements: tuple[Any, ...],
     ):
-        target = self._resolved_target(node, kind)
+        target = self._resolved_caption_target(node)
         if target is None:
             return None
+        kind = target.kind
         assert self._resolved_numbering_session is not None
         children = node.get(_RESOLVED_CAPTION_CHILDREN_KEY)
         if not isinstance(children, list):
@@ -480,32 +486,32 @@ class MdToDocxRenderer:
 
         if children:
             self._render_body_inline_children(p, children)
-        resolved_target = self._resolved_target(node, "figure")
+        resolved_target = self._resolved_caption_target(node)
         if resolved_target is not None:
             self._bind_v3_ordinary_anchor((p._p,), node)
             caption = self._create_resolved_caption(
                 node,
-                kind="figure",
                 object_elements=(p._p,),
             )
             assert caption is not None
-            # Figure is the one caption kind whose frozen physical order is
-            # object -> caption.
-            p._p.addnext(caption._p)
-            return [p, caption]
+            if resolved_target.kind == "figure":
+                p._p.addnext(caption._p)
+                return [p, caption]
+            p._p.addprevious(caption._p)
+            return [caption, p]
         v3_target = node.get("_docwen_v3_caption_target")
         if v3_target is not None:
             caption = self._create_v3_caption(v3_target)
-            # Figure is the one caption kind whose frozen DOCX order is
-            # object -> caption.  The Markdown source remains declaration ->
-            # object; this is only the physical Word projection.
-            p._p.addnext(caption._p)
+            if v3_target["kind"] == "figure":
+                p._p.addnext(caption._p)
+            else:
+                p._p.addprevious(caption._p)
             if self._semantic_v3_session is not None:
                 anchor = node.get("_docwen_v3_ordinary_anchor")
                 if anchor is not None:
                     self._bind_v3_ordinary_anchor((p._p,), node)
                 self._semantic_v3_session.bind_caption(caption, (p._p,), v3_target)
-            return [p, caption]
+            return [p, caption] if v3_target["kind"] == "figure" else [caption, p]
         if self._source_carrier_session is not None and node.get("_docwen_v3_ordinary_anchor") is not None:
             self._bind_v3_ordinary_anchor((p._p,), node)
         return p
@@ -631,15 +637,17 @@ class MdToDocxRenderer:
                 fenced_record,
                 logical_body=logical_body,
             )
-        resolved_target = self._resolved_target(node, "code_block")
+        resolved_target = self._resolved_caption_target(node)
         if resolved_target is not None:
             self._bind_v3_ordinary_anchor((p._p,), node)
             caption = self._create_resolved_caption(
                 node,
-                kind="code_block",
                 object_elements=(p._p,),
             )
             assert caption is not None
+            if resolved_target.kind == "figure":
+                p._p.addnext(caption._p)
+                return [p, caption]
             p._p.addprevious(caption._p)
             return [caption, p]
         v3_target = node.get("_docwen_v3_caption_target")
@@ -650,13 +658,16 @@ class MdToDocxRenderer:
                 return p
         if v3_target is not None:
             caption = self._create_v3_caption(v3_target)
-            p._p.addprevious(caption._p)
+            if v3_target["kind"] == "figure":
+                p._p.addnext(caption._p)
+            else:
+                p._p.addprevious(caption._p)
             if self._semantic_v3_session is not None:
                 anchor = node.get("_docwen_v3_ordinary_anchor")
                 if anchor is not None:
                     self._bind_v3_ordinary_anchor((p._p,), node)
                 self._semantic_v3_session.bind_caption(caption, (p._p,), v3_target)
-            return [caption, p]
+            return [p, caption] if v3_target["kind"] == "figure" else [caption, p]
         if caption_data is None:
             return p
         caption = self._create_semantic_caption(
@@ -965,28 +976,33 @@ class MdToDocxRenderer:
         paragraph = self._doc.paragraphs[-1] if self._doc.paragraphs else None
         if paragraph is None:
             return None
-        resolved_target = self._resolved_target(node, "equation")
+        resolved_target = self._resolved_caption_target(node)
         if resolved_target is not None:
             _strip_serialization_only_whitespace(paragraph._p)
             self._bind_v3_ordinary_anchor((paragraph._p,), node)
             caption = self._create_resolved_caption(
                 node,
-                kind="equation",
                 object_elements=(paragraph._p,),
             )
             assert caption is not None
+            if resolved_target.kind == "figure":
+                paragraph._p.addnext(caption._p)
+                return [paragraph, caption]
             paragraph._p.addprevious(caption._p)
             return [caption, paragraph]
         v3_target = node.get("_docwen_v3_caption_target")
         if v3_target is not None:
             caption = self._create_v3_caption(v3_target)
-            paragraph._p.addprevious(caption._p)
+            if v3_target["kind"] == "figure":
+                paragraph._p.addnext(caption._p)
+            else:
+                paragraph._p.addprevious(caption._p)
             if self._semantic_v3_session is not None:
                 anchor = node.get("_docwen_v3_ordinary_anchor")
                 if anchor is not None:
                     self._bind_v3_ordinary_anchor((paragraph._p,), node)
                 self._semantic_v3_session.bind_caption(caption, (paragraph._p,), v3_target)
-            return [caption, paragraph]
+            return [paragraph, caption] if v3_target["kind"] == "figure" else [caption, paragraph]
         if self._source_carrier_session is not None and node.get("_docwen_v3_ordinary_anchor") is not None:
             self._bind_v3_ordinary_anchor((paragraph._p,), node)
         caption_data = node.get("_document_semantics_caption")
@@ -1113,28 +1129,33 @@ class MdToDocxRenderer:
                 column = int(anchor["column"])
                 table.cell(row, column).merge(table.cell(row + row_span - 1, column + column_span - 1))
 
-        resolved_target = self._resolved_target(node, "table")
+        resolved_target = self._resolved_caption_target(node)
         if resolved_target is not None:
             self._bind_v3_ordinary_anchor((table._element,), node)
             caption = self._create_resolved_caption(
                 node,
-                kind="table",
                 object_elements=(table._element,),
             )
             assert caption is not None
+            if resolved_target.kind == "figure":
+                table._element.addnext(caption._p)
+                return [table, caption]
             table._element.addprevious(caption._p)
             return [caption, table]
 
         v3_target = node.get("_docwen_v3_caption_target")
         if v3_target is not None:
             caption = self._create_v3_caption(v3_target)
-            table._element.addprevious(caption._p)
+            if v3_target["kind"] == "figure":
+                table._element.addnext(caption._p)
+            else:
+                table._element.addprevious(caption._p)
             if self._semantic_v3_session is not None:
                 anchor = node.get("_docwen_v3_ordinary_anchor")
                 if anchor is not None:
                     self._bind_v3_ordinary_anchor((table._element,), node)
                 self._semantic_v3_session.bind_caption(caption, (table._element,), v3_target)
-            return [caption, table]
+            return [table, caption] if v3_target["kind"] == "figure" else [caption, table]
         if self._source_carrier_session is not None and node.get("_docwen_v3_ordinary_anchor") is not None:
             self._bind_v3_ordinary_anchor((table._element,), node)
         caption_data = node.get("_document_semantics_caption")

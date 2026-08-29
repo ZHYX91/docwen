@@ -225,6 +225,8 @@ def analyze_markdown_semantics_v3(
     }
     heading_records: list[dict[str, Any]] = []
     active_heading_titles: list[str] = []
+    semantic_anchor_marker_ranges: set[tuple[int, int]] = set()
+    caption_bindings, ambiguous_captions = _caption_object_bindings(blocks)
 
     # Headings and declarations own semantic IDs.  Raw objects never do.
     for index, block in enumerate(blocks):
@@ -241,6 +243,9 @@ def analyze_markdown_semantics_v3(
             number = ".".join(str(value) for value in heading_counters[:level] if value)
             active_heading_titles = active_heading_titles[: level - 1]
             active_heading_titles.append(title)
+            if anchor is None:
+                anchor = _standalone_semantic_anchor(blocks, index)
+            record_end = block.end
             record: dict[str, Any] = {
                 "kind": "heading",
                 "title": title,
@@ -248,11 +253,15 @@ def analyze_markdown_semantics_v3(
                 "heading_path": list(active_heading_titles),
                 "number": number,
                 "source_form": "heading",
-                "range": SourceRange(block.start, block.end).as_dict(),
+                "range": SourceRange(block.start, record_end).as_dict(),
             }
             if anchor is not None:
                 token, token_range = anchor
                 excluded_inline_ranges.append(token_range)
+                if token_range.start >= block.end:
+                    semantic_anchor_marker_ranges.add((token_range.start, token_range.end))
+                    record_end = max(record_end, _block_end_for_token_range(blocks, token_range))
+                    record["range"] = SourceRange(block.start, record_end).as_dict()
                 anchor_id = token[1:]
                 if _valid_id(anchor_id):
                     record["id"] = anchor_id
@@ -284,11 +293,15 @@ def analyze_markdown_semantics_v3(
             absolute_start=int(block.data["content_start"]),
         )
         content = content.strip()
+        if anchor is None:
+            anchor = _standalone_semantic_anchor(blocks, index)
         anchor_id: str | None = None
         anchor_range: SourceRange | None = None
         if anchor is not None:
             token, anchor_range = anchor
             excluded_inline_ranges.append(anchor_range)
+            if anchor_range.start >= block.end:
+                semantic_anchor_marker_ranges.add((anchor_range.start, anchor_range.end))
             candidate = token[1:]
             if _valid_id(candidate):
                 anchor_id = candidate
@@ -304,7 +317,7 @@ def analyze_markdown_semantics_v3(
                 )
 
         keyword_range = SourceRange(int(block.data["keyword_start"]), int(block.data["keyword_end"]))
-        if declaration_kind in {"figure", "table", "code_block"} and not content:
+        if declaration_kind in {"figure", "table"} and not content:
             diagnostics.append(
                 _diagnostic(
                     source_identity,
@@ -315,7 +328,7 @@ def analyze_markdown_semantics_v3(
                 )
             )
             continue
-        if declaration_kind == "equation" and not content and anchor_id is None:
+        if declaration_kind in {"equation", "code_block"} and not content and anchor_id is None:
             insertion_offset = int(block.data["line_content_end"])
             insertion = SourceRange(insertion_offset, insertion_offset)
             fixes: tuple[dict[str, Any], ...] = ()
@@ -332,57 +345,47 @@ def analyze_markdown_semantics_v3(
                     source_identity,
                     "error",
                     "docwen.markdown.caption.empty_equation_target_required",
-                    "An empty Equation declaration requires an explicit semantic ID.",
+                    f"An empty {block.data['canonical_keyword']} declaration requires an explicit semantic ID.",
                     keyword_range,
                     fixes=fixes,
                 )
             )
             continue
 
-        object_index = _next_non_marker_block(
-            blocks,
-            index + 1,
-            container_path=tuple(block.data["container_path"]),
-        )
+        object_index = caption_bindings.get(index)
         if object_index is None:
             diagnostics.append(
                 _diagnostic(
                     source_identity,
                     "error",
                     "docwen.markdown.caption.object_mismatch",
-                    f"{block.data['canonical_keyword']} is not followed by its matching object.",
+                    (
+                        f"{block.data['canonical_keyword']} has ambiguous adjacent caption ownership."
+                        if index in ambiguous_captions
+                        else f"{block.data['canonical_keyword']} has no adjacent captionable object."
+                    ),
                     keyword_range,
                 )
             )
             continue
         object_block = blocks[object_index]
-        expected_object = {
-            "figure": "image",
-            "table": "table",
-            "equation": "equation",
-            "code_block": "code_block",
-        }[declaration_kind]
-        if object_block.kind != expected_object:
-            diagnostics.append(
-                _diagnostic(
-                    source_identity,
-                    "error",
-                    "docwen.markdown.caption.object_mismatch",
-                    f"{block.data['canonical_keyword']} is followed by {object_block.kind}, not {expected_object}.",
-                    SourceRange(object_block.start, object_block.end),
-                )
-            )
-            continue
 
         caption_counters[declaration_kind] += 1
+        declaration_end = max(
+            block.end,
+            _block_end_for_token_range(blocks, anchor_range) if anchor_range else block.end,
+        )
         record = {
             "kind": declaration_kind,
             "title": content,
             "number": str(caption_counters[declaration_kind]),
             "source_form": "declaration",
             "source_keyword": block.data["source_keyword"],
-            "range": SourceRange(block.start, object_block.end).as_dict(),
-            "declaration_range": SourceRange(block.start, block.end).as_dict(),
+            "range": SourceRange(
+                min(block.start, object_block.start),
+                max(declaration_end, object_block.end),
+            ).as_dict(),
+            "declaration_range": SourceRange(block.start, declaration_end).as_dict(),
             "object_range": SourceRange(object_block.start, object_block.end).as_dict(),
         }
         if anchor_id is not None and anchor_range is not None:
@@ -454,6 +457,8 @@ def analyze_markdown_semantics_v3(
         token = str(block.data["token"])
         token_range = SourceRange(int(block.data["token_start"]), int(block.data["token_end"]))
         excluded_inline_ranges.append(token_range)
+        if (token_range.start, token_range.end) in semantic_anchor_marker_ranges:
+            continue
         anchor_id = token[1:]
         if not _valid_id(anchor_id):
             diagnostics.append(
@@ -747,10 +752,10 @@ def render_caption_declaration(kind: TargetKind, content: str, *, target_id: str
     if keyword is None:
         raise ValueError("Heading is not a caption declaration")
     trimmed = content.strip()
-    if kind in {"figure", "table", "code_block"} and not trimmed:
+    if kind in {"figure", "table"} and not trimmed:
         raise ValueError(f"{keyword} requires non-empty caption text")
-    if kind == "equation" and not trimmed and target_id is None:
-        raise ValueError("an empty Equation declaration requires a target_id")
+    if kind in {"equation", "code_block"} and not trimmed and target_id is None:
+        raise ValueError(f"an empty {keyword} declaration requires a target_id")
     if target_id is not None and not _valid_id(target_id):
         raise ValueError("target_id must match [A-Za-z0-9-]{1,128}")
     suffix = "" if target_id is None else f"^{target_id}"
@@ -1300,6 +1305,38 @@ def _ordinary_anchor_owner_range(block: _Block) -> SourceRange:
     return SourceRange(block.start, block.end)
 
 
+def _standalone_semantic_anchor(
+    blocks: Sequence[_Block],
+    owner_index: int,
+) -> tuple[str, SourceRange] | None:
+    """Return an ID-only line immediately following a Heading/Caption.
+
+    Number Suite emits this ordinary Obsidian spelling as an alternative to
+    the inline trailing ``^id``.  It remains a semantic target ID, not an
+    ordinary anchor on the carrier that follows it.
+    """
+
+    owner = blocks[owner_index]
+    owner_path = tuple(owner.data["container_path"])
+    for candidate in blocks[owner_index + 1 :]:
+        if tuple(candidate.data["container_path"]) != owner_path:
+            continue
+        if candidate.start != owner.end or candidate.kind != "anchor_marker":
+            return None
+        token = str(candidate.data["token"])
+        return token, SourceRange(int(candidate.data["token_start"]), int(candidate.data["token_end"]))
+    return None
+
+
+def _block_end_for_token_range(blocks: Sequence[_Block], token_range: SourceRange) -> int:
+    for block in blocks:
+        if block.kind != "anchor_marker":
+            continue
+        if int(block.data["token_start"]) == token_range.start and int(block.data["token_end"]) == token_range.end:
+            return block.end
+    return token_range.end
+
+
 def _container_path_projection(block: _Block) -> list[dict[str, Any]]:
     """Project strict CommonMark ancestors in frozen outer-to-inner order."""
 
@@ -1337,19 +1374,82 @@ def _has_nested_inline_owner(blocks: Sequence[_Block], structural: _Block, token
     return False
 
 
-def _next_non_marker_block(
+def _caption_object_bindings(
+    blocks: Sequence[_Block],
+) -> tuple[dict[int, int], set[int]]:
+    """Resolve one adjacent captionable carrier per declaration.
+
+    Zero or one blank source line may separate the declaration and carrier.
+    A declaration with carriers on both sides, or a carrier claimed by two
+    declarations, is ambiguous and intentionally receives no binding.
+    """
+
+    captionable = {"image", "table", "equation", "code_block"}
+    candidate_sets: dict[int, set[int]] = {}
+    for index, block in enumerate(blocks):
+        if block.kind != "caption_declaration":
+            continue
+        container_path = tuple(block.data["container_path"])
+        adjacent = {
+            candidate
+            for candidate in (
+                _adjacent_block(blocks, index - 1, -1, container_path=container_path),
+                _adjacent_block(blocks, index + 1, 1, container_path=container_path),
+            )
+            if candidate is not None and blocks[candidate].kind in captionable
+        }
+        candidate_sets[index] = adjacent
+    return _strict_caption_bindings(candidate_sets)
+
+
+def _strict_caption_bindings(candidate_sets: dict[int, set[int]]) -> tuple[dict[int, int], set[int]]:
+    """Bind only declarations with one local carrier and one local claimant."""
+
+    ambiguous = {caption for caption, candidates in candidate_sets.items() if len(candidates) > 1}
+    bindings = {
+        caption: next(iter(candidates))
+        for caption, candidates in candidate_sets.items()
+        if len(candidates) == 1 and caption not in ambiguous
+    }
+    claims_by_object: dict[int, set[int]] = {}
+    for caption, object_index in bindings.items():
+        claims_by_object.setdefault(object_index, set()).add(caption)
+    for claimants in claims_by_object.values():
+        if len(claimants) > 1:
+            ambiguous.update(claimants)
+    return (
+        {caption: object_index for caption, object_index in bindings.items() if caption not in ambiguous},
+        ambiguous,
+    )
+
+
+def _adjacent_block(
     blocks: Sequence[_Block],
     start: int,
+    direction: Literal[-1, 1],
     *,
     container_path: tuple[tuple[str, int], ...],
 ) -> int | None:
-    for index in range(start, len(blocks)):
+    blank_lines = 0
+    anchor_markers = 0
+    stop = len(blocks) if direction > 0 else -1
+    for index in range(start, stop, direction):
         if tuple(blocks[index].data["container_path"]) != container_path:
             continue
         if blocks[index].kind == "blank":
+            blank_lines += 1
+            if blank_lines > 1:
+                return None
             continue
         if blocks[index].kind == "anchor_marker":
-            return index
+            # An anchor-only line is structurally owned by the adjacent
+            # declaration (forward scan) or object (backward scan).  It is a
+            # transparent identity carrier for caption/object adjacency, but
+            # two such lines are not one unambiguous ownership boundary.
+            anchor_markers += 1
+            if anchor_markers > 1:
+                return None
+            continue
         return index
     return None
 

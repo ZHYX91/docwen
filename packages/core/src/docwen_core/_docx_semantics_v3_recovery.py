@@ -9,6 +9,7 @@ from typing import Any
 from zipfile import ZipFile
 
 import docwen_core._docx_semantics_v3_fenced as fenced
+from docwen_core._docx_caption_carrier import captionable_logical_elements
 from docwen_core._docx_semantics_v3_fenced import FencedSourceIdentityV3
 from docwen_core._docx_semantics_v3_fenced_map import parse_fenced_source_map
 from docwen_core._docx_semantics_v3_model import (
@@ -413,30 +414,9 @@ def _prove_caption_target_group(
 
 
 def _prove_caption_object_kind(kind: str, elements: tuple[Any, ...]) -> None:
-    from docx.oxml.ns import qn
-
-    if kind == "table":
-        valid = len(elements) == 1 and elements[0].tag == qn("w:tbl")
-    elif kind == "figure":
-        valid = (
-            len(elements) == 1
-            and elements[0].tag == qn("w:p")
-            and (
-                elements[0].find(f".//{qn('w:drawing')}") is not None
-                or elements[0].find(f".//{qn('w:pict')}") is not None
-            )
-        )
-    elif kind == "equation":
-        valid = len(elements) == 1 and (
-            elements[0].find(".//{http://schemas.openxmlformats.org/officeDocument/2006/math}oMath") is not None
-            or elements[0].find(".//{http://schemas.openxmlformats.org/officeDocument/2006/math}oMathPara") is not None
-        )
-    elif kind == "code_block":
-        valid = bool(elements) and all(item.tag == qn("w:p") for item in elements)
-    else:
-        valid = False
-    if not valid:
-        raise DocxSemanticsV3Error("caption target object kind does not match its declaration")
+    if kind not in {"figure", "table", "equation", "code_block"}:
+        raise DocxSemanticsV3Error("caption target has an unsupported semantic kind")
+    captionable_logical_elements(elements)
 
 
 def _parse_v3_caption(

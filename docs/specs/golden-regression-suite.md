@@ -129,12 +129,14 @@ Candidate-blocking corpora additionally include:
   rename coverage. Provider fixtures prove a total diagnostic/fix mapping without string fallthrough or coordinate
   loss;
 - Figure/Table/Equation/Code positives with and without IDs, enabled and disabled ID-less non-empty Heading/caption,
-  non-empty ID-less Equation, and empty Equation with ID. Enabled DOCX recovery proves exact caption style, matching
-  single `SEQ` and cached number, matching object kind, and the fixed direct order Figure object→caption versus
-  Table/Equation/Code caption→object. A disabled declaration requires authenticated plan/occurrence authority;
+  non-empty ID-less Equation/Code, and empty Equation/Code with ID. Enabled DOCX recovery proves exact caption style,
+  matching single `SEQ` and cached number, and independent preservation of the caption's semantic kind and the
+  carrier's native image/table/equation/code structure. Physical order follows semantic kind: Figure
+  carrier→caption versus Table/Equation/Code caption→carrier, including cross-type pairs. A disabled declaration
+  requires authenticated plan/occurrence authority;
   style plus adjacency alone is rejected. An ID-less caption has no target pairing SDT/map, hidden ID, bookmark, or
-  `REF`; fixtures reject
-  reversed/opposite-side order, an intervening block, missing/wrong object, style/`SEQ` mismatch, and multiple claims.
+  `REF`; fixtures reject reversed/opposite-side order, an intervening block, missing/unproved native carriers,
+  style/`SEQ` mismatch, and multiple claims.
   A target SDT exists only when addressable, and Markdown emits no pairing token.
   Markdown→DOCX exact Heading `numbering.xml`/list and caption `SEQ`/bookmark/`REF`/cached-result positives and
   disabled absences pass headless round-trip before separate Word, WPS, and LibreOffice host observations. Reverse

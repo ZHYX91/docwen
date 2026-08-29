@@ -90,15 +90,18 @@ def test_four_caption_kinds_and_idless_targets_are_numbered() -> None:
 
 ![image](image.png)
 
+
 Table: Table text ^shared-name
 
 | A |
 |---|
 | 1 |
 
+
 Equation: Equation text
 
 $$x=1$$
+
 
 Code: Code text ^code-name
 
@@ -480,9 +483,7 @@ Paragraph ^same
 
 Figure: Wrong object ^caption-id
 
-| A |
-|---|
-| 1 |
+This paragraph is not a captionable object.
 
 ![[image.png]] ^raw-image
 
@@ -644,6 +645,7 @@ def test_writer_helpers_preserve_token_ownership_and_choose_safe_fences() -> Non
     assert render_citation_token(("fig-legacy",), parenthetical=False) == "@fig-legacy"
     assert render_citation_token(("smith", "wang"), parenthetical=True) == "[@smith; @wang]"
     assert render_caption_declaration("code_block", "Example", target_id="any-name") == "Code: Example ^any-name"
+    assert render_caption_declaration("code_block", "", target_id="snippet") == "Code: ^snippet"
     assert render_caption_declaration("equation", "", target_id="energy") == "Equation: ^energy"
     assert select_safe_fence("```\n~~~~") == "````"
     assert select_safe_fence("````\n~~~") == "~~~~"

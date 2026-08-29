@@ -35,6 +35,7 @@ from docwen_plugin_markdown.document_semantics_v3_fenced_source import (
 type _MarkerRole = Literal[
     "heading_target",
     "caption_declaration",
+    "semantic_target_id",
     "ordinary_anchor",
     "cross_reference",
     "citation",
@@ -107,7 +108,12 @@ def prepare_runtime_semantics_v3(source: str, *, input_id: str) -> RuntimeSemant
             id_range = target.get("id_range")
             if id_range is None:
                 continue
-            marker_specs.append((id_range["start"], id_range["end"], "heading_target", dict(target)))
+            if _is_standalone_target_id(source, target):
+                insertion = _first_line_content_end(source, int(target["range"]["start"]))
+                marker_specs.append((insertion, insertion, "heading_target", dict(target)))
+                marker_specs.append((id_range["start"], id_range["end"], "semantic_target_id", dict(target)))
+            else:
+                marker_specs.append((id_range["start"], id_range["end"], "heading_target", dict(target)))
             continue
         declaration_range = _caption_marker_range(source, target)
         marker_specs.append(
@@ -118,6 +124,9 @@ def prepare_runtime_semantics_v3(source: str, *, input_id: str) -> RuntimeSemant
                 dict(target),
             )
         )
+        if _is_standalone_target_id(source, target):
+            id_range = target["id_range"]
+            marker_specs.append((id_range["start"], id_range["end"], "semantic_target_id", dict(target)))
     for anchor in analysis.projection["anchors"]:
         source_range = anchor["range"]
         marker_specs.append((source_range["start"], source_range["end"], "ordinary_anchor", dict(anchor)))
@@ -179,6 +188,25 @@ def _caption_marker_range(source: str, target: dict[str, Any]) -> dict[str, int]
     return {"start": marker_start, "end": marker_start + len(token)}
 
 
+def _is_standalone_target_id(source: str, target: dict[str, Any]) -> bool:
+    id_range = target.get("id_range")
+    if not isinstance(id_range, dict):
+        return False
+    first_line_end = source.find("\n", int(target["range"]["start"]))
+    if first_line_end < 0:
+        first_line_end = len(source)
+    return int(id_range["start"]) > first_line_end
+
+
+def _first_line_content_end(source: str, start: int) -> int:
+    end = source.find("\n", start)
+    if end < 0:
+        end = len(source)
+    if end > start and source[end - 1] == "\r":
+        end -= 1
+    return end
+
+
 def apply_runtime_semantics_v3(
     ast_nodes: list[dict[str, Any]],
     plan: RuntimeSemanticsV3Plan,
@@ -192,8 +220,9 @@ def apply_runtime_semantics_v3(
     _bind_fenced_source_markers(restored, plan)
     for node in restored:
         _bind_block_markers(node)
-    restored = _bind_caption_targets(restored)
+    restored = _remove_standalone_target_id_nodes(restored)
     restored = _bind_post_block_anchors(restored)
+    restored = _bind_caption_targets(restored)
     _lift_container_anchors(restored)
     _attach_ordinary_anchor_parents(restored, plan.ordinary_anchor_parents)
     remaining = tuple(_iter_marker_nodes(restored))
@@ -460,12 +489,28 @@ def _bind_block_markers(node: dict[str, Any]) -> None:
         elif original_type in {"paragraph", "block_text"} and role == "caption_declaration":
             node["type"] = "_docwen_v3_caption_declaration"
             node["_docwen_v3_caption_target"] = marker["payload"]
+        elif original_type in {"paragraph", "block_text"} and role == "semantic_target_id":
+            node["_docwen_v3_standalone_target_id"] = marker["payload"]
         else:
             continue
         bound_roles.add(role)
         bound_indices.append(marker_index)
     for marker_index in reversed(bound_indices):
         _remove_bound_marker(children, marker_index)
+
+
+def _remove_standalone_target_id_nodes(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    output: list[dict[str, Any]] = []
+    for node in nodes:
+        children = node.get("children")
+        if isinstance(children, list):
+            node["children"] = _remove_standalone_target_id_nodes(children)
+        if node.get("_docwen_v3_standalone_target_id") is not None:
+            node.pop("_docwen_v3_standalone_target_id", None)
+            if node.get("type") in {"paragraph", "block_text"} and not _plain_children(node.get("children", [])):
+                continue
+        output.append(node)
+    return output
 
 
 def _remove_bound_marker(children: list[dict[str, Any]], marker_index: int) -> None:
@@ -482,39 +527,112 @@ def _bind_caption_targets(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
         children = node.get("children")
         if isinstance(children, list):
             node["children"] = _bind_caption_targets(children)
-    output: list[dict[str, Any]] = []
-    index = 0
-    object_types = {
-        "figure": "paragraph",
-        "table": "table",
-        "equation": "block_math",
-        "code_block": "block_code",
-    }
-    while index < len(nodes):
-        declaration = nodes[index]
-        if declaration.get("type") != "_docwen_v3_caption_declaration":
-            output.append(declaration)
-            index += 1
-            continue
-        object_index = index + 1
-        while object_index < len(nodes) and nodes[object_index].get("type") == "blank_line":
-            object_index += 1
-        target = declaration["_docwen_v3_caption_target"]
-        if target["kind"] == "figure" and _is_image_paragraph(declaration):
-            declaration["type"] = "paragraph"
-            declaration["_docwen_v3_caption_target"] = target
-            output.append(declaration)
-            index += 1
-            continue
-        if object_index >= len(nodes) or nodes[object_index].get("type") != object_types[target["kind"]]:
-            raise RuntimeSemanticsV3Unsupported("caption declaration marker lost its matching object")
+    nodes = _split_inline_caption_images(nodes)
+    declarations = [index for index, node in enumerate(nodes) if node.get("type") == "_docwen_v3_caption_declaration"]
+    candidate_sets: dict[int, set[int]] = {}
+    for declaration_index in declarations:
+        target = nodes[declaration_index]["_docwen_v3_caption_target"]
+        declaration_start = int(target["declaration_range"]["start"])
+        object_start = int(target["object_range"]["start"])
+        direction = -1 if object_start < declaration_start else 1
+        candidates = {
+            candidate
+            for candidate in (_adjacent_caption_node(nodes, declaration_index + direction, direction),)
+            if candidate is not None and _captionable_node_kind(nodes[candidate]) is not None
+        }
+        candidate_sets[declaration_index] = candidates
+    bindings = _require_unique_caption_bindings(candidate_sets)
+
+    removed = set(declarations)
+    for declaration_index, object_index in bindings.items():
+        target = nodes[declaration_index]["_docwen_v3_caption_target"]
         object_node = nodes[object_index]
-        if target["kind"] == "figure" and not _is_image_paragraph(object_node):
-            raise RuntimeSemanticsV3Unsupported("Figure declaration marker lost its image object")
+        if "_docwen_v3_caption_target" in object_node:
+            raise RuntimeSemanticsV3Unsupported("one Markdown object participates in multiple caption claims")
         object_node["_docwen_v3_caption_target"] = target
-        output.append(object_node)
-        index = object_index + 1
+        for between in range(min(declaration_index, object_index) + 1, max(declaration_index, object_index)):
+            if nodes[between].get("type") == "blank_line":
+                removed.add(between)
+    return [node for index, node in enumerate(nodes) if index not in removed]
+
+
+def _split_inline_caption_images(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Split either zero-blank declaration/image paragraph Mistune creates."""
+
+    output: list[dict[str, Any]] = []
+    for node in nodes:
+        children = node.get("children")
+        if node.get("type") != "_docwen_v3_caption_declaration" or not isinstance(children, list):
+            output.append(node)
+            continue
+        separator = next(
+            (index for index, child in enumerate(children) if child.get("type") in {"softbreak", "linebreak"}),
+            None,
+        )
+        if separator is None:
+            output.append(node)
+            continue
+        before = {"type": "paragraph", "children": children[:separator]}
+        after = {"type": "paragraph", "children": children[separator + 1 :]}
+        if _is_image_paragraph(after):
+            declaration_children = children[:separator]
+            image_node = after
+            caption_first = True
+        elif _is_image_paragraph(before):
+            declaration_children = children[separator + 1 :]
+            image_node = before
+            caption_first = False
+        else:
+            output.append(node)
+            continue
+        declaration = dict(node)
+        declaration["children"] = declaration_children
+        for key in (
+            "_docwen_v3_ordinary_anchor",
+            "_docwen_v3_ordinary_anchor_parent_source_id",
+        ):
+            if key in node:
+                image_node[key] = node[key]
+                declaration.pop(key, None)
+        output.extend((declaration, image_node) if caption_first else (image_node, declaration))
     return output
+
+
+def _adjacent_caption_node(nodes: list[dict[str, Any]], start: int, direction: int) -> int | None:
+    blank_nodes = 0
+    stop = len(nodes) if direction > 0 else -1
+    for index in range(start, stop, direction):
+        if nodes[index].get("type") == "blank_line":
+            blank_nodes += 1
+            if blank_nodes > 1:
+                return None
+            continue
+        return index
+    return None
+
+
+def _captionable_node_kind(node: dict[str, Any]) -> str | None:
+    node_type = node.get("type")
+    if node_type == "table":
+        return "table"
+    if node_type in {"block_math", "block_latex"}:
+        return "equation"
+    if node_type == "block_code":
+        return "code_block"
+    if node_type == "paragraph" and _is_image_paragraph(node):
+        return "figure"
+    return None
+
+
+def _require_unique_caption_bindings(candidate_sets: dict[int, set[int]]) -> dict[int, int]:
+    """Require one local carrier per declaration and one claimant per carrier."""
+
+    if any(len(candidates) != 1 for candidates in candidate_sets.values()):
+        raise RuntimeSemanticsV3Unsupported("caption declarations do not have one unique object matching")
+    bindings = {caption: next(iter(candidates)) for caption, candidates in candidate_sets.items()}
+    if len(set(bindings.values())) != len(bindings):
+        raise RuntimeSemanticsV3Unsupported("caption declarations do not have one unique object matching")
+    return bindings
 
 
 def _bind_post_block_anchors(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -526,18 +644,24 @@ def _bind_post_block_anchors(nodes: list[dict[str, Any]]) -> list[dict[str, Any]
     for node in nodes:
         anchor = node.get("_docwen_v3_ordinary_anchor")
         if (
-            node.get("type") == "paragraph"
+            node.get("type") in {"paragraph", "_docwen_v3_caption_declaration"}
             and anchor is not None
             and anchor.get("placement") == "post_block"
-            and not _plain_children(node.get("children", []))
         ):
+            is_marker_only = node.get("type") == "paragraph" and not _plain_children(node.get("children", []))
+            is_caption_boundary = node.get("type") == "_docwen_v3_caption_declaration"
+            if not (is_marker_only or is_caption_boundary):
+                output.append(node)
+                continue
             owner_index = len(output) - 1
             while owner_index >= 0 and output[owner_index].get("type") == "blank_line":
                 owner_index -= 1
             if owner_index < 0:
                 raise RuntimeSemanticsV3Unsupported("post-block anchor lost its structured owner")
             output[owner_index]["_docwen_v3_ordinary_anchor"] = anchor
-            continue
+            if is_marker_only:
+                continue
+            node.pop("_docwen_v3_ordinary_anchor", None)
         output.append(node)
     return output
 

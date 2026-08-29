@@ -4,17 +4,20 @@ Figure: System overview ^system-overview
 
 ![[system.png]]
 
+
 Table: Results ^results-main
 
 | Metric | Value |
 |---|---|
 | Score | 95 |
 
+
 Equation: ^energy-main
 
 $$
 E = mc^2
 $$
+
 
 Code: Entry point ^entry-main
 

@@ -35,6 +35,18 @@ _TARGET_KEY = "_docwen_resolved_v4_target"
 _CAPTION_CHILDREN_KEY = "_docwen_resolved_v4_caption_children"
 _REFERENCE_KEY = "_docwen_resolved_v4_reference"
 _CITATION_KEY = "_docwen_resolved_v4_citation"
+_CAPTION_SOURCES = {
+    "figure": "Figure: Composite",
+    "table": "Table: Composite",
+    "equation": "Equation: Composite",
+    "code_block": "Code: Composite",
+}
+_CARRIER_SOURCES = {
+    "figure": "![image](image.png)",
+    "table": "| A |\n|---|\n| 1 |",
+    "equation": "$$x=1$$",
+    "code_block": "```text\nx\n```",
+}
 
 
 def _sha(value: str) -> str:
@@ -145,11 +157,11 @@ def _full_port() -> ResolvedNumberingPort:
     source = (
         "## 2.3 **手写标题** ^head-1\n\n"
         "Figure: 图 @cite ^fig-1\n\n"
-        "![x](image.png) ^raw-image\n\n"
+        "![x](image.png) ^raw-image\n\n\n"
         "Table: 表\n\n"
-        "| A |\n|---|\n| 1 |\n\n"
+        "| A |\n|---|\n| 1 |\n\n\n"
         "Equation: 方程\n\n"
-        "$$x=1$$\n\n"
+        "$$x=1$$\n\n\n"
         "Code: 代码\n\n"
         "```python\nx = 1\n```\n\n"
         "See @[[#^head-1|标题]] and [@smith; @wang].\n"
@@ -230,6 +242,69 @@ def _inline_text(nodes: list[dict[str, Any]]) -> str:
     return "".join(output)
 
 
+@pytest.mark.parametrize("caption_first", [True, False])
+@pytest.mark.parametrize("blank_lines", [0, 1])
+@pytest.mark.parametrize("caption_kind", tuple(_CAPTION_SOURCES))
+@pytest.mark.parametrize("carrier_kind", tuple(_CARRIER_SOURCES))
+def test_cross_type_captions_bind_all_carriers_in_both_orders_and_supported_spacing(
+    caption_first: bool,
+    blank_lines: int,
+    caption_kind: str,
+    carrier_kind: str,
+) -> None:
+    declaration = _CAPTION_SOURCES[caption_kind]
+    carrier = _CARRIER_SOURCES[carrier_kind]
+    separator = "\n" * (blank_lines + 1)
+    source = f"{declaration}{separator}{carrier}\n" if caption_first else f"{carrier}{separator}{declaration}\n"
+    declaration_start = source.index(declaration)
+    target = _target(
+        source,
+        declaration_start,
+        declaration_start + len(declaration),
+        kind=caption_kind,
+        target_id=None,
+        authored_text="Composite",
+    )
+
+    plan = prepare_resolved_runtime_v4(_port(source, (target,)))
+    restored = apply_resolved_runtime_v4(parse_markdown_text(plan.shielded_source), plan)
+
+    owners = [node for node in _walk(restored) if node.get(_TARGET_KEY) == target]
+    assert len(owners) == 1
+    assert (
+        owners[0]["type"]
+        == {
+            "figure": "paragraph",
+            "table": "table",
+            "equation": "block_math",
+            "code_block": "block_code",
+        }[carrier_kind]
+    )
+    assert _inline_text(owners[0][_CAPTION_CHILDREN_KEY]) == "Composite"
+
+
+def test_resolved_chain_does_not_use_global_matching_to_resolve_local_ambiguity() -> None:
+    source = "Figure: First\n\n| first |\n|---|\n| 1 |\n\nTable: Second\n\n![second](second.png)\n"
+    targets = tuple(
+        _target(
+            source,
+            source.index(declaration),
+            source.index(declaration) + len(declaration),
+            kind=kind,
+            target_id=None,
+            authored_text=title,
+        )
+        for declaration, kind, title in (
+            ("Figure: First", "figure", "First"),
+            ("Table: Second", "table", "Second"),
+        )
+    )
+    plan = prepare_resolved_runtime_v4(_port(source, targets))
+
+    with pytest.raises(ResolvedRuntimeV4Unsupported, match="one unique object matching"):
+        apply_resolved_runtime_v4(parse_markdown_text(plan.shielded_source), plan)
+
+
 def test_exact_markers_bind_all_targets_references_and_citations_without_deriving_numbers() -> None:
     port = _full_port()
     plan = prepare_resolved_runtime_v4(port)
@@ -306,7 +381,7 @@ def test_idless_heading_closing_marks_and_nested_case_insensitive_caption_bind_s
 
 
 def test_caption_first_inline_markers_compose_at_the_same_authenticated_boundary() -> None:
-    source = "# Heading ^h\n\nFigure:@cite\n\n![x](image.png)\n\nTable:@[[#^h]]\n\n| A |\n|---|\n| 1 |\n"
+    source = "# Heading ^h\n\nFigure:@cite\n\n![x](image.png)\n\n\nTable:@[[#^h]]\n\n| A |\n|---|\n| 1 |\n"
     heading_end = source.index("\n")
     figure_start, figure_end = _caption_range(source, "Figure:@cite")
     table_start, table_end = _caption_range(source, "Table:@[[#^h]]")
@@ -376,7 +451,7 @@ def test_caption_first_inline_markers_compose_at_the_same_authenticated_boundary
 
 
 def test_same_kind_target_markers_cannot_swap_authenticated_source_slots() -> None:
-    source = "Figure: Same\n\n![a](a.png)\n\nFigure: Same\n\n![b](b.png)\n"
+    source = "Figure: Same\n\n![a](a.png)\n\n\nFigure: Same\n\n![b](b.png)\n"
     targets = tuple(
         _target(
             source,
@@ -442,7 +517,7 @@ def test_target_marker_preparation_rejects_identity_or_kind_guessing(
     [
         ("Figure:\n\n![x](image.png)\n", "figure", None, "require authored content"),
         ("Table:\n\n| A |\n|---|\n| 1 |\n", "table", None, "require authored content"),
-        ("Code:\n\n```text\nx\n```\n", "code_block", None, "require authored content"),
+        ("Code:\n\n```text\nx\n```\n", "code_block", None, "requires an explicit source ID"),
         ("Equation:\n\n$$x=1$$\n", "equation", None, "requires an explicit source ID"),
     ],
 )
@@ -547,8 +622,62 @@ def test_caption_marker_rejects_wrong_adjacent_object_before_any_renderer_bindin
         authored_text="Caption",
     )
     plan = prepare_resolved_runtime_v4(_port(source, (target,)))
-    with pytest.raises(ResolvedRuntimeV4Unsupported, match="one image paragraph"):
+    with pytest.raises(ResolvedRuntimeV4Unsupported, match="one unique object matching"):
         apply_resolved_runtime_v4(parse_markdown_text(plan.shielded_source), plan)
+
+
+def test_next_line_heading_and_caption_ids_bind_to_targets_not_carriers() -> None:
+    source = "# Heading\n^heading-id\n\nFigure: Composite\n^caption-id\n| A |\n|---|\n| 1 |\n"
+    heading_end = len("# Heading")
+    caption_start = source.index("Figure:")
+    caption_end = caption_start + len("Figure: Composite")
+    targets = (
+        _target(
+            source,
+            0,
+            heading_end,
+            kind="heading",
+            target_id="heading-id",
+            heading_level=1,
+            authored_text="Heading",
+        ),
+        _target(
+            source,
+            caption_start,
+            caption_end,
+            kind="figure",
+            target_id="caption-id",
+            authored_text="Composite",
+        ),
+    )
+
+    plan = prepare_resolved_runtime_v4(_port(source, targets))
+    ast = apply_resolved_runtime_v4(parse_markdown_text(plan.shielded_source), plan)
+
+    heading, table = [node for node in ast if node.get("type") != "blank_line"]
+    assert heading[_TARGET_KEY].target_id == "heading-id"
+    assert table["type"] == "table"
+    assert table[_TARGET_KEY].target_id == "caption-id"
+    assert all("^heading-id" not in str(node) and "^caption-id" not in str(node) for node in ast)
+
+
+@pytest.mark.parametrize("declaration", ["Code: ^snippet", "Code:\n^snippet"])
+def test_empty_code_with_explicit_id_is_valid(declaration: str) -> None:
+    source = f"{declaration}\n```text\nx\n```\n"
+    target = _target(
+        source,
+        0,
+        len(declaration.splitlines()[0]),
+        kind="code_block",
+        target_id="snippet",
+        authored_text="",
+    )
+
+    plan = prepare_resolved_runtime_v4(_port(source, (target,)))
+    [node] = apply_resolved_runtime_v4(parse_markdown_text(plan.shielded_source), plan)
+
+    assert node["type"] == "block_code"
+    assert node[_TARGET_KEY].target_id == "snippet"
 
 
 def test_module_has_no_v3_or_legacy_numbering_parser_dependency() -> None:

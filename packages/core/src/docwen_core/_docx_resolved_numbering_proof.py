@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 from zipfile import ZipFile
 
+from docwen_core._docx_caption_carrier import captionable_logical_elements
 from docwen_core._docx_numbering_package import _elements_equal
 from docwen_core._docx_resolved_source_carriers import (
     prove_resolved_anchor_topology_v4,
@@ -48,7 +49,6 @@ from docwen_core._docx_semantics_v3_styles import (
     prove_caption_style_registry,
 )
 from docwen_core._docx_semantics_v3_topology import (
-    logical_group_elements,
     parse_anchor_topology_map,
     prove_alias_run,
     prove_block_sdt_envelope,
@@ -682,35 +682,12 @@ class ResolvedNumberingProofMixin:
             raise ResolvedNumberingDocxError("caption logical object OOXML differs from its bind snapshot")
 
     def _validate_caption_object_elements(self, kind: str, elements: tuple[Any, ...]) -> tuple[Any, ...]:
-        from docx.oxml.ns import qn
-
         try:
-            logical = logical_group_elements(elements)
+            logical = captionable_logical_elements(elements)
         except DocxSemanticsV3Error as exc:
             raise ResolvedNumberingDocxError("caption logical object wrapper is invalid") from exc
-        if kind == "table":
-            valid = len(logical) == 1 and logical[0].tag == qn("w:tbl")
-        elif kind == "figure":
-            valid = (
-                len(logical) == 1
-                and logical[0].tag == qn("w:p")
-                and (
-                    logical[0].find(f".//{qn('w:drawing')}") is not None
-                    or logical[0].find(f".//{qn('w:pict')}") is not None
-                )
-            )
-        elif kind == "equation":
-            valid = len(logical) == 1 and (
-                logical[0].find(".//{http://schemas.openxmlformats.org/officeDocument/2006/math}oMath") is not None
-                or logical[0].find(".//{http://schemas.openxmlformats.org/officeDocument/2006/math}oMathPara")
-                is not None
-            )
-        elif kind == "code_block":
-            valid = bool(logical) and all(item.tag == qn("w:p") for item in logical)
-        else:
-            valid = False
-        if not valid:
-            raise ResolvedNumberingDocxError("caption logical object kind differs from the typed snapshot")
+        if kind not in {"figure", "table", "equation", "code_block"}:
+            raise ResolvedNumberingDocxError("caption target has an unsupported semantic kind")
         return tuple(logical)
 
     def _caption_style_ids_by_kind(self) -> dict[str, str]:

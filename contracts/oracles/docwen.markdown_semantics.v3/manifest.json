@@ -39,8 +39,8 @@
     },
     {
       "path": "corpus/docwen-exact-two-harness.case.json",
-      "bytes": 946,
-      "sha256": "db24a897718d1771bd38de589e6aeeaa857991900ed5b8ec5885468ca73ef937"
+      "bytes": 952,
+      "sha256": "44f3ff2209863661f26642cd02488be0e79d7ca5c10aa54561b395f89953d08a"
     },
     {
       "path": "corpus/invalid-caption-content.case.json",
@@ -89,8 +89,8 @@
     },
     {
       "path": "corpus/invalid-kind-mismatch.case.json",
-      "bytes": 474,
-      "sha256": "a3c319648ffd8d36e12faf20d35066439339faa98b9d0fa3852e995f6fd6b946"
+      "bytes": 471,
+      "sha256": "1e1f2e76c052a63c7b311ec35c09c2c3a04847903ade42c20d519e8fd22c7eab"
     },
     {
       "path": "corpus/invalid-nonsemantic-reference.case.json",
@@ -114,8 +114,8 @@
     },
     {
       "path": "corpus/positive-caption-kinds.case.json",
-      "bytes": 619,
-      "sha256": "fd63a8ff2d9669d3e9462d4cd416f07aba322e34fd01ae16f6482db8c0474950"
+      "bytes": 625,
+      "sha256": "c19a411418a80d8bf69bbd3c46d25d934495194524b2e2275205bc5dfda2d670"
     },
     {
       "path": "corpus/positive-core.case.json",
@@ -144,8 +144,8 @@
     },
     {
       "path": "../../../packages/plugins/markdown/src/docwen_plugin_markdown/document_semantics_v3.py",
-      "bytes": 68314,
-      "sha256": "11ceffd9eb80c1d3f29da38e8eede7504529e542592b6e5df95232113d688c72"
+      "bytes": 72820,
+      "sha256": "111ef2e7d2ea081b90dd8fee746c79ebc79036608c626f5a6d01411ad91831ee"
     },
     {
       "path": "../../../packages/plugins/markdown/src/docwen_plugin_markdown/document_semantics_v3_fenced_source.py",
@@ -154,8 +154,8 @@
     },
     {
       "path": "../../../packages/plugins/markdown/tests/test_document_semantics_v3.py",
-      "bytes": 20606,
-      "sha256": "dec19e0dacdc69f6fe6f84d4f906887d36cfa2546b027d5e96a93c0cfaf9a4b8"
+      "bytes": 20732,
+      "sha256": "1c19c8ca837ebf40d03cdd2de7f975004cab7f1f5fb629afdd50454347a618be"
     },
     {
       "path": "../../../packages/plugins/markdown/tests/test_document_semantics_v3_anchor_topology.py",

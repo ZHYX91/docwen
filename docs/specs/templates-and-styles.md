@@ -85,27 +85,28 @@ must resolve to a style of the correct type.
 - Figure/Table/Equation/Code authored declarations use their four dedicated paragraph styles. Renaming
   `listing_caption` to `code_block_caption` changes one identity in place: the registry remains exactly 43 entries,
   and no `List Caption` style or semantic key is reserved.
-- `Equation:` means an explicit authored declaration; it may have caption text, an `^id`, or both. Only the
-  empty-text form requires an ID. Figure, Table, and Code declarations require non-empty visible caption text, but
+- `Equation:` and `Code:` mean explicit authored declarations; each may have caption text, an `^id`, or both. Their
+  empty-text forms require an ID. Figure and Table declarations require non-empty visible caption text, but
   their IDs are optional. Every valid declaration receives its caption style. It receives a derived field number
   only when the provider-neutral resolved numbering/export plan enables that kind and supplies the exact number;
   disabled captions retain authored content/style and contain no `SEQ`. Only a declaration with an ID is
-  addressable. DOCX order is fixed: a Figure object directly precedes `DocWenFigureCaption`, while
-  `DocWenTableCaption`, `DocWenEquationCaption`, and `DocWenCodeBlockCaption` directly precede their matching object.
-  The order is not profile-configurable.
+  addressable. Caption semantic kind and native carrier structure are independent. DOCX order follows the semantic
+  kind: a Figure-labelled carrier directly precedes `DocWenFigureCaption`, while Table-, Equation-, and Code-labelled
+  captions directly precede their carrier, including cross-type pairs such as Figure plus a native table. The order
+  is not profile-configurable; canonical Markdown recovery writes every declaration above its carrier.
 - A declaration ID and its structure-owned numbered target semantics follow
   [Markdown compatibility](markdown-compatibility.md). When enabled, its target bookmark belongs to the caption
   paragraph and encloses either the simple `SEQ` field or the complete chapter `STYLEREF`+separator+`SEQ` composite,
   with exact cached result. When disabled, an ID-bearing caption instead has a zero-width navigation bookmark at
   paragraph start and no number/`SEQ`/`REF`. The required `docwen-target-v1:` outer SDT binds exactly that styled caption
-  paragraph and one matching logical object; it is internal pairing, not an authored marker or second target. A
+  paragraph and one authenticated native carrier; it is internal pairing, not an authored marker or second target. A
   generic object/block anchor is styled as its underlying object and retained by an opaque block-level SDT plus
   custom XML mapping; it receives no bookmark, hyperlink target, caption style, `SEQ`, or `REF` semantics.
 - An enabled ID-less caption is recovered only from the fixed direct physical adjacency, its exact managed style,
   exactly one closed simple-`SEQ` or chapter-`STYLEREF`+separator+`SEQ` materialization, and exact cached result. A
   disabled ID-less caption instead requires the independent `document-numbering-occurrence-map/v1` plus exact
   physical two-block occurrence SDT; it has no field, number, target, bookmark, or hidden ID. Style/adjacency alone,
-  reversed/opposite-side placement, an intervening block, wrong/missing object, mismatched field/occurrence map, or
+  reversed/opposite-side placement, an intervening block, missing/unproved carrier, mismatched field/occurrence map, or
   multiple pairing claims fail closed.
 - The exact caption style means the request-resolved style ID, not a requested-ID prefix. If any caption is rendered,
   a separate `document-caption-style-binding-map/v1` custom XML item persists exactly four ordered bindings

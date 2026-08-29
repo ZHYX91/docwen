@@ -22,18 +22,18 @@
       ],
       "source": {
         "relativePath": "packages/plugins/markdown/tests/fixtures/resolved_v4/docwen-exact-two.md",
-        "bytes": 398,
-        "sha256": "1d28a20836a07c7818a289b51a7ef4ca2b1dc8d731175e02b831750dc27ab962"
+        "bytes": 401,
+        "sha256": "d4c0c6535675a6e035ca119679068d3f7dc35f58a4f983b5245d6d82addea316"
       },
       "neutralDocument": {
         "relativePath": "packages/plugins/markdown/tests/fixtures/resolved_v4/resolved-document.rich.json",
-        "bytes": 3943,
-        "sha256": "dcbea329bf485caaf5cb17a39e5a90562789970f4bcee4cf12907a78326146f5"
+        "bytes": 3948,
+        "sha256": "89949f2cf86007b25048d1fd66c92fc2ceeca425044bb7fa96d6fb577fa91609"
       },
       "numberingExportPlan": {
         "relativePath": "packages/plugins/markdown/tests/fixtures/resolved_v4/numbering-export-plan.rich.json",
-        "bytes": 2915,
-        "sha256": "f47bfa88966fca1994f05b25f277d8c7ad5792bfad8b5629ece3f3bc8b465085"
+        "bytes": 2914,
+        "sha256": "bbce264303a09180f8e50cfe9ce42976be56216c3d86eeea27910d3c0c859183"
       },
       "expectedOoxml": {
         "abstractNumCount": 1,
@@ -46,8 +46,8 @@
       },
       "expectedRoundtrip": {
         "relativePath": "packages/plugins/markdown/tests/fixtures/resolved_v4/docwen-exact-two.md",
-        "bytes": 398,
-        "sha256": "1d28a20836a07c7818a289b51a7ef4ca2b1dc8d731175e02b831750dc27ab962"
+        "bytes": 401,
+        "sha256": "d4c0c6535675a6e035ca119679068d3f7dc35f58a4f983b5245d6d82addea316"
       }
     }
   ]
