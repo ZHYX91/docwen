@@ -248,7 +248,7 @@ def test_release_workflow_publishes_supported_windows_and_ubuntu_assets() -> Non
     assert "DocWen 0.9 publishes one Windows x64 package and two Ubuntu 24.04 x64 packages" in packaging
     assert "DocWen 0.9 正式发布" in packaging
     assert (
-        "The [0.9.0 Release](https://github.com/ZHYX91/docwen/releases/tag/0.9.0) publishes one Windows x64 GUI+CLI package"
+        "The [0.9.1 Release](https://github.com/ZHYX91/docwen/releases/tag/0.9.1) publishes one Windows x64 GUI+CLI package"
         in readme
     )
     assert "No 0.9 Release is published yet" not in readme

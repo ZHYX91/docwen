@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "docwen-application"
-version = "0.9.0"
+version = "0.9.1"
 description = "DocWen Application — commands, workflows, application events, and runtime ports"
 requires-python = ">=3.12,<3.13"
 dependencies = [

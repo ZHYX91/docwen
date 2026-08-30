@@ -110,7 +110,7 @@ NFC/casefold 后的身份冲突会使发现安全失败。
 ```json
 {
   "protocol_version": 3,
-  "product_version": "0.9.0",
+  "product_version": "0.9.1",
   "success": true,
   "command": "convert",
   "data": {
@@ -137,7 +137,7 @@ NFC/casefold 后的身份冲突会使发现安全失败。
 ```json
 {
   "protocol_version": 3,
-  "product_version": "0.9.0",
+  "product_version": "0.9.1",
   "success": false,
   "command": "convert",
   "data": {},

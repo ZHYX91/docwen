@@ -17,7 +17,7 @@ def test_protocol_envelope_has_exact_top_level_shape() -> None:
 
     assert envelope == {
         "protocol_version": 3,
-        "product_version": "0.9.0",
+        "product_version": "0.9.1",
         "success": True,
         "command": "info",
         "data": {"ready": True},
@@ -40,7 +40,7 @@ def test_json_presenter_emits_typed_protocol_error(capsys: pytest.CaptureFixture
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["protocol_version"] == 3
-    assert payload["product_version"] == "0.9.0"
+    assert payload["product_version"] == "0.9.1"
     assert payload["error"] == {
         "category": "unavailable",
         "code": "gui_not_running",

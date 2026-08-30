@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "docwen-runtime"
-version = "0.9.0"
+version = "0.9.1"
 description = "DocWen Runtime — task execution, plugin loading, workspace, output finalizer, config"
 requires-python = ">=3.12,<3.13"
 dependencies = [

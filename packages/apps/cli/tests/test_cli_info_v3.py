@@ -29,7 +29,7 @@ def test_info_json_does_not_initialize_runtime(capsys: pytest.CaptureFixture[str
     assert payload["command"] == "info"
     assert payload["protocol_version"] == 3
     assert payload["data"]["protocol"]["major"] == 3
-    assert payload["data"]["product"]["version"] == "0.9.0"
+    assert payload["data"]["product"]["version"] == "0.9.1"
     capabilities = {item["id"]: item for item in payload["data"]["capabilities"]}
     assert capabilities["cli.schema"] == {
         "id": "cli.schema",
@@ -137,7 +137,7 @@ def test_version_is_lightweight(argv: list[str], capsys: pytest.CaptureFixture[s
 
     captured = capsys.readouterr()
     assert exit_code == 0
-    assert captured.out.strip() == "DocWen 0.9.0 (CLI protocol 3)"
+    assert captured.out.strip() == "DocWen 0.9.1 (CLI protocol 3)"
     assert captured.err == ""
 
 

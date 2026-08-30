@@ -3329,14 +3329,20 @@ def _run_machine_protocol_smoke_impl(
     params = terminal.get("params")
     bundle = params.get("bundle") if isinstance(params, dict) else None
     artifacts = bundle.get("artifacts") if isinstance(bundle, dict) else None
+    documents = (
+        [item for item in artifacts if isinstance(item, dict) and item.get("kind") == "document"]
+        if isinstance(artifacts, list)
+        else []
+    )
     if (
         not isinstance(bundle, dict)
         or bundle.get("task_id") != task_id
         or not isinstance(artifacts, list)
-        or len(artifacts) != 1
+        or len(artifacts) != 2
+        or len(documents) != 1
     ):
         raise RuntimeError(f"packaged_machine_protocol_bundle_invalid:{bundle}")
-    artifact = artifacts[0]
+    artifact = documents[0]
     if not isinstance(artifact, dict) or artifact.get("kind") != "document":
         raise RuntimeError(f"packaged_machine_protocol_artifact_invalid:{artifact}")
     locator = artifact.get("locator")

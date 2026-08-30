@@ -3,7 +3,7 @@
   "manifestId": "docwen-windows-production",
   "product": {
     "name": "DocWen",
-    "version": "0.9.0",
+    "version": "0.9.1",
     "stableSemverOnly": true,
     "cliJsonProtocolVersion": 3,
     "releaseTagFormat": "{version}"
@@ -34,15 +34,15 @@
     "fixtures": [
       {
         "path": "tests/fixtures/golden/cli_protocol_v3_success.json",
-        "sha256": "b143d7651e63d655f678c46b01d4f8439566cabd101360d40395209e56b4e683"
+        "sha256": "12bfab6e6528195d861ac83748447709adb79cc560da303b81d22bb881c457c0"
       },
       {
         "path": "tests/fixtures/golden/cli_protocol_v3_error.json",
-        "sha256": "621d9a989c9174c340c5f8358bff7c0c709793528ccd93f9599ba7946bc01803"
+        "sha256": "313ba8d9fb5b4b603cf2cd25867ada3c775c90dd061a08cb6fa21c09b78c2a9f"
       },
       {
         "path": "tests/fixtures/golden/cli_protocol_v3_batch.json",
-        "sha256": "5252ca264dfd9b3d7d39cdcdd042618a6fa6cb7c5671b0f5951c9d59759ffbc2"
+        "sha256": "dcd6dbb5f6602ee6b1081eb472544949b91ed60b64cbe20a6b7ea1d858bda3ea"
       }
     ],
     "machineContractFiles": [
@@ -204,7 +204,7 @@
     },
     "lock": {
       "path": "uv.lock",
-      "sha256": "2a906b61e39042afaad046af49c2c89db7eac2907d781d2888d2e5e96d8ba305"
+      "sha256": "8a8797b4cf78069c308bcbe40363d30fafefec1268bd3b2cbce1a934237152b8"
     },
     "pyinstallerVersion": "6.16.0"
   },
@@ -244,8 +244,8 @@
   },
   "releaseAssetAllowlist": [
     "DocWen-windows-x64.zip",
-    "DocWenCLI-0.9.0-linux-x64.tar.gz",
-    "DocWen-0.9.0-linux-x64.tar.gz",
+    "DocWenCLI-0.9.1-linux-x64.tar.gz",
+    "DocWen-0.9.1-linux-x64.tar.gz",
     "SHA256SUMS.txt"
   ]
 }

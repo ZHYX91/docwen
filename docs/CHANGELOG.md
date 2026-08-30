@@ -5,7 +5,16 @@
 
 ## Unreleased / 未发布
 
+## 0.9.1 (2026-08-30)
+
+- 改进紧凑控件的几何布局，并增加 Structural Tables Markdown 互操作支持。
+- 将 Figure、Table、Equation、Code 题注编号与具体载体类型解耦，支持跨类型题注载体。
+- 增加经认证的 DOCX 往返 sidecar，使规范 Markdown 语义能够安全恢复，并记录 Obsidian 互操作合同。
 - 发布后的治理维护改用 GitHub REST `immutable: true` 字段复核不可变 Release，避免依赖已移除的 GraphQL 字段，并为普通 CI 增加手动恢复入口。
+
+- Improved compact control geometry and added Structural Tables Markdown interoperability.
+- Decoupled Figure, Table, Equation, and Code caption numbering from carrier types so cross-type carriers remain representable.
+- Added an authenticated DOCX round-trip sidecar for safe canonical-Markdown restoration and documented the Obsidian interoperability contract.
 - Post-release governance now verifies immutable Releases through the GitHub REST `immutable: true` field instead of the removed GraphQL field and adds a manual recovery trigger for ordinary CI.
 
 ## 0.9.0 (2026-08-26)

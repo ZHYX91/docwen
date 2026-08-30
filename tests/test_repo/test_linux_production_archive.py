@@ -75,8 +75,8 @@ def test_linux_production_contract_schema_and_two_versioned_assets_are_frozen() 
         "platformTag": "linux-x64",
     }
     assert [artifact["archiveName"] for artifact in manifest["artifacts"]] == [
-        "DocWen-0.9.0-linux-x64.tar.gz",
-        "DocWenCLI-0.9.0-linux-x64.tar.gz",
+        "DocWen-0.9.1-linux-x64.tar.gz",
+        "DocWenCLI-0.9.1-linux-x64.tar.gz",
     ]
     assert [artifact["entryPoints"] for artifact in manifest["artifacts"]] == [
         ["DocWen", "DocWenCLI"],
@@ -123,7 +123,7 @@ def test_linux_archives_are_byte_identical_and_normalize_every_header(tmp_path: 
         embedded = json.loads(archive.extractfile(f"{root}/manifest.json").read())
         checksums = archive.extractfile(f"{root}/SHA256SUMS.txt").read().decode("utf-8")
         assert embedded["schema"] == "docwen.linux.payload.v1"
-        assert embedded["product"] == {"name": "DocWen", "version": "0.9.0"}
+        assert embedded["product"] == {"name": "DocWen", "version": "0.9.1"}
         assert embedded["artifact"]["archiveName"] == artifact["archiveName"]
         assert [row["path"] for row in embedded["files"]] == sorted(
             [row["path"] for row in embedded["files"]], key=lambda value: value.encode("utf-8")
@@ -167,7 +167,7 @@ def test_archive_helper_cli_emits_machine_readable_identity(tmp_path: Path, caps
     )
     result = json.loads(capsys.readouterr().out)
     assert result["artifactId"] == "cli-only"
-    assert result["archiveName"] == "DocWenCLI-0.9.0-linux-x64.tar.gz"
+    assert result["archiveName"] == "DocWenCLI-0.9.1-linux-x64.tar.gz"
     assert result["sha256"] == hashlib.sha256(destination.read_bytes()).hexdigest()
 
 

@@ -11,7 +11,7 @@ def test_application_importable() -> None:
     """docwen_application should be importable."""
     import docwen_application
 
-    assert docwen_application.__version__ == "0.9.0"
+    assert docwen_application.__version__ == "0.9.1"
 
 
 def test_application_submodules_importable() -> None:

@@ -76,7 +76,7 @@ def test_store_config_and_manifest_bind_partner_center_identity() -> None:
     assert identity.attrib == {
         "Name": "ZHYX.DocWen",
         "Publisher": "CN=9E46E7F1-F057-4B88-BF71-7C9CB77AF9C6",
-        "Version": "1.0.1.0",
+        "Version": "1.0.2.0",
         "ProcessorArchitecture": "x64",
     }
     target = manifest.find("f:Dependencies/f:TargetDeviceFamily", namespaces)
@@ -177,7 +177,7 @@ def test_makeappx_accepts_generated_layout_when_windows_sdk_is_available(tmp_pat
 def test_checked_in_store_config_is_stable_json() -> None:
     config = json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
     assert config["storeId"] == "9NR2211SJH97"
-    assert config["sourceVersion"] == "0.9.0"
+    assert config["sourceVersion"] == "0.9.1"
 
 
 def test_package_content_identity_ignores_zip_timestamps(tmp_path: Path) -> None:

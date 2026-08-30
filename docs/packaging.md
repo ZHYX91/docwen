@@ -6,8 +6,8 @@ DocWen 0.9 正式发布一个 Windows x64 完整包和两个 Ubuntu 24.04 x64 �
 
 | Platform / 平台 | 0.9 distribution status / 发行状态 | Evidence boundary / 证据边界 |
 | --- | --- | --- |
-| Windows x64 | Published in 0.9.0 / 已随 0.9.0 发布 | Exact packaged candidate plus automated and manual Windows acceptance / 精确打包候选及 Windows 自动与人工验收 |
-| Ubuntu 24.04 x64 | Published in 0.9.0 / 已随 0.9.0 发布 | Exact manifest-bound package, post-extract automation and Ubuntu desktop acceptance / 精确清单绑定包、解压后自动化及 Ubuntu 桌面验收 |
+| Windows x64 | Published in 0.9.1 / 已随 0.9.1 发布 | Exact packaged candidate plus automated and manual Windows acceptance / 精确打包候选及 Windows 自动与人工验收 |
+| Ubuntu 24.04 x64 | Published in 0.9.1 / 已随 0.9.1 发布 | Exact manifest-bound package, post-extract automation and Ubuntu desktop acceptance / 精确清单绑定包、解压后自动化及 Ubuntu 桌面验收 |
 | macOS x64/arm64 | No 0.9 release asset / 无 0.9 正式附件 | Source CI and opt-in packaging experiment only; primary document operations are unavailable / 仅源码 CI 与手动打包实验，主要文档操作不可用 |
 
 ## Required contents / 必需内容
@@ -41,7 +41,7 @@ The hosted GitHub Release workflow enforces this deterministic baseline before p
 2. Windows package resource/layout verification.
 3. Packaged Windows CLI baseline doctor, conversion, and JSON checks.
 4. Packaged Windows GUI settings-page construction smoke.
-5. Manifest-bound deterministic Ubuntu archive construction with fixed `DocWen-0.9.0-linux-x64.tar.gz` and `DocWenCLI-0.9.0-linux-x64.tar.gz` names.
+5. Manifest-bound deterministic Ubuntu archive construction with fixed `DocWen-0.9.1-linux-x64.tar.gz` and `DocWenCLI-0.9.1-linux-x64.tar.gz` names.
 6. CLI and GUI verification against fresh directories extracted from those exact Ubuntu archives.
 7. Byte-for-byte comparison of two clean builds per release platform, followed by Release SHA-256 generation over all three archives.
 
@@ -53,7 +53,7 @@ The exact local Windows candidate used for a release decision has a wider gate: 
 2. 验证 Windows 打包资源与 Layout 资源。
 3. 验证 Windows 打包 CLI 的基础 doctor、转换和 JSON 路径。
 4. 验证 Windows 打包 GUI 的设置页构造。
-5. 按受版本控制的生产清单确定性构造 Ubuntu 压缩包，并固定为 `DocWen-0.9.0-linux-x64.tar.gz` 与 `DocWenCLI-0.9.0-linux-x64.tar.gz`。
+5. 按受版本控制的生产清单确定性构造 Ubuntu 压缩包，并固定为 `DocWen-0.9.1-linux-x64.tar.gz` 与 `DocWenCLI-0.9.1-linux-x64.tar.gz`。
 6. 从这两个精确 Ubuntu 压缩包解压到全新目录后，再分别验证 CLI 和 GUI。
 7. 对每个发布平台执行两次干净构建并逐字节比较，再为三个压缩包生成 Release SHA-256。
 

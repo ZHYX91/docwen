@@ -78,13 +78,13 @@ def test_root_distribution_builds_without_flat_layout_discovery(tmp_path: Path) 
     )
 
     assert completed.returncode == 0, completed.stdout + completed.stderr
-    wheels = list(wheel_dir.glob("docwen-0.9.0-*.whl"))
+    wheels = list(wheel_dir.glob("docwen-0.9.1-*.whl"))
     assert len(wheels) == 1
     with zipfile.ZipFile(wheels[0]) as archive:
         names = archive.namelist()
         assert not any(name.startswith("assets/") for name in names)
         assert not any(name.startswith("packages/") for name in names)
-        entry_points = archive.read("docwen-0.9.0.dist-info/entry_points.txt").decode("utf-8")
+        entry_points = archive.read("docwen-0.9.1.dist-info/entry_points.txt").decode("utf-8")
     assert "docwen = docwen_bundle.cli_entry:main" in entry_points
     assert "docwen-gui = docwen_bundle.gui_entry:main" in entry_points
 

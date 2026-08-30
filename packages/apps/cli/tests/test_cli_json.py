@@ -29,7 +29,7 @@ def test_success_envelope_exact_shape(capsys: pytest.CaptureFixture[str]) -> Non
     payload = json.loads(capsys.readouterr().out)
     assert set(payload) == REQUIRED_FIELDS
     assert payload["protocol_version"] == 3
-    assert payload["product_version"] == "0.9.0"
+    assert payload["product_version"] == "0.9.1"
     assert payload["success"] is True
     assert payload["error"] is None
     assert payload["meta"] == {}

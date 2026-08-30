@@ -9,7 +9,7 @@ def test_gui_importable() -> None:
     """docwen_gui top-level package should be importable."""
     import docwen_gui
 
-    assert docwen_gui.__version__ == "0.9.0"
+    assert docwen_gui.__version__ == "0.9.1"
 
 
 def test_app_module_import() -> None:
