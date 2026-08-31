@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=45", "wheel"]
+requires = ["setuptools>=83.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
@@ -131,7 +131,7 @@ dev = [
     "Cython==3.1.6",
     "pyinstaller==6.16.0",
     "pre-commit>=4.0.0",
-    "setuptools>=45",
+    "setuptools>=83.0.0",
     "ruff>=0.15.1",
     "pyright>=1.1.408",
     "lxml-stubs>=0.5.1",
@@ -145,7 +145,7 @@ lint = [
 ]
 test = [
     "jsonschema>=4.23.0,<5.0.0",
-    "pytest>=8.0.0",
+    "pytest>=9.0.3",
     "pytest-cov>=4.0.0",
     "pytest-qt>=4.4.0",
     "pytest-xdist>=3.8.0",
