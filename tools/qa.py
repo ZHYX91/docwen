@@ -10,7 +10,7 @@ import stat
 import subprocess
 import sys
 import tempfile
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -38,7 +38,6 @@ PYTEST_RUNTIME_ROOT_ENV = "DOCWEN_PYTEST_RUNTIME_ROOT"
 PYTEST_REPORT_DIR_ENV = "DOCWEN_PYTEST_REPORT_DIR"
 WORKSPACE_ROOT_ENV = _WORKSPACE_ROOT_ENV
 PYTEST_RUNTIME_LEASE = ".docwen-temp-lease.json"
-PYTEST_AUTO_CLEANUP_MAX_AGE_HOURS = 72
 PYTEST_RUNTIME_PREFIX = "p"
 PYTEST_BASETEMP_NAME = "b"
 PYTEST_CACHE_NAME = "c"
@@ -188,14 +187,17 @@ def _workspace_runtime_parent(workspace_root: Path) -> Path:
 def _cleanup_expired_workspace_temps(workspace_root: Path) -> None:
     from tools import workspace_cleanup
 
-    result = workspace_cleanup.cleanup(
-        workspace_root=workspace_root,
-        max_age=timedelta(hours=PYTEST_AUTO_CLEANUP_MAX_AGE_HOURS),
-        apply=True,
-    )
-    removed = result.get("removed", [])
-    if removed:
-        print(f"[qa] removed {len(removed)} expired workspace runtime root(s)")
+    plan = workspace_cleanup.create_plan(workspace_root=workspace_root)
+    entries = plan.get("entries", [])
+    if not entries:
+        return
+
+    timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
+    plan_path = workspace_root / "diagnostics" / f"qa-housekeeping-{os.getpid()}-{timestamp}.json"
+    workspace_cleanup.save_plan(plan, plan_path)
+    workspace_cleanup.apply_saved_plan(plan_path, workspace_root=workspace_root)
+    plan_path.unlink()
+    print(f"[qa] removed {len(entries)} workspace scratch root(s) via the shared retention plan")
 
 
 def _pytest_runtime_environment(

@@ -65,7 +65,7 @@ def test_cleanup_discovers_the_governance_root_above_repos(tmp_path: Path) -> No
     assert workspace_root.resolve_workspace_root(repo, environment={}) == governed
 
 
-def test_cleanup_removes_only_expired_marked_roots(tmp_path: Path) -> None:
+def test_cleanup_direct_apply_is_disabled_and_preview_remains_non_mutating(tmp_path: Path) -> None:
     workspace = tmp_path / ".workspace"
     now = datetime(2026, 8, 22, tzinfo=UTC)
     expired = workspace / "temp" / "docwen" / "pytest" / "expired"
@@ -75,15 +75,24 @@ def test_cleanup_removes_only_expired_marked_roots(tmp_path: Path) -> None:
     _lease(recent, created_at=now - timedelta(hours=1))
     unmarked.mkdir(parents=True)
 
+    with pytest.raises(workspace_cleanup.HousekeepingError, match="direct_apply_disabled_use_saved_plan"):
+        workspace_cleanup.cleanup(
+            workspace_root=workspace,
+            max_age=timedelta(hours=72),
+            apply=True,
+            now=now,
+        )
+
     result = workspace_cleanup.cleanup(
         workspace_root=workspace,
         max_age=timedelta(hours=72),
-        apply=True,
+        apply=False,
         now=now,
     )
 
-    assert result["removed"] == [str(expired.resolve())]
-    assert not expired.exists()
+    assert result["eligible"] == [str(expired.resolve())]
+    assert result["removed"] == []
+    assert expired.is_dir()
     assert recent.is_dir()
     assert unmarked.is_dir()
 
@@ -101,7 +110,7 @@ def test_cleanup_rejects_a_foreign_marker(tmp_path: Path) -> None:
     result = workspace_cleanup.cleanup(
         workspace_root=workspace,
         max_age=timedelta(0),
-        apply=True,
+        apply=False,
         now=now,
     )
 
@@ -121,6 +130,35 @@ def test_cleanup_treats_a_leased_runtime_as_one_root(tmp_path: Path) -> None:
     markers = workspace_cleanup._lease_markers(workspace / "temp" / "docwen")
 
     assert markers == [runtime / workspace_cleanup.LEASE_NAME]
+
+
+def test_cleanup_does_not_treat_nested_workspace_fixtures_as_owned_roots(tmp_path: Path) -> None:
+    workspace = tmp_path / ".workspace"
+    fixture_runtime = (
+        workspace
+        / "temp"
+        / "caller-owned-pytest-runtime"
+        / "basetemp"
+        / "test-case"
+        / ".workspace"
+        / "temp"
+        / "docwen"
+        / "pytest"
+        / "expired-fixture"
+    )
+    now = datetime(2026, 8, 22, tzinfo=UTC)
+    _lease(fixture_runtime, created_at=now - timedelta(days=4))
+
+    result = workspace_cleanup.cleanup(
+        workspace_root=workspace,
+        max_age=timedelta(hours=72),
+        apply=False,
+        now=now,
+    )
+
+    assert result["eligible"] == []
+    assert result["skipped"] == [{"path": str(fixture_runtime.parents[3]), "reason": "nested_workspace_boundary"}]
+    assert fixture_runtime.is_dir()
 
 
 def test_cleanup_unmounts_an_owned_short_drive_only_when_applying(
@@ -152,12 +190,16 @@ def test_cleanup_unmounts_an_owned_short_drive_only_when_applying(
     assert preview["eligible"] == [str(runtime.resolve())]
     assert unmounted == []
 
-    applied = workspace_cleanup.cleanup(
+    diagnostics = workspace / "diagnostics"
+    diagnostics.mkdir()
+    plan = workspace_cleanup.create_plan(
         workspace_root=workspace,
-        max_age=timedelta(0),
-        apply=True,
+        explicit_targets=(runtime,),
+        reason="expired test runtime",
         now=now,
     )
+    plan_path = workspace_cleanup.save_plan(plan, diagnostics / "cleanup-plan.json")
+    applied = workspace_cleanup.apply_saved_plan(plan_path, workspace_root=workspace)
 
     assert applied["removed"] == [str(runtime.resolve())]
     assert unmounted == [("W:", runtime.resolve())]
