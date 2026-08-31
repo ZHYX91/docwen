@@ -187,6 +187,19 @@ def _windows_extended_path(path: Path) -> str:
     return f"\\\\?\\{absolute}"
 
 
+def _logical_path(path: str | Path) -> Path:
+    """Return a normal absolute path after extended-length Windows I/O."""
+
+    value = os.fspath(path)
+    if os.name != "nt":
+        return Path(value)
+    if value.startswith("\\\\?\\UNC\\"):
+        return Path(f"\\\\{value[8:]}")
+    if value.startswith("\\\\?\\"):
+        return Path(value[4:])
+    return Path(value)
+
+
 def _remove_owned_readonly_path(function: object, path: str, error: BaseException) -> None:
     if not isinstance(error, PermissionError) or not callable(function):
         raise error
@@ -278,7 +291,7 @@ def _resolve_reparse_target(path: Path) -> Path:
 
 def _snapshot_tree(root: Path) -> dict[str, Any]:
     absolute_root = _absolute(root)
-    root_metadata = absolute_root.lstat()
+    root_metadata = os.lstat(_windows_extended_path(absolute_root))
     if not stat.S_ISDIR(root_metadata.st_mode) or _is_link_or_reparse(root_metadata):
         raise HousekeepingError(f"plain_directory_required:{absolute_root}")
     digest = hashlib.sha256()
@@ -289,6 +302,7 @@ def _snapshot_tree(root: Path) -> dict[str, Any]:
     latest_mtime_ns = root_metadata.st_mtime_ns
     reparse_points: list[dict[str, str]] = []
     lease_marker_paths: list[Path] = []
+    lease_roots: list[Path] = []
 
     def record(kind: str, relative: str, metadata: os.stat_result, extra: str = "") -> None:
         nonlocal latest_mtime_ns
@@ -310,16 +324,16 @@ def _snapshot_tree(root: Path) -> dict[str, Any]:
 
     record("directory", ".", root_metadata)
     for current, directories, files in os.walk(
-        absolute_root,
+        _windows_extended_path(absolute_root),
         topdown=True,
         followlinks=False,
         onerror=_raise_walk_error,
     ):
-        current_path = Path(current)
+        current_path = _logical_path(current)
         safe_directories: list[str] = []
         for name in sorted(directories):
             child = current_path / name
-            metadata = child.lstat()
+            metadata = os.lstat(_windows_extended_path(child))
             relative = str(child.relative_to(absolute_root))
             if _is_link_or_reparse(metadata):
                 target = _resolve_reparse_target(child)
@@ -336,7 +350,7 @@ def _snapshot_tree(root: Path) -> dict[str, Any]:
         directories[:] = safe_directories
         for name in sorted(files):
             child = current_path / name
-            metadata = child.lstat()
+            metadata = os.lstat(_windows_extended_path(child))
             relative = str(child.relative_to(absolute_root))
             if _is_link_or_reparse(metadata):
                 target = _resolve_reparse_target(child)
@@ -352,11 +366,11 @@ def _snapshot_tree(root: Path) -> dict[str, Any]:
             record("file", relative, metadata)
             content_digest.update(relative.replace(os.sep, "/").encode("utf-8"))
             content_digest.update(b"\0")
-            with child.open("rb") as stream:
+            with open(_windows_extended_path(child), "rb") as stream:
                 while chunk := stream.read(1024 * 1024):
                     content_digest.update(chunk)
             content_digest.update(b"\0")
-            after_read = child.lstat()
+            after_read = os.lstat(_windows_extended_path(child))
             if (
                 after_read.st_dev,
                 after_read.st_ino,
@@ -372,9 +386,14 @@ def _snapshot_tree(root: Path) -> dict[str, Any]:
             ):
                 raise HousekeepingError(f"target_changed_during_snapshot:{child}")
             if name == LEASE_NAME:
-                lease_marker_paths.append(child)
+                inside_leased_root = any(
+                    lease_root == current_path or lease_root in current_path.parents for lease_root in lease_roots
+                )
+                if not inside_leased_root:
+                    lease_marker_paths.append(child)
+                    lease_roots.append(current_path)
 
-    after_root = absolute_root.lstat()
+    after_root = os.lstat(_windows_extended_path(absolute_root))
     if (
         after_root.st_dev,
         after_root.st_ino,

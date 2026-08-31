@@ -209,6 +209,53 @@ def test_saved_plan_applies_after_per_target_revalidation(tmp_path: Path) -> Non
     assert plan_path.is_file()
 
 
+def test_saved_plan_handles_an_extended_length_tree(tmp_path: Path) -> None:
+    _, workspace = _workspace(tmp_path)
+    target = workspace / "temp" / "long-tree"
+    target.mkdir()
+    deep = target
+    while len(str(deep / "payload.bin")) < 300:
+        deep /= "long-path-segment"
+    os.makedirs(workspace_cleanup._windows_extended_path(deep))
+    payload = deep / "payload.bin"
+    with open(workspace_cleanup._windows_extended_path(payload), "wb") as stream:
+        stream.write(b"extended")
+
+    plan = workspace_cleanup.create_plan(
+        workspace_root=workspace,
+        explicit_targets=(target,),
+        reason="extended length scratch",
+    )
+    plan_path = workspace_cleanup.save_plan(plan, workspace / "diagnostics" / "long-tree-plan.json")
+
+    result = workspace_cleanup.apply_saved_plan(plan_path, workspace_root=workspace)
+
+    assert result["removed"] == [str(target.resolve())]
+    assert result["removedBytes"] == len(b"extended")
+    assert not target.exists()
+
+
+def test_leased_runtime_treats_nested_lease_named_fixtures_as_payload(tmp_path: Path) -> None:
+    _, workspace = _workspace(tmp_path)
+    target = workspace / "temp" / "leased-runtime"
+    _lease(
+        target,
+        created_at=datetime(2026, 8, 31, tzinfo=UTC),
+        state="retained-failure",
+    )
+    fixture_marker = target / "test-fixture" / workspace_cleanup.LEASE_NAME
+    fixture_marker.parent.mkdir()
+    fixture_marker.write_text('{"owner":"foreign-test-fixture"}\n', encoding="utf-8")
+
+    plan = workspace_cleanup.create_plan(
+        workspace_root=workspace,
+        explicit_targets=(target,),
+        reason="completed leased runtime",
+    )
+
+    assert [lease["path"] for lease in plan["entries"][0]["identity"]["leases"]] == [workspace_cleanup.LEASE_NAME]
+
+
 def test_qa_uses_shared_retention_policy_and_removes_its_saved_plan(tmp_path: Path) -> None:
     _, workspace = _workspace(tmp_path)
     now = datetime.now(UTC)
