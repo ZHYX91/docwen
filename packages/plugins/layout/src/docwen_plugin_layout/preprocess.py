@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import logging
 import shutil
+import tempfile
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -375,19 +376,23 @@ def _save_data_uri_image(
     if not is_data_uri_image(src):
         return src
 
-    temp_file = resolve_data_uri_image_to_temp_file(src, temp_dir=None)
-    if not temp_file:
-        return src
-
-    src_path = Path(temp_file)
     try:
-        filename = _make_image_filename(src_path, original_basename, image_index, unified_timestamp_desc)
-    except (OSError, ValueError):
+        with tempfile.TemporaryDirectory(prefix=".docwen-data-uri-", dir=output_folder) as temporary:
+            temp_file = resolve_data_uri_image_to_temp_file(src, temp_dir=temporary)
+            if not temp_file:
+                return src
+
+            src_path = Path(temp_file)
+            try:
+                filename = _make_image_filename(src_path, original_basename, image_index, unified_timestamp_desc)
+            except (OSError, ValueError):
+                return src
+            target = Path(output_folder) / filename
+            if not target.exists():
+                shutil.copy2(src_path, target)
+            return filename
+    except OSError:
         return src
-    target = Path(output_folder) / filename
-    if not target.exists():
-        shutil.copy2(src_path, target)
-    return filename
 
 
 def materialize_image_target(
@@ -487,35 +492,39 @@ def build_image_markdown(
 
         if not is_data_uri_image(src):
             return ""
-        temp_file = resolve_data_uri_image_to_temp_file(src, temp_dir=None)
-        if not temp_file:
-            return ""
-        src_path = Path(temp_file)
         try:
-            filename = _make_image_filename(src_path, original_basename, image_index, unified_timestamp_desc)
-        except (OSError, ValueError):
-            return ""
-        if keep_images:
-            target = Path(output_folder) / filename
-            if not target.exists():
-                shutil.copy2(src_path, target)
-            target_path = str(target)
-        else:
-            target_path = str(src_path)
+            with tempfile.TemporaryDirectory(prefix=".docwen-data-uri-", dir=output_folder) as temporary:
+                temp_file = resolve_data_uri_image_to_temp_file(src, temp_dir=temporary)
+                if not temp_file:
+                    return ""
+                src_path = Path(temp_file)
+                try:
+                    filename = _make_image_filename(src_path, original_basename, image_index, unified_timestamp_desc)
+                except (OSError, ValueError):
+                    return ""
+                if keep_images:
+                    target = Path(output_folder) / filename
+                    if not target.exists():
+                        shutil.copy2(src_path, target)
+                    target_path = str(target)
+                else:
+                    target_path = str(src_path)
 
-        if enable_ocr:
-            return _ocr_image_link(
-                image_path=target_path,
-                filename=filename,
-                keep_images=keep_images,
-                output_folder=output_folder,
-                image_link_style=image_link_style,
-                md_file_link_style=md_file_link_style,
-                ocr_blockquote_title=ocr_blockquote_title,
-                ocr_language=ocr_language,
-                current_locale=current_locale,
-            )
-        return format_image_link(filename, filename, style=image_link_style)
+                if enable_ocr:
+                    return _ocr_image_link(
+                        image_path=target_path,
+                        filename=filename,
+                        keep_images=keep_images,
+                        output_folder=output_folder,
+                        image_link_style=image_link_style,
+                        md_file_link_style=md_file_link_style,
+                        ocr_blockquote_title=ocr_blockquote_title,
+                        ocr_language=ocr_language,
+                        current_locale=current_locale,
+                    )
+                return format_image_link(filename, filename, style=image_link_style)
+        except OSError:
+            return ""
 
     # ── Remote URL ─────────────────────────────────────────────────────
     if _is_remote_url(src):

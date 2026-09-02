@@ -610,6 +610,11 @@ def main(argv: list[str]) -> int:
                 try:
                     _cleanup_owned_runtime(runtime_root)
                 except (OSError, ValueError) as error:
+                    _patch_runtime_lease(
+                        runtime_root,
+                        state="retained-cleanup-failure",
+                        fields={"cleanupError": f"{type(error).__name__}:{error}"},
+                    )
                     print(f"[qa] pytest runtime cleanup failed: {error}", file=sys.stderr)
                     return 2
     return exit_code

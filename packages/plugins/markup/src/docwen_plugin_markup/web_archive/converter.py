@@ -590,19 +590,20 @@ def _html_image_link_or_resource(
     from docwen_plugin_markup.markdown_resources import MarkdownResource
 
     if src.startswith("data:"):
-        from docwen_core.links import is_data_uri_image, resolve_data_uri_image_to_temp_file
+        from docwen_core.links import decode_data_uri_image, is_data_uri_image
 
         if not is_data_uri_image(src):
             return "", None
-        temp_file = resolve_data_uri_image_to_temp_file(src, temp_dir=None)
-        if not temp_file:
+        decoded = decode_data_uri_image(src)
+        if decoded is None:
             return "", None
-        source_path = Path(temp_file)
+        payload, suffix = decoded
+        suggested_name = f"data-uri{suffix}"
         return "", MarkdownResource(
             source_key=token,
-            suggested_name=source_path.name,
-            media_type=_guess_media_type(source_path.name),
-            data=source_path.read_bytes(),
+            suggested_name=suggested_name,
+            media_type=_guess_media_type(suggested_name),
+            data=payload,
         )
 
     if _is_remote_url(src):

@@ -15,8 +15,16 @@ import subprocess
 import sys
 import tempfile
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
+
+if __package__ in {None, ""}:
+    _BOOTSTRAP_ROOT = Path(__file__).resolve().parents[2]
+    if str(_BOOTSTRAP_ROOT) not in sys.path:
+        sys.path.insert(0, str(_BOOTSTRAP_ROOT))
+
+from tools.workspace_root import WorkspaceRootError, resolve_workspace_root
 
 try:
     from scripts.release import packaged_resources as _packaged_resources
@@ -84,6 +92,9 @@ _REQUIRED_SETTINGS_PAGE_MODULES: frozenset[str] = frozenset(
     f"docwen_gui.widgets.settings.{key}_tab" for key in _REQUIRED_SETTINGS_TAB_KEYS
 )
 _FILE_ATTRIBUTE_REPARSE_POINT = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+_VERIFICATION_LEASE = ".docwen-temp-lease.json"
+_VERIFICATION_OWNER = "docwen.release.verify-packaged-gui"
+_RECEIPT_SCHEMA = "docwen.acceptance-receipt.v1"
 
 
 def _default_binary_name() -> str:
@@ -207,6 +218,133 @@ def _capture_evidence_tree(root: Path) -> tuple[tuple[str, ...], dict[str, tuple
 
     visit(root)
     return tuple(directories), files
+
+
+def _atomic_json_write(path: Path, payload: dict[str, Any]) -> None:
+    temporary = path.with_name(f".{path.name}.tmp")
+    temporary.write_text(
+        json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    temporary.replace(path)
+
+
+def _optional_workspace_root(explicit: Path | None) -> Path | None:
+    repo_root = Path(__file__).resolve().parents[2]
+    try:
+        return resolve_workspace_root(repo_root, explicit=explicit)
+    except WorkspaceRootError:
+        if explicit is not None:
+            raise
+        return None
+
+
+def _create_verification_dir(workspace_root: Path | None) -> Path:
+    parent = workspace_root / "temp" if workspace_root is not None else None
+    if parent is not None:
+        parent.mkdir(parents=True, exist_ok=True)
+    verification_dir = Path(
+        tempfile.mkdtemp(
+            prefix="docwen-packaged-gui-verify-",
+            dir=os.fspath(parent) if parent is not None else None,
+        )
+    ).resolve()
+    if parent is not None and not _is_same_or_descendant(verification_dir, parent.resolve(strict=True)):
+        raise RuntimeError(f"packaged_gui_runtime_outside_workspace:{verification_dir}")
+    _atomic_json_write(
+        verification_dir / _VERIFICATION_LEASE,
+        {
+            "schemaVersion": 1,
+            "owner": _VERIFICATION_OWNER,
+            "kind": "packaged-gui-verification",
+            "pid": os.getpid(),
+            "createdAt": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            "state": "active",
+            "root": str(verification_dir),
+        },
+    )
+    return verification_dir
+
+
+def _update_verification_lease(
+    verification_dir: Path,
+    *,
+    state: str,
+    error: BaseException | None = None,
+) -> None:
+    marker = verification_dir / _VERIFICATION_LEASE
+    payload = json.loads(marker.read_text(encoding="utf-8"))
+    if payload.get("owner") != _VERIFICATION_OWNER or payload.get("root") != str(verification_dir):
+        raise RuntimeError(f"packaged_gui_runtime_lease_mismatch:{verification_dir}")
+    payload["state"] = state
+    if error is not None:
+        payload["error"] = f"{type(error).__name__}:{error}"
+    _atomic_json_write(marker, payload)
+
+
+def _cleanup_verification_dir(verification_dir: Path) -> None:
+    marker = verification_dir / _VERIFICATION_LEASE
+    payload = json.loads(marker.read_text(encoding="utf-8"))
+    if payload.get("owner") != _VERIFICATION_OWNER or payload.get("root") != str(verification_dir):
+        raise RuntimeError(f"packaged_gui_runtime_cleanup_lease_mismatch:{verification_dir}")
+    root_stat = verification_dir.lstat()
+    if _is_link_or_reparse(root_stat) or not stat.S_ISDIR(root_stat.st_mode):
+        raise RuntimeError(f"packaged_gui_runtime_cleanup_unsafe_root:{verification_dir}")
+    _update_verification_lease(verification_dir, state="completed-success")
+    shutil.rmtree(verification_dir)
+    if verification_dir.exists():
+        raise RuntimeError(f"packaged_gui_runtime_cleanup_failed:{verification_dir}")
+
+
+def _validate_receipt_destination(requested: Path, *, workspace_root: Path) -> Path:
+    acceptance_root = (workspace_root / "acceptance").resolve(strict=True)
+    if not requested.is_absolute():
+        raise ValueError(f"packaged_gui_receipt_not_absolute:{requested}")
+    destination = Path(os.path.abspath(requested))
+    if _lexical_path_text(destination) != _lexical_path_text(requested):
+        raise RuntimeError(f"packaged_gui_receipt_alias_rejected:{requested}")
+    if not _is_same_or_descendant(destination, acceptance_root):
+        raise RuntimeError(f"packaged_gui_receipt_outside_acceptance:{destination}")
+    if destination.exists():
+        raise FileExistsError(f"packaged_gui_receipt_exists:{destination}")
+    _assert_directory_chain_without_aliases(destination.parent)
+    return destination
+
+
+def _build_acceptance_receipt(
+    verification_dir: Path,
+    *,
+    candidate_id: str,
+    binary_path: Path,
+    selected_gates: list[str],
+) -> dict[str, Any]:
+    directories, files = _capture_evidence_tree(verification_dir)
+    manifest = {
+        "directories": list(directories),
+        "files": {path: {"bytes": value[0], "sha256": value[1]} for path, value in files.items()},
+    }
+    manifest_bytes = json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    binary_size, binary_sha256 = _hash_regular_file(binary_path)
+    return {
+        "schema": _RECEIPT_SCHEMA,
+        "candidateId": candidate_id,
+        "gate": "packaged-gui",
+        "selectedGates": selected_gates,
+        "result": "passed",
+        "generatedAt": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+        "binary": {"name": binary_path.name, "bytes": binary_size, "sha256": binary_sha256},
+        "runSummary": {
+            "fileCount": len(files),
+            "directoryCount": len(directories),
+            "bytes": sum(value[0] for value in files.values()),
+            "manifestSha256": hashlib.sha256(manifest_bytes).hexdigest(),
+        },
+        "limitations": [
+            "This receipt proves only the selected packaged GUI gates.",
+            "It does not prove public release, Store state, or unselected external hosts.",
+        ],
+    }
 
 
 def _verify_file_bytes_equal(source: Path, destination: Path) -> None:
@@ -925,7 +1063,23 @@ def main(argv: list[str]) -> int:
             "The destination must not already exist or be inside the packaged binary directory."
         ),
     )
+    parser.add_argument(
+        "--workspace-root",
+        type=Path,
+        help="Use an explicit governed DocWen workspace for the isolated verification runtime.",
+    )
+    parser.add_argument(
+        "--candidate-id",
+        help="Stable candidate identity to record with --receipt-output.",
+    )
+    parser.add_argument(
+        "--receipt-output",
+        type=Path,
+        help="Write one compact success receipt below the governed workspace acceptance directory.",
+    )
     args = parser.parse_args(argv)
+    if (args.candidate_id is None) != (args.receipt_output is None):
+        parser.error("--candidate-id and --receipt-output must be provided together")
     if args.ipc_smoke and (
         args.notification_smoke
         or args.settings_smoke
@@ -971,6 +1125,14 @@ def main(argv: list[str]) -> int:
         if args.evidence_dir is not None
         else None
     )
+    workspace_root = _optional_workspace_root(args.workspace_root)
+    receipt_output = None
+    if args.receipt_output is not None:
+        if workspace_root is None:
+            raise RuntimeError("packaged_gui_receipt_requires_governed_workspace")
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", args.candidate_id):
+            raise ValueError(f"packaged_gui_candidate_id_invalid:{args.candidate_id}")
+        receipt_output = _validate_receipt_destination(args.receipt_output, workspace_root=workspace_root)
     _verify_resource_layout(binary_dir)
     if args.settings_smoke:
         _verify_settings_page_archive(binary_path)
@@ -981,8 +1143,10 @@ def main(argv: list[str]) -> int:
 
     print(f"Running packaged GUI smoke test: {binary_path} ...")
 
-    verification_dir = Path(tempfile.mkdtemp(prefix="docwen-packaged-gui-verify-"))
+    verification_dir = _create_verification_dir(workspace_root)
     verification_succeeded = False
+    verification_error: BaseException | None = None
+    receipt_payload: dict[str, Any] | None = None
     try:
         (verification_dir / "config_home").mkdir(parents=True, exist_ok=True)
         (verification_dir / "log_home").mkdir(parents=True, exist_ok=True)
@@ -1167,16 +1331,63 @@ def main(argv: list[str]) -> int:
             print(f"packaged_gui_smoke_ok: {binary_path.name}")
         if retained_evidence is not None:
             print(f"packaged_gui_evidence_retained: {retained_evidence}")
+        if receipt_output is not None:
+            selected_gates = [
+                name
+                for name, selected in (
+                    ("notification", args.notification_smoke),
+                    ("settings", args.settings_smoke),
+                    ("ocr", args.ocr_smoke),
+                    ("ipc", args.ipc_smoke),
+                    ("office", args.office_smoke),
+                    ("presentation", args.presentation_smoke),
+                    ("smartdoc", args.smartdoc_smoke),
+                    ("successful-warning", bool(args.successful_warning_smoke)),
+                )
+                if selected
+            ]
+            receipt_payload = _build_acceptance_receipt(
+                verification_dir,
+                candidate_id=args.candidate_id,
+                binary_path=binary_path,
+                selected_gates=selected_gates or ["default-smoke"],
+            )
         verification_succeeded = True
     except subprocess.TimeoutExpired as exc:
-        raise RuntimeError(
+        verification_error = RuntimeError(
             f"GUI smoke test timed out! The application did not auto-close within the expected time.\nSTDOUT:\n{exc.stdout}\nSTDERR:\n{exc.stderr}"
-        ) from exc
+        )
+        raise verification_error from exc
+    except BaseException as exc:
+        verification_error = exc
+        raise
     finally:
         if verification_succeeded:
-            shutil.rmtree(verification_dir, ignore_errors=True)
+            try:
+                _cleanup_verification_dir(verification_dir)
+            except BaseException as cleanup_error:
+                if verification_dir.exists():
+                    with contextlib.suppress(Exception):
+                        _update_verification_lease(
+                            verification_dir,
+                            state="retained-cleanup-failure",
+                            error=cleanup_error,
+                        )
+                raise RuntimeError(f"packaged_gui_runtime_cleanup_failed:{cleanup_error}") from cleanup_error
         else:
+            with contextlib.suppress(Exception):
+                _update_verification_lease(
+                    verification_dir,
+                    state="retained-failure",
+                    error=verification_error,
+                )
             print(f"packaged_gui_failure_artifacts_retained: {verification_dir}", file=sys.stderr)
+
+    if receipt_output is not None:
+        if receipt_payload is None:
+            raise RuntimeError("packaged_gui_receipt_payload_missing")
+        _atomic_json_write(receipt_output, receipt_payload)
+        print(f"packaged_gui_acceptance_receipt: {receipt_output}")
 
     return 0
 

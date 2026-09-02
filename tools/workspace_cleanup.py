@@ -46,6 +46,7 @@ FAILURE_STATES = frozenset(
         "retained-interrupted",
     }
 )
+ABANDONED_STATES = frozenset({"active"})
 
 
 class HousekeepingError(ValueError):
@@ -273,12 +274,14 @@ def retention_decision(
     if normalized_state in SUCCESS_STATES:
         return {"eligible": True, "reason": "success_scratch"}
     is_failure = normalized_state in FAILURE_STATES
-    if is_failure:
+    is_abandoned = normalized_state in ABANDONED_STATES
+    if is_failure or is_abandoned:
+        reason_prefix = "abandoned" if is_abandoned else "failure"
         if age >= failure_ttl:
-            return {"eligible": True, "reason": "failure_ttl_expired"}
+            return {"eligible": True, "reason": f"{reason_prefix}_ttl_expired"}
         if same_kind_rank >= failure_max_per_kind:
-            return {"eligible": True, "reason": "failure_retention_cap"}
-        return {"eligible": False, "reason": "failure_retained"}
+            return {"eligible": True, "reason": f"{reason_prefix}_retention_cap"}
+        return {"eligible": False, "reason": f"{reason_prefix}_retained"}
     return {"eligible": False, "reason": "state_not_terminal"}
 
 
@@ -588,7 +591,7 @@ def _automatic_lease_candidates(
     failure_groups: dict[str, list[tuple[Path, dict[str, Any], Path]]] = {}
     for candidate in discovered:
         state = str(candidate[1].get("state") or "").strip().casefold()
-        if state in FAILURE_STATES:
+        if state in FAILURE_STATES or state in ABANDONED_STATES:
             kind = str(candidate[1].get("kind") or candidate[1].get("owner") or "unknown")
             failure_groups.setdefault(kind, []).append(candidate)
     failure_rank: dict[str, int] = {}

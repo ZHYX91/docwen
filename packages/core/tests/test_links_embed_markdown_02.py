@@ -45,6 +45,7 @@ class TestProcessSingleEmbed:
             set(),
             0,
             image_mode="embed",
+            temp_dir=str(tmp_path),
         )
         assert result is not None
         assert result.startswith("{{IMAGE:")

@@ -11,6 +11,7 @@ from docwen_core.links._anchor import (
     strip_yaml_front_matter,
 )
 from docwen_core.links._data_uri import (
+    decode_data_uri_image,
     is_data_uri_image,
     resolve_data_uri_image_to_temp_file,
 )
@@ -79,6 +80,7 @@ __all__ = [
     "NotFoundAction",
     "_process_non_embed_links",
     "bind_declared_markdown_images",
+    "decode_data_uri_image",
     "dispatch_error_output",
     "escape_unescaped_pipes",
     "extract_block_by_id",

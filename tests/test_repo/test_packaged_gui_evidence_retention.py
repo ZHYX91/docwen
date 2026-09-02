@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -66,6 +67,7 @@ def test_evidence_dir_is_parsed_and_preserves_a_verified_success_tree(
         "mkdtemp",
         lambda **_kwargs: str(verification_dir),
     )
+    monkeypatch.setattr(verify_packaged_gui, "_optional_workspace_root", lambda _explicit: None)
 
     def fake_run(binary_path: Path, *args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
         run_directories.append(cwd)
@@ -113,6 +115,7 @@ def test_default_success_still_cleans_without_retaining_evidence(
         "mkdtemp",
         lambda **_kwargs: str(verification_dir),
     )
+    monkeypatch.setattr(verify_packaged_gui, "_optional_workspace_root", lambda _explicit: None)
 
     def fake_run(binary_path: Path, *args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
         (cwd / "log_home" / "logs").mkdir(parents=True, exist_ok=True)
@@ -238,6 +241,7 @@ def test_main_retains_temporary_source_when_evidence_copy_fails(
         "mkdtemp",
         lambda **_kwargs: str(verification_dir),
     )
+    monkeypatch.setattr(verify_packaged_gui, "_optional_workspace_root", lambda _explicit: None)
 
     def fake_run(binary_path: Path, *args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
         (cwd / "log_home" / "logs").mkdir(parents=True, exist_ok=True)
@@ -267,3 +271,55 @@ def test_main_retains_temporary_source_when_evidence_copy_fails(
     captured = capsys.readouterr()
     assert "packaged_gui_smoke_ok" not in captured.out
     assert f"packaged_gui_failure_artifacts_retained: {verification_dir}" in captured.err
+    lease = json.loads((verification_dir / verify_packaged_gui._VERIFICATION_LEASE).read_text(encoding="utf-8"))
+    assert lease["state"] == "retained-failure"
+
+
+def test_governed_success_writes_compact_receipt_and_removes_raw_run(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from scripts.release import verify_packaged_gui
+    from tools import workspace_root
+
+    binary_dir, binary_name = _packaged_gui(tmp_path)
+    governed = tmp_path / ".workspace"
+    governed.mkdir()
+    (governed / "README.md").write_text("# DocWen 本地工作区\n", encoding="utf-8")
+    for name in workspace_root._GOVERNANCE_DIRECTORIES:
+        (governed / name).mkdir()
+    receipt = governed / "acceptance" / "candidate-packaged-gui.json"
+    run_directories: list[Path] = []
+
+    def fake_run(binary_path: Path, *args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
+        run_directories.append(cwd)
+        (cwd / "log_home" / "logs").mkdir(parents=True, exist_ok=True)
+        (cwd / "log_home" / "logs" / "docwen.log").write_text("ok", encoding="utf-8")
+        return subprocess.CompletedProcess([str(binary_path), *args], 0, stdout="", stderr="")
+
+    monkeypatch.setattr(verify_packaged_gui, "_run", fake_run)
+
+    assert (
+        verify_packaged_gui.main(
+            [
+                "--binary-dir",
+                str(binary_dir),
+                "--binary-name",
+                binary_name,
+                "--workspace-root",
+                str(governed),
+                "--candidate-id",
+                "candidate-1",
+                "--receipt-output",
+                str(receipt),
+            ]
+        )
+        == 0
+    )
+    assert len(run_directories) == 1
+    assert not run_directories[0].exists()
+    payload = json.loads(receipt.read_text(encoding="utf-8"))
+    assert payload["schema"] == verify_packaged_gui._RECEIPT_SCHEMA
+    assert payload["candidateId"] == "candidate-1"
+    assert payload["result"] == "passed"
+    assert payload["selectedGates"] == ["default-smoke"]

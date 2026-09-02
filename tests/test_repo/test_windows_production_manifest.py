@@ -416,3 +416,31 @@ def test_production_work_cleanup_rejects_foreign_content_root(tmp_path: Path) ->
         production._cleanup_owned_work_root(work)
 
     assert work.is_dir()
+
+
+def test_failed_production_build_retains_work_as_failure_and_removes_partial_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    work = (tmp_path / "work").resolve()
+    output = (tmp_path / "output").resolve()
+    work.mkdir()
+    output.mkdir()
+    production._write_work_lease(work, state="active")
+    production._write_output_lease(output)
+    (work / "diagnostic.txt").write_text("failure\n", encoding="utf-8")
+    (output / "partial.bin").write_bytes(b"partial")
+    args = type("Args", (), {"work_root": work, "output_root": output})()
+
+    def fail_build(_args: object) -> dict[str, object]:
+        raise production.ProductionBuildError("boom")
+
+    monkeypatch.setattr(production, "_build", fail_build)
+
+    with pytest.raises(production.ProductionBuildError, match="boom"):
+        production.build(args)
+
+    lease = json.loads((work / production.PRODUCTION_WORK_LEASE).read_text(encoding="utf-8"))
+    assert lease["state"] == "retained-failure"
+    assert lease["error"] == "ProductionBuildError:boom"
+    assert not output.exists()

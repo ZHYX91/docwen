@@ -33,6 +33,7 @@ from scripts.build.payload_normalization import normalize_packaged_record_files
 
 EMPTY_SHA256 = hashlib.sha256(b"").hexdigest()
 PRODUCTION_WORK_LEASE = ".docwen-temp-lease.json"
+PRODUCTION_OUTPUT_LEASE = ".docwen-partial-output.json"
 STABLE_SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")
 MACHINE_CONTRACT_PATHS = (
@@ -133,12 +134,51 @@ def _write_work_lease(work: Path, *, state: str) -> None:
     )
 
 
-def _update_work_lease(work: Path, *, state: str) -> None:
+def _update_work_lease(work: Path, *, state: str, error: BaseException | None = None) -> None:
     marker = work / PRODUCTION_WORK_LEASE
     payload = json.loads(marker.read_text(encoding="utf-8"))
     payload["state"] = state
+    if error is not None:
+        payload["error"] = f"{type(error).__name__}:{error}"
     marker.unlink()
     atomic_write(marker, canonical_bytes(payload))
+
+
+def _write_output_lease(output: Path) -> None:
+    atomic_write(
+        output / PRODUCTION_OUTPUT_LEASE,
+        canonical_bytes(
+            {
+                "schemaVersion": 1,
+                "owner": "docwen.release.build-production-candidate",
+                "kind": "partial-production-output",
+                "pid": os.getpid(),
+                "createdAt": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+                "state": "active",
+                "root": str(output),
+            }
+        ),
+    )
+
+
+def _cleanup_owned_partial_output(output: Path) -> None:
+    safe_output = output.resolve(strict=True)
+    marker = safe_output / PRODUCTION_OUTPUT_LEASE
+    require(marker.is_file() and not marker.is_symlink(), "partial_output_cleanup_lease_missing")
+    payload = json.loads(marker.read_text(encoding="utf-8"))
+    require(
+        payload.get("owner") == "docwen.release.build-production-candidate", "partial_output_cleanup_owner_mismatch"
+    )
+    require(payload.get("root") == str(safe_output), "partial_output_cleanup_identity_mismatch")
+    metadata = safe_output.lstat()
+    reparse_flag = int(getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))
+    require(
+        not stat.S_ISLNK(metadata.st_mode)
+        and not (reparse_flag and int(getattr(metadata, "st_file_attributes", 0)) & reparse_flag),
+        "partial_output_cleanup_reparse_rejected",
+    )
+    shutil.rmtree(safe_output)
+    require(not safe_output.exists(), "partial_output_cleanup_failed")
 
 
 def _cleanup_owned_work_root(work: Path) -> None:
@@ -522,7 +562,7 @@ def deterministic_zip(payload: Path, destination: Path, rows: Iterable[dict[str,
             )
 
 
-def build(args: argparse.Namespace) -> dict[str, Any]:
+def _build(args: argparse.Namespace) -> dict[str, Any]:
     repo = args.repo.resolve(strict=True)
     manifest_path = args.manifest.resolve(strict=True)
     output = args.output_root.resolve(strict=False)
@@ -544,6 +584,7 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         args.uv.resolve(strict=True),
     )
     output.mkdir(parents=True)
+    _write_output_lease(output)
     work.mkdir(parents=True)
     _write_work_lease(work, state="active")
     clone = work / "source"
@@ -644,8 +685,35 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         _update_work_lease(work, state="retained-manual")
     else:
         _cleanup_owned_work_root(work)
+    (output / PRODUCTION_OUTPUT_LEASE).unlink()
     print(json.dumps(resolved, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
     return resolved
+
+
+def _close_failed_build(args: argparse.Namespace, error: BaseException) -> None:
+    work = args.work_root.resolve(strict=False)
+    work_marker = work / PRODUCTION_WORK_LEASE
+    if work_marker.is_file() and not work_marker.is_symlink():
+        try:
+            _update_work_lease(work, state="retained-failure", error=error)
+        except (OSError, ValueError, json.JSONDecodeError) as cleanup_error:
+            error.add_note(f"production work lease finalization failed: {cleanup_error}")
+
+    output = args.output_root.resolve(strict=False)
+    output_marker = output / PRODUCTION_OUTPUT_LEASE
+    if output_marker.is_file() and not output_marker.is_symlink():
+        try:
+            _cleanup_owned_partial_output(output)
+        except (OSError, ValueError, json.JSONDecodeError) as cleanup_error:
+            error.add_note(f"partial production output cleanup failed: {cleanup_error}")
+
+
+def build(args: argparse.Namespace) -> dict[str, Any]:
+    try:
+        return _build(args)
+    except BaseException as error:
+        _close_failed_build(args, error)
+        raise
 
 
 def parser() -> argparse.ArgumentParser:

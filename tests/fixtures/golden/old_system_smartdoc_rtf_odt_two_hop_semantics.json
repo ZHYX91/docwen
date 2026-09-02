@@ -179,6 +179,6 @@
     "Installed LibreOffice, large-document progress and cancellation feel, complex floating layout, macros, signatures, protection, and overall final artifact parity remain open."
   ],
   "evidence": {
-    "guard": "tests/test_repo/test_smartdoc_rtf_odt_evidence.py"
+    "guard": "tests/test_repo/test_smartdoc_rtf_odt_projection_contract.py"
   }
 }

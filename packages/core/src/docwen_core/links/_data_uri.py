@@ -51,16 +51,11 @@ def _estimate_base64_decoded_size(payload: str) -> int:
     return max(0, (payload_len * 3) // 4 - padding)
 
 
-def resolve_data_uri_image_to_temp_file(data_uri: str, *, temp_dir: str | None = None) -> str | None:
-    """Decode a base64 data URI image and write it to a temporary file.
+def decode_data_uri_image(data_uri: str) -> tuple[bytes, str] | None:
+    """Decode a base64 data URI image without creating a filesystem artifact.
 
-    The temporary file is created with ``mkstemp`` in *temp_dir* (or the
-    system default).  The file suffix is derived from the MIME subtype in the
-    data URI header (e.g. ``.png`` for ``image/png``).
-
-    Returns the absolute path of the temp file on success, or ``None`` when
-    the data URI is malformed, the payload exceeds the size limit, or
-    decoding / writing fails.
+    Returns ``(payload, suffix)`` on success, or ``None`` when the data URI is
+    malformed or exceeds the size limit.
     """
     try:
         header, payload = data_uri.split(",", 1)
@@ -99,10 +94,37 @@ def resolve_data_uri_image_to_temp_file(data_uri: str, *, temp_dir: str | None =
         )
         return None
 
+    return image_bytes, ext
+
+
+def resolve_data_uri_image_to_temp_file(data_uri: str, *, temp_dir: str | None = None) -> str | None:
+    """Decode a base64 data URI image into an explicitly owned directory.
+
+    ``temp_dir`` must name an existing absolute directory.  Omitting it fails
+    closed so this helper can never create unowned files in the process-wide
+    system temporary directory.
+
+    Returns the absolute path of the temp file on success, or ``None`` when
+    the data URI or destination is invalid, the payload exceeds the size
+    limit, or decoding / writing fails.
+    """
+    decoded = decode_data_uri_image(data_uri)
+    if decoded is None:
+        return None
+    image_bytes, ext = decoded
+
+    if temp_dir is None:
+        logger.warning("data URI image materialisation requires an explicit owned temp directory")
+        return None
+    temp_root = Path(temp_dir)
+    if not temp_root.is_absolute() or not temp_root.is_dir():
+        logger.warning("data URI image temp directory is not an existing absolute directory: %s", temp_root)
+        return None
+
     fd = None
     temp_path: str | None = None
     try:
-        fd, temp_path = tempfile.mkstemp(suffix=ext, prefix="docwen_data_uri_", dir=temp_dir)
+        fd, temp_path = tempfile.mkstemp(suffix=ext, prefix="docwen_data_uri_", dir=temp_root)
         with os.fdopen(fd, "wb") as f:
             fd = None
             f.write(image_bytes)

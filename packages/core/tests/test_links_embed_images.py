@@ -89,17 +89,17 @@ def _make_data_uri(image_bytes: bytes, mime: str = "image/png") -> str:
 class TestResolveDataUriImageToTempFile:
     """Covers F-H2-006: ``resolve_data_uri_image_to_temp_file``."""
 
-    def test_resolve_png_to_temp_file(self) -> None:
+    def test_resolve_png_to_temp_file(self, tmp_path: Path) -> None:
         data_uri = _make_data_uri(_SAMPLE_PNG_BYTES)
-        result = resolve_data_uri_image_to_temp_file(data_uri)
+        result = resolve_data_uri_image_to_temp_file(data_uri, temp_dir=str(tmp_path))
         assert result is not None
         assert os.path.isfile(result)
         written = Path(result).read_bytes()
         assert written == _SAMPLE_PNG_BYTES
 
-    def test_resolve_jpeg_mime_to_jpg_ext(self) -> None:
+    def test_resolve_jpeg_mime_to_jpg_ext(self, tmp_path: Path) -> None:
         data_uri = _make_data_uri(b"\xff\xd8\xff\xe0\x00\x10JFIF", mime="image/jpeg")
-        result = resolve_data_uri_image_to_temp_file(data_uri)
+        result = resolve_data_uri_image_to_temp_file(data_uri, temp_dir=str(tmp_path))
         assert result is not None
         assert result.endswith(".jpg")
 
@@ -109,33 +109,45 @@ class TestResolveDataUriImageToTempFile:
         assert result is not None
         assert result.startswith(str(tmp_path))
 
-    def test_returns_none_for_non_data_uri(self) -> None:
-        assert resolve_data_uri_image_to_temp_file("not a data uri") is None
+    def test_missing_owned_temp_dir_fails_closed(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        data_uri = _make_data_uri(_SAMPLE_PNG_BYTES)
 
-    def test_returns_none_for_missing_base64(self) -> None:
-        assert resolve_data_uri_image_to_temp_file("data:image/png,raw-bytes") is None
+        def unexpected_mkstemp(*args: object, **kwargs: object) -> tuple[int, str]:
+            raise AssertionError("mkstemp must not run without an owned directory")
 
-    def test_returns_none_for_text_data_uri(self) -> None:
-        assert resolve_data_uri_image_to_temp_file("data:text/plain;base64,SGVsbG8=") is None
+        monkeypatch.setattr("docwen_core.links._data_uri.tempfile.mkstemp", unexpected_mkstemp)
+        assert resolve_data_uri_image_to_temp_file(data_uri) is None
 
-    def test_returns_none_for_malformed_uri(self) -> None:
-        assert resolve_data_uri_image_to_temp_file("data:image/png;base64") is None
+    def test_returns_none_for_non_data_uri(self, tmp_path: Path) -> None:
+        assert resolve_data_uri_image_to_temp_file("not a data uri", temp_dir=str(tmp_path)) is None
+
+    def test_returns_none_for_missing_base64(self, tmp_path: Path) -> None:
+        assert resolve_data_uri_image_to_temp_file("data:image/png,raw-bytes", temp_dir=str(tmp_path)) is None
+
+    def test_returns_none_for_text_data_uri(self, tmp_path: Path) -> None:
+        assert resolve_data_uri_image_to_temp_file("data:text/plain;base64,SGVsbG8=", temp_dir=str(tmp_path)) is None
+
+    def test_returns_none_for_malformed_uri(self, tmp_path: Path) -> None:
+        assert resolve_data_uri_image_to_temp_file("data:image/png;base64", temp_dir=str(tmp_path)) is None
         # missing comma → no split
-        assert resolve_data_uri_image_to_temp_file("data:image/png;base64,") is not None
+        assert resolve_data_uri_image_to_temp_file("data:image/png;base64,", temp_dir=str(tmp_path)) is not None
         # empty payload still decodes (zero bytes)
 
-    def test_returns_none_for_invalid_base64(self) -> None:
-        assert resolve_data_uri_image_to_temp_file("data:image/png;base64,!!!not-valid-base64!!!") is None
+    def test_returns_none_for_invalid_base64(self, tmp_path: Path) -> None:
+        assert (
+            resolve_data_uri_image_to_temp_file("data:image/png;base64,!!!not-valid-base64!!!", temp_dir=str(tmp_path))
+            is None
+        )
 
-    def test_respected_max_size_limit(self) -> None:
+    def test_respected_max_size_limit(self, tmp_path: Path) -> None:
         """Payload larger than 10 MB is rejected."""
         huge_payload = base64.b64encode(b"A" * (11 * 1024 * 1024)).decode("ascii")
         data_uri = f"data:image/png;base64,{huge_payload}"
-        assert resolve_data_uri_image_to_temp_file(data_uri) is None
+        assert resolve_data_uri_image_to_temp_file(data_uri, temp_dir=str(tmp_path)) is None
 
-    def test_unknown_mime_subtype_gets_fallback_ext(self) -> None:
+    def test_unknown_mime_subtype_gets_fallback_ext(self, tmp_path: Path) -> None:
         data_uri = _make_data_uri(_SAMPLE_PNG_BYTES, mime="image/x-unknown-fmt")
-        result = resolve_data_uri_image_to_temp_file(data_uri)
+        result = resolve_data_uri_image_to_temp_file(data_uri, temp_dir=str(tmp_path))
         assert result is not None
         # falls back to .xunknownfmt
         assert ".xunknownfmt" in result
@@ -340,7 +352,7 @@ class TestProcessEmbeddedImage:
 class TestUserPathDataUriToEmbeddedImage:
     """End-to-end path: detect data URI → materialise → embed placeholder."""
 
-    def test_full_data_uri_to_placeholder_pipeline(self) -> None:
+    def test_full_data_uri_to_placeholder_pipeline(self, tmp_path: Path) -> None:
         """Simulate the real flow: a data URI image is detected, written to
         a temp file, then wrapped in a placeholder."""
         data_uri = _make_data_uri(_SAMPLE_PNG_BYTES)
@@ -349,7 +361,7 @@ class TestUserPathDataUriToEmbeddedImage:
         assert is_data_uri_image(data_uri) is True
 
         # Step 2: resolve to temp file
-        temp_path = resolve_data_uri_image_to_temp_file(data_uri)
+        temp_path = resolve_data_uri_image_to_temp_file(data_uri, temp_dir=str(tmp_path))
         assert temp_path is not None
         try:
             assert os.path.isfile(temp_path)

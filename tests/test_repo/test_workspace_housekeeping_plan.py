@@ -20,8 +20,6 @@ def _workspace(tmp_path: Path) -> tuple[Path, Path]:
     (workspace / "README.md").write_text("# DocWen 本地工作区\n", encoding="utf-8")
     for name in workspace_root._GOVERNANCE_DIRECTORIES:
         (workspace / name).mkdir()
-    (workspace / "build").mkdir()
-    (workspace / "tmp").mkdir()
     (engineering / "repos" / "docwen").mkdir(parents=True)
     return engineering, workspace
 
@@ -80,6 +78,16 @@ def test_retention_policy_cleans_success_immediately_and_bounds_failures() -> No
         age=timedelta(days=30),
         same_kind_rank=20,
     ) == {"eligible": False, "reason": "state_not_terminal"}
+    assert workspace_cleanup.retention_decision(
+        state="active",
+        age=recent,
+        same_kind_rank=0,
+    ) == {"eligible": False, "reason": "abandoned_retained"}
+    assert workspace_cleanup.retention_decision(
+        state="active",
+        age=timedelta(hours=72),
+        same_kind_rank=0,
+    ) == {"eligible": True, "reason": "abandoned_ttl_expired"}
 
 
 def test_default_plan_covers_managed_roots_and_only_reports_root_bypasses(tmp_path: Path) -> None:

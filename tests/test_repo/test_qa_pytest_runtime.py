@@ -189,6 +189,30 @@ def test_qa_retains_owned_runtime_on_failure(
     assert lease["state"] == "retained-failure"
 
 
+def test_qa_marks_owned_runtime_when_success_cleanup_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    governed_workspace = _governance_root(tmp_path / "engineering")
+    monkeypatch.setenv(qa.WORKSPACE_ROOT_ENV, str(governed_workspace))
+    monkeypatch.delenv(qa.PYTEST_RUNTIME_ROOT_ENV, raising=False)
+    monkeypatch.setattr(qa, "_scan_private_symbol_usage", lambda _repo: 0)
+    monkeypatch.setattr(qa, "_run", lambda _command, *, env=None: 0)
+    observed: list[Path] = []
+
+    def fail_cleanup(runtime_root: Path) -> None:
+        observed.append(runtime_root)
+        raise OSError("locked")
+
+    monkeypatch.setattr(qa, "_cleanup_owned_runtime", fail_cleanup)
+
+    assert qa.main(["--skip-ruff", "--skip-pyright"]) == 2
+    assert len(observed) == 1
+    lease = json.loads((observed[0] / qa.PYTEST_RUNTIME_LEASE).read_text(encoding="utf-8"))
+    assert lease["state"] == "retained-cleanup-failure"
+    assert lease["cleanupError"] == "OSError:locked"
+
+
 def test_qa_can_own_and_remove_a_new_explicit_short_root(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
