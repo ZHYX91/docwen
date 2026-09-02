@@ -10,7 +10,6 @@ import pytest
 pytestmark = pytest.mark.unit
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-REPORT_NAME = "rapidocr-engine-invocation-isolation-and-request-availability-2026-07-20.md"
 OCR_PATH = PROJECT_ROOT / "packages" / "core" / "src" / "docwen_core" / "text" / "ocr.py"
 OCR_TEST_PATH = PROJECT_ROOT / "packages" / "core" / "tests" / "test_ocr_request_isolation.py"
 ARCHITECTURE_TEST_PATH = PROJECT_ROOT / "tests" / "test_repo" / "test_ocr_architecture.py"

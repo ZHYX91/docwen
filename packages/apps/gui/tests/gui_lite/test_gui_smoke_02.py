@@ -1,15 +1,15 @@
-"""Focused tests split from test_post_closure_gui_smoke.py."""
+"""Current GUI smoke tests for selectors and editor dialogs."""
 
 from __future__ import annotations
 
 import pytest
 
-from ._post_closure_gui_smoke_support import (
+from ._gui_smoke_support import (
     Path,
 )
 
 pytestmark = pytest.mark.gui
-from ._post_closure_gui_smoke_support import (
+from ._gui_smoke_support import (
     window as window,
 )
 

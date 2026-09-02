@@ -11,10 +11,6 @@ from tools.validation.source_family import read_source_text
 pytestmark = [pytest.mark.contract, pytest.mark.golden]
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-REPORT_NAME = "fa09-complete-matrix-and-internal-goto-closure-2026-07-23.md"
-STAGE_CARD = "fa09-complete-matrix-and-internal-goto-stage-card-2026-07-23.md"
-SOURCE_SHA = "55192F12F6AFF1294EB9F40000F9455B5F905D5F661AA308EBFAFE8A31154D02"
-SCAN_SHA = "C1C8AAA7267E961404F18455742F0C87A08D3B9930363B05510C08369AA6688F"
 PROJECTION_SHA = "1ADD0084CA59296E764D900A091D880E139664B2226EE068EA3D050431CD2E0C"
 
 

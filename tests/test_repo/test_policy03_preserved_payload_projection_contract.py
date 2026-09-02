@@ -13,7 +13,6 @@ ROOT = Path(__file__).resolve().parents[2]
 GOLDEN = ROOT / "tests/fixtures/golden"
 FIXTURE = GOLDEN / "current_policy03_preserved_presentation_payloads_semantics.json"
 CONVERTER = ROOT / "packages/plugins/presentation/src/docwen_plugin_presentation/pptx_md/converter.py"
-EVALUATOR = ROOT / "tools/validation/evaluate_policy03_preserved_payloads.py"
 
 
 def _fixture() -> dict[str, object]:
@@ -86,4 +85,3 @@ def test_policy03_same_basename_and_implementation_shape_remain_closed() -> None
         "video/mp4",
     ):
         assert token in source
-    assert EVALUATOR.is_file()

@@ -9,8 +9,6 @@ import pytest
 
 pytestmark = pytest.mark.contract
 ROOT = Path(__file__).resolve().parents[2]
-REPORT_NAME = "policy01-presence-warning-implementation-2026-07-23.md"
-STAGE_CARD_NAME = "policy01-presence-warning-implementation-stage-card-2026-07-23.md"
 FIXTURE_NAME = "current_policy01_presence_warning_semantics.json"
 FIXTURE = ROOT / "tests/fixtures/golden" / FIXTURE_NAME
 

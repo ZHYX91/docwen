@@ -641,7 +641,6 @@
     "contract": "CONTRACT-2026-07-22-001 / FA-10",
     "probe_id": "FA-10-B1-N1-2026-07-22",
     "evidence_root": "D:/docwen-parity/vis163-merge-tables-fa10-11fbbf8-v1",
-    "probe_tool": "tools/validation/probe_merge_tables_parity.py",
     "frozen_inputs": {
       "B1_base": "922F528886CC952A58576335612996F3C469857AC58043CD9FBF45D93DF53CEC",
       "B1_collect": "9EA0C8B88A44226F51FB339174C0766EB172193C512A069B2357D10F69B252A9",

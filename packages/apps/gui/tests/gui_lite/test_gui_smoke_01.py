@@ -1,10 +1,10 @@
-"""Focused tests split from test_post_closure_gui_smoke.py."""
+"""Current GUI smoke tests for the main window and core dialogs."""
 
 from __future__ import annotations
 
 import pytest
 
-from ._post_closure_gui_smoke_support import (
+from ._gui_smoke_support import (
     Path,
     _save_screenshot,
     contextlib,
@@ -12,7 +12,7 @@ from ._post_closure_gui_smoke_support import (
 )
 
 pytestmark = pytest.mark.gui
-from ._post_closure_gui_smoke_support import (
+from ._gui_smoke_support import (
     window as window,
 )
 

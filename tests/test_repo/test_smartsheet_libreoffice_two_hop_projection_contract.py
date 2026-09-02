@@ -12,7 +12,6 @@ pytestmark = pytest.mark.unit
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_NAME = "old_system_smartsheet_rich_two_hop_matrix_semantics.json"
-REPORT_NAME = "smart-sheet-libreoffice-two-hop-matrix-2026-07-17.md"
 FIXTURE_PATH = PROJECT_ROOT / "tests" / "fixtures" / "golden" / FIXTURE_NAME
 PROJECTS = {"docwen-ref-tk", "docwen-ref-pyside6", "docwen-current"}
 

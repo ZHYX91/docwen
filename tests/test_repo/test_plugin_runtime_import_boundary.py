@@ -57,8 +57,7 @@ class TestPluginRuntimeImportBoundary:
     @pytest.mark.parametrize("src_root", PLUGIN_SRC_ROOTS)
     def test_plugin_src_no_runtime_imports(self, src_root: str) -> None:
         root = REPO_ROOT / src_root
-        if not root.is_dir():
-            pytest.skip(f"{src_root} not found")
+        assert root.is_dir(), f"required plugin source root is missing: {src_root}"
         bad = _collect_runtime_imports(root)
         assert not bad, f"{src_root} imports from docwen_runtime (forbidden):\n" + "\n".join(
             f"  line {ln}: {mod}" for ln, mod in bad

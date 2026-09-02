@@ -10,7 +10,6 @@ import pytest
 pytestmark = pytest.mark.unit
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-REPORT_NAME = "ruff-lint-format-ci-baseline-2026-07-21.md"
 
 
 def _read(relative_path: str) -> str:

@@ -11,12 +11,6 @@ pytestmark = [pytest.mark.contract, pytest.mark.golden]
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = ROOT / "tests" / "fixtures" / "golden" / "current_fa07_complete_matrix_semantics.json"
-REPORT_NAME = "fa07-complete-matrix-artifact-oracle-2026-07-24.md"
-STAGE_CARD = "fa07-complete-matrix-artifact-oracle-stage-card-2026-07-24.md"
-DECISION_REPORT = "fa07-ods-fidelity-boundary-acceptance-2026-07-26.md"
-DECISION_CARD = "fa07-ods-fidelity-boundary-acceptance-stage-card-2026-07-26.md"
-ACQUISITION_REPORT = "fa07-ofgem-real-financial-model-acquisition-2026-07-24.md"
-ACQUISITION_CARD = "fa07-ofgem-real-financial-model-acquisition-stage-card-2026-07-24.md"
 STATUS = "PASS_WITH_USER_ACCEPTED_BOUNDARY"
 
 

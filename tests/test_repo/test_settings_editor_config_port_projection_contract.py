@@ -11,7 +11,6 @@ from tools.validation.source_family import read_source_text
 pytestmark = pytest.mark.unit
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-REPORT_NAME = "settings-editor-config-port-composition-2026-07-19.md"
 
 
 def _read(relative_path: str) -> str:

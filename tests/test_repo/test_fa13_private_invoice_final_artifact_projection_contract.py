@@ -9,10 +9,6 @@ import pytest
 pytestmark = pytest.mark.unit
 
 ROOT = Path(__file__).resolve().parents[2]
-REPORT_NAME = "fa13-private-invoice-final-artifact-parity-2026-07-26.md"
-CARD_NAME = "fa13-private-invoice-corpus-stage-card-2026-07-26.md"
-ADDENDUM_NAME = "fa13-private-invoice-execution-addendum-2026-07-26.md"
-STATUS = "FIXED_AND_VERIFIED_WITH_USER_ACCEPTED_DERIVED_IMAGE_ACCURACY_BOUNDARY"
 
 
 def _read(path: Path) -> str:

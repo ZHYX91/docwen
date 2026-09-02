@@ -10,9 +10,6 @@ from tools.validation.source_family import read_source_text
 pytestmark = [pytest.mark.contract, pytest.mark.golden]
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-REPORT_NAME = "fa06-best-effort-loss-warning-implementation-2026-07-23.md"
-CARD_NAME = "fa06-best-effort-loss-warning-stage-card-2026-07-23.md"
-STATUS = "BEST_EFFORT_WARNING_IMPLEMENTED_MATRIX_AND_ARTIFACT_ORACLE_PENDING"
 CODE = "DOCX-SMARTDOC-BEST-EFFORT-LOSS"
 
 

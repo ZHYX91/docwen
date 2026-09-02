@@ -14,7 +14,6 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_PATH = (
     PROJECT_ROOT / "tests" / "fixtures" / "golden" / "old_system_markdown_multilingual_physical_semantics.json"
 )
-REPORT_NAME = "markdown-output-multilingual-physical-matrix-2026-07-16.md"
 
 
 def _read(path: Path) -> str:

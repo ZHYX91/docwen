@@ -9,8 +9,6 @@ import pytest
 pytestmark = pytest.mark.contract
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-REPORT_NAME = "fa05-real-issued-gongwen-n1-stage-card-2026-07-22.md"
-CLOSURE_REPORT_NAME = "fa05-visible-schema-and-reference-defect-closure-2026-07-23.md"
 
 
 def _read(path: Path) -> str:

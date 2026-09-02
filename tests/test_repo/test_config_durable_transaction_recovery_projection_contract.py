@@ -9,7 +9,6 @@ import pytest
 pytestmark = pytest.mark.unit
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-REPORT_NAME = "config-durable-transaction-recovery-2026-07-22.md"
 
 
 def _read(relative_path: str) -> str:

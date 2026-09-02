@@ -9,8 +9,6 @@ import pytest
 
 pytestmark = [pytest.mark.contract, pytest.mark.golden]
 ROOT = Path(__file__).resolve().parents[2]
-REPORT_NAME = "fa06-complete-matrix-artifact-oracle-2026-07-24.md"
-CARD_NAME = "fa06-complete-matrix-artifact-oracle-stage-card-2026-07-24.md"
 FIXTURE_NAME = "current_fa06_best_effort_complete_matrix_semantics.json"
 FIXTURE = ROOT / "tests/fixtures/golden" / FIXTURE_NAME
 STATUS = "PASS_WITH_USER_ACCEPTED_BOUNDARY"

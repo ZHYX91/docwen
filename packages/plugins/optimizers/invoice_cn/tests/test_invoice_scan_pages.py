@@ -187,25 +187,16 @@ def _make_scan_pdf(path: Path) -> None:
     doc = fitz.open()
     page = doc.new_page(width=595, height=842)
 
-    # Create a valid small PNG using Pillow (or use a raw pixmap fallback)
-    try:
-        import io
+    import io
 
-        from PIL import Image
+    from PIL import Image
 
-        buf = io.BytesIO()
-        img = Image.new("RGB", (2, 2), color=(255, 255, 255))
-        img.save(buf, format="PNG")
-        png_bytes = buf.getvalue()
-        img_rect = fitz.Rect(100, 100, 400, 300)
-        page.insert_image(img_rect, stream=png_bytes)
-    except ImportError:
-        # Fallback: use a raw pixmap (this always works with PyMuPDF)
-        # Create a 2x2 white pixmap
-        pm = fitz.Pixmap(fitz.csRGB, 2, 2, False)
-        pm.clear_with(255)
-        img_rect = fitz.Rect(100, 100, 400, 300)
-        page.insert_image(img_rect, pixmap=pm)
+    buf = io.BytesIO()
+    img = Image.new("RGB", (2, 2), color=(255, 255, 255))
+    img.save(buf, format="PNG")
+    png_bytes = buf.getvalue()
+    img_rect = fitz.Rect(100, 100, 400, 300)
+    page.insert_image(img_rect, stream=png_bytes)
 
     doc.save(str(path))
     doc.close()
@@ -313,14 +304,11 @@ class TestRenderPdfPageToPng:
 
         render_pdf_page_to_png(file_path=str(pdf_path), page_index=0, png_path=png_path)
 
-        try:
-            from PIL import Image
+        from PIL import Image
 
-            img = Image.open(png_path)
-            assert img.size[0] > 0
-            assert img.size[1] > 0
-        except ImportError:
-            pytest.skip("Pillow not available")
+        img = Image.open(png_path)
+        assert img.size[0] > 0
+        assert img.size[1] > 0
 
     def test_renders_scan_pdf_page(self, tmp_path: Path) -> None:
         """Rendering a scan-like PDF page (no text, image content) should work."""
@@ -368,15 +356,12 @@ class TestRenderPdfPageToPng:
 
         render_pdf_page_to_png(file_path=str(pdf_path), page_index=0, png_path=png_path)
 
-        try:
-            from PIL import Image
+        from PIL import Image
 
-            img = Image.open(png_path)
-            # A4 at 300 DPI → ~2480 x 3508 pixels
-            assert img.size[0] >= 2000, f"Expected >= 2000px width at 300 DPI, got {img.size[0]}"
-            assert img.size[1] >= 3000, f"Expected >= 3000px height at 300 DPI, got {img.size[1]}"
-        except ImportError:
-            pytest.skip("Pillow not available")
+        img = Image.open(png_path)
+        # A4 at 300 DPI → ~2480 x 3508 pixels
+        assert img.size[0] >= 2000, f"Expected >= 2000px width at 300 DPI, got {img.size[0]}"
+        assert img.size[1] >= 3000, f"Expected >= 3000px height at 300 DPI, got {img.size[1]}"
 
 
 # ── Integration tests: scan-page → converter ───────────────────────────

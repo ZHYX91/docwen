@@ -10,7 +10,6 @@ pytestmark = pytest.mark.contract
 ROOT = Path(__file__).resolve().parents[2]
 TASK_MANAGER = ROOT / "packages/runtime/src/docwen_runtime/engine/task_manager.py"
 RUNTIME_TESTS = ROOT / "packages/runtime/tests/test_fake_closed_loop_*.py"
-REPORT_NAME = "application-preconversion-failure-intermediate-preservation-2026-07-21.md"
 
 
 def test_failure_intermediate_runtime_contract_is_single_shot_and_cancellation_safe() -> None:

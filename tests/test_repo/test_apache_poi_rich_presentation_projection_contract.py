@@ -13,7 +13,6 @@ pytestmark = pytest.mark.contract
 ROOT = Path(__file__).resolve().parents[2]
 GOLDEN = ROOT / "tests" / "fixtures" / "golden"
 FIXTURE = GOLDEN / "old_system_pptx_to_markdown_semantics.json"
-REPORT_NAME = "apache-poi-rich-presentation-physical-matrix-2026-07-17.md"
 CONVERTER = ROOT / "packages/plugins/presentation/src/docwen_plugin_presentation/pptx_md/converter.py"
 PRESENTATION_TEST = ROOT / "packages/plugins/presentation/tests/test_presentation_to_md_*.py"
 

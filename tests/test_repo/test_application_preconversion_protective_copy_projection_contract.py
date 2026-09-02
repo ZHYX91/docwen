@@ -13,7 +13,6 @@ PRECONVERTER = ROOT / "packages/application/src/docwen_application/preconversion
 CONTROLLER_TESTS = ROOT / "packages/application/tests/test_controller_*.py"
 PRECONVERTER_TESTS = ROOT / "packages/application/tests/test_pre_converter.py"
 RUNTIME_TESTS = ROOT / "packages/runtime/tests/test_fake_closed_loop_*.py"
-REPORT_NAME = "application-preconversion-protective-source-copy-2026-07-21.md"
 
 
 def test_preconverter_isolates_the_external_bridge_behind_a_canonical_copy() -> None:

@@ -12,7 +12,6 @@ pytestmark = pytest.mark.contract
 ROOT = Path(__file__).resolve().parents[2]
 GOLDEN = ROOT / "tests" / "fixtures" / "golden"
 FIXTURE = GOLDEN / "old_system_apache_poi_review_field_header_semantics.json"
-REPORT_NAME = "apache-poi-review-header-physical-matrix-2026-07-17.md"
 
 
 def _fixture() -> dict[str, object]:

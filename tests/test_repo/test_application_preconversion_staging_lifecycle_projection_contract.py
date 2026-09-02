@@ -12,7 +12,6 @@ CONTROLLER = ROOT / "packages/application/src/docwen_application/controller.py"
 PRECONVERTER = ROOT / "packages/application/src/docwen_application/preconversion/pre_converter.py"
 CONTROLLER_TESTS = ROOT / "packages/application/tests/test_controller_*.py"
 RUNTIME_TESTS = ROOT / "packages/runtime/tests/test_fake_closed_loop_*.py"
-REPORT_NAME = "application-preconversion-staging-lifecycle-output-ownership-2026-07-21.md"
 
 
 def test_preconversion_staging_has_owner_isolation_and_original_index_alignment() -> None:

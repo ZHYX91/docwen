@@ -30,7 +30,7 @@ def _write_commented_docx(path: Path) -> None:
         archive.writestr("word/comments.xml", comments_xml.encode())
 
 
-def test_all_maintained_anchor_tools_bind_the_canonical_proofread_module() -> None:
+def test_maintained_anchor_tools_bind_the_canonical_proofread_module() -> None:
     current_only_paths = (
         _REPO_ROOT / "tools" / "docx_spell_anchor_report.py",
         _REPO_ROOT / "tools" / "docx_spell_anchor_matrix_check.py",
@@ -40,12 +40,6 @@ def test_all_maintained_anchor_tools_bind_the_canonical_proofread_module() -> No
         source = path.read_text(encoding="utf-8")
         assert "docwen_plugin_proofread.anchor_report" in source
         assert "docwen.docx_spell" not in source
-
-    parity_probe = (_REPO_ROOT / "tools" / "validation" / "probe_proofread_numbering_parity.py").read_text(
-        encoding="utf-8"
-    )
-    augment_anchor_evidence = parity_probe[parity_probe.index("def _augment_anchor_evidence") :]
-    assert "from docwen_plugin_proofread.anchor_report import" in augment_anchor_evidence
 
 
 @pytest.mark.parametrize(

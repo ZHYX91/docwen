@@ -17,7 +17,6 @@ OUTCOME_TESTS = ROOT / "packages/runtime/tests/test_task_manager_outcome_honesty
 NUMBERING_TESTS = ROOT / "packages/runtime/tests/test_request_scoped_numbering.py"
 GUI_TESTS = ROOT / "packages/apps/gui/tests/test_main_window_projection_binding_*.py"
 BATCH_LIST_TESTS = ROOT / "packages/apps/gui/tests/test_batch_list_widget_*.py"
-REPORT_NAME = "runtime-finalizer-outcome-terminal-honesty-2026-07-21.md"
 
 
 def test_runtime_finalizer_and_terminal_paths_fail_closed() -> None:

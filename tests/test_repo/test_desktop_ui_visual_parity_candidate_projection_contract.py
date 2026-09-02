@@ -9,7 +9,6 @@ import pytest
 pytestmark = pytest.mark.unit
 
 ROOT = Path(__file__).resolve().parents[2]
-CARD_NAME = "desktop-ui-visual-parity-stage-card-2026-07-27.md"
 
 
 def _read(relative_path: str) -> str:

@@ -10,11 +10,6 @@ from tools.validation.source_family import read_source_text
 pytestmark = pytest.mark.contract
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-FIXTURE = PROJECT_ROOT / "tests" / "fixtures" / "golden" / "old_system_docx_to_markdown_rich_semantics.json"
-REPORT_NAME = "docx-real-tracked-business-final-artifact-parity-2026-07-22.md"
-COMPLETE_PROJECTION_REPORT_NAME = "docx-real-tracked-business-complete-source-projection-2026-07-23.md"
-REFERENCE_DISPOSITION_REPORT_NAME = "fa02-legacy-reference-defect-disposition-2026-07-23.md"
-STATUS = "CURRENT_RESOURCE_FIX_VERIFIED_STRICT_ORACLE_RED_UNACCEPTED"
 
 
 def _read(path: Path) -> str:

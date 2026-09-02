@@ -118,13 +118,6 @@ _RE_MONKEY_PATCH_DOCSTRING = re.compile(
 )
 
 _APPROVED_RUNTIME_PATCH_FILES = frozenset({"packages/core/src/docwen_core/ofd.py"})
-_APPROVED_LEGACY_PARITY_FILES = frozenset(
-    {
-        "tools/golden_parity_runner.py",
-        "tools/validation/probe_merge_tables_parity.py",
-    }
-)
-
 _SHIMMY_NAMES = ("shim", "wrapper", "compat", "forward", "alias")
 _SHIMMY_PATTERN = re.compile(
     r"(?:^|[\\/])(?:" + "|".join(_SHIMMY_NAMES) + r")(?:[_.]|$)",
@@ -201,10 +194,7 @@ def _scan_old_project_path(content: str, file_path: Path, repo_root: Path) -> li
 def _scan_deprecated_deep_import(content: str, file_path: Path, repo_root: Path) -> list[str]:
     """Scan for deprecated deep imports from docwen.converter.*."""
     violations: list[str] = []
-    rel = file_path.relative_to(repo_root)
-    rel_str = rel.as_posix()
-    if rel_str in _APPROVED_LEGACY_PARITY_FILES:
-        return []
+    rel_str = file_path.relative_to(repo_root).as_posix()
     for line_no, line in enumerate(content.splitlines(), 1):
         if _RE_DEEP_IMPORT_DEPRECATED.search(line):
             # Skip comments and docstrings that might reference these

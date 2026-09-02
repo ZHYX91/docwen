@@ -12,7 +12,6 @@ pytestmark = pytest.mark.unit
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_NAME = "old_system_smartsheet_csv_binary_matrix_semantics.json"
-REPORT_NAME = "smart-sheet-csv-binary-matrix-2026-07-14.md"
 FIXTURE_PATH = PROJECT_ROOT / "tests" / "fixtures" / "golden" / FIXTURE_NAME
 
 EXPECTED_ROUTES = {"csv->xls", "csv->ods", "xls->csv", "ods->csv", "et->csv"}

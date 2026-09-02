@@ -10,7 +10,6 @@ from tools.validation.source_family import read_source_text
 pytestmark = pytest.mark.unit
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-REPORT_NAME = "settings-general-link-config-roundtrip-2026-07-18.md"
 
 
 def _read(relative_path: str) -> str:

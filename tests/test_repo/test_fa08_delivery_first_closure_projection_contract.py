@@ -1,4 +1,4 @@
-"""Fail-closed evidence guards for VIS-201 / selected FA-08 closure."""
+"""Current source and golden-oracle guards for the selected FA-08 policy."""
 
 from __future__ import annotations
 
@@ -12,8 +12,6 @@ pytestmark = [pytest.mark.contract, pytest.mark.golden]
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = PROJECT_ROOT / "tests" / "fixtures" / "golden" / "old_system_image_format_semantics.json"
-REPORT_NAME = "fa08-delivery-first-source-fidelity-implementation-2026-07-23.md"
-STAGE_CARD = "fa08-delivery-first-source-fidelity-stage-card-2026-07-23.md"
 STATUS = "FIXED_AND_VERIFIED_WITH_USER_ACCEPTED_MPO_AUXILIARY_PAGE_BOUNDARY"
 WARNING_CODE = "IMG2PDF-MPO-AUXILIARY-FRAMES"
 
@@ -48,19 +46,9 @@ def test_selected_policy_is_implemented_by_the_owned_image_routes() -> None:
 
 
 def test_post_choice_oracle_and_fixture_lock_the_exact_boundary() -> None:
-    evaluator = _read("tools/validation/evaluate_fa08_delivery_first.py")
     fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))
     closure = fixture["fa08_delivery_first_closure_addendum"]
     historical = fixture["fa08_final_artifact_contract_addendum"]
-
-    for token in (
-        'EXPECTED_STAGE_CONTRACT_SHA256 = "c1299d3a4e76007ef3ad21efecf8b9ad1773cb55562ebdfee39c652bfd7f8909"',
-        "SUPPORTED_EXIF = {271, 272, 274, 305, 306}",
-        "output_icc == source_icc",
-        "N1_ACCEPTED_AUXILIARY_SCORE = 0.79880938",
-        "affected_slots_passed",
-    ):
-        assert token in evaluator
 
     assert historical["status"] == "pending_user_decision_shared_source_fidelity"
     assert historical["pass"] is False

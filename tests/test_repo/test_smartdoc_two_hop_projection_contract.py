@@ -12,7 +12,6 @@ pytestmark = pytest.mark.contract
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_NAME = "old_system_smartdoc_odt_rtf_two_hop_semantics.json"
 FIXTURE_PATH = PROJECT_ROOT / "tests" / "fixtures" / "golden" / FIXTURE_NAME
-REPORT_NAME = "smartdoc-odt-rtf-two-hop-artifact-2026-07-14.md"
 
 
 def _fixture() -> dict[str, object]:

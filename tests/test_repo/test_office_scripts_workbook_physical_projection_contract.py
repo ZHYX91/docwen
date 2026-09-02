@@ -12,7 +12,6 @@ pytestmark = pytest.mark.contract
 ROOT = Path(__file__).resolve().parents[2]
 GOLDEN = ROOT / "tests" / "fixtures" / "golden"
 FIXTURE = GOLDEN / "old_system_official_office_scripts_workbook_batch_semantics.json"
-REPORT_NAME = "office-scripts-workbook-xls-ods-physical-matrix-2026-07-17.md"
 
 
 def _fixture() -> dict[str, object]:

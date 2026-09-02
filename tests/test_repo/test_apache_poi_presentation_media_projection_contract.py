@@ -12,7 +12,6 @@ pytestmark = pytest.mark.contract
 ROOT = Path(__file__).resolve().parents[2]
 GOLDEN = ROOT / "tests" / "fixtures" / "golden"
 FIXTURE = GOLDEN / "old_system_pptx_to_markdown_semantics.json"
-REPORT_NAME = "apache-poi-presentation-chart-audio-video-matrix-2026-07-17.md"
 
 
 def _addendum() -> dict[str, object]:

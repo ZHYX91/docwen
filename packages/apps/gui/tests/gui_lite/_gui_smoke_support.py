@@ -1,4 +1,4 @@
-"""Post-closure GUI smoke test — validates critical GUI widgets and interactions.
+"""Current GUI smoke-test support for critical widgets and interactions.
 
 Uses pytest-qt (qtbot) against the real MainWindow, dialogs, and components.
 Marked as ``pytest.mark.gui`` so tests can be excluded from fast CI runs.

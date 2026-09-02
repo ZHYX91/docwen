@@ -13,7 +13,6 @@ ROOT = Path(__file__).resolve().parents[2]
 GOLDEN = ROOT / "tests" / "fixtures" / "golden"
 FIELD_FIXTURE = GOLDEN / "old_system_apache_poi_review_field_header_semantics.json"
 ATTACHMENT_FIXTURE = GOLDEN / "old_system_apache_poi_attachment_revision_semantics.json"
-REPORT_NAME = "apache-poi-smartdoc-physical-matrix-2026-07-17.md"
 
 
 def _load(path: Path) -> dict[str, object]:

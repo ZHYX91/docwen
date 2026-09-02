@@ -13,7 +13,6 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_PATH = (
     PROJECT_ROOT / "tests" / "fixtures" / "golden" / "old_system_smartdoc_rich_outbound_fidelity_semantics.json"
 )
-REPORT_NAME = "smartdoc-rich-outbound-fidelity-2026-07-14.md"
 
 
 def _fixture() -> dict[str, object]:

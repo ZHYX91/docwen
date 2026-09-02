@@ -13,7 +13,6 @@ pytestmark = pytest.mark.unit
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_PATH = PROJECT_ROOT / "tests" / "fixtures" / "golden" / "old_system_libreoffice_fallback_matrix_semantics.json"
-REPORT_NAME = "libreoffice-fallback-real-matrix-2026-07-17.md"
 
 
 def _read(path: Path) -> str:

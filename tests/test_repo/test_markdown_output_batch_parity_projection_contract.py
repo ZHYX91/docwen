@@ -11,7 +11,6 @@ pytestmark = pytest.mark.unit
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_NAME = "old_system_markdown_output_batch_semantics.json"
-REPORT_NAME = "markdown-output-comprehensive-batch-parity-2026-07-16.md"
 
 
 def _read(path: Path) -> str:

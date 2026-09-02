@@ -9,7 +9,6 @@ import pytest
 pytestmark = pytest.mark.unit
 
 ROOT = Path(__file__).resolve().parents[2]
-CARD_NAME = "reachable-desktop-ui-polish-stage-card-2026-07-27.md"
 LOCALES = (
     "de_DE",
     "en_US",

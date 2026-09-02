@@ -9,7 +9,6 @@ import pytest
 pytestmark = pytest.mark.contract
 
 ROOT = Path(__file__).resolve().parents[2]
-REPORT_NAME = "fresh-package-held-notification-boundary-2026-07-17.md"
 
 
 def test_held_notification_probe_is_explicit_and_default_safe() -> None:

@@ -12,7 +12,6 @@ pytestmark = pytest.mark.unit
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_NAME = "old_system_smartdoc_remaining_route_matrix_semantics.json"
-REPORT_NAME = "smartdoc-remaining-route-matrix-2026-07-14.md"
 FIXTURE_PATH = PROJECT_ROOT / "tests" / "fixtures" / "golden" / FIXTURE_NAME
 SUPPORTED = {"doc->odt", "doc->rtf", "odt->doc", "rtf->doc", "wps->doc", "wps->odt", "wps->rtf"}
 ENHANCEMENTS = {"doc->wps", "odt->wps", "rtf->wps"}

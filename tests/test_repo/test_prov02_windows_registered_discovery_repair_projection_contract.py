@@ -10,9 +10,6 @@ pytestmark = [pytest.mark.contract, pytest.mark.golden]
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 BRIDGE = PROJECT_ROOT / "packages" / "core" / "src" / "docwen_core" / "office_bridge.py"
-REPORT_NAME = "prov02-windows-registered-discovery-repair-2026-07-26.md"
-CARD_NAME = "prov02-windows-registered-discovery-repair-stage-card-2026-07-26.md"
-STATUS = "REGISTERED_INSTALL_DISCOVERY_FIXED_ROUTE_ACCEPTANCE_PENDING"
 
 
 def _read(path: Path) -> str:

@@ -95,8 +95,7 @@ class TestAppRuntimeImportBoundary:
     def test_cli_only_allowed_runtime_imports(self) -> None:
         """CLI runtime imports must be from the allowed set."""
         cli_root = REPO_ROOT / "packages/apps/cli/src/docwen_cli"
-        if not cli_root.is_dir():
-            pytest.skip("CLI source not found")
+        assert cli_root.is_dir(), f"required CLI source root is missing: {cli_root}"
         bad: list[str] = []
         for lineno, module in _collect_runtime_imports(cli_root):
             top = ".".join(module.split(".")[:2])
@@ -112,8 +111,7 @@ class TestAppRuntimeImportBoundary:
     def test_gui_only_allowed_runtime_imports(self) -> None:
         """GUI runtime imports must be from the allowed set."""
         gui_root = REPO_ROOT / "packages/apps/gui/src/docwen_gui"
-        if not gui_root.is_dir():
-            pytest.skip("GUI source not found")
+        assert gui_root.is_dir(), f"required GUI source root is missing: {gui_root}"
         bad: list[str] = []
         for lineno, module in _collect_runtime_imports(gui_root):
             top = ".".join(module.split(".")[:2])
