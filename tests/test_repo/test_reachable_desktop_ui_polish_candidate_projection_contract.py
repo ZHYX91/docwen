@@ -33,6 +33,7 @@ def test_reachable_ui_candidate_keeps_geometry_and_surface_contracts() -> None:
     policy = _read("packages/apps/gui/src/docwen_gui/window_behavior.py")
     interaction = _read("packages/apps/gui/src/docwen_gui/view_models/interaction.py")
     action = _read("packages/apps/gui/src/docwen_gui/widgets/action_area.py")
+    panel_card = _read("packages/apps/gui/src/docwen_gui/widgets/panel_card.py")
     conversion = _read("packages/apps/gui/src/docwen_gui/widgets/conversion_panel.py")
     settings = _read("packages/apps/gui/src/docwen_gui/widgets/settings/base_tab.py")
     batch_dialogs = _read("packages/apps/gui/src/docwen_gui/widgets/batch_dialogs.py")
@@ -53,7 +54,9 @@ def test_reachable_ui_candidate_keeps_geometry_and_surface_contracts() -> None:
 
     # Entering batch mode is itself left-panel demand, including an empty list.
     assert "left_visible = context.mode == UiMode.BATCH" in interaction
-    assert 'setObjectName("actionPanelTitle")' in action
+    assert "content_page = PanelCard(parent=self)" in action
+    for shared_primitive in ("PanelCard", "SectionHeader", "FormRow", "ChoiceGroup", "ActionFooter"):
+        assert f"class {shared_primitive}" in panel_card
     assert 'setObjectName("conversionPanelScrollArea")' in conversion
     assert "def _on_vm_state_changed(" in conversion
     assert 'setObjectName("settingsTabTitle")' in settings

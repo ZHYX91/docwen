@@ -36,21 +36,19 @@ def vm() -> Generator[InfoAreaViewModel, None, None]:
 
 
 class TestHistoryDedup:
-    def test_suppresses_rapid_duplicates(self, vm: InfoAreaViewModel) -> None:
-        """Identical messages within 250ms are deduplicated."""
-        # All calls at the same monotonic time -> only first passes
+    def test_counts_consecutive_duplicates(self, vm: InfoAreaViewModel) -> None:
+        """Identical consecutive events remain visible as a repeat count."""
         vm.add_message("same", "info")
         vm.add_message("same", "info")
         vm.add_message("same", "info")
         assert vm.message_count == 1
+        assert vm.history_rows[0].repeat_count == 3
 
-    def test_allows_same_message_after_dedup_window(self, monkeypatch, vm: InfoAreaViewModel) -> None:
-        """Same message after 250ms is allowed."""
-        times = iter([1.0, 1.3])  # 300ms gap
-        monkeypatch.setattr(_time_module, "monotonic", lambda: next(times))
+    def test_merges_consecutive_identical_messages_without_a_time_window(self, vm: InfoAreaViewModel) -> None:
         vm.add_message("same", "info")
         vm.add_message("same", "info")
-        assert vm.message_count == 2
+        assert vm.message_count == 1
+        assert vm.history_rows[0].repeat_count == 2
 
     def test_different_signatures_not_deduped(self, vm: InfoAreaViewModel) -> None:
         """Different messages or types always pass."""
@@ -373,15 +371,12 @@ class TestTaskSummary:
 
 
 class TestGuideActions:
-    def test_success_shows_open_output_and_add_more(self, vm: InfoAreaViewModel) -> None:
+    def test_success_shows_only_useful_output_action(self, vm: InfoAreaViewModel) -> None:
         actions = InfoAreaViewModel.compute_guide_actions(
             "success", output_dir="/tmp/out", failed_details_path="", retry_available=True
         )
         keys = [a["action_key"] for a in actions]
-        assert "open_output_dir" in keys
-        assert "add_more_files" in keys
-        assert "view_failed_details" not in keys
-        assert "retry_failed" not in keys
+        assert keys == ["open_output_dir"]
 
     def test_failed_shows_all_three(self, vm: InfoAreaViewModel) -> None:
         actions = InfoAreaViewModel.compute_guide_actions(
@@ -391,7 +386,6 @@ class TestGuideActions:
         assert "open_output_dir" in keys
         assert "view_failed_details" in keys
         assert "retry_failed" in keys
-        assert "add_more_files" in keys
 
     def test_partial_shows_all_three(self, vm: InfoAreaViewModel) -> None:
         actions = InfoAreaViewModel.compute_guide_actions(
@@ -401,14 +395,13 @@ class TestGuideActions:
         assert "open_output_dir" in keys
         assert "view_failed_details" in keys
         assert "retry_failed" in keys
-        assert "add_more_files" in keys
 
-    def test_cancelled_only_add_more(self, vm: InfoAreaViewModel) -> None:
+    def test_cancelled_has_no_redundant_guide_action(self, vm: InfoAreaViewModel) -> None:
         actions = InfoAreaViewModel.compute_guide_actions(
             "cancelled", output_dir="/tmp/out", failed_details_path="", retry_available=True
         )
         keys = [a["action_key"] for a in actions]
-        assert keys == ["add_more_files"]
+        assert keys == []
 
     def test_failed_without_retry_excludes_retry(self, vm: InfoAreaViewModel) -> None:
         actions = InfoAreaViewModel.compute_guide_actions(
@@ -418,12 +411,10 @@ class TestGuideActions:
         assert "retry_failed" not in keys
         assert "open_output_dir" in keys
         assert "view_failed_details" in keys
-        assert "add_more_files" in keys
 
     def test_guide_set_from_task_summary(self, vm: InfoAreaViewModel) -> None:
         guide_actions = [
             {"action_key": "open_output_dir", "target_path": "/tmp/out"},
-            {"action_key": "add_more_files", "target_path": ""},
         ]
         vm.set_task_summary(
             operation_id="op-2000",
@@ -436,14 +427,14 @@ class TestGuideActions:
             guide_actions=guide_actions,
         )
         assert vm.guide_visible
-        assert len(vm.guide_actions) == 2
+        assert len(vm.guide_actions) == 1
 
     def test_guide_not_visible_for_active_task(self, vm: InfoAreaViewModel) -> None:
         vm.set_task_summary(
             operation_id="op-1",
             state="active",
             tone="info",
-            guide_actions=[{"action_key": "add_more_files", "target_path": ""}],
+            guide_actions=[{"action_key": "open_output_dir", "target_path": "/tmp/out"}],
         )
         assert not vm.guide_visible
 
@@ -589,7 +580,7 @@ class TestClearAll:
             current_file="old.docx",
             total_count=1,
             state="active",
-            guide_actions=[{"action_key": "add_more_files", "target_path": ""}],
+            guide_actions=[{"action_key": "open_output_dir", "target_path": "/tmp/out"}],
         )
         vm.set_transient_message(progress_key, "Step 1", "info", ttl_ms=0, source="session-reset")
         vm.set_transient_message(progress_key, "Step 2", "info", ttl_ms=0, source="session-reset")

@@ -24,10 +24,6 @@ def build_info_area_stylesheet(theme_name: str, font_size_preset: str | None = N
     action_shell_border = _hex_to_rgba(COLOR_SECONDARY, 116 if dark_theme else 72)
     action_shell_background = _hex_to_rgba("#020617" if dark_theme else "#FFFFFF", 210 if dark_theme else 250)
     info_accent = _hex_to_rgba(COLOR_INFO, 192 if dark_theme else 148)
-    history_info_background = _hex_to_rgba(COLOR_INFO, 18 if dark_theme else 10)
-    history_success_background = _hex_to_rgba(COLOR_SUCCESS, 18 if dark_theme else 10)
-    history_warning_background = _hex_to_rgba(COLOR_WARNING, 18 if dark_theme else 10)
-    history_danger_background = _hex_to_rgba(COLOR_DANGER, 18 if dark_theme else 10)
     return "\n".join(
         [
             "/* docwen-status-bar-foundation */",
@@ -63,6 +59,14 @@ def build_info_area_stylesheet(theme_name: str, font_size_preset: str | None = N
             "    background: transparent;",
             f"    font-size: {Typography.qss(Typography.BODY_SIZE, font_size_preset)};",
             "    font-weight: 600;",
+            "}",
+            "QLabel#infoHistoryRepeatBadge {",
+            f"    color: {meta_text};",
+            f"    border: {Border.THIN}px solid {divider_color};",
+            f"    border-radius: {Radius.SMALL}px;",
+            "    background: transparent;",
+            "    padding: 1px 4px;",
+            f"    font-size: {Typography.qss(Typography.CAPTION_SIZE, font_size_preset)};",
             "}",
             "QLabel#infoStatusSummary {",
             f"    color: {muted_text};",
@@ -100,18 +104,23 @@ def build_info_area_stylesheet(theme_name: str, font_size_preset: str | None = N
             "}",
             "QWidget#infoHistoryRow {",
             "    background: transparent;",
+            f"    border-bottom: {Border.THIN}px solid {divider_color};",
             "}",
-            'QWidget#infoHistoryRow[infoStatusTone="info"] {',
-            f"    background: {history_info_background};",
+            "QFrame#infoHistoryToneMarker {",
+            f"    border-radius: {Radius.SMALL}px;",
+            "    background: palette(mid);",
             "}",
-            'QWidget#infoHistoryRow[infoStatusTone="success"] {',
-            f"    background: {history_success_background};",
+            'QFrame#infoHistoryToneMarker[infoStatusTone="info"] {',
+            f"    background: {COLOR_INFO};",
             "}",
-            'QWidget#infoHistoryRow[infoStatusTone="warning"] {',
-            f"    background: {history_warning_background};",
+            'QFrame#infoHistoryToneMarker[infoStatusTone="success"] {',
+            f"    background: {COLOR_SUCCESS};",
             "}",
-            'QWidget#infoHistoryRow[infoStatusTone="danger"] {',
-            f"    background: {history_danger_background};",
+            'QFrame#infoHistoryToneMarker[infoStatusTone="warning"] {',
+            f"    background: {COLOR_WARNING};",
+            "}",
+            'QFrame#infoHistoryToneMarker[infoStatusTone="danger"] {',
+            f"    background: {COLOR_DANGER};",
             "}",
             "QWidget#infoHistoryMeta,",
             "QLabel#infoHistoryText,",

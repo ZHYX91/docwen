@@ -448,8 +448,8 @@ def test_chinese_status_progress_and_failure_messages_use_full_width_colon() -> 
             "zh_TW": "目前檔案：{name}",
         },
         "info_area.task_progress_detail": {
-            "zh_CN": "已完成 {completed}/{total}，失败 {failed}，任务 ID：{operation_id}",
-            "zh_TW": "已完成 {completed}/{total}，失敗 {failed}，任務 ID：{operation_id}",
+            "zh_CN": "已完成 {completed}/{total}，失败 {failed}",
+            "zh_TW": "已完成 {completed}/{total}，失敗 {failed}",
         },
         "components.info_area.task_completion_notification_failed": {
             "zh_CN": "任务已结束：共 {total} 个文件，失败 {failed} 个。",
@@ -503,8 +503,8 @@ def test_chinese_batch_progress_messages_use_full_width_colon() -> None:
             "zh_TW": "批次處理結束：成功 {success} 個，失敗 {failed} 個，略過 {skipped} 個，取消 {cancelled} 個",
         },
         "info_area.task_progress_detail": {
-            "zh_CN": "已完成 {completed}/{total}，失败 {failed}，任务 ID：{operation_id}",
-            "zh_TW": "已完成 {completed}/{total}，失敗 {failed}，任務 ID：{operation_id}",
+            "zh_CN": "已完成 {completed}/{total}，失败 {failed}",
+            "zh_TW": "已完成 {completed}/{total}，失敗 {failed}",
         },
     }
 

@@ -10,26 +10,26 @@ Supports 4 category layouts:
   - Layout: PDF conversion + DOCX/DOC/ODT/RTF export + PNG/JPG/TIF render + PDF merge/split
 
 Widget structure:
-  - 3 QGroupBox: conversion, save-as, extra (initially hidden)
+  - 3 neutral PanelCard sections: conversion, layout output, extra
   - Each group has one concise description plus its controls
 """
 
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
+from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import cast as _cast
 
-from PySide6.QtCore import QEvent, QRectF, QSignalBlocker, Qt, Signal
+from PySide6.QtCore import QEvent, QRectF, QSignalBlocker, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (
-    QBoxLayout,
     QButtonGroup,
     QCheckBox,
     QComboBox,
     QFrame,
     QGridLayout,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -41,7 +41,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from docwen_gui.format_presentation import FormatChoice, presentation_for
 from docwen_gui.i18n import t as _t
+from docwen_gui.view_models.conversion_panel_vm import BUTTON_COLORS
+
+from .panel_card import ActionFooter, ChoiceGroup, FormatSelector, FormRow, InlineNotice, PanelCard
 
 if TYPE_CHECKING:
     from ..view_models.conversion_panel_vm import ConversionPanelViewModel
@@ -53,33 +57,9 @@ _SPACING_XS = 4
 _SPACING_SM = 8
 
 # ── Format swatch icons ────────────────────────────────────────────────
-# Semantic class per format, mirroring the old panel's color-coded buttons.
+# Semantic class per format comes from the shared format presentation registry.
 _SWATCH_SIZE = 12
 _SWATCH_RADIUS = 3
-
-_FORMAT_THEME_CLASSES: dict[str, str] = {
-    "DOCX": "primary",
-    "XLSX": "primary",
-    "PNG": "primary",
-    "JPG": "primary",
-    "JPEG": "primary",
-    "DOC": "info",
-    "XLS": "info",
-    "ET": "info",
-    "BMP": "info",
-    "XPS": "info",
-    "ODT": "success",
-    "ODS": "success",
-    "GIF": "success",
-    "OFD": "success",
-    "RTF": "warning",
-    "CSV": "warning",
-    "TIF": "warning",
-    "TIFF": "warning",
-    "CEB": "warning",
-    "PDF": "danger",
-    "WEBP": "danger",
-}
 
 _format_icon_cache: dict[tuple[str, str], QIcon] = {}
 _empty_swatch_icon: QIcon | None = None
@@ -92,7 +72,7 @@ def format_swatch_icon(format_name: str) -> QIcon | None:
     theme via :func:`docwen_gui.styles.theme_semantics.get_theme_class_color`.
     """
     normalized = str(format_name or "").strip().upper()
-    theme_class = _FORMAT_THEME_CLASSES.get(normalized)
+    theme_class = BUTTON_COLORS.get(normalized)
     if theme_class is None:
         return None
 
@@ -148,6 +128,16 @@ class _WrappingCheckLabel(QLabel):
 
     activated = Signal()
 
+    def sync_wrapped_height(self) -> None:
+        required_height = self.heightForWidth(max(1, self.width()))
+        if required_height > 0 and self.minimumHeight() != required_height:
+            self.setMinimumHeight(required_height)
+            self.updateGeometry()
+
+    def resizeEvent(self, event) -> None:  # type: ignore[override]
+        super().resizeEvent(event)
+        self.sync_wrapped_height()
+
     def mouseReleaseEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton and self.isEnabled():
             self.activated.emit()
@@ -159,7 +149,7 @@ class _WrappingCheckLabel(QLabel):
 class ConversionPanel(QWidget):
     """Format conversion panel widget.
 
-    Renders 3 group boxes (conversion/saveas/extra) whose content changes
+    Renders 3 neutral cards (conversion/layout output/extra) whose content changes
     based on the current file category.  All user actions are delegated
     to the ``ConversionPanelViewModel``.
     """
@@ -178,7 +168,7 @@ class ConversionPanel(QWidget):
         self.setObjectName("conversionPanelRoot")
 
         # Internal widget refs — cleared and rebuilt on category change
-        self._conversion_combo: QComboBox = _cast(QComboBox, None)
+        self._conversion_combo: FormatSelector = _cast(FormatSelector, None)
         self._conversion_button: QPushButton = _cast(QPushButton, None)
         self._saveas_combo: QComboBox = _cast(QComboBox, None)
         self._saveas_button: QPushButton = _cast(QPushButton, None)
@@ -234,7 +224,7 @@ class ConversionPanel(QWidget):
     # ── UI Construction ──────────────────────────────────────────────────
 
     def _build_ui(self) -> None:
-        """Build the widget skeleton with 3 group boxes."""
+        """Build the widget skeleton with three neutral operation cards."""
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
@@ -257,7 +247,6 @@ class ConversionPanel(QWidget):
             _t("conversion_panel.format_conversion", "Format Conversion"),
             "conversionPrimaryGroup",
         )
-        self._conversion_group.setProperty("accentTone", "success")
         content_layout.addWidget(self._conversion_group)
 
         # Save-as group
@@ -265,12 +254,10 @@ class ConversionPanel(QWidget):
             _t("conversion_panel.save_as", "Save As"),
             "conversionSecondaryGroup",
         )
-        self._saveas_group.setProperty("accentTone", "danger")
         content_layout.addWidget(self._saveas_group)
 
         # Extra group (initially hidden)
         self._extra_group = self._make_section_group("", "conversionExtraGroup")
-        self._extra_group.setProperty("accentTone", "warning")
         self._extra_group.setVisible(False)
         content_layout.addWidget(self._extra_group)
 
@@ -283,13 +270,12 @@ class ConversionPanel(QWidget):
         scroll_area.setWidget(scroll_content)
         root.addWidget(scroll_area)
 
-    def _make_section_group(self, title: str, object_name: str) -> QGroupBox:
-        """Create a compact QGroupBox with one description and its controls."""
-        group = QGroupBox(title, self)
+    def _make_section_group(self, title: str, object_name: str) -> PanelCard:
+        """Create a compact card with an internal centred title."""
+        group = PanelCard(title, self, level="card")
         group.setObjectName(object_name)
 
-        layout = QVBoxLayout(group)
-        layout.setContentsMargins(_SPACING_SM, _SPACING_SM, _SPACING_SM, _SPACING_SM)
+        layout = group.content_layout
         layout.setSpacing(_SPACING_XS)
 
         desc_label = QLabel(group)
@@ -331,6 +317,7 @@ class ConversionPanel(QWidget):
             route_result.status,
             route_result.targets,
             getattr(route_result.error, "code", None),
+            self._vm.spreadsheet_protection_info,
         )
 
     def _on_vm_state_changed(self) -> None:
@@ -545,7 +532,9 @@ class ConversionPanel(QWidget):
         self._sync_layout_controls()
 
     def _sync_action_targets(self) -> None:
-        self._sync_combo_items(self._conversion_combo, self._vm.get_conversion_formats())
+        if self._conversion_combo is not None:
+            self._conversion_combo.set_choices(self._vm.get_conversion_format_choices())
+            apply_format_swatch_icons(self._conversion_combo)
         self._sync_combo_items(self._saveas_combo, self._vm.get_saveas_formats())
         self._sync_combo_items(self._layout_export_combo, self._vm.get_layout_export_formats())
         self._sync_combo_items(
@@ -559,8 +548,7 @@ class ConversionPanel(QWidget):
             selected=str(self._vm.render_dpi),
         )
 
-        if self._conversion_button is not None and self._conversion_combo is not None:
-            self._conversion_button.setEnabled(self._conversion_combo.count() > 0)
+        self._sync_conversion_button_enabled()
         if self._saveas_button is not None and self._saveas_combo is not None:
             self._saveas_button.setEnabled(self._saveas_combo.count() > 0)
         if self._layout_export_button is not None and self._layout_export_combo is not None:
@@ -602,6 +590,36 @@ class ConversionPanel(QWidget):
                 or _t("conversion_panel.spreadsheet.no_table_selected", "No table selected")
             )
 
+    def _sync_conversion_button_enabled(self) -> None:
+        """Apply target availability and protection consent as one gate."""
+
+        button = self._conversion_button
+        combo = self._conversion_combo
+        if button is None or combo is None:
+            return
+        enabled = combo.current_choice_enabled()
+        if (
+            enabled
+            and self._vm.file_category == "spreadsheet"
+            and self._vm.current_format == "xlsx"
+            and combo.currentText().strip().lower() == "ods"
+        ):
+            if self._vm.spreadsheet_unknown_files:
+                enabled = False
+            elif self._vm.spreadsheet_protected_files:
+                enabled = (
+                    self._vm.ui_mode == "single"
+                    and self._spreadsheet_protection_loss_checkbox is not None
+                    and self._spreadsheet_protection_loss_checkbox.isChecked()
+                    and (
+                        not self._vm.spreadsheet_password_required
+                        or (
+                            self._spreadsheet_password_edit is not None and bool(self._spreadsheet_password_edit.text())
+                        )
+                    )
+                )
+        button.setEnabled(enabled)
+
     def _sync_layout_controls(self) -> None:
         if self._page_input_edit is not None:
             if not self._page_input_edit.hasFocus():
@@ -637,9 +655,8 @@ class ConversionPanel(QWidget):
 
     def _make_action_button(self, text: str, parent: QWidget | None = None) -> QPushButton:
         btn = QPushButton(text, parent or self)
-        btn.setObjectName("conversionActionButton")
+        btn.setObjectName("conversionSecondaryButton")
         btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        btn.setProperty("class", "primary")
         return btn
 
     def _make_subtle_divider(self) -> QFrame:
@@ -650,14 +667,39 @@ class ConversionPanel(QWidget):
         sep.setFrameShadow(QFrame.Shadow.Sunken)
         return sep
 
-    def _make_dropdown_action_row(self, items: list[str], button_text: str) -> tuple[QWidget, QComboBox, QPushButton]:
+    @staticmethod
+    def _enabled_format_choice(name: str) -> FormatChoice:
+        presentation = presentation_for(name)
+        return FormatChoice(
+            key=presentation.key,
+            display_name=presentation.display_name,
+            tone=presentation.tone,
+            enabled=True,
+            disabled_reason="",
+            help_text=_t(
+                "conversion_panel.format_target_help",
+                "Convert to {format}",
+                format=presentation.display_name,
+            ),
+        )
+
+    def _make_dropdown_action_row(
+        self,
+        items: Sequence[str | FormatChoice],
+        button_text: str,
+    ) -> tuple[QWidget, FormatSelector, QPushButton]:
         """Create a row with combo + action button."""
-        row_container, row_layout = self._make_button_row()
-        combo = self._make_combo(items, parent=row_container)
-        row_layout.addWidget(combo, alignment=Qt.AlignmentFlag.AlignVCenter)
-        btn = self._make_action_button(button_text, parent=row_container)
-        row_layout.addWidget(btn, alignment=Qt.AlignmentFlag.AlignVCenter)
-        return row_container, combo, btn
+        footer = ActionFooter(self)
+        choices = [item if isinstance(item, FormatChoice) else self._enabled_format_choice(item) for item in items]
+        combo = FormatSelector(footer)
+        combo.set_choices(choices)
+        apply_format_swatch_icons(combo)
+        footer.content_layout.addWidget(combo, alignment=Qt.AlignmentFlag.AlignVCenter)
+        btn = self._make_action_button(button_text, parent=footer)
+        btn.setEnabled(combo.current_choice_enabled())
+        combo.currentIndexChanged.connect(lambda _index, c=combo, b=btn: b.setEnabled(c.current_choice_enabled()))
+        footer.content_layout.addWidget(btn, alignment=Qt.AlignmentFlag.AlignVCenter)
+        return footer, combo, btn
 
     def _make_checkbox(self, text: str, checked: bool = False) -> QCheckBox:
         try:
@@ -688,6 +730,7 @@ class ConversionPanel(QWidget):
         label.setToolTip(text)
         label.activated.connect(checkbox.toggle)
         layout.addWidget(label, stretch=1)
+        QTimer.singleShot(0, label.sync_wrapped_height)
         return row, checkbox
 
     def _make_radio(self, text: str, checked: bool = False) -> QRadioButton:
@@ -700,10 +743,10 @@ class ConversionPanel(QWidget):
         rb.setChecked(checked)
         return rb
 
-    def _make_option_group(self, title: str) -> QGroupBox:
-        group = QGroupBox(title, self)
-        layout = QVBoxLayout(group)
-        layout.setContentsMargins(_SPACING_SM, _SPACING_SM, _SPACING_SM, _SPACING_SM)
+    def _make_option_group(self, title: str) -> PanelCard:
+        group = PanelCard(title, self, level="section")
+        group.setObjectName("conversionOptionGroup")
+        layout = group.content_layout
         layout.setSpacing(_SPACING_SM)
         return group
 
@@ -714,7 +757,7 @@ class ConversionPanel(QWidget):
         conv_layout = self._get_primary_content()
 
         # Conversion row
-        conversion_formats = self._vm.get_conversion_formats()
+        conversion_formats = self._vm.get_conversion_format_choices()
         row_container, combo, btn = self._make_dropdown_action_row(
             conversion_formats, _t("conversion_panel.convert", "Convert")
         )
@@ -755,7 +798,7 @@ class ConversionPanel(QWidget):
         # Options group
         opts_group = self._make_option_group(_t("conversion_panel.document.proofread_options", "Proofread Options"))
         opts_layout = QVBoxLayout()
-        _cast(QBoxLayout, opts_group.layout()).addLayout(opts_layout)
+        opts_group.content_layout.addLayout(opts_layout)
 
         options_spec: list[tuple[str, str, str]] = [
             (
@@ -797,7 +840,7 @@ class ConversionPanel(QWidget):
         """Build the spreadsheet category: conversion row + save-as row + table merge extra."""
         conv_layout = self._get_primary_content()
 
-        conversion_formats = self._vm.get_conversion_formats()
+        conversion_formats = self._vm.get_conversion_format_choices()
         row_container, combo, btn = self._make_dropdown_action_row(
             conversion_formats, _t("conversion_panel.convert", "Convert")
         )
@@ -810,8 +853,10 @@ class ConversionPanel(QWidget):
             policy_group = self._make_option_group(
                 _t("conversion_panel.spreadsheet.ods_delivery_options", "ODS Delivery Options")
             )
-            policy_layout = _cast(QBoxLayout, policy_group.layout())
+            policy_layout = policy_group.content_layout
             is_single = self._vm.ui_mode == "single"
+            protected_files = self._vm.spreadsheet_protected_files
+            unknown_files = self._vm.spreadsheet_unknown_files
 
             policy_hint = QLabel(
                 _t(
@@ -825,33 +870,56 @@ class ConversionPanel(QWidget):
             policy_hint.setWordWrap(True)
             policy_layout.addWidget(policy_hint)
 
-            password_edit = QLineEdit(self)
-            password_edit.setObjectName("spreadsheetProtectionPasswordEdit")
-            password_edit.setEchoMode(QLineEdit.EchoMode.Password)
-            password_edit.setClearButtonEnabled(True)
-            password_edit.setPlaceholderText(
-                _t("conversion_panel.spreadsheet.protection_password", "Protection password (optional)")
-            )
-            password_edit.setEnabled(is_single)
-            self._spreadsheet_password_edit = password_edit
-            policy_layout.addWidget(password_edit)
+            if unknown_files:
+                unknown_notice = InlineNotice(
+                    "\n".join(
+                        (
+                            _t(
+                                "conversion_panel.spreadsheet.protection_status_unknown",
+                                "The file's protection status could not be inspected reliably. "
+                                "Conversion is blocked to prevent an unprotected delivery.",
+                            ),
+                            *(f"• {Path(path).name}" for path in unknown_files),
+                        )
+                    ),
+                    self,
+                    tone="warning",
+                )
+                policy_layout.addWidget(unknown_notice)
 
-            consent_row, consent = self._make_wrapping_checkbox(
-                _t(
-                    "conversion_panel.spreadsheet.allow_protection_loss",
-                    "I understand the delivered ODS will not retain password protection",
-                ),
-                checked=False,
-            )
-            consent_row.setEnabled(is_single)
-            self._spreadsheet_protection_loss_checkbox = consent
-            policy_layout.addWidget(consent_row)
+            elif is_single and protected_files:
+                password_edit = QLineEdit(self)
+                password_edit.setObjectName("spreadsheetProtectionPasswordEdit")
+                password_edit.setEchoMode(QLineEdit.EchoMode.Password)
+                password_edit.setClearButtonEnabled(True)
+                password_edit.setPlaceholderText(
+                    _t("conversion_panel.spreadsheet.protection_password", "Protection password (optional)")
+                )
+                self._spreadsheet_password_edit = password_edit
+                password_edit.textChanged.connect(self._sync_conversion_button_enabled)
+                policy_layout.addWidget(password_edit)
 
-            if not is_single:
-                batch_hint = QLabel(
+                consent_row, consent = self._make_wrapping_checkbox(
                     _t(
-                        "conversion_panel.spreadsheet.protected_batch_single_only",
-                        "Passwords are not reused across a batch. Convert protected files individually.",
+                        "conversion_panel.spreadsheet.allow_protection_loss",
+                        "I understand the delivered ODS will not retain password protection",
+                    ),
+                    checked=False,
+                )
+                self._spreadsheet_protection_loss_checkbox = consent
+                policy_layout.addWidget(consent_row)
+                consent.toggled.connect(self._sync_conversion_button_enabled)
+
+            elif not is_single and protected_files:
+                batch_hint = QLabel(
+                    "\n".join(
+                        (
+                            _t(
+                                "conversion_panel.spreadsheet.protected_batch_single_only",
+                                "Passwords are not reused across a batch. Convert protected files individually.",
+                            ),
+                            *(f"• {Path(path).name}" for path in protected_files),
+                        )
                     ),
                     self,
                 )
@@ -860,6 +928,11 @@ class ConversionPanel(QWidget):
                 policy_layout.addWidget(batch_hint)
 
             conv_layout.addWidget(policy_group)
+            policy_group.setVisible(combo.currentText().strip().upper() == "ODS")
+            combo.currentTextChanged.connect(
+                lambda value, group=policy_group: group.setVisible(value.strip().upper() == "ODS")
+            )
+            combo.currentTextChanged.connect(self._sync_conversion_button_enabled)
 
         # Subtle divider
         conv_layout.addWidget(self._make_subtle_divider())
@@ -892,7 +965,7 @@ class ConversionPanel(QWidget):
 
         # Merge mode radios
         mode_group = self._make_option_group(_t("conversion_panel.spreadsheet.merge_options", "Merge Options"))
-        mode_layout = _cast(QBoxLayout, mode_group.layout())
+        mode_layout = mode_group.content_layout
 
         self._merge_mode_group = QButtonGroup(mode_group)
         self._merge_mode_group.setExclusive(True)
@@ -926,7 +999,7 @@ class ConversionPanel(QWidget):
         conv_layout = self._get_primary_content()
 
         # Conversion row
-        conversion_formats = self._vm.get_conversion_formats()
+        conversion_formats = self._vm.get_conversion_format_choices()
         row_container, combo, btn = self._make_dropdown_action_row(
             conversion_formats, _t("conversion_panel.convert", "Convert")
         )
@@ -963,10 +1036,11 @@ class ConversionPanel(QWidget):
         compress_group = self._make_option_group(
             _t("conversion_panel.image.compression_options", "Compression Options")
         )
-        compress_layout = _cast(QBoxLayout, compress_group.layout())
+        compress_layout = compress_group.content_layout
 
         self._compress_btn_group = QButtonGroup(compress_group)
         self._compress_btn_group.setExclusive(True)
+        choice_group = ChoiceGroup(compress_group)
 
         radio_defs: list[tuple[str, str, int]] = [
             (_t("conversion_panel.image.highest_quality", "Lossless"), "lossless", 0),
@@ -977,36 +1051,38 @@ class ConversionPanel(QWidget):
             rb = self._make_radio(label, checked=mode_val == self._vm.compress_mode)
             self._compress_btn_group.addButton(rb, btn_id)
             rb.setProperty("compress_value", mode_val)
-            compress_layout.addWidget(rb)
+            choice_group.content_layout.addWidget(rb)
+
+        compress_layout.addWidget(choice_group)
 
         self._compress_btn_group.idToggled.connect(self._on_compress_mode_changed)
 
         # Size limit row
-        size_row = QWidget(self)
-        size_layout = QGridLayout(size_row)
+        size_control = QWidget(self)
+        size_layout = QHBoxLayout(size_control)
         size_layout.setContentsMargins(0, 0, 0, 0)
-        size_layout.setHorizontalSpacing(_SPACING_SM)
-        size_layout.setVerticalSpacing(_SPACING_XS)
-
-        size_label = QLabel(_t("conversion_panel.image.file_size_limit", "File Size Limit"), self)
-        size_layout.addWidget(size_label, 0, 0, 1, 2)
+        size_layout.setSpacing(_SPACING_SM)
 
         size_edit = QLineEdit(str(self._vm.size_limit), self)
         size_edit.setEnabled(is_limit)
         size_edit.textChanged.connect(self._on_size_input_changed)
         self._size_limit_edit = size_edit
-        size_layout.addWidget(size_edit, 1, 0)
+        size_layout.addWidget(size_edit, stretch=1)
 
-        unit_combo = self._make_combo(["KB", "MB"], parent=size_row)
+        unit_combo = self._make_combo(["KB", "MB"], parent=size_control)
         unit_combo.setCurrentText(self._vm.size_unit)
         unit_combo.setEnabled(is_limit)
         unit_combo.setMinimumWidth(84)
         unit_combo.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
         unit_combo.currentTextChanged.connect(self._on_size_input_changed)
         self._size_unit_combo = unit_combo
-        size_layout.addWidget(unit_combo, 1, 1)
-        size_layout.setColumnStretch(0, 1)
+        size_layout.addWidget(unit_combo)
 
+        size_row = FormRow(
+            _t("conversion_panel.image.file_size_limit", "File Size Limit"),
+            size_control,
+            compress_group,
+        )
         compress_layout.addWidget(size_row)
 
         warning_label = QLabel("", self)
@@ -1019,7 +1095,7 @@ class ConversionPanel(QWidget):
     def _build_pdf_quality_section(self, parent_layout: QVBoxLayout) -> None:
         """Build PDF quality radio options for image category."""
         quality_group = self._make_option_group(_t("conversion_panel.image.size_options", "Quality Options"))
-        quality_layout = _cast(QBoxLayout, quality_group.layout())
+        quality_layout = quality_group.content_layout
 
         self._pdf_quality_group = QButtonGroup(quality_group)
         self._pdf_quality_group.setExclusive(True)
@@ -1052,7 +1128,7 @@ class ConversionPanel(QWidget):
         extra_layout.addWidget(merge_btn)
 
         tiff_group = self._make_option_group(_t("conversion_panel.image.conversion_options", "TIFF Options"))
-        tiff_layout = _cast(QBoxLayout, tiff_group.layout())
+        tiff_layout = tiff_group.content_layout
 
         self._tiff_btn_group = QButtonGroup(tiff_group)
         self._tiff_btn_group.setExclusive(True)
@@ -1247,7 +1323,8 @@ class ConversionPanel(QWidget):
 
     def _on_convert_button_clicked(self) -> None:
         combo = self._conversion_combo
-        if combo is None:
+        self._sync_conversion_button_enabled()
+        if combo is None or self._conversion_button is None or not self._conversion_button.isEnabled():
             return
         target = combo.currentText().strip()
         if not target:
@@ -1492,8 +1569,8 @@ class ConversionPanel(QWidget):
         return self._saveas_button
 
     @property
-    def extra_group(self) -> QGroupBox:
-        """The extra section group box (for testing visibility)."""
+    def extra_group(self) -> PanelCard:
+        """The extra operation card (for testing visibility)."""
         return self._extra_group
 
 

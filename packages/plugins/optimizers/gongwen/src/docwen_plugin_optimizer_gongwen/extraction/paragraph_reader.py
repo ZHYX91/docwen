@@ -17,6 +17,7 @@ from docwen_core.docx_parsing.textbox_extraction import (
     extract_textbox_paragraphs,
 )
 from docwen_core.text.heading_numbering import detect_heading_prefix
+from docwen_plugin_document.shared.list_processing import ListCounterManager
 from docwen_plugin_optimizer_gongwen.extraction.format_features import (
     extract_alignment,
     extract_font_info,
@@ -34,6 +35,74 @@ from docwen_plugin_optimizer_gongwen.extraction.table_extraction import (
     extract_table_paragraphs,
 )
 from docwen_plugin_optimizer_gongwen.models import ParagraphFeature
+
+_GONGWEN_NATIVE_HEADING_FORMATS = frozenset({"chinesecounting", "chinesecountingthousand", "ideographtraditional"})
+
+
+def _is_native_heading_level(
+    level_info: Any,
+    *,
+    text: str = "",
+    style_name: str = "",
+    para: Any = None,
+    numbering_index: Any = None,
+    counter_key: str = "",
+    ilvl: int = 0,
+    neighboring_paragraphs: tuple[Any, ...] = (),
+) -> bool:
+    """Accept explicit headings and fail closed for ordinary Chinese lists."""
+
+    style_id = str(getattr(level_info, "p_style", "") or "").casefold().replace(" ", "")
+    if any(marker in style_id for marker in ("heading", "title", "标题")):
+        return True
+    if int(getattr(level_info, "ilvl", -1)) != 0:
+        return False
+    num_fmt = str(getattr(level_info, "num_fmt", "") or "").casefold()
+    lvl_text = str(getattr(level_info, "lvl_text", "") or "").strip().replace(" ", "")
+    if num_fmt not in _GONGWEN_NATIVE_HEADING_FORMATS or lvl_text not in {"%1、", "%1．", "%1."}:
+        return False
+
+    stripped = text.strip()
+    if not stripped or len(stripped) > 40 or stripped.endswith(("。", "；", "！", "？", ";", "!", "?")):
+        return False
+
+    normalized_style = style_name.casefold().replace(" ", "")
+    if any(marker in normalized_style for marker in ("heading", "title", "标题")):
+        return True
+    if para is not None:
+        outline_level = extract_outline_level(para)
+        if isinstance(outline_level, int) and 0 <= outline_level <= 4:
+            return True
+        if para.paragraph_format.keep_with_next is True:
+            return True
+        if any(run.bold is True for run in para.runs if run.text.strip()):
+            return True
+
+    if numbering_index is None or not neighboring_paragraphs:
+        return False
+    for neighbor in neighboring_paragraphs:
+        try:
+            resolved = _resolve_word_numbering(neighbor, numbering_index)
+        except Exception:
+            return False
+        if resolved is not None and resolved[0] == counter_key and resolved[1] == ilvl:
+            return False
+    return True
+
+
+def _neighboring_content_paragraphs(paragraphs: list[Any], index: int) -> tuple[Any, ...]:
+    """Return the nearest non-empty paragraph on each side."""
+
+    neighbors: list[Any] = []
+    for step in (-1, 1):
+        candidate_index = index + step
+        while 0 <= candidate_index < len(paragraphs):
+            candidate = paragraphs[candidate_index]
+            if candidate.text.strip():
+                neighbors.append(candidate)
+                break
+            candidate_index += step
+    return tuple(neighbors)
 
 
 def read_paragraphs(
@@ -53,9 +122,11 @@ def read_paragraphs(
     closed when no owned destination was supplied.
     """
     features: list[ParagraphFeature] = []
+    numbering_counters = ListCounterManager()
 
     body_element = doc.element.body
-    for para in doc.paragraphs:
+    paragraphs = list(doc.paragraphs)
+    for paragraph_index, para in enumerate(paragraphs):
         text = para.text
 
         # Empty layout paragraphs carry no semantic content, but an empty
@@ -88,9 +159,11 @@ def read_paragraphs(
             style_name,
             para,
             numbering_index=numbering_index,
+            numbering_counters=numbering_counters,
             cleanup_rules=cleanup_rules,
             diagnostic_sink=diagnostic_sink,
             diagnostic_location=f"paragraph {len(features)}",
+            neighboring_paragraphs=_neighboring_content_paragraphs(paragraphs, paragraph_index),
         )
 
         # ── Heading clean-text: display text vs raw text ──
@@ -172,9 +245,11 @@ def _detect_heading(
     style_name: str = "",
     para=None,
     numbering_index=None,
+    numbering_counters: ListCounterManager | None = None,
     cleanup_rules: Any = (),
     diagnostic_sink: ProgressSink | None = None,
     diagnostic_location: str = "",
+    neighboring_paragraphs: tuple[Any, ...] = (),
 ) -> tuple[str, int, str]:
     """Three-pass heading detection for body paragraphs.
 
@@ -200,19 +275,31 @@ def _detect_heading(
     heading_level = style_map.get(style_name, 0)
     heading_num = ""
 
-    # Pass 3 (fallback): Word numbering definitions via NumberingIndex
-    if heading_level == 0 and numbering_index is not None and para is not None:
+    # Pass 3: Word numbering definitions via NumberingIndex.  This also runs
+    # for style-recognised headings so Word's generated marker is retained.
+    if numbering_index is not None and para is not None:
         try:
-            numPr = para._p.find(qn("w:pPr/w:numPr"))
-            if numPr is not None:
-                numId_elem = numPr.find(qn("w:numId"))
-                ilvl_elem = numPr.find(qn("w:ilvl"))
-                if numId_elem is not None:
-                    num_id = int(numId_elem.get(qn("w:val"), "0"))
-                    ilvl = int(ilvl_elem.get(qn("w:val"), "0")) if ilvl_elem is not None else 0
-                    level_info = numbering_index.lookup(num_id, ilvl)
-                    if level_info:
-                        heading_level = ilvl + 1  # ilvl 0 → heading level 1
+            resolved = _resolve_word_numbering(para, numbering_index)
+            if resolved is not None:
+                counter_key, ilvl, level_info = resolved
+                counters = numbering_counters or ListCounterManager()
+                counter_value = counters.next(counter_key, ilvl, start=level_info.start)
+                if _is_native_heading_level(
+                    level_info,
+                    text=text,
+                    style_name=style_name,
+                    para=para,
+                    numbering_index=numbering_index,
+                    counter_key=counter_key,
+                    ilvl=ilvl,
+                    neighboring_paragraphs=neighboring_paragraphs,
+                ):
+                    heading_level = heading_level or ilvl + 1
+                    heading_num = numbering_index.render_numbering_text(
+                        level_info,
+                        counter_value,
+                        counters.snapshot(counter_key),
+                    )
         except Exception as exc:
             if diagnostic_sink is not None:
                 diagnostic_sink.report_diagnostic(
@@ -226,6 +313,33 @@ def _detect_heading(
                 )
 
     return text, heading_level, heading_num
+
+
+def _resolve_word_numbering(para: Any, numbering_index: Any) -> tuple[str, int, Any] | None:
+    """Resolve direct or style-inherited numbering without hiding failures."""
+
+    p_pr = para._p.find(qn("w:pPr"))
+    num_pr = p_pr.find(qn("w:numPr")) if p_pr is not None else None
+    if num_pr is not None:
+        num_id_element = num_pr.find(qn("w:numId"))
+        level_element = num_pr.find(qn("w:ilvl"))
+        if num_id_element is None:
+            return None
+        num_id = str(num_id_element.get(qn("w:val"), "0"))
+        if num_id == "0":
+            return None
+        ilvl = int(level_element.get(qn("w:val"), "0")) if level_element is not None else 0
+        level_info = numbering_index.lookup(num_id, ilvl)
+        return (num_id, ilvl, level_info) if level_info is not None else None
+
+    style_id = getattr(getattr(para, "style", None), "style_id", None)
+    if not isinstance(style_id, str) or not style_id:
+        return None
+    level_info = numbering_index.lookup_by_style_id(style_id)
+    if level_info is None:
+        return None
+    counter_key = f"abs_{level_info.abstract_num_id}"
+    return counter_key, int(level_info.ilvl), level_info
 
 
 _MIXED_HEADING_PUNCTUATION = ("。", "．", ".", "：", ":", "！", "!", "？", "?")

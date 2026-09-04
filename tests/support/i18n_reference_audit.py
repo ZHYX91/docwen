@@ -244,7 +244,7 @@ DYNAMIC_CALL_CONTRACTS: Mapping[tuple[str, str], DynamicCallContract] = {
         1,
         _keys(
             "info_area.task_guide_",
-            {"open_output_dir", "view_failed_details", "retry_failed", "add_more_files"},
+            {"open_output_dir", "view_failed_details", "retry_failed"},
         )
         | {"common.ok"},
         "finite _TASK_GUIDE_LABELS map and default",
@@ -362,10 +362,6 @@ LITERAL_FALLBACK_CONTRACTS: Mapping[tuple[str, str], LiteralFallbackContract] = 
     ): _literal_fallback(2, "Copy", "feedback detail copy action"),
     (
         "packages/apps/gui/src/docwen_gui/main_window.py",
-        "main_window.conversion_warning",
-    ): _literal_fallback(1, "Conversion completed with a warning", "diagnostic fallback"),
-    (
-        "packages/apps/gui/src/docwen_gui/main_window.py",
         "main_window.add_file",
     ): _literal_fallback(1, "Add File", "window shortcut label"),
     (
@@ -376,10 +372,6 @@ LITERAL_FALLBACK_CONTRACTS: Mapping[tuple[str, str], LiteralFallbackContract] = 
         "packages/apps/gui/src/docwen_gui/main_window.py",
         "main_window.cancel",
     ): _literal_fallback(1, "Cancel", "window shortcut label"),
-    (
-        "packages/apps/gui/src/docwen_gui/main_window.py",
-        "main_window.aggregate_need_two",
-    ): _literal_fallback(1, "At least two matching files are required.", "aggregate admission"),
     (
         "packages/apps/gui/src/docwen_gui/main_window.py",
         "main_window.thread_start_uncertain",

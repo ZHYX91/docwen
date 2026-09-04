@@ -9,6 +9,7 @@ description = "DocWen Spreadsheet Plugin — XLSX/CSV/TSV ↔ Markdown, CSV/TSV/
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "docwen-core",
+    "msoffcrypto-tool>=6.0.0,<7.0.0",
     "openpyxl>=3.1.0",
     "pandas>=2.0.0",
     "tabulate>=0.9.0",

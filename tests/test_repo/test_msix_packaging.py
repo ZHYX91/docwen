@@ -18,6 +18,7 @@ pytestmark = pytest.mark.contract
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _CONFIG_PATH = _REPO_ROOT / "release" / "windows-store-msix.v1.json"
 _FOUNDATION = "http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+_UAP = "http://schemas.microsoft.com/appx/manifest/uap/windows10"
 _UAP5 = "http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
 _RESCAP = "http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
 
@@ -29,6 +30,11 @@ def _fake_payload(path: Path) -> Path:
     assets = path / "assets"
     assets.mkdir()
     Image.new("RGBA", (256, 256), (38, 111, 227, 255)).save(assets / "icon.png")
+    (assets / "icon.svg").write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'
+        '<rect width="100" height="100" fill="#E5484D" /></svg>',
+        encoding="utf-8",
+    )
     docx_templates = path / "_internal" / "docx" / "templates"
     expanded_template = docx_templates / "default-docx-template"
     expanded_template.mkdir(parents=True)
@@ -69,7 +75,7 @@ def _fake_pe_with_certificate_directory(
 def test_store_config_and_manifest_bind_partner_center_identity() -> None:
     config = build_msix.read_config(_CONFIG_PATH)
     manifest = ElementTree.fromstring(build_msix.render_manifest(config))
-    namespaces = {"f": _FOUNDATION, "uap5": _UAP5, "rescap": _RESCAP}
+    namespaces = {"f": _FOUNDATION, "uap": _UAP, "uap5": _UAP5, "rescap": _RESCAP}
 
     identity = manifest.find("f:Identity", namespaces)
     assert identity is not None
@@ -85,6 +91,10 @@ def test_store_config_and_manifest_bind_partner_center_identity() -> None:
     assert capability is not None and capability.attrib["Name"] == "runFullTrust"
     alias = manifest.find(".//uap5:ExecutionAlias", namespaces)
     assert alias is not None and alias.attrib["Alias"] == "docwen.exe"
+    default_tile = manifest.find(".//f:Application/uap:VisualElements/uap:DefaultTile", namespaces)
+    assert default_tile is not None and default_tile.attrib["ShortName"] == "DocWen"
+    show_name = default_tile.find("uap:ShowNameOnTiles/uap:ShowOn", namespaces)
+    assert show_name is not None and show_name.attrib["Tile"] == "square150x150Logo"
 
 
 @pytest.mark.parametrize("version", ["0.9.0.0", "1.0.0.1", "1.0.0", "65536.0.0.0"])
@@ -104,9 +114,14 @@ def test_prepare_layout_keeps_payload_assets_and_generates_required_logos(tmp_pa
     assert (staging / "AppxManifest.xml").is_file()
     assert not (staging / "_internal" / "docx" / "templates" / "default-docx-template").exists()
     assert (staging / "_internal" / "docx" / "templates" / "default.docx").is_file()
-    for name, expected_size in build_msix._ASSET_SIZES.items():  # pyright: ignore[reportPrivateUsage]
+    for name, (expected_size, fill_ratio) in build_msix._ASSET_SPECS.items():  # pyright: ignore[reportPrivateUsage]
         with Image.open(staging / "assets" / "msix" / name) as image:
             assert image.size == expected_size
+            alpha_bounds = image.getchannel("A").getbbox()
+            assert alpha_bounds is not None
+            assert alpha_bounds[2] - alpha_bounds[0] == round(expected_size[0] * fill_ratio)
+            assert alpha_bounds[3] - alpha_bounds[1] == round(expected_size[1] * fill_ratio)
+            assert image.getpixel((image.width // 2, image.height // 2))[:3] == (229, 72, 77)
 
 
 def test_prepare_layout_clears_certificate_pointer_when_signature_blob_was_stripped(tmp_path: Path) -> None:

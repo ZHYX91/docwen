@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pytest
 
+from docwen_gui.i18n import t
+
 pytestmark = pytest.mark.gui
 
 
@@ -371,7 +373,7 @@ def test_batch_result_publishes_one_aligned_operation_summary(
         "failed_count": 1,
         "skipped_count": 0,
         "cancelled_count": 0,
-        "message": "second failed",
+        "message": f"{t('main_window.conversion_failed')} [conversion_failed]",
         "status": "partial",
     }
 

@@ -11,11 +11,14 @@ import re
 import struct
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
+from io import BytesIO
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 from zipfile import ZIP_DEFLATED, BadZipFile, ZipFile, ZipInfo
 
+import msoffcrypto
 from lxml import etree
+from msoffcrypto.exceptions import DecryptionError, FileFormatError, InvalidKeyError
 
 _MAIN_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 _REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -153,13 +156,68 @@ def _protection_kind(element: etree._Element, *, workbook: bool) -> str:
     return "unpassworded"
 
 
-def _read_package(path: str | Path) -> tuple[list[ZipInfo], dict[str, bytes]]:
+def _read_package(path: str | Path | BytesIO) -> tuple[list[ZipInfo], dict[str, bytes]]:
     try:
         with ZipFile(path) as package:
             infos = package.infolist()
             return infos, {info.filename: package.read(info.filename) for info in infos}
     except (BadZipFile, OSError, KeyError, etree.XMLSyntaxError) as exc:
         raise XlsxOdsPolicyError("INVALID_XLSX_PACKAGE", "The XLSX package cannot be inspected safely.") from exc
+
+
+def _open_policy_source(
+    path: str | Path,
+    *,
+    password: str | None,
+    allow_protection_loss: bool,
+) -> tuple[str | Path | BytesIO, bool]:
+    """Return a readable OOXML package, decrypting only into private memory."""
+
+    try:
+        with Path(path).open("rb") as source:
+            if source.read(8) != b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1":
+                return path, False
+            source.seek(0)
+            office_file = msoffcrypto.OfficeFile(source)
+            if not office_file.is_encrypted():
+                raise XlsxOdsPolicyError(
+                    "INVALID_XLSX_PACKAGE",
+                    "The compound XLSX container is not a supported encrypted OOXML package.",
+                )
+            if not password:
+                raise XlsxOdsPolicyError(
+                    "PROTECTION_PASSWORD_REQUIRED",
+                    "This workbook is encrypted. Enter the password to continue.",
+                )
+            try:
+                cast(Any, office_file).load_key(password=password, verify_password=True)
+            except InvalidKeyError as exc:
+                raise XlsxOdsPolicyError(
+                    "PROTECTION_PASSWORD_INVALID",
+                    "The spreadsheet protection password is invalid.",
+                ) from exc
+            if not allow_protection_loss:
+                raise XlsxOdsPolicyError(
+                    "PROTECTION_LOSS_CONSENT_REQUIRED",
+                    "ODS delivery requires removing workbook encryption from the private conversion copy. Confirm this loss to continue.",
+                )
+            decrypted = BytesIO()
+            try:
+                cast(Any, office_file).decrypt(decrypted, verify_integrity=True)
+            except InvalidKeyError as exc:
+                raise XlsxOdsPolicyError(
+                    "PROTECTION_PASSWORD_INVALID",
+                    "The spreadsheet protection password is invalid.",
+                ) from exc
+            decrypted.seek(0)
+            return decrypted, True
+    except XlsxOdsPolicyError:
+        raise
+    except (DecryptionError, FileFormatError, OSError, ValueError) as exc:
+        raise XlsxOdsPolicyError(
+            "INVALID_XLSX_PACKAGE",
+            "The encrypted XLSX package cannot be decrypted safely.",
+        ) from exc
 
 
 def _inspect_parts(parts: dict[str, bytes], *, source_filename: str) -> XlsxOdsPolicyInspection:
@@ -488,7 +546,12 @@ def prepare_xlsx_for_ods(
 ) -> XlsxOdsPreparation:
     """Create the only backend-visible XLSX copy for selected POLICY-02 B/B."""
 
-    infos, parts = _read_package(input_path)
+    package_source, file_encryption_removed = _open_policy_source(
+        input_path,
+        password=password,
+        allow_protection_loss=allow_protection_loss,
+    )
+    infos, parts = _read_package(package_source)
     try:
         inspection = _inspect_parts(parts, source_filename=Path(input_path).name)
         password_nodes = _passworded_protection_nodes(parts)
@@ -544,9 +607,11 @@ def prepare_xlsx_for_ods(
             or inspection.external_link_parts_present
             or inspection.external_defined_names
         ),
-        protection_removed=bool(password_nodes),
+        protection_removed=file_encryption_removed or bool(password_nodes),
         flattened_cached_values=flattened_cached_values,
-        removed_protection_elements=inspection.password_protected_elements,
+        removed_protection_elements=(
+            (("encrypted-package",) if file_encryption_removed else ()) + inspection.password_protected_elements
+        ),
         removed_external_defined_names=removed_external_defined_names,
         fidelity_risk_counts=inspection.fidelity_risk_counts,
     )

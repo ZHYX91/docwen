@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from docwen_gui.i18n import t
+
 from ._gui_e2e_conversion_support import (
     _E2E_CONVERSION_TIMEOUT_MS,
     BatchFileEntry,
@@ -412,7 +414,8 @@ class TestAggregateGuiExecution:
         assert window._info_area_vm.history_rows
         latest = window._info_area_vm.history_rows[-1]
         assert latest.message_type == "danger"
-        assert "Failed to merge" in latest.message
+        assert latest.message == f"{t('main_window.conversion_failed')} [PDF-MERGE-ERROR]"
+        assert latest.show_location is False
 
     def test_merge_tables_failure_marks_all_participants_failed(
         self,
@@ -482,4 +485,5 @@ class TestAggregateGuiExecution:
         assert window._info_area_vm.history_rows
         latest = window._info_area_vm.history_rows[-1]
         assert latest.message_type == "danger"
-        assert "broken.xlsx" in latest.message
+        assert latest.message == f"{t('main_window.conversion_failed')} [MERGE-PARSE-ERROR]"
+        assert latest.show_location is False

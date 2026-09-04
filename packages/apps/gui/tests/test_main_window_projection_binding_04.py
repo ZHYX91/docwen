@@ -449,7 +449,6 @@ class TestRuntimeRequestBinding:
             {"action_key": "open_output_dir", "target_path": str(retained.parent)},
             {"action_key": "view_failed_details", "target_path": normalized},
             {"action_key": "retry_failed", "target_path": ""},
-            {"action_key": "add_more_files", "target_path": ""},
         ]
         assert opened == []
 
@@ -497,4 +496,4 @@ class TestRuntimeRequestBinding:
         assert window._info_area_vm.status_meta_text == _t("info_area.task_state_cancelled", "Cancelled")
         assert window._info_area_vm.status_tone == "warning"
         assert window._info_area_vm._task_summary.cancelled_count == 1
-        assert window._info_area_vm.guide_actions == [{"action_key": "add_more_files", "target_path": ""}]
+        assert window._info_area_vm.guide_actions == []

@@ -147,6 +147,17 @@ class TestHistoryRendering:
         vm.add_message("Third", "warning")
         assert widget.message_count == 3
 
+    def test_repeated_event_renders_a_localized_count_badge(self, widget: InfoArea, vm: InfoAreaViewModel) -> None:
+        from docwen_gui.i18n import t
+
+        vm.add_message("Same event", "info")
+        vm.add_message("Same event", "info")
+        row = widget.get_history_row_widget(0)
+        assert row is not None
+        badge = row.findChild(QLabel, "infoHistoryRepeatBadge")
+        assert badge is not None
+        assert badge.text() == t("info_area.history_repeated", "Repeated {count} times", count=2)
+
     def test_rebuild_detaches_stale_history_rows(self, widget: InfoArea, vm: InfoAreaViewModel) -> None:
         vm.add_message("First", "info")
         vm.add_message("Second", "success")
@@ -223,7 +234,6 @@ class TestGuideButtons:
     def test_renders_guide_buttons_for_success(self, widget: InfoArea, vm: InfoAreaViewModel) -> None:
         guide_actions = [
             {"action_key": "open_output_dir", "target_path": "/tmp/out"},
-            {"action_key": "add_more_files", "target_path": ""},
         ]
         vm.set_task_summary(
             operation_id="op-2000",
@@ -237,16 +247,13 @@ class TestGuideButtons:
         )
         assert widget.is_guide_row_visible
         buttons = widget.find_guide_buttons()
-        assert len(buttons) == 2
-        # First button is primary
+        assert len(buttons) == 1
         assert buttons[0].property("guideActionPriority") == "primary"
-        assert buttons[1].property("guideActionPriority") == "secondary"
 
     def test_renders_guide_buttons_for_failed(self, widget: InfoArea, vm: InfoAreaViewModel) -> None:
         guide_actions = [
             {"action_key": "view_failed_details", "target_path": "/tmp/failed.txt"},
             {"action_key": "retry_failed", "target_path": ""},
-            {"action_key": "add_more_files", "target_path": ""},
         ]
         vm.set_task_summary(
             operation_id="op-3000",
@@ -260,7 +267,7 @@ class TestGuideButtons:
         )
         assert widget.is_guide_row_visible
         buttons = widget.find_guide_buttons()
-        assert len(buttons) == 3
+        assert len(buttons) == 2
 
     def test_guide_not_visible_for_active(self, widget: InfoArea, vm: InfoAreaViewModel) -> None:
         vm.set_task_summary(

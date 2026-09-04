@@ -48,6 +48,8 @@ from docwen_gui.i18n import t as _t
 from docwen_gui.styles.design_tokens import Sizing
 from docwen_gui.styles.theme_semantics import apply_theme_class
 
+from .panel_card import ActionFooter, ChoiceGroup, FormRow, InlineNotice, PanelCard
+
 if TYPE_CHECKING:
     from ..view_models.action_area_vm import ActionAreaViewModel
 
@@ -103,6 +105,7 @@ class ActionArea(QWidget):
 
         # Widget refs — cleared on mode switch
         self._button_stack: QStackedWidget = _cast(QStackedWidget, None)
+        self._content_card: PanelCard = _cast(PanelCard, None)
         self._content_layout: QVBoxLayout = _cast(QVBoxLayout, None)
         self._cancel_button: QPushButton = _cast(QPushButton, None)
         self._cancel_hint_label: QLabel = _cast(QLabel, None)
@@ -118,6 +121,9 @@ class ActionArea(QWidget):
         # Option widget refs
         self._image_cb: QCheckBox = _cast(QCheckBox, None)
         self._ocr_cb: QCheckBox = _cast(QCheckBox, None)
+        self._ocr_settings_group: ChoiceGroup = _cast(ChoiceGroup, None)
+        self._ocr_language_combo: QComboBox = _cast(QComboBox, None)
+        self._ocr_placement_combo: QComboBox = _cast(QComboBox, None)
         self._optimize_combo: QComboBox = _cast(QComboBox, None)
         self.doc_remove_numbering_cb: QCheckBox = _cast(QCheckBox, None)
         self.doc_add_numbering_cb: QCheckBox = _cast(QCheckBox, None)
@@ -162,10 +168,10 @@ class ActionArea(QWidget):
         root.addWidget(self._button_stack)
 
         # Page 0: content area
-        content_page = QFrame()
+        content_page = PanelCard(parent=self)
         content_page.setObjectName("actionContentCard")
-        self._content_layout = QVBoxLayout(content_page)
-        self._content_layout.setContentsMargins(_SPACING_MD, _SPACING_SM, _SPACING_MD, _SPACING_MD)
+        self._content_card = content_page
+        self._content_layout = content_page.content_layout
         self._content_layout.setSpacing(_SPACING_XS)
         self._button_stack.addWidget(content_page)
 
@@ -269,9 +275,7 @@ class ActionArea(QWidget):
         title = _t("action_area.export_options", "Export Options")
         if self._vm.file_type in {"docx", "md_to_spreadsheet"}:
             title = _t("action_area.generation_options", "Generation Options")
-        title_label = QLabel(title)
-        title_label.setObjectName("actionPanelTitle")
-        self._content_layout.addWidget(title_label)
+        self._content_card.setTitle(title)
 
         ft = self._vm.file_type
         if ft in ("document", "spreadsheet", "image", "layout"):
@@ -309,6 +313,10 @@ class ActionArea(QWidget):
         """Update option widgets in place without replacing their QWidget tree."""
         self._set_checkbox_checked(self._image_cb, self._vm.extract_image)
         self._set_checkbox_checked(self._ocr_cb, self._vm.extract_ocr)
+        if self._ocr_settings_group is not None:
+            self._ocr_settings_group.setVisible(self._vm.extract_ocr)
+        self._set_combo_data(self._ocr_language_combo, self._vm.ocr_language or "auto")
+        self._set_combo_data(self._ocr_placement_combo, self._vm.ocr_placement)
         self._set_combo_data(self._optimize_combo, self._vm.optimize_for_type or None)
         self._set_checkbox_checked(self.doc_remove_numbering_cb, self._vm.doc_remove_numbering)
         self._set_checkbox_checked(self.doc_add_numbering_cb, self._vm.doc_add_numbering)
@@ -339,6 +347,8 @@ class ActionArea(QWidget):
             self.md_spreadsheet_format_combo,
             self._image_cb,
             self._ocr_cb,
+            self._ocr_language_combo,
+            self._ocr_placement_combo,
             self._optimize_combo,
             self.doc_remove_numbering_cb,
             self.doc_add_numbering_cb,
@@ -396,6 +406,9 @@ class ActionArea(QWidget):
             "md_spreadsheet_format_combo",
             "_image_cb",
             "_ocr_cb",
+            "_ocr_settings_group",
+            "_ocr_language_combo",
+            "_ocr_placement_combo",
             "_optimize_combo",
             "doc_remove_numbering_cb",
             "doc_add_numbering_cb",
@@ -467,7 +480,7 @@ class ActionArea(QWidget):
         row.setObjectName("actionOptionRow")
         layout = QHBoxLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(_SPACING_XS)
+        layout.setSpacing(_SPACING_MD)
         return row, layout
 
     def _make_responsive_option_grid(
@@ -554,7 +567,8 @@ class ActionArea(QWidget):
         ft = self._vm.file_type or "document"
 
         # Main action button row
-        button_row, button_layout = self._make_option_row()
+        button_row = ActionFooter(self)
+        button_layout = button_row.content_layout
         button_layout.addStretch(1)
 
         btn = self._make_button(self._vm.get_button_label(), parent=button_row)
@@ -573,10 +587,9 @@ class ActionArea(QWidget):
 
         button_layout.addWidget(btn)
         button_layout.addStretch(1)
-        self._content_layout.addWidget(button_row)
-
         # Options section
         self._build_file_to_md_options()
+        self._content_layout.addWidget(button_row)
 
     def _build_file_to_md_options(self) -> None:
         """Build extract_image, OCR, optimize, and numbering options rows."""
@@ -585,7 +598,8 @@ class ActionArea(QWidget):
 
         # The two primary boolean options belong to one compact row, matching
         # the old panel's scan pattern while remaining keyboard accessible.
-        img_row, img_layout = self._make_option_row()
+        img_row = ChoiceGroup(self, responsive=True)
+        img_layout = img_row.content_layout
         self._image_cb = self._make_checkbox(
             _t("action_area.extract_images", "Extract Images"),
             checked=self._vm.extract_image,
@@ -600,8 +614,8 @@ class ActionArea(QWidget):
         )
         self._ocr_cb.stateChanged.connect(lambda state: self._vm.set_file_to_md_option("extract_ocr", bool(state)))
         img_layout.addWidget(self._ocr_cb)
-        img_layout.addStretch(1)
         self._content_layout.addWidget(img_row)
+        self._build_ocr_settings()
 
         # Optimize option (if shown)
         if self._vm.show_optimize:
@@ -611,6 +625,60 @@ class ActionArea(QWidget):
         if self._vm.show_numbering:
             self._build_file_to_md_numbering_rows()
 
+    def _build_ocr_settings(self) -> None:
+        """Build request-level OCR controls, collapsed until OCR is selected."""
+
+        if self._content_layout is None:
+            return
+        group = ChoiceGroup(self)
+        group.setObjectName("actionOcrSettings")
+        self._ocr_settings_group = group
+
+        language = self._make_combo(parent=group)
+        language_items = (
+            (_t("settings.image.ocr_language_auto", "Follow interface language"), "auto"),
+            (_t("settings.image.ocr_language_chinese", "Chinese/English"), "chinese"),
+            (_t("settings.image.ocr_language_chinese_cht", "Traditional Chinese"), "chinese_cht"),
+            (_t("settings.image.ocr_language_english", "English Only"), "english"),
+            (_t("settings.image.ocr_language_japanese", "Japanese"), "japanese"),
+            (_t("settings.image.ocr_language_korean", "Korean"), "korean"),
+            (_t("settings.image.ocr_language_latin", "Latin script"), "latin"),
+            (_t("settings.image.ocr_language_cyrillic", "Cyrillic script"), "cyrillic"),
+        )
+        for label, value in language_items:
+            language.addItem(label, value)
+        language.setCurrentIndex(max(0, language.findData(self._vm.ocr_language or "auto")))
+        language.currentIndexChanged.connect(
+            lambda index: self._vm.set_file_to_md_option("ocr_language", language.itemData(index))
+        )
+        language_label = _t("settings.image.ocr_language_label", "OCR recognition language:").rstrip(":：")
+        language.setAccessibleName(language_label)
+        self._ocr_language_combo = language
+        group.content_layout.addWidget(FormRow(language_label, language, group))
+
+        if self._vm.ocr_placement is not None:
+            placement = self._make_combo(parent=group)
+            placement.addItem(
+                _t("settings.extraction.ocr_placement_mode_image_md", "Image MD"),
+            )
+            placement.setItemData(0, "image_md")
+            placement.addItem(
+                _t("settings.extraction.ocr_placement_mode_main_md", "Main document"),
+            )
+            placement.setItemData(1, "main_md")
+            placement.setCurrentIndex(max(0, placement.findData(self._vm.ocr_placement)))
+            placement.currentIndexChanged.connect(
+                lambda index: self._vm.set_file_to_md_option("ocr_placement", placement.itemData(index))
+            )
+            placement_label = _t("settings.extraction.ocr_placement_mode_label", "OCR placement:").rstrip(":：")
+            placement.setAccessibleName(placement_label)
+            self._ocr_placement_combo = placement
+            group.content_layout.addWidget(FormRow(placement_label, placement, group))
+
+        group.setVisible(self._vm.extract_ocr)
+        self._ocr_cb.toggled.connect(group.setVisible)
+        self._content_layout.addWidget(group)
+
     def _build_optimize_row(self) -> None:
         """Build the optimize-for-type combo row."""
         if self._content_layout is None:
@@ -618,21 +686,23 @@ class ActionArea(QWidget):
         opt_row, opt_layout = self._make_option_row()
         optimization_result = self._vm.optimization_choices_result
         if optimization_result.status == "failed":
-            notice = QLabel(
+            notice = InlineNotice(
                 _t(
                     "action_area.optimization_unavailable",
                     "Optimization options are unavailable; standard conversion remains available.",
                 ),
                 opt_row,
+                tone="warning",
             )
-            notice.setObjectName("actionOptimizationUnavailable")
+            notice.label.setObjectName("actionOptimizationUnavailable")
             notice.setProperty("settingsRole", "tabDescription")
-            notice.setTextFormat(Qt.TextFormat.PlainText)
-            notice.setWordWrap(True)
             error = optimization_result.error
             if error is not None:
-                notice.setProperty("errorCode", getattr(error, "code", "capability_unavailable"))
-                notice.setToolTip(str(getattr(error, "code", "capability_unavailable")))
+                error_code = getattr(error, "code", "capability_unavailable")
+                notice.setProperty("errorCode", error_code)
+                notice.label.setProperty("errorCode", error_code)
+                notice.setToolTip(str(error_code))
+                notice.label.setToolTip(str(error_code))
             opt_layout.addWidget(notice)
             opt_layout.addStretch(1)
             self._content_layout.addWidget(opt_row)
@@ -736,7 +806,8 @@ class ActionArea(QWidget):
             return
 
         # Action button
-        button_row, button_layout = self._make_option_row()
+        button_row = ActionFooter(self)
+        button_layout = button_row.content_layout
         button_layout.addStretch(1)
 
         btn = self._make_button(self._vm.get_button_label(), parent=button_row)
@@ -746,10 +817,9 @@ class ActionArea(QWidget):
 
         button_layout.addWidget(btn)
         button_layout.addStretch(1)
-        self._content_layout.addWidget(button_row)
-
         # Keep the two universal boolean options on one compact row.
-        img_row, img_layout = self._make_option_row()
+        img_row = ChoiceGroup(self, responsive=True)
+        img_layout = img_row.content_layout
         self._image_cb = self._make_checkbox(
             _t("action_area.extract_images", "Extract Images"),
             checked=self._vm.extract_image,
@@ -764,11 +834,13 @@ class ActionArea(QWidget):
         )
         self._ocr_cb.stateChanged.connect(lambda state: self._vm.set_file_to_md_option("extract_ocr", bool(state)))
         img_layout.addWidget(self._ocr_cb)
-        img_layout.addStretch(1)
         self._content_layout.addWidget(img_row)
+        self._build_ocr_settings()
 
         if self._vm.show_optimize:
             self._build_optimize_row()
+
+        self._content_layout.addWidget(button_row)
 
     # ── MD -> Document Layout ───────────────────────────────────────────
 
@@ -778,7 +850,8 @@ class ActionArea(QWidget):
             return
 
         # Generate row
-        gen_row, gen_layout = self._make_option_row()
+        gen_row = ActionFooter(self)
+        gen_layout = gen_row.content_layout
         gen_layout.addStretch(1)
 
         format_combo = self._make_combo(parent=gen_row)
@@ -808,10 +881,6 @@ class ActionArea(QWidget):
 
         gen_layout.addWidget(generate_btn)
         gen_layout.addStretch(1)
-        self._content_layout.addWidget(gen_row)
-
-        self._add_target_route_notice()
-
         # Numbering rows
         self._build_md_numbering_rows()
 
@@ -824,6 +893,8 @@ class ActionArea(QWidget):
 
         # Proofread grid
         self._build_proofread_grid()
+        self._add_target_route_notice()
+        self._content_layout.addWidget(gen_row)
 
     def _build_md_numbering_rows(self) -> None:
         """Build numbering options for MD->Document mode.

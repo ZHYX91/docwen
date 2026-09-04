@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 from typing import cast as _cast
 
 from PySide6.QtCore import QEvent, QSize, Qt, QTimer
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QFontDatabase
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -38,6 +38,8 @@ from PySide6.QtWidgets import (
 
 from docwen_gui.i18n import t as _t
 
+from .panel_card import PanelCard, TaskActivityList
+
 if TYPE_CHECKING:
     from ..view_models.info_area_vm import InfoAreaViewModel
 
@@ -47,7 +49,6 @@ logger = logging.getLogger(__name__)
 _SPACING_XS = 4
 _SPACING_SM = 8
 _SPACING_MD = 12
-_TIMESTAMP_WIDTH = 54  # logical px, will be DPI-scaled
 _LOCATION_BUTTON_SIZE = 26
 _LOCATION_ICON_SIZE = 16
 _SCROLL_DELAY_MS = 50
@@ -174,10 +175,9 @@ class InfoArea(QWidget):
         root_layout.setSpacing(_SPACING_SM)
 
         # Content card
-        self._content_card = QWidget(self)
+        self._content_card = PanelCard(parent=self)
         self._content_card.setObjectName("infoAreaContentCard")
-        card_layout = QVBoxLayout(self._content_card)
-        card_layout.setContentsMargins(_SPACING_SM, _SPACING_SM, _SPACING_SM, _SPACING_SM)
+        card_layout = self._content_card.content_layout
         card_layout.setSpacing(_SPACING_SM)
 
         # Scroll area for history messages
@@ -187,11 +187,8 @@ class InfoArea(QWidget):
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._scroll.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored)
 
-        self._msg_container = QWidget()
-        self._msg_layout = QVBoxLayout(self._msg_container)
-        self._msg_layout.setContentsMargins(0, 0, 0, 0)
-        self._msg_layout.setSpacing(_SPACING_SM)
-        self._msg_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self._msg_container = TaskActivityList()
+        self._msg_layout = self._msg_container.content_layout
 
         self._empty_history_state = QWidget(self._msg_container)
         self._empty_history_state.setObjectName("infoHistoryEmptyState")
@@ -316,8 +313,14 @@ class InfoArea(QWidget):
         row.setProperty("hasNavigationTarget", "false")
         row.setProperty("hasOperationId", "false")
         row_layout = QHBoxLayout(row)
-        row_layout.setContentsMargins(0, 2, 0, 2)
-        row_layout.setSpacing(_SPACING_XS)
+        row_layout.setContentsMargins(_SPACING_SM, _SPACING_XS, _SPACING_XS, _SPACING_XS)
+        row_layout.setSpacing(_SPACING_SM)
+
+        tone_marker = QFrame(row)
+        tone_marker.setObjectName("infoHistoryToneMarker")
+        tone_marker.setProperty("infoStatusTone", row_data.message_type)
+        tone_marker.setFixedWidth(_scale(3))
+        row_layout.addWidget(tone_marker)
 
         # Content wrapper
         content = QWidget(row)
@@ -328,17 +331,21 @@ class InfoArea(QWidget):
         # First line: timestamp + message
         first_line = QWidget(content)
         first_line.setObjectName("infoHistoryMeta")
-        first_line.setProperty("hasBadge", "false")
+        first_line.setProperty("hasBadge", "true" if row_data.repeat_count > 1 else "false")
         first_line_layout = QHBoxLayout(first_line)
         first_line_layout.setContentsMargins(0, 0, 0, 0)
         first_line_layout.setSpacing(_SPACING_XS)
 
-        # Timestamp label (HH:MM:SS, fixed width)
-        timestamp_width = _scale(_TIMESTAMP_WIDTH)
+        # Size from actual font metrics so every second remains visible.
         timestamp_label = QLabel(row_data.timestamp, first_line)
         timestamp_label.setObjectName("statusTimestamp")
-        timestamp_label.setMinimumWidth(timestamp_width)
-        timestamp_label.setMaximumWidth(timestamp_width)
+        timestamp_label.setFont(QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont))
+        # Global typography is stylesheet-driven.  Polish before measuring so
+        # an xlarge preset cannot enlarge the glyphs after the fixed width was
+        # chosen and clip the final second digit.
+        timestamp_label.ensurePolished()
+        timestamp_width = timestamp_label.fontMetrics().horizontalAdvance("00:00:00")
+        timestamp_label.setFixedWidth(timestamp_width + _scale(8))
         first_line_layout.addWidget(timestamp_label, alignment=Qt.AlignmentFlag.AlignTop)
 
         # Message text (selectable)
@@ -350,6 +357,18 @@ class InfoArea(QWidget):
         msg_label.setToolTip(row_data.message)
         row.setToolTip(row_data.message)
         first_line_layout.addWidget(msg_label, stretch=1)
+        if row_data.repeat_count > 1:
+            repeat_label = QLabel(
+                _t(
+                    "info_area.history_repeated",
+                    "Repeated {count} times",
+                    count=row_data.repeat_count,
+                ),
+                first_line,
+            )
+            repeat_label.setObjectName("infoHistoryRepeatBadge")
+            repeat_label.setToolTip(repeat_label.text())
+            first_line_layout.addWidget(repeat_label, alignment=Qt.AlignmentFlag.AlignTop)
         content_layout.addWidget(first_line)
 
         row_layout.addWidget(content, stretch=1)

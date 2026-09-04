@@ -53,10 +53,10 @@ from qfluentwidgets import (
     PrimaryPushButton,
     PushButton,
     SegmentedWidget,
-    SimpleCardWidget,
     StrongBodyLabel,
 )
 
+from docwen_gui.format_presentation import SUPPORTED_FORMAT_GROUPS, presentation_for
 from docwen_gui.i18n import t
 from docwen_gui.styles.design_tokens import Sizing
 
@@ -75,13 +75,9 @@ _SPACING_MD = 12
 _PYRAMID_INDENTS = (72, 58, 44, 30, 18, 8)
 _ACTION_BUTTON_MIN_WIDTH = 72
 
-_SUPPORTED_TYPE_ROWS: tuple[tuple[str, str, str], ...] = (
-    ("file_category.text_short", "Text", "MD, TXT"),
-    ("file_category.layout_short", "Layout", "PDF, XPS, OFD"),
-    ("file_category.spreadsheet_short", "Sheet", "XLSX, XLS, ET, CSV, TSV, ODS"),
-    ("file_category.document_short", "Doc", "DOCX, DOC, WPS, RTF, ODT"),
-    ("file_category.image_short", "Image", "JPG, PNG, BMP, GIF, HEIC, HEIF, WebP"),
-    ("file_category.other_short", "Other", "HTML, MHTML, ENEX, PPTX, PPT, EPUB"),
+_SUPPORTED_TYPE_ROWS: tuple[tuple[str, str, str], ...] = tuple(
+    (label_key, fallback, ", ".join(presentation_for(fmt).display_name for fmt in formats))
+    for label_key, fallback, formats in SUPPORTED_FORMAT_GROUPS
 )
 
 # MIME types for drag-and-drop
@@ -235,8 +231,9 @@ class InputArea(QFrame):
         self.setTabOrder(self._mode_switch, self._add_button)
         self.setTabOrder(self._add_button, self._clear_button)
 
-        # Empty state card
-        self._empty_state_frame = SimpleCardWidget(self._drop_group)
+        # The drop group is the single framed surface; the state content stays
+        # unframed so selection feedback does not create a nested card stack.
+        self._empty_state_frame = QWidget(self._drop_group)
         self._empty_state_frame.setObjectName("fileDropEmptyStateFrame")
         empty_layout = QVBoxLayout(self._empty_state_frame)
         empty_layout.setContentsMargins(_SPACING_MD, _SPACING_SM, _SPACING_MD, _SPACING_MD)
@@ -334,17 +331,12 @@ class InputArea(QFrame):
             alignment=Qt.AlignmentFlag.AlignVCenter,
         )
 
-        # Feedback frame (selection message)
-        self._feedback_frame = QFrame(self._empty_state_frame)
-        self._feedback_frame.setObjectName("fileDropFeedbackFrame")
+        # Unframed selection feedback; the outer drop area already owns the card boundary.
+        self._feedback_frame = QWidget(self._empty_state_frame)
+        self._feedback_frame.setObjectName("fileDropFeedbackArea")
         feedback_layout = QVBoxLayout(self._feedback_frame)
         feedback_layout.setContentsMargins(_SPACING_MD, _SPACING_SM, _SPACING_MD, _SPACING_SM)
         feedback_layout.setSpacing(_SPACING_XS)
-
-        self._feedback_title_label = CaptionLabel(self._feedback_frame)
-        self._feedback_title_label.setObjectName("fileDropFeedbackTitleLabel")
-        self._feedback_title_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        self._feedback_title_label.setText(_i18n(_I_TRANSIENT_TITLE, "Status"))
 
         self._selection_label = QLabel(self._feedback_frame)
         self._selection_label.setObjectName("fileDropSelectionLabel")
@@ -360,7 +352,6 @@ class InputArea(QFrame):
         self._selection_detail_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         self._selection_detail_label.setVisible(False)
 
-        feedback_layout.addWidget(self._feedback_title_label)
         feedback_layout.addWidget(self._selection_label)
         feedback_layout.addWidget(self._selection_detail_label)
 

@@ -5,7 +5,7 @@ Widgets bind to its signals and properties; user actions flow through
 method calls.
 
 State managed:
-- History messages: 100 max, 250ms dedup (six-tuple signature), HH:MM:SS timestamps
+- History messages: 100 max, consecutive-event repeat counts, HH:MM:SS timestamps
 - Transient messages: priority (error>terminal>progress>processing), TTL (3000ms default, 4000ms terminal), progress throttle (250ms)
 - Task summary: drives guide button rendering and status display
 - Activity animation: 300ms interval dot cycle
@@ -46,7 +46,6 @@ _TASK_GUIDE_LABELS: dict[str, str] = {
     "open_output_dir": "info_area.task_guide_open_output_dir",
     "view_failed_details": "info_area.task_guide_view_failed_details",
     "retry_failed": "info_area.task_guide_retry_failed",
-    "add_more_files": "info_area.task_guide_add_more_files",
 }
 
 # ── Task states that trigger guide row ────────────────────────────────────
@@ -92,6 +91,7 @@ class HistoryRowData:
     file_path: str = ""
     navigate_file_path: str = ""
     operation_id: str = ""
+    repeat_count: int = 1
 
 
 @dataclass
@@ -165,7 +165,6 @@ class InfoAreaViewModel(QObject):
         # ── History state ────────────────────────────────────────────────
         self._history_rows: list[HistoryRowData] = []
         self._last_message_signature: tuple | None = None
-        self._last_message_time: float = 0.0
 
         # ── Transient state ──────────────────────────────────────────────
         # _transient_messages: key -> (message, message_type, priority)
@@ -293,8 +292,8 @@ class InfoAreaViewModel(QObject):
     ) -> None:
         """Add a message to the history area.
 
-        Deduplicates against the previous message using a six-tuple
-        signature within a 250ms window.
+        Coalesces an identical consecutive event into a visible repeat count.
+        Repeated attempts remain independently visible once another state occurs.
 
         Args:
             message: The user-visible message text.
@@ -314,16 +313,18 @@ class InfoAreaViewModel(QObject):
             navigation_target,
             resolved_operation_id,
         )
-        now = time.monotonic()
-
-        # 250ms dedup window
-        if signature == self._last_message_signature and (now - self._last_message_time) < 0.25:
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        if signature == self._last_message_signature and self._history_rows:
+            latest = self._history_rows[-1]
+            self._history_rows[-1] = replace(
+                latest,
+                timestamp=timestamp,
+                repeat_count=latest.repeat_count + 1,
+            )
+            self._refresh_status()
             return
 
         self._last_message_signature = signature
-        self._last_message_time = now
-
-        timestamp = datetime.now().strftime("%H:%M:%S")
 
         row = HistoryRowData(
             timestamp=timestamp,
@@ -348,13 +349,13 @@ class InfoAreaViewModel(QObject):
         """Remove a history row by index."""
         if 0 <= index < len(self._history_rows):
             self._history_rows.pop(index)
+            self._last_message_signature = None
             self._refresh_status()
 
     def clear_history(self) -> None:
         """Clear all history rows."""
         self._history_rows.clear()
         self._last_message_signature = None
-        self._last_message_time = 0.0
         self._refresh_status()
 
     def reset_session(self) -> None:
@@ -368,7 +369,6 @@ class InfoAreaViewModel(QObject):
         """
         self._history_rows.clear()
         self._last_message_signature = None
-        self._last_message_time = 0.0
 
         self._transient_generation += 1
         self._clear_transient_state()
@@ -740,15 +740,13 @@ class InfoAreaViewModel(QObject):
             completed = ts.completed_count
             total = ts.total_count
             failed = ts.failed_count
-            op_id = ts.operation_id
             progress_lines = [
                 _t(
                     "info_area.task_progress_detail",
-                    "Completed: {completed}/{total}, Failed: {failed} [{operation_id}]",
+                    "Completed: {completed}/{total}, Failed: {failed}",
                     completed=completed,
                     total=total,
                     failed=failed,
-                    operation_id=op_id,
                 )
             ]
             if ts.skipped_count:
@@ -901,9 +899,9 @@ class InfoAreaViewModel(QObject):
         """Compute the guide action list based on task completion state.
 
         This static method encapsulates the guide button combination rules:
-        - All success: open_output_dir + add_more_files
+        - All success: open_output_dir when one exists
         - Has failures: open_output_dir + view_failed_details + retry_failed
-        - Cancelled: only add_more_files
+        - Cancelled: no redundant guide action; file input remains available
 
         Args:
             state: Task state (success / partial / failed / cancelled).
@@ -917,14 +915,11 @@ class InfoAreaViewModel(QObject):
         actions: list[dict[str, str]] = []
 
         if state == "cancelled":
-            actions.append({"action_key": "add_more_files", "target_path": ""})
             return actions
 
         # For success, partial, and failed states
         if output_dir:
             actions.append({"action_key": "open_output_dir", "target_path": output_dir})
-        else:
-            actions.append({"action_key": "open_output_dir", "target_path": ""})
 
         if state in ("partial", "failed"):
             if failed_details_path:
@@ -944,7 +939,6 @@ class InfoAreaViewModel(QObject):
             if retry_available:
                 actions.append({"action_key": "retry_failed", "target_path": ""})
 
-        actions.append({"action_key": "add_more_files", "target_path": ""})
         return actions
 
     @staticmethod

@@ -140,6 +140,61 @@ def test_unknown_ole_is_blocked_instead_of_suffix_routed(tmp_path: Path, monkeyp
     assert inspection.reason_code == "FILE_CONTAINER_UNRECOGNIZED"
 
 
+@pytest.mark.parametrize("extension", ["docx", "xlsx", "pptx"])
+def test_encrypted_ooxml_container_is_bound_to_supported_ooxml_declaration(
+    tmp_path: Path,
+    monkeypatch,
+    extension: str,
+) -> None:
+    source = tmp_path / f"encrypted.{extension}"
+    source.write_bytes(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"x" * 64)
+
+    class FakeOleFile:
+        def __init__(self, _path: str) -> None:
+            pass
+
+        def listdir(self) -> list[list[str]]:
+            return [["EncryptionInfo"], ["EncryptedPackage"]]
+
+    monkeypatch.setitem(
+        sys.modules,
+        "olefile",
+        SimpleNamespace(isOleFile=lambda _path: True, OleFileIO=FakeOleFile),
+    )
+
+    inspection = inspect_file(str(source))
+
+    assert inspection.detected_format == extension
+    assert inspection.structure_status is StructureStatus.VALID
+    assert inspection.relation is FormatRelation.EXACT_MATCH
+    assert inspection.decision is AdmissionDecision.ALLOW
+    assert inspection.ooxml_signature["state"] == "not_applicable"
+
+
+def test_encrypted_ooxml_container_is_not_suffix_routed_to_legacy_office(tmp_path: Path, monkeypatch) -> None:
+    source = tmp_path / "encrypted.doc"
+    source.write_bytes(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"x" * 64)
+
+    class FakeOleFile:
+        def __init__(self, _path: str) -> None:
+            pass
+
+        def listdir(self) -> list[list[str]]:
+            return [["EncryptionInfo"], ["EncryptedPackage"]]
+
+    monkeypatch.setitem(
+        sys.modules,
+        "olefile",
+        SimpleNamespace(isOleFile=lambda _path: True, OleFileIO=FakeOleFile),
+    )
+
+    inspection = inspect_file(str(source))
+
+    assert inspection.detected_format == "ooxml_encrypted"
+    assert inspection.decision is AdmissionDecision.BLOCK
+    assert inspection.reason_code == "UNSUPPORTED_FORMAT"
+
+
 def test_empty_zip_cannot_pose_as_docx(tmp_path: Path) -> None:
     source = tmp_path / "empty-package.docx"
     with zipfile.ZipFile(source, "w"):

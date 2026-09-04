@@ -340,8 +340,11 @@ class TestConversionFormatLookups:
         vm.compress_mode = "limit_size"
         vm.set_file_info("image", "jpeg")
         fmts = vm.get_conversion_formats()
-        assert "JPG" in fmts
-        assert "PNG" in fmts
+        assert fmts == ["JPG", "WebP"]
+        choices = {choice.display_name: choice for choice in vm.get_conversion_format_choices()}
+        assert choices["JPG"].enabled is True
+        assert choices["PNG"].enabled is False
+        assert choices["PNG"].disabled_reason
 
     def test_image_limit_size_keeps_same_non_compressible_format_hidden(self, vm: ConversionPanelViewModel) -> None:
         vm.compress_mode = "limit_size"

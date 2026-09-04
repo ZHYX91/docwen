@@ -114,6 +114,8 @@ _OLE_STREAM_SIGNATURES: list[tuple[list[str], str]] = [
     (["Workbook", "Book", "BOOK"], "xls"),
     (["PowerPoint Document"], "ppt"),
 ]
+ENCRYPTED_OOXML_CONTAINER_FORMAT = "ooxml_encrypted"
+_ENCRYPTED_OOXML_STREAMS = frozenset({"EncryptionInfo", "EncryptedPackage"})
 
 # ── Supported filename declarations ──────────────────────────────────
 
@@ -823,7 +825,7 @@ def _xml_attribute(node: ElementTree.Element, local_name: str) -> str:
 
 
 def _detect_ole_type(file_path: str) -> str | None:
-    """Inspect OLE2 compound document streams to distinguish DOC/XLS/PPT."""
+    """Inspect OLE2 streams for legacy Office or encrypted OOXML containers."""
     try:
         import olefile
     except ImportError:
@@ -841,5 +843,8 @@ def _detect_ole_type(file_path: str) -> str | None:
     for stream_names, fmt in _OLE_STREAM_SIGNATURES:
         if any(s in flat for s in stream_names):
             return fmt
+
+    if flat >= _ENCRYPTED_OOXML_STREAMS:
+        return ENCRYPTED_OOXML_CONTAINER_FORMAT
 
     return None

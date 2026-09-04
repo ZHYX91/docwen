@@ -17,7 +17,14 @@ from typing import TYPE_CHECKING, Any
 from PySide6.QtCore import QObject, Signal
 
 from docwen_core.formats.categories import CATEGORY_DOCUMENT, CATEGORY_IMAGE, CATEGORY_SPREADSHEET, get_category
+from docwen_gui.format_presentation import (
+    FORMAT_PRESENTATIONS,
+    FormatChoice,
+    format_choice,
+    normalize_format,
+)
 from docwen_gui.i18n import t as _t
+from docwen_gui.spreadsheet_protection import SpreadsheetProtectionInfo, inspect_xlsx_protection
 
 from ._runtime_route_filter import (
     RuntimeRouteChoicesResult,
@@ -30,29 +37,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# ── Pure presentation constants ──────────────────────────────────────────
+# Compatibility exports now derive from the single presentation registry.
 COMPRESSIBLE_FORMATS: list[str] = ["JPG", "JPEG", "WEBP"]
-
 BUTTON_COLORS: dict[str, str] = {
-    "DOCX": "primary",
-    "DOC": "info",
-    "ODT": "success",
-    "RTF": "warning",
-    "WPS": "info",
-    "XLSX": "primary",
-    "XLS": "info",
-    "ODS": "success",
-    "CSV": "warning",
-    "TSV": "warning",
-    "ET": "info",
-    "PNG": "primary",
-    "JPG": "primary",
-    "BMP": "info",
-    "GIF": "success",
-    "TIF": "warning",
-    "WebP": "danger",
-    "PDF": "danger",
-    "OFD": "success",
+    presentation.display_name.upper(): presentation.tone for presentation in FORMAT_PRESENTATIONS.values()
 }
 
 # ── Validation option keys ───────────────────────────────────────────────
@@ -107,6 +95,7 @@ class ConversionPanelViewModel(QObject):
         self._file_list: list[str] = []
         self._ui_mode: str = "single"
         self._route_choices_result = RuntimeRouteChoicesResult(status="empty", choices=())
+        self._spreadsheet_protection_info: tuple[SpreadsheetProtectionInfo, ...] = ()
 
         # Image section state
         self._compress_mode: str = self._normalize_compress_mode(self._read_image_default("compress_mode", "lossless"))
@@ -173,6 +162,30 @@ class ConversionPanelViewModel(QObject):
         """Canonical conversion routes for the current concrete source."""
 
         return self._route_choices_result
+
+    @property
+    def spreadsheet_protection_info(self) -> tuple[SpreadsheetProtectionInfo, ...]:
+        """Read-only protection state for the selected XLSX inputs."""
+
+        return self._spreadsheet_protection_info
+
+    @property
+    def spreadsheet_protected_files(self) -> tuple[str, ...]:
+        """Selected inputs for which workbook or sheet protection was detected."""
+
+        return tuple(info.path for info in self._spreadsheet_protection_info if info.is_protected)
+
+    @property
+    def spreadsheet_unknown_files(self) -> tuple[str, ...]:
+        """Selected inputs whose protection state could not be inspected."""
+
+        return tuple(info.path for info in self._spreadsheet_protection_info if info.is_unknown)
+
+    @property
+    def spreadsheet_password_required(self) -> bool:
+        """Whether an encrypted workbook requires a password before delivery."""
+
+        return any(info.requires_password for info in self._spreadsheet_protection_info)
 
     # ── Image section properties ──────────────────────────────────────────
 
@@ -392,6 +405,10 @@ class ConversionPanelViewModel(QObject):
         self._current_file_path = file_path
         self._file_list = list(file_list or [])
         self._ui_mode = ui_mode
+        protection_paths = self._file_list if ui_mode == "batch" else ([file_path] if file_path else [])
+        self._spreadsheet_protection_info = (
+            tuple(inspect_xlsx_protection(path) for path in protection_paths) if self._current_format == "xlsx" else ()
+        )
         main_vm = self._main_vm
         controller = getattr(main_vm, "controller", None) if main_vm is not None else None
         self._route_choices_result = discover_runtime_route_choices(
@@ -419,6 +436,7 @@ class ConversionPanelViewModel(QObject):
         self._file_list = []
         self._ui_mode = "single"
         self._route_choices_result = RuntimeRouteChoicesResult(status="empty", choices=())
+        self._spreadsheet_protection_info = ()
         self._compress_mode = self._normalize_compress_mode(self._read_image_default("compress_mode", "lossless"))
         self._size_limit = self._read_int_default("image.size_limit", 200)
         self._size_unit = self._normalize_size_unit(self._read_image_default("size_unit", "KB"))
@@ -517,9 +535,32 @@ class ConversionPanelViewModel(QObject):
         if not fp:
             logger.warning("Conversion requested without a file path")
             return
+        normalized_target = str(target_format or "").strip().lower()
+        route = self._route_choices_result.get(normalized_target)
+        if route is None:
+            route = next(
+                (
+                    choice
+                    for choice in self._route_choices_result.choices
+                    if normalize_format(choice.target) == normalize_format(normalized_target)
+                ),
+                None,
+            )
+        if route is None:
+            logger.warning("Conversion target is not backed by a current runtime route: %s", normalized_target)
+            return
+        if self._file_category == CATEGORY_IMAGE and get_category(normalized_target) == CATEGORY_IMAGE:
+            choice = format_choice(
+                normalized_target,
+                current_format=self._current_format,
+                compression_mode=self._compress_mode,
+            )
+            if not choice.enabled:
+                logger.warning("Image conversion target rejected by presentation contract: %s", normalized_target)
+                return
         opts = options or {}
         logger.info("Conversion requested: %s -> %s", fp, target_format)
-        self.conversion_requested.emit(target_format, fp, opts)
+        self.conversion_requested.emit(route.target, fp, opts)
 
     def request_named_action(
         self,
@@ -661,36 +702,29 @@ class ConversionPanelViewModel(QObject):
     @staticmethod
     def normalize_format(fmt: str) -> str:
         """Normalize format aliases (jpg→jpeg, tif→tiff, heif→heic)."""
-        fmt = fmt.lower()
-        eq = {
-            "jpg": "jpeg",
-            "jpeg": "jpeg",
-            "tif": "tiff",
-            "tiff": "tiff",
-            "heif": "heic",
-            "heic": "heic",
-        }
-        return eq.get(fmt, fmt)
+        return normalize_format(fmt)
+
+    def get_conversion_format_choices(self) -> list[FormatChoice]:
+        """Return runtime-backed targets with explicit UI availability reasons."""
+
+        category = self._file_category or ""
+        choices: list[FormatChoice] = []
+        for route_choice in self._route_choices_result.choices:
+            target = route_choice.target
+            include = target == "pdf" if category == "layout" else get_category(target) == category
+            if include:
+                choices.append(
+                    format_choice(
+                        target,
+                        current_format=self._current_format,
+                        compression_mode=self._compress_mode,
+                    )
+                )
+        return choices
 
     def get_conversion_formats(self) -> list[str]:
         """Get the list of conversion target formats for the current category."""
-        category = self._file_category or ""
-        current = self.normalize_format(self._current_format.strip())
-        formats: list[str] = []
-        for choice in self._route_choices_result.choices:
-            target = choice.target
-            include = target == "pdf" if category == "layout" else get_category(target) == category
-            if not include:
-                continue
-            allow_current_image_compress = (
-                category == CATEGORY_IMAGE
-                and self._compress_mode == "limit_size"
-                and current.upper() in COMPRESSIBLE_FORMATS
-            )
-            if not allow_current_image_compress and self.normalize_format(target) == current:
-                continue
-            formats.append(self._display_format(target))
-        return formats
+        return [choice.display_name for choice in self.get_conversion_format_choices() if choice.enabled]
 
     def get_layout_export_formats(self) -> list[str]:
         """Get layout→document export formats backed by actual layout routes."""

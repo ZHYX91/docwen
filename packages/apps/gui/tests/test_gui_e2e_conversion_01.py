@@ -88,7 +88,7 @@ class TestDocxToMdConversion:
         assert latest.navigate_file_path == str(output_path)
         assert latest.message == t("info_area.history_completed", name=sample_docx.name)
         guide_keys = {action["action_key"] for action in window._info_area_vm.guide_actions}
-        assert {"open_output_dir", "add_more_files"}.issubset(guide_keys)
+        assert guide_keys == {"open_output_dir"}
 
     def test_conversion_uses_custom_output_directory_setting(
         self, main_window_with_controller, sample_docx: Path, tmp_path: Path

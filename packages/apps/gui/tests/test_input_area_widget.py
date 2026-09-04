@@ -112,6 +112,10 @@ class TestConstruction:
         assert "HEIF" in values
         assert "EPUB" in values
 
+    def test_selection_feedback_is_not_a_nested_status_card(self, widget: InputArea) -> None:
+        assert widget._feedback_frame.objectName() == "fileDropFeedbackArea"
+        assert not widget.findChildren(QLabel, "fileDropFeedbackTitleLabel")
+
     @pytest.mark.parametrize(
         ("theme", "readable_color"),
         [

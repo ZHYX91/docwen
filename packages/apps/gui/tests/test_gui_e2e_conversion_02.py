@@ -244,8 +244,8 @@ class TestGuiCancellationExecution:
             assert window._info_area_vm._task_summary.state == "cancelled"
             assert window._info_area_vm._task_summary.failed_count == 0
             assert window._info_area_vm._task_summary.cancelled_count == 1
-            assert window._info_area_vm.guide_visible is True
-            assert window._info_area_vm.guide_actions == [{"action_key": "add_more_files", "target_path": ""}]
+            assert window._info_area_vm.guide_visible is False
+            assert window._info_area_vm.guide_actions == []
         finally:
             shutdown_main_window(window)
 
@@ -380,7 +380,6 @@ class TestGuiBatchExecution:
                 "open_output_dir",
                 "view_failed_details",
                 "retry_failed",
-                "add_more_files",
             ]
         finally:
             shutdown_main_window(window)

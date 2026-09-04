@@ -1,0 +1,287 @@
+"""Shared visual primitives for the three-column workspace.
+
+The primitives in this module deliberately own structure rather than colours.
+Their semantic properties are consumed by the shared panel-card stylesheet so
+all workflow panels use the same hierarchy without nesting framed group boxes.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+from typing import Protocol
+
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QStandardItemModel
+from PySide6.QtWidgets import (
+    QBoxLayout,
+    QComboBox,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
+
+
+class FormatChoiceLike(Protocol):
+    """Structural type accepted by :class:`FormatSelector`."""
+
+    @property
+    def display_name(self) -> str: ...
+
+    @property
+    def enabled(self) -> bool: ...
+
+    @property
+    def disabled_reason(self) -> str: ...
+
+    @property
+    def help_text(self) -> str: ...
+
+
+class SectionHeader(QLabel):
+    """A title inside a card; never painted across a frame border."""
+
+    def __init__(self, title: str = "", parent: QWidget | None = None, *, level: str = "section") -> None:
+        super().__init__(title, parent)
+        if level not in {"card", "section"}:
+            raise ValueError("section header level must be 'card' or 'section'")
+        self.setProperty("headerLevel", level)
+        self.setObjectName("panelCardTitle" if level == "card" else "panelSectionTitle")
+        alignment = (
+            Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
+            if level == "card"
+            else Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
+        self.setAlignment(alignment)
+
+
+class FormRow(QFrame):
+    """A label/control row that stacks before translated content clips."""
+
+    def __init__(self, label: str, control: QWidget, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setObjectName("panelFormRow")
+        self.content_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight, self)
+        self.content_layout.setContentsMargins(0, 0, 0, 0)
+        self.content_layout.setSpacing(8)
+        self.label = QLabel(label, self)
+        self.label.setObjectName("panelFormLabel")
+        self.label.setBuddy(control)
+        self.label.setMinimumWidth(0)
+        self.label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self.control = control
+        self.content_layout.addWidget(self.label)
+        self.content_layout.addWidget(control, stretch=1)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        required_width = (
+            self.label.sizeHint().width()
+            + max(self.control.minimumSizeHint().width(), self.control.minimumWidth())
+            + self.content_layout.spacing()
+        )
+        horizontal = required_width <= self.contentsRect().width()
+        direction = QBoxLayout.Direction.LeftToRight if horizontal else QBoxLayout.Direction.TopToBottom
+        if self.content_layout.direction() != direction:
+            self.content_layout.setDirection(direction)
+            self.content_layout.setSpacing(8 if horizontal else 4)
+            self.updateGeometry()
+
+
+class ChoiceGroup(QFrame):
+    """Unframed container for related choices.
+
+    A responsive group uses a comfortably separated horizontal scan pattern
+    while it fits, then stacks without clipping at narrow widths or under
+    larger translated fonts.
+    """
+
+    def __init__(self, parent: QWidget | None = None, *, responsive: bool = False) -> None:
+        super().__init__(parent)
+        self.setObjectName("panelChoiceGroup")
+        self._responsive = responsive
+        direction = QBoxLayout.Direction.LeftToRight if responsive else QBoxLayout.Direction.TopToBottom
+        self.content_layout = QBoxLayout(direction, self)
+        self.content_layout.setContentsMargins(0, 0, 0, 0)
+        self.content_layout.setSpacing(24 if responsive else 8)
+        if responsive:
+            self.content_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        if not self._responsive:
+            return
+        widgets: list[QWidget] = []
+        for index in range(self.content_layout.count()):
+            item = self.content_layout.itemAt(index)
+            widget = item.widget() if item is not None else None
+            if widget is not None:
+                widgets.append(widget)
+        required = sum(widget.sizeHint().width() for widget in widgets) + max(0, len(widgets) - 1) * 24
+        horizontal = required <= self.contentsRect().width()
+        self.content_layout.setDirection(
+            QBoxLayout.Direction.LeftToRight if horizontal else QBoxLayout.Direction.TopToBottom
+        )
+        self.content_layout.setSpacing(24 if horizontal else 8)
+
+
+class ActionFooter(QFrame):
+    """Unframed row reserved for the action that follows its options."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setObjectName("panelActionFooter")
+        self.content_layout = QHBoxLayout(self)
+        self.content_layout.setContentsMargins(0, 0, 0, 0)
+        self.content_layout.setSpacing(8)
+
+
+class InlineNotice(QFrame):
+    """Compact semantic notice used for warnings and availability states."""
+
+    def __init__(self, text: str = "", parent: QWidget | None = None, *, tone: str = "info") -> None:
+        super().__init__(parent)
+        self.setObjectName("panelInlineNotice")
+        self.setProperty("noticeTone", tone)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(8, 6, 8, 6)
+        self.label = QLabel(text, self)
+        self.label.setWordWrap(True)
+        layout.addWidget(self.label, stretch=1)
+
+    def setText(self, text: str) -> None:
+        self.label.setText(text)
+
+
+class TaskActivityList(QFrame):
+    """Unframed host for the task-history rows in the feedback panel."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setObjectName("taskActivityList")
+        self.content_layout = QVBoxLayout(self)
+        self.content_layout.setContentsMargins(0, 0, 0, 0)
+        self.content_layout.setSpacing(8)
+        self.content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+
+class FormatSelector(QComboBox):
+    """A combo that retains unavailable targets with an explicit reason."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setObjectName("formatSelector")
+        self.setMinimumWidth(100)
+        self.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        self.currentIndexChanged.connect(self._sync_tooltip)
+
+    def set_choices(self, choices: Sequence[FormatChoiceLike], *, selected: str | None = None) -> None:
+        """Replace items while selecting the first enabled target when needed."""
+
+        previous = self.currentText()
+        self.clear()
+        model = self.model()
+        if not isinstance(model, QStandardItemModel):
+            raise TypeError("FormatSelector requires a QStandardItemModel")
+
+        first_enabled = -1
+        requested_index = -1
+        for index, choice in enumerate(choices):
+            self.addItem(choice.display_name)
+            item = model.item(index)
+            item.setEnabled(choice.enabled)
+            tooltip = choice.help_text if choice.enabled else choice.disabled_reason
+            item.setToolTip(tooltip)
+            self.setItemData(index, choice.enabled, Qt.ItemDataRole.UserRole)
+            self.setItemData(index, tooltip, Qt.ItemDataRole.ToolTipRole)
+            if choice.enabled and first_enabled < 0:
+                first_enabled = index
+            if choice.enabled and choice.display_name == (selected or previous):
+                requested_index = index
+
+        self.setCurrentIndex(requested_index if requested_index >= 0 else first_enabled)
+        longest = max(
+            (self.fontMetrics().horizontalAdvance(self.itemText(index)) for index in range(self.count())), default=0
+        )
+        self.setMinimumWidth(max(100, longest + 48))
+        self._sync_tooltip()
+
+    def current_choice_enabled(self) -> bool:
+        """Whether the current item can be submitted."""
+
+        return self.currentIndex() >= 0 and bool(self.currentData(Qt.ItemDataRole.UserRole))
+
+    def _sync_tooltip(self) -> None:
+        self.setToolTip(str(self.currentData(Qt.ItemDataRole.ToolTipRole) or ""))
+
+
+class PanelCard(QFrame):
+    """Neutral card with an internal title and dedicated content layout.
+
+    Card titles are compact and centred. Section titles are left aligned and
+    intentionally avoid another framed surface, so nested options do not turn
+    into a stack of fieldsets.
+    """
+
+    def __init__(
+        self,
+        title: str = "",
+        parent: QWidget | None = None,
+        *,
+        level: str = "card",
+    ) -> None:
+        super().__init__(parent)
+        if level not in {"card", "section"}:
+            raise ValueError("panel card level must be 'card' or 'section'")
+
+        self.setProperty("panelLevel", level)
+        outer = QVBoxLayout(self)
+        margin_x = 12 if level == "card" else 0
+        margin_top = 10 if level == "card" else 4
+        margin_bottom = 12 if level == "card" else 4
+        outer.setContentsMargins(margin_x, margin_top, margin_x, margin_bottom)
+        outer.setSpacing(8)
+
+        self._title_label = SectionHeader(parent=self, level=level)
+        outer.addWidget(self._title_label)
+
+        self._content = QWidget(self)
+        self._content.setObjectName("panelCardContent")
+        self._content_layout = QVBoxLayout(self._content)
+        self._content_layout.setContentsMargins(0, 0, 0, 0)
+        self._content_layout.setSpacing(8)
+        outer.addWidget(self._content)
+
+        self.setTitle(title)
+
+    @property
+    def content_layout(self) -> QVBoxLayout:
+        """Return the layout owned by the card's content region."""
+
+        return self._content_layout
+
+    def setTitle(self, title: str) -> None:
+        """Update the internal title without placing text on the border."""
+
+        self._title_label.setText(title)
+        self._title_label.setVisible(bool(title.strip()))
+
+    def title(self) -> str:
+        """Return the current internal title."""
+
+        return self._title_label.text()
+
+
+__all__ = [
+    "ActionFooter",
+    "ChoiceGroup",
+    "FormRow",
+    "FormatSelector",
+    "InlineNotice",
+    "PanelCard",
+    "SectionHeader",
+    "TaskActivityList",
+]

@@ -498,8 +498,11 @@ class TestRuntimeRequestBinding:
             "open_output_dir",
             "view_failed_details",
             "retry_failed",
-            "add_more_files",
         ]
+        details_action = next(
+            action for action in window._info_area_vm.guide_actions if action["action_key"] == "view_failed_details"
+        )
+        assert details_action["target_path"] == second_norm
         history = window._info_area_vm.history_rows
         assert [row.message_type for row in history[-2:]] == ["warning", "danger"]
         assert history[-2].message == _t(
@@ -510,6 +513,7 @@ class TestRuntimeRequestBinding:
             skipped=0,
             cancelled=0,
         )
-        assert history[-1].message == "boom"
-        assert history[-1].file_path == second_norm
-        assert history[-1].navigate_file_path == second_norm
+        assert history[-1].message == f"{_t('main_window.conversion_failed')} [conversion_failed]"
+        assert history[-1].show_location is False
+        assert history[-1].file_path == ""
+        assert history[-1].navigate_file_path == ""

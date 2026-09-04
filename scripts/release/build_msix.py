@@ -28,10 +28,30 @@ from PIL import Image
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 _FOUR_PART_VERSION = re.compile(r"^\d+\.\d+\.\d+\.\d+$")
-_ASSET_SIZES = {
-    "StoreLogo.png": (50, 50),
-    "Square44x44Logo.png": (44, 44),
-    "Square150x150Logo.png": (150, 150),
+_ASSET_SPECS = {
+    "StoreLogo.png": ((50, 50), 0.72),
+    "StoreLogo.scale-100.png": ((50, 50), 0.72),
+    "StoreLogo.scale-125.png": ((63, 63), 0.72),
+    "StoreLogo.scale-150.png": ((75, 75), 0.72),
+    "StoreLogo.scale-200.png": ((100, 100), 0.72),
+    "StoreLogo.scale-400.png": ((200, 200), 0.72),
+    "Square44x44Logo.png": ((44, 44), 0.86),
+    "Square150x150Logo.png": ((150, 150), 0.64),
+    "Square44x44Logo.scale-100.png": ((44, 44), 0.86),
+    "Square44x44Logo.scale-125.png": ((55, 55), 0.86),
+    "Square44x44Logo.scale-150.png": ((66, 66), 0.86),
+    "Square44x44Logo.scale-200.png": ((88, 88), 0.86),
+    "Square44x44Logo.scale-400.png": ((176, 176), 0.86),
+    "Square150x150Logo.scale-100.png": ((150, 150), 0.64),
+    "Square150x150Logo.scale-125.png": ((188, 188), 0.64),
+    "Square150x150Logo.scale-150.png": ((225, 225), 0.64),
+    "Square150x150Logo.scale-200.png": ((300, 300), 0.64),
+    "Square150x150Logo.scale-400.png": ((600, 600), 0.64),
+    "Square44x44Logo.targetsize-16_altform-unplated.png": ((16, 16), 1.0),
+    "Square44x44Logo.targetsize-24_altform-unplated.png": ((24, 24), 1.0),
+    "Square44x44Logo.targetsize-32_altform-unplated.png": ((32, 32), 1.0),
+    "Square44x44Logo.targetsize-48_altform-unplated.png": ((48, 48), 1.0),
+    "Square44x44Logo.targetsize-256_altform-unplated.png": ((256, 256), 1.0),
 }
 
 
@@ -182,7 +202,13 @@ def render_manifest(config: Mapping[str, Any]) -> str:
       <uap:VisualElements DisplayName={quoteattr(str(application["displayName"]))}
         Description={values["description"]} BackgroundColor="transparent"
         Square150x150Logo="assets\\msix\\Square150x150Logo.png"
-        Square44x44Logo="assets\\msix\\Square44x44Logo.png" />
+        Square44x44Logo="assets\\msix\\Square44x44Logo.png">
+        <uap:DefaultTile ShortName={quoteattr(str(application["displayName"]))}>
+          <uap:ShowNameOnTiles>
+            <uap:ShowOn Tile="square150x150Logo" />
+          </uap:ShowNameOnTiles>
+        </uap:DefaultTile>
+      </uap:VisualElements>
       <Extensions>
         <uap5:Extension Category="windows.appExecutionAlias" Executable={values["cli_executable"]}
           EntryPoint="Windows.FullTrustApplication">
@@ -224,18 +250,52 @@ def _copy_payload(payload_root: Path, staging_root: Path, config: Mapping[str, A
 
 
 def _write_assets(staging_root: Path) -> None:
-    candidates = (staging_root / "assets" / "icon.png", _REPO_ROOT / "assets" / "icon.png")
+    candidates = (staging_root / "assets" / "icon.svg", _REPO_ROOT / "assets" / "icon.svg")
     icon_path = next((path for path in candidates if path.is_file()), None)
-    _require(icon_path is not None, "msix_icon_source_missing")
+    _require(icon_path is not None, "msix_icon_svg_source_missing")
     icon_path = cast(Path, icon_path)
     output_root = staging_root / "assets" / "msix"
     output_root.mkdir(parents=True, exist_ok=True)
 
-    with Image.open(icon_path) as source:
-        icon = source.convert("RGBA")
-        for name, size in _ASSET_SIZES.items():
-            resized = icon.resize(size, Image.Resampling.LANCZOS)
-            resized.save(output_root / name, format="PNG", optimize=False, compress_level=9)
+    for name, (size, fill_ratio) in _ASSET_SPECS.items():
+        canvas = Image.new("RGBA", size, (0, 0, 0, 0))
+        content_size = (
+            max(1, round(size[0] * fill_ratio)),
+            max(1, round(size[1] * fill_ratio)),
+        )
+        rendered = _render_svg_icon(icon_path, content_size)
+        offset = ((size[0] - rendered.width) // 2, (size[1] - rendered.height) // 2)
+        canvas.alpha_composite(rendered, offset)
+        canvas.save(output_root / name, format="PNG", optimize=False, compress_level=9)
+
+
+def _render_svg_icon(svg_path: Path, size: tuple[int, int]) -> Image.Image:
+    """Render one MSIX asset directly from the canonical SVG source."""
+
+    from PySide6.QtCore import QRectF, Qt
+    from PySide6.QtGui import QImage, QPainter
+    from PySide6.QtSvg import QSvgRenderer
+
+    renderer = QSvgRenderer(svg_path.read_bytes())
+    _require(renderer.isValid(), "msix_icon_svg_invalid")
+    image = QImage(size[0], size[1], QImage.Format.Format_ARGB32_Premultiplied)
+    image.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(image)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+    renderer.render(painter, QRectF(0, 0, size[0], size[1]))
+    painter.end()
+
+    rgba = image.convertToFormat(QImage.Format.Format_RGBA8888)
+    return Image.frombytes(
+        "RGBA",
+        size,
+        bytes(rgba.constBits()),
+        "raw",
+        "RGBA",
+        rgba.bytesPerLine(),
+        1,
+    )
 
 
 def _sanitize_stripped_pe_certificates(staging_root: Path) -> tuple[str, ...]:

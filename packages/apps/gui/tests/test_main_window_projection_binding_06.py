@@ -92,7 +92,6 @@ class TestRuntimeRequestBinding:
             {"action_key": "open_output_dir", "target_path": str(retained.parent)},
             {"action_key": "view_failed_details", "target_path": normalized},
             {"action_key": "retry_failed", "target_path": ""},
-            {"action_key": "add_more_files", "target_path": ""},
         ]
         history = window._info_area_vm.history_rows
         assert history[-1].message_type == "danger"
@@ -161,9 +160,10 @@ class TestRuntimeRequestBinding:
             card = BatchEntryItemWidget(entry)
             assert card._primary_action_key == "open_output"
             card.close()
-        assert [row.message for row in window._info_area_vm.history_rows if row.message.startswith("failure-")] == [
-            "failure-0"
-        ]
+        failure_rows = [row for row in window._info_area_vm.history_rows if row.message_type == "danger"]
+        assert len(failure_rows) == 2
+        assert failure_rows[-1].message
+        assert "failure-0" not in failure_rows[-1].message
 
     @pytest.mark.parametrize(
         ("error_type", "expected_status"),

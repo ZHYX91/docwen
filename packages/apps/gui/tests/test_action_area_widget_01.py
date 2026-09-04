@@ -71,11 +71,22 @@ class TestConstruction:
         assert widget.button_stack is not None
         assert widget.button_stack.count() == 2
 
+    def test_ocr_settings_expand_only_when_ocr_is_selected(self, widget: ActionArea, vm: ActionAreaViewModel) -> None:
+        vm.setup_for_document_file("/test.docx")
+        assert widget._ocr_settings_group is not None
+        assert widget._ocr_settings_group.isHidden() is True
+
+        assert widget._ocr_cb is not None
+        widget._ocr_cb.click()
+
+        assert widget._ocr_settings_group.isHidden() is False
+        assert widget._ocr_language_combo is not None
+
     def test_active_actions_render_inside_a_titled_surface(self, widget: ActionArea, vm: ActionAreaViewModel) -> None:
         vm.setup_for_document_file("/test.docx")
 
         card = widget.findChild(QFrame, "actionContentCard")
-        title = widget.findChild(QLabel, "actionPanelTitle")
+        title = widget.findChild(QLabel, "panelCardTitle")
         assert card is not None
         assert title is not None and title.text().strip()
         assert widget.findChild(QLabel, "actionPanelSubtitle") is None

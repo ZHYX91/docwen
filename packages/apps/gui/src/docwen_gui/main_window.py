@@ -146,6 +146,25 @@ def _result_warning_messages(result: ConversionResult) -> list[str]:
     return messages
 
 
+def _localized_failure_message(error: object | None = None) -> str:
+    """Return localized summary copy while keeping raw diagnostics in details."""
+
+    base = _t(
+        "main_window.conversion_failed",
+        "Conversion failed. Open failure details for diagnostic information.",
+    )
+    if error is None:
+        return base
+    if isinstance(error, str):
+        candidate = error.partition(":")[0].strip()
+        stable_code = candidate if candidate and " " not in candidate and candidate == candidate.upper() else ""
+        return f"{base} [{stable_code}]" if stable_code else base
+    diagnostic_code = str(getattr(error, "diagnostic_code", "") or "").strip()
+    error_type = str(getattr(error, "error_type", "") or "").strip()
+    stable_code = diagnostic_code or error_type
+    return f"{base} [{stable_code}]" if stable_code else base
+
+
 def _redacted_request_options(options: dict[str, Any]) -> dict[str, Any]:
     """Keep execution secrets out of GUI retry/history context."""
 
@@ -1527,9 +1546,7 @@ class MainWindow(QWidget):
                 filename=Path(file_path).name,
             ),
             "info",
-            show_location=True,
-            file_path=file_path,
-            navigate_file_path=file_path,
+            show_location=False,
         )
 
     def _on_status_message_changed(self, message: str) -> None:
@@ -1671,7 +1688,11 @@ class MainWindow(QWidget):
                 file_paths = _move_path_to_front(file_paths, file_path)
             if len(file_paths) < 2:
                 self._info_area_vm.add_message(
-                    _t("main_window.aggregate_need_two", "At least two matching files are required."),
+                    _t(
+                        "main_window.aggregate_need_two",
+                        "At least two matching files are required (found: {count}).",
+                        count=len(file_paths),
+                    ),
                     "warning",
                 )
                 return
@@ -1799,11 +1820,9 @@ class MainWindow(QWidget):
             )
             self._action_area_vm.show_cancel()
             self._info_area_vm.add_message(
-                f"Started: {Path(file_path).name}",
+                _t("info_area.history_started", name=Path(file_path).name),
                 "info",
-                show_location=True,
-                file_path=file_path,
-                navigate_file_path=file_path,
+                show_location=False,
             )
 
         self._launch_execution_thread(
@@ -1878,7 +1897,7 @@ class MainWindow(QWidget):
                 self._batch_list_vm.set_file_status(path, "processing", operation_id=task_id)
             self._action_area_vm.show_cancel()
             self._info_area_vm.add_message(
-                f"Started: {context.get('display_name', 'Batch conversion')}",
+                _t("info_area.history_started", name=context.get("display_name", "Batch conversion")),
                 "info",
                 show_location=False,
                 operation_id=task_id,
@@ -1951,7 +1970,7 @@ class MainWindow(QWidget):
                 self._batch_list_vm.set_file_status(path, "processing", operation_id=task_id)
             self._action_area_vm.show_cancel()
             self._info_area_vm.add_message(
-                f"Started: {context.get('display_name', action_name)}",
+                _t("info_area.history_started", name=context.get("display_name", action_name)),
                 "info",
                 show_location=False,
                 operation_id=task_id,
@@ -2092,9 +2111,7 @@ class MainWindow(QWidget):
                         "The file changed after it was added. Remove it from the list and add it again to re-check the file, then retry.",
                     ),
                     "warning",
-                    show_location=True,
-                    file_path=ref.path,
-                    navigate_file_path=ref.path,
+                    show_location=False,
                 )
                 return False
             if inspection.decision is AdmissionDecision.BLOCK:
@@ -2102,9 +2119,7 @@ class MainWindow(QWidget):
                     render_file_inspection_message(inspection, prefer_reason=True)
                     or _t("main_window.file_admission_blocked", "The selected file cannot be processed."),
                     "danger",
-                    show_location=True,
-                    file_path=ref.path,
-                    navigate_file_path=ref.path,
+                    show_location=False,
                 )
                 return False
             if not admission_is_satisfied(inspection, ref.metadata):
@@ -2497,7 +2512,9 @@ class MainWindow(QWidget):
             cancelled = bool(result_error is not None and result_error.error_type == "cancelled")
             self._publish_execution_summary(
                 "cancelled" if cancelled else "failed",
-                message=result_error.message if result_error is not None else "Conversion failed",
+                message=(
+                    _t("main_window.task_cancelled_status") if cancelled else _localized_failure_message(result_error)
+                ),
             )
             self._maybe_notify_task_completion(context)
 
@@ -2517,11 +2534,9 @@ class MainWindow(QWidget):
                 operation_id=task_id,
             )
         self._info_area_vm.add_message(
-            message,
+            _localized_failure_message(message),
             "danger",
-            show_location=True,
-            file_path=file_path,
-            navigate_file_path=file_path,
+            show_location=False,
             operation_id=task_id,
         )
         guide_actions = self._info_area_vm.compute_guide_actions(
@@ -2542,7 +2557,7 @@ class MainWindow(QWidget):
             navigation_kind="failed",
             guide_actions=guide_actions,
         )
-        self._publish_execution_summary("failed", message=message)
+        self._publish_execution_summary("failed", message=_localized_failure_message(message))
         self._maybe_notify_task_completion(context)
 
     def _handle_unsuccessful_result(self, result: ConversionResult, context: dict[str, Any]) -> None:
@@ -2566,13 +2581,12 @@ class MainWindow(QWidget):
                 error_message=message,
                 operation_id=task_id,
             )
-        history_path = retained_output_path or file_path
         self._info_area_vm.add_message(
-            message,
+            _t("main_window.task_cancelled_status") if cancelled else _localized_failure_message(error),
             tone,
-            show_location=True,
-            file_path=history_path,
-            navigate_file_path=history_path,
+            show_location=bool(retained_output_path),
+            file_path=retained_output_path,
+            navigate_file_path=retained_output_path,
             operation_id=task_id,
         )
         guide_actions = self._info_area_vm.compute_guide_actions(
@@ -2611,6 +2625,7 @@ class MainWindow(QWidget):
         warning_rows: list[tuple[str, str, str]] = []
         first_failed_path = ""
         first_error_message = ""
+        first_error_summary_source: object | None = None
         first_error_output = ""
         first_retained_failure: tuple[str, str, str] | None = None
 
@@ -2622,6 +2637,7 @@ class MainWindow(QWidget):
                 if not first_failed_path:
                     first_failed_path = file_path
                     first_error_message = message
+                    first_error_summary_source = "INVALID-BATCH-RESULT"
                 self._batch_list_vm.set_file_status(
                     file_path,
                     "failed",
@@ -2686,6 +2702,7 @@ class MainWindow(QWidget):
                 if not first_failed_path:
                     first_failed_path = file_path
                     first_error_message = message
+                    first_error_summary_source = error or message
                     first_error_output = retained_output_path
 
         completed_count = success_count + failed_count
@@ -2735,19 +2752,18 @@ class MainWindow(QWidget):
                 operation_id=task_id,
             )
         if first_error_message:
-            history_path = first_error_output or first_failed_path
             self._info_area_vm.add_message(
-                first_error_message,
+                _localized_failure_message(first_error_summary_source or first_error_message),
                 "danger",
-                show_location=True,
-                file_path=history_path,
-                navigate_file_path=history_path,
+                show_location=bool(first_error_output),
+                file_path=first_error_output,
+                navigate_file_path=first_error_output,
                 operation_id=task_id,
             )
         if first_retained_failure is not None and first_retained_failure[0] != first_failed_path:
-            _, retained_output, retained_message = first_retained_failure
+            _, retained_output, _retained_message = first_retained_failure
             self._info_area_vm.add_message(
-                retained_message,
+                _localized_failure_message(),
                 "danger",
                 show_location=True,
                 file_path=retained_output,
@@ -2769,7 +2785,12 @@ class MainWindow(QWidget):
             navigation_kind=navigation_kind,
             guide_actions=guide_actions,
         )
-        self._publish_execution_summary("completed" if state == "success" else state, message=first_error_message)
+        terminal_message = (
+            _localized_failure_message(first_error_summary_source or first_error_message)
+            if state in {"failed", "partial"}
+            else ""
+        )
+        self._publish_execution_summary("completed" if state == "success" else state, message=terminal_message)
         if context.get("open_after_done") and successful_output_dir:
             self._open_path(successful_output_dir, open_parent=False)
         self._maybe_notify_task_completion(context)
@@ -2878,9 +2899,6 @@ class MainWindow(QWidget):
         if action_key == "retry_failed":
             self._retry_failed_request()
             return
-        if action_key == "add_more_files":
-            self._input_area.add_button.setFocus(Qt.FocusReason.ShortcutFocusReason)
-            self.bring_to_front()
 
     def _retry_failed_request(self) -> None:
         failed_files = self._batch_list_vm.get_failed_files()

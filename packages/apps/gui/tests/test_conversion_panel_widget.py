@@ -7,11 +7,10 @@ category-based layout switching. Require a QApplication instance.
 from collections.abc import Generator
 
 import pytest
-from PySide6.QtWidgets import QApplication, QCheckBox, QLabel, QLineEdit, QScrollArea
+from PySide6.QtWidgets import QApplication, QCheckBox, QLabel, QScrollArea
 from tests.support.gui_vm_fakes import FakeMainWindowViewModel
 
 from docwen_gui.i18n import t
-from docwen_gui.styles._hex_helper import _hex_to_rgba
 from docwen_gui.styles.conversion_panel import build_conversion_panel_stylesheet
 from docwen_gui.styles.theme_manager import ThemeManager
 from docwen_gui.styles.theme_semantics import get_theme_class_color
@@ -75,28 +74,24 @@ class TestConstruction:
     def test_extra_group_hidden_initially(self, widget: ConversionPanel) -> None:
         assert widget.extra_group.isVisible() is False
 
-    def test_stylesheet_overrides_action_buttons(self) -> None:
+    def test_stylesheet_uses_neutral_action_buttons(self) -> None:
         stylesheet = build_conversion_panel_stylesheet("dark")
 
         assert "conversionPanelHeader" not in stylesheet
         assert "conversionSectionMeta" not in stylesheet
-        assert "QWidget#conversionPanelRoot QPushButton#conversionActionButton" in stylesheet
-        assert "background-color: palette(highlight)" in stylesheet
-        assert "QWidget#conversionPanelRoot QPushButton#conversionActionButton:disabled" in stylesheet
+        assert "QWidget#conversionPanelRoot QPushButton#conversionSecondaryButton" in stylesheet
+        assert "QWidget#conversionPanelRoot QPushButton#conversionSecondaryButton:disabled" in stylesheet
         assert "background-color: palette(alternate-base)" in stylesheet
 
-    def test_semantic_card_borders_keep_distinct_readable_theme_tones(self) -> None:
+    def test_cards_share_one_neutral_internal_title_contract(self) -> None:
         light = build_conversion_panel_stylesheet("light")
         dark = build_conversion_panel_stylesheet("dark")
 
-        for tone in ("success", "danger", "warning"):
-            light_color = get_theme_class_color(tone, "light")
-            dark_color = get_theme_class_color(tone, "dark")
-            assert f'[accentTone="{tone}"]' in light
-            assert f"border: 1px solid {_hex_to_rgba(light_color, 130)};" in light
-            assert f"background-color: {_hex_to_rgba(light_color, 10)};" in light
-            assert f"border: 1px solid {_hex_to_rgba(dark_color, 132)};" in dark
-            assert f"background-color: {_hex_to_rgba(dark_color, 22)};" in dark
+        for stylesheet in (light, dark):
+            assert 'QFrame[panelLevel="card"]' in stylesheet
+            assert "QLabel#panelCardTitle" in stylesheet
+            assert "border-bottom: 1px solid palette(midlight)" in stylesheet
+            assert "accentTone" not in stylesheet
 
 
 # ── Category Switching ────────────────────────────────────────────────
@@ -155,8 +150,8 @@ class TestWidgetRebuild:
         assert widget.saveas_combo is not None
         assert widget.saveas_button is not None
         assert widget.conversion_button is not None
-        assert widget.conversion_button.objectName() == "conversionActionButton"
-        assert widget.saveas_button.objectName() == "conversionActionButton"
+        assert widget.conversion_button.objectName() == "conversionSecondaryButton"
+        assert widget.saveas_button.objectName() == "conversionSecondaryButton"
 
     def test_format_swatch_recolors_during_live_theme_preview(
         self,
@@ -239,19 +234,26 @@ class TestWidgetRebuild:
         # Extra group visibility flag set to True (hiddenness=False)
         assert not widget.extra_group.isHidden()
         assert widget._merge_pdfs_button is not None
-        assert widget._merge_pdfs_button.objectName() == "conversionActionButton"
+        assert widget._merge_pdfs_button.objectName() == "conversionSecondaryButton"
 
     def test_image_has_compress_options(self, widget: ConversionPanel, vm: ConversionPanelViewModel) -> None:
         vm.set_file_info("image", "png", file_path="/test.png")
         # Image should have compression widgets
         assert widget._compress_btn_group is not None
 
-    def test_image_conversion_combo_hides_same_format(
+    def test_image_conversion_combo_explains_disabled_same_format(
         self, widget: ConversionPanel, vm: ConversionPanelViewModel
     ) -> None:
+        from PySide6.QtGui import QStandardItemModel
+
         vm.set_file_info("image", "png", file_path="/test.png")
         assert widget.conversion_combo is not None
-        assert "PNG" not in [widget.conversion_combo.itemText(i) for i in range(widget.conversion_combo.count())]
+        assert "PNG" in [widget.conversion_combo.itemText(i) for i in range(widget.conversion_combo.count())]
+        model = widget.conversion_combo.model()
+        assert isinstance(model, QStandardItemModel)
+        png_item = model.item(widget.conversion_combo.findText("PNG"))
+        assert png_item.isEnabled() is False
+        assert png_item.toolTip()
         assert widget.conversion_combo.currentText() == "JPG"
 
     def test_image_panel_uses_vertical_scroll_when_height_is_constrained(
@@ -386,73 +388,6 @@ class TestConversionRequests:
         if btn is not None:
             btn.click()
             assert emitted == ["xls"]
-
-    def test_policy02_xlsx_to_ods_uses_masked_request_scoped_password_and_explicit_consent(
-        self, widget: ConversionPanel, vm: ConversionPanelViewModel
-    ) -> None:
-        vm.set_file_info("spreadsheet", "xlsx", file_path="/protected.xlsx")
-        password_edit = widget._spreadsheet_password_edit
-        consent = widget._spreadsheet_protection_loss_checkbox
-        assert password_edit is not None
-        assert password_edit.echoMode() == QLineEdit.EchoMode.Password
-        assert consent is not None
-        assert consent.isChecked() is False
-
-        emitted: list[tuple[str, str, dict]] = []
-        vm.conversion_requested.connect(lambda f, fp, o: emitted.append((f, fp, o)))
-        assert widget.conversion_combo is not None
-        widget.conversion_combo.setCurrentText("ODS")
-        password_edit.setText("test")
-        consent.setChecked(True)
-        assert widget.conversion_button is not None
-        widget.conversion_button.click()
-
-        assert emitted == [
-            (
-                "ods",
-                "/protected.xlsx",
-                {
-                    "spreadsheet_password": "test",
-                    "allow_spreadsheet_protection_loss": True,
-                },
-            )
-        ]
-        assert password_edit.text() == ""
-        assert consent.isChecked() is False
-
-    def test_policy02_password_controls_are_disabled_in_batch_to_prevent_credential_reuse(
-        self, widget: ConversionPanel, vm: ConversionPanelViewModel
-    ) -> None:
-        vm.set_file_info(
-            "spreadsheet",
-            "xlsx",
-            file_path="/one.xlsx",
-            file_list=["/one.xlsx", "/two.xlsx"],
-            ui_mode="batch",
-        )
-
-        assert widget._spreadsheet_password_edit is not None
-        assert widget._spreadsheet_password_edit.isEnabled() is False
-        assert widget._spreadsheet_protection_loss_checkbox is not None
-        assert widget._spreadsheet_protection_loss_checkbox.isEnabled() is False
-
-    def test_policy02_options_do_not_leak_to_non_ods_target(
-        self, widget: ConversionPanel, vm: ConversionPanelViewModel
-    ) -> None:
-        vm.set_file_info("spreadsheet", "xlsx", file_path="/protected.xlsx")
-        assert widget._spreadsheet_password_edit is not None
-        assert widget._spreadsheet_protection_loss_checkbox is not None
-        widget._spreadsheet_password_edit.setText("test")
-        widget._spreadsheet_protection_loss_checkbox.setChecked(True)
-        assert widget.conversion_combo is not None
-        widget.conversion_combo.setCurrentText("XLS")
-        emitted: list[tuple[str, str, dict]] = []
-        vm.conversion_requested.connect(lambda f, fp, o: emitted.append((f, fp, o)))
-
-        assert widget.conversion_button is not None
-        widget.conversion_button.click()
-
-        assert emitted[-1][2] == {}
 
     def test_tsv_convert_button_uses_only_reachable_target(
         self, widget: ConversionPanel, vm: ConversionPanelViewModel

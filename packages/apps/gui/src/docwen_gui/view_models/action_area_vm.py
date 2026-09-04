@@ -87,6 +87,8 @@ _DEFAULT_FILE_TO_MD: dict[str, Any] = {
 _NON_FILE_TO_MD_TYPES = {MODE_MD_TO_DOCUMENT, MODE_MD_TO_SPREADSHEET, MODE_AGGREGATE}
 _PRESENTATION_FILE_TO_MD_TYPES = {"ppt", "pptx"}
 _MARKUP_FILE_TO_MD_TYPES = {"html", "htm", "mhtml", "mht", "enex", "epub"}
+_OCR_LANGUAGES = frozenset({"auto", "chinese", "chinese_cht", "english", "japanese", "korean", "latin", "cyrillic"})
+_OCR_PLACEMENTS = frozenset({"image_md", "main_md"})
 
 
 class ActionAreaViewModel(QObject):
@@ -133,6 +135,8 @@ class ActionAreaViewModel(QObject):
         # File→MD options
         self._extract_image: bool = True
         self._extract_ocr: bool = False
+        self._ocr_language: str | None = None
+        self._ocr_placement: str | None = None
         self._optimize_for_type: str | None = None
         self._optimization_choices_result = OptimizationChoicesResult(status="ready", choices=())
         self._optimization_sources: tuple[OptimizationSource, ...] = ()
@@ -216,6 +220,36 @@ class ActionAreaViewModel(QObject):
     def extract_ocr(self, value: bool) -> None:
         if self._extract_ocr != value:
             self._extract_ocr = value
+            self.state_changed.emit()
+
+    @property
+    def ocr_language(self) -> str | None:
+        """Request-level OCR language projected from the Settings-owned default."""
+
+        return self._ocr_language
+
+    @ocr_language.setter
+    def ocr_language(self, value: str) -> None:
+        normalized = str(value or "").strip().lower()
+        if normalized not in _OCR_LANGUAGES:
+            raise ValueError(f"Invalid OCR language: {value!r}")
+        if self._ocr_language != normalized:
+            self._ocr_language = normalized
+            self.state_changed.emit()
+
+    @property
+    def ocr_placement(self) -> str | None:
+        """Request-level OCR placement, or ``None`` when the route does not expose one."""
+
+        return self._ocr_placement
+
+    @ocr_placement.setter
+    def ocr_placement(self, value: str | None) -> None:
+        normalized = str(value or "").strip().lower() or None
+        if normalized is not None and normalized not in _OCR_PLACEMENTS:
+            raise ValueError(f"Invalid OCR placement: {value!r}")
+        if self._ocr_placement != normalized:
+            self._ocr_placement = normalized
             self.state_changed.emit()
 
     @property
@@ -662,6 +696,15 @@ class ActionAreaViewModel(QObject):
         section = file_type if file_type in {MODE_DOCUMENT, MODE_SPREADSHEET, MODE_IMAGE, MODE_LAYOUT} else "other"
         self._extract_image = bool(self._read_file_to_md_default(section, "to_md_keep_images", True))
         self._extract_ocr = bool(self._read_file_to_md_default(section, "to_md_enable_ocr", extract_ocr))
+        language = str(self._read_config_default("image.ocr_language", "") or "").strip().lower()
+        self._ocr_language = language if language in _OCR_LANGUAGES else None
+        placement = str(self._read_export_file_to_md_default("to_md_ocr_placement_mode", "") or "").strip().lower()
+        supports_placement = file_type != MODE_LAYOUT and (
+            file_type in {MODE_DOCUMENT, MODE_SPREADSHEET, MODE_IMAGE}
+            or file_type in _MARKUP_FILE_TO_MD_TYPES
+            or file_type in _PRESENTATION_FILE_TO_MD_TYPES
+        )
+        self._ocr_placement = placement if supports_placement and placement in _OCR_PLACEMENTS else None
         if file_type == MODE_DOCUMENT:
             self._doc_remove_numbering = bool(self._read_file_to_md_default("document", "to_md_remove_numbering", True))
             self._doc_add_numbering = bool(self._read_file_to_md_default("document", "to_md_add_numbering", False))
@@ -744,23 +787,12 @@ class ActionAreaViewModel(QObject):
         return str(value).strip() if value else None
 
     def _file_to_md_ocr_placement_option(self) -> str | None:
-        section = self._file_to_md_section()
-        if section == MODE_LAYOUT:
-            return None
-        if (
-            section not in {MODE_DOCUMENT, MODE_SPREADSHEET, MODE_IMAGE}
-            and self._file_type not in _MARKUP_FILE_TO_MD_TYPES
-            and self._file_type not in _PRESENTATION_FILE_TO_MD_TYPES
-        ):
-            return None
-        value = self._read_export_file_to_md_default("to_md_ocr_placement_mode", None)
-        return str(value).strip() if value else None
+        return self._ocr_placement
 
     def _file_to_md_ocr_language_option(self) -> str | None:
         if not self._is_file_to_md_mode():
             return None
-        value = self._read_config_default("image.ocr_language", None)
-        return str(value).strip() if value else None
+        return self._ocr_language
 
     def _file_to_md_image_link_style_option(self) -> str | None:
         if self._file_type not in {
@@ -955,6 +987,10 @@ class ActionAreaViewModel(QObject):
             self.extract_image = bool(value)
         elif key == "extract_ocr":
             self.extract_ocr = bool(value)
+        elif key == "ocr_language":
+            self.ocr_language = str(value)
+        elif key == "ocr_placement":
+            self.ocr_placement = str(value) if value else None
         elif key == "optimize_for_type":
             self.optimize_for_type = value if value else None
         elif key == "remove_numbering":
@@ -1005,6 +1041,8 @@ class ActionAreaViewModel(QObject):
         self._mode = "single"
         self._extract_image = True
         self._extract_ocr = False
+        self._ocr_language = None
+        self._ocr_placement = None
         self._optimize_for_type = None
         self._optimization_choices_result = OptimizationChoicesResult(status="ready", choices=())
         self._optimization_sources = ()

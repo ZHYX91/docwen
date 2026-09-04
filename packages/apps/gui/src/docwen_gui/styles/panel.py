@@ -5,10 +5,8 @@ from __future__ import annotations
 from ._hex_helper import _hex_to_rgba
 from .design_tokens import Border, Radius, Spacing, Typography
 from .theme_semantics import (
-    COLOR_DANGER,
     COLOR_PRIMARY,
     COLOR_SECONDARY,
-    COLOR_WARNING,
     is_dark_theme,
 )
 
@@ -17,7 +15,6 @@ def build_panel_stylesheet(theme_name: str, font_size_preset: str | None = None)
     """为全局低风险容器提供统一基础样式。"""
     dark_theme = is_dark_theme(theme_name)
     section_border = _hex_to_rgba(COLOR_SECONDARY, 128 if dark_theme else 58)
-    section_emphasis_border = _hex_to_rgba(COLOR_SECONDARY, 150 if dark_theme else 78)
     section_background = _hex_to_rgba("#111B2E" if dark_theme else "#FFFFFF", 242 if dark_theme else 255)
     section_background_alt = _hex_to_rgba("#0E1728" if dark_theme else "#F8FAFC", 234 if dark_theme else 250)
     field_background = _hex_to_rgba("#182437" if dark_theme else "#FFFFFF", 246 if dark_theme else 255)
@@ -36,17 +33,8 @@ def build_panel_stylesheet(theme_name: str, font_size_preset: str | None = None)
     file_drop_selected_background = _hex_to_rgba("#172554" if dark_theme else "#EFF6FF", 214 if dark_theme else 248)
     file_drop_drag_border = _hex_to_rgba(COLOR_PRIMARY, 224 if dark_theme else 178)
     file_drop_drag_background = _hex_to_rgba(COLOR_PRIMARY, 36 if dark_theme else 22)
-    file_drop_feedback_warning_border = _hex_to_rgba(COLOR_WARNING, 150 if dark_theme else 112)
-    file_drop_feedback_warning_background = _hex_to_rgba(
-        "#422006" if dark_theme else "#FFFBEB", 214 if dark_theme else 248
-    )
-    file_drop_feedback_danger_border = _hex_to_rgba(COLOR_DANGER, 156 if dark_theme else 118)
-    file_drop_feedback_danger_background = _hex_to_rgba(
-        "#450A0A" if dark_theme else "#FEF2F2", 214 if dark_theme else 248
-    )
     section_title_color = _hex_to_rgba("#F8FAFC" if dark_theme else "#0F172A", 228 if dark_theme else 188)
     hint_color = _hex_to_rgba("#CBD5E1" if dark_theme else "#475569", 218 if dark_theme else 224)
-    warning_hint_color = _hex_to_rgba(COLOR_WARNING, 168 if dark_theme else 128)
     scrollbar_track = _hex_to_rgba("#0F172A" if dark_theme else "#E2E8F0", 88 if dark_theme else 118)
     scrollbar_handle = _hex_to_rgba(COLOR_SECONDARY, 168 if dark_theme else 132)
     scrollbar_handle_hover = _hex_to_rgba(COLOR_PRIMARY, 196 if dark_theme else 154)
@@ -70,14 +58,10 @@ def build_panel_stylesheet(theme_name: str, font_size_preset: str | None = None)
             f"    border-radius: {Radius.LARGE}px;",
             f"    background-color: {section_background};",
             "}",
-            "QWidget#settingsTabRoot QGroupBox#settingsSectionGroup,",
-            "QWidget#conversionPanelRoot QGroupBox#conversionPrimaryGroup,",
-            "QWidget#conversionPanelRoot QGroupBox#conversionSecondaryGroup,",
-            "QWidget#conversionPanelRoot QGroupBox#conversionExtraGroup {",
+            "QWidget#settingsTabRoot QGroupBox#settingsSectionGroup {",
             f"    border-radius: {Radius.LARGE}px;",
             "}",
             "QWidget#settingsTabRoot QGroupBox#settingsSectionGroup::title,",
-            "QWidget#conversionPanelRoot QGroupBox::title,",
             "QLabel#generalThemePreviewTitle,",
             "QLabel#settingsCardTitle {",
             f"    color: {section_title_color};",
@@ -93,15 +77,6 @@ def build_panel_stylesheet(theme_name: str, font_size_preset: str | None = None)
             "QWidget#settingsTabRoot QGroupBox#settingsSectionGroup {",
             f"    border: {Border.THIN}px solid {section_border};",
             f"    background-color: {section_background};",
-            "}",
-            "QWidget#conversionPanelRoot QGroupBox#conversionPrimaryGroup {",
-            f"    border: {Border.THIN}px solid {section_emphasis_border};",
-            f"    background-color: {section_background};",
-            "}",
-            "QWidget#conversionPanelRoot QGroupBox#conversionSecondaryGroup,",
-            "QWidget#conversionPanelRoot QGroupBox#conversionExtraGroup {",
-            f"    border: {Border.THIN}px solid {section_border};",
-            f"    background-color: {section_background_alt};",
             "}",
             # -- File drop area (InputArea) --
             "QFrame#fileDropGroup {",
@@ -156,32 +131,9 @@ def build_panel_stylesheet(theme_name: str, font_size_preset: str | None = None)
             "    font-weight: 600;",
             "    padding-top: 0;",
             "}",
-            "QFrame#fileDropFeedbackFrame {",
-            f"    border: {Border.THIN}px solid {section_border};",
-            f"    border-radius: {Radius.MEDIUM}px;",
-            f"    background-color: {section_background};",
-            "}",
-            'QFrame#fileDropFeedbackFrame[feedbackTone="success"] {',
-            f"    border-color: {file_drop_selected_border};",
-            f"    background-color: {file_drop_selected_background};",
-            "}",
-            'QFrame#fileDropFeedbackFrame[feedbackTone="warning"] {',
-            f"    border-color: {file_drop_feedback_warning_border};",
-            f"    background-color: {file_drop_feedback_warning_background};",
-            "}",
-            'QFrame#fileDropFeedbackFrame[feedbackTone="danger"] {',
-            f"    border-color: {file_drop_feedback_danger_border};",
-            f"    background-color: {file_drop_feedback_danger_background};",
-            "}",
-            "QLabel#fileDropFeedbackTitleLabel {",
-            f"    color: {hint_color};",
-            "    font-weight: 600;",
-            "}",
-            'QFrame#fileDropFeedbackFrame[feedbackTone="warning"] QLabel#fileDropFeedbackTitleLabel {',
-            f"    color: {warning_hint_color};",
-            "}",
-            'QFrame#fileDropFeedbackFrame[feedbackTone="danger"] QLabel#fileDropFeedbackTitleLabel {',
-            f"    color: {warning_hint_color};",
+            "QWidget#fileDropFeedbackArea {",
+            "    background: transparent;",
+            "    border: none;",
             "}",
             "QLabel#fileDropSelectionLabel {",
             "    color: palette(text);",
@@ -426,8 +378,7 @@ def build_panel_stylesheet(theme_name: str, font_size_preset: str | None = None)
             "}",
             # -- GroupBox titles --
             "QWidget#actionAreaRoot QGroupBox::title,",
-            "QWidget#settingsTabRoot QGroupBox#settingsSectionGroup::title,",
-            "QWidget#conversionPanelRoot QGroupBox::title {",
+            "QWidget#settingsTabRoot QGroupBox#settingsSectionGroup::title {",
             "    font-weight: 600;",
             f"    font-size: {Typography.qss(Typography.CARD_TITLE_SIZE, font_size_preset)};",
             "}",

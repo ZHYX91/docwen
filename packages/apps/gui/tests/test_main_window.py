@@ -90,7 +90,7 @@ class TestMainWindowAssembly:
             current_file=source.name,
             total_count=1,
             state="success",
-            guide_actions=[{"action_key": "add_more_files", "target_path": ""}],
+            guide_actions=[{"action_key": "open_output_dir", "target_path": str(tmp_path)}],
         )
         info_vm.set_transient_message("progress:clear-session", "old progress", "info", ttl_ms=0)
 

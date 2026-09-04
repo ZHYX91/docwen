@@ -274,7 +274,9 @@ def test_xlarge_layout_render_controls_stay_inside_right_panel(qapp) -> None:
         ThemeManager.reset_instance()
 
 
-def test_xlarge_conversion_detail_controls_wrap_without_clipping(qapp) -> None:
+def test_xlarge_conversion_detail_controls_wrap_without_clipping(qapp, tmp_path) -> None:
+    import zipfile
+
     from PySide6.QtWidgets import QLabel
 
     from docwen_gui.styles.theme_manager import ThemeManager
@@ -290,7 +292,18 @@ def test_xlarge_conversion_detail_controls_wrap_without_clipping(qapp) -> None:
     widget.resize(576, 760)
     widget.show()
     try:
-        vm.set_file_info("spreadsheet", "xlsx", file_path="invoice-summary-2026.xlsx")
+        protected_workbook = tmp_path / "invoice-summary-2026.xlsx"
+        with zipfile.ZipFile(protected_workbook, "w") as package:
+            package.writestr(
+                "xl/workbook.xml",
+                '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" />',
+            )
+            package.writestr(
+                "xl/worksheets/sheet1.xml",
+                '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+                '<sheetProtection sheet="1" /></worksheet>',
+            )
+        vm.set_file_info("spreadsheet", "xlsx", file_path=str(protected_workbook))
         for _ in range(3):
             qapp.processEvents()
         consent_label = widget.findChild(QLabel, "conversionWrappingCheckLabel")
@@ -334,14 +347,13 @@ def test_xlarge_guide_actions_wrap_before_labels_are_squeezed(qapp, qtbot) -> No
             {"action_key": "open_output_dir", "target_path": "/tmp/out"},
             {"action_key": "view_failed_details", "target_path": "/tmp/failed.json"},
             {"action_key": "retry_failed", "target_path": ""},
-            {"action_key": "add_more_files", "target_path": ""},
         ],
     )
     try:
         for _ in range(3):
             qapp.processEvents()
         buttons = widget.find_guide_buttons()
-        assert len(buttons) == 4
+        assert len(buttons) == 3
         spacing = max(0, widget._status_guide_actions_layout.horizontalSpacing())
         one_row_width = sum(button.sizeHint().width() for button in buttons) + spacing * (len(buttons) - 1)
         widget._status_guide_actions_widget.setFixedWidth(one_row_width)
@@ -355,6 +367,36 @@ def test_xlarge_guide_actions_wrap_before_labels_are_squeezed(qapp, qtbot) -> No
             assert button.sizeHint().width() <= button.width()
             assert button.geometry().right() < widget._status_guide_actions_widget.width()
     finally:
+        widget.close()
+        ThemeManager.reset_instance()
+
+
+def test_xlarge_history_timestamp_uses_post_stylesheet_font_metrics(qapp) -> None:
+    from PySide6.QtWidgets import QLabel
+
+    from docwen_gui.styles.theme_manager import ThemeManager
+    from docwen_gui.view_models.info_area_vm import InfoAreaViewModel
+    from docwen_gui.widgets.info_area import InfoArea
+
+    ThemeManager.reset_instance()
+    manager = ThemeManager.get_instance()
+    manager.initialize(qapp, "dark")
+    manager.apply_font_size_preset("xlarge")
+    vm = InfoAreaViewModel()
+    widget = InfoArea(view_model=vm)
+    widget.resize(576, 320)
+    widget.show()
+    try:
+        vm.add_message("Long localized event", "info")
+        qapp.processEvents()
+        row = widget.get_history_row_widget(0)
+        assert row is not None
+        timestamp = row.findChild(QLabel, "statusTimestamp")
+        assert timestamp is not None
+        required_width = timestamp.fontMetrics().horizontalAdvance("00:00:00")
+        assert timestamp.width() >= required_width + 8
+    finally:
+        vm.stop_all_timers()
         widget.close()
         ThemeManager.reset_instance()
 

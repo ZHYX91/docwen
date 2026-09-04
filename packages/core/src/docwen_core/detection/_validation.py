@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from docwen_core.detection._sniffing import (
+    ENCRYPTED_OOXML_CONTAINER_FORMAT,
     SUPPORTED_EXTENSION_FORMATS,
     detect_content_format,
 )
@@ -39,6 +40,7 @@ _SUPPORTED_EXTENSIONS: frozenset[str] = frozenset(SUPPORTED_EXTENSION_FORMATS)
 _SUPPORTED_FORMATS: frozenset[str] = frozenset(SUPPORTED_EXTENSION_FORMATS.values())
 _TEXT_WORKFLOW_FORMATS: frozenset[str] = frozenset({"txt", "markdown"})
 _ZIP_PACKAGE_FORMATS: frozenset[str] = frozenset({"docx", "xlsx", "pptx", "odt", "ods", "ofd", "xps", "epub"})
+_ENCRYPTED_OOXML_FORMATS: frozenset[str] = frozenset({"docx", "xlsx", "pptx"})
 _FileIdentity = tuple[int, int, int, int, int]
 _HASH_CHUNK_SIZE = 1024 * 1024
 
@@ -271,6 +273,9 @@ def inspect_file(file_path: str) -> FileInspection:
     declared_category = get_category(declared_format)
     declared_supported = extension in _SUPPORTED_EXTENSIONS
     detection = detect_content_format(str(io_path))
+    encrypted_ooxml_container = detection.format == ENCRYPTED_OOXML_CONTAINER_FORMAT
+    if encrypted_ooxml_container and declared_format in _ENCRYPTED_OOXML_FORMATS:
+        detection = replace(detection, format=declared_format)
     detected_format = detection.format
     detected_category = get_category(detected_format)
     workflow_category = _workflow_category(detected_format, detected_category)
@@ -291,7 +296,10 @@ def inspect_file(file_path: str) -> FileInspection:
         detected_supported=detected_supported,
     )
 
-    signature_info = inspect_ooxml_signature_graph(str(io_path), actual_format=detected_format)
+    signature_info = inspect_ooxml_signature_graph(
+        str(io_path),
+        actual_format=ENCRYPTED_OOXML_CONTAINER_FORMAT if encrypted_ooxml_container else detected_format,
+    )
     stat_after = io_path.stat()
     if _file_identity(stat_after) != stat_key:
         raise OSError(f"File changed while it was being inspected: {file_path}")
