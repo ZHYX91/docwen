@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 import re
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QObject, Signal
@@ -24,13 +25,14 @@ from docwen_gui.format_presentation import (
     normalize_format,
 )
 from docwen_gui.i18n import t as _t
-from docwen_gui.spreadsheet_protection import SpreadsheetProtectionInfo, inspect_xlsx_protection
+from docwen_gui.spreadsheet_protection import SpreadsheetProtectionInfo
 
 from ._runtime_route_filter import (
     RuntimeRouteChoicesResult,
     RuntimeRouteSource,
     discover_runtime_route_choices,
 )
+from .spreadsheet_analysis import SpreadsheetAnalysis
 
 if TYPE_CHECKING:
     from .main_window_vm import MainWindowViewModel
@@ -93,9 +95,12 @@ class ConversionPanelViewModel(QObject):
         self._current_format: str = ""
         self._current_file_path: str | None = None
         self._file_list: list[str] = []
+        self._aggregate_counts: dict[str, int] = {}
         self._ui_mode: str = "single"
         self._route_choices_result = RuntimeRouteChoicesResult(status="empty", choices=())
-        self._spreadsheet_protection_info: tuple[SpreadsheetProtectionInfo, ...] = ()
+        self._spreadsheet_analysis = SpreadsheetAnalysis(self)
+        self._spreadsheet_analysis.changed.connect(self.state_changed)
+        self._spreadsheet_sources: tuple[str, ...] = ()
 
         # Image section state
         self._compress_mode: str = self._normalize_compress_mode(self._read_image_default("compress_mode", "lossless"))
@@ -167,25 +172,44 @@ class ConversionPanelViewModel(QObject):
     def spreadsheet_protection_info(self) -> tuple[SpreadsheetProtectionInfo, ...]:
         """Read-only protection state for the selected XLSX inputs."""
 
-        return self._spreadsheet_protection_info
+        return self._spreadsheet_analysis.results
+
+    @property
+    def spreadsheet_analysis_pending(self) -> bool:
+        return self._spreadsheet_analysis.pending
+
+    @property
+    def has_xlsx_inputs(self) -> bool:
+        return bool(self._spreadsheet_sources)
+
+    def close(self) -> None:
+        self._spreadsheet_analysis.close()
 
     @property
     def spreadsheet_protected_files(self) -> tuple[str, ...]:
         """Selected inputs for which workbook or sheet protection was detected."""
 
-        return tuple(info.path for info in self._spreadsheet_protection_info if info.is_protected)
+        return tuple(info.path for info in self.spreadsheet_protection_info if info.is_protected)
 
     @property
     def spreadsheet_unknown_files(self) -> tuple[str, ...]:
         """Selected inputs whose protection state could not be inspected."""
 
-        return tuple(info.path for info in self._spreadsheet_protection_info if info.is_unknown)
+        return tuple(info.path for info in self.spreadsheet_protection_info if info.is_unknown)
 
     @property
     def spreadsheet_password_required(self) -> bool:
         """Whether an encrypted workbook requires a password before delivery."""
 
-        return any(info.requires_password for info in self._spreadsheet_protection_info)
+        return any(info.requires_password for info in self.spreadsheet_protection_info)
+
+    def set_aggregate_counts(self, counts: dict[str, int]) -> None:
+        if counts != self._aggregate_counts:
+            self._aggregate_counts = dict(counts)
+            self.state_changed.emit()
+
+    def aggregate_count(self, action: str) -> int:
+        return self._aggregate_counts.get(action, 0)
 
     # ── Image section properties ──────────────────────────────────────────
 
@@ -380,6 +404,7 @@ class ConversionPanelViewModel(QObject):
         file_path: str | None = None,
         file_list: list[str] | None = None,
         ui_mode: str = "single",
+        source_formats: dict[str, str] | None = None,
     ) -> None:
         """Set the current file context — called when file selection changes.
 
@@ -403,21 +428,22 @@ class ConversionPanelViewModel(QObject):
         self._file_category = category
         self._current_format = current_format.lower() if current_format else ""
         self._current_file_path = file_path
+        self._reference_table_name = Path(file_path).name if category == "spreadsheet" and file_path else ""
         self._file_list = list(file_list or [])
         self._ui_mode = ui_mode
-        protection_paths = self._file_list if ui_mode == "batch" else ([file_path] if file_path else [])
-        self._spreadsheet_protection_info = (
-            tuple(inspect_xlsx_protection(path) for path in protection_paths) if self._current_format == "xlsx" else ()
+        formats = (
+            source_formats
+            if ui_mode == "batch" and source_formats is not None
+            else ({file_path: self._current_format} if file_path else {})
         )
+        self._spreadsheet_sources = tuple(path for path, fmt in formats.items() if fmt == "xlsx")
         main_vm = self._main_vm
         controller = getattr(main_vm, "controller", None) if main_vm is not None else None
         self._route_choices_result = discover_runtime_route_choices(
             controller,
-            sources=(
-                RuntimeRouteSource(
-                    detected_format=self._current_format,
-                    source_category=str(category or "").strip().lower(),
-                ),
+            sources=tuple(
+                RuntimeRouteSource(detected_format=fmt, source_category=category)
+                for fmt in dict.fromkeys(formats.values() or [self._current_format])
             ),
             operation="conversion",
         )
@@ -426,6 +452,7 @@ class ConversionPanelViewModel(QObject):
                 "Runtime route discovery failed; conversion panel disabled (stage=set-file-info, format=%s)",
                 self._current_format,
             )
+        self._spreadsheet_analysis.select(self._spreadsheet_sources)
         self.state_changed.emit()
 
     def reset(self) -> None:
@@ -436,7 +463,8 @@ class ConversionPanelViewModel(QObject):
         self._file_list = []
         self._ui_mode = "single"
         self._route_choices_result = RuntimeRouteChoicesResult(status="empty", choices=())
-        self._spreadsheet_protection_info = ()
+        self._spreadsheet_sources = ()
+        self._spreadsheet_analysis.select(())
         self._compress_mode = self._normalize_compress_mode(self._read_image_default("compress_mode", "lossless"))
         self._size_limit = self._read_int_default("image.size_limit", 200)
         self._size_unit = self._normalize_size_unit(self._read_image_default("size_unit", "KB"))

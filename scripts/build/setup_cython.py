@@ -75,7 +75,7 @@ CORE_MODULES = [
     # Application controller + workflows
     "packages/application/src/docwen_application/controller.py",
     "packages/application/src/docwen_application/workflows/single_file.py",
-    "packages/application/src/docwen_application/workflows/batch.py",
+    "packages/application/src/docwen_application/workflows/aggregate.py",
     # Runtime engine + output
     "packages/runtime/src/docwen_runtime/engine/route_resolver.py",
     "packages/runtime/src/docwen_runtime/engine/task_manager.py",

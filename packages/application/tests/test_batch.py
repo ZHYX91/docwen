@@ -57,25 +57,25 @@ class TestAggregateCommand:
     """AggregateCommand critical path tests."""
 
     def test_construction_with_valid_action(self, mock_runtime: MagicMock) -> None:
-        from docwen_application.commands.batch import AggregateCommand
+        from docwen_application.commands.aggregate import AggregateCommand
 
         cmd = AggregateCommand(mock_runtime, action_name="merge_pdfs")
         assert cmd.action_name == "merge_pdfs"
 
     def test_construction_rejects_unknown_action(self, mock_runtime: MagicMock) -> None:
-        from docwen_application.commands.batch import AggregateCommand
+        from docwen_application.commands.aggregate import AggregateCommand
 
         with pytest.raises(ValueError, match="not a known aggregate action"):
             AggregateCommand(mock_runtime, action_name="convert")
 
     def test_construction_rejects_empty_action(self, mock_runtime: MagicMock) -> None:
-        from docwen_application.commands.batch import AggregateCommand
+        from docwen_application.commands.aggregate import AggregateCommand
 
         with pytest.raises(ValueError, match="not a known aggregate action"):
             AggregateCommand(mock_runtime, action_name="")
 
     def test_all_known_actions_accepted(self, mock_runtime: MagicMock) -> None:
-        from docwen_application.commands.batch import (
+        from docwen_application.commands.aggregate import (
             AGGREGATE_ACTIONS,
             AggregateCommand,
         )
@@ -85,7 +85,7 @@ class TestAggregateCommand:
             assert cmd.action_name == action
 
     def test_execute_delegates_to_runtime(self, mock_runtime: MagicMock) -> None:
-        from docwen_application.commands.batch import AggregateCommand
+        from docwen_application.commands.aggregate import AggregateCommand
         from docwen_core.models.result import ConversionResult
 
         expected = ConversionResult(task_id="a1", success=True)
@@ -99,7 +99,7 @@ class TestAggregateCommand:
         assert result is expected
 
     def test_execute_passes_all_input_refs(self, mock_runtime: MagicMock) -> None:
-        from docwen_application.commands.batch import AggregateCommand
+        from docwen_application.commands.aggregate import AggregateCommand
         from docwen_core.models.result import ConversionResult
 
         mock_runtime.execute.return_value = ConversionResult(task_id="a2", success=True)
@@ -120,7 +120,7 @@ class TestAggregateCommand:
         assert len(called_request.input_refs) == 3
 
     def test_rejects_single_input(self, mock_runtime: MagicMock) -> None:
-        from docwen_application.commands.batch import AggregateCommand
+        from docwen_application.commands.aggregate import AggregateCommand
 
         cmd = AggregateCommand(mock_runtime, action_name="merge_images_to_tiff")
         request = _make_aggregate_request(
@@ -133,7 +133,7 @@ class TestAggregateCommand:
             cmd.execute(request)
 
     def test_failure_result_propagated(self, mock_runtime: MagicMock) -> None:
-        from docwen_application.commands.batch import AggregateCommand
+        from docwen_application.commands.aggregate import AggregateCommand
         from docwen_core.models.result import ConversionErrorInfo, ConversionResult
 
         failure = ConversionResult(
@@ -161,7 +161,7 @@ class TestAggregateWorkflow:
     """AggregateWorkflow critical path tests."""
 
     def test_execute_with_two_inputs(self, mock_runtime: MagicMock) -> None:
-        from docwen_application.workflows.batch import AggregateWorkflow
+        from docwen_application.workflows.aggregate import AggregateWorkflow
         from docwen_core.models.result import ConversionResult
 
         expected = ConversionResult(task_id="aw1", success=True)
@@ -175,7 +175,7 @@ class TestAggregateWorkflow:
         assert result is expected
 
     def test_execute_with_three_inputs(self, mock_runtime: MagicMock) -> None:
-        from docwen_application.workflows.batch import AggregateWorkflow
+        from docwen_application.workflows.aggregate import AggregateWorkflow
         from docwen_core.models.result import ConversionResult
 
         expected = ConversionResult(task_id="aw2", success=True)
@@ -196,7 +196,7 @@ class TestAggregateWorkflow:
         assert result is expected
 
     def test_rejects_single_input(self, mock_runtime: MagicMock) -> None:
-        from docwen_application.workflows.batch import AggregateWorkflow
+        from docwen_application.workflows.aggregate import AggregateWorkflow
 
         wf = AggregateWorkflow(mock_runtime, action_name="merge_pdfs")
         request = _make_aggregate_request("aw3", "/only.pdf")
@@ -205,7 +205,7 @@ class TestAggregateWorkflow:
             wf.execute(request)
 
     def test_rejects_zero_inputs(self, mock_runtime: MagicMock) -> None:
-        from docwen_application.workflows.batch import AggregateWorkflow
+        from docwen_application.workflows.aggregate import AggregateWorkflow
 
         wf = AggregateWorkflow(mock_runtime, action_name="merge_pdfs")
         request = _make_aggregate_request("aw4")  # no paths
@@ -214,7 +214,7 @@ class TestAggregateWorkflow:
             wf.execute(request)
 
     def test_rejects_non_aggregate_action(self, mock_runtime: MagicMock) -> None:
-        from docwen_application.workflows.batch import AggregateWorkflow
+        from docwen_application.workflows.aggregate import AggregateWorkflow
 
         wf = AggregateWorkflow(mock_runtime, action_name="merge_pdfs")
         request = _make_aggregate_request(
@@ -229,7 +229,7 @@ class TestAggregateWorkflow:
 
     def test_falls_back_to_constructor_action_name(self, mock_runtime: MagicMock) -> None:
         """When request.action_name is empty, use the constructor action."""
-        from docwen_application.workflows.batch import AggregateWorkflow
+        from docwen_application.workflows.aggregate import AggregateWorkflow
         from docwen_core.models.result import ConversionResult
 
         expected = ConversionResult(task_id="aw6", success=True)
@@ -249,7 +249,7 @@ class TestAggregateWorkflow:
         mock_runtime.execute.assert_called_once()
 
     def test_all_aggregate_actions_work(self, mock_runtime: MagicMock) -> None:
-        from docwen_application.workflows.batch import AggregateWorkflow
+        from docwen_application.workflows.aggregate import AggregateWorkflow
         from docwen_core.models.result import ConversionResult
 
         mock_runtime.execute.return_value = ConversionResult(task_id="aw7", success=True)
@@ -266,7 +266,7 @@ class TestAggregateWorkflow:
             assert result.success
 
     def test_runtime_not_called_on_validation_error(self, mock_runtime: MagicMock) -> None:
-        from docwen_application.workflows.batch import AggregateWorkflow
+        from docwen_application.workflows.aggregate import AggregateWorkflow
 
         wf = AggregateWorkflow(mock_runtime, action_name="merge_pdfs")
         request = _make_aggregate_request("aw8", "/only.pdf")
@@ -278,7 +278,7 @@ class TestAggregateWorkflow:
     # ── summary() ────────────────────────────────────────────────────
 
     def test_summary_success(self) -> None:
-        from docwen_application.workflows.batch import AggregateWorkflow
+        from docwen_application.workflows.aggregate import AggregateWorkflow
         from docwen_core.models.result import ConversionResult
 
         wf = AggregateWorkflow(MagicMock(), action_name="merge_pdfs")
@@ -286,7 +286,7 @@ class TestAggregateWorkflow:
         assert s == {"total": 1, "success": 1, "failed": 0, "skipped": 0, "cancelled": 0}
 
     def test_summary_failure(self) -> None:
-        from docwen_application.workflows.batch import AggregateWorkflow
+        from docwen_application.workflows.aggregate import AggregateWorkflow
         from docwen_core.models.result import ConversionResult
 
         wf = AggregateWorkflow(MagicMock(), action_name="merge_pdfs")
@@ -296,13 +296,13 @@ class TestAggregateWorkflow:
     # ── Properties ────────────────────────────────────────────────────
 
     def test_action_name_property(self) -> None:
-        from docwen_application.workflows.batch import AggregateWorkflow
+        from docwen_application.workflows.aggregate import AggregateWorkflow
 
         wf = AggregateWorkflow(MagicMock(), action_name="merge_tables")
         assert wf.action_name == "merge_tables"
 
     def test_events_property(self, mock_runtime: MagicMock) -> None:
-        from docwen_application.workflows.batch import AggregateWorkflow
+        from docwen_application.workflows.aggregate import AggregateWorkflow
 
         wf = AggregateWorkflow(mock_runtime, action_name="merge_pdfs")
         assert wf.events == []
@@ -316,14 +316,14 @@ class TestIsAggregateAction:
     """Tests for the ``is_aggregate_action`` sentinel function."""
 
     def test_known_actions(self) -> None:
-        from docwen_application.commands.batch import is_aggregate_action
+        from docwen_application.commands.aggregate import is_aggregate_action
 
         assert is_aggregate_action("merge_pdfs") is True
         assert is_aggregate_action("merge_tables") is True
         assert is_aggregate_action("merge_images_to_tiff") is True
 
     def test_unknown_actions(self) -> None:
-        from docwen_application.commands.batch import is_aggregate_action
+        from docwen_application.commands.aggregate import is_aggregate_action
 
         assert is_aggregate_action("convert") is False
         assert is_aggregate_action("validate") is False
@@ -331,7 +331,7 @@ class TestIsAggregateAction:
         assert is_aggregate_action("merge_pdf") is False  # no trailing s
 
     def test_aggregate_actions_constant(self) -> None:
-        from docwen_application.commands.batch import AGGREGATE_ACTIONS
+        from docwen_application.commands.aggregate import AGGREGATE_ACTIONS
 
         assert len(AGGREGATE_ACTIONS) == 3
         assert "merge_pdfs" in AGGREGATE_ACTIONS

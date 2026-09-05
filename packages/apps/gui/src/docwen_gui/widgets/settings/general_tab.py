@@ -138,6 +138,8 @@ class GeneralTab(BaseSettingsTab):
             t("settings.general.sample_text", "This is a sample text for theme preview."), preview_frame
         )
         sample_text.setObjectName("generalThemePreviewText")
+        sample_text.setWordWrap(True)
+        sample_button.setWordWrap(True)
         preview_frame_layout.addWidget(sample_button)
         preview_frame_layout.addWidget(sample_text, 1)
         preview_layout.addWidget(preview_frame)

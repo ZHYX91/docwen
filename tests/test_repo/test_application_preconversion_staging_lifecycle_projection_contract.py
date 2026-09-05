@@ -25,9 +25,9 @@ def test_preconversion_staging_has_owner_isolation_and_original_index_alignment(
     runnable_ref_appends = controller.count("new_refs.append(")
     assert runnable_ref_appends > 0
     assert controller.count("input_indices.append(idx)") == runnable_ref_appends
-    assert "plan.input_indices," in controller
+    assert "input_indices=request.input_indices," in controller
     assert "strict=True" in controller
-    assert 'task_id = f"{plan.request.request_id}-{original_index}"' in controller
+    assert 'task_id = f"{request.request_id}-{index}"' in controller
     assert "request_id=task_id" in controller
     assert controller.count("managed.cleanup()") == 2
     assert controller.index("if errors and not batch:") < controller.index(

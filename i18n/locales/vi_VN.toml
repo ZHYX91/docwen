@@ -27,7 +27,6 @@ font_size_tooltip = "Chuyen doi co chu"
 no_file_for_locate = "Chua chon tep, khong the dinh vi dau ra."
 runtime_unavailable = "Runtime khong kha dung, khong the bat dau chuyen doi."
 task_already_running = "Da co tac vu dang chay, vui long huy tac vu hien tai truoc."
-cancelling = "Dang huy..."
 task_processing_prefix = "Dang xu ly:"
 task_progress_prefix = "Tien do:"
 task_failed_prefix = "That bai:"
@@ -39,7 +38,6 @@ task_cancelled_status = "Da huy"
 error_copied = "Da sao chep chi tiet loi."
 no_error_available = "Hien khong co thong tin loi."
 no_failed_to_retry = "Khong co tac vu that bai de thu lai."
-retry_context_unavailable = "Ngu canh thu lai khong kha dung."
 path_not_exist = "Duong dan khong ton tai: {path}"
 open_path_failed = "Khong the mo duong dan: {path}"
 template_not_found = "Không tìm thấy mẫu: {name}"
@@ -62,6 +60,7 @@ file_admission_cancelled = "Đã hủy xử lý; định dạng đã phát hiệ
 # 通用文本
 # =============================================================================
 [common]
+copy = "Sao chép"
 app_name = "DocWen"
 default = "Mặc định"
 close = "Đóng"
@@ -80,14 +79,19 @@ save_failed = "Lưu cài đặt thất bại"
 # 状态栏
 # =============================================================================
 [info_area]
+task_state_skipped = "Da bo qua"
+batch_name = "Xử lý hàng loạt ({count} tệp)"
+aggregate_name = "Gộp ({count} tệp)"
+activity_count = "Hoạt động ({count})"
+clear_history = "Xóa lịch sử hoạt động"
+notice_title = "Thông báo"
+task_state_cancelling = "Đang hủy"
 copy_path = "Sao chep duong dan"
 open_location = "Mo vi tri tep: {path}"
 ipc_file_missing = "Tep IPC khong ton tai: {path}"
 font_size_applied = "Co chu: {label}"
 
 transient_title = "Trang thai hien tai"
-transient_meta = "{count} muc dang hien"
-history_title = "Tin nhan gan day"
 history_repeated = "Lặp lại {count} lần"
 history_meta = "{count} muc"
 task_state_active = "Đang xử lý"
@@ -210,6 +214,9 @@ general = "Cài đặt toàn cục như ngôn ngữ và giao diện"
 
 # 设置状态消息
 [settings.status]
+apply_success = "Đã áp dụng cài đặt."
+apply_failed = "Không thể áp dụng cài đặt."
+reset_success = "Đã khôi phục cài đặt mặc định."
 
 [settings.reset]
 tab_button = "Dat lai tab"
@@ -1006,6 +1013,7 @@ spreadsheet_templates = "Bảng"
 # 转换面板区域
 # =============================================================================
 [conversion_panel]
+target_format = "Định dạng đích"
 route_options_unavailable = "Không thể tải các thao tác khả dụng; các thao tác đã bị tắt để tránh yêu cầu sai."
 no_compatible_operation = "Không có thao tác tương thích cho tệp này."
 format_conversion = "Chuyển đổi định dạng"
@@ -1066,9 +1074,7 @@ convert_to_document_or_image = "Chuyển sang tài liệu hoặc ảnh"
 merge_split = "Trộn/Tách"
 merge_split_hint = "Trộn hoặc tách tệp bố cục"
 merge_to_pdf = "Trộn thành PDF"
-merge_to_ofd = "Trộn thành OFD"
 split_to_pdf = "Tách thành PDF"
-split_to_ofd = "Tách thành OFD"
 split_page_range = "Phạm vi trang tách:"
 page_range_placeholder = "1-3,5  *  #"
 selected_split_file = "Đã chọn tệp để tách ({pages} trang):"
@@ -1078,8 +1084,11 @@ split_mode_single_page_warning = "⚠️ Tep nay chi co 1 trang; khong can tach"
 
 # 表格转换区
 [conversion_panel.spreadsheet]
+protection_checking = "Đang kiểm tra trạng thái bảo vệ sổ làm việc…"
+reference_table = "Bảng tham chiếu: {name}"
+protection_password_required = "Mật khẩu (bắt buộc)"
 ods_delivery_options = "Tùy chọn bàn giao ODS"
-ods_delivery_hint = "Công thức ngoài dùng giá trị đã lưu đệm. Tệp được bảo vệ cần mật khẩu và sự đồng ý xuất bản không còn bảo vệ."
+ods_delivery_hint = "Công thức bên ngoài sử dụng giá trị đã lưu trong bộ nhớ đệm. Xuất tệp được bảo vệ sang ODS cần có sự đồng ý rõ ràng."
 protection_password = "Mật khẩu bảo vệ (tùy chọn)"
 allow_protection_loss = "Tôi hiểu rằng ODS được bàn giao sẽ không giữ bảo vệ bằng mật khẩu"
 protected_batch_single_only = "Mật khẩu không được dùng lại trong lô. Hãy chuyển đổi từng tệp được bảo vệ."

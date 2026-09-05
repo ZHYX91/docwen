@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QScrollArea,
+    QSizePolicy,
     QSpinBox,
     QToolButton,
     QVBoxLayout,
@@ -53,6 +54,9 @@ def _prepare_combo(widget: QComboBox) -> None:
     from PySide6.QtWidgets import QListView
 
     widget.setMaxVisibleItems(20)
+    widget.setMinimumContentsLength(8)
+    widget.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+    widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
     # Use a list view for the popup to get middle-elide on Windows
     view = QListView()
     view.setTextElideMode(Qt.TextElideMode.ElideMiddle)
@@ -113,6 +117,8 @@ class BaseSettingsTab(QWidget):
 
         self._scroll_container = QWidget(self._scroll_area)
         self._scroll_container.setObjectName("settingsTabScrollContainer")
+        self._scroll_container.setMinimumWidth(0)
+        self._scroll_container.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self._scroll_layout = QVBoxLayout(self._scroll_container)
         self._scroll_layout.setContentsMargins(SPACING_MD, SPACING_MD, SPACING_MD, SPACING_MD)
         self._scroll_layout.setSpacing(SPACING_MD)
@@ -159,6 +165,7 @@ class BaseSettingsTab(QWidget):
         layout.setSpacing(10)
 
         title_label = QLabel(title, card)
+        title_label.setWordWrap(True)
         title_label.setObjectName("settingsCardTitle")
         layout.addWidget(title_label)
 
@@ -185,6 +192,7 @@ class BaseSettingsTab(QWidget):
             form.addRow(widget)
             return None
         label_widget = BaseSettingsTab.create_label_with_info(label_text, effective_tooltip)
+        widget.setMinimumWidth(0)
         if effective_tooltip:
             label_widget.setToolTip(effective_tooltip)
         form.addRow(label_widget, widget)

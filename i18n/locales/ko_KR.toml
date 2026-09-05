@@ -11,6 +11,7 @@ template_name = "한국어 범용 템플릿"
 # 通用文本
 # =============================================================================
 [common]
+copy = "복사"
 app_name = "DocWen"
 default = "기본값"
 close = "닫기"
@@ -29,14 +30,19 @@ save_failed = "설정 저장 실패"
 # 状态栏
 # =============================================================================
 [info_area]
+task_state_skipped = "건너뜀"
+batch_name = "일괄 처리 (파일 {count}개)"
+aggregate_name = "병합 (파일 {count}개)"
+activity_count = "작업 기록 ({count})"
+clear_history = "작업 기록 지우기"
+notice_title = "알림"
+task_state_cancelling = "취소 중"
 copy_path = "경로 복사"
 open_location = "파일 위치 열기: {path}"
 ipc_file_missing = "IPC 파일이 없습니다: {path}"
 font_size_applied = "글자 크기: {label}"
 
 transient_title = "현재 상태"
-transient_meta = "{count}개 표시 중"
-history_title = "최근 메시지"
 history_repeated = "{count}회 반복"
 history_meta = "{count}개"
 task_state_active = "진행 중"
@@ -159,6 +165,9 @@ general = "언어, 테마 등 전역 설정"
 
 # 设置状态消息
 [settings.status]
+apply_success = "설정을 적용했습니다."
+apply_failed = "설정을 적용할 수 없습니다."
+reset_success = "설정을 기본값으로 재설정했습니다."
 
 [settings.reset]
 tab_button = "현재 탭 초기화"
@@ -956,6 +965,7 @@ spreadsheet_templates = "시트"
 # 转换面板区域
 # =============================================================================
 [conversion_panel]
+target_format = "대상 형식"
 route_options_unavailable = "사용 가능한 작업을 불러오지 못해 잘못된 요청을 방지하도록 작업을 비활성화했습니다."
 no_compatible_operation = "이 파일에 사용할 수 있는 호환 작업이 없습니다."
 format_conversion = "형식 변환"
@@ -1016,9 +1026,7 @@ convert_to_document_or_image = "문서 또는 이미지로 변환"
 merge_split = "병합/분할"
 merge_split_hint = "레이아웃 파일을 병합 또는 분할합니다"
 merge_to_pdf = "PDF로 병합"
-merge_to_ofd = "OFD로 병합"
 split_to_pdf = "PDF로 분할"
-split_to_ofd = "OFD로 분할"
 split_page_range = "분할 페이지 범위:"
 page_range_placeholder = "1-3,5  *  #"
 selected_split_file = "분할할 파일({pages}페이지):"
@@ -1028,8 +1036,11 @@ split_mode_single_page_warning = "⚠️ 이 파일은 1페이지뿐이라 분�
 
 # 表格转换区
 [conversion_panel.spreadsheet]
+protection_checking = "통합 문서 보호 상태 확인 중…"
+reference_table = "기준 표: {name}"
+protection_password_required = "암호 (필수)"
 ods_delivery_options = "ODS 전달 옵션"
-ods_delivery_hint = "외부 수식에는 캐시된 값을 사용합니다. 보호된 파일은 암호와 보호 없이 게시하는 데 대한 동의가 필요합니다."
+ods_delivery_hint = "외부 수식은 캐시된 값을 사용합니다. 보호된 파일을 ODS로 출력하려면 보호 해제에 명시적으로 동의해야 합니다."
 protection_password = "보호 암호(선택 사항)"
 allow_protection_loss = "전달된 ODS에 암호 보호가 유지되지 않음을 이해합니다"
 protected_batch_single_only = "암호는 일괄 작업에서 재사용되지 않습니다. 보호된 파일을 개별적으로 변환하세요."
@@ -1564,7 +1575,6 @@ font_size_tooltip = "글꼴 크기 전환"
 no_file_for_locate = "선택된 파일이 없어 출력을 찾을 수 없습니다."
 runtime_unavailable = "런타임을 사용할 수 없어 변환을 시작할 수 없습니다."
 task_already_running = "이미 실행 중인 작업이 있습니다. 현재 작업을 먼저 취소하세요."
-cancelling = "취소 중..."
 task_processing_prefix = "처리 중:"
 task_progress_prefix = "진행률:"
 task_failed_prefix = "실패:"
@@ -1576,7 +1586,6 @@ task_cancelled_status = "취소됨"
 error_copied = "오류 상세가 복사되었습니다."
 no_error_available = "오류 정보가 없습니다."
 no_failed_to_retry = "재시도할 실패 작업이 없습니다."
-retry_context_unavailable = "재시도 컨텍스트를 사용할 수 없습니다."
 path_not_exist = "경로가 존재하지 않습니다: {path}"
 open_path_failed = "경로를 열 수 없습니다: {path}"
 template_not_found = "템플릿을 찾을 수 없습니다: {name}"

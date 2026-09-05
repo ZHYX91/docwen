@@ -89,30 +89,18 @@ class TestConstruction:
 
 
 class TestHistoryRendering:
-    def test_history_scroll_area_does_not_raise_the_parent_minimum_height(self, widget: InfoArea) -> None:
+    def test_expanded_history_reserves_its_bounded_height(self, widget: InfoArea) -> None:
         scroll = widget.findChild(QScrollArea, "infoHistoryScrollArea")
         assert scroll is not None
-        assert scroll.sizePolicy().verticalPolicy() == QSizePolicy.Policy.Ignored
+        assert scroll.sizePolicy().verticalPolicy() == QSizePolicy.Policy.Fixed
 
-    def test_empty_history_has_a_centered_semantic_state(self, widget: InfoArea) -> None:
-        empty_state = widget.findChild(QWidget, "infoHistoryEmptyState")
-        assert empty_state is not None
-        assert empty_state.isVisibleTo(widget)
-
-        title = empty_state.findChild(QLabel, "infoHistoryEmptyTitle")
-        caption = empty_state.findChild(QLabel, "infoHistoryEmptyCaption")
-        assert title is not None and title.text()
-        assert caption is not None and caption.text()
-        assert title.alignment() & Qt.AlignmentFlag.AlignHCenter
-        assert caption.alignment() & Qt.AlignmentFlag.AlignHCenter
+    def test_empty_history_does_not_reserve_an_empty_card(self, widget: InfoArea) -> None:
+        assert widget._scroll.isHidden()
+        assert widget._history_toolbar.isHidden()
 
     def test_renders_history_row(self, widget: InfoArea, vm: InfoAreaViewModel) -> None:
         vm.add_message("Need attention", "warning")
         assert widget.message_count == 1
-
-        empty_state = widget.findChild(QWidget, "infoHistoryEmptyState")
-        assert empty_state is not None
-        assert not empty_state.isVisible()
 
         row = widget.get_history_row_widget(0)
         assert row is not None

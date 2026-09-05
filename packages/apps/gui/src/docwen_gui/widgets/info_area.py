@@ -3,15 +3,7 @@
 Renders the InfoArea UI based on ``InfoAreaViewModel`` state.
 Does NOT call runtime/plugins directly — all actions go through the ViewModel.
 
-Widget structure:
-  content_card (SimpleCardWidget)
-    +-- scroll (QScrollArea, horizontal scrollbar always off)
-    |     +-- msg_container (history message rows)
-    +-- divider (QFrame HLine)
-    +-- status_section
-          +-- status_meta_label (overview source + activity dots)
-          +-- status_summary_label (InteractiveTextLabel, clickable)
-          +-- status_guide_row (task completion guide buttons, hidden by default)
+Current task feedback stays above an optional, bounded activity history.
 """
 
 from __future__ import annotations
@@ -28,6 +20,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMenu,
+    QProgressBar,
     QPushButton,
     QScrollArea,
     QSizePolicy,
@@ -41,17 +34,61 @@ from docwen_gui.i18n import t as _t
 from .panel_card import PanelCard, TaskActivityList
 
 if TYPE_CHECKING:
-    from ..view_models.info_area_vm import InfoAreaViewModel
+    from ..view_models.info_area_vm import HistoryRowData, InfoAreaViewModel
 
 logger = logging.getLogger(__name__)
 
 # ── Design constants ──────────────────────────────────────────────────────
 _SPACING_XS = 4
 _SPACING_SM = 8
-_SPACING_MD = 12
 _LOCATION_BUTTON_SIZE = 26
 _LOCATION_ICON_SIZE = 16
 _SCROLL_DELAY_MS = 50
+
+
+class _SummaryButton(QPushButton):
+    """A native keyboard-accessible button with a wrapping caption."""
+
+    def __init__(self, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.caption = QLabel(self)
+        self.caption.setWordWrap(True)
+        self.caption.setTextFormat(Qt.TextFormat.PlainText)
+        self.caption.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        layout = QVBoxLayout(self)
+        self._caption_layout = layout
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.caption)
+        self.setFlat(True)
+        self.setAutoDefault(False)
+        policy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        policy.setHeightForWidth(True)
+        self.setSizePolicy(policy)
+
+    def setText(self, text: str) -> None:
+        self.caption.setText(text)
+        self.setAccessibleName(text)
+        self._caption_layout.invalidate()
+        self.updateGeometry()
+
+    def text(self) -> str:
+        return self.caption.text()
+
+    def sizeHint(self) -> QSize:
+        return self._caption_layout.sizeHint()
+
+    def minimumSizeHint(self) -> QSize:
+        return self._caption_layout.minimumSize()
+
+    def heightForWidth(self, width: int) -> int:
+        return self.caption.heightForWidth(width)
+
+    def keyPressEvent(self, event) -> None:
+        if event.key() in {Qt.Key.Key_Return, Qt.Key.Key_Enter}:
+            self.click()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
 
 def _scale(value: int) -> int:
@@ -151,10 +188,12 @@ class InfoArea(QWidget):
         self._scroll: QScrollArea = _cast(QScrollArea, None)
         self._msg_container: QWidget = _cast(QWidget, None)
         self._msg_layout: QVBoxLayout = _cast(QVBoxLayout, None)
-        self._empty_history_state: QWidget = _cast(QWidget, None)
         self._history_row_widgets: list[QWidget] = []
+        self._rendered_history_rows: list[HistoryRowData] = []
+        self._history_expanded = False
+        self._rendered_guide_actions: list[dict[str, str]] | None = None
         self._status_meta_label: QLabel = _cast(QLabel, None)
-        self._status_summary_label: QLabel = _cast(QLabel, None)
+        self._status_summary_label: _SummaryButton = _cast(_SummaryButton, None)
         self._status_guide_row: QWidget = _cast(QWidget, None)
         self._status_guide_actions_widget: QWidget = _cast(QWidget, None)
         self._status_guide_actions_layout: QGridLayout = _cast(QGridLayout, None)
@@ -185,39 +224,12 @@ class InfoArea(QWidget):
         self._scroll.setObjectName("infoHistoryScrollArea")
         self._scroll.setWidgetResizable(True)
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self._scroll.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored)
+        self._scroll.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         self._msg_container = TaskActivityList()
         self._msg_layout = self._msg_container.content_layout
 
-        self._empty_history_state = QWidget(self._msg_container)
-        self._empty_history_state.setObjectName("infoHistoryEmptyState")
-        empty_layout = QVBoxLayout(self._empty_history_state)
-        empty_layout.setContentsMargins(_SPACING_MD, _SPACING_MD, _SPACING_MD, _SPACING_MD)
-        empty_layout.setSpacing(_SPACING_XS)
-        empty_layout.addStretch(1)
-
-        empty_title = QLabel(_t("info_area.history_title", "Recent messages"), self._empty_history_state)
-        empty_title.setObjectName("infoHistoryEmptyTitle")
-        empty_title.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
-        empty_layout.addWidget(empty_title)
-
-        empty_caption = QLabel(_t("common.ready", "Ready"), self._empty_history_state)
-        empty_caption.setObjectName("infoHistoryEmptyCaption")
-        empty_caption.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
-        empty_layout.addWidget(empty_caption)
-        empty_layout.addStretch(1)
-
-        self._msg_layout.addWidget(self._empty_history_state, stretch=1)
-
         self._scroll.setWidget(self._msg_container)
-        card_layout.addWidget(self._scroll, stretch=1)
-
-        # Divider
-        divider = QFrame()
-        divider.setObjectName("infoSectionDivider")
-        divider.setFrameShape(QFrame.Shape.HLine)
-        card_layout.addWidget(divider)
 
         # Status section
         status_section = QWidget()
@@ -233,10 +245,16 @@ class InfoArea(QWidget):
         overview_layout.addWidget(self._status_meta_label)
 
         # Summary label (main status text, potentially interactive)
-        self._status_summary_label = QLabel("", status_section)
+        self._status_summary_label = _SummaryButton(status_section)
         self._status_summary_label.setObjectName("infoStatusSummary")
-        self._status_summary_label.setWordWrap(True)
+        self._status_summary_label.clicked.connect(self._vm.request_navigation)
         overview_layout.addWidget(self._status_summary_label)
+        self._progress = QProgressBar(status_section)
+        self._progress.setObjectName("infoTaskProgress")
+        self._progress.setTextVisible(False)
+        self._progress.setFixedHeight(5)
+        self._progress.hide()
+        overview_layout.addWidget(self._progress)
 
         # Guide row (hidden by default)
         self._status_guide_row = QWidget(status_section)
@@ -258,6 +276,34 @@ class InfoArea(QWidget):
         overview_layout.addWidget(self._status_guide_row)
         card_layout.addWidget(status_section)
 
+        self._notice = QLabel(self)
+        self._notice.setObjectName("infoNotification")
+        self._notice.setWordWrap(True)
+        self._notice.setTextFormat(Qt.TextFormat.PlainText)
+        self._notice.hide()
+        card_layout.addWidget(self._notice)
+        self._history_toolbar = QWidget(self)
+        self._history_toolbar.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        toolbar = QHBoxLayout(self._history_toolbar)
+        toolbar.setContentsMargins(0, 0, 0, 0)
+        self._history_toggle = QToolButton(self._history_toolbar)
+        self._history_toggle.setCheckable(True)
+        self._history_toggle.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self._history_toggle.setAutoRaise(True)
+        self._history_toggle.toggled.connect(self._set_history_expanded)
+        toolbar.addWidget(self._history_toggle)
+        toolbar.addStretch(1)
+        clear = QToolButton(self._history_toolbar)
+        clear.setText(_t("components.file_drop.clear_button", "Clear"))
+        clear.setToolTip(_t("info_area.clear_history", "Clear activity records"))
+        clear.setAccessibleName(clear.toolTip())
+        clear.clicked.connect(self._vm.clear_history)
+        toolbar.addWidget(clear)
+        card_layout.addWidget(self._history_toolbar)
+        card_layout.addWidget(self._scroll)
+        self._scroll.setFixedHeight(180)
+        self._scroll.hide()
+
         root_layout.addWidget(self._content_card)
 
     # ── ViewModel Wiring ─────────────────────────────────────────────────
@@ -273,6 +319,12 @@ class InfoArea(QWidget):
         self._update_status_section()
         self._update_guide_row()
 
+    def _set_history_expanded(self, expanded: bool) -> None:
+        self._history_expanded = expanded
+        self._history_toggle.setArrowType(Qt.ArrowType.DownArrow if expanded else Qt.ArrowType.RightArrow)
+        self._scroll.setVisible(expanded and bool(self._vm.history_rows))
+        self.updateGeometry()
+
     # ── History rendering ────────────────────────────────────────────────
 
     def _rebuild_history(self) -> None:
@@ -280,26 +332,66 @@ class InfoArea(QWidget):
         if self._msg_layout is None:
             return
 
-        for row in self._history_row_widgets:
-            self._msg_layout.removeWidget(row)
-            row.hide()
-            row.setParent(None)
-            row.deleteLater()
-        self._history_row_widgets.clear()
+        rows = self._vm.history_rows
+        if rows == self._rendered_history_rows:
+            self._history_toolbar.setVisible(bool(rows))
+            return
+        scrollbar = self._scroll.verticalScrollBar()
+        follow_tail = scrollbar.value() >= self._history_tail_position() - 2
+        old_position = scrollbar.value()
+        available = list(zip(self._rendered_history_rows, self._history_row_widgets, strict=True))
+        widgets = []
+        for data in rows:
+            match = next((index for index, (old, _) in enumerate(available) if old is data), None)
+            if match is None:
+                match = next(
+                    (
+                        index
+                        for index, (old, _) in enumerate(available)
+                        if old.message == data.message
+                        and old.operation_id == data.operation_id
+                        and old.file_path == data.file_path
+                        and old.message_type == data.message_type
+                        and old.navigate_file_path == data.navigate_file_path
+                        and old.show_location == data.show_location
+                    ),
+                    None,
+                )
+            if match is None:
+                widget = self._build_history_row(data)
+            else:
+                old, widget = available.pop(match)
+                if old != data:
+                    timestamp = widget.findChild(QLabel, "statusTimestamp")
+                    badge = widget.findChild(QLabel, "infoHistoryRepeatBadge")
+                    if timestamp is not None:
+                        timestamp.setText(data.timestamp)
+                    if badge is not None:
+                        badge.setText(
+                            _t("info_area.history_repeated", "Repeated {count} times", count=data.repeat_count)
+                        )
+                        badge.setToolTip(badge.text())
+                        badge.setVisible(data.repeat_count > 1)
+            widgets.append(widget)
+        for _, widget in available:
+            self._msg_layout.removeWidget(widget)
+            widget.hide()
+            widget.setParent(None)
+            widget.deleteLater()
+        for widget in widgets:
+            self._msg_layout.removeWidget(widget)
+            self._msg_layout.addWidget(widget)
+        self._history_row_widgets = widgets
+        self._rendered_history_rows = rows
+        self._history_toolbar.setVisible(bool(rows))
+        self._history_toggle.setText(_t("info_area.activity_count", "Activity ({count})", count=len(rows)))
+        self._set_history_expanded(self._history_expanded)
+        if follow_tail:
+            QTimer.singleShot(_SCROLL_DELAY_MS, self._scroll_to_bottom)
+        else:
+            scrollbar.setValue(old_position)
 
-        has_history = bool(self._vm.history_rows)
-        self._empty_history_state.setVisible(not has_history)
-
-        # Add rows from ViewModel
-        for row_data in self._vm.history_rows:
-            row_widget = self._build_history_row(row_data)
-            self._msg_layout.addWidget(row_widget)
-            self._history_row_widgets.append(row_widget)
-
-        # Schedule scroll to bottom
-        QTimer.singleShot(_SCROLL_DELAY_MS, self._scroll_to_bottom)
-
-    def _build_history_row(self, row_data) -> QWidget:
+    def _build_history_row(self, row_data: HistoryRowData) -> QWidget:
         """Build a single history message row widget."""
 
         has_location = bool(row_data.show_location and row_data.file_path)
@@ -350,26 +442,28 @@ class InfoArea(QWidget):
 
         # Message text (selectable)
         msg_label = QLabel(row_data.message, first_line)
+        msg_label.setTextFormat(Qt.TextFormat.PlainText)
         msg_label.setObjectName("infoHistoryText")
         msg_label.setProperty("infoStatusTone", row_data.message_type)
         msg_label.setWordWrap(True)
         msg_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         msg_label.setToolTip(row_data.message)
         row.setToolTip(row_data.message)
-        first_line_layout.addWidget(msg_label, stretch=1)
-        if row_data.repeat_count > 1:
-            repeat_label = QLabel(
-                _t(
-                    "info_area.history_repeated",
-                    "Repeated {count} times",
-                    count=row_data.repeat_count,
-                ),
-                first_line,
-            )
-            repeat_label.setObjectName("infoHistoryRepeatBadge")
-            repeat_label.setToolTip(repeat_label.text())
-            first_line_layout.addWidget(repeat_label, alignment=Qt.AlignmentFlag.AlignTop)
+        first_line_layout.addStretch(1)
+        repeat_label = QLabel(
+            _t(
+                "info_area.history_repeated",
+                "Repeated {count} times",
+                count=row_data.repeat_count,
+            ),
+            first_line,
+        )
+        repeat_label.setObjectName("infoHistoryRepeatBadge")
+        repeat_label.setToolTip(repeat_label.text())
+        repeat_label.setVisible(row_data.repeat_count > 1)
+        first_line_layout.addWidget(repeat_label, alignment=Qt.AlignmentFlag.AlignTop)
         content_layout.addWidget(first_line)
+        content_layout.addWidget(msg_label)
 
         row_layout.addWidget(content, stretch=1)
 
@@ -403,6 +497,8 @@ class InfoArea(QWidget):
 
             # Interactive styling
             has_target = bool(vm.status_action_target)
+            self._status_summary_label.setEnabled(has_target)
+            self._status_summary_label.setAccessibleDescription(vm.status_action_target)
             self._status_summary_label.setProperty("interactiveText", has_target)
             if has_target:
                 self._status_summary_label.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -411,8 +507,18 @@ class InfoArea(QWidget):
                 self._status_summary_label.setCursor(Qt.CursorShape.ArrowCursor)
                 self._status_summary_label.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
+        self._status_meta_label.setVisible(bool(vm.status_meta_text))
+        self._notice.setText(vm.notification_text)
+        self._notice.setVisible(bool(vm.notification_text))
+        task = vm.task_summary
+        self._progress.setVisible(task.state in {"active", "cancelling"})
+        if task.percent is None:
+            self._progress.setRange(0, 0)
+        else:
+            self._progress.setRange(0, 100)
+            self._progress.setValue(round(task.percent))
+
         # Update status section properties
-        self._status_summary_label.parent() if self._status_summary_label else None
         # Walk up to find the status section (parent of summary label)
         if self._status_summary_label is not None:
             p = self._status_summary_label.parent()
@@ -425,6 +531,10 @@ class InfoArea(QWidget):
 
     def _update_guide_row(self) -> None:
         """Update the guide button row from ViewModel state."""
+        actions = self._vm.guide_actions if self._vm.guide_visible else []
+        if actions == self._rendered_guide_actions:
+            return
+        self._rendered_guide_actions = actions
         if self._status_guide_row is None:
             return
         if self._status_guide_actions_layout is None:
@@ -511,12 +621,21 @@ class InfoArea(QWidget):
 
     # ── Helpers ──────────────────────────────────────────────────────────
 
+    def _history_tail_position(self) -> int:
+        """The last message, excluding spare space from Qt's size hints."""
+        if not self._history_row_widgets:
+            return 0
+        content_bottom = self._history_row_widgets[-1].geometry().bottom() + 1
+        return max(
+            0, min(self._scroll.verticalScrollBar().maximum(), content_bottom - self._scroll.viewport().height())
+        )
+
     def _scroll_to_bottom(self) -> None:
-        """Scroll the history area to the bottom."""
+        """Follow actual messages even when wrapped size hints reserve extra space."""
         if self._scroll is None:
             return
         sb = self._scroll.verticalScrollBar()
-        sb.setValue(sb.maximum())
+        sb.setValue(self._history_tail_position())
 
     @staticmethod
     def _clear_layout(layout: QGridLayout | QHBoxLayout | QVBoxLayout) -> None:
@@ -545,17 +664,6 @@ class InfoArea(QWidget):
             style.polish(widget)
 
     # ── Event handlers ───────────────────────────────────────────────────
-
-    def mouseReleaseEvent(self, event) -> None:
-        """Handle click on the status summary area."""
-        if event.button() == Qt.MouseButton.LeftButton and self._status_summary_label is not None:
-            # Check if click is on or near the summary label
-            local_pos = self._status_summary_label.mapFromParent(event.position().toPoint())
-            if self._status_summary_label.rect().contains(local_pos) and self._vm.status_action_target:
-                self._vm.request_navigation()
-                event.accept()
-                return
-        super().mouseReleaseEvent(event)
 
     # ── Public API ───────────────────────────────────────────────────────
 

@@ -61,7 +61,7 @@ _GUIDE_ELIGIBLE_STATES: frozenset[str] = frozenset(
 # ``_refresh_status`` builds ``info_area.task_state_{state}`` dynamically.
 # Keep that lookup finite and fail closed before any unknown state can enter
 # the view-model.  The empty state is reserved for the idle DTO.
-TASK_SUMMARY_STATES = frozenset({"active", "success", "partial", "failed", "cancelled"})
+TASK_SUMMARY_STATES = frozenset({"active", "cancelling", "success", "partial", "failed", "cancelled", "skipped"})
 TASK_SUMMARY_TONES = frozenset({"info", "success", "warning", "danger"})
 
 
@@ -114,6 +114,8 @@ class TaskSummaryState:
     cancelled_count: int = 0
     navigate_path: str = ""
     navigation_kind: str = ""
+    progress_message: str = ""
+    percent: float | None = None
 
     def __post_init__(self) -> None:
         state = str(self.state).strip().lower()
@@ -258,6 +260,18 @@ class InfoAreaViewModel(QObject):
     def transient_count(self) -> int:
         """Number of active transient messages."""
         return len(self._transient_messages)
+
+    @property
+    def notification_text(self) -> str:
+        """A notice never replaces the identity or actions of a current task."""
+        if not self.has_task_summary:
+            return ""
+        notices = [
+            value
+            for key, value in self._transient_messages.items()
+            if self._transient_key_base(key) not in {"progress", "processing", "terminal"}
+        ]
+        return min(notices, key=lambda value: value[2])[0] if notices else ""
 
     @property
     def has_task_summary(self) -> bool:
@@ -545,6 +559,41 @@ class InfoAreaViewModel(QObject):
         self._guide_actions.clear()
         self._refresh_status()
 
+    def begin_task(self, *, operation_id: str, current_file: str, total_count: int) -> None:
+        """Replace prior result actions before a new worker can emit telemetry."""
+        self._transient_generation += 1
+        self._clear_transient_state()
+        self.set_task_summary(operation_id=operation_id, current_file=current_file, total_count=total_count)
+
+    def update_task_progress(
+        self,
+        operation_id: str,
+        *,
+        message: str = "",
+        percent: float | None = None,
+        completed_count: int | None = None,
+        current_file: str = "",
+    ) -> None:
+        task = self._task_summary
+        if task.operation_id != operation_id or task.state not in {"active", "cancelling"}:
+            return
+        if task.state == "cancelling":
+            return
+        task.progress_message = message
+        if percent is not None:
+            task.percent = max(0.0, min(100.0, percent))
+        if completed_count is not None:
+            task.completed_count = max(0, min(task.total_count, completed_count))
+        if current_file:
+            task.current_file = current_file
+        self._refresh_status()
+
+    def mark_cancelling(self, operation_id: str) -> None:
+        if self._task_summary.operation_id == operation_id and self._task_summary.state == "active":
+            self._task_summary.state = "cancelling"
+            self._task_summary.progress_message = ""
+            self._refresh_status()
+
     # ── Public methods: activity animation ───────────────────────────────
 
     def start_activity_animation(self, base_meta: str) -> None:
@@ -708,7 +757,7 @@ class InfoAreaViewModel(QObject):
     def _refresh_status(self) -> None:
         """Recalculate display state from current data sources.
 
-        Priority: transient > task_summary > history > idle.
+        Task identity takes precedence; unrelated notices are displayed separately.
         """
         activity_enabled = False
         overview_source = "idle"
@@ -772,19 +821,20 @@ class InfoAreaViewModel(QObject):
                 ]
             )
 
-            message = transient_message or summary_message
-            badge_tone = transient_theme if transient_message else ts.tone
-            overview_source = "transient" if transient_message else "task"
+            if ts.progress_message:
+                summary_message += "\n" + ts.progress_message
+            message = summary_message
+            badge_tone = ts.tone
+            overview_source = "task"
             action_target = ts.navigate_path
-            activity_enabled = state == "active" and transient_message is None
+            activity_enabled = state in {"active", "cancelling"}
         else:
             if transient_message is not None:
                 message = transient_message
                 badge_tone = transient_theme
                 overview_meta = _t(
-                    "info_area.transient_meta",
-                    "Processing ({count})",
-                    count=len(self._transient_messages),
+                    "info_area.notice_title",
+                    "Notice",
                 )
                 overview_source = "transient"
                 # Activity animation for progress/processing transients
@@ -809,7 +859,7 @@ class InfoAreaViewModel(QObject):
                 action_target = latest.navigate_file_path
             else:
                 message = _t("common.ready", "Ready")
-                overview_meta = _t("info_area.history_meta", "History (0)", count=0)
+                overview_meta = ""
 
         # Update state
         self._status_meta_text = overview_meta
@@ -820,6 +870,7 @@ class InfoAreaViewModel(QObject):
 
         # Manage activity animation
         if activity_enabled:
+            self._activity_base_meta = overview_meta
             if not self._activity_enabled:
                 self._activity_base_meta = overview_meta
                 self._activity_enabled = True
@@ -901,7 +952,7 @@ class InfoAreaViewModel(QObject):
         This static method encapsulates the guide button combination rules:
         - All success: open_output_dir when one exists
         - Has failures: open_output_dir + view_failed_details + retry_failed
-        - Cancelled: no redundant guide action; file input remains available
+        - Cancelled: retain access to outputs and any actual failures
 
         Args:
             state: Task state (success / partial / failed / cancelled).
@@ -914,26 +965,16 @@ class InfoAreaViewModel(QObject):
         """
         actions: list[dict[str, str]] = []
 
-        if state == "cancelled":
-            return actions
-
         # For success, partial, and failed states
         if output_dir:
             actions.append({"action_key": "open_output_dir", "target_path": output_dir})
 
-        if state in ("partial", "failed"):
+        if state in ("partial", "failed", "cancelled"):
             if failed_details_path:
                 actions.append(
                     {
                         "action_key": "view_failed_details",
                         "target_path": failed_details_path,
-                    }
-                )
-            else:
-                actions.append(
-                    {
-                        "action_key": "view_failed_details",
-                        "target_path": "",
                     }
                 )
             if retry_available:

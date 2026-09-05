@@ -11,6 +11,7 @@ template_name = "繁體中文通用模板"
 # 通用文本
 # =============================================================================
 [common]
+copy = "複製"
 app_name = "DocWen"
 default = "默認"
 close = "關閉"
@@ -29,14 +30,19 @@ save_failed = "儲存設定失敗"
 # 状态栏
 # =============================================================================
 [info_area]
+task_state_skipped = "已跳過"
+batch_name = "批次處理（{count} 個檔案）"
+aggregate_name = "合併（{count} 個檔案）"
+activity_count = "活動記錄（{count}）"
+clear_history = "清除活動記錄"
+notice_title = "提示"
+task_state_cancelling = "正在取消"
 copy_path = "複製路徑"
 open_location = "打開檔案位置：{path}"
 ipc_file_missing = "IPC 檔案不存在：{path}"
 font_size_applied = "字號：{label}"
 
 transient_title = "當前狀態"
-transient_meta = "{count} 條進行中"
-history_title = "最近訊息"
 history_repeated = "重複 {count} 次"
 history_meta = "{count} 條記錄"
 task_state_active = "進行中"
@@ -159,6 +165,9 @@ general = "語言、主題等全域設定"
 
 # 设置状态消息
 [settings.status]
+apply_success = "設定已套用。"
+apply_failed = "無法套用設定。"
+reset_success = "設定已還原預設值。"
 
 [settings.reset]
 tab_button = "重設當前頁"
@@ -956,6 +965,7 @@ spreadsheet_templates = "表格範本"
 # 转换面板区域
 # =============================================================================
 [conversion_panel]
+target_format = "目標格式"
 route_options_unavailable = "無法載入可用操作；為避免送出錯誤要求，操作已停用。"
 no_compatible_operation = "此檔案沒有相容的可用操作。"
 format_conversion = "格式轉換"
@@ -1016,9 +1026,7 @@ convert_to_document_or_image = "轉換為文件或圖片"
 merge_split = "合併/拆分"
 merge_split_hint = "合併或拆分版式文件"
 merge_to_pdf = "合併PDF"
-merge_to_ofd = "合併OFD"
 split_to_pdf = "拆分PDF"
-split_to_ofd = "拆分OFD"
 split_page_range = "拆分頁碼範圍："
 page_range_placeholder = "1-3,5  *  #"
 selected_split_file = "當前選中的拆分文件（共{pages}頁）："
@@ -1028,8 +1036,11 @@ split_mode_single_page_warning = "⚠️ 當前文件只有1頁，無需拆分"
 
 # 表格转换区
 [conversion_panel.spreadsheet]
+protection_checking = "正在檢查活頁簿保護狀態…"
+reference_table = "參考表格：{name}"
+protection_password_required = "密碼（必填）"
 ods_delivery_options = "ODS 交付選項"
-ods_delivery_hint = "外部公式將使用檔案內快取值。受保護檔案需要密碼，並明確同意交付不再受保護的結果。"
+ods_delivery_hint = "外部公式使用快取值。將受保護檔案輸出為 ODS 需要明確確認解除保護。"
 protection_password = "保護密碼（選填）"
 allow_protection_loss = "我了解交付的 ODS 將不再保留密碼保護"
 protected_batch_single_only = "密碼不會在批次工作中重複使用。請逐一轉換受保護檔案。"
@@ -1557,7 +1568,6 @@ route_unavailable = "此檔案沒有相容的可用操作。"
 output_settings_unavailable = "無法載入輸出設定，未啟動本次工作。"
 template_catalog_failed = "無法載入範本。"
 about_tooltip = "關於 DocWen"
-cancelling = "正在取消..."
 error_copied = "錯誤詳細已複製。"
 font_size_tooltip = "切換字型大小"
 no_error_available = "暫無錯誤資訊。"
@@ -1567,7 +1577,6 @@ open_path_failed = "無法開啟路徑：{path}"
 template_not_found = "找不到模板：{name}"
 template_dir_unavailable = "範本目錄不可用。"
 path_not_exist = "路徑不存在：{path}"
-retry_context_unavailable = "重試上下文不可用。"
 runtime_unavailable = "執行時不可用，無法開始轉換。"
 settings_tooltip = "設定 (Ctrl+,)"
 system_tray_hide = "隱藏視窗"

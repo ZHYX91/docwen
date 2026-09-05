@@ -65,16 +65,32 @@ def inspect_xlsx_protection(path_value: str) -> SpreadsheetProtectionInfo:
                 if info.file_size > _MAX_PROTECTION_XML_BYTES:
                     return SpreadsheetProtectionInfo(path=str(path), status="unknown")
                 root = ElementTree.fromstring(package.read(name))
-                protected_tags = {"workbookProtection", "sheetProtection"}
-                if any(element.tag.rsplit("}", 1)[-1] in protected_tags for element in root.iter()):
+                # Protection is a direct workbook/worksheet child. Walking
+                # every cell in Python makes large sheets needlessly expensive.
+                if any(_protection_enabled(element) for element in root):
                     protected_parts.append(name)
-    except (ElementTree.ParseError, OSError, RuntimeError, zipfile.BadZipFile):
+    except (ElementTree.ParseError, OSError, RuntimeError, ValueError, zipfile.BadZipFile):
         return SpreadsheetProtectionInfo(path=str(path), status="unknown")
     return SpreadsheetProtectionInfo(
         path=str(path),
         status="protected" if protected_parts else "none",
         protected_parts=tuple(protected_parts),
     )
+
+
+def _protection_enabled(element: ElementTree.Element) -> bool:
+    tag = element.tag.rsplit("}", 1)[-1]
+    flags = (
+        ("sheet",)
+        if tag == "sheetProtection"
+        else ("lockStructure", "lockWindows", "lockRevision")
+        if tag == "workbookProtection"
+        else ()
+    )
+    values = [element.get(flag, "false").lower() for flag in flags]
+    if any(value not in {"true", "false", "1", "0"} for value in values):
+        raise ValueError("Invalid protection flag")
+    return any(value in {"true", "1"} for value in values)
 
 
 __all__ = ["SpreadsheetProtectionInfo", "inspect_xlsx_protection"]

@@ -26,7 +26,6 @@ font_size_tooltip = "切换字体大小"
 no_file_for_locate = "未选中文件，无法定位输出。"
 runtime_unavailable = "运行时不可用，无法开始转换。"
 task_already_running = "已有任务在运行，请先取消当前任务。"
-cancelling = "正在取消..."
 task_processing_prefix = "正在处理："
 task_progress_prefix = "进度："
 task_failed_prefix = "失败："
@@ -38,7 +37,6 @@ task_cancelled_status = "已取消"
 error_copied = "错误详情已复制。"
 no_error_available = "暂无错误信息。"
 no_failed_to_retry = "没有可重试的失败任务。"
-retry_context_unavailable = "重试上下文不可用。"
 path_not_exist = "路径不存在：{path}"
 open_path_failed = "无法打开路径：{path}"
 template_not_found = "找不到模板：{name}"
@@ -62,6 +60,7 @@ file_admission_cancelled = "已取消处理；未接受检测到的格式。"
 # 通用文本
 # =============================================================================
 [common]
+copy = "复制"
 app_name = "DocWen"
 default = "默认"
 close = "关闭"
@@ -80,14 +79,19 @@ save_failed = "保存设置失败"
 # 状态栏
 # =============================================================================
 [info_area]
+task_state_skipped = "已跳过"
+batch_name = "批量处理（{count} 个文件）"
+aggregate_name = "合并（{count} 个文件）"
+activity_count = "活动记录（{count}）"
+clear_history = "清空活动记录"
+notice_title = "提示"
+task_state_cancelling = "正在取消"
 copy_path = "复制路径"
 open_location = "打开文件位置：{path}"
 ipc_file_missing = "IPC 文件不存在：{path}"
 font_size_applied = "字号：{label}"
 
 transient_title = "当前状态"
-transient_meta = "{count} 条进行中"
-history_title = "最近消息"
 history_repeated = "重复 {count} 次"
 history_meta = "{count} 条记录"
 task_state_active = "进行中"
@@ -210,6 +214,9 @@ general = "语言、主题等全局设置"
 
 # 设置状态消息
 [settings.status]
+apply_success = "设置已应用。"
+apply_failed = "无法应用设置。"
+reset_success = "设置已恢复默认值。"
 
 [settings.reset]
 tab_button = "还原当前选项卡"
@@ -1005,6 +1012,7 @@ spreadsheet_templates = "表格模板"
 # 转换面板区域
 # =============================================================================
 [conversion_panel]
+target_format = "目标格式"
 route_options_unavailable = "无法加载可用操作；为避免发出错误请求，操作已禁用。"
 no_compatible_operation = "此文件没有兼容的可用操作。"
 format_conversion = "格式转换"
@@ -1065,9 +1073,7 @@ convert_to_document_or_image = "转换为文档或图片"
 merge_split = "合并/拆分"
 merge_split_hint = "合并或拆分版式文件"
 merge_to_pdf = "合并PDF"
-merge_to_ofd = "合并OFD"
 split_to_pdf = "拆分PDF"
-split_to_ofd = "拆分OFD"
 split_page_range = "拆分页码范围："
 page_range_placeholder = "1-3,5  *  #"
 selected_split_file = "当前选中的拆分文件（共{pages}页）："
@@ -1077,8 +1083,11 @@ split_mode_single_page_warning = "⚠️ 当前文件只有1页，无需拆分"
 
 # 表格转换区
 [conversion_panel.spreadsheet]
+protection_checking = "正在检查工作簿保护状态…"
+reference_table = "参考表格：{name}"
+protection_password_required = "密码（必填）"
 ods_delivery_options = "ODS 交付选项"
-ods_delivery_hint = "外部公式将使用文件内缓存值。受保护文件需要密码，并明确同意交付不再受保护的结果。"
+ods_delivery_hint = "外部公式使用缓存值。将受保护文件输出为 ODS 需要明确确认解除保护。"
 protection_password = "保护密码（可选）"
 allow_protection_loss = "我了解交付的 ODS 将不再保留密码保护"
 protected_batch_single_only = "密码不会在批量任务中复用。请逐个转换受保护文件。"

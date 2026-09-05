@@ -419,19 +419,11 @@ class ApplicationController:
 
         return ConvertCommand(self._runtime_port)
 
-    def _batch_command(self, *, continue_on_error: bool = True) -> Any:
-        """Build the internal batch command behind admitted execution."""
-        if self._runtime_port is None:
-            raise ControllerError("No runtime port configured — cannot create BatchCommand")
-        from docwen_application.commands.batch import BatchCommand
-
-        return BatchCommand(self._runtime_port, continue_on_error=continue_on_error)
-
     def _aggregate_command(self, action_name: str) -> Any:
         """Build the internal aggregate command behind admitted execution."""
         if self._runtime_port is None:
             raise ControllerError("No runtime port configured — cannot create AggregateCommand")
-        from docwen_application.commands.batch import AggregateCommand
+        from docwen_application.commands.aggregate import AggregateCommand
 
         return AggregateCommand(self._runtime_port, action_name=action_name)
 
@@ -564,7 +556,12 @@ class ApplicationController:
                     self._commit_without_runtime(scope)
                     results = [slot for slot in request.result_slots if slot is not None]
                     return self._persist_output_manifests(manifest_request, results)
-                runtime_results = self._execute_preconverted_batch(request, scope)
+                runtime_results = self._execute_runtime_batch(
+                    request.request,
+                    scope,
+                    input_indices=request.input_indices,
+                    output_policies=request.output_policies,
+                )
                 runtime_iter = iter(runtime_results)
                 results = [next(runtime_iter) if slot is None else slot for slot in request.result_slots]
                 return self._persist_output_manifests(manifest_request, results)
@@ -606,7 +603,14 @@ class ApplicationController:
             error=ConversionErrorInfo(error_type="cancelled", message="Task was cancelled"),
         )
 
-    def _execute_runtime_batch(self, request: Any, scope: _ExecutionCancellationScope) -> list[Any]:
+    def _execute_runtime_batch(
+        self,
+        request: Any,
+        scope: _ExecutionCancellationScope,
+        *,
+        input_indices: list[int] | None = None,
+        output_policies: list[Any] | None = None,
+    ) -> list[Any]:
         """Execute a regular batch while Application owns future cancellation."""
         if not hasattr(request, "input_refs") or len(request.input_refs) == 0:
             raise ValueError("ConversionRequest must have at least one input file")
@@ -615,7 +619,9 @@ class ApplicationController:
 
         runtime_results: list[Any] = []
         cmd = self._convert_command()
-        for index, input_ref in enumerate(request.input_refs):
+        indices = range(len(request.input_refs)) if input_indices is None else input_indices
+        policies = [request.output_policy] * len(request.input_refs) if output_policies is None else output_policies
+        for input_ref, index, output_policy in zip(request.input_refs, indices, policies, strict=True):
             task_id = f"{request.request_id}-{index}"
             child_request = ConversionRequest(
                 request_id=task_id,
@@ -623,55 +629,10 @@ class ApplicationController:
                 target_format=request.target_format,
                 action_name=getattr(request, "action_name", ""),
                 options=dict(getattr(request, "options", {})),
-                output_policy=request.output_policy,
+                output_policy=output_policy,
                 config_snapshot=dict(getattr(request, "config_snapshot", {})),
                 manifest_context=(
                     request.manifest_context.for_input(index) if request.manifest_context is not None else None
-                ),
-            )
-            if not self._begin_runtime_task(scope, task_id):
-                runtime_results.append(self._cancelled_result(task_id))
-                continue
-            try:
-                runtime_results.append(cmd.execute(child_request))
-            finally:
-                self._finish_runtime_task(scope, task_id)
-        return runtime_results
-
-    def _execute_preconverted_batch(
-        self,
-        plan: _PreconversionBatchPlan,
-        scope: _ExecutionCancellationScope,
-    ) -> list[Any]:
-        """Execute prepared refs sequentially with per-input output anchors.
-
-        This is the narrow preconversion counterpart of the default
-        ``BatchWorkflow``.  It keeps the same continue-on-error ordering while
-        allowing each physically staged input to retain its own source policy.
-        """
-        from docwen_core.models.request import ConversionRequest
-
-        runtime_results: list[Any] = []
-        cmd = self._convert_command()
-        for input_ref, output_policy, original_index in zip(
-            plan.request.input_refs,
-            plan.output_policies,
-            plan.input_indices,
-            strict=True,
-        ):
-            task_id = f"{plan.request.request_id}-{original_index}"
-            child_request = ConversionRequest(
-                request_id=task_id,
-                input_refs=[input_ref],
-                target_format=plan.request.target_format,
-                action_name=plan.request.action_name,
-                options=dict(plan.request.options),
-                output_policy=output_policy,
-                config_snapshot=dict(plan.request.config_snapshot),
-                manifest_context=(
-                    plan.request.manifest_context.for_input(original_index)
-                    if plan.request.manifest_context is not None
-                    else None
                 ),
             )
             if not self._begin_runtime_task(scope, task_id):

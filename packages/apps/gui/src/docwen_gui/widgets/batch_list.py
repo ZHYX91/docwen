@@ -25,6 +25,7 @@ from PySide6.QtCore import (
     QEvent,
     QPoint,
     QRect,
+    QSignalBlocker,
     QSize,
     Qt,
     QTimer,
@@ -40,6 +41,7 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
     QBoxLayout,
+    QComboBox,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -1051,6 +1053,15 @@ class BatchList(QWidget):
         self.category_stack.setObjectName("batchCategoryStack")
 
         tabs_layout.addWidget(self.category_pivot, 0)
+        self._category_selector = QComboBox(self.tabs_frame)
+        self._category_selector.setObjectName("batchCategorySelector")
+        for category in _CATEGORY_ORDER:
+            self._category_selector.addItem(self._category_tab_label(category, 0), category)
+        self._category_selector.currentIndexChanged.connect(
+            lambda _index: self._activate_tab(str(self._category_selector.currentData()))
+        )
+        self._category_selector.hide()
+        tabs_layout.addWidget(self._category_selector)
         tabs_layout.addWidget(self.category_stack, 1)
 
         layout.addWidget(self.summary_section)
@@ -1312,6 +1323,8 @@ class BatchList(QWidget):
         """Render the active VM tab without mutating ViewModel state."""
         list_widget = self._tabs[category]
         self.category_stack.setCurrentWidget(list_widget)
+        with QSignalBlocker(self._category_selector):
+            self._category_selector.setCurrentIndex(self._category_selector.findData(category))
         with contextlib.suppress(Exception):
             if hasattr(self.category_pivot, "setCurrentItem"):
                 self.category_pivot.setCurrentItem(category)  # pyright: ignore[reportAttributeAccessIssue]
@@ -1343,6 +1356,12 @@ class BatchList(QWidget):
         super().resizeEvent(event)
         self._sync_summary_header_layout()
         self._refresh_pivot_labels()
+        required = sum(
+            self.fontMetrics().horizontalAdvance(self._category_tab_label(cat, 0)) + 28 for cat in _CATEGORY_ORDER
+        )
+        compact = self.width() < required
+        self.category_pivot.setVisible(not compact)
+        self._category_selector.setVisible(compact)
 
     def eventFilter(self, watched, event) -> bool:
         if watched is self._summary_header and event.type() == QEvent.Type.LayoutRequest:
@@ -1549,6 +1568,11 @@ class BatchList(QWidget):
         self._refresh_summary()
 
     def _refresh_pivot_labels(self) -> None:
+        for index in range(self._category_selector.count()):
+            category = str(self._category_selector.itemData(index))
+            self._category_selector.setItemText(
+                index, self._category_tab_label(category, self._vm.get_visible_count_for_category(category))
+            )
         if not self._pivot_items:
             return
         self._pivot_compact_mode = self.width() <= _BATCH_CATEGORY_PIVOT_NARROW_THRESHOLD
@@ -1861,6 +1885,7 @@ class BatchList(QWidget):
                 ),
             )
             _action_remove.triggered.connect(lambda paths=selected: self._remove_selected(paths))
+            _action_remove.setEnabled(all(self._vm.can_remove_file(path) for path in selected))
             _action_open = menu.addAction(
                 _t(
                     "components.file_drop.batch_list.action_open_selected_locations",

@@ -222,8 +222,10 @@ class TestGuiCancellationExecution:
                 timeout_ms=_E2E_CONVERSION_TIMEOUT_MS,
                 interval_ms=20,
             )
-            assert window._info_area_vm.status_source == "transient"
-            assert window._info_area_vm.status_summary_text.startswith(t("main_window.task_progress_prefix"))
+            assert window._info_area_vm.status_source == "task"
+            assert window._info_area_vm.task_summary.state == "active"
+            assert window._info_area_vm.task_summary.current_file == "cancel-me.md"
+            assert window._info_area_vm.task_summary.progress_message
             assert window._info_area_vm.activity_enabled is True
             assert window._action_area_vm.cancel_visible is True
             assert window._action_area.cancel_button is not None

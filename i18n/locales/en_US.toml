@@ -26,7 +26,6 @@ font_size_tooltip = "Change font size"
 no_file_for_locate = "No file selected to locate output."
 runtime_unavailable = "Runtime is unavailable; conversion cannot start."
 task_already_running = "A task is already running. Cancel it before starting another one."
-cancelling = "Cancelling..."
 task_processing_prefix = "Processing:"
 task_progress_prefix = "Progress:"
 task_failed_prefix = "Failed:"
@@ -38,7 +37,6 @@ task_cancelled_status = "Cancelled"
 error_copied = "Error details copied."
 no_error_available = "No error details available."
 no_failed_to_retry = "No failed task is available to retry."
-retry_context_unavailable = "Retry context is unavailable."
 path_not_exist = "Path does not exist: {path}"
 open_path_failed = "Failed to open path: {path}"
 template_not_found = "Template not found: {name}"
@@ -62,6 +60,7 @@ file_admission_cancelled = "Processing was cancelled; the detected format was no
 # 通用文本
 # =============================================================================
 [common]
+copy = "Copy"
 app_name = "DocWen"
 default = "Default"
 close = "Close"
@@ -80,14 +79,19 @@ save_failed = "Failed to save settings"
 # 状态栏
 # =============================================================================
 [info_area]
+task_state_skipped = "Skipped"
+batch_name = "Batch processing ({count} files)"
+aggregate_name = "Merge ({count} files)"
+activity_count = "Activity ({count})"
+clear_history = "Clear activity records"
+notice_title = "Notice"
+task_state_cancelling = "Cancelling"
 copy_path = "Copy path"
 open_location = "Open file location: {path}"
 ipc_file_missing = "IPC file not found: {path}"
 font_size_applied = "Text size: {label}"
 
 transient_title = "Current status"
-transient_meta = "{count} active"
-history_title = "Recent messages"
 history_repeated = "Repeated {count} times"
 history_meta = "{count} entries"
 task_state_active = "In progress"
@@ -210,6 +214,9 @@ general = "Global settings such as language and theme"
 
 # 设置状态消息
 [settings.status]
+apply_success = "Settings applied."
+apply_failed = "Settings could not be applied."
+reset_success = "Settings reset to defaults."
 
 [settings.reset]
 tab_button = "Reset Tab"
@@ -1004,6 +1011,7 @@ spreadsheet_templates = "Sheet"
 # 转换面板区域
 # =============================================================================
 [conversion_panel]
+target_format = "Target format"
 route_options_unavailable = "Available operations could not be loaded; actions are disabled to avoid an incorrect request."
 no_compatible_operation = "No compatible operation is available for this file."
 format_conversion = "Format Conversion"
@@ -1064,9 +1072,7 @@ convert_to_document_or_image = "Convert to document or image"
 merge_split = "Merge/Split"
 merge_split_hint = "Merge or split layout files"
 merge_to_pdf = "Merge to PDF"
-merge_to_ofd = "Merge to OFD"
 split_to_pdf = "Split to PDF"
-split_to_ofd = "Split to OFD"
 split_page_range = "Split page range:"
 page_range_placeholder = "1-3,5  *  #"
 selected_split_file = "Selected file to split ({pages} pages):"
@@ -1076,8 +1082,11 @@ split_mode_single_page_warning = "⚠️ This file has only 1 page; no split nee
 
 # 表格转换区
 [conversion_panel.spreadsheet]
+protection_checking = "Checking workbook protection…"
+reference_table = "Reference table: {name}"
+protection_password_required = "Password (required)"
 ods_delivery_options = "ODS Delivery Options"
-ods_delivery_hint = "External formulas use cached values. Protected files require a password and consent to publish without protection."
+ods_delivery_hint = "External formulas use cached values. Publishing protected files as ODS requires explicit consent."
 protection_password = "Protection password (optional)"
 allow_protection_loss = "I understand the delivered ODS will not retain password protection"
 protected_batch_single_only = "Passwords are not reused across a batch. Convert protected files individually."

@@ -233,7 +233,7 @@ class ConversionPanel(QWidget):
         scroll_area.setObjectName("conversionPanelScrollArea")
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
         scroll_content = QWidget(scroll_area)
         scroll_content.setObjectName("conversionPanelScrollContent")
@@ -318,12 +318,25 @@ class ConversionPanel(QWidget):
             route_result.targets,
             getattr(route_result.error, "code", None),
             self._vm.spreadsheet_protection_info,
+            self._vm.has_xlsx_inputs,
+            self._vm.spreadsheet_analysis_pending,
         )
 
     def _on_vm_state_changed(self) -> None:
         """Rebuild only for structural context changes; otherwise update in place."""
         if self._render_key != self._current_render_key():
+            # Analysis completes asynchronously. Preserve the user's target
+            # when only protection controls changed for the same route context.
+            target = (
+                self._conversion_combo.currentText()
+                if self._conversion_combo is not None
+                and self._render_key is not None
+                and self._render_key[:6] == self._current_render_key()[:6]
+                else ""
+            )
             self._rebuild_from_vm()
+            if target and self._conversion_combo is not None:
+                self._conversion_combo.setCurrentText(target)
             return
         self._sync_controls_from_vm()
 
@@ -379,7 +392,28 @@ class ConversionPanel(QWidget):
             self._build_image_section()
         elif category == "layout":
             self._build_layout_section()
+        for content in (self._get_primary_content(), self._get_secondary_content(), self._get_extra_content()):
+            self._arrange_section_actions(content)
         self._sync_controls_from_vm()
+
+    def _arrange_section_actions(self, layout: QVBoxLayout) -> None:
+        """Use the same target/options/action reading order in each workflow card."""
+        footers: list[QWidget] = []
+        widgets = [item.widget() for index in range(layout.count()) if (item := layout.itemAt(index)) is not None]
+        for widget in widgets:
+            if isinstance(widget, ActionFooter):
+                combo = widget.findChild(FormatSelector)
+                if combo is not None:
+                    widget.content_layout.removeWidget(combo)
+                    layout.insertWidget(
+                        layout.indexOf(widget), FormRow(_t("conversion_panel.target_format", "Target format"), combo)
+                    )
+                footers.append(widget)
+            elif isinstance(widget, QPushButton):
+                footers.append(widget)
+        for footer in dict.fromkeys(footers):
+            layout.removeWidget(footer)
+            layout.addWidget(footer)
 
     def _clear_all_content(self) -> None:
         """Remove all dynamic widgets from content layouts."""
@@ -530,6 +564,27 @@ class ConversionPanel(QWidget):
         self._sync_image_controls()
         self._sync_spreadsheet_controls()
         self._sync_layout_controls()
+        self._sync_aggregate_actions()
+
+    def _sync_aggregate_actions(self) -> None:
+        for action, button in (
+            ("merge_tables", self._merge_tables_button),
+            ("merge_images_to_tiff", self._merge_tiff_button),
+            ("merge_pdfs", self._merge_pdfs_button),
+        ):
+            if button is not None:
+                count = self._vm.aggregate_count(action)
+                reason = _t("main_window.aggregate_need_two", count=count) if count < 2 else ""
+                button.setEnabled(count >= 2)
+                button.setToolTip(reason)
+                notice = self._extra_group.findChild(QLabel, "aggregateAvailabilityNotice")
+                if notice is None:
+                    notice = QLabel(self._extra_group)
+                    notice.setObjectName("aggregateAvailabilityNotice")
+                    notice.setWordWrap(True)
+                    self._get_extra_content().addWidget(notice)
+                notice.setText(reason)
+                notice.setVisible(bool(reason))
 
     def _sync_action_targets(self) -> None:
         if self._conversion_combo is not None:
@@ -586,8 +641,13 @@ class ConversionPanel(QWidget):
         self._sync_button_id(self._merge_mode_group, self._vm.merge_mode)
         if self._reference_table_label is not None:
             self._reference_table_label.setText(
-                self._vm.reference_table_name
-                or _t("conversion_panel.spreadsheet.no_table_selected", "No table selected")
+                _t(
+                    "conversion_panel.spreadsheet.reference_table",
+                    "Reference table: {name}",
+                    name=self._vm.reference_table_name,
+                )
+                if self._vm.reference_table_name
+                else _t("conversion_panel.spreadsheet.no_table_selected", "No table selected")
             )
 
     def _sync_conversion_button_enabled(self) -> None:
@@ -601,10 +661,10 @@ class ConversionPanel(QWidget):
         if (
             enabled
             and self._vm.file_category == "spreadsheet"
-            and self._vm.current_format == "xlsx"
+            and self._vm.has_xlsx_inputs
             and combo.currentText().strip().lower() == "ods"
         ):
-            if self._vm.spreadsheet_unknown_files:
+            if self._vm.spreadsheet_analysis_pending or self._vm.spreadsheet_unknown_files:
                 enabled = False
             elif self._vm.spreadsheet_protected_files:
                 enabled = (
@@ -730,7 +790,7 @@ class ConversionPanel(QWidget):
         label.setToolTip(text)
         label.activated.connect(checkbox.toggle)
         layout.addWidget(label, stretch=1)
-        QTimer.singleShot(0, label.sync_wrapped_height)
+        QTimer.singleShot(0, label, label.sync_wrapped_height)
         return row, checkbox
 
     def _make_radio(self, text: str, checked: bool = False) -> QRadioButton:
@@ -765,9 +825,6 @@ class ConversionPanel(QWidget):
         self._conversion_button = btn
         btn.clicked.connect(self._on_convert_button_clicked)
         conv_layout.addWidget(row_container)
-
-        # Subtle divider
-        conv_layout.addWidget(self._make_subtle_divider())
 
         # Save-as row
         saveas_layout = self._get_secondary_content()
@@ -849,7 +906,7 @@ class ConversionPanel(QWidget):
         btn.clicked.connect(self._on_convert_button_clicked)
         conv_layout.addWidget(row_container)
 
-        if self._vm.current_format == "xlsx":
+        if self._vm.has_xlsx_inputs:
             policy_group = self._make_option_group(
                 _t("conversion_panel.spreadsheet.ods_delivery_options", "ODS Delivery Options")
             )
@@ -861,8 +918,7 @@ class ConversionPanel(QWidget):
             policy_hint = QLabel(
                 _t(
                     "conversion_panel.spreadsheet.ods_delivery_hint",
-                    "External formulas use cached values. Protected files require a password "
-                    "and consent to publish without protection.",
+                    "External formulas use cached values. Publishing protected files as ODS requires explicit consent.",
                 ),
                 self,
             )
@@ -870,7 +926,9 @@ class ConversionPanel(QWidget):
             policy_hint.setWordWrap(True)
             policy_layout.addWidget(policy_hint)
 
-            if unknown_files:
+            if self._vm.spreadsheet_analysis_pending:
+                policy_layout.addWidget(InlineNotice(_t("conversion_panel.spreadsheet.protection_checking"), self))
+            elif unknown_files:
                 unknown_notice = InlineNotice(
                     "\n".join(
                         (
@@ -893,8 +951,12 @@ class ConversionPanel(QWidget):
                 password_edit.setEchoMode(QLineEdit.EchoMode.Password)
                 password_edit.setClearButtonEnabled(True)
                 password_edit.setPlaceholderText(
-                    _t("conversion_panel.spreadsheet.protection_password", "Protection password (optional)")
+                    _t("conversion_panel.spreadsheet.protection_password_required", "Password (required)")
+                    if self._vm.spreadsheet_password_required
+                    else _t("conversion_panel.spreadsheet.protection_password", "Protection password (optional)")
                 )
+                password_edit.setAccessibleName(password_edit.placeholderText())
+                password_edit.setToolTip(password_edit.placeholderText())
                 self._spreadsheet_password_edit = password_edit
                 password_edit.textChanged.connect(self._sync_conversion_button_enabled)
                 policy_layout.addWidget(password_edit)
@@ -933,9 +995,6 @@ class ConversionPanel(QWidget):
                 lambda value, group=policy_group: group.setVisible(value.strip().upper() == "ODS")
             )
             combo.currentTextChanged.connect(self._sync_conversion_button_enabled)
-
-        # Subtle divider
-        conv_layout.addWidget(self._make_subtle_divider())
 
         saveas_layout = self._get_secondary_content()
         saveas_formats = self._vm.get_saveas_formats()
@@ -984,11 +1043,18 @@ class ConversionPanel(QWidget):
         extra_layout.addWidget(mode_group)
 
         # Reference table label
-        ref_text = self._vm.reference_table_name or _t(
-            "conversion_panel.spreadsheet.no_table_selected", "No table selected"
+        ref_text = (
+            _t(
+                "conversion_panel.spreadsheet.reference_table",
+                "Reference table: {name}",
+                name=self._vm.reference_table_name,
+            )
+            if self._vm.reference_table_name
+            else _t("conversion_panel.spreadsheet.no_table_selected", "No table selected")
         )
         ref_label = QLabel(ref_text, self)
         ref_label.setObjectName("conversionDetailLabel")
+        ref_label.setWordWrap(True)
         self._reference_table_label = ref_label
         extra_layout.addWidget(ref_label)
 
@@ -1010,9 +1076,6 @@ class ConversionPanel(QWidget):
 
         # Compression options
         self._build_image_compress_section(conv_layout)
-
-        # Subtle divider
-        conv_layout.addWidget(self._make_subtle_divider())
 
         # Save-as row
         saveas_layout = self._get_secondary_content()
@@ -1165,8 +1228,6 @@ class ConversionPanel(QWidget):
             btn.clicked.connect(self._on_convert_button_clicked)
             conv_layout.addWidget(row_container)
 
-            # Subtle divider
-            conv_layout.addWidget(self._make_subtle_divider())
         else:
             self._conversion_group.setVisible(False)
 
@@ -1254,12 +1315,6 @@ class ConversionPanel(QWidget):
         self._merge_pdfs_button = merge_pdfs_btn
         merge_row.addWidget(merge_pdfs_btn)
 
-        merge_ofd_btn = self._make_action_button(
-            _t("conversion_panel.layout.merge_to_ofd", "Merge OFDs"), parent=merge_row_container
-        )
-        merge_ofd_btn.setEnabled(False)
-        merge_row.addWidget(merge_ofd_btn)
-
         extra_layout.addWidget(merge_row_container)
 
         # Divider
@@ -1277,12 +1332,6 @@ class ConversionPanel(QWidget):
         split_pdf_btn.clicked.connect(self._on_split_pdf_clicked)
         self._split_pdf_button = split_pdf_btn
         split_row.addWidget(split_pdf_btn)
-
-        split_ofd_btn = self._make_action_button(
-            _t("conversion_panel.layout.split_to_ofd", "Split OFDs"), parent=split_row_container
-        )
-        split_ofd_btn.setEnabled(False)
-        split_row.addWidget(split_ofd_btn)
 
         extra_layout.addWidget(split_row_container)
 

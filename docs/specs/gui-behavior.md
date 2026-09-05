@@ -9,9 +9,12 @@ GUI 通过 ViewModel 呈现唯一的 application/runtime 状态。Widget 负责�
 - Single and batch input modes support file dialog, drag/drop, filtering and stable ordering.
 - Available conversion panels and actions derive from selected files and route capabilities.
 - Batch rows expose truthful pending, processing, completed, partial, failed and cancelled states.
+- Admitted input files cannot be removed until their worker finishes. Completed operation records own failure details and retry intent independently of editable batch rows; retry restores removed inputs through normal admission.
+- Mixed batches use the intersection of routes for every admitted source format. XLSX protection analysis runs in the background with bounded file-identity caching; only the latest selection can publish results. Pending or unknown protection blocks ODS delivery. Empty protection elements are not enabled locks, and execution still revalidates inputs.
 - Cancellation becomes reachable immediately, is idempotent and does not publish incomplete output.
 - Settings use persisted, draft and preview layers; Apply/OK/Cancel and reset operations preserve their ownership boundaries.
 - Light, dark and system themes, semantic typography presets and high-DPI geometry remain supported.
+- Form rows reflow after font, style, text and geometry changes. System theme preference survives font changes and responds to Qt system color-scheme events.
 - Keyboard shortcuts are suppressed while text-editing controls own focus.
 - A second launch forwards files to the existing instance through IPC.
 

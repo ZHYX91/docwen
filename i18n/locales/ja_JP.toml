@@ -11,6 +11,7 @@ template_name = "日本語汎用テンプレート"
 # 通用文本
 # =============================================================================
 [common]
+copy = "コピー"
 app_name = "DocWen"
 default = "デフォルト"
 close = "閉じる"
@@ -29,14 +30,19 @@ save_failed = "設定の保存に失敗しました"
 # 状态栏
 # =============================================================================
 [info_area]
+task_state_skipped = "スキップ"
+batch_name = "一括処理（{count} ファイル）"
+aggregate_name = "結合（{count} ファイル）"
+activity_count = "履歴（{count}）"
+clear_history = "履歴を消去"
+notice_title = "通知"
+task_state_cancelling = "キャンセル中"
 copy_path = "パスをコピー"
 open_location = "ファイルの場所を開く: {path}"
 ipc_file_missing = "IPC ファイルが存在しません: {path}"
 font_size_applied = "文字サイズ：{label}"
 
 transient_title = "現在の状態"
-transient_meta = "{count} 件表示中"
-history_title = "最近のメッセージ"
 history_repeated = "{count} 回繰り返し"
 history_meta = "{count} 件"
 task_state_active = "処理中"
@@ -159,6 +165,9 @@ general = "言語やテーマなどの全体設定"
 
 # 设置状态消息
 [settings.status]
+apply_success = "設定を適用しました。"
+apply_failed = "設定を適用できませんでした。"
+reset_success = "設定を既定値に戻しました。"
 
 [settings.reset]
 tab_button = "このタブをリセット"
@@ -956,6 +965,7 @@ spreadsheet_templates = "表"
 # 转换面板区域
 # =============================================================================
 [conversion_panel]
+target_format = "出力形式"
 route_options_unavailable = "利用可能な操作を読み込めなかったため、誤った要求を防ぐために操作を無効にしました。"
 no_compatible_operation = "このファイルで利用できる互換操作はありません。"
 format_conversion = "形式変換"
@@ -1016,9 +1026,7 @@ convert_to_document_or_image = "ドキュメントまたは画像に変換"
 merge_split = "結合/分割"
 merge_split_hint = "レイアウトファイルを結合または分割"
 merge_to_pdf = "PDFに結合"
-merge_to_ofd = "OFDに結合"
 split_to_pdf = "PDFに分割"
-split_to_ofd = "OFDに分割"
 split_page_range = "分割ページ範囲："
 page_range_placeholder = "1-3,5  *  #"
 selected_split_file = "分割する選択されたファイル（{pages} ページ）："
@@ -1028,8 +1036,11 @@ split_mode_single_page_warning = "⚠️ このファイルは1ページのみ�
 
 # 表格转换区
 [conversion_panel.spreadsheet]
+protection_checking = "ブックの保護状態を確認しています…"
+reference_table = "参照テーブル：{name}"
+protection_password_required = "パスワード（必須）"
 ods_delivery_options = "ODS 配信オプション"
-ods_delivery_hint = "外部数式にはキャッシュ値を使用します。保護されたファイルには、パスワードと保護なしで公開することへの同意が必要です。"
+ods_delivery_hint = "外部数式にはキャッシュ値を使用します。保護されたファイルを ODS に出力するには、保護の解除への明示的な同意が必要です。"
 protection_password = "保護パスワード（任意）"
 allow_protection_loss = "配信される ODS にパスワード保護が保持されないことを理解しています"
 protected_batch_single_only = "パスワードはバッチ内で再利用されません。保護されたファイルは個別に変換してください。"
@@ -1564,7 +1575,6 @@ font_size_tooltip = "フォントサイズを切り替え"
 no_file_for_locate = "ファイルが選択されていません。出力場所を特定できません。"
 runtime_unavailable = "ランタイムが利用できません。変換を開始できません。"
 task_already_running = "既にタスクが実行中です。先に現在のタスクをキャンセルしてください。"
-cancelling = "キャンセル中..."
 task_processing_prefix = "処理中："
 task_progress_prefix = "進捗："
 task_failed_prefix = "失敗："
@@ -1576,7 +1586,6 @@ task_cancelled_status = "キャンセル済み"
 error_copied = "エラー詳細をコピーしました。"
 no_error_available = "エラー情報はありません。"
 no_failed_to_retry = "再試行可能な失敗タスクはありません。"
-retry_context_unavailable = "再試行コンテキストが利用できません。"
 path_not_exist = "パスが存在しません：{path}"
 open_path_failed = "パスを開けません：{path}"
 template_not_found = "テンプレートが見つかりません：{name}"

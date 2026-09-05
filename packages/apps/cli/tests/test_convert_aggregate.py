@@ -223,17 +223,17 @@ class TestIsAggregateActionCLI:
     """Verify is_aggregate_action is importable and correct in CLI context."""
 
     def test_import_from_application(self) -> None:
-        from docwen_application.commands.batch import is_aggregate_action
+        from docwen_application.commands.aggregate import is_aggregate_action
 
         assert callable(is_aggregate_action)
 
     def test_merge_pdfs_is_aggregate(self) -> None:
-        from docwen_application.commands.batch import is_aggregate_action
+        from docwen_application.commands.aggregate import is_aggregate_action
 
         assert is_aggregate_action("merge_pdfs") is True
 
     def test_convert_is_not_aggregate(self) -> None:
-        from docwen_application.commands.batch import is_aggregate_action
+        from docwen_application.commands.aggregate import is_aggregate_action
 
         assert is_aggregate_action("convert") is False
 

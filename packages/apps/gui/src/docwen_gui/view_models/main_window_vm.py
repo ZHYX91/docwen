@@ -88,6 +88,9 @@ class MainWindowViewModel(QObject):
     task_summary_changed = Signal(dict)
     """Emitted when a task summary is available (payload: dict)."""
 
+    execution_progress_changed = Signal(dict)
+    """Identity-bound live telemetry, separate from human-readable notices."""
+
     files_changed = Signal(list)
     """Emitted when the file list changes (payload: list[FileRef])."""
 
@@ -135,6 +138,7 @@ class MainWindowViewModel(QObject):
         self._file_inspector = file_inspector
         self._mutex = QMutex()
         self._files: list[FileRef] = []
+        self._reserved_inputs: dict[str, frozenset[Path]] = {}
         self._mode: str = _read_default_mode(controller)
         self._status_message: str = _t("common.ready", "Ready")
         self._title: str = "DocWen Offline"
@@ -289,12 +293,12 @@ class MainWindowViewModel(QObject):
         added_refs: list[FileRef] = []
         file_count = 0
         with QMutexLocker(self._mutex):
-            existing = {f.path for f in self._files}
+            existing = {Path(f.path) for f in self._files}
             for ref in new_refs:
-                if ref.path not in existing:
+                if Path(ref.path) not in existing:
                     self._files.append(ref)
                     added_refs.append(ref)
-                    existing.add(ref.path)
+                    existing.add(Path(ref.path))
 
             if added_refs:
                 files_snapshot = list(self._files)
@@ -306,17 +310,31 @@ class MainWindowViewModel(QObject):
             self.set_status_message(rejected[0][1])
         return FileAddOutcome(added=tuple(added_refs), rejected=tuple(rejected))
 
+    def reserve_execution_inputs(self, operation_id: str, paths: tuple[str, ...]) -> None:
+        """Keep admitted inputs until the owning worker has fully finished."""
+        self._reserved_inputs[operation_id] = frozenset(Path(path) for path in paths)
+
+    def release_execution_inputs(self, operation_id: str) -> None:
+        self._reserved_inputs.pop(operation_id, None)
+
+    def can_remove_file(self, file_path: str) -> bool:
+        return all(Path(file_path) not in paths for paths in self._reserved_inputs.values())
+
     def remove_file(self, file_path: str) -> None:
         """Remove a single file from the input list.
 
         Args:
             file_path: The absolute path of the file to remove.
         """
+        if not self.can_remove_file(file_path):
+            return
         files_snapshot: list[FileRef] | None = None
         file_count = 0
         with QMutexLocker(self._mutex):
             before = len(self._files)
-            self._files = [f for f in self._files if f.path != file_path]
+            self._files = [f for f in self._files if Path(f.path) != Path(file_path)]
+            if self._selected_file is not None and Path(self._selected_file.path) == Path(file_path):
+                self._selected_file = None
             if len(self._files) != before:
                 files_snapshot = list(self._files)
                 file_count = len(self._files)
@@ -324,8 +342,12 @@ class MainWindowViewModel(QObject):
             self.files_changed.emit(files_snapshot)
             self._update_title_for_file_count(file_count)
 
+            self._emit_projection_changed()
+
     def clear_files(self) -> None:
         """Remove all files from the input list."""
+        if self._reserved_inputs:
+            return
         with QMutexLocker(self._mutex):
             self._files.clear()
             self._selected_file = None
@@ -422,6 +444,7 @@ class MainWindowViewModel(QObject):
         message = payload.get("message", "")
 
         publish_live_status = False
+        telemetry: dict[str, Any] | None = None
         with QMutexLocker(self._mutex):
             if task_id not in self._accepted_runtime_task_ids:
                 return
@@ -434,6 +457,18 @@ class MainWindowViewModel(QObject):
                 self._ended_runtime_task_ids.add(task_id)
                 if self._current_task_id == task_id:
                     self._current_task_id = None
+            else:
+                return
+            telemetry = {
+                "operation_id": self._active_execution_id,
+                "task_id": task_id,
+                "event_type": event_type,
+                "message": str(message),
+                "percent": payload.get("percent"),
+                "completed_count": len(self._ended_runtime_task_ids),
+            }
+
+        self.execution_progress_changed.emit(telemetry)
 
         if event_type == TASK_STARTED and publish_live_status:
             self.set_status_message(_t("main_window.task_processing_status", message=message))

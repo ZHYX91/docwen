@@ -25,6 +25,7 @@ def vm() -> ConversionPanelViewModel:
 def widget(qapp: QApplication, vm: ConversionPanelViewModel) -> Generator[ConversionPanel, None, None]:
     panel = ConversionPanel(view_model=vm)
     yield panel
+    vm.close()
     panel.deleteLater()
 
 
@@ -46,9 +47,11 @@ def test_protected_xlsx_to_ods_requires_request_scoped_password_and_explicit_con
     widget: ConversionPanel,
     vm: ConversionPanelViewModel,
     tmp_path: Path,
+    qtbot,
 ) -> None:
     protected = _write_xlsx(tmp_path / "protected.xlsx", protected=True)
     vm.set_file_info("spreadsheet", "xlsx", file_path=str(protected))
+    qtbot.waitUntil(lambda: not vm.spreadsheet_analysis_pending)
     password_edit = widget._spreadsheet_password_edit
     consent = widget._spreadsheet_protection_loss_checkbox
     assert password_edit is not None
@@ -85,6 +88,7 @@ def test_protected_batch_discloses_files_and_does_not_reuse_credentials(
     widget: ConversionPanel,
     vm: ConversionPanelViewModel,
     tmp_path: Path,
+    qtbot,
 ) -> None:
     first = _write_xlsx(tmp_path / "one.xlsx", protected=True)
     second = _write_xlsx(tmp_path / "two.xlsx", protected=True)
@@ -94,11 +98,15 @@ def test_protected_batch_discloses_files_and_does_not_reuse_credentials(
         file_path=str(first),
         file_list=[str(first), str(second)],
         ui_mode="batch",
+        source_formats={str(first): "xlsx", str(second): "xlsx"},
     )
+    qtbot.waitUntil(lambda: not vm.spreadsheet_analysis_pending)
 
     assert widget._spreadsheet_password_edit is None
     assert widget._spreadsheet_protection_loss_checkbox is None
-    warning = next(label for label in widget.findChildren(QLabel) if "one.xlsx" in label.text())
+    warning = widget.findChild(QLabel, "warningLabel")
+    assert warning is not None
+    assert "one.xlsx" in warning.text()
     assert "two.xlsx" in warning.text()
     assert widget.conversion_combo is not None
     widget.conversion_combo.setCurrentText("ODS")
@@ -110,10 +118,12 @@ def test_unprotected_xlsx_does_not_request_credentials(
     widget: ConversionPanel,
     vm: ConversionPanelViewModel,
     tmp_path: Path,
+    qtbot,
 ) -> None:
     workbook = _write_xlsx(tmp_path / "plain.xlsx", protected=False)
 
     vm.set_file_info("spreadsheet", "xlsx", file_path=str(workbook))
+    qtbot.waitUntil(lambda: not vm.spreadsheet_analysis_pending)
 
     assert vm.spreadsheet_protected_files == ()
     assert widget._spreadsheet_password_edit is None
@@ -124,9 +134,11 @@ def test_ods_protection_options_do_not_leak_to_other_target(
     widget: ConversionPanel,
     vm: ConversionPanelViewModel,
     tmp_path: Path,
+    qtbot,
 ) -> None:
     protected = _write_xlsx(tmp_path / "protected.xlsx", protected=True)
     vm.set_file_info("spreadsheet", "xlsx", file_path=str(protected))
+    qtbot.waitUntil(lambda: not vm.spreadsheet_analysis_pending)
     assert widget._spreadsheet_password_edit is not None
     assert widget._spreadsheet_protection_loss_checkbox is not None
     widget._spreadsheet_password_edit.setText("test")

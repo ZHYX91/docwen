@@ -412,7 +412,9 @@ class TestResetEmitsStatus:
         ok = vm.reset_section(SECTION_GUI)
         assert ok is True
         assert len(status_signals) == 1
-        assert "reset" in status_signals[0][0].lower()
+        from docwen_gui.i18n import t
+
+        assert status_signals[0][0] == t("settings.status.reset_success")
         assert status_signals[0][1] is False  # not an error
 
     def test_unknown_section_emits_error(self, vm: SettingsViewModel) -> None:

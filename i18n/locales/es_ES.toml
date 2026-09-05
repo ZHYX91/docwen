@@ -30,7 +30,6 @@ font_size_tooltip = "Cambiar tamaño de letra"
 no_file_for_locate = "Ningún archivo seleccionado, no se puede localizar la salida."
 runtime_unavailable = "Runtime no disponible, no se puede iniciar la conversión."
 task_already_running = "Ya hay una tarea en ejecución; cancele la tarea actual primero."
-cancelling = "Cancelando..."
 task_processing_prefix = "Procesando:"
 task_progress_prefix = "Progreso:"
 task_failed_prefix = "Error:"
@@ -42,7 +41,6 @@ task_cancelled_status = "Cancelado"
 error_copied = "Detalles del error copiados."
 no_error_available = "No hay información de error disponible."
 no_failed_to_retry = "No hay tareas fallidas para reintentar."
-retry_context_unavailable = "Contexto de reintento no disponible."
 path_not_exist = "La ruta no existe: {path}"
 open_path_failed = "No se pudo abrir la ruta: {path}"
 template_not_found = "No se encontró la plantilla: {name}"
@@ -62,6 +60,7 @@ file_admission_confirm_message = "El nombre del archivo y el contenido detectado
 file_admission_confirm_action = "Procesar como formato detectado"
 file_admission_cancelled = "Se canceló el procesamiento; no se aceptó el formato detectado."
 [common]
+copy = "Copiar"
 app_name = "DocWen"
 default = "Predeterminado"
 close = "Cerrar"
@@ -80,14 +79,19 @@ save_failed = "Error al guardar la configuración"
 # 状态栏
 # =============================================================================
 [info_area]
+task_state_skipped = "Omitido"
+batch_name = "Procesamiento por lotes ({count} archivos)"
+aggregate_name = "Combinar ({count} archivos)"
+activity_count = "Actividad ({count})"
+clear_history = "Borrar actividades"
+notice_title = "Aviso"
+task_state_cancelling = "Cancelando"
 copy_path = "Copiar ruta"
 open_location = "Abrir ubicacion del archivo: {path}"
 ipc_file_missing = "Archivo IPC no encontrado: {path}"
 font_size_applied = "Tamano de texto: {label}"
 
 transient_title = "Estado actual"
-transient_meta = "{count} activas"
-history_title = "Mensajes recientes"
 history_repeated = "Repetido {count} veces"
 history_meta = "{count} registros"
 task_state_active = "En curso"
@@ -210,6 +214,9 @@ general = "Ajustes globales como idioma y tema"
 
 # 设置状态消息
 [settings.status]
+apply_success = "Configuración aplicada."
+apply_failed = "No se pudo aplicar la configuración."
+reset_success = "Configuración restablecida a los valores predeterminados."
 
 [settings.reset]
 tab_button = "Restablecer pestana"
@@ -1010,6 +1017,7 @@ spreadsheet_templates = "Hoja"
 # 转换面板区域
 # =============================================================================
 [conversion_panel]
+target_format = "Formato de destino"
 route_options_unavailable = "No se pudieron cargar las operaciones disponibles; las acciones están desactivadas para evitar una solicitud incorrecta."
 no_compatible_operation = "No hay ninguna operación compatible con este archivo."
 format_conversion = "Conversión de formato"
@@ -1070,9 +1078,7 @@ convert_to_document_or_image = "Convertir a documento o imagen"
 merge_split = "Combinar/Dividir"
 merge_split_hint = "Combina o divide archivos de maquetación"
 merge_to_pdf = "Combinar a PDF"
-merge_to_ofd = "Combinar a OFD"
 split_to_pdf = "Dividir a PDF"
-split_to_ofd = "Dividir a OFD"
 split_page_range = "Rango de páginas a dividir:"
 page_range_placeholder = "1-3,5  *  #"
 selected_split_file = "Archivo seleccionado para dividir ({pages} páginas):"
@@ -1082,8 +1088,11 @@ split_mode_single_page_warning = "⚠️ Este archivo solo tiene 1 página; no e
 
 # 表格转换区
 [conversion_panel.spreadsheet]
+protection_checking = "Comprobando la protección del libro…"
+reference_table = "Tabla de referencia: {name}"
+protection_password_required = "Contraseña (obligatoria)"
 ods_delivery_options = "Opciones de entrega ODS"
-ods_delivery_hint = "Las fórmulas externas usan valores en caché. Los archivos protegidos requieren contraseña y consentimiento para publicarlos sin protección."
+ods_delivery_hint = "Las fórmulas externas usan valores en caché. Exportar archivos protegidos como ODS requiere consentimiento explícito."
 protection_password = "Contraseña de protección (opcional)"
 allow_protection_loss = "Entiendo que el ODS entregado no conservará la protección por contraseña"
 protected_batch_single_only = "Las contraseñas no se reutilizan en lotes. Convierta los archivos protegidos individualmente."

@@ -26,6 +26,8 @@ from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QMutex, QMutexLocker, QObject, Signal
 
+from docwen_gui.i18n import t as _t
+
 from ..models.settings_config import (
     DEFAULT_HEADING_MERGE_PUNCTUATION,
     ConversionDefaultsConfig,
@@ -572,7 +574,7 @@ class SettingsViewModel(QObject):
 
         if not persisted:
             self._refresh_persisted_baseline_from_controller()
-            self.status_changed.emit(f"Settings could not be fully applied{failure_detail}.", True)
+            self.status_changed.emit(f"{_t('settings.status.apply_failed')}{failure_detail}", True)
             return False
 
         with QMutexLocker(self._mutex):
@@ -580,7 +582,7 @@ class SettingsViewModel(QObject):
             self._snapshot = deepcopy(self._config)
             self._persisted_baseline = deepcopy(self._config)
             self._is_dirty = False
-        self.status_changed.emit("Settings applied.", False)
+        self.status_changed.emit(_t("settings.status.apply_success"), False)
         self.dirty_state_changed.emit(False)
         return True
 
@@ -1230,7 +1232,7 @@ class SettingsViewModel(QObject):
         """Reset a GUI section through its runtime-owned logical group plan."""
         group = self._SECTION_GROUP_MAP.get(section)
         if group is None:
-            self.status_changed.emit(f"Unknown section: {section}", True)
+            self.status_changed.emit(_t("settings.reset.failed"), True)
             return False
         return self.reset_group(group)
 
@@ -1246,7 +1248,7 @@ class SettingsViewModel(QObject):
         cfg_port = getattr(controller, "config_port", None) if controller is not None else None
         reset_group = getattr(cfg_port, "reset_group", None)
         if not callable(reset_group):
-            self.status_changed.emit(f"Unknown config group: {group}", True)
+            self.status_changed.emit(_t("settings.reset.failed"), True)
             return False
         before_source = self._try_snapshot_config_port(cfg_port)
         try:
@@ -1263,9 +1265,9 @@ class SettingsViewModel(QObject):
         )
         ok = ok and reconciled
         if ok:
-            self.status_changed.emit(f"Config group '{group}' reset to defaults.", False)
+            self.status_changed.emit(_t("settings.status.reset_success"), False)
         else:
-            self.status_changed.emit(f"Config group '{group}' reset partially failed.", True)
+            self.status_changed.emit(_t("settings.reset.failed"), True)
         return ok
 
     def reset_all(self) -> bool:
@@ -1290,9 +1292,9 @@ class SettingsViewModel(QObject):
             )
         ok = ok and reconciled
         if ok:
-            self.status_changed.emit("All settings reset to defaults.", False)
+            self.status_changed.emit(_t("settings.reset.success"), False)
         else:
-            self.status_changed.emit("Some settings could not be reset (excluded files).", True)
+            self.status_changed.emit(_t("settings.reset.failed"), True)
         return ok
 
     def _persist_to_controller_config(

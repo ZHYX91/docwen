@@ -1,8 +1,4 @@
-"""BatchCommand and AggregateCommand — application-layer commands.
-
-BatchCommand handles per-file batch conversion (many-to-many).
-AggregateCommand handles merge/aggregate operations (many-to-one).
-"""
+"""Aggregate commands for many-to-one operations."""
 
 from __future__ import annotations
 
@@ -25,41 +21,6 @@ AGGREGATE_ACTIONS: frozenset[str] = frozenset(
 def is_aggregate_action(action_name: str) -> bool:
     """Return True if *action_name* is a known aggregate (merge) operation."""
     return action_name in AGGREGATE_ACTIONS
-
-
-class BatchCommand:
-    """Command to execute a batch conversion.
-
-    This is the application-layer entry point that GUI and CLI both use
-    for batch operations.  It selects the ``BatchWorkflow`` and delegates
-    to the runtime port.
-    """
-
-    def __init__(
-        self,
-        runtime_port: RuntimePort,
-        *,
-        continue_on_error: bool = True,
-    ) -> None:
-        self._runtime = runtime_port
-        self._continue_on_error = continue_on_error
-
-    def execute(self, request: Any) -> list[Any]:
-        """Execute a batch conversion.
-
-        Args:
-            request: A ``ConversionRequest`` with one or more ``input_refs``.
-
-        Returns:
-            A ``list[ConversionResult]``, one per input file.
-        """
-        from docwen_application.workflows.batch import BatchWorkflow
-
-        workflow = BatchWorkflow(
-            self._runtime,
-            continue_on_error=self._continue_on_error,
-        )
-        return workflow.execute(request)
 
 
 class AggregateCommand:
@@ -104,7 +65,7 @@ class AggregateCommand:
         Raises:
             ValueError: If the request has fewer than 2 input_refs.
         """
-        from docwen_application.workflows.batch import AggregateWorkflow
+        from docwen_application.workflows.aggregate import AggregateWorkflow
 
         workflow = AggregateWorkflow(self._runtime, self._action_name)
         return workflow.execute(request)

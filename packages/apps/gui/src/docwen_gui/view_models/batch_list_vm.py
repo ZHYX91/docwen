@@ -402,8 +402,13 @@ class BatchListViewModel(QObject):
                 self.activate_tab(category)
                 return
 
+    def can_remove_file(self, file_path: str) -> bool:
+        return self._main_vm is None or self._main_vm.can_remove_file(file_path)
+
     def remove_file(self, file_path: str) -> bool:
         """Remove a single file. Returns True if found and removed."""
+        if not self.can_remove_file(file_path):
+            return False
         normalized = _normalize_path(file_path)
         record = self._entries.pop(normalized, None)
         if record is None:
@@ -414,6 +419,8 @@ class BatchListViewModel(QObject):
             if normalized in order:
                 order.remove(normalized)
         self.files_removed.emit(normalized)
+        if self._main_vm is not None:
+            self._main_vm.remove_file(normalized)
         self.entry_count_changed.emit(len(self._entries))
         return True
 
@@ -427,6 +434,8 @@ class BatchListViewModel(QObject):
 
     def clear_files(self) -> None:
         """Remove all files and reset state."""
+        if any(not self.can_remove_file(path) for path in self._entries):
+            return
         self._entries.clear()
         self._custom_order_by_category = {cat: [] for cat in CATEGORY_ORDER}
         self._sort_key = "custom"

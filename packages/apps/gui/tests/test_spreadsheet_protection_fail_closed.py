@@ -26,3 +26,20 @@ def test_encrypted_office_package_requires_a_password() -> None:
 
     assert info.is_protected
     assert info.requires_password
+
+
+@pytest.mark.parametrize("kind", ["none", "workbook", "sheet"])
+def test_empty_protection_elements_are_not_enabled_locks(tmp_path, kind):
+    from openpyxl import Workbook
+
+    source = tmp_path / "book.xlsx"
+    workbook = Workbook()
+    if kind == "workbook":
+        workbook.security.lockStructure = True
+    elif kind == "sheet":
+        sheet = workbook.active
+        assert sheet is not None
+        sheet.protection.sheet = True
+    workbook.save(source)
+    info = inspect_xlsx_protection(str(source))
+    assert info.status == ("none" if kind == "none" else "protected")

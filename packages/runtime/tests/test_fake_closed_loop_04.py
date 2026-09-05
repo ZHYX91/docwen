@@ -428,31 +428,3 @@ class TestBatchModelStates:
         ]
         cancelled = [r for r in results if r.error and r.error.error_type == "cancelled"]
         assert len(cancelled) == 1
-
-    def test_batch_summary_counts(self) -> None:
-        """BatchWorkflow summary computes correct counts."""
-        from docwen_core.models.result import ConversionErrorInfo
-
-        results = [
-            ConversionResult(task_id="t1", success=True),
-            ConversionResult(task_id="t2", success=True),
-            ConversionResult(
-                task_id="t3", success=False, error=ConversionErrorInfo(error_type="conversion_failed", message="err")
-            ),
-            ConversionResult(
-                task_id="t4", success=False, error=ConversionErrorInfo(error_type="skipped", message="skipped")
-            ),
-            ConversionResult(
-                task_id="t5", success=False, error=ConversionErrorInfo(error_type="cancelled", message="cancelled")
-            ),
-        ]
-
-        from docwen_application.workflows.batch import BatchWorkflow
-
-        # BatchWorkflow needs a runtime port; we only test summary logic
-        summary = BatchWorkflow.summary(None, results)  # type: ignore[arg-type]
-        assert summary["total"] == 5
-        assert summary["success"] == 2
-        assert summary["failed"] == 1
-        assert summary["skipped"] == 1
-        assert summary["cancelled"] == 1

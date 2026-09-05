@@ -26,7 +26,6 @@ def test_current_geometry_contract_matches_the_reference_center_width() -> None:
 
 def test_visible_panel_transition_has_one_top_level_geometry_commit() -> None:
     main_window = _read("packages/apps/gui/src/docwen_gui/main_window.py")
-    info_area = _read("packages/apps/gui/src/docwen_gui/widgets/info_area.py")
 
     assert "def _normal_panel_transition_rect(" in main_window
     assert "self.setUpdatesEnabled(False)" in main_window
@@ -36,4 +35,3 @@ def test_visible_panel_transition_has_one_top_level_geometry_commit() -> None:
     assert "self._collapsed_normal_window_rect" in main_window
     assert "def _context_panel_width_contribution(" in main_window
     assert "width=recovered_collapsed.rect.width + contribution" in main_window
-    assert "QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored" in info_area

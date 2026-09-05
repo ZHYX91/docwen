@@ -491,6 +491,7 @@ class TestConversionRequests:
         self, widget: ConversionPanel, vm: ConversionPanelViewModel
     ) -> None:
         vm.tiff_mode = "rgb"
+        vm.set_aggregate_counts({"merge_images_to_tiff": 2})
         vm.set_file_info("image", "png", file_path="/test.png")
         emitted: list[tuple[str, str, dict]] = []
         vm.named_action_requested.connect(lambda n, fp, o: emitted.append((n, fp, o)))
@@ -506,6 +507,7 @@ class TestConversionRequests:
         self, widget: ConversionPanel, vm: ConversionPanelViewModel
     ) -> None:
         vm.merge_mode = 2
+        vm.set_aggregate_counts({"merge_tables": 2})
         vm.set_file_info("spreadsheet", "xlsx", file_path="/test.xlsx")
         emitted: list[tuple[str, str, dict]] = []
         vm.named_action_requested.connect(lambda n, fp, o: emitted.append((n, fp, o)))

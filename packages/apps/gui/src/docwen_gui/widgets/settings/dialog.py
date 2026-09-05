@@ -50,8 +50,8 @@ logger = logging.getLogger(__name__)
 # ── Dialog geometry ────────────────────────────────────────────────────────
 DEFAULT_WIDTH = 700
 DEFAULT_HEIGHT = 800
-MIN_WIDTH = 510
-MIN_HEIGHT = 750
+MIN_WIDTH = 360
+MIN_HEIGHT = 320
 DIALOG_PADDING = 15
 ACTION_BUTTON_MIN_HEIGHT = 32
 RESET_TAB_BUTTON_MIN_WIDTH = 116
@@ -329,10 +329,20 @@ class SettingsDialog(QDialog):
         self.setObjectName("settingsDialog")
         self.resize(DEFAULT_WIDTH, DEFAULT_HEIGHT)
         self.setMinimumSize(MIN_WIDTH, MIN_HEIGHT)
+        screen = self.screen()
+        if screen is not None:
+            available = screen.availableGeometry()
+            self.resize(min(DEFAULT_WIDTH, available.width() - 32), min(DEFAULT_HEIGHT, available.height() - 64))
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(DIALOG_PADDING, DIALOG_PADDING, DIALOG_PADDING, DIALOG_PADDING)
         layout.setSpacing(DIALOG_PADDING)
+        self._compact_navigation = QComboBox(self)
+        self._compact_navigation.setObjectName("settingsPageSelector")
+        self._compact_navigation.setAccessibleName(t("settings.title"))
+        self._compact_navigation.addItems(list(TAB_NAMES.values()))
+        self._compact_navigation.hide()
+        layout.addWidget(self._compact_navigation)
 
         # ── Tab widget (hidden tab bar) ─────────────────────────────────
         self._tab_widget = QTabWidget(self)
@@ -340,6 +350,8 @@ class SettingsDialog(QDialog):
         self._tab_widget.setUsesScrollButtons(False)
         self._tab_widget.setElideMode(Qt.TextElideMode.ElideRight)
         self._tab_widget.tabBar().hide()
+        self._compact_navigation.currentIndexChanged.connect(self._tab_widget.setCurrentIndex)
+        self._tab_widget.currentChanged.connect(self._compact_navigation.setCurrentIndex)
 
         # ── Sidebar + content row ───────────────────────────────────────
         content_row = QHBoxLayout()
@@ -416,8 +428,8 @@ class SettingsDialog(QDialog):
         if apply_btn:
             apply_btn.clicked.connect(self._on_apply)
 
-        action_row.addWidget(button_box)
         layout.addLayout(action_row)
+        layout.addWidget(button_box)
 
         # ── Status label ────────────────────────────────────────────────
         self._status_label = QLabel("", self)
@@ -434,6 +446,17 @@ class SettingsDialog(QDialog):
         layout.addWidget(self._changes_label)
 
         self._tab_widget.currentChanged.connect(self._on_tab_changed)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        if not hasattr(self, "_compact_navigation"):
+            return
+        compact = self.width() < 700
+        self._compact_navigation.setVisible(compact)
+        if self._navigation is not None:
+            self._navigation.setVisible(not compact)
+        else:
+            self._tab_widget.tabBar().setVisible(not compact)
 
     # ── Preview restore ────────────────────────────────────────────────────
 

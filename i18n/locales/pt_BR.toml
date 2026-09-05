@@ -26,7 +26,6 @@ font_size_tooltip = "Alternar tamanho da fonte"
 no_file_for_locate = "Nenhum arquivo selecionado, nao e possivel localizar a saida."
 runtime_unavailable = "Runtime indisponivel, nao e possivel iniciar a conversao."
 task_already_running = "Ja existe uma tarefa em execucao. Cancele a tarefa atual primeiro."
-cancelling = "Cancelando..."
 task_processing_prefix = "Processando:"
 task_progress_prefix = "Progresso:"
 task_failed_prefix = "Falha:"
@@ -38,7 +37,6 @@ task_cancelled_status = "Cancelado"
 error_copied = "Detalhes do erro copiados."
 no_error_available = "Nenhuma informacao de erro disponivel."
 no_failed_to_retry = "Nenhuma tarefa com falha para tentar novamente."
-retry_context_unavailable = "Contexto de repeticao indisponivel."
 path_not_exist = "Caminho nao existe: {path}"
 open_path_failed = "Nao foi possivel abrir o caminho: {path}"
 template_not_found = "Modelo não encontrado: {name}"
@@ -61,6 +59,7 @@ file_admission_cancelled = "O processamento foi cancelado; o formato detectado n
 # 通用文本
 # =============================================================================
 [common]
+copy = "Copiar"
 app_name = "DocWen"
 default = "Padrão"
 close = "Fechar"
@@ -79,14 +78,19 @@ save_failed = "Falha ao salvar configurações"
 # 状态栏
 # =============================================================================
 [info_area]
+task_state_skipped = "Ignorado"
+batch_name = "Processamento em lote ({count} arquivos)"
+aggregate_name = "Mesclar ({count} arquivos)"
+activity_count = "Atividade ({count})"
+clear_history = "Limpar atividades"
+notice_title = "Aviso"
+task_state_cancelling = "Cancelando"
 copy_path = "Copiar caminho"
 open_location = "Abrir local do arquivo: {path}"
 ipc_file_missing = "Arquivo IPC nao encontrado: {path}"
 font_size_applied = "Tamanho do texto: {label}"
 
 transient_title = "Status atual"
-transient_meta = "{count} ativas"
-history_title = "Mensagens recentes"
 history_repeated = "Repetido {count} vezes"
 history_meta = "{count} registros"
 task_state_active = "Em andamento"
@@ -209,6 +213,9 @@ general = "Configurações globais de idioma, tema e interface"
 
 # 设置状态消息
 [settings.status]
+apply_success = "Configurações aplicadas."
+apply_failed = "Não foi possível aplicar as configurações."
+reset_success = "Configurações restauradas para os valores padrão."
 
 [settings.reset]
 tab_button = "Redefinir aba"
@@ -1004,6 +1011,7 @@ spreadsheet_templates = "Planilha"
 # 转换面板区域
 # =============================================================================
 [conversion_panel]
+target_format = "Formato de destino"
 route_options_unavailable = "Não foi possível carregar as operações disponíveis; as ações estão desativadas para evitar uma solicitação incorreta."
 no_compatible_operation = "Não há operação compatível disponível para este arquivo."
 format_conversion = "Conversão"
@@ -1064,9 +1072,7 @@ convert_to_document_or_image = "Documento/Imagem"
 merge_split = "Mesclar/Dividir"
 merge_split_hint = "Mesclar/Dividir"
 merge_to_pdf = "Mesclar PDF"
-merge_to_ofd = "Mesclar OFD"
 split_to_pdf = "Dividir PDF"
-split_to_ofd = "Dividir OFD"
 split_page_range = "Intervalo:"
 page_range_placeholder = "1-3,5  *  #"
 selected_split_file = "Escolhido: {pages} páginas"
@@ -1076,8 +1082,11 @@ split_mode_single_page_warning = "⚠️ Este arquivo tem apenas 1 pagina; nao p
 
 # 表格转换区
 [conversion_panel.spreadsheet]
+protection_checking = "Verificando a proteção da pasta de trabalho…"
+reference_table = "Tabela de referência: {name}"
+protection_password_required = "Senha (obrigatória)"
 ods_delivery_options = "Opções de entrega ODS"
-ods_delivery_hint = "Fórmulas externas usam valores em cache. Arquivos protegidos exigem senha e consentimento para publicação sem proteção."
+ods_delivery_hint = "Fórmulas externas usam valores em cache. A exportação de arquivos protegidos como ODS exige consentimento explícito."
 protection_password = "Senha de proteção (opcional)"
 allow_protection_loss = "Entendo que o ODS entregue não manterá a proteção por senha"
 protected_batch_single_only = "As senhas não são reutilizadas em lotes. Converta arquivos protegidos individualmente."

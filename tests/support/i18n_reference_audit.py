@@ -102,7 +102,9 @@ _FONT_SIZE_KEYS = _keys("components.font_size.", {"small", "default", "large", "
 _TASK_NOTIFICATION_KEYS = _keys(
     "components.info_area.task_completion_notification_", {"success", "partial", "failed", "cancelled"}
 )
-_TASK_STATE_KEYS = _keys("info_area.task_state_", {"active", "success", "partial", "failed", "cancelled"})
+_TASK_STATE_KEYS = _keys(
+    "info_area.task_state_", {"active", "cancelling", "success", "partial", "failed", "cancelled", "skipped"}
+)
 _FILE_TYPE_KEYS = _keys("file_types.", {"text", "document", "spreadsheet", "layout", "image", "other"})
 _BATCH_STATUS_KEYS = _keys(
     "components.file_drop.status.", {"pending", "processing", "completed", "failed", "skipped", "cancelled"}
@@ -356,10 +358,6 @@ DYNAMIC_CALL_CONTRACTS: Mapping[tuple[str, str], DynamicCallContract] = {
 # fallback are all frozen: deleting any other live literal locale key cannot be
 # hidden by merely passing a default string.
 LITERAL_FALLBACK_CONTRACTS: Mapping[tuple[str, str], LiteralFallbackContract] = {
-    (
-        "packages/apps/gui/src/docwen_gui/dialogs/feedback.py",
-        "common.copy",
-    ): _literal_fallback(2, "Copy", "feedback detail copy action"),
     (
         "packages/apps/gui/src/docwen_gui/main_window.py",
         "main_window.add_file",

@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Protocol
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtGui import QStandardItemModel
 from PySide6.QtWidgets import (
     QBoxLayout,
@@ -49,6 +49,7 @@ class SectionHeader(QLabel):
             raise ValueError("section header level must be 'card' or 'section'")
         self.setProperty("headerLevel", level)
         self.setObjectName("panelCardTitle" if level == "card" else "panelSectionTitle")
+        self.setWordWrap(True)
         alignment = (
             Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
             if level == "card"
@@ -57,7 +58,34 @@ class SectionHeader(QLabel):
         self.setAlignment(alignment)
 
 
-class FormRow(QFrame):
+class _ResponsiveFrame(QFrame):
+    """Coalesce geometry, content and typography changes into one reflow."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._reflow_timer = QTimer(self)
+        self._reflow_timer.setSingleShot(True)
+        self._reflow_timer.timeout.connect(self._sync_layout)
+
+    def event(self, event: QEvent) -> bool:
+        handled = super().event(event)
+        if event.type() in {
+            QEvent.Type.LayoutRequest,
+            QEvent.Type.FontChange,
+            QEvent.Type.StyleChange,
+            QEvent.Type.Show,
+            QEvent.Type.Resize,
+        }:
+            timer = getattr(self, "_reflow_timer", None)
+            if timer is not None and not timer.isActive():
+                timer.start(0)
+        return handled
+
+    def _sync_layout(self) -> None:
+        raise NotImplementedError
+
+
+class FormRow(_ResponsiveFrame):
     """A label/control row that stacks before translated content clips."""
 
     def __init__(self, label: str, control: QWidget, parent: QWidget | None = None) -> None:
@@ -75,14 +103,18 @@ class FormRow(QFrame):
         self.content_layout.addWidget(self.label)
         self.content_layout.addWidget(control, stretch=1)
 
-    def resizeEvent(self, event) -> None:
-        super().resizeEvent(event)
-        required_width = (
-            self.label.sizeHint().width()
-            + max(self.control.minimumSizeHint().width(), self.control.minimumWidth())
-            + self.content_layout.spacing()
-        )
+    def _sync_layout(self) -> None:
+        label_width = self.label.fontMetrics().horizontalAdvance(self.label.text())
+        required_width = label_width + max(self.control.minimumSizeHint().width(), self.control.minimumWidth()) + 8
         horizontal = required_width <= self.contentsRect().width()
+        self.label.setWordWrap(not horizontal)
+        if horizontal:
+            self.label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
+            self.label.setFixedWidth(label_width)
+        else:
+            self.label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+            self.label.setMinimumWidth(0)
+            self.label.setMaximumWidth(16777215)
         direction = QBoxLayout.Direction.LeftToRight if horizontal else QBoxLayout.Direction.TopToBottom
         if self.content_layout.direction() != direction:
             self.content_layout.setDirection(direction)
@@ -90,7 +122,7 @@ class FormRow(QFrame):
             self.updateGeometry()
 
 
-class ChoiceGroup(QFrame):
+class ChoiceGroup(_ResponsiveFrame):
     """Unframed container for related choices.
 
     A responsive group uses a comfortably separated horizontal scan pattern
@@ -109,8 +141,7 @@ class ChoiceGroup(QFrame):
         if responsive:
             self.content_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-    def resizeEvent(self, event) -> None:
-        super().resizeEvent(event)
+    def _sync_layout(self) -> None:
         if not self._responsive:
             return
         widgets: list[QWidget] = []

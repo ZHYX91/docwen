@@ -340,7 +340,7 @@ class TestTaskSummary:
         )
         assert "demo.docx" in vm.status_summary_text
 
-    def test_transient_overrides_task_summary(self, vm: InfoAreaViewModel) -> None:
+    def test_notice_does_not_replace_task_identity(self, vm: InfoAreaViewModel) -> None:
         vm.set_task_summary(
             operation_id="op-1",
             current_file="file.docx",
@@ -351,8 +351,9 @@ class TestTaskSummary:
             tone="info",
         )
         vm.set_transient_message("error:op-1", "Error occurred", "danger", ttl_ms=0)
-        assert vm.status_source == "transient"
-        assert vm.status_summary_text == "Error occurred"
+        assert vm.status_source == "task"
+        assert "file.docx" in vm.status_summary_text
+        assert vm.notification_text == "Error occurred"
 
     def test_activity_enabled_during_active_task(self, vm: InfoAreaViewModel) -> None:
         vm.set_task_summary(
@@ -396,12 +397,12 @@ class TestGuideActions:
         assert "view_failed_details" in keys
         assert "retry_failed" in keys
 
-    def test_cancelled_has_no_redundant_guide_action(self, vm: InfoAreaViewModel) -> None:
+    def test_cancelled_keeps_available_outputs_accessible(self, vm: InfoAreaViewModel) -> None:
         actions = InfoAreaViewModel.compute_guide_actions(
-            "cancelled", output_dir="/tmp/out", failed_details_path="", retry_available=True
+            "cancelled", output_dir="/tmp/out", failed_details_path="", retry_available=False
         )
         keys = [a["action_key"] for a in actions]
-        assert keys == []
+        assert keys == ["open_output_dir"]
 
     def test_failed_without_retry_excludes_retry(self, vm: InfoAreaViewModel) -> None:
         actions = InfoAreaViewModel.compute_guide_actions(

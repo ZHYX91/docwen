@@ -101,16 +101,6 @@ class TestRuntimeRequestBinding:
         assert summary.skipped_count == int(include_skipped)
         assert summary.cancelled_count == 2
         assert window._info_area_vm.status_meta_text == _t("info_area.task_state_cancelled", "Cancelled")
-        assert window._info_area_vm.status_summary_text == _t(
-            "components.info_area.batch_completed",
-            "Batch finished: {success} succeeded, {failed} failed, {skipped} skipped, {cancelled} cancelled",
-            success=1,
-            failed=0,
-            skipped=int(include_skipped),
-            cancelled=2,
-        )
-        window._info_area_vm._clear_transient_state()
-        window._info_area_vm._refresh_status()
         assert _t("info_area.task_cancelled_count", "Cancelled: {cancelled}", cancelled=2) in (
             window._info_area_vm.status_summary_text
         )

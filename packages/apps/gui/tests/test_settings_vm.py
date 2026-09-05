@@ -33,6 +33,30 @@ from docwen_gui.view_models.settings_vm import (
 
 pytestmark = pytest.mark.unit
 
+
+@pytest.mark.parametrize("locale", ["zh_CN", "en_US"])
+@pytest.mark.parametrize("success", [True, False])
+def test_apply_status_uses_selected_language(vm, monkeypatch, locale, success):
+    from docwen_gui.i18n import get_locale, set_locale
+
+    previous = get_locale()
+    statuses = []
+    vm.status_changed.connect(lambda message, error: statuses.append((message, error)))
+    monkeypatch.setattr(vm, "_persist_to_controller_config", lambda *args: success)
+    try:
+        set_locale(locale)
+        assert vm.apply_changes() is success
+        expected = {
+            ("zh_CN", True): "设置已应用。",
+            ("zh_CN", False): "无法应用设置。",
+            ("en_US", True): "Settings applied.",
+            ("en_US", False): "Settings could not be applied.",
+        }
+        assert statuses == [(expected[(locale, success)], not success)]
+    finally:
+        set_locale(previous)
+
+
 PROJECT_CONFIGS = Path(__file__).resolve().parent.parent.parent.parent.parent / "configs"
 
 
@@ -211,7 +235,9 @@ class TestApplyCancel:
         vm.status_changed.connect(lambda msg, err: status_signals.append((msg, err)))
         vm.apply_settings()
         assert len(status_signals) == 1
-        assert "applied" in status_signals[0][0].lower()
+        from docwen_gui.i18n import t
+
+        assert status_signals[0][0] == t("settings.status.apply_success")
         assert status_signals[0][1] is False  # not error
 
     def test_apply_persists_logging_console_colorize(
@@ -473,7 +499,9 @@ class TestReset:
         vm.status_changed.connect(lambda msg, err: status_signals.append((msg, err)))
         vm.reset_section(SECTION_GUI)
         assert len(status_signals) == 1
-        assert "reset" in status_signals[0][0].lower()
+        from docwen_gui.i18n import t
+
+        assert status_signals[0][0] == t("settings.status.reset_success")
 
     def test_reset_all_clears_all(self, vm: SettingsViewModel) -> None:
         vm.set_field(SECTION_GUI, "theme", "dark")

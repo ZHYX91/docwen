@@ -49,7 +49,7 @@ class SingleFileWorkflow:
         if len(primary_inputs) != 1:
             raise ValueError(
                 f"SingleFileWorkflow requires exactly one primary document input, got {len(primary_inputs)}. "
-                "Use BatchWorkflow for multiple independent source files."
+                "Use ApplicationController.execute_batch for multiple independent source files."
             )
 
         return self._runtime.execute(request)

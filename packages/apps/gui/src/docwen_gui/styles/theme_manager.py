@@ -7,10 +7,11 @@ sync, and global QSS stylesheet application.
 from __future__ import annotations
 
 import logging
+from contextlib import suppress
 from typing import Literal
 from typing import cast as _cast
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QMetaObject, QObject, Qt
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QApplication, QWidget
 
@@ -31,8 +32,10 @@ class ThemeManager:
 
     def __init__(self) -> None:
         self._current_theme: str = DEFAULT_THEME
+        self._requested_theme: str = DEFAULT_THEME
         self._font_size_preset: str = "default"
         self._app: QApplication | None = None
+        self._system_theme_connection: QMetaObject.Connection | None = None
 
     @classmethod
     def get_instance(cls) -> ThemeManager:
@@ -44,6 +47,8 @@ class ThemeManager:
     @classmethod
     def reset_instance(cls) -> None:
         """Reset singleton instance (for testing)."""
+        if cls._instance is not None:
+            cls._instance._disconnect_system_theme()
         cls._instance = None
 
     def initialize(self, app: QApplication, theme_name: str) -> None:
@@ -53,8 +58,21 @@ class ThemeManager:
             app: The QApplication instance.
             theme_name: Initial theme name (``"light"``, ``"dark"``, or ``"system"``).
         """
+        self._disconnect_system_theme()
         self._app = app
+        self._system_theme_connection = app.styleHints().colorSchemeChanged.connect(self._on_system_theme_changed)
         self.apply_theme(theme_name)
+
+    def _disconnect_system_theme(self) -> None:
+        connection = self._system_theme_connection
+        self._system_theme_connection = None
+        if connection is not None:
+            with suppress(RuntimeError):
+                QObject.disconnect(connection)
+
+    def _on_system_theme_changed(self, _scheme: Qt.ColorScheme) -> None:
+        if self._requested_theme == "system":
+            self.apply_theme("system")
 
     def apply_theme(self, theme_name: str) -> None:
         """Apply theme at runtime.  Safe to call multiple times.
@@ -62,7 +80,8 @@ class ThemeManager:
         Args:
             theme_name: One of ``"light"``, ``"dark"``, ``"system"``.
         """
-        resolved = self._resolve_system_theme(theme_name)
+        self._requested_theme = theme_name if theme_name in {"light", "dark", "system"} else DEFAULT_THEME
+        resolved = self._resolve_system_theme(self._requested_theme)
         self._current_theme = resolved
 
         if self._app is None:
@@ -119,7 +138,7 @@ class ThemeManager:
             return normalized
 
         apply_application_font(self._app, font_size_preset=normalized)
-        self.apply_theme(self._current_theme)
+        self.apply_theme(self._requested_theme)
         return normalized
 
     def get_font_size_preset(self) -> str:
