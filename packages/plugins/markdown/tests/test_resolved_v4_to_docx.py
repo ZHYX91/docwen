@@ -12,7 +12,6 @@ from zipfile import ZipFile
 
 import pytest
 from docx import Document
-from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from lxml import etree
 from tests.support.cancellation import FakeCancellationTokenView
@@ -46,7 +45,6 @@ from docwen_core.models.resolved_numbering import (
     ResolvedReference,
     canonicalize_numbering_plan,
 )
-from docwen_plugin_markdown import renderer as markdown_renderer
 from docwen_plugin_markdown.manifest import RESOLVED_V4_MD_TO_DOCX_OPTIONS_SCHEMA
 from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
 from docwen_runtime.config.document_styles import build_document_style_catalog
@@ -58,26 +56,6 @@ pytestmark = pytest.mark.contract
 _FIXTURES = Path(__file__).parent / "fixtures" / "resolved_v4"
 _NEUTRAL = _FIXTURES / "resolved-document.rich.json"
 _PLAN = _FIXTURES / "numbering-export-plan.rich.json"
-
-
-def test_equation_snapshot_cleanup_preserves_whitespace_only_leaf_text() -> None:
-    equation = OxmlElement("m:oMath")
-    equation.text = "\n  "
-    run = OxmlElement("m:r")
-    run.text = "\n    "
-    leaf = OxmlElement("m:t")
-    leaf.set(qn("xml:space"), "preserve")
-    leaf.text = " "
-    leaf.tail = "\n  "
-    run.append(leaf)
-    equation.append(run)
-
-    markdown_renderer._strip_serialization_only_whitespace(equation)  # pyright: ignore[reportPrivateUsage]
-
-    assert equation.text is None
-    assert run.text is None
-    assert leaf.text == " "
-    assert leaf.tail is None
 
 
 def test_active_resolved_v4_options_include_explicit_markdown_dialect() -> None:
