@@ -433,10 +433,6 @@ LITERAL_FALLBACK_CONTRACTS: Mapping[tuple[str, str], LiteralFallbackContract] = 
     ): _literal_fallback(1, "Select Log Directory", "log directory chooser"),
     (
         "packages/apps/gui/src/docwen_gui/widgets/settings/numbering_clean_editor.py",
-        "editors.numbering_add.level",
-    ): _literal_fallback(1, "Level:", "numbering cleanup editor field"),
-    (
-        "packages/apps/gui/src/docwen_gui/widgets/settings/numbering_clean_editor.py",
         "common.type_warning",
     ): _literal_fallback(1, "Warning", "typed warning dialog"),
     (

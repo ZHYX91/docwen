@@ -248,7 +248,6 @@ save_success_message = "Configuration enregistree et rechargee."
 language_section = "Langue"
 language_label = "Choisir la langue :"
 language_tooltip = "Choisir la langue d'affichage.\nRedémarrage requis."
-language_restart_hint = "Redémarrage requis."
 
 # 主题设置区域
 theme_section = "Thème"

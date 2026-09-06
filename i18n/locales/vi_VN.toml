@@ -252,7 +252,6 @@ save_success_message = "Cau hinh da duoc luu va tai lai."
 language_section = "Ngôn ngữ"
 language_label = "Chọn ngôn ngữ giao diện:"
 language_tooltip = "Chọn ngôn ngữ hiển thị của ứng dụng.\nThay đổi sẽ có hiệu lực sau khi khởi động lại."
-language_restart_hint = "Thay đổi sẽ có hiệu lực sau khi khởi động lại."
 
 # 主题设置区域
 theme_section = "Chủ đề giao diện"

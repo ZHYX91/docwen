@@ -252,7 +252,6 @@ save_success_message = "La configuracion se ha guardado y recargado."
 language_section = "Idioma"
 language_label = "Selecciona el idioma de la interfaz:"
 language_tooltip = "Selecciona el idioma de visualización de la aplicación.\nLos cambios se aplicarán tras reiniciar."
-language_restart_hint = "Los cambios se aplicarán tras reiniciar."
 
 # 主题设置区域
 theme_section = "Tema de la interfaz"

@@ -203,7 +203,6 @@ save_success_message = "Конфигурация сохранена и пере�
 language_section = "Язык"
 language_label = "Выберите язык:"
 language_tooltip = "Выберите язык интерфейса.\nТребуется перезапуск."
-language_restart_hint = "Требуется перезапуск."
 
 # 主题设置区域
 theme_section = "Тема"

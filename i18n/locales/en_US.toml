@@ -252,7 +252,6 @@ save_success_message = "Config saved and reloaded."
 language_section = "Language"
 language_label = "Select interface language:"
 language_tooltip = "Select the display language for the application.\nChanges will take effect after restart."
-language_restart_hint = "Changes will take effect after restart."
 
 # 主题设置区域
 theme_section = "Interface Theme"

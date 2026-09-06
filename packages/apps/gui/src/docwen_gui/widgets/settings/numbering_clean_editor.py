@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ...dialogs import feedback
 from ...i18n import t
 from .check_box import SettingsCheckBox
 
@@ -595,45 +596,16 @@ class NumberingCleanDialog(QDialog):
     # ── Helpers ─────────────────────────────────────────────────────────
 
     def _confirm(self, title: str, message: str) -> bool:
-        from PySide6.QtWidgets import QMessageBox
-
-        box = QMessageBox(self)
-        box.setWindowTitle(title)
-        box.setText(message)
-        box.setIcon(QMessageBox.Icon.Warning)
-        box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        box.setDefaultButton(QMessageBox.StandardButton.No)
-        return box.exec() == QMessageBox.StandardButton.Yes
+        return feedback.confirm(title, message, parent=self, danger=True)
 
     def _notify_info(self, message: str, *, title: str = "") -> None:
-        from PySide6.QtWidgets import QMessageBox
-
-        box = QMessageBox(self)
-        box.setWindowTitle(title or t("editors.numbering_clean.prompt", "Info"))
-        box.setText(message)
-        box.setIcon(QMessageBox.Icon.Information)
-        box.setStandardButtons(QMessageBox.StandardButton.Ok)
-        box.exec()
+        feedback.info(title or t("editors.numbering_clean.prompt", "Info"), message, parent=self)
 
     def _notify_error(self, title: str, message: str) -> None:
-        from PySide6.QtWidgets import QMessageBox
-
-        box = QMessageBox(self)
-        box.setWindowTitle(title)
-        box.setText(message)
-        box.setIcon(QMessageBox.Icon.Critical)
-        box.setStandardButtons(QMessageBox.StandardButton.Ok)
-        box.exec()
+        feedback.error(title, message, parent=self)
 
     def _notify_warning(self, message: str, *, title: str = "") -> None:
-        from PySide6.QtWidgets import QMessageBox
-
-        box = QMessageBox(self)
-        box.setWindowTitle(title or t("common.type_warning", "Warning"))
-        box.setText(message)
-        box.setIcon(QMessageBox.Icon.Warning)
-        box.setStandardButtons(QMessageBox.StandardButton.Ok)
-        box.exec()
+        feedback.warn(title or t("common.type_warning", "Warning"), message, parent=self)
 
     # ── Public API ──────────────────────────────────────────────────────
 

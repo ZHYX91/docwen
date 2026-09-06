@@ -252,7 +252,6 @@ save_success_message = "配置已保存并重新加载。"
 language_section = "语言"
 language_label = "选择界面语言:"
 language_tooltip = "选择应用程序的界面显示语言。\n更改语言后需要重启应用才能生效。"
-language_restart_hint = "更改语言后需要重启应用才能生效。"
 
 # 主题设置区域
 theme_section = "界面主题"

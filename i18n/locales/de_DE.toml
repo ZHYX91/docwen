@@ -203,7 +203,6 @@ save_success_message = "Konfiguration gespeichert und neu geladen."
 language_section = "Sprache"
 language_label = "Sprache wählen:"
 language_tooltip = "Anzeigesprache wählen.\nNeustart erforderlich."
-language_restart_hint = "Neustart erforderlich."
 
 # 主题设置区域
 theme_section = "Design"

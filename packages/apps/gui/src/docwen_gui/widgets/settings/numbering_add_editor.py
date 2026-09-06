@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ...dialogs import feedback
 from ...i18n import t
 
 # ── Theme helpers ────────────────────────────────────────────────────────
@@ -658,10 +659,13 @@ class NumberingAddDialog(QDialog):
             hier_header = menu.addAction(t("editors.numbering_add.menu_hierarchical"))
             hier_header.setEnabled(False)
             hierarchical = ".".join(f"{{{idx}.arabic_half}}" for idx in range(1, level + 1)) + " "
-            menu.addAction(
-                hierarchical,
+            example = ".".join("1" for _ in range(level))
+            action = menu.addAction(
+                f"{t('editors.numbering_add.names.hierarchical_standard')}  {example}",
                 lambda _checked=False, value=hierarchical: self._insert_placeholder(level, value),
             )
+            action.setToolTip(hierarchical)
+            menu.setToolTipsVisible(True)
 
         menu.exec(edit.mapToGlobal(edit.rect().bottomRight()))
 
@@ -884,45 +888,16 @@ class NumberingAddDialog(QDialog):
         return False
 
     def _confirm(self, title: str, message: str) -> bool:
-        from PySide6.QtWidgets import QMessageBox
-
-        box = QMessageBox(self)
-        box.setWindowTitle(title)
-        box.setText(message)
-        box.setIcon(QMessageBox.Icon.Warning)
-        box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        box.setDefaultButton(QMessageBox.StandardButton.No)
-        return box.exec() == QMessageBox.StandardButton.Yes
+        return feedback.confirm(title, message, parent=self, danger=True)
 
     def _notify_info(self, message: str, *, title: str = "") -> None:
-        from PySide6.QtWidgets import QMessageBox
-
-        box = QMessageBox(self)
-        box.setWindowTitle(title or t("editors.common.prompt"))
-        box.setText(message)
-        box.setIcon(QMessageBox.Icon.Information)
-        box.setStandardButtons(QMessageBox.StandardButton.Ok)
-        box.exec()
+        feedback.info(title or t("editors.common.prompt"), message, parent=self)
 
     def _notify_warning(self, message: str) -> None:
-        from PySide6.QtWidgets import QMessageBox
-
-        box = QMessageBox(self)
-        box.setWindowTitle(t("editors.common.cannot_delete"))
-        box.setText(message)
-        box.setIcon(QMessageBox.Icon.Warning)
-        box.setStandardButtons(QMessageBox.StandardButton.Ok)
-        box.exec()
+        feedback.warn(t("editors.common.cannot_delete"), message, parent=self)
 
     def _notify_error(self, title: str, message: str) -> None:
-        from PySide6.QtWidgets import QMessageBox
-
-        box = QMessageBox(self)
-        box.setWindowTitle(title)
-        box.setText(message)
-        box.setIcon(QMessageBox.Icon.Critical)
-        box.setStandardButtons(QMessageBox.StandardButton.Ok)
-        box.exec()
+        feedback.error(title, message, parent=self)
 
     # ── Public API ───────────────────────────────────────────────────────
 

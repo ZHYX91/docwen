@@ -203,7 +203,6 @@ save_success_message = "配置已保存並重新載入。"
 language_section = "語言"
 language_label = "選擇介面語言:"
 language_tooltip = "選擇應用程式的介面顯示語言。\n更改語言後需要重啟應用才能生效。"
-language_restart_hint = "更改語言後需要重啟應用才能生效。"
 
 # 主题设置区域
 theme_section = "介面主題"

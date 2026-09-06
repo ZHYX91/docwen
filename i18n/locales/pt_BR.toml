@@ -251,7 +251,6 @@ save_success_message = "Configuracao salva e recarregada."
 language_section = "Idioma"
 language_label = "Escolher idioma:"
 language_tooltip = "Escolha o idioma de exibição.\nReinicialização necessária."
-language_restart_hint = "Reinicialização necessária."
 
 # 主题设置区域
 theme_section = "Tema"
