@@ -186,3 +186,47 @@ def test_extension_controls_and_directional_preset_update_only_the_selected_dire
     tab.reload_from_config()
     assert not control.isChecked()
     assert not any(vm.config.formatting.markdown_extensions["output"].values())
+
+
+@pytest.mark.parametrize("locale", ["zh_CN", "en_US"])
+@pytest.mark.parametrize("font_size", [12, 15])
+def test_extension_labels_use_available_row_width_and_remain_accessible(qapp, locale, font_size) -> None:
+    from PySide6.QtGui import QFont
+    from PySide6.QtWidgets import QCheckBox, QWidget
+
+    from docwen_gui.i18n import get_locale, set_locale
+    from docwen_gui.models.settings_config import SettingsConfig
+    from docwen_gui.view_models.settings_vm import SettingsViewModel
+    from docwen_gui.widgets.panel_card import FormRow
+    from docwen_gui.widgets.settings.formatting_tab import FormattingTab
+
+    previous = get_locale()
+    set_locale(locale)
+    tab = FormattingTab(SettingsViewModel(config=SettingsConfig()))
+    tab.setFont(QFont("Microsoft YaHei", font_size))
+    tab.resize(600, 850)
+    try:
+        tab.show()
+        for _ in range(8):
+            qapp.processEvents()
+        for direction in ("Input", "Output"):
+            card = tab.findChild(QWidget, f"markdownExtensions{direction}Card")
+            assert card is not None
+            rows = card.findChildren(FormRow)
+            assert len(rows) == 4
+            assert len({row.control.geometry().right() for row in rows}) == 1
+            for row in rows:
+                label, control = row.label, row.control
+                assert isinstance(control, QCheckBox)
+                natural_width = label.fontMetrics().horizontalAdvance(label.text())
+                if natural_width + control.minimumSizeHint().width() + 8 <= row.width():
+                    assert natural_width <= label.width()
+                else:
+                    assert label.width() >= row.width() - control.width() - 8
+                    assert label.height() >= label.heightForWidth(label.width())
+                assert label.buddy() is control
+                assert control.accessibleName() == label.text()
+                assert not row.label_container.geometry().intersects(control.geometry())
+    finally:
+        tab.close()
+        set_locale(previous)

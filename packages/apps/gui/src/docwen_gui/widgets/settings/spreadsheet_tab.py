@@ -6,17 +6,15 @@ Matches old SpreadsheetTab (DynamicSettingsTab + 3 software priority QListWidget
 from __future__ import annotations
 
 from PySide6.QtWidgets import (
-    QHBoxLayout,
     QListWidget,
     QListWidgetItem,
     QPushButton,
-    QVBoxLayout,
-    QWidget,
 )
 
 from ...i18n import t
 from ...view_models.settings_vm import SECTION_SOFTWARE_PRIORITY, SettingsViewModel
 from .base_tab import DynamicSettingsTab
+from .priority_editor import SoftwarePriorityEditor
 
 _SS_SOFTWARE_LABEL_KEYS: dict[str, str] = {
     "wps_spreadsheets": "settings.spreadsheet.software.wps_spreadsheets",
@@ -117,32 +115,13 @@ class SpreadsheetTab(DynamicSettingsTab):
             "spreadsheet_to_pdf": t("settings.spreadsheet.spreadsheet_to_pdf_label", "Spreadsheet to PDF:"),
         }
         for cat, label in categories.items():
-            row = QWidget(self._scroll_container)
-            row_layout = QHBoxLayout(row)
-            row_layout.setContentsMargins(0, 0, 0, 0)
-            row_layout.setSpacing(8)
-
-            lst = QListWidget(row)
-            lst.setObjectName("settingsPriorityList")
+            editor = SoftwarePriorityEditor(label, self._scroll_container)
+            lst = editor.list_widget
+            up, down = editor.move_up_button, editor.move_down_button
             lst.currentRowChanged.connect(lambda _r, c=cat: self._refresh_buttons(c))
-            row_layout.addWidget(lst, 1)
-
-            btn_container = QWidget(row)
-            btn_layout = QVBoxLayout(btn_container)
-            btn_layout.setContentsMargins(0, 0, 0, 0)
-            btn_layout.setSpacing(6)
-
-            up = QPushButton(t("editors.common.move_up", "Move Up"), btn_container)
             up.clicked.connect(lambda _checked=False, c=cat: self._move_item(c, -1))
-            btn_layout.addWidget(up)
-
-            down = QPushButton(t("editors.common.move_down", "Move Down"), btn_container)
             down.clicked.connect(lambda _checked=False, c=cat: self._move_item(c, 1))
-            btn_layout.addWidget(down)
-            btn_layout.addStretch(1)
-
-            row_layout.addWidget(btn_container)
-            self.add_form_row(form, label, row)
+            form.addRow(editor)
             self._priority_lists[cat] = lst
             self._move_up_btns[cat] = up
             self._move_down_btns[cat] = down

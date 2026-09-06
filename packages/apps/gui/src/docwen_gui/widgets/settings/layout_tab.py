@@ -8,17 +8,15 @@ from __future__ import annotations
 from typing import cast as _cast
 
 from PySide6.QtWidgets import (
-    QHBoxLayout,
     QListWidget,
     QListWidgetItem,
     QPushButton,
-    QVBoxLayout,
-    QWidget,
 )
 
 from ...i18n import t
 from ...view_models.settings_vm import SECTION_SOFTWARE_PRIORITY, SettingsViewModel
 from .base_tab import DynamicSettingsTab
+from .priority_editor import SoftwarePriorityEditor
 
 _LAYOUT_SOFTWARE_LABEL_KEYS: dict[str, str] = {
     "msoffice_word": "settings.document.software.msoffice_word",
@@ -108,32 +106,16 @@ class LayoutTab(DynamicSettingsTab):
             t("settings.layout.software_section", "Software Priority"),
             object_name="layoutSoftwarePriorityCard",
         )
-        self._priority_list = QListWidget(self._scroll_container)
-        self._priority_list.setObjectName("settingsPriorityList")
+        editor = SoftwarePriorityEditor(
+            t("settings.layout.pdf_to_doc_label", "PDF to Office Priority:"), self._scroll_container
+        )
+        self._priority_list = editor.list_widget
         self._priority_list.currentRowChanged.connect(self._refresh_buttons)
-
-        btn_container = QWidget(self._scroll_container)
-        btn_layout = QVBoxLayout(btn_container)
-        btn_layout.setContentsMargins(0, 0, 0, 0)
-        btn_layout.setSpacing(6)
-
-        self._move_up_btn = QPushButton(t("editors.common.move_up", "Move Up"), btn_container)
+        self._move_up_btn = editor.move_up_button
         self._move_up_btn.clicked.connect(lambda: self._move_item(-1))
-        btn_layout.addWidget(self._move_up_btn)
-
-        self._move_down_btn = QPushButton(t("editors.common.move_down", "Move Down"), btn_container)
+        self._move_down_btn = editor.move_down_button
         self._move_down_btn.clicked.connect(lambda: self._move_item(1))
-        btn_layout.addWidget(self._move_down_btn)
-        btn_layout.addStretch(1)
-
-        priority_row = QWidget(self._scroll_container)
-        priority_layout = QHBoxLayout(priority_row)
-        priority_layout.setContentsMargins(0, 0, 0, 0)
-        priority_layout.setSpacing(8)
-        priority_layout.addWidget(self._priority_list, 1)
-        priority_layout.addWidget(btn_container)
-
-        self.add_form_row(form, t("settings.layout.pdf_to_doc_label", "PDF to Office Priority:"), priority_row)
+        form.addRow(editor)
         self._refresh_buttons()
 
     def _load_software_priority_values(self) -> None:

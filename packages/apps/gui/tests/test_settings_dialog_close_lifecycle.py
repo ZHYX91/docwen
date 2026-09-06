@@ -18,6 +18,49 @@ from docwen_gui.widgets.settings.general_tab import GeneralTab
 pytestmark = pytest.mark.gui
 
 
+def test_unsaved_close_confirmation_uses_the_selected_language(qapp) -> None:
+    from PySide6.QtCore import QTimer
+    from PySide6.QtWidgets import QMessageBox
+
+    from docwen_gui.i18n import get_locale, set_locale, t
+
+    previous_locale = get_locale()
+    set_locale("zh_CN")
+    parent, vm, dialog = _dirty_opacity_preview(qapp)
+    observed = []
+
+    def reject_confirmation() -> None:
+        message = dialog.findChild(QMessageBox)
+        if message is not None:
+            observed.append(
+                (
+                    message.windowTitle(),
+                    message.text(),
+                    message.button(QMessageBox.StandardButton.Yes).text(),
+                    message.button(QMessageBox.StandardButton.No).text(),
+                )
+            )
+            message.button(QMessageBox.StandardButton.No).click()
+
+    try:
+        QTimer.singleShot(0, reject_confirmation)
+        dialog.close()
+        assert observed == [
+            (
+                t("editors.common.confirm_close"),
+                t("editors.common.unsaved_close_message"),
+                t("common.ok"),
+                t("common.cancel"),
+            )
+        ]
+        assert dialog.isVisible() and vm.is_dirty
+    finally:
+        vm.cancel_changes()
+        dialog.close()
+        parent.close()
+        set_locale(previous_locale)
+
+
 def _dirty_opacity_preview(qapp) -> tuple[QWidget, SettingsViewModel, SettingsDialog]:
     parent = QWidget()
     parent.setWindowOpacity(0.8)

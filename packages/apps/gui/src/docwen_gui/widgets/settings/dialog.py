@@ -268,6 +268,8 @@ def _show_confirm(parent: QWidget, title: str, message: str, danger: bool = True
     mb.setText(message)
     mb.setIcon(QMessageBox.Icon.Warning if danger else QMessageBox.Icon.Question)
     mb.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+    mb.button(QMessageBox.StandardButton.Yes).setText(t("common.ok"))
+    mb.button(QMessageBox.StandardButton.No).setText(t("common.cancel"))
     mb.setDefaultButton(QMessageBox.StandardButton.No)
     return mb.exec() == QMessageBox.StandardButton.Yes
 
@@ -865,8 +867,8 @@ class SettingsDialog(QDialog):
                 and self._vm.is_dirty
                 and not _show_confirm(
                     self,
-                    t("common.error"),
-                    t("settings.unsaved_changes.message", "You have unsaved changes. Close without saving?"),
+                    t("editors.common.confirm_close"),
+                    t("editors.common.unsaved_close_message"),
                     danger=True,
                 )
             ):

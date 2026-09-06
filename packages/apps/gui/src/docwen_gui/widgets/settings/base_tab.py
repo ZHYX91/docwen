@@ -18,7 +18,6 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFormLayout,
     QGroupBox,
-    QHBoxLayout,
     QLabel,
     QLineEdit,
     QScrollArea,
@@ -30,6 +29,7 @@ from PySide6.QtWidgets import (
 )
 
 from ...resources import load_svg_icon
+from ..panel_card import FormRow
 
 # Design token — matches GUI行为与交互规范.md §3.9
 SPACING_XS = 4
@@ -191,12 +191,20 @@ class BaseSettingsTab(QWidget):
         if not label_text.strip():
             form.addRow(widget)
             return None
-        label_widget = BaseSettingsTab.create_label_with_info(label_text, effective_tooltip)
+        suffix = _create_info_button(effective_tooltip) if effective_tooltip else None
+        row = FormRow(label_text, widget, label_suffix=suffix, trailing_control=isinstance(widget, QCheckBox))
+        row.setObjectName("settingsFormRow")
+        row.label_container.setMinimumHeight(CONTROL_HEIGHT)
+        row.content_layout.setAlignment(row.label_container, Qt.AlignmentFlag.AlignTop)
+        row.label.setTextFormat(Qt.TextFormat.PlainText)
+        row.label.setProperty("settingsRole", "fieldLabel")
+        if not widget.accessibleName():
+            widget.setAccessibleName(label_text)
         widget.setMinimumWidth(0)
         if effective_tooltip:
-            label_widget.setToolTip(effective_tooltip)
-        form.addRow(label_widget, widget)
-        return label_widget
+            row.label.setToolTip(effective_tooltip)
+        form.addRow(row)
+        return row.label
 
     @staticmethod
     def add_form_description(form: QFormLayout, text: str) -> QLabel:
@@ -207,24 +215,6 @@ class BaseSettingsTab(QWidget):
         label.setProperty("settingsRole", "sectionDescription")
         form.addRow(label)
         return label
-
-    @staticmethod
-    def create_label_with_info(text: str, tooltip: str | None = None, parent: QWidget | None = None) -> QWidget:
-        """Create a label row with optional info icon."""
-        container = QWidget(parent)
-        container.setObjectName("settingsLabelWithInfo")
-        layout = QHBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(6)
-        label = QLabel(text, container)
-        label.setWordWrap(True)
-        label.setProperty("settingsRole", "fieldLabel")
-        layout.addWidget(label)
-        if tooltip:
-            label.setToolTip(tooltip)
-            layout.addWidget(_create_info_button(tooltip, container))
-        layout.addStretch(1)
-        return container
 
     # ── Widget factory helpers ──────────────────────────────────────────────
 

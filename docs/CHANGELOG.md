@@ -10,8 +10,9 @@
 - Markdown→Word 只生成独立 DOCX，删除原文 sidecar 及回放逻辑；请自行保留源文件。回转从 DOCX 实际结构重建，不承诺源码逐字一致。
 - 新增按输入识别/输出使用分别控制的 Markdown 扩展开关：Structural Tables、Number Suite 题注与交叉引用、H7–H9、类型化尾注。默认关闭，每个方向可应用 Obsidian 预设。
 - 支持题注名称引用和无编号引用的标题/Alias 显示；关闭输出扩展时使用普通 Markdown 并提示结构表达损失。
-- 设置输入页改名为“传入文本、传入文档、传入表格、传入版式文件”，明确 Markdown 语法、Markdown 资源和文件保存职责。
+- 设置输入页改名为“传入文本、传入文档、传入表格、传入图片、传入版式文件”，明确 Markdown 语法、Markdown 资源和文件保存职责。
 - 改进任务反馈、混合批次、输入所有权、异步保护检查和设置在窄窗口中的布局。
+- 修复设置标签提前换行和堆叠后的多余留白；软件优先级列表统一宽度并按内容调整高度，未保存更改提示使用当前界面语言。
 - 修复单文件模式再次添加或重新选择文件时，显示目标与实际转换输入不一致的问题。
 - 修复 Word 正常保存后重新序列化语义 XML、合并内容类型声明导致回转失败的问题；继续验证实际结构和引用身份。
 
@@ -19,6 +20,7 @@
 - Added independent input/output switches for Structural Tables, Number Suite captions and cross-references, H7–H9, and typed endnotes. Extensions default to off, with an Obsidian preset per direction.
 - Added caption-name references and title/Alias display for unnumbered targets. Plain Markdown output reports structural representation losses.
 - Clarified input settings names, Markdown syntax/resources, and file saving; improved task feedback, mixed batches, input ownership, asynchronous protection checks, and narrow settings layouts.
+- Fixed premature settings-label wrapping and excess stacked-row spacing; aligned software-priority lists with content-sized heights and localized the unsaved-changes confirmation.
 - Fixed single-file additions and reselections so the displayed target and actual conversion input stay aligned.
 - Fixed reverse conversion after Word reserializes semantic XML and consolidates content-type declarations on save, while retaining structure and reference identity validation.
 

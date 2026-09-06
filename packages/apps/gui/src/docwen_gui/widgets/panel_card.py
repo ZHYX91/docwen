@@ -88,7 +88,15 @@ class _ResponsiveFrame(QFrame):
 class FormRow(_ResponsiveFrame):
     """A label/control row that stacks before translated content clips."""
 
-    def __init__(self, label: str, control: QWidget, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        label: str,
+        control: QWidget,
+        parent: QWidget | None = None,
+        *,
+        label_suffix: QWidget | None = None,
+        trailing_control: bool = False,
+    ) -> None:
         super().__init__(parent)
         self.setObjectName("panelFormRow")
         self.content_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight, self)
@@ -99,27 +107,65 @@ class FormRow(_ResponsiveFrame):
         self.label.setBuddy(control)
         self.label.setMinimumWidth(0)
         self.label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self.label_suffix = label_suffix
+        self.trailing_control = trailing_control
+        self.label_container: QWidget = self.label
+        if label_suffix is not None:
+            self.label_container = QWidget(self)
+            label_layout = QHBoxLayout(self.label_container)
+            label_layout.setContentsMargins(0, 0, 0, 0)
+            label_layout.setSpacing(6)
+            label_layout.addWidget(self.label, 1)
+            label_layout.addWidget(label_suffix, 0, Qt.AlignmentFlag.AlignVCenter)
         self.control = control
-        self.content_layout.addWidget(self.label)
+        self.content_layout.addWidget(self.label_container)
         self.content_layout.addWidget(control, stretch=1)
 
     def _sync_layout(self) -> None:
         label_width = self.label.fontMetrics().horizontalAdvance(self.label.text())
-        required_width = label_width + max(self.control.minimumSizeHint().width(), self.control.minimumWidth()) + 8
-        horizontal = required_width <= self.contentsRect().width()
-        self.label.setWordWrap(not horizontal)
+        suffix_width = self.label_suffix.sizeHint().width() + 6 if self.label_suffix is not None else 0
+        control_min_width = max(self.control.minimumSizeHint().width(), self.control.minimumWidth())
+        required_width = label_width + suffix_width + control_min_width + 8
+        horizontal = self.trailing_control or required_width <= self.contentsRect().width()
+        self.label.setWordWrap(not horizontal or required_width > self.contentsRect().width())
+        if self.trailing_control:
+            label_width = max(1, self.contentsRect().width() - suffix_width - control_min_width - 8)
         if horizontal:
             self.label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
             self.label.setFixedWidth(label_width)
+            self.label_container.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
+            self.label_container.setFixedWidth(label_width + suffix_width)
         else:
             self.label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
             self.label.setMinimumWidth(0)
             self.label.setMaximumWidth(16777215)
+            self.label_container.setMinimumWidth(0)
+            self.label_container.setMaximumWidth(16777215)
+            self.label_container.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         direction = QBoxLayout.Direction.LeftToRight if horizontal else QBoxLayout.Direction.TopToBottom
         if self.content_layout.direction() != direction:
             self.content_layout.setDirection(direction)
             self.content_layout.setSpacing(8 if horizontal else 4)
             self.updateGeometry()
+        text_width = label_width if horizontal else max(1, self.contentsRect().width() - suffix_width)
+        label_height = (
+            self.label.heightForWidth(text_width) if self.label.wordWrap() else self.label.sizeHint().height()
+        )
+        label_height = max(label_height, self.label_container.minimumHeight())
+        if self.label_suffix is not None:
+            label_height = max(label_height, self.label_suffix.sizeHint().height())
+        control_width = (
+            max(1, self.contentsRect().width() - label_width - suffix_width - 8)
+            if horizontal
+            else self.contentsRect().width()
+        )
+        control_height = (
+            self.control.heightForWidth(control_width)
+            if self.control.hasHeightForWidth()
+            else self.control.sizeHint().height()
+        )
+        control_height = max(control_height, self.control.minimumHeight(), self.control.minimumSizeHint().height())
+        self.setFixedHeight(max(label_height, control_height) if horizontal else label_height + control_height + 4)
 
 
 class ChoiceGroup(_ResponsiveFrame):

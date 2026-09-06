@@ -30,3 +30,30 @@ def test_form_row_uses_horizontal_layout_when_space_is_available(qapp: QApplicat
 
     assert row.content_layout.direction() == QBoxLayout.Direction.LeftToRight
     row.close()
+
+
+def test_form_row_keeps_long_label_and_help_visible_when_control_stacks(qapp: QApplication) -> None:
+    from PySide6.QtWidgets import QToolButton
+
+    control = QLineEdit("value")
+    control.setMinimumWidth(160)
+    help_button = QToolButton()
+    help_button.setFixedSize(18, 18)
+    row = FormRow("图文输出位置（图片 + OCR）:", control, label_suffix=help_button)
+    row.resize(320, 110)
+    row.show()
+    try:
+        for _ in range(8):
+            qapp.processEvents()
+        assert row.content_layout.direction() == QBoxLayout.Direction.TopToBottom
+        assert row.label.width() >= row.label.fontMetrics().horizontalAdvance(row.label.text())
+        assert row.label_container.width() == row.contentsRect().width()
+        assert not row.label_container.geometry().intersects(control.geometry())
+        assert row.label_container.rect().contains(help_button.geometry())
+        row.resize(700, 110)
+        for _ in range(8):
+            qapp.processEvents()
+        assert row.content_layout.direction() == QBoxLayout.Direction.LeftToRight
+        assert not row.label_container.geometry().intersects(control.geometry())
+    finally:
+        row.close()

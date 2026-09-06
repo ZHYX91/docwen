@@ -5,6 +5,41 @@ import pytest
 pytestmark = pytest.mark.gui
 
 
+def test_priority_lists_align_and_fit_their_rows_without_unused_space(qapp) -> None:
+    from PySide6.QtCore import QPoint
+
+    from docwen_gui.models.settings_config import SettingsConfig
+    from docwen_gui.view_models.settings_vm import SettingsViewModel
+    from docwen_gui.widgets.settings.priority_editor import SoftwarePriorityEditor
+    from docwen_gui.widgets.settings.spreadsheet_tab import SpreadsheetTab
+
+    tab = SpreadsheetTab(SettingsViewModel(config=SettingsConfig()))
+    tab.resize(600, 900)
+    tab.show()
+    try:
+        for _ in range(12):
+            qapp.processEvents()
+        editors = tab.findChildren(SoftwarePriorityEditor)
+        assert len(editors) == 3
+        lists = [editor.list_widget for editor in editors]
+        assert len({widget.mapTo(tab, QPoint()).x() for widget in lists}) == 1
+        assert len({widget.width() for widget in lists}) == 1
+        assert lists[1].count() == 2 and lists[0].count() == lists[2].count() == 3
+        assert lists[1].height() < lists[0].height() == lists[2].height()
+        button_sizes = set()
+        for editor in editors:
+            widget = editor.list_widget
+            last_row = widget.visualItemRect(widget.item(widget.count() - 1))
+            assert 0 <= widget.viewport().height() - last_row.bottom() <= 4
+            assert widget.verticalScrollBar().maximum() == 0
+            assert editor.title_label.mapTo(editor, QPoint()).y() < widget.mapTo(editor, QPoint()).y()
+            for button in (editor.move_up_button, editor.move_down_button):
+                button_sizes.add((button.width(), button.height()))
+        assert len(button_sizes) == 1
+    finally:
+        tab.close()
+
+
 def test_document_software_priority_buttons_write_back(qapp) -> None:
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
