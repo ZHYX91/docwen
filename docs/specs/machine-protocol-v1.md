@@ -67,6 +67,12 @@ artifact kinds `[document]`, and no relations. The DOCX has its own byte count a
 or source-recovery manifest is produced or consumed. Generic image/OCR resources remain unchanged on routes that
 publish them.
 
+The `neutral_document` input handle's `logical_path` names the authored document in the virtual input root.
+Its filename stem supplies the default title and suggested DOCX filename; an authored YAML title takes precedence.
+Consumers preserve the user-visible source path here even when the physical input is an isolated JSON snapshot.
+The declared media type identifies the JSON payload independently of its logical suffix. `input_id` only binds
+the semantic envelopes and must never appear as a generated document title or filename.
+
 成功输出是单文档 Artifact Bundle：一个首选 DOCX `document`，不带关系或 `.docwen` 伴随文件。
 逆向转换只读取当前 DOCX；Bundle 继续校验 DOCX 本身的字节数和 SHA-256。
 

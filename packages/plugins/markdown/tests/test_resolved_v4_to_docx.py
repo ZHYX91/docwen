@@ -11,6 +11,7 @@ from typing import Any
 from zipfile import ZipFile
 
 import pytest
+from docx import Document
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from lxml import etree
@@ -159,6 +160,42 @@ def _context(
 
 def _forbidden_legacy(*_args: Any, **_kwargs: Any) -> Any:
     raise AssertionError("resolved-v4 request entered a historical source converter")
+
+
+def test_resolved_title_and_filename_use_source_logical_path_not_input_id(tmp_path: Path) -> None:
+    refs = _refs(_NEUTRAL, _PLAN)
+    refs[0].logical_path = "notes/中文报告 v2.md"
+    template = Document()
+    template.add_paragraph("{{标题}}")
+    template.add_paragraph("{{正文}}")
+    template_path = tmp_path / "title-template.docx"
+    template.save(str(template_path))
+    context, _workspace = _context(
+        tmp_path,
+        refs,
+        options={
+            "locale": "zh_CN",
+            "heading_merge_mode": "never",
+            "template_name": str(template_path),
+        },
+    )
+
+    result = MdToDocxConverter().convert(context)
+
+    assert result.success, result.error
+    artifact = result.artifacts[0]
+    assert artifact.suggested_name == "中文报告 v2.docx"
+    with ZipFile(artifact.staging_path) as package:
+        document = etree.fromstring(package.read("word/document.xml"))
+    body = document.find(qn("w:body"))
+    assert body is not None
+    first_paragraph = body.find(qn("w:p"))
+    assert first_paragraph is not None
+    title = "".join(item.text or "" for item in first_paragraph.iter(qn("w:t")))
+    assert title == "中文报告 v2"
+    visible = "".join(item.text or "" for item in document.iter(qn("w:t")))
+    assert "fixture-d4c0c653" not in visible
+    assert "Architecture" in visible
 
 
 def test_representative_exact_two_materializes_all_physical_semantics_without_legacy(

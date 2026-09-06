@@ -7,6 +7,9 @@
 
 ## 0.10.0 (2026-09-07)
 
+- 已解析 Markdown 导出 Word 时，以源文件名称补全文档标题，避免内部标识出现在成品中。
+- Use the source filename for resolved Markdown exports without an authored title, keeping internal input identifiers out of generated Word titles.
+
 - 修复 Assistant 传入新文件及重复打开文件时的选择同步，并将前台显示权限交给当前连接的 Windows GUI。
 - 转换损失提示使用当前界面语言，并在任务摘要显示提示数量；设置反馈变化时，底部确认按钮保持原位。
 

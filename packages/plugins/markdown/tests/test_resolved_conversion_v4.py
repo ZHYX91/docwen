@@ -201,6 +201,7 @@ def _prepared(port: ResolvedNumberingPort) -> PreparedResolvedInputsV4:
         ),
         neutral_document_path=Path("neutral.json"),
         numbering_export_plan_path=Path("plan.json"),
+        source_stem="document",
     )
 
 

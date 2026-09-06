@@ -361,7 +361,7 @@ def _render_resolved_v4_docx(
     ensure_title_fallback(
         yaml_dict,
         placeholder_names=placeholder_map,
-        source_stem=prepared.port.input_id,
+        source_stem=prepared.source_stem,
     )
 
     session = ResolvedNumberingDocxSession(
@@ -443,7 +443,7 @@ def _render_resolved_v4_docx(
     _remove_request_resource_root(Path(workspace.staging_dir), resource_root)
     state["resource_root"] = None
 
-    suggested_name = f"{Path(prepared.port.input_id).name}.docx"
+    suggested_name = f"{prepared.source_stem}.docx"
     artifact = ArtifactManifest(
         artifact_id=f"{task_id}-docx",
         kind=ARTIFACT_KIND_PRIMARY,

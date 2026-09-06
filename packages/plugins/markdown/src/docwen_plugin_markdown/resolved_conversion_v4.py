@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from docwen_core.models.resolved_numbering import (
@@ -61,6 +61,7 @@ class PreparedResolvedInputsV4:
     source_carrier_plan: ResolvedSourceCarrierPlanV4
     neutral_document_path: Path
     numbering_export_plan_path: Path
+    source_stem: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -142,7 +143,10 @@ def load_resolved_v4_inputs(workspace: Any) -> PreparedResolvedInputsV4:
             "docwen.resolved_document.invalid",
             str(exc),
         ) from exc
-    return PreparedResolvedInputsV4(port, runtime_plan, source_carrier_plan, neutral_path, plan_path)
+    # The input ID binds semantic facts; the logical path names the document
+    # in the caller's virtual input root and is never resolved on disk here.
+    source_stem = PurePosixPath(neutral.logical_path).stem
+    return PreparedResolvedInputsV4(port, runtime_plan, source_carrier_plan, neutral_path, plan_path, source_stem)
 
 
 def compose_resolved_v4_markdown(
