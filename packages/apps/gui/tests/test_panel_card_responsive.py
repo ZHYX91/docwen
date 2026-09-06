@@ -32,6 +32,33 @@ def test_form_row_uses_horizontal_layout_when_space_is_available(qapp: QApplicat
     row.close()
 
 
+def test_compound_size_field_stacks_before_numeric_text_is_clipped(qapp: QApplication) -> None:
+    from PySide6.QtWidgets import QComboBox, QHBoxLayout, QWidget
+
+    control = QWidget()
+    layout = QHBoxLayout(control)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.setSpacing(8)
+    number = QLineEdit("200")
+    unit = QComboBox()
+    unit.addItems(["KB", "MB"])
+    unit.setMinimumWidth(84)
+    layout.addWidget(number, 1)
+    layout.addWidget(unit)
+    row = FormRow("文件大小上限", control)
+    row.resize(274, 80)
+    row.show()
+    try:
+        for _ in range(8):
+            qapp.processEvents()
+        assert row.content_layout.direction() == QBoxLayout.Direction.TopToBottom
+        assert number.width() >= number.fontMetrics().horizontalAdvance(number.text()) + 24
+        assert unit.width() >= unit.minimumWidth()
+        assert not number.geometry().intersects(unit.geometry())
+    finally:
+        row.close()
+
+
 def test_form_row_keeps_long_label_and_help_visible_when_control_stacks(qapp: QApplication) -> None:
     from PySide6.QtWidgets import QToolButton
 

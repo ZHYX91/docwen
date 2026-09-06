@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
@@ -238,14 +239,41 @@ class FormRow(_ResponsiveFrame):
         self.setFixedHeight(max(label_height, control_height) if horizontal else label_height + control_height + 4)
 
     def _control_readable_width(self) -> int:
-        width = max(self.control.minimumSizeHint().width(), self.control.minimumWidth())
-        if isinstance(self.control, QComboBox):
-            metrics = self.control.fontMetrics()
+        return self._readable_widget_width(self.control)
+
+    @classmethod
+    def _readable_widget_width(cls, control: QWidget) -> int:
+        width = max(control.minimumSizeHint().width(), control.minimumWidth())
+        if isinstance(control, QLineEdit):
+            width = max(width, control.sizeHint().width())
+        elif isinstance(control, QComboBox):
+            metrics = control.fontMetrics()
             text_width = max(
-                (metrics.horizontalAdvance(self.control.itemText(index)) for index in range(self.control.count())),
+                (metrics.horizontalAdvance(control.itemText(index)) for index in range(control.count())),
                 default=0,
             )
             width = max(width, text_width + 48)
+        else:
+            layout = control.layout()
+            if isinstance(layout, QBoxLayout):
+                widths = []
+                for index in range(layout.count()):
+                    item = layout.itemAt(index)
+                    if item is None:
+                        continue
+                    child = item.widget()
+                    widths.append(
+                        cls._readable_widget_width(child) if child is not None else item.minimumSize().width()
+                    )
+                horizontal = layout.direction() in {
+                    QBoxLayout.Direction.LeftToRight,
+                    QBoxLayout.Direction.RightToLeft,
+                }
+                content_width = (
+                    sum(widths) + max(0, len(widths) - 1) * layout.spacing() if horizontal else max(widths, default=0)
+                )
+                margins = layout.contentsMargins()
+                width = max(width, content_width + margins.left() + margins.right())
         return width
 
 

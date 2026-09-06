@@ -6,8 +6,8 @@ from ._hex_helper import _hex_to_rgba
 from .design_tokens import Border, Radius, Spacing, Typography
 from .theme_semantics import (
     COLOR_DANGER,
-    COLOR_SECONDARY,
     COLOR_WARNING,
+    get_theme_class_color,
     is_dark_theme,
 )
 
@@ -16,7 +16,7 @@ def build_batch_list_stylesheet(theme_name: str, font_size_preset: str | None = 
     """批量列表与条目卡片样式统一收口到全局主题中心。"""
     dark_theme = is_dark_theme(theme_name)
     warning_hint_color = _hex_to_rgba(COLOR_WARNING, 168 if dark_theme else 128)
-    detail_hint_color = _hex_to_rgba(COLOR_SECONDARY, 168 if dark_theme else 104)
+    detail_hint_color = get_theme_class_color("secondary", theme_name)
     danger_hint_color = _hex_to_rgba(COLOR_DANGER, 176 if dark_theme else 134)
     return "\n".join(
         [

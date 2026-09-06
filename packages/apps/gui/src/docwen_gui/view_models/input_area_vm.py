@@ -257,7 +257,7 @@ class InputAreaViewModel(QObject):
         self._emit_message("", "secondary")
         self.files_cleared.emit()
 
-    def sync_selection(self, file_refs: Sequence[FileRef]) -> None:
+    def sync_selection(self, file_refs: Sequence[FileRef], *, current: bool = False) -> None:
         """Synchronize externally-added files into the visual selection state.
 
         Unlike :meth:`add_files`, this renderer-facing method never validates,
@@ -271,10 +271,10 @@ class InputAreaViewModel(QObject):
             return
         warning_message = self._selection_warning_from_refs(refs)
         if warning_message:
-            detail = str(Path(normalized[0]).parent) if self._mode == "single" else ""
+            detail = str(Path(normalized[0]).parent) if self._mode == "single" or current else ""
             self._emit_message(warning_message, "warning", detail=detail)
             return
-        if self._mode == "single":
+        if self._mode == "single" or current:
             file_path = normalized[0]
             message = _t(
                 "components.file_drop.file_selected_msg",

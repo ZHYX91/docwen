@@ -75,7 +75,6 @@ _SPACING_MD = 12
 _SPACING_LG = 16
 
 _BATCH_ENTRY_COMPACT_WIDTH_THRESHOLD = 340
-_BATCH_CATEGORY_PIVOT_NARROW_THRESHOLD = 380
 _BATCH_STATUS_PULSE_ENTRY_LIMIT = 40
 
 # Constructing a card creates a substantial QWidget/layout tree.  Keep one
@@ -997,6 +996,9 @@ class BatchList(QWidget):
         self._tabs: dict[str, ReorderableListWidget] = {}
         self._pivot_items: dict[str, QWidget] = {}
         self._pivot_compact_mode = False
+        self._category_reflow_timer = QTimer(self)
+        self._category_reflow_timer.setSingleShot(True)
+        self._category_reflow_timer.timeout.connect(self._refresh_pivot_labels)
         self._suspend_selection_sync = False
         self._suspend_tab_selection_sync = False
         self._pending_entry_widget_attachments: deque[tuple[QListWidget, QListWidgetItem, BatchFileEntry]] = deque()
@@ -1048,6 +1050,10 @@ class BatchList(QWidget):
             self.category_pivot = pivot_container
         self.category_pivot.setObjectName("batchCategoryPivot")
         self.category_pivot.setFocusPolicy(Qt.FocusPolicy.TabFocus)
+        self.category_pivot.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        pivot_layout = self.category_pivot.layout()
+        if pivot_layout is not None:
+            pivot_layout.setSizeConstraint(QLayout.SizeConstraint.SetNoConstraint)
 
         self.category_stack = QStackedWidget(self.tabs_frame)
         self.category_stack.setObjectName("batchCategoryStack")
@@ -1062,6 +1068,7 @@ class BatchList(QWidget):
         )
         self._category_selector.hide()
         tabs_layout.addWidget(self._category_selector)
+        self.tabs_frame.installEventFilter(self)
         tabs_layout.addWidget(self.category_stack, 1)
 
         layout.addWidget(self.summary_section)
@@ -1356,14 +1363,15 @@ class BatchList(QWidget):
         super().resizeEvent(event)
         self._sync_summary_header_layout()
         self._refresh_pivot_labels()
-        required = sum(
-            self.fontMetrics().horizontalAdvance(self._category_tab_label(cat, 0)) + 28 for cat in _CATEGORY_ORDER
-        )
-        compact = self.width() < required
-        self.category_pivot.setVisible(not compact)
-        self._category_selector.setVisible(compact)
 
     def eventFilter(self, watched, event) -> bool:
+        if watched in (self.tabs_frame, self.category_pivot) and event.type() in {
+            QEvent.Type.Resize,
+            QEvent.Type.LayoutRequest,
+            QEvent.Type.FontChange,
+            QEvent.Type.StyleChange,
+        }:
+            self._category_reflow_timer.start(0)
         if watched is self._summary_header and event.type() == QEvent.Type.LayoutRequest:
             self._sync_summary_header_layout()
         if (
@@ -1575,13 +1583,38 @@ class BatchList(QWidget):
             )
         if not self._pivot_items:
             return
-        self._pivot_compact_mode = self.width() <= _BATCH_CATEGORY_PIVOT_NARROW_THRESHOLD
+        layout = self.tabs_frame.layout()
+        margins = layout.contentsMargins() if layout is not None else self.tabs_frame.contentsMargins()
+        available = self.tabs_frame.contentsRect().width() - margins.left() - margins.right()
+        self._pivot_compact_mode = self._pivot_required_width(include_count=True) > available
+        self._set_pivot_labels(include_count=not self._pivot_compact_mode)
+        use_selector = self._pivot_required_width(include_count=not self._pivot_compact_mode) > available
+        self.category_pivot.setVisible(not use_selector)
+        self._category_selector.setVisible(use_selector)
+
+    def _pivot_required_width(self, *, include_count: bool) -> int:
+        layout = self.category_pivot.layout()
+        widths = 0
+        for category, item in self._pivot_items.items():
+            label = self._category_tab_label(
+                category, self._vm.get_visible_count_for_category(category), include_count=include_count
+            )
+            metrics = item.fontMetrics()
+            text_delta = metrics.horizontalAdvance(label) - metrics.horizontalAdvance(str(item.property("text") or ""))
+            widths += max(item.minimumWidth(), item.sizeHint().width() + text_delta)
+        if layout is not None:
+            margins = layout.contentsMargins()
+            widths += margins.left() + margins.right()
+            widths += max(0, len(self._pivot_items) - 1) * max(0, layout.spacing())
+        return widths
+
+    def _set_pivot_labels(self, *, include_count: bool) -> None:
         for category, item in self._pivot_items.items():
             count = self._vm.get_visible_count_for_category(category)
             label = self._category_tab_label(
                 category,
                 count,
-                include_count=not self._pivot_compact_mode,
+                include_count=include_count,
             )
             if hasattr(item, "setText"):
                 item.setText(label)  # pyright: ignore[reportAttributeAccessIssue]

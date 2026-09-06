@@ -303,9 +303,34 @@ def test_input_selection_updates_merge_reference_and_availability(main_window_wi
     main_window._input_area_vm.add_files([str(paths[1])])
     main_window._on_selected_file_changed(str(paths[1]))
     assert main_window._conversion_panel_vm.reference_table_name == "reference.xlsx"
+    assert "reference.xlsx" in main_window._input_area_vm.selection_message
     button = main_window._conversion_panel._merge_tables_button
     assert button is not None and button.isEnabled()
     assert not button.toolTip()
+
+
+def test_batch_category_selection_updates_input_summary_and_conversion_target(
+    main_window_with_controller, tmp_path, qtbot
+):
+    from PIL import Image
+
+    window = main_window_with_controller
+    text = tmp_path / "source.md"
+    text.write_text("# Source", encoding="utf-8")
+    image = tmp_path / "current.png"
+    Image.new("RGB", (24, 24), "white").save(image)
+    window._input_area_vm.set_mode("batch")
+    window._input_area_vm.add_files([str(text), str(image)])
+    window._batch_list._activate_tab("markdown")
+    window._input_area_vm.set_mode("single")
+    assert "source.md" in window._input_area_vm.selection_message
+    window._input_area_vm.set_mode("batch")
+    window._batch_list._activate_tab("image")
+    qtbot.wait(30)
+    assert "current.png" in window._input_area_vm.selection_message
+    assert "source.md" not in window._input_area_vm.selection_message
+    assert window.view_model.selected_file.path == str(image)
+    assert window._conversion_panel_vm.current_file_path == str(image)
 
 
 def test_form_row_label_and_control_do_not_overlap_when_resized(qtbot):

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from ._batch_list_widget_support import (
     CATEGORY_ORDER,
-    COLOR_SECONDARY,
     FILTER_OPTIONS,
     BatchList,
     BatchListViewModel,
@@ -16,7 +15,6 @@ from ._batch_list_widget_support import (
     _add_synthetic,
     _filter_option_label,
     _format_size,
-    _hex_to_rgba,
     _load_status_icon,
     _PivotText,
     _source_path_text,
@@ -72,13 +70,13 @@ class TestHelpers:
             expected = _t(f"components.file_drop.batch_list.filter_{filter_key}", status_fallback)
         assert _filter_option_label(filter_key, fallback) == expected
 
-    @pytest.mark.parametrize(("theme_name", "alpha"), [("light", 104), ("dark", 168)])
-    def test_batch_stylesheet_keeps_old_pyside_detail_tone(self, theme_name: str, alpha: int) -> None:
+    @pytest.mark.parametrize(("theme_name", "color"), [("light", "#6E7781"), ("dark", "#8B949E")])
+    def test_batch_stylesheet_keeps_secondary_details_readable(self, theme_name: str, color: str) -> None:
         stylesheet = build_batch_list_stylesheet(theme_name)
 
         assert 'QLabel#batchInfoLabel[class="danger"] {' in stylesheet
         assert 'QLabel#batchDetailLabel[detailRole="secondary"] {' in stylesheet
-        assert f"color: {_hex_to_rgba(COLOR_SECONDARY, alpha)};" in stylesheet
+        assert f"color: {color};" in stylesheet
         assert "QWidget#batchOutputRow {" in stylesheet
 
 
@@ -117,12 +115,35 @@ class TestConstruction:
         assert all("1" not in cast(_PivotText, item).text() for item in items)
         assert max(item.geometry().right() for item in items) < pivot.width()
 
+    def test_category_navigation_remains_accessible_after_counts_and_font_change(
+        self, populated_widget: BatchList, qapp: QApplication
+    ) -> None:
+        populated_widget.setFixedWidth(400)
+        populated_widget.resize(400, 640)
+        populated_widget.show()
+        _add_synthetic(populated_widget.view_model, [f"/test/image-{index}.png" for index in range(100)])
+        for font_size in (14, 26):
+            font = populated_widget.font()
+            font.setPixelSize(font_size)
+            for item in populated_widget._pivot_items.values():
+                item.setFont(font)
+            for _ in range(8):
+                qapp.processEvents()
+            selector = populated_widget._category_selector
+            if selector.isVisible():
+                assert selector.count() == 6
+                selector.setCurrentIndex(selector.findData("other"))
+                assert populated_widget.view_model.current_category == "other"
+            else:
+                pivot = populated_widget.category_pivot
+                assert all(pivot.rect().contains(item.geometry()) for item in populated_widget._pivot_items.values())
+
     def test_wide_category_pivot_restores_nonzero_counts(
         self,
         populated_widget: BatchList,
         qapp: QApplication,
     ) -> None:
-        populated_widget.resize(720, 640)
+        populated_widget.resize(1200, 640)
         populated_widget.show()
         qapp.processEvents()
 
