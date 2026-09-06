@@ -9,12 +9,11 @@ pytestmark = pytest.mark.gui
 def test_settings_cards_keep_field_columns_aligned_across_all_tabs(qapp, qtbot, locale, font_size) -> None:
     from PySide6.QtCore import QPoint
     from PySide6.QtGui import QFont
-    from PySide6.QtWidgets import QWidget
 
     from docwen_gui.i18n import get_locale, set_locale
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
-    from docwen_gui.widgets.settings.base_tab import _SettingsFormLayout
+    from docwen_gui.widgets.settings.base_tab import BaseSettingsTab, _SettingsFormLayout
     from docwen_gui.widgets.settings.dialog import _TAB_SPECS
 
     previous = get_locale()
@@ -22,7 +21,7 @@ def test_settings_cards_keep_field_columns_aligned_across_all_tabs(qapp, qtbot, 
     try:
         for key, spec in _TAB_SPECS.items():
             tab = spec.factory(SettingsViewModel(config=SettingsConfig()))
-            assert isinstance(tab, QWidget)
+            assert isinstance(tab, BaseSettingsTab)
             tab.setFont(QFont("Microsoft YaHei", font_size))
             tab.show()
             try:

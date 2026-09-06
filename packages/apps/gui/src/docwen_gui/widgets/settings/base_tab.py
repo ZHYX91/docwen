@@ -124,6 +124,9 @@ class BaseSettingsTab(QWidget):
         self._scroll_area.setObjectName("settingsTabScrollArea")
         self._scroll_area.setWidgetResizable(True)
         self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        # Reserve the scrollbar gutter so crossing the responsive breakpoint
+        # cannot leave the page stuck in its taller layout after widening.
+        self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         root_layout.addWidget(self._scroll_area, 1)
 
         self._scroll_container = QWidget(self._scroll_area)

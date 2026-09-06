@@ -137,7 +137,7 @@ class TabbedTemplateSelector(QWidget):
     # ── Public API ────────────────────────────────────────────────────────────
 
     def activate_and_select(self, template_type: str) -> bool:
-        """激活指定选项卡并选中第一个模板。
+        """激活指定选项卡并选中语言对应的默认模板。
 
         Returns:
             True 表示成功选中。
@@ -146,12 +146,17 @@ class TabbedTemplateSelector(QWidget):
             template_type if template_type in self._selectors else next(iter(self._selectors.keys()), "docx")
         )
         self._set_current_tab(resolved_type, emit_signal=False)
-        selector = self._selectors.get(resolved_type)
+        return self._activate_default_template(resolved_type, selection_source="auto_default")
+
+    def _activate_default_template(self, template_type: str, *, selection_source: str) -> bool:
+        selector = self._selectors.get(template_type)
         if selector and selector._list.count() > 0:
-            selector.activate_first_template(
-                selection_source="auto_default",
-                explanation=self._build_auto_default_reason(resolved_type),
-            )
+            preferred_name = t("meta.template_name") if template_type == "docx" else ""
+            explanation = self._build_auto_default_reason(template_type)
+            if preferred_name and selector.has_template(preferred_name):
+                selector.select_template(preferred_name, selection_source=selection_source, explanation=explanation)
+            else:
+                selector.activate_first_template(selection_source=selection_source, explanation=explanation)
             return True
         return False
 
@@ -260,7 +265,7 @@ class TabbedTemplateSelector(QWidget):
             elif selected and selected in sorted_names:
                 selector.select_template(selected, selection_source="restore")
             elif sorted_names:
-                selector.activate_first_template(selection_source="restore")
+                self._activate_default_template(template_type, selection_source="restore")
         if self._manual_selection is not None and self._manual_selection[0] == template_type:
             self._restore_manual_selection()
 

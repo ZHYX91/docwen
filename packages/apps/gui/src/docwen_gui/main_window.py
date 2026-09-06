@@ -849,8 +849,6 @@ class MainWindow(QWidget):
             self._input_area_vm.sync_selection([selected_file], current=True)
             if self._view_model.mode == "single":
                 self._batch_list.select_file(selected_file.path)
-        elif not self._view_model.files:
-            self._input_area_vm.sync_selection([])
 
         window_is_normal = not (self.isMaximized() or self.isFullScreen() or self.isMinimized())
         old_left_visible = self._left_panel_frame.isVisible()

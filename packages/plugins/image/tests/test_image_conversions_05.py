@@ -223,6 +223,33 @@ class TestImageMergeToTiff:
             assert "notanimage.png" in result.error.message
             assert "Failed to load image" in result.error.message
 
+    @pytest.mark.contract
+    def test_merge_initializes_heic_decoder_without_a_prior_conversion(
+        self, sample_png_path, real_heic_path, real_heif_path, tmp_path, monkeypatch
+    ):
+        from docwen_plugin_image.merge.converter import ImageToTiffMerger
+
+        # Fixture creation registers Pillow's decoder; reproduce a fresh process
+        # in which no individual HEIC conversion has registered it yet.
+        monkeypatch.delitem(Image.OPEN, "HEIF", raising=False)
+        staging = tmp_path / "merge-cold-decoder"
+        staging.mkdir()
+        context = _build_fake_context(
+            str(sample_png_path),
+            str(staging),
+            "tif",
+            action_name="merge_images_to_tiff",
+            extra_input_paths=[str(real_heic_path), str(real_heif_path)],
+        )
+        result = ImageToTiffMerger().convert(context)
+        assert result.success, result.error
+        with Image.open(result.artifacts[0].staging_path) as output:
+            assert getattr(output, "n_frames", 1) == 3
+            output.seek(1)
+            assert output.size == (18, 12)
+            output.seek(2)
+            assert output.size == (20, 10)
+
 
 @pytest.mark.contract
 class TestAdmittedFormatRouting:

@@ -79,6 +79,7 @@ save_failed = "Error al guardar la configuración"
 # 状态栏
 # =============================================================================
 [info_area]
+task_progress_percent = "Progreso:{percent}%"
 task_state_skipped = "Omitido"
 batch_name = "Procesamiento por lotes ({count} archivos)"
 aggregate_name = "Combinar ({count} archivos)"
@@ -100,7 +101,7 @@ history_completed = "Completado: {name}"
 task_state_partial = "Fallo parcial"
 task_state_failed = "Fallido"
 task_state_cancelled = "Cancelado"
-task_current_file = "Archivo actual: {name}"
+task_current_file = "Archivo de la tarea: {name}"
 task_progress_detail = "Completados {completed}/{total}, fallidos {failed}"
 history_started = "Iniciado: {name}"
 task_skipped_count = "Omitidos: {skipped}"
@@ -910,6 +911,8 @@ drag_preview_skipped_unreadable = "Inaccesible: {path}"
 
 # 批量文件列表
 [components.file_drop.batch_list]
+error_count = "Errores: {count}"
+issue_count = "Incidencias: {count}"
 no_batch_files = "No hay archivos por lotes"
 retry_selected_failed = "Reintentar el elemento fallido seleccionado"
 retry_all_failed = "Reintentar todos los elementos fallidos de esta pestaña"
@@ -1003,7 +1006,7 @@ usage_line = "Uso: {value}"
 source_line = "Origen: {value}"
 updated_line = "Actualizado: {value}"
 source_tooltip = "Carpeta de origen: {value}"
-auto_selected_reason = "Se seleccionó automáticamente la primera opción disponible de {template_kind} según la configuración predeterminada."
+auto_selected_reason = "Se seleccionó una plantilla disponible en {template_kind} según la configuración predeterminada."
 
 open_location = "Abrir ubicación del archivo"
 
@@ -1015,6 +1018,7 @@ spreadsheet_templates = "Hoja"
 # 转换面板区域
 # =============================================================================
 [conversion_panel]
+no_common_target = "Estos archivos no tienen un formato de destino común. Use el modo de archivo individual para convertirlos por separado."
 target_format = "Formato de destino"
 route_options_unavailable = "No se pudieron cargar las operaciones disponibles; las acciones están desactivadas para evitar una solicitud incorrecta."
 no_compatible_operation = "No hay ninguna operación compatible con este archivo."
@@ -1079,7 +1083,7 @@ merge_to_pdf = "Combinar a PDF"
 split_to_pdf = "Dividir a PDF"
 split_page_range = "Rango de páginas a dividir:"
 page_range_placeholder = "1-3,5  *  #"
-selected_split_file = "Archivo seleccionado para dividir ({pages} páginas):"
+selected_split_file = "Archivo actual: {pages} páginas"
 invalid_page_range = "Rango de páginas no válido: {part}"
 invalid_page = "Página no válida: {part}"
 split_mode_single_page_warning = "⚠️ Este archivo solo tiene 1 página; no es necesario dividir"

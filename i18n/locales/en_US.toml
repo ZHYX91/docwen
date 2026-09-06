@@ -79,6 +79,7 @@ save_failed = "Failed to save settings"
 # 状态栏
 # =============================================================================
 [info_area]
+task_progress_percent = "Progress:{percent}%"
 task_state_skipped = "Skipped"
 batch_name = "Batch processing ({count} files)"
 aggregate_name = "Merge ({count} files)"
@@ -100,7 +101,7 @@ history_completed = "Completed: {name}"
 task_state_partial = "Partial failure"
 task_state_failed = "Failed"
 task_state_cancelled = "Cancelled"
-task_current_file = "Current file: {name}"
+task_current_file = "Task file: {name}"
 task_progress_detail = "Completed {completed}/{total}, failed {failed}"
 history_started = "Started: {name}"
 task_skipped_count = "Skipped: {skipped}"
@@ -908,6 +909,8 @@ all_files_filter = "All files"
 
 # 批量文件列表
 [components.file_drop.batch_list]
+error_count = "Errors: {count}"
+issue_count = "Issues: {count}"
 no_batch_files = "No batch files"
 retry_selected_failed = "Retry selected failed item"
 retry_all_failed = "Retry all failed items in this tab"
@@ -997,7 +1000,7 @@ usage_line = "Use: {value}"
 source_line = "Source: {value}"
 updated_line = "Updated: {value}"
 source_tooltip = "Source folder: {value}"
-auto_selected_reason = "Auto-selected the first available option in {template_kind} based on the default setting."
+auto_selected_reason = "Selected an available template in {template_kind} using the default settings."
 open_location = "Open file location"
 
 # 选项卡式模板选择器
@@ -1009,6 +1012,7 @@ spreadsheet_templates = "Sheet"
 # 转换面板区域
 # =============================================================================
 [conversion_panel]
+no_common_target = "These files have no common target format. Switch to single-file mode to convert them separately."
 target_format = "Target format"
 route_options_unavailable = "Available operations could not be loaded; actions are disabled to avoid an incorrect request."
 no_compatible_operation = "No compatible operation is available for this file."
@@ -1073,7 +1077,7 @@ merge_to_pdf = "Merge to PDF"
 split_to_pdf = "Split to PDF"
 split_page_range = "Split page range:"
 page_range_placeholder = "1-3,5  *  #"
-selected_split_file = "Selected file to split ({pages} pages):"
+selected_split_file = "Current file: {pages} pages"
 invalid_page_range = "Invalid page range: {part}"
 invalid_page = "Invalid page: {part}"
 split_mode_single_page_warning = "⚠️ This file has only 1 page; no split needed"

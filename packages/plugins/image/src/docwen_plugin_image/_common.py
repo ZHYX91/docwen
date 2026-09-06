@@ -80,14 +80,19 @@ def is_heic_format(source_format: str) -> bool:
     return normalize_format(source_format) in HEIC_INPUT_FORMATS
 
 
-def preconvert_heic_to_png(input_path: str, staging_dir: str) -> str:
-    """Convert HEIC/HEIF input to a PNG intermediate in the plugin workspace."""
+def register_heic_decoder() -> None:
+    """Enable HEIC decoding before any route opens admitted HEIC inputs."""
     try:
         from pillow_heif import register_heif_opener
     except ImportError as exc:
         raise RuntimeError("HEIC/HEIF conversion requires the optional pillow-heif dependency.") from exc
 
     register_heif_opener()
+
+
+def preconvert_heic_to_png(input_path: str, staging_dir: str) -> str:
+    """Convert HEIC/HEIF input to a PNG intermediate in the plugin workspace."""
+    register_heic_decoder()
     output_path = Path(staging_dir) / f"{input_stem(input_path)}.png"
     counter = 1
     while output_path.exists():

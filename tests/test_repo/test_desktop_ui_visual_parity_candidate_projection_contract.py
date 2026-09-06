@@ -35,6 +35,7 @@ def test_visual_candidate_keeps_the_confirmed_production_repairs() -> None:
     assert "_TWO_SIDE_PANEL_MIN_WIDTH" not in main
     for token in ("_PYRAMID_INDENTS", "_type_prompt_rows", "selection_detail"):
         assert token in input_area
-    assert "_BATCH_CATEGORY_PIVOT_NARROW_THRESHOLD = 380" in batch_list
+    assert "def _pivot_required_width(" in batch_list
+    assert 'setObjectName("batchCategorySelector")' in batch_list
     assert "def _initialize_application_theme(" in app
     assert "_initialize_application_theme(app, controller)" in bundle_entry

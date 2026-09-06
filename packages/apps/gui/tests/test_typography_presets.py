@@ -203,7 +203,11 @@ def test_batch_status_pulse_returns_to_semantic_font_size(qapp) -> None:
         widget.close()
 
 
-def test_xlarge_batch_entry_wraps_before_name_and_badge_collide(qapp) -> None:
+@pytest.mark.parametrize("preset", ["default", "large", "xlarge"])
+@pytest.mark.parametrize(
+    "filename", ["27-markdown.markdown", "very_long_filename_for_status_balance_review_document_v3.docx"]
+)
+def test_batch_entry_wraps_before_name_and_badge_collide(qapp, preset, filename) -> None:
     from PySide6.QtWidgets import QListWidget, QListWidgetItem
 
     from docwen_gui.styles.theme_manager import ThemeManager
@@ -213,11 +217,11 @@ def test_xlarge_batch_entry_wraps_before_name_and_badge_collide(qapp) -> None:
     ThemeManager.reset_instance()
     manager = ThemeManager.get_instance()
     manager.initialize(qapp, "dark")
-    manager.apply_font_size_preset("xlarge")
+    manager.apply_font_size_preset(preset)
     entry = BatchFileEntry(
-        file_path="very_long_filename_for_status_balance_review_document_v3.docx",
-        file_name="very_long_filename_for_status_balance_review_document_v3.docx",
-        detected_format="docx",
+        file_path=filename,
+        file_name=filename,
+        detected_format="markdown" if filename.endswith(".markdown") else "docx",
         workflow_category="document",
         size_bytes=1_048_576,
         status="completed",
@@ -237,10 +241,61 @@ def test_xlarge_batch_entry_wraps_before_name_and_badge_collide(qapp) -> None:
         assert widget.name_label.text().replace("\u200b", "") == entry.file_name
         wrapped_name_height = widget.name_label.heightForWidth(widget.name_label.width())
         assert wrapped_name_height <= widget.name_label.height()
-        assert widget.info_badge.sizeHint().width() <= widget.info_badge.width()
+        assert widget.info_badge.heightForWidth(widget.info_badge.width()) <= widget.info_badge.height()
         item_layout = widget.layout()
         assert item_layout is not None
         assert item.sizeHint().height() >= item_layout.totalHeightForWidth(list_widget.viewport().width())
+    finally:
+        list_widget.close()
+        ThemeManager.reset_instance()
+
+
+@pytest.mark.parametrize("preset", ["default", "large", "xlarge"])
+@pytest.mark.parametrize("status", ["pending", "failed"])
+def test_themed_batch_details_fit_inside_the_actual_list_item(qapp, qtbot, preset, status) -> None:
+    from PySide6.QtCore import QPoint
+    from PySide6.QtWidgets import QListWidget, QListWidgetItem
+
+    from docwen_gui.styles.theme_manager import ThemeManager
+    from docwen_gui.view_models.batch_list_vm import BatchFileEntry
+    from docwen_gui.widgets.batch_list import BatchEntryItemWidget
+
+    ThemeManager.reset_instance()
+    manager = ThemeManager.get_instance()
+    manager.initialize(qapp, "light")
+    manager.apply_font_size_preset(preset)
+    detail_text = "文件名声明为 ET，内容检测为 XLS。两者属于同一处理类别，将按检测到的格式处理。"
+    entry = BatchFileEntry(
+        file_path="D:/documents/formats/10-et.et",
+        file_name="10-et.et",
+        detected_format="xls",
+        workflow_category="spreadsheet",
+        size_bytes=5632,
+        status=status,
+        warning_message=detail_text if status == "pending" else "",
+        error_message=detail_text if status == "failed" else "",
+    )
+    list_widget = QListWidget()
+    qtbot.addWidget(list_widget)
+    list_widget.setObjectName("batchListWidget")
+    list_widget.setSpacing(4)
+    list_widget.resize(390, 700)
+    item = QListWidgetItem(list_widget)
+    widget = BatchEntryItemWidget(entry)
+    list_widget.setItemWidget(item, widget)
+    widget.bind_list_item(list_widget, item)
+    widget.set_interaction_state(selected=True, current=True)
+    list_widget.show()
+    try:
+        qtbot.wait(100)
+        detail = widget._get_row_value_widget(widget.detail_row)
+        assert detail is not None
+        assert detail.isVisible()
+        assert detail.heightForWidth(detail.width()) <= detail.height()
+        assert detail.mapTo(widget, QPoint(0, detail.height())).y() <= widget.height()
+        layout = widget.layout()
+        assert layout is not None
+        assert widget.height() >= layout.minimumSize().height()
     finally:
         list_widget.close()
         ThemeManager.reset_instance()
@@ -275,7 +330,7 @@ def test_xlarge_layout_render_controls_stay_inside_right_panel(qapp) -> None:
         ThemeManager.reset_instance()
 
 
-def test_xlarge_conversion_detail_controls_wrap_without_clipping(qapp, tmp_path) -> None:
+def test_xlarge_conversion_detail_controls_wrap_without_clipping(qapp, tmp_path, qtbot) -> None:
     import zipfile
 
     from PySide6.QtWidgets import QLabel
@@ -307,6 +362,7 @@ def test_xlarge_conversion_detail_controls_wrap_without_clipping(qapp, tmp_path)
         vm.set_file_info("spreadsheet", "xlsx", file_path=str(protected_workbook))
         for _ in range(3):
             qapp.processEvents()
+        qtbot.waitUntil(lambda: widget.findChild(QLabel, "conversionWrappingCheckLabel") is not None)
         consent_label = widget.findChild(QLabel, "conversionWrappingCheckLabel")
         assert consent_label is not None
         assert consent_label.wordWrap()

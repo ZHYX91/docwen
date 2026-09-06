@@ -821,8 +821,8 @@ class InfoAreaViewModel(QObject):
                 ]
             )
 
-            if ts.progress_message:
-                summary_message += "\n" + ts.progress_message
+            if state == "active" and ts.percent is not None:
+                summary_message += "\n" + _t("info_area.task_progress_percent", percent=round(ts.percent))
             message = summary_message
             badge_tone = ts.tone
             overview_source = "task"

@@ -98,7 +98,8 @@ class TestMainWindowBatchSync:
         assert entry.warning_message == ref.warning_message
         assert entry.metadata == ref.metadata
         assert window._input_area_vm.selection_tone == "warning"
-        assert window._input_area_vm.selection_message == ref.warning_message
+        assert Path(ref.path).name in window._input_area_vm.selection_message
+        assert ref.warning_message in window._input_area_vm.selection_message
 
     def test_batch_tab_switch_updates_selection_and_clears_stale_panels(self, window, tmp_path, qapp) -> None:
         note = tmp_path / "note.md"

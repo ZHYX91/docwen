@@ -10,7 +10,6 @@ from ._batch_list_widget_support import (
     BatchList,
     BatchListViewModel,
     QApplication,
-    QBoxLayout,
     QListWidget,
     QListWidgetItem,
     Qt,
@@ -110,14 +109,14 @@ class TestBatchEntryItemWidget:
         )
         widget = BatchEntryItemWidget(entry)
         try:
-            # A 358 px content area is wide enough at the default type size,
+            # A 434 px content area is wide enough at the default type size,
             # regardless of status text, icon presence, or prior layout state.
-            widget.setFixedWidth(374)
+            widget.setFixedWidth(450)
             widget.show()
             for _ in range(3):
                 qapp.processEvents()
             assert widget._is_compact is False
-            assert widget._header_layout.direction() == QBoxLayout.Direction.LeftToRight
+            assert widget.info_badge.x() > widget.name_label.geometry().right()
 
             # Entering compact mode must not feed the stretched icon width
             # back into the next decision and make the vertical layout sticky.
@@ -125,20 +124,20 @@ class TestBatchEntryItemWidget:
             for _ in range(3):
                 qapp.processEvents()
             assert widget._is_compact is True
-            assert widget._header_layout.direction() == QBoxLayout.Direction.TopToBottom
+            assert widget.info_badge.y() > widget.name_label.geometry().bottom()
 
-            widget.setFixedWidth(374)
+            widget.setFixedWidth(450)
             for _ in range(3):
                 qapp.processEvents()
             assert widget._is_compact is False
-            assert widget._header_layout.direction() == QBoxLayout.Direction.LeftToRight
+            assert widget.info_badge.x() > widget.name_label.geometry().right()
 
             # Hidden category pages use the same threshold and recover too.
             widget.hide()
             widget.setFixedWidth(320)
             widget._apply_compact_mode()
             assert widget._is_compact is True
-            widget.setFixedWidth(374)
+            widget.setFixedWidth(450)
             widget._apply_compact_mode()
             assert widget._is_compact is False
         finally:
@@ -362,7 +361,7 @@ class TestBatchEntryItemWidget:
         assert entry_widget.primary_action_button.text() == _t("components.file_drop.batch_list.action_open_output")
         assert entry_widget._secondary_action_visibility["retry"] is True
 
-    def test_failed_entry_expansion_updates_list_item_height(self, qapp: QApplication) -> None:
+    def test_failed_entry_expansion_updates_list_item_height(self, qapp: QApplication, qtbot) -> None:
         failed_entry = BatchFileEntry(
             file_path="/test/annual-summary-2026.docx",
             file_name="annual-summary-2026.docx",
@@ -370,22 +369,36 @@ class TestBatchEntryItemWidget:
             workflow_category="document",
             size_bytes=842752,
             status="failed",
-            error_message="Conversion failed: annual-summary-2026.docx. The document structure could not be read.",
+            error_message=(
+                "Conversion failed: annual-summary-2026.docx. The document structure could not be read. "
+                "A very long source path must stay readable when the failure details expand. "
+                "D:/documents/annual-summaries/2026/department-review/source-document.docx"
+            ),
             error_count=1,
         )
         list_widget = QListWidget()
+        qtbot.addWidget(list_widget)
         list_widget.resize(320, 400)
         item = QListWidgetItem(list_widget)
         entry_widget = BatchEntryItemWidget(failed_entry)
         list_widget.setItemWidget(item, entry_widget)
         entry_widget.bind_list_item(list_widget, item)
+        list_widget.show()
         qapp.processEvents()
 
+        entry_widget._is_hovered = False
+        entry_widget.set_interaction_state(selected=False, current=False)
+        qtbot.wait(100)
         collapsed_height = item.sizeHint().height()
         entry_widget.set_interaction_state(selected=True, current=True)
-        qapp.processEvents()
+        qtbot.wait(100)
 
         assert item.sizeHint().height() > collapsed_height
+        detail = entry_widget._get_row_value_widget(entry_widget.detail_row)
+        assert detail is not None
+        qtbot.waitUntil(lambda: detail.heightForWidth(detail.width()) <= detail.height())
+        assert entry_widget.detail_row.rect().contains(detail.geometry())
+        assert entry_widget.rect().contains(entry_widget.body_section.geometry())
 
     def test_completed_entry_shows_open_output(self, entry_widget: BatchEntryItemWidget) -> None:
         completed_entry = BatchFileEntry(

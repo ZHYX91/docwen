@@ -193,7 +193,9 @@ def test_pdf_workflow_fits_default_columns_with_large_typography(main_window_wit
         panel = window._conversion_panel
         button = panel._split_pdf_button
         field = panel._page_input_edit.parentWidget()
-        gap = field.mapTo(window, QPoint()).y() - button.mapTo(window, QPoint()).y() - button.height()
+        assert button.mapTo(window, QPoint()).y() >= field.mapTo(window, QPoint()).y() + field.height()
+        info = panel._pdf_info_label
+        gap = button.mapTo(window, QPoint()).y() - info.mapTo(window, QPoint()).y() - info.height()
         assert 0 <= gap <= 16, gap
     finally:
         manager.apply_font_size_preset("default")
@@ -234,6 +236,38 @@ def test_mixed_spreadsheets_share_routes_and_protection_gate(qtbot, tmp_path):
         targets.append(vm.route_choices_result.targets)
     assert targets[0] == targets[1]
     vm.close()
+
+
+def test_mixed_spreadsheets_without_common_target_explain_how_to_continue(qtbot, tmp_path):
+    from openpyxl import Workbook
+    from tests.support.gui_vm_fakes import FakeMainWindowViewModel
+
+    from docwen_gui.i18n import t
+    from docwen_gui.view_models.conversion_panel_vm import ConversionPanelViewModel
+    from docwen_gui.widgets.conversion_panel import ConversionPanel
+    from docwen_gui.widgets.panel_card import InlineNotice
+
+    formats = {str(tmp_path / f"sample.{fmt}"): fmt for fmt in ("xlsx", "xls", "ods", "et", "csv")}
+    xlsx = next(iter(formats))
+    Workbook().save(xlsx)
+    vm = ConversionPanelViewModel(FakeMainWindowViewModel())  # type: ignore[arg-type]
+    widget = ConversionPanel(vm)
+    qtbot.addWidget(widget)
+    try:
+        vm.set_file_info("spreadsheet", "xlsx", xlsx, list(formats), "batch", source_formats=formats)
+        qtbot.waitUntil(lambda: not vm.spreadsheet_analysis_pending)
+        assert not widget._conversion_combo.current_choice_enabled()
+        assert not widget._conversion_button.isEnabled()
+        notices = widget.findChildren(InlineNotice, "targetAvailabilityNotice")
+        assert any(
+            not notice.isHidden() and notice.label.text() == t("conversion_panel.no_common_target")
+            for notice in notices
+        )
+        vm.set_file_info("spreadsheet", "csv", str(tmp_path / "sample.csv"), [], "single")
+        assert widget._conversion_combo.current_choice_enabled()
+        assert all(notice.isHidden() for notice in widget.findChildren(InlineNotice, "targetAvailabilityNotice"))
+    finally:
+        vm.close()
 
 
 def test_analysis_is_nonblocking_cached_and_rejects_stale_results(qtbot, monkeypatch, tmp_path):

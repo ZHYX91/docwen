@@ -402,12 +402,28 @@ class ConversionPanel(QWidget):
                     layout.insertWidget(
                         layout.indexOf(widget), FormRow(_t("conversion_panel.target_format", "Target format"), combo)
                     )
+                    notice = InlineNotice(parent=self, tone="warning")
+                    notice.setObjectName("targetAvailabilityNotice")
+                    layout.insertWidget(layout.indexOf(widget), notice)
+                    combo.choices_changed.connect(lambda c=combo, n=notice: self._sync_target_notice(c, n))
+                    self._sync_target_notice(combo, notice)
                 footers.append(widget)
             elif isinstance(widget, QPushButton):
                 footers.append(widget)
         for footer in dict.fromkeys(footers):
             layout.removeWidget(footer)
             layout.addWidget(footer)
+
+    def _sync_target_notice(self, combo: FormatSelector, notice: InlineNotice) -> None:
+        available = any(bool(combo.itemData(index, Qt.ItemDataRole.UserRole)) for index in range(combo.count()))
+        notice.setVisible(not available)
+        if not available:
+            message = (
+                _t("conversion_panel.no_common_target")
+                if self._vm.ui_mode == "batch"
+                else _t("conversion_panel.no_compatible_operation")
+            )
+            notice.setText(message)
 
     def _clear_all_content(self) -> None:
         """Remove all dynamic widgets from content layouts."""
@@ -1336,8 +1352,6 @@ class ConversionPanel(QWidget):
         self._split_pdf_button = split_pdf_btn
         split_row.addWidget(split_pdf_btn)
 
-        extra_layout.addWidget(split_row_container)
-
         # Page range input row
         page_edit = QLineEdit(self._vm.page_input, self)
         page_edit.setMinimumWidth(160)
@@ -1365,6 +1379,7 @@ class ConversionPanel(QWidget):
         page_warning.hide()
         self._page_warning_label = page_warning
         extra_layout.addWidget(page_warning)
+        extra_layout.addWidget(split_row_container)
 
     # ── Button Click Handlers ───────────────────────────────────────────
 

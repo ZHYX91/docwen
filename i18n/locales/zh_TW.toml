@@ -30,6 +30,7 @@ save_failed = "儲存設定失敗"
 # 状态栏
 # =============================================================================
 [info_area]
+task_progress_percent = "進度：{percent}%"
 task_state_skipped = "已跳過"
 batch_name = "批次處理（{count} 個檔案）"
 aggregate_name = "合併（{count} 個檔案）"
@@ -51,7 +52,7 @@ history_completed = "已完成：{name}"
 task_state_partial = "部分失敗"
 task_state_failed = "失敗"
 task_state_cancelled = "已取消"
-task_current_file = "目前檔案：{name}"
+task_current_file = "工作檔案：{name}"
 task_progress_detail = "已完成 {completed}/{total}，失敗 {failed}"
 history_started = "開始處理：{name}"
 task_skipped_count = "已略過：{skipped}"
@@ -861,6 +862,8 @@ drag_preview_summary_degraded = "{summary}；目前為大批次預覽，結果�
 drag_preview_summary_recursive = "{summary}，包含資料夾遞迴掃描"
 
 [components.file_drop.batch_list]
+error_count = "錯誤：{count}"
+issue_count = "問題：{count}"
 no_batch_files = "無批次檔案"
 retry_selected_failed = "重試當前失敗項"
 retry_all_failed = "重試當前分頁全部失敗項"
@@ -952,7 +955,7 @@ usage_line = "適用：{value}"
 source_line = "來源：{value}"
 updated_line = "更新：{value}"
 source_tooltip = "Source folder: {value}"
-auto_selected_reason = "已依預設設定自動選取 {template_kind} 中第一個可用範本。"
+auto_selected_reason = "已依預設設定自動選取 {template_kind} 中的可用範本。"
 open_location = "開啟檔案位置"
 
 [components.template_selector_tabbed]
@@ -963,6 +966,7 @@ spreadsheet_templates = "表格範本"
 # 转换面板区域
 # =============================================================================
 [conversion_panel]
+no_common_target = "這些檔案沒有共同的目標格式。請切換到單檔模式分別轉換。"
 target_format = "目標格式"
 route_options_unavailable = "無法載入可用操作；為避免送出錯誤要求，操作已停用。"
 no_compatible_operation = "此檔案沒有相容的可用操作。"
@@ -1027,7 +1031,7 @@ merge_to_pdf = "合併PDF"
 split_to_pdf = "拆分PDF"
 split_page_range = "拆分頁碼範圍："
 page_range_placeholder = "1-3,5  *  #"
-selected_split_file = "當前選中的拆分文件（共{pages}頁）："
+selected_split_file = "目前檔案：{pages} 頁"
 invalid_page_range = "無效的頁碼範圍: {part}"
 invalid_page = "無效的頁碼: {part}"
 split_mode_single_page_warning = "⚠️ 當前文件只有1頁，無需拆分"

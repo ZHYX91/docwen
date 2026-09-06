@@ -350,7 +350,7 @@ def test_zh_tw_gui_status_messages_use_traditional_chinese_wording() -> None:
         "components.file_drop.files_added_with_skipped_msg": "已新增 {added} 個檔案，跳過 {skipped} 個",
         "components.file_drop.file_selected_msg": "已選取：{filename}",
         "components.file_drop.unsupported_type_msg": "不支援的檔案類型：{filename}",
-        "components.template_selector.auto_selected_reason": "已依預設設定自動選取 {template_kind} 中第一個可用範本。",
+        "components.template_selector.auto_selected_reason": "已依預設設定自動選取 {template_kind} 中的可用範本。",
     }
 
     for key, expected_value in expected_values.items():
@@ -444,8 +444,8 @@ def test_chinese_status_progress_and_failure_messages_use_full_width_colon() -> 
 
     expected_values = {
         "info_area.task_current_file": {
-            "zh_CN": "当前文件：{name}",
-            "zh_TW": "目前檔案：{name}",
+            "zh_CN": "任务文件：{name}",
+            "zh_TW": "工作檔案：{name}",
         },
         "info_area.task_progress_detail": {
             "zh_CN": "已完成 {completed}/{total}，失败 {failed}",

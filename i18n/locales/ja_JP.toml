@@ -30,6 +30,7 @@ save_failed = "設定の保存に失敗しました"
 # 状态栏
 # =============================================================================
 [info_area]
+task_progress_percent = "進捗：{percent}%"
 task_state_skipped = "スキップ"
 batch_name = "一括処理（{count} ファイル）"
 aggregate_name = "結合（{count} ファイル）"
@@ -51,7 +52,7 @@ history_completed = "完了：{name}"
 task_state_partial = "一部失敗"
 task_state_failed = "失敗"
 task_state_cancelled = "キャンセル済み"
-task_current_file = "現在のファイル: {name}"
+task_current_file = "処理対象：{name}"
 task_progress_detail = "完了 {completed}/{total}、失敗 {failed}"
 history_started = "開始: {name}"
 task_skipped_count = "スキップ：{skipped}"
@@ -861,6 +862,8 @@ drag_preview_skipped_unsupported = "未対応：{name}"
 drag_preview_skipped_unreadable = "アクセス不可：{path}"
 
 [components.file_drop.batch_list]
+error_count = "エラー：{count} 件"
+issue_count = "問題：{count} 件"
 no_batch_files = "バッチファイルがありません"
 retry_selected_failed = "選択した失敗項目を再試行"
 retry_all_failed = "このタブの失敗項目をすべて再試行"
@@ -952,7 +955,7 @@ usage_line = "用途: {value}"
 source_line = "ソース: {value}"
 updated_line = "更新: {value}"
 source_tooltip = "参照元フォルダー：{value}"
-auto_selected_reason = "既定の設定に基づき、{template_kind} の最初の利用可能な項目を自動選択しました。"
+auto_selected_reason = "既定の設定に基づき、{template_kind} の利用可能なテンプレートを選択しました。"
 open_location = "ファイルの場所を開く"
 
 [components.template_selector_tabbed]
@@ -963,6 +966,7 @@ spreadsheet_templates = "表"
 # 转换面板区域
 # =============================================================================
 [conversion_panel]
+no_common_target = "これらのファイルに共通の出力形式はありません。単一ファイルモードで個別に変換してください。"
 target_format = "出力形式"
 route_options_unavailable = "利用可能な操作を読み込めなかったため、誤った要求を防ぐために操作を無効にしました。"
 no_compatible_operation = "このファイルで利用できる互換操作はありません。"
@@ -1027,7 +1031,7 @@ merge_to_pdf = "PDFに結合"
 split_to_pdf = "PDFに分割"
 split_page_range = "分割ページ範囲："
 page_range_placeholder = "1-3,5  *  #"
-selected_split_file = "分割する選択されたファイル（{pages} ページ）："
+selected_split_file = "現在のファイル：{pages} ページ"
 invalid_page_range = "無効なページ範囲: {part}"
 invalid_page = "無効なページ: {part}"
 split_mode_single_page_warning = "⚠️ このファイルは1ページのみのため、分割は不要です"

@@ -81,6 +81,37 @@ class TestHelpers:
 
 
 class TestConstruction:
+    def test_one_selected_file_has_location_and_remove_actions(self, populated_widget, monkeypatch, qapp):
+        from PySide6.QtWidgets import QMenu
+
+        widget = populated_widget
+        widget.show()
+        qapp.processEvents()
+        category = widget.view_model.current_category
+        listing = widget._tabs[category]
+        listing.setCurrentRow(0)
+        file_path = widget.get_current_file()
+        original_count = widget.view_model.entry_count
+        labels = []
+
+        def inspect_menu(menu, _position):
+            labels.extend(action.text() for action in menu.actions() if not action.isSeparator())
+            remove_label = _t("components.file_drop.batch_list.action_remove_selected", count=1)
+            remove = next(action for action in menu.actions() if action.text() == remove_label)
+            assert remove.isEnabled()
+            remove.trigger()
+
+        class InspectMenu(QMenu):
+            def exec(self, position):
+                return inspect_menu(self, position)
+
+        monkeypatch.setitem(widget._show_item_context_menu.__func__.__globals__, "QMenu", InspectMenu)
+        widget._show_item_context_menu(category, listing.visualItemRect(listing.item(0)).center())
+        assert len(labels) == 2
+        assert _t("components.file_drop.batch_list.action_open_selected_locations", count=1) in labels
+        assert file_path not in widget.view_model.get_files()
+        assert widget.view_model.entry_count == original_count - 1
+
     def test_widget_created(self, widget: BatchList) -> None:
         assert widget is not None
 

@@ -30,6 +30,7 @@ save_failed = "설정 저장 실패"
 # 状态栏
 # =============================================================================
 [info_area]
+task_progress_percent = "진행률:{percent}%"
 task_state_skipped = "건너뜀"
 batch_name = "일괄 처리 (파일 {count}개)"
 aggregate_name = "병합 (파일 {count}개)"
@@ -51,7 +52,7 @@ history_completed = "완료: {name}"
 task_state_partial = "일부 실패"
 task_state_failed = "실패"
 task_state_cancelled = "취소됨"
-task_current_file = "현재 파일: {name}"
+task_current_file = "작업 파일: {name}"
 task_progress_detail = "완료 {completed}/{total}, 실패 {failed}"
 history_started = "시작: {name}"
 task_skipped_count = "건너뜀: {skipped}"
@@ -861,6 +862,8 @@ drag_preview_skipped_unsupported = "지원 안 함: {name}"
 drag_preview_skipped_unreadable = "접근 불가: {path}"
 
 [components.file_drop.batch_list]
+error_count = "오류: {count}개"
+issue_count = "문제: {count}개"
 no_batch_files = "배치 파일이 없습니다"
 retry_selected_failed = "선택한 실패 항목 다시 시도"
 retry_all_failed = "이 탭의 모든 실패 항목 다시 시도"
@@ -952,7 +955,7 @@ usage_line = "용도: {value}"
 source_line = "출처: {value}"
 updated_line = "업데이트: {value}"
 source_tooltip = "원본 폴더: {value}"
-auto_selected_reason = "기본 설정에 따라 {template_kind}에서 사용 가능한 첫 번째 항목을 자동으로 선택했습니다."
+auto_selected_reason = "기본 설정에 따라 {template_kind}에서 사용 가능한 템플릿을 선택했습니다."
 open_location = "파일 위치 열기"
 
 [components.template_selector_tabbed]
@@ -963,6 +966,7 @@ spreadsheet_templates = "시트"
 # 转换面板区域
 # =============================================================================
 [conversion_panel]
+no_common_target = "이 파일들에 공통으로 적용할 출력 형식이 없습니다. 단일 파일 모드에서 각각 변환하세요."
 target_format = "대상 형식"
 route_options_unavailable = "사용 가능한 작업을 불러오지 못해 잘못된 요청을 방지하도록 작업을 비활성화했습니다."
 no_compatible_operation = "이 파일에 사용할 수 있는 호환 작업이 없습니다."
@@ -1027,7 +1031,7 @@ merge_to_pdf = "PDF로 병합"
 split_to_pdf = "PDF로 분할"
 split_page_range = "분할 페이지 범위:"
 page_range_placeholder = "1-3,5  *  #"
-selected_split_file = "분할할 파일({pages}페이지):"
+selected_split_file = "현재 파일: {pages}페이지"
 invalid_page_range = "잘못된 페이지 범위: {part}"
 invalid_page = "잘못된 페이지: {part}"
 split_mode_single_page_warning = "⚠️ 이 파일은 1페이지뿐이라 분할이 필요 없습니다"

@@ -62,6 +62,8 @@ from docwen_gui.i18n import t as _t
 from docwen_gui.styles.design_tokens import Sizing
 from docwen_gui.styles.theme_semantics import apply_theme_class
 
+from .panel_card import WrappingLabel
+
 if TYPE_CHECKING:
     from ..view_models.batch_list_vm import BatchFileEntry, BatchListViewModel
 
@@ -74,7 +76,7 @@ _SPACING_SM = 8
 _SPACING_MD = 12
 _SPACING_LG = 16
 
-_BATCH_ENTRY_COMPACT_WIDTH_THRESHOLD = 340
+_BATCH_ENTRY_COMPACT_WIDTH_THRESHOLD = 400
 _BATCH_STATUS_PULSE_ENTRY_LIMIT = 40
 
 # Constructing a card creates a substantial QWidget/layout tree.  Keep one
@@ -202,7 +204,7 @@ class ReorderableListWidget(QListWidget):
         return [self.item(i) for i in range(self.count()) if not self.item(i).isHidden()]
 
 
-class _InteractivePathLabel(QLabel):
+class _InteractivePathLabel(WrappingLabel):
     """Keyboard-accessible file label with open and copy-path affordances."""
 
     activated = Signal()
@@ -435,7 +437,7 @@ class BatchEntryItemWidget(QWidget):
         # ── Header row ─────────────────────────────────────────────
         header_row = QWidget(self)
         header_row.setObjectName("batchHeaderRow")
-        self._header_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight, header_row)
+        self._header_layout = QGridLayout(header_row)
         self._header_layout.setContentsMargins(0, 0, 0, 0)
         self._header_layout.setSpacing(_SPACING_XS)
         self._header_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -445,7 +447,7 @@ class BatchEntryItemWidget(QWidget):
         self.status_icon_label.setMinimumSize(QSize(20, 16))
         self.status_icon_label.setMaximumHeight(18)
         self.status_icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._header_layout.addWidget(self.status_icon_label, alignment=Qt.AlignmentFlag.AlignTop)
+        self._header_layout.addWidget(self.status_icon_label, 0, 0, Qt.AlignmentFlag.AlignTop)
 
         self.name_label = _InteractivePathLabel(
             self._entry.file_name,
@@ -455,14 +457,17 @@ class BatchEntryItemWidget(QWidget):
         self.name_label.setObjectName("batchEntryName")
         self.name_label.setStyleSheet("font-weight: bold;")
         self.name_label.setWordWrap(True)
+        self.name_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self.name_label.activated.connect(
             lambda: self.action_requested.emit("open_source_location", self._entry.file_path),
         )
-        self._header_layout.addWidget(self.name_label, stretch=1)
+        self._header_layout.addWidget(self.name_label, 0, 1)
+        self._header_layout.setColumnStretch(1, 1)
 
         self.info_badge = QLabel(header_row)
         self.info_badge.setObjectName("batchInfoBadge")
-        self._header_layout.addWidget(self.info_badge, alignment=Qt.AlignmentFlag.AlignTop)
+        self.info_badge.setWordWrap(True)
+        self._header_layout.addWidget(self.info_badge, 0, 2, Qt.AlignmentFlag.AlignTop)
 
         root.addWidget(header_row)
 
@@ -537,7 +542,7 @@ class BatchEntryItemWidget(QWidget):
         title = QLabel(label_text, row)
         title.setObjectName("batchInfoLabel")
         row_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignTop)
-        value = _MiddleElidedLabel(value_text, row) if elide_middle else QLabel(value_text, row)
+        value = _MiddleElidedLabel(value_text, row) if elide_middle else WrappingLabel(value_text, row)
         value.setObjectName(value_object_name)
         if not elide_middle:
             value.setWordWrap(True)
@@ -569,9 +574,13 @@ class BatchEntryItemWidget(QWidget):
         badge_text = f"{entry.detected_format.upper()} · {size_str} · {status_label}"
         if entry.error_count > 0:
             if entry.status == "failed":
-                badge_text += f" · {entry.error_count} errors"
+                badge_text += " · " + _t(
+                    "components.file_drop.batch_list.error_count", "Errors: {count}", count=entry.error_count
+                )
             else:
-                badge_text += f" · {entry.error_count} issues"
+                badge_text += " · " + _t(
+                    "components.file_drop.batch_list.issue_count", "Issues: {count}", count=entry.error_count
+                )
         self.info_badge.setText(badge_text)
 
         # Body rows
@@ -816,9 +825,8 @@ class BatchEntryItemWidget(QWidget):
         detail_label = self._get_row_value_widget(self.detail_row)
         has_detail = bool(detail_label.text().strip()) if detail_label else False
         self.detail_row.setVisible(expanded and has_detail)
-        if detail_label is not None:
-            line_height = detail_label.fontMetrics().lineSpacing()
-            detail_label.setMinimumHeight(line_height * 3 if expanded and has_detail else 0)
+        if isinstance(detail_label, WrappingLabel) and expanded and has_detail:
+            detail_label.sync_wrapped_height()
         self.output_row.setHidden(True)
         self.retry_button.setVisible(expanded and self._secondary_action_visibility.get("retry", False))
         self.remove_button.setVisible(expanded and self._secondary_action_visibility.get("remove", False))
@@ -869,10 +877,17 @@ class BatchEntryItemWidget(QWidget):
         width = viewport.width() if viewport is not None else self.width()
         layout = self.layout()
         if width > 0 and layout is not None:
-            hint_height = layout.totalHeightForWidth(width)
+            item_spacing = self._list_widget.spacing() if self._list_widget is not None else 0
+            hint_height = max(
+                layout.totalHeightForWidth(max(1, width - 2 * item_spacing)),
+                layout.minimumSize().height(),
+            )
             if hint_height > 0:
                 try:
-                    self._list_item.setSizeHint(QSize(width, hint_height))
+                    hint = QSize(width, hint_height)
+                    if self._list_item.sizeHint() == hint:
+                        return
+                    self._list_item.setSizeHint(hint)
                 except RuntimeError:
                     return
                 if self._list_widget is not None:
@@ -889,6 +904,13 @@ class BatchEntryItemWidget(QWidget):
         super().resizeEvent(event)
         self._apply_compact_mode()
         self._sync_item_size_hint()
+
+    def event(self, event) -> bool:
+        handled = super().event(event)
+        timer = getattr(self, "_typography_layout_timer", None)
+        if event.type() == QEvent.Type.LayoutRequest and timer is not None:
+            timer.start(0)
+        return handled
 
     def changeEvent(self, event) -> None:
         super().changeEvent(event)
@@ -920,8 +942,17 @@ class BatchEntryItemWidget(QWidget):
         if compact == self._is_compact:
             return
         self._is_compact = compact
-        direction = QBoxLayout.Direction.TopToBottom if compact else QBoxLayout.Direction.LeftToRight
-        self._header_layout.setDirection(direction)
+        self._header_layout.removeWidget(self.name_label)
+        self._header_layout.removeWidget(self.info_badge)
+        self._header_layout.addWidget(self.name_label, 0, 1, 1, 2 if compact else 1)
+        self._header_layout.addWidget(
+            self.info_badge,
+            1 if compact else 0,
+            1 if compact else 2,
+            1,
+            2 if compact else 1,
+            Qt.AlignmentFlag.AlignTop,
+        )
         spacing = _SPACING_SM if compact else _SPACING_XS
         self._header_layout.setSpacing(spacing)
         if compact:
@@ -1878,15 +1909,15 @@ class BatchList(QWidget):
 
         # Retry actions
         selected_failed, category_failed = self._vm.build_retry_targets(category, file_path)
-        retry_selected = menu.addAction(
-            _t("components.file_drop.batch_list.retry_selected_failed", "Retry Selected Failed")
-        )
-        retry_selected.setEnabled(bool(selected_failed))
-        retry_selected.triggered.connect(lambda: self._vm.reset_failed_files(selected_failed))
+        if selected_failed:
+            retry_selected = menu.addAction(
+                _t("components.file_drop.batch_list.retry_selected_failed", "Retry Selected Failed")
+            )
+            retry_selected.triggered.connect(lambda: self._vm.reset_failed_files(selected_failed))
 
-        retry_all = menu.addAction(_t("components.file_drop.batch_list.retry_all_failed", "Retry All Failed"))
-        retry_all.setEnabled(bool(category_failed))
-        retry_all.triggered.connect(lambda: self._vm.reset_failed_files(category_failed))
+        if category_failed:
+            retry_all = menu.addAction(_t("components.file_drop.batch_list.retry_all_failed", "Retry All Failed"))
+            retry_all.triggered.connect(lambda: self._vm.reset_failed_files(category_failed))
 
         # Error details for failed entries
         if file_path:
@@ -1906,9 +1937,9 @@ class BatchList(QWidget):
                     lambda: self.entry_action_requested.emit("copy_error_details", file_path),
                 )
 
-        # Multi-selection actions
+        # Location and removal actions remain useful for one selected file too.
         selected = self.get_selected_files(category)
-        if len(selected) > 1:
+        if selected:
             menu.addSeparator()
             _action_remove = menu.addAction(
                 _t(
@@ -1917,7 +1948,7 @@ class BatchList(QWidget):
                     count=len(selected),
                 ),
             )
-            _action_remove.triggered.connect(lambda paths=selected: self._remove_selected(paths))
+            _action_remove.triggered.connect(lambda _checked=False, paths=selected: self._remove_selected(paths))
             _action_remove.setEnabled(all(self._vm.can_remove_file(path) for path in selected))
             _action_open = menu.addAction(
                 _t(
@@ -1926,7 +1957,7 @@ class BatchList(QWidget):
                     count=len(selected),
                 ),
             )
-            _action_open.triggered.connect(lambda paths=selected: self._open_selected_locations(paths))
+            _action_open.triggered.connect(lambda _checked=False, paths=selected: self._open_selected_locations(paths))
 
         menu.exec(list_widget.mapToGlobal(position))
 

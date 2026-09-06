@@ -30,6 +30,7 @@ save_failed = "Einstellungen konnten nicht gespeichert werden"
 # 状态栏
 # =============================================================================
 [info_area]
+task_progress_percent = "Fortschritt:{percent}%"
 task_state_skipped = "Uebersprungen"
 batch_name = "Stapelverarbeitung ({count} Dateien)"
 aggregate_name = "Zusammenführen ({count} Dateien)"
@@ -51,7 +52,7 @@ history_completed = "Abgeschlossen: {name}"
 task_state_partial = "Teilweise fehlgeschlagen"
 task_state_failed = "Fehlgeschlagen"
 task_state_cancelled = "Abgebrochen"
-task_current_file = "Aktuelle Datei: {name}"
+task_current_file = "Datei der Aufgabe: {name}"
 task_progress_detail = "Abgeschlossen {completed}/{total}, fehlgeschlagen {failed}"
 history_started = "Gestartet: {name}"
 task_skipped_count = "Übersprungen: {skipped}"
@@ -861,6 +862,8 @@ drag_preview_summary_degraded = "{summary}; Großmengenvorschau (gekürzt)"
 drag_preview_summary_recursive = "{summary}, inkl. rekursiver Ordnerdurchsuchung"
 
 [components.file_drop.batch_list]
+error_count = "Fehler: {count}"
+issue_count = "Hinweise: {count}"
 no_batch_files = "Keine Stapeldateien"
 retry_selected_failed = "Ausgewählten fehlgeschlagenen Eintrag erneut versuchen"
 retry_all_failed = "Alle fehlgeschlagenen Einträge in diesem Tab erneut versuchen"
@@ -952,7 +955,7 @@ usage_line = "Verwendung: {value}"
 source_line = "Quelle: {value}"
 updated_line = "Aktualisiert: {value}"
 source_tooltip = "Quellordner: {value}"
-auto_selected_reason = "Auf Grundlage der Standardeinstellung wurde automatisch die erste verfügbare Option in {template_kind} ausgewählt."
+auto_selected_reason = "Eine verfügbare Vorlage in {template_kind} wurde anhand der Standardeinstellungen ausgewählt."
 open_location = "Dateispeicherort öffnen"
 
 [components.template_selector_tabbed]
@@ -963,6 +966,7 @@ spreadsheet_templates = "Tabelle"
 # 转换面板区域
 # =============================================================================
 [conversion_panel]
+no_common_target = "Diese Dateien haben kein gemeinsames Zielformat. Konvertieren Sie sie einzeln im Einzeldateimodus."
 target_format = "Zielformat"
 route_options_unavailable = "Verfügbare Vorgänge konnten nicht geladen werden; Aktionen sind deaktiviert, um eine falsche Anfrage zu vermeiden."
 no_compatible_operation = "Für diese Datei ist kein kompatibler Vorgang verfügbar."
@@ -1027,7 +1031,7 @@ merge_to_pdf = "PDF Merge"
 split_to_pdf = "PDF Split"
 split_page_range = "Bereich:"
 page_range_placeholder = "1-3,5  *  #"
-selected_split_file = "Gewählt: {pages} Seiten"
+selected_split_file = "Aktuelle Datei: {pages} Seiten"
 invalid_page_range = "Ungültiger Seitenbereich: {part}"
 invalid_page = "Ungültige Seite: {part}"
 split_mode_single_page_warning = "⚠️ Diese Datei hat nur 1 Seite; kein Split nötig"

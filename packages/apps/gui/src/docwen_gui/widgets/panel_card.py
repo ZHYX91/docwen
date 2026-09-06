@@ -360,6 +360,8 @@ class TaskActivityList(QFrame):
 class FormatSelector(QComboBox):
     """A combo that retains unavailable targets with an explicit reason."""
 
+    choices_changed = Signal()
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("formatSelector")
@@ -398,6 +400,7 @@ class FormatSelector(QComboBox):
         )
         self.setMinimumWidth(max(100, longest + 48))
         self._sync_tooltip()
+        self.choices_changed.emit()
 
     def current_choice_enabled(self) -> bool:
         """Whether the current item can be submitted."""

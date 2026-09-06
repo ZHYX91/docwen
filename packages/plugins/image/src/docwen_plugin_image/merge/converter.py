@@ -7,7 +7,14 @@ from typing import TYPE_CHECKING
 
 from PIL import Image
 
-from docwen_plugin_image._common import file_size, has_alpha, new_artifact_id, paste_on_white
+from docwen_plugin_image._common import (
+    file_size,
+    has_alpha,
+    is_heic_format,
+    new_artifact_id,
+    paste_on_white,
+    register_heic_decoder,
+)
 
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ConverterContext
@@ -69,6 +76,8 @@ class ImageToTiffMerger:
         loaded: list[Image.Image] = []
         converted: list[Image.Image] = []
         try:
+            if any(is_heic_format(ref.format) for ref in input_refs):
+                register_heic_decoder()
             for idx, path in enumerate(input_paths, 1):
                 context.cancellation.check()
                 context.progress.report_progress(

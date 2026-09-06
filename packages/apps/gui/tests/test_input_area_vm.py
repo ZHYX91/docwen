@@ -121,7 +121,8 @@ class TestSingleModeAddFiles:
 
         assert calls == [str(file_path)]
         assert vm.selection_tone == "warning"
-        assert vm.selection_message == "File extension (docx) does not match actual content (pdf)"
+        assert "renamed.docx" in vm.selection_message
+        assert vm.selection_message.endswith("File extension (docx) does not match actual content (pdf)")
         assert vm.selection_detail == str(tmp_path)
 
     def test_supported_content_with_unknown_suffix_reaches_explicit_acceptance_state(
@@ -180,7 +181,8 @@ class TestSingleModeAddFiles:
         vm.sync_selection([ref])
 
         assert vm.selection_tone == "warning"
-        assert vm.selection_message in {
+        assert Path(ref.path).name in vm.selection_message
+        assert vm.selection_message.split("\n", 1)[1] in {
             "The filename and content formats differ.",
             "Re-check the detected file format.",
         }

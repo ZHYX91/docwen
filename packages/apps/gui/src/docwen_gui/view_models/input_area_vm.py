@@ -270,10 +270,6 @@ class InputAreaViewModel(QObject):
             self._emit_message("", "secondary")
             return
         warning_message = self._selection_warning_from_refs(refs)
-        if warning_message:
-            detail = str(Path(normalized[0]).parent) if self._mode == "single" or current else ""
-            self._emit_message(warning_message, "warning", detail=detail)
-            return
         if self._mode == "single" or current:
             file_path = normalized[0]
             message = _t(
@@ -281,14 +277,16 @@ class InputAreaViewModel(QObject):
                 "Selected: {filename}",
                 filename=Path(file_path).name,
             )
-            self._emit_message(message, "success", detail=str(Path(file_path).parent))
+            if warning_message:
+                message = f"{message}\n{warning_message}"
+            self._emit_message(message, "warning" if warning_message else "success", detail=str(Path(file_path).parent))
             return
         message = _t(
             "components.file_drop.files_added_msg",
             "Added {count} file(s)",
             count=len(normalized),
         )
-        self._emit_message(message, "success")
+        self._emit_message(message, "warning" if warning_message else "success", detail=warning_message)
 
     @staticmethod
     def _selection_warning_from_refs(file_refs: Sequence[FileRef]) -> str:
@@ -655,16 +653,15 @@ class InputAreaViewModel(QObject):
             warning_message = warnings[0]
 
         file_count = len(paths)
-        if warning_message and self._mode == "single":
-            msg = warning_message
-            tone = "warning"
-        elif self._mode == "single":
+        if self._mode == "single":
             msg = _t(
                 "components.file_drop.file_selected_msg",
                 "Selected: {filename}",
                 filename=Path(paths[0]).name if paths else "",
             )
-            tone = "success"
+            if warning_message:
+                msg = f"{msg}\n{warning_message}"
+            tone = "warning" if warning_message else "success"
         elif skipped_count > 0:
             msg = _t(
                 "components.file_drop.files_added_with_skipped_msg",

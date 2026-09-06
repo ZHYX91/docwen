@@ -27,6 +27,24 @@ from ._template_selector_support import (
 class TestTabbedTemplateSelectorTabSwitching:
     """Tab switching behaviour."""
 
+    @pytest.mark.parametrize("locale", ["zh_CN", "en_US", "de_DE"])
+    def test_initial_template_prefers_interface_language_and_preserves_manual_choice(self, tabbed, locale):
+        from docwen_gui.i18n import get_locale, set_locale, t
+
+        previous_locale = get_locale()
+        try:
+            set_locale(locale)
+            preferred = t("meta.template_name")
+            tabbed.load_templates("docx", ["AAA custom template", preferred])
+            assert tabbed.get_selected_template() == ("docx", preferred)
+            selector = tabbed.get_selector("docx")
+            assert selector is not None
+            selector.select_template("AAA custom template", selection_source="user")
+            tabbed.load_templates("docx", ["AAA custom template", preferred, "New template"])
+            assert tabbed.get_selected_template() == ("docx", "AAA custom template")
+        finally:
+            set_locale(previous_locale)
+
     def test_switch_tab_via_method(self, tabbed: TabbedTemplateSelector) -> None:
         tabbed._set_current_tab("xlsx", emit_signal=False)
         assert tabbed.current_tab == "xlsx"

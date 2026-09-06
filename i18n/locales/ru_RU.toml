@@ -30,6 +30,7 @@ save_failed = "Не удалось сохранить настройки"
 # 状态栏
 # =============================================================================
 [info_area]
+task_progress_percent = "Прогресс:{percent}%"
 task_state_skipped = "Пропущено"
 batch_name = "Пакетная обработка ({count} файлов)"
 aggregate_name = "Объединение ({count} файлов)"
@@ -51,7 +52,7 @@ history_completed = "Завершено: {name}"
 task_state_partial = "Частичный сбой"
 task_state_failed = "Сбой"
 task_state_cancelled = "Отменено"
-task_current_file = "Текущий файл: {name}"
+task_current_file = "Файл задачи: {name}"
 task_progress_detail = "Выполнено {completed}/{total}, ошибок {failed}"
 history_started = "Начато: {name}"
 task_skipped_count = "Пропущено: {skipped}"
@@ -861,6 +862,8 @@ drag_preview_skipped_unsupported = "Не поддерживается: {name}"
 drag_preview_skipped_unreadable = "Нет доступа: {path}"
 
 [components.file_drop.batch_list]
+error_count = "Ошибок: {count}"
+issue_count = "Замечаний: {count}"
 no_batch_files = "Нет пакетных файлов"
 retry_selected_failed = "Повторить выбранную неудачную запись"
 retry_all_failed = "Повторить все неудачные записи на этой вкладке"
@@ -952,7 +955,7 @@ usage_line = "Использование: {value}"
 source_line = "Источник: {value}"
 updated_line = "Обновлено: {value}"
 source_tooltip = "Исходная папка: {value}"
-auto_selected_reason = "По настройке по умолчанию автоматически выбран первый доступный вариант в {template_kind}."
+auto_selected_reason = "По настройкам по умолчанию выбран доступный шаблон в {template_kind}."
 open_location = "Открыть расположение файла"
 
 [components.template_selector_tabbed]
@@ -963,6 +966,7 @@ spreadsheet_templates = "Таблица"
 # 转换面板区域
 # =============================================================================
 [conversion_panel]
+no_common_target = "У этих файлов нет общего формата вывода. Переключитесь в режим одного файла и преобразуйте их по отдельности."
 target_format = "Целевой формат"
 route_options_unavailable = "Не удалось загрузить доступные операции; действия отключены, чтобы избежать неверного запроса."
 no_compatible_operation = "Для этого файла нет совместимой операции."
@@ -1027,7 +1031,7 @@ merge_to_pdf = "Слияние PDF"
 split_to_pdf = "Разделение PDF"
 split_page_range = "Диапазон:"
 page_range_placeholder = "1-3,5  *  #"
-selected_split_file = "Выбрано: {pages} страниц"
+selected_split_file = "Текущий файл: {pages} страниц"
 invalid_page_range = "Недопустимый диапазон страниц: {part}"
 invalid_page = "Недопустимая страница: {part}"
 split_mode_single_page_warning = "⚠️ В этом файле только 1 страница; деление не требуется"

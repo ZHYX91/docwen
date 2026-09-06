@@ -293,6 +293,25 @@ class TestTerminalTransient:
 
 
 class TestTaskSummary:
+    @pytest.mark.parametrize("locale", ["zh_CN", "en_US"])
+    def test_engine_progress_uses_localized_percentage(self, vm: InfoAreaViewModel, locale: str) -> None:
+        from docwen_gui.i18n import get_locale, set_locale, t
+
+        previous = get_locale()
+        set_locale(locale)
+        try:
+            vm.begin_task(operation_id="conversion", current_file="report.docx", total_count=10)
+            vm.update_task_progress(
+                "conversion", message="Starting conversion via internal.plugin", percent=45.6, completed_count=4
+            )
+            assert t("info_area.task_progress_percent", percent=46) in vm.status_summary_text
+            assert "report.docx" in vm.status_summary_text
+            assert "internal.plugin" not in vm.status_summary_text
+            assert vm.task_summary.completed_count == 4
+            assert vm.task_summary.progress_message == "Starting conversion via internal.plugin"
+        finally:
+            set_locale(previous)
+
     def test_set_and_clear(self, vm: InfoAreaViewModel) -> None:
         vm.set_task_summary(
             operation_id="op-1",
