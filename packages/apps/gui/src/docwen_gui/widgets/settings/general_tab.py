@@ -143,7 +143,7 @@ class GeneralTab(BaseSettingsTab):
         preview_frame_layout.addWidget(sample_button)
         preview_frame_layout.addWidget(sample_text, 1)
         preview_layout.addWidget(preview_frame)
-        theme_form.addWidget(preview_container)
+        theme_form.addRow(preview_container)
 
         # ── Transparency card ───────────────────────────────────────────
         transp_card, transp_form = self.add_settings_card(
@@ -193,7 +193,7 @@ class GeneralTab(BaseSettingsTab):
         value_row_layout.addWidget(value_label)
         value_row_layout.addStretch(1)
         transp_container_layout.addWidget(value_row)
-        transp_form.addWidget(transp_container)
+        transp_form.addRow(transp_container)
 
         enabled.toggled.connect(self._on_transparency_toggled)
         value.valueChanged.connect(self._on_transparency_value_changed)
@@ -211,7 +211,7 @@ class GeneralTab(BaseSettingsTab):
         )
         remember.setParent(window_card)
         self._remember_state = remember
-        window_form.addWidget(remember)
+        window_form.addRow(remember)
         remember.toggled.connect(self._on_remember_state_toggled)
 
         auto_center = self.create_settings_toggle(
@@ -220,7 +220,7 @@ class GeneralTab(BaseSettingsTab):
         )
         auto_center.setParent(window_card)
         self._auto_center = auto_center
-        window_form.addWidget(auto_center)
+        window_form.addRow(auto_center)
         auto_center.toggled.connect(self._on_auto_center_toggled)
 
         expand = self.create_settings_toggle(
@@ -232,7 +232,7 @@ class GeneralTab(BaseSettingsTab):
         )
         expand.setParent(window_card)
         self._expand_side_panels = expand
-        window_form.addWidget(expand)
+        window_form.addRow(expand)
         expand.toggled.connect(self._on_expand_side_panels_toggled)
 
         default_mode = QComboBox(window_card)

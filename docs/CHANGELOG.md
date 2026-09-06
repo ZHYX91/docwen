@@ -13,6 +13,7 @@
 - 设置输入页改名为“传入文本、传入文档、传入表格、传入图片、传入版式文件”，明确 Markdown 语法、Markdown 资源和文件保存职责。
 - 改进任务反馈、混合批次、输入所有权、异步保护检查和设置在窄窗口中的布局。
 - 修复设置标签提前换行和堆叠后的多余留白；软件优先级列表统一宽度并按内容调整高度，未保存更改提示使用当前界面语言。
+- 统一 13 个设置页的字段列和控件高度，勾选框置于普通文字左侧并支持长文字换行；窗口变窄时整页字段采用一致的上下排列，恢复宽度后同步收紧。
 - 修复单文件模式再次添加或重新选择文件时，显示目标与实际转换输入不一致的问题。
 - 修复 Word 正常保存后重新序列化语义 XML、合并内容类型声明导致回转失败的问题；继续验证实际结构和引用身份。
 
@@ -21,6 +22,7 @@
 - Added caption-name references and title/Alias display for unnumbered targets. Plain Markdown output reports structural representation losses.
 - Clarified input settings names, Markdown syntax/resources, and file saving; improved task feedback, mixed batches, input ownership, asynchronous protection checks, and narrow settings layouts.
 - Fixed premature settings-label wrapping and excess stacked-row spacing; aligned software-priority lists with content-sized heights and localized the unsaved-changes confirmation.
+- Unified field columns and control heights across all 13 settings pages. Checkboxes precede regular-weight, wrapping labels; fields stack consistently at narrow widths and contract again when widened.
 - Fixed single-file additions and reselections so the displayed target and actual conversion input stay aligned.
 - Fixed reverse conversion after Word reserializes semantic XML and consolidates content-type declarations on save, while retaining structure and reference identity validation.
 

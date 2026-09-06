@@ -156,10 +156,10 @@ class FormattingTab(BaseSettingsTab):
                 object_name=f"markdownExtensions{direction.title()}Card",
             )
             for name in EXTENSION_NAMES:
-                checkbox = self.create_checkbox("")
+                checkbox = self.create_checkbox(t(f"settings.markdown_extensions.{name}", name.replace("_", " ")))
                 checkbox.setObjectName(f"markdownExtension{direction.title()}{name.title().replace('_', '')}")
                 self._extension_checks[(direction, name)] = checkbox
-                self.add_form_row(form, t(f"settings.markdown_extensions.{name}", name.replace("_", " ")), checkbox)
+                self.add_form_row(form, "", checkbox)
                 checkbox.toggled.connect(self._save_extensions)
             preset = QPushButton(t("settings.markdown_extensions.obsidian_preset", "Use Obsidian extensions"))
             preset.setObjectName(f"markdownExtensions{direction.title()}Preset")

@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Protocol
 
-from PySide6.QtCore import QEvent, Qt, QTimer
+from PySide6.QtCore import QEvent, QRect, Qt, QTimer
 from PySide6.QtGui import QStandardItemModel
 from PySide6.QtWidgets import (
     QBoxLayout,
@@ -95,7 +95,8 @@ class FormRow(_ResponsiveFrame):
         parent: QWidget | None = None,
         *,
         label_suffix: QWidget | None = None,
-        trailing_control: bool = False,
+        alignment_group: Sequence[FormRow] | None = None,
+        minimum_label_height: int = 0,
     ) -> None:
         super().__init__(parent)
         self.setObjectName("panelFormRow")
@@ -108,7 +109,8 @@ class FormRow(_ResponsiveFrame):
         self.label.setMinimumWidth(0)
         self.label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self.label_suffix = label_suffix
-        self.trailing_control = trailing_control
+        self.alignment_group = alignment_group
+        self.minimum_label_height = minimum_label_height
         self.label_container: QWidget = self.label
         if label_suffix is not None:
             self.label_container = QWidget(self)
@@ -122,14 +124,18 @@ class FormRow(_ResponsiveFrame):
         self.content_layout.addWidget(control, stretch=1)
 
     def _sync_layout(self) -> None:
-        label_width = self.label.fontMetrics().horizontalAdvance(self.label.text())
+        peers = self.alignment_group or (self,)
+        column_width = max(
+            row.label.fontMetrics().horizontalAdvance(row.label.text())
+            + (row.label_suffix.sizeHint().width() + 6 if row.label_suffix is not None else 0)
+            for row in peers
+        )
         suffix_width = self.label_suffix.sizeHint().width() + 6 if self.label_suffix is not None else 0
-        control_min_width = max(self.control.minimumSizeHint().width(), self.control.minimumWidth())
-        required_width = label_width + suffix_width + control_min_width + 8
-        horizontal = self.trailing_control or required_width <= self.contentsRect().width()
-        self.label.setWordWrap(not horizontal or required_width > self.contentsRect().width())
-        if self.trailing_control:
-            label_width = max(1, self.contentsRect().width() - suffix_width - control_min_width - 8)
+        label_width = column_width - suffix_width
+        control_min_width = max(max(row.control.minimumSizeHint().width(), row.control.minimumWidth()) for row in peers)
+        required_width = column_width + control_min_width + 8
+        horizontal = required_width <= self.contentsRect().width()
+        self.label.setWordWrap(not horizontal)
         if horizontal:
             self.label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
             self.label.setFixedWidth(label_width)
@@ -148,12 +154,25 @@ class FormRow(_ResponsiveFrame):
             self.content_layout.setSpacing(8 if horizontal else 4)
             self.updateGeometry()
         text_width = label_width if horizontal else max(1, self.contentsRect().width() - suffix_width)
-        label_height = (
-            self.label.heightForWidth(text_width) if self.label.wordWrap() else self.label.sizeHint().height()
-        )
-        label_height = max(label_height, self.label_container.minimumHeight())
+        margins = self.label.contentsMargins()
+        horizontal_padding = margins.left() + margins.right() + 2 * self.label.margin()
+        vertical_padding = margins.top() + margins.bottom() + 2 * self.label.margin()
+        label_height = self.label.fontMetrics().height()
+        if self.label.wordWrap():
+            label_height = (
+                self.label.fontMetrics()
+                .boundingRect(
+                    QRect(0, 0, max(1, text_width - horizontal_padding), 100000),
+                    Qt.TextFlag.TextWordWrap,
+                    self.label.text(),
+                )
+                .height()
+            )
+        label_height += vertical_padding
+        label_height = max(label_height, self.minimum_label_height)
         if self.label_suffix is not None:
             label_height = max(label_height, self.label_suffix.sizeHint().height())
+        self.label_container.setFixedHeight(label_height)
         control_width = (
             max(1, self.contentsRect().width() - label_width - suffix_width - 8)
             if horizontal

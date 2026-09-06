@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
 
 from ...resources import load_svg_icon
 from ..panel_card import FormRow
+from .check_box import SettingsCheckBox
 
 # Design token — matches GUI行为与交互规范.md §3.9
 SPACING_XS = 4
@@ -42,6 +43,15 @@ CONTROL_HEIGHT = 32
 
 SETTINGS_TOGGLE_OBJECT_NAME = "settingsToggle"
 SETTINGS_INFO_BUTTON_OBJECT_NAME = "settingsInfoButton"
+
+
+class _SettingsFormLayout(QFormLayout):
+    """Keep one page's field column and responsive breakpoint aligned."""
+
+    def __init__(self, alignment_group: list[FormRow], parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.alignment_group = alignment_group
+        self.field_rows: list[FormRow] = []
 
 
 def _apply_control_height(widget: QWidget) -> None:
@@ -91,6 +101,7 @@ class BaseSettingsTab(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("settingsTabRoot")
+        self._field_rows: list[FormRow] = []
 
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(SPACING_SM, 0, 0, 0)
@@ -188,19 +199,32 @@ class BaseSettingsTab(QWidget):
         effective_tooltip = tooltip or widget.toolTip()
         if effective_tooltip:
             widget.setToolTip(effective_tooltip)
+        if isinstance(widget, QCheckBox):
+            if label_text.strip() and not widget.text():
+                widget.setText(label_text)
+            form.addRow(widget)
+            return None
         if not label_text.strip():
             form.addRow(widget)
             return None
         suffix = _create_info_button(effective_tooltip) if effective_tooltip else None
-        row = FormRow(label_text, widget, label_suffix=suffix, trailing_control=isinstance(widget, QCheckBox))
+        peers = form.alignment_group if isinstance(form, _SettingsFormLayout) else None
+        row = FormRow(
+            label_text, widget, label_suffix=suffix, alignment_group=peers, minimum_label_height=CONTROL_HEIGHT
+        )
+        if peers is not None:
+            peers.append(row)
+        if isinstance(form, _SettingsFormLayout):
+            form.field_rows.append(row)
         row.setObjectName("settingsFormRow")
-        row.label_container.setMinimumHeight(CONTROL_HEIGHT)
         row.content_layout.setAlignment(row.label_container, Qt.AlignmentFlag.AlignTop)
         row.label.setTextFormat(Qt.TextFormat.PlainText)
         row.label.setProperty("settingsRole", "fieldLabel")
         if not widget.accessibleName():
             widget.setAccessibleName(label_text)
         widget.setMinimumWidth(0)
+        if isinstance(widget, (QComboBox, QLineEdit, QSpinBox, QDoubleSpinBox)):
+            _apply_control_height(widget)
         if effective_tooltip:
             row.label.setToolTip(effective_tooltip)
         form.addRow(row)
@@ -227,12 +251,7 @@ class BaseSettingsTab(QWidget):
         object_name: str | None = None,
     ) -> QCheckBox:
         """Create a checkbox with standard styling hook."""
-        try:
-            from qfluentwidgets import CheckBox as FluentCheckBox
-
-            cb = FluentCheckBox(text, self._scroll_container)
-        except ImportError:
-            cb = QCheckBox(text, self._scroll_container)
+        cb = SettingsCheckBox(text, self._scroll_container)
         if object_name:
             cb.setObjectName(object_name)
         if tooltip:
@@ -308,9 +327,8 @@ class BaseSettingsTab(QWidget):
 
     # ── Internal helpers ────────────────────────────────────────────────────
 
-    @staticmethod
-    def _make_form(parent: QWidget | None = None) -> QFormLayout:
-        form = QFormLayout(parent) if parent is not None else QFormLayout()
+    def _make_form(self, parent: QWidget | None = None) -> QFormLayout:
+        form = _SettingsFormLayout(self._field_rows, parent)
         form.setContentsMargins(0, 0, 0, 0)
         form.setVerticalSpacing(10)
         form.setHorizontalSpacing(SPACING_MD)

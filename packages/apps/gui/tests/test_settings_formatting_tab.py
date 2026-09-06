@@ -197,7 +197,7 @@ def test_extension_labels_use_available_row_width_and_remain_accessible(qapp, lo
     from docwen_gui.i18n import get_locale, set_locale
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
-    from docwen_gui.widgets.panel_card import FormRow
+    from docwen_gui.widgets.settings.check_box import SettingsCheckBox
     from docwen_gui.widgets.settings.formatting_tab import FormattingTab
 
     previous = get_locale()
@@ -212,21 +212,15 @@ def test_extension_labels_use_available_row_width_and_remain_accessible(qapp, lo
         for direction in ("Input", "Output"):
             card = tab.findChild(QWidget, f"markdownExtensions{direction}Card")
             assert card is not None
-            rows = card.findChildren(FormRow)
-            assert len(rows) == 4
-            assert len({row.control.geometry().right() for row in rows}) == 1
-            for row in rows:
-                label, control = row.label, row.control
-                assert isinstance(control, QCheckBox)
-                natural_width = label.fontMetrics().horizontalAdvance(label.text())
-                if natural_width + control.minimumSizeHint().width() + 8 <= row.width():
-                    assert natural_width <= label.width()
-                else:
-                    assert label.width() >= row.width() - control.width() - 8
-                    assert label.height() >= label.heightForWidth(label.width())
-                assert label.buddy() is control
-                assert control.accessibleName() == label.text()
-                assert not row.label_container.geometry().intersects(control.geometry())
+            controls = card.findChildren(SettingsCheckBox)
+            assert len(controls) == 4
+            assert len({control.geometry().left() for control in controls}) == 1
+            for control in controls:
+                assert control.text() and control.accessibleName() == control.text()
+                assert control.height() >= control.heightForWidth(control.width())
+                painted_text = QCheckBox.text(control)
+                assert "".join(painted_text.split()) == "".join(control.text().split())
+                assert not control.font().bold()
     finally:
         tab.close()
         set_locale(previous)

@@ -428,10 +428,6 @@ LITERAL_FALLBACK_CONTRACTS: Mapping[tuple[str, str], LiteralFallbackContract] = 
         "components.file_drop.file_unavailable",
     ): _literal_fallback(1, "File is unavailable", "file admission recovery"),
     (
-        "packages/apps/gui/src/docwen_gui/widgets/settings/dialog.py",
-        "settings.unsaved_changes.message",
-    ): _literal_fallback(1, "You have unsaved changes. Close without saving?", "settings close guard"),
-    (
         "packages/apps/gui/src/docwen_gui/widgets/settings/logging_tab.py",
         "settings.logging.browse_title",
     ): _literal_fallback(1, "Select Log Directory", "log directory chooser"),
