@@ -718,9 +718,6 @@ class ActionArea(QWidget):
         }
         label_text = _t(label_key_map.get(ft, "action_area.layout.optimize_for_type"), "Optimize For")
 
-        opt_label = QLabel(label_text, opt_row)
-        opt_layout.addWidget(opt_label)
-
         optimization_choices = optimization_result.choices
         if not optimization_choices:
             opt_row.deleteLater()
@@ -728,7 +725,6 @@ class ActionArea(QWidget):
 
         combo = self._make_combo(parent=opt_row)
         combo.setAccessibleName(label_text)
-        opt_label.setBuddy(combo)
         combo.addItem(_t("common.default", "Default"), None)
         for choice in optimization_choices:
             combo.addItem(choice.label, choice.id)
@@ -739,8 +735,7 @@ class ActionArea(QWidget):
             lambda idx: self._vm.set_file_to_md_option("optimize_for_type", combo.itemData(idx))
         )
         self._optimize_combo = combo
-        opt_layout.addWidget(combo)
-        opt_layout.addStretch(1)
+        opt_layout.addWidget(FormRow(label_text, combo, opt_row))
         self._content_layout.addWidget(opt_row)
 
     def _build_file_to_md_numbering_rows(self) -> None:

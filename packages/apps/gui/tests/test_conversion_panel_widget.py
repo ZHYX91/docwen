@@ -40,6 +40,46 @@ def widget(qapp: QApplication, vm: ConversionPanelViewModel) -> "Generator[Conve
 # ── Construction ──────────────────────────────────────────────────────
 
 
+@pytest.mark.parametrize(
+    ("category", "fmt", "action", "button_attr"),
+    [
+        ("layout", "pdf", "merge_pdfs", "_merge_pdfs_button"),
+        ("image", "png", "merge_images_to_tiff", "_merge_tiff_button"),
+        ("spreadsheet", "csv", "merge_tables", "_merge_tables_button"),
+    ],
+)
+def test_merge_controls_follow_mode_and_eligible_count(widget, vm, category, fmt, action, button_attr):
+    vm.set_file_info(category, fmt, file_path=f"/test.{fmt}")
+    vm.tiff_mode = "RGB"
+    vm.merge_mode = 2
+    vm.page_input = "1"
+    for mode in ("single", "batch", "single", "batch"):
+        vm.set_file_info(category, fmt, file_path=f"/test.{fmt}", ui_mode=mode)
+        button = getattr(widget, button_attr)
+        if mode == "single":
+            assert button is None
+            assert widget._extra_group.isHidden() == (category != "layout")
+            assert widget._tiff_btn_group is None
+            assert widget._merge_mode_group is None
+        else:
+            assert button is not None
+            assert not widget._extra_group.isHidden()
+            for count in (1, 2, 1):
+                vm.set_aggregate_counts({action: count})
+                assert button.isEnabled() == (count >= 2)
+                notice = widget._extra_group.findChild(QLabel, "aggregateAvailabilityNotice")
+                assert notice is not None
+                assert notice.isHidden() == (count >= 2)
+                if category == "layout":
+                    layout = widget._get_extra_content()
+                    assert layout.indexOf(notice) == layout.indexOf(button.parentWidget()) + 1
+        if category == "layout":
+            assert widget._split_pdf_button is not None
+            assert widget._page_input_edit.text() == "1"
+        assert vm.tiff_mode == "RGB"
+        assert vm.merge_mode == 2
+
+
 class TestConstruction:
     def test_widget_created(self, widget: ConversionPanel) -> None:
         assert widget is not None
@@ -230,7 +270,7 @@ class TestWidgetRebuild:
         assert widget._split_pdf_button is None
 
     def test_layout_extra_has_merge_split(self, widget: ConversionPanel, vm: ConversionPanelViewModel) -> None:
-        vm.set_file_info("layout", "pdf", file_path="/test.pdf")
+        vm.set_file_info("layout", "pdf", file_path="/test.pdf", ui_mode="batch")
         # Extra group visibility flag set to True (hiddenness=False)
         assert not widget.extra_group.isHidden()
         assert widget._merge_pdfs_button is not None
@@ -492,7 +532,7 @@ class TestConversionRequests:
     ) -> None:
         vm.tiff_mode = "rgb"
         vm.set_aggregate_counts({"merge_images_to_tiff": 2})
-        vm.set_file_info("image", "png", file_path="/test.png")
+        vm.set_file_info("image", "png", file_path="/test.png", ui_mode="batch")
         emitted: list[tuple[str, str, dict]] = []
         vm.named_action_requested.connect(lambda n, fp, o: emitted.append((n, fp, o)))
 
@@ -508,7 +548,7 @@ class TestConversionRequests:
     ) -> None:
         vm.merge_mode = 2
         vm.set_aggregate_counts({"merge_tables": 2})
-        vm.set_file_info("spreadsheet", "xlsx", file_path="/test.xlsx")
+        vm.set_file_info("spreadsheet", "xlsx", file_path="/test.xlsx", ui_mode="batch")
         emitted: list[tuple[str, str, dict]] = []
         vm.named_action_requested.connect(lambda n, fp, o: emitted.append((n, fp, o)))
 

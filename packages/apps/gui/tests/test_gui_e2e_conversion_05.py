@@ -53,6 +53,7 @@ class TestAggregateGuiExecution:
             doc.close()
 
         window = main_window_with_controller
+        window._input_area_vm.set_mode("batch")
         vm = window.view_model
         vm.add_files([str(first), str(second)])
 
@@ -99,6 +100,7 @@ class TestAggregateGuiExecution:
             doc.close()
 
         window = main_window_with_controller
+        window._input_area_vm.set_mode("batch")
         controller = window.view_model.controller
         assert controller is not None
         assert controller.config_port is not None
@@ -159,6 +161,7 @@ class TestAggregateGuiExecution:
             workbook.close()
 
         window = main_window_with_controller
+        window._input_area_vm.set_mode("batch")
         vm = window.view_model
         vm.add_files([str(first), str(second)])
 
@@ -219,6 +222,7 @@ class TestAggregateGuiExecution:
             workbook.close()
 
         window = main_window_with_controller
+        window._input_area_vm.set_mode("batch")
         controller = window.view_model.controller
         assert controller is not None
         assert controller.config_port is not None
@@ -278,6 +282,7 @@ class TestAggregateGuiExecution:
         Image.new("RGB", (32, 24), (0, 0, 255)).save(second)
 
         window = main_window_with_controller
+        window._input_area_vm.set_mode("batch")
         vm = window.view_model
         vm.add_files([str(first), str(second)])
 
@@ -325,6 +330,7 @@ class TestAggregateGuiExecution:
         Image.new("RGB", (32, 24), (0, 0, 255)).save(second)
 
         window = main_window_with_controller
+        window._input_area_vm.set_mode("batch")
         controller = window.view_model.controller
         assert controller is not None
         assert controller.config_port is not None
@@ -386,6 +392,7 @@ class TestAggregateGuiExecution:
         broken.write_bytes(b"%PDF-1.4\nnot a real pdf body\n")
 
         window = main_window_with_controller
+        window._input_area_vm.set_mode("batch")
         vm = window.view_model
         vm.add_files([str(good), str(broken)])
 
@@ -458,6 +465,7 @@ class TestAggregateGuiExecution:
         monkeypatch.setattr(TableMergerConverter, "convert", fail_merge)
 
         window = main_window_with_controller
+        window._input_area_vm.set_mode("batch")
         window.view_model.add_files([str(good), str(broken)])
 
         app = QApplication.instance()

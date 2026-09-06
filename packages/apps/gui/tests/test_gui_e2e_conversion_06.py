@@ -50,6 +50,7 @@ class TestAggregateGuiExecution:
         broken.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 64)
 
         window = main_window_with_controller
+        window._input_area_vm.set_mode("batch")
         window.view_model.add_files([str(good), str(broken)])
 
         app = QApplication.instance()

@@ -228,7 +228,7 @@ class TestRuntimeRequestBinding:
 
         window._batch_list_vm.add_files([str(first), str(second)])
         window._batch_list_vm.reorder_manual("layout", [str(second).replace("\\", "/"), str(first).replace("\\", "/")])
-        window._conversion_panel_vm.set_file_info("layout", "pdf", file_path=str(first))
+        window._conversion_panel_vm.set_file_info("layout", "pdf", file_path=str(first), ui_mode="batch")
         calls: list[dict[str, object]] = []
         monkeypatch.setattr(window, "_start_aggregate_execution", lambda **kwargs: calls.append(kwargs))
 
@@ -262,7 +262,7 @@ class TestRuntimeRequestBinding:
 
         window._batch_list_vm.add_files([str(first), str(second)])
         window._conversion_panel_vm.merge_mode = 2
-        window._conversion_panel_vm.set_file_info("spreadsheet", "xlsx", file_path=str(second))
+        window._conversion_panel_vm.set_file_info("spreadsheet", "xlsx", file_path=str(second), ui_mode="batch")
         calls: list[dict[str, object]] = []
         monkeypatch.setattr(window, "_start_aggregate_execution", lambda **kwargs: calls.append(kwargs))
 
@@ -288,7 +288,7 @@ class TestRuntimeRequestBinding:
 
         window._batch_list_vm.add_files([str(first), str(second)])
         window._conversion_panel_vm.tiff_mode = "rgb"
-        window._conversion_panel_vm.set_file_info("image", "png", file_path=str(first))
+        window._conversion_panel_vm.set_file_info("image", "png", file_path=str(first), ui_mode="batch")
         calls: list[dict[str, object]] = []
         monkeypatch.setattr(window, "_start_aggregate_execution", lambda **kwargs: calls.append(kwargs))
 

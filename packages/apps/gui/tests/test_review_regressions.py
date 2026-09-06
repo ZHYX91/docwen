@@ -119,6 +119,58 @@ def test_form_reflows_for_runtime_font_and_text_without_window_resize(qtbot, qap
         ThemeManager.reset_instance()
 
 
+def test_pdf_workflow_fits_default_columns_with_large_typography(main_window_with_controller, qtbot, tmp_path, qapp):
+    import fitz
+    from PySide6.QtCore import QPoint
+    from PySide6.QtWidgets import QScrollArea
+
+    from docwen_gui.styles.theme_manager import ThemeManager
+
+    source = tmp_path / "layout.pdf"
+    with fitz.open() as document:
+        document.new_page().insert_text((72, 72), "Layout check")
+        document.save(source)
+    manager = ThemeManager.get_instance()
+    manager.initialize(qapp, "dark")
+    manager.apply_font_size_preset("xlarge")
+    window = main_window_with_controller
+    try:
+        window._input_area_vm.set_mode("batch")
+        window._input_area_vm.add_files([str(source)])
+        window.show()
+        qtbot.waitUntil(lambda: window._conversion_panel._pdf_info_label is not None)
+        qtbot.wait(200)
+        page_input = window._conversion_panel._page_input_edit
+        assert page_input.height() >= page_input.fontMetrics().height() + 10
+        assert page_input.parentWidget().rect().contains(page_input.geometry())
+        info_label = window._conversion_panel._pdf_info_label
+        assert page_input.mapTo(window, QPoint()).y() + page_input.height() <= info_label.mapTo(window, QPoint()).y()
+        page_input.setText("1-3,5")
+        assert page_input.text() == "1-3,5"
+        qtbot.waitUntil(lambda: window._conversion_panel_vm.pdf_total_pages == 1)
+        page_input.setText("*")
+        assert not window._conversion_panel._page_warning_label.isHidden()
+        assert window._conversion_panel._page_warning_label.text()
+        page_input.clear()
+        assert window._conversion_panel._page_warning_label.isHidden()
+        for name in ("centerWorkflowScroll", "conversionPanelScrollArea"):
+            scroll = window.findChild(QScrollArea, name)
+            assert scroll is not None
+            assert scroll.horizontalScrollBar().maximum() == 0, (
+                name,
+                scroll.viewport().width(),
+                [
+                    (child.objectName(), type(child).__name__, child.minimumSizeHint().width(), child.minimumWidth())
+                    for child in scroll.findChildren(QWidget)
+                    if max(child.minimumSizeHint().width(), child.minimumWidth()) > scroll.viewport().width()
+                ],
+            )
+    finally:
+        manager.apply_font_size_preset("default")
+        manager.apply_theme("light")
+        window.close()
+
+
 def test_mixed_spreadsheets_share_routes_and_protection_gate(qtbot, tmp_path):
     from openpyxl import Workbook
     from tests.support.gui_vm_fakes import FakeMainWindowViewModel

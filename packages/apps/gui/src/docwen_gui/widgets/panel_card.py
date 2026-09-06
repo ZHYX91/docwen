@@ -85,6 +85,38 @@ class _ResponsiveFrame(QFrame):
         raise NotImplementedError
 
 
+class WrappingLabel(QLabel):
+    """Keep wrapped text's minimum height current after text, font or width changes."""
+
+    def __init__(self, text: str = "", parent: QWidget | None = None) -> None:
+        super().__init__(text, parent)
+        self.setWordWrap(True)
+
+    def sync_wrapped_height(self) -> None:
+        margins = self.contentsMargins()
+        width = max(1, self.width() - margins.left() - margins.right() - 2 * self.margin())
+        height = (
+            self.fontMetrics().boundingRect(QRect(0, 0, width, 100000), Qt.TextFlag.TextWordWrap, self.text()).height()
+        )
+        height += margins.top() + margins.bottom() + 2 * self.margin()
+        if self.minimumHeight() != height:
+            self.setMinimumHeight(height)
+            self.updateGeometry()
+
+    def setText(self, text: str) -> None:
+        super().setText(text)
+        self.sync_wrapped_height()
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self.sync_wrapped_height()
+
+    def changeEvent(self, event) -> None:
+        super().changeEvent(event)
+        if event.type() in {QEvent.Type.FontChange, QEvent.Type.StyleChange}:
+            self.sync_wrapped_height()
+
+
 class _FormLabel(QLabel):
     geometryChanged = Signal()
 
@@ -113,6 +145,7 @@ class FormRow(_ResponsiveFrame):
     ) -> None:
         super().__init__(parent)
         self.setObjectName("panelFormRow")
+        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self.content_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight, self)
         self.content_layout.setContentsMargins(0, 0, 0, 0)
         self.content_layout.setSpacing(8)
@@ -213,14 +246,17 @@ class ChoiceGroup(_ResponsiveFrame):
     larger translated fonts.
     """
 
-    def __init__(self, parent: QWidget | None = None, *, responsive: bool = False) -> None:
+    def __init__(self, parent: QWidget | None = None, *, responsive: bool = False, spacing: int = 24) -> None:
         super().__init__(parent)
         self.setObjectName("panelChoiceGroup")
         self._responsive = responsive
+        self._horizontal_spacing = spacing
+        if responsive:
+            self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         direction = QBoxLayout.Direction.LeftToRight if responsive else QBoxLayout.Direction.TopToBottom
         self.content_layout = QBoxLayout(direction, self)
         self.content_layout.setContentsMargins(0, 0, 0, 0)
-        self.content_layout.setSpacing(24 if responsive else 8)
+        self.content_layout.setSpacing(spacing if responsive else 8)
         if responsive:
             self.content_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
@@ -233,12 +269,13 @@ class ChoiceGroup(_ResponsiveFrame):
             widget = item.widget() if item is not None else None
             if widget is not None:
                 widgets.append(widget)
-        required = sum(widget.sizeHint().width() for widget in widgets) + max(0, len(widgets) - 1) * 24
+        required = sum(widget.sizeHint().width() for widget in widgets)
+        required += max(0, len(widgets) - 1) * self._horizontal_spacing
         horizontal = required <= self.contentsRect().width()
         self.content_layout.setDirection(
             QBoxLayout.Direction.LeftToRight if horizontal else QBoxLayout.Direction.TopToBottom
         )
-        self.content_layout.setSpacing(24 if horizontal else 8)
+        self.content_layout.setSpacing(self._horizontal_spacing if horizontal else 8)
 
 
 class ActionFooter(QFrame):

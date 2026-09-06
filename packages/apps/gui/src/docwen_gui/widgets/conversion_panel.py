@@ -29,7 +29,6 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFrame,
-    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -45,7 +44,7 @@ from docwen_gui.format_presentation import FormatChoice, presentation_for
 from docwen_gui.i18n import t as _t
 from docwen_gui.view_models.conversion_panel_vm import BUTTON_COLORS
 
-from .panel_card import ActionFooter, ChoiceGroup, FormatSelector, FormRow, InlineNotice, PanelCard
+from .panel_card import ActionFooter, ChoiceGroup, FormatSelector, FormRow, InlineNotice, PanelCard, WrappingLabel
 
 if TYPE_CHECKING:
     from ..view_models.conversion_panel_vm import ConversionPanelViewModel
@@ -123,20 +122,10 @@ def apply_format_swatch_icons(combo: QComboBox | None) -> None:
         combo.setItemIcon(index, format_swatch_icon(combo.itemText(index)) or _empty_swatch_icon)
 
 
-class _WrappingCheckLabel(QLabel):
+class _WrappingCheckLabel(WrappingLabel):
     """Word-wrapping label that keeps the adjacent checkbox label-click affordance."""
 
     activated = Signal()
-
-    def sync_wrapped_height(self) -> None:
-        required_height = self.heightForWidth(max(1, self.width()))
-        if required_height > 0 and self.minimumHeight() != required_height:
-            self.setMinimumHeight(required_height)
-            self.updateGeometry()
-
-    def resizeEvent(self, event) -> None:  # type: ignore[override]
-        super().resizeEvent(event)
-        self.sync_wrapped_height()
 
     def mouseReleaseEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton and self.isEnabled():
@@ -262,7 +251,9 @@ class ConversionPanel(QWidget):
         content_layout.addWidget(self._extra_group)
 
         # Hint label (shown when no file selected)
-        self._hint_label = QLabel(_t("conversion_panel.select_file_hint", "Select a file to see conversion options"))
+        self._hint_label = WrappingLabel(
+            _t("conversion_panel.select_file_hint", "Select a file to see conversion options")
+        )
         self._hint_label.setObjectName("hintLabel")
         self._hint_label.setWordWrap(True)
         content_layout.addWidget(self._hint_label)
@@ -278,7 +269,7 @@ class ConversionPanel(QWidget):
         layout = group.content_layout
         layout.setSpacing(_SPACING_XS)
 
-        desc_label = QLabel(group)
+        desc_label = WrappingLabel(parent=group)
         desc_label.setObjectName("conversionSectionDescription")
         desc_label.setWordWrap(True)
         layout.addWidget(desc_label)
@@ -502,6 +493,8 @@ class ConversionPanel(QWidget):
         }
         defaults: tuple[str, str, str] = ("", "", "")
         primary, secondary, extra = descs.get(cat or "", defaults)
+        if cat == "layout" and self._vm.ui_mode == "single":
+            extra = ""
         for prefix, text in [
             ("conversionPrimaryGroup", primary),
             ("conversionSecondaryGroup", secondary),
@@ -579,10 +572,14 @@ class ConversionPanel(QWidget):
                 button.setToolTip(reason)
                 notice = self._extra_group.findChild(QLabel, "aggregateAvailabilityNotice")
                 if notice is None:
-                    notice = QLabel(self._extra_group)
+                    notice = WrappingLabel(parent=self._extra_group)
                     notice.setObjectName("aggregateAvailabilityNotice")
                     notice.setWordWrap(True)
-                    self._get_extra_content().addWidget(notice)
+                    layout = self._get_extra_content()
+                    anchor: QWidget = button
+                    if layout.indexOf(anchor) < 0:
+                        anchor = button.parentWidget() or button
+                    layout.insertWidget(layout.indexOf(anchor) + 1, notice)
                 notice.setText(reason)
                 notice.setVisible(bool(reason))
 
@@ -1013,6 +1010,9 @@ class ConversionPanel(QWidget):
 
     def _build_spreadsheet_merge_extra(self) -> None:
         """Build the table merge extra section for spreadsheet category."""
+        if self._vm.ui_mode != "batch":
+            self._extra_group.hide()
+            return
         extra_layout = self._get_extra_content()
         self._extra_group.setTitle(_t("conversion_panel.spreadsheet.merge_tables", "Merge Tables"))
         self._extra_group.setVisible(True)
@@ -1181,6 +1181,9 @@ class ConversionPanel(QWidget):
 
     def _build_tiff_merge_extra(self) -> None:
         """Build TIFF merge extra section for image category."""
+        if self._vm.ui_mode != "batch":
+            self._extra_group.hide()
+            return
         extra_layout = self._get_extra_content()
         self._extra_group.setTitle(_t("conversion_panel.image.merge_images", "Merge Images"))
         self._extra_group.setVisible(True)
@@ -1265,14 +1268,14 @@ class ConversionPanel(QWidget):
             return
 
         # Render controls need one more field than the common combo/action row.
-        # Keep the two selectors together and give the action its own full-width
-        # row so large typography never squeezes the button beyond the panel.
+        # Let selectors stack in narrow viewports; the action always has its own row.
         render_row_container = QWidget(self)
         render_row_container.setObjectName("conversionButtonRow")
-        render_row = QGridLayout(render_row_container)
+        render_row = QVBoxLayout(render_row_container)
         render_row.setContentsMargins(0, 0, 0, 0)
-        render_row.setHorizontalSpacing(_SPACING_SM)
-        render_row.setVerticalSpacing(_SPACING_SM)
+        render_row.setSpacing(_SPACING_SM)
+        selectors = ChoiceGroup(render_row_container, responsive=True, spacing=_SPACING_SM)
+        render_row.addWidget(selectors)
 
         render_format_combo = self._make_combo(render_formats, parent=render_row_container)
         render_format_combo.setCurrentText(
@@ -1281,46 +1284,47 @@ class ConversionPanel(QWidget):
         render_format_combo.setMinimumWidth(100)
         render_format_combo.currentTextChanged.connect(lambda value: setattr(self._vm, "render_format", value))
         self._layout_render_format_combo = render_format_combo
-        render_row.addWidget(render_format_combo, 0, 0)
+        selectors.content_layout.addWidget(render_format_combo, 1)
 
         dpi_combo = self._make_combo(["150", "300", "600"], parent=render_row_container)
         dpi_combo.setCurrentText(str(self._vm.render_dpi))
         dpi_combo.setMinimumWidth(80)
         dpi_combo.currentTextChanged.connect(lambda value: setattr(self._vm, "render_dpi", int(value)))
         self._layout_render_dpi_combo = dpi_combo
-        render_row.addWidget(dpi_combo, 0, 1)
+        selectors.content_layout.addWidget(dpi_combo, 1)
 
         render_btn = self._make_action_button(_t("conversion_panel.render", "Render"), parent=render_row_container)
         render_btn.clicked.connect(self._on_layout_render_clicked)
         self._layout_render_button = render_btn
-        render_row.addWidget(render_btn, 1, 0, 1, 2)
-        render_row.setColumnStretch(0, 1)
-        render_row.setColumnStretch(1, 1)
+        render_row.addWidget(render_btn)
 
         parent_layout.addWidget(render_row_container)
 
     def _build_layout_merge_split_extra(self) -> None:
         """Build merge/split extra section for layout category."""
         extra_layout = self._get_extra_content()
-        self._extra_group.setTitle(_t("conversion_panel.layout.merge_split", "Merge & Split"))
+        self._extra_group.setTitle(
+            _t("conversion_panel.layout.merge_split", "Merge & Split")
+            if self._vm.ui_mode == "batch"
+            else _t("conversion_panel.layout.split_to_pdf", "Split PDF")
+        )
         self._extra_group.setVisible(True)
 
-        # Merge row
-        merge_row_container, merge_row = self._make_button_row()
+        if self._vm.ui_mode == "batch":
+            merge_row_container, merge_row = self._make_button_row()
 
-        merge_pdfs_btn = self._make_action_button(
-            _t("conversion_panel.layout.merge_to_pdf", "Merge PDFs"), parent=merge_row_container
-        )
-        merge_pdfs_btn.clicked.connect(self._on_merge_pdfs_clicked)
-        self._merge_pdfs_button = merge_pdfs_btn
-        merge_row.addWidget(merge_pdfs_btn)
+            merge_pdfs_btn = self._make_action_button(
+                _t("conversion_panel.layout.merge_to_pdf", "Merge PDFs"), parent=merge_row_container
+            )
+            merge_pdfs_btn.clicked.connect(self._on_merge_pdfs_clicked)
+            self._merge_pdfs_button = merge_pdfs_btn
+            merge_row.addWidget(merge_pdfs_btn)
 
-        extra_layout.addWidget(merge_row_container)
+            extra_layout.addWidget(merge_row_container)
 
-        # Divider
-        sep = QFrame()
-        sep.setFrameShape(QFrame.Shape.HLine)
-        extra_layout.addWidget(sep)
+            sep = QFrame()
+            sep.setFrameShape(QFrame.Shape.HLine)
+            extra_layout.addWidget(sep)
 
         # Split row
         split_row_container, split_row = self._make_button_row()
@@ -1336,35 +1340,30 @@ class ConversionPanel(QWidget):
         extra_layout.addWidget(split_row_container)
 
         # Page range input row
-        page_row = QWidget(self)
-        page_layout = QGridLayout(page_row)
-        page_layout.setContentsMargins(0, 0, 0, 0)
-        page_layout.setVerticalSpacing(_SPACING_XS)
-
-        page_label = QLabel(_t("conversion_panel.layout.split_page_range", "Page Range"), self)
-        page_layout.addWidget(page_label, 0, 0)
-
         page_edit = QLineEdit(self._vm.page_input, self)
+        page_edit.setMinimumWidth(160)
         page_edit.setPlaceholderText(_t("conversion_panel.layout.page_range_placeholder", "e.g., 1-5,7,9-12 or *"))
         page_edit.textChanged.connect(self._on_page_input_changed)
         self._page_input_edit = page_edit
-        page_layout.addWidget(page_edit, 1, 0)
-
-        extra_layout.addWidget(page_row)
+        page_label = _t("conversion_panel.layout.split_page_range", "Page Range")
+        page_edit.setAccessibleName(page_label)
+        extra_layout.addWidget(FormRow(page_label, page_edit, self))
 
         # PDF info
         pdf_info_text = _t(
             "conversion_panel.layout.selected_split_file",
             "Selected file: {pages} pages",
         ).format(pages=self._vm.pdf_total_pages)
-        pdf_info = QLabel(pdf_info_text, self)
+        pdf_info = WrappingLabel(pdf_info_text, self)
         pdf_info.setObjectName("hintLabel")
+        pdf_info.setWordWrap(True)
         self._pdf_info_label = pdf_info
         extra_layout.addWidget(pdf_info)
 
-        page_warning = QLabel("", self)
+        page_warning = WrappingLabel("", self)
         page_warning.setObjectName("warningLabel")
         page_warning.setWordWrap(True)
+        page_warning.hide()
         self._page_warning_label = page_warning
         extra_layout.addWidget(page_warning)
 
@@ -1524,6 +1523,7 @@ class ConversionPanel(QWidget):
                         "Split mode not applicable for single-page PDF",
                     )
                 )
+                self._page_warning_label.show()
             return
 
         options: dict = {"split_mode": split_mode}
@@ -1546,6 +1546,7 @@ class ConversionPanel(QWidget):
                 self._split_pdf_button.setEnabled(False)
             if self._page_warning_label:
                 self._page_warning_label.setText("")
+                self._page_warning_label.hide()
             return
         is_valid = self._vm.validate_page_input(text, self._vm.pdf_total_pages)
         if self._split_pdf_button:
@@ -1558,9 +1559,11 @@ class ConversionPanel(QWidget):
                         "Split mode not applicable for single-page PDF",
                     )
                 )
+                self._page_warning_label.show()
         else:
             if self._page_warning_label:
                 self._page_warning_label.setText("")
+                self._page_warning_label.hide()
 
     # ── Focus Management ─────────────────────────────────────────────────
 
