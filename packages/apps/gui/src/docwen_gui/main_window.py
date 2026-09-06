@@ -844,6 +844,11 @@ class MainWindow(QWidget):
         if self._left_panel_frame is None or self._right_panel_frame is None or self._right_stack is None:
             return
 
+        selected_file = self._view_model.selected_file
+        if selected_file is not None and self._view_model.mode == "single":
+            self._input_area_vm.sync_selection([selected_file])
+            self._batch_list.select_file(selected_file.path)
+
         window_is_normal = not (self.isMaximized() or self.isFullScreen() or self.isMinimized())
         old_left_visible = self._left_panel_frame.isVisible()
         old_right_visible = self._right_panel_frame.isVisible()

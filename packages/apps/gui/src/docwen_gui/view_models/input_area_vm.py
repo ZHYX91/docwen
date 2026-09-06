@@ -632,6 +632,13 @@ class InputAreaViewModel(QObject):
     ) -> None:
         outcome = self._main_vm.add_files(paths)
         admitted_paths = [ref.path for ref in outcome.added]
+        if self._mode == "single" and not outcome.rejected:
+            requested_path = Path(paths[0])
+            selected = next((ref for ref in self._main_vm.files if Path(ref.path) == requested_path), None)
+            if selected is not None:
+                self._main_vm.set_selected_file(selected)
+                if not admitted_paths:
+                    self.sync_selection([selected])
         if not admitted_paths:
             if outcome.rejected:
                 self._emit_message(outcome.rejected[0][1], "danger")
