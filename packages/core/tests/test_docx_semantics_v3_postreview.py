@@ -139,7 +139,7 @@ def test_heading_target_requires_heading_style(tmp_path: Path) -> None:
         session.prove_package(output)
 
 
-def test_all_custom_xml_item_ids_and_owned_props_bytes_are_proven(tmp_path: Path) -> None:
+def test_all_custom_xml_item_ids_are_proven_and_props_whitespace_is_ignored(tmp_path: Path) -> None:
     session, output = _write_paragraph_anchor(tmp_path)
     with ZipFile(output) as package:
         _item_name, props_name = _owned_item_and_props(
@@ -166,8 +166,67 @@ def test_all_custom_xml_item_ids_and_owned_props_bytes_are_proven(tmp_path: Path
         second_props = package.read(second_props_name)
     mutated_props = second_props.replace(b"><ds:schemaRefs>", b"> <ds:schemaRefs>", 1)
     _replace_zip_members(second, {second_props_name: mutated_props})
-    with pytest.raises(DocxSemanticsV3Error, match="properties"):
-        second_session.prove_package(second)
+    second_session.prove_package(second)
+
+
+@pytest.mark.parametrize("serialization", ["compact", "indented", "attribute_order", "namespace_prefix"])
+def test_owned_maps_accept_equivalent_xml_serialization(tmp_path: Path, serialization: str) -> None:
+    session, output = _write_two_soft_references(tmp_path)
+    with ZipFile(output) as package:
+        replacements = {}
+        for name in package.namelist():
+            if not name.startswith("customXml/") or not name.endswith((".xml", ".rels")):
+                continue
+            root = etree.fromstring(package.read(name))
+            if serialization == "attribute_order":
+                for element in root.iter():
+                    attributes = list(element.attrib.items())[::-1]
+                    element.attrib.clear()
+                    element.attrib.update(attributes)
+            elif serialization == "namespace_prefix" and etree.QName(root).namespace.startswith("https://docwen.dev/"):
+                replacement = etree.Element(root.tag, nsmap={"dw": etree.QName(root).namespace})
+                replacement.attrib.update(root.attrib)
+                replacement.extend(list(root))
+                root = replacement
+            replacements[name] = etree.tostring(
+                root,
+                encoding="UTF-8",
+                xml_declaration=True,
+                standalone=False,
+                pretty_print=serialization == "indented",
+            ).replace(b"\n", b"\r\n")
+    _replace_zip_members(output, replacements)
+    session.prove_package(output)
+
+
+@pytest.mark.parametrize("content_type", ["application/xml", "text/plain", None])
+def test_custom_xml_content_type_uses_opc_extension_default(tmp_path: Path, content_type: str | None) -> None:
+    session, output = _write_paragraph_anchor(tmp_path)
+    item_name, _props_name = _owned_item_and_props(output, "document-target-map")
+
+    def consolidate(root) -> None:
+        for item in list(root):
+            if item.get("PartName") == f"/{item_name}" or item.get("Extension") == "xml":
+                root.remove(item)
+        if content_type is not None:
+            etree.SubElement(
+                root,
+                "{http://schemas.openxmlformats.org/package/2006/content-types}Default",
+                Extension="xml",
+                ContentType=content_type,
+            )
+
+    _mutate_xml_member(output, "[Content_Types].xml", consolidate)
+    if content_type == "application/xml":
+        session.prove_package(output)
+    else:
+        from docwen_core._docx_semantics_v3_package import verify_custom_xml_support
+        from docwen_core.docx_semantics_v3 import TARGET_MAP_NAMESPACE
+
+        number = re.search(r"item([0-9]+)", item_name)
+        assert number is not None
+        with ZipFile(output) as package, pytest.raises(DocxSemanticsV3Error, match="content types"):
+            verify_custom_xml_support(package, int(number.group(1)), TARGET_MAP_NAMESPACE)
 
 
 def test_duplicate_targetmode_internal_relationship_and_owned_tails_fail_closed(

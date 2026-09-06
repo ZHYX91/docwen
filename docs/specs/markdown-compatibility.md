@@ -358,7 +358,7 @@ visible payload and no run outside it. It may nest under an ordinary-anchor SDT 
 The fenced map and inline SDT contain no source ID, target ID, anchor ID, bookmark name, target kind, or consumer
 identity and create zero bookmark, `SEQ`, or `REF` facts by themselves.
 
-Import proves closed package topology, canonical map bytes, one-to-one tag ownership, exact non-overlapping source
+Import proves closed package topology, canonical map content, one-to-one tag ownership, exact non-overlapping source
 inventory, complete visible body topology/hash, and reconstruction of the complete authored block. Missing,
 duplicate, unmapped, swapped, overlapping, partially wrapped, moved, host-stripped, or tampered data fails closed;
 the reader does not fall back to AST ordinals or synthesize a fence. Direct/top-level, blockquote, and list-container
@@ -489,10 +489,13 @@ deterministic UUID use the same rules as the target map, with this caption-style
 On import, each binding must select exactly one `w:style` in `word/styles.xml` by exact `w:styleId`; that style must
 be a paragraph style, contain exactly one direct `w:name` equal to `visible_name`, and contain no `w:aliases`.
 Preserving an unrelated conflicting user style may leave the same visible name elsewhere; only the collision-free
-resolved style ID is identity. Every addressable and ID-less caption paragraph must contain exactly one direct
+resolved style ID is identity. If the recorded ID is absent after Office renumbers styles, import may rebind it
+only to one style with the exact recorded `visible_name`; duplicate names, aliases, a conflicting existing ID, or
+duplicate current IDs fail closed. The original custom XML and its UUID remain unchanged. This is an explicit
+name-to-current-ID binding, not localized-name or prefix inference. Every addressable and ID-less caption paragraph must contain exactly one direct
 `w:pPr/w:pStyle`, and its value must equal the binding selected by the caption's structural kind. Prefix matching,
 the canonical requested style ID after it was displaced by a conflict, localized-name guessing, `SEQ`-kind
-guessing, and cross-kind fallback are forbidden. A missing/extra/reordered map record, changed bytes/UUID/topology,
+guessing, and cross-kind fallback are forbidden. A missing/extra/reordered map record, changed content/UUID/topology,
 missing/duplicate/wrong-type/wrong-name/aliased style, absent/duplicate/mismatched `pStyle`, or style-map stripping
 fails closed. The renderer binds the same complete four-entry request-local style table before it records any
 caption and proves the reopened map and `styles.xml` before artifact registration.
@@ -825,6 +828,27 @@ The deterministic UUID is `UUIDv5(NAMESPACE_URL, UTF-8(map_namespace + "\0" +
 sha256(itemN.xml-bytes).lowercase_hex))`, where the digest is the complete 64-character lowercase hexadecimal digest.
 It is serialized as uppercase hexadecimal in braced RFC 4122 `8-4-4-4-12` form and must not collide with another
 `ds:itemID` in the package.
+
+These byte framing and attribute-order rules define **DocWen's deterministic writer**, for every owned map in this
+specification. The reader accepts equivalent XML serialization after an Office save: XML declaration spelling,
+standalone value, BOM, line endings, insignificant element whitespace, namespace prefixes, attribute order, and
+empty-element spelling are not semantic identity. It parses the closed map, reconstructs the writer's canonical
+bytes, and recomputes the UUID from those canonical bytes. Expanded element/attribute names, exact attribute
+values, child/record order, scalar spelling, hashes, and one-to-one ownership still must match. DTDs, comments,
+processing instructions, unknown content and non-whitespace text remain invalid. No document body is restored
+from these maps.
+
+The reader also accepts the OPC-equivalent `Default Extension="xml" ContentType="application/xml"` when Word
+removes a redundant item override. An explicit override takes precedence; missing, duplicate or wrong effective
+content types fail. Properties still require their specific content-type override. Part renumbering is valid when
+the complete item/properties/relationship topology and deterministic map UUID remain consistent.
+
+Office may add one signed 32-bit `w:sdtPr/w:id` to an owned content control. This host-local UI identifier is
+accepted alongside the exact authenticated `w:tag`; it creates no semantic identity. An ordinary unlocked `REF`
+field may have its dirty flag cleared after update, and its cache run may carry valid Word revision IDs and
+`w:rPr/w:noProof`. These save annotations are ignored only after the field instruction, bookmark, exact cached
+number, authored Alias, carrier count and order have all been verified. They never authorize altered visible text
+or a different reference target. Locked citation fields retain their separate lock/dirty rules.
 
 `/customXml/itemN.xml` is UTF-8 without a BOM, begins with the exact XML declaration
 `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`, has no comments or insignificant indentation, and uses

@@ -119,7 +119,7 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
             if CAPTION_STYLE_BINDING_MAP_NAMESPACE in owned:
                 _number, root = owned[CAPTION_STYLE_BINDING_MAP_NAMESPACE]
                 caption_styles = parse_caption_style_binding_map(root)
-                prove_caption_style_registry(package, caption_styles)
+                caption_styles = prove_caption_style_registry(package, caption_styles, allow_style_id_rewrite=True)
         if not _has_explicit_resolved_v4_signal(document, owned, targets, caption_styles):
             return None
         return cls._load_proven(package_path, document, owned)

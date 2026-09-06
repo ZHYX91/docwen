@@ -248,8 +248,8 @@ def read_owned_map_parts(package: ZipFile) -> dict[str, tuple[int, Any]]:
         namespace = etree.QName(root).namespace
         if namespace not in _OWNED_MAP_NAMESPACES:
             continue
-        require_exact_xml_framing(data)
-        _require_canonical_owned_map_bytes(namespace, root, data)
+        _normalize_owned_xml(root)
+        _canonical_owned_map_bytes(namespace, root)
         if namespace in output:
             raise DocxSemanticsV3Error(f"duplicate custom XML map namespace: {namespace}")
         output[namespace] = (int(match.group("number")), root)
@@ -263,12 +263,13 @@ def verify_custom_xml_support(package: ZipFile, item_number: int, namespace: str
     item_rels_name = f"customXml/_rels/item{item_number}.xml.rels"
     if props_name not in names or item_rels_name not in names:
         raise DocxSemanticsV3Error("custom XML map lacks properties or item relationship")
-    item_bytes = package.read(f"customXml/item{item_number}.xml")
+    item_root = etree.fromstring(package.read(f"customXml/item{item_number}.xml"), parser)
+    _normalize_owned_xml(item_root)
+    item_bytes = _canonical_owned_map_bytes(namespace, item_root)
     props_bytes = package.read(props_name)
     item_rels_bytes = package.read(item_rels_name)
-    require_exact_xml_framing(props_bytes)
-    require_exact_xml_framing(item_rels_bytes)
     item_rels = etree.fromstring(item_rels_bytes, parser)
+    _normalize_owned_xml(item_rels)
     relationships = list(item_rels)
     if (
         item_rels.tag != f"{{{_RELATIONSHIPS_NAMESPACE}}}Relationships"
@@ -277,7 +278,7 @@ def verify_custom_xml_support(package: ZipFile, item_number: int, namespace: str
         or item_rels.tail is not None
         or len(relationships) != 1
         or relationships[0].tag != f"{{{_RELATIONSHIPS_NAMESPACE}}}Relationship"
-        or tuple(relationships[0].attrib) != ("Id", "Type", "Target")
+        or set(relationships[0].attrib) != {"Id", "Type", "Target"}
         or relationships[0].get("Id") != "rId1"
         or relationships[0].get("Type") != _CUSTOM_XML_PROPS_REL
         or relationships[0].get("Target") != f"itemProps{item_number}.xml"
@@ -288,6 +289,7 @@ def verify_custom_xml_support(package: ZipFile, item_number: int, namespace: str
     ):
         raise DocxSemanticsV3Error("custom XML item relationship is not canonical")
     props = etree.fromstring(props_bytes, parser)
+    _normalize_owned_xml(props)
     props_children = list(props)
     schema_refs = props.findall(
         f"{{{_CUSTOM_XML_PROPERTIES_NAMESPACE}}}schemaRefs/{{{_CUSTOM_XML_PROPERTIES_NAMESPACE}}}schemaRef"
@@ -323,8 +325,6 @@ def verify_custom_xml_support(package: ZipFile, item_number: int, namespace: str
     )
     if props.get(f"{{{_CUSTOM_XML_PROPERTIES_NAMESPACE}}}itemID") != expected_uuid:
         raise DocxSemanticsV3Error("custom XML item UUID does not match its deterministic identity")
-    if props_bytes != _canonical_item_properties(namespace, expected_uuid):
-        raise DocxSemanticsV3Error("custom XML properties bytes are not canonical")
     _verify_document_relationship(package, item_number, parser)
     _verify_content_types(package, item_number, parser)
 
@@ -379,15 +379,26 @@ def parse_reference_occurrence_map(root: Any) -> list[ReferenceOccurrenceIdentit
     return records
 
 
-def require_exact_xml_framing(data: bytes) -> None:
-    if (
-        data.startswith(b"\xef\xbb\xbf")
-        or b"\r" in data
-        or not data.startswith((_XML_DECLARATION + "\n").encode())
-        or not data.endswith(b"\n")
-        or data.count(b"\n") != 2
-    ):
-        raise DocxSemanticsV3Error("owned custom XML part has non-canonical byte framing")
+def _normalize_owned_xml(root: Any) -> None:
+    """Ignore XML serialization choices while retaining closed semantic content.
+
+    Office rewrites declarations, namespace prefixes, line endings and empty
+    elements on save. Owned maps contain attributes and element children only;
+    their record values, order and deterministic identity remain authoritative.
+    """
+    if root.getroottree().docinfo.doctype or root.getprevious() is not None or root.getnext() is not None:
+        raise DocxSemanticsV3Error("owned custom XML contains a declaration or node outside its root")
+    for element in root.iter():
+        if not isinstance(element.tag, str):
+            raise DocxSemanticsV3Error("owned custom XML contains a non-element node")
+        for name in ("text", "tail"):
+            value = getattr(element, name)
+            if value is not None and not value.strip(" \t\r\n"):
+                setattr(element, name, None)
+
+
+def _xml_structure(root: Any) -> tuple[Any, ...]:
+    return (root.tag, dict(root.attrib), root.text, root.tail, tuple(_xml_structure(child) for child in root))
 
 
 def _occupied_item_numbers(existing: dict[str, bytes]) -> set[int]:
@@ -506,7 +517,7 @@ def _reject_malformed_owned_signals(existing: dict[str, bytes], parser: Any) -> 
             raise DocxSemanticsV3Error("owned custom XML properties point to a non-owned root")
 
 
-def _require_canonical_owned_map_bytes(namespace: str, root: Any, data: bytes) -> None:
+def _canonical_owned_map_bytes(namespace: str, root: Any) -> bytes:
     if namespace == TARGET_MAP_NAMESPACE:
         targets, anchors = parse_semantic_map(root)
         expected = semantic_map_xml(targets, anchors)
@@ -528,8 +539,10 @@ def _require_canonical_owned_map_bytes(namespace: str, root: Any, data: bytes) -
         expected = citation_occurrence_map_xml(parse_citation_occurrence_map(root))
     else:  # pragma: no cover - caller owns the closed namespace set
         raise DocxSemanticsV3Error("unknown owned custom XML namespace")
-    if data != expected:
-        raise DocxSemanticsV3Error("owned custom XML bytes are not canonical")
+    expected_root = etree.fromstring(expected)
+    if _xml_structure(root) != _xml_structure(expected_root):
+        raise DocxSemanticsV3Error("owned custom XML content is not canonical")
+    return expected
 
 
 def _lowest_positive_not_in(values: set[int]) -> int:
@@ -574,7 +587,7 @@ def _verify_document_relationship(package: ZipFile, item_number: int, parser: An
         raise DocxSemanticsV3Error("document does not own exactly one custom XML relationship")
     if (
         matching[0].tag != f"{{{_RELATIONSHIPS_NAMESPACE}}}Relationship"
-        or tuple(matching[0].attrib) != ("Id", "Type", "Target")
+        or set(matching[0].attrib) != {"Id", "Type", "Target"}
         or matching[0].get("Type") != _CUSTOM_XML_REL
         or matching[0].text is not None
         or matching[0].tail is not None
@@ -591,18 +604,26 @@ def _verify_content_types(package: ZipFile, item_number: int, parser: Any) -> No
     props_part = f"/customXml/itemProps{item_number}.xml"
     items = [item for item in types if item.get("PartName") == item_part]
     props = [item for item in types if item.get("PartName") == props_part]
+    # Word removes redundant application/xml overrides during an ordinary save.
+    # OPC resolves an explicit Override first, then the extension's Default.
+    item_attributes = {"PartName", "ContentType"}
+    item_tag = f"{{{_CONTENT_TYPES_NAMESPACE}}}Override"
+    if not items:
+        items = [item for item in types if item.get("Extension") == "xml"]
+        item_attributes = {"Extension", "ContentType"}
+        item_tag = f"{{{_CONTENT_TYPES_NAMESPACE}}}Default"
     if (
         len(items) != 1
-        or items[0].tag != f"{{{_CONTENT_TYPES_NAMESPACE}}}Override"
+        or items[0].tag != item_tag
         or items[0].get("ContentType") != "application/xml"
-        or tuple(items[0].attrib) != ("PartName", "ContentType")
+        or set(items[0].attrib) != item_attributes
         or items[0].text is not None
         or items[0].tail is not None
         or len(items[0]) != 0
         or len(props) != 1
         or props[0].tag != f"{{{_CONTENT_TYPES_NAMESPACE}}}Override"
         or props[0].get("ContentType") != _CUSTOM_XML_PROPS_CONTENT_TYPE
-        or tuple(props[0].attrib) != ("PartName", "ContentType")
+        or set(props[0].attrib) != {"PartName", "ContentType"}
         or props[0].text is not None
         or props[0].tail is not None
         or len(props[0]) != 0
@@ -642,7 +663,7 @@ def _canonical_item_properties(namespace: str, item_uuid: str) -> bytes:
 
 
 def _parse_target(item: Any, namespace: str) -> TargetIdentityV3:
-    if item.tag != f"{namespace}target" or tuple(item.attrib) != ("kind", "source_id", "bookmark_name", "sha256"):
+    if item.tag != f"{namespace}target" or set(item.attrib) != {"kind", "source_id", "bookmark_name", "sha256"}:
         raise DocxSemanticsV3Error("semantic target record is not closed and canonical")
     identity = derive_target_identity_v3(item.get("kind"), item.get("source_id"))  # type: ignore[arg-type]
     if item.get("bookmark_name") != identity.bookmark_name or item.get("sha256") != identity.sha256:
@@ -651,7 +672,7 @@ def _parse_target(item: Any, namespace: str) -> TargetIdentityV3:
 
 
 def _parse_anchor(item: Any, namespace: str) -> AnchorIdentityV3:
-    if item.tag != f"{namespace}anchor" or tuple(item.attrib) != ("block_kind", "source_id", "tag", "sha256"):
+    if item.tag != f"{namespace}anchor" or set(item.attrib) != {"block_kind", "source_id", "tag", "sha256"}:
         raise DocxSemanticsV3Error("ordinary-anchor record is not closed and canonical")
     identity = derive_anchor_identity_v3(item.get("block_kind"), item.get("source_id"))
     if item.get("tag") != identity.tag or item.get("sha256") != identity.sha256:
@@ -670,7 +691,7 @@ def _parse_soft_reference(item: Any, namespace: str) -> SoftReferenceIdentityV3:
     )
     if item.get("fallback_text") is not None:
         expected_attributes += ("fallback_text",)
-    if item.tag != f"{namespace}softReference" or tuple(item.attrib) != expected_attributes:
+    if item.tag != f"{namespace}softReference" or set(item.attrib) != set(expected_attributes):
         raise DocxSemanticsV3Error("soft-reference record is not closed and canonical")
     try:
         identity = derive_soft_reference_identity_v3(
@@ -694,8 +715,8 @@ def _parse_reference_occurrence(
 ) -> ReferenceOccurrenceIdentityV3:
     if (
         item.tag != f"{namespace}referenceOccurrence"
-        or tuple(item.attrib)
-        != (
+        or set(item.attrib)
+        != {
             "tag",
             "source_sha256",
             "source_start",
@@ -703,7 +724,7 @@ def _parse_reference_occurrence(
             "authored_token",
             "resolved_bookmark_name",
             "cached_number",
-        )
+        }
         or item.text is not None
         or item.tail is not None
         or len(item) != 0

@@ -90,12 +90,12 @@ def numbering_occurrence_map_xml(records: list[NumberingOccurrenceIdentity]) -> 
 
 
 def parse_numbering_occurrence_map(root: Any) -> list[NumberingOccurrenceIdentity]:
-    """Parse and recompute every record; lexical bytes are checked by caller."""
+    """Parse and recompute every record; canonical content is checked by caller."""
 
     namespace = f"{{{NUMBERING_OCCURRENCE_MAP_NAMESPACE}}}"
     if (
         root.tag != f"{namespace}documentNumberingOccurrenceMap"
-        or tuple(root.attrib) != ("version", "plan_sha256")
+        or set(root.attrib) != {"version", "plan_sha256"}
         or root.get("version") != "1"
         or root.text is not None
         or root.tail is not None
@@ -119,7 +119,7 @@ def parse_numbering_occurrence_map(root: Any) -> list[NumberingOccurrenceIdentit
     for element in root:
         if (
             element.tag != f"{namespace}occurrence"
-            or tuple(element.attrib) != expected_attributes
+            or set(element.attrib) != set(expected_attributes)
             or element.text is not None
             or element.tail is not None
             or len(element) != 0

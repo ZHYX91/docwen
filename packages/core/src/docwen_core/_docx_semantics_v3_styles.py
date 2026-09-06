@@ -84,7 +84,7 @@ def parse_caption_style_binding_map(root: Any) -> tuple[CaptionStyleBindingV3, .
     for item in root:
         if (
             item.tag != f"{namespace}binding"
-            or tuple(item.attrib) != ("semantic_key", "resolved_style_id", "visible_name")
+            or set(item.attrib) != {"semantic_key", "resolved_style_id", "visible_name"}
             or item.text is not None
             or item.tail is not None
             or len(item) != 0
@@ -103,8 +103,13 @@ def parse_caption_style_binding_map(root: Any) -> tuple[CaptionStyleBindingV3, .
     return ordered
 
 
-def prove_caption_style_registry(package: ZipFile, bindings: tuple[CaptionStyleBindingV3, ...]) -> None:
-    """Authenticate every resolved style against the main styles.xml registry."""
+def prove_caption_style_registry(
+    package: ZipFile,
+    bindings: tuple[CaptionStyleBindingV3, ...],
+    *,
+    allow_style_id_rewrite: bool = False,
+) -> tuple[CaptionStyleBindingV3, ...]:
+    """Bind saved styles by ID, or an exact unique recorded name after Office renumbers IDs."""
 
     if "word/styles.xml" not in package.namelist():
         raise DocxSemanticsV3Error("DOCX package lacks the main styles registry")
@@ -117,10 +122,20 @@ def prove_caption_style_registry(package: ZipFile, bindings: tuple[CaptionStyleB
     id_attr = f"{{{_WORD_NAMESPACE}}}styleId"
     value_attr = f"{{{_WORD_NAMESPACE}}}val"
     styles = root.findall(style_tag)
+    resolved: list[CaptionStyleBindingV3] = []
     for binding in bindings:
         by_id = [item for item in styles if item.get(id_attr) == binding.resolved_style_id]
+        if not by_id and allow_style_id_rewrite:
+            by_id = [
+                item
+                for item in styles
+                if any(name.get(value_attr) == binding.visible_name for name in item.findall(name_tag))
+            ]
         if len(by_id) != 1 or by_id[0].get(type_attr) != "paragraph":
             raise DocxSemanticsV3Error("caption-style binding does not resolve one exact paragraph style")
+        resolved_id = by_id[0].get(id_attr)
+        if not resolved_id or len([item for item in styles if item.get(id_attr) == resolved_id]) != 1:
+            raise DocxSemanticsV3Error("caption-style resolved style ID is missing or duplicated")
         names = by_id[0].findall(name_tag)
         if (
             len(names) != 1
@@ -131,6 +146,10 @@ def prove_caption_style_registry(package: ZipFile, bindings: tuple[CaptionStyleB
             raise DocxSemanticsV3Error("caption-style visible name is not exact and canonical")
         if by_id[0].find(f".//{alias_tag}") is not None:
             raise DocxSemanticsV3Error("caption-style binding must not use aliases")
+        resolved.append(CaptionStyleBindingV3(binding.semantic_key, resolved_id, binding.visible_name))
+    if len({item.resolved_style_id.casefold() for item in resolved}) != len(resolved):
+        raise DocxSemanticsV3Error("caption-style resolved style IDs are not unique")
+    return tuple(resolved)
 
 
 def prove_caption_paragraph_style(

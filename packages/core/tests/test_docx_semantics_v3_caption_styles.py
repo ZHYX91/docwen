@@ -172,6 +172,44 @@ def test_caption_style_map_uuid_binds_exact_bytes(tmp_path: Path) -> None:
         DocxSemanticsV3Recovery.load(output, Document(str(output)))
 
 
+@pytest.mark.parametrize("damage", [None, "ambiguous_name", "paragraph_not_rebound"])
+def test_saved_style_id_remapping_requires_unique_recorded_name_and_current_pstyle(
+    tmp_path: Path, damage: str | None
+) -> None:
+    output = _valid_table_package(tmp_path)
+
+    def renumber_styles(root) -> None:
+        style = next(item for item in root.findall(qn("w:style")) if item.get(qn("w:styleId")) == "DocWenTableCaption")
+        style.set(qn("w:styleId"), "af7")
+        if damage == "ambiguous_name":
+            duplicate = deepcopy(style)
+            duplicate.set(qn("w:styleId"), "af8")
+            root.append(duplicate)
+
+    def renumber_paragraphs(root) -> None:
+        for style in root.iter(qn("w:pStyle")):
+            if style.get(qn("w:val")) == "DocWenTableCaption":
+                style.set(qn("w:val"), "af7")
+
+    _mutate_xml_member(output, "word/styles.xml", renumber_styles)
+    if damage != "paragraph_not_rebound":
+        _mutate_xml_member(output, "word/document.xml", renumber_paragraphs)
+    if damage is None:
+        recovery = DocxSemanticsV3Recovery.load(output, Document(str(output)))
+        assert (
+            next(
+                item.resolved_style_id
+                for item in recovery.caption_style_bindings
+                if item.semantic_key == "table_caption"
+            )
+            == "af7"
+        )
+    else:
+        message = "one exact paragraph style" if damage == "ambiguous_name" else "pStyle does not match"
+        with pytest.raises(DocxSemanticsV3Error, match=message):
+            DocxSemanticsV3Recovery.load(output, Document(str(output)))
+
+
 def test_caption_style_map_is_closed_after_uuid_rebind(tmp_path: Path) -> None:
     output = _valid_table_package(tmp_path)
     with ZipFile(output) as package:

@@ -143,7 +143,7 @@ def parse_fenced_source_map(root: Any) -> list[FencedSourceIdentityV3]:
     for item in root:
         if (
             item.tag != f"{namespace}fencedSource"
-            or tuple(item.attrib) != _RECORD_ATTRIBUTES
+            or set(item.attrib) != set(_RECORD_ATTRIBUTES)
             or item.text is not None
             or item.tail is not None
             or len(item) != 0

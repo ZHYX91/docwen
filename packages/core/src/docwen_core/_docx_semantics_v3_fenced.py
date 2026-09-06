@@ -10,6 +10,7 @@ from docwen_core._docx_semantics_v3_model import (
     DocxSemanticsV3Error,
     require_sha256,
 )
+from docwen_core.docx_host_metadata import has_owned_tag_properties
 
 FENCED_SOURCE_MAP_NAMESPACE = "https://docwen.dev/schema/document-fenced-source-map/v1"
 FENCED_SOURCE_TAG_PREFIX = "docwen-fenced-source-v1:"
@@ -394,20 +395,7 @@ def _prove_and_read_body_runs(content: Any) -> str:
 
 
 def _prove_single_tag(properties: Any, tag: str) -> None:
-    from docx.oxml.ns import qn
-
-    children = list(properties)
-    if (
-        properties.attrib
-        or properties.text is not None
-        or properties.tail is not None
-        or len(children) != 1
-        or children[0].tag != qn("w:tag")
-        or tuple(children[0].attrib.items()) != ((qn("w:val"), tag),)
-        or children[0].text is not None
-        or children[0].tail is not None
-        or len(children[0]) != 0
-    ):
+    if not has_owned_tag_properties(properties, tag):
         raise DocxSemanticsV3Error("fenced-source SDT properties are not canonical")
 
 

@@ -134,3 +134,32 @@ def test_request_override_does_not_change_other_direction_or_config() -> None:
     assert resolve_markdown_extensions(options, config, direction="input").captions_references
     assert resolve_markdown_extensions(options, config, direction="output") == MarkdownExtensions()
     assert resolve_markdown_extensions({}, config, direction="input") == MarkdownExtensions.obsidian()
+
+
+@pytest.mark.parametrize("dialect", [MarkdownExtensions(), MarkdownExtensions.obsidian()])
+def test_real_word_saved_docx_uses_current_body_and_semantics(tmp_path: Path, dialect: MarkdownExtensions) -> None:
+    isolated = tmp_path / "edited.docx"
+    isolated.write_bytes((ROOT / "tests/fixtures/word-save/edited-markdown-extensions.docx").read_bytes())
+    result = DocxToMarkdownConverter().convert(_context(tmp_path, isolated, "md", {"output": dialect.to_dict()}))
+    assert result.success, result.error
+    markdown = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
+    assert "Word 实测追加：从独立 DOCX 的当前内容回转。" in markdown
+    assert "**粗体正文**与*斜体正文*应保留。" in markdown
+    assert "| 甲 | 12 |" in markdown
+    assert ("| 乙 | ^ |" in markdown) is dialect.structural_tables
+    assert ("@[[#Table: 指标]]" in markdown) is dialect.captions_references
+    assert ("####### 深层标题" in markdown) is dialect.extended_headings
+    assert ("[^endnote:1]" in markdown) is dialect.typed_endnotes
+    assert "这是尾注正文。" in markdown
+
+
+def test_word_edit_that_adds_a_block_inside_caption_control_reports_invalid_structure(tmp_path: Path) -> None:
+    isolated = tmp_path / "expanded-caption.docx"
+    isolated.write_bytes((ROOT / "tests/fixtures/word-save/expanded-caption-control.docx").read_bytes())
+    result = DocxToMarkdownConverter().convert(
+        _context(tmp_path, isolated, "md", {"output": MarkdownExtensions.obsidian().to_dict()})
+    )
+    assert not result.success
+    assert result.error is not None
+    assert "one caption and one logical object" in result.error.message
+    assert not result.artifacts

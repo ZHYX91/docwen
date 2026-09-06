@@ -42,6 +42,7 @@ from docwen_core.docx_bookmarks import (
     build_docx_bookmark_inventory,
     prove_bookmark_name,
 )
+from docwen_core.docx_host_metadata import has_owned_tag_properties
 from docwen_core.models.resolved_numbering import ResolvedCitation, ResolvedCitationItem
 
 _XML_SPACE = "{http://www.w3.org/XML/1998/namespace}space"
@@ -154,16 +155,7 @@ def prove_citation_occurrence_sdt(
         or content.tail is not None
     ):
         raise ResolvedCitationOoxmlError("citation occurrence SDT envelope is not canonical")
-    property_children = list(properties)
-    if (
-        len(property_children) != 1
-        or property_children[0].tag != qn("w:tag")
-        or tuple(property_children[0].attrib) != (qn("w:val"),)
-        or property_children[0].get(qn("w:val")) != identity.tag
-        or property_children[0].text is not None
-        or property_children[0].tail is not None
-        or len(property_children[0]) != 0
-    ):
+    if not has_owned_tag_properties(properties, identity.tag):
         raise ResolvedCitationOoxmlError("citation occurrence SDT tag is not canonical")
     children = list(content)
     expected_tags = [

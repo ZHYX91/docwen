@@ -13,6 +13,7 @@ from docwen_core._docx_semantics_v3_model import (
     DocxSemanticsV3Error,
     derive_anchor_topology_edge_v3,
 )
+from docwen_core.docx_host_metadata import field_run_payload, has_owned_tag_properties
 
 
 def order_ordinary_anchor_bindings(
@@ -104,7 +105,7 @@ def parse_anchor_topology_map(root: Any) -> list[AnchorTopologyEdgeV3]:
     for item in root:
         if (
             item.tag != f"{namespace}edge"
-            or tuple(item.attrib) != ("child_tag", "parent_tag", "sha256")
+            or set(item.attrib) != {"child_tag", "parent_tag", "sha256"}
             or item.text is not None
             or item.tail is not None
             or len(item) != 0
@@ -346,8 +347,8 @@ def prove_exact_field_run(
 ) -> None:
     from docx.oxml.ns import qn
 
-    children = list(run)
-    if run.attrib or run.xpath("text()") or run.tail is not None:
+    children = field_run_payload(run)
+    if children is None:
         raise DocxSemanticsV3Error("reference-occurrence REF run is not canonical")
     if len(children) != 1 or children[0].tag != payload_tag or len(children[0]) != 0:
         raise DocxSemanticsV3Error("reference-occurrence REF run payload is not canonical")
@@ -356,7 +357,11 @@ def prove_exact_field_run(
     if field_type is not None:
         pairs = [(qn("w:fldCharType"), field_type)]
         if dirty is not None:
-            pairs.append((qn("w:dirty"), dirty))
+            saved_dirty = payload.get(qn("w:dirty"))
+            if saved_dirty is not None:
+                if saved_dirty not in {"true", "false", "1", "0", "on", "off"}:
+                    raise DocxSemanticsV3Error("reference-occurrence REF dirty flag is invalid")
+                pairs.append((qn("w:dirty"), saved_dirty))
         expected_attributes = tuple(pairs)
     elif xml_space is not None:
         expected_attributes = (("{http://www.w3.org/XML/1998/namespace}space", xml_space),)
@@ -513,18 +518,5 @@ def prove_source_recovery_physical_order(
 
 
 def _prove_single_tag_properties(properties: Any, tag: str, *, context: str) -> None:
-    from docx.oxml.ns import qn
-
-    children = list(properties)
-    if (
-        properties.attrib
-        or properties.text is not None
-        or properties.tail is not None
-        or len(children) != 1
-        or children[0].tag != qn("w:tag")
-        or tuple(children[0].attrib.items()) != ((qn("w:val"), tag),)
-        or children[0].text is not None
-        or children[0].tail is not None
-        or len(children[0]) != 0
-    ):
+    if not has_owned_tag_properties(properties, tag):
         raise DocxSemanticsV3Error(f"{context} SDT properties are not canonical")

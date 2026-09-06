@@ -13,12 +13,14 @@
 - 设置输入页改名为“传入文本、传入文档、传入表格、传入版式文件”，明确 Markdown 语法、Markdown 资源和文件保存职责。
 - 改进任务反馈、混合批次、输入所有权、异步保护检查和设置在窄窗口中的布局。
 - 修复单文件模式再次添加或重新选择文件时，显示目标与实际转换输入不一致的问题。
+- 修复 Word 正常保存后重新序列化语义 XML、合并内容类型声明导致回转失败的问题；继续验证实际结构和引用身份。
 
 - Markdown-to-Word produces an independent DOCX. Original-source sidecars and replay have been removed; retain your sources. Reverse conversion reconstructs actual DOCX structures without promising byte-identical Markdown.
 - Added independent input/output switches for Structural Tables, Number Suite captions and cross-references, H7–H9, and typed endnotes. Extensions default to off, with an Obsidian preset per direction.
 - Added caption-name references and title/Alias display for unnumbered targets. Plain Markdown output reports structural representation losses.
 - Clarified input settings names, Markdown syntax/resources, and file saving; improved task feedback, mixed batches, input ownership, asynchronous protection checks, and narrow settings layouts.
 - Fixed single-file additions and reselections so the displayed target and actual conversion input stay aligned.
+- Fixed reverse conversion after Word reserializes semantic XML and consolidates content-type declarations on save, while retaining structure and reference identity validation.
 
 ## 0.9.1 (2026-08-30)
 

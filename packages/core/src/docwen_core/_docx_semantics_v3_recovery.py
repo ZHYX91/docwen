@@ -127,7 +127,7 @@ class DocxSemanticsV3Recovery:
             if CAPTION_STYLE_BINDING_MAP_NAMESPACE in owned:
                 _number, root = owned[CAPTION_STYLE_BINDING_MAP_NAMESPACE]
                 caption_styles = parse_caption_style_binding_map(root)
-                prove_caption_style_registry(package, caption_styles)
+                caption_styles = prove_caption_style_registry(package, caption_styles, allow_style_id_rewrite=True)
 
         targets: list[TargetIdentityV3] = []
         anchors: list[AnchorIdentityV3] = []

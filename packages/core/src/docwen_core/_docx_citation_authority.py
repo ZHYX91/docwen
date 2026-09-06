@@ -294,7 +294,7 @@ def parse_citation_item_map(root: Any) -> CitationItemMap:
     namespace = f"{{{CITATION_ITEM_MAP_NAMESPACE}}}"
     if (
         root.tag != f"{namespace}documentCitationItemMap"
-        or tuple(root.attrib) != ("version", "source_sha256")
+        or set(root.attrib) != {"version", "source_sha256"}
         or root.get("version") != "1"
         or root.text is not None
         or root.tail is not None
@@ -314,7 +314,7 @@ def parse_citation_item_map(root: Any) -> CitationItemMap:
     for element in root:
         if (
             element.tag != f"{namespace}item"
-            or tuple(element.attrib) != expected_attributes
+            or set(element.attrib) != set(expected_attributes)
             or element.text is not None
             or element.tail is not None
             or len(element) != 0
@@ -346,7 +346,7 @@ def parse_citation_occurrence_map(root: Any) -> CitationOccurrenceMap:
     namespace = f"{{{CITATION_OCCURRENCE_MAP_NAMESPACE}}}"
     if (
         root.tag != f"{namespace}documentCitationOccurrenceMap"
-        or tuple(root.attrib) != ("version", "source_sha256")
+        or set(root.attrib) != {"version", "source_sha256"}
         or root.get("version") != "1"
         or root.text is not None
         or root.tail is not None
@@ -372,7 +372,7 @@ def parse_citation_occurrence_map(root: Any) -> CitationOccurrenceMap:
     for element in root:
         if (
             element.tag != f"{namespace}citationOccurrence"
-            or tuple(element.attrib) != expected_attributes
+            or set(element.attrib) != set(expected_attributes)
             or element.text is not None
             or element.tail is not None
             or not 1 <= len(element) <= 64
@@ -542,7 +542,7 @@ def _occurrence_xml(item: CitationOccurrenceIdentity) -> str:
 def _parse_item_ref(element: Any, namespace: str) -> CitationItemReferenceIdentity:
     if (
         element.tag != f"{namespace}itemRef"
-        or tuple(element.attrib) != ("citation_key", "word_tag", "item_sha256", "sha256")
+        or set(element.attrib) != {"citation_key", "word_tag", "item_sha256", "sha256"}
         or element.text is not None
         or element.tail is not None
         or len(element) != 0
