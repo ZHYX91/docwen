@@ -216,8 +216,8 @@
     "readmeSourceGlob": "docs/user-guides/README.*.md",
     "allowlist": {
       "path": "release/windows-payload-allowlist.v1.json",
-      "status": "CALIBRATION_REQUIRED",
-      "sha256": null,
+      "status": "FROZEN",
+      "sha256": "c9e5b79287c0ac1f2df7d92b6c7ceebed6923e23e3beac8487cc63c3df037d9a",
       "rejectMissing": true,
       "rejectUnexpected": true,
       "rejectCaseFoldCollision": true,
