@@ -179,6 +179,31 @@ def _literal_fallback(expected_count: int, default: str, rationale: str) -> Lite
 # until its finite producer and exact suffix set are reviewed here.
 DYNAMIC_CALL_CONTRACTS: Mapping[tuple[str, str], DynamicCallContract] = {
     (
+        "packages/apps/gui/src/docwen_gui/widgets/settings/formatting_tab.py",
+        "f'settings.markdown_extensions.{direction}'",
+    ): _contract(
+        1, _keys("settings.markdown_extensions.", {"output", "input"}), "finite directional extension controls"
+    ),
+    (
+        "packages/apps/gui/src/docwen_gui/widgets/settings/formatting_tab.py",
+        "f'settings.markdown_extensions.{direction}_hint'",
+    ): _contract(
+        1,
+        _keys("settings.markdown_extensions.", {"output_hint", "input_hint"}),
+        "finite directional extension controls",
+    ),
+    (
+        "packages/apps/gui/src/docwen_gui/widgets/settings/formatting_tab.py",
+        "f'settings.markdown_extensions.{name}'",
+    ): _contract(
+        1,
+        _keys(
+            "settings.markdown_extensions.",
+            {"typed_endnotes", "structural_tables", "captions_references", "extended_headings"},
+        ),
+        "finite directional extension controls",
+    ),
+    (
         "packages/apps/cli/src/docwen_cli/commands/execution_request.py",
         "key",
     ): _contract(1, frozenset(), "transparent wrapper; only structural yaml_keys.title/subtitle call sites"),

@@ -368,14 +368,15 @@ class DocxSemanticsV3Recovery:
     def is_caption_element(self, element: Any) -> bool:
         return any(item.caption_element is element for item in self.recovered_captions)
 
-    def render_paragraph_text(self, paragraph_element: Any) -> str | None:
+    def render_paragraph_text(self, paragraph_element: Any, *, emit_references: bool = True) -> str | None:
         """Recover exact authored v3 reference tokens from one paragraph."""
 
         text, semantic = recover_paragraph_children(
             list(paragraph_element),
             target_ids_by_bookmark=self._target_ids_by_bookmark,
-            soft_tokens_by_tag=self._soft_tokens_by_tag,
-            occurrence_tokens_by_tag=self._occurrence_tokens_by_tag,
+            emit_references=emit_references,
+            soft_tokens_by_tag=self._soft_tokens_by_tag if emit_references else {},
+            occurrence_tokens_by_tag=self._occurrence_tokens_by_tag if emit_references else {},
         )
         return text if semantic else None
 
@@ -585,7 +586,7 @@ def _prove_soft_references(
         prove_soft_reference_envelope(
             sdt,
             tag,
-            soft_reference_visible_text(record.authored_token, record.cached_number),
+            soft_reference_visible_text(record.authored_token, record.cached_number, record.fallback_text),
         )
         seen.add(tag)
     if seen != set(by_tag):

@@ -18,6 +18,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, cast
 
+from docwen_core.markdown_extensions import MarkdownExtensions
 from docwen_plugin_markdown.document_semantics_v3_fenced_source import (
     project_fenced_source_v3,
 )
@@ -128,6 +129,7 @@ class MarkdownSemanticsV3Analysis:
 
     projection: dict[str, Any]
     diagnostics: tuple[dict[str, Any], ...]
+    literal_ranges: tuple[SourceRange, ...] = ()
 
     @property
     def has_errors(self) -> bool:
@@ -184,6 +186,7 @@ def analyze_markdown_semantics_v3(
     external_citations: Sequence[ExternalCitationResolution] = (),
     rename_replacements: Mapping[int, str] | None = None,
     semantic_id_replacements: Mapping[int, str] | None = None,
+    extensions: MarkdownExtensions | None = None,
 ) -> MarkdownSemanticsV3Analysis:
     """Parse one authenticated Markdown source into the v3 source oracle.
 
@@ -207,6 +210,8 @@ def analyze_markdown_semantics_v3(
     semantic_source = _mask_yaml_front_matter(source)
     lines = _split_lines(semantic_source)
     blocks = _scan_blocks(lines)
+    dialect = extensions or MarkdownExtensions.obsidian()
+    literal_ranges: list[SourceRange] = []
 
     diagnostics: list[dict[str, Any]] = []
     targets: list[dict[str, Any]] = []
@@ -230,6 +235,18 @@ def analyze_markdown_semantics_v3(
 
     # Headings and declarations own semantic IDs.  Raw objects never do.
     for index, block in enumerate(blocks):
+        disabled = (block.kind == "caption_declaration" and not dialect.captions_references) or (
+            block.kind == "heading" and int(block.data["level"]) > 6 and not dialect.extended_headings
+        )
+        if disabled:
+            end = block.start + len(source[block.start : block.end].rstrip("\r\n"))
+            literal_ranges.append(SourceRange(block.start, end))
+            anchor = _standalone_semantic_anchor(blocks, index)
+            if anchor is not None:
+                _token, token_range = anchor
+                literal_ranges.append(token_range)
+                semantic_anchor_marker_ranges.add((token_range.start, token_range.end))
+            continue
         if block.kind == "heading":
             level = int(block.data["level"])
             title, anchor = _extract_inline_anchor(
@@ -536,9 +553,12 @@ def analyze_markdown_semantics_v3(
     occupied: list[SourceRange] = []
     for match in semantic_matches:
         token_range = SourceRange(match.start(), match.end())
-        if _overlaps_any(token_range, excluded):
+        if _overlaps_any(token_range, [*excluded, *literal_ranges]):
             continue
         occupied.append(token_range)
+        if not dialect.captions_references:
+            literal_ranges.append(token_range)
+            continue
         reference, reference_diagnostics = _resolve_reference(
             source_identity,
             match,
@@ -622,7 +642,9 @@ def analyze_markdown_semantics_v3(
             key=lambda item: (item["range"]["start"], item["range"]["end"], item["code"]),
         )
     )
-    return MarkdownSemanticsV3Analysis(projection=projection, diagnostics=ordered_diagnostics)
+    return MarkdownSemanticsV3Analysis(
+        projection=projection, diagnostics=ordered_diagnostics, literal_ranges=tuple(literal_ranges)
+    )
 
 
 def _project_fenced_sources(source: str, blocks: Sequence[_Block], source_sha256: str) -> list[dict[str, Any]]:
@@ -1673,10 +1695,18 @@ def _resolve_reference(
             matching_headings = [
                 heading for heading in headings if tuple(heading["heading_path"][-len(heading_path) :]) == heading_path
             ]
+            if len(heading_path) == 1:
+                keywords = {"figure": "Figure", "table": "Table", "equation": "Equation", "code_block": "Code"}
+                matching_headings.extend(
+                    target
+                    for target in targets
+                    if target["kind"] in keywords
+                    and f"{keywords[target['kind']]}: {target['title']}".strip() == fragment.strip()
+                )
             if len(matching_headings) == 1:
                 target = matching_headings[0]
                 status = "resolved" if target.get("number") else "unnumbered"
-                record["resolved_kind"] = "heading"
+                record["resolved_kind"] = target["kind"]
                 current_title = str(target["title"])
                 if target.get("number"):
                     record["cached_number"] = target["number"]
@@ -1691,7 +1721,7 @@ def _resolve_reference(
                         source_identity,
                         "error",
                         "docwen.markdown.cross_reference.ambiguous",
-                        "The same-document Heading path selects more than one Heading.",
+                        "The same-document title selects more than one heading or caption.",
                         token_range,
                         related_ranges=tuple(
                             SourceRange(item["range"]["start"], item["range"]["end"]) for item in matching_headings[:16]
@@ -1732,15 +1762,7 @@ def _resolve_reference(
             )
         )
     elif status == "unnumbered":
-        diagnostics.append(
-            _diagnostic(
-                source_identity,
-                "error",
-                "docwen.markdown.cross_reference.unnumbered_target",
-                "The resolved semantic target has no materializable number.",
-                token_range,
-            )
-        )
+        record["fallback_text"] = alias or current_title or str(record.get("resolved_kind", "Reference"))
 
     if alias is not None and current_title is not None and alias != current_title:
         alias_range_dict = record["alias_range"]

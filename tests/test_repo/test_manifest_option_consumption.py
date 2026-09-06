@@ -12,7 +12,7 @@ pytestmark = pytest.mark.unit
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-_OPTION_GET_LITERAL_RE = re.compile(r'\b(?:options|opts|context\.request\.options)\.get\("([^"]+)"')
+_OPTION_GET_LITERAL_RE = re.compile(r'\b(?:options|raw_options|opts|context\.request\.options)\.get\("([^"]+)"')
 _CONTEXT_REQUEST_OPTIONS_GET_RE = re.compile(r'getattr\(context\.request,\s*"options",\s*\{\}\)\.get\("([^"]+)"')
 _REQUEST_OPTIONS_INDEX_RE = re.compile(r'"([^"]+)"\s+in\s+request_options|request_options\["([^"]+)"\]')
 _REQ_OPTS_INDEX_RE = re.compile(r'"([^"]+)"\s+in\s+req_opts|req_opts\["([^"]+)"\]')
@@ -40,6 +40,11 @@ def _plugin_request_option_read_keys() -> set[str]:
             for match in pattern.finditer(source):
                 key = next(group for group in match.groups() if group)
                 keys.add(key)
+    shared_policy = PROJECT_ROOT / "packages/core/src/docwen_core/markdown_extensions.py"
+    assert "resolve_markdown_extensions(" in "\n".join(
+        path.read_text(encoding="utf-8") for path in source_root.glob("**/src/**/*.py")
+    )
+    keys.update(_OPTION_GET_LITERAL_RE.findall(shared_policy.read_text(encoding="utf-8")))
     return keys
 
 

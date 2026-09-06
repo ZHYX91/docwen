@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "docwen-gui"
-version = "0.9.1"
+version = "0.10.0"
 description = "DocWen GUI -- PySide6-based graphical user interface"
 requires-python = ">=3.12,<3.13"
 dependencies = [

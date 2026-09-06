@@ -551,7 +551,7 @@ class ResolvedNumberingProofMixin:
                 prove_soft_reference_envelope(
                     sdt,
                     tag,
-                    soft_reference_visible_text(record.authored_token, record.cached_number),
+                    soft_reference_visible_text(record.authored_token, record.cached_number, record.fallback_text),
                 )
                 soft_physical.append(tag)
             elif tag.startswith(REFERENCE_OCCURRENCE_TAG_PREFIX):

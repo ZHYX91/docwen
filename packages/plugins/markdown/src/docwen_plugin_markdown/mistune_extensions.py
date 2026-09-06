@@ -34,6 +34,8 @@ from mistune.plugins.formatting import (
     superscript as _superscript,
 )
 
+from docwen_core.markdown_extensions import MarkdownExtensions
+
 _EXTENDED_ATX_HEADING_TRIM = re.compile(r"(\s+|^)#+\s*$")
 _STRUCTURAL_TABLE_DELIMITER_CELL = re.compile(r"^:?-{3,}:?$")
 _STRUCTURAL_TABLE_BLOCK = (
@@ -309,7 +311,9 @@ def plugin_structural_tables(md: mistune.Markdown) -> None:
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-def create_extended_markdown(*, auto_link_bare_url: bool = False) -> mistune.Markdown:
+def create_extended_markdown(
+    *, auto_link_bare_url: bool = False, extensions: MarkdownExtensions | None = None
+) -> mistune.Markdown:
     """Create a mistune Markdown instance with the requested plugins.
 
     Includes:
@@ -328,15 +332,18 @@ def create_extended_markdown(*, auto_link_bare_url: bool = False) -> mistune.Mar
         "strikethrough",
         "task_lists",
         "math",
-        plugin_structural_tables,
         _mark,
         _insert,
         _superscript,
         _subscript,
         plugin_single_line_block_math,
-        plugin_extended_atx_headings,
         plugin_underline,
     ]
+    dialect = extensions or MarkdownExtensions.obsidian()
+    if dialect.structural_tables:
+        plugins.append(plugin_structural_tables)
+    if dialect.extended_headings:
+        plugins.append(plugin_extended_atx_headings)
     if auto_link_bare_url:
         plugins.append("url")
 
@@ -355,6 +362,7 @@ def parse_markdown_text(
     content: str,
     *,
     auto_link_bare_url: bool = False,
+    extensions: MarkdownExtensions | None = None,
 ) -> list[dict[str, Any]]:
     """Parse Markdown text into an AST using the extended mistune parser.
 
@@ -364,5 +372,15 @@ def parse_markdown_text(
     Returns:
         A list of token dicts from mistune's AST renderer.
     """
-    parser = create_extended_markdown(auto_link_bare_url=auto_link_bare_url)
-    return parser(content)  # pyright: ignore[reportReturnType]
+    parser = create_extended_markdown(auto_link_bare_url=auto_link_bare_url, extensions=extensions)
+    nodes = parser(content)
+    if extensions is not None and not extensions.structural_tables:
+
+        def literal_cells(items: list[dict[str, Any]]) -> None:
+            for node in items:
+                if node.get("type") == "table_cell":
+                    node.setdefault("attrs", {})["docwen_literal_merge_marker"] = True
+                literal_cells(node.get("children", []))
+
+        literal_cells(nodes)  # pyright: ignore[reportArgumentType]
+    return nodes  # pyright: ignore[reportReturnType]

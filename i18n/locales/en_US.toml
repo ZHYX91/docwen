@@ -196,17 +196,17 @@ title = "Settings"
 # 选项卡标题
 [settings.tabs]
 general = "General"
-text = "Text"
+text = "Incoming text"
 proofread = "Proofread"
-export = "Export"
-document = "Document"
-spreadsheet = "Spreadsheet"
+export = "Markdown resources"
+document = "Incoming documents"
+spreadsheet = "Incoming spreadsheets"
 image = "Image"
-layout = "Layout"
+layout = "Incoming fixed-layout files"
 other = "Other"
 link = "Link"
-formatting = "Format"
-output = "Output"
+formatting = "Markdown syntax"
+output = "File saving"
 logging = "Logging"
 
 [settings.descriptions]
@@ -404,7 +404,6 @@ merge_strategy_label = "Merge Cell Export Strategy:"
 [settings.table_export.strategies]
 fill = "Fill"
 empty = "Empty"
-marker = "Marker"
 
 [settings.document]
 # 内容提取设置
@@ -1599,3 +1598,15 @@ body = "body"
 [yaml_keys]
 title = "title"
 subtitle = "subtitle"
+
+[settings.markdown_extensions]
+description = "Choose extensions to recognize in Markdown input and to use in Markdown output. Source files are never rewritten."
+input = "Markdown input: recognize extensions"
+output = "Markdown output: use extensions"
+input_hint = "When disabled, use ordinary text, tables and footnotes."
+output_hint = "When disabled, export ordinary Markdown and report losses of table structure, heading levels and endnote types."
+structural_tables = "Structural Tables"
+captions_references = "Number Suite captions and cross-references"
+extended_headings = "Heading levels 7–9 (H7–H9)"
+typed_endnotes = "Typed footnotes and endnotes"
+obsidian_preset = "Use Obsidian extensions"

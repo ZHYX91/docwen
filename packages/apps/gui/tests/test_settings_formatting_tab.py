@@ -156,3 +156,33 @@ def test_formatting_tab_user_edits_update_all_view_model_fields(qapp) -> None:
 
     tab._heading_merge_punctuation.setText("：§")  # pyright: ignore[reportPrivateUsage]
     assert vm.config.formatting.heading_merge_punctuation == "：§"
+
+
+def test_extension_controls_and_directional_preset_update_only_the_selected_direction(qapp) -> None:
+    from PySide6.QtWidgets import QCheckBox, QPushButton
+
+    from docwen_gui.models.settings_config import SettingsConfig
+    from docwen_gui.view_models.settings_vm import SettingsViewModel
+    from docwen_gui.widgets.settings.formatting_tab import FormattingTab
+
+    vm = SettingsViewModel(config=SettingsConfig())
+    tab = FormattingTab(vm)
+    control = tab.findChild(QCheckBox, "markdownExtensionInputStructuralTables")
+    preset = tab.findChild(QPushButton, "markdownExtensionsOutputPreset")
+    assert control is not None and preset is not None
+    assert not control.isChecked()
+    control.setChecked(True)
+    assert vm.config.formatting.markdown_extensions["input"] == {
+        "structural_tables": True,
+        "captions_references": False,
+        "extended_headings": False,
+        "typed_endnotes": False,
+    }
+    assert not any(vm.config.formatting.markdown_extensions["output"].values())
+    preset.click()
+    assert all(vm.config.formatting.markdown_extensions["output"].values())
+    assert not vm.config.formatting.markdown_extensions["input"]["captions_references"]
+    vm.cancel_changes()
+    tab.reload_from_config()
+    assert not control.isChecked()
+    assert not any(vm.config.formatting.markdown_extensions["output"].values())

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "docwen-cli"
-version = "0.9.1"
+version = "0.10.0"
 description = "DocWen CLI — command-line interface"
 requires-python = ">=3.12,<3.13"
 dependencies = [
@@ -22,7 +22,6 @@ packages = ["src/docwen_cli"]
 "../../../contracts/schemas/docwen.machine.v1.schema.json" = "docwen_cli/contracts/docwen.machine.v1.schema.json"
 "../../../contracts/schemas/docwen.machine.diagnostic_evidence.v1.schema.json" = "docwen_cli/contracts/docwen.machine.diagnostic_evidence.v1.schema.json"
 "../../../contracts/schemas/docwen.semantic_bibliography.v1.schema.json" = "docwen_cli/contracts/docwen.semantic_bibliography.v1.schema.json"
-"../../../contracts/schemas/docwen.round_trip_sidecar.v1.schema.json" = "docwen_cli/contracts/docwen.round_trip_sidecar.v1.schema.json"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

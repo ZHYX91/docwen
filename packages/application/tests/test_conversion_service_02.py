@@ -108,6 +108,7 @@ def test_docx_to_markdown_declares_document_resource_graph_and_preserves_images(
         "default": True,
     }
     assert set(capability.options_schema["properties"]) == {
+        "markdown_extensions",
         "recognize_text",
         "preserve_resources",
         "ocr_language",

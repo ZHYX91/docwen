@@ -3,7 +3,7 @@
   "manifestId": "docwen-windows-production",
   "product": {
     "name": "DocWen",
-    "version": "0.9.1",
+    "version": "0.10.0",
     "stableSemverOnly": true,
     "cliJsonProtocolVersion": 3,
     "releaseTagFormat": "{version}"
@@ -34,15 +34,15 @@
     "fixtures": [
       {
         "path": "tests/fixtures/golden/cli_protocol_v3_success.json",
-        "sha256": "12bfab6e6528195d861ac83748447709adb79cc560da303b81d22bb881c457c0"
+        "sha256": "69544b19170cf133cf3f7fe589455ec165be7a9417fcba2698902aa04382005e"
       },
       {
         "path": "tests/fixtures/golden/cli_protocol_v3_error.json",
-        "sha256": "313ba8d9fb5b4b603cf2cd25867ada3c775c90dd061a08cb6fa21c09b78c2a9f"
+        "sha256": "b54f775c41d615a5145fcd8951346effff47f28c5795c8ba838302c796c9660f"
       },
       {
         "path": "tests/fixtures/golden/cli_protocol_v3_batch.json",
-        "sha256": "dcd6dbb5f6602ee6b1081eb472544949b91ed60b64cbe20a6b7ea1d858bda3ea"
+        "sha256": "67ec8840dbe1f525eb6c58299cf656133e6de1ef9e092e1b57dc43cd5299199f"
       }
     ],
     "machineContractFiles": [
@@ -67,12 +67,8 @@
         "sha256": "fdb25f27fc750f683aea9f6b7364437e8e0b832fa7d03f45b531bc938832b373"
       },
       {
-        "path": "contracts/schemas/docwen.round_trip_sidecar.v1.schema.json",
-        "sha256": "063441e3978b771c3a87e14f53c26da384cc5530f573c3a7f1a9f0b0c350579f"
-      },
-      {
         "path": "contracts/conformance-manifest.json",
-        "sha256": "eaed98e6a099d6e8bfc2a04d82164f2e75f24f80759f045bb8147353c84c6bef"
+        "sha256": "cc86429f4421ecbeeafc72cda6bc206d89737e8a8ec816de5104a36cd4aaefa1"
       },
       {
         "path": "contracts/fixtures/valid/semantic-bibliography.rich.json",
@@ -204,7 +200,7 @@
     },
     "lock": {
       "path": "uv.lock",
-      "sha256": "df986817a1cd53a79537ad102e7b680f3e657e742d76002026371973939a358d"
+      "sha256": "94bc093732ee5f3243d0a52cd47f1a32cde8415c24e708ffb8f30435e7da8cb6"
     },
     "pyinstallerVersion": "6.16.0"
   },
@@ -220,8 +216,8 @@
     "readmeSourceGlob": "docs/user-guides/README.*.md",
     "allowlist": {
       "path": "release/windows-payload-allowlist.v1.json",
-      "status": "FROZEN",
-      "sha256": "7c3dbf66160ac6be0c30b9f5f545f2079174fbb5cd34d3783eb7872c7106efae",
+      "status": "CALIBRATION_REQUIRED",
+      "sha256": null,
       "rejectMissing": true,
       "rejectUnexpected": true,
       "rejectCaseFoldCollision": true,
@@ -244,8 +240,8 @@
   },
   "releaseAssetAllowlist": [
     "DocWen-windows-x64.zip",
-    "DocWenCLI-0.9.1-linux-x64.tar.gz",
-    "DocWen-0.9.1-linux-x64.tar.gz",
+    "DocWenCLI-0.10.0-linux-x64.tar.gz",
+    "DocWen-0.10.0-linux-x64.tar.gz",
     "SHA256SUMS.txt"
   ]
 }

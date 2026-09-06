@@ -457,3 +457,25 @@ class TestResetSectionReload:
         assert vm.config.gui.theme == "light"
         assert vm.is_dirty is False
         assert vm.get_change_summary() == []
+
+
+def test_extension_directions_persist_cancel_and_reset_as_one_formatting_group(vm: SettingsViewModel) -> None:
+    from docwen_core.markdown_extensions import MarkdownExtensions
+
+    defaults = {direction: MarkdownExtensions().to_dict() for direction in ("input", "output")}
+    expected = {"input": MarkdownExtensions.obsidian().to_dict(), "output": MarkdownExtensions().to_dict()}
+    assert vm.config.formatting.markdown_extensions == defaults
+    vm.set_field(SECTION_FORMATTING, "markdown_extensions", expected)
+    assert vm.apply_settings()
+    assert vm.load_from_controller_config()
+    assert vm.config.formatting.markdown_extensions == expected
+    vm.begin_session()
+    vm.set_field(
+        SECTION_FORMATTING, "markdown_extensions", {**expected, "output": MarkdownExtensions.obsidian().to_dict()}
+    )
+    vm.cancel_changes()
+    assert vm.config.formatting.markdown_extensions == expected
+    assert vm.reset_section(SECTION_FORMATTING)
+    assert vm.config.formatting.markdown_extensions == defaults
+    assert vm.load_from_controller_config()
+    assert vm.config.formatting.markdown_extensions == defaults

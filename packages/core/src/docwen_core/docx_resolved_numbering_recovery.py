@@ -1,29 +1,17 @@
-"""Proof-only recovery for DOCX packages carrying resolved-v4 signals.
+"""Read the represented semantics of resolved-v4 DOCX packages.
 
-This reader deliberately does not reconstruct a provider document or claim an
-exact Markdown round-trip.  The current physical package carries enough
-authority to prove Word numbering, caption, reference, Citation, and disabled
-occurrence facts, but it does not carry the complete admitted neutral input.
-Consequently, callers may use the recovered authored tokens and may preserve
-visible authored text, while a separate stable diagnostic records that exact
-source bytes are unavailable.
+The DOCX is the complete conversion input. Numbering, captions, references
+and content are recovered from its validated semantic structures.
 """
 
 from __future__ import annotations
 
-import hashlib
 import re
 from pathlib import Path
 from typing import Any, cast
 from zipfile import ZipFile
 
 from docwen_core import _docx_semantics_v3_fenced as fenced
-from docwen_core._docx_recovery_map import (
-    RESOLVED_V4_RECOVERY_MAP_NAMESPACE,
-    ResolvedV4RecoveryMap,
-    compute_physical_projection,
-    read_recovery_map,
-)
 from docwen_core._docx_semantics_v3_fenced_map import parse_fenced_source_map
 from docwen_core._docx_semantics_v3_model import (
     ANCHOR_TOPOLOGY_MAP_NAMESPACE,
@@ -68,7 +56,6 @@ from docwen_core.docx_citation_ooxml import (
 )
 from docwen_core.docx_numbering_import import (
     HeadingNumberingProofIndex,
-    NumberingImportDiagnostic,
     ProofOnlyHeadingImport,
     import_heading_without_source_mutation,
 )
@@ -77,12 +64,6 @@ from docwen_core.docx_numbering_occurrence import (
     NumberingOccurrenceIdentity,
     parse_numbering_occurrence_map,
     prove_numbering_occurrence_sdt,
-)
-
-RESOLVED_V4_SOURCE_SNAPSHOT_MISSING_DIAGNOSTIC = "docwen.docx.resolved_v4.source_snapshot_missing"
-RESOLVED_V4_SOURCE_SNAPSHOT_MISSING_MESSAGE = (
-    "Resolved-v4 Word semantics were proven, but this package has no authenticated complete neutral/source "
-    "snapshot; output is generic extraction and is not an exact Markdown round-trip."
 )
 
 _CAPTION_COUNTER = {
@@ -107,14 +88,10 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
     """Authenticated adapter over the currently frozen v4 physical carriers."""
 
     is_resolved_v4 = True
-    has_complete_source_snapshot = False
-    source_recovery_available = False
     _resolved_v4_inline_tokens: dict[str, str]
     _resolved_v4_citations: tuple[Any, ...]
     _resolved_v4_heading_proof: HeadingNumberingProofIndex
     _resolved_v4_heading_imports: dict[int, ProofOnlyHeadingImport]
-    _recovery_map: ResolvedV4RecoveryMap | None = None
-    _recovery_item_number: int | None = None
 
     @classmethod
     def load_if_present(
@@ -125,8 +102,8 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         """Return a strict v4 reader only for an explicit current-package signal.
 
         Packages that are physically indistinguishable from historical v3 are
-        left to the frozen v3 reader.  A future authenticated recovery map must
-        remove that ambiguity before exact round-trip can be claimed.
+        left to the v3 semantic reader. Both readers reconstruct Markdown
+        from the document package without access to original source files.
         """
 
         package_path = Path(path)
@@ -143,107 +120,9 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
                 _number, root = owned[CAPTION_STYLE_BINDING_MAP_NAMESPACE]
                 caption_styles = parse_caption_style_binding_map(root)
                 prove_caption_style_registry(package, caption_styles)
-            recovery_map = read_recovery_map(package)
-            if recovery_map is not None:
-                item_number, _parsed = recovery_map
-                verify_custom_xml_support(package, item_number, RESOLVED_V4_RECOVERY_MAP_NAMESPACE)
         if not _has_explicit_resolved_v4_signal(document, owned, targets, caption_styles):
             return None
-        recovery = cls._load_proven(package_path, document, owned)
-        if recovery_map is not None:
-            recovery._bind_recovery_map(package_path, recovery_map[1], recovery_map[0])
-        return recovery
-
-    def _bind_recovery_map(
-        self,
-        package_path: Path,
-        value: ResolvedV4RecoveryMap,
-        item_number: int,
-    ) -> None:
-        """Bind the exact-neutral recovery authority without raw file admission.
-
-        The map is authentic when its content digest and the whole-package
-        physical projection both match the reopened package.  The three raw
-        pointer files live in the request-owned staging tree; exact-neutral
-        recovery consumes them only through the authenticated adapter below,
-        and generic proof-only recovery never touches them.
-        """
-
-        if not re.fullmatch(r"[0-9a-f]{64}", value.source_sha256) or not re.fullmatch(
-            r"[0-9a-f]{64}", value.plan_sha256
-        ):
-            raise DocxSemanticsV3Error("resolved-v4 recovery map identity digests are invalid")
-        physical = compute_physical_projection(package_path, exclude_item_numbers={item_number})
-        if physical != value.physical_sha256:
-            # The semantic evidence above has already been fully proven by
-            # ``_load_proven``.  A remaining whole-package byte difference
-            # disables only byte-exact source recovery; callers continue from
-            # the authenticated semantic projection.  Semantic-map, field,
-            # bookmark, caption, REF-cache, and identity errors never reach
-            # this downgrade path and still fail closed.
-            return
-        self._recovery_map = value
-        self._recovery_item_number = item_number
-        self.has_complete_source_snapshot = True
-        self.source_recovery_available = True
-
-    def prove_exact_recovery_raw(
-        self,
-        *,
-        neutral_raw: bytes,
-        plan_raw: bytes,
-        authored_source: bytes,
-    ) -> None:
-        """Prove three caller-supplied raw files against the authenticated map."""
-
-        if self._recovery_map is None:
-            raise DocxSemanticsV3Error("resolved-v4 recovery map is not bound")
-        expected = {item.role: item for item in self._recovery_map.pointers}
-        actual = {
-            "neutral_raw": neutral_raw,
-            "plan_raw": plan_raw,
-            "authored_source": authored_source,
-        }
-        for role, raw in actual.items():
-            pointer = expected.get(role)
-            if pointer is None:
-                raise DocxSemanticsV3Error(f"resolved-v4 recovery map lacks {role} pointer")
-            if len(raw) != pointer.bytes:
-                raise DocxSemanticsV3Error(f"resolved-v4 recovery {role} byte count differs from its pointer")
-            if hashlib.sha256(raw).hexdigest() != pointer.sha256:
-                raise DocxSemanticsV3Error(f"resolved-v4 recovery {role} digest differs from its pointer")
-
-    def recover_exact_neutral(self, *, raw_root: Path) -> bytes:
-        """Return the authenticated neutral raw bytes from a request-owned tree.
-
-        ``raw_root`` is the staging directory holding the three pointer files.
-        Every pointer is a safe relative path inside that tree; no external or
-        absolute path is ever admitted.
-        """
-
-        if self._recovery_map is None:
-            raise DocxSemanticsV3Error("resolved-v4 recovery map is not bound")
-        resolved: dict[str, bytes] = {}
-        for pointer in self._recovery_map.pointers:
-            relative = Path(pointer.relative_path)
-            if relative.is_absolute() or any(part in {".", "..", ""} for part in relative.parts):
-                raise DocxSemanticsV3Error("resolved-v4 recovery pointer is not a safe relative path")
-            candidate = (raw_root / relative).resolve()
-            root_resolved = raw_root.resolve()
-            if root_resolved not in candidate.parents and candidate != root_resolved:
-                raise DocxSemanticsV3Error("resolved-v4 recovery pointer escapes the raw root")
-            if not candidate.is_file() or candidate.is_symlink():
-                raise DocxSemanticsV3Error("resolved-v4 recovery raw file is missing or is a link")
-            raw = candidate.read_bytes()
-            if len(raw) != pointer.bytes:
-                raise DocxSemanticsV3Error(f"resolved-v4 recovery {pointer.role} byte count differs from its pointer")
-            if hashlib.sha256(raw).hexdigest() != pointer.sha256:
-                raise DocxSemanticsV3Error(f"resolved-v4 recovery {pointer.role} digest differs from its pointer")
-            resolved[pointer.role] = raw
-        neutral = resolved.get("neutral_raw")
-        if neutral is None:
-            raise DocxSemanticsV3Error("resolved-v4 recovery neutral raw bytes are unavailable")
-        return neutral
+        return cls._load_proven(package_path, document, owned)
 
     @classmethod
     def _load_proven(
@@ -345,13 +224,6 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         )
         return recovery
 
-    @property
-    def source_recovery_diagnostic(self) -> NumberingImportDiagnostic:
-        return NumberingImportDiagnostic(
-            RESOLVED_V4_SOURCE_SNAPSHOT_MISSING_DIAGNOSTIC,
-            RESOLVED_V4_SOURCE_SNAPSHOT_MISSING_MESSAGE,
-        )
-
     def heading_import(self, paragraph: Any) -> ProofOnlyHeadingImport:
         key = id(paragraph._p)
         existing = self._resolved_v4_heading_imports.get(key)
@@ -365,12 +237,16 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         self._resolved_v4_heading_imports[key] = imported
         return imported
 
-    def render_paragraph_text(self, paragraph_element: Any) -> str | None:
+    def render_paragraph_text(self, paragraph_element: Any, *, emit_references: bool = True) -> str | None:
         text, semantic = recover_paragraph_children(
             list(paragraph_element),
             target_ids_by_bookmark=self._target_ids_by_bookmark,
-            soft_tokens_by_tag={**self._soft_tokens_by_tag, **self._resolved_v4_inline_tokens},
-            occurrence_tokens_by_tag=self._occurrence_tokens_by_tag,
+            emit_references=emit_references,
+            soft_tokens_by_tag={
+                **(self._soft_tokens_by_tag if emit_references else {}),
+                **self._resolved_v4_inline_tokens,
+            },
+            occurrence_tokens_by_tag=self._occurrence_tokens_by_tag if emit_references else {},
         )
         return text if semantic else None
 
@@ -731,15 +607,6 @@ def _valid_sequence_instruction(instruction: str, counter: str) -> bool:
     return any(re.fullmatch(pattern, instruction) is not None for pattern in patterns)
 
 
-def _recovery_pointer(value: ResolvedV4RecoveryMap, role: str) -> Any:
-    for item in value.pointers:
-        if item.role == role:
-            return item
-    raise DocxSemanticsV3Error(f"resolved-v4 recovery map lacks {role} pointer")
-
-
 __all__ = [
-    "RESOLVED_V4_SOURCE_SNAPSHOT_MISSING_DIAGNOSTIC",
-    "RESOLVED_V4_SOURCE_SNAPSHOT_MISSING_MESSAGE",
     "ResolvedNumberingV4Recovery",
 ]

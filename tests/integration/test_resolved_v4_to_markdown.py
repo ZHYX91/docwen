@@ -18,9 +18,9 @@ from docwen_core._docx_semantics_v3_model import CaptionStyleBindingV3, CaptionS
 from docwen_core.docx_numbering_import import AMBIGUOUS_VISIBLE_PREFIX_DIAGNOSTIC
 from docwen_core.docx_resolved_numbering import ResolvedNumberingDocxSession
 from docwen_core.docx_resolved_numbering_recovery import (
-    RESOLVED_V4_SOURCE_SNAPSHOT_MISSING_DIAGNOSTIC,
     ResolvedNumberingV4Recovery,
 )
+from docwen_core.markdown_extensions import MarkdownExtensions
 from docwen_core.models.file_ref import FileRef
 from docwen_core.models.request import ConversionRequest, OutputPolicy
 from docwen_core.models.resolved_numbering import (
@@ -39,7 +39,6 @@ from docwen_core.models.resolved_numbering import (
     ResolvedNumberingPlan,
     ResolvedNumberingPort,
 )
-from docwen_core.round_trip_sidecar import ROUND_TRIP_SIDECAR_MEDIA_TYPE
 from docwen_plugin_document.to_markdown.converter import DocxToMarkdownConverter
 from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
 from docwen_runtime.config.document_styles import build_document_style_catalog
@@ -125,7 +124,11 @@ def _reverse_context(tmp_path: Path, source: Path, *, request_id: str) -> FakeEx
             request_id=request_id,
             input_refs=[ref],
             target_format="md",
-            options={"to_md_keep_images": True, "remove_numbering": True},
+            options={
+                "to_md_keep_images": True,
+                "remove_numbering": True,
+                "markdown_extensions": {"output": MarkdownExtensions.obsidian().to_dict()},
+            },
             output_policy=OutputPolicy(),
         ),
         FakeWorkspaceHandle(str(source), str(staging), (ref,)),
@@ -139,7 +142,7 @@ def _reverse_context(tmp_path: Path, source: Path, *, request_id: str) -> FakeEx
 def _forward_representative(tmp_path: Path) -> Path:
     result = MdToDocxConverter().convert(_forward_context(tmp_path))
     assert result.success, result.error
-    assert any(item.media_type == ROUND_TRIP_SIDECAR_MEDIA_TYPE for item in result.artifacts)
+    assert len(result.artifacts) == 1
     finalized = OutputFinalizer().finalize(
         "resolved-v4-forward-for-reverse",
         result.artifacts,
@@ -147,7 +150,7 @@ def _forward_representative(tmp_path: Path) -> Path:
     )
     assert finalized.success, finalized.error
     primary = next(item for item in finalized.artifacts if item.is_primary)
-    assert Path(f"{primary.staging_path}.docwen").is_file()
+    assert not Path(f"{primary.staging_path}.docwen").exists()
     return Path(primary.staging_path)
 
 
@@ -162,9 +165,8 @@ def test_representative_proves_four_kinds_refs_citation_and_preserves_tokens_wit
     assert result.success, result.error
     primary = Path(next(item.staging_path for item in result.artifacts if item.is_primary))
     markdown = primary.read_text(encoding="utf-8")
-    expected_source = json.loads(_NEUTRAL.read_text(encoding="utf-8"))["document"]["authored_markdown"]
-    assert len(expected_source.encode()) == 401
-    assert markdown == expected_source
+    assert "| Score | 95 |" in markdown
+    assert "```rust\nfn main() {}\n```" in markdown
     assert not context.progress.diagnostics
     assert "# Architecture ^h-7f3a" in markdown
     assert "Figure: System overview ^system-overview" in markdown
@@ -206,7 +208,6 @@ def test_manual_heading_prefix_survives_enabled_and_disabled_without_legacy_clea
     assert "# 标题 ^head-a" not in markdown
     assert "# 1 2.3 标题" not in markdown
     diagnostics = [item[2] for item in context.progress.diagnostics]
-    assert RESOLVED_V4_SOURCE_SNAPSHOT_MISSING_DIAGNOSTIC in diagnostics
     assert (AMBIGUOUS_VISIBLE_PREFIX_DIAGNOSTIC in diagnostics) is (not enabled)
 
 
@@ -225,35 +226,35 @@ def test_reference_cache_tamper_fails_before_artifact_or_staging_publish(tmp_pat
     assert list(Path(context.workspace.staging_dir).iterdir()) == []
 
 
-@pytest.mark.parametrize("sidecar_state", ["missing", "damaged"])
-def test_missing_or_damaged_sidecar_falls_back_to_authenticated_semantic_markdown(
+@pytest.mark.parametrize("legacy_companion", [False, True])
+def test_docx_alone_reconstructs_semantics_and_ignores_unrelated_companions(
     tmp_path: Path,
-    sidecar_state: str,
+    legacy_companion: bool,
 ) -> None:
-    source = _forward_representative(tmp_path)
-    sidecar = Path(f"{source}.docwen")
-    if sidecar_state == "missing":
-        sidecar.unlink()
-    else:
-        sidecar.write_bytes(b"not-a-sidecar")
-    context = _reverse_context(tmp_path, source, request_id=f"sidecar-{sidecar_state}")
+    generated = _forward_representative(tmp_path)
+    isolated = tmp_path / "isolated-input"
+    isolated.mkdir()
+    source = isolated / "document.docx"
+    source.write_bytes(generated.read_bytes())
+    if legacy_companion:
+        source.with_suffix(".docx.docwen").write_bytes(b"unrelated-file-must-not-be-read")
+    context = _reverse_context(tmp_path, source, request_id="isolated")
 
     result = DocxToMarkdownConverter().convert(context)
 
     assert result.success, result.error
     markdown = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
-    expected_source = json.loads(_NEUTRAL.read_text(encoding="utf-8"))["document"]["authored_markdown"]
-    assert markdown != expected_source
-    diagnostics = [item[2] for item in context.progress.diagnostics]
-    expected_code = (
-        "docwen.docx.resolved_v4.sidecar_missing"
-        if sidecar_state == "missing"
-        else "docwen.docx.resolved_v4.sidecar_invalid.archive_invalid"
-    )
-    assert expected_code in diagnostics
+    assert "# Architecture ^h-7f3a" in markdown
+    assert "Table: Results ^results-main" in markdown
+    assert "| Score | 95 |" in markdown
+    assert "@[[#^system-overview|System overview]]" in markdown
+    assert "@cite-one" in markdown
+    assert not context.progress.diagnostics
+    if legacy_companion:
+        assert source.with_suffix(".docx.docwen").read_bytes() == b"unrelated-file-must-not-be-read"
 
 
-def test_modified_docx_never_reuses_old_sidecar_source(tmp_path: Path) -> None:
+def test_document_edit_is_recovered_from_current_docx(tmp_path: Path) -> None:
     source = _forward_representative(tmp_path)
     _replace_zip_member_bytes(source, member="word/document.xml", old=b"<w:t>95</w:t>", new=b"<w:t>96</w:t>")
     context = _reverse_context(tmp_path, source, request_id="edited-docx")
@@ -265,7 +266,8 @@ def test_modified_docx_never_reuses_old_sidecar_source(tmp_path: Path) -> None:
     expected_source = json.loads(_NEUTRAL.read_text(encoding="utf-8"))["document"]["authored_markdown"]
     assert markdown != expected_source
     assert "| Score | 96 |" in markdown
-    assert RESOLVED_V4_SOURCE_SNAPSHOT_MISSING_DIAGNOSTIC in [item[2] for item in context.progress.diagnostics]
+    assert "| Score | 95 |" not in markdown
+    assert not context.progress.diagnostics
 
 
 def _caption_bindings(document: Any) -> tuple[CaptionStyleBindingV3, ...]:

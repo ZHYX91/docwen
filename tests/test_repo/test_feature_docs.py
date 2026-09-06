@@ -24,7 +24,7 @@ def test_capability_inventory_is_unique_and_current_only() -> None:
     rows = [line for line in text.splitlines() if line.startswith("| FEAT-")]
     ids = [line.split("|", 2)[1].strip() for line in rows]
 
-    assert len(rows) == 160
+    assert len(rows) == 162
     assert len(set(ids)) == len(ids)
     assert not re.search(r"\bVIS-\d|\bF-\d", text)
 

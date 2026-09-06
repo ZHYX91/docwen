@@ -50,6 +50,6 @@ def test_fa13_n1_has_direct_mixed_revision_regression() -> None:
 
     assert "def _flush_text()" in renderer
     assert 'elif tag == "tab"' in renderer
-    assert 'for tag in ("ins", "fldSimple", "hyperlink")' in converter
+    assert 'for tag in ("ins", "fldSimple", "hyperlink", "sdt")' in converter
     assert "test_mixed_direct_and_inserted_revision_text_reaches_paragraph_processing" in tests
     assert 'assert "Rejected heading" not in' in tests

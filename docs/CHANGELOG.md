@@ -5,6 +5,19 @@
 
 ## Unreleased / 未发布
 
+## 0.10.0 (2026-09-06)
+
+- Markdown→Word 只生成独立 DOCX，删除原文 sidecar 及回放逻辑；请自行保留源文件。回转从 DOCX 实际结构重建，不承诺源码逐字一致。
+- 新增按输入识别/输出使用分别控制的 Markdown 扩展开关：Structural Tables、Number Suite 题注与交叉引用、H7–H9、类型化尾注。默认关闭，每个方向可应用 Obsidian 预设。
+- 支持题注名称引用和无编号引用的标题/Alias 显示；关闭输出扩展时使用普通 Markdown 并提示结构表达损失。
+- 设置输入页改名为“传入文本、传入文档、传入表格、传入版式文件”，明确 Markdown 语法、Markdown 资源和文件保存职责。
+- 改进任务反馈、混合批次、输入所有权、异步保护检查和设置在窄窗口中的布局。
+
+- Markdown-to-Word produces an independent DOCX. Original-source sidecars and replay have been removed; retain your sources. Reverse conversion reconstructs actual DOCX structures without promising byte-identical Markdown.
+- Added independent input/output switches for Structural Tables, Number Suite captions and cross-references, H7–H9, and typed endnotes. Extensions default to off, with an Obsidian preset per direction.
+- Added caption-name references and title/Alias display for unnumbered targets. Plain Markdown output reports structural representation losses.
+- Clarified input settings names, Markdown syntax/resources, and file saving; improved task feedback, mixed batches, input ownership, asynchronous protection checks, and narrow settings layouts.
+
 ## 0.9.1 (2026-08-30)
 
 - 改进紧凑控件的几何布局，并增加 Structural Tables Markdown 互操作支持。

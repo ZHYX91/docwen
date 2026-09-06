@@ -14,6 +14,7 @@ from openpyxl import Workbook
 
 from docwen_core.export_semantics import LinkRuntimeConfig
 from docwen_core.links import process_markdown_links, split_yaml_front_matter_source
+from docwen_core.markdown_extensions import resolve_markdown_extensions
 from docwen_core.models.artifact import (
     ARTIFACT_KIND_PRIMARY,
     ArtifactManifest,
@@ -165,6 +166,9 @@ class MdToXlsxConverter:
                     source_stem=Path(input_path).stem,
                     image_scope=image_scope,
                     list_separator=_request_yaml_list_separator(context),
+                    structural_tables=resolve_markdown_extensions(
+                        context.request.options, context.config, direction="input"
+                    ).structural_tables,
                 )
                 actual_table_count = template_stats.get("table_count", 0)
             else:
@@ -352,6 +356,9 @@ class MdToCsvConverter:
                     source_stem=Path(input_path).stem,
                     image_scope=image_scope,
                     list_separator=_request_yaml_list_separator(context),
+                    structural_tables=resolve_markdown_extensions(
+                        context.request.options, context.config, direction="input"
+                    ).structural_tables,
                 )
                 return self._convert_template_workbook_to_csv_artifacts(
                     workbook=workbook,

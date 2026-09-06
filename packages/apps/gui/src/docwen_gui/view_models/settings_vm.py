@@ -1110,7 +1110,18 @@ class SettingsViewModel(QObject):
             style = document.get("style", {}) if isinstance(document, dict) else {}
             table_style = style.get("table", {}) if isinstance(style, dict) else {}
             table_m2d = table_style.get("md_to_docx", {}) if isinstance(table_style, dict) else {}
+            extension_settings = conv.get("markdown_extensions", {})
+            extension_settings = extension_settings if isinstance(extension_settings, dict) else {}
             config.formatting = FormattingConfig(
+                markdown_extensions={
+                    direction: {
+                        name: (extension_settings.get(direction, {}).get(name) is True)
+                        if isinstance(extension_settings.get(direction), dict)
+                        else False
+                        for name in ("structural_tables", "captions_references", "extended_headings", "typed_endnotes")
+                    }
+                    for direction in ("input", "output")
+                },
                 body_format="preserve"
                 if (isinstance(d2m, dict) and d2m.get("preserve_formatting", True))
                 else "discard",
@@ -1383,6 +1394,9 @@ class SettingsViewModel(QObject):
         self._collect_conversion_defaults(values, config.conversion_defaults)
 
         fmt = config.formatting
+        for direction, extensions in fmt.markdown_extensions.items():
+            for name, enabled in extensions.items():
+                put(f"conversion.markdown_extensions.{direction}.{name}", enabled)
         put("conversion.docx_to_md.preserve_formatting", fmt.body_format == "preserve")
         put("conversion.docx_to_md.preserve_heading_formatting", fmt.heading_format == "preserve")
         put("conversion.docx_to_md.preserve_table_header_formatting", fmt.table_header_format == "preserve")

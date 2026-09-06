@@ -251,11 +251,12 @@ class DocxSemanticsV3Session:
 
         if self._finalized:
             raise DocxSemanticsV3Error("semantic session is already finalized")
-        if reference.get("resolution_status") != "resolved":
+        if reference.get("resolution_status") not in {"resolved", "unnumbered"}:
             raise DocxSemanticsV3Error("only resolved semantic references can be rendered")
         cached_number = str(reference.get("cached_number") or "")
-        if not cached_number:
-            raise DocxSemanticsV3Error("semantic reference has no materializable number")
+        fallback_text = reference.get("fallback_text")
+        if not cached_number and not fallback_text:
+            raise DocxSemanticsV3Error("semantic reference has neither a number nor current title")
         selector_kind = reference.get("selector_kind")
         if selector_kind == "stable_id":
             target_id = str(reference.get("target_id") or "")
@@ -263,7 +264,7 @@ class DocxSemanticsV3Session:
             target_id = str(reference["resolved_target_id"])
         else:
             target_id = ""
-        if target_id:
+        if target_id and cached_number:
             target_kind = str(reference.get("resolved_kind") or "")
             target = derive_target_identity_v3(target_kind, target_id)  # type: ignore[arg-type]
             source_range = reference["range"]
@@ -290,8 +291,8 @@ class DocxSemanticsV3Session:
             self._stable_reference_target_ids.append(target.source_id)
             return
 
-        if selector_kind != "heading_path":
-            raise DocxSemanticsV3Error("unsupported soft Heading reference projection")
+        if selector_kind != "heading_path" and not fallback_text:
+            raise DocxSemanticsV3Error("unsupported plain reference projection")
         source_range = reference["range"]
         identity = derive_soft_reference_identity_v3(
             source_sha256=self._source_sha256,
@@ -299,11 +300,15 @@ class DocxSemanticsV3Session:
             source_end=int(source_range["end"]),
             authored_token=str(reference["raw"]),
             cached_number=cached_number,
+            fallback_text=fallback_text,
         )
         if any(item.tag == identity.tag for item in self._soft_references):
             raise DocxSemanticsV3Error("soft-reference tag collision")
         paragraph._p.append(
-            inline_sdt(identity.tag, soft_reference_visible_text(identity.authored_token, cached_number))
+            inline_sdt(
+                identity.tag,
+                soft_reference_visible_text(identity.authored_token, cached_number, identity.fallback_text),
+            )
         )
         self._soft_references.append(identity)
 

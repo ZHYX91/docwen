@@ -20,6 +20,7 @@ Declared routes (11 total):
 from __future__ import annotations
 
 from docwen_core.docx_styles import SHIPPED_STYLE_LOCALES
+from docwen_core.markdown_extensions import MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA
 from docwen_core.models.manifest import HonestyRoute, PluginManifest, RouteCapabilityRule, RouteSpec
 from docwen_core.text.heading_merge import DEFAULT_HEADING_MERGE_PUNCTUATION
 
@@ -32,6 +33,7 @@ MD_TO_DOCX_OPTIONS_SCHEMA: dict = {
     "type": "object",
     "additionalProperties": False,
     "properties": {
+        "markdown_extensions": MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA,
         "locale": {
             "type": "string",
             "enum": list(SHIPPED_STYLE_LOCALES),
@@ -177,6 +179,7 @@ RESOLVED_V4_MD_TO_DOCX_OPTIONS_SCHEMA: dict = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
+        "markdown_extensions": MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA,
         "locale": {
             "type": "string",
             "enum": list(SHIPPED_STYLE_LOCALES),
@@ -202,6 +205,7 @@ MD_TO_SPREADSHEET_TEMPLATE_OPTIONS_SCHEMA: dict = {
     "type": "object",
     "additionalProperties": False,
     "properties": {
+        "markdown_extensions": MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA,
         "template_name": {
             "type": "string",
             "pattern": r"^template\.xlsx\.[0-9a-f]{64}$",
@@ -218,7 +222,9 @@ MD_TO_SPREADSHEET_TEMPLATE_OPTIONS_SCHEMA: dict = {
 MD_TO_SPREADSHEET_OPTIONS_SCHEMA: dict = {
     "type": "object",
     "additionalProperties": False,
-    "properties": {},
+    "properties": {
+        "markdown_extensions": MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA,
+    },
     "required": [],
 }
 

@@ -10,7 +10,6 @@ import os
 import random
 import re
 import shutil
-import stat
 import subprocess
 import sys
 import tempfile
@@ -61,7 +60,6 @@ _DOCTOR_BASE_CHECK_IDS = frozenset(
 )
 _WORDPROCESSINGML_NAMESPACE = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 _WORD_TAG = f"{{{_WORDPROCESSINGML_NAMESPACE}}}"
-_ROUND_TRIP_SIDECAR_MEDIA_TYPE = "application/vnd.docwen.round-trip-sidecar+zip"
 _ROUND_TRIP_SIDECAR_MEMBERS = (
     "authored-source.md",
     "neutral-document.json",
@@ -487,67 +485,6 @@ Machine semantic tail.
 
 def _default_binary_name() -> str:
     return "DocWenCLI.exe" if os.name == "nt" else "DocWenCLI"
-
-
-def _verify_round_trip_sidecar(
-    sidecar_path: Path,
-    *,
-    docx_path: Path,
-    authored_source: bytes,
-    neutral_document: bytes,
-    numbering_export_plan: bytes,
-) -> None:
-    docx_bytes = _read_bytes_with_long_path(docx_path)
-    expected_payloads = {
-        "authored-source.md": authored_source,
-        "neutral-document.json": neutral_document,
-        "numbering-export-plan.json": numbering_export_plan,
-    }
-    with _zipfile_with_long_path(sidecar_path) as archive:
-        infos = archive.infolist()
-        if archive.comment or tuple(item.filename for item in infos) != _ROUND_TRIP_SIDECAR_MEMBERS:
-            raise RuntimeError("packaged_machine_round_trip_sidecar_inventory_invalid")
-        for info in infos:
-            mode = (info.external_attr >> 16) & 0xFFFF
-            if (
-                info.date_time != (1980, 1, 1, 0, 0, 0)
-                or info.extra
-                or info.comment
-                or info.create_system != 3
-                or mode != stat.S_IFREG | 0o600
-                or info.compress_type != zipfile.ZIP_STORED
-            ):
-                raise RuntimeError("packaged_machine_round_trip_sidecar_metadata_invalid")
-        payloads = {name: archive.read(name) for name in _ROUND_TRIP_SIDECAR_MEMBERS}
-    for name, expected in expected_payloads.items():
-        if payloads[name] != expected:
-            raise RuntimeError(f"packaged_machine_round_trip_sidecar_payload_invalid:{name}")
-    expected_manifest = {
-        "schema": "docwen.round_trip_sidecar.v1",
-        "docx": {
-            "media_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            "bytes": len(docx_bytes),
-            "sha256": hashlib.sha256(docx_bytes).hexdigest(),
-        },
-        "files": [
-            {
-                "path": name,
-                "media_type": media_type,
-                "bytes": len(expected_payloads[name]),
-                "sha256": hashlib.sha256(expected_payloads[name]).hexdigest(),
-            }
-            for name, media_type in (
-                ("authored-source.md", "text/markdown; charset=utf-8"),
-                ("neutral-document.json", MACHINE_RESOLVED_DOCUMENT_MEDIA_TYPE),
-                ("numbering-export-plan.json", MACHINE_NUMBERING_EXPORT_PLAN_MEDIA_TYPE),
-            )
-        ],
-    }
-    expected_manifest_bytes = (json.dumps(expected_manifest, ensure_ascii=False, separators=(",", ":")) + "\n").encode(
-        "utf-8"
-    )
-    if payloads["manifest.json"] != expected_manifest_bytes:
-        raise RuntimeError("packaged_machine_round_trip_sidecar_manifest_invalid")
 
 
 def _verify_resource_layout(binary_dir: Path) -> None:
@@ -2681,9 +2618,9 @@ def _run_machine_protocol_smoke_impl(
         or markdown_capability.get("input_shape") != expected_markdown_input_shape
         or markdown_capability.get("output_shape")
         != {
-            "cardinality": "many",
-            "artifact_kinds": ["document", "resource"],
-            "relation_types": ["resource_of"],
+            "cardinality": "one",
+            "artifact_kinds": ["document"],
+            "relation_types": [],
             "atomic_bundle": True,
         }
     ):
@@ -2869,7 +2806,13 @@ def _run_machine_protocol_smoke_impl(
                     "staging_root": {"kind": "local_path", "path": str(staging)},
                     "staging_policy": "require_empty",
                 },
-                "options": {},
+                "options": {
+                    "markdown_extensions": {
+                        "input": dict.fromkeys(
+                            ("structural_tables", "captions_references", "extended_headings", "typed_endnotes"), True
+                        )
+                    }
+                },
             },
         }
     )
@@ -3024,34 +2967,13 @@ def _run_machine_protocol_smoke_impl(
         if isinstance(semantic_artifacts, list)
         else []
     )
-    semantic_sidecars = (
-        [
-            item
-            for item in semantic_artifacts
-            if isinstance(item, dict)
-            and item.get("kind") == "resource"
-            and item.get("media_type") == _ROUND_TRIP_SIDECAR_MEDIA_TYPE
-        ]
-        if isinstance(semantic_artifacts, list)
-        else []
-    )
     if (
         not isinstance(semantic_bundle, dict)
         or semantic_bundle.get("task_id") != task_id
         or not isinstance(semantic_artifacts, list)
-        or len(semantic_artifacts) != 2
+        or len(semantic_artifacts) != 1
         or len(semantic_documents) != 1
-        or len(semantic_sidecars) != 1
-        or semantic_bundle.get("relations")
-        != [
-            {
-                "type": "resource_of",
-                "source_artifact_id": semantic_sidecars[0].get("artifact_id"),
-                "target_artifact_id": semantic_documents[0].get("artifact_id"),
-                "role": "manifest",
-                "ordinal": 0,
-            }
-        ]
+        or semantic_bundle.get("relations") != []
     ):
         raise RuntimeError(f"packaged_machine_protocol_semantic_artifact_invalid:{semantic_bundle}")
     expected_entries = [
@@ -3073,27 +2995,6 @@ def _run_machine_protocol_smoke_impl(
         semantic_output_bytes
     ).hexdigest() != semantic_documents[0].get("sha256"):
         raise RuntimeError("packaged_machine_protocol_semantic_integrity_mismatch")
-    semantic_sidecar_locator = semantic_sidecars[0].get("locator")
-    if (
-        not isinstance(semantic_sidecar_locator, str)
-        or semantic_sidecar_locator != f"{semantic_locator}.docwen"
-        or "\\" in semantic_sidecar_locator
-        or ".." in semantic_sidecar_locator.split("/")
-    ):
-        raise RuntimeError(f"packaged_machine_protocol_sidecar_locator_invalid:{semantic_sidecar_locator}")
-    semantic_sidecar = staging / Path(semantic_sidecar_locator)
-    semantic_sidecar_bytes = _read_bytes_with_long_path(semantic_sidecar)
-    if len(semantic_sidecar_bytes) != semantic_sidecars[0].get("size_bytes") or hashlib.sha256(
-        semantic_sidecar_bytes
-    ).hexdigest() != semantic_sidecars[0].get("sha256"):
-        raise RuntimeError("packaged_machine_protocol_sidecar_integrity_mismatch")
-    _verify_round_trip_sidecar(
-        semantic_sidecar,
-        docx_path=semantic_output,
-        authored_source=MACHINE_EXACT_TWO_NEUTRAL_DOCUMENT["document"]["authored_markdown"].encode("utf-8"),
-        neutral_document=neutral_bytes,
-        numbering_export_plan=numbering_plan_bytes,
-    )
     verify_machine_document_semantics_docx(semantic_output)
     semantic_reverse_task_id, semantic_reverse_terminal = execute_additional_task(
         plan_request_id=7,
@@ -3112,7 +3013,13 @@ def _run_machine_protocol_smoke_impl(
             }
         ],
         output_root=semantic_reverse_staging,
-        options={},
+        options={
+            "markdown_extensions": {
+                "output": dict.fromkeys(
+                    ("structural_tables", "captions_references", "extended_headings", "typed_endnotes"), True
+                )
+            }
+        },
     )
 
     validation_task_id, validation_terminal = execute_additional_task(
@@ -3338,7 +3245,8 @@ def _run_machine_protocol_smoke_impl(
         not isinstance(bundle, dict)
         or bundle.get("task_id") != task_id
         or not isinstance(artifacts, list)
-        or len(artifacts) != 2
+        or len(artifacts) != 1
+        or bundle.get("relations") != []
         or len(documents) != 1
     ):
         raise RuntimeError(f"packaged_machine_protocol_bundle_invalid:{bundle}")

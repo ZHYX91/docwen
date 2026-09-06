@@ -31,31 +31,35 @@ direct `outlineLvl=0..8` values and outline levels inherited through paragraph s
 
 ## Obsidian extension interoperability / Obsidian 扩展互通
 
-The round-trip contract is: an unchanged DOCX recovers the authenticated authored Markdown byte-for-byte; after a
-DOCX edit, DocWen preserves the represented semantics and writes canonical Markdown. Exact recovery is never claimed
-from visual similarity alone. It requires an authentic resolved-numbering v4 projection plus the adjacent owned
-`<document>.docwen` artifact. That artifact has media type
-`application/vnd.docwen.round-trip-sidecar+zip`, schema `docwen.round_trip_sidecar.v1`, and exactly four ZIP members
-in order: `authored-source.md`, `neutral-document.json`, `numbering-export-plan.json`, and `manifest.json`. The
-canonical manifest binds the exact DOCX byte count/SHA-256 and the byte count, SHA-256, and strict media type of each
-of the three payloads. The producer fixes member order, timestamps, permissions, comments, and storage encoding for
-deterministic bytes. The reader rejects extra or duplicate members, absolute or parent paths, links, encryption,
-non-canonical metadata, and oversized or unsafe compression. The whole sidecar is additionally integrity-pinned by
-Artifact Bundle v2. A missing, foreign, invalid, stale, linked, structurally unsafe, oversized, or DOCX-mismatched
-sidecar falls back to canonical semantic recovery with an explicit diagnostic. UTF-8 BOM, CRLF/LF choice, blank
-lines, and final-newline presence are therefore retained only on the authenticated unchanged path. A Word edit
-disables byte-exact recovery before the old source can be considered; it does not prevent authenticated semantic
-normalization when the semantic carriers still prove.
+DOCX→Markdown always reconstructs the document's current content and supported semantics. The reverse converter
+needs only the DOCX and never loads the original Markdown, a `.docwen` companion, or a saved source snapshot.
+Users retain their originals. Round-trip tests use the original solely as an independent test oracle, inspect the
+intermediate OOXML, and repeat reverse conversion with an isolated DOCX, including after document edits.
+BOM, line endings, whitespace and equivalent Markdown spellings are normalized; byte-identical restoration is not
+a product promise. Images and OCR resources remain ordinary output resources.
 
-往返合同为：DOCX 未修改时，恢复经过认证的 Markdown 原文字节；在 Word 中修改后，保留可表达的语义并
-输出规范化 Markdown。系统不会因视觉相似就声称精确恢复。精确路径要求 DOCX 中有效的 resolved-numbering
-v4 投影，以及相邻且归属明确的单文件 `<document>.docwen` ZIP artifact。它的媒体类型为
-`application/vnd.docwen.round-trip-sidecar+zip`、schema 为 `docwen.round_trip_sidecar.v1`，并按固定顺序仅含
-`authored-source.md`、`neutral-document.json`、`numbering-export-plan.json` 与 `manifest.json`。manifest 绑定
-DOCX 及三份数据的字节数和 SHA-256；Artifact Bundle v2 另行绑定整个 sidecar。sidecar 缺失、外来、损坏、
-过期、不安全、过大或与 DOCX 不匹配时，系统会带明确诊断退回语义规范化。Word 编辑会先关闭逐字恢复，
-不会套用旧源码；只要语义载体仍通过认证，就继续规范化恢复。因此 BOM、换行风格、空行和文末换行只在
-经过认证的未修改路径中逐字节保留。
+DOCX→Markdown 始终从当前文档重建内容和可表达的语义，不读取原 Markdown、`.docwen` 伴随文件或原文快照。
+原文件由用户自行保留。往返测试把原文仅用作独立期望，检查中间 DOCX，并用隔离的 DOCX 验证回转和编辑后回转。
+BOM、换行、空白和等价语法可以规范化，不承诺逐字节还原。图片、OCR 资源和通用 Artifact Bundle 清单不受影响。
+
+### Optional dialect policy / 可选扩展策略
+
+New installations disable all four optional dialects. Settings → Markdown syntax exposes independent input and
+output controls and an Obsidian preset for each direction. Persisted values live under
+`conversion.markdown_extensions.input` and `.output`; request option `markdown_extensions` uses the same two
+objects and overrides only explicitly supplied booleans. The four keys are `structural_tables`,
+`captions_references`, `extended_headings`, and `typed_endnotes`.
+
+| Extension | Disabled input recognition | Disabled Markdown output |
+|---|---|---|
+| Structural Tables | Ordinary pipe tables; merge-marker cells stay literal | Ordinary tables; merged cells and header roles are flattened with a warning |
+| Number Suite captions/references | Caption declarations and `@[[...]]` remain visible text | Current caption/reference presentation becomes ordinary text, with a warning for lost semantics |
+| H7–H9 | Seven to nine leading hashes remain visible text | Heading levels 7–9 become H6 with a warning |
+| Typed notes | Labels such as `endnote:id` belong to ordinary footnotes | Endnotes become ordinary footnotes with distinct `endnote-` IDs and a warning |
+
+The neutral-document port is already resolved semantic input: its explicit heading/caption/reference records are
+authoritative, like Word's explicit structures, rather than inferred from Markdown spellings. Its untyped tables
+and note syntax use the input dialect policy. Markdown output always uses the selected output policy.
 
 DocWen accepts the Structural Tables pipe-table dialect in addition to ordinary GFM tables:
 
@@ -207,19 +211,20 @@ The parser preserves five observable source constructs as different IR variants:
 - `[[Page#^id]]` is an ordinary navigation link;
 - `![[Page#^id]]` is an ordinary embed;
 - `@[[#^id]]` and `@[[Page#^id]]` are stable-ID semantic cross-references;
-- `@[[#Heading]]` and `@[[Page#Parent#Heading]]` are soft Heading-path semantic cross-references; and
+- `@[[#Heading]]`, `@[[Page#Parent#Heading]]`, and `@[[#Figure: Title]]` are authored-name semantic cross-references; and
 - narrative `@citation-key` and parenthetical `[@first; @second]` are citations.
 
-The soft form contains one or more non-empty authored Heading segments and never resolves to a caption or ordinary
-anchor. Within the supplied document, DocWen resolves it only when the exact path selects one Heading: zero matches
-is `missing`, multiple matches is `ambiguous`. A cross-document soft selector stays `external_unresolved` until its
-external owner supplies one neutral resolution record; DocWen never chooses the first Heading or scans another file.
+The soft form contains non-empty authored Heading path segments or one canonical caption name such as
+`Figure: System overview`. Within the supplied document it resolves only when the exact selector has one semantic
+target: zero matches is `missing`, multiple Heading/caption matches is `ambiguous`. Ordinary anchors are not name
+targets. A cross-document selector stays `external_unresolved` until its owner supplies one neutral resolution
+record; DocWen does not choose the first match or scan another file.
 
 Semantic cross-references allow an optional Alias, for example `@[[Page#^id|Short title]]` or
 `@[[Page#Parent#Heading|Short title]]`. When the resolved numbering/export plan supplies a materializable number,
 presentation contains that derived number and then the authored Alias; Alias never replaces the number or rewrites
-the target. If numbering is disabled or a Heading-level template is empty, the same semantic reference fails as
-`docwen.markdown.cross_reference.unnumbered_target`; it does not display Alias without a number.
+the target. If numbering is disabled or a Heading-level template is empty, the resolved reference displays its Alias or current
+target title without inventing a number. The exact-two port encodes this case with an empty `cached_number`.
 Target kind comes from the resolved Heading or bound caption declaration, never from the ID or reference spelling.
 A semantic reference to an ordinary anchor fails as `docwen.markdown.cross_reference.non_semantic_target`; it does
 not silently degrade to an ordinary WikiLink. `@[[...]]`, ordinary WikiLinks/embeds, and citations are recognized
@@ -239,8 +244,8 @@ citation key. The source projection keeps authored syntax separate from resoluti
 record has `selector_kind=stable_id|heading_path`; optional authored `page_locator`; exactly one of stable
 `target_id` or a non-empty ordered `heading_path`; optional authored `alias`; and `resolution_status` exactly
 `resolved`, `missing`, `ambiguous`, `non_semantic`, `unnumbered`, or `external_unresolved`. Resolved document
-identity, resolved kind, and cached number remain separate optional facts. A resolved soft selector always has
-`resolved_kind=heading`:
+identity, resolved kind, and cached number remain separate optional facts. A resolved title selector may select a unique heading or a unique caption name such as `Figure: System overview`.
+Heading and caption matches share one ambiguity boundary:
 
 This semantic-target rule is separate from direct raw-file image materialization. For CLI/GUI conversion of a raw
 Markdown file, a short image basename may resolve only beside that file, in its sibling same-name directory, or in
@@ -391,9 +396,8 @@ series use the following exact codes:
 | `docwen.markdown.caption.object_mismatch` | no unique adjacent captionable object exists within zero or one blank line, including two-sided ambiguity or an intervening block/container boundary; primary range identifies the declaration/boundary | none; DocWen does not guess ownership |
 | `docwen.markdown.caption.empty_equation_target_required` | Equation or Code has both empty trimmed caption content and no ID; primary range is the declaration keyword | `docwen.markdown.fix.add_semantic_id`, whose insertion edit alone has a zero-width range at declaration end |
 | `docwen.markdown.cross_reference.missing` | the supplied locator has no target; range is the complete `@[[...]]` | `docwen.markdown.fix.add_semantic_id` only when one intended ID-less semantic object is already uniquely selected by the caller |
-| `docwen.markdown.cross_reference.ambiguous` | a same-document soft Heading path selects more than one Heading; range is the complete `@[[...]]` and related ranges identify all matching Heading declarations | none; the caller must select a full path or establish a stable ID |
+| `docwen.markdown.cross_reference.ambiguous` | a same-document authored-name selector selects more than one semantic target; range is the complete `@[[...]]` and related ranges identify all matching Heading/caption declarations | none; the caller must select a full path or establish a stable ID |
 | `docwen.markdown.cross_reference.non_semantic_target` | the resolved ID belongs only to an ordinary block anchor; range is the complete `@[[...]]` | `docwen.markdown.fix.move_anchor_to_declaration` only for one adjacent, matching, ID-less declaration; otherwise none |
-| `docwen.markdown.cross_reference.unnumbered_target` | the resolved semantic target has no materializable number under the supplied numbering plan; range is the complete `@[[...]]` | none; it does not degrade to an ordinary link |
 | `docwen.markdown.cross_reference.alias_stale` | Alias differs from current resolved title/caption; warning over the complete Alias | none; an explicit custom title remains valid |
 
 All codes above have severity `error` except `alias_stale`, which is `warning`. There is no generic “caption ID
@@ -405,16 +409,13 @@ resolve `Page`, or rename other files; an external multi-document transaction ow
 journal. Neither layer may convert an ordinary object anchor into a semantic target by inference or generate anchors
 for unrelated blocks.
 
-The provider mapping is exact and one-to-one:
-`interop.cross_reference.unnumbered_target` maps only to
-`docwen.markdown.cross_reference.unnumbered_target`, preserving error severity, authenticated reference range,
-resolved target identity/kind, and the absence of a fix; the reverse adapter maps it back to that sole interop code.
-Plan admission instead uses the non-source codes `docwen.numbering_export_plan.missing`,
-`docwen.numbering_export_plan.invalid`, and `docwen.numbering_export_plan.unsupported_materialization`. Those codes
-have no Markdown range/fix and must never be coerced into `unnumbered_target`: disabled is a valid plan state, while
-missing, malformed, contradictory, or non-portable plan input is not.
+Disabled numbering is a valid resolved target state. A reference carries an empty `cached_number` and displays its
+Alias or current target title; it is not an error diagnostic. Plan admission separately uses
+`docwen.numbering_export_plan.missing`, `docwen.numbering_export_plan.invalid`, and
+`docwen.numbering_export_plan.unsupported_materialization`. These have no Markdown range/fix: missing, malformed,
+contradictory, or non-portable plan input must not be disguised as disabled numbering.
 
-An adapter mapping is total rather than string passthrough. It maps the eleven diagnostic and three fix suffixes above
+An adapter mapping is total rather than string passthrough. It maps the ten diagnostic and three fix suffixes above
 one by one, preserves severity, source identity/hash, primary/related ranges and edit preconditions, and has no
 default branch. Consumer-only resolver diagnostics do not enter this table. An unknown code/fix or invalid evidence
 envelope fails the structured handoff instead of being coerced or dropped. Coordinate conversion, when needed by a
@@ -543,7 +544,7 @@ adjacency, paragraph order, or a historical numbering-cleanup heuristic.
 #### REF-based semantic-reference occurrences / 基于 REF 的语义引用出现位置
 
 Every semantic-reference occurrence rendered with a `REF` field has a separate reversible source-recovery record.
-This includes a stable-ID selector and a soft Heading-path selector that resolves to an ID-bearing Heading. The
+This includes a stable-ID or authored-name selector that resolves to an enabled ID-bearing Heading or caption. The
 occurrence is wrapped in exactly one inline `w:sdt` tagged `docwen-ref-occurrence-v1:<digest32>`. The SDT contains
 exactly one `REF` field followed by any authored Alias rich runs; the Alias is outside `REF` but inside this SDT, so
 the visible presentation remains number plus Alias. This occurrence wrapper is not a target, bookmark, second ID, or
@@ -574,7 +575,7 @@ source identity/range/token, exact `REF` bookmark/instruction/cached result, and
 Missing, duplicate, overlapping, changed, host-stripped, or cross-linked SDT/map data fails closed; the importer does
 not flatten the occurrence or infer a selector from the target.
 
-When a soft Heading reference resolves uniquely to an ID-less Heading, DocWen must not write an ID back to Markdown,
+When an authored-name reference resolves uniquely to an ID-less Heading or caption, DocWen must not write an ID back to Markdown,
 invent a bookmark, add a target-map entry, or emit a `REF`/hyperlink field. The DOCX occurrence is static cached
 number text followed by any authored Alias, wrapped in exactly one inline non-target SDT. Its tag is
 `docwen-soft-ref-v1:<digest32>`, where `digest32` is the first 32 lowercase hex characters of SHA-256 over exact UTF-8
@@ -592,10 +593,15 @@ source-recovery map, never a target/bookmark map.
 
 Import verifies the complete digest, unique inline SDT, authenticated source coordinates/token, and exact static
 cached-number text before restoring the authored semantic token. Missing, duplicate, changed, or host-stripped
-SDT/map data fails closed. If export cannot emit this exact reversible projection, or the Heading has no materialized
-number, conversion fails with the structured cross-reference diagnostic; it never degrades the token to plain text.
-An ID-bearing Heading continues to use the addressable target bookmark/REF projection above even when selected by a
-soft path.
+SDT/map data fails closed. If export cannot emit this reversible projection, conversion fails with a structured
+cross-reference diagnostic. An enabled ID-bearing target uses the addressable bookmark/REF projection even when
+selected by name.
+
+A valid disabled target, including one with a stable ID, uses the inline soft-reference carrier. Its map record has
+an empty `cached_number` and an additional non-empty `fallback_text` attribute containing Alias or current title.
+Numbered records have a non-empty `cached_number` and no `fallback_text`. Import validates this exclusive choice
+and the actual visible text. It creates no numeric bookmark or REF field for an unnumbered occurrence. These
+semantic records contain no original Markdown document snapshot.
 
 #### Resolved citation item and occurrence authority / 已解析引文条目与出现权威
 

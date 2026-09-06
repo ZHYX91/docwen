@@ -115,7 +115,7 @@
         "target_source_end": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
         "target_kind": {"$ref": "#/$defs/targetKind"},
         "target_id": {"$ref": "#/$defs/targetId"},
-        "cached_number": {"type": "string", "minLength": 1},
+        "cached_number": {"type": "string", "description": "Empty only for a target whose numbering plan is disabled."},
         "alias": {
           "oneOf": [
             {"type": "string", "minLength": 1},

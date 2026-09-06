@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from docwen_core.docx_semantics_v3 import fenced_source_identity_from_mapping_v3
+from docwen_core.markdown_extensions import MarkdownExtensions
 from docwen_plugin_markdown.document_semantics_v3 import (
     MarkdownSemanticsV3Analysis,
     analyze_markdown_semantics_v3,
@@ -40,6 +41,7 @@ type _MarkerRole = Literal[
     "cross_reference",
     "citation",
     "fenced_source",
+    "literal",
 ]
 
 
@@ -80,11 +82,13 @@ class RuntimeSemanticsV3Plan:
         return self.shielded_source[self.body_start :]
 
 
-def prepare_runtime_semantics_v3(source: str, *, input_id: str) -> RuntimeSemanticsV3Plan:
+def prepare_runtime_semantics_v3(
+    source: str, *, input_id: str, extensions: MarkdownExtensions | None = None
+) -> RuntimeSemanticsV3Plan:
     """Analyze and shield one exact accepted input before generic processing."""
 
     try:
-        analysis = analyze_markdown_semantics_v3(source, input_id=input_id)
+        analysis = analyze_markdown_semantics_v3(source, input_id=input_id, extensions=extensions)
     except ValueError as exc:
         raise RuntimeSemanticsV3Unsupported(str(exc)) from exc
     body_start = markdown_semantics_body_start_v3(source)
@@ -102,6 +106,9 @@ def prepare_runtime_semantics_v3(source: str, *, input_id: str) -> RuntimeSemant
     source_hash = hashlib.sha256(source.encode("utf-8")).hexdigest()
     marker_prefix = _unique_marker_prefix(source, source_hash)
     marker_specs: list[tuple[int, int, _MarkerRole, dict[str, Any]]] = []
+
+    for span in analysis.literal_ranges:
+        marker_specs.append((span.start, span.end, "literal", {"raw": source[span.start : span.end]}))
 
     for target in analysis.projection["targets"]:
         if target["kind"] == "heading":
@@ -266,14 +273,17 @@ def _validate_supported_projection(projection: dict[str, Any]) -> None:
             f"the current production slice does not yet project these structured anchors: {kinds}"
         )
     for reference in projection["references"]:
-        if reference["resolution_status"] != "resolved" or reference.get("page_locator") is not None:
+        if (
+            reference["resolution_status"] not in {"resolved", "unnumbered"}
+            or reference.get("page_locator") is not None
+        ):
             raise RuntimeSemanticsV3Unsupported(
                 "cross-document or unresolved semantic references require the external neutral resolver boundary"
             )
         if reference["selector_kind"] == "stable_id":
             continue
-        if reference.get("resolved_kind") != "heading":
-            raise RuntimeSemanticsV3Unsupported("soft references must resolve to Heading")
+        if reference.get("resolved_kind") not in {"heading", "figure", "table", "equation", "code_block"}:
+            raise RuntimeSemanticsV3Unsupported("title reference has no semantic target")
 
 
 def _ordinary_anchor_parent_ids(projection: dict[str, Any]) -> tuple[tuple[str, str | None], ...]:
@@ -445,6 +455,8 @@ def _next_marker(
 
 
 def _marker_ast_node(marker: RuntimeMarkerV3) -> dict[str, Any]:
+    if marker.role == "literal":
+        return {"type": "text", "raw": marker.payload["raw"]}
     if marker.role == "cross_reference":
         return {
             "type": "semantic_cross_reference",

@@ -196,17 +196,17 @@ title = "设置"
 # 选项卡标题
 [settings.tabs]
 general = "通用"
-text = "文本"
+text = "传入文本"
 proofread = "校对"
-export = "导出"
-document = "文档"
-spreadsheet = "表格"
+export = "Markdown 资源"
+document = "传入文档"
+spreadsheet = "传入表格"
 image = "图片"
-layout = "版式"
+layout = "传入版式文件"
 other = "其他"
 link = "链接"
-formatting = "格式"
-output = "输出"
+formatting = "Markdown 语法"
+output = "文件保存"
 logging = "日志"
 
 [settings.descriptions]
@@ -399,12 +399,11 @@ base64_compress_threshold_tooltip = "压缩阈值（KB）：超过该大小的�
 [settings.table_export]
 section = "合并单元格导出"
 desc = "控制合并单元格在 Markdown 输出中的表示方式。"
-merge_strategy_label = "合并单元格导出策略:"
+merge_strategy_label = "普通 Markdown 中的合并单元格:"
 
 [settings.table_export.strategies]
 fill = "填充"
 empty = "留空"
-marker = "标记"
 
 [settings.document]
 # 内容提取设置
@@ -1600,3 +1599,15 @@ body = "正文"
 [yaml_keys]
 title = "标题"
 subtitle = "副标题"
+
+[settings.markdown_extensions]
+description = "分别选择传入 Markdown 时识别的扩展，以及生成 Markdown 时使用的扩展。原文件不会被改写。"
+input = "传入 Markdown：识别扩展"
+output = "生成 Markdown：使用扩展"
+input_hint = "关闭时按普通文本、普通表格和脚注处理。"
+output_hint = "关闭时使用普通 Markdown；不能表达的表格结构、标题层级和尾注类型会提示损失。"
+structural_tables = "Structural Tables 结构表格"
+captions_references = "Number Suite 题注和交叉引用"
+extended_headings = "七至九级标题（H7–H9）"
+typed_endnotes = "类型化脚注和尾注"
+obsidian_preset = "使用 Obsidian 扩展预设"

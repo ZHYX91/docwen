@@ -71,9 +71,9 @@ def test_capability_and_successful_plan_execute_closed_loop(tmp_path: Path) -> N
         "undeclared_roles": "reject",
     }
     assert capability["output_shape"] == {
-        "cardinality": "many",
-        "artifact_kinds": ["document", "resource"],
-        "relation_types": ["resource_of"],
+        "cardinality": "one",
+        "artifact_kinds": ["document"],
+        "relation_types": [],
         "atomic_bundle": True,
     }
     assert capability["options_schema"]["additionalProperties"] is False
@@ -88,9 +88,9 @@ def test_capability_and_successful_plan_execute_closed_loop(tmp_path: Path) -> N
     assert outcome.bundle is not None
     assert outcome.bundle.task_id == task_id
     assert outcome.bundle.artifacts[0].kind == "document"
-    assert outcome.bundle.artifacts[1].kind == "resource"
+    assert len(outcome.bundle.artifacts) == 1
     assert outcome.bundle.entries[0].role == "primary"
-    assert outcome.bundle.relations[0].role == "manifest"
+    assert outcome.bundle.relations == ()
     assert controller.released == [task_id]
     assert service.cancel(task_id) == "already_terminal"
 
@@ -429,6 +429,7 @@ def test_consumer_facing_options_are_discovered_resolved_and_validated(tmp_path:
     schema = capabilities[MARKDOWN_TO_DOCX_CAPABILITY_ID].options_schema
     assert schema["additionalProperties"] is False
     assert set(schema["properties"]) == {
+        "markdown_extensions",
         "locale",
         "template_name",
         "heading_merge_mode",

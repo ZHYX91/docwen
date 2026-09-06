@@ -196,17 +196,17 @@ title = "Configuración"
 # 选项卡标题
 [settings.tabs]
 general = "General"
-text = "Texto"
+text = "Texto de entrada"
 proofread = "Revisión"
-export = "Exportar"
-document = "Documento"
-spreadsheet = "Hoja"
+export = "Recursos Markdown"
+document = "Documentos de entrada"
+spreadsheet = "Hojas de cálculo de entrada"
 image = "Imagen"
-layout = "Maquetación"
+layout = "Archivos de diseño fijo de entrada"
 other = "Otros"
 link = "Enlaces"
-formatting = "Formato"
-output = "Salida"
+formatting = "Sintaxis Markdown"
+output = "Guardado de archivos"
 logging = "Registro"
 
 [settings.descriptions]
@@ -404,7 +404,6 @@ merge_strategy_label = "Estrategia de exportación de celdas combinadas:"
 [settings.table_export.strategies]
 fill = "Rellenar"
 empty = "Dejar vacío"
-marker = "Marcador"
 
 [settings.document]
 # 内容提取设置
@@ -1610,3 +1609,15 @@ body = "cuerpo"
 [yaml_keys]
 title = "título"
 subtitle = "subtítulo"
+
+[settings.markdown_extensions]
+description = "Elige las extensiones al leer y generar Markdown por separado. No se modifica el archivo original."
+input = "Entrada Markdown: reconocer extensiones"
+output = "Salida Markdown: usar extensiones"
+input_hint = "La sintaxis desactivada se trata como texto, tablas o notas al pie normales."
+output_hint = "Usar Markdown común e informar de las estructuras que no se puedan representar."
+structural_tables = "Structural Tables: tablas estructuradas"
+captions_references = "Number Suite: leyendas y referencias cruzadas"
+extended_headings = "Encabezados de niveles 7–9"
+typed_endnotes = "Notas al pie y finales tipificadas"
+obsidian_preset = "Usar extensiones de Obsidian"

@@ -62,7 +62,6 @@
             "docwen.markdown.cross_reference.missing",
             "docwen.markdown.cross_reference.ambiguous",
             "docwen.markdown.cross_reference.non_semantic_target",
-            "docwen.markdown.cross_reference.unnumbered_target",
             "docwen.markdown.cross_reference.alias_stale"
           ]
         },

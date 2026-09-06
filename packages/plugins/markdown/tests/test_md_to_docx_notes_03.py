@@ -39,7 +39,9 @@ First endnote[^endnote:z], then[^endnote:y].
         md_path = write_temp_md(markdown)
         source_path = Path(md_path)
         original = source_path.read_bytes()
-        ctx, _workspace = make_context(md_path, target_format="docx")
+        ctx, _workspace = make_context(
+            md_path, target_format="docx", options={"markdown_extensions": {"input": {"typed_endnotes": True}}}
+        )
 
         result = MdToDocxConverter().convert(ctx)
 
@@ -72,7 +74,9 @@ First endnote[^endnote:z], then[^endnote:y].
         from .conftest import make_context, write_temp_md
 
         md_path = write_temp_md(MD_MIXED_NOTES)
-        ctx, _workspace = make_context(md_path, target_format="docx")
+        ctx, _workspace = make_context(
+            md_path, target_format="docx", options={"markdown_extensions": {"input": {"typed_endnotes": True}}}
+        )
 
         converter = MdToDocxConverter()
         result = converter.convert(ctx)
@@ -89,7 +93,9 @@ First endnote[^endnote:z], then[^endnote:y].
         from .conftest import make_context, write_temp_md
 
         md_path = write_temp_md(MD_MIXED_NOTES)
-        ctx, _workspace = make_context(md_path, target_format="docx")
+        ctx, _workspace = make_context(
+            md_path, target_format="docx", options={"markdown_extensions": {"input": {"typed_endnotes": True}}}
+        )
 
         converter = MdToDocxConverter()
         result = converter.convert(ctx)
@@ -115,7 +121,9 @@ First endnote[^endnote:z], then[^endnote:y].
         from .conftest import make_context, write_temp_md
 
         md_path = write_temp_md(MD_MIXED_NOTES)
-        ctx, _workspace = make_context(md_path, target_format="docx")
+        ctx, _workspace = make_context(
+            md_path, target_format="docx", options={"markdown_extensions": {"input": {"typed_endnotes": True}}}
+        )
 
         converter = MdToDocxConverter()
         result = converter.convert(ctx)
@@ -144,7 +152,9 @@ First endnote[^endnote:z], then[^endnote:y].
         from .conftest import make_context, write_temp_md
 
         md_path = write_temp_md(MD_MIXED_NOTES)
-        ctx, _workspace = make_context(md_path, target_format="docx")
+        ctx, _workspace = make_context(
+            md_path, target_format="docx", options={"markdown_extensions": {"input": {"typed_endnotes": True}}}
+        )
 
         converter = MdToDocxConverter()
         result = converter.convert(ctx)

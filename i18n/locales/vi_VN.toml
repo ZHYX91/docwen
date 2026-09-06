@@ -196,17 +196,17 @@ title = "Cài đặt"
 # 选项卡标题
 [settings.tabs]
 general = "Chung"
-text = "Văn bản"
+text = "Văn bản đầu vào"
 proofread = "Kiểm tra"
-export = "Xuất"
-document = "Tài liệu"
-spreadsheet = "Bảng tính"
+export = "Tài nguyên Markdown"
+document = "Tài liệu đầu vào"
+spreadsheet = "Bảng tính đầu vào"
 image = "Hình ảnh"
-layout = "Bố cục"
+layout = "Tệp bố cục cố định đầu vào"
 other = "Khác"
 link = "Liên kết"
-formatting = "Định dạng"
-output = "Đầu ra"
+formatting = "Cú pháp Markdown"
+output = "Lưu tệp"
 logging = "Ghi log"
 
 [settings.descriptions]
@@ -404,7 +404,6 @@ merge_strategy_label = "Cách xuất ô đã hợp nhất:"
 [settings.table_export.strategies]
 fill = "Điền"
 empty = "Để trống"
-marker = "Dấu hiệu"
 
 [settings.document]
 # 内容提取设置
@@ -1601,3 +1600,15 @@ body = "Nội dung"
 [yaml_keys]
 title = "tieu_de"
 subtitle = "phu_de"
+
+[settings.markdown_extensions]
+description = "Chọn riêng phần mở rộng khi đọc và tạo Markdown. Tệp gốc không bị thay đổi."
+input = "Markdown đầu vào: nhận dạng phần mở rộng"
+output = "Markdown đầu ra: dùng phần mở rộng"
+input_hint = "Khi tắt, xử lý như văn bản, bảng hoặc chú thích chân trang thông thường."
+output_hint = "Dùng Markdown thông thường và báo cấu trúc không thể biểu diễn."
+structural_tables = "Structural Tables: bảng có cấu trúc"
+captions_references = "Number Suite: chú thích và tham chiếu chéo"
+extended_headings = "Tiêu đề cấp 7–9"
+typed_endnotes = "Chú thích chân trang và cuối tài liệu có kiểu"
+obsidian_preset = "Dùng phần mở rộng Obsidian"

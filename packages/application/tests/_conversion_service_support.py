@@ -63,12 +63,6 @@ from docwen_core.models import (
     canonicalize_numbering_plan,
 )
 from docwen_core.paths import filesystem_path
-from docwen_core.round_trip_sidecar import (
-    ROUND_TRIP_SIDECAR_MEDIA_TYPE,
-    ROUND_TRIP_SIDECAR_OWNER_METADATA,
-    ROUND_TRIP_SIDECAR_SCHEMA,
-    ROUND_TRIP_SIDECAR_SCHEMA_METADATA,
-)
 
 pytestmark = pytest.mark.integration
 
@@ -230,22 +224,6 @@ class _Controller:
             is_primary=True,
         )
         artifacts = [primary]
-        if request.target_format == "docx":
-            sidecar = Path(f"{output}.docwen")
-            sidecar.write_bytes(b"sidecar fixture")
-            artifacts.append(
-                ArtifactManifest(
-                    artifact_id="artifact.sidecar",
-                    kind="auxiliary",
-                    staging_path=str(sidecar),
-                    suggested_name=f"{output.name}.docwen",
-                    media_type=ROUND_TRIP_SIDECAR_MEDIA_TYPE,
-                    metadata={
-                        ROUND_TRIP_SIDECAR_SCHEMA_METADATA: ROUND_TRIP_SIDECAR_SCHEMA,
-                        ROUND_TRIP_SIDECAR_OWNER_METADATA: primary.artifact_id,
-                    },
-                )
-            )
         return ConversionResult(
             task_id=request.request_id,
             success=True,

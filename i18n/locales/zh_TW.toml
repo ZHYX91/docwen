@@ -147,17 +147,17 @@ title = "設定"
 # 选项卡标题
 [settings.tabs]
 general = "通用"
-text = "文字"
+text = "傳入文字"
 proofread = "校對"
-export = "匯出"
-document = "文件"
-spreadsheet = "表格"
+export = "Markdown 資源"
+document = "傳入文件"
+spreadsheet = "傳入表格"
 image = "圖片"
-layout = "版式"
+layout = "傳入版式檔案"
 other = "其他"
 link = "連結"
-formatting = "格式"
-output = "輸出"
+formatting = "Markdown 語法"
+output = "檔案儲存"
 logging = "日誌"
 
 [settings.descriptions]
@@ -355,7 +355,6 @@ merge_strategy_label = "合併儲存格匯出策略:"
 [settings.table_export.strategies]
 fill = "填充"
 empty = "留空"
-marker = "標記"
 
 [settings.document]
 # 内容提取设置
@@ -1604,3 +1603,15 @@ task_failed_status = "失敗：{message}"
 task_cancelled_status = "已取消"
 version_offline = "離線版"
 window_title = "DocWen 離線版"
+
+[settings.markdown_extensions]
+description = "分別選擇讀取與產生 Markdown 時使用的擴充語法。原始檔不會被改寫。"
+input = "傳入 Markdown：辨識擴充語法"
+output = "產生 Markdown：使用擴充語法"
+input_hint = "關閉時以一般文字、一般表格和註腳處理。"
+output_hint = "關閉時使用一般 Markdown，並提示無法表達的結構或類型。"
+structural_tables = "Structural Tables 結構表格"
+captions_references = "Number Suite 題注和交互參照"
+extended_headings = "七至九級標題（H7–H9）"
+typed_endnotes = "類型化註腳和章節附註"
+obsidian_preset = "使用 Obsidian 擴充預設"

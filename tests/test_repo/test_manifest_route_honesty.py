@@ -600,4 +600,4 @@ def test_remaining_plugin_source_option_reads_match_route_schemas() -> None:
 
     spreadsheet_template_properties = MD_TO_SPREADSHEET_TEMPLATE_OPTIONS_SCHEMA["properties"]
     assert 'options", {}).get("template_name"' in markdown_spreadsheet_source
-    assert set(spreadsheet_template_properties) == {"template_name"}
+    assert set(spreadsheet_template_properties) == {"template_name", "markdown_extensions"}

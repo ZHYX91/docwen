@@ -257,7 +257,7 @@ def _parse_reference(raw: object, index: int, code: str) -> ResolvedReference:
         target_source_end=_integer(item["target_source_end"], f"{location}.target_source_end", code, 1),
         target_kind=_target_kind(item["target_kind"], f"{location}.target_kind", code),
         target_id=_target_id(item["target_id"], f"{location}.target_id", code),
-        cached_number=_string(item["cached_number"], f"{location}.cached_number", code, minimum=1),
+        cached_number=_string(item["cached_number"], f"{location}.cached_number", code, minimum=0),
         alias=alias,
     )
 

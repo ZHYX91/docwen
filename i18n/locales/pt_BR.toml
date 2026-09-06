@@ -195,17 +195,17 @@ title = "Configurações"
 # 选项卡标题
 [settings.tabs]
 general = "Geral"
-text = "Texto"
+text = "Texto de entrada"
 proofread = "Revisão"
-export = "Exportar"
-document = "Documento"
-spreadsheet = "Planilha"
+export = "Recursos Markdown"
+document = "Documentos de entrada"
+spreadsheet = "Planilhas de entrada"
 image = "Imagem"
-layout = "Layout"
+layout = "Arquivos de layout fixo de entrada"
 other = "Outros"
 link = "Link"
-formatting = "Formatação"
-output = "Saída"
+formatting = "Sintaxe Markdown"
+output = "Salvamento de arquivos"
 logging = "Log"
 
 [settings.descriptions]
@@ -403,7 +403,6 @@ merge_strategy_label = "Estratégia de exportação de células mescladas:"
 [settings.table_export.strategies]
 fill = "Preencher"
 empty = "Deixar vazio"
-marker = "Marcador"
 
 [settings.document]
 # 内容提取设置
@@ -1599,3 +1598,15 @@ body = "Corpo"
 [yaml_keys]
 title = "Título"
 subtitle = "Subtítulo"
+
+[settings.markdown_extensions]
+description = "Escolha separadamente as extensões ao ler e gerar Markdown. O arquivo original não é alterado."
+input = "Entrada Markdown: reconhecer extensões"
+output = "Saída Markdown: usar extensões"
+input_hint = "A sintaxe desativada é tratada como texto, tabelas ou notas de rodapé comuns."
+output_hint = "Usar Markdown comum e informar estruturas que não podem ser representadas."
+structural_tables = "Structural Tables: tabelas estruturadas"
+captions_references = "Number Suite: legendas e referências cruzadas"
+extended_headings = "Títulos de níveis 7–9"
+typed_endnotes = "Notas de rodapé e de fim tipadas"
+obsidian_preset = "Usar extensões do Obsidian"

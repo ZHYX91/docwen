@@ -45,7 +45,7 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
         "conversion.export.base64_compress_threshold_kb",
     }
     assert formatting_plan.files == ()
-    assert len(formatting_plan.dotted_keys) == 26
+    assert len(formatting_plan.dotted_keys) == 34
     assert "document.style.table.md_to_docx.table_style_mode" in formatting_plan.dotted_keys
     assert "conversion.code_detection.code_font" not in formatting_plan.dotted_keys
     assert "conversion.export.base64_compress_enabled" not in formatting_plan.dotted_keys
@@ -58,7 +58,7 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
         "general": 4,
         "text": 6,
         "proofread": 6,
-        "formatting": 26,
+        "formatting": 34,
         "document": 11,
         "spreadsheet": 7,
         "layout": 6,

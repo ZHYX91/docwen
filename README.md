@@ -53,7 +53,7 @@ Changelog: see [CHANGELOG.md](docs/CHANGELOG.md)
 
 **Prerequisites**: Python 3.12
 
-**0.9 release boundary**: The [0.9.1 Release](https://github.com/ZHYX91/docwen/releases/tag/0.9.1) publishes one Windows x64 GUI+CLI package and separate
+**0.10 release boundary**: The [0.10.0 Release](https://github.com/ZHYX91/docwen/releases/tag/0.10.0) publishes one Windows x64 GUI+CLI package and separate
 Ubuntu 24.04 x64 GUI+CLI and CLI-only packages. Other Linux
 distributions and macOS remain source/development paths and are not implied by the Ubuntu package.
 
@@ -67,15 +67,15 @@ cd docwen
 uv sync --frozen --all-extras
 ```
 
-DocWen 0.9's source/test/build contract is the checked-in lock with exactly `uv 0.12.0`.
+DocWen 0.10's source/test/build contract is the checked-in lock with exactly `uv 0.12.0`.
 `pip install -e` is unsupported because pip cannot apply the repository's scoped dependency exclusion.
 
 ### Launch Program
 
 On the Windows packaged release, double-click `DocWen.exe` to start the graphical interface. On
-Ubuntu 24.04 x64, extract `DocWen-0.9.1-linux-x64.tar.gz` and run `./DocWen`; the companion
-`DocWenCLI-0.9.1-linux-x64.tar.gz` is the CLI-only package. These assets are installable from the
-immutable 0.9.1 Release. If installed from source, run:
+Ubuntu 24.04 x64, extract `DocWen-0.10.0-linux-x64.tar.gz` and run `./DocWen`; the companion
+`DocWenCLI-0.10.0-linux-x64.tar.gz` is the CLI-only package. These assets are installable from the
+immutable 0.10.0 Release. If installed from source, run:
 
 ```bash
 docwen-gui  # GUI mode
@@ -103,7 +103,7 @@ pip install pillow-heif
 
 ### Linux GUI Prerequisites
 
-**Supported package target**: DocWen 0.9 supports the packaged GUI and CLI on Ubuntu 24.04 x64.
+**Supported package target**: DocWen 0.10 supports the packaged GUI and CLI on Ubuntu 24.04 x64.
 These prerequisites do not extend that support claim to another Linux distribution or architecture.
 
 - Desktop environment installed (GNOME, KDE, XFCE, etc.)

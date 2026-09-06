@@ -28,8 +28,8 @@ numbering state:
 - disabled means the target has no materializable number. A Heading level whose selected template is empty is
   disabled for that target even when the Heading kind is otherwise enabled; and
 - v1 has no separate state in which a number is hidden in the views but remains available to cross-references or
-  export. A semantic `@[[...]]` that resolves to a disabled target fails with
-  `docwen.markdown.cross_reference.unnumbered_target`. An ordinary `[[...]]` remains a navigation link.
+  export. A semantic `@[[...]]` that resolves to a disabled target displays its Alias or current target title
+  with an empty `cached_number`; it never invents a number. An ordinary `[[...]]` remains a navigation link.
 
 The upstream semantic provider owns the five independent counters and every rule that
 produces their resolved values: enablement, format, localized label, start/reset, document-wide versus Heading
@@ -240,130 +240,37 @@ diagnostic. Import must not guess from punctuation, locale, glyph style, indenta
 profile. Thus a plain DOCX paragraph visibly beginning `2.3 标题` remains `2.3 标题` unless authentic Word list
 semantics prove a separate number.
 
-### Recovery addendum: exact-neutral DOCX recovery authority / 恢复补充：精确中立 DOCX 恢复权威
+### Independent document recovery / 独立文档回转
 
-This addendum freezes the exact-neutral DOCX recovery authority that the generic proof-only reader deliberately
-does not claim. A package without this authority still produces generic extraction plus the stable
-`docwen.docx.resolved_v4.source_snapshot_missing` diagnostic and never claims an exact Markdown round-trip. Exact
-authored-source recovery is an optional, authenticated path inside the normal DOCX-to-Markdown capability. The
-resolved Markdown-to-DOCX capability publishes the DOCX together with one DocWen-owned
-`application/vnd.docwen.round-trip-sidecar+zip` resource. Missing or invalid sidecar evidence disables only exact
-bytes and continues through authenticated canonical semantic recovery; invalid semantic carriers still fail closed.
+Markdown→DOCX produces one DOCX artifact. DOCX→Markdown reconstructs current document content from the package's
+text, styles, list/SEQ/REF semantics and supported semantic carriers. No original-source replay or adjacent
+`.docwen` file is generated or consumed. The original Markdown and numbering plan are conversion inputs only;
+round-trip tests may retain them as independent expected data, never as reverse-converter input.
 
-#### Admission and artifact separation / 准入与 artifact 分离
+Semantic carriers describe document structures, references and literal code; they do not embed an original-document
+backup. Ordinary body edits are extracted from the current DOCX. Invalid semantic carriers still fail explicitly.
+There is no missing-source-snapshot diagnostic and no byte-identical Markdown restoration promise.
 
-- `convert.markdown.to_docx` advertises a many-artifact output shape: one preferred DOCX document and one public
-  round-trip sidecar resource related by `resource_of(role=manifest, ordinal=0)`. There is no private exact-recovery
-  capability and no consumer-authored sidecar contract.
-- Admission requires the exact two Machine inputs already frozen by this contract: one neutral document
-  (`application/vnd.docwen.resolved-document+json`) and one numbering export plan
-  (`application/vnd.docwen.numbering-export-plan+json`) with matching `input_id`, `source_sha256`, and
-  `plan_sha256`. There is no third or substitute input; Machine options never carry source text, a second semantic
-  bag, or a pointer to external storage.
-- The writer emits the recovery map in the same request-owned session as the resolved-v4 carriers, proves the final
-  DOCX, then deterministically emits `<DOCX suggested name>.docwen`. The ZIP has exactly four ordered regular-file
-  members: `authored-source.md`, `neutral-document.json`, `numbering-export-plan.json`, and `manifest.json`. It has no
-  directory, link, absolute/parent path, duplicate/extra member, encryption, unsupported compression, or unbounded
-  expansion. The canonical `docwen.round_trip_sidecar.v1` manifest binds the final DOCX bytes/SHA-256 plus the three
-  payload byte counts, media types, and SHA-256 values. Artifact Bundle v2 separately hashes the complete ZIP.
-
-#### Recovery map package shape / 恢复映射包形状
-
-The map owns one independently allocated canonical custom-XML trio using the exact rules of the target map
-(`/customXml/itemN.xml`, `/customXml/itemPropsN.xml`, `/customXml/_rels/itemN.xml.rels`, one document relationship,
-and two content-type Overrides; lowest unused `N`, lowest unused numeric `rIdK`, lexical Override insertion,
-deterministic UUIDv5 `ds:itemID` over the map namespace, and the exact UTF-8/no-BOM/declaration-one-LF-single-root-
-one-final-LF framing). The map namespace is `https://docwen.dev/schema/resolved-v4-recovery-map/v1` and is the sole
-`ds:schemaRef/@ds:uri`. No trio part or relationship is shared with another owned map.
-
-`/customXml/itemN.xml` has root `resolvedV4RecoveryMap` with attributes in exact order
-`version,source_sha256,plan_sha256,recovery_sha256`. Its children, in this closed order, are:
-
-1. `pointers` — three pointers, each `pointer` element with attributes in exact order
-   `role,relative_path,bytes,sha256`; `role` is exactly one of `neutral_raw`, `plan_raw`, or `authored_source`.
-   `relative_path` is one of the three fixed sidecar member names, never absolute, never
-   `..`-escaping, never a Windows/UNC drive, never a symlink or reparse point. `bytes` is the positive integer
-   byte count and `sha256` the complete lowercase 64-hex digest of the pointed-to raw file at publish time:
-   - `neutral_raw` points to the exact bytes of the neutral document input file (not the authenticated internal
-     record only);
-   - `plan_raw` points to the exact bytes of the numbering export plan input file; and
-   - `authored_source` points to the exact bytes of the authored Markdown source bound by the neutral document
-     envelope.
-   The three raw files are written once into the request-owned public sidecar after the DOCX is proven. Their
-   sidecar-manifest identities and recovery-map pointer identities must agree before exact source is exposed.
-2. `projection` — the whole-package physical projection summary. `projection` has attributes in exact order
-   `version,algorithm,physical_sha256`; `version` is `1`, `algorithm` is exactly `docwen-ooxml-physical-v1`, and
-   `physical_sha256` is the complete lowercase SHA-256 over the canonical physical projection described below. This
-   is the anti-staleness binding: the summary is recomputed from the physical package at recovery time and must
-   equal the stored value; a stale or self-signed snapshot can never pass on its own.
-3. `bibliography` — exactly one element. It reuses the frozen v3 bibliography owner identities
-   (`_DWB_BIBLIOGRAPHY` / `_DWE_...`); no new owner is invented. The element carries attributes in exact order
-   `owner,placeholder,media_type`; when the request renders no bibliography the element is present with empty
-   `placeholder` and the empty media type, and the map still requires the element to keep the closed shape.
-
-#### Whole-package physical projection / 全包物理投影
-
-The canonical projection is computed over the final published package after `write_package` completes and before
-any host rewrite, with one deliberate exclusion: the recovery map's own OPC trio
-(`/customXml/itemN.xml`, `/customXml/itemPropsN.xml`, `/customXml/_rels/itemN.xml.rels`) and its one document
-relationship and two content-type Overrides are computed **after** the projection digest, so the digest cannot be
-a self-hash. Every other part contributes, including the target map, occurrence map, and citation maps:
-
-- every OPC part in package order (`[Content_Types].xml` first, then all parts sorted by UTF-8 part name), each
-  contributing its part name, uncompressed byte length, and a complete SHA-256 over its raw bytes;
-- for every part that is XML, additionally the canonical C14N (exclusive XML canonicalization 1.0) of its root
-  element with all comments removed, as raw bytes, contributed to the same digest stream;
-- for every relationship part and content-type Override, the exact serialized record set.
-
-The digest stream is the concatenation, for each contributing item in the fixed order above, of:
-`<utf-8 part name>\0<decimal byte count>\0<64-hex part sha256>\0` plus, for XML parts,
-`<utf-8 part name>\0<decimal canonical byte count>\0<64-hex canonical sha256>\0`. The complete stream is hashed
-with SHA-256 to produce `physical_sha256`. Recovery recomputes the identical stream from the reopened package
-under the same exclusion rule. An exact match is mandatory before the adjacent sidecar can expose old authored
-bytes. Any Word edit changes the digest and disables exact recovery; after all semantic maps, fields, bookmarks,
-captions, and REF caches independently prove, canonical semantic recovery may continue. A semantic proof failure
-still fails closed before artifact publication; there is no host-derived bypass.
-
-The map's `recovery_sha256` is the complete lowercase SHA-256 over the exact UTF-8 bytes of the map's three
-child elements (`pointers`, `projection`, `bibliography`) serialized in canonical order with no leading/trailing
-whitespace; it is a content digest, not a hash of the root element, so it has no self-reference. The map bytes are
-frozen after `physical_sha256` is computed; the map trio is then injected and the reopened package is re-proven
-for the complete owned-carrier set including the recovery map.
-
-#### Recovery semantics and fail-closed rules / 恢复语义与失败关闭规则
-
-On import, the reader first authenticates every resolved-v4 semantic carrier. It then recomputes the whole-package
-physical projection. Only an unchanged projection may proceed to the adjacent `<document>.docwen` file. The sidecar
-reader requires a regular non-link ZIP, exact member inventory/order, bounded archive/member/expanded sizes and
-compression ratio, canonical manifest schema/media types, complete hashes, and an exact DOCX byte-count/SHA-256
-match. Finally, the three payload hashes are proved again against the DOCX recovery map. Only after every layer passes
-is `authored-source.md` returned byte-for-byte; nothing is guessed, repaired, or merged from a second source.
-
-Any wrong semantic-map media type, root/record shape, duplicate relationship, changed `itemN`/`rId`/UUID, bookmark,
-caption, field, REF cache, bibliography owner, or semantic identity is a hard failure before artifact or staging
-publish. A missing/damaged/foreign/stale sidecar, sidecar-to-DOCX mismatch, absent recovery map, or physical projection
-change never exposes old source bytes; it emits a stable diagnostic and uses canonical semantic recovery only when
-the semantic proof itself remains valid. Word/WPS/LibreOffice host preservation of the semantic carriers (bookmarks,
-SDTs, map trio identities, relationships, content types, styles) is proven in a separate host layer against the
-same candidate; a host save/readback that changes any byte is not re-admitted into exact authored-source recovery
-because the physical projection is byte-bound. Host evidence never replaces headless XML proof, and no relaxed byte
-comparison can re-enable sidecar source recovery.
+Unnumbered resolved targets accept `cached_number=""`. Their references display the authored Alias when present,
+otherwise the current target title (or the kind label for an empty title). They use a validated inline text carrier
+without inventing a list number, SEQ value, or REF field. The authored reference token remains recoverable from that
+carrier when output reference syntax is enabled.
 
 ## Required matrix / 必须矩阵
 
 | Kind/case | Provider presentation | Semantic `@[[...]]` | Ordinary `[[...]]` | Markdown diff | DOCX physical result |
 |---|---|---|---|---|---|
 | Heading enabled | derived number visible | resolved number | navigates | zero | exact numbering.xml/list semantics; no Heading cached-number run |
-| Heading disabled | no derived number | `unnumbered_target` | navigates | zero | no effective numbering |
-| Heading-level template empty | no derived number | `unnumbered_target` | navigates | zero | no effective numbering |
+| Heading disabled | no derived number | current title/Alias | navigates | zero | no effective numbering |
+| Heading-level template empty | no derived number | current title/Alias | navigates | zero | no effective numbering |
 | Figure enabled | derived number visible | resolved number | navigates | zero | Figure `SEQ` + cached result |
-| Figure disabled | no derived number | `unnumbered_target` | navigates | zero | caption style, no `SEQ` |
+| Figure disabled | no derived number | current title/Alias | navigates | zero | caption style, no `SEQ` |
 | Table enabled | derived number visible | resolved number | navigates | zero | Table `SEQ` + cached result |
-| Table disabled | no derived number | `unnumbered_target` | navigates | zero | caption style, no `SEQ` |
+| Table disabled | no derived number | current title/Alias | navigates | zero | caption style, no `SEQ` |
 | Equation enabled | derived number visible | resolved number | navigates | zero | Equation `SEQ` + cached result |
-| Equation disabled | no derived number | `unnumbered_target` | navigates | zero | caption style, no `SEQ` |
+| Equation disabled | no derived number | current title/Alias | navigates | zero | caption style, no `SEQ` |
 | Code enabled | derived number visible | resolved number | navigates | zero | Code `SEQ` + cached result |
-| Code disabled | no derived number | `unnumbered_target` | navigates | zero | caption style, no `SEQ` |
+| Code disabled | no derived number | current title/Alias | navigates | zero | caption style, no `SEQ` |
 | `## 2.3 标题`, Heading enabled | derived prefix plus complete `2.3 标题` | derived number | navigates | zero | list number plus unchanged authored title |
 
 Additional fixtures toggle every kind on→off→on and prove byte-identical Markdown; distinguish ordinary WikiLinks

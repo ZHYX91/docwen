@@ -31,6 +31,7 @@ from docwen_core.links import (
     process_markdown_links,
     reject_declared_input_link_lookups,
 )
+from docwen_core.markdown_extensions import resolve_markdown_extensions
 from docwen_core.models.artifact import (
     ARTIFACT_KIND_PRIMARY,
     ArtifactManifest,
@@ -543,6 +544,7 @@ class MdToDocxConverter:
                 )
             progress.report_progress(5.0, "Reading Markdown input")
             content, input_bytes = read_input_markdown(input_path)
+            extensions = resolve_markdown_extensions(options, context.config, direction="input")
 
             # Analyze the exact accepted input before numbering, YAML
             # extraction, or generic link preprocessing can change source
@@ -555,6 +557,7 @@ class MdToDocxConverter:
                 semantic_v3_plan = prepare_runtime_semantics_v3(
                     content,
                     input_id=semantic_input_id,
+                    extensions=extensions,
                 )
             except RuntimeSemanticsV3Unsupported as exc:
                 return _semantic_v3_failure(
@@ -716,7 +719,7 @@ class MdToDocxConverter:
             # create a request-local parser projection.  The source Markdown
             # is never rewritten.
             try:
-                md_body = normalize_note_syntax(md_body)
+                md_body = normalize_note_syntax(md_body, typed_endnotes=extensions.typed_endnotes)
             except NoteWritebackError as exc:
                 return _note_failure(task_id, t_start, exc)
 
@@ -740,7 +743,7 @@ class MdToDocxConverter:
 
             # 2g. Parse with extended mistune
             progress.report_progress(30.0, "Parsing Markdown")
-            raw_ast = parse_markdown_text(md_body, auto_link_bare_url=False)
+            raw_ast = parse_markdown_text(md_body, auto_link_bare_url=False, extensions=extensions)
             _restore_markdown_image_alt_texts(raw_ast, source_image_alt_texts)
             try:
                 raw_ast = apply_runtime_semantics_v3(raw_ast, semantic_v3_plan)

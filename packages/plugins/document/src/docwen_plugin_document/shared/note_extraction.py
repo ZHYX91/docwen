@@ -166,7 +166,8 @@ class NoteExtractor:
     """Aggregate footnote/endnote extraction, mapping, reference text, and
     Markdown definitions block."""
 
-    def __init__(self, doc, docx_path: str | None = None) -> None:
+    def __init__(self, doc, docx_path: str | None = None, *, typed_endnotes: bool = True) -> None:
+        self._endnote_prefix = "endnote:" if typed_endnotes else "endnote-"
         self.footnotes, self.footnote_part_failed = _extract_notes_with_status(
             doc,
             docx_path,
@@ -206,7 +207,7 @@ class NoteExtractor:
             referenced.add(word_id)
             display_id = self.endnote_id_map.get(word_id)
             if display_id is None:
-                display_id = f"endnote:{len(self.endnote_id_map) + 1}"
+                display_id = f"{getattr(self, '_endnote_prefix', 'endnote:')}{len(self.endnote_id_map) + 1}"
                 self.endnote_id_map[word_id] = display_id
         else:
             display_id = str(word_id)
@@ -230,7 +231,9 @@ class NoteExtractor:
                 self.footnote_id_map[word_id] = str(len(self.footnote_id_map) + 1)
         for word_id in sorted(self.endnotes):
             if word_id not in self.endnote_id_map:
-                self.endnote_id_map[word_id] = f"endnote:{len(self.endnote_id_map) + 1}"
+                self.endnote_id_map[word_id] = (
+                    f"{getattr(self, '_endnote_prefix', 'endnote:')}{len(self.endnote_id_map) + 1}"
+                )
         parts: list[str] = []
         if self.footnotes:
             parts.append(build_note_definitions(self.footnotes, self.footnote_id_map))

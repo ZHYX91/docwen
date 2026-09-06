@@ -123,7 +123,6 @@ class DocumentTab(DynamicSettingsTab):
                         "items": [
                             (t("settings.table_export.strategies.fill", "Fill"), "fill"),
                             (t("settings.table_export.strategies.empty", "Empty"), "empty"),
-                            (t("settings.table_export.strategies.marker", "Marker"), "marker"),
                         ],
                     },
                 ],

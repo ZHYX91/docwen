@@ -150,6 +150,7 @@ def test_manifest_declares_consumed_docx_intermediate_rendering_options() -> Non
     routes_by_target = {route.target_format: route for route in plugin.manifest.routes}
 
     consumed_docx_options = {
+        "markdown_extensions",
         "locale",
         "remove_numbering",
         "add_numbering",
@@ -168,7 +169,7 @@ def test_manifest_declares_consumed_docx_intermediate_rendering_options() -> Non
         "template_name",
         "hr_mapping",
     }
-    spreadsheet_template_options = {"template_name"}
+    spreadsheet_template_options = {"template_name", "markdown_extensions"}
     numbering_action_options = {
         "remove_numbering",
         "add_numbering",

@@ -147,17 +147,17 @@ title = "Einstellungen"
 # 选项卡标题
 [settings.tabs]
 general = "Allgemein"
-text = "Text"
+text = "Texteingabe"
 proofread = "Prüfung"
-export = "Export"
-document = "Dokument"
-spreadsheet = "Tabelle"
+export = "Markdown-Ressourcen"
+document = "Dokumenteingabe"
+spreadsheet = "Tabelleneingabe"
 image = "Bild"
-layout = "Layout"
+layout = "Layout-Dateieingabe"
 other = "Andere"
 link = "Link"
-formatting = "Formatierung"
-output = "Ausgabe"
+formatting = "Markdown-Syntax"
+output = "Dateispeicherung"
 logging = "Log"
 
 [settings.descriptions]
@@ -355,7 +355,6 @@ merge_strategy_label = "Exportstrategie für verbundene Zellen:"
 [settings.table_export.strategies]
 fill = "Ausfüllen"
 empty = "Leer lassen"
-marker = "Markierung"
 
 [settings.document]
 # 内容提取设置
@@ -1604,3 +1603,15 @@ task_failed_status = "Fehlgeschlagen: {message}"
 task_cancelled_status = "Abgebrochen"
 version_offline = "Offline-Version"
 window_title = "DocWen Offline-Version"
+
+[settings.markdown_extensions]
+description = "Markdown-Erweiterungen für Eingabe und Ausgabe getrennt wählen. Quelldateien bleiben unverändert."
+input = "Markdown-Eingabe: Erweiterungen erkennen"
+output = "Markdown-Ausgabe: Erweiterungen verwenden"
+input_hint = "Deaktivierte Syntax wird als normaler Text, Tabelle oder Fußnote verarbeitet."
+output_hint = "Normales Markdown verwenden und nicht darstellbare Strukturen melden."
+structural_tables = "Structural Tables: strukturierte Tabellen"
+captions_references = "Number Suite: Beschriftungen und Querverweise"
+extended_headings = "Überschriften der Ebenen 7–9"
+typed_endnotes = "Typisierte Fuß- und Endnoten"
+obsidian_preset = "Obsidian-Erweiterungen verwenden"

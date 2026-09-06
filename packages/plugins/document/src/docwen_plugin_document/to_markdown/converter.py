@@ -38,10 +38,10 @@ from docwen_core.docx_parsing.format_features import (
 )
 from docwen_core.docx_parsing.textbox_extraction import extract_textbox_paragraphs
 from docwen_core.docx_resolved_numbering_recovery import ResolvedNumberingV4Recovery
-from docwen_core.docx_semantics_v3 import DocxSemanticsV3Error, DocxSemanticsV3Recovery
+from docwen_core.docx_semantics_v3 import DocxSemanticsV3Recovery
 from docwen_core.export_semantics import MarkdownExportSemantics
 from docwen_core.formula.constants import OMML_NS
-from docwen_core.round_trip_sidecar import RoundTripSidecarError, read_round_trip_sidecar
+from docwen_core.markdown_extensions import MarkdownExtensions, resolve_markdown_extensions
 from docwen_core.text.heading_numbering import (
     HeadingFormatter,
     NumberingSchemeResolutionError,
@@ -144,6 +144,7 @@ class DocxToMarkdownConverter:
         self._note_extractor: Any | None = None
         self._semantic_bookmark_inventory: DocxBookmarkInventory | None = None
         self._semantic_v3_recovery = DocxSemanticsV3Recovery()
+        self._extensions = MarkdownExtensions.obsidian()
         self._resolved_v4_recovery: ResolvedNumberingV4Recovery | None = None
         self._resolved_v4_diagnostics: list[tuple[str, str, str]] = []
         self._pending_artifacts: list[Any] = []
@@ -206,6 +207,7 @@ class DocxToMarkdownConverter:
 
         # 3. Read options
         options = context.request.options
+        self._extensions = resolve_markdown_extensions(options, context.config, direction="output")
 
         # Resolve the authoritative request snapshot once before parsing.
         policy = build_docx_markdown_request_policy(context, options)
@@ -272,7 +274,7 @@ class DocxToMarkdownConverter:
             )
 
             # Prepend YAML front matter to the markdown output
-            if yaml_header and not stats.get("exact_source_recovered"):
+            if yaml_header:
                 markdown_content = yaml_header + markdown_content
         except Exception as exc:
             self._discard_pending_artifacts()
@@ -475,16 +477,6 @@ class DocxToMarkdownConverter:
                 self._semantic_v3_recovery = DocxSemanticsV3Recovery.load(input_path, doc)
         else:
             self._semantic_v3_recovery = self._resolved_v4_recovery
-            exact_source = self._recover_exact_round_trip_source(input_path, context)
-            if exact_source is not None:
-                return exact_source, {
-                    "paragraphs": 0,
-                    "headings": 0,
-                    "tables": 0,
-                    "images": 0,
-                    "image_owner_resource_omitted_count": 0,
-                    "exact_source_recovered": 1,
-                }
         lines: list[str] = []
         exact_fenced_fragments: dict[str, str] = {}
 
@@ -524,7 +516,9 @@ class DocxToMarkdownConverter:
         # Note extractor for inline references and definitions block
         from docwen_plugin_document.shared.note_extraction import NoteExtractor
 
-        self._note_extractor = NoteExtractor(doc, input_path)
+        self._note_extractor = NoteExtractor(doc, input_path, typed_endnotes=self._extensions.typed_endnotes)
+        if self._note_extractor.endnotes and not self._extensions.typed_endnotes:
+            self._record_extension_loss("typed_endnotes", "Endnotes were exported as ordinary Markdown footnotes.")
 
         # List detection and numbering infrastructure
         from docwen_plugin_document.shared.list_processing import ListCounterManager
@@ -544,6 +538,7 @@ class DocxToMarkdownConverter:
         code_block_acc = CodeBlockAccumulator(indent_spaces=self._list_indent_spaces)
 
         options = context.request.options
+        self._extensions = resolve_markdown_extensions(options, context.config, direction="output")
         preserve_resources = bool(options.get("to_md_keep_images", True))
         recognize_text = bool(options.get("to_md_enable_ocr", False))
         process_images = preserve_resources or recognize_text
@@ -626,6 +621,13 @@ class DocxToMarkdownConverter:
             semantic_caption_by_object_index[object_index] = caption
             semantic_caption_indices.add(caption_index)
 
+        if not self._extensions.captions_references:
+            semantic_caption_by_object_index.clear()
+            semantic_caption_indices.clear()
+            if self._semantic_v3_recovery.recovered_captions:
+                self._record_extension_loss(
+                    "captions_references", "Captions and cross-references were exported as visible text."
+                )
         total_elements = len(body_elements) if body_elements else 1
         active_list_context_level: int | None = None
 
@@ -638,11 +640,13 @@ class DocxToMarkdownConverter:
 
             tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
 
-            if self._semantic_v3_recovery.is_caption_element(child):
+            if self._extensions.captions_references and self._semantic_v3_recovery.is_caption_element(child):
                 _append_textboxes(body_textboxes_by_anchor.get(idx, []))
                 continue
 
-            v3_caption = self._semantic_v3_recovery.caption_for_object(child)
+            v3_caption = (
+                self._semantic_v3_recovery.caption_for_object(child) if self._extensions.captions_references else None
+            )
             if v3_caption is not None:
                 keyword = {
                     "figure": "Figure",
@@ -1014,51 +1018,6 @@ class DocxToMarkdownConverter:
             raise ValueError("fenced source recovery left an internal token in output")
         return markdown, stats
 
-    def _recover_exact_round_trip_source(self, input_path: str, context: Any) -> str | None:
-        """Use a verified adjacent sidecar only while the DOCX is byte-bound unchanged."""
-
-        recovery = self._resolved_v4_recovery
-        if recovery is None or not recovery.source_recovery_available:
-            diagnostic = recovery.source_recovery_diagnostic if recovery is not None else None
-            code = diagnostic.code if diagnostic is not None else "docwen.docx.resolved_v4.source_snapshot_missing"
-            message = (
-                diagnostic.message
-                if diagnostic is not None
-                else "The resolved-v4 package has no authenticated source recovery map."
-            )
-        else:
-            sidecar_path = Path(f"{input_path}.docwen")
-            if sidecar_path.exists() or sidecar_path.is_symlink():
-                try:
-                    sidecar = read_round_trip_sidecar(sidecar_path, docx_path=input_path)
-                    recovery.prove_exact_recovery_raw(
-                        neutral_raw=sidecar.neutral_document,
-                        plan_raw=sidecar.numbering_export_plan,
-                        authored_source=sidecar.authored_source,
-                    )
-                    return sidecar.authored_source.decode("utf-8", errors="strict")
-                except (OSError, UnicodeDecodeError, DocxSemanticsV3Error, RoundTripSidecarError) as exc:
-                    suffix = f".{exc.code}" if isinstance(exc, RoundTripSidecarError) else ""
-                    code = f"docwen.docx.resolved_v4.sidecar_invalid{suffix}"
-                    message = (
-                        "The adjacent DocWen round-trip sidecar failed authentication; semantic Markdown "
-                        f"normalization is being used ({exc})."
-                    )
-            else:
-                code = "docwen.docx.resolved_v4.sidecar_missing"
-                message = (
-                    "The DOCX is unchanged, but its adjacent .docwen round-trip sidecar is unavailable; "
-                    "semantic Markdown normalization is being used."
-                )
-        self._resolved_v4_diagnostics.append((code, message, "DOCX round-trip sidecar"))
-        context.progress.report_diagnostic(
-            "warning",
-            message,
-            code=code,
-            location="DOCX round-trip sidecar",
-        )
-        return None
-
     @staticmethod
     def _format_yaml_value(value: Any) -> str:
         """Format a value as a YAML-safe string.
@@ -1379,8 +1338,14 @@ class DocxToMarkdownConverter:
             para.text.strip() if para is not None else self._extract_paragraph_text_raw(para_element).strip()
         )
         semantic_bookmark_inventory = self._semantic_bookmark_inventory
-        semantic_reference_text = self._semantic_v3_recovery.render_paragraph_text(para_element)
-        if semantic_reference_text is None and semantic_bookmark_inventory is not None:
+        semantic_reference_text = self._semantic_v3_recovery.render_paragraph_text(
+            para_element, emit_references=self._extensions.captions_references
+        )
+        if (
+            self._extensions.captions_references
+            and semantic_reference_text is None
+            and semantic_bookmark_inventory is not None
+        ):
             semantic_reference_text = render_semantic_reference_text(
                 para_element,
                 bookmark_inventory=semantic_bookmark_inventory,
@@ -1391,7 +1356,7 @@ class DocxToMarkdownConverter:
         if para is not None:
             w_ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
             has_visible_wrapper = any(
-                para._p.find(f".//{{{w_ns}}}{tag}") is not None for tag in ("ins", "fldSimple", "hyperlink")
+                para._p.find(f".//{{{w_ns}}}{tag}") is not None for tag in ("ins", "fldSimple", "hyperlink", "sdt")
             )
         if para is not None and (not paragraph_text or has_visible_wrapper):
             # python-docx Paragraph.text can be empty when all visible text is
@@ -1633,6 +1598,12 @@ class DocxToMarkdownConverter:
         # ── 6. Extract text ─────────────────────────────────────────
         text = paragraph_text
         source_anchor = self._semantic_v3_recovery.source_anchor(para_element)
+        if (
+            source_anchor is not None
+            and source_anchor.owner_kind == "semantic_target"
+            and not self._extensions.captions_references
+        ):
+            source_anchor = None
 
         # ── 6a. Formula extraction (H2) — OMML → LaTeX ──────────────
         _MATH_NS = OMML_NS["m"]
@@ -1660,7 +1631,9 @@ class DocxToMarkdownConverter:
 
         # ── 7. Heading output ───────────────────────────────────────
         if is_heading:
-            prefix = "#" * heading_level
+            if heading_level > 6 and not self._extensions.extended_headings:
+                self._record_extension_loss("extended_headings", "Heading levels 7–9 were exported at level 6.")
+            prefix = "#" * (heading_level if self._extensions.extended_headings else min(heading_level, 6))
             if _formula_text is not None:
                 display_text = _formula_text
             elif self._preserve_heading_formatting and para is not None:
@@ -2702,8 +2675,15 @@ class DocxToMarkdownConverter:
 
         table_metadata = extract_semantic_table_metadata(tbl_element)
         structural = table_metadata.header_rows > 1 or table_metadata.header_columns > 0
-        resolved_round_trip = self._resolved_v4_recovery is not None or bool(self._resolved_v4_diagnostics)
-        use_merge_markers = table_merge_strategy == "marker" or structural or resolved_round_trip
+        if not self._extensions.structural_tables:
+            if structural or any(node.tag.rsplit("}", 1)[-1] in {"gridSpan", "vMerge"} for node in tbl_element.iter()):
+                self._record_extension_loss(
+                    "structural_tables", "Merged cells and header roles were flattened to a standard Markdown table."
+                )
+            structural = False
+            if table_merge_strategy == "marker":
+                table_merge_strategy = "fill"
+        use_merge_markers = self._extensions.structural_tables
         rendered = render_docx_table_rows(
             tbl_element,
             cell_text_resolver=lambda cell, row_index, _virtual_col: self._get_cell_text(
@@ -2721,7 +2701,7 @@ class DocxToMarkdownConverter:
             # literal marker cells must always be escaped.  In fill mode the
             # repeated values are literals too; in marker mode covered cells
             # remain the structural carriers.
-            escape_literal_merge_markers=True,
+            escape_literal_merge_markers=self._extensions.structural_tables,
         )
         lines = markdown_table_lines(
             rendered,
@@ -2731,6 +2711,11 @@ class DocxToMarkdownConverter:
         if lines:
             lines.append("")
         return lines, 0
+
+    def _record_extension_loss(self, name: str, message: str) -> None:
+        code = f"docwen.markdown.extension.{name}.flattened"
+        if not any(item[0] == code for item in self._resolved_v4_diagnostics):
+            self._resolved_v4_diagnostics.append((code, message, "word/document.xml"))
 
     def _process_table_for_output(
         self,

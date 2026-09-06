@@ -147,17 +147,17 @@ title = "설정"
 # 选项卡标题
 [settings.tabs]
 general = "일반"
-text = "텍스트"
+text = "입력 텍스트"
 proofread = "교정"
-export = "내보내기"
-document = "문서"
-spreadsheet = "스프레드시트"
+export = "Markdown 리소스"
+document = "입력 문서"
+spreadsheet = "입력 스프레드시트"
 image = "이미지"
-layout = "레이아웃"
+layout = "입력 고정 레이아웃 파일"
 other = "기타"
 link = "링크"
-formatting = "서식"
-output = "출력"
+formatting = "Markdown 문법"
+output = "파일 저장"
 logging = "로그"
 
 [settings.descriptions]
@@ -355,7 +355,6 @@ merge_strategy_label = "병합 셀 내보내기 방식:"
 [settings.table_export.strategies]
 fill = "채우기"
 empty = "비우기"
-marker = "표식"
 
 [settings.document]
 # 内容提取设置
@@ -1604,3 +1603,15 @@ file_admission_confirm_title = "감지된 파일 형식 확인"
 file_admission_confirm_message = "파일 이름과 감지된 내용의 형식이 다릅니다. 감지된 형식으로 처리할까요?"
 file_admission_confirm_action = "감지된 형식으로 처리"
 file_admission_cancelled = "처리가 취소되었습니다. 감지된 형식은 승인되지 않았습니다."
+
+[settings.markdown_extensions]
+description = "Markdown 입력과 출력에 사용할 확장 문법을 각각 선택합니다. 원본 파일은 변경하지 않습니다."
+input = "Markdown 입력: 확장 문법 인식"
+output = "Markdown 출력: 확장 문법 사용"
+input_hint = "끄면 일반 텍스트, 표, 각주로 처리합니다."
+output_hint = "일반 Markdown을 사용하고 표현할 수 없는 구조나 유형을 알립니다."
+structural_tables = "Structural Tables 구조화 표"
+captions_references = "Number Suite 캡션 및 상호 참조"
+extended_headings = "7~9단계 제목"
+typed_endnotes = "유형이 있는 각주 및 미주"
+obsidian_preset = "Obsidian 확장 사용"

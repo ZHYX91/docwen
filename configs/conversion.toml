@@ -135,3 +135,16 @@ blockquote_title_override_by_locale = {}
 [export]
 base64_compress_enabled = true
 base64_compress_threshold_kb = 100
+
+# Optional Markdown dialects: input recognition and output emission are independent.
+[markdown_extensions.input]
+structural_tables = false
+captions_references = false
+extended_headings = false
+typed_endnotes = false
+
+[markdown_extensions.output]
+structural_tables = false
+captions_references = false
+extended_headings = false
+typed_endnotes = false

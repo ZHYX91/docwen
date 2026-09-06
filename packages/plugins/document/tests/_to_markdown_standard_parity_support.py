@@ -76,7 +76,7 @@ def _convert_document_fixture_to_markdown(tmp_path: Path, document: Any, *, requ
             request_id=request_id,
             input_refs=[FileRef(path=str(source), format="docx", category="document")],
             target_format="md",
-            options={},
+            options={"markdown_extensions": {"output": {"structural_tables": True, "extended_headings": True}}},
             output_policy=OutputPolicy(),
         ),
         workspace=FakeWorkspaceHandle(str(source), str(staging)),

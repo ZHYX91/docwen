@@ -101,7 +101,9 @@ def soft_reference_map_xml(records: list[SoftReferenceIdentityV3]) -> bytes:
             f'<softReference tag="{item.tag}" source_sha256="{item.source_sha256}" '
             f'source_start="{item.source_start}" source_end="{item.source_end}" '
             f'authored_token="{xml_attr(item.authored_token)}" '
-            f'cached_number="{xml_attr(item.cached_number)}"/>'
+            f'cached_number="{xml_attr(item.cached_number)}"'
+            + (f' fallback_text="{xml_attr(item.fallback_text)}"' if item.fallback_text is not None else "")
+            + "/>"
         )
         for item in sorted(records, key=lambda value: (value.source_start, value.source_end, value.tag))
     )
@@ -658,14 +660,17 @@ def _parse_anchor(item: Any, namespace: str) -> AnchorIdentityV3:
 
 
 def _parse_soft_reference(item: Any, namespace: str) -> SoftReferenceIdentityV3:
-    if item.tag != f"{namespace}softReference" or tuple(item.attrib) != (
+    expected_attributes = (
         "tag",
         "source_sha256",
         "source_start",
         "source_end",
         "authored_token",
         "cached_number",
-    ):
+    )
+    if item.get("fallback_text") is not None:
+        expected_attributes += ("fallback_text",)
+    if item.tag != f"{namespace}softReference" or tuple(item.attrib) != expected_attributes:
         raise DocxSemanticsV3Error("soft-reference record is not closed and canonical")
     try:
         identity = derive_soft_reference_identity_v3(
@@ -674,6 +679,7 @@ def _parse_soft_reference(item: Any, namespace: str) -> SoftReferenceIdentityV3:
             source_end=int(item.get("source_end")),
             authored_token=item.get("authored_token"),
             cached_number=item.get("cached_number"),
+            fallback_text=item.get("fallback_text"),
         )
     except (TypeError, ValueError) as exc:
         raise DocxSemanticsV3Error("soft-reference record has invalid scalar values") from exc

@@ -34,6 +34,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from docwen_core.markdown_extensions import MarkdownExtensions
 from docwen_core.models.file_ref import FileRef
 from docwen_core.models.request import ConversionRequest, OutputPolicy
 
@@ -71,7 +72,13 @@ def _run(
         target_format=target_format,
         action_name=action_name,
         output_policy=OutputPolicy(output_dir=str(output_dir)),
-        options=options or {},
+        # These semantic round-trip fixtures deliberately exercise the Obsidian dialect.
+        options={
+            "markdown_extensions": {
+                direction: MarkdownExtensions.obsidian().to_dict() for direction in ("input", "output")
+            },
+            **(options or {}),
+        },
     )
     return runtime.execute(request)
 

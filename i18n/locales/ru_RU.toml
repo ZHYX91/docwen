@@ -147,17 +147,17 @@ title = "Настройки"
 # 选项卡标题
 [settings.tabs]
 general = "Общие"
-text = "Текст"
+text = "Входной текст"
 proofread = "Проверка"
-export = "Экспорт"
-document = "Документ"
-spreadsheet = "Таблица"
+export = "Ресурсы Markdown"
+document = "Входные документы"
+spreadsheet = "Входные таблицы"
 image = "Изображение"
-layout = "Макет"
+layout = "Входные файлы фиксированной вёрстки"
 other = "Другое"
 link = "Ссылка"
-formatting = "Форматирование"
-output = "Вывод"
+formatting = "Синтаксис Markdown"
+output = "Сохранение файлов"
 logging = "Лог"
 
 [settings.descriptions]
@@ -355,7 +355,6 @@ merge_strategy_label = "Стратегия экспорта объединённ
 [settings.table_export.strategies]
 fill = "Заполнить"
 empty = "Оставить пустыми"
-marker = "Маркер"
 
 [settings.document]
 # 内容提取设置
@@ -1604,3 +1603,15 @@ file_admission_confirm_title = "Подтвердить обнаруженный 
 file_admission_confirm_message = "Имя файла и обнаруженное содержимое имеют разные форматы. Обработать файл в обнаруженном формате?"
 file_admission_confirm_action = "Обработать в обнаруженном формате"
 file_admission_cancelled = "Обработка отменена; обнаруженный формат не принят."
+
+[settings.markdown_extensions]
+description = "Выберите расширения отдельно для чтения и записи Markdown. Исходные файлы не изменяются."
+input = "Входной Markdown: распознавать расширения"
+output = "Выходной Markdown: использовать расширения"
+input_hint = "Отключённый синтаксис обрабатывается как обычный текст, таблицы или сноски."
+output_hint = "Использовать обычный Markdown и сообщать о непредставимых структурах."
+structural_tables = "Structural Tables: структурные таблицы"
+captions_references = "Number Suite: подписи и перекрёстные ссылки"
+extended_headings = "Заголовки уровней 7–9"
+typed_endnotes = "Типизированные сноски и концевые сноски"
+obsidian_preset = "Использовать расширения Obsidian"

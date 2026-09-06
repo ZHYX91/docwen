@@ -63,6 +63,8 @@ class SoftReferenceIdentityV3:
     authored_token: str
     cached_number: str
 
+    fallback_text: str | None = None
+
 
 @dataclass(frozen=True, slots=True)
 class ReferenceOccurrenceIdentityV3:
@@ -193,6 +195,7 @@ def derive_soft_reference_identity_v3(
     source_end: int,
     authored_token: str,
     cached_number: str,
+    fallback_text: str | None = None,
 ) -> SoftReferenceIdentityV3:
     """Derive the frozen inline non-target SDT identity."""
 
@@ -201,8 +204,8 @@ def derive_soft_reference_identity_v3(
         raise DocxSemanticsV3Error("soft-reference source range must be non-empty and ordered")
     if not authored_token.startswith("@[[") or not authored_token.endswith("]]"):
         raise DocxSemanticsV3Error("soft-reference authored token is not canonical")
-    if not cached_number:
-        raise DocxSemanticsV3Error("soft-reference cached number must be non-empty")
+    if bool(cached_number) == bool(fallback_text):
+        raise DocxSemanticsV3Error("soft reference must have either a number or unnumbered display text")
     if source_end - source_start != len(authored_token):
         raise DocxSemanticsV3Error("soft-reference range length does not match its authored token")
     preimage = f"docwen-soft-ref-map-v1\0{source_sha256}\0{source_start}\0{source_end}\0{authored_token}"
@@ -214,6 +217,7 @@ def derive_soft_reference_identity_v3(
         source_end=source_end,
         authored_token=authored_token,
         cached_number=cached_number,
+        fallback_text=fallback_text,
     )
 
 

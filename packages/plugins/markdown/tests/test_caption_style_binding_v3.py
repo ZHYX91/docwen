@@ -76,7 +76,7 @@ def test_real_converter_persists_and_recovers_request_local_caption_style(tmp_pa
     context, _workspace = make_context(
         str(source),
         target_format="docx",
-        options={"template_name": str(template)},
+        options={"template_name": str(template), "markdown_extensions": {"input": {"captions_references": True}}},
         document_style_catalog=catalog,
     )
 

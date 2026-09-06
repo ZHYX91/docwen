@@ -170,7 +170,9 @@ class TestRendererFoundation:
         from .conftest import make_context, write_temp_md
 
         md_path = write_temp_md(MD_WITH_FOOTNOTES_ONLY)
-        ctx, _workspace = make_context(md_path, target_format="docx")
+        ctx, _workspace = make_context(
+            md_path, target_format="docx", options={"markdown_extensions": {"input": {"typed_endnotes": True}}}
+        )
 
         converter = MdToDocxConverter()
         result = converter.convert(ctx)
@@ -212,7 +214,9 @@ class TestRendererFoundation:
         md_path = write_temp_md(markdown)
         source_path = Path(md_path)
         original = source_path.read_bytes()
-        ctx, _workspace = make_context(md_path, target_format="docx")
+        ctx, _workspace = make_context(
+            md_path, target_format="docx", options={"markdown_extensions": {"input": {"typed_endnotes": True}}}
+        )
 
         result = MdToDocxConverter().convert(ctx)
 
@@ -235,7 +239,9 @@ class TestWritebackFootnotes:
         from .conftest import make_context, write_temp_md
 
         md_path = write_temp_md(MD_FOOTNOTE_ONLY)
-        ctx, _workspace = make_context(md_path, target_format="docx")
+        ctx, _workspace = make_context(
+            md_path, target_format="docx", options={"markdown_extensions": {"input": {"typed_endnotes": True}}}
+        )
 
         converter = MdToDocxConverter()
         result = converter.convert(ctx)
@@ -253,7 +259,9 @@ class TestWritebackFootnotes:
         from .conftest import make_context, write_temp_md
 
         md_path = write_temp_md(MD_FOOTNOTE_ONLY)
-        ctx, _workspace = make_context(md_path, target_format="docx")
+        ctx, _workspace = make_context(
+            md_path, target_format="docx", options={"markdown_extensions": {"input": {"typed_endnotes": True}}}
+        )
 
         converter = MdToDocxConverter()
         result = converter.convert(ctx)
@@ -285,7 +293,9 @@ class TestWritebackFootnotes:
         from .conftest import make_context, write_temp_md
 
         md_path = write_temp_md(MD_FOOTNOTE_ONLY)
-        ctx, _workspace = make_context(md_path, target_format="docx")
+        ctx, _workspace = make_context(
+            md_path, target_format="docx", options={"markdown_extensions": {"input": {"typed_endnotes": True}}}
+        )
 
         converter = MdToDocxConverter()
         result = converter.convert(ctx)
@@ -303,7 +313,9 @@ class TestWritebackFootnotes:
         from .conftest import make_context, write_temp_md
 
         md_path = write_temp_md(MD_FOOTNOTE_ONLY)
-        ctx, _workspace = make_context(md_path, target_format="docx")
+        ctx, _workspace = make_context(
+            md_path, target_format="docx", options={"markdown_extensions": {"input": {"typed_endnotes": True}}}
+        )
 
         converter = MdToDocxConverter()
         result = converter.convert(ctx)
@@ -327,7 +339,9 @@ class TestWritebackFootnotes:
         from .conftest import make_context, write_temp_md
 
         md_path = write_temp_md(MD_MULTI_FOOTNOTES)
-        ctx, _workspace = make_context(md_path, target_format="docx")
+        ctx, _workspace = make_context(
+            md_path, target_format="docx", options={"markdown_extensions": {"input": {"typed_endnotes": True}}}
+        )
 
         converter = MdToDocxConverter()
         result = converter.convert(ctx)
@@ -359,7 +373,9 @@ class TestWritebackFootnotes:
         from .conftest import make_context, write_temp_md
 
         md_path = write_temp_md(MD_NO_NOTES)
-        ctx, _workspace = make_context(md_path, target_format="docx")
+        ctx, _workspace = make_context(
+            md_path, target_format="docx", options={"markdown_extensions": {"input": {"typed_endnotes": True}}}
+        )
 
         converter = MdToDocxConverter()
         result = converter.convert(ctx)
@@ -382,7 +398,9 @@ class TestWritebackEndnotes:
         from .conftest import make_context, write_temp_md
 
         md_path = write_temp_md(MD_ENDNOTE_ONLY)
-        ctx, _workspace = make_context(md_path, target_format="docx")
+        ctx, _workspace = make_context(
+            md_path, target_format="docx", options={"markdown_extensions": {"input": {"typed_endnotes": True}}}
+        )
 
         converter = MdToDocxConverter()
         result = converter.convert(ctx)
@@ -398,7 +416,9 @@ class TestWritebackEndnotes:
         from .conftest import make_context, write_temp_md
 
         md_path = write_temp_md(MD_ENDNOTE_ONLY)
-        ctx, _workspace = make_context(md_path, target_format="docx")
+        ctx, _workspace = make_context(
+            md_path, target_format="docx", options={"markdown_extensions": {"input": {"typed_endnotes": True}}}
+        )
 
         converter = MdToDocxConverter()
         result = converter.convert(ctx)
@@ -428,7 +448,9 @@ class TestWritebackEndnotes:
         from .conftest import make_context, write_temp_md
 
         md_path = write_temp_md(MD_ENDNOTE_ONLY)
-        ctx, _workspace = make_context(md_path, target_format="docx")
+        ctx, _workspace = make_context(
+            md_path, target_format="docx", options={"markdown_extensions": {"input": {"typed_endnotes": True}}}
+        )
 
         converter = MdToDocxConverter()
         result = converter.convert(ctx)
@@ -446,7 +468,9 @@ class TestWritebackEndnotes:
         from .conftest import make_context, write_temp_md
 
         md_path = write_temp_md(MD_ENDNOTE_ONLY)
-        ctx, _workspace = make_context(md_path, target_format="docx")
+        ctx, _workspace = make_context(
+            md_path, target_format="docx", options={"markdown_extensions": {"input": {"typed_endnotes": True}}}
+        )
 
         converter = MdToDocxConverter()
         result = converter.convert(ctx)

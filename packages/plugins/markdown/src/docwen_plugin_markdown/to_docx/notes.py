@@ -41,11 +41,13 @@ def _note_syntax_invalid(message: str) -> NoReturn:
     )
 
 
-def _note_identity(label: str) -> tuple[str, str, str]:
+def _note_identity(label: str, *, typed_endnotes: bool = True) -> tuple[str, str, str]:
     """Return ``(kind, normalized_id, spelling)`` for one authored label."""
 
     folded = label.casefold()
-    if folded.startswith("footnote:"):
+    if not typed_endnotes:
+        kind, note_id, spelling = "footnote", label, "default"
+    elif folded.startswith("footnote:"):
         kind = "footnote"
         note_id = label[len("footnote:") :]
         spelling = "explicit"
@@ -71,12 +73,14 @@ def _note_identity(label: str) -> tuple[str, str, str]:
 def _rewrite_reference_segments(
     text: str,
     internal_keys: dict[tuple[str, str], str],
+    *,
+    typed_endnotes: bool = True,
 ) -> str:
     """Rewrite note references outside inline-code spans."""
 
     def rewrite_segment(segment: str) -> str:
         def replace(match: re.Match[str]) -> str:
-            kind, normalized_id, _spelling = _note_identity(match.group("label"))
+            kind, normalized_id, _spelling = _note_identity(match.group("label"), typed_endnotes=typed_endnotes)
             return f"[^{internal_keys[(kind, normalized_id)]}]"
 
         return _NOTE_REFERENCE_RE.sub(replace, segment)
@@ -103,7 +107,7 @@ def _rewrite_reference_segments(
     return "".join(output)
 
 
-def normalize_note_syntax(md_body: str) -> str:
+def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
     """Validate and normalize the frozen Obsidian note syntax for Mistune.
 
     The authored Markdown is never written back.  This request-local projection
@@ -162,7 +166,7 @@ def normalize_note_syntax(md_body: str) -> str:
             continue
 
         label = definition_match.group("label")
-        kind, normalized_id, spelling = _note_identity(label)
+        kind, normalized_id, spelling = _note_identity(label, typed_endnotes=typed_endnotes)
         identity = (kind, normalized_id)
         previous = definitions.get(identity)
         if previous is not None:
@@ -186,7 +190,7 @@ def normalize_note_syntax(md_body: str) -> str:
             tick = text.find("`", cursor)
             segment_end = len(text) if tick < 0 else tick
             for match in _NOTE_REFERENCE_RE.finditer(text, cursor, segment_end):
-                kind, normalized_id, _spelling = _note_identity(match.group("label"))
+                kind, normalized_id, _spelling = _note_identity(match.group("label"), typed_endnotes=typed_endnotes)
                 reference_identities.append((kind, normalized_id))
             if tick < 0:
                 break
@@ -225,7 +229,7 @@ def normalize_note_syntax(md_body: str) -> str:
         if index in definition_labels:
             match = _NOTE_DEFINITION_RE.match(text)
             assert match is not None
-            kind, normalized_id, _spelling = _note_identity(definition_labels[index])
+            kind, normalized_id, _spelling = _note_identity(definition_labels[index], typed_endnotes=typed_endnotes)
             start, end = match.span("label")
             text = text[:start] + internal_keys[(kind, normalized_id)] + text[end:]
         elif index in continuation_leads and text.strip():
@@ -239,7 +243,7 @@ def normalize_note_syntax(md_body: str) -> str:
                 if 2 <= spaces < 4:
                     text = lead + "    " + remainder[spaces:]
         elif index not in fenced_lines:
-            text = _rewrite_reference_segments(text, internal_keys)
+            text = _rewrite_reference_segments(text, internal_keys, typed_endnotes=typed_endnotes)
         rewritten.append(text + newline)
     return "".join(rewritten)
 

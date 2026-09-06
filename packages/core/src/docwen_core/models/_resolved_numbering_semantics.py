@@ -105,7 +105,9 @@ def validate_document(document: ResolvedDocument, source_sha256: str, code: str)
             if target.target_id is None or selector_id != target.target_id:
                 _fail(code, f"{location} stable selector contradicts the target source ID")
         elif target.kind != "heading":
-            _fail(code, f"{location} soft Heading selector resolves to a non-Heading target")
+            expected = f"{_COUNTER_FOR_KIND[target.kind]}: {target.authored_text}".strip()
+            if selector_id.strip() != expected:
+                _fail(code, f"{location} caption title selector contradicts the target caption")
 
     _validate_resolved_dependencies(document, source, code)
 
@@ -205,7 +207,7 @@ def _parse_cross_reference_token(
     token: str,
     location: str,
     code: str,
-) -> tuple[str, str | None, str | None]:
+) -> tuple[str, str, str | None]:
     if not token.startswith("@[[") or not token.endswith("]]"):
         _fail(code, f"{location}.authored_token is not a semantic cross-reference")
     body = token[3:-2]
@@ -228,7 +230,7 @@ def _parse_cross_reference_token(
         return "stable", source_id, alias
     if any(part.startswith("^") for part in parts):
         _fail(code, f"{location}.authored_token mixes a Heading path with a stable selector")
-    return "soft", None, alias
+    return "soft", selector, alias
 
 
 def validate_plan(plan: ResolvedNumberingPlan) -> None:
@@ -344,9 +346,8 @@ def validate_port(
     _validate_caption_sequences(document.document, plan.plan)
     for reference in document.document.references:
         target = plan_targets[reference.target_occurrence_key]
-        if not target.enabled or target.derived_number is None:
-            _invalid("resolved reference points to an unnumbered target")
-        if reference.cached_number != target.derived_number:
+        expected_number = target.derived_number if target.enabled else ""
+        if reference.cached_number != expected_number:
             _invalid("resolved reference cached number contradicts its target plan value")
 
 

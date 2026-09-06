@@ -197,7 +197,8 @@
         "resolved_document_sha256": {"$ref": "#/$defs/sha256"},
         "resolved_kind": {"$ref": "#/$defs/targetKind"},
         "resolved_target_id": {"$ref": "#/$defs/id"},
-        "cached_number": {"type": "string", "minLength": 1}
+        "cached_number": {"type": "string", "minLength": 1},
+        "fallback_text": {"type": "string", "minLength": 1}
       },
       "oneOf": [
         {"required": ["target_id"], "properties": {"selector_kind": {"const": "stable_id"}}},

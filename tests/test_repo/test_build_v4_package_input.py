@@ -495,7 +495,7 @@ def test_binary_difference_and_version_drift_are_rejected(tmp_path: Path) -> Non
             **_arguments(  # type: ignore[arg-type]
                 drift,
                 version_reader=lambda path: (
-                    "DocWen 0.9.1 (CLI protocol 3)"
+                    "DocWen 0.10.0 (CLI protocol 3)"
                     if producer.PACKAGE_NAMES[0] in path.parts
                     else "DocWen 0.9.0 (CLI protocol 3)"
                 ),

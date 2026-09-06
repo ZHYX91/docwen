@@ -325,7 +325,7 @@ owner: Finance
         ctx, _workspace = make_context(
             md_path,
             target_format="xlsx",
-            options={"template_name": str(template)},
+            options={"template_name": str(template), "markdown_extensions": {"input": {"structural_tables": True}}},
         )
 
         converter = MdToXlsxConverter()
@@ -366,7 +366,7 @@ owner: Finance
         ctx, _workspace = make_context(
             md_path,
             target_format="xlsx",
-            options={"template_name": str(template)},
+            options={"template_name": str(template), "markdown_extensions": {"input": {"structural_tables": True}}},
         )
 
         result = MdToXlsxConverter().convert(ctx)
@@ -400,7 +400,7 @@ owner: Finance
         ctx, _workspace = make_context(
             md_path,
             target_format="xlsx",
-            options={"template_name": str(template)},
+            options={"template_name": str(template), "markdown_extensions": {"input": {"structural_tables": True}}},
         )
 
         result = MdToXlsxConverter().convert(ctx)

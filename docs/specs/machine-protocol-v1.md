@@ -62,19 +62,13 @@ The v4 plan-aware Markdown→DOCX capability requires exactly two input resource
 | `neutral_document` | `application/vnd.docwen.resolved-document+json` | exactly 1 | `docwen.resolved_document.v1` / `urn:docwen:schema:resolved-document:v1` |
 | `numbering_export_plan` | `application/vnd.docwen.numbering-export-plan+json` | exactly 1 | `docwen.numbering_export_plan.v1` / `urn:docwen:schema:numbering-export-plan:v1` |
 
-The successful output is one atomic many-artifact Bundle: the preferred DOCX `document` plus exactly one `resource`
-with media type `application/vnd.docwen.round-trip-sidecar+zip`. The resource has one
-`resource_of(role=manifest, ordinal=0)` relation to the DOCX and suggested name `<DOCX suggested name>.docwen`.
-`docwen.round_trip_sidecar.v1` is DocWen-owned; consumers do not recreate it from private inputs. Its ZIP inventory is
-exactly `authored-source.md`, `neutral-document.json`, `numbering-export-plan.json`, `manifest.json` in that order. The
-manifest binds the exact DOCX and all three payload identities. A consumer publishes or moves the DOCX and sidecar as
-a pair, preserving the adjacent basename; Artifact Bundle locators and SHA-256 values remain the authority while the
-files are in request staging.
+The successful output is a single-document Artifact Bundle: one preferred DOCX `document`, cardinality `one`,
+artifact kinds `[document]`, and no relations. The DOCX has its own byte count and SHA-256. No `.docwen` companion
+or source-recovery manifest is produced or consumed. Generic image/OCR resources remain unchanged on routes that
+publish them.
 
-成功输出是一个原子多 artifact Bundle：首选 DOCX `document`，以及唯一的
-`application/vnd.docwen.round-trip-sidecar+zip` `resource`。它通过
-`resource_of(role=manifest, ordinal=0)` 归属于 DOCX，建议文件名为 `<DOCX 建议文件名>.docwen`。sidecar 的
-四成员、manifest、DOCX/数据哈希全部由 DocWen 生成；消费者只校验并成对发布，不自行用私有数据重建。
+成功输出是单文档 Artifact Bundle：一个首选 DOCX `document`，不带关系或 `.docwen` 伴随文件。
+逆向转换只读取当前 DOCX；Bundle 继续校验 DOCX 本身的字节数和 SHA-256。
 
 Both are strict UTF-8 JSON, at most 8 MiB each, reject duplicate keys/non-finite numbers, and are closed at every
 object. Each envelope requires exactly `$schema,schema,input_id,source_sha256,plan_sha256` plus its schema-owned
@@ -103,21 +97,21 @@ range/fix and publish no partial artifact. They are distinct from a valid disabl
 Missing or invalid `neutral_document` independently uses `docwen.resolved_document.missing` or
 `docwen.resolved_document.invalid`; it is never disguised as a numbering state either.
 
-The sole provider diagnostic mapping for that valid state is
-`interop.cross_reference.unnumbered_target` ↔
-`docwen.markdown.cross_reference.unnumbered_target`. It is one-to-one in both directions and preserves severity,
-source evidence, target identity/kind, and no-fix status; neither side maps missing/invalid/unsupported plan errors to
-an unnumbered target.
+A valid disabled target accepts a reference with an empty `cached_number`. The visible reference uses its Alias
+or current target title and contains no invented number. No unnumbered-target error is emitted. Missing, invalid,
+or unsupported plans remain admission errors, independently of this display state.
 
 ## OCR-capable option schemas / OCR 能力选项 schema
 
-The final v4 DOCX-to-Markdown capability has exactly these seven properties: `recognize_text` (boolean, default `false`),
+The DOCX-to-Markdown capability also accepts the shared `markdown_extensions` policy (input/output objects with
+four independent booleans; defaults are false). Its image/resource properties are: `recognize_text` (boolean, default `false`),
 `preserve_resources` (boolean, default `true`), `ocr_language` (the eight-value language enum, default `auto`),
 `image_mode` (`file|base64|embed|omit`, default `file`), `ocr_placement` (`image_md|main_md`, default `main_md`),
 `image_link_style` (`wiki_embed|wiki_link|markdown_embed|markdown_link`, default `wiki_embed`),
 and `table_merge_strategy` (`fill|empty|marker`, default `fill`). Its schema has `required=[]` and
-`additionalProperties=false`. The three source-authoring numbering properties are rejected on this capability because
-the closed Machine/capability schema exposes them only on other declared capabilities. The schema, manifest,
+`additionalProperties=false`. It also exposes `remove_numbering` (default true), `add_numbering` (default false),
+and `numbering_scheme` (default `gongwen_standard`) for source-document conversion. These are separate from
+resolved-plan Markdown-to-DOCX, whose numbering authority is supplied in the typed plan. The schema, manifest,
 fixtures, source/package capability output, and consumers change atomically.
 
 DOCX is a `document_with_resources` route, not a physical-page route. Let `K` be the number of preserved embedded

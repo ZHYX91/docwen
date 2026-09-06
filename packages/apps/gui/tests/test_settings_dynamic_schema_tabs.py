@@ -163,7 +163,7 @@ def test_document_layout_spreadsheet_dynamic_schema_values(qapp, request: pytest
     spreadsheet_merge_mode = _control(spreadsheet_widgets, "merge_mode", QComboBox)
 
     assert _combo_values(document_optimization_type) == ["gongwen"]
-    assert _combo_values(document_table_merge) == ["fill", "empty", "marker"]
+    assert _combo_values(document_table_merge) == ["fill", "empty"]
     assert _combo_values(document_default_scheme) == ["hierarchical_standard", "legal_standard"]
     assert document_remove_numbering.isChecked() is True
     assert document_add_numbering.isChecked() is False
@@ -171,7 +171,7 @@ def test_document_layout_spreadsheet_dynamic_schema_values(qapp, request: pytest
     assert document_default_scheme.isEnabled() is False
     assert _combo_values(layout_optimization_type) == ["invoice_cn"]
     assert _combo_values(layout_render_dpi) == [150, 300, 600]
-    assert _combo_values(spreadsheet_table_merge) == ["fill", "empty", "marker"]
+    assert _combo_values(spreadsheet_table_merge) == ["fill", "empty"]
     assert _combo_values(spreadsheet_merge_mode) == [1, 2, 3]
 
     document_keep_images.setChecked(True)
@@ -181,14 +181,14 @@ def test_document_layout_spreadsheet_dynamic_schema_values(qapp, request: pytest
     document_tab.set_combo_data(document_default_scheme, "legal_standard")
     document_enable_optimization.setChecked(True)
     document_tab.set_combo_data(document_optimization_type, "gongwen")
-    document_tab.set_combo_data(document_table_merge, "marker")
+    document_tab.set_combo_data(document_table_merge, "empty")
     layout_keep_images.setChecked(True)
     layout_enable_ocr.setChecked(True)
     layout_enable_optimization.setChecked(True)
     layout_tab.set_combo_data(layout_render_dpi, 600)
     spreadsheet_keep_images.setChecked(True)
     spreadsheet_enable_ocr.setChecked(True)
-    spreadsheet_tab.set_combo_data(spreadsheet_table_merge, "marker")
+    spreadsheet_tab.set_combo_data(spreadsheet_table_merge, "empty")
     spreadsheet_tab.set_combo_data(spreadsheet_merge_mode, 2)
 
     config = vm.config
@@ -200,14 +200,14 @@ def test_document_layout_spreadsheet_dynamic_schema_values(qapp, request: pytest
     assert document_default_scheme.isEnabled() is True
     assert config.conversion_defaults.document["to_md_enable_optimization"] is True
     assert config.conversion_defaults.document["to_md_optimization_type"] == "gongwen"
-    assert config.conversion_defaults.document["to_md_table_merge_export_strategy"] == "marker"
+    assert config.conversion_defaults.document["to_md_table_merge_export_strategy"] == "empty"
     assert config.conversion_defaults.layout["to_md_keep_images"] is True
     assert config.conversion_defaults.layout["to_md_enable_ocr"] is True
     assert config.conversion_defaults.layout["to_md_enable_optimization"] is True
     assert config.conversion_defaults.layout["render_dpi"] == 600
     assert config.conversion_defaults.spreadsheet["to_md_keep_images"] is True
     assert config.conversion_defaults.spreadsheet["to_md_enable_ocr"] is True
-    assert config.conversion_defaults.spreadsheet["to_md_table_merge_export_strategy"] == "marker"
+    assert config.conversion_defaults.spreadsheet["to_md_table_merge_export_strategy"] == "empty"
     assert config.conversion_defaults.spreadsheet["merge_mode"] == 2
 
     collected = document_tab.collect_values()

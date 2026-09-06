@@ -19,7 +19,7 @@ MANIFEST = ROOT / "release" / "windows-production-manifest.v1.json"
 
 def test_windows_production_manifest_has_one_offline_asset_and_fixed_epoch() -> None:
     manifest = production.read_manifest(MANIFEST)
-    assert manifest["product"]["version"] == "0.9.1"
+    assert manifest["product"]["version"] == "0.10.0"
     assert manifest["product"]["releaseTagFormat"] == "{version}"
     assert manifest["product"]["cliJsonProtocolVersion"] == 3
     assert manifest["build"]["mode"] == "pure-python"
@@ -29,8 +29,8 @@ def test_windows_production_manifest_has_one_offline_asset_and_fixed_epoch() -> 
     assert "DocWenCLI-windows-x64.zip" not in json.dumps(manifest)
     assert manifest["releaseAssetAllowlist"] == [
         "DocWen-windows-x64.zip",
-        "DocWenCLI-0.9.1-linux-x64.tar.gz",
-        "DocWen-0.9.1-linux-x64.tar.gz",
+        "DocWenCLI-0.10.0-linux-x64.tar.gz",
+        "DocWen-0.10.0-linux-x64.tar.gz",
         "SHA256SUMS.txt",
     ]
     assert manifest["toolchain"]["python"] == {
@@ -185,7 +185,7 @@ def test_v4_toolchain_hashes_the_same_base_interpreter(tmp_path: Path, monkeypat
     manifest = {
         "schemaVersion": 1,
         "manifestId": "docwen-windows-production",
-        "product": {"version": "0.9.1"},
+        "product": {"version": "0.10.0"},
         "toolchain": {
             "python": {
                 "implementation": "CPython",
@@ -232,7 +232,7 @@ def test_machine_contract_files_pin_exact_d2_closure() -> None:
     manifest = production.read_manifest(MANIFEST)
     files = manifest["sourceContracts"]["machineContractFiles"]
     assert [item["path"] for item in files] == list(production.MACHINE_CONTRACT_PATHS)
-    assert len(files) == 32
+    assert len(files) == 31
     assert all(production.sha256_lf_source_file(ROOT / item["path"]) == item["sha256"] for item in files)
 
 

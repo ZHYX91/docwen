@@ -92,6 +92,7 @@ def test_yaml_body_marker_survives_text_numbering_without_reusing_old_body_offse
         str(source),
         target_format="docx",
         options={
+            "markdown_extensions": {"input": {"captions_references": True}},
             "add_numbering": True,
             "numbering_scheme": "hierarchical_standard",
             "heading_numbering_render_mode": "text",

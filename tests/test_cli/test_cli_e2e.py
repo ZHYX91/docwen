@@ -81,7 +81,7 @@ def _payload(proc) -> dict[str, object]:
     value = json.loads(proc.stdout)
     assert isinstance(value, dict)
     assert value["protocol_version"] == 3
-    assert value["product_version"] == "0.9.1"
+    assert value["product_version"] == "0.10.0"
     return value
 
 

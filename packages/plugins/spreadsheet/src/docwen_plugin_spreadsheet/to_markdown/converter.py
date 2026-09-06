@@ -20,6 +20,7 @@ from collections import deque
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from docwen_core.markdown_extensions import resolve_markdown_extensions
 from docwen_core.text.ocr import format_ocr_best_effort_warning
 
 if TYPE_CHECKING:
@@ -414,6 +415,11 @@ class SpreadsheetToMarkdownConverter:
         options = context.request.options
         keep_images = options.get("to_md_keep_images", True)
         merge_strategy = options.get("table_merge_strategy", "fill")
+        extensions = resolve_markdown_extensions(options, context.config, direction="output")
+        if extensions.structural_tables:
+            merge_strategy = "marker"
+        elif merge_strategy == "marker":
+            merge_strategy = "fill"
 
         # All previously reserved options have been implemented.
         # No reserved options remain — the optimize_for concept has been
@@ -811,6 +817,16 @@ class SpreadsheetToMarkdownConverter:
 
             total_images_extracted += len(sheet_images)
 
+            if (
+                ws.merged_cells.ranges
+                and not resolve_markdown_extensions(options, context.config, direction="output").structural_tables
+            ):
+                context.progress.report_diagnostic(
+                    "warning",
+                    "Merged cells were flattened to a standard Markdown table.",
+                    code="docwen.markdown.extension.structural_tables.flattened",
+                    location=ws.title,
+                )
             df = _worksheet_to_dataframe(ws, table_merge_strategy=merge_strategy)
 
             # H6: Inject image/OCR content into the correct cell positions

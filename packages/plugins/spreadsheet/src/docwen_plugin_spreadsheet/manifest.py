@@ -5,6 +5,7 @@ Declares all conversion routes this plugin handles.
 
 from __future__ import annotations
 
+from docwen_core.markdown_extensions import MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA
 from docwen_core.models.manifest import PluginManifest, RouteCapabilityRule, RouteSpec
 
 PLUGIN_ID = "docwen_plugin_spreadsheet"
@@ -16,6 +17,7 @@ SPREADSHEET_TO_MD_OPTIONS_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
     "properties": {
+        "markdown_extensions": MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA,
         "to_md_keep_images": {
             "type": "boolean",
             "default": True,

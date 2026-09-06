@@ -28,6 +28,7 @@ from docwen_core.formats import (
     CATEGORY_MARKDOWN,
     CATEGORY_SPREADSHEET,
 )
+from docwen_core.markdown_extensions import MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA
 from docwen_core.models import (
     ArtifactBundle,
     ArtifactBundleValidationError,
@@ -282,12 +283,6 @@ _SINGLE_DOCUMENT_SHAPE = OutputShape(
     relation_types=(),
 )
 
-_DOCUMENT_WITH_ROUND_TRIP_SIDECAR_SHAPE = OutputShape(
-    cardinality="many",
-    artifact_kinds=("document", "resource"),
-    relation_types=("resource_of",),
-)
-
 _DOCUMENT_WITH_RESOURCES_SHAPE = OutputShape(
     cardinality="many",
     artifact_kinds=("document", "fragment", "resource"),
@@ -344,6 +339,7 @@ def _strict_options(properties: dict[str, Any], *, required: tuple[str, ...] = (
 
 _MARKDOWN_TO_DOCX_OPTIONS = _strict_options(
     {
+        "markdown_extensions": MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA,
         "locale": {
             "type": "string",
             "enum": list(SHIPPED_STYLE_LOCALES),
@@ -365,17 +361,19 @@ _MARKDOWN_TO_DOCX_OPTIONS = _strict_options(
 
 _MARKDOWN_TO_XLSX_OPTIONS = _strict_options(
     {
+        "markdown_extensions": MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA,
         "template_name": {
             "type": "string",
             "pattern": r"^template\.xlsx\.[0-9a-f]{64}$",
             "x-docwen-resource-kind": "templates",
             "x-docwen-resource-target": "xlsx",
-        }
+        },
     }
 )
 
 _XLSX_TO_MARKDOWN_OPTIONS = _strict_options(
     {
+        "markdown_extensions": MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA,
         "to_md_keep_images": {"type": "boolean", "default": True},
         "to_md_enable_ocr": {"type": "boolean", "default": False},
         "ocr_language": {
@@ -583,8 +581,6 @@ _CAPABILITY_BINDINGS = (
         target_format="docx",
         output_media_type=DOCX_MEDIA_TYPE,
         runtime_route_id="docwen_plugin_markdown:markdown:docx:convert",
-        output_shape=_DOCUMENT_WITH_ROUND_TRIP_SIDECAR_SHAPE,
-        bundle_profile="document_with_round_trip_sidecar",
         options_schema=_MARKDOWN_TO_DOCX_OPTIONS,
         limitations=_RESOLVED_DOCUMENT_MACHINE_LIMITATIONS,
     ),

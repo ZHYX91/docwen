@@ -66,9 +66,9 @@ def test_enable_disable_and_template_empty_are_one_materialization_state() -> No
 
     assert "v1 has no separate state in which a number is hidden" in plan
     assert "Heading level whose selected template is empty is disabled" in plan
-    assert "docwen.markdown.cross_reference.unnumbered_target" in plan
+    assert "empty `cached_number`" in plan
     assert "ordinary `[[...]]` remains a navigation link" in plan
-    assert "does not display Alias without a number" in markdown
+    assert "reference displays its Alias or current target title without inventing a number" in markdown
 
     for label in (
         "Heading enabled",
@@ -228,22 +228,20 @@ def test_disabled_idless_caption_has_executable_occurrence_authority() -> None:
     assert "It creates no target, hidden ID, bookmark, `SEQ`, `REF`, or number" in markdown
 
 
-def test_unnumbered_provider_mapping_is_one_to_one() -> None:
-    markdown = _normalized("markdown-compatibility.md")
-    machine = _normalized("machine-protocol-v1.md")
-
-    for text in (markdown, machine):
-        assert "`interop.cross_reference.unnumbered_target`" in text
-        assert "`docwen.markdown.cross_reference.unnumbered_target`" in text
-        assert "one-to-one" in text
-    assert "must never be coerced into `unnumbered_target`" in markdown
+def test_disabled_reference_display_is_distinct_from_plan_admission() -> None:
+    for name in ("markdown-compatibility.md", "machine-protocol-v1.md"):
+        text = _normalized(name)
+        assert "empty `cached_number`" in text
+        assert "current target title" in text
+        assert "docwen.markdown.cross_reference.unnumbered_target" not in text
+        assert "docwen.numbering_export_plan.invalid" in text
 
 
 def test_source_authoring_options_are_not_resolved_plan_inputs() -> None:
     machine = _normalized("machine-protocol-v1.md")
     capabilities = " ".join((ROOT / "docs" / "capabilities.md").read_text(encoding="utf-8").split())
 
-    assert "final v4 DOCX-to-Markdown capability has exactly these seven properties" in machine
+    assert "shared `markdown_extensions` policy" in machine
     assert "required=[]` and `additionalProperties=false" in machine
     for option in ("`remove_numbering`", "`add_numbering`", "`numbering_scheme`"):
         assert option in machine

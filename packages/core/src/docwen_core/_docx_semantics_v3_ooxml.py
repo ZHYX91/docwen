@@ -223,6 +223,7 @@ def recover_paragraph_children(
     soft_tokens_by_tag: dict[str, str],
     occurrence_tokens_by_tag: dict[str, str] | None = None,
     stable_reference_target_ids: list[str] | None = None,
+    emit_references: bool = True,
 ) -> tuple[str, bool]:
     from docx.oxml.ns import qn
 
@@ -273,7 +274,9 @@ def recover_paragraph_children(
                 raise DocxSemanticsV3Error("unterminated complex field in semantic paragraph")
             instruction = "".join(instruction_parts)
             match = _REF_INSTRUCTION_RE.fullmatch(instruction)
-            if match is not None:
+            if not emit_references:
+                output.append("".join(field_visible))
+            elif match is not None:
                 bookmark_name = match.group(1)
                 if bookmark_name not in target_ids_by_bookmark:
                     raise DocxSemanticsV3Error("owned REF field has no authenticated semantic target")
@@ -293,7 +296,9 @@ def recover_paragraph_children(
     return "".join(output), semantic
 
 
-def soft_reference_visible_text(authored_token: str, cached_number: str) -> str:
+def soft_reference_visible_text(authored_token: str, cached_number: str, fallback_text: str | None = None) -> str:
+    if fallback_text is not None:
+        return fallback_text
     body = authored_token[3:-2]
     _selector, separator, alias = body.partition("|")
     return cached_number if not separator else f"{cached_number} {alias}"

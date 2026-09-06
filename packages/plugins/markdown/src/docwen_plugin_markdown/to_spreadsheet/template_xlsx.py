@@ -42,6 +42,7 @@ def build_template_workbook(
     source_stem: str = "",
     image_scope: str | None = None,
     list_separator: str = "、",
+    structural_tables: bool = True,
 ) -> tuple[Any, dict[str, int]]:
     """Fill an XLSX template using Markdown YAML and table data.
 
@@ -61,7 +62,9 @@ def build_template_workbook(
     if image_scope is not None:
         _promote_template_image_placeholders(workbook, image_scope)
     template_merged_ranges = _merged_ranges_by_sheet(workbook)
-    merge_plans, merge_plan_warnings = _collect_markdown_table_merge_plans(workbook, raw_tables or tables)
+    merge_plans, merge_plan_warnings = (
+        _collect_markdown_table_merge_plans(workbook, raw_tables or tables) if structural_tables else ([], 0)
+    )
     yaml_replacements = _yaml_replacements(
         workbook,
         yaml_data,

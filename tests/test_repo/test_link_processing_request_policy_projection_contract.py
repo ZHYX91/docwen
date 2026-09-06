@@ -57,7 +57,7 @@ def test_markdown_routes_keep_scoped_marker_and_bare_url_ownership_explicit() ->
     assert "image_scope = secrets.token_urlsafe(24)" in docx
     assert 'target_format="docx"' in docx
     assert "materialize_image_placeholders(" in docx and "image_scope=image_scope" in docx
-    assert "parse_markdown_text(md_body, auto_link_bare_url=False)" in docx
+    assert "parse_markdown_text(md_body, auto_link_bare_url=False, extensions=extensions)" in docx
 
     assert spreadsheet.count("image_scope = secrets.token_urlsafe(24)") >= 2
     assert 'target_format="xlsx"' in spreadsheet

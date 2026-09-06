@@ -242,6 +242,7 @@ def test_docx_image_presentation_never_overrides_resource_preservation(
             "to_md_enable_ocr": False,
             "to_md_keep_images": True,
             "image_mode": image_mode,
+            "markdown_extensions": {"output": {"captions_references": True}},
         },
     )
 
@@ -271,6 +272,7 @@ def test_authenticated_image_owner_omit_fails_before_staging(
         tmp_path,
         input_path,
         options={
+            "markdown_extensions": {"output": {"captions_references": True}},
             "to_md_enable_ocr": True,
             "to_md_keep_images": True,
             "image_mode": "omit",
@@ -314,6 +316,7 @@ def test_authenticated_image_owner_survives_owner_preserving_non_file_modes(
             "to_md_enable_ocr": False,
             "to_md_keep_images": preserve_resources,
             "image_mode": image_mode,
+            "markdown_extensions": {"output": {"captions_references": True}},
         },
     )
 

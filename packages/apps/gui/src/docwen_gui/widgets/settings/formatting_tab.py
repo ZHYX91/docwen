@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from typing import cast as _cast
 
-from PySide6.QtWidgets import QComboBox, QLineEdit
+from PySide6.QtWidgets import QCheckBox, QComboBox, QLineEdit, QPushButton
+
+from docwen_core.markdown_extensions import EXTENSION_NAMES
 
 from ...i18n import t
 from ...view_models.settings_vm import SECTION_FORMATTING, SettingsViewModel
@@ -109,6 +111,7 @@ class FormattingTab(BaseSettingsTab):
 
     def __init__(self, view_model: SettingsViewModel) -> None:
         self._vm = view_model
+        self._extension_checks: dict[tuple[str, str], QCheckBox] = {}
         # All combo refs — initialized in _create_interface()
         self._body_format: QComboBox = _cast(QComboBox, None)
         self._heading_format: QComboBox = _cast(QComboBox, None)
@@ -140,6 +143,28 @@ class FormattingTab(BaseSettingsTab):
         self._load_values()
 
     def _create_interface(self) -> None:
+        self.set_tab_description(
+            t(
+                "settings.markdown_extensions.description",
+                "Choose which Markdown extensions to recognize and generate. Your source files are never rewritten.",
+            )
+        )
+        for direction in ("input", "output"):
+            _card, form = self.add_settings_card(
+                t(f"settings.markdown_extensions.{direction}", direction.title()),
+                t(f"settings.markdown_extensions.{direction}_hint", "Extensions are optional."),
+                object_name=f"markdownExtensions{direction.title()}Card",
+            )
+            for name in EXTENSION_NAMES:
+                checkbox = self.create_checkbox("")
+                checkbox.setObjectName(f"markdownExtension{direction.title()}{name.title().replace('_', '')}")
+                self._extension_checks[(direction, name)] = checkbox
+                self.add_form_row(form, t(f"settings.markdown_extensions.{name}", name.replace("_", " ")), checkbox)
+                checkbox.toggled.connect(self._save_extensions)
+            preset = QPushButton(t("settings.markdown_extensions.obsidian_preset", "Use Obsidian extensions"))
+            preset.setObjectName(f"markdownExtensions{direction.title()}Preset")
+            preset.clicked.connect(lambda _checked=False, selected=direction: self._apply_extension_preset(selected))
+            form.addRow(preset)
         # ── DOCX → MD: Format Processing ────────────────────────────────
         _c1, f1 = self.add_settings_card(
             f"{t('settings.formatting.docx_to_md_section', 'DOCX to MD')} — {t('settings.formatting.format_processing', 'Format Processing')}",
@@ -385,6 +410,21 @@ class FormattingTab(BaseSettingsTab):
         self._wire_combo(self._asterisk_sep, "asterisk_sep")
         self._wire_combo(self._underscore_sep, "underscore_sep")
 
+    def _save_extensions(self, _checked: bool = False) -> None:
+        values = {
+            direction: {name: self._extension_checks[(direction, name)].isChecked() for name in EXTENSION_NAMES}
+            for direction in ("input", "output")
+        }
+        self._vm.set_field(SECTION_FORMATTING, "markdown_extensions", values)
+
+    def _apply_extension_preset(self, direction: str) -> None:
+        for (group, _name), checkbox in self._extension_checks.items():
+            if group == direction:
+                checkbox.blockSignals(True)
+                checkbox.setChecked(True)
+                checkbox.blockSignals(False)
+        self._save_extensions()
+
     def _wire_combo(self, combo: QComboBox, key: str) -> None:
         combo.currentIndexChanged.connect(
             lambda _idx, k=key, c=combo: self._vm.set_field(SECTION_FORMATTING, k, self.get_combo_data(c))
@@ -392,6 +432,10 @@ class FormattingTab(BaseSettingsTab):
 
     def _load_values(self) -> None:
         fmt = self._vm.config.formatting
+        for (direction, name), checkbox in self._extension_checks.items():
+            checkbox.blockSignals(True)
+            checkbox.setChecked(fmt.markdown_extensions[direction][name])
+            checkbox.blockSignals(False)
         self.set_combo_data(self._body_format, fmt.body_format)
         self.set_combo_data(self._heading_format, fmt.heading_format)
         self.set_combo_data(self._table_header_format, fmt.table_header_format)

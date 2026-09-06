@@ -24,8 +24,8 @@
     },
     {
       "path": "schemas/diagnostics.schema.json",
-      "bytes": 3010,
-      "sha256": "01df1fe2c3d4cee475353d6100bcac5b2df0a3271317081595eae3778f9fee06"
+      "bytes": 2945,
+      "sha256": "aea08ac1be0041d80a38f3ea27bb5df0d6a0e160f05eb204c639c6913b8cb5fb"
     },
     {
       "path": "schemas/manifest.schema.json",
@@ -34,8 +34,8 @@
     },
     {
       "path": "schemas/projection.schema.json",
-      "bytes": 9600,
-      "sha256": "34a5eb35ec787f7771e77bfebc5a6974cd0f9e428c8e33144d8ccc772f14190f"
+      "bytes": 9661,
+      "sha256": "61bd1345965295f30afedb8b30af6901f67d2a63bbae2df078db44c57cd4a9df"
     },
     {
       "path": "corpus/docwen-exact-two-harness.case.json",
@@ -144,8 +144,8 @@
     },
     {
       "path": "../../../packages/plugins/markdown/src/docwen_plugin_markdown/document_semantics_v3.py",
-      "bytes": 72820,
-      "sha256": "111ef2e7d2ea081b90dd8fee746c79ebc79036608c626f5a6d01411ad91831ee"
+      "bytes": 74187,
+      "sha256": "fb645bcbc4abc32435d9b2db494e0b59b28daf47c22c7d5fbd6c348aea77e375"
     },
     {
       "path": "../../../packages/plugins/markdown/src/docwen_plugin_markdown/document_semantics_v3_fenced_source.py",

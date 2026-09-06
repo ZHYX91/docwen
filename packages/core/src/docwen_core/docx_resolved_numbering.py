@@ -11,13 +11,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from docwen_core._docx_recovery_map import (
-    ResolvedV4RecoveryInput,
-    ResolvedV4RecoveryMap,
-    build_recovery_map,
-    compute_physical_projection,
-    inject_recovery_map,
-)
 from docwen_core._docx_resolved_inline import (
     ResolvedInlineCarrier,
     ResolvedInlineFragment,
@@ -163,7 +156,6 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
         heading_style_ids: dict[int, str],
         heading_style_names: dict[str, str],
         caption_style_bindings: tuple[CaptionStyleBindingV3, ...],
-        recovery_input: ResolvedV4RecoveryInput | None = None,
     ) -> None:
         try:
             validate_document(port.document, port.source_sha256, "docwen.resolved_document.invalid")
@@ -218,8 +210,6 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
         self._soft_references: list[SoftReferenceIdentityV3] = []
         self._stable_reference_target_ids: list[str] = []
         self._claimed_ids: set[str] = set()
-        self._recovery_input = recovery_input
-        self._recovery_map: ResolvedV4RecoveryMap | None = None
         self._finalized = False
 
     @property
@@ -233,10 +223,6 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
     @property
     def citation_projection(self) -> ResolvedCitationProjection | None:
         return self._citation_projection
-
-    @property
-    def recovery_map(self) -> ResolvedV4RecoveryMap | None:
-        return self._recovery_map
 
     def bind_ordinary_anchor(
         self,
@@ -458,9 +444,20 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
         target_key = reference.target_occurrence_key
         target = self._document_targets[target_key]
         plan_target = self._plan_targets[target_key]
-        if not plan_target.enabled or plan_target.derived_number != reference.cached_number:
-            raise ResolvedNumberingDocxError("reference does not name one enabled plan target")
-        if target.target_id is not None:
+        expected_number = plan_target.derived_number if plan_target.enabled else ""
+        if expected_number != reference.cached_number:
+            raise ResolvedNumberingDocxError("reference contradicts its target numbering plan")
+        fallback_text = None
+        if not plan_target.enabled:
+            labels = {
+                "heading": "Heading",
+                "figure": "Figure",
+                "table": "Table",
+                "equation": "Equation",
+                "code_block": "Code",
+            }
+            fallback_text = reference.alias or target.authored_text or labels[target.kind]
+        if target.target_id is not None and plan_target.enabled:
             identity = derive_target_identity_v3(target.kind, target.target_id)
             occurrence = derive_reference_occurrence_identity_v3(
                 source_sha256=self._port.source_sha256,
@@ -488,11 +485,14 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
                 source_end=source_end,
                 authored_token=reference.authored_token,
                 cached_number=reference.cached_number,
+                fallback_text=fallback_text,
             )
             paragraph._p.append(
                 inline_sdt(
                     identity.tag,
-                    soft_reference_visible_text(identity.authored_token, identity.cached_number),
+                    soft_reference_visible_text(
+                        identity.authored_token, identity.cached_number, identity.fallback_text
+                    ),
                 )
             )
             self._soft_references.append(identity)
@@ -594,13 +594,12 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
         self,
         path: str | Path,
         *,
-        pre_recovery_package_transform: Callable[[Path], None] | None = None,
+        package_transform: Callable[[Path], None] | None = None,
     ) -> None:
-        """Write numbering-owned parts and bind the final physical package.
+        """Write semantic parts and validate the complete document package.
 
-        ``pre_recovery_package_transform`` is the closed extension point for
-        request-owned ZIP parts, such as footnotes and endnotes, that must be
-        present before the recovery map authenticates the package projection.
+        ``package_transform`` adds request-owned parts such as footnotes
+        and endnotes before the final semantic validation.
         """
 
         self.finalize_document()
@@ -677,29 +676,14 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
             write_heading_numbering_projection(temporary, self._projection)
             if parts:
                 inject_custom_xml_parts(temporary, parts)
-            if pre_recovery_package_transform is not None:
-                pre_recovery_package_transform(temporary)
+            if package_transform is not None:
+                package_transform(temporary)
                 if not temporary.is_file() or temporary.is_symlink():
-                    raise ResolvedNumberingDocxError("pre-recovery package transform replaced the package unsafely")
-            if self._recovery_input is not None:
-                self._write_recovery_map(temporary)
+                    raise ResolvedNumberingDocxError("package transform replaced the package unsafely")
             self.prove_package(temporary)
             os.replace(temporary, package_path)
         finally:
             temporary.unlink(missing_ok=True)
-
-    def _write_recovery_map(self, temporary: Path) -> None:
-        recovery_input = self._recovery_input
-        if recovery_input is None:
-            raise ResolvedNumberingDocxError("resolved-v4 recovery input is unavailable")
-        physical_sha256 = compute_physical_projection(temporary, exclude_item_numbers=set())
-        value = build_recovery_map(
-            self._port,
-            input_bytes=recovery_input,
-            physical_sha256=physical_sha256,
-        )
-        inject_recovery_map(temporary, value)
-        self._recovery_map = value
 
     def _target_has_nested_inline(self, source_start: int, source_end: int) -> bool:
         found = False

@@ -147,17 +147,17 @@ title = "設定"
 # 选项卡标题
 [settings.tabs]
 general = "一般"
-text = "テキスト"
+text = "入力テキスト"
 proofread = "校正"
-export = "エクスポート"
-document = "ドキュメント"
-spreadsheet = "スプレッドシート"
+export = "Markdown リソース"
+document = "入力文書"
+spreadsheet = "入力スプレッドシート"
 image = "画像"
-layout = "レイアウト"
+layout = "入力固定レイアウトファイル"
 other = "その他"
 link = "リンク"
-formatting = "フォーマット"
-output = "出力"
+formatting = "Markdown 構文"
+output = "ファイル保存"
 logging = "ログ"
 
 [settings.descriptions]
@@ -355,7 +355,6 @@ merge_strategy_label = "結合セルのエクスポート方式："
 [settings.table_export.strategies]
 fill = "埋める"
 empty = "空にする"
-marker = "マーカー"
 
 [settings.document]
 # 内容提取设置
@@ -1604,3 +1603,15 @@ file_admission_confirm_title = "検出したファイル形式を確認"
 file_admission_confirm_message = "ファイル名と検出した内容の形式が異なります。検出した形式として処理しますか？"
 file_admission_confirm_action = "検出した形式で処理"
 file_admission_cancelled = "処理をキャンセルしました。検出した形式は承認されていません。"
+
+[settings.markdown_extensions]
+description = "Markdown の読み込みと出力で使用する拡張構文を個別に選択します。元のファイルは変更しません。"
+input = "Markdown 入力：拡張構文を認識"
+output = "Markdown 出力：拡張構文を使用"
+input_hint = "無効な拡張構文は通常のテキスト、表、脚注として処理します。"
+output_hint = "通常の Markdown を使用し、表現できない構造や種類を通知します。"
+structural_tables = "Structural Tables の構造化テーブル"
+captions_references = "Number Suite のキャプションと相互参照"
+extended_headings = "レベル 7～9 の見出し"
+typed_endnotes = "種類を区別する脚注と文末脚注"
+obsidian_preset = "Obsidian 拡張を使用"

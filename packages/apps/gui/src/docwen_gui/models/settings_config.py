@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from docwen_core.markdown_extensions import MarkdownExtensions
 from docwen_core.text.heading_merge import DEFAULT_HEADING_MERGE_PUNCTUATION
 from docwen_gui.window_behavior import DEFAULT_WINDOW_BEHAVIOR
 
@@ -147,6 +148,10 @@ class FormattingConfig:
 
     Maps to the Formatting tab's combo-box and exact-text controls.
     """
+
+    markdown_extensions: dict[str, dict[str, bool]] = field(
+        default_factory=lambda: {direction: MarkdownExtensions().to_dict() for direction in ("input", "output")}
+    )
 
     # DOCX -> MD: format processing
     body_format: str = "preserve"
