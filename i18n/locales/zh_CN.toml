@@ -11,6 +11,10 @@ template_name = "简体中文通用模板"
 # 主窗口
 # =============================================================================
 [main_window]
+extension_loss_endnotes = "尾注已转换为普通 Markdown 脚注。"
+extension_loss_headings = "七至九级标题已转换为六级标题。"
+extension_loss_references = "题注和交叉引用已转换为可见文本。"
+extension_loss_tables = "合并单元格和表头结构已转换为普通 Markdown 表格。"
 route_catalog_failed = "无法加载可用操作，未启动本次任务。"
 conversion_failed = "转换失败。请打开失败详情查看诊断信息。"
 conversion_warning = "转换已完成，但有警告。"
@@ -79,6 +83,7 @@ save_failed = "保存设置失败"
 # 状态栏
 # =============================================================================
 [info_area]
+task_warning_count = "有 {count} 条转换提示，请展开活动记录查看。"
 task_progress_percent = "进度：{percent}%"
 task_state_skipped = "已跳过"
 batch_name = "批量处理（{count} 个文件）"

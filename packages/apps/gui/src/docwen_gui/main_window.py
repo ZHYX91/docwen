@@ -140,6 +140,15 @@ def _result_warning_messages(result: ConversionResult) -> list[str]:
     for diagnostic in result.diagnostics:
         if diagnostic.level != "warning":
             continue
+        extension_messages = {
+            "docwen.markdown.extension.typed_endnotes.flattened": _t("main_window.extension_loss_endnotes"),
+            "docwen.markdown.extension.extended_headings.flattened": _t("main_window.extension_loss_headings"),
+            "docwen.markdown.extension.captions_references.flattened": _t("main_window.extension_loss_references"),
+            "docwen.markdown.extension.structural_tables.flattened": _t("main_window.extension_loss_tables"),
+        }
+        if diagnostic.code in extension_messages:
+            messages.append(extension_messages[diagnostic.code])
+            continue
         message = diagnostic.message.strip() or diagnostic.code.strip()
         if not message:
             message = _t("main_window.conversion_warning", "Conversion completed with a warning")
@@ -1576,7 +1585,10 @@ class MainWindow(QWidget):
         return False
 
     def _on_ipc_file_received(self, file_path: str) -> None:
-        self._input_area_vm.sync_selection(self._view_model.files)
+        selected = self._view_model.selected_file
+        if selected is not None:
+            self._input_area_vm.sync_selection([selected], current=True)
+            self._batch_list.select_file(selected.path)
         self._info_area_vm.add_message(
             _t(
                 "main_window.ipc_file_received",
@@ -2578,6 +2590,7 @@ class MainWindow(QWidget):
                 completed_count=total_count,
                 total_count=total_count,
                 failed_count=0,
+                warning_count=len(warning_messages),
                 state="success",
                 tone=completion_tone,
                 navigate_file_path=output_path or "",
@@ -2867,6 +2880,7 @@ class MainWindow(QWidget):
             failed_count=failed_count,
             skipped_count=skipped_count,
             cancelled_count=cancelled_count,
+            warning_count=len(warning_rows),
             state=state,
             tone=tone,
             navigate_file_path=navigate_path,

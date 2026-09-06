@@ -11,6 +11,10 @@ template_name = "Modelo Geral Português"
 # Janela principal
 # =============================================================================
 [main_window]
+extension_loss_endnotes = "As notas de fim foram convertidas em notas de rodapé comuns do Markdown."
+extension_loss_headings = "Os títulos de nível 7–9 foram convertidos para o nível 6."
+extension_loss_references = "As legendas e referências cruzadas foram convertidas em texto visível."
+extension_loss_tables = "As células mescladas e a estrutura do cabeçalho foram convertidas em uma tabela Markdown comum."
 route_catalog_failed = "Não foi possível carregar as operações disponíveis; a solicitação não foi iniciada."
 conversion_failed = "A conversão falhou. Abra os detalhes da falha para consultar as informações de diagnóstico."
 conversion_warning = "A conversão foi concluída com um aviso."
@@ -78,6 +82,7 @@ save_failed = "Falha ao salvar configurações"
 # 状态栏
 # =============================================================================
 [info_area]
+task_warning_count = "{count} avisos de conversão. Expanda o histórico de atividades para ver os detalhes."
 task_progress_percent = "Progresso:{percent}%"
 task_state_skipped = "Ignorado"
 batch_name = "Processamento em lote ({count} arquivos)"

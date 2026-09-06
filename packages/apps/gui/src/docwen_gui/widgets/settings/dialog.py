@@ -430,9 +430,6 @@ class SettingsDialog(QDialog):
         if apply_btn:
             apply_btn.clicked.connect(self._on_apply)
 
-        layout.addLayout(action_row)
-        layout.addWidget(button_box)
-
         # ── Status label ────────────────────────────────────────────────
         self._status_label = QLabel("", self)
         self._status_label.setObjectName("settingsStatusLabel")
@@ -446,6 +443,10 @@ class SettingsDialog(QDialog):
         self._changes_label.setVisible(False)
         self._changes_label.setWordWrap(True)
         layout.addWidget(self._changes_label)
+
+        # Keep confirmation buttons anchored while feedback appears above them.
+        layout.addLayout(action_row)
+        layout.addWidget(button_box)
 
         self._tab_widget.currentChanged.connect(self._on_tab_changed)
 

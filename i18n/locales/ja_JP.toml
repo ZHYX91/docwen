@@ -30,6 +30,7 @@ save_failed = "設定の保存に失敗しました"
 # 状态栏
 # =============================================================================
 [info_area]
+task_warning_count = "変換に関する通知が {count} 件あります。操作履歴を展開して確認してください。"
 task_progress_percent = "進捗：{percent}%"
 task_state_skipped = "スキップ"
 batch_name = "一括処理（{count} ファイル）"
@@ -1564,6 +1565,10 @@ subtitle = "サブタイトル"
 
 
 [main_window]
+extension_loss_endnotes = "文末脚注を通常の Markdown 脚注に変換しました。"
+extension_loss_headings = "レベル 7～9 の見出しをレベル 6 に変換しました。"
+extension_loss_references = "キャプションと相互参照を表示テキストに変換しました。"
+extension_loss_tables = "結合セルと見出し構造を通常の Markdown 表に変換しました。"
 route_catalog_failed = "利用可能な操作を読み込めなかったため、要求は開始されませんでした。"
 conversion_failed = "変換に失敗しました。診断情報は失敗の詳細を開いて確認してください。"
 conversion_warning = "変換は完了しましたが、警告があります。"

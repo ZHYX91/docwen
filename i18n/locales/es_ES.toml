@@ -15,6 +15,10 @@ template_name = "Plantilla General Española"
 # 主窗口
 # =============================================================================
 [main_window]
+extension_loss_endnotes = "Las notas finales se convirtieron en notas al pie normales de Markdown."
+extension_loss_headings = "Los encabezados de nivel 7–9 se convirtieron al nivel 6."
+extension_loss_references = "Los títulos y las referencias cruzadas se convirtieron en texto visible."
+extension_loss_tables = "Las celdas combinadas y la estructura del encabezado se convirtieron en una tabla Markdown normal."
 route_catalog_failed = "No se pudieron cargar las operaciones disponibles; la solicitud no se inició."
 conversion_failed = "La conversión falló. Abra los detalles del error para consultar la información de diagnóstico."
 conversion_warning = "La conversión terminó con una advertencia."
@@ -79,6 +83,7 @@ save_failed = "Error al guardar la configuración"
 # 状态栏
 # =============================================================================
 [info_area]
+task_warning_count = "{count} avisos de conversión. Despliegue el historial de actividad para ver los detalles."
 task_progress_percent = "Progreso:{percent}%"
 task_state_skipped = "Omitido"
 batch_name = "Procesamiento por lotes ({count} archivos)"

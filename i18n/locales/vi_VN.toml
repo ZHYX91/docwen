@@ -12,6 +12,10 @@ template_name = "Mẫu Chung Tiếng Việt"
 # Cua so chinh
 # =============================================================================
 [main_window]
+extension_loss_endnotes = "Chú thích cuối tài liệu đã được chuyển thành chú thích chân trang Markdown thông thường."
+extension_loss_headings = "Tiêu đề cấp 7–9 đã được chuyển thành cấp 6."
+extension_loss_references = "Chú thích và tham chiếu chéo đã được chuyển thành văn bản hiển thị."
+extension_loss_tables = "Ô gộp và cấu trúc tiêu đề đã được chuyển thành bảng Markdown thông thường."
 route_catalog_failed = "Không thể tải các thao tác khả dụng; yêu cầu chưa được bắt đầu."
 conversion_failed = "Chuyển đổi thất bại. Hãy mở chi tiết lỗi để xem thông tin chẩn đoán."
 conversion_warning = "Chuyển đổi hoàn tất nhưng có cảnh báo."
@@ -79,6 +83,7 @@ save_failed = "Lưu cài đặt thất bại"
 # 状态栏
 # =============================================================================
 [info_area]
+task_warning_count = "Có {count} thông báo chuyển đổi. Mở rộng lịch sử hoạt động để xem chi tiết."
 task_progress_percent = "Tien do:{percent}%"
 task_state_skipped = "Da bo qua"
 batch_name = "Xử lý hàng loạt ({count} tệp)"

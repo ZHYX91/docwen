@@ -11,6 +11,10 @@ template_name = "English General Template"
 # Main Window
 # =============================================================================
 [main_window]
+extension_loss_endnotes = "Endnotes were converted to ordinary Markdown footnotes."
+extension_loss_headings = "Heading levels 7–9 were converted to level 6."
+extension_loss_references = "Captions and cross-references were converted to visible text."
+extension_loss_tables = "Merged cells and header structure were flattened to an ordinary Markdown table."
 route_catalog_failed = "Available operations could not be loaded; the request was not started."
 conversion_failed = "Conversion failed. Open failure details for diagnostic information."
 conversion_warning = "Conversion completed with a warning."
@@ -79,6 +83,7 @@ save_failed = "Failed to save settings"
 # 状态栏
 # =============================================================================
 [info_area]
+task_warning_count = "{count} conversion notices. Expand activity history for details."
 task_progress_percent = "Progress:{percent}%"
 task_state_skipped = "Skipped"
 batch_name = "Batch processing ({count} files)"

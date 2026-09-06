@@ -112,6 +112,7 @@ class TaskSummaryState:
     failed_count: int = 0
     skipped_count: int = 0
     cancelled_count: int = 0
+    warning_count: int = 0
     navigate_path: str = ""
     navigation_kind: str = ""
     progress_message: str = ""
@@ -514,6 +515,7 @@ class InfoAreaViewModel(QObject):
         failed_count: int = 0,
         skipped_count: int = 0,
         cancelled_count: int = 0,
+        warning_count: int = 0,
         state: str = "active",
         tone: str = "info",
         navigate_file_path: str = "",
@@ -531,6 +533,7 @@ class InfoAreaViewModel(QObject):
             failed_count: Number of failed items.
             skipped_count: Number of skipped items.
             cancelled_count: Number of cancelled items.
+            warning_count: Number of conversion warnings available in activity history.
             state: Task state: active / success / partial / failed / cancelled.
             tone: Semantic tone: info / success / warning / danger.
             navigate_file_path: Path for status summary click navigation.
@@ -547,6 +550,7 @@ class InfoAreaViewModel(QObject):
             failed_count=failed_count,
             skipped_count=skipped_count,
             cancelled_count=cancelled_count,
+            warning_count=warning_count,
             navigate_path=navigate_file_path,
             navigation_kind=navigation_kind,
         )
@@ -814,6 +818,8 @@ class InfoAreaViewModel(QObject):
                         cancelled=ts.cancelled_count,
                     )
                 )
+            if ts.warning_count:
+                progress_lines.append(_t("info_area.task_warning_count", count=ts.warning_count))
             summary_message = "\n".join(
                 [
                     _t("info_area.task_current_file", "Current: {name}", name=current_file),

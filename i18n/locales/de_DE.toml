@@ -30,6 +30,7 @@ save_failed = "Einstellungen konnten nicht gespeichert werden"
 # 状态栏
 # =============================================================================
 [info_area]
+task_warning_count = "{count} Konvertierungshinweise. Details stehen im Aktivitätsverlauf."
 task_progress_percent = "Fortschritt:{percent}%"
 task_state_skipped = "Uebersprungen"
 batch_name = "Stapelverarbeitung ({count} Dateien)"
@@ -1564,6 +1565,10 @@ subtitle = "Untertitel"
 
 
 [main_window]
+extension_loss_endnotes = "Endnoten wurden in normale Markdown-Fußnoten umgewandelt."
+extension_loss_headings = "Überschriften der Ebenen 7–9 wurden in Ebene 6 umgewandelt."
+extension_loss_references = "Beschriftungen und Querverweise wurden in sichtbaren Text umgewandelt."
+extension_loss_tables = "Verbundene Zellen und die Kopfzeilenstruktur wurden in eine normale Markdown-Tabelle umgewandelt."
 route_catalog_failed = "Verfügbare Vorgänge konnten nicht geladen werden; die Anfrage wurde nicht gestartet."
 conversion_failed = "Die Konvertierung ist fehlgeschlagen. Öffnen Sie die Fehlerdetails für Diagnoseinformationen."
 conversion_warning = "Die Konvertierung wurde mit einer Warnung abgeschlossen."

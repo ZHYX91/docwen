@@ -30,6 +30,7 @@ save_failed = "설정 저장 실패"
 # 状态栏
 # =============================================================================
 [info_area]
+task_warning_count = "변환 알림 {count}개가 있습니다. 활동 기록을 펼쳐 확인하세요."
 task_progress_percent = "진행률:{percent}%"
 task_state_skipped = "건너뜀"
 batch_name = "일괄 처리 (파일 {count}개)"
@@ -1564,6 +1565,10 @@ subtitle = "부제"
 
 
 [main_window]
+extension_loss_endnotes = "미주를 일반 Markdown 각주로 변환했습니다."
+extension_loss_headings = "7~9단계 제목을 6단계 제목으로 변환했습니다."
+extension_loss_references = "캡션과 상호 참조를 표시 텍스트로 변환했습니다."
+extension_loss_tables = "병합 셀과 머리글 구조를 일반 Markdown 표로 변환했습니다."
 route_catalog_failed = "사용 가능한 작업을 불러오지 못해 요청을 시작하지 않았습니다."
 conversion_failed = "변환에 실패했습니다. 진단 정보는 실패 상세 정보를 열어 확인하세요."
 conversion_warning = "변환은 완료되었지만 경고가 있습니다."

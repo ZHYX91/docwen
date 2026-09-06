@@ -524,7 +524,9 @@ class MainWindowViewModel(QObject):
                 self.set_status_message(_t("info_area.ipc_file_missing", "IPC file not found: {path}", path=file_path))
                 return
             outcome = self.add_files([str(path)])
-            if outcome.added:
+            admitted = next((ref for ref in self.files if Path(ref.path) == path), None)
+            if admitted is not None and not outcome.rejected:
+                self.set_selected_file(admitted)
                 self.ipc_file_received.emit(str(path))
             # Always bring window to front when files are added.
             self.window_activation_requested.emit()

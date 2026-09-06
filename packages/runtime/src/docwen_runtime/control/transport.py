@@ -58,6 +58,30 @@ class _WindowsPipeChannel:
     def close(self) -> None:
         self._connection.close()
 
+    def allow_foreground_activation(self) -> None:
+        """Pass the caller's foreground permission to this connected GUI only."""
+        if sys.platform != "win32":
+            return
+        import ctypes
+        from ctypes import wintypes
+
+        try:
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            get_server_pid = kernel32.GetNamedPipeServerProcessId
+            get_server_pid.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.ULONG)]
+            get_server_pid.restype = wintypes.BOOL
+            server_pid = wintypes.ULONG()
+            if not get_server_pid(self._connection.fileno(), ctypes.byref(server_pid)) or not server_pid.value:
+                return
+            user32 = ctypes.WinDLL("user32", use_last_error=True)
+            allow_foreground = user32.AllowSetForegroundWindow
+            allow_foreground.argtypes = [wintypes.DWORD]
+            allow_foreground.restype = wintypes.BOOL
+            allow_foreground(server_pid.value)
+        except (AttributeError, OSError):
+            # Windows may deny a background caller; the open request still works.
+            return
+
     def authenticate_client(self, *, deadline: float) -> None:
         from multiprocessing.connection import answer_challenge, deliver_challenge
 
@@ -750,6 +774,8 @@ class ControlClient:
                     "payload": request_payload,
                 }
             )
+            if action in {"activate", "open", "open_settings"} and isinstance(connection, _WindowsPipeChannel):
+                connection.allow_foreground_activation()
             connection.send_bytes(encoded_request, deadline=deadline)
             response_bytes = connection.recv_bytes(_MAX_MESSAGE_BYTES, deadline=deadline)
             message = _decode(response_bytes)

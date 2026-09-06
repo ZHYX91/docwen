@@ -30,6 +30,7 @@ save_failed = "儲存設定失敗"
 # 状态栏
 # =============================================================================
 [info_area]
+task_warning_count = "有 {count} 則轉換提示，請展開活動記錄查看。"
 task_progress_percent = "進度：{percent}%"
 task_state_skipped = "已跳過"
 batch_name = "批次處理（{count} 個檔案）"
@@ -1564,6 +1565,10 @@ subtitle = "副標題"
 
 
 [main_window]
+extension_loss_endnotes = "尾註已轉換為一般 Markdown 註腳。"
+extension_loss_headings = "七至九級標題已轉換為六級標題。"
+extension_loss_references = "題註與交互參照已轉換為可見文字。"
+extension_loss_tables = "合併儲存格與表頭結構已轉換為一般 Markdown 表格。"
 route_catalog_failed = "無法載入可用操作，未啟動本次工作。"
 conversion_failed = "轉換失敗。請開啟失敗詳情查看診斷資訊。"
 conversion_warning = "轉換已完成，但有警告。"

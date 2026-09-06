@@ -11,6 +11,10 @@ template_name = "Modèle Général Français"
 # 通用文本
 # =============================================================================
 [main_window]
+extension_loss_endnotes = "Les notes de fin ont été converties en notes de bas de page Markdown ordinaires."
+extension_loss_headings = "Les titres de niveau 7 à 9 ont été convertis au niveau 6."
+extension_loss_references = "Les légendes et les renvois ont été convertis en texte visible."
+extension_loss_tables = "Les cellules fusionnées et les en-têtes ont été convertis en tableau Markdown ordinaire."
 route_catalog_failed = "Les opérations disponibles n’ont pas pu être chargées ; la demande n’a pas été lancée."
 conversion_failed = "La conversion a échoué. Ouvrez les détails de l’échec pour consulter le diagnostic."
 conversion_warning = "La conversion s’est terminée avec un avertissement."
@@ -75,6 +79,7 @@ save_failed = "Échec de l'enregistrement des paramètres"
 # 状态栏
 # =============================================================================
 [info_area]
+task_warning_count = "{count} avis de conversion. Développez l’historique pour les consulter."
 task_progress_percent = "Progression :{percent}%"
 task_state_skipped = "Ignore"
 batch_name = "Traitement par lot ({count} fichiers)"
