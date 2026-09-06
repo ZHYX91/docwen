@@ -413,13 +413,28 @@ class TestAboutDialog:
         assert hasattr(dialog, "show_dialog")
         dialog.close()
 
-    def test_about_dialog_fixed_size(self, qapp, main_window) -> None:
-        """AboutDialog has fixed dimensions."""
+    def test_about_dialog_resizes_without_hiding_tool_labels(self, qapp, main_window) -> None:
+        """The scrollable About dialog keeps acknowledged tools readable."""
+        from PySide6.QtWidgets import QLabel, QScrollArea, QWidget
+
         from docwen_gui.dialogs.about import AboutDialog
 
         dialog = AboutDialog(parent=main_window)
-        assert dialog.width() == 440
-        assert dialog.height() == 680
+        dialog.show()
+        for width in (640, 400, 640):
+            dialog.resize(width, 600)
+            for _ in range(12):
+                qapp.processEvents()
+            assert dialog.width() == width
+            scroll = dialog.findChild(QScrollArea, "aboutScrollArea")
+            assert scroll is not None
+            assert scroll.horizontalScrollBar().maximum() == 0
+            for entry in dialog.findChildren(QWidget, "aboutToolEntry"):
+                label = entry.findChild(QLabel)
+                assert label is not None
+                assert label.width() > 50
+                assert label.geometry().right() < entry.width()
+                assert label.height() >= label.heightForWidth(label.width())
         dialog.close()
 
     def test_about_dialog_tool_entries_have_visible_info_affordances(self, qapp, main_window) -> None:

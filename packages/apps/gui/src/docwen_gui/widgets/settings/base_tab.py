@@ -30,7 +30,7 @@ from PySide6.QtWidgets import (
 )
 
 from ...resources import load_svg_icon
-from ..panel_card import FormRow
+from ..panel_card import FormRow, WrappingLabel
 from .check_box import SettingsCheckBox
 
 # Design token — matches GUI行为与交互规范.md §3.9
@@ -114,12 +114,11 @@ class BaseSettingsTab(QWidget):
         root_layout.addWidget(self._tab_title)
 
         # Tab-level description (hidden by default; subclasses call set_tab_description)
-        self._tab_desc = QLabel("", self)
+        self._tab_desc = WrappingLabel("", self)
         self._tab_desc.setObjectName("settingsTabDescription")
         self._tab_desc.setProperty("settingsRole", "tabDescription")
         self._tab_desc.setWordWrap(True)
         self._tab_desc.setVisible(False)
-        root_layout.addWidget(self._tab_desc)
 
         self._scroll_area = QScrollArea(self)
         self._scroll_area.setObjectName("settingsTabScrollArea")
@@ -135,12 +134,13 @@ class BaseSettingsTab(QWidget):
         self._scroll_layout.setContentsMargins(SPACING_MD, SPACING_MD, SPACING_MD, SPACING_MD)
         self._scroll_layout.setSpacing(SPACING_MD)
         self._scroll_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self._scroll_layout.addWidget(self._tab_desc)
         self._scroll_area.setWidget(self._scroll_container)
 
         self._create_interface()
 
     def set_tab_description(self, text: str) -> None:
-        """Set the tab-level description text shown above the scroll area."""
+        """Set the introduction that scrolls with the page's settings."""
         self._tab_desc.setText(text)
         self._tab_desc.setVisible(bool(text.strip()))
 

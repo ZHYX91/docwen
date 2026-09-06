@@ -265,9 +265,11 @@ class ConversionPanel(QWidget):
         """Create a compact card with an internal centred title."""
         group = PanelCard(title, self, level="card")
         group.setObjectName(object_name)
+        group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
 
         layout = group.content_layout
         layout.setSpacing(_SPACING_XS)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         desc_label = WrappingLabel(parent=group)
         desc_label.setObjectName("conversionSectionDescription")
@@ -277,6 +279,7 @@ class ConversionPanel(QWidget):
 
         content = QVBoxLayout()
         content.setSpacing(_SPACING_XS)
+        content.setAlignment(Qt.AlignmentFlag.AlignTop)
         layout.addLayout(content)
         setattr(self, "_" + object_name + "_content", content)
 
@@ -791,12 +794,8 @@ class ConversionPanel(QWidget):
         return row, checkbox
 
     def _make_radio(self, text: str, checked: bool = False) -> QRadioButton:
-        try:
-            from qfluentwidgets import RadioButton as FluentRadioButton
-
-            rb = FluentRadioButton(text, self)
-        except ImportError:
-            rb = QRadioButton(text, self)
+        rb = QRadioButton(text, self)
+        rb.setObjectName("conversionRadioButton")
         rb.setChecked(checked)
         return rb
 

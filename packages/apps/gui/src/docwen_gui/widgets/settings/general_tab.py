@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QHBoxLayout,
     QLabel,
+    QPushButton,
     QVBoxLayout,
     QWidget,
 )
@@ -80,15 +81,6 @@ class GeneralTab(BaseSettingsTab):
         lang_combo.addItem(t("settings.general.languages.zh_TW", "Chinese (Traditional)"), "zh_TW")
         lang_container_layout.addWidget(lang_combo)
 
-        hint = QLabel(
-            t("settings.general.language_restart_hint", "Requires application restart to take full effect."),
-            lang_container,
-        )
-        hint.setObjectName("generalLanguageHint")
-        hint.setWordWrap(True)
-        hint.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        lang_container_layout.addWidget(hint)
-
         self.add_form_row(
             lang_form,
             t("settings.general.language_label", "Display Language:"),
@@ -132,14 +124,13 @@ class GeneralTab(BaseSettingsTab):
         preview_frame_layout = QHBoxLayout(preview_frame)
         preview_frame_layout.setContentsMargins(12, 12, 12, 12)
         preview_frame_layout.setSpacing(12)
-        sample_button = QLabel(f"[ {t('settings.general.sample_button', 'Sample Button')} ]", preview_frame)
+        sample_button = QPushButton(t("settings.general.sample_button", "Sample Button"), preview_frame)
         sample_button.setObjectName("generalThemePreviewButton")
         sample_text = QLabel(
             t("settings.general.sample_text", "This is a sample text for theme preview."), preview_frame
         )
         sample_text.setObjectName("generalThemePreviewText")
         sample_text.setWordWrap(True)
-        sample_button.setWordWrap(True)
         preview_frame_layout.addWidget(sample_button)
         preview_frame_layout.addWidget(sample_text, 1)
         preview_layout.addWidget(preview_frame)

@@ -15,7 +15,6 @@ from typing import Any
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QCheckBox,
     QDialog,
     QFormLayout,
     QHBoxLayout,
@@ -31,6 +30,7 @@ from PySide6.QtWidgets import (
 )
 
 from ...i18n import t
+from .check_box import SettingsCheckBox
 
 # ── Data ──────────────────────────────────────────────────────────────────
 
@@ -201,7 +201,8 @@ class NumberingCleanDialog(QDialog):
         content.addLayout(right, 2)
         form = QFormLayout()
 
-        self.enabled_check = QCheckBox(t("editors.numbering_clean.enabled", "Enabled"), self)
+        self.enabled_check = SettingsCheckBox(t("editors.numbering_clean.enabled", "Enabled"), self)
+        self.enabled_check.setObjectName("settingsToggle")
         self.enabled_check.toggled.connect(self._on_enabled_changed)
         form.addRow("", self.enabled_check)
 
@@ -216,7 +217,7 @@ class NumberingCleanDialog(QDialog):
         self.level_spin = QSpinBox(self)
         self.level_spin.setRange(1, 5)
         self.level_spin.valueChanged.connect(self._on_level_changed)
-        form.addRow(t("editors.numbering_add.level", "Level:"), self.level_spin)
+        form.addRow(t("editors.numbering_clean.level", "Heading level:"), self.level_spin)
         right.addLayout(form)
 
         # Regex test area
@@ -278,7 +279,7 @@ class NumberingCleanDialog(QDialog):
 
     @staticmethod
     def _update_rule_list_item(item: QListWidgetItem, rule: CleanRule) -> None:
-        suffix = "" if rule.enabled else " [off]"
+        suffix = "" if rule.enabled else f" [{t('editors.numbering_clean.disabled', 'Disabled')}]"
         item.setText(f"{rule.display_name()}{suffix}")
         description = rule.display_description()
         item.setToolTip(f"{description}\n{rule.pattern}" if description else rule.pattern)
@@ -320,6 +321,8 @@ class NumberingCleanDialog(QDialog):
             self.enabled_check.setChecked(rule.enabled)
             self.pattern_edit.setText(rule.pattern)
             self.desc_edit.setText(rule.display_description())
+            self.pattern_edit.setCursorPosition(0)
+            self.desc_edit.setCursorPosition(0)
             self.level_spin.setValue(rule.level)
             self._run_regex_test()
             self._refresh_action_states()

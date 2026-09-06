@@ -183,7 +183,7 @@ class FormRow(_ResponsiveFrame):
         )
         suffix_width = self.label_suffix.sizeHint().width() + 6 if self.label_suffix is not None else 0
         label_width = column_width - suffix_width
-        control_min_width = max(max(row.control.minimumSizeHint().width(), row.control.minimumWidth()) for row in peers)
+        control_min_width = max(row._control_readable_width() for row in peers)
         required_width = column_width + control_min_width + 8
         horizontal = required_width <= self.contentsRect().width()
         self.label.setWordWrap(not horizontal)
@@ -236,6 +236,17 @@ class FormRow(_ResponsiveFrame):
         )
         control_height = max(control_height, self.control.minimumHeight(), self.control.minimumSizeHint().height())
         self.setFixedHeight(max(label_height, control_height) if horizontal else label_height + control_height + 4)
+
+    def _control_readable_width(self) -> int:
+        width = max(self.control.minimumSizeHint().width(), self.control.minimumWidth())
+        if isinstance(self.control, QComboBox):
+            metrics = self.control.fontMetrics()
+            text_width = max(
+                (metrics.horizontalAdvance(self.control.itemText(index)) for index in range(self.control.count())),
+                default=0,
+            )
+            width = max(width, text_width + 48)
+        return width
 
 
 class ChoiceGroup(_ResponsiveFrame):

@@ -1277,6 +1277,8 @@ unsaved_close_message = "Có thay đổi chưa lưu. Bạn có chắc muốn đ�
 
 # 序号清理编辑器
 [editors.numbering_clean]
+level = "Cấp tiêu đề:"
+disabled = "Đã tắt"
 window_title = "Trình chỉnh sửa quy tắc làm sạch"
 rule_list = "Danh sách quy tắc"
 description = "Mô tả:"

@@ -1275,6 +1275,8 @@ unsaved_close_message = "There are unsaved changes. Are you sure you want to clo
 
 # 序号清理编辑器
 [editors.numbering_clean]
+level = "Heading level:"
+disabled = "Disabled"
 window_title = "Cleanup Rules Editor"
 rule_list = "Rule List"
 description = "Description:"

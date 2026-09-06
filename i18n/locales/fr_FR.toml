@@ -1275,6 +1275,8 @@ unsaved_close_message = "Vraiment fermer ?"
 
 # 序号清理编辑器
 [editors.numbering_clean]
+level = "Niveau de titre :"
+disabled = "Désactivé"
 window_title = "Règles de nettoyage"
 rule_list = "Règles"
 description = "Description :"

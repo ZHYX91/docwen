@@ -833,7 +833,7 @@ title = "关于"
 # 仅简体中文使用的品牌副标题，其他语言 locale 无需翻译该键
 subtitle = "公文图表格式转换软件（公文转换器）"
 version_info = "版本 {version}"
-version_tooltip = "本软件禁止联网，需要用户自行检查更新"
+version_tooltip = "本软件离线运行，请手动检查更新。"
 contact = "联系邮箱: {email}"
 copyright = "© {year} {author}"
 acknowledgments = "致谢"
@@ -1276,6 +1276,8 @@ unsaved_close_message = "有未保存的修改，确定要关闭吗？"
 
 # 序号清理编辑器
 [editors.numbering_clean]
+level = "标题级别:"
+disabled = "已禁用"
 window_title = "清理规则编辑器"
 rule_list = "规则列表"
 description = "说明:"

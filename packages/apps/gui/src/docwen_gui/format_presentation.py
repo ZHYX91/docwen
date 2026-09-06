@@ -96,7 +96,7 @@ SUPPORTED_FORMAT_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ("file_category.layout_short", "Layout", ("pdf", "xps", "ofd")),
     ("file_category.document_short", "Doc", ("docx", "doc", "wps", "rtf", "odt")),
     ("file_category.spreadsheet_short", "Sheet", ("xlsx", "xls", "et", "csv", "tsv", "ods")),
-    ("file_category.image_short", "Image", ("jpg", "png", "bmp", "gif", "heic", "heif", "webp")),
+    ("file_category.image_short", "Image", ("jpg", "png", "bmp", "gif", "tiff", "heic", "heif", "webp")),
     ("file_category.other_short", "Other", ("html", "mhtml", "enex", "pptx", "ppt", "epub")),
 )
 

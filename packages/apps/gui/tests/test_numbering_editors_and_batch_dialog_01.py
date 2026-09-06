@@ -164,6 +164,7 @@ class TestNumberingCleanDialogConstruction:
         translations = {
             "editors.numbering_clean.names.number_separator": "Localized rule",
             "editors.numbering_clean.descriptions.number_separator_desc": "Localized description",
+            "editors.numbering_clean.disabled": "Localized disabled",
         }
 
         def fake_t(key: str, default: str = "", **_kwargs: object) -> str:
@@ -187,7 +188,7 @@ class TestNumberingCleanDialogConstruction:
         )
 
         item = dlg.rule_list.item(0)
-        assert item.text() == "Localized rule [off]"
+        assert item.text() == "Localized rule [Localized disabled]"
         assert item.toolTip() == "Localized description\n^[0-9]+[.]"
         assert dlg.desc_edit.text() == "Localized description"
         dlg.close()

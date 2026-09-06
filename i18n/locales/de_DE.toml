@@ -1230,6 +1230,8 @@ unsaved_close_message = "Wirklich schließen?"
 
 # 序号清理编辑器
 [editors.numbering_clean]
+level = "Überschriftenebene:"
+disabled = "Deaktiviert"
 window_title = "Bereinigungsregeln"
 rule_list = "Regeln"
 description = "Beschreibung:"

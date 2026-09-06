@@ -61,6 +61,7 @@ from docwen_gui.i18n import t
 from docwen_gui.styles.design_tokens import Sizing
 
 from .batch_list import _MiddleElidedLabel
+from .panel_card import WrappingLabel
 
 if TYPE_CHECKING:
     from ..view_models.input_area_vm import InputAreaViewModel
@@ -299,7 +300,7 @@ class InputArea(QFrame):
         self._types_layout = QVBoxLayout(self._types_container)
         self._types_layout.setContentsMargins(0, 0, 0, 0)
         self._types_layout.setSpacing(2)
-        self._types_container.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        self._types_container.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         self._type_prompt_rows: list[tuple[QWidget, QHBoxLayout, QLabel, QLabel]] = []
         for label_key, fallback_label, formats in _SUPPORTED_TYPE_ROWS:
             row_widget = QWidget(self._types_container)
@@ -313,18 +314,18 @@ class InputArea(QFrame):
             type_label.setObjectName("fileDropTypesTypeLabel")
             type_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
             type_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-            value_label = QLabel(formats, row_widget)
+            value_label = WrappingLabel(formats, row_widget)
             value_label.setObjectName("fileDropTypesValueLabel")
-            value_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+            value_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+            value_label.setMinimumWidth(0)
             value_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
             row_layout.addWidget(type_label, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-            row_layout.addStretch(1)
-            row_layout.addWidget(value_label, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            row_layout.addWidget(value_label, 1)
             self._types_layout.addWidget(row_widget)
             self._type_prompt_rows.append((row_widget, row_layout, type_label, value_label))
         self._sync_supported_type_layout()
-        center_layout.addWidget(self._types_container, alignment=Qt.AlignmentFlag.AlignCenter)
+        center_layout.addWidget(self._types_container)
         content_layout.addWidget(
             self._empty_center_panel,
             stretch=1,
@@ -729,7 +730,10 @@ class InputArea(QFrame):
         for index, (_, row_layout, type_label, value_label) in enumerate(self._type_prompt_rows):
             desired_indent = _PYRAMID_INDENTS[min(index, len(_PYRAMID_INDENTS) - 1)]
             required_width = (
-                type_label.sizeHint().width() + value_label.sizeHint().width() + row_layout.spacing() + middle_gap
+                type_label.sizeHint().width()
+                + value_label.fontMetrics().horizontalAdvance(value_label.text())
+                + row_layout.spacing()
+                + middle_gap
             )
             available_indent = max((content_width - required_width) // 2, 0)
             actual_indent = min(desired_indent, available_indent)

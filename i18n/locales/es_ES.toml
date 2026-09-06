@@ -1284,6 +1284,8 @@ unsaved_close_message = "Hay cambios sin guardar. ¿Seguro que quieres cerrar?"
 
 # 序号清理编辑器
 [editors.numbering_clean]
+level = "Nivel de título:"
+disabled = "Desactivado"
 window_title = "Editor de reglas de limpieza"
 rule_list = "Lista de reglas"
 description = "Descripción:"

@@ -8,10 +8,10 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import (
     QDialog,
-    QGridLayout,
     QHBoxLayout,
     QLabel,
     QScrollArea,
+    QSizePolicy,
     QToolButton,
     QToolTip,
     QVBoxLayout,
@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 
 from ..i18n import t
 from ..resources import load_svg_icon
+from ..widgets.panel_card import ChoiceGroup, WrappingLabel
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +84,9 @@ class _ToolInfoButton(QToolButton):
 
 
 def _tool_tip_label(name: str, tooltip_key: str) -> QLabel:
-    lbl = QLabel(name)
+    lbl = WrappingLabel(name)
+    lbl.setMinimumWidth(0)
+    lbl.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
     tooltip = t(f"about.tools.{tooltip_key}", default="")
     if tooltip:
         lbl.setToolTip(tooltip)
@@ -117,9 +120,8 @@ def _tool_entry_widget(name: str, tooltip_key: str) -> QWidget:
     layout.setSpacing(4)
 
     label = _tool_tip_label(name, tooltip_key)
-    layout.addWidget(label)
+    layout.addWidget(label, 1)
     layout.addWidget(_tool_info_button(tooltip_key))
-    layout.addStretch(1)
     return widget
 
 
@@ -130,7 +132,8 @@ class AboutDialog(QDialog):
         super().__init__(parent)
         self.setObjectName("aboutDialog")
         self.setModal(True)
-        self.setFixedSize(440, 680)
+        self.resize(640, 680)
+        self.setMinimumSize(360, 320)
         self.setWindowTitle(t("about.title", default="About DocWen"))
         self._create_interface()
         self._center_on_parent()
@@ -157,6 +160,7 @@ class AboutDialog(QDialog):
         root_layout.addWidget(scroll, 1)
 
         content = QWidget(scroll)
+        content.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         content_layout = QVBoxLayout(content)
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(8)
@@ -169,7 +173,6 @@ class AboutDialog(QDialog):
         hero_layout = QVBoxLayout(hero_card)
         hero_layout.setContentsMargins(16, 16, 16, 16)
         hero_layout.setSpacing(4)
-        hero_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
 
         title_label = QLabel(t("common.app_name", default="DocWen"))
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -178,7 +181,7 @@ class AboutDialog(QDialog):
 
         subtitle = t("about.subtitle", default="")
         if subtitle:
-            sub_label = QLabel(subtitle)
+            sub_label = WrappingLabel(subtitle)
             sub_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             sub_label.setObjectName("aboutSubtitle")
             hero_layout.addWidget(sub_label)
@@ -196,18 +199,18 @@ class AboutDialog(QDialog):
         hero_layout.addWidget(ver_label)
 
         if update_notice:
-            update_label = QLabel(update_notice)
+            update_label = WrappingLabel(update_notice)
             update_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             update_label.setWordWrap(True)
             update_label.setObjectName("aboutUpdateNotice")
             hero_layout.addWidget(update_label)
 
-        contact_label = QLabel(t("about.contact", email="zhengyx91@hotmail.com"))
+        contact_label = WrappingLabel(t("about.contact", email="zhengyx91@hotmail.com"))
         contact_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         contact_label.setObjectName("aboutMeta")
         hero_layout.addWidget(contact_label)
 
-        copyright_label = QLabel(t("about.copyright", year="2025-2026", author="ZhengYX"))
+        copyright_label = WrappingLabel(t("about.copyright", year="2025-2026", author="ZhengYX"))
         copyright_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         copyright_label.setObjectName("aboutMeta")
         hero_layout.addWidget(copyright_label)
@@ -219,7 +222,7 @@ class AboutDialog(QDialog):
         disclaimer_card.setObjectName("aboutGroup")
         disclaimer_layout = QVBoxLayout(disclaimer_card)
         disclaimer_layout.setContentsMargins(16, 16, 16, 16)
-        disclaimer_label = QLabel(t("common.disclaimer", default=""))
+        disclaimer_label = WrappingLabel(t("common.disclaimer", default=""))
         disclaimer_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         disclaimer_label.setWordWrap(True)
         disclaimer_label.setObjectName("warningLabel")
@@ -236,22 +239,23 @@ class AboutDialog(QDialog):
         ack_title.setObjectName("aboutGroupTitle")
         ack_layout.addWidget(ack_title)
 
-        intro = QLabel(t("about.acknowledgments_intro", default=""))
+        intro = WrappingLabel(t("about.acknowledgments_intro", default=""))
         intro.setWordWrap(True)
         intro.setObjectName("aboutAcknowledgmentsIntro")
         ack_layout.addWidget(intro)
 
-        tools_widget = QWidget()
+        tools_widget = ChoiceGroup(responsive=True, spacing=12)
         tools_widget.setObjectName("aboutToolsGrid")
-        tools_grid = QGridLayout(tools_widget)
-        tools_grid.setSpacing(4)
-        tools_grid.setHorizontalSpacing(12)
-
-        for row, (name, tooltip_key) in enumerate(_TOOLS_LEFT):
-            tools_grid.addWidget(_tool_entry_widget(name, tooltip_key), row, 0, Qt.AlignmentFlag.AlignLeft)
-
-        for row, (name, tooltip_key) in enumerate(_TOOLS_RIGHT):
-            tools_grid.addWidget(_tool_entry_widget(name, tooltip_key), row, 1, Qt.AlignmentFlag.AlignLeft)
+        for entries in (_TOOLS_LEFT, _TOOLS_RIGHT):
+            column = QWidget(tools_widget)
+            column.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+            column_layout = QVBoxLayout(column)
+            column_layout.setContentsMargins(0, 0, 0, 0)
+            column_layout.setSpacing(4)
+            column_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+            for name, tooltip_key in entries:
+                column_layout.addWidget(_tool_entry_widget(name, tooltip_key))
+            tools_widget.content_layout.addWidget(column, 1)
 
         ack_layout.addWidget(tools_widget)
         content_layout.addWidget(ack_card)

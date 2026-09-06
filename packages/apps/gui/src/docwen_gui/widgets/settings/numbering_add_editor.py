@@ -25,6 +25,8 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QPushButton,
+    QScrollArea,
+    QSizePolicy,
     QTextEdit,
     QToolButton,
     QVBoxLayout,
@@ -214,8 +216,18 @@ class NumberingAddDialog(QDialog):
         left.addLayout(order_btns)
 
         # -- right panel: form + level grid + preview --
-        right = QVBoxLayout()
-        content.addLayout(right, 2)
+        form_scroll = QScrollArea(self)
+        form_scroll.setObjectName("numberingSchemeScroll")
+        form_scroll.setWidgetResizable(True)
+        form_scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        form_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        form_content = QWidget(form_scroll)
+        form_content.setMinimumWidth(0)
+        form_content.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        right = QVBoxLayout(form_content)
+        right.setContentsMargins(0, 0, 0, 0)
+        form_scroll.setWidget(form_content)
+        content.addWidget(form_scroll, 2)
 
         top_row = QHBoxLayout()
         top_row.addWidget(QLabel(t("editors.numbering_add.default_scheme"), self))
@@ -360,11 +372,14 @@ class NumberingAddDialog(QDialog):
         try:
             self.name_edit.setText(scheme.name or scheme.display_name())
             self.desc_edit.setText(scheme.description or scheme.display_description())
+            self.name_edit.setCursorPosition(0)
+            self.desc_edit.setCursorPosition(0)
             is_custom = not scheme.is_system
             self.name_edit.setEnabled(is_custom)
             self.desc_edit.setEnabled(is_custom)
             for idx in range(1, 10):
                 self.level_edits[idx].setText(scheme.levels.get(idx, ""))
+                self.level_edits[idx].setCursorPosition(0)
             self._validate_all_levels()
             self._update_preview()
             self._update_word_native_compatibility(scheme)

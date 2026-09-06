@@ -1230,6 +1230,8 @@ unsaved_close_message = "저장되지 않은 변경 사항이 있습니다. 닫�
 
 # 序号清理编辑器
 [editors.numbering_clean]
+level = "제목 수준:"
+disabled = "비활성화"
 window_title = "정리 규칙 편집기"
 rule_list = "규칙 목록"
 description = "설명:"

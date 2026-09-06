@@ -75,6 +75,7 @@ class ExportTab(BaseSettingsTab):
         title_layout.setContentsMargins(0, 0, 0, 0)
         title_layout.setSpacing(6)
         self._ocr_title_text = QLineEdit(self._scroll_container)
+        self._ocr_title_text.setPlaceholderText(t("conversion.ocr_output.blockquote_prefix", "🖼️ **Image OCR**:"))
         self._ocr_title_text.setToolTip(
             t("settings.extraction.ocr_blockquote_title_text_tooltip", "Only affects the current UI language.")
         )
@@ -114,6 +115,7 @@ class ExportTab(BaseSettingsTab):
             ),
             default=100,
         )
+        self._compress_threshold.setSuffix(" KB")
         self.add_form_row(
             form2,
             t("settings.export.base64_compress_threshold_label", "Compression Threshold (KB):"),

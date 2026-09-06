@@ -119,6 +119,29 @@ def test_form_reflows_for_runtime_font_and_text_without_window_resize(qtbot, qap
         ThemeManager.reset_instance()
 
 
+def test_long_combo_choice_remains_readable_when_form_stacks(qtbot, qapp):
+    from PySide6.QtGui import QFont
+
+    from docwen_gui.widgets.panel_card import FormRow
+
+    host = QWidget()
+    qtbot.addWidget(host)
+    host.setFont(QFont("Microsoft YaHei", 15))
+    layout = QVBoxLayout(host)
+    combo = QComboBox()
+    combo.addItem("中文发票（invoice-cn-v1）")
+    combo.setMinimumContentsLength(8)
+    combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+    row = FormRow("固定版式文档优化方案：", combo)
+    layout.addWidget(row)
+    required = row.label.fontMetrics().horizontalAdvance(row.label.text()) + row._control_readable_width() + 8
+    host.setFixedWidth(required - 10)
+    host.resize(host.width(), 220)
+    host.show()
+    qtbot.waitUntil(lambda: row.label_container.geometry().bottom() < combo.geometry().top())
+    assert combo.width() >= combo.fontMetrics().horizontalAdvance(combo.currentText()) + 48
+
+
 def test_pdf_workflow_fits_default_columns_with_large_typography(main_window_with_controller, qtbot, tmp_path, qapp):
     import fitz
     from PySide6.QtCore import QPoint
@@ -165,6 +188,13 @@ def test_pdf_workflow_fits_default_columns_with_large_typography(main_window_wit
                     if max(child.minimumSizeHint().width(), child.minimumWidth()) > scroll.viewport().width()
                 ],
             )
+        window._input_area_vm.set_mode("single")
+        qtbot.wait(100)
+        panel = window._conversion_panel
+        button = panel._split_pdf_button
+        field = panel._page_input_edit.parentWidget()
+        gap = field.mapTo(window, QPoint()).y() - button.mapTo(window, QPoint()).y() - button.height()
+        assert 0 <= gap <= 16, gap
     finally:
         manager.apply_font_size_preset("default")
         manager.apply_theme("light")

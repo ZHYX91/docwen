@@ -13,11 +13,13 @@ from pathlib import Path
 from typing import Any
 from typing import cast as _cast
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
     QDialogButtonBox,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QLineEdit,
     QMessageBox,
@@ -33,6 +35,7 @@ from docwen_runtime.config import atomic_write_text
 
 from ...i18n import t
 from ...view_models.settings_vm import SECTION_PROOFREAD, SettingsViewModel
+from ..panel_card import WrappingLabel
 from .base_tab import BaseSettingsTab
 
 # ── Path resolution ─────────────────────────────────────────────────────────
@@ -126,6 +129,21 @@ class _BaseEditorDialog(QDialog):
     values in the value column.
     """
 
+    def _add_dialog_buttons(self, layout: QVBoxLayout, on_accept: Callable[[], None]) -> None:
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
+            self,
+        )
+        button_box.button(QDialogButtonBox.StandardButton.Ok).setText(t("common.ok", "OK"))
+        button_box.button(QDialogButtonBox.StandardButton.Cancel).setText(t("common.cancel", "Cancel"))
+        button_box.accepted.connect(on_accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+
+    def _configure_columns(self, table: QTableWidget) -> None:
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        table.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+
     def _add_search_bar(self, layout: QVBoxLayout) -> QLineEdit:
         """Add a search/filter QLineEdit above the table and return it."""
         self._current_page = 1  # type: ignore[attr-defined]
@@ -139,7 +157,7 @@ class _BaseEditorDialog(QDialog):
 
     def _add_multi_value_hint(self, layout: QVBoxLayout) -> None:
         """Add a small hint label about pipe-separated multi-values."""
-        hint = QLabel(
+        hint = WrappingLabel(
             t(
                 "editors.mapping.multi_value_hint",
                 "Tip: use | to separate multiple values (for example: value1|value2|value3)",
@@ -366,7 +384,7 @@ class _SymbolMappingEditor(_BaseEditorDialog):
                 t("editors.mapping.target_symbol", "Target Symbol"),
             ]
         )
-        self._table.horizontalHeader().setStretchLastSection(True)
+        self._configure_columns(self._table)
         layout.addWidget(self._table)
         self._add_pagination_bar(layout)
 
@@ -388,13 +406,7 @@ class _SymbolMappingEditor(_BaseEditorDialog):
         layout.addWidget(btn_row)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
-            self,
-        )
-        button_box.accepted.connect(self._on_accept)
-        button_box.rejected.connect(self.reject)
-        layout.addWidget(button_box)
+        self._add_dialog_buttons(layout, self._on_accept)
 
     def _populate_table(self) -> None:
         self._table.setRowCount(len(self._entries))
@@ -550,7 +562,7 @@ class _TyposDictionaryEditor(_BaseEditorDialog):
                 t("editors.mapping.comment", "Remark"),
             ]
         )
-        self._table.horizontalHeader().setStretchLastSection(True)
+        self._configure_columns(self._table)
         layout.addWidget(self._table)
         self._add_pagination_bar(layout)
 
@@ -572,13 +584,7 @@ class _TyposDictionaryEditor(_BaseEditorDialog):
         layout.addWidget(btn_row)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
-            self,
-        )
-        button_box.accepted.connect(self._on_accept)
-        button_box.rejected.connect(self.reject)
-        layout.addWidget(button_box)
+        self._add_dialog_buttons(layout, self._on_accept)
 
     def _populate_table(self) -> None:
         self._table.setRowCount(len(self._entries))
@@ -749,7 +755,7 @@ class _SymbolErrorEditor(_BaseEditorDialog):
                 t("editors.mapping.comment", "Remark"),
             ]
         )
-        self._table.horizontalHeader().setStretchLastSection(True)
+        self._configure_columns(self._table)
         layout.addWidget(self._table)
         self._add_pagination_bar(layout)
 
@@ -771,13 +777,7 @@ class _SymbolErrorEditor(_BaseEditorDialog):
         layout.addWidget(btn_row)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
-            self,
-        )
-        button_box.accepted.connect(self._on_accept)
-        button_box.rejected.connect(self.reject)
-        layout.addWidget(button_box)
+        self._add_dialog_buttons(layout, self._on_accept)
 
     def _populate_table(self) -> None:
         self._table.setRowCount(len(self._entries))
@@ -954,7 +954,7 @@ class _SensitiveWordEditor(_BaseEditorDialog):
                 t("editors.mapping.comment", "Remark"),
             ]
         )
-        self._table.horizontalHeader().setStretchLastSection(True)
+        self._configure_columns(self._table)
         layout.addWidget(self._table)
         self._add_pagination_bar(layout)
 
@@ -976,13 +976,7 @@ class _SensitiveWordEditor(_BaseEditorDialog):
         layout.addWidget(btn_row)
 
         # Dialog buttons
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
-            self,
-        )
-        button_box.accepted.connect(self._on_accept)
-        button_box.rejected.connect(self.reject)
-        layout.addWidget(button_box)
+        self._add_dialog_buttons(layout, self._on_accept)
 
     def _populate_table(self) -> None:
         self._table.setRowCount(len(self._entries))

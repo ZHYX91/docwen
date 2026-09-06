@@ -122,7 +122,7 @@ def test_xlarge_drop_pyramid_keeps_every_label_inside_its_row(qapp, qtbot) -> No
         qtbot.waitUntil(
             lambda: all(
                 type_label.sizeHint().width() <= type_label.width()
-                and value_label.sizeHint().width() <= value_label.width()
+                and value_label.heightForWidth(value_label.width()) <= value_label.height()
                 for _row, _layout, type_label, value_label in widget._type_prompt_rows
             ),
             timeout=3000,
@@ -138,7 +138,8 @@ def test_xlarge_drop_pyramid_keeps_every_label_inside_its_row(qapp, qtbot) -> No
             assert value_label.geometry().right() < row.width()
             assert type_label.geometry().right() < value_label.geometry().left()
             assert type_label.sizeHint().width() <= type_label.width()
-            assert value_label.sizeHint().width() <= value_label.width()
+            assert value_label.heightForWidth(value_label.width()) <= value_label.height()
+            assert row.mapTo(widget, row.rect().topRight()).x() < widget.width()
     finally:
         widget.close()
         ThemeManager.reset_instance()

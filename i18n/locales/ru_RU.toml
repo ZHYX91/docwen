@@ -1230,6 +1230,8 @@ unsaved_close_message = "Действительно закрыть?"
 
 # 序号清理编辑器
 [editors.numbering_clean]
+level = "Уровень заголовка:"
+disabled = "Отключено"
 window_title = "Правила очистки"
 rule_list = "Правила"
 description = "Описание:"

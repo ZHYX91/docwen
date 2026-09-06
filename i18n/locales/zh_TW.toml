@@ -1230,6 +1230,8 @@ unsaved_close_message = "有未保存的修改，確定要關閉嗎？"
 
 # 序号清理编辑器
 [editors.numbering_clean]
+level = "標題層級:"
+disabled = "已停用"
 window_title = "清理規則編輯器"
 rule_list = "規則列表"
 description = "說明:"

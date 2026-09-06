@@ -1230,6 +1230,8 @@ unsaved_close_message = "保存されていない変更があります。閉じ�
 
 # 序号清理编辑器
 [editors.numbering_clean]
+level = "見出しレベル:"
+disabled = "無効"
 window_title = "クリーンアップルールエディタ"
 rule_list = "ルールリスト"
 description = "説明："

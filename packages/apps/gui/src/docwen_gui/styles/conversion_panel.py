@@ -4,14 +4,36 @@ from __future__ import annotations
 
 from .design_tokens import Border, Radius, Spacing, Typography
 from .panel_card import build_panel_card_stylesheet
+from .theme_semantics import is_dark_theme
 
 
 def build_conversion_panel_stylesheet(theme_name: str, font_size_preset: str | None = None) -> str:
     """转换面板基础样式。"""
+    hint_color = "#CBD5E1" if is_dark_theme(theme_name) else "#475569"
     return "\n".join(
         [
             build_panel_card_stylesheet(font_size_preset),
             "/* docwen-conversion-panel-foundation */",
+            "QRadioButton#conversionRadioButton {",
+            "    spacing: 8px;",
+            "    min-height: 32px;",
+            "    color: palette(text);",
+            "}",
+            "QRadioButton#conversionRadioButton::indicator {",
+            "    width: 16px; height: 16px;",
+            "    border: 2px solid palette(mid);",
+            "    border-radius: 10px;",
+            "    background: palette(base);",
+            "}",
+            "QRadioButton#conversionRadioButton::indicator:checked {",
+            "    width: 8px; height: 8px;",
+            "    border: 6px solid palette(highlight);",
+            "    background: palette(highlighted-text);",
+            "}",
+            "QRadioButton#conversionRadioButton::indicator:hover,",
+            "QRadioButton#conversionRadioButton::indicator:focus {",
+            "    border-color: palette(highlight);",
+            "}",
             "QWidget#conversionPanelRoot QScrollArea#conversionPanelScrollArea,",
             "QWidget#conversionPanelRoot QWidget#conversionPanelScrollContent {",
             "    border: none;",
@@ -38,15 +60,15 @@ def build_conversion_panel_stylesheet(theme_name: str, font_size_preset: str | N
             "    font-weight: 600;",
             "}",
             "QWidget#conversionPanelRoot QLabel#hintLabel {",
-            "    color: palette(mid);",
+            f"    color: {hint_color};",
             f"    font-size: {Typography.qss(Typography.BODY_SIZE, font_size_preset)};",
             "}",
             "QWidget#conversionPanelRoot QLabel#conversionSectionDescription {",
-            "    color: palette(mid);",
+            f"    color: {hint_color};",
             f"    font-size: {Typography.qss(Typography.BODY_SIZE, font_size_preset)};",
             "}",
             "QWidget#conversionPanelRoot QLabel#conversionDetailLabel {",
-            "    color: palette(mid);",
+            f"    color: {hint_color};",
             f"    font-size: {Typography.qss(Typography.CAPTION_SIZE, font_size_preset)};",
             "}",
             "QWidget#conversionPanelRoot QLabel#warningLabel {",

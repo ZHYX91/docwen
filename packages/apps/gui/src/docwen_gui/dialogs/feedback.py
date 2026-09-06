@@ -98,6 +98,7 @@ def _message_box(
     if details:
         box.setDetailedText(details)
     box.setStandardButtons(QMessageBox.StandardButton.Ok)
+    box.button(QMessageBox.StandardButton.Ok).setText(t("common.ok", "OK"))
     copy_button = None
     copy_details = details if copyable and details else None
     if copy_details is not None:
