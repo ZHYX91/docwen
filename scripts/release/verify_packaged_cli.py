@@ -60,12 +60,6 @@ _DOCTOR_BASE_CHECK_IDS = frozenset(
 )
 _WORDPROCESSINGML_NAMESPACE = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 _WORD_TAG = f"{{{_WORDPROCESSINGML_NAMESPACE}}}"
-_ROUND_TRIP_SIDECAR_MEMBERS = (
-    "authored-source.md",
-    "neutral-document.json",
-    "numbering-export-plan.json",
-    "manifest.json",
-)
 MACHINE_DOCUMENT_SEMANTICS_LIMITATIONS = (
     {
         "severity": "warning",
