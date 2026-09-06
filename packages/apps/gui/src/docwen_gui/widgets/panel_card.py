@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Protocol
 
-from PySide6.QtCore import QEvent, QRect, Qt, QTimer
+from PySide6.QtCore import QEvent, QRect, Qt, QTimer, Signal
 from PySide6.QtGui import QStandardItemModel
 from PySide6.QtWidgets import (
     QBoxLayout,
@@ -85,6 +85,19 @@ class _ResponsiveFrame(QFrame):
         raise NotImplementedError
 
 
+class _FormLabel(QLabel):
+    geometryChanged = Signal()
+
+    def setText(self, text: str) -> None:
+        super().setText(text)
+        self.geometryChanged.emit()
+
+    def changeEvent(self, event) -> None:
+        super().changeEvent(event)
+        if event.type() in {QEvent.Type.FontChange, QEvent.Type.StyleChange}:
+            self.geometryChanged.emit()
+
+
 class FormRow(_ResponsiveFrame):
     """A label/control row that stacks before translated content clips."""
 
@@ -103,7 +116,8 @@ class FormRow(_ResponsiveFrame):
         self.content_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight, self)
         self.content_layout.setContentsMargins(0, 0, 0, 0)
         self.content_layout.setSpacing(8)
-        self.label = QLabel(label, self)
+        self.label = _FormLabel(label, self)
+        self.label.geometryChanged.connect(self._schedule_group_reflow)
         self.label.setObjectName("panelFormLabel")
         self.label.setBuddy(control)
         self.label.setMinimumWidth(0)
@@ -122,6 +136,10 @@ class FormRow(_ResponsiveFrame):
         self.control = control
         self.content_layout.addWidget(self.label_container)
         self.content_layout.addWidget(control, stretch=1)
+
+    def _schedule_group_reflow(self) -> None:
+        for row in self.alignment_group or (self,):
+            row._reflow_timer.start(0)
 
     def _sync_layout(self) -> None:
         peers = self.alignment_group or (self,)

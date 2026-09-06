@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
 from ...i18n import t
 from ...styles.theme_semantics import apply_theme_class
 from ...view_models.settings_vm import SECTION_LOGGING, SettingsViewModel
-from .base_tab import BaseSettingsTab, _create_info_button
+from .base_tab import BaseSettingsTab
 
 
 def _log_levels() -> list[tuple[str, str]]:
@@ -218,18 +218,6 @@ class LoggingTab(BaseSettingsTab):
             t("settings.logging.console_colorize_label", "Console color:"),
             self._console_colorize,
         )
-
-    def _create_toggle_with_info(self, text: str, tooltip: str) -> tuple[QWidget, QCheckBox]:
-        container = QWidget(self._scroll_container)
-        layout = QHBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(6)
-        cb = self.create_settings_toggle(text, tooltip)
-        layout.addWidget(cb)
-        if tooltip:
-            layout.addWidget(_create_info_button(tooltip, container))
-        layout.addStretch(1)
-        return container, cb
 
     def _on_file_prefix_changed(self, value: str) -> None:
         self._vm.set_field(SECTION_LOGGING, "file_prefix", value)

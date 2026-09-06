@@ -64,7 +64,21 @@ class SettingsCheckBox(_CheckBox):
         return max(32, size.height())
 
     def minimumSizeHint(self) -> QSize:
-        return QSize(0, self.heightForWidth(self.width()))
+        return QSize(0, 32)
+
+    def sizeHint(self) -> QSize:
+        # Geometry must depend on the original label, never the last narrow paint.
+        option = QStyleOptionButton()
+        self.initStyleOption(option)
+        option.text = self._source_text
+        metrics = self.fontMetrics()
+        paragraphs = self._source_text.split("\n")
+        size = QSize(
+            max((metrics.horizontalAdvance(line) for line in paragraphs), default=0),
+            metrics.height() + (len(paragraphs) - 1) * metrics.lineSpacing(),
+        )
+        size = self.style().sizeFromContents(QStyle.ContentsType.CT_CheckBox, option, size, self)
+        return QSize(size.width(), max(32, size.height()))
 
     def _reflow_text(self) -> None:
         rendered = "\n".join(self._lines(self.width()))

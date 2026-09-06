@@ -83,3 +83,41 @@ def test_settings_checkbox_wraps_without_losing_native_mouse_keyboard_or_accessi
     checkbox.resize(wide, checkbox.heightForWidth(wide))
     qapp.processEvents()
     assert QCheckBox.text(checkbox) == text
+
+
+@pytest.mark.parametrize("locale", ["zh_CN", "en_US"])
+@pytest.mark.parametrize("tab_name", ["export", "logging"])
+def test_help_checkbox_uses_available_row_width(qapp, qtbot, locale, tab_name) -> None:
+    from PySide6.QtWidgets import QCheckBox, QToolButton, QWidget
+
+    from docwen_gui.i18n import get_locale, set_locale
+    from docwen_gui.models.settings_config import SettingsConfig
+    from docwen_gui.view_models.settings_vm import SettingsViewModel
+    from docwen_gui.widgets.settings.check_box import SettingsCheckBox
+    from docwen_gui.widgets.settings.dialog import _TAB_SPECS
+
+    previous = get_locale()
+    set_locale(locale)
+    tab = _TAB_SPECS[tab_name].factory(SettingsViewModel(config=SettingsConfig()))
+    assert isinstance(tab, QWidget)
+    qtbot.addWidget(tab)
+    try:
+        tab.show()
+        for width in (700, 420, 700):
+            tab.resize(width, 850)
+            qtbot.wait(80)
+            for checkbox in tab.findChildren(SettingsCheckBox):
+                wrapper = checkbox.parentWidget()
+                assert wrapper is not None
+                icons = wrapper.findChildren(QToolButton, "settingsInfoButton")
+                if not icons:
+                    continue
+                icon = icons[0]
+                assert checkbox.width() >= wrapper.width() - icon.width() - 8
+                assert not checkbox.geometry().intersects(icon.geometry())
+                assert checkbox.height() >= checkbox.heightForWidth(checkbox.width())
+                if width == 700:
+                    assert QCheckBox.text(checkbox) == checkbox.text()
+    finally:
+        tab.close()
+        set_locale(previous)

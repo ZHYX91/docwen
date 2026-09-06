@@ -13,7 +13,7 @@ from PySide6.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLineEdit, QPus
 
 from ...i18n import t
 from ...view_models.settings_vm import SECTION_EXPORT, SettingsViewModel
-from .base_tab import BaseSettingsTab, _create_info_button
+from .base_tab import BaseSettingsTab
 
 
 class ExportTab(BaseSettingsTab):
@@ -126,19 +126,6 @@ class ExportTab(BaseSettingsTab):
         # Wire signals
         self._image_mode.currentIndexChanged.connect(self._on_image_mode_changed)
         self._ocr_mode.currentIndexChanged.connect(self._on_ocr_mode_changed)
-
-    def _create_toggle_with_info(self, text: str, tooltip: str) -> tuple[QWidget, QCheckBox]:
-        """Create a settings toggle with label, returning (widget, checkbox)."""
-        container = QWidget(self._scroll_container)
-        layout = QHBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(6)
-        cb = self.create_settings_toggle(text, tooltip)
-        layout.addWidget(cb)
-        if tooltip:
-            layout.addWidget(_create_info_button(tooltip, container))
-        layout.addStretch(1)
-        return container, cb
 
     def _on_image_mode_changed(self, _idx: int) -> None:
         mode = self.get_combo_data(self._image_mode)

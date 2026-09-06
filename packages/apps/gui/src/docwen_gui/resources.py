@@ -57,12 +57,21 @@ _icon_cache: dict[str, Any] = {}
 class _SvgIconEngine(QIconEngine):
     """Render SVG bytes at the device-pixel ratio requested by Qt."""
 
-    def __init__(self, svg_bytes: bytes) -> None:
+    def __init__(self, svg_bytes: bytes, *, color: str | None = None) -> None:
         super().__init__()
         self._svg_bytes = bytes(svg_bytes)
+        self._color = color
 
     def clone(self) -> _SvgIconEngine:
-        return _SvgIconEngine(self._svg_bytes)
+        return _SvgIconEngine(self._svg_bytes, color=self._color)
+
+    def _renderer(self) -> QSvgRenderer:
+        color = self._color or _resolve_theme_icon_color()
+        svg_text = self._svg_bytes.decode("utf-8")
+        for attribute in ("fill", "stroke"):
+            for old_color in ("#000", "#000000", "black"):
+                svg_text = svg_text.replace(f'{attribute}="{old_color}"', f'{attribute}="{color}"')
+        return QSvgRenderer(QByteArray(svg_text.encode("utf-8")))
 
     def key(self) -> str:
         return "DocWenSvgIconEngine"
@@ -76,7 +85,7 @@ class _SvgIconEngine(QIconEngine):
 
     def paint(self, painter: QPainter, rect, mode: QIcon.Mode, state: QIcon.State) -> None:
         del mode, state
-        renderer = QSvgRenderer(QByteArray(self._svg_bytes))
+        renderer = self._renderer()
         if renderer.isValid():
             renderer.render(painter, QRectF(rect))
 
@@ -99,7 +108,7 @@ class _SvgIconEngine(QIconEngine):
         pixmap.setDevicePixelRatio(effective_scale)
         painter = QPainter(pixmap)
         try:
-            renderer = QSvgRenderer(QByteArray(self._svg_bytes))
+            renderer = self._renderer()
             if renderer.isValid():
                 renderer.render(painter, QRectF(0, 0, size.width(), size.height()))
         finally:
@@ -128,8 +137,7 @@ def load_svg_asset_icon(
     color: str | None = None,
 ) -> Any | None:
     """Load an SVG asset through a resolution-independent Qt icon engine."""
-    resolved_color = color or _resolve_theme_icon_color()
-    cache_key = f"svg:{relative_path}:{resolved_color}"
+    cache_key = f"svg:{relative_path}:{color or 'theme'}"
     if cache_key in _icon_cache:
         return _icon_cache[cache_key]
 
@@ -141,21 +149,13 @@ def load_svg_asset_icon(
     try:
         svg_text = icon_path.read_text(encoding="utf-8", errors="ignore")
 
-        # Adapt the monochrome application icon vocabulary to the active theme.
-        for attribute in ("fill", "stroke"):
-            for old_color in ("#000", "#000000", "black"):
-                svg_text = svg_text.replace(
-                    f'{attribute}="{old_color}"',
-                    f'{attribute}="{resolved_color}"',
-                )
-
         svg_bytes = svg_text.encode("utf-8")
         renderer = QSvgRenderer(QByteArray(svg_bytes))
         if not renderer.isValid():
             logger.debug("Invalid SVG icon: %s", icon_path)
             return None
 
-        icon = QIcon(_SvgIconEngine(svg_bytes))
+        icon = QIcon(_SvgIconEngine(svg_bytes, color=color))
         _icon_cache[cache_key] = icon
         return icon
     except Exception as exc:

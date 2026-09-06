@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFormLayout,
     QGroupBox,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
     QScrollArea,
@@ -262,6 +263,18 @@ class BaseSettingsTab(QWidget):
     def create_settings_toggle(self, text: str, tooltip: str | None = None, default: bool = False) -> QCheckBox:
         """Create a toggle checkbox with the unified settings object name."""
         return self.create_checkbox(text, tooltip, default=default, object_name=SETTINGS_TOGGLE_OBJECT_NAME)
+
+    def _create_toggle_with_info(self, text: str, tooltip: str) -> tuple[QWidget, QCheckBox]:
+        """Let the checkbox use the row width while reserving only the help icon."""
+        container = QWidget(self._scroll_container)
+        layout = QHBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+        checkbox = self.create_settings_toggle(text, tooltip)
+        layout.addWidget(checkbox, 1)
+        if tooltip:
+            layout.addWidget(_create_info_button(tooltip, container), 0, Qt.AlignmentFlag.AlignVCenter)
+        return container, checkbox
 
     def create_combobox(
         self, items: list[tuple[str, Any]], tooltip: str | None = None, default_data: Any = None

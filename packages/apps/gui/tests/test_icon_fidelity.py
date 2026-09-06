@@ -23,6 +23,35 @@ def test_svg_icon_keeps_two_x_backing_pixels(qapp) -> None:
     assert pixmap.deviceIndependentSize() == QSize(18, 18)
 
 
+def test_existing_svg_icon_follows_palette_changes_and_preserves_explicit_color(qapp) -> None:
+    from PySide6.QtGui import QColor, QPalette
+
+    from docwen_gui.resources import load_svg_icon
+
+    original = qapp.palette()
+    adaptive = load_svg_icon("info.svg")
+    fixed = load_svg_icon("info.svg", color="#ff0000")
+    assert isinstance(adaptive, QIcon)
+    assert isinstance(fixed, QIcon)
+    try:
+        for color in ("#0f172a", "#f1f5f9", "#0f172a"):
+            palette = QPalette(original)
+            palette.setColor(QPalette.ColorRole.WindowText, QColor(color))
+            qapp.setPalette(palette)
+            for icon, expected in ((adaptive, color), (fixed, "#ff0000")):
+                raster = icon.pixmap(QSize(24, 24), 2.0).toImage()
+                opaque = [
+                    raster.pixelColor(x, y).name()
+                    for y in range(raster.height())
+                    for x in range(raster.width())
+                    if raster.pixelColor(x, y).alpha() == 255
+                ]
+                assert opaque
+                assert set(opaque) == {expected}
+    finally:
+        qapp.setPalette(original)
+
+
 def test_settings_tabs_own_distinct_semantic_icons(qapp) -> None:
     from docwen_gui.widgets.settings.dialog import TAB_KEYS, SettingsDialog
 
