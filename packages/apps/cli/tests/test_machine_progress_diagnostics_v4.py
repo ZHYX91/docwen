@@ -5,7 +5,7 @@ from __future__ import annotations
 import io
 import json
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 import pytest
@@ -178,6 +178,27 @@ def _lifecycle(responses: list[dict[str, Any]]) -> list[dict[str, Any]]:
         for message in responses
         if message.get("method") in {"task/progress", "task/completed", "task/failed", "task/cancelled"}
     ]
+
+
+@pytest.mark.parametrize(
+    "extension", ["structural_tables", "captions_references", "extended_headings", "typed_endnotes"]
+)
+def test_docx_extension_loss_warning_completes_without_markdown_source_coordinates(extension: str) -> None:
+    from docwen_plugin_document.to_markdown.converter import DocxToMarkdownConverter
+
+    converter = DocxToMarkdownConverter()
+    converter._record_extension_loss(extension, "The selected standard syntax flattens this extension.")
+    code, message, location = converter._resolved_v4_diagnostics[0]
+    diagnostic = ConversionDiagnostic(level="warning", code=code, message=message, location=location)
+    responses, active = _run(
+        _Service(outcome_factory=lambda task_id: replace(_completed_outcome(task_id), diagnostics=(diagnostic,))),
+        capability_id="convert.docx.to_markdown",
+    )
+    lifecycle = _lifecycle(responses)
+    assert lifecycle[-1]["method"] == "task/completed"
+    assert lifecycle[-1]["params"]["diagnostics"] == [{"severity": "warning", "code": code, "message": message}]
+    assert not code.startswith("docwen.markdown.")
+    assert active == {}
 
 
 def test_runtime_progress_is_private_bounded_monotonic_and_terminal_ordered() -> None:

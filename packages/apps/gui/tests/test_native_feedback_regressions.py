@@ -68,7 +68,7 @@ def test_extension_losses_are_localized_and_summary_exposes_warning_count(qapp):
         diagnostics=[
             ConversionDiagnostic(
                 level="warning",
-                code="docwen.markdown.extension.typed_endnotes.flattened",
+                code="docwen.conversion.markdown_extension.typed_endnotes.flattened",
                 message="Raw technical English",
                 location="word/document.xml",
             )

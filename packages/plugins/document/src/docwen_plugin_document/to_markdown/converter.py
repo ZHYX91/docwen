@@ -2713,7 +2713,7 @@ class DocxToMarkdownConverter:
         return lines, 0
 
     def _record_extension_loss(self, name: str, message: str) -> None:
-        code = f"docwen.markdown.extension.{name}.flattened"
+        code = f"docwen.conversion.markdown_extension.{name}.flattened"
         if not any(item[0] == code for item in self._resolved_v4_diagnostics):
             self._resolved_v4_diagnostics.append((code, message, "word/document.xml"))
 

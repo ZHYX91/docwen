@@ -141,10 +141,14 @@ def _result_warning_messages(result: ConversionResult) -> list[str]:
         if diagnostic.level != "warning":
             continue
         extension_messages = {
-            "docwen.markdown.extension.typed_endnotes.flattened": _t("main_window.extension_loss_endnotes"),
-            "docwen.markdown.extension.extended_headings.flattened": _t("main_window.extension_loss_headings"),
-            "docwen.markdown.extension.captions_references.flattened": _t("main_window.extension_loss_references"),
-            "docwen.markdown.extension.structural_tables.flattened": _t("main_window.extension_loss_tables"),
+            "docwen.conversion.markdown_extension.typed_endnotes.flattened": _t("main_window.extension_loss_endnotes"),
+            "docwen.conversion.markdown_extension.extended_headings.flattened": _t(
+                "main_window.extension_loss_headings"
+            ),
+            "docwen.conversion.markdown_extension.captions_references.flattened": _t(
+                "main_window.extension_loss_references"
+            ),
+            "docwen.conversion.markdown_extension.structural_tables.flattened": _t("main_window.extension_loss_tables"),
         }
         if diagnostic.code in extension_messages:
             messages.append(extension_messages[diagnostic.code])

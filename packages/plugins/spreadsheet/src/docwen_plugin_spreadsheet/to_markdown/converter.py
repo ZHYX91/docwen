@@ -824,7 +824,7 @@ class SpreadsheetToMarkdownConverter:
                 context.progress.report_diagnostic(
                     "warning",
                     "Merged cells were flattened to a standard Markdown table.",
-                    code="docwen.markdown.extension.structural_tables.flattened",
+                    code="docwen.conversion.markdown_extension.structural_tables.flattened",
                     location=ws.title,
                 )
             df = _worksheet_to_dataframe(ws, table_merge_strategy=merge_strategy)

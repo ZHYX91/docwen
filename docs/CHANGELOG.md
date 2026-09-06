@@ -7,6 +7,9 @@
 
 ## 0.10.0 (2026-09-07)
 
+- 修复关闭 Markdown 输出扩展时，转换降级提示导致 Machine/Assistant 任务被误报为内部错误的问题。
+- Keep Machine and Assistant exports successful when disabled Markdown extensions produce conversion warnings.
+
 - 已解析 Markdown 导出 Word 时，以源文件名称补全文档标题，避免内部标识出现在成品中。
 - Use the source filename for resolved Markdown exports without an authored title, keeping internal input identifiers out of generated Word titles.
 
