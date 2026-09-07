@@ -6,7 +6,7 @@ import csv
 import re
 import secrets
 import time
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 from urllib.parse import unquote
 
@@ -41,6 +41,14 @@ if TYPE_CHECKING:
 MEDIA_TYPE_XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 MEDIA_TYPE_CSV = "text/csv"
 _IMAGE_PLACEHOLDER_RE = re.compile(r"\{\{IMAGE:([^}]+)\}\}")
+
+
+def _source_stem(context: ConverterContext) -> str:
+    """Use the declared document name instead of a private staging filename."""
+    source = next((item for item in context.request.input_refs if item.input_role == "source"), None)
+    if source is not None and source.logical_path:
+        return PurePosixPath(source.logical_path).stem
+    return Path(context.workspace.input_path).stem
 
 
 def _request_link_config(context: ConverterContext) -> LinkRuntimeConfig:
@@ -163,7 +171,7 @@ class MdToXlsxConverter:
                 wb, template_stats = build_template_workbook(
                     content,
                     template_path,
-                    source_stem=Path(input_path).stem,
+                    source_stem=_source_stem(context),
                     image_scope=image_scope,
                     list_separator=_request_yaml_list_separator(context),
                     structural_tables=resolve_markdown_extensions(
@@ -215,7 +223,7 @@ class MdToXlsxConverter:
             progress.report_progress(80.0, "Writing XLSX to staging")
 
             output_path = workspace.create_artifact_path(ARTIFACT_KIND_PRIMARY, ".xlsx")
-            input_stem = Path(input_path).stem
+            input_stem = _source_stem(context)
             suggested_name = f"{input_stem}.xlsx"
 
             wb.save(output_path)
@@ -353,7 +361,7 @@ class MdToCsvConverter:
                 workbook, template_stats = build_template_workbook(
                     content,
                     template_path,
-                    source_stem=Path(input_path).stem,
+                    source_stem=_source_stem(context),
                     image_scope=image_scope,
                     list_separator=_request_yaml_list_separator(context),
                     structural_tables=resolve_markdown_extensions(
@@ -398,7 +406,7 @@ class MdToCsvConverter:
             cancellable.check()
             progress.report_progress(50.0, "Writing CSV files to staging")
 
-            input_stem = Path(input_path).stem
+            input_stem = _source_stem(context)
             artifacts: list[ArtifactManifest] = []
             total_output_bytes = 0
 
@@ -492,7 +500,7 @@ class MdToCsvConverter:
         progress = context.progress
         workspace = context.workspace
 
-        input_stem = Path(input_path).stem
+        input_stem = _source_stem(context)
         folder_name = f"{input_stem}_fromMd"
         artifacts: list[ArtifactManifest] = []
         total_output_bytes = 0

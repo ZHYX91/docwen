@@ -7,6 +7,9 @@
 
 ## 0.10.0 (2026-09-07)
 
+- 表格导出使用声明的原文件名，避免临时输入编号出现在模板标题与建议文件名中。
+- Preserve declared source names in spreadsheet template titles and suggested output filenames.
+
 - 单文件模式只保留当前输入，拖入、添加和 Assistant 传入遵守同一规则；批量切回单文件时确认保留项，移除内部进程接收记录。
 - Single-file mode keeps only the current input across drag, picker, and Assistant entry points. Returning from a batch confirms the retained file, and internal process messages no longer clutter activity history.
 
