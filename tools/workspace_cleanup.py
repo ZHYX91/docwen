@@ -318,7 +318,9 @@ def _snapshot_tree(root: Path) -> dict[str, Any]:
                     "device": metadata.st_dev,
                     "inode": metadata.st_ino,
                     "mode": stat.S_IFMT(metadata.st_mode),
-                    "size": metadata.st_size,
+                    # Windows may report different allocation sizes for an unchanged directory.
+                    # Its entries and identity are checked separately; only file sizes are stable.
+                    "size": 0 if kind in {"directory", "reparse-directory"} else metadata.st_size,
                     "mtimeNs": metadata.st_mtime_ns,
                     "extra": extra,
                 }

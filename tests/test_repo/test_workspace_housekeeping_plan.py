@@ -6,6 +6,8 @@ import shutil
 import subprocess
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from types import SimpleNamespace
+from typing import cast
 
 import pytest
 from tools import qa, workspace_cleanup, workspace_root
@@ -194,6 +196,39 @@ def test_apply_rejects_same_content_directory_replacement(tmp_path: Path) -> Non
         workspace_cleanup.apply_saved_plan(plan_path, workspace_root=workspace)
 
     assert target.is_dir()
+
+
+def test_saved_plan_accepts_directory_size_drift(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _, workspace = _workspace(tmp_path)
+    target = workspace / "temp" / "directory-size-drift"
+    child = target / "child"
+    child.mkdir(parents=True)
+    (child / "payload.txt").write_text("unchanged bytes", encoding="utf-8")
+    original_lstat = os.lstat
+    reported_size = 4096
+
+    def lstat_with_directory_size(path: str | os.PathLike[str], *, dir_fd: int | None = None) -> os.stat_result:
+        metadata = original_lstat(path, dir_fd=dir_fd)
+        if workspace_cleanup._logical_path(path) not in {target, child}:
+            return metadata
+        fields = {name: getattr(metadata, name) for name in dir(metadata) if name.startswith("st_")}
+        fields["st_size"] = reported_size
+        return cast(os.stat_result, SimpleNamespace(**fields))
+
+    monkeypatch.setattr(os, "lstat", lstat_with_directory_size)
+    plan = workspace_cleanup.create_plan(
+        workspace_root=workspace,
+        explicit_targets=(target,),
+        reason="directory size drift scratch",
+    )
+    plan_path = workspace_cleanup.save_plan(plan, workspace / "diagnostics" / "plan.json")
+    reported_size = 0
+
+    result = workspace_cleanup.apply_saved_plan(plan_path, workspace_root=workspace)
+
+    assert result["removed"] == [str(target.resolve())]
+    assert result["removedBytes"] == len("unchanged bytes")
+    assert not target.exists()
 
 
 def test_saved_plan_applies_after_per_target_revalidation(tmp_path: Path) -> None:
