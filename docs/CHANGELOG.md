@@ -8,8 +8,6 @@
 ## 0.10.0 (2026-09-07)
 
 - 升级 Markdown 解析依赖 Mistune 至 3.3.3，修复已知的嵌套强调解析崩溃风险（CVE-2026-76098）。
-- Updated Mistune to 3.3.3 to fix the known nested-emphasis crash risk (CVE-2026-76098).
-
 - 删除保存原始 Markdown 的 sidecar 和回放逻辑；Word 回转从实际文档结构重建，并修复 Word 保存后的语义 XML 兼容问题。请自行保留源文件。
 - Markdown 扩展按传入识别、生成使用分别设置，默认关闭：Structural Tables、Number Suite 题注与交叉引用、H7–H9、类型化脚注/尾注；提供 Obsidian 预设，关闭时使用普通 Markdown 并提示表达损失。
 - Markdown 转文档/电子表格以及其他格式转 Markdown，一律在所选父目录内生成结果文件夹。目录与主文件使用原文件名、统一时间戳和本次传入格式；CSV 工作表名位于时间戳之前，公文附件使用统一的“附件”子目录及文件名。
@@ -23,6 +21,7 @@
 - PDF、图片及表格合并入口只在批量模式显示，并要求足够数量的匹配文件；单文件 PDF 保留拆分，改善页码范围输入和禁用原因说明。
 - CLI 传入或生成 Markdown 的转换改用 `--output-dir` 选择父目录；原精确 `--output` 用于其他单文件转换。DocWen Assistant 2.4 使用目录发布；OpenClaw 2.0.0 尚不支持新的 MD→CSV 资源主输出与配套布局清单关系。
 
+- Updated Mistune to 3.3.3 to fix the known nested-emphasis crash risk (CVE-2026-76098).
 - Remove original-Markdown sidecars and replay. Rebuild reverse conversions from the actual Word structure, including documents reserialized by Word; keep your source files separately.
 - Control Markdown extensions independently for input and output, off by default: Structural Tables, Number Suite captions and references, H7–H9, and typed footnotes/endnotes. Obsidian presets are available; ordinary Markdown output reports representation loss.
 - Always publish a result folder for conversions from or to Markdown, including single-output document and spreadsheet exports. Folder and main-file names share the source name, timestamp and current input format; CSV sheet names precede the timestamp and official-document attachments use one consistent attachment directory.
