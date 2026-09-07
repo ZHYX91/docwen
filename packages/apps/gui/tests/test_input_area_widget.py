@@ -5,6 +5,7 @@ ViewModel wiring.  They require a QApplication instance.
 """
 
 from collections.abc import Generator
+from itertools import pairwise
 from pathlib import Path
 
 import pytest
@@ -173,23 +174,61 @@ class TestConstruction:
         assert rtl_arrow.center().x() < combo.width() // 2
         combo.close()
 
-    @pytest.mark.parametrize("width", [360, 1200])
-    def test_supported_formats_keep_compact_aligned_columns(self, widget, qapp, width):
-        widget.resize(width, _DEFAULT_HEIGHT)
+    def test_supported_formats_restore_symmetric_pyramid(self, widget, qapp):
+        widget.resize(1200, _DEFAULT_HEIGHT)
         widget.show()
         qapp.processEvents()
         widget._sync_supported_type_layout()
         qapp.processEvents()
         assert len(widget._type_prompt_rows) == 6
-        starts = set()
+        left_edges = []
+        right_edges = []
         for row, _layout, label, value in widget._type_prompt_rows:
-            starts.add(value.x())
-            assert 0 < value.x() - label.geometry().right() <= 12
+            left_edges.append(label.geometry().left())
+            right_edges.append(value.geometry().right())
+            assert abs(label.x() - (row.width() - 1 - value.geometry().right())) <= 1
+            assert label.geometry().right() < value.geometry().left()
             assert value.geometry().right() < row.width()
-            assert value.alignment() & Qt.AlignmentFlag.AlignLeft
-        assert len(starts) == 1
-        natural_width = max(v.fontMetrics().horizontalAdvance(v.text()) for _, _, _, v in widget._type_prompt_rows)
-        assert widget._types_container.width() <= natural_width + starts.pop() + 2
+            assert value.alignment() & Qt.AlignmentFlag.AlignRight
+            assert value.height() >= value.heightForWidth(value.width())
+        assert all(upper > lower for upper, lower in pairwise(left_edges))
+        assert all(upper < lower for upper, lower in pairwise(right_edges))
+
+    @pytest.mark.parametrize("font_pixels", [13, 20, 26])
+    def test_format_pyramid_wraps_without_clipping_when_narrow(self, widget, qapp, font_pixels):
+        for _, _, label, value in widget._type_prompt_rows:
+            for control in (label, value):
+                font = control.font()
+                font.setPixelSize(font_pixels)
+                control.setFont(font)
+        widget.resize(360, _DEFAULT_HEIGHT)
+        widget.show()
+        qapp.processEvents()
+        widget._sync_supported_type_layout()
+        qapp.processEvents()
+        previous_bottom = -1
+        for row, layout, label, value in widget._type_prompt_rows:
+            margins = layout.contentsMargins()
+            assert margins.left() == margins.right() >= 0
+            assert label.geometry().right() < value.geometry().left()
+            assert 0 <= value.x() < value.geometry().right() < row.width()
+            assert value.height() >= value.heightForWidth(value.width())
+            assert row.y() > previous_bottom
+            previous_bottom = row.geometry().bottom()
+
+    def test_large_empty_prompt_uses_available_width_without_vertical_clipping(self, widget, qapp):
+        widget.setStyleSheet(build_panel_stylesheet("light", "xlarge"))
+        widget._prompt_label.setText("Drag a single document here")
+        widget.resize(360, _DEFAULT_HEIGHT)
+        widget.show()
+        qapp.processEvents()
+        widget._sync_prompt_layout()
+        qapp.processEvents()
+        prompt = widget._prompt_label
+        assert prompt.height() >= prompt.heightForWidth(prompt.width())
+        assert prompt.geometry().bottom() < widget._empty_title_row.height()
+        assert prompt.y() > widget._hero_icon_label.geometry().bottom()
+        assert prompt.width() <= widget._empty_center_panel.width()
 
     def test_supported_formats_hide_with_selection_feedback(self, widget: InputArea, tmp_path) -> None:
         sample = tmp_path / "sample.docx"

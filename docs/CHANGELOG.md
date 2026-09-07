@@ -14,6 +14,7 @@
 - 输出保持完整目录和资源链接；保护清理后重名的工作表、原始来源身份、可选审计清单与整组结果的原子发布。
 - 单文件模式只保留当前输入，拖入、添加、重复打开和 Assistant 传入共用同一规则；批量切回单文件时确认保留项。运行中禁止替换输入，移除内部进程接收提示。
 - 统一主题卡片标题及边框、按钮尺寸和间距；执行按钮铺满卡片并显示目标格式或实际批量范围。简化模板区和批量列表，改善深浅主题、特大字号、长标签及窄窗口布局。
+- 保留拖拽区空状态的金字塔格式排列；窄窗口自适应缩进和换行高度，提示图标与文字空间不足时上下排列。
 - 结果卡片用状态作标题，单文件显示实际主输出及定位图标，多个结果显示数量胶囊；批量在各条目定位输出，成功、跳过和失败图标提供对应快捷操作。启动失败会清除上一次输出入口。
 - 活动记录使用可点击的胶囊入口，失败时显示警告色；统一窗口支持搜索、状态/操作筛选、排序、详情、复制和输入/输出定位。Windows 定位文件可正确处理中文、空格及逗号。
 - 14 页设置按传入、内容处理、转换软件和保存流程重排；输入页采用“传入文本、传入文档、传入表格、传入图片、传入版式文件”等名称。复选框左置，字段与软件优先级列表对齐，避免滚轮误改数值。
@@ -28,6 +29,7 @@
 - Preserve complete output trees and resource links, disambiguate sanitized sheet names, retain true source identity and publish optional audit manifests atomically with the results.
 - Apply the same single-file selection rule to drag-and-drop, file picking, reopening and Assistant input. Confirm the retained file when leaving batch mode, protect running tasks and remove internal process-receipt notices.
 - Unify themed card headers and borders, control geometry, spacing and full-width execution buttons. Simplify templates and batch lists, with improved dark themes, extra-large fonts, long labels and narrow windows.
+- Preserve the empty drop area's pyramid format overview, adapting insets and row heights at narrow widths and stacking the prompt artwork when space is limited.
 - Show semantic task states, actual primary output names, location icons and multiple-output counts. Batch rows expose their own results and status actions; failed starts clear stale output actions.
 - Open the searchable, filterable and sortable activity window from a clearly clickable pill with failure colouring. Keep details, copying and file locations together; Windows file selection supports Unicode, spaces and commas.
 - Reorganize all 14 settings pages by input, content, converter and saving responsibilities. Align fields and priority lists, place checkboxes before labels and prevent accidental value changes while scrolling.

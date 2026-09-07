@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 from typing import cast as _cast
 
 import shiboken6
-from PySide6.QtCore import QEvent, QSize, Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, QRect, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import (
     QAction,
     QCloseEvent,
@@ -74,6 +74,7 @@ _ORNAMENT_SIZE = QSize(72, 72)
 _SPACING_XS = Spacing.XS
 _SPACING_SM = Spacing.SM
 _SPACING_MD = Spacing.MD
+_PYRAMID_INDENTS = (72, 58, 44, 30, 18, 8)
 _ACTION_BUTTON_MIN_WIDTH = Sizing.BUTTON_MIN_WIDTH
 
 _SUPPORTED_TYPE_ROWS: tuple[tuple[str, str, str], ...] = tuple(
@@ -321,7 +322,7 @@ class InputArea(QFrame):
             value_label.setObjectName("fileDropTypesValueLabel")
             value_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
             value_label.setMinimumWidth(0)
-            value_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            value_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
             row_layout.addWidget(type_label, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
             row_layout.addWidget(value_label, 1)
@@ -698,17 +699,27 @@ class InputArea(QFrame):
         if not self._prompt_layout_objects_are_valid():
             return
         artwork_width = _ORNAMENT_SIZE.width() + _SPACING_SM
-        fallback_width = self._drop_group.width() - (_SPACING_MD * 4) - artwork_width
+        fallback_width = self._drop_group.width() - (_SPACING_MD * 4)
         panel_width = self._empty_center_panel.width()
-        visible_width = panel_width - artwork_width
-        available_width = max(visible_width if panel_width > 0 else fallback_width, 0)
+        available_width = max(panel_width if panel_width > 0 else fallback_width, 0)
         if available_width <= 0:
             return
         text_width = self._prompt_label.fontMetrics().horizontalAdvance(self._prompt_label.text()) + 2
+        stacked = text_width + artwork_width > available_width
+        title_layout = _cast(QBoxLayout, self._empty_title_row.layout())
+        title_layout.setDirection(QBoxLayout.Direction.TopToBottom if stacked else QBoxLayout.Direction.LeftToRight)
+        if not stacked:
+            available_width -= artwork_width
         should_wrap = text_width > available_width
         self._prompt_label.setWordWrap(should_wrap)
-        self._prompt_label.setMinimumWidth(0 if should_wrap else text_width)
-        self._prompt_label.setMaximumWidth(available_width if should_wrap else 16777215)
+        prompt_width = min(text_width, available_width)
+        self._prompt_label.setFixedWidth(prompt_width)
+        prompt_height = (
+            self._prompt_label.fontMetrics()
+            .boundingRect(QRect(0, 0, prompt_width, 100000), Qt.TextFlag.TextWordWrap, self._prompt_label.text())
+            .height()
+        )
+        self._prompt_label.setFixedHeight(prompt_height)
         self._prompt_label.updateGeometry()
 
     def _prompt_layout_objects_are_valid(self) -> bool:
@@ -782,17 +793,27 @@ class InputArea(QFrame):
         fallback_width = self._drop_group.width() - (_SPACING_MD * 4)
         panel_width = self._empty_center_panel.width()
         content_width = max(panel_width if panel_width > 0 else fallback_width, 0)
-        label_width = max(label.sizeHint().width() for _, _, label, _ in self._type_prompt_rows)
-        value_width = max(
-            value.fontMetrics().horizontalAdvance(value.text()) for _, _, _, value in self._type_prompt_rows
-        )
-        width = min(content_width, label_width + _SPACING_SM + value_width + 2)
-        self._types_container.setFixedWidth(width)
-        for row, row_layout, type_label, value_label in self._type_prompt_rows:
-            row_layout.setContentsMargins(0, 0, 0, 0)
-            type_label.setFixedWidth(label_width)
-            value_width = max(1, width - label_width - row_layout.spacing())
-            row.setMinimumHeight(max(type_label.sizeHint().height(), value_label.heightForWidth(value_width)))
+        self._types_container.setFixedWidth(content_width)
+        middle_gap = max(_SPACING_MD, 24)
+        total_height = self._types_layout.spacing() * (len(self._type_prompt_rows) - 1)
+        for index, (row, row_layout, type_label, value_label) in enumerate(self._type_prompt_rows):
+            # The empty-state format overview keeps its symmetric pyramid.
+            # Give text the available width before reserving decorative insets.
+            desired_indent = _PYRAMID_INDENTS[min(index, len(_PYRAMID_INDENTS) - 1)]
+            label_width = type_label.sizeHint().width()
+            required_width = (
+                label_width
+                + value_label.fontMetrics().horizontalAdvance(value_label.text())
+                + row_layout.spacing()
+                + middle_gap
+            )
+            actual_indent = min(desired_indent, max((content_width - required_width) // 2, 0))
+            row_layout.setContentsMargins(actual_indent, 0, actual_indent, 0)
+            value_width = max(1, content_width - 2 * actual_indent - label_width - row_layout.spacing())
+            row_height = max(type_label.sizeHint().height(), value_label.heightForWidth(value_width))
+            row.setFixedHeight(row_height)
+            total_height += row_height
+        self._types_container.setFixedHeight(total_height)
         self._types_container.updateGeometry()
 
     def _supported_type_layout_objects_are_valid(self) -> bool:
