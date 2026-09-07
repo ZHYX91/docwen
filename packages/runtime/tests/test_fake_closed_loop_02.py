@@ -162,7 +162,8 @@ class TestFullClosedLoop:
         assert len(results) == 3
         for r in results:
             assert r.success is True
-            assert len(r.artifacts) == 1
+            assert len(r.artifacts) == 2
+            assert sum(a.is_primary for a in r.artifacts) == 1
 
     def test_batch_partial_failure(self, closed_loop, tmp_path) -> None:
         """Batch: some files fail, others succeed (continue_on_error)."""
@@ -313,14 +314,14 @@ class TestFullClosedLoop:
             output_policy=OutputPolicy(output_dir=str(output_dir)),
         )
         events: list[TaskEvent] = []
-        real_prepare = OutputFinalizer._prepare_artifact
+        real_prepare = OutputFinalizer._copy_to_temp
 
         def prepare_then_cancel(*args: Any, **kwargs: Any) -> Any:
             prepared = real_prepare(*args, **kwargs)
             task_mgr.cancel(request.request_id)
             return prepared
 
-        monkeypatch.setattr(OutputFinalizer, "_prepare_artifact", staticmethod(prepare_then_cancel))
+        monkeypatch.setattr(OutputFinalizer, "_copy_to_temp", staticmethod(prepare_then_cancel))
 
         result = task_mgr.execute_single(request, on_event=events.append)
 

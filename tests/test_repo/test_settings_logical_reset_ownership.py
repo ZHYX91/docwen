@@ -39,14 +39,15 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
 
     assert export_plan.files == ("export.toml",)
     assert set(export_plan.dotted_keys) == {
+        "ocr.language",
         "conversion.ocr_output.show_blockquote_title",
         "conversion.ocr_output.blockquote_title_override_by_locale",
         "conversion.export.base64_compress_enabled",
         "conversion.export.base64_compress_threshold_kb",
     }
     assert formatting_plan.files == ()
-    assert len(formatting_plan.dotted_keys) == 34
-    assert "document.style.table.md_to_docx.table_style_mode" in formatting_plan.dotted_keys
+    assert len(formatting_plan.dotted_keys) == 22
+    assert "document.style.table.md_to_docx.table_style_mode" in reset_plan_for_group("text").dotted_keys
     assert "conversion.code_detection.code_font" not in formatting_plan.dotted_keys
     assert "conversion.export.base64_compress_enabled" not in formatting_plan.dotted_keys
     assert document_plan.files == ()
@@ -56,12 +57,12 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
 
     precise_counts = {
         "general": 4,
-        "text": 6,
+        "text": 15,
         "proofread": 6,
-        "formatting": 34,
+        "formatting": 22,
         "document": 11,
-        "spreadsheet": 7,
-        "layout": 6,
+        "spreadsheet": 4,
+        "layout": 5,
         "link": 8,
         "other": 2,
         "output": 6,

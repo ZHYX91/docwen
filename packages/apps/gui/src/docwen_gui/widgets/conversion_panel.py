@@ -44,6 +44,7 @@ from docwen_gui.format_presentation import FormatChoice, presentation_for
 from docwen_gui.i18n import t as _t
 from docwen_gui.styles.design_tokens import Sizing, Spacing
 from docwen_gui.view_models.conversion_panel_vm import BUTTON_COLORS
+from docwen_gui.widgets.value_controls import ScrollSafeComboBox
 
 from .panel_card import ActionFooter, ChoiceGroup, FormatSelector, FormRow, InlineNotice, PanelCard, WrappingLabel
 
@@ -750,7 +751,7 @@ class ConversionPanel(QWidget):
         return row, layout
 
     def _make_combo(self, items: list[str], parent: QWidget | None = None) -> QComboBox:
-        combo = QComboBox(parent or self)
+        combo = ScrollSafeComboBox(parent or self)
         combo.addItems(items)
         apply_format_swatch_icons(combo)
         combo.setMinimumWidth(100)

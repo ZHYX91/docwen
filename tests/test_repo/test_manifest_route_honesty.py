@@ -595,8 +595,12 @@ def test_remaining_plugin_source_option_reads_match_route_schemas() -> None:
         assert f'options.get("{key}"' in markdown_docx_source
         assert key in docx_properties
     assert "list_separator" not in docx_properties
-    assert '"conversion.md_to_docx.list_separator"' in markdown_docx_source
-    assert '"conversion.md_to_docx.list_separator"' in markdown_spreadsheet_source
+    policy_source = (
+        PROJECT_ROOT / "packages/plugins/markdown/src/docwen_plugin_markdown/template_policy.py"
+    ).read_text(encoding="utf-8")
+    assert '"template_fill.list_separator"' in policy_source
+    assert "template_list_separator(context.config)" in markdown_docx_source
+    assert "template_list_separator(context.config)" in markdown_spreadsheet_source
 
     spreadsheet_template_properties = MD_TO_SPREADSHEET_TEMPLATE_OPTIONS_SCHEMA["properties"]
     assert 'options", {}).get("template_name"' in markdown_spreadsheet_source

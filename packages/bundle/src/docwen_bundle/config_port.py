@@ -54,8 +54,8 @@ class ConfigPortAdapter:
     def get_file_text(self, rel_path: str) -> str | None:
         return self._loader.get_file_text(rel_path)
 
-    def save_file_text(self, rel_path: str, content: str) -> bool:
-        return self._loader.save_file_text(rel_path, content)
+    def save_file_text(self, rel_path: str, content: str, *, expected_text: str | None = None) -> bool:
+        return self._loader.save_file_text(rel_path, content, expected_text=expected_text)
 
     def reset_file(self, rel_path: str) -> bool:
         return self._loader.reset_file(rel_path)

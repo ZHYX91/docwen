@@ -579,7 +579,7 @@ class SpreadsheetToMarkdownConverter:
 
         Returns (markdown_text, stats_dict).
         """
-        file_stem = Path(input_path).stem
+        file_stem = context.request.source_stem
         stats: dict[str, int] = {"sheets": 0, "rows": 0, "cols": 0, "blocks": 0}
 
         # YAML frontmatter — routed through shared core utility (F-I2b-001)

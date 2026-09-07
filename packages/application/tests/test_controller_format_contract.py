@@ -210,6 +210,8 @@ def test_preconverted_ref_removes_source_admission_identity_and_records_provenan
     assert derived.metadata["_docwen_preconversion_source"] == {
         "path": str(source),
         "format": "doc",
+        "sha256": "",
+        "created_at": "",
         "category": "document",
         "warning_message": "warning about the original source",
         "inspection": source_inspection,

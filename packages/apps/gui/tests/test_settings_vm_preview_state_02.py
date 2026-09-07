@@ -317,7 +317,7 @@ class TestPartialPersistenceFailure:
     def test_successful_document_reset_preserves_sibling_conversion_drafts(self) -> None:
         from copy import deepcopy
 
-        from docwen_gui.view_models.settings_vm import SECTION_FORMATTING, SECTION_SOFTWARE_PRIORITY
+        from docwen_gui.view_models.settings_vm import SECTION_SOFTWARE_PRIORITY
 
         class SuccessfulDocumentResetPort:
             def __init__(self) -> None:
@@ -359,23 +359,23 @@ class TestPartialPersistenceFailure:
             "spreadsheet_processors",
             ["libreoffice", "msoffice_excel", "wps_spreadsheets"],
         )
-        vm.set_field(SECTION_FORMATTING, "body_format", "discard")
+        vm.set_field("document", "body_format", "discard")
 
         assert vm.reset_group("document") is True
 
         assert vm.config.conversion_defaults.document["to_md_keep_images"] is True
         assert vm.config.conversion_defaults.spreadsheet["to_md_keep_images"] is False
-        assert vm.config.software_priority.word_processors == ["wps_writer", "msoffice_word", "libreoffice"]
+        assert vm.config.software_priority.word_processors == ["libreoffice", "msoffice_word", "wps_writer"]
         assert vm.config.software_priority.spreadsheet_processors == [
             "libreoffice",
             "msoffice_excel",
             "wps_spreadsheets",
         ]
-        assert vm.config.formatting.body_format == "discard"
+        assert vm.config.document.body_format == "preserve"
         assert {change["field"] for change in vm.get_change_summary()} == {
             "conversion_defaults.spreadsheet",
             "software_priority.spreadsheet_processors",
-            "formatting.body_format",
+            "software_priority.word_processors",
         }
 
     def test_reset_tab_draft_ownership_covers_every_dialog_group(self) -> None:

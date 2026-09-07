@@ -40,7 +40,7 @@ class TestMarkdownExportSemanticsDefaults:
         assert s.page_break_separator == "---"
         assert s.section_break_separator == "***"
         assert s.horizontal_rule_separator == "___"
-        assert s.yaml_list_separator == "、"
+
         assert s.save_intermediate_files is False
 
     def test_frozen(self) -> None:
@@ -148,18 +148,6 @@ class TestMarkdownExportSemanticsDefaults:
 
         assert s.image_extraction_mode == "file"
         assert s.ocr_placement_mode == "main_md"
-
-    @pytest.mark.parametrize("separator", ["，", ", ", ""])
-    def test_from_config_yaml_list_separator(self, separator: str) -> None:
-        s = MarkdownExportSemantics.from_config(
-            conversion_cfg={"md_to_docx": {"list_separator": separator}},
-        )
-        assert s.yaml_list_separator == separator
-
-    def test_from_config_ignores_removed_flat_yaml_list_separator(self) -> None:
-        s = MarkdownExportSemantics.from_config(conversion_cfg={"list_separator": ";"})
-
-        assert s.yaml_list_separator == "、"
 
     def test_from_config_table_merge_strategy(self) -> None:
         s = MarkdownExportSemantics.from_config(

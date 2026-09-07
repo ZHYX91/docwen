@@ -89,7 +89,7 @@ def test_direct_single_projects_snapshot_values_without_mutating_caller(tmp_path
         source,
         request_id="single",
         config_snapshot={
-            "image": {"ocr_language": "japanese"},
+            "ocr": {"language": "japanese"},
             "gui": {"language": {"locale": "ja_JP"}},
         },
     )
@@ -110,7 +110,7 @@ def test_direct_single_preserves_present_falsey_keys(tmp_path: Path) -> None:
         request_id="falsey",
         options={"ocr_language": "", "locale": None},
         config_snapshot={
-            "image": {"ocr_language": "japanese"},
+            "ocr": {"language": "japanese"},
             "gui": {"language": {"locale": "ja_JP"}},
         },
     )
@@ -124,12 +124,12 @@ def test_direct_single_preserves_present_falsey_keys(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("request_id", "target_format", "snapshot", "expected"),
     [
-        ("partial", "md", {"image": {"ocr_language": "english"}}, {"ocr_language": "english", "locale": "zh_CN"}),
+        ("partial", "md", {"ocr": {"language": "english"}}, {"ocr_language": "english", "locale": "zh_CN"}),
         ("empty", "md", {}, {}),
         (
             "non-markdown",
             "docx",
-            {"image": {"ocr_language": "japanese"}, "gui": {"language": {"locale": "ja_JP"}}},
+            {"ocr": {"language": "japanese"}, "gui": {"language": {"locale": "ja_JP"}}},
             {},
         ),
     ],
@@ -171,7 +171,7 @@ def test_direct_batch_projects_each_derived_request(tmp_path: Path) -> None:
         action_name="capture_ocr_options",
         options={},
         config_snapshot={
-            "image": {"ocr_language": "english"},
+            "ocr": {"language": "english"},
             "gui": {"language": {"locale": "en_US"}},
         },
     )

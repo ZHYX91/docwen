@@ -31,17 +31,17 @@ save_failed = "설정 저장 실패"
 # 状态栏
 # =============================================================================
 [info_area]
+output_each_source = "각 결과를 원본 파일 폴더에 저장"
+output_date_subfolder = "날짜 하위 폴더에 저장"
 task_warning_count = "변환 알림 {count}개가 있습니다. 활동 기록을 펼쳐 확인하세요."
 task_progress_percent = "진행률:{percent}%"
 task_state_skipped = "건너뜀"
 batch_name = "일괄 처리 (파일 {count}개)"
 aggregate_name = "병합 (파일 {count}개)"
 activity_count = "작업 기록 ({count})"
-clear_history = "작업 기록 지우기"
 notice_title = "알림"
 task_state_cancelling = "취소 중"
 copy_path = "경로 복사"
-open_location = "파일 위치 열기: {path}"
 ipc_file_missing = "IPC 파일이 없습니다: {path}"
 font_size_applied = "글자 크기: {label}"
 
@@ -54,12 +54,12 @@ history_completed = "완료: {name}"
 task_state_partial = "일부 실패"
 task_state_failed = "실패"
 task_state_cancelled = "취소됨"
-task_current_file = "작업 파일: {name}"
+task_current_file = "처리 중: {name}"
 task_progress_detail = "완료 {completed}/{total}, 실패 {failed}"
 history_started = "시작: {name}"
 task_skipped_count = "건너뜀: {skipped}"
 task_cancelled_count = "취소됨: {cancelled}"
-task_guide_open_output_dir = "출력 폴더 열기"
+task_output_file = "출력 파일: {name}"
 task_guide_view_failed_details = "실패 상세 보기"
 task_guide_retry_failed = "실패 항목 다시 시도"
 window_topmost_enabled = "창을 항상 위에 표시합니다. Ctrl+Shift+T로 해제할 수 있습니다."
@@ -108,7 +108,7 @@ doctor = "진단 실행"
 gongwen = "공문"
 
 # 校对选项
-invoice_cn = "중국 송장(invoice_cn)"
+invoice_cn = "중국 송장"
 [cli.interactive.proofread]
 
 # 提示文本
@@ -157,11 +157,12 @@ document = "입력 문서"
 spreadsheet = "입력 스프레드시트"
 image = "입력 이미지"
 layout = "입력 고정 레이아웃 파일"
-other = "기타"
+other = "기타 입력 파일"
 link = "링크"
 formatting = "Markdown 문법"
 output = "파일 저장"
 logging = "로그"
+software = "변환 소프트웨어"
 
 [settings.descriptions]
 general = "언어, 테마 등 전역 설정"
@@ -302,6 +303,9 @@ save_numbering_clean_rules_failed = "번호 정리 규칙을 저장하지 못했
 # -----------------------------------------------------------------------------
 # 文档设置选项卡
 # -----------------------------------------------------------------------------
+input_description = "입력 Markdown의 문서 생성, 템플릿 채우기 및 제목 처리를 설정합니다."
+template_fill_section = "템플릿 채우기"
+template_fill_desc = "Word 및 스프레드시트 템플릿의 YAML 목록 값을 연결하는 구분자입니다. 빈 문자열과 공백은 그대로 유지됩니다."
 [settings.proofread]
 validation_section = "교정 규칙"
 enable_symbol_pairing = "기호 짝 검사 사용"
@@ -310,13 +314,13 @@ enable_typos_rule = "오타 감지 사용"
 enable_sensitive_word = "주의 용어 검사 사용"
 skip_code_blocks = "코드 블록 제외"
 skip_quote_blocks = "인용 블록 제외"
-symbol_mapping_section = "기호 매핑 편집기"
-symbol_mapping_desc = "기호 짝 및 교정 규칙을 관리합니다."
-symbol_correction_section = "기호 교정 편집기"
+symbol_mapping_section = "문장 부호 짝 규칙"
+symbol_mapping_desc = "여는 부호와 닫는 부호가 올바르게 짝을 이루는지 확인합니다."
+symbol_correction_section = "기호 교정 규칙"
 symbol_correction_desc = "전각 및 반각 기호의 교정 항목을 관리합니다."
-typos_section = "오타 사전 편집기"
+typos_section = "오타 사전"
 typos_desc = "자주 발생하는 오타의 교정 항목을 관리합니다."
-sensitive_words_section = "주의 용어 편집기"
+sensitive_words_section = "민감 단어 사전"
 sensitive_words_desc = "주의 용어 감지 항목을 관리합니다."
 edit = "편집"
 
@@ -372,7 +376,6 @@ enable_optimization = "기본으로 \"문서 유형 최적화\" 사용"
 optimization_type_label = "기본 최적화 유형:"
 
 # 软件优先级
-software_section = "소프트웨어 우선순위"
 word_processors_label = "문서 처리 소프트웨어 우선순위"
 odt_conversion_label = "ODT 형식 변환"
 document_to_pdf_label = "문서 → PDF"
@@ -403,7 +406,6 @@ enable_ocr_tooltip = "스프레드시트 → MD 변환 시 기본으로 \"이미
 merge_mode_section = "병합 모드 설정"
 merge_mode_desc = "표 병합의 기본 모드를 설정합니다"
 default_merge_mode_label = "기본 병합 모드:"
-software_section = "소프트웨어 우선순위"
 spreadsheet_processors_label = "스프레드시트 처리 소프트웨어 우선순위"
 ods_conversion_label = "ODS 형식 변환"
 spreadsheet_to_pdf_label = "스프레드시트 → PDF"
@@ -418,7 +420,6 @@ by_cell = "셀 기준 병합"
 [settings.spreadsheet.software]
 wps_spreadsheets = "WPS Spreadsheets"
 excel = "Excel"
-libreoffice = "LibreOffice"
 
 # -----------------------------------------------------------------------------
 # 图片设置选项卡
@@ -433,16 +434,6 @@ enable_optimization = "기본으로 \"이미지 유형 최적화\" 활성화"
 optimization_type_label = "기본 최적화 유형:"
 
 # OCR语言设置
-ocr_language_label = "OCR 인식 언어:"
-ocr_language_tooltip = "OCR 문자 인식에 사용할 언어 모델을 선택합니다.\n\n• 인터페이스 언어 따름: 현재 인터페이스 언어에 따라 자동 선택\n• 중국어/영어: 중국어·영어 혼합 문서에 적합\n• 일본어: 일본어 문서에 적합\n• 라틴 문자권: 독일어, 프랑스어, 포르투갈어 등에 적합\n• 키릴 문자권: 러시아어 등에 적합"
-ocr_language_auto = "인터페이스 언어 따름"
-ocr_language_chinese = "중국어/영어"
-ocr_language_japanese = "일본어"
-ocr_language_chinese_cht = "중국어 번체"
-ocr_language_english = "영어만"
-ocr_language_korean = "한국어"
-ocr_language_latin = "라틴 문자권(독/프/포 등)"
-ocr_language_cyrillic = "키릴 문자권(러시아어 등)"
 
 compress_section = "압축 옵션 설정"
 compress_desc = "이미지 형식 변환의 기본 압축 모드를 설정합니다"
@@ -476,7 +467,6 @@ render_dpi_label = "Render DPI:"
 dpi_min = "최소(150)"
 dpi_medium = "중간(300)"
 dpi_high = "고품질(600)"
-software_section = "소프트웨어 우선순위"
 pdf_to_doc_label = "PDF → 문서"
 
 # -----------------------------------------------------------------------------
@@ -781,6 +771,53 @@ critical = "심각 (CRITICAL)"
 # =============================================================================
 # 关于对话框
 # =============================================================================
+
+[settings.software]
+priority = "소프트웨어 우선순위"
+description = "설치된 소프트웨어를 이 순서로 시도합니다. 사용 가능 여부는 변환 형식에 따라 달라집니다."
+presentation_processors = "프레젠테이션 소프트웨어"
+wps_presentation = "WPS Presentation"
+powerpoint = "PowerPoint"
+
+[settings.ocr]
+language_label = "OCR 인식 언어:"
+language_tooltip = "모든 입력 형식에 공통으로 적용할 OCR 언어입니다."
+language_auto = "인터페이스 언어 따름"
+language_chinese = "중국어/영어"
+language_japanese = "일본어"
+language_chinese_cht = "중국어 번체"
+language_english = "영어만"
+language_korean = "한국어"
+language_latin = "라틴 문자권(독/프/포 등)"
+language_cyrillic = "키릴 문자권(러시아어 등)"
+section = "OCR 인식"
+
+[settings.rule_transfer]
+read_failed = "현재 규칙 설정을 읽을 수 없습니다."
+added = "추가"
+unchanged = "변경 없음"
+conflict = "차이 있음"
+existing_only = "기존에만 있음"
+change = "변경"
+rule = "규칙"
+current = "현재"
+incoming = "가져올 내용"
+preview = "규칙 가져오기 미리 보기"
+summary = "추가 {added} · 차이 {conflict} · 변경 없음 {unchanged} · 기존에만 있음 {existing_only}"
+strategy = "가져오기 방식"
+merge = "기존 규칙과 병합"
+replace = "모든 규칙 바꾸기"
+strategy_hint = "병합은 기존 항목을 유지하며 같은 키의 값과 메모를 합칩니다. 바꾸기는 가져오는 파일에 없는 항목을 제거합니다."
+merge_unavailable = "충돌하는 문장 부호 쌍은 병합할 수 없습니다. 취소하여 파일을 수정하거나 바꾸기를 선택하세요."
+confirm = "가져오기 확인"
+source_changed = "미리 보기 중 규칙이 변경되었습니다. 다시 가져와 최신 차이를 확인하세요."
+save_failed = "저장하지 못했습니다. 원래 규칙은 유지됩니다."
+import = "가져오기…"
+import_failed = "가져오기 실패"
+imported = "규칙을 가져왔습니다."
+export = "내보내기…"
+export_failed = "내보내기 실패"
+exported = "모든 규칙을 내보냈습니다."
 [about]
 title = "정보"
 version_info = "버전 {version}"
@@ -874,8 +911,6 @@ no_batch_files = "배치 파일이 없습니다"
 retry_selected_failed = "선택한 실패 항목 다시 시도"
 retry_all_failed = "이 탭의 모든 실패 항목 다시 시도"
 total_files = "총 {total}개 파일"
-total_files_selected = "총 {total}개 파일, 선택됨: {current_name}"
-action_open_output = "출력 열기"
 action_view_skip = "건너뛰기 보기"
 action_view_error = "오류 보기"
 action_remove = "제거"
@@ -1288,7 +1323,7 @@ letter_number_desc = "매칭: A. / A) / (A) / a. / a) 문자 번호"
 # 映射编辑器
 [editors.mapping]
 # 对话框标题
-symbol_editor_title = "문장부호 매핑 편집기"
+symbol_editor_title = "문장 부호 짝 규칙"
 typo_editor_title = "오탈자 사전 편집기"
 sensitive_editor_title = "주의 용어 편집기"
 # 下拉选择标签
@@ -1327,14 +1362,14 @@ merge = "병합"
 # 文件类型分类
 # =============================================================================
 search_placeholder = "키, 값 또는 설명 검색"
-source_symbol = "원본 기호"
-target_symbol = "대상 기호"
 typo = "오타"
 corrections = "교정 항목"
 multi_value_hint = "팁: 여러 값은 | 로 구분하세요(예: 값1|값2|값3)"
 save_typos_failed = "오타 사전을 저장하지 못했습니다."
 save_symbol_correction_failed = "기호 교정 항목을 저장하지 못했습니다."
 save_sensitive_words_failed = "주의 용어 사전을 저장하지 못했습니다."
+opening_symbol = "여는 부호"
+closing_symbol = "닫는 부호"
 [file_types]
 document = "문서"
 spreadsheet = "스프레드시트"
@@ -1576,6 +1611,8 @@ subtitle = "부제"
 
 
 [main_window]
+file_admission_missing = "입력 파일이 없거나 이동되었습니다: {path}"
+file_admission_unreadable = "입력 파일을 읽을 수 없습니다: {path}"
 extension_loss_endnotes = "미주를 일반 Markdown 각주로 변환했습니다."
 extension_loss_headings = "7~9단계 제목을 6단계 제목으로 변환했습니다."
 extension_loss_references = "캡션과 상호 참조를 표시 텍스트로 변환했습니다."
@@ -1635,3 +1672,32 @@ captions_references = "Number Suite 캡션 및 상호 참조"
 extended_headings = "7~9단계 제목"
 typed_endnotes = "유형이 있는 각주 및 미주"
 obsidian_preset = "Obsidian 확장 사용"
+
+[activity]
+record_unavailable = "이 활동 기록은 삭제되었거나 사용할 수 없습니다."
+title = "활동 기록"
+search = "파일 이름 또는 활동 검색"
+all_statuses = "모든 상태"
+all_operations = "모든 작업"
+time = "시간"
+status = "상태"
+file = "파일"
+operation = "작업"
+details = "세부 정보"
+select_record = "기록을 선택하여 세부 정보 보기"
+clear_finished = "종료된 기록 지우기"
+info = "알림"
+warning = "경고"
+merge = "병합"
+split = "분할"
+numbering = "번호 매기기"
+validate = "검증"
+input = "입력"
+output = "출력"
+failed_count = "활동 기록 · {count}개 실패"
+
+[file_locations]
+input = "입력 파일 위치 열기"
+output = "출력 파일 위치 열기"
+multiple = "총 {count}개"
+show_outputs = "모든 출력 파일 보기"

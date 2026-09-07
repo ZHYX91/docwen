@@ -125,7 +125,7 @@ class TestFullClosedLoop:
         result = controller.execute_single(request)
 
         assert result.success is True
-        assert len(result.artifacts) == 2
+        assert len(result.artifacts) == 3
         auxiliary = next(artifact for artifact in result.artifacts if artifact.kind == "auxiliary")
         assert auxiliary.suggested_name == "legacy_fromDoc.docx"
         assert auxiliary.metadata["source"] == "preconversion"
@@ -427,6 +427,7 @@ class TestFullClosedLoop:
         plugin = FakeClosedLoopPlugin("preconversion-token-cancel", "docx", "md")
 
         def return_failure_after_cancel(context: Any) -> ConversionResult:
+            manager.cancel(request_id)
             assert context.cancellation.is_cancelled is True
             return ConversionResult(
                 task_id=context.request.request_id,
@@ -473,7 +474,6 @@ class TestFullClosedLoop:
             output_policy=OutputPolicy(output_dir=str(output_dir)),
         )
         events: list[TaskEvent] = []
-        manager.cancel(request_id)
 
         result = manager.execute_single(request, on_event=events.append)
 

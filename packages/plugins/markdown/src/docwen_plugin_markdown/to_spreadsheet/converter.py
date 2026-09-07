@@ -6,7 +6,7 @@ import csv
 import re
 import secrets
 import time
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import unquote
 
@@ -30,6 +30,7 @@ from docwen_plugin_markdown.common_utils import (
     read_input_markdown,
     write_table_to_csv,
 )
+from docwen_plugin_markdown.template_policy import template_list_separator
 from docwen_plugin_markdown.to_spreadsheet.template_xlsx import (
     build_template_workbook,
     process_image_placeholders,
@@ -45,10 +46,7 @@ _IMAGE_PLACEHOLDER_RE = re.compile(r"\{\{IMAGE:([^}]+)\}\}")
 
 def _source_stem(context: ConverterContext) -> str:
     """Use the declared document name instead of a private staging filename."""
-    source = next((item for item in context.request.input_refs if item.input_role == "source"), None)
-    if source is not None and source.logical_path:
-        return PurePosixPath(source.logical_path).stem
-    return Path(context.workspace.input_path).stem
+    return context.request.source_stem
 
 
 def _request_link_config(context: ConverterContext) -> LinkRuntimeConfig:
@@ -57,14 +55,6 @@ def _request_link_config(context: ConverterContext) -> LinkRuntimeConfig:
     if not isinstance(raw_config, dict):
         raw_config = {}
     return LinkRuntimeConfig.from_config(raw_config)
-
-
-def _request_yaml_list_separator(context: ConverterContext) -> str:
-    """Resolve the exact YAML list separator from this request snapshot."""
-    raw = context.config.get("conversion.md_to_docx.list_separator", None)
-    if raw is None:
-        return "、"
-    return str(raw)
 
 
 def _image_placeholder_re(image_scope: str | None) -> re.Pattern[str]:
@@ -173,7 +163,7 @@ class MdToXlsxConverter:
                     template_path,
                     source_stem=_source_stem(context),
                     image_scope=image_scope,
-                    list_separator=_request_yaml_list_separator(context),
+                    list_separator=template_list_separator(context.config),
                     structural_tables=resolve_markdown_extensions(
                         context.request.options, context.config, direction="input"
                     ).structural_tables,
@@ -363,7 +353,7 @@ class MdToCsvConverter:
                     template_path,
                     source_stem=_source_stem(context),
                     image_scope=image_scope,
-                    list_separator=_request_yaml_list_separator(context),
+                    list_separator=template_list_separator(context.config),
                     structural_tables=resolve_markdown_extensions(
                         context.request.options, context.config, direction="input"
                     ).structural_tables,
@@ -501,7 +491,6 @@ class MdToCsvConverter:
         workspace = context.workspace
 
         input_stem = _source_stem(context)
-        folder_name = f"{input_stem}_fromMd"
         artifacts: list[ArtifactManifest] = []
         total_output_bytes = 0
 
@@ -513,7 +502,7 @@ class MdToCsvConverter:
             worksheet = workbook[sheet_name]
             csv_path = workspace.create_artifact_path(ARTIFACT_KIND_PRIMARY, f"_{idx}.csv")
             safe_sheet = _csv_safe_sheet_name(sheet_name)
-            suggested = f"{folder_name}/{input_stem}_{safe_sheet}_fromMd.csv"
+            suggested = f"{input_stem}_{safe_sheet}.csv"
 
             _write_worksheet_to_csv(worksheet, csv_path)
 
@@ -531,7 +520,6 @@ class MdToCsvConverter:
                     "source_format": "markdown",
                     "target_format": "csv",
                     "template_name": template_name,
-                    "csv_output_folder": folder_name,
                     "sheet_name": sheet_name,
                     "sheet_index": idx,
                     **template_stats,
@@ -542,7 +530,7 @@ class MdToCsvConverter:
 
         elapsed_ms = (time.monotonic() - t_start) * 1000.0
         progress.report_progress(100.0, "Done")
-        logger.info(f"MD→CSV template chain complete: {input_path} → {folder_name} ({len(artifacts)} sheet(s))")
+        logger.info(f"MD→CSV template chain complete: {input_path} ({len(artifacts)} sheet(s))")
 
         return ConversionResult(
             task_id=task_id,

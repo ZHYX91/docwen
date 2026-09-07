@@ -36,11 +36,14 @@ from docwen_runtime.output.document_node import (
     plan_document_node_layout,
     relocated_markdown_bytes,
 )
+from docwen_runtime.output.node_audit import stage_node_audit
 from docwen_runtime.path_io import filesystem_path
 
 if TYPE_CHECKING:
+    from docwen_core.models.document_node import ConversionIdentity
     from docwen_core.models.request import OutputPolicy
     from docwen_core.protocols.execution_context import CancellationTokenView
+    from docwen_runtime.output.manifest import OutputManifestDocument
 
 
 _TEMP_PREFIX = ".__docwen-finalizer-"
@@ -112,6 +115,9 @@ class OutputFinalizer:
         duration_ms: float = 0.0,
         input_bytes: int = 0,
         cancellation: CancellationTokenView | None = None,
+        group_outputs: bool = False,
+        identity: ConversionIdentity | None = None,
+        audit_document: OutputManifestDocument | None = None,
     ) -> ConversionResult:
         """Finalize a set of artifacts.
 
@@ -129,7 +135,7 @@ class OutputFinalizer:
         self._check_cancellation(cancellation)
         output_dir = self._resolve_output_dir(policy, input_path)
         node_plan: DocumentNodeLayoutPlan | None = None
-        if has_markdown_artifacts(artifacts):
+        if artifacts and (group_outputs or has_markdown_artifacts(artifacts)):
             in_place_markdown = bool(
                 policy.output_path
                 and input_path
@@ -137,7 +143,7 @@ class OutputFinalizer:
                 == os.path.normcase(os.path.abspath(input_path))
             )
             if policy.output_path and not in_place_markdown:
-                raise ValueError("Markdown output requires an output parent directory, not output_path")
+                raise ValueError("Grouped conversion output requires an output parent directory, not output_path")
             if in_place_markdown:
                 artifacts = self._artifacts_for_policy(artifacts, policy)
             else:
@@ -145,6 +151,7 @@ class OutputFinalizer:
                     task_id=task_id,
                     artifacts=artifacts,
                     input_path=input_path,
+                    identity=identity,
                 )
                 artifacts = list(node_plan.artifacts)
         else:
@@ -161,6 +168,7 @@ class OutputFinalizer:
                     duration_ms=duration_ms,
                     input_bytes=input_bytes,
                     cancellation=cancellation,
+                    audit_document=audit_document,
                 )
             return self._finalize_locked(
                 task_id,
@@ -344,8 +352,9 @@ class OutputFinalizer:
         duration_ms: float,
         input_bytes: int,
         cancellation: CancellationTokenView | None,
+        audit_document: OutputManifestDocument | None = None,
     ) -> ConversionResult:
-        """Publish a complete Markdown node through one directory commit."""
+        """Publish a complete conversion result through one directory commit."""
 
         self._check_cancellation(cancellation)
         output_io = self._io_path(output_dir)
@@ -371,7 +380,7 @@ class OutputFinalizer:
 
         final_root = os.path.abspath(os.path.join(output_dir, selected.root_name))
         self._ensure_contained(output_dir, final_root)
-        source_sha256 = self._sha256_if_file(input_path, cancellation)
+        source_sha256 = selected.identity.source_sha256 or self._sha256_if_file(input_path, cancellation)
         if policy.overwrite_mode == "skip" and self._io_path(final_root).exists():
             return self._reuse_document_node(
                 task_id,
@@ -430,6 +439,23 @@ class OutputFinalizer:
                     }
                 )
 
+            if audit_document is not None:
+                audit = stage_node_audit(selected, temp_root, audit_document)
+                size_bytes, sha256 = self._file_integrity(audit.staging_path, cancellation)
+                output_bytes += size_bytes
+                manifest_artifacts.append(
+                    {
+                        "artifact_id": audit.artifact_id,
+                        "kind": audit.kind,
+                        "logical_path": audit.logical_path,
+                        "media_type": audit.media_type,
+                        "role": "audit",
+                        "size_bytes": size_bytes,
+                        "sha256": sha256,
+                    }
+                )
+                selected = replace(selected, artifacts=(*selected.artifacts, audit))
+
             manifest_relative = "docwen-node.json"
             manifest_temp = os.path.join(temp_root, manifest_relative)
             manifest_document = {
@@ -438,7 +464,8 @@ class OutputFinalizer:
                 "node_name": selected.root_name,
                 "created_at": selected.identity.created_at_utc,
                 "source": {
-                    "name": os.path.basename(input_path) if input_path else "",
+                    "name": selected.identity.source_name,
+                    "stem": selected.identity.source_stem,
                     "format": selected.identity.source_format,
                     "sha256": source_sha256,
                 },

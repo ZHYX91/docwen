@@ -31,17 +31,17 @@ save_failed = "設定の保存に失敗しました"
 # 状态栏
 # =============================================================================
 [info_area]
+output_each_source = "各結果を元のファイルと同じフォルダーに保存"
+output_date_subfolder = "日付のサブフォルダーに保存"
 task_warning_count = "変換に関する通知が {count} 件あります。操作履歴を展開して確認してください。"
 task_progress_percent = "進捗：{percent}%"
 task_state_skipped = "スキップ"
 batch_name = "一括処理（{count} ファイル）"
 aggregate_name = "結合（{count} ファイル）"
 activity_count = "履歴（{count}）"
-clear_history = "履歴を消去"
 notice_title = "通知"
 task_state_cancelling = "キャンセル中"
 copy_path = "パスをコピー"
-open_location = "ファイルの場所を開く: {path}"
 ipc_file_missing = "IPC ファイルが存在しません: {path}"
 font_size_applied = "文字サイズ：{label}"
 
@@ -54,12 +54,12 @@ history_completed = "完了：{name}"
 task_state_partial = "一部失敗"
 task_state_failed = "失敗"
 task_state_cancelled = "キャンセル済み"
-task_current_file = "処理対象：{name}"
+task_current_file = "処理中：{name}"
 task_progress_detail = "完了 {completed}/{total}、失敗 {failed}"
 history_started = "開始: {name}"
 task_skipped_count = "スキップ：{skipped}"
 task_cancelled_count = "キャンセル：{cancelled}"
-task_guide_open_output_dir = "出力フォルダーを開く"
+task_output_file = "出力ファイル：{name}"
 task_guide_view_failed_details = "失敗詳細を表示"
 task_guide_retry_failed = "失敗項目を再試行"
 window_topmost_enabled = "ウィンドウを最前面に固定しました。Ctrl+Shift+T でもう一度切り替えられます。"
@@ -108,7 +108,7 @@ doctor = "診断を実行"
 gongwen = "公文書"
 
 # 校对选项
-invoice_cn = "中国の請求書（invoice_cn）"
+invoice_cn = "中国の請求書"
 [cli.interactive.proofread]
 
 # 提示文本
@@ -157,11 +157,12 @@ document = "入力文書"
 spreadsheet = "入力スプレッドシート"
 image = "入力画像"
 layout = "入力固定レイアウトファイル"
-other = "その他"
+other = "その他の入力ファイル"
 link = "リンク"
 formatting = "Markdown 構文"
 output = "ファイル保存"
 logging = "ログ"
+software = "変換ソフト"
 
 [settings.descriptions]
 general = "言語やテーマなどの全体設定"
@@ -302,6 +303,9 @@ save_numbering_clean_rules_failed = "番号除去ルールを保存できませ�
 # -----------------------------------------------------------------------------
 # 文档设置选项卡
 # -----------------------------------------------------------------------------
+input_description = "入力 Markdown の文書生成、テンプレートへの入力、見出し処理を設定します。"
+template_fill_section = "テンプレートへの入力"
+template_fill_desc = "Word・表計算テンプレートに YAML リストを入力する際の区切り文字です。空文字と空白はそのまま保持されます。"
 [settings.proofread]
 validation_section = "校正ルール"
 enable_symbol_pairing = "記号の対応チェックを有効にする"
@@ -310,13 +314,13 @@ enable_typos_rule = "誤字の検出を有効にする"
 enable_sensitive_word = "要注意語のチェックを有効にする"
 skip_code_blocks = "コードブロックを除外する"
 skip_quote_blocks = "引用ブロックを除外する"
-symbol_mapping_section = "記号対応エディター"
-symbol_mapping_desc = "記号の対応と補正のルールを管理します。"
-symbol_correction_section = "記号補正エディター"
+symbol_mapping_section = "句読点のペア規則"
+symbol_mapping_desc = "開始記号と終了記号が正しく対応しているか確認します。"
+symbol_correction_section = "記号の修正规則"
 symbol_correction_desc = "全角・半角記号の補正項目を管理します。"
-typos_section = "誤字辞書エディター"
+typos_section = "誤字辞書"
 typos_desc = "よくある誤字の補正項目を管理します。"
-sensitive_words_section = "要注意語エディター"
+sensitive_words_section = "注意語辞書"
 sensitive_words_desc = "要注意語の検出項目を管理します。"
 edit = "編集"
 
@@ -372,7 +376,6 @@ enable_optimization = "デフォルトで「ドキュメントタイプに合わ
 optimization_type_label = "デフォルトの最適化タイプ："
 
 # 软件优先级
-software_section = "ソフトウェア優先順位"
 word_processors_label = "ドキュメント処理ソフトウェアの優先順位"
 odt_conversion_label = "ODT形式変換"
 document_to_pdf_label = "ドキュメントからPDF"
@@ -403,7 +406,6 @@ enable_ocr_tooltip = "スプレッドシートをMDに変換する際、デフ�
 merge_mode_section = "結合モード設定"
 merge_mode_desc = "テーブル結合のデフォルトモードを設定します"
 default_merge_mode_label = "既定の結合モード："
-software_section = "ソフトウェア優先順位"
 spreadsheet_processors_label = "スプレッドシート処理ソフトウェアの優先順位"
 ods_conversion_label = "ODS形式変換"
 spreadsheet_to_pdf_label = "スプレッドシートからPDF"
@@ -418,7 +420,6 @@ by_cell = "セルで結合"
 [settings.spreadsheet.software]
 wps_spreadsheets = "WPS Spreadsheets"
 excel = "Excel"
-libreoffice = "LibreOffice"
 
 # -----------------------------------------------------------------------------
 # 图片设置选项卡
@@ -433,16 +434,6 @@ enable_optimization = "デフォルトで「画像タイプに合わせて最適
 optimization_type_label = "デフォルトの最適化タイプ："
 
 # OCR语言设置
-ocr_language_label = "OCR認識言語:"
-ocr_language_tooltip = "OCR文字認識で使用する言語モデルを選択します。\n\n• UI言語に従う：現在のUI言語に合わせて自動選択\n• 中国語/英語：中国語と英語の混在文書に適しています\n• 日本語：日本語文書に適しています\n• ラテン文字系：ドイツ語・フランス語・ポルトガル語などに適しています\n• キリル文字系：ロシア語などに適しています"
-ocr_language_auto = "UI言語に従う"
-ocr_language_chinese = "中国語/英語"
-ocr_language_japanese = "日本語"
-ocr_language_chinese_cht = "繁体字中国語"
-ocr_language_english = "英語のみ"
-ocr_language_korean = "韓国語"
-ocr_language_latin = "ラテン文字系（独/仏/葡など）"
-ocr_language_cyrillic = "キリル文字系（露など）"
 
 compress_section = "圧縮オプション設定"
 compress_desc = "画像形式変換のデフォルト圧縮モードを設定します"
@@ -476,7 +467,6 @@ render_dpi_label = "Render DPI:"
 dpi_min = "最小 (150)"
 dpi_medium = "中 (300)"
 dpi_high = "高品質 (600)"
-software_section = "ソフトウェア優先順位"
 pdf_to_doc_label = "PDFからドキュメント"
 
 # -----------------------------------------------------------------------------
@@ -781,6 +771,53 @@ critical = "重大 (CRITICAL)"
 # =============================================================================
 # 关于对话框
 # =============================================================================
+
+[settings.software]
+priority = "ソフトの優先順位"
+description = "インストール済みのソフトをこの順に試します。利用できるソフトは変換形式によって異なります。"
+presentation_processors = "プレゼンテーションソフト"
+wps_presentation = "WPS Presentation"
+powerpoint = "PowerPoint"
+
+[settings.ocr]
+language_label = "OCR認識言語:"
+language_tooltip = "すべての入力形式で使用する OCR 認識言語。"
+language_auto = "UI言語に従う"
+language_chinese = "中国語/英語"
+language_japanese = "日本語"
+language_chinese_cht = "繁体字中国語"
+language_english = "英語のみ"
+language_korean = "韓国語"
+language_latin = "ラテン文字系（独/仏/葡など）"
+language_cyrillic = "キリル文字系（露など）"
+section = "OCR 認識"
+
+[settings.rule_transfer]
+read_failed = "現在のルール設定を読み込めません。"
+added = "追加"
+unchanged = "変更なし"
+conflict = "相違あり"
+existing_only = "既存のみ"
+change = "変更"
+rule = "ルール"
+current = "現在"
+incoming = "読み込み内容"
+preview = "ルールの読み込みプレビュー"
+summary = "追加 {added} · 相違 {conflict} · 変更なし {unchanged} · 既存のみ {existing_only}"
+strategy = "読み込み方法"
+merge = "既存のルールと統合"
+replace = "すべてのルールを置換"
+strategy_hint = "統合は既存の項目を保持し、同じキーの値とメモをまとめます。置換は読み込みファイルにない項目を削除します。"
+merge_unavailable = "競合する記号ペアは統合できません。キャンセルしてファイルを修正するか、置換を選択してください。"
+confirm = "読み込みを確定"
+source_changed = "プレビュー中にルールが変更されました。再度読み込んで最新の差分を確認してください。"
+save_failed = "保存に失敗しました。元のルールは保持されています。"
+import = "読み込み…"
+import_failed = "読み込み失敗"
+imported = "ルールを読み込みました。"
+export = "書き出し…"
+export_failed = "書き出し失敗"
+exported = "すべてのルールを書き出しました。"
 [about]
 title = "バージョン情報"
 version_info = "バージョン {version}"
@@ -874,8 +911,6 @@ no_batch_files = "バッチファイルがありません"
 retry_selected_failed = "選択した失敗項目を再試行"
 retry_all_failed = "このタブの失敗項目をすべて再試行"
 total_files = "合計 {total} 件"
-total_files_selected = "合計 {total} 件、選択中: {current_name}"
-action_open_output = "出力を開く"
 action_view_skip = "スキップ理由"
 action_view_error = "エラー詳細"
 action_remove = "削除"
@@ -1288,7 +1323,7 @@ letter_number_desc = "マッチ：A. / A) / (A) / a. / a) 文字番号"
 # 映射编辑器
 [editors.mapping]
 # 对话框标题
-symbol_editor_title = "句読点マッピングエディタ"
+symbol_editor_title = "句読点のペア規則"
 typo_editor_title = "誤字辞書エディタ"
 sensitive_editor_title = "注意用語エディタ"
 # 下拉选择标签
@@ -1327,14 +1362,14 @@ merge = "マージ"
 # 文件类型分类
 # =============================================================================
 search_placeholder = "キー、値、コメントを検索"
-source_symbol = "変換元の記号"
-target_symbol = "変換先の記号"
 typo = "誤字"
 corrections = "修正候補"
 multi_value_hint = "ヒント：複数の値は | で区切ります（例：値1|値2|値3）"
 save_typos_failed = "誤字辞書を保存できませんでした。"
 save_symbol_correction_failed = "記号補正の項目を保存できませんでした。"
 save_sensitive_words_failed = "要注意語辞書を保存できませんでした。"
+opening_symbol = "開始記号"
+closing_symbol = "終了記号"
 [file_types]
 document = "ドキュメント"
 spreadsheet = "スプレッドシート"
@@ -1576,6 +1611,8 @@ subtitle = "サブタイトル"
 
 
 [main_window]
+file_admission_missing = "入力ファイルが存在しないか、移動されています：{path}"
+file_admission_unreadable = "入力ファイルを読み取れません：{path}"
 extension_loss_endnotes = "文末脚注を通常の Markdown 脚注に変換しました。"
 extension_loss_headings = "レベル 7～9 の見出しをレベル 6 に変換しました。"
 extension_loss_references = "キャプションと相互参照を表示テキストに変換しました。"
@@ -1635,3 +1672,32 @@ captions_references = "Number Suite のキャプションと相互参照"
 extended_headings = "レベル 7～9 の見出し"
 typed_endnotes = "種類を区別する脚注と文末脚注"
 obsidian_preset = "Obsidian 拡張を使用"
+
+[activity]
+record_unavailable = "このアクティビティ記録は削除されたか、利用できません。"
+title = "操作履歴"
+search = "ファイル名または履歴を検索"
+all_statuses = "すべての状態"
+all_operations = "すべての操作"
+time = "時刻"
+status = "状態"
+file = "ファイル"
+operation = "操作"
+details = "詳細"
+select_record = "履歴を選択すると詳細を表示します"
+clear_finished = "終了した履歴を消去"
+info = "通知"
+warning = "警告"
+merge = "結合"
+split = "分割"
+numbering = "番号付け"
+validate = "検証"
+input = "入力"
+output = "出力"
+failed_count = "操作履歴 · {count} 件失敗"
+
+[file_locations]
+input = "入力ファイルの場所を開く"
+output = "出力ファイルの場所を開く"
+multiple = "計 {count} 件"
+show_outputs = "すべての出力ファイルを表示"

@@ -53,7 +53,8 @@ class TestPartialPersistenceFailure:
                 True,
             ),
             ("link", ("link", "max_depth"), 10, 3),
-            ("formatting", ("formatting", "body_format"), "discard", "preserve"),
+            ("formatting", ("formatting", "bold_syntax"), "underscore", "asterisk"),
+            ("document", ("document", "body_format"), "discard", "preserve"),
             ("output", ("output", "output_mode"), "custom", "source"),
             ("export", ("export", "image_mode"), "base64", "file"),
             ("logging", ("logging", "level"), "warning", "debug"),
@@ -185,7 +186,6 @@ class TestPartialPersistenceFailure:
         from docwen_gui.view_models.settings_vm import (
             SECTION_CONVERSION_DEFAULTS,
             SECTION_EXPORT,
-            SECTION_FORMATTING,
             SECTION_TEXT,
         )
 
@@ -225,9 +225,9 @@ class TestPartialPersistenceFailure:
         vm.set_field(SECTION_TEXT, "remove_numbering", False)
         vm.set_field(SECTION_EXPORT, "image_mode", "base64")
         vm.set_field(SECTION_EXPORT, "base64_compress_enabled", False)
-        vm.set_field(SECTION_FORMATTING, "table_style_mode", "custom")
-        vm.set_field(SECTION_FORMATTING, "custom_table_style_name", "Draft Table")
-        vm.set_field(SECTION_FORMATTING, "body_format", "discard")
+        vm.set_field("text", "table_style_mode", "custom")
+        vm.set_field("text", "custom_table_style_name", "Draft Table")
+        vm.set_field("document", "body_format", "discard")
         vm.set_field(SECTION_GUI, "theme", "dark")
 
         assert vm.reset_section(SECTION_CONVERSION_DEFAULTS) is True
@@ -235,17 +235,17 @@ class TestPartialPersistenceFailure:
         assert vm.config.text.remove_numbering is True
         assert vm.config.export.image_mode == "file"
         assert vm.config.export.base64_compress_enabled is False
-        assert vm.config.formatting.table_style_mode == "builtin"
-        assert vm.config.formatting.custom_table_style_name == ""
-        assert vm.config.formatting.body_format == "discard"
+        assert vm.config.text.table_style_mode == "builtin"
+        assert vm.config.text.custom_table_style_name == ""
+        assert vm.config.document.body_format == "discard"
         assert vm.config.gui.theme == "dark"
         assert {change["field"] for change in vm.get_change_summary()} == {
             "gui.theme",
             "export.base64_compress_enabled",
-            "formatting.body_format",
+            "document.body_format",
         }
 
-    def test_software_alias_resets_software_priority_draft(self) -> None:
+    def test_software_group_resets_software_priority_draft(self) -> None:
         from copy import deepcopy
 
         from docwen_gui.view_models.settings_vm import SECTION_SOFTWARE_PRIORITY

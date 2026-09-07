@@ -7,13 +7,15 @@ import json
 import tempfile
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from docwen_core.models.artifact import ARTIFACT_KIND_MANIFEST, ArtifactManifest
 from docwen_core.models.conversion_manifest import ConversionManifestContext
 from docwen_core.models.request import ConversionRequest, OutputPolicy
 from docwen_core.models.result import ConversionDiagnostic, ConversionResult
-from docwen_runtime.output.finalizer import OutputFinalizer
+
+if TYPE_CHECKING:
+    from docwen_runtime.output.finalizer import OutputFinalizer
 
 _MANIFEST_SCHEMA_VERSION = "1.0"
 _MANIFEST_MEDIA_TYPE = "application/json"
@@ -90,6 +92,14 @@ class OutputManifestWriter:
     def __init__(self, finalizer: OutputFinalizer) -> None:
         self._finalizer = finalizer
 
+    @classmethod
+    def build_for_success(cls, request: ConversionRequest, result: ConversionResult) -> OutputManifestDocument | None:
+        """Prepare audit facts before the grouped output transaction starts."""
+        context = cls._context_for_request(request)
+        if not result.success or not context.policy.save_to_output or not request.output_policy.write_artifacts:
+            return None
+        return cls._build_document(request, result, context)
+
     def persist(self, request: ConversionRequest, result: Any) -> Any:
         """Return *result* with manifest artifacts added when policy enables them."""
         if isinstance(result, list):
@@ -118,7 +128,10 @@ class OutputManifestWriter:
             return result
         if not context.policy.save_to_output or not request.output_policy.write_artifacts:
             return result
-        if any(artifact.kind == ARTIFACT_KIND_MANIFEST for artifact in result.artifacts):
+        if any(
+            artifact.kind == ARTIFACT_KIND_MANIFEST and artifact.media_type == _MANIFEST_MEDIA_TYPE
+            for artifact in result.artifacts
+        ):
             return result
         if result.error is not None and result.error.error_type == "cancelled":
             return result

@@ -30,6 +30,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from docwen_gui.widgets.value_controls import ScrollSafeComboBox, ScrollSafeDoubleSpinBox, ScrollSafeSpinBox
+
 from ...resources import load_svg_icon
 from ...styles.design_tokens import Sizing, Spacing
 from ..panel_card import FormRow, PanelCard, WrappingLabel
@@ -282,7 +284,7 @@ class BaseSettingsTab(QWidget):
         self, items: list[tuple[str, Any]], tooltip: str | None = None, default_data: Any = None
     ) -> QComboBox:
         """Create a combobox with items (label, data) tuples."""
-        cb = QComboBox(self._scroll_container)
+        cb = ScrollSafeComboBox(self._scroll_container)
         _prepare_combo(cb)
         if tooltip:
             cb.setToolTip(tooltip)
@@ -296,7 +298,7 @@ class BaseSettingsTab(QWidget):
 
     def create_spinbox(self, minimum: int, maximum: int, tooltip: str | None = None, default: int = 0) -> QSpinBox:
         """Create a spinbox."""
-        sb = QSpinBox(self._scroll_container)
+        sb = ScrollSafeSpinBox(self._scroll_container)
         sb.setRange(minimum, maximum)
         if tooltip:
             sb.setToolTip(tooltip)
@@ -314,7 +316,7 @@ class BaseSettingsTab(QWidget):
         single_step: float = 0.05,
     ) -> QDoubleSpinBox:
         """Create a double spinbox."""
-        sb = QDoubleSpinBox(self._scroll_container)
+        sb = ScrollSafeDoubleSpinBox(self._scroll_container)
         sb.setRange(minimum, maximum)
         sb.setDecimals(decimals)
         sb.setSingleStep(single_step)

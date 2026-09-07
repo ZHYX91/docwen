@@ -116,7 +116,7 @@ def test_settings_dialog_action_buttons_keep_readable_geometry(qapp) -> None:
         dialog.close()
 
 
-def test_settings_dialog_tab_order_uses_pyside6_order_and_tk_union(qapp) -> None:
+def test_settings_dialog_tab_order_follows_input_processing_and_delivery(qapp) -> None:
     from PySide6.QtWidgets import QTabWidget
 
     from docwen_gui.view_models.settings_vm import SettingsViewModel
@@ -144,17 +144,18 @@ def test_settings_dialog_tab_order_uses_pyside6_order_and_tk_union(qapp) -> None
     pyside6_settings_order = [
         "general",
         "text",
-        "proofread",
         "document",
         "spreadsheet",
         "image",
         "layout",
-        "link",
-        "formatting",
-        "output",
-        "export",
-        "logging",
         "other",
+        "proofread",
+        "formatting",
+        "link",
+        "export",
+        "software",
+        "output",
+        "logging",
     ]
 
     assert set(TAB_KEYS).issuperset(tk_settings_tabs)

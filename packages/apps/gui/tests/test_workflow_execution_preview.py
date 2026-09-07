@@ -38,8 +38,8 @@ def test_output_preview_survives_resize_and_reflects_committed_policy(window, tm
     source = tmp_path / "source.md"
     source.write_text("# Example\n", encoding="utf-8")
     window._input_area_vm.add_files([str(source)])
-    label = window._output_location_label
-    assert str(tmp_path) in label.full_text
+    label = window._info_area._output_destination_label
+    assert label.isHidden()
     destination = tmp_path / "A long output folder name" / "Another long folder name"
     config = window._view_model.controller.config_port
     config._values.update({"output.directory.mode": "custom", "output.directory.custom_path": str(destination)})

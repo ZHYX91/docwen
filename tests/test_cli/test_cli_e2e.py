@@ -93,7 +93,7 @@ def test_cli_convert_xlsx_to_markdown_document_node(tmp_path: Path) -> None:
     output_parent = tmp_path / "published"
     _write_xlsx(source)
 
-    proc = _run("convert", str(source), "--to", "md", "--output", str(output_parent), "--json")
+    proc = _run("convert", str(source), "--to", "md", "--output-dir", str(output_parent), "--json")
     assert proc.returncode == 0, proc.stderr
     assert proc.stderr == ""
     payload = _payload(proc)
@@ -135,7 +135,7 @@ def test_cli_delimited_ingress_reaches_markdown_document_node(
     assert inspection_payload["data"]["detected_format"] == "csv"
     assert inspection_payload["data"]["decision"] == "allow"
 
-    converted = _run("convert", str(source), "--to", "md", "--output", str(output_parent), "--json")
+    converted = _run("convert", str(source), "--to", "md", "--output-dir", str(output_parent), "--json")
     assert converted.returncode == 0, converted.stderr
     assert converted.stderr == ""
     conversion_payload = _payload(converted)
@@ -153,7 +153,7 @@ def test_cli_delimited_ingress_reaches_markdown_document_node(
 
 def test_cli_convert_reports_missing_input(tmp_path: Path) -> None:
     source = tmp_path / "missing.xlsx"
-    proc = _run("convert", str(source), "--to", "md", "--output", str(tmp_path / "published"), "--json")
+    proc = _run("convert", str(source), "--to", "md", "--output-dir", str(tmp_path / "published"), "--json")
     assert proc.returncode == 2
     assert proc.stderr == ""
     payload = _payload(proc)
@@ -430,12 +430,12 @@ def test_cli_legacy_word_preconversion_cancellation_uses_public_cancel_contract(
 
 
 def test_cli_convert_rejects_existing_output_until_overwrite_is_explicit(tmp_path: Path) -> None:
-    source = tmp_path / "sample.md"
-    output = tmp_path / "sample.docx"
-    source.write_text("# Sample\n", encoding="utf-8")
+    source = tmp_path / "sample.xlsx"
+    output = tmp_path / "sample.csv"
+    _write_xlsx(source)
     output.write_text("keep me", encoding="utf-8")
 
-    rejected = _run("convert", str(source), "--to", "docx", "--output", str(output), "--json")
+    rejected = _run("convert", str(source), "--to", "csv", "--output", str(output), "--json")
     assert rejected.returncode == 7
     rejected_payload = _payload(rejected)
     assert rejected_payload["error"]["code"] == "output_exists"
@@ -445,7 +445,7 @@ def test_cli_convert_rejects_existing_output_until_overwrite_is_explicit(tmp_pat
         "convert",
         str(source),
         "--to",
-        "docx",
+        "csv",
         "--output",
         str(output),
         "--overwrite",
@@ -457,12 +457,12 @@ def test_cli_convert_rejects_existing_output_until_overwrite_is_explicit(tmp_pat
 
 
 def test_cli_unicode_long_output_conflict_is_typed_and_serializable(tmp_path: Path) -> None:
-    source = tmp_path / "源文件.md"
-    output = tmp_path / (("很长" * 35) + ".docx")
-    source.write_text("# 源文件\n", encoding="utf-8")
+    source = tmp_path / "源文件.xlsx"
+    output = tmp_path / (("很长" * 35) + ".csv")
+    _write_xlsx(source)
     output.write_text("保留", encoding="utf-8")
 
-    proc = _run("convert", str(source), "--to", "docx", "--output", str(output), "--json")
+    proc = _run("convert", str(source), "--to", "csv", "--output", str(output), "--json")
     assert proc.returncode == 7
     assert proc.stderr == ""
     payload = _payload(proc)

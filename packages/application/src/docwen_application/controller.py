@@ -877,6 +877,8 @@ class ApplicationController:
                     derived_metadata["_docwen_preconversion_source"] = {
                         "path": ref.path,
                         "format": actual_format,
+                        "sha256": pre_result.source_sha256,
+                        "created_at": pre_result.created_at,
                         "category": ref.category,
                         "warning_message": ref.warning_message,
                         "inspection": source_inspection if isinstance(source_inspection, dict) else None,

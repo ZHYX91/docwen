@@ -65,7 +65,7 @@ def _schedule_test_conversion_report(app: QApplication, window: MainWindow) -> N
     screenshot_raw = os.environ.get("DOCWEN_GUI_TEST_CONVERSION_SCREENSHOT", "").strip()
     screenshot_path = Path(screenshot_raw) if screenshot_raw else None
     warning_row_screenshot_path = (
-        screenshot_path.with_name(f"{screenshot_path.stem}_warning_row{screenshot_path.suffix}")
+        screenshot_path.with_name(f"{screenshot_path.stem}_warning_details{screenshot_path.suffix}")
         if screenshot_path is not None
         else None
     )
@@ -242,10 +242,13 @@ def _schedule_test_conversion_report(app: QApplication, window: MainWindow) -> N
             if info_area is not None:
                 info_area_visible = bool(info_area.isVisible())
                 if warning_index >= 0:
-                    row_widget = info_area.get_history_row_widget(warning_index)
+                    dialog = window._show_activity_records()
+                    dialog.search.setText(expected_warning)
+                    app.processEvents()
+                    row_widget = dialog.details
                     if row_widget is not None:
-                        warning_row_tone = str(row_widget.property("infoStatusTone") or "")
-                        warning_row_tooltip = row_widget.toolTip()
+                        warning_row_tone = str(row_widget.property("activityStatus") or "")
+                        warning_row_tooltip = row_widget.toPlainText()
                         warning_row_visible = bool(row_widget.isVisible())
                         if warning_row_screenshot_path is not None:
                             warning_row_screenshot_path.parent.mkdir(parents=True, exist_ok=True)
@@ -316,16 +319,16 @@ def _schedule_test_conversion_report(app: QApplication, window: MainWindow) -> N
                     "expectedWarningMessage": expected_warning,
                     "historyRows": history_payload,
                     "warningHistoryIndex": warning_index,
-                    "warningRowTone": warning_row_tone,
-                    "warningRowTooltip": warning_row_tooltip,
-                    "warningRowVisible": warning_row_visible,
-                    "warningRowScreenshotPath": (
+                    "warningRecordStatus": warning_row_tone,
+                    "warningDetailsText": warning_row_tooltip,
+                    "warningDetailsVisible": warning_row_visible,
+                    "warningDetailsScreenshotPath": (
                         str(warning_row_screenshot_path) if warning_row_screenshot_path else None
                     ),
-                    "warningRowScreenshotSaved": warning_row_screenshot_saved,
-                    "warningRowScreenshotBytes": warning_row_screenshot_bytes,
-                    "warningRowScreenshotWidth": warning_row_screenshot_width,
-                    "warningRowScreenshotHeight": warning_row_screenshot_height,
+                    "warningDetailsScreenshotSaved": warning_row_screenshot_saved,
+                    "warningDetailsScreenshotBytes": warning_row_screenshot_bytes,
+                    "warningDetailsScreenshotWidth": warning_row_screenshot_width,
+                    "warningDetailsScreenshotHeight": warning_row_screenshot_height,
                     "taskSummary": summary_payload,
                     "statusSource": status_source,
                     "statusTone": status_tone,

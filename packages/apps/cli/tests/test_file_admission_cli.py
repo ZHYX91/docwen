@@ -32,7 +32,7 @@ def _available_controller() -> MagicMock:
 @pytest.mark.parametrize(
     "argv",
     [
-        ["convert", "input.md", "--to", "docx", "--output", "out.docx"],
+        ["convert", "input.md", "--to", "docx", "--output-dir", "out.docx"],
         ["validate", "input.md"],
         ["number", "markdown", "input.md", "--operation", "remove", "--in-place"],
         ["merge", "pdf", "a.pdf", "b.pdf", "--output", "merged.pdf"],
@@ -54,7 +54,7 @@ def test_cross_family_mismatch_is_rejected_by_default_and_machine_readable(
     source.write_bytes(b"%PDF-1.4\n")
     output = tmp_path / "layout.md"
     args = _build_parser().parse_args(
-        ["convert", str(source), "--to", "md", "--output", str(output), "--dry-run", "--json"]
+        ["convert", str(source), "--to", "md", "--output-dir", str(output), "--dry-run", "--json"]
     )
 
     exit_code = execute_execution(args, _available_controller())
@@ -82,7 +82,7 @@ def test_explicit_acceptance_routes_the_detected_content_not_the_suffix(
             str(source),
             "--to",
             "md",
-            "--output",
+            "--output-dir",
             str(output),
             "--dry-run",
             "--json",

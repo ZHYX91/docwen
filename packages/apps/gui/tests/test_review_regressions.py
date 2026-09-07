@@ -16,7 +16,7 @@ def test_active_inputs_survive_delete_and_finished_details_survive_row_removal(
     main_window, qtbot, tmp_path, monkeypatch
 ):
     from docwen_core.models.result import ConversionErrorInfo, ConversionResult
-    from docwen_gui.dialogs.task_details import TaskDetailsDialog
+    from docwen_gui.dialogs.activity_records import ActivityRecordsDialog
     from docwen_gui.main_window import _normalize_path
 
     release = threading.Event()
@@ -78,7 +78,7 @@ def test_active_inputs_survive_delete_and_finished_details_survive_row_removal(
     assert window._batch_list_vm.remove_file(path)
     assert not window.view_model.files
     window._handle_task_guide_action("view_failed_details", path)
-    dialog = window.findChild(TaskDetailsDialog)
+    dialog = window.findChild(ActivityRecordsDialog)
     assert dialog is not None
     assert "Output locked" in dialog.details.toPlainText()
     assert window._task_history.get("op").failed_paths == [path]

@@ -1,0 +1,4 @@
+# Shared OCR language for every input category.
+# auto follows the interface language. Explicit task options take precedence.
+# auto / chinese / chinese_cht / english / japanese / korean / latin / cyrillic
+language = "auto"

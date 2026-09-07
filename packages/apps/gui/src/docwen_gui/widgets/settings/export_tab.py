@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import cast as _cast
 
+from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLineEdit, QPushButton, QSpinBox, QWidget
 
 from ...i18n import t
@@ -34,6 +35,26 @@ class ExportTab(BaseSettingsTab):
         self._load_values()
 
     def _create_interface(self) -> None:
+        _ocr_card, ocr_form = self.add_settings_card(
+            t("settings.ocr.section", "OCR Recognition"), object_name="exportOcrLanguageCard"
+        )
+        self._ocr_language = self.create_combobox(
+            [
+                (t("settings.ocr.language_auto", "Auto-detect"), "auto"),
+                (t("settings.ocr.language_chinese", "Chinese"), "chinese"),
+                (t("settings.ocr.language_chinese_cht", "Traditional Chinese"), "chinese_cht"),
+                (t("settings.ocr.language_english", "English Only"), "english"),
+                (t("settings.ocr.language_japanese", "Japanese"), "japanese"),
+                (t("settings.ocr.language_korean", "Korean"), "korean"),
+                (t("settings.ocr.language_latin", "Latin"), "latin"),
+                (t("settings.ocr.language_cyrillic", "Cyrillic"), "cyrillic"),
+            ],
+            t("settings.ocr.language_tooltip", "OCR language shared by all input formats."),
+        )
+        self.add_form_row(ocr_form, t("settings.ocr.language_label", "OCR Language:"), self._ocr_language)
+        self._ocr_language.currentIndexChanged.connect(
+            lambda _index: self._vm.set_field(SECTION_EXPORT, "ocr_language", self._ocr_language.currentData())
+        )
         _card, form = self.add_settings_card(
             t("settings.export.md_export_section", "MD Export Options"),
             t("settings.export.md_export_desc", "Configure how images are handled in Markdown output."),
@@ -181,6 +202,8 @@ class ExportTab(BaseSettingsTab):
             self._compress_threshold.setEnabled(self._compress_enabled.isChecked())
 
     def _load_values(self) -> None:
+        with QSignalBlocker(self._ocr_language):
+            self.set_combo_data(self._ocr_language, self._vm.config.export.ocr_language)
         exp = self._vm.config.export
         self.set_combo_data(self._image_mode, exp.image_mode)
         self.set_combo_data(self._ocr_mode, exp.ocr_mode)

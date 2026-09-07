@@ -33,7 +33,7 @@ def test_visual_candidate_keeps_the_confirmed_production_repairs() -> None:
     ):
         assert token in main
     assert "_TWO_SIDE_PANEL_MIN_WIDTH" not in main
-    for token in ("_PYRAMID_INDENTS", "_type_prompt_rows", "selection_detail"):
+    for token in ("_type_prompt_rows", "selection_detail"):
         assert token in input_area
     assert "def _pivot_required_width(" in batch_list
     assert 'setObjectName("batchCategorySelector")' in batch_list

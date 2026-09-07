@@ -253,7 +253,7 @@ def test_reported_plugin_failure_emits_failed_without_spurious_finalizing_progre
     )
 
 
-def test_finalizer_partial_failure_returns_typed_error_and_failed_terminal(tmp_path: Path) -> None:
+def test_grouped_finalizer_failure_publishes_nothing_and_emits_failed_terminal(tmp_path: Path) -> None:
     def convert(context: Any) -> ConversionResult:
         good = _successful_artifact(context, content="good")
         missing = ArtifactManifest(
@@ -280,10 +280,10 @@ def test_finalizer_partial_failure_returns_typed_error_and_failed_terminal(tmp_p
     assert result.success is False
     assert result.error is not None
     assert result.error.error_type == "output_finalization_failed"
-    assert result.error.diagnostic_code == "FINALIZER_PARTIAL"
-    assert [artifact.suggested_name for artifact in result.artifacts] == ["result.docx"]
-    assert Path(result.artifacts[0].staging_path).read_text(encoding="utf-8") == "good"
-    assert result.metrics.output_bytes == 4
+    assert result.error.diagnostic_code == "DOCUMENT_NODE_PUBLISH_FAILED"
+    assert result.artifacts == []
+    assert result.metrics.output_bytes == 0
+    assert list((tmp_path / "output").iterdir()) == []
     assert result.metrics.extra["plugin_metric"] == "kept"
     assert [event.event_type for event in _terminal_events(events)] == ["task_failed"]
     assert _terminal_events(events)[0].payload["error_type"] == "output_finalization_failed"
@@ -507,8 +507,9 @@ def test_terminal_listener_rejection_cannot_change_success_or_duplicate_terminal
 
     assert result.success is True
     assert result.error is None
-    assert len(result.artifacts) == 1
-    assert Path(result.artifacts[0].staging_path).is_file()
+    assert len(result.artifacts) == 2
+    assert len([artifact for artifact in result.artifacts if artifact.is_primary]) == 1
+    assert all(Path(artifact.staging_path).is_file() for artifact in result.artifacts)
     assert result.metrics.extra["plugin_metric"] == "kept"
     assert "TASK_EVENT_LISTENER_ERROR" in [diagnostic.code for diagnostic in result.diagnostics]
     assert [event.event_type for event in _terminal_events(events)] == ["task_completed"]

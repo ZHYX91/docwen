@@ -210,7 +210,7 @@ class TestFullClosedLoop:
         final_paths = [Path(result.artifacts[0].staging_path) for result in results]
         assert [path.parent.parent for path in final_paths] == [first_dir, second_dir]
         assert all(path.parent.name == path.stem for path in final_paths)
-        assert all(path.stem.startswith("report_") and path.stem.endswith("_fromDocx") for path in final_paths)
+        assert all(path.stem.startswith("report_") and path.stem.endswith("_fromRtf") for path in final_paths)
         assert all((path.parent / "docwen-node.json").is_file() for path in final_paths)
         assert [path.read_text(encoding="utf-8") for path in final_paths] == [first_content, second_content]
         assert [first.read_text(encoding="utf-8"), second.read_text(encoding="utf-8")] == [

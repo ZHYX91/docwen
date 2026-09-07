@@ -15,6 +15,8 @@ template_name = "Plantilla General Española"
 # 主窗口
 # =============================================================================
 [main_window]
+file_admission_missing = "El archivo de entrada ya no existe: {path}"
+file_admission_unreadable = "No se puede leer el archivo de entrada: {path}"
 extension_loss_endnotes = "Las notas finales se convirtieron en notas al pie normales de Markdown."
 extension_loss_headings = "Los encabezados de nivel 7–9 se convirtieron al nivel 6."
 extension_loss_references = "Los títulos y las referencias cruzadas se convirtieron en texto visible."
@@ -83,17 +85,17 @@ save_failed = "Error al guardar la configuración"
 # 状态栏
 # =============================================================================
 [info_area]
+output_each_source = "Guardar cada resultado junto a su archivo de origen"
+output_date_subfolder = "Guardar en una subcarpeta con fecha"
 task_warning_count = "{count} avisos de conversión. Despliegue el historial de actividad para ver los detalles."
 task_progress_percent = "Progreso:{percent}%"
 task_state_skipped = "Omitido"
 batch_name = "Procesamiento por lotes ({count} archivos)"
 aggregate_name = "Combinar ({count} archivos)"
 activity_count = "Actividad ({count})"
-clear_history = "Borrar actividades"
 notice_title = "Aviso"
 task_state_cancelling = "Cancelando"
 copy_path = "Copiar ruta"
-open_location = "Abrir ubicacion del archivo: {path}"
 ipc_file_missing = "Archivo IPC no encontrado: {path}"
 font_size_applied = "Tamano de texto: {label}"
 
@@ -106,12 +108,12 @@ history_completed = "Completado: {name}"
 task_state_partial = "Fallo parcial"
 task_state_failed = "Fallido"
 task_state_cancelled = "Cancelado"
-task_current_file = "Archivo de la tarea: {name}"
+task_current_file = "Procesando: {name}"
 task_progress_detail = "Completados {completed}/{total}, fallidos {failed}"
 history_started = "Iniciado: {name}"
 task_skipped_count = "Omitidos: {skipped}"
 task_cancelled_count = "Cancelados: {cancelled}"
-task_guide_open_output_dir = "Abrir carpeta de salida"
+task_output_file = "Archivo de salida: {name}"
 task_guide_view_failed_details = "Ver detalles del fallo"
 task_guide_retry_failed = "Reintentar elementos fallidos"
 window_topmost_enabled = "La ventana queda siempre encima. Pulsa Ctrl+Shift+T para desactivarlo."
@@ -160,7 +162,7 @@ doctor = "Ejecutar diagnóstico"
 gongwen = "Documento oficial"
 
 # 校对选项
-invoice_cn = "Factura china (invoice_cn)"
+invoice_cn = "Factura china"
 [cli.interactive.proofread]
 
 # 提示文本
@@ -209,11 +211,12 @@ document = "Documentos de entrada"
 spreadsheet = "Hojas de cálculo de entrada"
 image = "Imágenes de entrada"
 layout = "Archivos de diseño fijo de entrada"
-other = "Otros"
+other = "Otros archivos de entrada"
 link = "Enlaces"
 formatting = "Sintaxis Markdown"
 output = "Guardado de archivos"
 logging = "Registro"
+software = "Software de conversión"
 
 [settings.descriptions]
 general = "Ajustes globales como idioma y tema"
@@ -354,6 +357,9 @@ save_numbering_clean_rules_failed = "No se pudieron guardar las reglas de limpie
 # -----------------------------------------------------------------------------
 # 文档设置选项卡
 # -----------------------------------------------------------------------------
+input_description = "Opciones para Markdown de entrada: generar documentos, rellenar plantillas y procesar encabezados."
+template_fill_section = "Rellenar plantillas"
+template_fill_desc = "Separador para unir listas YAML en plantillas de Word u hojas de cálculo. Se conservan los espacios y el separador vacío."
 [settings.proofread]
 validation_section = "Reglas de revisión"
 enable_symbol_pairing = "Activar comprobación de pares de símbolos"
@@ -362,13 +368,13 @@ enable_typos_rule = "Activar detección de erratas"
 enable_sensitive_word = "Activar comprobación de términos marcados"
 skip_code_blocks = "Omitir bloques de código"
 skip_quote_blocks = "Omitir bloques de cita"
-symbol_mapping_section = "Editor de correspondencias de símbolos"
-symbol_mapping_desc = "Gestionar las reglas de emparejamiento y corrección de símbolos."
-symbol_correction_section = "Editor de corrección de símbolos"
+symbol_mapping_section = "Pares de puntuación"
+symbol_mapping_desc = "Comprueba que los signos de apertura y cierre estén emparejados."
+symbol_correction_section = "Reglas de corrección de símbolos"
 symbol_correction_desc = "Gestionar las correcciones de símbolos de ancho completo y medio ancho."
-typos_section = "Editor del diccionario de erratas"
+typos_section = "Diccionario de erratas"
 typos_desc = "Gestionar las correcciones de erratas frecuentes."
-sensitive_words_section = "Editor de términos marcados"
+sensitive_words_section = "Diccionario de palabras sensibles"
 sensitive_words_desc = "Gestionar las entradas para detectar términos marcados."
 edit = "Editar"
 
@@ -424,7 +430,6 @@ enable_optimization = "Activar por defecto \"Optimizar según tipo de documento\
 optimization_type_label = "Tipo de optimización predeterminado:"
 
 # 软件优先级
-software_section = "Prioridad de software"
 word_processors_label = "Prioridad de software para documentos"
 odt_conversion_label = "Conversión de formato ODT"
 document_to_pdf_label = "Documento a PDF"
@@ -455,7 +460,6 @@ enable_ocr_tooltip = "Marca \"OCR de imagen\" por defecto al convertir hoja → 
 merge_mode_section = "Ajustes de modo de combinación"
 merge_mode_desc = "Establece el modo predeterminado para combinar tablas"
 default_merge_mode_label = "Modo de combinación predeterminado:"
-software_section = "Prioridad de software"
 spreadsheet_processors_label = "Prioridad de software para hojas de cálculo"
 ods_conversion_label = "Conversión de formato ODS"
 spreadsheet_to_pdf_label = "Hoja de cálculo a PDF"
@@ -470,7 +474,6 @@ by_cell = "Combinar por celdas"
 [settings.spreadsheet.software]
 wps_spreadsheets = "WPS Spreadsheets"
 excel = "Excel"
-libreoffice = "LibreOffice"
 
 # -----------------------------------------------------------------------------
 # 图片设置选项卡
@@ -485,16 +488,6 @@ enable_optimization = "Habilitar \"Optimizar por tipo de imagen\" por defecto"
 optimization_type_label = "Tipo de optimización predeterminado:"
 
 # OCR语言设置
-ocr_language_label = "Idioma de OCR:"
-ocr_language_tooltip = "Selecciona el modelo de idioma usado para el reconocimiento OCR.\n\n• Seguir el idioma de la interfaz: selección automática según el idioma actual\n• Chino/Inglés: adecuado para documentos mixtos chino/inglés\n• Japonés: adecuado para documentos en japonés\n• Alfabeto latino: adecuado para alemán, francés, portugués, etc.\n• Alfabeto cirílico: adecuado para ruso, etc."
-ocr_language_auto = "Seguir el idioma de la interfaz"
-ocr_language_chinese = "Chino/Inglés"
-ocr_language_japanese = "Japonés"
-ocr_language_chinese_cht = "Chino tradicional"
-ocr_language_english = "Solo inglés"
-ocr_language_korean = "Coreano"
-ocr_language_latin = "Alfabeto latino (DE/FR/PT, etc.)"
-ocr_language_cyrillic = "Alfabeto cirílico (RU, etc.)"
 
 compress_section = "Ajustes de opciones de compresión"
 compress_desc = "Establece el modo de compresión predeterminado para la conversión de formato de imagen"
@@ -528,7 +521,6 @@ render_dpi_label = "Render DPI:"
 dpi_min = "Mínimo (150)"
 dpi_medium = "Medio (300)"
 dpi_high = "Alta calidad (600)"
-software_section = "Prioridad de software"
 pdf_to_doc_label = "PDF a documento"
 
 # -----------------------------------------------------------------------------
@@ -833,6 +825,53 @@ critical = "Crítico (CRITICAL)"
 # =============================================================================
 # 关于对话框
 # =============================================================================
+
+[settings.software]
+priority = "Prioridad del software"
+description = "Prueba el software instalado en este orden. La disponibilidad también depende del formato de conversión."
+presentation_processors = "Software de presentaciones"
+wps_presentation = "WPS Presentation"
+powerpoint = "PowerPoint"
+
+[settings.ocr]
+language_label = "Idioma de OCR:"
+language_tooltip = "Idioma OCR compartido por todos los formatos de entrada."
+language_auto = "Seguir el idioma de la interfaz"
+language_chinese = "Chino/Inglés"
+language_japanese = "Japonés"
+language_chinese_cht = "Chino tradicional"
+language_english = "Solo inglés"
+language_korean = "Coreano"
+language_latin = "Alfabeto latino (DE/FR/PT, etc.)"
+language_cyrillic = "Alfabeto cirílico (RU, etc.)"
+section = "Reconocimiento OCR"
+
+[settings.rule_transfer]
+read_failed = "No se puede leer la configuración actual de las reglas."
+added = "Añadida"
+unchanged = "Sin cambios"
+conflict = "Diferente"
+existing_only = "Solo existente"
+change = "Cambio"
+rule = "Regla"
+current = "Actual"
+incoming = "Importada"
+preview = "Vista previa de reglas"
+summary = "Añadidas {added} · Diferentes {conflict} · Sin cambios {unchanged} · Solo existentes {existing_only}"
+strategy = "Método de importación"
+merge = "Combinar con las reglas existentes"
+replace = "Reemplazar todas las reglas"
+strategy_hint = "Combinar conserva las entradas existentes y une valores y notas de claves coincidentes. Reemplazar elimina las entradas ausentes del archivo importado."
+merge_unavailable = "Los pares de puntuación en conflicto no se pueden combinar. Cancele para ajustar el archivo o elija reemplazar."
+confirm = "Confirmar importación"
+source_changed = "Las reglas cambiaron durante la vista previa. Importe de nuevo para revisar las diferencias actuales."
+save_failed = "No se pudo guardar. Se conservaron las reglas originales."
+import = "Importar…"
+import_failed = "Error de importación"
+imported = "Reglas importadas."
+export = "Exportar…"
+export_failed = "Error de exportación"
+exported = "Se exportaron todas las reglas."
 [about]
 title = "Acerca de"
 version_info = "Versión {version}"
@@ -926,8 +965,6 @@ no_batch_files = "No hay archivos por lotes"
 retry_selected_failed = "Reintentar el elemento fallido seleccionado"
 retry_all_failed = "Reintentar todos los elementos fallidos de esta pestaña"
 total_files = "{total} archivo(s) en total"
-total_files_selected = "{total} archivo(s) en total, seleccionado: {current_name}"
-action_open_output = "Abrir salida"
 action_view_skip = "Ver omitido"
 action_view_error = "Ver error"
 action_remove = "Eliminar"
@@ -1345,7 +1382,7 @@ letter_number_desc = "Coincide con: A. / A) / (A) / a. / a) (numeración con let
 # 映射编辑器
 [editors.mapping]
 # 对话框标题
-symbol_editor_title = "Editor de asignación de signos"
+symbol_editor_title = "Pares de puntuación"
 typo_editor_title = "Editor de diccionario de erratas"
 sensitive_editor_title = "Editor de términos marcados"
 # 下拉选择标签
@@ -1381,8 +1418,6 @@ overwrite = "Sobrescribir"
 merge = "Combinar"
 
 search_placeholder = "Buscar clave, valor o comentario"
-source_symbol = "Símbolo de origen"
-target_symbol = "Símbolo de destino"
 typo = "Errata"
 corrections = "Corrección o correcciones"
 multi_value_hint = "Consejo: use | para separar varios valores (por ejemplo: valor1|valor2|valor3)"
@@ -1393,6 +1428,8 @@ save_sensitive_words_failed = "No se pudo guardar el diccionario de términos ma
 # =============================================================================
 # 文件类型分类
 # =============================================================================
+opening_symbol = "Signo de apertura"
+closing_symbol = "Signo de cierre"
 [file_types]
 document = "Documento"
 spreadsheet = "Hoja de cálculo"
@@ -1641,3 +1678,32 @@ captions_references = "Number Suite: leyendas y referencias cruzadas"
 extended_headings = "Encabezados de niveles 7–9"
 typed_endnotes = "Notas al pie y finales tipificadas"
 obsidian_preset = "Usar extensiones de Obsidian"
+
+[activity]
+record_unavailable = "Este registro de actividad se ha borrado o no está disponible."
+title = "Registro de actividad"
+search = "Buscar nombres de archivo o actividad"
+all_statuses = "Todos los estados"
+all_operations = "Todas las operaciones"
+time = "Hora"
+status = "Estado"
+file = "Archivo"
+operation = "Operación"
+details = "Detalles"
+select_record = "Seleccione un registro para ver los detalles"
+clear_finished = "Borrar registros finalizados"
+info = "Aviso"
+warning = "Advertencia"
+merge = "Combinar"
+split = "Dividir"
+numbering = "Numeración"
+validate = "Validar"
+input = "Entrada"
+output = "Salida"
+failed_count = "Actividad · {count} fallidos"
+
+[file_locations]
+input = "Localizar archivo de entrada"
+output = "Localizar archivo de salida"
+multiple = "{count} archivos"
+show_outputs = "Ver todos los archivos de salida"

@@ -399,10 +399,10 @@ class TestConfigLoaderEditableFileText:
             ConfigLoader(base_dir=base_dir, user_dir=user_dir)
 
 
-def test_config_registry_has_exactly_23_files() -> None:
+def test_config_registry_has_exactly_25_files() -> None:
     from docwen_runtime.config.registry import CONFIG_FILES
 
-    assert len(CONFIG_FILES) == 23
+    assert len(CONFIG_FILES) == 25
     assert {spec.rel_path for spec in CONFIG_FILES} == {
         "gui.toml",
         "output.toml",
@@ -412,9 +412,11 @@ def test_config_registry_has_exactly_23_files() -> None:
         "other.toml",
         "document.toml",
         "text.toml",
+        "template_fill.toml",
         "layout.toml",
         "spreadsheet.toml",
         "image.toml",
+        "ocr.toml",
         "link.toml",
         "software.toml",
         "optimize.toml",
@@ -473,6 +475,7 @@ def test_registry_groups_specs_by_group() -> None:
     assert {s.rel_path for s in specs_for_group("text")} == {
         "field_processors.toml",
         "text.toml",
+        "template_fill.toml",
         "numbering/add.toml",
         "numbering/cleanup.toml",
     }

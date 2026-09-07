@@ -104,7 +104,7 @@ def test_convert_projects_markdown_parent_output_policy(tmp_path: Path) -> None:
 
     output_parent = tmp_path / "published"
     args = _build_parser().parse_args(
-        ["convert", str(tmp_path / "a.docx"), "--to", "md", "--output", str(output_parent)]
+        ["convert", str(tmp_path / "a.docx"), "--to", "md", "--output-dir", str(output_parent)]
     )
 
     _prepare_args(args)

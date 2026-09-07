@@ -2961,13 +2961,23 @@ def _run_machine_protocol_smoke_impl(
         if isinstance(semantic_artifacts, list)
         else []
     )
+    semantic_manifests = (
+        [
+            item
+            for item in semantic_artifacts
+            if isinstance(item, dict) and item.get("media_type") == "application/vnd.docwen.document-node+json"
+        ]
+        if isinstance(semantic_artifacts, list)
+        else []
+    )
     if (
         not isinstance(semantic_bundle, dict)
         or semantic_bundle.get("task_id") != task_id
         or not isinstance(semantic_artifacts, list)
-        or len(semantic_artifacts) != 1
+        or len(semantic_artifacts) != 2
         or len(semantic_documents) != 1
-        or semantic_bundle.get("relations") != []
+        or len(semantic_manifests) != 1
+        or semantic_bundle.get("layout_schema") != "docwen.document_node.v1"
     ):
         raise RuntimeError(f"packaged_machine_protocol_semantic_artifact_invalid:{semantic_bundle}")
     expected_entries = [
@@ -2980,10 +2990,29 @@ def _run_machine_protocol_smoke_impl(
     ]
     if semantic_bundle.get("entries") != expected_entries:
         raise RuntimeError(f"packaged_machine_protocol_semantic_entries_invalid:{semantic_bundle}")
+    if semantic_bundle.get("relations") != [
+        {
+            "type": "resource_of",
+            "source_artifact_id": semantic_manifests[0]["artifact_id"],
+            "target_artifact_id": semantic_documents[0]["artifact_id"],
+            "role": "manifest",
+            "ordinal": 0,
+        }
+    ]:
+        raise RuntimeError("packaged_machine_protocol_semantic_manifest_relation_invalid")
     semantic_locator = semantic_documents[0].get("locator")
     if not isinstance(semantic_locator, str) or "\\" in semantic_locator or ".." in semantic_locator.split("/"):
         raise RuntimeError(f"packaged_machine_protocol_semantic_locator_invalid:{semantic_locator}")
     semantic_output = staging / Path(semantic_locator)
+    manifest_locator = semantic_manifests[0].get("locator")
+    expected_manifest_locator = str(Path(semantic_locator).parent / "docwen-node.json").replace("\\", "/")
+    if manifest_locator != expected_manifest_locator:
+        raise RuntimeError("packaged_machine_protocol_semantic_manifest_locator_invalid")
+    manifest_bytes = _read_bytes_with_long_path(staging / Path(manifest_locator))
+    if len(manifest_bytes) != semantic_manifests[0].get("size_bytes") or hashlib.sha256(
+        manifest_bytes
+    ).hexdigest() != semantic_manifests[0].get("sha256"):
+        raise RuntimeError("packaged_machine_protocol_semantic_manifest_integrity_mismatch")
     semantic_output_bytes = _read_bytes_with_long_path(semantic_output)
     if len(semantic_output_bytes) != semantic_documents[0].get("size_bytes") or hashlib.sha256(
         semantic_output_bytes
@@ -3239,8 +3268,9 @@ def _run_machine_protocol_smoke_impl(
         not isinstance(bundle, dict)
         or bundle.get("task_id") != task_id
         or not isinstance(artifacts, list)
-        or len(artifacts) != 1
-        or bundle.get("relations") != []
+        or len(artifacts) != 2
+        or bundle.get("relations") != semantic_bundle.get("relations")
+        or bundle.get("layout_schema") != "docwen.document_node.v1"
         or len(documents) != 1
     ):
         raise RuntimeError(f"packaged_machine_protocol_bundle_invalid:{bundle}")

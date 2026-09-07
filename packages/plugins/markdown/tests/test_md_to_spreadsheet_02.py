@@ -378,7 +378,11 @@ owner: Finance
         wb.close()
 
         md_path = write_temp_md("---\nauthors:\n  - 甲\n  - 乙\nnested:\n  - 甲\n  - [乙, 丙]\n---\n")
-        config_values = {} if separator is None else {"conversion": {"md_to_docx": {"list_separator": separator}}}
+        config_values = (
+            {}
+            if separator is None
+            else {"conversion": {"md_to_docx": {}}, "template_fill": {"list_separator": separator}}
+        )
         ctx, _workspace = make_context(
             md_path,
             target_format="xlsx",
@@ -413,9 +417,7 @@ owner: Finance
             md_path,
             target_format="csv",
             options={"template_name": str(template)},
-            config_values={
-                "conversion": {"md_to_docx": {"list_separator": " / "}},
-            },
+            config_values={"conversion": {"md_to_docx": {}}, "template_fill": {"list_separator": " / "}},
         )
 
         result = MdToCsvConverter().convert(ctx)
@@ -470,10 +472,12 @@ owner: Finance
         )
 
         assert result.success
-        assert len(result.artifacts) == 1
+        assert len(result.artifacts) == 2
         assert any(diagnostic.code == "FINALIZER_DONE" for diagnostic in result.diagnostics)
         output = Path(result.artifacts[0].staging_path)
-        assert output.parent == output_dir
+        assert output.parent.parent == output_dir
+        assert output.parent.name == output.stem
+        assert output.stem.endswith("_fromMd")
         assert output.suffix == ".xlsx"
         assert output.exists()
         assert not output.is_relative_to(tmp_path / "workspace")

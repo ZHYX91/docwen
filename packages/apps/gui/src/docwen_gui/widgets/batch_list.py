@@ -41,7 +41,6 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
     QBoxLayout,
-    QComboBox,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -53,6 +52,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QStackedWidget,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -61,7 +61,11 @@ from docwen_gui.font_utils import DEFAULT_FONT_SIZE, resolve_font_size_preset
 from docwen_gui.i18n import t as _t
 from docwen_gui.styles.design_tokens import Sizing
 from docwen_gui.styles.theme_semantics import apply_theme_class
+from docwen_gui.widgets.value_controls import ScrollSafeComboBox
 
+from .elided_label import MiddleElidedLabel
+from .location_button import LocationButton
+from .output_file_row import OutputFileRow
 from .panel_card import WrappingLabel
 
 if TYPE_CHECKING:
@@ -247,48 +251,6 @@ class _InteractivePathLabel(WrappingLabel):
         QApplication.clipboard().setText(self._file_path)
 
 
-class _MiddleElidedLabel(QLabel):
-    """Single-line label that preserves a full path in its tooltip.
-
-    Middle elision keeps both the path root and filename recognizable without
-    allowing a long absolute path to widen the whole left panel.
-    """
-
-    def __init__(self, text: str = "", parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self._full_text = ""
-        self.setWordWrap(False)
-        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
-        self.set_full_text(text)
-
-    @property
-    def full_text(self) -> str:
-        return self._full_text
-
-    def set_full_text(self, text: str) -> None:
-        self._full_text = text
-        self.setToolTip(text)
-        self.setAccessibleName(text)
-        self._refresh_elision()
-
-    def resizeEvent(self, event) -> None:
-        super().resizeEvent(event)
-        self._refresh_elision()
-
-    def _refresh_elision(self) -> None:
-        available_width = self.contentsRect().width()
-        if available_width <= 0:
-            super().setText(self._full_text)
-            return
-        super().setText(
-            self.fontMetrics().elidedText(
-                self._full_text,
-                Qt.TextElideMode.ElideMiddle,
-                available_width,
-            )
-        )
-
-
 # ── WrapRowLayout ──────────────────────────────────────────────────────
 
 
@@ -383,7 +345,7 @@ class BatchEntryItemWidget(QWidget):
       3. body_section:
          - path_row: source directory (always visible, middle-elided)
          - detail_row: detail text (visible on selected/current/hovered)
-         - output_row: output path (always hidden)
+         - output_row: primary output, count badge, and location action
       4. actions_row: primary/retry/remove buttons
 
     Visibility rules (matches old behavior):
@@ -422,6 +384,7 @@ class BatchEntryItemWidget(QWidget):
         }
 
         self.setObjectName("batchEntryCard")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setMouseTracking(True)
 
         self._build_ui()
@@ -442,12 +405,13 @@ class BatchEntryItemWidget(QWidget):
         self._header_layout.setSpacing(_SPACING_XS)
         self._header_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        self.status_icon_label = QLabel(header_row)
-        self.status_icon_label.setObjectName("batchEntryStatusIcon")
-        self.status_icon_label.setMinimumSize(QSize(20, 16))
-        self.status_icon_label.setMaximumHeight(18)
-        self.status_icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._header_layout.addWidget(self.status_icon_label, 0, 0, Qt.AlignmentFlag.AlignTop)
+        self.status_button = QToolButton(header_row)
+        self.status_button.setObjectName("batchEntryStatusIcon")
+        self.status_button.setFixedSize(Sizing.CONTROL_HEIGHT, Sizing.CONTROL_HEIGHT)
+        self.status_button.setIconSize(QSize(16, 16))
+        self.status_button.setAutoRaise(True)
+        self.status_button.clicked.connect(self._activate_status)
+        self._header_layout.addWidget(self.status_button, 0, 0, Qt.AlignmentFlag.AlignTop)
 
         self.name_label = _InteractivePathLabel(
             self._entry.file_name,
@@ -491,16 +455,23 @@ class BatchEntryItemWidget(QWidget):
             value_object_name="batchPathLabel",
             elide_middle=True,
         )
+        self.open_location_button = LocationButton(self.path_row, label=_t("file_locations.input"))
+        self.open_location_button.clicked.connect(
+            lambda: self.action_requested.emit("open_source_location", self._entry.file_path)
+        )
+        _cast(QBoxLayout, self.path_row.layout()).addWidget(self.open_location_button)
         body_layout.addWidget(self.path_row)
         # detail_row
         self.detail_row = self._create_body_row("", "", value_object_name="batchDetailLabel")
         body_layout.addWidget(self.detail_row)
         # output_row
-        self.output_row = self._create_body_row(
-            "Output",
-            "",
-            row_object_name="batchOutputRow",
-            value_object_name="batchOutputLabel",
+        self.output_row = OutputFileRow(self.body_section)
+        self.output_row.setObjectName("batchOutputRow")
+        self.output_row.location_requested.connect(
+            lambda _path: self.action_requested.emit("open_output_location", self._entry.file_path)
+        )
+        self.output_row.details_requested.connect(
+            lambda: self.action_requested.emit("show_output_details", self._entry.file_path)
         )
         body_layout.addWidget(self.output_row)
 
@@ -519,7 +490,8 @@ class BatchEntryItemWidget(QWidget):
         self.retry_button.clicked.connect(lambda: self.action_requested.emit("retry_failed", self._entry.file_path))
         self.remove_button.clicked.connect(lambda: self.action_requested.emit("remove_entry", self._entry.file_path))
         for btn in (self.primary_action_button, self.retry_button, self.remove_button):
-            btn.setMinimumWidth(72)
+            btn.setMinimumWidth(Sizing.BUTTON_MIN_WIDTH)
+            btn.setMinimumHeight(Sizing.CONTROL_HEIGHT)
             actions_layout.addWidget(btn)
         actions_layout.addStretch(1)
         root.addWidget(self.actions_row)
@@ -542,7 +514,7 @@ class BatchEntryItemWidget(QWidget):
         title = QLabel(label_text, row)
         title.setObjectName("batchInfoLabel")
         row_layout.addWidget(title, alignment=Qt.AlignmentFlag.AlignTop)
-        value = _MiddleElidedLabel(value_text, row) if elide_middle else WrappingLabel(value_text, row)
+        value = MiddleElidedLabel(value_text, row) if elide_middle else WrappingLabel(value_text, row)
         value.setObjectName(value_object_name)
         if not elide_middle:
             value.setWordWrap(True)
@@ -553,13 +525,6 @@ class BatchEntryItemWidget(QWidget):
         """Apply BatchFileEntry data to this card's widgets."""
         self._entry = entry
         self._apply_leading_marker()
-
-        # Completed: show pointing hand cursor for opening output
-        if entry.status == "completed" and entry.output_path:
-            self.status_icon_label.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.status_icon_label.setToolTip(_t("components.file_drop.batch_list.action_open_output"))
-        else:
-            self.status_icon_label.setCursor(Qt.CursorShape.ArrowCursor)
 
         # Name
         self.name_label.setText(_soft_wrap_filename(entry.file_name))
@@ -589,8 +554,7 @@ class BatchEntryItemWidget(QWidget):
         detail_label = self._get_detail_label_text(entry)
         self._set_row_text(self.detail_row, detail_label, detail_text)
         self._apply_detail_tone(entry)
-        output_text = Path(entry.output_path).name if entry.output_path else ""
-        self._set_row_text(self.output_row, "Output", output_text)
+        self.output_row.set_output(entry.output_path or "", len(entry.output_paths) or bool(entry.output_path))
 
         # Action buttons
         self._apply_action_buttons(entry)
@@ -605,21 +569,38 @@ class BatchEntryItemWidget(QWidget):
         entry = self._entry
         icon = _load_status_icon(entry.status)
         if icon.isNull():
-            self.status_icon_label.clear()
             sequence_text = str(self._sequence_number) if self._sequence_number is not None else ""
-            self.status_icon_label.setText(sequence_text)
-            self.status_icon_label.setVisible(bool(sequence_text))
-            self.status_icon_label.setAccessibleName(sequence_text)
-            if entry.status != "completed" or not entry.output_path:
-                self.status_icon_label.setToolTip(sequence_text)
+            self.status_button.setIcon(QIcon())
+            self.status_button.setText(sequence_text)
+            self.status_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+            self.status_button.setAccessibleName(sequence_text)
+            self.status_button.setToolTip(sequence_text)
         else:
-            self.status_icon_label.clear()
-            self.status_icon_label.setPixmap(icon.pixmap(QSize(16, 16)))
-            self.status_icon_label.setVisible(True)
+            self.status_button.setText("")
+            self.status_button.setIcon(icon)
+            self.status_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
             status_text = _t(f"components.file_drop.status.{entry.status}", entry.status.title())
-            self.status_icon_label.setAccessibleName(status_text)
-            if entry.status != "completed" or not entry.output_path:
-                self.status_icon_label.setToolTip(status_text)
+            self.status_button.setAccessibleName(status_text)
+            self.status_button.setToolTip(status_text)
+        action = self._status_action()
+        if action:
+            hint = _t("file_locations.output") if action == "open_output_location" else _t("activity.details")
+            self.status_button.setToolTip(f"{self.status_button.accessibleName()} · {hint}")
+        self.status_button.setAccessibleDescription(self.status_button.toolTip())
+        self.status_button.setFocusPolicy(Qt.FocusPolicy.StrongFocus if action else Qt.FocusPolicy.NoFocus)
+        self.status_button.setCursor(Qt.CursorShape.PointingHandCursor if action else Qt.CursorShape.ArrowCursor)
+
+    def _status_action(self) -> str:
+        if self._entry.status == "completed" and self._entry.output_path:
+            return "open_output_location"
+        return {"failed": "show_error_details", "skipped": "show_skip_details", "cancelled": "show_output_details"}.get(
+            self._entry.status, ""
+        )
+
+    def _activate_status(self) -> None:
+        action = self._status_action()
+        if action:
+            self.action_requested.emit(action, self._entry.file_path)
 
     @staticmethod
     def _set_row_text(row: QWidget, label: str, value: str) -> None:
@@ -635,7 +616,7 @@ class BatchEntryItemWidget(QWidget):
             title_widget.setVisible(bool(label.strip()))
         if val is not None and val.widget() is not None:
             value_widget = val.widget()
-            if isinstance(value_widget, _MiddleElidedLabel):
+            if isinstance(value_widget, MiddleElidedLabel):
                 value_widget.set_full_text(value)
             else:
                 value_widget.setText(value)  # pyright: ignore[reportOptionalMemberAccess, reportAttributeAccessIssue]
@@ -682,14 +663,7 @@ class BatchEntryItemWidget(QWidget):
         status = entry.status
 
         # Primary action
-        if status in {"completed", "failed"} and entry.output_path:
-            self._set_button(
-                self.primary_action_button,
-                _t("components.file_drop.batch_list.action_open_output"),
-                True,
-            )
-            self._primary_action_key = "open_output"
-        elif status == "skipped" and entry.skip_reason:
+        if status == "skipped" and entry.skip_reason:
             self._set_button(
                 self.primary_action_button,
                 _t("components.file_drop.batch_list.action_view_skip"),
@@ -806,7 +780,7 @@ class BatchEntryItemWidget(QWidget):
         - info_badge: always visible
         - path_row: always visible when a source directory is available
         - detail_row: visible when (selected OR current OR hovered) AND has content
-        - output_row: always hidden
+        - output_row: visible for completed or retained failed outputs
         - retry_button: visible when hovered/selected/current and applicable
         - remove_button: visible when hovered/selected/current and applicable
         - actions_row: visible when any action button is visible
@@ -816,7 +790,7 @@ class BatchEntryItemWidget(QWidget):
         self.badge_strip.setVisible(True)
         self.info_badge.setVisible(True)
         path_label = self._get_row_value_widget(self.path_row)
-        if isinstance(path_label, _MiddleElidedLabel):
+        if isinstance(path_label, MiddleElidedLabel):
             has_path = bool(path_label.full_text.strip())
         else:
             has_path = bool(path_label.text().strip()) if path_label else False
@@ -827,14 +801,14 @@ class BatchEntryItemWidget(QWidget):
         self.detail_row.setVisible(expanded and has_detail)
         if isinstance(detail_label, WrappingLabel) and expanded and has_detail:
             detail_label.sync_wrapped_height()
-        self.output_row.setHidden(True)
+        self.output_row.setVisible(bool(self._entry.output_path) and self._entry.status in {"completed", "failed"})
         self.retry_button.setVisible(expanded and self._secondary_action_visibility.get("retry", False))
         self.remove_button.setVisible(expanded and self._secondary_action_visibility.get("remove", False))
         any_visible = any(
             btn.isVisible() for btn in (self.primary_action_button, self.retry_button, self.remove_button)
         )
         self.actions_row.setVisible(any_visible)
-        self.body_section.setVisible(has_path or not self.detail_row.isHidden())
+        self.body_section.setVisible(has_path or not self.detail_row.isHidden() or not self.output_row.isHidden())
 
     @staticmethod
     def _get_row_label_widget(row: QWidget) -> QLabel | None:
@@ -884,7 +858,7 @@ class BatchEntryItemWidget(QWidget):
             )
             if hint_height > 0:
                 try:
-                    hint = QSize(width, hint_height)
+                    hint = QSize(max(1, width - 2 * item_spacing), hint_height)
                     if self._list_item.sizeHint() == hint:
                         return
                     self._list_item.setSizeHint(hint)
@@ -914,7 +888,7 @@ class BatchEntryItemWidget(QWidget):
 
     def changeEvent(self, event) -> None:
         super().changeEvent(event)
-        if event.type() == QEvent.Type.PaletteChange and hasattr(self, "status_icon_label"):
+        if event.type() == QEvent.Type.PaletteChange and hasattr(self, "status_button"):
             self._apply_leading_marker()
         if event.type() in {QEvent.Type.FontChange, QEvent.Type.StyleChange} and hasattr(self, "name_label"):
             self._typography_layout_timer.start(0)
@@ -1038,6 +1012,7 @@ class BatchList(QWidget):
         self._entry_widget_attach_timer.timeout.connect(self._attach_pending_entry_widgets)
 
         self.setObjectName("batchListSurface")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         self._build_ui()
@@ -1057,7 +1032,6 @@ class BatchList(QWidget):
 
         # ── Summary section ─────────────────────────────────────────
         self._build_summary_section()
-        layout.addWidget(self.summary_section)
 
         # ── Tab section ─────────────────────────────────────────────
         self.tabs_frame = QFrame(self)
@@ -1090,7 +1064,7 @@ class BatchList(QWidget):
         self.category_stack.setObjectName("batchCategoryStack")
 
         tabs_layout.addWidget(self.category_pivot, 0)
-        self._category_selector = QComboBox(self.tabs_frame)
+        self._category_selector = ScrollSafeComboBox(self.tabs_frame)
         self._category_selector.setObjectName("batchCategorySelector")
         for category in _CATEGORY_ORDER:
             self._category_selector.addItem(self._category_tab_label(category, 0), category)
@@ -1102,7 +1076,6 @@ class BatchList(QWidget):
         self.tabs_frame.installEventFilter(self)
         tabs_layout.addWidget(self.category_stack, 1)
 
-        layout.addWidget(self.summary_section)
         layout.addWidget(self.tabs_frame, 1)
 
         # Build 6 category tabs
@@ -1136,6 +1109,8 @@ class BatchList(QWidget):
                 pivot_item = getattr(self.category_pivot, "items", {}).get(category)
                 if pivot_item is not None:
                     self._pivot_items[category] = pivot_item
+
+        tabs_layout.insertWidget(0, self.summary_section)
 
         # Activate the ViewModel's current tab when the widget is created from
         # pre-populated state, such as app startup with initial files.
@@ -1445,15 +1420,18 @@ class BatchList(QWidget):
         if event.key() not in {Qt.Key.Key_Left, Qt.Key.Key_Right}:
             return False
         current = self._vm.current_category
+        categories = self._present_categories()
+        if not categories:
+            return False
         try:
-            idx = _CATEGORY_ORDER.index(current)
+            idx = categories.index(current)
         except ValueError:
             idx = 0
         offset = -1 if event.key() == Qt.Key.Key_Left else 1
-        next_idx = max(0, min(len(_CATEGORY_ORDER) - 1, idx + offset))
+        next_idx = max(0, min(len(categories) - 1, idx + offset))
         if next_idx == idx:
             return False
-        self._activate_tab(_CATEGORY_ORDER[next_idx])
+        self._activate_tab(categories[next_idx])
         return True
 
     def _apply_focus_navigation(self) -> None:
@@ -1606,12 +1584,22 @@ class BatchList(QWidget):
         self._refresh_pivot_states()
         self._refresh_summary()
 
+    def _present_categories(self) -> list[str]:
+        # Filters change visibility, never the admitted categories or execution scope.
+        return [category for category in _CATEGORY_ORDER if self._vm.get_file_count(category) > 0]
+
     def _refresh_pivot_labels(self) -> None:
-        for index in range(self._category_selector.count()):
-            category = str(self._category_selector.itemData(index))
-            self._category_selector.setItemText(
-                index, self._category_tab_label(category, self._vm.get_visible_count_for_category(category))
+        categories = self._present_categories()
+        self._category_selector.blockSignals(True)
+        self._category_selector.clear()
+        for category in categories:
+            self._category_selector.addItem(
+                self._category_tab_label(category, self._vm.get_visible_count_for_category(category)), category
             )
+        self._category_selector.setCurrentIndex(self._category_selector.findData(self._vm.current_category))
+        self._category_selector.blockSignals(False)
+        for category, item in self._pivot_items.items():
+            item.setVisible(category in categories)
         if not self._pivot_items:
             return
         layout = self.tabs_frame.layout()
@@ -1620,13 +1608,15 @@ class BatchList(QWidget):
         self._pivot_compact_mode = self._pivot_required_width(include_count=True) > available
         self._set_pivot_labels(include_count=not self._pivot_compact_mode)
         use_selector = self._pivot_required_width(include_count=not self._pivot_compact_mode) > available
-        self.category_pivot.setVisible(not use_selector)
-        self._category_selector.setVisible(use_selector)
+        self.category_pivot.setVisible(len(categories) > 1 and not use_selector)
+        self._category_selector.setVisible(len(categories) > 1 and use_selector)
 
     def _pivot_required_width(self, *, include_count: bool) -> int:
         layout = self.category_pivot.layout()
         widths = 0
         for category, item in self._pivot_items.items():
+            if category not in self._present_categories():
+                continue
             label = self._category_tab_label(
                 category, self._vm.get_visible_count_for_category(category), include_count=include_count
             )
@@ -1636,7 +1626,7 @@ class BatchList(QWidget):
         if layout is not None:
             margins = layout.contentsMargins()
             widths += margins.left() + margins.right()
-            widths += max(0, len(self._pivot_items) - 1) * max(0, layout.spacing())
+            widths += max(0, len(self._present_categories()) - 1) * max(0, layout.spacing())
         return widths
 
     def _set_pivot_labels(self, *, include_count: bool) -> None:
@@ -1672,20 +1662,11 @@ class BatchList(QWidget):
             self.summary_label.setText(text)
             self.summary_section.setProperty("hasFiles", False)
         else:
-            current = self.get_current_file()
-            if current:
-                text = _t(
-                    "components.file_drop.batch_list.total_files_selected",
-                    f"{total} files loaded, current: {{current_name}}",
-                    total=total,
-                    current_name=Path(current).name,
-                )
-            else:
-                text = _t(
-                    "components.file_drop.batch_list.total_files",
-                    f"{total} files loaded",
-                    total=total,
-                )
+            text = _t(
+                "components.file_drop.batch_list.total_files",
+                f"{total} files loaded",
+                total=total,
+            )
             self.summary_label.setText(text)
             self.summary_section.setProperty("hasFiles", True)
         self.summary_section.style().unpolish(self.summary_section)

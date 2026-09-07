@@ -7,53 +7,31 @@
 
 ## 0.10.0 (2026-09-07)
 
-- 主界面与设置页共用标题栏和间距规范；执行按钮铺满卡片，Markdown 生成按钮显示目标格式，批量按钮显示实际处理数量。
-- 显示输出位置与当前模板，改善深浅主题对比、长文字换行及空闲反馈。
-- Unify card headers, control sizes and spacing across workflows and settings. Full-width execution buttons name Markdown targets and show the actual batch scope.
-- Preview output locations and selected templates; improve theme contrast, long-label reflow and idle feedback.
+- 删除保存原始 Markdown 的 sidecar 和回放逻辑；Word 回转从实际文档结构重建，并修复 Word 保存后的语义 XML 兼容问题。请自行保留源文件。
+- Markdown 扩展按传入识别、生成使用分别设置，默认关闭：Structural Tables、Number Suite 题注与交叉引用、H7–H9、类型化脚注/尾注；提供 Obsidian 预设，关闭时使用普通 Markdown 并提示表达损失。
+- Markdown 转文档/电子表格以及其他格式转 Markdown，一律在所选父目录内生成结果文件夹。目录与主文件使用原文件名、统一时间戳和本次传入格式；CSV 工作表名位于时间戳之前，公文附件使用统一的“附件”子目录及文件名。
+- 输出保持完整目录和资源链接；保护清理后重名的工作表、原始来源身份、可选审计清单与整组结果的原子发布。
+- 单文件模式只保留当前输入，拖入、添加、重复打开和 Assistant 传入共用同一规则；批量切回单文件时确认保留项。运行中禁止替换输入，移除内部进程接收提示。
+- 统一主题卡片标题及边框、按钮尺寸和间距；执行按钮铺满卡片并显示目标格式或实际批量范围。简化模板区和批量列表，改善深浅主题、特大字号、长标签及窄窗口布局。
+- 结果卡片用状态作标题，单文件显示实际主输出及定位图标，多个结果显示数量胶囊；批量在各条目定位输出，成功、跳过和失败图标提供对应快捷操作。启动失败会清除上一次输出入口。
+- 活动记录使用可点击的胶囊入口，失败时显示警告色；统一窗口支持搜索、状态/操作筛选、排序、详情、复制和输入/输出定位。Windows 定位文件可正确处理中文、空格及逗号。
+- 14 页设置按传入、内容处理、转换软件和保存流程重排；输入页采用“传入文本、传入文档、传入表格、传入图片、传入版式文件”等名称。复选框左置，字段与软件优先级列表对齐，避免滚轮误改数值。
+- 校对编辑器使用清晰的规则名称，支持带校验预览的 TOML 导入、合并或替换和完整导出；保存保护并发修改及注释。共享 OCR 语言和模板填充分隔符有独立配置，文档 YAML 保留。
+- PDF、图片及表格合并入口只在批量模式显示，并要求足够数量的匹配文件；单文件 PDF 保留拆分，改善页码范围输入和禁用原因说明。
+- CLI 传入或生成 Markdown 的转换改用 `--output-dir` 选择父目录；原精确 `--output` 用于其他单文件转换。DocWen Assistant 2.4 使用目录发布；OpenClaw 2.0.0 尚不支持新的 MD→CSV 资源主输出与配套布局清单关系。
 
-- 表格导出使用声明的原文件名，避免临时输入编号出现在模板标题与建议文件名中。
-- Preserve declared source names in spreadsheet template titles and suggested output filenames.
-
-- 单文件模式只保留当前输入，拖入、添加和 Assistant 传入遵守同一规则；批量切回单文件时确认保留项，移除内部进程接收记录。
-- Single-file mode keeps only the current input across drag, picker, and Assistant entry points. Returning from a batch confirms the retained file, and internal process messages no longer clutter activity history.
-
-- PDF 拆分说明所选页、剩余页、逐页和奇偶页的含义；无效页码或选中全部页面时显示禁用原因。
-- Explain PDF split modes and why invalid or all-page selections cannot be split.
-
-- 修复关闭 Markdown 输出扩展时，转换降级提示导致 Machine/Assistant 任务被误报为内部错误的问题。
-- Keep Machine and Assistant exports successful when disabled Markdown extensions produce conversion warnings.
-
-- 已解析 Markdown 导出 Word 时，以源文件名称补全文档标题，避免内部标识出现在成品中。
-- Use the source filename for resolved Markdown exports without an authored title, keeping internal input identifiers out of generated Word titles.
-
-- 修复 Assistant 传入新文件及重复打开文件时的选择同步，并将前台显示权限交给当前连接的 Windows GUI。
-- 转换损失提示使用当前界面语言，并在任务摘要显示提示数量；设置反馈变化时，底部确认按钮保持原位。
-
-- Markdown→Word 只生成独立 DOCX，删除原文 sidecar 及回放逻辑；请自行保留源文件。回转从 DOCX 实际结构重建，不承诺源码逐字一致。
-- 新增按输入识别/输出使用分别控制的 Markdown 扩展开关：Structural Tables、Number Suite 题注与交叉引用、H7–H9、类型化尾注。默认关闭，每个方向可应用 Obsidian 预设。
-- 支持题注名称引用和无编号引用的标题/Alias 显示；关闭输出扩展时使用普通 Markdown 并提示结构表达损失。
-- 设置输入页改名为“传入文本、传入文档、传入表格、传入图片、传入版式文件”，明确 Markdown 语法、Markdown 资源和文件保存职责。
-- 改进任务反馈、混合批次、输入所有权、异步保护检查和设置在窄窗口中的布局。
-- 修复设置标签提前换行和堆叠后的多余留白；软件优先级列表统一宽度并按内容调整高度，未保存更改提示使用当前界面语言。
-- 统一 13 个设置页的字段列和控件高度，勾选框置于普通文字左侧并支持长文字换行；窗口变窄时整页字段采用一致的上下排列，恢复宽度后同步收紧。
-- 修复特大字号下启动页溢出、长选项截断和关于页遮挡；序号编辑器支持滚动，校对编辑器统一列宽与按钮语言，深色主题说明更易读。
-- PDF、图片和表格的合并操作只在批量模式显示；单文件 PDF 保留拆分，并改善页码范围输入和间距。
-- 修复单文件模式再次添加或重新选择文件时，显示目标与实际转换输入不一致的问题。
-- 修复 Word 正常保存后重新序列化语义 XML、合并内容类型声明导致回转失败的问题；继续验证实际结构和引用身份。
-
-- Markdown-to-Word produces an independent DOCX. Original-source sidecars and replay have been removed; retain your sources. Reverse conversion reconstructs actual DOCX structures without promising byte-identical Markdown.
-- Keep the requested file selected when opened from Assistant, including repeated opens; hand foreground permission to the connected Windows GUI.
-- Localize Markdown extension loss notices, show their count in the task summary, and keep settings confirmation buttons stationary when feedback changes.
-- Added independent input/output switches for Structural Tables, Number Suite captions and cross-references, H7–H9, and typed endnotes. Extensions default to off, with an Obsidian preset per direction.
-- Added caption-name references and title/Alias display for unnumbered targets. Plain Markdown output reports structural representation losses.
-- Clarified input settings names, Markdown syntax/resources, and file saving; improved task feedback, mixed batches, input ownership, asynchronous protection checks, and narrow settings layouts.
-- Fixed premature settings-label wrapping and excess stacked-row spacing; aligned software-priority lists with content-sized heights and localized the unsaved-changes confirmation.
-- Unified field columns and control heights across all 13 settings pages. Checkboxes precede regular-weight, wrapping labels; fields stack consistently at narrow widths and contract again when widened.
-- Fixed extra-large-font overflow on the start screen, clipped long choices, and obscured About content. Numbering forms scroll, proofreading tables use aligned columns and localized buttons, and dark-theme hints are more readable.
-- PDF, image, and spreadsheet merge actions appear only in batch mode. Single-file PDFs retain splitting with clearer page-range input and spacing.
-- Fixed single-file additions and reselections so the displayed target and actual conversion input stay aligned.
-- Fixed reverse conversion after Word reserializes semantic XML and consolidates content-type declarations on save, while retaining structure and reference identity validation.
+- Remove original-Markdown sidecars and replay. Rebuild reverse conversions from the actual Word structure, including documents reserialized by Word; keep your source files separately.
+- Control Markdown extensions independently for input and output, off by default: Structural Tables, Number Suite captions and references, H7–H9, and typed footnotes/endnotes. Obsidian presets are available; ordinary Markdown output reports representation loss.
+- Always publish a result folder for conversions from or to Markdown, including single-output document and spreadsheet exports. Folder and main-file names share the source name, timestamp and current input format; CSV sheet names precede the timestamp and official-document attachments use one consistent attachment directory.
+- Preserve complete output trees and resource links, disambiguate sanitized sheet names, retain true source identity and publish optional audit manifests atomically with the results.
+- Apply the same single-file selection rule to drag-and-drop, file picking, reopening and Assistant input. Confirm the retained file when leaving batch mode, protect running tasks and remove internal process-receipt notices.
+- Unify themed card headers and borders, control geometry, spacing and full-width execution buttons. Simplify templates and batch lists, with improved dark themes, extra-large fonts, long labels and narrow windows.
+- Show semantic task states, actual primary output names, location icons and multiple-output counts. Batch rows expose their own results and status actions; failed starts clear stale output actions.
+- Open the searchable, filterable and sortable activity window from a clearly clickable pill with failure colouring. Keep details, copying and file locations together; Windows file selection supports Unicode, spaces and commas.
+- Reorganize all 14 settings pages by input, content, converter and saving responsibilities. Align fields and priority lists, place checkboxes before labels and prevent accidental value changes while scrolling.
+- Rename proofreading editors clearly and support validated TOML import previews, merge or replacement, and complete export with comment and concurrent-edit protection. Separate shared OCR language and template-list separators without changing document YAML.
+- Show PDF, image and spreadsheet merge actions only in batch mode, with an adequate matching-file count. Retain single-file PDF splitting and clarify page ranges and disabled actions.
+- CLI conversions from or to Markdown now select a parent with `--output-dir`; exact `--output` remains for other single-file conversions. DocWen Assistant 2.4 publishes whole directories. OpenClaw 2.0.0 does not yet accept the new MD-to-CSV primary-resource/layout-manifest relationship.
 
 ## 0.9.1 (2026-08-30)
 

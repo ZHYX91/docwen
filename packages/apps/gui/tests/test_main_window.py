@@ -90,7 +90,7 @@ class TestMainWindowAssembly:
             current_file=source.name,
             total_count=1,
             state="success",
-            guide_actions=[{"action_key": "open_output_dir", "target_path": str(tmp_path)}],
+            guide_actions=[{"action_key": "open_output_location", "target_path": str(tmp_path)}],
         )
         info_vm.set_transient_message("progress:clear-session", "old progress", "info", ttl_ms=0)
 
@@ -113,7 +113,8 @@ class TestMainWindowAssembly:
         assert main_window.action_area.view_model.file_path is None
         assert main_window.conversion_panel.view_model.has_files is False
         assert main_window.info_area.message_count == 0
-        assert main_window.info_area._history_row_widgets == []
+        assert main_window._activity_model.records == []
+        assert main_window.info_area._activity_button.isHidden()
         assert info_vm.transient_count == 0
         assert info_vm.has_task_summary is False
         assert info_vm.guide_visible is False

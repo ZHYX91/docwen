@@ -30,6 +30,7 @@ _TAB_GROUP_MAP: dict[str, str] = {
     "layout": "layout",
     "link": "link",
     "proofread": "proofread",
+    "software": "software",
 }
 
 _TABS = list(_TAB_GROUP_MAP.keys())

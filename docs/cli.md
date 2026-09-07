@@ -19,7 +19,8 @@ DocWen 0.9 的源码态与打包态使用同一套 `docwen` 命令树。精确�
 - `inspect FILE`: inspect one input's actual format and supported routes.
 - `resources list|show TYPE`: discover formats, optimizations, templates and numbering schemes.
 - `schema [COMMAND_PATH...]`: export the active parser contract.
-- `convert FILE --to FORMAT --output PATH`: convert one file to an exact output path.
+- `convert FILE --to FORMAT --output-dir DIR`: convert one file into the chosen parent; required for conversions from or to Markdown.
+- `convert FILE --to FORMAT --output PATH`: exact-file output for other single-file conversions.
 - `validate FILE [--report PATH]`: validate DOCX, Markdown, or legacy Word-family content
   (`DOC`/`WPS`/`RTF`/`ODT` is pre-converted to DOCX by the Application layer); the default is read-only.
 - `number markdown FILE --operation add|remove [--scheme ID] (--output PATH | --in-place)`: explicitly add or remove Markdown heading numbering.
@@ -57,6 +58,10 @@ DocWen 不会为了匹配文件名递归扫描 Workspace、Vault、父目录树�
 Markdown 明确写出的绝对路径或带目录段的相对路径属于精确定位，不属于文件名搜索；未找到的短链接按配置的错误策略处理。
 
 ## Output and safety / 输出与安全
+
+Conversions from or to Markdown publish a result folder inside the parent selected with `--output-dir DIR`, even when there is only one output. Names include the source name, timestamp and current input format. Use `--output PATH` only for other conversions that produce one exact file.
+
+传入或生成 Markdown 的转换统一在 `--output-dir DIR` 指定的父目录下创建结果文件夹，即使只有一个输出文件；名称包含原文件名、时间戳和本次传入格式。其他只生成单个文件的转换才使用 `--output PATH` 指定精确文件路径。
 
 - JSON mode emits exactly one protocol 3 envelope conforming to [the JSON schema](specs/json-contracts.schema.json).
 - Machine meaning comes from stable fields and typed error codes, not localized messages.
@@ -127,7 +132,7 @@ docwen inspect document.docx --json
 docwen resources list formats --json
 docwen resources list optimizations --json
 docwen schema convert --json
-docwen convert document.docx --to md --output document.md
+docwen convert document.docx --to md --output-dir exports
 docwen validate document.docx --check typo --check punct --json
 docwen merge pdf part-1.pdf part-2.pdf --output combined.pdf
 docwen gui status --json

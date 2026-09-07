@@ -61,7 +61,7 @@ def test_config_port_adapter_delegates_editable_file_text() -> None:
             calls.append(("read", rel_path))
             return "[entries]\n"
 
-        def save_file_text(self, rel_path: str, content: str) -> bool:
+        def save_file_text(self, rel_path: str, content: str, *, expected_text: str | None = None) -> bool:
             calls.append((rel_path, content))
             return True
 

@@ -1,4 +1,4 @@
-"""Central Markdown document-node layout planning and link relocation."""
+"""Central conversion layout planning and Markdown link relocation."""
 
 from __future__ import annotations
 
@@ -50,8 +50,8 @@ class DocumentNodeLayoutPlan:
                 raise ValueError("planned artifact is missing logical_path")
             old = validate_logical_path(artifact.logical_path)
             relative = old.relative_to(self.root_path)
-            if artifact.metadata.get("document_node_role") == "primary":
-                relative = PurePosixPath(f"{root_name}.md")
+            if relative.stem == self.root_name:
+                relative = PurePosixPath(f"{root_name}{relative.suffix}")
             logical = (PurePosixPath(root_name) / relative).as_posix()
             if artifact.media_type == MARKDOWN_MEDIA_TYPE:
                 validate_markdown_node_path(logical)
@@ -77,22 +77,24 @@ def plan_document_node_layout(
     input_path: str,
     created_at: datetime | None = None,
     root_collision: int = 0,
+    identity: ConversionIdentity | None = None,
 ) -> DocumentNodeLayoutPlan:
-    """Assign one root node and one ``X/X.md`` path to every Markdown."""
+    """Group a conversion's deliverables, keeping every Markdown at ``X/X.md``."""
 
-    markdown = [artifact for artifact in artifacts if artifact.media_type == MARKDOWN_MEDIA_TYPE]
-    if not markdown:
-        raise ValueError("document-node layout requires at least one Markdown artifact")
-    preferred = [artifact for artifact in markdown if artifact.is_primary]
-    primary = preferred[0] if preferred else markdown[0]
+    deliverables = [artifact for artifact in artifacts if artifact.kind not in {"manifest", "log"}]
+    if not deliverables:
+        raise ValueError("document-node layout requires at least one deliverable")
+    preferred = [artifact for artifact in deliverables if artifact.is_primary]
+    primary = preferred[0] if preferred else deliverables[0]
     source = Path(input_path)
     source_stem = source.stem or Path(primary.suggested_name).stem or "document"
     source_format = source.suffix.lstrip(".") or str(primary.metadata.get("source_format", "unknown"))
-    identity = ConversionIdentity.create(
+    identity = identity or ConversionIdentity.create(
         task_id=task_id,
         source_stem=source_stem,
         source_format=source_format,
         created_at=created_at,
+        source_name=source.name,
     )
     root_name = identity.node_name(collision=root_collision)
     root = DocumentNodePath(root_name)
@@ -101,6 +103,12 @@ def plan_document_node_layout(
     used_paths: set[str] = set()
     child_labels: dict[str, int] = {}
     resource_names: dict[str, int] = {}
+    csv_names: set[str] = set()
+    reserved_csv_names = {
+        identity.node_name(label).casefold()
+        for artifact in artifacts
+        if (label := _csv_label(identity, artifact)) is not None
+    }
     for artifact in artifacts:
         metadata = {
             **artifact.metadata,
@@ -108,8 +116,26 @@ def plan_document_node_layout(
             "node_root": root_name,
             "source_suggested_name": artifact.suggested_name,
         }
-        if artifact is primary:
-            logical = root.markdown.as_posix()
+        csv_label = _csv_label(identity, artifact)
+        if csv_label is not None:
+            csv_name = identity.node_name(csv_label)
+            collision = 1
+            while csv_name.casefold() in csv_names or (collision > 1 and csv_name.casefold() in reserved_csv_names):
+                index = artifact.metadata.get("sheet_index", artifact.metadata.get("table_index", len(csv_names)))
+                ordinal = int(index) + 1 if isinstance(index, int) else len(csv_names) + 1
+                disambiguator = f"_{ordinal}" if collision == 1 else f"_{ordinal}_{collision}"
+                csv_name = identity.node_name(f"{csv_label}{disambiguator}")
+                collision += 1
+            csv_names.add(csv_name.casefold())
+            logical = (root.directory / f"{csv_name}.csv").as_posix()
+            metadata["document_node_role"] = "primary" if artifact is primary else "worksheet"
+        elif artifact is primary:
+            suffix = (
+                ".md"
+                if artifact.media_type == MARKDOWN_MEDIA_TYPE
+                else Path(artifact.suggested_name).suffix or Path(artifact.staging_path).suffix
+            )
+            logical = (root.directory / f"{root_name}{suffix}").as_posix()
             metadata["document_node_role"] = "primary"
         elif artifact.media_type == MARKDOWN_MEDIA_TYPE:
             label = _markdown_child_label(identity, artifact)
@@ -148,6 +174,16 @@ def plan_document_node_layout(
     return DocumentNodeLayoutPlan(identity=identity, root_name=root_name, artifacts=tuple(planned))
 
 
+def _csv_label(identity: ConversionIdentity, artifact: ArtifactManifest) -> str | None:
+    if artifact.media_type != "text/csv":
+        return None
+    sheet_name = artifact.metadata.get("sheet_name")
+    if not isinstance(sheet_name, str) or not sheet_name.strip():
+        index = artifact.metadata.get("sheet_index", artifact.metadata.get("table_index", 0))
+        sheet_name = f"Sheet{int(index) + 1}" if isinstance(index, int) else "Sheet1"
+    return f"{identity.source_stem}_{sheet_name}"
+
+
 def relocated_markdown_bytes(
     artifact: ArtifactManifest,
     *,
@@ -180,11 +216,7 @@ def relocated_markdown_bytes(
 def _markdown_child_label(identity: ConversionIdentity, artifact: ArtifactManifest) -> str:
     source_kind = str(artifact.metadata.get("source_kind", ""))
     if source_kind == "gongwen_attachment":
-        ordinal = artifact.metadata.get("attachment_ordinal")
-        suffix = f"{int(ordinal):02d}" if isinstance(ordinal, int) and ordinal > 0 else ""
-        title = artifact.metadata.get("attachment_title")
-        title_suffix = f"-{title}" if isinstance(title, str) and title.strip() else ""
-        return sanitize_node_label(f"{identity.source_stem}_附件{suffix}{title_suffix}")
+        return sanitize_node_label(f"{identity.source_stem}_附件")
     raw = Path(artifact.suggested_name).stem or "子文档"
     if raw.casefold() == identity.source_stem.casefold():
         raw = f"{identity.source_stem}_子文档"

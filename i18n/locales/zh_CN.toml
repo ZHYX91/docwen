@@ -11,6 +11,8 @@ template_name = "简体中文通用模板"
 # 主窗口
 # =============================================================================
 [main_window]
+file_admission_missing = "输入文件不存在或已移走：{path}"
+file_admission_unreadable = "无法读取输入文件：{path}"
 extension_loss_endnotes = "尾注已转换为普通 Markdown 脚注。"
 extension_loss_headings = "七至九级标题已转换为六级标题。"
 extension_loss_references = "题注和交叉引用已转换为可见文本。"
@@ -83,17 +85,17 @@ save_failed = "保存设置失败"
 # 状态栏
 # =============================================================================
 [info_area]
+output_each_source = "分别保存到各文件所在目录"
+output_date_subfolder = "保存到日期子文件夹"
 task_warning_count = "有 {count} 条转换提示，请展开活动记录查看。"
 task_progress_percent = "进度：{percent}%"
 task_state_skipped = "已跳过"
 batch_name = "批量处理（{count} 个文件）"
 aggregate_name = "合并（{count} 个文件）"
 activity_count = "活动记录（{count}）"
-clear_history = "清空活动记录"
 notice_title = "提示"
 task_state_cancelling = "正在取消"
 copy_path = "复制路径"
-open_location = "打开文件位置：{path}"
 ipc_file_missing = "IPC 文件不存在：{path}"
 font_size_applied = "字号：{label}"
 
@@ -106,12 +108,12 @@ history_completed = "已完成：{name}"
 task_state_partial = "部分失败"
 task_state_failed = "失败"
 task_state_cancelled = "已取消"
-task_current_file = "任务文件：{name}"
+task_current_file = "正在处理：{name}"
 task_progress_detail = "已完成 {completed}/{total}，失败 {failed}"
 history_started = "开始处理：{name}"
 task_skipped_count = "已跳过：{skipped}"
 task_cancelled_count = "已取消：{cancelled}"
-task_guide_open_output_dir = "打开输出目录"
+task_output_file = "输出文件：{name}"
 task_guide_view_failed_details = "查看失败详情"
 task_guide_retry_failed = "重试失败项"
 window_topmost_enabled = "窗口已置顶，按 Ctrl+Shift+T 可取消"
@@ -160,7 +162,7 @@ doctor = "运行自检"
 gongwen = "公文"
 
 # 校对选项
-invoice_cn = "中文发票（invoice_cn）"
+invoice_cn = "中文发票"
 [cli.interactive.proofread]
 
 # 提示文本
@@ -209,11 +211,12 @@ document = "传入文档"
 spreadsheet = "传入表格"
 image = "传入图片"
 layout = "传入版式文件"
-other = "其他"
+other = "传入其他文件"
 link = "链接"
 formatting = "Markdown 语法"
 output = "文件保存"
 logging = "日志"
+software = "转换软件"
 
 [settings.descriptions]
 general = "语言、主题等全局设置"
@@ -354,6 +357,9 @@ save_numbering_clean_rules_failed = "无法将序号清理规则保存到磁盘�
 # -----------------------------------------------------------------------------
 # 文档设置选项卡
 # -----------------------------------------------------------------------------
+input_description = "设置传入 Markdown 后的文档生成、模板填充和标题处理。"
+template_fill_section = "模板填充"
+template_fill_desc = "将 YAML 列表填入 Word 或表格模板时，使用此分隔符连接各项。空字符串和空格会原样保留。"
 [settings.proofread]
 validation_section = "校对规则"
 enable_symbol_pairing = "启用标点配对检查"
@@ -362,13 +368,13 @@ enable_typos_rule = "启用错别字检测"
 enable_sensitive_word = "启用敏感词检查"
 skip_code_blocks = "跳过代码块"
 skip_quote_blocks = "跳过引用块"
-symbol_mapping_section = "标点符号映射编辑器"
-symbol_mapping_desc = "管理标点配对和符号映射规则。"
-symbol_correction_section = "符号校对编辑器"
+symbol_mapping_section = "标点配对规则"
+symbol_mapping_desc = "检测左右标点是否正确配对、闭合。"
+symbol_correction_section = "符号纠正规则"
 symbol_correction_desc = "管理全角/半角等符号校对条目。"
-typos_section = "错别字库编辑器"
+typos_section = "错别字词典"
 typos_desc = "管理常见错别字校正条目。"
-sensitive_words_section = "敏感词库编辑器"
+sensitive_words_section = "敏感词词典"
 sensitive_words_desc = "管理敏感词检测条目。"
 edit = "编辑"
 
@@ -424,7 +430,6 @@ enable_optimization = "默认启用\"针对文档类型优化\""
 optimization_type_label = "默认优化类型:"
 
 # 软件优先级
-software_section = "软件优先级"
 word_processors_label = "文档处理软件优先级"
 odt_conversion_label = "ODT格式转换"
 document_to_pdf_label = "文档转PDF"
@@ -455,7 +460,6 @@ enable_ocr_tooltip = "表格转MD时默认勾选\"图片文字识别\""
 merge_mode_section = "汇总模式设置"
 merge_mode_desc = "设置表格汇总的默认模式"
 default_merge_mode_label = "默认汇总模式:"
-software_section = "软件优先级"
 spreadsheet_processors_label = "表格处理软件优先级"
 ods_conversion_label = "ODS格式转换"
 spreadsheet_to_pdf_label = "表格转PDF"
@@ -470,7 +474,6 @@ by_cell = "按单元格汇总"
 [settings.spreadsheet.software]
 wps_spreadsheets = "WPS表格"
 excel = "Excel"
-libreoffice = "LibreOffice"
 
 # -----------------------------------------------------------------------------
 # 图片设置选项卡
@@ -485,16 +488,6 @@ enable_optimization = "默认启用\"针对图片类型优化\""
 optimization_type_label = "默认优化类型:"
 
 # OCR语言设置
-ocr_language_label = "OCR识别语言:"
-ocr_language_tooltip = "选择OCR文字识别使用的语言模型。\n\n• 跟随界面语言：根据当前界面语言自动选择\n• 中文/英文：适合中文和英文混合文档\n• 日语：适合日语文档\n• 拉丁语系：适合德语、法语、葡萄牙语等\n• 西里尔语系：适合俄语等"
-ocr_language_auto = "跟随界面语言"
-ocr_language_chinese = "中文/英文"
-ocr_language_japanese = "日语"
-ocr_language_chinese_cht = "繁体中文"
-ocr_language_english = "纯英文"
-ocr_language_korean = "韩语"
-ocr_language_latin = "拉丁语系 (德/法/葡等)"
-ocr_language_cyrillic = "西里尔语系 (俄语等)"
 
 compress_section = "压缩选项设置"
 compress_desc = "设置图片格式转换时的默认压缩模式"
@@ -528,7 +521,6 @@ render_dpi_label = "渲染 DPI:"
 dpi_min = "最小(150)"
 dpi_medium = "适中(300)"
 dpi_high = "高清(600)"
-software_section = "软件优先级"
 pdf_to_doc_label = "PDF转文档"
 
 # -----------------------------------------------------------------------------
@@ -833,6 +825,53 @@ critical = "严重 (CRITICAL)"
 # =============================================================================
 # 关于对话框
 # =============================================================================
+
+[settings.software]
+priority = "软件优先级"
+description = "按顺序尝试已安装的软件，实际可用软件取决于转换格式。"
+presentation_processors = "演示文稿处理软件"
+wps_presentation = "WPS 演示"
+powerpoint = "PowerPoint"
+
+[settings.ocr]
+language_label = "OCR识别语言:"
+language_tooltip = "所有输入格式共用的 OCR 识别语言。"
+language_auto = "跟随界面语言"
+language_chinese = "中文/英文"
+language_japanese = "日语"
+language_chinese_cht = "繁体中文"
+language_english = "纯英文"
+language_korean = "韩语"
+language_latin = "拉丁语系 (德/法/葡等)"
+language_cyrillic = "西里尔语系 (俄语等)"
+section = "OCR 识别"
+
+[settings.rule_transfer]
+read_failed = "无法读取当前规则配置。"
+added = "新增"
+unchanged = "相同"
+conflict = "有差异"
+existing_only = "仅现有"
+change = "变化"
+rule = "规则"
+current = "当前内容"
+incoming = "导入内容"
+preview = "预览导入规则"
+summary = "新增 {added} · 有差异 {conflict} · 相同 {unchanged} · 仅现有 {existing_only}"
+strategy = "导入方式"
+merge = "合并到现有规则"
+replace = "替换全部规则"
+strategy_hint = "合并保留现有条目，并合并同名条目的值和备注；替换会移除本次导入中没有的条目。"
+merge_unavailable = "配对规则存在冲突，不能合并。可取消后调整文件，或选择替换。"
+confirm = "确认导入"
+source_changed = "预览期间规则已更改。请重新导入以查看最新差异。"
+save_failed = "保存失败，原规则已保留。"
+import = "导入…"
+import_failed = "导入失败"
+imported = "规则已导入。"
+export = "导出…"
+export_failed = "导出失败"
+exported = "完整规则已导出。"
 [about]
 title = "关于"
 # 仅简体中文使用的品牌副标题，其他语言 locale 无需翻译该键
@@ -925,8 +964,6 @@ no_batch_files = "当前无批量文件"
 retry_selected_failed = "重试当前失败项"
 retry_all_failed = "重试当前选项卡全部失败项"
 total_files = "共 {total} 个文件"
-total_files_selected = "共 {total} 个文件，当前选中：{current_name}"
-action_open_output = "打开输出"
 action_view_skip = "查看跳过"
 action_view_error = "查看失败"
 action_remove = "移除"
@@ -1336,13 +1373,11 @@ letter_number_desc = "匹配：A. / A) / (A) / a. / a) 等字母序号"
 # 映射编辑器
 [editors.mapping]
 # 对话框标题
-symbol_editor_title = "标点符号映射编辑器"
+symbol_editor_title = "标点配对规则"
 typo_editor_title = "错别字库编辑器"
 sensitive_editor_title = "敏感词库编辑器"
 # 下拉选择标签
 search_placeholder = "搜索键、值或备注"
-source_symbol = "源符号"
-target_symbol = "目标符号"
 typo = "错别字"
 corrections = "校正词"
 multi_value_hint = "提示：支持用 | 分隔多个值（如：value1|value2|value3）"
@@ -1383,6 +1418,8 @@ merge = "合并"
 # =============================================================================
 # 文件类型分类
 # =============================================================================
+opening_symbol = "左侧标点"
+closing_symbol = "右侧标点"
 [file_types]
 document = "文档"
 spreadsheet = "表格"
@@ -1631,3 +1668,32 @@ captions_references = "Number Suite 题注和交叉引用"
 extended_headings = "七至九级标题（H7–H9）"
 typed_endnotes = "类型化脚注和尾注"
 obsidian_preset = "使用 Obsidian 扩展预设"
+
+[activity]
+record_unavailable = "该活动记录已清除或不可用。"
+title = "活动记录"
+search = "搜索文件名或记录内容"
+all_statuses = "全部状态"
+all_operations = "全部操作"
+time = "时间"
+status = "状态"
+file = "文件"
+operation = "操作"
+details = "详情"
+select_record = "选择记录以查看详情"
+clear_finished = "清空已结束记录"
+info = "提示"
+warning = "警告"
+merge = "合并"
+split = "拆分"
+numbering = "编号"
+validate = "验证"
+input = "输入"
+output = "输出"
+failed_count = "活动记录 · {count} 项失败"
+
+[file_locations]
+input = "定位输入文件"
+output = "定位输出文件"
+multiple = "等 {count} 个"
+show_outputs = "查看全部输出文件"

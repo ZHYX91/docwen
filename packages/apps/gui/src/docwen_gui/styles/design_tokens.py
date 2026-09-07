@@ -19,6 +19,7 @@ class Spacing:
     FORM_ROW_GAP = MD
     CARD_PADDING = LG
     CARD_GAP = LG
+    COLUMN_GAP = LG
 
 
 class Typography:

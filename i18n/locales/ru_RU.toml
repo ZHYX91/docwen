@@ -31,17 +31,17 @@ save_failed = "Не удалось сохранить настройки"
 # 状态栏
 # =============================================================================
 [info_area]
+output_each_source = "Сохранять каждый результат рядом с исходным файлом"
+output_date_subfolder = "Сохранять в подпапку с датой"
 task_warning_count = "Уведомлений о преобразовании: {count}. Подробности доступны в журнале действий."
 task_progress_percent = "Прогресс:{percent}%"
 task_state_skipped = "Пропущено"
 batch_name = "Пакетная обработка ({count} файлов)"
 aggregate_name = "Объединение ({count} файлов)"
 activity_count = "Действия ({count})"
-clear_history = "Очистить журнал действий"
 notice_title = "Уведомление"
 task_state_cancelling = "Отмена"
 copy_path = "Копировать путь"
-open_location = "Открыть расположение файла: {path}"
 ipc_file_missing = "Файл IPC не найден: {path}"
 font_size_applied = "Размер текста: {label}"
 
@@ -54,12 +54,12 @@ history_completed = "Завершено: {name}"
 task_state_partial = "Частичный сбой"
 task_state_failed = "Сбой"
 task_state_cancelled = "Отменено"
-task_current_file = "Файл задачи: {name}"
+task_current_file = "Обработка: {name}"
 task_progress_detail = "Выполнено {completed}/{total}, ошибок {failed}"
 history_started = "Начато: {name}"
 task_skipped_count = "Пропущено: {skipped}"
 task_cancelled_count = "Отменено: {cancelled}"
-task_guide_open_output_dir = "Открыть папку вывода"
+task_output_file = "Выходной файл: {name}"
 task_guide_view_failed_details = "Показать детали ошибки"
 task_guide_retry_failed = "Повторить проблемные элементы"
 window_topmost_enabled = "Окно закреплено поверх остальных. Нажмите Ctrl+Shift+T, чтобы отключить."
@@ -108,7 +108,7 @@ doctor = "Запустить диагностику"
 gongwen = "Официальный"
 
 # 校对选项
-invoice_cn = "Китайский счёт (invoice_cn)"
+invoice_cn = "Китайский счёт"
 [cli.interactive.proofread]
 
 # 提示文本
@@ -157,11 +157,12 @@ document = "Входные документы"
 spreadsheet = "Входные таблицы"
 image = "Входные изображения"
 layout = "Входные файлы фиксированной вёрстки"
-other = "Другое"
+other = "Другие входные файлы"
 link = "Ссылка"
 formatting = "Синтаксис Markdown"
 output = "Сохранение файлов"
 logging = "Лог"
+software = "Программы конвертации"
 
 [settings.descriptions]
 general = "Глобальные настройки языка, темы и интерфейса"
@@ -302,6 +303,9 @@ save_numbering_clean_rules_failed = "Не удалось сохранить пр
 # -----------------------------------------------------------------------------
 # 文档设置选项卡
 # -----------------------------------------------------------------------------
+input_description = "Настройки входного Markdown: создание документов, заполнение шаблонов и обработка заголовков."
+template_fill_section = "Заполнение шаблонов"
+template_fill_desc = "Разделитель элементов YAML-списка в шаблонах Word и таблиц. Пробелы и пустой разделитель сохраняются без изменений."
 [settings.proofread]
 validation_section = "Правила проверки"
 enable_symbol_pairing = "Включить проверку парных символов"
@@ -310,13 +314,13 @@ enable_typos_rule = "Включить обнаружение опечаток"
 enable_sensitive_word = "Включить проверку отмеченных терминов"
 skip_code_blocks = "Пропускать блоки кода"
 skip_quote_blocks = "Пропускать блоки цитат"
-symbol_mapping_section = "Редактор соответствий символов"
-symbol_mapping_desc = "Управление правилами парности и исправления символов."
-symbol_correction_section = "Редактор исправлений символов"
+symbol_mapping_section = "Пары знаков препинания"
+symbol_mapping_desc = "Проверка соответствия открывающих и закрывающих знаков."
+symbol_correction_section = "Правила исправления символов"
 symbol_correction_desc = "Управление исправлениями полноширинных и полуширинных символов."
-typos_section = "Редактор словаря опечаток"
+typos_section = "Словарь опечаток"
 typos_desc = "Управление исправлениями распространённых опечаток."
-sensitive_words_section = "Редактор отмеченных терминов"
+sensitive_words_section = "Словарь чувствительных слов"
 sensitive_words_desc = "Управление записями для обнаружения отмеченных терминов."
 edit = "Изменить"
 
@@ -372,7 +376,6 @@ enable_optimization = "Включить оптимизацию"
 optimization_type_label = "Тип:"
 
 # 软件优先级
-software_section = "Приоритет ПО"
 word_processors_label = "Текстовый процессор"
 odt_conversion_label = "Конвертация ODT"
 document_to_pdf_label = "Документ в PDF"
@@ -403,7 +406,6 @@ enable_ocr_tooltip = "Включить OCR."
 merge_mode_section = "Режим слияния"
 merge_mode_desc = "Режим по умолчанию для слияния таблиц."
 default_merge_mode_label = "Режим объединения по умолчанию:"
-software_section = "Приоритет ПО"
 spreadsheet_processors_label = "Табличный процессор"
 ods_conversion_label = "Конвертация ODS"
 spreadsheet_to_pdf_label = "Таблица в PDF"
@@ -418,7 +420,6 @@ by_cell = "По ячейке"
 [settings.spreadsheet.software]
 wps_spreadsheets = "WPS Spreadsheets"
 excel = "Excel"
-libreoffice = "LibreOffice"
 
 # -----------------------------------------------------------------------------
 # 图片设置选项卡
@@ -433,16 +434,6 @@ enable_optimization = "Включать \"Оптимизация по типу �
 optimization_type_label = "Тип оптимизации по умолчанию:"
 
 # OCR语言设置
-ocr_language_label = "Язык OCR:"
-ocr_language_tooltip = "Выберите языковую модель для распознавания OCR.\n\n• Следовать языку интерфейса: Автоматический выбор по текущему языку интерфейса\n• Китайский/Английский: Для смешанных китайских и английских документов\n• Японский: Для японских документов\n• Латиница: Для немецкого, французского, португальского и т. д.\n• Кириллица: Для русского и т. д."
-ocr_language_auto = "Следовать языку интерфейса"
-ocr_language_chinese = "Китайский/Английский"
-ocr_language_japanese = "Японский"
-ocr_language_chinese_cht = "Традиционный китайский"
-ocr_language_english = "Только английский"
-ocr_language_korean = "Корейский"
-ocr_language_latin = "Латиница (DE/FR/PT и т. д.)"
-ocr_language_cyrillic = "Кириллица (RU и т. д.)"
 
 compress_section = "Сжатие"
 compress_desc = "Настройки сжатия по умолчанию."
@@ -476,7 +467,6 @@ render_dpi_label = "Render DPI:"
 dpi_min = "Мин (150)"
 dpi_medium = "Среднее (300)"
 dpi_high = "Высокое (600)"
-software_section = "Приоритет ПО"
 pdf_to_doc_label = "PDF в Документ"
 
 # -----------------------------------------------------------------------------
@@ -781,6 +771,53 @@ critical = "Критический (CRITICAL)"
 # =============================================================================
 # 关于对话框
 # =============================================================================
+
+[settings.software]
+priority = "Приоритет программ"
+description = "Установленные программы проверяются в этом порядке. Доступность также зависит от формата преобразования."
+presentation_processors = "Программы презентаций"
+wps_presentation = "WPS Presentation"
+powerpoint = "PowerPoint"
+
+[settings.ocr]
+language_label = "Язык OCR:"
+language_tooltip = "Общий язык OCR для всех входных форматов."
+language_auto = "Следовать языку интерфейса"
+language_chinese = "Китайский/Английский"
+language_japanese = "Японский"
+language_chinese_cht = "Традиционный китайский"
+language_english = "Только английский"
+language_korean = "Корейский"
+language_latin = "Латиница (DE/FR/PT и т. д.)"
+language_cyrillic = "Кириллица (RU и т. д.)"
+section = "Распознавание OCR"
+
+[settings.rule_transfer]
+read_failed = "Не удалось прочитать текущую конфигурацию правил."
+added = "Добавлено"
+unchanged = "Без изменений"
+conflict = "Различается"
+existing_only = "Только текущее"
+change = "Изменение"
+rule = "Правило"
+current = "Текущее"
+incoming = "Импортируемое"
+preview = "Предпросмотр импорта правил"
+summary = "Добавлено {added} · Различается {conflict} · Без изменений {unchanged} · Только текущее {existing_only}"
+strategy = "Способ импорта"
+merge = "Объединить с текущими правилами"
+replace = "Заменить все правила"
+strategy_hint = "Объединение сохраняет текущие записи и объединяет значения и примечания одинаковых ключей. Замена удаляет записи, которых нет в импортируемом файле."
+merge_unavailable = "Конфликтующие пары знаков нельзя объединить. Отмените импорт и исправьте файл или выберите замену."
+confirm = "Подтвердить импорт"
+source_changed = "Правила изменились во время просмотра. Повторите импорт, чтобы проверить актуальные различия."
+save_failed = "Не удалось сохранить. Исходные правила сохранены без изменений."
+import = "Импорт…"
+import_failed = "Ошибка импорта"
+imported = "Правила импортированы."
+export = "Экспорт…"
+export_failed = "Ошибка экспорта"
+exported = "Все правила экспортированы."
 [about]
 title = "О программе"
 version_info = "Версия {version}"
@@ -874,8 +911,6 @@ no_batch_files = "Нет пакетных файлов"
 retry_selected_failed = "Повторить выбранную неудачную запись"
 retry_all_failed = "Повторить все неудачные записи на этой вкладке"
 total_files = "Всего файлов: {total}"
-total_files_selected = "Всего файлов: {total}, выбран: {current_name}"
-action_open_output = "Открыть результат"
 action_view_skip = "Показать пропуск"
 action_view_error = "Показать ошибку"
 action_remove = "Удалить"
@@ -1288,7 +1323,7 @@ letter_number_desc = "A. и т.д."
 # 映射编辑器
 [editors.mapping]
 # 对话框标题
-symbol_editor_title = "Символы"
+symbol_editor_title = "Пары знаков препинания"
 typo_editor_title = "Опечатки"
 sensitive_editor_title = "Отмеченные термины"
 # 下拉选择标签
@@ -1327,14 +1362,14 @@ merge = "Объединить"
 # 文件类型分类
 # =============================================================================
 search_placeholder = "Поиск ключа, значения или комментария"
-source_symbol = "Исходный символ"
-target_symbol = "Целевой символ"
 typo = "Опечатка"
 corrections = "Исправления"
 multi_value_hint = "Совет: разделяйте несколько значений символом | (например: значение1|значение2|значение3)"
 save_typos_failed = "Не удалось сохранить словарь опечаток."
 save_symbol_correction_failed = "Не удалось сохранить записи исправления символов."
 save_sensitive_words_failed = "Не удалось сохранить словарь отмеченных терминов."
+opening_symbol = "Открывающий знак"
+closing_symbol = "Закрывающий знак"
 [file_types]
 document = "Документ"
 spreadsheet = "Таблица"
@@ -1576,6 +1611,8 @@ subtitle = "Подзаголовок"
 
 
 [main_window]
+file_admission_missing = "Входной файл больше не существует: {path}"
+file_admission_unreadable = "Не удалось прочитать входной файл: {path}"
 extension_loss_endnotes = "Концевые сноски преобразованы в обычные сноски Markdown."
 extension_loss_headings = "Заголовки уровней 7–9 преобразованы в уровень 6."
 extension_loss_references = "Подписи и перекрёстные ссылки преобразованы в видимый текст."
@@ -1635,3 +1672,32 @@ captions_references = "Number Suite: подписи и перекрёстные 
 extended_headings = "Заголовки уровней 7–9"
 typed_endnotes = "Типизированные сноски и концевые сноски"
 obsidian_preset = "Использовать расширения Obsidian"
+
+[activity]
+record_unavailable = "Эта запись активности удалена или недоступна."
+title = "Журнал действий"
+search = "Поиск по имени файла или содержимому"
+all_statuses = "Все состояния"
+all_operations = "Все операции"
+time = "Время"
+status = "Состояние"
+file = "Файл"
+operation = "Операция"
+details = "Подробности"
+select_record = "Выберите запись для просмотра подробностей"
+clear_finished = "Очистить завершённые записи"
+info = "Уведомление"
+warning = "Предупреждение"
+merge = "Объединить"
+split = "Разделить"
+numbering = "Нумерация"
+validate = "Проверить"
+input = "Вход"
+output = "Выход"
+failed_count = "Журнал · ошибок: {count}"
+
+[file_locations]
+input = "Показать исходный файл"
+output = "Показать выходной файл"
+multiple = "Файлов: {count}"
+show_outputs = "Показать все выходные файлы"

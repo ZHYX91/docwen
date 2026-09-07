@@ -76,17 +76,18 @@ _GENERATED_SUCCESSFUL_WARNING_FIXTURE = Path("__docwen_generated_successful_warn
 _REQUIRED_SETTINGS_TAB_KEYS: tuple[str, ...] = (
     "general",
     "text",
-    "proofread",
     "document",
     "spreadsheet",
     "image",
     "layout",
-    "link",
-    "formatting",
-    "output",
-    "export",
-    "logging",
     "other",
+    "proofread",
+    "formatting",
+    "link",
+    "export",
+    "software",
+    "output",
+    "logging",
 )
 _REQUIRED_SETTINGS_PAGE_MODULES: frozenset[str] = frozenset(
     f"docwen_gui.widgets.settings.{key}_tab" for key in _REQUIRED_SETTINGS_TAB_KEYS
@@ -1783,24 +1784,24 @@ def _verify_successful_warning_smoke_report(
     ):
         raise RuntimeError(f"packaged_gui_successful_warning_history_missing: {report}")
     if (
-        report.get("warningRowTone") != "warning"
-        or report.get("warningRowTooltip") != expected_message
-        or report.get("warningRowVisible") is not True
+        report.get("warningRecordStatus") != "warning"
+        or expected_message not in str(report.get("warningDetailsText") or "")
+        or report.get("warningDetailsVisible") is not True
     ):
-        raise RuntimeError(f"packaged_gui_successful_warning_row_unexpected: {report}")
+        raise RuntimeError(f"packaged_gui_successful_warning_details_unexpected: {report}")
     warning_row_screenshot_path = screenshot_path.with_name(
-        f"{screenshot_path.stem}_warning_row{screenshot_path.suffix}"
+        f"{screenshot_path.stem}_warning_details{screenshot_path.suffix}"
     )
     if (
-        report.get("warningRowScreenshotPath") != str(warning_row_screenshot_path)
-        or report.get("warningRowScreenshotSaved") is not True
+        report.get("warningDetailsScreenshotPath") != str(warning_row_screenshot_path)
+        or report.get("warningDetailsScreenshotSaved") is not True
         or not warning_row_screenshot_path.is_file()
         or not warning_row_screenshot_path.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
-        or int(report.get("warningRowScreenshotBytes") or 0) != warning_row_screenshot_path.stat().st_size
-        or int(report.get("warningRowScreenshotWidth") or 0) <= 0
-        or int(report.get("warningRowScreenshotHeight") or 0) <= 0
+        or int(report.get("warningDetailsScreenshotBytes") or 0) != warning_row_screenshot_path.stat().st_size
+        or int(report.get("warningDetailsScreenshotWidth") or 0) <= 0
+        or int(report.get("warningDetailsScreenshotHeight") or 0) <= 0
     ):
-        raise RuntimeError(f"packaged_gui_successful_warning_row_screenshot_invalid: {report}")
+        raise RuntimeError(f"packaged_gui_successful_warning_details_screenshot_invalid: {report}")
     summary = report.get("taskSummary")
     if not isinstance(summary, dict) or (
         summary.get("state") != "success"

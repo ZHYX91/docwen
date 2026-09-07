@@ -141,18 +141,27 @@ class TestMdToDocument:
         from docwen_gui.i18n import get_locale, set_locale
 
         previous_locale = get_locale()
+        manager = ThemeManager.get_instance()
+        previous_preset = manager.get_font_size_preset()
         localized_vm = ActionAreaViewModel()
         localized_widget: ActionArea | None = None
         try:
             set_locale(locale)
+            manager.apply_font_size_preset("large")
             localized_widget = ActionArea(localized_vm)
-            localized_widget.resize(460, 720)
+            localized_widget.resize(300, 720)
             localized_vm.setup_for_md_to_document("/localized.md")
             localized_widget.show()
             qapp.processEvents()
 
             positions = [_grid_position(checkbox) for checkbox in localized_widget.checkbox_vars.values()]
-            assert positions == [(0, 0), (1, 0), (2, 0), (3, 0)]
+            assert positions == [(0, 0), (1, 0), (2, 0), (3, 0)], {
+                "width": localized_widget.width(),
+                "minimum": localized_widget.minimumSizeHint().width(),
+                "checkboxes": [
+                    (cb.text(), cb.width(), cb.sizeHint().width()) for cb in localized_widget.checkbox_vars.values()
+                ],
+            }
             grid_widget = localized_widget._proofread_grid_widget  # pyright: ignore[reportPrivateUsage]
             grid = localized_widget._proofread_grid  # pyright: ignore[reportPrivateUsage]
             assert grid_widget is not None
@@ -173,6 +182,7 @@ class TestMdToDocument:
                 (1, 1),
             ]
         finally:
+            manager.apply_font_size_preset(previous_preset)
             set_locale(previous_locale)
             if localized_widget is not None:
                 localized_widget.close()

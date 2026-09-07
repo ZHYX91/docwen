@@ -81,11 +81,14 @@ def register_execution_parsers(subparsers: Any) -> None:
     convert = _leaf(subparsers, "convert", "Convert one file to an explicit destination.")
     convert.add_argument("file")
     convert.add_argument("--to", required=True, metavar="FORMAT")
-    convert.add_argument(
+    destination = convert.add_mutually_exclusive_group(required=True)
+    destination.add_argument(
         "--output",
-        required=True,
         metavar="PATH",
-        help="Output file, or the parent directory when --to is Markdown.",
+        help="Exact output file for conversions that do not use Markdown.",
+    )
+    destination.add_argument(
+        "--output-dir", metavar="DIR", help="Output parent directory; required for Markdown conversions."
     )
     _add_convert_options(convert)
     _add_write_controls(convert)

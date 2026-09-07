@@ -614,7 +614,33 @@ def _validate_proofread_sensitive_words(data: dict[str, Any]) -> None:
     _validate_proofread_entries(data, namespace="sensitive_words")
 
 
+def _validate_ocr(data: dict[str, Any]) -> None:
+    _canonical_choice(
+        data,
+        "language",
+        frozenset(
+            {
+                "auto",
+                "chinese",
+                "chinese_cht",
+                "english",
+                "japanese",
+                "korean",
+                "latin",
+                "cyrillic",
+            }
+        ),
+        label="ocr.language",
+    )
+
+
+def _validate_template_fill(data: dict[str, Any]) -> None:
+    _validate_optional_string(data, "list_separator", label="template_fill")
+
+
 _EXPLICIT_VALIDATORS = {
+    "ocr.toml": _validate_ocr,
+    "template_fill.toml": _validate_template_fill,
     "logger.toml": _validate_logger,
     "output.toml": _validate_output,
     "gui.toml": _validate_gui,
@@ -649,6 +675,14 @@ def validate_config_file(
     if not isinstance(shipped, Mapping):
         raise ConfigSemanticError(f"shipped {rel_path} root must be a table")
 
+    if rel_path == "image.toml" and "ocr_language" in effective:
+        raise ConfigSemanticError("image.ocr_language has been removed; use ocr.language")
+    if rel_path == "conversion.toml":
+        md_to_docx = effective.get("md_to_docx")
+        if isinstance(md_to_docx, Mapping) and "list_separator" in md_to_docx:
+            raise ConfigSemanticError(
+                "conversion.md_to_docx.list_separator has been removed; use template_fill.list_separator"
+            )
     normalized = deepcopy(dict(effective))
     _validate_known_shapes(normalized, shipped, path=rel_path)
     validator = _EXPLICIT_VALIDATORS.get(rel_path)

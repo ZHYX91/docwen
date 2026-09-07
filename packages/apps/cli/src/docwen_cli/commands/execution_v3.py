@@ -90,16 +90,16 @@ def _prepare_args(args: argparse.Namespace) -> None:
         args.output_dir = getattr(args, "report_dir", None)
     elif path == "split pdf" or path.startswith("batch "):
         args.output_dir = str(args.output_dir)
+    elif path == "convert" and args.output_dir:
+        args.output_dir = str(args.output_dir)
+        args.output_path = None
     else:
         output = getattr(args, "output", None)
         if path == "number markdown" and getattr(args, "in_place", False):
             output = str(Path(args.file))
             args.overwrite = True
             args.output_path = output
-        elif output and (
-            path == "number markdown"
-            or (path == "convert" and normalize_target_format(str(getattr(args, "to", ""))) == "md")
-        ):
+        elif output and path == "number markdown":
             # Markdown publishes a complete document-node directory.  The CLI
             # destination therefore names its parent, never an exact .md file.
             args.output_dir = str(output)
@@ -174,6 +174,10 @@ def _preflight_destination(args: argparse.Namespace) -> tuple[str, str, dict[str
 
     output_path = getattr(args, "output_path", None)
     if output_path:
+        if getattr(args, "command_path", "") == "convert" and (
+            normalize_target_format(str(getattr(args, "to", ""))) == "md"
+        ):
+            return "invalid_input", "Markdown conversions require --output-dir, not --output.", {}
         resolved = Path(output_path).expanduser().resolve(strict=False)
         parent = resolved.parent
         if not parent.is_dir():
@@ -257,7 +261,7 @@ def _preflight_batch_collisions(args: argparse.Namespace, output_dir: Path) -> t
     destinations: dict[str, tuple[Path, list[str]]] = {}
     for raw_input in getattr(args, "files", []):
         source = Path(raw_input).expanduser().resolve(strict=False)
-        if markdown_target:
+        if markdown_target or source.suffix.lower() in {".md", ".markdown"}:
             source_tag = canonical_source_tag(source.suffix.lstrip(".") or "document")
             node_key = sanitize_node_label(f"{source.stem}_<timestamp>_from{source_tag}")
             destination = output_dir / node_key

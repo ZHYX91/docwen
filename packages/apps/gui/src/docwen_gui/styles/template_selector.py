@@ -63,7 +63,7 @@ def build_template_selector_stylesheet() -> str:
             "    color: palette(mid);",
             "}",
             "/* Tabbed selector */",
-            "QWidget#tabbedTemplateSelector {",
+            "QWidget#tabbedTemplateSelector, QWidget#mainWindowTemplateSelector {",
             "    background: transparent;",
             "}",
             "QWidget#templateSelectorStack {",

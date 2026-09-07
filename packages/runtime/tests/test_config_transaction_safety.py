@@ -11,6 +11,33 @@ import pytest
 pytestmark = pytest.mark.unit
 
 
+def test_preview_save_rechecks_source_inside_transaction(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from docwen_runtime.config.loader import ConfigLoader
+
+    base = tmp_path / "base"
+    _write_minimal_base_config_tree(base)
+    first = ConfigLoader(base_dir=base, user_dir=tmp_path / "user")
+    second = ConfigLoader(base_dir=base, user_dir=tmp_path / "user")
+    name = "proofread/typos.toml"
+    assert first.save_file_text(name, '[entries]\noriginal = ["old"]\n')
+    preview_source = first.get_file_text(name)
+    assert preview_source is not None
+    original_transaction = first._run_user_file_transaction
+    latest = '[entries]\nother_editor = ["keep this"]\n'
+
+    def interleave_other_editor(*args, **kwargs):
+        assert second.save_file_text(name, latest)
+        return original_transaction(*args, **kwargs)
+
+    monkeypatch.setattr(first, "_run_user_file_transaction", interleave_other_editor)
+    assert first.save_file_text(name, '[entries]\nimported = ["new"]\n', expected_text=preview_source) is False
+    assert (tmp_path / "user" / name).read_text(encoding="utf-8") == latest
+    assert first.config.as_dict()["proofread"]["typos"]["entries"] == {"other_editor": ["keep this"]}
+
+    monkeypatch.setattr(first, "_run_user_file_transaction", original_transaction)
+    assert first.save_file_text(name, '[entries]\naccepted = ["new"]\n', expected_text=first.get_file_text(name))
+
+
 def _install_fake_file_symlinks(
     monkeypatch: pytest.MonkeyPatch,
     links: dict[Path, Path],

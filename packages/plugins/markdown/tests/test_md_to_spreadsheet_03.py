@@ -222,10 +222,10 @@ owner: Finance
         first, second = result.artifacts
         input_stem = Path(md_path).stem
         assert first.is_primary is True
-        assert first.suggested_name == f"{input_stem}_fromMd/{input_stem}_Report_Sheet_fromMd.csv"
-        assert second.suggested_name == f"{input_stem}_fromMd/{input_stem}_Summary_fromMd.csv"
+        assert first.suggested_name == f"{input_stem}_Report_Sheet.csv"
+        assert second.suggested_name == f"{input_stem}_Summary.csv"
         assert first.metadata["template_name"] == str(template)
-        assert first.metadata["csv_output_folder"] == f"{input_stem}_fromMd"
+        assert first.metadata["sheet_name"] == "Report Sheet"
         assert first.metadata["yaml_placeholders"] >= 1
         assert first.metadata["column_placeholders"] == 4
         assert second.metadata["row_placeholders"] == 2

@@ -333,7 +333,7 @@ class TestExecuteConvertActionPath:
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
         mock_controller.config_port.get.side_effect = lambda key, default=None: (
-            "english" if key == "image.ocr_language" else default
+            "english" if key == "ocr.language" else default
         )
 
         init_cli_locale("de_DE")
@@ -398,7 +398,7 @@ class TestExecuteConvertActionPath:
         mock_controller.has_runtime = True
         mock_controller.execute_single.return_value = MagicMock(success=True)
         mock_controller.config_port.get.side_effect = lambda key, default=None: (
-            "english" if key == "image.ocr_language" else default
+            "english" if key == "ocr.language" else default
         )
 
         init_cli_locale("zh_CN")

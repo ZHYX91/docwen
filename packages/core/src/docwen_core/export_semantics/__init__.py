@@ -175,9 +175,6 @@ class MarkdownExportSemantics:
     section_break_separator: str = "***"
     horizontal_rule_separator: str = "___"
 
-    # YAML list separator (F-H3b-033)
-    yaml_list_separator: str = "、"
-
     # Intermediate files (F-H3b-034)
     save_intermediate_files: bool = False
 
@@ -225,13 +222,6 @@ class MarkdownExportSemantics:
         conversion_export = conv.get("export", {})
         if not isinstance(conversion_export, dict):
             conversion_export = {}
-        md_to_docx = conv.get("md_to_docx", {})
-        if not isinstance(md_to_docx, dict):
-            md_to_docx = {}
-        yaml_list_separator = md_to_docx.get("list_separator", "、")
-        if yaml_list_separator is None:
-            yaml_list_separator = "、"
-
         table_strategy = normalize_table_merge_export_strategy(
             conv.get("table_merge_export_strategy"),
         )
@@ -266,7 +256,6 @@ class MarkdownExportSemantics:
                 docx_to_md_breaks.get("horizontal_rule"),
                 default="___",
             ),
-            yaml_list_separator=str(yaml_list_separator),
             save_intermediate_files=bool(intermediate.get("save_to_output", False)),
         )
 

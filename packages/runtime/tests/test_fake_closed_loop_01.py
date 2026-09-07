@@ -97,11 +97,13 @@ class TestFullClosedLoop:
         result = controller.execute_single(request)
 
         assert result.success is True
-        assert len(result.artifacts) == 1
+        assert len(result.artifacts) == 2
         # The artifact should be in the output directory
         assert result.artifacts[0].staging_path.startswith(str(output_dir))
         assert os.path.isfile(result.artifacts[0].staging_path)
-        assert result.artifacts[0].suggested_name == "test.docx"
+        output = Path(result.artifacts[0].staging_path)
+        assert output.parent.name == output.stem
+        assert output.name.startswith("test_") and output.name.endswith("_fromMd.docx")
         assert result.metrics.extra["plugin_metric"] == "preserved"
         assert result.metrics.extra["output_dir"] == str(output_dir)
 
@@ -159,10 +161,13 @@ class TestFullClosedLoop:
         result = controller.execute_single(request)
 
         assert result.success is True
-        assert [item.kind for item in result.artifacts] == ["primary", "manifest"]
-        manifest_path = Path(result.artifacts[-1].staging_path)
+        assert [item.kind for item in result.artifacts] == ["primary", "manifest", "manifest"]
+        manifest_path = Path(
+            next(item.staging_path for item in result.artifacts if item.media_type == "application/json")
+        )
         manifest_text = manifest_path.read_text(encoding="utf-8")
-        assert manifest_path.parent == output_dir.resolve()
+        assert manifest_path.parent.parent == output_dir.resolve()
+        assert len(list(output_dir.iterdir())) == 1
         assert "<redacted>/private-source.md" in manifest_text
         assert str(source.resolve()) not in manifest_text
         # Request-scoped manifest staging must be gone.  OutputFinalizer keeps

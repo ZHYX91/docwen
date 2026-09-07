@@ -90,8 +90,8 @@ LOCALIZED_PROSE_KEYS = (
     "editors.numbering_add.word_native_full",
     "editors.numbering_add.word_native_approximate",
     "editors.numbering_add.word_native_incompatible",
-    "editors.mapping.source_symbol",
-    "editors.mapping.target_symbol",
+    "editors.mapping.opening_symbol",
+    "editors.mapping.closing_symbol",
     "editors.mapping.typo",
     "editors.mapping.multi_value_hint",
     "editors.mapping.save_typos_failed",
@@ -444,8 +444,8 @@ def test_chinese_status_progress_and_failure_messages_use_full_width_colon() -> 
 
     expected_values = {
         "info_area.task_current_file": {
-            "zh_CN": "任务文件：{name}",
-            "zh_TW": "工作檔案：{name}",
+            "zh_CN": "正在处理：{name}",
+            "zh_TW": "正在處理：{name}",
         },
         "info_area.task_progress_detail": {
             "zh_CN": "已完成 {completed}/{total}，失败 {failed}",
@@ -481,15 +481,6 @@ def test_chinese_gui_operation_failure_messages_use_full_width_colon() -> None:
     for key, locale_values in expected_values.items():
         assert _get_nested_value(zh_cn, key) == locale_values["zh_CN"]
         assert _get_nested_value(zh_tw, key) == locale_values["zh_TW"]
-
-
-def test_chinese_open_location_label_uses_full_width_colon() -> None:
-    """中文状态栏“打开文件位置”统一使用全角冒号。"""
-    zh_cn = _read_toml_file(LOCALES_DIR / "zh_CN.toml")
-    zh_tw = _read_toml_file(LOCALES_DIR / "zh_TW.toml")
-
-    assert _get_nested_value(zh_cn, "info_area.open_location") == "打开文件位置：{path}"
-    assert _get_nested_value(zh_tw, "info_area.open_location") == "打開檔案位置：{path}"
 
 
 def test_chinese_batch_progress_messages_use_full_width_colon() -> None:

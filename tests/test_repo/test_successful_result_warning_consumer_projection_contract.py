@@ -76,4 +76,3 @@ def test_gui_success_consumers_keep_success_state_with_warning_tone() -> None:
     assert 'f"{Path(warning_file).name}: {warning_message}"' in main_window
     assert "test_success_callback_projects_warning_diagnostics_to_info_area" in gui_tests
     assert "test_batch_all_success_with_warning_keeps_success_state_and_warning_tone" in gui_tests
-    assert 'warning_row.property("infoStatusTone") == "warning"' in gui_tests

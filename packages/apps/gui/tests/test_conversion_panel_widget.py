@@ -123,17 +123,6 @@ class TestConstruction:
         assert "QWidget#conversionPanelRoot QPushButton#conversionSecondaryButton:disabled" in stylesheet
         assert "background-color: palette(alternate-base)" in stylesheet
 
-    def test_cards_share_one_theme_aware_header_band(self) -> None:
-        light = build_conversion_panel_stylesheet("light")
-        dark = build_conversion_panel_stylesheet("dark")
-
-        for stylesheet in (light, dark):
-            assert 'QFrame[panelLevel="card"]' in stylesheet
-            assert "QLabel#panelCardTitle" in stylesheet
-            assert "border-top-left-radius:" in stylesheet
-            assert "border-bottom: 1px solid palette(midlight)" not in stylesheet
-            assert "accentTone" not in stylesheet
-
 
 # ── Category Switching ────────────────────────────────────────────────
 

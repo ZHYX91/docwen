@@ -56,23 +56,17 @@ def test_gui_retains_real_failed_artifacts_without_promoting_success() -> None:
     main_window = MAIN_WINDOW.read_text(encoding="utf-8")
     batch_list = BATCH_LIST.read_text(encoding="utf-8")
 
-    for token in (
-        'cancelled = bool(error is not None and error.error_type == "cancelled")',
-        'retained_output_path = "" if cancelled else self._pick_existing_output_path(result)',
-        "primary = [artifact for artifact in result.artifacts if artifact.is_primary]",
-        "for artifact in (*primary, *secondary):",
-        "filesystem_path(artifact.staging_path).is_file()",
-        "except (OSError, ValueError):",
-        "output_path=retained_output_path",
-        "retained_failure_output_dir",
-        "successful_output_dir",
-    ):
-        assert token in main_window
-
-    assert 'if status in {"completed", "failed"} and entry.output_path:' in batch_list
-    assert 'self._primary_action_key = "open_output"' in batch_list
+    output_projection = (ROOT / "packages/apps/gui/src/docwen_gui/view_models/output_files.py").read_text(
+        encoding="utf-8"
+    )
+    assert "result_output_paths(result, existing_only=True)" in main_window
+    assert "output_paths=retained_paths" in main_window
+    assert "filesystem_path(path).is_file()" in output_projection
+    assert "except (OSError, ValueError):" in output_projection
+    assert 'a.kind in {"auxiliary", "intermediate"}' in output_projection
+    assert 'self._entry.status in {"completed", "failed"}' in batch_list
     assert 'self.retry_button.clicked.connect(lambda: self.action_requested.emit("retry_failed"' in batch_list
-    assert 'if status == "failed":' in batch_list
+    assert 'self._primary_action_key = "show_error_details"' in batch_list
 
 
 def test_regressions_cover_output_truth_terminal_truth_and_failed_artifact_reachability() -> None:
@@ -94,7 +88,7 @@ def test_regressions_cover_output_truth_terminal_truth_and_failed_artifact_reach
 
     for token in (
         "test_reported_plugin_failure_emits_failed_without_spurious_finalizing_progress",
-        "test_finalizer_partial_failure_returns_typed_error_and_failed_terminal",
+        "test_grouped_finalizer_failure_publishes_nothing_and_emits_failed_terminal",
         "test_real_proofread_disabled_result_is_an_intentional_empty_report_success",
         "test_ordinary_success_without_artifacts_is_a_typed_finalizer_failure",
         "test_plugin_success_with_non_cancel_error_is_normalized_to_failed",

@@ -42,7 +42,7 @@ def project_markdown_ocr_options(
         return options
 
     if "ocr_language" not in options:
-        ocr_language = _nonblank_text(_nested_value(config_snapshot, "image", "ocr_language"))
+        ocr_language = _nonblank_text(_nested_value(config_snapshot, "ocr", "language"))
         options["ocr_language"] = ocr_language or "auto"
 
     if "locale" not in options:

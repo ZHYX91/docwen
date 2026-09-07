@@ -211,6 +211,8 @@ pip install pillow-heif
 
 ### 常用範例
 
+傳入或產生 Markdown 的轉換統一在 `--output-dir DIR` 指定的父目錄下建立結果資料夾，即使只有一個輸出檔案；名稱包含原始檔名、時間戳記和本次傳入格式。其他僅產生單一檔案的轉換才使用 `--output PATH` 指定精確檔案路徑。
+
 ```bash
 # Windows 打包版
 DocWenCLI.exe inspect document.docx --json
@@ -219,16 +221,16 @@ DocWenCLI.exe inspect document.docx --json
 DocWenCLI.exe schema convert
 
 # 預演本次轉換會如何執行，但不實際寫出結果
-DocWenCLI.exe convert report.docx --to md --output report.md --extract-img --ocr --dry-run --json
+DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --ocr --dry-run --json
 
 # 匯出 Word 為 Markdown（提取圖片 + OCR）
-DocWenCLI.exe convert report.docx --to md --output report.md --extract-img --ocr
+DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --ocr
 
 # Markdown 轉 Word（指定模板，並設定標題 + 正文合併模式）
-DocWenCLI.exe convert document.md --to docx --output document.docx --template template.docx.926a8bcb579f16e796662bff35edb7bb437aa718b7b7739b2461f4641128001e --heading-merge-mode punct_required
+DocWenCLI.exe convert document.md --to docx --output-dir exports --template template.docx.926a8bcb579f16e796662bff35edb7bb437aa718b7b7739b2461f4641128001e --heading-merge-mode punct_required
 
 # 控制 Markdown 匯出圖片與 OCR 文字落位
-DocWenCLI.exe convert report.docx --to md --output report.md --extract-img --image-mode file --ocr --ocr-placement image_md
+DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --image-mode file --ocr --ocr-placement image_md
 
 # 查看目前環境下的執行期能力與依賴門控
 DocWenCLI.exe doctor --json
@@ -242,8 +244,8 @@ DocWenCLI.exe validate input.md --check typo --check punct
 # inspect -> schema -> dry-run -> convert
 # docwen inspect document.docx --json
 # docwen schema convert
-# docwen convert document.docx --to md --output document.md --dry-run --json
-# docwen convert document.docx --to md --output document.md
+# docwen convert document.docx --to md --output-dir exports --dry-run --json
+# docwen convert document.docx --to md --output-dir exports
 ```
 
 ### 常用命令與選項

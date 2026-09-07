@@ -51,16 +51,7 @@ class ArtifactBundleCommitter:
             entries=draft.entries,
             relations=draft.relations,
             schema=ARTIFACT_BUNDLE_SCHEMA,
-            layout_schema=(
-                "docwen.document_node.v1"
-                if any(artifact.media_type == "text/markdown" for artifact in draft.artifacts)
-                and all(
-                    artifact.logical_path is not None
-                    for artifact in draft.artifacts
-                    if artifact.media_type == "text/markdown"
-                )
-                else "docwen.artifact_layout.v1"
-            ),
+            layout_schema=draft.layout_schema,
         )
         try:
             validate_artifact_bundle(bundle)

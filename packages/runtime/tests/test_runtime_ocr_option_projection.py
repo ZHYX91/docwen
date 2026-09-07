@@ -55,7 +55,7 @@ class _ConfigLoader:
 
 def _snapshot(*, ocr_language: str, locale: str) -> dict[str, Any]:
     return {
-        "image": {"ocr_language": ocr_language},
+        "ocr": {"language": ocr_language},
         "gui": {"language": {"locale": locale}},
     }
 
@@ -110,7 +110,7 @@ def test_real_config_loader_projects_reloaded_ocr_values_without_mutating_reques
     loader = ConfigLoader(base_dir=PROJECT_CONFIGS, user_dir=tmp_path / "user-config")
     assert loader.set_values(
         {
-            "image.ocr_language": "japanese",
+            "ocr.language": "japanese",
             "gui.language.locale": "ja_JP",
         }
     )
@@ -122,7 +122,7 @@ def test_real_config_loader_projects_reloaded_ocr_values_without_mutating_reques
 
     admitted = recorder.requests[0]
     assert admitted.options == {"ocr_language": "japanese", "locale": "ja_JP"}
-    assert admitted.config_snapshot["image"]["ocr_language"] == "japanese"
+    assert admitted.config_snapshot["ocr"]["language"] == "japanese"
     assert admitted.config_snapshot["gui"]["language"]["locale"] == "ja_JP"
     assert request.options == {}
     assert request.config_snapshot == {}
@@ -148,7 +148,7 @@ def test_request_snapshot_is_authoritative_over_the_live_loader(runtime_input: P
     ("request_snapshot", "expected"),
     [
         (
-            {"image": {"ocr_language": "japanese"}},
+            {"ocr": {"language": "japanese"}},
             {"ocr_language": "japanese", "locale": "zh_CN"},
         ),
         (
@@ -183,7 +183,7 @@ def test_removed_scalar_gui_language_shape_does_not_act_as_a_locale_alias(
         _request(
             runtime_input,
             config_snapshot={
-                "image": {"ocr_language": "english"},
+                "ocr": {"language": "english"},
                 "gui": {"language": "ja_JP"},
             },
         )

@@ -39,7 +39,9 @@ class TestMdToCsv:
         result = converter.convert(ctx)
 
         assert result.success
-        assert [artifact.suggested_name for artifact in result.artifacts] == fixture["csv_suggested_names"]
+        assert [artifact.suggested_name for artifact in result.artifacts] == [
+            f"{md_path.stem}_Sheet{index}.csv" for index in range(1, 4)
+        ]
 
         with Path(result.artifacts[0].staging_path).open(encoding="utf-8-sig", newline="") as handle:
             rows = list(csv.reader(handle))
@@ -53,7 +55,6 @@ class TestMdToCsv:
     def test_markdown_csv_old_system_fixture_finalizes_through_runtime(self, tmp_path: Path):
         """Runtime finalizer places the old-system MD->CSV smoke output chain."""
         import csv
-        import os
 
         from docwen_runtime.path_io import filesystem_path
 
@@ -71,16 +72,22 @@ class TestMdToCsv:
 
         assert result.success
         assert any(diagnostic.code == "FINALIZER_DONE" for diagnostic in result.diagnostics)
-        assert [artifact.suggested_name for artifact in result.artifacts] == [
-            os.path.normpath(name) for name in fixture["csv_suggested_names"]
+        csv_artifacts = [artifact for artifact in result.artifacts if artifact.media_type == "text/csv"]
+        root = Path(result.metrics.extra["document_node_root"])
+        suffix = root.name.removeprefix(md_path.stem)
+        assert suffix.endswith("_fromMd")
+        assert [artifact.suggested_name for artifact in csv_artifacts] == [
+            f"{md_path.stem}_Sheet{index}{suffix}.csv" for index in range(1, 4)
         ]
-        assert len(result.artifacts) == len(fixture["csv_suggested_names"])
+        assert len(result.artifacts) == 4
+        assert (root / "docwen-node.json").is_file()
 
-        final_paths = [Path(artifact.staging_path) for artifact in result.artifacts]
+        final_paths = [Path(artifact.staging_path) for artifact in csv_artifacts]
         for path in final_paths:
             assert filesystem_path(path).exists()
             assert path.suffix == ".csv"
             assert path.is_relative_to(output_dir)
+            assert path.parent == root
             assert not path.is_relative_to(tmp_path / "workspace")
 
         with filesystem_path(final_paths[0]).open(encoding="utf-8-sig", newline="") as handle:

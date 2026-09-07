@@ -128,7 +128,7 @@ def test_plain_class_satisfies_config_port():
         def get_file_text(self, rel_path: str) -> str | None:
             return ""
 
-        def save_file_text(self, rel_path: str, content: str) -> bool:
+        def save_file_text(self, rel_path: str, content: str, *, expected_text: str | None = None) -> bool:
             return True
 
         def reset_file(self, rel_path: str) -> bool:
@@ -246,7 +246,7 @@ def test_config_port_required_methods() -> None:
         def get_file_text(self, rel_path: str) -> str | None:
             return ""
 
-        def save_file_text(self, rel_path: str, content: str) -> bool:
+        def save_file_text(self, rel_path: str, content: str, *, expected_text: str | None = None) -> bool:
             return True
 
         def reset_file(self, rel_path: str) -> bool:
@@ -347,7 +347,7 @@ def test_multi_port_adapter() -> None:
         def get_file_text(self, rel_path: str) -> str | None:
             return ""
 
-        def save_file_text(self, rel_path: str, content: str) -> bool:
+        def save_file_text(self, rel_path: str, content: str, *, expected_text: str | None = None) -> bool:
             return True
 
         def reset_file(self, rel_path: str) -> bool:

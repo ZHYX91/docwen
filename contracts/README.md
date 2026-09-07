@@ -156,7 +156,7 @@ Relations point from the subject artifact to its context/source:
 
 - `attachment_of`: document -> document, role `attachment`;
 - `fragment_of`: fragment -> document, role `ocr_page`, `ocr_text`, `section`, or `worksheet`;
-- `resource_of`: resource -> document/fragment, role `image`, `original`, `preview`, or `worksheet`;
+- `resource_of`: resource -> document/fragment, role `image`, `original`, `preview`, `worksheet`, or `manifest`; a typed `application/vnd.docwen.document-node+json` resource named `docwen-node.json` may use `manifest` to target the preferred resource entry of a resource-only result directory; other resource-to-resource ownership is invalid;
 - `derived_from`: any artifact -> any source artifact, role `source` or `original`.
 
 Attachment and fragment relations require zero-based `ordinal`. A `fragment_of`/`ocr_page` relation also requires

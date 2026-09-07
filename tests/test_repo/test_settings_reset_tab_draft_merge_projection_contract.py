@@ -48,7 +48,6 @@ def test_reset_tab_draft_merge_stays_model_owned_and_preserves_unrelated_drafts(
         "logging",
         "other",
         "conversion_defaults",
-        "software_priority",
         "software",
     ):
         assert f'"{group}": (' in ownership
@@ -58,9 +57,9 @@ def test_reset_tab_draft_merge_stays_model_owned_and_preserves_unrelated_drafts(
     proofread_ownership = ownership.split('"proofread": (', 1)[1].split('"document": (', 1)[0]
     assert '("proofread", "symbol_mappings")' not in proofread_ownership
     assert '("conversion_defaults", "document", "to_md_keep_images")' in ownership
-    assert '("software_priority", "word_processors")' in ownership
+    assert '("software_priority", "word_processors")' not in ownership
     assert '("conversion_defaults", "export")' in ownership
-    assert '("formatting", "table_style_mode")' in ownership
+    assert '("text", "table_style_mode")' in ownership
     assert '"software": (("software_priority",),)' in ownership
     assert "docwen_runtime" not in ownership
     assert "reset_plan_for_group" not in ownership
@@ -97,7 +96,7 @@ def test_reset_tab_draft_merge_stays_model_owned_and_preserves_unrelated_drafts(
         "test_successful_builtin_group_reset_discards_only_owner_draft",
         "test_successful_unknown_group_uses_conservative_full_refresh",
         "test_conversion_defaults_aggregate_resets_owned_text_and_export_leaves",
-        "test_software_alias_resets_software_priority_draft",
+        "test_software_group_resets_software_priority_draft",
     ):
         assert token in vm_regression
 

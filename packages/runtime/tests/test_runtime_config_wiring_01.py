@@ -24,7 +24,6 @@ class TestConfigSnapshotProjectsExportSemantics:
             loader = ConfigLoader(base_dir=PROJECT_CONFIGS, user_dir=Path(tmpdir))
             semantics = MarkdownExportSemantics.from_config_snapshot(loader.config.as_dict())
             assert semantics.image_link_style == "wiki_embed"
-            assert semantics.yaml_list_separator == "、"
 
     def test_config_value_change_updates_request_projection(self) -> None:
         from docwen_core.export_semantics import MarkdownExportSemantics
@@ -36,21 +35,6 @@ class TestConfigSnapshotProjectsExportSemantics:
             loader.set_value("link.format.image_link_style", "markdown_embed")
             semantics = MarkdownExportSemantics.from_config_snapshot(loader.config.as_dict())
             assert semantics.image_link_style == "markdown_embed"
-
-    @pytest.mark.parametrize("separator", [", ", ""])
-    def test_snapshot_projection_consumes_nested_yaml_list_separator_override(
-        self,
-        tmp_path: Path,
-        separator: str,
-    ) -> None:
-        from docwen_core.export_semantics import MarkdownExportSemantics
-        from docwen_runtime.config.loader import ConfigLoader
-
-        loader = ConfigLoader(base_dir=PROJECT_CONFIGS, user_dir=tmp_path / "user-config")
-        assert loader.set_value("conversion.md_to_docx.list_separator", separator)
-
-        semantics = MarkdownExportSemantics.from_config_snapshot(loader.config.as_dict())
-        assert semantics.yaml_list_separator == separator
 
     def test_export_semantics_config_values_match_loader_defaults(self) -> None:
         """Projected semantics must match the base file values."""

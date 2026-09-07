@@ -20,6 +20,7 @@ from PySide6.QtWidgets import QStackedWidget, QVBoxLayout, QWidget
 from qfluentwidgets import Pivot
 
 from ..i18n import t
+from ..styles.design_tokens import Spacing
 from .template_selector import (
     TemplateItemDetails,
     TemplateSelectionFeedback,
@@ -92,6 +93,7 @@ class TabbedTemplateSelector(QWidget):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(Spacing.GROUP_GAP)
 
         # ── Tab bar ──────────────────────────────────────────────────────
         self._tab_titles: dict[str, str] = {}

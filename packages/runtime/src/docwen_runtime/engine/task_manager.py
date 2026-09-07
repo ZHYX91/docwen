@@ -12,7 +12,7 @@ import contextlib
 import threading
 import time
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 
 from docwen_core.cancellation import CancellationToken
@@ -30,6 +30,7 @@ from docwen_core.events.task_events import (
     make_task_progress,
     make_task_started,
 )
+from docwen_core.models.document_node import ConversionIdentity
 from docwen_core.models.file_ref import FileRef
 from docwen_core.models.request import PRECONVERSION_INTERMEDIATES_OPTION, ConversionRequest
 from docwen_core.models.result import (
@@ -42,6 +43,8 @@ from docwen_core.models.task import TaskEvent
 from docwen_runtime._request_admission import admit_markdown_ocr_options
 from docwen_runtime.config.document_styles import DocumentStyleCatalogError
 from docwen_runtime.engine.route_resolver import RouteResolutionError
+from docwen_runtime.output.identity import conversion_identity
+from docwen_runtime.output.manifest import OutputManifestWriter
 from docwen_runtime.security import NetworkAccessBlockedError
 from docwen_runtime.templates import (
     TemplateNotFoundError,
@@ -76,6 +79,7 @@ class _SingleTaskState:
     plugin_finished: bool = False
     duration_ms: float = 0.0
     finalization_attempted: bool = False
+    identity: ConversionIdentity | None = None
 
     def next_sequence(self) -> int:
         value = self.sequence[0]
@@ -210,6 +214,14 @@ class TaskManager:
             sequence=[0],
         )
         try:
+            state.identity = conversion_identity(state.task_id, state.input_ref, cancellation=state.token)
+            state.request = replace(state.request, conversion_identity=state.identity)
+            if (
+                request.output_policy.output_path
+                and not request.action_name
+                and (input_ref.format in {"md", "markdown"} or request.target_format in {"md", "markdown"})
+            ):
+                raise ValueError("Markdown conversions require output_dir, not an exact output_path")
             self._run_plugin(state, reserved_cancellation=is_reserved_cancellation)
             plugin_result = state.plugin_result
             assert plugin_result is not None
@@ -572,6 +584,11 @@ class TaskManager:
             duration_ms=state.duration_ms,
             input_bytes=state.input_ref.size_bytes,
             cancellation=state.token.view(),
+            group_outputs=not state.request.action_name and state.input_ref.format in {"md", "markdown"},
+            identity=state.identity,
+            audit_document=OutputManifestWriter.build_for_success(
+                state.request, replace(state.plugin_result, artifacts=artifacts)
+            ),
         )
         final_error = finalizer_result.error
         if not finalizer_result.success and final_error is None:
@@ -643,6 +660,7 @@ class TaskManager:
                 error_type="cancelled",
                 message="Task was cancelled",
             ),
+            metrics=ConversionMetrics(duration_ms=state.duration_ms, input_bytes=state.input_ref.size_bytes),
         )
 
     def _known_failure_result(
@@ -1005,14 +1023,9 @@ class TaskManager:
             ) from exc
         resolved_path = str(validate_template_path(template.path, expected_target=expected_template_target))
 
-        return ConversionRequest(
-            request_id=request.request_id,
-            input_refs=list(request.input_refs),
-            target_format=request.target_format,
-            action_name=request.action_name,
+        return replace(
+            request,
             options={**request.options, "template_name": resolved_path},
-            output_policy=request.output_policy,
-            config_snapshot=dict(request.config_snapshot),
         )
 
     def _finalize_failure_intermediates(

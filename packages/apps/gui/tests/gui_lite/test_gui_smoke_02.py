@@ -168,11 +168,11 @@ class TestProofreadEditorDialogsLite:
 
     def test_symbol_mapping_editor_has_object_name(self, qapp, window, tmp_path):
         from docwen_gui.widgets.settings.proofread_tab import (
-            _SymbolMappingEditor,
+            _SymbolPairingEditor,
         )
 
-        dlg = _SymbolMappingEditor(str(tmp_path / "proofread_pairing.toml"), parent=window)
-        assert dlg.objectName() == "symbolMappingEditor"
+        dlg = _SymbolPairingEditor(str(tmp_path / "proofread_pairing.toml"), parent=window)
+        assert dlg.objectName() == "symbolPairingEditor"
         dlg.close()
 
     def test_typos_dictionary_editor_has_object_name(self, qapp, window, tmp_path):

@@ -51,8 +51,8 @@ class TestNumberingEditorsUserPath:
         monkeypatch.setattr(numbering_clean_editor, "NumberingCleanDialog", _CleanEditorStub)
 
         tab = TextTab(vm)
-        tab._open_numbering_scheme_editor()
-        tab._open_numbering_clean_editor()
+        tab._numbering_editors._open_numbering_scheme_editor()
+        tab._numbering_editors._open_numbering_clean_editor()
 
         assert captured["add"] == {
             "number_styles": {},
@@ -382,7 +382,7 @@ class TestTextTabEditorSaveFailure:
         QMessageBox.warning = fake_warning  # type: ignore[method-assign]
 
         try:
-            tab._on_numbering_schemes_saved(schemes_data)
+            tab._numbering_editors._on_numbering_schemes_saved(schemes_data)
 
             # Verify persist was called
             assert len(persist_called_with) == 1
@@ -439,7 +439,7 @@ class TestTextTabEditorSaveFailure:
         QMessageBox.warning = fake_warning  # type: ignore[method-assign]
 
         try:
-            tab._on_numbering_clean_rules_saved(rules_data)
+            tab._numbering_editors._on_numbering_clean_rules_saved(rules_data)
 
             # Verify persist was called
             assert len(persist_called_with) == 1

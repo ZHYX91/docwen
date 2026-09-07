@@ -62,6 +62,40 @@ from docwen_gui.view_models.settings_vm import (
 # ── Section-level isolation tests ──────────────────────────────────────
 
 
+def test_document_draft_participates_in_dirty_apply_and_cancel(
+    vm: SettingsViewModel, config_port: ConfigPortAdapter
+) -> None:
+    vm.begin_session()
+    original = vm.config.document.body_format
+    edited = "discard" if original == "preserve" else "preserve"
+    vm.set_field("document", "body_format", edited)
+    assert vm.is_dirty
+    assert "document" in vm.config.dirty_sections
+    vm.cancel_changes()
+    assert vm.config.document.body_format == original
+    assert not vm.is_dirty
+    vm.set_field("document", "body_format", edited)
+    assert vm.apply_settings()
+    assert not vm.is_dirty
+    assert config_port.get("conversion.docx_to_md.preserve_formatting") == (edited == "preserve")
+
+
+def test_global_ocr_persists_and_resets_without_changing_image_defaults(
+    vm: SettingsViewModel, config_port: ConfigPortAdapter
+) -> None:
+    vm.set_field(SECTION_EXPORT, "ocr_language", "japanese")
+    vm.set_conversion_default("image", "to_md_keep_images", False)
+    assert vm.apply_settings()
+    assert config_port.get("ocr.language") == "japanese"
+    assert "ocr_language" not in config_port.snapshot()["image"]
+    assert vm.reset_group("image")
+    assert vm.config.export.ocr_language == "japanese"
+    vm.set_conversion_default("image", "to_md_keep_images", False)
+    assert vm.reset_group("export")
+    assert vm.config.export.ocr_language == "auto"
+    assert vm.config.conversion_defaults.image["to_md_keep_images"] is False
+
+
 class TestResetSectionIsolation:
     """Reset of one logical group must not cascade to another group."""
 
@@ -105,15 +139,15 @@ class TestResetSectionIsolation:
         assert vm.config.output.output_mode == "source"
         assert vm.config.logging.level == "warning"
 
-    def test_reset_formatting_leaves_gui_intact(self, vm: SettingsViewModel) -> None:
+    def test_reset_document_formatting_leaves_gui_intact(self, vm: SettingsViewModel) -> None:
         """Resetting Formatting leaves General intact."""
-        vm.set_field(SECTION_FORMATTING, "body_format", "discard")
+        vm.set_field("document", "body_format", "discard")
         vm.set_field(SECTION_GUI, "theme", "dark")
         vm.apply_settings()
 
-        ok = vm.reset_section(SECTION_FORMATTING)
+        ok = vm.reset_section("document")
         assert ok is True
-        assert vm.config.formatting.body_format == "preserve"  # default
+        assert vm.config.document.body_format == "preserve"  # default
         assert vm.config.gui.theme == "dark"
 
     def test_reset_logging_leaves_export_intact(self, vm: SettingsViewModel) -> None:
@@ -175,7 +209,7 @@ class TestResetSectionIsolation:
 
         assert vm.config.conversion_defaults.document["to_md_keep_images"] is True
         assert vm.config.conversion_defaults.image["to_md_enable_ocr"] is False
-        assert vm.config.software_priority.word_processors == ["wps_writer", "msoffice_word", "libreoffice"]
+        assert vm.config.software_priority.word_processors == ["libreoffice", "msoffice_word", "wps_writer"]
         assert vm.config.software_priority.spreadsheet_processors == [
             "libreoffice",
             "msoffice_excel",
@@ -217,7 +251,7 @@ class TestResetSectionIsolation:
         assert loader.config.as_dict()["conversion"]["ocr_output"]["blockquote_title_override_by_locale"] == {}
         assert vm.config.formatting.bold_syntax == "underscore"
 
-    def test_reset_formatting_group_preserves_export_and_resets_table_style(
+    def test_reset_syntax_preserves_text_and_export_then_text_reset_restores_its_values(
         self,
         vm: SettingsViewModel,
         config_loader: ConfigLoader,
@@ -225,7 +259,7 @@ class TestResetSectionIsolation:
         """Formatting owns precise conversion keys and the document table-style keys."""
         loader = config_loader
         loader.set_value("conversion.syntax.bold", "underscore")
-        loader.set_value("conversion.md_to_docx.list_separator", ", ")
+        loader.set_value("template_fill.list_separator", ", ")
         loader.set_value("document.style.table.md_to_docx.table_style_mode", "custom")
         loader.set_value("document.style.table.md_to_docx.custom_style_name", "Research Table")
         loader.set_value("conversion.export.base64_compress_enabled", False)
@@ -233,18 +267,21 @@ class TestResetSectionIsolation:
 
         vm.load_from_controller_config()
         assert vm.config.formatting.bold_syntax == "underscore"
-        assert vm.config.formatting.list_separator == ", "
-        assert vm.config.formatting.table_style_mode == "custom"
-        assert vm.config.formatting.custom_table_style_name == "Research Table"
+        assert vm.config.text.list_separator == ", "
+        assert vm.config.text.table_style_mode == "custom"
+        assert vm.config.text.custom_table_style_name == "Research Table"
         assert vm.config.export.base64_compress_enabled is False
         assert vm.config.export.ocr_title_enabled is False
 
         assert vm.reset_group("formatting") is True
 
         assert vm.config.formatting.bold_syntax == "asterisk"
-        assert vm.config.formatting.list_separator == "、"
-        assert vm.config.formatting.table_style_mode == "builtin"
-        assert vm.config.formatting.custom_table_style_name == ""
+        assert vm.config.text.list_separator == ", "
+        assert vm.config.text.table_style_mode == "custom"
+        assert vm.reset_group("text") is True
+        assert vm.config.text.list_separator == "、"
+        assert vm.config.text.table_style_mode == "builtin"
+        assert vm.config.text.custom_table_style_name == ""
         assert vm.config.export.base64_compress_enabled is False
         assert vm.config.export.ocr_title_enabled is False
 
@@ -262,14 +299,14 @@ class TestResetSectionIsolation:
 
         vm.load_from_controller_config()
         assert vm.config.conversion_defaults.document["to_md_keep_images"] is False
-        assert vm.config.formatting.table_style_mode == "custom"
+        assert vm.config.text.table_style_mode == "custom"
 
         assert vm.reset_group("document") is True
 
         assert vm.config.conversion_defaults.document["to_md_keep_images"] is True
         assert loader.config.document.style.code.docx_to_md.fuzzy_match_enabled is False
-        assert vm.config.formatting.table_style_mode == "custom"
-        assert vm.config.formatting.custom_table_style_name == "Research Table"
+        assert vm.config.text.table_style_mode == "custom"
+        assert vm.config.text.custom_table_style_name == "Research Table"
 
     def test_reset_proofread_group_preserves_curated_dictionaries_and_reloads(
         self,
@@ -335,7 +372,7 @@ class TestResetSectionIsolation:
         vm.set_field(SECTION_GUI, "theme", "dark")
         vm.set_field(SECTION_OUTPUT, "output_mode", "custom")
         vm.set_field(SECTION_LOGGING, "level", "warning")
-        vm.set_field(SECTION_FORMATTING, "body_format", "discard")
+        vm.set_field("document", "body_format", "discard")
         vm.apply_settings()
 
         # Reset output only — three other sections must survive
@@ -345,7 +382,7 @@ class TestResetSectionIsolation:
         assert vm.config.output.output_mode == "source"  # default restored
         assert vm.config.gui.theme == "dark"
         assert vm.config.logging.level == "warning"
-        assert vm.config.formatting.body_format == "discard"
+        assert vm.config.document.body_format == "discard"
 
 
 class TestResetSectionCrossFile:

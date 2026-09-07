@@ -47,6 +47,7 @@ from docwen_gui import numbering_schemes
 from docwen_gui.i18n import t as _t
 from docwen_gui.styles.design_tokens import Sizing, Spacing
 from docwen_gui.styles.theme_semantics import apply_theme_class
+from docwen_gui.widgets.value_controls import ScrollSafeComboBox
 
 from .action_button import ActionButton
 from .panel_card import ActionFooter, ChoiceGroup, FormRow, InlineNotice, PanelCard
@@ -217,14 +218,14 @@ class ActionArea(QWidget):
 
         if self._vm.cancel_visible:
             if self._button_stack:
-                self._button_stack.setCurrentIndex(1)
+                self._show_action_page(1)
             if self._cancel_button:
                 self._cancel_button.setEnabled(True)
             if self._cancel_hint_label:
                 self._cancel_hint_label.setVisible(True)
         else:
             if self._button_stack:
-                self._button_stack.setCurrentIndex(0)
+                self._show_action_page(0)
             if self._cancel_hint_label:
                 self._cancel_hint_label.setVisible(False)
 
@@ -241,6 +242,19 @@ class ActionArea(QWidget):
         elif not self._vm.visible:
             self._content_signature = None
         self._enforce_control_metrics()
+
+    def _show_action_page(self, index: int) -> None:
+        """Size the stack to the visible page instead of its largest hidden form."""
+        for page_index in range(self._button_stack.count()):
+            page = self._button_stack.widget(page_index)
+            if page is not None:
+                policy = page.sizePolicy()
+                policy.setVerticalPolicy(
+                    QSizePolicy.Policy.Preferred if page_index == index else QSizePolicy.Policy.Ignored
+                )
+                page.setSizePolicy(policy)
+        self._button_stack.setCurrentIndex(index)
+        self._button_stack.updateGeometry()
 
     def _content_structure_signature(self) -> tuple[object, ...]:
         """Describe only facts that require a different dynamic widget tree."""
@@ -289,6 +303,7 @@ class ActionArea(QWidget):
             # Other file -> MD (simplified, no numbering, no optimize)
             self._build_other_to_md()
         self._sync_dynamic_controls()
+        self._update_responsive_layouts()
         QTimer.singleShot(0, self._update_responsive_layouts)
 
     @staticmethod
@@ -442,7 +457,7 @@ class ActionArea(QWidget):
         return cb
 
     def _make_combo(self, items: list[str] | None = None, parent: QWidget | None = None) -> QComboBox:
-        combo = QComboBox(parent or self)
+        combo = ScrollSafeComboBox(parent or self)
         combo.setMinimumHeight(Sizing.CONTROL_HEIGHT)
         # Option rows already end in a stretch.  A preferred-width combo keeps
         # the control visually distinct from a text field without claiming the
@@ -564,7 +579,11 @@ class ActionArea(QWidget):
 
         widest_checkbox = max(checkbox.sizeHint().width() for checkbox in checkboxes)
         required_two_columns = (2 * widest_checkbox) + grid.horizontalSpacing()
-        available = grid_widget.contentsRect().width()
+        # The first layout pass can still reflect the initial two-column
+        # minimum size. Bound it by the actual card before choosing columns.
+        margins = self._content_layout.contentsMargins() if self._content_layout is not None else None
+        horizontal_margin = margins.left() + margins.right() if margins is not None else 0
+        available = min(grid_widget.contentsRect().width(), self.width() - horizontal_margin)
         columns = 2 if available >= required_two_columns else 1
         grid_widget.setMinimumWidth(widest_checkbox)
         if self._proofread_columns == columns:
@@ -656,14 +675,14 @@ class ActionArea(QWidget):
 
         language = self._make_combo(parent=group)
         language_items = (
-            (_t("settings.image.ocr_language_auto", "Follow interface language"), "auto"),
-            (_t("settings.image.ocr_language_chinese", "Chinese/English"), "chinese"),
-            (_t("settings.image.ocr_language_chinese_cht", "Traditional Chinese"), "chinese_cht"),
-            (_t("settings.image.ocr_language_english", "English Only"), "english"),
-            (_t("settings.image.ocr_language_japanese", "Japanese"), "japanese"),
-            (_t("settings.image.ocr_language_korean", "Korean"), "korean"),
-            (_t("settings.image.ocr_language_latin", "Latin script"), "latin"),
-            (_t("settings.image.ocr_language_cyrillic", "Cyrillic script"), "cyrillic"),
+            (_t("settings.ocr.language_auto", "Follow interface language"), "auto"),
+            (_t("settings.ocr.language_chinese", "Chinese/English"), "chinese"),
+            (_t("settings.ocr.language_chinese_cht", "Traditional Chinese"), "chinese_cht"),
+            (_t("settings.ocr.language_english", "English Only"), "english"),
+            (_t("settings.ocr.language_japanese", "Japanese"), "japanese"),
+            (_t("settings.ocr.language_korean", "Korean"), "korean"),
+            (_t("settings.ocr.language_latin", "Latin script"), "latin"),
+            (_t("settings.ocr.language_cyrillic", "Cyrillic script"), "cyrillic"),
         )
         for label, value in language_items:
             language.addItem(label, value)
@@ -671,7 +690,7 @@ class ActionArea(QWidget):
         language.currentIndexChanged.connect(
             lambda index: self._vm.set_file_to_md_option("ocr_language", language.itemData(index))
         )
-        language_label = _t("settings.image.ocr_language_label", "OCR recognition language:").rstrip(":：")
+        language_label = _t("settings.ocr.language_label", "OCR recognition language:").rstrip(":：")
         language.setAccessibleName(language_label)
         self._ocr_language_combo = language
         group.content_layout.addWidget(FormRow(language_label, language, group))

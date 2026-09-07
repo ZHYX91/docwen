@@ -8,12 +8,14 @@ the legal candidates required by its document-to-DOCX hub step.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import os
 import stat
 import sys
 import tempfile
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, BinaryIO
 
@@ -68,6 +70,8 @@ class PreConversionResult:
     """The original source format (e.g. ``"doc"``, ``"wps"``)."""
     backend: str
     """The backend that performed the conversion (e.g. ``"WPS Writer"``)."""
+    source_sha256: str = ""
+    created_at: str = ""
 
 
 @dataclass(frozen=True)
@@ -415,8 +419,15 @@ def pre_convert(
         return PreConversionFailure(message="cancelled", cancelled=True, error_type="cancelled")
 
     protected_input = stage_path / f"input{source_suffix}"
+    created_at = datetime.now().astimezone().isoformat()
     try:
         _prepare_protective_snapshot(source_path, protected_input, cancel)
+        digest = hashlib.sha256()
+        with protected_input.open("rb") as stream:
+            while block := stream.read(_SNAPSHOT_CHUNK_SIZE):
+                if _is_cancel_requested(cancel):
+                    raise _SnapshotCancelled()
+                digest.update(block)
     except _SnapshotCancelled:
         return PreConversionFailure(message="cancelled", cancelled=True, error_type="cancelled")
     except _SnapshotSourceChanged as exc:
@@ -476,4 +487,6 @@ def pre_convert(
         pre_converted_path=result.output_path,
         original_source_format=source_format,
         backend=result.backend or "unknown",
+        source_sha256=digest.hexdigest(),
+        created_at=created_at,
     )

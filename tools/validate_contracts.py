@@ -260,9 +260,17 @@ def validate_bundle(bundle: dict[str, Any]) -> None:
             _fail("self_relation", f"artifact {source!r} cannot relate to itself")
 
         source_kinds, target_kinds = relation_kinds[relation_type]
+        manifest_resource_owner = (
+            relation_type == "resource_of"
+            and relation["role"] == "manifest"
+            and artifact_by_id[source]["media_type"] == "application/vnd.docwen.document-node+json"
+            and artifact_by_id[source]["suggested_name"] == "docwen-node.json"
+            and artifact_by_id[target]["kind"] == "resource"
+            and any(entry["artifact_id"] == target and entry["preferred"] for entry in bundle["entries"])
+        )
         if (
             artifact_by_id[source]["kind"] not in source_kinds
-            or artifact_by_id[target]["kind"] not in target_kinds
+            or (artifact_by_id[target]["kind"] not in target_kinds and not manifest_resource_owner)
             or relation["role"] not in relation_roles[relation_type]
         ):
             _fail("incompatible_relation", f"relation {relation_type!r} has incompatible kinds or role")

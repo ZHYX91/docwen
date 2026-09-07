@@ -17,7 +17,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QFrame,
@@ -27,7 +27,6 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QMenu,
     QStyle,
-    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -35,6 +34,7 @@ from qfluentwidgets import PrimaryPushButton
 
 from ..i18n import t
 from ..styles.design_tokens import Spacing
+from .location_button import LocationButton
 
 logger = logging.getLogger(__name__)
 
@@ -162,18 +162,9 @@ class TemplateSelector(QWidget):
         self._details_label.setVisible(False)
         footer_layout.addWidget(self._details_label, 1)
 
-        self._open_location_button = QToolButton(self._footer_row)
+        self._open_location_button = LocationButton(self._footer_row)
         self._open_location_button.setObjectName("templateSelectorOpenButton")
-        self._open_location_button.setToolTip(t("components.template_selector.open_location"))
-        self._open_location_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
-        # Use theme-compatible icon
-        folder_icon = self.style().standardIcon(self.style().StandardPixmap.SP_DirOpenIcon)
-        self._location_icon = folder_icon
-        self._open_location_button.setIcon(folder_icon)
-        self._open_location_button.setIconSize(QSize(16, 16))
-        self._open_location_button.setFixedSize(26, 26)
-        self._open_location_button.setAutoRaise(True)
-        self._open_location_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._location_icon = self._open_location_button.icon()
         self._open_location_button.setEnabled(False)
         self._open_location_button.clicked.connect(self._open_selected_template_location)
         # Hide if no location callback provided

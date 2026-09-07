@@ -1,0 +1,3 @@
+# Join YAML list values when filling Word and spreadsheet templates.
+# Empty strings and whitespace are intentional and preserved exactly.
+list_separator = "、"

@@ -21,6 +21,7 @@ REQUIRED_CONFIG_FILES = (
     "logger.toml",
     "numbering/add.toml",
     "numbering/cleanup.toml",
+    "ocr.toml",
     "optimize.toml",
     "other.toml",
     "output.toml",
@@ -32,6 +33,7 @@ REQUIRED_CONFIG_FILES = (
     "proofread/typos.toml",
     "software.toml",
     "spreadsheet.toml",
+    "template_fill.toml",
     "text.toml",
 )
 REQUIRED_TEMPLATE_FILES = (
@@ -92,6 +94,7 @@ REQUIRED_ASSET_FILES = (
     "icons/proofread.svg",
     "icons/settings.svg",
     "icons/skip.svg",
+    "icons/software.svg",
     "icons/spreadsheet.svg",
     "icons/sync.svg",
     "icons/text.svg",

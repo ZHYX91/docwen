@@ -250,10 +250,10 @@ def test_conversion_release_hook_captures_rendered_successful_warning(
 
     class _RowWidget:
         def property(self, name: str) -> str:
-            assert name == "infoStatusTone"
+            assert name == "activityStatus"
             return "warning"
 
-        def toolTip(self) -> str:
+        def toPlainText(self) -> str:
             return warning
 
         def isVisible(self) -> bool:
@@ -278,9 +278,6 @@ def test_conversion_release_hook_captures_rendered_successful_warning(
         def isVisible(self) -> bool:
             return True
 
-        def get_history_row_widget(self, index: int) -> _RowWidget | None:
-            return _RowWidget() if index == 1 else None
-
         def grab(self) -> _Pixmap:
             return _Pixmap()
 
@@ -291,6 +288,9 @@ def test_conversion_release_hook_captures_rendered_successful_warning(
         _batch_list_vm=SimpleNamespace(get_file_entry=lambda _normalized: entry),
         _info_area_vm=info_vm,
         _info_area=_InfoArea(),
+        _show_activity_records=lambda: SimpleNamespace(
+            search=SimpleNamespace(setText=lambda text: None), details=_RowWidget()
+        ),
         close=lambda: None,
     )
     app = SimpleNamespace(processEvents=lambda: None)
@@ -304,12 +304,12 @@ def test_conversion_release_hook_captures_rendered_successful_warning(
     assert payload["actionName"] == "gongwen"
     assert payload["expectedWarningMessage"] == warning
     assert payload["warningHistoryIndex"] == 1
-    assert payload["warningRowTone"] == "warning"
-    assert payload["warningRowTooltip"] == warning
-    assert payload["warningRowVisible"] is True
-    assert payload["warningRowScreenshotSaved"] is True
-    assert payload["warningRowScreenshotWidth"] == 640
-    assert payload["warningRowScreenshotHeight"] == 320
+    assert payload["warningRecordStatus"] == "warning"
+    assert payload["warningDetailsText"] == warning
+    assert payload["warningDetailsVisible"] is True
+    assert payload["warningDetailsScreenshotSaved"] is True
+    assert payload["warningDetailsScreenshotWidth"] == 640
+    assert payload["warningDetailsScreenshotHeight"] == 320
     assert payload["taskSummary"]["state"] == "success"
     assert payload["taskSummary"]["tone"] == "warning"
     assert payload["statusSource"] == "task"
@@ -319,7 +319,7 @@ def test_conversion_release_hook_captures_rendered_successful_warning(
     assert payload["screenshotWidth"] == 640
     assert payload["screenshotHeight"] == 320
     assert screenshot.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
-    warning_row_screenshot = screenshot.with_name("info-area_warning_row.png")
+    warning_row_screenshot = screenshot.with_name("info-area_warning_details.png")
     assert warning_row_screenshot.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
 
 

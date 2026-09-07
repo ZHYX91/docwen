@@ -11,6 +11,7 @@ from .disabled_button import build_disabled_button_stylesheet
 from .info_area import build_info_area_stylesheet
 from .main_window import build_main_window_stylesheet
 from .panel import build_panel_stylesheet
+from .panel_card import build_panel_card_stylesheet
 from .settings import build_settings_stylesheet
 from .template_selector import build_template_selector_stylesheet
 
@@ -33,6 +34,7 @@ def build_global_stylesheet(theme_name: str, font_size_preset: str | None = None
             ),
             build_disabled_button_stylesheet(theme_name),
             build_panel_stylesheet(theme_name, font_size_preset),
+            build_panel_card_stylesheet(font_size_preset, theme_name=theme_name),
             build_settings_stylesheet(theme_name, font_size_preset),
             build_action_area_stylesheet(font_size_preset),
             build_info_area_stylesheet(theme_name, font_size_preset),

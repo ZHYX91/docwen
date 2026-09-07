@@ -485,7 +485,6 @@ class TestRuntimeRequestBinding:
         assert summary.navigate_path == second_norm
         assert window._info_area_vm.status_meta_text == _t("info_area.task_state_partial", "Partial failure")
         assert [action["action_key"] for action in window._info_area_vm.guide_actions] == [
-            "open_output_dir",
             "view_failed_details",
             "retry_failed",
         ]

@@ -49,7 +49,7 @@ class TestMdToDocxOldBaseline:
         from docwen_bundle.cli_entry import main as cli_main
         from docwen_runtime.templates import TemplateRegistry
 
-        new_docx = tmp_path / "sample.docx"
+        output_parent = tmp_path / "generated"
         template = next(
             item
             for item in TemplateRegistry.default().list_templates("docx")
@@ -61,15 +61,16 @@ class TestMdToDocxOldBaseline:
                 str(md_input),
                 "--to",
                 "docx",
-                "--output",
-                str(new_docx),
+                "--output-dir",
+                str(output_parent),
                 "--template",
                 template.id,
             ]
         )
         assert exit_code == 0, f"CLI conversion failed with exit code {exit_code}"
 
-        # Protocol 3 writes only to the explicit output path.
+        [new_docx] = output_parent.glob("*/*.docx")
+        assert new_docx.parent.name == new_docx.stem
         assert new_docx.exists(), (
             f"Expected output DOCX not found at {new_docx}\ntmp_path contents: {list(tmp_path.iterdir())}"
         )

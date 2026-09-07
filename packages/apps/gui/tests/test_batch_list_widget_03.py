@@ -32,6 +32,25 @@ from ._batch_list_widget_support import (
 
 
 class TestFilter:
+    def test_loaded_categories_survive_filter_and_single_category_has_no_tabs(self, qapp: QApplication) -> None:
+        vm = BatchListViewModel()
+        _add_synthetic(vm, ["/test/pending.docx"])
+        widget = BatchList(view_model=vm)
+        try:
+            assert widget.category_pivot.isHidden()
+            assert widget._category_selector.isHidden()
+            _add_synthetic(vm, ["/test/failed.pdf"])
+            vm.set_file_status("/test/failed.pdf", "failed", error_message="boom")
+            vm.activate_tab("document")
+            vm.set_status_filter("failed")
+            assert widget._present_categories() == ["document", "layout"]
+            assert widget._category_selector.count() == 2
+            assert vm.current_category == "document"
+            assert not widget._pivot_items["document"].isHidden()
+            assert widget._pivot_items["text"].isHidden()
+        finally:
+            widget.deleteLater()
+
     def test_filter_button_exists(self, populated_widget: BatchList) -> None:
         assert populated_widget.filter_button is not None
 
@@ -196,8 +215,8 @@ class TestMoveReorder:
             second = list_widget.itemWidget(list_widget.item(1))
             assert isinstance(first, BatchEntryItemWidget)
             assert isinstance(second, BatchEntryItemWidget)
-            assert first.status_icon_label.text() == "1"
-            assert second.status_icon_label.text() == "2"
+            assert first.status_button.text() == "1"
+            assert second.status_button.text() == "2"
         finally:
             widget.deleteLater()
 

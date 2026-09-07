@@ -1,13 +1,24 @@
-"""Shared neutral card and internal section-title styles."""
+"""Shared semantic card and internal section-title styles."""
 
 from __future__ import annotations
 
 from .design_tokens import Border, Radius, Spacing, Typography
+from .theme_semantics import ThemeClass, get_card_colors
 
 
-def build_panel_card_stylesheet(font_size_preset: str | None = None) -> str:
+def build_panel_card_stylesheet(font_size_preset: str | None = None, *, theme_name: str = "light") -> str:
     """Build the common card hierarchy used by action and conversion panels."""
 
+    tones: tuple[ThemeClass, ...] = ("primary", "info", "success", "warning", "danger", "secondary")
+    tone_rules = []
+    for tone in tones:
+        surface, text = get_card_colors(tone, theme_name)
+        tone_rules.extend(
+            [
+                f'QFrame[panelLevel="card"][panelTone="{tone}"] {{ border-color: {surface}; }}',
+                f'QLabel#panelCardTitle[panelTone="{tone}"] {{ background-color: {surface}; color: {text}; }}',
+            ]
+        )
     return "\n".join(
         [
             'QFrame[panelLevel="card"] {',
@@ -32,6 +43,10 @@ def build_panel_card_stylesheet(font_size_preset: str | None = None) -> str:
             "    border: none;",
             f"    border-top-left-radius: {Radius.LARGE - Border.THIN}px;",
             f"    border-top-right-radius: {Radius.LARGE - Border.THIN}px;",
+            "}",
+            'QLabel#panelCardTitle[contentCollapsed="true"] {',
+            f"    border-bottom-left-radius: {Radius.LARGE - Border.THIN}px;",
+            f"    border-bottom-right-radius: {Radius.LARGE - Border.THIN}px;",
             "}",
             "QLabel#panelSectionTitle {",
             "    color: palette(text);",
@@ -64,6 +79,7 @@ def build_panel_card_stylesheet(font_size_preset: str | None = None) -> str:
             "    background: transparent;",
             f"    font-size: {Typography.qss(Typography.CAPTION_SIZE, font_size_preset)};",
             "}",
+            *tone_rules,
         ]
     )
 

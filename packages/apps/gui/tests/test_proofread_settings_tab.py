@@ -32,8 +32,8 @@ def test_symbol_mapping_editor_preserves_pairs(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """_SymbolMappingEditor reads/writes proofread/pairs.toml with key 'items'."""
-    from docwen_gui.widgets.settings.proofread_tab import _SymbolMappingEditor
+    """_SymbolPairingEditor reads/writes proofread/pairs.toml with key 'items'."""
+    from docwen_gui.widgets.settings.proofread_tab import _SymbolPairingEditor
     from docwen_runtime.config.loader import ConfigLoader
 
     config_dir = tmp_path / "configs"
@@ -49,7 +49,7 @@ def test_symbol_mapping_editor_preserves_pairs(
         {"items": [["<", ">"], ["【", "】"]]},
     )
 
-    dialog = _SymbolMappingEditor(config_dir / "proofread" / "pairs.toml")
+    dialog = _SymbolPairingEditor(config_dir / "proofread" / "pairs.toml")
 
     assert dialog._table.columnCount() == 2
     item00 = dialog._table.item(0, 0)

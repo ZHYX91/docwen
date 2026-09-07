@@ -21,7 +21,6 @@ if TYPE_CHECKING:
     pass
 
 from docwen_gui.view_models.settings_vm import (
-    SECTION_FORMATTING,
     SECTION_GUI,
     SECTION_LINK,
     SECTION_LOGGING,
@@ -304,7 +303,6 @@ class TestApplyCancel:
             "image": {
                 "to_md_keep_images": False,
                 "to_md_enable_ocr": False,
-                "ocr_language": "japanese",
                 "compress_mode": "limit_size",
                 "size_limit": 1024,
                 "size_unit": "MB",
@@ -336,9 +334,9 @@ class TestApplyCancel:
     def test_apply_persists_md_to_docx_table_style_settings(
         self, vm: SettingsViewModel, config_port: ConfigPortAdapter
     ) -> None:
-        vm.set_field(SECTION_FORMATTING, "table_style_mode", "custom")
-        vm.set_field(SECTION_FORMATTING, "builtin_table_style", "table_grid")
-        vm.set_field(SECTION_FORMATTING, "custom_table_style_name", "Research Table")
+        vm.set_field("text", "table_style_mode", "custom")
+        vm.set_field("text", "builtin_table_style", "table_grid")
+        vm.set_field("text", "custom_table_style_name", "Research Table")
 
         assert vm.apply_settings() is True
 
@@ -374,13 +372,13 @@ class TestApplyCancel:
         vm: SettingsViewModel,
         config_port: ConfigPortAdapter,
     ) -> None:
-        vm.set_field(SECTION_FORMATTING, "list_separator", separator)
+        vm.set_field("text", "list_separator", separator)
 
         assert vm.apply_settings() is True
-        assert config_port.snapshot()["conversion"]["md_to_docx"]["list_separator"] == separator
+        assert config_port.snapshot()["template_fill"]["list_separator"] == separator
 
         fresh_vm = SettingsViewModel(controller=ApplicationController(config_port=config_port))
-        assert fresh_vm.config.formatting.list_separator == separator
+        assert fresh_vm.config.text.list_separator == separator
 
     @pytest.mark.parametrize("punctuation", ["：§", ""])
     def test_apply_roundtrips_heading_merge_punctuation_exactly(
@@ -389,13 +387,13 @@ class TestApplyCancel:
         vm: SettingsViewModel,
         config_port: ConfigPortAdapter,
     ) -> None:
-        vm.set_field(SECTION_FORMATTING, "heading_merge_punctuation", punctuation)
+        vm.set_field("text", "heading_merge_punctuation", punctuation)
 
         assert vm.apply_settings() is True
         assert config_port.snapshot()["conversion"]["md_to_docx"]["heading_merge_punctuation"] == punctuation
 
         fresh_vm = SettingsViewModel(controller=ApplicationController(config_port=config_port))
-        assert fresh_vm.config.formatting.heading_merge_punctuation == punctuation
+        assert fresh_vm.config.text.heading_merge_punctuation == punctuation
 
     def test_apply_persists_text_fact_sources(
         self,
@@ -489,10 +487,10 @@ class TestApplyCancel:
 
 class TestReset:
     def test_reset_section_reverts_to_defaults(self, vm: SettingsViewModel) -> None:
-        vm.set_field(SECTION_FORMATTING, "body_format", "discard")
-        assert vm.config.formatting.body_format == "discard"
-        vm.reset_section(SECTION_FORMATTING)
-        assert vm.config.formatting.body_format == "preserve"  # default
+        vm.set_field("document", "body_format", "discard")
+        assert vm.config.document.body_format == "discard"
+        vm.reset_section("document")
+        assert vm.config.document.body_format == "preserve"  # default
 
     def test_reset_section_emits_status(self, vm: SettingsViewModel) -> None:
         status_signals: list = []

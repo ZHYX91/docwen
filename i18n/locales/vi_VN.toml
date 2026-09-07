@@ -12,6 +12,8 @@ template_name = "Mẫu Chung Tiếng Việt"
 # Cua so chinh
 # =============================================================================
 [main_window]
+file_admission_missing = "Tệp đầu vào không còn tồn tại: {path}"
+file_admission_unreadable = "Không thể đọc tệp đầu vào: {path}"
 extension_loss_endnotes = "Chú thích cuối tài liệu đã được chuyển thành chú thích chân trang Markdown thông thường."
 extension_loss_headings = "Tiêu đề cấp 7–9 đã được chuyển thành cấp 6."
 extension_loss_references = "Chú thích và tham chiếu chéo đã được chuyển thành văn bản hiển thị."
@@ -83,17 +85,17 @@ save_failed = "Lưu cài đặt thất bại"
 # 状态栏
 # =============================================================================
 [info_area]
+output_each_source = "Lưu từng kết quả cạnh tệp nguồn"
+output_date_subfolder = "Lưu trong thư mục con theo ngày"
 task_warning_count = "Có {count} thông báo chuyển đổi. Mở rộng lịch sử hoạt động để xem chi tiết."
 task_progress_percent = "Tien do:{percent}%"
 task_state_skipped = "Da bo qua"
 batch_name = "Xử lý hàng loạt ({count} tệp)"
 aggregate_name = "Gộp ({count} tệp)"
 activity_count = "Hoạt động ({count})"
-clear_history = "Xóa lịch sử hoạt động"
 notice_title = "Thông báo"
 task_state_cancelling = "Đang hủy"
 copy_path = "Sao chep duong dan"
-open_location = "Mo vi tri tep: {path}"
 ipc_file_missing = "Tep IPC khong ton tai: {path}"
 font_size_applied = "Co chu: {label}"
 
@@ -106,12 +108,12 @@ history_completed = "Hoàn tất: {name}"
 task_state_partial = "Lỗi một phần"
 task_state_failed = "Thất bại"
 task_state_cancelled = "Đã hủy"
-task_current_file = "Tệp tác vụ: {name}"
+task_current_file = "Đang xử lý: {name}"
 task_progress_detail = "Hoàn tất {completed}/{total}, lỗi {failed}"
 history_started = "Đã bắt đầu: {name}"
 task_skipped_count = "Đã bỏ qua: {skipped}"
 task_cancelled_count = "Đã hủy: {cancelled}"
-task_guide_open_output_dir = "Mở thư mục đầu ra"
+task_output_file = "Tệp đầu ra: {name}"
 task_guide_view_failed_details = "Xem chi tiết lỗi"
 task_guide_retry_failed = "Thử lại các mục lỗi"
 window_topmost_enabled = "Cua so duoc ghim luon o tren. Nhan Ctrl+Shift+T de tat."
@@ -160,7 +162,7 @@ doctor = "Chạy chẩn đoán"
 gongwen = "Công văn"
 
 # 校对选项
-invoice_cn = "Hóa đơn Trung Quốc (invoice_cn)"
+invoice_cn = "Hóa đơn Trung Quốc"
 [cli.interactive.proofread]
 
 # 提示文本
@@ -209,11 +211,12 @@ document = "Tài liệu đầu vào"
 spreadsheet = "Bảng tính đầu vào"
 image = "Hình ảnh đầu vào"
 layout = "Tệp bố cục cố định đầu vào"
-other = "Khác"
+other = "Tệp đầu vào khác"
 link = "Liên kết"
 formatting = "Cú pháp Markdown"
 output = "Lưu tệp"
 logging = "Ghi log"
+software = "Phần mềm chuyển đổi"
 
 [settings.descriptions]
 general = "Cài đặt toàn cục như ngôn ngữ và giao diện"
@@ -354,6 +357,9 @@ save_numbering_clean_rules_failed = "Không thể lưu các quy tắc xóa số.
 # -----------------------------------------------------------------------------
 # 文档设置选项卡
 # -----------------------------------------------------------------------------
+input_description = "Thiết lập Markdown đầu vào: tạo tài liệu, điền mẫu và xử lý tiêu đề."
+template_fill_section = "Điền mẫu"
+template_fill_desc = "Dấu phân cách nối các mục danh sách YAML trong mẫu Word hoặc bảng tính. Chuỗi rỗng và khoảng trắng được giữ nguyên."
 [settings.proofread]
 validation_section = "Quy tắc kiểm lỗi"
 enable_symbol_pairing = "Bật kiểm tra cặp ký hiệu"
@@ -362,13 +368,13 @@ enable_typos_rule = "Bật phát hiện lỗi chính tả"
 enable_sensitive_word = "Bật kiểm tra thuật ngữ được đánh dấu"
 skip_code_blocks = "Bỏ qua khối mã"
 skip_quote_blocks = "Bỏ qua khối trích dẫn"
-symbol_mapping_section = "Trình sửa ánh xạ ký hiệu"
-symbol_mapping_desc = "Quản lý quy tắc ghép cặp và sửa ký hiệu."
-symbol_correction_section = "Trình sửa ký hiệu"
+symbol_mapping_section = "Quy tắc ghép cặp dấu"
+symbol_mapping_desc = "Kiểm tra dấu mở và dấu đóng có ghép cặp đúng không."
+symbol_correction_section = "Quy tắc sửa ký hiệu"
 symbol_correction_desc = "Quản lý các mục sửa ký hiệu toàn chiều rộng và nửa chiều rộng."
-typos_section = "Trình sửa từ điển lỗi chính tả"
+typos_section = "Từ điển lỗi chính tả"
 typos_desc = "Quản lý các mục sửa lỗi chính tả thường gặp."
-sensitive_words_section = "Trình sửa thuật ngữ được đánh dấu"
+sensitive_words_section = "Từ điển từ nhạy cảm"
 sensitive_words_desc = "Quản lý các mục phát hiện thuật ngữ được đánh dấu."
 edit = "Sửa"
 
@@ -424,7 +430,6 @@ enable_optimization = "Mặc định bật \"Tối ưu theo loại tài liệu\"
 optimization_type_label = "Loại tối ưu mặc định:"
 
 # 软件优先级
-software_section = "Ưu tiên phần mềm"
 word_processors_label = "Ưu tiên phần mềm xử lý tài liệu"
 odt_conversion_label = "Chuyển đổi định dạng ODT"
 document_to_pdf_label = "Tài liệu → PDF"
@@ -455,7 +460,6 @@ enable_ocr_tooltip = "Mặc định bật \"OCR hình ảnh\" khi chuyển bản
 merge_mode_section = "Thiết lập chế độ trộn"
 merge_mode_desc = "Đặt chế độ mặc định để trộn bảng"
 default_merge_mode_label = "Chế độ hợp nhất mặc định:"
-software_section = "Ưu tiên phần mềm"
 spreadsheet_processors_label = "Ưu tiên phần mềm xử lý bảng tính"
 ods_conversion_label = "Chuyển đổi định dạng ODS"
 spreadsheet_to_pdf_label = "Bảng tính → PDF"
@@ -470,7 +474,6 @@ by_cell = "Trộn theo ô"
 [settings.spreadsheet.software]
 wps_spreadsheets = "WPS Spreadsheets"
 excel = "Excel"
-libreoffice = "LibreOffice"
 
 # -----------------------------------------------------------------------------
 # 图片设置选项卡
@@ -485,16 +488,6 @@ enable_optimization = "Mặc định bật \"Tối ưu theo loại hình ảnh\"
 optimization_type_label = "Loại tối ưu mặc định:"
 
 # OCR语言设置
-ocr_language_label = "Ngôn ngữ OCR:"
-ocr_language_tooltip = "Chọn mô hình ngôn ngữ dùng cho nhận dạng OCR.\n\n• Theo ngôn ngữ giao diện: tự động chọn theo ngôn ngữ giao diện hiện tại\n• Trung/Anh: phù hợp tài liệu pha trộn tiếng Trung và tiếng Anh\n• Tiếng Nhật: phù hợp tài liệu tiếng Nhật\n• Chữ cái Latinh: phù hợp tiếng Đức, Pháp, Bồ Đào Nha, v.v.\n• Chữ cái Cyrillic: phù hợp tiếng Nga, v.v."
-ocr_language_auto = "Theo ngôn ngữ giao diện"
-ocr_language_chinese = "Trung/Anh"
-ocr_language_japanese = "Tiếng Nhật"
-ocr_language_chinese_cht = "Tiếng Trung phồn thể"
-ocr_language_english = "Chỉ tiếng Anh"
-ocr_language_korean = "Tiếng Hàn"
-ocr_language_latin = "Chữ cái Latinh (Đức/Pháp/Bồ Đào Nha, v.v.)"
-ocr_language_cyrillic = "Chữ cái Cyrillic (Nga, v.v.)"
 
 compress_section = "Thiết lập tùy chọn nén"
 compress_desc = "Đặt chế độ nén mặc định khi chuyển đổi định dạng ảnh"
@@ -528,7 +521,6 @@ render_dpi_label = "Render DPI:"
 dpi_min = "Tối thiểu (150)"
 dpi_medium = "Trung bình (300)"
 dpi_high = "Chất lượng cao (600)"
-software_section = "Ưu tiên phần mềm"
 pdf_to_doc_label = "PDF → Tài liệu"
 
 # -----------------------------------------------------------------------------
@@ -833,6 +825,53 @@ critical = "Nghiêm trọng (CRITICAL)"
 # =============================================================================
 # 关于对话框
 # =============================================================================
+
+[settings.software]
+priority = "Ưu tiên phần mềm"
+description = "Thử phần mềm đã cài đặt theo thứ tự này. Khả năng sử dụng còn phụ thuộc định dạng chuyển đổi."
+presentation_processors = "Phần mềm trình chiếu"
+wps_presentation = "WPS Presentation"
+powerpoint = "PowerPoint"
+
+[settings.ocr]
+language_label = "Ngôn ngữ OCR:"
+language_tooltip = "Ngôn ngữ OCR dùng chung cho mọi định dạng đầu vào."
+language_auto = "Theo ngôn ngữ giao diện"
+language_chinese = "Trung/Anh"
+language_japanese = "Tiếng Nhật"
+language_chinese_cht = "Tiếng Trung phồn thể"
+language_english = "Chỉ tiếng Anh"
+language_korean = "Tiếng Hàn"
+language_latin = "Chữ cái Latinh (Đức/Pháp/Bồ Đào Nha, v.v.)"
+language_cyrillic = "Chữ cái Cyrillic (Nga, v.v.)"
+section = "Nhận dạng OCR"
+
+[settings.rule_transfer]
+read_failed = "Không thể đọc cấu hình quy tắc hiện tại."
+added = "Thêm mới"
+unchanged = "Không đổi"
+conflict = "Khác biệt"
+existing_only = "Chỉ có sẵn"
+change = "Thay đổi"
+rule = "Quy tắc"
+current = "Hiện tại"
+incoming = "Nhập vào"
+preview = "Xem trước quy tắc nhập"
+summary = "Thêm {added} · Khác {conflict} · Không đổi {unchanged} · Chỉ có sẵn {existing_only}"
+strategy = "Cách nhập"
+merge = "Hợp nhất với quy tắc hiện có"
+replace = "Thay toàn bộ quy tắc"
+strategy_hint = "Hợp nhất giữ các mục hiện có và gộp giá trị, ghi chú của cùng khóa. Thay thế xóa các mục không có trong tệp nhập."
+merge_unavailable = "Không thể hợp nhất các cặp dấu xung đột. Hủy để sửa tệp hoặc chọn thay thế."
+confirm = "Xác nhận nhập"
+source_changed = "Quy tắc đã thay đổi khi xem trước. Hãy nhập lại để kiểm tra khác biệt mới nhất."
+save_failed = "Lưu thất bại. Quy tắc gốc được giữ nguyên."
+import = "Nhập…"
+import_failed = "Nhập thất bại"
+imported = "Đã nhập quy tắc."
+export = "Xuất…"
+export_failed = "Xuất thất bại"
+exported = "Đã xuất toàn bộ quy tắc."
 [about]
 title = "Giới thiệu"
 version_info = "Phiên bản {version}"
@@ -924,8 +963,6 @@ no_batch_files = "Khong co tep hang loat"
 retry_selected_failed = "Thử lại mục lỗi đang chọn"
 retry_all_failed = "Thử lại tất cả mục lỗi trong thẻ này"
 total_files = "Tong cong {total} tep"
-total_files_selected = "Tong cong {total} tep, da chon: {current_name}"
-action_open_output = "Mở đầu ra"
 action_view_skip = "Xem bỏ qua"
 action_view_error = "Xem lỗi"
 action_remove = "Xóa"
@@ -1337,14 +1374,12 @@ letter_number_desc = "Khớp: A. / A) / (A) / a. / a) kiểu đánh số chữ c
 # 映射编辑器
 [editors.mapping]
 # 对话框标题
-symbol_editor_title = "Trình chỉnh sửa ánh xạ dấu câu"
+symbol_editor_title = "Quy tắc ghép cặp dấu"
 typo_editor_title = "Trình chỉnh sửa từ điển lỗi chính tả"
 sensitive_editor_title = "Trình chỉnh sửa từ nhạy cảm"
 # 下拉选择标签
 
 search_placeholder = "Tim kiem khoa, gia tri hoac ghi chu"
-source_symbol = "Ký hiệu nguồn"
-target_symbol = "Ký hiệu đích"
 typo = "Lỗi chính tả"
 corrections = "Nội dung sửa"
 multi_value_hint = "Mẹo: dùng | để phân tách nhiều giá trị (ví dụ: giá_trị1|giá_trị2|giá_trị3)"
@@ -1384,6 +1419,8 @@ merge = "Trộn"
 # =============================================================================
 # 文件类型分类
 # =============================================================================
+opening_symbol = "Dấu mở"
+closing_symbol = "Dấu đóng"
 [file_types]
 document = "Tài liệu"
 spreadsheet = "Bảng tính"
@@ -1632,3 +1669,32 @@ captions_references = "Number Suite: chú thích và tham chiếu chéo"
 extended_headings = "Tiêu đề cấp 7–9"
 typed_endnotes = "Chú thích chân trang và cuối tài liệu có kiểu"
 obsidian_preset = "Dùng phần mở rộng Obsidian"
+
+[activity]
+record_unavailable = "Bản ghi hoạt động này đã bị xóa hoặc không còn khả dụng."
+title = "Nhật ký hoạt động"
+search = "Tìm tên tệp hoặc nội dung hoạt động"
+all_statuses = "Tất cả trạng thái"
+all_operations = "Tất cả thao tác"
+time = "Thời gian"
+status = "Trạng thái"
+file = "Tệp"
+operation = "Thao tác"
+details = "Chi tiết"
+select_record = "Chọn bản ghi để xem chi tiết"
+clear_finished = "Xóa bản ghi đã kết thúc"
+info = "Thông báo"
+warning = "Cảnh báo"
+merge = "Gộp"
+split = "Tách"
+numbering = "Đánh số"
+validate = "Xác thực"
+input = "Đầu vào"
+output = "Đầu ra"
+failed_count = "Hoạt động · {count} thất bại"
+
+[file_locations]
+input = "Định vị tệp đầu vào"
+output = "Định vị tệp đầu ra"
+multiple = "{count} tệp"
+show_outputs = "Xem tất cả tệp đầu ra"

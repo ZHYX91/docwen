@@ -59,7 +59,7 @@ class TestCollectOptions:
                     "export.to_md_image_extraction_mode": "base64",
                     "export.to_md_ocr_placement_mode": "main_md",
                     "document.to_md_table_merge_export_strategy": "empty",
-                    "image.ocr_language": "japanese",
+                    "ocr.language": "japanese",
                     "link.format.image_link_style": "markdown_embed",
                 }
             )
@@ -80,7 +80,7 @@ class TestCollectOptions:
                 {
                     "export.to_md_image_extraction_mode": "embed",
                     "export.to_md_ocr_placement_mode": "image_md",
-                    "image.ocr_language": "latin",
+                    "ocr.language": "latin",
                     "spreadsheet.to_md_table_merge_export_strategy": "marker",
                     "link.format.image_link_style": "markdown_link",
                 }
@@ -102,7 +102,7 @@ class TestCollectOptions:
                 {
                     "export.to_md_image_extraction_mode": "omit",
                     "export.to_md_ocr_placement_mode": "main_md",
-                    "image.ocr_language": "korean",
+                    "ocr.language": "korean",
                     "link.format.image_link_style": "markdown_embed",
                 }
             )
@@ -122,7 +122,7 @@ class TestCollectOptions:
             FakeMainWindowViewModel(  # type: ignore[arg-type]
                 {
                     "export.to_md_image_extraction_mode": "base64",
-                    "image.ocr_language": "english",
+                    "ocr.language": "english",
                     "link.format.image_link_style": "markdown_embed",
                 }
             )

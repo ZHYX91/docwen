@@ -67,7 +67,7 @@ def test_current_docs_describe_packaging_and_config_ownership() -> None:
     for resource in ("configs/", "templates/", "models/", "locale files", "application assets"):
         assert resource in packaging
     assert "Windows package resource/layout verification" in packaging
-    assert "23 files" in configuration
+    assert "25 files" in configuration
     assert "configs/numbering/add.toml" in configuration
     assert "configs/numbering/cleanup.toml" in configuration
     assert "docwen_plugin_markdown.field_processors.gongwen.process_yaml" in configuration

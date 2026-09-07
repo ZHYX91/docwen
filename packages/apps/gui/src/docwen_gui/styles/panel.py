@@ -52,8 +52,7 @@ def build_panel_stylesheet(theme_name: str, font_size_preset: str | None = None)
             # -- Status & about hero cards (grouped with theme preview) --
             "QWidget#aboutHeroCard,",
             # -- Settings cards & sections --
-            "QWidget#generalThemePreviewFrame,",
-            'QWidget#settingsTabRoot QWidget[settingsRole="settingsCard"] {',
+            "QWidget#generalThemePreviewFrame {",
             f"    border: {Border.THIN}px solid {section_border};",
             f"    border-radius: {Radius.LARGE}px;",
             f"    background-color: {section_background};",

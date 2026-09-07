@@ -32,7 +32,7 @@ _WINDOWS_RESERVED = frozenset(
 )
 _SOURCE_TAGS: Final[dict[str, str]] = {
     "md": "Md",
-    "markdown": "Markdown",
+    "markdown": "Md",
     "doc": "Doc",
     "docx": "Docx",
     "rtf": "Rtf",
@@ -107,6 +107,8 @@ class ConversionIdentity:
     source_stem: str
     source_format: str
     created_at: datetime
+    source_name: str = ""
+    source_sha256: str = ""
 
     @classmethod
     def create(
@@ -116,6 +118,8 @@ class ConversionIdentity:
         source_stem: str,
         source_format: str,
         created_at: datetime | None = None,
+        source_name: str = "",
+        source_sha256: str = "",
     ) -> ConversionIdentity:
         instant = created_at or datetime.now().astimezone()
         if instant.tzinfo is None or instant.utcoffset() is None:
@@ -125,6 +129,8 @@ class ConversionIdentity:
             source_stem=sanitize_node_label(source_stem),
             source_format=source_format.strip().lower().lstrip(".") or "unknown",
             created_at=instant,
+            source_name=source_name or f"{source_stem}.{source_format}",
+            source_sha256=source_sha256,
         )
 
     @property
@@ -140,9 +146,38 @@ class ConversionIdentity:
         return canonical_source_tag(self.source_format)
 
     def node_name(self, label: str | None = None, *, collision: int = 0) -> str:
-        safe_label = sanitize_node_label(label or self.source_stem)
         collision_token = f"_{collision:03d}" if collision else ""
-        return f"{safe_label}_{self.timestamp}{collision_token}_from{self.source_tag}"
+        suffix = f"_{self.timestamp}{collision_token}_from{self.source_tag}"
+        raw_label = label or self.source_stem
+        safe_label = sanitize_node_label(raw_label)
+        # Leave room for extensions on filesystems with a 255-byte component limit.
+        byte_budget = 220 - len(suffix.encode("utf-8"))
+        if len(safe_label.encode("utf-8")) > byte_budget:
+            digest = hashlib.sha256(raw_label.encode("utf-8")).hexdigest()[:10]
+            prefix = safe_label.encode("utf-8")[: byte_budget - 11].decode("utf-8", errors="ignore")
+            safe_label = f"{prefix.rstrip(' .')}_{digest}"
+        return f"{safe_label}{suffix}"
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "task_id": self.task_id,
+            "source_stem": self.source_stem,
+            "source_format": self.source_format,
+            "source_name": self.source_name,
+            "source_sha256": self.source_sha256,
+            "created_at": self.created_at.isoformat(),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, str]) -> ConversionIdentity:
+        return cls.create(
+            task_id=data["task_id"],
+            source_stem=data["source_stem"],
+            source_format=data["source_format"],
+            source_name=data["source_name"],
+            source_sha256=data.get("source_sha256", ""),
+            created_at=datetime.fromisoformat(data["created_at"]),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -153,7 +188,7 @@ class DocumentNodePath:
     parent: PurePosixPath = field(default_factory=lambda: PurePosixPath("."))
 
     def __post_init__(self) -> None:
-        if sanitize_node_label(self.node_name) != self.node_name:
+        if sanitize_node_label(self.node_name, max_length=220) != self.node_name:
             raise DocumentNodeValidationError(f"unsafe node name: {self.node_name!r}")
         _validate_relative_parts(self.parent)
 

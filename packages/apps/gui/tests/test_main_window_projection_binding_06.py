@@ -89,7 +89,6 @@ class TestRuntimeRequestBinding:
         assert summary.navigate_path == normalized
         assert summary.navigation_kind == "failed"
         assert window._info_area_vm.guide_actions == [
-            {"action_key": "open_output_dir", "target_path": str(retained.parent)},
             {"action_key": "view_failed_details", "target_path": normalized},
             {"action_key": "retry_failed", "target_path": ""},
         ]
@@ -158,7 +157,8 @@ class TestRuntimeRequestBinding:
         for entry in entries:
             assert entry is not None
             card = BatchEntryItemWidget(entry)
-            assert card._primary_action_key == "open_output"
+            assert card._primary_action_key == "show_error_details"
+            assert not card.output_row.isHidden()
             card.close()
         failure_rows = [row for row in window._info_area_vm.history_rows if row.message_type == "danger"]
         assert len(failure_rows) == 2

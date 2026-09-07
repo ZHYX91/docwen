@@ -23,11 +23,12 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QPushButton,
-    QSpinBox,
     QTextEdit,
     QVBoxLayout,
     QWidget,
 )
+
+from docwen_gui.widgets.value_controls import ScrollSafeSpinBox
 
 from ...dialogs import feedback
 from ...i18n import t
@@ -215,7 +216,7 @@ class NumberingCleanDialog(QDialog):
         self.desc_edit.textChanged.connect(self._on_description_changed)
         form.addRow(t("editors.numbering_clean.description", "Description:"), self.desc_edit)
 
-        self.level_spin = QSpinBox(self)
+        self.level_spin = ScrollSafeSpinBox(self)
         self.level_spin.setRange(1, 5)
         self.level_spin.valueChanged.connect(self._on_level_changed)
         form.addRow(t("editors.numbering_clean.level", "Heading level:"), self.level_spin)

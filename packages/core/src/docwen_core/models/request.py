@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from docwen_core.models.conversion_manifest import ConversionManifestContext
+from docwen_core.models.document_node import ConversionIdentity
 from docwen_core.models.file_ref import FileRef
 
 PRECONVERSION_INTERMEDIATES_OPTION = "_docwen_preconversion_intermediates"
@@ -24,9 +26,9 @@ class OutputPolicy:
     """Explicit output parent directory.  ``None`` means same-as-input."""
 
     output_path: str | None = None
-    """Exact path for a non-Markdown primary artifact; mutually exclusive with ``output_dir``.
+    """Exact path for ungrouped output; mutually exclusive with ``output_dir``.
 
-    Markdown publications are document-node directories and must use
+    Conversions from or to Markdown publish result directories and must use
     ``output_dir``.  The sole exception is an explicit in-place transform
     where ``output_path`` is the input path itself.
     """
@@ -129,6 +131,16 @@ class ConversionRequest:
     manifest_context: ConversionManifestContext | None = None
     """Optional typed sidecar-manifest context frozen at request admission."""
 
+    conversion_identity: ConversionIdentity | None = None
+    """Runtime-frozen source label and timestamp, shared by rendering and publication."""
+
+    @property
+    def source_stem(self) -> str:
+        if self.conversion_identity is not None:
+            return self.conversion_identity.source_stem
+        source = next((ref for ref in self.input_refs if ref.input_role in {"source", "neutral_document"}), None)
+        return Path(source.logical_path or source.path).stem if source is not None else "document"
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "request_id": self.request_id,
@@ -139,6 +151,7 @@ class ConversionRequest:
             "output_policy": self.output_policy.to_dict(),
             "config_snapshot": dict(self.config_snapshot),
             "manifest_context": self.manifest_context.to_dict() if self.manifest_context else None,
+            "conversion_identity": self.conversion_identity.to_dict() if self.conversion_identity else None,
         }
 
     @classmethod
@@ -154,6 +167,11 @@ class ConversionRequest:
             manifest_context=(
                 ConversionManifestContext.from_dict(data["manifest_context"])
                 if isinstance(data.get("manifest_context"), dict)
+                else None
+            ),
+            conversion_identity=(
+                ConversionIdentity.from_dict(data["conversion_identity"])
+                if isinstance(data.get("conversion_identity"), dict)
                 else None
             ),
         )

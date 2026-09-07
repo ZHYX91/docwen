@@ -33,6 +33,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from docwen_gui.widgets.value_controls import ScrollSafeComboBox
+
 from ...dialogs import feedback
 from ...i18n import t
 
@@ -232,7 +234,7 @@ class NumberingAddDialog(QDialog):
 
         top_row = QHBoxLayout()
         top_row.addWidget(QLabel(t("editors.numbering_add.default_scheme"), self))
-        self.default_combo = QComboBox(self)
+        self.default_combo = ScrollSafeComboBox(self)
         self._prepare_combo(self.default_combo)
         self.default_combo.currentIndexChanged.connect(self._on_default_scheme_changed)
         top_row.addWidget(self.default_combo, 1)

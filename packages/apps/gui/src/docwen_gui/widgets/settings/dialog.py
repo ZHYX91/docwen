@@ -3,8 +3,7 @@
 Replicates the user-visible behavior of the old ``SettingsDialog``:
 - 700x800 initial, 510x750 minimum, modal
 - FluentNavigationInterface sidebar sized for the active locale + hidden QTabWidget tabBar
-- 13 tabs: general, text, proofread, document, spreadsheet, image, layout,
-  link, formatting, output, export, logging, other
+- 14 pages: general, incoming formats, content processing, converter software, output and logging
 - Bottom bar: Reset Tab + Reset All + Ok/Cancel/Apply (QDialogButtonBox)
 - Dirty tracking with auto-signal monitoring
 - Unsaved-close confirmation (danger, default=no)
@@ -42,6 +41,7 @@ from PySide6.QtWidgets import (
 
 from docwen_gui.i18n import t
 from docwen_gui.styles.design_tokens import Sizing, Spacing
+from docwen_gui.widgets.value_controls import ScrollSafeComboBox
 
 from ...styles.theme_semantics import apply_theme_class
 from ...view_models.settings_vm import SettingsViewModel
@@ -103,34 +103,36 @@ def _read_initial_opacity(parent: QWidget | None) -> float:
 TAB_KEYS = [
     "general",
     "text",
-    "proofread",
     "document",
     "spreadsheet",
     "image",
     "layout",
-    "link",
-    "formatting",
-    "output",
-    "export",
-    "logging",
     "other",
+    "proofread",
+    "formatting",
+    "link",
+    "export",
+    "software",
+    "output",
+    "logging",
 ]
 
 # ── Tab display names ──────────────────────────────────────────────────────
 TAB_NAMES: dict[str, str] = {
     "general": t("settings.tabs.general"),
     "text": t("settings.tabs.text"),
-    "proofread": t("settings.tabs.proofread"),
     "document": t("settings.tabs.document"),
     "spreadsheet": t("settings.tabs.spreadsheet"),
     "image": t("settings.tabs.image"),
     "layout": t("settings.tabs.layout"),
-    "link": t("settings.tabs.link"),
-    "formatting": t("settings.tabs.formatting"),
-    "output": t("settings.tabs.output"),
-    "export": t("settings.tabs.export"),
-    "logging": t("settings.tabs.logging"),
     "other": t("settings.tabs.other"),
+    "proofread": t("settings.tabs.proofread"),
+    "formatting": t("settings.tabs.formatting"),
+    "link": t("settings.tabs.link"),
+    "export": t("settings.tabs.export"),
+    "software": t("settings.tabs.software"),
+    "output": t("settings.tabs.output"),
+    "logging": t("settings.tabs.logging"),
 }
 
 _TabFactory = Callable[[SettingsViewModel], object]
@@ -198,6 +200,12 @@ def _build_formatting_tab(view_model: SettingsViewModel) -> QWidget:
     return FormattingTab(view_model)
 
 
+def _build_software_tab(view_model: SettingsViewModel) -> QWidget:
+    from .software_tab import SoftwareTab
+
+    return SoftwareTab(view_model)
+
+
 def _build_output_tab(view_model: SettingsViewModel) -> QWidget:
     from .output_tab import OutputTab
 
@@ -232,6 +240,7 @@ _TAB_SPECS: dict[str, _TabSpec] = {
     "layout": _TabSpec("layout_tab", "LayoutTab", _build_layout_tab),
     "link": _TabSpec("link_tab", "LinkTab", _build_link_tab),
     "formatting": _TabSpec("formatting_tab", "FormattingTab", _build_formatting_tab),
+    "software": _TabSpec("software_tab", "SoftwareTab", _build_software_tab),
     "output": _TabSpec("output_tab", "OutputTab", _build_output_tab),
     "export": _TabSpec("export_tab", "ExportTab", _build_export_tab),
     "logging": _TabSpec("logging_tab", "LoggingTab", _build_logging_tab),
@@ -249,6 +258,7 @@ RESET_GROUPS: dict[str, str] = {
     "layout": "layout",
     "link": "link",
     "formatting": "formatting",
+    "software": "software",
     "output": "output",
     "export": "export",
     "logging": "logging",
@@ -287,7 +297,7 @@ def _try_fluent_panel(navigation: Any, key: str) -> Any | None:
 
 
 class SettingsDialog(QDialog):
-    """Settings dialog with 13-tab navigation and dirty tracking.
+    """Settings dialog with task-oriented navigation and dirty tracking.
 
     Owns a ``SettingsViewModel`` as its state source of truth.
     Delegates all Apply/Reset operations through the ViewModel.
@@ -340,7 +350,7 @@ class SettingsDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(DIALOG_PADDING, DIALOG_PADDING, DIALOG_PADDING, DIALOG_PADDING)
         layout.setSpacing(DIALOG_PADDING)
-        self._compact_navigation = QComboBox(self)
+        self._compact_navigation = ScrollSafeComboBox(self)
         self._compact_navigation.setObjectName("settingsPageSelector")
         self._compact_navigation.setAccessibleName(t("settings.title"))
         self._compact_navigation.addItems(list(TAB_NAMES.values()))
@@ -545,6 +555,7 @@ class SettingsDialog(QDialog):
             "formatting": "formatting.svg",
             "output": "output.svg",
             "export": "export.svg",
+            "software": "software.svg",
             "logging": "logging.svg",
             "other": "other.svg",
         }
@@ -1021,6 +1032,7 @@ class SettingsDialog(QDialog):
             "other": "conversion_defaults",
             "link": "link",
             "formatting": "formatting",
+            "software": "software_priority",
             "output": "output",
             "export": "export",
             "logging": "logging",

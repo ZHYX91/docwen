@@ -259,8 +259,11 @@ def test_real_stdio_process_emits_integrity_pinned_docx_bundle(tmp_path: Path) -
 
     assert terminal["method"] == "task/completed", terminal
     bundle = terminal["params"]["bundle"]
-    assert len(bundle["artifacts"]) == 1
+    assert len(bundle["artifacts"]) == 2
+    assert bundle["layout_schema"] == "docwen.document_node.v1"
     artifact = next(item for item in bundle["artifacts"] if item["kind"] == "document")
+    manifest = next(item for item in bundle["artifacts"] if item["kind"] == "resource")
+    assert manifest["media_type"] == "application/vnd.docwen.document-node+json"
     assert bundle["entries"] == [
         {
             "artifact_id": artifact["artifact_id"],
@@ -269,8 +272,19 @@ def test_real_stdio_process_emits_integrity_pinned_docx_bundle(tmp_path: Path) -
             "preferred": True,
         }
     ]
-    assert bundle["relations"] == []
+    assert bundle["relations"] == [
+        {
+            "type": "resource_of",
+            "source_artifact_id": manifest["artifact_id"],
+            "target_artifact_id": artifact["artifact_id"],
+            "role": "manifest",
+            "ordinal": 0,
+        }
+    ]
     output = staging / Path(artifact["locator"])
+    manifest_path = staging / Path(manifest["locator"])
+    assert manifest_path == output.parent / "docwen-node.json"
+    assert hashlib.sha256(manifest_path.read_bytes()).hexdigest() == manifest["sha256"]
     assert output.is_file()
     assert output.stat().st_size == artifact["size_bytes"]
     assert hashlib.sha256(output.read_bytes()).hexdigest() == artifact["sha256"]

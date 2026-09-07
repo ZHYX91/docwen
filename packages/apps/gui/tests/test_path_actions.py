@@ -23,18 +23,18 @@ class _CompletedProcess:
 def test_windows_reveal_selects_exact_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     sample = tmp_path / "report.docx"
     sample.write_text("done", encoding="utf-8")
-    commands: list[list[str]] = []
+    revealed: list[Path] = []
     monkeypatch.setattr(path_actions.sys, "platform", "win32")
     monkeypatch.setattr(
-        path_actions.subprocess,
-        "run",
-        lambda command, **kwargs: commands.append(list(command)) or _CompletedProcess(),
+        path_actions,
+        "_windows_reveal_file",
+        lambda candidate: revealed.append(candidate),
     )
 
     result = path_actions.reveal_path(sample)
 
     assert result == PathActionResult(success=True, precise=True)
-    assert commands == [["explorer", "/select,", str(sample)]]
+    assert revealed == [sample]
 
 
 @pytest.mark.skipif(os.name != "nt", reason="Win32 extended-path boundary")
@@ -47,19 +47,19 @@ def test_windows_reveal_probes_long_file_without_leaking_extended_prefix(
         pytest.skip("pytest temp root cannot express an exact 260-character file")
     sample = tmp_path / ("r" * remaining)
     path_actions.filesystem_path(sample).write_bytes(b"done")
-    commands: list[list[str]] = []
+    revealed: list[Path] = []
     monkeypatch.setattr(path_actions.sys, "platform", "win32")
     monkeypatch.setattr(
-        path_actions.subprocess,
-        "run",
-        lambda command, **kwargs: commands.append(list(command)) or _CompletedProcess(),
+        path_actions,
+        "_windows_reveal_file",
+        lambda candidate: revealed.append(candidate),
     )
 
     result = path_actions.reveal_path(sample)
 
     assert result == PathActionResult(success=True, precise=True)
-    assert commands == [["explorer", "/select,", str(sample)]]
-    assert not commands[0][-1].startswith("\\\\?\\")
+    assert revealed == [sample]
+    assert not str(revealed[0]).startswith("\\\\?\\")
 
 
 def test_macos_reveal_uses_open_dash_r(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -133,11 +133,11 @@ def test_failed_precise_command_falls_back_instead_of_claiming_success(
     sample = tmp_path / "report.docx"
     sample.write_text("done", encoding="utf-8")
     monkeypatch.setattr(path_actions.sys, "platform", "win32")
-    monkeypatch.setattr(
-        path_actions,
-        "_run_command",
-        lambda command: PathActionResult(success=False, error="blocked", error_code="command_failed"),
-    )
+
+    def fail(candidate):
+        raise OSError("blocked")
+
+    monkeypatch.setattr(path_actions, "_windows_reveal_file", fail)
     monkeypatch.setattr(
         path_actions,
         "_open_with_desktop_services",

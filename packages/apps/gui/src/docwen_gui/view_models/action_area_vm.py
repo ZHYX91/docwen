@@ -696,7 +696,7 @@ class ActionAreaViewModel(QObject):
         section = file_type if file_type in {MODE_DOCUMENT, MODE_SPREADSHEET, MODE_IMAGE, MODE_LAYOUT} else "other"
         self._extract_image = bool(self._read_file_to_md_default(section, "to_md_keep_images", True))
         self._extract_ocr = bool(self._read_file_to_md_default(section, "to_md_enable_ocr", extract_ocr))
-        language = str(self._read_config_default("image.ocr_language", "") or "").strip().lower()
+        language = str(self._read_config_default("ocr.language", "") or "").strip().lower()
         self._ocr_language = language if language in _OCR_LANGUAGES else None
         placement = str(self._read_export_file_to_md_default("to_md_ocr_placement_mode", "") or "").strip().lower()
         supports_placement = file_type != MODE_LAYOUT and (

@@ -35,8 +35,9 @@ from docwen_runtime.config import atomic_write_text
 
 from ...i18n import t
 from ...view_models.settings_vm import SECTION_PROOFREAD, SettingsViewModel
-from ..panel_card import WrappingLabel
+from ..panel_card import ChoiceGroup, WrappingLabel
 from .base_tab import BaseSettingsTab
+from .proofread_transfer import ProofreadRuleTransfer
 
 # ── Path resolution ─────────────────────────────────────────────────────────
 
@@ -292,8 +293,8 @@ class _BaseEditorDialog(QDialog):
         return [by_key[key] for key in ordered_keys if key in by_key]
 
 
-class _SymbolMappingEditor(_BaseEditorDialog):
-    """Dialog for editing symbol mapping.
+class _SymbolPairingEditor(_BaseEditorDialog):
+    """Dialog for editing opening and closing punctuation pairs.
 
     Uses a supplied effective TOML source and production save callback for
     format-preserving I/O.
@@ -308,7 +309,7 @@ class _SymbolMappingEditor(_BaseEditorDialog):
         save_callback: ConfigTextSaveCallback | None = None,
     ) -> None:
         super().__init__(parent)
-        self.setObjectName("symbolMappingEditor")
+        self.setObjectName("symbolPairingEditor")
         self._toml_path = Path(toml_path)
         self._config_name = self._toml_path.as_posix()
         self._source_text = source_text
@@ -370,7 +371,7 @@ class _SymbolMappingEditor(_BaseEditorDialog):
     # ── UI ───────────────────────────────────────────────────────────────
 
     def _setup_ui(self) -> None:
-        self.setWindowTitle(t("editors.mapping.symbol_editor_title", "Edit Symbol Mapping"))
+        self.setWindowTitle(t("editors.mapping.symbol_editor_title", "Punctuation Pairing Rules"))
         self.setMinimumSize(550, 400)
 
         layout = QVBoxLayout(self)
@@ -380,8 +381,8 @@ class _SymbolMappingEditor(_BaseEditorDialog):
         self._table = QTableWidget(0, 2, self)
         self._table.setHorizontalHeaderLabels(
             [
-                t("editors.mapping.source_symbol", "Source Symbol"),
-                t("editors.mapping.target_symbol", "Target Symbol"),
+                t("editors.mapping.opening_symbol", "Opening Symbol"),
+                t("editors.mapping.closing_symbol", "Closing Symbol"),
             ]
         )
         self._configure_columns(self._table)
@@ -1037,6 +1038,7 @@ class ProofreadTab(BaseSettingsTab):
 
     def __init__(self, view_model: SettingsViewModel) -> None:
         self._vm = view_model
+        self._rule_transfer = ProofreadRuleTransfer(self, view_model)
         self._symbol_pairing: QCheckBox = _cast(QCheckBox, None)
         self._symbol_correction: QCheckBox = _cast(QCheckBox, None)
         self._typos_rule: QCheckBox = _cast(QCheckBox, None)
@@ -1077,31 +1079,31 @@ class ProofreadTab(BaseSettingsTab):
         # ── Dictionary editor cards ─────────────────────────────────────
         # Symbol Mapping Editor
         _card_sym, form_sym = self.add_settings_card(
-            t("settings.proofread.symbol_mapping_section", "Symbol Mapping Editor"),
-            t("settings.proofread.symbol_mapping_desc", "Manage symbol pairing and correction rules."),
+            t("settings.proofread.symbol_mapping_section", "Punctuation Pairing Rules"),
+            t("settings.proofread.symbol_mapping_desc", "Check that opening and closing punctuation is paired."),
         )
-        self._add_editor_button(form_sym, self._open_symbol_mapping_editor)
+        self._add_editor_buttons(form_sym, self._open_symbol_pairing_editor, "proofread/pairs.toml")
 
         # Symbol Error Editor
         _card_err, form_err = self.add_settings_card(
             t("settings.proofread.symbol_correction_section", "Symbol Correction Editor"),
             t("settings.proofread.symbol_correction_desc", "Manage fullwidth/halfwidth symbol correction entries."),
         )
-        self._add_editor_button(form_err, self._open_symbol_error_editor)
+        self._add_editor_buttons(form_err, self._open_symbol_error_editor, "proofread/symbol_map.toml")
 
         # Typos Dictionary Editor
         _card_typo, form_typo = self.add_settings_card(
             t("settings.proofread.typos_section", "Typos Dictionary Editor"),
             t("settings.proofread.typos_desc", "Manage common typo correction entries."),
         )
-        self._add_editor_button(form_typo, self._open_typos_editor)
+        self._add_editor_buttons(form_typo, self._open_typos_editor, "proofread/typos.toml")
 
         # Sensitive Words Editor
         _card_sw, form_sw = self.add_settings_card(
             t("settings.proofread.sensitive_words_section", "Sensitive Words Editor"),
             t("settings.proofread.sensitive_words_desc", "Manage sensitive word detection entries."),
         )
-        self._add_editor_button(form_sw, self._open_sensitive_words_editor)
+        self._add_editor_buttons(form_sw, self._open_sensitive_words_editor, "proofread/sensitive_words.toml")
 
         # Wire toggles
         self._symbol_pairing.toggled.connect(lambda v: self._vm.set_field(SECTION_PROOFREAD, "symbol_pairing", v))
@@ -1111,16 +1113,19 @@ class ProofreadTab(BaseSettingsTab):
         self._skip_code_blocks.toggled.connect(lambda v: self._vm.set_field(SECTION_PROOFREAD, "skip_code_blocks", v))
         self._skip_quote_blocks.toggled.connect(lambda v: self._vm.set_field(SECTION_PROOFREAD, "skip_quote_blocks", v))
 
-    def _add_editor_button(self, form, slot) -> None:
-        """Add an Edit button row to a form layout, connected to *slot*."""
-        button_row = QWidget(self)
-        button_layout = QHBoxLayout(button_row)
-        button_layout.setContentsMargins(0, 0, 0, 0)
-        button_layout.setSpacing(8)
+    def _add_editor_buttons(self, form, slot, config_name: str) -> None:
+        """All three actions address the same complete editable source."""
+        button_row = ChoiceGroup(self, responsive=True)
+        button_layout = button_row.content_layout
         btn = QPushButton(t("settings.proofread.edit", "Edit"), button_row)
         btn.clicked.connect(slot)
-        button_layout.addWidget(btn)
-        button_layout.addStretch(1)
+        button_layout.addWidget(btn, 1)
+        import_button = QPushButton(t("settings.rule_transfer.import"), button_row)
+        import_button.clicked.connect(lambda: self._rule_transfer.import_rules(config_name))
+        button_layout.addWidget(import_button, 1)
+        export_button = QPushButton(t("settings.rule_transfer.export"), button_row)
+        export_button.clicked.connect(lambda: self._rule_transfer.export_rules(config_name))
+        button_layout.addWidget(export_button, 1)
         form.addRow(button_row)
 
     def _load_values(self) -> None:
@@ -1154,9 +1159,9 @@ class ProofreadTab(BaseSettingsTab):
         )
         dlg.exec()
 
-    def _open_symbol_mapping_editor(self) -> None:
+    def _open_symbol_pairing_editor(self) -> None:
         """Open the pairing editor against the injected editable source."""
-        self._open_config_editor(_SymbolMappingEditor, "proofread/pairs.toml")
+        self._open_config_editor(_SymbolPairingEditor, "proofread/pairs.toml")
 
     def _open_symbol_error_editor(self) -> None:
         """Open the symbol-correction editor against the injected source."""

@@ -62,18 +62,19 @@ def test_cli_commands_start_and_succeed(args: list[str], tmp_path: Path) -> None
 
 
 def test_cli_markdown_docx_roundtrip(tmp_path: Path) -> None:
-    output_docx = tmp_path / "sample.docx"
+    output_docx_parent = tmp_path / "generated"
     output_directory = tmp_path / "roundtrip"
 
     converted = _run_cli(
-        ["convert", str(SAMPLE_MD), "--to", "docx", "--output", str(output_docx)],
+        ["convert", str(SAMPLE_MD), "--to", "docx", "--output-dir", str(output_docx_parent)],
         runtime_root=tmp_path,
     )
     assert converted.returncode == 0, converted.stderr[-4000:]
-    assert output_docx.is_file()
+    [output_docx] = output_docx_parent.glob("*/*.docx")
+    assert output_docx.parent.stem == output_docx.stem
 
     roundtripped = _run_cli(
-        ["convert", str(output_docx), "--to", "md", "--output", str(output_directory)],
+        ["convert", str(output_docx), "--to", "md", "--output-dir", str(output_directory)],
         runtime_root=tmp_path,
     )
     assert roundtripped.returncode == 0, roundtripped.stderr[-4000:]

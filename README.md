@@ -217,6 +217,8 @@ For scripts, agents, or plugin integrations, use this order:
 
 ### Common Examples
 
+Conversions from or to Markdown publish a result folder inside the parent selected with `--output-dir DIR`, even when there is only one output. Names include the source name, timestamp and current input format. Use `--output PATH` only for other conversions that produce one exact file.
+
 ```bash
 # Packaged release (Windows)
 DocWenCLI.exe inspect document.docx --json
@@ -225,22 +227,22 @@ DocWenCLI.exe inspect document.docx --json
 DocWenCLI.exe schema convert
 
 # Preview how the conversion would run without writing files
-DocWenCLI.exe convert report.docx --to md --output report.md --extract-img --ocr --dry-run --json
+DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --ocr --dry-run --json
 
 # Export Word to Markdown (extract images + OCR)
-DocWenCLI.exe convert report.docx --to md --output report.md --extract-img --ocr
+DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --ocr
 
 # Markdown to Word (select a template and heading/body merge mode)
-DocWenCLI.exe convert document.md --to docx --output document.docx --template template.docx.f1eeb0a008ce3eae0619ecae6e185ab132a3ee0abdd382c8863481d9af1dc77f --heading-merge-mode punct_required
+DocWenCLI.exe convert document.md --to docx --output-dir exports --template template.docx.f1eeb0a008ce3eae0619ecae6e185ab132a3ee0abdd382c8863481d9af1dc77f --heading-merge-mode punct_required
 
 # Control Markdown image export mode and OCR placement
-DocWenCLI.exe convert report.docx --to md --output report.md --extract-img --image-mode file --ocr --ocr-placement image_md
+DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --image-mode file --ocr --ocr-placement image_md
 
 # Chinese official-document optimization selected by public resource ID
-DocWenCLI.exe convert report.docx --to md --output report.md --optimization gongwen
+DocWenCLI.exe convert report.docx --to md --output-dir exports --optimization gongwen
 
 # Chinese invoice optimization selected by public resource ID
-DocWenCLI.exe convert invoice.pdf --to md --output invoice.md --optimization invoice_cn
+DocWenCLI.exe convert invoice.pdf --to md --output-dir exports --optimization invoice_cn
 
 # Check runtime capability summary and dependency gates
 DocWenCLI.exe doctor --json
@@ -256,8 +258,8 @@ DocWenCLI.exe validate input.md --check typo --check punct --report report.json
 # docwen inspect document.docx --json
 # docwen resources list formats --json
 # docwen schema convert
-# docwen convert document.docx --to md --output document.md --dry-run --json
-# docwen convert document.docx --to md --output document.md
+# docwen convert document.docx --to md --output-dir exports --dry-run --json
+# docwen convert document.docx --to md --output-dir exports
 ```
 
 ### Common Commands & Options

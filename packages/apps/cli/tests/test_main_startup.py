@@ -152,7 +152,7 @@ class TestFailureLabelsInOutput:
             lambda args, **kwargs: (_ for _ in ()).throw(RuntimeError("bootstrap forced failure")),
         )
 
-        main(["convert", "test.md", "--to", "md", "--output", "test-out.md"])
+        main(["convert", "test.md", "--to", "md", "--output-dir", "test-out.md"])
         captured = capsys.readouterr()
         assert "初始化失败" in captured.err
 

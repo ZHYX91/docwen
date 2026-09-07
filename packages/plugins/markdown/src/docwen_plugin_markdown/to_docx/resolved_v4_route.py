@@ -69,6 +69,7 @@ from docwen_plugin_markdown.resolved_runtime_v4 import (
 from docwen_plugin_markdown.resolved_source_carriers_v4 import apply_resolved_source_carriers_v4
 from docwen_plugin_markdown.runtime_semantics_v3 import RuntimeSemanticsV3Unsupported
 from docwen_plugin_markdown.template_filler import fill_template
+from docwen_plugin_markdown.template_policy import template_list_separator
 from docwen_plugin_markdown.template_utils import (
     TemplatePackageError,
     extract_body_font,
@@ -91,7 +92,6 @@ from docwen_plugin_markdown.to_docx.converter import (
     _normalize_table_style_key,
     _option_or_config,
     _request_heading_merge_punctuation,
-    _request_yaml_list_separator,
     _resolve_body_formatting_mode,
     _resolve_horizontal_rule_actions,
     _resolve_quote_style_levels,
@@ -402,7 +402,7 @@ def _render_resolved_v4_docx(
         placeholder_map=placeholder_map,
         placeholder_rules=placeholder_rules,
         special_placeholder_handlers=special_placeholder_handlers,
-        list_separator=_request_yaml_list_separator(context.config),
+        list_separator=template_list_separator(context.config),
     )
     if bibliography_anchor is not None:
         DocxSemanticRenderer(doc).render_bibliography_fragment(

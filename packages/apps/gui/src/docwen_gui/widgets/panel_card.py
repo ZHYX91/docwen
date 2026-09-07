@@ -24,7 +24,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from docwen_gui.widgets.value_controls import ScrollSafeComboBox
+
 from ..styles.design_tokens import Border, Sizing, Spacing
+from ..styles.theme_semantics import ThemeClass
 
 
 class FormatChoiceLike(Protocol):
@@ -356,7 +359,7 @@ class TaskActivityList(QFrame):
         self.content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
 
-class FormatSelector(QComboBox):
+class FormatSelector(ScrollSafeComboBox):
     """A combo that retains unavailable targets with an explicit reason."""
 
     choices_changed = Signal()
@@ -442,7 +445,25 @@ class PanelCard(QFrame):
         self._content_layout.setSpacing(Spacing.FORM_ROW_GAP)
         outer.addWidget(self._content)
 
+        self.setTone("primary")
         self.setTitle(title)
+
+    def setTone(self, tone: ThemeClass | str) -> None:
+        """Keep the header and border on the same semantic colour token."""
+        if tone not in {"primary", "info", "success", "warning", "danger", "secondary"}:
+            raise ValueError(f"Unknown card tone: {tone}")
+        for widget in (self, self._title_label):
+            if widget.property("panelTone") == tone:
+                continue
+            widget.setProperty("panelTone", tone)
+            style = widget.style()
+            style.unpolish(widget)
+            style.polish(widget)
+            widget.update()
+
+    @property
+    def header(self) -> SectionHeader:
+        return self._title_label
 
     @property
     def content_layout(self) -> QVBoxLayout:
@@ -455,6 +476,18 @@ class PanelCard(QFrame):
 
         self._title_label.setText(title)
         self._title_label.setVisible(bool(title.strip()))
+
+    def setContentVisible(self, visible: bool) -> None:
+        """Keep a compact, fully rounded header when the body has no content."""
+        self._content.setVisible(visible)
+        collapsed = not visible
+        if self._title_label.property("contentCollapsed") != collapsed:
+            self._title_label.setProperty("contentCollapsed", collapsed)
+            style = self._title_label.style()
+            style.unpolish(self._title_label)
+            style.polish(self._title_label)
+            self._title_label.updateGeometry()
+            self._title_label.update()
 
     def title(self) -> str:
         """Return the current internal title."""

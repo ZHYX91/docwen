@@ -24,6 +24,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from docwen_gui.widgets.value_controls import ScrollSafeComboBox, ScrollSafeDoubleSpinBox
+
 from ...i18n import t
 from ...view_models.settings_vm import SECTION_GUI, SettingsViewModel
 from .base_tab import BaseSettingsTab, _apply_control_height, _prepare_combo
@@ -65,7 +67,7 @@ class GeneralTab(BaseSettingsTab):
         lang_container_layout.setContentsMargins(0, 0, 0, 0)
         lang_container_layout.setSpacing(8)
 
-        lang_combo = QComboBox(lang_container)
+        lang_combo = ScrollSafeComboBox(lang_container)
         self._language_combo = lang_combo
         _prepare_combo(lang_combo)
         lang_combo.addItem(t("settings.general.languages.zh_CN", "Chinese (Simplified)"), "zh_CN")
@@ -95,7 +97,7 @@ class GeneralTab(BaseSettingsTab):
             t("settings.general.theme_description", "Choose between light, dark, or follow system theme."),
             object_name="generalThemeCard",
         )
-        theme_combo = QComboBox(theme_card)
+        theme_combo = ScrollSafeComboBox(theme_card)
         self._theme_combo = theme_combo
         _prepare_combo(theme_combo)
         theme_combo.addItem(t("settings.general.themes.light", "Light"), "light")
@@ -161,7 +163,7 @@ class GeneralTab(BaseSettingsTab):
         value_row_layout.setContentsMargins(0, 0, 0, 0)
         value_row_layout.setSpacing(8)
 
-        value = QDoubleSpinBox(value_row)
+        value = ScrollSafeDoubleSpinBox(value_row)
         value.setObjectName("generalTransparencySpinBox")
         value.setRange(0.20, 1.00)
         value.setSingleStep(0.05)
@@ -226,7 +228,7 @@ class GeneralTab(BaseSettingsTab):
         window_form.addRow(expand)
         expand.toggled.connect(self._on_expand_side_panels_toggled)
 
-        default_mode = QComboBox(window_card)
+        default_mode = ScrollSafeComboBox(window_card)
         self._default_mode = default_mode
         _prepare_combo(default_mode)
         default_mode.addItem(t("settings.general.window.single_mode", "Single File Mode"), "single")

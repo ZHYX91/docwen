@@ -36,6 +36,8 @@ _LOCALES = (
 _MAIN_WINDOW_KEYS = frozenset(
     {
         "file_admission_invalid",
+        "file_admission_missing",
+        "file_admission_unreadable",
         "file_admission_changed",
         "file_admission_blocked",
         "file_admission_confirm_title",

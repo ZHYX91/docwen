@@ -10,6 +10,7 @@ from __future__ import annotations
 import contextlib
 import logging
 import os
+import re
 import time
 import uuid
 from collections.abc import Callable, Sequence
@@ -63,6 +64,7 @@ from docwen_gui.view_models._runtime_route_filter import (
     RuntimeRouteSource,
     discover_runtime_route_choices,
 )
+from docwen_gui.view_models.output_files import result_output_paths
 from docwen_gui.view_models.task_history import TaskHistory
 from docwen_gui.window_behavior import (
     DEFAULT_WINDOW_BEHAVIOR,
@@ -85,7 +87,6 @@ from docwen_gui.window_geometry import (
     load_window_scale_factor,
     recover_window_geometry,
 )
-from docwen_runtime.path_io import filesystem_path
 
 if TYPE_CHECKING:
     from docwen_application.controller import ApplicationController
@@ -135,6 +136,10 @@ class _OutputPolicyConfigError(RuntimeError):
     """Raised when persisted output settings cannot be read safely."""
 
 
+class _ExecutionAdmissionError(RuntimeError):
+    """A localized reason why a requested execution cannot start."""
+
+
 def _result_warning_messages(result: ConversionResult) -> list[str]:
     """Return user-visible warning diagnostics from a successful result."""
     messages: list[str] = []
@@ -174,7 +179,7 @@ def _localized_failure_message(error: object | None = None) -> str:
         return base
     if isinstance(error, str):
         candidate = error.partition(":")[0].strip()
-        stable_code = candidate if candidate and " " not in candidate and candidate == candidate.upper() else ""
+        stable_code = candidate if re.fullmatch(r"[A-Z][A-Z0-9_-]{1,63}", candidate) else ""
         return f"{base} [{stable_code}]" if stable_code else base
     diagnostic_code = str(getattr(error, "diagnostic_code", "") or "").strip()
     error_type = str(getattr(error, "error_type", "") or "").strip()
@@ -549,6 +554,7 @@ class MainWindow(QWidget):
         grid = QGridLayout(central_container)
         grid.setContentsMargins(8, 8, 8, 8)
         grid.setSpacing(8)
+        grid.setHorizontalSpacing(Spacing.COLUMN_GAP)
 
         # ── Left panel: batch list (visible in batch mode) ──────────────
         self._left_panel_frame = QFrame()
@@ -682,10 +688,17 @@ class MainWindow(QWidget):
         self._conversion_panel_vm = ConversionPanelViewModel(main_vm=self._view_model, parent=self)
         self._action_area_vm = ActionAreaViewModel(main_vm=self._view_model, parent=self)
         self._info_area_vm = InfoAreaViewModel(parent=self)
+        from .view_models.activity_records import ActivityRecordsModel
+
+        self._activity_model = ActivityRecordsModel(self._task_history, self._info_area_vm, self)
+        self._activity_model.records_changed.connect(self._sync_activity_summary)
+        self._info_area_vm.activity_requested.connect(self._show_activity_records)
 
         self._action_area_vm.set_mode(self._view_model.mode)
+        self._info_area_vm.set_mode(self._view_model.mode)
 
         self._input_area = InputArea(view_model=self._input_area_vm, parent=self)
+        self._input_area.location_requested.connect(self._open_location)
         self._batch_list = BatchList(view_model=self._batch_list_vm, parent=self)
         self._conversion_panel = ConversionPanel(view_model=self._conversion_panel_vm, parent=self)
         self._action_area = ActionArea(view_model=self._action_area_vm, parent=self)
@@ -710,13 +723,6 @@ class MainWindow(QWidget):
         flow.setContentsMargins(0, 0, 0, 0)
         flow.setSpacing(Spacing.CARD_GAP)
         flow.addWidget(self._input_area)
-        from .widgets.batch_list import _MiddleElidedLabel
-
-        self._output_location_label = _MiddleElidedLabel("", content)
-        self._output_location_label.setObjectName("workflowOutputLocation")
-        self._output_location_label.setTextFormat(Qt.TextFormat.PlainText)
-        self._output_location_label.hide()
-        flow.addWidget(self._output_location_label)
         flow.addWidget(self._action_area)
         flow.addWidget(self._info_area)
         flow.addStretch(1)
@@ -851,23 +857,21 @@ class MainWindow(QWidget):
         )
         self._action_area.set_execution_count(len(paths))
         self._conversion_panel.set_execution_count(len(paths))
-        label = self._output_location_label
-        label.setVisible(bool(paths))
-        if not paths:
-            return
-        try:
-            policy = self._build_output_policy()
-        except _OutputPolicyConfigError:
-            text = _t("main_window.output_settings_unavailable")
-        else:
-            parents = {str(Path(path).parent) for path in paths}
-            location = policy.output_dir or (
-                next(iter(parents)) if len(parents) == 1 else _t("settings.output.output_modes.source")
-            )
-            text = f"{_t('settings.output.output_mode_label')} {location}"
-            if policy.date_subfolder:
-                text += f" · {_t('settings.output.date_folder.create_label')}"
-        label.set_full_text(text)
+        text = ""
+        if paths:
+            try:
+                policy = self._build_output_policy()
+            except _OutputPolicyConfigError:
+                text = _t("main_window.output_settings_unavailable")
+            else:
+                if policy.output_dir:
+                    text = f"{_t('settings.output.output_mode_label')} {policy.output_dir}"
+                elif self._view_model.mode == "batch":
+                    text = _t("info_area.output_each_source")
+                if policy.date_subfolder:
+                    text = f"{text} · " if text else ""
+                    text += _t("info_area.output_date_subfolder")
+        self._info_area_vm.set_output_destination_hint(text)
 
     def _wire_view_model(self) -> None:
         vm = self._view_model
@@ -1611,6 +1615,7 @@ class MainWindow(QWidget):
 
     def _on_mode_changed(self, mode: str) -> None:
         self._current_mode = mode
+        self._info_area_vm.set_mode(mode)
         self._action_area_vm.set_mode(mode)
         if mode == "single" and self._view_model.selected_file is None:
             self._select_current_batch_file()
@@ -1931,7 +1936,7 @@ class MainWindow(QWidget):
         except _OutputPolicyConfigError:
             self._report_output_policy_config_error()
             return
-        if not self._confirm_request_admission(request):
+        if not self._admit_execution_request(request, context):
             return
 
         def project_reserved_execution() -> None:
@@ -1947,6 +1952,7 @@ class MainWindow(QWidget):
                 _t("info_area.history_started", name=Path(file_path).name),
                 "info",
                 show_location=False,
+                operation_id=request.request_id,
             )
 
         self._launch_execution_thread(
@@ -2003,7 +2009,7 @@ class MainWindow(QWidget):
         except _OutputPolicyConfigError:
             self._report_output_policy_config_error()
             return
-        if not self._confirm_request_admission(request):
+        if not self._admit_execution_request(request, context):
             return
         task_id = request.request_id
 
@@ -2078,7 +2084,7 @@ class MainWindow(QWidget):
         except _OutputPolicyConfigError:
             self._report_output_policy_config_error()
             return
-        if not self._confirm_request_admission(request):
+        if not self._admit_execution_request(request, context):
             return
         task_id = request.request_id
 
@@ -2200,6 +2206,21 @@ class MainWindow(QWidget):
             self._view_model.release_execution_inputs(task_id)
             thread.deleteLater()
 
+    def _admit_execution_request(self, request: ConversionRequest, context: dict[str, Any]) -> bool:
+        """Project rejected attempts through the same result and history as worker failures."""
+        try:
+            return self._confirm_request_admission(request)
+        except _ExecutionAdmissionError as exc:
+            self._start_time = time.monotonic()
+            self._feedback_context = dict(context)
+            self._info_area_vm.begin_task(
+                operation_id=request.request_id,
+                current_file=context.get("display_name", Path(context.get("file_path", "")).name),
+                total_count=int(context.get("total_count", 1)),
+            )
+            self._on_execution_failed(str(exc), context)
+            return False
+
     def _confirm_request_admission(self, request: ConversionRequest) -> bool:
         """Enforce core admission decisions before crossing into runtime."""
         from docwen_core.detection import inspect_file
@@ -2215,44 +2236,36 @@ class MainWindow(QWidget):
         pending: list[tuple[FileRef, FileInspection]] = []
         for ref in request.input_refs:
             raw_inspection = ref.metadata.get(FILE_INSPECTION_METADATA_KEY)
-            if raw_inspection is None:
-                self._info_area_vm.add_message(
-                    _t("main_window.file_admission_invalid", "File inspection data is invalid."),
-                    "danger",
-                )
-                return False
             if not isinstance(raw_inspection, dict):
-                self._info_area_vm.add_message(
-                    _t("main_window.file_admission_invalid", "File inspection data is invalid."),
-                    "danger",
+                raise _ExecutionAdmissionError(
+                    _t("main_window.file_admission_invalid", "File inspection data is invalid.")
                 )
-                return False
             try:
                 inspection = inspect_file(ref.path)
-            except (FileNotFoundError, OSError, TypeError, ValueError):
-                self._info_area_vm.add_message(
-                    _t("main_window.file_admission_invalid", "File inspection data is invalid."),
-                    "danger",
-                )
-                return False
+            except FileNotFoundError as exc:
+                raise _ExecutionAdmissionError(
+                    _t("main_window.file_admission_missing", "The input file no longer exists: {path}", path=ref.path)
+                ) from exc
+            except OSError as exc:
+                raise _ExecutionAdmissionError(
+                    _t("main_window.file_admission_unreadable", "The input file cannot be read: {path}", path=ref.path)
+                ) from exc
+            except (TypeError, ValueError) as exc:
+                raise _ExecutionAdmissionError(
+                    _t("main_window.file_admission_invalid", "File inspection data is invalid.")
+                ) from exc
             if raw_inspection != inspection.to_dict():
-                self._info_area_vm.add_message(
+                raise _ExecutionAdmissionError(
                     _t(
                         "main_window.file_admission_changed",
                         "The file changed after it was added. Remove it from the list and add it again to re-check the file, then retry.",
-                    ),
-                    "warning",
-                    show_location=False,
+                    )
                 )
-                return False
             if inspection.decision is AdmissionDecision.BLOCK:
-                self._info_area_vm.add_message(
+                raise _ExecutionAdmissionError(
                     render_file_inspection_message(inspection, prefer_reason=True)
-                    or _t("main_window.file_admission_blocked", "The selected file cannot be processed."),
-                    "danger",
-                    show_location=False,
+                    or _t("main_window.file_admission_blocked", "The selected file cannot be processed.")
                 )
-                return False
             if not admission_is_satisfied(inspection, ref.metadata):
                 pending.append((ref, inspection))
 
@@ -2589,6 +2602,7 @@ class MainWindow(QWidget):
 
         if result.success:
             output_path = self._pick_output_path(result)
+            result_paths = result_output_paths(result)
             warning_messages = _result_warning_messages(result)
             completion_tone = "warning" if warning_messages else "success"
             for path in file_paths:
@@ -2596,8 +2610,10 @@ class MainWindow(QWidget):
                     path,
                     "completed",
                     output_path=output_path,
+                    output_paths=result_paths,
                     operation_id=task_id,
                     error_message="",
+                    warnings=tuple(warning_messages),
                 )
             self._info_area_vm.add_message(
                 _t("info_area.history_completed", name=context.get("display_name", Path(file_path).name)),
@@ -2616,10 +2632,8 @@ class MainWindow(QWidget):
                     navigate_file_path=output_path or "",
                     operation_id=task_id,
                 )
-            output_dir = str(Path(output_path).parent) if output_path else str(Path(file_path).parent)
             guide_actions = self._info_area_vm.compute_guide_actions(
                 "success",
-                output_dir=output_dir,
             )
             self._info_area_vm.set_task_summary(
                 operation_id=task_id,
@@ -2633,11 +2647,14 @@ class MainWindow(QWidget):
                 tone=completion_tone,
                 navigate_file_path=output_path or "",
                 navigation_kind="output",
+                output_path=output_path,
                 guide_actions=guide_actions,
+                output_paths=result_paths,
+                batch=bool(context.get("aggregate")),
             )
             self._publish_execution_summary("completed")
-            if context.get("open_after_done") and (output_path or output_dir):
-                self._open_path(output_path or output_dir, open_parent=bool(output_path))
+            if context.get("open_after_done") and output_path:
+                self._open_path(output_path, open_parent=True)
             self._maybe_notify_task_completion(context)
         else:
             self._handle_unsuccessful_result(result, context)
@@ -2666,6 +2683,7 @@ class MainWindow(QWidget):
                 "failed",
                 error_message=message,
                 operation_id=task_id,
+                output_path="",
             )
         self._info_area_vm.add_message(
             _localized_failure_message(message),
@@ -2705,6 +2723,7 @@ class MainWindow(QWidget):
         file_paths = list(context.get("file_paths", []) or ([file_path] if file_path else []))
         total_count = int(context.get("total_count", len(file_paths) or 1))
         retained_output_path = "" if cancelled else self._pick_existing_output_path(result)
+        retained_paths = () if cancelled else result_output_paths(result, existing_only=True)
 
         entry_status = "cancelled" if cancelled else "failed"
         for path in file_paths:
@@ -2712,6 +2731,7 @@ class MainWindow(QWidget):
                 path,
                 entry_status,
                 output_path=retained_output_path,
+                output_paths=retained_paths,
                 error_message=message,
                 operation_id=task_id,
             )
@@ -2725,7 +2745,6 @@ class MainWindow(QWidget):
         )
         guide_actions = self._info_area_vm.compute_guide_actions(
             state,
-            output_dir=str(Path(retained_output_path).parent) if retained_output_path else "",
             failed_details_path="" if cancelled else file_path,
             retry_available=not cancelled,
         )
@@ -2736,7 +2755,10 @@ class MainWindow(QWidget):
             completed_count=0,
             total_count=total_count,
             failed_count=0 if cancelled else total_count,
+            output_path=retained_output_path,
             cancelled_count=total_count if cancelled else 0,
+            output_paths=retained_paths,
+            batch=bool(context.get("aggregate")),
             state=state,
             tone=tone,
             navigate_file_path="" if cancelled else file_path,
@@ -2786,16 +2808,20 @@ class MainWindow(QWidget):
             if raw_result.success:
                 success_count += 1
                 output_path = self._pick_output_path(raw_result)
+                result_paths = result_output_paths(raw_result)
                 if output_path:
                     output_paths.append(output_path)
-                for warning_message in _result_warning_messages(raw_result):
+                warning_messages = _result_warning_messages(raw_result)
+                for warning_message in warning_messages:
                     warning_rows.append((file_path, output_path, warning_message))
                 self._set_execution_file_status(
                     file_path,
                     "completed",
                     output_path=output_path,
+                    output_paths=result_paths,
                     error_message="",
                     operation_id=task_id,
+                    warnings=tuple(warning_messages),
                 )
                 continue
 
@@ -2830,6 +2856,7 @@ class MainWindow(QWidget):
                     file_path,
                     "failed",
                     output_path=retained_output_path,
+                    output_paths=result_output_paths(raw_result, existing_only=True),
                     error_message=message,
                     operation_id=task_id,
                 )
@@ -2855,14 +2882,13 @@ class MainWindow(QWidget):
             state = "success"
             tone = "warning" if warning_rows else "success"
 
-        successful_output_dir = str(Path(output_paths[0]).parent) if output_paths else ""
-        retained_failure_output_dir = str(Path(retained_failure_paths[0]).parent) if retained_failure_paths else ""
-        guide_output_dir = successful_output_dir or retained_failure_output_dir
+        successful_output_path = output_paths[0] if output_paths else ""
+        retained_failure_output_path = retained_failure_paths[0] if retained_failure_paths else ""
+        guide_output_path = successful_output_path or retained_failure_output_path
         navigate_path = output_paths[0] if state == "success" and output_paths else first_failed_path
         navigation_kind = "output" if state == "success" else ("failed" if first_failed_path else "")
         guide_actions = self._info_area_vm.compute_guide_actions(
             state,
-            output_dir=guide_output_dir,
             failed_details_path=first_failed_path,
             retry_available=bool(first_failed_path),
         )
@@ -2876,9 +2902,9 @@ class MainWindow(QWidget):
                 cancelled=cancelled_count,
             ),
             tone,
-            show_location=bool(guide_output_dir),
-            file_path=guide_output_dir,
-            navigate_file_path=guide_output_dir,
+            show_location=bool(guide_output_path),
+            file_path=guide_output_path,
+            navigate_file_path=guide_output_path,
             operation_id=task_id,
         )
         for warning_file, warning_output, warning_message in warning_rows:
@@ -2923,7 +2949,9 @@ class MainWindow(QWidget):
             tone=tone,
             navigate_file_path=navigate_path,
             navigation_kind=navigation_kind,
+            output_path=guide_output_path,
             guide_actions=guide_actions,
+            batch=True,
         )
         terminal_message = (
             _localized_failure_message(first_error_summary_source or first_error_message)
@@ -2933,33 +2961,20 @@ class MainWindow(QWidget):
         self._publish_execution_summary(
             "completed" if state in {"success", "skipped"} else state, message=terminal_message
         )
-        if context.get("open_after_done") and successful_output_dir:
-            self._open_path(successful_output_dir, open_parent=False)
+        if context.get("open_after_done") and successful_output_path:
+            self._open_path(successful_output_path, open_parent=True)
         self._maybe_notify_task_completion(context)
 
     @staticmethod
     def _pick_output_path(result: ConversionResult) -> str:
-        primary = next((artifact.staging_path for artifact in result.artifacts if artifact.is_primary), "")
-        if primary:
-            return primary
-        if result.artifacts:
-            return result.artifacts[0].staging_path
-        return ""
+        paths = result_output_paths(result)
+        return paths[0] if paths else ""
 
     @staticmethod
     def _pick_existing_output_path(result: ConversionResult) -> str:
         """Return a real retained artifact path suitable for failure navigation."""
-        primary = [artifact for artifact in result.artifacts if artifact.is_primary]
-        secondary = [artifact for artifact in result.artifacts if not artifact.is_primary]
-        for artifact in (*primary, *secondary):
-            if not artifact.staging_path:
-                continue
-            try:
-                if filesystem_path(artifact.staging_path).is_file():
-                    return artifact.staging_path
-            except (OSError, ValueError):
-                continue
-        return ""
+        paths = result_output_paths(result, existing_only=True)
+        return paths[0] if paths else ""
 
     def _cancel_active_task(self) -> None:
         controller = self._view_model.controller
@@ -3001,37 +3016,43 @@ class MainWindow(QWidget):
             _normalize_path(path),
             status,
             str(values.get("error_message") or ""),
+            str(values.get("output_path") or ""),
+            warnings=tuple(values.pop("warnings", ())),
+            skip_reason=str(values.get("skip_reason") or ""),
+            output_paths=tuple(values.get("output_paths") or ()),
         )
         self._batch_list_vm.set_file_status(path, status, **values)
 
-    def _show_failure_details(self, details: str) -> None:
-        if not details:
-            return
-        from .dialogs.task_details import TaskDetailsDialog
+    def _sync_activity_summary(self) -> None:
+        self._info_area_vm.set_activity_counts(self._activity_model.rowCount(), self._activity_model.failed_count)
 
-        dialog = self.findChild(TaskDetailsDialog, "taskFailureDetailsDialog")
+    def _show_activity_records(self, *, operation_id: str = "", source_path: str = ""):
+        from .dialogs.activity_records import ActivityRecordsDialog
+
+        dialog = self.findChild(ActivityRecordsDialog, "activityRecordsDialog")
         if dialog is None:
-            dialog = TaskDetailsDialog(parent=self)
-        dialog.set_details(details)
-        dialog.show()
-        dialog.raise_()
-        dialog.activateWindow()
+            dialog = ActivityRecordsDialog(self._activity_model, parent=self)
+            dialog.location_requested.connect(lambda path, parent: self._open_path(path, open_parent=parent))
+        dialog.show_records(
+            failures_only=self._activity_model.failed_count > 0 and not operation_id,
+            operation_id=operation_id,
+            source_path=_normalize_path(source_path) if source_path else "",
+        )
+        return dialog
 
     def _handle_batch_entry_action(self, action_key: str, file_path: str) -> None:
-        if action_key == "open_output":
+        if action_key == "open_output_location":
             entry = self._batch_list_vm.get_file_entry(file_path)
             if entry is not None and entry.output_path:
-                self._open_path(entry.output_path)
+                self._open_path(entry.output_path, open_parent=True)
             return
         if action_key == "open_source_location":
             self._open_path(file_path, open_parent=True)
             return
-        if action_key == "show_error_details":
+        if action_key in {"show_error_details", "show_skip_details", "show_output_details"}:
             entry = self._batch_list_vm.get_file_entry(file_path)
             if entry is not None:
-                record = self._task_history.get(entry.operation_id or "")
-                details = record.failure_details if record is not None else (entry.error_message or "")
-                self._show_failure_details(details)
+                self._show_activity_records(operation_id=entry.operation_id or "", source_path=file_path)
             return
         if action_key == "copy_error_details":
             copied = self._batch_list.copy_error_details(file_path)
@@ -3049,13 +3070,11 @@ class MainWindow(QWidget):
         self._open_path(file_path, open_parent=True)
 
     def _handle_task_guide_action(self, action_key: str, target_path: str) -> None:
-        if action_key == "open_output_dir":
-            self._open_path(target_path, open_parent=False)
+        if action_key == "view_outputs":
+            self._show_activity_records(operation_id=self._info_area_vm.task_summary.operation_id)
             return
         if action_key == "view_failed_details":
-            record = self._task_history.get(self._info_area_vm.task_summary.operation_id)
-            if record is not None:
-                self._show_failure_details(record.failure_details)
+            self._show_activity_records(operation_id=self._info_area_vm.task_summary.operation_id)
             return
         if action_key == "retry_failed":
             self._retry_failed_request()

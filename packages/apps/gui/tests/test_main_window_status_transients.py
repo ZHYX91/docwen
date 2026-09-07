@@ -26,7 +26,7 @@ def test_terminal_status_clears_persistent_main_window_work_transients(
     main_window._on_status_message_changed(t("main_window.task_processing_prefix") + " rules.docx")
     main_window._on_status_message_changed(t("main_window.task_progress_prefix") + "90% Finalizing output")
     assert not info_vm._transient_messages
-    assert "rules.docx" in info_vm.status_summary_text
+    assert "rules.docx" not in info_vm.status_summary_text
 
     if terminal_kind == "completed":
         terminal_message = t("main_window.task_completed_status")

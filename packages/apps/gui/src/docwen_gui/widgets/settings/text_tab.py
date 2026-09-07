@@ -17,9 +17,6 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QLabel,
-    QPushButton,
-    QVBoxLayout,
-    QWidget,
 )
 
 from docwen_gui import numbering_schemes
@@ -28,6 +25,8 @@ from ...i18n import t
 from ...view_models.settings_vm import SECTION_GUI, SECTION_TEXT, SettingsViewModel
 from ..template_selector_tabbed import TabbedTemplateSelector
 from .base_tab import BaseSettingsTab
+from .content_controls import MarkdownContentControls
+from .numbering_editors import NumberingEditors
 
 
 def _draft_mapping(value: object) -> dict[str, object]:
@@ -57,6 +56,13 @@ class TextTab(BaseSettingsTab):
         self._load_values()
 
     def _create_interface(self) -> None:
+        self.set_tab_description(
+            t(
+                "settings.text.input_description",
+                "Settings for incoming Markdown: generating documents, filling templates and processing headings.",
+            )
+        )
+        self._content_controls = MarkdownContentControls(self, self._vm)
         # ── MD to DOCX numbering card ───────────────────────────────────
         _card1, form1 = self.add_settings_card(
             t("settings.text.md_to_docx_section", "MD to DOCX — Numbering Options"),
@@ -115,26 +121,7 @@ class TextTab(BaseSettingsTab):
         help_label.setProperty("class", "secondary")
         form1.addRow(help_label)
 
-        # ── Numbering editor buttons ────────────────────────────────────
-        _card2, form2 = self.add_settings_card(
-            t("settings.text.numbering_settings_section", "Numbering Settings"),
-            t("settings.text.numbering_settings_desc", "Edit numbering addition schemes and removal rules."),
-            object_name="textNumberingEditorsCard",
-        )
-        button_row = QWidget(self)
-        button_layout = QVBoxLayout(button_row)
-        button_layout.setContentsMargins(0, 0, 0, 0)
-        button_layout.setSpacing(8)
-
-        add_btn = QPushButton(t("settings.text.edit_numbering_add", "Edit Numbering Addition Schemes"), button_row)
-        add_btn.clicked.connect(self._open_numbering_scheme_editor)
-        button_layout.addWidget(add_btn)
-
-        clean_btn = QPushButton(t("settings.text.edit_numbering_clean", "Edit Numbering Removal Rules"), button_row)
-        clean_btn.clicked.connect(self._open_numbering_clean_editor)
-        button_layout.addWidget(clean_btn)
-
-        form2.addRow(button_row)
+        self._numbering_editors = NumberingEditors(self, self._vm, self._refresh_scheme_combo_items)
 
         # ── Field processors card ─────────────────────────────────────
         _card_fp, self._field_processors_form = self.add_settings_card(
@@ -167,6 +154,7 @@ class TextTab(BaseSettingsTab):
     # ── Value loading ───────────────────────────────────────────────────────
 
     def _load_values(self) -> None:
+        self._content_controls.reload_from_config()
         config = self._vm.config
         text = config.text
         self._refresh_scheme_combo_items(text.default_scheme)
@@ -206,6 +194,7 @@ class TextTab(BaseSettingsTab):
         items = numbering_schemes.get_numbering_scheme_items(
             config_data=self._vm.config.text.numbering_schemes,
         )
+        selected_scheme = selected_scheme or self._vm.config.text.default_scheme
         with QSignalBlocker(self._scheme_combo):
             self._scheme_combo.clear()
             for label, scheme_id in items:
@@ -330,88 +319,3 @@ class TextTab(BaseSettingsTab):
                 name=name,
             ),
         )
-
-    # ── Editor dialogs ──────────────────────────────────────────────────────
-
-    def _open_numbering_scheme_editor(self) -> None:
-        """Open the full numbering addition scheme editor (NumberingAddDialog)."""
-        from .numbering_add_editor import NumberingAddDialog
-
-        config = self._vm.config
-        ns = _draft_mapping(config.text.numbering_schemes)
-        settings = _draft_mapping(ns.get("settings"))
-        order = settings.get("order", [])
-        current_data = {
-            "number_styles": _draft_mapping(ns.get("number_styles")),
-            "schemes": _draft_mapping(ns.get("schemes")),
-            "settings": {
-                "default_scheme": config.text.default_scheme,
-                "order": list(order) if isinstance(order, list) else [],
-            },
-        }
-
-        dlg = NumberingAddDialog(
-            self,
-            config_data=current_data,
-            on_save=self._on_numbering_schemes_saved,
-        )
-        dlg.exec()
-
-    def _open_numbering_clean_editor(self) -> None:
-        """Open the numbering removal rule editor (NumberingCleanDialog)."""
-        from .numbering_clean_editor import NumberingCleanDialog
-
-        config = self._vm.config
-        cr = _draft_mapping(config.text.numbering_clean_rules)
-        settings = _draft_mapping(cr.get("settings"))
-        order = settings.get("order", [])
-        rules = cr.get("rules", [])
-        current_data = {
-            "settings": {"order": list(order) if isinstance(order, list) else []},
-            "rules": rules if isinstance(rules, (list, dict)) else [],
-        }
-        dlg = NumberingCleanDialog(
-            self,
-            config_data=current_data,
-            on_save=self._on_numbering_clean_rules_saved,
-        )
-        dlg.exec()
-
-    def _on_numbering_schemes_saved(self, schemes_data: dict) -> bool:
-        ok = self._vm.persist_numbering_schemes_source(schemes_data)
-        if not ok:
-            from PySide6.QtWidgets import QMessageBox
-
-            QMessageBox.warning(
-                self,
-                t("common.save_failed", "Save Failed"),
-                t(
-                    "settings.text.save_numbering_schemes_failed",
-                    "Failed to save numbering schemes to disk. Changes were not persisted.",
-                ),
-            )
-            return False
-        default_scheme = schemes_data.get("settings", {}).get("default_scheme", "")
-        updates: dict[str, object] = {"numbering_schemes": schemes_data}
-        if isinstance(default_scheme, str) and default_scheme:
-            updates["default_scheme"] = default_scheme
-        self._vm.set_field_batch(SECTION_TEXT, updates)
-        self._refresh_scheme_combo_items(str(default_scheme or ""))
-        return True
-
-    def _on_numbering_clean_rules_saved(self, rules_data: dict) -> bool:
-        ok = self._vm.persist_numbering_clean_rules_source(rules_data)
-        if not ok:
-            from PySide6.QtWidgets import QMessageBox
-
-            QMessageBox.warning(
-                self,
-                t("common.save_failed", "Save Failed"),
-                t(
-                    "settings.text.save_numbering_clean_rules_failed",
-                    "Failed to save numbering clean rules to disk. Changes were not persisted.",
-                ),
-            )
-            return False
-        self._vm.set_field(SECTION_TEXT, "numbering_clean_rules", rules_data)
-        return True

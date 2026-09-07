@@ -28,6 +28,57 @@ from ._main_window_projection_binding_support import (
 
 
 class TestRuntimeRequestBinding:
+    @pytest.mark.parametrize("failure", ["missing", "unreadable", "changed"])
+    def test_admission_failure_replaces_previous_output_and_records_input(
+        self, window, tmp_path, monkeypatch, failure
+    ) -> None:
+        from docwen_gui.i18n import t as _t
+
+        source = tmp_path / "source.md"
+        source.write_text("# Content\n", encoding="utf-8")
+        window._view_model.add_files([str(source)])
+        request, context = window._build_request(
+            file_path=str(source), target_format="docx", action_name="", options={}
+        )
+        previous_output = tmp_path / "previous.docx"
+        previous_output.write_bytes(b"old output")
+        window._info_area_vm.set_task_summary(
+            operation_id="previous",
+            state="success",
+            tone="success",
+            output_path=str(previous_output),
+            completed_count=1,
+            total_count=1,
+        )
+
+        if failure == "missing":
+            source.unlink()
+        elif failure == "unreadable":
+
+            def inaccessible(_path):
+                raise PermissionError("test access denied")
+
+            monkeypatch.setattr("docwen_core.detection.inspect_file", inaccessible)
+        else:
+            source.write_text("# Changed content with a different size\n", encoding="utf-8")
+
+        assert window._admit_execution_request(request, context) is False
+        summary = window._info_area_vm.task_summary
+        assert summary.state == "failed"
+        assert summary.operation_id == request.request_id
+        assert summary.output_path == ""
+        assert summary.output_paths == ()
+        assert summary.failed_count == 1
+        assert not window._active_threads
+        records = [row for row in window._activity_model.records if row.operation_id == request.request_id]
+        assert len(records) == 1
+        assert records[0].source_path == source.as_posix()
+        assert records[0].status == "failed"
+        assert records[0].output_path == ""
+        assert records[0].operation != _t("activity.info")
+        assert _t(f"main_window.file_admission_{failure}", path=str(source)) in records[0].details
+        assert window._info_area_vm.history_rows[-1].message == _t("main_window.conversion_failed")
+
     def test_gui_confirmation_fails_closed_without_frozen_inspection(self, window, tmp_path) -> None:
         from docwen_core.models import ConversionRequest, FileRef
 
@@ -39,7 +90,12 @@ class TestRuntimeRequestBinding:
             target_format="docx",
         )
 
-        assert window._confirm_request_admission(request) is False
+        assert (
+            window._admit_execution_request(
+                request, {"request_id": request.request_id, "file_path": str(source), "target_format": "docx"}
+            )
+            is False
+        )
 
     def test_request_builder_admits_programmatic_path_through_core(self, window, tmp_path) -> None:
         from docwen_core.models import FILE_INSPECTION_METADATA_KEY
@@ -130,12 +186,15 @@ class TestRuntimeRequestBinding:
             lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("stale fact must stop before dialog")),
         )
 
-        assert window._confirm_request_admission(second_request) is False
+        assert window._admit_execution_request(second_request, _context) is False
         from docwen_gui.i18n import t as _t
 
         guidance = _t("main_window.file_admission_changed")
         assert "重新添加" in guidance or "add it again" in guidance
-        assert any(row.message == guidance for row in window._info_area_vm.history_rows)
+        assert any(
+            row.operation_id == second_request.request_id and guidance in row.details
+            for row in window._activity_model.records
+        )
 
     def test_request_keeps_localized_ingress_warning_and_inspection_after_text_route_normalization(
         self, window, tmp_path

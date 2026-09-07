@@ -28,6 +28,15 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
     text_plan = reset_plan_for_group("text")
     assert text_plan.files == ()
     assert set(text_plan.dotted_keys) == {
+        "conversion.md_to_docx.formatting_mode",
+        "conversion.md_to_docx.heading_formatting_mode",
+        "conversion.md_to_docx.table_header_formatting_mode",
+        "conversion.md_to_docx.heading_merge_mode",
+        "conversion.md_to_docx.heading_merge_punctuation",
+        "template_fill.list_separator",
+        "document.style.table.md_to_docx.table_style_mode",
+        "document.style.table.md_to_docx.builtin_style_key",
+        "document.style.table.md_to_docx.custom_style_name",
         "text.remove_numbering",
         "text.add_numbering",
         "text.numbering_scheme",
@@ -39,6 +48,7 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
     export_plan = reset_plan_for_group("export")
     assert export_plan.files == ("export.toml",)
     assert set(export_plan.dotted_keys) == {
+        "ocr.language",
         "conversion.ocr_output.show_blockquote_title",
         "conversion.ocr_output.blockquote_title_override_by_locale",
         "conversion.export.base64_compress_enabled",
@@ -47,15 +57,15 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
 
     formatting_plan = reset_plan_for_group("formatting")
     assert formatting_plan.files == ()
-    assert len(formatting_plan.dotted_keys) == 34
+    assert len(formatting_plan.dotted_keys) == 22
     assert {
         "conversion.md_to_docx.heading_merge_mode",
         "conversion.md_to_docx.heading_merge_punctuation",
-        "conversion.md_to_docx.list_separator",
+        "template_fill.list_separator",
         "document.style.table.md_to_docx.table_style_mode",
         "document.style.table.md_to_docx.builtin_style_key",
         "document.style.table.md_to_docx.custom_style_name",
-    }.issubset(formatting_plan.dotted_keys)
+    }.issubset(text_plan.dotted_keys)
     assert {
         "conversion.horizontal_rule.enabled",
         "conversion.code_detection.code_font",
@@ -66,6 +76,9 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
     document_plan = reset_plan_for_group("document")
     assert document_plan.files == ()
     assert set(document_plan.dotted_keys) == {
+        "conversion.docx_to_md.preserve_formatting",
+        "conversion.docx_to_md.preserve_heading_formatting",
+        "conversion.docx_to_md.preserve_table_header_formatting",
         "document.to_md_keep_images",
         "document.to_md_enable_ocr",
         "document.to_md_table_merge_export_strategy",
@@ -74,9 +87,6 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
         "document.to_md_default_scheme",
         "document.to_md_enable_optimization",
         "document.to_md_optimization_type",
-        "software.default_priority.word_processors",
-        "software.special_conversions.odt",
-        "software.special_conversions.document_to_pdf",
     }
 
     spreadsheet_plan = reset_plan_for_group("spreadsheet")
@@ -86,9 +96,6 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
         "spreadsheet.to_md_enable_ocr",
         "spreadsheet.to_md_table_merge_export_strategy",
         "spreadsheet.merge_mode",
-        "software.default_priority.spreadsheet_processors",
-        "software.special_conversions.ods",
-        "software.special_conversions.spreadsheet_to_pdf",
     }
 
     layout_plan = reset_plan_for_group("layout")
@@ -99,7 +106,6 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
         "layout.to_md_enable_optimization",
         "layout.to_md_optimization_type",
         "layout.render_dpi",
-        "software.special_conversions.pdf_to_office",
     }
 
     link_plan = reset_plan_for_group("link")
@@ -211,7 +217,7 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
         ),
     ],
 )
-def test_reset_group_restores_owned_software_values_without_crossing_siblings(
+def test_input_reset_preserves_software_then_software_reset_restores_all(
     tmp_path: Path,
     group: str,
     owned_updates: dict[str, list[str]],
@@ -228,12 +234,20 @@ def test_reset_group_restores_owned_software_values_without_crossing_siblings(
     assert loader.reset_group(group) is True
 
     data = loader.config.as_dict()
-    for key, expected in owned_defaults.items():
+    for key, expected in owned_updates.items():
         current = data
         for part in key.split("."):
             current = current[part]
         assert current == expected
     assert data["software"]["default_priority"]["word_processors"] == sibling
+    assert loader.reset_group("software") is True
+    data = loader.config.as_dict()
+    for key, expected in owned_defaults.items():
+        current = data
+        for part in key.split("."):
+            current = current[part]
+        assert current == expected
+    assert data["software"]["default_priority"]["word_processors"] == ["wps_writer", "msoffice_word", "libreoffice"]
 
 
 @pytest.mark.parametrize(

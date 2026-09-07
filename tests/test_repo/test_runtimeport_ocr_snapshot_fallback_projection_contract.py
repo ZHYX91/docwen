@@ -49,7 +49,7 @@ def test_shared_admission_projects_missing_ocr_options_from_one_snapshot() -> No
         'request.target_format != "md"',
         'request.action_name == "process_md_numbering"',
         'if "ocr_language" not in options:',
-        '_nested_value(config_snapshot, "image", "ocr_language")',
+        '_nested_value(config_snapshot, "ocr", "language")',
         'options["ocr_language"] = ocr_language or "auto"',
         'if "locale" not in options:',
         '_nested_value(config_snapshot, "gui", "language", "locale")',
@@ -84,7 +84,7 @@ def test_direct_regressions_cover_authority_precedence_and_scope() -> None:
     for test_name in required_tests:
         assert f"def {test_name}(" in tests
     for token in (
-        '"image.ocr_language": "japanese"',
+        '"ocr.language": "japanese"',
         '"gui.language.locale": "ja_JP"',
         "assert request.options == {}",
         "assert request.config_snapshot == {}",
@@ -103,7 +103,7 @@ def test_direct_regressions_cover_authority_precedence_and_scope() -> None:
     ):
         assert f"def {test_name}(" in direct_manager_tests
     for token in (
-        '("partial", "md", {"image": {"ocr_language": "english"}}',
+        '("partial", "md", {"ocr": {"language": "english"}}',
         '("empty", "md", {}, {})',
         '"non-markdown",',
         '"docx",',

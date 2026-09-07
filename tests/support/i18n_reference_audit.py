@@ -179,6 +179,40 @@ def _literal_fallback(expected_count: int, default: str, rationale: str) -> Lite
 # until its finite producer and exact suffix set are reviewed here.
 DYNAMIC_CALL_CONTRACTS: Mapping[tuple[str, str], DynamicCallContract] = {
     (
+        "packages/apps/gui/src/docwen_gui/widgets/settings/proofread_transfer.py",
+        "_CHANGE_LABEL_KEYS[change.kind]",
+    ): _contract(
+        1,
+        _keys("settings.rule_transfer.", {"added", "unchanged", "conflict", "existing_only"}),
+        "finite rule import change kinds",
+    ),
+    (
+        "packages/apps/gui/src/docwen_gui/widgets/settings/software_tab.py",
+        "label_key",
+    ): _contract(
+        2,
+        frozenset(
+            {
+                "settings.document.software.wps_writer",
+                "settings.document.software.msoffice_word",
+                "settings.document.software.libreoffice",
+                "settings.spreadsheet.software.wps_spreadsheets",
+                "settings.spreadsheet.software.excel",
+                "settings.software.wps_presentation",
+                "settings.software.powerpoint",
+                "settings.document.word_processors_label",
+                "settings.document.odt_conversion_label",
+                "settings.document.document_to_pdf_label",
+                "settings.spreadsheet.spreadsheet_processors_label",
+                "settings.spreadsheet.ods_conversion_label",
+                "settings.spreadsheet.spreadsheet_to_pdf_label",
+                "settings.software.presentation_processors",
+                "settings.layout.pdf_to_doc_label",
+            }
+        ),
+        "finite software and priority label maps",
+    ),
+    (
         "packages/apps/gui/src/docwen_gui/widgets/settings/formatting_tab.py",
         "f'settings.markdown_extensions.{direction}'",
     ): _contract(
@@ -271,7 +305,7 @@ DYNAMIC_CALL_CONTRACTS: Mapping[tuple[str, str], DynamicCallContract] = {
         1,
         _keys(
             "info_area.task_guide_",
-            {"open_output_dir", "view_failed_details", "retry_failed"},
+            {"view_failed_details", "retry_failed"},
         )
         | {"common.ok"},
         "finite _TASK_GUIDE_LABELS map and default",
@@ -316,17 +350,6 @@ DYNAMIC_CALL_CONTRACTS: Mapping[tuple[str, str], DynamicCallContract] = {
         "key",
     ): _contract(1, _INPUT_AREA_KEYS, "transparent _i18n wrapper with finite widget constants"),
     (
-        "packages/apps/gui/src/docwen_gui/widgets/settings/document_tab.py",
-        "_SOFTWARE_LABEL_KEYS.get(sid, '')",
-    ): _contract(
-        1,
-        _keys(
-            "settings.document.software.",
-            {"wps_writer", "msoffice_word", "libreoffice"},
-        ),
-        "finite document software label map",
-    ),
-    (
         "packages/apps/gui/src/docwen_gui/widgets/settings/formatting_tab.py",
         "f'settings.formatting.syntax.{kind}_extended'",
     ): _contract(1, _FORMATTING_KEYS, "four literal formatting-kind call sites"),
@@ -334,14 +357,6 @@ DYNAMIC_CALL_CONTRACTS: Mapping[tuple[str, str], DynamicCallContract] = {
         "packages/apps/gui/src/docwen_gui/widgets/settings/formatting_tab.py",
         "f'settings.formatting.syntax.{kind}_html'",
     ): _contract(1, _FORMATTING_KEYS, "four literal formatting-kind call sites"),
-    (
-        "packages/apps/gui/src/docwen_gui/widgets/settings/layout_tab.py",
-        "_LAYOUT_SOFTWARE_LABEL_KEYS.get(sid, '')",
-    ): _contract(
-        1,
-        _keys("settings.document.software.", {"msoffice_word", "libreoffice"}),
-        "finite layout software label map",
-    ),
     (
         "packages/apps/gui/src/docwen_gui/widgets/settings/numbering_add_editor.py",
         "f'editors.numbering_add.names.{self.name_key}'",
@@ -358,14 +373,6 @@ DYNAMIC_CALL_CONTRACTS: Mapping[tuple[str, str], DynamicCallContract] = {
         "packages/apps/gui/src/docwen_gui/widgets/settings/numbering_clean_editor.py",
         "key",
     ): _contract(2, _NUMBERING_CLEAN_KEYS, "allowlisted cleanup.toml name/description fields"),
-    (
-        "packages/apps/gui/src/docwen_gui/widgets/settings/spreadsheet_tab.py",
-        "_SS_SOFTWARE_LABEL_KEYS.get(sid, '')",
-    ): _contract(
-        1,
-        _keys("settings.spreadsheet.software.", {"wps_spreadsheets", "excel", "libreoffice"}),
-        "finite spreadsheet software label map",
-    ),
     (
         "packages/apps/gui/src/docwen_gui/widgets/template_selector_tabbed.py",
         "'components.template_selector_tabbed.document_templates' if template_type == 'docx' else "

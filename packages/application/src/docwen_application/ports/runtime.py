@@ -144,8 +144,11 @@ class ConfigPort(Protocol):
         """Read one registered editable config source as effective TOML text."""
         ...
 
-    def save_file_text(self, rel_path: str, content: str) -> bool:
-        """Persist TOML all-or-nothing when handled-failure compensation succeeds."""
+    def save_file_text(self, rel_path: str, content: str, *, expected_text: str | None = None) -> bool:
+        """Persist TOML all-or-nothing when handled-failure compensation succeeds.
+
+        Reject a stale optional preview source under the write transaction lock.
+        """
         ...
 
     def reset_file(self, rel_path: str) -> bool:

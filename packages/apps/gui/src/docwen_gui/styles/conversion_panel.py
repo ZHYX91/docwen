@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from .control_metrics import button_geometry_qss
 from .design_tokens import Border, Sizing, Spacing, Typography
-from .panel_card import build_panel_card_stylesheet
 from .theme_semantics import is_dark_theme
 
 
@@ -13,7 +12,6 @@ def build_conversion_panel_stylesheet(theme_name: str, font_size_preset: str | N
     hint_color = "#CBD5E1" if is_dark_theme(theme_name) else "#475569"
     return "\n".join(
         [
-            build_panel_card_stylesheet(font_size_preset),
             "/* docwen-conversion-panel-foundation */",
             "QRadioButton#conversionRadioButton {",
             "    spacing: 8px;",

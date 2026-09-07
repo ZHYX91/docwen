@@ -360,10 +360,8 @@ class TestRuntimeRequestBinding:
         assert [row.message_type for row in history[-2:]] == ["warning", "warning"]
         assert history[-1].message == "缺少必需字段：成文日期"
         assert history[-1].file_path == str(output)
-        warning_row = window._info_area.get_history_row_widget(len(history) - 1)
-        assert warning_row is not None
-        assert warning_row.property("infoStatusTone") == "warning"
-        assert warning_row.toolTip() == "缺少必需字段：成文日期"
+        records = window._activity_model.records
+        assert any("缺少必需字段：成文日期" in row.details for row in records)
         summary = window._info_area_vm.task_summary
         assert summary.state == "success"
         assert summary.tone == "warning"
@@ -446,7 +444,6 @@ class TestRuntimeRequestBinding:
         assert summary.navigate_path == normalized
         assert summary.navigation_kind == "failed"
         assert window._info_area_vm.guide_actions == [
-            {"action_key": "open_output_dir", "target_path": str(retained.parent)},
             {"action_key": "view_failed_details", "target_path": normalized},
             {"action_key": "retry_failed", "target_path": ""},
         ]

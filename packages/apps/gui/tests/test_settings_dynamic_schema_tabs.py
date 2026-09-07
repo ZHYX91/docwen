@@ -22,18 +22,21 @@ def _combo_values(combo: QComboBox) -> list[object]:
 def test_image_and_other_dynamic_schema_tabs_create_with_expected_values(qapp) -> None:
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
+    from docwen_gui.widgets.settings.export_tab import ExportTab
     from docwen_gui.widgets.settings.image_tab import ImageTab
     from docwen_gui.widgets.settings.other_tab import OtherTab
 
     vm = SettingsViewModel(config=SettingsConfig())
     image_tab = ImageTab(vm)
     other_tab = OtherTab(vm)
+    export_tab = ExportTab(vm)
 
     image_widgets = image_tab.widgets
     other_widgets = other_tab.widgets
     image_keep_images = _control(image_widgets, "to_md_keep_images", QCheckBox)
     image_enable_ocr = _control(image_widgets, "to_md_enable_ocr", QCheckBox)
-    ocr_language = _control(image_widgets, "ocr_language", QComboBox)
+    assert "ocr_language" not in image_widgets
+    ocr_language = export_tab._ocr_language
     compress_mode = _control(image_widgets, "compress_mode", QComboBox)
     size_limit = _control(image_widgets, "size_limit", QSpinBox)
     size_unit = _control(image_widgets, "size_unit", QComboBox)
@@ -71,7 +74,7 @@ def test_image_and_other_dynamic_schema_tabs_create_with_expected_values(qapp) -
     config = vm.config
     assert config.conversion_defaults.image["to_md_keep_images"] is True
     assert config.conversion_defaults.image["to_md_enable_ocr"] is True
-    assert config.conversion_defaults.image["ocr_language"] == "japanese"
+    assert config.export.ocr_language == "japanese"
     assert config.conversion_defaults.image["compress_mode"] == "limit_size"
     assert config.conversion_defaults.image["size_limit"] == 1024
     assert config.conversion_defaults.image["size_unit"] == "MB"

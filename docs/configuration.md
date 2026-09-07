@@ -26,6 +26,16 @@ DocWen 在 `configs/` 提供不可变基础 TOML，并把用户覆盖写入平�
 
 配置文件与消费方的完整映射可通过 `docwen inspect --json` 和 registry 源码核对。
 
-The packaged base contains the 23 files declared by the registry, including `configs/text.toml`, `configs/numbering/add.toml`, `configs/numbering/cleanup.toml` and `configs/field_processors.toml`. The `gongwen` field processor resolves to `docwen_plugin_markdown.field_processors.gongwen.process_yaml`; its placeholder rules are consumed by `docwen_plugin_markdown.template_filler`.
+The packaged base contains the 25 files declared by the registry, including `configs/text.toml`, `configs/ocr.toml`, `configs/template_fill.toml`, `configs/numbering/add.toml`, `configs/numbering/cleanup.toml` and `configs/field_processors.toml`. The `gongwen` field processor resolves to `docwen_plugin_markdown.field_processors.gongwen.process_yaml`; its placeholder rules are consumed by `docwen_plugin_markdown.template_filler`.
 
-随包基础配置完整包含 registry 声明的 23 个文件，包括 `configs/text.toml`、`configs/numbering/add.toml`、`configs/numbering/cleanup.toml` 与 `configs/field_processors.toml`。`gongwen` 字段处理器解析到 `docwen_plugin_markdown.field_processors.gongwen.process_yaml`，其占位符规则由 `docwen_plugin_markdown.template_filler` 消费。
+随包基础配置完整包含 registry 声明的 25 个文件，包括 `configs/text.toml`、`configs/ocr.toml`、`configs/template_fill.toml`、`configs/numbering/add.toml`、`configs/numbering/cleanup.toml` 与 `configs/field_processors.toml`。`gongwen` 字段处理器解析到 `docwen_plugin_markdown.field_processors.gongwen.process_yaml`，其占位符规则由 `docwen_plugin_markdown.template_filler` 消费。
+
+## Shared settings / 共用设置
+
+OCR language is shared by every input format through `ocr.language` in `ocr.toml`, owned by the Markdown resources settings page. Word and spreadsheet template filling share `template_fill.list_separator` in `template_fill.toml`, owned by incoming text settings. Empty separators and intentional spaces are preserved. Document YAML/frontmatter is unchanged.
+
+OCR 语言由所有传入格式共用，通过 `ocr.toml` 中的 `ocr.language` 设置，归属“Markdown 资源”。Word 与表格模板填充共用 `template_fill.toml` 中的 `template_fill.list_separator`，归属“传入文本”；空字符串和有意输入的空格原样保留。文档 YAML/frontmatter 不变。
+
+The removed keys `image.ocr_language` and `conversion.md_to_docx.list_separator` are rejected by validation; there are no aliases or automatic migrations. Other keys retain functional namespaces even when their settings page changes. Resetting an input page preserves converter priorities; the conversion software page owns all eight priority lists. Numbering and proofreading editor saves remain immediate transactions, independent of unrelated settings drafts.
+
+旧键 `image.ocr_language` 和 `conversion.md_to_docx.list_separator` 不再通过验证，不提供别名或自动迁移。其他键即使调整设置页归属，也保留功能命名空间。重置传入页保留软件优先级；八组优先级统一归属“转换软件”。编号和校对编辑器保存仍是立即生效的事务，不丢弃其他设置草稿。

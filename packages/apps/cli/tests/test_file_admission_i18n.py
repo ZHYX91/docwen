@@ -107,7 +107,7 @@ def test_json_error_localizes_message_but_preserves_typed_admission(
     source.write_bytes(b"%PDF-1.4\n")
     output = tmp_path / "layout.md"
     args = _build_parser().parse_args(
-        ["convert", str(source), "--to", "md", "--output", str(output), "--dry-run", "--json"]
+        ["convert", str(source), "--to", "md", "--output-dir", str(output), "--dry-run", "--json"]
     )
 
     assert execute_execution(args) == 2
@@ -134,7 +134,7 @@ def test_json_warning_localizes_message_and_keeps_stable_code(
             str(source),
             "--to",
             "md",
-            "--output",
+            "--output-dir",
             str(output),
             "--dry-run",
             "--json",

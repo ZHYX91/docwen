@@ -41,7 +41,17 @@ class GUIConfig:
 
 @dataclass
 class TextConfig:
-    """Numbering / field-processor settings (Text tab)."""
+    """Incoming Markdown: content, templates, numbering and field processing."""
+
+    md_body_format: str = "apply"
+    md_heading_format: str = "remove"
+    md_table_header_format: str = "remove"
+    heading_merge_mode: str = "punct_required"
+    heading_merge_punctuation: str = DEFAULT_HEADING_MERGE_PUNCTUATION
+    list_separator: str = "、"
+    table_style_mode: str = "builtin"
+    builtin_table_style: str = "three_line_table"
+    custom_table_style_name: str = ""
 
     remove_numbering: bool = True
     add_numbering: bool = False
@@ -65,6 +75,15 @@ class TextConfig:
         }
     )
     heading_numbering_render_mode: str = "text"
+
+
+@dataclass
+class DocumentConfig:
+    """Content formatting when exporting incoming documents to Markdown."""
+
+    body_format: str = "preserve"
+    heading_format: str = "discard"
+    table_header_format: str = "discard"
 
 
 # ── ProofreadConfig ────────────────────────────────────────────────────────
@@ -111,6 +130,9 @@ class ConversionDefaultsConfig:
 class SoftwarePriorityConfig:
     """Priority lists for external office software per category."""
 
+    presentation_processors: list[str] = field(
+        default_factory=lambda: ["wps_presentation", "msoffice_powerpoint", "libreoffice"]
+    )
     word_processors: list[str] = field(default_factory=lambda: ["wps_writer", "msoffice_word", "libreoffice"])
     odt_conversion: list[str] = field(default_factory=lambda: ["msoffice_word", "libreoffice"])
     document_to_pdf: list[str] = field(default_factory=lambda: ["wps_writer", "msoffice_word", "libreoffice"])
@@ -144,19 +166,11 @@ class LinkConfig:
 
 @dataclass
 class FormattingConfig:
-    """DOCX<->MD formatting settings.
-
-    Maps to the Formatting tab's combo-box and exact-text controls.
-    """
+    """Markdown extensions, syntax variants and separator mappings."""
 
     markdown_extensions: dict[str, dict[str, bool]] = field(
         default_factory=lambda: {direction: MarkdownExtensions().to_dict() for direction in ("input", "output")}
     )
-
-    # DOCX -> MD: format processing
-    body_format: str = "preserve"
-    heading_format: str = "discard"
-    table_header_format: str = "discard"
 
     # DOCX -> MD: separators
     page_break_sep: str = "---"
@@ -172,17 +186,6 @@ class FormattingConfig:
     subscript_syntax: str = "html"
     unordered_list_syntax: str = "dash"
     indent_spaces: int = 4
-
-    # MD -> DOCX
-    md_body_format: str = "apply"
-    md_heading_format: str = "remove"
-    md_table_header_format: str = "remove"
-    heading_merge_mode: str = "punct_required"
-    heading_merge_punctuation: str = DEFAULT_HEADING_MERGE_PUNCTUATION
-    list_separator: str = "、"
-    table_style_mode: str = "builtin"
-    builtin_table_style: str = "three_line_table"
-    custom_table_style_name: str = ""
 
     # MD -> DOCX separators
     dash_sep: str = "page_break"
@@ -212,6 +215,7 @@ class OutputConfig:
 class ExportConfig:
     """Export (image extraction / OCR placement / Base64) settings."""
 
+    ocr_language: str = "auto"
     image_mode: str = "file"  # file / base64
     ocr_mode: str = "image_md"  # image_md / main_md
     ocr_title_enabled: bool = True
@@ -252,6 +256,7 @@ class SettingsConfig:
 
     gui: GUIConfig = field(default_factory=GUIConfig)
     text: TextConfig = field(default_factory=TextConfig)
+    document: DocumentConfig = field(default_factory=DocumentConfig)
     proofread: ProofreadConfig = field(default_factory=ProofreadConfig)
     conversion_defaults: ConversionDefaultsConfig = field(default_factory=ConversionDefaultsConfig)
     software_priority: SoftwarePriorityConfig = field(default_factory=SoftwarePriorityConfig)

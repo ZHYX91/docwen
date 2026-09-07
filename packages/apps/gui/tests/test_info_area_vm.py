@@ -359,6 +359,24 @@ class TestTaskSummary:
         )
         assert "demo.docx" in vm.status_summary_text
 
+    def test_completed_summary_identifies_output_without_repeating_input(self, vm: InfoAreaViewModel) -> None:
+        vm.set_task_summary(
+            current_file="input.md",
+            current_file_path="/inputs/input.md",
+            output_path="/outputs/input_20260907_180000_fromMd.docx",
+            completed_count=1,
+            total_count=1,
+            state="success",
+            navigate_file_path="/inputs/input.md",
+        )
+        assert vm.status_summary_text == ""
+        assert "input_20260907_180000_fromMd.docx" in vm.output_file_text
+        assert not vm.status_action_target
+
+        vm.begin_task(operation_id="next", current_file="next.md", total_count=1)
+        assert vm.output_file_text == ""
+        assert "next.md" in vm.status_summary_text
+
     def test_notice_does_not_replace_task_identity(self, vm: InfoAreaViewModel) -> None:
         vm.set_task_summary(
             operation_id="op-1",
@@ -392,49 +410,45 @@ class TestTaskSummary:
 
 class TestGuideActions:
     def test_success_shows_only_useful_output_action(self, vm: InfoAreaViewModel) -> None:
-        actions = InfoAreaViewModel.compute_guide_actions(
-            "success", output_dir="/tmp/out", failed_details_path="", retry_available=True
-        )
+        actions = InfoAreaViewModel.compute_guide_actions("success", failed_details_path="", retry_available=True)
         keys = [a["action_key"] for a in actions]
-        assert keys == ["open_output_dir"]
+        assert keys == []
 
     def test_failed_shows_all_three(self, vm: InfoAreaViewModel) -> None:
         actions = InfoAreaViewModel.compute_guide_actions(
-            "failed", output_dir="/tmp/out", failed_details_path="/tmp/failed.txt", retry_available=True
+            "failed", failed_details_path="/tmp/failed.txt", retry_available=True
         )
         keys = [a["action_key"] for a in actions]
-        assert "open_output_dir" in keys
+        assert "open_output_location" not in keys
         assert "view_failed_details" in keys
         assert "retry_failed" in keys
 
     def test_partial_shows_all_three(self, vm: InfoAreaViewModel) -> None:
         actions = InfoAreaViewModel.compute_guide_actions(
-            "partial", output_dir="/tmp/out", failed_details_path="/tmp/failed.txt", retry_available=True
+            "partial", failed_details_path="/tmp/failed.txt", retry_available=True
         )
         keys = [a["action_key"] for a in actions]
-        assert "open_output_dir" in keys
+        assert "open_output_location" not in keys
         assert "view_failed_details" in keys
         assert "retry_failed" in keys
 
     def test_cancelled_keeps_available_outputs_accessible(self, vm: InfoAreaViewModel) -> None:
-        actions = InfoAreaViewModel.compute_guide_actions(
-            "cancelled", output_dir="/tmp/out", failed_details_path="", retry_available=False
-        )
+        actions = InfoAreaViewModel.compute_guide_actions("cancelled", failed_details_path="", retry_available=False)
         keys = [a["action_key"] for a in actions]
-        assert keys == ["open_output_dir"]
+        assert keys == []
 
     def test_failed_without_retry_excludes_retry(self, vm: InfoAreaViewModel) -> None:
         actions = InfoAreaViewModel.compute_guide_actions(
-            "failed", output_dir="/tmp/out", failed_details_path="/tmp/failed.txt", retry_available=False
+            "failed", failed_details_path="/tmp/failed.txt", retry_available=False
         )
         keys = [a["action_key"] for a in actions]
         assert "retry_failed" not in keys
-        assert "open_output_dir" in keys
+        assert "open_output_location" not in keys
         assert "view_failed_details" in keys
 
     def test_guide_set_from_task_summary(self, vm: InfoAreaViewModel) -> None:
         guide_actions = [
-            {"action_key": "open_output_dir", "target_path": "/tmp/out"},
+            {"action_key": "open_output_location", "target_path": "/tmp/out"},
         ]
         vm.set_task_summary(
             operation_id="op-2000",
@@ -454,7 +468,7 @@ class TestGuideActions:
             operation_id="op-1",
             state="active",
             tone="info",
-            guide_actions=[{"action_key": "open_output_dir", "target_path": "/tmp/out"}],
+            guide_actions=[{"action_key": "open_output_location", "target_path": "/tmp/out"}],
         )
         assert not vm.guide_visible
 
@@ -546,8 +560,8 @@ class TestGuideActionRequest:
     def test_emits_signal(self, vm: InfoAreaViewModel) -> None:
         emitted: list[tuple[str, str]] = []
         vm.task_guide_action_requested.connect(lambda ak, tp: emitted.append((ak, tp)))
-        vm.request_guide_action("open_output_dir", "/tmp/out")
-        assert emitted == [("open_output_dir", "/tmp/out")]
+        vm.request_guide_action("open_output_location", "/tmp/out")
+        assert emitted == [("open_output_location", "/tmp/out")]
 
 
 # ── Location request ──────────────────────────────────────────────────────
@@ -600,7 +614,7 @@ class TestClearAll:
             current_file="old.docx",
             total_count=1,
             state="active",
-            guide_actions=[{"action_key": "open_output_dir", "target_path": "/tmp/out"}],
+            guide_actions=[{"action_key": "open_output_location", "target_path": "/tmp/out"}],
         )
         vm.set_transient_message(progress_key, "Step 1", "info", ttl_ms=0, source="session-reset")
         vm.set_transient_message(progress_key, "Step 2", "info", ttl_ms=0, source="session-reset")
@@ -639,53 +653,3 @@ class TestClearAll:
         vm.stop_all_timers()
         assert len(vm._transient_timers) == 0
         assert vm._activity_timer is None
-
-
-class DescribeProgressBoundaries:
-    """Edge case tests for progress and task state boundaries."""
-
-    def test_error_message_priority_overrides_progress(self, vm: InfoAreaViewModel) -> None:
-        """Error messages should take priority over progress messages."""
-        vm.set_transient_message("progress:op-1", "Still working...", message_type="progress")
-        vm.set_transient_message("error:op-1", "Something failed!", message_type="error")
-        assert len(vm.message_types) > 0
-
-    def test_zero_total_count_does_not_crash(self, vm: InfoAreaViewModel) -> None:
-        """Division by zero should not crash when total_count is 0."""
-        vm.set_task_summary(
-            total_count=0,
-            completed_count=0,
-            state="active",
-            operation_id="op-zero",
-        )
-        assert vm.has_task_summary is True
-
-    def test_cancelled_with_no_retry_action(self, vm: InfoAreaViewModel) -> None:
-        """Cancelled state should not offer retry."""
-        vm.set_task_summary(
-            total_count=5,
-            cancelled_count=5,
-            state="cancelled",
-            tone="info",
-            guide_actions=[{"key": "open_output", "label": "Open Output"}],
-            operation_id="op-cancel",
-        )
-        assert {a["key"] for a in vm.guide_actions} == {"open_output"}
-
-
-class DescribeTaskSummaryCache:
-    """Test that task summary state is properly cached and accessible."""
-
-    def test_task_summary_caches_all_fields(self, vm: InfoAreaViewModel) -> None:
-        """All fields passed to set_task_summary should be queryable."""
-        vm.set_task_summary(
-            total_count=10,
-            completed_count=3,
-            failed_count=1,
-            skipped_count=0,
-            cancelled_count=0,
-            state="active",
-            tone="info",
-            operation_id="op-123",
-        )
-        assert vm.has_task_summary is True

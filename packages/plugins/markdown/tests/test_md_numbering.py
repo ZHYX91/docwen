@@ -675,7 +675,8 @@ class TestOldSystemMdNumberingFixture:
         assert document_node["node_name"] == node_root.name
         assert document_node["source"] == {
             "name": input_file.name,
-            "format": input_file.suffix.lstrip("."),
+            "stem": input_file.stem,
+            "format": request.input_refs[0].format,
             "sha256": hashlib.sha256(input_file.read_bytes()).hexdigest(),
         }
         [primary_record] = document_node["artifacts"]

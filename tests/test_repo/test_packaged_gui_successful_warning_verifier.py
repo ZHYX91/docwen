@@ -29,7 +29,7 @@ def _write_valid_report(
     output_path.write_text("---\ntitle: test\n---\n", encoding="utf-8")
     screenshot_path.parent.mkdir(parents=True, exist_ok=True)
     screenshot_path.write_bytes(b"\x89PNG\r\n\x1a\npackaged-gui-warning")
-    row_screenshot_path = screenshot_path.with_name(f"{screenshot_path.stem}_warning_row{screenshot_path.suffix}")
+    row_screenshot_path = screenshot_path.with_name(f"{screenshot_path.stem}_warning_details{screenshot_path.suffix}")
     row_screenshot_path.write_bytes(b"\x89PNG\r\n\x1a\npackaged-gui-warning-row")
     report_path.write_text(
         json.dumps(
@@ -48,14 +48,14 @@ def _write_valid_report(
                     {"message": WARNING, "messageType": "warning", "filePath": str(output_path)},
                 ],
                 "warningHistoryIndex": 1,
-                "warningRowTone": "warning",
-                "warningRowTooltip": WARNING,
-                "warningRowVisible": True,
-                "warningRowScreenshotPath": str(row_screenshot_path),
-                "warningRowScreenshotSaved": True,
-                "warningRowScreenshotBytes": row_screenshot_path.stat().st_size,
-                "warningRowScreenshotWidth": 600,
-                "warningRowScreenshotHeight": 90,
+                "warningRecordStatus": "warning",
+                "warningDetailsText": WARNING,
+                "warningDetailsVisible": True,
+                "warningDetailsScreenshotPath": str(row_screenshot_path),
+                "warningDetailsScreenshotSaved": True,
+                "warningDetailsScreenshotBytes": row_screenshot_path.stat().st_size,
+                "warningDetailsScreenshotWidth": 600,
+                "warningDetailsScreenshotHeight": 90,
                 "taskSummary": {
                     "state": "success",
                     "tone": "warning",
@@ -132,7 +132,7 @@ def test_successful_warning_runner_drives_gongwen_action_and_retains_outputs(
     assert proc.returncode == 0
 
 
-def test_successful_warning_report_fails_closed_when_warning_row_is_missing(tmp_path: Path) -> None:
+def test_successful_warning_report_fails_closed_when_warning_details_is_missing(tmp_path: Path) -> None:
     from scripts.release import verify_packaged_gui
 
     source = tmp_path / "rules.docx"

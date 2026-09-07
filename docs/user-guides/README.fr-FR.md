@@ -213,6 +213,8 @@ Pour les scripts, agents ou plugins, l'ordre recommandé est le suivant :
 
 ### Exemples courants
 
+Les conversions depuis ou vers Markdown créent un dossier de résultats dans `--output-dir DIR`, même pour un seul fichier. Les noms comprennent le nom source, l’horodatage et le format d’entrée. `--output PATH` reste réservé aux autres conversions produisant un fichier cible précis.
+
 ```bash
 # Paquet Windows
 DocWenCLI.exe inspect document.docx --json
@@ -221,16 +223,16 @@ DocWenCLI.exe inspect document.docx --json
 DocWenCLI.exe schema convert
 
 # Prévisualiser l'exécution sans écrire de fichiers
-DocWenCLI.exe convert report.docx --to md --output report.md --extract-img --ocr --dry-run --json
+DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --ocr --dry-run --json
 
 # Exporter Word vers Markdown (extraction d'images + OCR)
-DocWenCLI.exe convert report.docx --to md --output report.md --extract-img --ocr
+DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --ocr
 
 # Markdown vers Word (modèle + mode de fusion titre/corps)
-DocWenCLI.exe convert document.md --to docx --output document.docx --template template.docx.abaa27b964bf8589a411a696f0f5781e0917b8950067268ca15c6941668e39e9 --heading-merge-mode punct_required
+DocWenCLI.exe convert document.md --to docx --output-dir exports --template template.docx.abaa27b964bf8589a411a696f0f5781e0917b8950067268ca15c6941668e39e9 --heading-merge-mode punct_required
 
 # Contrôler le mode image et l'emplacement du texte OCR dans Markdown
-DocWenCLI.exe convert report.docx --to md --output report.md --extract-img --image-mode file --ocr --ocr-placement image_md
+DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --image-mode file --ocr --ocr-placement image_md
 
 # Consulter les capacités d’exécution et les portes de dépendance
 DocWenCLI.exe doctor --json
@@ -244,8 +246,8 @@ DocWenCLI.exe validate input.md --check typo --check punct
 # inspect -> schema -> dry-run -> convert
 # docwen inspect document.docx --json
 # docwen schema convert
-# docwen convert document.docx --to md --output document.md --dry-run --json
-# docwen convert document.docx --to md --output document.md
+# docwen convert document.docx --to md --output-dir exports --dry-run --json
+# docwen convert document.docx --to md --output-dir exports
 ```
 
 ### Commandes et options courantes

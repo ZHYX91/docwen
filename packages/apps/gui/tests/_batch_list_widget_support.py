@@ -48,7 +48,7 @@ pytestmark = pytest.mark.gui
 
 
 def _dominant_opaque_pixmap_color(label) -> str | None:
-    pixmap = label.pixmap()
+    pixmap = label.icon().pixmap(16, 16)
     image = pixmap.toImage()
     colors = Counter(
         image.pixelColor(x, y).name().upper()

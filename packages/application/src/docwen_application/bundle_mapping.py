@@ -639,6 +639,7 @@ def _attach_document_node_manifest(
     return BundleDraft(
         artifacts=(*draft.artifacts, _draft_artifact(manifest, "resource")),
         entries=draft.entries,
+        layout_schema="docwen.document_node.v1",
         relations=(
             *draft.relations,
             BundleRelation(

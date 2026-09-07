@@ -210,6 +210,8 @@ DocWen은 GUI 외에도 자동화 스크립트, 배치 처리, 외부 연동을 
 
 ### 자주 쓰는 예시
 
+Markdown을 입력하거나 출력하는 변환은 파일이 하나여도 `--output-dir DIR` 아래에 결과 폴더를 만듭니다. 이름에는 원본 이름, 타임스탬프와 현재 입력 형식이 포함됩니다. `--output PATH`는 그 밖의 단일 파일 변환에서 정확한 출력 경로를 지정할 때 사용합니다.
+
 ```bash
 # Windows 패키지
 DocWenCLI.exe inspect document.docx --json
@@ -218,16 +220,16 @@ DocWenCLI.exe inspect document.docx --json
 DocWenCLI.exe schema convert
 
 # 실제 파일 생성 없이 변환 경로 미리 보기
-DocWenCLI.exe convert report.docx --to md --output report.md --extract-img --ocr --dry-run --json
+DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --ocr --dry-run --json
 
 # Word 를 Markdown 으로 내보내기 (이미지 추출 + OCR)
-DocWenCLI.exe convert report.docx --to md --output report.md --extract-img --ocr
+DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --ocr
 
 # Markdown 을 Word 로 변환 (템플릿 + 제목/본문 병합 모드)
-DocWenCLI.exe convert document.md --to docx --output document.docx --template template.docx.6cd486f34e59c79ded078a008b269af37860b63ccb74d8d0ab0080a7229a9ab5 --heading-merge-mode punct_required
+DocWenCLI.exe convert document.md --to docx --output-dir exports --template template.docx.6cd486f34e59c79ded078a008b269af37860b63ccb74d8d0ab0080a7229a9ab5 --heading-merge-mode punct_required
 
 # Markdown 출력 시 이미지 모드와 OCR 텍스트 배치 제어
-DocWenCLI.exe convert report.docx --to md --output report.md --extract-img --image-mode file --ocr --ocr-placement image_md
+DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --image-mode file --ocr --ocr-placement image_md
 
 # 런타임 능력과 의존성 게이트 확인
 DocWenCLI.exe doctor --json
@@ -241,8 +243,8 @@ DocWenCLI.exe validate input.md --check typo --check punct
 # inspect -> schema -> dry-run -> convert
 # docwen inspect document.docx --json
 # docwen schema convert
-# docwen convert document.docx --to md --output document.md --dry-run --json
-# docwen convert document.docx --to md --output document.md
+# docwen convert document.docx --to md --output-dir exports --dry-run --json
+# docwen convert document.docx --to md --output-dir exports
 ```
 
 ### 자주 쓰는 명령과 옵션

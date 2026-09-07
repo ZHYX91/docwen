@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 
 from PySide6.QtCore import QObject, QTimer, Signal
@@ -43,7 +43,6 @@ _IMPORTANT_TYPES: frozenset[str] = frozenset({"success", "danger", "warning"})
 
 # ── Task guide action label i18n keys ─────────────────────────────────────
 _TASK_GUIDE_LABELS: dict[str, str] = {
-    "open_output_dir": "info_area.task_guide_open_output_dir",
     "view_failed_details": "info_area.task_guide_view_failed_details",
     "retry_failed": "info_area.task_guide_retry_failed",
 }
@@ -92,6 +91,7 @@ class HistoryRowData:
     navigate_file_path: str = ""
     operation_id: str = ""
     repeat_count: int = 1
+    created_at: datetime = field(default_factory=datetime.now)
 
 
 @dataclass
@@ -107,6 +107,9 @@ class TaskSummaryState:
     tone: str = "info"  # info / success / warning / danger
     operation_id: str = ""
     current_file: str = ""
+    output_path: str = ""
+    output_paths: tuple[str, ...] = ()
+    batch: bool = False
     completed_count: int = 0
     total_count: int = 0
     failed_count: int = 0
@@ -147,6 +150,8 @@ class InfoAreaViewModel(QObject):
 
     # ── Signals ──────────────────────────────────────────────────────────
 
+    activity_requested = Signal()
+
     state_changed = Signal()
     """Emitted when any display-relevant state changes — widgets rebind."""
 
@@ -164,6 +169,9 @@ class InfoAreaViewModel(QObject):
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self.max_messages: int = 100
+        self._output_destination_hint = ""
+        self._activity_counts = (0, 0)
+        self._batch_mode = False
 
         # ── History state ────────────────────────────────────────────────
         self._history_rows: list[HistoryRowData] = []
@@ -206,6 +214,40 @@ class InfoAreaViewModel(QObject):
         self._refresh_status()
 
     # ── Public properties (read-only display state) ──────────────────────
+
+    @property
+    def activity_counts(self) -> tuple[int, int]:
+        return self._activity_counts
+
+    def set_activity_counts(self, count: int, failed: int) -> None:
+        if self._activity_counts != (count, failed):
+            self._activity_counts = (count, failed)
+            self.state_changed.emit()
+
+    @property
+    def output_destination_hint(self) -> str:
+        return self._output_destination_hint
+
+    @property
+    def output_file_text(self) -> str:
+        path = self._task_summary.output_path
+        if not path or self._task_summary.state in {"", "active", "cancelling"}:
+            return ""
+        name = path.replace("\\", "/").rsplit("/", 1)[-1]
+        return _t("info_area.task_output_file", "Output: {name}", name=name)
+
+    @property
+    def show_output_file(self) -> bool:
+        return bool(self.output_file_text) and not self._batch_mode and not self._task_summary.batch
+
+    def set_mode(self, mode: str) -> None:
+        self._batch_mode = mode == "batch"
+        self.state_changed.emit()
+
+    def set_output_destination_hint(self, text: str) -> None:
+        if text != self._output_destination_hint:
+            self._output_destination_hint = text
+            self.state_changed.emit()
 
     @property
     def status_meta_text(self) -> str:
@@ -384,6 +426,7 @@ class InfoAreaViewModel(QObject):
         """
         self._history_rows.clear()
         self._last_message_signature = None
+        self._output_destination_hint = ""
 
         self._transient_generation += 1
         self._clear_transient_state()
@@ -510,6 +553,9 @@ class InfoAreaViewModel(QObject):
         operation_id: str = "",
         current_file: str = "",
         current_file_path: str = "",
+        output_path: str = "",
+        output_paths: tuple[str, ...] = (),
+        batch: bool = False,
         completed_count: int = 0,
         total_count: int = 0,
         failed_count: int = 0,
@@ -528,6 +574,7 @@ class InfoAreaViewModel(QObject):
             operation_id: Unique operation identifier.
             current_file: Name of the currently processing file.
             current_file_path: Absolute path of the current file.
+            output_path: Actual primary output file, independent of the current input.
             completed_count: Number of completed items.
             total_count: Total number of items.
             failed_count: Number of failed items.
@@ -545,6 +592,9 @@ class InfoAreaViewModel(QObject):
             tone=tone,
             operation_id=operation_id,
             current_file=current_file,
+            output_path=output_path,
+            output_paths=output_paths or ((output_path,) if output_path else ()),
+            batch=batch,
             completed_count=completed_count,
             total_count=total_count,
             failed_count=failed_count,
@@ -802,6 +852,8 @@ class InfoAreaViewModel(QObject):
                     failed=failed,
                 )
             ]
+            if state == "success" and total == 1 and not failed and not (self._batch_mode or ts.batch):
+                progress_lines.clear()
             if ts.skipped_count:
                 progress_lines.append(
                     _t(
@@ -820,19 +872,16 @@ class InfoAreaViewModel(QObject):
                 )
             if ts.warning_count:
                 progress_lines.append(_t("info_area.task_warning_count", count=ts.warning_count))
-            summary_message = "\n".join(
-                [
-                    _t("info_area.task_current_file", "Current: {name}", name=current_file),
-                    *progress_lines,
-                ]
-            )
+            if state in {"active", "cancelling"}:
+                progress_lines.insert(0, _t("info_area.task_current_file", "Current: {name}", name=current_file))
+            summary_message = "\n".join(progress_lines)
 
             if state == "active" and ts.percent is not None:
                 summary_message += "\n" + _t("info_area.task_progress_percent", percent=round(ts.percent))
             message = summary_message
             badge_tone = ts.tone
             overview_source = "task"
-            action_target = ts.navigate_path
+            action_target = ts.navigate_path if state in {"active", "cancelling"} else ""
             activity_enabled = state in {"active", "cancelling"}
         else:
             if transient_message is not None:
@@ -949,20 +998,17 @@ class InfoAreaViewModel(QObject):
     @staticmethod
     def compute_guide_actions(
         state: str,
-        output_dir: str = "",
         failed_details_path: str = "",
         retry_available: bool = False,
     ) -> list[dict[str, str]]:
         """Compute the guide action list based on task completion state.
 
         This static method encapsulates the guide button combination rules:
-        - All success: open_output_dir when one exists
-        - Has failures: open_output_dir + view_failed_details + retry_failed
-        - Cancelled: retain access to outputs and any actual failures
+        Output navigation belongs to OutputFileRow and the batch list.
+        Failed and cancelled tasks can expose details and retry actions.
 
         Args:
             state: Task state (success / partial / failed / cancelled).
-            output_dir: Path to the output directory.
             failed_details_path: Path to failed item details.
             retry_available: Whether retry is available.
 
@@ -970,10 +1016,6 @@ class InfoAreaViewModel(QObject):
             List of guide action dicts with action_key and target_path.
         """
         actions: list[dict[str, str]] = []
-
-        # For success, partial, and failed states
-        if output_dir:
-            actions.append({"action_key": "open_output_dir", "target_path": output_dir})
 
         if state in ("partial", "failed", "cancelled"):
             if failed_details_path:

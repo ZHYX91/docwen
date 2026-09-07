@@ -119,6 +119,12 @@ class InputAreaViewModel(QObject):
     # ── Observable properties ────────────────────────────────────────
 
     @property
+    def selected_file_path(self) -> str:
+        """The committed selection, independent of feedback and drag previews."""
+        selected = self._main_vm.selected_file
+        return selected.path if selected is not None else ""
+
+    @property
     def mode(self) -> str:
         """Current mode: ``"single"`` or ``"batch"``."""
         return self._mode

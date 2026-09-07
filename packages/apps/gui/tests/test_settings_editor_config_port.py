@@ -20,6 +20,43 @@ def _view_model(port: ConfigPortAdapter) -> SettingsViewModel:
     return SettingsViewModel(controller=ApplicationController(config_port=port))
 
 
+@pytest.mark.parametrize("origin", ["text", "document"])
+def test_numbering_editor_refreshes_both_pages_without_losing_other_drafts(qapp, tmp_path: Path, origin: str) -> None:
+    from PySide6.QtWidgets import QComboBox
+
+    from docwen_gui.widgets.settings.document_tab import DocumentTab
+    from docwen_gui.widgets.settings.text_tab import TextTab
+
+    port = ConfigPortAdapter(base_dir=PROJECT_CONFIGS, user_dir=tmp_path / "configs")
+    vm = _view_model(port)
+    vm.begin_session()
+    text_tab, document_tab = TextTab(vm), DocumentTab(vm)
+    vm.set_field("document", "body_format", "discard")
+    vm.set_field("text", "list_separator", ", ")
+    vm.set_conversion_default("document", "to_md_keep_images", False)
+    schemes = deepcopy(vm.config.text.numbering_schemes)
+    schemes["settings"]["order"].append("shared_new")
+    schemes["schemes"]["shared_new"] = {
+        "name": "Shared scheme",
+        "is_system": False,
+        "level_1": {"format": "{1.arabic_half}. "},
+    }
+    caller = text_tab if origin == "text" else document_tab
+    assert caller._numbering_editors._on_numbering_schemes_saved(schemes)
+    document_combo = document_tab._widgets["to_md_default_scheme"]
+    assert isinstance(document_combo, QComboBox)
+    assert document_combo.findData("shared_new") >= 0
+    assert text_tab._scheme_combo.findData("shared_new") >= 0
+    assert vm.config.document.body_format == "discard"
+    assert vm.config.text.list_separator == ", "
+    assert vm.config.conversion_defaults.document["to_md_keep_images"] is False
+    assert vm.is_dirty
+    vm.cancel_changes()
+    assert "shared_new" in vm.config.text.numbering_schemes["schemes"]
+    text_tab.close()
+    document_tab.close()
+
+
 def test_text_numbering_editors_write_the_injected_config_port(
     tmp_path: Path,
 ) -> None:
@@ -141,14 +178,14 @@ def test_proofread_editor_reads_effective_base_data_through_the_injected_port(
     tab = proofread_tab.ProofreadTab(_view_model(injected))
     row_counts: list[int] = []
 
-    def inspect_without_modal(dialog: proofread_tab._SymbolMappingEditor) -> int:
+    def inspect_without_modal(dialog: proofread_tab._SymbolPairingEditor) -> int:
         row_counts.append(dialog._table.rowCount())  # pyright: ignore[reportPrivateUsage]
         dialog.reject()
         return int(QDialog.DialogCode.Rejected)
 
-    monkeypatch.setattr(proofread_tab._SymbolMappingEditor, "exec", inspect_without_modal)
+    monkeypatch.setattr(proofread_tab._SymbolPairingEditor, "exec", inspect_without_modal)
 
-    tab._open_symbol_mapping_editor()  # pyright: ignore[reportPrivateUsage]
+    tab._open_symbol_pairing_editor()  # pyright: ignore[reportPrivateUsage]
 
     assert row_counts and row_counts[0] > 0
     tab.close()

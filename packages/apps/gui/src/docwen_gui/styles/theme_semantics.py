@@ -87,6 +87,22 @@ def get_status_color(status: str, theme_name: str | None = None) -> str:
     return get_theme_class_color(get_status_theme_class(status), theme_name)
 
 
+def get_card_colors(tone: ThemeClass, theme_name: str | None = None) -> tuple[str, str]:
+    """Return the shared header/border colour and its contrasting text colour."""
+    dark = is_dark_theme(theme_name)
+    accent = get_theme_class_color(tone, theme_name)
+
+    def blend(base: str, weight: float) -> str:
+        channels = (
+            round(int(base[i : i + 2], 16) * (1 - weight) + int(accent[i : i + 2], 16) * weight) for i in (1, 3, 5)
+        )
+        return "#" + "".join(f"{channel:02X}" for channel in channels)
+
+    return blend("#111B2E" if dark else "#FFFFFF", 0.32 if dark else 0.22), blend(
+        "#FFFFFF" if dark else "#000000", 0.35 if dark else 0.55
+    )
+
+
 def apply_theme_class(widget: QWidget | None, theme_class: ThemeClass | str) -> None:
     """统一处理语义类名设置与样式刷新。"""
     if widget is None:

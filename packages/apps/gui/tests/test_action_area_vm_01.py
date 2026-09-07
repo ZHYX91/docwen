@@ -398,7 +398,7 @@ class TestSetupOtherFile:
             FakeMainWindowViewModel(  # type: ignore[arg-type]
                 {
                     "export.to_md_ocr_placement_mode": "main_md",
-                    "image.ocr_language": "japanese",
+                    "ocr.language": "japanese",
                 }
             )
         )
@@ -418,7 +418,7 @@ class TestSetupOtherFile:
                 {
                     "export.to_md_ocr_placement_mode": "image_md",
                     "other.to_md_ocr_placement_mode": "main_md",
-                    "image.ocr_language": "japanese",
+                    "ocr.language": "japanese",
                 }
             )
         )
@@ -437,7 +437,7 @@ class TestSetupOtherFile:
             FakeMainWindowViewModel(  # type: ignore[arg-type]
                 {
                     "export.to_md_ocr_placement_mode": "main_md",
-                    "image.ocr_language": "japanese",
+                    "ocr.language": "japanese",
                     "link.format.image_link_style": "markdown_link",
                 }
             )

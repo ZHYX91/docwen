@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from docwen_gui.widgets.value_controls import ScrollSafeComboBox
 from docwen_runtime.config import atomic_write_text
 
 from ...i18n import t
@@ -126,7 +127,7 @@ class TomlEditorWidget(QWidget):
         header.addWidget(label)
 
         if self._choices:
-            combo = QComboBox(self)
+            combo = ScrollSafeComboBox(self)
             self._combo = combo
             _prepare_combobox_for_long_text(combo)
             for display, name in self._choices:

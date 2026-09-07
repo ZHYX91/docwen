@@ -31,24 +31,6 @@ class ImageTab(DynamicSettingsTab):
                         "text": t("settings.image.enable_ocr", "Enable OCR on images"),
                         "tooltip": "",
                     },
-                    {
-                        "key": "ocr_language",
-                        "type": "combobox",
-                        "label": t("settings.image.ocr_language_label", "OCR Language:"),
-                        "tooltip": t(
-                            "settings.image.ocr_language_tooltip", "Select OCR language for image text extraction"
-                        ),
-                        "items": [
-                            (t("settings.image.ocr_language_auto", "Auto-detect"), "auto"),
-                            (t("settings.image.ocr_language_chinese", "Chinese"), "chinese"),
-                            (t("settings.image.ocr_language_chinese_cht", "Traditional Chinese"), "chinese_cht"),
-                            (t("settings.image.ocr_language_english", "English Only"), "english"),
-                            (t("settings.image.ocr_language_japanese", "Japanese"), "japanese"),
-                            (t("settings.image.ocr_language_korean", "Korean"), "korean"),
-                            (t("settings.image.ocr_language_latin", "Latin"), "latin"),
-                            (t("settings.image.ocr_language_cyrillic", "Cyrillic"), "cyrillic"),
-                        ],
-                    },
                 ],
             },
             {

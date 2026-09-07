@@ -11,6 +11,8 @@ template_name = "English General Template"
 # Main Window
 # =============================================================================
 [main_window]
+file_admission_missing = "The input file no longer exists: {path}"
+file_admission_unreadable = "The input file cannot be read: {path}"
 extension_loss_endnotes = "Endnotes were converted to ordinary Markdown footnotes."
 extension_loss_headings = "Heading levels 7–9 were converted to level 6."
 extension_loss_references = "Captions and cross-references were converted to visible text."
@@ -83,17 +85,17 @@ save_failed = "Failed to save settings"
 # 状态栏
 # =============================================================================
 [info_area]
+output_each_source = "Save each result beside its source file"
+output_date_subfolder = "Save in a dated subfolder"
 task_warning_count = "{count} conversion notices. Expand activity history for details."
 task_progress_percent = "Progress:{percent}%"
 task_state_skipped = "Skipped"
 batch_name = "Batch processing ({count} files)"
 aggregate_name = "Merge ({count} files)"
 activity_count = "Activity ({count})"
-clear_history = "Clear activity records"
 notice_title = "Notice"
 task_state_cancelling = "Cancelling"
 copy_path = "Copy path"
-open_location = "Open file location: {path}"
 ipc_file_missing = "IPC file not found: {path}"
 font_size_applied = "Text size: {label}"
 
@@ -106,12 +108,12 @@ history_completed = "Completed: {name}"
 task_state_partial = "Partial failure"
 task_state_failed = "Failed"
 task_state_cancelled = "Cancelled"
-task_current_file = "Task file: {name}"
+task_current_file = "Processing: {name}"
 task_progress_detail = "Completed {completed}/{total}, failed {failed}"
 history_started = "Started: {name}"
 task_skipped_count = "Skipped: {skipped}"
 task_cancelled_count = "Cancelled: {cancelled}"
-task_guide_open_output_dir = "Open output folder"
+task_output_file = "Output: {name}"
 task_guide_view_failed_details = "View failure details"
 task_guide_retry_failed = "Retry failed items"
 window_topmost_enabled = "Window pinned on top. Press Ctrl+Shift+T to turn it off."
@@ -160,7 +162,7 @@ doctor = "Run diagnostics"
 gongwen = "Official Document"
 
 # 校对选项
-invoice_cn = "Chinese Invoice (invoice_cn)"
+invoice_cn = "Chinese Invoice"
 [cli.interactive.proofread]
 
 # 提示文本
@@ -209,11 +211,12 @@ document = "Incoming documents"
 spreadsheet = "Incoming spreadsheets"
 image = "Incoming images"
 layout = "Incoming fixed-layout files"
-other = "Other"
+other = "Incoming other files"
 link = "Link"
 formatting = "Markdown syntax"
 output = "File saving"
 logging = "Logging"
+software = "Conversion software"
 
 [settings.descriptions]
 general = "Global settings such as language and theme"
@@ -354,6 +357,9 @@ save_numbering_clean_rules_failed = "Failed to save numbering clean rules to dis
 # -----------------------------------------------------------------------------
 # 文档设置选项卡
 # -----------------------------------------------------------------------------
+input_description = "Settings for incoming Markdown: generating documents, filling templates and processing headings."
+template_fill_section = "Template filling"
+template_fill_desc = "Join YAML list values when filling Word or spreadsheet templates. Spaces and an empty separator are preserved exactly."
 [settings.proofread]
 validation_section = "Validation Rules"
 enable_symbol_pairing = "Enable Symbol Pairing Check"
@@ -362,13 +368,13 @@ enable_typos_rule = "Enable Typos Detection"
 enable_sensitive_word = "Enable Sensitive Word Check"
 skip_code_blocks = "Skip Code Blocks"
 skip_quote_blocks = "Skip Quote Blocks"
-symbol_mapping_section = "Symbol Mapping Editor"
-symbol_mapping_desc = "Manage symbol pairing and correction rules."
-symbol_correction_section = "Symbol Correction Editor"
+symbol_mapping_section = "Punctuation pairing rules"
+symbol_mapping_desc = "Check that opening and closing punctuation is correctly paired."
+symbol_correction_section = "Symbol correction rules"
 symbol_correction_desc = "Manage fullwidth/halfwidth symbol correction entries."
-typos_section = "Typos Dictionary Editor"
+typos_section = "Typo dictionary"
 typos_desc = "Manage common typo correction entries."
-sensitive_words_section = "Sensitive Words Editor"
+sensitive_words_section = "Sensitive word dictionary"
 sensitive_words_desc = "Manage sensitive word detection entries."
 edit = "Edit"
 
@@ -424,7 +430,6 @@ enable_optimization = "Enable \"Optimize for document type\" by default"
 optimization_type_label = "Default optimization type:"
 
 # 软件优先级
-software_section = "Software Priority"
 word_processors_label = "Document Processing Software Priority"
 odt_conversion_label = "ODT Format Conversion"
 document_to_pdf_label = "Document to PDF"
@@ -455,7 +460,6 @@ enable_ocr_tooltip = "Check \"Image OCR\" by default when converting spreadsheet
 merge_mode_section = "Merge Mode Settings"
 merge_mode_desc = "Set the default mode for table merging"
 default_merge_mode_label = "Default Merge Mode:"
-software_section = "Software Priority"
 spreadsheet_processors_label = "Spreadsheet Processing Software Priority"
 ods_conversion_label = "ODS Format Conversion"
 spreadsheet_to_pdf_label = "Spreadsheet to PDF"
@@ -470,7 +474,6 @@ by_cell = "Merge by Cell"
 [settings.spreadsheet.software]
 wps_spreadsheets = "WPS Spreadsheets"
 excel = "Excel"
-libreoffice = "LibreOffice"
 
 # -----------------------------------------------------------------------------
 # 图片设置选项卡
@@ -485,16 +488,6 @@ enable_optimization = "Enable \"Optimize for image type\" by default"
 optimization_type_label = "Default optimization type:"
 
 # OCR语言设置
-ocr_language_label = "OCR recognition language:"
-ocr_language_tooltip = "Select the language model used for OCR text recognition.\n\n• Follow interface language: Automatically choose based on current UI language\n• Chinese/English: Suitable for mixed Chinese and English documents\n• Japanese: Suitable for Japanese documents\n• Latin script: Suitable for German, French, Portuguese, etc.\n• Cyrillic script: Suitable for Russian, etc."
-ocr_language_auto = "Follow interface language"
-ocr_language_chinese = "Chinese/English"
-ocr_language_japanese = "Japanese"
-ocr_language_chinese_cht = "Traditional Chinese"
-ocr_language_english = "English Only"
-ocr_language_korean = "Korean"
-ocr_language_latin = "Latin script (DE/FR/PT, etc.)"
-ocr_language_cyrillic = "Cyrillic script (RU, etc.)"
 
 compress_section = "Compression Options Settings"
 compress_desc = "Set the default compression mode for image format conversion"
@@ -528,7 +521,6 @@ render_dpi_label = "Render DPI:"
 dpi_min = "Minimum (150)"
 dpi_medium = "Medium (300)"
 dpi_high = "High Quality (600)"
-software_section = "Software Priority"
 pdf_to_doc_label = "PDF to Document"
 
 # -----------------------------------------------------------------------------
@@ -833,6 +825,53 @@ critical = "Critical (CRITICAL)"
 # =============================================================================
 # 关于对话框
 # =============================================================================
+
+[settings.software]
+priority = "Software priority"
+description = "Try installed software in this order. Availability also depends on the conversion format."
+presentation_processors = "Presentation software"
+wps_presentation = "WPS Presentation"
+powerpoint = "PowerPoint"
+
+[settings.ocr]
+language_label = "OCR recognition language:"
+language_tooltip = "OCR language shared by all input formats."
+language_auto = "Follow interface language"
+language_chinese = "Chinese/English"
+language_japanese = "Japanese"
+language_chinese_cht = "Traditional Chinese"
+language_english = "English Only"
+language_korean = "Korean"
+language_latin = "Latin script (DE/FR/PT, etc.)"
+language_cyrillic = "Cyrillic script (RU, etc.)"
+section = "OCR recognition"
+
+[settings.rule_transfer]
+read_failed = "Unable to read the current rule configuration."
+added = "Added"
+unchanged = "Unchanged"
+conflict = "Different"
+existing_only = "Existing only"
+change = "Change"
+rule = "Rule"
+current = "Current"
+incoming = "Incoming"
+preview = "Preview rule import"
+summary = "Added {added} · Different {conflict} · Unchanged {unchanged} · Existing only {existing_only}"
+strategy = "Import strategy"
+merge = "Merge with existing rules"
+replace = "Replace all rules"
+strategy_hint = "Merge keeps existing entries and combines values and notes for matching keys. Replace removes entries absent from the imported file."
+merge_unavailable = "Conflicting punctuation pairs cannot be merged. Cancel to adjust the file, or choose replacement."
+confirm = "Confirm import"
+source_changed = "Rules changed during preview. Import again to review the latest differences."
+save_failed = "Save failed. Original rules were preserved."
+import = "Import…"
+import_failed = "Import failed"
+imported = "Rules imported."
+export = "Export…"
+export_failed = "Export failed"
+exported = "Complete rules exported."
 [about]
 title = "About"
 subtitle = "Document and Spreadsheet Format Conversion Tool (Official Document Converter)"
@@ -924,8 +963,6 @@ no_batch_files = "No batch files"
 retry_selected_failed = "Retry selected failed item"
 retry_all_failed = "Retry all failed items in this tab"
 total_files = "{total} file(s) total"
-total_files_selected = "{total} file(s) total, selected: {current_name}"
-action_open_output = "Open Output"
 action_view_skip = "View Skip"
 action_view_error = "View Error"
 action_remove = "Remove"
@@ -1335,13 +1372,11 @@ letter_number_desc = "Match: A. / A) / (A) / a. / a) letter numbering"
 # 映射编辑器
 [editors.mapping]
 # 对话框标题
-symbol_editor_title = "Punctuation Mapping Editor"
+symbol_editor_title = "Punctuation pairing rules"
 typo_editor_title = "Typo Dictionary Editor"
 sensitive_editor_title = "Flagged Terms Editor"
 # 下拉选择标签
 search_placeholder = "Search key, value, or comment"
-source_symbol = "Source Symbol"
-target_symbol = "Target Symbol"
 typo = "Typo"
 corrections = "Correction(s)"
 multi_value_hint = "Tip: use | to separate multiple values (for example: value1|value2|value3)"
@@ -1382,6 +1417,8 @@ merge = "Merge"
 # =============================================================================
 # 文件类型分类
 # =============================================================================
+opening_symbol = "Opening punctuation"
+closing_symbol = "Closing punctuation"
 [file_types]
 document = "Document"
 spreadsheet = "Spreadsheet"
@@ -1630,3 +1667,32 @@ captions_references = "Number Suite captions and cross-references"
 extended_headings = "Heading levels 7–9 (H7–H9)"
 typed_endnotes = "Typed footnotes and endnotes"
 obsidian_preset = "Use Obsidian extensions"
+
+[activity]
+record_unavailable = "This activity record has been cleared or is unavailable."
+title = "Activity records"
+search = "Search filenames or activity"
+all_statuses = "All statuses"
+all_operations = "All operations"
+time = "Time"
+status = "Status"
+file = "File"
+operation = "Operation"
+details = "Details"
+select_record = "Select a record to view details"
+clear_finished = "Clear finished records"
+info = "Notice"
+warning = "Warning"
+merge = "Merge"
+split = "Split"
+numbering = "Numbering"
+validate = "Validate"
+input = "Input"
+output = "Output"
+failed_count = "Activity · {count} failed"
+
+[file_locations]
+input = "Locate input file"
+output = "Locate output file"
+multiple = "{count} files"
+show_outputs = "View all output files"

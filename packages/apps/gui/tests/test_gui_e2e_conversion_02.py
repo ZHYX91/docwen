@@ -379,7 +379,6 @@ class TestGuiBatchExecution:
             assert summary.failed_count == 1
             assert summary.navigate_path == bad_norm
             assert [action["action_key"] for action in window._info_area_vm.guide_actions] == [
-                "open_output_dir",
                 "view_failed_details",
                 "retry_failed",
             ]
@@ -447,7 +446,8 @@ class TestMarkdownTemplateWorkflow:
 
         output_path = Path(entry.output_path)
         assert output_path.exists()
-        assert output_path.name == "brief.docx"
+        assert output_path.name.startswith("brief_") and output_path.name.endswith("_fromMd.docx")
+        assert output_path.parent.name == output_path.stem
         output_doc = Document(str(output_path))
         paragraph_text = [paragraph.text for paragraph in output_doc.paragraphs if paragraph.text.strip()]
 

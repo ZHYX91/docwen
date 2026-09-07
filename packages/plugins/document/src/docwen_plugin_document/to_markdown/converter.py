@@ -132,6 +132,7 @@ class DocxToMarkdownConverter:
 
     def __init__(self) -> None:
         """Create an isolated converter instance for one request."""
+        self._source_stem = ""
         self._request_policy = DocxMarkdownRequestPolicy(
             formatting=DocxMarkdownFormattingConfig(),
             syntax=DocxMarkdownSyntaxConfig(),
@@ -198,6 +199,7 @@ class DocxToMarkdownConverter:
         t_start = time.monotonic()
         task_id = context.request.request_id
         input_path = context.workspace.input_path
+        self._source_stem = context.request.source_stem
         # 1. Check cancellation before starting
         context.cancellation.check()
 
@@ -257,7 +259,7 @@ class DocxToMarkdownConverter:
             from docx import Document as _StandardDocument
 
             _doc = _StandardDocument(input_path)
-            metadata, skip_indices = self._extract_title_metadata(_doc, input_path)
+            metadata, skip_indices = self._extract_title_metadata(_doc, f"{self._source_stem}.docx")
             locale = str(options.get("locale", "en"))
             yaml_header = self._build_yaml_header(
                 metadata,
@@ -553,7 +555,7 @@ class DocxToMarkdownConverter:
         ocr_language = str(options.get("ocr_language") or "auto")
         current_locale = str(options.get("locale") or "zh_CN")
         _img_seq = 0
-        _main_stem = os.path.splitext(os.path.basename(str(input_path)))[0]
+        _main_stem = self._source_stem or Path(input_path).stem
 
         # Build a lookup from XML paragraph element to Paragraph object
         # so we can use python-docx's high-level API for text extraction

@@ -31,6 +31,7 @@ from docwen_gui.i18n import t as _t
 from ..models.settings_config import (
     DEFAULT_HEADING_MERGE_PUNCTUATION,
     ConversionDefaultsConfig,
+    DocumentConfig,
     ExportConfig,
     FormattingConfig,
     GUIConfig,
@@ -53,6 +54,7 @@ if TYPE_CHECKING:
 # ── Settings section identifiers ─────────────────────────────────────
 SECTION_GUI = "gui"
 SECTION_TEXT = "text"
+SECTION_DOCUMENT = "document"
 SECTION_PROOFREAD = "proofread"
 SECTION_CONVERSION_DEFAULTS = "conversion_defaults"
 SECTION_SOFTWARE_PRIORITY = "software_priority"
@@ -83,6 +85,15 @@ _RESET_GROUP_DRAFT_PATHS: dict[str, tuple[tuple[str, ...], ...]] = {
         ("gui", "default_mode"),
     ),
     "text": (
+        ("text", "builtin_table_style"),
+        ("text", "custom_table_style_name"),
+        ("text", "heading_merge_mode"),
+        ("text", "heading_merge_punctuation"),
+        ("text", "list_separator"),
+        ("text", "md_body_format"),
+        ("text", "md_heading_format"),
+        ("text", "md_table_header_format"),
+        ("text", "table_style_mode"),
         ("text", "remove_numbering"),
         ("text", "add_numbering"),
         ("text", "default_scheme"),
@@ -99,6 +110,7 @@ _RESET_GROUP_DRAFT_PATHS: dict[str, tuple[tuple[str, ...], ...]] = {
         ("proofread", "skip_quote_blocks"),
     ),
     "document": (
+        ("document",),
         ("conversion_defaults", "document", "to_md_keep_images"),
         ("conversion_defaults", "document", "to_md_enable_ocr"),
         ("conversion_defaults", "document", "to_md_table_merge_export_strategy"),
@@ -107,18 +119,12 @@ _RESET_GROUP_DRAFT_PATHS: dict[str, tuple[tuple[str, ...], ...]] = {
         ("conversion_defaults", "document", "to_md_default_scheme"),
         ("conversion_defaults", "document", "to_md_enable_optimization"),
         ("conversion_defaults", "document", "to_md_optimization_type"),
-        ("software_priority", "word_processors"),
-        ("software_priority", "odt_conversion"),
-        ("software_priority", "document_to_pdf"),
     ),
     "spreadsheet": (
         ("conversion_defaults", "spreadsheet", "to_md_keep_images"),
         ("conversion_defaults", "spreadsheet", "to_md_enable_ocr"),
         ("conversion_defaults", "spreadsheet", "to_md_table_merge_export_strategy"),
         ("conversion_defaults", "spreadsheet", "merge_mode"),
-        ("software_priority", "spreadsheet_processors"),
-        ("software_priority", "ods_conversion"),
-        ("software_priority", "spreadsheet_to_pdf"),
     ),
     "image": (("conversion_defaults", "image"),),
     "layout": (
@@ -127,7 +133,6 @@ _RESET_GROUP_DRAFT_PATHS: dict[str, tuple[tuple[str, ...], ...]] = {
         ("conversion_defaults", "layout", "to_md_enable_optimization"),
         ("conversion_defaults", "layout", "to_md_optimization_type"),
         ("conversion_defaults", "layout", "render_dpi"),
-        ("software_priority", "pdf_to_office"),
     ),
     "link": (("link",),),
     "formatting": (("formatting",),),
@@ -146,11 +151,10 @@ _RESET_GROUP_DRAFT_PATHS: dict[str, tuple[tuple[str, ...], ...]] = {
         ("text", "heading_numbering_render_mode"),
         ("export", "image_mode"),
         ("export", "ocr_mode"),
-        ("formatting", "table_style_mode"),
-        ("formatting", "builtin_table_style"),
-        ("formatting", "custom_table_style_name"),
+        ("text", "table_style_mode"),
+        ("text", "builtin_table_style"),
+        ("text", "custom_table_style_name"),
     ),
-    "software_priority": (("software_priority",),),
     "software": (("software_priority",),),
 }
 
@@ -793,9 +797,10 @@ class SettingsViewModel(QObject):
     _SECTION_GROUP_MAP: dict[str, str] = {  # noqa: RUF012
         SECTION_GUI: "general",
         SECTION_TEXT: "text",
+        SECTION_DOCUMENT: "document",
         SECTION_PROOFREAD: "proofread",
         SECTION_CONVERSION_DEFAULTS: "conversion_defaults",
-        SECTION_SOFTWARE_PRIORITY: "software_priority",
+        SECTION_SOFTWARE_PRIORITY: "software",
         SECTION_LINK: "link",
         SECTION_FORMATTING: "formatting",
         SECTION_OUTPUT: "output",
@@ -1017,6 +1022,11 @@ class SettingsViewModel(QObject):
             heading_numbering_render_mode=text_raw.get("heading_numbering_render_mode", "text"),
         )
 
+        template_fill = raw.get("template_fill", {})
+        config.text.list_separator = (
+            str(template_fill.get("list_separator", "、")) if isinstance(template_fill, dict) else "、"
+        )
+
         # proofread section — proofread/{engine,skip,symbol_map,typos,sensitive_words}.toml
         proofread_raw = raw.get("proofread", {}) if isinstance(raw.get("proofread"), dict) else {}
         engine = proofread_raw.get("engine", {}) if isinstance(proofread_raw.get("engine"), dict) else {}
@@ -1054,6 +1064,11 @@ class SettingsViewModel(QObject):
             dp = soft.get("default_priority", {})
             sc = soft.get("special_conversions", {})
             config.software_priority = SoftwarePriorityConfig(
+                presentation_processors=dp.get(
+                    "presentation_processors", ["wps_presentation", "msoffice_powerpoint", "libreoffice"]
+                )
+                if isinstance(dp, dict)
+                else [],
                 word_processors=dp.get("word_processors", ["wps_writer", "msoffice_word", "libreoffice"])
                 if isinstance(dp, dict)
                 else [],
@@ -1112,6 +1127,45 @@ class SettingsViewModel(QObject):
             table_m2d = table_style.get("md_to_docx", {}) if isinstance(table_style, dict) else {}
             extension_settings = conv.get("markdown_extensions", {})
             extension_settings = extension_settings if isinstance(extension_settings, dict) else {}
+            config.document = DocumentConfig()
+            config.document.body_format = (
+                "preserve" if (isinstance(d2m, dict) and d2m.get("preserve_formatting", True)) else "discard"
+            )
+            config.document.heading_format = (
+                "preserve" if (isinstance(d2m, dict) and d2m.get("preserve_heading_formatting", False)) else "discard"
+            )
+            config.document.table_header_format = (
+                "preserve"
+                if (isinstance(d2m, dict) and d2m.get("preserve_table_header_formatting", False))
+                else "discard"
+            )
+            config.text.md_body_format = m2d.get("formatting_mode", "apply") if isinstance(m2d, dict) else "apply"
+            config.text.md_heading_format = (
+                m2d.get("heading_formatting_mode", "remove") if isinstance(m2d, dict) else "remove"
+            )
+            config.text.md_table_header_format = (
+                m2d.get("table_header_formatting_mode", "remove") if isinstance(m2d, dict) else "remove"
+            )
+            config.text.heading_merge_mode = (
+                m2d.get("heading_merge_mode", "punct_required") if isinstance(m2d, dict) else "punct_required"
+            )
+            config.text.heading_merge_punctuation = (
+                str(m2d.get("heading_merge_punctuation", DEFAULT_HEADING_MERGE_PUNCTUATION))
+                if isinstance(m2d, dict)
+                and m2d.get("heading_merge_punctuation", DEFAULT_HEADING_MERGE_PUNCTUATION) is not None
+                else DEFAULT_HEADING_MERGE_PUNCTUATION
+            )
+            config.text.table_style_mode = (
+                table_m2d.get("table_style_mode", "builtin") if isinstance(table_m2d, dict) else "builtin"
+            )
+            config.text.builtin_table_style = (
+                table_m2d.get("builtin_style_key", "three_line_table")
+                if isinstance(table_m2d, dict)
+                else "three_line_table"
+            )
+            config.text.custom_table_style_name = (
+                table_m2d.get("custom_style_name", "") if isinstance(table_m2d, dict) else ""
+            )
             config.formatting = FormattingConfig(
                 markdown_extensions={
                     direction: {
@@ -1122,15 +1176,6 @@ class SettingsViewModel(QObject):
                     }
                     for direction in ("input", "output")
                 },
-                body_format="preserve"
-                if (isinstance(d2m, dict) and d2m.get("preserve_formatting", True))
-                else "discard",
-                heading_format="preserve"
-                if (isinstance(d2m, dict) and d2m.get("preserve_heading_formatting", False))
-                else "discard",
-                table_header_format="preserve"
-                if (isinstance(d2m, dict) and d2m.get("preserve_table_header_formatting", False))
-                else "discard",
                 page_break_sep=hr_d2m.get("page_break", "---") if isinstance(hr_d2m, dict) else "---",
                 section_break_sep=hr_d2m.get("section_break", "***") if isinstance(hr_d2m, dict) else "***",
                 horizontal_rule_sep=hr_d2m.get("horizontal_rule", "___") if isinstance(hr_d2m, dict) else "___",
@@ -1144,32 +1189,6 @@ class SettingsViewModel(QObject):
                 subscript_syntax=syntax.get("subscript", "html") if isinstance(syntax, dict) else "html",
                 unordered_list_syntax=syntax.get("unordered_list", "dash") if isinstance(syntax, dict) else "dash",
                 indent_spaces=syntax.get("indent_spaces", 4) if isinstance(syntax, dict) else 4,
-                md_body_format=m2d.get("formatting_mode", "apply") if isinstance(m2d, dict) else "apply",
-                md_heading_format=m2d.get("heading_formatting_mode", "remove") if isinstance(m2d, dict) else "remove",
-                md_table_header_format=m2d.get("table_header_formatting_mode", "remove")
-                if isinstance(m2d, dict)
-                else "remove",
-                heading_merge_mode=m2d.get("heading_merge_mode", "punct_required")
-                if isinstance(m2d, dict)
-                else "punct_required",
-                heading_merge_punctuation=(
-                    str(m2d.get("heading_merge_punctuation", DEFAULT_HEADING_MERGE_PUNCTUATION))
-                    if isinstance(m2d, dict)
-                    and m2d.get("heading_merge_punctuation", DEFAULT_HEADING_MERGE_PUNCTUATION) is not None
-                    else DEFAULT_HEADING_MERGE_PUNCTUATION
-                ),
-                list_separator=(
-                    str(m2d.get("list_separator", "、"))
-                    if isinstance(m2d, dict) and m2d.get("list_separator", "、") is not None
-                    else "、"
-                ),
-                table_style_mode=table_m2d.get("table_style_mode", "builtin")
-                if isinstance(table_m2d, dict)
-                else "builtin",
-                builtin_table_style=table_m2d.get("builtin_style_key", "three_line_table")
-                if isinstance(table_m2d, dict)
-                else "three_line_table",
-                custom_table_style_name=table_m2d.get("custom_style_name", "") if isinstance(table_m2d, dict) else "",
                 dash_sep=hr_m2d.get("dash", "page_break") if isinstance(hr_m2d, dict) else "page_break",
                 asterisk_sep=hr_m2d.get("asterisk", "section_break") if isinstance(hr_m2d, dict) else "section_break",
                 underscore_sep=hr_m2d.get("underscore", "horizontal_rule_1")
@@ -1208,7 +1227,9 @@ class SettingsViewModel(QObject):
         title_text = ""
         if isinstance(title_overrides, dict):
             title_text = str(title_overrides.get(current_locale) or title_overrides.get(config.gui.language) or "")
+        ocr = raw.get("ocr", {})
         config.export = ExportConfig(
+            ocr_language=ocr.get("language", "auto") if isinstance(ocr, dict) else "auto",
             image_mode=export_defaults.get("to_md_image_extraction_mode", "file"),
             ocr_mode=export_defaults.get("to_md_ocr_placement_mode", "image_md"),
             ocr_title_enabled=ocr_output.get("show_blockquote_title", True) if isinstance(ocr_output, dict) else True,
@@ -1383,6 +1404,7 @@ class SettingsViewModel(QObject):
         put("logger.directory", log.directory)
 
         sp = config.software_priority
+        put("software.default_priority.presentation_processors", list(sp.presentation_processors))
         put("software.default_priority.word_processors", list(sp.word_processors))
         put("software.default_priority.spreadsheet_processors", list(sp.spreadsheet_processors))
         put("software.special_conversions.odt", list(sp.odt_conversion))
@@ -1397,9 +1419,9 @@ class SettingsViewModel(QObject):
         for direction, extensions in fmt.markdown_extensions.items():
             for name, enabled in extensions.items():
                 put(f"conversion.markdown_extensions.{direction}.{name}", enabled)
-        put("conversion.docx_to_md.preserve_formatting", fmt.body_format == "preserve")
-        put("conversion.docx_to_md.preserve_heading_formatting", fmt.heading_format == "preserve")
-        put("conversion.docx_to_md.preserve_table_header_formatting", fmt.table_header_format == "preserve")
+        put("conversion.docx_to_md.preserve_formatting", config.document.body_format == "preserve")
+        put("conversion.docx_to_md.preserve_heading_formatting", config.document.heading_format == "preserve")
+        put("conversion.docx_to_md.preserve_table_header_formatting", config.document.table_header_format == "preserve")
         put("conversion.syntax.bold", fmt.bold_syntax)
         put("conversion.syntax.italic", fmt.italic_syntax)
         put("conversion.syntax.strikethrough", fmt.strikethrough_syntax)
@@ -1408,15 +1430,15 @@ class SettingsViewModel(QObject):
         put("conversion.syntax.subscript", fmt.subscript_syntax)
         put("conversion.syntax.unordered_list", fmt.unordered_list_syntax)
         put("conversion.syntax.indent_spaces", int(fmt.indent_spaces))
-        put("conversion.md_to_docx.formatting_mode", fmt.md_body_format)
-        put("conversion.md_to_docx.heading_formatting_mode", fmt.md_heading_format)
-        put("conversion.md_to_docx.table_header_formatting_mode", fmt.md_table_header_format)
-        put("conversion.md_to_docx.heading_merge_mode", fmt.heading_merge_mode)
-        put("conversion.md_to_docx.heading_merge_punctuation", fmt.heading_merge_punctuation)
-        put("conversion.md_to_docx.list_separator", fmt.list_separator)
-        put("document.style.table.md_to_docx.table_style_mode", fmt.table_style_mode)
-        put("document.style.table.md_to_docx.builtin_style_key", fmt.builtin_table_style)
-        put("document.style.table.md_to_docx.custom_style_name", fmt.custom_table_style_name)
+        put("conversion.md_to_docx.formatting_mode", text.md_body_format)
+        put("conversion.md_to_docx.heading_formatting_mode", text.md_heading_format)
+        put("conversion.md_to_docx.table_header_formatting_mode", text.md_table_header_format)
+        put("conversion.md_to_docx.heading_merge_mode", text.heading_merge_mode)
+        put("conversion.md_to_docx.heading_merge_punctuation", text.heading_merge_punctuation)
+        put("template_fill.list_separator", text.list_separator)
+        put("document.style.table.md_to_docx.table_style_mode", text.table_style_mode)
+        put("document.style.table.md_to_docx.builtin_style_key", text.builtin_table_style)
+        put("document.style.table.md_to_docx.custom_style_name", text.custom_table_style_name)
         put("conversion.horizontal_rule.docx_to_md.page_break", fmt.page_break_sep)
         put("conversion.horizontal_rule.docx_to_md.section_break", fmt.section_break_sep)
         put("conversion.horizontal_rule.docx_to_md.horizontal_rule", fmt.horizontal_rule_sep)
@@ -1440,6 +1462,7 @@ class SettingsViewModel(QObject):
             put("proofread.sensitive_words.entries", proof.sensitive_words)
 
         exp = config.export
+        put("ocr.language", exp.ocr_language)
         put("export.to_md_image_extraction_mode", exp.image_mode)
         put("export.to_md_ocr_placement_mode", exp.ocr_mode)
         put("conversion.export.base64_compress_enabled", bool(exp.base64_compress_enabled))
@@ -1480,7 +1503,6 @@ class SettingsViewModel(QObject):
                 "to_md_enable_ocr",
                 "to_md_enable_optimization",
                 "to_md_optimization_type",
-                "ocr_language",
                 "compress_mode",
                 "size_limit",
                 "size_unit",
@@ -1636,7 +1658,7 @@ class SettingsViewModel(QObject):
             return None
         return content if isinstance(content, str) else None
 
-    def save_config_file_text(self, config_name: str, content: str) -> bool:
+    def save_config_file_text(self, config_name: str, content: str, *, expected_text: str | None = None) -> bool:
         """Save VM-owned TOML through the port and reconcile editor state."""
         if config_name not in _EDITOR_FILE_MODEL_PATHS:
             logger.error("Settings editor does not own config source: %s", config_name)
@@ -1647,7 +1669,11 @@ class SettingsViewModel(QObject):
             return False
         before = self._try_snapshot_config_port(cfg_port)
         try:
-            ok = bool(save_file_text(config_name, content))
+            ok = (
+                bool(save_file_text(config_name, content, expected_text=expected_text))
+                if expected_text is not None
+                else bool(save_file_text(config_name, content))
+            )
         except Exception:
             logger.exception("Config editor source save raised: %s", config_name)
             ok = False
@@ -1684,28 +1710,11 @@ class SettingsViewModel(QObject):
 
     def _recompute_dirty(self) -> bool:
         """Compare live config against snapshot (must hold _mutex)."""
-        # Use deepcopy to avoid false-sharing of mutable sub-objects
-        live = deepcopy(self._config)
-        snap = self._snapshot
-        if live.gui != snap.gui:
-            return True
-        if live.text != snap.text:
-            return True
-        if live.proofread != snap.proofread:
-            return True
-        if live.conversion_defaults != snap.conversion_defaults:
-            return True
-        if live.software_priority != snap.software_priority:
-            return True
-        if live.link != snap.link:
-            return True
-        if live.formatting != snap.formatting:
-            return True
-        if live.output != snap.output:
-            return True
-        if live.export != snap.export:
-            return True
-        return live.logging != snap.logging
+        return any(
+            getattr(self._config, item.name) != getattr(self._snapshot, item.name)
+            for item in fields(SettingsConfig)
+            if not item.name.startswith("_")
+        )
 
     @staticmethod
     def _validate() -> list[str]:

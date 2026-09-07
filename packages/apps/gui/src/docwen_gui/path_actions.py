@@ -12,6 +12,7 @@ from pathlib import Path
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 
+from docwen_gui.windows_shell import reveal_file as _windows_reveal_file
 from docwen_runtime.path_io import filesystem_path
 
 logger = logging.getLogger(__name__)
@@ -156,11 +157,12 @@ def reveal_path(target_path: str | Path) -> PathActionResult:
 
     platform_key = _platform_key()
     if platform_key == "windows":
-        result = _run_command(["explorer", "/select,", str(candidate)])
-        if result.success:
+        try:
+            _windows_reveal_file(candidate)
             logger.info("Selected file in Windows Explorer: %s", candidate)
             return _success(precise=True)
-        return _reveal_fallback(candidate, result)
+        except Exception as exc:
+            return _reveal_fallback(candidate, _failure(str(exc), error_code="reveal_failed"))
 
     if platform_key == "macos":
         result = _run_command(["open", "-R", str(candidate)])

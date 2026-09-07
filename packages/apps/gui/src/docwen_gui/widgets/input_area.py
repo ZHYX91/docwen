@@ -60,7 +60,8 @@ from docwen_gui.format_presentation import SUPPORTED_FORMAT_GROUPS, presentation
 from docwen_gui.i18n import t
 from docwen_gui.styles.design_tokens import Sizing, Spacing
 
-from .batch_list import _MiddleElidedLabel
+from .elided_label import MiddleElidedLabel
+from .location_button import LocationButton
 from .panel_card import WrappingLabel
 
 if TYPE_CHECKING:
@@ -73,7 +74,6 @@ _ORNAMENT_SIZE = QSize(72, 72)
 _SPACING_XS = Spacing.XS
 _SPACING_SM = Spacing.SM
 _SPACING_MD = Spacing.MD
-_PYRAMID_INDENTS = (72, 58, 44, 30, 18, 8)
 _ACTION_BUTTON_MIN_WIDTH = Sizing.BUTTON_MIN_WIDTH
 
 _SUPPORTED_TYPE_ROWS: tuple[tuple[str, str, str], ...] = tuple(
@@ -136,6 +136,7 @@ class InputArea(QFrame):
     """
 
     height_changed = Signal(int)
+    location_requested = Signal(str)
 
     def __init__(
         self,
@@ -320,14 +321,14 @@ class InputArea(QFrame):
             value_label.setObjectName("fileDropTypesValueLabel")
             value_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
             value_label.setMinimumWidth(0)
-            value_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            value_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 
             row_layout.addWidget(type_label, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
             row_layout.addWidget(value_label, 1)
             self._types_layout.addWidget(row_widget)
             self._type_prompt_rows.append((row_widget, row_layout, type_label, value_label))
         self._sync_supported_type_layout()
-        center_layout.addWidget(self._types_container)
+        center_layout.addWidget(self._types_container, alignment=Qt.AlignmentFlag.AlignHCenter)
         content_layout.addWidget(
             self._empty_center_panel,
             stretch=1,
@@ -349,14 +350,22 @@ class InputArea(QFrame):
         self._selection_label.setMinimumWidth(0)
         self._selection_label.setText("")
 
-        self._selection_detail_label = _MiddleElidedLabel("", self._feedback_frame)
+        self._selection_detail_label = MiddleElidedLabel("", self._feedback_frame)
         self._selection_detail_label.setObjectName("fileDropSelectionDetailLabel")
         self._selection_detail_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self._selection_detail_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         self._selection_detail_label.setVisible(False)
 
         feedback_layout.addWidget(self._selection_label)
-        feedback_layout.addWidget(self._selection_detail_label)
+        path_row = QHBoxLayout()
+        path_row.setSpacing(Spacing.SM)
+        path_row.addWidget(self._selection_detail_label, 1)
+        self._open_location_button = LocationButton(self._feedback_frame, label=t("file_locations.input"))
+        self._open_location_button.setObjectName("fileDropOpenLocationButton")
+        self._open_location_button.setVisible(False)
+        self._open_location_button.clicked.connect(self._open_selected_location)
+        path_row.addWidget(self._open_location_button)
+        feedback_layout.addLayout(path_row)
 
         # Assemble drop layout
         drop_layout.addLayout(self._top_layout)
@@ -370,6 +379,11 @@ class InputArea(QFrame):
         self._sync_top_control_layout()
 
     # ── ViewModel wiring ───────────────────────────────────────────
+
+    def _open_selected_location(self) -> None:
+        path = self._vm.selected_file_path
+        if path:
+            self.location_requested.emit(path)
 
     def _request_mode(self, mode: str) -> None:
         filename = self._vm.single_mode_kept_filename if mode == "single" else None
@@ -554,6 +568,7 @@ class InputArea(QFrame):
 
     def _sync_visual_state(self) -> None:
         """Sync visual state. Selection state is derived from ViewModel message."""
+        self._open_location_button.setVisible(bool(self._vm.selected_file_path) and not self._drag_active)
         has_selection = bool(self._vm.selection_message.strip())
 
         self._empty_content.setVisible(not has_selection)
@@ -767,18 +782,17 @@ class InputArea(QFrame):
         fallback_width = self._drop_group.width() - (_SPACING_MD * 4)
         panel_width = self._empty_center_panel.width()
         content_width = max(panel_width if panel_width > 0 else fallback_width, 0)
-        middle_gap = max(_SPACING_MD, 24)
-        for index, (_, row_layout, type_label, value_label) in enumerate(self._type_prompt_rows):
-            desired_indent = _PYRAMID_INDENTS[min(index, len(_PYRAMID_INDENTS) - 1)]
-            required_width = (
-                type_label.sizeHint().width()
-                + value_label.fontMetrics().horizontalAdvance(value_label.text())
-                + row_layout.spacing()
-                + middle_gap
-            )
-            available_indent = max((content_width - required_width) // 2, 0)
-            actual_indent = min(desired_indent, available_indent)
-            row_layout.setContentsMargins(actual_indent, 0, actual_indent, 0)
+        label_width = max(label.sizeHint().width() for _, _, label, _ in self._type_prompt_rows)
+        value_width = max(
+            value.fontMetrics().horizontalAdvance(value.text()) for _, _, _, value in self._type_prompt_rows
+        )
+        width = min(content_width, label_width + _SPACING_SM + value_width + 2)
+        self._types_container.setFixedWidth(width)
+        for row, row_layout, type_label, value_label in self._type_prompt_rows:
+            row_layout.setContentsMargins(0, 0, 0, 0)
+            type_label.setFixedWidth(label_width)
+            value_width = max(1, width - label_width - row_layout.spacing())
+            row.setMinimumHeight(max(type_label.sizeHint().height(), value_label.heightForWidth(value_width)))
         self._types_container.updateGeometry()
 
     def _supported_type_layout_objects_are_valid(self) -> bool:

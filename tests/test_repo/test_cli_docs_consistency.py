@@ -35,7 +35,8 @@ def test_cli_docs_describe_the_current_public_commands() -> None:
         "`doctor`",
     ):
         assert token in cli
-    assert "`convert FILE --to FORMAT --output PATH`" in row
+    assert "convert FILE --to FORMAT (--output-dir DIR" in row
+    assert "--output PATH)" in row
     assert "`run` 命令" not in row
 
 

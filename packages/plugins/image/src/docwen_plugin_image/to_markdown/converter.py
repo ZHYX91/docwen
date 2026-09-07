@@ -301,7 +301,7 @@ class ImageToMarkdownConverter:
         image_mode = str(
             _option_or_config(options, "image_mode", context, "image.to_md_image_extraction_mode", "file") or "file"
         )
-        ocr_language = str(_option_or_config(options, "ocr_language", context, "image.ocr_language", "auto") or "auto")
+        ocr_language = str(_option_or_config(options, "ocr_language", context, "ocr.language", "auto") or "auto")
         current_locale = str(options.get("locale") or "zh_CN")
 
         context.cancellation.check()

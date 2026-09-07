@@ -11,16 +11,16 @@ def test_priority_lists_align_and_fit_their_rows_without_unused_space(qapp) -> N
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
     from docwen_gui.widgets.settings.priority_editor import SoftwarePriorityEditor
-    from docwen_gui.widgets.settings.spreadsheet_tab import SpreadsheetTab
+    from docwen_gui.widgets.settings.software_tab import SoftwareTab
 
-    tab = SpreadsheetTab(SettingsViewModel(config=SettingsConfig()))
+    tab = SoftwareTab(SettingsViewModel(config=SettingsConfig()))
     tab.resize(600, 900)
     tab.show()
     try:
         for _ in range(12):
             qapp.processEvents()
         editors = tab.findChildren(SoftwarePriorityEditor)
-        assert len(editors) == 3
+        assert len(editors) == 8
         lists = [editor.list_widget for editor in editors]
         assert len({widget.mapTo(tab, QPoint()).x() for widget in lists}) == 1
         assert len({widget.width() for widget in lists}) == 1
@@ -43,14 +43,14 @@ def test_priority_lists_align_and_fit_their_rows_without_unused_space(qapp) -> N
 def test_document_software_priority_buttons_write_back(qapp) -> None:
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
-    from docwen_gui.widgets.settings.document_tab import DocumentTab
+    from docwen_gui.widgets.settings.software_tab import SoftwareTab
 
     vm = SettingsViewModel(config=SettingsConfig())
-    tab = DocumentTab(vm)
+    tab = SoftwareTab(vm)
 
-    priority_list = tab._priority_lists["word_processors"]  # pyright: ignore[reportPrivateUsage]
-    move_up = tab._move_up_btns["word_processors"]  # pyright: ignore[reportPrivateUsage]
-    move_down = tab._move_down_btns["word_processors"]  # pyright: ignore[reportPrivateUsage]
+    priority_list = tab._editors["word_processors"].list_widget  # pyright: ignore[reportPrivateUsage]
+    move_up = tab._editors["word_processors"].move_up_button  # pyright: ignore[reportPrivateUsage]
+    move_down = tab._editors["word_processors"].move_down_button  # pyright: ignore[reportPrivateUsage]
 
     assert priority_list.currentRow() == 0
     assert move_up.isEnabled() is False
@@ -65,13 +65,13 @@ def test_document_software_priority_buttons_write_back(qapp) -> None:
 def test_document_to_pdf_priority_buttons_write_back(qapp) -> None:
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
-    from docwen_gui.widgets.settings.document_tab import DocumentTab
+    from docwen_gui.widgets.settings.software_tab import SoftwareTab
 
     vm = SettingsViewModel(config=SettingsConfig())
-    tab = DocumentTab(vm)
+    tab = SoftwareTab(vm)
 
-    priority_list = tab._priority_lists["document_to_pdf"]  # pyright: ignore[reportPrivateUsage]
-    move_down = tab._move_down_btns["document_to_pdf"]  # pyright: ignore[reportPrivateUsage]
+    priority_list = tab._editors["document_to_pdf"].list_widget  # pyright: ignore[reportPrivateUsage]
+    move_down = tab._editors["document_to_pdf"].move_down_button  # pyright: ignore[reportPrivateUsage]
 
     move_down.click()
 
@@ -82,14 +82,14 @@ def test_document_to_pdf_priority_buttons_write_back(qapp) -> None:
 def test_layout_software_priority_buttons_write_back(qapp) -> None:
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
-    from docwen_gui.widgets.settings.layout_tab import LayoutTab
+    from docwen_gui.widgets.settings.software_tab import SoftwareTab
 
     vm = SettingsViewModel(config=SettingsConfig())
-    tab = LayoutTab(vm)
+    tab = SoftwareTab(vm)
 
-    priority_list = tab._priority_list  # pyright: ignore[reportPrivateUsage]
-    move_up = tab._move_up_btn  # pyright: ignore[reportPrivateUsage]
-    move_down = tab._move_down_btn  # pyright: ignore[reportPrivateUsage]
+    priority_list = tab._editors["pdf_to_office"].list_widget  # pyright: ignore[reportPrivateUsage]
+    move_up = tab._editors["pdf_to_office"].move_up_button  # pyright: ignore[reportPrivateUsage]
+    move_down = tab._editors["pdf_to_office"].move_down_button  # pyright: ignore[reportPrivateUsage]
 
     assert priority_list.currentRow() == 0
     assert move_up.isEnabled() is False
@@ -104,7 +104,7 @@ def test_layout_software_priority_buttons_write_back(qapp) -> None:
 def test_layout_pdf_to_office_priority_filters_wps_and_unknown_backends(qapp) -> None:
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
-    from docwen_gui.widgets.settings.layout_tab import LayoutTab
+    from docwen_gui.widgets.settings.software_tab import SoftwareTab
 
     config = SettingsConfig()
     config.software_priority.pdf_to_office = [
@@ -118,8 +118,8 @@ def test_layout_pdf_to_office_priority_filters_wps_and_unknown_backends(qapp) ->
 
     assert vm.config.software_priority.pdf_to_office == ["libreoffice", "msoffice_word"]
 
-    tab = LayoutTab(vm)
-    priority_list = tab._priority_list  # pyright: ignore[reportPrivateUsage]
+    tab = SoftwareTab(vm)
+    priority_list = tab._editors["pdf_to_office"].list_widget  # pyright: ignore[reportPrivateUsage]
     priority_ids = [priority_list.item(index).data(0x0100) for index in range(priority_list.count())]
 
     assert priority_ids == ["libreoffice", "msoffice_word"]
@@ -134,14 +134,14 @@ def test_layout_pdf_to_office_priority_filters_wps_and_unknown_backends(qapp) ->
 def test_spreadsheet_software_priority_buttons_write_back(qapp) -> None:
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
-    from docwen_gui.widgets.settings.spreadsheet_tab import SpreadsheetTab
+    from docwen_gui.widgets.settings.software_tab import SoftwareTab
 
     vm = SettingsViewModel(config=SettingsConfig())
-    tab = SpreadsheetTab(vm)
+    tab = SoftwareTab(vm)
 
-    priority_list = tab._priority_lists["spreadsheet_processors"]  # pyright: ignore[reportPrivateUsage]
-    move_up = tab._move_up_btns["spreadsheet_processors"]  # pyright: ignore[reportPrivateUsage]
-    move_down = tab._move_down_btns["spreadsheet_processors"]  # pyright: ignore[reportPrivateUsage]
+    priority_list = tab._editors["spreadsheet_processors"].list_widget  # pyright: ignore[reportPrivateUsage]
+    move_up = tab._editors["spreadsheet_processors"].move_up_button  # pyright: ignore[reportPrivateUsage]
+    move_down = tab._editors["spreadsheet_processors"].move_down_button  # pyright: ignore[reportPrivateUsage]
 
     assert priority_list.currentRow() == 0
     assert move_up.isEnabled() is False
@@ -160,13 +160,13 @@ def test_spreadsheet_software_priority_buttons_write_back(qapp) -> None:
 def test_spreadsheet_to_pdf_priority_buttons_write_back(qapp) -> None:
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
-    from docwen_gui.widgets.settings.spreadsheet_tab import SpreadsheetTab
+    from docwen_gui.widgets.settings.software_tab import SoftwareTab
 
     vm = SettingsViewModel(config=SettingsConfig())
-    tab = SpreadsheetTab(vm)
+    tab = SoftwareTab(vm)
 
-    priority_list = tab._priority_lists["spreadsheet_to_pdf"]  # pyright: ignore[reportPrivateUsage]
-    move_down = tab._move_down_btns["spreadsheet_to_pdf"]  # pyright: ignore[reportPrivateUsage]
+    priority_list = tab._editors["spreadsheet_to_pdf"].list_widget  # pyright: ignore[reportPrivateUsage]
+    move_down = tab._editors["spreadsheet_to_pdf"].move_down_button  # pyright: ignore[reportPrivateUsage]
 
     move_down.click()
 
@@ -181,7 +181,7 @@ def test_spreadsheet_to_pdf_priority_buttons_write_back(qapp) -> None:
 def test_spreadsheet_ods_priority_filters_wps_and_unknown_backends(qapp) -> None:
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
-    from docwen_gui.widgets.settings.spreadsheet_tab import SpreadsheetTab
+    from docwen_gui.widgets.settings.software_tab import SoftwareTab
 
     config = SettingsConfig()
     config.software_priority.ods_conversion = [
@@ -195,8 +195,8 @@ def test_spreadsheet_ods_priority_filters_wps_and_unknown_backends(qapp) -> None
 
     assert vm.config.software_priority.ods_conversion == ["libreoffice", "msoffice_excel"]
 
-    tab = SpreadsheetTab(vm)
-    priority_list = tab._priority_lists["ods"]  # pyright: ignore[reportPrivateUsage]
+    tab = SoftwareTab(vm)
+    priority_list = tab._editors["ods_conversion"].list_widget  # pyright: ignore[reportPrivateUsage]
     priority_ids = [priority_list.item(index).data(0x0100) for index in range(priority_list.count())]
 
     assert priority_ids == ["libreoffice", "msoffice_excel"]

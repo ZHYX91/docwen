@@ -1,31 +1,16 @@
-"""Formatting settings tab — DOCX<->MD format/separator/syntax choices."""
+"""Markdown syntax settings — extensions, syntax and separator mappings."""
 
 from __future__ import annotations
 
 from typing import cast as _cast
 
-from PySide6.QtWidgets import QCheckBox, QComboBox, QLineEdit, QPushButton
+from PySide6.QtWidgets import QCheckBox, QComboBox, QPushButton
 
 from docwen_core.markdown_extensions import EXTENSION_NAMES
 
 from ...i18n import t
 from ...view_models.settings_vm import SECTION_FORMATTING, SettingsViewModel
 from .base_tab import BaseSettingsTab
-
-
-def _fmt_options() -> list[tuple[str, str]]:
-    return [
-        (t("settings.formatting.options.preserve_format", "Preserve Formatting"), "preserve"),
-        (t("settings.formatting.options.discard_format", "Discard Formatting"), "discard"),
-    ]
-
-
-def _md_fmt_options() -> list[tuple[str, str]]:
-    return [
-        (t("settings.formatting.options.apply_format", "Apply Formatting"), "apply"),
-        (t("settings.formatting.options.keep_markup", "Keep Markup"), "keep"),
-        (t("settings.formatting.options.clean_markup", "Remove Markup"), "remove"),
-    ]
 
 
 def _sep_options() -> list[tuple[str, str]]:
@@ -84,28 +69,6 @@ def _syntax_indent_options() -> list[tuple[str, int]]:
     ]
 
 
-def _heading_merge_options() -> list[tuple[str, str]]:
-    return [
-        (t("settings.formatting.options.heading_merge_punct_required", "Punctuation Required"), "punct_required"),
-        (t("settings.formatting.options.heading_merge_always", "Always Merge"), "always"),
-        (t("settings.formatting.options.heading_merge_never", "Never Merge"), "never"),
-    ]
-
-
-def _table_style_mode_options() -> list[tuple[str, str]]:
-    return [
-        (t("settings.formatting.builtin_style_radio", "Use built-in style"), "builtin"),
-        (t("settings.formatting.custom_style_radio", "Use custom style name"), "custom"),
-    ]
-
-
-def _builtin_table_style_options() -> list[tuple[str, str]]:
-    return [
-        (t("settings.formatting.table_styles.three_line_table", "Three-line Table"), "three_line_table"),
-        (t("settings.formatting.table_styles.table_grid", "Table Grid"), "table_grid"),
-    ]
-
-
 class FormattingTab(BaseSettingsTab):
     """Formatting settings tab backed by typed draft state."""
 
@@ -113,9 +76,6 @@ class FormattingTab(BaseSettingsTab):
         self._vm = view_model
         self._extension_checks: dict[tuple[str, str], QCheckBox] = {}
         # All combo refs — initialized in _create_interface()
-        self._body_format: QComboBox = _cast(QComboBox, None)
-        self._heading_format: QComboBox = _cast(QComboBox, None)
-        self._table_header_format: QComboBox = _cast(QComboBox, None)
         self._page_break: QComboBox = _cast(QComboBox, None)
         self._section_break: QComboBox = _cast(QComboBox, None)
         self._horizontal_rule: QComboBox = _cast(QComboBox, None)
@@ -127,15 +87,6 @@ class FormattingTab(BaseSettingsTab):
         self._sub_syntax: QComboBox = _cast(QComboBox, None)
         self._ul_syntax: QComboBox = _cast(QComboBox, None)
         self._indent_spaces: QComboBox = _cast(QComboBox, None)
-        self._md_body_format: QComboBox = _cast(QComboBox, None)
-        self._md_heading_format: QComboBox = _cast(QComboBox, None)
-        self._md_table_header_format: QComboBox = _cast(QComboBox, None)
-        self._heading_merge_mode: QComboBox = _cast(QComboBox, None)
-        self._heading_merge_punctuation: QLineEdit = _cast(QLineEdit, None)
-        self._list_separator: QLineEdit = _cast(QLineEdit, None)
-        self._table_style_mode: QComboBox = _cast(QComboBox, None)
-        self._builtin_table_style: QComboBox = _cast(QComboBox, None)
-        self._custom_table_style_name: QLineEdit = _cast(QLineEdit, None)
         self._dash_sep: QComboBox = _cast(QComboBox, None)
         self._asterisk_sep: QComboBox = _cast(QComboBox, None)
         self._underscore_sep: QComboBox = _cast(QComboBox, None)
@@ -165,33 +116,6 @@ class FormattingTab(BaseSettingsTab):
             preset.setObjectName(f"markdownExtensions{direction.title()}Preset")
             preset.clicked.connect(lambda _checked=False, selected=direction: self._apply_extension_preset(selected))
             form.addRow(preset)
-        # ── DOCX → MD: Format Processing ────────────────────────────────
-        _c1, f1 = self.add_settings_card(
-            f"{t('settings.formatting.docx_to_md_section', 'DOCX to MD')} — {t('settings.formatting.format_processing', 'Format Processing')}",
-            t(
-                "settings.formatting.format_processing_tooltip",
-                "How to handle formatting when converting from DOCX to Markdown.",
-            ),
-            object_name="formattingDocxProcessingCard",
-        )
-        self._body_format = self.create_combobox(
-            _fmt_options(), t("settings.formatting.body_format_tooltip", "How to handle body text formatting")
-        )
-        self.add_form_row(f1, t("settings.formatting.body_format_label", "Body Text Format:"), self._body_format)
-
-        self._heading_format = self.create_combobox(
-            _fmt_options(), t("settings.formatting.heading_format_tooltip", "How to handle heading formatting")
-        )
-        self.add_form_row(f1, t("settings.formatting.heading_format_label", "Heading Format:"), self._heading_format)
-
-        self._table_header_format = self.create_combobox(
-            _fmt_options(),
-            t("settings.formatting.table_header_format_tooltip", "How to handle table header formatting"),
-        )
-        self.add_form_row(
-            f1, t("settings.formatting.table_header_format_label", "Table Header Format:"), self._table_header_format
-        )
-
         # ── DOCX → MD: Separator Mapping ───────────────────────────────
         _c2, f2 = self.add_settings_card(
             f"{t('settings.formatting.docx_to_md_section', 'DOCX to MD')} — {t('settings.formatting.separator_mapping', 'Separator Mapping')}",
@@ -257,102 +181,6 @@ class FormattingTab(BaseSettingsTab):
         )
         self.add_form_row(f3, t("settings.formatting.indent_spaces_label", "Indent:"), self._indent_spaces)
 
-        # ── MD → DOCX: Format Processing ───────────────────────────────
-        _c4, f4 = self.add_settings_card(
-            f"{t('settings.formatting.md_to_docx_section', 'MD to DOCX')} — {t('settings.formatting.md_format_processing', 'Format Processing')}",
-            t(
-                "settings.formatting.md_format_processing_tooltip",
-                "How to handle formatting when converting from MD to DOCX.",
-            ),
-            object_name="formattingMdProcessingCard",
-        )
-        self._md_body_format = self.create_combobox(
-            _md_fmt_options(), t("settings.formatting.md_body_format_tooltip", "Body format markup handling")
-        )
-        self.add_form_row(f4, t("settings.formatting.md_body_format_label", "Body Text Format:"), self._md_body_format)
-        self._md_heading_format = self.create_combobox(
-            _md_fmt_options(), t("settings.formatting.md_heading_format_tooltip", "Heading format markup handling")
-        )
-        self.add_form_row(
-            f4, t("settings.formatting.md_heading_format_label", "Heading Format:"), self._md_heading_format
-        )
-        self._md_table_header_format = self.create_combobox(
-            _md_fmt_options(),
-            t("settings.formatting.md_table_header_format_tooltip", "Table header format markup handling"),
-        )
-        self.add_form_row(
-            f4,
-            t("settings.formatting.md_table_header_format_label", "Table Header Format:"),
-            self._md_table_header_format,
-        )
-        self._heading_merge_mode = self.create_combobox(
-            _heading_merge_options(), t("settings.formatting.heading_merge_mode_tooltip", "Heading merge mode")
-        )
-        self.add_form_row(
-            f4, t("settings.formatting.heading_merge_mode_label", "Heading Merge Mode:"), self._heading_merge_mode
-        )
-        self._heading_merge_punctuation = QLineEdit(self)
-        self._heading_merge_punctuation.setToolTip(
-            t(
-                "settings.formatting.heading_merge_punctuation_tooltip",
-                "Characters that trigger heading/body merging when punctuation is required. Empty disables punctuation-triggered merging.",
-            )
-        )
-        self.add_form_row(
-            f4,
-            t("settings.formatting.heading_merge_punctuation_label", "Merge punctuation:"),
-            self._heading_merge_punctuation,
-        )
-        self._list_separator = QLineEdit(self)
-        self._list_separator.setToolTip(
-            t(
-                "settings.formatting.list_separator_tooltip",
-                "Separator used when joining YAML list values into a string.",
-            )
-        )
-        self.add_form_row(
-            f4,
-            t("settings.formatting.list_separator_label", "YAML List Separator") + ":",
-            self._list_separator,
-        )
-
-        # ── MD → DOCX: Table Style ────────────────────────────────────
-        _c_table, f_table = self.add_settings_card(
-            f"{t('settings.formatting.md_to_docx_section', 'MD to DOCX')} — {t('settings.formatting.table_style', 'Table Style')}",
-            t(
-                "settings.formatting.table_style_tooltip",
-                "Choose the Word table style used for Markdown tables.",
-            ),
-            object_name="formattingMdTableStyleCard",
-        )
-        self._table_style_mode = self.create_combobox(
-            _table_style_mode_options(),
-            t("settings.formatting.table_style_tooltip", "Use a built-in table style or a custom style name."),
-        )
-        self.add_form_row(
-            f_table,
-            t("settings.formatting.table_style", "Table Style") + ":",
-            self._table_style_mode,
-        )
-        self._builtin_table_style = self.create_combobox(
-            _builtin_table_style_options(),
-            t("settings.formatting.table_style_tooltip", "Built-in table style for Markdown tables."),
-        )
-        self.add_form_row(
-            f_table,
-            t("settings.formatting.builtin_style_radio", "Use built-in style") + ":",
-            self._builtin_table_style,
-        )
-        self._custom_table_style_name = QLineEdit(self)
-        self._custom_table_style_name.setToolTip(
-            t("settings.formatting.table_style_tooltip", "Custom Word table style name.")
-        )
-        self.add_form_row(
-            f_table,
-            t("settings.formatting.custom_style_radio", "Use custom style name") + ":",
-            self._custom_table_style_name,
-        )
-
         # ── MD → DOCX: Separator Mapping ───────────────────────────────
         _c5, f5 = self.add_settings_card(
             f"{t('settings.formatting.md_to_docx_section', 'MD to DOCX')} — {t('settings.formatting.md_separator_mapping', 'Separator Mapping')}",
@@ -373,9 +201,6 @@ class FormattingTab(BaseSettingsTab):
         self.add_form_row(f5, t("settings.formatting.underscore_label", "Underscore (___):"), self._underscore_sep)
 
         # Wire all combos
-        self._wire_combo(self._body_format, "body_format")
-        self._wire_combo(self._heading_format, "heading_format")
-        self._wire_combo(self._table_header_format, "table_header_format")
         self._wire_combo(self._page_break, "page_break_sep")
         self._wire_combo(self._section_break, "section_break_sep")
         self._wire_combo(self._horizontal_rule, "horizontal_rule_sep")
@@ -387,25 +212,6 @@ class FormattingTab(BaseSettingsTab):
         self._wire_combo(self._sub_syntax, "subscript_syntax")
         self._wire_combo(self._ul_syntax, "unordered_list_syntax")
         self._wire_combo(self._indent_spaces, "indent_spaces")
-        self._wire_combo(self._md_body_format, "md_body_format")
-        self._wire_combo(self._md_heading_format, "md_heading_format")
-        self._wire_combo(self._md_table_header_format, "md_table_header_format")
-        self._wire_combo(self._heading_merge_mode, "heading_merge_mode")
-        self._heading_merge_mode.currentIndexChanged.connect(
-            lambda _idx: self._sync_heading_merge_punctuation_control()
-        )
-        self._heading_merge_punctuation.textChanged.connect(
-            lambda text: self._vm.set_field(SECTION_FORMATTING, "heading_merge_punctuation", text)
-        )
-        self._list_separator.textChanged.connect(
-            lambda text: self._vm.set_field(SECTION_FORMATTING, "list_separator", text)
-        )
-        self._wire_combo(self._table_style_mode, "table_style_mode")
-        self._wire_combo(self._builtin_table_style, "builtin_table_style")
-        self._table_style_mode.currentIndexChanged.connect(lambda _idx: self._sync_table_style_controls())
-        self._custom_table_style_name.textChanged.connect(
-            lambda text: self._vm.set_field(SECTION_FORMATTING, "custom_table_style_name", text.strip())
-        )
         self._wire_combo(self._dash_sep, "dash_sep")
         self._wire_combo(self._asterisk_sep, "asterisk_sep")
         self._wire_combo(self._underscore_sep, "underscore_sep")
@@ -436,9 +242,6 @@ class FormattingTab(BaseSettingsTab):
             checkbox.blockSignals(True)
             checkbox.setChecked(fmt.markdown_extensions[direction][name])
             checkbox.blockSignals(False)
-        self.set_combo_data(self._body_format, fmt.body_format)
-        self.set_combo_data(self._heading_format, fmt.heading_format)
-        self.set_combo_data(self._table_header_format, fmt.table_header_format)
         self.set_combo_data(self._page_break, fmt.page_break_sep)
         self.set_combo_data(self._section_break, fmt.section_break_sep)
         self.set_combo_data(self._horizontal_rule, fmt.horizontal_rule_sep)
@@ -450,28 +253,9 @@ class FormattingTab(BaseSettingsTab):
         self.set_combo_data(self._sub_syntax, fmt.subscript_syntax)
         self.set_combo_data(self._ul_syntax, fmt.unordered_list_syntax)
         self.set_combo_data(self._indent_spaces, fmt.indent_spaces)
-        self.set_combo_data(self._md_body_format, fmt.md_body_format)
-        self.set_combo_data(self._md_heading_format, fmt.md_heading_format)
-        self.set_combo_data(self._md_table_header_format, fmt.md_table_header_format)
-        self.set_combo_data(self._heading_merge_mode, fmt.heading_merge_mode)
-        self._heading_merge_punctuation.setText(fmt.heading_merge_punctuation)
-        self._sync_heading_merge_punctuation_control()
-        self._list_separator.setText(fmt.list_separator)
-        self.set_combo_data(self._table_style_mode, fmt.table_style_mode)
-        self.set_combo_data(self._builtin_table_style, fmt.builtin_table_style)
-        self._custom_table_style_name.setText(fmt.custom_table_style_name)
-        self._sync_table_style_controls()
         self.set_combo_data(self._dash_sep, fmt.dash_sep)
         self.set_combo_data(self._asterisk_sep, fmt.asterisk_sep)
         self.set_combo_data(self._underscore_sep, fmt.underscore_sep)
 
     def reload_from_config(self) -> None:
         self._load_values()
-
-    def _sync_table_style_controls(self) -> None:
-        use_builtin = self.get_combo_data(self._table_style_mode) == "builtin"
-        self._builtin_table_style.setEnabled(use_builtin)
-        self._custom_table_style_name.setEnabled(not use_builtin)
-
-    def _sync_heading_merge_punctuation_control(self) -> None:
-        self._heading_merge_punctuation.setEnabled(self.get_combo_data(self._heading_merge_mode) == "punct_required")

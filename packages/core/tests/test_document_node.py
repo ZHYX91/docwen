@@ -56,3 +56,11 @@ def test_naive_conversion_time_is_rejected() -> None:
             source_format="docx",
             created_at=datetime(2026, 8, 20, 21, 45),
         )
+
+
+def test_long_unicode_identity_preserves_suffix_and_portable_component_budget() -> None:
+    identity = ConversionIdentity.create(task_id="long", source_stem="很长的中文标题" * 40, source_format="markdown")
+    name = identity.node_name()
+    assert name.endswith(f"_{identity.timestamp}_fromMd")
+    assert len(name.encode("utf-8")) <= 220
+    DocumentNodePath(name)

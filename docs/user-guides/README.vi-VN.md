@@ -211,6 +211,8 @@ Ngoài giao diện đồ họa, DocWen còn cung cấp giao diện dòng lệnh 
 
 ### Ví dụ thường dùng
 
+Chuyển đổi từ hoặc sang Markdown tạo thư mục kết quả bên trong `--output-dir DIR`, kể cả khi chỉ có một tệp. Tên gồm tên nguồn, dấu thời gian và định dạng đầu vào hiện tại. Chỉ dùng `--output PATH` cho các chuyển đổi khác tạo đúng một tệp đích.
+
 ```bash
 # Bản đóng gói Windows
 DocWenCLI.exe inspect document.docx --json
@@ -219,16 +221,16 @@ DocWenCLI.exe inspect document.docx --json
 DocWenCLI.exe schema convert
 
 # Xem trước cách chuyển đổi sẽ chạy mà không ghi kết quả
-DocWenCLI.exe convert report.docx --to md --output report.md --extract-img --ocr --dry-run --json
+DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --ocr --dry-run --json
 
 # Xuất Word sang Markdown (trích ảnh + OCR)
-DocWenCLI.exe convert report.docx --to md --output report.md --extract-img --ocr
+DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --ocr
 
 # Markdown sang Word (mẫu + chế độ gộp tiêu đề/nội dung)
-DocWenCLI.exe convert document.md --to docx --output document.docx --template template.docx.da28ee624892975bc590fd419880875136f22e0edcd878bca69472e81297c0bc --heading-merge-mode punct_required
+DocWenCLI.exe convert document.md --to docx --output-dir exports --template template.docx.da28ee624892975bc590fd419880875136f22e0edcd878bca69472e81297c0bc --heading-merge-mode punct_required
 
 # Điều khiển chế độ ảnh và vị trí văn bản OCR trong Markdown
-DocWenCLI.exe convert report.docx --to md --output report.md --extract-img --image-mode file --ocr --ocr-placement image_md
+DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --image-mode file --ocr --ocr-placement image_md
 
 # Kiểm tra khả năng chạy và cổng phụ thuộc
 DocWenCLI.exe doctor --json
@@ -242,8 +244,8 @@ DocWenCLI.exe validate input.md --check typo --check punct
 # inspect -> schema -> dry-run -> convert
 # docwen inspect document.docx --json
 # docwen schema convert
-# docwen convert document.docx --to md --output document.md --dry-run --json
-# docwen convert document.docx --to md --output document.md
+# docwen convert document.docx --to md --output-dir exports --dry-run --json
+# docwen convert document.docx --to md --output-dir exports
 ```
 
 ### Lệnh và tùy chọn thông dụng

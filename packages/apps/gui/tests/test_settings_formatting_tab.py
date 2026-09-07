@@ -16,47 +16,54 @@ def _combo_texts(combo) -> list[str]:
 def test_formatting_tab_updates_combo_fields_including_indent(qapp) -> None:
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
+    from docwen_gui.widgets.settings.document_tab import DocumentTab
     from docwen_gui.widgets.settings.formatting_tab import FormattingTab
+    from docwen_gui.widgets.settings.text_tab import TextTab
 
     vm = SettingsViewModel(config=SettingsConfig())
     tab = FormattingTab(vm)
+    text_tab = TextTab(vm)
+    document_tab = DocumentTab(vm)
+    text = text_tab._content_controls
+    document = document_tab._content_controls
 
-    assert _combo_values(tab._body_format) == ["preserve", "discard"]  # pyright: ignore[reportPrivateUsage]
+    assert _combo_values(document._body_format) == ["preserve", "discard"]  # pyright: ignore[reportPrivateUsage]
     assert _combo_values(tab._indent_spaces) == [2, 4]  # pyright: ignore[reportPrivateUsage]
-    assert _combo_values(tab._heading_merge_mode) == ["punct_required", "always", "never"]  # pyright: ignore[reportPrivateUsage]
-    assert _combo_values(tab._table_style_mode) == ["builtin", "custom"]  # pyright: ignore[reportPrivateUsage]
-    assert _combo_values(tab._builtin_table_style) == ["three_line_table", "table_grid"]  # pyright: ignore[reportPrivateUsage]
+    assert _combo_values(text._heading_merge_mode) == ["punct_required", "always", "never"]  # pyright: ignore[reportPrivateUsage]
+    assert _combo_values(text._table_style_mode) == ["builtin", "custom"]  # pyright: ignore[reportPrivateUsage]
+    assert _combo_values(text._builtin_table_style) == ["three_line_table", "table_grid"]  # pyright: ignore[reportPrivateUsage]
 
-    tab.set_combo_data(tab._body_format, "discard")  # pyright: ignore[reportPrivateUsage]
+    tab.set_combo_data(document._body_format, "discard")  # pyright: ignore[reportPrivateUsage]
     tab.set_combo_data(tab._indent_spaces, 2)  # pyright: ignore[reportPrivateUsage]
-    tab.set_combo_data(tab._heading_merge_mode, "always")  # pyright: ignore[reportPrivateUsage]
-    tab.set_combo_data(tab._table_style_mode, "custom")  # pyright: ignore[reportPrivateUsage]
-    tab._custom_table_style_name.setText("My Table")  # pyright: ignore[reportPrivateUsage]
+    tab.set_combo_data(text._heading_merge_mode, "always")  # pyright: ignore[reportPrivateUsage]
+    tab.set_combo_data(text._table_style_mode, "custom")  # pyright: ignore[reportPrivateUsage]
+    text._custom_table_style_name.setText("My Table")  # pyright: ignore[reportPrivateUsage]
 
-    assert vm.config.formatting.body_format == "discard"
+    assert vm.config.document.body_format == "discard"
     assert vm.config.formatting.indent_spaces == 2
-    assert vm.config.formatting.heading_merge_mode == "always"
-    assert vm.config.formatting.table_style_mode == "custom"
-    assert vm.config.formatting.custom_table_style_name == "My Table"
-    assert tab._builtin_table_style.isEnabled() is False  # pyright: ignore[reportPrivateUsage]
-    assert tab._custom_table_style_name.isEnabled() is True  # pyright: ignore[reportPrivateUsage]
+    assert vm.config.text.heading_merge_mode == "always"
+    assert vm.config.text.table_style_mode == "custom"
+    assert vm.config.text.custom_table_style_name == "My Table"
+    assert text._builtin_table_style.isEnabled() is False  # pyright: ignore[reportPrivateUsage]
+    assert text._custom_table_style_name.isEnabled() is True  # pyright: ignore[reportPrivateUsage]
 
 
 def test_formatting_tab_preserves_yaml_list_separator_exactly(qapp) -> None:
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
-    from docwen_gui.widgets.settings.formatting_tab import FormattingTab
+    from docwen_gui.widgets.settings.text_tab import TextTab
 
     vm = SettingsViewModel(config=SettingsConfig())
-    tab = FormattingTab(vm)
+    text_tab = TextTab(vm)
+    text = text_tab._content_controls
 
-    assert tab._list_separator.text() == "、"  # pyright: ignore[reportPrivateUsage]
+    assert text._list_separator.text() == "、"  # pyright: ignore[reportPrivateUsage]
 
-    tab._list_separator.setText(", ")  # pyright: ignore[reportPrivateUsage]
-    assert vm.config.formatting.list_separator == ", "
+    text._list_separator.setText(", ")  # pyright: ignore[reportPrivateUsage]
+    assert vm.config.text.list_separator == ", "
 
-    tab._list_separator.setText("")  # pyright: ignore[reportPrivateUsage]
-    assert vm.config.formatting.list_separator == ""
+    text._list_separator.setText("")  # pyright: ignore[reportPrivateUsage]
+    assert vm.config.text.list_separator == ""
 
 
 def test_formatting_tab_heading_merge_punctuation_is_exact_and_mode_dependent(qapp) -> None:
@@ -67,47 +74,52 @@ def test_formatting_tab_heading_merge_punctuation_is_exact_and_mode_dependent(qa
     )
     from docwen_gui.view_models.settings_vm import SettingsViewModel
     from docwen_gui.widgets.settings.formatting_tab import FormattingTab
+    from docwen_gui.widgets.settings.text_tab import TextTab
 
     vm = SettingsViewModel(config=SettingsConfig(formatting=FormattingConfig()))
     tab = FormattingTab(vm)
+    text_tab = TextTab(vm)
+    text = text_tab._content_controls
 
     assert DEFAULT_HEADING_MERGE_PUNCTUATION == "。：！？.:!?"
-    assert tab._heading_merge_punctuation.text() == DEFAULT_HEADING_MERGE_PUNCTUATION  # pyright: ignore[reportPrivateUsage]
-    assert tab._heading_merge_punctuation.isEnabled() is True  # pyright: ignore[reportPrivateUsage]
+    assert text._heading_merge_punctuation.text() == DEFAULT_HEADING_MERGE_PUNCTUATION  # pyright: ignore[reportPrivateUsage]
+    assert text._heading_merge_punctuation.isEnabled() is True  # pyright: ignore[reportPrivateUsage]
 
-    tab._heading_merge_punctuation.setText("")  # pyright: ignore[reportPrivateUsage]
-    assert vm.config.formatting.heading_merge_punctuation == ""
+    text._heading_merge_punctuation.setText("")  # pyright: ignore[reportPrivateUsage]
+    assert vm.config.text.heading_merge_punctuation == ""
 
-    tab.set_combo_data(tab._heading_merge_mode, "always")  # pyright: ignore[reportPrivateUsage]
-    assert tab._heading_merge_punctuation.isEnabled() is False  # pyright: ignore[reportPrivateUsage]
-    assert vm.config.formatting.heading_merge_punctuation == ""
+    tab.set_combo_data(text._heading_merge_mode, "always")  # pyright: ignore[reportPrivateUsage]
+    assert text._heading_merge_punctuation.isEnabled() is False  # pyright: ignore[reportPrivateUsage]
+    assert vm.config.text.heading_merge_punctuation == ""
 
-    tab.set_combo_data(tab._heading_merge_mode, "punct_required")  # pyright: ignore[reportPrivateUsage]
-    assert tab._heading_merge_punctuation.isEnabled() is True  # pyright: ignore[reportPrivateUsage]
-    assert tab._heading_merge_punctuation.text() == ""  # pyright: ignore[reportPrivateUsage]
+    tab.set_combo_data(text._heading_merge_mode, "punct_required")  # pyright: ignore[reportPrivateUsage]
+    assert text._heading_merge_punctuation.isEnabled() is True  # pyright: ignore[reportPrivateUsage]
+    assert text._heading_merge_punctuation.text() == ""  # pyright: ignore[reportPrivateUsage]
 
 
 def test_formatting_tab_table_style_controls_use_existing_locale_keys(qapp) -> None:
     from docwen_gui.i18n import get_locale, set_locale, t
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
-    from docwen_gui.widgets.settings.formatting_tab import FormattingTab
+    from docwen_gui.widgets.settings.text_tab import TextTab
 
     previous_locale = get_locale()
     set_locale("zh_CN")
     try:
-        tab = FormattingTab(SettingsViewModel(config=SettingsConfig()))
+        vm = SettingsViewModel(config=SettingsConfig())
+        text_tab = TextTab(vm)
+        text = text_tab._content_controls
 
-        assert _combo_texts(tab._table_style_mode) == [  # pyright: ignore[reportPrivateUsage]
+        assert _combo_texts(text._table_style_mode) == [  # pyright: ignore[reportPrivateUsage]
             t("settings.formatting.builtin_style_radio"),
             t("settings.formatting.custom_style_radio"),
         ]
-        assert _combo_texts(tab._builtin_table_style) == [  # pyright: ignore[reportPrivateUsage]
+        assert _combo_texts(text._builtin_table_style) == [  # pyright: ignore[reportPrivateUsage]
             t("settings.formatting.table_styles.three_line_table"),
             t("settings.formatting.table_styles.table_grid"),
         ]
-        assert tab._table_style_mode.toolTip() == t("settings.formatting.table_style_tooltip")  # pyright: ignore[reportPrivateUsage]
-        assert tab._custom_table_style_name.toolTip() == t("settings.formatting.table_style_tooltip")  # pyright: ignore[reportPrivateUsage]
+        assert text._table_style_mode.toolTip() == t("settings.formatting.table_style_tooltip")  # pyright: ignore[reportPrivateUsage]
+        assert text._custom_table_style_name.toolTip() == t("settings.formatting.table_style_tooltip")  # pyright: ignore[reportPrivateUsage]
     finally:
         set_locale(previous_locale)
 
@@ -115,10 +127,16 @@ def test_formatting_tab_table_style_controls_use_existing_locale_keys(qapp) -> N
 def test_formatting_tab_user_edits_update_all_view_model_fields(qapp) -> None:
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
+    from docwen_gui.widgets.settings.document_tab import DocumentTab
     from docwen_gui.widgets.settings.formatting_tab import FormattingTab
+    from docwen_gui.widgets.settings.text_tab import TextTab
 
     vm = SettingsViewModel(config=SettingsConfig())
     tab = FormattingTab(vm)
+    text_tab = TextTab(vm)
+    document_tab = DocumentTab(vm)
+    text = text_tab._content_controls
+    document = document_tab._content_controls
 
     cases = [
         ("_body_format", "body_format", "discard"),
@@ -147,15 +165,38 @@ def test_formatting_tab_user_edits_update_all_view_model_fields(qapp) -> None:
     ]
 
     for widget_name, field_name, value in cases:
-        combo = getattr(tab, widget_name)
+        text_fields = {
+            "md_body_format",
+            "md_heading_format",
+            "md_table_header_format",
+            "heading_merge_mode",
+            "table_style_mode",
+            "builtin_table_style",
+        }
+        document_fields = {"body_format", "heading_format", "table_header_format"}
+        owner, config = (
+            (text, vm.config.text)
+            if field_name in text_fields
+            else (document, vm.config.document)
+            if field_name in document_fields
+            else (tab, vm.config.formatting)
+        )
+        combo = getattr(owner, widget_name)
         tab.set_combo_data(combo, value)
-        assert getattr(vm.config.formatting, field_name) == value
+        config = (
+            vm.config.text
+            if field_name in text_fields
+            else vm.config.document
+            if field_name in document_fields
+            else vm.config.formatting
+        )
+        assert getattr(config, field_name) == value
 
-    tab._custom_table_style_name.setText("Research Table")  # pyright: ignore[reportPrivateUsage]
-    assert vm.config.formatting.custom_table_style_name == "Research Table"
+    text._custom_table_style_name.setText("Research Table")  # pyright: ignore[reportPrivateUsage]
+    assert vm.config.text.custom_table_style_name == "Research Table"
 
-    tab._heading_merge_punctuation.setText("：§")  # pyright: ignore[reportPrivateUsage]
-    assert vm.config.formatting.heading_merge_punctuation == "：§"
+    text._heading_merge_punctuation.setText("：§")  # pyright: ignore[reportPrivateUsage]
+    assert vm.config.text.heading_merge_punctuation == "：§"
 
 
 def test_extension_controls_and_directional_preset_update_only_the_selected_direction(qapp) -> None:

@@ -212,6 +212,8 @@ DocWen は GUI に加えて、自動化スクリプト、バッチ処理、外�
 
 ### よく使う例
 
+Markdown を入力または出力する変換では、ファイルが一つでも `--output-dir DIR` の下に結果フォルダーを作成します。名前には元の名前、日時、今回の入力形式を含みます。`--output PATH` は、それ以外の単一ファイル変換で正確な出力パスを指定する場合に使います。
+
 ```bash
 # Windows パッケージ版
 DocWenCLI.exe inspect document.docx --json
@@ -220,16 +222,16 @@ DocWenCLI.exe inspect document.docx --json
 DocWenCLI.exe schema convert
 
 # 実際には書き出さずに変換の流れを確認
-DocWenCLI.exe convert report.docx --to md --output report.md --extract-img --ocr --dry-run --json
+DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --ocr --dry-run --json
 
 # Word を Markdown に変換（画像抽出 + OCR）
-DocWenCLI.exe convert report.docx --to md --output report.md --extract-img --ocr
+DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --ocr
 
 # Markdown を Word に変換（テンプレート指定 + 見出し/本文結合モード）
-DocWenCLI.exe convert document.md --to docx --output document.docx --template template.docx.16f7dd4daed94f3a1130ef0999b3ae1f738a6b3cd185bebe363ada6536f8815f --heading-merge-mode punct_required
+DocWenCLI.exe convert document.md --to docx --output-dir exports --template template.docx.16f7dd4daed94f3a1130ef0999b3ae1f738a6b3cd185bebe363ada6536f8815f --heading-merge-mode punct_required
 
 # Markdown 出力時の画像モードと OCR テキスト配置を制御
-DocWenCLI.exe convert report.docx --to md --output report.md --extract-img --image-mode file --ocr --ocr-placement image_md
+DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --image-mode file --ocr --ocr-placement image_md
 
 # ランタイム能力と依存ゲートを確認
 DocWenCLI.exe doctor --json
@@ -243,8 +245,8 @@ DocWenCLI.exe validate input.md --check typo --check punct
 # inspect -> schema -> dry-run -> convert
 # docwen inspect document.docx --json
 # docwen schema convert
-# docwen convert document.docx --to md --output document.md --dry-run --json
-# docwen convert document.docx --to md --output document.md
+# docwen convert document.docx --to md --output-dir exports --dry-run --json
+# docwen convert document.docx --to md --output-dir exports
 ```
 
 ### 主なコマンドとオプション

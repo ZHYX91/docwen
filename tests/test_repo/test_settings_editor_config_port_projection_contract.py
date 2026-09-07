@@ -28,14 +28,15 @@ def test_settings_editor_persistence_stays_on_the_injected_config_port() -> None
     adapter = _read("packages/bundle/src/docwen_bundle/config_port.py")
     vm = _read("packages/apps/gui/src/docwen_gui/view_models/settings_vm.py")
     text_tab = _read("packages/apps/gui/src/docwen_gui/widgets/settings/text_tab.py")
+    numbering_editors = _read("packages/apps/gui/src/docwen_gui/widgets/settings/numbering_editors.py")
     proofread_tab = _read("packages/apps/gui/src/docwen_gui/widgets/settings/proofread_tab.py")
     add_editor = _read("packages/apps/gui/src/docwen_gui/widgets/settings/numbering_add_editor.py")
     clean_editor = _read("packages/apps/gui/src/docwen_gui/widgets/settings/numbering_clean_editor.py")
 
     assert "def get_file_text(self, rel_path: str) -> str | None:" in port
-    assert "def save_file_text(self, rel_path: str, content: str) -> bool:" in port
+    assert "def save_file_text(self, rel_path: str, content: str, *, expected_text: str | None = None) -> bool:" in port
     assert "return self._loader.get_file_text(rel_path)" in adapter
-    assert "return self._loader.save_file_text(rel_path, content)" in adapter
+    assert "return self._loader.save_file_text(rel_path, content, expected_text=expected_text)" in adapter
 
     ownership = vm.split(
         "_EDITOR_FILE_MODEL_PATHS: dict[str, tuple[tuple[str, ...], ...]] = {",
@@ -67,11 +68,11 @@ def test_settings_editor_persistence_stays_on_the_injected_config_port() -> None
     assert "get_config_loader" not in proofread_tab
     assert "update_file_dict" not in proofread_tab
     assert "update_file_value" not in proofread_tab
-    open_editor = _method_block(proofread_tab, "_open_config_editor", "_open_symbol_mapping_editor")
+    open_editor = _method_block(proofread_tab, "_open_config_editor", "_open_symbol_pairing_editor")
     assert "self._vm.read_config_file_text(config_name)" in open_editor
     assert "save_callback=self._vm.save_config_file_text" in open_editor
 
-    assert text_tab.count("config_data=") >= 4
+    assert numbering_editors.count("config_data=") == 2
     assert "config_data=self._vm.config.text.numbering_schemes" in text_tab
     assert "if callable(self._on_save) and self._on_save(doc_data) is False:" in add_editor
     assert "if callable(self._on_save) and self._on_save(doc_data) is False:" in clean_editor

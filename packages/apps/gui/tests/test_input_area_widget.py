@@ -5,9 +5,7 @@ ViewModel wiring.  They require a QApplication instance.
 """
 
 from collections.abc import Generator
-from itertools import pairwise
 from pathlib import Path
-from typing import cast
 
 import pytest
 from PySide6.QtCore import QCoreApplication, QEvent, QMimeData, QPoint, QPointF, Qt, QUrl
@@ -15,11 +13,9 @@ from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
-    QHBoxLayout,
     QLabel,
     QStyle,
     QStyleOptionComboBox,
-    QVBoxLayout,
 )
 from shiboken6 import isValid
 
@@ -29,7 +25,6 @@ from docwen_gui.view_models.main_window_vm import MainWindowViewModel
 from docwen_gui.widgets.input_area import (
     _COMPACT_WIDTH_THRESHOLD,
     _DEFAULT_HEIGHT,
-    _PYRAMID_INDENTS,
     InputArea,
 )
 
@@ -178,48 +173,23 @@ class TestConstruction:
         assert rtl_arrow.center().x() < combo.width() // 2
         combo.close()
 
-    def test_supported_formats_use_six_single_line_pyramid_rows(self, widget: InputArea, qapp: QApplication) -> None:
-        widget.resize(1200, _DEFAULT_HEIGHT)
+    @pytest.mark.parametrize("width", [360, 1200])
+    def test_supported_formats_keep_compact_aligned_columns(self, widget, qapp, width):
+        widget.resize(width, _DEFAULT_HEIGHT)
         widget.show()
         qapp.processEvents()
-
-        layout = widget._types_layout
-        assert isinstance(layout, QVBoxLayout)
-        assert layout.count() == len(widget._type_prompt_rows) == 6
-
-        margins: list[int] = []
-        for row_widget, row_layout, type_label, value_label in widget._type_prompt_rows:
-            assert isinstance(row_layout, QHBoxLayout)
-            assert row_widget.objectName() == "fileDropTypesRow"
-            assert row_layout.indexOf(type_label) >= 0
-            assert row_layout.indexOf(value_label) >= 0
-            left, top, right, bottom = cast(tuple[int, int, int, int], row_layout.getContentsMargins())
-            assert left == right
-            assert top == bottom == 0
-            margins.append(left)
-
-        assert margins == list(_PYRAMID_INDENTS)
-        assert all(first > second for first, second in pairwise(margins))
-        for row_widget, _row_layout, type_label, value_label in widget._type_prompt_rows:
-            assert type_label.geometry().left() >= 0
-            assert value_label.geometry().right() < row_widget.width()
-            assert type_label.geometry().right() < value_label.geometry().left()
-
-    def test_supported_format_pyramid_clamps_safely_at_narrow_width(self, widget: InputArea) -> None:
-        widget._drop_group.resize(340, _DEFAULT_HEIGHT)
         widget._sync_supported_type_layout()
-
-        margins = [
-            cast(tuple[int, int, int, int], row_layout.getContentsMargins())[0]
-            for _, row_layout, _, _ in widget._type_prompt_rows
-        ]
-        assert all(margin >= 0 for margin in margins)
-        assert all(margin <= desired for margin, desired in zip(margins, _PYRAMID_INDENTS, strict=True))
-        assert all(
-            cast(tuple[int, int, int, int], row_layout.getContentsMargins())[0]
-            == cast(tuple[int, int, int, int], row_layout.getContentsMargins())[2]
-            for _, row_layout, _, _ in widget._type_prompt_rows
-        )
+        qapp.processEvents()
+        assert len(widget._type_prompt_rows) == 6
+        starts = set()
+        for row, _layout, label, value in widget._type_prompt_rows:
+            starts.add(value.x())
+            assert 0 < value.x() - label.geometry().right() <= 12
+            assert value.geometry().right() < row.width()
+            assert value.alignment() & Qt.AlignmentFlag.AlignLeft
+        assert len(starts) == 1
+        natural_width = max(v.fontMetrics().horizontalAdvance(v.text()) for _, _, _, v in widget._type_prompt_rows)
+        assert widget._types_container.width() <= natural_width + starts.pop() + 2
 
     def test_supported_formats_hide_with_selection_feedback(self, widget: InputArea, tmp_path) -> None:
         sample = tmp_path / "sample.docx"
@@ -480,6 +450,31 @@ class TestCompactLayout:
 
 
 class TestViewModelWiring:
+    def test_location_uses_committed_file_through_feedback_and_replacement(
+        self, widget: InputArea, main_vm: MainWindowViewModel, tmp_path: Path
+    ) -> None:
+        from docwen_core.models import FileRef
+
+        selected = FileRef(path=str(tmp_path / "first.md"), format="markdown", category="markdown")
+        main_vm.set_selected_file(selected)
+        widget.view_model.sync_selection([selected], current=True)
+        emitted: list[str] = []
+        widget.location_requested.connect(emitted.append)
+        widget._selection_detail_label.set_full_text("Warning: a different file was rejected")
+        widget._open_location_button.click()
+        assert emitted == [selected.path]
+
+        replacement = FileRef(path=str(tmp_path / "second.md"), format="markdown", category="markdown")
+        main_vm.set_selected_file(replacement)
+        widget.view_model.sync_selection([replacement], current=True)
+        widget._open_location_button.click()
+        assert emitted[-1] == replacement.path
+        main_vm.clear_selected_file()
+        widget.view_model.clear_files()
+        widget._open_selected_location()
+        assert len(emitted) == 2
+        assert widget._open_location_button.isHidden()
+
     def test_mode_changed_updates_switch(self, widget: InputArea) -> None:
         widget.view_model.set_mode("batch")
         current = widget.mode_switch.currentItem()

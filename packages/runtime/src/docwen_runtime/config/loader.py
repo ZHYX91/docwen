@@ -1044,12 +1044,14 @@ class ConfigLoader:
             logger.error("读取可编辑配置源失败: %s | 错误: %s", rel_path, exc)
             return None
 
-    def save_file_text(self, rel_path: str, content: str) -> bool:
+    def save_file_text(self, rel_path: str, content: str, *, expected_text: str | None = None) -> bool:
         """Persist validated TOML *content* to the user override file.
 
         The content is written without hidden metadata. Registry-declared
         replacement sections are complete whenever present; all other mappings
-        remain sparse. Calls :meth:`reload` after writing.
+        remain sparse. Calls :meth:`reload` after writing. When *expected_text*
+        is supplied, compare the effective source under the transaction lock
+        and refuse the write if another editor has changed it.
 
         Returns ``False`` for unknown *rel_path*, invalid TOML, or write
         failure.
@@ -1073,6 +1075,8 @@ class ConfigLoader:
         user_path = self._user_path_for_spec(spec)
 
         def _write_text() -> None:
+            if expected_text is not None and self.get_file_text(rel_path) != expected_text:
+                raise ValueError("Editable configuration changed after preview")
             atomic_write_text(user_path, content)
 
         return self._run_user_file_transaction(

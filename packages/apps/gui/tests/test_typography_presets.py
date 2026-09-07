@@ -99,7 +99,7 @@ def test_existing_main_window_roles_follow_runtime_preset(qapp) -> None:
         ThemeManager.reset_instance()
 
 
-def test_xlarge_drop_pyramid_keeps_every_label_inside_its_row(qapp, qtbot) -> None:
+def test_xlarge_drop_formats_keep_every_label_inside_its_row(qapp, qtbot) -> None:
     from docwen_gui.styles.theme_manager import ThemeManager
     from docwen_gui.view_models.input_area_vm import InputAreaViewModel
     from docwen_gui.view_models.main_window_vm import MainWindowViewModel
@@ -401,7 +401,7 @@ def test_xlarge_guide_actions_wrap_before_labels_are_squeezed(qapp, qtbot) -> No
         state="failed",
         tone="danger",
         guide_actions=[
-            {"action_key": "open_output_dir", "target_path": "/tmp/out"},
+            {"action_key": "open_output_location", "target_path": "/tmp/out"},
             {"action_key": "view_failed_details", "target_path": "/tmp/failed.json"},
             {"action_key": "retry_failed", "target_path": ""},
         ],
@@ -424,36 +424,6 @@ def test_xlarge_guide_actions_wrap_before_labels_are_squeezed(qapp, qtbot) -> No
             assert button.sizeHint().width() <= button.width()
             assert button.geometry().right() < widget._status_guide_actions_widget.width()
     finally:
-        widget.close()
-        ThemeManager.reset_instance()
-
-
-def test_xlarge_history_timestamp_uses_post_stylesheet_font_metrics(qapp) -> None:
-    from PySide6.QtWidgets import QLabel
-
-    from docwen_gui.styles.theme_manager import ThemeManager
-    from docwen_gui.view_models.info_area_vm import InfoAreaViewModel
-    from docwen_gui.widgets.info_area import InfoArea
-
-    ThemeManager.reset_instance()
-    manager = ThemeManager.get_instance()
-    manager.initialize(qapp, "dark")
-    manager.apply_font_size_preset("xlarge")
-    vm = InfoAreaViewModel()
-    widget = InfoArea(view_model=vm)
-    widget.resize(576, 320)
-    widget.show()
-    try:
-        vm.add_message("Long localized event", "info")
-        qapp.processEvents()
-        row = widget.get_history_row_widget(0)
-        assert row is not None
-        timestamp = row.findChild(QLabel, "statusTimestamp")
-        assert timestamp is not None
-        required_width = timestamp.fontMetrics().horizontalAdvance("00:00:00")
-        assert timestamp.width() >= required_width + 8
-    finally:
-        vm.stop_all_timers()
         widget.close()
         ThemeManager.reset_instance()
 

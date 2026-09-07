@@ -474,7 +474,9 @@ class TestMdToDocxGolden:
         )
         options = {"template_name": str(template_path)}
         config_values = (
-            {} if config_separator is None else {"conversion": {"md_to_docx": {"list_separator": config_separator}}}
+            {}
+            if config_separator is None
+            else {"conversion": {"md_to_docx": {}}, "template_fill": {"list_separator": config_separator}}
         )
         ctx, _workspace = make_context(
             md_path,

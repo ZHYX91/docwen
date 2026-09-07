@@ -85,6 +85,7 @@ from docwen_plugin_markdown.runtime_semantics_v3 import (
     prepare_runtime_semantics_v3,
 )
 from docwen_plugin_markdown.template_filler import fill_template
+from docwen_plugin_markdown.template_policy import template_list_separator
 from docwen_plugin_markdown.template_utils import (
     TemplatePackageError,
     extract_body_font,
@@ -147,14 +148,6 @@ def _request_link_config(config: object) -> LinkRuntimeConfig:
     if not isinstance(raw, Mapping):
         return LinkRuntimeConfig()
     return LinkRuntimeConfig.from_config(dict(raw))
-
-
-def _request_yaml_list_separator(config: object) -> str:
-    """Resolve the exact YAML list separator from this request snapshot."""
-    raw = _config_value(config, "conversion.md_to_docx.list_separator", _MISSING)
-    if raw is _MISSING or raw is None:
-        return "、"
-    return str(raw)
 
 
 def _request_heading_merge_punctuation(options: dict[str, object], config: object) -> frozenset[str]:
@@ -1006,7 +999,7 @@ class MdToDocxConverter:
                 placeholder_map=placeholder_map,
                 placeholder_rules=placeholder_rules,
                 special_placeholder_handlers=special_placeholder_handlers,
-                list_separator=_request_yaml_list_separator(context.config),
+                list_separator=template_list_separator(context.config),
             )
             try:
                 semantic_v3_session.finalize_document()

@@ -10,21 +10,38 @@ from __future__ import annotations
 from collections.abc import Iterator
 
 import pytest
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
-    QLabel,
-    QScrollArea,
-    QSizePolicy,
-    QWidget,
 )
 
 from docwen_gui.view_models.info_area_vm import (
     InfoAreaViewModel,
 )
-from docwen_gui.widgets.info_area import InfoArea, _StatusLocationButton
+from docwen_gui.widgets.info_area import InfoArea
 
 pytestmark = pytest.mark.gui
+
+
+def test_result_filename_is_elided_with_full_output_tooltip(qtbot, qapp) -> None:
+    from docwen_gui.view_models.info_area_vm import InfoAreaViewModel
+    from docwen_gui.widgets.info_area import InfoArea
+
+    vm = InfoAreaViewModel()
+    widget = InfoArea(view_model=vm)
+    qtbot.addWidget(widget)
+    widget.setFixedWidth(340)
+    output = "/outputs/" + "很长的实际输出名称" * 8 + "_20260907_180000_fromMd.docx"
+    vm.set_task_summary(current_file="input.md", output_path=output, state="success", completed_count=1, total_count=1)
+    widget.show()
+    qapp.processEvents()
+    label = widget._output_row.name_label
+    assert label.isVisible()
+    assert label.toolTip() == output
+    assert label.full_text.endswith("_20260907_180000_fromMd.docx")
+    assert label.text() != label.full_text
+    assert not widget._status_summary_label.isVisible()
+    vm.begin_task(operation_id="next", current_file="next.md", total_count=1)
+    assert not label.isVisible()
 
 
 @pytest.fixture
@@ -55,13 +72,9 @@ class TestConstruction:
         assert widget.view_model is not None
         assert isinstance(widget.view_model, InfoAreaViewModel)
 
-    def test_scroll_area_exists(self, widget: InfoArea) -> None:
-        assert widget._scroll is not None
-        assert widget._scroll.objectName() == "infoHistoryScrollArea"
-
     def test_status_meta_label_exists(self, widget: InfoArea) -> None:
         assert widget._status_meta_label is not None
-        assert widget._status_meta_label.objectName() == "infoStatusMeta"
+        assert widget._status_meta_label.objectName() == "panelCardTitle"
 
     def test_status_summary_label_exists(self, widget: InfoArea) -> None:
         assert widget._status_summary_label is not None
@@ -70,116 +83,17 @@ class TestConstruction:
     def test_guide_row_initially_hidden(self, widget: InfoArea) -> None:
         assert widget.is_guide_row_visible is False
 
-    def test_location_button_context_menu_copies_exact_path(
-        self,
-        qapp: QApplication,
-    ) -> None:
-        button = _StatusLocationButton("/test/output/report.docx")
-        try:
-            menu = button._create_context_menu()
-            actions = menu.actions()
-            actions[0].trigger()
-            assert actions
-            assert QApplication.clipboard().text() == "/test/output/report.docx"
-        finally:
-            button.deleteLater()
 
-
-# ── History rendering ─────────────────────────────────────────────────────
-
-
-class TestHistoryRendering:
-    def test_expanded_history_reserves_its_bounded_height(self, widget: InfoArea) -> None:
-        scroll = widget.findChild(QScrollArea, "infoHistoryScrollArea")
-        assert scroll is not None
-        assert scroll.sizePolicy().verticalPolicy() == QSizePolicy.Policy.Fixed
-
-    def test_empty_history_does_not_reserve_an_empty_card(self, widget: InfoArea) -> None:
-        assert widget._scroll.isHidden()
-        assert widget._history_toolbar.isHidden()
-
-    def test_renders_history_row(self, widget: InfoArea, vm: InfoAreaViewModel) -> None:
-        vm.add_message("Need attention", "warning")
-        assert widget.message_count == 1
-
-        row = widget.get_history_row_widget(0)
-        assert row is not None
-        assert row.property("infoStatusTone") == "warning"
-
-    def test_renders_timestamp_label(self, widget: InfoArea, vm: InfoAreaViewModel) -> None:
-        vm.add_message("Test message", "info")
-        row = widget.get_history_row_widget(0)
-        assert row is not None
-
-        timestamps = [lbl for lbl in row.findChildren(QLabel) if lbl.objectName() == "statusTimestamp"]
-        assert len(timestamps) == 1
-        # Fixed width
-        assert timestamps[0].minimumWidth() == timestamps[0].maximumWidth()
-        assert timestamps[0].minimumWidth() > 0
-
-    def test_renders_message_text(self, widget: InfoArea, vm: InfoAreaViewModel) -> None:
-        vm.add_message("Hello world", "success")
-        row = widget.get_history_row_widget(0)
-        assert row is not None
-
-        messages = [lbl for lbl in row.findChildren(QLabel) if lbl.objectName() == "infoHistoryText"]
-        assert len(messages) == 1
-        assert messages[0].text() == "Hello world"
-        assert messages[0].toolTip() == "Hello world"
-        assert messages[0].textInteractionFlags() == Qt.TextInteractionFlag.TextSelectableByMouse
-        assert row.toolTip() == "Hello world"
-
-    def test_multiple_rows(self, widget: InfoArea, vm: InfoAreaViewModel) -> None:
-        vm.add_message("First", "info")
-        vm.add_message("Second", "success")
-        vm.add_message("Third", "warning")
-        assert widget.message_count == 3
-
-    def test_repeated_event_renders_a_localized_count_badge(self, widget: InfoArea, vm: InfoAreaViewModel) -> None:
-        from docwen_gui.i18n import t
-
-        vm.add_message("Same event", "info")
-        vm.add_message("Same event", "info")
-        row = widget.get_history_row_widget(0)
-        assert row is not None
-        badge = row.findChild(QLabel, "infoHistoryRepeatBadge")
-        assert badge is not None
-        assert badge.text() == t("info_area.history_repeated", "Repeated {count} times", count=2)
-
-    def test_rebuild_detaches_stale_history_rows(self, widget: InfoArea, vm: InfoAreaViewModel) -> None:
-        vm.add_message("First", "info")
-        vm.add_message("Second", "success")
-        vm.add_message("Third", "warning")
-
-        rows = widget._msg_container.findChildren(QWidget, "infoHistoryRow")
-        assert len(rows) == widget.message_count
-        assert [row.parentWidget() for row in rows] == [widget._msg_container] * widget.message_count
-
-    def test_no_location_button_without_show_location(self, widget: InfoArea, vm: InfoAreaViewModel) -> None:
-        vm.add_message("No location", "info")
-        buttons = widget.find_location_buttons()
-        assert len(buttons) == 0
-
-
-# ── Location button ──────────────────────────────────────────────────────
-
-
-class TestLocationButton:
-    def test_shows_location_button(self, widget: InfoArea, vm: InfoAreaViewModel) -> None:
-        vm.add_message("Locate me", "success", show_location=True, file_path="/tmp/test.txt")
-        buttons = widget.find_location_buttons()
-        assert len(buttons) == 1
-        assert buttons[0].objectName() == "statusLocationButton"
-        assert buttons[0].toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonIconOnly
-
-    def test_location_button_tooltip(self, widget: InfoArea, vm: InfoAreaViewModel) -> None:
-        vm.add_message("Locate me", "success", show_location=True, file_path="/tmp/test.txt")
-        buttons = widget.find_location_buttons()
-        assert len(buttons) == 1
-        assert "/tmp/test.txt" in buttons[0].accessibleDescription()
-
-
-# ── Status section ────────────────────────────────────────────────────────
+class TestActivityEntry:
+    def test_entry_is_hidden_until_records_exist(self, widget, vm, qtbot):
+        assert widget._activity_button.isHidden()
+        vm.set_activity_counts(3, 2)
+        assert not widget._activity_button.isHidden()
+        assert widget._activity_button.property("hasFailures") is True
+        with qtbot.waitSignal(vm.activity_requested):
+            widget._activity_button.click()
+        vm.set_activity_counts(1, 0)
+        assert widget._activity_button.property("hasFailures") is False
 
 
 class TestStatusSection:
@@ -209,6 +123,45 @@ class TestStatusSection:
 
     def test_status_shows_idle_when_empty(self, widget: InfoArea, vm: InfoAreaViewModel) -> None:
         assert widget.status_source == "idle"
+        assert widget._content_card.title() == vm.status_summary_text
+        assert not widget._content_card.header.isHidden()
+        assert widget._status_summary_label.isHidden()
+        assert widget._content_card.header.property("contentCollapsed") is True
+
+    def test_idle_card_expands_for_progress_and_retains_terminal_result(
+        self, widget: InfoArea, vm: InfoAreaViewModel
+    ) -> None:
+        vm.set_task_summary(operation_id="op", current_file="report.md", state="active", tone="info")
+        assert widget._content_card.header.property("contentCollapsed") is False
+        assert not widget._progress.isHidden()
+        assert not widget._status_summary_label.isHidden()
+        vm.set_task_summary(
+            operation_id="op",
+            current_file="report.md",
+            state="success",
+            tone="success",
+            completed_count=1,
+            total_count=1,
+        )
+        assert widget._content_card.header.property("contentCollapsed") is False
+        assert widget._progress.isHidden()
+        assert widget._content_card.property("panelTone") == "success"
+        assert "1/1" not in widget.status_summary_text
+        vm.reset_session()
+        assert widget._content_card.header.property("contentCollapsed") is True
+
+    def test_idle_card_keeps_activity_and_custom_destination_reachable(
+        self, widget: InfoArea, vm: InfoAreaViewModel
+    ) -> None:
+        vm.set_output_destination_hint("Output: D:/Converted")
+        assert widget._content_card.header.property("contentCollapsed") is False
+        assert not widget._output_destination_label.isHidden()
+        assert widget._status_summary_label.isHidden()
+        vm.set_output_destination_hint("")
+        assert widget._content_card.header.property("contentCollapsed") is True
+        vm.set_activity_counts(2, 1)
+        assert widget._content_card.header.property("contentCollapsed") is False
+        assert not widget._activity_button.isHidden()
 
     def test_status_meta_text(self, widget: InfoArea, vm: InfoAreaViewModel) -> None:
         vm.add_message("Test", "info")
@@ -221,7 +174,7 @@ class TestStatusSection:
 class TestGuideButtons:
     def test_renders_guide_buttons_for_success(self, widget: InfoArea, vm: InfoAreaViewModel) -> None:
         guide_actions = [
-            {"action_key": "open_output_dir", "target_path": "/tmp/out"},
+            {"action_key": "view_failed_details", "target_path": "/tmp/out"},
         ]
         vm.set_task_summary(
             operation_id="op-2000",
@@ -269,7 +222,7 @@ class TestGuideButtons:
         emitted: list[tuple[str, str]] = []
         vm.task_guide_action_requested.connect(lambda ak, tp: emitted.append((ak, tp)))
         guide_actions = [
-            {"action_key": "open_output_dir", "target_path": "/tmp/out.md"},
+            {"action_key": "view_failed_details", "target_path": "/tmp/out.md"},
         ]
         vm.set_task_summary(
             operation_id="op-1",
@@ -282,11 +235,11 @@ class TestGuideButtons:
         buttons = widget.find_guide_buttons()
         assert len(buttons) == 1
         buttons[0].click()
-        assert emitted == [("open_output_dir", "/tmp/out.md")]
+        assert emitted == [("view_failed_details", "/tmp/out.md")]
 
     def test_guide_buttons_have_minimum_height(self, widget: InfoArea, vm: InfoAreaViewModel) -> None:
         guide_actions = [
-            {"action_key": "open_output_dir", "target_path": "/tmp/out"},
+            {"action_key": "view_failed_details", "target_path": "/tmp/out"},
         ]
         vm.set_task_summary(
             operation_id="op-1",
@@ -334,13 +287,3 @@ class TestMessageLimitRendering:
 
 
 # ── Scroll area ───────────────────────────────────────────────────────────
-
-
-class TestScrollArea:
-    def test_horizontal_scrollbar_always_off(self, widget: InfoArea) -> None:
-        assert widget._scroll is not None
-        assert widget._scroll.horizontalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-
-    def test_widget_resizable(self, widget: InfoArea) -> None:
-        assert widget._scroll is not None
-        assert widget._scroll.widgetResizable() is True

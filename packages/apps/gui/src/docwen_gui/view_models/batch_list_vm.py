@@ -95,6 +95,7 @@ class BatchFileEntry:
     error_message: str | None = None
     error_count: int = 0  # Number of diagnostics/errors for this file
     operation_id: str | None = None
+    output_paths: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         detected_format = str(self.detected_format).strip().lower()
@@ -486,6 +487,7 @@ class BatchListViewModel(QObject):
         error_message: str | None = None,
         error_count: int | None = None,
         operation_id: str | None = None,
+        output_paths: tuple[str, ...] | None = None,
     ) -> bool:
         """Update the status of a file entry. Returns True if entry was found."""
         normalized_status = str(status).strip().lower()
@@ -497,11 +499,18 @@ class BatchListViewModel(QObject):
             return False
         entry = record[1]
         previous_status = entry.status
+        if normalized_status in {"pending", "processing"}:
+            entry.output_path = None
+            entry.output_paths = ()
+            entry.error_message = None
+            entry.skip_reason = None
+            entry.error_count = 0
         # Apply the complete payload before publishing the new status.  A
         # terminal status is the observable commit point for the row; callers
         # must never see it paired with stale artifact or diagnostic fields.
         if output_path is not None:
             entry.output_path = output_path
+            entry.output_paths = output_paths or ((output_path,) if output_path else ())
         if skip_reason is not None:
             entry.skip_reason = skip_reason
         if error_message is not None:

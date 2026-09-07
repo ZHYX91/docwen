@@ -223,6 +223,24 @@ class TestConstruction:
 
 
 class TestVisibility:
+    def test_busy_page_does_not_reserve_hidden_generation_form_height(
+        self, widget: ActionArea, vm: ActionAreaViewModel, qapp: QApplication
+    ) -> None:
+        vm.setup_for_md_to_document("/report.md")
+        widget.setStyleSheet(build_action_area_stylesheet("light"))
+        widget.show()
+        qapp.processEvents()
+        form_height = widget._button_stack.sizeHint().height()
+        widget.show_cancel()
+        qapp.processEvents()
+        cancel_height = widget._button_stack.sizeHint().height()
+        assert cancel_height < form_height
+        assert cancel_height >= widget._cancel_button.sizeHint().height()
+        widget.hide_cancel()
+        qapp.processEvents()
+        assert widget._button_stack.sizeHint().height() > cancel_height
+        assert widget._content_card.isVisible()
+
     def test_show_panel(self, widget: ActionArea, vm: ActionAreaViewModel) -> None:
         widget.show_panel()
         assert vm.visible is True

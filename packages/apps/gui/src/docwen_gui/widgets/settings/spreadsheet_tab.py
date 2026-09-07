@@ -5,22 +5,9 @@ Matches old SpreadsheetTab (DynamicSettingsTab + 3 software priority QListWidget
 
 from __future__ import annotations
 
-from PySide6.QtWidgets import (
-    QListWidget,
-    QListWidgetItem,
-    QPushButton,
-)
-
 from ...i18n import t
-from ...view_models.settings_vm import SECTION_SOFTWARE_PRIORITY, SettingsViewModel
+from ...view_models.settings_vm import SettingsViewModel
 from .base_tab import DynamicSettingsTab
-from .priority_editor import SoftwarePriorityEditor
-
-_SS_SOFTWARE_LABEL_KEYS: dict[str, str] = {
-    "wps_spreadsheets": "settings.spreadsheet.software.wps_spreadsheets",
-    "msoffice_excel": "settings.spreadsheet.software.excel",
-    "libreoffice": "settings.spreadsheet.software.libreoffice",
-}
 
 
 class SpreadsheetTab(DynamicSettingsTab):
@@ -87,13 +74,8 @@ class SpreadsheetTab(DynamicSettingsTab):
             },
         ]
         self._vm = view_model
-        self._priority_lists: dict[str, QListWidget] = {}
-        self._move_up_btns: dict[str, QPushButton] = {}
-        self._move_down_btns: dict[str, QPushButton] = {}
         super().__init__(None, "conversion_defaults", "spreadsheet", schema)
         self._load_values()
-        self._create_software_priority_section()
-        self._load_software_priority_values()
 
     def _load_values(self) -> None:
         data = self._vm.config.conversion_defaults.spreadsheet
@@ -102,76 +84,3 @@ class SpreadsheetTab(DynamicSettingsTab):
 
     def reload_from_config(self) -> None:
         self._load_values()
-        self._load_software_priority_values()
-
-    def _create_software_priority_section(self) -> None:
-        _card, form = self.add_settings_card(
-            t("settings.spreadsheet.software_section", "Software Priority"),
-            object_name="spreadsheetSoftwarePriorityCard",
-        )
-        categories = {
-            "spreadsheet_processors": t("settings.spreadsheet.spreadsheet_processors_label", "Spreadsheet Processors:"),
-            "ods": t("settings.spreadsheet.ods_conversion_label", "ODS Conversion:"),
-            "spreadsheet_to_pdf": t("settings.spreadsheet.spreadsheet_to_pdf_label", "Spreadsheet to PDF:"),
-        }
-        for cat, label in categories.items():
-            editor = SoftwarePriorityEditor(label, self._scroll_container)
-            lst = editor.list_widget
-            up, down = editor.move_up_button, editor.move_down_button
-            lst.currentRowChanged.connect(lambda _r, c=cat: self._refresh_buttons(c))
-            up.clicked.connect(lambda _checked=False, c=cat: self._move_item(c, -1))
-            down.clicked.connect(lambda _checked=False, c=cat: self._move_item(c, 1))
-            form.addRow(editor)
-            self._priority_lists[cat] = lst
-            self._move_up_btns[cat] = up
-            self._move_down_btns[cat] = down
-            self._refresh_buttons(cat)
-
-    def _load_software_priority_values(self) -> None:
-        sp = self._vm.config.software_priority
-        defaults = {
-            "spreadsheet_processors": sp.spreadsheet_processors,
-            "ods": sp.ods_conversion,
-            "spreadsheet_to_pdf": sp.spreadsheet_to_pdf,
-        }
-        for cat, lst in self._priority_lists.items():
-            lst.clear()
-            for sid in defaults.get(cat, []):
-                label = t(_SS_SOFTWARE_LABEL_KEYS.get(sid, ""), sid)
-                item = QListWidgetItem(label)
-                item.setData(0x0100, sid)
-                item.setToolTip(label)
-                lst.addItem(item)
-            if lst.count() > 0:
-                lst.setCurrentRow(0)
-            self._refresh_buttons(cat)
-
-    def _get_priority(self, category: str) -> list[str]:
-        lst = self._priority_lists[category]
-        return [str(lst.item(i).data(0x0100)) for i in range(lst.count())]
-
-    def _refresh_buttons(self, category: str) -> None:
-        lst = self._priority_lists[category]
-        row = lst.currentRow()
-        cnt = lst.count()
-        self._move_up_btns[category].setEnabled(row > 0)
-        self._move_down_btns[category].setEnabled(0 <= row < cnt - 1)
-
-    def _move_item(self, category: str, offset: int) -> None:
-        lst = self._priority_lists[category]
-        cur = lst.currentRow()
-        tgt = cur + offset
-        if cur < 0 or not (0 <= tgt < lst.count()):
-            return
-        item = lst.takeItem(cur)
-        lst.insertItem(tgt, item)
-        lst.setCurrentRow(tgt)
-        self._refresh_buttons(category)
-
-        mapping = {
-            "spreadsheet_processors": "spreadsheet_processors",
-            "ods": "ods_conversion",
-            "spreadsheet_to_pdf": "spreadsheet_to_pdf",
-        }
-        key = mapping.get(category, category)
-        self._vm.set_field(SECTION_SOFTWARE_PRIORITY, key, self._get_priority(category))

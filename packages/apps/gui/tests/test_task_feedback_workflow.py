@@ -7,7 +7,6 @@ from types import SimpleNamespace
 
 import pytest
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QLabel
 
 from docwen_core.events.task_events import TASK_PROGRESS
 from docwen_gui.main_window import _normalize_path
@@ -127,7 +126,7 @@ def test_retry_preserves_scope_order_and_options(main_window, tmp_path, monkeypa
 
 
 def test_viewing_details_does_not_republish_failures(main_window, tmp_path):
-    from docwen_gui.dialogs.task_details import TaskDetailsDialog
+    from docwen_gui.dialogs.activity_records import ActivityRecordsDialog
 
     path = tmp_path / "report.md"
     path.write_text("# source", encoding="utf-8")
@@ -139,7 +138,7 @@ def test_viewing_details_does_not_republish_failures(main_window, tmp_path):
     before = main_window._info_area_vm.history_rows
     main_window._handle_task_guide_action("view_failed_details", str(path))
     main_window._handle_task_guide_action("view_failed_details", str(path))
-    dialogs = main_window.findChildren(TaskDetailsDialog)
+    dialogs = main_window.findChildren(ActivityRecordsDialog)
     assert len(dialogs) == 1
     assert "Output is locked" in dialogs[0].details.toPlainText()
     assert main_window._info_area_vm.history_rows == before
@@ -175,64 +174,23 @@ def test_retry_requests_a_fresh_password_without_storing_it(main_window, tmp_pat
     assert options["spreadsheet_password"] == "<redacted>"
 
 
-def test_animation_keeps_history_scroll_selection_and_row_identity(qtbot):
-    vm = InfoAreaViewModel()
-    widget = InfoArea(vm)
-    qtbot.addWidget(widget)
-    widget.resize(460, 440)
-    widget.show()
-    for index in range(35):
-        vm.add_message(f"Failure {index}: review this output before retrying.", "danger")
-    widget._history_toggle.setChecked(True)
-    scrollbar = widget._scroll.verticalScrollBar()
-    qtbot.waitUntil(lambda: scrollbar.maximum() > 0)
-    qtbot.wait(150)
-    scrollbar.setValue(0)
-    row = widget.get_history_row_widget(0)
-    assert row is not None
-    label = row.findChild(QLabel, "infoHistoryText")
-    assert label is not None
-    label.setSelection(0, 7)
-    selected = label.selectedText()
-    vm.begin_task(operation_id="active", current_file="next.md", total_count=1)
-    qtbot.wait(400)
-    assert widget.get_history_row_widget(0) is row
-    assert label.selectedText() == selected
-    assert scrollbar.value() == 0
-    vm.stop_all_timers()
-
-
-def test_history_follow_does_not_scroll_past_the_last_message(qtbot):
-    vm = InfoAreaViewModel()
-    widget = InfoArea(vm)
-    qtbot.addWidget(widget)
-    widget.resize(240, 420)
-    widget.show()
-    for index in range(8):
-        vm.add_message(f"{index}: A wrapped message with enough detail to span several lines.", "info")
-    widget._history_toggle.setChecked(True)
-    qtbot.wait(100)
-    last = widget._history_row_widgets[-1]
-    widget._msg_container.setMinimumHeight(last.geometry().bottom() + 400)
-    qtbot.wait(30)
-    widget._scroll_to_bottom()
-    viewport = widget._scroll.viewport()
-    assert 0 < last.mapTo(viewport, last.rect().bottomRight()).y() <= viewport.height()
-    assert widget._scroll.verticalScrollBar().value() < widget._scroll.verticalScrollBar().maximum()
-    vm.stop_all_timers()
-
-
 @pytest.mark.parametrize("activation", ["mouse", "return", "space"])
-def test_summary_navigation_uses_real_user_events(qtbot, activation):
+def test_output_location_uses_real_user_events(qtbot, activation):
     vm = InfoAreaViewModel()
     widget = InfoArea(vm)
     qtbot.addWidget(widget)
-    vm.set_task_summary(state="success", current_file="report.docx", navigate_file_path="/output/report.docx")
+    vm.set_task_summary(
+        state="success",
+        current_file="source.md",
+        navigate_file_path="/output/report.docx",
+        output_path="/output/report.docx",
+        output_paths=("/output/report.docx",),
+    )
     widget.resize(460, 250)
     widget.show()
-    button = widget._status_summary_label
+    button = widget._output_row.location_button
     emitted = []
-    vm.history_navigation_requested.connect(emitted.append)
+    vm.location_requested.connect(emitted.append)
     if activation == "mouse":
         qtbot.mouseClick(button, Qt.MouseButton.LeftButton)
     else:

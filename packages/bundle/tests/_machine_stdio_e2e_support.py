@@ -449,9 +449,11 @@ def _exercise_auxiliary_capability_matrix(
         trace.append(table_terminal)
         if table_terminal.get("method") in {"task/completed", "task/failed", "task/cancelled"}:
             break
-    assert table_terminal["method"] == "task/completed"
+    assert table_terminal["method"] == "task/completed", table_terminal
     table_bundle = table_terminal["params"]["bundle"]
-    assert [artifact["kind"] for artifact in table_bundle["artifacts"]] == ["resource", "resource"]
+    assert [artifact["kind"] for artifact in table_bundle["artifacts"]] == ["resource", "resource", "resource"]
+    assert table_bundle["layout_schema"] == "docwen.document_node.v1"
+    assert table_bundle["artifacts"][-1]["suggested_name"] == "docwen-node.json"
     assert [(entry["role"], entry["ordinal"]) for entry in table_bundle["entries"]] == [
         ("supplementary", 0),
         ("supplementary", 1),

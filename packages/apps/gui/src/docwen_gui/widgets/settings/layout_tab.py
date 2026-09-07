@@ -5,23 +5,9 @@ Matches old LayoutTab (DynamicSettingsTab + 1 software priority QListWidget).
 
 from __future__ import annotations
 
-from typing import cast as _cast
-
-from PySide6.QtWidgets import (
-    QListWidget,
-    QListWidgetItem,
-    QPushButton,
-)
-
 from ...i18n import t
-from ...view_models.settings_vm import SECTION_SOFTWARE_PRIORITY, SettingsViewModel
+from ...view_models.settings_vm import SettingsViewModel
 from .base_tab import DynamicSettingsTab
-from .priority_editor import SoftwarePriorityEditor
-
-_LAYOUT_SOFTWARE_LABEL_KEYS: dict[str, str] = {
-    "msoffice_word": "settings.document.software.msoffice_word",
-    "libreoffice": "settings.document.software.libreoffice",
-}
 
 
 class LayoutTab(DynamicSettingsTab):
@@ -84,13 +70,8 @@ class LayoutTab(DynamicSettingsTab):
             },
         ]
         self._vm = view_model
-        self._priority_list: QListWidget = _cast(QListWidget, None)
-        self._move_up_btn: QPushButton = _cast(QPushButton, None)
-        self._move_down_btn: QPushButton = _cast(QPushButton, None)
         super().__init__(None, "conversion_defaults", "layout", schema)
         self._load_values()
-        self._create_software_priority_section()
-        self._load_software_priority_values()
 
     def _load_values(self) -> None:
         data = self._vm.config.conversion_defaults.layout
@@ -99,63 +80,3 @@ class LayoutTab(DynamicSettingsTab):
 
     def reload_from_config(self) -> None:
         self._load_values()
-        self._load_software_priority_values()
-
-    def _create_software_priority_section(self) -> None:
-        _card, form = self.add_settings_card(
-            t("settings.layout.software_section", "Software Priority"),
-            object_name="layoutSoftwarePriorityCard",
-        )
-        editor = SoftwarePriorityEditor(
-            t("settings.layout.pdf_to_doc_label", "PDF to Office Priority:"), self._scroll_container
-        )
-        self._priority_list = editor.list_widget
-        self._priority_list.currentRowChanged.connect(self._refresh_buttons)
-        self._move_up_btn = editor.move_up_button
-        self._move_up_btn.clicked.connect(lambda: self._move_item(-1))
-        self._move_down_btn = editor.move_down_button
-        self._move_down_btn.clicked.connect(lambda: self._move_item(1))
-        form.addRow(editor)
-        self._refresh_buttons()
-
-    def _load_software_priority_values(self) -> None:
-        if self._priority_list is None:
-            return
-        self._priority_list.clear()
-        for sid in self._vm.config.software_priority.pdf_to_office:
-            label = t(_LAYOUT_SOFTWARE_LABEL_KEYS.get(sid, ""), sid)
-            item = QListWidgetItem(label)
-            item.setData(0x0100, sid)
-            item.setToolTip(label)
-            self._priority_list.addItem(item)
-        if self._priority_list.count() > 0:
-            self._priority_list.setCurrentRow(0)
-        self._refresh_buttons()
-
-    def _get_priority(self) -> list[str]:
-        if self._priority_list is None:
-            return []
-        return [str(self._priority_list.item(i).data(0x0100)) for i in range(self._priority_list.count())]
-
-    def _refresh_buttons(self, _row: int | None = None) -> None:
-        if self._priority_list is None:
-            return
-        row = self._priority_list.currentRow()
-        cnt = self._priority_list.count()
-        if self._move_up_btn:
-            self._move_up_btn.setEnabled(row > 0)
-        if self._move_down_btn:
-            self._move_down_btn.setEnabled(0 <= row < cnt - 1)
-
-    def _move_item(self, offset: int) -> None:
-        if self._priority_list is None:
-            return
-        cur = self._priority_list.currentRow()
-        tgt = cur + offset
-        if cur < 0 or not (0 <= tgt < self._priority_list.count()):
-            return
-        item = self._priority_list.takeItem(cur)
-        self._priority_list.insertItem(tgt, item)
-        self._priority_list.setCurrentRow(tgt)
-        self._refresh_buttons()
-        self._vm.set_field(SECTION_SOFTWARE_PRIORITY, "pdf_to_office", self._get_priority())

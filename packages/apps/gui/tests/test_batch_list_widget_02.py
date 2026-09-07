@@ -58,9 +58,9 @@ class TestBatchEntryItemWidget:
         assert entry_widget.objectName() == "batchEntryCard"
 
     def test_has_status_icon(self, entry_widget: BatchEntryItemWidget) -> None:
-        assert entry_widget.status_icon_label is not None
+        assert entry_widget.status_button is not None
 
-    @pytest.mark.parametrize("status", ["completed", "processing"])
+    @pytest.mark.parametrize("status", ["completed", "processing", "skipped", "failed"])
     def test_status_icon_recolors_during_live_theme_preview(self, qapp: QApplication, status: str) -> None:
         manager = ThemeManager.get_instance()
         previous_theme = manager.get_current_theme()
@@ -75,12 +75,12 @@ class TestBatchEntryItemWidget:
         )
         widget = BatchEntryItemWidget(entry)
         try:
-            assert _dominant_opaque_pixmap_color(widget.status_icon_label) == get_status_color(status, "light").upper()
+            assert _dominant_opaque_pixmap_color(widget.status_button) == get_status_color(status, "light").upper()
 
             manager.apply_theme("dark")
             qapp.processEvents()
 
-            assert _dominant_opaque_pixmap_color(widget.status_icon_label) == get_status_color(status, "dark").upper()
+            assert _dominant_opaque_pixmap_color(widget.status_button) == get_status_color(status, "dark").upper()
         finally:
             widget.deleteLater()
             manager.apply_theme(previous_theme)
@@ -208,14 +208,14 @@ class TestBatchEntryItemWidget:
     def test_body_rows_keep_old_pyside_style_anchors(self, entry_widget: BatchEntryItemWidget) -> None:
         path_value = entry_widget._get_row_value_widget(entry_widget.path_row)
         detail_value = entry_widget._get_row_value_widget(entry_widget.detail_row)
-        output_value = entry_widget._get_row_value_widget(entry_widget.output_row)
+        output_value = entry_widget.output_row.name_label
 
         assert path_value is not None
         assert detail_value is not None
         assert output_value is not None
         assert path_value.objectName() == "batchPathLabel"
         assert detail_value.objectName() == "batchDetailLabel"
-        assert output_value.objectName() == "batchOutputLabel"
+        assert output_value.objectName() == "outputFileName"
         assert entry_widget.output_row.objectName() == "batchOutputRow"
 
     @pytest.mark.parametrize(
@@ -273,9 +273,9 @@ class TestBatchEntryItemWidget:
     def test_pending_entry_uses_sequence_marker(self, entry_widget: BatchEntryItemWidget) -> None:
         entry_widget.set_sequence_number(12)
 
-        assert entry_widget.status_icon_label.text() == "12"
-        assert not entry_widget.status_icon_label.isHidden()
-        assert entry_widget.status_icon_label.accessibleName() == "12"
+        assert entry_widget.status_button.text() == "12"
+        assert not entry_widget.status_button.isHidden()
+        assert entry_widget.status_button.accessibleName() == "12"
 
     def test_narrow_source_path_is_middle_elided_but_full_path_remains_available(
         self,
@@ -357,8 +357,8 @@ class TestBatchEntryItemWidget:
         entry_widget._apply_entry(failed_entry)
         entry_widget._apply_visibility_for_state()
 
-        assert entry_widget._primary_action_key == "open_output"
-        assert entry_widget.primary_action_button.text() == _t("components.file_drop.batch_list.action_open_output")
+        assert entry_widget._primary_action_key == "show_error_details"
+        assert not entry_widget.output_row.isHidden()
         assert entry_widget._secondary_action_visibility["retry"] is True
 
     def test_failed_entry_expansion_updates_list_item_height(self, qapp: QApplication, qtbot) -> None:
@@ -412,7 +412,8 @@ class TestBatchEntryItemWidget:
         )
         entry_widget._apply_entry(completed_entry)
         entry_widget._apply_visibility_for_state()
-        assert entry_widget._primary_action_key == "open_output"
+        assert entry_widget._primary_action_key is None
+        assert not entry_widget.output_row.isHidden()
 
     def test_cancelled_entry_is_not_retryable_failure(self, entry_widget: BatchEntryItemWidget) -> None:
         cancelled_entry = BatchFileEntry(

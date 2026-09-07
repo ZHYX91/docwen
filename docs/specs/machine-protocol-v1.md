@@ -62,10 +62,7 @@ The v4 plan-aware Markdown→DOCX capability requires exactly two input resource
 | `neutral_document` | `application/vnd.docwen.resolved-document+json` | exactly 1 | `docwen.resolved_document.v1` / `urn:docwen:schema:resolved-document:v1` |
 | `numbering_export_plan` | `application/vnd.docwen.numbering-export-plan+json` | exactly 1 | `docwen.numbering_export_plan.v1` / `urn:docwen:schema:numbering-export-plan:v1` |
 
-The successful output is a single-document Artifact Bundle: one preferred DOCX `document`, cardinality `one`,
-artifact kinds `[document]`, and no relations. The DOCX has its own byte count and SHA-256. No `.docwen` companion
-or source-recovery manifest is produced or consumed. Generic image/OCR resources remain unchanged on routes that
-publish them.
+The successful output contains one preferred DOCX `document` and one primary entry. Its result directory additionally includes a typed `docwen-node.json` resource bound through `resource_of/manifest`. Capability cardinality and artifact kinds describe business outputs; the storage manifest is not another business document. Both artifacts carry byte counts and SHA-256. No `.docwen` companion or original-source reconstruction payload is produced or consumed. See [result-directory output](document-node-output.md) for naming, resource-only manifest ownership and consumer publication.
 
 The `neutral_document` input handle's `logical_path` names the authored document in the virtual input root.
 Its filename stem supplies the default title and suggested DOCX filename; an authored YAML title takes precedence.

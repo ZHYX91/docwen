@@ -212,6 +212,8 @@ pip install pillow-heif
 
 ### Типовые примеры
 
+Преобразования из Markdown или в Markdown создают папку результатов внутри `--output-dir DIR`, даже для одного файла. Имена включают исходное имя, дату, время и текущий входной формат. `--output PATH` используется только для других преобразований с одним точным выходным файлом.
+
 ```bash
 # Windows-пакет
 DocWenCLI.exe inspect document.docx --json
@@ -220,16 +222,16 @@ DocWenCLI.exe inspect document.docx --json
 DocWenCLI.exe schema convert
 
 # Предпросмотр выполнения без записи результатов
-DocWenCLI.exe convert report.docx --to md --output report.md --extract-img --ocr --dry-run --json
+DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --ocr --dry-run --json
 
 # Экспорт Word в Markdown (извлечение изображений + OCR)
-DocWenCLI.exe convert report.docx --to md --output report.md --extract-img --ocr
+DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --ocr
 
 # Markdown в Word (шаблон + режим объединения заголовка и текста)
-DocWenCLI.exe convert document.md --to docx --output document.docx --template template.docx.402044547bbb3acc1c7b3469d495c788647b3bb23ffdcff5427730c8baa711f1 --heading-merge-mode punct_required
+DocWenCLI.exe convert document.md --to docx --output-dir exports --template template.docx.402044547bbb3acc1c7b3469d495c788647b3bb23ffdcff5427730c8baa711f1 --heading-merge-mode punct_required
 
 # Управление режимом изображений и размещением OCR-текста в Markdown
-DocWenCLI.exe convert report.docx --to md --output report.md --extract-img --image-mode file --ocr --ocr-placement image_md
+DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --image-mode file --ocr --ocr-placement image_md
 
 # Просмотр возможностей времени выполнения и ворот зависимостей
 DocWenCLI.exe doctor --json
@@ -243,8 +245,8 @@ DocWenCLI.exe validate input.md --check typo --check punct
 # inspect -> schema -> dry-run -> convert
 # docwen inspect document.docx --json
 # docwen schema convert
-# docwen convert document.docx --to md --output document.md --dry-run --json
-# docwen convert document.docx --to md --output document.md
+# docwen convert document.docx --to md --output-dir exports --dry-run --json
+# docwen convert document.docx --to md --output-dir exports
 ```
 
 ### Часто используемые команды и параметры

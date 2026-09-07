@@ -173,7 +173,7 @@ def test_cli_image_ocr_uses_configured_ocr_language_default(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No CLI OCR language flag: image.ocr_language config reaches plugin OCR."""
+    """No CLI OCR language flag: ocr.language config reaches plugin OCR."""
     import docwen_plugin_image.to_markdown.converter as image_converter
     from docwen_application.controller import ApplicationController
     from docwen_bundle.config_port import ConfigPortAdapter
@@ -197,7 +197,7 @@ def test_cli_image_ocr_uses_configured_ocr_language_default(
     _write_png(source)
 
     config_port = ConfigPortAdapter(base_dir=PROJECT_CONFIGS, user_dir=tmp_path / "configs")
-    assert config_port.set("image.ocr_language", "japanese") is True
+    assert config_port.set("ocr.language", "japanese") is True
 
     runtime_port = create_runtime_port()
     controller = ApplicationController(runtime_port=runtime_port, config_port=config_port)

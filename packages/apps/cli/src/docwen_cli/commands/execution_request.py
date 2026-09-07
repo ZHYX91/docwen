@@ -122,7 +122,7 @@ def configured_ocr_language(controller: Any) -> str | None:
     if config_port is None:
         return None
     try:
-        value = config_port.get("image.ocr_language", None)
+        value = config_port.get("ocr.language", None)
     except Exception as exc:
         raise CapabilityUnavailableError("OCR language configuration could not be read.") from exc
     return str(value).strip() if value else None

@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 from .control_metrics import button_geometry_qss
-from .design_tokens import Border, Radius, Sizing, Typography
-from .panel_card import build_panel_card_stylesheet
+from .design_tokens import Border, Sizing, Typography
 from .theme_semantics import COLOR_ACCENT_HOVER, COLOR_ACCENT_PRESSED
 
 
@@ -12,13 +11,7 @@ def build_action_area_stylesheet(font_size_preset: str | None = None) -> str:
     """操作面板基础样式。"""
     return "\n".join(
         [
-            build_panel_card_stylesheet(font_size_preset),
             "/* docwen-action-panel-foundation */",
-            "QFrame#actionContentCard, QFrame#actionCancelCard {",
-            f"    border: {Border.THIN}px solid palette(midlight);",
-            f"    border-radius: {Radius.LARGE}px;",
-            "    background-color: palette(base);",
-            "}",
             "QLabel#actionPanelSubtitle {",
             "    color: palette(mid);",
             f"    font-size: {Typography.qss(Typography.CAPTION_SIZE, font_size_preset)};",
