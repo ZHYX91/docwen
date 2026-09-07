@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMenu,
+    QStyle,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -462,7 +463,9 @@ class TemplateSelector(QWidget):
 
     def _apply_item_presentation(self, item: QListWidgetItem, name: str) -> None:
         item.setText(name)
-        if self._on_open_location_cb is not None:
+        if name == self._selected:
+            item.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton))
+        elif self._on_open_location_cb is not None:
             item.setIcon(self._location_icon)
         else:
             item.setIcon(QIcon())
@@ -494,9 +497,9 @@ class TemplateSelector(QWidget):
 
     def _build_selection_details_text(self, name: str) -> str:
         details = self._template_details.get(name)
+        lines: list[str] = [t("components.template_selector.selected_name", name=name)]
         if not details:
-            return ""
-        lines: list[str] = []
+            return "\n".join(lines)
         if details.source_label:
             lines.append(t("components.template_selector.source_line", value=details.source_label))
         if details.updated_label:

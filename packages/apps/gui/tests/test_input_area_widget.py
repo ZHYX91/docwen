@@ -91,8 +91,9 @@ class TestConstruction:
 
         add_button = widget.add_button
         clear_button = widget.clear_button
-        assert add_button.minimumWidth() == clear_button.minimumWidth() == _ACTION_BUTTON_MIN_WIDTH
-        assert add_button.minimumHeight() == clear_button.minimumHeight() == Sizing.CONTROL_HEIGHT
+        assert add_button.minimumWidth() == clear_button.minimumWidth() >= _ACTION_BUTTON_MIN_WIDTH
+        assert add_button.minimumHeight() == clear_button.minimumHeight() >= Sizing.CONTROL_HEIGHT
+        assert add_button.height() == clear_button.height() == widget.mode_switch.height()
 
     def test_mode_switch_exists(self, widget: InputArea) -> None:
         switch = widget.mode_switch

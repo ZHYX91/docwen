@@ -11,6 +11,7 @@ template_name = "繁體中文通用模板"
 # 通用文本
 # =============================================================================
 [common]
+action_file_count = "{action}（{count} 個檔案）"
 copy = "複製"
 app_name = "DocWen"
 default = "默認"
@@ -950,6 +951,7 @@ cancel_hint = "任務處理中，可按 Esc 取消目前任務。"
 
 # 模板选择器
 [components.template_selector]
+selected_name = "目前範本：{name}"
 no_templates = "無可用範本"
 empty_hint = "沒有模板時，可先打開模板目錄檢查或補充模板檔案。"
 open_template_dir = "打開模板目錄"
@@ -1028,6 +1030,8 @@ no_transparency = "不保留透明"
 
 # 版式转换区
 [conversion_panel.layout]
+image_format = "圖片格式"
+resolution = "解析度（DPI）"
 convert_to_other_formats = "轉換為其他版式格式"
 convert_to_document_or_image = "轉換為文件或圖片"
 merge_split = "合併/拆分"

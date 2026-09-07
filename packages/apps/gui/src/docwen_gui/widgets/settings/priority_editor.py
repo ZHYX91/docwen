@@ -4,6 +4,7 @@ from PySide6.QtCore import QEvent, QRect, QSize, Qt, QTimer
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QListWidget, QPushButton, QVBoxLayout, QWidget
 
 from ...i18n import t
+from ...styles.design_tokens import Sizing, Spacing
 
 
 class SoftwarePriorityEditor(QWidget):
@@ -17,7 +18,7 @@ class SoftwarePriorityEditor(QWidget):
         self._resize_timer.timeout.connect(self._sync_geometry)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
+        layout.setSpacing(Spacing.CONTROL_GAP)
         self.title_label = QLabel(title, self)
         self.title_label.setTextFormat(Qt.TextFormat.PlainText)
         self.title_label.setWordWrap(True)
@@ -25,7 +26,7 @@ class SoftwarePriorityEditor(QWidget):
         layout.addWidget(self.title_label)
 
         row = QHBoxLayout()
-        row.setSpacing(8)
+        row.setSpacing(Spacing.CONTROL_GAP)
         self.list_widget = QListWidget(self)
         self.list_widget.setObjectName("settingsPriorityList")
         self.list_widget.setAccessibleName(title)
@@ -34,7 +35,7 @@ class SoftwarePriorityEditor(QWidget):
         self.title_label.setBuddy(self.list_widget)
         row.addWidget(self.list_widget, 1, Qt.AlignmentFlag.AlignTop)
         buttons = QVBoxLayout()
-        buttons.setSpacing(6)
+        buttons.setSpacing(Spacing.CONTROL_GAP)
         self.move_up_button = QPushButton(t("editors.common.move_up", "Move Up"), self)
         self.move_down_button = QPushButton(t("editors.common.move_down", "Move Down"), self)
         buttons.addWidget(self.move_up_button)
@@ -61,13 +62,13 @@ class SoftwarePriorityEditor(QWidget):
 
     def _sync_geometry(self) -> None:
         buttons = (self.move_up_button, self.move_down_button)
-        button_width = max(72, *(button.sizeHint().width() for button in buttons))
-        button_height = max(32, *(button.sizeHint().height() for button in buttons))
+        button_width = max(Sizing.BUTTON_MIN_WIDTH, *(button.sizeHint().width() for button in buttons))
+        button_height = max(Sizing.CONTROL_HEIGHT, *(button.sizeHint().height() for button in buttons))
         for button in buttons:
             button.setFixedSize(button_width, button_height)
         width = max(1, self.list_widget.viewport().width() - 16)
         metrics = self.list_widget.fontMetrics()
-        row_height = max(32, metrics.height() + 12)
+        row_height = max(Sizing.CONTROL_HEIGHT, metrics.height() + Spacing.MD)
         for index in range(self.list_widget.count()):
             text = self.list_widget.item(index).text()
             bounds = metrics.boundingRect(QRect(0, 0, width, 10000), Qt.TextFlag.TextWordWrap, text)

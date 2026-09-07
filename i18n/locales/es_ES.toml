@@ -63,6 +63,7 @@ file_admission_confirm_message = "El nombre del archivo y el contenido detectado
 file_admission_confirm_action = "Procesar como formato detectado"
 file_admission_cancelled = "Se canceló el procesamiento; no se aceptó el formato detectado."
 [common]
+action_file_count = "{action} ({count} archivos)"
 copy = "Copiar"
 app_name = "DocWen"
 default = "Predeterminado"
@@ -1004,6 +1005,7 @@ cancel_hint = "Hay una tarea en ejecución. Pulse Esc para cancelarla."
 
 # 模板选择器
 [components.template_selector]
+selected_name = "Plantilla seleccionada: {name}"
 no_templates = "No hay plantillas disponibles"
 empty_hint = "Si no hay plantillas disponibles, abra la carpeta de plantillas para revisar o agregar archivos."
 open_template_dir = "Abrir carpeta de plantillas"
@@ -1083,6 +1085,8 @@ no_transparency = "Sin transparencia"
 
 # 版式转换区
 [conversion_panel.layout]
+image_format = "Formato de imagen"
+resolution = "Resolución (DPI)"
 convert_to_other_formats = "Convertir a otros formatos de maquetación"
 convert_to_document_or_image = "Convertir a documento o imagen"
 merge_split = "Combinar/Dividir"

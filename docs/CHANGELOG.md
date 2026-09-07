@@ -7,6 +7,11 @@
 
 ## 0.10.0 (2026-09-07)
 
+- 主界面与设置页共用标题栏和间距规范；执行按钮铺满卡片，Markdown 生成按钮显示目标格式，批量按钮显示实际处理数量。
+- 显示输出位置与当前模板，改善深浅主题对比、长文字换行及空闲反馈。
+- Unify card headers, control sizes and spacing across workflows and settings. Full-width execution buttons name Markdown targets and show the actual batch scope.
+- Preview output locations and selected templates; improve theme contrast, long-label reflow and idle feedback.
+
 - 表格导出使用声明的原文件名，避免临时输入编号出现在模板标题与建议文件名中。
 - Preserve declared source names in spreadsheet template titles and suggested output filenames.
 

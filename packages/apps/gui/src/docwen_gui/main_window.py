@@ -55,6 +55,7 @@ from docwen_gui.file_admission_i18n import render_file_inspection_message
 from docwen_gui.font_utils import FONT_SIZE_PRESETS, normalize_font_size_preset
 from docwen_gui.i18n import t as _t
 from docwen_gui.resources import load_svg_icon
+from docwen_gui.styles.design_tokens import Spacing
 from docwen_gui.styles.theme_manager import ThemeManager
 from docwen_gui.view_models._optimization_filter import OptimizationSource
 from docwen_gui.view_models._runtime_route_filter import (
@@ -707,8 +708,15 @@ class MainWindow(QWidget):
         content = QWidget(scroll)
         flow = QVBoxLayout(content)
         flow.setContentsMargins(0, 0, 0, 0)
-        flow.setSpacing(8)
+        flow.setSpacing(Spacing.CARD_GAP)
         flow.addWidget(self._input_area)
+        from .widgets.batch_list import _MiddleElidedLabel
+
+        self._output_location_label = _MiddleElidedLabel("", content)
+        self._output_location_label.setObjectName("workflowOutputLocation")
+        self._output_location_label.setTextFormat(Qt.TextFormat.PlainText)
+        self._output_location_label.hide()
+        flow.addWidget(self._output_location_label)
         flow.addWidget(self._action_area)
         flow.addWidget(self._info_area)
         flow.addStretch(1)
@@ -814,12 +822,14 @@ class MainWindow(QWidget):
         self._info_area_vm.task_guide_action_requested.connect(self._handle_task_guide_action)
         self._sync_session_mutation_controls()
         self._batch_list_vm.entry_count_changed.connect(self._sync_aggregate_availability)
+        self._batch_list_vm.current_category_changed.connect(self._sync_execution_context)
         self._sync_aggregate_availability()
 
     def _sync_aggregate_availability(self, *_args: object) -> None:
         self._conversion_panel_vm.set_aggregate_counts(
             {action: len(self._batch_list_vm.get_aggregate_file_list(action)) for action in _AGGREGATE_ACTIONS}
         )
+        self._sync_execution_context()
 
     def _sync_session_mutation_controls(self) -> None:
         """Prevent clearing the working set while an execution can still emit results."""
@@ -827,6 +837,37 @@ class MainWindow(QWidget):
         if clear_button is not None:
             clear_button.setEnabled(not self._action_area_vm.cancel_visible)
         self._conversion_panel.setEnabled(not self._action_area_vm.cancel_visible)
+        self._sync_execution_context()
+
+    def _sync_execution_context(self, *_args: object) -> None:
+        """Preview persisted output policy and the request handler's category scope."""
+        selected = self._view_model.selected_file
+        paths = (
+            self._batch_list_vm.get_files_for_category(self._batch_list_vm.current_category)
+            if self._view_model.mode == "batch"
+            else [selected.path]
+            if selected is not None
+            else []
+        )
+        self._action_area.set_execution_count(len(paths))
+        self._conversion_panel.set_execution_count(len(paths))
+        label = self._output_location_label
+        label.setVisible(bool(paths))
+        if not paths:
+            return
+        try:
+            policy = self._build_output_policy()
+        except _OutputPolicyConfigError:
+            text = _t("main_window.output_settings_unavailable")
+        else:
+            parents = {str(Path(path).parent) for path in paths}
+            location = policy.output_dir or (
+                next(iter(parents)) if len(parents) == 1 else _t("settings.output.output_modes.source")
+            )
+            text = f"{_t('settings.output.output_mode_label')} {location}"
+            if policy.date_subfolder:
+                text += f" · {_t('settings.output.date_folder.create_label')}"
+        label.set_full_text(text)
 
     def _wire_view_model(self) -> None:
         vm = self._view_model
@@ -1193,6 +1234,7 @@ class MainWindow(QWidget):
             right_visible=projection.right_panel_visible,
         )
         self._restore_main_template_default()
+        self._sync_execution_context()
 
     def _finish_geometry_source_transition_settling(self) -> None:
         """Finish the bounded internal-layout quiet period after a panel change."""

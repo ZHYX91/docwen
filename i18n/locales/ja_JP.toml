@@ -11,6 +11,7 @@ template_name = "日本語汎用テンプレート"
 # 通用文本
 # =============================================================================
 [common]
+action_file_count = "{action}（{count} ファイル）"
 copy = "コピー"
 app_name = "DocWen"
 default = "デフォルト"
@@ -950,6 +951,7 @@ cancel_hint = "タスクを実行中です。Esc キーを押すと現在のタ�
 
 # 模板选择器
 [components.template_selector]
+selected_name = "選択中のテンプレート：{name}"
 no_templates = "利用可能なテンプレートはありません"
 empty_hint = "テンプレートがない場合は、テンプレートフォルダーを開いて確認または追加してください。"
 open_template_dir = "テンプレートフォルダーを開く"
@@ -1028,6 +1030,8 @@ no_transparency = "透明度なし"
 
 # 版式转换区
 [conversion_panel.layout]
+image_format = "画像形式"
+resolution = "解像度（DPI）"
 convert_to_other_formats = "他のレイアウト形式に変換"
 convert_to_document_or_image = "ドキュメントまたは画像に変換"
 merge_split = "結合/分割"

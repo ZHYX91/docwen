@@ -316,11 +316,12 @@ class TestTemplateSelectorDetailsLabel:
         assert "Default document template" in tooltip
         assert "S:/DocWen/templates/Standard Report.docx" in tooltip
 
-    def test_details_label_hidden_without_details(self, selector: TemplateSelector) -> None:
+    def test_selected_name_visible_without_optional_metadata(self, selector: TemplateSelector) -> None:
         selector.add_templates(_sample_names())
         selector.select_template(_SORTED_SECOND, selection_source="user")
-        # Business Letter has no detail entry → label should be hidden
-        _assert_hidden(selector._details_label)
+        _assert_visible(selector._details_label)
+        assert _SORTED_SECOND in selector._details_label.text()
+        assert not selector._list.currentItem().icon().isNull()
 
     def test_footer_row_visible_when_details_or_button(self, selector: TemplateSelector) -> None:
         selector.add_templates(_sample_names(), template_details=_sample_details())

@@ -22,6 +22,17 @@ GUI 通过 ViewModel 呈现唯一的 application/runtime 状态。Widget 负责�
 
 Visible controls require localized labels or accessible names. Errors, warnings and confirmations use the shared feedback layer. Terminal summaries, history and retained artifacts must agree with runtime truth.
 
+## Visual system / 视觉规范
+
+- Shared cards use a left-aligned, theme-aware header band and 16 logical-pixel body padding. Main workflow and settings cards share this primitive.
+- Regular controls have a 36 logical-pixel minimum height; execution buttons have a 40 logical-pixel minimum height and fill their card's content width. Short text buttons have an 80 logical-pixel minimum width. Font metrics may increase these dimensions.
+- Related controls use an 8-pixel horizontal gap, functional groups and form rows use 12 pixels, and cards use 16 pixels. Qt handles system DPI scaling; these tokens are not scaled a second time.
+- Checkbox labels follow the indicator on its right. Form fields align within a settings page; narrow rows and long localized text reflow without clipping. Proofreading choices use one column when two do not fit.
+- Markdown target selection occupies a separate form row above the full-width generation action. The action names its target format. Batch conversion buttons show the same category count used by request dispatch; merge buttons show their own matching-input count.
+- The workspace previews committed output-directory settings. Template selection has a persistent check marker and a visible selected name. Idle feedback is borderless; task, notification and result feedback retain their card.
+- Light and dark themes use identical geometry, with readable hover, pressed, disabled and keyboard-focus states.
+- Theme-independent design tokens and shared control geometry own dimensions and spacing. Theme colour changes reuse the same complete button box model; new themes do not redeclare padding or minimum sizes.
+
 ## Regression / 回归
 
 Widget/view-model tests cover deterministic behavior. GUI smoke, screenshots and physical desktop interaction cover the final host-dependent surface. Current reference screenshots are stored under `docs/assets/screenshots/`.

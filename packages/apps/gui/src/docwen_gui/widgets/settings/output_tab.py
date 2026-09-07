@@ -11,6 +11,7 @@ from typing import cast as _cast
 from PySide6.QtWidgets import QCheckBox, QComboBox, QFileDialog, QHBoxLayout, QLineEdit, QPushButton, QWidget
 
 from ...i18n import t
+from ...styles.design_tokens import Spacing
 from ...view_models.settings_vm import SECTION_OUTPUT, SettingsViewModel
 from .base_tab import BaseSettingsTab
 
@@ -67,7 +68,7 @@ class OutputTab(BaseSettingsTab):
         path_row.setObjectName("outputCustomPathRow")
         path_layout = QHBoxLayout(path_row)
         path_layout.setContentsMargins(0, 0, 0, 0)
-        path_layout.setSpacing(4)
+        path_layout.setSpacing(Spacing.CONTROL_GAP)
         self._custom_path = QLineEdit()
         self._custom_path.setObjectName("outputCustomPathEdit")
         browse_btn = QPushButton(t("common.browse", "Browse"))

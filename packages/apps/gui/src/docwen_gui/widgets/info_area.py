@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
 )
 
 from docwen_gui.i18n import t as _t
+from docwen_gui.styles.design_tokens import Spacing
 
 from .panel_card import PanelCard, TaskActivityList
 
@@ -39,8 +40,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # ── Design constants ──────────────────────────────────────────────────────
-_SPACING_XS = 4
-_SPACING_SM = 8
+_SPACING_XS = Spacing.XS
+_SPACING_SM = Spacing.SM
 _LOCATION_BUTTON_SIZE = 26
 _LOCATION_ICON_SIZE = 16
 _SCROLL_DELAY_MS = 50
@@ -184,7 +185,7 @@ class InfoArea(QWidget):
         self.setObjectName("infoArea")
 
         # Widget refs
-        self._content_card: QWidget = _cast(QWidget, None)
+        self._content_card: PanelCard = _cast(PanelCard, None)
         self._scroll: QScrollArea = _cast(QScrollArea, None)
         self._msg_container: QWidget = _cast(QWidget, None)
         self._msg_layout: QVBoxLayout = _cast(QVBoxLayout, None)
@@ -480,6 +481,13 @@ class InfoArea(QWidget):
     def _update_status_section(self) -> None:
         """Update the status meta, summary, and styling from ViewModel."""
         vm = self._vm
+
+        idle = vm.status_source == "idle" and not vm.notification_text and not vm.history_rows
+        if self._content_card.property("idleFeedback") != idle:
+            self._content_card.setProperty("idleFeedback", idle)
+            self._refresh_widget_style(self._content_card)
+            padding = Spacing.SM if idle else Spacing.CARD_PADDING
+            self._content_card.content_layout.setContentsMargins(padding, padding, padding, padding)
 
         if self._status_meta_label is not None:
             if vm.activity_enabled:

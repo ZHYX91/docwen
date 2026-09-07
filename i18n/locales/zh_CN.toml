@@ -63,6 +63,7 @@ file_admission_cancelled = "已取消处理；未接受检测到的格式。"
 # 通用文本
 # =============================================================================
 [common]
+action_file_count = "{action}（{count} 个文件）"
 copy = "复制"
 app_name = "DocWen"
 default = "默认"
@@ -1001,6 +1002,7 @@ cancel_hint = "任务处理中，可按 Esc 取消当前任务。"
 
 # 模板选择器
 [components.template_selector]
+selected_name = "当前模板：{name}"
 no_templates = "无可用模板"
 empty_hint = "没有模板时，可先打开模板目录检查或补充模板文件。"
 open_template_dir = "打开模板目录"
@@ -1078,6 +1080,8 @@ no_transparency = "不保留透明"
 
 # 版式转换区
 [conversion_panel.layout]
+image_format = "图片格式"
+resolution = "分辨率（DPI）"
 convert_to_other_formats = "转换为其他版式格式"
 convert_to_document_or_image = "转换为文档或图片"
 merge_split = "合并/拆分"

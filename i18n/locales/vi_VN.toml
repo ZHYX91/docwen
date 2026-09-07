@@ -63,6 +63,7 @@ file_admission_cancelled = "Đã hủy xử lý; định dạng đã phát hiệ
 # 通用文本
 # =============================================================================
 [common]
+action_file_count = "{action} ({count} tệp)"
 copy = "Sao chép"
 app_name = "DocWen"
 default = "Mặc định"
@@ -1000,6 +1001,7 @@ cancel_hint = "Tác vụ đang chạy. Nhấn Esc để hủy tác vụ hiện t
 
 # 模板选择器
 [components.template_selector]
+selected_name = "Mẫu đã chọn: {name}"
 no_templates = "Không có mẫu khả dụng"
 empty_hint = "Khi chưa có mẫu, hãy mở thư mục mẫu để kiểm tra hoặc bổ sung tệp."
 open_template_dir = "Mở thư mục mẫu"
@@ -1079,6 +1081,8 @@ no_transparency = "Không trong suốt"
 
 # 版式转换区
 [conversion_panel.layout]
+image_format = "Định dạng ảnh"
+resolution = "Độ phân giải (DPI)"
 convert_to_other_formats = "Chuyển sang định dạng bố cục khác"
 convert_to_document_or_image = "Chuyển sang tài liệu hoặc ảnh"
 merge_split = "Trộn/Tách"

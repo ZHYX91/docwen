@@ -42,6 +42,7 @@ from PySide6.QtWidgets import (
 
 from docwen_gui.format_presentation import FormatChoice, presentation_for
 from docwen_gui.i18n import t as _t
+from docwen_gui.styles.design_tokens import Sizing, Spacing
 from docwen_gui.view_models.conversion_panel_vm import BUTTON_COLORS
 
 from .panel_card import ActionFooter, ChoiceGroup, FormatSelector, FormRow, InlineNotice, PanelCard, WrappingLabel
@@ -52,8 +53,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # ── Design constants ─────────────────────────────────────────────────────
-_SPACING_XS = 4
-_SPACING_SM = 8
+_SPACING_XS = Spacing.XS
+_SPACING_SM = Spacing.SM
 
 # ── Format swatch icons ────────────────────────────────────────────────
 # Semantic class per format comes from the shared format presentation registry.
@@ -228,7 +229,7 @@ class ConversionPanel(QWidget):
         scroll_content.setObjectName("conversionPanelScrollContent")
         content_layout = QVBoxLayout(scroll_content)
         content_layout.setContentsMargins(0, 0, 0, _SPACING_SM * 2)
-        content_layout.setSpacing(_SPACING_SM)
+        content_layout.setSpacing(Spacing.CARD_GAP)
         content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         # Conversion group
@@ -262,13 +263,13 @@ class ConversionPanel(QWidget):
         root.addWidget(scroll_area)
 
     def _make_section_group(self, title: str, object_name: str) -> PanelCard:
-        """Create a compact card with an internal centred title."""
+        """Create a card with a shared header and consistent form spacing."""
         group = PanelCard(title, self, level="card")
         group.setObjectName(object_name)
         group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
 
         layout = group.content_layout
-        layout.setSpacing(_SPACING_XS)
+        layout.setSpacing(Spacing.FORM_ROW_GAP)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         desc_label = WrappingLabel(parent=group)
@@ -278,7 +279,7 @@ class ConversionPanel(QWidget):
         setattr(self, "_" + object_name + "_desc", desc_label)
 
         content = QVBoxLayout()
-        content.setSpacing(_SPACING_XS)
+        content.setSpacing(Spacing.FORM_ROW_GAP)
         content.setAlignment(Qt.AlignmentFlag.AlignTop)
         layout.addLayout(content)
         setattr(self, "_" + object_name + "_content", content)
@@ -388,6 +389,9 @@ class ConversionPanel(QWidget):
             self._build_layout_section()
         for content in (self._get_primary_content(), self._get_secondary_content(), self._get_extra_content()):
             self._arrange_section_actions(content)
+        for control in self.findChildren(QWidget):
+            if isinstance(control, (QComboBox, QLineEdit, QRadioButton)):
+                control.setMinimumHeight(Sizing.CONTROL_HEIGHT)
         self._sync_controls_from_vm()
 
     def _arrange_section_actions(self, layout: QVBoxLayout) -> None:
@@ -511,12 +515,12 @@ class ConversionPanel(QWidget):
             ),
         }
         defaults: tuple[str, str, str] = ("", "", "")
-        primary, secondary, extra = descs.get(cat or "", defaults)
+        _primary, _secondary, extra = descs.get(cat or "", defaults)
         if cat == "layout" and self._vm.ui_mode == "single":
             extra = ""
         for prefix, text in [
-            ("conversionPrimaryGroup", primary),
-            ("conversionSecondaryGroup", secondary),
+            ("conversionPrimaryGroup", ""),
+            ("conversionSecondaryGroup", ""),
             ("conversionExtraGroup", extra),
         ]:
             desc_label = getattr(self, "_" + prefix + "_desc", None)
@@ -577,6 +581,28 @@ class ConversionPanel(QWidget):
         self._sync_spreadsheet_controls()
         self._sync_layout_controls()
         self._sync_aggregate_actions()
+        self._sync_execution_labels()
+
+    def set_execution_count(self, count: int) -> None:
+        self._execution_count = count
+        self._sync_execution_labels()
+
+    def _sync_execution_labels(self) -> None:
+        for button in (
+            self._conversion_button,
+            self._saveas_button,
+            self._layout_export_button,
+            self._layout_render_button,
+        ):
+            if button is not None:
+                self._set_counted_button_label(button, getattr(self, "_execution_count", 0))
+
+    def _set_counted_button_label(self, button: QPushButton, count: int) -> None:
+        label = str(button.property("baseActionLabel") or button.text())
+        button.setProperty("baseActionLabel", label)
+        if self._vm.ui_mode == "batch" and count:
+            label = _t("common.action_file_count", action=label, count=count)
+        button.setText(label)
 
     def _sync_aggregate_actions(self) -> None:
         for action, button in (
@@ -586,6 +612,7 @@ class ConversionPanel(QWidget):
         ):
             if button is not None:
                 count = self._vm.aggregate_count(action)
+                self._set_counted_button_label(button, count)
                 reason = _t("main_window.aggregate_need_two", count=count) if count < 2 else ""
                 button.setEnabled(count >= 2)
                 button.setToolTip(reason)
@@ -727,12 +754,16 @@ class ConversionPanel(QWidget):
         combo.addItems(items)
         apply_format_swatch_icons(combo)
         combo.setMinimumWidth(100)
+        combo.setMinimumHeight(Sizing.CONTROL_HEIGHT)
+        combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         return combo
 
     def _make_action_button(self, text: str, parent: QWidget | None = None) -> QPushButton:
-        btn = QPushButton(text, parent or self)
+        from .action_button import ActionButton
+
+        btn = ActionButton(text, parent or self)
         btn.setObjectName("conversionSecondaryButton")
-        btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        btn.setProperty("baseActionLabel", text)
         return btn
 
     def _make_subtle_divider(self) -> QFrame:
@@ -785,6 +816,7 @@ class ConversionPanel(QWidget):
         except ImportError:
             cb = QCheckBox(text, self)
         cb.setChecked(checked)
+        cb.setMinimumHeight(Sizing.CONTROL_HEIGHT)
         return cb
 
     def _make_wrapping_checkbox(self, text: str, checked: bool = False) -> tuple[QWidget, QCheckBox]:
@@ -1266,13 +1298,19 @@ class ConversionPanel(QWidget):
             self._saveas_group.setVisible(False)
             return
         if export_formats:
+            export_section = QWidget(self)
+            export_layout = QVBoxLayout(export_section)
+            export_layout.setContentsMargins(0, 0, 0, 0)
+            export_layout.setSpacing(Spacing.FORM_ROW_GAP)
             row_container, combo, btn = self._make_dropdown_action_row(
                 export_formats, _t("conversion_panel.export", "Export")
             )
             self._layout_export_combo = combo
             self._layout_export_button = btn
             btn.clicked.connect(self._on_layout_export_clicked)
-            parent_layout.addWidget(row_container)
+            export_layout.addWidget(row_container)
+            self._arrange_section_actions(export_layout)
+            parent_layout.addWidget(export_section)
 
         if export_formats and render_formats:
             sep = QFrame()
@@ -1282,15 +1320,14 @@ class ConversionPanel(QWidget):
         if not render_formats:
             return
 
-        # Render controls need one more field than the common combo/action row.
-        # Let selectors stack in narrow viewports; the action always has its own row.
+        # Give each selector an explicit label; shared form rows handle narrow
+        # viewports and large fonts while the action retains its own row.
         render_row_container = QWidget(self)
         render_row_container.setObjectName("conversionButtonRow")
         render_row = QVBoxLayout(render_row_container)
         render_row.setContentsMargins(0, 0, 0, 0)
-        render_row.setSpacing(_SPACING_SM)
-        selectors = ChoiceGroup(render_row_container, responsive=True, spacing=_SPACING_SM)
-        render_row.addWidget(selectors)
+        render_row.setSpacing(Spacing.FORM_ROW_GAP)
+        render_fields: list[FormRow] = []
 
         render_format_combo = self._make_combo(render_formats, parent=render_row_container)
         render_format_combo.setCurrentText(
@@ -1299,14 +1336,20 @@ class ConversionPanel(QWidget):
         render_format_combo.setMinimumWidth(100)
         render_format_combo.currentTextChanged.connect(lambda value: setattr(self._vm, "render_format", value))
         self._layout_render_format_combo = render_format_combo
-        selectors.content_layout.addWidget(render_format_combo, 1)
+        format_row = FormRow(
+            _t("conversion_panel.layout.image_format"), render_format_combo, alignment_group=render_fields
+        )
+        render_fields.append(format_row)
+        render_row.addWidget(format_row)
 
         dpi_combo = self._make_combo(["150", "300", "600"], parent=render_row_container)
         dpi_combo.setCurrentText(str(self._vm.render_dpi))
         dpi_combo.setMinimumWidth(80)
         dpi_combo.currentTextChanged.connect(lambda value: setattr(self._vm, "render_dpi", int(value)))
         self._layout_render_dpi_combo = dpi_combo
-        selectors.content_layout.addWidget(dpi_combo, 1)
+        dpi_row = FormRow(_t("conversion_panel.layout.resolution"), dpi_combo, alignment_group=render_fields)
+        render_fields.append(dpi_row)
+        render_row.addWidget(dpi_row)
 
         render_btn = self._make_action_button(_t("conversion_panel.render", "Render"), parent=render_row_container)
         render_btn.clicked.connect(self._on_layout_render_clicked)
@@ -1354,8 +1397,9 @@ class ConversionPanel(QWidget):
 
         # Page range input row
         page_edit = QLineEdit(self._vm.page_input, self)
-        page_edit.setMinimumWidth(160)
+        page_edit.setMinimumWidth(Sizing.BUTTON_MIN_WIDTH)
         page_edit.setPlaceholderText(_t("conversion_panel.layout.page_range_placeholder", "e.g., 1-5,7,9-12 or *"))
+        page_edit.setToolTip(page_edit.placeholderText())
         page_edit.textChanged.connect(self._on_page_input_changed)
         self._page_input_edit = page_edit
         page_label = _t("conversion_panel.layout.split_page_range", "Page Range")

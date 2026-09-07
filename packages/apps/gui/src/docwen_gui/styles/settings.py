@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from ._hex_helper import _hex_to_rgba
-from .design_tokens import Border, Radius, Spacing, Typography
+from .control_metrics import button_geometry_qss
+from .design_tokens import Border, Radius, Sizing, Spacing, Typography
 from .theme_semantics import COLOR_PRIMARY, COLOR_SECONDARY, is_dark_theme
 
 
@@ -13,7 +14,7 @@ def build_settings_stylesheet(theme_name: str, font_size_preset: str | None = No
     section_title_soft = _hex_to_rgba("#E2E8F0" if dark_theme else "#1E293B", 206 if dark_theme else 164)
     section_description_color = _hex_to_rgba(COLOR_SECONDARY, 186 if dark_theme else 120)
     tab_description_color = _hex_to_rgba("#E2E8F0" if dark_theme else "#334155", 168 if dark_theme else 144)
-    secondary_button_text = _hex_to_rgba("#E2E8F0" if dark_theme else "#334155", 188 if dark_theme else 168)
+    secondary_button_text = "#E2E8F0" if dark_theme else "#334155"
     secondary_button_border = _hex_to_rgba(COLOR_SECONDARY, 124 if dark_theme else 82)
     secondary_button_hover = _hex_to_rgba("#FFFFFF" if dark_theme else "#0F172A", 18 if dark_theme else 6)
     secondary_button_pressed = _hex_to_rgba("#FFFFFF" if dark_theme else "#0F172A", 26 if dark_theme else 10)
@@ -26,9 +27,7 @@ def build_settings_stylesheet(theme_name: str, font_size_preset: str | None = No
             f"    color: {secondary_button_text};",
             f"    background-color: {secondary_button_surface};",
             f"    border: {Border.THIN}px solid {secondary_button_border};",
-            f"    border-radius: {Radius.MEDIUM}px;",
-            "    padding: 4px 12px;",
-            "    min-width: 78px; min-height: 32px;",
+            button_geometry_qss(minimum_width=Sizing.BUTTON_MIN_WIDTH),
             "}",
             "QMessageBox QPushButton:hover {",
             f"    background-color: {secondary_button_hover};",
@@ -48,17 +47,14 @@ def build_settings_stylesheet(theme_name: str, font_size_preset: str | None = No
             "}",
             "QDialog#settingsDialog QPushButton#settingsResetTabButton,",
             "QDialog#settingsDialog QPushButton#settingsResetAllButton {",
-            "    min-width: 84px;",
-            "    padding: 4px 12px;",
-            f"    border-radius: {Radius.MEDIUM}px;",
+            button_geometry_qss(minimum_width=Sizing.BUTTON_MIN_WIDTH),
             "}",
             "QDialog#settingsDialog QPushButton#settingsLoggingCopyPathButton,",
             "QDialog#settingsDialog QPushButton#settingsLoggingOpenDirectoryButton,",
             "QDialog#settingsDialog QPushButton#settingsOkButton,",
             "QDialog#settingsDialog QPushButton#settingsCancelButton,",
             "QDialog#settingsDialog QPushButton#settingsApplyButton {",
-            "    min-width: 78px;",
-            f"    border-radius: {Radius.MEDIUM}px;",
+            button_geometry_qss(minimum_width=Sizing.BUTTON_MIN_WIDTH),
             "}",
             "QDialog#settingsDialog QPushButton#settingsResetTabButton,",
             "QDialog#settingsDialog QPushButton#settingsResetAllButton,",
@@ -99,9 +95,7 @@ def build_settings_stylesheet(theme_name: str, font_size_preset: str | None = No
             "QDialog#symbolErrorEditor QDialogButtonBox QPushButton,",
             "QDialog#sensitiveWordEditor QDialogButtonBox QPushButton,",
             "QWidget#tomlEditorDialog QDialogButtonBox QPushButton {",
-            "    min-width: 78px;",
-            "    min-height: 32px;",
-            f"    border-radius: {Radius.MEDIUM}px;",
+            button_geometry_qss(minimum_width=Sizing.BUTTON_MIN_WIDTH),
             "}",
             "QDialog#settingsDialog QPushButton#settingsOkButton {",
             f"    color: {'#F8FAFC' if dark_theme else '#FFFFFF'};",
@@ -126,10 +120,8 @@ def build_settings_stylesheet(theme_name: str, font_size_preset: str | None = No
             "QDialog#numberingAddDialog QToolButton {",
             f"    color: {secondary_button_text};",
             f"    border: {Border.THIN}px solid {secondary_button_border};",
-            f"    border-radius: {Radius.MEDIUM}px;",
             f"    background-color: {secondary_button_surface};",
-            f"    padding: {Spacing.XS}px {Spacing.SM}px;",
-            "    min-height: 32px;",
+            button_geometry_qss(),
             "}",
             "QWidget#settingsTabRoot QPushButton:hover,",
             "QDialog#numberingAddDialog QPushButton:hover,",
@@ -175,7 +167,7 @@ def build_settings_stylesheet(theme_name: str, font_size_preset: str | None = No
             "    background: transparent;",
             "}",
             'QWidget#settingsTabRoot QWidget[settingsRole="settingsCard"] {',
-            f"    margin-top: {Spacing.SM}px;",
+            "    margin-top: 0;",
             "}",
             "QWidget#settingsTabRoot QGroupBox#settingsSectionGroup {",
             f"    border-radius: {Radius.LARGE}px;",

@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QPushButton,
     QScrollArea,
     QSizePolicy,
     QSpinBox,
@@ -30,17 +31,17 @@ from PySide6.QtWidgets import (
 )
 
 from ...resources import load_svg_icon
-from ..panel_card import FormRow, WrappingLabel
+from ...styles.design_tokens import Sizing, Spacing
+from ..panel_card import FormRow, PanelCard, WrappingLabel
 from .check_box import SettingsCheckBox
 
-# Design token — matches GUI行为与交互规范.md §3.9
-SPACING_XS = 4
-SPACING_SM = 8
-SPACING_MD = 12
-SPACING_LG = 16
-SPACING_XL = 24
+SPACING_XS = Spacing.XS
+SPACING_SM = Spacing.SM
+SPACING_MD = Spacing.MD
+SPACING_LG = Spacing.LG
+SPACING_XL = Spacing.XL
 
-CONTROL_HEIGHT = 32
+CONTROL_HEIGHT = Sizing.CONTROL_HEIGHT
 
 SETTINGS_TOGGLE_OBJECT_NAME = "settingsToggle"
 SETTINGS_INFO_BUTTON_OBJECT_NAME = "settingsInfoButton"
@@ -135,12 +136,17 @@ class BaseSettingsTab(QWidget):
         self._scroll_container.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self._scroll_layout = QVBoxLayout(self._scroll_container)
         self._scroll_layout.setContentsMargins(SPACING_MD, SPACING_MD, SPACING_MD, SPACING_MD)
-        self._scroll_layout.setSpacing(SPACING_MD)
+        self._scroll_layout.setSpacing(Spacing.CARD_GAP)
         self._scroll_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self._scroll_layout.addWidget(self._tab_desc)
         self._scroll_area.setWidget(self._scroll_container)
 
         self._create_interface()
+        for control in self.findChildren(QWidget):
+            if isinstance(control, (QPushButton, QComboBox, QLineEdit, QSpinBox, QDoubleSpinBox)):
+                control.setMinimumHeight(Sizing.CONTROL_HEIGHT)
+            if isinstance(control, QPushButton):
+                control.setMinimumWidth(max(control.minimumWidth(), Sizing.BUTTON_MIN_WIDTH))
 
     def set_tab_description(self, text: str) -> None:
         """Set the introduction that scrolls with the page's settings."""
@@ -171,18 +177,11 @@ class BaseSettingsTab(QWidget):
         object_name: str | None = None,
     ) -> tuple[QWidget, QFormLayout]:
         """Add a card-style settings block."""
-        card = QWidget(self._scroll_container)
+        card = PanelCard(title, self._scroll_container)
         card.setObjectName(object_name or "settingsSectionCard")
         card.setProperty("settingsRole", "settingsCard")
 
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(SPACING_LG, SPACING_LG, SPACING_LG, SPACING_LG)
-        layout.setSpacing(10)
-
-        title_label = QLabel(title, card)
-        title_label.setWordWrap(True)
-        title_label.setObjectName("settingsCardTitle")
-        layout.addWidget(title_label)
+        layout = card.content_layout
 
         desc = description.strip()
         if desc:
@@ -272,7 +271,7 @@ class BaseSettingsTab(QWidget):
         container = QWidget(self._scroll_container)
         layout = QHBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(6)
+        layout.setSpacing(Spacing.CONTROL_GAP)
         checkbox = self.create_settings_toggle(text, tooltip)
         layout.addWidget(checkbox, 1)
         if tooltip:
@@ -346,7 +345,7 @@ class BaseSettingsTab(QWidget):
     def _make_form(self, parent: QWidget | None = None) -> QFormLayout:
         form = _SettingsFormLayout(self._field_rows, parent)
         form.setContentsMargins(0, 0, 0, 0)
-        form.setVerticalSpacing(10)
+        form.setVerticalSpacing(Spacing.FORM_ROW_GAP)
         form.setHorizontalSpacing(SPACING_MD)
         form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
         form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)

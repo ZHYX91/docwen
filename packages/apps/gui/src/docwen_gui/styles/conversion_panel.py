@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from .design_tokens import Border, Radius, Spacing, Typography
+from .control_metrics import button_geometry_qss
+from .design_tokens import Border, Sizing, Spacing, Typography
 from .panel_card import build_panel_card_stylesheet
 from .theme_semantics import is_dark_theme
 
@@ -16,7 +17,6 @@ def build_conversion_panel_stylesheet(theme_name: str, font_size_preset: str | N
             "/* docwen-conversion-panel-foundation */",
             "QRadioButton#conversionRadioButton {",
             "    spacing: 8px;",
-            "    min-height: 32px;",
             "    color: palette(text);",
             "}",
             "QRadioButton#conversionRadioButton::indicator {",
@@ -81,9 +81,9 @@ def build_conversion_panel_stylesheet(theme_name: str, font_size_preset: str | N
             "QWidget#conversionPanelRoot QPushButton#conversionSecondaryButton {",
             "    color: palette(text);",
             f"    border: {Border.THIN}px solid palette(midlight);",
-            f"    border-radius: {Radius.MEDIUM}px;",
             "    background-color: palette(alternate-base);",
-            f"    padding: {Spacing.XS}px {Spacing.MD}px;",
+            button_geometry_qss(minimum_height=Sizing.ACTION_HEIGHT, minimum_width=Sizing.BUTTON_MIN_WIDTH),
+            f"    font-size: {Typography.qss(Typography.BODY_SIZE, font_size_preset)};",
             "}",
             "QWidget#conversionPanelRoot QPushButton#conversionSecondaryButton:hover {",
             "    border-color: palette(highlight);",
@@ -96,6 +96,9 @@ def build_conversion_panel_stylesheet(theme_name: str, font_size_preset: str | N
             "    color: palette(mid);",
             f"    border: {Border.THIN}px solid palette(midlight);",
             "    background-color: palette(alternate-base);",
+            "}",
+            "QWidget#conversionPanelRoot QPushButton#conversionSecondaryButton:focus {",
+            "    border-color: palette(highlight);",
             "}",
             "QWidget#generalTransparencyValueRow {",
             "    background: transparent;",

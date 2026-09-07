@@ -63,6 +63,7 @@ file_admission_cancelled = "Processing was cancelled; the detected format was no
 # 通用文本
 # =============================================================================
 [common]
+action_file_count = "{action} ({count} files)"
 copy = "Copy"
 app_name = "DocWen"
 default = "Default"
@@ -1000,6 +1001,7 @@ cancel_hint = "Task running. Press Esc to cancel the current task."
 
 # 模板选择器
 [components.template_selector]
+selected_name = "Selected template: {name}"
 no_templates = "No templates available"
 empty_hint = "When no template is available, open the template folder to review or add files."
 open_template_dir = "Open template folder"
@@ -1077,6 +1079,8 @@ no_transparency = "No Transparency"
 
 # 版式转换区
 [conversion_panel.layout]
+image_format = "Image format"
+resolution = "Resolution (DPI)"
 convert_to_other_formats = "Convert to other layout formats"
 convert_to_document_or_image = "Convert to document or image"
 merge_split = "Merge/Split"

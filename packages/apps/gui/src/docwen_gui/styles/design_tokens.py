@@ -6,13 +6,19 @@ GUI 视觉 Token 定义。
 
 
 class Spacing:
-    """全局间距基准（使用前需通过 ``ui_scale`` 进行应用级 UI 缩放）。"""
+    """Qt 逻辑像素间距；系统 DPI 缩放由 Qt 负责。"""
 
     XS = 4
     SM = 8
     MD = 12
     LG = 16
     XL = 24
+
+    CONTROL_GAP = SM
+    GROUP_GAP = MD
+    FORM_ROW_GAP = MD
+    CARD_PADDING = LG
+    CARD_GAP = LG
 
 
 class Typography:
@@ -59,13 +65,13 @@ class Sizing:
 
     与 Spacing（间距）解耦 --- Spacing 控制 margin/padding/gap 等"留白"，
     Sizing 控制 widget 自身的几何尺寸（高度/宽度/图标尺寸等）。
-    控件高度统一通过 ``QWidget.setMinimumHeight`` 落地，QSS 不再使用
-    ``min-height/max-height`` 控制控件高度，避免 QSS 盒模型与 widget
-    geometry 两套语义混用导致的视觉对齐偏差（QSS min-height 不含边框，
-    而 setMinimumHeight 含边框）。
+    QWidget 的最小高度包含边框和内边距。QSS 默认值使用从同一高度扣除
+    边框及内边距的内容高度，避免两套盒模型产生不一致的实际尺寸。
     """
 
-    CONTROL_HEIGHT = 32
+    CONTROL_HEIGHT = 36
+    ACTION_HEIGHT = 40
+    BUTTON_MIN_WIDTH = 80
 
 
 class SurfaceAlpha:

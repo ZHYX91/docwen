@@ -59,6 +59,7 @@ file_admission_confirm_message = "Le nom du fichier et le contenu détecté util
 file_admission_confirm_action = "Traiter selon le format détecté"
 file_admission_cancelled = "Le traitement a été annulé ; le format détecté n’a pas été accepté."
 [common]
+action_file_count = "{action} ({count} fichiers)"
 copy = "Copier"
 app_name = "DocWen"
 default = "Défaut"
@@ -998,6 +999,7 @@ cancel_hint = "Une tâche est en cours. Appuyez sur Échap pour l’annuler."
 
 # 模板选择器
 [components.template_selector]
+selected_name = "Modèle sélectionné : {name}"
 no_templates = "Aucun disponible"
 empty_hint = "S'il n'y a aucun modèle disponible, ouvrez le dossier des modèles pour vérifier ou ajouter des fichiers."
 open_template_dir = "Ouvrir le dossier des modèles"
@@ -1076,6 +1078,8 @@ no_transparency = "Supprimer"
 
 # 版式转换区
 [conversion_panel.layout]
+image_format = "Format d’image"
+resolution = "Résolution (DPI)"
 convert_to_other_formats = "Autres formats"
 convert_to_document_or_image = "Document/Image"
 merge_split = "Fusionner/Diviser"

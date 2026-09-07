@@ -11,6 +11,7 @@ template_name = "Deutsche Allgemeine Vorlage"
 # 通用文本
 # =============================================================================
 [common]
+action_file_count = "{action} ({count} Dateien)"
 copy = "Kopieren"
 app_name = "DocWen"
 default = "Standard"
@@ -950,6 +951,7 @@ cancel_hint = "Aufgabe wird ausgeführt. Esc drücken, um die aktuelle Aufgabe a
 
 # 模板选择器
 [components.template_selector]
+selected_name = "Ausgewählte Vorlage: {name}"
 no_templates = "Keine verfügbar"
 empty_hint = "Wenn keine Vorlage verfügbar ist, öffnen Sie den Vorlagenordner, um Dateien zu prüfen oder hinzuzufügen."
 open_template_dir = "Vorlagenordner öffnen"
@@ -1028,6 +1030,8 @@ no_transparency = "Entfernen"
 
 # 版式转换区
 [conversion_panel.layout]
+image_format = "Bildformat"
+resolution = "Auflösung (DPI)"
 convert_to_other_formats = "Andere Formate"
 convert_to_document_or_image = "Dokument/Bild"
 merge_split = "Zusammenführen/Teilen"

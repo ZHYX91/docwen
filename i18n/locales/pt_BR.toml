@@ -62,6 +62,7 @@ file_admission_cancelled = "O processamento foi cancelado; o formato detectado n
 # 通用文本
 # =============================================================================
 [common]
+action_file_count = "{action} ({count} arquivos)"
 copy = "Copiar"
 app_name = "DocWen"
 default = "Padrão"
@@ -999,6 +1000,7 @@ cancel_hint = "Há uma tarefa em execução. Pressione Esc para cancelá-la."
 
 # 模板选择器
 [components.template_selector]
+selected_name = "Modelo selecionado: {name}"
 no_templates = "Nenhum disponível"
 empty_hint = "Se não houver modelos disponíveis, abra a pasta de modelos para revisar ou adicionar arquivos."
 open_template_dir = "Abrir pasta de modelos"
@@ -1077,6 +1079,8 @@ no_transparency = "Remover"
 
 # 版式转换区
 [conversion_panel.layout]
+image_format = "Formato de imagem"
+resolution = "Resolução (DPI)"
 convert_to_other_formats = "Outros formatos"
 convert_to_document_or_image = "Documento/Imagem"
 merge_split = "Mesclar/Dividir"

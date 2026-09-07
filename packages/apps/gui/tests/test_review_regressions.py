@@ -176,6 +176,12 @@ def test_pdf_workflow_fits_default_columns_with_large_typography(main_window_wit
         assert window._conversion_panel._page_warning_label.text()
         page_input.clear()
         assert window._conversion_panel._page_warning_label.isHidden()
+        export_button = window._conversion_panel._layout_export_button
+        render_format = window._conversion_panel._layout_render_format_combo
+        assert (
+            export_button.mapTo(window, QPoint()).y() + export_button.height()
+            < render_format.mapTo(window, QPoint()).y()
+        )
         for name in ("centerWorkflowScroll", "conversionPanelScrollArea"):
             scroll = window.findChild(QScrollArea, name)
             assert scroll is not None

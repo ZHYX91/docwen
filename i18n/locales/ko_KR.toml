@@ -11,6 +11,7 @@ template_name = "한국어 범용 템플릿"
 # 通用文本
 # =============================================================================
 [common]
+action_file_count = "{action} (파일 {count}개)"
 copy = "복사"
 app_name = "DocWen"
 default = "기본값"
@@ -950,6 +951,7 @@ cancel_hint = "작업이 실행 중입니다. Esc 키를 누르면 현재 작업
 
 # 模板选择器
 [components.template_selector]
+selected_name = "선택한 템플릿: {name}"
 no_templates = "사용 가능한 템플릿이 없습니다"
 empty_hint = "템플릿이 없으면 템플릿 폴더를 열어 파일을 확인하거나 추가하세요."
 open_template_dir = "템플릿 폴더 열기"
@@ -1028,6 +1030,8 @@ no_transparency = "투명도 없음"
 
 # 版式转换区
 [conversion_panel.layout]
+image_format = "이미지 형식"
+resolution = "해상도(DPI)"
 convert_to_other_formats = "다른 레이아웃 형식으로 변환"
 convert_to_document_or_image = "문서 또는 이미지로 변환"
 merge_split = "병합/분할"

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from ._hex_helper import _hex_to_rgba
-from .design_tokens import Border, Radius, Typography
+from .design_tokens import Border, Radius, Spacing, Typography
 from .theme_semantics import (
     COLOR_DANGER,
     COLOR_INFO,
@@ -29,6 +29,14 @@ def build_info_area_stylesheet(theme_name: str, font_size_preset: str | None = N
             "/* docwen-status-bar-foundation */",
             "QWidget#infoArea {",
             "    background: transparent;",
+            "}",
+            'QFrame#infoAreaContentCard[idleFeedback="true"] {',
+            "    border: none; background: transparent;",
+            "}",
+            "QLabel#workflowOutputLocation {",
+            f"    color: {muted_text};",
+            f"    font-size: {Typography.qss(Typography.CAPTION_SIZE, font_size_preset)};",
+            f"    padding: 0 {Spacing.CARD_PADDING}px;",
             "}",
             "QLabel#infoStatusMeta {",
             f"    color: {meta_text};",

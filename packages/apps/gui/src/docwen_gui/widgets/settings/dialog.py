@@ -41,6 +41,7 @@ from PySide6.QtWidgets import (
 )
 
 from docwen_gui.i18n import t
+from docwen_gui.styles.design_tokens import Sizing, Spacing
 
 from ...styles.theme_semantics import apply_theme_class
 from ...view_models.settings_vm import SettingsViewModel
@@ -52,8 +53,8 @@ DEFAULT_WIDTH = 700
 DEFAULT_HEIGHT = 800
 MIN_WIDTH = 360
 MIN_HEIGHT = 320
-DIALOG_PADDING = 15
-ACTION_BUTTON_MIN_HEIGHT = 32
+DIALOG_PADDING = Spacing.CARD_PADDING
+ACTION_BUTTON_MIN_HEIGHT = Sizing.CONTROL_HEIGHT
 RESET_TAB_BUTTON_MIN_WIDTH = 116
 RESET_ALL_BUTTON_MIN_WIDTH = 104
 STATUS_DISPLAY_MS = 3000
@@ -426,6 +427,8 @@ class SettingsDialog(QDialog):
             apply_theme_class(apply_btn, "secondary")
 
         button_box.accepted.connect(self._on_ok)
+        for button in button_box.buttons():
+            button.setMinimumWidth(Sizing.BUTTON_MIN_WIDTH)
         button_box.rejected.connect(self._on_cancel)
         if apply_btn:
             apply_btn.clicked.connect(self._on_apply)

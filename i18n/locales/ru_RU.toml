@@ -11,6 +11,7 @@ template_name = "Русский Общий Шаблон"
 # 通用文本
 # =============================================================================
 [common]
+action_file_count = "{action} (файлов: {count})"
 copy = "Копировать"
 app_name = "DocWen"
 default = "По умолчанию"
@@ -950,6 +951,7 @@ cancel_hint = "Задача выполняется. Нажмите Esc, чтоб
 
 # 模板选择器
 [components.template_selector]
+selected_name = "Выбранный шаблон: {name}"
 no_templates = "Нет доступных"
 empty_hint = "Если шаблоны недоступны, откройте папку шаблонов, чтобы проверить или добавить файлы."
 open_template_dir = "Открыть папку шаблонов"
@@ -1028,6 +1030,8 @@ no_transparency = "Удалить"
 
 # 版式转换区
 [conversion_panel.layout]
+image_format = "Формат изображения"
+resolution = "Разрешение (DPI)"
 convert_to_other_formats = "Другие форматы"
 convert_to_document_or_image = "Документ/Изображение"
 merge_split = "Слияние/Разделение"

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from .design_tokens import Border, Radius, Spacing, Typography
+from .control_metrics import button_geometry_qss
+from .design_tokens import Border, Radius, Sizing, Typography
 from .panel_card import build_panel_card_stylesheet
 from .theme_semantics import COLOR_ACCENT_HOVER, COLOR_ACCENT_PRESSED
 
@@ -25,16 +26,12 @@ def build_action_area_stylesheet(font_size_preset: str | None = None) -> str:
             "QWidget#actionAreaRoot QWidget#actionOptionRow {",
             "    background: transparent;",
             "}",
-            "QWidget#actionAreaRoot QWidget#panelActionFooter {",
-            f"    margin-top: {Spacing.SM}px;",
-            "    background: transparent;",
-            "}",
             "QWidget#actionAreaRoot QPushButton#actionPrimaryButton {",
             "    color: palette(highlighted-text);",
             f"    border: {Border.THIN}px solid palette(highlight);",
-            f"    border-radius: {Radius.MEDIUM}px;",
             "    background-color: palette(highlight);",
-            f"    padding: {Spacing.XS}px {Spacing.MD}px;",
+            button_geometry_qss(minimum_height=Sizing.ACTION_HEIGHT, minimum_width=Sizing.BUTTON_MIN_WIDTH),
+            f"    font-size: {Typography.qss(Typography.BODY_SIZE, font_size_preset)};",
             "}",
             "QWidget#actionAreaRoot QPushButton#actionPrimaryButton:hover {",
             f"    background-color: {COLOR_ACCENT_HOVER};",
@@ -46,6 +43,9 @@ def build_action_area_stylesheet(font_size_preset: str | None = None) -> str:
             "    color: palette(mid);",
             f"    border: {Border.THIN}px solid palette(midlight);",
             "    background-color: palette(alternate-base);",
+            "}",
+            "QWidget#actionAreaRoot QPushButton#actionPrimaryButton:focus {",
+            "    border-color: palette(text);",
             "}",
         ]
     )

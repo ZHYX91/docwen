@@ -24,6 +24,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ..styles.design_tokens import Border, Sizing, Spacing
+
 
 class FormatChoiceLike(Protocol):
     """Structural type accepted by :class:`FormatSelector`."""
@@ -51,12 +53,7 @@ class SectionHeader(QLabel):
         self.setProperty("headerLevel", level)
         self.setObjectName("panelCardTitle" if level == "card" else "panelSectionTitle")
         self.setWordWrap(True)
-        alignment = (
-            Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
-            if level == "card"
-            else Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
-        )
-        self.setAlignment(alignment)
+        self.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 
 
 class _ResponsiveFrame(QFrame):
@@ -149,7 +146,7 @@ class FormRow(_ResponsiveFrame):
         self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self.content_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight, self)
         self.content_layout.setContentsMargins(0, 0, 0, 0)
-        self.content_layout.setSpacing(8)
+        self.content_layout.setSpacing(Spacing.CONTROL_GAP)
         self.label = _FormLabel(label, self)
         self.label.geometryChanged.connect(self._schedule_group_reflow)
         self.label.setObjectName("panelFormLabel")
@@ -285,7 +282,9 @@ class ChoiceGroup(_ResponsiveFrame):
     larger translated fonts.
     """
 
-    def __init__(self, parent: QWidget | None = None, *, responsive: bool = False, spacing: int = 24) -> None:
+    def __init__(
+        self, parent: QWidget | None = None, *, responsive: bool = False, spacing: int = Spacing.GROUP_GAP
+    ) -> None:
         super().__init__(parent)
         self.setObjectName("panelChoiceGroup")
         self._responsive = responsive
@@ -295,9 +294,9 @@ class ChoiceGroup(_ResponsiveFrame):
         direction = QBoxLayout.Direction.LeftToRight if responsive else QBoxLayout.Direction.TopToBottom
         self.content_layout = QBoxLayout(direction, self)
         self.content_layout.setContentsMargins(0, 0, 0, 0)
-        self.content_layout.setSpacing(spacing if responsive else 8)
+        self.content_layout.setSpacing(spacing if responsive else Spacing.FORM_ROW_GAP)
         if responsive:
-            self.content_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.content_layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 
     def _sync_layout(self) -> None:
         if not self._responsive:
@@ -314,7 +313,7 @@ class ChoiceGroup(_ResponsiveFrame):
         self.content_layout.setDirection(
             QBoxLayout.Direction.LeftToRight if horizontal else QBoxLayout.Direction.TopToBottom
         )
-        self.content_layout.setSpacing(self._horizontal_spacing if horizontal else 8)
+        self.content_layout.setSpacing(self._horizontal_spacing if horizontal else Spacing.FORM_ROW_GAP)
 
 
 class ActionFooter(QFrame):
@@ -325,7 +324,7 @@ class ActionFooter(QFrame):
         self.setObjectName("panelActionFooter")
         self.content_layout = QHBoxLayout(self)
         self.content_layout.setContentsMargins(0, 0, 0, 0)
-        self.content_layout.setSpacing(8)
+        self.content_layout.setSpacing(Spacing.CONTROL_GAP)
 
 
 class InlineNotice(QFrame):
@@ -365,6 +364,7 @@ class FormatSelector(QComboBox):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("formatSelector")
+        self.setMinimumHeight(Sizing.CONTROL_HEIGHT)
         self.setMinimumWidth(100)
         self.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
@@ -412,12 +412,7 @@ class FormatSelector(QComboBox):
 
 
 class PanelCard(QFrame):
-    """Neutral card with an internal title and dedicated content layout.
-
-    Card titles are compact and centred. Section titles are left aligned and
-    intentionally avoid another framed surface, so nested options do not turn
-    into a stack of fieldsets.
-    """
+    """Card with a left-aligned header band and a consistently padded body."""
 
     def __init__(
         self,
@@ -432,11 +427,9 @@ class PanelCard(QFrame):
 
         self.setProperty("panelLevel", level)
         outer = QVBoxLayout(self)
-        margin_x = 12 if level == "card" else 0
-        margin_top = 10 if level == "card" else 4
-        margin_bottom = 12 if level == "card" else 4
-        outer.setContentsMargins(margin_x, margin_top, margin_x, margin_bottom)
-        outer.setSpacing(8)
+        edge = Border.THIN if level == "card" else 0
+        outer.setContentsMargins(edge, edge, edge, edge)
+        outer.setSpacing(0 if level == "card" else Spacing.CONTROL_GAP)
 
         self._title_label = SectionHeader(parent=self, level=level)
         outer.addWidget(self._title_label)
@@ -444,8 +437,9 @@ class PanelCard(QFrame):
         self._content = QWidget(self)
         self._content.setObjectName("panelCardContent")
         self._content_layout = QVBoxLayout(self._content)
-        self._content_layout.setContentsMargins(0, 0, 0, 0)
-        self._content_layout.setSpacing(8)
+        padding = Spacing.CARD_PADDING if level == "card" else 0
+        self._content_layout.setContentsMargins(padding, padding, padding, padding)
+        self._content_layout.setSpacing(Spacing.FORM_ROW_GAP)
         outer.addWidget(self._content)
 
         self.setTitle(title)

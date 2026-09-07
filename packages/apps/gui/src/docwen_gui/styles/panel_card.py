@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .design_tokens import Border, Radius, Typography
+from .design_tokens import Border, Radius, Spacing, Typography
 
 
 def build_panel_card_stylesheet(font_size_preset: str | None = None) -> str:
@@ -25,12 +25,13 @@ def build_panel_card_stylesheet(font_size_preset: str | None = None) -> str:
             "}",
             "QLabel#panelCardTitle {",
             "    color: palette(text);",
-            "    background: transparent;",
-            f"    font-size: {Typography.qss(Typography.CAPTION_SIZE, font_size_preset)};",
+            "    background: palette(alternate-base);",
+            f"    font-size: {Typography.qss(Typography.CARD_TITLE_SIZE, font_size_preset)};",
             "    font-weight: 600;",
-            "    padding: 1px 0 7px 0;",
+            f"    padding: {Spacing.MD}px {Spacing.CARD_PADDING}px;",
             "    border: none;",
-            "    border-bottom: 1px solid palette(midlight);",
+            f"    border-top-left-radius: {Radius.LARGE - Border.THIN}px;",
+            f"    border-top-right-radius: {Radius.LARGE - Border.THIN}px;",
             "}",
             "QLabel#panelSectionTitle {",
             "    color: palette(text);",

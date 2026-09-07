@@ -45,9 +45,10 @@ from qfluentwidgets import PushButton as FluentPushButton
 
 from docwen_gui import numbering_schemes
 from docwen_gui.i18n import t as _t
-from docwen_gui.styles.design_tokens import Sizing
+from docwen_gui.styles.design_tokens import Sizing, Spacing
 from docwen_gui.styles.theme_semantics import apply_theme_class
 
+from .action_button import ActionButton
 from .panel_card import ActionFooter, ChoiceGroup, FormRow, InlineNotice, PanelCard
 
 if TYPE_CHECKING:
@@ -56,10 +57,10 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # ── Design constants ─────────────────────────────────────────────────────
-_SPACING_XS = 4
-_SPACING_SM = 8
-_SPACING_MD = 12
-_SPACING_LG = 16
+_SPACING_XS = Spacing.XS
+_SPACING_SM = Spacing.SM
+_SPACING_MD = Spacing.MD
+_SPACING_LG = Spacing.LG
 
 
 class _ActionCheckBox(FluentCheckBox):
@@ -172,7 +173,7 @@ class ActionArea(QWidget):
         content_page.setObjectName("actionContentCard")
         self._content_card = content_page
         self._content_layout = content_page.content_layout
-        self._content_layout.setSpacing(_SPACING_XS)
+        self._content_layout.setSpacing(Spacing.FORM_ROW_GAP)
         self._button_stack.addWidget(content_page)
 
         # Page 1: cancel area
@@ -187,7 +188,7 @@ class ActionArea(QWidget):
         cancel_btn.setProperty("usesFluentActionButton", True)
         cancel_btn.setProperty("actionButtonRole", "cancel")
         apply_theme_class(cancel_btn, "secondary")
-        cancel_btn.setMinimumHeight(Sizing.CONTROL_HEIGHT)
+        cancel_btn.setMinimumHeight(Sizing.ACTION_HEIGHT)
         cancel_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         cancel_btn.setToolTip(cancel_text)
         cancel_btn.setAccessibleName(cancel_text)
@@ -328,6 +329,7 @@ class ActionArea(QWidget):
         self._set_combo_data(self.md_numbering_scheme_combo, self._vm.md_numbering_scheme)
         self._set_combo_data(self.md_document_format_combo, self._vm.target_format)
         self._set_combo_data(self.md_spreadsheet_format_combo, self._vm.target_format)
+        self._sync_execution_labels()
         for key, checkbox in self.checkbox_vars.items():
             self._set_checkbox_checked(checkbox, self._vm.proofread_options.get(key, False))
         if self.md_numbering_scheme_combo is not None:
@@ -428,10 +430,8 @@ class ActionArea(QWidget):
     # ── Widget Factory Helpers ───────────────────────────────────────────
 
     def _make_button(self, text: str, parent: QWidget | None = None) -> QPushButton:
-        btn = QPushButton(text, parent or self)
+        btn = ActionButton(text, parent or self)
         btn.setObjectName("actionPrimaryButton")
-        btn.setMinimumHeight(Sizing.CONTROL_HEIGHT)
-        btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         return btn
 
     def _make_checkbox(self, text: str, checked: bool = False, parent: QWidget | None = None) -> QCheckBox:
@@ -447,28 +447,52 @@ class ActionArea(QWidget):
         # Option rows already end in a stretch.  A preferred-width combo keeps
         # the control visually distinct from a text field without claiming the
         # whole row, while still allowing the layout to shrink when necessary.
-        combo.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         if items:
             combo.addItems(items)
         return combo
 
     @staticmethod
     def _make_format_combo_compact(combo: QComboBox) -> None:
-        """Size a short format selector from its contents instead of pixels.
-
-        The previous fixed 112 px width was simultaneously too wide for a
-        four-letter choice and too narrow once the global font/DPI and arrow
-        padding were applied, so ``DOCX`` could be elided.  Qt's content-based
-        size hint includes both the longest item and the drop-down affordance.
-        """
+        """Keep translated format names readable in a full-width form row."""
         combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
-        combo.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
     def _set_target_format_from_combo(self, combo: QComboBox, index: int) -> None:
         """Project a user-selected target into the ViewModel's canonical state."""
         value = combo.itemData(index)
         if isinstance(value, str) and value:
             self._vm.target_format = value
+        self._sync_execution_labels()
+
+    def _generate_label(self) -> str:
+        return f"{_t('action_area.generate', 'Generate')} {self._vm.target_format.upper()}"
+
+    def set_execution_count(self, count: int) -> None:
+        """Render the same category scope used by the window's request handler."""
+        self._execution_count = count
+        self._sync_execution_labels()
+
+    def _sync_execution_labels(self) -> None:
+        count = getattr(self, "_execution_count", 0)
+        for button in (
+            self.convert_docx_button,
+            self.convert_excel_button,
+            self.document_to_md_button,
+            self.spreadsheet_to_md_button,
+            self.image_to_md_button,
+            self.layout_to_md_button,
+        ):
+            if button is None:
+                continue
+            label = (
+                self._generate_label()
+                if button in (self.convert_docx_button, self.convert_excel_button)
+                else self._vm.get_button_label()
+            )
+            if self._vm.mode == "batch" and count:
+                label = _t("common.action_file_count", action=label, count=count)
+            button.setText(label)
 
     def _numbering_scheme_items(self) -> list[tuple[str, str]]:
         return numbering_schemes.get_numbering_scheme_items(
@@ -493,8 +517,8 @@ class ActionArea(QWidget):
         row.setObjectName("actionOptionRow")
         layout = QGridLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setHorizontalSpacing(_SPACING_XS)
-        layout.setVerticalSpacing(_SPACING_XS)
+        layout.setHorizontalSpacing(Spacing.CONTROL_GAP)
+        layout.setVerticalSpacing(Spacing.FORM_ROW_GAP)
         return row, layout
 
     def resizeEvent(self, event) -> None:
@@ -540,22 +564,20 @@ class ActionArea(QWidget):
 
         widest_checkbox = max(checkbox.sizeHint().width() for checkbox in checkboxes)
         required_two_columns = (2 * widest_checkbox) + grid.horizontalSpacing()
-        # The proofreading choices are a stable compact 2x2 group. Preserve
-        # that shape for every locale and give the
-        # group a truthful minimum width instead of silently clipping labels or
-        # turning the compact group into four rows.
-        grid_widget.setMinimumWidth(required_two_columns)
-        if self._proofread_columns == 2:
+        available = grid_widget.contentsRect().width()
+        columns = 2 if available >= required_two_columns else 1
+        grid_widget.setMinimumWidth(widest_checkbox)
+        if self._proofread_columns == columns:
             return
 
         for checkbox in checkboxes:
             grid.removeWidget(checkbox)
         for index, checkbox in enumerate(checkboxes):
-            row, column = divmod(index, 2)
+            row, column = divmod(index, columns)
             grid.addWidget(checkbox, row, column)
         grid.setColumnStretch(0, 1)
-        grid.setColumnStretch(1, 1)
-        self._proofread_columns = 2
+        grid.setColumnStretch(1, 1 if columns == 2 else 0)
+        self._proofread_columns = columns
 
     # ── File -> MD Layout ───────────────────────────────────────────────
 
@@ -569,7 +591,6 @@ class ActionArea(QWidget):
         # Main action button row
         button_row = ActionFooter(self)
         button_layout = button_row.content_layout
-        button_layout.addStretch(1)
 
         btn = self._make_button(self._vm.get_button_label(), parent=button_row)
         btn.setToolTip(self._vm.get_button_tooltip())
@@ -586,7 +607,6 @@ class ActionArea(QWidget):
         setattr(self, attr_name, btn)
 
         button_layout.addWidget(btn)
-        button_layout.addStretch(1)
         # Options section
         self._build_file_to_md_options()
         self._content_layout.addWidget(button_row)
@@ -803,7 +823,6 @@ class ActionArea(QWidget):
         # Action button
         button_row = ActionFooter(self)
         button_layout = button_row.content_layout
-        button_layout.addStretch(1)
 
         btn = self._make_button(self._vm.get_button_label(), parent=button_row)
         btn.setToolTip(self._vm.get_button_tooltip())
@@ -811,7 +830,6 @@ class ActionArea(QWidget):
         self.document_to_md_button = btn
 
         button_layout.addWidget(btn)
-        button_layout.addStretch(1)
         # Keep the two universal boolean options on one compact row.
         img_row = ChoiceGroup(self, responsive=True)
         img_layout = img_row.content_layout
@@ -847,7 +865,6 @@ class ActionArea(QWidget):
         # Generate row
         gen_row = ActionFooter(self)
         gen_layout = gen_row.content_layout
-        gen_layout.addStretch(1)
 
         format_combo = self._make_combo(parent=gen_row)
         for label in self._vm.available_target_formats:
@@ -867,15 +884,14 @@ class ActionArea(QWidget):
         format_combo.setToolTip(_t("action_area.md_to_document.format_combo_tooltip", "Choose target document format"))
         format_combo.currentIndexChanged.connect(lambda index: self._set_target_format_from_combo(format_combo, index))
         self.md_document_format_combo = format_combo
-        gen_layout.addWidget(format_combo)
+        format_row = FormRow(_t("conversion_panel.target_format", "Target format"), format_combo, self)
 
-        generate_btn = self._make_button(_t("action_area.generate", "Generate"), parent=gen_row)
+        generate_btn = self._make_button(self._generate_label(), parent=gen_row)
         generate_btn.setEnabled(route_ready)
         generate_btn.clicked.connect(lambda: self._on_md_to_document_clicked(format_combo.currentData()))
         self.convert_docx_button = generate_btn
 
         gen_layout.addWidget(generate_btn)
-        gen_layout.addStretch(1)
         # Numbering rows
         self._build_md_numbering_rows()
 
@@ -889,6 +905,7 @@ class ActionArea(QWidget):
         # Proofread grid
         self._build_proofread_grid()
         self._add_target_route_notice()
+        self._content_layout.addWidget(format_row)
         self._content_layout.addWidget(gen_row)
 
     def _build_md_numbering_rows(self) -> None:
@@ -969,7 +986,7 @@ class ActionArea(QWidget):
         grid = QGridLayout(grid_widget)
         grid.setContentsMargins(0, 0, 0, 0)
         grid.setHorizontalSpacing(_SPACING_MD)
-        grid.setVerticalSpacing(_SPACING_XS)
+        grid.setVerticalSpacing(Spacing.FORM_ROW_GAP)
         grid.setColumnStretch(0, 1)
         grid.setColumnStretch(1, 1)
         self._proofread_grid_widget = grid_widget
@@ -994,8 +1011,8 @@ class ActionArea(QWidget):
         if self._content_layout is None:
             return
 
-        gen_row, gen_layout = self._make_option_row()
-        gen_layout.addStretch(1)
+        gen_row = ActionFooter(self)
+        gen_layout = gen_row.content_layout
 
         format_combo = self._make_combo(parent=gen_row)
         for label in self._vm.available_target_formats:
@@ -1017,15 +1034,15 @@ class ActionArea(QWidget):
         )
         format_combo.currentIndexChanged.connect(lambda index: self._set_target_format_from_combo(format_combo, index))
         self.md_spreadsheet_format_combo = format_combo
-        gen_layout.addWidget(format_combo)
+        format_row = FormRow(_t("conversion_panel.target_format", "Target format"), format_combo, self)
 
-        generate_btn = self._make_button(_t("action_area.generate", "Generate"), parent=gen_row)
+        generate_btn = self._make_button(self._generate_label(), parent=gen_row)
         generate_btn.setEnabled(route_ready)
         generate_btn.clicked.connect(lambda: self._on_md_to_spreadsheet_clicked(format_combo.currentData()))
         self.convert_excel_button = generate_btn
 
         gen_layout.addWidget(generate_btn)
-        gen_layout.addStretch(1)
+        self._content_layout.addWidget(format_row)
         self._content_layout.addWidget(gen_row)
 
         self._add_target_route_notice()

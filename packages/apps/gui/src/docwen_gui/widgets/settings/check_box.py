@@ -6,6 +6,8 @@ from PySide6.QtCore import QEvent, QSize
 from PySide6.QtGui import QTextLayout, QTextOption
 from PySide6.QtWidgets import QCheckBox, QSizePolicy, QStyle, QStyleOptionButton, QWidget
 
+from ...styles.design_tokens import Sizing
+
 if TYPE_CHECKING:
     from PySide6.QtWidgets import QCheckBox as _CheckBox
 else:
@@ -61,10 +63,10 @@ class SettingsCheckBox(_CheckBox):
         option = QStyleOptionButton()
         self.initStyleOption(option)
         size = self.style().sizeFromContents(QStyle.ContentsType.CT_CheckBox, option, QSize(0, height), self)
-        return max(32, size.height())
+        return max(Sizing.CONTROL_HEIGHT, size.height())
 
     def minimumSizeHint(self) -> QSize:
-        return QSize(0, 32)
+        return QSize(0, Sizing.CONTROL_HEIGHT)
 
     def sizeHint(self) -> QSize:
         # Geometry must depend on the original label, never the last narrow paint.
@@ -78,7 +80,7 @@ class SettingsCheckBox(_CheckBox):
             metrics.height() + (len(paragraphs) - 1) * metrics.lineSpacing(),
         )
         size = self.style().sizeFromContents(QStyle.ContentsType.CT_CheckBox, option, size, self)
-        return QSize(size.width(), max(32, size.height()))
+        return QSize(size.width(), max(Sizing.CONTROL_HEIGHT, size.height()))
 
     def _reflow_text(self) -> None:
         rendered = "\n".join(self._lines(self.width()))

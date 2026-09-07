@@ -58,7 +58,7 @@ from qfluentwidgets import (
 
 from docwen_gui.format_presentation import SUPPORTED_FORMAT_GROUPS, presentation_for
 from docwen_gui.i18n import t
-from docwen_gui.styles.design_tokens import Sizing
+from docwen_gui.styles.design_tokens import Sizing, Spacing
 
 from .batch_list import _MiddleElidedLabel
 from .panel_card import WrappingLabel
@@ -70,11 +70,11 @@ if TYPE_CHECKING:
 _DEFAULT_HEIGHT = 230
 _COMPACT_WIDTH_THRESHOLD = 340
 _ORNAMENT_SIZE = QSize(72, 72)
-_SPACING_XS = 4
-_SPACING_SM = 8
-_SPACING_MD = 12
+_SPACING_XS = Spacing.XS
+_SPACING_SM = Spacing.SM
+_SPACING_MD = Spacing.MD
 _PYRAMID_INDENTS = (72, 58, 44, 30, 18, 8)
-_ACTION_BUTTON_MIN_WIDTH = 72
+_ACTION_BUTTON_MIN_WIDTH = Sizing.BUTTON_MIN_WIDTH
 
 _SUPPORTED_TYPE_ROWS: tuple[tuple[str, str, str], ...] = tuple(
     (label_key, fallback, ", ".join(presentation_for(fmt).display_name for fmt in formats))
@@ -175,18 +175,20 @@ class InputArea(QFrame):
         self._drop_group = QFrame(self)
         self._drop_group.setObjectName("fileDropGroup")
         drop_layout = QVBoxLayout(self._drop_group)
-        drop_layout.setContentsMargins(_SPACING_MD, _SPACING_MD, _SPACING_MD, _SPACING_MD)
-        drop_layout.setSpacing(_SPACING_SM)
+        padding = Spacing.CARD_PADDING
+        drop_layout.setContentsMargins(padding, padding, padding, padding)
+        drop_layout.setSpacing(Spacing.GROUP_GAP)
         layout.addWidget(self._drop_group)
 
         # Top controls layout (mode switch + buttons)
         self._top_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight)
         self._top_layout.setContentsMargins(0, 0, 0, 0)
-        self._top_layout.setSpacing(_SPACING_XS)
+        self._top_layout.setSpacing(Spacing.GROUP_GAP)
 
         # Mode switch
         self._mode_switch = SegmentedWidget(self._drop_group)
         self._mode_switch.setObjectName("fileDropModeSwitch")
+        self._mode_switch.setMinimumHeight(Sizing.CONTROL_HEIGHT)
         self._mode_switch.setAccessibleName(_i18n(_I_BATCH_MODE))
         self._mode_switch.addItem(
             "batch",
@@ -206,7 +208,7 @@ class InputArea(QFrame):
         self._action_frame.setObjectName("fileDropActionButtonsFrame")
         action_layout = QHBoxLayout(self._action_frame)
         action_layout.setContentsMargins(0, 0, 0, 0)
-        action_layout.setSpacing(_SPACING_XS)
+        action_layout.setSpacing(Spacing.CONTROL_GAP)
 
         # Add button
         self._add_button = PrimaryPushButton(_i18n(_I_ADD_BUTTON, "Add"), self._drop_group)
@@ -663,6 +665,7 @@ class InputArea(QFrame):
         sync_supported_types = self._deferred_supported_type_layout
         self._deferred_prompt_layout = False
         self._deferred_supported_type_layout = False
+        self._sync_top_control_layout()
         if sync_prompt:
             self._sync_prompt_layout()
         if sync_supported_types:
@@ -706,17 +709,38 @@ class InputArea(QFrame):
         )
 
     def _sync_top_control_layout(self) -> None:
-        content_width = max(self._drop_group.width() - (_SPACING_MD * 2), 0)
-        compact = 0 < content_width < _COMPACT_WIDTH_THRESHOLD
+        if not all(
+            shiboken6.isValid(control)
+            for control in (self._drop_group, self._mode_switch, self._add_button, self._clear_button)
+        ):
+            return
+        content_width = max(self._drop_group.width() - (Spacing.CARD_PADDING * 2), 0)
+        control_height = max(
+            Sizing.CONTROL_HEIGHT,
+            self._mode_switch.sizeHint().height(),
+            self._add_button.sizeHint().height(),
+            self._clear_button.sizeHint().height(),
+        )
+        for control in (self._mode_switch, self._add_button, self._clear_button):
+            control.setMinimumHeight(control_height)
+        action_width = max(
+            _ACTION_BUTTON_MIN_WIDTH, self._add_button.sizeHint().width(), self._clear_button.sizeHint().width()
+        )
+        required = (
+            self._mode_switch.minimumSizeHint().width() + 2 * action_width + Spacing.CONTROL_GAP + Spacing.GROUP_GAP
+        )
+        compact = 0 < content_width < max(_COMPACT_WIDTH_THRESHOLD, required)
 
         if compact == self._top_controls_compact:
+            self._add_button.setMinimumWidth(action_width)
+            self._clear_button.setMinimumWidth(Sizing.CONTROL_HEIGHT if compact else action_width)
             return
 
         self._top_controls_compact = compact
 
         if compact:
             self._top_layout.setDirection(QBoxLayout.Direction.TopToBottom)
-            self._top_layout.setSpacing(_SPACING_SM)
+            self._top_layout.setSpacing(Spacing.GROUP_GAP)
             self._clear_button.setText("")
             self._clear_button.setToolTip(_i18n(_I_CLEAR_BUTTON, "Clear"))
             self._clear_button.setIconSize(QSize(16, 16))
@@ -727,14 +751,14 @@ class InputArea(QFrame):
                     self._clear_button.setIcon(icon)
         else:
             self._top_layout.setDirection(QBoxLayout.Direction.LeftToRight)
-            self._top_layout.setSpacing(_SPACING_XS)
+            self._top_layout.setSpacing(Spacing.GROUP_GAP)
             self._clear_button.setText(_i18n(_I_CLEAR_BUTTON, "Clear"))
             self._clear_button.setIcon(QIcon())
 
         # Keep the two text actions visually balanced at normal widths.  The
         # icon-only clear action remains intentionally smaller in compact mode.
-        self._add_button.setMinimumWidth(56 if compact else _ACTION_BUTTON_MIN_WIDTH)
-        self._clear_button.setMinimumWidth(36 if compact else _ACTION_BUTTON_MIN_WIDTH)
+        self._add_button.setMinimumWidth(action_width)
+        self._clear_button.setMinimumWidth(Sizing.CONTROL_HEIGHT if compact else action_width)
         self.height_changed.emit(self.minimumHeight())
 
     def _sync_supported_type_layout(self) -> None:

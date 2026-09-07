@@ -81,15 +81,27 @@ class TestMdToDocument:
         assert widget.md_document_format_combo.accessibleName()
         assert widget.md_numbering_scheme_combo.accessibleName()
 
-    def test_document_format_combo_uses_compact_content_width(
-        self, widget: ActionArea, vm: ActionAreaViewModel
+    def test_document_format_selector_precedes_full_width_generation(
+        self, qapp: QApplication, widget: ActionArea, vm: ActionAreaViewModel
     ) -> None:
         vm.setup_for_md_to_document("/test.md")
         combo = widget.md_document_format_combo
 
         assert combo.sizeAdjustPolicy() == combo.SizeAdjustPolicy.AdjustToContents
-        assert combo.sizePolicy().horizontalPolicy() == combo.sizePolicy().Policy.Fixed
+        assert combo.sizePolicy().horizontalPolicy() == combo.sizePolicy().Policy.Expanding
         assert combo.sizeHint().width() >= combo.fontMetrics().horizontalAdvance("DOCX")
+        widget.resize(600, 850)
+        widget.show()
+        qapp.processEvents()
+        button = widget.convert_docx_button
+        assert combo.mapToGlobal(combo.rect().bottomLeft()).y() < button.mapToGlobal(button.rect().topLeft()).y()
+        parent = button.parentWidget()
+        assert parent is not None
+        assert button.width() == parent.contentsRect().width()
+        combo.setCurrentIndex(combo.findData("pdf"))
+        assert "PDF" in button.text()
+        vm.target_format = "rtf"
+        assert "RTF" in button.text()
 
     def test_has_convert_button(self, widget: ActionArea, vm: ActionAreaViewModel) -> None:
         vm.setup_for_md_to_document("/test.md")
@@ -121,7 +133,7 @@ class TestMdToDocument:
         assert positions == [(0, 0), (0, 1), (1, 0), (1, 1)]
 
     @pytest.mark.parametrize("locale", ["de_DE", "fr_FR", "ru_RU"])
-    def test_proofread_grid_keeps_two_by_two_for_long_locales_without_clipping(
+    def test_proofread_grid_reflows_long_locales_without_clipping(
         self,
         qapp: QApplication,
         locale: str,
@@ -140,18 +152,26 @@ class TestMdToDocument:
             qapp.processEvents()
 
             positions = [_grid_position(checkbox) for checkbox in localized_widget.checkbox_vars.values()]
-            assert positions == [(0, 0), (0, 1), (1, 0), (1, 1)]
+            assert positions == [(0, 0), (1, 0), (2, 0), (3, 0)]
             grid_widget = localized_widget._proofread_grid_widget  # pyright: ignore[reportPrivateUsage]
             grid = localized_widget._proofread_grid  # pyright: ignore[reportPrivateUsage]
             assert grid_widget is not None
             assert grid is not None
             widest = max(checkbox.sizeHint().width() for checkbox in localized_widget.checkbox_vars.values())
-            required_width = (2 * widest) + grid.horizontalSpacing()
-            assert grid_widget.minimumWidth() >= required_width
-            column_width = (grid_widget.contentsRect().width() - grid.horizontalSpacing()) // 2
+            column_width = grid_widget.contentsRect().width()
+            assert column_width >= widest
             assert all(
                 checkbox.sizeHint().width() <= column_width for checkbox in localized_widget.checkbox_vars.values()
             )
+            localized_widget.resize(1080, 850)
+            for _ in range(3):
+                qapp.processEvents()
+            assert [_grid_position(cb) for cb in localized_widget.checkbox_vars.values()] == [
+                (0, 0),
+                (0, 1),
+                (1, 0),
+                (1, 1),
+            ]
         finally:
             set_locale(previous_locale)
             if localized_widget is not None:
