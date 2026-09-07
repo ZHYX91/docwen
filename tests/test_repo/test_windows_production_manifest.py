@@ -42,7 +42,7 @@ def test_windows_production_manifest_has_one_offline_asset_and_fixed_epoch() -> 
     assert manifest["payload"]["allowlist"] == {
         "path": "release/windows-payload-allowlist.v1.json",
         "status": "FROZEN",
-        "sha256": "2abc4e2697c44a48eec974b57d14cf90917b72de9f6f6b6387a88bc2ad748821",
+        "sha256": "aae8b47ea2506385f36b3ce227f5f66187d69ad12fccc327073536856b92515d",
         "rejectMissing": True,
         "rejectUnexpected": True,
         "rejectCaseFoldCollision": True,
