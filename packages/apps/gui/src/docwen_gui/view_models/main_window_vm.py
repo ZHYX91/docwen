@@ -168,13 +168,30 @@ class MainWindowViewModel(QObject):
     def mode(self, value: str) -> None:
         if value not in ("single", "batch"):
             raise ValueError(f"Invalid mode: {value!r}")
+        if value == self.mode:
+            return
+        if self._reserved_inputs:
+            self.set_status_message(_t("components.file_drop.input_busy"))
+            return
         changed = False
+        files_snapshot: list[FileRef] | None = None
         with QMutexLocker(self._mutex):
             if self._mode != value:
+                if value == "single" and self._files:
+                    selected = self._selected_file
+                    if selected is None or selected not in self._files:
+                        selected = self._files[0]
+                    self._selected_file = selected
+                    if len(self._files) > 1:
+                        self._files = [selected]
+                        files_snapshot = list(self._files)
                 self._mode = value
                 changed = True
         if changed:
             self.mode_changed.emit(value)
+        if files_snapshot is not None:
+            self.files_changed.emit(files_snapshot)
+            self._update_title_for_file_count(len(files_snapshot))
         # Recompute projection outside the mutex to avoid emitting under lock.
         self._emit_projection_changed()
 
@@ -227,7 +244,7 @@ class MainWindowViewModel(QObject):
     # ── Command methods (called by widgets → delegate to controller) ────
 
     def add_files(self, paths: list[str]) -> FileAddOutcome:
-        """Add files to the current input list.
+        """Replace the single input or append to the visible batch list.
 
         Widgets call this when files are dropped, selected via dialog,
         or received via IPC.
@@ -244,6 +261,18 @@ class MainWindowViewModel(QObject):
         from docwen_core.models.file_ref import FileRef
 
         from .interaction import normalize_workflow_category
+
+        paths = list(dict.fromkeys(p for p in paths if p))
+        if not paths:
+            return FileAddOutcome(added=(), rejected=())
+        reason = ""
+        if self._reserved_inputs:
+            reason = _t("components.file_drop.input_busy")
+        elif self.mode == "single" and len(paths) != 1:
+            reason = _t("components.file_drop.single_mode_only_one")
+        if reason:
+            self.set_status_message(reason)
+            return FileAddOutcome(added=(), rejected=tuple((p, reason) for p in paths))
 
         new_refs: list[FileRef] = []
         rejected: list[tuple[str, str]] = []
@@ -293,8 +322,17 @@ class MainWindowViewModel(QObject):
         added_refs: list[FileRef] = []
         file_count = 0
         with QMutexLocker(self._mutex):
+            if self._mode == "single":
+                # Validate first: a rejected replacement must preserve the input.
+                ref = new_refs[0]
+                if len(self._files) != 1 or Path(self._files[0].path) != Path(ref.path):
+                    self._files = [ref]
+                    self._selected_file = ref
+                    added_refs.append(ref)
+                else:
+                    self._selected_file = self._files[0]
             existing = {Path(f.path) for f in self._files}
-            for ref in new_refs:
+            for ref in new_refs if self._mode == "batch" else ():
                 if Path(ref.path) not in existing:
                     self._files.append(ref)
                     added_refs.append(ref)
@@ -306,6 +344,8 @@ class MainWindowViewModel(QObject):
         if files_snapshot is not None:
             self.files_changed.emit(files_snapshot)
             self._update_title_for_file_count(file_count)
+        if self.mode == "single":
+            self._emit_projection_changed()
         if rejected:
             self.set_status_message(rejected[0][1])
         return FileAddOutcome(added=tuple(added_refs), rejected=tuple(rejected))
@@ -507,7 +547,7 @@ class MainWindowViewModel(QObject):
 
     # ── IPC command handling ─────────────────────────────────────────────
 
-    def handle_ipc_command(self, action: str, file_path: str | None = None) -> None:
+    def handle_ipc_command(self, action: str, file_path: str | None = None) -> bool:
         """Handle a command received from another process via IPC.
 
         Called by the main window when runtime/control delivers a command.
@@ -522,7 +562,7 @@ class MainWindowViewModel(QObject):
             if not path.exists():
                 logger.warning("IPC file does not exist — skipping: %s", file_path)
                 self.set_status_message(_t("info_area.ipc_file_missing", "IPC file not found: {path}", path=file_path))
-                return
+                return False
             outcome = self.add_files([str(path)])
             admitted = next((ref for ref in self.files if Path(ref.path) == path), None)
             if admitted is not None and not outcome.rejected:
@@ -530,10 +570,13 @@ class MainWindowViewModel(QObject):
                 self.ipc_file_received.emit(str(path))
             # Always bring window to front when files are added.
             self.window_activation_requested.emit()
+            return admitted is not None and not outcome.rejected
         elif action == "activate":
             self.window_activation_requested.emit()
+            return True
         else:
             logger.debug("Unknown or no-op IPC action: %r", action)
+            return False
 
     def request_window_activation(self) -> None:
         """Request that the main window be activated (brought to front).

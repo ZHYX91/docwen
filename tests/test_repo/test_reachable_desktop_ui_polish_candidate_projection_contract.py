@@ -41,7 +41,6 @@ def test_reachable_ui_candidate_keeps_geometry_and_surface_contracts() -> None:
     for token in (
         "def _normal_panel_transition_rect(",
         "def _context_panel_width_contribution(",
-        "main_window.ipc_file_received",
     ):
         assert token in main
     for token in (
@@ -66,7 +65,6 @@ def test_reachable_ui_candidate_keeps_geometry_and_surface_contracts() -> None:
 
 def test_reachable_ui_candidate_localizes_new_owned_feedback() -> None:
     keys = (
-        "ipc_file_received",
         "batch_add_failed_title",
         "batch_add_failed_message",
         "batch_add_failed_reason",

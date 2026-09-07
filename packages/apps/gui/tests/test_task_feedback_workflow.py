@@ -322,9 +322,7 @@ def test_batch_category_selection_updates_input_summary_and_conversion_target(
     window._input_area_vm.set_mode("batch")
     window._input_area_vm.add_files([str(text), str(image)])
     window._batch_list._activate_tab("markdown")
-    window._input_area_vm.set_mode("single")
     assert "source.md" in window._input_area_vm.selection_message
-    window._input_area_vm.set_mode("batch")
     window._batch_list._activate_tab("image")
     qtbot.wait(30)
     assert "current.png" in window._input_area_vm.selection_message

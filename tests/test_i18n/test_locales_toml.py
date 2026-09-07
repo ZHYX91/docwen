@@ -348,7 +348,7 @@ def test_zh_tw_gui_status_messages_use_traditional_chinese_wording() -> None:
     expected_values = {
         "components.file_drop.files_added_msg": "已新增 {count} 個檔案",
         "components.file_drop.files_added_with_skipped_msg": "已新增 {added} 個檔案，跳過 {skipped} 個",
-        "components.file_drop.file_selected_msg": "已選取：{filename}",
+        "components.file_drop.file_selected_msg": "目前檔案：{filename}",
         "components.file_drop.unsupported_type_msg": "不支援的檔案類型：{filename}",
         "components.template_selector.auto_selected_reason": "已依預設設定自動選取 {template_kind} 中的可用範本。",
     }
@@ -433,8 +433,8 @@ def test_chinese_file_selected_message_uses_full_width_colon() -> None:
     zh_cn = _read_toml_file(LOCALES_DIR / "zh_CN.toml")
     zh_tw = _read_toml_file(LOCALES_DIR / "zh_TW.toml")
 
-    assert _get_nested_value(zh_cn, "components.file_drop.file_selected_msg") == "已选择：{filename}"
-    assert _get_nested_value(zh_tw, "components.file_drop.file_selected_msg") == "已選取：{filename}"
+    assert _get_nested_value(zh_cn, "components.file_drop.file_selected_msg") == "当前文件：{filename}"
+    assert _get_nested_value(zh_tw, "components.file_drop.file_selected_msg") == "目前檔案：{filename}"
 
 
 def test_chinese_status_progress_and_failure_messages_use_full_width_colon() -> None:

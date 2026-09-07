@@ -27,7 +27,7 @@ def test_ipc_new_and_repeated_open_selects_requested_input(window, tmp_path, qap
         assert source.name in window._input_area_vm.selection_message
         context = window._view_model.ui_projection.template_context
         assert context is not None and Path(context.file_path) == source
-    assert len(window._view_model.files) == 2
+    assert len(window._view_model.files) == (1 if mode == "single" else 2)
 
 
 def test_settings_feedback_does_not_move_confirmation_buttons(qapp):

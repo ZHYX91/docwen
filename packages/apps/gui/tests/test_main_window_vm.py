@@ -141,6 +141,7 @@ class TestModeChanges:
 
 class TestFileManagement:
     def test_add_files_emits_signal(self, vm: MainWindowViewModel) -> None:
+        vm.set_mode("batch")
         signals: list[list] = []
         vm.files_changed.connect(signals.append)
         vm.add_files(["/tmp/a.docx", "/tmp/b.pdf"])
@@ -179,6 +180,7 @@ class TestFileManagement:
         assert lock_available == [True]
 
     def test_add_duplicate_path_is_deduped(self, vm: MainWindowViewModel) -> None:
+        vm.set_mode("batch")
         signals: list[list] = []
         vm.files_changed.connect(signals.append)
         vm.add_files(["/tmp/a.docx"])
@@ -188,6 +190,7 @@ class TestFileManagement:
         assert len(signals[1]) == 2  # only b.pdf added, a.docx skipped
 
     def test_remove_file_emits_signal(self, vm: MainWindowViewModel) -> None:
+        vm.set_mode("batch")
         signals: list[list] = []
         vm.files_changed.connect(signals.append)
         vm.add_files(["/tmp/a.docx", "/tmp/b.pdf"])
@@ -217,6 +220,7 @@ class TestFileManagement:
         assert len(clear_signals) == 1
 
     def test_add_files_is_not_limited_by_preview_scan_limit(self, vm: MainWindowViewModel) -> None:
+        vm.set_mode("batch")
         paths = [f"/tmp/file_{i}.docx" for i in range(250)]
         vm.add_files(paths)
         assert len(vm.files) == 250

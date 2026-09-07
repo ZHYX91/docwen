@@ -36,13 +36,10 @@ from ._main_window_projection_binding_support import (
 )
 
 
-def test_ipc_file_received_history_message_is_localized(window) -> None:
-    from docwen_gui.i18n import t
-
+def test_ipc_file_received_does_not_add_an_activity_record(window) -> None:
+    before = list(window._info_area_vm.history_rows)
     window._on_ipc_file_received("C:/tmp/example.md")
-
-    latest = window._info_area_vm.history_rows[-1]
-    assert latest.message == t("main_window.ipc_file_received", filename="example.md")
+    assert window._info_area_vm.history_rows == before
 
 
 class TestPanelVisibility:

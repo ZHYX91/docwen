@@ -114,6 +114,7 @@ class InputAreaViewModel(QObject):
             # Main VM takes precedence if it has a different value (e.g. set by IPC)
             default_mode = main_vm.mode
         self._mode: str = default_mode
+        main_vm.mode_changed.connect(self._on_main_mode_changed)
 
     # ── Observable properties ────────────────────────────────────────
 
@@ -158,9 +159,23 @@ class InputAreaViewModel(QObject):
             raise ValueError(f"Invalid mode: {mode!r}")
         if mode == self._mode:
             return
+        self._main_vm.set_mode(mode)
+
+    def _on_main_mode_changed(self, mode: str) -> None:
         self._mode = mode
         self.mode_changed.emit(mode)
-        self._main_vm.set_mode(mode)
+        selected = self._main_vm.selected_file
+        refs = [selected] if mode == "single" and selected is not None else self._main_vm.files
+        self.sync_selection(refs)
+
+    @property
+    def single_mode_kept_filename(self) -> str | None:
+        """The surviving input when a batch-to-single switch needs confirmation."""
+        files = self._main_vm.files
+        if self._mode != "batch" or len(files) <= 1:
+            return None
+        selected = self._main_vm.selected_file or files[0]
+        return Path(selected.path).name
 
     def add_files(self, paths: list[str]) -> None:
         """Validate and add file paths.
@@ -183,7 +198,7 @@ class InputAreaViewModel(QObject):
     def _add_single(self, paths: list[str]) -> None:
         folder_paths = [p for p in paths if Path(p).is_dir()]
         if folder_paths:
-            self._emit_message(
+            self._emit_rejection(
                 _t("messages.no_folder_in_single_mode", "Single mode does not support folders"),
                 "warning",
             )
@@ -191,7 +206,7 @@ class InputAreaViewModel(QObject):
 
         file_paths = [p for p in paths if Path(p).is_file()]
         if len(file_paths) != 1:
-            self._emit_message(
+            self._emit_rejection(
                 _t("components.file_drop.single_mode_only_one", "Please select exactly one file in single mode"),
                 "warning",
             )
@@ -200,7 +215,7 @@ class InputAreaViewModel(QObject):
         file_path = file_paths[0]
         supported = self._is_supported(file_path)
         if not supported:
-            self._emit_message(
+            self._emit_rejection(
                 _t(
                     "components.file_drop.unsupported_type_msg",
                     "Unsupported file type: {filename}",
@@ -274,7 +289,7 @@ class InputAreaViewModel(QObject):
             file_path = normalized[0]
             message = _t(
                 "components.file_drop.file_selected_msg",
-                "Selected: {filename}",
+                "Current file: {filename}",
                 filename=Path(file_path).name,
             )
             if warning_message:
@@ -621,6 +636,15 @@ class InputAreaViewModel(QObject):
         self._selection_tone = tone
         self.selection_message_changed.emit(message, tone)
 
+    def _emit_rejection(self, message: str, tone: str) -> None:
+        selected = self._main_vm.selected_file
+        detail = ""
+        if self._mode == "single" and selected is not None:
+            current = _t("components.file_drop.file_selected_msg", filename=Path(selected.path).name)
+            message = f"{current}\n{message}"
+            detail = str(Path(selected.path).parent)
+        self._emit_message(message, tone, detail=detail)
+
     def _emit_files_added(
         self,
         paths: list[str],
@@ -639,7 +663,7 @@ class InputAreaViewModel(QObject):
                     self.sync_selection([selected])
         if not admitted_paths:
             if outcome.rejected:
-                self._emit_message(outcome.rejected[0][1], "danger")
+                self._emit_rejection(outcome.rejected[0][1], "danger")
             return
         paths = admitted_paths
         skipped_count += len(outcome.rejected)
@@ -656,7 +680,7 @@ class InputAreaViewModel(QObject):
         if self._mode == "single":
             msg = _t(
                 "components.file_drop.file_selected_msg",
-                "Selected: {filename}",
+                "Current file: {filename}",
                 filename=Path(paths[0]).name if paths else "",
             )
             if warning_message:

@@ -1589,19 +1589,11 @@ class MainWindow(QWidget):
         return False
 
     def _on_ipc_file_received(self, file_path: str) -> None:
+        logger.debug("Received GUI input from another process: %s", file_path)
         selected = self._view_model.selected_file
         if selected is not None:
             self._input_area_vm.sync_selection([selected], current=True)
             self._batch_list.select_file(selected.path)
-        self._info_area_vm.add_message(
-            _t(
-                "main_window.ipc_file_received",
-                "Received file from another instance: {filename}",
-                filename=Path(file_path).name,
-            ),
-            "info",
-            show_location=False,
-        )
 
     def _on_status_message_changed(self, message: str) -> None:
         if not message:
@@ -3053,6 +3045,8 @@ class MainWindow(QWidget):
                 return
             options["spreadsheet_password"] = password
         retry_paths = record.paths if context.get("aggregate") else failed_files
+        if len(retry_paths) > 1:
+            self._view_model.set_mode("batch")
         missing_paths = [path for path in retry_paths if self._batch_list_vm.get_file_entry(path) is None]
         if missing_paths:
             self._view_model.add_files(missing_paths)
@@ -3516,8 +3510,8 @@ class MainWindow(QWidget):
         self.raise_()
         self.activateWindow()
 
-    def handle_ipc_command(self, action: str, file_path: str | None = None) -> None:
-        self._view_model.handle_ipc_command(action, file_path)
+    def handle_ipc_command(self, action: str, file_path: str | None = None) -> bool:
+        return self._view_model.handle_ipc_command(action, file_path)
 
     def showEvent(self, event: QShowEvent) -> None:
         super().showEvent(event)

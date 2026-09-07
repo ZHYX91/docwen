@@ -30,7 +30,7 @@ def test_single_add_executes_the_visible_file(window, tmp_path, monkeypatch, res
         window._input_area_vm.add_files([str(first)])
         expected = first
 
-    assert len(window._view_model.files) == 2
+    assert [Path(ref.path) for ref in window._view_model.files] == [expected]
     assert Path(window._view_model.selected_file.path) == expected
     assert expected.name in window._input_area_vm.selection_message
     assert Path(window._batch_list.get_current_file()) == expected

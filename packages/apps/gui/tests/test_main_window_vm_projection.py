@@ -103,6 +103,7 @@ class TestSelectedFileState:
 
 class TestFileListSignalContract:
     def test_files_changed_emits_real_file_refs(self, vm: MainWindowViewModel, tmp_path) -> None:
+        vm.set_mode("batch")
         received: list[list[FileRef]] = []
         vm.files_changed.connect(received.append)
         first = tmp_path / "x.docx"

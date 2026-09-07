@@ -358,7 +358,7 @@ class TestGuiEntry:
 
         fake_app = SimpleNamespace(aboutToQuit=_Signal())
         window = SimpleNamespace(handled=[], opened_settings=[], isVisible=lambda: True)
-        window.handle_ipc_command = lambda action, path=None: window.handled.append((action, path))
+        window.handle_ipc_command = lambda action, path=None: window.handled.append((action, path)) or True
         window.supported_settings_sections = lambda: ("proofread",)
         window.open_settings = lambda section, *, deadline=None: (
             window.opened_settings.append(section) or {"accepted": True, "section": section, "reused": False}
@@ -381,6 +381,24 @@ class TestGuiEntry:
 
         assert result["accepted"] is True
         assert window.handled == [("open_file", str(sample.resolve()))]
+
+        accepting_handler = window.handle_ipc_command
+        window.handle_ipc_command = lambda action, path=None: False
+        rejected = []
+
+        def request_rejected_input() -> None:
+            try:
+                server.handler("open", {"file": str(sample.resolve())})
+            except control_module.ControlRequestError as exc:
+                rejected.append(exc.code)
+
+        worker = threading.Thread(target=request_rejected_input)
+        worker.start()
+        time.sleep(0.02)
+        installed[0]()
+        worker.join(1)
+        assert rejected == ["gui_input_rejected"]
+        window.handle_ipc_command = accepting_handler
 
         status: dict[str, object] = {}
         worker = threading.Thread(target=lambda: status.update(server.handler("status", {})))

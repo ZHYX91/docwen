@@ -136,6 +136,7 @@ class TestMainWindowBatchSync:
         second_doc = str(second_doc_path)
         sheet = str(sheet_path)
 
+        window._view_model.set_mode("batch")
         window._view_model.add_files([first_doc, second_doc, sheet])
         app_instance = QApplication.instance()
         if app_instance:

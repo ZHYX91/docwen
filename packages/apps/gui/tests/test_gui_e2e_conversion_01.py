@@ -243,6 +243,7 @@ class TestDocxToMdConversion:
         docx2_path = tmp_path / "e2e_test_2.docx"
         docx2_path.write_bytes(sample_docx.read_bytes())
 
+        vm.set_mode("batch")
         vm.add_files([str(sample_docx), str(docx2_path)])
         app = QApplication.instance()
         if app is not None:

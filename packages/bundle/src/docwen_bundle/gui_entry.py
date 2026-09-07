@@ -146,7 +146,11 @@ def _start_gui_control(window: Any, *, app: Any) -> object:
                     if not path.is_absolute() or not path.is_file():
                         raise ControlRequestError("file_not_found", "The requested GUI file does not exist.")
                     resolved = str(path.resolve())
-                    window.handle_ipc_command("open_file", resolved)
+                    if not window.handle_ipc_command("open_file", resolved):
+                        raise ControlRequestError(
+                            "gui_input_rejected",
+                            "DocWen could not accept the input. Finish the current task and check the file before retrying.",
+                        )
                     response["data"] = {
                         "accepted": True,
                         "running": True,

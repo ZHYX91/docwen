@@ -191,12 +191,12 @@ class InputArea(QFrame):
         self._mode_switch.addItem(
             "batch",
             _i18n(_I_BATCH_MODE, "Batch"),
-            onClick=lambda: self._vm.set_mode("batch"),
+            onClick=lambda: self._request_mode("batch"),
         )
         self._mode_switch.addItem(
             "single",
             _i18n(_I_SINGLE_MODE, "Single"),
-            onClick=lambda: self._vm.set_mode("single"),
+            onClick=lambda: self._request_mode("single"),
         )
         self._mode_switch.setCurrentItem(self._vm.mode)
         self._top_layout.addWidget(self._mode_switch)
@@ -368,6 +368,23 @@ class InputArea(QFrame):
         self._sync_top_control_layout()
 
     # ── ViewModel wiring ───────────────────────────────────────────
+
+    def _request_mode(self, mode: str) -> None:
+        filename = self._vm.single_mode_kept_filename if mode == "single" else None
+        if filename is not None:
+            from docwen_gui.dialogs.feedback import confirm
+
+            accepted = confirm(
+                t("components.file_drop.switch_single_title"),
+                t("components.file_drop.switch_single_message", filename=filename),
+                parent=self.window(),
+                confirm_label=t("components.file_drop.switch_single_action"),
+            )
+            if not accepted:
+                self._on_mode_changed(self._vm.mode)
+                return
+        self._vm.set_mode(mode)
+        self._on_mode_changed(self._vm.mode)
 
     def _wire_view_model(self) -> None:
         vm = self._vm

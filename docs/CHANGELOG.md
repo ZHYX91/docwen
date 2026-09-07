@@ -7,6 +7,9 @@
 
 ## 0.10.0 (2026-09-07)
 
+- 单文件模式只保留当前输入，拖入、添加和 Assistant 传入遵守同一规则；批量切回单文件时确认保留项，移除内部进程接收记录。
+- Single-file mode keeps only the current input across drag, picker, and Assistant entry points. Returning from a batch confirms the retained file, and internal process messages no longer clutter activity history.
+
 - PDF 拆分说明所选页、剩余页、逐页和奇偶页的含义；无效页码或选中全部页面时显示禁用原因。
 - Explain PDF split modes and why invalid or all-page selections cannot be split.
 
