@@ -503,7 +503,10 @@ def test_packaged_cli_pymupdf_layout_smoke_runs_real_pdf_to_markdown_command(
         source = Path(args[1])
         with fitz.open(source) as document:
             assert verify_packaged_cli._PYMUPDF_LAYOUT_SMOKE_TEXT in "".join(page.get_text() for page in document)
-        output = Path(args[args.index("--output") + 1])
+        parent = Path(args[args.index("--output-dir") + 1])
+        node = "PyMuPDF Layout 最小验证_20260907_180000_fromPdf"
+        output = parent / node / f"{node}.md"
+        output.parent.mkdir(parents=True)
         output.write_text(f"# {verify_packaged_cli._PYMUPDF_LAYOUT_SMOKE_TEXT}\n", encoding="utf-8")
         return _completed(
             {
@@ -526,8 +529,8 @@ def test_packaged_cli_pymupdf_layout_smoke_runs_real_pdf_to_markdown_command(
             str(tmp_path / "PyMuPDF Layout 最小验证.pdf"),
             "--to",
             "md",
-            "--output",
-            str(tmp_path / "PyMuPDF Layout 最小验证.md"),
+            "--output-dir",
+            str(tmp_path / "PyMuPDF Layout 转换结果"),
             "--json",
             "--quiet",
         )
@@ -542,7 +545,10 @@ def test_packaged_cli_pymupdf_layout_smoke_rejects_output_without_expected_text(
 
     def fake_run(binary_path: Path, *args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
         del binary_path, cwd
-        output = Path(args[args.index("--output") + 1])
+        parent = Path(args[args.index("--output-dir") + 1])
+        node = "PyMuPDF Layout 最小验证_20260907_180000_fromPdf"
+        output = parent / node / f"{node}.md"
+        output.parent.mkdir(parents=True)
         output.write_text("# unrelated text\n", encoding="utf-8")
         return _completed(
             {

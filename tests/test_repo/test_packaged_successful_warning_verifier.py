@@ -252,7 +252,7 @@ def test_packaged_cli_verifier_runs_optional_successful_warning_smoke(
             payload = _fake_numbering_payload(args)
             return subprocess.CompletedProcess([str(binary_path), *args], 0, stdout=json.dumps(payload), stderr="")
         if "--optimization" in args:
-            output_dir = Path(args[args.index("--output") + 1])
+            output_dir = Path(args[args.index("--output-dir") + 1])
             output_dir.mkdir(parents=True, exist_ok=True)
             root_name = "rules_20260824_120102_fromDocx"
             output_file = output_dir / root_name / f"{root_name}.md"
@@ -283,13 +283,18 @@ def test_packaged_cli_verifier_runs_optional_successful_warning_smoke(
                 stderr=f"警告 [GONGWEN-NEEDS-REVIEW]: {expected_message}\n",
             )
 
-        output_file = Path(args[args.index("--output") + 1])
+        parent = Path(args[args.index("--output-dir") + 1])
+        source = Path(args[1])
+        node = f"{source.stem}_20260907_180000_from{source.suffix[1:].capitalize()}"
+        output_file = parent / node / f"{node}.md"
+        os.makedirs(verify_packaged_cli._native_long_path(output_file.parent), exist_ok=True)
         output_text = (
             f"# {verify_packaged_cli._PYMUPDF_LAYOUT_SMOKE_TEXT}\n"
             if output_file.name.startswith("PyMuPDF Layout")
             else "| name | value |\n| --- | --- |\n| alpha | 1 |\n"
         )
-        output_file.write_text(output_text, encoding="utf-8")
+        with open(verify_packaged_cli._native_long_path(output_file), "w", encoding="utf-8") as stream:
+            stream.write(output_text)
         payload = {
             "protocol_version": 3,
             "success": True,
@@ -342,8 +347,8 @@ def test_packaged_cli_verifier_runs_optional_successful_warning_smoke(
     assert "--json" in warning_calls[0]
     assert "--json" not in warning_calls[1]
     assert warning_calls[0][warning_calls[0].index("--optimization") + 1] == "gongwen"
-    assert Path(warning_calls[0][warning_calls[0].index("--output") + 1]).name == "warning_json"
-    assert Path(warning_calls[1][warning_calls[1].index("--output") + 1]).name == "warning_text"
+    assert Path(warning_calls[0][warning_calls[0].index("--output-dir") + 1]).name == "warning_json"
+    assert Path(warning_calls[1][warning_calls[1].index("--output-dir") + 1]).name == "warning_text"
 
 
 def test_packaged_cli_successful_warning_smoke_fails_when_code_is_missing(

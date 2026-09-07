@@ -45,7 +45,7 @@ _TEMPLATE_SMOKE_TEXT = "DOCWEN PACKAGED CANONICAL TEMPLATE ID SMOKE"
 _PROOFREAD_REPORT_FIXTURE_TEXT = "\ufeff\r\n# 坐标 😀e\u0301👩\u200d💻１２\r\n结尾（"
 _LONG_PATH_MINIMUM_LENGTH = 201
 _LONG_PATH_SEGMENT_LIMIT = 32
-_LONG_PATH_OUTPUT_NAME = "转换 结果.md"
+_LONG_PATH_OUTPUT_NAME = "转换 结果目录"
 _PROOFREAD_LOCATION_CONTRACT = {
     "id": "docwen.proofread-text-range",
     "version": 1,
@@ -1412,7 +1412,7 @@ def _run_template_resource_smoke(binary_path: Path, *, work_dir: Path) -> Path:
 
     source_path = work_dir / "canonical-template-id-smoke.md"
     source_path.write_text(f"# {_TEMPLATE_SMOKE_TEXT}\n\nTemplate resource ID closed loop.\n", encoding="utf-8")
-    output_path = work_dir / "canonical-template-id-smoke.docx"
+    output_path = work_dir / "canonical-template-results"
     convert_payload = _load_json_payload(
         _run(
             binary_path,
@@ -1422,7 +1422,7 @@ def _run_template_resource_smoke(binary_path: Path, *, work_dir: Path) -> Path:
             "docx",
             "--template",
             template_id,
-            "--output",
+            "--output-dir",
             str(output_path),
             "--json",
             "--quiet",
@@ -1437,7 +1437,13 @@ def _run_template_resource_smoke(binary_path: Path, *, work_dir: Path) -> Path:
         work_dir=work_dir,
         command_name="convert with canonical template ID",
     )
-    if resolved_output.resolve() != output_path.resolve():
+    node_name = resolved_output.stem
+    if (
+        resolved_output.suffix != ".docx"
+        or resolved_output.parent.name != node_name
+        or resolved_output.parent.parent.resolve() != output_path.resolve()
+        or re.fullmatch(r"canonical-template-id-smoke_\d{8}_\d{6}_fromMd", node_name) is None
+    ):
         raise RuntimeError(
             "convert with canonical template ID returned an unexpected output: "
             f"expected={output_path.resolve()}, actual={resolved_output.resolve()}"
@@ -1527,7 +1533,7 @@ def _verify_md_output_file(payload: dict[str, object], *, work_dir: Path, comman
 def _run_pymupdf_layout_smoke(binary_path: Path, *, work_dir: Path) -> Path:
     """Trigger the packaged PDF-to-Markdown route and its lazy-loaded layout model."""
     source = work_dir / "PyMuPDF Layout 最小验证.pdf"
-    output = work_dir / "PyMuPDF Layout 最小验证.md"
+    output = work_dir / "PyMuPDF Layout 转换结果"
     _write_pymupdf_layout_pdf(source)
 
     payload = _load_json_payload(
@@ -1537,7 +1543,7 @@ def _run_pymupdf_layout_smoke(binary_path: Path, *, work_dir: Path) -> Path:
             str(source),
             "--to",
             "md",
-            "--output",
+            "--output-dir",
             str(output),
             "--json",
             "--quiet",
@@ -1594,7 +1600,7 @@ def _verify_blocked_container_failure(
         str(input_path),
         "--to",
         "md",
-        "--output",
+        "--output-dir",
         str(output_path),
         "--use-detected-format",
         "--json",
@@ -1624,7 +1630,7 @@ def _verify_blocked_container_failure(
 def _run_content_first_contract_smoke(binary_path: Path, *, work_dir: Path) -> Path:
     """Prove the installed CLI follows content, not a filename suffix."""
     disguised_xlsx = work_dir / "实际为 XLSX 的文本后缀.txt"
-    disguised_output = work_dir / "伪装表格转换结果.md"
+    disguised_output = work_dir / "伪装表格转换结果"
     _write_xlsx(disguised_xlsx)
     _inspect_content_contract(
         binary_path,
@@ -1645,7 +1651,7 @@ def _run_content_first_contract_smoke(binary_path: Path, *, work_dir: Path) -> P
             str(disguised_xlsx),
             "--to",
             "md",
-            "--output",
+            "--output-dir",
             str(disguised_output),
             "--use-detected-format",
             "--json",
@@ -1743,7 +1749,7 @@ def _run_content_first_contract_smoke(binary_path: Path, *, work_dir: Path) -> P
 
 def _run_optional_ocr_smoke(binary_path: Path, *, work_dir: Path) -> Path:
     source = work_dir / "sample_ocr.png"
-    output = work_dir / "sample_ocr.md"
+    output = work_dir / "sample_ocr_results"
     _write_ocr_png(source)
     payload = _load_json_payload(
         _run(
@@ -1752,7 +1758,7 @@ def _run_optional_ocr_smoke(binary_path: Path, *, work_dir: Path) -> Path:
             str(source),
             "--to",
             "md",
-            "--output",
+            "--output-dir",
             str(output),
             "--ocr",
             "--ocr-placement",
@@ -2133,7 +2139,7 @@ def _run_optional_successful_warning_smoke(
             "md",
             "--optimization",
             action,
-            "--output",
+            "--output-dir",
             str(json_output_dir),
             "--json",
             cwd=work_dir,
@@ -2175,7 +2181,7 @@ def _run_optional_successful_warning_smoke(
         "md",
         "--optimization",
         action,
-        "--output",
+        "--output-dir",
         str(text_output_dir),
         cwd=work_dir,
     )
@@ -3533,7 +3539,7 @@ def main(argv: list[str]) -> int:
                 str(source),
                 "--to",
                 "md",
-                "--output",
+                "--output-dir",
                 str(output),
                 "--json",
                 "--quiet",

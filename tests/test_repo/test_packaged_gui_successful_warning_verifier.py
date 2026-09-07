@@ -197,7 +197,7 @@ def test_successful_warning_preflight_uses_packaged_cli_as_canonical_message(
         timeout: int,
     ) -> subprocess.CompletedProcess[str]:
         observed.update(binary=binary_path, args=args, cwd=cwd, env=env, timeout=timeout)
-        output_dir = Path(args[args.index("--output") + 1])
+        output_dir = Path(args[args.index("--output-dir") + 1])
         output_dir.mkdir(parents=True, exist_ok=True)
         root_name = "rules_20260824_120102_fromDocx"
         output = output_dir / root_name / f"{root_name}.md"
@@ -269,7 +269,7 @@ def test_successful_warning_preflight_fails_closed(
         timeout: int,
     ) -> subprocess.CompletedProcess[str]:
         del cwd, env, timeout
-        output_dir = Path(args[args.index("--output") + 1])
+        output_dir = Path(args[args.index("--output-dir") + 1])
         output_dir.mkdir(parents=True, exist_ok=True)
         root_name = "rules_20260824_120102_fromDocx"
         output = output_dir / root_name / f"{root_name}.md"

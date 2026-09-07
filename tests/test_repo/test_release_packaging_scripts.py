@@ -8,7 +8,11 @@ import sys
 from pathlib import Path
 
 import pytest
-from tests.support.packaged_contracts import fake_dependency_egress_guard, fake_numbering_payload
+from tests.support.packaged_contracts import (
+    fake_dependency_egress_guard,
+    fake_numbering_payload,
+    write_conversion_output,
+)
 from tests.support.release_packaging import (
     use_compact_pymupdf_layout_manifest,
 )
@@ -185,8 +189,7 @@ def test_packaged_cli_verifier_uses_protocol_3_convert_command(tmp_path: Path, m
         elif args[:2] == ("number", "markdown"):
             payload = fake_numbering_payload(args)
         elif args[:1] == ("convert",):
-            output_file = Path(args[args.index("--output") + 1])
-            output_file.write_text("| name | value |\n| --- | --- |\n| alpha | 1 |\n", encoding="utf-8")
+            output_file = write_conversion_output(args, "| name | value |\n| --- | --- |\n| alpha | 1 |\n")
             payload = {
                 "protocol_version": 3,
                 "success": True,
@@ -253,8 +256,7 @@ def test_packaged_cli_verifier_runs_optional_ocr_smoke(tmp_path: Path, monkeypat
         elif args[:2] == ("number", "markdown"):
             payload = fake_numbering_payload(args)
         elif args[:1] == ("convert",) and "--ocr" in args:
-            output_file = Path(args[args.index("--output") + 1])
-            output_file.write_text("> HELLO DOCWEN OCR\n", encoding="utf-8")
+            output_file = write_conversion_output(args, "> HELLO DOCWEN OCR\n")
             payload = {
                 "protocol_version": 3,
                 "success": True,
@@ -263,8 +265,7 @@ def test_packaged_cli_verifier_runs_optional_ocr_smoke(tmp_path: Path, monkeypat
                 "error": None,
             }
         elif args[:1] == ("convert",):
-            output_file = Path(args[args.index("--output") + 1])
-            output_file.write_text("| name | value |\n| --- | --- |\n| alpha | 1 |\n", encoding="utf-8")
+            output_file = write_conversion_output(args, "| name | value |\n| --- | --- |\n| alpha | 1 |\n")
             payload = {
                 "protocol_version": 3,
                 "success": True,
@@ -309,7 +310,7 @@ def test_packaged_cli_verifier_runs_optional_ocr_smoke(tmp_path: Path, monkeypat
             str(Path(ocr_calls[0][1])),
             "--to",
             "md",
-            "--output",
+            "--output-dir",
             str(Path(ocr_calls[0][5])),
             "--ocr",
             "--ocr-placement",

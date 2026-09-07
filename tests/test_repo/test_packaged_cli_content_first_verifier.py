@@ -95,10 +95,13 @@ def test_packaged_cli_content_first_smoke_covers_success_and_hard_blocks(
 
         assert args[0] == "convert"
         input_path = Path(args[1])
-        output_path = Path(args[args.index("--output") + 1])
+        output_path = Path(args[args.index("--output-dir") + 1])
         if input_path.name in blocked_names:
             payload = _blocked_payload(input_path)
             return subprocess.CompletedProcess([str(binary), *args], 2, stdout=json.dumps(payload), stderr="")
+        node = f"{input_path.stem}_20260907_180000_fromXlsx"
+        output_path = output_path / node / f"{node}.md"
+        output_path.parent.mkdir(parents=True)
         output_path.write_text("| name | value |\n| --- | --- |\n| alpha | 1 |\n", encoding="utf-8")
         payload = _success_payload("convert", {"output": str(output_path)})
         return subprocess.CompletedProcess([str(binary), *args], 0, stdout=json.dumps(payload), stderr="")
@@ -108,7 +111,8 @@ def test_packaged_cli_content_first_smoke_covers_success_and_hard_blocks(
 
     output = verify_packaged_cli._run_content_first_contract_smoke(binary_path, work_dir=tmp_path)
 
-    assert output.name == "伪装表格转换结果.md"
+    assert output.name == "实际为 XLSX 的文本后缀_20260907_180000_fromXlsx.md"
+    assert output.parent.parent == tmp_path / "伪装表格转换结果"
     assert output.is_file()
     inspect_calls = [call for call in calls if call[0] == "inspect"]
     convert_calls = [call for call in calls if call[0] == "convert"]

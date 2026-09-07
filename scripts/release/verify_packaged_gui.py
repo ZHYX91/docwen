@@ -886,7 +886,7 @@ def _probe_successful_warning_contract(
         "md",
         "--optimization",
         action,
-        "--output",
+        "--output-dir",
         str(output_dir),
         "--lang",
         _SUCCESSFUL_WARNING_LOCALE,
