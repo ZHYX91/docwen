@@ -200,7 +200,7 @@
     },
     "lock": {
       "path": "uv.lock",
-      "sha256": "94bc093732ee5f3243d0a52cd47f1a32cde8415c24e708ffb8f30435e7da8cb6"
+      "sha256": "03b621750fad4dd9f1ddad3a76cf41749b868529f51f43554101bf67c30e10b7"
     },
     "pyinstallerVersion": "6.16.0"
   },
@@ -216,8 +216,8 @@
     "readmeSourceGlob": "docs/user-guides/README.*.md",
     "allowlist": {
       "path": "release/windows-payload-allowlist.v1.json",
-      "status": "FROZEN",
-      "sha256": "284c5eaee3abb8755da8df780ce789b7b3e0d586bc4af956a6e1b2b1e4b3ca11",
+      "status": "CALIBRATION_REQUIRED",
+      "sha256": null,
       "rejectMissing": true,
       "rejectUnexpected": true,
       "rejectCaseFoldCollision": true,

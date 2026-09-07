@@ -7,6 +7,9 @@
 
 ## 0.10.0 (2026-09-07)
 
+- 升级 Markdown 解析依赖 Mistune 至 3.3.3，修复已知的嵌套强调解析崩溃风险（CVE-2026-76098）。
+- Updated Mistune to 3.3.3 to fix the known nested-emphasis crash risk (CVE-2026-76098).
+
 - 删除保存原始 Markdown 的 sidecar 和回放逻辑；Word 回转从实际文档结构重建，并修复 Word 保存后的语义 XML 兼容问题。请自行保留源文件。
 - Markdown 扩展按传入识别、生成使用分别设置，默认关闭：Structural Tables、Number Suite 题注与交叉引用、H7–H9、类型化脚注/尾注；提供 Obsidian 预设，关闭时使用普通 Markdown 并提示表达损失。
 - Markdown 转文档/电子表格以及其他格式转 Markdown，一律在所选父目录内生成结果文件夹。目录与主文件使用原文件名、统一时间戳和本次传入格式；CSV 工作表名位于时间戳之前，公文附件使用统一的“附件”子目录及文件名。
