@@ -278,7 +278,7 @@ def _render_svg_icon(svg_path: Path, size: tuple[int, int]) -> Image.Image:
 
     renderer = QSvgRenderer(svg_path.read_bytes())
     _require(renderer.isValid(), "msix_icon_svg_invalid")
-    image = QImage(size[0], size[1], QImage.Format.Format_ARGB32_Premultiplied)
+    image = QImage(size[0], size[1], QImage.Format.Format_RGBA8888_Premultiplied)
     image.fill(Qt.GlobalColor.transparent)
     painter = QPainter(image)
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -286,16 +286,31 @@ def _render_svg_icon(svg_path: Path, size: tuple[int, int]) -> Image.Image:
     renderer.render(painter, QRectF(0, 0, size[0], size[1]))
     painter.end()
 
-    rgba = image.convertToFormat(QImage.Format.Format_RGBA8888)
     return Image.frombytes(
         "RGBA",
         size,
-        bytes(rgba.constBits()),
+        _unpremultiply_rgba(bytes(image.constBits())),
         "raw",
         "RGBA",
-        rgba.bytesPerLine(),
+        image.bytesPerLine(),
         1,
     )
+
+
+def _unpremultiply_rgba(pixels: bytes) -> bytes:
+    """Use one integer rounding rule for straight-alpha Store PNG pixels.
+
+    Qt's CPU-specific image conversion paths can round halfway values
+    differently. Keep rasterization premultiplied and convert its byte-ordered
+    RGBA channels with exact arithmetic so build hosts produce identical PNGs.
+    """
+    result = bytearray(pixels)
+    for offset in range(0, len(result), 4):
+        alpha = result[offset + 3]
+        if 0 < alpha < 255:
+            for channel in range(offset, offset + 3):
+                result[channel] = min(255, (result[channel] * 255 + alpha // 2) // alpha)
+    return bytes(result)
 
 
 def _sanitize_stripped_pe_certificates(staging_root: Path) -> tuple[str, ...]:

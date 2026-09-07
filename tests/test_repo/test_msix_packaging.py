@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import os
 import struct
+import subprocess
+import sys
 import zipfile
 from pathlib import Path
 from xml.etree import ElementTree
@@ -122,6 +124,32 @@ def test_prepare_layout_keeps_payload_assets_and_generates_required_logos(tmp_pa
             assert alpha_bounds[2] - alpha_bounds[0] == round(expected_size[0] * fill_ratio)
             assert alpha_bounds[3] - alpha_bounds[1] == round(expected_size[1] * fill_ratio)
             assert image.getpixel((image.width // 2, image.height // 2))[:3] == (229, 72, 77)
+
+
+def test_store_png_halfway_alpha_rounding_preserves_colour_and_transparency() -> None:
+    # The green channel is exactly 110.5 after unpremultiplication; CI hosts
+    # previously disagreed between 110 and 111 for these real logo pixels.
+    pixels = bytes((33, 78, 166, 180, 0, 0, 0, 0, 47, 111, 235, 255))
+    assert build_msix._unpremultiply_rgba(pixels) == bytes(  # pyright: ignore[reportPrivateUsage]
+        (47, 111, 235, 180, 0, 0, 0, 0, 47, 111, 235, 255)
+    )
+
+
+def test_store_icons_are_identical_across_optional_qt_cpu_features(tmp_path: Path) -> None:
+    if os.name != "nt":
+        pytest.skip("Windows Store rendering CPU regression")
+    command = (
+        "from pathlib import Path; import sys; "
+        "from scripts.release.build_msix import _write_assets; "
+        "_write_assets(Path(sys.argv[1]))"
+    )
+    roots = [tmp_path / "native-cpu", tmp_path / "baseline-cpu"]
+    for root, features in zip(roots, ("", "avx2 avx512f"), strict=True):
+        env = os.environ.copy()
+        env["QT_NO_CPU_FEATURE"] = features
+        subprocess.run([sys.executable, "-c", command, str(root)], cwd=_REPO_ROOT, env=env, check=True)
+    for name in build_msix._ASSET_SPECS:  # pyright: ignore[reportPrivateUsage]
+        assert (roots[0] / "assets/msix" / name).read_bytes() == (roots[1] / "assets/msix" / name).read_bytes(), name
 
 
 def test_prepare_layout_clears_certificate_pointer_when_signature_blob_was_stripped(tmp_path: Path) -> None:
