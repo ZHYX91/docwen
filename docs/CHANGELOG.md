@@ -7,6 +7,9 @@
 
 ## 0.10.0 (2026-09-07)
 
+- PDF 拆分说明所选页、剩余页、逐页和奇偶页的含义；无效页码或选中全部页面时显示禁用原因。
+- Explain PDF split modes and why invalid or all-page selections cannot be split.
+
 - 修复关闭 Markdown 输出扩展时，转换降级提示导致 Machine/Assistant 任务被误报为内部错误的问题。
 - Keep Machine and Assistant exports successful when disabled Markdown extensions produce conversion warnings.
 

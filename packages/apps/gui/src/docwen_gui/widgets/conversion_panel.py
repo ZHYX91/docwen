@@ -1362,6 +1362,17 @@ class ConversionPanel(QWidget):
         page_edit.setAccessibleName(page_label)
         extra_layout.addWidget(FormRow(page_label, page_edit, self))
 
+        split_help = WrappingLabel(
+            _t(
+                "conversion_panel.layout.page_range_help",
+                "Page numbers separate selected pages from the rest. * splits every page; # separates odd and even pages.",
+            ),
+            self,
+        )
+        split_help.setObjectName("hintLabel")
+        split_help.setWordWrap(True)
+        extra_layout.addWidget(split_help)
+
         # PDF info
         pdf_info_text = _t(
             "conversion_panel.layout.selected_split_file",
@@ -1571,6 +1582,26 @@ class ConversionPanel(QWidget):
                     _t(
                         "conversion_panel.layout.split_mode_single_page_warning",
                         "Split mode not applicable for single-page PDF",
+                    )
+                )
+                self._page_warning_label.show()
+        elif not is_valid:
+            all_pages = False
+            try:
+                pages = self._vm.parse_page_ranges(text)
+                all_pages = self._vm.pdf_total_pages > 0 and set(range(1, self._vm.pdf_total_pages + 1)).issubset(pages)
+            except ValueError:
+                pass
+            if self._page_warning_label:
+                self._page_warning_label.setText(
+                    _t(
+                        "conversion_panel.layout.split_all_pages_warning",
+                        "All pages are selected. Select some pages, or use * or # to split the entire file.",
+                    )
+                    if all_pages
+                    else _t(
+                        "conversion_panel.layout.split_invalid_range_warning",
+                        "Enter page numbers within this file, such as 1-2 or 1,3, or use * or #.",
                     )
                 )
                 self._page_warning_label.show()
