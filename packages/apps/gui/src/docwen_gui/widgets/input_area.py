@@ -262,6 +262,7 @@ class InputArea(QFrame):
 
         self._empty_center_panel = QWidget(self._empty_content)
         self._empty_center_panel.setObjectName("fileDropEmptyStateCenterPanel")
+        self._empty_center_panel.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         center_layout = QVBoxLayout(self._empty_center_panel)
         center_layout.setContentsMargins(0, 0, 0, 0)
         center_layout.setSpacing(_SPACING_SM)
@@ -792,13 +793,10 @@ class InputArea(QFrame):
             return
         fallback_width = self._drop_group.width() - (_SPACING_MD * 4)
         panel_width = self._empty_center_panel.width()
-        content_width = max(panel_width if panel_width > 0 else fallback_width, 0)
-        self._types_container.setFixedWidth(content_width)
+        available_width = max(panel_width if panel_width > 0 else fallback_width, 0)
         middle_gap = max(_SPACING_MD, 24)
-        total_height = self._types_layout.spacing() * (len(self._type_prompt_rows) - 1)
-        for index, (row, row_layout, type_label, value_label) in enumerate(self._type_prompt_rows):
-            # The empty-state format overview keeps its symmetric pyramid.
-            # Give text the available width before reserving decorative insets.
+        row_widths = []
+        for index, (_, row_layout, type_label, value_label) in enumerate(self._type_prompt_rows):
             desired_indent = _PYRAMID_INDENTS[min(index, len(_PYRAMID_INDENTS) - 1)]
             label_width = type_label.sizeHint().width()
             required_width = (
@@ -807,6 +805,17 @@ class InputArea(QFrame):
                 + row_layout.spacing()
                 + middle_gap
             )
+            row_widths.append((desired_indent, label_width, required_width))
+        # Keep the format overview compact and centered on wide screens while
+        # deriving its natural width from the current font and translated text.
+        preferred_width = max(required + 2 * indent for indent, _, required in row_widths)
+        content_width = min(available_width, preferred_width)
+        self._types_container.setFixedWidth(content_width)
+        total_height = self._types_layout.spacing() * (len(self._type_prompt_rows) - 1)
+        for (row, row_layout, type_label, value_label), (desired_indent, label_width, required_width) in zip(
+            self._type_prompt_rows, row_widths, strict=True
+        ):
+            # Give text the available width before reserving decorative insets.
             actual_indent = min(desired_indent, max((content_width - required_width) // 2, 0))
             row_layout.setContentsMargins(actual_indent, 0, actual_indent, 0)
             value_width = max(1, content_width - 2 * actual_indent - label_width - row_layout.spacing())

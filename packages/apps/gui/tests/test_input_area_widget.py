@@ -197,6 +197,39 @@ class TestConstruction:
         assert all(upper > lower for upper, lower in pairwise(left_edges))
         assert all(upper < lower for upper, lower in pairwise(right_edges))
 
+    @pytest.mark.parametrize("theme", ["light", "dark"])
+    def test_format_pyramid_stays_compact_and_centered_after_resize(self, widget, qapp, theme):
+        widget.setStyleSheet(build_panel_stylesheet(theme))
+        widget.show()
+        measured_widths = []
+        for width in (360, 1200, 1920, 360):
+            widget.resize(width, _DEFAULT_HEIGHT)
+            qapp.processEvents()
+            widget._sync_supported_type_layout()
+            qapp.processEvents()
+            assert widget.width() == width
+            formats = widget._types_container
+            panel = widget._empty_center_panel
+            measured_widths.append(formats.width())
+            assert formats.width() <= panel.width()
+            assert abs(2 * formats.x() + formats.width() - panel.width()) <= 1
+            for _, _, _, value in widget._type_prompt_rows:
+                assert value.height() >= value.heightForWidth(value.width())
+                if width >= 1200:
+                    assert value.width() >= value.fontMetrics().horizontalAdvance(value.text())
+        assert measured_widths[0] == measured_widths[3]
+        assert measured_widths[1] == measured_widths[2] < 1200
+
+        normal_width = measured_widths[2]
+        widget.resize(1920, _DEFAULT_HEIGHT)
+        widget.setStyleSheet(build_panel_stylesheet(theme, "xlarge"))
+        qapp.processEvents()
+        widget._sync_supported_type_layout()
+        qapp.processEvents()
+        assert normal_width < widget._types_container.width() < widget._empty_center_panel.width()
+        for _, _, _, value in widget._type_prompt_rows:
+            assert value.width() >= value.fontMetrics().horizontalAdvance(value.text())
+
     @pytest.mark.parametrize("font_pixels", [13, 20, 26])
     def test_format_pyramid_wraps_without_clipping_when_narrow(self, widget, qapp, font_pixels):
         for _, _, label, value in widget._type_prompt_rows:
