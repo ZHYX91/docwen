@@ -15,8 +15,11 @@ from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
     QLabel,
+    QScrollArea,
     QStyle,
     QStyleOptionComboBox,
+    QVBoxLayout,
+    QWidget,
 )
 from shiboken6 import isValid
 
@@ -219,8 +222,18 @@ class TestConstruction:
     def test_large_empty_prompt_uses_available_width_without_vertical_clipping(self, widget, qapp):
         widget.setStyleSheet(build_panel_stylesheet("light", "xlarge"))
         widget._prompt_label.setText("Drag a single document here")
-        widget.resize(360, _DEFAULT_HEIGHT)
-        widget.show()
+        # Match the main window: its workflow scroll area gives the input
+        # widget its minimum content height even when the viewport is shorter.
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        content = QWidget()
+        flow = QVBoxLayout(content)
+        flow.setContentsMargins(0, 0, 0, 0)
+        flow.addWidget(widget)
+        flow.addStretch(1)
+        scroll.setWidget(content)
+        scroll.resize(360, _DEFAULT_HEIGHT)
+        scroll.show()
         qapp.processEvents()
         widget._sync_prompt_layout()
         qapp.processEvents()
@@ -229,6 +242,8 @@ class TestConstruction:
         assert prompt.geometry().bottom() < widget._empty_title_row.height()
         assert prompt.y() > widget._hero_icon_label.geometry().bottom()
         assert prompt.width() <= widget._empty_center_panel.width()
+        assert scroll.verticalScrollBar().maximum() > 0
+        scroll.close()
 
     def test_supported_formats_hide_with_selection_feedback(self, widget: InputArea, tmp_path) -> None:
         sample = tmp_path / "sample.docx"
