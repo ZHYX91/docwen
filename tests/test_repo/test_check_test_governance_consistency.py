@@ -105,7 +105,7 @@ def run_subprocess(timeout: float | None = DEFAULT_SUBPROCESS_TIMEOUT_SECONDS):
 uv run python tools/qa.py --skip-ruff --skip-pyright --suite fast
 uv run python tools/qa.py --skip-ruff --skip-pyright --suite pr-integration
 uv run python tools/qa.py --skip-ruff --skip-pyright --suite full
-uv run python tools/run_import_linter.py
+uv run python tools/qa.py --skip-pytest
 DOCWEN_PYTEST_XDIST: "1"
 DOCWEN_PYTEST_XDIST_WORKERS: "auto"
 DOCWEN_PYTEST_RUNTIME_ROOT

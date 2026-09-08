@@ -169,7 +169,7 @@ def _make_pstyle_numbering_index(
     ilvl: int = 0,
 ):
     """Build a NumberingIndex with a known pStyle mapping."""
-    from docwen_plugin_document.shared.numbering_index import NumberingIndex
+    from docwen_core.docx_parsing.numbering_index import NumberingIndex
 
     idx = NumberingIndex.__new__(NumberingIndex)
     idx._num_to_abstract = {num_id: abs_id}

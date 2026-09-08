@@ -382,7 +382,7 @@ def test_heading_with_pstyle_numbering_renders_prefix():
         mock_style.style_id = "1Heading1"
         with patch.object(type(para), "style", property(lambda s: mock_style)):
             converter = DocxToMarkdownConverter()
-            from docwen_plugin_document.shared.list_processing import ListCounterManager
+            from docwen_core.docx_parsing.list_processing import ListCounterManager
 
             lines, _stats = converter._process_paragraph(
                 para._element,
@@ -414,7 +414,7 @@ def test_heading_pstyle_numbering_respects_remove_numbering():
         mock_style.style_id = "1Heading1"
         with patch.object(type(para), "style", property(lambda s: mock_style)):
             converter = DocxToMarkdownConverter()
-            from docwen_plugin_document.shared.list_processing import ListCounterManager
+            from docwen_core.docx_parsing.list_processing import ListCounterManager
 
             lines, _stats = converter._process_paragraph(
                 para._element,
@@ -449,7 +449,7 @@ def test_regular_paragraph_pstyle_numbering_via_abs_num_id():
     mock_style.style_id = "1ListStyle"
     with patch.object(type(para), "style", property(lambda s: mock_style)):
         converter = DocxToMarkdownConverter()
-        from docwen_plugin_document.shared.list_processing import ListCounterManager
+        from docwen_core.docx_parsing.list_processing import ListCounterManager
 
         lines, _stats = converter._process_paragraph(
             para._element,
@@ -473,7 +473,7 @@ def test_regular_paragraph_pstyle_numbering_respects_remove_numbering():
     mock_style.name = "Normal"
     mock_style.style_id = "1ListStyle"
     with patch.object(type(para), "style", property(lambda s: mock_style)):
-        from docwen_plugin_document.shared.list_processing import ListCounterManager
+        from docwen_core.docx_parsing.list_processing import ListCounterManager
 
         lines, _stats = DocxToMarkdownConverter()._process_paragraph(
             para._element,
@@ -508,7 +508,7 @@ def test_paragraph_pstyle_numbering_counter_increments():
     mock_style2.style_id = "1ListStyle"
 
     converter = DocxToMarkdownConverter()
-    from docwen_plugin_document.shared.list_processing import ListCounterManager
+    from docwen_core.docx_parsing.list_processing import ListCounterManager
 
     lc = ListCounterManager()
 

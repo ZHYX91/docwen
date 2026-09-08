@@ -1,5 +1,11 @@
 # Testing / 测试
 
+Local QA and CI use `tools/qa.py` for the same mandatory source checks: whole-repository Ruff,
+test governance, all Import-Linter dependency contracts, architecture cleanliness, and Pyright
+for Windows, Linux and macOS. `python tools/qa.py --skip-pytest` runs these checks before costly
+tests or builds. The release workflow reuses `tests.yml`, including its Windows full suite, before
+running the package-specific platform gates. A passing package preflight alone is insufficient.
+
 Tests are grouped by primary behavior family and execution cost. The default repository run selects only non-slow unit and contract tests; GUI, integration, end-to-end and environment-owned checks run in their explicit lanes.
 
 测试按主要行为族和执行成本分层。默认仓库测试只选择非 slow 的 unit 与 contract；GUI、integration、端到端及环境所有型检查进入各自显式门禁。

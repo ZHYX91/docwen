@@ -239,7 +239,14 @@ venvPath = "."
 venv = ".venv"
 pythonVersion = "3.12"
 typeCheckingMode = "basic"
-include = ["packages"]
+include = [
+    "packages",
+    "scripts/release/publication.py",
+    "scripts/release/publication_contract.py",
+    "scripts/release/publication_http.py",
+    "scripts/release/publication_session.py",
+    "tools/source_checks.py",
+]
 exclude = [
     "**/node_modules",
     "**/__pycache__",

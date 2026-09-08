@@ -19,6 +19,7 @@ if __package__ in {None, ""}:
     if str(_BOOTSTRAP_ROOT) not in sys.path:
         sys.path.insert(0, str(_BOOTSTRAP_ROOT))
 
+from tools import source_checks
 from tools.windows_short_path import ShortPathDriveError, drive_root, mount_short_drive, unmount_short_drive
 from tools.workspace_root import WORKSPACE_ROOT_ENV as _WORKSPACE_ROOT_ENV
 from tools.workspace_root import WorkspaceRootError, resolve_workspace_root
@@ -489,14 +490,9 @@ def main(argv: list[str]) -> int:
                     False,
                 )
             ]
+    steps += source_checks.architecture_steps()
     if not args.skip_pyright:
-        steps += [
-            (
-                "pyright",
-                [sys.executable, "-m", "pyright", "--level", "error", "--pythonpath", sys.executable],
-                True,
-            ),
-        ]
+        steps += source_checks.typecheck_steps()
 
     exit_code = 0
     for name, cmd, gate in steps:

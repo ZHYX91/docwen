@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ctypes
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +11,8 @@ _RPC_E_CHANGED_MODE = -2147417850
 
 
 def _load_libraries() -> tuple[Any, Any]:
+    if sys.platform != "win32":
+        raise OSError("Windows Shell file selection is only available on Windows")
     ole = ctypes.WinDLL("ole32", use_last_error=True)
     shell = ctypes.WinDLL("shell32", use_last_error=True)
     ole.CoInitializeEx.argtypes = [ctypes.c_void_p, ctypes.c_ulong]

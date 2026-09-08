@@ -187,50 +187,36 @@ def test_release_workflow_builds_each_supported_package_twice_and_runs_packaged_
 
 
 def test_release_workflow_has_a_read_only_preflight_and_fixed_immutable_publication_boundary() -> None:
-    workflow_document = Path(".github/workflows/release.yml").read_text(encoding="utf-8")
     workflow = _release_workflow()
     jobs = workflow["jobs"]
     assert isinstance(jobs, dict)
-    verify = jobs["verify-release"]
-    publish = jobs["publish"]
-    assert isinstance(verify, dict)
-    assert isinstance(publish, dict)
-
-    assert workflow["concurrency"] == {
-        "group": "release-${{ github.repository }}",
-        "cancel-in-progress": "false",
-    }
-    assert publish["if"] == "github.event_name == 'push'"
-    assert "actions: read" in workflow_document
-    assert "attestations: write" in workflow_document
-    assert "id-token: write" in workflow_document
-    assert "contents: write" in workflow_document
-    assert "DOCWEN_PYTEST_RUNTIME_ROOT: ${{ runner.temp }}/docwen-pytest-runtime" in workflow_document
-    assert "gh release create" in _commands(publish)
-    assert "gh release upload" not in workflow_document
-    assert "--clobber" not in workflow_document
-    assert "isImmutable" not in _commands(publish)
-    assert ".immutable == true" in _commands(publish)
-    assert "/releases/tags/$RELEASE_VERSION" in _commands(publish)
-    assert 'case "$release_status" in' in _commands(publish)
-    assert "404)" in _commands(publish)
-    assert "git ls-remote --exit-code" in _commands(publish)
-    steps = publish["steps"]
-    assert isinstance(steps, list)
-    release_state = next(step for step in steps if isinstance(step, dict) and step.get("id") == "release_state")
-    assert 'if gh release view "$RELEASE_VERSION"' not in str(release_state.get("run", ""))
-    assert '((.published_at | type) == "string")' in str(release_state.get("run", ""))
-    assert "((.published_at | length) > 0)" in str(release_state.get("run", ""))
-    assert "gh attestation verify" in _commands(publish)
-    assert "cmp " in _commands(verify)
-    assert "artifact-ids: ${{ needs.verify-release.outputs.artifact_id }}" in workflow_document
-    assert "actions/checkout@" not in workflow_document.split("\n  publish:\n", 1)[1]
-
-    for line in workflow_document.splitlines():
-        if "uses:" in line:
-            action = line.split("uses:", 1)[1].split("#", 1)[0].strip()
-            assert action.rsplit("@", 1)[1].isalnum()
-            assert len(action.rsplit("@", 1)[1]) == 40
+    verify, publish, post = jobs["verify-release"], jobs["publish"], jobs["post-verify"]
+    assert workflow["concurrency"] == {"group": "release-${{ github.repository }}", "cancel-in-progress": "false"}
+    assert jobs["source-checks"]["uses"] == "./.github/workflows/tests.yml"
+    assert jobs["source-checks"]["if"] == "inputs.operation == 'preflight'"
+    assert jobs["release-gate"]["needs"] == "source-checks"
+    assert publish["if"] == "inputs.operation == 'publish'"
+    assert "needs" not in publish  # Publication retrieves an earlier verified run; it does not rebuild.
+    assert "publication.py assemble" in _commands(verify)
+    assert "publication.py fetch" in _commands(publish)
+    assert "publication.py publish" in _commands(publish)
+    assert '--artifact-id "$ARTIFACT_ID" --artifact-digest "$ARTIFACT_DIGEST"' in _commands(publish)
+    assert '--commit "$GITHUB_SHA"' in _commands(publish)
+    assert "publication.py verify" in _commands(post)
+    assert post["permissions"]["contents"] == "read"
+    assert publish["permissions"]["contents"] == "write"
+    assert verify["permissions"]["attestations"] == "write"
+    assert verify["permissions"]["id-token"] == "write"
+    assert "--clobber" not in _commands(publish)
+    candidate_upload = next(step for step in verify["steps"] if step.get("id") == "publication")
+    assert "if" not in candidate_upload
+    assert int(candidate_upload["with"]["retention-days"]) >= 30
+    for job in jobs.values():
+        for step in job.get("steps", []):
+            if "uses" in step:
+                action = step["uses"]
+                assert action.rsplit("@", 1)[1].isalnum()
+                assert len(action.rsplit("@", 1)[1]) == 40
 
 
 def test_release_workflow_publishes_supported_windows_and_ubuntu_assets() -> None:

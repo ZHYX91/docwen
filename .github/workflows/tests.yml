@@ -1,6 +1,7 @@
 name: tests
 
 on:
+  workflow_call:
   workflow_dispatch:
   push:
     branches:
@@ -12,7 +13,7 @@ env:
   PYTHONUTF8: "1"
 
 jobs:
-  lint:
+  source-checks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -21,38 +22,12 @@ jobs:
           version: "0.12.0"
           enable-cache: true
       - name: Install
-        run: uv sync --frozen --extra lint
-      - name: Ruff format (check)
-        run: |
-          uv run ruff format --check .
-      - name: Ruff check
-        run: |
-          uv run ruff check .
-      - name: Test governance consistency
-        run: |
-          uv run python tools/check_test_governance_consistency.py
-      - name: Import-Linter
-        run: |
-          uv run python tools/run_import_linter.py
-      - name: Architecture cleanliness
-        run: |
-          uv run python tools/validation/check_architecture_cleanliness.py --repo-root .
-
-  typecheck:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
-        with:
-          version: "0.12.0"
-          enable-cache: true
-      - name: Install
-        run: uv sync --frozen --extra lint
-      - name: Pyright
-        run: |
-          uv run pyright --level error
+        run: uv sync --frozen --extra lint --extra test
+      - name: Required source checks
+        run: uv run python tools/qa.py --skip-pytest
 
   pytest_windows_pr_integration:
+    needs: source-checks
     if: github.event_name == 'pull_request'
     runs-on: windows-latest
     env:
@@ -66,7 +41,7 @@ jobs:
           version: "0.12.0"
           enable-cache: true
       - name: Install
-        run: uv sync --frozen --extra test --extra dev
+        run: uv sync --frozen --extra test --extra dev --extra lint
       - name: QA (declarative pr_gate)
         env:
           DOCWEN_PYTEST_RUNTIME_ROOT: ${{ runner.temp }}/docwen-pytest-runtime
@@ -85,7 +60,8 @@ jobs:
             ${{ runner.temp }}/docwen-pytest-runtime/reports/missing_marker_report.json
 
   pytest_windows_push:
-    if: github.event_name == 'push'
+    needs: source-checks
+    if: github.event_name != 'pull_request'
     runs-on: windows-latest
     env:
       DOCWEN_PYTEST_XDIST: "1"
@@ -97,7 +73,7 @@ jobs:
           version: "0.12.0"
           enable-cache: true
       - name: Install
-        run: uv sync --frozen --extra test --extra dev
+        run: uv sync --frozen --extra test --extra dev --extra lint
       - name: QA (full)
         env:
           DOCWEN_PYTEST_RUNTIME_ROOT: ${{ runner.temp }}/docwen-pytest-runtime
@@ -116,6 +92,7 @@ jobs:
             ${{ runner.temp }}/docwen-pytest-runtime/reports/missing_marker_report.json
 
   pytest_ubuntu:
+    needs: source-checks
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     env:
@@ -135,7 +112,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends libegl1 libgl1 libxkbcommon-x11-0 libxcb-cursor0
       - name: Install
-        run: uv sync --frozen --extra test --extra dev
+        run: uv sync --frozen --extra test --extra dev --extra lint
       - name: QA (fast / unit+contract)
         env:
           DOCWEN_PYTEST_RUNTIME_ROOT: ${{ runner.temp }}/docwen-pytest-runtime
@@ -154,6 +131,7 @@ jobs:
             ${{ runner.temp }}/docwen-pytest-runtime/reports/missing_marker_report.json
 
   pytest_macos:
+    needs: source-checks
     if: github.event_name == 'pull_request'
     runs-on: macos-latest
     env:
@@ -173,7 +151,7 @@ jobs:
             brew install libheif || true
           fi
       - name: Install
-        run: uv sync --frozen --extra test --extra dev
+        run: uv sync --frozen --extra test --extra dev --extra lint
       - name: QA (fast / unit+contract)
         env:
           DOCWEN_PYTEST_RUNTIME_ROOT: ${{ runner.temp }}/docwen-pytest-runtime
@@ -192,6 +170,7 @@ jobs:
             ${{ runner.temp }}/docwen-pytest-runtime/reports/missing_marker_report.json
 
   coverage:
+    needs: source-checks
     if: github.event_name == 'pull_request'
     runs-on: windows-latest
     env:
@@ -205,7 +184,7 @@ jobs:
           version: "0.12.0"
           enable-cache: true
       - name: Install
-        run: uv sync --frozen --extra test --extra dev
+        run: uv sync --frozen --extra test --extra dev --extra lint
       - name: Coverage
         env:
           DOCWEN_PYTEST_REPORT_DIR: ${{ runner.temp }}/docwen-pytest-runtime/reports
@@ -243,6 +222,7 @@ jobs:
           path: ${{ runner.temp }}/docwen-pytest-runtime/htmlcov
 
   coverage_gui:
+    needs: source-checks
     if: github.event_name == 'pull_request'
     runs-on: windows-latest
     env:
@@ -286,3 +266,15 @@ jobs:
         with:
           name: coverage-gui-html
           path: ${{ runner.temp }}/docwen-pytest-runtime/htmlcov-gui
+
+  required:
+    name: Required checks
+    if: always()
+    needs: [source-checks, pytest_windows_push, pytest_windows_pr_integration, pytest_ubuntu, pytest_macos, coverage, coverage_gui]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Reject missing, failed, or skipped required checks
+        env:
+          DOCWEN_CI_RESULTS: ${{ toJSON(needs) }}
+        run: python -m tools.source_checks

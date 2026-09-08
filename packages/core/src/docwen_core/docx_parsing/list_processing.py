@@ -1,4 +1,4 @@
-"""Word list detection, counter management."""
+"""Shared Word list detection and counter management for document consumers."""
 
 from __future__ import annotations
 

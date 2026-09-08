@@ -1,4 +1,4 @@
-"""Tests for numbering helpers and NumberingIndex methods.
+"""Tests for shared numbering helpers and NumberingIndex methods.
 
 Covers:
 - number_to_chinese, number_to_circled (via core)
@@ -17,16 +17,16 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.styles.style import ParagraphStyle
 
+from docwen_core.docx_parsing.numbering_index import (
+    NumberingIndex,
+    NumberingLevel,
+    _format_counter,
+)
 from docwen_core.text.numbering import (
     number_to_chinese,
     number_to_circled,
     number_to_letter_lower,
     number_to_roman_lower,
-)
-from docwen_plugin_document.shared.numbering_index import (
-    NumberingIndex,
-    NumberingLevel,
-    _format_counter,
 )
 
 pytestmark = pytest.mark.contract
@@ -408,7 +408,7 @@ def test_real_numbering_xml_roundtrip_preserves_start_suffix_and_style(tmp_path:
 
 
 def test_real_numbering_xml_drives_exact_markdown_sequence(tmp_path: Path) -> None:
-    from docwen_plugin_document.shared.list_processing import ListCounterManager
+    from docwen_core.docx_parsing.list_processing import ListCounterManager
     from docwen_plugin_document.to_markdown.converter import DocxToMarkdownConverter
 
     doc = Document()

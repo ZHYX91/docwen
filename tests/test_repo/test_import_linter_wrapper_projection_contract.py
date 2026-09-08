@@ -27,7 +27,8 @@ def test_wrapper_source_and_ci_execute_the_pinned_console_callback() -> None:
     assert "env=env" in wrapper
 
     assert "uv sync --frozen --extra lint" in workflow
-    assert "uv run python tools/run_import_linter.py" in workflow
+    assert "uv run python tools/qa.py --skip-pytest" in workflow
+    assert '"tools/run_import_linter.py", "--no-cache"' in _read("tools/source_checks.py")
     optional_dependencies = pyproject["project"]["optional-dependencies"]
     assert "import-linter==2.11" in optional_dependencies["lint"]
     assert "import-linter==2.11" not in optional_dependencies["test"]

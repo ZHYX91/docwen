@@ -1,4 +1,4 @@
-"""Word numbering.xml index for numPr → list-type/level resolution."""
+"""Shared Word numbering.xml index for numPr → list-type/level resolution."""
 
 from __future__ import annotations
 

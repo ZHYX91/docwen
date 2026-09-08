@@ -523,8 +523,8 @@ class DocxToMarkdownConverter:
             self._record_extension_loss("typed_endnotes", "Endnotes were exported as ordinary Markdown footnotes.")
 
         # List detection and numbering infrastructure
-        from docwen_plugin_document.shared.list_processing import ListCounterManager
-        from docwen_plugin_document.shared.numbering_index import NumberingIndex
+        from docwen_core.docx_parsing.list_processing import ListCounterManager
+        from docwen_core.docx_parsing.numbering_index import NumberingIndex
 
         numbering_index = NumberingIndex(doc)
         list_counter = ListCounterManager()
@@ -1527,7 +1527,7 @@ class DocxToMarkdownConverter:
             nested_level = 0
             nested_list_type: str | None = None
             if list_inside_quote or quote_inside_list:
-                from docwen_plugin_document.shared.list_processing import (
+                from docwen_core.docx_parsing.list_processing import (
                     detect_list_item,
                     format_list_marker,
                 )
@@ -1753,7 +1753,7 @@ class DocxToMarkdownConverter:
             stats["headings"] += 1
         else:
             # ── 8. Regular paragraph ────────────────────────────────
-            from docwen_plugin_document.shared.list_processing import (
+            from docwen_core.docx_parsing.list_processing import (
                 detect_list_item,
                 format_list_marker,
             )
@@ -1937,7 +1937,7 @@ class DocxToMarkdownConverter:
         """Return the Word list item level for the paragraph itself."""
         if para is None:
             return None
-        from docwen_plugin_document.shared.list_processing import detect_list_item
+        from docwen_core.docx_parsing.list_processing import detect_list_item
 
         _num_id, ilvl, list_type = detect_list_item(para, numbering_index)
         if list_type and isinstance(ilvl, int):

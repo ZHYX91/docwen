@@ -73,7 +73,7 @@ def _inject_numpr(paragraph: Any, *, num_id: str) -> None:
 def test_native_chinese_numbering_becomes_a_retained_gongwen_heading(tmp_path) -> None:
     from docx import Document
 
-    from docwen_plugin_document.shared.numbering_index import NumberingIndex
+    from docwen_core.docx_parsing.numbering_index import NumberingIndex
     from docwen_plugin_optimizer_gongwen.extraction.paragraph_reader import read_paragraphs
     from docwen_plugin_optimizer_gongwen.models import GongwenMetadata
     from docwen_plugin_optimizer_gongwen.rendering.markdown_renderer import render
@@ -117,7 +117,7 @@ def test_style_inherited_native_numbering_is_recognised(tmp_path) -> None:
     from docx import Document
     from docx.enum.style import WD_STYLE_TYPE
 
-    from docwen_plugin_document.shared.numbering_index import NumberingIndex
+    from docwen_core.docx_parsing.numbering_index import NumberingIndex
     from docwen_plugin_optimizer_gongwen.extraction.paragraph_reader import read_paragraphs
 
     document = Document()
@@ -147,7 +147,7 @@ def test_style_inherited_native_numbering_is_recognised(tmp_path) -> None:
 def test_ordinary_word_lists_fail_closed_as_body_text(tmp_path, num_fmt: str, level_text: str) -> None:
     from docx import Document
 
-    from docwen_plugin_document.shared.numbering_index import NumberingIndex
+    from docwen_core.docx_parsing.numbering_index import NumberingIndex
     from docwen_plugin_optimizer_gongwen.extraction.paragraph_reader import read_paragraphs
 
     document = Document()
@@ -174,7 +174,7 @@ def test_ordinary_word_lists_fail_closed_as_body_text(tmp_path, num_fmt: str, le
 def test_ordinary_chinese_numbered_sequence_remains_body_text(tmp_path) -> None:
     from docx import Document
 
-    from docwen_plugin_document.shared.numbering_index import NumberingIndex
+    from docwen_core.docx_parsing.numbering_index import NumberingIndex
     from docwen_plugin_optimizer_gongwen.extraction.paragraph_reader import read_paragraphs
 
     document = Document()

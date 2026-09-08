@@ -536,7 +536,7 @@ def test_real_outline_level_zero_still_becomes_h1():
 
 def test_standard_list_item_uses_explicit_marker_and_indent():
     """Standard DOCX list items honor the request-owned list syntax."""
-    from docwen_plugin_document.shared.list_processing import ListCounterManager
+    from docwen_core.docx_parsing.list_processing import ListCounterManager
 
     doc = Document()
     para = doc.add_paragraph("nested item")

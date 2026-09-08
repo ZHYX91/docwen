@@ -1,4 +1,4 @@
-"""Tests for list processing: ListCounterManager, and detect_list_item including
+"""Tests for shared list processing: ListCounterManager and detect_list_item including
 pStyle fallback.
 """
 
@@ -10,15 +10,15 @@ from docx import Document
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
-from docwen_core.text.heading_numbering import strip_heading_prefix
-from docwen_plugin_document.shared.list_processing import (
+from docwen_core.docx_parsing.list_processing import (
     ListCounterManager,
     detect_list_item,
     format_list_marker,
 )
-from docwen_plugin_document.shared.numbering_index import (
+from docwen_core.docx_parsing.numbering_index import (
     NumberingLevel,
 )
+from docwen_core.text.heading_numbering import strip_heading_prefix
 
 pytestmark = pytest.mark.unit
 

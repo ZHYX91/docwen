@@ -37,7 +37,7 @@ tags before a version tag is pushed. 仓库设置必须在推送版本标签前�
 
 The hosted GitHub Release workflow enforces this deterministic baseline before publishing one Windows archive and two Ubuntu 24.04 x64 archives:
 
-1. Source repository release tests on Windows, Linux, and macOS.
+1. Shared required source checks (Ruff, test governance, Import-Linter, architecture checks and Pyright for all three targets), the ordinary Windows full suite, then release tests on Windows, Linux, and macOS.
 2. Windows package resource/layout verification.
 3. Packaged Windows CLI baseline doctor, conversion, and JSON checks.
 4. Packaged Windows GUI settings-page construction smoke.
@@ -49,7 +49,7 @@ The exact local Windows candidate used for a release decision has a wider gate: 
 
 托管的 GitHub Release 工作流在发布一个 Windows 压缩包和两个 Ubuntu 24.04 x64 压缩包前执行以下确定性基线：
 
-1. 在 Windows、Linux 和 macOS 上运行源码态 release 测试。
+1. 先运行统一必需源码检查（Ruff、测试治理、Import-Linter、架构检查及三个目标平台的 Pyright）和普通 Windows 完整测试，再在 Windows、Linux 和 macOS 上运行源码态 release 测试。
 2. 验证 Windows 打包资源与 Layout 资源。
 3. 验证 Windows 打包 CLI 的基础 doctor、转换和 JSON 路径。
 4. 验证 Windows 打包 GUI 的设置页构造。
@@ -60,6 +60,20 @@ The exact local Windows candidate used for a release decision has a wider gate: 
 用于发版决策的精确本地 Windows 候选还要通过更宽门禁：源码/打包 CLI 一致性、CLI OCR 与成功警告、GUI 启动、设置、通知/OCR、IPC 与成功警告，以及在外部依赖已真实配置的机器上验证 Office、演示文稿和 SmartDoc 路径。这些环境相关结果单独记录，不能冒充托管工作流已经执行。通知中心可见性、目标设备渲染和人工 UI 检查仍属于人工证据。
 
 Signing and publication are separate release operations. A successfully built unsigned package must not be described as signed or published.
+
+### Candidate reuse and recovery / 候选复用与恢复
+
+Hosted publishing requires a repository-scoped `DOCWEN_IMMUTABILITY_READ_TOKEN` Secret with Administration read permission solely to read the immutable setting; the normal workflow token performs publication. The default `GITHUB_TOKEN` cannot read that setting. Local maintainers can run the same Python publisher with their existing authenticated GitHub CLI, then request `operation=verify` for an independent read-only hosted check. Do not copy a broad local credential into the workflow to satisfy this requirement.
+
+Run `Release` manually with `operation=preflight` on the default branch before creating the numeric tag. The reusable ordinary CI must pass; failed, missing, cancelled or skipped required jobs stop the build chain. Configure the ordinary `Required checks` job as a required branch check. The preflight compares two independent builds per platform, attests the exact files, and records the publication artifact ID and SHA-256 archive digest. Build and publication artifacts are retained for 30 days; acceptance must finish within that interval or use a newly identified preflight.
+
+Create the numeric tag at the accepted source commit, then run `operation=publish` at that same commit with the recorded artifact ID and digest. Publishing retrieves those exact bytes and verifies run, jobs, inventory and provenance; it does not rebuild. `scripts/release/publication.py` creates a draft, verifies all four public assets, publishes with Immutable Releases enabled, and downloads the hosted assets to verify their bytes. A separate read-only `post-verify` job repeats the verification. `candidate.json` is a control record and is not a public Release asset.
+
+If publication is interrupted, retain its `docwen-publication-progress-RUN-ATTEMPT` artifact and supply its exact ID and digest in `resume_artifact_id` and `resume_artifact_digest` on the next manual run. The previous owner must have completed. The receipt binds the source, candidate and Release ID, and records writes whose outcome is uncertain. Such writes are reconciled by reading before any further action; they are never blindly repeated. Transient reads use bounded backoff within a 60-second budget including request time and honor Retry-After. Permission, source, inventory and hash conflicts stop immediately.
+
+在默认分支手动运行 `operation=preflight`，通过普通 CI 与双份独立构建后记录精确 artifact ID、归档摘要及来源证明。验收通过后才在同一源码提交创建数字标签，再用 `operation=publish` 复用这些字节。发布依次完成草稿资产核验、immutable 发布和独立只读回查。中断后通过原进度 artifact 的 ID/digest 恢复；不以重复上传或重建替代状态核实。
+
+Native host acceptance is selected per release and documented separately. DW-OPEN-20 explicitly selects full Computer Use acceptance for 0.10.0; this is not a permanent requirement for every future release. 本次 0.10.0 明确执行完整原生验收；通用流程按发布范围选取真实宿主验收，并单独记录其边界。
 
 The Ubuntu archives are generated only by `scripts/release/linux_archive.py` under `release/linux-production-manifest.v1.json`. The contract fixes the top-level directory, entry order, owner, timestamp, modes, gzip header, generated `manifest.json` and payload `SHA256SUMS.txt`. It permits only manifest-declared relative symlinks to internal regular files and rejects absolute, escaping, dangling, directory-target and cyclic links. The archive helper verifies the completed bytes before publishing them without replacement. Hosted post-extract smoke is package evidence; visible desktop behavior and target-host integration remain separate acceptance evidence.
 

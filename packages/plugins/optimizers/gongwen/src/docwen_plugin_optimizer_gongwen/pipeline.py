@@ -185,7 +185,7 @@ def convert_docx_to_md_gongwen(
         scheme_config = resolve_heading_numbering_scheme(numbering_scheme, registry)
         heading_formatter = HeadingFormatter(scheme_config)
 
-    from docwen_plugin_document.shared.numbering_index import NumberingIndex
+    from docwen_core.docx_parsing.numbering_index import NumberingIndex
     from docwen_plugin_optimizer_gongwen.extraction.paragraph_reader import read_paragraphs
     from docwen_plugin_optimizer_gongwen.recognition.reevaluation import maybe_reevaluate
     from docwen_plugin_optimizer_gongwen.recognition.rounds import run_rounds

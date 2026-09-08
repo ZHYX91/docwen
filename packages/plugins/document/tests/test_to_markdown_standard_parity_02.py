@@ -297,7 +297,7 @@ def test_docx_to_md_convert_indents_extra_indent_table_after_list(tmp_path):
 
 def test_sdt_internal_list_context_indents_continuation_and_table():
     """List context inside one SDT content block applies to continuation paragraphs and tables."""
-    from docwen_plugin_document.shared.list_processing import ListCounterManager
+    from docwen_core.docx_parsing.list_processing import ListCounterManager
 
     doc = Document()
     list_para = doc.add_paragraph("parent item")
@@ -385,7 +385,7 @@ def test_heading_page_break_preserves_heading_structure_on_both_sides():
 
 
 def test_standard_list_page_break_keeps_one_marker_and_continuation_indent():
-    from docwen_plugin_document.shared.list_processing import ListCounterManager
+    from docwen_core.docx_parsing.list_processing import ListCounterManager
 
     doc = Document()
     para = doc.add_paragraph()
@@ -445,7 +445,7 @@ def test_standard_list_page_break_supports_wide_ordered_marker():
 
 
 def test_standard_list_page_break_before_text_does_not_invent_an_empty_item():
-    from docwen_plugin_document.shared.list_processing import ListCounterManager
+    from docwen_core.docx_parsing.list_processing import ListCounterManager
 
     doc = Document()
     para = doc.add_paragraph()
@@ -473,7 +473,7 @@ def test_standard_list_page_break_before_text_does_not_invent_an_empty_item():
 
 
 def test_pstyle_list_page_break_keeps_separator_inside_same_list_item():
-    from docwen_plugin_document.shared.list_processing import ListCounterManager
+    from docwen_core.docx_parsing.list_processing import ListCounterManager
 
     doc = Document()
     para = doc.add_paragraph()
@@ -507,7 +507,7 @@ def test_pstyle_list_page_break_keeps_separator_inside_same_list_item():
 
 @pytest.mark.parametrize("with_section", (False, True))
 def test_non_commonmark_pstyle_page_break_never_turns_tail_into_code(with_section: bool):
-    from docwen_plugin_document.shared.list_processing import ListCounterManager
+    from docwen_core.docx_parsing.list_processing import ListCounterManager
 
     doc = Document()
     para = doc.add_paragraph()

@@ -168,7 +168,7 @@ def test_full_paragraph_quote_character_style_page_break_does_not_emit_code_tick
 @pytest.mark.parametrize("kind", ("normal", "heading", "list", "continuation", "code", "quote"))
 def test_page_and_section_breaks_preserve_content_then_boundary_order(kind: str):
     from docwen_core.docx_parsing.format_features import CodeBlockAccumulator
-    from docwen_plugin_document.shared.list_processing import ListCounterManager
+    from docwen_core.docx_parsing.list_processing import ListCounterManager
 
     doc = Document()
     para = doc.add_paragraph()

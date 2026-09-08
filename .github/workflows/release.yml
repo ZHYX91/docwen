@@ -4,12 +4,27 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Stable x.y.z version to preflight before creating its tag
+        description: Stable x.y.z source version
         required: true
         type: string
-  push:
-    tags:
-      - "[0-9]*.[0-9]*.[0-9]*"
+      operation:
+        description: Build a verified candidate, or publish the supplied artifact
+        required: true
+        type: choice
+        options: [preflight, publish, verify]
+        default: preflight
+      artifact_id:
+        description: Exact preflight publication artifact ID (publish only)
+        type: string
+      artifact_digest:
+        description: Exact sha256 digest of that artifact archive (publish only)
+        type: string
+      resume_artifact_id:
+        description: Exact saved publication-progress artifact ID when resuming
+        type: string
+      resume_artifact_digest:
+        description: Exact sha256 digest of the saved progress archive
+        type: string
 
 permissions:
   contents: read
@@ -19,12 +34,17 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+  RELEASE_VERSION: ${{ inputs.version }}
   PUBLICATION_ARTIFACT_NAME: docwen-publication-${{ github.run_id }}-${{ github.run_attempt }}
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
+  source-checks:
+    if: inputs.operation == 'preflight'
+    uses: ./.github/workflows/tests.yml
+
   release-gate:
+    needs: source-checks
     name: Source gate on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
@@ -64,18 +84,13 @@ jobs:
           source_version="$(uv run python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
           test "$RELEASE_VERSION" = "$source_version"
           git fetch --no-tags origin "$DEFAULT_BRANCH"
-          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
-            test "$GITHUB_SHA" = "$(git rev-parse "origin/$DEFAULT_BRANCH")"
-            if git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_VERSION" >/dev/null 2>&1; then
-              echo "preflight requires an unused numeric tag" >&2
-              exit 2
-            fi
-          else
-            test "$GITHUB_REF" = "refs/tags/$RELEASE_VERSION"
-            git merge-base --is-ancestor "$GITHUB_SHA" "origin/$DEFAULT_BRANCH"
+          test "$GITHUB_SHA" = "$(git rev-parse "origin/$DEFAULT_BRANCH")"
+          if git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_VERSION" >/dev/null 2>&1; then
+            echo "preflight requires an unused numeric tag" >&2
+            exit 2
           fi
       - name: Install exact lockfile
-        run: uv sync --frozen --extra test
+        run: uv sync --frozen --extra test --extra lint
       - name: Run release source gate
         env:
           DOCWEN_PYTEST_RUNTIME_ROOT: ${{ runner.temp }}/docwen-pytest-runtime
@@ -154,7 +169,7 @@ jobs:
           compression-level: 0
           if-no-files-found: error
           overwrite: false
-          retention-days: 1
+          retention-days: 30
 
   build-linux:
     name: Clean Ubuntu build ${{ matrix.replica }}
@@ -226,20 +241,19 @@ jobs:
           compression-level: 0
           if-no-files-found: error
           overwrite: false
-          retention-days: 1
+          retention-days: 30
 
   verify-release:
     needs: [build-windows, build-linux]
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     permissions:
       actions: read
       contents: read
-    outputs:
-      artifact_id: ${{ steps.publication.outputs.artifact-id }}
-      artifact_digest: ${{ steps.publication.outputs.artifact-digest }}
-      artifact_name: ${{ env.PUBLICATION_ARTIFACT_NAME }}
+      attestations: write
+      id-token: write
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Download Windows build A
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
@@ -260,40 +274,16 @@ jobs:
         with:
           name: docwen-linux-${{ github.run_id }}-${{ github.run_attempt }}-b
           path: builds/linux-b
-      - name: Compare independent builds and assemble exact assets
-        shell: bash
-        run: |
-          set -euo pipefail
-          cmp builds/windows-a/DocWen-windows-x64.zip builds/windows-b/DocWen-windows-x64.zip
-          python - <<'PY'
-          import hashlib
-          import json
-          from pathlib import Path
-
-          records = []
-          for replica in ("a", "b"):
-              root = Path(f"builds/windows-{replica}")
-              package = root / "DocWen-windows-x64.msix"
-              record = json.loads((root / "DocWen-windows-x64.msix.json").read_text(encoding="utf-8"))
-              actual_sha256 = hashlib.file_digest(package.open("rb"), "sha256").hexdigest()
-              if record["sha256"] != actual_sha256:
-                  raise SystemExit(f"MSIX raw digest mismatch for Windows build {replica}")
-              record.pop("sha256")
-              records.append(record)
-          if records[0] != records[1]:
-              raise SystemExit("independent MSIX package contents differ")
-          PY
-          cmp "builds/linux-a/DocWenCLI-${RELEASE_VERSION}-linux-x64.tar.gz" "builds/linux-b/DocWenCLI-${RELEASE_VERSION}-linux-x64.tar.gz"
-          cmp "builds/linux-a/DocWen-${RELEASE_VERSION}-linux-x64.tar.gz" "builds/linux-b/DocWen-${RELEASE_VERSION}-linux-x64.tar.gz"
-          mkdir publication
-          cp builds/windows-a/DocWen-windows-x64.zip publication/
-          cp "builds/linux-a/DocWenCLI-${RELEASE_VERSION}-linux-x64.tar.gz" publication/
-          cp "builds/linux-a/DocWen-${RELEASE_VERSION}-linux-x64.tar.gz" publication/
-          (
-            cd publication
-            sha256sum DocWen-windows-x64.zip "DocWenCLI-${RELEASE_VERSION}-linux-x64.tar.gz" "DocWen-${RELEASE_VERSION}-linux-x64.tar.gz" > SHA256SUMS.txt
-            test "$(find . -maxdepth 1 -type f | wc -l)" -eq 4
-          )
+      - name: Compare independent builds and assemble exact candidate
+        run: >-
+          python scripts/release/publication.py assemble
+          --repository "$GITHUB_REPOSITORY" --version "$RELEASE_VERSION" --commit "$GITHUB_SHA"
+          --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT"
+          --source . --builds builds --directory publication
+      - name: Attest exact candidate and public assets
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
+        with:
+          subject-path: publication/*
       - name: Upload Microsoft Store submission package
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -305,8 +295,7 @@ jobs:
           if-no-files-found: error
           overwrite: false
           retention-days: 30
-      - name: Upload the sole current-run publication artifact
-        if: github.event_name == 'push'
+      - name: Upload the exact preflight publication artifact
         id: publication
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -315,135 +304,104 @@ jobs:
           compression-level: 0
           if-no-files-found: error
           overwrite: false
-          retention-days: 1
-      - name: Preflight completed without publishing
-        if: github.event_name == 'workflow_dispatch'
-        run: echo "Release preflight passed for ${RELEASE_VERSION}; no tag or Release was created."
+          retention-days: 30
+      - name: Record candidate identity
+        env:
+          ARTIFACT_ID: ${{ steps.publication.outputs.artifact-id }}
+          ARTIFACT_DIGEST: ${{ steps.publication.outputs.artifact-digest }}
+        run: |
+          echo "Candidate artifact ID: $ARTIFACT_ID" >> "$GITHUB_STEP_SUMMARY"
+          echo "Candidate artifact digest: $ARTIFACT_DIGEST" >> "$GITHUB_STEP_SUMMARY"
+          echo "No tag or Release was created by this preflight." >> "$GITHUB_STEP_SUMMARY"
 
   publish:
-    if: github.event_name == 'push'
-    needs: verify-release
+    if: inputs.operation == 'publish'
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 40
     permissions:
       actions: read
-      attestations: write
       contents: write
-      id-token: write
+      attestations: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ARTIFACT_ID: ${{ inputs.artifact_id }}
+      ARTIFACT_DIGEST: ${{ inputs.artifact_digest }}
+      RESUME_ARTIFACT_ID: ${{ inputs.resume_artifact_id }}
+      RESUME_ARTIFACT_DIGEST: ${{ inputs.resume_artifact_digest }}
     steps:
-      - name: Download the exact current-run publication artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          artifact-ids: ${{ needs.verify-release.outputs.artifact_id }}
-          path: publication
-      - name: Verify the fixed publication inventory
-        shell: bash
-        run: |
-          set -euo pipefail
-          expected="$(printf '%s\n' "DocWen-${RELEASE_VERSION}-linux-x64.tar.gz" "DocWen-windows-x64.zip" "DocWenCLI-${RELEASE_VERSION}-linux-x64.tar.gz" "SHA256SUMS.txt")"
-          observed="$(find publication -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort)"
-          test "$observed" = "$expected"
-          (cd publication && sha256sum --check SHA256SUMS.txt)
-      - name: Fail closed or select an exact immutable no-op
-        id: release_state
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Retrieve the verified preflight artifact
+        run: >-
+          python scripts/release/publication.py fetch
+          --repository "$GITHUB_REPOSITORY" --version "$RELEASE_VERSION" --commit "$GITHUB_SHA"
+          --artifact-id "$ARTIFACT_ID" --artifact-digest "$ARTIFACT_DIGEST"
+          --directory "$RUNNER_TEMP/publication"
+      - name: Verify draft assets, publish and read back
         env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
+          DOCWEN_IMMUTABILITY_READ_TOKEN: ${{ secrets.DOCWEN_IMMUTABILITY_READ_TOKEN }}
         run: |
           set -euo pipefail
-          release_status="$(curl --silent --show-error --location --output /tmp/release.json --write-out '%{http_code}' \
-            --header "Accept: application/vnd.github+json" \
-            --header "Authorization: Bearer $GH_TOKEN" \
-            --header "X-GitHub-Api-Version: 2026-03-10" \
-            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_VERSION")"
-          case "$release_status" in
-            200)
-              jq --exit-status --arg version "$RELEASE_VERSION" \
-                '.tag_name == $version and .draft == false and .prerelease == false and .immutable == true and ((.published_at | type) == "string") and ((.published_at | length) > 0)' \
-                /tmp/release.json >/dev/null
-              mkdir existing
-              gh release download "$RELEASE_VERSION" --repo "$GITHUB_REPOSITORY" --dir existing
-              expected="$(find publication -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort)"
-              observed="$(find existing -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort)"
-              test "$observed" = "$expected"
-              for asset in publication/*; do
-                cmp "$asset" "existing/$(basename "$asset")"
-                gh attestation verify "existing/$(basename "$asset")" --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" --source-ref "$GITHUB_REF" --source-digest "$GITHUB_SHA" --deny-self-hosted-runners
-              done
-              echo "decision=noop" >> "$GITHUB_OUTPUT"
-              ;;
-            404)
-              echo "decision=create" >> "$GITHUB_OUTPUT"
-              ;;
-            *)
-              echo "GitHub Release lookup failed with HTTP $release_status" >&2
-              exit 1
-              ;;
-          esac
-      - name: Attest exact assets
-        if: steps.release_state.outputs.decision == 'create'
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
+          test -n "$DOCWEN_IMMUTABILITY_READ_TOKEN"
+          resume_args=()
+          if [[ -n "$RESUME_ARTIFACT_ID" ]]; then
+            test -n "$RESUME_ARTIFACT_DIGEST"
+            resume_args=(--resume-artifact-id "$RESUME_ARTIFACT_ID" --resume-artifact-digest "$RESUME_ARTIFACT_DIGEST")
+          else
+            test -z "$RESUME_ARTIFACT_DIGEST"
+            test "$GITHUB_RUN_ATTEMPT" -eq 1
+          fi
+          python scripts/release/publication.py publish \
+            --repository "$GITHUB_REPOSITORY" --version "$RELEASE_VERSION" --commit "$GITHUB_SHA" \
+            --artifact-id "$ARTIFACT_ID" --artifact-digest "$ARTIFACT_DIGEST" \
+            --directory "$RUNNER_TEMP/publication" --receipt "$RUNNER_TEMP/publication-progress.json" \
+            --notes docs/CHANGELOG.md "${resume_args[@]}"
+      - name: Preserve publication progress, including uncertain writes
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          subject-path: publication/*
-      - name: Create the immutable Release
-        if: steps.release_state.outputs.decision == 'create'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          verify_release_tag() {
-            local direct="" peeled="" sha ref
-            while read -r sha ref; do
-              case "$ref" in
-                "refs/tags/$RELEASE_VERSION") direct="$sha" ;;
-                "refs/tags/$RELEASE_VERSION^{}") peeled="$sha" ;;
-                *) return 1 ;;
-              esac
-            done < <(git ls-remote --exit-code "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git" "refs/tags/$RELEASE_VERSION" "refs/tags/$RELEASE_VERSION^{}")
-            test -n "$direct"
-            test "${peeled:-$direct}" = "$GITHUB_SHA"
-          }
-          verify_release_tag
-          gh release create "$RELEASE_VERSION" publication/* --repo "$GITHUB_REPOSITORY" --verify-tag --title "$RELEASE_VERSION" --generate-notes
-          verify_release_tag
-      - name: Final immutable Release and byte readback
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          for attempt in $(seq 1 10); do
-            release_status="$(curl --silent --show-error --location --output /tmp/final.json --write-out '%{http_code}' \
-              --header "Accept: application/vnd.github+json" \
-              --header "Authorization: Bearer $GH_TOKEN" \
-              --header "X-GitHub-Api-Version: 2026-03-10" \
-              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_VERSION")"
-            if [[ "$release_status" == "200" ]] && jq --exit-status --arg version "$RELEASE_VERSION" \
-              '.tag_name == $version and .draft == false and .prerelease == false and .immutable == true and ((.published_at | type) == "string") and ((.published_at | length) > 0)' \
-              /tmp/final.json >/dev/null; then
-              break
-            fi
-            test "$attempt" -lt 10
-            sleep 3
-          done
-          mkdir readback
-          gh release download "$RELEASE_VERSION" --repo "$GITHUB_REPOSITORY" --dir readback
-          for asset in publication/*; do
-            name="$(basename "$asset")"
-            cmp "$asset" "readback/$name"
-            gh attestation verify "readback/$name" --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" --source-ref "$GITHUB_REF" --source-digest "$GITHUB_SHA" --deny-self-hosted-runners
-          done
-          verify_release_tag() {
-            local direct="" peeled="" sha ref
-            while read -r sha ref; do
-              case "$ref" in
-                "refs/tags/$RELEASE_VERSION") direct="$sha" ;;
-                "refs/tags/$RELEASE_VERSION^{}") peeled="$sha" ;;
-                *) return 1 ;;
-              esac
-            done < <(git ls-remote --exit-code "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git" "refs/tags/$RELEASE_VERSION" "refs/tags/$RELEASE_VERSION^{}")
-            test -n "$direct"
-            test "${peeled:-$direct}" = "$GITHUB_SHA"
-          }
-          verify_release_tag
+          name: docwen-publication-progress-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/publication-progress.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  post-verify:
+    if: always() && (inputs.operation == 'publish' || inputs.operation == 'verify')
+    needs: publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+      attestations: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ARTIFACT_ID: ${{ inputs.artifact_id }}
+      ARTIFACT_DIGEST: ${{ inputs.artifact_digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Retrieve the same verified candidate
+        run: >-
+          python scripts/release/publication.py fetch
+          --repository "$GITHUB_REPOSITORY" --version "$RELEASE_VERSION" --commit "$GITHUB_SHA"
+          --artifact-id "$ARTIFACT_ID" --artifact-digest "$ARTIFACT_DIGEST"
+          --directory "$RUNNER_TEMP/publication"
+      - name: Independently verify immutable hosted bytes and provenance
+        run: >-
+          python scripts/release/publication.py verify
+          --repository "$GITHUB_REPOSITORY" --version "$RELEASE_VERSION" --commit "$GITHUB_SHA"
+          --artifact-id "$ARTIFACT_ID" --artifact-digest "$ARTIFACT_DIGEST"
+          --directory "$RUNNER_TEMP/publication" --receipt "$RUNNER_TEMP/publication-readback.json"
+      - name: Save independent readback receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: docwen-publication-readback-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/publication-readback.json
+          if-no-files-found: warn
+          retention-days: 30

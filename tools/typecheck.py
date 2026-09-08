@@ -4,6 +4,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from tools.source_checks import typecheck_steps
+
 
 def _run(args: list[str]) -> int:
     proc = subprocess.run(args, cwd=Path(__file__).resolve().parents[1])
@@ -11,12 +16,8 @@ def _run(args: list[str]) -> int:
 
 
 def main() -> int:
-    steps: list[tuple[list[str], bool]] = [
-        ([sys.executable, "-m", "pyright", "--level", "error"], True),
-    ]
-
     exit_code = 0
-    for args, gate in steps:
+    for _name, args, gate in typecheck_steps():
         code = _run(args)
         if code != 0:
             if gate:

@@ -11,6 +11,11 @@ from tools import qa, workspace_root
 pytestmark = pytest.mark.unit
 
 
+@pytest.fixture(autouse=True)
+def isolate_runtime_from_architecture_checks(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(qa.source_checks, "architecture_steps", list)
+
+
 def _governance_root(engineering_root: Path) -> Path:
     governed = engineering_root / ".workspace"
     governed.mkdir(parents=True)
@@ -309,7 +314,7 @@ def test_qa_passes_its_current_interpreter_to_pyright(monkeypatch: pytest.Monkey
     monkeypatch.setattr(qa, "_run", lambda command, *, env=None: commands.append(command) or 0)
 
     assert qa.main(["--skip-ruff", "--skip-pytest"]) == 0
-    assert commands == [[qa.sys.executable, "-m", "pyright", "--level", "error", "--pythonpath", qa.sys.executable]]
+    assert commands == [command for _, command, _ in qa.source_checks.typecheck_steps()]
 
 
 def test_xdist_auto_is_bounded_but_an_explicit_worker_count_is_exact(monkeypatch: pytest.MonkeyPatch) -> None:

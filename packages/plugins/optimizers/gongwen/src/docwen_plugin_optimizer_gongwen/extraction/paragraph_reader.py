@@ -12,12 +12,12 @@ if TYPE_CHECKING:
 from docx.oxml.ns import qn
 
 from docwen_core.docx_parsing.image_extraction import extract_images_from_element
+from docwen_core.docx_parsing.list_processing import ListCounterManager
 from docwen_core.docx_parsing.textbox_extraction import (
     ExtractedParagraph,
     extract_textbox_paragraphs,
 )
 from docwen_core.text.heading_numbering import detect_heading_prefix
-from docwen_plugin_document.shared.list_processing import ListCounterManager
 from docwen_plugin_optimizer_gongwen.extraction.format_features import (
     extract_alignment,
     extract_font_info,

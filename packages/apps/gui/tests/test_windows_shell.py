@@ -8,6 +8,13 @@ import pytest
 
 from docwen_gui import windows_shell
 
+
+def test_non_windows_reveal_is_rejected_before_loading_native_libraries(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(windows_shell.sys, "platform", "linux")
+    with pytest.raises(OSError, match="only available on Windows"):
+        windows_shell._load_libraries()
+
+
 pytestmark = pytest.mark.unit
 
 
