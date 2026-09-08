@@ -156,4 +156,5 @@ class FakeGitHub(GitHub):
 
     def download_identity(self, path: str, *, timeout: float) -> dict:
         data = self.bytes[int(path.rsplit("/", 1)[1])]
-        return {"bytes": len(data), "sha256": "0" * 64 if self.bad_download else hashlib.sha256(data).hexdigest()}
+        corrupt = self.bad_download and self.release is not None and self.release.get("draft") is False
+        return {"bytes": len(data), "sha256": "0" * 64 if corrupt else hashlib.sha256(data).hexdigest()}

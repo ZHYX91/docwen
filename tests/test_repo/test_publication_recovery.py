@@ -65,6 +65,16 @@ def test_published_readback_failure_can_resume_without_any_write(session) -> Non
     assert api.writes == writes
 
 
+def test_draft_download_mismatch_prevents_publication(session, monkeypatch) -> None:
+    api, create, receipt, _ = session
+    monkeypatch.setattr(api, "download_identity", lambda *args, **kwargs: {"bytes": 0, "sha256": "0" * 64})
+    with pytest.raises(PublicationError, match="remote bytes mismatch"):
+        create().publish(notes="Release notes")
+    assert api.release["draft"] is True
+    assert not any(method == "PATCH" for method, _ in api.writes)
+    assert read_object(receipt)["stage"] != "verified"
+
+
 def test_process_interruption_after_upload_resumes_the_pending_write(session, monkeypatch: pytest.MonkeyPatch) -> None:
     api, create, receipt, _ = session
     original = api.request

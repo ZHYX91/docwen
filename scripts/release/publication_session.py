@@ -302,7 +302,8 @@ class ReleaseSession:
                 read_with_retry(read_asset, allow_missing=True)
             if self.state.get("pending") == operation:
                 self.save(pending=None)
-        self.observe(published=False, complete=True)
+        _, draft_assets = self.observe(published=False, complete=True)
+        self.verify_remote_bytes(draft_assets)
         self.save(stage="draft-verified")
         self.verify_tag()
         self.write_once(
@@ -317,14 +318,7 @@ class ReleaseSession:
         self.verify_tag()
         release, assets = self.observe(published=True, complete=True)
         self.save(stage="published-awaiting-readback", pending=None)
-        for name, record in assets.items():
-            observed = read_with_retry(
-                lambda timeout, record=record: self.api.download_identity(
-                    f"{self.prefix}/releases/assets/{record['id']}",
-                    timeout=timeout,
-                )
-            )
-            require(observed == self.assets[name], f"remote bytes mismatch: {name}")
+        self.verify_remote_bytes(assets)
         self.verify_tag()
         self.save(
             stage="verified",
@@ -332,3 +326,12 @@ class ReleaseSession:
             assets={name: {"id": record["id"], **self.assets[name]} for name, record in assets.items()},
         )
         return self.state
+
+    def verify_remote_bytes(self, assets: dict[str, Any]) -> None:
+        for name, record in assets.items():
+            observed = read_with_retry(
+                lambda timeout, record=record: self.api.download_identity(
+                    f"{self.prefix}/releases/assets/{record['id']}", timeout=timeout
+                )
+            )
+            require(observed == self.assets[name], f"remote bytes mismatch: {name}")
