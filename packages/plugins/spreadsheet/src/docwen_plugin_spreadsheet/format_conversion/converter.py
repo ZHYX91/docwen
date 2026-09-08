@@ -6,12 +6,12 @@ import os
 import shutil
 import time
 import uuid
+from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from docwen_core.models.artifact import ArtifactManifest
 from docwen_core.models.file_ref import FileRef
-from docwen_core.models.request import ConversionRequest
 from docwen_core.models.result import (
     ConversionDiagnostic,
     ConversionErrorInfo,
@@ -137,8 +137,8 @@ class SmartSheetConverter:
             return self._success(context, source, target, hub_xlsx, inbound_backend, started_at)
 
         if target == "md":
-            proxy_request = ConversionRequest(
-                request_id=task_id,
+            proxy_request = replace(
+                context.request,
                 input_refs=[
                     FileRef(
                         path=hub_xlsx,
@@ -148,9 +148,7 @@ class SmartSheetConverter:
                     )
                 ],
                 target_format="md",
-                action_name=context.request.action_name,
                 options=dict(context.request.options),
-                output_policy=context.request.output_policy,
                 config_snapshot=dict(context.request.config_snapshot),
             )
             proxy_context = HubConversionContext(
@@ -270,8 +268,8 @@ class SmartSheetConverter:
         from docwen_plugin_spreadsheet.csv_xlsx.converter import XlsxToCsvConverter
 
         task_id = context.request.request_id
-        proxy_request = ConversionRequest(
-            request_id=task_id,
+        proxy_request = replace(
+            context.request,
             input_refs=[
                 FileRef(
                     path=hub_xlsx,
@@ -281,9 +279,7 @@ class SmartSheetConverter:
                 )
             ],
             target_format="csv",
-            action_name=context.request.action_name,
             options=dict(context.request.options),
-            output_policy=context.request.output_policy,
             config_snapshot=dict(context.request.config_snapshot),
         )
         proxy_context = HubConversionContext(

@@ -15,7 +15,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-from docwen_core.models.file_inspection import FILE_INSPECTION_METADATA_KEY
 from docwen_plugin_markdown.manifest import build_manifest
 from docwen_plugin_markdown.numbering.converter import MdNumberingProcessor
 from docwen_plugin_markdown.office_bridge.converter import MarkdownOfficeBridgeConverter
@@ -91,9 +90,10 @@ class MarkdownPlugin:
         target = context.request.target_format
         action = context.request.action_name
 
-        inspection = input_ref.metadata.get(FILE_INSPECTION_METADATA_KEY, {}) if input_ref is not None else {}
-        declared_format = inspection.get("declared_format") if isinstance(inspection, dict) else None
-        admitted_markdown_text = source == "txt" and declared_format == "markdown"
+        # Core admission assigns plain text to the Markdown workflow. Match
+        # the resolver's category fallback without changing the detected format
+        # or inferring execution behavior from the filename declaration.
+        admitted_markdown_text = source == "txt" and input_ref is not None and input_ref.category == "markdown"
         source_format = "markdown" if source == "markdown" or admitted_markdown_text else source
 
         # ── Action: MD numbering ─────────────────────────────────

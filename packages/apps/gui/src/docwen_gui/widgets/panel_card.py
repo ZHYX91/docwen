@@ -339,8 +339,7 @@ class InlineNotice(QFrame):
         self.setProperty("noticeTone", tone)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(8, 6, 8, 6)
-        self.label = QLabel(text, self)
-        self.label.setWordWrap(True)
+        self.label = WrappingLabel(text, self)
         layout.addWidget(self.label, stretch=1)
 
     def setText(self, text: str) -> None:
