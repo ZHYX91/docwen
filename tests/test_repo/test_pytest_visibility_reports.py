@@ -287,6 +287,10 @@ def test_xdist_visibility_report_preserves_unmarked_worker_items(
     system_temp = tmp_path / "system-temp"
     system_temp.mkdir()
     environment = os.environ.copy()
+    # This is an independent pytest protocol probe, not another coverage worker.
+    for key in tuple(environment):
+        if key == "PYTEST_ADDOPTS" or key.startswith(("COV_CORE_", "COVERAGE_")):
+            environment.pop(key)
     environment.update(
         {
             "DOCWEN_PYTEST_REPORT_DIR": str(report_dir),
@@ -313,6 +317,8 @@ def test_xdist_visibility_report_preserves_unmarked_worker_items(
             str(project_root / "pyproject.toml"),
             "-p",
             "tests._pytest_hooks.reporting",
+            "-p",
+            "no:pytest_cov",
             "-o",
             "addopts=-q --tb=short --strict-markers --import-mode=importlib -ra",
             "-o",

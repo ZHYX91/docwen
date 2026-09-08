@@ -26,6 +26,11 @@ from xml.sax.saxutils import escape, quoteattr
 from PIL import Image
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from scripts.icon_pixels import unpremultiply_rgba  # noqa: E402 - standalone script bootstrap
+
 _SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 _FOUR_PART_VERSION = re.compile(r"^\d+\.\d+\.\d+\.\d+$")
 _ASSET_SPECS = {
@@ -289,28 +294,12 @@ def _render_svg_icon(svg_path: Path, size: tuple[int, int]) -> Image.Image:
     return Image.frombytes(
         "RGBA",
         size,
-        _unpremultiply_rgba(bytes(image.constBits())),
+        unpremultiply_rgba(bytes(image.constBits())),
         "raw",
         "RGBA",
         image.bytesPerLine(),
         1,
     )
-
-
-def _unpremultiply_rgba(pixels: bytes) -> bytes:
-    """Use one integer rounding rule for straight-alpha Store PNG pixels.
-
-    Qt's CPU-specific image conversion paths can round halfway values
-    differently. Keep rasterization premultiplied and convert its byte-ordered
-    RGBA channels with exact arithmetic so build hosts produce identical PNGs.
-    """
-    result = bytearray(pixels)
-    for offset in range(0, len(result), 4):
-        alpha = result[offset + 3]
-        if 0 < alpha < 255:
-            for channel in range(offset, offset + 3):
-                result[channel] = min(255, (result[channel] * 255 + alpha // 2) // alpha)
-    return bytes(result)
 
 
 def _sanitize_stripped_pe_certificates(staging_root: Path) -> tuple[str, ...]:

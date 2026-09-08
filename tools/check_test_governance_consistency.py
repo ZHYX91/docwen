@@ -216,7 +216,7 @@ def main(argv: list[str]) -> int:
             "docwen-pytest-runtime/reports/missing_marker_report.json",
             "uv run python tools/check_coverage_source_manifest.py",
             "uv run python tools/check_core_coverage.py",
-            "uv run python -m pytest packages/apps/gui/tests --cov=docwen_gui --cov-report=term-missing:skip-covered",
+            "uv run python -m pytest -c pyproject.toml packages/apps/gui/tests --cov=docwen_gui --cov-report=term-missing:skip-covered",
             "uv run python tools/check_gui_coverage.py",
         ],
         ".github/workflows/tests.yml",

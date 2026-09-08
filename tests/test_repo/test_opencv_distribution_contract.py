@@ -108,8 +108,8 @@ def test_installed_cv2_has_one_distribution_owner() -> None:
     from cv2.version import headless
 
     assert headless is True
-    gui_sections = re.findall(r"(?m)^\s*GUI:\s*(\S+)", cv2.getBuildInformation())
-    assert all(value == "NONE" for value in gui_sections)
+    gui_sections = re.findall(r"(?m)^[ \t]*GUI:[ \t]*([^\r\n]*)", cv2.getBuildInformation())
+    assert all(value.strip() in {"", "NONE"} for value in gui_sections), gui_sections
     with pytest.raises(importlib.metadata.PackageNotFoundError):
         importlib.metadata.distribution("opencv-python")
 

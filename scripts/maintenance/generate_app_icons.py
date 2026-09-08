@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import io
 import struct
+import sys
 from pathlib import Path
 
 from PIL import Image
@@ -13,6 +14,11 @@ from PySide6.QtGui import QImage, QPainter
 from PySide6.QtSvg import QSvgRenderer
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from scripts.icon_pixels import unpremultiply_rgba  # noqa: E402 - standalone script bootstrap
+
 SVG_PATH = ROOT / "assets" / "icon.svg"
 PNG_PATH = ROOT / "assets" / "icon.png"
 ICO_PATH = ROOT / "assets" / "icon.ico"
@@ -25,7 +31,7 @@ def _render_png(svg_bytes: bytes, size: int) -> bytes:
     if not renderer.isValid():
         raise ValueError(f"Invalid SVG source: {SVG_PATH}")
 
-    canvas = QImage(size, size, QImage.Format.Format_ARGB32_Premultiplied)
+    canvas = QImage(size, size, QImage.Format.Format_RGBA8888_Premultiplied)
     canvas.fill(Qt.GlobalColor.transparent)
     painter = QPainter(canvas)
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -33,15 +39,14 @@ def _render_png(svg_bytes: bytes, size: int) -> bytes:
     renderer.render(painter, QRectF(0, 0, size, size))
     painter.end()
 
-    rgba = canvas.convertToFormat(QImage.Format.Format_RGBA8888)
-    pixels = bytes(rgba.constBits())
+    pixels = unpremultiply_rgba(bytes(canvas.constBits()))
     image = Image.frombytes(
         "RGBA",
         (size, size),
         pixels,
         "raw",
         "RGBA",
-        rgba.bytesPerLine(),
+        canvas.bytesPerLine(),
         1,
     )
     output = io.BytesIO()

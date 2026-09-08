@@ -1065,6 +1065,8 @@ class ControlServer:
             listener = Listener(
                 self._address,
                 family=self._family,
+                # Leave room for an endpoint liveness probe and normal clients.
+                backlog=16,
                 authkey=None,
             )
             self._listener = listener

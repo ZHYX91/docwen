@@ -130,9 +130,9 @@ def test_store_png_halfway_alpha_rounding_preserves_colour_and_transparency() ->
     # The green channel is exactly 110.5 after unpremultiplication; CI hosts
     # previously disagreed between 110 and 111 for these real logo pixels.
     pixels = bytes((33, 78, 166, 180, 0, 0, 0, 0, 47, 111, 235, 255))
-    assert build_msix._unpremultiply_rgba(pixels) == bytes(  # pyright: ignore[reportPrivateUsage]
-        (47, 111, 235, 180, 0, 0, 0, 0, 47, 111, 235, 255)
-    )
+    from scripts.icon_pixels import unpremultiply_rgba
+
+    assert unpremultiply_rgba(pixels) == bytes((47, 111, 235, 180, 0, 0, 0, 0, 47, 111, 235, 255))
 
 
 def test_store_icons_are_identical_across_optional_qt_cpu_features(tmp_path: Path) -> None:

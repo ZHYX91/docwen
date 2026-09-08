@@ -30,14 +30,17 @@ pytestmark = pytest.mark.integration
 
 
 @pytest.fixture(autouse=True)
-def _clean_env_and_control() -> Generator[None, None, None]:
+def _clean_env_and_control(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
     """Remove IPC-related env vars and reset IPC toggle before each test.
 
     Both the bootstrap-layer env vars AND the runtime-layer
     ``disable_ipc()`` global must be reset for proper test isolation.
     """
+    # The fixture models an ordinary launch; the debugger test overrides this.
+    # Mock the observation without stopping the outer coverage tracer.
+    monkeypatch.setattr("sys.gettrace", lambda: None)
     for key in (ENV_DISABLE_CONTROL, ENV_TEST_AUTOCLOSE_MS, "DEBUGPY_LAUNCHER_PORT"):
-        os.environ.pop(key, None)
+        monkeypatch.delenv(key, raising=False)
     from docwen_runtime.ipc import enable_ipc
 
     enable_ipc()
