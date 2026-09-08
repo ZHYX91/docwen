@@ -42,6 +42,13 @@ change therefore fails the exact contract until the declaration and runtime beha
 路径均不需要 OpenCV HighGUI。根 uv 配置仅移除 RapidOCR 1.4.4 的冲突依赖边；一旦
 RapidOCR 版本变化，精确合同会先失败，必须重新审查声明与真实运行行为。
 
+The upstream macOS headless wheel retains the Cocoa backend; its package name does not promise
+`GUI: NONE` on macOS. Windows and Linux wheels use `NONE`. DocWen still requires one headless
+package owner and does not call HighGUI. See the [upstream build policy](https://github.com/opencv/opencv-python/blob/4.x/setup.py).
+
+上游 macOS headless 包保留 Cocoa 后端，包名不表示 macOS 的构建信息必须为 `GUI: NONE`；
+Windows 与 Linux 包使用 `NONE`。DocWen 仍严格要求唯一 headless 包所有者，且不调用 HighGUI。
+
 The authoritative environment check is the frozen uv lock plus the single-owner/runtime contract in
 `tests/test_repo/test_opencv_distribution_contract.py`. A generic metadata-only `pip check` does not
 understand uv's scoped exclusion and will repeat RapidOCR's upstream declaration; installing the second

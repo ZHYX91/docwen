@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import importlib.metadata
 import re
+import sys
 import tomllib
 from pathlib import Path
 
@@ -109,7 +110,9 @@ def test_installed_cv2_has_one_distribution_owner() -> None:
 
     assert headless is True
     gui_sections = re.findall(r"(?m)^[ \t]*GUI:[ \t]*([^\r\n]*)", cv2.getBuildInformation())
-    assert all(value.strip() in {"", "NONE"} for value in gui_sections), gui_sections
+    # Upstream headless macOS wheels retain Cocoa (opencv-python/setup.py).
+    expected_backend = "COCOA" if sys.platform == "darwin" else "NONE"
+    assert [value.strip() for value in gui_sections] == [expected_backend]
     with pytest.raises(importlib.metadata.PackageNotFoundError):
         importlib.metadata.distribution("opencv-python")
 
