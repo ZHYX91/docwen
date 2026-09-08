@@ -301,6 +301,44 @@ def test_themed_batch_details_fit_inside_the_actual_list_item(qapp, qtbot, prese
         ThemeManager.reset_instance()
 
 
+def test_xlarge_batch_target_notice_fits_narrow_panel(qapp, qtbot, tmp_path) -> None:
+    from openpyxl import Workbook
+    from PySide6.QtCore import QPoint
+
+    from docwen_gui.styles.theme_manager import ThemeManager
+    from docwen_gui.view_models.conversion_panel_vm import ConversionPanelViewModel
+    from docwen_gui.widgets.conversion_panel import ConversionPanel
+    from docwen_gui.widgets.panel_card import InlineNotice
+
+    ThemeManager.reset_instance()
+    manager = ThemeManager.get_instance()
+    manager.initialize(qapp, "dark")
+    manager.apply_font_size_preset("xlarge")
+    formats = {str(tmp_path / f"sample.{fmt}"): fmt for fmt in ("xlsx", "xls", "ods", "csv")}
+    xlsx = next(iter(formats))
+    Workbook().save(xlsx)
+    vm = ConversionPanelViewModel(FakeMainWindowViewModel())  # type: ignore[arg-type]
+    widget = ConversionPanel(vm)
+    qtbot.addWidget(widget)
+    widget.resize(288, 840)
+    widget.show()
+    try:
+        vm.set_file_info("spreadsheet", "xlsx", xlsx, list(formats), "batch", source_formats=formats)
+        qtbot.waitUntil(lambda: not vm.spreadsheet_analysis_pending)
+        qtbot.wait(100)
+        notices = widget.findChildren(InlineNotice, "targetAvailabilityNotice")
+        visible = [notice for notice in notices if notice.isVisible()]
+        assert visible
+        for notice in visible:
+            label = notice.label
+            assert label.heightForWidth(label.width()) <= label.height()
+            assert label.mapTo(notice, QPoint(0, label.height())).y() <= notice.height()
+    finally:
+        vm.close()
+        widget.close()
+        ThemeManager.reset_instance()
+
+
 def test_xlarge_layout_render_controls_stay_inside_right_panel(qapp) -> None:
     from docwen_gui.styles.theme_manager import ThemeManager
     from docwen_gui.view_models.conversion_panel_vm import ConversionPanelViewModel
