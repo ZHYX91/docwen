@@ -103,7 +103,13 @@ def test_installed_cv2_has_one_distribution_owner() -> None:
     assert owners == {HEADLESS_NAME}
     assert importlib.metadata.version(HEADLESS_NAME) == HEADLESS_VERSION
     assert cv2.__version__ == "4.13.0"
-    assert "GUI:                           NONE" in cv2.getBuildInformation()
+    # The macOS headless build omits the human-readable GUI section entirely.
+    # The wheel's generated structured flag is the cross-platform build contract.
+    from cv2.version import headless
+
+    assert headless is True
+    gui_sections = re.findall(r"(?m)^\s*GUI:\s*(\S+)", cv2.getBuildInformation())
+    assert all(value == "NONE" for value in gui_sections)
     with pytest.raises(importlib.metadata.PackageNotFoundError):
         importlib.metadata.distribution("opencv-python")
 

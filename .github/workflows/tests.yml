@@ -190,7 +190,7 @@ jobs:
           DOCWEN_PYTEST_REPORT_DIR: ${{ runner.temp }}/docwen-pytest-runtime/reports
         run: |
           New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP/docwen-pytest-runtime" | Out-Null
-          uv run pytest -m "(unit or contract) and not slow" -n "$env:DOCWEN_PYTEST_XDIST_WORKERS" --dist loadfile --cov --cov-config=pyproject.toml --cov-report=term-missing:skip-covered --cov-report="xml:$env:RUNNER_TEMP/docwen-pytest-runtime/coverage.xml" --cov-report="html:$env:RUNNER_TEMP/docwen-pytest-runtime/htmlcov" --cov-fail-under=81 --basetemp "$env:RUNNER_TEMP/docwen-pytest-runtime/basetemp" -o "cache_dir=$env:RUNNER_TEMP/docwen-pytest-runtime/cache"
+          uv run python -m pytest -o addopts="-v --tb=short --strict-markers --import-mode=importlib -ra" -n "$env:DOCWEN_PYTEST_XDIST_WORKERS" --dist loadfile --cov --cov-config=pyproject.toml --cov-report=term-missing:skip-covered --cov-report="xml:$env:RUNNER_TEMP/docwen-pytest-runtime/coverage.xml" --cov-report="html:$env:RUNNER_TEMP/docwen-pytest-runtime/htmlcov" --cov-fail-under=81 --basetemp "$env:RUNNER_TEMP/docwen-pytest-runtime/basetemp" -o "cache_dir=$env:RUNNER_TEMP/docwen-pytest-runtime/cache"
       - name: Coverage source manifest
         if: always()
         run: |
@@ -241,7 +241,7 @@ jobs:
           DOCWEN_PYTEST_REPORT_DIR: ${{ runner.temp }}/docwen-pytest-runtime/reports
         run: |
           New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP/docwen-pytest-runtime" | Out-Null
-          uv run pytest packages/apps/gui/tests --cov=docwen_gui --cov-report=term-missing:skip-covered --cov-report="xml:$env:RUNNER_TEMP/docwen-pytest-runtime/coverage-gui.xml" --cov-report="html:$env:RUNNER_TEMP/docwen-pytest-runtime/htmlcov-gui" -o addopts="-v --tb=short --strict-markers --import-mode=importlib -ra" --basetemp "$env:RUNNER_TEMP/docwen-pytest-runtime/basetemp" -o "cache_dir=$env:RUNNER_TEMP/docwen-pytest-runtime/cache"
+          uv run python -m pytest packages/apps/gui/tests --cov=docwen_gui --cov-report=term-missing:skip-covered --cov-report="xml:$env:RUNNER_TEMP/docwen-pytest-runtime/coverage-gui.xml" --cov-report="html:$env:RUNNER_TEMP/docwen-pytest-runtime/htmlcov-gui" -o addopts="-v --tb=short --strict-markers --import-mode=importlib -ra" --basetemp "$env:RUNNER_TEMP/docwen-pytest-runtime/basetemp" -o "cache_dir=$env:RUNNER_TEMP/docwen-pytest-runtime/cache"
       - name: GUI coverage summary
         run: |
           uv run python tools/check_gui_coverage.py "$env:RUNNER_TEMP/docwen-pytest-runtime/coverage-gui.xml"

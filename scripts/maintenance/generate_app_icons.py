@@ -83,8 +83,19 @@ def _generated_assets() -> tuple[bytes, bytes]:
     return png, _build_ico(frames)
 
 
+def _decoded_frames(data: bytes) -> tuple[str | None, dict[tuple[int, int], bytes]]:
+    with Image.open(io.BytesIO(data)) as image:
+        if image.format == "ICO":
+            return image.format, {
+                size: image.ico.getimage(size).convert("RGBA").tobytes() for size in image.ico.sizes()
+            }
+        return image.format, {image.size: image.convert("RGBA").tobytes()}
+
+
 def _check_asset(path: Path, expected: bytes) -> bool:
-    if not path.is_file() or path.read_bytes() != expected:
+    # Pillow wheels use different PNG compression libraries across platforms.
+    # Require exact decoded pixels for every frame, without a visual tolerance.
+    if not path.is_file() or _decoded_frames(path.read_bytes()) != _decoded_frames(expected):
         print(f"stale generated icon: {path.relative_to(ROOT)}")
         return False
     return True

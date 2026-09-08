@@ -12,6 +12,14 @@ pytestmark = pytest.mark.unit
 PROJECT_CONFIGS = Path(__file__).resolve().parents[4] / "configs"
 
 
+@pytest.fixture(params=["windows", "linux"])
+def supported_conversion_platform(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise default projection under each supported contract, independent of the test host."""
+    from docwen_runtime import capabilities
+
+    monkeypatch.setattr(capabilities, "current_platform_id", lambda: request.param)
+
+
 def _make_execution_args(**overrides: object) -> argparse.Namespace:
     ns = argparse.Namespace()
     ns.command = "convert"
@@ -71,6 +79,7 @@ def _single_image_markdown_node(output_dir: Path) -> Path:
 def test_cli_image_without_ocr_flag_disables_ocr_even_when_config_default_is_enabled(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    supported_conversion_platform: None,
 ) -> None:
     """CLI --ocr is opt-in; omitted flag must not inherit image OCR defaults."""
     import docwen_plugin_image.to_markdown.converter as image_converter
@@ -122,6 +131,7 @@ def test_cli_image_without_ocr_flag_disables_ocr_even_when_config_default_is_ena
 def test_cli_image_ocr_uses_export_ocr_placement_default_without_flag(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    supported_conversion_platform: None,
 ) -> None:
     """No --ocr-placement flag: runtime export.toml default controls placement."""
     import docwen_plugin_image.to_markdown.converter as image_converter
@@ -172,6 +182,7 @@ def test_cli_image_ocr_uses_export_ocr_placement_default_without_flag(
 def test_cli_image_ocr_uses_configured_ocr_language_default(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    supported_conversion_platform: None,
 ) -> None:
     """No CLI OCR language flag: ocr.language config reaches plugin OCR."""
     import docwen_plugin_image.to_markdown.converter as image_converter

@@ -322,6 +322,7 @@ def _snapshot_tree(root: Path) -> dict[str, Any]:
                     # Its entries and identity are checked separately; only file sizes are stable.
                     "size": 0 if kind in {"directory", "reparse-directory"} else metadata.st_size,
                     "mtimeNs": metadata.st_mtime_ns,
+                    "ctimeNs": metadata.st_ctime_ns,
                     "extra": extra,
                 }
             )
@@ -382,12 +383,14 @@ def _snapshot_tree(root: Path) -> dict[str, Any]:
                 after_read.st_mode,
                 after_read.st_size,
                 after_read.st_mtime_ns,
+                after_read.st_ctime_ns,
             ) != (
                 metadata.st_dev,
                 metadata.st_ino,
                 metadata.st_mode,
                 metadata.st_size,
                 metadata.st_mtime_ns,
+                metadata.st_ctime_ns,
             ):
                 raise HousekeepingError(f"target_changed_during_snapshot:{child}")
             if name == LEASE_NAME:
@@ -404,11 +407,13 @@ def _snapshot_tree(root: Path) -> dict[str, Any]:
         after_root.st_ino,
         after_root.st_mode,
         after_root.st_mtime_ns,
+        after_root.st_ctime_ns,
     ) != (
         root_metadata.st_dev,
         root_metadata.st_ino,
         root_metadata.st_mode,
         root_metadata.st_mtime_ns,
+        root_metadata.st_ctime_ns,
     ):
         raise HousekeepingError(f"target_changed_during_snapshot:{absolute_root}")
 

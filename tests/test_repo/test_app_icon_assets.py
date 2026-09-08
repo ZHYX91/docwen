@@ -101,3 +101,19 @@ def test_generated_png_and_ico_are_current() -> None:
             assert frame.size == (size, size)
             assert frame.mode == "RGBA"
     assert frames[-1][1] == PNG_PATH.read_bytes()
+
+
+def test_icon_freshness_ignores_compression_but_rejects_any_changed_pixel(tmp_path: Path, monkeypatch) -> None:
+    from scripts.maintenance import generate_app_icons as generator
+
+    monkeypatch.setattr(generator, "ROOT", tmp_path)
+    image = Image.new("RGBA", (8, 8), (20, 40, 60, 255))
+    expected = io.BytesIO()
+    image.save(expected, format="PNG", compress_level=9)
+    actual = tmp_path / "icon.png"
+    image.save(actual, format="PNG", compress_level=0)
+    assert actual.read_bytes() != expected.getvalue()
+    assert generator._check_asset(actual, expected.getvalue()) is True
+    image.putpixel((3, 3), (20, 40, 61, 255))
+    image.save(actual, format="PNG")
+    assert generator._check_asset(actual, expected.getvalue()) is False
