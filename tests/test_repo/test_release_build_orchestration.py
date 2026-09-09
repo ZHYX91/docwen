@@ -177,7 +177,17 @@ def test_release_workflow_builds_each_supported_package_twice_and_runs_packaged_
     linux_dependency_step = next(
         step for step in linux["steps"] if step.get("name") == "Install Linux GUI dependencies"
     )
-    assert "libegl1" in linux_dependency_step["run"]
+    assert linux_dependency_step["run"] == "bash scripts/release/install_linux_build_dependencies.sh"
+    container = linux["container"]
+    assert isinstance(container, dict)
+    image = container["image"]
+    assert isinstance(image, str)
+    assert image.startswith("mcr.microsoft.com/devcontainers/base:noble@sha256:")
+    assert len(image.rsplit(":", 1)[1]) == 64
+    dependencies = Path("scripts/release/install_linux_build_dependencies.sh").read_text(encoding="utf-8")
+    assert "https://snapshot.ubuntu.com/ubuntu/" in dependencies
+    assert "Dir::Etc::sourceparts=-" in dependencies
+    assert "libegl1" in dependencies
 
     for job_name, job in jobs.items():
         assert isinstance(job, dict), job_name

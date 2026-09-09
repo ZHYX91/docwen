@@ -31,6 +31,10 @@ Windows 生产构建器把 PyInstaller 的 DLL 搜索路径限制为干净项目
 
 ## Release gates / 发布门禁
 
+Both Linux production builds run in the same digest-pinned Ubuntu 24.04 container declared in the release workflow. `scripts/release/install_linux_build_dependencies.sh` installs system dependencies from one dated Ubuntu archive snapshot and ignores other package repositories. Update the container digest and archive snapshot deliberately, then repeat both builds and extracted-package checks. The host runner's preinstalled libraries are not production build inputs.
+
+两次 Linux 生产构建均运行在发布工作流声明的同一固定摘要 Ubuntu 24.04 容器内。`scripts/release/install_linux_build_dependencies.sh` 从固定日期的 Ubuntu 仓库快照安装系统依赖，并忽略其他软件源。更新容器摘要或仓库快照后，必须重新执行两次构建及解压后包验证；宿主 runner 预装的库不作为生产构建输入。
+
 Repository settings must enable Immutable Releases and an active no-update/no-delete ruleset for numeric `x.y.z`
 tags before a version tag is pushed. 仓库设置必须在推送版本标签前启用 Immutable Releases，并启用禁止更新或
 删除数字 `x.y.z` 标签的 ruleset。

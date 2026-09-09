@@ -175,6 +175,11 @@ jobs:
     name: Clean Ubuntu build ${{ matrix.replica }}
     needs: release-gate
     runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/devcontainers/base:noble@sha256:24ea8d1abd543fb56208fa8f9468c9a684e65aa8c42d54f76e312127f1ed5cd9
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -197,10 +202,7 @@ jobs:
           enable-cache: true
       - name: Install Linux GUI dependencies
         shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends xvfb libegl1 libgl1 libxkbcommon-x11-0 libxcb-cursor0
+        run: bash scripts/release/install_linux_build_dependencies.sh
       - name: Install exact lockfile
         run: uv sync --frozen --extra dev
       - name: Build GUI and CLI payloads
