@@ -605,11 +605,20 @@ def _validate_ooxml_package(
         node
         for node in content_types.iter()
         if _xml_local_name(node.tag) == "Override"
-        and _xml_attribute(node, "PartName") == f"/{main_part}"
-        and _xml_attribute(node, "ContentType") == expected_content_type
+        and _xml_attribute(node, "PartName").lower() == f"/{main_part}".lower()
     ]
-    if len(matching_overrides) != 1:
+    matching_defaults = [
+        node
+        for node in content_types.iter()
+        if _xml_local_name(node.tag) == "Default"
+        and _xml_attribute(node, "Extension").lower() == main_part.rsplit(".", 1)[-1].lower()
+    ]
+    # OPC resolves a part-specific Override before its extension's Default.
+    declarations = matching_overrides or matching_defaults
+    if len(matching_overrides) > 1 or len(matching_defaults) > 1 or len(declarations) != 1:
         raise ValueError(f"[Content_Types].xml must declare exactly one content type for {main_part}")
+    if _xml_attribute(declarations[0], "ContentType") != expected_content_type:
+        raise ValueError(f"[Content_Types].xml declares an unexpected content type for {main_part}")
 
     office_targets: list[str] = []
     for node in relationships.iter():

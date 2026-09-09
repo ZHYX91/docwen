@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+from xml.etree import ElementTree
+
 from ._detection_support import (
     SUPPORTED_EXTENSION_FORMATS,
     StructureStatus,
@@ -113,6 +116,66 @@ class TestDetectContentFormat:
 
 class TestDetectZipContainer:
     """ZIP-based container detection via member entry inspection."""
+
+    @pytest.mark.parametrize("file_format", ["docx", "xlsx", "pptx"])
+    @pytest.mark.parametrize(
+        ("declaration_mode", "valid"),
+        [
+            ("default", True),
+            ("uppercase-extension", True),
+            ("override-precedence", True),
+            ("uppercase-part", True),
+            ("wrong-override", False),
+            ("wrong-default", False),
+            ("duplicate-override", False),
+            ("duplicate-default", False),
+            ("missing", False),
+        ],
+    )
+    def test_ooxml_content_type_resolution(
+        self, tmp_path: Path, file_format: str, declaration_mode: str, valid: bool
+    ) -> None:
+        entries = _ooxml_entries(file_format)
+        content_types = ElementTree.fromstring(entries["[Content_Types].xml"])
+        override = content_types[0]
+        expected_type = override.attrib["ContentType"]
+        default = ElementTree.Element(
+            "{http://schemas.openxmlformats.org/package/2006/content-types}Default",
+            Extension="xml",
+            ContentType=expected_type,
+        )
+        content_types.append(default)
+        if declaration_mode in {"default", "uppercase-extension", "wrong-default", "duplicate-default"}:
+            content_types.remove(override)
+        if declaration_mode == "uppercase-extension":
+            default.set("Extension", "XML")
+        elif declaration_mode == "override-precedence":
+            default.set("ContentType", "application/xml")
+        elif declaration_mode == "uppercase-part":
+            override.set("PartName", override.attrib["PartName"].upper())
+        elif declaration_mode == "wrong-override":
+            override.set("ContentType", "application/xml")
+        elif declaration_mode == "wrong-default":
+            default.set("ContentType", "application/xml")
+        elif declaration_mode == "duplicate-override":
+            content_types.append(
+                ElementTree.Element(override.tag, {**override.attrib, "ContentType": "application/xml"})
+            )
+        elif declaration_mode == "duplicate-default":
+            content_types.append(ElementTree.Element(default.tag, {**default.attrib, "ContentType": "application/xml"}))
+        elif declaration_mode == "missing":
+            content_types.remove(override)
+            content_types.remove(default)
+        entries["[Content_Types].xml"] = ElementTree.tostring(content_types, encoding="unicode")
+        path = tmp_path / f"document.{file_format}"
+        _write_zip_entries(str(path), entries)
+        detection = detect_content_format(str(path))
+        if valid:
+            assert detection.format == file_format
+            assert detection.structure_status is StructureStatus.VALID
+        else:
+            assert detection.structure_status is StructureStatus.INVALID
+            assert detection.detail_code == "FILE_CONTAINER_INVALID"
 
     def test_detect_docx(self):
         """A minimal valid OOXML Word package is detected as DOCX."""
