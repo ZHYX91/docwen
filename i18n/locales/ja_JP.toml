@@ -1362,8 +1362,8 @@ merge = "マージ"
 # 文件类型分类
 # =============================================================================
 search_placeholder = "キー、値、コメントを検索"
-typo = "誤字"
-corrections = "修正候補"
+correct_word = "正しい表記"
+misspellings = "誤表記一覧"
 multi_value_hint = "ヒント：複数の値は | で区切ります（例：値1|値2|値3）"
 save_typos_failed = "誤字辞書を保存できませんでした。"
 save_symbol_correction_failed = "記号補正の項目を保存できませんでした。"

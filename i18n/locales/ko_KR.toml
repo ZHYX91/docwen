@@ -1362,8 +1362,8 @@ merge = "병합"
 # 文件类型分类
 # =============================================================================
 search_placeholder = "키, 값 또는 설명 검색"
-typo = "오타"
-corrections = "교정 항목"
+correct_word = "올바른 표기"
+misspellings = "잘못된 표기 목록"
 multi_value_hint = "팁: 여러 값은 | 로 구분하세요(예: 값1|값2|값3)"
 save_typos_failed = "오타 사전을 저장하지 못했습니다."
 save_symbol_correction_failed = "기호 교정 항목을 저장하지 못했습니다."

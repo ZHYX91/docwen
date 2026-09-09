@@ -1380,8 +1380,8 @@ sensitive_editor_title = "Trình chỉnh sửa từ nhạy cảm"
 # 下拉选择标签
 
 search_placeholder = "Tim kiem khoa, gia tri hoac ghi chu"
-typo = "Lỗi chính tả"
-corrections = "Nội dung sửa"
+correct_word = "Cách viết đúng"
+misspellings = "Các cách viết sai"
 multi_value_hint = "Mẹo: dùng | để phân tách nhiều giá trị (ví dụ: giá_trị1|giá_trị2|giá_trị3)"
 save_typos_failed = "Không thể lưu từ điển lỗi chính tả."
 save_symbol_correction_failed = "Không thể lưu các mục sửa ký hiệu."

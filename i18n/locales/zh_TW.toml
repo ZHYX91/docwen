@@ -1362,8 +1362,8 @@ merge = "合併"
 # 文件类型分类
 # =============================================================================
 search_placeholder = "搜尋鍵、值或備註"
-typo = "錯別字"
-corrections = "校正詞"
+correct_word = "正確寫法"
+misspellings = "錯誤寫法清單"
 multi_value_hint = "提示：支援用 | 分隔多個值（如：value1|value2|value3）"
 save_typos_failed = "無法保存錯別字詞庫。"
 save_symbol_correction_failed = "無法保存符號校對條目。"

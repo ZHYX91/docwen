@@ -1362,8 +1362,8 @@ merge = "Zusammenführen"
 # 文件类型分类
 # =============================================================================
 search_placeholder = "Suche Schlüssel, Wert oder Kommentar"
-typo = "Tippfehler"
-corrections = "Korrektur(en)"
+correct_word = "Korrekte Schreibweise"
+misspellings = "Fehlschreibungen"
 multi_value_hint = "Tipp: Mehrere Werte mit | trennen (zum Beispiel: Wert1|Wert2|Wert3)"
 save_typos_failed = "Das Tippfehlerwörterbuch konnte nicht gespeichert werden."
 save_symbol_correction_failed = "Die Einträge zur Symbolkorrektur konnten nicht gespeichert werden."

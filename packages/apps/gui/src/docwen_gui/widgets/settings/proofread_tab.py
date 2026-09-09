@@ -446,7 +446,7 @@ class _SymbolPairingEditor(_BaseEditorDialog):
 
 
 class _TyposDictionaryEditor(_BaseEditorDialog):
-    """Dialog for editing typos dictionary.
+    """Dialog for editing correct words and their misspellings.
 
     Uses a supplied effective TOML source and production save callback for
     format-preserving I/O. Inline comments store the Remark field.
@@ -493,28 +493,28 @@ class _TyposDictionaryEditor(_BaseEditorDialog):
                 key = str(key_item)
                 raw_val: Any = val_item.value if hasattr(val_item, "value") else val_item
                 if isinstance(raw_val, list):
-                    corrections = "|".join(str(v) for v in raw_val)
+                    misspellings = "|".join(str(v) for v in raw_val)
                 else:
-                    corrections = str(raw_val) if raw_val else ""
+                    misspellings = str(raw_val) if raw_val else ""
                 remark = ""
                 trivia = getattr(val_item, "trivia", None)
                 if trivia is not None and hasattr(trivia, "comment"):
                     remark = _clean_inline_comment(getattr(trivia, "comment", ""))
                 self._entries.append(
                     {
-                        "typo": key,
-                        "corrections": corrections,
+                        "correct_word": key,
+                        "misspellings": misspellings,
                         "remark": remark,
                     }
                 )
         else:
             # Plain dict fallback
             for key, val in raw_typos.items():
-                corrections = "|".join(str(v) for v in val) if isinstance(val, list) else (str(val) if val else "")
+                misspellings = "|".join(str(v) for v in val) if isinstance(val, list) else (str(val) if val else "")
                 self._entries.append(
                     {
-                        "typo": str(key),
-                        "corrections": corrections,
+                        "correct_word": str(key),
+                        "misspellings": misspellings,
                         "remark": "",
                     }
                 )
@@ -522,13 +522,13 @@ class _TyposDictionaryEditor(_BaseEditorDialog):
     def _write_toml(self) -> bool:
         typos_tbl = toml_table()
         for entry in self._entries:
-            typo = entry.get("typo", "").strip()
-            corr_str = entry.get("corrections", "").strip()
+            correct_word = entry.get("correct_word", "").strip()
+            misspellings_text = entry.get("misspellings", "").strip()
             remark = entry.get("remark", "").strip()
-            if not typo:
+            if not correct_word:
                 continue
-            corrections = [c.strip() for c in corr_str.split("|") if c.strip()]
-            typos_tbl[typo] = toml_value(corrections, remark if remark else "")
+            misspellings = [c.strip() for c in misspellings_text.split("|") if c.strip()]
+            typos_tbl[correct_word] = toml_value(misspellings, remark if remark else "")
         self._doc["entries"] = typos_tbl
         ok = _save_toml_document(
             self._doc,
@@ -558,8 +558,8 @@ class _TyposDictionaryEditor(_BaseEditorDialog):
         self._table = QTableWidget(0, 3, self)
         self._table.setHorizontalHeaderLabels(
             [
-                t("editors.mapping.typo", "Typo"),
-                t("editors.mapping.corrections", "Correction(s)"),
+                t("editors.mapping.correct_word", "Correct Word"),
+                t("editors.mapping.misspellings", "Misspellings"),
                 t("editors.mapping.comment", "Remark"),
             ]
         )
@@ -590,8 +590,8 @@ class _TyposDictionaryEditor(_BaseEditorDialog):
     def _populate_table(self) -> None:
         self._table.setRowCount(len(self._entries))
         for row, entry in enumerate(self._entries):
-            self._table.setItem(row, 0, QTableWidgetItem(entry.get("typo", "")))
-            self._table.setItem(row, 1, QTableWidgetItem(entry.get("corrections", "")))
+            self._table.setItem(row, 0, QTableWidgetItem(entry.get("correct_word", "")))
+            self._table.setItem(row, 1, QTableWidgetItem(entry.get("misspellings", "")))
             self._table.setItem(row, 2, QTableWidgetItem(entry.get("remark", "")))
         self._refresh_table_view()
 
@@ -611,18 +611,20 @@ class _TyposDictionaryEditor(_BaseEditorDialog):
     def _on_accept(self) -> None:
         self._entries.clear()
         for row in range(self._table.rowCount()):
-            typo_item = self._table.item(row, 0)
-            corr_item = self._table.item(row, 1)
+            correct_item = self._table.item(row, 0)
+            misspellings_item = self._table.item(row, 1)
             rmk_item = self._table.item(row, 2)
-            typo = typo_item.text().strip() if typo_item else ""
-            corr = corr_item.text().strip() if corr_item else ""
+            correct_word = correct_item.text().strip() if correct_item else ""
+            misspellings_text = misspellings_item.text().strip() if misspellings_item else ""
             remark = rmk_item.text().strip() if rmk_item else ""
-            if typo:
-                self._entries.append({"typo": typo, "corrections": corr, "remark": remark})
+            if correct_word:
+                self._entries.append(
+                    {"correct_word": correct_word, "misspellings": misspellings_text, "remark": remark}
+                )
         coalesced = self._coalesce_duplicate_entries(
             self._entries,
-            key_field="typo",
-            values_field="corrections",
+            key_field="correct_word",
+            values_field="misspellings",
             comment_field="remark",
         )
         if coalesced is None:

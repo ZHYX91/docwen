@@ -1412,8 +1412,8 @@ merge = "Fusionner"
 # 文件类型分类
 # =============================================================================
 search_placeholder = "Rechercher clé, valeur ou commentaire"
-typo = "Faute de frappe"
-corrections = "Correction(s)"
+correct_word = "Orthographe correcte"
+misspellings = "Graphies incorrectes"
 multi_value_hint = "Conseil : utilisez | pour séparer plusieurs valeurs (par exemple : valeur1|valeur2|valeur3)"
 save_typos_failed = "Impossible d’enregistrer le dictionnaire des fautes de frappe."
 save_symbol_correction_failed = "Impossible d’enregistrer les corrections de symboles."

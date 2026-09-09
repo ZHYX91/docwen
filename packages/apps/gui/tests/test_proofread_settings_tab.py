@@ -152,6 +152,12 @@ def test_typos_editor_preserves_entries_and_remark(
     dialog = _TyposDictionaryEditor(config_dir / "proofread" / "typos.toml")
 
     assert dialog._table.columnCount() == 3
+    from docwen_gui.i18n import t
+
+    correct_header = dialog._table.horizontalHeaderItem(0)
+    misspellings_header = dialog._table.horizontalHeaderItem(1)
+    assert correct_header is not None and correct_header.text() == t("editors.mapping.correct_word")
+    assert misspellings_header is not None and misspellings_header.text() == t("editors.mapping.misspellings")
     item00 = dialog._table.item(0, 0)
     assert item00 is not None
     assert item00.text() == "己"
