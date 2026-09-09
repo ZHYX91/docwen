@@ -211,6 +211,64 @@ def test_manual_heading_prefix_survives_enabled_and_disabled_without_legacy_clea
     assert (AMBIGUOUS_VISIBLE_PREFIX_DIAGNOSTIC in diagnostics) is (not enabled)
 
 
+@pytest.mark.parametrize("conflicting_paragraph_style", [False, True])
+def test_office_renumbered_caption_styles_keep_authenticated_bindings(
+    tmp_path: Path, conflicting_paragraph_style: bool
+) -> None:
+    source = _forward_representative(tmp_path)
+    original = ResolvedNumberingV4Recovery.load_if_present(source, Document(str(source)))
+    assert original is not None
+    replacements = {
+        binding.resolved_style_id: f"OfficeCaption{index}"
+        for index, binding in enumerate(original.caption_style_bindings)
+    }
+    with ZipFile(source) as package:
+        infos = package.infolist()
+        members = {item.filename: package.read(item.filename) for item in infos}
+    for member in ("word/styles.xml", "word/document.xml"):
+        root = etree.fromstring(members[member])
+        for element in root.iter():
+            attribute = qn("w:styleId") if element.tag == qn("w:style") else qn("w:val")
+            if element.tag in {qn(f"w:{tag}") for tag in ("style", "pStyle", "basedOn", "next", "link")}:
+                current = element.get(attribute)
+                if current in replacements:
+                    element.set(attribute, replacements[current])
+        if member == "word/document.xml" and conflicting_paragraph_style:
+            table_style = replacements[original.caption_style_bindings[1].resolved_style_id]
+            figure_style = replacements[original.caption_style_bindings[0].resolved_style_id]
+            paragraph_style = next(item for item in root.iter(qn("w:pStyle")) if item.get(qn("w:val")) == table_style)
+            paragraph_style.set(qn("w:val"), figure_style)
+        members[member] = etree.tostring(root, encoding="UTF-8", xml_declaration=True, standalone=True)
+    saved = tmp_path / "office-saved.docx"
+    with ZipFile(saved, "w", compression=ZIP_DEFLATED) as package:
+        for info in infos:
+            package.writestr(info, members[info.filename])
+    context = _reverse_context(tmp_path, saved, request_id="office-styles")
+
+    result = DocxToMarkdownConverter().convert(context)
+
+    if conflicting_paragraph_style:
+        assert not result.success
+        assert result.artifacts == []
+        assert context.workspace.registered_artifacts == []
+        assert list(Path(context.workspace.staging_dir).iterdir()) == []
+        return
+    assert result.success, result.error
+    recovered = ResolvedNumberingV4Recovery.load_if_present(saved, Document(str(saved)))
+    assert recovered is not None
+    assert recovered.caption_signatures == original.caption_signatures
+    markdown = Path(next(item.staging_path for item in result.artifacts if item.is_primary)).read_text(encoding="utf-8")
+    for expected in (
+        "Figure: System overview ^system-overview",
+        "Table: Results ^results-main",
+        "Equation: ^energy-main",
+        "Code: Entry point ^entry-main",
+        "@[[#^system-overview|System overview]]",
+        "Citation: @cite-one.",
+    ):
+        assert expected in markdown
+
+
 def test_reference_cache_tamper_fails_before_artifact_or_staging_publish(tmp_path: Path) -> None:
     source = _forward_representative(tmp_path)
     tampered = tmp_path / "tampered-reference.docx"

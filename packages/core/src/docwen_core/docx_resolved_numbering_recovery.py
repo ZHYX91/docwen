@@ -19,6 +19,7 @@ from docwen_core._docx_semantics_v3_model import (
     REFERENCE_OCCURRENCE_MAP_NAMESPACE,
     SOFT_REFERENCE_MAP_NAMESPACE,
     TARGET_MAP_NAMESPACE,
+    CaptionStyleBindingV3,
     DocxSemanticsV3Error,
     RecoveredCaptionV3,
 )
@@ -122,7 +123,7 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
                 caption_styles = prove_caption_style_registry(package, caption_styles, allow_style_id_rewrite=True)
         if not _has_explicit_resolved_v4_signal(document, owned, targets, caption_styles):
             return None
-        return cls._load_proven(package_path, document, owned)
+        return cls._load_proven(package_path, document, owned, caption_styles)
 
     @classmethod
     def _load_proven(
@@ -130,6 +131,7 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         path: Path,
         document: Any,
         owned: dict[str, tuple[int, Any]],
+        caption_styles: tuple[CaptionStyleBindingV3, ...],
     ) -> ResolvedNumberingV4Recovery:
         targets: list[Any] = []
         anchors: list[Any] = []
@@ -137,7 +139,6 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         references: list[Any] = []
         fenced_sources: list[Any] = []
         topology: list[Any] = []
-        caption_styles: tuple[Any, ...] = ()
         occurrences: list[NumberingOccurrenceIdentity] = []
 
         if TARGET_MAP_NAMESPACE in owned:
@@ -152,9 +153,6 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         if REFERENCE_OCCURRENCE_MAP_NAMESPACE in owned:
             _number, root = owned[REFERENCE_OCCURRENCE_MAP_NAMESPACE]
             references = parse_reference_occurrence_map(root)
-        if CAPTION_STYLE_BINDING_MAP_NAMESPACE in owned:
-            _number, root = owned[CAPTION_STYLE_BINDING_MAP_NAMESPACE]
-            caption_styles = parse_caption_style_binding_map(root)
         if fenced.FENCED_SOURCE_MAP_NAMESPACE in owned:
             _number, root = owned[fenced.FENCED_SOURCE_MAP_NAMESPACE]
             fenced_sources = parse_fenced_source_map(root)
