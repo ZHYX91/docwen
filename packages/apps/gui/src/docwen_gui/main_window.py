@@ -1362,10 +1362,9 @@ class MainWindow(QWidget):
         previous_target = selector.current_tab
         selector.set_defaults(self._template_vm.defaults)
         selector.load_all_templates(data, details=details)
-        for target in ("docx", "xlsx"):
-            selector.ensure_preferred_selection(target)
         selector.restore_current_tab(previous_target)
         self._restore_main_template_default()
+        selector.ensure_preferred_selection(selector.current_tab)
         self._action_area_vm.set_template_ready(selector.get_selected_template_resource() is not None)
 
     def _manage_templates(self, target: str) -> None:
