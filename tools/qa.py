@@ -20,6 +20,7 @@ if __package__ in {None, ""}:
         sys.path.insert(0, str(_BOOTSTRAP_ROOT))
 
 from tools import source_checks
+from tools.run_lease import lease_payload, transition
 from tools.windows_short_path import ShortPathDriveError, drive_root, mount_short_drive, unmount_short_drive
 from tools.workspace_root import WORKSPACE_ROOT_ENV as _WORKSPACE_ROOT_ENV
 from tools.workspace_root import WorkspaceRootError, resolve_workspace_root
@@ -76,15 +77,7 @@ def _path_traverses_link_or_reparse(path: Path, *, stop_at: Path | None = None) 
 
 def _write_runtime_lease(runtime_root: Path, *, state: str) -> None:
     marker = runtime_root / PYTEST_RUNTIME_LEASE
-    payload = {
-        "schemaVersion": 1,
-        "owner": "docwen.tools.qa",
-        "kind": "pytest-runtime",
-        "pid": os.getpid(),
-        "createdAt": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
-        "state": state,
-        "root": str(runtime_root),
-    }
+    payload = lease_payload(runtime_root, owner="docwen.tools.qa", kind="pytest-runtime", state=state)
     marker.write_text(
         json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
         encoding="utf-8",
@@ -106,7 +99,7 @@ def _patch_runtime_lease(
     if not str(payload.get("owner", "")).startswith("docwen.") or payload.get("root") != str(runtime_root):
         raise ValueError(f"pytest runtime lease mismatch: {runtime_root}")
     if state is not None:
-        payload["state"] = state
+        transition(payload, root=runtime_root, owner="docwen.tools.qa", state=state)
     if fields:
         payload.update(fields)
     for field in remove_fields:
@@ -189,6 +182,8 @@ def _cleanup_expired_workspace_temps(workspace_root: Path) -> None:
     from tools import workspace_cleanup
 
     plan = workspace_cleanup.create_plan(workspace_root=workspace_root)
+    for observation in plan.get("observations", {}).get("skipped", []):
+        print(f"[qa] housekeeping skipped: {observation['path']}: {observation['reason']}", file=sys.stderr)
     entries = plan.get("entries", [])
     if not entries:
         return

@@ -24,6 +24,7 @@ if __package__ in {None, ""}:
     if str(_BOOTSTRAP_ROOT) not in sys.path:
         sys.path.insert(0, str(_BOOTSTRAP_ROOT))
 
+from tools.run_lease import lease_payload, transition
 from tools.workspace_root import WorkspaceRootError, resolve_workspace_root
 
 try:
@@ -255,15 +256,7 @@ def _create_verification_dir(workspace_root: Path | None) -> Path:
         raise RuntimeError(f"packaged_gui_runtime_outside_workspace:{verification_dir}")
     _atomic_json_write(
         verification_dir / _VERIFICATION_LEASE,
-        {
-            "schemaVersion": 1,
-            "owner": _VERIFICATION_OWNER,
-            "kind": "packaged-gui-verification",
-            "pid": os.getpid(),
-            "createdAt": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
-            "state": "active",
-            "root": str(verification_dir),
-        },
+        lease_payload(verification_dir, owner=_VERIFICATION_OWNER, kind="packaged-gui-verification", state="active"),
     )
     return verification_dir
 
@@ -278,7 +271,7 @@ def _update_verification_lease(
     payload = json.loads(marker.read_text(encoding="utf-8"))
     if payload.get("owner") != _VERIFICATION_OWNER or payload.get("root") != str(verification_dir):
         raise RuntimeError(f"packaged_gui_runtime_lease_mismatch:{verification_dir}")
-    payload["state"] = state
+    transition(payload, root=verification_dir, owner=_VERIFICATION_OWNER, state=state)
     if error is not None:
         payload["error"] = f"{type(error).__name__}:{error}"
     _atomic_json_write(marker, payload)
