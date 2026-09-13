@@ -4,8 +4,8 @@
 管理多个模板类型（docx/xlsx）的选项卡式选择器，支持外部数据注入和刷新。
 
 架构约定：
-- 模板数据由外层通过 ``load_templates()`` 注入，组件内不直接访问文件系统。
-- 刷新逻辑由外层控制（例如使用 QThread），组件仅提供接收数据的接口。
+- 模板数据由外层通过 ``load_templates()`` 注入；调用方顺序即展示顺序。
+- 模板管理完成后可以通过 ``refresh_from_runtime_registry()`` 刷新两类模板。
 """
 
 from __future__ import annotations
@@ -30,8 +30,9 @@ from .template_selector import (
 logger = logging.getLogger(__name__)
 
 
-# ── Sort helper ──────────────────────────────────────────────────────────────
-
+# ── Legacy natural-sort helper ───────────────────────────────────────────────
+# Kept importable for compatibility.  Template ordering is now owned by the
+# runtime template state and callers; the selector must not override it.
 _SORT_TOKEN_RE = re.compile(r"\d+|\D+")
 
 
@@ -45,29 +46,11 @@ def _template_name_sort_key(name: str) -> tuple[object, ...]:
     return tuple(parts)
 
 
-# ── Widget ───────────────────────────────────────────────────────────────────
-
-
 class TabbedTemplateSelector(QWidget):
-    """选项卡式模板选择组件。
-
-    包含两个选项卡（docx/xlsx），每个选项卡内嵌一个
-    :class:`TemplateSelector`。支持模板选中跟踪、手动选择记忆
-    和外部模板数据注入。
-
-    参数：
-        parent: 父组件。
-        on_template_selected: 选中回调 ``fn(template_type: str, template_name: str)``。
-        on_tab_changed: 选项卡切换回调 ``fn(new_tab: str, old_tab: str)``。
-        on_open_location: 打开模板文件位置回调 ``fn(template_type, template_name)``。
-        on_open_directory: 打开模板目录回调 ``fn(template_type)``。
-    """
+    """选项卡式模板选择组件。"""
 
     template_selected = Signal(str, str)
-    """选中模板时发出: (template_type, template_name)。"""
-
     tab_changed = Signal(str, str)
-    """选项卡切换时发出: (new_tab, old_tab)。"""
 
     def __init__(
         self,
@@ -95,18 +78,15 @@ class TabbedTemplateSelector(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(Spacing.GROUP_GAP)
 
-        # ── Tab bar ──────────────────────────────────────────────────────
         self._tab_titles: dict[str, str] = {}
         self._pivot = Pivot(self)
         self._pivot.setObjectName("templateSelectorPivot")
         layout.addWidget(self._pivot, 0)
 
-        # ── Stacked widget ───────────────────────────────────────────────
         self._stack = QStackedWidget(self)
         self._stack.setObjectName("templateSelectorStack")
         layout.addWidget(self._stack, 1)
 
-        # ── 创建两个选项卡 ────────────────────────────────────────────────
         self._selectors: dict[str, TemplateSelector] = {}
         for template_type, label_key in [
             ("docx", "components.template_selector_tabbed.document_templates"),
@@ -120,7 +100,6 @@ class TabbedTemplateSelector(QWidget):
                 on_open_location=self._on_open_location_cb,
                 on_open_directory=self._on_open_directory_cb,
             )
-            # Forward the template_error signal
             selector.template_error.connect(self._forward_template_error)
             self._selectors[template_type] = selector
             self._stack.addWidget(selector)
@@ -139,11 +118,6 @@ class TabbedTemplateSelector(QWidget):
     # ── Public API ────────────────────────────────────────────────────────────
 
     def activate_and_select(self, template_type: str) -> bool:
-        """激活指定选项卡并选中语言对应的默认模板。
-
-        Returns:
-            True 表示成功选中。
-        """
         resolved_type = (
             template_type if template_type in self._selectors else next(iter(self._selectors.keys()), "docx")
         )
@@ -163,11 +137,6 @@ class TabbedTemplateSelector(QWidget):
         return False
 
     def ensure_preferred_selection(self, template_type: str) -> bool:
-        """确保目标页有选中模板：保留现有选择，再恢复手选或激活默认。
-
-        Returns:
-            True 表示已有选中。
-        """
         selector = self._selectors.get(template_type)
         selected = selector.get_selected() if selector is not None else None
         if selector is not None and selector.has_template(selected):
@@ -178,17 +147,14 @@ class TabbedTemplateSelector(QWidget):
         return self.activate_and_select(template_type)
 
     def set_selection_callback(self, callback: Callable[[str, str], None] | None) -> None:
-        """设置模板选中回调。"""
         self._on_template_selected_cb = callback
 
     def get_selected_template(self) -> tuple[str, str] | None:
-        """返回 ``(template_type, template_name)`` 或 ``None``。"""
         selector = self._selectors.get(self._current_tab)
         if selector:
             name = selector.get_selected()
             if name:
                 return (self._current_tab, name)
-        # Fallback: search across tabs
         for tt, sel in self._selectors.items():
             name = sel.get_selected()
             if name:
@@ -196,7 +162,6 @@ class TabbedTemplateSelector(QWidget):
         return None
 
     def get_selected_template_resource(self) -> tuple[str, str] | None:
-        """Return ``(template_type, canonical_resource_id)`` for the selection."""
         selector = self._selectors.get(self._current_tab)
         if selector:
             resource_id = selector.get_selected_resource_id()
@@ -208,27 +173,19 @@ class TabbedTemplateSelector(QWidget):
                 return (template_type, resource_id)
         return None
 
-    def consume_last_selection_feedback(
-        self,
-    ) -> tuple[str, str, TemplateSelectionFeedback] | None:
-        """取出并清空最近一次选中回执。"""
+    def consume_last_selection_feedback(self) -> tuple[str, str, TemplateSelectionFeedback] | None:
         feedback = self._last_selection_feedback
         self._last_selection_feedback = None
         return feedback
 
-    def peek_callback_selection_feedback(
-        self,
-    ) -> tuple[str, str, TemplateSelectionFeedback] | None:
-        """查看当前 callback 的回执，不受公共 mailbox 消费影响。"""
+    def peek_callback_selection_feedback(self) -> tuple[str, str, TemplateSelectionFeedback] | None:
         return self._selection_callback_contexts[-1] if self._selection_callback_contexts else None
 
     @property
     def current_tab(self) -> str:
-        """当前激活的选项卡键（``"docx"`` 或 ``"xlsx"``）。"""
         return self._current_tab
 
     def restore_current_tab(self, template_type: str) -> str:
-        """按持久化类型恢复活动页，不产生用户选择信号。"""
         resolved_type = template_type if template_type in self._selectors else next(iter(self._selectors), "docx")
         self._set_current_tab(resolved_type, emit_signal=False)
         return resolved_type
@@ -240,33 +197,28 @@ class TabbedTemplateSelector(QWidget):
         *,
         details: dict[str, TemplateItemDetails] | None = None,
     ) -> None:
-        """加载指定类型的模板列表（由外部数据源提供）。
+        """Load templates while preserving the caller/runtime order."""
 
-        Args:
-            template_type: 模板类型。
-            names: 模板名称列表。
-            details: 模板元数据。
-        """
         selector = self._selectors.get(template_type)
         if selector is None:
             return
-        sorted_names = sorted(names, key=_template_name_sort_key)
+        ordered_names = list(dict.fromkeys(names))
         normalized_details = dict(details or {})
-        if sorted_names != self._template_cache.get(
+        if ordered_names != self._template_cache.get(
             template_type
         ) or normalized_details != self._template_details_cache.get(template_type):
-            self._template_cache[template_type] = sorted_names
+            self._template_cache[template_type] = ordered_names
             self._template_details_cache[template_type] = normalized_details
             selected = selector.get_selected()
             manual_name = None
             if self._manual_selection is not None and self._manual_selection[0] == template_type:
                 manual_name = self._manual_selection[1]
-            selector.add_templates(sorted_names, template_details=normalized_details)
+            selector.add_templates(ordered_names, template_details=normalized_details)
             if manual_name and selector.has_template(manual_name):
                 selector.select_template(manual_name, selection_source="restore")
-            elif selected and selected in sorted_names:
+            elif selected and selected in ordered_names:
                 selector.select_template(selected, selection_source="restore")
-            elif sorted_names:
+            elif ordered_names:
                 self._activate_default_template(template_type, selection_source="restore")
         if self._manual_selection is not None and self._manual_selection[0] == template_type:
             self._restore_manual_selection()
@@ -277,20 +229,41 @@ class TabbedTemplateSelector(QWidget):
         *,
         details: dict[str, dict[str, TemplateItemDetails]] | None = None,
     ) -> None:
-        """加载全部类型的模板。
-
-        Args:
-            data: ``{template_type: [name, ...]}``。
-            details: ``{template_type: {name: TemplateItemDetails}}``。
-        """
         for tt in self._selectors:
             names = data.get(tt, [])
             tt_details = (details or {}).get(tt, {})
             self.load_templates(tt, names, details=tt_details)
 
-    def show_load_error(self, summary: str, detail: str) -> None:
-        """Project one registry failure into every template tab."""
+    def refresh_from_runtime_registry(self) -> None:
+        """Refresh both tabs from the managed runtime catalog."""
 
+        try:
+            from docwen_runtime.templates import TemplateManager
+
+            manager = TemplateManager.default()
+            data: dict[str, list[str]] = {"docx": [], "xlsx": []}
+            details: dict[str, dict[str, TemplateItemDetails]] = {"docx": {}, "xlsx": {}}
+            for target in ("docx", "xlsx"):
+                for info in manager.list_templates(target, include_disabled=False):
+                    data[target].append(info.name)
+                    custom = manager.is_custom(info)
+                    details[target][info.name] = TemplateItemDetails(
+                        resource_id=info.id,
+                        usage_hint=info.description,
+                        source_label=(
+                            t("settings.templates.custom", "自定义")
+                            if custom
+                            else t("settings.templates.builtin", "内置")
+                        ),
+                        source_path=str(info.path) if custom else None,
+                        updated_label=TemplateSelector._format_modified_ns(info.modified_ns),
+                    )
+            self.load_all_templates(data, details=details)
+        except Exception as exc:
+            logger.exception("Unable to refresh managed template catalog")
+            self.show_load_error(t("components.template_selector.unavailable"), str(exc))
+
+    def show_load_error(self, summary: str, detail: str) -> None:
         self._template_cache.clear()
         self._template_details_cache.clear()
         self._manual_selection = None
@@ -299,7 +272,6 @@ class TabbedTemplateSelector(QWidget):
         self._refresh_accessibility()
 
     def get_selector(self, template_type: str) -> TemplateSelector | None:
-        """获取指定类型的内部 TemplateSelector 引用（用于测试/高级用法）。"""
         return self._selectors.get(template_type)
 
     # ── Focus ─────────────────────────────────────────────────────────────────
@@ -378,11 +350,7 @@ class TabbedTemplateSelector(QWidget):
             template_kind=template_kind,
         )
 
-    # ── Internal: helpers ─────────────────────────────────────────────────────
-
     def _forward_template_error(self, summary: str, detail: str) -> None:
-        """Forward error from child TemplateSelector. Connected as signal handler."""
-        # Just log — TemplateSelector's own signal is sufficient for UI binding.
         logger.debug("TemplateSelector error: %s — %s", summary, detail)
 
     def _refresh_accessibility(self) -> None:
