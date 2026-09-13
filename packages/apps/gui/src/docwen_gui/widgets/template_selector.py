@@ -1,12 +1,12 @@
 """
 模板列表组件 — 基于 PySide6 + qfluentwidgets。
 
-提供单个模板类型的列表显示和选择功能，支持模板列表展示、选择和文件位置打开。
+提供单个模板类型的列表显示和选择功能，并提供统一模板管理入口。
 
 架构约定：
-- 模板数据通过 ``add_templates()`` 从外部注入，本组件不直接加载模板。
-- 文件夹/位置操作通过回调（``on_open_location`` / ``on_open_directory``）
-  委托给外部，本组件不直接访问文件系统。
+- 模板数据通常通过 ``add_templates()`` 从外部注入。
+- 旧的文件夹/位置回调继续兼容；模板管理使用独立的用户可写目录。
+- 管理操作完成后可从 Runtime 注册表刷新当前列表。
 - 反馈通知通过 ``template_error`` 信号发出，由外层负责渲染。
 """
 
@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 from PySide6.QtCore import Qt, Signal
@@ -30,7 +31,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from qfluentwidgets import PrimaryPushButton
+from qfluentwidgets import PrimaryPushButton, PushButton
 
 from ..i18n import t
 from ..styles.design_tokens import Spacing
@@ -71,9 +72,9 @@ class TemplateSelector(QWidget):
         parent: 父组件。
         template_type: 模板类型（``"docx"`` 或 ``"xlsx"``）。
         on_template_selected: 选中回调 ``fn(template_name: str)``。
-        on_open_location: 打开模板文件位置回调 ``fn(template_type, template_name)``。
-            未提供时，打开位置按钮隐藏。
-        on_open_directory: 打开模板目录回调 ``fn(template_type)``。
+        on_open_location: 兼容旧版的打开模板文件位置回调。
+        on_open_directory: 兼容旧版的打开模板目录回调。
+        on_manage_templates: 可选的模板管理入口回调 ``fn(template_type)``。
     """
 
     template_selected = Signal(str)
@@ -82,6 +83,9 @@ class TemplateSelector(QWidget):
     template_error = Signal(str, str)
     """操作出错时发出: (summary, detail)。"""
 
+    catalog_changed = Signal()
+    """模板管理改变可见目录后发出。"""
+
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -89,6 +93,7 @@ class TemplateSelector(QWidget):
         on_template_selected: Callable[[str], None] | None = None,
         on_open_location: Callable[[str, str], None] | None = None,
         on_open_directory: Callable[[str], None] | None = None,
+        on_manage_templates: Callable[[str], None] | None = None,
     ):
         super().__init__(parent)
         self.setObjectName("templateSelectorRoot")
@@ -97,6 +102,7 @@ class TemplateSelector(QWidget):
         self._on_template_selected_cb = on_template_selected
         self._on_open_location_cb = on_open_location
         self._on_open_directory_cb = on_open_directory
+        self._on_manage_templates_cb = on_manage_templates
         self._selected: str | None = None
         self._user_selected_template_name: str | None = None
         self._template_details: dict[str, TemplateItemDetails] = {}
@@ -133,6 +139,14 @@ class TemplateSelector(QWidget):
         self._empty_action_button.setMinimumHeight(32)
         self._empty_action_button.clicked.connect(self._open_template_directory)
         empty_layout.addWidget(self._empty_action_button, alignment=Qt.AlignmentFlag.AlignHCenter)
+
+        self._empty_manage_button = PushButton(
+            t("components.template_selector.manage_templates", "管理模板")
+        )
+        self._empty_manage_button.setObjectName("templateSelectorEmptyManageButton")
+        self._empty_manage_button.setMinimumHeight(32)
+        self._empty_manage_button.clicked.connect(self._open_template_management)
+        empty_layout.addWidget(self._empty_manage_button, alignment=Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(self._empty_state)
 
         # ── 模板列表 ────────────────────────────────────────────────────
@@ -162,12 +176,16 @@ class TemplateSelector(QWidget):
         self._details_label.setVisible(False)
         footer_layout.addWidget(self._details_label, 1)
 
+        self._manage_button = PushButton(t("components.template_selector.manage_templates", "管理模板"), self._footer_row)
+        self._manage_button.setObjectName("templateSelectorManageButton")
+        self._manage_button.clicked.connect(self._open_template_management)
+        footer_layout.addWidget(self._manage_button, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
+
         self._open_location_button = LocationButton(self._footer_row)
         self._open_location_button.setObjectName("templateSelectorOpenButton")
         self._location_icon = self._open_location_button.icon()
         self._open_location_button.setEnabled(False)
         self._open_location_button.clicked.connect(self._open_selected_template_location)
-        # Hide if no location callback provided
         if self._on_open_location_cb is None:
             self._open_location_button.setVisible(False)
         footer_layout.addWidget(
@@ -177,7 +195,8 @@ class TemplateSelector(QWidget):
         )
         layout.addWidget(self._footer_row)
 
-        self.setTabOrder(self._list, self._open_location_button)
+        self.setTabOrder(self._list, self._manage_button)
+        self.setTabOrder(self._manage_button, self._open_location_button)
         self._show_empty_state()
 
     # ── Public API ────────────────────────────────────────────────────────────
@@ -189,13 +208,7 @@ class TemplateSelector(QWidget):
         *,
         template_details: dict[str, TemplateItemDetails] | None = None,
     ) -> None:
-        """批量加载模板列表。
-
-        Args:
-            template_names: 模板名称列表。
-            auto_select_first: 是否在没有手动选择时自动选中第一个。
-            template_details: 模板元数据字典（name → TemplateItemDetails）。
-        """
+        """批量加载模板列表。"""
         self._load_error = None
         self._empty_label.setText(t("components.template_selector.no_templates"))
         self._empty_hint_label.setText(t("components.template_selector.empty_hint"))
@@ -213,7 +226,6 @@ class TemplateSelector(QWidget):
             self._list.addItem(item)
         if template_names:
             self._show_template_list()
-            # Restore selection after list repopulation
             if self._has_manual_selection() and self._user_selected_template_name in template_names:
                 self.select_template(self._user_selected_template_name, selection_source="restore")
             elif auto_select_first and not self._has_manual_selection():
@@ -296,15 +308,47 @@ class TemplateSelector(QWidget):
         """清空模板列表。"""
         self._list.clear()
         self._clear_current_selection()
-        self._user_selected_template_name = None  # reset manual tracking on clear
+        self._user_selected_template_name = None
         self._show_empty_state()
+
+    def refresh_from_runtime_registry(self) -> None:
+        """Reload enabled templates for this type after a management change."""
+
+        try:
+            from docwen_runtime.templates import TemplateManager
+
+            manager = TemplateManager.default()
+            templates = manager.list_templates(self.template_type, include_disabled=False)
+            names: list[str] = []
+            details: dict[str, TemplateItemDetails] = {}
+            for info in templates:
+                names.append(info.name)
+                custom = manager.is_custom(info)
+                details[info.name] = TemplateItemDetails(
+                    resource_id=info.id,
+                    usage_hint=info.description,
+                    source_label=(
+                        t("settings.templates.custom", "自定义")
+                        if custom
+                        else t("settings.templates.builtin", "内置")
+                    ),
+                    source_path=str(info.path) if custom else None,
+                    updated_label=self._format_modified_ns(info.modified_ns),
+                )
+            self.add_templates(names, template_details=details)
+        except Exception as exc:
+            logger.exception("Unable to refresh template registry")
+            self.template_error.emit(
+                t("components.template_selector.unavailable"),
+                str(exc),
+            )
 
     # ── Internal: visibility ──────────────────────────────────────────────────
 
     def _show_template_list(self) -> None:
         self._empty_state.setVisible(False)
         self._list.setVisible(True)
-        self._footer_row.setVisible(bool(self._details_label.text()) or self._open_location_button.isEnabled())
+        self._footer_row.setVisible(True)
         self._details_label.setVisible(bool(self._details_label.text()))
 
     def _show_empty_state(self) -> None:
@@ -356,7 +400,6 @@ class TemplateSelector(QWidget):
         self._details_label.clear()
         self._details_label.setVisible(False)
         self._details_label.setToolTip("")
-        self._footer_row.setVisible(False)
 
     # ── Event handlers ────────────────────────────────────────────────────────
 
@@ -367,6 +410,9 @@ class TemplateSelector(QWidget):
     def _focus_primary_control(self) -> None:
         if self._list.isVisible() and self._list.count() > 0 and self._list.isEnabled():
             self._list.setFocus(Qt.FocusReason.TabFocusReason)
+            return
+        if self._empty_manage_button.isVisible() and self._empty_manage_button.isEnabled():
+            self._empty_manage_button.setFocus(Qt.FocusReason.TabFocusReason)
             return
         if self._empty_action_button.isVisible() and self._empty_action_button.isEnabled():
             self._empty_action_button.setFocus(Qt.FocusReason.TabFocusReason)
@@ -399,6 +445,8 @@ class TemplateSelector(QWidget):
 
         menu = QMenu(self._list)
         template_name = self._get_item_template_name(item)
+        manage_action = menu.addAction(t("components.template_selector.manage_templates", "管理模板"))
+        manage_action.triggered.connect(lambda _checked=False: self._open_template_management())  # type: ignore[attr-defined]
         if template_name and self._on_open_location_cb is not None:
             action = menu.addAction(self._open_location_button.toolTip())
             action.triggered.connect(  # type: ignore[attr-defined]
@@ -406,7 +454,37 @@ class TemplateSelector(QWidget):
             )
         menu.exec(self._list.viewport().mapToGlobal(position))
 
-    # ── Location actions ──────────────────────────────────────────────────────
+    # ── Management and compatibility location actions ───────────────────────
+
+    def _open_template_management(self) -> None:
+        if self._on_manage_templates_cb is not None:
+            self._on_manage_templates_cb(self.template_type)
+            return
+        try:
+            from .template_management_dialog import TemplateManagementDialog
+
+            dialog = TemplateManagementDialog(self, initial_target=self.template_type)
+            dialog.catalog_changed.connect(self._refresh_management_owner)
+            dialog.exec()
+            self._refresh_management_owner()
+        except Exception as exc:
+            logger.exception("Unable to open template management")
+            self.template_error.emit(
+                t("components.template_selector.unavailable"),
+                str(exc),
+            )
+
+    def _refresh_management_owner(self) -> None:
+        current: QWidget | None = self
+        while current is not None:
+            refresh = getattr(current, "refresh_from_runtime_registry", None)
+            if callable(refresh) and current is not self:
+                refresh()
+                self.catalog_changed.emit()
+                return
+            current = current.parentWidget()
+        self.refresh_from_runtime_registry()
+        self.catalog_changed.emit()
 
     def _open_selected_template_location(self) -> None:
         template_name = self.get_selected()
@@ -440,6 +518,13 @@ class TemplateSelector(QWidget):
             return None
         value = item.data(Qt.ItemDataRole.UserRole)
         return str(value) if value else item.text()
+
+    @staticmethod
+    def _format_modified_ns(value: int) -> str | None:
+        try:
+            return datetime.fromtimestamp(value / 1_000_000_000).strftime("%Y-%m-%d %H:%M")
+        except (OSError, OverflowError, TypeError, ValueError):
+            return None
 
     def _sync_open_location_button_state(self, template_name: str | None) -> None:
         enabled = template_name is not None and self._on_open_location_cb is not None
@@ -484,7 +569,7 @@ class TemplateSelector(QWidget):
         self._details_label.setVisible(bool(details_text))
         tooltip = self._build_selection_details_tooltip(name)
         self._details_label.setToolTip(tooltip)
-        self._footer_row.setVisible(bool(details_text) or self._open_location_button.isEnabled())
+        self._footer_row.setVisible(True)
 
     def _build_selection_details_text(self, name: str) -> str:
         details = self._template_details.get(name)
@@ -494,12 +579,7 @@ class TemplateSelector(QWidget):
         if details.source_label:
             lines.append(t("components.template_selector.source_line", value=details.source_label))
         if details.updated_label:
-            lines.append(
-                t(
-                    "components.template_selector.updated_line",
-                    value=details.updated_label,
-                )
-            )
+            lines.append(t("components.template_selector.updated_line", value=details.updated_label))
         return "\n".join(lines)
 
     def _build_selection_details_tooltip(self, name: str) -> str:
