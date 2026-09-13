@@ -125,6 +125,9 @@ class TemplateManager:
         if safe_name.casefold().endswith(suffix):
             safe_name = safe_name[: -len(suffix)]
             safe_name = _safe_display_name(safe_name)
+        for candidate in self.list_templates(template.target, include_disabled=True):
+            if candidate.id != template.id and candidate.name.casefold() == safe_name.casefold():
+                raise TemplateManagementError(f"A template named {safe_name!r} already exists")
         destination = template.path.with_name(f"{safe_name}{suffix}")
         if destination.exists() and destination.resolve(strict=False) != template.path.resolve(strict=False):
             raise TemplateManagementError(f"A template named {destination.name!r} already exists")
@@ -200,15 +203,16 @@ class TemplateManager:
     def _unique_destination(self, stem: str, target: str) -> Path:
         safe_stem = _safe_display_name(stem or "template")
         directory = self.ensure_user_directory()
-        candidate = directory / f"{safe_stem}.{target}"
-        if not candidate.exists():
-            return candidate
+        existing_names = {
+            template.name.casefold()
+            for template in self.list_templates(target, include_disabled=True)
+        }
+        candidate_stem = safe_stem
         counter = 2
-        while True:
-            candidate = directory / f"{safe_stem} ({counter}).{target}"
-            if not candidate.exists():
-                return candidate
+        while candidate_stem.casefold() in existing_names or (directory / f"{candidate_stem}.{target}").exists():
+            candidate_stem = f"{safe_stem} ({counter})"
             counter += 1
+        return directory / f"{candidate_stem}.{target}"
 
 
 __all__ = ["TemplateManagementError", "TemplateManager"]
