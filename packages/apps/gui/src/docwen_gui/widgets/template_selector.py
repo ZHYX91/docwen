@@ -140,9 +140,7 @@ class TemplateSelector(QWidget):
         self._empty_action_button.clicked.connect(self._open_template_directory)
         empty_layout.addWidget(self._empty_action_button, alignment=Qt.AlignmentFlag.AlignHCenter)
 
-        self._empty_manage_button = PushButton(
-            t("components.template_selector.manage_templates", "管理模板")
-        )
+        self._empty_manage_button = PushButton(t("components.template_selector.manage_templates", "管理模板"))
         self._empty_manage_button.setObjectName("templateSelectorEmptyManageButton")
         self._empty_manage_button.setMinimumHeight(32)
         self._empty_manage_button.clicked.connect(self._open_template_management)
@@ -176,7 +174,9 @@ class TemplateSelector(QWidget):
         self._details_label.setVisible(False)
         footer_layout.addWidget(self._details_label, 1)
 
-        self._manage_button = PushButton(t("components.template_selector.manage_templates", "管理模板"), self._footer_row)
+        self._manage_button = PushButton(
+            t("components.template_selector.manage_templates", "管理模板"), self._footer_row
+        )
         self._manage_button.setObjectName("templateSelectorManageButton")
         self._manage_button.clicked.connect(self._open_template_management)
         footer_layout.addWidget(self._manage_button, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
@@ -328,9 +328,7 @@ class TemplateSelector(QWidget):
                     resource_id=info.id,
                     usage_hint=info.description,
                     source_label=(
-                        t("settings.templates.custom", "自定义")
-                        if custom
-                        else t("settings.templates.builtin", "内置")
+                        t("settings.templates.custom", "自定义") if custom else t("settings.templates.builtin", "内置")
                     ),
                     source_path=str(info.path) if custom else None,
                     updated_label=self._format_modified_ns(info.modified_ns),
