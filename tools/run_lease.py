@@ -7,6 +7,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from tools.process_identity import observe
+
 STATES = frozenset(
     {
         "active",
@@ -22,11 +24,15 @@ STATES = frozenset(
 def lease_payload(root: Path, *, owner: str, kind: str, state: str = "active") -> dict[str, Any]:
     if not owner.startswith("docwen.") or not kind or state not in STATES:
         raise ValueError("invalid_run_lease_identity_or_state")
+    identity = observe(os.getpid()).identity
+    if os.name == "nt" and identity is None:
+        raise OSError("cannot_identify_lease_owner_process")
     return {
         "schemaVersion": 1,
         "owner": owner,
         "kind": kind,
         "pid": os.getpid(),
+        **({"processIdentity": identity} if identity is not None else {}),
         "createdAt": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "state": state,
         "root": str(root.resolve(strict=True)),

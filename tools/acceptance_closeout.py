@@ -91,7 +91,7 @@ def close_run(
         raise AcceptanceCloseoutError(f"run_lease_identity_mismatch:{run}")
     if str(lease.get("state", "")).casefold() not in workspace_cleanup.SUCCESS_STATES:
         raise AcceptanceCloseoutError(f"run_not_success_terminal:{run}:{lease.get('state')}")
-    if workspace_cleanup._process_alive(lease.get("pid")):
+    if workspace_cleanup._lease_process_alive(lease):
         raise AcceptanceCloseoutError(f"run_owner_still_alive:{run}:{lease.get('pid')}")
 
     identity = workspace_cleanup._snapshot_tree(run)

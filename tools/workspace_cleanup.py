@@ -17,6 +17,7 @@ if __package__ in {None, ""}:
     if str(_BOOTSTRAP_ROOT) not in sys.path:
         sys.path.insert(0, str(_BOOTSTRAP_ROOT))
 
+from tools import process_identity
 from tools.windows_short_path import ShortPathDriveError, unmount_short_drive
 from tools.workspace_root import WORKSPACE_ROOT_ENV as _WORKSPACE_ROOT_ENV
 from tools.workspace_root import resolve_workspace_root
@@ -131,44 +132,13 @@ def _created_at(payload: dict[str, Any]) -> datetime:
 
 
 def _process_alive(pid: object) -> bool:
-    if not isinstance(pid, int) or pid <= 0:
-        return False
-    if os.name == "nt":
-        return _windows_process_alive(pid)
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    except OSError:
-        return False
-    return True
+    return process_identity.observe(pid).alive
 
 
-def _windows_process_alive(pid: int) -> bool:
-    # os.kill(pid, 0) sends CTRL_C_EVENT on Windows; it is not a liveness probe.
-    if sys.platform != "win32":
-        raise OSError("Windows process handles are unavailable on this platform")
-    import ctypes
-    from ctypes import wintypes
-
-    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
-    kernel.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
-    kernel.OpenProcess.restype = wintypes.HANDLE
-    kernel.WaitForSingleObject.argtypes = (wintypes.HANDLE, wintypes.DWORD)
-    kernel.WaitForSingleObject.restype = wintypes.DWORD
-    kernel.CloseHandle.argtypes = (wintypes.HANDLE,)
-    kernel.CloseHandle.restype = wintypes.BOOL
-    handle = kernel.OpenProcess(0x00100000, False, pid)  # SYNCHRONIZE only
-    if not handle:
-        # Only ERROR_INVALID_PARAMETER proves that the PID no longer exists.
-        # Access denied and other query failures must keep the leased directory.
-        return ctypes.get_last_error() != 87
-    try:
-        return kernel.WaitForSingleObject(handle, 0) != 0  # only WAIT_OBJECT_0 proves exit
-    finally:
-        kernel.CloseHandle(handle)
+def _lease_process_alive(lease: dict[str, Any]) -> bool:
+    if lease.get("processIdentity") is None:
+        return _process_alive(lease.get("pid"))
+    return process_identity.owner_alive(lease.get("pid"), lease.get("processIdentity"))
 
 
 def _lease_markers(temp_root: Path, *, errors: list[dict[str, str]] | None = None) -> list[Path]:
@@ -272,7 +242,7 @@ def cleanup(*, workspace_root: Path, max_age: timedelta, apply: bool, now: datet
             if age < max_age:
                 result["skipped"].append({"path": str(runtime_root), "reason": "not_expired"})
                 continue
-            if _process_alive(payload.get("pid")):
+            if _lease_process_alive(payload):
                 result["skipped"].append({"path": str(runtime_root), "reason": "owner_process_alive"})
                 continue
             result["eligible"].append(str(runtime_root))
@@ -479,6 +449,7 @@ def _snapshot_lease(marker: Path, *, root: Path) -> dict[str, Any]:
         "owner": owner,
         "kind": payload.get("kind"),
         "pid": payload.get("pid"),
+        **({"processIdentity": payload["processIdentity"]} if "processIdentity" in payload else {}),
         "createdAt": payload.get("createdAt"),
         "state": payload.get("state"),
         "root": payload.get("root"),
@@ -559,7 +530,7 @@ def _entry_for_target(
     _validate_target_chain(absolute_target, boundary=boundary)
     identity = _snapshot_tree(absolute_target)
     for lease in identity["leases"]:
-        if _process_alive(lease.get("pid")):
+        if _lease_process_alive(lease):
             raise HousekeepingError(f"lease_process_alive:{absolute_target}:{lease.get('pid')}")
     return {
         "path": str(absolute_target),
@@ -636,7 +607,7 @@ def _automatic_lease_candidates(
 
     entries: list[dict[str, Any]] = []
     for leased_root, payload, managed_root in discovered:
-        if _process_alive(payload.get("pid")):
+        if _lease_process_alive(payload):
             skipped.append({"path": str(leased_root), "reason": "owner_process_alive"})
             continue
         if leased_root.name in DEPENDENCY_DIRECTORY_NAMES:
@@ -820,7 +791,7 @@ def _revalidate_entry(entry: dict[str, Any], *, workspace: Path) -> dict[str, An
     if current_identity != entry.get("identity"):
         raise HousekeepingError(f"target_identity_changed:{path}")
     for lease in current_identity["leases"]:
-        if _process_alive(lease.get("pid")):
+        if _lease_process_alive(lease):
             raise HousekeepingError(f"lease_process_alive:{path}:{lease.get('pid')}")
     return current_identity
 
@@ -879,7 +850,7 @@ def plan_published_candidate(directory: Path, receipt: Path) -> Path | None:
         return None
     boundary = _published_candidate_boundary(target, workspace=workspace, receipt=receipt)
     identity = _snapshot_tree(target)
-    if any(_process_alive(lease.get("pid")) for lease in identity["leases"]):
+    if any(_lease_process_alive(lease) for lease in identity["leases"]):
         raise HousekeepingError("publication_candidate_still_owned")
     plan = {
         "schema": PLAN_SCHEMA,
