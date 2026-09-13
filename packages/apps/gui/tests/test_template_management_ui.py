@@ -155,9 +155,11 @@ def test_template_readiness_updates_existing_generation_button(qapp):
 
 def test_text_output_format_remains_editable_without_template_selector(qapp, template_vm):
     from docwen_gui.widgets.settings.dialog import SettingsDialog
+    from docwen_gui.widgets.settings.text_tab import TextTab
 
     dialog = SettingsDialog(template_view_model=template_vm)
     page = dialog._tabs["text"]
+    assert isinstance(page, TextTab)
     combo = page._output_format_combo
     combo.setCurrentIndex(combo.findData("xlsx"))
     assert page._vm.config.gui.md_default_template == "xlsx"
