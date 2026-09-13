@@ -13,6 +13,24 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
+def _loop_metadata(source: Image.Image, target: str) -> dict[str, int]:
+    """Translate GIF repeats after the first play into WebP/APNG total plays."""
+    raw_loop = source.info.get("loop")
+    plays = 1 if raw_loop is None else int(raw_loop)
+    if source.format == "GIF" and raw_loop is not None and plays > 0:
+        plays += 1
+    if target == "gif":
+        if plays == 1:
+            return {}  # No Netscape extension means one play, not infinite looping.
+        loop = plays - 1 if plays else 0
+    else:
+        loop = plays
+    maximum = 0xFFFFFFFF if target == "png" else 0xFFFF
+    if not 0 <= loop <= maximum:
+        raise ValueError(f"Animation loop count cannot be represented in {target.upper()}")
+    return {"loop": loop}
+
+
 def save_sequence(
     source: Image.Image,
     output_path: str,
@@ -47,10 +65,8 @@ def save_sequence(
         metadata.update(save_all=True, append_images=frames[1:])
         if target in ("gif", "webp", "png"):
             metadata["duration"] = durations
-            if "loop" in source.info:
-                metadata["loop"] = source.info["loop"]
-            elif target in ("webp", "png"):
-                metadata["loop"] = 1
+            metadata.pop("loop", None)
+            metadata.update(_loop_metadata(source, target))
             if target == "png":
                 metadata.update(disposal=0, blend=0, default_image=poster)
             elif target == "gif":
