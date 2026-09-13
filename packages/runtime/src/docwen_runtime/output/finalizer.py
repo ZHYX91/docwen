@@ -1074,6 +1074,22 @@ class OutputFinalizer:
             # support hard links (for example FAT-family removable media).
             os.rename(io_temp, io_destination)
             return
+        if sys.platform == "linux":
+            import ctypes
+            import errno
+
+            libc = ctypes.CDLL(None, use_errno=True)
+            rename_no_replace = getattr(libc, "renameat2", None)
+            if rename_no_replace is None:
+                raise OSError(errno.ENOSYS, "Atomic no-replace rename is unavailable", str(io_destination))
+            rename_no_replace.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+            rename_no_replace.restype = ctypes.c_int
+            # AT_FDCWD, RENAME_NOREPLACE. Unlike link(), this supports FAT
+            # destinations while preserving the concurrent-writer contract.
+            if rename_no_replace(-100, os.fsencode(io_temp), -100, os.fsencode(io_destination), 1) != 0:
+                error = ctypes.get_errno()
+                raise OSError(error, os.strerror(error), str(io_destination))
+            return
         os.link(io_temp, io_destination)
         with contextlib.suppress(OSError):
             io_temp.unlink()

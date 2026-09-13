@@ -17,11 +17,11 @@ import csv
 import os
 import uuid
 from collections import deque
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from docwen_core.markdown_extensions import resolve_markdown_extensions
 from docwen_core.text.ocr import format_ocr_best_effort_warning
+from docwen_plugin_spreadsheet.delimited import decoded_samples
 
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ConverterContext
@@ -211,30 +211,13 @@ def _read_csv_flexible(file_path: str, source_format: str) -> Any:
     """Read a CSV file with flexible encoding and delimiter detection."""
     import pandas as pd
 
-    candidates = ("utf-8-sig", "utf-8", "gbk", "utf-16")
     delimiters = ",;\t|"
     is_tsv = source_format == "tsv"
 
     def should_skip_blank_lines(sep: str | None = None) -> bool:
         return not (is_tsv or sep == "\t")
 
-    try:
-        with Path(file_path).open("rb") as f:
-            sample_bytes = f.read(65536)
-    except Exception:
-        return pd.read_csv(
-            file_path,
-            header=None,
-            keep_default_na=False,
-            skip_blank_lines=should_skip_blank_lines(),
-        )
-
-    for encoding in candidates:
-        try:
-            sample_text = sample_bytes.decode(encoding)
-        except Exception:
-            continue
-
+    for encoding, sample_text in decoded_samples(file_path):
         sep = None
         try:
             sep = csv.Sniffer().sniff(sample_text, delimiters=delimiters).delimiter
@@ -246,6 +229,7 @@ def _read_csv_flexible(file_path: str, source_format: str) -> Any:
                 return pd.read_csv(
                     file_path,
                     header=None,
+                    dtype=str,
                     keep_default_na=False,
                     encoding=encoding,
                     sep=sep,
@@ -254,6 +238,7 @@ def _read_csv_flexible(file_path: str, source_format: str) -> Any:
             return pd.read_csv(
                 file_path,
                 header=None,
+                dtype=str,
                 keep_default_na=False,
                 encoding=encoding,
                 sep=None,
@@ -266,6 +251,7 @@ def _read_csv_flexible(file_path: str, source_format: str) -> Any:
     return pd.read_csv(
         file_path,
         header=None,
+        dtype=str,
         keep_default_na=False,
         skip_blank_lines=should_skip_blank_lines(),
     )

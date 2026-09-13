@@ -13,11 +13,12 @@ from __future__ import annotations
 
 import csv
 import os
-import re
 import uuid
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
+from docwen_plugin_spreadsheet.delimited import decoded_samples
 
 if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ConverterContext
@@ -36,56 +37,6 @@ def _load_admitted_xlsx(file_path: str, *, data_only: bool = True) -> Any:
         return openpyxl.load_workbook(workbook_stream, data_only=data_only)
 
 
-def _maybe_number(v: str) -> Any:
-    """Try to convert a string to int or float, preserving leading zeros."""
-    s = (v or "").strip()
-    if s == "":
-        return ""
-    # Integer
-    if re.fullmatch(r"-?[0-9]+", s):
-        if len(s) > 1 and s.startswith("0"):
-            return v
-        if len(s) > 2 and s.startswith("-0"):
-            return v
-        try:
-            return int(s)
-        except Exception:
-            return v
-    # Float
-    if re.fullmatch(r"-?[0-9]+\.[0-9]+", s):
-        try:
-            return float(s)
-        except Exception:
-            return v
-    return v
-
-
-def _detect_csv_encoding(file_path: str) -> str:
-    """Detect the encoding of a CSV/TSV file by trying a sample of the file.
-
-    Tries encodings in the same order as ``_read_csv_flexible()``
-    (utf-8-sig, utf-8, gbk, utf-16) to ensure consistency between
-    CSV/TSV→XLSX and CSV→MD routes.  If all attempts fail, falls back
-    to utf-8-sig.
-    """
-    candidates = ("utf-8-sig", "utf-8", "gbk", "utf-16")
-
-    try:
-        with open(file_path, "rb") as f:
-            sample_bytes = f.read(65536)
-    except Exception:
-        return "utf-8-sig"
-
-    for encoding in candidates:
-        try:
-            sample_bytes.decode(encoding)
-            return encoding
-        except (UnicodeDecodeError, UnicodeError):
-            continue
-
-    return "utf-8-sig"
-
-
 def _build_delimited_workbook(
     input_path: str,
     *,
@@ -102,7 +53,7 @@ def _build_delimited_workbook(
     ws.title = "Sheet1"
 
     row_count = 0
-    detected_enc = _detect_csv_encoding(input_path)
+    detected_enc = next(iter(decoded_samples(input_path)), ("utf-8-sig", ""))[0]
     try:
         with open(input_path, encoding=detected_enc, newline="") as f:
             reader = csv.reader(f, delimiter=sep)
@@ -110,7 +61,8 @@ def _build_delimited_workbook(
                 if cancel_check is not None and r_idx % 1000 == 0:
                     cancel_check()
                 for c_idx, value in enumerate(row, 1):
-                    ws.cell(row=r_idx, column=c_idx, value=_maybe_number(value))
+                    cell = ws.cell(row=r_idx, column=c_idx, value=value)
+                    cell.data_type = "s"
                 row_count = r_idx
     except Exception:
         wb.close()
@@ -389,25 +341,7 @@ class TsvToXlsxConverter:
 
         # ── Phase 1: Parse TSV ───────────────────────────────────────
         try:
-            import openpyxl
-
-            wb = openpyxl.Workbook()
-            ws = wb.active
-            if ws is None:
-                ws = wb.create_sheet()
-            ws.title = "Sheet1"
-
-            row_count = 0
-            detected_enc = _detect_csv_encoding(input_path)
-            with open(input_path, encoding=detected_enc, newline="") as f:
-                reader = csv.reader(f, delimiter="\t")
-                for r_idx, row in enumerate(reader, 1):
-                    # Allow cancellation mid-conversion for large files
-                    if r_idx % 1000 == 0:
-                        context.cancellation.check()
-                    for c_idx, value in enumerate(row, 1):
-                        ws.cell(row=r_idx, column=c_idx, value=_maybe_number(value))
-                    row_count = r_idx
+            wb, row_count = _build_delimited_workbook(input_path, sep="\t", cancel_check=context.cancellation.check)
 
             context.progress.report_progress(50.0, "Writing XLSX...")
         except Exception as exc:

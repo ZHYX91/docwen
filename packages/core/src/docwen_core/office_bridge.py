@@ -7,24 +7,22 @@ Callers provide route-specific SaveAs format codes and application types.
 from __future__ import annotations
 
 import contextlib
-import csv
-import io
 import multiprocessing
 import os
 import shutil
-import signal
 import stat
 import subprocess
 import sys
 import tempfile
 import time
 import zipfile
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, Protocol
 
 from docwen_core.detection import SUPPORTED_EXTENSION_FORMATS
+from docwen_core.windows_process import WindowsProcessIdentity
 
 AppType = Literal["word", "excel", "powerpoint"]
 
@@ -250,85 +248,6 @@ def _get_com_app_pid(app: object) -> int | None:
         return None
 
 
-def _process_exists(process_id: int) -> bool:
-    if sys.platform == "win32":
-        try:
-            proc = subprocess.run(
-                ["tasklist", "/FI", f"PID eq {process_id}", "/FO", "CSV", "/NH"],
-                check=False,
-                text=True,
-                capture_output=True,
-                timeout=5,
-            )
-        except Exception:
-            return False
-        for row in csv.reader(io.StringIO(proc.stdout)):
-            if len(row) >= 2:
-                with contextlib.suppress(ValueError):
-                    if int(row[1]) == process_id:
-                        return True
-        return False
-
-    try:
-        os.kill(process_id, 0)
-    except OSError:
-        return False
-    return True
-
-
-def _wait_for_process_exit(process_id: int, *, timeout_s: float = 5.0) -> bool:
-    deadline = time.monotonic() + timeout_s
-    while time.monotonic() < deadline:
-        if not _process_exists(process_id):
-            return True
-        time.sleep(0.1)
-    return not _process_exists(process_id)
-
-
-def _terminate_process(process_id: int) -> None:
-    with contextlib.suppress(Exception):
-        os.kill(process_id, signal.SIGTERM)
-
-
-def _office_process_names(*, prog_id: str, app_type: AppType) -> tuple[str, ...]:
-    prog_id_lower = prog_id.lower()
-    if prog_id_lower.startswith("kwps"):
-        return ("WPS.EXE",)
-    if prog_id_lower.startswith("ket"):
-        return ("KET.EXE",)
-    if prog_id_lower.startswith("kwpp"):
-        return ("KWPP.EXE",)
-    if app_type == "word":
-        return ("WINWORD.EXE",)
-    if app_type == "excel":
-        return ("EXCEL.EXE",)
-    return ("POWERPNT.EXE",)
-
-
-def _snapshot_process_ids(process_names: tuple[str, ...]) -> set[int]:
-    if sys.platform != "win32":
-        return set()
-
-    process_ids: set[int] = set()
-    for process_name in process_names:
-        try:
-            proc = subprocess.run(
-                ["tasklist", "/FI", f"IMAGENAME eq {process_name}", "/FO", "CSV", "/NH"],
-                check=False,
-                text=True,
-                capture_output=True,
-                timeout=5,
-            )
-        except Exception:
-            continue
-        for row in csv.reader(io.StringIO(proc.stdout)):
-            if len(row) < 2 or row[0].upper() != process_name.upper():
-                continue
-            with contextlib.suppress(ValueError):
-                process_ids.add(int(row[1]))
-    return process_ids
-
-
 def _try_com_conversion(
     input_path: str,
     output_path: str,
@@ -337,6 +256,7 @@ def _try_com_conversion(
     save_format: int,
     app_type: AppType,
     suppress_new_revisions: bool = False,
+    on_process_owned: Callable[[WindowsProcessIdentity], None] | None = None,
 ) -> str | None:
     pythoncom, win32_client = _import_win32()
     if pythoncom is None or win32_client is None:
@@ -344,22 +264,19 @@ def _try_com_conversion(
 
     app: Any = None
     doc_or_wb: Any = None
-    app_pid: int | None = None
-    office_process_names: tuple[str, ...] = ()
-    office_before_pids: set[int] = set()
+    owned_process: WindowsProcessIdentity | None = None
     try:
         pythoncom.CoInitialize()  # pyright: ignore[reportAttributeAccessIssue]
-        office_process_names = _office_process_names(prog_id=prog_id, app_type=app_type)
-        office_before_pids = _snapshot_process_ids(office_process_names)
-        dispatch_ex = getattr(win32_client, "DispatchEx", None)
-        if callable(dispatch_ex):
-            try:
-                app = dispatch_ex(prog_id)
-                app_pid = _get_com_app_pid(app)
-            except Exception:
-                app = win32_client.Dispatch(prog_id)  # pyright: ignore[reportAttributeAccessIssue]
-        else:
-            app = win32_client.Dispatch(prog_id)  # pyright: ignore[reportAttributeAccessIssue]
+        started_at = time.time_ns()
+        app = win32_client.DispatchEx(prog_id)
+        app_pid = _get_com_app_pid(app)
+        if app_pid is None:
+            return None
+        owned_process = WindowsProcessIdentity.capture(app_pid, started_after_ns=started_at)
+        if owned_process is None:
+            return None
+        if on_process_owned is not None:
+            on_process_owned(owned_process)
         with contextlib.suppress(Exception):
             app.Visible = False
         with contextlib.suppress(Exception):
@@ -417,26 +334,10 @@ def _try_com_conversion(
                     doc_or_wb.Close()
                 else:
                     doc_or_wb.Close(SaveChanges=False)
-        if app is not None:
-            if app_pid is None:
-                app_pid = _get_com_app_pid(app)
+        if app is not None and owned_process is not None:
             with contextlib.suppress(Exception):
                 app.Quit()
-            process_ids: set[int] = set()
-            if app_pid is not None:
-                process_ids.add(app_pid)
-            if office_process_names:
-                process_ids.update(_snapshot_process_ids(office_process_names) - office_before_pids)
-            for _ in range(2):
-                for process_id in process_ids:
-                    if not _wait_for_process_exit(process_id):
-                        _terminate_process(process_id)
-                if not office_process_names:
-                    break
-                time.sleep(0.2)
-                process_ids = _snapshot_process_ids(office_process_names) - office_before_pids
-                if not process_ids:
-                    break
+            owned_process.terminate_if_running(grace_ms=5000)
         if pythoncom is not None:
             with contextlib.suppress(Exception):
                 pythoncom.CoUninitialize()  # pyright: ignore[reportAttributeAccessIssue]
@@ -461,6 +362,7 @@ def _com_conversion_worker(
             save_format=save_format,
             app_type=app_type,
             suppress_new_revisions=suppress_new_revisions,
+            on_process_owned=result_connection.send,
         )
     finally:
         with contextlib.suppress(Exception):
@@ -515,20 +417,6 @@ def _stop_com_worker(process: _ComWorkerProcess) -> None:
             process.join(timeout=_COM_WORKER_STOP_TIMEOUT_S)
 
 
-def _terminate_new_office_processes(
-    process_names: tuple[str, ...],
-    before_process_ids: set[int],
-) -> None:
-    """Clean Office processes created by a worker that could not run ``finally``."""
-    for _ in range(2):
-        new_process_ids = _snapshot_process_ids(process_names) - before_process_ids
-        for process_id in new_process_ids:
-            _terminate_process(process_id)
-        if not new_process_ids:
-            break
-        time.sleep(0.2)
-
-
 def _try_com_conversion_bounded(
     input_path: str,
     output_path: str,
@@ -558,8 +446,6 @@ def _try_com_conversion_bounded(
             suppress_new_revisions=suppress_new_revisions,
         )
 
-    process_names = _office_process_names(prog_id=prog_id, app_type=app_type)
-    before_process_ids = _snapshot_process_ids(process_names)
     try:
         process, result_connection = _start_com_conversion_process(
             input_path,
@@ -574,35 +460,40 @@ def _try_com_conversion_bounded(
 
     deadline = time.monotonic() + timeout_s
     forced_stop = False
+    owned_process: WindowsProcessIdentity | None = None
     try:
-        while process.is_alive():
+        while True:
             if _is_cancel_requested(cancel) or time.monotonic() >= deadline:
                 forced_stop = True
-                _stop_com_worker(process)
                 return None
             if result_connection.poll(_COM_POLL_INTERVAL_S):
-                with contextlib.suppress(EOFError, OSError):
-                    result = result_connection.recv()
-                    process.join(timeout=_COM_WORKER_STOP_TIMEOUT_S)
-                    if process.is_alive():
-                        _stop_com_worker(process)
-                    return result if isinstance(result, str) else None
-
-        process.join(timeout=_COM_WORKER_STOP_TIMEOUT_S)
-        if result_connection.poll():
-            with contextlib.suppress(EOFError, OSError):
-                result = result_connection.recv()
-                return result if isinstance(result, str) else None
-        return None
+                try:
+                    message = result_connection.recv()
+                except (EOFError, OSError):
+                    return None
+                if isinstance(message, WindowsProcessIdentity):
+                    owned_process = message
+                    continue
+                process.join(timeout=_COM_WORKER_STOP_TIMEOUT_S)
+                return message if isinstance(message, str) else None
+            if not process.is_alive():
+                return None
     finally:
-        result_connection.close()
         if process.is_alive():
-            forced_stop = True
             _stop_com_worker(process)
+        # Cancellation can race the worker's ownership notification. Drain only
+        # after stopping the worker, before closing its pipe.
+        with contextlib.suppress(EOFError, OSError):
+            while result_connection.poll():
+                message = result_connection.recv()
+                if isinstance(message, WindowsProcessIdentity):
+                    owned_process = message
+        result_connection.close()
+        if owned_process is not None:
+            owned_process.terminate_if_running()
         if forced_stop:
             with contextlib.suppress(OSError):
                 Path(output_path).unlink(missing_ok=True)
-            _terminate_new_office_processes(process_names, before_process_ids)
 
 
 def _remove_temp_tree(

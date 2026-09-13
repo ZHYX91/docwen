@@ -50,42 +50,73 @@ class ImageFormatConverter:
         suffix = f".{target}"
         artifacts: list[ArtifactManifest] = []
         frames = 1
+        diagnostics: list[ConversionDiagnostic] = []
 
         try:
-            img = Image.open(input_path)
-            n_frames = getattr(img, "n_frames", 1)
+            with Image.open(input_path) as img:
+                n_frames = getattr(img, "n_frames", 1)
 
-            if source_format == "tif" and n_frames > 1 and target != "tif":
-                img.close()
-                from docwen_plugin_image._common import iter_frames
-
-                frames_list = iter_frames(input_path)
-                frames = len(frames_list)
-                for idx, frame in enumerate(frames_list, 1):
-                    context.cancellation.check()
-                    output_path = context.workspace.create_artifact_path("primary" if idx == 1 else "auxiliary", suffix)
-                    save_image_with_options(frame, output_path, target, context.request.options)
-                    frame.close()
-                    artifact = ArtifactManifest(
-                        artifact_id=new_artifact_id(),
-                        kind="primary" if idx == 1 else "auxiliary",
-                        staging_path=output_path,
-                        suggested_name=f"{input_stem(input_path)}_page{idx}.{target}",
-                        media_type=media_type_for(target),
-                        metadata={
-                            "source_format": source_format,
-                            "target_format": target,
-                            "page_index": idx - 1,
-                        },
-                        is_primary=(idx == 1),
-                    )
-                    context.workspace.add_artifact(artifact)
-                    artifacts.append(artifact)
-            else:
-                try:
+                if n_frames > 1 and ((source_format == "tif" and target != "tif") or target in ("jpg", "bmp")):
+                    frames = n_frames
+                    frame_label = "page" if source_format == "tif" else "frame"
+                    if frame_label == "frame":
+                        diagnostics.append(
+                            ConversionDiagnostic(
+                                level="warning",
+                                code="IMAGEFMT-FRAMES-SPLIT",
+                                message="The static target contains separate frames; animation playback timing is not retained.",
+                            )
+                        )
+                    for idx in range(1, n_frames + 1):
+                        context.cancellation.check()
+                        output_path = context.workspace.create_artifact_path(
+                            "primary" if idx == 1 else "auxiliary", suffix
+                        )
+                        img.seek(idx - 1)
+                        with img.copy() as frame:
+                            save_image_with_options(frame, output_path, target, context.request.options)
+                        artifact = ArtifactManifest(
+                            artifact_id=new_artifact_id(),
+                            kind="primary" if idx == 1 else "auxiliary",
+                            staging_path=output_path,
+                            suggested_name=f"{input_stem(input_path)}_{frame_label}{idx}.{target}",
+                            media_type=media_type_for(target),
+                            metadata={
+                                "source_format": source_format,
+                                "target_format": target,
+                                "page_index": idx - 1,
+                            },
+                            is_primary=(idx == 1),
+                        )
+                        context.workspace.add_artifact(artifact)
+                        artifacts.append(artifact)
+                else:
                     output_path = context.workspace.create_artifact_path("primary", suffix)
-                    img.load()
-                    if target in ("jpg", "webp"):
+                    if n_frames > 1:
+                        from docwen_plugin_image.format_conversion.sequence import save_sequence
+
+                        if source_format != "tif" and target == "tif":
+                            diagnostics.append(
+                                ConversionDiagnostic(
+                                    level="warning",
+                                    code="IMAGEFMT-ANIMATION-TO-PAGES",
+                                    message="All animation frames are retained as TIFF pages; playback timing is not retained.",
+                                )
+                            )
+                        if img.info.get("default_image") and target != "png":
+                            diagnostics.append(
+                                ConversionDiagnostic(
+                                    level="warning",
+                                    code="IMAGEFMT-POSTER-OMITTED",
+                                    message="The APNG poster is omitted; animation frames are retained.",
+                                )
+                            )
+                        frames = save_sequence(
+                            img, output_path, target, context.request.options, cancel_check=context.cancellation.check
+                        )
+                        width, height = img.size
+                    elif target in ("jpg", "webp"):
+                        img.load()
                         prepared, save_metadata = prepare_flat_export(img)
                         try:
                             save_image_with_options(
@@ -101,19 +132,17 @@ class ImageFormatConverter:
                     else:
                         save_image_with_options(img, output_path, target, context.request.options)
                         width, height = img.size
-                finally:
-                    img.close()
-                artifact = ArtifactManifest(
-                    artifact_id=new_artifact_id(),
-                    kind="primary",
-                    staging_path=output_path,
-                    suggested_name=f"{input_stem(input_path)}.{target}",
-                    media_type=media_type_for(target),
-                    metadata={"target_format": target, "width": width, "height": height},
-                    is_primary=True,
-                )
-                context.workspace.add_artifact(artifact)
-                artifacts.append(artifact)
+                    artifact = ArtifactManifest(
+                        artifact_id=new_artifact_id(),
+                        kind="primary",
+                        staging_path=output_path,
+                        suggested_name=f"{input_stem(input_path)}.{target}",
+                        media_type=media_type_for(target),
+                        metadata={"target_format": target, "width": width, "height": height},
+                        is_primary=True,
+                    )
+                    context.workspace.add_artifact(artifact)
+                    artifacts.append(artifact)
         except Exception as exc:
             context.logger.error(f"Image format conversion failed: {exc}")
             return ConversionResult(
@@ -140,7 +169,8 @@ class ImageFormatConverter:
             success=True,
             artifacts=artifacts,
             diagnostics=[
-                ConversionDiagnostic(level="info", message=f"Converted image to {target.upper()}", code="IMAGEFMT-OK")
+                *diagnostics,
+                ConversionDiagnostic(level="info", message=f"Converted image to {target.upper()}", code="IMAGEFMT-OK"),
             ],
             metrics=ConversionMetrics(
                 input_bytes=file_size(input_path),

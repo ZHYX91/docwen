@@ -13,6 +13,15 @@ import pytest
 pytestmark = pytest.mark.unit
 
 
+def _mock_owned_process(monkeypatch: pytest.MonkeyPatch) -> None:
+    from docwen_core import office_bridge
+    from docwen_core.windows_process import WindowsProcessIdentity
+
+    monkeypatch.setattr(office_bridge, "_get_com_app_pid", lambda app: 4242)
+    monkeypatch.setattr(WindowsProcessIdentity, "capture", lambda pid, **kwargs: WindowsProcessIdentity(pid, 1))
+    monkeypatch.setattr(WindowsProcessIdentity, "terminate_if_running", lambda self, **kwargs: None)
+
+
 def _write_formula_writer_container(
     path: Path,
     *,
@@ -44,6 +53,7 @@ def _write_formula_writer_container(
 
 __all__ = (
     "Path",
+    "_mock_owned_process",
     "_write_formula_writer_container",
     "os",
     "pytest",
