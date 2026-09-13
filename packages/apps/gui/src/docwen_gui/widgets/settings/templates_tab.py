@@ -21,11 +21,11 @@ from PySide6.QtWidgets import (
     QMenu,
     QMessageBox,
     QPushButton,
-    QTabWidget,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
-from qfluentwidgets import PrimaryPushButton, PushButton
+from qfluentwidgets import Pivot, PrimaryPushButton, PushButton
 
 from docwen_runtime.templates import TemplateManagementError
 
@@ -83,7 +83,10 @@ class TemplatesTab(BaseSettingsTab):
         intro.setObjectName("templateManagementDescription")
         root.addWidget(intro)
 
-        self._tabs = QTabWidget(self)
+        self._pivot = Pivot(self)
+        self._pivot.setObjectName("templateManagementPivot")
+        root.addWidget(self._pivot)
+        self._tabs = QStackedWidget(self)
         self._tabs.setObjectName("templateManagementTabs")
         self._tabs.setMinimumHeight(320)
         for target, title in (
@@ -108,8 +111,10 @@ class TemplatesTab(BaseSettingsTab):
             )
             layout.addWidget(template_list, 1)
             self._lists[target] = template_list
-            self._tabs.addTab(page, title)
-        self._tabs.currentChanged.connect(lambda _index: self._sync_actions())
+            index = self._tabs.addWidget(page)
+            self._pivot.addItem(target, title, onClick=lambda _checked=False, i=index: self._tabs.setCurrentIndex(i))
+        self._pivot.setCurrentItem("docx")
+        self._tabs.currentChanged.connect(self._on_target_changed)
         root.addWidget(self._tabs, 1)
 
         primary_row = QGridLayout()
@@ -176,6 +181,10 @@ class TemplatesTab(BaseSettingsTab):
         button.clicked.connect(callback)
         apply_theme_class(button, "primary" if primary else "secondary")
         return button
+
+    def _on_target_changed(self, _index: int) -> None:
+        self._pivot.setCurrentItem(self._target())
+        self._sync_actions()
 
     def _target(self) -> str:
         return "xlsx" if self._tabs.currentIndex() == 1 else "docx"
