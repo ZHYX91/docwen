@@ -10,7 +10,7 @@ from types import SimpleNamespace
 from typing import cast
 
 import pytest
-from tools import qa, workspace_cleanup, workspace_root
+from tools import process_identity, qa, workspace_cleanup, workspace_root
 
 pytestmark = pytest.mark.unit
 
@@ -519,4 +519,38 @@ def test_cli_separates_saved_plan_generation_from_apply(
     applied = json.loads(capsys.readouterr().out)
     assert applied["removed"] == [str(target.resolve())]
     assert applied["removedBytes"] == len("payload")
+    assert not target.exists()
+
+
+def test_process_birth_is_bound_to_plan_and_rechecked_before_cleanup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, workspace = _workspace(tmp_path)
+    target = workspace / "temp" / "reused-pid"
+    _lease(target, created_at=datetime.now(UTC), state="completed-success", pid=4321)
+    marker = target / workspace_cleanup.LEASE_NAME
+    payload = json.loads(marker.read_text(encoding="utf-8"))
+    identity = "windows-filetime:0000000000000001"
+    payload["processIdentity"] = identity
+    marker.write_text(json.dumps(payload), encoding="utf-8")
+    monkeypatch.setattr(
+        process_identity,
+        "observe",
+        lambda pid: process_identity.ProcessObservation(True, "windows-filetime:0000000000000002"),
+    )
+    plan = workspace_cleanup.create_plan(
+        workspace_root=workspace, explicit_targets=(target,), reason="reuse regression"
+    )
+    assert plan["entries"][0]["identity"]["leases"][0]["processIdentity"] == identity
+    saved = workspace_cleanup.save_plan(plan, workspace / "diagnostics" / "birth-plan.json")
+    monkeypatch.setattr(process_identity, "observe", lambda pid: process_identity.ProcessObservation(True, identity))
+    with pytest.raises(workspace_cleanup.HousekeepingError, match="lease_process_alive"):
+        workspace_cleanup.apply_saved_plan(saved, workspace_root=workspace)
+    assert target.is_dir()
+    monkeypatch.setattr(
+        process_identity,
+        "observe",
+        lambda pid: process_identity.ProcessObservation(True, "windows-filetime:0000000000000002"),
+    )
+    workspace_cleanup.apply_saved_plan(saved, workspace_root=workspace)
     assert not target.exists()
