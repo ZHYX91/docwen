@@ -461,6 +461,7 @@ def _base_env(cwd: Path) -> dict[str, str]:
     env["PYTHONUTF8"] = "1"
     env["PYTHONIOENCODING"] = "utf-8"
     env["DOCWEN_CONFIG_DIR"] = str(cwd / "config_home")
+    env["DOCWEN_DATA_DIR"] = str(cwd / "data_home")
     env["DOCWEN_LOG_DIR"] = str(cwd / "log_home")
     env["DOCWEN_LOG_TO_TEMP"] = ""
 

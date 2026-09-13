@@ -977,6 +977,7 @@ def _run(binary_path: Path, *args: str, cwd: Path) -> subprocess.CompletedProces
     env["PYTHONUTF8"] = "1"
     env["PYTHONIOENCODING"] = "utf-8"
     env["DOCWEN_CONFIG_DIR"] = str(cwd / "config_home")
+    env["DOCWEN_DATA_DIR"] = str(cwd / "data_home")
     env["DOCWEN_LOG_DIR"] = str(cwd / "log_home")
     env["DOCWEN_LOG_TO_TEMP"] = ""
     return subprocess.run(
@@ -1003,6 +1004,7 @@ def _run_multiprocessing_egress_boundary_smoke(binary_path: Path, *, work_dir: P
     env["PYTHONUTF8"] = "1"
     env["PYTHONIOENCODING"] = "utf-8"
     env["DOCWEN_CONFIG_DIR"] = str(work_dir / "config_home")
+    env["DOCWEN_DATA_DIR"] = str(work_dir / "data_home")
     env["DOCWEN_LOG_DIR"] = str(work_dir / "log_home")
     env["DOCWEN_LOG_TO_TEMP"] = ""
     env["DOCWEN_TEST_MULTIPROCESS_EGRESS_REPORT"] = str(report_path)
@@ -2496,6 +2498,7 @@ def _run_machine_protocol_smoke_impl(
     env["PYTHONUTF8"] = "1"
     env["PYTHONIOENCODING"] = "utf-8"
     env["DOCWEN_CONFIG_DIR"] = str(work_dir / "config_home")
+    env["DOCWEN_DATA_DIR"] = str(work_dir / "data_home")
     env["DOCWEN_LOG_DIR"] = str(work_dir / "log_home")
     env["DOCWEN_LOG_TO_TEMP"] = ""
     env["DOCWEN_WORKSPACE_ROOT"] = str(physical_governed_root)
