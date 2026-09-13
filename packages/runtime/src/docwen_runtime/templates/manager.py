@@ -71,7 +71,8 @@ def _move_to_windows_recycle_bin(path: Path) -> None:
     operation.wFunc = 3  # FO_DELETE
     operation.pFrom = source
     operation.fFlags = 0x0040 | 0x0010 | 0x0004 | 0x0400  # ALLOWUNDO | NOCONFIRMATION | SILENT | NOERRORUI
-    result = ctypes.windll.shell32.SHFileOperationW(ctypes.byref(operation))
+    windows_dlls = getattr(ctypes, "windll")
+    result = windows_dlls.shell32.SHFileOperationW(ctypes.byref(operation))
     if result != 0 or operation.fAnyOperationsAborted:
         raise OSError(f"Windows recycle-bin operation failed with code {result}")
 
