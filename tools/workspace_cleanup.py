@@ -654,7 +654,10 @@ def create_plan(
     now: datetime | None = None,
     failure_ttl: timedelta = DEFAULT_FAILURE_TTL,
     failure_max_per_kind: int = DEFAULT_FAILURE_MAX_PER_KIND,
+    disposition: str = "delete",
 ) -> dict[str, Any]:
+    if disposition not in {"delete", "recycle"}:
+        raise HousekeepingError("unsupported_disposition")
     workspace = _absolute(workspace_root)
     if not workspace.is_dir() or not _chain_is_plain(workspace, boundary=workspace):
         raise HousekeepingError(f"unsafe_workspace_root:{workspace}")
@@ -688,6 +691,7 @@ def create_plan(
     entries.sort(key=lambda entry: os.path.normcase(str(entry["path"])))
     _assert_non_overlapping(entries)
     plan: dict[str, Any] = {
+        "disposition": disposition,
         "schema": PLAN_SCHEMA,
         "createdAt": current_time.isoformat().replace("+00:00", "Z"),
         "workspaceRoot": str(workspace),
@@ -766,11 +770,18 @@ def _revalidate_entry(entry: dict[str, Any], *, workspace: Path) -> dict[str, An
     path = _absolute(Path(str(entry.get("path", ""))))
     source = str(entry.get("source", ""))
     clean_dependencies = source == "clean-deps"
-    classified_source, boundary = _classify_target(
-        path,
-        workspace=workspace,
-        clean_dependencies=clean_dependencies,
-    )
+    if source == "published-candidate":
+        receipt = Path(str(entry.get("publicationReceipt", "")))
+        boundary = _published_candidate_boundary(path, workspace=workspace, receipt=receipt)
+        if _sha256_bytes(receipt.read_bytes()) != entry.get("publicationReceiptSha256"):
+            raise HousekeepingError("publication_receipt_changed")
+        classified_source = source
+    else:
+        classified_source, boundary = _classify_target(
+            path,
+            workspace=workspace,
+            clean_dependencies=clean_dependencies,
+        )
     source_matches = source == classified_source or (source == "lease-policy" and classified_source == "explicit")
     if not source_matches:
         raise HousekeepingError(f"plan_source_mismatch:{path}:{source}:{classified_source}")
@@ -802,10 +813,78 @@ def _unmount_entry_short_drives(entry: dict[str, Any]) -> None:
             raise HousekeepingError(str(error)) from error
 
 
+def _published_candidate_boundary(target: Path, *, workspace: Path, receipt: Path) -> Path:
+    boundary = workspace / "artifacts"
+    if target.parent != boundary or receipt.parent != workspace / "acceptance":
+        raise HousekeepingError("publication_closeout_boundary_mismatch")
+    _validate_target_chain(target, boundary=workspace)
+    if not _chain_is_plain(receipt, boundary=workspace):
+        raise HousekeepingError("publication_receipt_not_plain")
+    state = _read_json_object(receipt)
+    if state.get("schema") != "docwen-publication-progress-v1" or state.get("stage") != "verified":
+        raise HousekeepingError("publication_not_verified")
+    if state.get("pending") is not None or not state.get("releaseId") or state.get("provenance") != "verified":
+        raise HousekeepingError("publication_identity_incomplete")
+    assets = state.get("assets")
+    if not isinstance(assets, dict) or len(assets) != 4:
+        raise HousekeepingError("publication_inventory_incomplete")
+    if {p.name for p in target.iterdir()} != set(assets) | {"candidate.json"}:
+        raise HousekeepingError("publication_local_inventory_changed")
+    for name, identity in {**assets, "candidate.json": {"sha256": state.get("manifestSha256")}}.items():
+        file = target / name
+        if file.parent != target or not file.is_file() or not _chain_is_plain(file, boundary=target):
+            raise HousekeepingError("publication_asset_not_plain")
+        if "bytes" in identity and file.stat().st_size != identity["bytes"]:
+            raise HousekeepingError("publication_asset_changed")
+        with file.open("rb") as stream:
+            digest = hashlib.file_digest(stream, "sha256").hexdigest()
+        if digest != identity.get("sha256"):
+            raise HousekeepingError("publication_asset_changed")
+    return boundary
+
+
+def plan_published_candidate(directory: Path, receipt: Path) -> Path | None:
+    """Plan retirement only for a verified local publication; never delete on publish."""
+    target, receipt = _absolute(directory), _absolute(receipt)
+    workspace = target.parent.parent
+    # Hosted CI artifacts are owned by the runner, not this workspace lifecycle.
+    if target.parent.name != "artifacts" or workspace.name != ".workspace":
+        return None
+    boundary = _published_candidate_boundary(target, workspace=workspace, receipt=receipt)
+    identity = _snapshot_tree(target)
+    if any(_process_alive(lease.get("pid")) for lease in identity["leases"]):
+        raise HousekeepingError("publication_candidate_still_owned")
+    plan = {
+        "schema": PLAN_SCHEMA,
+        "workspaceRoot": str(workspace),
+        "createdAt": datetime.now(UTC).isoformat(),
+        "disposition": "recycle" if os.name == "nt" else "delete",
+        "entries": [
+            {
+                "path": str(target),
+                "source": "published-candidate",
+                "allowedBoundary": str(boundary),
+                "reason": "immutable_publication_verified",
+                "identity": identity,
+                "publicationReceipt": str(receipt),
+                "publicationReceiptSha256": _sha256_bytes(receipt.read_bytes()),
+            }
+        ],
+    }
+    plan["planFingerprint"] = _plan_fingerprint(plan)
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
+    return save_plan(plan, workspace / "diagnostics" / f"publication-closeout-{stamp}.json")
+
+
 def apply_saved_plan(plan_path: Path, *, workspace_root: Path) -> dict[str, Any]:
     """Apply one saved plan after a full preflight and per-target revalidation."""
 
     plan = load_plan(plan_path, workspace_root=workspace_root)
+    disposition = plan.get("disposition", "delete")
+    if disposition not in {"delete", "recycle"}:
+        raise HousekeepingError("unsupported_disposition")
+    if disposition == "recycle" and os.name != "nt":
+        raise HousekeepingError("recycle_requires_windows")
     workspace = _absolute(Path(str(plan["workspaceRoot"])))
     entries = plan.get("entries")
     if not isinstance(entries, list):
@@ -821,11 +900,18 @@ def apply_saved_plan(plan_path: Path, *, workspace_root: Path) -> dict[str, Any]
         _revalidate_entry(entry, workspace=workspace)
         _unmount_entry_short_drives(entry)
         path = _absolute(Path(str(entry["path"])))
-        shutil.rmtree(_windows_extended_path(path), onexc=_remove_owned_readonly_path)
+        if disposition == "recycle":
+            from tools.recycle import recycle_directory
+
+            recycle_directory(path)
+        else:
+            shutil.rmtree(_windows_extended_path(path), onexc=_remove_owned_readonly_path)
         removed.append(str(path))
         removed_entries.append({"path": str(path), "bytes": int(entry["identity"]["bytes"])})
     return {
         "schema": "docwen.housekeeping-apply-result.v1",
+        "disposition": disposition,
+        "spaceReclaimed": disposition == "delete",
         "planPath": str(_absolute(plan_path)),
         "planFingerprint": plan["planFingerprint"],
         "removed": removed,
@@ -857,6 +943,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--failure-max-per-kind", type=int, default=2)
     parser.add_argument("--plan-output", type=Path)
+    parser.add_argument("--disposition", choices=["delete", "recycle"], default=None)
     parser.add_argument("--apply-plan", type=Path)
     return parser
 
@@ -870,7 +957,11 @@ def main(argv: list[str] | None = None) -> int:
         print("workspace_cleanup_error:failure_max_per_kind_must_be_non_negative")
         return 2
     if args.apply_plan is not None and (
-        args.target or args.clean_deps or args.reason is not None or args.plan_output is not None
+        args.target
+        or args.clean_deps
+        or args.reason is not None
+        or args.plan_output is not None
+        or args.disposition is not None
     ):
         print("workspace_cleanup_error:apply_plan_is_mutually_exclusive_with_plan_generation")
         return 2
@@ -889,6 +980,7 @@ def main(argv: list[str] | None = None) -> int:
                 clean_dependency_targets=tuple(args.clean_deps),
                 failure_ttl=timedelta(hours=args.failure_ttl_hours),
                 failure_max_per_kind=args.failure_max_per_kind,
+                disposition=args.disposition or "delete",
             )
             if args.plan_output is not None:
                 saved = save_plan(result, args.plan_output)

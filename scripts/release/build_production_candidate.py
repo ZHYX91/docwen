@@ -30,6 +30,7 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from scripts.build.payload_normalization import normalize_packaged_record_files
+from tools.run_lease import lease_payload, transition
 
 EMPTY_SHA256 = hashlib.sha256(b"").hexdigest()
 PRODUCTION_WORK_LEASE = ".docwen-temp-lease.json"
@@ -120,15 +121,9 @@ def _write_work_lease(work: Path, *, state: str) -> None:
     atomic_write(
         work / PRODUCTION_WORK_LEASE,
         canonical_bytes(
-            {
-                "schemaVersion": 1,
-                "owner": "docwen.release.build-production-candidate",
-                "kind": "production-build-work",
-                "pid": os.getpid(),
-                "createdAt": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
-                "state": state,
-                "root": str(work),
-            }
+            lease_payload(
+                work, owner="docwen.release.build-production-candidate", kind="production-build-work", state=state
+            )
         ),
     )
 
@@ -136,7 +131,7 @@ def _write_work_lease(work: Path, *, state: str) -> None:
 def _update_work_lease(work: Path, *, state: str, error: BaseException | None = None) -> None:
     marker = work / PRODUCTION_WORK_LEASE
     payload = json.loads(marker.read_text(encoding="utf-8"))
-    payload["state"] = state
+    transition(payload, root=work, owner="docwen.release.build-production-candidate", state=state)
     if error is not None:
         payload["error"] = f"{type(error).__name__}:{error}"
     marker.unlink()
@@ -147,15 +142,12 @@ def _write_output_lease(output: Path) -> None:
     atomic_write(
         output / PRODUCTION_OUTPUT_LEASE,
         canonical_bytes(
-            {
-                "schemaVersion": 1,
-                "owner": "docwen.release.build-production-candidate",
-                "kind": "partial-production-output",
-                "pid": os.getpid(),
-                "createdAt": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
-                "state": "active",
-                "root": str(output),
-            }
+            lease_payload(
+                output,
+                owner="docwen.release.build-production-candidate",
+                kind="partial-production-output",
+                state="active",
+            )
         ),
     )
 
@@ -530,8 +522,6 @@ def normalize_packaged_msvc_runtime(payload: Path, dependency_root: Path) -> dic
 
 
 def deterministic_zip(payload: Path, destination: Path, rows: Iterable[dict[str, object]], epoch: int) -> None:
-    from datetime import datetime
-
     timestamp = datetime.fromtimestamp(max(epoch, 315532800), tz=UTC)
     date_time = (
         timestamp.year,

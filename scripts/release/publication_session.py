@@ -7,6 +7,7 @@ import http.client
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -325,6 +326,11 @@ class ReleaseSession:
             releaseUrl=release.get("html_url"),
             assets={name: {"id": record["id"], **self.assets[name]} for name, record in assets.items()},
         )
+        from tools.workspace_cleanup import plan_published_candidate
+
+        closeout = plan_published_candidate(self.directory, self.receipt)
+        if closeout is not None:
+            print(f"Publication verified; candidate cleanup plan: {closeout}", file=sys.stderr)
         return self.state
 
     def verify_remote_bytes(self, assets: dict[str, Any]) -> None:
