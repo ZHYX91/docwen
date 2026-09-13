@@ -986,6 +986,7 @@ cancel_hint = "タスクを実行中です。Esc キーを押すと現在のタ�
 
 # 模板选择器
 [components.template_selector]
+manage_templates = "テンプレートを管理"
 selected_name = "選択中のテンプレート：{name}"
 no_templates = "利用可能なテンプレートはありません"
 empty_hint = "テンプレートがない場合は、テンプレートフォルダーを開いて確認または追加してください。"
@@ -1701,3 +1702,24 @@ input = "入力ファイルの場所を開く"
 output = "出力ファイルの場所を開く"
 multiple = "計 {count} 件"
 show_outputs = "すべての出力ファイルを表示"
+
+[settings.templates]
+title = "テンプレート"
+description = "組み込みテンプレートは読み取り専用です。編集するにはコピーしてカスタムテンプレートを作成してください。このページの変更はすぐに反映されます。"
+import = "テンプレートをインポート"
+copy_edit = "コピーして編集"
+edit = "編集"
+rename = "名前を変更"
+export = "エクスポート"
+delete = "削除"
+move_up = "上へ移動"
+move_down = "下へ移動"
+open_user_folder = "カスタムテンプレートフォルダーを開く"
+refresh = "更新"
+status_note = "無効にしたテンプレートはここに残りますが、メインのテンプレート選択には表示されません。"
+custom = "カスタム"
+builtin = "組み込み"
+builtin_hint = "組み込みテンプレートは、編集前にコピーしてください。"
+file_filter = "Office テンプレート (*.docx *.xlsx);;すべてのファイル (*)"
+name_prompt = "テンプレート名："
+delete_confirm = "カスタムテンプレート「{name}」を削除しますか？"

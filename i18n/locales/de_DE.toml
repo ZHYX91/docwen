@@ -986,6 +986,7 @@ cancel_hint = "Aufgabe wird ausgeführt. Esc drücken, um die aktuelle Aufgabe a
 
 # 模板选择器
 [components.template_selector]
+manage_templates = "Vorlagen verwalten"
 selected_name = "Ausgewählte Vorlage: {name}"
 no_templates = "Keine verfügbar"
 empty_hint = "Wenn keine Vorlage verfügbar ist, öffnen Sie den Vorlagenordner, um Dateien zu prüfen oder hinzuzufügen."
@@ -1701,3 +1702,24 @@ input = "Eingabedatei anzeigen"
 output = "Ausgabedatei anzeigen"
 multiple = "{count} Dateien"
 show_outputs = "Alle Ausgabedateien anzeigen"
+
+[settings.templates]
+title = "Vorlagen"
+description = "Integrierte Vorlagen sind schreibgeschützt. Kopieren Sie eine Vorlage, um eine bearbeitbare benutzerdefinierte Vorlage zu erstellen. Änderungen auf dieser Seite werden sofort wirksam."
+import = "Vorlagen importieren"
+copy_edit = "Kopieren und bearbeiten"
+edit = "Bearbeiten"
+rename = "Umbenennen"
+export = "Exportieren"
+delete = "Löschen"
+move_up = "Nach oben"
+move_down = "Nach unten"
+open_user_folder = "Ordner für benutzerdefinierte Vorlagen öffnen"
+refresh = "Aktualisieren"
+status_note = "Deaktivierte Vorlagen bleiben hier erhalten, werden aber in der Vorlagenauswahl des Hauptfensters ausgeblendet."
+custom = "Benutzerdefiniert"
+builtin = "Integriert"
+builtin_hint = "Integrierte Vorlage: Vor dem Bearbeiten zuerst kopieren."
+file_filter = "Office-Vorlagen (*.docx *.xlsx);;Alle Dateien (*)"
+name_prompt = "Vorlagenname:"
+delete_confirm = "Benutzerdefinierte Vorlage „{name}“ löschen?"

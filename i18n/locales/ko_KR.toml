@@ -986,6 +986,7 @@ cancel_hint = "작업이 실행 중입니다. Esc 키를 누르면 현재 작업
 
 # 模板选择器
 [components.template_selector]
+manage_templates = "템플릿 관리"
 selected_name = "선택한 템플릿: {name}"
 no_templates = "사용 가능한 템플릿이 없습니다"
 empty_hint = "템플릿이 없으면 템플릿 폴더를 열어 파일을 확인하거나 추가하세요."
@@ -1701,3 +1702,24 @@ input = "입력 파일 위치 열기"
 output = "출력 파일 위치 열기"
 multiple = "총 {count}개"
 show_outputs = "모든 출력 파일 보기"
+
+[settings.templates]
+title = "템플릿"
+description = "기본 제공 템플릿은 읽기 전용입니다. 편집하려면 복사하여 사용자 지정 템플릿을 만드세요. 이 페이지의 변경 사항은 즉시 적용됩니다."
+import = "템플릿 가져오기"
+copy_edit = "복사 후 편집"
+edit = "편집"
+rename = "이름 바꾸기"
+export = "내보내기"
+delete = "삭제"
+move_up = "위로 이동"
+move_down = "아래로 이동"
+open_user_folder = "사용자 지정 템플릿 폴더 열기"
+refresh = "새로 고침"
+status_note = "비활성화된 템플릿은 여기에 남아 있지만 기본 템플릿 선택기에서는 숨겨집니다."
+custom = "사용자 지정"
+builtin = "기본 제공"
+builtin_hint = "기본 제공 템플릿은 편집하기 전에 복사하세요."
+file_filter = "Office 템플릿 (*.docx *.xlsx);;모든 파일 (*)"
+name_prompt = "템플릿 이름:"
+delete_confirm = "사용자 지정 템플릿 ‘{name}’을(를) 삭제하시겠습니까?"

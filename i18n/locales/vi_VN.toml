@@ -1038,6 +1038,7 @@ cancel_hint = "Tác vụ đang chạy. Nhấn Esc để hủy tác vụ hiện t
 
 # 模板选择器
 [components.template_selector]
+manage_templates = "Quản lý mẫu"
 selected_name = "Mẫu đã chọn: {name}"
 no_templates = "Không có mẫu khả dụng"
 empty_hint = "Khi chưa có mẫu, hãy mở thư mục mẫu để kiểm tra hoặc bổ sung tệp."
@@ -1698,3 +1699,24 @@ input = "Định vị tệp đầu vào"
 output = "Định vị tệp đầu ra"
 multiple = "{count} tệp"
 show_outputs = "Xem tất cả tệp đầu ra"
+
+[settings.templates]
+title = "Mẫu"
+description = "Mẫu tích hợp chỉ đọc. Hãy sao chép một mẫu để tạo mẫu tùy chỉnh có thể chỉnh sửa. Các thay đổi trên trang này có hiệu lực ngay lập tức."
+import = "Nhập mẫu"
+copy_edit = "Sao chép và chỉnh sửa"
+edit = "Chỉnh sửa"
+rename = "Đổi tên"
+export = "Xuất"
+delete = "Xóa"
+move_up = "Di chuyển lên"
+move_down = "Di chuyển xuống"
+open_user_folder = "Mở thư mục mẫu tùy chỉnh"
+refresh = "Làm mới"
+status_note = "Mẫu đã tắt vẫn được giữ ở đây nhưng bị ẩn khỏi bộ chọn mẫu chính."
+custom = "Tùy chỉnh"
+builtin = "Tích hợp"
+builtin_hint = "Mẫu tích hợp: hãy sao chép trước khi chỉnh sửa."
+file_filter = "Mẫu Office (*.docx *.xlsx);;Tất cả tệp (*)"
+name_prompt = "Tên mẫu:"
+delete_confirm = "Xóa mẫu tùy chỉnh “{name}”?"
