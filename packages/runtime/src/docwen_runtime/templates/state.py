@@ -155,7 +155,7 @@ class TemplateStateStore:
         self.save(state)
 
     def ordered_ids(self, target: str, discovered_ids: list[str]) -> list[str]:
-        """Return discovered IDs in persisted order, appending new IDs at the end."""
+        """Return discovered IDs in persisted order, appending new IDs in-memory."""
 
         state = self.load()
         persisted = state["order"].setdefault(target, [])
@@ -167,9 +167,6 @@ class TemplateStateStore:
         for template_id in discovered_ids:
             if template_id not in result:
                 result.append(template_id)
-        if result != persisted:
-            state["order"][target] = result
-            self.save(state)
         return result
 
     def set_order(self, target: str, ordered_ids: list[str]) -> None:
