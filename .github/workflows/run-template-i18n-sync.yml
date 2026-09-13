@@ -1,0 +1,46 @@
+name: run-template-i18n-sync
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/run-template-i18n-sync.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: feat/template-management
+      - name: Extract and run locale synchronization script
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          source = Path('.github/workflows/template-i18n-sync.yml').read_text(encoding='utf-8').splitlines()
+          start = source.index('        run: |') + 1
+          end = source.index('      - name: Commit synchronized locale catalogues')
+          body = []
+          for line in source[start:end]:
+              if line.startswith('          '):
+                  body.append(line[10:])
+              else:
+                  body.append(line)
+          if body and body[-1].strip() == 'PY':
+              body.pop()
+          Path('/tmp/template_i18n_sync.py').write_text('\n'.join(body) + '\n', encoding='utf-8')
+          PY
+          python /tmp/template_i18n_sync.py
+      - name: Commit locale updates only
+        run: |
+          if ! git diff --quiet -- i18n/locales; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add i18n/locales
+            git commit -m "feat: localize template management"
+            git push origin HEAD:feat/template-management
+          fi
