@@ -217,7 +217,7 @@
     "allowlist": {
       "path": "release/windows-payload-allowlist.v1.json",
       "status": "FROZEN",
-      "sha256": "fcc62c73c757278ec1cd58e899ff8efdb88c36d519599b87d620234549e0b4ac",
+      "sha256": "b6f8eab7d69daca5a37718856b3b25f8986ec86cdcc816b934e179c512a39bd1",
       "rejectMissing": true,
       "rejectUnexpected": true,
       "rejectCaseFoldCollision": true,
