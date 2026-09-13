@@ -494,17 +494,13 @@ Note (rapport JSON de correction Markdown) :
 
 ### Utilisation de modèles existants
 
-Le programme est livré avec divers modèles, y compris des versions multilingues. Vous pouvez les sélectionner et les utiliser selon vos besoins. Les fichiers modèles sont situés dans le répertoire `templates/`.
+Gérez les modèles DOCX/XLSX dans **Paramètres → Modèles** : activation, désactivation, ordre et modèle par défaut. Les modèles intégrés sont en lecture seule ; les modèles personnalisés sont stockés dans un dossier utilisateur accessible en écriture. MSIX ne nécessite aucune modification de WindowsApps.
 
 ### Modèles personnalisés
 
-1.  Créez un fichier modèle à l'aide de Word ou WPS.
-2.  Référez-vous aux modèles existants et insérez des espaces réservés comme `{{Title}}`, etc., où le remplissage est nécessaire.
-3.  Dans le modèle, les styles intégrés Titre 1 ~ Titre 5 doivent être modifiés manuellement.
-4.  Enregistrez le modèle dans le répertoire `templates/`.
-5.  Redémarrez le programme, et le nouveau modèle sera automatiquement chargé.
-
-Vous pouvez également copier un modèle existant, le modifier et le renommer.
+1. Copiez et modifiez un modèle intégré, ou importez un fichier DOCX/XLSX existant.
+2. Modifiez le contenu, les styles et les espaces réservés de la copie dans Word, Excel ou WPS ; les règles figurent ci-dessous.
+3. Enregistrez le fichier puis actualisez la liste dans DocWen. Aucun redémarrage nécessaire.
 
 ### Utilisation des espaces réservés
 
@@ -625,9 +621,9 @@ contrôle de publication immuable.
 
 ### Le modèle ne s'affiche pas ?
 
--   Confirmez que les fichiers modèles sont dans le répertoire `templates/`.
--   Vérifiez si le fichier modèle est corrompu.
--   Redémarrez le programme pour recharger les modèles.
+- Dans **Paramètres → Modèles**, vérifiez que le modèle est activé et correspond au format de sortie.
+- Vérifiez que le fichier DOCX/XLSX peut être ouvert normalement.
+- Actualisez après une modification externe ; importez les nouveaux fichiers.
 
 ### La fonction de correction ne fonctionne pas ?
 
@@ -637,9 +633,9 @@ contrôle de publication immuable.
 
 ### Format de sortie non conforme aux attentes ?
 
--   Le programme génère des documents basés sur les styles de modèle. Pour ajuster le format de sortie, modifiez les définitions de style directement dans le fichier modèle.
--   Les fichiers modèles sont situés dans le répertoire `templates/`.
--   Après modification des styles de modèle, tous les documents convertis avec ce modèle appliqueront les nouveaux styles.
+- Ouvrez **Paramètres → Modèles**. Copiez les modèles intégrés avant de les modifier ; les modèles personnalisés sont directement modifiables.
+- Ajustez les styles dans Word, Excel ou WPS, enregistrez puis actualisez la liste.
+- Sélectionnez le modèle personnalisé avant de générer de nouveaux fichiers.
 
 ### Les cellules de formule sont vides après la conversion Excel vers Markdown ?
 

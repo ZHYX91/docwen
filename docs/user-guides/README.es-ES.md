@@ -489,17 +489,13 @@ Nota (informe JSON de revisión para Markdown):
 
 ### Usar plantillas existentes
 
-El programa incluye varias plantillas, incluidas versiones multilingües. Los archivos de plantilla están en el directorio `templates/`.
+Gestiona las plantillas DOCX/XLSX en **Configuración → Plantillas**: activar, desactivar, ordenar y elegir valores predeterminados. Las integradas son de solo lectura; las personalizadas se guardan en una carpeta de usuario con permisos de escritura. MSIX no requiere modificar WindowsApps.
 
 ### Plantillas personalizadas
 
-1.  Crea un archivo de plantilla con Word o WPS.
-2.  Consulta plantillas existentes e inserta marcadores como `{{Title}}`, `{{DocumentNumber}}`, etc., donde sea necesario rellenar.
-3.  En la plantilla, los estilos incorporados Heading 1 ~ Heading 5 deben modificarse manualmente.
-4.  Guarda la plantilla en el directorio `templates/`.
-5.  Reinicia el programa y la nueva plantilla se cargará automáticamente.
-
-También puedes copiar una plantilla existente, modificarla y renombrarla.
+1. Copia y edita una plantilla integrada o importa un archivo DOCX/XLSX existente.
+2. Modifica el contenido, los estilos y los marcadores de la copia en Word, Excel o WPS; consulta las reglas siguientes.
+3. Guarda el archivo y actualiza la lista en DocWen. No hace falta reiniciar.
 
 ### Uso de marcadores de posición
 
@@ -620,9 +616,9 @@ control de publicación inmutable.
 
 ### ¿No aparece la plantilla?
 
--   Confirma que las plantillas estén en `templates/`.
--   Comprueba si el archivo de plantilla está dañado.
--   Reinicia el programa para recargar plantillas.
+- Comprueba en **Configuración → Plantillas** que esté activada y corresponda al formato de salida.
+- Confirma que el archivo DOCX/XLSX se abra correctamente.
+- Actualiza la lista después de cambios externos; importa los archivos nuevos.
 
 ### ¿La función de revisión no funciona?
 
@@ -632,9 +628,9 @@ control de publicación inmutable.
 
 ### ¿El formato de salida no es el esperado?
 
--   El programa genera documentos según los estilos de la plantilla. Para ajustar la salida, modifica los estilos en el archivo de plantilla.
--   Las plantillas están en `templates/`.
--   Tras modificar estilos, todos los documentos convertidos con esa plantilla aplicarán los cambios.
+- Abre **Configuración → Plantillas**. Copia las plantillas integradas antes de editarlas; puedes editar directamente las personalizadas.
+- Ajusta los estilos en Word, Excel o WPS, guarda y actualiza la lista.
+- Selecciona la plantilla personalizada antes de generar nuevos archivos.
 
 ### ¿Las celdas de fórmula están vacías después de la conversión de Excel a Markdown?
 
