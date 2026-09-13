@@ -12,7 +12,11 @@ pytestmark = pytest.mark.gui
 
 def test_tabbed_selector_preserves_registry_order(qapp) -> None:
     selector = TabbedTemplateSelector()
-    selector.load_templates("docx", ["Third", "First", "Second"])
+    selector.load_templates(
+        "docx",
+        ["Third", "First", "Second"],
+        preserve_order=True,
+    )
     page = selector.get_selector("docx")
     assert page is not None
     assert [page._list.item(index).text() for index in range(page._list.count())] == [
