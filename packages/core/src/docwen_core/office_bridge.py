@@ -270,6 +270,17 @@ def _try_com_conversion(
         started_at = time.time_ns()
         app = win32_client.DispatchEx(prog_id)
         app_pid = _get_com_app_pid(app)
+        if app_pid is None and app_type == "word":
+            # Word exposes Hwnd on its document Window, not Application. Open
+            # only this attempt's private read-only copy before identifying it;
+            # never change application settings or quit an unowned server.
+            doc_or_wb = app.Documents.Open(
+                str(Path(input_path).resolve()),
+                ReadOnly=True,
+                ConfirmConversions=False,
+                AddToRecentFiles=False,
+            )
+            app_pid = _get_com_app_pid(doc_or_wb.Windows.Item(1))
         if app_pid is None:
             return None
         owned_process = WindowsProcessIdentity.capture(app_pid, started_after_ns=started_at)
@@ -290,14 +301,14 @@ def _try_com_conversion(
                 IgnoreReadOnlyRecommended=True,
                 AddToMru=False,
             )
-        elif app_type == "word":
+        elif app_type == "word" and doc_or_wb is None:
             doc_or_wb = app.Documents.Open(
                 str(Path(input_path).resolve()),
                 ReadOnly=True,
                 ConfirmConversions=False,
                 AddToRecentFiles=False,
             )
-        else:
+        elif app_type == "powerpoint":
             try:
                 doc_or_wb = app.Presentations.Open(str(Path(input_path).resolve()), True, False, False)
             except Exception:

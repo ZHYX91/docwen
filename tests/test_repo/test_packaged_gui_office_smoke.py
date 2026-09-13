@@ -508,3 +508,40 @@ def test_packaged_gui_presentation_smoke_rejects_staging_name(tmp_path: Path) ->
             expected_source_format="Ppt",
             expected_tokens=("DOCWEN PACKAGED GUI PRESENTATION 2026",),
         )
+
+
+def test_markdown_office_metrics_include_document_node_manifest(tmp_path: Path) -> None:
+    from scripts.release import verify_packaged_gui
+
+    source = tmp_path / "input.md"
+    source.write_bytes(b"markdown")
+    node = tmp_path / "node"
+    node.mkdir()
+    output = node / "output.pdf"
+    output.write_bytes(b"%PDF-output")
+    manifest = node / "docwen-node.json"
+    manifest.write_bytes(b"{}")
+    report = tmp_path / "report.json"
+    report.write_text(
+        json.dumps(
+            {
+                "inputPath": str(source),
+                "outputPath": str(output),
+                "outputBytes": output.stat().st_size,
+                "conversionMetrics": {
+                    "durationMs": 1,
+                    "inputBytes": source.stat().st_size,
+                    "outputBytes": output.stat().st_size + manifest.stat().st_size,
+                    "engine": "office_bridge",
+                    "backend": "fixture-office",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    verify_packaged_gui._verify_office_conversion_metrics(
+        report,
+        case_name="markdown",
+        input_path=source,
+        output_path=output,
+    )

@@ -1890,6 +1890,14 @@ def _verify_office_conversion_metrics(
 
     input_size = input_path.stat().st_size
     output_size = output_path.stat().st_size
+    # Markdown publishes a document node; metrics include its manifest and
+    # resources, while outputBytes identifies the primary PDF alone.
+    total_output_size = output_size
+    if case_name == "markdown":
+        manifest = output_path.parent / "docwen-node.json"
+        if not manifest.is_file():
+            raise RuntimeError("packaged_gui_office_document_node_missing")
+        total_output_size = sum(path.stat().st_size for path in output_path.parent.rglob("*") if path.is_file())
     duration_ms = metrics.get("durationMs")
     input_bytes = metrics.get("inputBytes")
     output_bytes = metrics.get("outputBytes")
@@ -1913,7 +1921,7 @@ def _verify_office_conversion_metrics(
         isinstance(output_bytes, int)
         and not isinstance(output_bytes, bool)
         and output_bytes > 0
-        and output_bytes == output_size
+        and output_bytes == total_output_size
         and isinstance(reported_output_bytes, int)
         and not isinstance(reported_output_bytes, bool)
         and reported_output_bytes == output_size
