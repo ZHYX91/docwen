@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from ._office_bridge_support import (
     Path,
+    _mock_owned_process,
     pytest,
 )
 
@@ -186,11 +187,12 @@ def test_try_com_conversion_continues_when_visible_cannot_be_hidden(
         app = _PowerPointApp()
 
         @classmethod
-        def Dispatch(cls, prog_id: str) -> _PowerPointApp:
+        def DispatchEx(cls, prog_id: str) -> _PowerPointApp:
             assert prog_id == "PowerPoint.Application"
             return cls.app
 
     monkeypatch.setattr(office_bridge, "_import_win32", lambda: (_PythonCom, _Win32Client))
+    _mock_owned_process(monkeypatch)
 
     result = office_bridge._try_com_conversion(
         str(input_path),
@@ -248,10 +250,11 @@ def test_powerpoint_open_fallback_remains_explicitly_read_only(
 
     class _Win32Client:
         @staticmethod
-        def Dispatch(_prog_id: str) -> _App:
+        def DispatchEx(_prog_id: str) -> _App:
             return _App()
 
     monkeypatch.setattr(office_bridge, "_import_win32", lambda: (_PythonCom, _Win32Client))
+    _mock_owned_process(monkeypatch)
 
     result = office_bridge._try_com_conversion(
         str(input_path),
@@ -317,11 +320,12 @@ def test_try_com_conversion_uses_fixed_format_for_excel_pdf(
 
     class _Win32Client:
         @staticmethod
-        def Dispatch(prog_id: str) -> _ExcelApp:
+        def DispatchEx(prog_id: str) -> _ExcelApp:
             assert prog_id == "KET.Application"
             return _ExcelApp()
 
     monkeypatch.setattr(office_bridge, "_import_win32", lambda: (_PythonCom, _Win32Client))
+    _mock_owned_process(monkeypatch)
 
     result = office_bridge._try_com_conversion(
         str(input_path),
@@ -381,11 +385,12 @@ def test_try_com_conversion_opens_spreadsheets_read_only_without_updating_links(
 
     class _Win32Client:
         @staticmethod
-        def Dispatch(prog_id: str) -> _ExcelApp:
+        def DispatchEx(prog_id: str) -> _ExcelApp:
             assert prog_id == "Excel.Application"
             return _ExcelApp()
 
     monkeypatch.setattr(office_bridge, "_import_win32", lambda: (_PythonCom, _Win32Client))
+    _mock_owned_process(monkeypatch)
 
     result = office_bridge._try_com_conversion(
         str(input_path),
@@ -463,6 +468,7 @@ def test_try_com_conversion_prefers_dispatch_ex_for_isolated_com_instance(
             raise AssertionError(f"Dispatch fallback should not be used for {prog_id}")
 
     monkeypatch.setattr(office_bridge, "_import_win32", lambda: (_PythonCom, _Win32Client))
+    _mock_owned_process(monkeypatch)
 
     result = office_bridge._try_com_conversion(
         str(input_path),

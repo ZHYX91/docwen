@@ -53,13 +53,13 @@ class TestCsvToXlsx:
 
             # Data rows
             assert ws.cell(2, 1).value == "Alice"
-            assert ws.cell(2, 2).value == 30  # auto-number conversion
+            assert ws.cell(2, 2).value == "30"
             assert ws.cell(3, 1).value == "Bob"
 
             wb.close()
 
-    def test_csv_to_xlsx_numeric_values(self, sample_csv_path: Path) -> None:
-        """Numeric strings should be converted to numbers."""
+    def test_csv_to_xlsx_numeric_text(self, sample_csv_path: Path) -> None:
+        """Numeric-looking fields remain literal text."""
         import openpyxl
 
         from docwen_plugin_spreadsheet.csv_xlsx.converter import CsvToXlsxConverter
@@ -73,9 +73,9 @@ class TestCsvToXlsx:
             ws = wb.active
             assert ws is not None
 
-            # Age=30 should be int
-            assert isinstance(ws.cell(2, 2).value, int)
-            assert ws.cell(2, 2).value == 30
+            # Delimited input has no numeric type declaration.
+            assert isinstance(ws.cell(2, 2).value, str)
+            assert ws.cell(2, 2).value == "30"
             wb.close()
 
 
@@ -170,7 +170,7 @@ class TestTsvToXlsx:
             ws = wb.active
             assert ws is not None
             assert ws.cell(1, 1).value == "ID"
-            assert ws.cell(2, 2).value == 95
+            assert ws.cell(2, 2).value == "95"
             wb.close()
 
 

@@ -51,13 +51,13 @@ class TestSmartSheetConverter:
         return input_path
 
     @pytest.mark.parametrize("target_format", ["xls", "ods"])
-    def test_csv_to_binary_preserves_numeric_cells_like_old_systems(
+    def test_csv_to_binary_preserves_literal_fields(
         self,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         target_format: str,
     ) -> None:
-        """The private CSV hub must use the canonical numeric-cell semantics."""
+        """The private CSV hub retains the original field text."""
         import openpyxl
 
         from docwen_core.office_bridge import BridgeResult
@@ -90,8 +90,8 @@ class TestSmartSheetConverter:
         assert captured_rows == [
             [
                 ["Name", "Value"],
-                ["Alpha", 11],
-                ["Beta", 22],
+                ["Alpha", "11"],
+                ["Beta", "22"],
             ]
         ]
         assert result.artifacts[0].metadata["backend"] == "openpyxl -> fake-office"

@@ -96,6 +96,8 @@ def linux_reveal_commands(target_path: Path) -> list[list[str]]:
             "--session",
             "--dest=org.freedesktop.FileManager1",
             "--type=method_call",
+            "--print-reply",
+            "--reply-timeout=2000",
             "/org/freedesktop/FileManager1",
             "org.freedesktop.FileManager1.ShowItems",
             f"array:string:{file_uri}",
