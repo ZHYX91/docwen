@@ -62,6 +62,11 @@ def test_packaged_gui_office_smoke_drives_panel_and_action_routes(
         output_dir = Path(env["DOCWEN_GUI_TEST_CONVERSION_OUTPUT_DIR"])
         output_path = output_dir / f"{source.stem}.pdf"
         _write_pdf(output_path, tokens[source.suffix])
+        total_output_size = output_path.stat().st_size
+        if source.suffix == ".md":
+            manifest = output_dir / "docwen-node.json"
+            manifest.write_bytes(b"{}")
+            total_output_size += manifest.stat().st_size
         report_path = Path(env["DOCWEN_GUI_TEST_CONVERSION_REPORT"])
         backends = {
             ".docx": "fixture-word",
@@ -80,7 +85,7 @@ def test_packaged_gui_office_smoke_drives_panel_and_action_routes(
                     "conversionMetrics": {
                         "durationMs": 12.5,
                         "inputBytes": source.stat().st_size,
-                        "outputBytes": output_path.stat().st_size,
+                        "outputBytes": total_output_size,
                         "engine": "office_bridge",
                         "backend": backends[source.suffix],
                     },
