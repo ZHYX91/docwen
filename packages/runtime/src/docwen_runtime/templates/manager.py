@@ -102,6 +102,7 @@ class TemplateManager:
         shutil.copy2(source, destination)
         template_id = self.state_store.ensure_user_identity(destination, target)
         self.state_store.set_enabled(template_id, True)
+        self._place_at_end(target, template_id)
         return self._find(template_id)
 
     def copy_builtin_as_custom(self, template_id: str, *, custom_name: str | None = None) -> TemplateInfo:
@@ -174,6 +175,13 @@ class TemplateManager:
         ordered.pop(index)
         ordered.insert(destination, template_id)
         self.state_store.set_order(template.target, ordered)
+
+    def _place_at_end(self, target: str, template_id: str) -> None:
+        ordered = [item.id for item in self.list_templates(target, include_disabled=True)]
+        if template_id in ordered:
+            ordered.remove(template_id)
+        ordered.append(template_id)
+        self.state_store.set_order(target, ordered)
 
     def _place_after(self, target: str, template_id: str, *, after_id: str) -> None:
         ordered = [item.id for item in self.list_templates(target, include_disabled=True)]
