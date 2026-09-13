@@ -270,6 +270,8 @@ class TabbedTemplateSelector(QWidget):
                 if feedback.selection_source == "user":
                     self._invalidated.discard(template_type)
                     self._manual_selection = (template_type, template_name)
+        if template_type != self._current_tab:
+            return
         self._selection_callback_contexts.append(callback_feedback)
         try:
             self._refresh_accessibility()

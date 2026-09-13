@@ -282,6 +282,18 @@ class TestConversionPanelPdfInfoBinding:
 
 
 class TestTemplateCatalogBinding:
+    def test_template_refresh_does_not_project_inactive_default(self, window):
+        window._view_model.set_selected_file(FileRef(path="C:/test/source.md", format="markdown", category="markdown"))
+        selector = window._template_selector
+        selector.restore_current_tab("docx")
+        selector.get_selector("xlsx")._list.setCurrentRow(-1)
+        window._show_template_target_mode("docx", "C:/test/source.md")
+        window._action_area_vm.md_add_numbering = True
+        window._render_template_catalog()
+        assert selector.current_tab == "docx"
+        assert window._action_area_vm.file_type == "docx"
+        assert window._action_area_vm.md_add_numbering is True
+
     @pytest.mark.parametrize(
         ("template_type", "expected_mode"),
         [("docx", "docx"), ("xlsx", "md_to_spreadsheet")],
