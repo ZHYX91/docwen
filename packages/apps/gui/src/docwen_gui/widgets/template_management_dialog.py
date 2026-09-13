@@ -191,7 +191,11 @@ class TemplateManagementDialog(QDialog):
                 widget.clear()
                 for template in templates:
                     custom = self._manager.is_custom(template)
-                    source = t("settings.templates.custom", "Custom") if custom else t("settings.templates.builtin", "Built-in")
+                    source = (
+                        t("settings.templates.custom", "Custom")
+                        if custom
+                        else t("settings.templates.builtin", "Built-in")
+                    )
                     item = QListWidgetItem(f"{template.name}    [{source}]")
                     item.setData(_TEMPLATE_ID_ROLE, template.id)
                     item.setData(_TEMPLATE_CUSTOM_ROLE, custom)
@@ -199,10 +203,14 @@ class TemplateManagementDialog(QDialog):
                     item.setCheckState(
                         Qt.CheckState.Checked if self._manager.is_enabled(template.id) else Qt.CheckState.Unchecked
                     )
-                    item.setToolTip(str(template.path) if custom else t(
-                        "settings.templates.builtin_hint",
-                        "Built-in template: copy it before editing.",
-                    ))
+                    item.setToolTip(
+                        str(template.path)
+                        if custom
+                        else t(
+                            "settings.templates.builtin_hint",
+                            "Built-in template: copy it before editing.",
+                        )
+                    )
                     widget.addItem(item)
                     if template.id == remembered:
                         item.setSelected(True)
