@@ -133,6 +133,8 @@ def _created_at(payload: dict[str, Any]) -> datetime:
 def _process_alive(pid: object) -> bool:
     if not isinstance(pid, int) or pid <= 0:
         return False
+    if os.name == "nt":
+        return _windows_process_alive(pid)
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
@@ -142,6 +144,31 @@ def _process_alive(pid: object) -> bool:
     except OSError:
         return False
     return True
+
+
+def _windows_process_alive(pid: int) -> bool:
+    # os.kill(pid, 0) sends CTRL_C_EVENT on Windows; it is not a liveness probe.
+    if sys.platform != "win32":
+        raise OSError("Windows process handles are unavailable on this platform")
+    import ctypes
+    from ctypes import wintypes
+
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+    kernel.OpenProcess.restype = wintypes.HANDLE
+    kernel.WaitForSingleObject.argtypes = (wintypes.HANDLE, wintypes.DWORD)
+    kernel.WaitForSingleObject.restype = wintypes.DWORD
+    kernel.CloseHandle.argtypes = (wintypes.HANDLE,)
+    kernel.CloseHandle.restype = wintypes.BOOL
+    handle = kernel.OpenProcess(0x00100000, False, pid)  # SYNCHRONIZE only
+    if not handle:
+        # Only ERROR_INVALID_PARAMETER proves that the PID no longer exists.
+        # Access denied and other query failures must keep the leased directory.
+        return ctypes.get_last_error() != 87
+    try:
+        return kernel.WaitForSingleObject(handle, 0) != 0  # only WAIT_OBJECT_0 proves exit
+    finally:
+        kernel.CloseHandle(handle)
 
 
 def _lease_markers(temp_root: Path, *, errors: list[dict[str, str]] | None = None) -> list[Path]:
@@ -896,6 +923,7 @@ def apply_saved_plan(plan_path: Path, *, workspace_root: Path) -> dict[str, Any]
         _revalidate_entry(entry, workspace=workspace)
     removed: list[str] = []
     removed_entries: list[dict[str, object]] = []
+    removed_bytes = 0
     for entry in entries:
         _revalidate_entry(entry, workspace=workspace)
         _unmount_entry_short_drives(entry)
@@ -908,6 +936,7 @@ def apply_saved_plan(plan_path: Path, *, workspace_root: Path) -> dict[str, Any]
             shutil.rmtree(_windows_extended_path(path), onexc=_remove_owned_readonly_path)
         removed.append(str(path))
         removed_entries.append({"path": str(path), "bytes": int(entry["identity"]["bytes"])})
+        removed_bytes += int(entry["identity"]["bytes"])
     return {
         "schema": "docwen.housekeeping-apply-result.v1",
         "disposition": disposition,
@@ -916,7 +945,7 @@ def apply_saved_plan(plan_path: Path, *, workspace_root: Path) -> dict[str, Any]
         "planFingerprint": plan["planFingerprint"],
         "removed": removed,
         "removedEntries": removed_entries,
-        "removedBytes": sum(int(entry["bytes"]) for entry in removed_entries),
+        "removedBytes": removed_bytes,
     }
 
 
