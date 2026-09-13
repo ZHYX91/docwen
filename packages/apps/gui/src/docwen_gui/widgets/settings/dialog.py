@@ -921,6 +921,8 @@ class SettingsDialog(QDialog):
         if not (0 <= index < len(TAB_KEYS)):
             return
         tab_key = TAB_KEYS[index]
+        if tab_key == "templates":
+            return
         tab_name = TAB_NAMES.get(tab_key, tab_key)
 
         if not _show_confirm(

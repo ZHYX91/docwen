@@ -870,6 +870,7 @@ xlarge = "Sehr gross"
 
 # 文件拖拽区
 [components.file_drop]
+inspecting = "Dateien werden geprüft…"
 empty_hint_single = "Einzelne Datei hierher ziehen"
 empty_hint_batch = "Dateien/Ordner hierher ziehen"
 add_button = "Hinzufügen"
@@ -1700,6 +1701,8 @@ multiple = "{count} Dateien"
 show_outputs = "Alle Ausgabedateien anzeigen"
 
 [settings.templates]
+load_failed = "Vorlagen konnten nicht geladen werden"
+operation_failed = "Der Vorlagenvorgang ist fehlgeschlagen. Weitere Informationen stehen in den Details."
 title = "Vorlagen"
 description = "Integrierte Vorlagen sind schreibgeschützt. Kopieren Sie eine Vorlage, um eine bearbeitbare benutzerdefinierte Vorlage zu erstellen. Änderungen auf dieser Seite werden sofort wirksam."
 import = "Vorlagen importieren"

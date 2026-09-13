@@ -18,9 +18,11 @@ from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QMutex, QMutexLocker, QObject, Signal
 
+from docwen_core.cancellation import CancellationToken
 from docwen_core.models import FILE_INSPECTION_METADATA_KEY
 from docwen_gui.file_admission_i18n import render_file_inspection_message
 from docwen_gui.i18n import t as _t
+from docwen_gui.qt_bridge.background_operation import BackgroundOperation
 
 logger = logging.getLogger(__name__)
 
@@ -131,11 +133,10 @@ class MainWindowViewModel(QObject):
     ) -> None:
         super().__init__(parent)
         self._controller = controller
-        if file_inspector is None:
-            from docwen_core.detection import inspect_file
-
-            file_inspector = inspect_file
         self._file_inspector = file_inspector
+        self._pending_inspection_paths: list[str] = []
+        self._inspection = BackgroundOperation(self)
+        self._inspection.busy_changed.connect(self._inspection_busy_changed)
         self._mutex = QMutex()
         self._files: list[FileRef] = []
         self._reserved_inputs: dict[str, frozenset[Path]] = {}
@@ -188,6 +189,7 @@ class MainWindowViewModel(QObject):
                 self._mode = value
                 changed = True
         if changed:
+            self.cancel_inspection()
             self.mode_changed.emit(value)
         if files_snapshot is not None:
             self.files_changed.emit(files_snapshot)
@@ -243,15 +245,68 @@ class MainWindowViewModel(QObject):
 
     # ── Command methods (called by widgets → delegate to controller) ────
 
+    def _inspection_busy_changed(self, busy: bool) -> None:
+        if not busy and self.status_message == _t("components.file_drop.inspecting"):
+            self.set_status_message(_t("common.ready", "Ready"))
+
+    @property
+    def inspection_busy(self) -> bool:
+        return self._inspection.busy
+
+    def cancel_inspection(self) -> None:
+        self._pending_inspection_paths = []
+        self._inspection.cancel()
+
+    def _inspect_paths(self, paths: list[str], token: CancellationToken) -> list[tuple[str, FileInspection | None]]:
+        from docwen_core.detection import inspect_file
+
+        inspected: list[tuple[str, FileInspection | None]] = []
+        for path in paths:
+            token.check()
+            try:
+                inspection = (
+                    self._file_inspector(path)
+                    if self._file_inspector is not None
+                    else inspect_file(path, cancel_check=token.check)
+                )
+                inspected.append((path, inspection))
+            except (ValueError, OSError):
+                inspected.append((path, None))
+        return inspected
+
+    def request_files(self, paths: list[str], completed: Callable[[FileAddOutcome], None] | None = None) -> None:
+        """Inspect interactive inputs off-thread and commit only the latest request."""
+        paths = list(dict.fromkeys(path for path in paths if path))
+        if not paths:
+            return
+        if self._reserved_inputs or (self.mode == "single" and len(paths) != 1):
+            outcome = self._apply_inspections([(path, None) for path in paths])
+            if completed is not None:
+                completed(outcome)
+            return
+        if self.mode == "batch":
+            paths = list(dict.fromkeys([*self._pending_inspection_paths, *paths]))
+        self._pending_inspection_paths = paths
+        self.set_status_message(_t("components.file_drop.inspecting"))
+
+        def apply(inspected: Any, error: Exception | None) -> None:
+            self._pending_inspection_paths = []
+            outcome = self._apply_inspections(inspected if error is None else [(path, None) for path in paths])
+            if completed is not None:
+                completed(outcome)
+
+        self._inspection.submit(lambda token: self._inspect_paths(paths, token), apply)
+
     def add_files(self, paths: list[str]) -> FileAddOutcome:
-        """Replace the single input or append to the visible batch list.
+        """Synchronously admit files for noninteractive setup and smoke probes."""
+        self.cancel_inspection()
+        paths = list(dict.fromkeys(path for path in paths if path))
+        if self._reserved_inputs or (self.mode == "single" and len(paths) != 1):
+            return self._apply_inspections([(path, None) for path in paths])
+        return self._apply_inspections(self._inspect_paths(paths, CancellationToken()))
 
-        Widgets call this when files are dropped, selected via dialog,
-        or received via IPC.
-
-        Args:
-            paths: Absolute file paths to add.
-        """
+    def _apply_inspections(self, inspected: list[tuple[str, FileInspection | None]]) -> FileAddOutcome:
+        """Commit inspected data on the owning thread, checking current reservations."""
         from pathlib import Path
 
         from docwen_core.detection import (
@@ -262,7 +317,7 @@ class MainWindowViewModel(QObject):
 
         from .interaction import normalize_workflow_category
 
-        paths = list(dict.fromkeys(p for p in paths if p))
+        paths = [path for path, _inspection in inspected]
         if not paths:
             return FileAddOutcome(added=(), rejected=())
         reason = ""
@@ -276,11 +331,12 @@ class MainWindowViewModel(QObject):
 
         new_refs: list[FileRef] = []
         rejected: list[tuple[str, str]] = []
-        for p in paths:
+        for p, inspection in inspected:
             if not p:
                 continue
             try:
-                inspection = self._file_inspector(p)
+                if inspection is None:
+                    raise ValueError("Input inspection failed")
                 fmt = inspection.detected_format
                 detected_category = inspection.workflow_category
                 category = normalize_workflow_category(detected_category) or "other"
@@ -305,7 +361,7 @@ class MainWindowViewModel(QObject):
                     format=fmt,
                     category=category,
                     warning_message=warning,
-                    size_bytes=Path(p).stat().st_size if Path(p).is_file() else 0,
+                    size_bytes=inspection.size_bytes,
                     metadata=metadata,
                 )
                 new_refs.append(ref)
@@ -325,18 +381,24 @@ class MainWindowViewModel(QObject):
             if self._mode == "single":
                 # Validate first: a rejected replacement must preserve the input.
                 ref = new_refs[0]
-                if len(self._files) != 1 or Path(self._files[0].path) != Path(ref.path):
+                if len(self._files) != 1 or self._files[0] != ref:
                     self._files = [ref]
                     self._selected_file = ref
                     added_refs.append(ref)
                 else:
                     self._selected_file = self._files[0]
-            existing = {Path(f.path) for f in self._files}
+            existing = {Path(f.path): index for index, f in enumerate(self._files)}
             for ref in new_refs if self._mode == "batch" else ():
-                if Path(ref.path) not in existing:
+                index = existing.get(Path(ref.path))
+                if index is None:
+                    existing[Path(ref.path)] = len(self._files)
                     self._files.append(ref)
                     added_refs.append(ref)
-                    existing.add(Path(ref.path))
+                elif self._files[index] != ref:
+                    self._files[index] = ref
+                    added_refs.append(ref)
+                    if self._selected_file is not None and Path(self._selected_file.path) == Path(ref.path):
+                        self._selected_file = ref
 
             if added_refs:
                 files_snapshot = list(self._files)
@@ -344,7 +406,7 @@ class MainWindowViewModel(QObject):
         if files_snapshot is not None:
             self.files_changed.emit(files_snapshot)
             self._update_title_for_file_count(file_count)
-        if self.mode == "single":
+        if added_refs or self.mode == "single":
             self._emit_projection_changed()
         if rejected:
             self.set_status_message(rejected[0][1])
@@ -352,6 +414,7 @@ class MainWindowViewModel(QObject):
 
     def reserve_execution_inputs(self, operation_id: str, paths: tuple[str, ...]) -> None:
         """Keep admitted inputs until the owning worker has fully finished."""
+        self.cancel_inspection()
         self._reserved_inputs[operation_id] = frozenset(Path(path) for path in paths)
 
     def release_execution_inputs(self, operation_id: str) -> None:
@@ -368,6 +431,7 @@ class MainWindowViewModel(QObject):
         """
         if not self.can_remove_file(file_path):
             return
+        self.cancel_inspection()
         files_snapshot: list[FileRef] | None = None
         file_count = 0
         with QMutexLocker(self._mutex):
@@ -388,6 +452,7 @@ class MainWindowViewModel(QObject):
         """Remove all files from the input list."""
         if self._reserved_inputs:
             return
+        self.cancel_inspection()
         with QMutexLocker(self._mutex):
             self._files.clear()
             self._selected_file = None
@@ -558,19 +623,24 @@ class MainWindowViewModel(QObject):
             file_path: Optional file path associated with the command.
         """
         if action in ("add_file", "open_file") and file_path:
+            if self._reserved_inputs:
+                self.set_status_message(_t("components.file_drop.input_busy"))
+                return False
             path = Path(file_path)
             if not path.exists():
                 logger.warning("IPC file does not exist — skipping: %s", file_path)
                 self.set_status_message(_t("info_area.ipc_file_missing", "IPC file not found: {path}", path=file_path))
                 return False
-            outcome = self.add_files([str(path)])
-            admitted = next((ref for ref in self.files if Path(ref.path) == path), None)
-            if admitted is not None and not outcome.rejected:
-                self.set_selected_file(admitted)
-                self.ipc_file_received.emit(str(path))
-            # Always bring window to front when files are added.
+
+            def admitted(outcome: FileAddOutcome) -> None:
+                ref = next((ref for ref in self.files if Path(ref.path) == path), None)
+                if ref is not None and not outcome.rejected:
+                    self.set_selected_file(ref)
+                    self.ipc_file_received.emit(str(path))
+
+            self.request_files([str(path)], admitted)
             self.window_activation_requested.emit()
-            return admitted is not None and not outcome.rejected
+            return True
         elif action == "activate":
             self.window_activation_requested.emit()
             return True

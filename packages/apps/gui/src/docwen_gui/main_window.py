@@ -11,6 +11,7 @@ import contextlib
 import logging
 import os
 import re
+import sys
 import time
 import uuid
 from collections.abc import Callable, Sequence
@@ -340,6 +341,36 @@ def _read_pdf_total_pages(file_path: str) -> int | None:
     return page_count if page_count > 0 else None
 
 
+def _check_frozen_request(request: ConversionRequest) -> None:
+    """Revalidate exact ingress bytes on the execution worker before conversion."""
+    from docwen_core.detection import inspect_file
+    from docwen_core.models import FILE_INSPECTION_METADATA_KEY
+
+    for ref in request.input_refs:
+        raw_inspection = ref.metadata.get(FILE_INSPECTION_METADATA_KEY)
+        try:
+            inspection = inspect_file(ref.path)
+        except FileNotFoundError as exc:
+            raise _ExecutionAdmissionError(
+                _t("main_window.file_admission_missing", "The input file no longer exists: {path}", path=ref.path)
+            ) from exc
+        except OSError as exc:
+            raise _ExecutionAdmissionError(
+                _t("main_window.file_admission_unreadable", "The input file cannot be read: {path}", path=ref.path)
+            ) from exc
+        except (TypeError, ValueError) as exc:
+            raise _ExecutionAdmissionError(
+                _t("main_window.file_admission_invalid", "File inspection data is invalid.")
+            ) from exc
+        if raw_inspection != inspection.to_dict():
+            raise _ExecutionAdmissionError(
+                _t(
+                    "main_window.file_admission_changed",
+                    "The file changed after it was added. Remove it from the list and add it again to re-check the file, then retry.",
+                )
+            )
+
+
 class _ExecutionThread(QThread):
     """Run a single conversion request off the UI thread.
 
@@ -370,6 +401,7 @@ class _ExecutionThread(QThread):
 
     def run(self) -> None:
         try:
+            _check_frozen_request(self._request)
             if self._aggregate_action_name:
                 result = self._controller.execute_aggregate(self._request, self._aggregate_action_name)
             elif self._batch_execution:
@@ -394,6 +426,9 @@ class MainWindow(QWidget):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
+        from docwen_gui.qt_bridge.background_operation import BackgroundOperation
+
+        self._path_operation = BackgroundOperation(self)
         self._view_model = view_model
         self._window_behavior = self._load_window_behavior()
         self._window_scale_factor = self._load_window_scale_factor()
@@ -1528,6 +1563,9 @@ class MainWindow(QWidget):
 
             self._batch_list_vm.add_files(missing, file_resolver=resolve_existing_ref)
 
+        for ref in file_refs:
+            self._batch_list_vm.refresh_admission(ref)
+
         for stale in current_paths - desired_paths:
             self._batch_list_vm.remove_file(stale)
 
@@ -2187,12 +2225,12 @@ class MainWindow(QWidget):
             return False
 
     def _confirm_request_admission(self, request: ConversionRequest) -> bool:
-        """Enforce core admission decisions before crossing into runtime."""
-        from docwen_core.detection import inspect_file
+        """Confirm frozen ingress facts without reading file contents on the UI thread."""
         from docwen_core.models import (
             FILE_ADMISSION_ACCEPTANCE_METADATA_KEY,
             FILE_INSPECTION_METADATA_KEY,
             AdmissionDecision,
+            FileInspection,
             admission_is_satisfied,
             make_admission_acceptance,
         )
@@ -2206,26 +2244,11 @@ class MainWindow(QWidget):
                     _t("main_window.file_admission_invalid", "File inspection data is invalid.")
                 )
             try:
-                inspection = inspect_file(ref.path)
-            except FileNotFoundError as exc:
-                raise _ExecutionAdmissionError(
-                    _t("main_window.file_admission_missing", "The input file no longer exists: {path}", path=ref.path)
-                ) from exc
-            except OSError as exc:
-                raise _ExecutionAdmissionError(
-                    _t("main_window.file_admission_unreadable", "The input file cannot be read: {path}", path=ref.path)
-                ) from exc
+                inspection = FileInspection.from_dict(raw_inspection)
             except (TypeError, ValueError) as exc:
                 raise _ExecutionAdmissionError(
                     _t("main_window.file_admission_invalid", "File inspection data is invalid.")
                 ) from exc
-            if raw_inspection != inspection.to_dict():
-                raise _ExecutionAdmissionError(
-                    _t(
-                        "main_window.file_admission_changed",
-                        "The file changed after it was added. Remove it from the list and add it again to re-check the file, then retry.",
-                    )
-                )
             if inspection.decision is AdmissionDecision.BLOCK:
                 raise _ExecutionAdmissionError(
                     render_file_inspection_message(inspection, prefer_reason=True)
@@ -3074,30 +3097,37 @@ class MainWindow(QWidget):
         if len(retry_paths) > 1:
             self._view_model.set_mode("batch")
         missing_paths = [path for path in retry_paths if self._batch_list_vm.get_file_entry(path) is None]
+
+        def resume_retry() -> None:
+            if context.get("aggregate"):
+                self._start_aggregate_execution(
+                    file_paths=list(context["file_paths"]),
+                    target_format=context["target_format"],
+                    action_name=context["action_name"],
+                    options=options,
+                )
+            elif context.get("batch"):
+                failed_keys = {_normalize_path(path) for path in failed_files}
+                self._start_batch_execution(
+                    file_paths=[path for path in context["file_paths"] if _normalize_path(path) in failed_keys],
+                    target_format=context["target_format"],
+                    action_name=context["action_name"],
+                    options=options,
+                )
+            else:
+                self._start_execution(
+                    file_path=context["file_path"],
+                    target_format=context["target_format"],
+                    action_name=context["action_name"],
+                    options=options,
+                )
+
         if missing_paths:
-            self._view_model.add_files(missing_paths)
-        if context.get("aggregate"):
-            self._start_aggregate_execution(
-                file_paths=list(context["file_paths"]),
-                target_format=context["target_format"],
-                action_name=context["action_name"],
-                options=options,
-            )
-        elif context.get("batch"):
-            failed_keys = {_normalize_path(path) for path in failed_files}
-            self._start_batch_execution(
-                file_paths=[path for path in context["file_paths"] if _normalize_path(path) in failed_keys],
-                target_format=context["target_format"],
-                action_name=context["action_name"],
-                options=options,
+            self._view_model.request_files(
+                missing_paths, lambda outcome: resume_retry() if not outcome.rejected else None
             )
         else:
-            self._start_execution(
-                file_path=context["file_path"],
-                target_format=context["target_format"],
-                action_name=context["action_name"],
-                options=options,
-            )
+            resume_retry()
 
     # ── Path helpers ────────────────────────────────────────────────
 
@@ -3105,7 +3135,17 @@ class MainWindow(QWidget):
         if not target_path:
             return False
 
+        if open_parent and sys.platform in {"linux", "darwin"}:
+
+            def report(result: path_actions.PathActionResult) -> None:
+                self._report_path_action(target_path, result)
+
+            path_actions.reveal_path_async(target_path, self._path_operation, report)
+            return True
         result = path_actions.reveal_path(target_path) if open_parent else path_actions.open_path(target_path)
+        return self._report_path_action(target_path, result)
+
+    def _report_path_action(self, target_path: str, result: path_actions.PathActionResult) -> bool:
         if result.success:
             return True
         if result.error_code == "missing_path":
@@ -3601,6 +3641,12 @@ class MainWindow(QWidget):
         self._capture_normal_window_geometry()
 
     def closeEvent(self, event: QCloseEvent) -> None:
+        if self._view_model.inspection_busy or self._path_operation.busy:
+            self._view_model.cancel_inspection()
+            self._path_operation.cancel()
+            event.ignore()
+            QTimer.singleShot(25, self.close)
+            return
         if self._active_threads:
             event.ignore()
             self._begin_execution_close()

@@ -921,6 +921,7 @@ xlarge = "Muy grande"
 
 # 文件拖拽区
 [components.file_drop]
+inspecting = "Comprobando archivos…"
 empty_hint_single = "Arrastra un archivo aquí"
 empty_hint_batch = "Arrastra archivos o carpetas aquí"
 add_button = "Añadir"
@@ -1706,6 +1707,8 @@ multiple = "{count} archivos"
 show_outputs = "Ver todos los archivos de salida"
 
 [settings.templates]
+load_failed = "No se pudieron cargar las plantillas"
+operation_failed = "La operación de plantilla falló. Consulta los detalles."
 title = "Plantillas"
 description = "Las plantillas integradas son de solo lectura. Copie una para crear una plantilla personalizada editable. Los cambios de esta página se aplican de inmediato."
 import = "Importar plantillas"

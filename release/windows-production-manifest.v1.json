@@ -3,7 +3,7 @@
   "manifestId": "docwen-windows-production",
   "product": {
     "name": "DocWen",
-    "version": "0.10.0",
+    "version": "0.11.0",
     "stableSemverOnly": true,
     "cliJsonProtocolVersion": 3,
     "releaseTagFormat": "{version}"
@@ -34,15 +34,15 @@
     "fixtures": [
       {
         "path": "tests/fixtures/golden/cli_protocol_v3_success.json",
-        "sha256": "69544b19170cf133cf3f7fe589455ec165be7a9417fcba2698902aa04382005e"
+        "sha256": "bf9c95ead1c12d28dc97defb6d7068495c5c53450d698b3a4a2d010ab570fe99"
       },
       {
         "path": "tests/fixtures/golden/cli_protocol_v3_error.json",
-        "sha256": "b54f775c41d615a5145fcd8951346effff47f28c5795c8ba838302c796c9660f"
+        "sha256": "bb429aa0e7ccec36d55d4ade409fbfe863ae70c2cc495e5bed6b2bc66bdb55d8"
       },
       {
         "path": "tests/fixtures/golden/cli_protocol_v3_batch.json",
-        "sha256": "67ec8840dbe1f525eb6c58299cf656133e6de1ef9e092e1b57dc43cd5299199f"
+        "sha256": "9c4ba70dc276a7514fb689dfa559fbf8ee5b5ac9f293fb23782e2c7bb4ac204d"
       }
     ],
     "machineContractFiles": [
@@ -240,8 +240,8 @@
   },
   "releaseAssetAllowlist": [
     "DocWen-windows-x64.zip",
-    "DocWenCLI-0.10.0-linux-x64.tar.gz",
-    "DocWen-0.10.0-linux-x64.tar.gz",
+    "DocWenCLI-0.11.0-linux-x64.tar.gz",
+    "DocWen-0.11.0-linux-x64.tar.gz",
     "SHA256SUMS.txt"
   ]
 }

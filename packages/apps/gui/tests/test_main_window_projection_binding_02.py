@@ -149,7 +149,7 @@ class TestMainWindowBatchSync:
         assert selected.path == first_doc
         assert window._batch_list.get_current_file() == first_doc.replace("\\", "/")
 
-    def test_input_area_folder_add_syncs_all_files_into_batch_list(self, window, tmp_path) -> None:
+    def test_input_area_folder_add_syncs_all_files_into_batch_list(self, window, tmp_path, qtbot) -> None:
         folder = tmp_path / "large"
         folder.mkdir()
         total = _BATCH_SCAN_LIMIT + 5
@@ -164,6 +164,7 @@ class TestMainWindowBatchSync:
         if app_instance:
             app_instance.processEvents()
 
+        qtbot.waitUntil(lambda: not window._view_model.inspection_busy)
         assert len(window._view_model.files) == total
         assert window._batch_list_vm.entry_count == total
         assert window._batch_list_vm.current_category == "text"
@@ -171,7 +172,7 @@ class TestMainWindowBatchSync:
         assert selected is not None
         assert selected.path.endswith("doc-000.txt")
 
-    def test_input_area_url_drop_large_folder_syncs_all_files_into_batch_list(self, window, tmp_path) -> None:
+    def test_input_area_url_drop_large_folder_syncs_all_files_into_batch_list(self, window, tmp_path, qtbot) -> None:
         folder = tmp_path / "large-url-drop"
         nested = folder / "nested"
         nested.mkdir(parents=True)
@@ -212,6 +213,7 @@ class TestMainWindowBatchSync:
 
         assert drop_event.isAccepted()
         expected_order = sorted(supported_files, key=lambda path: path.casefold())
+        qtbot.waitUntil(lambda: not window._view_model.inspection_busy)
         assert [ref.path for ref in window._view_model.files] == expected_order
         assert window._batch_list_vm.get_files() == [path.replace("\\", "/") for path in expected_order]
         assert len(main_files_changed) == 1
@@ -220,6 +222,7 @@ class TestMainWindowBatchSync:
         assert len(batch_files_added[0][0]) == total
         assert batch_files_added[0][1] == []
         assert batch_entry_counts == [total]
+        qtbot.waitUntil(lambda: not window._view_model.inspection_busy)
         assert len(window._view_model.files) == total
         assert window._batch_list_vm.entry_count == total
         assert window._batch_list_vm.current_category == "text"

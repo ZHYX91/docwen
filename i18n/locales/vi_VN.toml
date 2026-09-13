@@ -920,6 +920,7 @@ xlarge = "Rat lon"
 
 # 文件拖拽区
 [components.file_drop]
+inspecting = "Đang kiểm tra tệp…"
 empty_hint_single = "Kéo thả một tệp vào đây"
 empty_hint_batch = "Kéo thả tệp hoặc thư mục vào đây"
 add_button = "Thêm"
@@ -1697,6 +1698,8 @@ multiple = "{count} tệp"
 show_outputs = "Xem tất cả tệp đầu ra"
 
 [settings.templates]
+load_failed = "Không thể tải mẫu"
+operation_failed = "Thao tác với mẫu không thành công. Hãy xem chi tiết."
 title = "Mẫu"
 description = "Mẫu tích hợp chỉ đọc. Hãy sao chép một mẫu để tạo mẫu tùy chỉnh có thể chỉnh sửa. Các thay đổi trên trang này có hiệu lực ngay lập tức."
 import = "Nhập mẫu"

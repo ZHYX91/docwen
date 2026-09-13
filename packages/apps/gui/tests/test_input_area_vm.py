@@ -17,6 +17,18 @@ from docwen_gui.view_models.main_window_vm import MainWindowViewModel
 pytestmark = pytest.mark.gui
 
 
+@pytest.fixture(autouse=True)
+def synchronous_inspection_port(monkeypatch):
+    """These state tests use an immediate port; background delivery has separate tests."""
+
+    def request_files(self, paths, completed=None):
+        outcome = self.add_files(paths)
+        if completed is not None:
+            completed(outcome)
+
+    monkeypatch.setattr(MainWindowViewModel, "request_files", request_files)
+
+
 # ── Fixtures ──────────────────────────────────────────────────────────
 
 

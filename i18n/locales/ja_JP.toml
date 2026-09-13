@@ -870,6 +870,7 @@ xlarge = "特大"
 
 # 文件拖拽区
 [components.file_drop]
+inspecting = "ファイルを確認しています…"
 empty_hint_single = "ここにファイルをドラッグ"
 empty_hint_batch = "ここにファイルまたはフォルダをドラッグ"
 add_button = "追加"
@@ -1700,6 +1701,8 @@ multiple = "計 {count} 件"
 show_outputs = "すべての出力ファイルを表示"
 
 [settings.templates]
+load_failed = "テンプレートを読み込めません"
+operation_failed = "テンプレートの操作に失敗しました。詳細を確認してください。"
 title = "テンプレート"
 description = "組み込みテンプレートは読み取り専用です。編集するにはコピーしてカスタムテンプレートを作成してください。このページの変更はすぐに反映されます。"
 import = "テンプレートをインポート"

@@ -1,5 +1,8 @@
 """Office cleanup requires a positively identified, newly created COM server."""
 
+import os
+import sys
+import time
 from collections import deque
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -10,6 +13,14 @@ from docwen_core import office_bridge, windows_process
 from docwen_core.windows_process import WindowsProcessIdentity
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows process identity API")
+def test_real_process_identity_rejects_preexisting_process() -> None:
+    identity = WindowsProcessIdentity.capture(os.getpid(), started_after_ns=0)
+    assert identity is not None
+    assert identity.pid == os.getpid()
+    assert WindowsProcessIdentity.capture(os.getpid(), started_after_ns=time.time_ns()) is None
 
 
 @pytest.mark.parametrize("pid", [None, 100])

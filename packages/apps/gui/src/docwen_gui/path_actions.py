@@ -5,13 +5,14 @@ from __future__ import annotations
 import logging
 import subprocess
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 
+from docwen_gui.qt_bridge.background_operation import BackgroundOperation
 from docwen_gui.windows_shell import reveal_file as _windows_reveal_file
 from docwen_runtime.path_io import filesystem_path
 
@@ -142,7 +143,7 @@ def open_path(target_path: str | Path) -> PathActionResult:
     return _failure(str(candidate), error_code="missing_path" if not candidate_exists else "open_failed")
 
 
-def reveal_path(target_path: str | Path) -> PathActionResult:
+def _select_file(target_path: str | Path) -> PathActionResult:
     """Select a file in its manager, with an explicit parent-directory fallback."""
     candidate, error = _coerce_path(target_path)
     if error is not None or candidate is None:
@@ -153,7 +154,7 @@ def reveal_path(target_path: str | Path) -> PathActionResult:
         if not io_candidate.exists():
             return _failure(str(candidate), error_code="missing_path")
         if io_candidate.is_dir():
-            return open_path(candidate)
+            return _failure(str(candidate), error_code="directory")
     except Exception as exc:
         return _failure(str(exc), error_code="probe_failed")
 
@@ -164,14 +165,14 @@ def reveal_path(target_path: str | Path) -> PathActionResult:
             logger.info("Selected file in Windows Explorer: %s", candidate)
             return _success(precise=True)
         except Exception as exc:
-            return _reveal_fallback(candidate, _failure(str(exc), error_code="reveal_failed"))
+            return _failure(str(exc), error_code="reveal_failed")
 
     if platform_key == "macos":
         result = _run_command(["open", "-R", str(candidate)])
         if result.success:
             logger.info("Selected file in macOS Finder: %s", candidate)
             return _success(precise=True)
-        return _reveal_fallback(candidate, result)
+        return result
 
     if platform_key == "linux":
         last_error: PathActionResult | None = None
@@ -181,9 +182,38 @@ def reveal_path(target_path: str | Path) -> PathActionResult:
                 logger.info("Selected file in a Linux file manager: %s", candidate)
                 return _success(precise=True)
             last_error = result
-        return _reveal_fallback(candidate, last_error)
+        return last_error or _failure(str(candidate), error_code="reveal_failed")
 
-    return _reveal_fallback(candidate, None)
+    return _failure(str(candidate), error_code="reveal_failed")
+
+
+def _finish_reveal(target_path: str | Path, result: PathActionResult) -> PathActionResult:
+    if result.success or result.error_code in {"missing_path", "probe_failed"}:
+        return result
+    candidate = Path(target_path).expanduser()
+    if result.error_code == "directory":
+        return open_path(candidate)
+    return _reveal_fallback(candidate, result)
+
+
+def reveal_path(target_path: str | Path) -> PathActionResult:
+    """Synchronously select a file with an explicit directory fallback."""
+    return _finish_reveal(target_path, _select_file(target_path))
+
+
+def reveal_path_async(
+    target_path: str | Path,
+    operation: BackgroundOperation,
+    completed: Callable[[PathActionResult], None],
+) -> None:
+    """Wait for file-manager replies off-thread; launch desktop fallbacks on the UI thread."""
+
+    def finish(result: PathActionResult, error: Exception | None) -> None:
+        if error is not None:
+            result = _failure(str(error), error_code="reveal_failed")
+        completed(_finish_reveal(target_path, result))
+
+    operation.submit(lambda token: _select_file(target_path), finish)
 
 
 def _reveal_fallback(candidate: Path, precise_error: PathActionResult | None) -> PathActionResult:
@@ -194,4 +224,4 @@ def _reveal_fallback(candidate: Path, precise_error: PathActionResult | None) ->
     return precise_error or fallback
 
 
-__all__ = ["PathActionResult", "linux_reveal_commands", "open_path", "reveal_path"]
+__all__ = ["PathActionResult", "linux_reveal_commands", "open_path", "reveal_path", "reveal_path_async"]

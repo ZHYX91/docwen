@@ -58,7 +58,7 @@ def _launch_blocking_execution(window, tmp_path, controller: _BlockingController
     file_path = _normalize_path(str(source))
     window._batch_list_vm.add_files([file_path])
     window._view_model._controller = controller
-    request = SimpleNamespace(request_id=task_id)
+    request = SimpleNamespace(request_id=task_id, input_refs=[])
     context = {
         "request_id": task_id,
         "file_path": file_path,

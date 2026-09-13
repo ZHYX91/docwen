@@ -62,7 +62,15 @@ class TestRuntimeRequestBinding:
         else:
             source.write_text("# Changed content with a different size\n", encoding="utf-8")
 
-        assert window._admit_execution_request(request, context) is False
+        from types import SimpleNamespace
+
+        from docwen_gui.main_window import _ExecutionThread
+
+        window._feedback_context = dict(context)
+        window._info_area_vm.begin_task(operation_id=request.request_id, current_file=source.name, total_count=1)
+        thread = _ExecutionThread(controller=SimpleNamespace(), request=request, context=context)  # type: ignore[arg-type]
+        thread.error_signal.connect(window._on_execution_failed)
+        thread.run()
         summary = window._info_area_vm.task_summary
         assert summary.state == "failed"
         assert summary.operation_id == request.request_id
@@ -186,15 +194,15 @@ class TestRuntimeRequestBinding:
             lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("stale fact must stop before dialog")),
         )
 
-        assert window._admit_execution_request(second_request, _context) is False
         from docwen_gui.i18n import t as _t
+        from docwen_gui.main_window import _check_frozen_request, _ExecutionAdmissionError
 
-        guidance = _t("main_window.file_admission_changed")
-        assert "重新添加" in guidance or "add it again" in guidance
-        assert any(
-            row.operation_id == second_request.request_id and guidance in row.details
-            for row in window._activity_model.records
-        )
+        # GUI confirmation reads frozen facts; exact-byte revalidation belongs
+        # to the execution thread and still rejects changed inputs.
+        assert window._confirm_request_admission(second_request) is True
+        with pytest.raises(_ExecutionAdmissionError) as error:
+            _check_frozen_request(second_request)
+        assert str(error.value) == _t("main_window.file_admission_changed")
 
     def test_request_keeps_localized_ingress_warning_and_inspection_after_text_route_normalization(
         self, window, tmp_path

@@ -12,7 +12,7 @@ from ._main_window_projection_binding_support import window as window
 pytestmark = pytest.mark.gui
 
 
-def test_batch_label_counts_current_category_and_matches_dispatch(window, tmp_path, monkeypatch):
+def test_batch_label_counts_current_category_and_matches_dispatch(window, tmp_path, monkeypatch, qtbot):
     first, second = tmp_path / "first.md", tmp_path / "second.md"
     table = tmp_path / "table.csv"
     for path in (first, second):
@@ -21,6 +21,7 @@ def test_batch_label_counts_current_category_and_matches_dispatch(window, tmp_pa
     _load_request_templates(window)
     window._input_area_vm.set_mode("batch")
     window._input_area_vm.add_files([str(first), str(second), str(table)])
+    qtbot.waitUntil(lambda: not window._view_model.inspection_busy)
     window._batch_list.select_file(str(first))
     calls = []
     monkeypatch.setattr(window, "_start_batch_execution", lambda **kwargs: calls.append(kwargs))
@@ -34,10 +35,11 @@ def test_batch_label_counts_current_category_and_matches_dispatch(window, tmp_pa
     assert conversion.text() == t("common.action_file_count", action=conversion.property("baseActionLabel"), count=1)
 
 
-def test_output_preview_survives_resize_and_reflects_committed_policy(window, tmp_path, qapp):
+def test_output_preview_survives_resize_and_reflects_committed_policy(window, tmp_path, qapp, qtbot):
     source = tmp_path / "source.md"
     source.write_text("# Example\n", encoding="utf-8")
     window._input_area_vm.add_files([str(source)])
+    qtbot.waitUntil(lambda: not window._view_model.inspection_busy)
     label = window._info_area._output_destination_label
     assert label.isHidden()
     destination = tmp_path / "A long output folder name" / "Another long folder name"
