@@ -106,6 +106,13 @@ class ActionAreaViewModel(QObject):
     # ── Signals ──────────────────────────────────────────────────────────
 
     state_changed = Signal()
+    template_ready = True
+
+    def set_template_ready(self, ready: bool) -> None:
+        if self.template_ready != ready:
+            self.template_ready = ready
+            self.state_changed.emit()
+
     """Emitted when file_type, visibility, or options change — widgets rebind."""
 
     conversion_requested = Signal(str, str, object)

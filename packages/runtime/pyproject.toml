@@ -9,6 +9,7 @@ description = "DocWen Runtime — task execution, plugin loading, workspace, out
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "docwen-core",
+    "send2trash>=1.8.3,<2",
 ]
 
 [project.optional-dependencies]

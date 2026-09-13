@@ -52,7 +52,7 @@ def test_runtime_toml_writers_use_same_directory_staged_replace() -> None:
 def test_every_public_loader_mutation_uses_the_shared_executor() -> None:
     relative_path = "packages/runtime/src/docwen_runtime/config/loader.py"
     source = _read(relative_path)
-    transaction = _read("packages/runtime/src/docwen_runtime/config/transaction.py")
+    transaction = _read("packages/runtime/src/docwen_runtime/file_transactions.py")
 
     for token in (
         "_CONFIG_TRANSACTION_LOCK = threading.RLock()",

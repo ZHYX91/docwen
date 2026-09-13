@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from docwen_runtime.config.transaction import _ProcessFileLock
+from docwen_runtime.file_transactions import _ProcessFileLock
 
 pytestmark = pytest.mark.unit
 

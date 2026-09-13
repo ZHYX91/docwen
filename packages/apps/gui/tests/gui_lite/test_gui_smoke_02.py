@@ -41,7 +41,8 @@ class TestTemplateSelectorLite:
         selector = TemplateSelector(template_type="docx")
         qtbot.addWidget(selector)
         names = ["Standard Report", "Academic Paper", "Business Letter"]
-        selector.add_templates(names, auto_select_first=True)
+        selector.add_templates(names)
+        selector.select_template(names[0], selection_source="user")
 
         selected = selector.get_selected()
         assert selected is not None
@@ -60,7 +61,8 @@ class TestTemplateSelectorLite:
         selector.template_selected.connect(lambda name: emitted.append(name))
 
         names = ["Custom Template"]
-        selector.add_templates(names, auto_select_first=True)
+        selector.add_templates(names)
+        selector.select_template(names[0], selection_source="user")
 
         assert len(emitted) >= 1
         assert emitted[0] == "Custom Template"

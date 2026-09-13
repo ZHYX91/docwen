@@ -103,6 +103,7 @@ def test_packaged_gui_settings_archive_contract_tracks_dialog_pages() -> None:
     from docwen_gui.widgets.settings.dialog import _TAB_SPECS, TAB_KEYS
 
     expected = {f"docwen_gui.widgets.settings.{spec.module_name}" for spec in _TAB_SPECS.values()}
+    expected.add("docwen_gui.widgets.settings.templates_tab")
 
     assert expected == verify_packaged_gui._REQUIRED_SETTINGS_PAGE_MODULES
     assert tuple(TAB_KEYS) == verify_packaged_gui._REQUIRED_SETTINGS_TAB_KEYS

@@ -262,6 +262,8 @@ batch_mode = "バッチモード"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
+output_format = "既定の出力形式"
+output_format_hint = "Markdown を追加したときに、この形式のテンプレートを表示します。"
 # MD转文档序号设置
 md_to_docx_section = "見出し番号付け (Markdownからドキュメント)"
 remove_numbering = "デフォルトで元のMarkdown見出し番号を削除"
@@ -289,8 +291,6 @@ edit_numbering_add = "見出し番号追加を編集"
 edit_numbering_clean = "見出し番号削除ルールを編集"
 
 # 模板设置
-template_section = "テンプレート設定"
-template_tooltip = "MDファイルのデフォルトテンプレート選択を設定します\n• DOCX：ドキュメントテンプレート\n• XLSX：スプレッドシートテンプレート"
 
 # 校对设置
 
@@ -989,8 +989,7 @@ cancel_hint = "タスクを実行中です。Esc キーを押すと現在のタ�
 manage_templates = "テンプレートを管理"
 selected_name = "選択中のテンプレート：{name}"
 no_templates = "利用可能なテンプレートはありません"
-empty_hint = "テンプレートがない場合は、テンプレートフォルダーを開いて確認または追加してください。"
-open_template_dir = "テンプレートフォルダーを開く"
+empty_hint = "「テンプレートを管理」で組み込みテンプレートを有効にするか、カスタムテンプレートをインポートしてください。"
 unavailable = "テンプレートセレクターは利用できません"
 
 # 选项卡式模板选择器
@@ -1624,7 +1623,6 @@ conversion_warning = "変換は完了しましたが、警告があります。"
 aggregate_need_two = "一致するファイルが少なくとも2つ必要です（検出: {count}）。"
 route_unavailable = "このファイルで利用できる互換操作はありません。"
 output_settings_unavailable = "出力設定を読み込めなかったため、処理を開始しませんでした。"
-template_catalog_failed = "テンプレートを読み込めませんでした。"
 window_title = "DocWen オフライン版"
 version_offline = "オフライン版"
 settings_tooltip = "設定 (Ctrl+,)"
@@ -1646,8 +1644,6 @@ no_error_available = "エラー情報はありません。"
 no_failed_to_retry = "再試行可能な失敗タスクはありません。"
 path_not_exist = "パスが存在しません：{path}"
 open_path_failed = "パスを開けません：{path}"
-template_not_found = "テンプレートが見つかりません：{name}"
-template_dir_unavailable = "テンプレートディレクトリを利用できません。"
 system_tray_show = "ウィンドウを表示"
 system_tray_hide = "ウィンドウを隠す"
 system_tray_quit = "終了"
@@ -1722,4 +1718,13 @@ builtin = "組み込み"
 builtin_hint = "組み込みテンプレートは、編集前にコピーしてください。"
 file_filter = "Office テンプレート (*.docx *.xlsx);;すべてのファイル (*)"
 name_prompt = "テンプレート名："
-delete_confirm = "カスタムテンプレート「{name}」を削除しますか？"
+delete_confirm = "カスタムテンプレート「{name}」をごみ箱に移動しますか？"
+
+set_default = "既定に設定"
+default = "既定"
+choose_template = "右側で有効なテンプレートを選択してください"
+more = "その他"
+open_failed = "テンプレートを開けません。関連付けられたアプリを確認してください。"
+name_conflict = "{name} というカスタムテンプレートは既に存在します。"
+keep_both = "両方保持"
+replace = "置換"

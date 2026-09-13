@@ -42,8 +42,8 @@ def test_settings_dialog_source_signal_refreshes_main_window_policy(
                 callback()
 
     class _Dialog:
-        def __init__(self, *, parent: QWidget, view_model: object) -> None:
-            del parent, view_model
+        def __init__(self, *, parent: QWidget, view_model: object, template_view_model: object) -> None:
+            del parent, view_model, template_view_model
             self.settings_source_changed = _Signal()
             self.destroyed = _Signal()
             self.finished = _Signal()
@@ -110,8 +110,8 @@ def test_main_window_reuses_owned_nonblocking_settings_dialog(main_window, monke
                 callback()
 
     class _Dialog:
-        def __init__(self, *, parent: QWidget, view_model: object) -> None:
-            del parent, view_model
+        def __init__(self, *, parent: QWidget, view_model: object, template_view_model: object) -> None:
+            del parent, view_model, template_view_model
             self.settings_source_changed = _Signal()
             self.destroyed = _Signal()
             self.finished = _Signal()
@@ -171,8 +171,8 @@ def test_main_window_discards_settings_dialog_when_construction_crosses_deadline
             return None
 
     class _Dialog:
-        def __init__(self, *, parent: QWidget, view_model: object) -> None:
-            del parent, view_model
+        def __init__(self, *, parent: QWidget, view_model: object, template_view_model: object) -> None:
+            del parent, view_model, template_view_model
             self.settings_source_changed = _Signal()
             self.destroyed = _Signal()
             self.finished = _Signal()

@@ -45,6 +45,7 @@ from docwen_gui.widgets.value_controls import ScrollSafeComboBox
 
 from ...styles.theme_semantics import apply_theme_class
 from ...view_models.settings_vm import SettingsViewModel
+from ...view_models.template_vm import TemplateViewModel
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +111,7 @@ TAB_KEYS = [
     "other",
     "proofread",
     "formatting",
+    "templates",
     "link",
     "export",
     "software",
@@ -119,6 +121,7 @@ TAB_KEYS = [
 
 # ── Tab display names ──────────────────────────────────────────────────────
 TAB_NAMES: dict[str, str] = {
+    "templates": t("settings.templates.title"),
     "general": t("settings.tabs.general"),
     "text": t("settings.tabs.text"),
     "document": t("settings.tabs.document"),
@@ -313,6 +316,7 @@ class SettingsDialog(QDialog):
         self,
         parent: QWidget | None = None,
         view_model: SettingsViewModel | None = None,
+        template_view_model: TemplateViewModel | None = None,
     ) -> None:
         title = t("settings.title")
         super().__init__(parent)
@@ -321,6 +325,7 @@ class SettingsDialog(QDialog):
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
 
         self._vm = view_model or SettingsViewModel()
+        self._template_vm = template_view_model or TemplateViewModel(self)
         # Capture the persisted baseline so Cancel can roll back all edits
         self._vm.begin_session()
         # Save initial visual state for Cancel rollback
@@ -353,7 +358,7 @@ class SettingsDialog(QDialog):
         self._compact_navigation = ScrollSafeComboBox(self)
         self._compact_navigation.setObjectName("settingsPageSelector")
         self._compact_navigation.setAccessibleName(t("settings.title"))
-        self._compact_navigation.addItems(list(TAB_NAMES.values()))
+        self._compact_navigation.addItems([TAB_NAMES[key] for key in TAB_KEYS])
         self._compact_navigation.hide()
         layout.addWidget(self._compact_navigation)
 
@@ -379,7 +384,6 @@ class SettingsDialog(QDialog):
         self._add_all_tabs()
 
         # ── Inject template data into the ViewModel ────────────────────
-        self._load_templates_into_vm()
 
         # ── Populate dynamic optimization type items (ViewModel-driven) ─
         self._populate_optimization_types()
@@ -398,6 +402,10 @@ class SettingsDialog(QDialog):
         reset_tab_btn.setMinimumWidth(RESET_TAB_BUTTON_MIN_WIDTH)
         apply_theme_class(reset_tab_btn, "secondary")
         reset_tab_btn.clicked.connect(self._on_reset_tab)
+        self._tab_widget.currentChanged.connect(
+            lambda _: reset_tab_btn.setEnabled(self.current_section() != "templates")
+        )
+        reset_tab_btn.setEnabled(self.current_section() != "templates")
 
         reset_all_btn = QPushButton(t("settings.reset.all_button"), self)
         reset_all_btn.setObjectName("settingsResetAllButton")
@@ -553,6 +561,7 @@ class SettingsDialog(QDialog):
             "layout": "layout.svg",
             "link": "link.svg",
             "formatting": "formatting.svg",
+            "templates": "templates.svg",
             "output": "output.svg",
             "export": "export.svg",
             "software": "software.svg",
@@ -603,6 +612,10 @@ class SettingsDialog(QDialog):
 
     def _build_tab(self, key: str) -> QWidget:
         """Construct one settings page through a PyInstaller-visible lazy import."""
+        if key == "templates":
+            from .templates_tab import TemplatesTab
+
+            return TemplatesTab(view_model=self._template_vm)
         spec = _TAB_SPECS.get(key)
         if spec is None:
             raise KeyError(f"Unknown Settings tab: {key!r}")
@@ -610,6 +623,14 @@ class SettingsDialog(QDialog):
         if not isinstance(tab, QWidget):
             raise TypeError(f"Settings tab factory {key!r} did not return a QWidget")
         return tab
+
+    def focus_template(self, target: str, template_id: str | None) -> None:
+        from .templates_tab import TemplatesTab
+
+        page = self._tabs.get("templates")
+        if isinstance(page, TemplatesTab):
+            self.activate_section("templates")
+            page.focus_template(target, template_id)
 
     def _build_failed_tab(self, key: str, title: str, error: Exception) -> QWidget:
         """Return a stable placeholder when one settings page cannot be built."""
@@ -650,30 +671,6 @@ class SettingsDialog(QDialog):
         adding a "*" to the tab title) but no longer duplicates dirty-state
         logic — the ViewModel is the single source of truth.
         """
-
-    def _load_templates_into_vm(self) -> None:
-        """Query TemplateRegistry and inject template lists into the ViewModel.
-
-        Called during UI construction so TextTab's TabbedTemplateSelector
-        is populated on dialog open.  Falls back silently if the template
-        registry is unavailable (no templates found, templates dir missing,
-        or runtime package not installed).
-        """
-        try:
-            from docwen_runtime.templates import TemplateRegistry
-        except ImportError:
-            logger.debug("TemplateRegistry not available — template selector stays empty")
-            return
-        try:
-            registry = TemplateRegistry.default()
-            templates: dict[str, list[str]] = {"docx": [], "xlsx": []}
-            for info in registry.list_templates():
-                target = info.target
-                if target in templates:
-                    templates[target].append(info.name)
-            self._vm.set_templates(templates)
-        except Exception:
-            logger.debug("Failed to load templates from registry", exc_info=True)
 
     def _populate_optimization_types(self) -> None:
         """Populate optimization policy controls from Runtime capabilities.
@@ -954,7 +951,7 @@ class SettingsDialog(QDialog):
             self.settings_source_changed.emit()
 
     def _on_reset_all(self) -> None:
-        """Reset all tabs to defaults."""
+        """Reset configuration drafts; template files and catalog state are independent."""
         if not _show_confirm(
             self,
             t("settings.reset.all_confirm_title", "Reset All Settings"),

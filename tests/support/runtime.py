@@ -24,6 +24,10 @@ def isolate_user_runtime_roots(tmp_path_factory: pytest.TempPathFactory) -> Iter
 
     import platformdirs
 
+    data_variable = "DOCWEN_DATA_DIR"
+    previous_data_root = os.environ.get(data_variable)
+    os.environ[data_variable] = str(tmp_path_factory.mktemp("docwen-user-data"))
+
     config_variable = "DOCWEN_CONFIG_DIR"
     previous_config_root = os.environ.get(config_variable)
     os.environ[config_variable] = str(tmp_path_factory.mktemp("docwen-user-config"))
@@ -58,7 +62,17 @@ def isolate_user_runtime_roots(tmp_path_factory: pytest.TempPathFactory) -> Iter
         yield
     finally:
         platformdirs.user_log_dir = original_user_log_dir
+        if previous_data_root is None:
+            os.environ.pop(data_variable, None)
+        else:
+            os.environ[data_variable] = previous_data_root
         if previous_config_root is None:
             os.environ.pop(config_variable, None)
         else:
             os.environ[config_variable] = previous_config_root
+
+
+@pytest.fixture(autouse=True)
+def isolate_template_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Template discovery persists IDs; each test owns its catalog state."""
+    monkeypatch.setenv("DOCWEN_DATA_DIR", str(tmp_path / "template-data"))

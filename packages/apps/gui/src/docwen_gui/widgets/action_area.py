@@ -345,6 +345,11 @@ class ActionArea(QWidget):
         self._set_combo_data(self.md_document_format_combo, self._vm.target_format)
         self._set_combo_data(self.md_spreadsheet_format_combo, self._vm.target_format)
         self._sync_execution_labels()
+        route_ready = self._vm.target_route_choices_result.status == "ready"
+        for button in (self.convert_docx_button, self.convert_excel_button):
+            if button is not None:
+                button.setEnabled(route_ready and self._vm.template_ready)
+                button.setToolTip("" if self._vm.template_ready else _t("settings.templates.choose_template"))
         for key, checkbox in self.checkbox_vars.items():
             self._set_checkbox_checked(checkbox, self._vm.proofread_options.get(key, False))
         if self.md_numbering_scheme_combo is not None:
@@ -906,7 +911,11 @@ class ActionArea(QWidget):
         format_row = FormRow(_t("conversion_panel.target_format", "Target format"), format_combo, self)
 
         generate_btn = self._make_button(self._generate_label(), parent=gen_row)
-        generate_btn.setEnabled(route_ready)
+        generate_btn.setEnabled(route_ready and self._vm.template_ready)
+        if not self._vm.template_ready:
+            generate_btn.setToolTip(
+                _t("settings.templates.choose_template", "Choose an enabled template in the right panel")
+            )
         generate_btn.clicked.connect(lambda: self._on_md_to_document_clicked(format_combo.currentData()))
         self.convert_docx_button = generate_btn
 
@@ -1056,7 +1065,11 @@ class ActionArea(QWidget):
         format_row = FormRow(_t("conversion_panel.target_format", "Target format"), format_combo, self)
 
         generate_btn = self._make_button(self._generate_label(), parent=gen_row)
-        generate_btn.setEnabled(route_ready)
+        generate_btn.setEnabled(route_ready and self._vm.template_ready)
+        if not self._vm.template_ready:
+            generate_btn.setToolTip(
+                _t("settings.templates.choose_template", "Choose an enabled template in the right panel")
+            )
         generate_btn.clicked.connect(lambda: self._on_md_to_spreadsheet_clicked(format_combo.currentData()))
         self.convert_excel_button = generate_btn
 

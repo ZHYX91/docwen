@@ -165,3 +165,190 @@ def test_built_in_template_cannot_be_renamed_or_exported_as_custom(tmp_path: Pat
         manager.rename_custom(template.id, "Changed")
     with pytest.raises(TemplateManagementError, match="Built-in templates are read-only"):
         manager.export_custom(template.id, tmp_path / "export.docx")
+
+
+def test_corrupt_state_is_preserved_and_blocks_discovery(tmp_path: Path) -> None:
+    manager, _, user_dir = _manager(tmp_path)
+    _write_ooxml_template(user_dir / "Mine.docx", "docx")
+    manager.state_store.path.parent.mkdir(parents=True, exist_ok=True)
+    manager.state_store.path.write_text("{broken", encoding="utf-8")
+    with pytest.raises(ValueError, match="Cannot read template state"):
+        manager.list_templates()
+    assert manager.state_store.path.read_text(encoding="utf-8") == "{broken"
+
+
+def test_failed_rename_restores_file_and_identity(tmp_path: Path, monkeypatch) -> None:
+    manager, _, user_dir = _manager(tmp_path)
+    _write_ooxml_template(user_dir / "Mine.docx", "docx")
+    template = manager.list_templates()[0]
+    before = manager.state_store.path.read_bytes()
+
+    def fail_save(_state):
+        raise OSError("disk unavailable")
+
+    monkeypatch.setattr(manager.state_store, "save", fail_save)
+    with pytest.raises(OSError, match="disk unavailable"):
+        manager.rename_custom(template.id, "Renamed")
+    assert template.path.is_file()
+    assert not (user_dir / "Renamed.docx").exists()
+    assert manager.state_store.path.read_bytes() == before
+
+
+def test_external_rename_retains_identity_and_disable_state(tmp_path: Path) -> None:
+    manager, _, user_dir = _manager(tmp_path)
+    _write_ooxml_template(user_dir / "Mine.docx", "docx")
+    template = manager.list_templates()[0]
+    manager.set_enabled(template.id, False)
+    template.path.rename(user_dir / "External.docx")
+    renamed = manager.list_templates()[0]
+    assert renamed.id == template.id
+    assert not manager.is_enabled(renamed.id)
+
+
+def test_disabling_default_clears_it_without_selecting_another(tmp_path: Path) -> None:
+    manager, builtin_dir, _ = _manager(tmp_path)
+    _write_ooxml_template(builtin_dir / "Alpha.docx", "docx")
+    _write_ooxml_template(builtin_dir / "Beta.docx", "docx")
+    template = manager.list_templates()[0]
+    manager.set_default(template.id)
+    assert manager.state_store.default_id("docx") == template.id
+    manager.set_enabled(template.id, False)
+    assert manager.state_store.default_id("docx") is None
+    assert len(manager.registry.list_templates()) == 1
+
+
+def test_same_display_name_keeps_distinct_resource_ids(tmp_path: Path) -> None:
+    manager, builtin_dir, user_dir = _manager(tmp_path)
+    _write_ooxml_template(builtin_dir / "Report.docx", "docx")
+    _write_ooxml_template(user_dir / "Report.docx", "docx")
+    templates = manager.list_templates()
+    assert len(templates) == 2
+    assert templates[0].id != templates[1].id
+
+
+def test_reorder_rejects_stale_catalog(tmp_path: Path) -> None:
+    manager, builtin_dir, _ = _manager(tmp_path)
+    _write_ooxml_template(builtin_dir / "Alpha.docx", "docx")
+    with pytest.raises(TemplateManagementError, match="catalog changed"):
+        manager.set_order("docx", [])
+
+
+def test_prepared_journal_recovers_template_bytes_and_state(tmp_path):
+    from docwen_runtime import file_transactions as transactions
+
+    manager, _, user_dir = _manager(tmp_path)
+    _write_ooxml_template(user_dir / "Mine.docx", "docx")
+    original = manager.list_templates()[0]
+    before_bytes = original.path.read_bytes()
+    before_state = manager.state_store.load()
+    snapshots = [transactions.capture_user_file_preimage(path) for path in (manager.state_store.path, original.path)]
+    transactions.write_transaction_journal(manager.state_store.path.parent, "templates", snapshots, state="PREPARED")
+    original.path.write_bytes(b"interrupted replacement")
+    recovered = manager.list_templates()[0]
+    assert recovered.id == original.id
+    assert recovered.path.read_bytes() == before_bytes
+    recovered_state = manager.state_store.load()
+    for entry in recovered_state["user_identities"].values():
+        entry.pop("file_key", None)
+    for entry in before_state["user_identities"].values():
+        entry.pop("file_key", None)
+    assert recovered_state == before_state
+    assert not (manager.state_store.path.parent / transactions.CONFIG_JOURNAL_NAME).exists()
+
+
+def test_replace_preserves_identity_order_enablement_and_default(tmp_path):
+    manager, _, user_dir = _manager(tmp_path)
+    _write_ooxml_template(user_dir / "Mine.docx", "docx")
+    original = manager.list_templates()[0]
+    manager.set_default(original.id)
+    incoming = tmp_path / "incoming" / "Mine.docx"
+    _write_ooxml_template(incoming, "docx")
+    with zipfile.ZipFile(incoming, "a") as package:
+        package.writestr("custom-marker.txt", "replacement")
+    result = manager.import_template(incoming, replace_id=original.id)
+    assert result.id == original.id
+    assert result.path.read_bytes() == incoming.read_bytes()
+    assert manager.state_store.default_id("docx") == original.id
+    manager.set_enabled(original.id, False)
+    manager.import_template(incoming, replace_id=original.id)
+    assert not manager.is_enabled(original.id)
+
+
+def test_trash_failure_restores_template_and_default(tmp_path, monkeypatch):
+    manager, _, user_dir = _manager(tmp_path)
+    _write_ooxml_template(user_dir / "Mine.docx", "docx")
+    original = manager.list_templates()[0]
+    manager.set_default(original.id)
+    before = manager.state_store.path.read_bytes()
+
+    def fail_trash(path):
+        raise OSError("trash unavailable")
+
+    monkeypatch.setattr("docwen_runtime.templates.manager._move_to_recycle_bin", fail_trash)
+    with pytest.raises(TemplateManagementError, match="recycle bin"):
+        manager.delete_custom(original.id)
+    assert original.path.is_file()
+    assert manager.state_store.path.read_bytes() == before
+
+
+def test_package_upgrade_keeps_builtin_state_and_independent_custom_copy(tmp_path):
+    manager, builtin_dir, user_dir = _manager(tmp_path)
+    _write_ooxml_template(builtin_dir / "Report.docx", "docx")
+    builtin = manager.list_templates()[0]
+    custom = manager.copy_builtin_as_custom(builtin.id)
+    custom_bytes = custom.path.read_bytes()
+    manager.set_enabled(builtin.id, False)
+    manager.set_default(custom.id)
+    upgraded = tmp_path / "new-package-version" / "templates"
+    _write_ooxml_template(upgraded / "Report.docx", "docx")
+    registry = TemplateRegistry(
+        upgraded, extra_paths=[user_dir], state_store=manager.state_store, managed_user_dir=user_dir
+    )
+    assert [item.id for item in registry.list_templates()] == [custom.id]
+    assert manager.state_store.default_id("docx") == custom.id
+    assert custom.path.read_bytes() == custom_bytes
+
+
+@pytest.mark.parametrize("name", ["CON", "NUL.docx", "Report.", "bad\x01name"])
+def test_invalid_portable_name_does_not_create_template(tmp_path, name):
+    manager, builtin_dir, user_dir = _manager(tmp_path)
+    _write_ooxml_template(builtin_dir / "Report.docx", "docx")
+    builtin = manager.list_templates()[0]
+    with pytest.raises(TemplateManagementError):
+        manager.copy_builtin_as_custom(builtin.id, custom_name=name)
+    assert not list(user_dir.iterdir())
+
+
+def test_concurrent_process_imports_preserve_every_identity_and_order(tmp_path):
+    import os
+    import sys
+    from concurrent.futures import ThreadPoolExecutor
+
+    from tests.support.subprocess_runner import run_subprocess
+
+    manager, builtin_dir, user_dir = _manager(tmp_path)
+    incoming = tmp_path / "incoming" / "Report.docx"
+    _write_ooxml_template(incoming, "docx")
+    script = """
+import sys
+from pathlib import Path
+from docwen_runtime.templates import TemplateManager, TemplateRegistry, TemplateStateStore
+builtin, user, source = map(Path, sys.argv[1:])
+state = TemplateStateStore(user.parent / 'template-state.json', user_dir=user)
+manager = TemplateManager(
+    TemplateRegistry(builtin, extra_paths=[user], state_store=state, managed_user_dir=user),
+    state_store=state, user_dir=user,
+)
+for _ in range(4):
+    manager.import_template(source)
+"""
+    command = [sys.executable, "-c", script, str(builtin_dir), str(user_dir), str(incoming)]
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        pending = [pool.submit(run_subprocess, command, env=dict(os.environ), timeout=30) for _ in range(2)]
+        results = [future.result() for future in pending]
+    assert all(result.returncode == 0 for result in results), [result.stderr for result in results]
+    templates = manager.list_templates()
+    assert len(templates) == 8
+    assert len({item.id for item in templates}) == 8
+    assert len({item.name for item in templates}) == 8
+    assert manager.state_store.load()["order"]["docx"] == [item.id for item in templates]

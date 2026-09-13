@@ -84,6 +84,7 @@ _REQUIRED_SETTINGS_TAB_KEYS: tuple[str, ...] = (
     "other",
     "proofread",
     "formatting",
+    "templates",
     "link",
     "export",
     "software",

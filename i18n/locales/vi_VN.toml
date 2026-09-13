@@ -24,7 +24,6 @@ conversion_warning = "Chuyển đổi hoàn tất nhưng có cảnh báo."
 aggregate_need_two = "Cần ít nhất hai tệp phù hợp (đã tìm thấy: {count})."
 route_unavailable = "Không có thao tác tương thích cho tệp này."
 output_settings_unavailable = "Không thể tải cài đặt đầu ra nên tác vụ chưa được bắt đầu."
-template_catalog_failed = "Không thể tải mẫu."
 window_title = "DocWen (Phien ban ngoai tuyen)"
 version_offline = "Phien ban ngoai tuyen"
 settings_tooltip = "Cai dat (Ctrl+,)"
@@ -46,8 +45,6 @@ no_error_available = "Hien khong co thong tin loi."
 no_failed_to_retry = "Khong co tac vu that bai de thu lai."
 path_not_exist = "Duong dan khong ton tai: {path}"
 open_path_failed = "Khong the mo duong dan: {path}"
-template_not_found = "Không tìm thấy mẫu: {name}"
-template_dir_unavailable = "Không thể truy cập thư mục mẫu."
 system_tray_show = "Hien cua so"
 system_tray_hide = "An cua so"
 system_tray_quit = "Thoat"
@@ -316,6 +313,8 @@ batch_mode = "Chế độ hàng loạt"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
+output_format = "Định dạng đầu ra mặc định"
+output_format_hint = "Hiển thị mẫu của định dạng này khi thêm Markdown."
 # MD转文档序号设置
 md_to_docx_section = "Đánh số tiêu đề (Markdown → Tài liệu)"
 remove_numbering = "Mặc định xóa đánh số tiêu đề trong Markdown"
@@ -343,8 +342,6 @@ edit_numbering_add = "Sửa sơ đồ thêm số"
 edit_numbering_clean = "Sửa quy tắc xóa số"
 
 # 模板设置
-template_section = "Thiết lập mẫu"
-template_tooltip = "Đặt lựa chọn mẫu mặc định cho tệp MD\n• DOCX: mẫu tài liệu\n• XLSX: mẫu bảng tính"
 
 # 校对设置
 
@@ -1041,8 +1038,7 @@ cancel_hint = "Tác vụ đang chạy. Nhấn Esc để hủy tác vụ hiện t
 manage_templates = "Quản lý mẫu"
 selected_name = "Mẫu đã chọn: {name}"
 no_templates = "Không có mẫu khả dụng"
-empty_hint = "Khi chưa có mẫu, hãy mở thư mục mẫu để kiểm tra hoặc bổ sung tệp."
-open_template_dir = "Mở thư mục mẫu"
+empty_hint = "Dùng Quản lý mẫu để bật mẫu tích hợp hoặc nhập mẫu tùy chỉnh."
 unavailable = "Không thể sử dụng bộ chọn mẫu"
 
 # 选项卡式模板选择器
@@ -1719,4 +1715,13 @@ builtin = "Tích hợp"
 builtin_hint = "Mẫu tích hợp: hãy sao chép trước khi chỉnh sửa."
 file_filter = "Mẫu Office (*.docx *.xlsx);;Tất cả tệp (*)"
 name_prompt = "Tên mẫu:"
-delete_confirm = "Xóa mẫu tùy chỉnh “{name}”?"
+delete_confirm = "Chuyển mẫu tùy chỉnh “{name}” vào thùng rác?"
+
+set_default = "Đặt làm mặc định"
+default = "Mặc định"
+choose_template = "Chọn mẫu đã bật ở bảng bên phải"
+more = "Thêm"
+open_failed = "Không thể mở mẫu. Hãy kiểm tra ứng dụng liên kết."
+name_conflict = "Đã có mẫu tùy chỉnh mang tên {name}."
+keep_both = "Giữ cả hai"
+replace = "Thay thế"

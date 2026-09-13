@@ -262,6 +262,8 @@ batch_mode = "批量模式"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
+output_format = "預設輸出格式"
+output_format_hint = "傳入 Markdown 時，優先顯示此格式的範本。"
 # MD转文档序号设置
 md_to_docx_section = "小標題序號設定（Markdown轉為文件）"
 remove_numbering = "默認清除原有 Markdown 小標題序號"
@@ -289,8 +291,6 @@ edit_numbering_add = "編輯小標題序號新增方案"
 edit_numbering_clean = "編輯小標題序號清理規則"
 
 # 模板设置
-template_section = "範本設定"
-template_tooltip = "設定MD文件的默認範本選擇\n• DOCX：文件範本\n• XLSX：表格範本"
 
 # 校对设置
 
@@ -989,8 +989,7 @@ cancel_hint = "任務處理中，可按 Esc 取消目前任務。"
 manage_templates = "管理範本"
 selected_name = "目前範本：{name}"
 no_templates = "無可用範本"
-empty_hint = "沒有模板時，可先打開模板目錄檢查或補充模板檔案。"
-open_template_dir = "打開模板目錄"
+empty_hint = "透過「管理範本」啟用內建範本或匯入自訂範本。"
 unavailable = "範本選擇器不可用"
 
 # 选项卡式模板选择器
@@ -1624,7 +1623,6 @@ conversion_warning = "轉換已完成，但有警告。"
 aggregate_need_two = "至少需要兩個相符的檔案（目前找到 {count} 個）。"
 route_unavailable = "此檔案沒有相容的可用操作。"
 output_settings_unavailable = "無法載入輸出設定，未啟動本次工作。"
-template_catalog_failed = "無法載入範本。"
 about_tooltip = "關於 DocWen"
 error_copied = "錯誤詳細已複製。"
 font_size_tooltip = "切換字型大小"
@@ -1632,8 +1630,6 @@ no_error_available = "暫無錯誤資訊。"
 no_failed_to_retry = "沒有可重試的失敗任務。"
 no_file_for_locate = "未選中檔案，無法定位輸出。"
 open_path_failed = "無法開啟路徑：{path}"
-template_not_found = "找不到模板：{name}"
-template_dir_unavailable = "範本目錄不可用。"
 path_not_exist = "路徑不存在：{path}"
 runtime_unavailable = "執行時不可用，無法開始轉換。"
 settings_tooltip = "設定 (Ctrl+,)"
@@ -1722,4 +1718,13 @@ builtin = "內建"
 builtin_hint = "內建範本無法直接修改，請先複製為自訂範本。"
 file_filter = "Office 範本 (*.docx *.xlsx);;所有檔案 (*)"
 name_prompt = "範本名稱："
-delete_confirm = "刪除自訂範本「{name}」？"
+delete_confirm = "將自訂範本「{name}」移到資源回收筒？"
+
+set_default = "設為預設"
+default = "預設"
+choose_template = "請在右欄選擇一個已啟用的範本"
+more = "更多"
+open_failed = "無法開啟範本，請檢查是否安裝了關聯的文書或試算表軟體。"
+name_conflict = "已存在名為「{name}」的自訂範本。"
+keep_both = "保留兩份"
+replace = "取代"

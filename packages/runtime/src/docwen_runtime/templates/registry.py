@@ -6,6 +6,7 @@ import hashlib
 import logging
 import re
 import unicodedata
+from contextlib import nullcontext
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -101,9 +102,8 @@ class TemplateRegistry:
     """Discover structurally valid DOCX/XLSX templates by content.
 
     ``TemplateRegistry.default()`` merges immutable bundled templates with the
-    writable per-user template directory.  Directly constructed registries keep
-    the historical standalone behaviour used by CLI/tests and do not persist
-    enablement or ordering state unless a state store is supplied explicitly.
+    writable per-user template directory. Explicit roots and an optional state
+    store support isolated catalogs and external resource discovery.
     """
 
     def __init__(
@@ -124,7 +124,7 @@ class TemplateRegistry:
         extra_paths: list[Path] | None = None,
         *,
         state_store: TemplateStateStore | None = None,
-    ) -> "TemplateRegistry":
+    ) -> TemplateRegistry:
         user_dir = user_templates_dir()
         state = state_store or TemplateStateStore.default()
         combined_paths: list[Path] = [user_dir]
@@ -145,13 +145,17 @@ class TemplateRegistry:
         *,
         include_disabled: bool = False,
     ) -> list[TemplateInfo]:
+        with self._state_store.locked() if self._state_store else nullcontext():
+            return self._list_templates(target_type, include_disabled=include_disabled)
+
+    def _list_templates(self, target_type: str | None, *, include_disabled: bool) -> list[TemplateInfo]:
         templates: list[TemplateInfo] = []
         identities: dict[str, Path] = {}
         for templates_dir in self._dirs:
             if not templates_dir.exists():
                 continue
             for path in sorted(templates_dir.iterdir(), key=lambda item: item.name.casefold()):
-                if not path.is_file():
+                if path.is_symlink() or not path.is_file():
                     continue
                 try:
                     inspection = inspect_file(str(path))
@@ -168,8 +172,7 @@ class TemplateRegistry:
                 conflicting_path = identities.get(template_id)
                 if conflicting_path is not None:
                     raise TemplateIdentityConflictError(
-                        "Conflicting canonical template identity "
-                        f"{template_id}: {conflicting_path} and {path}"
+                        f"Conflicting canonical template identity {template_id}: {conflicting_path} and {path}"
                     )
                 identities[template_id] = path
                 stat = path.stat()

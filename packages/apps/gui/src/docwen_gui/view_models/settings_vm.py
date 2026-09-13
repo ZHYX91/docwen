@@ -324,12 +324,6 @@ class SettingsViewModel(QObject):
     config_reloaded = Signal()
     """Emitted after config is reloaded from source (after Reset)."""
 
-    template_lists_changed = Signal(object)
-    """Emitted when template lists are loaded/updated: dict of type -> [names]."""
-
-    template_selection_changed = Signal(str, str)
-    """Emitted when a template is selected: (template_type, template_name)."""
-
     optimization_types_changed = Signal(dict)
     """Emitted when localization-resolved optimization types are ready:
     {type_id: localized_display_name}."""
@@ -357,10 +351,6 @@ class SettingsViewModel(QObject):
         # cancel_changes() can revert it to the persisted baseline without
         # writing through _config (which holds the draft).
         self._preview_theme: str | None = None
-        # Template lists and concrete template-name selections are session state.
-        # Only the default template type is persisted as gui.md_default_template.
-        self._templates: dict[str, list[str]] = {}
-        self._selected_templates: dict[str, str] = {}
         self._initial_tab_key: str | None = None
         if controller is not None:
             self.load_from_controller_config()
@@ -665,47 +655,6 @@ class SettingsViewModel(QObject):
             changes: list[dict[str, object]] = []
             _diff_configs(baseline, live, "", changes)
         return changes
-
-    def set_templates(self, data: dict[str, list[str]]) -> None:
-        """Inject template lists from an external data source.
-
-        Called by the application layer (e.g. dialog opener) after
-        querying the template registry.  Emits ``template_lists_changed``.
-
-        Args:
-            data: ``{template_type: [template_name, ...]}``.
-        """
-        with QMutexLocker(self._mutex):
-            self._templates = deepcopy(data)
-        self.template_lists_changed.emit(deepcopy(self._templates))
-
-    def get_templates(self) -> dict[str, list[str]]:
-        """Return the current template lists: ``{template_type: [name, ...]}``."""
-        with QMutexLocker(self._mutex):
-            return deepcopy(self._templates)
-
-    def select_template(self, template_type: str, name: str) -> None:
-        """Record a session template-name selection.
-
-        The persistent setting is the template type preference
-        (``gui.md_default_template``), which callers update through
-        :meth:`set_field` when the user changes the active template type.
-        Concrete template names are kept as view/session state so unavailable
-        or refreshed template lists do not write stale names into GUI config.
-
-        Args:
-            template_type: ``"docx"`` or ``"xlsx"``.
-            name: The selected template name.
-        """
-        with QMutexLocker(self._mutex):
-            self._selected_templates[template_type] = name
-        self.template_selection_changed.emit(template_type, name)
-
-    @property
-    def selected_templates(self) -> dict[str, str]:
-        """Get current template selections: ``{template_type: template_name}``."""
-        with QMutexLocker(self._mutex):
-            return dict(self._selected_templates)
 
     # ── Initial tab activation ──────────────────────────────────────────────
 

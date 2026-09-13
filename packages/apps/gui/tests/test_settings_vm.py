@@ -7,7 +7,6 @@ No QApplication is needed.
 
 from __future__ import annotations
 
-import inspect
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -101,23 +100,6 @@ class TestInitialState:
         assert proof.symbol_correction is True
         assert proof.typos_rule is True
         assert proof.sensitive_word is True
-
-
-class TestTemplateState:
-    def test_template_name_selection_is_session_state_only(self, vm: SettingsViewModel) -> None:
-        vm.set_field(SECTION_GUI, "md_default_template", "docx")
-        vm.select_template("xlsx", "Quarterly Sheet")
-
-        assert vm.selected_templates == {"xlsx": "Quarterly Sheet"}
-        assert vm.get_field(SECTION_GUI, "md_default_template") == "docx"
-
-    def test_settings_vm_template_comments_track_persisted_boundary(self) -> None:
-        source_path = Path(inspect.getsourcefile(SettingsViewModel) or "")
-        text = source_path.read_text(encoding="utf-8")
-
-        assert "schema extension pending" not in text
-        assert "Also sets ``gui.md_default_template``" not in text
-        assert "Only the default template type is persisted as gui.md_default_template" in text
 
 
 # ── Field mutation ──────────────────────────────────────────────────────

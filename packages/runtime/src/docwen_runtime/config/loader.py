@@ -25,7 +25,7 @@ from pathlib import Path
 from tomllib import TOMLDecodeError
 from typing import Any
 
-import docwen_runtime.config.transaction as config_transaction
+import docwen_runtime.file_transactions as config_transaction
 from docwen_runtime.config.registry import (
     CONFIG_FILES,
     relative_key_for_spec,

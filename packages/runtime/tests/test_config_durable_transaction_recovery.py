@@ -225,7 +225,7 @@ def test_process_death_after_commit_marker_keeps_new_generation(
         import os
         import sys
         from pathlib import Path
-        from docwen_runtime.config import transaction
+        from docwen_runtime import file_transactions as transaction
         from docwen_runtime.config.loader import ConfigLoader
 
         loader = ConfigLoader(base_dir=Path(sys.argv[1]), user_dir=Path(sys.argv[2]))
@@ -418,7 +418,7 @@ def test_commit_marker_failure_rolls_back_old_generation(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from docwen_runtime.config import transaction
+    from docwen_runtime import file_transactions as transaction
     from docwen_runtime.config.loader import ConfigLoader
 
     base_dir, user_dir, preimages = _config_tree(tmp_path)
@@ -446,7 +446,7 @@ def test_committed_cleanup_failure_is_safe_success_and_retried_on_reload(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from docwen_runtime.config import transaction
+    from docwen_runtime import file_transactions as transaction
     from docwen_runtime.config.loader import ConfigLoader
 
     base_dir, user_dir, _preimages = _config_tree(tmp_path)
@@ -473,8 +473,8 @@ def test_prepared_recovery_failure_leaves_journal_for_idempotent_retry(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    from docwen_runtime import file_transactions as transaction
     from docwen_runtime import toml_io
-    from docwen_runtime.config import transaction
     from docwen_runtime.config.loader import ConfigLoader
 
     base_dir, user_dir, preimages = _config_tree(tmp_path)

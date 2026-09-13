@@ -24,7 +24,6 @@ def _method_block(source: str, name: str, next_name: str) -> str:
 
 def test_reset_tab_draft_merge_stays_model_owned_and_preserves_unrelated_drafts() -> None:
     vm = _read("packages/apps/gui/src/docwen_gui/view_models/settings_vm.py")
-    text_tab = _read("packages/apps/gui/src/docwen_gui/widgets/settings/text_tab.py")
     tabbed = _read("packages/apps/gui/src/docwen_gui/widgets/template_selector_tabbed.py")
     vm_regression = _read("packages/apps/gui/tests/test_settings_vm_preview_state_*.py")
     dialog_regression = _read("packages/apps/gui/tests/test_settings_dialog_shell_*.py")
@@ -100,16 +99,9 @@ def test_reset_tab_draft_merge_stays_model_owned_and_preserves_unrelated_drafts(
     ):
         assert token in vm_regression
 
-    for token in (
-        "test_settings_dialog_reset_tab_preserves_other_tab_draft_and_widget",
-        "test_settings_text_template_restore_does_not_create_unsaved_draft",
-        "test_settings_text_reset_restores_template_type_widget_without_dirty",
-    ):
+    for token in ("test_settings_dialog_reset_tab_preserves_other_tab_draft_and_widget",):
         assert token in dialog_regression
 
-    assert "peek_callback_selection_feedback()" in text_tab
-    assert "restore_current_tab(config.gui.md_default_template)" in text_tab
-    assert "restore_current_tab(self._vm.config.gui.md_default_template)" in text_tab
     assert "def peek_callback_selection_feedback(" in tabbed
     assert "def restore_current_tab(" in tabbed
     assert "self._selection_callback_contexts.append(callback_feedback)" in tabbed

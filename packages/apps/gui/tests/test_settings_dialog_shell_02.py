@@ -424,34 +424,3 @@ def test_settings_dialog_reset_tab_preserves_other_tab_draft_and_widget(
         assert vm.persisted_config.output.output_mode == "custom"
         assert port.raw["output"]["directory"]["mode"] == "custom"  # type: ignore[index]
         assert vm.is_dirty is False
-
-
-def test_settings_text_template_restore_does_not_create_unsaved_draft(qapp) -> None:
-    from docwen_gui.models.settings_config import GUIConfig, SettingsConfig
-    from docwen_gui.view_models.settings_vm import SettingsViewModel
-    from docwen_gui.widgets.settings.text_tab import TextTab
-
-    vm = SettingsViewModel(config=SettingsConfig(gui=GUIConfig(md_default_template="docx")))
-    vm.begin_session()
-    tab = TextTab(vm)
-    consumed_feedback: list[object] = []
-    tab._template_selector.template_selected.connect(  # pyright: ignore[reportPrivateUsage]
-        lambda *_args: consumed_feedback.append(
-            tab._template_selector.consume_last_selection_feedback()  # pyright: ignore[reportPrivateUsage]
-        )
-    )
-
-    vm.set_templates({"docx": ["Document Template"], "xlsx": ["Workbook Template"]})
-    qapp.processEvents()
-
-    assert vm.config.gui.md_default_template == "docx"
-    assert vm.selected_templates == {
-        "docx": "Document Template",
-        "xlsx": "Workbook Template",
-    }
-    assert vm.is_dirty is False
-    assert vm.get_change_summary() == []
-    assert len(consumed_feedback) == 2
-    assert all(feedback is not None for feedback in consumed_feedback)
-
-    tab.close()

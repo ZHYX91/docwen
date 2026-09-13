@@ -262,6 +262,8 @@ batch_mode = "Stapelverarbeitung"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
+output_format = "Standardausgabeformat"
+output_format_hint = "Beim Hinzufügen von Markdown Vorlagen für dieses Format anzeigen."
 # MD转文档序号设置
 md_to_docx_section = "Nummerierung (MD zu DOCX)"
 remove_numbering = "Alte Nummerierung entfernen"
@@ -289,8 +291,6 @@ edit_numbering_add = "Hinzufügeschemata bearbeiten"
 edit_numbering_clean = "Bereinigungsregeln bearbeiten"
 
 # 模板设置
-template_section = "Vorlageneinstellungen"
-template_tooltip = "Standardvorlage beim Import von MD-Dateien."
 
 # 校对设置
 
@@ -989,8 +989,7 @@ cancel_hint = "Aufgabe wird ausgeführt. Esc drücken, um die aktuelle Aufgabe a
 manage_templates = "Vorlagen verwalten"
 selected_name = "Ausgewählte Vorlage: {name}"
 no_templates = "Keine verfügbar"
-empty_hint = "Wenn keine Vorlage verfügbar ist, öffnen Sie den Vorlagenordner, um Dateien zu prüfen oder hinzuzufügen."
-open_template_dir = "Vorlagenordner öffnen"
+empty_hint = "Über Vorlagen verwalten integrierte Vorlagen aktivieren oder eigene importieren."
 unavailable = "Nicht verfügbar"
 
 # 选项卡式模板选择器
@@ -1624,7 +1623,6 @@ conversion_warning = "Die Konvertierung wurde mit einer Warnung abgeschlossen."
 aggregate_need_two = "Mindestens zwei passende Dateien sind erforderlich (gefunden: {count})."
 route_unavailable = "Für diese Datei ist kein kompatibler Vorgang verfügbar."
 output_settings_unavailable = "Die Ausgabeeinstellungen konnten nicht geladen werden; der Vorgang wurde nicht gestartet."
-template_catalog_failed = "Die Vorlagen konnten nicht geladen werden."
 about_tooltip = "Über DocWen"
 error_copied = "Fehlerdetails wurden kopiert."
 font_size_tooltip = "Schriftgröße umschalten"
@@ -1632,8 +1630,6 @@ no_error_available = "Derzeit keine Fehlerinformationen."
 no_failed_to_retry = "Keine fehlgeschlagenen Aufgaben zum Wiederholen."
 no_file_for_locate = "Keine Datei ausgewählt. Ausgabe kann nicht lokalisiert werden."
 open_path_failed = "Pfad konnte nicht geöffnet werden: {path}"
-template_not_found = "Vorlage nicht gefunden: {name}"
-template_dir_unavailable = "Das Vorlagenverzeichnis ist nicht verfügbar."
 path_not_exist = "Pfad existiert nicht: {path}"
 runtime_unavailable = "Runtime nicht verfügbar. Konvertierung kann nicht gestartet werden."
 settings_tooltip = "Einstellungen (Ctrl+,)"
@@ -1722,4 +1718,13 @@ builtin = "Integriert"
 builtin_hint = "Integrierte Vorlage: Vor dem Bearbeiten zuerst kopieren."
 file_filter = "Office-Vorlagen (*.docx *.xlsx);;Alle Dateien (*)"
 name_prompt = "Vorlagenname:"
-delete_confirm = "Benutzerdefinierte Vorlage „{name}“ löschen?"
+delete_confirm = "Benutzerdefinierte Vorlage „{name}“ in den Papierkorb verschieben?"
+
+set_default = "Als Standard festlegen"
+default = "Standard"
+choose_template = "Wählen Sie rechts eine aktivierte Vorlage aus"
+more = "Mehr"
+open_failed = "Die Vorlage konnte nicht geöffnet werden. Prüfen Sie die zugeordnete Anwendung."
+name_conflict = "Eine benutzerdefinierte Vorlage namens {name} ist bereits vorhanden."
+keep_both = "Beide behalten"
+replace = "Ersetzen"

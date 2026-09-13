@@ -13,7 +13,6 @@ from ._main_window_projection_binding_support import (
     Path,
     QApplication,
     RightPanelSlot,
-    SimpleNamespace,
     _emit,
     _file_ref,
     _make_window_with_config,
@@ -282,7 +281,7 @@ class TestConversionPanelPdfInfoBinding:
         assert split_button.isEnabled() is False
 
 
-class TestTemplateSelectorOpenLocationBinding:
+class TestTemplateCatalogBinding:
     @pytest.mark.parametrize(
         ("template_type", "expected_mode"),
         [("docx", "docx"), ("xlsx", "md_to_spreadsheet")],
@@ -391,111 +390,38 @@ class TestTemplateSelectorOpenLocationBinding:
         finally:
             window.close()
 
-    def test_main_window_loads_template_lists_and_details_from_registry(self, qapp, monkeypatch, tmp_path) -> None:
-        from docwen_gui.main_window import MainWindow
-        from docwen_gui.view_models.main_window_vm import MainWindowViewModel
+    def test_main_window_loads_template_lists_and_details_from_registry(self, window, tmp_path):
+        from docx import Document
+
         from docwen_runtime.templates import TemplateRegistry
 
         templates_dir = tmp_path / "templates"
-        report_path = templates_dir / "Report.docx"
-        letter_path = templates_dir / "Letter.docx"
-        budget_path = templates_dir / "Budget.xlsx"
-
-        class _FakeRegistry:
-            def list_templates(self):
-                return [
-                    SimpleNamespace(
-                        target="docx",
-                        name="Report",
-                        description="Report DOCX template",
-                        path=report_path,
-                        modified_ns=1_719_914_460_000_000_000,
-                    ),
-                    SimpleNamespace(
-                        target="docx",
-                        name="Letter",
-                        description="Letter DOCX template",
-                        path=letter_path,
-                        modified_ns=1_719_914_460_000_000_000,
-                    ),
-                    SimpleNamespace(
-                        target="xlsx",
-                        name="Budget",
-                        description="Budget XLSX template",
-                        path=budget_path,
-                        modified_ns=1_719_914_460_000_000_000,
-                    ),
-                ]
-
-        monkeypatch.setattr(TemplateRegistry, "default", staticmethod(lambda: _FakeRegistry()))
-
-        w = MainWindow(view_model=MainWindowViewModel(controller=None))
-        w.setup_ui()
-        try:
-            template_selector = w._template_selector
-            assert template_selector is not None
-            docx_selector = template_selector.get_selector("docx")
-            xlsx_selector = template_selector.get_selector("xlsx")
-
-            assert docx_selector is not None
-            assert xlsx_selector is not None
-            assert docx_selector._list.count() == 2
-            assert xlsx_selector._list.count() == 1
-
-            docx_selector.select_template("Report", selection_source="user")
-            assert "Report DOCX template" not in docx_selector._details_label.text()
-            assert "Report DOCX template" in docx_selector._details_label.toolTip()
-            assert "templates" in docx_selector._details_label.text()
-            assert str(report_path) in docx_selector._details_label.toolTip()
-        finally:
-            w.close()
-
-    def test_template_location_button_routes_through_main_window(self, window, monkeypatch) -> None:
-        calls: list[tuple[str, bool]] = []
-        template_path = Path("S:/Templates/Report.docx")
-
-        monkeypatch.setattr(
-            type(window),
-            "_resolve_template_path",
-            staticmethod(lambda template_type, template_name: template_path),
-        )
-        monkeypatch.setattr(
-            window,
-            "_open_path",
-            lambda target_path, *, open_parent=False: calls.append((target_path, open_parent)) or True,
-        )
-
-        selector = window._template_selector.get_selector("docx")
-        assert selector is not None
-        selector.add_templates(["Report"])
-        selector.select_template("Report", selection_source="user")
-
-        assert selector._open_location_button.isEnabled()
-        selector._open_location_button.click()
-
-        assert calls == [(str(template_path), True)]
-
-    def test_template_empty_state_button_opens_template_directory(self, window, monkeypatch, tmp_path) -> None:
-        calls: list[tuple[str, bool]] = []
-        templates_dir = tmp_path / "templates"
         templates_dir.mkdir()
+        Document().save(str(templates_dir / "Report.docx"))
+        registry = TemplateRegistry(templates_dir)
+        window._template_vm.manager.registry = registry
+        window._load_templates_into_main_selector()
+        template = registry.list_templates()[0]
+        selector = window._template_selector.get_selector("docx")
+        assert selector._list.count() == 1
+        selector.select_template(template.id, selection_source="user")
+        assert "Report" in selector._details_label.text()
+        assert selector.get_selected_resource_id() == template.id
 
-        class _FakeResourceRegistry:
-            def templates_dir(self) -> Path:
-                return templates_dir
+    def test_template_management_button_focuses_current_template(self, window):
+        selector = window._template_selector.get_selector("docx")
+        selected = selector.get_selected_resource_id()
+        selector._manage_button.click()
+        dialog = window._settings_dialog
+        assert dialog.current_section() == "templates"
+        assert dialog._tabs["templates"]._selected_id() == selected
+        dialog.close()
 
-        from docwen_runtime.resources import ResourceRegistry
-
-        monkeypatch.setattr(ResourceRegistry, "default", staticmethod(lambda: _FakeResourceRegistry()))
-        monkeypatch.setattr(
-            window,
-            "_open_path",
-            lambda target_path, *, open_parent=False: calls.append((target_path, open_parent)) or True,
-        )
-
+    def test_template_empty_state_button_opens_management(self, window):
         selector = window._template_selector.get_selector("xlsx")
-        assert selector is not None
         selector.clear_all()
-        selector._empty_action_button.click()
-
-        assert calls == [(str(templates_dir), False)]
+        selector._empty_manage_button.click()
+        dialog = window._settings_dialog
+        assert dialog.current_section() == "templates"
+        assert dialog._tabs["templates"]._target() == "xlsx"
+        dialog.close()

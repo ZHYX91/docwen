@@ -7,14 +7,15 @@ into the user directory before editing.
 
 from __future__ import annotations
 
-import shutil
-import subprocess
-import sys
+import unicodedata
+from collections.abc import Callable, Iterable
+from functools import wraps
 from pathlib import Path
-from typing import Iterable
+from typing import Concatenate
 
 from docwen_core.detection import inspect_file
 from docwen_core.models import StructureStatus
+from docwen_runtime.toml_io import atomic_write_bytes
 
 from .registry import TemplateInfo, TemplateNotFoundError, TemplateRegistry
 from .state import TemplateStateStore, user_templates_dir
@@ -25,11 +26,18 @@ class TemplateManagementError(RuntimeError):
 
 
 def _safe_display_name(value: str) -> str:
-    name = value.strip()
+    name = unicodedata.normalize("NFC", value.strip())
     if not name or name in {".", ".."}:
         raise TemplateManagementError("Template name cannot be empty")
     if Path(name).name != name or any(character in name for character in '<>:"/\\|?*'):
         raise TemplateManagementError("Template name contains invalid path characters")
+    if (
+        name.endswith(".")
+        or any(ord(character) < 32 for character in name)
+        or name.split(".")[0].upper()
+        in {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)), *(f"LPT{i}" for i in range(1, 10))}
+    ):
+        raise TemplateManagementError("Template name is not a portable filename")
     return name
 
 
@@ -47,63 +55,24 @@ def _detect_valid_target(path: Path) -> str:
     return target
 
 
-def _move_to_windows_recycle_bin(path: Path) -> None:
-    """Move *path* to the Windows recycle bin without a third-party dependency."""
-
-    import ctypes
-    from ctypes import wintypes
-
-    class SHFILEOPSTRUCTW(ctypes.Structure):
-        _fields_ = [
-            ("hwnd", wintypes.HWND),
-            ("wFunc", wintypes.UINT),
-            ("pFrom", wintypes.LPCWSTR),
-            ("pTo", wintypes.LPCWSTR),
-            ("fFlags", wintypes.WORD),
-            ("fAnyOperationsAborted", wintypes.BOOL),
-            ("hNameMappings", ctypes.c_void_p),
-            ("lpszProgressTitle", wintypes.LPCWSTR),
-        ]
-
-    # SHFileOperation requires a double-NUL terminated source list.
-    source = f"{path}\0\0"
-    operation = SHFILEOPSTRUCTW()
-    operation.wFunc = 3  # FO_DELETE
-    operation.pFrom = source
-    operation.fFlags = 0x0040 | 0x0010 | 0x0004 | 0x0400  # ALLOWUNDO | NOCONFIRMATION | SILENT | NOERRORUI
-    windows_dlls = getattr(ctypes, "windll")
-    result = windows_dlls.shell32.SHFileOperationW(ctypes.byref(operation))
-    if result != 0 or operation.fAnyOperationsAborted:
-        raise OSError(f"Windows recycle-bin operation failed with code {result}")
-
-
 def _move_to_recycle_bin(path: Path) -> None:
-    """Move a file to the platform trash, never falling back to hard deletion."""
+    """Use the declared cross-platform trash backend; never permanently unlink."""
+    from send2trash import send2trash
 
-    try:
-        from send2trash import send2trash  # type: ignore[import-not-found]
-    except ImportError:
-        if sys.platform == "win32":
-            _move_to_windows_recycle_bin(path)
-            return
-        gio = shutil.which("gio")
-        if gio:
-            completed = subprocess.run(
-                [gio, "trash", str(path)],
-                check=False,
-                capture_output=True,
-                text=True,
-                timeout=15,
-            )
-            if completed.returncode == 0:
-                return
-            detail = (completed.stderr or completed.stdout or "").strip()
-            raise OSError(detail or f"gio trash exited with {completed.returncode}")
-        raise TemplateManagementError(
-            "Safe recycle-bin support is unavailable; the template was not deleted"
-        )
-    else:
-        send2trash(str(path))
+    send2trash(str(path))
+
+
+def serialized[**P, R](
+    method: Callable[Concatenate[TemplateManager, P], R],
+) -> Callable[Concatenate[TemplateManager, P], R]:
+    """Keep discovery and mutations in one cooperative catalog transaction."""
+
+    @wraps(method)
+    def call(self: TemplateManager, *args: P.args, **kwargs: P.kwargs) -> R:
+        with self.state_store.locked():
+            return method(self, *args, **kwargs)
+
+    return call
 
 
 class TemplateManager:
@@ -121,7 +90,7 @@ class TemplateManager:
         self.user_dir = Path(user_dir)
 
     @classmethod
-    def default(cls) -> "TemplateManager":
+    def default(cls) -> TemplateManager:
         state = TemplateStateStore.default()
         return cls(
             TemplateRegistry.default(state_store=state),
@@ -133,6 +102,7 @@ class TemplateManager:
         self.user_dir.mkdir(parents=True, exist_ok=True)
         return self.user_dir
 
+    @serialized
     def list_templates(self, target_type: str | None = None, *, include_disabled: bool = True) -> list[TemplateInfo]:
         return self.registry.list_templates(target_type, include_disabled=include_disabled)
 
@@ -145,9 +115,24 @@ class TemplateManager:
     def is_enabled(self, template_id: str) -> bool:
         return self.state_store.is_enabled(template_id)
 
+    @serialized
     def set_enabled(self, template_id: str, enabled: bool) -> None:
         self._find(template_id)
         self.state_store.set_enabled(template_id, enabled)
+
+    @serialized
+    def set_default(self, template_id: str) -> None:
+        template = self._find(template_id)
+        if not self.is_enabled(template_id):
+            raise TemplateManagementError("Enable the template before setting it as default")
+        self.state_store.set_default(template.target, template.id)
+
+    @serialized
+    def set_order(self, target: str, template_ids: list[str]) -> None:
+        expected = {item.id for item in self.list_templates(target)}
+        if len(template_ids) != len(expected) or set(template_ids) != expected:
+            raise TemplateManagementError("Template catalog changed; refresh before sorting")
+        self.state_store.set_order(target, template_ids)
 
     def import_templates(self, paths: Iterable[Path | str]) -> list[TemplateInfo]:
         imported: list[TemplateInfo] = []
@@ -155,17 +140,42 @@ class TemplateManager:
             imported.append(self.import_template(path))
         return imported
 
-    def import_template(self, path: Path | str) -> TemplateInfo:
-        source = Path(path)
+    @serialized
+    def import_template(self, path: Path | str, *, replace_id: str | None = None) -> TemplateInfo:
+        source = Path(path).expanduser().resolve()
         target = _detect_valid_target(source)
+        if replace_id is not None:
+            existing = self._find(replace_id)
+            self._require_custom(existing)
+            if existing.target != target:
+                raise TemplateManagementError("Template format does not match the replacement")
+            if source != existing.path.resolve():
+                with self.state_store.file_transaction(existing.path):
+                    atomic_write_bytes(existing.path, source.read_bytes())
+            return self._find(replace_id)
         destination = self._unique_destination(source.stem, target)
         self.ensure_user_directory()
-        shutil.copy2(source, destination)
-        template_id = self.state_store.ensure_user_identity(destination, target)
-        self.state_store.set_enabled(template_id, True)
-        self._place_at_end(target, template_id)
+        with self.state_store.file_transaction(destination):
+            atomic_write_bytes(destination, source.read_bytes())
+            template_id = self.state_store.ensure_user_identity(destination, target)
+            self.state_store.set_enabled(template_id, True)
+            self._place_at_end(target, template_id)
         return self._find(template_id)
 
+    @serialized
+    def import_conflict(self, path: Path | str) -> TemplateInfo | None:
+        source = Path(path)
+        target = _detect_valid_target(source)
+        return next(
+            (
+                item
+                for item in self.list_templates(target)
+                if self.is_custom(item) and item.name.casefold() == source.stem.casefold()
+            ),
+            None,
+        )
+
+    @serialized
     def copy_builtin_as_custom(self, template_id: str, *, custom_name: str | None = None) -> TemplateInfo:
         template = self._find(template_id)
         if self.is_custom(template):
@@ -173,12 +183,14 @@ class TemplateManager:
         base_name = _safe_display_name(custom_name) if custom_name is not None else f"{template.name} - custom"
         destination = self._unique_destination(base_name, template.target)
         self.ensure_user_directory()
-        shutil.copy2(template.path, destination)
-        custom_id = self.state_store.ensure_user_identity(destination, template.target)
-        self.state_store.set_enabled(custom_id, True)
-        self._place_after(template.target, custom_id, after_id=template.id)
+        with self.state_store.file_transaction(destination):
+            atomic_write_bytes(destination, template.path.read_bytes())
+            custom_id = self.state_store.ensure_user_identity(destination, template.target)
+            self.state_store.set_enabled(custom_id, True)
+            self._place_after(template.target, custom_id, after_id=template.id)
         return self._find(custom_id)
 
+    @serialized
     def rename_custom(self, template_id: str, new_name: str) -> TemplateInfo:
         template = self._find(template_id)
         self._require_custom(template)
@@ -194,10 +206,14 @@ class TemplateManager:
         if destination.exists() and destination.resolve(strict=False) != template.path.resolve(strict=False):
             raise TemplateManagementError(f"A template named {destination.name!r} already exists")
         old_name = template.path.name
-        template.path.rename(destination)
-        self.state_store.rename_user_identity(old_name, destination.name)
+        if destination == template.path:
+            return template
+        with self.state_store.file_transaction(template.path, destination):
+            template.path.rename(destination)
+            self.state_store.rename_user_identity(old_name, destination.name)
         return self._find(template_id)
 
+    @serialized
     def delete_custom(self, template_id: str) -> None:
         """Move a custom template to the OS recycle bin, never hard-delete it."""
 
@@ -205,16 +221,17 @@ class TemplateManager:
         self._require_custom(template)
         filename = template.path.name
         try:
-            _move_to_recycle_bin(template.path)
+            with self.state_store.file_transaction(template.path):
+                self.state_store.set_enabled(template.id, False)
+                self._remove_from_order(template.target, template.id)
+                self.state_store.forget_user_identity(filename)
+                _move_to_recycle_bin(template.path)
         except TemplateManagementError:
             raise
         except Exception as exc:
-            raise TemplateManagementError(
-                f"Could not move template to the recycle bin: {template.path.name}"
-            ) from exc
-        self.state_store.forget_user_identity(filename)
-        self._remove_from_order(template.target, template.id)
+            raise TemplateManagementError(f"Could not move template to the recycle bin: {template.path.name}") from exc
 
+    @serialized
     def export_custom(self, template_id: str, destination: Path | str) -> Path:
         template = self._find(template_id)
         self._require_custom(template)
@@ -222,9 +239,10 @@ class TemplateManager:
         if destination_path.exists() and destination_path.is_dir():
             destination_path = destination_path / template.path.name
         destination_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(template.path, destination_path)
+        atomic_write_bytes(destination_path, template.path.read_bytes())
         return destination_path
 
+    @serialized
     def move(self, template_id: str, offset: int) -> None:
         if offset == 0:
             return
@@ -276,10 +294,7 @@ class TemplateManager:
     def _unique_destination(self, stem: str, target: str) -> Path:
         safe_stem = _safe_display_name(stem or "template")
         directory = self.ensure_user_directory()
-        existing_names = {
-            template.name.casefold()
-            for template in self.list_templates(target, include_disabled=True)
-        }
+        existing_names = {template.name.casefold() for template in self.list_templates(target, include_disabled=True)}
         candidate_stem = safe_stem
         counter = 2
         while candidate_stem.casefold() in existing_names or (directory / f"{candidate_stem}.{target}").exists():

@@ -262,6 +262,8 @@ batch_mode = "Пакетный"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
+output_format = "Формат вывода по умолчанию"
+output_format_hint = "Показывать шаблоны этого формата при добавлении Markdown."
 # MD转文档序号设置
 md_to_docx_section = "Нумерация (MD в DOCX)"
 remove_numbering = "Удалить старую нумерацию"
@@ -289,8 +291,6 @@ edit_numbering_add = "Изменить схемы добавления"
 edit_numbering_clean = "Изменить правила очистки"
 
 # 模板设置
-template_section = "Настройки шаблона"
-template_tooltip = "Шаблон по умолчанию при импорте MD файлов."
 
 # 校对设置
 
@@ -989,8 +989,7 @@ cancel_hint = "Задача выполняется. Нажмите Esc, чтоб
 manage_templates = "Управление шаблонами"
 selected_name = "Выбранный шаблон: {name}"
 no_templates = "Нет доступных"
-empty_hint = "Если шаблоны недоступны, откройте папку шаблонов, чтобы проверить или добавить файлы."
-open_template_dir = "Открыть папку шаблонов"
+empty_hint = "В разделе управления шаблонами включите встроенные шаблоны или импортируйте свои."
 unavailable = "Недоступно"
 
 # 选项卡式模板选择器
@@ -1624,7 +1623,6 @@ conversion_warning = "Преобразование завершено с пре�
 aggregate_need_two = "Требуется не менее двух подходящих файлов (найдено: {count})."
 route_unavailable = "Для этого файла нет совместимой операции."
 output_settings_unavailable = "Не удалось загрузить настройки вывода; задача не была запущена."
-template_catalog_failed = "Не удалось загрузить шаблоны."
 window_title = "DocWen (Оффлайн версия)"
 version_offline = "Оффлайн версия"
 settings_tooltip = "Настройки (Ctrl+,)"
@@ -1646,8 +1644,6 @@ no_error_available = "Нет информации об ошибке."
 no_failed_to_retry = "Нет неудачных задач для повтора."
 path_not_exist = "Путь не существует: {path}"
 open_path_failed = "Не удалось открыть путь: {path}"
-template_not_found = "Шаблон не найден: {name}"
-template_dir_unavailable = "Каталог шаблонов недоступен."
 system_tray_show = "Показать окно"
 system_tray_hide = "Скрыть окно"
 system_tray_quit = "Выход"
@@ -1722,4 +1718,13 @@ builtin = "Встроенный"
 builtin_hint = "Встроенный шаблон: скопируйте его перед редактированием."
 file_filter = "Шаблоны Office (*.docx *.xlsx);;Все файлы (*)"
 name_prompt = "Имя шаблона:"
-delete_confirm = "Удалить пользовательский шаблон «{name}»?"
+delete_confirm = "Переместить пользовательский шаблон «{name}» в корзину?"
+
+set_default = "Использовать по умолчанию"
+default = "По умолчанию"
+choose_template = "Выберите включённый шаблон на правой панели"
+more = "Ещё"
+open_failed = "Не удалось открыть шаблон. Проверьте связанное приложение."
+name_conflict = "Пользовательский шаблон {name} уже существует."
+keep_both = "Сохранить оба"
+replace = "Заменить"

@@ -4,15 +4,12 @@
 管理多个模板类型（docx/xlsx）的选项卡式选择器，支持外部数据注入和刷新。
 
 架构约定：
-- ``load_templates()`` 默认保留旧版自然排序语义，兼容现有直接调用方。
-- ``load_all_templates()`` 默认尊重 Runtime/管理层提供的持久排序。
-- 模板管理完成后可以通过 ``refresh_from_runtime_registry()`` 刷新两类模板。
+- 所有列表按模型提供的顺序展示；选择使用稳定资源 ID。
 """
 
 from __future__ import annotations
 
 import logging
-import re
 from collections.abc import Callable
 from typing import Any
 
@@ -31,20 +28,6 @@ from .template_selector import (
 logger = logging.getLogger(__name__)
 
 
-# ── Natural-sort helper ──────────────────────────────────────────────────────
-_SORT_TOKEN_RE = re.compile(r"\d+|\D+")
-
-
-def _template_name_sort_key(name: str) -> tuple[object, ...]:
-    parts: list[tuple[int, object]] = []
-    for token in _SORT_TOKEN_RE.findall(str(name)):
-        if token.isdigit():
-            parts.append((0, int(token)))
-        else:
-            parts.append((1, token.casefold()))
-    return tuple(parts)
-
-
 class TabbedTemplateSelector(QWidget):
     """选项卡式模板选择组件。"""
 
@@ -56,22 +39,21 @@ class TabbedTemplateSelector(QWidget):
         parent: QWidget | None = None,
         on_template_selected: Callable[[str, str], None] | None = None,
         on_tab_changed: Callable[[str, str], None] | None = None,
-        on_open_location: Callable[[str, str], None] | None = None,
-        on_open_directory: Callable[[str], None] | None = None,
+        on_manage_templates: Callable[[str], None] | None = None,
     ):
         super().__init__(parent)
         self.setObjectName("tabbedTemplateSelector")
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self._on_template_selected_cb = on_template_selected
         self._on_tab_changed_cb = on_tab_changed
-        self._on_open_location_cb = on_open_location
-        self._on_open_directory_cb = on_open_directory
         self._current_tab: str = "docx"
         self._template_cache: dict[str, list[str]] = {}
         self._template_details_cache: dict[str, dict[str, TemplateItemDetails]] = {}
         self._last_selection_feedback: tuple[str, str, TemplateSelectionFeedback] | None = None
         self._selection_callback_contexts: list[tuple[str, str, TemplateSelectionFeedback] | None] = []
         self._manual_selection: tuple[str, str] | None = None
+        self._default_ids: dict[str, str | None] = {}
+        self._invalidated: set[str] = set()
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -96,8 +78,7 @@ class TabbedTemplateSelector(QWidget):
             selector = TemplateSelector(
                 template_type=template_type,
                 on_template_selected=lambda name, tt=template_type: self._on_selector_selected(tt, name),
-                on_open_location=self._on_open_location_cb,
-                on_open_directory=self._on_open_directory_cb,
+                on_manage_templates=on_manage_templates,
             )
             selector.template_error.connect(self._forward_template_error)
             self._selectors[template_type] = selector
@@ -123,15 +104,14 @@ class TabbedTemplateSelector(QWidget):
         self._set_current_tab(resolved_type, emit_signal=False)
         return self._activate_default_template(resolved_type, selection_source="auto_default")
 
+    def set_defaults(self, defaults: dict[str, str | None]) -> None:
+        self._default_ids = dict(defaults)
+
     def _activate_default_template(self, template_type: str, *, selection_source: str) -> bool:
         selector = self._selectors.get(template_type)
-        if selector and selector._list.count() > 0:
-            preferred_name = t("meta.template_name") if template_type == "docx" else ""
-            explanation = self._build_auto_default_reason(template_type)
-            if preferred_name and selector.has_template(preferred_name):
-                selector.select_template(preferred_name, selection_source=selection_source, explanation=explanation)
-            else:
-                selector.activate_first_template(selection_source=selection_source, explanation=explanation)
+        preferred_id = self._default_ids.get(template_type)
+        if selector and preferred_id and selector.has_template(preferred_id) and template_type not in self._invalidated:
+            selector.select_template(preferred_id, selection_source=selection_source)
             return True
         return False
 
@@ -154,10 +134,6 @@ class TabbedTemplateSelector(QWidget):
             name = selector.get_selected()
             if name:
                 return (self._current_tab, name)
-        for tt, sel in self._selectors.items():
-            name = sel.get_selected()
-            if name:
-                return (tt, name)
         return None
 
     def get_selected_template_resource(self) -> tuple[str, str] | None:
@@ -166,10 +142,6 @@ class TabbedTemplateSelector(QWidget):
             resource_id = selector.get_selected_resource_id()
             if resource_id:
                 return (self._current_tab, resource_id)
-        for template_type, candidate in self._selectors.items():
-            resource_id = candidate.get_selected_resource_id()
-            if resource_id:
-                return (template_type, resource_id)
         return None
 
     def consume_last_selection_feedback(self) -> tuple[str, str, TemplateSelectionFeedback] | None:
@@ -195,21 +167,16 @@ class TabbedTemplateSelector(QWidget):
         names: list[str],
         *,
         details: dict[str, TemplateItemDetails] | None = None,
-        preserve_order: bool = False,
     ) -> None:
-        """Load templates, optionally preserving the caller/runtime order.
+        """Load templates in the caller/runtime order.
 
-        Direct callers keep the historical natural-sort behavior. Managed
-        catalog callers can pass ``preserve_order=True`` so the persisted
-        per-format user order remains the presentation order.
+        The model owns ordering; identity keys are never sorted in the view.
         """
 
         selector = self._selectors.get(template_type)
         if selector is None:
             return
         ordered_names = list(dict.fromkeys(names))
-        if not preserve_order:
-            ordered_names.sort(key=_template_name_sort_key)
         normalized_details = dict(details or {})
         if ordered_names != self._template_cache.get(
             template_type
@@ -217,6 +184,8 @@ class TabbedTemplateSelector(QWidget):
             self._template_cache[template_type] = ordered_names
             self._template_details_cache[template_type] = normalized_details
             selected = selector.get_selected()
+            if selected and selected not in ordered_names:
+                self._invalidated.add(template_type)
             manual_name = None
             if self._manual_selection is not None and self._manual_selection[0] == template_type:
                 manual_name = self._manual_selection[1]
@@ -225,8 +194,7 @@ class TabbedTemplateSelector(QWidget):
                 selector.select_template(manual_name, selection_source="restore")
             elif selected and selected in ordered_names:
                 selector.select_template(selected, selection_source="restore")
-            elif ordered_names:
-                self._activate_default_template(template_type, selection_source="restore")
+
         if self._manual_selection is not None and self._manual_selection[0] == template_type:
             self._restore_manual_selection()
 
@@ -235,7 +203,6 @@ class TabbedTemplateSelector(QWidget):
         data: dict[str, list[str]],
         *,
         details: dict[str, dict[str, TemplateItemDetails]] | None = None,
-        preserve_order: bool = True,
     ) -> None:
         """Load the full catalog, preserving registry order by default."""
 
@@ -246,37 +213,7 @@ class TabbedTemplateSelector(QWidget):
                 tt,
                 names,
                 details=tt_details,
-                preserve_order=preserve_order,
             )
-
-    def refresh_from_runtime_registry(self) -> None:
-        """Refresh both tabs from the managed runtime catalog."""
-
-        try:
-            from docwen_runtime.templates import TemplateManager
-
-            manager = TemplateManager.default()
-            data: dict[str, list[str]] = {"docx": [], "xlsx": []}
-            details: dict[str, dict[str, TemplateItemDetails]] = {"docx": {}, "xlsx": {}}
-            for target in ("docx", "xlsx"):
-                for info in manager.list_templates(target, include_disabled=False):
-                    data[target].append(info.name)
-                    custom = manager.is_custom(info)
-                    details[target][info.name] = TemplateItemDetails(
-                        resource_id=info.id,
-                        usage_hint=info.description,
-                        source_label=(
-                            t("settings.templates.custom", "自定义")
-                            if custom
-                            else t("settings.templates.builtin", "内置")
-                        ),
-                        source_path=str(info.path) if custom else None,
-                        updated_label=TemplateSelector._format_modified_ns(info.modified_ns),
-                    )
-            self.load_all_templates(data, details=details, preserve_order=True)
-        except Exception as exc:
-            logger.exception("Unable to refresh managed template catalog")
-            self.show_load_error(t("components.template_selector.unavailable"), str(exc))
 
     def show_load_error(self, summary: str, detail: str) -> None:
         self._template_cache.clear()
@@ -331,6 +268,7 @@ class TabbedTemplateSelector(QWidget):
                 )
                 self._last_selection_feedback = callback_feedback
                 if feedback.selection_source == "user":
+                    self._invalidated.discard(template_type)
                     self._manual_selection = (template_type, template_name)
         self._selection_callback_contexts.append(callback_feedback)
         try:
