@@ -363,7 +363,7 @@ def detect_text_format(file_path: str) -> str:
 
     md_score = 0
     for line_index, line in enumerate(md_markers):
-        if line.startswith(("#", "```")):  # heading
+        if re.match(r"^#{1,6}(?:\s|$)", line) or line.startswith("```"):
             md_score += 2
         elif line.startswith("---") and len(line) <= 5:  # YAML front matter / HR
             md_score += 1
@@ -482,6 +482,27 @@ def _detect_delimited_format(text: str) -> str | None:
     if len(set(widths)) > 2 and max(widths) - min(widths) > 3:
         return None
     return "tsv" if dialect.delimiter == "\t" else "csv"
+
+
+def matches_single_column_declaration(file_path: str, declared_format: str) -> bool:
+    """Validate the ambiguous single-column subset after neutral text sniffing."""
+    if declared_format not in {"csv", "tsv"}:
+        return False
+    text = _read_text_file(file_path)
+    if not text:
+        return False
+    try:
+        rows = csv.reader(io.StringIO(text), delimiter="," if declared_format == "csv" else "\t", strict=True)
+        found = False
+        for row in rows:
+            if not row:
+                continue
+            if len(row) != 1:
+                return False
+            found = True
+        return found
+    except csv.Error:
+        return False
 
 
 def _inspect_zip_container(file_path: str) -> ContentDetection:

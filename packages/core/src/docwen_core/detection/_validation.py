@@ -1,6 +1,8 @@
 """Canonical file inspection, validation, and admission decisions.
 
-The suffix is treated as a declaration, never as content evidence.  Every
+The suffix is treated as a declaration, never as content evidence. A declared
+CSV/TSV parser may resolve neutral text that validates as a single column; it
+cannot override distinctive content detected in another format. Every
 application ingress should call :func:`inspect_file` once and carry the result
 forward with the request instead of independently guessing a route.
 """
@@ -17,6 +19,7 @@ from docwen_core.detection._sniffing import (
     ENCRYPTED_OOXML_CONTAINER_FORMAT,
     SUPPORTED_EXTENSION_FORMATS,
     detect_content_format,
+    matches_single_column_declaration,
 )
 from docwen_core.detection.ooxml_signature import (
     inspect_ooxml_signature_graph,
@@ -276,6 +279,8 @@ def inspect_file(file_path: str, *, cancel_check: Callable[[], None] | None = No
     declared_category = get_category(declared_format)
     declared_supported = extension in _SUPPORTED_EXTENSIONS
     detection = detect_content_format(str(io_path))
+    if detection.format == "txt" and matches_single_column_declaration(str(io_path), declared_format):
+        detection = replace(detection, format=declared_format, confidence=DetectionConfidence.PROBABLE)
     encrypted_ooxml_container = detection.format == ENCRYPTED_OOXML_CONTAINER_FORMAT
     if encrypted_ooxml_container and declared_format in _ENCRYPTED_OOXML_FORMATS:
         detection = replace(detection, format=declared_format)
