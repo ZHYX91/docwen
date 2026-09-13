@@ -4,7 +4,8 @@
 管理多个模板类型（docx/xlsx）的选项卡式选择器，支持外部数据注入和刷新。
 
 架构约定：
-- 模板数据由外层通过 ``load_templates()`` 注入；调用方顺序即展示顺序。
+- ``load_templates()`` 默认保留旧版自然排序语义，兼容现有直接调用方。
+- ``load_all_templates()`` 默认尊重 Runtime/管理层提供的持久排序。
 - 模板管理完成后可以通过 ``refresh_from_runtime_registry()`` 刷新两类模板。
 """
 
@@ -30,9 +31,7 @@ from .template_selector import (
 logger = logging.getLogger(__name__)
 
 
-# ── Legacy natural-sort helper ───────────────────────────────────────────────
-# Kept importable for compatibility.  Template ordering is now owned by the
-# runtime template state and callers; the selector must not override it.
+# ── Natural-sort helper ──────────────────────────────────────────────────────
 _SORT_TOKEN_RE = re.compile(r"\d+|\D+")
 
 
@@ -196,13 +195,21 @@ class TabbedTemplateSelector(QWidget):
         names: list[str],
         *,
         details: dict[str, TemplateItemDetails] | None = None,
+        preserve_order: bool = False,
     ) -> None:
-        """Load templates while preserving the caller/runtime order."""
+        """Load templates, optionally preserving the caller/runtime order.
+
+        Direct callers keep the historical natural-sort behavior. Managed
+        catalog callers can pass ``preserve_order=True`` so the persisted
+        per-format user order remains the presentation order.
+        """
 
         selector = self._selectors.get(template_type)
         if selector is None:
             return
         ordered_names = list(dict.fromkeys(names))
+        if not preserve_order:
+            ordered_names.sort(key=_template_name_sort_key)
         normalized_details = dict(details or {})
         if ordered_names != self._template_cache.get(
             template_type
@@ -228,11 +235,19 @@ class TabbedTemplateSelector(QWidget):
         data: dict[str, list[str]],
         *,
         details: dict[str, dict[str, TemplateItemDetails]] | None = None,
+        preserve_order: bool = True,
     ) -> None:
+        """Load the full catalog, preserving registry order by default."""
+
         for tt in self._selectors:
             names = data.get(tt, [])
             tt_details = (details or {}).get(tt, {})
-            self.load_templates(tt, names, details=tt_details)
+            self.load_templates(
+                tt,
+                names,
+                details=tt_details,
+                preserve_order=preserve_order,
+            )
 
     def refresh_from_runtime_registry(self) -> None:
         """Refresh both tabs from the managed runtime catalog."""
@@ -258,7 +273,7 @@ class TabbedTemplateSelector(QWidget):
                         source_path=str(info.path) if custom else None,
                         updated_label=TemplateSelector._format_modified_ns(info.modified_ns),
                     )
-            self.load_all_templates(data, details=details)
+            self.load_all_templates(data, details=details, preserve_order=True)
         except Exception as exc:
             logger.exception("Unable to refresh managed template catalog")
             self.show_load_error(t("components.template_selector.unavailable"), str(exc))
