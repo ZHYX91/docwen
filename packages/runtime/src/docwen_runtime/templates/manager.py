@@ -8,6 +8,8 @@ into the user directory before editing.
 from __future__ import annotations
 
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 from typing import Iterable
 
@@ -43,6 +45,64 @@ def _detect_valid_target(path: Path) -> str:
     if target not in {"docx", "xlsx"} or inspection.structure_status is not StructureStatus.VALID:
         raise TemplateManagementError(f"File is not a structurally valid DOCX/XLSX template: {candidate}")
     return target
+
+
+def _move_to_windows_recycle_bin(path: Path) -> None:
+    """Move *path* to the Windows recycle bin without a third-party dependency."""
+
+    import ctypes
+    from ctypes import wintypes
+
+    class SHFILEOPSTRUCTW(ctypes.Structure):
+        _fields_ = [
+            ("hwnd", wintypes.HWND),
+            ("wFunc", wintypes.UINT),
+            ("pFrom", wintypes.LPCWSTR),
+            ("pTo", wintypes.LPCWSTR),
+            ("fFlags", wintypes.WORD),
+            ("fAnyOperationsAborted", wintypes.BOOL),
+            ("hNameMappings", ctypes.c_void_p),
+            ("lpszProgressTitle", wintypes.LPCWSTR),
+        ]
+
+    # SHFileOperation requires a double-NUL terminated source list.
+    source = f"{path}\0\0"
+    operation = SHFILEOPSTRUCTW()
+    operation.wFunc = 3  # FO_DELETE
+    operation.pFrom = source
+    operation.fFlags = 0x0040 | 0x0010 | 0x0004 | 0x0400  # ALLOWUNDO | NOCONFIRMATION | SILENT | NOERRORUI
+    result = ctypes.windll.shell32.SHFileOperationW(ctypes.byref(operation))
+    if result != 0 or operation.fAnyOperationsAborted:
+        raise OSError(f"Windows recycle-bin operation failed with code {result}")
+
+
+def _move_to_recycle_bin(path: Path) -> None:
+    """Move a file to the platform trash, never falling back to hard deletion."""
+
+    try:
+        from send2trash import send2trash  # type: ignore[import-not-found]
+    except ImportError:
+        if sys.platform == "win32":
+            _move_to_windows_recycle_bin(path)
+            return
+        gio = shutil.which("gio")
+        if gio:
+            completed = subprocess.run(
+                [gio, "trash", str(path)],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            if completed.returncode == 0:
+                return
+            detail = (completed.stderr or completed.stdout or "").strip()
+            raise OSError(detail or f"gio trash exited with {completed.returncode}")
+        raise TemplateManagementError(
+            "Safe recycle-bin support is unavailable; the template was not deleted"
+        )
+    else:
+        send2trash(str(path))
 
 
 class TemplateManager:
@@ -144,13 +204,9 @@ class TemplateManager:
         self._require_custom(template)
         filename = template.path.name
         try:
-            from send2trash import send2trash  # type: ignore[import-not-found]
-        except ImportError as exc:
-            raise TemplateManagementError(
-                "Safe recycle-bin support is unavailable; the template was not deleted"
-            ) from exc
-        try:
-            send2trash(str(template.path))
+            _move_to_recycle_bin(template.path)
+        except TemplateManagementError:
+            raise
         except Exception as exc:
             raise TemplateManagementError(
                 f"Could not move template to the recycle bin: {template.path.name}"
