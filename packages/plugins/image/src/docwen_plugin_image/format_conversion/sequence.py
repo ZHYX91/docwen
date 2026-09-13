@@ -57,6 +57,9 @@ def save_sequence(
                 rgba = frame.convert("RGBA")
                 stack.callback(rgba.close)
                 frame = rgba
+            # Encoders may fall back to image.info when an explicit save option
+            # is absent (notably a GIF that should play only once).
+            frame.info.pop("loop", None)
             frames.append(frame)
             if not poster or index != 0:
                 durations.append(int(source.info.get("duration", 0)))
