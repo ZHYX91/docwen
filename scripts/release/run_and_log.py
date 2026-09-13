@@ -19,6 +19,7 @@ ALLOWED_ENVIRONMENT_OVERRIDES = frozenset(
     {
         "DOCWEN_BUILD_VERSION",
         "DOCWEN_CONFIG_DIR",
+        "DOCWEN_DATA_DIR",
         "DOCWEN_LOG_DIR",
         "DOCWEN_LOG_TO_TEMP",
         "DOCWEN_PYTEST_REPORT_DIR",

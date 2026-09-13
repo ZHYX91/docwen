@@ -537,3 +537,11 @@ def test_packaged_gui_smoke_documents_ipc_boundary() -> None:
     assert "不证明单实例锁、二次启动文件投递或窗口激活" in release_doc
     assert "可选 `--ipc-smoke`" in release_doc
     assert "The default packaged GUI smoke uses `DOCWEN_GUI_TEST_AUTOCLOSE_MS`" in gate_doc
+
+
+def test_packaged_gui_isolates_template_data_from_user_profile(tmp_path, monkeypatch):
+    from scripts.release.verify_packaged_gui import _base_env
+
+    monkeypatch.setenv("DOCWEN_DATA_DIR", str(tmp_path / "unrelated-user-data"))
+    work = tmp_path / "verification"
+    assert _base_env(work)["DOCWEN_DATA_DIR"] == str(work / "data_home")

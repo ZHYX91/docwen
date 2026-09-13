@@ -389,6 +389,7 @@ def verify(binary_dir: Path) -> None:
                 "PYTHONUTF8": "1",
                 "PYTHONIOENCODING": "utf-8",
                 "DOCWEN_CONFIG_DIR": str(root / "config"),
+                "DOCWEN_DATA_DIR": str(root / "data"),
                 "DOCWEN_LOG_DIR": str(root / "logs"),
                 "DOCWEN_LOG_TO_TEMP": "",
             }
