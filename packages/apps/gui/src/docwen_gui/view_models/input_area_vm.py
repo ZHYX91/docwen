@@ -26,7 +26,7 @@ from docwen_gui.i18n import t as _t
 if TYPE_CHECKING:
     from docwen_core.models.file_ref import FileRef
 
-    from .main_window_vm import MainWindowViewModel
+    from .main_window_vm import FileAddOutcome, MainWindowViewModel
 
 # Maximum number of paths to parse from a text drag payload
 _TEXT_PAYLOAD_MAX_PATHS = 64
@@ -658,7 +658,17 @@ class InputAreaViewModel(QObject):
         skipped_count: int = 0,
         warning_message: str = "",
     ) -> None:
-        outcome = self._main_vm.add_files(paths)
+        self._emit_message(_t("components.file_drop.inspecting"), "info")
+        self._main_vm.request_files(
+            paths,
+            lambda outcome: self._finish_files_added(
+                outcome, paths, skipped_count=skipped_count, warning_message=warning_message
+            ),
+        )
+
+    def _finish_files_added(
+        self, outcome: FileAddOutcome, paths: list[str], *, skipped_count: int, warning_message: str
+    ) -> None:
         admitted_paths = [ref.path for ref in outcome.added]
         if self._mode == "single" and not outcome.rejected:
             requested_path = Path(paths[0])

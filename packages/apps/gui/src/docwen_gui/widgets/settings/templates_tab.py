@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFileDialog,
     QGridLayout,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
     QListWidget,
@@ -82,13 +83,25 @@ class TemplatesTab(BaseSettingsTab):
         intro.setWordWrap(True)
         intro.setObjectName("templateManagementDescription")
         root.addWidget(intro)
+        self._catalog_error = QWidget(self)
+        self._catalog_error.setObjectName("templateCatalogError")
+        error_layout = QHBoxLayout(self._catalog_error)
+        error_layout.setContentsMargins(0, 0, 0, 0)
+        error_label = QLabel(t("settings.templates.load_failed"), self._catalog_error)
+        error_label.setWordWrap(True)
+        error_layout.addWidget(error_label, 1)
+        details_button = PushButton(t("activity.details"), self._catalog_error)
+        details_button.clicked.connect(lambda: self._show_error(RuntimeError(self._vm.error or "")))
+        error_layout.addWidget(details_button)
+        self._catalog_error.hide()
+        root.addWidget(self._catalog_error)
 
         self._pivot = Pivot(self)
         self._pivot.setObjectName("templateManagementPivot")
         root.addWidget(self._pivot)
         self._tabs = QStackedWidget(self)
         self._tabs.setObjectName("templateManagementTabs")
-        self._tabs.setMinimumHeight(320)
+        self._tabs.setMinimumHeight(240)
         for target, title in (
             ("docx", t("components.template_selector_tabbed.document_templates", "DOCX templates")),
             ("xlsx", t("components.template_selector_tabbed.spreadsheet_templates", "XLSX templates")),
@@ -209,6 +222,7 @@ class TemplatesTab(BaseSettingsTab):
         self._render(select_id=template_id)
 
     def _render(self, *, select_id: str | None = None) -> None:
+        self._catalog_error.setVisible(self._vm.error is not None)
         for target, widget in self._lists.items():
             remembered = select_id if select_id is not None else self._current_ids.get(target)
             templates = [item for item in self._vm.templates if item.target == target]
@@ -463,7 +477,15 @@ class TemplatesTab(BaseSettingsTab):
         except Exception as exc:
             self._show_error(exc)
             return
-        QDesktopServices.openUrl(QUrl.fromLocalFile(str(directory)))
+        from docwen_gui.path_actions import open_path
+
+        result = open_path(directory)
+        if not result.success:
+            self._show_error(
+                TemplateManagementError(
+                    t("main_window.open_path_failed", "Failed to open path: {path}", path=str(directory))
+                )
+            )
 
     def _selected_template(self):
         template_id = self._selected_id()
@@ -482,7 +504,8 @@ class TemplatesTab(BaseSettingsTab):
         for widget in self._lists.values():
             widget.clear()
         self._sync_actions()
-        self.setToolTip(detail)
+        self._catalog_error.setVisible(True)
+        self._catalog_error.setToolTip(detail)
 
     def _set_default(self) -> None:
         template_id = self._selected_id()
@@ -505,10 +528,10 @@ class TemplatesTab(BaseSettingsTab):
 
     def _show_error(self, error: Exception) -> None:
         logger.exception("Template management operation failed", exc_info=error)
-        message = str(error)
-        if isinstance(error, TemplateManagementError):
-            message = str(error)
-        QMessageBox.warning(self, t("common.error", "Error"), message)
+        from docwen_gui.dialogs.feedback import error as show_error
+
+        message = str(error) if isinstance(error, TemplateManagementError) else t("settings.templates.operation_failed")
+        show_error(t("common.error", "Error"), message, details=str(error), parent=self)
 
 
 __all__ = ["TemplatesTab"]

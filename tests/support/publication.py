@@ -9,7 +9,7 @@ from scripts.release.publication_contract import assemble, canonical_json, file_
 from scripts.release.publication_http import ApiError, GitHub
 
 REPOSITORY = "example/docwen"
-VERSION = "0.10.0"
+VERSION = "0.11.0"
 COMMIT = "a" * 40
 DIGEST = "sha256:" + "b" * 64
 
@@ -33,7 +33,7 @@ def candidate(root: Path) -> tuple[Path, dict]:
         record = {
             **file_identity(package),
             "sourceVersion": VERSION,
-            "packageVersion": "1.0.3.0",
+            "packageVersion": "1.0.4.0",
             "contentSha256": "c" * 64,
         }
         package.with_suffix(".msix.json").write_bytes(canonical_json(record))

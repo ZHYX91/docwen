@@ -17,7 +17,7 @@ def _files(tmp_path):
 
 
 @pytest.mark.parametrize("entry", ["input", "ipc", "model"])
-def test_single_input_replaces_previous_and_never_resurrects_it(main_window, tmp_path, entry):
+def test_single_input_replaces_previous_and_never_resurrects_it(main_window, tmp_path, entry, qtbot):
     window = main_window
     vm = window._view_model
     paths = _files(tmp_path)
@@ -29,6 +29,7 @@ def test_single_input_replaces_previous_and_never_resurrects_it(main_window, tmp
             assert window.handle_ipc_command("open_file", str(path))
         else:
             vm.add_files([str(path)])
+        qtbot.waitUntil(lambda: not vm.inspection_busy)
         assert [Path(ref.path) for ref in vm.files] == [path]
         assert Path(vm.selected_file.path) == path
         assert [Path(p) for p in window._batch_list_vm.get_files()] == [path]
@@ -41,11 +42,14 @@ def test_single_input_replaces_previous_and_never_resurrects_it(main_window, tmp
 
 
 @pytest.mark.parametrize("accept", [False, True])
-def test_batch_to_single_confirmation_preserves_or_reduces_visible_input(main_window, tmp_path, monkeypatch, accept):
+def test_batch_to_single_confirmation_preserves_or_reduces_visible_input(
+    main_window, tmp_path, monkeypatch, accept, qtbot
+):
     window = main_window
     paths = _files(tmp_path)
     window._input_area_vm.set_mode("batch")
     window._input_area_vm.add_files([str(path) for path in paths])
+    qtbot.waitUntil(lambda: not window._view_model.inspection_busy)
     window._batch_list.select_file(str(paths[1]))
     calls = []
 
@@ -66,7 +70,7 @@ def test_batch_to_single_confirmation_preserves_or_reduces_visible_input(main_wi
     assert all(path.exists() for path in paths)
 
 
-def test_rejected_replacement_and_multiple_inputs_preserve_current_file(main_window, tmp_path):
+def test_rejected_replacement_and_multiple_inputs_preserve_current_file(main_window, tmp_path, qtbot):
     vm = main_window._view_model
     paths = _files(tmp_path)
     vm.add_files([str(paths[0])])
@@ -77,21 +81,23 @@ def test_rejected_replacement_and_multiple_inputs_preserve_current_file(main_win
         assert Path(vm.selected_file.path) == paths[0]
         assert paths[0].name in main_window._input_area_vm.selection_message
         main_window._input_area_vm.add_files(replacement)
+        qtbot.waitUntil(lambda: not vm.inspection_busy)
         assert paths[0].name in main_window._input_area_vm.selection_message
 
 
-def test_batch_ipc_adds_to_visible_list_and_selects_received_file(main_window, tmp_path):
+def test_batch_ipc_adds_to_visible_list_and_selects_received_file(main_window, tmp_path, qtbot):
     vm = main_window._view_model
     paths = _files(tmp_path)
     main_window._input_area_vm.set_mode("batch")
     for path in paths:
         assert main_window.handle_ipc_command("open_file", str(path))
+        qtbot.waitUntil(lambda: not vm.inspection_busy)
         assert Path(vm.selected_file.path) == path
     assert [Path(ref.path) for ref in vm.files] == paths
     assert [Path(p) for p in main_window._batch_list_vm.get_files()] == paths
 
 
-def test_running_task_refuses_input_and_mode_changes_until_owner_releases(main_window, tmp_path):
+def test_running_task_refuses_input_and_mode_changes_until_owner_releases(main_window, tmp_path, qtbot):
     vm = main_window._view_model
     paths = _files(tmp_path)
     vm.add_files([str(paths[0])])
@@ -104,4 +110,5 @@ def test_running_task_refuses_input_and_mode_changes_until_owner_releases(main_w
     assert vm.status_message == t("components.file_drop.input_busy")
     vm.release_execution_inputs("active")
     assert main_window.handle_ipc_command("open_file", str(paths[1]))
+    qtbot.waitUntil(lambda: not vm.inspection_busy)
     assert [Path(ref.path) for ref in vm.files] == [paths[1]]

@@ -64,7 +64,7 @@ def test_digest_normalization_and_exact_release_notes(tmp_path: Path) -> None:
     with pytest.raises(PublicationError):
         canonical_digest("short")
     notes = tmp_path / "CHANGELOG.md"
-    notes.write_text("# Changes\n\n## 0.10.0\nCurrent\n\n## 0.9.1\nOld\n", encoding="utf-8")
-    assert publication.release_notes(notes, "0.10.0") == "## 0.10.0\nCurrent"
+    notes.write_text("# Changes\n\n## 0.11.0\nCurrent\n\n## 0.9.1\nOld\n", encoding="utf-8")
+    assert publication.release_notes(notes, "0.11.0") == "## 0.11.0\nCurrent"
     with pytest.raises(PublicationError):
         publication.release_notes(notes, "0.10")

@@ -23,6 +23,19 @@ class _InfoArea:
         self.messages.append((message, tone))
 
 
+@pytest.fixture(autouse=True)
+def synchronous_windows_path_port(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("docwen_gui.main_window.sys.platform", "win32")
+
+
+class _PathWindow:
+    def __init__(self) -> None:
+        self._info_area_vm = _InfoArea()
+
+    def _report_path_action(self, target: str, result: PathActionResult) -> bool:
+        return MainWindow._report_path_action(cast(Any, self), target, result)
+
+
 def test_main_window_open_parent_routes_file_to_precise_reveal(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -35,7 +48,7 @@ def test_main_window_open_parent_routes_file_to_precise_reveal(
         "reveal_path",
         lambda value: calls.append(str(value)) or PathActionResult(success=True, precise=True),
     )
-    fake = SimpleNamespace(_info_area_vm=_InfoArea())
+    fake = _PathWindow()
 
     opened = MainWindow._open_path(cast(Any, fake), str(target), open_parent=True)
 
@@ -53,7 +66,7 @@ def test_main_window_plain_open_uses_desktop_open(monkeypatch: pytest.MonkeyPatc
         "open_path",
         lambda value: calls.append(str(value)) or PathActionResult(success=True),
     )
-    fake = SimpleNamespace(_info_area_vm=_InfoArea())
+    fake = _PathWindow()
 
     opened = MainWindow._open_path(cast(Any, fake), str(target), open_parent=False)
 
@@ -82,7 +95,7 @@ def test_main_window_reveal_missing_path_surfaces_warning(
         "reveal_path",
         lambda value: PathActionResult(success=False, error=str(value), error_code="missing_path"),
     )
-    fake = SimpleNamespace(_info_area_vm=_InfoArea())
+    fake = _PathWindow()
 
     opened = MainWindow._open_path(cast(Any, fake), str(missing), open_parent=True)
 

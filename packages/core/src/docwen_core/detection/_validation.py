@@ -8,6 +8,7 @@ forward with the request instead of independently guessing a route.
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -57,12 +58,14 @@ def _file_identity(stat_result: Any) -> _FileIdentity:
     )
 
 
-def _content_sha256(path: Path) -> str:
+def _content_sha256(path: Path, cancel_check: Callable[[], None] | None = None) -> str:
     """Hash the complete content so admission is bound to exact bytes."""
 
     digest = hashlib.sha256()
     with path.open("rb") as stream:
         while chunk := stream.read(_HASH_CHUNK_SIZE):
+            if cancel_check is not None:
+                cancel_check()
             digest.update(chunk)
     return digest.hexdigest()
 
@@ -256,7 +259,7 @@ def _decision_for(
     )
 
 
-def inspect_file(file_path: str) -> FileInspection:
+def inspect_file(file_path: str, *, cancel_check: Callable[[], None] | None = None) -> FileInspection:
     """Inspect one file and return the canonical admission result."""
 
     resolved = str(Path(file_path).expanduser().resolve(strict=False))
@@ -280,7 +283,7 @@ def inspect_file(file_path: str) -> FileInspection:
     detected_category = get_category(detected_format)
     workflow_category = _workflow_category(detected_format, detected_category)
     detected_supported = detected_format in _SUPPORTED_FORMATS
-    content_sha256 = _content_sha256(io_path)
+    content_sha256 = _content_sha256(io_path, cancel_check)
     relation = _relation(
         extension=extension,
         declared_format=declared_format,

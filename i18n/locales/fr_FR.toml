@@ -917,6 +917,7 @@ xlarge = "Tres grande"
 
 # 文件拖拽区
 [components.file_drop]
+inspecting = "Vérification des fichiers…"
 empty_hint_single = "Glisser un fichier ici"
 empty_hint_batch = "Glisser fichiers/dossiers ici"
 add_button = "Ajouter"
@@ -1696,6 +1697,8 @@ multiple = "{count} fichiers"
 show_outputs = "Voir tous les fichiers de sortie"
 
 [settings.templates]
+load_failed = "Impossible de charger les modèles"
+operation_failed = "L’opération sur le modèle a échoué. Consultez les détails."
 title = "Modèles"
 description = "Les modèles intégrés sont en lecture seule. Copiez-en un pour créer un modèle personnalisé modifiable. Les modifications apportées sur cette page prennent effet immédiatement."
 import = "Importer des modèles"

@@ -286,6 +286,7 @@ class TestFileManagement:
             warning_message=warning,
             decision=AdmissionDecision.ALLOW_WITH_WARNING,
             reason_message="",
+            size_bytes=source.stat().st_size,
             ooxml_signature=inspection_payload["ooxml_signature"],
             to_dict=lambda: dict(inspection_payload),
         )
@@ -332,6 +333,7 @@ class TestFileManagement:
             warning_message="",
             decision=AdmissionDecision.ALLOW,
             reason_message="",
+            size_bytes=source.stat().st_size,
             ooxml_signature={},
             to_dict=lambda: dict(payload),
         )
@@ -477,7 +479,7 @@ class TestTaskEventHandling:
 
         assert vm.status_message == t("info_area.ipc_file_missing", path=str(missing_path))
 
-    def test_ipc_add_publishes_admitted_file_before_activation(self, vm: MainWindowViewModel, tmp_path) -> None:
+    def test_ipc_add_activates_before_background_inspection(self, vm: MainWindowViewModel, tmp_path, qtbot) -> None:
         source = tmp_path / "renamed.docx"
         source.write_bytes(b"%PDF-1.4\n% IPC warning probe\n")
         events: list[str] = []
@@ -493,7 +495,8 @@ class TestTaskEventHandling:
 
         vm.handle_ipc_command("add_file", str(source))
 
-        assert events == ["files", "ipc", "activate"]
+        qtbot.waitUntil(lambda: not vm.inspection_busy)
+        assert events == ["activate", "files", "ipc"]
         assert received_warnings and received_warnings[0]
 
 

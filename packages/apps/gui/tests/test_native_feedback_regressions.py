@@ -12,7 +12,7 @@ pytestmark = pytest.mark.gui
 
 
 @pytest.mark.parametrize("mode", ["single", "batch"])
-def test_ipc_new_and_repeated_open_selects_requested_input(window, tmp_path, qapp, mode):
+def test_ipc_new_and_repeated_open_selects_requested_input(window, tmp_path, qtbot, mode):
     first = tmp_path / "first.md"
     second = tmp_path / "second.txt"
     first.write_text("# First", encoding="utf-8")
@@ -20,7 +20,7 @@ def test_ipc_new_and_repeated_open_selects_requested_input(window, tmp_path, qap
     window._view_model.set_mode(mode)
     for source in (first, second, first, second):
         window.handle_ipc_command("open_file", str(source))
-        qapp.processEvents()
+        qtbot.waitUntil(lambda: not window._view_model.inspection_busy)
         selected = window._view_model.selected_file
         assert selected is not None and Path(selected.path) == source
         assert Path(window._batch_list.get_current_file()) == source

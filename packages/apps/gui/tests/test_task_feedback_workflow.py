@@ -244,7 +244,7 @@ def test_all_skipped_batch_does_not_claim_failure(main_window, tmp_path):
     assert not main_window._info_area_vm.guide_actions
 
 
-def test_input_selection_updates_merge_reference_and_availability(main_window_with_controller, tmp_path):
+def test_input_selection_updates_merge_reference_and_availability(main_window_with_controller, tmp_path, qtbot):
     main_window = main_window_with_controller
     from openpyxl import Workbook
 
@@ -252,6 +252,7 @@ def test_input_selection_updates_merge_reference_and_availability(main_window_wi
     for path in paths:
         Workbook().save(path)
     main_window._input_area_vm.add_files([str(paths[0])])
+    qtbot.waitUntil(lambda: not main_window._view_model.inspection_busy)
     assert main_window._conversion_panel._merge_tables_button is None
     assert main_window._conversion_panel._extra_group.isHidden()
     main_window._input_area_vm.set_mode("batch")
@@ -259,6 +260,7 @@ def test_input_selection_updates_merge_reference_and_availability(main_window_wi
     assert button is not None and not button.isEnabled()
     assert button.toolTip()
     main_window._input_area_vm.add_files([str(paths[1])])
+    qtbot.waitUntil(lambda: not main_window._view_model.inspection_busy)
     main_window._on_selected_file_changed(str(paths[1]))
     assert main_window._conversion_panel_vm.reference_table_name == "reference.xlsx"
     assert "reference.xlsx" in main_window._input_area_vm.selection_message
@@ -279,6 +281,7 @@ def test_batch_category_selection_updates_input_summary_and_conversion_target(
     Image.new("RGB", (24, 24), "white").save(image)
     window._input_area_vm.set_mode("batch")
     window._input_area_vm.add_files([str(text), str(image)])
+    qtbot.waitUntil(lambda: not window._view_model.inspection_busy)
     window._batch_list._activate_tab("markdown")
     assert window.view_model.selected_file.path == str(text)
     window._batch_list._activate_tab("image")

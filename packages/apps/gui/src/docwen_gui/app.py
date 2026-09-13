@@ -116,7 +116,7 @@ def create_main_window(
     )  # setup_ui() is called inside __init__
 
     if initial_files:
-        view_model.add_files(initial_files)
+        view_model.request_files(initial_files)
 
     return window
 

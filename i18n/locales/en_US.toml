@@ -920,6 +920,7 @@ xlarge = "Extra large"
 
 # 文件拖拽区
 [components.file_drop]
+inspecting = "Checking files…"
 empty_hint_single = "Drag a file here"
 empty_hint_batch = "Drag files or folders here"
 add_button = "Add"
@@ -1695,6 +1696,8 @@ multiple = "{count} files"
 show_outputs = "View all output files"
 
 [settings.templates]
+load_failed = "Templates could not be loaded"
+operation_failed = "The template operation failed. View details for more information."
 title = "Templates"
 description = "Built-in templates are read-only. Copy one to create an editable custom template. Changes on this page take effect immediately."
 import = "Import templates"

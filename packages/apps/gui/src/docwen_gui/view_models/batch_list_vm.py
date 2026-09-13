@@ -37,6 +37,8 @@ def _normalize_path(file_path: str) -> str:
 
 
 if TYPE_CHECKING:
+    from docwen_core.models.file_ref import FileRef
+
     from .main_window_vm import MainWindowViewModel
 
 # ── Category constants ──────────────────────────────────────────────────
@@ -351,6 +353,29 @@ class BatchListViewModel(QObject):
         self.entry_count_changed.emit(len(self._entries))
         self._activate_optimal_category_for_added(added)
         return added, failed
+
+    def refresh_admission(self, ref: FileRef) -> None:
+        """Refresh an existing row without changing its order or retaining stale task results."""
+        normalized = _normalize_path(ref.path)
+        record = self._entries.get(normalized)
+        if record is None or record[1].metadata == ref.metadata:
+            return
+        old_category, entry = record
+        category = self._display_category(ref.category)
+        entry.detected_format = ref.format
+        entry.workflow_category = ref.category
+        entry.warning_message = ref.warning_message or None
+        entry.metadata = dict(ref.metadata)
+        entry.size_bytes = ref.size_bytes
+        self._entries[normalized] = (category, entry)
+        if old_category != category:
+            old_order = self._custom_order_by_category[old_category]
+            if normalized in old_order:
+                old_order.remove(normalized)
+            self._custom_order_by_category[category].append(normalized)
+            self.files_removed.emit(normalized)
+            self.files_added.emit([normalized], [])
+        self.set_file_status(normalized, "pending")
 
     @staticmethod
     def _display_category(category: str | None) -> str:

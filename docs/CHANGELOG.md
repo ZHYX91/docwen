@@ -5,6 +5,25 @@
 
 ## Unreleased / 未发布
 
+## 0.11.0 (2026-09-14)
+
+- 新增“设置 → 模板”，统一管理 DOCX/XLSX 的启停、排序、默认模板、导入导出、复制编辑、重命名和回收站删除。内置模板只读，自定义模板保存在用户可写目录，MSIX 无需修改 WindowsApps。
+- 模板使用稳定身份及事务化存储；替换、重命名、并发修改与软件更新保持用户管理状态。主界面只负责选择，显示前置来源胶囊；停用或删除当前模板后要求重新选择。
+- 移除旧模板定位入口、独立管理窗口、重复选择器及内部兼容排序和自动选择分支。改善深色主题、大字号布局和可复制的错误详情。
+- 输入文件检查移到后台，过期结果不再覆盖新选择；重新添加同一路径会刷新检查结果。Linux 文件定位等待真实回复并在后台执行，失败时回退打开父目录。
+- Office 转换只清理本次独立实例明确拥有、且创建身份仍匹配的进程，移除全局进程差集和共享实例回退。
+- CSV/TSV 导入保留字面文本，包括长编号、前导零和公式样式文本；增量解码修复 UTF-8 多字节字符跨采样边界时的误判。
+- 多帧图像转换保留帧序列、支持目标的时长与循环；静态目标导出全部帧并提示播放信息损失，TIFF 保留全部页。
+- Linux 单文件无覆盖发布采用原子 renameat2，不再依赖目标文件系统的硬链接支持。
+
+- Add Settings → Templates for DOCX/XLSX enablement, order, defaults, import/export, copy/edit, rename and recycle-bin deletion. Built-ins remain read-only; custom templates live in writable user storage, including MSIX installs.
+- Use stable identities and transactional catalog updates. The main selector shows leading source badges and requires a fresh selection after the current template is disabled or deleted. Remove obsolete location actions, duplicate management surfaces and internal compatibility paths.
+- Inspect interactive inputs in the background, discard superseded results and refresh metadata when a path is added again. Improve dark themes, large-font layouts, diagnostic feedback and asynchronous Linux file-location fallback.
+- Bind Office cleanup to the independently created instance's exact process identity; remove global process-difference cleanup and shared-instance fallback.
+- Preserve literal CSV/TSV text, including long identifiers, leading zeros and formula-like strings. Decode partial samples incrementally so valid UTF-8 boundaries are not mistaken for another encoding.
+- Preserve image sequences and supported animation timing/loops; export every frame for static targets with a playback-loss warning, and retain multipage TIFF content.
+- Publish Linux files atomically without replacement using renameat2, removing the hard-link requirement.
+
 ## 0.10.0 (2026-09-07)
 
 - 修正错别字词典编辑器的列名与字段语义：正确写法对应错误写法列表，各语言一致，现有 TOML 内容保持不变。

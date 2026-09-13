@@ -921,6 +921,7 @@ xlarge = "特大"
 
 # 文件拖拽区
 [components.file_drop]
+inspecting = "正在检查文件…"
 empty_hint_single = "拖拽单个文件到这里"
 empty_hint_batch = "拖拽文件或文件夹到这里"
 add_button = "添加"
@@ -1696,6 +1697,8 @@ multiple = "等 {count} 个"
 show_outputs = "查看全部输出文件"
 
 [settings.templates]
+load_failed = "无法加载模板"
+operation_failed = "模板操作失败。请查看详情。"
 title = "模板"
 description = "内置模板为只读。请先复制为自定义模板后再编辑。本页的更改会立即生效。"
 import = "导入模板"

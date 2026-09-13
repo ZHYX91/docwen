@@ -870,6 +870,7 @@ xlarge = "特大"
 
 # 文件拖拽区
 [components.file_drop]
+inspecting = "正在檢查檔案…"
 empty_hint_single = "拖拽單個文件到這裡"
 empty_hint_batch = "拖拽文件或文件夾到這裡"
 add_button = "添加"
@@ -1700,6 +1701,8 @@ multiple = "等 {count} 個"
 show_outputs = "查看所有輸出檔案"
 
 [settings.templates]
+load_failed = "無法載入範本"
+operation_failed = "範本操作失敗。請查看詳情。"
 title = "範本"
 description = "內建範本為唯讀。請先複製為自訂範本後再編輯。本頁的變更會立即生效。"
 import = "匯入範本"

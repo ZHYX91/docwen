@@ -41,7 +41,7 @@ class TestExecutionThreadDispatch:
             def execute_single(self, request):
                 raise AssertionError("batch execution must not call execute_single")
 
-        request = SimpleNamespace(request_id="request-1")
+        request = SimpleNamespace(request_id="request-1", input_refs=[])
         context = {"request_id": "request-1", "batch": True}
         thread = _ExecutionThread(
             controller=_Controller(),  # type: ignore[arg-type]
@@ -70,7 +70,7 @@ class TestExecutionThreadDispatch:
             def execute_single(self, request):
                 raise AssertionError("aggregate execution must not call execute_single")
 
-        request = SimpleNamespace(request_id="request-1")
+        request = SimpleNamespace(request_id="request-1", input_refs=[])
         context = {"request_id": "request-1"}
         thread = _ExecutionThread(
             controller=_Controller(),  # type: ignore[arg-type]

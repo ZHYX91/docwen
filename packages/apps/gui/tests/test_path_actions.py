@@ -103,6 +103,8 @@ def test_linux_reveal_tries_standard_selectors_then_parent_fallback(
 
     assert result == PathActionResult(success=True, fallback_used=True)
     assert commands == path_actions.linux_reveal_commands(sample)
+    assert "--print-reply" in commands[0]
+    assert "--reply-timeout=2000" in commands[0]
     assert opened == [sample.parent]
 
 

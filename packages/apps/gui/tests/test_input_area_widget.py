@@ -36,8 +36,11 @@ pytestmark = pytest.mark.gui
 
 
 @pytest.fixture
-def main_vm() -> MainWindowViewModel:
-    return MainWindowViewModel(controller=None)
+def main_vm(qtbot) -> Generator[MainWindowViewModel, None, None]:
+    vm = MainWindowViewModel(controller=None)
+    yield vm
+    vm.cancel_inspection()
+    qtbot.waitUntil(lambda: not vm.inspection_busy)
 
 
 @pytest.fixture
@@ -278,13 +281,13 @@ class TestConstruction:
         assert scroll.verticalScrollBar().maximum() > 0
         scroll.close()
 
-    def test_supported_formats_hide_with_selection_feedback(self, widget: InputArea, tmp_path) -> None:
+    def test_supported_formats_hide_with_selection_feedback(self, widget: InputArea, tmp_path, qtbot) -> None:
         sample = tmp_path / "sample.docx"
         sample.write_text("content")
         assert not widget._empty_content.isHidden()
 
         widget.view_model.add_files([str(sample)])
-
+        qtbot.waitUntil(lambda: widget._empty_content.isHidden())
         assert widget._empty_content.isHidden()
 
 
@@ -346,7 +349,7 @@ class TestDragDropMime:
         assert "ignore.bin" in widget._selection_label.toolTip()
         assert widget._feedback_frame.property("feedbackTone") == "info"
 
-    def test_drop_batch_folder_reports_partial_skips(self, widget: InputArea, tmp_path) -> None:
+    def test_drop_batch_folder_reports_partial_skips(self, widget: InputArea, tmp_path, qtbot) -> None:
         folder = tmp_path / "mixed"
         nested = folder / "nested"
         nested.mkdir(parents=True)
@@ -370,6 +373,7 @@ class TestDragDropMime:
         )
 
         widget.dropEvent(event)
+        qtbot.waitUntil(lambda: bool(added))
 
         assert event.isAccepted()
         assert added == [[str(supported)]]
@@ -380,6 +384,7 @@ class TestDragDropMime:
         self,
         widget: InputArea,
         tmp_path,
+        qtbot,
     ) -> None:
         folder = tmp_path / "large-url-drop"
         nested = folder / "nested"
@@ -424,6 +429,7 @@ class TestDragDropMime:
         )
 
         widget.dropEvent(drop_event)
+        qtbot.waitUntil(lambda: bool(added), timeout=10000)
 
         assert drop_event.isAccepted()
         assert len(added) == 1

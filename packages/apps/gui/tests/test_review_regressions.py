@@ -42,6 +42,7 @@ def test_active_inputs_survive_delete_and_finished_details_survive_row_removal(
     window = main_window
     window._input_area_vm.set_mode("batch")
     window._input_area_vm.add_files([path])
+    qtbot.waitUntil(lambda: not window._view_model.inspection_busy)
     window.show()
     window._batch_list.select_file(path)
     context = {
@@ -61,7 +62,7 @@ def test_active_inputs_survive_delete_and_finished_details_survive_row_removal(
     try:
         assert window._launch_execution_thread(
             controller=Controller(),
-            request=SimpleNamespace(request_id="op"),
+            request=SimpleNamespace(request_id="op", input_refs=[]),
             context=context,
             project_reserved_execution=project,
         )
@@ -86,6 +87,7 @@ def test_active_inputs_survive_delete_and_finished_details_survive_row_removal(
     retries = []
     monkeypatch.setattr(window, "_start_execution", lambda **kwargs: retries.append(kwargs))
     window._retry_failed_request()
+    qtbot.waitUntil(lambda: not window._view_model.inspection_busy)
     assert [request["file_path"] for request in retries] == [path]
     assert window._batch_list_vm.get_file_entry(path) is not None
 

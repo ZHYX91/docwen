@@ -18,7 +18,7 @@ def _sources(tmp_path):
 
 
 @pytest.mark.parametrize("reselect_existing", [False, True])
-def test_single_add_executes_the_visible_file(window, tmp_path, monkeypatch, reselect_existing):
+def test_single_add_executes_the_visible_file(window, tmp_path, monkeypatch, reselect_existing, qtbot):
     first, second = _sources(tmp_path)
     calls = []
     monkeypatch.setattr(window, "_start_execution", lambda **kwargs: calls.append(kwargs))
@@ -30,6 +30,7 @@ def test_single_add_executes_the_visible_file(window, tmp_path, monkeypatch, res
         window._input_area_vm.add_files([str(first)])
         expected = first
 
+    qtbot.waitUntil(lambda: not window._view_model.inspection_busy)
     assert [Path(ref.path) for ref in window._view_model.files] == [expected]
     assert Path(window._view_model.selected_file.path) == expected
     assert expected.name in window._input_area_vm.selection_message
@@ -39,23 +40,27 @@ def test_single_add_executes_the_visible_file(window, tmp_path, monkeypatch, res
     assert Path(calls[0]["file_path"]) == expected
 
 
-def test_rejected_single_add_preserves_execution_selection(window, tmp_path, monkeypatch):
+def test_rejected_single_add_preserves_execution_selection(window, tmp_path, monkeypatch, qtbot):
     first, _second = _sources(tmp_path)
     _load_request_templates(window)
     window._input_area_vm.add_files([str(first)])
+    qtbot.waitUntil(lambda: not window._view_model.inspection_busy)
     calls = []
     monkeypatch.setattr(window, "_start_execution", lambda **kwargs: calls.append(kwargs))
     window._input_area_vm.add_files([str(tmp_path / "missing.md")])
+    qtbot.waitUntil(lambda: not window._view_model.inspection_busy)
     assert Path(window._view_model.selected_file.path) == first
     window._action_area_vm.request_conversion()
     assert Path(calls[0]["file_path"]) == first
 
 
-def test_batch_add_preserves_selection_and_single_mode_projects_it(window, tmp_path):
+def test_batch_add_preserves_selection_and_single_mode_projects_it(window, tmp_path, qtbot):
     first, second = _sources(tmp_path)
     window._input_area_vm.add_files([str(first)])
+    qtbot.waitUntil(lambda: not window._view_model.inspection_busy)
     window._input_area_vm.set_mode("batch")
     window._input_area_vm.add_files([str(second)])
+    qtbot.waitUntil(lambda: not window._view_model.inspection_busy)
     assert Path(window._view_model.selected_file.path) == first
     window._batch_list.select_file(str(second))
     window._input_area_vm.set_mode("single")
@@ -63,10 +68,11 @@ def test_batch_add_preserves_selection_and_single_mode_projects_it(window, tmp_p
     assert second.name in window._input_area_vm.selection_message
 
 
-def test_batch_projection_preserves_multiple_selected_rows(window, tmp_path):
+def test_batch_projection_preserves_multiple_selected_rows(window, tmp_path, qtbot):
     first, second = _sources(tmp_path)
     window._input_area_vm.set_mode("batch")
     window._input_area_vm.add_files([str(first), str(second)])
+    qtbot.waitUntil(lambda: not window._view_model.inspection_busy)
     window._batch_list._tabs["text"].selectAll()
     window._view_model.ui_projection_changed.emit(window._view_model.ui_projection)
     assert {Path(path) for path in window._batch_list.get_selected_files("text")} == {first, second}
