@@ -24,7 +24,7 @@ def test_real_process_identity_rejects_preexisting_process() -> None:
 
 
 @pytest.mark.parametrize("pid", [None, 100])
-def test_com_without_ownership_does_not_touch_application(
+def test_com_without_ownership_does_not_change_or_quit_application(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, pid: int | None
 ) -> None:
     app = MagicMock()
@@ -41,9 +41,51 @@ def test_com_without_ownership_does_not_touch_application(
         app_type="word",
     )
     assert result is None
-    assert app.mock_calls == []
+    if pid is None:
+        app.Documents.Open.assert_called_once_with(
+            str(tmp_path / "in.doc"), ReadOnly=True, ConfirmConversions=False, AddToRecentFiles=False
+        )
+        app.Documents.Open.return_value.Close.assert_called_once_with(SaveChanges=False)
+    else:
+        assert app.mock_calls == []
+    app.Quit.assert_not_called()
     assert "Visible" not in app.__dict__
     client.Dispatch.assert_not_called()
+
+
+def test_word_identifies_its_private_document_window_before_changing_application(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    app = MagicMock()
+    document = app.Documents.Open.return_value
+    window = document.Windows.Item.return_value
+    client = MagicMock()
+    client.DispatchEx.return_value = app
+    identity = WindowsProcessIdentity(200, 1234)
+    monkeypatch.setattr(office_bridge, "_import_win32", lambda: (MagicMock(), client))
+    monkeypatch.setattr(office_bridge, "_get_com_app_pid", lambda obj: 200 if obj is window else None)
+    monkeypatch.setattr(WindowsProcessIdentity, "capture", lambda *args, **kwargs: identity)
+    monkeypatch.setattr(WindowsProcessIdentity, "terminate_if_running", lambda *args, **kwargs: None)
+    output = tmp_path / "out.docx"
+    document.SaveAs.side_effect = lambda *args, **kwargs: output.write_bytes(b"converted")
+
+    def notified(owned: WindowsProcessIdentity) -> None:
+        assert owned is identity
+        assert "Visible" not in app.__dict__
+        document.SaveAs.assert_not_called()
+
+    assert office_bridge._try_com_conversion(
+        str(tmp_path / "in.doc"),
+        str(output),
+        prog_id="Word.Application",
+        save_format=16,
+        app_type="word",
+        on_process_owned=notified,
+    ) == str(output)
+    app.Documents.Open.assert_called_once()
+    document.Windows.Item.assert_called_once_with(1)
+    document.Close.assert_called_once_with(SaveChanges=False)
+    app.Quit.assert_called_once()
 
 
 def test_com_does_not_fall_back_to_shared_dispatch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
