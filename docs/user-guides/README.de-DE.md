@@ -492,17 +492,13 @@ Hinweis (JSON-Bericht für Markdown-Korrektur):
 
 ### Verwendung vorhandener Vorlagen
 
-Das Programm enthält verschiedene Vorlagen, einschließlich mehrsprachiger Versionen. Sie können sie nach Bedarf auswählen und verwenden. Vorlagendateien befinden sich im Verzeichnis `templates/`.
+Verwalten Sie DOCX/XLSX-Vorlagen unter **Einstellungen → Vorlagen**: aktivieren, deaktivieren, sortieren und als Standard festlegen. Integrierte Vorlagen sind schreibgeschützt; eigene Vorlagen liegen im beschreibbaren Benutzerverzeichnis. Bei MSIX müssen Sie WindowsApps nicht ändern.
 
 ### Benutzerdefinierte Vorlagen
 
-1.  Erstellen Sie eine Vorlagendatei mit Word oder WPS.
-2.  Beziehen Sie sich auf vorhandene Vorlagen und fügen Sie Platzhalter wie `{{Title}}` usw. ein, wo das Ausfüllen erforderlich ist.
-3.  In der Vorlage müssen die integrierten Stile Überschrift 1 ~ Überschrift 5 manuell geändert werden.
-4.  Speichern Sie die Vorlage im Verzeichnis `templates/`.
-5.  Starten Sie das Programm neu, und die neue Vorlage wird automatisch geladen.
-
-Sie können auch eine vorhandene Vorlage kopieren, ändern und umbenennen.
+1. Kopieren und bearbeiten Sie eine integrierte Vorlage oder importieren Sie eine DOCX/XLSX-Datei.
+2. Bearbeiten Sie Inhalt, Formatvorlagen und Platzhalter der eigenen Kopie in Word, Excel oder WPS; die Regeln stehen unten.
+3. Speichern Sie die Datei und aktualisieren Sie die Liste in DocWen. Ein Neustart ist nicht erforderlich.
 
 ### Platzhalterverwendung
 
@@ -623,9 +619,9 @@ unveränderliche Release-Gate erfolgreich war.
 
 ### Vorlage wird nicht angezeigt?
 
--   Bestätigen Sie, dass sich Vorlagendateien im Verzeichnis `templates/` befinden.
--   Prüfen Sie, ob die Vorlagendatei beschädigt ist.
--   Starten Sie das Programm neu, um Vorlagen neu zu laden.
+- Prüfen Sie unter **Einstellungen → Vorlagen**, ob die Vorlage aktiviert ist und zum Ausgabeformat passt.
+- Prüfen Sie, ob sich die DOCX/XLSX-Datei öffnen lässt.
+- Aktualisieren Sie die Liste nach externen Änderungen; neue Dateien können Sie importieren.
 
 ### Korrekturfunktion funktioniert nicht?
 
@@ -635,9 +631,9 @@ unveränderliche Release-Gate erfolgreich war.
 
 ### Ausgabeformat nicht wie erwartet?
 
--   Das Programm generiert Dokumente basierend auf Vorlagenstilen. Um das Ausgabeformat anzupassen, ändern Sie die Stildefinitionen direkt in der Vorlagendatei.
--   Vorlagendateien befinden sich im Verzeichnis `templates/`.
--   Nach Änderung der Vorlagenstile werden alle mit dieser Vorlage konvertierten Dokumente die neuen Stile anwenden.
+- Öffnen Sie **Einstellungen → Vorlagen**. Kopieren Sie integrierte Vorlagen vor dem Bearbeiten; eigene Vorlagen können Sie direkt bearbeiten.
+- Passen Sie die Formatvorlagen in Word, Excel oder WPS an, speichern Sie und aktualisieren Sie die Liste.
+- Wählen Sie die eigene Vorlage vor der nächsten Ausgabe aus.
 
 ### Formelzellen sind nach der Excel-zu-Markdown-Konvertierung leer?
 

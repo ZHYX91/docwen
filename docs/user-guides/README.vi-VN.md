@@ -490,17 +490,13 @@ Ghi chú (báo cáo JSON khi kiểm tra Markdown):
 
 ### Dùng template có sẵn
 
-Chương trình có sẵn nhiều template (bao gồm đa ngôn ngữ). File template nằm trong thư mục `templates/`.
+Quản lý mẫu DOCX/XLSX trong **Cài đặt → Mẫu**: bật, tắt, sắp xếp và chọn mặc định. Mẫu tích hợp chỉ được đọc; mẫu tùy chỉnh nằm trong thư mục người dùng có quyền ghi. Với MSIX, không cần sửa WindowsApps.
 
 ### Template tuỳ chỉnh
 
-1.  Tạo file template bằng Word hoặc WPS.
-2.  Tham khảo template có sẵn và chèn placeholder như `{{Title}}`, `{{DocumentNumber}}`, ... vào vị trí cần điền.
-3.  Trong template, các style Heading 1 ~ Heading 5 built-in cần chỉnh sửa thủ công.
-4.  Lưu template vào thư mục `templates/`.
-5.  Khởi động lại chương trình, template mới sẽ tự được tải.
-
-Bạn cũng có thể copy một template có sẵn, chỉnh sửa và đổi tên.
+1. Sao chép và chỉnh sửa mẫu tích hợp, hoặc nhập tệp DOCX/XLSX có sẵn.
+2. Sửa nội dung, kiểu và chỗ giữ chỗ của bản sao bằng Word, Excel hoặc WPS; xem quy tắc bên dưới.
+3. Lưu tệp rồi làm mới danh sách trong DocWen. Không cần khởi động lại.
 
 ### Cách dùng placeholder
 
@@ -621,9 +617,9 @@ thành công.
 
 ### Template không hiển thị?
 
--   Xác nhận file template nằm trong `templates/`.
--   Kiểm tra template có bị hỏng không.
--   Khởi động lại chương trình để tải lại template.
+- Trong **Cài đặt → Mẫu**, kiểm tra mẫu đã bật và phù hợp với định dạng đầu ra.
+- Kiểm tra tệp DOCX/XLSX có mở bình thường không.
+- Làm mới sau khi sửa bên ngoài; nhập các tệp mới.
 
 ### Chức năng kiểm tra lỗi không hoạt động?
 
@@ -633,9 +629,9 @@ thành công.
 
 ### Định dạng đầu ra không như mong đợi?
 
--   Chương trình tạo tài liệu dựa trên style của template. Nếu muốn điều chỉnh đầu ra, hãy sửa trực tiếp style trong file template.
--   Template nằm trong `templates/`.
--   Sau khi sửa style, mọi tài liệu chuyển đổi với template đó sẽ áp dụng style mới.
+- Mở **Cài đặt → Mẫu**. Sao chép mẫu tích hợp trước khi sửa; có thể sửa trực tiếp mẫu tùy chỉnh.
+- Điều chỉnh kiểu trong Word, Excel hoặc WPS, lưu rồi làm mới danh sách.
+- Chọn mẫu tùy chỉnh trước khi tạo tệp mới.
 
 ### Ô công thức bị trống sau khi chuyển Excel sang Markdown?
 

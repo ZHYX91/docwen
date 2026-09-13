@@ -509,17 +509,13 @@ Note (Markdown proofreading report):
 
 ### Using Existing Templates
 
-The program comes with various templates, including multilingual versions. You can select and use them as needed. Template files are located in the `templates/` directory.
+Manage DOCX/XLSX templates in **Settings → Templates**. Built-in templates are read-only; custom templates use writable user storage. Enable, disable, sort and choose defaults here. MSIX users do not need to modify WindowsApps.
 
 ### Custom Templates
 
-1.  Create a template file using Word or WPS.
-2.  Refer to existing templates and insert placeholders like `{{Title}}`, `{{DocumentNumber}}`, etc., where filling is needed.
-3.  In the template, built-in Heading 1 ~ Heading 5 styles need to be manually modified.
-4.  Save the template to the `templates/` directory.
-5.  Restart the program, and the new template will be automatically loaded.
-
-You can also copy an existing template, modify it, and rename it.
+1. Select a built-in template and choose **Copy and edit**, or import an existing DOCX/XLSX file.
+2. Edit the custom copy in Word, Excel or WPS; adjust styles and placeholders as described below.
+3. Save the file, return to DocWen and choose **Refresh**. No restart is needed.
 
 ### Placeholder Usage
 
@@ -640,9 +636,9 @@ release gate succeeds.
 
 ### Template not showing?
 
--   Confirm template files are in the `templates/` directory.
--   Check if the template file is corrupted.
--   Restart the program to reload templates.
+- Check that the template is enabled in **Settings → Templates** and matches the selected output format.
+- Confirm that the DOCX/XLSX file can be opened normally.
+- Choose **Refresh** after external changes; use **Import templates** to add a file.
 
 ### Proofreading function not working?
 
@@ -652,9 +648,9 @@ release gate succeeds.
 
 ### Output format not as expected?
 
--   The program generates documents based on template styles. To adjust output format, modify the style definitions in the template file directly.
--   Template files are located in the `templates/` directory.
--   After modifying template styles, all documents converted using that template will apply the new styles.
+- Open **Settings → Templates**. For a built-in template, use **Copy and edit**; for a custom template, use **Edit**.
+- Adjust its styles in Word, Excel or WPS, then save and refresh the list.
+- Select the custom template before generating new documents.
 
 ### Formula cells are empty after Excel to Markdown conversion?
 

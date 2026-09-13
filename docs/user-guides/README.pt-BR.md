@@ -491,17 +491,13 @@ Observação (relatório JSON de revisão para Markdown):
 
 ### Usando Modelos Existentes
 
-O programa vem com vários modelos, incluindo versões multilíngues. Você pode selecionar e usar conforme necessário. Os arquivos de modelo estão localizados no diretório `templates/`.
+Gerencie modelos DOCX/XLSX em **Configurações → Modelos**: ativação, ordem e modelo padrão. Os modelos integrados são somente leitura; os personalizados ficam em uma pasta gravável do usuário. O MSIX não exige alterações em WindowsApps.
 
 ### Modelos Personalizados
 
-1.  Crie um arquivo de modelo usando Word ou WPS.
-2.  Consulte modelos existentes e insira espaços reservados como `{{Title}}`, etc., onde o preenchimento é necessário.
-3.  No modelo, estilos embutidos Título 1 ~ Título 5 precisam ser modificados manualmente.
-4.  Salve o modelo no diretório `templates/`.
-5.  Reinicie o programa, e o novo modelo será carregado automaticamente.
-
-Você também pode copiar um modelo existente, modificá-lo e renomeá-lo.
+1. Copie e edite um modelo integrado ou importe um arquivo DOCX/XLSX existente.
+2. Ajuste conteúdo, estilos e espaços reservados da cópia no Word, Excel ou WPS; consulte as regras abaixo.
+3. Salve o arquivo e atualize a lista no DocWen. Não é necessário reiniciar.
 
 ### Uso de Espaço Reservado
 
@@ -622,9 +618,9 @@ imutável for aprovado.
 
 ### Modelo não aparece?
 
--   Confirme se os arquivos de modelo estão no diretório `templates/`.
--   Verifique se o arquivo de modelo está corrompido.
--   Reinicie o programa para recarregar os modelos.
+- Em **Configurações → Modelos**, confirme que o modelo está ativado e corresponde ao formato de saída.
+- Confirme que o arquivo DOCX/XLSX abre normalmente.
+- Atualize a lista após alterações externas; importe novos arquivos.
 
 ### Função de revisão não funciona?
 
@@ -634,9 +630,9 @@ imutável for aprovado.
 
 ### Formato de saída não conforme esperado?
 
--   O programa gera documentos com base nos estilos de modelo. Para ajustar o formato de saída, modifique as definições de estilo diretamente no arquivo de modelo.
--   Os arquivos de modelo estão localizados no diretório `templates/`.
--   Após modificar os estilos de modelo, todos os documentos convertidos com esse modelo aplicarão os novos estilos.
+- Abra **Configurações → Modelos**. Copie os modelos integrados antes de editar; os personalizados podem ser editados diretamente.
+- Ajuste os estilos no Word, Excel ou WPS, salve e atualize a lista.
+- Selecione o modelo personalizado antes de gerar novos arquivos.
 
 ### Células de fórmula ficam vazias após a conversão de Excel para Markdown?
 
