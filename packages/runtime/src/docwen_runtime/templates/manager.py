@@ -138,15 +138,23 @@ class TemplateManager:
         return self._find(template_id)
 
     def delete_custom(self, template_id: str) -> None:
+        """Move a custom template to the OS recycle bin, never hard-delete it."""
+
         template = self._find(template_id)
         self._require_custom(template)
         filename = template.path.name
         try:
             from send2trash import send2trash  # type: ignore[import-not-found]
-        except ImportError:
-            template.path.unlink()
-        else:
+        except ImportError as exc:
+            raise TemplateManagementError(
+                "Safe recycle-bin support is unavailable; the template was not deleted"
+            ) from exc
+        try:
             send2trash(str(template.path))
+        except Exception as exc:
+            raise TemplateManagementError(
+                f"Could not move template to the recycle bin: {template.path.name}"
+            ) from exc
         self.state_store.forget_user_identity(filename)
         self._remove_from_order(template.target, template.id)
 
