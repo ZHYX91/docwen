@@ -201,10 +201,10 @@ class TestRuntimeRequestBinding:
         from docwen_gui.view_models.main_window_vm import MainWindowViewModel
         from docwen_runtime.templates import TemplateRegistry
 
-        def fail_registry() -> object:
+        def fail_registry(*args, **kwargs) -> object:
             raise OSError("template catalog unreadable")
 
-        monkeypatch.setattr(TemplateRegistry, "default", fail_registry)
+        monkeypatch.setattr(TemplateRegistry, "list_templates", fail_registry)
         candidate = MainWindow(view_model=MainWindowViewModel(controller=FakeController()))  # type: ignore[arg-type]
         candidate.setup_ui()
         try:
@@ -214,11 +214,11 @@ class TestRuntimeRequestBinding:
                 assert selector is not None
                 assert selector._load_error == (
                     t("components.template_selector.unavailable"),
-                    t("main_window.template_catalog_failed"),
+                    "template catalog unreadable",
                 )
                 assert selector._list.count() == 0
-                assert selector._empty_action_button.isEnabled() is False
-            assert candidate._info_area_vm.history_rows[-1].message == t("main_window.template_catalog_failed")
+                assert selector._empty_manage_button.isEnabled() is True
+            assert candidate._action_area_vm.template_ready is False
         finally:
             candidate.close()
 

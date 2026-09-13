@@ -23,7 +23,6 @@ conversion_warning = "La conversion s’est terminée avec un avertissement."
 aggregate_need_two = "Au moins deux fichiers correspondants sont requis ({count} trouvé(s))."
 route_unavailable = "Aucune opération compatible n’est disponible pour ce fichier."
 output_settings_unavailable = "Les paramètres de sortie n’ont pas pu être chargés ; la tâche n’a pas été lancée."
-template_catalog_failed = "Les modèles n’ont pas pu être chargés."
 window_title = "DocWen (Hors ligne)"
 version_offline = "Hors ligne"
 settings_tooltip = "Paramètres (Ctrl+,)"
@@ -45,8 +44,6 @@ no_error_available = "Aucune information d’erreur disponible."
 no_failed_to_retry = "Aucune tâche échouée à réessayer."
 path_not_exist = "Le chemin n’existe pas : {path}"
 open_path_failed = "Impossible d’ouvrir le chemin : {path}"
-template_not_found = "Modèle introuvable : {name}"
-template_dir_unavailable = "Le répertoire des modèles n’est pas disponible."
 system_tray_show = "Afficher la fenêtre"
 system_tray_hide = "Masquer la fenêtre"
 system_tray_quit = "Quitter"
@@ -312,6 +309,8 @@ batch_mode = "Par lots"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
+output_format = "Format de sortie par défaut"
+output_format_hint = "Afficher les modèles de ce format lors de l’ajout de Markdown."
 # MD转文档序号设置
 md_to_docx_section = "Numérotation (MD vers DOCX)"
 remove_numbering = "Supprimer l'ancienne numérotation"
@@ -339,8 +338,6 @@ edit_numbering_add = "Modifier les schémas d'ajout"
 edit_numbering_clean = "Modifier les règles de nettoyage"
 
 # 模板设置
-template_section = "Paramètres de modèle"
-template_tooltip = "Modèle par défaut lors de l'importation de fichiers MD."
 
 # 校对设置
 
@@ -1039,8 +1036,7 @@ cancel_hint = "Une tâche est en cours. Appuyez sur Échap pour l’annuler."
 manage_templates = "Gérer les modèles"
 selected_name = "Modèle sélectionné : {name}"
 no_templates = "Aucun disponible"
-empty_hint = "S'il n'y a aucun modèle disponible, ouvrez le dossier des modèles pour vérifier ou ajouter des fichiers."
-open_template_dir = "Ouvrir le dossier des modèles"
+empty_hint = "Utilisez Gérer les modèles pour activer les modèles intégrés ou importer vos modèles."
 unavailable = "Non disponible"
 
 # 选项卡式模板选择器
@@ -1718,4 +1714,13 @@ builtin = "Intégré"
 builtin_hint = "Modèle intégré : copiez-le avant de le modifier."
 file_filter = "Modèles Office (*.docx *.xlsx);;Tous les fichiers (*)"
 name_prompt = "Nom du modèle :"
-delete_confirm = "Supprimer le modèle personnalisé « {name} » ?"
+delete_confirm = "Déplacer le modèle personnalisé « {name} » dans la corbeille ?"
+
+set_default = "Définir par défaut"
+default = "Par défaut"
+choose_template = "Choisissez un modèle activé dans le panneau de droite"
+more = "Plus"
+open_failed = "Impossible d’ouvrir le modèle. Vérifiez l’application associée."
+name_conflict = "Un modèle personnalisé nommé {name} existe déjà."
+keep_both = "Conserver les deux"
+replace = "Remplacer"

@@ -417,11 +417,12 @@ class TestMarkdownTemplateWorkflow:
 
         window = main_window_with_controller
         normalized = _normalize_path(str(source))
+        window._template_vm.manager.registry = registry
         window._load_templates_into_main_selector()
         docx_selector = window._template_selector.get_selector("docx")
         assert docx_selector is not None
-        assert docx_selector.has_template("Corporate Report")
-        docx_selector.select_template("Corporate Report", selection_source="user")
+        assert docx_selector.has_template(registry.list_templates()[0].id)
+        docx_selector.select_template(registry.list_templates()[0].id, selection_source="user")
 
         window.view_model.add_files([str(source)])
         app = QApplication.instance()

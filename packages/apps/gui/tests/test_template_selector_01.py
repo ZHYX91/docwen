@@ -11,7 +11,6 @@ from ._template_selector_support import (
     _UNSORTED_FIRST,
     _UNSORTED_THIRD,
     QApplication,
-    QListWidgetItem,
     Qt,
     TabbedTemplateSelector,
     TemplateSelector,
@@ -70,18 +69,18 @@ class TestTemplateSelectorEmptyState:
     def test_empty_hint_visible(self, selector: TemplateSelector) -> None:
         _assert_visible(selector._empty_hint_label)
 
-    def test_empty_action_button_visible(self, selector: TemplateSelector) -> None:
-        _assert_visible(selector._empty_action_button)
-        assert selector._empty_action_button.text() == t("components.template_selector.open_template_dir")
+    def test_empty_manage_button_visible(self, selector: TemplateSelector) -> None:
+        _assert_visible(selector._empty_manage_button)
+        assert selector._empty_manage_button.text() == t("components.template_selector.manage_templates")
 
-    def test_empty_action_button_click_invokes_callback(self, qapp: QApplication) -> None:
+    def test_empty_manage_button_click_invokes_callback(self, qapp: QApplication) -> None:
         calls: list[str] = []
 
         def _on_open_dir(tt: str) -> None:
             calls.append(tt)
 
-        w = TemplateSelector(template_type="docx", on_open_directory=_on_open_dir)
-        w._empty_action_button.click()
+        w = TemplateSelector(template_type="docx", on_manage_templates=_on_open_dir)
+        w._empty_manage_button.click()
         assert calls == ["docx"]
         w.deleteLater()
 
@@ -89,9 +88,8 @@ class TestTemplateSelectorEmptyState:
         w = TemplateSelector(template_type="docx")  # no callbacks
         errors: list[tuple[str, str]] = []
         w.template_error.connect(lambda s, d: errors.append((s, d)))
-        w._empty_action_button.click()
-        assert len(errors) == 1
-        assert errors[0][0] == t("components.template_selector.unavailable")
+        w._empty_manage_button.click()
+        assert errors == []
         w.deleteLater()
 
 
@@ -121,20 +119,14 @@ class TestTemplateSelectorAddTemplates:
         detail = selector._template_details["Standard Report"]
         assert detail.updated_label == "2025-06-01 14:30"
 
-    def test_add_templates_auto_select_first(self, selector: TemplateSelector) -> None:
-        selector.add_templates(_sample_names(), auto_select_first=True)
-        # TemplateSelector preserves caller order → first is _UNSORTED_FIRST
-        assert selector.get_selected() == _UNSORTED_FIRST
+    def test_population_requires_explicit_selection(self, selector: TemplateSelector) -> None:
+        selector.add_templates(_sample_names())
+        assert selector.get_selected() is None
 
-    def test_add_templates_auto_select_respects_manual(self, selector: TemplateSelector) -> None:
-        # First populate → auto selects first item in caller order
-        selector.add_templates(_sample_names(), auto_select_first=True)
-        assert selector.get_selected() == _UNSORTED_FIRST
-        # User manually selects a different template
+    def test_population_preserves_manual_selection(self, selector: TemplateSelector) -> None:
+        selector.add_templates(_sample_names())
         selector.select_template(_UNSORTED_THIRD, selection_source="user")
-        assert selector.get_selected() == _UNSORTED_THIRD
-        # Re-populate — should keep user's manual selection
-        selector.add_templates(_sample_names(), auto_select_first=True)
+        selector.add_templates(_sample_names())
         assert selector.get_selected() == _UNSORTED_THIRD
 
     def test_add_empty_templates_shows_empty_state(self, selector: TemplateSelector) -> None:
@@ -143,11 +135,12 @@ class TestTemplateSelectorAddTemplates:
         _assert_visible(selector._empty_state)
 
     def test_add_templates_clears_previous_selection_when_gone(self, selector: TemplateSelector) -> None:
-        selector.add_templates(_sample_names(), auto_select_first=True)
+        selector.add_templates(_sample_names())
+        selector.select_template(_UNSORTED_FIRST, selection_source="user")
         assert selector.get_selected() == _UNSORTED_FIRST
-        # Repopulate with a different set — old selection is gone, auto-select picks first
-        selector.add_templates(["New Template"], auto_select_first=True)
-        assert selector.get_selected() == "New Template"
+        # A removed selection stays empty; no silent fallback.
+        selector.add_templates(["New Template"])
+        assert selector.get_selected() is None
 
 
 class TestTemplateSelectorSelection:
@@ -177,16 +170,6 @@ class TestTemplateSelectorSelection:
         assert calls == [_SORTED_SECOND]
         w.deleteLater()
 
-    def test_activate_first_template(self, selector: TemplateSelector) -> None:
-        selector.add_templates(_sample_names())
-        name = selector.activate_first_template(selection_source="auto_default")
-        # TemplateSelector preserves caller order — first is _UNSORTED_FIRST
-        assert name == _UNSORTED_FIRST
-        assert selector.get_selected() == _UNSORTED_FIRST
-
-    def test_activate_first_on_empty(self, selector: TemplateSelector) -> None:
-        assert selector.activate_first_template() is None
-
     def test_has_template(self, selector: TemplateSelector) -> None:
         selector.add_templates(_sample_names())
         assert selector.has_template(_SORTED_SECOND) is True
@@ -196,7 +179,7 @@ class TestTemplateSelectorSelection:
     def test_has_manual_selection_tracking(self, selector: TemplateSelector) -> None:
         selector.add_templates(_sample_names())
         # auto selection doesn't count as manual
-        selector.activate_first_template(selection_source="auto_default")
+        selector.select_template(_UNSORTED_FIRST, selection_source="auto_default")
         assert selector._has_manual_selection() is False
         # user selection does
         selector.select_template(_SORTED_SECOND, selection_source="user")
@@ -213,7 +196,7 @@ class TestTemplateSelectorSelection:
 
     def test_consumer_feedback_after_auto_default(self, selector: TemplateSelector) -> None:
         selector.add_templates(_sample_names())
-        selector.activate_first_template(selection_source="auto_default", explanation="auto")
+        selector.select_template(_UNSORTED_FIRST, selection_source="auto_default", explanation="auto")
         fb = selector.consume_selection_feedback()
         assert fb is not None
         assert fb.selection_source == "auto_default"
@@ -240,50 +223,6 @@ class TestTemplateSelectorClearAll:
 
 class TestTemplateSelectorLocationButton:
     """Open-location button state synchronisation."""
-
-    def test_location_button_disabled_initially(self, selector: TemplateSelector) -> None:
-        assert not selector._open_location_button.isEnabled()
-
-    def test_location_button_enabled_after_selection(self, qapp: QApplication) -> None:
-        def _cb(tt: str, name: str) -> None:
-            pass
-
-        w = TemplateSelector(template_type="docx", on_open_location=_cb)
-        w.show()
-        w.add_templates(_sample_names())
-        w.select_template(_UNSORTED_THIRD, selection_source="user")
-        assert w._open_location_button.isEnabled()
-        w.hide()
-        w.deleteLater()
-
-    def test_location_button_hidden_without_callback(self, selector: TemplateSelector) -> None:
-        # No on_open_location callback in fixture → button is explicitly hidden
-        _assert_hidden(selector._open_location_button)
-
-    def test_location_button_visible_with_callback(self, qapp: QApplication) -> None:
-        def _cb(tt: str, name: str) -> None:
-            pass
-
-        w = TemplateSelector(template_type="docx", on_open_location=_cb)
-        w.show()
-        _assert_visible(w._open_location_button)
-        w.hide()
-        w.deleteLater()
-
-    def test_location_affordance_icons_visible_with_callback(self, qapp: QApplication) -> None:
-        def _cb(tt: str, name: str) -> None:
-            pass
-
-        w = TemplateSelector(template_type="docx", on_open_location=_cb)
-        w.add_templates(_sample_names())
-
-        for index in range(w._list.count()):
-            item = w._list.item(index)
-            assert item is not None
-            assert not item.icon().isNull()
-            assert t("components.template_selector.open_location") in item.toolTip()
-
-        w.deleteLater()
 
     def test_location_affordance_icons_hidden_without_callback(self, selector: TemplateSelector) -> None:
         selector.add_templates(_sample_names())
@@ -321,7 +260,7 @@ class TestTemplateSelectorDetailsLabel:
         selector.select_template(_SORTED_SECOND, selection_source="user")
         _assert_visible(selector._details_label)
         assert _SORTED_SECOND in selector._details_label.text()
-        assert not selector._list.currentItem().icon().isNull()
+        assert selector._list.currentItem().isSelected()
 
     def test_footer_row_visible_when_details_or_button(self, selector: TemplateSelector) -> None:
         selector.add_templates(_sample_names(), template_details=_sample_details())
@@ -392,73 +331,9 @@ class TestTemplateSelectorContextMenu:
         selector._list.customContextMenuRequested.emit(selector._list.rect().center())
         # No crash = pass
 
-    def test_location_button_and_context_menu_share_callee(self, qapp: QApplication) -> None:
-        """Both the open-location button and the context menu action route
-        through _open_template_location — verifying the button path also
-        verifies the context menu's action endpoint."""
-        open_calls: list[tuple[str, str]] = []
-
-        def _on_open(tt: str, name: str) -> None:
-            open_calls.append((tt, name))
-
-        w = TemplateSelector(template_type="docx", on_open_location=_on_open)
-        w.add_templates(_sample_names())
-        w.select_template(_SORTED_SECOND, selection_source="user")
-
-        # Direct call to the shared method that both the button and
-        # context menu action ultimately invoke.
-        w._open_template_location(_SORTED_SECOND)
-        assert ("docx", _SORTED_SECOND) in open_calls
-
-        w.deleteLater()
-
 
 class TestTemplateSelectorItemActivation:
     """Item activation (double-click / Enter) path coverage."""
-
-    def test_item_activated_calls_open_location(self, qapp: QApplication) -> None:
-        """Double-click or Enter on a template item triggers the
-        open-location callback via _on_item_activated."""
-        open_calls: list[tuple[str, str]] = []
-
-        def _on_open(tt: str, name: str) -> None:
-            open_calls.append((tt, name))
-
-        w = TemplateSelector(template_type="docx", on_open_location=_on_open)
-        w.add_templates(_sample_names())
-        w.select_template(_SORTED_SECOND, selection_source="user")
-
-        item = w._list.currentItem()
-        assert item is not None
-        w._on_item_activated(item)
-
-        assert ("docx", _SORTED_SECOND) in open_calls
-        w.deleteLater()
-
-    def test_item_activated_without_callback_emits_error(self, qapp: QApplication) -> None:
-        """Double-click without a location callback emits template_error."""
-        w = TemplateSelector(template_type="docx")  # no on_open_location
-        w.add_templates(_sample_names())
-        w.select_template(_SORTED_FIRST, selection_source="user")
-
-        errors: list[tuple[str, str]] = []
-        w.template_error.connect(lambda s, d: errors.append((s, d)))
-
-        item = w._list.currentItem()
-        w._on_item_activated(item)
-
-        assert len(errors) == 1
-        assert errors[0][0] == t("components.template_selector.unavailable")
-        w.deleteLater()
-
-    def test_item_activated_with_none_item_does_not_crash(self, qapp: QApplication) -> None:
-        """Passing an item with no UserRole data does not crash."""
-        w = TemplateSelector(template_type="docx")
-        # Use a bare QListWidgetItem with no UserRole
-        bare = QListWidgetItem("bare")
-        # Should not raise
-        w._on_item_activated(bare)
-        w.deleteLater()
 
 
 class TestTabbedTemplateSelectorConstruction:
@@ -497,8 +372,8 @@ class TestTabbedTemplateSelectorLoadTemplates:
         sel = tabbed.get_selector("docx")
         assert sel is not None
         assert sel._list.count() == 3
-        # Auto-selects sort-first template on load
-        assert sel.get_selected() == _SORTED_FIRST
+        # Catalog refresh does not invent a new selection.
+        assert sel.get_selected() is None
 
     def test_load_templates_xlsx(self, tabbed: TabbedTemplateSelector) -> None:
         tabbed.load_templates("xlsx", ["Budget", "Invoice"])

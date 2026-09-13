@@ -586,8 +586,7 @@ class MainWindow(QWidget):
             self._right_panel_frame,
             on_template_selected=self._on_main_window_template_selected,
             on_tab_changed=self._on_main_window_template_tab_changed,
-            on_open_location=self._open_template_location,
-            on_open_directory=self._open_template_directory,
+            on_manage_templates=self._manage_templates,
         )
         self._template_selector.setObjectName("mainWindowTemplateSelector")
 
@@ -1278,6 +1277,10 @@ class MainWindow(QWidget):
     def _show_template_target_mode(self, template_type: str, file_path: str) -> None:
         """Project a template target into the matching Markdown generation mode."""
         normalized_type = str(template_type or "").strip().lower()
+        selector = self._template_selector.get_selector(normalized_type) if self._template_selector else None
+        self._action_area_vm.set_template_ready(
+            selector is not None and selector.get_selected_resource_id() is not None
+        )
         expected_mode = "md_to_spreadsheet" if normalized_type == "xlsx" else "docx"
         if (
             self._action_area_vm.mode == self._view_model.mode
@@ -1322,45 +1325,54 @@ class MainWindow(QWidget):
         return resolved_type
 
     def _load_templates_into_main_selector(self) -> None:
-        """Populate the main-window template selector from the runtime registry."""
-        if self._template_selector is None:
-            return
-        try:
-            from docwen_gui.widgets.template_selector import TemplateItemDetails
-            from docwen_runtime.templates import TemplateRegistry
+        from .view_models.template_vm import TemplateViewModel
 
-            registry = TemplateRegistry.default()
-            templates: dict[str, list[str]] = {"docx": [], "xlsx": []}
-            details: dict[str, dict[str, TemplateItemDetails]] = {"docx": {}, "xlsx": {}}
-            for info in registry.list_templates():
-                target = str(getattr(info, "target", "") or "").strip().lower()
-                if target in templates:
-                    name = str(getattr(info, "name", "") or "")
-                    if not name:
-                        continue
-                    path_value = getattr(info, "path", "") or ""
-                    path = Path(path_value) if path_value else None
-                    templates[target].append(name)
-                    details[target][name] = TemplateItemDetails(
-                        resource_id=str(getattr(info, "id", "") or "") or None,
-                        usage_hint=str(getattr(info, "description", "") or "") or None,
-                        source_label=(path.parent.name or str(path.parent) or None) if path is not None else None,
-                        source_path=str(path) if path is not None else None,
-                        updated_label=_format_template_modified_label(getattr(info, "modified_ns", None)),
-                    )
-            self._template_selector.load_all_templates(templates, details=details)
-            self._restore_main_template_default(force=True)
-        except Exception:
-            logger.exception("Unable to load the runtime template registry")
-            message = _t(
-                "main_window.template_catalog_failed",
-                "Templates could not be loaded.",
+        if not hasattr(self, "_template_vm"):
+            self._template_vm = TemplateViewModel(self)
+            self._template_vm.changed.connect(self._render_template_catalog)
+            self._template_vm.failed.connect(self._template_catalog_failed)
+        self._template_vm.refresh()
+        self._render_template_catalog()
+
+    def _template_catalog_failed(self, detail: str) -> None:
+        self._action_area_vm.set_template_ready(False)
+        if self._template_selector is not None:
+            self._template_selector.show_load_error(_t("components.template_selector.unavailable"), detail)
+
+    def _render_template_catalog(self) -> None:
+        from .widgets.template_selector import TemplateItemDetails
+
+        selector = self._template_selector
+        if selector is None or self._template_vm.error:
+            return
+        data: dict[str, list[str]] = {"docx": [], "xlsx": []}
+        details: dict[str, dict[str, TemplateItemDetails]] = {"docx": {}, "xlsx": {}}
+        for info in self._template_vm.templates:
+            if not self._template_vm.enabled[info.id]:
+                continue
+            data[info.target].append(info.id)
+            custom = self._template_vm.manager.is_custom(info)
+            details[info.target][info.id] = TemplateItemDetails(
+                display_name=info.name,
+                resource_id=info.id,
+                usage_hint=info.description,
+                source_label=(_t("settings.templates.custom") if custom else _t("settings.templates.builtin")),
+                updated_label=_format_template_modified_label(info.modified_ns),
             )
-            self._template_selector.show_load_error(
-                _t("components.template_selector.unavailable", "Unavailable"),
-                message,
-            )
-            self._info_area_vm.add_message(message, "warning")
+        previous_target = selector.current_tab
+        selector.set_defaults(self._template_vm.defaults)
+        selector.load_all_templates(data, details=details)
+        for target in ("docx", "xlsx"):
+            selector.ensure_preferred_selection(target)
+        selector.restore_current_tab(previous_target)
+        self._restore_main_template_default()
+        self._action_area_vm.set_template_ready(selector.get_selected_template_resource() is not None)
+
+    def _manage_templates(self, target: str) -> None:
+        self.open_settings("templates")
+        if self._settings_dialog is not None:
+            selected = self._template_selector.get_selected_template_resource() if self._template_selector else None
+            self._settings_dialog.focus_template(target, selected[1] if selected else None)
 
     def _merge_template_options_for_request(
         self,
@@ -1383,65 +1395,13 @@ class MainWindow(QWidget):
         selector = self._template_selector
         selected = selector.get_selected_template_resource() if selector is not None else None
         if selected is None:
-            return merged
+            raise ValueError(_t("settings.templates.choose_template", "Choose an enabled template in the right panel"))
         template_type, template_id = selected
         if target in _DOCUMENT_TEMPLATE_TARGETS and template_type == "docx":
             merged["template_name"] = template_id
         if target in _SPREADSHEET_TEMPLATE_TARGETS and template_type == "xlsx":
             merged["template_name"] = template_id
         return merged
-
-    def _open_template_location(self, template_type: str, template_name: str) -> None:
-        """Open the selected template's containing folder."""
-        template_path = self._resolve_template_path(template_type, template_name)
-        if template_path is None:
-            self._info_area_vm.set_transient_message(
-                f"template:not-found:{template_type}:{template_name}",
-                _t("main_window.template_not_found", "Template not found: {name}", name=template_name),
-                "warning",
-                ttl_ms=3000,
-                source="template-selector",
-            )
-            return
-        self._open_path(str(template_path), open_parent=True)
-
-    def _open_template_directory(self, template_type: str) -> None:
-        """Open the template directory for empty-state recovery."""
-        try:
-            from docwen_runtime.resources import ResourceRegistry
-
-            templates_dir = ResourceRegistry.default().templates_dir()
-        except Exception:
-            self._info_area_vm.set_transient_message(
-                f"template:dir-unavailable:{template_type}",
-                _t("main_window.template_dir_unavailable", "Template directory is unavailable."),
-                "warning",
-                ttl_ms=3000,
-                source="template-selector",
-            )
-            return
-        self._open_path(str(templates_dir), open_parent=False)
-
-    @staticmethod
-    def _resolve_template_path(template_type: str, template_name: str) -> Path | None:
-        """Resolve a template name through the runtime template registry."""
-        try:
-            from docwen_runtime.templates import TemplateRegistry
-
-            requested_type = str(template_type or "").strip().lower()
-            requested_name = str(template_name or "").strip()
-            if not requested_name:
-                return None
-            registry = TemplateRegistry.default()
-            for template in registry.list_templates(requested_type or None):
-                if (
-                    template.name.casefold() == requested_name.casefold()
-                    or template.path.name.casefold() == requested_name.casefold()
-                ):
-                    return template.path
-            return None
-        except Exception:
-            return None
 
     def _install_shortcuts(self) -> None:
         # Each shortcut uses WindowShortcut context so it fires regardless
@@ -1936,6 +1896,9 @@ class MainWindow(QWidget):
         except _OutputPolicyConfigError:
             self._report_output_policy_config_error()
             return
+        except ValueError as exc:
+            self._info_area_vm.add_message(str(exc), "warning")
+            return
         if not self._admit_execution_request(request, context):
             return
 
@@ -2008,6 +1971,9 @@ class MainWindow(QWidget):
             )
         except _OutputPolicyConfigError:
             self._report_output_policy_config_error()
+            return
+        except ValueError as exc:
+            self._info_area_vm.add_message(str(exc), "warning")
             return
         if not self._admit_execution_request(request, context):
             return
@@ -3196,7 +3162,7 @@ class MainWindow(QWidget):
 
     # ── Settings dialog ────────────────────────────────────────────
 
-    _PUBLIC_SETTINGS_SECTIONS = ("proofread",)
+    _PUBLIC_SETTINGS_SECTIONS = ("proofread", "templates")
 
     def supported_settings_sections(self) -> tuple[str, ...]:
         """Return semantic settings sections exposed through runtime/control."""
@@ -3236,7 +3202,7 @@ class MainWindow(QWidget):
             if initial_tab:
                 vm.set_initial_tab(initial_tab)
 
-            dialog = SettingsDialog(parent=self, view_model=vm)
+            dialog = SettingsDialog(parent=self, view_model=vm, template_view_model=self._template_vm)
             if self._settings_request_expired(deadline):
                 dialog.deleteLater()
                 return self._settings_timeout_result(section, reused=False)
@@ -3624,6 +3590,8 @@ class MainWindow(QWidget):
 
     def changeEvent(self, event: QEvent) -> None:
         super().changeEvent(event)
+        if event.type() == QEvent.Type.ActivationChange and self.isActiveWindow() and hasattr(self, "_template_vm"):
+            self._template_vm.refresh()
         if event.type() != QEvent.Type.WindowStateChange:
             return
         if self._pending_normal_center_anchor is not None:

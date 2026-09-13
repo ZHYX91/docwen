@@ -262,6 +262,8 @@ batch_mode = "일괄 모드"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
+output_format = "기본 출력 형식"
+output_format_hint = "Markdown을 추가할 때 이 형식의 템플릿을 표시합니다."
 # MD转文档序号设置
 md_to_docx_section = "제목 번호(마크다운 → 문서)"
 remove_numbering = "기본으로 마크다운 제목 번호 제거"
@@ -289,8 +291,6 @@ edit_numbering_add = "제목 번호 추가 편집"
 edit_numbering_clean = "제목 번호 정리 규칙 편집"
 
 # 模板设置
-template_section = "템플릿 설정"
-template_tooltip = "MD 파일의 기본 템플릿 선택을 설정합니다\n• DOCX: 문서 템플릿\n• XLSX: 스프레드시트 템플릿"
 
 # 校对设置
 
@@ -989,8 +989,7 @@ cancel_hint = "작업이 실행 중입니다. Esc 키를 누르면 현재 작업
 manage_templates = "템플릿 관리"
 selected_name = "선택한 템플릿: {name}"
 no_templates = "사용 가능한 템플릿이 없습니다"
-empty_hint = "템플릿이 없으면 템플릿 폴더를 열어 파일을 확인하거나 추가하세요."
-open_template_dir = "템플릿 폴더 열기"
+empty_hint = "템플릿 관리에서 기본 템플릿을 활성화하거나 사용자 지정 템플릿을 가져오세요."
 unavailable = "템플릿 선택기를 사용할 수 없습니다"
 
 # 选项卡式模板选择器
@@ -1624,7 +1623,6 @@ conversion_warning = "변환은 완료되었지만 경고가 있습니다."
 aggregate_need_two = "일치하는 파일이 두 개 이상 필요합니다(발견: {count})."
 route_unavailable = "이 파일에 사용할 수 있는 호환 작업이 없습니다."
 output_settings_unavailable = "출력 설정을 불러올 수 없어 작업을 시작하지 않았습니다."
-template_catalog_failed = "템플릿을 불러올 수 없습니다."
 window_title = "DocWen 오프라인 버전"
 version_offline = "오프라인 버전"
 settings_tooltip = "설정 (Ctrl+,)"
@@ -1646,8 +1644,6 @@ no_error_available = "오류 정보가 없습니다."
 no_failed_to_retry = "재시도할 실패 작업이 없습니다."
 path_not_exist = "경로가 존재하지 않습니다: {path}"
 open_path_failed = "경로를 열 수 없습니다: {path}"
-template_not_found = "템플릿을 찾을 수 없습니다: {name}"
-template_dir_unavailable = "템플릿 디렉터리를 사용할 수 없습니다."
 system_tray_show = "창 표시"
 system_tray_hide = "창 숨기기"
 system_tray_quit = "종료"
@@ -1722,4 +1718,13 @@ builtin = "기본 제공"
 builtin_hint = "기본 제공 템플릿은 편집하기 전에 복사하세요."
 file_filter = "Office 템플릿 (*.docx *.xlsx);;모든 파일 (*)"
 name_prompt = "템플릿 이름:"
-delete_confirm = "사용자 지정 템플릿 ‘{name}’을(를) 삭제하시겠습니까?"
+delete_confirm = "사용자 지정 템플릿 “{name}”을 휴지통으로 이동할까요?"
+
+set_default = "기본값으로 설정"
+default = "기본값"
+choose_template = "오른쪽에서 활성화된 템플릿을 선택하세요"
+more = "더 보기"
+open_failed = "템플릿을 열 수 없습니다. 연결된 앱을 확인하세요."
+name_conflict = "{name} 이름의 사용자 지정 템플릿이 이미 있습니다."
+keep_both = "둘 다 유지"
+replace = "바꾸기"

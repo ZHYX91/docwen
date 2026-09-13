@@ -107,22 +107,29 @@ def _load_request_templates(window, *, docx: bool = True, xlsx: bool = True) -> 
     from docwen_gui.widgets.template_selector import TemplateItemDetails
 
     names = {
-        "docx": ["Corporate Report"] if docx else [],
-        "xlsx": ["Budget"] if xlsx else [],
+        "docx": [_DOCX_TEMPLATE_ID] if docx else [],
+        "xlsx": [_XLSX_TEMPLATE_ID] if xlsx else [],
     }
     details = {
         "docx": {
-            "Corporate Report": TemplateItemDetails(resource_id=_DOCX_TEMPLATE_ID),
+            _DOCX_TEMPLATE_ID: TemplateItemDetails(display_name="Corporate Report", resource_id=_DOCX_TEMPLATE_ID),
         }
         if docx
         else {},
         "xlsx": {
-            "Budget": TemplateItemDetails(resource_id=_XLSX_TEMPLATE_ID),
+            _XLSX_TEMPLATE_ID: TemplateItemDetails(display_name="Budget", resource_id=_XLSX_TEMPLATE_ID),
         }
         if xlsx
         else {},
     }
+    window._template_selector.set_defaults(
+        {"docx": _DOCX_TEMPLATE_ID if docx else None, "xlsx": _XLSX_TEMPLATE_ID if xlsx else None}
+    )
     window._template_selector.load_all_templates(names, details=details)
+    for target, enabled in (("docx", docx), ("xlsx", xlsx)):
+        if enabled:
+            window._template_selector.get_selector(target).select_template(names[target][0], selection_source="user")
+    window._template_selector.restore_current_tab("docx" if docx else "xlsx")
 
 
 _PROJECTION_HIDDEN = MainWindowUiProjection(

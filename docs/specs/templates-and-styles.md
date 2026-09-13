@@ -7,6 +7,34 @@ shipped or user template in place.
 本文是每次 Markdown→DOCX 转换的正式样式合同。模板发现和选择仍由 `TemplateRegistry` 负责；完整样式
 只注入请求拥有的输出文档，不原地修改随包模板或用户模板。
 
+## Template catalog / 模板目录与管理
+
+Bundled templates are immutable resources. User templates live in the platform user-data directory
+(%LOCALAPPDATA%/docwen/templates on Windows); MSIX package paths are never a user editing destination.
+template-state.json beside that directory owns stable custom IDs, enablement, separate DOCX/XLSX order,
+and per-format defaults. It does not store an installation-version path as the selected identity.
+
+内置模板只读；自定义模板放在用户可写目录。内置模板的 canonical ID 不随安装版本路径变化，
+自定义模板使用独立持久 ID。重命名、排序和替换内容保留身份；复制内置模板创建独立副本，
+软件升级不覆盖副本。外部文件重命名可通过文件身份重新关联；原子保存沿用原文件名对应的 ID。
+
+The registry validates actual DOCX/XLSX content and merges both sources. Management serializes discovery and
+mutations with a process lock. File-plus-state changes use the shared durable transaction journal;
+unreadable state fails closed without resetting user preferences. Deletion uses the OS trash backend and
+fails without permanently deleting when trash is unavailable. A default is initialized once by GUI locale,
+even when runtime discovery has already created the catalog state.
+
+设置 → 模板集中提供启停、排序、默认模板、导入、复制并编辑、重命名、导出和回收站删除。
+本页修改即时生效；设置的取消或还原不会回滚模板文件与目录状态。DOCX/XLSX 分页分别排序，
+内置和自定义模板可混排；新增导入排到末尾，副本排在原模板之后。同名导入默认保留两者，
+明确选择替换时保留既有自定义模板的 ID、顺序和启停状态。
+
+The main selector shows enabled templates in saved order and uses canonical IDs for selection and dispatch.
+Both lists show a leading source badge with a locale-consistent width. The main selector offers only management
+navigation; it has no package-location action. Removing or disabling the current template clears selection,
+shows guidance, and disables template-dependent conversion until the user selects another template. Refresh
+preserves the current format tab. A missing or disabled default is cleared without selecting an alternative.
+
 ## Managed identity / 受管身份
 
 Every managed style has one identity chain:

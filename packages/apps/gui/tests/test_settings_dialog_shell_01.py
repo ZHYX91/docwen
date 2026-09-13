@@ -138,6 +138,7 @@ def test_settings_dialog_tab_order_follows_input_processing_and_delivery(qapp) -
         "other",
         "link",
         "formatting",
+        "templates",
         "output",
         "logging",
     }
@@ -151,6 +152,7 @@ def test_settings_dialog_tab_order_follows_input_processing_and_delivery(qapp) -
         "other",
         "proofread",
         "formatting",
+        "templates",
         "link",
         "export",
         "software",

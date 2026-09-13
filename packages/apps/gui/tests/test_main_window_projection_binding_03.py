@@ -231,7 +231,7 @@ class TestRuntimeRequestBinding:
         _load_request_templates(window)
         selector = window._template_selector.get_selector("docx")
         assert selector is not None
-        selector.select_template("Corporate Report", selection_source="user")
+        selector.select_template(_DOCX_TEMPLATE_ID, selection_source="user")
 
         request, context = window._build_request(
             file_path=str(source),
@@ -514,7 +514,7 @@ class TestRuntimeRequestBinding:
         _load_request_templates(window, xlsx=False)
         selector = window._template_selector.get_selector("docx")
         assert selector is not None
-        selector.select_template("Corporate Report", selection_source="user")
+        selector.select_template(_DOCX_TEMPLATE_ID, selection_source="user")
 
         request, _context = window._build_request(
             file_path=str(source),
@@ -534,7 +534,7 @@ class TestRuntimeRequestBinding:
         _load_request_templates(window, xlsx=False)
         selector = window._template_selector.get_selector("docx")
         assert selector is not None
-        selector.select_template("Corporate Report", selection_source="user")
+        selector.select_template(_DOCX_TEMPLATE_ID, selection_source="user")
 
         request, _context = window._build_request(
             file_path=str(source),
@@ -560,7 +560,7 @@ class TestRuntimeRequestBinding:
         _load_request_templates(window, xlsx=False)
         selector = window._template_selector.get_selector("docx")
         assert selector is not None
-        selector.select_template("Corporate Report", selection_source="user")
+        selector.select_template(_DOCX_TEMPLATE_ID, selection_source="user")
 
         request, _context = window._build_request(
             file_path=str(source),

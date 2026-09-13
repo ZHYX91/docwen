@@ -1,11 +1,4 @@
-"""Text settings tab — numbering schemes, templates, field processors.
-
-Matches old TextTab behavior:
-- Remove/add numbering checkboxes with scheme combo (linked state)
-- Numbering scheme editor + pattern editor buttons
-- MD default template (docx/xlsx)
-- Field processor dynamic checkbox list
-"""
+"""Settings for incoming Markdown, numbering and field processing."""
 
 from __future__ import annotations
 
@@ -23,7 +16,6 @@ from docwen_gui import numbering_schemes
 
 from ...i18n import t
 from ...view_models.settings_vm import SECTION_GUI, SECTION_TEXT, SettingsViewModel
-from ..template_selector_tabbed import TabbedTemplateSelector
 from .base_tab import BaseSettingsTab
 from .content_controls import MarkdownContentControls
 from .numbering_editors import NumberingEditors
@@ -40,15 +32,13 @@ def _draft_mapping(value: object) -> dict[str, object]:
 
 
 class TextTab(BaseSettingsTab):
-    """Text/numbering/template settings tab."""
+    """Text conversion settings tab."""
 
     def __init__(self, view_model: SettingsViewModel) -> None:
         self._vm = view_model
         self._remove_numbering: QCheckBox = _cast(QCheckBox, None)
         self._add_numbering: QCheckBox = _cast(QCheckBox, None)
         self._scheme_combo: QComboBox = _cast(QComboBox, None)
-        self._template_combo: QComboBox = _cast(QComboBox, None)
-        self._template_selector: TabbedTemplateSelector = _cast(TabbedTemplateSelector, None)
         self._field_processor_checkboxes: dict[str, QCheckBox] = {}
         self._field_processors_by_id: dict[str, dict] = {}
         self._field_processors_empty_label: QLabel = _cast(QLabel, None)
@@ -62,6 +52,13 @@ class TextTab(BaseSettingsTab):
                 "Settings for incoming Markdown: generating documents, filling templates and processing headings.",
             )
         )
+        _output_card, output_form = self.add_settings_card(t("settings.text.output_format"))
+        self._output_format_combo = self.create_combobox(
+            [("DOCX", "docx"), ("XLSX", "xlsx")],
+            t("settings.text.output_format_hint"),
+        )
+        self._output_format_combo.currentIndexChanged.connect(self._on_output_format_changed)
+        self.add_form_row(output_form, t("settings.text.output_format"), self._output_format_combo)
         self._content_controls = MarkdownContentControls(self, self._vm)
         # ── MD to DOCX numbering card ───────────────────────────────────
         _card1, form1 = self.add_settings_card(
@@ -137,25 +134,13 @@ class TextTab(BaseSettingsTab):
         self._field_processors_form.addRow(self._field_processors_empty_label)
         self._build_field_processor_rows()
 
-        # ── Template card ───────────────────────────────────────────────
-        _card3, form3 = self.add_settings_card(
-            t("settings.text.template_section", "Default Template"),
-            t("settings.text.template_tooltip", "Select a default template for MD to document conversions."),
-            object_name="textTemplateCard",
-        )
-        self._template_selector = TabbedTemplateSelector(
-            on_template_selected=self._on_template_selector_changed,
-            on_tab_changed=self._on_template_type_changed,
-        )
-        self.add_form_row(form3, "", self._template_selector)
-        # Connect ViewModel template signals
-        self._vm.template_lists_changed.connect(self._on_templates_loaded)
-
     # ── Value loading ───────────────────────────────────────────────────────
 
     def _load_values(self) -> None:
         self._content_controls.reload_from_config()
         config = self._vm.config
+        with QSignalBlocker(self._output_format_combo):
+            self.set_combo_data(self._output_format_combo, config.gui.md_default_template)
         text = config.text
         self._refresh_scheme_combo_items(text.default_scheme)
 
@@ -171,18 +156,6 @@ class TextTab(BaseSettingsTab):
             with QSignalBlocker(self._render_mode_combo):
                 self._render_mode_combo.setEnabled(text.add_numbering)
                 self.set_combo_data(self._render_mode_combo, text.heading_numbering_render_mode)
-        if self._template_selector is not None:
-            templates = self._vm.get_templates()
-            if templates:
-                self._template_selector.load_all_templates(templates)
-            # Restore previous selections from ViewModel
-            selected = self._vm.selected_templates
-            if selected:
-                for tt, name in selected.items():
-                    sel = self._template_selector.get_selector(tt)
-                    if sel is not None and sel.has_template(name):
-                        sel.select_template(name, selection_source="restore")
-            self._template_selector.restore_current_tab(config.gui.md_default_template)
         self._load_field_processor_values()
 
     def reload_from_config(self) -> None:
@@ -248,23 +221,8 @@ class TextTab(BaseSettingsTab):
 
     # ── Signal handlers ─────────────────────────────────────────────────────
 
-    def _on_template_selector_changed(self, template_type: str, name: str) -> None:
-        """Handle template selection without dirtying on list restoration."""
-        feedback = self._template_selector.peek_callback_selection_feedback()
-        selection_source = feedback[2].selection_source if feedback is not None else "user"
-        if selection_source == "user":
-            self._vm.set_field(SECTION_GUI, "md_default_template", template_type)
-        self._vm.select_template(template_type, name)
-
-    def _on_template_type_changed(self, template_type: str, _previous_type: str) -> None:
-        """Persist an explicit user tab switch independently of selection restore."""
-        self._vm.set_field(SECTION_GUI, "md_default_template", template_type)
-
-    def _on_templates_loaded(self, data: dict) -> None:
-        """Load template lists into the selector widget when ViewModel provides them."""
-        if self._template_selector is not None:
-            self._template_selector.load_all_templates(data)
-            self._template_selector.restore_current_tab(self._vm.config.gui.md_default_template)
+    def _on_output_format_changed(self, _index: int) -> None:
+        self._vm.set_field(SECTION_GUI, "md_default_template", self._output_format_combo.currentData())
 
     def _on_remove_numbering_changed(self, state: int) -> None:
         self._vm.set_field(SECTION_TEXT, "remove_numbering", bool(state))

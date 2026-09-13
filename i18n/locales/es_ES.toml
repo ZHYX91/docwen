@@ -27,7 +27,6 @@ conversion_warning = "La conversión terminó con una advertencia."
 aggregate_need_two = "Se requieren al menos dos archivos coincidentes (encontrados: {count})."
 route_unavailable = "No hay ninguna operación compatible con este archivo."
 output_settings_unavailable = "No se pudo cargar la configuración de salida; la tarea no se inició."
-template_catalog_failed = "No se pudieron cargar las plantillas."
 window_title = "DocWen sin conexión"
 version_offline = "Sin conexión"
 settings_tooltip = "Configuración (Ctrl+,)"
@@ -49,8 +48,6 @@ no_error_available = "No hay información de error disponible."
 no_failed_to_retry = "No hay tareas fallidas para reintentar."
 path_not_exist = "La ruta no existe: {path}"
 open_path_failed = "No se pudo abrir la ruta: {path}"
-template_not_found = "No se encontró la plantilla: {name}"
-template_dir_unavailable = "El directorio de plantillas no está disponible."
 system_tray_show = "Mostrar ventana"
 system_tray_hide = "Ocultar ventana"
 system_tray_quit = "Salir"
@@ -316,6 +313,8 @@ batch_mode = "Modo por lotes"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
+output_format = "Formato de salida predeterminado"
+output_format_hint = "Mostrar plantillas de este formato al añadir Markdown."
 # MD转文档序号设置
 md_to_docx_section = "Numeración de encabezados (Markdown → Documento)"
 remove_numbering = "Eliminar por defecto la numeración de encabezados en Markdown"
@@ -343,8 +342,6 @@ edit_numbering_add = "Editar esquemas de numeración"
 edit_numbering_clean = "Editar reglas de limpieza"
 
 # 模板设置
-template_section = "Ajustes de plantilla"
-template_tooltip = "Establece la plantilla predeterminada para archivos MD\n• DOCX: plantilla de documento\n• XLSX: plantilla de hoja de cálculo"
 
 # 校对设置
 
@@ -1045,8 +1042,7 @@ cancel_hint = "Hay una tarea en ejecución. Pulse Esc para cancelarla."
 manage_templates = "Administrar plantillas"
 selected_name = "Plantilla seleccionada: {name}"
 no_templates = "No hay plantillas disponibles"
-empty_hint = "Si no hay plantillas disponibles, abra la carpeta de plantillas para revisar o agregar archivos."
-open_template_dir = "Abrir carpeta de plantillas"
+empty_hint = "Use Administrar plantillas para activar las integradas o importar plantillas personalizadas."
 unavailable = "Selector de plantillas no disponible"
 
 # 选项卡式模板选择器
@@ -1728,4 +1724,13 @@ builtin = "Integrada"
 builtin_hint = "Plantilla integrada: cópiela antes de editarla."
 file_filter = "Plantillas de Office (*.docx *.xlsx);;Todos los archivos (*)"
 name_prompt = "Nombre de la plantilla:"
-delete_confirm = "¿Eliminar la plantilla personalizada «{name}»?"
+delete_confirm = "¿Mover la plantilla personalizada «{name}» a la papelera?"
+
+set_default = "Establecer como predeterminada"
+default = "Predeterminada"
+choose_template = "Seleccione una plantilla habilitada en el panel derecho"
+more = "Más"
+open_failed = "No se pudo abrir la plantilla. Compruebe la aplicación asociada."
+name_conflict = "Ya existe una plantilla personalizada llamada {name}."
+keep_both = "Conservar ambas"
+replace = "Reemplazar"

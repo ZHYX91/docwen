@@ -17,7 +17,7 @@ def _read(relative_path: str) -> str:
 
 def test_runtime_owns_one_locked_checksummed_recovery_protocol() -> None:
     loader = _read("packages/runtime/src/docwen_runtime/config/loader.py")
-    transaction = _read("packages/runtime/src/docwen_runtime/config/transaction.py")
+    transaction = _read("packages/runtime/src/docwen_runtime/file_transactions.py")
     toml_io = _read("packages/runtime/src/docwen_runtime/toml_io.py")
 
     for token in (
