@@ -45,6 +45,25 @@ def retry_after_seconds(value: str | None) -> float:
             return 0
 
 
+def env_seconds(name: str, default: float, *, minimum: float = 1.0) -> float:
+    """Read a transfer budget override from the environment.
+
+    Defaults keep the fast datacenter budgets; slow self-hosted transports raise
+    them explicitly instead of monkey-patching this module.
+    """
+
+    value = os.environ.get(name)
+    if not value:
+        return default
+    try:
+        seconds = float(value)
+    except ValueError as error:
+        raise PublicationError(f"{name} must be a number of seconds") from error
+    if seconds < minimum:
+        raise PublicationError(f"{name} must be at least {minimum:g} seconds")
+    return seconds
+
+
 def read_with_retry[T](
     operation: Callable[[float], T],
     *,

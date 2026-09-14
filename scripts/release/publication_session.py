@@ -24,7 +24,19 @@ from scripts.release.publication_contract import (
     verify_inventory,
     verify_origin,
 )
-from scripts.release.publication_http import ApiError, GitHub, PendingRead, read_with_retry
+from scripts.release.publication_http import ApiError, GitHub, PendingRead, env_seconds, read_with_retry
+
+
+def read_budget() -> float:
+    """Recovery budget for one logical read; slow transports raise it explicitly."""
+
+    return env_seconds("DOCWEN_PUBLICATION_READ_BUDGET", 60)
+
+
+def data_timeout() -> float:
+    """Wall-clock ceiling for one asset upload; slow transports raise it explicitly."""
+
+    return env_seconds("DOCWEN_PUBLICATION_DATA_TIMEOUT", 600)
 
 
 def verify_preflight_jobs(payload: dict[str, Any]) -> None:
@@ -172,7 +184,7 @@ class ReleaseSession:
             self.validate_release(result)
             return result
 
-        return read_with_retry(read, allow_missing=wait)
+        return read_with_retry(read, budget=read_budget(), allow_missing=wait)
 
     def write_once(
         self, operation: str, method: str, path: str, *, body: object = None, data: bytes | None = None
@@ -183,7 +195,9 @@ class ReleaseSession:
             return  # The caller must resolve the previous remote outcome by reading.
         self.save(pending=operation)
         try:
-            result = self.api.request(method, path, timeout=600 if data is not None else 60, body=body, data=data)
+            result = self.api.request(
+                method, path, timeout=data_timeout() if data is not None else 60, body=body, data=data
+            )
             if operation == "create-draft":
                 self.validate_release(result)
                 self.save(releaseId=result["id"], stage="draft-created", pending=None)
@@ -236,18 +250,26 @@ class ReleaseSession:
                 require(release.get("draft") is True, "draft was published before verification completed")
             return release, self.remote_assets(release, complete=complete)
 
-        return read_with_retry(read, allow_missing=True)
+        return read_with_retry(read, budget=read_budget(), allow_missing=True)
 
     def publish(self, *, notes: str) -> dict[str, Any]:
         self.verify_source()
         self.verify_provenance()
         admin_token = os.environ.get("DOCWEN_IMMUTABILITY_READ_TOKEN")
-        settings_api = GitHub(self.repository, token=admin_token) if admin_token else self.api
-        require(
-            settings_api.get(f"{self.prefix}/immutable-releases").get("enabled") is True,
-            "immutable releases must be enabled",
-        )
-        self.save()
+        if admin_token:
+            settings_api = GitHub(self.repository, token=admin_token)
+            require(
+                settings_api.get(f"{self.prefix}/immutable-releases").get("enabled") is True,
+                "immutable releases must be enabled",
+            )
+            immutable_precheck = "verified-enabled"
+        else:
+            # Reading this repository setting needs an administration-scoped token, which the
+            # workflow token does not carry.  Publication still refuses to report success unless
+            # the hosted release itself reports immutable=true, so an absent token degrades this
+            # single pre-check instead of blocking the release.
+            immutable_precheck = "unavailable-without-administration-token"
+        self.save(immutablePrecheck=immutable_precheck)
         try:
             release = self.load_release(wait=self.state.get("pending") == "create-draft")
         except ApiError as error:
@@ -300,11 +322,13 @@ class ReleaseSession:
                         raise PendingRead("uploaded asset is not visible yet")
                     return assets[name]
 
-                read_with_retry(read_asset, allow_missing=True)
+                read_with_retry(read_asset, budget=read_budget(), allow_missing=True)
             if self.state.get("pending") == operation:
                 self.save(pending=None)
-        _, draft_assets = self.observe(published=False, complete=True)
-        self.verify_remote_bytes(draft_assets)
+        # observe() already pins every draft asset to its exact size and platform digest, so the
+        # full byte readback runs once, only against the immutable published release.  A slow
+        # transport therefore no longer downloads the whole candidate twice.
+        self.observe(published=False, complete=True)
         self.save(stage="draft-verified")
         self.verify_tag()
         self.write_once(
@@ -338,6 +362,7 @@ class ReleaseSession:
             observed = read_with_retry(
                 lambda timeout, record=record: self.api.download_identity(
                     f"{self.prefix}/releases/assets/{record['id']}", timeout=timeout
-                )
+                ),
+                budget=read_budget(),
             )
             require(observed == self.assets[name], f"remote bytes mismatch: {name}")

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import functools
 import http.client
 import json
@@ -65,10 +66,21 @@ def test_published_readback_failure_can_resume_without_any_write(session) -> Non
     assert api.writes == writes
 
 
-def test_draft_download_mismatch_prevents_publication(session, monkeypatch) -> None:
+def test_draft_asset_identity_mismatch_prevents_publication(session, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The draft is pinned by the platform size and digest, not by a second byte download."""
+
     api, create, receipt, _ = session
-    monkeypatch.setattr(api, "download_identity", lambda *args, **kwargs: {"bytes": 0, "sha256": "0" * 64})
-    with pytest.raises(PublicationError, match="remote bytes mismatch"):
+    original = api.request
+
+    def tampered(method: str, path: str, **kwargs):
+        result = original(method, path, **kwargs)
+        if method == "GET" and isinstance(result, dict) and result.get("assets"):
+            result = copy.deepcopy(result)
+            result["assets"][-1]["digest"] = "sha256:" + "0" * 64
+        return result
+
+    monkeypatch.setattr(api, "request", tampered)
+    with pytest.raises(PublicationError, match="remote asset mismatch"):
         create().publish(notes="Release notes")
     assert api.release["draft"] is True
     assert not any(method == "PATCH" for method, _ in api.writes)

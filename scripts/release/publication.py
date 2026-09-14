@@ -28,7 +28,7 @@ from scripts.release.publication_contract import (
     verify_inventory,
     verify_origin,
 )
-from scripts.release.publication_http import GitHub
+from scripts.release.publication_http import GitHub, env_seconds
 from scripts.release.publication_session import ReleaseSession, verify_preflight_jobs
 
 
@@ -102,7 +102,7 @@ def fetch_candidate(
             ["gh", "api", f"/repos/{repository}/actions/artifacts/{artifact_id}/zip"],
             stdout=stream,
             stderr=subprocess.PIPE,
-            timeout=600,
+            timeout=env_seconds("DOCWEN_PUBLICATION_ARTIFACT_TIMEOUT", 600),
         )
     require(result.returncode == 0, "candidate artifact download failed")
     require(f"sha256:{file_identity(archive)['sha256']}" == digest, "downloaded artifact digest mismatch")

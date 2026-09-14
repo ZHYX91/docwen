@@ -205,11 +205,16 @@ def test_release_workflow_has_a_read_only_preflight_and_fixed_immutable_publicat
     assert jobs["source-checks"]["uses"] == "./.github/workflows/tests.yml"
     assert jobs["source-checks"]["if"] == "inputs.operation == 'preflight'"
     assert jobs["release-gate"]["needs"] == "source-checks"
-    assert publish["if"] == "inputs.operation == 'publish'"
+    assert workflow["on"]["push"] == {"tags": ["*.*.*"]}
+    assert workflow["env"]["RELEASE_VERSION"] == "${{ inputs.version || github.ref_name }}"
+    assert publish["if"] == "github.event_name == 'push' || inputs.operation == 'publish'"
+    assert publish["environment"] == "release"
     assert "needs" not in publish  # Publication retrieves an earlier verified run; it does not rebuild.
     assert "publication.py assemble" in _commands(verify)
     assert "publication.py fetch" in _commands(publish)
     assert "publication.py publish" in _commands(publish)
+    assert "scripts/release/resolve_publication.py" in _commands(publish)
+    assert 'test -n "$DOCWEN_IMMUTABILITY_READ_TOKEN"' not in _commands(publish)
     assert '--artifact-id "$ARTIFACT_ID" --artifact-digest "$ARTIFACT_DIGEST"' in _commands(publish)
     assert '--commit "$GITHUB_SHA"' in _commands(publish)
     assert "publication.py verify" in _commands(post)
