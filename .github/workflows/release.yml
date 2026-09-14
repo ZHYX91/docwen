@@ -1,6 +1,8 @@
 name: Release
 
 on:
+  push:
+    tags: ['*.*.*']
   workflow_dispatch:
     inputs:
       version:
@@ -34,7 +36,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  RELEASE_VERSION: ${{ inputs.version }}
+  RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
   PUBLICATION_ARTIFACT_NAME: docwen-publication-${{ github.run_id }}-${{ github.run_attempt }}
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
@@ -317,17 +319,19 @@ jobs:
           echo "No tag or Release was created by this preflight." >> "$GITHUB_STEP_SUMMARY"
 
   publish:
-    if: inputs.operation == 'publish'
+    if: github.event_name == 'push' || inputs.operation == 'publish'
     runs-on: ubuntu-24.04
     timeout-minutes: 40
+    environment: release
     permissions:
       actions: read
       contents: write
       attestations: read
+    outputs:
+      artifact_id: ${{ steps.resolve.outputs.artifact_id }}
+      artifact_digest: ${{ steps.resolve.outputs.artifact_digest }}
     env:
       GH_TOKEN: ${{ github.token }}
-      ARTIFACT_ID: ${{ inputs.artifact_id }}
-      ARTIFACT_DIGEST: ${{ inputs.artifact_digest }}
       RESUME_ARTIFACT_ID: ${{ inputs.resume_artifact_id }}
       RESUME_ARTIFACT_DIGEST: ${{ inputs.resume_artifact_digest }}
     steps:
@@ -335,18 +339,42 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - name: Resolve the exact preflight publication artifact
+        id: resolve
+        shell: bash
+        env:
+          INPUT_ARTIFACT_ID: ${{ inputs.artifact_id }}
+          INPUT_ARTIFACT_DIGEST: ${{ inputs.artifact_digest }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          if [[ -n "$INPUT_ARTIFACT_ID" ]]; then
+            [[ "$INPUT_ARTIFACT_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+            printf 'ARTIFACT_ID=%s\nARTIFACT_DIGEST=%s\n' "$INPUT_ARTIFACT_ID" "$INPUT_ARTIFACT_DIGEST" \
+              >> "$GITHUB_ENV"
+            printf 'artifact_id=%s\nartifact_digest=%s\n' "$INPUT_ARTIFACT_ID" "$INPUT_ARTIFACT_DIGEST" \
+              >> "$GITHUB_OUTPUT"
+          else
+            test -z "$INPUT_ARTIFACT_DIGEST"
+            python scripts/release/resolve_publication.py \
+              --repository "$GITHUB_REPOSITORY" --commit "$GITHUB_SHA" \
+              --github-env "$GITHUB_ENV" --github-output "$GITHUB_OUTPUT"
+          fi
       - name: Retrieve the verified preflight artifact
-        run: >-
-          python scripts/release/publication.py fetch
-          --repository "$GITHUB_REPOSITORY" --version "$RELEASE_VERSION" --commit "$GITHUB_SHA"
-          --artifact-id "$ARTIFACT_ID" --artifact-digest "$ARTIFACT_DIGEST"
-          --directory "$RUNNER_TEMP/publication"
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ARTIFACT_ID"
+          test -n "$ARTIFACT_DIGEST"
+          python scripts/release/publication.py fetch \
+            --repository "$GITHUB_REPOSITORY" --version "$RELEASE_VERSION" --commit "$GITHUB_SHA" \
+            --artifact-id "$ARTIFACT_ID" --artifact-digest "$ARTIFACT_DIGEST" \
+            --directory "$RUNNER_TEMP/publication"
       - name: Verify draft assets, publish and read back
         env:
           DOCWEN_IMMUTABILITY_READ_TOKEN: ${{ secrets.DOCWEN_IMMUTABILITY_READ_TOKEN }}
         run: |
           set -euo pipefail
-          test -n "$DOCWEN_IMMUTABILITY_READ_TOKEN"
           resume_args=()
           if [[ -n "$RESUME_ARTIFACT_ID" ]]; then
             test -n "$RESUME_ARTIFACT_DIGEST"
@@ -370,7 +398,7 @@ jobs:
           retention-days: 30
 
   post-verify:
-    if: always() && (inputs.operation == 'publish' || inputs.operation == 'verify')
+    if: always() && (github.event_name == 'push' || inputs.operation == 'publish' || inputs.operation == 'verify')
     needs: publish
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -380,8 +408,8 @@ jobs:
       attestations: read
     env:
       GH_TOKEN: ${{ github.token }}
-      ARTIFACT_ID: ${{ inputs.artifact_id }}
-      ARTIFACT_DIGEST: ${{ inputs.artifact_digest }}
+      ARTIFACT_ID: ${{ needs.publish.outputs.artifact_id || inputs.artifact_id }}
+      ARTIFACT_DIGEST: ${{ needs.publish.outputs.artifact_digest || inputs.artifact_digest }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
