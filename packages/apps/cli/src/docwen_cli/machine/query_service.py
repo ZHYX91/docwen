@@ -122,7 +122,7 @@ class MachineQueryService:
 
         normalized: list[dict[str, Any]] = []
         for item in resources:
-            resource = {
+            resource: dict[str, Any] = {
                 "id": str(item.get("id", item.get("name", ""))),
                 "name": str(item.get("name", item.get("id", ""))),
                 "description": str(item.get("description", "")),

@@ -177,6 +177,7 @@ class TemplateRegistry:
                     continue
                 is_managed_user = self._state_store is not None and self._is_managed_user_template(path)
                 if is_managed_user:
+                    assert self._state_store is not None
                     template_id = self._state_store.ensure_user_identity(path, target)
                 else:
                     template_id = _canonical_template_id(path.stem, target)

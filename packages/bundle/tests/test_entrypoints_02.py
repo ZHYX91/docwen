@@ -366,7 +366,7 @@ class TestGuiEntry:
         sample = tmp_path / "sample.md"
         sample.write_text("hello", encoding="utf-8")
 
-        server = gui_entry._start_gui_control(window, app=fake_app)
+        server = gui_entry._start_gui_control(window, app=fake_app, app_name="docwen-test")
 
         assert isinstance(server, _FakeControlServer)
         assert len(installed) == 1
