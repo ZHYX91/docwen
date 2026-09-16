@@ -1,8 +1,13 @@
 """GUI projection of the canonical Runtime optimization-resource catalog.
 
 Runtime owns resource existence, bindings, actions and route options.  The
-``optimize`` config file is intentionally only a user policy overlay: it may
-disable known resources and order them, but it cannot invent capabilities.
+Application layer owns pre-conversion composition.  This view therefore never
+invents a GUI-only optimizer route: when an admitted legacy document reaches an
+optimizer through the canonical Application pre-conversion chain, discovery
+reuses the optimizer's real DOCX binding and action.
+
+The ``optimize`` config file remains only a user policy overlay: it may disable
+known resources and order them, but it cannot invent capabilities.
 """
 
 from __future__ import annotations
@@ -18,6 +23,7 @@ from docwen_application.optimization_catalog import (
     OptimizationResource,
     inspect_optimization_catalog,
 )
+from docwen_application.preconversion.chain_resolver import resolve_chain
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +138,21 @@ def _display_name(resource: OptimizationResource, locale: str) -> str:
         return resource.name
 
 
+def _composed_runtime_source(source_format: str, target: str, action_name: str) -> str:
+    """Return the real Runtime source after Application-owned pre-conversion."""
+
+    if not source_format:
+        return ""
+    try:
+        chain = resolve_chain(source_format, target, action_name=action_name)
+    except ValueError:
+        return source_format
+    # A multi-step chain's first element is the normalized Runtime source.
+    # A direct chain contains only the requested target and therefore leaves
+    # the admitted source unchanged for optimization matching.
+    return chain[0] if len(chain) > 1 else source_format
+
+
 def _binding_for_source(
     resource: OptimizationResource,
     source: OptimizationSource,
@@ -142,6 +163,16 @@ def _binding_for_source(
     exact = next((binding for binding in available if binding.source == source.detected_format), None)
     if exact is not None:
         return exact
+
+    # Legacy Word-family formats (DOC/WPS/RTF/ODT) are admitted by Application
+    # and normalized to DOCX before the Runtime action executes. Reuse that
+    # exact Runtime binding rather than inventing per-format optimizer routes.
+    composed_source = _composed_runtime_source(source.detected_format, target, resource.action_name)
+    if composed_source and composed_source != source.detected_format:
+        composed = next((binding for binding in available if binding.source == composed_source), None)
+        if composed is not None:
+            return composed
+
     if not source.detected_format:
         return next((binding for binding in available if binding.source_category == source.source_category), None)
     return next(
@@ -173,11 +204,13 @@ def discover_optimization_choices(
     sources: tuple[OptimizationSource, ...] = (),
     target: str = "md",
 ) -> OptimizationChoicesResult:
-    """Project canonical Runtime resources through optional local policy.
+    """Project canonical resources through Application composition and user policy.
 
     Settings supplies a category-only source; the operation panel supplies
-    exact detected formats.  Every selected input must have an available
-    binding.  For a batch, route options are the intersection of all matches.
+    exact detected formats. Every selected input must resolve to one available
+    Runtime binding, directly or through the canonical Application
+    pre-conversion chain. For a batch, route options are the intersection of
+    all resolved bindings.
     """
 
     catalog, error = _load_catalog(controller)
