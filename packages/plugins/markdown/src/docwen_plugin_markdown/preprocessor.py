@@ -1,11 +1,15 @@
 """Preprocessing: heading merge detection, image materialization, HTML cleanup.
 
-All functions operate on raw markdown text **before** mistune parsing.
+All functions operate on raw markdown text **before** mistune parsing.  Any
+rewrite that is presentation-oriented must leave fenced and inline code
+byte-for-byte untouched; source-semantic recovery binds those literal regions
+before the generic Markdown parser runs.
 """
 
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from pathlib import Path
 from urllib.parse import quote, unquote
 
@@ -24,6 +28,26 @@ def _image_placeholder_re(image_scope: str | None) -> re.Pattern[str]:
     if image_scope is None:
         return _IMAGE_PLACEHOLDER_RE
     return re.compile(rf"\{{\{{IMAGE@{re.escape(image_scope)}:([^{{}}\r\n]+)\}}\}}")
+
+
+def _rewrite_non_code_markdown(text: str, rewrite: Callable[[str], str]) -> str:
+    """Apply *rewrite* only to ordinary Markdown source.
+
+    Several historical preprocessors predate source-semantic recovery and used
+    whole-document regular expressions.  That can turn literal examples inside
+    fenced or inline code into real Markdown structure.  Keep one shared
+    boundary here so future textual normalizers cannot accidentally repeat that
+    class of bug.
+    """
+
+    result: list[str] = []
+    for block_text, is_fenced in split_markdown_block_segments(text):
+        if is_fenced:
+            result.append(block_text)
+            continue
+        for inline_text, is_inline_code in split_markdown_inline_segments(block_text):
+            result.append(inline_text if is_inline_code else rewrite(inline_text))
+    return "".join(result)
 
 
 def materialize_image_placeholders(
@@ -46,24 +70,14 @@ def materialize_image_placeholders(
         return md_body
 
     placeholder_re = _image_placeholder_re(image_scope)
-
-    result: list[str] = []
-    for fenced_text, is_fenced in split_markdown_block_segments(md_body):
-        if is_fenced:
-            result.append(fenced_text)
-            continue
-        for inline_text, is_inline_code in split_markdown_inline_segments(fenced_text):
-            result.append(
-                inline_text
-                if is_inline_code
-                else _replace_image_placeholders(
-                    inline_text,
-                    placeholder_re,
-                    decode_path=image_scope is not None,
-                )
-            )
-
-    return "".join(result)
+    return _rewrite_non_code_markdown(
+        md_body,
+        lambda text: _replace_image_placeholders(
+            text,
+            placeholder_re,
+            decode_path=image_scope is not None,
+        ),
+    )
 
 
 def _replace_image_placeholders(
@@ -137,19 +151,21 @@ _SETEXT_H2_RE = re.compile(
 
 
 def handle_setext_headings(md_body: str) -> str:
-    """Convert Setext headings (=== and ---) to ATX format (# and ##).
+    """Convert Setext headings to ATX without rewriting literal code.
 
-    Args:
-        md_body: Raw markdown text.
-
-    Returns:
-        Markdown text with Setext headings converted to ATX headings.
+    Mistune understands Setext headings itself, but the renderer's historical
+    heading-merge path consumes the ATX projection.  Until that path is fully
+    source-position driven, keep this narrow adapter while respecting Markdown
+    literal boundaries.
     """
-    # Process H1 (===) first, then H2 (---) — order matters since ---
-    # also matches thematic breaks, but regex multiline anchoring handles that.
-    md_body = _SETEXT_H1_RE.sub(r"# \1", md_body)
-    md_body = _SETEXT_H2_RE.sub(r"## \1", md_body)
-    return md_body
+
+    def rewrite(text: str) -> str:
+        # Process H1 first, then H2 — order matters because ``---`` also has
+        # thematic-break syntax outside a Setext pair.
+        text = _SETEXT_H1_RE.sub(r"# \1", text)
+        return _SETEXT_H2_RE.sub(r"## \1", text)
+
+    return _rewrite_non_code_markdown(md_body, rewrite)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -162,20 +178,11 @@ def detect_heading_merges(
     mode: str = "punct_required",
     punctuation: frozenset[str] | None = None,
 ) -> set[int]:
-    """Return 0‑based heading indexes that should merge with next body text.
+    """Return 0-based rendered-heading indexes that merge with following text.
 
-    The next source line must be an immediately adjacent plain-text line.
-    Blank lines and Markdown block constructs deliberately break the merge.
-    ``"always"`` removes only the punctuation requirement; it does not allow
-    merging a list, table, quote, formula, code block, or thematic break.
-
-    Args:
-        md_body: Raw markdown source.
-        mode: ``"punct_required"``, ``"always"``, or ``"never"``.
-        punctuation: Set of punctuation chars that trigger merge. Uses
-            a sensible default for Chinese + English punctuation.
-    Returns:
-        Set of 0‑based heading indexes (in order of appearance) to merge.
+    Fenced code is never a heading source and therefore does not consume a
+    heading index.  This keeps indexes aligned with the AST even when examples
+    contain lines beginning with ``#``.
     """
     if mode not in {"punct_required", "always", "never"}:
         mode = "punct_required"
@@ -186,26 +193,21 @@ def detect_heading_merges(
     if mode == "punct_required" and not punct:
         return set()
 
-    lines = md_body.split("\n")
     merges: set[int] = set()
     heading_idx = 0
-
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-        heading_match = _ATX_HEADING_RE.match(line)
-        if heading_match is None:
-            i += 1
+    for block_text, is_fenced in split_markdown_block_segments(md_body):
+        if is_fenced:
             continue
-
-        content = re.sub(r"[ \t]+#+[ \t]*$", "", heading_match.group(2)).strip()
-        punctuation_allows_merge = mode == "always" or bool(content and content[-1] in punct)
-        if punctuation_allows_merge and i + 1 < len(lines) and _is_plain_merge_body_line(lines[i + 1]):
-            merges.add(heading_idx)
-
-        heading_idx += 1
-        i += 1
-
+        lines = block_text.split("\n")
+        for index, line in enumerate(lines):
+            heading_match = _ATX_HEADING_RE.match(line)
+            if heading_match is None:
+                continue
+            content = re.sub(r"[ \t]+#+[ \t]*$", "", heading_match.group(2)).strip()
+            punctuation_allows_merge = mode == "always" or bool(content and content[-1] in punct)
+            if punctuation_allows_merge and index + 1 < len(lines) and _is_plain_merge_body_line(lines[index + 1]):
+                merges.add(heading_idx)
+            heading_idx += 1
     return merges
 
 
@@ -232,25 +234,19 @@ def _is_plain_merge_body_line(line: str) -> bool:
 
 
 def detect_hr_attachments(md_body: str) -> set[int]:
-    """Return line indexes of HRs that should attach to preceding paragraph.
+    """Return source line indexes of non-code HRs attached to prior content."""
 
-    A horizontal rule (``---``, ``***``, ``___``) is considered "attached"
-    when the previous line is non-blank content (not a heading, not blank).
-
-    Args:
-        md_body: Raw markdown source.
-
-    Returns:
-        Set of 0-based line indexes where an attached HR occurs.
-    """
-    lines = md_body.split("\n")
     attached: set[int] = set()
-    for i in range(1, len(lines)):
-        stripped = lines[i].strip()
-        prev = lines[i - 1].strip()
-        # Check if current line is HR and previous line is non-blank content
-        if stripped in ("---", "***", "___") and prev and not prev.startswith("#"):
-            attached.add(i)
+    line_offset = 0
+    for block_text, is_fenced in split_markdown_block_segments(md_body):
+        lines = block_text.split("\n")
+        if not is_fenced:
+            for index in range(1, len(lines)):
+                stripped = lines[index].strip()
+                prev = lines[index - 1].strip()
+                if stripped in ("---", "***", "___") and prev and not prev.startswith("#"):
+                    attached.add(line_offset + index)
+        line_offset += block_text.count("\n")
     return attached
 
 
@@ -262,17 +258,6 @@ _BR_RE = re.compile(r"<br\s*/?>", re.IGNORECASE)
 
 
 def normalize_html_tags(md_body: str) -> str:
-    """Preprocess HTML tags before markdown parsing.
+    """Normalize supported HTML only outside fenced and inline code."""
 
-    - ``<br>``, ``<br/>`` → two trailing spaces plus newline (hard break)
-    - ``<u>``, ``<sub>``, ``<sup>`` → preserved for mistune inline passthrough
-
-    Args:
-        md_body: Raw markdown text.
-
-    Returns:
-        Preprocessed markdown text.
-    """
-    # <br> → markdown hard line break (two spaces + newline)
-    result = _BR_RE.sub("  \n", md_body)
-    return result
+    return _rewrite_non_code_markdown(md_body, lambda text: _BR_RE.sub("  \n", text))
