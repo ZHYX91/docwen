@@ -46,11 +46,9 @@ def _windows_has_package_identity() -> bool:
     result = int(get_name(ctypes.byref(length), None))
     if result == _ERROR_INSUFFICIENT_BUFFER:
         return True
-    if result == _APPMODEL_ERROR_NO_PACKAGE:
-        return False
     # An indeterminate package-identity probe must not authorize writes beside
     # a potentially protected installation.
-    return True
+    return result != _APPMODEL_ERROR_NO_PACKAGE
 
 
 def _packaged_archive_root() -> Path | None:
