@@ -12,29 +12,21 @@ from typing import Any
 import docwen_cli.gui_control_port as gui_control_contract
 from docwen_cli.gui_control_port import GuiControlError, GuiControlPort
 from docwen_runtime.control import ControlClient, ControlError, ControlNotRunningError, ControlTimeoutError
+from docwen_runtime.profile_paths import profile_instance_name
 
 
 class GuiControlAdapter(GuiControlPort):
     """Connect the stable CLI contract to the local GUI control endpoint."""
 
     def __init__(self) -> None:
-        self._client = ControlClient(app_name="docwen")
+        self._client = ControlClient(app_name=profile_instance_name())
 
     def status(self, *, timeout: float) -> dict[str, Any]:
         deadline = time.monotonic() + timeout
         try:
-            data = self._client.request(
-                "status",
-                {"_deadline_monotonic": deadline},
-                timeout=timeout,
-            )
+            data = self._client.request("status", {"_deadline_monotonic": deadline}, timeout=timeout)
         except ControlNotRunningError:
-            return {
-                "state": "stopped",
-                "running": False,
-                "control_ready": False,
-                "available": True,
-            }
+            return {"state": "stopped", "running": False, "control_ready": False, "available": True}
         except ControlError as exc:
             raise _to_cli_error(exc) from exc
         return self._require_running_status(data)
@@ -42,11 +34,7 @@ class GuiControlAdapter(GuiControlPort):
     def activate(self, *, timeout: float) -> dict[str, Any]:
         deadline = time.monotonic() + timeout
         try:
-            data = self._client.request(
-                "activate",
-                {"_deadline_monotonic": deadline},
-                timeout=timeout,
-            )
+            data = self._client.request("activate", {"_deadline_monotonic": deadline}, timeout=timeout)
         except ControlError as exc:
             raise _to_cli_error(exc) from exc
         return self._require_action_response(data, action="activate")
@@ -64,10 +52,7 @@ class GuiControlAdapter(GuiControlPort):
             raise GuiControlError(
                 "settings_section_unavailable",
                 "The requested GUI settings section is unavailable.",
-                details={
-                    "section": section,
-                    "available_sections": list(gui_control_contract.GUI_SETTINGS_SECTIONS),
-                },
+                details={"section": section, "available_sections": list(gui_control_contract.GUI_SETTINGS_SECTIONS)},
             )
         deadline = time.monotonic() + timeout
         try:
@@ -89,10 +74,7 @@ class GuiControlAdapter(GuiControlPort):
                 raise ControlTimeoutError("Timed out before the GUI could accept the settings request.")
             data = self._client.request(
                 "open_settings",
-                {
-                    "section": section,
-                    "_deadline_monotonic": deadline,
-                },
+                {"section": section, "_deadline_monotonic": deadline},
                 timeout=remaining,
             )
             return self._require_action_response(
@@ -144,9 +126,7 @@ class GuiControlAdapter(GuiControlPort):
             except (ControlNotRunningError, ControlTimeoutError) as exc:
                 sleep_remaining = deadline - time.monotonic()
                 if sleep_remaining <= 0:
-                    raise ControlTimeoutError(
-                        "Timed out while waiting for DocWen GUI control to become ready."
-                    ) from exc
+                    raise ControlTimeoutError("Timed out while waiting for DocWen GUI control to become ready.") from exc
                 time.sleep(min(0.05, sleep_remaining))
 
         remaining = deadline - time.monotonic()
@@ -159,19 +139,12 @@ class GuiControlAdapter(GuiControlPort):
         if timeout <= 0:
             raise ControlTimeoutError("Timed out before the GUI could accept the request.")
         if resolved is None:
-            data = self._client.request(
-                "activate",
-                {"_deadline_monotonic": deadline},
-                timeout=timeout,
-            )
+            data = self._client.request("activate", {"_deadline_monotonic": deadline}, timeout=timeout)
             return self._require_action_response(data, action="activate")
         expected_file = str(resolved)
         data = self._client.request(
             "open",
-            {
-                "file": expected_file,
-                "_deadline_monotonic": deadline,
-            },
+            {"file": expected_file, "_deadline_monotonic": deadline},
             timeout=timeout,
         )
         return self._require_action_response(data, action="open", expected_file=expected_file)
@@ -196,9 +169,7 @@ class GuiControlAdapter(GuiControlPort):
             except (ControlNotRunningError, ControlTimeoutError) as exc:
                 sleep_remaining = deadline - time.monotonic()
                 if sleep_remaining <= 0:
-                    raise ControlTimeoutError(
-                        "Timed out while waiting for DocWen GUI control to become ready."
-                    ) from exc
+                    raise ControlTimeoutError("Timed out while waiting for DocWen GUI control to become ready.") from exc
                 time.sleep(min(0.05, sleep_remaining))
 
     @staticmethod
@@ -209,12 +180,7 @@ class GuiControlAdapter(GuiControlPort):
             raise GuiControlError(
                 "capability_unavailable",
                 "The running DocWen GUI does not support opening settings. Restart it after upgrading DocWen.",
-                details={
-                    "required_action": "open_settings",
-                    "supported_actions": actions,
-                    "restart_required": True,
-                    "running": bool(status.get("running")),
-                },
+                details={"required_action": "open_settings", "supported_actions": actions, "restart_required": True, "running": bool(status.get("running"))},
             )
         raw_sections = status.get("settings_sections")
         sections = [item for item in raw_sections if isinstance(item, str)] if isinstance(raw_sections, list) else []
