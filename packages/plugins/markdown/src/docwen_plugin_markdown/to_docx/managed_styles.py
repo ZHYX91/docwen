@@ -1,10 +1,10 @@
 """Complete the request-owned DOCX style registry before rendering.
 
-The public identity contract lives in :mod:`docwen_core.docx_styles`.  This
-module owns only OOXML mechanics: recognize legacy localized styles, preflight
-all conflicts, resolve host and DocWen IDs without losing user formatting,
-update the main-document style domain, and keep Word's optional
-``stylesWithEffects`` copy in sync.
+The public identity contract lives in :mod:`docwen_core.docx_styles`. This
+module owns only OOXML mechanics: recognize legacy localized styles, complete
+DocWen-owned dependencies in the output copy, resolve host and DocWen IDs
+without losing user formatting, update the main-document style domain, and
+keep Word's optional ``stylesWithEffects`` copy in sync.
 """
 
 from __future__ import annotations
@@ -54,7 +54,18 @@ _REFERENCE_TAGS: Final = (
     "styleLink",
 )
 _REFERENCE_QNAMES: Final = tuple(qn(f"w:{tag}") for tag in _REFERENCE_TAGS)
-_BASE_STYLE_DEFINITIONS: Final = (
+_DIRECT_STYLE_REFERENCE_TYPES: Final = {
+    qn("w:pStyle"): "paragraph",
+    qn("w:rStyle"): "character",
+    qn("w:tblStyle"): "table",
+}
+
+# These three definitions are implementation dependencies of DocWen-managed
+# styles. They are completed into the request-owned output when absent; they
+# are not prerequisites that a user template must already contain. ``Title``
+# and ``Subtitle`` are deliberately not in this registry: YAML placeholders
+# inherit the template paragraph/run formatting at their insertion location.
+_FOUNDATION_STYLE_DEFINITIONS: Final = (
     DocumentStyleDefinition("normal", "Normal", "paragraph", "", canonical_name="Normal"),
     DocumentStyleDefinition(
         "default_paragraph_font",
@@ -64,9 +75,8 @@ _BASE_STYLE_DEFINITIONS: Final = (
         canonical_name="Default Paragraph Font",
     ),
     DocumentStyleDefinition("table_normal", "TableNormal", "table", "", canonical_name="Normal Table"),
-    DocumentStyleDefinition("title", "Title", "paragraph", "Normal", canonical_name="Title"),
 )
-_ALL_STYLE_DEFINITIONS: Final = (*_BASE_STYLE_DEFINITIONS, *MANAGED_DOCUMENT_STYLES)
+_ALL_STYLE_DEFINITIONS: Final = (*_FOUNDATION_STYLE_DEFINITIONS, *MANAGED_DOCUMENT_STYLES)
 _CUSTOM_KEYS: Final = frozenset(
     definition.semantic_key for definition in MANAGED_DOCUMENT_STYLES if not definition.is_builtin
 )
@@ -152,10 +162,12 @@ def complete_managed_styles(
 ) -> tuple[DocumentObject, ManagedStyleBindings]:
     """Return a complete document and its request-local managed bindings.
 
-    All identity and type conflicts are detected before the supplied document
-    is mutated.  A save/ZIP/reopen round-trip then updates generic OOXML parts
-    (footnotes/endnotes) and Word's parallel ``stylesWithEffects`` registry.
-    Callers must discard every proxy obtained from the input document.
+    All identity/type conflicts are detected before the supplied document is
+    mutated. Missing DocWen-managed styles and their three foundation
+    dependencies are then synthesized in the request-owned copy. A save/ZIP/
+    reopen round-trip updates generic OOXML parts and Word's parallel
+    ``stylesWithEffects`` registry. Callers must discard proxies obtained from
+    the input document.
     """
 
     try:
@@ -165,11 +177,7 @@ def complete_managed_styles(
         working = Document(BytesIO(source_blob))
         primary_root = working.styles.element
         effects_root = _preflight_serialized_package(source_blob)
-        resolved_ids, resolution_conflicts = _resolve_output_style_ids(
-            primary_root,
-            effects_root,
-            catalog,
-        )
+        resolved_ids, resolution_conflicts = _resolve_output_style_ids(primary_root, effects_root, catalog)
         plan = _preflight(primary_root, catalog, resolved_ids)
         effects_plan = _preflight(effects_root, catalog, resolved_ids) if effects_root is not None else None
         _apply_primary_plan(
@@ -273,8 +281,6 @@ def _preflight(
                     "all non-selected styles were preserved.",
                 )
             )
-        if candidate is None and definition in _BASE_STYLE_DEFINITIONS:
-            _conflict(f"Required base style {definition.style_id!r} is missing.")
         if candidate is not None:
             _require_type(candidate, definition)
             owner = claimed.setdefault(id(candidate), definition.semantic_key)
@@ -311,13 +317,8 @@ def _resolve_output_style_ids(
     resolved: list[tuple[str, str]] = []
     conflicts: list[ManagedStyleConflict] = []
     for definition in _ALL_STYLE_DEFINITIONS:
-        if definition in _BASE_STYLE_DEFINITIONS or definition.is_builtin:
-            resolved.append(
-                (
-                    definition.semantic_key,
-                    _resolve_builtin_style_id(primary_root, definition, catalog),
-                )
-            )
+        if definition in _FOUNDATION_STYLE_DEFINITIONS or definition.is_builtin:
+            resolved.append((definition.semantic_key, _resolve_builtin_style_id(primary_root, definition, catalog)))
             continue
         recognition_names = _recognition_names(definition, catalog)
         recognition_identities = {_normalize_name(name) for name in recognition_names}
@@ -362,8 +363,6 @@ def _resolve_builtin_style_id(
     recognition_names = _recognition_names(definition, catalog)
     stable = _style_by_id(primary_root, definition.style_id)
     if stable is not None:
-        # Preflight owns the stable-ID conflict diagnostic. Returning the
-        # canonical ID here keeps that failure deterministic.
         if _compatible_identity(stable, definition, recognition_names):
             return definition.style_id
         return definition.style_id
@@ -375,8 +374,6 @@ def _resolve_builtin_style_id(
     )
     if len(candidates) == 1:
         return candidates[0].get(qn("w:styleId"), definition.style_id)
-    # Missing and ambiguous cases are distinguished by preflight. Missing
-    # managed built-ins are injected with their canonical Word styleId.
     return definition.style_id
 
 
@@ -413,11 +410,7 @@ def _select_candidate(
 ) -> etree._Element | None:
     if not candidates:
         return None
-    preferred_ids = (
-        output_style_id,
-        definition.style_id,
-        *_LEGACY_STYLE_IDS.get(definition.semantic_key, ()),
-    )
+    preferred_ids = (output_style_id, definition.style_id, *_LEGACY_STYLE_IDS.get(definition.semantic_key, ()))
     for style_id in preferred_ids:
         preferred = [item for item in candidates if item.get(qn("w:styleId"), "") == style_id]
         if len(preferred) == 1:
@@ -444,12 +437,7 @@ def _dedupe_conflicts(
     result: list[ManagedStyleConflict] = []
     seen: set[tuple[str, str, str, str]] = set()
     for conflict in conflicts:
-        identity = (
-            conflict.semantic_key,
-            conflict.requested_style_id,
-            conflict.resolved_style_id,
-            conflict.code,
-        )
+        identity = (conflict.semantic_key, conflict.requested_style_id, conflict.resolved_style_id, conflict.code)
         if identity not in seen:
             result.append(conflict)
             seen.add(identity)
@@ -529,7 +517,7 @@ def _rewrite_serialized_package(
                 payload = _serialize_xml(root)
             _write_zip_member(archive_out, item, payload)
         if effects_plan is not None and not saw_effects:
-            _internal("The parallel style part disappeared after preflight.")
+            _internal("The parallel style registry disappeared after preflight.")
     return target.getvalue()
 
 
@@ -556,9 +544,7 @@ def _complete_effects_part(
     return _serialize_xml(effects_root)
 
 
-def _preflight_serialized_package(
-    blob: bytes,
-) -> etree._Element | None:
+def _preflight_serialized_package(blob: bytes) -> etree._Element | None:
     with ZipFile(BytesIO(blob), "r") as archive:
         names = archive.namelist()
         if len(names) != len(set(names)):
@@ -652,6 +638,21 @@ def _apply_new_style_defaults(
         return
 
     key = definition.semantic_key
+    if key == "normal":
+        style.set(qn("w:default"), "1")
+        style.append(OxmlElement("w:qFormat"))
+        _append_ui_priority(style, 0)
+        return
+    if key == "default_paragraph_font":
+        style.set(qn("w:default"), "1")
+        _append_flags(style, "semiHidden", "unhideWhenUsed")
+        _append_ui_priority(style, 1)
+        return
+    if key == "table_normal":
+        style.set(qn("w:default"), "1")
+        _append_flags(style, "semiHidden", "unhideWhenUsed")
+        _append_ui_priority(style, 99)
+        return
     if key in {"footnote_text", "endnote_text"}:
         _append_flags(style, "semiHidden" if key == "footnote_text" else None, "unhideWhenUsed")
         _append_ui_priority(style, 99)
@@ -662,10 +663,7 @@ def _apply_new_style_defaults(
         _set_attributes(r_pr, "sz", val="18")
         _set_attributes(r_pr, "szCs", val="18")
     elif key in {"footnote_reference", "endnote_reference"}:
-        if key == "footnote_reference":
-            _append_flags(style, "semiHidden", "unhideWhenUsed")
-        else:
-            _append_flags(style, "semiHidden", "unhideWhenUsed")
+        _append_flags(style, "semiHidden", "unhideWhenUsed")
         _append_ui_priority(style, 99)
         _set_attributes(_child(style, "rPr"), "vertAlign", val="superscript")
     elif key in {"caption", "bibliography", "hyperlink"} or key.endswith("_caption"):
@@ -673,13 +671,7 @@ def _apply_new_style_defaults(
     elif key == "code_block":
         _append_common_custom(style, priority=29)
         p_pr = _child(style, "pPr")
-        _set_attributes(
-            p_pr,
-            "shd",
-            val="clear",
-            color="auto",
-            fill=(code_background_color or "F5F5F5").upper(),
-        )
+        _set_attributes(p_pr, "shd", val="clear", color="auto", fill=(code_background_color or "F5F5F5").upper())
         _set_attributes(p_pr, "spacing", before="120", after="120", line="240", lineRule="auto")
         _set_attributes(p_pr, "ind", firstLine="0")
         _monospace(_child(style, "rPr"), with_size=True, font_name=code_font)
@@ -687,13 +679,7 @@ def _apply_new_style_defaults(
         _append_common_custom(style, priority=29)
         r_pr = _child(style, "rPr")
         _monospace(r_pr, with_size=False, font_name=code_font)
-        _set_attributes(
-            r_pr,
-            "shd",
-            val="clear",
-            color="auto",
-            fill=(code_background_color or "F0F0F0").upper(),
-        )
+        _set_attributes(r_pr, "shd", val="clear", color="auto", fill=(code_background_color or "F0F0F0").upper())
     elif key == "formula_block":
         _append_common_custom(style, priority=29)
         p_pr = _child(style, "pPr")
@@ -730,18 +716,7 @@ def _apply_new_style_defaults(
         _append_common_custom(style, priority=59)
         tbl_pr = _child(style, "tblPr")
         borders = _child(tbl_pr, "tblBorders")
-        edges = (
-            ("top", "bottom")
-            if key == "three_line_table"
-            else (
-                "top",
-                "left",
-                "bottom",
-                "right",
-                "insideH",
-                "insideV",
-            )
-        )
+        edges = ("top", "bottom") if key == "three_line_table" else ("top", "left", "bottom", "right", "insideH", "insideV")
         for edge in edges:
             _set_qn_attributes(
                 _child(borders, edge),
@@ -776,21 +751,11 @@ def _apply_new_style_defaults(
         _set_attributes(r_pr, "szCs", val="21")
 
 
-def _apply_locale_format(
-    style: etree._Element,
-    value: DocumentStyleFormat,
-    *,
-    heading_level: int | None,
-) -> None:
+def _apply_locale_format(style: etree._Element, value: DocumentStyleFormat, *, heading_level: int | None) -> None:
     _append_common_custom(style, priority=9 if heading_level is not None else 1)
     p_pr = _child(style, "pPr")
     if value.spacing_before_twip or value.spacing_after_twip:
-        _set_attributes(
-            p_pr,
-            "spacing",
-            before=str(value.spacing_before_twip),
-            after=str(value.spacing_after_twip),
-        )
+        _set_attributes(p_pr, "spacing", before=str(value.spacing_before_twip), after=str(value.spacing_after_twip))
     indent: dict[str, str] = {}
     if value.first_line_indent_chars:
         indent["firstLineChars"] = str(value.first_line_indent_chars)
@@ -804,13 +769,7 @@ def _apply_locale_format(
     if heading_level is not None:
         _set_attributes(p_pr, "outlineLvl", val=str(heading_level - 1))
     r_pr = _child(style, "rPr")
-    _set_attributes(
-        r_pr,
-        "rFonts",
-        ascii=value.ascii_font,
-        hAnsi=value.ascii_font,
-        eastAsia=value.east_asia_font,
-    )
+    _set_attributes(r_pr, "rFonts", ascii=value.ascii_font, hAnsi=value.ascii_font, eastAsia=value.east_asia_font)
     if value.bold:
         r_pr.append(OxmlElement("w:b"))
         r_pr.append(OxmlElement("w:bCs"))
@@ -952,12 +911,7 @@ def validate_managed_style_package(
     catalog: DocumentStyleCatalog,
     bindings: ManagedStyleBindings | None = None,
 ) -> None:
-    """Validate final DOCX style identities and every supported style reference.
-
-    The renderer and the notes/numbering ZIP writers run after initial style
-    completion, so the final serialized package must be checked again before
-    an artifact is registered.
-    """
+    """Validate final DOCX managed identities and direct style references."""
 
     try:
         expected_ids = (
@@ -982,14 +936,25 @@ def validate_managed_style_package(
 
 
 def _validate_reference_root(root: etree._Element, style_types: dict[str, str], part_name: str) -> None:
-    expected_types = {qn("w:pStyle"): "paragraph", qn("w:rStyle"): "character", qn("w:tblStyle"): "table"}
+    """Validate concrete formatting references without over-owning inheritance.
+
+    Missing ``pStyle``/``rStyle``/``tblStyle`` changes rendered formatting and
+    is always invalid in DocWen output. WordprocessingML inheritance/link
+    references, however, may legitimately name a definition that a foreign
+    template omits and Word then ignores. DocWen completes every dependency it
+    creates itself, so preserving such legacy links is safer than synthesizing
+    unknown user formatting or rejecting an otherwise usable template.
+    """
+
     for tag in _REFERENCE_QNAMES:
         for element in root.iter(tag):
             style_id = element.get(qn("w:val"), "")
+            expected = _DIRECT_STYLE_REFERENCE_TYPES.get(tag)
+            if expected is None:
+                continue
             if style_id not in style_types:
                 _internal(f"{part_name} references missing style {style_id!r}.")
-            expected = expected_types.get(tag)
-            if expected is not None and style_types[style_id] != expected:
+            if style_types[style_id] != expected:
                 _internal(f"{part_name} references {style_id!r} with the wrong OOXML type.")
 
 
@@ -1066,12 +1031,7 @@ def _is_reference_part(name: str) -> bool:
 
 
 def _serialize_xml(root: etree._Element) -> bytes:
-    return etree.tostring(
-        root,
-        encoding="UTF-8",
-        xml_declaration=True,
-        standalone=True,
-    )
+    return etree.tostring(root, encoding="UTF-8", xml_declaration=True, standalone=True)
 
 
 def _write_zip_member(archive: ZipFile, source: ZipInfo, payload: bytes) -> None:
@@ -1090,19 +1050,11 @@ def _write_zip_member(archive: ZipFile, source: ZipInfo, payload: bytes) -> None
 
 
 def _conflict(message: str) -> Never:
-    raise ManagedStyleCompletionError(
-        "MD2DOCX-STYLE-CONFLICT",
-        message,
-        error_type="invalid_input",
-    )
+    raise ManagedStyleCompletionError("MD2DOCX-STYLE-CONFLICT", message, error_type="invalid_input")
 
 
 def _internal(message: str) -> Never:
-    raise ManagedStyleCompletionError(
-        "MD2DOCX-STYLE-COMPLETION-ERROR",
-        message,
-        error_type="conversion_failed",
-    )
+    raise ManagedStyleCompletionError("MD2DOCX-STYLE-COMPLETION-ERROR", message, error_type="conversion_failed")
 
 
 __all__ = [
