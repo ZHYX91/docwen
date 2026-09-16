@@ -126,7 +126,9 @@ class GuiControlAdapter(GuiControlPort):
             except (ControlNotRunningError, ControlTimeoutError) as exc:
                 sleep_remaining = deadline - time.monotonic()
                 if sleep_remaining <= 0:
-                    raise ControlTimeoutError("Timed out while waiting for DocWen GUI control to become ready.") from exc
+                    raise ControlTimeoutError(
+                        "Timed out while waiting for DocWen GUI control to become ready."
+                    ) from exc
                 time.sleep(min(0.05, sleep_remaining))
 
         remaining = deadline - time.monotonic()
@@ -169,7 +171,9 @@ class GuiControlAdapter(GuiControlPort):
             except (ControlNotRunningError, ControlTimeoutError) as exc:
                 sleep_remaining = deadline - time.monotonic()
                 if sleep_remaining <= 0:
-                    raise ControlTimeoutError("Timed out while waiting for DocWen GUI control to become ready.") from exc
+                    raise ControlTimeoutError(
+                        "Timed out while waiting for DocWen GUI control to become ready."
+                    ) from exc
                 time.sleep(min(0.05, sleep_remaining))
 
     @staticmethod
@@ -180,7 +184,12 @@ class GuiControlAdapter(GuiControlPort):
             raise GuiControlError(
                 "capability_unavailable",
                 "The running DocWen GUI does not support opening settings. Restart it after upgrading DocWen.",
-                details={"required_action": "open_settings", "supported_actions": actions, "restart_required": True, "running": bool(status.get("running"))},
+                details={
+                    "required_action": "open_settings",
+                    "supported_actions": actions,
+                    "restart_required": True,
+                    "running": bool(status.get("running")),
+                },
             )
         raw_sections = status.get("settings_sections")
         sections = [item for item in raw_sections if isinstance(item, str)] if isinstance(raw_sections, list) else []

@@ -716,7 +716,9 @@ def _apply_new_style_defaults(
         _append_common_custom(style, priority=59)
         tbl_pr = _child(style, "tblPr")
         borders = _child(tbl_pr, "tblBorders")
-        edges = ("top", "bottom") if key == "three_line_table" else ("top", "left", "bottom", "right", "insideH", "insideV")
+        edges = (
+            ("top", "bottom") if key == "three_line_table" else ("top", "left", "bottom", "right", "insideH", "insideV")
+        )
         for edge in edges:
             _set_qn_attributes(
                 _child(borders, edge),

@@ -40,26 +40,9 @@ def test_whitespace_only_predecessor_is_not_a_setext_heading(underline: str) -> 
 
 @pytest.mark.parametrize("fence", ["```", "````", "~~~"])
 def test_setext_like_lines_inside_fenced_code_are_literal(fence: str) -> None:
-    source = (
-        f"{fence}markdown\n"
-        "---\n"
-        "ReportName: example\n"
-        "Unit: office\n"
-        "---\n"
-        f"{fence}\n"
-        "Real heading\n"
-        "---\n"
-    )
+    source = f"{fence}markdown\n---\nReportName: example\nUnit: office\n---\n{fence}\nReal heading\n---\n"
 
-    expected = (
-        f"{fence}markdown\n"
-        "---\n"
-        "ReportName: example\n"
-        "Unit: office\n"
-        "---\n"
-        f"{fence}\n"
-        "## Real heading\n"
-    )
+    expected = f"{fence}markdown\n---\nReportName: example\nUnit: office\n---\n{fence}\n## Real heading\n"
     assert handle_setext_headings(source) == expected
 
 

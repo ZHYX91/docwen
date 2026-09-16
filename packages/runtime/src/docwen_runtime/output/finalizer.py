@@ -608,7 +608,10 @@ class OutputFinalizer:
         manifest_path = self._io_path(os.path.join(final_root, "docwen-node.json"))
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            if manifest.get("schema") != "docwen.document_node.v1" or manifest.get("source", {}).get("sha256") != source_sha256:
+            if (
+                manifest.get("schema") != "docwen.document_node.v1"
+                or manifest.get("source", {}).get("sha256") != source_sha256
+            ):
                 raise ValueError("existing node identity does not match this source")
             recorded = {
                 item.get("logical_path"): item
@@ -667,7 +670,9 @@ class OutputFinalizer:
             success=True,
             artifacts=placed,
             diagnostics=[
-                ConversionDiagnostic(level="info", message=f"Reused document node {final_root}", code="DOCUMENT_NODE_REUSED")
+                ConversionDiagnostic(
+                    level="info", message=f"Reused document node {final_root}", code="DOCUMENT_NODE_REUSED"
+                )
             ],
             metrics=ConversionMetrics(
                 duration_ms=duration_ms,
@@ -957,7 +962,9 @@ class OutputFinalizer:
         shutil.copystat(io_source, io_temp)
 
     @classmethod
-    def _commit_prepared(cls, item: _PreparedArtifact, output_dir: str, overwrite_mode: str) -> tuple[ArtifactManifest, int]:
+    def _commit_prepared(
+        cls, item: _PreparedArtifact, output_dir: str, overwrite_mode: str
+    ) -> tuple[ArtifactManifest, int]:
         cls._ensure_contained(output_dir, item.destination)
         if item.reuse is not None:
             return item.reuse, 0
@@ -1082,7 +1089,10 @@ class OutputFinalizer:
         input_abs = os.path.abspath(input_path)
         if os.path.normcase(final_path) != os.path.normcase(input_abs):
             return None
-        if not OutputFinalizer._io_path(artifact.staging_path).is_file() or not OutputFinalizer._io_path(input_abs).is_file():
+        if (
+            not OutputFinalizer._io_path(artifact.staging_path).is_file()
+            or not OutputFinalizer._io_path(input_abs).is_file()
+        ):
             return None
         if not OutputFinalizer._files_identical(artifact.staging_path, input_abs, cancellation):
             raise ValueError("Retained artifact collides with its input path but has different bytes")
