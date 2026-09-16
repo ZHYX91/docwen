@@ -26,6 +26,7 @@ jobs:
                 output_dir=os.path.abspath(request.output.staging_root),
                 overwrite_mode="error",
                 write_artifacts=True,
+                open_after_done=False,
             ),
 '''
           new = '''            output_policy=OutputPolicy(
@@ -33,11 +34,14 @@ jobs:
                 overwrite_mode="error",
                 write_artifacts=True,
                 include_node_manifest=True,
+                open_after_done=False,
             ),
 '''
-          if old not in text:
+          count = text.count(old)
+          if count == 0:
               raise SystemExit('Machine OutputPolicy anchor not found')
-          path.write_text(text.replace(old, new, 1))
+          path.write_text(text.replace(old, new))
+          print(f'patched {count} Machine OutputPolicy construction(s)')
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
