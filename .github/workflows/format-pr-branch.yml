@@ -1,0 +1,48 @@
+name: format pr branch
+
+on:
+  push:
+    branches:
+      - fix/portable-data-and-integration-contracts
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: fix/portable-data-and-integration-contracts
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: "0.12.0"
+          enable-cache: true
+      - name: Install formatter
+        run: uv sync --frozen --extra lint
+      - name: Format changed Python sources
+        run: |
+          uv run ruff format \
+            packages/bundle/src/docwen_bundle/gui_control_adapter.py \
+            packages/plugins/markdown/src/docwen_plugin_markdown/preprocessor.py \
+            packages/plugins/markdown/src/docwen_plugin_markdown/to_docx/managed_styles.py \
+            packages/plugins/markdown/tests/test_setext_heading_preprocessor.py \
+            packages/plugins/markdown/tests/test_managed_style_foundations.py \
+            packages/runtime/src/docwen_runtime/output/finalizer.py \
+            packages/runtime/src/docwen_runtime/profile_paths.py \
+            packages/apps/gui/src/docwen_gui/view_models/_optimization_filter.py \
+            packages/apps/gui/tests/test_optimization_catalog_gui.py
+      - name: Commit formatter output
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- '*.py'
+          git commit -m "style: apply Ruff formatting"
+          git push origin HEAD:fix/portable-data-and-integration-contracts
