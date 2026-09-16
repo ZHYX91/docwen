@@ -47,10 +47,20 @@ def _projection(*, include_resources: bool = True) -> dict[str, Any]:
                     "operation": "action",
                     "action": action,
                     "source": source,
+                    "source_category": category,
                     "target": "md",
                     "available": True,
                     "state": "available",
                     "options": options,
+                    "platforms": ["test"],
+                    "platform_supported": True,
+                    "required_capabilities": [],
+                    "optional_capabilities": [],
+                    "missing_required_capabilities": [],
+                    "missing_optional_capabilities": [],
+                    "limitations": [],
+                    "label": route_id,
+                    "plugin": "test",
                 }
             ],
         }
@@ -141,26 +151,23 @@ def test_config_orders_and_disables_only_runtime_resources() -> None:
     assert [choice.id for choice in result.choices] == ["invoice-resource"]
 
 
-def test_exact_format_and_category_wildcard_binding_are_distinct() -> None:
+def test_exact_and_preconverted_document_formats_share_the_real_gongwen_binding() -> None:
     controller = _controller()
-    docx = discover_optimization_choices(
-        controller,
-        locale="en_US",
-        sources=(OptimizationSource("docx", "document"),),
-    )
-    odt = discover_optimization_choices(
-        controller,
-        locale="en_US",
-        sources=(OptimizationSource("odt", "document"),),
-    )
+    for detected_format in ("docx", "doc", "wps", "rtf", "odt"):
+        result = discover_optimization_choices(
+            controller,
+            locale="en_US",
+            sources=(OptimizationSource(detected_format, "document"),),
+        )
+        assert [choice.id for choice in result.choices] == ["public-gongwen"]
+        assert result.choices[0].bindings[0].source == "docx"
+        assert result.choices[0].action_name == "internal-gongwen"
+
     png = discover_optimization_choices(
         controller,
         locale="en_US",
         sources=(OptimizationSource("png", "image"),),
     )
-
-    assert [choice.id for choice in docx.choices] == ["public-gongwen"]
-    assert odt.choices == ()
     assert [choice.id for choice in png.choices] == ["invoice-resource"]
 
 
@@ -203,7 +210,7 @@ def test_action_area_keeps_public_id_separate_from_internal_action() -> None:
     }.get(key, default)
     vm = ActionAreaViewModel(main_vm=cast(Any, SimpleNamespace(controller=controller)))
 
-    vm.setup_for_document_file("/test.docx", "docx")
+    vm.setup_for_document_file("/test.doc", "doc")
 
     assert vm.optimize_for_type == "public-gongwen"
     assert vm.action_name == "internal-gongwen"
