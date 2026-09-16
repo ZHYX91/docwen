@@ -1,0 +1,46 @@
+name: patch machine node manifest
+
+on:
+  push:
+    branches:
+      - fix/portable-data-and-integration-contracts
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: fix/portable-data-and-integration-contracts
+      - name: Keep the typed node manifest inside Machine staging bundles
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('packages/application/src/docwen_application/conversion_service.py')
+          text = path.read_text()
+          old = '''            output_policy=OutputPolicy(
+                output_dir=os.path.abspath(request.output.staging_root),
+                overwrite_mode="error",
+                write_artifacts=True,
+            ),
+'''
+          new = '''            output_policy=OutputPolicy(
+                output_dir=os.path.abspath(request.output.staging_root),
+                overwrite_mode="error",
+                write_artifacts=True,
+                include_node_manifest=True,
+            ),
+'''
+          if old not in text:
+              raise SystemExit('Machine OutputPolicy anchor not found')
+          path.write_text(text.replace(old, new, 1))
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/application/src/docwen_application/conversion_service.py
+          git commit -m "fix: keep node manifests inside Machine bundles only"
+          git push origin HEAD:fix/portable-data-and-integration-contracts
