@@ -119,15 +119,19 @@ class MachineQueryService:
             resources = _template_entries(args) if kind == "templates" else _numbering_entries(args, self._controller)
         except CapabilityUnavailableError as exc:
             raise MachineQueryError("resource_unavailable", str(exc)) from exc
-        normalized = [
-            {
+
+        normalized: list[dict[str, Any]] = []
+        for item in resources:
+            resource = {
                 "id": str(item.get("id", item.get("name", ""))),
                 "name": str(item.get("name", item.get("id", ""))),
                 "description": str(item.get("description", "")),
                 **({"target": str(item["target"])} if item.get("target") else {}),
             }
-            for item in resources
-        ]
+            if kind == "templates":
+                resource["origin"] = str(item.get("origin", "custom"))
+                resource["is_default"] = bool(item.get("is_default", False))
+            normalized.append(resource)
         return {"kind": kind, "resources": normalized}
 
     def gui_control(
