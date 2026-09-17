@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from docx import Document
 from docx.oxml.ns import qn
 
@@ -9,6 +10,8 @@ from docwen_plugin_markdown.to_docx.managed_styles import complete_managed_style
 from docwen_runtime.config.document_styles import build_document_style_catalog
 
 from .conftest import PROJECT_ROOT
+
+pytestmark = pytest.mark.unit
 
 
 def _catalog():
