@@ -46,10 +46,28 @@ def test_setext_like_lines_inside_fenced_code_are_literal(fence: str) -> None:
     assert handle_setext_headings(source) == expected
 
 
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        ("Title `code` tail\n---\n", "## Title `code` tail\n"),
+        ("Title [link](https://example.com) tail\n---\n", "## Title [link](https://example.com) tail\n"),
+        ("Title $x+y$ tail\n---\n", "## Title $x+y$ tail\n"),
+    ],
+)
+def test_setext_heading_keeps_inline_atoms_inside_one_physical_line(source: str, expected: str) -> None:
+    assert handle_setext_headings(source) == expected
+
+
 def test_inline_code_is_not_rewritten_as_html_break() -> None:
     source = "Text <br> next and `<br>` literal."
 
     assert normalize_html_tags(source) == "Text   \n next and `<br>` literal."
+
+
+def test_other_inline_html_is_preserved_while_br_is_normalized() -> None:
+    source = "Before <span>inside<br/>text</span> after"
+
+    assert normalize_html_tags(source) == "Before <span>inside  \ntext</span> after"
 
 
 def test_fenced_html_example_is_not_rewritten() -> None:
