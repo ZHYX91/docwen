@@ -13,13 +13,14 @@ jobs:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: fix/portable-data-and-integration-contracts
           fetch-depth: 0
       - name: Update clean-output contract tests
-        shell: python
+        shell: bash
         run: |
+          python - <<'PY'
           from pathlib import Path
 
           path = Path("tests/test_cli/test_cli_e2e.py")
@@ -30,6 +31,7 @@ jobs:
           if count != 2:
               raise SystemExit(f"expected 2 legacy node-manifest assertions, found {count}")
           path.write_text(text.replace(old, new), encoding="utf-8")
+          PY
       - name: Commit
         shell: bash
         run: |
