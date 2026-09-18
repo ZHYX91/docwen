@@ -46,6 +46,7 @@ def test_missing_foundations_are_completed_but_title_is_not_required_or_injected
     assert len(bindings.styles) == 43
 
 
+@pytest.mark.unit
 def test_existing_title_is_preserved_without_becoming_a_managed_dependency() -> None:
     document = Document()
     title = document.styles["Title"]
