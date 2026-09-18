@@ -1,11 +1,15 @@
 """Preprocessing: heading merge detection, image materialization, HTML cleanup.
 
-All functions operate on raw markdown text **before** mistune parsing.
+All functions operate on raw markdown text **before** mistune parsing. Any
+rewrite that is presentation-oriented must leave literal source regions intact;
+source-semantic recovery binds those regions before the generic Markdown parser
+runs.
 """
 
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from pathlib import Path
 from urllib.parse import quote, unquote
 
@@ -26,6 +30,41 @@ def _image_placeholder_re(image_scope: str | None) -> re.Pattern[str]:
     return re.compile(rf"\{{\{{IMAGE@{re.escape(image_scope)}:([^{{}}\r\n]+)\}}\}}")
 
 
+def _rewrite_non_code_markdown(text: str, rewrite: Callable[[str], str]) -> str:
+    """Apply an inline rewrite only to ordinary Markdown source.
+
+    ``split_markdown_inline_segments`` protects renderer atoms such as code,
+    inline HTML and inline math, not code alone. This helper is therefore for
+    transforms (for example image-placeholder materialization) that must not
+    enter any protected atom.
+    """
+
+    result: list[str] = []
+    for block_text, is_literal_block in split_markdown_block_segments(text):
+        if is_literal_block:
+            result.append(block_text)
+            continue
+        for inline_text, is_protected_atom in split_markdown_inline_segments(block_text):
+            result.append(inline_text if is_protected_atom else rewrite(inline_text))
+    return "".join(result)
+
+
+def _rewrite_non_literal_blocks(text: str, rewrite: Callable[[str], str]) -> str:
+    """Apply a block-structural rewrite while preserving literal blocks.
+
+    Block grammar such as Setext headings depends on complete physical lines.
+    Splitting a paragraph around inline code/link/math atoms before running that
+    grammar invents artificial line starts and can turn ``Title `code` tail``
+    into malformed Markdown. Keep each ordinary block whole and let its inline
+    atoms remain byte-for-byte inside the rewritten line.
+    """
+
+    return "".join(
+        block_text if is_literal_block else rewrite(block_text)
+        for block_text, is_literal_block in split_markdown_block_segments(text)
+    )
+
+
 def materialize_image_placeholders(
     md_body: str,
     *,
@@ -34,11 +73,11 @@ def materialize_image_placeholders(
     """Turn core image placeholders into table-safe Markdown images.
 
     ``process_markdown_links`` emits ``{{IMAGE:path|width|height}}`` for an
-    embedded image.  Passing that representation directly to Mistune would
+    embedded image. Passing that representation directly to Mistune would
     leave a literal placeholder in paragraphs and, more importantly, split a
-    table cell at each dimension pipe.  This adapter uses an angle-bracketed
+    table cell at each dimension pipe. This adapter uses an angle-bracketed
     Markdown destination and carries optional dimensions in the title, which
-    contains no table delimiters.  Fenced and inline code remain literal.
+    contains no table delimiters. Literal renderer atoms remain untouched.
     """
 
     marker = "{{IMAGE:" if image_scope is None else f"{{{{IMAGE@{image_scope}:"
@@ -46,24 +85,14 @@ def materialize_image_placeholders(
         return md_body
 
     placeholder_re = _image_placeholder_re(image_scope)
-
-    result: list[str] = []
-    for fenced_text, is_fenced in split_markdown_block_segments(md_body):
-        if is_fenced:
-            result.append(fenced_text)
-            continue
-        for inline_text, is_inline_code in split_markdown_inline_segments(fenced_text):
-            result.append(
-                inline_text
-                if is_inline_code
-                else _replace_image_placeholders(
-                    inline_text,
-                    placeholder_re,
-                    decode_path=image_scope is not None,
-                )
-            )
-
-    return "".join(result)
+    return _rewrite_non_code_markdown(
+        md_body,
+        lambda text: _replace_image_placeholders(
+            text,
+            placeholder_re,
+            decode_path=image_scope is not None,
+        ),
+    )
 
 
 def _replace_image_placeholders(
@@ -137,19 +166,22 @@ _SETEXT_H2_RE = re.compile(
 
 
 def handle_setext_headings(md_body: str) -> str:
-    """Convert Setext headings (=== and ---) to ATX format (# and ##).
+    """Convert Setext headings to ATX without rewriting literal blocks.
 
-    Args:
-        md_body: Raw markdown text.
-
-    Returns:
-        Markdown text with Setext headings converted to ATX headings.
+    Mistune understands Setext headings itself, but the renderer's historical
+    heading-merge path consumes the ATX projection. Until that path is fully
+    source-position driven, keep this narrow adapter. Crucially, run the block
+    grammar on complete ordinary blocks rather than fragments split around
+    inline atoms.
     """
-    # Process H1 (===) first, then H2 (---) — order matters since ---
-    # also matches thematic breaks, but regex multiline anchoring handles that.
-    md_body = _SETEXT_H1_RE.sub(r"# \1", md_body)
-    md_body = _SETEXT_H2_RE.sub(r"## \1", md_body)
-    return md_body
+
+    def rewrite(text: str) -> str:
+        # Process H1 first, then H2 — order matters because ``---`` also has
+        # thematic-break syntax outside a Setext pair.
+        text = _SETEXT_H1_RE.sub(r"# \1", text)
+        return _SETEXT_H2_RE.sub(r"## \1", text)
+
+    return _rewrite_non_literal_blocks(md_body, rewrite)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -162,20 +194,11 @@ def detect_heading_merges(
     mode: str = "punct_required",
     punctuation: frozenset[str] | None = None,
 ) -> set[int]:
-    """Return 0‑based heading indexes that should merge with next body text.
+    """Return 0-based rendered-heading indexes that merge with following text.
 
-    The next source line must be an immediately adjacent plain-text line.
-    Blank lines and Markdown block constructs deliberately break the merge.
-    ``"always"`` removes only the punctuation requirement; it does not allow
-    merging a list, table, quote, formula, code block, or thematic break.
-
-    Args:
-        md_body: Raw markdown source.
-        mode: ``"punct_required"``, ``"always"``, or ``"never"``.
-        punctuation: Set of punctuation chars that trigger merge. Uses
-            a sensible default for Chinese + English punctuation.
-    Returns:
-        Set of 0‑based heading indexes (in order of appearance) to merge.
+    Fenced code is never a heading source and therefore does not consume a
+    heading index. This keeps indexes aligned with the AST even when examples
+    contain lines beginning with ``#``.
     """
     if mode not in {"punct_required", "always", "never"}:
         mode = "punct_required"
@@ -186,26 +209,21 @@ def detect_heading_merges(
     if mode == "punct_required" and not punct:
         return set()
 
-    lines = md_body.split("\n")
     merges: set[int] = set()
     heading_idx = 0
-
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-        heading_match = _ATX_HEADING_RE.match(line)
-        if heading_match is None:
-            i += 1
+    for block_text, is_fenced in split_markdown_block_segments(md_body):
+        if is_fenced:
             continue
-
-        content = re.sub(r"[ \t]+#+[ \t]*$", "", heading_match.group(2)).strip()
-        punctuation_allows_merge = mode == "always" or bool(content and content[-1] in punct)
-        if punctuation_allows_merge and i + 1 < len(lines) and _is_plain_merge_body_line(lines[i + 1]):
-            merges.add(heading_idx)
-
-        heading_idx += 1
-        i += 1
-
+        lines = block_text.split("\n")
+        for index, line in enumerate(lines):
+            heading_match = _ATX_HEADING_RE.match(line)
+            if heading_match is None:
+                continue
+            content = re.sub(r"[ \t]+#+[ \t]*$", "", heading_match.group(2)).strip()
+            punctuation_allows_merge = mode == "always" or bool(content and content[-1] in punct)
+            if punctuation_allows_merge and index + 1 < len(lines) and _is_plain_merge_body_line(lines[index + 1]):
+                merges.add(heading_idx)
+            heading_idx += 1
     return merges
 
 
@@ -232,25 +250,19 @@ def _is_plain_merge_body_line(line: str) -> bool:
 
 
 def detect_hr_attachments(md_body: str) -> set[int]:
-    """Return line indexes of HRs that should attach to preceding paragraph.
+    """Return source line indexes of non-code HRs attached to prior content."""
 
-    A horizontal rule (``---``, ``***``, ``___``) is considered "attached"
-    when the previous line is non-blank content (not a heading, not blank).
-
-    Args:
-        md_body: Raw markdown source.
-
-    Returns:
-        Set of 0-based line indexes where an attached HR occurs.
-    """
-    lines = md_body.split("\n")
     attached: set[int] = set()
-    for i in range(1, len(lines)):
-        stripped = lines[i].strip()
-        prev = lines[i - 1].strip()
-        # Check if current line is HR and previous line is non-blank content
-        if stripped in ("---", "***", "___") and prev and not prev.startswith("#"):
-            attached.add(i)
+    line_offset = 0
+    for block_text, is_fenced in split_markdown_block_segments(md_body):
+        lines = block_text.split("\n")
+        if not is_fenced:
+            for index in range(1, len(lines)):
+                stripped = lines[index].strip()
+                prev = lines[index - 1].strip()
+                if stripped in ("---", "***", "___") and prev and not prev.startswith("#"):
+                    attached.add(line_offset + index)
+        line_offset += block_text.count("\n")
     return attached
 
 
@@ -262,17 +274,20 @@ _BR_RE = re.compile(r"<br\s*/?>", re.IGNORECASE)
 
 
 def normalize_html_tags(md_body: str) -> str:
-    """Preprocess HTML tags before markdown parsing.
+    """Normalize supported HTML outside literal code while preserving peers."""
 
-    - ``<br>``, ``<br/>`` → two trailing spaces plus newline (hard break)
-    - ``<u>``, ``<sub>``, ``<sup>`` → preserved for mistune inline passthrough
-
-    Args:
-        md_body: Raw markdown text.
-
-    Returns:
-        Preprocessed markdown text.
-    """
-    # <br> → markdown hard line break (two spaces + newline)
-    result = _BR_RE.sub("  \n", md_body)
-    return result
+    result: list[str] = []
+    for block_text, is_literal_block in split_markdown_block_segments(md_body):
+        if is_literal_block:
+            result.append(block_text)
+            continue
+        for inline_text, is_protected_atom in split_markdown_inline_segments(block_text):
+            if is_protected_atom:
+                # Inline HTML is intentionally a protected atom in the shared
+                # link parser, but ``<br>`` is exactly the HTML construct this
+                # preprocessor owns. Other protected atoms (code, math,
+                # autolinks, other HTML) remain byte-for-byte untouched.
+                result.append(_BR_RE.sub("  \n", inline_text) if _BR_RE.fullmatch(inline_text) else inline_text)
+            else:
+                result.append(_BR_RE.sub("  \n", inline_text))
+    return "".join(result)

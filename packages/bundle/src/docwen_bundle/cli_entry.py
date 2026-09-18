@@ -45,6 +45,12 @@ def _main_with_guard_active(argv: list[str] | None = None) -> int:
 def main(argv: list[str] | None = None) -> int:
     """Run the composed CLI with dependency egress protection enforced."""
 
+    from docwen_runtime.profile_paths import configure_process_profile
+
+    # Resolve the packaged profile before ConfigLoader, template discovery, or
+    # file logging has a chance to select an unrelated platform directory.
+    configure_process_profile()
+
     from docwen_runtime.logging import pre_init_logging
 
     # Keep successful machine-readable CLI runs silent on stderr while still

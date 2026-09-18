@@ -27,6 +27,8 @@ class TemplateInfo:
     name: str
     target: str
     description: str
+    origin: str
+    is_default: bool
     path: Path
     size_bytes: int
     modified_ns: int
@@ -37,6 +39,8 @@ class TemplateInfo:
             "name": self.name,
             "target": self.target,
             "description": self.description,
+            "origin": self.origin,
+            "is_default": self.is_default,
             "path": str(self.path),
             "size_bytes": self.size_bytes,
             "modified_ns": self.modified_ns,
@@ -102,8 +106,9 @@ class TemplateRegistry:
     """Discover structurally valid DOCX/XLSX templates by content.
 
     ``TemplateRegistry.default()`` merges immutable bundled templates with the
-    writable per-user template directory. Explicit roots and an optional state
-    store support isolated catalogs and external resource discovery.
+    writable user template directory.  Canonical IDs remain the only execution
+    identity; ``origin`` and ``is_default`` are presentation facts published to
+    clients so duplicate visible names remain unambiguous.
     """
 
     def __init__(
@@ -151,7 +156,12 @@ class TemplateRegistry:
     def _list_templates(self, target_type: str | None, *, include_disabled: bool) -> list[TemplateInfo]:
         templates: list[TemplateInfo] = []
         identities: dict[str, Path] = {}
-        for templates_dir in self._dirs:
+        defaults = (
+            {target: self._state_store.default_id(target) for target in ("docx", "xlsx")}
+            if self._state_store is not None
+            else {"docx": None, "xlsx": None}
+        )
+        for directory_index, templates_dir in enumerate(self._dirs):
             if not templates_dir.exists():
                 continue
             for path in sorted(templates_dir.iterdir(), key=lambda item: item.name.casefold()):
@@ -165,7 +175,9 @@ class TemplateRegistry:
                 target = inspection.detected_format
                 if target not in {"docx", "xlsx"} or inspection.structure_status is not StructureStatus.VALID:
                     continue
-                if self._state_store is not None and self._is_managed_user_template(path):
+                is_managed_user = self._state_store is not None and self._is_managed_user_template(path)
+                if is_managed_user:
+                    assert self._state_store is not None
                     template_id = self._state_store.ensure_user_identity(path, target)
                 else:
                     template_id = _canonical_template_id(path.stem, target)
@@ -182,6 +194,8 @@ class TemplateRegistry:
                         name=path.stem,
                         target=target,
                         description=_template_description(path.stem, target),
+                        origin="builtin" if directory_index == 0 else "custom",
+                        is_default=defaults.get(target) == template_id,
                         path=path,
                         size_bytes=stat.st_size,
                         modified_ns=stat.st_mtime_ns,
@@ -241,7 +255,7 @@ def _canonical_template_id(name: str, target: str) -> str:
 
 
 def is_canonical_template_id(value: str) -> bool:
-    """Return whether *value* is a protocol 3 canonical template resource ID."""
+    """Return whether *value* is a canonical template resource ID."""
 
     return _CANONICAL_TEMPLATE_ID_PATTERN.fullmatch(value) is not None
 

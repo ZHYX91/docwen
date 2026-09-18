@@ -49,6 +49,10 @@ class RuntimeSemanticsV3Unsupported(ValueError):
     """Raised when valid source is outside the current atomic runtime slice."""
 
 
+class RuntimeSemanticsV3InvariantError(RuntimeError):
+    """Raised when DocWen loses an internal source-to-AST ownership invariant."""
+
+
 @dataclass(frozen=True, slots=True)
 class RuntimeMarkerV3:
     marker: str
@@ -403,7 +407,7 @@ def _bind_fenced_source_markers(
         visit(node)
     missing = set(expected) - bound
     if missing:
-        raise RuntimeSemanticsV3Unsupported("fenced source markers lost their block_code owners")
+        raise RuntimeSemanticsV3InvariantError("fenced source markers lost their block_code owners")
 
 
 def _restore_node(

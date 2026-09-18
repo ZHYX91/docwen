@@ -80,6 +80,7 @@ from docwen_plugin_markdown.preprocessor import (
 from docwen_plugin_markdown.renderer import MdToDocxRenderer
 from docwen_plugin_markdown.resolved_conversion_v4 import claims_resolved_v4_inputs
 from docwen_plugin_markdown.runtime_semantics_v3 import (
+    RuntimeSemanticsV3InvariantError,
     RuntimeSemanticsV3Unsupported,
     apply_runtime_semantics_v3,
     prepare_runtime_semantics_v3,
@@ -477,6 +478,36 @@ def _semantic_v3_failure(
     )
 
 
+def _semantic_v3_internal_failure(
+    task_id: str,
+    started_at: float,
+    technical_message: str,
+    *,
+    input_bytes: int = 0,
+) -> ConversionResult:
+    code = "MD2DOCX-SEMANTICS-V3-INTERNAL"
+    return ConversionResult(
+        task_id=task_id,
+        success=False,
+        error=ConversionErrorInfo(
+            error_type="internal",
+            message="DocWen encountered an internal Markdown processing error. The source file was not modified.",
+            diagnostic_code=code,
+        ),
+        diagnostics=[
+            ConversionDiagnostic(
+                level="error",
+                message=technical_message,
+                code=code,
+            )
+        ],
+        metrics=ConversionMetrics(
+            duration_ms=(time.monotonic() - started_at) * 1000.0,
+            input_bytes=input_bytes,
+        ),
+    )
+
+
 def _semantic_v3_package_diagnostic(message: str) -> ConversionDiagnostic:
     return ConversionDiagnostic(
         level="error",
@@ -740,6 +771,13 @@ class MdToDocxConverter:
             _restore_markdown_image_alt_texts(raw_ast, source_image_alt_texts)
             try:
                 raw_ast = apply_runtime_semantics_v3(raw_ast, semantic_v3_plan)
+            except RuntimeSemanticsV3InvariantError as exc:
+                return _semantic_v3_internal_failure(
+                    task_id,
+                    t_start,
+                    str(exc),
+                    input_bytes=input_bytes,
+                )
             except RuntimeSemanticsV3Unsupported as exc:
                 return _semantic_v3_failure(
                     task_id,

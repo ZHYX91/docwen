@@ -119,19 +119,7 @@ class OutputFinalizer:
         identity: ConversionIdentity | None = None,
         audit_document: OutputManifestDocument | None = None,
     ) -> ConversionResult:
-        """Finalize a set of artifacts.
-
-        Args:
-            task_id: The task identifier.
-            artifacts: Artifact manifests from the plugin (staging paths).
-            policy: Output placement policy.
-            input_path: Original input file path (for ``same_dir`` mode).
-            duration_ms: Conversion duration for metrics.
-            input_bytes: Input size for metrics.
-
-        Returns:
-            A ``ConversionResult`` with final (not staging) artifact paths.
-        """
+        """Finalize a set of artifacts."""
         self._check_cancellation(cancellation)
         output_dir = self._resolve_output_dir(policy, input_path)
         node_plan: DocumentNodeLayoutPlan | None = None
@@ -195,10 +183,7 @@ class OutputFinalizer:
     ) -> ConversionResult:
         """Finalize one artifact batch while all concrete parent locks are held."""
         self._check_cancellation(cancellation)
-        filesystem_path(output_dir, force_extended=sys.platform == "win32").mkdir(
-            parents=True,
-            exist_ok=True,
-        )
+        filesystem_path(output_dir, force_extended=sys.platform == "win32").mkdir(parents=True, exist_ok=True)
 
         diagnostics: list[ConversionDiagnostic] = []
         final_artifacts: list[ArtifactManifest] = []
@@ -218,7 +203,6 @@ class OutputFinalizer:
                         self._cleanup_stale_temps(parent)
                         cleaned_parents.add(parent_key)
                 except (OSError, ValueError):
-                    # Placement below owns the typed per-artifact diagnostic.
                     pass
             for artifact in artifacts:
                 try:
@@ -239,23 +223,15 @@ class OutputFinalizer:
                     diagnostics.append(
                         ConversionDiagnostic(
                             level="error",
-                            message=(
-                                f"Failed to place artifact {artifact.artifact_id!r}: {self._public_exception_text(exc)}"
-                            ),
+                            message=f"Failed to place artifact {artifact.artifact_id!r}: {self._public_exception_text(exc)}",
                             code="FINALIZER_PLACE_ERROR",
                         )
                     )
 
-            # This is the batch linearization point. Cancellation wins through
-            # this check; after it returns, complete artifact commits win.
             self._check_cancellation(cancellation)
             for item in prepared:
                 try:
-                    final_artifact, written_bytes = self._commit_prepared(
-                        item,
-                        output_dir,
-                        policy.overwrite_mode,
-                    )
+                    final_artifact, written_bytes = self._commit_prepared(item, output_dir, policy.overwrite_mode)
                     final_artifacts.append(final_artifact)
                     total_output_bytes += written_bytes
                 except Exception as exc:
@@ -284,13 +260,7 @@ class OutputFinalizer:
         if attempted_artifacts == 0:
             summary_code = "FINALIZER_NO_ARTIFACTS"
             summary_message = "No output artifacts were provided for finalization"
-            diagnostics.append(
-                ConversionDiagnostic(
-                    level="error",
-                    message=summary_message,
-                    code=summary_code,
-                )
-            )
+            diagnostics.append(ConversionDiagnostic(level="error", message=summary_message, code=summary_code))
             error = ConversionErrorInfo(
                 error_type="output_finalization_failed",
                 message=summary_message,
@@ -299,13 +269,7 @@ class OutputFinalizer:
         elif failed_artifacts:
             summary_code = "FINALIZER_PARTIAL" if placed_artifacts else "FINALIZER_FAILED"
             summary_message = f"Placed {placed_artifacts} of {attempted_artifacts} artifact(s) in {output_dir}"
-            diagnostics.append(
-                ConversionDiagnostic(
-                    level="error",
-                    message=summary_message,
-                    code=summary_code,
-                )
-            )
+            diagnostics.append(ConversionDiagnostic(level="error", message=summary_message, code=summary_code))
             error = ConversionErrorInfo(
                 error_type="output_finalization_failed",
                 message=summary_message,
@@ -354,7 +318,15 @@ class OutputFinalizer:
         cancellation: CancellationTokenView | None,
         audit_document: OutputManifestDocument | None = None,
     ) -> ConversionResult:
-        """Publish a complete conversion result through one directory commit."""
+        """Publish a complete result directory through one atomic rename.
+
+        ``docwen-node.json`` is an opt-in integration artifact, not a business
+        output. Interactive conversions therefore publish only requested
+        artifacts. Existing result directories can be overwritten/reused only
+        when the persistent node manifest was explicitly enabled, because
+        without ownership metadata replacing an arbitrary directory cannot be
+        proven safe.
+        """
 
         self._check_cancellation(cancellation)
         output_io = self._io_path(output_dir)
@@ -367,6 +339,16 @@ class OutputFinalizer:
                 selected = plan.rebase_root(plan.identity.node_name(collision=collision))
                 continue
             if policy.overwrite_mode in {"overwrite", "skip"}:
+                if not policy.include_node_manifest:
+                    return self._document_node_failure(
+                        task_id,
+                        "Existing result directories cannot be replaced or reused without explicit ownership metadata.",
+                        duration_ms=duration_ms,
+                        input_bytes=input_bytes,
+                        output_dir=output_dir,
+                        root_name=selected.root_name,
+                        code="DOCUMENT_NODE_OWNERSHIP_UNAVAILABLE",
+                    )
                 break
             return self._document_node_failure(
                 task_id,
@@ -380,8 +362,12 @@ class OutputFinalizer:
 
         final_root = os.path.abspath(os.path.join(output_dir, selected.root_name))
         self._ensure_contained(output_dir, final_root)
-        source_sha256 = selected.identity.source_sha256 or self._sha256_if_file(input_path, cancellation)
-        if policy.overwrite_mode == "skip" and self._io_path(final_root).exists():
+        source_sha256 = (
+            selected.identity.source_sha256 or self._sha256_if_file(input_path, cancellation)
+            if policy.include_node_manifest
+            else ""
+        )
+        if policy.include_node_manifest and policy.overwrite_mode == "skip" and self._io_path(final_root).exists():
             return self._reuse_document_node(
                 task_id,
                 selected,
@@ -392,8 +378,6 @@ class OutputFinalizer:
                 cancellation=cancellation,
             )
 
-        # ``mkdtemp`` appends a private name, so reserve Win32 namespace headroom
-        # even when the public output directory itself is still below MAX_PATH.
         temp_parent = filesystem_path(output_dir, force_extended=sys.platform == "win32")
         temp_root = tempfile.mkdtemp(prefix=".__docwen-node-", dir=os.fspath(temp_parent))
         backup_root: str | None = None
@@ -425,64 +409,70 @@ class OutputFinalizer:
                         shutil.copystat(self._io_path(artifact.staging_path), destination_io)
                 else:
                     self._copy_to_temp(artifact.staging_path, destination, cancellation)
-                size_bytes, sha256 = self._file_integrity(destination, cancellation)
+                if policy.include_node_manifest:
+                    size_bytes, sha256 = self._file_integrity(destination, cancellation)
+                    manifest_artifacts.append(
+                        {
+                            "artifact_id": artifact.artifact_id,
+                            "kind": artifact.kind,
+                            "logical_path": logical,
+                            "media_type": artifact.media_type,
+                            "role": artifact.metadata.get("document_node_role", "resource"),
+                            "size_bytes": size_bytes,
+                            "sha256": sha256,
+                        }
+                    )
+                else:
+                    size_bytes = destination_io.stat().st_size
                 output_bytes += size_bytes
-                manifest_artifacts.append(
-                    {
-                        "artifact_id": artifact.artifact_id,
-                        "kind": artifact.kind,
-                        "logical_path": logical,
-                        "media_type": artifact.media_type,
-                        "role": artifact.metadata.get("document_node_role", "resource"),
-                        "size_bytes": size_bytes,
-                        "sha256": sha256,
-                    }
-                )
 
             if audit_document is not None:
                 audit = stage_node_audit(selected, temp_root, audit_document)
-                size_bytes, sha256 = self._file_integrity(audit.staging_path, cancellation)
+                size_bytes = self._io_path(audit.staging_path).stat().st_size
                 output_bytes += size_bytes
-                manifest_artifacts.append(
-                    {
-                        "artifact_id": audit.artifact_id,
-                        "kind": audit.kind,
-                        "logical_path": audit.logical_path,
-                        "media_type": audit.media_type,
-                        "role": "audit",
-                        "size_bytes": size_bytes,
-                        "sha256": sha256,
-                    }
-                )
+                if policy.include_node_manifest:
+                    _, sha256 = self._file_integrity(audit.staging_path, cancellation)
+                    manifest_artifacts.append(
+                        {
+                            "artifact_id": audit.artifact_id,
+                            "kind": audit.kind,
+                            "logical_path": audit.logical_path,
+                            "media_type": audit.media_type,
+                            "role": "audit",
+                            "size_bytes": size_bytes,
+                            "sha256": sha256,
+                        }
+                    )
                 selected = replace(selected, artifacts=(*selected.artifacts, audit))
 
             manifest_relative = "docwen-node.json"
-            manifest_temp = os.path.join(temp_root, manifest_relative)
-            manifest_document = {
-                "schema": "docwen.document_node.v1",
-                "task_id": task_id,
-                "node_name": selected.root_name,
-                "created_at": selected.identity.created_at_utc,
-                "source": {
-                    "name": selected.identity.source_name,
-                    "stem": selected.identity.source_stem,
-                    "format": selected.identity.source_format,
-                    "sha256": source_sha256,
-                },
-                "artifacts": manifest_artifacts,
-            }
-            manifest_bytes = (
-                json.dumps(manifest_document, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
-            ).encode("utf-8")
-            with self._io_path(manifest_temp).open("wb") as stream:
-                stream.write(manifest_bytes)
-                stream.flush()
-                os.fsync(stream.fileno())
-            output_bytes += len(manifest_bytes)
+            if policy.include_node_manifest:
+                manifest_temp = os.path.join(temp_root, manifest_relative)
+                manifest_document = {
+                    "schema": "docwen.document_node.v1",
+                    "task_id": task_id,
+                    "node_name": selected.root_name,
+                    "created_at": selected.identity.created_at_utc,
+                    "source": {
+                        "name": selected.identity.source_name,
+                        "stem": selected.identity.source_stem,
+                        "format": selected.identity.source_format,
+                        "sha256": source_sha256,
+                    },
+                    "artifacts": manifest_artifacts,
+                }
+                manifest_bytes = (
+                    json.dumps(manifest_document, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
+                ).encode("utf-8")
+                with self._io_path(manifest_temp).open("wb") as stream:
+                    stream.write(manifest_bytes)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                output_bytes += len(manifest_bytes)
 
             self._check_cancellation(cancellation)
             if self._io_path(final_root).exists():
-                if policy.overwrite_mode != "overwrite":
+                if policy.overwrite_mode != "overwrite" or not policy.include_node_manifest:
                     raise FileExistsError(f"Document node already exists: {final_root}")
                 self._validate_owned_document_node(final_root)
                 backup_root = self._unused_backup_path(final_root)
@@ -511,24 +501,25 @@ class OutputFinalizer:
                 for artifact in selected.artifacts
                 if artifact.logical_path is not None
             ]
-            manifest_logical = f"{selected.root_name}/{manifest_relative}"
-            placed.append(
-                ArtifactManifest(
-                    artifact_id=f"{task_id}-document-node-manifest",
-                    kind="manifest",
-                    staging_path=os.path.join(final_root, manifest_relative),
-                    suggested_name=manifest_relative,
-                    media_type=DOCUMENT_NODE_MANIFEST_MEDIA_TYPE,
-                    metadata={
-                        "document_node_schema": "docwen.document_node.v1",
-                        "document_node_role": "manifest",
-                        "node_root": selected.root_name,
-                        "logical_path": manifest_logical,
-                    },
-                    is_primary=False,
-                    logical_path=manifest_logical,
+            if policy.include_node_manifest:
+                manifest_logical = f"{selected.root_name}/{manifest_relative}"
+                placed.append(
+                    ArtifactManifest(
+                        artifact_id=f"{task_id}-document-node-manifest",
+                        kind="manifest",
+                        staging_path=os.path.join(final_root, manifest_relative),
+                        suggested_name=manifest_relative,
+                        media_type=DOCUMENT_NODE_MANIFEST_MEDIA_TYPE,
+                        metadata={
+                            "document_node_schema": "docwen.document_node.v1",
+                            "document_node_role": "manifest",
+                            "node_root": selected.root_name,
+                            "logical_path": manifest_logical,
+                        },
+                        is_primary=False,
+                        logical_path=manifest_logical,
+                    )
                 )
-            )
             return ConversionResult(
                 task_id=task_id,
                 success=True,
@@ -741,16 +732,12 @@ class OutputFinalizer:
         duration_ms: float = 0.0,
         input_bytes: int = 0,
     ) -> ConversionResult:
-        """Create a failed ConversionResult without placing any artifacts."""
         from docwen_core.models.result import ConversionErrorInfo
 
         if isinstance(error_info, ConversionErrorInfo):
             err = error_info
         else:
-            err = ConversionErrorInfo(
-                error_type="conversion_failed",
-                message=str(error_info),
-            )
+            err = ConversionErrorInfo(error_type="conversion_failed", message=str(error_info))
 
         return ConversionResult(
             task_id=task_id,
@@ -758,14 +745,8 @@ class OutputFinalizer:
             artifacts=[],
             diagnostics=[],
             error=err,
-            metrics=ConversionMetrics(
-                duration_ms=duration_ms,
-                input_bytes=input_bytes,
-                output_bytes=0,
-            ),
+            metrics=ConversionMetrics(duration_ms=duration_ms, input_bytes=input_bytes, output_bytes=0),
         )
-
-    # ── Internal helpers ────────────────────────────────────────────
 
     @staticmethod
     def _check_cancellation(cancellation: CancellationTokenView | None) -> None:
@@ -773,25 +754,14 @@ class OutputFinalizer:
             cancellation.check()
 
     @classmethod
-    def _acquire_thread_lock(
-        cls,
-        output_lock: Any,
-        cancellation: CancellationTokenView | None,
-    ) -> None:
-        """Acquire the in-process lock without making cancellation wait forever."""
+    def _acquire_thread_lock(cls, output_lock: Any, cancellation: CancellationTokenView | None) -> None:
         while True:
             cls._check_cancellation(cancellation)
             if output_lock.acquire(timeout=_LOCK_POLL_SECONDS):
                 return
 
     @classmethod
-    def _finalization_lock_paths(
-        cls,
-        output_dir: str,
-        artifacts: list[ArtifactManifest],
-    ) -> tuple[str, ...]:
-        """Return every output location whose contents this batch may mutate."""
-
+    def _finalization_lock_paths(cls, output_dir: str, artifacts: list[ArtifactManifest]) -> tuple[str, ...]:
         paths_by_key = {cls._lock_key(output_dir): output_dir}
         for artifact in artifacts:
             try:
@@ -800,19 +770,12 @@ class OutputFinalizer:
                 parent = os.path.dirname(destination)
                 paths_by_key.setdefault(cls._lock_key(parent), parent)
             except (OSError, ValueError):
-                # The normal prepare path owns the typed per-artifact error.
                 continue
         return tuple(paths_by_key[key] for key in sorted(paths_by_key))
 
     @classmethod
     @contextlib.contextmanager
-    def _finalization_locks(
-        cls,
-        paths: tuple[str, ...],
-        cancellation: CancellationTokenView | None,
-    ):
-        """Hold sorted in-process and OS locks for all concrete output parents."""
-
+    def _finalization_locks(cls, paths: tuple[str, ...], cancellation: CancellationTokenView | None):
         acquired_thread_locks: list[Any] = []
         try:
             for path in paths:
@@ -829,12 +792,7 @@ class OutputFinalizer:
 
     @classmethod
     @contextlib.contextmanager
-    def _process_lock(
-        cls,
-        output_dir: str,
-        cancellation: CancellationTokenView | None,
-    ):
-        """Hold a cancellation-aware OS lock keyed by resolved output directory."""
+    def _process_lock(cls, output_dir: str, cancellation: CancellationTokenView | None):
         resolved = cls._lock_key(output_dir)
         digest = hashlib.sha256(os.fsencode(resolved)).hexdigest()
         lock_dir = Path(tempfile.gettempdir()) / "docwen-output-finalizer-locks"
@@ -871,18 +829,10 @@ class OutputFinalizer:
 
     @staticmethod
     def _io_path(path: str | os.PathLike[str]) -> Path:
-        """Return an absolute path suitable for internal filesystem I/O.
-
-        Logical artifact paths stay prefix-free in manifests and diagnostics.
-        On Windows only syscall operands crossing the legacy MAX_PATH boundary
-        receive the extended-path prefix; this also covers UNC shares.
-        """
         return filesystem_path(path)
 
     @staticmethod
     def _logical_io_spelling(path: str | os.PathLike[str]) -> str:
-        """Remove only DocWen's internal Win32 extended-filesystem spelling."""
-
         raw = os.fsdecode(os.fspath(path))
         if sys.platform != "win32":
             return raw
@@ -894,8 +844,6 @@ class OutputFinalizer:
 
     @classmethod
     def _public_exception_text(cls, exc: BaseException) -> str:
-        """Render an exception without exposing an internal extended prefix."""
-
         if isinstance(exc, OSError) and any(
             value is not None
             for value in (
@@ -942,17 +890,10 @@ class OutputFinalizer:
         input_path: str,
         cancellation: CancellationTokenView | None,
     ) -> _PreparedArtifact:
-        """Copy an artifact to a private same-directory temp without publishing it."""
         if overwrite_mode not in {"error", "rename", "overwrite", "skip"}:
             raise ValueError(f"Unknown overwrite mode: {overwrite_mode!r}")
 
-        reused = cls._reuse_identical_input_artifact(
-            artifact,
-            output_dir,
-            overwrite_mode,
-            input_path,
-            cancellation,
-        )
+        reused = cls._reuse_identical_input_artifact(artifact, output_dir, overwrite_mode, input_path, cancellation)
         suggested = artifact.suggested_name or os.path.basename(artifact.staging_path)
         destination, suggested = cls._safe_final_path(output_dir, suggested)
         rename_base = destination if overwrite_mode == "rename" else None
@@ -989,9 +930,6 @@ class OutputFinalizer:
         io_parent = filesystem_path(parent, force_extended=sys.platform == "win32")
         io_parent.mkdir(parents=True, exist_ok=True)
         cls._ensure_contained(output_dir, destination)
-        # ``mkstemp`` appends its private random name.  A parent that is still
-        # below MAX_PATH can therefore produce a child above it, so force the
-        # filesystem namespace for this append operation on Windows.
         file_descriptor, temp_path = tempfile.mkstemp(prefix=_TEMP_PREFIX, dir=os.fspath(io_parent))
         os.close(file_descriptor)
         try:
@@ -1009,13 +947,7 @@ class OutputFinalizer:
         )
 
     @classmethod
-    def _copy_to_temp(
-        cls,
-        source: str,
-        temp_path: str,
-        cancellation: CancellationTokenView | None,
-    ) -> None:
-        """Copy into a private file, checking cancellation between chunks."""
+    def _copy_to_temp(cls, source: str, temp_path: str, cancellation: CancellationTokenView | None) -> None:
         io_source = OutputFinalizer._io_path(source)
         io_temp = OutputFinalizer._io_path(temp_path)
         with io_source.open("rb") as source_file, io_temp.open("wb") as temp_file:
@@ -1031,12 +963,8 @@ class OutputFinalizer:
 
     @classmethod
     def _commit_prepared(
-        cls,
-        item: _PreparedArtifact,
-        output_dir: str,
-        overwrite_mode: str,
+        cls, item: _PreparedArtifact, output_dir: str, overwrite_mode: str
     ) -> tuple[ArtifactManifest, int]:
-        """Publish one prepared artifact atomically without cancellation checks."""
         cls._ensure_contained(output_dir, item.destination)
         if item.reuse is not None:
             return item.reuse, 0
@@ -1066,12 +994,9 @@ class OutputFinalizer:
 
     @classmethod
     def _publish_no_clobber(cls, temp_path: str, destination: str) -> None:
-        """Atomically publish a new path without replacing an external winner."""
         io_temp = cls._io_path(temp_path)
         io_destination = cls._io_path(destination)
         if sys.platform == "win32":
-            # Windows rename is no-replace and works on filesystems that do not
-            # support hard links (for example FAT-family removable media).
             os.rename(io_temp, io_destination)
             return
         if sys.platform == "linux":
@@ -1084,8 +1009,6 @@ class OutputFinalizer:
                 raise OSError(errno.ENOSYS, "Atomic no-replace rename is unavailable", str(io_destination))
             rename_no_replace.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
             rename_no_replace.restype = ctypes.c_int
-            # AT_FDCWD, RENAME_NOREPLACE. Unlike link(), this supports FAT
-            # destinations while preserving the concurrent-writer contract.
             if rename_no_replace(-100, os.fsencode(io_temp), -100, os.fsencode(io_destination), 1) != 0:
                 error = ctypes.get_errno()
                 raise OSError(error, os.strerror(error), str(io_destination))
@@ -1095,12 +1018,7 @@ class OutputFinalizer:
             io_temp.unlink()
 
     @staticmethod
-    def _placed_manifest(
-        item: _PreparedArtifact,
-        destination: str,
-        *,
-        skipped: bool = False,
-    ) -> ArtifactManifest:
+    def _placed_manifest(item: _PreparedArtifact, destination: str, *, skipped: bool = False) -> ArtifactManifest:
         metadata = dict(item.artifact.metadata)
         if skipped:
             metadata.update({"skipped": True, "reason": "file_exists"})
@@ -1116,7 +1034,6 @@ class OutputFinalizer:
 
     @classmethod
     def _cleanup_stale_temps(cls, parent: str) -> None:
-        """Remove only aged members of the reserved pre-commit temp family."""
         now = time.time()
         with os.scandir(cls._io_path(parent)) as entries:
             for entry in entries:
@@ -1162,16 +1079,6 @@ class OutputFinalizer:
         input_path: str,
         cancellation: CancellationTokenView | None = None,
     ) -> tuple[ArtifactManifest, int] | None:
-        """Reuse an unchanged retained input already in the final directory.
-
-        Image-to-Markdown file mode registers a staging copy of the input as a
-        non-primary retained artifact.  When output remains beside the input,
-        that input already occupies the retained artifact's suggested path.
-        Treating it as an external collision would either fail a valid request,
-        overwrite the source, or orphan the Markdown link.  Reuse the exact
-        input under every overwrite policy, but only when the staging bytes
-        prove it is the same retained file.
-        """
         if artifact.is_primary or not input_path:
             return None
 
@@ -1207,7 +1114,6 @@ class OutputFinalizer:
         second_path: str,
         cancellation: CancellationTokenView | None = None,
     ) -> bool:
-        """Compare two files without loading an unbounded artifact into memory."""
         first_io = OutputFinalizer._io_path(first_path)
         second_io = OutputFinalizer._io_path(second_path)
         if first_io.stat().st_size != second_io.stat().st_size:
@@ -1224,7 +1130,6 @@ class OutputFinalizer:
 
     @classmethod
     def _lock_for_output_dir(cls, output_dir: str) -> Any:
-        """Return a process-wide lock shared by finalizers targeting one directory."""
         key = cls._lock_key(output_dir)
         with cls._output_locks_guard:
             output_lock = cls._output_locks.get(key)
@@ -1235,8 +1140,6 @@ class OutputFinalizer:
 
     @classmethod
     def _lock_key(cls, path: str) -> str:
-        """Return one prefix-free identity key for a concrete output location."""
-
         absolute = os.path.abspath(path)
         io_path = filesystem_path(absolute, force_extended=sys.platform == "win32")
         resolved = os.path.realpath(io_path)
@@ -1244,7 +1147,6 @@ class OutputFinalizer:
 
     @staticmethod
     def _resolve_output_dir(policy: OutputPolicy, input_path: str) -> str:
-        """Determine the final output directory."""
         if policy.output_path:
             if policy.output_dir:
                 raise ValueError("output_path and output_dir are mutually exclusive")
@@ -1278,12 +1180,7 @@ class OutputFinalizer:
         return base
 
     @staticmethod
-    def _artifacts_for_policy(
-        artifacts: list[ArtifactManifest],
-        policy: OutputPolicy,
-    ) -> list[ArtifactManifest]:
-        """Apply an exact primary output name without changing auxiliary names."""
-
+    def _artifacts_for_policy(artifacts: list[ArtifactManifest], policy: OutputPolicy) -> list[ArtifactManifest]:
         if not policy.output_path:
             return artifacts
         primary_indexes = [index for index, artifact in enumerate(artifacts) if artifact.is_primary]
@@ -1299,7 +1196,6 @@ class OutputFinalizer:
 
     @staticmethod
     def _safe_final_path(output_dir: str, suggested_name: str) -> tuple[str, str]:
-        """Resolve a plugin-suggested relative name inside ``output_dir``."""
         suggested = os.path.normpath(suggested_name)
         if (
             not suggested
@@ -1320,7 +1216,6 @@ class OutputFinalizer:
 
     @staticmethod
     def _ensure_contained(output_dir: str, final_path: str) -> None:
-        """Reject descendant symlink/junction resolution outside the selected root."""
         output_real = OutputFinalizer._logical_io_spelling(
             os.path.realpath(filesystem_path(os.path.abspath(output_dir), force_extended=sys.platform == "win32"))
         )
@@ -1336,7 +1231,6 @@ class OutputFinalizer:
 
     @staticmethod
     def _rename_path(path: str) -> str:
-        """Generate a unique path using the stable numbered-suffix contract."""
         if not OutputFinalizer._io_path(path).exists():
             return path
         base, ext = os.path.splitext(path)
