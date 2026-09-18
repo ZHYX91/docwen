@@ -490,7 +490,7 @@ def _semantic_v3_internal_failure(
         task_id=task_id,
         success=False,
         error=ConversionErrorInfo(
-            error_type="internal_error",
+            error_type="internal",
             message="DocWen encountered an internal Markdown processing error. The source file was not modified.",
             diagnostic_code=code,
         ),
