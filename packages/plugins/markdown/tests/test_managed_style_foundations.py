@@ -33,6 +33,7 @@ def _style_ids(document) -> set[str]:
     return {style.style_id for style in document.styles}
 
 
+@pytest.mark.unit
 def test_missing_foundations_are_completed_but_title_is_not_required_or_injected() -> None:
     document = Document()
     _remove_styles(document, "Normal", "DefaultParagraphFont", "TableNormal", "Title")
