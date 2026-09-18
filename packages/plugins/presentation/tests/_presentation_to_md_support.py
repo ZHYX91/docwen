@@ -101,7 +101,8 @@ def _deliverable_artifacts(result: Any) -> list[Any]:
     return [
         artifact
         for artifact in result.artifacts
-        if artifact.media_type != "application/vnd.docwen.document-node+json"
+        if artifact.media_type
+        != "application/vnd.docwen.document-node+json"
     ]
 
 
