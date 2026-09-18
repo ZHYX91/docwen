@@ -82,11 +82,13 @@ def _load_xlsx_to_md_old_system_fixture() -> dict[str, Any]:
 
 
 def _deliverable_artifacts(result: Any) -> list[Any]:
-    manifests = [
-        artifact for artifact in result.artifacts if artifact.media_type == "application/vnd.docwen.document-node+json"
+    """Return business artifacts regardless of optional node-manifest policy."""
+
+    return [
+        artifact
+        for artifact in result.artifacts
+        if artifact.media_type != "application/vnd.docwen.document-node+json"
     ]
-    assert len(manifests) == 1
-    return [artifact for artifact in result.artifacts if artifact not in manifests]
 
 
 def _document_node_root(path: Path, output_dir: Path) -> Path:
