@@ -51,10 +51,7 @@ def _deliverable_artifacts(result: Any) -> list[Any]:
     """Return business artifacts regardless of optional node-manifest policy."""
 
     return [
-        artifact
-        for artifact in result.artifacts
-        if artifact.media_type
-        != "application/vnd.docwen.document-node+json"
+        artifact for artifact in result.artifacts if artifact.media_type != "application/vnd.docwen.document-node+json"
     ]
 
 
