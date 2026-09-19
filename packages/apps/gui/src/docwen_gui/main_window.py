@@ -52,6 +52,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from docwen_application.optimization_selection import OptimizationSource
 from docwen_gui import path_actions
 from docwen_gui.file_admission_i18n import render_file_inspection_message
 from docwen_gui.font_utils import FONT_SIZE_PRESETS, normalize_font_size_preset
@@ -59,7 +60,6 @@ from docwen_gui.i18n import t as _t
 from docwen_gui.resources import load_svg_icon
 from docwen_gui.styles.design_tokens import Spacing
 from docwen_gui.styles.theme_manager import ThemeManager
-from docwen_gui.view_models._optimization_filter import OptimizationSource
 from docwen_gui.view_models._runtime_route_filter import (
     RuntimeRouteChoice,
     RuntimeRouteSource,

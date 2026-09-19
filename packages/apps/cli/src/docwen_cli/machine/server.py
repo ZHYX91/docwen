@@ -13,13 +13,15 @@ from typing import Any, BinaryIO, Literal, cast
 
 from jsonschema import ValidationError
 
-from docwen_application.conversion_service import (
+from docwen_application.conversion_contracts import (
     ConversionPlanRequest,
-    ConversionService,
     ConversionServiceError,
     ConversionTaskOutcome,
     LocalInputHandle,
     StagingOutputTarget,
+)
+from docwen_application.conversion_service import (
+    ConversionService,
 )
 from docwen_cli.machine.contracts import MachineContractValidator
 from docwen_cli.machine.framing import FrameWriter, FramingError, read_frame

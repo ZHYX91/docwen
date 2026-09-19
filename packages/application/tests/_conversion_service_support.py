@@ -11,7 +11,7 @@ from typing import Any, Literal
 
 import pytest
 
-from docwen_application.conversion_service import (
+from docwen_application.conversion_contracts import (
     CSV_MEDIA_TYPE,
     DOCX_MEDIA_TYPE,
     DOCX_TO_MARKDOWN_CAPABILITY_ID,
@@ -33,7 +33,6 @@ from docwen_application.conversion_service import (
     PDF_TO_PNG_CAPABILITY_ID,
     PNG_MEDIA_TYPE,
     PNG_TO_OCR_MARKDOWN_CAPABILITY_ID,
-    SEMANTIC_BIBLIOGRAPHY_MEDIA_TYPE,
     TIFF_FRAMES_TO_PNG_CAPABILITY_ID,
     TIFF_MEDIA_TYPE,
     TIFF_TO_MARKDOWN_CAPABILITY_ID,
@@ -44,10 +43,12 @@ from docwen_application.conversion_service import (
     XPS_MEDIA_TYPE,
     XPS_TO_MARKDOWN_CAPABILITY_ID,
     ConversionPlanRequest,
-    ConversionService,
     ConversionServiceError,
     LocalInputHandle,
     StagingOutputTarget,
+)
+from docwen_application.conversion_service import (
+    ConversionService,
 )
 from docwen_core.models import (
     NUMBERING_EXPORT_PLAN_MEDIA_TYPE,
@@ -63,6 +64,9 @@ from docwen_core.models import (
     canonicalize_numbering_plan,
 )
 from docwen_core.paths import filesystem_path
+from docwen_core.semantic_bibliography import (
+    SEMANTIC_BIBLIOGRAPHY_MEDIA_TYPE,
+)
 
 pytestmark = pytest.mark.integration
 

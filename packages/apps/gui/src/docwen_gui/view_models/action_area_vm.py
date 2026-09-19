@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QObject, Signal
 
+from docwen_application.optimization_selection import OptimizationSource
 from docwen_cli.options.to_markdown import build_to_markdown_options
 from docwen_core.formats.categories import CATEGORY_DOCUMENT, CATEGORY_SPREADSHEET, get_category
 from docwen_gui.i18n import t as _t
@@ -31,7 +32,6 @@ from docwen_gui.i18n import t as _t
 from ._optimization_filter import (
     OptimizationChoice,
     OptimizationChoicesResult,
-    OptimizationSource,
     discover_optimization_choices,
 )
 from ._runtime_route_filter import (

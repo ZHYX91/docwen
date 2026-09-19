@@ -118,6 +118,7 @@ class OptimizationCatalog:
     resources: tuple[OptimizationResource, ...]
     counts: OptimizationCounts
     route_options_by_id: Mapping[str, tuple[str, ...]]
+    runtime_catalog: RuntimeCapabilityCatalog
 
     def get(self, resource_id: str) -> OptimizationResource | None:
         return next((resource for resource in self.resources if resource.id == resource_id), None)
@@ -314,6 +315,7 @@ def parse_optimization_catalog(capability_projection: Mapping[str, object]) -> O
         resources=tuple(resources),
         counts=counts,
         route_options_by_id=MappingProxyType(route_options),
+        runtime_catalog=route_catalog,
     )
 
 

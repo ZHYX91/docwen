@@ -59,9 +59,9 @@ _PLAN = _FIXTURES / "numbering-export-plan.rich.json"
 
 
 def test_active_resolved_v4_options_include_explicit_markdown_dialect() -> None:
-    import docwen_application.conversion_service as application_conversion_service
+    import docwen_application.conversion_capabilities as application_conversion_capabilities
 
-    application_schema = application_conversion_service._MARKDOWN_TO_DOCX_OPTIONS  # pyright: ignore[reportPrivateUsage]
+    application_schema = application_conversion_capabilities._MARKDOWN_TO_DOCX_OPTIONS  # pyright: ignore[reportPrivateUsage]
     assert set(RESOLVED_V4_MD_TO_DOCX_OPTIONS_SCHEMA["properties"]) == {
         "locale",
         "template_name",

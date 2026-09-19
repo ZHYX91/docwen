@@ -10,7 +10,9 @@ from typing import Any
 import pytest
 from tools.validate_contracts import validate_trace
 
-from docwen_application.conversion_service import ConversionTaskOutcome
+from docwen_application.conversion_contracts import (
+    ConversionTaskOutcome,
+)
 from docwen_cli.machine.contracts import MachineContractValidator
 from docwen_cli.machine.framing import MAX_MESSAGE_BYTES, FrameWriter, read_frame
 from docwen_cli.machine.server import MachineProtocolServer

@@ -23,21 +23,9 @@ from docwen_application.optimization_catalog import (
     OptimizationResource,
     inspect_optimization_catalog,
 )
-from docwen_application.preconversion.chain_resolver import resolve_chain
+from docwen_application.optimization_selection import OptimizationSource, select_optimizations
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True, slots=True)
-class OptimizationSource:
-    """One canonical input identity used to match an optimization binding."""
-
-    detected_format: str
-    source_category: str
-
-    def __post_init__(self) -> None:
-        object.__setattr__(self, "detected_format", self.detected_format.strip().lower())
-        object.__setattr__(self, "source_category", self.source_category.strip().lower())
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,15 +106,6 @@ def _optimization_policy(controller: Any) -> tuple[tuple[str, ...], frozenset[st
     return order, frozenset(disabled)
 
 
-def _ordered_resources(
-    catalog: OptimizationCatalog, configured_order: tuple[str, ...]
-) -> tuple[OptimizationResource, ...]:
-    by_id = {resource.id: resource for resource in catalog.resources}
-    ordered_ids = [resource_id for resource_id in configured_order if resource_id in by_id]
-    ordered_ids.extend(resource.id for resource in catalog.resources if resource.id not in ordered_ids)
-    return tuple(by_id[resource_id] for resource_id in ordered_ids)
-
-
 def _display_name(resource: OptimizationResource, locale: str) -> str:
     del locale  # Locale selects translated text; it never hides a capability.
     try:
@@ -136,65 +115,6 @@ def _display_name(resource: OptimizationResource, locale: str) -> str:
     except Exception:
         logger.warning("Optimization label lookup failed; using catalog name (stage=display-name)", exc_info=True)
         return resource.name
-
-
-def _composed_runtime_source(source_format: str, target: str, action_name: str) -> str:
-    """Return the real Runtime source after Application-owned pre-conversion."""
-
-    if not source_format:
-        return ""
-    try:
-        chain = resolve_chain(source_format, target, action_name=action_name)
-    except ValueError:
-        return source_format
-    # A multi-step chain's first element is the normalized Runtime source.
-    # A direct chain contains only the requested target and therefore leaves
-    # the admitted source unchanged for optimization matching.
-    return chain[0] if len(chain) > 1 else source_format
-
-
-def _binding_for_source(
-    resource: OptimizationResource,
-    source: OptimizationSource,
-    *,
-    target: str,
-) -> OptimizationBinding | None:
-    available = tuple(binding for binding in resource.bindings if binding.available and binding.target == target)
-    exact = next((binding for binding in available if binding.source == source.detected_format), None)
-    if exact is not None:
-        return exact
-
-    # Legacy Word-family formats (DOC/WPS/RTF/ODT) are admitted by Application
-    # and normalized to DOCX before the Runtime action executes. Reuse that
-    # exact Runtime binding rather than inventing per-format optimizer routes.
-    composed_source = _composed_runtime_source(source.detected_format, target, resource.action_name)
-    if composed_source and composed_source != source.detected_format:
-        composed = next((binding for binding in available if binding.source == composed_source), None)
-        if composed is not None:
-            return composed
-
-    if not source.detected_format:
-        return next((binding for binding in available if binding.source_category == source.source_category), None)
-    return next(
-        (
-            binding
-            for binding in available
-            if binding.source == source.source_category and binding.source_category == source.source_category
-        ),
-        None,
-    )
-
-
-def _route_option_intersection(
-    catalog: OptimizationCatalog,
-    bindings: tuple[OptimizationBinding, ...],
-) -> tuple[str, ...]:
-    if not bindings:
-        return ()
-    common = set(catalog.options_for_route(bindings[0].route_id))
-    for binding in bindings[1:]:
-        common.intersection_update(catalog.options_for_route(binding.route_id))
-    return tuple(option for option in catalog.options_for_route(bindings[0].route_id) if option in common)
 
 
 def discover_optimization_choices(
@@ -218,40 +138,28 @@ def discover_optimization_choices(
         return _failed("Runtime optimization discovery failed.", error)
 
     configured_order, disabled = _optimization_policy(controller)
-    choices: list[OptimizationChoice] = []
-    for resource in _ordered_resources(catalog, configured_order):
-        if resource.id in disabled or not resource.available:
-            continue
-        if sources:
-            matched: list[OptimizationBinding] = []
-            for source in sources:
-                binding = _binding_for_source(resource, source, target=target)
-                if binding is None:
-                    break
-                matched.append(binding)
-            else:
-                bindings = tuple(matched)
-            if len(matched) != len(sources):
-                continue
-        else:
-            bindings = tuple(binding for binding in resource.bindings if binding.available and binding.target == target)
-            if not bindings:
-                continue
-        choices.append(
-            OptimizationChoice(
-                id=resource.id,
-                label=_display_name(resource, locale),
-                action_name=resource.action_name,
-                bindings=bindings,
-                route_options=_route_option_intersection(catalog, bindings),
-            )
+    selections = select_optimizations(
+        catalog,
+        sources=sources,
+        target=target,
+        configured_order=configured_order,
+        disabled=disabled,
+    )
+    choices = tuple(
+        OptimizationChoice(
+            id=selection.resource.id,
+            label=_display_name(selection.resource, locale),
+            action_name=selection.resource.action_name,
+            bindings=selection.bindings,
+            route_options=selection.route_options,
         )
-    return OptimizationChoicesResult(status="ready", choices=tuple(choices))
+        for selection in selections
+    )
+    return OptimizationChoicesResult(status="ready", choices=choices)
 
 
 __all__ = [
     "OptimizationChoice",
     "OptimizationChoicesResult",
-    "OptimizationSource",
     "discover_optimization_choices",
 ]

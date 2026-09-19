@@ -34,6 +34,22 @@ runtime  application
 
 ## Boundaries / 边界
 
+Application conversion planning separates typed requests and results (`conversion_contracts`), capability
+bindings (`conversion_capabilities`), option validation (`conversion_options`), runtime request construction
+(`conversion_requests`), and the plan/accept/execute/cancel lifecycle (`conversion_service`). Plans own copies
+of their input options and public result data; mutating a returned discovery or plan object cannot alter a
+later execution. Input integrity and active capabilities are checked again at acceptance.
+
+`conversion_routes` composes the same preconversion chain used by the controller and resolves every step
+against the runtime catalog. `optimization_selection` requires all selected inputs to have an available
+chain and intersects their route options. GUI localization and settings remain presentation concerns;
+missing or unavailable Office bridge routes cannot be hidden by an available final DOCX optimizer.
+
+应用层分别维护请求/结果类型、能力绑定、参数校验、运行请求构造与计划/接纳/执行/取消生命周期。
+计划持有自己的参数和结果快照，外部修改发现结果或计划对象不会改变执行；接纳时仍重验输入完整性和当前能力。
+转换路线计划与控制器使用同一前置转换链，逐步核对真实运行时路线。优化选择要求每个输入的完整链可用，
+批量选项取交集；GUI 只负责显示与交互，不能因最终 DOCX 优化器可用而掩盖前置 Office 转换不可用。
+
 - Core does not import application, runtime, apps, plugins or bundle.
 - Plugins do not import application/runtime/apps/bundle.
 - GUI and CLI do not deep-import plugin implementations or runtime internals.
