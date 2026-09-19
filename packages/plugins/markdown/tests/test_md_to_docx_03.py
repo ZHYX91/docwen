@@ -45,42 +45,30 @@ class TestMdToDocxGolden:
         heading_styles = [p.style.name for p in paragraphs if p.style and p.style.name and "Heading" in p.style.name]
         assert len(heading_styles) >= 2, f"Expected at least 2 headings, got {len(heading_styles)}"
 
-    def test_md_to_docx_consumes_configured_heading_merge_mode(self, monkeypatch):
-        """Global MD→DOCX heading merge config is used when options omit it."""
-        import docwen_plugin_markdown.to_docx.converter as converter_module
+    @pytest.mark.parametrize(
+        ("mode", "punctuation", "merged"),
+        [
+            ("never", "：§§ ", False),
+            ("punct_required", "§", True),
+            ("punct_required", "：", False),
+            ("always", "", True),
+        ],
+    )
+    def test_md_to_docx_consumes_configured_heading_merge_mode(self, mode, punctuation, merged):
+        """Global merge settings affect actual DOCX paragraphs when options omit them."""
+        from docx import Document
 
-        seen: dict[str, object] = {}
-
-        def fake_detect_heading_merges(
-            md_body: str,
-            *,
-            mode: str = "punct_required",
-            punctuation: frozenset[str] | None = None,
-        ):
-            seen["mode"] = mode
-            seen["punctuation"] = punctuation
-            return set()
-
-        monkeypatch.setattr(converter_module, "detect_heading_merges", fake_detect_heading_merges)
-
-        md_path = write_temp_md("# Heading.\nBody")
+        md_path = write_temp_md("# Heading§\nBody")
         ctx, _workspace = make_context(md_path, target_format="docx")
         ctx._config = FakeConfigView(
-            {
-                "conversion": {
-                    "md_to_docx": {
-                        "heading_merge_mode": "never",
-                        "heading_merge_punctuation": "：§§ ",
-                    }
-                }
-            }
+            {"conversion": {"md_to_docx": {"heading_merge_mode": mode, "heading_merge_punctuation": punctuation}}}
         )
-
         result = MdToDocxConverter().convert(ctx)
-
         assert result.success is True
-        assert seen["mode"] == "never"
-        assert seen["punctuation"] == frozenset({"：", "§"})
+        paragraphs = Document(str(result.artifacts[0].staging_path)).paragraphs
+        heading = next(paragraph for paragraph in paragraphs if "Heading§" in paragraph.text)
+        assert ("Body" in heading.text) is merged
+        assert any(paragraph.text == "Body" for paragraph in paragraphs) is not merged
 
     def test_md_to_docx_consumes_configured_body_formatting_remove(self):
         """Configured body formatting remove maps to renderer minimal mode."""

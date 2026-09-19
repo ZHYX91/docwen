@@ -423,6 +423,7 @@ def render_paragraph_runs(
     *,
     syntax_config: DocxMarkdownSyntaxConfig,
     style_detector_config: StyleDetectorConfig | None = None,
+    math_renderer: Callable[[Any], str | None] | None = None,
 ) -> str:
     """Render paragraph XML children in order, producing Markdown text.
 
@@ -447,6 +448,7 @@ def render_paragraph_runs(
         syntax_config=syntax_config,
         style_detector_config=style_detector_config,
         split_page_breaks=False,
+        math_renderer=math_renderer,
     )[0]
 
 

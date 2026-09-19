@@ -37,6 +37,7 @@ from typing import Any
 from docwen_core.markdown_extensions import MarkdownExtensions
 from docwen_core.models.file_ref import FileRef
 from docwen_core.models.request import ConversionRequest, OutputPolicy
+from docwen_core.paths import filesystem_path
 
 # ── Low-level leg runners ─────────────────────────────────────────────────
 
@@ -58,7 +59,8 @@ def _run(
     ``RuntimePort`` surface — rather than reaching into task-manager
     internals. This is the same path the application layer uses.
     """
-    size = input_path.stat().st_size if input_path.exists() else 0
+    native_input = filesystem_path(input_path)
+    size = native_input.stat().st_size if native_input.exists() else 0
     request = ConversionRequest(
         request_id=request_id,
         input_refs=[
@@ -88,7 +90,9 @@ def _primary_path(result: Any) -> Path:
     assert result.success, f"Conversion failed: {result.error.message if result.error else 'unknown'}"
     primaries = [a for a in result.artifacts if a.kind == "primary"]
     assert primaries, f"No primary artifact in result: {result.artifacts}"
-    return Path(primaries[0].staging_path)
+    # Runtime receipts expose ordinary public paths; test filesystem calls use
+    # the same Windows long-path adapter as production I/O.
+    return filesystem_path(primaries[0].staging_path)
 
 
 # ── Public round-trip API ─────────────────────────────────────────────────

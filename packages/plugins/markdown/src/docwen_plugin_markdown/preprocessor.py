@@ -1,4 +1,4 @@
-"""Preprocessing: heading merge detection, image materialization, HTML cleanup.
+"""Request-scoped image materialization before Markdown parsing.
 
 All functions operate on raw markdown text **before** mistune parsing. Any
 rewrite that is presentation-oriented must leave literal source regions intact;
@@ -17,7 +17,6 @@ from docwen_core.links import (
     split_markdown_block_segments,
     split_markdown_inline_segments,
 )
-from docwen_core.text.heading_merge import HEADING_MERGE_PUNCTUATION_SET
 
 # ── Wiki link patterns ───────────────────────────────────────────────────
 
@@ -47,22 +46,6 @@ def _rewrite_non_code_markdown(text: str, rewrite: Callable[[str], str]) -> str:
         for inline_text, is_protected_atom in split_markdown_inline_segments(block_text):
             result.append(inline_text if is_protected_atom else rewrite(inline_text))
     return "".join(result)
-
-
-def _rewrite_non_literal_blocks(text: str, rewrite: Callable[[str], str]) -> str:
-    """Apply a block-structural rewrite while preserving literal blocks.
-
-    Block grammar such as Setext headings depends on complete physical lines.
-    Splitting a paragraph around inline code/link/math atoms before running that
-    grammar invents artificial line starts and can turn ``Title `code` tail``
-    into malformed Markdown. Keep each ordinary block whole and let its inline
-    atoms remain byte-for-byte inside the rewritten line.
-    """
-
-    return "".join(
-        block_text if is_literal_block else rewrite(block_text)
-        for block_text, is_literal_block in split_markdown_block_segments(text)
-    )
 
 
 def materialize_image_placeholders(
@@ -144,150 +127,3 @@ def _parse_image_placeholder_payload(
     width = int(width_text) if width_text else None
     height = int(height_text) if height_text else None
     return image_path, width, height
-
-
-_ATX_HEADING_RE = re.compile(r"^ {0,3}(#{1,9})(?!#)(?:[ \t]+|$)(.*)$")
-_UNORDERED_LIST_RE = re.compile(r"^ {0,3}[*+-](?:[ \t]+|$)")
-_ORDERED_LIST_RE = re.compile(r"^ {0,3}\d{1,9}[.)](?:[ \t]+|$)")
-_THEMATIC_BREAK_RE = re.compile(r"^ {0,3}(?:(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|(?:_[ \t]*){3,})$")
-
-# ═══════════════════════════════════════════════════════════════════════════
-# Setext heading conversion
-# ═══════════════════════════════════════════════════════════════════════════
-
-_SETEXT_H1_RE = re.compile(
-    r"^([^\r\n]*[^ \t\r\n][^\r\n]*)\r?\n={3,}[ \t]*(?=\r?$)",
-    re.MULTILINE,
-)
-_SETEXT_H2_RE = re.compile(
-    r"^([^\r\n]*[^ \t\r\n][^\r\n]*)\r?\n-{3,}[ \t]*(?=\r?$)",
-    re.MULTILINE,
-)
-
-
-def handle_setext_headings(md_body: str) -> str:
-    """Convert Setext headings to ATX without rewriting literal blocks.
-
-    Mistune understands Setext headings itself, but the renderer's historical
-    heading-merge path consumes the ATX projection. Until that path is fully
-    source-position driven, keep this narrow adapter. Crucially, run the block
-    grammar on complete ordinary blocks rather than fragments split around
-    inline atoms.
-    """
-
-    def rewrite(text: str) -> str:
-        # Process H1 first, then H2 — order matters because ``---`` also has
-        # thematic-break syntax outside a Setext pair.
-        text = _SETEXT_H1_RE.sub(r"# \1", text)
-        return _SETEXT_H2_RE.sub(r"## \1", text)
-
-    return _rewrite_non_literal_blocks(md_body, rewrite)
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-# Heading merge detection
-# ═══════════════════════════════════════════════════════════════════════════
-
-
-def detect_heading_merges(
-    md_body: str,
-    mode: str = "punct_required",
-    punctuation: frozenset[str] | None = None,
-) -> set[int]:
-    """Return 0-based rendered-heading indexes that merge with following text.
-
-    Fenced code is never a heading source and therefore does not consume a
-    heading index. This keeps indexes aligned with the AST even when examples
-    contain lines beginning with ``#``.
-    """
-    if mode not in {"punct_required", "always", "never"}:
-        mode = "punct_required"
-    if mode == "never":
-        return set()
-
-    punct = punctuation if punctuation is not None else HEADING_MERGE_PUNCTUATION_SET
-    if mode == "punct_required" and not punct:
-        return set()
-
-    merges: set[int] = set()
-    heading_idx = 0
-    for block_text, is_fenced in split_markdown_block_segments(md_body):
-        if is_fenced:
-            continue
-        lines = block_text.split("\n")
-        for index, line in enumerate(lines):
-            heading_match = _ATX_HEADING_RE.match(line)
-            if heading_match is None:
-                continue
-            content = re.sub(r"[ \t]+#+[ \t]*$", "", heading_match.group(2)).strip()
-            punctuation_allows_merge = mode == "always" or bool(content and content[-1] in punct)
-            if punctuation_allows_merge and index + 1 < len(lines) and _is_plain_merge_body_line(lines[index + 1]):
-                merges.add(heading_idx)
-            heading_idx += 1
-    return merges
-
-
-def _is_plain_merge_body_line(line: str) -> bool:
-    """Whether *line* is the adjacent ordinary body text accepted by old DocWen."""
-
-    stripped = line.strip()
-    if not stripped:
-        return False
-    if line.startswith(("    ", "\t")):
-        return False
-    if _ATX_HEADING_RE.match(line):
-        return False
-    if stripped.startswith(("$$", "|", ">", "```", "~~~")):
-        return False
-    if _UNORDERED_LIST_RE.match(line) or _ORDERED_LIST_RE.match(line):
-        return False
-    return _THEMATIC_BREAK_RE.match(line) is None
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-# HR attachment detection
-# ═══════════════════════════════════════════════════════════════════════════
-
-
-def detect_hr_attachments(md_body: str) -> set[int]:
-    """Return source line indexes of non-code HRs attached to prior content."""
-
-    attached: set[int] = set()
-    line_offset = 0
-    for block_text, is_fenced in split_markdown_block_segments(md_body):
-        lines = block_text.split("\n")
-        if not is_fenced:
-            for index in range(1, len(lines)):
-                stripped = lines[index].strip()
-                prev = lines[index - 1].strip()
-                if stripped in ("---", "***", "___") and prev and not prev.startswith("#"):
-                    attached.add(line_offset + index)
-        line_offset += block_text.count("\n")
-    return attached
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-# HTML tag normalisation
-# ═══════════════════════════════════════════════════════════════════════════
-
-_BR_RE = re.compile(r"<br\s*/?>", re.IGNORECASE)
-
-
-def normalize_html_tags(md_body: str) -> str:
-    """Normalize supported HTML outside literal code while preserving peers."""
-
-    result: list[str] = []
-    for block_text, is_literal_block in split_markdown_block_segments(md_body):
-        if is_literal_block:
-            result.append(block_text)
-            continue
-        for inline_text, is_protected_atom in split_markdown_inline_segments(block_text):
-            if is_protected_atom:
-                # Inline HTML is intentionally a protected atom in the shared
-                # link parser, but ``<br>`` is exactly the HTML construct this
-                # preprocessor owns. Other protected atoms (code, math,
-                # autolinks, other HTML) remain byte-for-byte untouched.
-                result.append(_BR_RE.sub("  \n", inline_text) if _BR_RE.fullmatch(inline_text) else inline_text)
-            else:
-                result.append(_BR_RE.sub("  \n", inline_text))
-    return "".join(result)

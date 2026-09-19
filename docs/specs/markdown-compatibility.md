@@ -21,6 +21,25 @@ ATX Heading levels 1..6 follow CommonMark; levels 7..9 are DocWen extensions tha
 `Heading 7`..`Heading 9`. Ten or more leading `#` markers remain visible paragraph text. DOCX import resolves both
 direct `outlineLvl=0..8` values and outline levels inherited through paragraph styles.
 
+Setext headings use the parser's complete paragraph and underline grammar, including multiline titles. Code
+examples, lists and ATX headings cannot be reclassified by a text preprocessor. Heading/body merging applies only
+to an actual heading followed immediately by an ordinary paragraph; blank lines and other block types stop it.
+The punctuation policy reads the heading's inline text. A trailing formula or image is not discarded to find an
+earlier punctuation mark. Each thematic break retains its own marker and adjacency at parsing time, so literal
+examples and Setext underlines cannot shift another break's action. Inline `<br>`, `<br/>` and `<br />` remain
+line breaks inside their heading, table cell or link; code and formula contents stay literal.
+DOCX import serializes line breaks inside a heading as `<br>` so a second conversion retains one heading. Formula
+paragraphs use the same text renderer as ordinary paragraphs, preserving inline code, accepted revisions, links,
+notes and text on both sides of a run's break or tab under the selected formatting policy.
+
+Setext 标题按解析器的完整段落及下划线语法识别，支持多行标题；代码示例、列表及 ATX 标题不会被预处理改成
+另一种块。标题合并只作用于实际相邻的标题与普通段落，空行和其他块类型会阻止合并。标点策略读取标题行内
+文本，标题末尾的公式或图片不会被忽略以寻找更早的标点。分隔线在解析时绑定自身标记与相邻关系，代码和
+Setext 下划线不会错移其动作。行内 `<br>` 在标题、表格单元格和链接中仍是换行，不会提前拆分物理行；
+代码和公式中的字面内容不改写。
+DOCX 导入把标题内换行表示为 `<br>`，再次转换仍保持一个标题。公式段落复用普通段落的文本渲染器，按所选
+格式策略保留行内代码、接受的修订、链接、注释，以及同一文本片段换行或制表符两侧的内容。
+
 ## Rules / 规则
 
 - Parsers must not fetch remote content implicitly.
