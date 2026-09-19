@@ -6,9 +6,7 @@ copy path / open directory buttons.
 
 from __future__ import annotations
 
-import os
 import re
-import tempfile
 from pathlib import Path
 from typing import cast as _cast
 
@@ -234,11 +232,9 @@ class LoggingTab(BaseSettingsTab):
         self._update_dir_controls()
 
     def _env_override_source(self) -> str:
-        if os.environ.get("DOCWEN_LOG_DIR", "").strip():
-            return "DOCWEN_LOG_DIR"
-        if os.environ.get("DOCWEN_LOG_TO_TEMP", "").strip().lower() in {"1", "true", "yes", "on"}:
-            return "DOCWEN_LOG_TO_TEMP"
-        return ""
+        from docwen_runtime.logging import log_directory_override_source
+
+        return log_directory_override_source() or ""
 
     def _update_dir_controls(self, *, refresh_runtime: bool = True) -> None:
         is_custom = self.get_combo_data(self._dir_mode) == "custom"
@@ -308,13 +304,16 @@ class LoggingTab(BaseSettingsTab):
 
             runtime_state = get_logging_runtime_state()
             env_override = runtime_state.overridden_by_env or env_override
-            if env_override and runtime_state.active_log_file:
+            if runtime_state.active_log_file:
                 resolved = runtime_state.active_log_file
+            elif runtime_state.fallback_reason:
+                resolved = ""
             else:
                 resolved = resolve_log_file_path(config)
             fallback_reason = runtime_state.fallback_reason or ""
-        except Exception:
-            resolved = self._fallback_resolve_log_file_path(config)
+        except Exception as exc:
+            resolved = ""
+            fallback_reason = str(exc)
 
         if self._resolved_path:
             self._resolved_path.setText(resolved)
@@ -337,28 +336,6 @@ class LoggingTab(BaseSettingsTab):
         if self._dir_notice:
             self._dir_notice.setText(notice)
         self._update_dir_controls(refresh_runtime=False)
-
-    @staticmethod
-    def _fallback_resolve_log_file_path(config: dict[str, object]) -> str:
-        prefix = re.sub(r'[\\/*?:"<>|\x00-\x1f]', "", str(config.get("file_prefix") or ""))
-        prefix = prefix.strip().rstrip(". ") or "docwen"
-        dir_mode = str(config.get("directory_mode") or "user").strip().lower()
-        if dir_mode not in {"user", "temp", "custom"}:
-            dir_mode = "user"
-        custom_dir = str(config.get("directory") or "")
-        if dir_mode == "temp":
-            log_dir = str(Path(tempfile.gettempdir()) / "docwen" / "logs")
-        elif dir_mode == "custom" and custom_dir:
-            log_dir = custom_dir
-        else:
-            log_dir = str(Path.home() / ".docwen" / "logs")
-        resolved_dir = Path(log_dir).resolve(strict=False)
-        resolved_path = (resolved_dir / f"{prefix}.log").resolve(strict=False)
-        try:
-            resolved_path.relative_to(resolved_dir)
-        except ValueError:  # pragma: no cover - defense after prefix normalization
-            return str(resolved_dir / "docwen.log")
-        return str(resolved_path)
 
     def _load_values(self) -> None:
         log = self._vm.config.logging

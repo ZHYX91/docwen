@@ -45,21 +45,19 @@ def _main_with_guard_active(argv: list[str] | None = None) -> int:
 def main(argv: list[str] | None = None) -> int:
     """Run the composed CLI with dependency egress protection enforced."""
 
-    from docwen_runtime.profile_paths import configure_process_profile
-
-    # Resolve the packaged profile before ConfigLoader, template discovery, or
-    # file logging has a chance to select an unrelated platform directory.
-    configure_process_profile()
-
     from docwen_runtime.logging import pre_init_logging
+    from docwen_runtime.profile_paths import ProfileSelectionError, bind_process_profile
 
     # Keep successful machine-readable CLI runs silent on stderr while still
     # surfacing and buffering warnings raised before ConfigLoader is available.
     pre_init_logging("WARNING")
 
     try:
-        with dependency_egress_guard():
+        with bind_process_profile(), dependency_egress_guard():
             return _main_with_guard_active(argv)
+    except ProfileSelectionError as exc:
+        print(str(exc), file=sys.stderr)
+        return 4
     except NetworkGuardInstallationError:
         print("错误: 安全检查失败", file=sys.stderr)
         return NetworkGuardInstallationError.exit_code

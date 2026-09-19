@@ -316,17 +316,23 @@ def _main_with_guard_active(argv: list[str] | None = None) -> int:
 def main(argv: list[str] | None = None) -> int:
     """Run the composed GUI with dependency egress protection enforced."""
 
-    from docwen_runtime.profile_paths import configure_process_profile
-
-    configure_process_profile()
-
     from docwen_runtime.logging import pre_init_logging
+    from docwen_runtime.profile_paths import ProfileSelectionError, bind_process_profile
 
     pre_init_logging("INFO")
 
     try:
-        with dependency_egress_guard():
+        with bind_process_profile(), dependency_egress_guard():
             return _main_with_guard_active(argv)
+    except ProfileSelectionError as exc:
+        from PySide6.QtWidgets import QApplication, QMessageBox
+
+        logger.error("%s", exc)
+        app = QApplication.instance() or QApplication([])
+        QMessageBox.critical(None, "DocWen", str(exc))
+        # Keep the application alive until the blocking error dialog closes.
+        del app
+        return 4
     except ModuleNotFoundError as exc:
         missing_root = str(exc.name or "").partition(".")[0]
         if missing_root not in {"PySide6", "qfluentwidgets"}:

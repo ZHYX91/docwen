@@ -18,10 +18,8 @@ from __future__ import annotations
 
 import logging
 import logging.handlers
-import os
 import re
 import sys
-import tempfile
 import threading
 import time
 from collections import deque
@@ -117,17 +115,15 @@ def _ensure_log_dir(log_dir: Path) -> Path:
     return log_dir
 
 
-def _env_override_source() -> str | None:
-    env_dir = os.environ.get("DOCWEN_LOG_DIR", "").strip()
-    if env_dir:
-        return "DOCWEN_LOG_DIR"
-    if os.environ.get("DOCWEN_LOG_TO_TEMP", "").strip().lower() in {"1", "true", "yes", "on"}:
-        return "DOCWEN_LOG_TO_TEMP"
-    return None
+def log_directory_override_source() -> str | None:
+    """Expose the frozen startup override to runtime and settings consumers."""
+    from docwen_runtime.profile_paths import current_profile_paths
+
+    return current_profile_paths().log_override
 
 
 def _resolve_directory_mode(config: dict[str, Any]) -> str:
-    override = _env_override_source()
+    override = log_directory_override_source()
     if override == "DOCWEN_LOG_DIR":
         return "env"
     if override == "DOCWEN_LOG_TO_TEMP":
@@ -137,30 +133,19 @@ def _resolve_directory_mode(config: dict[str, Any]) -> str:
 
 
 def _resolve_log_dir(config: dict[str, Any]) -> Path:
-    """Resolve the logging directory from config or environment."""
-    env_dir = os.environ.get("DOCWEN_LOG_DIR", "").strip()
-    if env_dir:
-        return Path(env_dir) / "logs"
+    """Use one profile, with explicit log settings allowed to select a component."""
+    from docwen_runtime.profile_paths import current_profile_paths
 
-    if os.environ.get("DOCWEN_LOG_TO_TEMP", "").strip().lower() in {"1", "true", "yes", "on"}:
-        return Path(tempfile.gettempdir()) / "docwen" / "logs"
-
+    profile = current_profile_paths()
+    if profile.log_override:
+        return profile.log_dir
     directory_mode = _resolve_directory_mode(config)
     custom_dir = str(config.get("directory", "") or "").strip()
-
     if directory_mode == "custom" and custom_dir:
-        return Path(custom_dir)
-
+        return Path(custom_dir).expanduser().resolve(strict=False)
     if directory_mode == "temp":
-        return Path(tempfile.gettempdir()) / "docwen" / "logs"
-
-    # Default: user log directory via platformdirs
-    try:
-        import platformdirs
-
-        return Path(platformdirs.user_log_dir("docwen", appauthor=False, ensure_exists=True))
-    except ImportError:
-        return Path(os.path.expanduser("~")) / ".docwen" / "logs"
+        return profile.temporary_log_dir
+    return profile.log_dir
 
 
 def _resolve_log_level(value: object, default: str) -> int:
@@ -453,52 +438,35 @@ def _apply_config(config: dict[str, Any] | None, *, replay_pre_init: bool) -> lo
                 _state["active_directory_mode"] = _resolve_directory_mode(log_cfg)
                 _state["fallback_used"] = False
                 _state["fallback_reason"] = None
-                _state["overridden_by_env"] = _env_override_source()
+                _state["overridden_by_env"] = log_directory_override_source()
             except Exception as exc:
                 primary_error = exc
 
             if primary_error is not None:
-                fallback_dir = Path(tempfile.gettempdir()) / "docwen" / "logs"
-                fallback_path = _resolve_log_path(fallback_dir, file_prefix)
-                primary_path = _resolve_log_path(_resolve_log_dir(log_cfg), file_prefix)
-                fallback_error: Exception | None = None
-                if fallback_path != primary_path:
-                    try:
-                        _ensure_log_dir(fallback_dir)
-                        _install_file_handler(logger, fallback_path, file_level, fmt_str)
-                        _purge_old_logs(fallback_dir, file_prefix, retention_days)
-                        _state["file_enabled"] = True
-                        _state["active_log_file"] = str(fallback_path)
-                        _state["active_directory_mode"] = "fallback_temp"
-                        _state["fallback_used"] = True
-                        _state["fallback_reason"] = str(primary_error)
-                        _state["overridden_by_env"] = _env_override_source()
-                    except Exception as exc:
-                        fallback_error = exc
-                else:
-                    fallback_error = primary_error
+                # Preserve the selected profile. A different temporary directory
+                # would conceal a read-only or broken user-data location.
+                _state["file_enabled"] = False
+                _state["active_log_file"] = None
+                _state["active_directory_mode"] = primary_mode
+                _state["fallback_used"] = True
+                _state["fallback_reason"] = str(primary_error)
+                _state["overridden_by_env"] = log_directory_override_source()
+                if _console_handler is None:
+                    _console_handler = logging.StreamHandler(sys.stderr)
+                    _console_handler.setFormatter(logging.Formatter(PRE_INIT_CONSOLE_FORMAT))
+                    logger.addHandler(_console_handler)
+                    _state["console_enabled"] = True
+                _console_handler.setLevel(logging.WARNING)
+                logger.setLevel(min(logger.level, logging.WARNING))
+                logger.warning("File log setup failed; the selected directory was retained: %s", primary_error)
 
-                if fallback_error is not None:
-                    logger.warning("File log setup failed, continuing with console only: %s", primary_error)
-                    _state["file_enabled"] = False
-                    _state["active_log_file"] = None
-                    _state["active_directory_mode"] = primary_mode
-                    _state["fallback_used"] = True
-                    _state["fallback_reason"] = str(primary_error)
-                    _state["overridden_by_env"] = _env_override_source()
-                    if _console_handler is None:
-                        _console_handler = logging.StreamHandler(sys.stderr)
-                        _console_handler.setLevel(logging.INFO)
-                        _console_handler.setFormatter(logging.Formatter(PRE_INIT_CONSOLE_FORMAT))
-                        logger.addHandler(_console_handler)
-                        _state["console_enabled"] = True
         else:
             _state["file_enabled"] = False
             _state["active_log_file"] = None
             _state["active_directory_mode"] = _resolve_directory_mode(log_cfg)
             _state["fallback_used"] = False
             _state["fallback_reason"] = None
-            _state["overridden_by_env"] = _env_override_source()
+            _state["overridden_by_env"] = log_directory_override_source()
 
     # ── Replay pre-init buffer (outside lock to avoid re-entrancy) ─────
     if replay_pre_init:

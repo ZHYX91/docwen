@@ -12,7 +12,7 @@ from typing import Any
 import docwen_cli.gui_control_port as gui_control_contract
 from docwen_cli.gui_control_port import GuiControlError, GuiControlPort
 from docwen_runtime.control import ControlClient, ControlError, ControlNotRunningError, ControlTimeoutError
-from docwen_runtime.profile_paths import profile_instance_name
+from docwen_runtime.profile_paths import profile_instance_name, profile_process_environment
 
 
 class GuiControlAdapter(GuiControlPort):
@@ -254,6 +254,7 @@ class GuiControlAdapter(GuiControlPort):
                 shell=False,
                 creationflags=creationflags,
                 start_new_session=start_new_session,
+                env=profile_process_environment(),
             )
         except OSError as exc:
             raise ControlError("gui_start_failed", "Unable to start the DocWen GUI.") from exc

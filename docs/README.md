@@ -34,6 +34,7 @@ DocWen 文档只描述当前产品、受支持契约和维护门禁。实现与�
 - [JSON contracts](specs/json-contracts.md)
 - [Golden regression suite](specs/golden-regression-suite.md)
 - [GUI behavior](specs/gui-behavior.md)
+- [User profile paths](specs/user-profile.md)
 - [Markdown compatibility](specs/markdown-compatibility.md)
 - [Templates and styles](specs/templates-and-styles.md)
 - [Physical-page OCR and artifact relations](specs/physical-page-ocr.md)

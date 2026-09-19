@@ -1,8 +1,12 @@
 # Configuration / 配置
 
-DocWen ships immutable base TOML files under `configs/` and writes user overrides to the platform user-config directory. Runtime consumers receive typed or read-only snapshots; plugins do not write configuration directly.
+DocWen ships immutable base TOML files under `configs/` and writes user overrides to the selected profile's configuration directory. Runtime consumers receive typed or read-only snapshots; plugins do not write configuration directly.
 
-DocWen 在 `configs/` 提供不可变基础 TOML，并把用户覆盖写入平台用户配置目录。运行时消费者接收类型化或只读快照；插件不得直接写配置。
+DocWen 在 `configs/` 提供不可变基础 TOML，并把用户覆盖写入所选资料的配置目录。运行时消费者接收类型化或只读快照；插件不得直接写配置。
+
+`DOCWEN_DATA_DIR` selects a whole profile containing `configs/`, `templates/`, template state and default logs. `DOCWEN_CONFIG_DIR` overrides only the exact configuration directory. Archive, MSIX and source defaults, logging overrides, and explicit copy/import behavior are defined in [User profile paths](specs/user-profile.md). All entry points keep the startup selection until exit.
+
+`DOCWEN_DATA_DIR` 选择包含 `configs/`、`templates/`、模板状态和默认日志的一整份资料；`DOCWEN_CONFIG_DIR` 只覆盖精确的配置目录。便携包、MSIX、源码默认路径、日志覆盖和明确复制/导入方式见[用户资料路径](specs/user-profile.md)。所有入口均在启动时确定路径，运行中不切换资料。
 
 ## Ownership / 所有权
 
