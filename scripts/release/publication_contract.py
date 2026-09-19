@@ -80,25 +80,14 @@ def assemble(
     sources: dict[str, Path] = {}
     for name in package_names(version):
         platform = "windows" if name.endswith(".zip") else "linux"
-        first = builds / f"{platform}-a" / name
-        require(
-            file_identity(first) == file_identity(builds / f"{platform}-b" / name), f"independent builds differ: {name}"
-        )
-        records[name] = file_identity(first)
-        sources[name] = first
-    msix_records = []
-    for replica in ("a", "b"):
-        root = builds / f"windows-{replica}"
-        record = read_object(root / "DocWen-windows-x64.msix.json")
-        observed = file_identity(root / "DocWen-windows-x64.msix")
-        require(all(record.get(key) == value for key, value in observed.items()), "MSIX bytes differ from its receipt")
-        require(record.get("sourceVersion") == version, "MSIX source version mismatch")
-        msix_records.append(record)
-    require(
-        {key: value for key, value in msix_records[0].items() if key != "sha256"}
-        == {key: value for key, value in msix_records[1].items() if key != "sha256"},
-        "independent MSIX content identities differ",
-    )
+        package = builds / platform / name
+        records[name] = file_identity(package)
+        sources[name] = package
+    store_root = builds / "windows"
+    store = read_object(store_root / "DocWen-windows-x64.msix.json")
+    observed = file_identity(store_root / "DocWen-windows-x64.msix")
+    require(all(store.get(key) == value for key, value in observed.items()), "MSIX bytes differ from its receipt")
+    require(store.get("sourceVersion") == version, "MSIX source version mismatch")
     manifest = {
         "schema": SCHEMA,
         "repository": repo,
@@ -114,9 +103,10 @@ def assemble(
         },
         "origin": {"workflow": WORKFLOW, "runId": run_id, "runAttempt": attempt},
         "assets": records,
-        "store": msix_records[0],
+        "store": store,
     }
-    # Compare every input before making the candidate visible.
+    # Check every input before making the candidate visible. Publication reuses
+    # these exact packages; reproducing builds is an optional engineering check.
     output.mkdir(parents=True)
     for name, path in sources.items():
         shutil.copyfile(path, output / name)
@@ -165,11 +155,14 @@ def publication_assets(directory: Path, manifest: dict[str, Any]) -> dict[str, d
 def verify_origin(manifest: dict[str, Any], run: dict[str, Any], artifact: dict[str, Any], *, digest: str) -> None:
     origin = manifest["origin"]
     require(run.get("id") == origin["runId"] and run.get("run_attempt") == origin["runAttempt"], "wrong preflight run")
-    require(run.get("status") == "completed" and run.get("conclusion") == "success", "preflight did not pass")
+    # The candidate is consumed later in its own run. A completed run can also
+    # have failed only during publication; exact producer jobs are checked separately.
+    require(run.get("status") in {"in_progress", "completed"}, "candidate run has not started")
     require(
         run.get("head_sha") == manifest["sourceCommit"] and run.get("path") == WORKFLOW, "preflight source mismatch"
     )
-    require(run.get("event") == "workflow_dispatch", "preflight must be an explicit build run")
+    require(run.get("event") in {"push", "workflow_dispatch"}, "unexpected candidate trigger")
+    require(run.get("head_branch") == manifest["version"], "candidate must be built from its numeric tag")
     require(run.get("repository", {}).get("full_name") == manifest["repository"], "preflight repository mismatch")
     require(artifact.get("expired") is False, "preflight artifact expired")
     require(artifact.get("workflow_run", {}).get("id") == origin["runId"], "artifact belongs to another run")

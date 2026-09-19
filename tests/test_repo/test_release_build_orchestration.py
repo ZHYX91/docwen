@@ -142,7 +142,7 @@ def _commands(job: dict[str, object]) -> str:
     return "\n".join(str(step.get("run", "")) for step in steps if isinstance(step, dict))
 
 
-def test_release_workflow_builds_each_supported_package_twice_and_runs_packaged_gates() -> None:
+def test_release_workflow_builds_each_supported_package_once_and_runs_packaged_gates() -> None:
     workflow = _release_workflow()
     jobs = workflow["jobs"]
     assert isinstance(jobs, dict)
@@ -152,11 +152,22 @@ def test_release_workflow_builds_each_supported_package_twice_and_runs_packaged_
     assert isinstance(linux, dict)
 
     for job in (windows, linux):
-        strategy = job["strategy"]
-        assert isinstance(strategy, dict)
-        matrix = strategy["matrix"]
-        assert isinstance(matrix, dict)
-        assert matrix["replica"] == ["a", "b"]
+        assert "strategy" not in job
+        assert job["outputs"] == {"artifact_id": "${{ steps.upload.outputs.artifact-id }}"}
+
+    downloads = [step for step in jobs["verify-release"]["steps"] if "download-artifact@" in step.get("uses", "")]
+    assert [step["with"] for step in downloads] == [
+        {
+            "artifact-ids": "${{ needs.build-windows.outputs.artifact_id }}",
+            "path": "builds/windows",
+            "digest-mismatch": "error",
+        },
+        {
+            "artifact-ids": "${{ needs.build-linux.outputs.artifact_id }}",
+            "path": "builds/linux",
+            "digest-mismatch": "error",
+        },
+    ]
 
     windows_commands = _commands(windows)
     assert "scripts/release/build_production_candidate.py" in windows_commands
@@ -196,26 +207,34 @@ def test_release_workflow_builds_each_supported_package_twice_and_runs_packaged_
         assert all("${{ runner." not in str(value) for value in environment.values()), job_name
 
 
-def test_release_workflow_has_a_read_only_preflight_and_fixed_immutable_publication_boundary() -> None:
+def test_release_workflow_connects_tag_build_publication_and_independent_readback() -> None:
     workflow = _release_workflow()
     jobs = workflow["jobs"]
     assert isinstance(jobs, dict)
     verify, publish, post = jobs["verify-release"], jobs["publish"], jobs["post-verify"]
     assert workflow["concurrency"] == {"group": "release-${{ github.repository }}", "cancel-in-progress": "false"}
     assert jobs["source-checks"]["uses"] == "./.github/workflows/tests.yml"
-    assert jobs["source-checks"]["if"] == "inputs.operation == 'preflight'"
+    assert (
+        jobs["source-checks"]["if"]
+        == "github.event_name == 'push' || (inputs.operation == 'publish' && inputs.artifact_id == '')"
+    )
     assert jobs["release-gate"]["needs"] == "source-checks"
     assert workflow["on"]["push"] == {"tags": ["*.*.*"]}
-    assert workflow["env"]["RELEASE_VERSION"] == "${{ inputs.version || github.ref_name }}"
-    assert publish["if"] == "github.event_name == 'push' || inputs.operation == 'publish'"
+    assert workflow["env"]["RELEASE_VERSION"] == "${{ github.ref_name }}"
+    assert "needs.verify-release.result == 'success'" in publish["if"]
+    assert "github.event_name == 'workflow_dispatch' && inputs.artifact_id != ''" in publish["if"]
     assert publish["environment"] == "release"
-    assert "needs" not in publish  # Publication retrieves an earlier verified run; it does not rebuild.
+    assert publish["needs"] == "verify-release"
+    assert publish["env"]["ARTIFACT_ID"] == "${{ needs.verify-release.outputs.artifact_id || inputs.artifact_id }}"
+    assert workflow["on"]["workflow_dispatch"]["inputs"]["operation"]["options"] == ["verify", "publish"]
+    assert set(workflow["on"]["workflow_dispatch"]["inputs"]) == {"operation", "artifact_id", "resume_artifact_id"}
     assert "publication.py assemble" in _commands(verify)
     assert "publication.py fetch" in _commands(publish)
     assert "publication.py publish" in _commands(publish)
-    assert "scripts/release/resolve_publication.py" in _commands(publish)
-    assert 'test -n "$DOCWEN_IMMUTABILITY_READ_TOKEN"' not in _commands(publish)
-    assert '--artifact-id "$ARTIFACT_ID" --artifact-digest "$ARTIFACT_DIGEST"' in _commands(publish)
+    assert "resolve_publication" not in _commands(publish)
+    assert not Path("scripts/release/resolve_publication.py").exists()
+    assert "DOCWEN_IMMUTABILITY_READ_TOKEN" not in str(publish)
+    assert 'digest_args=(--artifact-digest "$ARTIFACT_DIGEST")' in _commands(publish)
     assert '--commit "$GITHUB_SHA"' in _commands(publish)
     assert "publication.py verify" in _commands(post)
     assert post["permissions"]["contents"] == "read"

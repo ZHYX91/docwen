@@ -49,10 +49,8 @@ def verify_preflight_jobs(payload: dict[str, Any]) -> None:
         "Source gate on windows-latest",
         "Source gate on ubuntu-24.04",
         "Source gate on macos-14",
-        "Clean Windows build a",
-        "Clean Windows build b",
-        "Clean Ubuntu build a",
-        "Clean Ubuntu build b",
+        "Build Windows packages",
+        "Build Linux packages",
         "verify-release",
     }
     for name in expected:
@@ -113,7 +111,7 @@ class ReleaseSession:
 
     def verify_source(self) -> None:
         origin = self.manifest["origin"]
-        run = self.api.get(f"{self.prefix}/actions/runs/{origin['runId']}")
+        run = self.api.get(f"{self.prefix}/actions/runs/{origin['runId']}/attempts/{origin['runAttempt']}")
         artifact = self.api.get(f"{self.prefix}/actions/artifacts/{self.identity['artifactId']}")
         require(artifact.get("id") == self.identity["artifactId"], "artifact ID mismatch")
         verify_origin(self.manifest, run, artifact, digest=self.identity["artifactDigest"])
@@ -150,7 +148,7 @@ class ReleaseSession:
                     "--source-digest",
                     self.commit,
                     "--source-ref",
-                    "refs/heads/main",
+                    f"refs/tags/{self.version}",
                     "--deny-self-hosted-runners",
                 ],
                 capture_output=True,
@@ -255,21 +253,6 @@ class ReleaseSession:
     def publish(self, *, notes: str) -> dict[str, Any]:
         self.verify_source()
         self.verify_provenance()
-        admin_token = os.environ.get("DOCWEN_IMMUTABILITY_READ_TOKEN")
-        if admin_token:
-            settings_api = GitHub(self.repository, token=admin_token)
-            require(
-                settings_api.get(f"{self.prefix}/immutable-releases").get("enabled") is True,
-                "immutable releases must be enabled",
-            )
-            immutable_precheck = "verified-enabled"
-        else:
-            # Reading this repository setting needs an administration-scoped token, which the
-            # workflow token does not carry.  Publication still refuses to report success unless
-            # the hosted release itself reports immutable=true, so an absent token degrades this
-            # single pre-check instead of blocking the release.
-            immutable_precheck = "unavailable-without-administration-token"
-        self.save(immutablePrecheck=immutable_precheck)
         try:
             release = self.load_release(wait=self.state.get("pending") == "create-draft")
         except ApiError as error:
@@ -293,8 +276,7 @@ class ReleaseSession:
         if self.state.get("pending") == "create-draft":
             self.save(pending=None, stage="draft-created")
         if release.get("draft") is False:
-            self.save(stage="published-awaiting-readback", pending=None)
-            return self.verify_published()
+            return self.confirm_published()
         self.validate_release(release)
         for name in self.assets:
             release, remote = self.observe(published=False, complete=False)
@@ -325,9 +307,8 @@ class ReleaseSession:
                 read_with_retry(read_asset, budget=read_budget(), allow_missing=True)
             if self.state.get("pending") == operation:
                 self.save(pending=None)
-        # observe() already pins every draft asset to its exact size and platform digest, so the
-        # full byte readback runs once, only against the immutable published release.  A slow
-        # transport therefore no longer downloads the whole candidate twice.
+        # The independent verification job downloads the immutable hosted bytes.
+        # Here the platform's complete draft inventory, sizes and digests gate publication.
         self.observe(published=False, complete=True)
         self.save(stage="draft-verified")
         self.verify_tag()
@@ -337,7 +318,20 @@ class ReleaseSession:
             f"{self.prefix}/releases/{self.state['releaseId']}",
             body={"draft": False, "make_latest": "true"},
         )
-        return self.verify_published()
+        return self.confirm_published()
+
+    def confirm_published(self) -> dict[str, Any]:
+        """Confirm immutable state without duplicating the independent byte readback."""
+
+        self.verify_tag()
+        release, assets = self.observe(published=True, complete=True)
+        self.save(
+            stage="published-awaiting-readback",
+            pending=None,
+            releaseUrl=release.get("html_url"),
+            assets={name: {"id": record["id"], **self.assets[name]} for name, record in assets.items()},
+        )
+        return self.state
 
     def verify_published(self) -> dict[str, Any]:
         self.verify_tag()

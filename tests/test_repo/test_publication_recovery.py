@@ -47,22 +47,28 @@ def test_lost_write_response_is_reconciled_without_repeating_the_write(session, 
     api, create, receipt, clock = session
     api.lost.add(lost)
     result = create().publish(notes="Release notes")
-    assert result["stage"] == "verified"
+    assert result["stage"] == "published-awaiting-readback"
+    assert api.downloads == []
     assert len(api.writes) == 6  # one draft, four public assets, one publish
     assert len({path for _, path in api.writes}) == 6
     assert clock.delays[:2] == [2, 4]
     assert read_object(receipt)["releaseId"] == 30
+    assert create().verify_published()["stage"] == "verified"
+    assert len(api.downloads) == 4
+    assert not any(path.endswith("/immutable-releases") for path in api.reads)
 
 
 def test_published_readback_failure_can_resume_without_any_write(session) -> None:
     api, create, receipt, _ = session
     api.bad_download = True
+    assert create().publish(notes="Release notes")["stage"] == "published-awaiting-readback"
     with pytest.raises(PublicationError, match="remote bytes mismatch"):
-        create().publish(notes="Release notes")
+        create().verify_published()
     assert read_object(receipt)["stage"] == "published-awaiting-readback"
     writes = api.writes[:]
     api.bad_download = False
-    assert create().publish(notes="Release notes")["stage"] == "verified"
+    assert create().publish(notes="Release notes")["stage"] == "published-awaiting-readback"
+    assert create().verify_published()["stage"] == "verified"
     assert api.writes == writes
 
 
@@ -102,22 +108,55 @@ def test_process_interruption_after_upload_resumes_the_pending_write(session, mo
         create().publish(notes="Release notes")
     assert read_object(receipt)["pending"].startswith("upload:")
     monkeypatch.setattr(api, "request", original)
-    assert create().publish(notes="Release notes")["stage"] == "verified"
+    assert create().publish(notes="Release notes")["stage"] == "published-awaiting-readback"
     assert len(api.writes) == 6
 
 
-@pytest.mark.parametrize("failure", ["lint", "run", "digest"])
+@pytest.mark.parametrize("failure", ["lint", "run", "digest", "expired"])
 def test_missing_or_failed_preflight_prevents_every_write(session, failure: str) -> None:
     api, create, _, _ = session
     if failure == "lint":
         api.jobs["jobs"][0]["conclusion"] = "failure"
     elif failure == "run":
-        api.run["conclusion"] = "failure"
+        api.run["head_branch"] = "main"
+    elif failure == "expired":
+        api.artifact["expired"] = True
     else:
         api.artifact["digest"] = "sha256:" + "f" * 64
     with pytest.raises(PublicationError):
         create().publish(notes="Release notes")
     assert api.writes == []
+
+
+def test_exact_published_release_is_read_only_until_independent_verification(session) -> None:
+    api, create, _, _ = session
+    create().publish(notes="Release notes")
+    writes = api.writes[:]
+    assert create().publish(notes="Release notes")["stage"] == "published-awaiting-readback"
+    assert api.writes == writes
+    assert api.downloads == []
+    assert create().verify_published()["stage"] == "verified"
+    assert len(api.downloads) == 4
+    assert api.writes == writes
+
+
+def test_nonimmutable_publication_never_reports_verified_or_downloads_assets(session, monkeypatch) -> None:
+    api, create, receipt, _ = session
+    original = api.request
+
+    def mutable_release(method, path, **kwargs):
+        result = original(method, path, **kwargs)
+        if method == "PATCH":
+            api.release["immutable"] = False
+            result["immutable"] = False
+        return result
+
+    monkeypatch.setattr(api, "request", mutable_release)
+    with pytest.raises(PublicationError, match="budget exhausted"):
+        create().publish(notes="Release notes")
+    assert len(api.writes) == 6
+    assert api.downloads == []
+    assert read_object(receipt)["stage"] == "published-awaiting-readback"
 
 
 def test_foreign_draft_is_never_modified(session) -> None:
@@ -141,7 +180,7 @@ def test_successful_publish_response_with_wrong_identity_keeps_pending_write(ses
         create().publish(notes="Release notes")
     assert read_object(receipt)["pending"] == "publish"
     monkeypatch.setattr(api, "request", original)
-    assert create().publish(notes="Release notes")["stage"] == "verified"
+    assert create().publish(notes="Release notes")["stage"] == "published-awaiting-readback"
     assert len(api.writes) == 6
 
 

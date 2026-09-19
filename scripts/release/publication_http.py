@@ -101,9 +101,9 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 class GitHub:
-    def __init__(self, repository: str, *, token: str | None = None) -> None:
+    def __init__(self, repository: str) -> None:
         self.repository = repository
-        token = token or os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+        token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
         if not token:
             result = subprocess.run(["gh", "auth", "token"], check=True, capture_output=True, text=True, timeout=30)
             token = result.stdout.strip()
