@@ -46,28 +46,39 @@ def _build_delimited_workbook(
     """Build the canonical one-sheet workbook used by delimited input routes."""
     import openpyxl
 
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    if ws is None:
-        ws = wb.create_sheet()
-    ws.title = "Sheet1"
-
-    row_count = 0
-    detected_enc = next(iter(decoded_samples(input_path)), ("utf-8-sig", ""))[0]
-    try:
-        with open(input_path, encoding=detected_enc, newline="") as f:
-            reader = csv.reader(f, delimiter=sep)
-            for r_idx, row in enumerate(reader, 1):
-                if cancel_check is not None and r_idx % 1000 == 0:
-                    cancel_check()
-                for c_idx, value in enumerate(row, 1):
-                    cell = ws.cell(row=r_idx, column=c_idx, value=value)
-                    cell.data_type = "s"
-                row_count = r_idx
-    except Exception:
-        wb.close()
-        raise
-    return wb, row_count
+    # A bounded ASCII prefix cannot distinguish UTF-8 from GBK. Commit a
+    # workbook only after the entire input decodes; a retry starts with a fresh
+    # sheet so rows from the rejected encoding can never survive.
+    candidates = decoded_samples(input_path) or [("utf-8-sig", "")]
+    for candidate_index, (encoding, _) in enumerate(candidates):
+        if cancel_check is not None:
+            cancel_check()
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        if ws is None:
+            ws = wb.create_sheet()
+        ws.title = "Sheet1"
+        row_count = 0
+        try:
+            with open(input_path, encoding=encoding, newline="") as f:
+                reader = csv.reader(f, delimiter=sep)
+                for r_idx, row in enumerate(reader, 1):
+                    if cancel_check is not None and r_idx % 1000 == 0:
+                        cancel_check()
+                    for c_idx, value in enumerate(row, 1):
+                        cell = ws.cell(row=r_idx, column=c_idx, value=value)
+                        cell.data_type = "s"
+                    row_count = r_idx
+        except UnicodeError:
+            wb.close()
+            if candidate_index == len(candidates) - 1:
+                raise
+        except BaseException:
+            wb.close()
+            raise
+        else:
+            return wb, row_count
+    raise AssertionError("Delimited input decoding produced no workbook")
 
 
 class CsvToXlsxConverter:

@@ -1701,6 +1701,7 @@ multiple = "計 {count} 件"
 show_outputs = "すべての出力ファイルを表示"
 
 [settings.templates]
+import_summary = "インポート成功：{succeeded}。失敗：{failed}。キャンセル：{cancelled}。"
 load_failed = "テンプレートを読み込めません"
 operation_failed = "テンプレートの操作に失敗しました。詳細を確認してください。"
 title = "テンプレート"

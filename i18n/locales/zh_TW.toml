@@ -1701,6 +1701,7 @@ multiple = "等 {count} 個"
 show_outputs = "查看所有輸出檔案"
 
 [settings.templates]
+import_summary = "匯入成功：{succeeded}。失敗：{failed}。已取消：{cancelled}。"
 load_failed = "無法載入範本"
 operation_failed = "範本操作失敗。請查看詳情。"
 title = "範本"

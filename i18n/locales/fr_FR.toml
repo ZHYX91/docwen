@@ -1697,6 +1697,7 @@ multiple = "{count} fichiers"
 show_outputs = "Voir tous les fichiers de sortie"
 
 [settings.templates]
+import_summary = "Importés : {succeeded}. Échecs : {failed}. Annulés : {cancelled}."
 load_failed = "Impossible de charger les modèles"
 operation_failed = "L’opération sur le modèle a échoué. Consultez les détails."
 title = "Modèles"

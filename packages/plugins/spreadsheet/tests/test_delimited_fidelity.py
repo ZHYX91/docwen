@@ -47,3 +47,52 @@ def test_delimited_fidelity_sample_boundary(tmp_path: Path, encoding: str) -> No
     finally:
         workbook.close()
     assert _read_csv_flexible(str(source), "csv").iloc[-1, 1] == "中文"
+
+
+@pytest.mark.parametrize("sep", [",", "\t"])
+def test_delimited_fidelity_gbk_after_ascii_sample(tmp_path: Path, sep: str) -> None:
+    source = tmp_path / "late-chinese.txt"
+    values = ["中文", "00123", "1234567890123456789", "=1+1"]
+    content = ((sep.join(["a"] * 4) + "\n") * 9000) + sep.join(values) + "\n"
+    source.write_bytes(content.encode("gbk"))
+    assert decoded_samples(str(source))[0][0] == "utf-8-sig"
+    workbook, rows = _build_delimited_workbook(str(source), sep=sep)
+    output = tmp_path / "late-chinese.xlsx"
+    try:
+        assert rows == 9001
+        workbook.save(output)
+    finally:
+        workbook.close()
+    loaded = openpyxl.load_workbook(output)
+    try:
+        assert loaded.active is not None
+        assert loaded.active.max_row == rows
+        assert [cell.value for cell in loaded.active[rows]] == values
+        assert all(cell.data_type == "s" for cell in loaded.active[rows])
+    finally:
+        loaded.close()
+    frame = _read_csv_flexible(str(source), "tsv" if sep == "\t" else "csv")
+    assert frame.iloc[-1].tolist() == values
+
+
+def test_delimited_bom_decode_error_is_not_reinterpreted(tmp_path: Path) -> None:
+    source = tmp_path / "invalid-utf8.csv"
+    source.write_bytes(b"\xef\xbb\xbf" + b"a,b\n" * 17000 + "中文".encode("gbk"))
+    with pytest.raises(UnicodeError):
+        _build_delimited_workbook(str(source), sep=",")
+
+
+def test_delimited_cancellation_is_not_retried_as_encoding(tmp_path: Path) -> None:
+    source = tmp_path / "cancel.csv"
+    source.write_text("a,b\n" * 2000, encoding="utf-8")
+    checks = 0
+
+    def cancel() -> None:
+        nonlocal checks
+        checks += 1
+        if checks == 2:
+            raise RuntimeError("cancelled")
+
+    with pytest.raises(RuntimeError, match="cancelled"):
+        _build_delimited_workbook(str(source), sep=",", cancel_check=cancel)
+    assert checks == 2

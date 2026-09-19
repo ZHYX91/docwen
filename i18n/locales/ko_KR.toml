@@ -1701,6 +1701,7 @@ multiple = "총 {count}개"
 show_outputs = "모든 출력 파일 보기"
 
 [settings.templates]
+import_summary = "가져오기 성공: {succeeded}. 실패: {failed}. 취소: {cancelled}."
 load_failed = "템플릿을 불러올 수 없습니다"
 operation_failed = "템플릿 작업에 실패했습니다. 세부 정보를 확인하세요."
 title = "템플릿"

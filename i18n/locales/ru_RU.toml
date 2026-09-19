@@ -1701,6 +1701,7 @@ multiple = "Файлов: {count}"
 show_outputs = "Показать все выходные файлы"
 
 [settings.templates]
+import_summary = "Импортировано: {succeeded}. Ошибок: {failed}. Отменено: {cancelled}."
 load_failed = "Не удалось загрузить шаблоны"
 operation_failed = "Операция с шаблоном не выполнена. См. подробности."
 title = "Шаблоны"

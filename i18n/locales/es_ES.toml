@@ -1707,6 +1707,7 @@ multiple = "{count} archivos"
 show_outputs = "Ver todos los archivos de salida"
 
 [settings.templates]
+import_summary = "Importadas: {succeeded}. Fallidas: {failed}. Canceladas: {cancelled}."
 load_failed = "No se pudieron cargar las plantillas"
 operation_failed = "La operación de plantilla falló. Consulta los detalles."
 title = "Plantillas"

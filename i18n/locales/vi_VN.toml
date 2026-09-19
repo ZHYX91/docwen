@@ -1698,6 +1698,7 @@ multiple = "{count} tệp"
 show_outputs = "Xem tất cả tệp đầu ra"
 
 [settings.templates]
+import_summary = "Đã nhập: {succeeded}. Thất bại: {failed}. Đã hủy: {cancelled}."
 load_failed = "Không thể tải mẫu"
 operation_failed = "Thao tác với mẫu không thành công. Hãy xem chi tiết."
 title = "Mẫu"

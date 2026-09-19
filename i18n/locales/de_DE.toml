@@ -1701,6 +1701,7 @@ multiple = "{count} Dateien"
 show_outputs = "Alle Ausgabedateien anzeigen"
 
 [settings.templates]
+import_summary = "Importiert: {succeeded}. Fehlgeschlagen: {failed}. Abgebrochen: {cancelled}."
 load_failed = "Vorlagen konnten nicht geladen werden"
 operation_failed = "Der Vorlagenvorgang ist fehlgeschlagen. Weitere Informationen stehen in den Details."
 title = "Vorlagen"

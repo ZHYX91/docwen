@@ -136,9 +136,10 @@ def warn(
     *,
     details: str | None = None,
     parent: Any = None,
+    copyable: bool = False,
 ) -> None:
     """Show a warning dialog."""
-    _message_box("warning", title, message, details=details, parent=parent)
+    _message_box("warning", title, message, details=details, parent=parent, copyable=copyable)
 
 
 def info(

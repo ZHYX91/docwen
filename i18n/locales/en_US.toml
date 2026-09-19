@@ -1696,6 +1696,7 @@ multiple = "{count} files"
 show_outputs = "View all output files"
 
 [settings.templates]
+import_summary = "Imported: {succeeded}. Failed: {failed}. Cancelled: {cancelled}."
 load_failed = "Templates could not be loaded"
 operation_failed = "The template operation failed. View details for more information."
 title = "Templates"

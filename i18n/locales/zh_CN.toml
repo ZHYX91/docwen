@@ -1697,6 +1697,7 @@ multiple = "等 {count} 个"
 show_outputs = "查看全部输出文件"
 
 [settings.templates]
+import_summary = "导入成功：{succeeded}。失败：{failed}。已取消：{cancelled}。"
 load_failed = "无法加载模板"
 operation_failed = "模板操作失败。请查看详情。"
 title = "模板"

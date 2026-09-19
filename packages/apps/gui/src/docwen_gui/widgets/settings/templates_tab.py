@@ -30,6 +30,7 @@ from qfluentwidgets import Pivot, PrimaryPushButton, PushButton
 
 from docwen_runtime.templates import TemplateManagementError
 
+from ...dialogs import feedback
 from ...i18n import t
 from ...styles.design_tokens import Sizing, Spacing
 from ...styles.theme_semantics import apply_theme_class
@@ -188,6 +189,13 @@ class TemplatesTab(BaseSettingsTab):
         note.setObjectName("templateManagementNote")
         root.addWidget(note)
 
+        self._import_summary = QLabel(self)
+        self._import_summary.setObjectName("templateImportSummary")
+        self._import_summary.setWordWrap(True)
+        self._import_summary.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self._import_summary.hide()
+        root.addWidget(self._import_summary)
+
     def _button(self, text: str, callback, *, primary: bool = False) -> QPushButton:
         button = PrimaryPushButton(text, self) if primary else PushButton(text, self)
         button.setMinimumHeight(Sizing.CONTROL_HEIGHT)
@@ -311,41 +319,53 @@ class TemplatesTab(BaseSettingsTab):
             return
         last_id: str | None = None
         errors: list[str] = []
+        succeeded = 0
+        cancelled = 0
         for path in paths:
             try:
                 conflict = self._manager.import_conflict(path)
                 replace_id = None
                 if conflict is not None:
-                    prompt = QMessageBox(self)
-                    prompt.setWindowTitle(t("settings.templates.import"))
-                    prompt.setText(
+                    choice = feedback.choose(
+                        t("settings.templates.import"),
                         t(
                             "settings.templates.name_conflict",
                             "A custom template named {name} already exists.",
                             name=conflict.name,
-                        )
+                        ),
+                        choices=[
+                            feedback.FeedbackChoice("keep", t("settings.templates.keep_both"), primary=True),
+                            feedback.FeedbackChoice("replace", t("settings.templates.replace"), role="accept"),
+                            feedback.FeedbackChoice("cancel", t("common.cancel"), role="reject"),
+                        ],
+                        parent=self,
+                        default="keep",
+                        danger=True,
                     )
-                    keep = prompt.addButton(
-                        t("settings.templates.keep_both", "Keep both"), QMessageBox.ButtonRole.AcceptRole
-                    )
-                    replace = prompt.addButton(
-                        t("settings.templates.replace", "Replace"), QMessageBox.ButtonRole.DestructiveRole
-                    )
-                    cancel = prompt.addButton(t("common.cancel"), QMessageBox.ButtonRole.RejectRole)
-                    prompt.setDefaultButton(keep)
-                    prompt.exec()
-                    if prompt.clickedButton() is cancel or prompt.clickedButton() is None:
+                    if choice not in {"keep", "replace"}:
+                        cancelled += 1
                         continue
-                    if prompt.clickedButton() is replace:
+                    if choice == "replace":
                         replace_id = conflict.id
                 imported = self._manager.import_template(path, replace_id=replace_id)
+                succeeded += 1
                 last_id = imported.id
                 self._tabs.setCurrentIndex(1 if imported.target == "xlsx" else 0)
             except Exception as exc:
                 errors.append(f"{Path(path).name}: {exc}")
         self.refresh(select_id=last_id)
+        summary = t(
+            "settings.templates.import_summary",
+            "Imported: {succeeded}. Failed: {failed}. Cancelled: {cancelled}.",
+            succeeded=succeeded,
+            failed=len(errors),
+            cancelled=cancelled,
+        )
+        self._import_summary.setText(summary)
+        self._import_summary.show()
         if errors:
-            QMessageBox.warning(self, t("common.error", "Error"), "\n".join(errors))
+            report = feedback.warn if succeeded else feedback.error
+            report(t("settings.templates.import"), summary, details="\n".join(errors), parent=self, copyable=True)
 
     def _copy_and_edit(self) -> None:
         template_id = self._selected_id()

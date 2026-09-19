@@ -166,3 +166,84 @@ def test_text_output_format_remains_editable_without_template_selector(qapp, tem
     combo.setCurrentIndex(combo.findData("docx"))
     assert page._vm.config.gui.md_default_template == "docx"
     dialog.close()
+
+
+def test_template_import_reports_partial_success_and_cancelled_conflict(qapp, template_vm, tmp_path, monkeypatch):
+    from docx import Document
+    from PySide6.QtWidgets import QFileDialog
+
+    from docwen_gui.dialogs import feedback
+    from docwen_gui.i18n import t
+    from docwen_gui.widgets.settings.templates_tab import TemplatesTab
+
+    template_vm.refresh()
+    existing = template_vm.manager.copy_builtin_as_custom(template_vm.templates[0].id, custom_name="Existing")
+    existing_bytes = existing.path.read_bytes()
+    valid = tmp_path / "New.docx"
+    conflict = tmp_path / "Existing.docx"
+    invalid = tmp_path / "invalid.docx"
+    Document().save(str(valid))
+    Document().save(str(conflict))
+    invalid.write_text("not an Office package", encoding="utf-8")
+    page = TemplatesTab(view_model=template_vm)
+    monkeypatch.setattr(
+        QFileDialog, "getOpenFileNames", lambda *args: ([str(p) for p in (valid, invalid, conflict)], "")
+    )
+    reports = []
+    choices = []
+
+    def cancel_conflict(*args, **kwargs):
+        choices.append(kwargs)
+        return "cancel"
+
+    monkeypatch.setattr(feedback, "choose", cancel_conflict)
+    monkeypatch.setattr(feedback, "warn", lambda title, message, **kwargs: reports.append((message, kwargs)))
+    page._import_button.click()
+
+    summary = t("settings.templates.import_summary", succeeded=1, failed=1, cancelled=1)
+    assert page._import_summary.text() == summary
+    assert not page._import_summary.isHidden()
+    assert len(reports) == 1
+    assert reports[0][0] == summary
+    assert "invalid.docx" in reports[0][1]["details"]
+    assert "New.docx" not in reports[0][1]["details"]
+    assert reports[0][1]["copyable"] is True
+    assert reports[0][1]["parent"] is page
+    assert choices[0]["default"] == "keep"
+    assert existing.path.read_bytes() == existing_bytes
+    imported = [item for item in template_vm.templates if item.name == "New"]
+    assert len(imported) == 1
+    assert imported[0].path.read_bytes() == valid.read_bytes()
+    assert page._selected_id() == imported[0].id
+    page.deleteLater()
+
+
+@pytest.mark.parametrize("valid_input", [True, False])
+def test_template_import_success_is_inline_and_total_failure_has_details(
+    qapp, template_vm, tmp_path, monkeypatch, valid_input
+):
+    from docx import Document
+    from PySide6.QtWidgets import QFileDialog
+
+    from docwen_gui.dialogs import feedback
+    from docwen_gui.i18n import t
+    from docwen_gui.widgets.settings.templates_tab import TemplatesTab
+
+    source = tmp_path / "Import.docx"
+    if valid_input:
+        Document().save(str(source))
+    else:
+        source.write_text("invalid", encoding="utf-8")
+    page = TemplatesTab(view_model=template_vm)
+    reports = []
+    monkeypatch.setattr(QFileDialog, "getOpenFileNames", lambda *args: ([str(source)], ""))
+    monkeypatch.setattr(feedback, "error", lambda title, message, **kwargs: reports.append(kwargs))
+    page._import_button.click()
+    assert page._import_summary.text() == t(
+        "settings.templates.import_summary", succeeded=int(valid_input), failed=int(not valid_input), cancelled=0
+    )
+    assert len(reports) == int(not valid_input)
+    if not valid_input:
+        assert "Import.docx" in reports[0]["details"]
+        assert reports[0]["copyable"] is True
+    page.deleteLater()

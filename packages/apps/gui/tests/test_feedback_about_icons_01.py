@@ -179,13 +179,14 @@ class TestFeedbackMessageBox:
         assert result == "ok"
         assert boxes[0].objectName() == "feedbackChoiceMessageBox"
 
-    def test_error_copyable_details_copies_to_clipboard(self, qapp) -> None:
-        """error(copyable=True) keeps the old public copy-details behavior."""
+    @pytest.mark.parametrize("level", ["error", "warning"])
+    def test_feedback_copyable_details_copies_to_clipboard(self, qapp, level: str) -> None:
+        """Error and partial-success warning details can be copied from the UI."""
         from unittest.mock import patch
 
         from PySide6.QtWidgets import QMessageBox
 
-        from docwen_gui.dialogs.feedback import error
+        from docwen_gui.dialogs.feedback import error, warn
         from docwen_gui.i18n import t
 
         details = "RuntimeError: boom"
@@ -198,9 +199,10 @@ class TestFeedbackMessageBox:
             return QMessageBox.DialogCode.Accepted
 
         with patch.object(QMessageBox, "exec", _capture):
-            error("Error", "boom", details=details, copyable=True)
+            report = error if level == "error" else warn
+            report("Import templates", "boom", details=details, copyable=True)
 
-        assert boxes[0].objectName() == "feedbackErrorMessageBox"
+        assert boxes[0].objectName() == f"feedback{level.title()}MessageBox"
         assert boxes[0].clickedButton().property("feedbackRole") == "copy"
         assert qapp.clipboard().text() == details
 

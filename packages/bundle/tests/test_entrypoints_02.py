@@ -261,7 +261,10 @@ class TestGuiEntry:
         control_server.begin_stop = _begin_stop
         control_server.stop = _stop
 
-        def _fake_start_gui_control(_window, *, app):
+        def _fake_start_gui_control(_window, *, app, app_name):
+            from docwen_runtime.profile_paths import profile_instance_name
+
+            assert app_name == profile_instance_name()
             app.aboutToQuit.connect(control_server.begin_stop)
             return control_server
 
