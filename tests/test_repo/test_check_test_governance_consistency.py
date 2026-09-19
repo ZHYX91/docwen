@@ -29,7 +29,7 @@ def _write_file(path: Path, content: str) -> None:
 def _build_repo(
     tmp_path: Path,
     *,
-    workflow_cov_fail_under: int = 81,
+    workflow_cov_fail_under: int | None = None,
     include_fixtures_readme: bool = True,
 ) -> None:
     _write_file(
@@ -83,8 +83,8 @@ PYTEST_BASE_ADDOPTS = "-v --tb=short --strict-markers --import-mode=importlib -r
 PYTEST_XDIST_ENV = "DOCWEN_PYTEST_XDIST"
 PYTEST_XDIST_WORKERS_ENV = "DOCWEN_PYTEST_XDIST_WORKERS"
 PYTEST_XDIST_DIST = "loadfile"
-PYTEST_PRIMARY_MARKER_DEBT_LIMIT = 872
-PYTEST_PRIMARY_MARKER_OVERLAP_LIMIT = 82
+PYTEST_PRIMARY_MARKER_DEBT_LIMIT = 0
+PYTEST_PRIMARY_MARKER_OVERLAP_LIMIT = 0
 PYTEST_RUNTIME_ROOT_ENV = "DOCWEN_PYTEST_RUNTIME_ROOT"
 PYTEST_REPORT_DIR_ENV = "DOCWEN_PYTEST_REPORT_DIR"
 """.strip(),
@@ -101,32 +101,20 @@ def run_subprocess(timeout: float | None = DEFAULT_SUBPROCESS_TIMEOUT_SECONDS):
     )
     _write_file(
         tmp_path / ".github" / "workflows" / "tests.yml",
-        f"""
-uv run python tools/qa.py --skip-ruff --skip-pyright --suite fast
-uv run python tools/qa.py --skip-ruff --skip-pyright --suite pr-integration
-uv run python tools/qa.py --skip-ruff --skip-pyright --suite full
+        """
 uv run python tools/qa.py --skip-pytest
+uv run python tools/qa.py --tests-only --suite "$QA_SUITE" --coverage --pytest-runtime-root "$RUNNER_TEMP/raw" --own-pytest-runtime --report-output "$RUNNER_TEMP/docwen-qa-reports/"
+suite: full
+suite: platform
+needs: [source-checks, tests]
 DOCWEN_PYTEST_XDIST: "1"
 DOCWEN_PYTEST_XDIST_WORKERS: "auto"
-DOCWEN_PYTEST_RUNTIME_ROOT
-New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP/docwen-pytest-runtime"
-uv run python -m pytest -o addopts="-v --tb=short --strict-markers --import-mode=importlib -ra" -n "$env:DOCWEN_PYTEST_XDIST_WORKERS" --dist loadfile --cov --cov-config=pyproject.toml --cov-report=term-missing:skip-covered --cov-report="xml:$env:RUNNER_TEMP/docwen-pytest-runtime/coverage.xml" --cov-report="html:$env:RUNNER_TEMP/docwen-pytest-runtime/htmlcov" --cov-fail-under={workflow_cov_fail_under} --basetemp "$env:RUNNER_TEMP/docwen-pytest-runtime/basetemp" -o "cache_dir=$env:RUNNER_TEMP/docwen-pytest-runtime/cache"
-docwen-pytest-runtime/reports/skip_report.json
-docwen-pytest-runtime/reports/not_collected_report.json
-docwen-pytest-runtime/reports/slow_report.json
-docwen-pytest-runtime/reports/subprocess_report.json
-docwen-pytest-runtime/reports/missing_marker_report.json
-uv run python tools/check_coverage_source_manifest.py "$env:RUNNER_TEMP/docwen-pytest-runtime/coverage.xml"
-uv run python tools/check_core_coverage.py "$env:RUNNER_TEMP/docwen-pytest-runtime/coverage.xml" --soft-gate
-uv run python -m pytest -c pyproject.toml packages/apps/gui/tests --cov=docwen_gui --cov-report=term-missing:skip-covered --cov-report="xml:$env:RUNNER_TEMP/docwen-pytest-runtime/coverage-gui.xml" --cov-report="html:$env:RUNNER_TEMP/docwen-pytest-runtime/htmlcov-gui" -o addopts="-v --tb=short --strict-markers --import-mode=importlib -ra" --basetemp "$env:RUNNER_TEMP/docwen-pytest-runtime/basetemp" -o "cache_dir=$env:RUNNER_TEMP/docwen-pytest-runtime/cache"
-uv run python tools/check_gui_coverage.py "$env:RUNNER_TEMP/docwen-pytest-runtime/coverage-gui.xml"
-uv run python tools/check_gui_coverage.py coverage-gui.xml
-uv run python tools/check_test_governance_consistency.py
 libegl1
 PYTHONIOENCODING: utf-8
 PYTHONUTF8: "1"
 uv sync --frozen --extra test --extra dev
-""".strip(),
+""".strip()
+        + (f"\n--cov-fail-under={workflow_cov_fail_under}" if workflow_cov_fail_under is not None else ""),
     )
     _write_file(
         tmp_path / "docs" / "testing.md",
@@ -138,7 +126,7 @@ uv sync --frozen --extra test --extra dev
 `python tools/check_coverage_source_manifest.py coverage.xml`
 `python tools/check_core_coverage.py coverage.xml --soft-gate`
 `pytest packages/apps/gui/tests --cov=docwen_gui --cov-report=term-missing:skip-covered --cov-report=xml:coverage-gui.xml --cov-report=html:htmlcov-gui -o addopts="-v --tb=short --strict-markers --import-mode=importlib -ra"`
-`python tools/check_gui_coverage.py coverage-gui.xml`
+`python tools/check_gui_coverage.py coverage.xml`
 `python tools/check_test_governance_consistency.py`
 `python tools/run_import_linter.py`
 `pytest-xdist`
@@ -201,7 +189,7 @@ def test_check_test_governance_consistency_passes_for_current_repo(
     )
 
 
-def test_check_test_governance_consistency_reports_threshold_drift(
+def test_check_test_governance_consistency_rejects_workflow_threshold_override(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     module = _load_module()
@@ -211,7 +199,7 @@ def test_check_test_governance_consistency_reports_threshold_drift(
     captured = capsys.readouterr()
 
     assert exit_code == 1
-    assert "--cov-fail-under=81" in captured.err
+    assert "coverage threshold is owned by QA and pyproject.toml" in captured.err
 
 
 def test_check_test_governance_consistency_reports_qa_import_mode_drift(
@@ -262,3 +250,19 @@ def test_check_test_governance_consistency_rejects_runner_context_in_job_env(
 
     assert exit_code == 1
     assert "uses runner context in job-level env" in captured.err
+
+
+def test_governance_fixture_passes_before_its_boundary_is_changed(tmp_path: Path) -> None:
+    _build_repo(tmp_path)
+    assert _load_module().main(["--repo-root", str(tmp_path)]) == 0
+
+
+@pytest.mark.parametrize("threshold", [81, 83])
+def test_qa_reads_the_coverage_threshold_from_its_single_project_config(tmp_path: Path, threshold: int) -> None:
+    from tools.qa_reports import coverage_arguments
+
+    (tmp_path / "pyproject.toml").write_text(f"[tool.coverage.report]\nfail_under = {threshold}\n", encoding="utf-8")
+    arguments = coverage_arguments(tmp_path, tmp_path / "runtime")
+    assert [argument for argument in arguments if argument.startswith("--cov-fail-under=")] == [
+        f"--cov-fail-under={threshold}"
+    ]

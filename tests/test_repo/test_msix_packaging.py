@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 import struct
 import subprocess
 import sys
@@ -14,6 +15,8 @@ from xml.etree import ElementTree
 import pytest
 from PIL import Image
 from scripts.release import build_msix
+from scripts.release.msix_candidate import extract_candidate
+from scripts.release.publication_contract import PublicationError, file_identity
 
 pytestmark = pytest.mark.contract
 
@@ -186,8 +189,40 @@ def test_prepare_layout_rejects_partially_truncated_certificate_table(tmp_path: 
         build_msix.prepare_layout(payload, tmp_path / "staging", config)
 
 
+def _portable_candidate(tmp_path: Path, payload: Path) -> tuple[Path, Path]:
+    archive = tmp_path / "DocWen-windows-x64.zip"
+    with zipfile.ZipFile(archive, "w") as package:
+        for path in sorted(payload.rglob("*")):
+            if path.is_file():
+                package.write(path, path.relative_to(payload).as_posix())
+    return archive, _inspection_receipt(tmp_path, archive)
+
+
+def _inspection_receipt(tmp_path: Path, archive: Path) -> Path:
+    receipt = tmp_path / "inspection.json"
+    receipt.write_text(
+        json.dumps(
+            {
+                "stage": "candidate-verified",
+                "provenance": "verified",
+                "repository": "ZHYX91/docwen",
+                "version": "0.11.0",
+                "sourceCommit": "a" * 40,
+                "manifestSha256": "b" * 64,
+                "artifactId": 20,
+                "artifactDigest": "sha256:" + "c" * 64,
+                "origin": {"sourceRef": "refs/heads/release/candidate", "runId": 10, "runAttempt": 1},
+                "assets": {"DocWen-windows-x64.zip": file_identity(archive)},
+            }
+        ),
+        encoding="utf-8",
+    )
+    return receipt
+
+
 @pytest.mark.windows_only
-def test_makeappx_accepts_generated_layout_when_windows_sdk_is_available(tmp_path: Path) -> None:
+@pytest.mark.parametrize("from_archive", [False, True])
+def test_makeappx_accepts_generated_layout_when_windows_sdk_is_available(tmp_path: Path, from_archive: bool) -> None:
     if os.name != "nt":
         pytest.skip("Windows-only MakeAppx contract")
     try:
@@ -197,8 +232,12 @@ def test_makeappx_accepts_generated_layout_when_windows_sdk_is_available(tmp_pat
 
     config = build_msix.read_config(_CONFIG_PATH)
     output = tmp_path / str(config["assetName"])
+    payload = _fake_payload(tmp_path / "payload")
+    archive, receipt = _portable_candidate(tmp_path, payload)
     metadata = build_msix.build_msix(
-        payload_root=_fake_payload(tmp_path / "payload"),
+        payload_root=None if from_archive else payload,
+        portable_zip=archive if from_archive else None,
+        candidate_receipt=receipt if from_archive else None,
         output=output,
         work_root=tmp_path / "work",
         config=config,
@@ -209,12 +248,101 @@ def test_makeappx_accepts_generated_layout_when_windows_sdk_is_available(tmp_pat
     assert len(str(metadata["sha256"])) == 64
     assert len(str(metadata["contentSha256"])) == 64
     assert int(metadata["entryCount"]) > 5
+    assert not (tmp_path / "work").exists()
+    if from_archive:
+        assert metadata["sourceCandidate"]["portableArchive"] == file_identity(archive)
+        assert metadata["sourceCandidate"]["artifactId"] == 20
+    else:
+        assert "sourceCandidate" not in metadata
     with zipfile.ZipFile(output) as package:
         names = set(package.namelist())
         assert "AppxManifest.xml" in names
         assert "assets/msix/StoreLogo.png" in names
         assert "DocWen.exe" in names
         assert "DocWenCLI.exe" in names
+
+
+@pytest.mark.parametrize(
+    "name,mode",
+    [
+        ("../escaped.txt", stat.S_IFREG),
+        ("/absolute.txt", stat.S_IFREG),
+        ("folder\\escaped.txt", stat.S_IFREG),
+        ("C:escaped.txt", stat.S_IFREG),
+        ("folder./file.txt", stat.S_IFREG),
+        ("NUL.txt", stat.S_IFREG),
+        ("DOCWEN.exe", stat.S_IFREG),
+        ("linked.txt", stat.S_IFLNK),
+    ],
+)
+def test_portable_candidate_rejects_unsafe_entries_before_extraction(tmp_path: Path, name: str, mode: int) -> None:
+    archive = tmp_path / "candidate.zip"
+    with zipfile.ZipFile(archive, "w") as package:
+        for filename, entry_mode in [("DocWen.exe", stat.S_IFREG), ("DocWenCLI.exe", stat.S_IFREG), (name, mode)]:
+            entry = zipfile.ZipInfo(filename)
+            entry.filename = filename  # Preserve raw separators instead of ZipInfo's Windows normalization.
+            entry.external_attr = (entry_mode | 0o644) << 16
+            package.writestr(entry, b"test")
+    receipt = _inspection_receipt(tmp_path, archive)
+    output = tmp_path / "extracted"
+    with pytest.raises(PublicationError):
+        extract_candidate(archive, receipt, output, version="0.11.0")
+    assert not output.exists()
+    assert not (tmp_path / "escaped.txt").exists()
+
+
+@pytest.mark.parametrize("failure", ["changed-archive", "uninspected", "wrong-version"])
+def test_portable_candidate_requires_inspected_bytes_and_version(tmp_path: Path, failure: str) -> None:
+    archive, receipt = _portable_candidate(tmp_path, _fake_payload(tmp_path / "payload"))
+    version = "0.11.0"
+    if failure == "changed-archive":
+        with archive.open("ab") as stream:
+            stream.write(b"changed")
+    elif failure == "uninspected":
+        record = json.loads(receipt.read_text(encoding="utf-8"))
+        record["stage"] = "prepared"
+        receipt.write_text(json.dumps(record), encoding="utf-8")
+    else:
+        version = "0.12.0"
+    output = tmp_path / "extracted"
+    with pytest.raises(PublicationError):
+        extract_candidate(archive, receipt, output, version=version)
+    assert not output.exists()
+
+
+def test_msix_never_replaces_an_existing_work_directory(tmp_path: Path) -> None:
+    work = tmp_path / "work"
+    work.mkdir()
+    original = work / "user-data.txt"
+    original.write_bytes(b"keep me")
+    with pytest.raises(build_msix.MsixBuildError, match="msix_work_root_already_exists"):
+        build_msix.build_msix(
+            payload_root=_fake_payload(tmp_path / "payload"),
+            output=tmp_path / "output.msix",
+            work_root=work,
+            config=build_msix.read_config(_CONFIG_PATH),
+            makeappx=tmp_path / "unused.exe",
+        )
+    assert original.read_bytes() == b"keep me"
+    assert set(work.iterdir()) == {original}
+
+
+def test_msix_build_failure_retains_an_owned_run_and_does_not_overwrite_output(tmp_path: Path) -> None:
+    work = tmp_path / "work"
+    output = tmp_path / "existing.msix"
+    output.write_bytes(b"previous package")
+    with pytest.raises(build_msix.MsixBuildError, match="msix_output_must_be_new_outside_work"):
+        build_msix.build_msix(
+            payload_root=_fake_payload(tmp_path / "payload"),
+            output=output,
+            work_root=work,
+            config=build_msix.read_config(_CONFIG_PATH),
+            makeappx=tmp_path / "unused.exe",
+        )
+    assert output.read_bytes() == b"previous package"
+    lease = json.loads((work / ".docwen-temp-lease.json").read_text(encoding="utf-8"))
+    assert lease["owner"] == "docwen.release.msix"
+    assert lease["state"] == "retained-failure"
 
 
 def test_checked_in_store_config_is_stable_json() -> None:

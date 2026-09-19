@@ -24,30 +24,40 @@ from scripts.release.publication_contract import (
     verify_inventory,
     verify_origin,
 )
-from scripts.release.publication_http import ApiError, GitHub, PendingRead, read_with_retry
+from scripts.release.publication_http import ApiError, GitHub, PendingRead, env_seconds, read_with_retry
 
 
-def verify_preflight_jobs(payload: dict[str, Any]) -> None:
+def read_budget() -> float:
+    """Recovery budget for one logical read; slow transports raise it explicitly."""
+
+    return env_seconds("DOCWEN_PUBLICATION_READ_BUDGET", 60)
+
+
+def data_timeout() -> float:
+    """Wall-clock ceiling for one asset upload; slow transports raise it explicitly."""
+
+    return env_seconds("DOCWEN_PUBLICATION_DATA_TIMEOUT", 600)
+
+
+def verify_candidate_jobs(payload: dict[str, Any]) -> None:
     jobs = payload.get("jobs", [])
-    require(payload.get("total_count") == len(jobs), "incomplete preflight job response")
+    require(payload.get("total_count") == len(jobs), "incomplete candidate job response")
     expected = {
         "source-checks",
-        "pytest_windows_push",
+        "Tests on windows-latest",
+        "Tests on ubuntu-24.04",
+        "Tests on macos-14",
         "Required checks",
-        "Source gate on windows-latest",
-        "Source gate on ubuntu-24.04",
-        "Source gate on macos-14",
-        "Clean Windows build a",
-        "Clean Windows build b",
-        "Clean Ubuntu build a",
-        "Clean Ubuntu build b",
+        "Source identity",
+        "Build Windows packages",
+        "Build Linux packages",
         "verify-release",
     }
     for name in expected:
         matching = [job for job in jobs if job.get("name", "").split(" / ")[-1] == name]
         require(
             len(matching) == 1 and matching[0].get("conclusion") == "success",
-            f"required preflight job did not pass: {name}",
+            f"required candidate job did not pass: {name}",
         )
 
 
@@ -101,19 +111,55 @@ class ReleaseSession:
 
     def verify_source(self) -> None:
         origin = self.manifest["origin"]
-        run = self.api.get(f"{self.prefix}/actions/runs/{origin['runId']}")
+        run = self.api.get(f"{self.prefix}/actions/runs/{origin['runId']}/attempts/{origin['runAttempt']}")
         artifact = self.api.get(f"{self.prefix}/actions/artifacts/{self.identity['artifactId']}")
         require(artifact.get("id") == self.identity["artifactId"], "artifact ID mismatch")
         verify_origin(self.manifest, run, artifact, digest=self.identity["artifactDigest"])
-        verify_preflight_jobs(
+        verify_candidate_jobs(
             self.api.get(
                 f"{self.prefix}/actions/runs/{origin['runId']}/attempts/{origin['runAttempt']}/jobs?per_page=100"
             )
         )
-        self.verify_tag()
 
-    def verify_tag(self) -> None:
-        record = self.api.get(f"{self.prefix}/git/ref/tags/{quote(self.version, safe='')}")
+    def verify_accepted_source(self) -> None:
+        """Keep the verified candidate through either an ancestry-preserving or squash merge."""
+
+        repository = self.api.get(self.prefix)
+        branch = repository.get("default_branch")
+        require(isinstance(branch, str) and bool(branch), "default branch missing")
+        head = self.api.get(f"{self.prefix}/commits/{quote(branch, safe='')}")
+        head_sha = head.get("sha")
+        require(isinstance(head_sha, str) and len(head_sha) == 40, "default branch commit missing")
+        accepted = head_sha == self.commit
+        basis = "exact-commit"
+        if not accepted:
+            comparison = self.api.get(f"{self.prefix}/compare/{self.commit}...{head_sha}")
+            source = comparison.get("base_commit", {})
+            require(source.get("sha") == self.commit, "source comparison mismatch")
+            if (
+                comparison.get("status") == "ahead"
+                and comparison.get("merge_base_commit", {}).get("sha") == self.commit
+            ):
+                accepted, basis = True, "ancestor"
+            else:
+                tree = source.get("commit", {}).get("tree", {}).get("sha")
+                accepted = (
+                    isinstance(tree, str)
+                    and len(tree) == 40
+                    and tree == head.get("commit", {}).get("tree", {}).get("sha")
+                )
+                basis = "identical-tree"
+        require(accepted, "candidate source has not been accepted by the default branch")
+        self.save(acceptedSource={"defaultBranch": branch, "commit": head_sha, "basis": basis})
+
+    def verify_tag(self, *, wait: bool = False) -> None:
+        record = read_with_retry(
+            lambda timeout: self.api.request(
+                "GET", f"{self.prefix}/git/ref/tags/{quote(self.version, safe='')}", timeout=timeout
+            ),
+            budget=read_budget(),
+            allow_missing=wait,
+        )
         target = record.get("object", {})
         for _ in range(4):
             if target.get("type") == "commit":
@@ -122,6 +168,26 @@ class ReleaseSession:
             require(target.get("type") == "tag", "release tag is not a commit")
             target = self.api.get(f"{self.prefix}/git/tags/{target['sha']}").get("object", {})
         raise PublicationError("release tag nesting exceeds limit")
+
+    def ensure_tag(self) -> None:
+        try:
+            self.verify_tag(wait=self.state.get("pending") == "create-tag")
+        except ApiError as error:
+            if error.status != 404:
+                raise
+            require(
+                self.manifest["origin"]["sourceRef"].startswith("refs/heads/"),
+                "the candidate's original tag is missing",
+            )
+            self.write_once(
+                "create-tag",
+                "POST",
+                f"{self.prefix}/git/refs",
+                body={"ref": f"refs/tags/{self.version}", "sha": self.commit},
+            )
+            self.verify_tag(wait=True)
+        if self.state.get("pending") == "create-tag":
+            self.save(pending=None, stage="tag-confirmed")
 
     def verify_provenance(self) -> None:
         for name in (*self.assets, MANIFEST_NAME):
@@ -138,7 +204,7 @@ class ReleaseSession:
                     "--source-digest",
                     self.commit,
                     "--source-ref",
-                    "refs/heads/main",
+                    self.manifest["origin"]["sourceRef"],
                     "--deny-self-hosted-runners",
                 ],
                 capture_output=True,
@@ -172,7 +238,7 @@ class ReleaseSession:
             self.validate_release(result)
             return result
 
-        return read_with_retry(read, allow_missing=wait)
+        return read_with_retry(read, budget=read_budget(), allow_missing=wait)
 
     def write_once(
         self, operation: str, method: str, path: str, *, body: object = None, data: bytes | None = None
@@ -183,7 +249,9 @@ class ReleaseSession:
             return  # The caller must resolve the previous remote outcome by reading.
         self.save(pending=operation)
         try:
-            result = self.api.request(method, path, timeout=600 if data is not None else 60, body=body, data=data)
+            result = self.api.request(
+                method, path, timeout=data_timeout() if data is not None else 60, body=body, data=data
+            )
             if operation == "create-draft":
                 self.validate_release(result)
                 self.save(releaseId=result["id"], stage="draft-created", pending=None)
@@ -236,23 +304,23 @@ class ReleaseSession:
                 require(release.get("draft") is True, "draft was published before verification completed")
             return release, self.remote_assets(release, complete=complete)
 
-        return read_with_retry(read, allow_missing=True)
+        return read_with_retry(read, budget=read_budget(), allow_missing=True)
 
     def publish(self, *, notes: str) -> dict[str, Any]:
         self.verify_source()
         self.verify_provenance()
-        admin_token = os.environ.get("DOCWEN_IMMUTABILITY_READ_TOKEN")
-        settings_api = GitHub(self.repository, token=admin_token) if admin_token else self.api
-        require(
-            settings_api.get(f"{self.prefix}/immutable-releases").get("enabled") is True,
-            "immutable releases must be enabled",
-        )
-        self.save()
         try:
             release = self.load_release(wait=self.state.get("pending") == "create-draft")
         except ApiError as error:
             if error.status != 404 or self.state.get("releaseId") is not None:
                 raise
+            release = None
+        if release is not None and release.get("draft") is False:
+            self.save(releaseId=release["id"])
+            return self.confirm_published()
+        self.verify_accepted_source()
+        self.ensure_tag()
+        if release is None:
             self.write_once(
                 "create-draft",
                 "POST",
@@ -270,9 +338,6 @@ class ReleaseSession:
         self.save(releaseId=release["id"])
         if self.state.get("pending") == "create-draft":
             self.save(pending=None, stage="draft-created")
-        if release.get("draft") is False:
-            self.save(stage="published-awaiting-readback", pending=None)
-            return self.verify_published()
         self.validate_release(release)
         for name in self.assets:
             release, remote = self.observe(published=False, complete=False)
@@ -300,11 +365,12 @@ class ReleaseSession:
                         raise PendingRead("uploaded asset is not visible yet")
                     return assets[name]
 
-                read_with_retry(read_asset, allow_missing=True)
+                read_with_retry(read_asset, budget=read_budget(), allow_missing=True)
             if self.state.get("pending") == operation:
                 self.save(pending=None)
-        _, draft_assets = self.observe(published=False, complete=True)
-        self.verify_remote_bytes(draft_assets)
+        # The independent verification job downloads the immutable hosted bytes.
+        # Here the platform's complete draft inventory, sizes and digests gate publication.
+        self.observe(published=False, complete=True)
         self.save(stage="draft-verified")
         self.verify_tag()
         self.write_once(
@@ -313,7 +379,20 @@ class ReleaseSession:
             f"{self.prefix}/releases/{self.state['releaseId']}",
             body={"draft": False, "make_latest": "true"},
         )
-        return self.verify_published()
+        return self.confirm_published()
+
+    def confirm_published(self) -> dict[str, Any]:
+        """Confirm immutable state without duplicating the independent byte readback."""
+
+        self.verify_tag()
+        release, assets = self.observe(published=True, complete=True)
+        self.save(
+            stage="published-awaiting-readback",
+            pending=None,
+            releaseUrl=release.get("html_url"),
+            assets={name: {"id": record["id"], **self.assets[name]} for name, record in assets.items()},
+        )
+        return self.state
 
     def verify_published(self) -> dict[str, Any]:
         self.verify_tag()
@@ -338,6 +417,7 @@ class ReleaseSession:
             observed = read_with_retry(
                 lambda timeout, record=record: self.api.download_identity(
                     f"{self.prefix}/releases/assets/{record['id']}", timeout=timeout
-                )
+                ),
+                budget=read_budget(),
             )
             require(observed == self.assets[name], f"remote bytes mismatch: {name}")

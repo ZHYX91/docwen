@@ -14,6 +14,7 @@ import json
 import os
 import re
 import shutil
+import stat
 import struct
 import subprocess
 import sys
@@ -30,6 +31,10 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from scripts.icon_pixels import unpremultiply_rgba  # noqa: E402 - standalone script bootstrap
+from scripts.release.msix_candidate import extract_candidate  # noqa: E402
+from scripts.release.publication_contract import PublicationError  # noqa: E402
+from tools.run_lease import lease_payload, transition  # noqa: E402
+from tools.workspace_root import WorkspaceRootError, resolve_workspace_root  # noqa: E402
 
 _SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 _FOUR_PART_VERSION = re.compile(r"^\d+\.\d+\.\d+\.\d+$")
@@ -239,7 +244,10 @@ def _copy_payload(payload_root: Path, staging_root: Path, config: Mapping[str, A
         _require((payload_root / application[executable_key]).is_file(), f"msix_payload_{executable_key}_missing")
 
     for source in payload_root.rglob("*"):
-        _require(not source.is_symlink(), "msix_payload_links_forbidden")
+        _require(
+            not source.is_symlink() and not getattr(source.lstat(), "st_file_attributes", 0) & 0x400,
+            "msix_payload_links_forbidden",
+        )
     shutil.copytree(payload_root, staging_root)
 
     for relative_text in config["excludedPayloadPaths"]:
@@ -391,16 +399,65 @@ def _normalize_timestamps(root: Path, epoch: int) -> None:
     os.utime(root, (epoch, epoch))
 
 
-def _safe_reset_work_root(path: Path) -> Path:
-    resolved = path.resolve()
-    _require(resolved != Path(resolved.anchor), "msix_work_root_is_filesystem_root")
-    _require(resolved != Path.home().resolve(), "msix_work_root_is_home")
-    _require(len(resolved.parts) >= 3, "msix_work_root_too_broad")
-    if resolved.exists():
-        _require(resolved.is_dir() and not resolved.is_symlink(), "msix_work_root_invalid")
-        shutil.rmtree(resolved)
-    resolved.mkdir(parents=True)
+def _safe_work_path(path: Path) -> Path:
+    candidate = path.absolute()
+    for parent in (candidate, *candidate.parents):
+        try:
+            info = parent.lstat()
+        except FileNotFoundError:
+            continue
+        _require(
+            not stat.S_ISLNK(info.st_mode) and not getattr(info, "st_file_attributes", 0) & 0x400,
+            "msix_work_path_link_forbidden",
+        )
+    resolved = candidate.resolve(strict=False)
+    _require(resolved != Path(resolved.anchor) and resolved != Path.home().resolve(), "msix_work_root_too_broad")
+    _require(
+        not resolved.is_relative_to(_REPO_ROOT) and not _REPO_ROOT.is_relative_to(resolved),
+        "msix_work_root_overlaps_source",
+    )
+    try:
+        workspace = resolve_workspace_root(_REPO_ROOT)
+    except WorkspaceRootError:
+        _require(
+            _REPO_ROOT.parent.name.casefold() != "repos" and not os.environ.get("DOCWEN_WORKSPACE_ROOT"),
+            "msix_governed_workspace_missing",
+        )
+        workspace = None
+    if workspace is not None:
+        _require(
+            resolved.is_relative_to(workspace / "temp") and resolved != workspace / "temp",
+            "msix_work_root_outside_workspace_temp",
+        )
     return resolved
+
+
+def _create_work_root(path: Path) -> Path:
+    resolved = _safe_work_path(path)
+    _require(not resolved.exists(), "msix_work_root_already_exists")
+    resolved.mkdir(parents=True)
+    lease = lease_payload(resolved, owner="docwen.release.msix", kind="msix-build-work")
+    (resolved / ".docwen-temp-lease.json").write_text(json.dumps(lease, indent=2) + "\n", encoding="utf-8")
+    return resolved
+
+
+def _finish_work_root(work: Path, *, state: str) -> None:
+    _require(_safe_work_path(work) == work, "msix_work_identity_changed")
+    marker = work / ".docwen-temp-lease.json"
+    _require(not marker.is_symlink(), "msix_work_lease_link_forbidden")
+    lease = json.loads(marker.read_text(encoding="utf-8"))
+    transition(lease, root=work, owner="docwen.release.msix", state=state)
+    marker.write_text(json.dumps(lease, indent=2) + "\n", encoding="utf-8")
+    if state == "completed-success":
+        try:
+            shutil.rmtree(work)
+        except OSError as error:
+            transition(lease, root=work, owner="docwen.release.msix", state="retained-cleanup-failure")
+            try:
+                marker.write_text(json.dumps(lease, indent=2) + "\n", encoding="utf-8")
+            except OSError as lease_error:
+                error.add_note(f"Could not record cleanup failure: {lease_error}")
+            raise
 
 
 def find_makeappx(explicit: Path | None = None) -> Path:
@@ -460,32 +517,84 @@ def package_content_identity(path: Path) -> tuple[int, str]:
 
 def build_msix(
     *,
-    payload_root: Path,
+    payload_root: Path | None,
     output: Path,
     work_root: Path,
     config: Mapping[str, Any],
     makeappx: Path,
+    portable_zip: Path | None = None,
+    candidate_receipt: Path | None = None,
 ) -> dict[str, object]:
-    safe_work_root = _safe_reset_work_root(work_root)
+    _require((payload_root is not None) != (portable_zip is not None), "msix_requires_one_payload_source")
+    _require((portable_zip is None) == (candidate_receipt is None), "msix_candidate_receipt_required_with_archive")
+    safe_work_root = _create_work_root(work_root)
+    try:
+        result = _build_msix(
+            payload_root=payload_root,
+            output=output,
+            work=safe_work_root,
+            config=config,
+            makeappx=makeappx,
+            portable_zip=portable_zip,
+            candidate_receipt=candidate_receipt,
+        )
+    except BaseException as error:
+        try:
+            _finish_work_root(
+                safe_work_root,
+                state="retained-interrupted" if isinstance(error, KeyboardInterrupt) else "retained-failure",
+            )
+        except (OSError, ValueError, MsixBuildError) as lease_error:
+            error.add_note(f"Could not record retained MSIX work: {lease_error}")
+        raise
+    _finish_work_root(safe_work_root, state="completed-success")
+    return result
+
+
+def _build_msix(
+    *,
+    payload_root: Path | None,
+    output: Path,
+    work: Path,
+    config: Mapping[str, Any],
+    makeappx: Path,
+    portable_zip: Path | None,
+    candidate_receipt: Path | None,
+) -> dict[str, object]:
+    candidate = None
+    if portable_zip is not None:
+        assert candidate_receipt is not None
+        payload_root = work / "portable"
+        candidate = extract_candidate(
+            portable_zip, candidate_receipt, payload_root, version=str(config["sourceVersion"])
+        )
+    assert payload_root is not None
+    safe_work_root = work
     staging_root = safe_work_root / "staging"
     sanitized_pe_certificates = prepare_layout(payload_root.resolve(), staging_root, config)
     _normalize_timestamps(staging_root, int(config["reproducibilityEpoch"]))
 
     output = output.resolve()
+    _require(not output.exists() and not output.is_relative_to(work), "msix_output_must_be_new_outside_work")
     output.parent.mkdir(parents=True, exist_ok=True)
+    built = work / "built.msix"
     completed = subprocess.run(
-        [str(makeappx), "pack", "/d", str(staging_root), "/p", str(output), "/o"],
+        [str(makeappx), "pack", "/d", str(staging_root), "/p", str(built)],
         check=False,
         capture_output=True,
         text=True,
         encoding="utf-8",
         errors="replace",
+        timeout=600,
     )
     if completed.returncode != 0:
         details = (completed.stdout + "\n" + completed.stderr).strip()
         raise MsixBuildError(f"makeappx_failed:{completed.returncode}:{details}")
-    _require(output.is_file(), "msix_output_missing")
-    entry_count, content_sha256 = package_content_identity(output)
+    _require(built.is_file(), "msix_output_missing")
+    entry_count, content_sha256 = package_content_identity(built)
+    with built.open("rb") as source, output.open("xb") as target:
+        shutil.copyfileobj(source, target)
+    _require(_sha256(output) == _sha256(built), "msix_output_copy_mismatch")
 
     return {
         "schemaVersion": 1,
@@ -499,17 +608,22 @@ def build_msix(
         "entryCount": entry_count,
         "contentSha256": content_sha256,
         "sanitizedPeCertificateDirectories": list(sanitized_pe_certificates),
+        **({"sourceCandidate": candidate} if candidate is not None else {}),
     }
 
 
 def _write_metadata(path: Path, metadata: Mapping[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+    with path.open("x", encoding="utf-8", newline="\n") as stream:
+        stream.write(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n")
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--payload-root", type=Path, required=True)
+    source_group = parser.add_mutually_exclusive_group(required=True)
+    source_group.add_argument("--payload-root", type=Path)
+    source_group.add_argument("--portable-zip", type=Path)
+    parser.add_argument("--candidate-receipt", type=Path)
     parser.add_argument("--config", type=Path, required=True)
     output_group = parser.add_mutually_exclusive_group(required=True)
     output_group.add_argument("--output", type=Path)
@@ -534,10 +648,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             work_root=args.work_root,
             config=config,
             makeappx=makeappx,
+            portable_zip=args.portable_zip,
+            candidate_receipt=args.candidate_receipt,
         )
         if args.metadata_output is not None:
             _write_metadata(args.metadata_output.resolve(), metadata)
-    except MsixBuildError as exc:
+    except (MsixBuildError, PublicationError, OSError, ValueError, subprocess.SubprocessError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
 

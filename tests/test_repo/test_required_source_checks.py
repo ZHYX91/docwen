@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
+import yaml
 from tools import qa
 from tools.source_checks import validate_ci_results
 
@@ -36,24 +39,29 @@ def test_required_source_failure_stops_before_pytest(monkeypatch: pytest.MonkeyP
 def test_required_ci_job_cannot_be_skipped_or_missing(result: str | None) -> None:
     jobs = {"source-checks": {"result": "success"}}
     if result is not None:
-        jobs["pytest_windows_push"] = {"result": result}
-    with pytest.raises(ValueError, match="pytest_windows_push"):
+        jobs["tests"] = {"result": result}
+    with pytest.raises(ValueError, match="tests"):
         validate_ci_results(jobs, "workflow_dispatch")
 
 
-def test_pull_request_requires_all_platform_and_coverage_jobs() -> None:
-    jobs = {
-        name: {"result": "success"}
-        for name in (
-            "source-checks",
-            "pytest_windows_pr_integration",
-            "pytest_ubuntu",
-            "pytest_macos",
-            "coverage",
-            "coverage_gui",
-        )
-    }
-    validate_ci_results(jobs, "pull_request")
-    del jobs["coverage_gui"]
-    with pytest.raises(ValueError, match="coverage_gui"):
-        validate_ci_results(jobs, "pull_request")
+@pytest.mark.parametrize("event", ["pull_request", "push", "workflow_dispatch"])
+def test_all_events_require_the_same_source_and_platform_matrix(event: str) -> None:
+    jobs = {name: {"result": "success"} for name in ("source-checks", "tests")}
+    validate_ci_results(jobs, event)
+    del jobs["tests"]
+    with pytest.raises(ValueError, match="tests"):
+        validate_ci_results(jobs, event)
+
+
+def test_ci_has_one_full_coverage_run_and_one_run_per_other_platform() -> None:
+    workflow = yaml.load(Path(".github/workflows/tests.yml").read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    jobs = workflow["jobs"]
+    assert set(jobs) == {"source-checks", "tests", "required"}
+    assert jobs["tests"]["needs"] == "source-checks"
+    assert jobs["tests"]["strategy"]["matrix"]["include"] == [
+        {"os": "windows-latest", "suite": "full", "coverage": "true"},
+        {"os": "ubuntu-24.04", "suite": "platform", "coverage": "false"},
+        {"os": "macos-14", "suite": "platform", "coverage": "false"},
+    ]
+    assert jobs["required"]["needs"] == ["source-checks", "tests"]
+    assert "if" not in jobs["tests"]

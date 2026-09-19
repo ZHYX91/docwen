@@ -1,29 +1,21 @@
 name: Release
 
 on:
+  push:
+    tags: ['*.*.*']
   workflow_dispatch:
     inputs:
-      version:
-        description: Stable x.y.z source version
-        required: true
-        type: string
       operation:
-        description: Build a verified candidate, or publish the supplied artifact
+        description: Verify a candidate without publishing, or publish the selected candidate
         required: true
         type: choice
-        options: [preflight, publish, verify]
-        default: preflight
+        options: [verify, publish]
+        default: verify
       artifact_id:
-        description: Exact preflight publication artifact ID (publish only)
-        type: string
-      artifact_digest:
-        description: Exact sha256 digest of that artifact archive (publish only)
+        description: Exact candidate ID to publish or read back; omit to build once from the selected ref
         type: string
       resume_artifact_id:
-        description: Exact saved publication-progress artifact ID when resuming
-        type: string
-      resume_artifact_digest:
-        description: Exact sha256 digest of the saved progress archive
+        description: Saved progress artifact ID for an interrupted publication
         type: string
 
 permissions:
@@ -34,78 +26,54 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  RELEASE_VERSION: ${{ inputs.version }}
   PUBLICATION_ARTIFACT_NAME: docwen-publication-${{ github.run_id }}-${{ github.run_attempt }}
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
-  source-checks:
-    if: inputs.operation == 'preflight'
-    uses: ./.github/workflows/tests.yml
-
-  release-gate:
-    needs: source-checks
-    name: Source gate on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest, ubuntu-24.04, macos-14]
-    env:
-      DOCWEN_GUI_DISABLE_STATE_SAVE: "1"
-      QT_QPA_PLATFORM: offscreen
+  identity:
+    name: Source identity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.identity.outputs.version }}
+      build: ${{ steps.identity.outputs.build }}
+      publish: ${{ steps.identity.outputs.publish }}
+      verify_hosted: ${{ steps.identity.outputs.verify_hosted }}
     steps:
-      - name: Check out exact source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Set up exact uv and Python
-        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: "0.12.0"
           python-version: "3.12.13"
-          enable-cache: true
-      - name: Install Linux GUI dependencies
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends libegl1 libgl1 libxkbcommon-x11-0 libxcb-cursor0
-      - name: Verify numeric version and source identity
-        shell: bash
+      - name: Resolve the selected source and operation
+        id: identity
         env:
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-        run: |
-          set -euo pipefail
-          [[ "$RELEASE_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
-          source_version="$(uv run python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
-          test "$RELEASE_VERSION" = "$source_version"
-          git fetch --no-tags origin "$DEFAULT_BRANCH"
-          test "$GITHUB_SHA" = "$(git rev-parse "origin/$DEFAULT_BRANCH")"
-          if git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_VERSION" >/dev/null 2>&1; then
-            echo "preflight requires an unused numeric tag" >&2
-            exit 2
-          fi
-      - name: Install exact lockfile
-        run: uv sync --frozen --extra test --extra lint
-      - name: Run release source gate
-        env:
-          DOCWEN_PYTEST_RUNTIME_ROOT: ${{ runner.temp }}/docwen-pytest-runtime
-        run: uv run python tools/qa.py --skip-ruff --skip-pyright --suite release
+          OPERATION: ${{ inputs.operation || 'publish' }}
+          ARTIFACT_ID: ${{ inputs.artifact_id }}
+          RESUME_ID: ${{ inputs.resume_artifact_id }}
+        run: >-
+          uv run --no-project python scripts/release/publication_entry.py
+          --source-ref "$GITHUB_REF" --commit "$GITHUB_SHA" --event "$GITHUB_EVENT_NAME"
+          --operation "$OPERATION" --artifact-id "$ARTIFACT_ID" --resume-id "$RESUME_ID"
+          --github-output "$GITHUB_OUTPUT"
+
+  source-checks:
+    needs: identity
+    if: needs.identity.outputs.build == 'true'
+    uses: ./.github/workflows/tests.yml
 
   build-windows:
-    name: Clean Windows build ${{ matrix.replica }}
-    needs: release-gate
+    name: Build Windows packages
+    outputs:
+      artifact_id: ${{ steps.upload.outputs.artifact-id }}
+    needs: [identity, source-checks]
     runs-on: windows-latest
     timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        replica: [a, b]
     env:
+      RELEASE_VERSION: ${{ needs.identity.outputs.version }}
       DOCWEN_GUI_DISABLE_STATE_SAVE: "1"
       QT_QPA_PLATFORM: offscreen
     steps:
@@ -147,33 +115,22 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           uv run python scripts/release/verify_packaged_gui.py --binary-dir "$output/payload" --settings-smoke
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $msixArguments = @(
-            "scripts/release/build_msix.py",
-            "--payload-root", "$output/payload",
-            "--config", (Resolve-Path "release/windows-store-msix.v1.json").Path,
-            "--source-version", $env:RELEASE_VERSION,
-            "--output-root", $output,
-            "--work-root", (Join-Path $env:RUNNER_TEMP "docwen-msix-work"),
-            "--metadata-output", "$output/DocWen-windows-x64.msix.json"
-          )
-          & $python @msixArguments
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Upload clean Windows build evidence
+      - name: Upload verified Windows packages
+        id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: docwen-windows-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.replica }}
-          path: |
-            ${{ runner.temp }}/docwen-candidate/DocWen-windows-x64.zip
-            ${{ runner.temp }}/docwen-candidate/DocWen-windows-x64.msix
-            ${{ runner.temp }}/docwen-candidate/DocWen-windows-x64.msix.json
+          name: docwen-windows-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/docwen-candidate/DocWen-windows-x64.zip
           compression-level: 0
           if-no-files-found: error
           overwrite: false
           retention-days: 30
 
   build-linux:
-    name: Clean Ubuntu build ${{ matrix.replica }}
-    needs: release-gate
+    name: Build Linux packages
+    outputs:
+      artifact_id: ${{ steps.upload.outputs.artifact-id }}
+    needs: [identity, source-checks]
     runs-on: ubuntu-24.04
     container:
       image: mcr.microsoft.com/devcontainers/base:noble@sha256:24ea8d1abd543fb56208fa8f9468c9a684e65aa8c42d54f76e312127f1ed5cd9
@@ -181,11 +138,8 @@ jobs:
       run:
         shell: bash
     timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        replica: [a, b]
     env:
+      RELEASE_VERSION: ${{ needs.identity.outputs.version }}
       DOCWEN_GUI_DISABLE_STATE_SAVE: "1"
       QT_QPA_PLATFORM: offscreen
     steps:
@@ -235,10 +189,11 @@ jobs:
           (cd "$gui_dir" && sha256sum --check SHA256SUMS.txt)
           uv run python scripts/release/verify_packaged_cli.py --binary-dir "$cli_dir" --proofread-report-smoke
           xvfb-run -a uv run python scripts/release/verify_packaged_gui.py --binary-dir "$gui_dir" --settings-smoke
-      - name: Upload clean Ubuntu build evidence
+      - name: Upload verified Linux packages
+        id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: docwen-linux-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.replica }}
+          name: docwen-linux-${{ github.run_id }}-${{ github.run_attempt }}
           path: publication/
           compression-level: 0
           if-no-files-found: error
@@ -246,7 +201,12 @@ jobs:
           retention-days: 30
 
   verify-release:
-    needs: [build-windows, build-linux]
+    outputs:
+      artifact_id: ${{ steps.publication.outputs.artifact-id }}
+      artifact_digest: ${{ steps.publication.outputs.artifact-digest }}
+    needs: [identity, build-windows, build-linux]
+    env:
+      RELEASE_VERSION: ${{ needs.identity.outputs.version }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -256,48 +216,29 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: Download Windows build A
+      - name: Download the verified Windows packages by artifact ID
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          name: docwen-windows-${{ github.run_id }}-${{ github.run_attempt }}-a
-          path: builds/windows-a
-      - name: Download Windows build B
+          artifact-ids: ${{ needs.build-windows.outputs.artifact_id }}
+          path: builds/windows
+          digest-mismatch: error
+      - name: Download the verified Linux packages by artifact ID
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          name: docwen-windows-${{ github.run_id }}-${{ github.run_attempt }}-b
-          path: builds/windows-b
-      - name: Download Ubuntu build A
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: docwen-linux-${{ github.run_id }}-${{ github.run_attempt }}-a
-          path: builds/linux-a
-      - name: Download Ubuntu build B
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: docwen-linux-${{ github.run_id }}-${{ github.run_attempt }}-b
-          path: builds/linux-b
-      - name: Compare independent builds and assemble exact candidate
+          artifact-ids: ${{ needs.build-linux.outputs.artifact_id }}
+          path: builds/linux
+          digest-mismatch: error
+      - name: Assemble the exact verified candidate
         run: >-
           python scripts/release/publication.py assemble
           --repository "$GITHUB_REPOSITORY" --version "$RELEASE_VERSION" --commit "$GITHUB_SHA"
-          --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT"
+          --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT" --source-ref "$GITHUB_REF"
           --source . --builds builds --directory publication
       - name: Attest exact candidate and public assets
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
         with:
           subject-path: publication/*
-      - name: Upload Microsoft Store submission package
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: docwen-microsoft-store-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            builds/windows-a/DocWen-windows-x64.msix
-            builds/windows-a/DocWen-windows-x64.msix.json
-          compression-level: 0
-          if-no-files-found: error
-          overwrite: false
-          retention-days: 30
-      - name: Upload the exact preflight publication artifact
+      - name: Upload the exact publication candidate
         id: publication
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -314,50 +255,61 @@ jobs:
         run: |
           echo "Candidate artifact ID: $ARTIFACT_ID" >> "$GITHUB_STEP_SUMMARY"
           echo "Candidate artifact digest: $ARTIFACT_DIGEST" >> "$GITHUB_STEP_SUMMARY"
-          echo "No tag or Release was created by this preflight." >> "$GITHUB_STEP_SUMMARY"
+          echo "Verify mode leaves this candidate unpublished for selected host acceptance. Publish reuses its exact artifact ID." >> "$GITHUB_STEP_SUMMARY"
 
   publish:
-    if: inputs.operation == 'publish'
+    needs: [identity, verify-release]
+    if: >-
+      always() && !cancelled() &&
+      needs.identity.result == 'success' && needs.identity.outputs.publish == 'true' &&
+      (needs.verify-release.result == 'success' ||
+       (github.event_name == 'workflow_dispatch' && inputs.artifact_id != ''))
     runs-on: ubuntu-24.04
     timeout-minutes: 40
+    environment: release
     permissions:
       actions: read
       contents: write
       attestations: read
+    outputs:
+      artifact_id: ${{ needs.verify-release.outputs.artifact_id || inputs.artifact_id }}
+      artifact_digest: ${{ needs.verify-release.outputs.artifact_digest }}
     env:
+      RELEASE_VERSION: ${{ needs.identity.outputs.version }}
       GH_TOKEN: ${{ github.token }}
-      ARTIFACT_ID: ${{ inputs.artifact_id }}
-      ARTIFACT_DIGEST: ${{ inputs.artifact_digest }}
       RESUME_ARTIFACT_ID: ${{ inputs.resume_artifact_id }}
-      RESUME_ARTIFACT_DIGEST: ${{ inputs.resume_artifact_digest }}
+      ARTIFACT_ID: ${{ needs.verify-release.outputs.artifact_id || inputs.artifact_id }}
+      ARTIFACT_DIGEST: ${{ needs.verify-release.outputs.artifact_digest }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Retrieve the verified preflight artifact
-        run: >-
-          python scripts/release/publication.py fetch
-          --repository "$GITHUB_REPOSITORY" --version "$RELEASE_VERSION" --commit "$GITHUB_SHA"
-          --artifact-id "$ARTIFACT_ID" --artifact-digest "$ARTIFACT_DIGEST"
-          --directory "$RUNNER_TEMP/publication"
-      - name: Verify draft assets, publish and read back
-        env:
-          DOCWEN_IMMUTABILITY_READ_TOKEN: ${{ secrets.DOCWEN_IMMUTABILITY_READ_TOKEN }}
+      - name: Retrieve the exact candidate from this run or the explicit recovery ID
+        shell: bash
         run: |
           set -euo pipefail
-          test -n "$DOCWEN_IMMUTABILITY_READ_TOKEN"
+          [[ "$RELEASE_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          digest_args=()
+          if [[ -n "$ARTIFACT_DIGEST" ]]; then
+            digest_args=(--artifact-digest "$ARTIFACT_DIGEST")
+          fi
+          python scripts/release/publication.py fetch \
+            --repository "$GITHUB_REPOSITORY" --version "$RELEASE_VERSION" --commit "$GITHUB_SHA" \
+            --artifact-id "$ARTIFACT_ID" "${digest_args[@]}" \
+            --directory "$RUNNER_TEMP/publication"
+      - name: Verify draft assets and publish immutable Release
+        run: |
+          set -euo pipefail
           resume_args=()
           if [[ -n "$RESUME_ARTIFACT_ID" ]]; then
-            test -n "$RESUME_ARTIFACT_DIGEST"
-            resume_args=(--resume-artifact-id "$RESUME_ARTIFACT_ID" --resume-artifact-digest "$RESUME_ARTIFACT_DIGEST")
+            resume_args=(--resume-artifact-id "$RESUME_ARTIFACT_ID")
           else
-            test -z "$RESUME_ARTIFACT_DIGEST"
             test "$GITHUB_RUN_ATTEMPT" -eq 1
           fi
           python scripts/release/publication.py publish \
             --repository "$GITHUB_REPOSITORY" --version "$RELEASE_VERSION" --commit "$GITHUB_SHA" \
-            --artifact-id "$ARTIFACT_ID" --artifact-digest "$ARTIFACT_DIGEST" \
+            --artifact-id "$ARTIFACT_ID" \
             --directory "$RUNNER_TEMP/publication" --receipt "$RUNNER_TEMP/publication-progress.json" \
             --notes docs/CHANGELOG.md "${resume_args[@]}"
       - name: Preserve publication progress, including uncertain writes
@@ -370,8 +322,11 @@ jobs:
           retention-days: 30
 
   post-verify:
-    if: always() && (inputs.operation == 'publish' || inputs.operation == 'verify')
-    needs: publish
+    if: >-
+      always() && !cancelled() && needs.identity.result == 'success' &&
+      (needs.identity.outputs.verify_hosted == 'true' ||
+       (needs.publish.result != 'skipped' && needs.publish.outputs.artifact_id != ''))
+    needs: [identity, publish]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -379,9 +334,10 @@ jobs:
       contents: read
       attestations: read
     env:
+      RELEASE_VERSION: ${{ needs.identity.outputs.version }}
       GH_TOKEN: ${{ github.token }}
-      ARTIFACT_ID: ${{ inputs.artifact_id }}
-      ARTIFACT_DIGEST: ${{ inputs.artifact_digest }}
+      ARTIFACT_ID: ${{ needs.publish.outputs.artifact_id || inputs.artifact_id }}
+      ARTIFACT_DIGEST: ${{ needs.publish.outputs.artifact_digest }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -391,13 +347,13 @@ jobs:
         run: >-
           python scripts/release/publication.py fetch
           --repository "$GITHUB_REPOSITORY" --version "$RELEASE_VERSION" --commit "$GITHUB_SHA"
-          --artifact-id "$ARTIFACT_ID" --artifact-digest "$ARTIFACT_DIGEST"
+          --artifact-id "$ARTIFACT_ID"
           --directory "$RUNNER_TEMP/publication"
       - name: Independently verify immutable hosted bytes and provenance
         run: >-
           python scripts/release/publication.py verify
           --repository "$GITHUB_REPOSITORY" --version "$RELEASE_VERSION" --commit "$GITHUB_SHA"
-          --artifact-id "$ARTIFACT_ID" --artifact-digest "$ARTIFACT_DIGEST"
+          --artifact-id "$ARTIFACT_ID"
           --directory "$RUNNER_TEMP/publication" --receipt "$RUNNER_TEMP/publication-readback.json"
       - name: Save independent readback receipt
         if: always()
