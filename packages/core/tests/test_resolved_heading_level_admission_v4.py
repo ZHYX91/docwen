@@ -268,7 +268,7 @@ def test_conformance_level_fixtures_match_the_narrowed_json_schemas() -> None:
 def test_docs_expose_the_docwen_heading_extension_through_level_nine() -> None:
     root = Path(__file__).parents[3]
     structured = (root / "docs/specs/structured-numbering-phases.md").read_text(encoding="utf-8")
-    machine = (root / "docs/specs/machine-protocol-v1.md").read_text(encoding="utf-8")
+    machine = (root / "docs/specs/machine-protocol-v2.md").read_text(encoding="utf-8")
     markdown = (root / "docs/specs/markdown-compatibility.md").read_text(encoding="utf-8")
     structured = " ".join(structured.split())
     machine = " ".join(machine.split())

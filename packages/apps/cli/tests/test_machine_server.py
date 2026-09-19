@@ -1,4 +1,4 @@
-"""Machine Protocol v1 server lifecycle and schema conformance contracts."""
+"""Machine Protocol v2 server lifecycle and schema conformance contracts."""
 
 from __future__ import annotations
 
@@ -193,7 +193,7 @@ def _initialize() -> dict[str, Any]:
         "initialize",
         1,
         {
-            "protocol": {"name": "docwen.machine", "major": 1, "minor": 0},
+            "protocol": {"name": "docwen.machine", "major": 2, "minor": 0},
             "client": {"name": "test-client", "version": "1.0.0"},
             "features": {"progress": True, "cancellation": True},
         },
@@ -274,7 +274,7 @@ def test_initialize_discovery_plan_execute_and_terminal_trace() -> None:
     exit_code, responses = _run(requests, _Service())
 
     assert exit_code == 0
-    assert responses[0]["result"]["artifact_bundle_schema"] == "docwen.artifact_bundle.v2"
+    assert responses[0]["result"]["artifact_bundle_schema"] == "docwen.artifact_bundle.v3"
     assert responses[1]["result"]["capabilities"][0]["capability_id"] == "convert.markdown.to_docx"
     assert responses[3]["result"] == {"task_id": "task.test", "state": "accepted"}
     assert responses[-1]["method"] == "task/completed"
@@ -282,6 +282,21 @@ def test_initialize_discovery_plan_execute_and_terminal_trace() -> None:
     for message in responses:
         validator.validate_message(message)
     validate_trace([*requests, *responses], requires_terminal=True)
+
+
+@pytest.mark.parametrize(("major", "minor"), [(1, 0), (2, 1), (3, 0)])
+def test_incompatible_handshake_does_not_initialize_session(major: int, minor: int) -> None:
+    request = _initialize()
+    request["params"]["protocol"].update(major=major, minor=minor)
+
+    exit_code, responses = _run([request, _request("capability/list", 2, {})], _Service())
+
+    assert exit_code == 0
+    assert responses[0]["error"]["data"] == {
+        "code": "incompatible_protocol",
+        "supported_protocol": {"name": "docwen.machine", "major": 2, "minor": 0},
+    }
+    assert responses[1]["error"]["message"] == "initialize must be called first"
 
 
 def test_plan_accepts_exact_resolved_numbering_handles() -> None:

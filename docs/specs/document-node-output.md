@@ -62,10 +62,10 @@ Independent filenames are never renamed separately to resolve a publication conf
 
 GUI and Assistant use the same producer-defined directory layout. Assistant preserves the complete logical directory in the user-selected parent and rejects existing result roots. Consumers list business outputs, choose the explicitly preferred output for file location, and exclude layout manifests or extracted image resources from document counts.
 
-## Artifact Bundle v2
+## Artifact Bundle v3
 
-`docwen.artifact_bundle.v2` carries each artifact's display basename in `suggested_name` and its stable relative location in `logical_path`. Result directories use `layout_schema=docwen.document_node.v1`; other bundles use `docwen.artifact_layout.v1`.
+`docwen.artifact_bundle.v3` carries each artifact's display basename in `suggested_name` and its stable relative location in `logical_path`. Result directories use `layout_schema=docwen.document_node.v1`; other bundles use `docwen.artifact_layout.v1`.
 
 The typed `docwen-node.json` resource is bound through `resource_of/manifest` to the preferred business entry. For resource-only results such as CSV tables, that owner may itself be a resource only when the source is the typed layout manifest and the owner is preferred. Ordinary resource-to-resource ownership remains invalid. The storage manifest adds no semantic business output or original-source recovery data.
 
-Readers accept only Bundle v2 and preserve validated relative paths. This contract contains no knowledge-base-specific storage concepts.
+Readers accept only Bundle v3 and preserve validated relative paths. This contract contains no knowledge-base-specific storage concepts.

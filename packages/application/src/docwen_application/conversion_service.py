@@ -95,7 +95,7 @@ _DOCUMENT_SEMANTICS_MACHINE_LIMITATIONS: tuple[dict[str, Any], ...] = (
         "severity": "warning",
         "code": "document_semantics.citation_processor_unavailable",
         "message": (
-            "DocWen does not run a CSL citation processor or accept citation_style inputs in Machine v1; "
+            "DocWen does not run a CSL citation processor or accept citation_style inputs in Machine v2; "
             "Markdown citation keys remain literal."
         ),
     },

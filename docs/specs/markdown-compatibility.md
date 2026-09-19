@@ -890,7 +890,7 @@ version and do not alias or synchronize another project's major number.
 input. A bare `@fig-legacy` is a v3 Citation whose key is `fig-legacy`; ID-like spelling never changes that lexical
 ownership. DocWen exposes no migration mode or alternate legacy grammar.
 
-This semantic series retains the Machine Protocol v1 identity and requires Artifact Bundle v2. Its optional source-backed
+This semantic series retains the Machine Protocol v2 identity and requires Artifact Bundle v3. Its optional source-backed
 diagnostic evidence and physical-route options are governed by the current schema and conformance set. A release
 candidate must be rebuilt whenever the parser, writer, IR projection,
 style registry, bookmark mapping, corpus, or schema changes.

@@ -596,12 +596,12 @@ AF_UNIX 通訊端。檔案鎖只負責單一實例所有權，控制命令不透
 
 ### 安裝方法
 
-DocWen Assistant 2.0 使用 DocWen Machine Protocol v1 與唯一的 Artifact Bundle v2 合同。原始碼版本不能
+DocWen Assistant 2.0 使用 DocWen Machine Protocol v2 與唯一的 Artifact Bundle v3 合同。原始碼版本不能
 證明已經發布；請只安裝明確標識了相容且已發布 DocWen 版本的數字版本 Release。
 
 ## 🔌 OpenClaw（插件 + Skill）
 
-OpenClaw 2.0 使用 DocWen Machine Protocol v1 與唯一的 Artifact Bundle v2 合同。原始碼版本不能證明已經
+OpenClaw 2.0 使用 DocWen Machine Protocol v2 與唯一的 Artifact Bundle v3 合同。原始碼版本不能證明已經
 發布；請以數字版本 Release 頁面為準，並只在不可變發布閘門成功後安裝。
 
 ## ❓ 常見問題

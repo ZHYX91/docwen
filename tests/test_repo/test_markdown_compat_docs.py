@@ -61,7 +61,7 @@ def test_markdown_compatibility_freezes_caption_order_and_fenced_anchor_kind() -
 
 def test_docx_recovery_resource_less_image_owner_contract_is_frozen() -> None:
     markdown = (ROOT / "docs" / "specs" / "markdown-compatibility.md").read_text(encoding="utf-8")
-    machine = (ROOT / "docs" / "specs" / "machine-protocol-v1.md").read_text(encoding="utf-8")
+    machine = (ROOT / "docs" / "specs" / "machine-protocol-v2.md").read_text(encoding="utf-8")
     golden = (ROOT / "docs" / "specs" / "golden-regression-suite.md").read_text(encoding="utf-8")
     normalized_markdown = " ".join(markdown.split())
     normalized_machine = " ".join(machine.split())
@@ -79,7 +79,7 @@ def test_docx_recovery_resource_less_image_owner_contract_is_frozen() -> None:
 
 def test_fenced_source_occurrence_package_and_evidence_layers_are_frozen() -> None:
     markdown = (ROOT / "docs" / "specs" / "markdown-compatibility.md").read_text(encoding="utf-8")
-    machine = (ROOT / "docs" / "specs" / "machine-protocol-v1.md").read_text(encoding="utf-8")
+    machine = (ROOT / "docs" / "specs" / "machine-protocol-v2.md").read_text(encoding="utf-8")
     golden = (ROOT / "docs" / "specs" / "golden-regression-suite.md").read_text(encoding="utf-8")
     normalized = " ".join(markdown.split())
 
@@ -100,7 +100,7 @@ def test_fenced_source_occurrence_package_and_evidence_layers_are_frozen() -> No
 
 def test_nested_ordinary_anchor_topology_source_package_and_roundtrip_are_frozen() -> None:
     markdown = (ROOT / "docs" / "specs" / "markdown-compatibility.md").read_text(encoding="utf-8")
-    machine = (ROOT / "docs" / "specs" / "machine-protocol-v1.md").read_text(encoding="utf-8")
+    machine = (ROOT / "docs" / "specs" / "machine-protocol-v2.md").read_text(encoding="utf-8")
     golden = (ROOT / "docs" / "specs" / "golden-regression-suite.md").read_text(encoding="utf-8")
     normalized = " ".join(markdown.split())
 

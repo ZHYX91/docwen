@@ -605,12 +605,12 @@ DocWen Assistant 2.0 仍仅限 Windows 桌面端，尚无 Linux/macOS 组合验�
 
 ### 安装方法
 
-DocWen Assistant 2.0 使用 DocWen Machine Protocol v1 与唯一的 Artifact Bundle v2 合同。源码版本不能
+DocWen Assistant 2.0 使用 DocWen Machine Protocol v2 与唯一的 Artifact Bundle v3 合同。源码版本不能
 证明已经发布；请只安装明确标识了兼容且已发布 DocWen 版本的数字版本 Release。
 
 ## 🔌 OpenClaw（插件 + Skill）
 
-OpenClaw 2.0 使用 DocWen Machine Protocol v1 与唯一的 Artifact Bundle v2 合同。源码版本不能证明已经
+OpenClaw 2.0 使用 DocWen Machine Protocol v2 与唯一的 Artifact Bundle v3 合同。源码版本不能证明已经
 发布；请以数字版本 Release 页面为准，并只在不可变发布门禁成功后安装。
 
 ## ❓ 常见问题

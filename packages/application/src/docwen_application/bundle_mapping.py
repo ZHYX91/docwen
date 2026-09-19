@@ -1,4 +1,4 @@
-"""Route-family policies that map technical runtime artifacts to Bundle v2."""
+"""Route-family policies that map technical runtime artifacts to Bundle v3."""
 
 from __future__ import annotations
 

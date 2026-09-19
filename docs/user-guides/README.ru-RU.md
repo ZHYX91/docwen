@@ -600,13 +600,13 @@ Unit: Отдел продаж
 
 ### Установка
 
-DocWen Assistant 2.0 использует DocWen Machine Protocol v1 и единственный контракт Artifact Bundle v2. Версия
+DocWen Assistant 2.0 использует DocWen Machine Protocol v2 и единственный контракт Artifact Bundle v3. Версия
 исходного кода не подтверждает публикацию; устанавливайте только числовой выпуск, в котором явно указан совместимый
 опубликованный выпуск DocWen.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-OpenClaw 2.0 использует DocWen Machine Protocol v1 и единственный контракт Artifact Bundle v2. Версия исходного
+OpenClaw 2.0 использует DocWen Machine Protocol v2 и единственный контракт Artifact Bundle v3. Версия исходного
 кода не подтверждает публикацию; следуйте странице числового выпуска и устанавливайте его только после успешного
 прохождения неизменяемого шлюза публикации.
 

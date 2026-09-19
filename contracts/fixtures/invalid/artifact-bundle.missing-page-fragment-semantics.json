@@ -1,11 +1,11 @@
 {
-  "schema": "docwen.artifact_bundle.v2",
+  "schema": "docwen.artifact_bundle.v3",
   "bundle_id": "bundle.invalid.page.missing",
   "task_id": "task.invalid.page.missing",
   "producer": {
     "name": "DocWen",
     "product_version": "0.9.0",
-    "machine_protocol": "docwen.machine.v1"
+    "machine_protocol": "docwen.machine.v2"
   },
   "artifacts": [
     {

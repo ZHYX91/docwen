@@ -51,7 +51,7 @@ def test_commit_pins_relative_locator_size_and_sha256(tmp_path: Path) -> None:
     assert artifact.locator == "documents/result.md"
     assert artifact.size_bytes == len(b"# Result\n")
     assert artifact.sha256 == hashlib.sha256(b"# Result\n").hexdigest()
-    assert bundle.to_dict()["schema"] == "docwen.artifact_bundle.v2"
+    assert bundle.to_dict()["schema"] == "docwen.artifact_bundle.v3"
     assert bundle.to_dict()["layout_schema"] == "docwen.artifact_layout.v1"
     assert bundle.to_dict()["artifacts"][0]["logical_path"] == "documents/result.md"
 

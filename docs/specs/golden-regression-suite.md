@@ -195,7 +195,7 @@ Candidate-blocking corpora additionally include:
 Page-count or ownership expectations must be explicit fixture facts. A golden generator may not derive them from
 extracted file count, file names, or the implementation under test.
 
-Machine Protocol v1 and Artifact Bundle v2 are frozen atomically with this semantic series; current fixtures are
+Machine Protocol v2 and Artifact Bundle v3 are frozen atomically with this semantic series; current fixtures are
 immutable acceptance inputs. Packaged gates run the v3 corpus against installed CLI/resources and inspect
 final OOXML. Each observation declares exactly one layer: `source_oracle`, `machine_wire`, `packaged`, `roundtrip`,
 `headless_ooxml`, `word_host`, `wps_host`, or `libreoffice_host`. Source expectations are never wire observations,

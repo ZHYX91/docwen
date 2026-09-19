@@ -122,7 +122,7 @@ def test_real_stdio_process_emits_integrity_pinned_docx_bundle(tmp_path: Path) -
             1,
             "initialize",
             {
-                "protocol": {"name": "docwen.machine", "major": 1, "minor": 0},
+                "protocol": {"name": "docwen.machine", "major": 2, "minor": 0},
                 "client": {"name": "docwen-e2e", "version": "1.0.0"},
                 "features": {"progress": True, "cancellation": True},
             },

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:docwen:schema:machine-diagnostic-evidence:v1",
   "title": "DocWen Machine source diagnostic evidence v1",
-  "description": "Closed nested objects and bounded source edits for optional source-backed fields on a Machine v1 diagnostic object.",
+  "description": "Closed nested objects and bounded source edits for optional source-backed fields on a Machine v2 diagnostic object.",
   "type": "object",
   "required": [
     "evidence_schema",

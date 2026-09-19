@@ -12,8 +12,8 @@ def register_serve_parser(subparsers: Any) -> None:
     parser = subparsers.add_parser(
         "serve",
         parents=[get_common_parser()],
-        help="Run DocWen Machine Protocol v1.",
-        description="Run DocWen Machine Protocol v1 over framed stdio.",
+        help="Run DocWen Machine Protocol v2.",
+        description="Run DocWen Machine Protocol v2 over framed stdio.",
     )
     parser.add_argument(
         "--stdio",

@@ -596,13 +596,13 @@ DocWen Assistant 2.0 sigue limitado al escritorio de Windows y no tiene aceptaci
 
 ### Instalación
 
-DocWen Assistant 2.0 usa DocWen Machine Protocol v1 y el único contrato Artifact Bundle v2. La versión del código
+DocWen Assistant 2.0 usa DocWen Machine Protocol v2 y el único contrato Artifact Bundle v3. La versión del código
 fuente no demuestra que esté publicada; instala solo una versión numérica que identifique explícitamente una versión
 publicada y compatible de DocWen.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-OpenClaw 2.0 usa DocWen Machine Protocol v1 y el único contrato Artifact Bundle v2. La versión del código fuente no
+OpenClaw 2.0 usa DocWen Machine Protocol v2 y el único contrato Artifact Bundle v3. La versión del código fuente no
 demuestra que esté publicada; consulta la página de la versión numérica e instala solo después de que supere su
 control de publicación inmutable.
 

@@ -598,13 +598,13 @@ não transportam comandos de controle. Isso descreve apenas a capacidade do Core
 
 ### Instalação
 
-O DocWen Assistant 2.0 usa o DocWen Machine Protocol v1 e o contrato único Artifact Bundle v2. A versão do código
+O DocWen Assistant 2.0 usa o DocWen Machine Protocol v2 e o contrato único Artifact Bundle v3. A versão do código
 fonte não comprova a publicação; instale somente uma versão numérica que identifique explicitamente uma versão
 publicada e compatível do DocWen.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-O OpenClaw 2.0 usa o DocWen Machine Protocol v1 e o contrato único Artifact Bundle v2. A versão do código fonte não
+O OpenClaw 2.0 usa o DocWen Machine Protocol v2 e o contrato único Artifact Bundle v3. A versão do código fonte não
 comprova a publicação; consulte a página da versão numérica e instale somente depois que o controle de publicação
 imutável for aprovado.
 

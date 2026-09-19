@@ -154,12 +154,12 @@ def test_real_stdio_process_executes_new_single_input_capabilities(tmp_path: Pat
     initialized = exchange(
         "initialize",
         {
-            "protocol": {"name": "docwen.machine", "major": 1, "minor": 0},
+            "protocol": {"name": "docwen.machine", "major": 2, "minor": 0},
             "client": {"name": "docwen-d3-e2e", "version": "1.0.0"},
             "features": {"progress": True, "cancellation": True},
         },
     )
-    assert initialized["result"]["protocol"] == {"name": "docwen.machine", "major": 1, "minor": 0}
+    assert initialized["result"]["protocol"] == {"name": "docwen.machine", "major": 2, "minor": 0}
 
     xlsx_bundle, xlsx_staging, xlsx_plan = execute(
         "convert.markdown.to_xlsx",
@@ -359,12 +359,12 @@ def test_real_stdio_process_rejects_linked_staging_then_completes_in_same_sessio
         initialized = exchange(
             "initialize",
             {
-                "protocol": {"name": "docwen.machine", "major": 1, "minor": 0},
+                "protocol": {"name": "docwen.machine", "major": 2, "minor": 0},
                 "client": {"name": "docwen-d5-link-e2e", "version": "1.0.0"},
                 "features": {"progress": True, "cancellation": True},
             },
         )
-        assert initialized["result"]["protocol"] == {"name": "docwen.machine", "major": 1, "minor": 0}
+        assert initialized["result"]["protocol"] == {"name": "docwen.machine", "major": 2, "minor": 0}
 
         rejected = exchange("task/plan", plan_params(linked_staging))
         assert "result" not in rejected

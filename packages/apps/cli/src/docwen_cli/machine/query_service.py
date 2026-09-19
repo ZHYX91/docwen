@@ -1,4 +1,4 @@
-"""Typed read/control operations exposed by DocWen Machine Protocol v1."""
+"""Typed read/control operations exposed by DocWen Machine Protocol v2."""
 
 from __future__ import annotations
 
@@ -129,8 +129,8 @@ class MachineQueryService:
                 **({"target": str(item["target"])} if item.get("target") else {}),
             }
             if kind == "templates":
-                resource["origin"] = str(item.get("origin", "custom"))
-                resource["is_default"] = bool(item.get("is_default", False))
+                resource["origin"] = item["origin"]
+                resource["is_default"] = item["is_default"]
             normalized.append(resource)
         return {"kind": kind, "resources": normalized}
 

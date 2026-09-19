@@ -597,13 +597,13 @@ desktop và chưa có nghiệm thu kết hợp trên Linux/macOS.
 
 ### Cài đặt
 
-DocWen Assistant 2.0 dùng DocWen Machine Protocol v1 và hợp đồng Artifact Bundle v2 duy nhất. Phiên bản mã nguồn
+DocWen Assistant 2.0 dùng DocWen Machine Protocol v2 và hợp đồng Artifact Bundle v3 duy nhất. Phiên bản mã nguồn
 không chứng minh rằng sản phẩm đã được phát hành; chỉ cài bản phát hành dạng số xác định rõ một bản DocWen đã phát
 hành và tương thích.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-OpenClaw 2.0 dùng DocWen Machine Protocol v1 và hợp đồng Artifact Bundle v2 duy nhất. Phiên bản mã nguồn không chứng
+OpenClaw 2.0 dùng DocWen Machine Protocol v2 và hợp đồng Artifact Bundle v3 duy nhất. Phiên bản mã nguồn không chứng
 minh rằng sản phẩm đã được phát hành; hãy theo dõi trang phát hành dạng số và chỉ cài sau khi cổng phát hành bất biến
 thành công.
 

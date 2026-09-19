@@ -78,26 +78,26 @@ def _load_validator_module():
     return module
 
 
-def test_machine_protocol_v1_contract_set_is_conformant() -> None:
+def test_machine_protocol_v2_contract_set_is_conformant() -> None:
     validator = _load_validator_module()
     contracts_root = Path(__file__).resolve().parents[2] / "contracts"
 
     summary = validator.validate_contract_set(contracts_root)
 
     assert summary.schemas == 9
-    assert summary.valid_fixtures == 18
-    assert summary.invalid_fixtures == 62
+    assert summary.valid_fixtures == 19
+    assert summary.invalid_fixtures == 72
     manifest = validator_json(contracts_root / "conformance-manifest.json")
     assert {(record["name"], record["id"], record["path"]) for record in manifest["schemas"]} == {
         (
             "artifact_bundle",
-            "urn:docwen:schema:artifact-bundle:v2",
-            "schemas/docwen.artifact_bundle.v2.schema.json",
+            "urn:docwen:schema:artifact-bundle:v3",
+            "schemas/docwen.artifact_bundle.v3.schema.json",
         ),
         (
             "machine",
-            "urn:docwen:schema:machine-protocol:v1",
-            "schemas/docwen.machine.v1.schema.json",
+            "urn:docwen:schema:machine-protocol:v2",
+            "schemas/docwen.machine.v2.schema.json",
         ),
         (
             "machine_diagnostic_evidence",

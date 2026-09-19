@@ -599,13 +599,13 @@ Assistant 2.0 bleibt auf Windows-Desktop beschränkt und besitzt keine Linux/mac
 
 ### Installation
 
-DocWen Assistant 2.0 verwendet DocWen Machine Protocol v1 und den einzigen Artifact-Bundle-v2-Vertrag. Die
+DocWen Assistant 2.0 verwendet DocWen Machine Protocol v2 und den einzigen Artifact-Bundle-v2-Vertrag. Die
 Quellversion belegt keine Veröffentlichung; installieren Sie nur einen numerischen Release, der ausdrücklich einen
 kompatiblen veröffentlichten DocWen-Release nennt.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-OpenClaw 2.0 verwendet DocWen Machine Protocol v1 und den einzigen Artifact-Bundle-v2-Vertrag. Die Quellversion
+OpenClaw 2.0 verwendet DocWen Machine Protocol v2 und den einzigen Artifact-Bundle-v2-Vertrag. Die Quellversion
 belegt keine Veröffentlichung; folgen Sie der numerischen Release-Seite und installieren Sie erst, nachdem das
 unveränderliche Release-Gate erfolgreich war.
 

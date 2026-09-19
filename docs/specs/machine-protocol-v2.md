@@ -1,4 +1,4 @@
-# Machine Protocol v1 and Artifact Bundle v2 / 机器协议与产物包
+# Machine Protocol v2 and Artifact Bundle v3 / 机器协议与产物包
 
 DocWen's public process boundary is JSON-RPC 2.0 over Content-Length framed stdio. It returns a
 consumer-neutral artifact graph and does not expose internal route objects, argv, runtime manifests, or a
@@ -10,17 +10,31 @@ DocWen 的公开进程边界采用 JSON-RPC 2.0 + Content-Length stdio，返回�
 
 ## Current authority / 当前权威
 
-`docwen.machine.v1`, `docwen.artifact_bundle.v2`, and the schemas and fixtures under `contracts/` are
+`docwen.machine.v2`, `docwen.artifact_bundle.v3`, and the schemas and fixtures under `contracts/` are
 the current wire authority. The in-process CLI/GUI and external `DocWenCLI serve --stdio` share one
 plan-first Application Service; the CLI JSON presentation envelope and private provider paths do not enter this wire.
 
-`docwen.machine.v1`、`docwen.artifact_bundle.v2` 以及 `contracts/` 下的 schema 与 fixture 是当前
+`docwen.machine.v2`、`docwen.artifact_bundle.v3` 以及 `contracts/` 下的 schema 与 fixture 是当前
 wire 权威。进程内 CLI/GUI 与外部 `DocWenCLI serve --stdio` 共用同一个 plan-first Application
 Service；CLI JSON 展示 envelope 与私有 provider 路径不进入该 wire。
 
+## Compatibility and template metadata / 兼容性与模板元数据
+
+The handshake requires exactly protocol 2.0. Template resources require `origin` (`builtin|custom`) and
+`is_default` (boolean), alongside canonical `id`, `name`, `description`, and `target` (`docx|xlsx`).
+The target matches the ID format segment. Consumers preserve the server's enabled-template order and
+execute by ID. Product version numbers cannot substitute for negotiation. Update the server and consumer
+together; v1 and unknown minors fail at initialization, with no silent downgrade.
+
+握手要求协议 2.0。模板必须返回来源 `origin`、布尔默认标志 `is_default`，以及规范 ID、显示名、
+说明和目标格式；ID 中的格式必须与 `target` 一致。消费者保留服务端的启用模板顺序，执行时只用 ID。
+产品版本号不能代替协议协商；服务端和客户端需要一起更新，旧协议和未知次版本在初始化时明确失败。
+Artifact Bundle v3 的图结构不变；因生产者协议标识也是闭合字段，产物包同步升级主版本，
+当前唯一生产者协议身份为 `docwen.machine.v2`，旧版不进入执行路径。
+
 ## Boundaries / 边界
 
-- DocWen owns `docwen.machine.v1`, `docwen.artifact_bundle.v2`, capability discovery, task lifecycle, and
+- DocWen owns `docwen.machine.v2`, `docwen.artifact_bundle.v3`, capability discovery, task lifecycle, and
   conformance fixtures.
 - GUI, Assistant, OpenClaw, and external consumers use the same Machine Protocol.
 - A consumer maps `document`, `fragment`, `resource`, entry roles, and relations into its own domain only after
@@ -210,7 +224,7 @@ package manifest/binary digest.
 - A success is valid only after every Bundle locator stays under the request-owned staging root and every
   `size_bytes`/`sha256` matches the bytes.
 - Accepted tasks produce one terminal notification; failure/cancellation never publish a partial Bundle.
-- Accepted tasks emit progress with strictly increasing per-task sequence numbers. Machine v1 retains
+- Accepted tasks emit progress with strictly increasing per-task sequence numbers. Machine v2 retains
   `phase=conversion` for convert, validate, render, transform, and merge. Only bounded integer percentage facts are
   projected through closed server-owned messages; duplicate, regressing, boolean, non-finite, or late Runtime values
   are ignored. Paths, locators, document text, sheet names, and diagnostic locations never enter progress phase or

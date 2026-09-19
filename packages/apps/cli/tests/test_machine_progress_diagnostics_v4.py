@@ -1,4 +1,4 @@
-"""Machine v1 bounded progress and v4 diagnostic evidence contracts."""
+"""Machine v2 bounded progress and v4 diagnostic evidence contracts."""
 
 from __future__ import annotations
 
@@ -116,7 +116,7 @@ def _messages(capability_id: str = "convert.markdown.to_docx") -> list[dict[str,
             "initialize",
             1,
             {
-                "protocol": {"name": "docwen.machine", "major": 1, "minor": 0},
+                "protocol": {"name": "docwen.machine", "major": 2, "minor": 0},
                 "client": {"name": "test-client", "version": "1.0.0"},
                 "features": {"progress": True, "cancellation": True},
             },

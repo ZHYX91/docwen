@@ -1,7 +1,7 @@
 # DocWen wire contracts
 
-`contracts/` is the single authoritative source for DocWen-owned process-boundary contracts. Machine Protocol v1,
-Artifact Bundle v2, and Proofread Report v2 are the only accepted current wire identities. Schemas, fixtures,
+`contracts/` is the single authoritative source for DocWen-owned process-boundary contracts. Machine Protocol v2,
+Artifact Bundle v3, and Proofread Report v2 are the only accepted current wire identities. Schemas, fixtures,
 consumers, packaged contracts, and release hashes must be updated atomically. `docwen.markdown_semantics.v3` is the
 authored Markdown grammar/range/topology/fenced/YAML/citation projection authority, but is not by itself a numbering,
 resolved-plan, candidate, package, or release authority. The contracts remain intentionally independent of the CLI JSON presentation envelope, internal
@@ -12,8 +12,8 @@ validated against them; formal release-candidate evidence remains a separate gat
 
 ## Contract identities and ownership
 
-- Machine protocol: `docwen.machine.v1` / schema ID `urn:docwen:schema:machine-protocol:v1`.
-- Artifact bundle: `docwen.artifact_bundle.v2` / schema ID `urn:docwen:schema:artifact-bundle:v2`.
+- Machine protocol: `docwen.machine.v2` / schema ID `urn:docwen:schema:machine-protocol:v2`.
+- Artifact bundle: `docwen.artifact_bundle.v3` / schema ID `urn:docwen:schema:artifact-bundle:v3`.
 - Proofread report: `docwen.proofread_report.v2` / schema ID `urn:docwen:schema:proofread-report:v2`.
 - Presented bibliography resource: `docwen.semantic_bibliography.v1` / schema ID
   `urn:docwen:schema:semantic-bibliography:v1`.
@@ -36,9 +36,27 @@ require a new Machine Protocol major; incompatible Bundle shape or graph changes
 Additive optional capability data may use a protocol minor only after an explicit version decision and new
 conformance fixtures.
 
+## Protocol 2.0 compatibility and template discovery
+
+The current handshake requires exactly `docwen.machine` major 2, minor 0. Product version numbers do not
+negotiate protocol compatibility. A v1 peer or an unknown minor is rejected during `initialize`, before any
+resource query or task. Update DocWen and its consumers together; there is no implicit v1 downgrade.
+
+Protocol 2.0 makes template `origin` (`builtin|custom`) and `is_default` (boolean) required. The closed
+resource also requires canonical `id`, display `name`, `description`, and `target` (`docx|xlsx`); the ID's
+format segment must match the target. Display names are never execution identities. `resource/list`
+returns enabled templates in the server's configured order; consumers preserve that order and the default
+flag, and do not infer either from names. A disabled template is absent, even if previously selected.
+Numbering schemes retain their separate closed `id,name,description` resource shape.
+
+Artifact Bundle v3 requires `producer.machine_protocol=docwen.machine.v2`. Its graph and layout semantics
+remain unchanged. Both wire identities advance because the producer protocol is also a closed schema
+field; retaining the old Bundle identity would misrepresent compatibility. Previous Machine/Bundle
+versions are rejected, and no compatibility adapter is provided.
+
 ## Transport
 
-Machine Protocol v1 uses JSON-RPC 2.0 over the child process's stdin/stdout. Each message is UTF-8 JSON without
+Machine Protocol v2 uses JSON-RPC 2.0 over the child process's stdin/stdout. Each message is UTF-8 JSON without
 a byte-order mark and is framed exactly as:
 
 ```text
@@ -53,12 +71,12 @@ protocol frames. EOF terminates an idle server; the client must first cancel or 
 
 ## Machine lifecycle
 
-The v1 request methods are `initialize`, `capability/list`, `health/check`, `file/inspect`, `resource/list`,
+The v2 request methods are `initialize`, `capability/list`, `health/check`, `file/inspect`, `resource/list`,
 `gui/status`, `gui/activate`, `gui/open`, `task/plan`, `task/execute`, and `task/cancel`.
 The server emits `task/progress` and exactly one of `task/completed`, `task/failed`, or `task/cancelled` for every
 accepted task.
 
-1. `initialize` fixes protocol `1.0`, feature support, the method set, Bundle schema, and concurrency.
+1. `initialize` fixes protocol `2.0`, feature support, the method set, Bundle schema, and concurrency.
 2. `capability/list` returns provider-specific capability IDs, typed input slots, capability-specific closed option schemas,
    dependency availability, and the expected artifact graph shape. Each `input_shape` declares unique roles and
    rejects undeclared roles. Ordinary capabilities have a required `source`; the v4 Markdown-to-DOCX capability
@@ -258,7 +276,7 @@ Run the offline gate from the repository root:
 
 ```powershell
 uv run --extra test python tools/validate_contracts.py
-uv run --extra test pytest tests/test_repo/test_machine_protocol_v1_contracts.py
+uv run --extra test pytest tests/test_repo/test_machine_protocol_v2_contracts.py
 ```
 
 Any schema, vocabulary, lifecycle, framing, locator, integrity, or fixture expectation change must update this

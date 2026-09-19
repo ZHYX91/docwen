@@ -616,13 +616,13 @@ desktop-only and has no Linux/macOS combination acceptance.
 
 ### Installation
 
-DocWen Assistant 2.0 uses DocWen Machine Protocol v1 and the single Artifact Bundle v2 contract. Its
+DocWen Assistant 2.0 uses DocWen Machine Protocol v2 and the single Artifact Bundle v3 contract. Its
 source version does not prove publication; install only a numeric release that explicitly identifies a
 compatible published DocWen release.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-OpenClaw 2.0 uses DocWen Machine Protocol v1 and the single Artifact Bundle v2 contract. Its source
+OpenClaw 2.0 uses DocWen Machine Protocol v2 and the single Artifact Bundle v3 contract. Its source
 version does not prove publication; follow the numeric release page and install only after its immutable
 release gate succeeds.
 

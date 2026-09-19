@@ -1,11 +1,11 @@
 # CLI / 命令行
 
 > This page documents the human-facing command tree. External integrations use
-> [`serve --stdio` Machine Protocol v1 and Artifact Bundle v2](specs/machine-protocol-v1.md). `--json` is a CLI
+> [`serve --stdio` Machine Protocol v2 and Artifact Bundle v3](specs/machine-protocol-v2.md). `--json` is a CLI
 > presentation mode, not the stable cross-product process boundary.
 >
-> 本页记录面向人的命令树。外部集成使用 [`serve --stdio` Machine Protocol v1 与 Artifact Bundle
-> v2](specs/machine-protocol-v1.md)；`--json` 只是 CLI 展示模式，不是跨产品稳定进程边界。
+> 本页记录面向人的命令树。外部集成使用 [`serve --stdio` Machine Protocol v2 与 Artifact Bundle
+> v2](specs/machine-protocol-v2.md)；`--json` 只是 CLI 展示模式，不是跨产品稳定进程边界。
 
 DocWen 0.9 source and packaged builds use the same `docwen` command tree. Run `docwen --help`, `docwen <command> --help`, or `docwen schema <command>` for the executable contract.
 
@@ -13,7 +13,7 @@ DocWen 0.9 的源码态与打包态使用同一套 `docwen` 命令树。精确�
 
 ## Commands / 命令
 
-- `serve --stdio`: run the Content-Length framed Machine Protocol v1 server for external consumers.
+- `serve --stdio`: run the Content-Length framed Machine Protocol v2 server for external consumers.
 - `info`: report product, protocol, platform and capability metadata without starting the runtime.
 - `doctor`: check base runtime health and report the canonical capability projection.
 - `inspect FILE`: inspect one input's actual format and supported routes.

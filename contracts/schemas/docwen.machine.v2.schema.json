@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:docwen:schema:machine-protocol:v1",
-  "title": "DocWen Machine Protocol v1 Messages",
+  "$id": "urn:docwen:schema:machine-protocol:v2",
+  "title": "DocWen Machine Protocol v2 Messages",
   "description": "JSON-RPC 2.0 messages carried over Content-Length framed stdio.",
   "oneOf": [
     {
@@ -116,7 +116,7 @@
           "const": "docwen.machine"
         },
         "major": {
-          "const": 1
+          "const": 2
         },
         "minor": {
           "const": 0
@@ -700,7 +700,7 @@
               ]
             },
             "artifact_bundle_schema": {
-              "const": "docwen.artifact_bundle.v2"
+              "const": "docwen.artifact_bundle.v3"
             },
             "max_concurrent_tasks": {
               "type": "integer",
@@ -1146,21 +1146,11 @@
             },
             "description": {
               "type": "string"
-            },
-            "target": {
-              "type": "string",
-              "minLength": 1
-            },
-            "origin": {
-              "enum": [
-                "builtin",
-                "custom"
-              ]
-            },
-            "is_default": {
-              "type": "boolean"
             }
           }
+        },
+        {
+          "$ref": "#/$defs/templateResource"
         }
       ]
     },
@@ -1201,7 +1191,27 @@
                 "$ref": "#/$defs/resourceItem"
               }
             }
-          }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "templates"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "resources": {
+                    "items": {
+                      "$ref": "#/$defs/templateResource"
+                    }
+                  }
+                }
+              }
+            }
+          ]
         }
       }
     },
@@ -1702,7 +1712,16 @@
               "minimum": 1
             },
             "bundle": {
-              "$ref": "urn:docwen:schema:artifact-bundle:v2"
+              "$ref": "urn:docwen:schema:artifact-bundle:v3",
+              "properties": {
+                "producer": {
+                  "properties": {
+                    "machine_protocol": {
+                      "const": "docwen.machine.v2"
+                    }
+                  }
+                }
+              }
             },
             "diagnostics": {
               "type": "array",
@@ -1852,6 +1871,79 @@
           }
         }
       }
+    },
+    "templateResource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "description",
+        "target",
+        "origin",
+        "is_default"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^template\\.(?:docx|xlsx)\\.[0-9a-f]{64}$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "target": {
+          "enum": [
+            "docx",
+            "xlsx"
+          ]
+        },
+        "origin": {
+          "enum": [
+            "builtin",
+            "custom"
+          ]
+        },
+        "is_default": {
+          "type": "boolean"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "target": {
+                "const": "docx"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "id": {
+                "pattern": "^template\\.docx\\.[0-9a-f]{64}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "target": {
+                "const": "xlsx"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "id": {
+                "pattern": "^template\\.xlsx\\.[0-9a-f]{64}$"
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }

@@ -18,8 +18,8 @@ dependencies = [
 packages = ["src/docwen_cli"]
 
 [tool.hatch.build.targets.wheel.force-include]
-"../../../contracts/schemas/docwen.artifact_bundle.v2.schema.json" = "docwen_cli/contracts/docwen.artifact_bundle.v2.schema.json"
-"../../../contracts/schemas/docwen.machine.v1.schema.json" = "docwen_cli/contracts/docwen.machine.v1.schema.json"
+"../../../contracts/schemas/docwen.artifact_bundle.v3.schema.json" = "docwen_cli/contracts/docwen.artifact_bundle.v3.schema.json"
+"../../../contracts/schemas/docwen.machine.v2.schema.json" = "docwen_cli/contracts/docwen.machine.v2.schema.json"
 "../../../contracts/schemas/docwen.machine.diagnostic_evidence.v1.schema.json" = "docwen_cli/contracts/docwen.machine.diagnostic_evidence.v1.schema.json"
 "../../../contracts/schemas/docwen.semantic_bibliography.v1.schema.json" = "docwen_cli/contracts/docwen.semantic_bibliography.v1.schema.json"
 

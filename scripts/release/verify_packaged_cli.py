@@ -40,7 +40,9 @@ _PLUGIN_LOAD_FAILURE_MARKER = "Failed to load plugin "
 _PYMUPDF_LAYOUT_GATE_ID = "python.pymupdf4llm"
 _PYMUPDF_LAYOUT_SMOKE_TEXT = "DOCWEN PACKAGED PYMUPDF LAYOUT SMOKE"
 _TEMPLATE_ID_PATTERN = re.compile(r"^template\.(?:docx|xlsx)\.[0-9a-f]{64}$")
-_TEMPLATE_RESOURCE_FIELDS = frozenset({"id", "name", "target", "description", "path", "size_bytes", "modified_ns"})
+_TEMPLATE_RESOURCE_FIELDS = frozenset(
+    {"id", "name", "target", "description", "origin", "is_default", "path", "size_bytes", "modified_ns"}
+)
 _TEMPLATE_SMOKE_TEXT = "DOCWEN PACKAGED CANONICAL TEMPLATE ID SMOKE"
 _PROOFREAD_REPORT_FIXTURE_TEXT = "\ufeff\r\n# 坐标 😀e\u0301👩\u200d💻１２\r\n结尾（"
 _LONG_PATH_MINIMUM_LENGTH = 201
@@ -65,7 +67,7 @@ MACHINE_DOCUMENT_SEMANTICS_LIMITATIONS = (
         "severity": "warning",
         "code": "document_semantics.citation_processor_unavailable",
         "message": (
-            "DocWen does not run a CSL citation processor or accept citation_style inputs in Machine v1; "
+            "DocWen does not run a CSL citation processor or accept citation_style inputs in Machine v2; "
             "Markdown citation keys remain literal."
         ),
     },
@@ -2532,14 +2534,14 @@ def _run_machine_protocol_smoke_impl(
             "id": 1,
             "method": "initialize",
             "params": {
-                "protocol": {"name": "docwen.machine", "major": 1, "minor": 0},
+                "protocol": {"name": "docwen.machine", "major": 2, "minor": 0},
                 "client": {"name": "packaged-verifier", "version": "1.0.0"},
                 "features": {"progress": True, "cancellation": True},
             },
         }
     )
     result = initialize.get("result")
-    if not isinstance(result, dict) or result.get("artifact_bundle_schema") != "docwen.artifact_bundle.v2":
+    if not isinstance(result, dict) or result.get("artifact_bundle_schema") != "docwen.artifact_bundle.v3":
         raise RuntimeError(f"packaged_machine_protocol_initialize_invalid:{initialize}")
 
     discovery = exchange({"jsonrpc": "2.0", "id": 2, "method": "capability/list", "params": {}})

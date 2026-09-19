@@ -6,12 +6,12 @@ Plugins produce typed results and declare artifacts. The runtime output finalize
 
 This page describes the current in-process runtime contract. Internal `ArtifactManifest` and `OutputManifest`
 objects are not the external wire format. The implemented external process boundary is
-[Machine Protocol v1 and Artifact Bundle v2](specs/machine-protocol-v1.md). The Application Service maps runtime
+[Machine Protocol v2 and Artifact Bundle v3](specs/machine-protocol-v2.md). The Application Service maps runtime
 results into a BundleDraft; Bundle commit then validates locators, graph semantics, size and SHA-256 before
 publishing the task Bundle. CLI JSON presentation objects are not a compatibility layer for external consumers.
 
 本页描述当前进程内 Runtime 契约。内部 `ArtifactManifest`、`OutputManifest` 不是外部 wire format。新进程
-边界已由 [Machine Protocol v1 与 Artifact Bundle v2](specs/machine-protocol-v1.md) 实现。Application Service
+边界已由 [Machine Protocol v2 与 Artifact Bundle v3](specs/machine-protocol-v2.md) 实现。Application Service
 先把 runtime 结果映射为 BundleDraft，Bundle commit 再校验 locator、图语义、size 与 SHA-256 后发布任务
 Bundle。CLI JSON 展示对象不是外部消费者兼容层。
 

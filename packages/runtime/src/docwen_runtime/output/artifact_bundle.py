@@ -1,4 +1,4 @@
-"""Runtime-owned validation and integrity commit for Artifact Bundle v2."""
+"""Runtime-owned validation and integrity commit for Artifact Bundle v3."""
 
 from __future__ import annotations
 

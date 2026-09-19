@@ -47,7 +47,7 @@ target's plan value. The document contains authored content and structural ident
 Workspace paths, Node IDs, consumer types, resolver instructions, counter rules, and consumer objects are forbidden.
 
 The two required input resources and their schemas are frozen in
-[Machine Protocol v1](machine-protocol-v1.md#resolved-numbering-inputs--已解析编号输入). Both envelopes carry the
+[Machine Protocol v2](machine-protocol-v2.md#resolved-numbering-inputs--已解析编号输入). Both envelopes carry the
 same `input_id`, `source_sha256`, and `plan_sha256`. `plan_sha256` is the lowercase SHA-256 of the RFC 8785 canonical
 UTF-8 bytes of the plan resource's closed `plan` member only, so the pointer is not a self-hash. The neutral-document
 envelope points to that digest; the plan envelope repeats it and is accepted only after recomputation.

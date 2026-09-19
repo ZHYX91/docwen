@@ -595,13 +595,13 @@ Assistant 2.0 は Windows デスクトップ専用のままで、Linux/macOS の
 
 ### インストール
 
-DocWen Assistant 2.0 は DocWen Machine Protocol v1 と単一の Artifact Bundle v2 契約を使用します。
+DocWen Assistant 2.0 は DocWen Machine Protocol v2 と単一の Artifact Bundle v3 契約を使用します。
 ソースのバージョンだけでは公開済みであることを証明できません。互換性のある公開済み DocWen リリースを
 明示した数字形式のリリースだけをインストールしてください。
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-OpenClaw 2.0 は DocWen Machine Protocol v1 と単一の Artifact Bundle v2 契約を使用します。ソースの
+OpenClaw 2.0 は DocWen Machine Protocol v2 と単一の Artifact Bundle v3 契約を使用します。ソースの
 バージョンだけでは公開済みであることを証明できません。数字形式のリリースページを確認し、変更不能な
 リリースゲートが成功した後にだけインストールしてください。
 

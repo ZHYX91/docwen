@@ -1,4 +1,4 @@
-"""Typed Artifact Bundle v2 round-trip and semantic validation contracts."""
+"""Typed Artifact Bundle v3 round-trip and semantic validation contracts."""
 
 from __future__ import annotations
 

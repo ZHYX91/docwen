@@ -601,13 +601,13 @@ ne transporte les commandes de contrôle. Cela décrit uniquement la capacité d
 
 ### Installation
 
-DocWen Assistant 2.0 utilise DocWen Machine Protocol v1 et l'unique contrat Artifact Bundle v2. La version du code
+DocWen Assistant 2.0 utilise DocWen Machine Protocol v2 et l'unique contrat Artifact Bundle v3. La version du code
 source ne prouve pas sa publication ; installez uniquement une version numérique qui identifie explicitement une
 version publiée et compatible de DocWen.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-OpenClaw 2.0 utilise DocWen Machine Protocol v1 et l'unique contrat Artifact Bundle v2. La version du code source ne
+OpenClaw 2.0 utilise DocWen Machine Protocol v2 et l'unique contrat Artifact Bundle v3. La version du code source ne
 prouve pas sa publication ; consultez la page de la version numérique et ne l'installez qu'après la réussite de son
 contrôle de publication immuable.
 

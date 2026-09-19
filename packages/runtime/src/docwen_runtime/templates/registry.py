@@ -118,10 +118,12 @@ class TemplateRegistry:
         *,
         state_store: TemplateStateStore | None = None,
         managed_user_dir: Path | str | None = None,
+        builtin_dir: Path | str | None = None,
     ) -> None:
         self._dirs = [Path(templates_dir)] + (extra_paths or [])
         self._state_store = state_store
         self._managed_user_dir = Path(managed_user_dir) if managed_user_dir is not None else None
+        self._builtin_dir = Path(builtin_dir).resolve() if builtin_dir is not None else None
 
     @classmethod
     def default(
@@ -142,6 +144,7 @@ class TemplateRegistry:
             extra_paths=combined_paths,
             state_store=state,
             managed_user_dir=user_dir,
+            builtin_dir=ResourceRegistry.default().templates_dir(),
         )
 
     def list_templates(
@@ -161,7 +164,7 @@ class TemplateRegistry:
             if self._state_store is not None
             else {"docx": None, "xlsx": None}
         )
-        for directory_index, templates_dir in enumerate(self._dirs):
+        for templates_dir in self._dirs:
             if not templates_dir.exists():
                 continue
             for path in sorted(templates_dir.iterdir(), key=lambda item: item.name.casefold()):
@@ -194,7 +197,7 @@ class TemplateRegistry:
                         name=path.stem,
                         target=target,
                         description=_template_description(path.stem, target),
-                        origin="builtin" if directory_index == 0 else "custom",
+                        origin="builtin" if path.parent.resolve() == self._builtin_dir else "custom",
                         is_default=defaults.get(target) == template_id,
                         path=path,
                         size_bytes=stat.st_size,

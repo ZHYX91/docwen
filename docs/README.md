@@ -27,7 +27,7 @@ DocWen 文档只描述当前产品、受支持契约和维护门禁。实现与�
 
 ## Specifications / 规格
 
-- [Machine Protocol v1 and Artifact Bundle v2](specs/machine-protocol-v1.md)
+- [Machine Protocol v2 and Artifact Bundle v3](specs/machine-protocol-v2.md)
 - [Markdown document-node output](specs/document-node-output.md)
 - [Routes and actions](specs/routes-and-actions.md)
 - [Plugin manifest](specs/plugin-manifest.md)
