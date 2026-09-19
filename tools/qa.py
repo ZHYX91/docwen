@@ -19,7 +19,7 @@ if __package__ in {None, ""}:
     if str(_BOOTSTRAP_ROOT) not in sys.path:
         sys.path.insert(0, str(_BOOTSTRAP_ROOT))
 
-from tools import source_checks
+from tools import qa_reports, source_checks
 from tools.run_lease import lease_payload, transition
 from tools.windows_short_path import ShortPathDriveError, drive_root, mount_short_drive, unmount_short_drive
 from tools.workspace_root import WORKSPACE_ROOT_ENV as _WORKSPACE_ROOT_ENV
@@ -309,8 +309,8 @@ def _xdist_args() -> list[str]:
     return args
 
 
-def _platform_fast_mark_expr() -> str:
-    expr_parts = [FAST_MARK_EXPR]
+def _platform_mark_expr(selection: str) -> str:
+    expr_parts = [selection]
     if sys.platform != "win32":
         expr_parts.append("not windows_only")
     if sys.platform != "darwin":
@@ -318,17 +318,14 @@ def _platform_fast_mark_expr() -> str:
     if not sys.platform.startswith("linux"):
         expr_parts.append("not linux_only")
     return " and ".join(expr_parts)
+
+
+def _platform_fast_mark_expr() -> str:
+    return _platform_mark_expr(FAST_MARK_EXPR)
 
 
 def _platform_release_mark_expr() -> str:
-    expr_parts = [RELEASE_GATE_MARK_EXPR]
-    if sys.platform != "win32":
-        expr_parts.append("not windows_only")
-    if sys.platform != "darwin":
-        expr_parts.append("not macos_only")
-    if not sys.platform.startswith("linux"):
-        expr_parts.append("not linux_only")
-    return " and ".join(expr_parts)
+    return _platform_mark_expr(RELEASE_GATE_MARK_EXPR)
 
 
 def _scan_private_symbol_usage(repo_root: Path) -> int:
@@ -422,7 +419,7 @@ def _scan_private_symbol_usage(repo_root: Path) -> int:
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--suite", choices=["fast", "full", "pr-integration", "release"], default="fast")
+    parser.add_argument("--suite", choices=["fast", "full", "pr-integration", "release", "platform"], default="fast")
     parser.add_argument("--phase5", action="store_true")
     parser.add_argument(
         "--workspace-root",
@@ -432,6 +429,13 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--skip-ruff", action="store_true")
     parser.add_argument("--skip-pyright", action="store_true")
     parser.add_argument("--skip-pytest", action="store_true")
+    parser.add_argument(
+        "--tests-only", action="store_true", help="Run tests after a separate required source-check job."
+    )
+    parser.add_argument("--coverage", action="store_true", help="Measure full-suite coverage and all domain reports.")
+    parser.add_argument(
+        "--report-output", type=Path, help="Export compact reports to a new external directory before cleanup."
+    )
     parser.add_argument(
         "--pytest-basetemp",
         type=Path,
@@ -455,14 +459,20 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     if args.own_pytest_runtime and args.pytest_runtime_root is None and args.pytest_basetemp is None:
         parser.error("--own-pytest-runtime requires --pytest-runtime-root or --pytest-basetemp")
+    if args.tests_only and args.skip_pytest:
+        parser.error("--tests-only cannot skip pytest")
+    if args.coverage and (args.suite != "full" or args.skip_pytest):
+        parser.error("--coverage requires the full test suite")
+    if args.report_output and args.skip_pytest:
+        parser.error("--report-output requires pytest")
 
     repo_root = Path(__file__).resolve().parents[1]
-    code = _scan_private_symbol_usage(repo_root)
+    code = 0 if args.tests_only else _scan_private_symbol_usage(repo_root)
     if code != 0:
         return code
 
     steps: list[tuple[str, list[str], bool]] = []
-    if not args.skip_ruff:
+    if not args.skip_ruff and not args.tests_only:
         steps += [
             ("ruff-format", [sys.executable, "-m", "ruff", "format", "--check", "."], True),
             ("ruff-check", [sys.executable, "-m", "ruff", "check", "."], True),
@@ -485,8 +495,9 @@ def main(argv: list[str]) -> int:
                     False,
                 )
             ]
-    steps += source_checks.architecture_steps()
-    if not args.skip_pyright:
+    if not args.tests_only:
+        steps += source_checks.architecture_steps()
+    if not args.skip_pyright and not args.tests_only:
         steps += source_checks.typecheck_steps()
 
     exit_code = 0
@@ -511,6 +522,17 @@ def main(argv: list[str]) -> int:
         if requested_runtime_root is None and args.pytest_basetemp is not None:
             requested_runtime_root = args.pytest_basetemp
         try:
+            if args.report_output:
+                output = args.report_output.absolute()
+                if output.exists() or not output.parent.is_dir() or _path_traverses_link_or_reparse(output):
+                    raise ValueError("report output must be new inside an existing regular parent")
+                if _is_within(output.resolve(strict=False), repo_root):
+                    raise ValueError("report output must be outside the repository")
+                if selected_workspace and not _is_within(
+                    output.resolve(strict=False), selected_workspace / "acceptance"
+                ):
+                    raise ValueError("local compact reports must stay inside workspace acceptance")
+                args.report_output = output
             runtime_root, pytest_environment, runtime_owned = _pytest_runtime_environment(
                 repo_root,
                 requested_runtime_root,
@@ -550,9 +572,16 @@ def main(argv: list[str]) -> int:
                 pytest_cmd += ["-m", PR_GATE_MARK_EXPR]
             elif args.suite == "release":
                 pytest_cmd += ["-m", _platform_release_mark_expr()]
+            elif args.suite == "platform":
+                pytest_cmd += ["-m", _platform_mark_expr(f"(({FAST_MARK_EXPR}) or ({RELEASE_GATE_MARK_EXPR}))")]
+            environment = _runtime_environment_for_view(pytest_environment, runtime_view)
+            if args.coverage:
+                pytest_cmd += qa_reports.coverage_arguments(repo_root, runtime_view)
+                environment["COVERAGE_FILE"] = str(runtime_view / ".coverage")
+                environment["DOCWEN_TEST_ALLOW_COVERAGE_TRACE"] = "1"
             return_code = _run(
                 pytest_cmd,
-                env=_runtime_environment_for_view(pytest_environment, runtime_view),
+                env=environment,
             )
         except KeyboardInterrupt:
             interrupted = True
@@ -588,6 +617,18 @@ def main(argv: list[str]) -> int:
             return 2
         if return_code is None:
             raise RuntimeError("pytest runner returned no status")
+        if args.coverage:
+            for command in qa_reports.coverage_checks(runtime_root):
+                code = _run([sys.executable, *command])
+                return_code = return_code or code
+        if args.report_output:
+            try:
+                qa_reports.export_reports(
+                    runtime_root, args.report_output, coverage=args.coverage, exit_code=return_code
+                )
+            except (OSError, ValueError) as error:
+                print(f"[qa] compact report export failed: {error}", file=sys.stderr)
+                return_code = return_code or 2
         if return_code != 0:
             if runtime_owned:
                 _update_runtime_lease(runtime_root, state="retained-failure")

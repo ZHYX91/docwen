@@ -44,11 +44,11 @@ def verify_preflight_jobs(payload: dict[str, Any]) -> None:
     require(payload.get("total_count") == len(jobs), "incomplete preflight job response")
     expected = {
         "source-checks",
-        "pytest_windows_push",
+        "Tests on windows-latest",
+        "Tests on ubuntu-24.04",
+        "Tests on macos-14",
         "Required checks",
-        "Source gate on windows-latest",
-        "Source gate on ubuntu-24.04",
-        "Source gate on macos-14",
+        "Source identity",
         "Build Windows packages",
         "Build Linux packages",
         "verify-release",

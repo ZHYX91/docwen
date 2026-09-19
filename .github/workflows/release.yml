@@ -37,16 +37,9 @@ jobs:
 
   release-gate:
     needs: source-checks
-    name: Source gate on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest, ubuntu-24.04, macos-14]
-    env:
-      DOCWEN_GUI_DISABLE_STATE_SAVE: "1"
-      QT_QPA_PLATFORM: offscreen
+    name: Source identity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Check out exact source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -59,13 +52,6 @@ jobs:
           version: "0.12.0"
           python-version: "3.12.13"
           enable-cache: true
-      - name: Install Linux GUI dependencies
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends libegl1 libgl1 libxkbcommon-x11-0 libxcb-cursor0
       - name: Verify numeric version and source identity
         shell: bash
         env:
@@ -80,12 +66,6 @@ jobs:
           test "$GITHUB_SHA" = "$(git rev-parse HEAD)"
           git merge-base --is-ancestor HEAD "origin/$DEFAULT_BRANCH"
           test "$(git rev-parse "refs/tags/$RELEASE_VERSION^{commit}")" = "$GITHUB_SHA"
-      - name: Install exact lockfile
-        run: uv sync --frozen --extra test --extra lint
-      - name: Run release source gate
-        env:
-          DOCWEN_PYTEST_RUNTIME_ROOT: ${{ runner.temp }}/docwen-pytest-runtime
-        run: uv run python tools/qa.py --skip-ruff --skip-pyright --suite release
 
   build-windows:
     name: Build Windows packages
