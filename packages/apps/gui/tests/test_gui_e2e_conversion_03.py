@@ -21,7 +21,7 @@ class TestImageGuiExecution:
     ) -> None:
         from PySide6.QtWidgets import QApplication
 
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = _create_ocr_smoke_png(tmp_path / "hello_docwen_ocr.png")
 
@@ -37,7 +37,7 @@ class TestImageGuiExecution:
         # the still-supported sidecar route, so keep that choice explicit.
         assert controller.config_port.set("export.to_md_ocr_placement_mode", "image_md")
 
-        normalized = _normalize_path(str(source))
+        normalized = normalize_path(str(source))
         window.view_model.add_files([str(source)])
 
         app = QApplication.instance()
@@ -97,7 +97,7 @@ class TestPresentationGuiExecution:
         from pptx.shapes.placeholder import SlidePlaceholder
         from PySide6.QtWidgets import QApplication
 
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "presentation-smoke.pptx"
         presentation = Presentation()
@@ -112,7 +112,7 @@ class TestPresentationGuiExecution:
         presentation.save(str(source))
 
         window = main_window_with_controller
-        normalized = _normalize_path(str(source))
+        normalized = normalize_path(str(source))
         window.view_model.add_files([str(source)])
 
         app = QApplication.instance()
@@ -154,7 +154,7 @@ class TestMarkupGuiExecution:
     ) -> None:
         from PySide6.QtWidgets import QApplication
 
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "html-smoke.html"
         source.write_text(
@@ -164,7 +164,7 @@ class TestMarkupGuiExecution:
         )
 
         window = main_window_with_controller
-        normalized = _normalize_path(str(source))
+        normalized = normalize_path(str(source))
         window.view_model.add_files([str(source)])
 
         app = QApplication.instance()
@@ -207,7 +207,7 @@ class TestMarkupGuiExecution:
 
         from PySide6.QtWidgets import QApplication
 
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         html_part = MIMEText(
             "<html><body><h1>MHTML Smoke</h1><p>GUI action-only route to Markdown.</p>"
@@ -229,7 +229,7 @@ class TestMarkupGuiExecution:
         source.write_bytes(message.as_bytes())
 
         window = main_window_with_controller
-        normalized = _normalize_path(str(source))
+        normalized = normalize_path(str(source))
         window.view_model.add_files([str(source)])
 
         app = QApplication.instance()
@@ -278,7 +278,7 @@ class TestMarkupGuiExecution:
         from PySide6.QtWidgets import QApplication
 
         from docwen_core.text.ocr import OcrOutcome, OcrStatus
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         monkeypatch.setattr(
             "docwen_plugin_markup.markdown_resources.run_ocr_outcome",
@@ -308,7 +308,7 @@ class TestMarkupGuiExecution:
         source.write_bytes(message.as_bytes())
 
         window = main_window_with_controller
-        normalized = _normalize_path(str(source))
+        normalized = normalize_path(str(source))
         window.view_model.add_files([str(source)])
 
         app = QApplication.instance()
@@ -358,7 +358,7 @@ class TestMarkupGuiExecution:
         from ebooklib import epub
         from PySide6.QtWidgets import QApplication
 
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         image_bytes = _create_ocr_smoke_png(tmp_path / "epub-image.png").read_bytes()
         book = epub.EpubBook()
@@ -389,7 +389,7 @@ class TestMarkupGuiExecution:
         epub.write_epub(str(source), book)
 
         window = main_window_with_controller
-        normalized = _normalize_path(str(source))
+        normalized = normalize_path(str(source))
         window.view_model.add_files([str(source)])
 
         app = QApplication.instance()
@@ -435,7 +435,7 @@ class TestMarkupGuiExecution:
 
         from PySide6.QtWidgets import QApplication
 
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         image_bytes = _create_ocr_smoke_png(tmp_path / "enex-image.png").read_bytes()
         image_hash = hashlib.md5(image_bytes).hexdigest()
@@ -471,7 +471,7 @@ class TestMarkupGuiExecution:
         )
 
         window = main_window_with_controller
-        normalized = _normalize_path(str(source))
+        normalized = normalize_path(str(source))
         window.view_model.add_files([str(source)])
 
         app = QApplication.instance()

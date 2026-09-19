@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from docwen_application.optimization_selection import OptimizationSource
-from docwen_gui.main_window import _to_markdown_locale_options
+from docwen_gui.execution_requests import _to_markdown_locale_options
 from docwen_gui.view_models._optimization_filter import (
     discover_optimization_choices,
 )

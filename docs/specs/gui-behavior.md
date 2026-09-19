@@ -22,6 +22,15 @@ Single-file mode retains exactly one validated current input across file picking
 
 单文件模式在添加、拖入、二次启动和 Assistant GUI 传入时均只保留一个验证通过的当前文件。批量模式保留完整可见清单；多文件批次切回单文件时确认保留项。运行中不替换输入，外部请求被拒绝时向调用方报告失败。普通接收不进入活动记录；Assistant CLI 处理不改变 GUI 选择。
 
+Execution owns independent input metadata and option snapshots. Confirming a detected format applies only
+to the facts shown, and updates the live list only while those facts still match. The worker rechecks the
+input before conversion. Cancellation and reservation release use the controller that started the task;
+shutdown rejects late starts and retains live workers until they finish. Result and activity state are
+committed before output navigation and completion notifications.
+
+执行持有独立的输入元数据与参数快照。格式确认仅针对展示的检测事实，当前列表仍匹配时才同步确认记录；后台执行前继续重验输入。
+取消与保留资源释放使用启动任务时的控制器。关闭后拒绝迟到启动，并保留仍运行的线程直至结束；结果与活动状态先提交，再打开结果或发出完成通知。
+
 ## Settings ownership / 设置归属
 
 The fifteen pages follow this order: general, incoming text, incoming documents, incoming spreadsheets, incoming images, incoming layout files, incoming other files, proofreading, Markdown syntax, templates, links, Markdown resources, conversion software, file saving, logging. Incoming text owns Markdown content formatting, heading merging, table styling and template filling; incoming documents own DOCX content retention. Markdown syntax owns only syntax and extension policies. Global OCR language belongs to Markdown resources, and all eight converter priority lists belong to conversion software. Numbering editor changes refresh both incoming text and document pages without resetting unrelated drafts.

@@ -64,7 +64,7 @@ class TestRuntimeRequestBinding:
                 message="downstream conversion failed",
             ),
         )
-        window._on_execution_finished(
+        window._results.finished(
             [result],
             {
                 "request_id": "batch-retained",
@@ -136,7 +136,7 @@ class TestRuntimeRequestBinding:
             )
             for index, output in enumerate(retained)
         ]
-        window._on_execution_finished(
+        window._results.finished(
             results,
             {
                 "request_id": "multi-retained",
@@ -188,7 +188,7 @@ class TestRuntimeRequestBinding:
             output_path=str(tmp_path / f"stale-{error_type}.docx"),
         )
 
-        window._on_execution_finished(
+        window._results.finished(
             [
                 ConversionResult(
                     task_id=f"batch-{error_type}-0",
@@ -266,7 +266,7 @@ class TestRuntimeRequestBinding:
             ),
         ]
 
-        window._on_execution_finished(
+        window._results.finished(
             results,
             {
                 "request_id": "batch-warning",
@@ -313,7 +313,7 @@ class TestRuntimeRequestBinding:
             output_path=str(tmp_path / "stale-missing.docx"),
         )
 
-        window._on_execution_finished(
+        window._results.finished(
             [
                 ConversionResult(
                     task_id="batch-1-0",
@@ -350,8 +350,11 @@ class TestRuntimeRequestBinding:
         assert summary.total_count == 2
         assert summary.failed_count == 1
 
-    def test_cancel_active_batch_uses_controller_canonical_parent_once(self, window, tmp_path) -> None:
+    def test_cancel_active_batch_uses_controller_canonical_parent_once(self, window, tmp_path, qtbot) -> None:
+        import threading
         from types import SimpleNamespace
+
+        from docwen_core.models.result import ConversionErrorInfo, ConversionResult
 
         first = tmp_path / "a.md"
         second = tmp_path / "b.md"
@@ -362,19 +365,44 @@ class TestRuntimeRequestBinding:
         window._batch_list_vm.add_files([str(first), str(second)])
         window._batch_list_vm.set_file_status(first_norm, "processing", operation_id="batch-1-0")
         window._batch_list_vm.set_file_status(second_norm, "processing", operation_id="batch-1")
-        window._active_threads["batch-1"] = object()  # type: ignore[assignment]
         window._view_model._current_task_id = "batch-1-0"
 
         cancelled: list[str] = []
-        window._view_model._controller = SimpleNamespace(
+        released = threading.Event()
+
+        def execute(request):
+            released.wait(3)
+            return [
+                ConversionResult(
+                    task_id=f"{request.request_id}-{index}",
+                    success=False,
+                    error=ConversionErrorInfo(error_type="cancelled", message="Cancelled"),
+                )
+                for index in range(2)
+            ]
+
+        controller = SimpleNamespace(
             has_runtime=True,
             cancel=lambda task_id: cancelled.append(task_id),
+            prepare_execution_cancellation=lambda *_args, **_kwargs: object(),
+            release_execution_cancellation=lambda *_args: None,
+            execute_batch=execute,
             stop=lambda: None,
         )
-
-        window._cancel_active_task()
-
-        assert cancelled == ["batch-1"]
+        window._view_model._controller = controller
+        assert window._execution.launch(
+            controller=controller,
+            request=SimpleNamespace(request_id="batch-1", input_refs=[]),
+            context={"request_id": "batch-1", "file_paths": [first_norm, second_norm], "batch": True},
+            on_reserved=lambda: None,
+            batch_execution=True,
+        )
+        try:
+            window._workflow.cancel()
+            assert cancelled == ["batch-1"]
+        finally:
+            released.set()
+            qtbot.waitUntil(lambda: not window._execution.busy)
 
     def test_single_thread_setup_failure_releases_exact_cancellation_reservation(
         self,
@@ -382,14 +410,13 @@ class TestRuntimeRequestBinding:
         tmp_path,
         monkeypatch,
     ) -> None:
-        import docwen_gui.main_window as main_window_module
 
         source = tmp_path / "setup-failure.md"
         source.write_text("# Setup failure", encoding="utf-8")
         normalized = str(source).replace("\\", "/")
         outcome = window._view_model.add_files([normalized])
         assert len(outcome.added) == 1
-        request, context = window._build_request(
+        request, context = window._requests.single(
             file_path=normalized,
             target_format="docx",
             action_name="",
@@ -406,14 +433,14 @@ class TestRuntimeRequestBinding:
             stop=lambda: None,
         )
         window._view_model._controller = controller
-        monkeypatch.setattr(window, "_build_request", lambda **_kwargs: (request, context))
+        monkeypatch.setattr(window._requests, "single", lambda **_kwargs: (request, context))
 
         def fail_thread_setup(**_kwargs: object) -> object:
             raise RuntimeError("QThread setup failed")
 
-        monkeypatch.setattr(main_window_module, "_ExecutionThread", fail_thread_setup)
+        monkeypatch.setattr("docwen_gui.qt_bridge.execution_supervisor.ExecutionThread", fail_thread_setup)
 
-        window._start_execution(
+        window._workflow.single(
             file_path=normalized,
             target_format="docx",
             action_name="",
@@ -421,7 +448,7 @@ class TestRuntimeRequestBinding:
         )
 
         assert released == [(request.request_id, reservation)]
-        assert window._active_threads == {}
+        assert window._execution.threads == {}
         assert window._action_area_vm.cancel_visible is False
         entry = window._batch_list_vm.get_file_entry(normalized)
         assert entry is not None
@@ -434,7 +461,6 @@ class TestRuntimeRequestBinding:
         tmp_path,
         monkeypatch,
     ) -> None:
-        import docwen_gui.main_window as main_window_module
 
         first = tmp_path / "first.pdf"
         second = tmp_path / "second.pdf"
@@ -442,7 +468,7 @@ class TestRuntimeRequestBinding:
         second.write_bytes(b"%PDF-1.4\n")
         paths = [str(first).replace("\\", "/"), str(second).replace("\\", "/")]
         window._batch_list_vm.add_files(paths)
-        request, context = window._build_aggregate_request(
+        request, context = window._requests.aggregate(
             file_paths=paths,
             target_format="pdf",
             action_name="merge_pdfs",
@@ -464,15 +490,15 @@ class TestRuntimeRequestBinding:
             stop=lambda: None,
         )
         window._view_model._controller = controller
-        monkeypatch.setattr(window, "_build_aggregate_request", lambda **_kwargs: (request, context))
+        monkeypatch.setattr(window._requests, "aggregate", lambda **_kwargs: (request, context))
         monkeypatch.setattr(window, "_confirm_request_admission", lambda _request: True)
 
         def fail_thread_setup(**_kwargs: object) -> object:
             raise RuntimeError("Aggregate QThread setup failed")
 
-        monkeypatch.setattr(main_window_module, "_ExecutionThread", fail_thread_setup)
+        monkeypatch.setattr("docwen_gui.qt_bridge.execution_supervisor.ExecutionThread", fail_thread_setup)
 
-        window._start_aggregate_execution(
+        window._workflow.aggregate(
             file_paths=paths,
             target_format="pdf",
             action_name="merge_pdfs",
@@ -481,7 +507,7 @@ class TestRuntimeRequestBinding:
 
         assert prepared == [(request, False)]
         assert released == [(request.request_id, reservation)]
-        assert window._active_threads == {}
+        assert window._execution.threads == {}
         assert window._action_area_vm.cancel_visible is False
         assert window._view_model._active_execution_id is None
         entries = [window._batch_list_vm.get_file_entry(path) for path in paths]

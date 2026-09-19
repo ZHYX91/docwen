@@ -190,12 +190,12 @@ class TestUserVisibleParitySmoke:
                 staticmethod(lambda: True),
             )
             window._system_tray_icon = _Tray()  # type: ignore[assignment]
-            window._start_time = time.monotonic()
+            window._workflow.started_at = time.monotonic()
 
             window._maybe_notify_task_completion({"display_name": "sample.docx"})
             assert messages == []
 
-            window._start_time = time.monotonic() - 6
+            window._workflow.started_at = time.monotonic() - 6
             window._maybe_notify_task_completion({"display_name": "sample.docx"})
 
             assert messages

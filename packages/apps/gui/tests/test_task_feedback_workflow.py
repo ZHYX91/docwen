@@ -9,7 +9,7 @@ import pytest
 from PySide6.QtCore import Qt
 
 from docwen_core.events.task_events import TASK_PROGRESS
-from docwen_gui.main_window import _normalize_path
+from docwen_gui.path_identity import normalize_path
 from docwen_gui.view_models.info_area_vm import InfoAreaViewModel
 from docwen_gui.widgets.info_area import InfoArea
 
@@ -54,7 +54,7 @@ def test_next_worker_replaces_old_result_and_ignores_late_old_telemetry(main_win
         "total_count": 1,
     }
     try:
-        assert window._launch_execution_thread(
+        assert window._workflow.launch(
             controller=Controller(),
             request=SimpleNamespace(request_id="new"),
             context=context,
@@ -77,7 +77,7 @@ def test_next_worker_replaces_old_result_and_ignores_late_old_telemetry(main_win
         assert vm.task_summary.percent == 25
     finally:
         release.set()
-        qtbot.waitUntil(lambda: not window._active_threads, timeout=5000)
+        qtbot.waitUntil(lambda: not window._execution.threads, timeout=5000)
 
 
 @pytest.mark.parametrize("kind", ["single", "batch", "aggregate"])
@@ -86,7 +86,7 @@ def test_retry_preserves_scope_order_and_options(main_window, tmp_path, monkeypa
     for name in ("b", "a", "other"):
         path = tmp_path / f"{name}.md"
         path.write_text("# source", encoding="utf-8")
-        paths.append(_normalize_path(str(path)))
+        paths.append(normalize_path(str(path)))
     main_window._batch_list_vm.add_files(paths)
     for path in paths:
         main_window._batch_list_vm.set_file_status(
@@ -107,16 +107,13 @@ def test_retry_preserves_scope_order_and_options(main_window, tmp_path, monkeypa
         main_window._task_history.record("op", path, "failed")
     main_window._info_area_vm.set_task_summary(operation_id="op", state="failed")
     calls = []
-    for method in ("_start_execution", "_start_batch_execution", "_start_aggregate_execution"):
-        monkeypatch.setattr(main_window, method, lambda _method=method, **kwargs: calls.append((_method, kwargs)))
+    for method in ("single", "batch", "aggregate"):
+        monkeypatch.setattr(
+            main_window._workflow, method, lambda _method=method, **kwargs: calls.append((_method, kwargs))
+        )
     main_window._retry_failed_request()
-    expected = {
-        "single": "_start_execution",
-        "batch": "_start_batch_execution",
-        "aggregate": "_start_aggregate_execution",
-    }[kind]
     assert len(calls) == 1
-    assert calls[0][0] == expected
+    assert calls[0][0] == kind
     assert calls[0][1]["options"] == context["options"]
     if kind == "single":
         assert calls[0][1]["file_path"] == paths[0]
@@ -149,7 +146,7 @@ def test_viewing_details_does_not_republish_failures(main_window, tmp_path):
 def test_retry_requests_a_fresh_password_without_storing_it(main_window, tmp_path, monkeypatch, accepted):
     source = tmp_path / "encrypted.xlsx"
     source.write_bytes(b"fixture")
-    path = _normalize_path(str(source))
+    path = normalize_path(str(source))
     main_window._batch_list_vm.add_files([path])
     main_window._batch_list_vm.set_file_status(path, "failed", operation_id="encrypted")
     main_window._info_area_vm.set_task_summary(operation_id="encrypted", state="failed")
@@ -166,7 +163,7 @@ def test_retry_requests_a_fresh_password_without_storing_it(main_window, tmp_pat
     main_window._task_history.record("encrypted", path, "failed")
     monkeypatch.setattr("docwen_gui.main_window.QInputDialog.getText", lambda *args: ("fresh-password", accepted))
     calls = []
-    monkeypatch.setattr(main_window, "_start_execution", lambda **kwargs: calls.append(kwargs))
+    monkeypatch.setattr(main_window._workflow, "single", lambda **kwargs: calls.append(kwargs))
     main_window._retry_failed_request()
     assert len(calls) == int(accepted)
     if accepted:
@@ -207,7 +204,7 @@ def test_empty_failure_actions_do_not_offer_dead_details():
 def test_batch_progress_spans_children_without_resetting_to_zero(main_window):
     from docwen_core.events.task_events import TASK_COMPLETED, TASK_STARTED
 
-    main_window._feedback_context = {"request_id": "batch", "batch": True, "file_paths": ["a.md", "b.md"]}
+    main_window._workflow._context = {"request_id": "batch", "batch": True, "file_paths": ["a.md", "b.md"]}
     vm = main_window._info_area_vm
     vm.begin_task(operation_id="batch", current_file="Two files", total_count=2)
     main_window.view_model.begin_execution_telemetry("batch", ("batch-0", "batch-1"))
@@ -229,7 +226,7 @@ def test_all_skipped_batch_does_not_claim_failure(main_window, tmp_path):
     source = tmp_path / "skip.md"
     source.write_text("# source", encoding="utf-8")
     main_window._batch_list_vm.add_files([str(source)])
-    main_window._on_execution_finished(
+    main_window._results.finished(
         [
             ConversionResult(
                 task_id="skip-0", success=False, error=ConversionErrorInfo(error_type="skipped", message="Skipped")

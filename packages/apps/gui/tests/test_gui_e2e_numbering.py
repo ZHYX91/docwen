@@ -107,9 +107,9 @@ class TestMdToDocxNumberingE2E:
             app.processEvents()
 
         # Trigger conversion to DOCX.
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
-        normalized = _normalize_path(str(md_path))
+        normalized = normalize_path(str(md_path))
 
         window._action_area_vm.request_conversion("docx")
         if app is not None:

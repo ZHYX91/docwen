@@ -312,9 +312,9 @@ def _schedule_test_ocr_report(app: QApplication, window: MainWindow) -> None:
                     _fail("output_config_persist_failed")
                     return
 
-            from .main_window import _normalize_path
+            from .path_identity import normalize_path
 
-            normalized = _normalize_path(str(source_path))
+            normalized = normalize_path(str(source_path))
             state["normalized_path"] = normalized
             window.view_model.add_files([str(source_path)])
             app.processEvents()

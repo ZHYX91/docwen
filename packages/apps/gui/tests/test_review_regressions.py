@@ -17,7 +17,7 @@ def test_active_inputs_survive_delete_and_finished_details_survive_row_removal(
 ):
     from docwen_core.models.result import ConversionErrorInfo, ConversionResult
     from docwen_gui.dialogs.activity_records import ActivityRecordsDialog
-    from docwen_gui.main_window import _normalize_path
+    from docwen_gui.path_identity import normalize_path
 
     release = threading.Event()
 
@@ -38,7 +38,7 @@ def test_active_inputs_survive_delete_and_finished_details_survive_row_removal(
 
     source = tmp_path / "sample.md"
     source.write_text("# Sample", encoding="utf-8")
-    path = _normalize_path(str(source))
+    path = normalize_path(str(source))
     window = main_window
     window._input_area_vm.set_mode("batch")
     window._input_area_vm.add_files([path])
@@ -56,11 +56,11 @@ def test_active_inputs_survive_delete_and_finished_details_survive_row_removal(
 
     def project():
         window.view_model.begin_execution_telemetry("op", ("op",))
-        window._set_execution_file_status(path, "processing", operation_id="op")
+        window._results.file_status(path, "processing", operation_id="op")
         window._action_area_vm.show_cancel()
 
     try:
-        assert window._launch_execution_thread(
+        assert window._workflow.launch(
             controller=Controller(),
             request=SimpleNamespace(request_id="op", input_refs=[]),
             context=context,
@@ -74,7 +74,7 @@ def test_active_inputs_survive_delete_and_finished_details_survive_row_removal(
         assert window.view_model.files
     finally:
         release.set()
-        qtbot.waitUntil(lambda: not window._active_threads)
+        qtbot.waitUntil(lambda: not window._execution.threads)
 
     assert window._batch_list_vm.remove_file(path)
     assert not window.view_model.files
@@ -85,7 +85,7 @@ def test_active_inputs_survive_delete_and_finished_details_survive_row_removal(
     assert window._task_history.get("op").failed_paths == [path]
     dialog.close()
     retries = []
-    monkeypatch.setattr(window, "_start_execution", lambda **kwargs: retries.append(kwargs))
+    monkeypatch.setattr(window._workflow, "single", lambda **kwargs: retries.append(kwargs))
     window._retry_failed_request()
     qtbot.waitUntil(lambda: not window._view_model.inspection_busy)
     assert [request["file_path"] for request in retries] == [path]

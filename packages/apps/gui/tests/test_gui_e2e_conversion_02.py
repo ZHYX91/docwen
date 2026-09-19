@@ -33,12 +33,12 @@ class TestGuiCancellationExecution:
             FormatRelation,
             StructureStatus,
         )
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         window = main_window_with_controller
         source = tmp_path / "cancel-preconversion.doc"
         source.write_bytes(b"legacy document fixture")
-        normalized = _normalize_path(str(source))
+        normalized = normalize_path(str(source))
         source_stat = source.stat()
         admitted_doc = FileInspection(
             file_path=str(source.resolve()),
@@ -107,7 +107,7 @@ class TestGuiCancellationExecution:
 
         assert _wait_for(_cancelled, timeout_ms=10000, interval_ms=20)
         assert bridge_saw_cancel.is_set()
-        assert _wait_for(lambda: not window._active_threads, timeout_ms=5000, interval_ms=20)
+        assert _wait_for(lambda: not window._execution.threads, timeout_ms=5000, interval_ms=20)
         entry = window._batch_list_vm.get_file_entry(normalized)
         assert entry is not None
         assert entry.status == "cancelled"
@@ -125,7 +125,7 @@ class TestGuiCancellationExecution:
         from docwen_core.models.manifest import PluginManifest, RouteSpec
         from docwen_core.models.result import ConversionResult
         from docwen_gui.app import create_main_window
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
         from docwen_gui.qt_bridge.task_event_bridge import TaskEventBridge
         from docwen_runtime.adapters import RuntimePortAdapter
         from docwen_runtime.capabilities import build_runtime_capability_projection
@@ -203,7 +203,7 @@ class TestGuiCancellationExecution:
         try:
             source = tmp_path / "cancel-me.md"
             source.write_text("# Cancel me", encoding="utf-8")
-            normalized = _normalize_path(str(source))
+            normalized = normalize_path(str(source))
             window.view_model.add_files([str(source)])
 
             app = QApplication.instance()
@@ -214,7 +214,7 @@ class TestGuiCancellationExecution:
 
             def _running() -> bool:
                 entry = window._batch_list_vm.get_file_entry(normalized)
-                return bool(window._active_threads) and entry is not None and entry.status == "processing"
+                return bool(window._execution.threads) and entry is not None and entry.status == "processing"
 
             assert _wait_for(_running, timeout_ms=_E2E_CONVERSION_TIMEOUT_MS, interval_ms=20)
             assert _wait_for(
@@ -262,7 +262,7 @@ class TestGuiBatchExecution:
         from docwen_core.models.manifest import PluginManifest, RouteSpec
         from docwen_core.models.result import ConversionErrorInfo, ConversionResult
         from docwen_gui.app import create_main_window
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
         from docwen_runtime.adapters import RuntimePortAdapter
         from docwen_runtime.capabilities import build_runtime_capability_projection
         from docwen_runtime.engine.route_resolver import RouteResolver
@@ -340,8 +340,8 @@ class TestGuiBatchExecution:
             bad_source = tmp_path / "bad.md"
             ok_source.write_text("# OK", encoding="utf-8")
             bad_source.write_text("# Bad", encoding="utf-8")
-            ok_norm = _normalize_path(str(ok_source))
-            bad_norm = _normalize_path(str(bad_source))
+            ok_norm = normalize_path(str(ok_source))
+            bad_norm = normalize_path(str(bad_source))
 
             window.view_model.mode = "batch"
             window.view_model.add_files([str(ok_source), str(bad_source)])
@@ -397,7 +397,7 @@ class TestMarkdownTemplateWorkflow:
         from docx import Document
         from PySide6.QtWidgets import QApplication
 
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
         from docwen_runtime.templates import TemplateRegistry
 
         templates_dir = tmp_path / "templates"
@@ -416,7 +416,7 @@ class TestMarkdownTemplateWorkflow:
         source.write_text("# Smoke Title\n\nBody paragraph from GUI template workflow.", encoding="utf-8")
 
         window = main_window_with_controller
-        normalized = _normalize_path(str(source))
+        normalized = normalize_path(str(source))
         window._template_vm.manager.registry = registry
         window._load_templates_into_main_selector()
         docx_selector = window._template_selector.get_selector("docx")
