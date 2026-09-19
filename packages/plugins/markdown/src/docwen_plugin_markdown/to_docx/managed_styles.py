@@ -122,6 +122,7 @@ class ManagedStyleBindings:
     """Request-owned stable styles, rebound after any save/reopen cycle."""
 
     styles: tuple[tuple[str, BaseStyle], ...]
+    foundation_style_ids: tuple[tuple[str, str], ...]
     conflicts: tuple[ManagedStyleConflict, ...] = ()
 
     def get(self, semantic_key: str) -> BaseStyle:
@@ -467,6 +468,13 @@ def _apply_primary_plan(
                 code_font=code_font,
                 code_background_color=code_background_color,
             )
+            if style.get(qn("w:default")) == "1" and any(
+                existing.get(qn("w:type")) == definition.kind and existing.get(qn("w:default")) in {"1", "true", "on"}
+                for existing in root.findall(qn("w:style"))
+            ):
+                # Complete our dependency without replacing a template-owned
+                # default for unstyled paragraphs, runs or tables.
+                del style.attrib[qn("w:default")]
             root.append(style)
         else:
             style.set(qn("w:styleId"), match.output_style_id)
@@ -857,7 +865,12 @@ def _bind_and_validate(
         if style_element.find(qn("w:aliases")) is not None:
             _internal(f"Managed style {match.output_style_id!r} still has aliases.")
         bindings.append((definition.semantic_key, style))
-    return ManagedStyleBindings(tuple(bindings), conflicts)
+    foundation_ids = tuple(
+        (match.definition.semantic_key, match.output_style_id)
+        for match in plan.matches
+        if match.definition in _FOUNDATION_STYLE_DEFINITIONS
+    )
+    return ManagedStyleBindings(tuple(bindings), foundation_ids, conflicts)
 
 
 def _validate_serialized_package(
@@ -875,7 +888,7 @@ def _validate_serialized_package(
         primary = etree.fromstring(archive.read(_PRIMARY_STYLES_PART))
         primary_by_id = _style_elements_by_id(primary)
         style_types = {style_id: element.get(qn("w:type"), "") for style_id, element in primary_by_id.items()}
-        for definition in MANAGED_DOCUMENT_STYLES:
+        for definition in _ALL_STYLE_DEFINITIONS:
             expected_id = expected_by_key[definition.semantic_key]
             element = primary_by_id.get(expected_id)
             if element is None or style_types.get(expected_id) != definition.kind:
@@ -896,7 +909,7 @@ def _validate_serialized_package(
             effects = etree.fromstring(archive.read(_EFFECTS_STYLES_PART))
             effects_by_id = _style_elements_by_id(effects)
             effects_types = {style_id: element.get(qn("w:type"), "") for style_id, element in effects_by_id.items()}
-            for definition in MANAGED_DOCUMENT_STYLES:
+            for definition in _ALL_STYLE_DEFINITIONS:
                 expected_id = effects_expected_by_key[definition.semantic_key]
                 element = effects_by_id.get(expected_id)
                 if element is None or element.get(qn("w:type")) != definition.kind:
@@ -917,9 +930,9 @@ def validate_managed_style_package(
 
     try:
         expected_ids = (
-            bindings.style_ids
+            (*bindings.foundation_style_ids, *bindings.style_ids)
             if bindings is not None
-            else tuple((definition.semantic_key, definition.style_id) for definition in MANAGED_DOCUMENT_STYLES)
+            else tuple((definition.semantic_key, definition.style_id) for definition in _ALL_STYLE_DEFINITIONS)
         )
         _validate_serialized_package(
             blob,

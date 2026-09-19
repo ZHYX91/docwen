@@ -56,9 +56,13 @@ semantic key -> stable OOXML styleId -> visible w:name
   semantic-key-to-styleId map is the only map used by renderers and is recorded with a stable conflict diagnostic.
   DocWen never deletes, renames, retypes, or rewrites the conflicting user style.
 
-Word's `Normal`, `DefaultParagraphFont`, `TableNormal`, and `Title` are template base styles and are not part of the
-43 managed entries. Starting from a document that contains only those four base styles, a complete output therefore
-contains exactly 47 physical styles. A custom template may contain more.
+`Normal`, `DefaultParagraphFont` and `TableNormal` are dependencies of the 43 managed entries. Missing definitions
+are completed in the output copy, using a compatible template-owned ID where one exists. Completion preserves an
+existing default style of each OOXML type; an injected foundation becomes the default only when that type has no
+default. Final validation covers these foundation identities in both `styles.xml` and `stylesWithEffects.xml`.
+`Title` and `Subtitle` are optional template styles, not prerequisites or injected dependencies. The shipped blank
+template includes `Title` and therefore produces 47 physical styles after completion; this count is not a requirement
+for other templates. Source template bytes and compatible formatting remain unchanged.
 
 ## Complete registry / 完整注册表
 
