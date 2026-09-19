@@ -25,6 +25,68 @@ def _governance_root(engineering_root: Path) -> Path:
     return governed
 
 
+@pytest.mark.parametrize("failure", [None, "pytest", "source-manifest", "gui", "missing-report"])
+def test_full_coverage_exports_one_report_set_and_cleans_only_successful_raw_runs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure: str | None
+) -> None:
+    governed = _governance_root(tmp_path / "engineering")
+    monkeypatch.setenv(qa.WORKSPACE_ROOT_ENV, str(governed))
+    monkeypatch.delenv(qa.PYTEST_RUNTIME_ROOT_ENV, raising=False)
+    monkeypatch.setattr(qa, "_should_use_short_runtime_drive", lambda **_kwargs: False)
+    commands = []
+    observed = []
+
+    def run(command, *, env=None):
+        commands.append(command)
+        if "pytest" in command:
+            root = Path(env[qa.PYTEST_RUNTIME_ROOT_ENV])
+            observed.append(root)
+            assert Path(env["COVERAGE_FILE"]).parent == root
+            assert env["DOCWEN_TEST_ALLOW_COVERAGE_TRACE"] == "1"
+            assert "--cov-fail-under=81" in command
+            assert "--cov" in command
+            assert not any(arg.startswith("--cov=docwen_gui") for arg in command)
+            for name in qa.qa_reports.VISIBILITY_REPORTS:
+                if failure != "missing-report" or name != "skip_report.json":
+                    (root / "reports" / name).write_text("{}", encoding="utf-8")
+            (root / "coverage.xml").write_text("<coverage/>", encoding="utf-8")
+            (root / "private-test-fixture.env").write_text("not an exported report", encoding="utf-8")
+            return 7 if failure == "pytest" else 0
+        if failure == "source-manifest" and "tools/check_coverage_source_manifest.py" in command:
+            return 8
+        if failure == "gui" and "tools/check_gui_coverage.py" in command:
+            return 9
+        return 0
+
+    monkeypatch.setattr(qa, "_run", run)
+    report = governed / "acceptance" / "qa-reports"
+    result = qa.main(["--tests-only", "--suite", "full", "--coverage", "--report-output", str(report)])
+    assert (result == 0) is (failure is None)
+    assert len(observed) == 1
+    assert len(commands) == 4  # One test run and three summaries from its single XML.
+    assert not (report / "private-test-fixture.env").exists()
+    assert observed[0].exists() is (failure is not None)
+    if failure != "missing-report":
+        summary = json.loads((report / "summary.json").read_text(encoding="utf-8"))
+        assert summary["exitCode"] == result
+        assert set(summary["reports"]) == {*qa.qa_reports.VISIBILITY_REPORTS, "coverage.xml"}
+
+
+def test_coverage_cannot_claim_the_full_product_from_a_fast_selection() -> None:
+    with pytest.raises(SystemExit) as error:
+        qa.main(["--coverage", "--suite", "fast"])
+    assert error.value.code == 2
+
+
+def test_platform_selection_unions_fast_and_release_cases_with_platform_exclusions(monkeypatch) -> None:
+    monkeypatch.setattr(qa.sys, "platform", "linux")
+    expression = qa._platform_mark_expr(f"(({qa.FAST_MARK_EXPR}) or ({qa.RELEASE_GATE_MARK_EXPR}))")
+    assert (
+        expression
+        == "(((unit or contract) and not slow) or (release_gate and (integration or gui_smoke or e2e))) and not windows_only and not macos_only"
+    )
+
+
 def test_full_qa_uses_the_explicit_pytest_runtime_root(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

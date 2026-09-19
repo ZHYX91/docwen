@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import functools
 import http.client
 import json
@@ -46,29 +47,46 @@ def test_lost_write_response_is_reconciled_without_repeating_the_write(session, 
     api, create, receipt, clock = session
     api.lost.add(lost)
     result = create().publish(notes="Release notes")
-    assert result["stage"] == "verified"
+    assert result["stage"] == "published-awaiting-readback"
+    assert api.downloads == []
     assert len(api.writes) == 6  # one draft, four public assets, one publish
     assert len({path for _, path in api.writes}) == 6
     assert clock.delays[:2] == [2, 4]
     assert read_object(receipt)["releaseId"] == 30
+    assert create().verify_published()["stage"] == "verified"
+    assert len(api.downloads) == 4
+    assert not any(path.endswith("/immutable-releases") for path in api.reads)
 
 
 def test_published_readback_failure_can_resume_without_any_write(session) -> None:
     api, create, receipt, _ = session
     api.bad_download = True
+    assert create().publish(notes="Release notes")["stage"] == "published-awaiting-readback"
     with pytest.raises(PublicationError, match="remote bytes mismatch"):
-        create().publish(notes="Release notes")
+        create().verify_published()
     assert read_object(receipt)["stage"] == "published-awaiting-readback"
     writes = api.writes[:]
     api.bad_download = False
-    assert create().publish(notes="Release notes")["stage"] == "verified"
+    assert create().publish(notes="Release notes")["stage"] == "published-awaiting-readback"
+    assert create().verify_published()["stage"] == "verified"
     assert api.writes == writes
 
 
-def test_draft_download_mismatch_prevents_publication(session, monkeypatch) -> None:
+def test_draft_asset_identity_mismatch_prevents_publication(session, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The draft is pinned by the platform size and digest, not by a second byte download."""
+
     api, create, receipt, _ = session
-    monkeypatch.setattr(api, "download_identity", lambda *args, **kwargs: {"bytes": 0, "sha256": "0" * 64})
-    with pytest.raises(PublicationError, match="remote bytes mismatch"):
+    original = api.request
+
+    def tampered(method: str, path: str, **kwargs):
+        result = original(method, path, **kwargs)
+        if method == "GET" and isinstance(result, dict) and result.get("assets"):
+            result = copy.deepcopy(result)
+            result["assets"][-1]["digest"] = "sha256:" + "0" * 64
+        return result
+
+    monkeypatch.setattr(api, "request", tampered)
+    with pytest.raises(PublicationError, match="remote asset mismatch"):
         create().publish(notes="Release notes")
     assert api.release["draft"] is True
     assert not any(method == "PATCH" for method, _ in api.writes)
@@ -90,17 +108,19 @@ def test_process_interruption_after_upload_resumes_the_pending_write(session, mo
         create().publish(notes="Release notes")
     assert read_object(receipt)["pending"].startswith("upload:")
     monkeypatch.setattr(api, "request", original)
-    assert create().publish(notes="Release notes")["stage"] == "verified"
+    assert create().publish(notes="Release notes")["stage"] == "published-awaiting-readback"
     assert len(api.writes) == 6
 
 
-@pytest.mark.parametrize("failure", ["lint", "run", "digest"])
-def test_missing_or_failed_preflight_prevents_every_write(session, failure: str) -> None:
+@pytest.mark.parametrize("failure", ["lint", "run", "digest", "expired"])
+def test_missing_or_failed_candidate_prevents_every_write(session, failure: str) -> None:
     api, create, _, _ = session
     if failure == "lint":
         api.jobs["jobs"][0]["conclusion"] = "failure"
     elif failure == "run":
-        api.run["conclusion"] = "failure"
+        api.run["head_branch"] = "main"
+    elif failure == "expired":
+        api.artifact["expired"] = True
     else:
         api.artifact["digest"] = "sha256:" + "f" * 64
     with pytest.raises(PublicationError):
@@ -108,10 +128,117 @@ def test_missing_or_failed_preflight_prevents_every_write(session, failure: str)
     assert api.writes == []
 
 
+def test_exact_published_release_is_read_only_until_independent_verification(session) -> None:
+    api, create, _, _ = session
+    create().publish(notes="Release notes")
+    writes = api.writes[:]
+    assert create().publish(notes="Release notes")["stage"] == "published-awaiting-readback"
+    assert api.writes == writes
+    assert api.downloads == []
+    assert create().verify_published()["stage"] == "verified"
+    assert len(api.downloads) == 4
+    assert api.writes == writes
+
+
+def test_nonimmutable_publication_never_reports_verified_or_downloads_assets(session, monkeypatch) -> None:
+    api, create, receipt, _ = session
+    original = api.request
+
+    def mutable_release(method, path, **kwargs):
+        result = original(method, path, **kwargs)
+        if method == "PATCH":
+            api.release["immutable"] = False
+            result["immutable"] = False
+        return result
+
+    monkeypatch.setattr(api, "request", mutable_release)
+    with pytest.raises(PublicationError, match="budget exhausted"):
+        create().publish(notes="Release notes")
+    assert len(api.writes) == 6
+    assert api.downloads == []
+    assert read_object(receipt)["stage"] == "published-awaiting-readback"
+
+
 def test_foreign_draft_is_never_modified(session) -> None:
     api, create, _, _ = session
     api.release = {"id": 31, "tag_name": VERSION, "prerelease": False, "draft": True, "body": "different candidate"}
     with pytest.raises(PublicationError, match="another candidate"):
+        create().publish(notes="Release notes")
+    assert api.writes == []
+
+
+@pytest.mark.parametrize("basis", ["exact", "ancestor", "squash"])
+def test_publishing_requires_default_branch_acceptance_without_rebuilding(session, basis) -> None:
+    api, create, receipt, _ = session
+    if basis != "exact":
+        api.default_head["sha"] = "e" * 40
+    if basis == "squash":
+        api.comparison.update(status="diverged", merge_base_commit={"sha": "f" * 40})
+    create().publish(notes="Release notes")
+    expected = {"exact": "exact-commit", "ancestor": "ancestor", "squash": "identical-tree"}[basis]
+    assert read_object(receipt)["acceptedSource"]["basis"] == expected
+
+
+def test_unmerged_changed_tree_prevents_all_remote_writes(session) -> None:
+    api, create, _, _ = session
+    api.default_head = {"sha": "e" * 40, "commit": {"tree": {"sha": "f" * 40}}}
+    api.comparison.update(status="diverged", merge_base_commit={"sha": "c" * 40})
+    with pytest.raises(PublicationError, match="not been accepted"):
+        create().publish(notes="Release notes")
+    assert api.writes == []
+
+
+@pytest.mark.parametrize("interruption", ["lost-response", "process-exit"])
+def test_branch_candidate_creates_its_tag_once_and_reconciles_interruption(tmp_path, monkeypatch, interruption) -> None:
+    directory, _ = candidate(tmp_path, source_ref="refs/heads/feature/pr")
+    api = FakeGitHub()
+    api.run["head_branch"] = "feature/pr"
+    api.tag = None
+    clock = Clock()
+    monkeypatch.setattr(
+        publication_session, "read_with_retry", functools.partial(read_with_retry, clock=clock.time, sleep=clock.sleep)
+    )
+    monkeypatch.setattr(ReleaseSession, "verify_provenance", lambda self: self.save(provenance="verified"))
+    receipt = tmp_path / "progress.json"
+
+    def create():
+        return ReleaseSession(
+            api,
+            directory,
+            receipt,
+            repository=REPOSITORY,
+            version=VERSION,
+            commit=COMMIT,
+            artifact_id=20,
+            artifact_digest=DIGEST,
+        )
+
+    if interruption == "lost-response":
+        api.lost.add("tag")
+    else:
+        request = api.request
+
+        def interrupted(method, path, **kwargs):
+            result = request(method, path, **kwargs)
+            if method == "POST" and path.endswith("/git/refs"):
+                raise KeyboardInterrupt
+            return result
+
+        monkeypatch.setattr(api, "request", interrupted)
+        with pytest.raises(KeyboardInterrupt):
+            create().publish(notes="Release notes")
+        assert read_object(receipt)["pending"] == "create-tag"
+        monkeypatch.setattr(api, "request", request)
+    assert create().publish(notes="Release notes")["stage"] == "published-awaiting-readback"
+    assert len(api.writes) == 7
+    assert sum(path.endswith("/git/refs") for _, path in api.writes) == 1
+    assert api.downloads == []
+
+
+def test_conflicting_tag_is_never_moved(session) -> None:
+    api, create, _, _ = session
+    api.tag = {"object": {"type": "commit", "sha": "f" * 40}}
+    with pytest.raises(PublicationError, match="tag source mismatch"):
         create().publish(notes="Release notes")
     assert api.writes == []
 
@@ -129,7 +256,7 @@ def test_successful_publish_response_with_wrong_identity_keeps_pending_write(ses
         create().publish(notes="Release notes")
     assert read_object(receipt)["pending"] == "publish"
     monkeypatch.setattr(api, "request", original)
-    assert create().publish(notes="Release notes")["stage"] == "verified"
+    assert create().publish(notes="Release notes")["stage"] == "published-awaiting-readback"
     assert len(api.writes) == 6
 
 

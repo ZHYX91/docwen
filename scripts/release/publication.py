@@ -28,8 +28,19 @@ from scripts.release.publication_contract import (
     verify_inventory,
     verify_origin,
 )
-from scripts.release.publication_http import GitHub
-from scripts.release.publication_session import ReleaseSession, verify_preflight_jobs
+from scripts.release.publication_http import GitHub, env_seconds
+from scripts.release.publication_session import ReleaseSession, verify_candidate_jobs
+
+
+def artifact_digest(api: GitHub, artifact_id: int) -> str:
+    """Read the platform digest of an explicit immutable artifact ID, never search runs."""
+
+    require(artifact_id > 0, "positive artifact ID required")
+    metadata = api.get(f"/repos/{api.repository}/actions/artifacts/{artifact_id}")
+    require(metadata.get("id") == artifact_id and metadata.get("expired") is False, "artifact unavailable")
+    digest = metadata.get("digest")
+    require(isinstance(digest, str), "artifact digest missing")
+    return canonical_digest(digest)
 
 
 def restore_progress(api: GitHub, *, artifact_id: int, digest: str, receipt: Path, commit: str) -> None:
@@ -102,7 +113,7 @@ def fetch_candidate(
             ["gh", "api", f"/repos/{repository}/actions/artifacts/{artifact_id}/zip"],
             stdout=stream,
             stderr=subprocess.PIPE,
-            timeout=600,
+            timeout=env_seconds("DOCWEN_PUBLICATION_ARTIFACT_TIMEOUT", 600),
         )
     require(result.returncode == 0, "candidate artifact download failed")
     require(f"sha256:{file_identity(archive)['sha256']}" == digest, "downloaded artifact digest mismatch")
@@ -123,9 +134,9 @@ def fetch_candidate(
     archive.unlink()
     manifest = verify_inventory(output, repository=repository, version=version, commit=commit)
     origin = manifest["origin"]
-    run = api.get(f"/repos/{repository}/actions/runs/{origin['runId']}")
+    run = api.get(f"/repos/{repository}/actions/runs/{origin['runId']}/attempts/{origin['runAttempt']}")
     verify_origin(manifest, run, metadata, digest=digest)
-    verify_preflight_jobs(
+    verify_candidate_jobs(
         api.get(f"/repos/{repository}/actions/runs/{origin['runId']}/attempts/{origin['runAttempt']}/jobs?per_page=100")
     )
 
@@ -133,7 +144,7 @@ def fetch_candidate(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="operation", required=True)
-    for operation in ("assemble", "fetch", "publish", "verify"):
+    for operation in ("assemble", "fetch", "inspect", "publish", "verify"):
         command = subparsers.add_parser(operation)
         command.add_argument("--repository", required=True)
         command.add_argument("--version", required=True)
@@ -144,10 +155,11 @@ def main(argv: list[str] | None = None) -> int:
             command.add_argument("--source", type=Path, required=True)
             command.add_argument("--run-id", type=int, required=True)
             command.add_argument("--attempt", type=int, required=True)
+            command.add_argument("--source-ref", required=True)
         else:
             command.add_argument("--artifact-id", type=int, required=True)
-            command.add_argument("--artifact-digest", type=canonical_digest, required=True)
-        if operation in {"publish", "verify"}:
+            command.add_argument("--artifact-digest", type=canonical_digest)
+        if operation in {"inspect", "publish", "verify"}:
             command.add_argument("--receipt", type=Path, required=True)
         if operation == "publish":
             command.add_argument("--notes", type=Path, required=True)
@@ -155,6 +167,10 @@ def main(argv: list[str] | None = None) -> int:
             command.add_argument("--resume-artifact-digest", type=canonical_digest)
     args = parser.parse_args(argv)
     try:
+        api = None
+        if args.operation != "assemble":
+            api = GitHub(args.repository)
+            args.artifact_digest = args.artifact_digest or artifact_digest(api, args.artifact_id)
         if args.operation == "assemble":
             assemble(
                 args.builds,
@@ -165,10 +181,12 @@ def main(argv: list[str] | None = None) -> int:
                 run_id=args.run_id,
                 attempt=args.attempt,
                 source=args.source,
+                source_ref=args.source_ref,
             )
         elif args.operation == "fetch":
+            assert api is not None
             fetch_candidate(
-                GitHub(args.repository),
+                api,
                 output=args.directory,
                 artifact_id=args.artifact_id,
                 digest=args.artifact_digest,
@@ -177,13 +195,13 @@ def main(argv: list[str] | None = None) -> int:
                 commit=args.commit,
             )
         else:
-            api = GitHub(args.repository)
+            assert api is not None
             if args.operation == "publish" and args.resume_artifact_id is not None:
-                require(args.resume_artifact_digest is not None, "resume artifact digest is required")
+                digest = args.resume_artifact_digest or artifact_digest(api, args.resume_artifact_id)
                 restore_progress(
                     api,
                     artifact_id=args.resume_artifact_id,
-                    digest=args.resume_artifact_digest,
+                    digest=digest,
                     receipt=args.receipt,
                     commit=args.commit,
                 )
@@ -202,9 +220,13 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 session.verify_source()
                 session.verify_provenance()
-                release = session.load_release(wait=True)
-                session.save(releaseId=release["id"])
-                result = session.verify_published()
+                if args.operation == "inspect":
+                    session.save(stage="candidate-verified", origin=session.manifest["origin"], assets=session.assets)
+                    result = session.state
+                else:
+                    release = session.load_release(wait=True)
+                    session.save(releaseId=release["id"])
+                    result = session.verify_published()
             print(json.dumps(result, ensure_ascii=False))
     except (PublicationError, OSError, ValueError, subprocess.SubprocessError) as error:
         print(f"publication failed: {error}", file=sys.stderr)

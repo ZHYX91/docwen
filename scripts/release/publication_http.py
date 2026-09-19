@@ -45,6 +45,25 @@ def retry_after_seconds(value: str | None) -> float:
             return 0
 
 
+def env_seconds(name: str, default: float, *, minimum: float = 1.0) -> float:
+    """Read a transfer budget override from the environment.
+
+    Defaults keep the fast datacenter budgets; slow self-hosted transports raise
+    them explicitly instead of monkey-patching this module.
+    """
+
+    value = os.environ.get(name)
+    if not value:
+        return default
+    try:
+        seconds = float(value)
+    except ValueError as error:
+        raise PublicationError(f"{name} must be a number of seconds") from error
+    if seconds < minimum:
+        raise PublicationError(f"{name} must be at least {minimum:g} seconds")
+    return seconds
+
+
 def read_with_retry[T](
     operation: Callable[[float], T],
     *,
@@ -82,9 +101,9 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 class GitHub:
-    def __init__(self, repository: str, *, token: str | None = None) -> None:
+    def __init__(self, repository: str) -> None:
         self.repository = repository
-        token = token or os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+        token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
         if not token:
             result = subprocess.run(["gh", "auth", "token"], check=True, capture_output=True, text=True, timeout=30)
             token = result.stdout.strip()

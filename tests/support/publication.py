@@ -5,7 +5,7 @@ import hashlib
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from scripts.release.publication_contract import assemble, canonical_json, file_identity, package_names
+from scripts.release.publication_contract import assemble, package_names
 from scripts.release.publication_http import ApiError, GitHub
 
 REPOSITORY = "example/docwen"
@@ -14,7 +14,7 @@ COMMIT = "a" * 40
 DIGEST = "sha256:" + "b" * 64
 
 
-def candidate(root: Path) -> tuple[Path, dict]:
+def candidate(root: Path, *, source_ref: str = f"refs/tags/{VERSION}") -> tuple[Path, dict]:
     source = root / "source"
     for name in ("uv.lock", "release/windows-production-manifest.v1.json", "release/linux-production-manifest.v1.json"):
         path = source / name
@@ -23,23 +23,20 @@ def candidate(root: Path) -> tuple[Path, dict]:
     builds = root / "builds"
     for name in package_names(VERSION):
         platform = "windows" if name.endswith(".zip") else "linux"
-        for replica in ("a", "b"):
-            path = builds / f"{platform}-{replica}" / name
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(name.encode("utf-8"))
-    for replica in ("a", "b"):
-        package = builds / f"windows-{replica}" / "DocWen-windows-x64.msix"
-        package.write_bytes(b"msix")
-        record = {
-            **file_identity(package),
-            "sourceVersion": VERSION,
-            "packageVersion": "1.0.4.0",
-            "contentSha256": "c" * 64,
-        }
-        package.with_suffix(".msix.json").write_bytes(canonical_json(record))
+        path = builds / platform / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(name.encode("utf-8"))
     output = root / "candidate"
     manifest = assemble(
-        builds, output, repo=REPOSITORY, version=VERSION, commit=COMMIT, run_id=10, attempt=1, source=source
+        builds,
+        output,
+        repo=REPOSITORY,
+        version=VERSION,
+        commit=COMMIT,
+        run_id=10,
+        attempt=1,
+        source=source,
+        source_ref=source_ref,
     )
     return output, manifest
 
@@ -66,12 +63,23 @@ class FakeGitHub(GitHub):
         self.hidden_reads = 0
         self.bytes: dict[int, bytes] = {}
         self.bad_download = False
+        self.downloads: list[str] = []
+        self.reads: list[str] = []
+        self.tag: dict | None = {"object": {"type": "commit", "sha": COMMIT}}
+        self.hidden_tag_reads = 0
+        self.default_head = {"sha": COMMIT, "commit": {"tree": {"sha": "d" * 40}}}
+        self.comparison = {
+            "status": "ahead",
+            "base_commit": {"sha": COMMIT, "commit": {"tree": {"sha": "d" * 40}}},
+            "merge_base_commit": {"sha": COMMIT},
+        }
         self.run = {
             "id": 10,
             "run_attempt": 1,
             "status": "completed",
             "conclusion": "success",
             "head_sha": COMMIT,
+            "head_branch": VERSION,
             "path": ".github/workflows/release.yml",
             "event": "workflow_dispatch",
             "repository": {"full_name": REPOSITORY},
@@ -85,15 +93,13 @@ class FakeGitHub(GitHub):
         }
         names = [
             "source-checks",
-            "pytest_windows_push",
+            "Tests on windows-latest",
+            "Tests on ubuntu-24.04",
+            "Tests on macos-14",
             "Required checks",
-            "Source gate on windows-latest",
-            "Source gate on ubuntu-24.04",
-            "Source gate on macos-14",
-            "Clean Windows build a",
-            "Clean Windows build b",
-            "Clean Ubuntu build a",
-            "Clean Ubuntu build b",
+            "Source identity",
+            "Build Windows packages",
+            "Build Linux packages",
             "verify-release",
         ]
         self.jobs = {"total_count": len(names), "jobs": [{"name": name, "conclusion": "success"} for name in names]}
@@ -103,8 +109,13 @@ class FakeGitHub(GitHub):
 
     def request(self, method: str, path: str, *, timeout: float, body: object = None, data: bytes | None = None):
         if method == "GET":
-            if path.endswith("/immutable-releases"):
-                return {"enabled": True}
+            self.reads.append(path)
+            if path == f"/repos/{REPOSITORY}":
+                return {"default_branch": "main"}
+            if "/commits/main" in path:
+                return copy.deepcopy(self.default_head)
+            if "/compare/" in path:
+                return copy.deepcopy(self.comparison)
             if "/jobs?" in path:
                 return copy.deepcopy(self.jobs)
             if "/actions/runs/" in path:
@@ -112,12 +123,23 @@ class FakeGitHub(GitHub):
             if "/actions/artifacts/" in path:
                 return copy.deepcopy(self.artifact)
             if "/git/ref/" in path:
-                return {"object": {"type": "commit", "sha": COMMIT}}
+                if self.tag is None or self.hidden_tag_reads:
+                    self.hidden_tag_reads = max(0, self.hidden_tag_reads - 1)
+                    raise ApiError(404)
+                return copy.deepcopy(self.tag)
             if self.release is None or self.hidden_reads:
                 self.hidden_reads = max(0, self.hidden_reads - 1)
                 raise ApiError(404)
             return copy.deepcopy(self.release)
         self.writes.append((method, path))
+        if method == "POST" and path.endswith("/git/refs"):
+            assert body == {"ref": f"refs/tags/{VERSION}", "sha": COMMIT}
+            self.tag = {"object": {"type": "commit", "sha": COMMIT}}
+            if "tag" in self.lost:
+                self.lost.remove("tag")
+                self.hidden_tag_reads = 2
+                raise TimeoutError("response lost after creating tag")
+            return copy.deepcopy(self.tag)
         if method == "POST" and path.endswith("/releases"):
             assert isinstance(body, dict)
             self.release = {
@@ -155,6 +177,7 @@ class FakeGitHub(GitHub):
         return copy.deepcopy(self.release)
 
     def download_identity(self, path: str, *, timeout: float) -> dict:
+        self.downloads.append(path)
         data = self.bytes[int(path.rsplit("/", 1)[1])]
         corrupt = self.bad_download and self.release is not None and self.release.get("draft") is False
         return {"bytes": len(data), "sha256": "0" * 64 if corrupt else hashlib.sha256(data).hexdigest()}
