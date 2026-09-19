@@ -241,8 +241,11 @@ pythonVersion = "3.12"
 typeCheckingMode = "basic"
 include = [
     "packages",
+    "scripts/release/build_msix.py",
+    "scripts/release/msix_candidate.py",
     "scripts/release/publication.py",
     "scripts/release/publication_contract.py",
+    "scripts/release/publication_entry.py",
     "scripts/release/publication_http.py",
     "scripts/release/publication_session.py",
     "tools/source_checks.py",

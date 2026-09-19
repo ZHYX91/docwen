@@ -31,9 +31,9 @@ Windows 生产构建器把 PyInstaller 的 DLL 搜索路径限制为干净项目
 
 ## Release gates / 发布门禁
 
-Both Linux production builds run in the same digest-pinned Ubuntu 24.04 container declared in the release workflow. `scripts/release/install_linux_build_dependencies.sh` installs system dependencies from one dated Ubuntu archive snapshot and ignores other package repositories. Update the container digest and archive snapshot deliberately, then repeat both builds and extracted-package checks. The host runner's preinstalled libraries are not production build inputs.
+The Linux production build runs once in the digest-pinned Ubuntu 24.04 container declared in the release workflow and produces both archives. `scripts/release/install_linux_build_dependencies.sh` installs system dependencies from one dated Ubuntu archive snapshot and ignores other package repositories. Update the container digest and archive snapshot deliberately, then repeat the build and both extracted-package checks. The host runner's preinstalled libraries are not production build inputs.
 
-两次 Linux 生产构建均运行在发布工作流声明的同一固定摘要 Ubuntu 24.04 容器内。`scripts/release/install_linux_build_dependencies.sh` 从固定日期的 Ubuntu 仓库快照安装系统依赖，并忽略其他软件源。更新容器摘要或仓库快照后，必须重新执行两次构建及解压后包验证；宿主 runner 预装的库不作为生产构建输入。
+Linux 生产构建在发布工作流声明的固定摘要 Ubuntu 24.04 容器内执行一次，生成两个压缩包。`scripts/release/install_linux_build_dependencies.sh` 从固定日期的 Ubuntu 仓库快照安装系统依赖，并忽略其他软件源。更新容器摘要或仓库快照后，必须重新执行构建及两个压缩包的解压后验证；宿主 runner 预装的库不作为生产构建输入。
 
 Repository settings must enable Immutable Releases and an active no-update/no-delete ruleset for numeric `x.y.z`
 tags before a version tag is pushed. 仓库设置必须在推送版本标签前启用 Immutable Releases，并启用禁止更新或
@@ -41,7 +41,7 @@ tags before a version tag is pushed. 仓库设置必须在推送版本标签前�
 
 The hosted GitHub Release workflow enforces this deterministic baseline before publishing one Windows archive and two Ubuntu 24.04 x64 archives:
 
-1. Shared required source checks (Ruff, test governance, Import-Linter, architecture checks and Pyright for all three targets), the ordinary Windows full suite, then release tests on Windows, Linux, and macOS.
+1. Shared required source checks (Ruff, test governance, Import-Linter, architecture checks and Pyright for all three targets), one Windows full suite with source/core/GUI coverage reports, and the union of fast and release tests on Linux and macOS. Ordinary CI and release use this same gate.
 2. Windows package resource/layout verification.
 3. Packaged Windows CLI baseline doctor, conversion, and JSON checks.
 4. Packaged Windows GUI settings-page construction smoke.
@@ -49,11 +49,11 @@ The hosted GitHub Release workflow enforces this deterministic baseline before p
 6. CLI and GUI verification against fresh directories extracted from those exact Ubuntu archives.
 7. One build per release platform, transported by the producing job's exact artifact ID with digest mismatch rejection, followed by Release SHA-256 generation over all three archives. Reproducibility comparisons are optional engineering checks, not a prerequisite for every release.
 
-The exact local Windows candidate used for a release decision has a wider gate: source/package CLI parity; OCR and successful-warning CLI paths; GUI startup, settings, notification/OCR, IPC, and successful-warning paths; plus Office, presentation, and SmartDoc routes on a machine where their external dependencies are actually configured. These environment-sensitive checks are recorded separately and are not falsely attributed to the hosted workflow. Visible notification presentation, target-device rendering, and manual UI inspection remain manual evidence.
+Selected native acceptance uses the exact candidate that will be published. Its scope is chosen for each release and can include: source/package CLI parity; OCR and successful-warning CLI paths; GUI startup, settings, notification/OCR, IPC, and successful-warning paths; plus Office, presentation, and SmartDoc routes on a machine where their external dependencies are actually configured. These environment-sensitive checks are recorded separately and are not falsely attributed to the hosted workflow. Visible notification presentation, target-device rendering, and manual UI inspection remain manual evidence.
 
 托管的 GitHub Release 工作流在发布一个 Windows 压缩包和两个 Ubuntu 24.04 x64 压缩包前执行以下确定性基线：
 
-1. 先运行统一必需源码检查（Ruff、测试治理、Import-Linter、架构检查及三个目标平台的 Pyright）和普通 Windows 完整测试，再在 Windows、Linux 和 macOS 上运行源码态 release 测试。
+1. 先运行统一必需源码检查（Ruff、测试治理、Import-Linter、架构检查及三个目标平台的 Pyright）；Windows 完整测试只运行一次并生成源码/core/GUI 覆盖率报告，Linux 与 macOS 各运行 fast 和 release 测试的并集。普通 CI 与发布使用同一门禁。
 2. 验证 Windows 打包资源与 Layout 资源。
 3. 验证 Windows 打包 CLI 的基础 doctor、转换和 JSON 路径。
 4. 验证 Windows 打包 GUI 的设置页构造。
@@ -61,7 +61,7 @@ The exact local Windows candidate used for a release decision has a wider gate: 
 6. 从这两个精确 Ubuntu 压缩包解压到全新目录后，再分别验证 CLI 和 GUI。
 7. 每个发布平台只构建一次，按构建任务输出的 artifact ID 交接并拒绝传输摘要不匹配，再为三个压缩包生成 Release SHA-256。可复现性比对按需研究，不作为每版前提。
 
-用于发版决策的精确本地 Windows 候选还要通过更宽门禁：源码/打包 CLI 一致性、CLI OCR 与成功警告、GUI 启动、设置、通知/OCR、IPC 与成功警告，以及在外部依赖已真实配置的机器上验证 Office、演示文稿和 SmartDoc 路径。这些环境相关结果单独记录，不能冒充托管工作流已经执行。通知中心可见性、目标设备渲染和人工 UI 检查仍属于人工证据。
+原生验收使用将要发布的同一精确候选，按本版范围选择场景，可包括：源码/打包 CLI 一致性、CLI OCR 与成功警告、GUI 启动、设置、通知/OCR、IPC 与成功警告，以及在外部依赖已真实配置的机器上验证 Office、演示文稿和 SmartDoc 路径。这些环境相关结果单独记录，不能冒充托管工作流已经执行。通知中心可见性、目标设备渲染和人工 UI 检查仍属于人工证据。
 
 Signing and publication are separate release operations. A successfully built unsigned package must not be described as signed or published.
 
@@ -69,17 +69,27 @@ Signing and publication are separate release operations. A successfully built un
 
 Hosted publishing uses `GITHUB_TOKEN` and does not read administration-only repository settings or require an additional PAT. Publication succeeds only after the hosted Release reports a complete immutable state. One independent read-only verification downloads all four hosted assets and compares their exact bytes and provenance; publishing itself checks the platform inventory, sizes and digests without repeating those downloads.
 
-Push the numeric version tag at the accepted source commit on the default branch. This one `Release` run invokes the shared ordinary CI gate (including declared release cases), builds each platform once, verifies and attests the packages, publishes those exact bytes, then performs independent readback. The version comes from the selected tag and must match `pyproject.toml`. Failed, missing, cancelled or skipped required source/build jobs stop publication; configure `Required checks` as a required branch check. The candidate is identified by the producer job's artifact ID and archive digest, with no search of earlier runs. Artifacts are retained for 30 days.
+Push the numeric version tag at the accepted source commit on the default branch. This one `Release` run invokes the shared ordinary CI gate (including declared release cases), builds each platform once, verifies and attests the packages, publishes those exact bytes, then performs independent readback. The version comes from `pyproject.toml`; a selected numeric tag must match it. Failed, missing, cancelled or skipped required source/build jobs stop publication; configure `Required checks` as a required branch check. The candidate is identified by the producer job's artifact ID and archive digest, with no search of earlier runs. Artifacts are retained for 30 days.
 
-The `publish` job uses the `release` environment and `GITHUB_TOKEN`. It verifies the candidate's exact run attempt, passed producer jobs, source/tag, inventory and provenance. The overall run can still be active, or have failed only during a previous publication attempt. `scripts/release/publication.py` creates a draft, pins every draft asset by size and platform digest, publishes and confirms the complete immutable hosted state. The separate read-only `post-verify` job downloads and verifies all hosted bytes once. `published-awaiting-readback` distinguishes publication from the final `verified` receipt. `candidate.json` is a control record and is not a public Release asset.
+The `publish` job uses the `release` environment and `GITHUB_TOKEN`. It verifies the candidate's exact run attempt, passed producer jobs, source, inventory and provenance, and confirms that the numeric tag points to that exact source commit. The overall run can still be active, or have failed only during a previous publication attempt. `scripts/release/publication.py` creates a draft, pins every draft asset by size and platform digest, publishes and confirms the complete immutable hosted state. The separate read-only `post-verify` job downloads and verifies all hosted bytes once. `published-awaiting-readback` distinguishes publication from the final `verified` receipt. `candidate.json` is a control record and is not a public Release asset.
 
-For independent verification, select the same numeric tag in `Run workflow`, leave `operation=verify`, and supply the candidate `artifact_id`. For an interrupted publication, select `operation=publish`, supply that same candidate ID and its saved `docwen-publication-progress-RUN-ATTEMPT` ID in `resume_artifact_id`. These explicit IDs retrieve their SHA-256 transport digests from GitHub; there is no manual version, run lookup or digest copying. The previous progress owner must have completed. The receipt binds source, candidate and Release ID and records uncertain writes, which are reconciled by reading before further action. Exact published releases are read-only; matching drafts upload only missing assets. Do not rerun all build jobs to recover publication, because a newly built candidate has a different identity. A manual `publish` without an artifact ID performs the normal build chain from the selected tag.
+When native acceptance must precede merging and publication, select the candidate branch in `Run workflow` and use `operation=verify` with no artifact ID. This runs the same source and package checks and creates an attested candidate without creating a tag or Release. Record its exact artifact ID and inspect it with `publication.py fetch` followed by `publication.py inspect`; the inspection receipt binds its bytes and provenance. After acceptance and merging, select a branch or numeric tag still pointing to that same source commit and run `operation=publish` with that artifact ID. The publisher requires the candidate commit to be on the default branch, an ancestor of it, or have the identical complete Git tree after a squash/rebase merge. It creates the numeric tag at the actual candidate commit, records the accepted default-branch commit and comparison basis, and never relabels or rebuilds the candidate. The manifest records the original build's branch/tag in `origin.sourceRef`, which remains the provenance source ref.
+
+For independent hosted verification, use `operation=verify` with the candidate `artifact_id` and a selected ref pointing to its source commit. For an interrupted publication, use `operation=publish`, that same candidate ID and the saved `docwen-publication-progress-RUN-ATTEMPT` ID in `resume_artifact_id`. The IDs retrieve their transport digests from GitHub; there is no manual version, run lookup or digest copying. The previous progress owner must have completed. Uncertain tag, draft, upload or publish writes are reconciled by reading before further action. Exact published releases are read-only; matching drafts upload only missing assets. Do not rerun build jobs to recover publication. A manual `publish` without an artifact ID performs the normal build chain from the selected ref and still requires default-branch acceptance before publication.
 
 Transient reads use bounded backoff and honor Retry-After; the default 60-second recovery budget and 600-second upload/artifact-download ceilings can be raised for slow transports with `DOCWEN_PUBLICATION_READ_BUDGET`, `DOCWEN_PUBLICATION_DATA_TIMEOUT` and `DOCWEN_PUBLICATION_ARTIFACT_TIMEOUT`. Permission, source, inventory and hash conflicts stop immediately.
 
-在默认分支已接纳的提交推送数字版本标签，即在同一次运行完成统一 CI（包含发布测试）、每平台一次构建、精确候选签证、immutable 发布和一次独立资产下载回验；版本取标签，artifact ID 与摘要由当前构建直接传递，不查找历史预检运行。手动 `verify` 在同一标签填写候选 `artifact_id` 即可只读回验；发布中断后用 `publish`、同一候选 ID 和原进度 `resume_artifact_id` 恢复，摘要由 GitHub 读取。原进度所有者必须结束，结果不明的写入先读回核实；精确已发布资产不再写入，匹配草稿只补缺项。不得通过重新构建所有作业恢复发布。
+在默认分支已接纳的提交推送数字版本标签，同一次运行完成统一 CI、每平台一次构建、候选签证、immutable 发布和一次独立资产下载回验。需先做原生验收时，在候选分支手动运行 `verify` 且不填 artifact ID，只构建候选，不写标签或 Release；用 `fetch` 和 `inspect` 生成身份回执，验收并合并后，以仍指向该候选源码的分支/标签运行 `publish` 并填写同一候选 ID。发布前确认源码已被默认分支接纳：相同提交、祖先提交，或 squash/rebase 后完整 Git tree 相同。标签始终指向实际构建源码，原始 `sourceRef` 保留用于来源验证，不能把旧产物冒充新提交构建。
 
-Native host acceptance is selected per release and documented separately. DW-OPEN-20 explicitly selects full Computer Use acceptance for 0.10.0; this is not a permanent requirement for every future release. 本次 0.10.0 明确执行完整原生验收；通用流程按发布范围选取真实宿主验收，并单独记录其边界。
+手动 `verify` 填候选 ID 是公开 Release 的只读回验。发布中断后用 `publish`、同一候选 ID 和原进度 `resume_artifact_id` 恢复；原所有者必须结束，结果不明的写入先读回核实，精确已发布资产不再写入，匹配草稿只补缺项。真实宿主验收按每版变更范围选择，单独记录证据，不增加永久人工审批门。
+
+### Independent MSIX channel / 独立 MSIX 渠道
+
+`MSIX candidate` is a separate manual workflow. Select a ref at the portable candidate's source commit and supply its exact `artifact_id`. The workflow fetches and inspects that candidate, then builds the unsigned MSIX directly from its Windows ZIP; it does not rebuild DocWen or gate the portable Release. MSIX metadata binds the portable archive digest, candidate artifact, source commit and provenance receipt. The Store config's source version must match; its package version follows the independent Store channel. Signing, installation acceptance and Store submission are separate operations.
+
+`build_msix.py` requires a new work directory, creates an ownership lease and removes that directory after success. It never resets an existing caller directory or overwrites an output package. Local raw work belongs below the governed workspace `temp`; failed or interrupted runs follow bounded retention.
+
+`MSIX candidate` 为独立手动流程：选择 portable 候选源码提交对应的分支/标签，填写候选 artifact ID；获取并核验后直接从 Windows ZIP 制作未签名 MSIX，不重新构建产品，也不阻挡 portable 发布。元数据记录 portable 摘要、候选 artifact、源码和来源回执；Store 配置的源码版本必须匹配，包版本按 Store 独立管理。签名、安装验收与商店提交另行执行。工作目录必须全新且带租约，成功清理；不删除调用者原目录，也不覆盖已有包。
 
 The Ubuntu archives are generated only by `scripts/release/linux_archive.py` under `release/linux-production-manifest.v1.json`. The contract fixes the top-level directory, entry order, owner, timestamp, modes, gzip header, generated `manifest.json` and payload `SHA256SUMS.txt`. It permits only manifest-declared relative symlinks to internal regular files and rejects absolute, escaping, dangling, directory-target and cyclic links. The archive helper verifies the completed bytes before publishing them without replacement. Hosted post-extract smoke is package evidence; visible desktop behavior and target-host integration remain separate acceptance evidence.
 

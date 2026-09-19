@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import json
 import subprocess
 import zipfile
 from pathlib import Path
@@ -9,7 +10,7 @@ from pathlib import Path
 import pytest
 from scripts.release import publication
 from scripts.release.publication_contract import PublicationError, verify_origin
-from scripts.release.publication_session import ReleaseSession, verify_preflight_jobs
+from scripts.release.publication_session import ReleaseSession, verify_candidate_jobs
 from tests.support.publication import COMMIT, DIGEST, REPOSITORY, VERSION, FakeGitHub, candidate
 
 pytestmark = pytest.mark.unit
@@ -26,7 +27,7 @@ def test_candidate_origin_accepts_its_active_run_and_recovery_after_publisher_fa
     api = FakeGitHub()
     api.run.update(status=status, conclusion=conclusion, event=event)
     verify_origin(manifest, api.run, api.artifact, digest=DIGEST)
-    verify_preflight_jobs(api.jobs)
+    verify_candidate_jobs(api.jobs)
 
 
 @pytest.mark.parametrize(
@@ -57,21 +58,32 @@ def test_candidate_requires_every_producer_job_even_when_the_parent_run_is_compl
     else:
         api.jobs["jobs"][-1]["conclusion"] = failure
     api.jobs["total_count"] = len(api.jobs["jobs"])
-    with pytest.raises(PublicationError, match="required preflight job did not pass"):
-        verify_preflight_jobs(api.jobs)
+    with pytest.raises(PublicationError, match="required candidate job did not pass"):
+        verify_candidate_jobs(api.jobs)
 
 
-def test_fetch_publish_and_independent_readback_reuse_one_exact_candidate(tmp_path: Path, monkeypatch) -> None:
+@pytest.mark.parametrize("branch_candidate", [False, True])
+def test_fetch_publish_and_independent_readback_reuse_one_exact_candidate(
+    tmp_path: Path, monkeypatch, branch_candidate: bool
+) -> None:
     """Exercise all CLI stages with a real ZIP and in-memory remote writes."""
 
-    directory, _ = candidate(tmp_path)
+    source_ref = "refs/heads/release/candidate" if branch_candidate else f"refs/tags/{VERSION}"
+    directory, _ = candidate(tmp_path, source_ref=source_ref)
     archive = io.BytesIO()
     with zipfile.ZipFile(archive, "w") as bundle:
         for path in directory.iterdir():
             bundle.writestr(path.name, path.read_bytes())
     content = archive.getvalue()
     api = FakeGitHub()
-    api.run.update(status="in_progress", conclusion=None, event="push")
+    api.run.update(
+        status="in_progress",
+        conclusion=None,
+        event="workflow_dispatch" if branch_candidate else "push",
+        head_branch=source_ref.split("/", 2)[2],
+    )
+    if branch_candidate:
+        api.tag = None
     api.artifact["digest"] = "sha256:" + hashlib.sha256(content).hexdigest()
     monkeypatch.setattr(publication, "GitHub", lambda _repository: api)
     provenance_commands = []
@@ -101,18 +113,27 @@ def test_fetch_publish_and_independent_readback_reuse_one_exact_candidate(tmp_pa
     ]
     assert publication.main(["fetch", *common]) == 0
     assert {p.name: p.read_bytes() for p in fetched.iterdir()} == {p.name: p.read_bytes() for p in directory.iterdir()}
+    inspection = tmp_path / "inspection.json"
+    assert publication.main(["inspect", *common, "--receipt", str(inspection)]) == 0
+    inspected = json.loads(inspection.read_text(encoding="utf-8"))
+    assert inspected["stage"] == "candidate-verified"
+    assert inspected["origin"]["sourceRef"] == source_ref
+    assert inspected["provenance"] == "verified"
+    assert not api.writes and not api.downloads
+    if branch_candidate:
+        assert api.tag is None
     notes = tmp_path / "CHANGELOG.md"
     notes.write_text(f"# Changes\n\n## {VERSION}\nReady\n", encoding="utf-8")
     receipt = tmp_path / "progress.json"
     assert publication.main(["publish", *common, "--receipt", str(receipt), "--notes", str(notes)]) == 0
-    assert len(api.writes) == 6
+    assert len(api.writes) == (7 if branch_candidate else 6)
     assert not api.downloads
     writes = api.writes[:]
     assert publication.main(["verify", *common, "--receipt", str(tmp_path / "readback.json")]) == 0
     assert api.writes == writes
     assert len(api.downloads) == 4
-    assert len(provenance_commands) == 10
-    assert all(command[command.index("--source-ref") + 1] == f"refs/tags/{VERSION}" for command in provenance_commands)
+    assert len(provenance_commands) == 15
+    assert all(command[command.index("--source-ref") + 1] == source_ref for command in provenance_commands)
     run_reads = [path for path in api.reads if "/actions/runs/" in path and "/jobs?" not in path]
     assert run_reads and set(run_reads) == {f"/repos/{REPOSITORY}/actions/runs/10/attempts/1"}
 

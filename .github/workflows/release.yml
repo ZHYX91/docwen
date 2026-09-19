@@ -6,13 +6,13 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: Publish from the selected numeric tag, or independently verify its candidate
+        description: Verify a candidate without publishing, or publish the selected candidate
         required: true
         type: choice
         options: [verify, publish]
         default: verify
       artifact_id:
-        description: Exact candidate artifact ID for verify or publication recovery; omit to build once
+        description: Exact candidate ID to publish or read back; omit to build once from the selected ref
         type: string
       resume_artifact_id:
         description: Saved progress artifact ID for an interrupted publication
@@ -26,55 +26,54 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  RELEASE_VERSION: ${{ github.ref_name }}
   PUBLICATION_ARTIFACT_NAME: docwen-publication-${{ github.run_id }}-${{ github.run_attempt }}
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
-  source-checks:
-    if: github.event_name == 'push' || (inputs.operation == 'publish' && inputs.artifact_id == '')
-    uses: ./.github/workflows/tests.yml
-
-  release-gate:
-    needs: source-checks
+  identity:
     name: Source identity
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    outputs:
+      version: ${{ steps.identity.outputs.version }}
+      build: ${{ steps.identity.outputs.build }}
+      publish: ${{ steps.identity.outputs.publish }}
+      verify_hosted: ${{ steps.identity.outputs.verify_hosted }}
     steps:
-      - name: Check out exact source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Set up exact uv and Python
-        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: "0.12.0"
           python-version: "3.12.13"
-          enable-cache: true
-      - name: Verify numeric version and source identity
-        shell: bash
+      - name: Resolve the selected source and operation
+        id: identity
         env:
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-        run: |
-          set -euo pipefail
-          [[ "$RELEASE_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
-          source_version="$(uv run python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
-          test "$RELEASE_VERSION" = "$source_version"
-          git fetch --no-tags origin "$DEFAULT_BRANCH"
-          test "$GITHUB_REF_TYPE" = tag
-          test "$GITHUB_SHA" = "$(git rev-parse HEAD)"
-          git merge-base --is-ancestor HEAD "origin/$DEFAULT_BRANCH"
-          test "$(git rev-parse "refs/tags/$RELEASE_VERSION^{commit}")" = "$GITHUB_SHA"
+          OPERATION: ${{ inputs.operation || 'publish' }}
+          ARTIFACT_ID: ${{ inputs.artifact_id }}
+          RESUME_ID: ${{ inputs.resume_artifact_id }}
+        run: >-
+          uv run --no-project python scripts/release/publication_entry.py
+          --source-ref "$GITHUB_REF" --commit "$GITHUB_SHA" --event "$GITHUB_EVENT_NAME"
+          --operation "$OPERATION" --artifact-id "$ARTIFACT_ID" --resume-id "$RESUME_ID"
+          --github-output "$GITHUB_OUTPUT"
+
+  source-checks:
+    needs: identity
+    if: needs.identity.outputs.build == 'true'
+    uses: ./.github/workflows/tests.yml
 
   build-windows:
     name: Build Windows packages
     outputs:
       artifact_id: ${{ steps.upload.outputs.artifact-id }}
-    needs: release-gate
+    needs: [identity, source-checks]
     runs-on: windows-latest
     timeout-minutes: 90
     env:
+      RELEASE_VERSION: ${{ needs.identity.outputs.version }}
       DOCWEN_GUI_DISABLE_STATE_SAVE: "1"
       QT_QPA_PLATFORM: offscreen
     steps:
@@ -116,26 +115,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           uv run python scripts/release/verify_packaged_gui.py --binary-dir "$output/payload" --settings-smoke
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $msixArguments = @(
-            "scripts/release/build_msix.py",
-            "--payload-root", "$output/payload",
-            "--config", (Resolve-Path "release/windows-store-msix.v1.json").Path,
-            "--source-version", $env:RELEASE_VERSION,
-            "--output-root", $output,
-            "--work-root", (Join-Path $env:RUNNER_TEMP "docwen-msix-work"),
-            "--metadata-output", "$output/DocWen-windows-x64.msix.json"
-          )
-          & $python @msixArguments
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload verified Windows packages
         id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: docwen-windows-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            ${{ runner.temp }}/docwen-candidate/DocWen-windows-x64.zip
-            ${{ runner.temp }}/docwen-candidate/DocWen-windows-x64.msix
-            ${{ runner.temp }}/docwen-candidate/DocWen-windows-x64.msix.json
+          path: ${{ runner.temp }}/docwen-candidate/DocWen-windows-x64.zip
           compression-level: 0
           if-no-files-found: error
           overwrite: false
@@ -145,7 +130,7 @@ jobs:
     name: Build Linux packages
     outputs:
       artifact_id: ${{ steps.upload.outputs.artifact-id }}
-    needs: release-gate
+    needs: [identity, source-checks]
     runs-on: ubuntu-24.04
     container:
       image: mcr.microsoft.com/devcontainers/base:noble@sha256:24ea8d1abd543fb56208fa8f9468c9a684e65aa8c42d54f76e312127f1ed5cd9
@@ -154,6 +139,7 @@ jobs:
         shell: bash
     timeout-minutes: 90
     env:
+      RELEASE_VERSION: ${{ needs.identity.outputs.version }}
       DOCWEN_GUI_DISABLE_STATE_SAVE: "1"
       QT_QPA_PLATFORM: offscreen
     steps:
@@ -218,7 +204,9 @@ jobs:
     outputs:
       artifact_id: ${{ steps.publication.outputs.artifact-id }}
       artifact_digest: ${{ steps.publication.outputs.artifact-digest }}
-    needs: [build-windows, build-linux]
+    needs: [identity, build-windows, build-linux]
+    env:
+      RELEASE_VERSION: ${{ needs.identity.outputs.version }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -244,23 +232,12 @@ jobs:
         run: >-
           python scripts/release/publication.py assemble
           --repository "$GITHUB_REPOSITORY" --version "$RELEASE_VERSION" --commit "$GITHUB_SHA"
-          --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT"
+          --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT" --source-ref "$GITHUB_REF"
           --source . --builds builds --directory publication
       - name: Attest exact candidate and public assets
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
         with:
           subject-path: publication/*
-      - name: Upload Microsoft Store submission package
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: docwen-microsoft-store-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            builds/windows/DocWen-windows-x64.msix
-            builds/windows/DocWen-windows-x64.msix.json
-          compression-level: 0
-          if-no-files-found: error
-          overwrite: false
-          retention-days: 30
       - name: Upload the exact publication candidate
         id: publication
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -278,13 +255,13 @@ jobs:
         run: |
           echo "Candidate artifact ID: $ARTIFACT_ID" >> "$GITHUB_STEP_SUMMARY"
           echo "Candidate artifact digest: $ARTIFACT_DIGEST" >> "$GITHUB_STEP_SUMMARY"
-          echo "The publisher consumes this exact candidate without rebuilding." >> "$GITHUB_STEP_SUMMARY"
+          echo "Verify mode leaves this candidate unpublished for selected host acceptance. Publish reuses its exact artifact ID." >> "$GITHUB_STEP_SUMMARY"
 
   publish:
-    needs: verify-release
+    needs: [identity, verify-release]
     if: >-
       always() && !cancelled() &&
-      (github.event_name == 'push' || inputs.operation == 'publish') &&
+      needs.identity.result == 'success' && needs.identity.outputs.publish == 'true' &&
       (needs.verify-release.result == 'success' ||
        (github.event_name == 'workflow_dispatch' && inputs.artifact_id != ''))
     runs-on: ubuntu-24.04
@@ -298,6 +275,7 @@ jobs:
       artifact_id: ${{ needs.verify-release.outputs.artifact_id || inputs.artifact_id }}
       artifact_digest: ${{ needs.verify-release.outputs.artifact_digest }}
     env:
+      RELEASE_VERSION: ${{ needs.identity.outputs.version }}
       GH_TOKEN: ${{ github.token }}
       RESUME_ARTIFACT_ID: ${{ inputs.resume_artifact_id }}
       ARTIFACT_ID: ${{ needs.verify-release.outputs.artifact_id || inputs.artifact_id }}
@@ -311,7 +289,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$GITHUB_REF_TYPE" = tag
           [[ "$RELEASE_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
           digest_args=()
           if [[ -n "$ARTIFACT_DIGEST" ]]; then
@@ -345,8 +322,11 @@ jobs:
           retention-days: 30
 
   post-verify:
-    if: always() && (github.event_name == 'push' || inputs.operation == 'publish' || inputs.operation == 'verify')
-    needs: publish
+    if: >-
+      always() && !cancelled() && needs.identity.result == 'success' &&
+      (needs.identity.outputs.verify_hosted == 'true' ||
+       (needs.publish.result != 'skipped' && needs.publish.outputs.artifact_id != ''))
+    needs: [identity, publish]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -354,6 +334,7 @@ jobs:
       contents: read
       attestations: read
     env:
+      RELEASE_VERSION: ${{ needs.identity.outputs.version }}
       GH_TOKEN: ${{ github.token }}
       ARTIFACT_ID: ${{ needs.publish.outputs.artifact_id || inputs.artifact_id }}
       ARTIFACT_DIGEST: ${{ needs.publish.outputs.artifact_digest }}

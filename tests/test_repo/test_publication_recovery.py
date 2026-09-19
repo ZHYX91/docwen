@@ -113,7 +113,7 @@ def test_process_interruption_after_upload_resumes_the_pending_write(session, mo
 
 
 @pytest.mark.parametrize("failure", ["lint", "run", "digest", "expired"])
-def test_missing_or_failed_preflight_prevents_every_write(session, failure: str) -> None:
+def test_missing_or_failed_candidate_prevents_every_write(session, failure: str) -> None:
     api, create, _, _ = session
     if failure == "lint":
         api.jobs["jobs"][0]["conclusion"] = "failure"
@@ -163,6 +163,82 @@ def test_foreign_draft_is_never_modified(session) -> None:
     api, create, _, _ = session
     api.release = {"id": 31, "tag_name": VERSION, "prerelease": False, "draft": True, "body": "different candidate"}
     with pytest.raises(PublicationError, match="another candidate"):
+        create().publish(notes="Release notes")
+    assert api.writes == []
+
+
+@pytest.mark.parametrize("basis", ["exact", "ancestor", "squash"])
+def test_publishing_requires_default_branch_acceptance_without_rebuilding(session, basis) -> None:
+    api, create, receipt, _ = session
+    if basis != "exact":
+        api.default_head["sha"] = "e" * 40
+    if basis == "squash":
+        api.comparison.update(status="diverged", merge_base_commit={"sha": "f" * 40})
+    create().publish(notes="Release notes")
+    expected = {"exact": "exact-commit", "ancestor": "ancestor", "squash": "identical-tree"}[basis]
+    assert read_object(receipt)["acceptedSource"]["basis"] == expected
+
+
+def test_unmerged_changed_tree_prevents_all_remote_writes(session) -> None:
+    api, create, _, _ = session
+    api.default_head = {"sha": "e" * 40, "commit": {"tree": {"sha": "f" * 40}}}
+    api.comparison.update(status="diverged", merge_base_commit={"sha": "c" * 40})
+    with pytest.raises(PublicationError, match="not been accepted"):
+        create().publish(notes="Release notes")
+    assert api.writes == []
+
+
+@pytest.mark.parametrize("interruption", ["lost-response", "process-exit"])
+def test_branch_candidate_creates_its_tag_once_and_reconciles_interruption(tmp_path, monkeypatch, interruption) -> None:
+    directory, _ = candidate(tmp_path, source_ref="refs/heads/feature/pr")
+    api = FakeGitHub()
+    api.run["head_branch"] = "feature/pr"
+    api.tag = None
+    clock = Clock()
+    monkeypatch.setattr(
+        publication_session, "read_with_retry", functools.partial(read_with_retry, clock=clock.time, sleep=clock.sleep)
+    )
+    monkeypatch.setattr(ReleaseSession, "verify_provenance", lambda self: self.save(provenance="verified"))
+    receipt = tmp_path / "progress.json"
+
+    def create():
+        return ReleaseSession(
+            api,
+            directory,
+            receipt,
+            repository=REPOSITORY,
+            version=VERSION,
+            commit=COMMIT,
+            artifact_id=20,
+            artifact_digest=DIGEST,
+        )
+
+    if interruption == "lost-response":
+        api.lost.add("tag")
+    else:
+        request = api.request
+
+        def interrupted(method, path, **kwargs):
+            result = request(method, path, **kwargs)
+            if method == "POST" and path.endswith("/git/refs"):
+                raise KeyboardInterrupt
+            return result
+
+        monkeypatch.setattr(api, "request", interrupted)
+        with pytest.raises(KeyboardInterrupt):
+            create().publish(notes="Release notes")
+        assert read_object(receipt)["pending"] == "create-tag"
+        monkeypatch.setattr(api, "request", request)
+    assert create().publish(notes="Release notes")["stage"] == "published-awaiting-readback"
+    assert len(api.writes) == 7
+    assert sum(path.endswith("/git/refs") for _, path in api.writes) == 1
+    assert api.downloads == []
+
+
+def test_conflicting_tag_is_never_moved(session) -> None:
+    api, create, _, _ = session
+    api.tag = {"object": {"type": "commit", "sha": "f" * 40}}
+    with pytest.raises(PublicationError, match="tag source mismatch"):
         create().publish(notes="Release notes")
     assert api.writes == []
 

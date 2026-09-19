@@ -1,0 +1,80 @@
+name: MSIX candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_id:
+        description: Exact verified portable publication candidate ID from the selected source ref
+        type: string
+        required: true
+
+permissions:
+  actions: read
+  contents: read
+  attestations: read
+
+concurrency:
+  group: msix-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  msix:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ARTIFACT_ID: ${{ inputs.artifact_id }}
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: "0.12.0"
+          python-version: "3.12.13"
+          enable-cache: true
+      - name: Resolve the selected source version
+        id: identity
+        shell: pwsh
+        run: >-
+          uv run --no-project python scripts/release/publication_entry.py
+          --source-ref "$env:GITHUB_REF" --commit "$env:GITHUB_SHA" --event workflow_dispatch
+          --operation verify --artifact-id "$env:ARTIFACT_ID" --github-output "$env:GITHUB_OUTPUT"
+      - name: Fetch and inspect the exact portable candidate
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ steps.identity.outputs.version }}
+        run: |
+          uv run --no-project python scripts/release/publication.py fetch `
+            --repository "$env:GITHUB_REPOSITORY" --version "$env:RELEASE_VERSION" --commit "$env:GITHUB_SHA" `
+            --artifact-id "$env:ARTIFACT_ID" --directory "$env:RUNNER_TEMP/publication"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          uv run --no-project python scripts/release/publication.py inspect `
+            --repository "$env:GITHUB_REPOSITORY" --version "$env:RELEASE_VERSION" --commit "$env:GITHUB_SHA" `
+            --artifact-id "$env:ARTIFACT_ID" --directory "$env:RUNNER_TEMP/publication" `
+            --receipt "$env:RUNNER_TEMP/candidate-inspection.json"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build unsigned Store package from those same portable bytes
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ steps.identity.outputs.version }}
+        run: |
+          uv run --frozen python scripts/release/build_msix.py `
+            --portable-zip "$env:RUNNER_TEMP/publication/DocWen-windows-x64.zip" `
+            --candidate-receipt "$env:RUNNER_TEMP/candidate-inspection.json" `
+            --config release/windows-store-msix.v1.json --source-version "$env:RELEASE_VERSION" `
+            --output-root "$env:RUNNER_TEMP/msix-output" --work-root "$env:RUNNER_TEMP/msix-work" `
+            --metadata-output "$env:RUNNER_TEMP/msix-output/DocWen-windows-x64.msix.json"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Upload the independently identified Store candidate
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: docwen-microsoft-store-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/msix-output/
+          compression-level: 0
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 30

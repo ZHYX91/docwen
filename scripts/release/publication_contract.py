@@ -1,4 +1,4 @@
-"""Exact source and artifact inventory used from preflight through publication."""
+"""Exact source and artifact inventory used from candidate through publication."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import stat
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "docwen-publication-candidate-v1"
+SCHEMA = "docwen-publication-candidate-v2"
 MANIFEST_NAME = "candidate.json"
 CHECKSUM_NAME = "SHA256SUMS.txt"
 WORKFLOW = ".github/workflows/release.yml"
@@ -70,11 +70,20 @@ def checksum_bytes(assets: dict[str, dict[str, Any]]) -> bytes:
 
 
 def assemble(
-    builds: Path, output: Path, *, repo: str, version: str, commit: str, run_id: int, attempt: int, source: Path
+    builds: Path,
+    output: Path,
+    *,
+    repo: str,
+    version: str,
+    commit: str,
+    run_id: int,
+    attempt: int,
+    source: Path,
+    source_ref: str,
 ) -> dict[str, Any]:
     require(bool(re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo)), "invalid repository")
     require(bool(re.fullmatch(r"[0-9a-f]{40}", commit)), "invalid source commit")
-    require(run_id > 0 and attempt > 0, "invalid preflight run identity")
+    require(run_id > 0 and attempt > 0, "invalid candidate run identity")
     require(not output.exists(), "publication output must be new")
     records: dict[str, dict[str, Any]] = {}
     sources: dict[str, Path] = {}
@@ -83,11 +92,6 @@ def assemble(
         package = builds / platform / name
         records[name] = file_identity(package)
         sources[name] = package
-    store_root = builds / "windows"
-    store = read_object(store_root / "DocWen-windows-x64.msix.json")
-    observed = file_identity(store_root / "DocWen-windows-x64.msix")
-    require(all(store.get(key) == value for key, value in observed.items()), "MSIX bytes differ from its receipt")
-    require(store.get("sourceVersion") == version, "MSIX source version mismatch")
     manifest = {
         "schema": SCHEMA,
         "repository": repo,
@@ -101,9 +105,8 @@ def assemble(
                 "release/linux-production-manifest.v1.json",
             )
         },
-        "origin": {"workflow": WORKFLOW, "runId": run_id, "runAttempt": attempt},
+        "origin": {"workflow": WORKFLOW, "runId": run_id, "runAttempt": attempt, "sourceRef": source_ref},
         "assets": records,
-        "store": store,
     }
     # Check every input before making the candidate visible. Publication reuses
     # these exact packages; reproducing builds is an optional engineering check.
@@ -137,8 +140,17 @@ def verify_inventory(directory: Path, *, repository: str, version: str, commit: 
     )
     origin = manifest.get("origin", {})
     require(origin.get("workflow") == WORKFLOW, "unexpected builder workflow")
-    require(type(origin.get("runId")) is int and origin["runId"] > 0, "preflight run missing")
-    require(type(origin.get("runAttempt")) is int and origin["runAttempt"] > 0, "preflight attempt missing")
+    require(type(origin.get("runId")) is int and origin["runId"] > 0, "candidate run missing")
+    require(type(origin.get("runAttempt")) is int and origin["runAttempt"] > 0, "candidate attempt missing")
+    source_ref = origin.get("sourceRef")
+    require(
+        isinstance(source_ref, str)
+        and (
+            source_ref == f"refs/tags/{version}"
+            or (source_ref.startswith("refs/heads/") and len(source_ref) > len("refs/heads/"))
+        ),
+        "candidate source ref missing or invalid",
+    )
     expected_inputs = {
         "uv.lock",
         "release/windows-production-manifest.v1.json",
@@ -154,17 +166,22 @@ def publication_assets(directory: Path, manifest: dict[str, Any]) -> dict[str, d
 
 def verify_origin(manifest: dict[str, Any], run: dict[str, Any], artifact: dict[str, Any], *, digest: str) -> None:
     origin = manifest["origin"]
-    require(run.get("id") == origin["runId"] and run.get("run_attempt") == origin["runAttempt"], "wrong preflight run")
+    require(run.get("id") == origin["runId"] and run.get("run_attempt") == origin["runAttempt"], "wrong candidate run")
     # The candidate is consumed later in its own run. A completed run can also
     # have failed only during publication; exact producer jobs are checked separately.
     require(run.get("status") in {"in_progress", "completed"}, "candidate run has not started")
     require(
-        run.get("head_sha") == manifest["sourceCommit"] and run.get("path") == WORKFLOW, "preflight source mismatch"
+        run.get("head_sha") == manifest["sourceCommit"] and run.get("path") == WORKFLOW, "candidate source mismatch"
     )
     require(run.get("event") in {"push", "workflow_dispatch"}, "unexpected candidate trigger")
-    require(run.get("head_branch") == manifest["version"], "candidate must be built from its numeric tag")
-    require(run.get("repository", {}).get("full_name") == manifest["repository"], "preflight repository mismatch")
-    require(artifact.get("expired") is False, "preflight artifact expired")
+    source_ref = origin["sourceRef"]
+    require(run.get("head_branch") == source_ref.split("/", 2)[2], "candidate source ref mismatch")
+    require(
+        run.get("event") != "push" or source_ref == f"refs/tags/{manifest['version']}",
+        "push candidate requires its numeric tag",
+    )
+    require(run.get("repository", {}).get("full_name") == manifest["repository"], "candidate repository mismatch")
+    require(artifact.get("expired") is False, "candidate artifact expired")
     require(artifact.get("workflow_run", {}).get("id") == origin["runId"], "artifact belongs to another run")
     require(
         artifact.get("name") == f"docwen-publication-{origin['runId']}-{origin['runAttempt']}", "artifact name mismatch"

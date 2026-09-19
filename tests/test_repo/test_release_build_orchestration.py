@@ -174,9 +174,8 @@ def test_release_workflow_builds_each_supported_package_once_and_runs_packaged_g
     assert "--proofread-report-smoke" in windows_commands
     assert "verify_packaged_gui.py" in windows_commands
     assert "--settings-smoke" in windows_commands
-    assert "scripts/release/build_msix.py" in windows_commands
-    assert "windows-store-msix.v1.json" in windows_commands
-    assert windows_commands.count("if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }") == 4
+    assert "build_msix.py" not in windows_commands
+    assert windows_commands.count("if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }") == 3
     assert '$env:PYTHONUTF8 = "1"' in windows_commands
     assert '$env:PYTHONIOENCODING = "utf-8"' in windows_commands
 
@@ -214,17 +213,18 @@ def test_release_workflow_connects_tag_build_publication_and_independent_readbac
     verify, publish, post = jobs["verify-release"], jobs["publish"], jobs["post-verify"]
     assert workflow["concurrency"] == {"group": "release-${{ github.repository }}", "cancel-in-progress": "false"}
     assert jobs["source-checks"]["uses"] == "./.github/workflows/tests.yml"
-    assert (
-        jobs["source-checks"]["if"]
-        == "github.event_name == 'push' || (inputs.operation == 'publish' && inputs.artifact_id == '')"
-    )
-    assert jobs["release-gate"]["needs"] == "source-checks"
+    assert jobs["source-checks"]["if"] == "needs.identity.outputs.build == 'true'"
+    assert jobs["source-checks"]["needs"] == "identity"
+    assert jobs["build-windows"]["needs"] == ["identity", "source-checks"]
     assert workflow["on"]["push"] == {"tags": ["*.*.*"]}
-    assert workflow["env"]["RELEASE_VERSION"] == "${{ github.ref_name }}"
+    assert publish["env"]["RELEASE_VERSION"] == "${{ needs.identity.outputs.version }}"
+    assert "publication_entry.py" in _commands(jobs["identity"])
+    assert "needs.identity.outputs.publish == 'true'" in publish["if"]
+    assert "needs.identity.outputs.verify_hosted == 'true'" in post["if"]
     assert "needs.verify-release.result == 'success'" in publish["if"]
     assert "github.event_name == 'workflow_dispatch' && inputs.artifact_id != ''" in publish["if"]
     assert publish["environment"] == "release"
-    assert publish["needs"] == "verify-release"
+    assert publish["needs"] == ["identity", "verify-release"]
     assert publish["env"]["ARTIFACT_ID"] == "${{ needs.verify-release.outputs.artifact_id || inputs.artifact_id }}"
     assert workflow["on"]["workflow_dispatch"]["inputs"]["operation"]["options"] == ["verify", "publish"]
     assert set(workflow["on"]["workflow_dispatch"]["inputs"]) == {"operation", "artifact_id", "resume_artifact_id"}
@@ -260,8 +260,12 @@ def test_release_workflow_publishes_supported_windows_and_ubuntu_assets() -> Non
     project_metadata = Path("pyproject.toml").read_text(encoding="utf-8")
     assert "DocWenCLI-windows-x64.zip" not in workflow
     assert "DocWen-windows-x64.zip" in workflow
-    assert "DocWen-windows-x64.msix" in workflow
-    assert "docwen-microsoft-store-${{ github.run_id }}-${{ github.run_attempt }}" in workflow
+    assert "msix" not in workflow.lower()
+    msix = Path(".github/workflows/msix.yml").read_text(encoding="utf-8")
+    assert "DocWen-windows-x64.msix" in msix
+    assert "docwen-microsoft-store-${{ github.run_id }}-${{ github.run_attempt }}" in msix
+    assert "--portable-zip" in msix and "publication.py inspect" in msix
+    assert "build_production_candidate" not in msix
     assert "DocWenCLI-${RELEASE_VERSION}-linux-x64.tar.gz" in workflow
     assert "DocWen-${RELEASE_VERSION}-linux-x64.tar.gz" in workflow
     assert "DocWen-macos" not in workflow
