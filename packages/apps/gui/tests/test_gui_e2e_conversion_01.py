@@ -132,7 +132,7 @@ class TestDocxToMdConversion:
         assert output_path.exists()
         assert output_path.parent.parent == output_dir
         assert output_path.parent.name == output_path.stem
-        assert (output_path.parent / "docwen-node.json").is_file()
+        assert not (output_path.parent / "docwen-node.json").exists()
         assert "E2E Test Document" in output_path.read_text(encoding="utf-8")
 
     def test_conversion_preserves_unowned_legacy_output(
@@ -180,7 +180,7 @@ class TestDocxToMdConversion:
         assert output_path.exists()
         assert output_path.parent.parent == output_dir
         assert output_path.parent.name == output_path.stem
-        assert (output_path.parent / "docwen-node.json").is_file()
+        assert not (output_path.parent / "docwen-node.json").exists()
         assert existing.read_text(encoding="utf-8") == "existing GUI result"
         assert "E2E Test Document" in output_path.read_text(encoding="utf-8")
 

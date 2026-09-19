@@ -79,8 +79,9 @@ class TestMdToCsv:
         assert [artifact.suggested_name for artifact in csv_artifacts] == [
             f"{md_path.stem}_Sheet{index}{suffix}.csv" for index in range(1, 4)
         ]
-        assert len(result.artifacts) == 4
-        assert (root / "docwen-node.json").is_file()
+        assert len(result.artifacts) == 3
+        assert not (root / "docwen-node.json").exists()
+        assert set(root.iterdir()) == {Path(artifact.staging_path) for artifact in csv_artifacts}
 
         final_paths = [Path(artifact.staging_path) for artifact in csv_artifacts]
         for path in final_paths:

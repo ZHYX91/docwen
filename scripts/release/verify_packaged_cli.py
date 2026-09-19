@@ -2556,6 +2556,15 @@ def _run_machine_protocol_smoke_impl(
         "split.pdf.partition",
         "merge.xlsx.tables",
         "merge.images.to_tiff",
+        "convert.doc.to_markdown",
+        "convert.wps.to_markdown",
+        "convert.rtf.to_markdown",
+        "convert.odt.to_markdown",
+        "optimize.gongwen.docx.to_markdown",
+        "optimize.gongwen.doc.to_markdown",
+        "optimize.gongwen.wps.to_markdown",
+        "optimize.gongwen.rtf.to_markdown",
+        "optimize.gongwen.odt.to_markdown",
     }
     if capability_ids != expected_capability_ids:
         raise RuntimeError(f"packaged_machine_protocol_capabilities_mismatch:{sorted(capability_ids)}")
@@ -3217,38 +3226,9 @@ def _run_machine_protocol_smoke_impl(
         primary_text = _read_text_with_long_path(physical_staging / Path(primary["locator"]))
         if "DOCWEN PHYSICAL PAGE" in primary_text or "DOCWEN TIFF FRAME" in primary_text:
             raise RuntimeError("packaged_physical_page_primary_contains_ocr")
-    if terminal.get("method") != "task/completed":
-        raise RuntimeError(f"packaged_machine_protocol_terminal_invalid:{terminal}")
-    params = terminal.get("params")
-    bundle = params.get("bundle") if isinstance(params, dict) else None
-    artifacts = bundle.get("artifacts") if isinstance(bundle, dict) else None
-    documents = (
-        [item for item in artifacts if isinstance(item, dict) and item.get("kind") == "document"]
-        if isinstance(artifacts, list)
-        else []
-    )
-    if (
-        not isinstance(bundle, dict)
-        or bundle.get("task_id") != task_id
-        or not isinstance(artifacts, list)
-        or len(artifacts) != 2
-        or bundle.get("relations") != semantic_bundle.get("relations")
-        or bundle.get("layout_schema") != "docwen.document_node.v1"
-        or len(documents) != 1
-    ):
-        raise RuntimeError(f"packaged_machine_protocol_bundle_invalid:{bundle}")
-    artifact = documents[0]
-    if not isinstance(artifact, dict) or artifact.get("kind") != "document":
-        raise RuntimeError(f"packaged_machine_protocol_artifact_invalid:{artifact}")
-    locator = artifact.get("locator")
-    if not isinstance(locator, str) or "\\" in locator or ".." in locator.split("/"):
-        raise RuntimeError(f"packaged_machine_protocol_locator_invalid:{locator}")
-    output = staging / Path(locator)
-    output_bytes = _read_bytes_with_long_path(output)
-    if len(output_bytes) != artifact.get("size_bytes") or hashlib.sha256(output_bytes).hexdigest() != artifact.get(
-        "sha256"
-    ):
-        raise RuntimeError("packaged_machine_protocol_integrity_mismatch")
+    # This is the exact document and Bundle already checked before the reverse
+    # conversion; retain its identity instead of repeating a second shape gate.
+    output = semantic_output
     with _zipfile_with_long_path(output) as archive:
         if "word/document.xml" not in archive.namelist():
             raise RuntimeError("packaged_machine_protocol_docx_invalid")
@@ -3258,7 +3238,6 @@ def _run_machine_protocol_smoke_impl(
         or _read_bytes_with_long_path(decoy_image) in embedded_images
     ):
         raise RuntimeError("packaged_machine_protocol_declared_resource_binding_invalid")
-    verify_machine_document_semantics_docx(output)
     if semantic_reverse_terminal.get("method") != "task/completed":
         raise RuntimeError(f"packaged_machine_protocol_semantic_reverse_terminal_invalid:{semantic_reverse_terminal}")
     semantic_reverse_params = semantic_reverse_terminal.get("params")

@@ -17,6 +17,7 @@ from ._machine_stdio_e2e_support import (
     MachineContractValidator,
     Path,
     Workbook,
+    _assert_bundle_files,
     _exercise_auxiliary_capability_matrix,
     _request,
     _write_ocr_png,
@@ -36,7 +37,7 @@ from ._machine_stdio_e2e_support import (
 
 
 @pytest.mark.e2e
-def test_real_stdio_process_emits_integrity_pinned_docx_bundle(tmp_path: Path) -> None:
+def test_real_stdio_process_emits_integrity_pinned_docx_bundle(tmp_path: Path, request: pytest.FixtureRequest) -> None:
     source_dir = tmp_path / "source-physical"
     source_dir.mkdir()
     source = source_dir / "source.md"
@@ -101,6 +102,17 @@ def test_real_stdio_process_emits_integrity_pinned_docx_bundle(tmp_path: Path) -
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
+
+    def close_process() -> None:
+        # An early assertion must not leave a source Machine waiting on stdin.
+        if process.poll() is None:
+            process.kill()
+            process.wait(timeout=30)
+        for stream in (process.stdin, process.stdout, process.stderr):
+            if stream is not None:
+                stream.close()
+
+    request.addfinalizer(close_process)
     assert process.stdin is not None
     assert process.stdout is not None
     assert process.stderr is not None
@@ -152,6 +164,15 @@ def test_real_stdio_process_emits_integrity_pinned_docx_bundle(tmp_path: Path) -
         "split.pdf.partition",
         "merge.xlsx.tables",
         "merge.images.to_tiff",
+        "convert.doc.to_markdown",
+        "convert.wps.to_markdown",
+        "convert.rtf.to_markdown",
+        "convert.odt.to_markdown",
+        "optimize.gongwen.docx.to_markdown",
+        "optimize.gongwen.doc.to_markdown",
+        "optimize.gongwen.wps.to_markdown",
+        "optimize.gongwen.rtf.to_markdown",
+        "optimize.gongwen.odt.to_markdown",
     }
     assert capabilities["render.pdf.to_png"]["operation"] == "render"
     assert capabilities["convert.png.to_ocr_markdown"]["availability"] == "available"
@@ -259,11 +280,10 @@ def test_real_stdio_process_emits_integrity_pinned_docx_bundle(tmp_path: Path) -
 
     assert terminal["method"] == "task/completed", terminal
     bundle = terminal["params"]["bundle"]
-    assert len(bundle["artifacts"]) == 2
+    _assert_bundle_files(bundle, staging)
+    [artifact] = bundle["artifacts"]
+    assert artifact["kind"] == "document"
     assert bundle["layout_schema"] == "docwen.document_node.v1"
-    artifact = next(item for item in bundle["artifacts"] if item["kind"] == "document")
-    manifest = next(item for item in bundle["artifacts"] if item["kind"] == "resource")
-    assert manifest["media_type"] == "application/vnd.docwen.document-node+json"
     assert bundle["entries"] == [
         {
             "artifact_id": artifact["artifact_id"],
@@ -272,19 +292,9 @@ def test_real_stdio_process_emits_integrity_pinned_docx_bundle(tmp_path: Path) -
             "preferred": True,
         }
     ]
-    assert bundle["relations"] == [
-        {
-            "type": "resource_of",
-            "source_artifact_id": manifest["artifact_id"],
-            "target_artifact_id": artifact["artifact_id"],
-            "role": "manifest",
-            "ordinal": 0,
-        }
-    ]
+    assert bundle["relations"] == []
     output = staging / Path(artifact["locator"])
-    manifest_path = staging / Path(manifest["locator"])
-    assert manifest_path == output.parent / "docwen-node.json"
-    assert hashlib.sha256(manifest_path.read_bytes()).hexdigest() == manifest["sha256"]
+    assert output.parent.name == output.stem
     assert output.is_file()
     assert output.stat().st_size == artifact["size_bytes"]
     assert hashlib.sha256(output.read_bytes()).hexdigest() == artifact["sha256"]
@@ -371,13 +381,10 @@ def test_real_stdio_process_emits_integrity_pinned_docx_bundle(tmp_path: Path) -
     markdown_bundle = markdown_terminal["params"]["bundle"]
     markdown_artifact = next(artifact for artifact in markdown_bundle["artifacts"] if artifact["kind"] == "document")
     resource_artifacts = [artifact for artifact in markdown_bundle["artifacts"] if artifact["kind"] == "resource"]
-    assert len(resource_artifacts) == 2
-    image_artifact = next(artifact for artifact in resource_artifacts if artifact["media_type"] == "image/png")
-    manifest_artifact = next(
-        artifact
-        for artifact in resource_artifacts
-        if artifact["media_type"] == "application/vnd.docwen.document-node+json"
-    )
+    _assert_bundle_files(markdown_bundle, markdown_staging)
+    assert len(markdown_bundle["artifacts"]) == 2
+    [image_artifact] = resource_artifacts
+    assert image_artifact["media_type"] == "image/png"
     markdown_output = markdown_staging / Path(markdown_artifact["locator"])
     assert markdown_artifact["media_type"] == "text/markdown"
     assert markdown_output.stat().st_size == markdown_artifact["size_bytes"]
@@ -395,13 +402,6 @@ def test_real_stdio_process_emits_integrity_pinned_docx_bundle(tmp_path: Path) -
             "target_artifact_id": markdown_artifact["artifact_id"],
             "role": "image",
             "ordinal": 0,
-        },
-        {
-            "type": "resource_of",
-            "source_artifact_id": manifest_artifact["artifact_id"],
-            "target_artifact_id": markdown_artifact["artifact_id"],
-            "role": "manifest",
-            "ordinal": 1,
         },
     ]
 

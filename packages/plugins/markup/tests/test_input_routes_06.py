@@ -333,13 +333,12 @@ class TestMhtmlToMd:
         assert result.artifacts[0].metadata["title"] == "Entity\N{NO-BREAK SPACE}Title & More"
         content = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
         _assert_yaml_title(content, "title", "Entity\N{NO-BREAK SPACE}Title & More")
-        assert [artifact.kind for artifact in result.artifacts] == ["primary", "image", "manifest"]
+        assert [artifact.kind for artifact in result.artifacts] == ["primary", "image"]
         assert result.artifacts[1].suggested_name == "used.png"
         assert "![used.png](used.png)" in content
         node_root = _document_node_root(Path(result.artifacts[0].staging_path), output_dir)
         assert sorted(path.name for path in output_dir.iterdir()) == [node_root.name]
         assert sorted(path.name for path in node_root.iterdir()) == [
-            "docwen-node.json",
             f"{node_root.name}.md",
             "used.png",
         ]
@@ -390,7 +389,7 @@ class TestMhtmlToMd:
         assert result.success
         expected = probe["current_expected_semantics"]
         assert [d.code for d in result.diagnostics if d.code in expected["diagnostics"]] == expected["diagnostics"]
-        assert len(result.artifacts) == expected["artifact_count"] + 1
+        assert len(result.artifacts) == expected["artifact_count"]
 
         markdown_path = Path(result.artifacts[0].staging_path)
         node_root = _document_node_root(markdown_path, output_dir)

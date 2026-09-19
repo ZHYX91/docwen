@@ -21,7 +21,6 @@ from docwen_core.models import (
 )
 
 MARKDOWN_MEDIA_TYPE = "text/markdown"
-DOCUMENT_NODE_MANIFEST_MEDIA_TYPE = "application/vnd.docwen.document-node+json"
 BundleProfile = Literal[
     "single_document",
     "document_with_resources",
@@ -98,20 +97,8 @@ def build_bundle_draft(
     )
     audits = tuple(artifact for artifact in artifacts if artifact.metadata.get("document_node_role") == "audit")
     artifacts = tuple(artifact for artifact in artifacts if artifact not in audits)
-    node_manifests = tuple(
-        artifact for artifact in artifacts if artifact.media_type == DOCUMENT_NODE_MANIFEST_MEDIA_TYPE
-    )
-    if len(node_manifests) > 1:
-        raise BundleMappingError(
-            "conversion_failed",
-            "document_node_manifest_count",
-            "a conversion may expose at most one document-node manifest",
-        )
-    node_manifest = node_manifests[0] if node_manifests else None
-    artifacts = tuple(artifact for artifact in artifacts if artifact is not node_manifest)
 
     def finish(draft: BundleDraft) -> BundleDraft:
-        draft = _attach_document_node_manifest(draft, node_manifest)
         if grouped:
             draft = replace(draft, layout_schema="docwen.document_node.v1")
         # Explicit audit exports are supplementary resources, never business
@@ -637,45 +624,6 @@ def _build_partition_documents(
             "PDF partition capability must identify exactly one preferred artifact",
         )
     return BundleDraft(artifacts=tuple(draft_artifacts), entries=tuple(entries))
-
-
-def _attach_document_node_manifest(
-    draft: BundleDraft,
-    manifest: ArtifactManifest | None,
-) -> BundleDraft:
-    if manifest is None:
-        return draft
-    preferred = [entry for entry in draft.entries if entry.preferred]
-    if len(preferred) != 1:
-        raise BundleMappingError(
-            "conversion_failed",
-            "document_node_manifest_owner",
-            "document-node manifest requires exactly one preferred owner",
-        )
-    target_id = preferred[0].artifact_id
-    used_ordinals = {
-        relation.ordinal
-        for relation in draft.relations
-        if relation.type == "resource_of" and relation.target_artifact_id == target_id and relation.ordinal is not None
-    }
-    ordinal = 0
-    while ordinal in used_ordinals:
-        ordinal += 1
-    return BundleDraft(
-        artifacts=(*draft.artifacts, _draft_artifact(manifest, "resource")),
-        entries=draft.entries,
-        layout_schema="docwen.document_node.v1",
-        relations=(
-            *draft.relations,
-            BundleRelation(
-                type="resource_of",
-                source_artifact_id=manifest.artifact_id,
-                target_artifact_id=target_id,
-                role="manifest",
-                ordinal=ordinal,
-            ),
-        ),
-    )
 
 
 def _draft_artifact(

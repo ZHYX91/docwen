@@ -21,7 +21,6 @@ from docwen_core.models import (
 )
 
 MARKDOWN_MEDIA_TYPE = "text/markdown"
-DOCUMENT_NODE_MANIFEST_MEDIA_TYPE = "application/vnd.docwen.document-node+json"
 
 _MARKDOWN_LINK = re.compile(r"(?P<prefix>!?\[[^\]\n]*\]\()(?P<target>[^)\s]+)(?P<suffix>[^)]*\))")
 _WIKI_LINK = re.compile(r"(?P<prefix>!?\[\[)(?P<body>[^\]\n]+)(?P<suffix>\]\])")
@@ -283,7 +282,6 @@ def _rewrite_known_links(text: str, replacements: dict[str, str]) -> str:
 
 
 __all__ = [
-    "DOCUMENT_NODE_MANIFEST_MEDIA_TYPE",
     "DocumentNodeLayoutPlan",
     "has_markdown_artifacts",
     "plan_document_node_layout",

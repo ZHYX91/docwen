@@ -220,7 +220,7 @@ class TestEnexToMd:
         assert result.success
         expected = probe["current_expected_semantics"]
         assert [d.code for d in result.diagnostics if d.code in expected["diagnostics"]] == expected["diagnostics"]
-        assert len(result.artifacts) == expected["artifact_count"] + 1
+        assert len(result.artifacts) == expected["artifact_count"]
 
         primary_path = Path(result.artifacts[0].staging_path)
         node_root = _document_node_root(primary_path, output_dir)

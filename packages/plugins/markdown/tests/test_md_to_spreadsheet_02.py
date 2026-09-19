@@ -472,7 +472,7 @@ owner: Finance
         )
 
         assert result.success
-        assert len(result.artifacts) == 2
+        assert len(result.artifacts) == 1
         assert any(diagnostic.code == "FINALIZER_DONE" for diagnostic in result.diagnostics)
         output = Path(result.artifacts[0].staging_path)
         assert output.parent.parent == output_dir

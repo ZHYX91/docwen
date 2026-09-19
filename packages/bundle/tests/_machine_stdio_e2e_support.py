@@ -56,6 +56,16 @@ def _file_inventory(path: Path, *, relative_to: Path) -> dict[str, str | int]:
     }
 
 
+def _assert_bundle_files(bundle: dict[str, Any], staging: Path) -> None:
+    declared = []
+    for artifact in bundle["artifacts"]:
+        assert artifact["suggested_name"] != "docwen-node.json"
+        declared.append(
+            {"path": artifact["locator"], "size_bytes": artifact["size_bytes"], "sha256": artifact["sha256"]}
+        )
+    assert list(_directory_inventory(staging)) == sorted(declared, key=lambda item: item["path"])
+
+
 def _directory_inventory(root: Path) -> tuple[dict[str, str | int], ...]:
     return tuple(
         _file_inventory(path, relative_to=root)
@@ -249,10 +259,8 @@ def _exercise_auxiliary_capability_matrix(
     physical_pdf_bundle = physical_pdf_terminal["params"]["bundle"]
     assert [artifact["kind"] for artifact in physical_pdf_bundle["artifacts"]].count("document") == 1
     assert [artifact["kind"] for artifact in physical_pdf_bundle["artifacts"]].count("fragment") == 2
-    assert any(
-        artifact["media_type"] == "application/vnd.docwen.document-node+json"
-        for artifact in physical_pdf_bundle["artifacts"]
-    )
+    assert len(physical_pdf_bundle["artifacts"]) == 3
+    _assert_bundle_files(physical_pdf_bundle, physical_pdf_staging)
     page_relations = [
         relation
         for relation in physical_pdf_bundle["relations"]
@@ -305,7 +313,9 @@ def _exercise_auxiliary_capability_matrix(
     assert physical_tiff_terminal["method"] == "task/completed", physical_tiff_terminal
     physical_tiff_bundle = physical_tiff_terminal["params"]["bundle"]
     assert [artifact["kind"] for artifact in physical_tiff_bundle["artifacts"]].count("document") == 1
-    assert [artifact["kind"] for artifact in physical_tiff_bundle["artifacts"]].count("resource") == 3
+    assert [artifact["kind"] for artifact in physical_tiff_bundle["artifacts"]].count("resource") == 2
+    assert len(physical_tiff_bundle["artifacts"]) == 3
+    _assert_bundle_files(physical_tiff_bundle, physical_tiff_staging)
     image_relations = [
         relation
         for relation in physical_tiff_bundle["relations"]
@@ -402,6 +412,8 @@ def _exercise_auxiliary_capability_matrix(
             break
     assert ocr_terminal["method"] == "task/completed"
     ocr_bundle = ocr_terminal["params"]["bundle"]
+    _assert_bundle_files(ocr_bundle, ocr_staging)
+    assert len(ocr_bundle["artifacts"]) == 3
     ocr_artifacts = {artifact["kind"]: artifact for artifact in ocr_bundle["artifacts"]}
     assert set(ocr_artifacts) == {"document", "fragment", "resource"}
     fragment_path = ocr_staging / Path(ocr_artifacts["fragment"]["locator"])
@@ -410,7 +422,6 @@ def _exercise_auxiliary_capability_matrix(
         ("resource_of", "original"),
         ("fragment_of", "ocr_text"),
         ("derived_from", "source"),
-        ("resource_of", "manifest"),
     ]
 
     table_staging = tmp_path / "table-staging"
@@ -451,9 +462,11 @@ def _exercise_auxiliary_capability_matrix(
             break
     assert table_terminal["method"] == "task/completed", table_terminal
     table_bundle = table_terminal["params"]["bundle"]
-    assert [artifact["kind"] for artifact in table_bundle["artifacts"]] == ["resource", "resource", "resource"]
+    _assert_bundle_files(table_bundle, table_staging)
+    assert [artifact["kind"] for artifact in table_bundle["artifacts"]] == ["resource", "resource"]
+    assert all(artifact["media_type"] == "text/csv" for artifact in table_bundle["artifacts"])
     assert table_bundle["layout_schema"] == "docwen.document_node.v1"
-    assert table_bundle["artifacts"][-1]["suggested_name"] == "docwen-node.json"
+    assert table_bundle["relations"] == []
     assert [(entry["role"], entry["ordinal"]) for entry in table_bundle["entries"]] == [
         ("supplementary", 0),
         ("supplementary", 1),
@@ -546,6 +559,7 @@ __all__ = (
     "MachineContractValidator",
     "Path",
     "Workbook",
+    "_assert_bundle_files",
     "_create_directory_link",
     "_directory_inventory",
     "_exercise_auxiliary_capability_matrix",
