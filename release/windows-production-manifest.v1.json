@@ -48,7 +48,7 @@
     "machineContractFiles": [
       {
         "path": "contracts/schemas/docwen.machine.v2.schema.json",
-        "sha256": "7fd2fc23d320e97ba6fb041b6c4c1df8a63286f0e037d2e2eb4f747dd56300bf"
+        "sha256": "a816d6b31140746f4cdacbac55aea04e4bc4da6ce9a94225a4da1459b336f26b"
       },
       {
         "path": "contracts/schemas/docwen.machine.diagnostic_evidence.v1.schema.json",
@@ -68,7 +68,7 @@
       },
       {
         "path": "contracts/conformance-manifest.json",
-        "sha256": "5719b513e466e13804e08059a360808c774ec7a7a9de19b3729ecb8eb0a1b659"
+        "sha256": "6e3e177fa7ccd795f3c0dad1204073c7c7a552e0ffeb9c732c3252c3a5b14041"
       },
       {
         "path": "contracts/fixtures/invalid/machine.legacy-bundle-producer.trace.json",

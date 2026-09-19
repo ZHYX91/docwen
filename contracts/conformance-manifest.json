@@ -655,6 +655,18 @@
       "schema": "machine",
       "document_type": "trace",
       "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/valid/machine.optimization-capability.response.json",
+      "schema": "machine",
+      "document_type": "message",
+      "expect": "valid"
+    },
+    {
+      "path": "fixtures/invalid/machine.optimization-on-conversion.response.json",
+      "schema": "machine",
+      "document_type": "message",
+      "expect": "invalid_schema"
     }
   ]
 }

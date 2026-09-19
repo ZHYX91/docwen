@@ -10,6 +10,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from collections.abc import Mapping
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -286,6 +287,7 @@ def _project_route(
         "missing_optional_capabilities": missing_optional,
         "limitations": sorted(set(limitations)),
         "options": sorted(str(key) for key in route.options_schema.get("properties", {})),
+        "options_schema": deepcopy(route.options_schema),
     }
 
 

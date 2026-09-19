@@ -81,7 +81,11 @@ accepted task.
    dependency availability, and the expected artifact graph shape. Each `input_shape` declares unique roles and
    rejects undeclared roles. Ordinary capabilities have a required `source`; the v4 Markdown-to-DOCX capability
    instead has the exact required pair `neutral_document` + `numbering_export_plan`. A consumer maps these IDs at its boundary;
-   they are not consumer-domain IDs.
+   they are not consumer-domain IDs. An optimizer additionally declares `optimization_id`, the ID of its
+   optimization resource, and must use `operation=transform`. Consumers select it by resource identity,
+   input shape, and output media type; ordinary conversion excludes optimizer capabilities. A resource
+   without a matching available capability is not executable through Machine. The full preconversion
+   chain contributes dependencies and availability, and the optimizer owns its closed option schema.
 3. `task/plan` binds immutable typed input fingerprints, an existing empty request-owned local staging root, and
    normalized options. It returns a `plan_id`, effective options, output shape, warnings, limitations, and any
    confirmation requirement without starting conversion. Calling `task/execute` is the client's confirmation.

@@ -41,12 +41,10 @@ def build_conversion_request(
     )
     runtime_options = dict(effective_options)
     public_properties = binding.options_schema.get("properties", {})
-    if isinstance(public_properties, dict) and {
-        "recognize_text",
-        "preserve_resources",
-    }.issubset(public_properties):
-        runtime_options["to_md_enable_ocr"] = runtime_options.pop("recognize_text")
-        runtime_options["to_md_keep_images"] = runtime_options.pop("preserve_resources")
+    if isinstance(public_properties, dict):
+        for public, internal in (("recognize_text", "to_md_enable_ocr"), ("preserve_resources", "to_md_keep_images")):
+            if public in public_properties and public in runtime_options:
+                runtime_options[internal] = runtime_options.pop(public)
 
     return ConversionRequest(
         request_id=task_id,

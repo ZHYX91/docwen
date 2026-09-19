@@ -391,6 +391,7 @@ class CapabilityBinding:
     accepted_input_media_types: tuple[str, ...] = ()
     input_cardinality: Literal["one", "many"] = "one"
     minimum_inputs: int = 1
+    optimization_id: str | None = None
 
     @property
     def input_shape(self) -> InputShape:

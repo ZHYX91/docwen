@@ -181,6 +181,7 @@ class MachineCapability:
     availability: str
     dependencies: tuple[dict[str, Any], ...] = ()
     limitations: tuple[dict[str, Any], ...] = ()
+    optimization_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -193,6 +194,7 @@ class MachineCapability:
             "availability": self.availability,
             "dependencies": [dict(item) for item in self.dependencies],
             "limitations": [dict(item) for item in self.limitations],
+            **({"optimization_id": self.optimization_id} if self.optimization_id is not None else {}),
         }
 
 

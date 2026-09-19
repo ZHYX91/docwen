@@ -14,6 +14,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from docwen_application.controller import CapabilityUnavailableError
+from docwen_application.conversion_routes import resolve_conversion_route_plan
 from docwen_application.runtime_capability_catalog import RuntimeCapabilityCatalog, RuntimeRoute
 from docwen_cli.capabilities import normalize_target_format, runtime_route_catalog
 from docwen_cli.commands import execution_request
@@ -67,12 +68,20 @@ def _resolve_runtime_routes(
         else:
             if not target_format:
                 raise ValueError("Conversion target must be explicit.")
-            route = catalog.resolve_route(
-                detected_format=inspection.detected_format,
-                workflow_category=inspection.workflow_category,
+            route = None
+        resolved_target = target_format or (route.target if route is not None else "")
+        plan = (
+            resolve_conversion_route_plan(
+                catalog,
+                source_format=inspection.detected_format,
+                source_category=inspection.workflow_category,
                 action_name=action,
-                target=target_format,
+                target_format=resolved_target,
             )
+            if resolved_target
+            else None
+        )
+        route = plan.final_route if plan is not None else None
         if route is None:
             requested_operation = "action" if action else "conversion"
             valid_targets = sorted(
@@ -94,8 +103,9 @@ def _resolve_runtime_routes(
                 f"{inspection.detected_format} -> {requested_target} (action={action!r})."
                 f"{target_hint}"
             )
-        if not route.available:
-            raise CapabilityUnavailableError(f"Runtime route is unavailable: {route.id} ({route.state}).")
+        if plan is not None and not plan.available:
+            unavailable = next(step for step in plan.routes if not step.available)
+            raise CapabilityUnavailableError(f"Runtime route is unavailable: {unavailable.id} ({unavailable.state}).")
         resolved[file_path] = route
     return resolved
 

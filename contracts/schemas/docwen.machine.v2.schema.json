@@ -453,8 +453,27 @@
           "items": {
             "$ref": "#/$defs/diagnostic"
           }
+        },
+        "optimization_id": {
+          "$ref": "#/$defs/identifier"
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "optimization_id"
+            ]
+          },
+          "then": {
+            "properties": {
+              "operation": {
+                "const": "transform"
+              }
+            }
+          }
+        }
+      ]
     },
     "diagnostic": {
       "type": "object",

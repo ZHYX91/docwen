@@ -67,6 +67,22 @@ DocWen 拥有两份契约及其发现、任务和验收语义。消费者在完�
 [`templates-and-styles.md`](templates-and-styles.md)，物理页合同见
 [`physical-page-ocr.md`](physical-page-ocr.md)。
 
+## Optimization capabilities / 优化能力
+
+An executable optimizer is a `transform` capability with an `optimization_id` matching a resource from
+`resource/list` (`kind=optimizations`). Consumers select a unique available capability by that ID, the typed
+input shape, and output media type. Capability IDs are opaque; resource discovery alone does not establish
+executability. Ordinary conversion excludes capabilities carrying `optimization_id`.
+
+Document-to-Markdown optimizers, including Gongwen, accept DOCX and the declared DOC/WPS/RTF/ODT preconversion
+chains. Discovery, planning, and acceptance check every route in the chain. The selected optimizer supplies
+its own closed option schema; it does not inherit unsupported options from ordinary conversion. Other
+optimizer families remain resource metadata until they have an explicit Machine input/output contract.
+
+可执行优化以 `transform` 能力公开，通过 `optimization_id` 绑定优化资源。消费者按资源 ID、输入形状和
+输出媒体类型选择唯一可用能力，不解析能力 ID 的命名，也不把资源列表当作可执行保证。公文优化及普通
+文档转 Markdown 都检查完整预转换链；优化参数来自实际优化路线，不能套用普通转换独有的参数。
+
 ## Resolved-numbering inputs / 已解析编号输入
 
 The v4 plan-aware Markdown→DOCX capability requires exactly two input resources; neither is optional or repeatable:

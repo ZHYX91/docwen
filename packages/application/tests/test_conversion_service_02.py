@@ -24,6 +24,7 @@ from ._conversion_service_support import (
     ConversionService,
     ConversionServiceError,
     Path,
+    _canonical_runtime_projection,
     _Committer,
     _Controller,
     _request,
@@ -368,24 +369,26 @@ def test_document_routes_reject_legacy_fidelity_keys_as_public_machine_options(
 def test_capability_discovery_projects_runtime_dependencies_and_fails_closed(tmp_path: Path) -> None:
     class _UnavailableController(_Controller):
         def describe_runtime_capabilities(self) -> dict[str, Any]:
-            return {
-                "gates": [{"id": "python.docx", "available": False}],
-                "sources": [
-                    {
-                        "routes": [
-                            {
-                                "id": "docwen_plugin_markdown:markdown:docx:convert",
-                                "available": False,
-                                "required_capabilities": ["python.docx"],
-                                "optional_capabilities": [],
-                                "missing_required_capabilities": ["python.docx"],
-                                "missing_optional_capabilities": [],
-                                "limitations": ["python-docx is required"],
-                            }
-                        ]
-                    }
-                ],
-            }
+            return _canonical_runtime_projection(
+                {
+                    "gates": [{"id": "python.docx", "available": False}],
+                    "sources": [
+                        {
+                            "routes": [
+                                {
+                                    "id": "docwen_plugin_markdown:markdown:docx:convert",
+                                    "available": False,
+                                    "required_capabilities": ["python.docx"],
+                                    "optional_capabilities": [],
+                                    "missing_required_capabilities": ["python.docx"],
+                                    "missing_optional_capabilities": [],
+                                    "limitations": ["python-docx is required"],
+                                }
+                            ]
+                        }
+                    ],
+                }
+            )
 
     source = tmp_path / "source.md"
     source.write_text("# Source\n", encoding="utf-8")

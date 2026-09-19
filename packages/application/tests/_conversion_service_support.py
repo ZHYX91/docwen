@@ -149,6 +149,58 @@ def _refingerprint(handle: LocalInputHandle) -> LocalInputHandle:
     return replace(handle, size_bytes=path.stat().st_size, sha256=_sha256(path))
 
 
+def _canonical_runtime_projection(description: dict[str, Any]) -> dict[str, Any]:
+    from docwen_core.formats import FORMAT_CATEGORY
+
+    groups: dict[str, dict[str, Any]] = {}
+    routes = [route for group in description["sources"] for route in group["routes"]]
+    for raw in routes:
+        _plugin, source, target, action = raw["id"].split(":", 3)
+        route = {
+            **raw,
+            "source": source,
+            "target": target,
+            "operation": "conversion" if action == "convert" else "action",
+            "action": None if action == "convert" else action,
+            "state": "available" if raw["available"] else "unavailable",
+            "options": [],
+        }
+        group = groups.setdefault(source, {"id": source, "category": FORMAT_CATEGORY.get(source, source), "routes": []})
+        group["routes"].append(route)
+    for group in groups.values():
+        group["available"] = any(route["available"] for route in group["routes"])
+    runtime = {"state": "available", "platform": "test"}
+    return {
+        **description,
+        "resource": "formats",
+        "contract": {"id": "docwen.runtime-capabilities", "version": 1},
+        "runtime": runtime,
+        "security": {"dependency_egress_guard": {}},
+        "sources": list(groups.values()),
+        "counts": {
+            "sources": len(groups),
+            "routes": len(routes),
+            "available_routes": sum(route["available"] for route in routes),
+            "unavailable_routes": sum(not route["available"] for route in routes),
+            "actions": sum(not route["id"].endswith(":convert") for route in routes),
+        },
+        "optimizations": {
+            "resource": "optimizations",
+            "contract": {"id": "docwen.optimizations", "version": 1},
+            "runtime": runtime,
+            "resources": [],
+            "counts": {
+                "resources": 0,
+                "available_resources": 0,
+                "unavailable_resources": 0,
+                "bindings": 0,
+                "available_bindings": 0,
+                "unavailable_bindings": 0,
+            },
+        },
+    }
+
+
 class _Controller:
     has_runtime = True
 
@@ -183,25 +235,27 @@ class _Controller:
         return object()
 
     def describe_runtime_capabilities(self) -> dict[str, Any]:
-        return {
-            "gates": [],
-            "sources": [
-                {
-                    "routes": [
-                        {
-                            "id": route_id,
-                            "available": True,
-                            "required_capabilities": [],
-                            "optional_capabilities": [],
-                            "missing_required_capabilities": [],
-                            "missing_optional_capabilities": [],
-                            "limitations": [],
-                        }
-                        for route_id in self._ROUTE_IDS
-                    ]
-                }
-            ],
-        }
+        return _canonical_runtime_projection(
+            {
+                "gates": [],
+                "sources": [
+                    {
+                        "routes": [
+                            {
+                                "id": route_id,
+                                "available": True,
+                                "required_capabilities": [],
+                                "optional_capabilities": [],
+                                "missing_required_capabilities": [],
+                                "missing_optional_capabilities": [],
+                                "limitations": [],
+                            }
+                            for route_id in self._ROUTE_IDS
+                        ]
+                    }
+                ],
+            }
+        )
 
     def release_execution_cancellation(self, task_id: str, reservation: object) -> None:
         self.released.append(task_id)

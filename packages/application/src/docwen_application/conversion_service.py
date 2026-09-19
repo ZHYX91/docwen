@@ -17,6 +17,7 @@ from docwen_application.bundle_mapping import (
     build_bundle_draft,
     validate_physical_page_diagnostics,
 )
+from docwen_application.composed_capabilities import composed_capability_bindings
 from docwen_application.conversion_capabilities import (
     CAPABILITY_BINDINGS,
     CAPABILITY_BY_ID,
@@ -34,7 +35,10 @@ from docwen_application.conversion_contracts import (
 )
 from docwen_application.conversion_options import resolve_conversion_options
 from docwen_application.conversion_requests import build_conversion_request
+from docwen_application.conversion_routes import resolve_conversion_route_plan
+from docwen_application.optimization_catalog import parse_optimization_catalog
 from docwen_application.ports.runtime import ArtifactBundleCommitPort
+from docwen_application.runtime_capability_catalog import RuntimeCapabilityCatalog
 from docwen_core.detection import FileAdmissionPathError
 from docwen_core.models import (
     ArtifactBundleValidationError,
@@ -82,6 +86,8 @@ class _RuntimeDiscovery:
     gates: dict[str, bool]
     routes: dict[str, dict[str, Any]]
     error: dict[str, Any] | None = None
+    bindings: tuple[CapabilityBinding, ...] = CAPABILITY_BINDINGS
+    catalog: RuntimeCapabilityCatalog | None = None
 
 
 @dataclass(slots=True)
@@ -114,7 +120,7 @@ class ConversionService:
     def list_capabilities(self) -> tuple[MachineCapability, ...]:
         discovery = self._discover_runtime()
         capabilities: list[MachineCapability] = []
-        for binding in CAPABILITY_BINDINGS:
+        for binding in discovery.bindings:
             state = self._runtime_capability_state(binding, discovery)
             capabilities.append(
                 MachineCapability(
@@ -127,6 +133,7 @@ class ConversionService:
                     availability=state.availability,
                     dependencies=state.dependencies,
                     limitations=deepcopy((*binding.limitations, *state.limitations)),
+                    optimization_id=binding.optimization_id,
                 )
             )
         return tuple(capabilities)
@@ -296,7 +303,7 @@ class ConversionService:
                 "runtime diagnostic references an artifact outside the output bundle",
                 details={"artifact_ids": dangling_diagnostics},
             )
-        if task.binding.capability_id == DOCX_TO_MARKDOWN_CAPABILITY_ID:
+        if task.binding.runtime_route_id == CAPABILITY_BY_ID[DOCX_TO_MARKDOWN_CAPABILITY_ID].runtime_route_id:
             expected_recognition = task.public_options.get("recognize_text")
             expected_resources = task.public_options.get("preserve_resources")
             expected_placement = task.public_options.get("ocr_placement")
@@ -388,7 +395,8 @@ class ConversionService:
             return
 
     def _validate_plan_request(self, request: ConversionPlanRequest) -> tuple[CapabilityBinding, dict[str, Any]]:
-        binding = CAPABILITY_BY_ID.get(request.capability_id)
+        discovery = self._discover_runtime()
+        binding = next((item for item in discovery.bindings if item.capability_id == request.capability_id), None)
         if binding is None:
             raise ConversionServiceError(
                 "unsupported",
@@ -397,7 +405,7 @@ class ConversionService:
             )
         if not self._controller.has_runtime:
             raise ConversionServiceError("unavailable", "runtime_unavailable", "conversion runtime is unavailable")
-        runtime_state = self._runtime_capability_state(binding, self._discover_runtime())
+        runtime_state = self._runtime_capability_state(binding, discovery)
         if runtime_state.availability == "unavailable":
             missing = [
                 dependency["dependency_id"]
@@ -556,6 +564,7 @@ class ConversionService:
 
         try:
             description = self._controller.describe_runtime_capabilities()
+            optimizations = parse_optimization_catalog(description)
             gates = {
                 str(gate.get("id")): bool(gate.get("available"))
                 for gate in description.get("gates", [])
@@ -568,6 +577,7 @@ class ConversionService:
                 for candidate in source.get("routes", [])
                 if isinstance(candidate, dict) and isinstance(candidate.get("id"), str)
             }
+            bindings = composed_capability_bindings(optimizations, routes)
         except Exception:
             return _RuntimeDiscovery(
                 gates={},
@@ -578,7 +588,7 @@ class ConversionService:
                     "message": "The active runtime could not describe its capabilities.",
                 },
             )
-        return _RuntimeDiscovery(gates=gates, routes=routes)
+        return _RuntimeDiscovery(gates=gates, routes=routes, bindings=bindings, catalog=optimizations.runtime_catalog)
 
     @staticmethod
     def _runtime_capability_state(
@@ -591,29 +601,46 @@ class ConversionService:
                 limitations=(discovery.error,),
             )
 
-        route = discovery.routes.get(binding.runtime_route_id)
-        if route is None:
+        plan = (
+            resolve_conversion_route_plan(
+                discovery.catalog,
+                source_format=binding.input_format,
+                source_category=binding.input_category,
+                target_format=binding.target_format,
+                action_name=binding.action_name,
+            )
+            if discovery.catalog is not None
+            else None
+        )
+        if plan is None or plan.final_route.id != binding.runtime_route_id:
             return _RuntimeCapabilityState(
                 availability="unavailable",
                 limitations=(
                     {
                         "severity": "error",
                         "code": "runtime_route_missing",
-                        "message": f"The active runtime does not expose route {binding.runtime_route_id}.",
+                        "message": f"The active runtime does not expose the complete route for {binding.capability_id}.",
                     },
                 ),
             )
 
+        routes = tuple(discovery.routes[route.id] for route in plan.routes)
+
         required_ids = tuple(
             dict.fromkeys(
                 (
-                    *(str(item) for item in route.get("required_capabilities", [])),
+                    *(str(item) for route in routes for item in route.get("required_capabilities", [])),
                     *binding.required_dependency_ids,
                 )
             )
         )
         optional_ids = tuple(
-            str(item) for item in route.get("optional_capabilities", []) if str(item) not in required_ids
+            dict.fromkeys(
+                str(item)
+                for route in routes
+                for item in route.get("optional_capabilities", [])
+                if str(item) not in required_ids
+            )
         )
         if binding.dependency_ids:
             required_ids = tuple(item for item in required_ids if item in binding.dependency_ids)
@@ -637,13 +664,14 @@ class ConversionService:
                     "code": "runtime_route_limitation",
                     "message": str(message),
                 }
+                for route in routes
                 for message in route.get("limitations", [])
                 if str(message).strip()
             )
             if binding.project_runtime_limitations
             else ()
         )
-        route_available = bool(route.get("available")) and not any(
+        route_available = plan.available and not any(
             dependency["required"] and not dependency["available"] for dependency in dependencies
         )
         if not route_available:
