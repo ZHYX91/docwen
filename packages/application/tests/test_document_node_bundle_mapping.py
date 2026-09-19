@@ -10,6 +10,50 @@ from docwen_core.models import ArtifactManifest, validate_artifact_bundle_draft
 pytestmark = pytest.mark.contract
 
 
+@pytest.mark.parametrize(
+    ("profile", "media_type", "suffix"),
+    [
+        ("single_document", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx"),
+        ("table_resources", "text/csv", ".csv"),
+        ("report_resource", "text/plain", ".txt"),
+    ],
+)
+def test_explicit_audit_maps_as_a_supplementary_resource_without_node_json(tmp_path, profile, media_type, suffix):
+    primary = ArtifactManifest(
+        "main",
+        "primary",
+        str(tmp_path / f"main{suffix}"),
+        f"main{suffix}",
+        media_type,
+        metadata={"table_index": 0, "document_node_schema": "docwen.document_node.v1"},
+        is_primary=True,
+        logical_path=f"result/main{suffix}",
+        size_bytes=4,
+        sha256="a" * 64,
+    )
+    audit = ArtifactManifest(
+        "audit",
+        "manifest",
+        str(tmp_path / "manifest.json"),
+        "manifest.json",
+        "application/json",
+        metadata={"document_node_role": "audit", "document_node_schema": "docwen.document_node.v1"},
+        logical_path="result/manifest.json",
+        size_bytes=2,
+        sha256="b" * 64,
+    )
+    draft = build_bundle_draft(profile=profile, output_media_type=media_type, artifacts=[primary, audit])
+    validate_artifact_bundle_draft(draft)
+    assert draft.layout_schema == "docwen.document_node.v1"
+    assert len(draft.artifacts) == 2
+    assert draft.artifacts[-1].kind == "resource"
+    assert draft.artifacts[-1].expected_sha256 == audit.sha256
+    assert draft.artifacts[-1].expected_size_bytes == audit.size_bytes
+    assert draft.entries[-1].artifact_id == "audit" and draft.entries[-1].role == "supplementary"
+    assert not draft.entries[-1].preferred
+    assert not draft.relations
+
+
 def test_gongwen_document_node_maps_attachment_and_manifest(tmp_path: Path) -> None:
     root_name = "notice_20260820_120000_fromDocx"
     root = tmp_path / root_name

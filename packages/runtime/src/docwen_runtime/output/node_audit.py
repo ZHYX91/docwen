@@ -40,5 +40,10 @@ def stage_node_audit(plan: DocumentNodeLayoutPlan, root: str, document: OutputMa
         suggested_name=name,
         media_type="application/json",
         logical_path=logical,
-        metadata={"document_node_role": "audit", "node_root": plan.root_name, "logical_path": logical},
+        metadata={
+            "document_node_role": "audit",
+            "document_node_schema": "docwen.document_node.v1",
+            "node_root": plan.root_name,
+            "logical_path": logical,
+        },
     )

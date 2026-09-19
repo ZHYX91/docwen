@@ -9,7 +9,6 @@ from __future__ import annotations
 import contextlib
 import errno
 import hashlib
-import json
 import os
 import shutil
 import sys
@@ -30,7 +29,6 @@ from docwen_core.models.result import (
     ConversionResult,
 )
 from docwen_runtime.output.document_node import (
-    DOCUMENT_NODE_MANIFEST_MEDIA_TYPE,
     DocumentNodeLayoutPlan,
     has_markdown_artifacts,
     plan_document_node_layout,
@@ -318,37 +316,33 @@ class OutputFinalizer:
         cancellation: CancellationTokenView | None,
         audit_document: OutputManifestDocument | None = None,
     ) -> ConversionResult:
-        """Publish a complete result directory through one atomic rename.
+        """Publish business artifacts and an explicitly requested audit atomically.
 
-        ``docwen-node.json`` is an opt-in integration artifact, not a business
-        output. Interactive conversions therefore publish only requested
-        artifacts. Existing result directories can be overwritten/reused only
-        when the persistent node manifest was explicitly enabled, because
-        without ownership metadata replacing an arbitrary directory cannot be
-        proven safe.
+        Integrity remains in memory. No sidecar or persistent ownership index
+        is needed, and arbitrary existing directories are never replaced.
         """
-
         self._check_cancellation(cancellation)
+        if policy.overwrite_mode not in {"error", "rename", "skip"}:
+            return self._document_node_failure(
+                task_id,
+                "Result directories support rename, error, or identical-content skip. "
+                "Overwrite applies only to individual files; choose a new output parent instead.",
+                duration_ms=duration_ms,
+                input_bytes=input_bytes,
+                output_dir=output_dir,
+                root_name=plan.root_name,
+                code="DOCUMENT_NODE_POLICY_UNSUPPORTED",
+            )
         output_io = self._io_path(output_dir)
         output_io.mkdir(parents=True, exist_ok=True)
         selected = plan
         collision = 0
-        while self._io_path(os.path.join(output_dir, selected.root_name)).exists():
+        while os.path.lexists(self._io_path(os.path.join(output_dir, selected.root_name))):
             if policy.overwrite_mode == "rename":
                 collision += 1
                 selected = plan.rebase_root(plan.identity.node_name(collision=collision))
                 continue
-            if policy.overwrite_mode in {"overwrite", "skip"}:
-                if not policy.include_node_manifest:
-                    return self._document_node_failure(
-                        task_id,
-                        "Existing result directories cannot be replaced or reused without explicit ownership metadata.",
-                        duration_ms=duration_ms,
-                        input_bytes=input_bytes,
-                        output_dir=output_dir,
-                        root_name=selected.root_name,
-                        code="DOCUMENT_NODE_OWNERSHIP_UNAVAILABLE",
-                    )
+            if policy.overwrite_mode == "skip":
                 break
             return self._document_node_failure(
                 task_id,
@@ -361,31 +355,18 @@ class OutputFinalizer:
             )
 
         final_root = os.path.abspath(os.path.join(output_dir, selected.root_name))
-        self._ensure_contained(output_dir, final_root)
-        source_sha256 = (
-            selected.identity.source_sha256 or self._sha256_if_file(input_path, cancellation)
-            if policy.include_node_manifest
-            else ""
-        )
-        if policy.include_node_manifest and policy.overwrite_mode == "skip" and self._io_path(final_root).exists():
-            return self._reuse_document_node(
-                task_id,
-                selected,
-                final_root=final_root,
-                source_sha256=source_sha256,
-                duration_ms=duration_ms,
-                input_bytes=input_bytes,
-                cancellation=cancellation,
-            )
-
-        temp_parent = filesystem_path(output_dir, force_extended=sys.platform == "win32")
-        temp_root = tempfile.mkdtemp(prefix=".__docwen-node-", dir=os.fspath(temp_parent))
-        backup_root: str | None = None
-        committed = False
+        temp_root = ""
+        diagnostics: list[ConversionDiagnostic] = []
+        placed: list[ArtifactManifest] = []
+        output_bytes = 0
+        reused = False
+        failure: ConversionResult | None = None
         try:
+            self._ensure_contained(output_dir, final_root)
+            temp_parent = filesystem_path(output_dir, force_extended=sys.platform == "win32")
+            temp_root = tempfile.mkdtemp(prefix=".__docwen-node-", dir=os.fspath(temp_parent))
             self._ensure_contained(output_dir, temp_root)
-            manifest_artifacts: list[dict[str, Any]] = []
-            output_bytes = 0
+            prepared: list[ArtifactManifest] = []
             for artifact in selected.artifacts:
                 self._check_cancellation(cancellation)
                 if artifact.logical_path is None:
@@ -401,7 +382,7 @@ class OutputFinalizer:
                 destination_io.parent.mkdir(parents=True, exist_ok=True)
                 if artifact.media_type == "text/markdown":
                     payload = relocated_markdown_bytes(artifact, artifacts=selected.artifacts)
-                    with destination_io.open("wb") as stream:
+                    with destination_io.open("xb") as stream:
                         stream.write(payload)
                         stream.flush()
                         os.fsync(stream.fileno())
@@ -409,161 +390,144 @@ class OutputFinalizer:
                         shutil.copystat(self._io_path(artifact.staging_path), destination_io)
                 else:
                     self._copy_to_temp(artifact.staging_path, destination, cancellation)
-                if policy.include_node_manifest:
-                    size_bytes, sha256 = self._file_integrity(destination, cancellation)
-                    manifest_artifacts.append(
-                        {
-                            "artifact_id": artifact.artifact_id,
-                            "kind": artifact.kind,
-                            "logical_path": logical,
-                            "media_type": artifact.media_type,
-                            "role": artifact.metadata.get("document_node_role", "resource"),
-                            "size_bytes": size_bytes,
-                            "sha256": sha256,
-                        }
-                    )
-                else:
-                    size_bytes = destination_io.stat().st_size
+                size_bytes, sha256 = self._file_integrity(destination, cancellation)
+                prepared.append(replace(artifact, size_bytes=size_bytes, sha256=sha256))
                 output_bytes += size_bytes
 
             if audit_document is not None:
                 audit = stage_node_audit(selected, temp_root, audit_document)
-                size_bytes = self._io_path(audit.staging_path).stat().st_size
+                size_bytes, sha256 = self._file_integrity(audit.staging_path, cancellation)
+                prepared.append(replace(audit, size_bytes=size_bytes, sha256=sha256))
                 output_bytes += size_bytes
-                if policy.include_node_manifest:
-                    _, sha256 = self._file_integrity(audit.staging_path, cancellation)
-                    manifest_artifacts.append(
-                        {
-                            "artifact_id": audit.artifact_id,
-                            "kind": audit.kind,
-                            "logical_path": audit.logical_path,
-                            "media_type": audit.media_type,
-                            "role": "audit",
-                            "size_bytes": size_bytes,
-                            "sha256": sha256,
-                        }
-                    )
-                selected = replace(selected, artifacts=(*selected.artifacts, audit))
-
-            manifest_relative = "docwen-node.json"
-            if policy.include_node_manifest:
-                manifest_temp = os.path.join(temp_root, manifest_relative)
-                manifest_document = {
-                    "schema": "docwen.document_node.v1",
-                    "task_id": task_id,
-                    "node_name": selected.root_name,
-                    "created_at": selected.identity.created_at_utc,
-                    "source": {
-                        "name": selected.identity.source_name,
-                        "stem": selected.identity.source_stem,
-                        "format": selected.identity.source_format,
-                        "sha256": source_sha256,
-                    },
-                    "artifacts": manifest_artifacts,
-                }
-                manifest_bytes = (
-                    json.dumps(manifest_document, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
-                ).encode("utf-8")
-                with self._io_path(manifest_temp).open("wb") as stream:
-                    stream.write(manifest_bytes)
-                    stream.flush()
-                    os.fsync(stream.fileno())
-                output_bytes += len(manifest_bytes)
 
             self._check_cancellation(cancellation)
-            if self._io_path(final_root).exists():
-                if policy.overwrite_mode != "overwrite" or not policy.include_node_manifest:
-                    raise FileExistsError(f"Document node already exists: {final_root}")
-                self._validate_owned_document_node(final_root)
-                backup_root = self._unused_backup_path(final_root)
-                self._ensure_contained(output_dir, backup_root)
-                os.rename(os.fspath(self._io_path(final_root)), os.fspath(self._io_path(backup_root)))
-            try:
-                os.rename(os.fspath(self._io_path(temp_root)), os.fspath(self._io_path(final_root)))
-                committed = True
+            if policy.overwrite_mode == "skip" and os.path.lexists(self._io_path(final_root)):
+                self._verify_identical_node(final_root, temp_root, prepared, cancellation)
+                reused = True
+                output_bytes = 0
+            else:
+                # Ordinary POSIX rename may replace an empty directory created
+                # by another program after our collision check. Never clobber it.
+                self._publish_directory_no_clobber(temp_root, final_root)
                 temp_root = ""
-            except BaseException:
-                if backup_root is not None and not self._io_path(final_root).exists():
-                    os.rename(os.fspath(self._io_path(backup_root)), os.fspath(self._io_path(final_root)))
-                    backup_root = None
-                raise
-            if backup_root is not None:
-                with contextlib.suppress(OSError):
-                    shutil.rmtree(self._io_path(backup_root))
-                backup_root = None
-
             placed = [
                 replace(
                     artifact,
                     staging_path=os.path.join(final_root, *artifact.logical_path.split("/")[1:]),
-                    metadata={**artifact.metadata, "document_node_committed": True},
+                    metadata={
+                        **artifact.metadata,
+                        "document_node_committed": not reused,
+                        "document_node_reused": reused,
+                    },
                 )
-                for artifact in selected.artifacts
+                for artifact in prepared
                 if artifact.logical_path is not None
             ]
-            if policy.include_node_manifest:
-                manifest_logical = f"{selected.root_name}/{manifest_relative}"
-                placed.append(
-                    ArtifactManifest(
-                        artifact_id=f"{task_id}-document-node-manifest",
-                        kind="manifest",
-                        staging_path=os.path.join(final_root, manifest_relative),
-                        suggested_name=manifest_relative,
-                        media_type=DOCUMENT_NODE_MANIFEST_MEDIA_TYPE,
-                        metadata={
-                            "document_node_schema": "docwen.document_node.v1",
-                            "document_node_role": "manifest",
-                            "node_root": selected.root_name,
-                            "logical_path": manifest_logical,
-                        },
-                        is_primary=False,
-                        logical_path=manifest_logical,
-                    )
+            diagnostics.append(
+                ConversionDiagnostic(
+                    level="info",
+                    message=f"{'Reused identical' if reused else 'Published'} document node {final_root}",
+                    code="DOCUMENT_NODE_REUSED" if reused else "FINALIZER_DONE",
                 )
-            return ConversionResult(
-                task_id=task_id,
-                success=True,
-                artifacts=placed,
-                diagnostics=[
-                    ConversionDiagnostic(
-                        level="info",
-                        message=f"Published document node {final_root}",
-                        code="FINALIZER_DONE",
-                    )
-                ],
-                metrics=ConversionMetrics(
-                    duration_ms=duration_ms,
-                    input_bytes=input_bytes,
-                    output_bytes=output_bytes,
-                    extra={
-                        "output_dir": output_dir,
-                        "document_node_root": final_root,
-                        "document_node_schema": "docwen.document_node.v1",
-                    },
-                ),
             )
         except CancellationRequested:
             raise
         except Exception as exc:
-            return self._document_node_failure(
+            failure = self._document_node_failure(
                 task_id,
                 self._public_exception_text(exc),
                 duration_ms=duration_ms,
                 input_bytes=input_bytes,
                 output_dir=output_dir,
                 root_name=selected.root_name,
+                code="DOCUMENT_NODE_SKIP_MISMATCH"
+                if policy.overwrite_mode == "skip"
+                else "DOCUMENT_NODE_PUBLISH_FAILED",
             )
         finally:
             if temp_root and self._io_path(temp_root).exists():
-                shutil.rmtree(self._io_path(temp_root), ignore_errors=True)
-            if (
-                backup_root is not None
-                and self._io_path(backup_root).exists()
-                and not committed
-                and not self._io_path(final_root).exists()
-            ):
-                with contextlib.suppress(OSError):
-                    os.rename(os.fspath(self._io_path(backup_root)), os.fspath(self._io_path(final_root)))
+                try:
+                    shutil.rmtree(self._io_path(temp_root))
+                except OSError as exc:
+                    diagnostics.append(
+                        ConversionDiagnostic(
+                            level="warning",
+                            message=f"Temporary output cleanup failed: {self._public_exception_text(exc)}",
+                            code="FINALIZER_CLEANUP_FAILED",
+                        )
+                    )
+        if failure is not None:
+            failure.diagnostics.extend(diagnostics)
+            return failure
+        return ConversionResult(
+            task_id=task_id,
+            success=True,
+            artifacts=placed,
+            diagnostics=diagnostics,
+            metrics=ConversionMetrics(
+                duration_ms=duration_ms,
+                input_bytes=input_bytes,
+                output_bytes=output_bytes,
+                extra={
+                    "output_dir": output_dir,
+                    "document_node_root": final_root,
+                    "document_node_schema": "docwen.document_node.v1",
+                    "document_node_reused": reused,
+                },
+            ),
+        )
+
+    @classmethod
+    def _verify_identical_node(
+        cls,
+        root: str,
+        prepared_root: str,
+        artifacts: list[ArtifactManifest],
+        cancellation: CancellationTokenView | None,
+    ) -> None:
+        """Reuse only a complete byte-identical tree; never trust its filename."""
+
+        def tree(path: str) -> set[str]:
+            native = cls._io_path(path)
+            if not native.is_dir() or native.is_symlink() or native.is_junction():
+                raise ValueError("existing result must be a regular directory")
+            entries: set[str] = set()
+            for directory, dirs, files in os.walk(native, followlinks=False):
+                cls._check_cancellation(cancellation)
+                for name in (*dirs, *files):
+                    item = Path(directory) / name
+                    if item.is_symlink() or item.is_junction():
+                        raise ValueError("existing result contains a link or junction")
+                    relative = item.relative_to(native).as_posix()
+                    entries.add(relative + ("/" if item.is_dir() else ""))
+            return entries
+
+        if tree(root) != tree(prepared_root):
+            raise ValueError("existing result contains missing or extra output paths")
+        for artifact in artifacts:
+            if artifact.logical_path is None:
+                raise ValueError("prepared artifact has no logical path")
+            path = os.path.join(root, *artifact.logical_path.split("/")[1:])
+            if cls._file_integrity(path, cancellation) != (artifact.size_bytes, artifact.sha256):
+                raise ValueError(f"existing result differs from prepared output: {artifact.logical_path}")
+
+    @classmethod
+    def _publish_directory_no_clobber(cls, source: str, destination: str) -> None:
+        if sys.platform in {"win32", "linux"}:
+            cls._publish_no_clobber(source, destination)
+            return
+        if sys.platform == "darwin":
+            import ctypes
+
+            libc = ctypes.CDLL(None, use_errno=True)
+            rename_exclusive = libc.renamex_np
+            rename_exclusive.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint]
+            rename_exclusive.restype = ctypes.c_int
+            if rename_exclusive(os.fsencode(source), os.fsencode(destination), 4) != 0:  # RENAME_EXCL
+                error = ctypes.get_errno()
+                raise OSError(error, os.strerror(error), destination)
+            return
+        raise OSError(errno.ENOSYS, "Atomic no-replace directory rename is unavailable", destination)
 
     @staticmethod
     def _document_node_failure(
@@ -593,121 +557,6 @@ class OutputFinalizer:
                 extra={"output_dir": output_dir, "document_node_root": os.path.join(output_dir, root_name)},
             ),
         )
-
-    def _reuse_document_node(
-        self,
-        task_id: str,
-        plan: DocumentNodeLayoutPlan,
-        *,
-        final_root: str,
-        source_sha256: str | None,
-        duration_ms: float,
-        input_bytes: int,
-        cancellation: CancellationTokenView | None,
-    ) -> ConversionResult:
-        manifest_path = self._io_path(os.path.join(final_root, "docwen-node.json"))
-        try:
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            if (
-                manifest.get("schema") != "docwen.document_node.v1"
-                or manifest.get("source", {}).get("sha256") != source_sha256
-            ):
-                raise ValueError("existing node identity does not match this source")
-            recorded = {
-                item.get("logical_path"): item
-                for item in manifest.get("artifacts", [])
-                if isinstance(item, dict) and isinstance(item.get("logical_path"), str)
-            }
-            placed = []
-            for artifact in plan.artifacts:
-                if artifact.logical_path is None:
-                    raise ValueError("planned artifact has no logical path")
-                path = os.path.join(final_root, *artifact.logical_path.split("/")[1:])
-                if not self._io_path(path).is_file():
-                    raise FileNotFoundError(path)
-                expected = recorded.get(artifact.logical_path)
-                size_bytes, sha256 = self._file_integrity(path, cancellation)
-                if expected is None or expected.get("size_bytes") != size_bytes or expected.get("sha256") != sha256:
-                    raise ValueError(f"existing node artifact integrity mismatch: {artifact.logical_path}")
-                placed.append(
-                    replace(
-                        artifact,
-                        staging_path=path,
-                        metadata={**artifact.metadata, "document_node_reused": True},
-                    )
-                )
-            manifest_logical = f"{plan.root_name}/docwen-node.json"
-            placed.append(
-                ArtifactManifest(
-                    artifact_id=f"{task_id}-document-node-manifest",
-                    kind="manifest",
-                    staging_path=os.fspath(manifest_path),
-                    suggested_name="docwen-node.json",
-                    media_type=DOCUMENT_NODE_MANIFEST_MEDIA_TYPE,
-                    metadata={
-                        "document_node_schema": "docwen.document_node.v1",
-                        "document_node_role": "manifest",
-                        "node_root": plan.root_name,
-                        "logical_path": manifest_logical,
-                        "document_node_reused": True,
-                    },
-                    is_primary=False,
-                    logical_path=manifest_logical,
-                )
-            )
-        except Exception as exc:
-            return self._document_node_failure(
-                task_id,
-                self._public_exception_text(exc),
-                duration_ms=duration_ms,
-                input_bytes=input_bytes,
-                output_dir=os.path.dirname(final_root),
-                root_name=os.path.basename(final_root),
-                code="DOCUMENT_NODE_SKIP_MISMATCH",
-            )
-        return ConversionResult(
-            task_id=task_id,
-            success=True,
-            artifacts=placed,
-            diagnostics=[
-                ConversionDiagnostic(
-                    level="info", message=f"Reused document node {final_root}", code="DOCUMENT_NODE_REUSED"
-                )
-            ],
-            metrics=ConversionMetrics(
-                duration_ms=duration_ms,
-                input_bytes=input_bytes,
-                output_bytes=0,
-                extra={"output_dir": os.path.dirname(final_root), "document_node_root": final_root},
-            ),
-        )
-
-    def _validate_owned_document_node(self, root: str) -> None:
-        manifest_path = self._io_path(os.path.join(root, "docwen-node.json"))
-        try:
-            document = json.loads(manifest_path.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as exc:
-            raise ValueError("overwrite is allowed only for a DocWen-owned document node") from exc
-        if document.get("schema") != "docwen.document_node.v1" or document.get("node_name") != os.path.basename(root):
-            raise ValueError("overwrite is allowed only for a matching DocWen-owned document node")
-
-    def _unused_backup_path(self, root: str) -> str:
-        counter = 0
-        while True:
-            counter += 1
-            candidate = f"{root}.__docwen_backup_{counter:03d}"
-            if not self._io_path(candidate).exists():
-                return candidate
-
-    @classmethod
-    def _sha256_if_file(
-        cls,
-        path: str,
-        cancellation: CancellationTokenView | None,
-    ) -> str | None:
-        if not path or not cls._io_path(path).is_file():
-            return None
-        return cls._file_integrity(path, cancellation)[1]
 
     @classmethod
     def _file_integrity(
@@ -934,12 +783,13 @@ class OutputFinalizer:
         os.close(file_descriptor)
         try:
             cls._copy_to_temp(artifact.staging_path, temp_path, cancellation)
+            size_bytes, sha256 = cls._file_integrity(temp_path, cancellation)
         except BaseException:
             with contextlib.suppress(OSError):
                 cls._io_path(temp_path).unlink()
             raise
         return _PreparedArtifact(
-            artifact=artifact,
+            artifact=replace(artifact, size_bytes=size_bytes, sha256=sha256),
             suggested_name=suggested,
             destination=destination,
             rename_base=rename_base,
@@ -971,6 +821,8 @@ class OutputFinalizer:
         if item.skip_existing:
             if not cls._io_path(item.destination).is_file():
                 raise FileNotFoundError(f"Existing output target disappeared: {item.destination}")
+            size_bytes, sha256 = cls._file_integrity(item.destination, None)
+            item.artifact = replace(item.artifact, size_bytes=size_bytes, sha256=sha256)
             return cls._placed_manifest(item, item.destination, skipped=True), 0
         if item.temp_path is None:
             raise RuntimeError("Prepared artifact has no commit source")
@@ -990,7 +842,7 @@ class OutputFinalizer:
                     cls._ensure_contained(output_dir, destination)
         if not cls._io_path(item.temp_path).exists():
             item.temp_path = None
-        return cls._placed_manifest(item, destination), cls._io_path(destination).stat().st_size
+        return cls._placed_manifest(item, destination), item.artifact.size_bytes or 0
 
     @classmethod
     def _publish_no_clobber(cls, temp_path: str, destination: str) -> None:
@@ -1022,14 +874,11 @@ class OutputFinalizer:
         metadata = dict(item.artifact.metadata)
         if skipped:
             metadata.update({"skipped": True, "reason": "file_exists"})
-        return ArtifactManifest(
-            artifact_id=item.artifact.artifact_id,
-            kind=item.artifact.kind,
+        return replace(
+            item.artifact,
             staging_path=destination,
             suggested_name=item.suggested_name,
-            media_type=item.artifact.media_type,
             metadata=metadata,
-            is_primary=item.artifact.is_primary,
         )
 
     @classmethod
@@ -1097,14 +946,14 @@ class OutputFinalizer:
         if not OutputFinalizer._files_identical(artifact.staging_path, input_abs, cancellation):
             raise ValueError("Retained artifact collides with its input path but has different bytes")
 
-        reused = ArtifactManifest(
-            artifact_id=artifact.artifact_id,
-            kind=artifact.kind,
+        size_bytes, sha256 = OutputFinalizer._file_integrity(input_abs, cancellation)
+        reused = replace(
+            artifact,
             staging_path=input_abs,
             suggested_name=suggested,
-            media_type=artifact.media_type,
             metadata={**artifact.metadata, "reused_input": True},
-            is_primary=artifact.is_primary,
+            size_bytes=size_bytes,
+            sha256=sha256,
         )
         return reused, 0
 

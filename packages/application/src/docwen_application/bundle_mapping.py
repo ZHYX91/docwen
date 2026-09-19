@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Sequence
+from dataclasses import replace
 from typing import Any, Literal, cast
 
 from docwen_core.models import (
@@ -92,6 +93,11 @@ def build_bundle_draft(
 ) -> BundleDraft:
     """Apply one explicit route-family mapping without inferring product storage."""
     artifacts = tuple(artifacts)
+    grouped = bool(artifacts) and all(
+        artifact.metadata.get("document_node_schema") == "docwen.document_node.v1" for artifact in artifacts
+    )
+    audits = tuple(artifact for artifact in artifacts if artifact.metadata.get("document_node_role") == "audit")
+    artifacts = tuple(artifact for artifact in artifacts if artifact not in audits)
     node_manifests = tuple(
         artifact for artifact in artifacts if artifact.media_type == DOCUMENT_NODE_MANIFEST_MEDIA_TYPE
     )
@@ -105,7 +111,26 @@ def build_bundle_draft(
     artifacts = tuple(artifact for artifact in artifacts if artifact is not node_manifest)
 
     def finish(draft: BundleDraft) -> BundleDraft:
-        return _attach_document_node_manifest(draft, node_manifest)
+        draft = _attach_document_node_manifest(draft, node_manifest)
+        if grouped:
+            draft = replace(draft, layout_schema="docwen.document_node.v1")
+        # Explicit audit exports are supplementary resources, never business
+        # documents or implicit layout manifests. This also works for CSV-only
+        # bundles, whose preferred entry is itself a resource.
+        if audits:
+            first_ordinal = 1 + max((entry.ordinal for entry in draft.entries), default=-1)
+            draft = replace(
+                draft,
+                artifacts=(*draft.artifacts, *(_draft_artifact(audit, "resource") for audit in audits)),
+                entries=(
+                    *draft.entries,
+                    *(
+                        BundleEntry(audit.artifact_id, "supplementary", index, False)
+                        for index, audit in enumerate(audits, start=first_ordinal)
+                    ),
+                ),
+            )
+        return draft
 
     if profile == "physical_page_ocr":
         artifact_ids = [artifact.artifact_id for artifact in artifacts]
@@ -664,6 +689,8 @@ def _draft_artifact(
         suggested_name=artifact.suggested_name,
         media_type=artifact.media_type,
         logical_path=artifact.logical_path,
+        expected_size_bytes=artifact.size_bytes,
+        expected_sha256=artifact.sha256,
     )
 
 

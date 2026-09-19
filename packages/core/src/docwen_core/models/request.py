@@ -49,8 +49,9 @@ class OutputPolicy:
     Valid values:
     - ``"error"`` — fail when the target already exists
     - ``"rename"`` — append a numeric suffix
-    - ``"overwrite"`` — replace existing file
-    - ``"skip"`` — do nothing if target exists
+    - ``"overwrite"`` — replace an individual file; invalid for result directories
+    - ``"skip"`` — leave an existing file untouched; reuse a result directory
+      only when its complete contents match the newly prepared result
     """
 
     write_artifacts: bool = True
@@ -59,15 +60,6 @@ class OutputPolicy:
     Diagnostic operations may set this to ``False`` to return structured
     findings without creating a user-visible report file.  Staging remains
     private and is cleaned by the runtime in either mode.
-    """
-
-    include_node_manifest: bool = False
-    """Whether grouped result directories persist ``docwen-node.json``.
-
-    Interactive GUI/CLI conversion defaults to business artifacts only.  A
-    Machine producer may enable this for a transaction-owned staging bundle
-    where the typed layout manifest is part of the integration contract.  The
-    flag never changes document conversion semantics.
     """
 
     open_after_done: bool = False
@@ -89,7 +81,6 @@ class OutputPolicy:
             "date_subfolder": self.date_subfolder,
             "overwrite_mode": self.overwrite_mode,
             "write_artifacts": self.write_artifacts,
-            "include_node_manifest": self.include_node_manifest,
             "open_after_done": self.open_after_done,
         }
 
@@ -101,7 +92,6 @@ class OutputPolicy:
             date_subfolder=data.get("date_subfolder", ""),
             overwrite_mode=data.get("overwrite_mode", "rename"),
             write_artifacts=data.get("write_artifacts", True),
-            include_node_manifest=data.get("include_node_manifest", False),
             open_after_done=data.get("open_after_done", False),
         )
 

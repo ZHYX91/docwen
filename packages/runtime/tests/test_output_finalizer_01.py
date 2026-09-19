@@ -163,6 +163,13 @@ class TestOutputFinalizer:
                 input_path=str(input_path),
             )
 
+            if overwrite_mode == "overwrite":
+                assert result.success is False and result.artifacts == []
+                assert result.error is not None
+                assert result.error.diagnostic_code == "DOCUMENT_NODE_POLICY_UNSUPPORTED"
+                assert list(Path(work).iterdir()) == [input_path]
+                assert input_path.read_bytes() == b"same retained image bytes"
+                return
             assert result.success is True
             retained = next(artifact for artifact in result.artifacts if artifact.kind == "image")
             assert Path(retained.staging_path).parent == Path(result.metrics.extra["document_node_root"])

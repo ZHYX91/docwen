@@ -708,33 +708,12 @@ def _verify_physical_page_bundle(
         for artifact in artifacts
         if isinstance(artifact, dict) and isinstance(artifact.get("artifact_id"), str)
     }
-    manifest_relations = [
-        relation
-        for relation in relations
-        if isinstance(relation, dict) and relation.get("type") == "resource_of" and relation.get("role") == "manifest"
-    ]
-    manifest_ids = {
-        relation.get("source_artifact_id")
-        for relation in manifest_relations
-        if isinstance(relation.get("source_artifact_id"), str)
-    }
-    if bundle.get("layout_schema") == "docwen.document_node.v1":
-        manifest_artifacts = [by_id[artifact_id] for artifact_id in manifest_ids if artifact_id in by_id]
-        if (
-            len(manifest_relations) != 1
-            or len(manifest_artifacts) != 1
-            or manifest_artifacts[0].get("media_type") != "application/vnd.docwen.document-node+json"
-            or manifest_artifacts[0].get("suggested_name") != "docwen-node.json"
-        ):
-            raise RuntimeError(f"packaged_document_node_manifest_invalid:{bundle}")
-    elif manifest_relations:
-        raise RuntimeError(f"packaged_artifact_layout_manifest_invalid:{bundle}")
-    deliverable_artifacts = [
-        artifact
-        for artifact in artifacts
-        if isinstance(artifact, dict) and artifact.get("artifact_id") not in manifest_ids
-    ]
-    semantic_relations = [relation for relation in relations if relation not in manifest_relations]
+    if any(
+        artifact.get("media_type") == "application/vnd.docwen.document-node+json" for artifact in by_id.values()
+    ) or any(isinstance(relation, dict) and relation.get("role") == "manifest" for relation in relations):
+        raise RuntimeError(f"packaged_unexpected_document_node_manifest:{bundle}")
+    deliverable_artifacts = artifacts
+    semantic_relations = relations
     documents = [artifact for artifact in deliverable_artifacts if artifact.get("kind") == "document"]
     fragments = [artifact for artifact in deliverable_artifacts if artifact.get("kind") == "fragment"]
     resources = [artifact for artifact in deliverable_artifacts if artifact.get("kind") == "resource"]
@@ -2972,22 +2951,12 @@ def _run_machine_protocol_smoke_impl(
         if isinstance(semantic_artifacts, list)
         else []
     )
-    semantic_manifests = (
-        [
-            item
-            for item in semantic_artifacts
-            if isinstance(item, dict) and item.get("media_type") == "application/vnd.docwen.document-node+json"
-        ]
-        if isinstance(semantic_artifacts, list)
-        else []
-    )
     if (
         not isinstance(semantic_bundle, dict)
         or semantic_bundle.get("task_id") != task_id
         or not isinstance(semantic_artifacts, list)
-        or len(semantic_artifacts) != 2
+        or len(semantic_artifacts) != 1
         or len(semantic_documents) != 1
-        or len(semantic_manifests) != 1
         or semantic_bundle.get("layout_schema") != "docwen.document_node.v1"
     ):
         raise RuntimeError(f"packaged_machine_protocol_semantic_artifact_invalid:{semantic_bundle}")
@@ -3001,29 +2970,12 @@ def _run_machine_protocol_smoke_impl(
     ]
     if semantic_bundle.get("entries") != expected_entries:
         raise RuntimeError(f"packaged_machine_protocol_semantic_entries_invalid:{semantic_bundle}")
-    if semantic_bundle.get("relations") != [
-        {
-            "type": "resource_of",
-            "source_artifact_id": semantic_manifests[0]["artifact_id"],
-            "target_artifact_id": semantic_documents[0]["artifact_id"],
-            "role": "manifest",
-            "ordinal": 0,
-        }
-    ]:
-        raise RuntimeError("packaged_machine_protocol_semantic_manifest_relation_invalid")
+    if semantic_bundle.get("relations") != []:
+        raise RuntimeError("packaged_machine_protocol_semantic_relations_invalid")
     semantic_locator = semantic_documents[0].get("locator")
     if not isinstance(semantic_locator, str) or "\\" in semantic_locator or ".." in semantic_locator.split("/"):
         raise RuntimeError(f"packaged_machine_protocol_semantic_locator_invalid:{semantic_locator}")
     semantic_output = staging / Path(semantic_locator)
-    manifest_locator = semantic_manifests[0].get("locator")
-    expected_manifest_locator = str(Path(semantic_locator).parent / "docwen-node.json").replace("\\", "/")
-    if manifest_locator != expected_manifest_locator:
-        raise RuntimeError("packaged_machine_protocol_semantic_manifest_locator_invalid")
-    manifest_bytes = _read_bytes_with_long_path(staging / Path(manifest_locator))
-    if len(manifest_bytes) != semantic_manifests[0].get("size_bytes") or hashlib.sha256(
-        manifest_bytes
-    ).hexdigest() != semantic_manifests[0].get("sha256"):
-        raise RuntimeError("packaged_machine_protocol_semantic_manifest_integrity_mismatch")
     semantic_output_bytes = _read_bytes_with_long_path(semantic_output)
     if len(semantic_output_bytes) != semantic_documents[0].get("size_bytes") or hashlib.sha256(
         semantic_output_bytes
@@ -3349,30 +3301,6 @@ def _run_machine_protocol_smoke_impl(
     ocr_bundle = ocr_params.get("bundle") if isinstance(ocr_params, dict) else None
     ocr_artifacts = ocr_bundle.get("artifacts") if isinstance(ocr_bundle, dict) else None
     ocr_relations = ocr_bundle.get("relations") if isinstance(ocr_bundle, dict) else None
-    ocr_manifest_relations = (
-        [
-            item
-            for item in ocr_relations
-            if isinstance(item, dict) and item.get("type") == "resource_of" and item.get("role") == "manifest"
-        ]
-        if isinstance(ocr_relations, list)
-        else []
-    )
-    ocr_manifest_ids = {
-        item.get("source_artifact_id")
-        for item in ocr_manifest_relations
-        if isinstance(item.get("source_artifact_id"), str)
-    }
-    ocr_manifest_artifacts = (
-        [item for item in ocr_artifacts if isinstance(item, dict) and item.get("artifact_id") in ocr_manifest_ids]
-        if isinstance(ocr_artifacts, list)
-        else []
-    )
-    ocr_semantic_relations = (
-        [item for item in ocr_relations if item not in ocr_manifest_relations]
-        if isinstance(ocr_relations, list)
-        else []
-    )
     if (
         not isinstance(ocr_bundle, dict)
         or ocr_bundle.get("task_id") != ocr_task_id
@@ -3381,11 +3309,8 @@ def _run_machine_protocol_smoke_impl(
         or {item.get("kind") for item in ocr_artifacts if isinstance(item, dict)}
         != {"document", "fragment", "resource"}
         or not isinstance(ocr_relations, list)
-        or len(ocr_manifest_relations) != 1
-        or len(ocr_manifest_artifacts) != 1
-        or ocr_manifest_artifacts[0].get("media_type") != "application/vnd.docwen.document-node+json"
-        or ocr_manifest_artifacts[0].get("suggested_name") != "docwen-node.json"
-        or [(item.get("type"), item.get("role")) for item in ocr_semantic_relations if isinstance(item, dict)]
+        or len(ocr_artifacts) != 3
+        or [(item.get("type"), item.get("role")) for item in ocr_relations if isinstance(item, dict)]
         != [
             ("resource_of", "original"),
             ("fragment_of", "ocr_text"),

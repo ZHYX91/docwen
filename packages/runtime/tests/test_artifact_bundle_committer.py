@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -54,6 +55,28 @@ def test_commit_pins_relative_locator_size_and_sha256(tmp_path: Path) -> None:
     assert bundle.to_dict()["schema"] == "docwen.artifact_bundle.v3"
     assert bundle.to_dict()["layout_schema"] == "docwen.artifact_layout.v1"
     assert bundle.to_dict()["artifacts"][0]["logical_path"] == "documents/result.md"
+
+
+@pytest.mark.parametrize("replacement", [b"different length", b"changed!"])
+def test_commit_rejects_bytes_changed_after_finalizer(tmp_path, replacement):
+    output = tmp_path / "result.md"
+    original = b"original"
+    output.write_bytes(original)
+    draft = _single_document(output)
+    draft = replace(
+        draft,
+        artifacts=(
+            replace(
+                draft.artifacts[0],
+                expected_size_bytes=len(original),
+                expected_sha256=hashlib.sha256(original).hexdigest(),
+            ),
+        ),
+    )
+    output.write_bytes(replacement)
+    with pytest.raises(ArtifactBundleCommitError) as error:
+        ArtifactBundleCommitter().commit(task_id="changed", staging_root=str(tmp_path), draft=draft)
+    assert error.value.code == "artifact_changed_after_finalization"
 
 
 def test_commit_rejects_artifact_outside_staging(tmp_path: Path) -> None:

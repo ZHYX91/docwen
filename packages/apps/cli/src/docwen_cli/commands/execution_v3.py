@@ -172,6 +172,16 @@ def preflight_execution(args: argparse.Namespace) -> int | None:
 def _preflight_destination(args: argparse.Namespace) -> tuple[str, str, dict[str, Any]] | None:
     """Fail before runtime startup or side effects when a destination is unsafe."""
 
+    if getattr(args, "command_path", "") in {"convert", "batch convert"} and getattr(args, "overwrite", False):
+        grouped = normalize_target_format(str(getattr(args, "to", ""))) == "md" or any(
+            Path(value).suffix.lower() in {".md", ".markdown"} for value in getattr(args, "files", [])
+        )
+        if grouped:
+            return (
+                "invalid_input",
+                "--overwrite applies only to individual files. Result-directory conversions require a new output parent.",
+                {},
+            )
     output_path = getattr(args, "output_path", None)
     if output_path:
         if getattr(args, "command_path", "") == "convert" and (

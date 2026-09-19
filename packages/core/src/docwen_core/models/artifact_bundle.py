@@ -292,6 +292,8 @@ class BundleDraftArtifact:
     suggested_name: str
     media_type: str
     logical_path: str | None = None
+    expected_size_bytes: int | None = None
+    expected_sha256: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
