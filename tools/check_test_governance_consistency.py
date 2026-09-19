@@ -215,6 +215,8 @@ def main(argv: list[str]) -> int:
     )
     if "python -m pytest" in workflow_text:
         errors.append("CI must run tests through tools/qa.py")
+    if "--cov-fail-under" in workflow_text:
+        errors.append("coverage threshold is owned by QA and pyproject.toml; workflow overrides are forbidden")
 
     _contains_all(
         docs_text,
