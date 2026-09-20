@@ -280,11 +280,25 @@ Run the offline gate from the repository root:
 
 ```powershell
 uv run --extra test python tools/validate_contracts.py
-uv run --extra test pytest tests/test_repo/test_machine_protocol_v2_contracts.py
+uv run --extra test python tools/qa.py --suite fast
 ```
 
 Any schema, vocabulary, lifecycle, framing, locator, integrity, or fixture expectation change must update this
 README and the conformance set in the same change.
+
+Consumers keep a self-contained `contracts/docwen/` test-data snapshot. From a checkout of this repository,
+`python tools/export_consumer_contracts.py <new-snapshot-directory> --revision <commit>` exports the complete
+conformance inventory from committed Git blobs. JSON whitespace is normalized; the snapshot records both
+original blob SHA-256 and exported SHA-256, plus the exact source commit. `--check` compares an existing
+snapshot without modifying it. Export never replaces an existing directory. Preserve the included license;
+the vendored schemas and examples are test data, not consumer runtime implementation.
+
+Consumer checks validate snapshot inventory/digests, all fixture schema expectations, and actual consumer
+framing and Bundle validation. Symbolic artifact payloads are materialized only inside owned test directories;
+only size/hash in the in-memory test copy change, never graph or fixture expectations. The complete trace
+semantics remain covered by this repository's offline gate and by consumers' process/lifecycle tests; validating
+a trace's JSON shape alone is not proof of lifecycle conformance. Independent consumer clones do not need
+another repository checkout, Python, or a running DocWen to run their source checks.
 
 Candidate receipts bind the final semantic/diagnostic identities; exact clean DocWen and provider commit/tree plus
 their spec-baseline commit/tree; candidate ID; package manifest and executable relative path/bytes/SHA-256/version;
