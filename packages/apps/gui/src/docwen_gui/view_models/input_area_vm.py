@@ -21,6 +21,7 @@ from PySide6.QtCore import QObject, QUrl, Signal
 
 from docwen_core.paths import scan_input_directory
 from docwen_gui.file_types import FILE_CATEGORY_ORDER, FILE_EXTENSIONS_BY_CATEGORY
+from docwen_gui.file_admission_i18n import render_file_format_notice
 from docwen_gui.i18n import t as _t
 
 if TYPE_CHECKING:
@@ -106,6 +107,7 @@ class InputAreaViewModel(QObject):
         self._selection_message: str = ""
         self._selection_detail: str = ""
         self._selection_tone: str = "secondary"
+        self._format_notice: str = ""
         self._file_filter: Callable[[str], bool] | None = None
 
         # Read default mode from config, then honor the owning VM's current mode.
@@ -143,6 +145,11 @@ class InputAreaViewModel(QObject):
     def selection_detail(self) -> str:
         """Secondary selection detail shown below the primary feedback."""
         return self._selection_detail
+
+    @property
+    def format_notice(self) -> str:
+        """Compact actual-format notice for the committed selection."""
+        return self._format_notice
 
     @property
     def file_filter(self) -> Callable[[str], bool] | None:
@@ -290,7 +297,8 @@ class InputAreaViewModel(QObject):
         if not normalized:
             self._emit_message("", "secondary")
             return
-        warning_message = self._selection_warning_from_refs(refs)
+        format_notice = render_file_format_notice(refs[0]) if refs else ""
+        warning_message = self._selection_warning_from_refs(refs, skip_format_mismatch=bool(format_notice))
         if self._mode == "single" or current:
             file_path = normalized[0]
             message = _t(
@@ -298,9 +306,12 @@ class InputAreaViewModel(QObject):
                 "Current file: {filename}",
                 filename=Path(file_path).name,
             )
-            if warning_message:
-                message = f"{message}\n{warning_message}"
-            self._emit_message(message, "warning" if warning_message else "success", detail=str(Path(file_path).parent))
+            self._emit_message(
+                message,
+                "warning" if (warning_message or format_notice) else "success",
+                detail=str(Path(file_path).parent),
+                format_notice=format_notice,
+            )
             return
         message = _t(
             "components.file_drop.files_added_msg",
@@ -310,20 +321,47 @@ class InputAreaViewModel(QObject):
         self._emit_message(message, "warning" if warning_message else "success", detail=warning_message)
 
     @staticmethod
-    def _selection_warning_from_refs(file_refs: Sequence[FileRef]) -> str:
+    def _selection_warning_from_refs(
+        file_refs: Sequence[FileRef],
+        *,
+        skip_format_mismatch: bool = False,
+    ) -> str:
         from docwen_core.models import FILE_INSPECTION_METADATA_KEY
 
+        format_codes = {
+            "FILE_FORMAT_COMPATIBLE_TEXT",
+            "FILE_FORMAT_SAME_FAMILY_MISMATCH",
+            "FILE_FORMAT_CROSS_FAMILY_MISMATCH",
+            "FILE_EXTENSION_UNSUPPORTED",
+        }
         for ref in file_refs:
-            warning = str(ref.warning_message or "").strip()
-            if warning:
-                return warning
             inspection = ref.metadata.get(FILE_INSPECTION_METADATA_KEY)
+            inspection_code = ""
+            if isinstance(inspection, dict):
+                inspection_code = str(inspection.get("warning_code", "") or "").strip().upper()
+
+            warning = str(ref.warning_message or "").strip()
+            if warning and not (skip_format_mismatch and inspection_code in format_codes):
+                return warning
             if not isinstance(inspection, dict):
                 continue
-            for key in ("warning_message", "reason_message"):
-                message = str(inspection.get(key) or "").strip()
-                if message:
-                    return message
+
+            raw_warnings = inspection.get("warnings", ())
+            if isinstance(raw_warnings, (tuple, list)):
+                for raw_warning in raw_warnings:
+                    if not isinstance(raw_warning, dict):
+                        continue
+                    code = str(raw_warning.get("code", "") or "").strip().upper()
+                    if skip_format_mismatch and code in format_codes:
+                        continue
+                    message = str(raw_warning.get("message", "") or "").strip()
+                    if message:
+                        return message
+
+            reason_message = str(inspection.get("reason_message", "") or "").strip()
+            reason_code = str(inspection.get("reason_code", "") or "").strip().upper()
+            if reason_message and reason_code and reason_code not in format_codes:
+                return reason_message
         return ""
 
     def request_add_dialog(self, *, force_batch_mode: bool = False) -> None:
@@ -636,10 +674,18 @@ class InputAreaViewModel(QObject):
             has_degraded_preview=has_degraded_preview,
         )
 
-    def _emit_message(self, message: str, tone: str, *, detail: str = "") -> None:
+    def _emit_message(
+        self,
+        message: str,
+        tone: str,
+        *,
+        detail: str = "",
+        format_notice: str = "",
+    ) -> None:
         self._selection_message = message
         self._selection_detail = detail
         self._selection_tone = tone
+        self._format_notice = format_notice
         self.selection_message_changed.emit(message, tone)
 
     def _emit_rejection(self, message: str, tone: str) -> None:
