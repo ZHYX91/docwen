@@ -485,7 +485,7 @@ def main(argv: list[str]) -> int:
     steps: list[tuple[str, list[str], bool]] = []
     if not args.skip_ruff and not args.tests_only:
         steps += [
-            ("ruff-format", [sys.executable, "-m", "ruff", "format", "--check", "."], True),
+            ("ruff-format", [sys.executable, "-m", "ruff", "format", "--diff", "."], True),
             ("ruff-check", [sys.executable, "-m", "ruff", "check", "."], True),
         ]
         if args.phase5:
