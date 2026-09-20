@@ -875,11 +875,13 @@ class MdToDocxConverter:
                         input_bytes=input_bytes,
                     ),
                 )
-            try:
-                prepare_note_context_for_document(doc, note_ctx)
-            except NoteWritebackError as exc:
-                return _note_failure(task_id, t_start, exc)
             placeholder_para = find_body_placeholder(doc)
+            render_body = placeholder_para is not None
+            if render_body:
+                try:
+                    prepare_note_context_for_document(doc, note_ctx)
+                except NoteWritebackError as exc:
+                    return _note_failure(task_id, t_start, exc)
             placeholder_map = scan_placeholders(doc)
             try:
                 bibliography_anchor = prepare_bibliography_anchor(
@@ -952,58 +954,63 @@ class MdToDocxConverter:
             cancellable.check()
             progress.report_progress(55.0, "Rendering AST to paragraphs")
 
-            semantic_v3_session = DocxSemanticsV3Session(
-                doc,
-                source_sha256=semantic_v3_plan.source_sha256,
-                caption_style_bindings=tuple(
-                    CaptionStyleBindingV3(
-                        semantic_key=semantic_key,
-                        resolved_style_id=managed_styles.style_id(semantic_key),
-                        visible_name=managed_styles.get(semantic_key).name or "",
-                    )
-                    for semantic_key in (
-                        "figure_caption",
-                        "table_caption",
-                        "equation_caption",
-                        "code_block_caption",
-                    )
-                ),
-            )
-
-            # Create renderer with explicit doc object (does NOT create its own Document)
-            renderer = MdToDocxRenderer(
-                doc=doc,
-                body_font=body_font,
-                body_style=body_style,
-                body_paragraph_format=body_paragraph_format,
-                code_font=code_font,
-                code_bg_color=code_background_color,
-                heading_formatting_mode=heading_formatting_mode,
-                table_header_formatting_mode=table_header_formatting_mode,
-                formatting_mode=formatting_mode,
-                table_style_name=table_style_name,
-                table_style_key=table_style_key,
-                quote_style_levels=quote_style_levels,
-                template_style_keys=template_style_keys,
-                managed_styles=managed_styles,
-                semantic_v3_session=semantic_v3_session,
-                hr_mapping=hr_mapping,
-                hr_actions=hr_actions,
-                cancellation=cancellable,
-                note_ctx=note_ctx,
-                source_file_path=input_path,
-                declared_resource_resolver=declared_resource_resolver,
-            )
-            try:
-                paragraphs = renderer.render(semantic_analysis.ast)
-            except DocxSemanticsV3Error as exc:
-                return _semantic_v3_failure(
-                    task_id,
-                    t_start,
-                    str(exc),
-                    [],
-                    input_bytes=input_bytes,
+            semantic_v3_session = None
+            renderer = None
+            paragraphs = []
+            if render_body:
+                semantic_v3_session = DocxSemanticsV3Session(
+                    doc,
+                    source_sha256=semantic_v3_plan.source_sha256,
+                    caption_style_bindings=tuple(
+                        CaptionStyleBindingV3(
+                            semantic_key=semantic_key,
+                            resolved_style_id=managed_styles.style_id(semantic_key),
+                            visible_name=managed_styles.get(semantic_key).name or "",
+                        )
+                        for semantic_key in (
+                            "figure_caption",
+                            "table_caption",
+                            "equation_caption",
+                            "code_block_caption",
+                        )
+                    ),
                 )
+
+                # Create renderer with explicit doc object (does NOT create its own Document)
+                renderer = MdToDocxRenderer(
+                    doc=doc,
+                    body_font=body_font,
+                    body_style=body_style,
+                    body_paragraph_format=body_paragraph_format,
+                    code_font=code_font,
+                    code_bg_color=code_background_color,
+                    heading_formatting_mode=heading_formatting_mode,
+                    table_header_formatting_mode=table_header_formatting_mode,
+                    formatting_mode=formatting_mode,
+                    table_style_name=table_style_name,
+                    table_style_key=table_style_key,
+                    quote_style_levels=quote_style_levels,
+                    template_style_keys=template_style_keys,
+                    managed_styles=managed_styles,
+                    semantic_v3_session=semantic_v3_session,
+                    hr_mapping=hr_mapping,
+                    hr_actions=hr_actions,
+                    cancellation=cancellable,
+                    note_ctx=note_ctx,
+                    source_file_path=input_path,
+                    declared_resource_resolver=declared_resource_resolver,
+                )
+                try:
+                    paragraphs = renderer.render(semantic_analysis.ast)
+                except DocxSemanticsV3Error as exc:
+                    return _semantic_v3_failure(
+                        task_id,
+                        t_start,
+                        str(exc),
+                        [],
+                        input_bytes=input_bytes,
+                    )
+
 
             # Inject paragraphs into template + fill YAML placeholders
             progress.report_progress(70.0, "Filling template")
@@ -1017,16 +1024,17 @@ class MdToDocxConverter:
                 special_placeholder_handlers=special_placeholder_handlers,
                 list_separator=template_list_separator(context.config),
             )
-            try:
-                semantic_v3_session.finalize_document()
-            except DocxSemanticsV3Error as exc:
-                return _semantic_v3_failure(
-                    task_id,
-                    t_start,
-                    str(exc),
-                    [],
-                    input_bytes=input_bytes,
-                )
+            if semantic_v3_session is not None:
+                try:
+                    semantic_v3_session.finalize_document()
+                except DocxSemanticsV3Error as exc:
+                    return _semantic_v3_failure(
+                        task_id,
+                        t_start,
+                        str(exc),
+                        [],
+                        input_bytes=input_bytes,
+                    )
             if bibliography_anchor is not None:
                 try:
                     DocxSemanticRenderer(doc).render_bibliography_fragment(
@@ -1061,14 +1069,14 @@ class MdToDocxConverter:
             doc.save(output_path)
 
             # Write footnote/endnote body elements into the DOCX ZIP parts
-            if note_ctx.has_notes:
+            if render_body and note_ctx.has_notes:
                 try:
                     write_notes_to_docx(output_path, note_ctx)
                 except NoteWritebackError as exc:
                     return _note_failure(task_id, t_start, exc, output_path=output_path)
 
             # Write Word-native list numbering definitions
-            if renderer.list_numbering.has_definitions:
+            if renderer is not None and renderer.list_numbering.has_definitions:
                 from docwen_plugin_markdown.to_docx.numbering import (
                     write_numbering_to_docx,
                 )
@@ -1076,7 +1084,7 @@ class MdToDocxConverter:
                 write_numbering_to_docx(output_path, renderer.list_numbering)
 
             # Write Word-native heading numbering definitions
-            if word_native_translation is not None:
+            if render_body and word_native_translation is not None:
                 from docwen_plugin_markdown.to_docx.heading_numbering import (
                     write_heading_numbering_to_docx,
                 )
@@ -1087,17 +1095,18 @@ class MdToDocxConverter:
                     heading_style_ids={level: managed_styles.style_id(f"heading_{level}") for level in range(1, 10)},
                 )
 
-            try:
-                semantic_v3_session.write_package(output_path)
-            except DocxSemanticsV3Error as exc:
-                return _semantic_v3_failure(
-                    task_id,
-                    t_start,
-                    str(exc),
-                    [_semantic_v3_package_diagnostic(str(exc))],
-                    input_bytes=input_bytes,
-                    output_path=output_path,
-                )
+            if semantic_v3_session is not None:
+                try:
+                    semantic_v3_session.write_package(output_path)
+                except DocxSemanticsV3Error as exc:
+                    return _semantic_v3_failure(
+                        task_id,
+                        t_start,
+                        str(exc),
+                        [_semantic_v3_package_diagnostic(str(exc))],
+                        input_bytes=input_bytes,
+                        output_path=output_path,
+                    )
 
             try:
                 validate_managed_style_package(
@@ -1122,17 +1131,18 @@ class MdToDocxConverter:
                     ),
                 )
 
-            try:
-                semantic_v3_session.prove_package(output_path)
-            except DocxSemanticsV3Error as exc:
-                return _semantic_v3_failure(
-                    task_id,
-                    t_start,
-                    str(exc),
-                    [_semantic_v3_package_diagnostic(str(exc))],
-                    input_bytes=input_bytes,
-                    output_path=output_path,
-                )
+            if semantic_v3_session is not None:
+                try:
+                    semantic_v3_session.prove_package(output_path)
+                except DocxSemanticsV3Error as exc:
+                    return _semantic_v3_failure(
+                        task_id,
+                        t_start,
+                        str(exc),
+                        [_semantic_v3_package_diagnostic(str(exc))],
+                        input_bytes=input_bytes,
+                        output_path=output_path,
+                    )
 
             output_bytes = Path(output_path).stat().st_size
 
