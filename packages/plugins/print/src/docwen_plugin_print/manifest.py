@@ -99,7 +99,7 @@ def build_manifest() -> PluginManifest:
                 HonestyRoute(
                     source="document",
                     targets=["ofd"],
-                    description="OFD export is unavailable in DocWen 0.9",
+                    description="OFD export is unavailable",
                 ),
             ],
         },

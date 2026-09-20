@@ -7,9 +7,9 @@
 > 本页记录面向人的命令树。外部集成使用 [`serve --stdio` Machine Protocol v2 与 Artifact Bundle
 > v2](specs/machine-protocol-v2.md)；`--json` 只是 CLI 展示模式，不是跨产品稳定进程边界。
 
-DocWen 0.9 source and packaged builds use the same `docwen` command tree. Run `docwen --help`, `docwen <command> --help`, or `docwen schema <command>` for the executable contract.
+DocWen source and packaged builds use the same `docwen` command tree. Run `docwen --help`, `docwen <command> --help`, or `docwen schema <command>` for the executable contract.
 
-DocWen 0.9 的源码态与打包态使用同一套 `docwen` 命令树。精确契约以 `docwen --help`、`docwen <command> --help` 和 `docwen schema <command>` 为准。
+DocWen 的源码态与打包态使用同一套 `docwen` 命令树。精确契约以 `docwen --help`、`docwen <command> --help` 和 `docwen schema <command>` 为准。
 
 ## Commands / 命令
 
@@ -37,9 +37,9 @@ blank values, and differently cased IDs are rejected.
 
 `md` is the only Markdown target identifier. `markdown` is rejected rather than normalized.
 
-There is no `run --action` compatibility entry in 0.9. Internal runtime action names are not public CLI commands.
+There is no `run --action` compatibility entry. Internal runtime action names are not public CLI commands.
 
-0.9 不提供 `run --action` 兼容入口；运行时内部 action 名称不是公开 CLI 命令。
+不提供 `run --action` 兼容入口；运行时内部 action 名称不是公开 CLI 命令。
 
 ## Direct Markdown resource resolution / 直接 Markdown 资源解析
 
@@ -70,7 +70,7 @@ Conversions from or to Markdown publish a result folder inside the parent select
   report; DOCX and pre-converted DOC/WPS/RTF/ODT inputs write an annotated DOCX report.
 - Existing targets are rejected by default; `--overwrite` is required to replace one intentionally.
 - Single-file commands never silently rename a requested output.
-- On Windows, every public input and output path must use ordinary absolute syntax and be at most 259 UTF-16 code units. DocWen 0.9 rejects `\\?\` / `\\.\` extended-length syntax before a backend starts because the supported conversion backends do not share one reliable extended-path contract. Runtime-generated artifact names may cross that boundary internally; DocWen keeps reported paths ordinary while adapting only its own filesystem calls.
+- On Windows, every public input and output path must use ordinary absolute syntax and be at most 259 UTF-16 code units. DocWen rejects `\\?\` / `\\.\` extended-length syntax before a backend starts because the supported conversion backends do not share one reliable extended-path contract. Runtime-generated artifact names may cross that boundary internally; DocWen keeps reported paths ordinary while adapting only its own filesystem calls.
 - Global options are limited to language, JSON/text verbosity and timing; batch, parallelism and confirmation flags belong to their commands.
 
 ## Runtime discovery / 运行时发现

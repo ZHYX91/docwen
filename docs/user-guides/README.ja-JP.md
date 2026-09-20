@@ -53,7 +53,7 @@ Word/Markdown/Excelの双方向変換をサポートするドキュメントお�
 
 **前提条件**：Python 3.12
 
-**0.9 対象境界**：このソースは Windows x64 と Ubuntu 24.04 x64 のパッケージを構築します。
+**対象境界**：このソースは Windows x64 と Ubuntu 24.04 x64 のパッケージを構築します。
 その他の Linux ディストリビューションと macOS はソース／開発用であり、Ubuntu パッケージの
 サポート対象には含まれません。
 
@@ -67,7 +67,7 @@ cd docwen
 uv sync --frozen --all-extras
 ```
 
-DocWen 0.9 のソース、テスト、ビルドは、リポジトリのロックファイルと `uv 0.12.0` のみをサポートします。`pip install -e` はサポートされません。
+DocWen のソース、テスト、ビルドは、リポジトリのロックファイルと `uv 0.12.0` のみをサポートします。`pip install -e` はサポートされません。
 
 ### プログラムの起動
 
@@ -99,7 +99,7 @@ pip install pillow-heif
 
 ### Linux GUI 版の前提条件
 
-**サポート対象パッケージ**：DocWen 0.9 は Ubuntu 24.04 x64 パッケージの GUI と CLI を
+**サポート対象パッケージ**：DocWen は Ubuntu 24.04 x64 パッケージの GUI と CLI を
 サポートします。この前提条件は他のディストリビューションやアーキテクチャには拡張されません。
 
 - デスクトップ環境がインストールされていること（GNOME、KDE、XFCE など）
@@ -587,7 +587,7 @@ Excelテンプレート内の `{{→Month}}` は、右方向に「1月」、「2
 DocWen Core の runtime/control transport は、Windows では名前付きパイプ、Linux/macOS では
 AF_UNIX ソケットを使用します。ファイルロックは単一インスタンスの所有権だけを確立し、
 制御コマンドの転送にはファイルを使用しません。これは Core の能力説明だけです。DocWen
-Assistant 2.0 は Windows デスクトップ専用のままで、Linux/macOS の組み合わせ受入実績はありません。
+Assistant 3.0 は Windows デスクトップ専用のままで、Linux/macOS の組み合わせ受入実績はありません。
 
 1.  **最初のクリック** → コンバーターを起動し、現在のファイルを渡します。
 2.  **再クリック（ファイルあり）** → 新しいファイルに置き換えます（単一ファイルモード）。
@@ -595,13 +595,13 @@ Assistant 2.0 は Windows デスクトップ専用のままで、Linux/macOS の
 
 ### インストール
 
-DocWen Assistant 2.0 は DocWen Machine Protocol v2 と単一の Artifact Bundle v3 契約を使用します。
+DocWen Assistant 3.0 は DocWen Machine Protocol v2 と単一の Artifact Bundle v3 契約を使用します。
 ソースのバージョンだけでは公開済みであることを証明できません。互換性のある公開済み DocWen リリースを
 明示した数字形式のリリースだけをインストールしてください。
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-OpenClaw 2.0 は DocWen Machine Protocol v2 と単一の Artifact Bundle v3 契約を使用します。ソースの
+OpenClaw 3.0 は DocWen Machine Protocol v2 と単一の Artifact Bundle v3 契約を使用します。ソースの
 バージョンだけでは公開済みであることを証明できません。数字形式のリリースページを確認し、変更不能な
 リリースゲートが成功した後にだけインストールしてください。
 

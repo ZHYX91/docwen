@@ -53,7 +53,7 @@ Changelog: siehe [CHANGELOG.md](../CHANGELOG.md)
 
 **Voraussetzungen**: Python 3.12
 
-**0.9-Zielgrenze**: Dieser Quellstand erstellt Pakete für Windows x64 und Ubuntu 24.04 x64. Andere
+**Unterstützte Paketziele**: Dieser Quellstand erstellt Pakete für Windows x64 und Ubuntu 24.04 x64. Andere
 Linux-Distributionen und macOS bleiben Quellcode-/Entwicklungspfade und sind nicht durch das
 Ubuntu-Paket abgedeckt.
 
@@ -67,7 +67,7 @@ cd docwen
 uv sync --frozen --all-extras
 ```
 
-Quellcode, Tests und Builds von DocWen 0.9 unterstützen nur die eingecheckte Sperrdatei mit `uv 0.12.0`; `pip install -e` wird nicht unterstützt.
+Quellcode, Tests und Builds von DocWen unterstützen nur die eingecheckte Sperrdatei mit `uv 0.12.0`; `pip install -e` wird nicht unterstützt.
 
 ### Programm starten
 
@@ -100,7 +100,7 @@ pip install pillow-heif
 
 ### Voraussetzungen für die Linux-GUI
 
-**Unterstütztes Paketziel**: DocWen 0.9 unterstützt GUI und CLI im Ubuntu-24.04-x64-Paket. Diese
+**Unterstütztes Paketziel**: DocWen unterstützt GUI und CLI im Ubuntu-24.04-x64-Paket. Diese
 Voraussetzungen erweitern die Zusage nicht auf andere Distributionen oder Architekturen.
 
 - Eine Desktop-Umgebung ist installiert (GNOME, KDE, XFCE usw.)
@@ -591,7 +591,7 @@ Ein begleitendes Obsidian-Plugin wird separat veröffentlicht und arbeitet mit d
 Der runtime/control-Transport von DocWen Core verwendet unter Windows eine Named Pipe und unter
 Linux/macOS einen AF_UNIX-Socket. Eine Dateisperre stellt nur den Besitz der Einzelinstanz sicher;
 Steuerbefehle werden nicht über Dateien übertragen. Dies beschreibt nur die Core-Fähigkeit. DocWen
-Assistant 2.0 bleibt auf Windows-Desktop beschränkt und besitzt keine Linux/macOS-Kombinationsabnahme.
+Assistant 3.0 bleibt auf Windows-Desktop beschränkt und besitzt keine Linux/macOS-Kombinationsabnahme.
 
 1.  **Erster Klick** → Konverter starten und aktuelle Datei übergeben.
 2.  **Klick erneut (Mit Datei)** → Durch neue Datei ersetzen (Einzeldateimodus).
@@ -599,13 +599,13 @@ Assistant 2.0 bleibt auf Windows-Desktop beschränkt und besitzt keine Linux/mac
 
 ### Installation
 
-DocWen Assistant 2.0 verwendet DocWen Machine Protocol v2 und den einzigen Artifact-Bundle-v2-Vertrag. Die
+DocWen Assistant 3.0 verwendet DocWen Machine Protocol v2 und den einzigen Artifact-Bundle-v3-Vertrag. Die
 Quellversion belegt keine Veröffentlichung; installieren Sie nur einen numerischen Release, der ausdrücklich einen
 kompatiblen veröffentlichten DocWen-Release nennt.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-OpenClaw 2.0 verwendet DocWen Machine Protocol v2 und den einzigen Artifact-Bundle-v2-Vertrag. Die Quellversion
+OpenClaw 3.0 verwendet DocWen Machine Protocol v2 und den einzigen Artifact-Bundle-v3-Vertrag. Die Quellversion
 belegt keine Veröffentlichung; folgen Sie der numerischen Release-Seite und installieren Sie erst, nachdem das
 unveränderliche Release-Gate erfolgreich war.
 

@@ -53,7 +53,7 @@ Nhật ký thay đổi: xem [CHANGELOG.md](../CHANGELOG.md)
 
 **Yêu cầu**: Python 3.12
 
-**Phạm vi mục tiêu 0.9**: Mã nguồn này tạo gói cho Windows x64 và Ubuntu 24.04 x64. Các bản phân
+**Nền tảng gói được hỗ trợ**: Mã nguồn này tạo gói cho Windows x64 và Ubuntu 24.04 x64. Các bản phân
 phối Linux khác và macOS vẫn là đường dẫn mã nguồn/phát triển, không thuộc cam kết của gói Ubuntu.
 
 **Cách 1: Sử dụng uv (khuyến nghị)**
@@ -66,7 +66,7 @@ cd docwen
 uv sync --frozen --all-extras
 ```
 
-Mã nguồn, kiểm thử và bản dựng DocWen 0.9 chỉ hỗ trợ tệp khóa trong kho với `uv 0.12.0`; `pip install -e` không được hỗ trợ.
+Mã nguồn, kiểm thử và bản dựng DocWen chỉ hỗ trợ tệp khóa trong kho với `uv 0.12.0`; `pip install -e` không được hỗ trợ.
 
 ### Khởi chạy chương trình
 
@@ -98,7 +98,7 @@ pip install pillow-heif
 
 ### Yêu cầu cho bản GUI trên Linux
 
-**Đích gói được hỗ trợ**: DocWen 0.9 hỗ trợ GUI và CLI trong gói Ubuntu 24.04 x64. Các yêu cầu này
+**Đích gói được hỗ trợ**: DocWen hỗ trợ GUI và CLI trong gói Ubuntu 24.04 x64. Các yêu cầu này
 không mở rộng cam kết sang bản phân phối hoặc kiến trúc khác.
 
 - Có môi trường desktop (GNOME, KDE, XFCE, ...)
@@ -588,7 +588,7 @@ Plugin Obsidian đồng hành được phát hành ở repo riêng và hoạt đ
 
 Runtime/control transport của DocWen Core có thể dùng named pipe trên Windows hoặc socket AF_UNIX trên
 Linux/macOS. Khóa file chỉ xác lập quyền sở hữu một phiên bản đang chạy; file không được dùng để truyền
-lệnh điều khiển. Đây chỉ là mô tả capability của Core. DocWen Assistant 2.0 vẫn chỉ dành cho Windows
+lệnh điều khiển. Đây chỉ là mô tả capability của Core. DocWen Assistant 3.0 vẫn chỉ dành cho Windows
 desktop và chưa có nghiệm thu kết hợp trên Linux/macOS.
 
 1.  **Nhấn lần đầu** → Khởi chạy bộ chuyển đổi và truyền file hiện tại.
@@ -597,13 +597,13 @@ desktop và chưa có nghiệm thu kết hợp trên Linux/macOS.
 
 ### Cài đặt
 
-DocWen Assistant 2.0 dùng DocWen Machine Protocol v2 và hợp đồng Artifact Bundle v3 duy nhất. Phiên bản mã nguồn
+DocWen Assistant 3.0 dùng DocWen Machine Protocol v2 và hợp đồng Artifact Bundle v3 duy nhất. Phiên bản mã nguồn
 không chứng minh rằng sản phẩm đã được phát hành; chỉ cài bản phát hành dạng số xác định rõ một bản DocWen đã phát
 hành và tương thích.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-OpenClaw 2.0 dùng DocWen Machine Protocol v2 và hợp đồng Artifact Bundle v3 duy nhất. Phiên bản mã nguồn không chứng
+OpenClaw 3.0 dùng DocWen Machine Protocol v2 và hợp đồng Artifact Bundle v3 duy nhất. Phiên bản mã nguồn không chứng
 minh rằng sản phẩm đã được phát hành; hãy theo dõi trang phát hành dạng số và chỉ cài sau khi cổng phát hành bất biến
 thành công.
 

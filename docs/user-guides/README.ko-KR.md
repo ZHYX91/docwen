@@ -53,7 +53,7 @@ Word/Markdown/Excel 양방향 변환을 지원하는 문서·표 변환 도구�
 
 **전제 조건**: Python 3.12
 
-**0.9 대상 범위**: 이 소스는 Windows x64와 Ubuntu 24.04 x64 패키지를 빌드합니다. 다른
+**대상 범위**: 이 소스는 Windows x64와 Ubuntu 24.04 x64 패키지를 빌드합니다. 다른
 Linux 배포판과 macOS는 소스/개발 경로이며 Ubuntu 패키지의 지원 범위에 포함되지 않습니다.
 
 **방법 1: uv 사용 (권장)**
@@ -66,7 +66,7 @@ cd docwen
 uv sync --frozen --all-extras
 ```
 
-DocWen 0.9 소스, 테스트 및 빌드는 저장소 잠금 파일과 `uv 0.12.0`만 지원합니다. `pip install -e`는 지원되지 않습니다.
+DocWen 소스, 테스트 및 빌드는 저장소 잠금 파일과 `uv 0.12.0`만 지원합니다. `pip install -e`는 지원되지 않습니다.
 
 ### 프로그램 실행
 
@@ -98,7 +98,7 @@ pip install pillow-heif
 
 ### Linux GUI 버전 사전 준비
 
-**지원 패키지 대상**: DocWen 0.9는 Ubuntu 24.04 x64 패키지의 GUI와 CLI를 지원합니다.
+**지원 패키지 대상**: DocWen은 Ubuntu 24.04 x64 패키지의 GUI와 CLI를 지원합니다.
 이 요구 사항은 다른 배포판이나 아키텍처로 지원 범위를 확장하지 않습니다.
 
 - 데스크톱 환경이 설치되어 있어야 합니다(GNOME, KDE, XFCE 등)
@@ -586,7 +586,7 @@ Markdown 표에서 데이터를 추출해 플레이스홀더 위치부터 **오�
 
 DocWen Core의 runtime/control transport는 Windows 명명된 파이프 또는 Linux/macOS의 AF_UNIX
 소켓을 사용할 수 있습니다. 파일 잠금은 단일 인스턴스 소유권만 설정하며 제어 명령 전송에는
-파일을 사용하지 않습니다. 이는 Core 기능 설명일 뿐입니다. DocWen Assistant 2.0은 Windows
+파일을 사용하지 않습니다. 이는 Core 기능 설명일 뿐입니다. DocWen Assistant 3.0은 Windows
 데스크톱 전용이며 Linux/macOS 조합 검수는 없습니다.
 
 1.  **첫 클릭** → 변환기를 실행하고 현재 파일을 전달
@@ -595,13 +595,13 @@ DocWen Core의 runtime/control transport는 Windows 명명된 파이프 또는 L
 
 ### 설치
 
-DocWen Assistant 2.0은 DocWen Machine Protocol v2과 단일 Artifact Bundle v3 계약을 사용합니다. 소스
+DocWen Assistant 3.0은 DocWen Machine Protocol v2과 단일 Artifact Bundle v3 계약을 사용합니다. 소스
 버전만으로 게시 여부를 증명할 수 없습니다. 호환되는 게시된 DocWen 릴리스를 명시한 숫자 형식의 릴리스만
 설치하세요.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-OpenClaw 2.0은 DocWen Machine Protocol v2과 단일 Artifact Bundle v3 계약을 사용합니다. 소스 버전만으로
+OpenClaw 3.0은 DocWen Machine Protocol v2과 단일 Artifact Bundle v3 계약을 사용합니다. 소스 버전만으로
 게시 여부를 증명할 수 없습니다. 숫자 형식의 릴리스 페이지를 확인하고 변경 불가능한 릴리스 게이트가 성공한
 후에만 설치하세요.
 
