@@ -15,9 +15,11 @@ from __future__ import annotations
 
 import logging
 from collections import Counter
+from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Pt
 
 from docwen_core.docx_semantics import (
@@ -129,6 +131,9 @@ class MdToDocxRenderer:
         semantic_v3_session: DocxSemanticsV3Session | None = None,
         resolved_numbering_session: ResolvedNumberingDocxSession | None = None,
         resolved_image_urls: tuple[str, ...] | None = None,
+        mermaid_mode: str = "code",
+        mermaid_work_dir: str | None = None,
+        mermaid_render: Any = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -166,6 +171,10 @@ class MdToDocxRenderer:
                 Keys are ``"dash"``, ``"asterisk"``, ``"underscore"``;
                 values are ``"page_break"``, ``"section_break"``,
                 ``"horizontal_rule_1"``/``"2"``/``"3"``, or ``"ignore"``.
+            mermaid_mode: ``"code"`` preserves Mermaid as a code block;
+                ``"image"`` renders it through the local Mermaid CLI.
+            mermaid_work_dir: Request-private staging directory for Mermaid
+                temporary files.
         """
         self._doc = doc
         self._body_font = body_font or {
@@ -279,6 +288,11 @@ class MdToDocxRenderer:
         # implements these two carrier bind methods.
         self._source_carrier_session = semantic_v3_session or resolved_numbering_session
         self._resolved_image_inventory = Counter(resolved_image_urls) if resolved_image_urls is not None else None
+        normalized_mermaid_mode = str(mermaid_mode or "code").strip().lower()
+        self._mermaid_mode = normalized_mermaid_mode if normalized_mermaid_mode in {"code", "image"} else "code"
+        self._mermaid_work_dir = mermaid_work_dir
+        self._mermaid_render = mermaid_render
+        self._warnings: list[tuple[str, str]] = []
 
         # Heading counters for optional numbering.
         self._h_counters: list[int] = [0] * 9
@@ -303,6 +317,11 @@ class MdToDocxRenderer:
     def document(self):
         """Return the underlying python-docx ``Document``."""
         return self._doc
+
+    @property
+    def warnings(self) -> tuple[tuple[str, str], ...]:
+        """Return non-fatal renderer warnings collected for the request."""
+        return tuple(self._warnings)
 
     @property
     def list_numbering(self) -> DocxListNumbering:
@@ -606,8 +625,72 @@ class MdToDocxRenderer:
 
         return heading
 
+    @staticmethod
+    def _fence_language(node: dict[str, Any]) -> str:
+        attrs = node.get("attrs")
+        info = str(attrs.get("info", "")) if isinstance(attrs, dict) else ""
+        return info.split(maxsplit=1)[0].casefold() if info.strip() else ""
+
+    def _render_mermaid_png_bytes(self, source: str) -> bytes:
+        if callable(self._mermaid_render):
+            rendered = self._mermaid_render(source)
+            if not isinstance(rendered, (bytes, bytearray)) or not rendered:
+                raise ValueError("Mermaid renderer returned no PNG bytes")
+            return bytes(rendered)
+        if not self._mermaid_work_dir:
+            raise ValueError("Mermaid rendering has no request-private working directory")
+        from docwen_plugin_markdown.to_docx.mermaid import render_mermaid_png
+
+        return render_mermaid_png(
+            source,
+            work_dir=self._mermaid_work_dir,
+            cancellation=self._cancellation,
+        )
+
+    def _available_content_width(self):
+        if not self._doc.sections:
+            return None
+        section = self._doc.sections[0]
+        values = (section.page_width, section.left_margin, section.right_margin)
+        if any(value is None for value in values):
+            return None
+        width = int(section.page_width) - int(section.left_margin) - int(section.right_margin)
+        return width if width > 0 else None
+
+    def _try_render_mermaid_image(
+        self,
+        node: dict[str, Any],
+        source_text: str,
+        caption_data: Any,
+    ):
+        if self._resolved_numbering_session is not None:
+            # The exact resolved-v4 route authenticates fenced-source carriers
+            # and image inventories. It remains source-preserving until that
+            # closed port explicitly adds rendered-diagram ownership.
+            return None
+        try:
+            png_bytes = self._render_mermaid_png_bytes(source_text)
+            paragraph = self._doc.add_paragraph(style=self._paragraph_style(image_only=True))
+            run = paragraph.add_run()
+            width = self._available_content_width()
+            if width is None:
+                run.add_picture(BytesIO(png_bytes))
+            else:
+                run.add_picture(BytesIO(png_bytes), width=width)
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            return self._finalize_block_code_object(node, paragraph, caption_data)
+        except Exception as exc:
+            logger.warning("Mermaid rendering failed; preserving source code block: %s", exc)
+            self._warnings.append(
+                (
+                    "MD2DOCX-MERMAID-FALLBACK",
+                    f"Mermaid diagram rendering failed; preserved as a code block: {exc}",
+                )
+            )
+            return None
+
     def _handle_block_code(self, node: dict[str, Any]):
-        """Render a code block as a single paragraph with ``<w:br>`` soft breaks."""
+        """Render a fenced block as code, or Mermaid as an image when selected."""
         fenced_record = node.get("_docwen_v3_fenced_source")
         logical_body = node.get("_docwen_v3_fenced_body")
         source_text = logical_body if isinstance(logical_body, str) else (node.get("raw", "") or node.get("text", ""))
@@ -615,6 +698,14 @@ class MdToDocxRenderer:
         caption_data = node.get("_document_semantics_caption")
         if not text and caption_data is None and fenced_record is None:
             return None
+
+        if self._mermaid_mode == "image" and self._fence_language(node) == "mermaid":
+            rendered = self._try_render_mermaid_image(node, str(source_text), caption_data)
+            if rendered is not None:
+                # Image mode intentionally omits the fenced-source carrier:
+                # DOCX -> Markdown treats the result as an ordinary image.
+                return rendered
+
         p = self._doc.add_paragraph(style=self._code_block_style)
         if self._code_block_style is None:
             apply_paragraph_shading(p, self._code_bg_color)
@@ -633,6 +724,10 @@ class MdToDocxRenderer:
                 fenced_record,
                 logical_body=logical_body,
             )
+        return self._finalize_block_code_object(node, p, caption_data)
+
+    def _finalize_block_code_object(self, node: dict[str, Any], p: Any, caption_data: Any):
+        """Apply anchors/captions to either a code paragraph or rendered diagram."""
         resolved_target = self._resolved_caption_target(node)
         if resolved_target is not None:
             self._bind_v3_ordinary_anchor((p._p,), node)
