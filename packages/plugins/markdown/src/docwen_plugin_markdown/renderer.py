@@ -680,6 +680,11 @@ class MdToDocxRenderer:
             paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
             return self._finalize_block_code_object(node, paragraph, caption_data)
         except Exception as exc:
+            # Cancellation is request control flow, not a rendering failure.
+            # Re-check here so a cancellation raised by the renderer is never
+            # swallowed and converted into a successful code fallback.
+            if self._cancellation is not None:
+                self._cancellation.check()
             logger.warning("Mermaid rendering failed; preserving source code block: %s", exc)
             self._warnings.append(
                 (
