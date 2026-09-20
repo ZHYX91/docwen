@@ -1011,7 +1011,6 @@ class MdToDocxConverter:
                         input_bytes=input_bytes,
                     )
 
-
             # Inject paragraphs into template + fill YAML placeholders
             progress.report_progress(70.0, "Filling template")
             fill_template(
