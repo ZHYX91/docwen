@@ -39,8 +39,6 @@ task_progress_status = "Progress: {percent}% {message}"
 task_completed_status = "Completed"
 task_failed_status = "Failed: {message}"
 task_cancelled_status = "Cancelled"
-error_copied = "Error details copied."
-no_error_available = "No error details available."
 no_failed_to_retry = "No failed task is available to retry."
 path_not_exist = "Path does not exist: {path}"
 open_path_failed = "Failed to open path: {path}"
@@ -63,7 +61,6 @@ file_admission_cancelled = "Processing was cancelled; the detected format was no
 # =============================================================================
 [common]
 action_file_count = "{action} ({count} files)"
-copy = "Copy"
 app_name = "DocWen"
 default = "Default"
 close = "Close"
@@ -1696,6 +1693,7 @@ multiple = "{count} files"
 show_outputs = "View all output files"
 
 [settings.templates]
+import_summary = "Imported: {succeeded}. Failed: {failed}. Cancelled: {cancelled}."
 load_failed = "Templates could not be loaded"
 operation_failed = "The template operation failed. View details for more information."
 title = "Templates"
@@ -1726,3 +1724,9 @@ open_failed = "Could not open the template. Check its associated application."
 name_conflict = "A custom template named {name} already exists."
 keep_both = "Keep both"
 replace = "Replace"
+
+[diagnostics]
+local_details = "Local details"
+preview = "Redacted diagnostics"
+copy = "Copy diagnostics"
+redacted_hint = "Copied diagnostics contain only status, categories and counts. Document content, paths, raw errors, commands and settings are excluded."

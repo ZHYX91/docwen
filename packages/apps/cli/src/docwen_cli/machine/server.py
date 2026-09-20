@@ -1,4 +1,4 @@
-"""JSON-RPC 2.0 server for DocWen Machine Protocol v1 over stdio."""
+"""JSON-RPC 2.0 server for DocWen Machine Protocol v2 over stdio."""
 
 from __future__ import annotations
 
@@ -13,13 +13,15 @@ from typing import Any, BinaryIO, Literal, cast
 
 from jsonschema import ValidationError
 
-from docwen_application.conversion_service import (
+from docwen_application.conversion_contracts import (
     ConversionPlanRequest,
-    ConversionService,
     ConversionServiceError,
     ConversionTaskOutcome,
     LocalInputHandle,
     StagingOutputTarget,
+)
+from docwen_application.conversion_service import (
+    ConversionService,
 )
 from docwen_cli.machine.contracts import MachineContractValidator
 from docwen_cli.machine.framing import FrameWriter, FramingError, read_frame
@@ -123,6 +125,24 @@ class MachineProtocolServer:
         try:
             self._validator.validate_message(message)
         except ValidationError as exc:
+            params = message.get("params")
+            if (
+                method == "initialize"
+                and message.get("jsonrpc") == "2.0"
+                and isinstance(params, dict)
+                and isinstance(params.get("protocol"), dict)
+                and params["protocol"] != {"name": "docwen.machine", "major": 2, "minor": 0}
+            ):
+                self._write_error(
+                    request_id,
+                    -32602,
+                    "DocWen Machine Protocol 2.0 is required",
+                    data={
+                        "code": "incompatible_protocol",
+                        "supported_protocol": {"name": "docwen.machine", "major": 2, "minor": 0},
+                    },
+                )
+                return
             self._write_error(
                 request_id,
                 -32602 if message.get("jsonrpc") == "2.0" else -32600,
@@ -197,11 +217,11 @@ class MachineProtocolServer:
         self._write_result(
             request_id,
             {
-                "protocol": {"name": "docwen.machine", "major": 1, "minor": 0},
+                "protocol": {"name": "docwen.machine", "major": 2, "minor": 0},
                 "server": {"name": "DocWen", "version": PRODUCT_VERSION},
                 "features": {"progress": True, "cancellation": True},
                 "methods": list(_METHODS),
-                "artifact_bundle_schema": "docwen.artifact_bundle.v2",
+                "artifact_bundle_schema": "docwen.artifact_bundle.v3",
                 "max_concurrent_tasks": 1,
             },
         )
@@ -236,7 +256,7 @@ class MachineProtocolServer:
             error = ConversionServiceError(
                 "resource_exhausted",
                 "max_concurrent_tasks",
-                "The Machine v1 session already has an active task.",
+                "The Machine v2 session already has an active task.",
                 retryable=True,
             )
             self._write_error(request_id, -32602, "Task admission failed", data={"task_error": error.to_dict()})
@@ -300,7 +320,7 @@ class MachineProtocolServer:
 
     def _write_outcome(self, outcome: ConversionTaskOutcome) -> None:
         if len(outcome.diagnostics) > _MAX_DIAGNOSTICS:
-            raise RuntimeError("runtime diagnostic count exceeds Machine v1 bound")
+            raise RuntimeError("runtime diagnostic count exceeds Machine v2 bound")
         with self._progress_lock:
             state = self._task_progress.get(outcome.task_id)
             accepted_inputs = set() if state is None else state.accepted_inputs
@@ -378,7 +398,7 @@ class MachineProtocolServer:
                 self._task_progress.pop(task_id, None)
 
     def report_runtime_event(self, event: TaskEvent) -> None:
-        """Project only bounded, privacy-safe Runtime progress onto Machine v1."""
+        """Project only bounded, privacy-safe Runtime progress onto Machine v2."""
 
         if event.event_type != "task_progress":
             return
@@ -558,7 +578,7 @@ class MachineProtocolServer:
             or len(item.related_ranges) > _MAX_RELATED_RANGES
             or len(item.fixes) > _MAX_DIAGNOSTIC_FIXES
         ):
-            raise RuntimeError("runtime diagnostic evidence violates Machine v1 contract")
+            raise RuntimeError("runtime diagnostic evidence violates Machine v2 contract")
         if any(value.start < 0 or value.end <= value.start for value in item.related_ranges):
             raise RuntimeError("runtime related diagnostic range is invalid")
         seen_fix_ids: set[str] = set()
@@ -569,7 +589,7 @@ class MachineProtocolServer:
                 or not fix.edits
                 or len(fix.edits) > _MAX_FIX_EDITS
             ):
-                raise RuntimeError("runtime diagnostic fix violates Machine v1 contract")
+                raise RuntimeError("runtime diagnostic fix violates Machine v2 contract")
             seen_fix_ids.add(fix.fix_id)
             previous_end = -1
             for edit in fix.edits:
@@ -579,7 +599,7 @@ class MachineProtocolServer:
                     or len(edit.replacement) > _MAX_FIX_REPLACEMENT_CODE_POINTS
                     or (edit.range.start == edit.range.end and not edit.replacement)
                 ):
-                    raise RuntimeError("runtime diagnostic fix edit violates Machine v1 contract")
+                    raise RuntimeError("runtime diagnostic fix edit violates Machine v2 contract")
                 previous_end = edit.range.end
 
     @staticmethod

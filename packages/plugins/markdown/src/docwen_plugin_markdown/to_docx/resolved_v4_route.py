@@ -43,10 +43,7 @@ from docwen_core.resolved_resource_staging import (
     ResolvedResourceStagingError,
     bind_resolved_document_resources,
 )
-from docwen_plugin_markdown.ast_transforms import (
-    annotate_ast_with_hr_attachments,
-    annotate_ast_with_merges,
-)
+from docwen_plugin_markdown.ast_transforms import annotate_ast_with_merges
 from docwen_plugin_markdown.field_registry import (
     collect_placeholder_rules,
     collect_special_placeholder_handlers,
@@ -54,7 +51,6 @@ from docwen_plugin_markdown.field_registry import (
 )
 from docwen_plugin_markdown.manifest import RESOLVED_V4_MD_TO_DOCX_OPTIONS_SCHEMA
 from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
-from docwen_plugin_markdown.preprocessor import detect_heading_merges, detect_hr_attachments
 from docwen_plugin_markdown.renderer import MdToDocxRenderer
 from docwen_plugin_markdown.resolved_conversion_v4 import (
     ResolvedConversionV4Unsupported,
@@ -307,12 +303,6 @@ def _render_resolved_v4_docx(
 
     context.progress.report_progress(25.0, "Parsing authenticated Markdown projection")
     source_image_alt_texts = _markdown_image_alt_texts(md_body)
-    merge_indices = detect_heading_merges(
-        md_body,
-        mode=heading_merge_mode,
-        punctuation=_request_heading_merge_punctuation({}, context.config),
-    )
-    hr_attachments = detect_hr_attachments(md_body)
     # Resolved heading/caption records are explicit semantic input, not inferred Markdown syntax.
     raw_ast = parse_markdown_text(
         md_body, auto_link_bare_url=False, extensions=replace(extensions, extended_headings=True)
@@ -321,8 +311,11 @@ def _render_resolved_v4_docx(
     raw_ast = apply_resolved_source_carriers_v4(raw_ast, projection.source_carrier_plan)
     raw_ast = apply_resolved_runtime_v4(raw_ast, projection.runtime_plan)
     prove_resolved_v4_image_inventory(raw_ast, projection)
-    annotate_ast_with_merges(raw_ast, merge_indices)
-    annotate_ast_with_hr_attachments(raw_ast, hr_attachments, md_body)
+    annotate_ast_with_merges(
+        raw_ast,
+        mode=heading_merge_mode,
+        punctuation=_request_heading_merge_punctuation({}, context.config),
+    )
     render_ast, note_ctx = extract_notes_from_ast(raw_ast)
 
     context.progress.report_progress(40.0, "Resolving template and managed styles")
@@ -388,7 +381,6 @@ def _render_resolved_v4_docx(
         session,
         projection.expected_image_urls,
         note_ctx,
-        hr_attachments,
         code_font=str(code_font),
         code_background_color=str(code_background_color),
     )
@@ -538,7 +530,6 @@ def _renderer(
     session: ResolvedNumberingDocxSession,
     image_urls: tuple[str, ...],
     note_ctx: Any,
-    hr_attachments: set[int],
     *,
     code_font: str,
     code_background_color: str,
@@ -601,7 +592,6 @@ def _renderer(
         resolved_image_urls=image_urls,
         hr_mapping=None,
         hr_actions=_resolve_horizontal_rule_actions(context.config),
-        hr_attachments=hr_attachments,
         cancellation=context.cancellation,
         note_ctx=note_ctx,
         source_file_path=None,

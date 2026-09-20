@@ -5,6 +5,24 @@
 
 ## Unreleased / 未发布
 
+## 0.12.0 (2026-09-20)
+
+- Machine Protocol 升至 2.0、Artifact Bundle 升至 v3；模板使用规范 ID，并明确来源、默认状态、启停与顺序。集成需要 DocWen Assistant 3.0 或 DocWen OpenClaw 3.0，不接受旧协议。
+- 便携包默认使用程序旁的 `data`，MSIX 使用用户可写资料目录；GUI、CLI、Machine 和单实例控制固定同一份资料选择，配置和日志覆盖只影响各自组件。
+- 修复 Markdown 代码块、脚注/尾注和表格结构处理，严格保留 CSV/TSV 字面文本；在输出文档内补齐受管基础样式，不要求模板预先具有 Title 样式。
+- 普通转换输出完整结果目录及关联资源，不再附送节点 JSON 或隐藏清单。发布前验证输入与目标身份，提交后的临时清理失败保留有效输出并报告警告。
+- 文档优化按实际能力、输入形状和目标格式选择，GUI、CLI 与 Machine 共用同一执行策略；拆分请求构造、准入、任务编排和结果呈现职责。
+- 统一 36 种格式的深浅色标，区分 DOC/DOCX、XLS/XLSX；补齐设置导航的可访问名称和键盘焦点，修复深色诊断页签与大字号模板底栏布局。诊断提供本地详情和有限字段的分享预览，复制后保留窗口。
+- 简化发布为每平台一次构建并复用已验候选，发布后独立核验公开资产；MSIX 独立消费同一 Windows 便携包。
+
+- Require Machine Protocol 2.0 and Artifact Bundle v3, with canonical template IDs, origin, default state, enablement and order. Integrations require DocWen Assistant 3.0 or DocWen for OpenClaw 3.0; older protocols are rejected.
+- Bind GUI, CLI, Machine and single-instance control to one profile. Portable builds use sibling `data`; MSIX uses writable user storage. Configuration and log overrides affect only their own components.
+- Correct Markdown code, note and table handling, preserve literal CSV/TSV text, and complete managed document styles in the output without requiring a Title style in templates.
+- Publish complete result directories and linked resources without node JSON or hidden manifests. Recheck source and target identities before publication; retain valid outputs and report a warning when cleanup fails after commit.
+- Select document optimizers by their real capability, input shape and output format, sharing execution policy across GUI, CLI and Machine. Separate request construction, admission, orchestration and result presentation.
+- Give 36 formats distinct theme-aware colors, including DOC/DOCX and XLS/XLSX; improve accessible settings navigation, keyboard focus, dark diagnostic tabs and large-font template controls. Separate local diagnostic details from a bounded sharing preview and keep the dialog open after copying.
+- Build once per platform, reuse verified candidates and independently verify public assets. Build MSIX separately from the same Windows portable archive.
+
 ## 0.11.0 (2026-09-14)
 
 - 新增“设置 → 模板”，统一管理 DOCX/XLSX 的启停、排序、默认模板、导入导出、复制编辑、重命名和回收站删除。内置模板只读，自定义模板保存在用户可写目录，MSIX 无需修改 WindowsApps。

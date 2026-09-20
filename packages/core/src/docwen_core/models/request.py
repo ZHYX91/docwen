@@ -49,8 +49,9 @@ class OutputPolicy:
     Valid values:
     - ``"error"`` — fail when the target already exists
     - ``"rename"`` — append a numeric suffix
-    - ``"overwrite"`` — replace existing file
-    - ``"skip"`` — do nothing if target exists
+    - ``"overwrite"`` — replace an individual file; invalid for result directories
+    - ``"skip"`` — leave an existing file untouched; reuse a result directory
+      only when its complete contents match the newly prepared result
     """
 
     write_artifacts: bool = True

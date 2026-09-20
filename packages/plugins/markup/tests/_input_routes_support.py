@@ -217,8 +217,16 @@ def _assert_finalized_markdown_content(result: Any, output_dir: Path, workspace_
     assert artifact_path.parent.parent == output_dir
     assert artifact_path.name == f"{artifact_path.parent.name}.md"
     assert artifact_path.exists()
-    manifest = next(item for item in result.artifacts if item.media_type == "application/vnd.docwen.document-node+json")
-    assert Path(manifest.staging_path) == artifact_path.parent / "docwen-node.json"
+    assert not (artifact_path.parent / "docwen-node.json").exists()
+    assert {path for path in artifact_path.parent.rglob("*") if path.is_file()} == {
+        Path(item.staging_path) for item in result.artifacts
+    }
+    for item in result.artifacts:
+        path = Path(item.staging_path)
+        data = path.read_bytes()
+        assert item.logical_path == path.relative_to(output_dir).as_posix()
+        assert item.size_bytes == len(data)
+        assert item.sha256 == hashlib.sha256(data).hexdigest()
     content = artifact_path.read_text(encoding="utf-8")
     assert str(Path(workspace_root)) not in content
     return content

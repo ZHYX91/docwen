@@ -53,7 +53,7 @@ Registro de alterações: veja [CHANGELOG.md](../CHANGELOG.md)
 
 **Pré-requisitos**: Python 3.12
 
-**Limite alvo da versão 0.9**: Este código-fonte gera pacotes para Windows x64 e Ubuntu 24.04 x64.
+**Destinos de pacotes compatíveis**: Este código-fonte gera pacotes para Windows x64 e Ubuntu 24.04 x64.
 Outras distribuições Linux e o macOS continuam como caminhos de código-fonte/desenvolvimento e não
 são abrangidos pelo pacote do Ubuntu.
 
@@ -67,7 +67,7 @@ cd docwen
 uv sync --frozen --all-extras
 ```
 
-O código-fonte, os testes e os builds do DocWen 0.9 aceitam apenas o lock do repositório com `uv 0.12.0`; `pip install -e` não é compatível.
+O código-fonte, os testes e os builds do DocWen aceitam apenas o lock do repositório com `uv 0.12.0`; `pip install -e` não é compatível.
 
 ### Iniciar Programa
 
@@ -99,7 +99,7 @@ pip install pillow-heif
 
 ### Pré-requisitos do GUI no Linux
 
-**Destino de pacote compatível**: O DocWen 0.9 oferece suporte à GUI e à CLI do pacote Ubuntu
+**Destino de pacote compatível**: O DocWen oferece suporte à GUI e à CLI do pacote Ubuntu
 24.04 x64. Estes pré-requisitos não ampliam esse compromisso para outra distribuição ou arquitetura.
 
 - Ambiente de desktop instalado (GNOME, KDE, XFCE, etc.)
@@ -598,13 +598,13 @@ não transportam comandos de controle. Isso descreve apenas a capacidade do Core
 
 ### Instalação
 
-O DocWen Assistant 2.0 usa o DocWen Machine Protocol v1 e o contrato único Artifact Bundle v2. A versão do código
+O DocWen Assistant 3.0 usa o DocWen Machine Protocol v2 e o contrato único Artifact Bundle v3. A versão do código
 fonte não comprova a publicação; instale somente uma versão numérica que identifique explicitamente uma versão
 publicada e compatível do DocWen.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-O OpenClaw 2.0 usa o DocWen Machine Protocol v1 e o contrato único Artifact Bundle v2. A versão do código fonte não
+O OpenClaw 3.0 usa o DocWen Machine Protocol v2 e o contrato único Artifact Bundle v3. A versão do código fonte não
 comprova a publicação; consulte a página da versão numérica e instale somente depois que o controle de publicação
 imutável for aprovado.
 

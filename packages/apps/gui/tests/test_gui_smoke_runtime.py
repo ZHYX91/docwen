@@ -58,7 +58,7 @@ class TestFileLoading:
     def test_file_synced_to_batch_list(self, main_window_with_controller, sample_docx: Path) -> None:
         from PySide6.QtWidgets import QApplication
 
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         window = main_window_with_controller
         vm = window.view_model
@@ -69,7 +69,7 @@ class TestFileLoading:
             app.processEvents()
 
         files_in_batch = window._batch_list_vm.get_files()
-        normalized = _normalize_path(str(sample_docx))
+        normalized = normalize_path(str(sample_docx))
         assert normalized in files_in_batch or any(normalized in f for f in files_in_batch)
 
     def test_selected_file_synced_to_panels(self, main_window_with_controller, sample_docx: Path) -> None:

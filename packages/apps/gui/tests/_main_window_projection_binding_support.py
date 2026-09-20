@@ -250,7 +250,7 @@ def _bind_admitted_ref(window, path: Path, category: str, fmt: str) -> FileRef:
         FormatRelation,
         StructureStatus,
     )
-    from docwen_gui.main_window import _normalize_path
+    from docwen_gui.path_identity import normalize_path
 
     stat = path.stat()
     container_formats = {"doc", "docx", "epub", "pptx", "wps", "xlsx"}
@@ -284,7 +284,7 @@ def _bind_admitted_ref(window, path: Path, category: str, fmt: str) -> FileRef:
         metadata={FILE_INSPECTION_METADATA_KEY: inspection.to_dict()},
     )
     window._view_model._files = [ref]
-    window._file_contexts = {_normalize_path(str(path)): (fmt, category)}
+    window._file_contexts = {normalize_path(str(path)): (fmt, category)}
     return ref
 
 

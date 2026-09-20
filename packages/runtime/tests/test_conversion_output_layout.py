@@ -58,10 +58,10 @@ def test_csv_sheet_label_precedes_shared_timestamp_and_source(tmp_path):
     ]
     assert {p.name for p in root.iterdir()} == {
         *(f"项目记录_{sheet}_20260907_180000_fromMd.csv" for sheet in sheets),
-        "docwen-node.json",
     }
-    manifest = json.loads((root / "docwen-node.json").read_text(encoding="utf-8"))
-    assert manifest["source"]["name"] == "项目记录.md"
+    assert all(
+        item.sha256 == hashlib.sha256(Path(item.staging_path).read_bytes()).hexdigest() for item in result.artifacts
+    )
 
 
 def test_binary_primary_with_markdown_report_keeps_binary_primary_and_collision_name(tmp_path):
@@ -120,13 +120,14 @@ def test_admitted_source_name_and_format_win_over_intermediate(tmp_path):
         identity=identity,
     )
     assert result.success
-    manifest = next(item for item in result.artifacts if item.kind == "manifest")
-    source = json.loads(Path(manifest.staging_path).read_text(encoding="utf-8"))["source"]
-    assert source["name"] == original.name
-    assert source["sha256"] == hashlib.sha256(original.read_bytes()).hexdigest()
+    assert len(result.artifacts) == 1
+    primary = result.artifacts[0]
+    assert Path(primary.staging_path).parent.name.startswith("通知_")
+    assert Path(primary.staging_path).parent.name.endswith("_fromWps")
+    assert primary.sha256 == hashlib.sha256(b"notification").hexdigest()
 
 
-def test_provenance_is_reused_only_for_matching_manifest_and_unchanged_output(tmp_path):
+def test_later_conversion_uses_its_actual_input_name_without_sidecar_provenance(tmp_path):
     source = tmp_path / "项目记录.md"
     source.write_text("body", encoding="utf-8")
     result = OutputFinalizer().finalize(
@@ -138,7 +139,7 @@ def test_provenance_is_reused_only_for_matching_manifest_and_unchanged_output(tm
     )
     output = next(a.staging_path for a in result.artifacts if a.is_primary)
     ref = FileRef(output, "markdown", "text")
-    assert conversion_identity("again", ref).source_stem == "项目记录"
+    assert conversion_identity("again", ref).source_stem == Path(output).stem
     from docwen_core.cancellation import CancellationToken
     from docwen_core.errors import CancellationRequested
 
@@ -235,10 +236,12 @@ def test_optional_audit_is_covered_by_the_same_directory_transaction(tmp_path, m
         return
     assert result.success
     assert len(list(output.iterdir())) == 1
-    node = json.loads(Path(result.artifacts[-1].staging_path).read_text(encoding="utf-8"))
-    record = next(item for item in node["artifacts"] if item["role"] == "audit")
-    audit_path = output / record["logical_path"]
-    assert record["sha256"] == hashlib.sha256(audit_path.read_bytes()).hexdigest()
+    assert [item.kind for item in result.artifacts] == ["primary", "manifest"]
+    audit = result.artifacts[-1]
+    audit_path = Path(audit.staging_path)
+    assert audit.sha256 == hashlib.sha256(audit_path.read_bytes()).hexdigest()
+    assert audit.logical_path == f"{audit_path.parent.name}/{audit_path.name}"
+    assert not (audit_path.parent / "docwen-node.json").exists()
     assert (
         json.loads(audit_path.read_text(encoding="utf-8"))["artifacts"][0]["name"]
         == "项目记录_20260907_180000_fromMd.md"

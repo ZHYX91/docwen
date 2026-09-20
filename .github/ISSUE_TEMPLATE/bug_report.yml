@@ -12,7 +12,7 @@ body:
     attributes:
       label: Versions
       description: DocWen and operating-system versions
-      placeholder: DocWen 0.9.0; Windows 11
+      placeholder: DocWen 0.12.0; Windows 11
     validations:
       required: true
   - type: textarea

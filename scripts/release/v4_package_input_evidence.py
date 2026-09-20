@@ -213,7 +213,7 @@ def build_evidence(
         "machine_wire",
         {
             "schema": "docwen.v4_machine_wire_observation.v1",
-            "protocol": "docwen.machine.v1",
+            "protocol": "docwen.machine.v2",
             "transcript": {"relativePath": "evidence/artifacts/x", "bytes": 1, "sha256": "0" * 64},
             "terminal": terminal,
             "terminalSha256": evidence_contract._payload_hash(terminal),
@@ -227,7 +227,7 @@ def build_evidence(
     )
     wire_payload = {
         "schema": "docwen.v4_machine_wire_observation.v1",
-        "protocol": "docwen.machine.v1",
+        "protocol": "docwen.machine.v2",
         "transcript": wire_terminal_artifact,
         "terminal": terminal,
         "terminalSha256": evidence_contract._payload_hash(terminal),

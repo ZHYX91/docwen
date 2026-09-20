@@ -53,7 +53,7 @@ def _control_wait_timeout(deadline: float | None) -> float:
     return max(0.0, deadline - time.monotonic())
 
 
-def _start_gui_control(window: Any, *, app: Any) -> object:
+def _start_gui_control(window: Any, *, app: Any, app_name: str) -> object:
     """Start runtime/control and marshal every GUI action onto the Qt thread."""
 
     from docwen_core.version import PRODUCT_VERSION
@@ -216,7 +216,7 @@ def _start_gui_control(window: Any, *, app: Any) -> object:
             response["error"] = _stopping_error()
             completed.set()
 
-    server = ControlServer(_handle, app_name="docwen")
+    server = ControlServer(_handle, app_name=app_name)
     server.start()
     timer = _install_gui_control_poll_timer(app, _drain)
     cast(Any, server)._docwen_gui_control_timer = timer
@@ -259,9 +259,11 @@ def _main_with_guard_active(argv: list[str] | None = None) -> int:
     from docwen_gui.release_smoke import _schedule_test_conversion_report
     from docwen_gui.settings_smoke import _schedule_test_settings_report
     from docwen_runtime.config import ConfigLoader
+    from docwen_runtime.profile_paths import profile_instance_name
 
     args = argv if argv is not None else sys.argv
-    decision = bootstrap_gui(app_name="docwen", argv=args)
+    app_name = profile_instance_name()
+    decision = bootstrap_gui(app_name=app_name, argv=args)
     if decision.should_exit:
         return decision.exit_code
 
@@ -293,7 +295,7 @@ def _main_with_guard_active(argv: list[str] | None = None) -> int:
     instance_lock = decision.instance_lock
     if instance_lock is not None:
         try:
-            control_server = _start_gui_control(window, app=app)
+            control_server = _start_gui_control(window, app=app, app_name=app_name)
         except Exception:
             instance_lock.release()
             raise
@@ -315,19 +317,26 @@ def main(argv: list[str] | None = None) -> int:
     """Run the composed GUI with dependency egress protection enforced."""
 
     from docwen_runtime.logging import pre_init_logging
+    from docwen_runtime.profile_paths import ProfileSelectionError, bind_process_profile
 
     pre_init_logging("INFO")
 
     try:
-        with dependency_egress_guard():
+        with bind_process_profile(), dependency_egress_guard():
             return _main_with_guard_active(argv)
+    except ProfileSelectionError as exc:
+        from PySide6.QtWidgets import QApplication, QMessageBox
+
+        logger.error("%s", exc)
+        app = QApplication.instance() or QApplication([])
+        QMessageBox.critical(None, "DocWen", str(exc))
+        # Keep the application alive until the blocking error dialog closes.
+        del app
+        return 4
     except ModuleNotFoundError as exc:
         missing_root = str(exc.name or "").partition(".")[0]
         if missing_root not in {"PySide6", "qfluentwidgets"}:
             raise
-        # Keep damaged/incomplete source installs on the same stable dependency
-        # category as protocol 3 without importing the CLI package into the GUI
-        # executable.  The message is deliberately bounded and traceback-free.
         print(
             f"DocWen GUI cannot start: required dependency '{missing_root}' is missing.",
             file=sys.stderr,

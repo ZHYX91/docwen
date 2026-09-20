@@ -1,5 +1,6 @@
 """Activity browsing preserves execution state and keeps one details surface."""
 
+import json
 from dataclasses import replace
 
 import pytest
@@ -59,7 +60,10 @@ def test_records_search_filter_sort_and_open_details(activity):
     assert dialog._proxy.rowCount() == 1
     assert "Output locked" in dialog.details.toPlainText()
     dialog.copy.click()
-    assert QApplication.clipboard().text() == dialog.details.toPlainText()
+    copied = QApplication.clipboard().text()
+    assert copied == dialog.diagnostic_view.preview.toPlainText()
+    assert json.loads(copied)["status"] == "failed"
+    assert "Output locked" not in copied and "/source" not in copied and "secret" not in copied
     dialog.status_filter.setCurrentIndex(0)
     dialog.search.setText("a.xlsx")
     assert dialog._proxy.rowCount() == 1

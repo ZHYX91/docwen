@@ -254,6 +254,49 @@ def test_cancel_after_commit_does_not_rewrite_committed_success(tmp_path: Path, 
     assert (output / "report.md").read_bytes() == b"committed payload"
 
 
+@pytest.mark.parametrize("publish_fails", [False, True])
+def test_temporary_cleanup_warning_preserves_the_publication_outcome(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, publish_fails: bool
+) -> None:
+    staging = tmp_path / "staging.txt"
+    staging.write_bytes(b"complete authoritative payload")
+    output = tmp_path / "output"
+    real_unlink = Path.unlink
+
+    def publish_with_retained_temp(source: str, destination: str) -> None:
+        if publish_fails:
+            raise OSError("publication failed before writing")
+        os.link(OutputFinalizer._io_path(source), OutputFinalizer._io_path(destination))
+
+    def refuse_temporary_cleanup(target: Path, *args: Any, **kwargs: Any) -> None:
+        if target.name.startswith(".__docwen-finalizer-"):
+            raise PermissionError("temporary file is busy")
+        real_unlink(target, *args, **kwargs)
+
+    monkeypatch.setattr(OutputFinalizer, "_publish_no_clobber", staticmethod(publish_with_retained_temp))
+    monkeypatch.setattr(Path, "unlink", refuse_temporary_cleanup)
+    result = OutputFinalizer().finalize(
+        task_id="cleanup-outcome",
+        artifacts=[_artifact(staging, "report.txt")],
+        policy=OutputPolicy(output_dir=str(output)),
+    )
+
+    assert result.success is not publish_fails
+    warnings = [item for item in result.diagnostics if item.code == "FINALIZER_CLEANUP_FAILED"]
+    assert len(warnings) == 1
+    assert warnings[0].level == "warning"
+    assert len(list(output.glob(".__docwen-finalizer-*"))) == 1
+    destination = output / "report.txt"
+    if publish_fails:
+        assert result.artifacts == []
+        assert result.error is not None
+        assert not destination.exists()
+    else:
+        assert result.error is None
+        assert destination.read_bytes() == staging.read_bytes()
+        assert Path(result.artifacts[0].staging_path).resolve() == destination.resolve()
+
+
 def test_new_destination_is_absent_until_complete_temp_is_committed(tmp_path: Path, monkeypatch) -> None:
     staging = tmp_path / "staging.md"
     staging.write_bytes(b"complete payload")

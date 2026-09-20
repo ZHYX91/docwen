@@ -403,7 +403,7 @@ LITERAL_FALLBACK_CONTRACTS: Mapping[tuple[str, str], LiteralFallbackContract] = 
         "main_window.cancel",
     ): _literal_fallback(1, "Cancel", "window shortcut label"),
     (
-        "packages/apps/gui/src/docwen_gui/main_window.py",
+        "packages/apps/gui/src/docwen_gui/qt_bridge/execution_supervisor.py",
         "main_window.thread_start_uncertain",
     ): _literal_fallback(
         1,
@@ -415,7 +415,7 @@ LITERAL_FALLBACK_CONTRACTS: Mapping[tuple[str, str], LiteralFallbackContract] = 
         "main_window.close_waiting_for_tasks",
     ): _literal_fallback(1, "Cancelling active tasks before closing...", "close lifecycle"),
     (
-        "packages/apps/gui/src/docwen_gui/main_window.py",
+        "packages/apps/gui/src/docwen_gui/qt_bridge/execution_supervisor.py",
         "main_window.close_cancel_failed",
     ): _literal_fallback(
         1,

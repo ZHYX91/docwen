@@ -132,6 +132,8 @@ def test_template_resource_id_is_listed_and_show_uses_the_same_token(
         name="Corporate Report",
         target="docx",
         description="Corporate Report DOCX template",
+        origin="builtin",
+        is_default=False,
         path=Path("D:/DocWen/templates/Corporate Report.docx"),
         size_bytes=1234,
         modified_ns=5678,

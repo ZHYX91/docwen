@@ -105,6 +105,25 @@ def _validation_capability_projection() -> dict[str, object]:
             ],
         },
     ]
+    sources.append(
+        {
+            "id": "doc",
+            "category": "document",
+            "available": True,
+            "routes": [
+                {
+                    "id": "document:doc:docx:convert",
+                    "operation": "conversion",
+                    "source": "doc",
+                    "target": "docx",
+                    "action": None,
+                    "available": True,
+                    "state": "available",
+                    "options": [],
+                }
+            ],
+        }
+    )
     return {
         "resource": "formats",
         "contract": {"id": "docwen.runtime-capabilities", "version": 1},
@@ -113,9 +132,9 @@ def _validation_capability_projection() -> dict[str, object]:
         "gates": [],
         "sources": sources,
         "counts": {
-            "sources": 3,
-            "routes": 3,
-            "available_routes": 3,
+            "sources": 4,
+            "routes": 4,
+            "available_routes": 4,
             "unavailable_routes": 0,
             "actions": 3,
         },

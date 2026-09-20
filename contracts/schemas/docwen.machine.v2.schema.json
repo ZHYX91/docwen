@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:docwen:schema:machine-protocol:v1",
-  "title": "DocWen Machine Protocol v1 Messages",
+  "$id": "urn:docwen:schema:machine-protocol:v2",
+  "title": "DocWen Machine Protocol v2 Messages",
   "description": "JSON-RPC 2.0 messages carried over Content-Length framed stdio.",
   "oneOf": [
     {
@@ -116,7 +116,7 @@
           "const": "docwen.machine"
         },
         "major": {
-          "const": 1
+          "const": 2
         },
         "minor": {
           "const": 0
@@ -453,8 +453,27 @@
           "items": {
             "$ref": "#/$defs/diagnostic"
           }
+        },
+        "optimization_id": {
+          "$ref": "#/$defs/identifier"
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "optimization_id"
+            ]
+          },
+          "then": {
+            "properties": {
+              "operation": {
+                "const": "transform"
+              }
+            }
+          }
+        }
+      ]
     },
     "diagnostic": {
       "type": "object",
@@ -495,23 +514,47 @@
         "related_ranges": {
           "type": "array",
           "maxItems": 16,
-          "items": {"$ref": "urn:docwen:schema:machine-diagnostic-evidence:v1#/$defs/range"}
+          "items": {
+            "$ref": "urn:docwen:schema:machine-diagnostic-evidence:v1#/$defs/range"
+          }
         },
         "fixes": {
           "type": "array",
           "maxItems": 8,
-          "items": {"$ref": "urn:docwen:schema:machine-diagnostic-evidence:v1#/$defs/fix"}
+          "items": {
+            "$ref": "urn:docwen:schema:machine-diagnostic-evidence:v1#/$defs/fix"
+          }
         }
       },
       "allOf": [
         {
           "if": {
             "anyOf": [
-              {"required": ["evidence_schema"]},
-              {"required": ["source"]},
-              {"required": ["range"]},
-              {"required": ["related_ranges"]},
-              {"required": ["fixes"]}
+              {
+                "required": [
+                  "evidence_schema"
+                ]
+              },
+              {
+                "required": [
+                  "source"
+                ]
+              },
+              {
+                "required": [
+                  "range"
+                ]
+              },
+              {
+                "required": [
+                  "related_ranges"
+                ]
+              },
+              {
+                "required": [
+                  "fixes"
+                ]
+              }
             ]
           },
           "then": {
@@ -676,7 +719,7 @@
               ]
             },
             "artifact_bundle_schema": {
-              "const": "docwen.artifact_bundle.v2"
+              "const": "docwen.artifact_bundle.v3"
             },
             "max_concurrent_tasks": {
               "type": "integer",
@@ -746,39 +789,90 @@
     "healthCheckRequest": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["jsonrpc", "id", "method", "params"],
+      "required": [
+        "jsonrpc",
+        "id",
+        "method",
+        "params"
+      ],
       "properties": {
-        "jsonrpc": {"const": "2.0"},
-        "id": {"$ref": "#/$defs/requestId"},
-        "method": {"const": "health/check"},
-        "params": {"type": "object", "additionalProperties": false}
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/requestId"
+        },
+        "method": {
+          "const": "health/check"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false
+        }
       }
     },
     "healthCheckResponse": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["jsonrpc", "id", "result"],
+      "required": [
+        "jsonrpc",
+        "id",
+        "result"
+      ],
       "properties": {
-        "jsonrpc": {"const": "2.0"},
-        "id": {"$ref": "#/$defs/requestId"},
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/requestId"
+        },
         "result": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["all_ok", "checks"],
+          "required": [
+            "all_ok",
+            "checks"
+          ],
           "properties": {
-            "all_ok": {"type": "boolean"},
+            "all_ok": {
+              "type": "boolean"
+            },
             "checks": {
               "type": "array",
               "items": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["id", "kind", "label", "status", "reason"],
+                "required": [
+                  "id",
+                  "kind",
+                  "label",
+                  "status",
+                  "reason"
+                ],
                 "properties": {
-                  "id": {"$ref": "#/$defs/identifier"},
-                  "kind": {"type": "string", "minLength": 1},
-                  "label": {"type": "string", "minLength": 1},
-                  "status": {"enum": ["ok", "fail"]},
-                  "reason": {"type": ["string", "null"]}
+                  "id": {
+                    "$ref": "#/$defs/identifier"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "label": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "status": {
+                    "enum": [
+                      "ok",
+                      "fail"
+                    ]
+                  },
+                  "reason": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
                 }
               }
             }
@@ -789,44 +883,107 @@
     "fileInspectRequest": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["jsonrpc", "id", "method", "params"],
+      "required": [
+        "jsonrpc",
+        "id",
+        "method",
+        "params"
+      ],
       "properties": {
-        "jsonrpc": {"const": "2.0"},
-        "id": {"$ref": "#/$defs/requestId"},
-        "method": {"const": "file/inspect"},
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/requestId"
+        },
+        "method": {
+          "const": "file/inspect"
+        },
         "params": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["input"],
-          "properties": {"input": {"$ref": "#/$defs/inputHandle"}}
+          "required": [
+            "input"
+          ],
+          "properties": {
+            "input": {
+              "$ref": "#/$defs/inputHandle"
+            }
+          }
         }
       }
     },
     "fileInspectResponse": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["jsonrpc", "id", "result"],
+      "required": [
+        "jsonrpc",
+        "id",
+        "result"
+      ],
       "properties": {
-        "jsonrpc": {"const": "2.0"},
-        "id": {"$ref": "#/$defs/requestId"},
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/requestId"
+        },
         "result": {
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "file_path", "size_bytes", "content_sha256", "decision", "supported_actions",
-            "declared_format", "detected_format", "warning_code", "reason_code", "workflow_category"
+            "file_path",
+            "size_bytes",
+            "content_sha256",
+            "decision",
+            "supported_actions",
+            "declared_format",
+            "detected_format",
+            "warning_code",
+            "reason_code",
+            "workflow_category"
           ],
           "properties": {
-            "file_path": {"type": "string", "minLength": 1},
-            "size_bytes": {"type": "integer", "minimum": 0},
-            "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-            "decision": {"type": "string", "minLength": 1},
-            "supported_actions": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
-            "declared_format": {"type": "string"},
-            "detected_format": {"type": "string"},
-            "warning_code": {"type": "string"},
-            "reason_code": {"type": "string"},
-            "workflow_category": {"type": "string", "minLength": 1}
+            "file_path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "size_bytes": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "content_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "decision": {
+              "type": "string",
+              "minLength": 1
+            },
+            "supported_actions": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "declared_format": {
+              "type": "string"
+            },
+            "detected_format": {
+              "type": "string"
+            },
+            "warning_code": {
+              "type": "string"
+            },
+            "reason_code": {
+              "type": "string"
+            },
+            "workflow_category": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         }
       }
@@ -834,19 +991,46 @@
     "resourceListRequest": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["jsonrpc", "id", "method", "params"],
+      "required": [
+        "jsonrpc",
+        "id",
+        "method",
+        "params"
+      ],
       "properties": {
-        "jsonrpc": {"const": "2.0"},
-        "id": {"$ref": "#/$defs/requestId"},
-        "method": {"const": "resource/list"},
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/requestId"
+        },
+        "method": {
+          "const": "resource/list"
+        },
         "params": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["kind"],
+          "required": [
+            "kind"
+          ],
           "properties": {
-            "kind": {"enum": ["formats", "optimizations", "templates", "numbering-schemes"]},
-            "target": {"type": "string", "minLength": 1},
-            "locale": {"type": "string", "minLength": 2, "maxLength": 32}
+            "kind": {
+              "enum": [
+                "formats",
+                "optimizations",
+                "templates",
+                "numbering-schemes"
+              ]
+            },
+            "target": {
+              "type": "string",
+              "minLength": 1
+            },
+            "locale": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 32
+            }
           }
         }
       }
@@ -854,16 +1038,55 @@
     "resourceRoute": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "source", "target", "operation", "action", "available", "state", "options"],
+      "required": [
+        "id",
+        "source",
+        "target",
+        "operation",
+        "action",
+        "available",
+        "state",
+        "options"
+      ],
       "properties": {
-        "id": {"$ref": "#/$defs/identifier"},
-        "source": {"type": "string", "minLength": 1},
-        "target": {"type": "string", "minLength": 1},
-        "operation": {"enum": ["conversion", "action"]},
-        "action": {"type": ["string", "null"]},
-        "available": {"type": "boolean"},
-        "state": {"type": "string", "minLength": 1},
-        "options": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operation": {
+          "enum": [
+            "conversion",
+            "action"
+          ]
+        },
+        "action": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "state": {
+          "type": "string",
+          "minLength": 1
+        },
+        "options": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
       }
     },
     "resourceItem": {
@@ -871,96 +1094,305 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["id", "category", "available", "routes"],
+          "required": [
+            "id",
+            "category",
+            "available",
+            "routes"
+          ],
           "properties": {
-            "id": {"$ref": "#/$defs/identifier"},
-            "category": {"type": "string", "minLength": 1},
-            "available": {"type": "boolean"},
-            "routes": {"type": "array", "items": {"$ref": "#/$defs/resourceRoute"}}
+            "id": {
+              "$ref": "#/$defs/identifier"
+            },
+            "category": {
+              "type": "string",
+              "minLength": 1
+            },
+            "available": {
+              "type": "boolean"
+            },
+            "routes": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/resourceRoute"
+              }
+            }
           }
         },
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["id", "name", "description", "scopes"],
+          "required": [
+            "id",
+            "name",
+            "description",
+            "scopes"
+          ],
           "properties": {
-            "id": {"$ref": "#/$defs/identifier"},
-            "name": {"type": "string"},
-            "description": {"type": "string"},
-            "scopes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+            "id": {
+              "$ref": "#/$defs/identifier"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "scopes": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
           }
         },
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["id", "name", "description"],
+          "required": [
+            "id",
+            "name",
+            "description"
+          ],
           "properties": {
-            "id": {"$ref": "#/$defs/identifier"},
-            "name": {"type": "string"},
-            "description": {"type": "string"},
-            "target": {"type": "string", "minLength": 1}
+            "id": {
+              "$ref": "#/$defs/identifier"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            }
           }
+        },
+        {
+          "$ref": "#/$defs/templateResource"
         }
       ]
     },
     "resourceListResponse": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["jsonrpc", "id", "result"],
+      "required": [
+        "jsonrpc",
+        "id",
+        "result"
+      ],
       "properties": {
-        "jsonrpc": {"const": "2.0"},
-        "id": {"$ref": "#/$defs/requestId"},
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/requestId"
+        },
         "result": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["kind", "resources"],
+          "required": [
+            "kind",
+            "resources"
+          ],
           "properties": {
-            "kind": {"enum": ["formats", "optimizations", "templates", "numbering-schemes"]},
-            "resources": {"type": "array", "items": {"$ref": "#/$defs/resourceItem"}}
-          }
+            "kind": {
+              "enum": [
+                "formats",
+                "optimizations",
+                "templates",
+                "numbering-schemes"
+              ]
+            },
+            "resources": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/resourceItem"
+              }
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "templates"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "resources": {
+                    "items": {
+                      "$ref": "#/$defs/templateResource"
+                    }
+                  }
+                }
+              }
+            }
+          ]
         }
       }
     },
     "guiRequest": {
       "oneOf": [
-        {"$ref": "#/$defs/guiStatusRequest"},
-        {"$ref": "#/$defs/guiActivateRequest"},
-        {"$ref": "#/$defs/guiOpenRequest"}
+        {
+          "$ref": "#/$defs/guiStatusRequest"
+        },
+        {
+          "$ref": "#/$defs/guiActivateRequest"
+        },
+        {
+          "$ref": "#/$defs/guiOpenRequest"
+        }
       ]
     },
     "guiStatusRequest": {
-      "type": "object", "additionalProperties": false,
-      "required": ["jsonrpc", "id", "method", "params"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "id",
+        "method",
+        "params"
+      ],
       "properties": {
-        "jsonrpc": {"const": "2.0"}, "id": {"$ref": "#/$defs/requestId"}, "method": {"const": "gui/status"},
-        "params": {"type": "object", "additionalProperties": false, "required": ["timeout_seconds"], "properties": {"timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 1800}}}
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/requestId"
+        },
+        "method": {
+          "const": "gui/status"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "timeout_seconds"
+          ],
+          "properties": {
+            "timeout_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1800
+            }
+          }
+        }
       }
     },
     "guiActivateRequest": {
-      "type": "object", "additionalProperties": false,
-      "required": ["jsonrpc", "id", "method", "params"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "id",
+        "method",
+        "params"
+      ],
       "properties": {
-        "jsonrpc": {"const": "2.0"}, "id": {"$ref": "#/$defs/requestId"}, "method": {"const": "gui/activate"},
-        "params": {"type": "object", "additionalProperties": false, "required": ["timeout_seconds"], "properties": {"timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 1800}}}
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/requestId"
+        },
+        "method": {
+          "const": "gui/activate"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "timeout_seconds"
+          ],
+          "properties": {
+            "timeout_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1800
+            }
+          }
+        }
       }
     },
     "guiOpenRequest": {
-      "type": "object", "additionalProperties": false,
-      "required": ["jsonrpc", "id", "method", "params"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "id",
+        "method",
+        "params"
+      ],
       "properties": {
-        "jsonrpc": {"const": "2.0"}, "id": {"$ref": "#/$defs/requestId"}, "method": {"const": "gui/open"},
-        "params": {"type": "object", "additionalProperties": false, "required": ["timeout_seconds"], "properties": {"timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 1800}, "file_path": {"type": "string", "minLength": 1}}}
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/requestId"
+        },
+        "method": {
+          "const": "gui/open"
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "timeout_seconds"
+          ],
+          "properties": {
+            "timeout_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1800
+            },
+            "file_path": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
       }
     },
     "guiResponse": {
-      "type": "object", "additionalProperties": false,
-      "required": ["jsonrpc", "id", "result"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "jsonrpc",
+        "id",
+        "result"
+      ],
       "properties": {
-        "jsonrpc": {"const": "2.0"}, "id": {"$ref": "#/$defs/requestId"},
+        "jsonrpc": {
+          "const": "2.0"
+        },
+        "id": {
+          "$ref": "#/$defs/requestId"
+        },
         "result": {
-          "type": "object", "additionalProperties": false,
-          "required": ["action", "accepted"],
-          "properties": {"action": {"enum": ["status", "activate", "open"]}, "accepted": {"type": "boolean"}, "running": {"type": "boolean"}}
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "action",
+            "accepted"
+          ],
+          "properties": {
+            "action": {
+              "enum": [
+                "status",
+                "activate",
+                "open"
+              ]
+            },
+            "accepted": {
+              "type": "boolean"
+            },
+            "running": {
+              "type": "boolean"
+            }
+          }
         }
       }
     },
@@ -1299,7 +1731,16 @@
               "minimum": 1
             },
             "bundle": {
-              "$ref": "urn:docwen:schema:artifact-bundle:v2"
+              "$ref": "urn:docwen:schema:artifact-bundle:v3",
+              "properties": {
+                "producer": {
+                  "properties": {
+                    "machine_protocol": {
+                      "const": "docwen.machine.v2"
+                    }
+                  }
+                }
+              }
             },
             "diagnostics": {
               "type": "array",
@@ -1449,6 +1890,79 @@
           }
         }
       }
+    },
+    "templateResource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "description",
+        "target",
+        "origin",
+        "is_default"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^template\\.(?:docx|xlsx)\\.[0-9a-f]{64}$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "target": {
+          "enum": [
+            "docx",
+            "xlsx"
+          ]
+        },
+        "origin": {
+          "enum": [
+            "builtin",
+            "custom"
+          ]
+        },
+        "is_default": {
+          "type": "boolean"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "target": {
+                "const": "docx"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "id": {
+                "pattern": "^template\\.docx\\.[0-9a-f]{64}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "target": {
+                "const": "xlsx"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "id": {
+                "pattern": "^template\\.xlsx\\.[0-9a-f]{64}$"
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }

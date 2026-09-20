@@ -99,11 +99,8 @@ class TestPdfInvoiceToMarkdown:
         )
 
         assert result.success, f"unexpected error: {result.error}"
-        assert len(result.artifacts) == 2
+        assert len(result.artifacts) == 1
         artifact = next(item for item in result.artifacts if item.media_type == "text/markdown")
-        manifest = next(
-            item for item in result.artifacts if item.media_type == "application/vnd.docwen.document-node+json"
-        )
         md_path = Path(artifact.staging_path)
         node_root = md_path.parent
         assert node_root.parent == output_dir
@@ -111,8 +108,7 @@ class TestPdfInvoiceToMarkdown:
         assert node_root.name.endswith("_fromPdf")
         assert md_path.name == f"{node_root.name}.md"
         assert artifact.logical_path == f"{node_root.name}/{node_root.name}.md"
-        assert Path(manifest.staging_path) == node_root / "docwen-node.json"
-        assert manifest.logical_path == f"{node_root.name}/docwen-node.json"
+        assert {item.name for item in node_root.iterdir()} == {md_path.name}
         assert artifact.media_type == "text/markdown"
         assert {key: artifact.metadata[key] for key in ("source_format", "row_count", "yaml_fields")} == {
             "source_format": "pdf",
@@ -156,11 +152,8 @@ class TestPdfInvoiceToMarkdown:
         )
 
         assert result.success, f"unexpected error: {result.error}"
-        assert len(result.artifacts) == 2
+        assert len(result.artifacts) == 1
         artifact = next(item for item in result.artifacts if item.media_type == "text/markdown")
-        manifest = next(
-            item for item in result.artifacts if item.media_type == "application/vnd.docwen.document-node+json"
-        )
         md_path = Path(artifact.staging_path)
         node_root = md_path.parent
         assert node_root.parent == output_dir
@@ -168,8 +161,7 @@ class TestPdfInvoiceToMarkdown:
         assert node_root.name.endswith("_fromOfd")
         assert md_path.name == f"{node_root.name}.md"
         assert artifact.logical_path == f"{node_root.name}/{node_root.name}.md"
-        assert Path(manifest.staging_path) == node_root / "docwen-node.json"
-        assert manifest.logical_path == f"{node_root.name}/docwen-node.json"
+        assert {item.name for item in node_root.iterdir()} == {md_path.name}
         assert artifact.media_type == "text/markdown"
         assert {key: artifact.metadata[key] for key in ("source_format", "row_count", "yaml_fields")} == {
             "source_format": "ofd",

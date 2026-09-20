@@ -16,7 +16,6 @@ fail closed. Base files must exist and user files are optional.
 from __future__ import annotations
 
 import logging
-import os
 import threading
 from collections.abc import Mapping, MutableMapping
 from copy import deepcopy
@@ -49,24 +48,10 @@ _CONFIG_TRANSACTION_STATE = threading.local()
 
 
 def _default_user_config_dir() -> Path:
-    """Return the user override config directory.
+    """Read the startup profile's configuration component without fallback."""
+    from docwen_runtime.profile_paths import current_profile_paths
 
-    Release verification and isolated host tests may provide
-    ``DOCWEN_CONFIG_DIR``. This is an internal isolation hook, not a public
-    configuration surface.
-
-    Uses ``platformdirs`` to pick a platform-appropriate location, with a
-    CWD fallback if ``platformdirs`` is unavailable.
-    """
-    isolated_dir = os.environ.get("DOCWEN_CONFIG_DIR", "").strip()
-    if isolated_dir:
-        return Path(isolated_dir)
-    try:
-        from platformdirs import user_config_dir
-
-        return Path(user_config_dir("docwen", appauthor=False)) / "configs"
-    except ImportError:
-        return Path.cwd() / "configs"
+    return current_profile_paths().config_dir
 
 
 # ---------------------------------------------------------------------------
@@ -418,7 +403,7 @@ class ConfigLoader:
         base_dir: Path to the read-only base ``configs/`` directory.  If *None*
             the loader uses ``ResourceRegistry.default().configs_dir()``.
         user_dir: Path to the writable user override directory.  If *None* the
-            loader uses ``platformdirs.user_config_dir("docwen")/configs``.
+            loader uses the configuration directory of the bound startup profile.
         runtime_overrides: Optional dict merged on top of base+user in memory.
     """
 

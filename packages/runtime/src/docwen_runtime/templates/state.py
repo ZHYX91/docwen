@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import re
 import threading
 import unicodedata
@@ -17,8 +16,6 @@ import uuid
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
-
-from platformdirs import user_data_dir
 
 from docwen_runtime import file_transactions as transaction
 from docwen_runtime.file_transactions import process_config_lock
@@ -36,9 +33,10 @@ def user_templates_dir() -> Path:
 
 
 def template_data_root() -> Path:
-    """Resolve user storage, with an explicit internal host-isolation hook."""
-    isolated = os.environ.get("DOCWEN_DATA_DIR", "").strip()
-    return Path(isolated).absolute() if isolated else Path(user_data_dir("docwen", appauthor=False))
+    """Read the template component of the same bound startup profile."""
+    from docwen_runtime.profile_paths import current_profile_paths
+
+    return current_profile_paths().data_dir
 
 
 def template_state_path() -> Path:

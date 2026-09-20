@@ -130,7 +130,8 @@ def test_png_ocr_markdown_maps_original_resource_and_ocr_provenance(tmp_path: Pa
             ]
             route = next(
                 item
-                for item in description["sources"][0]["routes"]
+                for source in description["sources"]
+                for item in source["routes"]
                 if item["id"] == "docwen_plugin_image:image:md:convert"
             )
             route.update(
@@ -336,7 +337,7 @@ def test_markdown_tables_and_tiff_frames_keep_route_defined_order(
                 {"id": "python.openpyxl", "available": True},
                 {"id": "python.pillow", "available": True},
             ]
-            for route in description["sources"][0]["routes"]:
+            for route in (route for source in description["sources"] for route in source["routes"]):
                 if route["id"] == "docwen_plugin_markdown:markdown:csv:convert":
                     route["required_capabilities"] = ["python.mistune", "python.openpyxl"]
                 if route["id"] == "docwen_plugin_image:image:png:convert":

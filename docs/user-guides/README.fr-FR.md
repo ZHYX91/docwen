@@ -53,7 +53,7 @@ Journal des modifications : voir [CHANGELOG.md](../CHANGELOG.md)
 
 **Prérequis** : Python 3.12
 
-**Périmètre cible de la version 0.9** : Ce code source produit des paquets Windows x64 et Ubuntu
+**Plateformes des paquets pris en charge** : Ce code source produit des paquets Windows x64 et Ubuntu
 24.04 x64. Les autres distributions Linux et macOS restent des voies source/développement, non
 couvertes par le paquet Ubuntu.
 
@@ -67,7 +67,7 @@ cd docwen
 uv sync --frozen --all-extras
 ```
 
-Le code source, les tests et les builds de DocWen 0.9 prennent uniquement en charge le verrou versionné avec `uv 0.12.0` ; `pip install -e` n'est pas pris en charge.
+Le code source, les tests et les builds de DocWen prennent uniquement en charge le verrou versionné avec `uv 0.12.0` ; `pip install -e` n'est pas pris en charge.
 
 ### Lancer le programme
 
@@ -100,7 +100,7 @@ pip install pillow-heif
 
 ### Prérequis GUI sous Linux
 
-**Cible packagée prise en charge** : DocWen 0.9 prend en charge la GUI et la CLI du paquet Ubuntu
+**Cible packagée prise en charge** : DocWen prend en charge la GUI et la CLI du paquet Ubuntu
 24.04 x64. Ces prérequis n'étendent pas cet engagement à une autre distribution ou architecture.
 
 - Environnement de bureau installé (GNOME, KDE, XFCE, etc.)
@@ -601,13 +601,13 @@ ne transporte les commandes de contrôle. Cela décrit uniquement la capacité d
 
 ### Installation
 
-DocWen Assistant 2.0 utilise DocWen Machine Protocol v1 et l'unique contrat Artifact Bundle v2. La version du code
+DocWen Assistant 3.0 utilise DocWen Machine Protocol v2 et l'unique contrat Artifact Bundle v3. La version du code
 source ne prouve pas sa publication ; installez uniquement une version numérique qui identifie explicitement une
 version publiée et compatible de DocWen.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-OpenClaw 2.0 utilise DocWen Machine Protocol v1 et l'unique contrat Artifact Bundle v2. La version du code source ne
+OpenClaw 3.0 utilise DocWen Machine Protocol v2 et l'unique contrat Artifact Bundle v3. La version du code source ne
 prouve pas sa publication ; consultez la page de la version numérique et ne l'installez qu'après la réussite de son
 contrôle de publication immuable.
 

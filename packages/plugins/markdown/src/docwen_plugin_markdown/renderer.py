@@ -123,7 +123,6 @@ class MdToDocxRenderer:
         formatting_mode: str = "full",
         hr_mapping: str | None = None,
         hr_actions: dict[str, str] | None = None,
-        hr_attachments: set[int] | None = None,
         source_file_path: str | None = None,
         declared_resource_resolver=None,
         managed_styles: ManagedStyleBindings | None = None,
@@ -167,8 +166,6 @@ class MdToDocxRenderer:
                 Keys are ``"dash"``, ``"asterisk"``, ``"underscore"``;
                 values are ``"page_break"``, ``"section_break"``,
                 ``"horizontal_rule_1"``/``"2"``/``"3"``, or ``"ignore"``.
-            hr_attachments: Optional set of 0-based AST node indexes where
-                HR should attach to the preceding paragraph.
         """
         self._doc = doc
         self._body_font = body_font or {
@@ -270,7 +267,6 @@ class MdToDocxRenderer:
         self._formatting_mode = formatting_mode
         self._hr_mapping = hr_mapping
         self._hr_actions = hr_actions or {}
-        self._hr_attachments = hr_attachments or set()
         self._source_dir = Path(source_file_path).resolve().parent if source_file_path else None
         self._declared_resource_resolver = declared_resource_resolver
         self._semantic_v3_session = semantic_v3_session

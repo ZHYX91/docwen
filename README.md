@@ -53,7 +53,7 @@ Changelog: see [CHANGELOG.md](docs/CHANGELOG.md)
 
 **Prerequisites**: Python 3.12
 
-**0.11 release boundary**: The [0.11.0 Release](https://github.com/ZHYX91/docwen/releases/tag/0.11.0) publishes one Windows x64 GUI+CLI package and separate
+**Package targets**: DocWen provides one Windows x64 GUI+CLI package and separate
 Ubuntu 24.04 x64 GUI+CLI and CLI-only packages. Other Linux
 distributions and macOS remain source/development paths and are not implied by the Ubuntu package.
 
@@ -67,15 +67,14 @@ cd docwen
 uv sync --frozen --all-extras
 ```
 
-DocWen 0.10's source/test/build contract is the checked-in lock with exactly `uv 0.12.0`.
+DocWen's source/test/build contract is the checked-in lock with exactly `uv 0.12.0`.
 `pip install -e` is unsupported because pip cannot apply the repository's scoped dependency exclusion.
 
 ### Launch Program
 
 On the Windows packaged release, double-click `DocWen.exe` to start the graphical interface. On
-Ubuntu 24.04 x64, extract `DocWen-0.11.0-linux-x64.tar.gz` and run `./DocWen`; the companion
-`DocWenCLI-0.11.0-linux-x64.tar.gz` is the CLI-only package. These assets are installable from the
-immutable 0.11.0 Release. If installed from source, run:
+Ubuntu 24.04 x64, extract `DocWen-<version>-linux-x64.tar.gz` and run `./DocWen`; the companion
+`DocWenCLI-<version>-linux-x64.tar.gz` is the CLI-only package. Download the matching assets from [DocWen Releases](https://github.com/ZHYX91/docwen/releases). If installed from source, run:
 
 ```bash
 docwen-gui  # GUI mode
@@ -103,7 +102,7 @@ pip install pillow-heif
 
 ### Linux GUI Prerequisites
 
-**Supported package target**: DocWen 0.10 supports the packaged GUI and CLI on Ubuntu 24.04 x64.
+**Supported package target**: DocWen supports the packaged GUI and CLI on Ubuntu 24.04 x64.
 These prerequisites do not extend that support claim to another Linux distribution or architecture.
 
 - Desktop environment installed (GNOME, KDE, XFCE, etc.)
@@ -607,7 +606,7 @@ A companion Obsidian plugin is published separately and works in tandem with the
 
 DocWen Core's runtime/control transport uses a Windows named pipe or an AF_UNIX socket on
 Linux/macOS. A file lock only establishes single-instance ownership; files are not used to transport
-control commands. This describes the Core transport only. DocWen Assistant 2.0 remains Windows
+control commands. This describes the Core transport only. DocWen Assistant 3.0 remains Windows
 desktop-only and has no Linux/macOS combination acceptance.
 
 1.  **First Click** → Launch converter and pass current file.
@@ -616,13 +615,13 @@ desktop-only and has no Linux/macOS combination acceptance.
 
 ### Installation
 
-DocWen Assistant 2.0 uses DocWen Machine Protocol v1 and the single Artifact Bundle v2 contract. Its
+DocWen Assistant 3.0 uses DocWen Machine Protocol v2 and the single Artifact Bundle v3 contract. Its
 source version does not prove publication; install only a numeric release that explicitly identifies a
 compatible published DocWen release.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-OpenClaw 2.0 uses DocWen Machine Protocol v1 and the single Artifact Bundle v2 contract. Its source
+OpenClaw 3.0 uses DocWen Machine Protocol v2 and the single Artifact Bundle v3 contract. Its source
 version does not prove publication; follow the numeric release page and install only after its immutable
 release gate succeeds.
 

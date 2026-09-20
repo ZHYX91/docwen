@@ -53,7 +53,7 @@ Registro de cambios: ver [CHANGELOG.md](../CHANGELOG.md)
 
 **Requisitos previos**: Python 3.12
 
-**Límite objetivo de 0.9**: Este código fuente crea paquetes para Windows x64 y Ubuntu 24.04 x64.
+**Destinos de paquetes compatibles**: Este código fuente crea paquetes para Windows x64 y Ubuntu 24.04 x64.
 Las demás distribuciones Linux y macOS siguen siendo rutas de código fuente/desarrollo y no quedan
 cubiertas por el paquete de Ubuntu.
 
@@ -67,7 +67,7 @@ cd docwen
 uv sync --frozen --all-extras
 ```
 
-El código fuente, las pruebas y las compilaciones de DocWen 0.9 solo admiten el archivo de bloqueo incluido con `uv 0.12.0`; `pip install -e` no es compatible.
+El código fuente, las pruebas y las compilaciones de DocWen solo admiten el archivo de bloqueo incluido con `uv 0.12.0`; `pip install -e` no es compatible.
 
 ### Iniciar el programa
 
@@ -99,7 +99,7 @@ pip install pillow-heif
 
 ### Requisitos previos del GUI en Linux
 
-**Destino de paquete compatible**: DocWen 0.9 admite la GUI y la CLI empaquetadas en Ubuntu 24.04
+**Destino de paquete compatible**: DocWen admite la GUI y la CLI empaquetadas en Ubuntu 24.04
 x64. Estos requisitos no amplían ese compromiso a otras distribuciones o arquitecturas.
 
 - Entorno de escritorio instalado (GNOME, KDE, XFCE, etc.)
@@ -588,7 +588,7 @@ Hay un plugin complementario de Obsidian publicado por separado que funciona jun
 El transporte runtime/control de DocWen Core usa una canalización con nombre de Windows o un socket
 AF_UNIX en Linux/macOS. Un bloqueo de archivo solo establece la propiedad de la instancia única; los
 comandos de control no se transportan mediante archivos. Esto solo describe la capacidad del Core.
-DocWen Assistant 2.0 sigue limitado al escritorio de Windows y no tiene aceptación combinada en Linux/macOS.
+DocWen Assistant 3.0 sigue limitado al escritorio de Windows y no tiene aceptación combinada en Linux/macOS.
 
 1.  **Primer clic** → Inicia el convertidor y pasa el archivo actual.
 2.  **Clic de nuevo (con archivo)** → Sustituye el archivo (modo de archivo único).
@@ -596,13 +596,13 @@ DocWen Assistant 2.0 sigue limitado al escritorio de Windows y no tiene aceptaci
 
 ### Instalación
 
-DocWen Assistant 2.0 usa DocWen Machine Protocol v1 y el único contrato Artifact Bundle v2. La versión del código
+DocWen Assistant 3.0 usa DocWen Machine Protocol v2 y el único contrato Artifact Bundle v3. La versión del código
 fuente no demuestra que esté publicada; instala solo una versión numérica que identifique explícitamente una versión
 publicada y compatible de DocWen.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
-OpenClaw 2.0 usa DocWen Machine Protocol v1 y el único contrato Artifact Bundle v2. La versión del código fuente no
+OpenClaw 3.0 usa DocWen Machine Protocol v2 y el único contrato Artifact Bundle v3. La versión del código fuente no
 demuestra que esté publicada; consulta la página de la versión numérica e instala solo después de que supere su
 control de publicación inmutable.
 

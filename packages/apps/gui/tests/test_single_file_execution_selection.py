@@ -21,7 +21,7 @@ def _sources(tmp_path):
 def test_single_add_executes_the_visible_file(window, tmp_path, monkeypatch, reselect_existing, qtbot):
     first, second = _sources(tmp_path)
     calls = []
-    monkeypatch.setattr(window, "_start_execution", lambda **kwargs: calls.append(kwargs))
+    monkeypatch.setattr(window._workflow, "single", lambda **kwargs: calls.append(kwargs))
     _load_request_templates(window)
     window._input_area_vm.add_files([str(first)])
     window._input_area_vm.add_files([str(second)])
@@ -46,7 +46,7 @@ def test_rejected_single_add_preserves_execution_selection(window, tmp_path, mon
     window._input_area_vm.add_files([str(first)])
     qtbot.waitUntil(lambda: not window._view_model.inspection_busy)
     calls = []
-    monkeypatch.setattr(window, "_start_execution", lambda **kwargs: calls.append(kwargs))
+    monkeypatch.setattr(window._workflow, "single", lambda **kwargs: calls.append(kwargs))
     window._input_area_vm.add_files([str(tmp_path / "missing.md")])
     qtbot.waitUntil(lambda: not window._view_model.inspection_busy)
     assert Path(window._view_model.selected_file.path) == first

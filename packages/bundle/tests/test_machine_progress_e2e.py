@@ -125,7 +125,7 @@ def test_real_stdio_convert_and_validate_emit_safe_advancing_progress(tmp_path: 
         initialized = exchange(
             "initialize",
             {
-                "protocol": {"name": "docwen.machine", "major": 1, "minor": 0},
+                "protocol": {"name": "docwen.machine", "major": 2, "minor": 0},
                 "client": {"name": "docwen-progress-e2e", "version": "1.0.0"},
                 "features": {"progress": True, "cancellation": True},
             },

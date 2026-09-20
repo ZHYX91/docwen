@@ -1,0 +1,25 @@
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "result": {
+    "kind": "templates",
+    "resources": [
+      {
+        "id": "template.docx.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "name": "Standard",
+        "description": "Bundled document template",
+        "target": "docx",
+        "origin": "builtin",
+        "is_default": false
+      },
+      {
+        "id": "template.docx.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "name": "Standard",
+        "description": "Custom document template",
+        "target": "docx",
+        "origin": "custom",
+        "is_default": true
+      }
+    ]
+  }
+}

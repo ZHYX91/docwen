@@ -8,12 +8,21 @@ import pytest
 
 from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
 from docwen_plugin_markdown.runtime_semantics_v3 import (
+    RuntimeSemanticsV3InvariantError,
     RuntimeSemanticsV3Unsupported,
     apply_runtime_semantics_v3,
     prepare_runtime_semantics_v3,
 )
 
 pytestmark = pytest.mark.contract
+
+
+def test_fenced_marker_owner_loss_is_an_internal_invariant_failure() -> None:
+    source = "```text\nbody\n```\n"
+    plan = prepare_runtime_semantics_v3(source, input_id="source")
+
+    with pytest.raises(RuntimeSemanticsV3InvariantError, match="block_code owners"):
+        apply_runtime_semantics_v3([], plan)
 
 
 def test_runtime_adapter_preserves_five_observable_source_constructs() -> None:

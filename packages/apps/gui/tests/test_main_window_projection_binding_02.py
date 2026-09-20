@@ -68,7 +68,7 @@ class TestMainWindowBatchSync:
         assert entry.workflow_category == "markdown"
         assert window._batch_list_vm.get_file_display_category(str(source)) == "text"
 
-        request_ref = window._request_file_ref(str(source))
+        request_ref = window._requests.file_ref(str(source))
         assert request_ref.format == expected_format
         assert request_ref.category == "markdown"
 

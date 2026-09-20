@@ -10,17 +10,15 @@ from __future__ import annotations
 import contextlib
 import logging
 import os
-import re
 import sys
 import time
-import uuid
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
 from typing import cast as _cast
 
-from PySide6.QtCore import QEvent, QObject, QPoint, QRect, QSize, Qt, QThread, QTimer, Signal, Slot
+from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt, QTimer, Slot
 from PySide6.QtGui import (
     QAction,
     QActionGroup,
@@ -52,20 +50,20 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from docwen_application.optimization_selection import OptimizationSource
 from docwen_gui import path_actions
+from docwen_gui.execution_admission import ExecutionAdmission
+from docwen_gui.execution_coordinator import ExecutionCoordinator
+from docwen_gui.execution_presenter import ExecutionPresenter
+from docwen_gui.execution_requests import ExecutionRequestBuilder, OutputPolicyConfigError
 from docwen_gui.file_admission_i18n import render_file_inspection_message
 from docwen_gui.font_utils import FONT_SIZE_PRESETS, normalize_font_size_preset
 from docwen_gui.i18n import t as _t
+from docwen_gui.path_identity import normalize_path
+from docwen_gui.qt_bridge.execution_supervisor import ExecutionSupervisor
 from docwen_gui.resources import load_svg_icon
 from docwen_gui.styles.design_tokens import Spacing
 from docwen_gui.styles.theme_manager import ThemeManager
-from docwen_gui.view_models._optimization_filter import OptimizationSource
-from docwen_gui.view_models._runtime_route_filter import (
-    RuntimeRouteChoice,
-    RuntimeRouteSource,
-    discover_runtime_route_choices,
-)
-from docwen_gui.view_models.output_files import result_output_paths
 from docwen_gui.view_models.task_history import TaskHistory
 from docwen_gui.window_behavior import (
     DEFAULT_WINDOW_BEHAVIOR,
@@ -90,11 +88,8 @@ from docwen_gui.window_geometry import (
 )
 
 if TYPE_CHECKING:
-    from docwen_application.controller import ApplicationController
-    from docwen_core.models import FileInspection
     from docwen_core.models.file_ref import FileRef
-    from docwen_core.models.request import ConversionRequest, OutputPolicy
-    from docwen_core.models.result import ConversionResult
+    from docwen_core.models.request import ConversionRequest
     from docwen_gui.qt_bridge.task_event_bridge import TaskEventBridge
 
     from .view_models.action_area_vm import ActionAreaViewModel
@@ -117,169 +112,10 @@ DEFAULT_HEIGHT = DEFAULT_WINDOW_HEIGHT
 MIN_WIDTH = DEFAULT_MIN_WIDTH
 MIN_HEIGHT = DEFAULT_MIN_HEIGHT
 
-_MARKDOWN_TARGET_FORMATS: frozenset[str] = frozenset({"md", "markdown"})
-_DOCUMENT_TEMPLATE_TARGETS: frozenset[str] = frozenset({"docx", "doc", "odt", "rtf", "wps", "pdf"})
-_SPREADSHEET_TEMPLATE_TARGETS: frozenset[str] = frozenset({"xlsx", "xls", "ods", "csv"})
 _AGGREGATE_ACTIONS: frozenset[str] = frozenset({"merge_pdfs", "merge_tables", "merge_images_to_tiff"})
-_PROOFREAD_ACTIONS: frozenset[str] = frozenset({"validate"})
 _ConversionRequestOrigin = Literal["action_area", "conversion_panel"]
-_PROOFREAD_GUI_OPTION_ALIASES: dict[str, str] = {
-    "symbol_pairing": "enable_symbol_pairing",
-    "symbol_correction": "enable_symbol_correction",
-    "typos_rule": "enable_typos_rule",
-    "sensitive_word": "enable_sensitive_word",
-}
 
 logger = logging.getLogger(__name__)
-
-
-class _OutputPolicyConfigError(RuntimeError):
-    """Raised when persisted output settings cannot be read safely."""
-
-
-class _ExecutionAdmissionError(RuntimeError):
-    """A localized reason why a requested execution cannot start."""
-
-
-def _result_warning_messages(result: ConversionResult) -> list[str]:
-    """Return user-visible warning diagnostics from a successful result."""
-    messages: list[str] = []
-    for diagnostic in result.diagnostics:
-        if diagnostic.level != "warning":
-            continue
-        extension_messages = {
-            "docwen.conversion.markdown_extension.typed_endnotes.flattened": _t("main_window.extension_loss_endnotes"),
-            "docwen.conversion.markdown_extension.extended_headings.flattened": _t(
-                "main_window.extension_loss_headings"
-            ),
-            "docwen.conversion.markdown_extension.captions_references.flattened": _t(
-                "main_window.extension_loss_references"
-            ),
-            "docwen.conversion.markdown_extension.structural_tables.flattened": _t("main_window.extension_loss_tables"),
-        }
-        if diagnostic.code in extension_messages:
-            messages.append(extension_messages[diagnostic.code])
-            continue
-        message = diagnostic.message.strip() or diagnostic.code.strip()
-        if not message:
-            message = _t("main_window.conversion_warning", "Conversion completed with a warning")
-        if diagnostic.location:
-            message = f"{message} ({diagnostic.location})"
-        messages.append(message)
-    return messages
-
-
-def _localized_failure_message(error: object | None = None) -> str:
-    """Return localized summary copy while keeping raw diagnostics in details."""
-
-    base = _t(
-        "main_window.conversion_failed",
-        "Conversion failed. Open failure details for diagnostic information.",
-    )
-    if error is None:
-        return base
-    if isinstance(error, str):
-        candidate = error.partition(":")[0].strip()
-        stable_code = candidate if re.fullmatch(r"[A-Z][A-Z0-9_-]{1,63}", candidate) else ""
-        return f"{base} [{stable_code}]" if stable_code else base
-    diagnostic_code = str(getattr(error, "diagnostic_code", "") or "").strip()
-    error_type = str(getattr(error, "error_type", "") or "").strip()
-    stable_code = diagnostic_code or error_type
-    return f"{base} [{stable_code}]" if stable_code else base
-
-
-def _redacted_request_options(options: dict[str, Any]) -> dict[str, Any]:
-    """Keep execution secrets out of GUI retry/history context."""
-
-    redacted = dict(options)
-    if "spreadsheet_password" in redacted:
-        redacted["spreadsheet_password"] = "<redacted>"
-    return redacted
-
-
-def _to_markdown_locale_options(
-    options: dict[str, Any],
-    *,
-    target_format: str,
-    action_name: str = "",
-    route_options: Sequence[str] | None = None,
-) -> dict[str, Any]:
-    from docwen_gui.i18n import get_locale
-
-    enriched = dict(options)
-    if route_options is not None:
-        supported = frozenset(route_options)
-        if "locale" in supported:
-            enriched.setdefault("locale", get_locale())
-        if target_format not in _MARKDOWN_TARGET_FORMATS or "yaml_key_labels" not in supported:
-            return enriched
-    elif target_format not in _MARKDOWN_TARGET_FORMATS:
-        return enriched
-    elif action_name:
-        # Named routes must provide their canonical option surface. Do not
-        # infer support from an action string.
-        return enriched
-    else:
-        enriched.setdefault("locale", get_locale())
-    enriched.setdefault(
-        "yaml_key_labels",
-        {
-            "title": _t("yaml_keys.title", default="title"),
-            "subtitle": _t("yaml_keys.subtitle", default="subtitle"),
-        },
-    )
-    return enriched
-
-
-def _normalize_proofread_action_options(options: dict[str, Any], *, action_name: str) -> dict[str, Any]:
-    if action_name not in _PROOFREAD_ACTIONS:
-        return options
-    normalized = dict(options)
-    for gui_key, plugin_key in _PROOFREAD_GUI_OPTION_ALIASES.items():
-        if gui_key not in normalized:
-            continue
-        value = normalized.pop(gui_key)
-        normalized.setdefault(plugin_key, bool(value))
-    return normalized
-
-
-def _route_scoped_options(
-    options: dict[str, Any],
-    *,
-    route_options: Sequence[str] | None,
-) -> dict[str, Any]:
-    if route_options is None:
-        return dict(options)
-    supported = frozenset(route_options)
-    return {key: value for key, value in options.items() if key in supported}
-
-
-_OUTPUT_DATE_SUBFOLDER_TOKENS: dict[str, str] = {
-    "%Y-%m-%d": "iso",
-    "%Y%m%d": "compact",
-    "%Y年%m月%d日": "chinese",
-}
-
-
-def _resolve_file_context(
-    file_contexts: dict[str, tuple[str, str]],
-    batch_list_vm: BatchListViewModel,
-    file_path: str,
-) -> tuple[str, str] | None:
-    """Resolve file format/category from file contexts or batch list VM."""
-    normalized = _normalize_path(file_path)
-    context = file_contexts.get(normalized)
-    if context is not None:
-        return context
-    entry = batch_list_vm.get_file_entry(file_path)
-    if entry is not None:
-        return entry.detected_format.lower(), entry.workflow_category.lower()
-    return None
-
-
-def _output_date_subfolder_token(date_folder_format: str) -> str:
-    """Map GUI output date formats to runtime output-policy tokens."""
-    return _OUTPUT_DATE_SUBFOLDER_TOKENS.get(date_folder_format, date_folder_format)
 
 
 def _detected_dpi_scale() -> float:
@@ -298,11 +134,6 @@ def _detected_dpi_scale() -> float:
     return 1.0
 
 
-def _normalize_path(file_path: str) -> str:
-    """Normalize a path for internal lookup across widgets/view-models."""
-    return str(Path(file_path)).replace("\\", "/")
-
-
 def _format_template_modified_label(modified_ns: object) -> str | None:
     """Format TemplateRegistry's nanosecond mtime for compact UI metadata."""
     if isinstance(modified_ns, bool) or not isinstance(modified_ns, int):
@@ -319,9 +150,9 @@ def _move_path_to_front(file_paths: Sequence[str], preferred_path: str | None) -
     ordered = list(file_paths)
     if not preferred_path:
         return ordered
-    preferred_key = _normalize_path(preferred_path)
+    preferred_key = normalize_path(preferred_path)
     for index, path in enumerate(ordered):
-        if _normalize_path(path) != preferred_key:
+        if normalize_path(path) != preferred_key:
             continue
         if index == 0:
             return ordered
@@ -339,78 +170,6 @@ def _read_pdf_total_pages(file_path: str) -> int | None:
     except Exception:
         return None
     return page_count if page_count > 0 else None
-
-
-def _check_frozen_request(request: ConversionRequest) -> None:
-    """Revalidate exact ingress bytes on the execution worker before conversion."""
-    from docwen_core.detection import inspect_file
-    from docwen_core.models import FILE_INSPECTION_METADATA_KEY
-
-    for ref in request.input_refs:
-        raw_inspection = ref.metadata.get(FILE_INSPECTION_METADATA_KEY)
-        try:
-            inspection = inspect_file(ref.path)
-        except FileNotFoundError as exc:
-            raise _ExecutionAdmissionError(
-                _t("main_window.file_admission_missing", "The input file no longer exists: {path}", path=ref.path)
-            ) from exc
-        except OSError as exc:
-            raise _ExecutionAdmissionError(
-                _t("main_window.file_admission_unreadable", "The input file cannot be read: {path}", path=ref.path)
-            ) from exc
-        except (TypeError, ValueError) as exc:
-            raise _ExecutionAdmissionError(
-                _t("main_window.file_admission_invalid", "File inspection data is invalid.")
-            ) from exc
-        if raw_inspection != inspection.to_dict():
-            raise _ExecutionAdmissionError(
-                _t(
-                    "main_window.file_admission_changed",
-                    "The file changed after it was added. Remove it from the list and add it again to re-check the file, then retry.",
-                )
-            )
-
-
-class _ExecutionThread(QThread):
-    """Run a single conversion request off the UI thread.
-
-    Uses direct QThread.run() override instead of moveToThread +
-    thread.started.connect to avoid signal-delivery deadlock in the
-    MainWindow context.
-    """
-
-    result_signal = Signal(object, dict)
-    error_signal = Signal(str, dict)
-
-    def __init__(
-        self,
-        *,
-        controller: ApplicationController,
-        request: ConversionRequest,
-        context: dict[str, Any],
-        aggregate_action_name: str = "",
-        batch_execution: bool = False,
-        parent: QObject | None = None,
-    ) -> None:
-        super().__init__(parent)
-        self._controller = controller
-        self._request = request
-        self._context = context
-        self._aggregate_action_name = aggregate_action_name
-        self._batch_execution = batch_execution
-
-    def run(self) -> None:
-        try:
-            _check_frozen_request(self._request)
-            if self._aggregate_action_name:
-                result = self._controller.execute_aggregate(self._request, self._aggregate_action_name)
-            elif self._batch_execution:
-                result = self._controller.execute_batch(self._request)
-            else:
-                result = self._controller.execute_single(self._request)
-            self.result_signal.emit(result, self._context)
-        except Exception as exc:
-            self.error_signal.emit(str(exc), self._context)
 
 
 class MainWindow(QWidget):
@@ -496,21 +255,19 @@ class MainWindow(QWidget):
         self._right_stack: QStackedWidget = _cast("QStackedWidget", None)
         self._center_column: QWidget = _cast("QWidget", None)
 
-        self._active_threads: dict[str, QThread] = {}
-        self._execution_cleanup_by_thread: dict[QThread, tuple[str, ApplicationController, object]] = {}
+        self._execution = ExecutionSupervisor(self._view_model, self)
+        self._execution.warning.connect(self._on_execution_warning)
         self._execution_close_pending = False
         self._execution_drain_timed_out = False
         self._execution_drain_deadline = 0.0
         self._execution_drain_timer: QTimer | None = None
         self._shutdown_finalized = False
         self._task_history = TaskHistory()
-        self._feedback_context: dict[str, Any] = {}
         self._current_mode = view_model.mode
         self._file_contexts: dict[str, tuple[str, str]] = {}
         self._always_on_top_enabled = False
         self._font_size_preset: str = "default"
         self._system_tray_icon: QSystemTrayIcon | None = None
-        self._start_time: float | None = None
         self._settings_dialog: Any | None = None
 
         self._setup_window_properties()
@@ -719,9 +476,41 @@ class MainWindow(QWidget):
 
         self._input_area_vm = InputAreaViewModel(main_vm=self._view_model, parent=self)
         self._batch_list_vm = BatchListViewModel(main_vm=self._view_model, parent=self)
+        self._admission = ExecutionAdmission(self._view_model, self._batch_list_vm)
+        self._requests = ExecutionRequestBuilder(
+            self._view_model,
+            self._batch_list_vm,
+            file_contexts=lambda: self._file_contexts,
+            selected_template=lambda: (
+                self._template_selector.get_selected_template_resource() if self._template_selector else None
+            ),
+        )
         self._conversion_panel_vm = ConversionPanelViewModel(main_vm=self._view_model, parent=self)
         self._action_area_vm = ActionAreaViewModel(main_vm=self._view_model, parent=self)
         self._info_area_vm = InfoAreaViewModel(parent=self)
+        self._results = ExecutionPresenter(
+            view_model=self._view_model,
+            batch_list_vm=self._batch_list_vm,
+            action_area_vm=self._action_area_vm,
+            info_area_vm=self._info_area_vm,
+            task_history=self._task_history,
+            parent=self,
+        )
+        self._workflow = ExecutionCoordinator(
+            view_model=self._view_model,
+            action_area_vm=self._action_area_vm,
+            info_area_vm=self._info_area_vm,
+            requests=self._requests,
+            supervisor=self._execution,
+            presenter=self._results,
+            history=self._task_history,
+            confirm_request=lambda request: self._confirm_request_admission(request),
+            parent=self,
+        )
+        self._execution.result_ready.connect(self._results.finished)
+        self._execution.failed.connect(self._results.failed)
+        self._results.open_output.connect(lambda path: self._open_path(path, open_parent=True))
+        self._results.completed.connect(lambda context: self._maybe_notify_task_completion(context))
         from .view_models.activity_records import ActivityRecordsModel
 
         self._activity_model = ActivityRecordsModel(self._task_history, self._info_area_vm, self)
@@ -855,7 +644,7 @@ class MainWindow(QWidget):
         self._conversion_panel_vm.conversion_requested.connect(self._handle_conversion_panel_conversion_requested)
         self._conversion_panel_vm.named_action_requested.connect(self._handle_named_action_requested)
         self._action_area_vm.conversion_requested.connect(self._handle_action_area_conversion_requested)
-        self._action_area_vm.cancel_requested.connect(self._cancel_active_task)
+        self._action_area_vm.cancel_requested.connect(self._workflow.cancel)
         self._action_area_vm.state_changed.connect(self._sync_session_mutation_controls)
         self._info_area_vm.history_navigation_requested.connect(self._handle_navigation_request)
         self._info_area_vm.location_requested.connect(self._open_location)
@@ -894,8 +683,8 @@ class MainWindow(QWidget):
         text = ""
         if paths:
             try:
-                policy = self._build_output_policy()
-            except _OutputPolicyConfigError:
+                policy = self._requests.output_policy()
+            except OutputPolicyConfigError:
                 text = _t("main_window.output_settings_unavailable")
             else:
                 if policy.output_dir:
@@ -911,7 +700,7 @@ class MainWindow(QWidget):
         vm = self._view_model
         vm.title_changed.connect(self.setWindowTitle)
         vm.status_message_changed.connect(self._on_status_message_changed)
-        vm.execution_progress_changed.connect(self._on_execution_progress)
+        vm.execution_progress_changed.connect(self._workflow.progress)
         vm.window_activation_requested.connect(self.bring_to_front)
         vm.files_changed.connect(self._sync_files_from_main_vm)
         vm.files_cleared.connect(self._on_files_cleared)
@@ -1320,7 +1109,7 @@ class MainWindow(QWidget):
         if (
             self._action_area_vm.mode == self._view_model.mode
             and self._action_area_vm.file_type == expected_mode
-            and _normalize_path(self._action_area_vm.file_path or "") == _normalize_path(file_path)
+            and normalize_path(self._action_area_vm.file_path or "") == normalize_path(file_path)
         ):
             return
         self._action_area_vm.set_mode(self._view_model.mode)
@@ -1408,35 +1197,6 @@ class MainWindow(QWidget):
             selected = self._template_selector.get_selected_template_resource() if self._template_selector else None
             self._settings_dialog.focus_template(target, selected[1] if selected else None)
 
-    def _merge_template_options_for_request(
-        self,
-        target_format: str,
-        options: dict[str, Any],
-        *,
-        source_format: str,
-        source_category: str,
-        action_name: str,
-    ) -> dict[str, Any]:
-        """Add selected template metadata for Markdown document/spreadsheet targets."""
-        merged = dict(options)
-        target = str(target_format or "").lower()
-        if action_name or "template_name" in merged:
-            return merged
-        from .view_models.interaction import FileCapability, resolve_capabilities
-
-        if FileCapability.TEMPLATE_SELECTION not in resolve_capabilities(source_category):
-            return merged
-        selector = self._template_selector
-        selected = selector.get_selected_template_resource() if selector is not None else None
-        if selected is None:
-            raise ValueError(_t("settings.templates.choose_template", "Choose an enabled template in the right panel"))
-        template_type, template_id = selected
-        if target in _DOCUMENT_TEMPLATE_TARGETS and template_type == "docx":
-            merged["template_name"] = template_id
-        if target in _SPREADSHEET_TEMPLATE_TARGETS and template_type == "xlsx":
-            merged["template_name"] = template_id
-        return merged
-
     def _install_shortcuts(self) -> None:
         # Each shortcut uses WindowShortcut context so it fires regardless
         # of which child widget has focus.  Handlers guard against
@@ -1520,7 +1280,7 @@ class MainWindow(QWidget):
     def _on_esc_shortcut(self) -> None:
         if self._has_editable_text_focus():
             return
-        self._cancel_active_task()
+        self._workflow.cancel()
 
     def _on_toggle_always_on_top_shortcut(self) -> None:
         if self._has_editable_text_focus():
@@ -1536,22 +1296,22 @@ class MainWindow(QWidget):
 
     def _sync_files_from_main_vm(self, file_refs: Sequence[FileRef]) -> None:
         self._file_contexts = {
-            _normalize_path(ref.path): (
+            normalize_path(ref.path): (
                 ref.format.lower(),
                 ref.category.lower(),
             )
             for ref in file_refs
             if ref.path
         }
-        refs_by_path = {_normalize_path(ref.path): ref for ref in file_refs if ref.path}
+        refs_by_path = {normalize_path(ref.path): ref for ref in file_refs if ref.path}
         desired_paths = set(refs_by_path)
-        current_paths = {_normalize_path(path) for path in self._batch_list_vm.get_files()}
+        current_paths = {normalize_path(path) for path in self._batch_list_vm.get_files()}
 
-        missing = [ref.path for ref in file_refs if _normalize_path(ref.path) not in current_paths]
+        missing = [ref.path for ref in file_refs if normalize_path(ref.path) not in current_paths]
         if missing:
 
             def resolve_existing_ref(path: str) -> dict[str, Any] | None:
-                ref = refs_by_path.get(_normalize_path(path))
+                ref = refs_by_path.get(normalize_path(path))
                 if ref is None:
                     return None
                 return {
@@ -1573,10 +1333,10 @@ class MainWindow(QWidget):
             if not self._input_area_vm.selection_message:
                 self._input_area_vm.sync_selection(file_refs)
             sel = self._view_model.selected_file
-            preferred_key = _normalize_path(getattr(sel, "path", "")) if sel is not None else ""
+            preferred_key = normalize_path(getattr(sel, "path", "")) if sel is not None else ""
             if preferred_key not in desired_paths:
                 current_batch_file = self._batch_list_vm.get_current_file()
-                preferred_key = _normalize_path(current_batch_file or "")
+                preferred_key = normalize_path(current_batch_file or "")
             preferred_ref = refs_by_path.get(preferred_key)
             if preferred_ref is not None:
                 self._view_model.set_selected_file(preferred_ref)
@@ -1589,7 +1349,7 @@ class MainWindow(QWidget):
         self._batch_list_vm.clear_files()
         self._action_area_vm.reset()
         self._info_area_vm.reset_session()
-        self._feedback_context.clear()
+        self._workflow.clear_context()
         self._task_history.clear()
 
     def _prepare_file_clear_panel_transition(self) -> None:
@@ -1622,9 +1382,9 @@ class MainWindow(QWidget):
         current_file = self._batch_list_vm.get_current_file()
         if not current_file:
             return False
-        current_key = _normalize_path(current_file)
+        current_key = normalize_path(current_file)
         for ref in self._view_model.files:
-            if _normalize_path(getattr(ref, "path", "")) != current_key:
+            if normalize_path(getattr(ref, "path", "")) != current_key:
                 continue
             self._view_model.set_selected_file(ref)
             with contextlib.suppress(Exception):
@@ -1698,47 +1458,15 @@ class MainWindow(QWidget):
     def _on_bridge_flush_error(self, message: str) -> None:
         self._info_area_vm.add_message(message, "warning")
 
-    def _on_execution_progress(self, payload: dict[str, Any]) -> None:
-        context = self._feedback_context
-        operation_id = str(payload.get("operation_id", ""))
-        if operation_id != context.get("request_id"):
-            return
-        paths = list(context.get("file_paths", []))
-        current_file = ""
-        if context.get("batch"):
-            task_id = str(payload.get("task_id", ""))
-            for index, path in enumerate(paths):
-                if task_id == f"{operation_id}-{index}":
-                    current_file = Path(path).name
-                    break
-        percent = payload.get("percent")
-        completed = int(payload.get("completed_count", 0))
-        if context.get("batch") and paths:
-            from docwen_core.events.task_events import TASK_PROGRESS
-
-            fraction = (
-                max(0.0, min(100.0, float(percent))) / 100
-                if isinstance(percent, (int, float)) and payload.get("event_type") == TASK_PROGRESS
-                else 0.0
-            )
-            percent = 100 * (completed + fraction) / len(paths)
-        self._info_area_vm.update_task_progress(
-            operation_id,
-            current_file=current_file,
-            message=str(payload.get("message", "")),
-            percent=float(percent) if isinstance(percent, (int, float)) else None,
-            completed_count=int(payload.get("completed_count", 0)) if not context.get("aggregate") else 0,
-        )
-
     # ── Selection and panel coordination ────────────────────────────
 
     def _on_selected_file_changed(self, file_path: str | None) -> None:
         if not file_path:
             self._view_model.clear_selected_file()
             return
-        normalized = _normalize_path(file_path)
+        normalized = normalize_path(file_path)
         for ref in self._view_model.files:
-            if _normalize_path(getattr(ref, "path", "")) == normalized:
+            if normalize_path(getattr(ref, "path", "")) == normalized:
                 self._view_model.set_selected_file(ref)
                 return
         self._view_model.clear_selected_file()
@@ -1789,14 +1517,14 @@ class MainWindow(QWidget):
         if self._view_model.mode == "batch":
             file_paths = self._batch_list_vm.get_files_for_category(self._batch_list_vm.current_category)
             if len(file_paths) > 1:
-                self._start_batch_execution(
+                self._workflow.batch(
                     file_paths=file_paths,
                     target_format=str(target_format).lower(),
                     action_name=action_name,
                     options=dict(options or {}),
                 )
                 return
-        self._start_execution(
+        self._workflow.single(
             file_path=file_path,
             target_format=str(target_format).lower(),
             action_name=action_name,
@@ -1823,7 +1551,7 @@ class MainWindow(QWidget):
                     "warning",
                 )
                 return
-            self._start_aggregate_execution(
+            self._workflow.aggregate(
                 file_paths=file_paths,
                 target_format="",
                 action_name=action_name,
@@ -1831,432 +1559,22 @@ class MainWindow(QWidget):
             )
             return
 
-        self._start_execution(
+        self._workflow.single(
             file_path=file_path,
             target_format="",
             action_name=action_name,
             options=dict(options or {}),
         )
 
-    def _resolve_execution_route(
-        self,
-        *,
-        file_paths: Sequence[str],
-        target_format: str,
-        action_name: str,
-    ) -> tuple[str, RuntimeRouteChoice] | None:
-        """Resolve one canonical route for every input before building a request."""
-
-        controller = self._view_model.controller
-        sources: list[RuntimeRouteSource] = []
-        for file_path in file_paths:
-            context = _resolve_file_context(self._file_contexts, self._batch_list_vm, file_path)
-            if context is None:
-                self._info_area_vm.add_message(
-                    _t("main_window.route_unavailable", "No compatible operation is available for this file."),
-                    "warning",
-                )
-                return None
-            detected_format, source_category = context
-            sources.append(RuntimeRouteSource(detected_format, source_category))
-        result = discover_runtime_route_choices(
-            controller,
-            sources=tuple(sources),
-            operation="action" if action_name else "conversion",
-            action_name=action_name,
-        )
-        if result.status == "failed":
-            self._info_area_vm.add_message(
-                _t(
-                    "main_window.route_catalog_failed",
-                    "Available operations could not be loaded; the request was not started.",
-                ),
-                "warning",
-            )
-            return None
-        normalized_target = str(target_format or "").strip().lower()
-        choice = result.get(normalized_target) if normalized_target else None
-        if choice is None and not normalized_target and len(result.choices) == 1:
-            choice = result.choices[0]
-        if choice is None:
-            self._info_area_vm.add_message(
-                _t("main_window.route_unavailable", "No compatible operation is available for this file."),
-                "warning",
-            )
-            return None
-        return choice.target, choice
-
-    def _start_execution(
-        self,
-        *,
-        file_path: str,
-        target_format: str,
-        action_name: str,
-        options: dict[str, Any],
-    ) -> None:
-        if self._execution_close_pending or self._shutdown_finalized:
-            return
-        controller = self._view_model.controller
-        if controller is None or not controller.has_runtime:
-            self._info_area_vm.add_message(
-                _t("main_window.runtime_unavailable", "Runtime is unavailable; conversion cannot start."),
-                "warning",
-            )
-            return
-        if self._active_threads:
-            self._info_area_vm.add_message(
-                _t(
-                    "main_window.task_already_running",
-                    "A task is already running. Cancel it before starting another one.",
-                ),
-                "warning",
-            )
-            return
-
-        resolved = self._resolve_execution_route(
-            file_paths=(file_path,),
-            target_format=target_format,
-            action_name=action_name,
-        )
-        if resolved is None:
-            return
-        target_format, route_choice = resolved
-
-        try:
-            request, context = self._build_request(
-                file_path=file_path,
-                target_format=target_format,
-                action_name=action_name,
-                options=options,
-                route_options=route_choice.options,
-            )
-        except _OutputPolicyConfigError:
-            self._report_output_policy_config_error()
-            return
-        except ValueError as exc:
-            self._info_area_vm.add_message(str(exc), "warning")
-            return
-        if not self._admit_execution_request(request, context):
-            return
-
-        def project_reserved_execution() -> None:
-            self._start_time = time.monotonic()
-            self._view_model.begin_execution_telemetry(request.request_id, (request.request_id,))
-            self._set_execution_file_status(
-                file_path,
-                "processing",
-                operation_id=request.request_id,
-            )
-            self._action_area_vm.show_cancel()
-            self._info_area_vm.add_message(
-                _t("info_area.history_started", name=Path(file_path).name),
-                "info",
-                show_location=False,
-                operation_id=request.request_id,
-            )
-
-        self._launch_execution_thread(
-            controller=controller,
-            request=request,
-            context=context,
-            project_reserved_execution=project_reserved_execution,
-        )
-
-    def _start_batch_execution(
-        self,
-        *,
-        file_paths: Sequence[str],
-        target_format: str,
-        action_name: str,
-        options: dict[str, Any],
-    ) -> None:
-        if self._execution_close_pending or self._shutdown_finalized:
-            return
-        controller = self._view_model.controller
-        if controller is None or not controller.has_runtime:
-            self._info_area_vm.add_message(
-                _t("main_window.runtime_unavailable", "Runtime is unavailable; conversion cannot start."),
-                "warning",
-            )
-            return
-        if self._active_threads:
-            self._info_area_vm.add_message(
-                _t(
-                    "main_window.task_already_running",
-                    "A task is already running. Cancel it before starting another one.",
-                ),
-                "warning",
-            )
-            return
-
-        resolved = self._resolve_execution_route(
-            file_paths=file_paths,
-            target_format=target_format,
-            action_name=action_name,
-        )
-        if resolved is None:
-            return
-        target_format, route_choice = resolved
-
-        try:
-            request, context = self._build_batch_request(
-                file_paths=file_paths,
-                target_format=target_format,
-                action_name=action_name,
-                options=options,
-                route_options=route_choice.options,
-            )
-        except _OutputPolicyConfigError:
-            self._report_output_policy_config_error()
-            return
-        except ValueError as exc:
-            self._info_area_vm.add_message(str(exc), "warning")
-            return
-        if not self._admit_execution_request(request, context):
-            return
-        task_id = request.request_id
-
-        def project_reserved_execution() -> None:
-            self._start_time = time.monotonic()
-            self._view_model.begin_execution_telemetry(
-                task_id,
-                tuple(f"{task_id}-{index}" for index, _path in enumerate(context.get("file_paths", []))),
-            )
-            for path in context.get("file_paths", []):
-                self._set_execution_file_status(path, "processing", operation_id=task_id)
-            self._action_area_vm.show_cancel()
-            self._info_area_vm.add_message(
-                _t("info_area.history_started", name=context.get("display_name", "Batch conversion")),
-                "info",
-                show_location=False,
-                operation_id=task_id,
-            )
-
-        self._launch_execution_thread(
-            controller=controller,
-            request=request,
-            context=context,
-            project_reserved_execution=project_reserved_execution,
-            batch_execution=True,
-        )
-
-    def _start_aggregate_execution(
-        self,
-        *,
-        file_paths: Sequence[str],
-        target_format: str,
-        action_name: str,
-        options: dict[str, Any],
-    ) -> None:
-        if self._execution_close_pending or self._shutdown_finalized:
-            return
-        controller = self._view_model.controller
-        if controller is None or not controller.has_runtime:
-            self._info_area_vm.add_message(
-                _t("main_window.runtime_unavailable", "Runtime is unavailable; conversion cannot start."),
-                "warning",
-            )
-            return
-        if self._active_threads:
-            self._info_area_vm.add_message(
-                _t(
-                    "main_window.task_already_running",
-                    "A task is already running. Cancel it before starting another one.",
-                ),
-                "warning",
-            )
-            return
-
-        resolved = self._resolve_execution_route(
-            file_paths=file_paths,
-            target_format=target_format,
-            action_name=action_name,
-        )
-        if resolved is None:
-            return
-        target_format, route_choice = resolved
-
-        try:
-            request, context = self._build_aggregate_request(
-                file_paths=file_paths,
-                target_format=target_format,
-                action_name=action_name,
-                options=options,
-                route_options=route_choice.options,
-            )
-        except _OutputPolicyConfigError:
-            self._report_output_policy_config_error()
-            return
-        if not self._admit_execution_request(request, context):
-            return
-        task_id = request.request_id
-
-        def project_reserved_execution() -> None:
-            self._start_time = time.monotonic()
-            self._view_model.begin_execution_telemetry(task_id, (task_id,))
-            for path in context.get("file_paths", []):
-                self._set_execution_file_status(path, "processing", operation_id=task_id)
-            self._action_area_vm.show_cancel()
-            self._info_area_vm.add_message(
-                _t("info_area.history_started", name=context.get("display_name", action_name)),
-                "info",
-                show_location=False,
-                operation_id=task_id,
-            )
-
-        self._launch_execution_thread(
-            controller=controller,
-            request=request,
-            context=context,
-            project_reserved_execution=project_reserved_execution,
-            aggregate_action_name=action_name,
-        )
-
-    def _launch_execution_thread(
-        self,
-        *,
-        controller: ApplicationController,
-        request: ConversionRequest,
-        context: dict[str, Any],
-        project_reserved_execution: Callable[[], None],
-        aggregate_action_name: str = "",
-        batch_execution: bool = False,
-    ) -> bool:
-        """Reserve, start and release one execution, or roll its projection back."""
-        task_id = request.request_id
-        reservation_missing = object()
-        cancellation_reservation: object = reservation_missing
-        thread: _ExecutionThread | None = None
-        try:
-            cancellation_reservation = controller.prepare_execution_cancellation(
-                request,
-                batch=batch_execution,
-            )
-            self._task_history.remember(context)
-            self._view_model.reserve_execution_inputs(
-                task_id, tuple(context.get("file_paths") or [context.get("file_path", "")])
-            )
-            project_reserved_execution()
-            self._feedback_context = dict(context)
-            self._info_area_vm.begin_task(
-                operation_id=task_id,
-                current_file=context.get("display_name", Path(context.get("file_path", "")).name),
-                total_count=int(context.get("total_count", 1)),
-            )
-            thread = _ExecutionThread(
-                controller=controller,
-                request=request,
-                context=context,
-                aggregate_action_name=aggregate_action_name,
-                batch_execution=batch_execution,
-                parent=self,
-            )
-            thread.result_signal.connect(self._on_execution_finished)
-            thread.error_signal.connect(self._on_execution_failed)
-            thread.finished.connect(self._on_execution_thread_finished)
-            self._active_threads[task_id] = thread
-            self._execution_cleanup_by_thread[thread] = (
-                task_id,
-                controller,
-                cancellation_reservation,
-            )
-            thread.start()
-        except Exception as exc:
-            if thread is not None and thread.isRunning():
-                # A platform binding may report a start error after the native
-                # worker has already entered ``run``.  Retain every owner and
-                # reservation until ``finished`` rather than orphaning it.
-                with contextlib.suppress(Exception):
-                    controller.cancel(task_id)
-                self._info_area_vm.add_message(
-                    _t(
-                        "main_window.thread_start_uncertain",
-                        "The task worker started but startup reporting failed; cancellation was requested.",
-                    ),
-                    "warning",
-                )
-                return True
-            self._active_threads.pop(task_id, None)
-            self._view_model.release_execution_inputs(task_id)
-            if thread is not None:
-                self._execution_cleanup_by_thread.pop(thread, None)
-            if cancellation_reservation is not reservation_missing:
-                with contextlib.suppress(Exception):
-                    controller.release_execution_cancellation(task_id, cancellation_reservation)
-            if thread is not None and not thread.isRunning():
-                thread.deleteLater()
-            self._on_execution_failed(str(exc), context)
-            return False
-        return True
-
-    @Slot()
-    def _on_execution_thread_finished(self) -> None:
-        """Release one worker on the GUI thread after its result signal was queued."""
-        thread = self.sender()
-        if not isinstance(thread, QThread):
-            return
-        cleanup = self._execution_cleanup_by_thread.pop(thread, None)
-        if cleanup is None:
-            thread.deleteLater()
-            return
-        task_id, controller, cancellation_reservation = cleanup
-        try:
-            controller.release_execution_cancellation(task_id, cancellation_reservation)
-        except Exception as exc:
-            self._info_area_vm.add_message(str(exc), "warning")
-        finally:
-            self._active_threads.pop(task_id, None)
-            self._view_model.release_execution_inputs(task_id)
-            thread.deleteLater()
-
-    def _admit_execution_request(self, request: ConversionRequest, context: dict[str, Any]) -> bool:
-        """Project rejected attempts through the same result and history as worker failures."""
-        try:
-            return self._confirm_request_admission(request)
-        except _ExecutionAdmissionError as exc:
-            self._start_time = time.monotonic()
-            self._feedback_context = dict(context)
-            self._info_area_vm.begin_task(
-                operation_id=request.request_id,
-                current_file=context.get("display_name", Path(context.get("file_path", "")).name),
-                total_count=int(context.get("total_count", 1)),
-            )
-            self._on_execution_failed(str(exc), context)
-            return False
+    @Slot(str)
+    def _on_execution_warning(self, message: str) -> None:
+        self._info_area_vm.add_message(message, "warning")
 
     def _confirm_request_admission(self, request: ConversionRequest) -> bool:
         """Confirm frozen ingress facts without reading file contents on the UI thread."""
-        from docwen_core.models import (
-            FILE_ADMISSION_ACCEPTANCE_METADATA_KEY,
-            FILE_INSPECTION_METADATA_KEY,
-            AdmissionDecision,
-            FileInspection,
-            admission_is_satisfied,
-            make_admission_acceptance,
-        )
         from docwen_gui.dialogs.feedback import confirm
 
-        pending: list[tuple[FileRef, FileInspection]] = []
-        for ref in request.input_refs:
-            raw_inspection = ref.metadata.get(FILE_INSPECTION_METADATA_KEY)
-            if not isinstance(raw_inspection, dict):
-                raise _ExecutionAdmissionError(
-                    _t("main_window.file_admission_invalid", "File inspection data is invalid.")
-                )
-            try:
-                inspection = FileInspection.from_dict(raw_inspection)
-            except (TypeError, ValueError) as exc:
-                raise _ExecutionAdmissionError(
-                    _t("main_window.file_admission_invalid", "File inspection data is invalid.")
-                ) from exc
-            if inspection.decision is AdmissionDecision.BLOCK:
-                raise _ExecutionAdmissionError(
-                    render_file_inspection_message(inspection, prefer_reason=True)
-                    or _t("main_window.file_admission_blocked", "The selected file cannot be processed.")
-                )
-            if not admission_is_satisfied(inspection, ref.metadata):
-                pending.append((ref, inspection))
-
+        pending = self._admission.pending(request)
         if not pending:
             return True
 
@@ -2281,735 +1599,10 @@ class MainWindow(QWidget):
             )
             return False
 
-        for ref, inspection in pending:
-            acceptance = make_admission_acceptance(inspection)
-            ref.metadata[FILE_ADMISSION_ACCEPTANCE_METADATA_KEY] = acceptance
-            normalized = _normalize_path(ref.path)
-            for source_ref in self._view_model.files:
-                if _normalize_path(getattr(source_ref, "path", "")) == normalized:
-                    source_ref.metadata[FILE_ADMISSION_ACCEPTANCE_METADATA_KEY] = dict(acceptance)
-            entry = self._batch_list_vm.get_file_entry(ref.path)
-            if entry is not None:
-                entry.metadata[FILE_ADMISSION_ACCEPTANCE_METADATA_KEY] = dict(acceptance)
+        self._admission.accept(pending)
         return True
 
-    def _request_file_ref(
-        self,
-        source_path: str,
-    ) -> FileRef:
-        """Build a runtime ref without discarding the ingress inspection.
-
-        Routing may normalize the runtime format/category (notably TXT to the
-        Markdown workflow), but warning and inspection facts must remain
-        attached so application/runtime admission can enforce the same
-        decision without opening and guessing the file again.
-        """
-        from docwen_core.models.file_ref import FileRef
-
-        normalized = _normalize_path(source_path)
-        source_ref = next(
-            (ref for ref in self._view_model.files if _normalize_path(getattr(ref, "path", "")) == normalized),
-            None,
-        )
-        if source_ref is not None:
-            return FileRef(
-                path=source_path,
-                format=source_ref.format,
-                category=source_ref.category,
-                encoding=source_ref.encoding,
-                warning_message=source_ref.warning_message,
-                size_bytes=source_ref.size_bytes,
-                metadata=dict(source_ref.metadata),
-            )
-
-        entry = self._batch_list_vm.get_file_entry(source_path)
-        if entry is not None:
-            return FileRef(
-                path=source_path,
-                format=entry.detected_format,
-                category=entry.workflow_category,
-                warning_message=entry.warning_message or "",
-                size_bytes=entry.size_bytes,
-                metadata=dict(entry.metadata),
-            )
-
-        # Programmatic callers that bypass the visual list still cross the
-        # same Core admission boundary here; no suffix-derived FileRef is ever
-        # manufactured.
-        from docwen_core.detection import FileAdmissionError, inspect_file
-        from docwen_core.detection.ooxml_signature import OOXML_SIGNATURE_INFO_METADATA_KEY
-        from docwen_core.models import FILE_INSPECTION_METADATA_KEY
-
-        inspection = inspect_file(source_path)
-        if not inspection.may_execute:
-            raise FileAdmissionError(inspection)
-        return FileRef(
-            path=inspection.file_path,
-            format=inspection.detected_format,
-            category=inspection.workflow_category,
-            warning_message=render_file_inspection_message(inspection),
-            size_bytes=inspection.size_bytes,
-            metadata={
-                FILE_INSPECTION_METADATA_KEY: inspection.to_dict(),
-                OOXML_SIGNATURE_INFO_METADATA_KEY: dict(inspection.ooxml_signature),
-            },
-        )
-
-    def _build_request(
-        self,
-        *,
-        file_path: str,
-        target_format: str,
-        action_name: str,
-        options: dict[str, Any],
-        route_options: Sequence[str] | None = None,
-    ) -> tuple[ConversionRequest, dict[str, Any]]:
-        from docwen_core.models.request import ConversionRequest
-
-        fmt, category = _resolve_file_context(self._file_contexts, self._batch_list_vm, file_path) or (
-            "unknown",
-            "other",
-        )
-        request_options = self._merge_template_options_for_request(
-            target_format,
-            options,
-            source_format=fmt,
-            source_category=category,
-            action_name=action_name,
-        )
-        request_options = _normalize_proofread_action_options(request_options, action_name=action_name)
-        request_options = _to_markdown_locale_options(
-            request_options,
-            target_format=target_format,
-            action_name=action_name,
-            route_options=route_options,
-        )
-        request_options = _route_scoped_options(
-            request_options,
-            route_options=route_options,
-        )
-        source_path = str(Path(file_path))
-
-        output_policy = self._build_output_policy()
-        request_id = str(uuid.uuid4())
-        request = ConversionRequest(
-            request_id=request_id,
-            input_refs=[self._request_file_ref(source_path)],
-            target_format=target_format,
-            action_name=action_name,
-            options=request_options,
-            output_policy=output_policy,
-        )
-        context = {
-            "request_id": request_id,
-            "file_path": _normalize_path(source_path),
-            "display_name": Path(source_path).name,
-            "target_format": target_format,
-            "action_name": action_name,
-            "options": _redacted_request_options(request_options),
-            "open_after_done": output_policy.open_after_done,
-        }
-        return request, context
-
-    def _build_batch_request(
-        self,
-        *,
-        file_paths: Sequence[str],
-        target_format: str,
-        action_name: str,
-        options: dict[str, Any],
-        route_options: Sequence[str] | None = None,
-    ) -> tuple[ConversionRequest, dict[str, Any]]:
-        from docwen_core.models.request import ConversionRequest
-
-        input_refs: list[FileRef] = []
-        normalized_paths: list[str] = []
-        first_source_format = "unknown"
-        first_source_category = "other"
-        for index, file_path in enumerate(file_paths):
-            fmt, category = _resolve_file_context(self._file_contexts, self._batch_list_vm, file_path) or (
-                "unknown",
-                "other",
-            )
-            if index == 0:
-                first_source_format = fmt
-                first_source_category = category
-            source_path = str(Path(file_path))
-            normalized_paths.append(_normalize_path(source_path))
-            input_refs.append(self._request_file_ref(source_path))
-
-        request_options = self._merge_template_options_for_request(
-            target_format,
-            options,
-            source_format=first_source_format,
-            source_category=first_source_category,
-            action_name=action_name,
-        )
-        request_options = _normalize_proofread_action_options(request_options, action_name=action_name)
-        request_options = _to_markdown_locale_options(
-            request_options,
-            target_format=target_format,
-            action_name=action_name,
-            route_options=route_options,
-        )
-        request_options = _route_scoped_options(
-            request_options,
-            route_options=route_options,
-        )
-        output_policy = self._build_output_policy()
-        request_id = str(uuid.uuid4())
-        request = ConversionRequest(
-            request_id=request_id,
-            input_refs=input_refs,
-            target_format=target_format,
-            action_name=action_name,
-            options=request_options,
-            output_policy=output_policy,
-        )
-        display_name = _t("info_area.batch_name", "Batch processing ({count} files)", count=len(input_refs))
-        context = {
-            "request_id": request_id,
-            "file_path": normalized_paths[0] if normalized_paths else "",
-            "file_paths": normalized_paths,
-            "display_name": display_name,
-            "target_format": target_format,
-            "action_name": action_name,
-            "options": _redacted_request_options(request_options),
-            "total_count": len(input_refs),
-            "batch": True,
-            "open_after_done": output_policy.open_after_done,
-        }
-        return request, context
-
-    def _build_output_policy(self) -> OutputPolicy:
-        from docwen_core.models.request import OutputPolicy
-
-        controller = self._view_model.controller
-        cfg_port = getattr(controller, "config_port", None) if controller is not None else None
-        if cfg_port is None:
-            return OutputPolicy()
-
-        try:
-            mode = str(cfg_port.get("output.directory.mode", "source") or "source")
-            custom_path = str(cfg_port.get("output.directory.custom_path", "") or "").strip()
-            create_date_subfolder = bool(cfg_port.get("output.directory.create_date_subfolder", False))
-            date_folder_format = str(cfg_port.get("output.directory.date_folder_format", "%Y-%m-%d") or "%Y-%m-%d")
-            auto_open_folder = bool(cfg_port.get("output.behavior.auto_open_folder", False))
-        except Exception as exc:
-            logger.exception("Unable to read persisted output settings")
-            raise _OutputPolicyConfigError("Persisted output settings are unavailable") from exc
-
-        try:
-            output_dir = (
-                str(Path(custom_path).expanduser().resolve(strict=False)) if mode == "custom" and custom_path else None
-            )
-        except (OSError, RuntimeError, ValueError) as exc:
-            logger.exception("Unable to resolve persisted custom output path")
-            raise _OutputPolicyConfigError("Persisted custom output path is invalid") from exc
-        date_subfolder = _output_date_subfolder_token(date_folder_format) if create_date_subfolder else ""
-        return OutputPolicy(
-            output_dir=output_dir,
-            date_subfolder=date_subfolder,
-            overwrite_mode="rename",
-            open_after_done=auto_open_folder,
-        )
-
-    def _report_output_policy_config_error(self) -> None:
-        self._info_area_vm.add_message(
-            _t(
-                "main_window.output_settings_unavailable",
-                "Output settings could not be loaded; the request was not started.",
-            ),
-            "error",
-        )
-
-    def _build_aggregate_request(
-        self,
-        *,
-        file_paths: Sequence[str],
-        target_format: str,
-        action_name: str,
-        options: dict[str, Any],
-        route_options: Sequence[str] | None = None,
-    ) -> tuple[ConversionRequest, dict[str, Any]]:
-        from docwen_core.models.request import ConversionRequest
-
-        input_refs: list[FileRef] = []
-        normalized_paths: list[str] = []
-        for file_path in file_paths:
-            source_path = str(Path(file_path))
-            normalized_paths.append(_normalize_path(source_path))
-            input_refs.append(self._request_file_ref(source_path))
-
-        output_policy = self._build_output_policy()
-        request_id = str(uuid.uuid4())
-        request = ConversionRequest(
-            request_id=request_id,
-            input_refs=input_refs,
-            target_format=target_format,
-            action_name=action_name,
-            options=_route_scoped_options(options, route_options=route_options),
-            output_policy=output_policy,
-        )
-        display_name = _t("info_area.aggregate_name", "Merge ({count} files)", count=len(input_refs))
-        context = {
-            "request_id": request_id,
-            "file_path": normalized_paths[0] if normalized_paths else "",
-            "file_paths": normalized_paths,
-            "display_name": display_name,
-            "target_format": target_format,
-            "action_name": action_name,
-            "options": _redacted_request_options(_route_scoped_options(options, route_options=route_options)),
-            "total_count": len(input_refs),
-            "aggregate": True,
-            "open_after_done": output_policy.open_after_done,
-        }
-        return request, context
-
-    @Slot(object, dict)
-    def _on_execution_finished(self, result: object, context: dict[str, Any]) -> None:
-        from docwen_core.models.result import ConversionResult
-
-        self._task_history.remember(context)
-        task_id = context.get("request_id", "")
-        file_path = context.get("file_path", "")
-        file_paths = list(context.get("file_paths", []) or ([file_path] if file_path else []))
-        total_count = int(context.get("total_count", len(file_paths) or 1))
-        self._action_area_vm.hide_cancel()
-
-        if context.get("batch"):
-            if not isinstance(result, list):
-                self._on_execution_failed("Invalid batch conversion result", context)
-                return
-            self._on_batch_execution_finished(result, context)
-            return
-
-        if not isinstance(result, ConversionResult):
-            self._on_execution_failed("Invalid conversion result", context)
-            return
-
-        if result.success:
-            output_path = self._pick_output_path(result)
-            result_paths = result_output_paths(result)
-            warning_messages = _result_warning_messages(result)
-            completion_tone = "warning" if warning_messages else "success"
-            for path in file_paths:
-                self._set_execution_file_status(
-                    path,
-                    "completed",
-                    output_path=output_path,
-                    output_paths=result_paths,
-                    operation_id=task_id,
-                    error_message="",
-                    warnings=tuple(warning_messages),
-                )
-            self._info_area_vm.add_message(
-                _t("info_area.history_completed", name=context.get("display_name", Path(file_path).name)),
-                completion_tone,
-                show_location=bool(output_path),
-                file_path=output_path or file_path,
-                navigate_file_path=output_path or "",
-                operation_id=task_id,
-            )
-            for warning_message in warning_messages:
-                self._info_area_vm.add_message(
-                    warning_message,
-                    "warning",
-                    show_location=bool(output_path),
-                    file_path=output_path or file_path,
-                    navigate_file_path=output_path or "",
-                    operation_id=task_id,
-                )
-            guide_actions = self._info_area_vm.compute_guide_actions(
-                "success",
-            )
-            self._info_area_vm.set_task_summary(
-                operation_id=task_id,
-                current_file=context.get("display_name", Path(file_path).name),
-                current_file_path=file_path,
-                completed_count=total_count,
-                total_count=total_count,
-                failed_count=0,
-                warning_count=len(warning_messages),
-                state="success",
-                tone=completion_tone,
-                navigate_file_path=output_path or "",
-                navigation_kind="output",
-                output_path=output_path,
-                guide_actions=guide_actions,
-                output_paths=result_paths,
-                batch=bool(context.get("aggregate")),
-            )
-            self._publish_execution_summary("completed")
-            if context.get("open_after_done") and output_path:
-                self._open_path(output_path, open_parent=True)
-            self._maybe_notify_task_completion(context)
-        else:
-            self._handle_unsuccessful_result(result, context)
-            result_error = result.error
-            cancelled = bool(result_error is not None and result_error.error_type == "cancelled")
-            self._publish_execution_summary(
-                "cancelled" if cancelled else "failed",
-                message=(
-                    _t("main_window.task_cancelled_status") if cancelled else _localized_failure_message(result_error)
-                ),
-            )
-            self._maybe_notify_task_completion(context)
-
-    @Slot(str, dict)
-    def _on_execution_failed(self, error_message: str, context: dict[str, Any]) -> None:
-        self._task_history.remember(context)
-        task_id = context.get("request_id", "")
-        file_path = context.get("file_path", "")
-        file_paths = list(context.get("file_paths", []) or ([file_path] if file_path else []))
-        total_count = int(context.get("total_count", len(file_paths) or 1))
-        self._action_area_vm.hide_cancel()
-        message = error_message or "Conversion failed"
-        for path in file_paths:
-            self._set_execution_file_status(
-                path,
-                "failed",
-                error_message=message,
-                operation_id=task_id,
-                output_path="",
-            )
-        self._info_area_vm.add_message(
-            _localized_failure_message(message),
-            "danger",
-            show_location=False,
-            operation_id=task_id,
-        )
-        guide_actions = self._info_area_vm.compute_guide_actions(
-            "failed",
-            failed_details_path=file_path,
-            retry_available=True,
-        )
-        self._info_area_vm.set_task_summary(
-            operation_id=task_id,
-            current_file=context.get("display_name", Path(file_path).name),
-            current_file_path=file_path,
-            completed_count=0,
-            total_count=total_count,
-            failed_count=total_count,
-            state="failed",
-            tone="danger",
-            navigate_file_path=file_path,
-            navigation_kind="failed",
-            guide_actions=guide_actions,
-        )
-        self._publish_execution_summary("failed", message=_localized_failure_message(message))
-        self._maybe_notify_task_completion(context)
-
-    def _handle_unsuccessful_result(self, result: ConversionResult, context: dict[str, Any]) -> None:
-        error = result.error
-        message = error.message if error is not None else "Conversion failed"
-        cancelled = bool(error is not None and error.error_type == "cancelled")
-        state = "cancelled" if cancelled else "failed"
-        tone = "warning" if cancelled else "danger"
-        task_id = context.get("request_id", "")
-        file_path = context.get("file_path", "")
-        file_paths = list(context.get("file_paths", []) or ([file_path] if file_path else []))
-        total_count = int(context.get("total_count", len(file_paths) or 1))
-        retained_output_path = "" if cancelled else self._pick_existing_output_path(result)
-        retained_paths = () if cancelled else result_output_paths(result, existing_only=True)
-
-        entry_status = "cancelled" if cancelled else "failed"
-        for path in file_paths:
-            self._set_execution_file_status(
-                path,
-                entry_status,
-                output_path=retained_output_path,
-                output_paths=retained_paths,
-                error_message=message,
-                operation_id=task_id,
-            )
-        self._info_area_vm.add_message(
-            _t("main_window.task_cancelled_status") if cancelled else _localized_failure_message(error),
-            tone,
-            show_location=bool(retained_output_path),
-            file_path=retained_output_path,
-            navigate_file_path=retained_output_path,
-            operation_id=task_id,
-        )
-        guide_actions = self._info_area_vm.compute_guide_actions(
-            state,
-            failed_details_path="" if cancelled else file_path,
-            retry_available=not cancelled,
-        )
-        self._info_area_vm.set_task_summary(
-            operation_id=task_id,
-            current_file=context.get("display_name", Path(file_path).name),
-            current_file_path=file_path,
-            completed_count=0,
-            total_count=total_count,
-            failed_count=0 if cancelled else total_count,
-            output_path=retained_output_path,
-            cancelled_count=total_count if cancelled else 0,
-            output_paths=retained_paths,
-            batch=bool(context.get("aggregate")),
-            state=state,
-            tone=tone,
-            navigate_file_path="" if cancelled else file_path,
-            navigation_kind="" if cancelled else "failed",
-            guide_actions=guide_actions,
-        )
-
-    def _on_batch_execution_finished(self, results: list[object], context: dict[str, Any]) -> None:
-        from docwen_core.models.result import ConversionResult
-
-        self._task_history.remember(context)
-
-        task_id = context.get("request_id", "")
-        file_paths = list(context.get("file_paths", []))
-        total_count = int(context.get("total_count", len(file_paths) or len(results)))
-        success_count = 0
-        failed_count = 0
-        skipped_count = 0
-        cancelled_count = 0
-        output_paths: list[str] = []
-        retained_failure_paths: list[str] = []
-        warning_rows: list[tuple[str, str, str]] = []
-        first_failed_path = ""
-        first_error_message = ""
-        first_error_summary_source: object | None = None
-        first_error_output = ""
-        first_retained_failure: tuple[str, str, str] | None = None
-
-        for index, file_path in enumerate(file_paths):
-            raw_result = results[index] if index < len(results) else None
-            if not isinstance(raw_result, ConversionResult):
-                failed_count += 1
-                message = "Invalid batch conversion result"
-                if not first_failed_path:
-                    first_failed_path = file_path
-                    first_error_message = message
-                    first_error_summary_source = "INVALID-BATCH-RESULT"
-                self._set_execution_file_status(
-                    file_path,
-                    "failed",
-                    output_path="",
-                    error_message=message,
-                    operation_id=task_id,
-                )
-                continue
-
-            if raw_result.success:
-                success_count += 1
-                output_path = self._pick_output_path(raw_result)
-                result_paths = result_output_paths(raw_result)
-                if output_path:
-                    output_paths.append(output_path)
-                warning_messages = _result_warning_messages(raw_result)
-                for warning_message in warning_messages:
-                    warning_rows.append((file_path, output_path, warning_message))
-                self._set_execution_file_status(
-                    file_path,
-                    "completed",
-                    output_path=output_path,
-                    output_paths=result_paths,
-                    error_message="",
-                    operation_id=task_id,
-                    warnings=tuple(warning_messages),
-                )
-                continue
-
-            error = raw_result.error
-            error_type = getattr(error, "error_type", "") if error is not None else ""
-            message = error.message if error is not None else "Conversion failed"
-            if error_type == "cancelled":
-                cancelled_count += 1
-                self._set_execution_file_status(
-                    file_path,
-                    "cancelled",
-                    output_path="",
-                    error_message=message,
-                    operation_id=task_id,
-                )
-            elif error_type == "skipped":
-                skipped_count += 1
-                self._set_execution_file_status(
-                    file_path,
-                    "skipped",
-                    output_path="",
-                    skip_reason=message,
-                    error_message="",
-                    operation_id=task_id,
-                )
-            else:
-                failed_count += 1
-                retained_output_path = self._pick_existing_output_path(raw_result)
-                if retained_output_path:
-                    retained_failure_paths.append(retained_output_path)
-                self._set_execution_file_status(
-                    file_path,
-                    "failed",
-                    output_path=retained_output_path,
-                    output_paths=result_output_paths(raw_result, existing_only=True),
-                    error_message=message,
-                    operation_id=task_id,
-                )
-                if retained_output_path and first_retained_failure is None:
-                    first_retained_failure = (file_path, retained_output_path, message)
-                if not first_failed_path:
-                    first_failed_path = file_path
-                    first_error_message = message
-                    first_error_summary_source = error or message
-                    first_error_output = retained_output_path
-
-        completed_count = success_count + failed_count
-        if cancelled_count and not failed_count:
-            state = "cancelled"
-            tone = "warning"
-        elif failed_count:
-            state = "partial" if success_count else "failed"
-            tone = "warning" if success_count else "danger"
-        elif skipped_count:
-            state = "success" if success_count else "skipped"
-            tone = "warning"
-        else:
-            state = "success"
-            tone = "warning" if warning_rows else "success"
-
-        successful_output_path = output_paths[0] if output_paths else ""
-        retained_failure_output_path = retained_failure_paths[0] if retained_failure_paths else ""
-        guide_output_path = successful_output_path or retained_failure_output_path
-        navigate_path = output_paths[0] if state == "success" and output_paths else first_failed_path
-        navigation_kind = "output" if state == "success" else ("failed" if first_failed_path else "")
-        guide_actions = self._info_area_vm.compute_guide_actions(
-            state,
-            failed_details_path=first_failed_path,
-            retry_available=bool(first_failed_path),
-        )
-        self._info_area_vm.add_message(
-            _t(
-                "components.info_area.batch_completed",
-                "Batch finished: {success} succeeded, {failed} failed, {skipped} skipped, {cancelled} cancelled",
-                success=success_count,
-                failed=failed_count,
-                skipped=skipped_count,
-                cancelled=cancelled_count,
-            ),
-            tone,
-            show_location=bool(guide_output_path),
-            file_path=guide_output_path,
-            navigate_file_path=guide_output_path,
-            operation_id=task_id,
-        )
-        for warning_file, warning_output, warning_message in warning_rows:
-            self._info_area_vm.add_message(
-                f"{Path(warning_file).name}: {warning_message}",
-                "warning",
-                show_location=bool(warning_output),
-                file_path=warning_output or warning_file,
-                navigate_file_path=warning_output or "",
-                operation_id=task_id,
-            )
-        if first_error_message:
-            self._info_area_vm.add_message(
-                _localized_failure_message(first_error_summary_source or first_error_message),
-                "danger",
-                show_location=bool(first_error_output),
-                file_path=first_error_output,
-                navigate_file_path=first_error_output,
-                operation_id=task_id,
-            )
-        if first_retained_failure is not None and first_retained_failure[0] != first_failed_path:
-            _, retained_output, _retained_message = first_retained_failure
-            self._info_area_vm.add_message(
-                _localized_failure_message(),
-                "danger",
-                show_location=True,
-                file_path=retained_output,
-                navigate_file_path=retained_output,
-                operation_id=task_id,
-            )
-        self._info_area_vm.set_task_summary(
-            operation_id=task_id,
-            current_file=context.get("display_name", "Batch conversion"),
-            current_file_path=context.get("file_path", ""),
-            completed_count=completed_count,
-            total_count=total_count,
-            failed_count=failed_count,
-            skipped_count=skipped_count,
-            cancelled_count=cancelled_count,
-            warning_count=len(warning_rows),
-            state=state,
-            tone=tone,
-            navigate_file_path=navigate_path,
-            navigation_kind=navigation_kind,
-            output_path=guide_output_path,
-            guide_actions=guide_actions,
-            batch=True,
-        )
-        terminal_message = (
-            _localized_failure_message(first_error_summary_source or first_error_message)
-            if state in {"failed", "partial"}
-            else ""
-        )
-        self._publish_execution_summary(
-            "completed" if state in {"success", "skipped"} else state, message=terminal_message
-        )
-        if context.get("open_after_done") and successful_output_path:
-            self._open_path(successful_output_path, open_parent=True)
-        self._maybe_notify_task_completion(context)
-
-    @staticmethod
-    def _pick_output_path(result: ConversionResult) -> str:
-        paths = result_output_paths(result)
-        return paths[0] if paths else ""
-
-    @staticmethod
-    def _pick_existing_output_path(result: ConversionResult) -> str:
-        """Return a real retained artifact path suitable for failure navigation."""
-        paths = result_output_paths(result, existing_only=True)
-        return paths[0] if paths else ""
-
-    def _cancel_active_task(self) -> None:
-        controller = self._view_model.controller
-        if controller is None or not controller.has_runtime:
-            return
-        active_parent_ids = list(self._active_threads)
-        task_id = active_parent_ids[0] if active_parent_ids else self._view_model.current_task_id
-        if not task_id:
-            return
-        try:
-            controller.cancel(task_id)
-            self._info_area_vm.mark_cancelling(task_id)
-        except Exception as exc:
-            self._info_area_vm.add_message(str(exc), "warning")
-
-    def _publish_execution_summary(self, status: str, *, message: str = "") -> None:
-        """Expose the already-committed InfoArea summary to GUI observers."""
-        summary = self._info_area_vm.task_summary
-        self._view_model.publish_execution_summary(
-            status,
-            {
-                "task_id": summary.operation_id,
-                "state": summary.state,
-                "completed_count": summary.completed_count,
-                "total_count": summary.total_count,
-                "failed_count": summary.failed_count,
-                "skipped_count": summary.skipped_count,
-                "cancelled_count": summary.cancelled_count,
-                "message": message,
-            },
-        )
-
     # ── Batch-list and info-area actions ────────────────────────────
-
-    def _set_execution_file_status(self, path: str, status: str, **values: Any) -> None:
-        """Record task truth before projecting it into the editable list."""
-        self._task_history.record(
-            str(values.get("operation_id", "")),
-            _normalize_path(path),
-            status,
-            str(values.get("error_message") or ""),
-            str(values.get("output_path") or ""),
-            warnings=tuple(values.pop("warnings", ())),
-            skip_reason=str(values.get("skip_reason") or ""),
-            output_paths=tuple(values.get("output_paths") or ()),
-        )
-        self._batch_list_vm.set_file_status(path, status, **values)
 
     def _sync_activity_summary(self) -> None:
         self._info_area_vm.set_activity_counts(self._activity_model.rowCount(), self._activity_model.failed_count)
@@ -3024,7 +1617,7 @@ class MainWindow(QWidget):
         dialog.show_records(
             failures_only=self._activity_model.failed_count > 0 and not operation_id,
             operation_id=operation_id,
-            source_path=_normalize_path(source_path) if source_path else "",
+            source_path=normalize_path(source_path) if source_path else "",
         )
         return dialog
 
@@ -3037,19 +1630,12 @@ class MainWindow(QWidget):
         if action_key == "open_source_location":
             self._open_path(file_path, open_parent=True)
             return
-        if action_key in {"show_error_details", "show_skip_details", "show_output_details"}:
+        if action_key in {"show_error_details", "show_skip_details", "show_output_details", "show_diagnostics"}:
             entry = self._batch_list_vm.get_file_entry(file_path)
             if entry is not None:
-                self._show_activity_records(operation_id=entry.operation_id or "", source_path=file_path)
+                dialog = self._show_activity_records(operation_id=entry.operation_id or "", source_path=file_path)
+                dialog.diagnostic_view.setCurrentIndex(1 if action_key == "show_diagnostics" else 0)
             return
-        if action_key == "copy_error_details":
-            copied = self._batch_list.copy_error_details(file_path)
-            self._info_area_vm.add_message(
-                _t("main_window.error_copied", "Error details copied.")
-                if copied
-                else _t("main_window.no_error_available", "No error details available."),
-                "success" if copied else "warning",
-            )
 
     def _handle_navigation_request(self, target_path: str) -> None:
         self._open_path(target_path, open_parent=True)
@@ -3069,7 +1655,7 @@ class MainWindow(QWidget):
             return
 
     def _retry_failed_request(self) -> None:
-        if self._active_threads:
+        if self._execution.busy:
             return
         operation_id = self._info_area_vm.task_summary.operation_id
         record = self._task_history.get(operation_id)
@@ -3100,22 +1686,22 @@ class MainWindow(QWidget):
 
         def resume_retry() -> None:
             if context.get("aggregate"):
-                self._start_aggregate_execution(
+                self._workflow.aggregate(
                     file_paths=list(context["file_paths"]),
                     target_format=context["target_format"],
                     action_name=context["action_name"],
                     options=options,
                 )
             elif context.get("batch"):
-                failed_keys = {_normalize_path(path) for path in failed_files}
-                self._start_batch_execution(
-                    file_paths=[path for path in context["file_paths"] if _normalize_path(path) in failed_keys],
+                failed_keys = {normalize_path(path) for path in failed_files}
+                self._workflow.batch(
+                    file_paths=[path for path in context["file_paths"] if normalize_path(path) in failed_keys],
                     target_format=context["target_format"],
                     action_name=context["action_name"],
                     options=options,
                 )
             else:
-                self._start_execution(
+                self._workflow.single(
                     file_path=context["file_path"],
                     target_format=context["target_format"],
                     action_name=context["action_name"],
@@ -3450,6 +2036,7 @@ class MainWindow(QWidget):
             return
 
         self._execution_close_pending = True
+        self._workflow.stop_accepting()
         self._execution_drain_timed_out = False
         self._execution_drain_deadline = time.monotonic() + self._EXECUTION_DRAIN_TIMEOUT_SECONDS
         self.setEnabled(False)
@@ -3461,27 +2048,7 @@ class MainWindow(QWidget):
             "warning",
         )
 
-        controller = self._view_model.controller
-        for task_id in tuple(self._active_threads):
-            try:
-                if controller is None:
-                    raise RuntimeError(
-                        _t(
-                            "main_window.runtime_unavailable",
-                            "Runtime is unavailable; conversion cannot start.",
-                        )
-                    )
-                controller.cancel(task_id)
-            except Exception as exc:
-                self._info_area_vm.add_message(
-                    _t(
-                        "main_window.close_cancel_failed",
-                        "Could not request cancellation for {task_id}: {message}",
-                        task_id=task_id,
-                        message=str(exc),
-                    ),
-                    "warning",
-                )
+        self._execution.cancel_all()
 
         timer = self._execution_drain_timer
         if timer is None:
@@ -3499,7 +2066,7 @@ class MainWindow(QWidget):
             if timer is not None:
                 timer.stop()
             return
-        if not self._active_threads:
+        if not self._execution.busy:
             if timer is not None:
                 timer.stop()
             QTimer.singleShot(0, self.close)
@@ -3521,6 +2088,7 @@ class MainWindow(QWidget):
         if self._shutdown_finalized:
             return
         self._shutdown_finalized = True
+        self._workflow.stop_accepting()
         self._conversion_panel_vm.close()
         self._execution_close_pending = False
         if self._execution_drain_timer is not None:
@@ -3647,7 +2215,7 @@ class MainWindow(QWidget):
             event.ignore()
             QTimer.singleShot(25, self.close)
             return
-        if self._active_threads:
+        if self._execution.busy:
             event.ignore()
             self._begin_execution_close()
             return
@@ -4160,8 +2728,8 @@ class MainWindow(QWidget):
             pass
 
         # Check minimum elapsed time
-        if self._start_time is not None:
-            elapsed = time.monotonic() - self._start_time
+        if self._workflow.started_at is not None:
+            elapsed = time.monotonic() - self._workflow.started_at
             try:
                 min_elapsed_raw = cfg_port.get("gui.notifications.min_elapsed_seconds", 8.0)
                 min_elapsed = float(min_elapsed_raw) if min_elapsed_raw is not None else 8.0

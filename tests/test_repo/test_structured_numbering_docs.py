@@ -38,7 +38,7 @@ def test_only_derived_numbering_is_authoritative_and_markdown_is_immutable() -> 
 
 def test_resolved_plan_keeps_numbering_rules_out_of_docwen() -> None:
     plan = _normalized("structured-numbering-phases.md")
-    machine = _normalized("machine-protocol-v1.md")
+    machine = _normalized("machine-protocol-v2.md")
 
     for kind in ("`heading`", "`figure`", "`table`", "`equation`", "`code_block`"):
         assert kind in plan
@@ -103,7 +103,7 @@ def test_docwen_materializes_only_proved_docx_semantics() -> None:
 
 
 def test_machine_freezes_exact_numbering_inputs_and_distinct_plan_failures() -> None:
-    machine = _normalized("machine-protocol-v1.md")
+    machine = _normalized("machine-protocol-v2.md")
 
     for token in (
         "`neutral_document`",
@@ -161,7 +161,7 @@ def test_closed_portable_heading_and_caption_materialization_is_frozen() -> None
 
 def test_exact_two_port_embeds_closed_resolved_dependencies() -> None:
     plan = _normalized("structured-numbering-phases.md")
-    machine = _normalized("machine-protocol-v1.md")
+    machine = _normalized("machine-protocol-v2.md")
 
     assert "authored_markdown,targets,references,resource_occurrences,citations,resources" in plan
     assert "source_start,source_end,source_slice_sha256,authored_token,authored_locator,resource_id" in plan
@@ -229,7 +229,7 @@ def test_disabled_idless_caption_has_executable_occurrence_authority() -> None:
 
 
 def test_disabled_reference_display_is_distinct_from_plan_admission() -> None:
-    for name in ("markdown-compatibility.md", "machine-protocol-v1.md"):
+    for name in ("markdown-compatibility.md", "machine-protocol-v2.md"):
         text = _normalized(name)
         assert "empty `cached_number`" in text
         assert "current target title" in text
@@ -238,7 +238,7 @@ def test_disabled_reference_display_is_distinct_from_plan_admission() -> None:
 
 
 def test_source_authoring_options_are_not_resolved_plan_inputs() -> None:
-    machine = _normalized("machine-protocol-v1.md")
+    machine = _normalized("machine-protocol-v2.md")
     capabilities = " ".join((ROOT / "docs" / "capabilities.md").read_text(encoding="utf-8").split())
 
     assert "shared `markdown_extensions` policy" in machine
@@ -256,7 +256,7 @@ def test_source_authoring_options_are_not_resolved_plan_inputs() -> None:
 def test_numbering_acceptance_keeps_evidence_layers_separate() -> None:
     plan = _read("structured-numbering-phases.md")
     golden = _read("golden-regression-suite.md")
-    machine = _read("machine-protocol-v1.md")
+    machine = _read("machine-protocol-v2.md")
 
     for layer in (
         "`source_oracle`",

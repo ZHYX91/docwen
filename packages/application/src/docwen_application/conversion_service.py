@@ -4,138 +4,57 @@ from __future__ import annotations
 
 import hashlib
 import logging
-import os
 import sys
 import threading
-from dataclasses import dataclass, field
+from copy import deepcopy
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, Protocol
 from uuid import uuid4
 
 from docwen_application.bundle_mapping import (
     BundleMappingError,
-    BundleProfile,
     build_bundle_draft,
     validate_physical_page_diagnostics,
 )
-from docwen_application.ports.runtime import ArtifactBundleCommitPort
-from docwen_core.detection import FileAdmissionPathError
-from docwen_core.docx_styles import SHIPPED_STYLE_LOCALES
-from docwen_core.formats import (
-    CATEGORY_DOCUMENT,
-    CATEGORY_IMAGE,
-    CATEGORY_LAYOUT,
-    CATEGORY_MARKDOWN,
-    CATEGORY_SPREADSHEET,
+from docwen_application.composed_capabilities import composed_capability_bindings
+from docwen_application.conversion_capabilities import (
+    CAPABILITY_BINDINGS,
+    CAPABILITY_BY_ID,
+    CapabilityBinding,
 )
-from docwen_core.markdown_extensions import MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA
+from docwen_application.conversion_contracts import (
+    DOCX_TO_MARKDOWN_CAPABILITY_ID,
+    MARKDOWN_TO_DOCX_CAPABILITY_ID,
+    ConversionPlan,
+    ConversionPlanRequest,
+    ConversionServiceError,
+    ConversionTaskOutcome,
+    LocalInputHandle,
+    MachineCapability,
+)
+from docwen_application.conversion_options import resolve_conversion_options
+from docwen_application.conversion_requests import build_conversion_request
+from docwen_application.conversion_routes import resolve_conversion_route_plan
+from docwen_application.optimization_catalog import parse_optimization_catalog
+from docwen_application.ports.runtime import ArtifactBundleCommitPort
+from docwen_application.runtime_capability_catalog import RuntimeCapabilityCatalog
+from docwen_core.detection import FileAdmissionPathError
 from docwen_core.models import (
-    ArtifactBundle,
     ArtifactBundleValidationError,
-    ConversionDiagnostic,
-    ConversionErrorInfo,
-    ConversionManifestContext,
-    ConversionManifestInput,
-    ConversionMetrics,
     ConversionRequest,
     ConversionResult,
-    FileRef,
-    OutputManifestPolicy,
-    OutputPolicy,
     validate_artifact_bundle_draft,
 )
 from docwen_core.models.resolved_numbering import (
-    NUMBERING_EXPORT_PLAN_MEDIA_TYPE,
-    RESOLVED_DOCUMENT_MEDIA_TYPE,
     ResolvedNumberingPortError,
     load_resolved_numbering_bytes,
 )
 from docwen_core.paths import filesystem_path
-from docwen_core.semantic_bibliography import SEMANTIC_BIBLIOGRAPHY_MEDIA_TYPE
 
 logger = logging.getLogger(__name__)
 
-MARKDOWN_TO_DOCX_CAPABILITY_ID = "convert.markdown.to_docx"
-MARKDOWN_TO_XLSX_CAPABILITY_ID = "convert.markdown.to_xlsx"
-DOCX_TO_MARKDOWN_CAPABILITY_ID = "convert.docx.to_markdown"
-XLSX_TO_MARKDOWN_CAPABILITY_ID = "convert.xlsx.to_markdown"
-PDF_TO_MARKDOWN_CAPABILITY_ID = "convert.pdf.to_markdown"
-OFD_TO_MARKDOWN_CAPABILITY_ID = "convert.ofd.to_markdown"
-XPS_TO_MARKDOWN_CAPABILITY_ID = "convert.xps.to_markdown"
-TIFF_TO_MARKDOWN_CAPABILITY_ID = "convert.tiff.to_markdown"
-XLSX_TO_CSV_CAPABILITY_ID = "convert.xlsx.to_csv"
-MARKDOWN_TABLES_TO_CSV_CAPABILITY_ID = "convert.markdown_tables.to_csv"
-PDF_TO_PNG_CAPABILITY_ID = "render.pdf.to_png"
-PDF_SPLIT_EVERY_PAGE_CAPABILITY_ID = "split.pdf.every_page"
-PNG_TO_OCR_MARKDOWN_CAPABILITY_ID = "convert.png.to_ocr_markdown"
-TIFF_FRAMES_TO_PNG_CAPABILITY_ID = "convert.tiff_frames.to_png"
-MARKDOWN_VALIDATE_CAPABILITY_ID = "validate.markdown"
-MARKDOWN_NUMBERING_CAPABILITY_ID = "transform.markdown.heading_numbering"
-PDF_MERGE_CAPABILITY_ID = "merge.pdf.documents"
-PDF_SPLIT_CUSTOM_CAPABILITY_ID = "split.pdf.partition"
-XLSX_MERGE_TABLES_CAPABILITY_ID = "merge.xlsx.tables"
-IMAGES_MERGE_TO_TIFF_CAPABILITY_ID = "merge.images.to_tiff"
-MARKDOWN_MEDIA_TYPE = "text/markdown"
-DOCX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-PDF_MEDIA_TYPE = "application/pdf"
-OFD_MEDIA_TYPE = "application/vnd.ofd"
-XPS_MEDIA_TYPE = "application/vnd.ms-xpsdocument"
-CSV_MEDIA_TYPE = "text/csv"
-PNG_MEDIA_TYPE = "image/png"
-TIFF_MEDIA_TYPE = "image/tiff"
-JPEG_MEDIA_TYPE = "image/jpeg"
-GIF_MEDIA_TYPE = "image/gif"
-BMP_MEDIA_TYPE = "image/bmp"
-WEBP_MEDIA_TYPE = "image/webp"
-JSON_MEDIA_TYPE = "application/json"
 _HASH_CHUNK_BYTES = 1024 * 1024
-_DOCUMENT_SEMANTICS_MACHINE_LIMITATIONS: tuple[dict[str, Any], ...] = (
-    {
-        "severity": "warning",
-        "code": "document_semantics.citation_processor_unavailable",
-        "message": (
-            "DocWen does not run a CSL citation processor or accept citation_style inputs in Machine v1; "
-            "Markdown citation keys remain literal."
-        ),
-    },
-    {
-        "severity": "warning",
-        "code": "document_semantics.v1_scope",
-        "message": (
-            "Document semantics v1 excludes CSL processing, composite or range citation semantics, "
-            "custom citation display, and PDF semantic round trips."
-        ),
-    },
-)
-_RESOLVED_DOCUMENT_MACHINE_LIMITATIONS: tuple[dict[str, Any], ...] = (
-    {
-        "severity": "warning",
-        "code": "resolved_document.provider_owned_semantics",
-        "message": (
-            "DocWen consumes already-resolved targets, citations, resources, and numbering facts; it does not "
-            "scan a Workspace, run a citation resolver, or infer numbering from authored text."
-        ),
-    },
-)
-_PHYSICAL_PAGE_OCR_LIMITATIONS: tuple[dict[str, Any], ...] = (
-    {
-        "severity": "warning",
-        "code": "physical_page_ocr.best_effort",
-        "message": (
-            "When OCR is enabled it is best effort: every physical page or frame retains an ordered fragment and "
-            "typed status even when recognition is blank or unavailable."
-        ),
-    },
-    {
-        "severity": "warning",
-        "code": "physical_page_ocr.consumer_owned_import",
-        "message": (
-            "The Bundle reports page and resource facts only; Node layout, basenames, and import strategy remain "
-            "consumer-owned."
-        ),
-    },
-)
 
 
 class _ExecutionController(Protocol):
@@ -155,695 +74,6 @@ class _ExecutionController(Protocol):
     def cancel(self, task_id: str) -> None: ...
 
 
-class ConversionServiceError(ValueError):
-    """Stable application-service failure ready for machine error projection."""
-
-    def __init__(
-        self,
-        category: str,
-        code: str,
-        message: str,
-        *,
-        retryable: bool = False,
-        details: dict[str, Any] | None = None,
-    ) -> None:
-        super().__init__(message)
-        self.category = category
-        self.code = code
-        self.retryable = retryable
-        self.details = dict(details or {})
-
-    def to_dict(self) -> dict[str, Any]:
-        payload: dict[str, Any] = {
-            "category": self.category,
-            "code": self.code,
-            "message": str(self),
-            "retryable": self.retryable,
-        }
-        if self.details:
-            payload["details"] = dict(self.details)
-        return payload
-
-
-@dataclass(frozen=True, slots=True)
-class LocalInputHandle:
-    input_id: str
-    path: str
-    media_type: str
-    size_bytes: int
-    sha256: str
-    kind: Literal["document", "resource"]
-    role: Literal[
-        "source",
-        "linked_resource",
-        "bibliography",
-        "citation_style",
-        "neutral_document",
-        "numbering_export_plan",
-    ]
-    logical_path: str
-
-
-@dataclass(frozen=True, slots=True)
-class StagingOutputTarget:
-    staging_root: str
-    staging_policy: str = "require_empty"
-
-
-@dataclass(frozen=True, slots=True)
-class ConversionPlanRequest:
-    capability_id: str
-    inputs: tuple[LocalInputHandle, ...]
-    output: StagingOutputTarget
-    options: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass(frozen=True, slots=True)
-class OutputShape:
-    cardinality: Literal["one", "many"]
-    artifact_kinds: tuple[str, ...]
-    relation_types: tuple[str, ...]
-    relation_payloads: tuple[Literal["page_fragment", "page_resource"], ...] = ()
-    atomic_bundle: bool = True
-
-    def to_dict(self) -> dict[str, Any]:
-        payload: dict[str, Any] = {
-            "cardinality": self.cardinality,
-            "artifact_kinds": list(self.artifact_kinds),
-            "relation_types": list(self.relation_types),
-            "atomic_bundle": self.atomic_bundle,
-        }
-        if self.relation_payloads:
-            payload["relation_payloads"] = list(self.relation_payloads)
-        return payload
-
-
-@dataclass(frozen=True, slots=True)
-class InputSlot:
-    role: Literal[
-        "source",
-        "linked_resource",
-        "bibliography",
-        "citation_style",
-        "neutral_document",
-        "numbering_export_plan",
-    ]
-    kind: Literal["document", "resource"]
-    media_types: tuple[str, ...]
-    min_items: int
-    max_items: int | None = None
-
-    def to_dict(self) -> dict[str, Any]:
-        payload: dict[str, Any] = {
-            "role": self.role,
-            "kind": self.kind,
-            "media_types": list(self.media_types),
-            "min_items": self.min_items,
-        }
-        if self.max_items is not None:
-            payload["max_items"] = self.max_items
-        return payload
-
-
-@dataclass(frozen=True, slots=True)
-class InputShape:
-    slots: tuple[InputSlot, ...]
-    undeclared_roles: Literal["reject"] = "reject"
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "slots": [slot.to_dict() for slot in self.slots],
-            "undeclared_roles": self.undeclared_roles,
-        }
-
-
-_SINGLE_DOCUMENT_SHAPE = OutputShape(
-    cardinality="one",
-    artifact_kinds=("document",),
-    relation_types=(),
-)
-
-_DOCUMENT_WITH_RESOURCES_SHAPE = OutputShape(
-    cardinality="many",
-    artifact_kinds=("document", "fragment", "resource"),
-    relation_types=("fragment_of", "resource_of"),
-)
-
-_PHYSICAL_PAGE_OCR_SHAPE = OutputShape(
-    cardinality="many",
-    artifact_kinds=("document", "fragment", "resource"),
-    relation_types=("fragment_of", "resource_of"),
-    relation_payloads=("page_fragment", "page_resource"),
-)
-
-_IMAGE_TO_OCR_MARKDOWN_SHAPE = OutputShape(
-    cardinality="many",
-    artifact_kinds=("document", "fragment", "resource"),
-    relation_types=("fragment_of", "resource_of", "derived_from"),
-)
-
-_WORKSHEET_RESOURCES_SHAPE = OutputShape(
-    cardinality="many",
-    artifact_kinds=("resource",),
-    relation_types=(),
-)
-
-_PAGE_IMAGES_SHAPE = OutputShape(
-    cardinality="many",
-    artifact_kinds=("resource",),
-    relation_types=(),
-)
-
-_SECTION_DOCUMENTS_SHAPE = OutputShape(
-    cardinality="many",
-    artifact_kinds=("document",),
-    relation_types=(),
-)
-
-_SINGLE_RESOURCE_SHAPE = OutputShape(
-    cardinality="one",
-    artifact_kinds=("resource",),
-    relation_types=(),
-)
-
-
-def _strict_options(properties: dict[str, Any], *, required: tuple[str, ...] = ()) -> dict[str, Any]:
-    return {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "type": "object",
-        "properties": properties,
-        "required": list(required),
-        "additionalProperties": False,
-    }
-
-
-_MARKDOWN_TO_DOCX_OPTIONS = _strict_options(
-    {
-        "markdown_extensions": MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA,
-        "locale": {
-            "type": "string",
-            "enum": list(SHIPPED_STYLE_LOCALES),
-            "default": "zh_CN",
-        },
-        "template_name": {
-            "type": "string",
-            "pattern": r"^template\.docx\.[0-9a-f]{64}$",
-            "x-docwen-resource-kind": "templates",
-            "x-docwen-resource-target": "docx",
-        },
-        "heading_merge_mode": {
-            "type": "string",
-            "enum": ["punct_required", "never", "always"],
-            "default": "punct_required",
-        },
-    }
-)
-
-_MARKDOWN_TO_XLSX_OPTIONS = _strict_options(
-    {
-        "markdown_extensions": MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA,
-        "template_name": {
-            "type": "string",
-            "pattern": r"^template\.xlsx\.[0-9a-f]{64}$",
-            "x-docwen-resource-kind": "templates",
-            "x-docwen-resource-target": "xlsx",
-        },
-    }
-)
-
-_XLSX_TO_MARKDOWN_OPTIONS = _strict_options(
-    {
-        "markdown_extensions": MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA,
-        "to_md_keep_images": {"type": "boolean", "default": True},
-        "to_md_enable_ocr": {"type": "boolean", "default": False},
-        "ocr_language": {
-            "type": "string",
-            "enum": ["auto", "chinese", "chinese_cht", "english", "japanese", "korean", "latin", "cyrillic"],
-            "default": "auto",
-        },
-        "image_mode": {
-            "type": "string",
-            "enum": ["file", "base64", "embed", "omit"],
-            "default": "file",
-        },
-        "ocr_placement": {
-            "type": "string",
-            "enum": ["image_md", "main_md"],
-            "default": "image_md",
-        },
-        "image_link_style": {
-            "type": "string",
-            "enum": ["wiki_embed", "wiki_link", "markdown_embed", "markdown_link"],
-            "default": "wiki_embed",
-        },
-        "table_merge_strategy": {
-            "type": "string",
-            "enum": ["fill", "empty", "marker"],
-            "default": "fill",
-        },
-    }
-)
-
-_DOCX_TO_MARKDOWN_OPTIONS = _strict_options(
-    {
-        **{
-            key: value
-            for key, value in _XLSX_TO_MARKDOWN_OPTIONS["properties"].items()
-            if key not in {"to_md_enable_ocr", "to_md_keep_images"}
-        },
-        "recognize_text": {"type": "boolean", "default": False},
-        "preserve_resources": {"type": "boolean", "default": True},
-        "ocr_placement": {
-            "type": "string",
-            "enum": ["image_md", "main_md"],
-            "default": "main_md",
-        },
-        "remove_numbering": {"type": "boolean", "default": True},
-        "add_numbering": {"type": "boolean", "default": False},
-        "numbering_scheme": {
-            "type": "string",
-            "default": "gongwen_standard",
-            "x-docwen-resource-kind": "numbering-schemes",
-        },
-    }
-)
-
-_PHYSICAL_PAGE_OCR_COMMON_PROPERTIES: dict[str, Any] = {
-    "recognize_text": {"type": "boolean", "default": False},
-    "preserve_resources": {"type": "boolean", "default": True},
-    "ocr_language": {
-        "type": "string",
-        "enum": ["auto", "chinese", "chinese_cht", "english", "japanese", "korean", "latin", "cyrillic"],
-        "default": "auto",
-    },
-}
-
-_FIXED_LAYOUT_TO_MARKDOWN_OPTIONS = _strict_options(
-    {
-        **_PHYSICAL_PAGE_OCR_COMMON_PROPERTIES,
-        "image_mode": {"type": "string", "enum": ["file"], "default": "file"},
-        "render_dpi": {"type": "integer", "minimum": 72, "maximum": 600, "default": 200},
-    }
-)
-
-_TIFF_TO_MARKDOWN_OPTIONS = _strict_options(dict(_PHYSICAL_PAGE_OCR_COMMON_PROPERTIES))
-
-_MARKDOWN_VALIDATE_OPTIONS = _strict_options(
-    {
-        "enable_symbol_pairing": {"type": "boolean", "default": True},
-        "enable_symbol_correction": {"type": "boolean", "default": True},
-        "enable_typos_rule": {"type": "boolean", "default": True},
-        "enable_sensitive_word": {"type": "boolean", "default": True},
-        "skip_code_blocks": {"type": "boolean", "default": True},
-        "skip_quote_blocks": {"type": "boolean", "default": False},
-    }
-)
-
-_MARKDOWN_NUMBERING_OPTIONS = _strict_options(
-    {
-        "remove_numbering": {"type": "boolean", "default": True},
-        "add_numbering": {"type": "boolean", "default": False},
-        "numbering_scheme": {
-            "type": "string",
-            "default": "gongwen_standard",
-            "x-docwen-resource-kind": "numbering-schemes",
-        },
-    }
-)
-
-_PDF_SPLIT_PARTITION_OPTIONS = _strict_options(
-    {
-        "pages": {
-            "type": "array",
-            "minItems": 1,
-            "uniqueItems": True,
-            "items": {"type": "integer", "minimum": 1},
-        }
-    },
-    required=("pages",),
-)
-
-_XLSX_MERGE_TABLES_OPTIONS = _strict_options(
-    {
-        "merge_mode": {
-            "type": "string",
-            "enum": ["row", "col", "cell"],
-            "default": "cell",
-        },
-        "offset_range": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 50,
-            "default": 10,
-        },
-    }
-)
-
-_IMAGES_MERGE_TO_TIFF_OPTIONS = _strict_options(
-    {
-        "mode": {"type": "string", "enum": ["smart", "rgb", "RGB"], "default": "smart"},
-        "keep_alpha": {"type": "boolean", "default": True},
-    }
-)
-
-
-@dataclass(frozen=True, slots=True)
-class _CapabilityBinding:
-    capability_id: str
-    input_media_type: str
-    input_format: str
-    input_category: str
-    target_format: str
-    output_media_type: str
-    runtime_route_id: str
-    operation: str = "convert"
-    output_shape: OutputShape = _SINGLE_DOCUMENT_SHAPE
-    bundle_profile: BundleProfile = "single_document"
-    action_name: str = ""
-    effective_options: dict[str, Any] = field(default_factory=dict)
-    options_schema: dict[str, Any] = field(
-        default_factory=lambda: {
-            "$schema": "https://json-schema.org/draft/2020-12/schema",
-            "type": "object",
-            "properties": {},
-            "additionalProperties": False,
-        }
-    )
-    limitations: tuple[dict[str, Any], ...] = ()
-    required_dependency_ids: tuple[str, ...] = ()
-    dependency_ids: tuple[str, ...] = ()
-    project_runtime_limitations: bool = True
-    accepted_input_media_types: tuple[str, ...] = ()
-    input_cardinality: Literal["one", "many"] = "one"
-    minimum_inputs: int = 1
-
-    @property
-    def input_shape(self) -> InputShape:
-        if self.capability_id == MARKDOWN_TO_DOCX_CAPABILITY_ID:
-            return InputShape(
-                slots=(
-                    InputSlot(
-                        role="neutral_document",
-                        kind="document",
-                        media_types=(RESOLVED_DOCUMENT_MEDIA_TYPE,),
-                        min_items=1,
-                        max_items=1,
-                    ),
-                    InputSlot(
-                        role="numbering_export_plan",
-                        kind="resource",
-                        media_types=(NUMBERING_EXPORT_PLAN_MEDIA_TYPE,),
-                        min_items=1,
-                        max_items=1,
-                    ),
-                )
-            )
-        source_kind: Literal["document", "resource"] = (
-            "document" if self.input_category in {CATEGORY_DOCUMENT, CATEGORY_MARKDOWN} else "resource"
-        )
-        accepted = (self.input_media_type, *self.accepted_input_media_types)
-        source = InputSlot(
-            role="source",
-            kind=source_kind,
-            media_types=accepted,
-            min_items=self.minimum_inputs,
-            max_items=1 if self.input_cardinality == "one" else None,
-        )
-        return InputShape(slots=(source,))
-
-
-_CAPABILITY_BINDINGS = (
-    _CapabilityBinding(
-        capability_id=MARKDOWN_TO_DOCX_CAPABILITY_ID,
-        input_media_type=RESOLVED_DOCUMENT_MEDIA_TYPE,
-        input_format="markdown",
-        input_category=CATEGORY_MARKDOWN,
-        target_format="docx",
-        output_media_type=DOCX_MEDIA_TYPE,
-        runtime_route_id="docwen_plugin_markdown:markdown:docx:convert",
-        options_schema=_MARKDOWN_TO_DOCX_OPTIONS,
-        limitations=_RESOLVED_DOCUMENT_MACHINE_LIMITATIONS,
-    ),
-    _CapabilityBinding(
-        capability_id=MARKDOWN_TO_XLSX_CAPABILITY_ID,
-        input_media_type=MARKDOWN_MEDIA_TYPE,
-        input_format="markdown",
-        input_category=CATEGORY_MARKDOWN,
-        target_format="xlsx",
-        output_media_type=XLSX_MEDIA_TYPE,
-        runtime_route_id="docwen_plugin_markdown:markdown:xlsx:convert",
-        options_schema=_MARKDOWN_TO_XLSX_OPTIONS,
-    ),
-    _CapabilityBinding(
-        capability_id=DOCX_TO_MARKDOWN_CAPABILITY_ID,
-        input_media_type=DOCX_MEDIA_TYPE,
-        input_format="docx",
-        input_category=CATEGORY_DOCUMENT,
-        target_format="md",
-        output_media_type=MARKDOWN_MEDIA_TYPE,
-        runtime_route_id="docwen_plugin_document:docx:md:convert",
-        output_shape=_DOCUMENT_WITH_RESOURCES_SHAPE,
-        bundle_profile="document_with_resources",
-        options_schema=_DOCX_TO_MARKDOWN_OPTIONS,
-        limitations=_DOCUMENT_SEMANTICS_MACHINE_LIMITATIONS,
-    ),
-    _CapabilityBinding(
-        capability_id=PDF_TO_MARKDOWN_CAPABILITY_ID,
-        input_media_type=PDF_MEDIA_TYPE,
-        input_format="pdf",
-        input_category=CATEGORY_LAYOUT,
-        target_format="md",
-        output_media_type=MARKDOWN_MEDIA_TYPE,
-        runtime_route_id="docwen_plugin_layout:pdf:md:convert",
-        output_shape=_PHYSICAL_PAGE_OCR_SHAPE,
-        bundle_profile="physical_page_ocr",
-        options_schema=_FIXED_LAYOUT_TO_MARKDOWN_OPTIONS,
-        limitations=_PHYSICAL_PAGE_OCR_LIMITATIONS,
-    ),
-    _CapabilityBinding(
-        capability_id=OFD_TO_MARKDOWN_CAPABILITY_ID,
-        input_media_type=OFD_MEDIA_TYPE,
-        input_format="ofd",
-        input_category=CATEGORY_LAYOUT,
-        target_format="md",
-        output_media_type=MARKDOWN_MEDIA_TYPE,
-        runtime_route_id="docwen_plugin_layout:ofd:md:convert",
-        output_shape=_PHYSICAL_PAGE_OCR_SHAPE,
-        bundle_profile="physical_page_ocr",
-        options_schema=_FIXED_LAYOUT_TO_MARKDOWN_OPTIONS,
-        limitations=_PHYSICAL_PAGE_OCR_LIMITATIONS,
-    ),
-    _CapabilityBinding(
-        capability_id=XPS_TO_MARKDOWN_CAPABILITY_ID,
-        input_media_type=XPS_MEDIA_TYPE,
-        input_format="xps",
-        input_category=CATEGORY_LAYOUT,
-        target_format="md",
-        output_media_type=MARKDOWN_MEDIA_TYPE,
-        runtime_route_id="docwen_plugin_layout:xps:md:convert",
-        output_shape=_PHYSICAL_PAGE_OCR_SHAPE,
-        bundle_profile="physical_page_ocr",
-        options_schema=_FIXED_LAYOUT_TO_MARKDOWN_OPTIONS,
-        limitations=_PHYSICAL_PAGE_OCR_LIMITATIONS,
-    ),
-    _CapabilityBinding(
-        capability_id=XLSX_TO_CSV_CAPABILITY_ID,
-        input_media_type=XLSX_MEDIA_TYPE,
-        input_format="xlsx",
-        input_category=CATEGORY_SPREADSHEET,
-        target_format="csv",
-        output_media_type=CSV_MEDIA_TYPE,
-        runtime_route_id="docwen_plugin_spreadsheet:xlsx:csv:convert",
-        output_shape=_WORKSHEET_RESOURCES_SHAPE,
-        bundle_profile="worksheet_resources",
-    ),
-    _CapabilityBinding(
-        capability_id=XLSX_TO_MARKDOWN_CAPABILITY_ID,
-        input_media_type=XLSX_MEDIA_TYPE,
-        input_format="xlsx",
-        input_category=CATEGORY_SPREADSHEET,
-        target_format="md",
-        output_media_type=MARKDOWN_MEDIA_TYPE,
-        runtime_route_id="docwen_plugin_spreadsheet:xlsx:md:convert",
-        output_shape=_DOCUMENT_WITH_RESOURCES_SHAPE,
-        bundle_profile="document_with_resources",
-        options_schema=_XLSX_TO_MARKDOWN_OPTIONS,
-    ),
-    _CapabilityBinding(
-        capability_id=PDF_TO_PNG_CAPABILITY_ID,
-        input_media_type=PDF_MEDIA_TYPE,
-        input_format="pdf",
-        input_category=CATEGORY_LAYOUT,
-        target_format="png",
-        output_media_type=PNG_MEDIA_TYPE,
-        runtime_route_id="docwen_plugin_layout:pdf:png:convert",
-        operation="render",
-        output_shape=_PAGE_IMAGES_SHAPE,
-        bundle_profile="page_images",
-        effective_options={"render_dpi": 150},
-    ),
-    _CapabilityBinding(
-        capability_id=PDF_SPLIT_EVERY_PAGE_CAPABILITY_ID,
-        input_media_type=PDF_MEDIA_TYPE,
-        input_format="pdf",
-        input_category=CATEGORY_LAYOUT,
-        target_format="pdf",
-        output_media_type=PDF_MEDIA_TYPE,
-        runtime_route_id="docwen_plugin_layout:pdf:pdf:split_pdf",
-        operation="transform",
-        output_shape=_SECTION_DOCUMENTS_SHAPE,
-        bundle_profile="section_documents",
-        action_name="split_pdf",
-        effective_options={"split_mode": "every_page"},
-    ),
-    _CapabilityBinding(
-        capability_id=PNG_TO_OCR_MARKDOWN_CAPABILITY_ID,
-        input_media_type=PNG_MEDIA_TYPE,
-        input_format="png",
-        input_category=CATEGORY_IMAGE,
-        target_format="md",
-        output_media_type=MARKDOWN_MEDIA_TYPE,
-        runtime_route_id="docwen_plugin_image:image:md:convert",
-        output_shape=_IMAGE_TO_OCR_MARKDOWN_SHAPE,
-        bundle_profile="image_to_markdown",
-        effective_options={
-            "image_mode": "file",
-            "to_md_keep_images": True,
-            "to_md_enable_ocr": True,
-            "ocr_placement": "image_md",
-        },
-        required_dependency_ids=("python.rapidocr",),
-        dependency_ids=("python.pillow", "python.rapidocr"),
-        project_runtime_limitations=False,
-    ),
-    _CapabilityBinding(
-        capability_id=MARKDOWN_TABLES_TO_CSV_CAPABILITY_ID,
-        input_media_type=MARKDOWN_MEDIA_TYPE,
-        input_format="markdown",
-        input_category=CATEGORY_MARKDOWN,
-        target_format="csv",
-        output_media_type=CSV_MEDIA_TYPE,
-        runtime_route_id="docwen_plugin_markdown:markdown:csv:convert",
-        output_shape=_WORKSHEET_RESOURCES_SHAPE,
-        bundle_profile="table_resources",
-    ),
-    _CapabilityBinding(
-        capability_id=TIFF_FRAMES_TO_PNG_CAPABILITY_ID,
-        input_media_type=TIFF_MEDIA_TYPE,
-        input_format="tif",
-        input_category=CATEGORY_IMAGE,
-        target_format="png",
-        output_media_type=PNG_MEDIA_TYPE,
-        runtime_route_id="docwen_plugin_image:image:png:convert",
-        output_shape=_PAGE_IMAGES_SHAPE,
-        bundle_profile="frame_images",
-        dependency_ids=("python.pillow",),
-        project_runtime_limitations=False,
-    ),
-    _CapabilityBinding(
-        capability_id=TIFF_TO_MARKDOWN_CAPABILITY_ID,
-        input_media_type=TIFF_MEDIA_TYPE,
-        input_format="tif",
-        input_category=CATEGORY_IMAGE,
-        target_format="md",
-        output_media_type=MARKDOWN_MEDIA_TYPE,
-        runtime_route_id="docwen_plugin_image:image:md:convert",
-        output_shape=_PHYSICAL_PAGE_OCR_SHAPE,
-        bundle_profile="physical_page_ocr",
-        options_schema=_TIFF_TO_MARKDOWN_OPTIONS,
-        limitations=_PHYSICAL_PAGE_OCR_LIMITATIONS,
-        dependency_ids=("python.pillow", "python.rapidocr"),
-        project_runtime_limitations=False,
-    ),
-    _CapabilityBinding(
-        capability_id=MARKDOWN_VALIDATE_CAPABILITY_ID,
-        input_media_type=MARKDOWN_MEDIA_TYPE,
-        input_format="markdown",
-        input_category=CATEGORY_MARKDOWN,
-        target_format="markdown",
-        output_media_type=JSON_MEDIA_TYPE,
-        runtime_route_id="docwen_plugin_proofread:markdown:markdown:validate",
-        operation="validate",
-        output_shape=_SINGLE_RESOURCE_SHAPE,
-        bundle_profile="report_resource",
-        action_name="validate",
-        options_schema=_MARKDOWN_VALIDATE_OPTIONS,
-    ),
-    _CapabilityBinding(
-        capability_id=MARKDOWN_NUMBERING_CAPABILITY_ID,
-        input_media_type=MARKDOWN_MEDIA_TYPE,
-        input_format="markdown",
-        input_category=CATEGORY_MARKDOWN,
-        target_format="md",
-        output_media_type=MARKDOWN_MEDIA_TYPE,
-        runtime_route_id="docwen_plugin_markdown:markdown:md:process_md_numbering",
-        operation="transform",
-        action_name="process_md_numbering",
-        options_schema=_MARKDOWN_NUMBERING_OPTIONS,
-    ),
-    _CapabilityBinding(
-        capability_id=PDF_MERGE_CAPABILITY_ID,
-        input_media_type=PDF_MEDIA_TYPE,
-        input_format="pdf",
-        input_category=CATEGORY_LAYOUT,
-        target_format="pdf",
-        output_media_type=PDF_MEDIA_TYPE,
-        runtime_route_id="docwen_plugin_layout:pdf:pdf:merge_pdfs",
-        operation="merge",
-        action_name="merge_pdfs",
-        input_cardinality="many",
-        minimum_inputs=2,
-    ),
-    _CapabilityBinding(
-        capability_id=PDF_SPLIT_CUSTOM_CAPABILITY_ID,
-        input_media_type=PDF_MEDIA_TYPE,
-        input_format="pdf",
-        input_category=CATEGORY_LAYOUT,
-        target_format="pdf",
-        output_media_type=PDF_MEDIA_TYPE,
-        runtime_route_id="docwen_plugin_layout:pdf:pdf:split_pdf",
-        operation="transform",
-        output_shape=_SECTION_DOCUMENTS_SHAPE,
-        bundle_profile="partition_documents",
-        action_name="split_pdf",
-        effective_options={"split_mode": "custom"},
-        options_schema=_PDF_SPLIT_PARTITION_OPTIONS,
-    ),
-    _CapabilityBinding(
-        capability_id=XLSX_MERGE_TABLES_CAPABILITY_ID,
-        input_media_type=XLSX_MEDIA_TYPE,
-        input_format="spreadsheet",
-        input_category=CATEGORY_SPREADSHEET,
-        target_format="xlsx",
-        output_media_type=XLSX_MEDIA_TYPE,
-        runtime_route_id="docwen_plugin_spreadsheet:spreadsheet:xlsx:merge_tables",
-        operation="merge",
-        action_name="merge_tables",
-        input_cardinality="many",
-        minimum_inputs=2,
-        options_schema=_XLSX_MERGE_TABLES_OPTIONS,
-    ),
-    _CapabilityBinding(
-        capability_id=IMAGES_MERGE_TO_TIFF_CAPABILITY_ID,
-        input_media_type=PNG_MEDIA_TYPE,
-        input_format="image",
-        input_category=CATEGORY_IMAGE,
-        target_format="tif",
-        output_media_type=TIFF_MEDIA_TYPE,
-        runtime_route_id="docwen_plugin_image:image:tif:merge_images_to_tiff",
-        operation="merge",
-        output_shape=_SINGLE_RESOURCE_SHAPE,
-        bundle_profile="image_resource",
-        action_name="merge_images_to_tiff",
-        accepted_input_media_types=(JPEG_MEDIA_TYPE, GIF_MEDIA_TYPE, BMP_MEDIA_TYPE, TIFF_MEDIA_TYPE, WEBP_MEDIA_TYPE),
-        input_cardinality="many",
-        minimum_inputs=2,
-        options_schema=_IMAGES_MERGE_TO_TIFF_OPTIONS,
-    ),
-)
-_CAPABILITY_BY_ID = {binding.capability_id: binding for binding in _CAPABILITY_BINDINGS}
-
-
 @dataclass(frozen=True, slots=True)
 class _RuntimeCapabilityState:
     availability: Literal["available", "limited", "unavailable"]
@@ -856,71 +86,15 @@ class _RuntimeDiscovery:
     gates: dict[str, bool]
     routes: dict[str, dict[str, Any]]
     error: dict[str, Any] | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class MachineCapability:
-    capability_id: str
-    operation: str
-    input_shape: InputShape
-    output_media_types: tuple[str, ...]
-    output_shape: OutputShape
-    options_schema: dict[str, Any]
-    availability: str
-    dependencies: tuple[dict[str, Any], ...] = ()
-    limitations: tuple[dict[str, Any], ...] = ()
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "capability_id": self.capability_id,
-            "operation": self.operation,
-            "input_shape": self.input_shape.to_dict(),
-            "output_media_types": list(self.output_media_types),
-            "output_shape": self.output_shape.to_dict(),
-            "options_schema": dict(self.options_schema),
-            "availability": self.availability,
-            "dependencies": [dict(item) for item in self.dependencies],
-            "limitations": [dict(item) for item in self.limitations],
-        }
-
-
-@dataclass(frozen=True, slots=True)
-class ConversionPlan:
-    plan_id: str
-    capability_id: str
-    effective_options: dict[str, Any]
-    output_shape: OutputShape
-    warnings: tuple[dict[str, Any], ...] = ()
-    limitations: tuple[dict[str, Any], ...] = ()
-    requires_confirmation: bool = False
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "plan_id": self.plan_id,
-            "capability_id": self.capability_id,
-            "effective_options": dict(self.effective_options),
-            "output_shape": self.output_shape.to_dict(),
-            "warnings": [dict(item) for item in self.warnings],
-            "limitations": [dict(item) for item in self.limitations],
-            "requires_confirmation": self.requires_confirmation,
-        }
-
-
-@dataclass(frozen=True, slots=True)
-class ConversionTaskOutcome:
-    task_id: str
-    state: Literal["completed", "failed", "cancelled"]
-    bundle: ArtifactBundle | None
-    diagnostics: tuple[ConversionDiagnostic, ...]
-    metrics: ConversionMetrics
-    error: ConversionErrorInfo | None = None
+    bindings: tuple[CapabilityBinding, ...] = CAPABILITY_BINDINGS
+    catalog: RuntimeCapabilityCatalog | None = None
 
 
 @dataclass(slots=True)
 class _PlanRecord:
     public: ConversionPlan
     request: ConversionPlanRequest
-    binding: _CapabilityBinding
+    binding: CapabilityBinding
 
 
 @dataclass(slots=True)
@@ -929,7 +103,7 @@ class _TaskRecord:
     public_options: dict[str, Any]
     staging_root: str
     reservation: object
-    binding: _CapabilityBinding
+    binding: CapabilityBinding
     state: str = "accepted"
 
 
@@ -946,7 +120,7 @@ class ConversionService:
     def list_capabilities(self) -> tuple[MachineCapability, ...]:
         discovery = self._discover_runtime()
         capabilities: list[MachineCapability] = []
-        for binding in _CAPABILITY_BINDINGS:
+        for binding in discovery.bindings:
             state = self._runtime_capability_state(binding, discovery)
             capabilities.append(
                 MachineCapability(
@@ -955,26 +129,27 @@ class ConversionService:
                     input_shape=binding.input_shape,
                     output_media_types=(binding.output_media_type,),
                     output_shape=binding.output_shape,
-                    options_schema=dict(binding.options_schema),
+                    options_schema=deepcopy(binding.options_schema),
                     availability=state.availability,
                     dependencies=state.dependencies,
-                    limitations=(*binding.limitations, *state.limitations),
+                    limitations=deepcopy((*binding.limitations, *state.limitations)),
+                    optimization_id=binding.optimization_id,
                 )
             )
         return tuple(capabilities)
 
     def plan(self, request: ConversionPlanRequest) -> ConversionPlan:
-        binding = self._validate_plan_request(request)
-        effective_options = self._effective_options(request.options, binding)
+        request = deepcopy(request)
+        binding, effective_options = self._validate_plan_request(request)
         plan = ConversionPlan(
             plan_id=f"plan.{uuid4().hex}",
             capability_id=request.capability_id,
             effective_options=effective_options,
             output_shape=binding.output_shape,
-            limitations=binding.limitations,
+            limitations=deepcopy(binding.limitations),
         )
         with self._lock:
-            self._plans[plan.plan_id] = _PlanRecord(public=plan, request=request, binding=binding)
+            self._plans[plan.plan_id] = _PlanRecord(public=deepcopy(plan), request=request, binding=deepcopy(binding))
         return plan
 
     def accept(self, plan_id: str, task_id: str | None = None) -> str:
@@ -987,17 +162,16 @@ class ConversionService:
 
         task_id = task_id or f"task.{uuid4().hex}"
         self._validate_identifier(task_id, field_name="task_id")
-        binding = self._validate_plan_request(record.request)
+        binding, effective_options = self._validate_plan_request(record.request)
         if binding != record.binding:
             raise ConversionServiceError("conflict", "capability_changed", "capability changed after planning")
-        effective_options = self._effective_options(record.request.options, binding)
         if effective_options != record.public.effective_options:
             raise ConversionServiceError(
                 "conflict",
                 "plan_options_changed",
                 "capability options changed after planning",
             )
-        conversion_request = self._build_conversion_request(
+        conversion_request = build_conversion_request(
             task_id,
             record.request,
             binding,
@@ -1129,7 +303,7 @@ class ConversionService:
                 "runtime diagnostic references an artifact outside the output bundle",
                 details={"artifact_ids": dangling_diagnostics},
             )
-        if task.binding.capability_id == DOCX_TO_MARKDOWN_CAPABILITY_ID:
+        if task.binding.runtime_route_id == CAPABILITY_BY_ID[DOCX_TO_MARKDOWN_CAPABILITY_ID].runtime_route_id:
             expected_recognition = task.public_options.get("recognize_text")
             expected_resources = task.public_options.get("preserve_resources")
             expected_placement = task.public_options.get("ocr_placement")
@@ -1220,8 +394,9 @@ class ConversionService:
             # projects rejected paths as deliverables even if local cleanup is denied.
             return
 
-    def _validate_plan_request(self, request: ConversionPlanRequest) -> _CapabilityBinding:
-        binding = _CAPABILITY_BY_ID.get(request.capability_id)
+    def _validate_plan_request(self, request: ConversionPlanRequest) -> tuple[CapabilityBinding, dict[str, Any]]:
+        discovery = self._discover_runtime()
+        binding = next((item for item in discovery.bindings if item.capability_id == request.capability_id), None)
         if binding is None:
             raise ConversionServiceError(
                 "unsupported",
@@ -1230,7 +405,7 @@ class ConversionService:
             )
         if not self._controller.has_runtime:
             raise ConversionServiceError("unavailable", "runtime_unavailable", "conversion runtime is unavailable")
-        runtime_state = self._runtime_capability_state(binding, self._discover_runtime())
+        runtime_state = self._runtime_capability_state(binding, discovery)
         if runtime_state.availability == "unavailable":
             missing = [
                 dependency["dependency_id"]
@@ -1319,7 +494,7 @@ class ConversionService:
                     "input_slot_cardinality_mismatch",
                     f"input role {slot.role} has invalid cardinality",
                 )
-        self._effective_options(request.options, binding)
+        effective_options = resolve_conversion_options(request.options, binding)
         if request.output.staging_policy != "require_empty":
             raise ConversionServiceError(
                 "invalid_request",
@@ -1331,7 +506,7 @@ class ConversionService:
         if binding.capability_id == MARKDOWN_TO_DOCX_CAPABILITY_ID:
             self._validate_resolved_numbering_inputs(request)
         self._validate_empty_staging_root(request.output.staging_root)
-        return binding
+        return binding, effective_options
 
     @staticmethod
     def _validate_resolved_numbering_inputs(request: ConversionPlanRequest) -> None:
@@ -1375,88 +550,6 @@ class ConversionService:
             )
             raise ConversionServiceError(category, exc.code, str(exc)) from exc
 
-    @classmethod
-    def _effective_options(
-        cls,
-        provided: dict[str, Any],
-        binding: _CapabilityBinding,
-    ) -> dict[str, Any]:
-        schema = binding.options_schema
-        properties = schema.get("properties", {})
-        if not isinstance(properties, dict):
-            raise ConversionServiceError(
-                "internal",
-                "capability_options_schema_invalid",
-                "capability has an invalid options schema",
-            )
-        unknown = sorted(set(provided) - set(properties))
-        if unknown:
-            raise ConversionServiceError(
-                "invalid_request",
-                "unsupported_options",
-                "capability does not accept one or more caller-defined options",
-                details={"option_keys": unknown},
-            )
-        effective = {
-            key: property_schema["default"]
-            for key, property_schema in properties.items()
-            if isinstance(property_schema, dict) and "default" in property_schema
-        }
-        effective.update(binding.effective_options)
-        effective.update(provided)
-        missing = [key for key in schema.get("required", []) if key not in effective]
-        if missing:
-            raise ConversionServiceError(
-                "invalid_request",
-                "required_options_missing",
-                "capability requires one or more options",
-                details={"option_keys": sorted(missing)},
-            )
-        for key, value in effective.items():
-            property_schema = properties.get(key)
-            if property_schema is None:
-                continue
-            cls._validate_option_value(key, value, property_schema)
-        return effective
-
-    @staticmethod
-    def _validate_option_value(key: str, value: Any, schema: dict[str, Any]) -> None:
-        raw_expected_type = schema.get("type")
-        expected_type = raw_expected_type if isinstance(raw_expected_type, str) else ""
-        valid_type = {
-            "boolean": isinstance(value, bool),
-            "string": isinstance(value, str),
-            "integer": isinstance(value, int) and not isinstance(value, bool),
-            "number": isinstance(value, (int, float)) and not isinstance(value, bool),
-            "array": isinstance(value, list),
-            "object": isinstance(value, dict),
-        }.get(expected_type, True)
-        invalid = not valid_type
-        if not invalid and "enum" in schema:
-            invalid = value not in schema["enum"]
-        if not invalid and isinstance(value, (int, float)) and not isinstance(value, bool):
-            minimum = schema.get("minimum")
-            maximum = schema.get("maximum")
-            invalid = (minimum is not None and value < minimum) or (maximum is not None and value > maximum)
-        if not invalid and isinstance(value, list) and isinstance(schema.get("items"), dict):
-            minimum_items = schema.get("minItems")
-            if isinstance(minimum_items, int) and len(value) < minimum_items:
-                invalid = True
-            if schema.get("uniqueItems") is True and any(value[index] in value[:index] for index in range(len(value))):
-                invalid = True
-            try:
-                for index, item in enumerate(value):
-                    ConversionService._validate_option_value(f"{key}[{index}]", item, schema["items"])
-            except ConversionServiceError:
-                invalid = True
-        if invalid:
-            raise ConversionServiceError(
-                "invalid_request",
-                "option_value_invalid",
-                f"option has a value outside its capability contract: {key}",
-                details={"option_key": key},
-            )
-
     def _discover_runtime(self) -> _RuntimeDiscovery:
         if not self._controller.has_runtime:
             return _RuntimeDiscovery(
@@ -1471,6 +564,7 @@ class ConversionService:
 
         try:
             description = self._controller.describe_runtime_capabilities()
+            optimizations = parse_optimization_catalog(description)
             gates = {
                 str(gate.get("id")): bool(gate.get("available"))
                 for gate in description.get("gates", [])
@@ -1483,6 +577,7 @@ class ConversionService:
                 for candidate in source.get("routes", [])
                 if isinstance(candidate, dict) and isinstance(candidate.get("id"), str)
             }
+            bindings = composed_capability_bindings(optimizations, routes)
         except Exception:
             return _RuntimeDiscovery(
                 gates={},
@@ -1493,11 +588,11 @@ class ConversionService:
                     "message": "The active runtime could not describe its capabilities.",
                 },
             )
-        return _RuntimeDiscovery(gates=gates, routes=routes)
+        return _RuntimeDiscovery(gates=gates, routes=routes, bindings=bindings, catalog=optimizations.runtime_catalog)
 
     @staticmethod
     def _runtime_capability_state(
-        binding: _CapabilityBinding,
+        binding: CapabilityBinding,
         discovery: _RuntimeDiscovery,
     ) -> _RuntimeCapabilityState:
         if discovery.error is not None:
@@ -1506,29 +601,46 @@ class ConversionService:
                 limitations=(discovery.error,),
             )
 
-        route = discovery.routes.get(binding.runtime_route_id)
-        if route is None:
+        plan = (
+            resolve_conversion_route_plan(
+                discovery.catalog,
+                source_format=binding.input_format,
+                source_category=binding.input_category,
+                target_format=binding.target_format,
+                action_name=binding.action_name,
+            )
+            if discovery.catalog is not None
+            else None
+        )
+        if plan is None or plan.final_route.id != binding.runtime_route_id:
             return _RuntimeCapabilityState(
                 availability="unavailable",
                 limitations=(
                     {
                         "severity": "error",
                         "code": "runtime_route_missing",
-                        "message": f"The active runtime does not expose route {binding.runtime_route_id}.",
+                        "message": f"The active runtime does not expose the complete route for {binding.capability_id}.",
                     },
                 ),
             )
 
+        routes = tuple(discovery.routes[route.id] for route in plan.routes)
+
         required_ids = tuple(
             dict.fromkeys(
                 (
-                    *(str(item) for item in route.get("required_capabilities", [])),
+                    *(str(item) for route in routes for item in route.get("required_capabilities", [])),
                     *binding.required_dependency_ids,
                 )
             )
         )
         optional_ids = tuple(
-            str(item) for item in route.get("optional_capabilities", []) if str(item) not in required_ids
+            dict.fromkeys(
+                str(item)
+                for route in routes
+                for item in route.get("optional_capabilities", [])
+                if str(item) not in required_ids
+            )
         )
         if binding.dependency_ids:
             required_ids = tuple(item for item in required_ids if item in binding.dependency_ids)
@@ -1552,13 +664,14 @@ class ConversionService:
                     "code": "runtime_route_limitation",
                     "message": str(message),
                 }
+                for route in routes
                 for message in route.get("limitations", [])
                 if str(message).strip()
             )
             if binding.project_runtime_limitations
             else ()
         )
-        route_available = bool(route.get("available")) and not any(
+        route_available = plan.available and not any(
             dependency["required"] and not dependency["available"] for dependency in dependencies
         )
         if not route_available:
@@ -1723,106 +836,5 @@ class ConversionService:
             ) from exc
         return size_bytes, digest.hexdigest()
 
-    @staticmethod
-    def _build_conversion_request(
-        task_id: str,
-        request: ConversionPlanRequest,
-        binding: _CapabilityBinding,
-        effective_options: dict[str, Any],
-    ) -> ConversionRequest:
-        manifest_context = ConversionManifestContext(
-            policy=OutputManifestPolicy(save_to_output=False, mask_input_path=True),
-            inputs=tuple(
-                ConversionManifestInput(
-                    path=handle.path,
-                    format=binding.input_format,
-                    category=binding.input_category,
-                )
-                for handle in request.inputs
-                if handle.role in {"source", "neutral_document"}
-            ),
-        )
-        runtime_options = dict(effective_options)
-        public_properties = binding.options_schema.get("properties", {})
-        if isinstance(public_properties, dict) and {
-            "recognize_text",
-            "preserve_resources",
-        }.issubset(public_properties):
-            runtime_options["to_md_enable_ocr"] = runtime_options.pop("recognize_text")
-            runtime_options["to_md_keep_images"] = runtime_options.pop("preserve_resources")
 
-        return ConversionRequest(
-            request_id=task_id,
-            input_refs=[
-                FileRef(
-                    path=os.path.abspath(handle.path),
-                    format=(binding.input_format if handle.role in {"source", "neutral_document"} else "resource"),
-                    category=(binding.input_category if handle.role in {"source", "neutral_document"} else "other"),
-                    size_bytes=handle.size_bytes,
-                    input_kind=handle.kind,
-                    input_role=handle.role,
-                    logical_path=handle.logical_path,
-                    media_type=handle.media_type,
-                    metadata={
-                        "machine_input_id": handle.input_id,
-                        "machine_input_size_bytes": handle.size_bytes,
-                        "machine_input_sha256": handle.sha256,
-                    },
-                )
-                for handle in request.inputs
-            ],
-            target_format=binding.target_format,
-            action_name=binding.action_name,
-            options=runtime_options,
-            output_policy=OutputPolicy(
-                output_dir=os.path.abspath(request.output.staging_root),
-                overwrite_mode="error",
-                write_artifacts=True,
-                open_after_done=False,
-            ),
-            # The controller captures the complete request-scoped config snapshot.
-            # Manifest policy is carried independently so Machine tasks never
-            # publish the legacy sidecar manifest into their staging bundle.
-            config_snapshot={},
-            manifest_context=manifest_context,
-        )
-
-
-__all__ = [
-    "CSV_MEDIA_TYPE",
-    "DOCX_MEDIA_TYPE",
-    "DOCX_TO_MARKDOWN_CAPABILITY_ID",
-    "JSON_MEDIA_TYPE",
-    "MARKDOWN_MEDIA_TYPE",
-    "MARKDOWN_NUMBERING_CAPABILITY_ID",
-    "MARKDOWN_TABLES_TO_CSV_CAPABILITY_ID",
-    "MARKDOWN_TO_DOCX_CAPABILITY_ID",
-    "MARKDOWN_TO_XLSX_CAPABILITY_ID",
-    "MARKDOWN_VALIDATE_CAPABILITY_ID",
-    "OFD_MEDIA_TYPE",
-    "OFD_TO_MARKDOWN_CAPABILITY_ID",
-    "PDF_MEDIA_TYPE",
-    "PDF_SPLIT_EVERY_PAGE_CAPABILITY_ID",
-    "PDF_TO_MARKDOWN_CAPABILITY_ID",
-    "PDF_TO_PNG_CAPABILITY_ID",
-    "PNG_MEDIA_TYPE",
-    "PNG_TO_OCR_MARKDOWN_CAPABILITY_ID",
-    "SEMANTIC_BIBLIOGRAPHY_MEDIA_TYPE",
-    "TIFF_FRAMES_TO_PNG_CAPABILITY_ID",
-    "TIFF_MEDIA_TYPE",
-    "TIFF_TO_MARKDOWN_CAPABILITY_ID",
-    "XLSX_MEDIA_TYPE",
-    "XLSX_TO_CSV_CAPABILITY_ID",
-    "XLSX_TO_MARKDOWN_CAPABILITY_ID",
-    "XPS_MEDIA_TYPE",
-    "XPS_TO_MARKDOWN_CAPABILITY_ID",
-    "ConversionPlan",
-    "ConversionPlanRequest",
-    "ConversionService",
-    "ConversionServiceError",
-    "ConversionTaskOutcome",
-    "LocalInputHandle",
-    "MachineCapability",
-    "OutputShape",
-    "StagingOutputTarget",
-]
+__all__ = ["ConversionService"]

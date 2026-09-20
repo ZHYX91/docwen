@@ -4,7 +4,7 @@
   "result": {
     "protocol": {
       "name": "docwen.machine",
-      "major": 1,
+      "major": 2,
       "minor": 0
     },
     "server": {
@@ -28,7 +28,7 @@
       "task/execute",
       "task/cancel"
     ],
-    "artifact_bundle_schema": "docwen.artifact_bundle.v2",
+    "artifact_bundle_schema": "docwen.artifact_bundle.v3",
     "max_concurrent_tasks": 1
   }
 }

@@ -37,7 +37,7 @@ class TestRuntimeRequestBinding:
         source = tmp_path / "source.md"
         source.write_text("# Content\n", encoding="utf-8")
         window._view_model.add_files([str(source)])
-        request, context = window._build_request(
+        request, context = window._requests.single(
             file_path=str(source), target_format="docx", action_name="", options={}
         )
         previous_output = tmp_path / "previous.docx"
@@ -64,12 +64,12 @@ class TestRuntimeRequestBinding:
 
         from types import SimpleNamespace
 
-        from docwen_gui.main_window import _ExecutionThread
+        from docwen_gui.qt_bridge.execution import ExecutionThread
 
-        window._feedback_context = dict(context)
+        window._workflow._context = dict(context)
         window._info_area_vm.begin_task(operation_id=request.request_id, current_file=source.name, total_count=1)
-        thread = _ExecutionThread(controller=SimpleNamespace(), request=request, context=context)  # type: ignore[arg-type]
-        thread.error_signal.connect(window._on_execution_failed)
+        thread = ExecutionThread(controller=SimpleNamespace(), request=request, context=context)  # type: ignore[arg-type]
+        thread.error_signal.connect(window._results.failed)
         thread.run()
         summary = window._info_area_vm.task_summary
         assert summary.state == "failed"
@@ -77,7 +77,7 @@ class TestRuntimeRequestBinding:
         assert summary.output_path == ""
         assert summary.output_paths == ()
         assert summary.failed_count == 1
-        assert not window._active_threads
+        assert not window._execution.threads
         records = [row for row in window._activity_model.records if row.operation_id == request.request_id]
         assert len(records) == 1
         assert records[0].source_path == source.as_posix()
@@ -99,7 +99,7 @@ class TestRuntimeRequestBinding:
         )
 
         assert (
-            window._admit_execution_request(
+            window._workflow._admit(
                 request, {"request_id": request.request_id, "file_path": str(source), "target_format": "docx"}
             )
             is False
@@ -107,13 +107,13 @@ class TestRuntimeRequestBinding:
 
     def test_request_builder_admits_programmatic_path_through_core(self, window, tmp_path) -> None:
         from docwen_core.models import FILE_INSPECTION_METADATA_KEY
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "not-added.md"
         source.write_text("# Content\n", encoding="utf-8")
-        window._file_contexts = {_normalize_path(str(source)): ("markdown", "markdown")}
+        window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
 
-        request, _context = window._build_request(
+        request, _context = window._requests.single(
             file_path=str(source),
             target_format="docx",
             action_name="",
@@ -136,7 +136,7 @@ class TestRuntimeRequestBinding:
         source.write_bytes(b"%PDF-1.4\n% deterministic probe\n")
         outcome = window._view_model.add_files([str(source)])
         assert len(outcome.added) == 1
-        request, _context = window._build_request(
+        request, _context = window._requests.single(
             file_path=str(source),
             target_format="md",
             action_name="",
@@ -161,7 +161,7 @@ class TestRuntimeRequestBinding:
             "docwen_gui.dialogs.feedback.confirm",
             lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("must not ask twice")),
         )
-        second_request, _context = window._build_request(
+        second_request, _context = window._requests.single(
             file_path=str(source),
             target_format="md",
             action_name="",
@@ -173,7 +173,7 @@ class TestRuntimeRequestBinding:
         source = tmp_path / "renamed.docx"
         source.write_bytes(b"%PDF-1.4\nfirst version\n")
         window._view_model.add_files([str(source)])
-        first_request, _context = window._build_request(
+        first_request, _context = window._requests.single(
             file_path=str(source),
             target_format="md",
             action_name="",
@@ -183,7 +183,7 @@ class TestRuntimeRequestBinding:
         assert window._confirm_request_admission(first_request) is True
 
         source.write_bytes(b"%PDF-1.4\nreplacement with a different size\n")
-        second_request, _context = window._build_request(
+        second_request, _context = window._requests.single(
             file_path=str(source),
             target_format="md",
             action_name="",
@@ -194,14 +194,14 @@ class TestRuntimeRequestBinding:
             lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("stale fact must stop before dialog")),
         )
 
+        from docwen_gui.execution_admission import ExecutionAdmissionError, check_frozen_request
         from docwen_gui.i18n import t as _t
-        from docwen_gui.main_window import _check_frozen_request, _ExecutionAdmissionError
 
         # GUI confirmation reads frozen facts; exact-byte revalidation belongs
         # to the execution thread and still rejects changed inputs.
         assert window._confirm_request_admission(second_request) is True
-        with pytest.raises(_ExecutionAdmissionError) as error:
-            _check_frozen_request(second_request)
+        with pytest.raises(ExecutionAdmissionError) as error:
+            check_frozen_request(second_request)
         assert str(error.value) == _t("main_window.file_admission_changed")
 
     def test_request_keeps_localized_ingress_warning_and_inspection_after_text_route_normalization(
@@ -215,7 +215,7 @@ class TestRuntimeRequestBinding:
         outcome = window._view_model.add_files([str(source)])
         assert len(outcome.added) == 1
 
-        request, _context = window._build_request(
+        request, _context = window._requests.single(
             file_path=str(source),
             target_format="docx",
             action_name="",
@@ -231,17 +231,17 @@ class TestRuntimeRequestBinding:
         assert input_ref.warning_message != inspection.warning_message
 
     def test_docx_template_selection_is_added_to_document_request(self, window, tmp_path) -> None:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "note.md"
         source.write_text("# Title", encoding="utf-8")
-        window._file_contexts = {_normalize_path(str(source)): ("markdown", "markdown")}
+        window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
         _load_request_templates(window)
         selector = window._template_selector.get_selector("docx")
         assert selector is not None
         selector.select_template(_DOCX_TEMPLATE_ID, selection_source="user")
 
-        request, context = window._build_request(
+        request, context = window._requests.single(
             file_path=str(source),
             target_format="docx",
             action_name="",
@@ -262,7 +262,7 @@ class TestRuntimeRequestBinding:
             _write_format_fixture(source, "docx")
             _bind_admitted_ref(window, source, "document", "docx")
 
-            request, context = window._build_request(
+            request, context = window._requests.single(
                 file_path=str(source),
                 target_format="md",
                 action_name="",
@@ -285,7 +285,7 @@ class TestRuntimeRequestBinding:
             _write_format_fixture(source, "xlsx")
             _bind_admitted_ref(window, source, "spreadsheet", "xlsx")
 
-            request, context = window._build_request(
+            request, context = window._requests.single(
                 file_path=str(source),
                 target_format="md",
                 action_name="",
@@ -303,7 +303,7 @@ class TestRuntimeRequestBinding:
         _write_format_fixture(source, "xlsx")
         _bind_admitted_ref(window, source, "spreadsheet", "xlsx")
 
-        request, context = window._build_request(
+        request, context = window._requests.single(
             file_path=str(source),
             target_format="ods",
             action_name="",
@@ -323,16 +323,16 @@ class TestRuntimeRequestBinding:
 
     def test_image_to_markdown_request_carries_locale_yaml_labels(self, window, tmp_path) -> None:
         from docwen_gui.i18n import get_locale, set_locale
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         previous_locale = get_locale()
         set_locale("ja_JP")
         try:
             source = tmp_path / "sample.png"
             source.write_bytes(b"\x89PNG\r\n\x1a\n")
-            window._file_contexts = {_normalize_path(str(source)): ("png", "image")}
+            window._file_contexts = {normalize_path(str(source)): ("png", "image")}
 
-            request, context = window._build_request(
+            request, context = window._requests.single(
                 file_path=str(source),
                 target_format="md",
                 action_name="",
@@ -346,7 +346,7 @@ class TestRuntimeRequestBinding:
             set_locale(previous_locale)
 
     def test_image_to_markdown_request_consumes_link_style_default(self, qapp, tmp_path) -> None:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         window = _make_window_with_config(
             qapp,
@@ -357,11 +357,11 @@ class TestRuntimeRequestBinding:
         try:
             source = tmp_path / "sample.png"
             source.write_bytes(b"\x89PNG\r\n\x1a\n")
-            window._file_contexts = {_normalize_path(str(source)): ("png", "image")}
+            window._file_contexts = {normalize_path(str(source)): ("png", "image")}
 
             window._view_model.set_selected_file(_file_ref(str(source), "image", "png"))
 
-            request, context = window._build_request(
+            request, context = window._requests.single(
                 file_path=str(source),
                 target_format="md",
                 action_name=window._action_area_vm.action_name,
@@ -377,7 +377,7 @@ class TestRuntimeRequestBinding:
 
     def test_markup_to_markdown_request_carries_locale_yaml_labels(self, window, tmp_path) -> None:
         from docwen_gui.i18n import get_locale, set_locale
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         previous_locale = get_locale()
         set_locale("de_DE")
@@ -387,9 +387,9 @@ class TestRuntimeRequestBinding:
                 "<html><head><title>Probe</title></head><body><h1>Probe</h1></body></html>",
                 encoding="utf-8",
             )
-            window._file_contexts = {_normalize_path(str(source)): ("html", "markup")}
+            window._file_contexts = {normalize_path(str(source)): ("html", "markup")}
 
-            request, context = window._build_request(
+            request, context = window._requests.single(
                 file_path=str(source),
                 target_format="md",
                 action_name="",
@@ -406,16 +406,16 @@ class TestRuntimeRequestBinding:
 
     def test_layout_to_markdown_request_carries_locale_yaml_labels(self, window, tmp_path) -> None:
         from docwen_gui.i18n import get_locale, set_locale
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         previous_locale = get_locale()
         set_locale("de_DE")
         try:
             source = tmp_path / "layout.pdf"
             source.write_bytes(b"%PDF-1.4\n")
-            window._file_contexts = {_normalize_path(str(source)): ("pdf", "layout")}
+            window._file_contexts = {normalize_path(str(source)): ("pdf", "layout")}
 
-            request, context = window._build_request(
+            request, context = window._requests.single(
                 file_path=str(source),
                 target_format="md",
                 action_name="",
@@ -432,16 +432,16 @@ class TestRuntimeRequestBinding:
 
     def test_invoice_cn_to_markdown_request_carries_locale_yaml_labels(self, window, tmp_path) -> None:
         from docwen_gui.i18n import get_locale, set_locale
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         previous_locale = get_locale()
         set_locale("de_DE")
         try:
             source = tmp_path / "invoice.pdf"
             source.write_bytes(b"%PDF-1.4\n%\x00\x00\x00\x00\n")
-            window._file_contexts = {_normalize_path(str(source)): ("pdf", "layout")}
+            window._file_contexts = {normalize_path(str(source)): ("pdf", "layout")}
 
-            request, context = window._build_request(
+            request, context = window._requests.single(
                 file_path=str(source),
                 target_format="md",
                 action_name="invoice_cn",
@@ -469,7 +469,7 @@ class TestRuntimeRequestBinding:
             _write_format_fixture(source, "docx")
             _bind_admitted_ref(window, source, "document", "docx")
 
-            request, context = window._build_request(
+            request, context = window._requests.single(
                 file_path=str(source),
                 target_format="md",
                 action_name="gongwen",
@@ -488,16 +488,16 @@ class TestRuntimeRequestBinding:
 
     def test_md_numbering_request_does_not_carry_markdown_export_metadata(self, window, tmp_path) -> None:
         from docwen_gui.i18n import get_locale, set_locale
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         previous_locale = get_locale()
         set_locale("de_DE")
         try:
             source = tmp_path / "note.md"
             source.write_text("# Title\n", encoding="utf-8")
-            window._file_contexts = {_normalize_path(str(source)): ("markdown", "markdown")}
+            window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
 
-            request, context = window._build_request(
+            request, context = window._requests.single(
                 file_path=str(source),
                 target_format="md",
                 action_name="process_md_numbering",
@@ -514,17 +514,17 @@ class TestRuntimeRequestBinding:
             set_locale(previous_locale)
 
     def test_docx_template_selection_is_added_to_wps_request(self, window, tmp_path) -> None:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "note.md"
         source.write_text("# Title", encoding="utf-8")
-        window._file_contexts = {_normalize_path(str(source)): ("markdown", "markdown")}
+        window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
         _load_request_templates(window, xlsx=False)
         selector = window._template_selector.get_selector("docx")
         assert selector is not None
         selector.select_template(_DOCX_TEMPLATE_ID, selection_source="user")
 
-        request, _context = window._build_request(
+        request, _context = window._requests.single(
             file_path=str(source),
             target_format="wps",
             action_name="",
@@ -534,17 +534,17 @@ class TestRuntimeRequestBinding:
         assert request.options["template_name"] == _DOCX_TEMPLATE_ID
 
     def test_docx_template_selection_is_added_to_pdf_request(self, window, tmp_path) -> None:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "note.md"
         source.write_text("# Title", encoding="utf-8")
-        window._file_contexts = {_normalize_path(str(source)): ("markdown", "markdown")}
+        window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
         _load_request_templates(window, xlsx=False)
         selector = window._template_selector.get_selector("docx")
         assert selector is not None
         selector.select_template(_DOCX_TEMPLATE_ID, selection_source="user")
 
-        request, _context = window._build_request(
+        request, _context = window._requests.single(
             file_path=str(source),
             target_format="pdf",
             action_name="",
@@ -560,17 +560,17 @@ class TestRuntimeRequestBinding:
         tmp_path,
         suffix: str,
     ) -> None:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / f"plain{suffix}"
         source.write_text("plain UTF-8 text without Markdown syntax\n", encoding="utf-8")
-        window._file_contexts = {_normalize_path(str(source)): ("txt", "markdown")}
+        window._file_contexts = {normalize_path(str(source)): ("txt", "markdown")}
         _load_request_templates(window, xlsx=False)
         selector = window._template_selector.get_selector("docx")
         assert selector is not None
         selector.select_template(_DOCX_TEMPLATE_ID, selection_source="user")
 
-        request, _context = window._build_request(
+        request, _context = window._requests.single(
             file_path=str(source),
             target_format="docx",
             action_name="",

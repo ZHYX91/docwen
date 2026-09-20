@@ -43,7 +43,6 @@ from PySide6.QtWidgets import (
 from docwen_gui.format_presentation import FormatChoice, presentation_for
 from docwen_gui.i18n import t as _t
 from docwen_gui.styles.design_tokens import Sizing, Spacing
-from docwen_gui.view_models.conversion_panel_vm import BUTTON_COLORS
 from docwen_gui.widgets.value_controls import ScrollSafeComboBox
 
 from .panel_card import ActionFooter, ChoiceGroup, FormatSelector, FormRow, InlineNotice, PanelCard, WrappingLabel
@@ -58,7 +57,7 @@ _SPACING_XS = Spacing.XS
 _SPACING_SM = Spacing.SM
 
 # ── Format swatch icons ────────────────────────────────────────────────
-# Semantic class per format comes from the shared format presentation registry.
+# File-family colors come from the shared format presentation registry.
 _SWATCH_SIZE = 12
 _SWATCH_RADIUS = 3
 
@@ -69,16 +68,16 @@ _empty_swatch_icon: QIcon | None = None
 def format_swatch_icon(format_name: str) -> QIcon | None:
     """Return a theme-aware 12x12 color dot icon for a known format name.
 
-    Unknown formats return ``None``; the color is resolved from the current
-    theme via :func:`docwen_gui.styles.theme_semantics.get_theme_class_color`.
+    Unknown formats return ``None``. File identity is independent of status
+    colors, so DOC/DOCX stay distinguishable in both themes.
     """
     normalized = str(format_name or "").strip().upper()
-    theme_class = BUTTON_COLORS.get(normalized)
-    if theme_class is None:
+    colors = presentation_for(normalized).swatch_colors
+    if colors is None:
         return None
 
     from docwen_gui.styles.theme_manager import ThemeManager
-    from docwen_gui.styles.theme_semantics import get_theme_class_color
+    from docwen_gui.styles.theme_semantics import is_dark_theme
 
     theme_name = ThemeManager.get_instance().get_current_theme()
     key = (theme_name, normalized)
@@ -91,7 +90,7 @@ def format_swatch_icon(format_name: str) -> QIcon | None:
     painter = QPainter(pixmap)
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
     painter.setPen(Qt.PenStyle.NoPen)
-    painter.setBrush(QColor(get_theme_class_color(theme_class, theme_name)))
+    painter.setBrush(QColor(colors[1 if is_dark_theme(theme_name) else 0]))
     painter.drawRoundedRect(
         QRectF(0.5, 0.5, _SWATCH_SIZE - 1, _SWATCH_SIZE - 1),
         _SWATCH_RADIUS,
@@ -781,7 +780,6 @@ class ConversionPanel(QWidget):
         return FormatChoice(
             key=presentation.key,
             display_name=presentation.display_name,
-            tone=presentation.tone,
             enabled=True,
             disabled_reason="",
             help_text=_t(

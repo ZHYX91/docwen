@@ -1619,6 +1619,7 @@ class DocxToMarkdownConverter:
                 para_element,
                 para,
                 preserve_formatting=(self._preserve_heading_formatting if is_heading else self._preserve_formatting),
+                style_detector_config=style_detector_config,
             )
 
         if not text and _formula_text is None:
@@ -1743,10 +1744,12 @@ class DocxToMarkdownConverter:
                     if part_type == "separator":
                         _append_block_separator(part)
                     elif part:
-                        lines.append(f"{prefix} {part}")
+                        inline_part = part.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "<br>")
+                        lines.append(f"{prefix} {inline_part}")
                         lines.append("")
             else:
-                lines.append(f"{prefix} {display_text}")
+                inline_title = display_text.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "<br>")
+                lines.append(f"{prefix} {inline_title}")
                 lines.append("")
             if has_section_break and self._section_break_separator:
                 _append_block_separator(self._section_break_separator)
@@ -2007,139 +2010,31 @@ class DocxToMarkdownConverter:
     def _build_paragraph_text_with_formulas(
         self,
         para_element: Any,
-        para: Any = None,
+        para: Any,
         *,
         preserve_formatting: bool = True,
+        style_detector_config: Any = None,
     ) -> str:
-        """Build paragraph text with OMML formulas converted to ``$...$`` LaTeX.
+        """Render formulas and surrounding text through the shared run walker."""
+        from docwen_plugin_document.shared.markdown_runs import render_paragraph_runs
 
-        Walks the paragraph XML children in document order, converting
-        ``<m:oMath>`` (inline) and ``<m:oMathPara>`` (display) elements
-        to their LaTeX representation via ``extract_formula_from_element``.
-        Non-math children are rendered with standard run formatting (bold,
-        italic, hyperlinks, inline note references, etc.).
-        """
-        from docwen_plugin_document.shared.markdown_runs import (
-            append_formatted_run_text,
-            resolve_hyperlink_target,
-        )
-
-        _MATH_NS = OMML_NS["m"]
-        elem = getattr(para, "_p", para_element) if para is not None else para_element
         paragraph_text = (
             para.text.strip() if para is not None else self._extract_paragraph_text_raw(para_element).strip()
         )
         standalone_formula = not paragraph_text
-        parts: list[str] = []
 
-        def _process_children(parent: Any) -> None:
-            for child in parent:
-                _process_child(child)
-
-        def _process_alternate_content(element: Any) -> None:
-            """Render one effective ``mc:AlternateContent`` branch.
-
-            Word commonly stores the same formula in a modern ``Choice`` and
-            a compatibility ``Fallback``.  Rendering both duplicates content,
-            while skipping the wrapper loses the formula entirely.  Prefer
-            the first Choice that produces output, then use Fallback only when
-            every Choice is empty or unsupported by this renderer.
-            """
-            branches: dict[str, list[Any]] = {"Choice": [], "Fallback": []}
-            for branch in element:
-                branch_tag = branch.tag.split("}")[-1] if "}" in (branch.tag or "") else (branch.tag or "")
-                if branch_tag in branches:
-                    branches[branch_tag].append(branch)
-
-            for branch_kind in ("Choice", "Fallback"):
-                for branch in branches[branch_kind]:
-                    previous_parts = list(parts)
-                    _process_children(branch)
-                    if parts != previous_parts:
-                        return
-
-        def _process_child(child: Any) -> None:
+        def render_formula(child: Any) -> str | None:
             tag = child.tag.split("}")[-1] if "}" in (child.tag or "") else (child.tag or "")
+            return extract_formula_from_element(child, block=(tag == "oMathPara" or standalone_formula))
 
-            if tag == "oMath":
-                # Some legacy Word producers emit display math as a bare
-                # ``oMath`` in an otherwise empty paragraph instead of an
-                # ``oMathPara`` wrapper.  Both old DocWen converters treated
-                # that shape as block math; mixed-content paragraphs remain
-                # inline.
-                latex = extract_formula_from_element(child, block=standalone_formula)
-                if latex:
-                    parts.append(latex)
-            elif tag == "oMathPara":
-                latex = extract_formula_from_element(child, block=True)
-                if latex:
-                    parts.append(latex)
-            elif tag == "r":
-                _handle_run(child)
-            elif tag == "hyperlink":
-                url = resolve_hyperlink_target(para, child) if para is not None else None
-                if url:
-                    previous_parts = list(parts)
-                    parts.append("[")
-                    opener_parts = list(parts)
-                _process_children(child)
-                if url:
-                    if parts == opener_parts:
-                        parts[:] = previous_parts
-                    else:
-                        parts.append(f"]({url})")
-            elif tag in ("ins", "moveTo", "fldSimple", "smartTag", "sdt", "sdtContent", "customXml"):
-                _process_children(child)
-            elif tag in ("del", "moveFrom"):
-                pass
-            elif tag == "AlternateContent":
-                _process_alternate_content(child)
-
-        def _handle_run(run: Any) -> None:
-            from docx.oxml.ns import qn
-
-            br = run.find(qn("w:br"))
-            if br is not None:
-                parts.append("\n")
-                return
-            tab = run.find(qn("w:tab"))
-            if tab is not None:
-                parts.append("\t")
-                return
-
-            # Note references (before text check — ref runs may lack w:t)
-            _ne = self._note_extractor
-            fn_ref = run.find(qn("w:footnoteReference"))
-            if fn_ref is not None and _ne is not None:
-                w_id = fn_ref.get(qn("w:id"))
-                if w_id is not None:
-                    parts.append(_ne.get_reference_text("footnote", int(w_id)))
-                    return
-
-            en_ref = run.find(qn("w:endnoteReference"))
-            if en_ref is not None and _ne is not None:
-                w_id = en_ref.get(qn("w:id"))
-                if w_id is not None:
-                    parts.append(_ne.get_reference_text("endnote", int(w_id)))
-                    return
-
-            t = run.find(qn("w:t"))
-            if t is None or t.text is None:
-                return
-            if not preserve_formatting:
-                parts.append(t.text)
-                return
-            append_formatted_run_text(
-                parts,
-                t.text,
-                run,
-                syntax_config=self._syntax_for_rendering(),
-            )
-
-        _process_children(elem)
-        text = "".join(parts)
-
-        return text
+        return render_paragraph_runs(
+            para if para is not None else para_element,
+            note_extractor=self._note_extractor,
+            preserve_formatting=preserve_formatting,
+            syntax_config=self._syntax_for_rendering(),
+            style_detector_config=style_detector_config,
+            math_renderer=render_formula,
+        )
 
     def _extract_paragraph_text_raw(self, para_element: Any) -> str:
         """Extract text from raw XML paragraph element (fallback)."""
@@ -2618,6 +2513,7 @@ class DocxToMarkdownConverter:
                     para_elem,
                     para,
                     preserve_formatting=preserve_formatting,
+                    style_detector_config=self._request_policy.style_detector,
                 )
                 if formula_text.strip():
                     cell_text_parts.append(formula_text.strip())

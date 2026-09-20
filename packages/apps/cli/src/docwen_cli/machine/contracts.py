@@ -1,4 +1,4 @@
-"""Packaged/source schema loading and validation for Machine Protocol v1."""
+"""Packaged/source schema loading and validation for Machine Protocol v2."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from typing import Any
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
-_MACHINE_SCHEMA_NAME = "docwen.machine.v1.schema.json"
+_MACHINE_SCHEMA_NAME = "docwen.machine.v2.schema.json"
 _DIAGNOSTIC_EVIDENCE_SCHEMA_NAME = "docwen.machine.diagnostic_evidence.v1.schema.json"
-_BUNDLE_SCHEMA_NAME = "docwen.artifact_bundle.v2.schema.json"
+_BUNDLE_SCHEMA_NAME = "docwen.artifact_bundle.v3.schema.json"
 
 
 class MachineContractValidator:

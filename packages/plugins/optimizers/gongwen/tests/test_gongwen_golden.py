@@ -279,13 +279,13 @@ class TestGongwenGolden:
         result = task_mgr.execute_single(request)
 
         assert result.success, f"unexpected error: {result.error}"
-        assert len(result.artifacts) == 2
+        assert len(result.artifacts) == 1
         primary = next(artifact for artifact in result.artifacts if artifact.is_primary)
-        manifest = next(artifact for artifact in result.artifacts if artifact.kind == "manifest")
         primary_path = Path(primary.staging_path)
         assert primary_path.parent.parent == output_dir
         assert primary_path.stem == primary_path.parent.name
-        assert Path(manifest.staging_path) == primary_path.parent / "docwen-node.json"
+        assert not (primary_path.parent / "docwen-node.json").exists()
+        assert {item.name for item in primary_path.parent.iterdir()} == {primary_path.name}
         assert primary.media_type == "text/markdown"
         assert primary.metadata["paragraph_count"] == len(fixture["input_docx"]["paragraphs"])
         assert primary.metadata["gongwen_fields"] >= 4
@@ -393,7 +393,7 @@ class TestGongwenGolden:
         result = task_mgr.execute_single(request)
 
         assert result.success, f"unexpected error: {result.error}"
-        assert len(result.artifacts) == 4
+        assert len(result.artifacts) == 3
         diagnostic_codes = {diagnostic.code for diagnostic in result.diagnostics}
         assert {"GONGWEN-OK", "FINALIZER_DONE"} <= diagnostic_codes
         assert "GONGWEN-NEEDS-REVIEW" not in diagnostic_codes

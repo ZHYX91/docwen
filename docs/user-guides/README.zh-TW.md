@@ -53,7 +53,7 @@
 
 **前置條件**：Python 3.12
 
-**0.9 目標邊界**：目前原始碼建置 Windows x64 與 Ubuntu 24.04 x64 正式套件。其他 Linux
+**目標邊界**：目前原始碼建置 Windows x64 與 Ubuntu 24.04 x64 正式套件。其他 Linux
 發行版與 macOS 仍屬於原始碼／開發路徑，不在 Ubuntu 套件的支援承諾內。
 
 **方式一：使用 uv（推薦）**
@@ -66,7 +66,7 @@ cd docwen
 uv sync --frozen --all-extras
 ```
 
-DocWen 0.9 原始碼、測試與建置僅支援倉庫內鎖定檔及 `uv 0.12.0`；不支援 `pip install -e`。
+DocWen 原始碼、測試與建置僅支援倉庫內鎖定檔及 `uv 0.12.0`；不支援 `pip install -e`。
 
 ### 啟動程式
 
@@ -98,7 +98,7 @@ pip install pillow-heif
 
 ### Linux GUI 版本前置條件
 
-**支援的打包目標**：DocWen 0.9 支援 Ubuntu 24.04 x64 打包 GUI 與 CLI。以下前置條件
+**支援的打包目標**：DocWen 支援 Ubuntu 24.04 x64 打包 GUI 與 CLI。以下前置條件
 不會把支援承諾擴展到其他發行版或架構。
 
 - 已安裝桌面環境（GNOME、KDE、XFCE 等均可）
@@ -588,7 +588,7 @@ Excel 範本中的 `{{→月份}}` 會依次向右填充"1月"、"2月"、"3月"
 
 DocWen Core 的 runtime/control transport 可在 Windows 使用命名管道，在 Linux/macOS 使用
 AF_UNIX 通訊端。檔案鎖只負責單一實例所有權，控制命令不透過檔案傳輸。這只是 Core 能力
-說明；DocWen Assistant 2.0 仍僅限 Windows 桌面端，尚無 Linux/macOS 組合驗收。
+說明；DocWen Assistant 3.0 仍僅限 Windows 桌面端，尚無 Linux/macOS 組合驗收。
 
 1. **首次點擊** → 啟動轉換器並傳入當前文件
 2. **再次點擊（有文件）** → 替換為新文件（單文件模式）
@@ -596,12 +596,12 @@ AF_UNIX 通訊端。檔案鎖只負責單一實例所有權，控制命令不透
 
 ### 安裝方法
 
-DocWen Assistant 2.0 使用 DocWen Machine Protocol v1 與唯一的 Artifact Bundle v2 合同。原始碼版本不能
+DocWen Assistant 3.0 使用 DocWen Machine Protocol v2 與唯一的 Artifact Bundle v3 合同。原始碼版本不能
 證明已經發布；請只安裝明確標識了相容且已發布 DocWen 版本的數字版本 Release。
 
 ## 🔌 OpenClaw（插件 + Skill）
 
-OpenClaw 2.0 使用 DocWen Machine Protocol v1 與唯一的 Artifact Bundle v2 合同。原始碼版本不能證明已經
+OpenClaw 3.0 使用 DocWen Machine Protocol v2 與唯一的 Artifact Bundle v3 合同。原始碼版本不能證明已經
 發布；請以數字版本 Release 頁面為準，並只在不可變發布閘門成功後安裝。
 
 ## ❓ 常見問題

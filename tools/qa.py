@@ -281,7 +281,18 @@ def _should_use_short_runtime_drive(*, suite: str) -> bool:
 
 
 def _pytest_base_cmd() -> list[str]:
-    return [sys.executable, "-m", "pytest", *_xdist_args(), "-o", f"addopts={PYTEST_BASE_ADDOPTS}"]
+    # A focused path inside one workspace package must still use the repository
+    # configuration and root fixtures, rather than that package's pyproject.
+    return [
+        sys.executable,
+        "-m",
+        "pytest",
+        "-c",
+        str(Path(__file__).resolve().parents[1] / "pyproject.toml"),
+        *_xdist_args(),
+        "-o",
+        f"addopts={PYTEST_BASE_ADDOPTS}",
+    ]
 
 
 def _xdist_args() -> list[str]:

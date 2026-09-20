@@ -97,7 +97,7 @@ class TestFullClosedLoop:
         result = controller.execute_single(request)
 
         assert result.success is True
-        assert len(result.artifacts) == 2
+        assert len(result.artifacts) == 1
         # The artifact should be in the output directory
         assert result.artifacts[0].staging_path.startswith(str(output_dir))
         assert os.path.isfile(result.artifacts[0].staging_path)
@@ -161,12 +161,13 @@ class TestFullClosedLoop:
         result = controller.execute_single(request)
 
         assert result.success is True
-        assert [item.kind for item in result.artifacts] == ["primary", "manifest", "manifest"]
+        assert [item.kind for item in result.artifacts] == ["primary", "manifest"]
         manifest_path = Path(
             next(item.staging_path for item in result.artifacts if item.media_type == "application/json")
         )
         manifest_text = manifest_path.read_text(encoding="utf-8")
         assert manifest_path.parent.parent == output_dir.resolve()
+        assert not (manifest_path.parent / "docwen-node.json").exists()
         assert len(list(output_dir.iterdir())) == 1
         assert "<redacted>/private-source.md" in manifest_text
         assert str(source.resolve()) not in manifest_text

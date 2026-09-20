@@ -24,7 +24,7 @@ def test_batch_label_counts_current_category_and_matches_dispatch(window, tmp_pa
     qtbot.waitUntil(lambda: not window._view_model.inspection_busy)
     window._batch_list.select_file(str(first))
     calls = []
-    monkeypatch.setattr(window, "_start_batch_execution", lambda **kwargs: calls.append(kwargs))
+    monkeypatch.setattr(window._workflow, "batch", lambda **kwargs: calls.append(kwargs))
     button = window._action_area.convert_docx_button
     assert button.text() == t("common.action_file_count", action=f"{t('action_area.generate')} DOCX", count=2)
     button.click()
@@ -47,7 +47,7 @@ def test_output_preview_survives_resize_and_reflects_committed_policy(window, tm
     config._values.update({"output.directory.mode": "custom", "output.directory.custom_path": str(destination)})
     window._apply_runtime_window_settings()
     assert str(destination) in label.full_text
-    assert window._build_output_policy().output_dir in label.full_text
+    assert window._requests.output_policy().output_dir in label.full_text
     window.show()
     label.resize(120, label.sizeHint().height())
     qapp.processEvents()

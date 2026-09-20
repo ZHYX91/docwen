@@ -1,4 +1,4 @@
-"""Typed read/control operations exposed by DocWen Machine Protocol v1."""
+"""Typed read/control operations exposed by DocWen Machine Protocol v2."""
 
 from __future__ import annotations
 
@@ -119,15 +119,19 @@ class MachineQueryService:
             resources = _template_entries(args) if kind == "templates" else _numbering_entries(args, self._controller)
         except CapabilityUnavailableError as exc:
             raise MachineQueryError("resource_unavailable", str(exc)) from exc
-        normalized = [
-            {
+
+        normalized: list[dict[str, Any]] = []
+        for item in resources:
+            resource: dict[str, Any] = {
                 "id": str(item.get("id", item.get("name", ""))),
                 "name": str(item.get("name", item.get("id", ""))),
                 "description": str(item.get("description", "")),
                 **({"target": str(item["target"])} if item.get("target") else {}),
             }
-            for item in resources
-        ]
+            if kind == "templates":
+                resource["origin"] = item["origin"]
+                resource["is_default"] = item["is_default"]
+            normalized.append(resource)
         return {"kind": kind, "resources": normalized}
 
     def gui_control(

@@ -81,7 +81,7 @@ def _payload(proc) -> dict[str, object]:
     value = json.loads(proc.stdout)
     assert isinstance(value, dict)
     assert value["protocol_version"] == 3
-    assert value["product_version"] == "0.11.0"
+    assert value["product_version"] == "0.12.0"
     return value
 
 
@@ -103,7 +103,7 @@ def test_cli_convert_xlsx_to_markdown_document_node(tmp_path: Path) -> None:
     output = Path(payload["data"]["output"])
     assert output.parent.parent == output_parent.resolve()
     assert output.stem == output.parent.name
-    assert (output.parent / "docwen-node.json").is_file()
+    assert not (output.parent / "docwen-node.json").exists()
     assert output.is_file()
     assert output.read_text(encoding="utf-8")
 
@@ -145,7 +145,7 @@ def test_cli_delimited_ingress_reaches_markdown_document_node(
     assert output.stem == output.parent.name
     assert output.parent.name.startswith(f"{source.stem}_")
     assert output.parent.name.endswith("_fromCsv")
-    assert (output.parent / "docwen-node.json").is_file()
+    assert not (output.parent / "docwen-node.json").exists()
     markdown = output.read_text(encoding="utf-8")
     assert "北京" in markdown
     assert "上海" in markdown

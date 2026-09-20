@@ -27,13 +27,14 @@ DocWen 文档只描述当前产品、受支持契约和维护门禁。实现与�
 
 ## Specifications / 规格
 
-- [Machine Protocol v1 and Artifact Bundle v2](specs/machine-protocol-v1.md)
+- [Machine Protocol v2 and Artifact Bundle v3](specs/machine-protocol-v2.md)
 - [Markdown document-node output](specs/document-node-output.md)
 - [Routes and actions](specs/routes-and-actions.md)
 - [Plugin manifest](specs/plugin-manifest.md)
 - [JSON contracts](specs/json-contracts.md)
 - [Golden regression suite](specs/golden-regression-suite.md)
 - [GUI behavior](specs/gui-behavior.md)
+- [User profile paths](specs/user-profile.md)
 - [Markdown compatibility](specs/markdown-compatibility.md)
 - [Templates and styles](specs/templates-and-styles.md)
 - [Physical-page OCR and artifact relations](specs/physical-page-ocr.md)

@@ -54,7 +54,7 @@ DocWen - 支持 Word/Markdown/Excel 互转，完全本地运行，数据安全�
 
 **前置条件**：Python 3.12
 
-**0.9 目标边界**：当前源码构建 Windows x64 和 Ubuntu 24.04 x64 正式包。其他 Linux
+**目标边界**：当前源码构建 Windows x64 和 Ubuntu 24.04 x64 正式包。其他 Linux
 发行版与 macOS 仍属于源码/开发路径，不在 Ubuntu 包的支持承诺内。
 
 **方式一：使用 uv（推荐）**
@@ -67,7 +67,7 @@ cd docwen
 uv sync --frozen --all-extras
 ```
 
-DocWen 0.9 源码、测试与构建仅支持仓库内锁文件及 `uv 0.12.0`；不支持 `pip install -e`。
+DocWen 源码、测试与构建仅支持仓库内锁文件及 `uv 0.12.0`；不支持 `pip install -e`。
 
 ### 启动程序
 
@@ -99,7 +99,7 @@ pip install pillow-heif
 
 ### Linux GUI 版本前置条件
 
-**支持的打包目标**：DocWen 0.9 支持 Ubuntu 24.04 x64 打包 GUI 与 CLI。以下前置条件
+**支持的打包目标**：DocWen 支持 Ubuntu 24.04 x64 打包 GUI 与 CLI。以下前置条件
 不会把支持承诺扩展到其他发行版或架构。
 
 - 已安装桌面环境（GNOME、KDE、XFCE 等均可）
@@ -597,7 +597,7 @@ Excel 模板中的 `{{→月份}}` 会依次向右填充"1月"、"2月"、"3月"
 
 DocWen Core 的 runtime/control transport 可在 Windows 使用命名管道，在 Linux/macOS 使用
 AF_UNIX 套接字。文件锁只负责单实例所有权，控制命令不通过文件传输。这只是 Core 能力说明；
-DocWen Assistant 2.0 仍仅限 Windows 桌面端，尚无 Linux/macOS 组合验收。
+DocWen Assistant 3.0 仍仅限 Windows 桌面端，尚无 Linux/macOS 组合验收。
 
 1. **首次点击** → 启动转换器并传入当前文件
 2. **再次点击（有文件）** → 替换为新文件（单文件模式）
@@ -605,12 +605,12 @@ DocWen Assistant 2.0 仍仅限 Windows 桌面端，尚无 Linux/macOS 组合验�
 
 ### 安装方法
 
-DocWen Assistant 2.0 使用 DocWen Machine Protocol v1 与唯一的 Artifact Bundle v2 合同。源码版本不能
+DocWen Assistant 3.0 使用 DocWen Machine Protocol v2 与唯一的 Artifact Bundle v3 合同。源码版本不能
 证明已经发布；请只安装明确标识了兼容且已发布 DocWen 版本的数字版本 Release。
 
 ## 🔌 OpenClaw（插件 + Skill）
 
-OpenClaw 2.0 使用 DocWen Machine Protocol v1 与唯一的 Artifact Bundle v2 合同。源码版本不能证明已经
+OpenClaw 3.0 使用 DocWen Machine Protocol v2 与唯一的 Artifact Bundle v3 合同。源码版本不能证明已经
 发布；请以数字版本 Release 页面为准，并只在不可变发布门禁成功后安装。
 
 ## ❓ 常见问题

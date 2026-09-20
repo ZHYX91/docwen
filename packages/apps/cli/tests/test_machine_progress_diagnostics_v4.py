@@ -1,4 +1,4 @@
-"""Machine v1 bounded progress and v4 diagnostic evidence contracts."""
+"""Machine v2 bounded progress and v4 diagnostic evidence contracts."""
 
 from __future__ import annotations
 
@@ -10,7 +10,9 @@ from typing import Any
 
 import pytest
 
-from docwen_application.conversion_service import ConversionTaskOutcome
+from docwen_application.conversion_contracts import (
+    ConversionTaskOutcome,
+)
 from docwen_cli.machine.contracts import MachineContractValidator
 from docwen_cli.machine.framing import FrameWriter, read_frame
 from docwen_cli.machine.server import MachineProtocolServer
@@ -116,7 +118,7 @@ def _messages(capability_id: str = "convert.markdown.to_docx") -> list[dict[str,
             "initialize",
             1,
             {
-                "protocol": {"name": "docwen.machine", "major": 1, "minor": 0},
+                "protocol": {"name": "docwen.machine", "major": 2, "minor": 0},
                 "client": {"name": "test-client", "version": "1.0.0"},
                 "features": {"progress": True, "cancellation": True},
             },

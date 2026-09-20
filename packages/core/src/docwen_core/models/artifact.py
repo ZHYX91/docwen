@@ -73,6 +73,12 @@ class ArtifactManifest:
     logical_path: str | None = None
     """Portable relative output path assigned by the central layout planner."""
 
+    size_bytes: int | None = None
+    """Final byte count, assigned by the runtime after preparing output."""
+
+    sha256: str | None = None
+    """SHA-256 of the final bytes, including relocated Markdown links."""
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "artifact_id": self.artifact_id,
@@ -83,6 +89,8 @@ class ArtifactManifest:
             "media_type": self.media_type,
             "metadata": dict(self.metadata),
             "is_primary": self.is_primary,
+            "size_bytes": self.size_bytes,
+            "sha256": self.sha256,
         }
 
     @classmethod
@@ -96,4 +104,6 @@ class ArtifactManifest:
             media_type=data.get("media_type", "application/octet-stream"),
             metadata=dict(data.get("metadata", {})),
             is_primary=data.get("is_primary", False),
+            size_bytes=data.get("size_bytes"),
+            sha256=data.get("sha256"),
         )

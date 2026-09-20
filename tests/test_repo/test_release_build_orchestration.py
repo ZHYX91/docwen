@@ -269,13 +269,9 @@ def test_release_workflow_publishes_supported_windows_and_ubuntu_assets() -> Non
     assert "DocWenCLI-${RELEASE_VERSION}-linux-x64.tar.gz" in workflow
     assert "DocWen-${RELEASE_VERSION}-linux-x64.tar.gz" in workflow
     assert "DocWen-macos" not in workflow
-    assert "DocWen 0.11 publishes one Windows x64 package and two Ubuntu 24.04 x64 packages" in packaging
-    assert "DocWen 0.11 正式发布" in packaging
-    assert (
-        "The [0.11.0 Release](https://github.com/ZHYX91/docwen/releases/tag/0.11.0) publishes one Windows x64 GUI+CLI package"
-        in readme
-    )
-    assert "No 0.9 Release is published yet" not in readme
+    assert "DocWen packages one Windows x64 package and two Ubuntu 24.04 x64 packages" in packaging
+    assert "DocWen 的发布目标为" in packaging
+    assert "DocWen provides one Windows x64 GUI+CLI package" in readme
     assert "Ubuntu 24.04 x64 GUI+CLI" in readme
     assert '"Operating System :: Microsoft :: Windows"' in project_metadata
     assert '"Operating System :: POSIX :: Linux"' in project_metadata

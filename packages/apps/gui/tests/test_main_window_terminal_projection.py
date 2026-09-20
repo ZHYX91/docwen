@@ -109,7 +109,7 @@ def test_execution_result_publishes_completed_with_output_path_atomically(
 
     main_window._batch_list_vm.status_changed.connect(capture_terminal)
     main_window.view_model.task_summary_changed.connect(summaries.append)
-    main_window._on_execution_finished(
+    main_window._results.finished(
         ConversionResult(
             task_id=task_id,
             success=True,
@@ -172,7 +172,7 @@ def test_execution_result_publishes_failure_payload_atomically(
 
     main_window._batch_list_vm.status_changed.connect(capture_terminal)
     main_window.view_model.task_summary_changed.connect(summaries.append)
-    main_window._on_execution_finished(
+    main_window._results.finished(
         ConversionResult(
             task_id=task_id,
             success=False,
@@ -219,7 +219,7 @@ def test_failed_result_keeps_long_retained_output_reachable(main_window, tmp_pat
         error=ConversionErrorInfo(error_type="conversion_failed", message="boom"),
     )
 
-    assert main_window._pick_existing_output_path(result) == str(retained)
+    assert main_window._results.existing_output_path(result) == str(retained)
 
 
 @pytest.mark.skipif(os.name != "nt", reason="Win32 namespace policy")
@@ -260,8 +260,8 @@ def test_failed_result_skips_invalid_namespace_artifacts(main_window, tmp_path: 
         error=error,
     )
 
-    assert main_window._pick_existing_output_path(with_fallback) == str(retained)
-    assert main_window._pick_existing_output_path(invalid_only) == ""
+    assert main_window._results.existing_output_path(with_fallback) == str(retained)
+    assert main_window._results.existing_output_path(invalid_only) == ""
 
 
 @pytest.mark.parametrize("child_terminal", ["task_completed", "task_failed", "task_cancelled"])
@@ -334,7 +334,7 @@ def test_batch_result_publishes_one_aligned_operation_summary(
     )
     assert summaries == []
 
-    main_window._on_execution_finished(
+    main_window._results.finished(
         [
             ConversionResult(
                 task_id=f"{parent_id}-0",
@@ -424,7 +424,7 @@ def test_aggregate_result_is_single_owner_for_every_input_row(
     assert summaries == []
 
     success = expected_status == "completed"
-    main_window._on_execution_finished(
+    main_window._results.finished(
         ConversionResult(
             task_id=task_id,
             success=success,

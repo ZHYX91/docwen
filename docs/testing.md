@@ -10,6 +10,8 @@ A passing package preflight alone is insufficient.
 
 Tests are grouped by primary behavior family and execution cost. The default repository run selects only non-slow unit and contract tests; GUI, integration, end-to-end and environment-owned checks run in their explicit lanes.
 
+Focused local runs may pass test paths through `PYTEST_ADDOPTS`. The QA entry point pins the repository's pytest configuration and root fixtures even when every selected path belongs to a single workspace package.
+
 测试按主要行为族和执行成本分层。默认仓库测试只选择非 slow 的 unit 与 contract；GUI、integration、端到端及环境所有型检查进入各自显式门禁。
 
 ## Common commands / 常用命令

@@ -87,7 +87,7 @@ class ArtifactBundleCommitPort(Protocol):
     """Runtime-owned integrity commit for one semantic BundleDraft."""
 
     def commit(self, *, task_id: str, staging_root: str, draft: Any) -> Any:
-        """Validate paths and graph, hash deliverables, and return Artifact Bundle v2."""
+        """Validate paths and graph, hash deliverables, and return Artifact Bundle v3."""
         ...
 
     def discard(self, *, staging_root: str, artifact_paths: list[str]) -> None:

@@ -28,6 +28,14 @@ def _yaml(title: str) -> str:
     return f"---\naliases:\n  - {title}\ntitle: {title}\nsubtitle: \n---\n\n"
 
 
+def _expected_import(source: str, docx_path: Path) -> str:
+    # The blank template has no visible Title paragraph. Import therefore
+    # derives YAML from the current DOCX filename, including the output naming
+    # policy. The authored body and its exact fences remain the strict oracle.
+    _front_matter, body = source.split("\n---\n\n", 1)
+    return _yaml(docx_path.stem) + body
+
+
 @pytest.mark.parametrize(
     ("case_id", "body"),
     [
@@ -76,7 +84,7 @@ def test_fenced_source_exact_round_trip_matrix(
         options={"to_md_keep_images": False, "to_md_enable_ocr": False, "locale": "en"},
     )
     returned = _primary_path(reverse).read_bytes().decode("utf-8")
-    assert returned == source
+    assert returned == _expected_import(source, docx_path)
     analysis = analyze_markdown_semantics_v3(returned, input_id=f"{case_id}-returned.md")
     assert len(analysis.projection["fenced_sources"]) == 1
 
@@ -148,7 +156,7 @@ def test_multi_paragraph_list_item_and_whole_list_anchors_round_trip_once(
         tmp_path / "nested-list-reverse",
         options={"to_md_keep_images": False, "to_md_enable_ocr": False, "locale": "en"},
     )
-    assert returned == source
+    assert returned == _expected_import(source, docx_path)
     analysis = analyze_markdown_semantics_v3(returned, input_id="nested-list-returned.md")
     assert [(item["id"], item["block_kind"]) for item in analysis.projection["anchors"]] == [
         ("inner-item", "list_item"),
@@ -206,7 +214,7 @@ def test_nested_quote_fence_and_whole_quote_anchors_restore_exact_container_mark
         options={"to_md_keep_images": False, "to_md_enable_ocr": False, "locale": "en"},
     )
 
-    assert returned == source
+    assert returned == _expected_import(source, docx_path)
     assert returned.count("> ^inner-fence") == 1
     assert returned.count("\n^outer-quote") == 1
     analysis = analyze_markdown_semantics_v3(returned, input_id=f"{case_id}-returned.md")
@@ -301,7 +309,7 @@ def test_container_anchor_topology_round_trips_at_exact_source_path(
         tmp_path / f"{case_id}-reverse",
         options={"to_md_keep_images": False, "to_md_enable_ocr": False, "locale": "en"},
     )
-    assert returned == source
+    assert returned == _expected_import(source, docx_path)
     analysis = analyze_markdown_semantics_v3(returned, input_id=f"{case_id}-returned.md")
     assert [(item["id"], item["block_kind"]) for item in analysis.projection["anchors"]] == [
         (inner_id, inner_kind),
@@ -330,15 +338,12 @@ def test_disjoint_top_level_anchors_emit_no_topology_map(
     with ZipFile(docx_path) as package:
         package_payload = b"\n".join(package.read(name) for name in package.namelist())
     assert ANCHOR_TOPOLOGY_MAP_NAMESPACE.encode() not in package_payload
-    assert (
-        docx_to_md(
-            round_trip_runtime,
-            docx_path,
-            tmp_path / "disjoint-reverse",
-            options={"to_md_keep_images": False, "to_md_enable_ocr": False, "locale": "en"},
-        )
-        == source
-    )
+    assert docx_to_md(
+        round_trip_runtime,
+        docx_path,
+        tmp_path / "disjoint-reverse",
+        options={"to_md_keep_images": False, "to_md_enable_ocr": False, "locale": "en"},
+    ) == _expected_import(source, docx_path)
 
 
 def test_anchor_topology_map_hash_tamper_fails_closed(

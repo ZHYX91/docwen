@@ -8,7 +8,7 @@ DocWen reports artifact facts; it never emits private Workspace/Node models or c
 
 ## Current authority / 当前权威
 
-Machine `docwen.machine.v1` and protocol `1.0` require `docwen.artifact_bundle.v2`. Bundle v1 is
+Machine `docwen.machine.v2` and protocol `2.0` require `docwen.artifact_bundle.v3`. Bundle v1 is
 rejected. The relation schema, conformance fixtures, all consumers, packaged contracts, and release hashes change
 atomically. A consumer that does not understand the closed relation fields must fail closed.
 

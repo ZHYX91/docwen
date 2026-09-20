@@ -311,6 +311,49 @@ def plugin_structural_tables(md: mistune.Markdown) -> None:
 # ═══════════════════════════════════════════════════════════════════════════
 
 
+def plugin_source_breaks(md: mistune.Markdown) -> None:
+    """Bind break metadata while the parser still owns the matched source.
+
+    Literal code and Setext underlines never reach the thematic-break rule.
+    An HTML break is inline content, so it must not invent a physical line
+    that could split a heading, table cell, or link before block parsing.
+    """
+
+    def parse_thematic_break(block, match, state):
+        end = block.parse_thematic_break(match, state)
+        token = state.last_token()
+        token["_hr_marker"] = {"-": "dash", "*": "asterisk", "_": "underscore"}[match.group(0).lstrip()[0]]
+        previous_end = max(0, match.start() - 1)
+        previous_start = state.src.rfind("\n", 0, previous_end) + 1
+        adjacent = bool(state.src[previous_start:previous_end].strip())
+        if adjacent:
+            token["_attach_to_prev"] = True
+        return end
+
+    def bind_attachments(markdown, state):
+        def visit(nodes):
+            previous = None
+            for node in nodes:
+                # Lists can be inserted before the rule only after their child
+                # parser returns. Inspect the completed sibling list here.
+                if node.get("type") == "thematic_break" and (
+                    previous is None or previous.get("type") not in {"paragraph", "list"}
+                ):
+                    node.pop("_attach_to_prev", None)
+                visit(node.get("children", []))
+                previous = node
+
+        visit(state.tokens)
+
+    def parse_html_linebreak(inline, match, state):
+        state.append_token({"type": "linebreak"})
+        return match.end()
+
+    md.block.register("thematic_break", None, parse_thematic_break)
+    md.before_render_hooks.append(bind_attachments)
+    md.inline.register("html_linebreak", r"(?i:<br[ \t]*/?>)", parse_html_linebreak, before="inline_html")
+
+
 def create_extended_markdown(
     *, auto_link_bare_url: bool = False, extensions: MarkdownExtensions | None = None
 ) -> mistune.Markdown:
@@ -338,6 +381,7 @@ def create_extended_markdown(
         _subscript,
         plugin_single_line_block_math,
         plugin_underline,
+        plugin_source_breaks,
     ]
     dialect = extensions or MarkdownExtensions.obsidian()
     if dialect.structural_tables:

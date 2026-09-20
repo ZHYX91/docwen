@@ -657,36 +657,20 @@ class TestOldSystemMdNumberingFixture:
 
         assert result.success, f"Conversion failed: {result.error.message if result.error else 'unknown'}"
         [primary] = [artifact for artifact in result.artifacts if artifact.is_primary]
-        [manifest] = [
-            artifact for artifact in result.artifacts if artifact.metadata.get("document_node_role") == "manifest"
-        ]
-
+        assert result.artifacts == [primary]
         node_root = Path(result.metrics.extra["document_node_root"])
         primary_path = Path(primary.staging_path)
-        manifest_path = Path(manifest.staging_path)
         assert node_root.parent == output_dir
+        assert node_root.name.startswith(f"{input_file.stem}_")
+        assert node_root.name.endswith("_fromMd")
         assert primary_path == node_root / f"{node_root.name}.md"
-        assert manifest_path == node_root / "docwen-node.json"
+        assert set(node_root.iterdir()) == {primary_path}
         assert primary_path.read_text(encoding="utf-8") == case["expected_markdown"]
-
-        document_node = json.loads(manifest_path.read_text(encoding="utf-8"))
-        assert document_node["schema"] == "docwen.document_node.v1"
-        assert document_node["task_id"] == request.request_id
-        assert document_node["node_name"] == node_root.name
-        assert document_node["source"] == {
-            "name": input_file.name,
-            "stem": input_file.stem,
-            "format": request.input_refs[0].format,
-            "sha256": hashlib.sha256(input_file.read_bytes()).hexdigest(),
-        }
-        [primary_record] = document_node["artifacts"]
+        assert result.metrics.extra["document_node_schema"] == "docwen.document_node.v1"
+        assert primary.metadata["document_node_role"] == "primary"
+        assert primary.metadata["document_node_committed"] is True
         primary_bytes = primary_path.read_bytes()
-        assert primary_record == {
-            "artifact_id": primary.artifact_id,
-            "kind": primary.kind,
-            "logical_path": f"{node_root.name}/{node_root.name}.md",
-            "media_type": "text/markdown",
-            "role": "primary",
-            "size_bytes": len(primary_bytes),
-            "sha256": hashlib.sha256(primary_bytes).hexdigest(),
-        }
+        assert primary.logical_path == f"{node_root.name}/{node_root.name}.md"
+        assert primary.media_type == "text/markdown"
+        assert primary.size_bytes == len(primary_bytes)
+        assert primary.sha256 == hashlib.sha256(primary_bytes).hexdigest()

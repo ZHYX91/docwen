@@ -38,7 +38,7 @@ def test_machine_exact_two_plan_rejects_unresolved_yaml_source_without_leaking_c
             "initialize",
             1,
             {
-                "protocol": {"name": "docwen.machine", "major": 1, "minor": 0},
+                "protocol": {"name": "docwen.machine", "major": 2, "minor": 0},
                 "client": {"name": "v4-yaml-gate", "version": "1.0.0"},
                 "features": {"progress": True, "cancellation": True},
             },

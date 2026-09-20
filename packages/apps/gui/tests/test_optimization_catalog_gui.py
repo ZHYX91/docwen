@@ -8,9 +8,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from docwen_gui.main_window import _to_markdown_locale_options
+from docwen_application.optimization_selection import OptimizationSource
+from docwen_gui.execution_requests import _to_markdown_locale_options
 from docwen_gui.view_models._optimization_filter import (
-    OptimizationSource,
     discover_optimization_choices,
 )
 from docwen_gui.view_models.action_area_vm import ActionAreaViewModel
@@ -30,7 +30,7 @@ def _binding(source: str, category: str, route_id: str, *, scope: str) -> dict[s
     }
 
 
-def _projection(*, include_resources: bool = True) -> dict[str, Any]:
+def _projection(*, include_resources: bool = True, bridge_state: str = "available") -> dict[str, Any]:
     routes = [
         ("docx", "document", "docx:md:internal-gongwen", "internal-gongwen", ["locale"]),
         ("pdf", "layout", "pdf:md:invoice-action", "invoice-action", ["locale", "yaml_key_labels"]),
@@ -47,15 +47,46 @@ def _projection(*, include_resources: bool = True) -> dict[str, Any]:
                     "operation": "action",
                     "action": action,
                     "source": source,
+                    "source_category": category,
                     "target": "md",
                     "available": True,
                     "state": "available",
                     "options": options,
+                    "platforms": ["test"],
+                    "platform_supported": True,
+                    "required_capabilities": [],
+                    "optional_capabilities": [],
+                    "missing_required_capabilities": [],
+                    "missing_optional_capabilities": [],
+                    "limitations": [],
+                    "label": route_id,
+                    "plugin": "test",
                 }
             ],
         }
         for source, category, route_id, action, options in routes
     ]
+    if bridge_state != "missing":
+        for source in ("doc", "wps", "rtf", "odt"):
+            sources.append(
+                {
+                    "id": source,
+                    "category": "document",
+                    "available": bridge_state == "available",
+                    "routes": [
+                        {
+                            "id": f"{source}:docx:convert",
+                            "operation": "conversion",
+                            "action": None,
+                            "source": source,
+                            "target": "docx",
+                            "available": bridge_state == "available",
+                            "state": bridge_state,
+                            "options": [],
+                        }
+                    ],
+                }
+            )
     resources = (
         [
             {
@@ -92,10 +123,10 @@ def _projection(*, include_resources: bool = True) -> dict[str, Any]:
         "gates": [],
         "sources": sources,
         "counts": {
-            "sources": 3,
-            "routes": 3,
-            "available_routes": 3,
-            "unavailable_routes": 0,
+            "sources": len(sources),
+            "routes": len(sources),
+            "available_routes": sum(source["available"] for source in sources),
+            "unavailable_routes": sum(not source["available"] for source in sources),
             "actions": 3,
         },
         "optimizations": {
@@ -141,26 +172,23 @@ def test_config_orders_and_disables_only_runtime_resources() -> None:
     assert [choice.id for choice in result.choices] == ["invoice-resource"]
 
 
-def test_exact_format_and_category_wildcard_binding_are_distinct() -> None:
+def test_exact_and_preconverted_document_formats_share_the_real_gongwen_binding() -> None:
     controller = _controller()
-    docx = discover_optimization_choices(
-        controller,
-        locale="en_US",
-        sources=(OptimizationSource("docx", "document"),),
-    )
-    odt = discover_optimization_choices(
-        controller,
-        locale="en_US",
-        sources=(OptimizationSource("odt", "document"),),
-    )
+    for detected_format in ("docx", "doc", "wps", "rtf", "odt"):
+        result = discover_optimization_choices(
+            controller,
+            locale="en_US",
+            sources=(OptimizationSource(detected_format, "document"),),
+        )
+        assert [choice.id for choice in result.choices] == ["public-gongwen"]
+        assert result.choices[0].bindings[0].source == "docx"
+        assert result.choices[0].action_name == "internal-gongwen"
+
     png = discover_optimization_choices(
         controller,
         locale="en_US",
         sources=(OptimizationSource("png", "image"),),
     )
-
-    assert [choice.id for choice in docx.choices] == ["public-gongwen"]
-    assert odt.choices == ()
     assert [choice.id for choice in png.choices] == ["invoice-resource"]
 
 
@@ -173,6 +201,33 @@ def test_batch_requires_every_input_and_intersects_route_options() -> None:
 
     assert [choice.id for choice in result.choices] == ["invoice-resource"]
     assert result.choices[0].route_options == ("locale",)
+
+
+@pytest.mark.parametrize("source", ["doc", "wps", "rtf", "odt"])
+@pytest.mark.parametrize("bridge_state", ["missing", "unavailable"])
+def test_missing_preconversion_hides_only_affected_selection(source: str, bridge_state: str) -> None:
+    controller = _controller(projection=_projection(bridge_state=bridge_state))
+    unavailable = discover_optimization_choices(
+        controller, locale="en_US", sources=(OptimizationSource(source, "document"),)
+    )
+    direct = discover_optimization_choices(
+        controller, locale="en_US", sources=(OptimizationSource("docx", "document"),)
+    )
+    mixed = discover_optimization_choices(
+        controller,
+        locale="en_US",
+        sources=(OptimizationSource("docx", "document"), OptimizationSource(source, "document")),
+    )
+    assert unavailable.status == mixed.status == "ready"
+    assert unavailable.choices == mixed.choices == ()
+    assert [choice.id for choice in direct.choices] == ["public-gongwen"]
+
+
+def test_configured_order_does_not_repeat_resources() -> None:
+    result = discover_optimization_choices(
+        _controller(policy={"settings": {"order": ["invoice-resource", "invoice-resource"]}}), locale="en_US"
+    )
+    assert [choice.id for choice in result.choices] == ["invoice-resource", "public-gongwen"]
 
 
 def test_ready_empty_and_failed_discovery_remain_distinct() -> None:
@@ -203,7 +258,7 @@ def test_action_area_keeps_public_id_separate_from_internal_action() -> None:
     }.get(key, default)
     vm = ActionAreaViewModel(main_vm=cast(Any, SimpleNamespace(controller=controller)))
 
-    vm.setup_for_document_file("/test.docx", "docx")
+    vm.setup_for_document_file("/test.doc", "doc")
 
     assert vm.optimize_for_type == "public-gongwen"
     assert vm.action_name == "internal-gongwen"

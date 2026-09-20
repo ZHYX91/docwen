@@ -362,14 +362,17 @@ class TestLoggingReconfigure:
         assert state.fallback_reason == "disk unavailable"
         assert state.overridden_by_env is None
 
-    def test_primary_file_failure_falls_back_to_isolated_temp_directory(self, tmp_path: Path, monkeypatch) -> None:
+    @pytest.mark.parametrize("level", ["DEBUG", "CRITICAL"])
+    def test_primary_file_failure_preserves_selected_directory_and_reports_console_warning(
+        self, tmp_path: Path, monkeypatch, capsys, level
+    ) -> None:
         import docwen_runtime.logging as runtime_logging
 
         monkeypatch.delenv("DOCWEN_LOG_DIR", raising=False)
         monkeypatch.delenv("DOCWEN_LOG_TO_TEMP", raising=False)
         primary_dir = (tmp_path / "primary").resolve()
         fallback_root = tmp_path / "fallback-root"
-        monkeypatch.setattr(runtime_logging.tempfile, "gettempdir", lambda: str(fallback_root))
+        monkeypatch.setattr("docwen_runtime.profile_paths.tempfile.gettempdir", lambda: str(fallback_root))
         original_handler = logging_handlers.RotatingFileHandler
 
         def _selective_handler(
@@ -390,16 +393,21 @@ class TestLoggingReconfigure:
                     "file_prefix": "audit",
                     "directory_mode": "custom",
                     "directory": str(primary_dir),
+                    "level": level,
+                    "console_level": level,
                 }
             }
         )
-        logger.warning("temp-fallback-sentinel")
+        logger.warning("console-fallback-sentinel")
         state = runtime_logging.get_logging_runtime_state()
 
-        expected = (fallback_root / "docwen" / "logs" / "audit.log").resolve()
-        assert state.file_enabled is True
-        assert state.active_log_file == str(expected)
-        assert state.active_directory_mode == "fallback_temp"
+        assert state.file_enabled is False
+        assert state.console_enabled is True
+        assert state.active_log_file is None
+        assert state.active_directory_mode == "custom"
         assert state.fallback_used is True
         assert state.fallback_reason == "primary unavailable"
-        assert "temp-fallback-sentinel" in expected.read_text(encoding="utf-8")
+        assert not fallback_root.exists()
+        stderr = capsys.readouterr().err
+        assert "primary unavailable" in stderr
+        assert "console-fallback-sentinel" in stderr

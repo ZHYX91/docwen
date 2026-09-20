@@ -119,7 +119,7 @@ def _assert_markdown_node(
     assert output_path.parent.name == output_path.stem
     assert output_path.stem.startswith(f"{source_stem}_")
     assert output_path.stem.endswith(f"_from{source_tag}")
-    assert (output_path.parent / "docwen-node.json").is_file()
+    assert not (output_path.parent / "docwen-node.json").exists()
     if output_root is not None:
         assert output_path.parent.parent == output_root
 

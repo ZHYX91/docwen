@@ -17,9 +17,9 @@ from ._gui_e2e_conversion_support import (
 class TestAggregateGuiExecution:
     @staticmethod
     def _wait_for_entries_finished(window, paths: list[str]) -> None:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
-        normalized = [_normalize_path(path) for path in paths]
+        normalized = [normalize_path(path) for path in paths]
 
         def _finished() -> bool:
             entries = [window._batch_list_vm.get_file_entry(path) for path in normalized]
@@ -31,9 +31,9 @@ class TestAggregateGuiExecution:
 
     @staticmethod
     def _completed_entries(window, paths: list[str]) -> list[BatchFileEntry]:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
-        entries = [window._batch_list_vm.get_file_entry(_normalize_path(path)) for path in paths]
+        entries = [window._batch_list_vm.get_file_entry(normalize_path(path)) for path in paths]
         assert all(entry is not None and entry.status == "completed" for entry in entries)
         return [entry for entry in entries if entry is not None]
 

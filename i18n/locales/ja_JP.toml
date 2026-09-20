@@ -12,7 +12,6 @@ template_name = "日本語汎用テンプレート"
 # =============================================================================
 [common]
 action_file_count = "{action}（{count} ファイル）"
-copy = "コピー"
 app_name = "DocWen"
 default = "デフォルト"
 close = "閉じる"
@@ -1640,8 +1639,6 @@ task_progress_status = "進捗：{percent}% {message}"
 task_completed_status = "完了"
 task_failed_status = "失敗：{message}"
 task_cancelled_status = "キャンセル済み"
-error_copied = "エラー詳細をコピーしました。"
-no_error_available = "エラー情報はありません。"
 no_failed_to_retry = "再試行可能な失敗タスクはありません。"
 path_not_exist = "パスが存在しません：{path}"
 open_path_failed = "パスを開けません：{path}"
@@ -1701,6 +1698,7 @@ multiple = "計 {count} 件"
 show_outputs = "すべての出力ファイルを表示"
 
 [settings.templates]
+import_summary = "インポート成功：{succeeded}。失敗：{failed}。キャンセル：{cancelled}。"
 load_failed = "テンプレートを読み込めません"
 operation_failed = "テンプレートの操作に失敗しました。詳細を確認してください。"
 title = "テンプレート"
@@ -1731,3 +1729,9 @@ open_failed = "テンプレートを開けません。関連付けられたア�
 name_conflict = "{name} というカスタムテンプレートは既に存在します。"
 keep_both = "両方保持"
 replace = "置換"
+
+[diagnostics]
+local_details = "ローカルの詳細"
+preview = "匿名化した診断"
+copy = "診断をコピー"
+redacted_hint = "コピーには状態、分類、件数のみが含まれます。本文、パス、元のエラー、コマンド、設定は含まれません。"

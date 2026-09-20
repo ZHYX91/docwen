@@ -81,5 +81,5 @@ def test_cli_markdown_docx_roundtrip(tmp_path: Path) -> None:
     assert output_directory.is_dir()
     document_nodes = [path for path in output_directory.iterdir() if path.is_dir()]
     assert len(document_nodes) == 1
-    assert (document_nodes[0] / "docwen-node.json").is_file()
+    assert not (document_nodes[0] / "docwen-node.json").exists()
     assert len(list(document_nodes[0].glob("*.md"))) == 1

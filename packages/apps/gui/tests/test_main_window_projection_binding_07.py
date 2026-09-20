@@ -31,7 +31,6 @@ class TestRuntimeRequestBinding:
         tmp_path,
         monkeypatch,
     ) -> None:
-        import docwen_gui.main_window as main_window_module
 
         first = tmp_path / "first.md"
         second = tmp_path / "second.md"
@@ -39,7 +38,7 @@ class TestRuntimeRequestBinding:
         second.write_text("# Second", encoding="utf-8")
         paths = [str(first).replace("\\", "/"), str(second).replace("\\", "/")]
         window._batch_list_vm.add_files(paths)
-        request, context = window._build_batch_request(
+        request, context = window._requests.batch(
             file_paths=paths,
             target_format="docx",
             action_name="",
@@ -61,15 +60,15 @@ class TestRuntimeRequestBinding:
             stop=lambda: None,
         )
         window._view_model._controller = controller
-        monkeypatch.setattr(window, "_build_batch_request", lambda **_kwargs: (request, context))
+        monkeypatch.setattr(window._requests, "batch", lambda **_kwargs: (request, context))
         monkeypatch.setattr(window, "_confirm_request_admission", lambda _request: True)
 
         def fail_thread_setup(**_kwargs: object) -> object:
             raise RuntimeError("Batch QThread setup failed")
 
-        monkeypatch.setattr(main_window_module, "_ExecutionThread", fail_thread_setup)
+        monkeypatch.setattr("docwen_gui.qt_bridge.execution_supervisor.ExecutionThread", fail_thread_setup)
 
-        window._start_batch_execution(
+        window._workflow.batch(
             file_paths=paths,
             target_format="docx",
             action_name="",
@@ -78,19 +77,19 @@ class TestRuntimeRequestBinding:
 
         assert prepared == [(request, True)]
         assert released == [(request.request_id, reservation)]
-        assert window._active_threads == {}
+        assert window._execution.threads == {}
         assert window._action_area_vm.cancel_visible is False
         entries = [window._batch_list_vm.get_file_entry(path) for path in paths]
         assert [entry.status for entry in entries if entry is not None] == ["failed", "failed"]
 
     def test_split_pdf_request_preserves_pdf_source_and_action(self, window, tmp_path) -> None:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "sample.pdf"
         source.write_bytes(b"%PDF-1.4\n")
-        window._file_contexts = {_normalize_path(str(source)): ("pdf", "layout")}
+        window._file_contexts = {normalize_path(str(source)): ("pdf", "layout")}
 
-        request, context = window._build_request(
+        request, context = window._requests.single(
             file_path=str(source),
             target_format="pdf",
             action_name="split_pdf",
@@ -113,7 +112,7 @@ class TestRuntimeRequestBinding:
         second.write_bytes(b"%PDF-1.4\n")
         window._batch_list_vm.add_files([str(first), str(second)])
 
-        request, context = window._build_aggregate_request(
+        request, context = window._requests.aggregate(
             file_paths=[str(first), str(second)],
             target_format="pdf",
             action_name="merge_pdfs",
@@ -131,13 +130,13 @@ class TestRuntimeRequestBinding:
     def test_txt_document_context_builds_markdown_runtime_request(self, window, tmp_path) -> None:
         """Core currently classifies txt as document; GUI request routing must
         still preserve the old TXT-as-Markdown source workflow."""
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "note.txt"
         source.write_text("# Title\n\ncontent", encoding="utf-8")
-        window._file_contexts = {_normalize_path(str(source)): ("markdown", "markdown")}
+        window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
 
-        request, _context = window._build_request(
+        request, _context = window._requests.single(
             file_path=str(source),
             target_format="docx",
             action_name="",

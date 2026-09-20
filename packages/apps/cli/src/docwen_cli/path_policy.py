@@ -1,6 +1,6 @@
 """Public CLI path compatibility policy.
 
-DocWen 0.9 intentionally rejects Windows paths that require extended-length
+DocWen intentionally rejects Windows paths that require extended-length
 syntax.  Many conversion backends still receive ordinary filesystem paths and
 do not consistently understand ``\\\\?\\`` names.  Failing at the CLI boundary
 keeps the machine contract deterministic instead of leaking backend-specific
@@ -56,7 +56,7 @@ def check_public_path(raw_path: str, *, platform_name: str | None = None) -> Pat
         return PathPolicyIssue(
             path=raw_path,
             message=(
-                "Windows extended-length path syntax is not supported by DocWen 0.9; "
+                "Windows extended-length path syntax is not supported by DocWen; "
                 "use an ordinary absolute path no longer than 259 UTF-16 code units."
             ),
         )
@@ -65,8 +65,7 @@ def check_public_path(raw_path: str, *, platform_name: str | None = None) -> Pat
         return PathPolicyIssue(
             path=raw_path,
             message=(
-                "Path exceeds DocWen 0.9's Windows compatibility limit of "
-                f"{WINDOWS_PUBLIC_PATH_LIMIT} UTF-16 code units."
+                f"Path exceeds DocWen's Windows compatibility limit of {WINDOWS_PUBLIC_PATH_LIMIT} UTF-16 code units."
             ),
         )
     return None

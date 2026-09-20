@@ -3,13 +3,13 @@
   "schemas": [
     {
       "name": "artifact_bundle",
-      "id": "urn:docwen:schema:artifact-bundle:v2",
-      "path": "schemas/docwen.artifact_bundle.v2.schema.json"
+      "id": "urn:docwen:schema:artifact-bundle:v3",
+      "path": "schemas/docwen.artifact_bundle.v3.schema.json"
     },
     {
       "name": "machine",
-      "id": "urn:docwen:schema:machine-protocol:v1",
-      "path": "schemas/docwen.machine.v1.schema.json"
+      "id": "urn:docwen:schema:machine-protocol:v2",
+      "path": "schemas/docwen.machine.v2.schema.json"
     },
     {
       "name": "machine_diagnostic_evidence",
@@ -588,6 +588,84 @@
       "path": "fixtures/invalid/proofread-report.old-version-field.json",
       "schema": "proofread_report",
       "document_type": "proofread_report",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/valid/machine.templates.response.json",
+      "schema": "machine",
+      "document_type": "message",
+      "expect": "valid"
+    },
+    {
+      "path": "fixtures/invalid/machine.templates.missing-origin.json",
+      "schema": "machine",
+      "document_type": "message",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/machine.templates.missing-is-default.json",
+      "schema": "machine",
+      "document_type": "message",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/machine.templates.invalid-origin.json",
+      "schema": "machine",
+      "document_type": "message",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/machine.templates.invalid-is-default.json",
+      "schema": "machine",
+      "document_type": "message",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/machine.templates.invalid-id.json",
+      "schema": "machine",
+      "document_type": "message",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/machine.templates.invalid-target.json",
+      "schema": "machine",
+      "document_type": "message",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/machine.templates.invalid-path.json",
+      "schema": "machine",
+      "document_type": "message",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/machine.initialize.legacy-major.json",
+      "schema": "machine",
+      "document_type": "message",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/machine.initialize.future-minor.json",
+      "schema": "machine",
+      "document_type": "message",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/invalid/machine.legacy-bundle-producer.trace.json",
+      "schema": "machine",
+      "document_type": "trace",
+      "expect": "invalid_schema"
+    },
+    {
+      "path": "fixtures/valid/machine.optimization-capability.response.json",
+      "schema": "machine",
+      "document_type": "message",
+      "expect": "valid"
+    },
+    {
+      "path": "fixtures/invalid/machine.optimization-on-conversion.response.json",
+      "schema": "machine",
+      "document_type": "message",
       "expect": "invalid_schema"
     }
   ]

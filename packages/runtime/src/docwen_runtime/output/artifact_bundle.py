@@ -1,4 +1,4 @@
-"""Runtime-owned validation and integrity commit for Artifact Bundle v2."""
+"""Runtime-owned validation and integrity commit for Artifact Bundle v3."""
 
 from __future__ import annotations
 
@@ -131,6 +131,12 @@ class ArtifactBundleCommitter:
             )
 
         size_bytes, sha256 = cls._integrity(resolved)
+        if (draft_artifact.expected_size_bytes is not None and size_bytes != draft_artifact.expected_size_bytes) or (
+            draft_artifact.expected_sha256 is not None and sha256 != draft_artifact.expected_sha256
+        ):
+            raise ArtifactBundleCommitError(
+                "artifact_changed_after_finalization", "artifact bytes changed after output finalization"
+            )
         return BundleArtifact(
             artifact_id=draft_artifact.artifact_id,
             kind=draft_artifact.kind,

@@ -45,7 +45,11 @@ def _add_admission_control(parser: argparse.ArgumentParser) -> None:
 
 
 def _add_write_controls(parser: argparse.ArgumentParser, *, timeout: int = 600) -> None:
-    parser.add_argument("--overwrite", action="store_true", help="Replace an existing output target.")
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Replace an individual output file; result directories cannot be overwritten.",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Validate without creating output.")
     _add_admission_control(parser)
     _add_timeout(parser, timeout)

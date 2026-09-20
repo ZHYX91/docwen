@@ -73,6 +73,12 @@ def _write_ooxml_template(path: Path, target: str) -> None:
 
 
 class TestExactMatch:
+    def test_custom_only_root_is_not_mislabeled_as_builtin(self, tmp_path: Path) -> None:
+        registry = _make_registry(["Report.docx"], tmp_path)
+
+        assert registry.list_templates()[0].origin == "custom"
+        assert TemplateRegistry(tmp_path, builtin_dir=tmp_path).list_templates()[0].origin == "builtin"
+
     def test_same_registry_instance_observes_added_and_removed_templates(self, tmp_path: Path) -> None:
         first = tmp_path / "First.docx"
         second = tmp_path / "Second.docx"

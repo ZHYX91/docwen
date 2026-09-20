@@ -54,10 +54,7 @@ from docwen_core.text.heading_numbering import (
     NumberingSchemeResolutionError,
     resolve_heading_numbering_scheme,
 )
-from docwen_plugin_markdown.ast_transforms import (
-    annotate_ast_with_hr_attachments,
-    annotate_ast_with_merges,
-)
+from docwen_plugin_markdown.ast_transforms import annotate_ast_with_merges
 from docwen_plugin_markdown.common_utils import (
     add_md_numbering,
     read_input_markdown,
@@ -71,15 +68,12 @@ from docwen_plugin_markdown.field_registry import (
 )
 from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
 from docwen_plugin_markdown.preprocessor import (
-    detect_heading_merges,
-    detect_hr_attachments,
-    handle_setext_headings,
     materialize_image_placeholders,
-    normalize_html_tags,
 )
 from docwen_plugin_markdown.renderer import MdToDocxRenderer
 from docwen_plugin_markdown.resolved_conversion_v4 import claims_resolved_v4_inputs
 from docwen_plugin_markdown.runtime_semantics_v3 import (
+    RuntimeSemanticsV3InvariantError,
     RuntimeSemanticsV3Unsupported,
     apply_runtime_semantics_v3,
     prepare_runtime_semantics_v3,
@@ -477,6 +471,36 @@ def _semantic_v3_failure(
     )
 
 
+def _semantic_v3_internal_failure(
+    task_id: str,
+    started_at: float,
+    technical_message: str,
+    *,
+    input_bytes: int = 0,
+) -> ConversionResult:
+    code = "MD2DOCX-SEMANTICS-V3-INTERNAL"
+    return ConversionResult(
+        task_id=task_id,
+        success=False,
+        error=ConversionErrorInfo(
+            error_type="internal",
+            message="DocWen encountered an internal Markdown processing error. The source file was not modified.",
+            diagnostic_code=code,
+        ),
+        diagnostics=[
+            ConversionDiagnostic(
+                level="error",
+                message=technical_message,
+                code=code,
+            )
+        ],
+        metrics=ConversionMetrics(
+            duration_ms=(time.monotonic() - started_at) * 1000.0,
+            input_bytes=input_bytes,
+        ),
+    )
+
+
 def _semantic_v3_package_diagnostic(message: str) -> ConversionDiagnostic:
     return ConversionDiagnostic(
         level="error",
@@ -702,12 +726,6 @@ class MdToDocxConverter:
                 image_scope=image_scope,
             )
 
-            # 2b. Convert Setext headings to ATX format after embed expansion.
-            md_body = handle_setext_headings(md_body)
-
-            # 2c. Normalize HTML tags (<br> → hard break, etc.)
-            md_body = normalize_html_tags(md_body)
-
             # 2d. Validate the cross-project footnote/endnote contract and
             # create a request-local parser projection.  The source Markdown
             # is never rewritten.
@@ -725,21 +743,19 @@ class MdToDocxConverter:
                 "punct_required",
                 allowed={"punct_required", "always", "never"},
             )
-            merge_indices = detect_heading_merges(
-                md_body,
-                mode=heading_merge_mode,
-                punctuation=_request_heading_merge_punctuation(options, context.config),
-            )
-
-            # 2f. Detect HR attachments
-            hr_attachments = detect_hr_attachments(md_body)
-
             # 2g. Parse with extended mistune
             progress.report_progress(30.0, "Parsing Markdown")
             raw_ast = parse_markdown_text(md_body, auto_link_bare_url=False, extensions=extensions)
             _restore_markdown_image_alt_texts(raw_ast, source_image_alt_texts)
             try:
                 raw_ast = apply_runtime_semantics_v3(raw_ast, semantic_v3_plan)
+            except RuntimeSemanticsV3InvariantError as exc:
+                return _semantic_v3_internal_failure(
+                    task_id,
+                    t_start,
+                    str(exc),
+                    input_bytes=input_bytes,
+                )
             except RuntimeSemanticsV3Unsupported as exc:
                 return _semantic_v3_failure(
                     task_id,
@@ -750,10 +766,11 @@ class MdToDocxConverter:
                 )
 
             # 2h. Annotate AST with merge info
-            annotate_ast_with_merges(raw_ast, merge_indices)
-
-            # 2i. Annotate AST with HR attachment info
-            annotate_ast_with_hr_attachments(raw_ast, hr_attachments, md_body)
+            annotate_ast_with_merges(
+                raw_ast,
+                mode=heading_merge_mode,
+                punctuation=_request_heading_merge_punctuation(options, context.config),
+            )
 
             # 2j. Extract notes from AST
             cleaned_ast, note_ctx = extract_notes_from_ast(raw_ast)
@@ -972,7 +989,6 @@ class MdToDocxConverter:
                 semantic_v3_session=semantic_v3_session,
                 hr_mapping=hr_mapping,
                 hr_actions=hr_actions,
-                hr_attachments=hr_attachments,
                 cancellation=cancellable,
                 note_ctx=note_ctx,
                 source_file_path=input_path,

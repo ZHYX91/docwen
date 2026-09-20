@@ -162,7 +162,7 @@ class TestFullClosedLoop:
         assert len(results) == 3
         for r in results:
             assert r.success is True
-            assert len(r.artifacts) == 2
+            assert len(r.artifacts) == 1
             assert sum(a.is_primary for a in r.artifacts) == 1
 
     def test_batch_partial_failure(self, closed_loop, tmp_path) -> None:

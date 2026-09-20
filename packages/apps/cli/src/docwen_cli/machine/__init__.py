@@ -1,4 +1,4 @@
-"""DocWen Machine Protocol v1 stdio adapter."""
+"""DocWen Machine Protocol v2 stdio adapter."""
 
 from docwen_cli.machine.server import MachineProtocolServer
 

@@ -3,7 +3,7 @@
 Replicates the user-visible behavior of the old ``SettingsDialog``:
 - 700x800 initial, 510x750 minimum, modal
 - FluentNavigationInterface sidebar sized for the active locale + hidden QTabWidget tabBar
-- 14 pages: general, incoming formats, content processing, converter software, output and logging
+- 15 pages: general, incoming formats, templates, content processing, converter software, output and logging
 - Bottom bar: Reset Tab + Reset All + Ok/Cancel/Apply (QDialogButtonBox)
 - Dirty tracking with auto-signal monitoring
 - Unsaved-close confirmation (danger, default=no)
@@ -46,6 +46,7 @@ from docwen_gui.widgets.value_controls import ScrollSafeComboBox
 from ...styles.theme_semantics import apply_theme_class
 from ...view_models.settings_vm import SettingsViewModel
 from ...view_models.template_vm import TemplateViewModel
+from .navigation import SettingsNavigationKeyboard
 
 logger = logging.getLogger(__name__)
 
@@ -334,6 +335,7 @@ class SettingsDialog(QDialog):
         self._tabs: dict[str, QWidget] = {}
         self._tab_widget: QTabWidget = _cast(QTabWidget, None)
         self._navigation: Any = None
+        self._navigation_keyboard: SettingsNavigationKeyboard | None = None
         self._status_timer: QTimer = _cast(QTimer, None)
         self._cancel_close_in_progress = False
         self._close_cleanup_done = False
@@ -470,12 +472,17 @@ class SettingsDialog(QDialog):
         layout.addWidget(button_box)
 
         self._tab_widget.currentChanged.connect(self._on_tab_changed)
+        self._on_tab_changed(self._tab_widget.currentIndex())
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
         if not hasattr(self, "_compact_navigation"):
             return
-        compact = self.width() < 700
+        # The fixed-height navigation entries do not scroll in Fluent's TOP
+        # section. Reserve both footer rows before choosing the full sidebar.
+        sidebar_height = len(TAB_KEYS) * (Sizing.CONTROL_HEIGHT + Spacing.XS)
+        footer_height = 2 * ACTION_BUTTON_MIN_HEIGHT + 3 * DIALOG_PADDING
+        compact = self.width() < 700 or self.height() < sidebar_height + footer_height
         self._compact_navigation.setVisible(compact)
         if self._navigation is not None:
             self._navigation.setVisible(not compact)
@@ -506,6 +513,7 @@ class SettingsDialog(QDialog):
             nav.setCollapsible(False)
             nav.setFixedWidth(navigation_width)
             self._navigation = nav
+            self._navigation_keyboard = SettingsNavigationKeyboard(self._tab_widget, nav)
             self._nav_position = NavigationItemPosition.TOP
             content_row.addWidget(nav, 0)
         except Exception:
@@ -542,6 +550,10 @@ class SettingsDialog(QDialog):
                 position=self._nav_position,
                 tooltip=title,
             )
+            entry = _try_fluent_panel(self._navigation, key)
+            if not isinstance(entry, QWidget) or self._navigation_keyboard is None:
+                raise TypeError("settings_navigation_entry_unavailable")
+            self._navigation_keyboard.add(index, key, entry, title)
             if index == 0:
                 self._navigation.setCurrentItem(key)
         except Exception as exc:
@@ -587,6 +599,11 @@ class SettingsDialog(QDialog):
             item.setText(title)
         if hasattr(item, "setToolTip"):
             item.setToolTip(title)
+        if isinstance(item, QWidget):
+            item.setAccessibleName(title)
+            inner = getattr(item, "itemWidget", None)
+            if isinstance(inner, QWidget):
+                inner.setAccessibleName(title)
 
     # ── Tab management ──────────────────────────────────────────────────────
 
@@ -783,7 +800,9 @@ class SettingsDialog(QDialog):
         if tab is None:
             return
         candidate = self._find_focus_target(tab)
-        if candidate is not None:
+        if self._navigation is not None and self._navigation_keyboard is not None:
+            self._navigation_keyboard.sync(index, candidate)
+        if candidate is not None and not self._compact_navigation.hasFocus():
             candidate.setFocus(Qt.FocusReason.TabFocusReason)
 
     @staticmethod

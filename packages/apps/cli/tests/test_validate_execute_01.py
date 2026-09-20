@@ -38,13 +38,6 @@ def test_cli_route_resolution_tracks_manifest_targets_and_actions_without_tables
             "options": [],
         }
     ]
-    projection["counts"] = {
-        "sources": 3,
-        "routes": 3,
-        "available_routes": 3,
-        "unavailable_routes": 0,
-        "actions": 3,
-    }
     catalog = parse_runtime_capability_catalog(projection)
 
     resolved = _resolve_runtime_routes(

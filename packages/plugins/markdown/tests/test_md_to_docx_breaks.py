@@ -13,7 +13,6 @@ import pytest
 from docx import Document
 from docx.oxml.ns import qn
 
-from docwen_plugin_markdown.ast_transforms import annotate_ast_with_hr_attachments
 from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
 from docwen_plugin_markdown.renderer import MdToDocxRenderer
 
@@ -241,12 +240,10 @@ class TestAppendHorizontalRuleToParagraph:
 class TestRendererThematicBreak:
     """_handle_thematic_break produces real horizontal rules in the DOCX."""
 
-    def test_hr_annotation_restores_source_markers_by_order(self):
-        """Mistune normalizes HR tokens, so source-order annotation preserves marker kind."""
+    def test_parser_binds_each_source_marker_to_its_own_rule(self):
+        """The matched thematic-break rule retains its own marker kind."""
         md = "a\n\n---\n\nb\n\n***\n\nc\n\n___\n\nd"
         ast = parse_markdown_text(md)
-
-        annotate_ast_with_hr_attachments(ast, set(), md)
 
         markers = [node.get("_hr_marker") for node in ast if node.get("type") == "thematic_break"]
         assert markers == ["dash", "asterisk", "underscore"]

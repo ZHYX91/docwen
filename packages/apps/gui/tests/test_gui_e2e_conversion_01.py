@@ -22,12 +22,12 @@ class TestDocxToMdConversion:
         from PySide6.QtTest import QSignalSpy
         from PySide6.QtWidgets import QApplication
 
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         window = main_window_with_controller
         vm = window.view_model
         file_path_str = str(sample_docx)
-        normalized = _normalize_path(file_path_str)
+        normalized = normalize_path(file_path_str)
 
         vm.add_files([file_path_str])
         app = QApplication.instance()
@@ -96,7 +96,7 @@ class TestDocxToMdConversion:
     ) -> None:
         from PySide6.QtWidgets import QApplication
 
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         window = main_window_with_controller
         controller = window.view_model.controller
@@ -108,7 +108,7 @@ class TestDocxToMdConversion:
         assert controller.config_port.set("output.directory.create_date_subfolder", False)
 
         file_path_str = str(sample_docx)
-        normalized = _normalize_path(file_path_str)
+        normalized = normalize_path(file_path_str)
         window.view_model.add_files([file_path_str])
         app = QApplication.instance()
         if app is not None:
@@ -132,7 +132,7 @@ class TestDocxToMdConversion:
         assert output_path.exists()
         assert output_path.parent.parent == output_dir
         assert output_path.parent.name == output_path.stem
-        assert (output_path.parent / "docwen-node.json").is_file()
+        assert not (output_path.parent / "docwen-node.json").exists()
         assert "E2E Test Document" in output_path.read_text(encoding="utf-8")
 
     def test_conversion_preserves_unowned_legacy_output(
@@ -140,7 +140,7 @@ class TestDocxToMdConversion:
     ) -> None:
         from PySide6.QtWidgets import QApplication
 
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         window = main_window_with_controller
         controller = window.view_model.controller
@@ -156,7 +156,7 @@ class TestDocxToMdConversion:
         assert controller.config_port.set("output.directory.create_date_subfolder", False)
 
         file_path_str = str(sample_docx)
-        normalized = _normalize_path(file_path_str)
+        normalized = normalize_path(file_path_str)
         window.view_model.add_files([file_path_str])
         app = QApplication.instance()
         if app is not None:
@@ -180,14 +180,15 @@ class TestDocxToMdConversion:
         assert output_path.exists()
         assert output_path.parent.parent == output_dir
         assert output_path.parent.name == output_path.stem
-        assert (output_path.parent / "docwen-node.json").is_file()
+        assert not (output_path.parent / "docwen-node.json").exists()
         assert existing.read_text(encoding="utf-8") == "existing GUI result"
         assert "E2E Test Document" in output_path.read_text(encoding="utf-8")
 
     def test_conversion_rejects_when_no_runtime(self, qapp, sample_docx: Path) -> None:
         from PySide6.QtWidgets import QApplication
 
-        from docwen_gui.main_window import MainWindow, _normalize_path
+        from docwen_gui.main_window import MainWindow
+        from docwen_gui.path_identity import normalize_path
         from docwen_gui.view_models.main_window_vm import MainWindowViewModel
 
         vm = MainWindowViewModel(controller=None)
@@ -204,9 +205,9 @@ class TestDocxToMdConversion:
             if app is not None:
                 app.processEvents()
 
-            assert len(window._active_threads) == 0
+            assert len(window._execution.threads) == 0
 
-            normalized = _normalize_path(str(sample_docx))
+            normalized = normalize_path(str(sample_docx))
             entry = window._batch_list_vm.get_file_entry(normalized)
             if entry is not None:
                 assert entry.status in ("pending", "")
@@ -236,7 +237,7 @@ class TestDocxToMdConversion:
     def test_multiple_files_loaded(self, main_window_with_controller, sample_docx: Path, tmp_path: Path) -> None:
         from PySide6.QtWidgets import QApplication
 
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         window = main_window_with_controller
         vm = window.view_model
@@ -253,8 +254,8 @@ class TestDocxToMdConversion:
         assert len(vm.files) == 2
         assert vm.selected_file is not None
 
-        normalized1 = _normalize_path(str(sample_docx))
-        normalized2 = _normalize_path(str(docx2_path))
+        normalized1 = normalize_path(str(sample_docx))
+        normalized2 = normalize_path(str(docx2_path))
         files_in_batch = window._batch_list_vm.get_files()
         assert any(normalized1 in f for f in files_in_batch)
         assert any(normalized2 in f for f in files_in_batch)
@@ -271,7 +272,7 @@ class TestOfficeBackedGuiExecution:
     ) -> None:
         from PySide6.QtWidgets import QApplication
 
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         if os.environ.get("DOCWEN_RUN_EXTERNAL_OFFICE_GUI_SMOKE") != "1":
             pytest.skip("Set DOCWEN_RUN_EXTERNAL_OFFICE_GUI_SMOKE=1 to run the external Office GUI smoke")
@@ -287,7 +288,7 @@ class TestOfficeBackedGuiExecution:
         assert controller.config_port.set("output.directory.custom_path", str(output_dir))
         assert controller.config_port.set("output.directory.create_date_subfolder", False)
 
-        normalized = _normalize_path(str(sample_docx))
+        normalized = normalize_path(str(sample_docx))
         window.view_model.add_files([str(sample_docx)])
 
         app = QApplication.instance()
@@ -335,7 +336,7 @@ class TestOfficeBackedGuiExecution:
         from openpyxl import Workbook
         from PySide6.QtWidgets import QApplication
 
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         if os.environ.get("DOCWEN_RUN_EXTERNAL_OFFICE_GUI_SMOKE") != "1":
             pytest.skip("Set DOCWEN_RUN_EXTERNAL_OFFICE_GUI_SMOKE=1 to run the external Office GUI smoke")
@@ -362,7 +363,7 @@ class TestOfficeBackedGuiExecution:
         assert controller.config_port.set("output.directory.custom_path", str(output_dir))
         assert controller.config_port.set("output.directory.create_date_subfolder", False)
 
-        normalized = _normalize_path(str(source))
+        normalized = normalize_path(str(source))
         window.view_model.add_files([str(source)])
 
         app = QApplication.instance()
@@ -408,7 +409,7 @@ class TestOfficeBackedGuiExecution:
     ) -> None:
         from PySide6.QtWidgets import QApplication
 
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         if os.environ.get("DOCWEN_RUN_EXTERNAL_OFFICE_GUI_SMOKE") != "1":
             pytest.skip("Set DOCWEN_RUN_EXTERNAL_OFFICE_GUI_SMOKE=1 to run the external Office GUI smoke")
@@ -431,7 +432,7 @@ class TestOfficeBackedGuiExecution:
         assert controller.config_port.set("output.directory.custom_path", str(output_dir))
         assert controller.config_port.set("output.directory.create_date_subfolder", False)
 
-        normalized = _normalize_path(str(source))
+        normalized = normalize_path(str(source))
         window.view_model.add_files([str(source)])
 
         app = QApplication.instance()

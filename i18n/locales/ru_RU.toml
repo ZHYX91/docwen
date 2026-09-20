@@ -12,7 +12,6 @@ template_name = "Русский Общий Шаблон"
 # =============================================================================
 [common]
 action_file_count = "{action} (файлов: {count})"
-copy = "Копировать"
 app_name = "DocWen"
 default = "По умолчанию"
 close = "Закрыть"
@@ -1640,8 +1639,6 @@ task_progress_status = "Прогресс: {percent}% {message}"
 task_completed_status = "Завершено"
 task_failed_status = "Ошибка: {message}"
 task_cancelled_status = "Отменено"
-error_copied = "Детали ошибки скопированы."
-no_error_available = "Нет информации об ошибке."
 no_failed_to_retry = "Нет неудачных задач для повтора."
 path_not_exist = "Путь не существует: {path}"
 open_path_failed = "Не удалось открыть путь: {path}"
@@ -1701,6 +1698,7 @@ multiple = "Файлов: {count}"
 show_outputs = "Показать все выходные файлы"
 
 [settings.templates]
+import_summary = "Импортировано: {succeeded}. Ошибок: {failed}. Отменено: {cancelled}."
 load_failed = "Не удалось загрузить шаблоны"
 operation_failed = "Операция с шаблоном не выполнена. См. подробности."
 title = "Шаблоны"
@@ -1731,3 +1729,9 @@ open_failed = "Не удалось открыть шаблон. Проверьт
 name_conflict = "Пользовательский шаблон {name} уже существует."
 keep_both = "Сохранить оба"
 replace = "Заменить"
+
+[diagnostics]
+local_details = "Локальные сведения"
+preview = "Обезличенная диагностика"
+copy = "Копировать диагностику"
+redacted_hint = "Копируются только состояние, категории и количество. Содержимое, пути, исходные ошибки, команды и настройки исключены."

@@ -47,10 +47,9 @@ class TestGuiSecurityErrorSurface:
         }
         error_message = "SECURITY_CHECK_FAILED: Network access blocked in strict local-only mode"
 
-        # Trigger _on_execution_failed (this is the slot the GUI uses
-        # for task failures)
+        # Project the failure through the same presenter as a real worker.
         initial_count = info_vm.message_count
-        main_window._on_execution_failed(error_message, context)
+        main_window._results.failed(error_message, context)
         # Verify a new message was added
         assert info_vm.message_count > initial_count
         # The failure message should be visible in the info area history
@@ -69,7 +68,7 @@ class TestGuiSecurityErrorSurface:
         error_message = "Security check failed: file access denied"
 
         initial_count = info_vm.message_count
-        main_window._on_execution_failed(error_message, context)
+        main_window._results.failed(error_message, context)
         assert info_vm.message_count > initial_count
 
 
@@ -81,7 +80,7 @@ class TestGuiNoSilentFallback:
     """
 
     def test_error_surface_is_visible_after_failure(self, main_window, tmp_path) -> None:
-        """After _on_execution_failed is called, the error should be visible
+        """After the presenter receives a failure, the error should be visible
         in the info area — no silent fallback."""
         info_vm = main_window._info_area_vm
         action_area_vm = main_window._action_area_vm
@@ -97,7 +96,7 @@ class TestGuiNoSilentFallback:
         error_message = "SECURITY_CHECK_FAILED: strict mode prevents network access"
 
         # Simulate the failure
-        main_window._on_execution_failed(error_message, context)
+        main_window._results.failed(error_message, context)
 
         # Verify: info area has the error in history
         assert any("SECURITY_CHECK_FAILED" in row.message for row in info_vm.history_rows)
@@ -117,7 +116,7 @@ class TestGuiNoSilentFallback:
         error_message = "Network access blocked in strict local-only mode"
 
         # Trigger failure
-        main_window._on_execution_failed(error_message, context)
+        main_window._results.failed(error_message, context)
 
         # Check batch list entry
         entry = main_window._batch_list_vm.get_file_entry(file_path)

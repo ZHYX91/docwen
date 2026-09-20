@@ -1,4 +1,4 @@
-"""Consumer-neutral Artifact Bundle v2 data objects and graph validation."""
+"""Consumer-neutral Artifact Bundle v3 data objects and graph validation."""
 
 from __future__ import annotations
 
@@ -11,8 +11,8 @@ from docwen_core.models.document_node import (
     validate_markdown_node_path,
 )
 
-ARTIFACT_BUNDLE_SCHEMA = "docwen.artifact_bundle.v2"
-MACHINE_PROTOCOL_SCHEMA = "docwen.machine.v1"
+ARTIFACT_BUNDLE_SCHEMA = "docwen.artifact_bundle.v3"
+MACHINE_PROTOCOL_SCHEMA = "docwen.machine.v2"
 
 ArtifactKind = Literal["document", "fragment", "resource"]
 EntryRole = Literal[
@@ -60,7 +60,7 @@ _PAGE_OCR_STATUSES = frozenset(
 
 
 class ArtifactBundleValidationError(ValueError):
-    """A cross-field or graph invariant in Artifact Bundle v2 was violated."""
+    """A cross-field or graph invariant in Artifact Bundle v3 was violated."""
 
     def __init__(self, code: str, message: str) -> None:
         super().__init__(f"{code}: {message}")
@@ -243,7 +243,7 @@ class BundleRelation:
 
 @dataclass(frozen=True, slots=True)
 class ArtifactBundle:
-    """A fully committed, integrity-pinned Artifact Bundle v2."""
+    """A fully committed, integrity-pinned Artifact Bundle v3."""
 
     bundle_id: str
     task_id: str
@@ -292,6 +292,8 @@ class BundleDraftArtifact:
     suggested_name: str
     media_type: str
     logical_path: str | None = None
+    expected_size_bytes: int | None = None
+    expected_sha256: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

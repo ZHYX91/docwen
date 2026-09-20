@@ -264,14 +264,14 @@ def _validation_terminal(docwen_clone: Path) -> dict[str, object]:
             "task_id": task_id,
             "sequence": 1,
             "bundle": {
-                "schema": "docwen.artifact_bundle.v2",
+                "schema": "docwen.artifact_bundle.v3",
                 "layout_schema": "docwen.artifact_layout.v1",
                 "bundle_id": "bundle.synthetic.validation",
                 "task_id": task_id,
                 "producer": {
                     "name": "DocWen",
                     "product_version": "0.9.0",
-                    "machine_protocol": "docwen.machine.v1",
+                    "machine_protocol": "docwen.machine.v2",
                 },
                 "artifacts": [
                     {

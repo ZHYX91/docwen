@@ -12,6 +12,22 @@ from docwen_cli.commands import execution_v3
 pytestmark = pytest.mark.integration
 
 
+@pytest.mark.parametrize(("source", "target"), [("source.md", "docx"), ("source.docx", "md")])
+def test_grouped_overwrite_is_rejected_before_runtime_or_write_probe(tmp_path, monkeypatch, source, target):
+    args = argparse.Namespace(
+        command_path="convert",
+        files=[str(tmp_path / source)],
+        to=target,
+        output_dir=str(tmp_path / "out"),
+        overwrite=True,
+    )
+    monkeypatch.setattr(execution_v3, "_directory_accepts_write_probe", lambda _: pytest.fail("must not probe"))
+    error = execution_v3._preflight_destination(args)
+    assert error is not None and error[0] == "invalid_input"
+    assert "individual files" in error[1]
+    assert not (tmp_path / "out").exists()
+
+
 def _args(
     *,
     output_path: Path | None = None,

@@ -65,6 +65,7 @@ def _manager(tmp_path: Path) -> tuple[TemplateManager, Path, Path]:
         extra_paths=[user_dir],
         state_store=state,
         managed_user_dir=user_dir,
+        builtin_dir=builtin_dir,
     )
     return TemplateManager(registry, state_store=state, user_dir=user_dir), builtin_dir, user_dir
 
@@ -79,6 +80,24 @@ def test_registry_merges_bundled_and_user_templates(tmp_path: Path) -> None:
     assert [(item.name, item.target) for item in templates] == [("Built In", "docx"), ("Mine", "xlsx")]
     assert manager.is_custom(templates[0]) is False
     assert manager.is_custom(templates[1]) is True
+    assert [item.origin for item in templates] == ["builtin", "custom"]
+
+
+def test_discovery_preserves_enabled_order_and_explicit_default(tmp_path: Path) -> None:
+    manager, builtin_dir, user_dir = _manager(tmp_path)
+    _write_ooxml_template(builtin_dir / "Alpha.docx", "docx")
+    _write_ooxml_template(user_dir / "Custom.docx", "docx")
+    alpha, custom = manager.list_templates("docx")
+    manager.set_default(custom.id)
+    manager.move(custom.id, -1)
+
+    enabled = manager.registry.list_templates("docx")
+    assert [(item.id, item.origin, item.is_default) for item in enabled] == [
+        (custom.id, "custom", True),
+        (alpha.id, "builtin", False),
+    ]
+    manager.set_enabled(custom.id, False)
+    assert [item.id for item in manager.registry.list_templates("docx")] == [alpha.id]
 
 
 def test_import_keeps_display_names_unambiguous_against_bundled_template(tmp_path: Path) -> None:

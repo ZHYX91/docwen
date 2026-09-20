@@ -18,7 +18,9 @@ from typing import Any
 import openpyxl
 
 _TEMPLATE_ID_PATTERN = re.compile(r"^template\.(?:docx|xlsx)\.[0-9a-f]{64}$")
-_TEMPLATE_RESOURCE_FIELDS = frozenset({"id", "name", "target", "description", "path", "size_bytes", "modified_ns"})
+_TEMPLATE_RESOURCE_FIELDS = frozenset(
+    {"id", "name", "target", "description", "origin", "is_default", "path", "size_bytes", "modified_ns"}
+)
 
 
 @dataclass(frozen=True, slots=True)

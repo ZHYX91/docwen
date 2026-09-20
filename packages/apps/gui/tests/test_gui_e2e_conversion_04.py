@@ -25,7 +25,7 @@ class TestLayoutGuiExecution:
 
         import docwen_plugin_layout.to_document.converter as layout_converter
         from docwen_core.office_bridge import BridgeResult
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         observed_priority: list[str] = []
 
@@ -71,7 +71,7 @@ class TestLayoutGuiExecution:
         doc.close()
 
         window = main_window_with_controller
-        normalized = _normalize_path(str(source))
+        normalized = normalize_path(str(source))
         window.view_model.add_files([str(source)])
 
         app = QApplication.instance()
@@ -116,7 +116,7 @@ class TestLayoutGuiExecution:
         import fitz
         from PySide6.QtWidgets import QApplication
 
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "contract.pdf"
         doc = fitz.open()
@@ -127,7 +127,7 @@ class TestLayoutGuiExecution:
         doc.close()
 
         window = main_window_with_controller
-        normalized = _normalize_path(str(source))
+        normalized = normalize_path(str(source))
         window.view_model.add_files([str(source)])
 
         app = QApplication.instance()

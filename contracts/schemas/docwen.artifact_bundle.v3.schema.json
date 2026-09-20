@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:docwen:schema:artifact-bundle:v2",
-  "title": "DocWen Artifact Bundle v2",
-  "description": "Consumer-neutral artifact graph with portable logical placement emitted by DocWen Machine Protocol v1.",
+  "$id": "urn:docwen:schema:artifact-bundle:v3",
+  "title": "DocWen Artifact Bundle v3",
+  "description": "Consumer-neutral artifact graph with portable logical placement emitted by DocWen Machine Protocol v2.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -17,7 +17,7 @@
   ],
   "properties": {
     "schema": {
-      "const": "docwen.artifact_bundle.v2"
+      "const": "docwen.artifact_bundle.v3"
     },
     "bundle_id": {
       "$ref": "#/$defs/identifier"
@@ -80,7 +80,7 @@
           "maxLength": 64
         },
         "machine_protocol": {
-          "const": "docwen.machine.v1"
+          "const": "docwen.machine.v2"
         }
       }
     },

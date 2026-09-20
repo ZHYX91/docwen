@@ -84,20 +84,19 @@ def _schedule_test_conversion_report(app: QApplication, window: MainWindow) -> N
         "terminal_wait_started": 0.0,
     }
 
-    original_execution_finished = getattr(window, "_on_execution_finished", None)
-    if callable(original_execution_finished):
+    execution = getattr(window, "_execution", None)
+    result_ready = getattr(execution, "result_ready", None)
+    if result_ready is not None:
 
-        def _capture_execution_finished(result: object, context: dict[str, object]) -> None:
-            # The execution thread connects after this release hook runs. Keep
-            # the ordinary terminal handler authoritative while observing the
-            # exact result delivered to it.
-            original_execution_finished(result, context)
+        def _capture_execution_finished(result: object, _context: dict[str, object]) -> None:
+            # Observe the same queued result as the presenter without replacing
+            # its bound slot or changing ordinary task projection.
             try:
                 state["conversion_metrics"] = _allowlisted_conversion_metrics(result)
             except (TypeError, ValueError):
                 state["conversion_metrics"] = {}
 
-        window._on_execution_finished = _capture_execution_finished  # type: ignore[method-assign]
+        result_ready.connect(_capture_execution_finished)
 
     def _write_report(payload: dict[str, object]) -> None:
         if report_path is None:
@@ -151,9 +150,9 @@ def _schedule_test_conversion_report(app: QApplication, window: MainWindow) -> N
                     _fail("output_config_persist_failed")
                     return
 
-            from .main_window import _normalize_path
+            from .path_identity import normalize_path
 
-            normalized = _normalize_path(str(source_path))
+            normalized = normalize_path(str(source_path))
             state["normalized_path"] = normalized
             window.view_model.add_files([str(source_path)])
             app.processEvents()

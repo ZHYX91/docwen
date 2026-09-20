@@ -186,7 +186,7 @@ def _bundle_shape(value: object) -> bool:
     artifacts = value.get("artifacts")
     entries = value.get("entries")
     return bool(
-        value.get("schema") == "docwen.artifact_bundle.v2"
+        value.get("schema") == "docwen.artifact_bundle.v3"
         and value.get("layout_schema") in {"docwen.artifact_layout.v1", "docwen.document_node.v1"}
         and isinstance(value.get("bundle_id"), str)
         and bool(value["bundle_id"])
@@ -196,7 +196,7 @@ def _bundle_shape(value: object) -> bool:
         and set(producer) == {"name", "product_version", "machine_protocol"}
         and producer.get("name") == "DocWen"
         and producer.get("product_version") == "0.9.0"
-        and producer.get("machine_protocol") == "docwen.machine.v1"
+        and producer.get("machine_protocol") == "docwen.machine.v2"
         and isinstance(artifacts, list)
         and bool(artifacts)
         and all(
@@ -296,7 +296,7 @@ def payload_shape_matches(layer: str, payload: Mapping[str, object]) -> bool:
         return bool(
             set(payload) == {"schema", "protocol", "transcript", "terminal", "terminalSha256"}
             and payload.get("schema") == "docwen.v4_machine_wire_observation.v1"
-            and payload.get("protocol") == "docwen.machine.v1"
+            and payload.get("protocol") == "docwen.machine.v2"
             and _identity_shape(payload.get("transcript"))
             and _terminal_shape(terminal)
             and payload.get("terminalSha256") == _payload_hash(terminal)

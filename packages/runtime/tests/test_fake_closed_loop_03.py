@@ -125,7 +125,7 @@ class TestFullClosedLoop:
         result = controller.execute_single(request)
 
         assert result.success is True
-        assert len(result.artifacts) == 3
+        assert len(result.artifacts) == 2
         auxiliary = next(artifact for artifact in result.artifacts if artifact.kind == "auxiliary")
         assert auxiliary.suggested_name == "legacy_fromDoc.docx"
         assert auxiliary.metadata["source"] == "preconversion"

@@ -507,7 +507,7 @@ def test_terminal_listener_rejection_cannot_change_success_or_duplicate_terminal
 
     assert result.success is True
     assert result.error is None
-    assert len(result.artifacts) == 2
+    assert len(result.artifacts) == 1
     assert len([artifact for artifact in result.artifacts if artifact.is_primary]) == 1
     assert all(Path(artifact.staging_path).is_file() for artifact in result.artifacts)
     assert result.metrics.extra["plugin_metric"] == "kept"

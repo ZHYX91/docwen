@@ -19,7 +19,6 @@ from PySide6.QtCore import QObject, Signal
 
 from docwen_core.formats.categories import CATEGORY_DOCUMENT, CATEGORY_IMAGE, CATEGORY_SPREADSHEET, get_category
 from docwen_gui.format_presentation import (
-    FORMAT_PRESENTATIONS,
     FormatChoice,
     format_choice,
     normalize_format,
@@ -39,11 +38,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Compatibility exports now derive from the single presentation registry.
 COMPRESSIBLE_FORMATS: list[str] = ["JPG", "JPEG", "WEBP"]
-BUTTON_COLORS: dict[str, str] = {
-    presentation.display_name.upper(): presentation.tone for presentation in FORMAT_PRESENTATIONS.values()
-}
 
 # ── Validation option keys ───────────────────────────────────────────────
 
@@ -811,7 +806,6 @@ class ConversionPanelViewModel(QObject):
 
 
 __all__ = [
-    "BUTTON_COLORS",
     "COMPRESSIBLE_FORMATS",
     "SENSITIVE_WORD",
     "SYMBOL_CORRECTION",

@@ -74,7 +74,7 @@ def test_conversion_release_hook_uses_requested_main_window_surface(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from PySide6.QtCore import QTimer
+    from PySide6.QtCore import QObject, QTimer, Signal
 
     from docwen_gui.release_smoke import _schedule_test_conversion_report
 
@@ -123,13 +123,18 @@ def test_conversion_release_hook_uses_requested_main_window_surface(
 
     def finish_conversion(request_surface: str, target: str) -> None:
         requests.append((request_surface, target))
-        window_holder["window"]._on_execution_finished(result, {"surface": request_surface})
+        window_holder["window"]._execution.result_ready.emit(result, {"surface": request_surface})
 
     def original_execution_finished(observed_result: object, context: dict[str, object]) -> None:
         assert observed_result is result
         handler_calls.append(context)
         entry.status = "completed"
 
+    class _Execution(QObject):
+        result_ready = Signal(object, dict)
+
+    execution = _Execution()
+    execution.result_ready.connect(original_execution_finished)
     window = SimpleNamespace(
         view_model=_ViewModel(),
         _action_area_vm=SimpleNamespace(
@@ -141,7 +146,7 @@ def test_conversion_release_hook_uses_requested_main_window_surface(
             request_conversion=lambda target: finish_conversion("panel", target),
         ),
         _batch_list_vm=SimpleNamespace(get_file_entry=lambda _normalized: entry),
-        _on_execution_finished=original_execution_finished,
+        _execution=execution,
         close=lambda: None,
     )
     window_holder["window"] = window

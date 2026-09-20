@@ -13,7 +13,7 @@ def test_cli_importable() -> None:
     """docwen_cli should be importable."""
     import docwen_cli
 
-    assert docwen_cli.__version__ == "0.11.0"
+    assert docwen_cli.__version__ == "0.12.0"
 
 
 def test_exit_codes_importable() -> None:

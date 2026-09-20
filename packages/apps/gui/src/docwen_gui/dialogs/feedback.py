@@ -14,7 +14,9 @@ from typing import cast as _cast
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
 
+from ..diagnostics import DiagnosticSummary
 from ..i18n import t
+from .diagnostics import DiagnosticDialog
 
 FeedbackLevel = Literal["info", "success", "warning", "error"]
 FeedbackRole = Literal["accept", "reject", "action"]
@@ -82,8 +84,12 @@ def _message_box(
     details: str | None = None,
     parent: Any = None,
     copyable: bool = False,
+    diagnostic: DiagnosticSummary | None = None,
 ) -> None:
     """Show a QMessageBox with the given level, title, and message."""
+    if copyable and details:
+        _diagnostic_dialog(title, message, details, diagnostic or DiagnosticSummary(status=level), parent)
+        return
     icon_map = {
         "info": QMessageBox.Icon.Information,
         "success": QMessageBox.Icon.Information,
@@ -94,28 +100,36 @@ def _message_box(
     box.setObjectName(f"feedback{level.title()}MessageBox")
     box.setWindowTitle(title)
     box.setIcon(icon_map.get(level, QMessageBox.Icon.Information))
+    box.setTextFormat(Qt.TextFormat.PlainText)
+    box.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
     box.setText(message)
     if details:
         box.setDetailedText(details)
     box.setStandardButtons(QMessageBox.StandardButton.Ok)
     box.button(QMessageBox.StandardButton.Ok).setText(t("common.ok", "OK"))
-    copy_button = None
-    copy_details = details if copyable and details else None
-    if copy_details is not None:
-        copy_button = box.addButton(t("common.copy", "Copy"), QMessageBox.ButtonRole.ActionRole)
-        copy_button.setProperty("feedbackRole", "copy")
-    box.exec()
-    if copy_button is not None and box.clickedButton() is copy_button and copy_details is not None:
-        _copy_text_to_clipboard(copy_details)
+    focus_widget = _focus_snapshot(box.parentWidget())
+    try:
+        box.exec()
+    finally:
+        _restore_focus(focus_widget)
+        box.deleteLater()
 
 
-def _copy_text_to_clipboard(text: str) -> bool:
-    app = QApplication.instance()
-    if app is None:
-        return False
-    clipboard = _cast(QApplication, app).clipboard()
-    clipboard.setText(text)
-    return True
+def _diagnostic_dialog(
+    title: str,
+    message: str,
+    details: str,
+    diagnostic: DiagnosticSummary,
+    parent: Any,
+) -> None:
+    qt_parent = _active_window_parent(parent)
+    focus_widget = _focus_snapshot(qt_parent)
+    dialog = DiagnosticDialog(title, message, details=details, diagnostic=diagnostic, parent=qt_parent)
+    try:
+        dialog.exec()
+    finally:
+        _restore_focus(focus_widget)
+        dialog.deleteLater()
 
 
 def error(
@@ -125,9 +139,10 @@ def error(
     details: str | None = None,
     parent: Any = None,
     copyable: bool = True,
+    diagnostic: DiagnosticSummary | None = None,
 ) -> None:
     """Show an error dialog."""
-    _message_box("error", title, message, details=details, parent=parent, copyable=copyable)
+    _message_box("error", title, message, details=details, parent=parent, copyable=copyable, diagnostic=diagnostic)
 
 
 def warn(
@@ -136,9 +151,11 @@ def warn(
     *,
     details: str | None = None,
     parent: Any = None,
+    copyable: bool = False,
+    diagnostic: DiagnosticSummary | None = None,
 ) -> None:
     """Show a warning dialog."""
-    _message_box("warning", title, message, details=details, parent=parent)
+    _message_box("warning", title, message, details=details, parent=parent, copyable=copyable, diagnostic=diagnostic)
 
 
 def info(
@@ -161,6 +178,7 @@ def choose(
     default: str | None = None,
     details: str | None = None,
     copyable: bool = False,
+    diagnostic: DiagnosticSummary | None = None,
     danger: bool = False,
     level: FeedbackLevel = "info",
     _object_name: str = "feedbackChoiceMessageBox",
@@ -185,6 +203,8 @@ def choose(
     box.setObjectName(_object_name)
     box.setWindowTitle(title)
     box.setIcon(QMessageBox.Icon.Warning if danger else icon_map.get(level, QMessageBox.Icon.Information))
+    box.setTextFormat(Qt.TextFormat.PlainText)
+    box.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
     box.setText(message)
     if details:
         box.setDetailedText(details)
@@ -193,8 +213,8 @@ def choose(
     copy_button = None
     copy_details = details if copyable and details else None
     if copy_details is not None:
-        copy_button = box.addButton(t("common.copy", "Copy"), QMessageBox.ButtonRole.ActionRole)
-        copy_button.setProperty("feedbackRole", "copy")
+        copy_button = box.addButton(t("diagnostics.preview"), QMessageBox.ButtonRole.ActionRole)
+        copy_button.setProperty("feedbackRole", "diagnostic")
 
     default_button = None
     primary_button = None
@@ -215,12 +235,15 @@ def choose(
         box.setDefaultButton(primary_button)
 
     try:
-        box.exec()
-        clicked = box.clickedButton()
-        if copy_button is not None and clicked is copy_button and copy_details is not None:
-            _copy_text_to_clipboard(copy_details)
-            return None
-        return button_values.get(clicked)
+        while True:
+            box.exec()
+            clicked = box.clickedButton()
+            if copy_button is not None and clicked is copy_button and copy_details is not None:
+                _diagnostic_dialog(
+                    title, message, copy_details, diagnostic or DiagnosticSummary(status=level), qt_parent
+                )
+                continue
+            return button_values.get(clicked)
     finally:
         _restore_focus(focus_widget)
         box.deleteLater()
@@ -331,7 +354,7 @@ def exception(
     if context:
         message = f"{context}\n{message}"
     details = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
-    error(title, message, details=details, parent=parent)
+    error(title, message, details=details, parent=parent, diagnostic=DiagnosticSummary.from_exception(exc))
 
 
 __all__ = [

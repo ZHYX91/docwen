@@ -124,7 +124,7 @@ class TestDocxToMdGolden:
             yaml_key_labels={"title": "Titel", "subtitle": "Untertitel"},
         )
         assert result.success, f"Conversion failed: {result.error.message if result.error else 'unknown'}"
-        assert len(result.artifacts) == 2
+        assert len(result.artifacts) == 1
 
         artifact = result.artifacts[0]
         artifact_path = Path(artifact.staging_path)

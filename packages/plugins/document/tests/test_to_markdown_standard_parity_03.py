@@ -376,6 +376,34 @@ def test_mixed_text_and_omath_paragraph_remains_inline_formula():
     assert output == "before $x$ after"
 
 
+def test_formula_paragraph_preserves_character_code_and_text_around_run_breaks():
+    from docwen_core.docx_parsing.format_features import StyleDetectorConfig
+
+    doc = Document()
+    doc.styles.add_style("Custom Literal", WD_STYLE_TYPE.CHARACTER)
+    para = doc.add_paragraph("before ")
+    literal = para.add_run("<br>")
+    literal.style = "Custom Literal"
+    literal.add_break()
+    literal.add_text("after-break")
+    literal.add_tab()
+    literal.add_text("after-tab")
+    _append_formula(para._p, "x")
+    hidden = para.add_run("HIDDEN_SENTINEL")
+    hidden.font.hidden = True
+    para.add_run(" end").bold = True
+
+    converter = DocxToMarkdownConverter()
+    output = converter._build_paragraph_text_with_formulas(
+        para._element,
+        para,
+        style_detector_config=StyleDetectorConfig(code_character_style_names=frozenset({"Custom Literal"})),
+    )
+    assert output == "before `<br>`\n`after-break`\t`after-tab`$x$** end**"
+    plain = converter._build_paragraph_text_with_formulas(para._element, para, preserve_formatting=False)
+    assert plain == "before <br>\nafter-break\tafter-tab$x$ end"
+
+
 def test_alternate_content_formula_prefers_choice_without_duplicate_fallback():
     doc = Document()
     para = doc.add_paragraph("before ")

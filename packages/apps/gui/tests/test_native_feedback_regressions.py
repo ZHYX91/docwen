@@ -58,8 +58,8 @@ def test_settings_feedback_does_not_move_confirmation_buttons(qapp):
 
 def test_extension_losses_are_localized_and_summary_exposes_warning_count(qapp):
     from docwen_core.models.result import ConversionDiagnostic, ConversionResult
+    from docwen_gui.execution_presenter import _result_warning_messages
     from docwen_gui.i18n import t
-    from docwen_gui.main_window import _result_warning_messages
     from docwen_gui.view_models.info_area_vm import InfoAreaViewModel
 
     result = ConversionResult(

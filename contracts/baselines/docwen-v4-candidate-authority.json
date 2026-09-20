@@ -17,14 +17,14 @@
   },
   "finalSpecFiles": [
     "contracts/README.md",
-    "contracts/schemas/docwen.artifact_bundle.v2.schema.json",
+    "contracts/schemas/docwen.artifact_bundle.v3.schema.json",
     "contracts/schemas/docwen.machine.diagnostic_evidence.v1.schema.json",
-    "contracts/schemas/docwen.machine.v1.schema.json",
+    "contracts/schemas/docwen.machine.v2.schema.json",
     "contracts/schemas/docwen.candidate_evidence_index.v4.schema.json",
     "contracts/schemas/docwen.candidate_receipt.v4.schema.json",
     "contracts/oracles/docwen.markdown_semantics.v3/manifest.json",
     "docs/specs/golden-regression-suite.md",
-    "docs/specs/machine-protocol-v1.md",
+    "docs/specs/machine-protocol-v2.md",
     "docs/specs/markdown-compatibility.md",
     "docs/specs/physical-page-ocr.md",
     "docs/specs/templates-and-styles.md"

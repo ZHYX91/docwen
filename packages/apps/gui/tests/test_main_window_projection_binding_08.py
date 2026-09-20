@@ -29,7 +29,7 @@ from ._main_window_projection_binding_support import (
 
 class TestExecutionThreadDispatch:
     def test_batch_thread_uses_controller_execute_batch(self, qapp) -> None:
-        from docwen_gui.main_window import _ExecutionThread
+        from docwen_gui.qt_bridge.execution import ExecutionThread
 
         calls: list[object] = []
 
@@ -43,7 +43,7 @@ class TestExecutionThreadDispatch:
 
         request = SimpleNamespace(request_id="request-1", input_refs=[])
         context = {"request_id": "request-1", "batch": True}
-        thread = _ExecutionThread(
+        thread = ExecutionThread(
             controller=_Controller(),  # type: ignore[arg-type]
             request=request,  # type: ignore[arg-type]
             context=context,
@@ -58,7 +58,7 @@ class TestExecutionThreadDispatch:
         assert received == [(["batch-result"], context)]
 
     def test_aggregate_thread_uses_admitted_controller_boundary(self, qapp) -> None:
-        from docwen_gui.main_window import _ExecutionThread
+        from docwen_gui.qt_bridge.execution import ExecutionThread
 
         calls: list[str] = []
 
@@ -72,7 +72,7 @@ class TestExecutionThreadDispatch:
 
         request = SimpleNamespace(request_id="request-1", input_refs=[])
         context = {"request_id": "request-1"}
-        thread = _ExecutionThread(
+        thread = ExecutionThread(
             controller=_Controller(),  # type: ignore[arg-type]
             request=request,  # type: ignore[arg-type]
             context=context,
@@ -90,13 +90,13 @@ class TestExecutionThreadDispatch:
     def test_txt_document_context_builds_markdown_runtime_request_for_office_bridge_targets(
         self, window, tmp_path, target_format: str
     ) -> None:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "note.txt"
         source.write_text("# Title\n\ncontent", encoding="utf-8")
-        window._file_contexts = {_normalize_path(str(source)): ("markdown", "markdown")}
+        window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
 
-        request, _context = window._build_request(
+        request, _context = window._requests.single(
             file_path=str(source),
             target_format=target_format,
             action_name="",
@@ -135,7 +135,7 @@ class TestExecutionThreadDispatch:
         assert window._action_area_vm.visible is True
         assert window._action_area_vm.file_type == fmt
 
-        request, _context = window._build_request(
+        request, _context = window._requests.single(
             file_path=str(source),
             target_format="md",
             action_name=window._action_area_vm.action_name,
@@ -171,7 +171,7 @@ class TestExecutionThreadDispatch:
             assert window._action_area_vm.visible is True
             assert window._action_area_vm.file_type == "pptx"
 
-            request, _context = window._build_request(
+            request, _context = window._requests.single(
                 file_path=str(source),
                 target_format="md",
                 action_name=window._action_area_vm.action_name,
@@ -193,7 +193,7 @@ class TestExecutionThreadDispatch:
         _write_format_fixture(source, "docx")
         _bind_admitted_ref(window, source, "document", "docx")
 
-        request, _context = window._build_request(
+        request, _context = window._requests.single(
             file_path=str(source),
             target_format="docx",
             action_name="validate",
@@ -218,13 +218,13 @@ class TestExecutionThreadDispatch:
         }
 
     def test_validate_markdown_text_context_builds_proofread_category_request(self, window, tmp_path) -> None:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "note.md"
         source.write_text("# Title", encoding="utf-8")
-        window._file_contexts = {_normalize_path(str(source)): ("markdown", "markdown")}
+        window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
 
-        request, _context = window._build_request(
+        request, _context = window._requests.single(
             file_path=str(source),
             target_format="markdown",
             action_name="validate",
@@ -261,7 +261,7 @@ class TestExecutionThreadDispatch:
         _write_format_fixture(source, "xlsx")
         _bind_admitted_ref(window, source, "spreadsheet", "xlsx")
 
-        request, _context = window._build_request(
+        request, _context = window._requests.single(
             file_path=str(source),
             target_format="xlsx",
             action_name="merge_tables",
@@ -302,7 +302,7 @@ class TestExecutionThreadDispatch:
         _write_format_fixture(source, fmt)
         _bind_admitted_ref(window, source, category, fmt)
 
-        request, _context = window._build_request(
+        request, _context = window._requests.single(
             file_path=str(source),
             target_format=target,
             action_name="",
@@ -316,13 +316,13 @@ class TestExecutionThreadDispatch:
         assert input_ref.category == category
 
     def test_layout_render_preserves_render_dpi_option(self, window, tmp_path) -> None:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "layout.pdf"
         source.write_bytes(b"%PDF-1.4\n")
-        window._file_contexts = {_normalize_path(str(source)): ("pdf", "layout")}
+        window._file_contexts = {normalize_path(str(source)): ("pdf", "layout")}
 
-        request, _context = window._build_request(
+        request, _context = window._requests.single(
             file_path=str(source),
             target_format="jpg",
             action_name="",
@@ -337,13 +337,13 @@ class TestExecutionThreadDispatch:
         assert input_ref.category == "layout"
 
     def test_layout_to_markdown_preserves_render_dpi_option(self, window, tmp_path) -> None:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "layout.pdf"
         source.write_bytes(b"%PDF-1.4\n")
-        window._file_contexts = {_normalize_path(str(source)): ("pdf", "layout")}
+        window._file_contexts = {normalize_path(str(source)): ("pdf", "layout")}
 
-        request, _context = window._build_request(
+        request, _context = window._requests.single(
             file_path=str(source),
             target_format="md",
             action_name="",
@@ -355,13 +355,13 @@ class TestExecutionThreadDispatch:
         assert request.options["render_dpi"] == 600
 
     def test_layout_pdf_normalize_drops_render_dpi_option(self, window, tmp_path) -> None:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "layout.pdf"
         source.write_bytes(b"%PDF-1.4\n")
-        window._file_contexts = {_normalize_path(str(source)): ("pdf", "layout")}
+        window._file_contexts = {normalize_path(str(source)): ("pdf", "layout")}
 
-        request, _context = window._build_request(
+        request, _context = window._requests.single(
             file_path=str(source),
             target_format="pdf",
             action_name="",
@@ -378,7 +378,7 @@ class TestExecutionThreadDispatch:
         _write_format_fixture(source, "docx")
         _bind_admitted_ref(window, source, "document", "docx")
 
-        request, _context = window._build_request(
+        request, _context = window._requests.single(
             file_path=str(source),
             target_format="md",
             action_name="",
@@ -391,13 +391,13 @@ class TestExecutionThreadDispatch:
         assert "render_dpi" not in request.options
 
     def test_merge_images_to_tiff_builds_image_category_request(self, window, tmp_path) -> None:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "image.png"
         source.write_bytes(b"\x89PNG\r\n\x1a\n")
-        window._file_contexts = {_normalize_path(str(source)): ("png", "image")}
+        window._file_contexts = {normalize_path(str(source)): ("png", "image")}
 
-        request, _context = window._build_request(
+        request, _context = window._requests.single(
             file_path=str(source),
             target_format="tif",
             action_name="merge_images_to_tiff",
@@ -411,13 +411,13 @@ class TestExecutionThreadDispatch:
         assert input_ref.category == "image"
 
     def test_standard_image_conversion_builds_image_category_request(self, window, tmp_path) -> None:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "image.png"
         source.write_bytes(b"\x89PNG\r\n\x1a\n")
-        window._file_contexts = {_normalize_path(str(source)): ("png", "image")}
+        window._file_contexts = {normalize_path(str(source)): ("png", "image")}
 
-        request, _context = window._build_request(
+        request, _context = window._requests.single(
             file_path=str(source),
             target_format="webp",
             action_name="",
@@ -431,13 +431,13 @@ class TestExecutionThreadDispatch:
         assert input_ref.category == "image"
 
     def test_standard_image_conversion_keeps_only_image_format_options(self, window, tmp_path) -> None:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "image.png"
         source.write_bytes(b"\x89PNG\r\n\x1a\n")
-        window._file_contexts = {_normalize_path(str(source)): ("png", "image")}
+        window._file_contexts = {normalize_path(str(source)): ("png", "image")}
 
-        request, _context = window._build_request(
+        request, _context = window._requests.single(
             file_path=str(source),
             target_format="webp",
             action_name="",
@@ -457,13 +457,13 @@ class TestExecutionThreadDispatch:
         }
 
     def test_image_to_markdown_drops_image_format_and_pdf_options(self, window, tmp_path) -> None:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "image.png"
         source.write_bytes(b"\x89PNG\r\n\x1a\n")
-        window._file_contexts = {_normalize_path(str(source)): ("png", "image")}
+        window._file_contexts = {normalize_path(str(source)): ("png", "image")}
 
-        request, context = window._build_request(
+        request, context = window._requests.single(
             file_path=str(source),
             target_format="md",
             action_name="",
@@ -491,7 +491,7 @@ class TestExecutionThreadDispatch:
         _write_format_fixture(source, "jpeg")
         _bind_admitted_ref(window, source, "image", "jpeg")
 
-        request, _context = window._build_request(
+        request, _context = window._requests.single(
             file_path=str(source),
             target_format="md",
             action_name="invoice_cn",

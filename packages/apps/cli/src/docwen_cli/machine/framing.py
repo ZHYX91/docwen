@@ -1,4 +1,4 @@
-"""Strict Content-Length framing for DocWen Machine Protocol v1."""
+"""Strict Content-Length framing for DocWen Machine Protocol v2."""
 
 from __future__ import annotations
 

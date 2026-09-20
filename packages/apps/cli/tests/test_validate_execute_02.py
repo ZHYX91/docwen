@@ -174,7 +174,10 @@ class TestExecuteConvertValidateRouting:
         assert exit_code == 2
         mock_controller.execute_single.assert_not_called()
 
-    def test_validate_routes_legacy_office_content_through_document_capability(self, tmp_path) -> None:
+    @pytest.mark.parametrize("bridge_available", [True, False])
+    def test_validate_routes_legacy_office_content_through_document_capability(
+        self, tmp_path, bridge_available
+    ) -> None:
         from docwen_cli.commands.convert import execute_convert
         from docwen_core.models import (
             AdmissionDecision,
@@ -206,6 +209,12 @@ class TestExecuteConvertValidateRouting:
             detected_supported=True,
         )
         controller = _validation_controller()
+        if not bridge_available:
+            projection = controller.describe_runtime_capabilities.return_value
+            source_projection = next(item for item in projection["sources"] if item["id"] == "doc")
+            source_projection["available"] = False
+            source_projection["routes"][0].update(available=False, state="unavailable")
+            projection["counts"].update(available_routes=3, unavailable_routes=1)
         args = self._fake_args(action="validate", files=[str(source)], to="docx")
 
         with (
@@ -214,6 +223,10 @@ class TestExecuteConvertValidateRouting:
         ):
             exit_code = execute_convert(args, controller=controller)
 
+        if not bridge_available:
+            assert exit_code == 6
+            controller.execute_single.assert_not_called()
+            return
         assert exit_code == 0
         request = controller.execute_single.call_args.args[0]
         assert request.action_name == "validate"

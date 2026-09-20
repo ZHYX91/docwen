@@ -67,12 +67,12 @@ def test_cli_presenters_consume_final_result_warning_diagnostics() -> None:
 
 
 def test_gui_success_consumers_keep_success_state_with_warning_tone() -> None:
-    main_window = _read("packages/apps/gui/src/docwen_gui/main_window.py")
+    presenter = _read("packages/apps/gui/src/docwen_gui/execution_presenter.py")
     gui_tests = _read("packages/apps/gui/tests/test_main_window_projection_binding_*.py")
 
-    assert main_window.count("_result_warning_messages(") == 3
-    assert 'completion_tone = "warning" if warning_messages else "success"' in main_window
-    assert 'tone = "warning" if warning_rows else "success"' in main_window
-    assert 'f"{Path(warning_file).name}: {warning_message}"' in main_window
+    assert presenter.count("_result_warning_messages(") == 3
+    assert 'completion_tone = "warning" if warning_messages else "success"' in presenter
+    assert 'tone = "warning" if warning_rows else "success"' in presenter
+    assert 'f"{Path(warning_file).name}: {warning_message}"' in presenter
     assert "test_success_callback_projects_warning_diagnostics_to_info_area" in gui_tests
     assert "test_batch_all_success_with_warning_keeps_success_state_and_warning_tone" in gui_tests

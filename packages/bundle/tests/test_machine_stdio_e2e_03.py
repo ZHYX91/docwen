@@ -51,7 +51,7 @@ def test_real_stdio_process_rejects_linked_input_without_reading_target(tmp_path
                 1,
                 "initialize",
                 {
-                    "protocol": {"name": "docwen.machine", "major": 1, "minor": 0},
+                    "protocol": {"name": "docwen.machine", "major": 2, "minor": 0},
                     "client": {"name": "docwen-linked-input-e2e", "version": "1.0.0"},
                     "features": {"progress": True, "cancellation": True},
                 },
@@ -59,7 +59,7 @@ def test_real_stdio_process_rejects_linked_input_without_reading_target(tmp_path
         )
         initialized = read_frame(cast(BinaryIO, process.stdout))
         assert initialized is not None
-        assert initialized["result"]["protocol"] == {"name": "docwen.machine", "major": 1, "minor": 0}
+        assert initialized["result"]["protocol"] == {"name": "docwen.machine", "major": 2, "minor": 0}
         writer.write(
             _request(
                 2,

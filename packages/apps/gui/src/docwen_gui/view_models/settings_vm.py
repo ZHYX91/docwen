@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QMutex, QMutexLocker, QObject, Signal
 
+from docwen_application.optimization_selection import OptimizationSource
 from docwen_gui.i18n import t as _t
 
 from ..models.settings_config import (
@@ -43,7 +44,10 @@ from ..models.settings_config import (
     SoftwarePriorityConfig,
     TextConfig,
 )
-from ._optimization_filter import OptimizationChoicesResult, OptimizationSource, discover_optimization_choices
+from ._optimization_filter import (
+    OptimizationChoicesResult,
+    discover_optimization_choices,
+)
 
 logger = logging.getLogger(__name__)
 

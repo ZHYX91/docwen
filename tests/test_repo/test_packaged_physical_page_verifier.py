@@ -100,7 +100,7 @@ def _canonical_terminal(root: Path) -> dict[str, Any]:
         "method": "task/completed",
         "params": {
             "bundle": {
-                "schema": "docwen.artifact_bundle.v2",
+                "schema": "docwen.artifact_bundle.v3",
                 "layout_schema": "docwen.artifact_layout.v1",
                 "task_id": "task.physical",
                 "producer": {"name": "DocWen", "version": "0.9.0"},

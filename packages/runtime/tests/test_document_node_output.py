@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import json
+import hashlib
 import os
 from datetime import datetime
 from pathlib import Path
@@ -94,9 +94,13 @@ def test_markdown_bundle_is_published_as_one_document_node(tmp_path: Path) -> No
     root = Path(result.metrics.extra["document_node_root"])
     assert root.name.startswith("公文_") and root.name.endswith("_fromDocx")
     assert (root / f"{root.name}.md").is_file()
-    manifest = json.loads((root / "docwen-node.json").read_text(encoding="utf-8"))
-    assert manifest["schema"] == "docwen.document_node.v1"
-    assert manifest["source"]["sha256"]
+    assert not (root / "docwen-node.json").exists()
+    assert len(result.artifacts) == 3
+    for artifact in result.artifacts:
+        data = Path(artifact.staging_path).read_bytes()
+        assert artifact.size_bytes == len(data)
+        assert artifact.sha256 == hashlib.sha256(data).hexdigest()
+        assert artifact.logical_path == Path(artifact.staging_path).relative_to(output).as_posix()
     main_text = (root / f"{root.name}.md").read_text(encoding="utf-8")
     attachment_artifact = next(item for item in markdown if not item.is_primary)
     attachment_path = Path(attachment_artifact.staging_path)
@@ -258,9 +262,17 @@ def test_document_node_collision_policy_applies_to_the_complete_root(
     assert renamed.success is True and renamed_root != first_root
     assert renamed_root.name.endswith("_001_fromDocx")
     assert (renamed_root / f"{renamed_root.name}.md").read_text(encoding="utf-8") == "renamed\n"
-    assert overwritten.success is True
-    assert Path(overwritten.metrics.extra["document_node_root"]) == first_root
-    assert (first_root / f"{first_root.name}.md").read_text(encoding="utf-8") == "overwritten\n"
+    assert overwritten.success is False
+    assert overwritten.error is not None
+    assert overwritten.error.diagnostic_code == "DOCUMENT_NODE_POLICY_UNSUPPORTED"
+    assert (first_root / f"{first_root.name}.md").read_text(encoding="utf-8") == "first\n"
+    reused = publish("first\n", "skip")
+    assert reused.success and reused.metrics.output_bytes == 0
+    assert reused.artifacts[0].metadata["document_node_reused"] is True
+    mismatch = publish("changed\n", "skip")
+    assert mismatch.error is not None
+    assert not mismatch.success and mismatch.error.diagnostic_code == "DOCUMENT_NODE_SKIP_MISMATCH"
+    assert (first_root / f"{first_root.name}.md").read_text(encoding="utf-8") == "first\n"
 
 
 def test_overwrite_refuses_an_unowned_directory(tmp_path: Path, frozen_node_clock: None) -> None:
@@ -292,3 +304,77 @@ def test_overwrite_refuses_an_unowned_directory(tmp_path: Path, frozen_node_cloc
     assert result.success is False
     assert sentinel.read_text(encoding="utf-8") == "keep\n"
     assert not (unowned / "docwen-node.json").exists()
+
+
+@pytest.mark.parametrize("extra", ["file", "directory", "missing"])
+def test_skip_requires_the_complete_current_output_tree(tmp_path, frozen_node_clock, extra):
+    staging = tmp_path / "source.md"
+    staging.write_bytes(b"body\n")
+    output = tmp_path / "out"
+    artifact = _artifact(
+        staging, artifact_id="main", suggested_name="source.md", media_type="text/markdown", primary=True
+    )
+    finalizer = OutputFinalizer()
+    policy = OutputPolicy(output_dir=str(output), overwrite_mode="skip")
+    first = finalizer.finalize("first", [artifact], policy, input_path=str(staging))
+    assert first.success
+    root = Path(first.artifacts[0].staging_path).parent
+    if extra == "file":
+        (root / "user.txt").write_bytes(b"keep")
+    elif extra == "directory":
+        (root / "user-folder").mkdir()
+    else:
+        Path(first.artifacts[0].staging_path).unlink()
+    before = sorted(str(path.relative_to(root)) for path in root.rglob("*"))
+    second = finalizer.finalize("second", [artifact], policy, input_path=str(staging))
+    assert not second.success and second.artifacts == []
+    assert second.error is not None
+    assert second.error.diagnostic_code == "DOCUMENT_NODE_SKIP_MISMATCH"
+    assert sorted(str(path.relative_to(root)) for path in root.rglob("*")) == before
+    assert not list(output.glob(".__docwen-node-*"))
+
+
+def test_racing_empty_directory_is_not_replaced(tmp_path, monkeypatch):
+    staging = tmp_path / "source.md"
+    staging.write_bytes(b"body")
+    output = tmp_path / "out"
+    publish = OutputFinalizer._publish_directory_no_clobber
+    raced = []
+
+    def race(source, destination):
+        path = Path(destination)
+        path.mkdir()
+        raced.append(path)
+        publish(source, destination)
+
+    monkeypatch.setattr(OutputFinalizer, "_publish_directory_no_clobber", staticmethod(race))
+    result = OutputFinalizer().finalize(
+        "race",
+        [_artifact(staging, artifact_id="main", suggested_name="source.md", media_type="text/markdown", primary=True)],
+        OutputPolicy(output_dir=str(output)),
+        input_path=str(staging),
+    )
+    assert not result.success and result.artifacts == []
+    assert raced[0].is_dir() and list(raced[0].iterdir()) == []
+    assert not list(output.glob(".__docwen-node-*"))
+
+
+def test_reused_output_survives_cleanup_failure_with_visible_warning(tmp_path, frozen_node_clock, monkeypatch):
+    staging = tmp_path / "source.md"
+    staging.write_bytes(b"body")
+    output = tmp_path / "out"
+    artifact = _artifact(
+        staging, artifact_id="main", suggested_name="source.md", media_type="text/markdown", primary=True
+    )
+    finalizer = OutputFinalizer()
+    policy = OutputPolicy(output_dir=str(output), overwrite_mode="skip")
+    assert finalizer.finalize("first", [artifact], policy, input_path=str(staging)).success
+
+    def fail_cleanup(*args, **kwargs):
+        raise PermissionError("temporary file is busy")
+
+    monkeypatch.setattr("docwen_runtime.output.finalizer.shutil.rmtree", fail_cleanup)
+    result = finalizer.finalize("again", [artifact], policy, input_path=str(staging))
+    assert result.success and result.metrics.output_bytes == 0
+    assert Path(result.artifacts[0].staging_path).read_bytes() == b"body"
+    assert any(item.code == "FINALIZER_CLEANUP_FAILED" and item.level == "warning" for item in result.diagnostics)

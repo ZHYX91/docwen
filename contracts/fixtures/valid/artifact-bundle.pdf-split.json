@@ -1,11 +1,11 @@
 {
-  "schema": "docwen.artifact_bundle.v2",
+  "schema": "docwen.artifact_bundle.v3",
   "bundle_id": "bundle.pdf-split.001",
   "task_id": "task.pdf-split.001",
   "producer": {
     "name": "DocWen",
     "product_version": "0.9.0",
-    "machine_protocol": "docwen.machine.v1"
+    "machine_protocol": "docwen.machine.v2"
   },
   "layout_schema": "docwen.artifact_layout.v1",
   "artifacts": [

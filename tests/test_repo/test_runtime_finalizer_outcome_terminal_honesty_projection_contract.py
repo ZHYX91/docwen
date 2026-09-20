@@ -10,7 +10,7 @@ pytestmark = pytest.mark.contract
 ROOT = Path(__file__).resolve().parents[2]
 FINALIZER = ROOT / "packages/runtime/src/docwen_runtime/output/finalizer.py"
 TASK_MANAGER = ROOT / "packages/runtime/src/docwen_runtime/engine/task_manager.py"
-MAIN_WINDOW = ROOT / "packages/apps/gui/src/docwen_gui/main_window.py"
+PRESENTER = ROOT / "packages/apps/gui/src/docwen_gui/execution_presenter.py"
 BATCH_LIST = ROOT / "packages/apps/gui/src/docwen_gui/widgets/batch_list.py"
 FINALIZER_TESTS = ROOT / "packages/runtime/tests/test_output_finalizer_*.py"
 OUTCOME_TESTS = ROOT / "packages/runtime/tests/test_task_manager_outcome_honesty.py"
@@ -53,14 +53,14 @@ def test_runtime_finalizer_and_terminal_paths_fail_closed() -> None:
 
 
 def test_gui_retains_real_failed_artifacts_without_promoting_success() -> None:
-    main_window = MAIN_WINDOW.read_text(encoding="utf-8")
+    presenter = PRESENTER.read_text(encoding="utf-8")
     batch_list = BATCH_LIST.read_text(encoding="utf-8")
 
     output_projection = (ROOT / "packages/apps/gui/src/docwen_gui/view_models/output_files.py").read_text(
         encoding="utf-8"
     )
-    assert "result_output_paths(result, existing_only=True)" in main_window
-    assert "output_paths=retained_paths" in main_window
+    assert "result_output_paths(result, existing_only=True)" in presenter
+    assert "output_paths=retained_paths" in presenter
     assert "filesystem_path(path).is_file()" in output_projection
     assert "except (OSError, ValueError):" in output_projection
     assert 'a.kind in {"auxiliary", "intermediate"}' in output_projection

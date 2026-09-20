@@ -215,7 +215,27 @@ def test_physical_page_document_node_commits_all_fidelity_shapes(
     )
 
     assert bundle.layout_schema == "docwen.document_node.v1"
-    assert any(relation.role == "manifest" for relation in bundle.relations)
+    assert not any(relation.role == "manifest" for relation in bundle.relations)
+    assert len(bundle.artifacts) == 1 + len(pages) + len(resources)
+    assert [relation.source_artifact_id for relation in bundle.relations if relation.type == "fragment_of"] == [
+        item.artifact_id for item in pages
+    ]
+    resource_relations = [relation for relation in bundle.relations if relation.type == "resource_of"]
+    assert [relation.target_artifact_id for relation in resource_relations] == [
+        f"fragment.page.{page}" if recognize_text else primary.artifact_id for page in range(1, len(resources) + 1)
+    ]
+    page_resources = [relation.page_resource for relation in resource_relations]
+    assert all(resource is not None for resource in page_resources)
+    assert [resource.source_page for resource in page_resources if resource is not None] == list(
+        range(1, len(resources) + 1)
+    )
+    finalized = {item.artifact_id: item for item in result.artifacts}
+    for artifact in bundle.artifacts:
+        assert artifact.sha256 == finalized[artifact.artifact_id].sha256
+        assert artifact.size_bytes == finalized[artifact.artifact_id].size_bytes
+        assert artifact.logical_path == artifact.locator
+        assert (staging / artifact.locator).is_file()
+    assert not list(staging.rglob("docwen-node.json"))
 
 
 def test_physical_page_profile_maps_fragments_and_page_resources(tmp_path: Path) -> None:

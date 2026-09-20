@@ -121,7 +121,7 @@ def _fixture(tmp_path: Path, *, hosts: str = "not_run") -> tuple[dict[str, Any],
     transcript = support.evidence_artifact(evidence, "machine-terminal.json", terminal)
     wire_payload = {
         "schema": "docwen.v4_machine_wire_observation.v1",
-        "protocol": "docwen.machine.v1",
+        "protocol": "docwen.machine.v2",
         "transcript": transcript,
         "terminal": terminal,
         "terminalSha256": evidence_contract._payload_hash(terminal),

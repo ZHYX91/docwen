@@ -63,10 +63,6 @@ def test_packaged_gui_office_smoke_drives_panel_and_action_routes(
         output_path = output_dir / f"{source.stem}.pdf"
         _write_pdf(output_path, tokens[source.suffix])
         total_output_size = output_path.stat().st_size
-        if source.suffix == ".md":
-            manifest = output_dir / "docwen-node.json"
-            manifest.write_bytes(b"{}")
-            total_output_size += manifest.stat().st_size
         report_path = Path(env["DOCWEN_GUI_TEST_CONVERSION_REPORT"])
         backends = {
             ".docx": "fixture-word",
@@ -515,7 +511,7 @@ def test_packaged_gui_presentation_smoke_rejects_staging_name(tmp_path: Path) ->
         )
 
 
-def test_markdown_office_metrics_include_document_node_manifest(tmp_path: Path) -> None:
+def test_markdown_office_metrics_include_requested_resources_without_node_manifest(tmp_path: Path) -> None:
     from scripts.release import verify_packaged_gui
 
     source = tmp_path / "input.md"
@@ -524,7 +520,7 @@ def test_markdown_office_metrics_include_document_node_manifest(tmp_path: Path) 
     node.mkdir()
     output = node / "output.pdf"
     output.write_bytes(b"%PDF-output")
-    manifest = node / "docwen-node.json"
+    manifest = node / "requested-image.png"
     manifest.write_bytes(b"{}")
     report = tmp_path / "report.json"
     report.write_text(

@@ -12,7 +12,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLineEdit,
-    QPlainTextEdit,
     QPushButton,
     QSplitter,
     QStyle,
@@ -22,6 +21,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from docwen_gui.dialogs.diagnostics import DiagnosticView
 from docwen_gui.i18n import t
 from docwen_gui.styles.design_tokens import Sizing, Spacing
 from docwen_gui.styles.theme_semantics import apply_theme_class
@@ -145,8 +145,8 @@ class ActivityRecordsDialog(QDialog):
         self.table.setColumnWidth(0, 175)
         self.table.setColumnWidth(1, 95)
         self.table.setColumnWidth(2, 210)
-        self.details = QPlainTextEdit(splitter)
-        self.details.setReadOnly(True)
+        self.diagnostic_view = DiagnosticView(splitter)
+        self.details = self.diagnostic_view.details
         self.details.setAccessibleName(t("activity.details"))
         self.details.setPlaceholderText(t("activity.select_record"))
         splitter.setSizes([300, 160])
@@ -160,7 +160,7 @@ class ActivityRecordsDialog(QDialog):
         selection_actions = ChoiceGroup(self, responsive=True, spacing=Spacing.CONTROL_GAP)
         self.open_source = QPushButton(t("file_locations.input"), selection_actions)
         self.open_output = QPushButton(t("file_locations.output"), selection_actions)
-        self.copy = QPushButton(t("common.copy"), selection_actions)
+        self.copy = QPushButton(t("diagnostics.copy"), selection_actions)
         for button in (self.open_source, self.open_output, self.copy):
             button.setObjectName("secondaryActionButton")
             apply_theme_class(button, "secondary")
@@ -174,7 +174,7 @@ class ActivityRecordsDialog(QDialog):
         actions.rejected.connect(self.close)
         self.open_source.clicked.connect(lambda: self._open_selected(False))
         self.open_output.clicked.connect(lambda: self._open_selected(True))
-        self.copy.clicked.connect(lambda: QApplication.clipboard().setText(self.details.toPlainText()))
+        self.copy.clicked.connect(self.diagnostic_view.copy_diagnostics)
         self.clear.clicked.connect(model.clear_finished)
         self.search.textChanged.connect(self._change_filters)
         self.status_filter.currentIndexChanged.connect(self._change_filters)
@@ -244,10 +244,9 @@ class ActivityRecordsDialog(QDialog):
         if record:
             self._selected_key = record.key
         text = record.details if record else ""
-        if self.details.toPlainText() != text:
-            self.details.setPlainText(text)
+        self.diagnostic_view.set_content(text, record.diagnostic if record else None)
         self.details.setProperty("activityStatus", record.status if record else "")
-        self.copy.setEnabled(bool(text))
+        self.copy.setEnabled(bool(self.diagnostic_view.preview.toPlainText()))
         self.open_source.setEnabled(bool(record and record.source_path))
         self.open_output.setEnabled(bool(record and record.output_path))
         selected_output = self.outputs.currentData()

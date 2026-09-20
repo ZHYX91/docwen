@@ -9,6 +9,7 @@ import pytest
 from PIL import Image
 
 from docwen_application.bundle_mapping import build_bundle_draft
+from docwen_core.paths import filesystem_path
 from docwen_plugin_markdown.document_semantics_v3 import analyze_markdown_semantics_v3
 from tests.integration._round_trip_helper import _primary_path, _run
 
@@ -92,7 +93,7 @@ def test_authenticated_owner_survives_six_bundle_combinations(
 
     assert result.success, result.error
     primary = next(artifact for artifact in result.artifacts if artifact.is_primary)
-    primary_text = Path(primary.staging_path).read_text(encoding="utf-8")
+    primary_text = filesystem_path(primary.staging_path).read_text(encoding="utf-8")
     images = [artifact for artifact in result.artifacts if artifact.kind == "image"]
     fragments = [artifact for artifact in result.artifacts if artifact.metadata.get("ocr") is True]
     analysis = analyze_markdown_semantics_v3(primary_text, input_id=primary.suggested_name)
@@ -133,7 +134,7 @@ def test_authenticated_owner_survives_six_bundle_combinations(
     if recognize_text and ocr_placement == "main_md":
         assert primary_text.index("![") < primary_text.index("authenticated owner OCR")
     if fragments:
-        fragment_text = Path(fragments[0].staging_path).read_text(encoding="utf-8")
+        fragment_text = filesystem_path(fragments[0].staging_path).read_text(encoding="utf-8")
         assert "authenticated owner OCR" in fragment_text
         assert "![" not in fragment_text
         assert "Figure:" not in fragment_text
@@ -149,14 +150,14 @@ def test_authenticated_owner_survives_six_bundle_combinations(
     assert len(bundle.entries) == 1
     assert (bundle.entries[0].artifact_id, bundle.entries[0].role) == (primary.artifact_id, "primary")
     assert sum(artifact.kind == "document" for artifact in bundle.artifacts) == 1
-    assert sum(artifact.kind == "resource" for artifact in bundle.artifacts) == int(preserve_resources) + 1
+    assert sum(artifact.kind == "resource" for artifact in bundle.artifacts) == int(preserve_resources)
     assert sum(artifact.kind == "fragment" for artifact in bundle.artifacts) == int(
         recognize_text and ocr_placement == "image_md"
     )
     assert sum(relation.type == "resource_of" and relation.role == "image" for relation in bundle.relations) == int(
         preserve_resources
     )
-    assert sum(relation.type == "resource_of" and relation.role == "manifest" for relation in bundle.relations) == 1
+    assert sum(relation.type == "resource_of" and relation.role == "manifest" for relation in bundle.relations) == 0
     assert sum(relation.type == "fragment_of" and relation.role == "ocr_text" for relation in bundle.relations) == int(
         recognize_text and ocr_placement == "image_md"
     )
@@ -215,7 +216,7 @@ def test_authenticated_owner_base64_remains_a_semantic_image_owner(
 
     assert result.success, result.error
     primary = next(artifact for artifact in result.artifacts if artifact.is_primary)
-    primary_text = Path(primary.staging_path).read_text(encoding="utf-8")
+    primary_text = filesystem_path(primary.staging_path).read_text(encoding="utf-8")
     analysis = analyze_markdown_semantics_v3(primary_text, input_id=primary.suggested_name)
 
     assert not analysis.has_errors, analysis.diagnostics

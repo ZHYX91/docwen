@@ -22,6 +22,15 @@ Single-file mode retains exactly one validated current input across file picking
 
 单文件模式在添加、拖入、二次启动和 Assistant GUI 传入时均只保留一个验证通过的当前文件。批量模式保留完整可见清单；多文件批次切回单文件时确认保留项。运行中不替换输入，外部请求被拒绝时向调用方报告失败。普通接收不进入活动记录；Assistant CLI 处理不改变 GUI 选择。
 
+Execution owns independent input metadata and option snapshots. Confirming a detected format applies only
+to the facts shown, and updates the live list only while those facts still match. The worker rechecks the
+input before conversion. Cancellation and reservation release use the controller that started the task;
+shutdown rejects late starts and retains live workers until they finish. Result and activity state are
+committed before output navigation and completion notifications.
+
+执行持有独立的输入元数据与参数快照。格式确认仅针对展示的检测事实，当前列表仍匹配时才同步确认记录；后台执行前继续重验输入。
+取消与保留资源释放使用启动任务时的控制器。关闭后拒绝迟到启动，并保留仍运行的线程直至结束；结果与活动状态先提交，再打开结果或发出完成通知。
+
 ## Settings ownership / 设置归属
 
 The fifteen pages follow this order: general, incoming text, incoming documents, incoming spreadsheets, incoming images, incoming layout files, incoming other files, proofreading, Markdown syntax, templates, links, Markdown resources, conversion software, file saving, logging. Incoming text owns Markdown content formatting, heading merging, table styling and template filling; incoming documents own DOCX content retention. Markdown syntax owns only syntax and extension policies. Global OCR language belongs to Markdown resources, and all eight converter priority lists belong to conversion software. Numbering editor changes refresh both incoming text and document pages without resetting unrelated drafts.
@@ -37,6 +46,10 @@ The four proofreading rule sets expose edit, import and export together. The pai
 Visible controls require localized labels or accessible names. Errors, warnings and confirmations use the shared feedback layer. Terminal summaries, history and retained artifacts must agree with runtime truth.
 
 Activity records open directly in one modeless window with search, status/operation filters, sorting and an integrated detail pane. Per-file warnings and skip reasons remain available independently of the bounded notification feed. Selection remains readable in both themes. The main result card uses its terminal state as its title, omits redundant single-file counts, and links to this same activity window; failures give the entry a warning colour.
+
+Activity records and copyable feedback separate local details from redacted diagnostics. The diagnostic preview and Copy diagnostics use the same finite summary: status, reviewed error/exception categories, output/warning counts and an explicitly reported recoverability flag when available. They exclude document content, paths, identifiers, arbitrary error codes, raw errors, tracebacks, commands and configuration. Unknown categories remain unknown. Reading local details is independent of sharing a summary; nothing is copied automatically. Copying keeps the diagnostic dialog open, and viewing diagnostics does not resolve or cancel a pending recovery choice.
+
+活动记录与可复制反馈将本地详情和脱敏诊断分开展示。诊断预览和“复制诊断”使用同一份有限摘要：状态、已审核的错误/异常类别、输出与警告数量，以及实际返回的可恢复标记（若有）。摘要不含正文、路径、标识符、任意错误码、原始错误、堆栈、命令或配置；未知类别保持未知。本地详情供当前用户阅读，不自动复制。复制后诊断窗口保持打开，查看诊断不会确认或取消待处理的恢复选择。
 
 ## Visual system / 视觉规范
 

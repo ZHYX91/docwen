@@ -12,7 +12,6 @@ template_name = "繁體中文通用模板"
 # =============================================================================
 [common]
 action_file_count = "{action}（{count} 個檔案）"
-copy = "複製"
 app_name = "DocWen"
 default = "默認"
 close = "關閉"
@@ -1625,9 +1624,7 @@ aggregate_need_two = "至少需要兩個相符的檔案（目前找到 {count} �
 route_unavailable = "此檔案沒有相容的可用操作。"
 output_settings_unavailable = "無法載入輸出設定，未啟動本次工作。"
 about_tooltip = "關於 DocWen"
-error_copied = "錯誤詳細已複製。"
 font_size_tooltip = "切換字型大小"
-no_error_available = "暫無錯誤資訊。"
 no_failed_to_retry = "沒有可重試的失敗任務。"
 no_file_for_locate = "未選中檔案，無法定位輸出。"
 open_path_failed = "無法開啟路徑：{path}"
@@ -1701,6 +1698,7 @@ multiple = "等 {count} 個"
 show_outputs = "查看所有輸出檔案"
 
 [settings.templates]
+import_summary = "匯入成功：{succeeded}。失敗：{failed}。已取消：{cancelled}。"
 load_failed = "無法載入範本"
 operation_failed = "範本操作失敗。請查看詳情。"
 title = "範本"
@@ -1731,3 +1729,9 @@ open_failed = "無法開啟範本，請檢查是否安裝了關聯的文書或�
 name_conflict = "已存在名為「{name}」的自訂範本。"
 keep_both = "保留兩份"
 replace = "取代"
+
+[diagnostics]
+local_details = "本機詳情"
+preview = "去識別化診斷"
+copy = "複製診斷"
+redacted_hint = "複製內容僅含狀態、類別和數量，不含內文、路徑、原始錯誤、命令或設定。"

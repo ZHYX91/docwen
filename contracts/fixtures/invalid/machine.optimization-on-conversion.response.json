@@ -1,0 +1,62 @@
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "capabilities": [
+      {
+        "capability_id": "optimize.gongwen.docx.to_markdown",
+        "operation": "convert",
+        "input_shape": {
+          "slots": [
+            {
+              "role": "source",
+              "kind": "document",
+              "media_types": [
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              ],
+              "min_items": 1,
+              "max_items": 1
+            }
+          ],
+          "undeclared_roles": "reject"
+        },
+        "output_media_types": [
+          "text/markdown"
+        ],
+        "output_shape": {
+          "cardinality": "many",
+          "artifact_kinds": [
+            "document",
+            "fragment",
+            "resource"
+          ],
+          "relation_types": [
+            "fragment_of",
+            "resource_of",
+            "attachment_of"
+          ],
+          "atomic_bundle": true
+        },
+        "options_schema": {
+          "type": "object",
+          "properties": {
+            "recognize_text": {
+              "type": "boolean",
+              "default": false
+            },
+            "preserve_resources": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "availability": "available",
+        "dependencies": [],
+        "limitations": [],
+        "optimization_id": "gongwen"
+      }
+    ]
+  }
+}

@@ -30,15 +30,15 @@ from ._main_window_projection_binding_support import (
 
 class TestRuntimeRequestBinding:
     def test_xlsx_template_selection_is_added_to_spreadsheet_request(self, window, tmp_path) -> None:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "note.md"
         source.write_text("# Title", encoding="utf-8")
-        window._file_contexts = {_normalize_path(str(source)): ("markdown", "markdown")}
+        window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
         _load_request_templates(window)
         assert window._template_selector.activate_and_select("xlsx") is True
 
-        request, context = window._build_request(
+        request, context = window._requests.single(
             file_path=str(source),
             target_format="xlsx",
             action_name="",
@@ -53,11 +53,11 @@ class TestRuntimeRequestBinding:
         window,
         tmp_path,
     ) -> None:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "note.md"
         source.write_text("# Title", encoding="utf-8")
-        window._file_contexts = {_normalize_path(str(source)): ("markdown", "markdown")}
+        window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
         window._view_model.set_selected_file(FileRef(path=str(source), format="markdown", category="markdown"))
         _load_request_templates(window, docx=False)
         window._action_area_vm.optimize_for_type = "invoice_cn"
@@ -65,7 +65,7 @@ class TestRuntimeRequestBinding:
 
         window._on_main_window_template_tab_changed("xlsx", "docx")
         assert window._template_selector.activate_and_select("xlsx") is True
-        request, context = window._build_request(
+        request, context = window._requests.single(
             file_path=str(source),
             target_format="xlsx",
             action_name=window._action_area_vm.action_name,
@@ -77,15 +77,15 @@ class TestRuntimeRequestBinding:
         assert context["options"]["template_name"] == _XLSX_TEMPLATE_ID
 
     def test_xlsx_template_selection_is_added_to_csv_request(self, window, tmp_path) -> None:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "note.md"
         source.write_text("# Title", encoding="utf-8")
-        window._file_contexts = {_normalize_path(str(source)): ("markdown", "markdown")}
+        window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
         _load_request_templates(window)
         assert window._template_selector.activate_and_select("xlsx") is True
 
-        request, context = window._build_request(
+        request, context = window._requests.single(
             file_path=str(source),
             target_format="csv",
             action_name="",
@@ -96,7 +96,7 @@ class TestRuntimeRequestBinding:
         assert context["options"]["template_name"] == _XLSX_TEMPLATE_ID
 
     def test_single_request_uses_output_preferences(self, qapp, tmp_path) -> None:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         output_dir = tmp_path / "exports"
         window = _make_window_with_config(
@@ -112,9 +112,9 @@ class TestRuntimeRequestBinding:
         try:
             source = tmp_path / "note.md"
             source.write_text("# Title", encoding="utf-8")
-            window._file_contexts = {_normalize_path(str(source)): ("markdown", "markdown")}
+            window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
 
-            request, context = window._build_request(
+            request, context = window._requests.single(
                 file_path=str(source),
                 target_format="docx",
                 action_name="",
@@ -146,7 +146,7 @@ class TestRuntimeRequestBinding:
             source = tmp_path / "note.md"
             source.write_text("# Title", encoding="utf-8")
 
-            request, _context = window._build_request(
+            request, _context = window._requests.single(
                 file_path=str(source),
                 target_format="docx",
                 action_name="",
@@ -164,11 +164,11 @@ class TestRuntimeRequestBinding:
         tmp_path,
     ) -> None:
         from docwen_gui.i18n import t
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "note.md"
         source.write_text("# Title", encoding="utf-8")
-        window._file_contexts = {_normalize_path(str(source)): ("markdown", "markdown")}
+        window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
 
         controller = window._view_model.controller
         assert controller is not None
@@ -180,14 +180,14 @@ class TestRuntimeRequestBinding:
             return None
 
         monkeypatch.setattr(controller.config_port, "get", fail_output_settings)
-        window._start_execution(
+        window._workflow.single(
             file_path=str(source),
             target_format="docx",
             action_name="",
             options={},
         )
 
-        assert not window._active_threads
+        assert not window._execution.threads
         assert window._info_area_vm.history_rows[-1].message == t("main_window.output_settings_unavailable")
         assert window._info_area_vm.history_rows[-1].message_type == "error"
 
@@ -241,7 +241,7 @@ class TestRuntimeRequestBinding:
             second.write_bytes(b"%PDF-1.4\n")
             window._batch_list_vm.add_files([str(first), str(second)])
 
-            request, context = window._build_aggregate_request(
+            request, context = window._requests.aggregate(
                 file_paths=[str(first), str(second)],
                 target_format="pdf",
                 action_name="merge_pdfs",
@@ -259,7 +259,7 @@ class TestRuntimeRequestBinding:
     def test_success_callback_auto_opens_output_when_enabled(self, window, tmp_path, monkeypatch) -> None:
         from docwen_core.models.artifact import ArtifactManifest
         from docwen_core.models.result import ConversionResult
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "note.md"
         output = tmp_path / "out" / "note.docx"
@@ -286,11 +286,11 @@ class TestRuntimeRequestBinding:
             ],
         )
 
-        window._on_execution_finished(
+        window._results.finished(
             result,
             {
                 "request_id": "task-1",
-                "file_path": _normalize_path(str(source)),
+                "file_path": normalize_path(str(source)),
                 "display_name": source.name,
                 "total_count": 1,
                 "open_after_done": True,
@@ -302,13 +302,13 @@ class TestRuntimeRequestBinding:
     def test_success_callback_projects_warning_diagnostics_to_info_area(self, window, tmp_path) -> None:
         from docwen_core.models.artifact import ArtifactManifest
         from docwen_core.models.result import ConversionDiagnostic, ConversionResult
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "rules.docx"
         output = tmp_path / "rules.md"
         _write_format_fixture(source, "docx")
         output.write_text("---\n---\n", encoding="utf-8")
-        normalized = _normalize_path(str(source))
+        normalized = normalize_path(str(source))
         # This test exercises result projection, not container admission. Use
         # an explicit resolver instead of asking the detector to inspect a
         # deliberately truncated four-byte ZIP fixture.
@@ -342,7 +342,7 @@ class TestRuntimeRequestBinding:
             ],
         )
 
-        window._on_execution_finished(
+        window._results.finished(
             result,
             {
                 "request_id": "gongwen-1",
@@ -377,14 +377,14 @@ class TestRuntimeRequestBinding:
     ) -> None:
         from docwen_core.models.artifact import ArtifactManifest
         from docwen_core.models.result import ConversionErrorInfo, ConversionResult
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "legacy.doc"
         retained = tmp_path / "out" / "legacy_fromDoc.docx"
         source.write_text("legacy", encoding="utf-8")
         retained.parent.mkdir()
         retained.write_text("preserved", encoding="utf-8")
-        normalized = _normalize_path(str(source))
+        normalized = normalize_path(str(source))
         window._batch_list_vm.add_files([str(source)])
         opened: list[tuple[str, bool]] = []
         monkeypatch.setattr(
@@ -417,7 +417,7 @@ class TestRuntimeRequestBinding:
                 message="downstream conversion failed",
             ),
         )
-        window._on_execution_finished(
+        window._results.finished(
             result,
             {
                 "request_id": result.task_id,
@@ -453,13 +453,13 @@ class TestRuntimeRequestBinding:
         from docwen_core.models.artifact import ArtifactManifest
         from docwen_core.models.result import ConversionErrorInfo, ConversionResult
         from docwen_gui.i18n import t as _t
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "note.md"
         stale_output = tmp_path / "stale.docx"
         source.write_text("# Title", encoding="utf-8")
         stale_output.write_text("stale", encoding="utf-8")
-        normalized = _normalize_path(str(source))
+        normalized = normalize_path(str(source))
         window._batch_list_vm.add_files([str(source)])
 
         result = ConversionResult(
@@ -475,7 +475,7 @@ class TestRuntimeRequestBinding:
             ],
             error=ConversionErrorInfo(error_type="cancelled", message="Task was cancelled"),
         )
-        window._on_execution_finished(
+        window._results.finished(
             result,
             {
                 "request_id": "task-1",

@@ -34,12 +34,12 @@ class TestRuntimeRequestBinding:
         from docwen_core.models.artifact import ArtifactManifest
         from docwen_core.models.result import ConversionErrorInfo, ConversionResult
         from docwen_gui.i18n import t as _t
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         sources = [tmp_path / f"input-{index}.docx" for index in range(4 if include_skipped else 3)]
         for source in sources:
             source.write_bytes(b"fixture")
-        paths = [_normalize_path(str(source)) for source in sources]
+        paths = [normalize_path(str(source)) for source in sources]
         window._batch_list_vm.add_files([str(source) for source in sources])
         output = tmp_path / "input-0.md"
         output.write_text("# converted", encoding="utf-8")
@@ -82,7 +82,7 @@ class TestRuntimeRequestBinding:
             ]
         )
 
-        window._on_execution_finished(
+        window._results.finished(
             results,
             {
                 "request_id": "batch-cancel",
@@ -111,17 +111,17 @@ class TestRuntimeRequestBinding:
         assert [window._batch_list_vm.get_file_entry(path).status for path in paths] == expected_statuses
 
     def test_named_validate_defers_markdown_target_to_runtime_catalog(self, window, tmp_path, monkeypatch) -> None:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "note.md"
         source.write_text("# Title", encoding="utf-8")
-        window._file_contexts = {_normalize_path(str(source)): ("markdown", "markdown")}
+        window._file_contexts = {normalize_path(str(source)): ("markdown", "markdown")}
         calls: list[dict[str, object]] = []
 
         def fake_start_execution(**kwargs: object) -> None:
             calls.append(kwargs)
 
-        monkeypatch.setattr(window, "_start_execution", fake_start_execution)
+        monkeypatch.setattr(window._workflow, "single", fake_start_execution)
 
         window._handle_named_action_requested(
             "validate",
@@ -147,7 +147,7 @@ class TestRuntimeRequestBinding:
         def fake_start_execution(**kwargs: object) -> None:
             calls.append(kwargs)
 
-        monkeypatch.setattr(window, "_start_execution", fake_start_execution)
+        monkeypatch.setattr(window._workflow, "single", fake_start_execution)
 
         window._handle_named_action_requested(
             "validate",
@@ -165,17 +165,17 @@ class TestRuntimeRequestBinding:
         ]
 
     def test_named_split_pdf_routes_to_pdf_action(self, window, tmp_path, monkeypatch) -> None:
-        from docwen_gui.main_window import _normalize_path
+        from docwen_gui.path_identity import normalize_path
 
         source = tmp_path / "sample.pdf"
         source.write_bytes(b"%PDF-1.4\n")
-        window._file_contexts = {_normalize_path(str(source)): ("pdf", "layout")}
+        window._file_contexts = {normalize_path(str(source)): ("pdf", "layout")}
         calls: list[dict[str, object]] = []
 
         def fake_start_execution(**kwargs: object) -> None:
             calls.append(kwargs)
 
-        monkeypatch.setattr(window, "_start_execution", fake_start_execution)
+        monkeypatch.setattr(window._workflow, "single", fake_start_execution)
 
         window._handle_named_action_requested(
             "split_pdf",
@@ -207,7 +207,7 @@ class TestRuntimeRequestBinding:
         def fake_start_aggregate_execution(**kwargs: object) -> None:
             calls.append(kwargs)
 
-        monkeypatch.setattr(window, "_start_aggregate_execution", fake_start_aggregate_execution)
+        monkeypatch.setattr(window._workflow, "aggregate", fake_start_aggregate_execution)
 
         window._handle_named_action_requested("merge_pdfs", str(first), {})
 
@@ -230,7 +230,7 @@ class TestRuntimeRequestBinding:
         window._batch_list_vm.reorder_manual("layout", [str(second).replace("\\", "/"), str(first).replace("\\", "/")])
         window._conversion_panel_vm.set_file_info("layout", "pdf", file_path=str(first), ui_mode="batch")
         calls: list[dict[str, object]] = []
-        monkeypatch.setattr(window, "_start_aggregate_execution", lambda **kwargs: calls.append(kwargs))
+        monkeypatch.setattr(window._workflow, "aggregate", lambda **kwargs: calls.append(kwargs))
 
         assert window._conversion_panel._merge_pdfs_button is not None
         window._conversion_panel._merge_pdfs_button.click()
@@ -264,7 +264,7 @@ class TestRuntimeRequestBinding:
         window._conversion_panel_vm.merge_mode = 2
         window._conversion_panel_vm.set_file_info("spreadsheet", "xlsx", file_path=str(second), ui_mode="batch")
         calls: list[dict[str, object]] = []
-        monkeypatch.setattr(window, "_start_aggregate_execution", lambda **kwargs: calls.append(kwargs))
+        monkeypatch.setattr(window._workflow, "aggregate", lambda **kwargs: calls.append(kwargs))
 
         assert window._conversion_panel._merge_tables_button is not None
         window._conversion_panel._merge_tables_button.click()
@@ -290,7 +290,7 @@ class TestRuntimeRequestBinding:
         window._conversion_panel_vm.tiff_mode = "rgb"
         window._conversion_panel_vm.set_file_info("image", "png", file_path=str(first), ui_mode="batch")
         calls: list[dict[str, object]] = []
-        monkeypatch.setattr(window, "_start_aggregate_execution", lambda **kwargs: calls.append(kwargs))
+        monkeypatch.setattr(window._workflow, "aggregate", lambda **kwargs: calls.append(kwargs))
 
         assert window._conversion_panel._merge_tiff_button is not None
         window._conversion_panel._merge_tiff_button.click()
@@ -309,7 +309,7 @@ class TestRuntimeRequestBinding:
         source.write_bytes(b"%PDF-1.4\n")
         window._batch_list_vm.add_files([str(source)])
         calls: list[dict[str, object]] = []
-        monkeypatch.setattr(window, "_start_aggregate_execution", lambda **kwargs: calls.append(kwargs))
+        monkeypatch.setattr(window._workflow, "aggregate", lambda **kwargs: calls.append(kwargs))
 
         window._handle_named_action_requested("merge_pdfs", str(source), {})
 
@@ -328,8 +328,8 @@ class TestRuntimeRequestBinding:
         window._batch_list_vm.reorder_manual("text", [str(second).replace("\\", "/"), str(first).replace("\\", "/")])
         batch_calls: list[dict[str, object]] = []
         single_calls: list[dict[str, object]] = []
-        monkeypatch.setattr(window, "_start_batch_execution", lambda **kwargs: batch_calls.append(kwargs))
-        monkeypatch.setattr(window, "_start_execution", lambda **kwargs: single_calls.append(kwargs))
+        monkeypatch.setattr(window._workflow, "batch", lambda **kwargs: batch_calls.append(kwargs))
+        monkeypatch.setattr(window._workflow, "single", lambda **kwargs: single_calls.append(kwargs))
 
         window._handle_conversion_requested(
             "docx",
@@ -375,7 +375,7 @@ class TestRuntimeRequestBinding:
         )
         window._action_area_vm.optimize_for_type = "invoice_cn"
         calls: list[dict[str, object]] = []
-        monkeypatch.setattr(window, "_start_execution", lambda **kwargs: calls.append(kwargs))
+        monkeypatch.setattr(window._workflow, "single", lambda **kwargs: calls.append(kwargs))
 
         window._handle_conversion_panel_conversion_requested("jpg", str(source), {"quality": 90})
         window._handle_action_area_conversion_requested("md", str(source), {"to_md_enable_ocr": True})
@@ -394,7 +394,7 @@ class TestRuntimeRequestBinding:
             second_norm: ("markdown", "markdown"),
         }
 
-        request, context = window._build_batch_request(
+        request, context = window._requests.batch(
             file_paths=[second_norm, first_norm],
             target_format="docx",
             action_name="",
@@ -452,7 +452,7 @@ class TestRuntimeRequestBinding:
             ),
         ]
 
-        window._on_execution_finished(
+        window._results.finished(
             results,
             {
                 "request_id": "batch-1",

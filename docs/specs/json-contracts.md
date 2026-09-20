@@ -2,16 +2,16 @@
 
 > This document describes the CLI `--json` presentation envelope. It is not the stable external process
 > boundary and is not a compatibility target. Cross-product consumers use
-> [Machine Protocol v1 and Artifact Bundle v2](machine-protocol-v1.md).
+> [Machine Protocol v2 and Artifact Bundle v3](machine-protocol-v2.md).
 >
 > 本文描述 CLI `--json` 展示信封；它不是稳定的外部进程边界，也不承担兼容目标。跨产品消费者使用
-> [Machine Protocol v1 与 Artifact Bundle v2](machine-protocol-v1.md)。
+> [Machine Protocol v2 与 Artifact Bundle v3](machine-protocol-v2.md)。
 
 The CLI presentation envelope conforms to [json-contracts.schema.json](json-contracts.schema.json). The only
-public process-integration contract is `docwen.machine.v1`; protocol 2/3 compatibility modes are not provided.
+public process-integration contract is `docwen.machine.v2`; CLI presentation protocol versions do not negotiate Machine compatibility.
 
 CLI 展示信封遵循 [json-contracts.schema.json](json-contracts.schema.json)。唯一公共进程集成契约是
-`docwen.machine.v1`；不提供 protocol 2/3 兼容模式。
+`docwen.machine.v2`；CLI 展示协议版本不能用于协商 Machine 兼容性。
 
 ## Envelope / 信封结构
 

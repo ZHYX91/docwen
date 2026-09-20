@@ -17,7 +17,7 @@ source .venv/bin/activate  # macOS/Linux
 
 ### 安装器边界
 
-DocWen 0.9 的源码、测试与构建合同是 `uv 0.12.0` 加仓库内的 `uv.lock`。
+DocWen 的源码、测试与构建合同是 `uv 0.12.0` 加仓库内的 `uv.lock`。
 不要使用 `pip install -e`：pip 不读取项目的 uv scoped dependency exclusion，会同时安装
 两个互斥且覆盖相同 `cv2` 文件的 OpenCV 分发包。
 

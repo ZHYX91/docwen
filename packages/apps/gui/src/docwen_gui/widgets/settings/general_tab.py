@@ -68,6 +68,9 @@ class GeneralTab(BaseSettingsTab):
         lang_container_layout.setSpacing(8)
 
         lang_combo = ScrollSafeComboBox(lang_container)
+        lang_combo.setObjectName("generalLanguageCombo")
+        language_label = t("settings.general.language_label", "Display Language:")
+        lang_combo.setAccessibleName(language_label)
         self._language_combo = lang_combo
         _prepare_combo(lang_combo)
         lang_combo.addItem(t("settings.general.languages.zh_CN", "Chinese (Simplified)"), "zh_CN")
@@ -85,7 +88,7 @@ class GeneralTab(BaseSettingsTab):
 
         self.add_form_row(
             lang_form,
-            t("settings.general.language_label", "Display Language:"),
+            language_label,
             lang_container,
             t("settings.general.language_tooltip", "Select the display language"),
         )
