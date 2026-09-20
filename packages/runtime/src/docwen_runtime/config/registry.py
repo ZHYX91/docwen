@@ -156,6 +156,7 @@ _GROUP_RESET_DOTTED_KEYS: dict[str, tuple[str, ...]] = {
         "conversion.syntax.subscript",
         "conversion.syntax.unordered_list",
         "conversion.syntax.indent_spaces",
+        "conversion.md_to_docx.mermaid_mode",
         "conversion.horizontal_rule.docx_to_md.page_break",
         "conversion.horizontal_rule.docx_to_md.section_break",
         "conversion.horizontal_rule.docx_to_md.horizontal_rule",
