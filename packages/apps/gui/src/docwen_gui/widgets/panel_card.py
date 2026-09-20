@@ -165,8 +165,9 @@ class FormRow(_ResponsiveFrame):
             label_layout = QHBoxLayout(self.label_container)
             label_layout.setContentsMargins(0, 0, 0, 0)
             label_layout.setSpacing(6)
-            label_layout.addWidget(self.label, 1)
+            label_layout.addWidget(self.label, 0, Qt.AlignmentFlag.AlignVCenter)
             label_layout.addWidget(label_suffix, 0, Qt.AlignmentFlag.AlignVCenter)
+            label_layout.addStretch(1)
         self.control = control
         self.content_layout.addWidget(self.label_container)
         self.content_layout.addWidget(control, stretch=1)
@@ -189,8 +190,15 @@ class FormRow(_ResponsiveFrame):
         horizontal = required_width <= self.contentsRect().width()
         self.label.setWordWrap(not horizontal)
         if horizontal:
-            self.label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
-            self.label.setFixedWidth(label_width)
+            if self.label_suffix is not None:
+                # Keep the help affordance visually attached to its label while
+                # the outer container still reserves the shared form column.
+                self.label.setMinimumWidth(0)
+                self.label.setMaximumWidth(label_width)
+                self.label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+            else:
+                self.label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
+                self.label.setFixedWidth(label_width)
             self.label_container.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
             self.label_container.setFixedWidth(label_width + suffix_width)
         else:
