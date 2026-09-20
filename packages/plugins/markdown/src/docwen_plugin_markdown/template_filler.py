@@ -15,14 +15,17 @@ import contextlib
 import inspect
 import logging
 import re
-from copy import deepcopy
 from collections.abc import Iterator, Mapping
+from copy import deepcopy
 from typing import Any
 
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
-from docwen_core.links._markdown_inline import parse_inline_link, parse_markdown_destination
+from docwen_core.links._markdown_inline import (
+    parse_inline_link,
+    parse_markdown_destination,
+)
 from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
 from docwen_plugin_markdown.renderer_inlines import add_hyperlink, extract_text_content
 
@@ -210,7 +213,10 @@ def _replace_placeholder_runs(para, key: str, replacement: str) -> set[Any]:
         end_offset += 1
         if start_element is end_element:
             current_text = start_element.text or ""
-            _set_word_text(start_element, current_text[:start_offset] + replacement + current_text[end_offset:])
+            _set_word_text(
+                start_element,
+                current_text[:start_offset] + replacement + current_text[end_offset:],
+            )
             inserted_text_nodes.add(start_element)
             continue
         start_text = start_element.text or ""
@@ -228,7 +234,6 @@ def _replace_placeholder_runs(para, key: str, replacement: str) -> set[Any]:
         _set_word_text(end_element, end_text[end_offset:])
 
     return inserted_text_nodes
-
 
 
 def _materialize_markdown_links_in_text_node(para: Any, text_node: Any) -> None:
