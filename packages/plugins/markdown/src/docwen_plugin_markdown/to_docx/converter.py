@@ -30,6 +30,7 @@ from docwen_core.links import (
     bind_declared_markdown_images,
     process_markdown_links,
     reject_declared_input_link_lookups,
+    _process_non_embed_links,
 )
 from docwen_core.markdown_extensions import resolve_markdown_extensions
 from docwen_core.models.artifact import (
@@ -142,6 +143,61 @@ def _request_link_config(config: object) -> LinkRuntimeConfig:
     if not isinstance(raw, Mapping):
         return LinkRuntimeConfig()
     return LinkRuntimeConfig.from_config(dict(raw))
+
+
+def _process_yaml_non_embed_links(
+    value: object,
+    *,
+    source_file_path: str,
+    link_config: LinkRuntimeConfig,
+) -> object:
+    """Apply only ordinary-link policy to YAML string leaves.
+
+    YAML structure and scalar types are preserved. Embedded image/document
+    syntax remains literal because this path intentionally calls only the
+    shared non-embed processor.
+    """
+
+    if isinstance(value, dict):
+        return {
+            key: _process_yaml_non_embed_links(
+                item,
+                source_file_path=source_file_path,
+                link_config=link_config,
+            )
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [
+            _process_yaml_non_embed_links(
+                item,
+                source_file_path=source_file_path,
+                link_config=link_config,
+            )
+            for item in value
+        ]
+    if isinstance(value, tuple):
+        return tuple(
+            _process_yaml_non_embed_links(
+                item,
+                source_file_path=source_file_path,
+                link_config=link_config,
+            )
+            for item in value
+        )
+    if not isinstance(value, str):
+        return value
+
+    return _process_non_embed_links(
+        value,
+        source_file_path=source_file_path,
+        wiki_mode=link_config.non_embed_wiki_mode,
+        markdown_mode=link_config.non_embed_markdown_mode,
+        search_dirs=link_config.search_dirs,
+        target_format="docx",
+        on_not_found=link_config.file_not_found_mode,
+        canonicalize_local_docx_targets=True,
+    )
 
 
 def _request_heading_merge_punctuation(options: dict[str, object], config: object) -> frozenset[str]:
@@ -679,6 +735,12 @@ class MdToDocxConverter:
             # ── Stage 1: YAML extraction ───────────────────────────────
             progress.report_progress(15.0, "Extracting YAML front matter")
             yaml_dict, md_body = extract_yaml_front_matter(content)
+            link_config = _request_link_config(context.config)
+            yaml_dict = _process_yaml_non_embed_links(
+                yaml_dict,
+                source_file_path=input_path,
+                link_config=link_config,
+            )
             field_processors_config = context.config.get("field_processors", {})
             current_locale = _resolve_locale(context.config.get("gui", {}))
             run_yaml_processors(yaml_dict, field_processors_config, current_locale=current_locale)
@@ -711,7 +773,6 @@ class MdToDocxConverter:
                 )
 
             # 2a. Apply the request-scoped link policy after YAML extraction.
-            link_config = _request_link_config(context.config)
             image_scope = secrets.token_urlsafe(24)
             md_body = process_markdown_links(
                 link_source,
@@ -1016,6 +1077,7 @@ class MdToDocxConverter:
                 placeholder_rules=placeholder_rules,
                 special_placeholder_handlers=special_placeholder_handlers,
                 list_separator=template_list_separator(context.config),
+                materialize_yaml_links=True,
             )
             try:
                 semantic_v3_session.finalize_document()
