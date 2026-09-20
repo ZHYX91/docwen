@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from io import BytesIO
+import base64
 
 import pytest
 from docx import Document
 from docx.oxml.ns import qn
-from PIL import Image
 
 from docwen_plugin_markdown.renderer import MdToDocxRenderer
 
@@ -13,9 +12,12 @@ pytestmark = pytest.mark.unit
 
 
 def _png_bytes() -> bytes:
-    stream = BytesIO()
-    Image.new("RGB", (160, 80), "white").save(stream, format="PNG")
-    return stream.getvalue()
+    # 1x1 transparent PNG; keeping the fixture inline avoids adding a test-only
+    # image dependency to the Markdown workspace package.
+    return base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ"
+        "AAAADUlEQVR42mNk+M/wHwAF/gL+XfV8AAAAAElFTkSuQmCC"
+    )
 
 
 def _mermaid_node() -> dict:
