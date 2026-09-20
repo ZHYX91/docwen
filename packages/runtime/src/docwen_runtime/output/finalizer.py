@@ -247,8 +247,18 @@ class OutputFinalizer:
         finally:
             for item in prepared:
                 if item.temp_path:
-                    with contextlib.suppress(OSError):
+                    try:
                         self._io_path(item.temp_path).unlink()
+                    except FileNotFoundError:
+                        pass
+                    except OSError as exc:
+                        diagnostics.append(
+                            ConversionDiagnostic(
+                                level="warning",
+                                message=f"Temporary output cleanup failed: {self._public_exception_text(exc)}",
+                                code="FINALIZER_CLEANUP_FAILED",
+                            )
+                        )
 
         attempted_artifacts = len(artifacts)
         placed_artifacts = len(final_artifacts)
