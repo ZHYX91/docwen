@@ -33,17 +33,9 @@ Este software foi originalmente projetado para o trabalho diário do escritório
 
 ## 📸 Capturas de tela
 
-| Lote | Markdown |
+| Markdown para documento | Gerenciamento de modelos |
 | --- | --- |
-| ![Painel de lote](../assets/screenshots/batch-light.png) | ![Janela principal](../assets/screenshots/main-light.png) |
-
-| Documento | Planilha |
-| --- | --- |
-| ![Painel de documento](../assets/screenshots/conversion-document-light.png) | ![Painel de planilha](../assets/screenshots/conversion-spreadsheet-light.png) |
-
-| Imagem | Arquivos de layout |
-| --- | --- |
-| ![Painel de imagem](../assets/screenshots/conversion-image-light.png) | ![Painel de layout](../assets/screenshots/conversion-layout-light.png) |
+| ![Markdown para documento](../assets/screenshots/markdown-generation-en.png) | ![Gerenciamento de modelos](../assets/screenshots/template-management-en.png) |
 
 Registro de alterações: veja [CHANGELOG.md](../CHANGELOG.md)
 

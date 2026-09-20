@@ -33,17 +33,9 @@ Diese Software wurde ursprünglich für die tägliche Arbeit der Druckerei entwi
 
 ## 📸 Screenshots
 
-| Batch | Markdown |
+| Markdown in Dokumente umwandeln | Vorlagenverwaltung |
 | --- | --- |
-| ![Batch-Ansicht](../assets/screenshots/batch-light.png) | ![Hauptfenster](../assets/screenshots/main-light.png) |
-
-| Dokument | Tabelle |
-| --- | --- |
-| ![Dokument-Ansicht](../assets/screenshots/conversion-document-light.png) | ![Tabellen-Ansicht](../assets/screenshots/conversion-spreadsheet-light.png) |
-
-| Bild | Layout-Dateien |
-| --- | --- |
-| ![Bild-Ansicht](../assets/screenshots/conversion-image-light.png) | ![Layout-Ansicht](../assets/screenshots/conversion-layout-light.png) |
+| ![Markdown in Dokumente umwandeln](../assets/screenshots/markdown-generation-en.png) | ![Vorlagenverwaltung](../assets/screenshots/template-management-en.png) |
 
 Changelog: siehe [CHANGELOG.md](../CHANGELOG.md)
 

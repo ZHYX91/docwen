@@ -33,17 +33,9 @@
 
 ## 📸 Скриншоты
 
-| Пакет | Markdown |
+| Из Markdown в документ | Управление шаблонами |
 | --- | --- |
-| ![Панель пакетной обработки](../assets/screenshots/batch-light.png) | ![Главное окно](../assets/screenshots/main-light.png) |
-
-| Документ | Таблица |
-| --- | --- |
-| ![Панель документа](../assets/screenshots/conversion-document-light.png) | ![Панель таблиц](../assets/screenshots/conversion-spreadsheet-light.png) |
-
-| Изображение | Файлы макетов |
-| --- | --- |
-| ![Панель изображений](../assets/screenshots/conversion-image-light.png) | ![Панель макета](../assets/screenshots/conversion-layout-light.png) |
+| ![Из Markdown в документ](../assets/screenshots/markdown-generation-en.png) | ![Управление шаблонами](../assets/screenshots/template-management-en.png) |
 
 Журнал изменений: см. [CHANGELOG.md](../CHANGELOG.md)
 
