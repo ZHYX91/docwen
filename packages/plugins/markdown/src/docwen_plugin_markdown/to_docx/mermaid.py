@@ -26,16 +26,13 @@ def _resolve_mermaid_cli() -> str:
         explicit = Path(configured).expanduser()
         if explicit.is_file():
             return str(explicit)
-        raise MermaidRenderError(
-            "DOCWEN_MERMAID_CLI does not point to an executable Mermaid CLI"
-        )
+        raise MermaidRenderError("DOCWEN_MERMAID_CLI does not point to an executable Mermaid CLI")
 
     resolved = shutil.which("mmdc")
     if resolved:
         return resolved
     raise MermaidRenderError(
-        "Mermaid CLI (mmdc) is unavailable; install @mermaid-js/mermaid-cli "
-        "or set DOCWEN_MERMAID_CLI"
+        "Mermaid CLI (mmdc) is unavailable; install @mermaid-js/mermaid-cli or set DOCWEN_MERMAID_CLI"
     )
 
 
@@ -114,22 +111,16 @@ def render_mermaid_png(
                 check=False,
             )
         except subprocess.TimeoutExpired as exc:
-            raise MermaidRenderError(
-                f"Mermaid rendering exceeded {timeout_seconds:g} seconds"
-            ) from exc
+            raise MermaidRenderError(f"Mermaid rendering exceeded {timeout_seconds:g} seconds") from exc
         except OSError as exc:
-            raise MermaidRenderError(
-                f"Mermaid CLI could not be started ({type(exc).__name__})"
-            ) from exc
+            raise MermaidRenderError(f"Mermaid CLI could not be started ({type(exc).__name__})") from exc
 
         if cancellation is not None:
             cancellation.check()
         if completed.returncode != 0:
             detail = _stderr_excerpt(completed.stderr or completed.stdout or "")
             suffix = f": {detail}" if detail else ""
-            raise MermaidRenderError(
-                f"Mermaid CLI exited with status {completed.returncode}{suffix}"
-            )
+            raise MermaidRenderError(f"Mermaid CLI exited with status {completed.returncode}{suffix}")
         if not output_path.is_file() or output_path.stat().st_size == 0:
             raise MermaidRenderError("Mermaid CLI produced no PNG output")
         return output_path.read_bytes()
