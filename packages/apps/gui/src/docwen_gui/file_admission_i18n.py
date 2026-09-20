@@ -74,6 +74,7 @@ def render_file_format_notice(file_ref: Any) -> str:
         detected_format=detected.upper(),
     )
 
+
 _ENGLISH_FALLBACKS: dict[str, str] = {
     "FILE_FORMAT_COMPATIBLE_TEXT": (
         "The filename declares {declared_format}, while the content was detected as "
