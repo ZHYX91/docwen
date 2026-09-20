@@ -48,6 +48,28 @@ DOCX 导入把标题内换行表示为 `<br>`，再次转换仍保持一个标�
 - Unsupported constructs remain visible as text or emit a warning; they must not disappear silently.
 - Configuration and per-request options have one precedence chain and no process-global fallback after admission.
 
+## Mermaid document rendering / Mermaid 文档渲染
+
+For the ordinary Markdown -> DOCX source route, `conversion.md_to_docx.mermaid_mode` controls how a
+```mermaid``` fenced block is presented. `code` is the compatibility default and preserves the existing
+fenced-source code-block behavior. `image` invokes a local Mermaid CLI (`mmdc`) and embeds the generated PNG in
+the document. DocWen does not download Mermaid or call an online rendering service; `DOCWEN_MERMAID_CLI` may point
+to an explicit executable when `mmdc` is not on `PATH`.
+
+Image rendering is best-effort per diagram. An unavailable CLI, invalid Mermaid source, timeout, or renderer failure
+produces `MD2DOCX-MERMAID-FALLBACK` and that occurrence remains a visible code block; other diagrams continue.
+A successfully rendered diagram is an ordinary document image and does not carry the fenced-source recovery
+carrier, so DOCX -> Markdown treats it as an image rather than reconstructing Mermaid source. The original Markdown
+file is never rewritten. The exact resolved-v4 input route remains source-preserving and does not opt into this
+presentation transform.
+
+普通 Markdown -> DOCX 源文件路径可通过 `conversion.md_to_docx.mermaid_mode` 选择 Mermaid 围栏块的呈现方式。
+`code` 为兼容默认值，继续按代码块保留源码；`image` 使用本地 Mermaid CLI（`mmdc`）生成 PNG 并插入文档。
+DocWen 不会为此下载 Mermaid，也不会调用在线渲染服务；当 `mmdc` 不在 `PATH` 中时，可通过
+`DOCWEN_MERMAID_CLI` 指定可执行文件。单个图表渲染失败时会产生 `MD2DOCX-MERMAID-FALLBACK`，并将该图表
+回退为可见代码块，不影响其他图表继续转换。成功渲染的图表按普通文档图片处理，DOCX -> Markdown 不承诺
+还原 Mermaid 源码；原始 Markdown 文件始终不被改写。
+
 ## Obsidian extension interoperability / Obsidian 扩展互通
 
 DOCX→Markdown always reconstructs the document's current content and supported semantics. The reverse converter
