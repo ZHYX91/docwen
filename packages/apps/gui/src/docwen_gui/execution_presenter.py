@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QObject, Signal, Slot
 
+from docwen_gui.diagnostics import DiagnosticSummary
 from docwen_gui.i18n import t as _t
 from docwen_gui.path_identity import normalize_path
 from docwen_gui.view_models.output_files import result_output_paths
@@ -131,6 +132,7 @@ class ExecutionPresenter(QObject):
                     operation_id=task_id,
                     error_message="",
                     warnings=tuple(warning_messages),
+                    diagnostic=DiagnosticSummary.from_result(result, output_count=len(result_paths)),
                 )
             self._info_area_vm.add_message(
                 _t("info_area.history_completed", name=context.get("display_name", Path(file_path).name)),
@@ -285,6 +287,7 @@ class ExecutionPresenter(QObject):
                     error_message="",
                     operation_id=task_id,
                     warnings=tuple(warning_messages),
+                    diagnostic=DiagnosticSummary.from_result(raw_result, output_count=len(result_paths)),
                 )
                 continue
 
@@ -296,6 +299,7 @@ class ExecutionPresenter(QObject):
                 self.file_status(
                     file_path,
                     "cancelled",
+                    diagnostic=DiagnosticSummary.from_result(raw_result, output_count=0),
                     output_path="",
                     error_message=message,
                     operation_id=task_id,
@@ -305,6 +309,7 @@ class ExecutionPresenter(QObject):
                 self.file_status(
                     file_path,
                     "skipped",
+                    diagnostic=DiagnosticSummary.from_result(raw_result, output_count=0),
                     output_path="",
                     skip_reason=message,
                     error_message="",
@@ -319,6 +324,9 @@ class ExecutionPresenter(QObject):
                     file_path,
                     "failed",
                     output_path=retained_output_path,
+                    diagnostic=DiagnosticSummary.from_result(
+                        raw_result, output_count=len(result_output_paths(raw_result, existing_only=True))
+                    ),
                     output_paths=result_output_paths(raw_result, existing_only=True),
                     error_message=message,
                     operation_id=task_id,
@@ -454,6 +462,7 @@ class ExecutionPresenter(QObject):
             warnings=tuple(values.pop("warnings", ())),
             skip_reason=str(values.get("skip_reason") or ""),
             output_paths=tuple(values.get("output_paths") or ()),
+            diagnostic=values.pop("diagnostic", None),
         )
         self._batch_list_vm.set_file_status(path, status, **values)
 
@@ -486,6 +495,7 @@ class ExecutionPresenter(QObject):
             self.file_status(
                 path,
                 entry_status,
+                diagnostic=DiagnosticSummary.from_result(result, output_count=len(retained_paths)),
                 output_path=retained_output_path,
                 output_paths=retained_paths,
                 error_message=message,

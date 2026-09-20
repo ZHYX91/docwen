@@ -39,8 +39,6 @@ task_progress_status = "进度：{percent}% {message}"
 task_completed_status = "已完成"
 task_failed_status = "失败：{message}"
 task_cancelled_status = "已取消"
-error_copied = "错误详情已复制。"
-no_error_available = "暂无错误信息。"
 no_failed_to_retry = "没有可重试的失败任务。"
 path_not_exist = "路径不存在：{path}"
 open_path_failed = "无法打开路径：{path}"
@@ -63,7 +61,6 @@ file_admission_cancelled = "已取消处理；未接受检测到的格式。"
 # =============================================================================
 [common]
 action_file_count = "{action}（{count} 个文件）"
-copy = "复制"
 app_name = "DocWen"
 default = "默认"
 close = "关闭"
@@ -1728,3 +1725,9 @@ open_failed = "无法打开模板，请检查是否安装了关联的文档或�
 name_conflict = "已存在名为“{name}”的自定义模板。"
 keep_both = "保留两份"
 replace = "替换"
+
+[diagnostics]
+local_details = "本地详情"
+preview = "脱敏诊断"
+copy = "复制诊断"
+redacted_hint = "复制内容仅含状态、类别和数量，不含正文、路径、原始错误、命令或配置。"

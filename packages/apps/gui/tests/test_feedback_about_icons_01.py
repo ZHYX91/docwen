@@ -118,25 +118,34 @@ class TestFeedbackMessageBox:
         assert boxes[0].objectName() == "feedbackChoiceMessageBox"
         assert boxes[0].detailedText() == "Reason"
 
-    def test_choose_copyable_details_copies_to_clipboard(self, qapp) -> None:
-        """choose(copyable=True) restores the old copy-details affordance."""
+    def test_choose_diagnostic_preview_preserves_pending_choice(self, qapp) -> None:
+        """Preview and copy do not choose or cancel the recovery action."""
         from unittest.mock import patch
 
         from PySide6.QtWidgets import QMessageBox
 
+        from docwen_gui.dialogs.diagnostics import DiagnosticDialog
         from docwen_gui.dialogs.feedback import FeedbackChoice, choose
         from docwen_gui.i18n import t
 
-        details = "Traceback details"
+        details = "Traceback details /private/path token=secret"
         boxes: list[QMessageBox] = []
+        previews = []
 
         def _capture(box_self):
             boxes.append(box_self)
-            copy_button = next(button for button in box_self.buttons() if button.text() == t("common.copy", "Copy"))
-            copy_button.click()
+            label = t("diagnostics.preview") if len(boxes) == 1 else "OK"
+            next(button for button in box_self.buttons() if button.text() == label).click()
             return QMessageBox.DialogCode.Accepted
 
-        with patch.object(QMessageBox, "exec", _capture):
+        def _preview(dialog):
+            assert dialog.view.details.toPlainText() == details
+            assert dialog.view.currentIndex() == 1
+            dialog.copy.click()
+            previews.append(dialog.view.preview.toPlainText())
+            return 0
+
+        with patch.object(QMessageBox, "exec", _capture), patch.object(DiagnosticDialog, "exec", _preview):
             result = choose(
                 "Failed",
                 "sample.docx",
@@ -145,10 +154,11 @@ class TestFeedbackMessageBox:
                 choices=[FeedbackChoice("ok", "OK", role="accept", primary=True)],
             )
 
-        assert result is None
+        assert result == "ok"
+        assert len(boxes) == 2 and boxes[0] is boxes[1]
         assert boxes[0].objectName() == "feedbackChoiceMessageBox"
-        assert boxes[0].clickedButton().property("feedbackRole") == "copy"
-        assert qapp.clipboard().text() == details
+        assert qapp.clipboard().text() == previews[0]
+        assert "secret" not in previews[0] and "/private" not in previews[0]
 
     @pytest.mark.parametrize("details", [None, ""])
     def test_choose_copyable_without_details_does_not_offer_copy(self, qapp, details: str | None) -> None:
@@ -163,7 +173,7 @@ class TestFeedbackMessageBox:
 
         def _capture(box_self):
             boxes.append(box_self)
-            assert all(button.property("feedbackRole") != "copy" for button in box_self.buttons())
+            assert all(button.property("feedbackRole") != "diagnostic" for button in box_self.buttons())
             next(button for button in box_self.buttons() if button.text() == "OK").click()
             return QMessageBox.DialogCode.Accepted
 
@@ -180,31 +190,29 @@ class TestFeedbackMessageBox:
         assert boxes[0].objectName() == "feedbackChoiceMessageBox"
 
     @pytest.mark.parametrize("level", ["error", "warning"])
-    def test_feedback_copyable_details_copies_to_clipboard(self, qapp, level: str) -> None:
-        """Error and partial-success warning details can be copied from the UI."""
+    def test_feedback_copies_exact_redacted_preview(self, qapp, level: str) -> None:
+        """Standalone errors and warnings copy no raw error or local path."""
         from unittest.mock import patch
 
-        from PySide6.QtWidgets import QMessageBox
-
+        from docwen_gui.dialogs.diagnostics import DiagnosticDialog
         from docwen_gui.dialogs.feedback import error, warn
-        from docwen_gui.i18n import t
 
-        details = "RuntimeError: boom"
-        boxes: list[QMessageBox] = []
+        details = "RuntimeError: /private/path secret"
+        previews = []
 
-        def _capture(box_self):
-            boxes.append(box_self)
-            copy_button = next(button for button in box_self.buttons() if button.text() == t("common.copy", "Copy"))
-            copy_button.click()
-            return QMessageBox.DialogCode.Accepted
+        def _capture(dialog):
+            assert dialog.view.details.toPlainText() == details
+            assert dialog.view.currentIndex() == 1
+            previews.append(dialog.view.preview.toPlainText())
+            dialog.copy.click()
+            return 0
 
-        with patch.object(QMessageBox, "exec", _capture):
+        with patch.object(DiagnosticDialog, "exec", _capture):
             report = error if level == "error" else warn
             report("Import templates", "boom", details=details, copyable=True)
 
-        assert boxes[0].objectName() == f"feedback{level.title()}MessageBox"
-        assert boxes[0].clickedButton().property("feedbackRole") == "copy"
-        assert qapp.clipboard().text() == details
+        assert qapp.clipboard().text() == previews[0]
+        assert "secret" not in previews[0] and "/private" not in previews[0]
 
     @pytest.mark.parametrize("details", [None, ""])
     def test_error_copyable_without_details_does_not_offer_copy(self, qapp, details: str | None) -> None:
@@ -306,12 +314,15 @@ class TestFeedbackMessageBox:
     def test_exception_uses_localized_error_title(self, qapp, monkeypatch) -> None:
         """exception() titles follow the active GUI locale instead of hardcoded English."""
         import docwen_gui.dialogs.feedback as fb
+        from docwen_gui.diagnostics import DiagnosticSummary
         from docwen_gui.i18n import get_locale, set_locale
 
         captured: dict[str, object] = {}
 
-        def _capture_error(title, message, *, details=None, parent=None) -> None:
-            captured.update({"title": title, "message": message, "details": details, "parent": parent})
+        def _capture_error(title, message, *, details=None, parent=None, diagnostic=None) -> None:
+            captured.update(
+                {"title": title, "message": message, "details": details, "parent": parent, "diagnostic": diagnostic}
+            )
 
         previous_locale = get_locale()
         monkeypatch.setattr(fb, "error", _capture_error)
@@ -327,6 +338,10 @@ class TestFeedbackMessageBox:
         assert captured["title"] == "错误"
         assert captured["message"] == "ctx\nboom"
         assert "RuntimeError: boom" in str(captured["details"])
+        diagnostic = captured["diagnostic"]
+        assert isinstance(diagnostic, DiagnosticSummary)
+        assert "RuntimeError" in diagnostic.to_text()
+        assert "boom" not in diagnostic.to_text()
 
 
 class TestAboutDialog:

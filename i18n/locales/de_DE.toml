@@ -12,7 +12,6 @@ template_name = "Deutsche Allgemeine Vorlage"
 # =============================================================================
 [common]
 action_file_count = "{action} ({count} Dateien)"
-copy = "Kopieren"
 app_name = "DocWen"
 default = "Standard"
 close = "Schließen"
@@ -1625,9 +1624,7 @@ aggregate_need_two = "Mindestens zwei passende Dateien sind erforderlich (gefund
 route_unavailable = "Für diese Datei ist kein kompatibler Vorgang verfügbar."
 output_settings_unavailable = "Die Ausgabeeinstellungen konnten nicht geladen werden; der Vorgang wurde nicht gestartet."
 about_tooltip = "Über DocWen"
-error_copied = "Fehlerdetails wurden kopiert."
 font_size_tooltip = "Schriftgröße umschalten"
-no_error_available = "Derzeit keine Fehlerinformationen."
 no_failed_to_retry = "Keine fehlgeschlagenen Aufgaben zum Wiederholen."
 no_file_for_locate = "Keine Datei ausgewählt. Ausgabe kann nicht lokalisiert werden."
 open_path_failed = "Pfad konnte nicht geöffnet werden: {path}"
@@ -1732,3 +1729,9 @@ open_failed = "Die Vorlage konnte nicht geöffnet werden. Prüfen Sie die zugeor
 name_conflict = "Eine benutzerdefinierte Vorlage namens {name} ist bereits vorhanden."
 keep_both = "Beide behalten"
 replace = "Ersetzen"
+
+[diagnostics]
+local_details = "Lokale Details"
+preview = "Bereinigte Diagnose"
+copy = "Diagnose kopieren"
+redacted_hint = "Die Kopie enthält nur Status, Kategorien und Anzahlen. Dokumentinhalte, Pfade, ursprüngliche Fehler, Befehle und Einstellungen sind ausgeschlossen."

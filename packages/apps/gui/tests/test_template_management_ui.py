@@ -209,6 +209,11 @@ def test_template_import_reports_partial_success_and_cancelled_conflict(qapp, te
     assert "New.docx" not in reports[0][1]["details"]
     assert reports[0][1]["copyable"] is True
     assert reports[0][1]["parent"] is page
+    diagnostic = reports[0][1]["diagnostic"]
+    assert diagnostic.succeeded_count == 1
+    assert diagnostic.failed_count == 1
+    assert diagnostic.cancelled_count == 1
+    assert "invalid.docx" not in diagnostic.to_text()
     assert choices[0]["default"] == "keep"
     assert existing.path.read_bytes() == existing_bytes
     imported = [item for item in template_vm.templates if item.name == "New"]

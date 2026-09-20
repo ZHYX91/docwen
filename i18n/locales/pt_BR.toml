@@ -39,8 +39,6 @@ task_progress_status = "Progresso: {percent}% {message}"
 task_completed_status = "Concluido"
 task_failed_status = "Falha: {message}"
 task_cancelled_status = "Cancelado"
-error_copied = "Detalhes do erro copiados."
-no_error_available = "Nenhuma informacao de erro disponivel."
 no_failed_to_retry = "Nenhuma tarefa com falha para tentar novamente."
 path_not_exist = "Caminho nao existe: {path}"
 open_path_failed = "Nao foi possivel abrir o caminho: {path}"
@@ -62,7 +60,6 @@ file_admission_cancelled = "O processamento foi cancelado; o formato detectado n
 # =============================================================================
 [common]
 action_file_count = "{action} ({count} arquivos)"
-copy = "Copiar"
 app_name = "DocWen"
 default = "Padrão"
 close = "Fechar"
@@ -1727,3 +1724,9 @@ open_failed = "Não foi possível abrir o modelo. Verifique o aplicativo associa
 name_conflict = "Já existe um modelo personalizado chamado {name}."
 keep_both = "Manter ambos"
 replace = "Substituir"
+
+[diagnostics]
+local_details = "Detalhes locais"
+preview = "Diagnóstico anonimizado"
+copy = "Copiar diagnóstico"
+redacted_hint = "A cópia contém apenas status, categorias e contagens. Conteúdo, caminhos, erros originais, comandos e configurações são excluídos."

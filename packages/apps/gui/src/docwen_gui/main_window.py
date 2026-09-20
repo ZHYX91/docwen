@@ -1630,19 +1630,12 @@ class MainWindow(QWidget):
         if action_key == "open_source_location":
             self._open_path(file_path, open_parent=True)
             return
-        if action_key in {"show_error_details", "show_skip_details", "show_output_details"}:
+        if action_key in {"show_error_details", "show_skip_details", "show_output_details", "show_diagnostics"}:
             entry = self._batch_list_vm.get_file_entry(file_path)
             if entry is not None:
-                self._show_activity_records(operation_id=entry.operation_id or "", source_path=file_path)
+                dialog = self._show_activity_records(operation_id=entry.operation_id or "", source_path=file_path)
+                dialog.diagnostic_view.setCurrentIndex(1 if action_key == "show_diagnostics" else 0)
             return
-        if action_key == "copy_error_details":
-            copied = self._batch_list.copy_error_details(file_path)
-            self._info_area_vm.add_message(
-                _t("main_window.error_copied", "Error details copied.")
-                if copied
-                else _t("main_window.no_error_available", "No error details available."),
-                "success" if copied else "warning",
-            )
 
     def _handle_navigation_request(self, target_path: str) -> None:
         self._open_path(target_path, open_parent=True)

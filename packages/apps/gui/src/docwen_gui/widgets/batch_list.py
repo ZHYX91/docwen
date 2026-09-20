@@ -933,19 +933,6 @@ class BatchEntryItemWidget(QWidget):
             self.name_label.setWordWrap(True)
         self.updateGeometry()
 
-    # ── Action helpers ─────────────────────────────────────────────────
-
-    def copy_error_details(self) -> bool:
-        """Copy error message to clipboard. Returns True on success."""
-        error_text = (self._entry.error_message or "").strip()
-        if not error_text:
-            return False
-        try:
-            QApplication.clipboard().setText(error_text)
-            return True
-        except Exception:
-            return False
-
 
 # ── Helper functions ───────────────────────────────────────────────────
 
@@ -1912,10 +1899,10 @@ class BatchList(QWidget):
                     lambda: self.entry_action_requested.emit("show_error_details", file_path),
                 )
                 _action_copy = menu.addAction(
-                    _t("editors.common.copy", "Copy Error"),
+                    _t("diagnostics.preview"),
                 )
                 _action_copy.triggered.connect(
-                    lambda: self.entry_action_requested.emit("copy_error_details", file_path),
+                    lambda: self.entry_action_requested.emit("show_diagnostics", file_path),
                 )
 
         # Location and removal actions remain useful for one selected file too.
@@ -1979,18 +1966,4 @@ class BatchList(QWidget):
                     self._suspend_selection_sync = False
                 self._handle_selection_changed()
                 return True
-        return False
-
-    def copy_error_details(self, file_path: str) -> bool:
-        """Copy the error details for a specific entry to the clipboard."""
-        target = str(file_path)
-        for list_widget in self._tabs.values():
-            for index in range(list_widget.count()):
-                item = list_widget.item(index)
-                if item.data(Qt.ItemDataRole.UserRole) != target:
-                    continue
-                widget = list_widget.itemWidget(item)
-                if isinstance(widget, BatchEntryItemWidget):
-                    return widget.copy_error_details()
-                return False
         return False

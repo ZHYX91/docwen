@@ -8,6 +8,7 @@ from PySide6.QtCore import QAbstractTableModel, Qt, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication
 
+from docwen_gui.diagnostics import DiagnosticSummary
 from docwen_gui.i18n import t
 from docwen_gui.styles.theme_semantics import get_status_theme_class, get_theme_class_color
 
@@ -39,6 +40,7 @@ class ActivityRecord:
     operation: str
     details: str
     output_paths: tuple[str, ...] = ()
+    diagnostic: DiagnosticSummary | None = None
 
     @property
     def status_label(self) -> str:
@@ -125,6 +127,7 @@ class ActivityRecordsModel(QAbstractTableModel):
                         operation,
                         "\n\n".join(dict.fromkeys(details)),
                         outputs,
+                        outcome.diagnostic if outcome else DiagnosticSummary(status="pending"),
                     )
                 )
         for row in notices:
@@ -151,6 +154,7 @@ class ActivityRecordsModel(QAbstractTableModel):
                     path if row.show_location else "",
                     t("activity.info"),
                     details,
+                    diagnostic=DiagnosticSummary(status=status),
                 )
             )
         if records == self.records:

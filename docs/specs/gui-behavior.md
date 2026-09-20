@@ -47,6 +47,10 @@ Visible controls require localized labels or accessible names. Errors, warnings 
 
 Activity records open directly in one modeless window with search, status/operation filters, sorting and an integrated detail pane. Per-file warnings and skip reasons remain available independently of the bounded notification feed. Selection remains readable in both themes. The main result card uses its terminal state as its title, omits redundant single-file counts, and links to this same activity window; failures give the entry a warning colour.
 
+Activity records and copyable feedback separate local details from redacted diagnostics. The diagnostic preview and Copy diagnostics use the same finite summary: status, reviewed error/exception categories, output/warning counts and an explicitly reported recoverability flag when available. They exclude document content, paths, identifiers, arbitrary error codes, raw errors, tracebacks, commands and configuration. Unknown categories remain unknown. Reading local details is independent of sharing a summary; nothing is copied automatically. Copying keeps the diagnostic dialog open, and viewing diagnostics does not resolve or cancel a pending recovery choice.
+
+活动记录与可复制反馈将本地详情和脱敏诊断分开展示。诊断预览和“复制诊断”使用同一份有限摘要：状态、已审核的错误/异常类别、输出与警告数量，以及实际返回的可恢复标记（若有）。摘要不含正文、路径、标识符、任意错误码、原始错误、堆栈、命令或配置；未知类别保持未知。本地详情供当前用户阅读，不自动复制。复制后诊断窗口保持打开，查看诊断不会确认或取消待处理的恢复选择。
+
 ## Visual system / 视觉规范
 
 - Shared cards use a left-aligned, theme-aware header band and 16 logical-pixel body padding. Main workflow and settings cards share this primitive.

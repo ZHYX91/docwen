@@ -12,7 +12,6 @@ template_name = "한국어 범용 템플릿"
 # =============================================================================
 [common]
 action_file_count = "{action} (파일 {count}개)"
-copy = "복사"
 app_name = "DocWen"
 default = "기본값"
 close = "닫기"
@@ -1640,8 +1639,6 @@ task_progress_status = "진행률: {percent}% {message}"
 task_completed_status = "완료"
 task_failed_status = "실패: {message}"
 task_cancelled_status = "취소됨"
-error_copied = "오류 상세가 복사되었습니다."
-no_error_available = "오류 정보가 없습니다."
 no_failed_to_retry = "재시도할 실패 작업이 없습니다."
 path_not_exist = "경로가 존재하지 않습니다: {path}"
 open_path_failed = "경로를 열 수 없습니다: {path}"
@@ -1732,3 +1729,9 @@ open_failed = "템플릿을 열 수 없습니다. 연결된 앱을 확인하세�
 name_conflict = "{name} 이름의 사용자 지정 템플릿이 이미 있습니다."
 keep_both = "둘 다 유지"
 replace = "바꾸기"
+
+[diagnostics]
+local_details = "로컬 세부 정보"
+preview = "비식별 진단"
+copy = "진단 복사"
+redacted_hint = "복사에는 상태, 범주, 개수만 포함됩니다. 문서 내용, 경로, 원본 오류, 명령 및 설정은 제외됩니다."

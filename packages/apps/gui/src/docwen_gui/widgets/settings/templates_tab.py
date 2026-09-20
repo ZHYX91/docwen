@@ -364,8 +364,22 @@ class TemplatesTab(BaseSettingsTab):
         self._import_summary.setText(summary)
         self._import_summary.show()
         if errors:
+            from docwen_gui.diagnostics import DiagnosticSummary
+
             report = feedback.warn if succeeded else feedback.error
-            report(t("settings.templates.import"), summary, details="\n".join(errors), parent=self, copyable=True)
+            report(
+                t("settings.templates.import"),
+                summary,
+                details="\n".join(errors),
+                parent=self,
+                copyable=True,
+                diagnostic=DiagnosticSummary(
+                    status="partial" if succeeded else "failed",
+                    succeeded_count=succeeded,
+                    failed_count=len(errors),
+                    cancelled_count=cancelled,
+                ),
+            )
 
     def _copy_and_edit(self) -> None:
         template_id = self._selected_id()
@@ -548,10 +562,17 @@ class TemplatesTab(BaseSettingsTab):
 
     def _show_error(self, error: Exception) -> None:
         logger.exception("Template management operation failed", exc_info=error)
+        from docwen_gui.diagnostics import DiagnosticSummary
         from docwen_gui.dialogs.feedback import error as show_error
 
         message = str(error) if isinstance(error, TemplateManagementError) else t("settings.templates.operation_failed")
-        show_error(t("common.error", "Error"), message, details=str(error), parent=self)
+        show_error(
+            t("common.error", "Error"),
+            message,
+            details=str(error),
+            parent=self,
+            diagnostic=DiagnosticSummary.from_exception(error),
+        )
 
 
 __all__ = ["TemplatesTab"]

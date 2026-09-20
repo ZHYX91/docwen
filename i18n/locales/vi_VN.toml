@@ -40,8 +40,6 @@ task_progress_status = "Tien do: {percent}% {message}"
 task_completed_status = "Hoan tat"
 task_failed_status = "That bai: {message}"
 task_cancelled_status = "Da huy"
-error_copied = "Da sao chep chi tiet loi."
-no_error_available = "Hien khong co thong tin loi."
 no_failed_to_retry = "Khong co tac vu that bai de thu lai."
 path_not_exist = "Duong dan khong ton tai: {path}"
 open_path_failed = "Khong the mo duong dan: {path}"
@@ -63,7 +61,6 @@ file_admission_cancelled = "Đã hủy xử lý; định dạng đã phát hiệ
 # =============================================================================
 [common]
 action_file_count = "{action} ({count} tệp)"
-copy = "Sao chép"
 app_name = "DocWen"
 default = "Mặc định"
 close = "Đóng"
@@ -1729,3 +1726,9 @@ open_failed = "Không thể mở mẫu. Hãy kiểm tra ứng dụng liên kết
 name_conflict = "Đã có mẫu tùy chỉnh mang tên {name}."
 keep_both = "Giữ cả hai"
 replace = "Thay thế"
+
+[diagnostics]
+local_details = "Chi tiết cục bộ"
+preview = "Chẩn đoán đã ẩn dữ liệu"
+copy = "Sao chép chẩn đoán"
+redacted_hint = "Bản sao chỉ chứa trạng thái, loại và số lượng. Không bao gồm nội dung, đường dẫn, lỗi gốc, lệnh hoặc cấu hình."

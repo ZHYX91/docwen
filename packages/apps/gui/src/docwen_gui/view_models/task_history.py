@@ -11,6 +11,8 @@ from typing import Any
 
 from PySide6.QtCore import QObject, Signal
 
+from docwen_gui.diagnostics import DiagnosticSummary
+
 
 @dataclass(frozen=True, slots=True)
 class FileOutcome:
@@ -22,6 +24,7 @@ class FileOutcome:
     skip_reason: str = ""
     updated_at: datetime = field(default_factory=datetime.now)
     output_paths: tuple[str, ...] = ()
+    diagnostic: DiagnosticSummary | None = None
 
 
 @dataclass(slots=True)
@@ -85,6 +88,7 @@ class TaskHistory(QObject):
         warnings: tuple[str, ...] = (),
         skip_reason: str = "",
         output_paths: tuple[str, ...] = (),
+        diagnostic: DiagnosticSummary | None = None,
     ) -> None:
         record = self.get(operation_id)
         if record is not None:
@@ -97,6 +101,12 @@ class TaskHistory(QObject):
                 warnings,
                 skip_reason,
                 output_paths=output_paths or ((output_path,) if output_path else ()),
+                diagnostic=diagnostic
+                or DiagnosticSummary(
+                    status=status,
+                    output_count=len(output_paths) if output_paths else int(bool(output_path)),
+                    warning_count=len(warnings),
+                ),
             )
             self.changed.emit()
 
