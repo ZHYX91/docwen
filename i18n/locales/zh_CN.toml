@@ -643,6 +643,12 @@ heading_merge_punctuation_tooltip = "“有标点才合并”模式下用于触�
 # MD转文档分隔符映射
 md_separator_mapping = "分隔符映射"
 md_separator_mapping_tooltip = "配置 Markdown 分隔符转换为哪种 Word 分页符/分节符/分隔线\n\n分页符：Word 中的分页符\n分节符：Word 中的分节符（下一页类型）\n分隔线：段落底部边框（视觉分隔线）"
+mermaid_title = "Mermaid 图表"
+mermaid_tooltip = "选择 Mermaid 围栏代码块在文档中渲染为图片，或保留为源码。图片模式使用本地 Mermaid CLI；渲染不可用或失败时会回退为代码块并报告警告。"
+mermaid_mode_label = "输出方式："
+mermaid_mode_tooltip = "选择 Mermaid 围栏代码块写入生成文档时的呈现方式。"
+mermaid_code = "保留为代码块"
+mermaid_image = "渲染为图片"
 dash_label = "--- (三个短横线):"
 dash_tooltip = "Markdown --- 分隔符转换为 Word 分页符/分节符"
 asterisk_label = "*** (三个星号):"
