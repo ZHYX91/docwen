@@ -116,20 +116,7 @@ NETWORK_GUARD_SANDBOX_MARKERS = {
     "README.zh-TW.md": "作業系統級沙箱",
 }
 
-SCREENSHOTS = {
-    f"{surface}-{theme}.png"
-    for surface in (
-        "main",
-        "settings",
-        "batch",
-        "conversion-document",
-        "conversion-spreadsheet",
-        "conversion-image",
-        "conversion-layout",
-        "about",
-    )
-    for theme in ("light", "dark")
-}
+SCREENSHOTS = {"markdown-generation-en.png", "template-management-en.png"}
 
 BANNED_CURRENT_TOKENS = (
     "gui-ui-ux-acceptance",
