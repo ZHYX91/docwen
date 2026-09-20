@@ -15,8 +15,7 @@ def _png_bytes() -> bytes:
     # 1x1 transparent PNG; keeping the fixture inline avoids adding a test-only
     # image dependency to the Markdown workspace package.
     return base64.b64decode(
-        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ"
-        "AAAADUlEQVR42mNk+M/wHwAF/gL+XfV8AAAAAElFTkSuQmCC"
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+XfV8AAAAAElFTkSuQmCC"
     )
 
 
