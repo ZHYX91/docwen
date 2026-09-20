@@ -86,5 +86,8 @@ def test_yaml_links_follow_request_scoped_ordinary_link_policy(tmp_path: Path, m
         assert "抄送：喵喵，钱钱钱" in observation.text
         assert "网站：项目主页" in observation.text
         assert "https://example.com/project" in observation.hyperlink_targets
-        assert any(target.startswith("file:") and target.endswith("/guide.md") for target in observation.hyperlink_targets)
+        assert any(
+            target.startswith("file:") and target.endswith("/guide.md")
+            for target in observation.hyperlink_targets
+        )
         assert "<w:hyperlink" in observation.document_xml
