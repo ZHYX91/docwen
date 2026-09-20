@@ -643,6 +643,12 @@ heading_merge_punctuation_tooltip = "Characters that trigger heading/body mergin
 # MD转文档分隔符映射
 md_separator_mapping = "Separator Mapping"
 md_separator_mapping_tooltip = "Configure which Word page break/section break/horizontal rule to convert Markdown separators to\n\nPage break: Page breaks in Word\nSection break: Section breaks in Word (next page type)\nHorizontal rule: Paragraph bottom border (visual separator)"
+mermaid_title = "Mermaid diagrams"
+mermaid_tooltip = "Choose whether Mermaid fenced blocks are rendered as images or kept as source code. Image mode uses the local Mermaid CLI; failures fall back to code with a warning."
+mermaid_mode_label = "Output:"
+mermaid_mode_tooltip = "Choose how Mermaid fenced blocks are written to generated documents."
+mermaid_code = "Keep as code block"
+mermaid_image = "Render as image"
 dash_label = "--- (three dashes):"
 dash_tooltip = "Convert Markdown --- separator to Word page break/section break"
 asterisk_label = "*** (three asterisks):"
