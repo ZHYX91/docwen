@@ -13,7 +13,6 @@ from ._action_area_widget_support import (
     _combo_data,
     _combo_icon_center_color,
     _grid_position,
-    get_theme_class_color,
     numbering_schemes,
     pytest,
 )
@@ -52,13 +51,20 @@ class TestMdToDocument:
         try:
             vm.setup_for_md_to_document("/test.md")
             combo = widget.md_document_format_combo
-            docx_index = combo.findData("docx")
-            assert _combo_icon_center_color(combo, docx_index) == get_theme_class_color("primary", "light").upper()
+            light_colors = [_combo_icon_center_color(combo, i) for i in range(combo.count())]
+            assert len(set(light_colors)) == combo.count()
+            assert combo.findData("docx") >= 0 and combo.findData("doc") >= 0
 
             manager.apply_theme("dark")
             qapp.processEvents()
 
-            assert _combo_icon_center_color(combo, docx_index) == get_theme_class_color("primary", "dark").upper()
+            dark_colors = [_combo_icon_center_color(combo, i) for i in range(combo.count())]
+            assert len(set(dark_colors)) == combo.count()
+            assert all(light != dark for light, dark in zip(light_colors, dark_colors, strict=True))
+
+            manager.apply_theme("light")
+            qapp.processEvents()
+            assert [_combo_icon_center_color(combo, i) for i in range(combo.count())] == light_colors
         finally:
             manager.apply_theme(previous_theme)
             qapp.processEvents()

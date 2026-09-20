@@ -13,7 +13,6 @@ from tests.support.gui_vm_fakes import FakeMainWindowViewModel
 from docwen_gui.i18n import t
 from docwen_gui.styles.conversion_panel import build_conversion_panel_stylesheet
 from docwen_gui.styles.theme_manager import ThemeManager
-from docwen_gui.styles.theme_semantics import get_theme_class_color
 from docwen_gui.view_models.conversion_panel_vm import ConversionPanelViewModel
 from docwen_gui.widgets.conversion_panel import ConversionPanel
 
@@ -196,13 +195,20 @@ class TestWidgetRebuild:
             vm.set_file_info("layout", "pdf", file_path="/test.pdf")
             combo = widget._layout_export_combo
             assert combo is not None
-            docx_index = combo.findText("DOCX")
-            assert _combo_icon_center_color(combo, docx_index) == get_theme_class_color("primary", "light").upper()
+            light_colors = [_combo_icon_center_color(combo, i) for i in range(combo.count())]
+            assert len(set(light_colors)) == combo.count()
+            assert combo.findText("DOCX") >= 0 and combo.findText("DOC") >= 0
 
             manager.apply_theme("dark")
             qapp.processEvents()
 
-            assert _combo_icon_center_color(combo, docx_index) == get_theme_class_color("primary", "dark").upper()
+            dark_colors = [_combo_icon_center_color(combo, i) for i in range(combo.count())]
+            assert len(set(dark_colors)) == combo.count()
+            assert all(light != dark for light, dark in zip(light_colors, dark_colors, strict=True))
+
+            manager.apply_theme("light")
+            qapp.processEvents()
+            assert [_combo_icon_center_color(combo, i) for i in range(combo.count())] == light_colors
         finally:
             manager.apply_theme(previous_theme)
             qapp.processEvents()

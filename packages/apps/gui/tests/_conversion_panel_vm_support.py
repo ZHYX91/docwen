@@ -8,7 +8,6 @@ import pytest
 from tests.support.gui_vm_fakes import FakeMainWindowViewModel
 
 from docwen_gui.view_models.conversion_panel_vm import (
-    BUTTON_COLORS,
     COMPRESSIBLE_FORMATS,
     SENSITIVE_WORD,
     SYMBOL_CORRECTION,
@@ -27,7 +26,6 @@ def vm() -> ConversionPanelViewModel:
 
 
 __all__ = (
-    "BUTTON_COLORS",
     "COMPRESSIBLE_FORMATS",
     "SENSITIVE_WORD",
     "SYMBOL_CORRECTION",

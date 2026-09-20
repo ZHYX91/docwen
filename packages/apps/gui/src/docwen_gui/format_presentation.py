@@ -20,7 +20,7 @@ class FormatPresentation:
     key: str
     display_name: str
     category: str
-    tone: str
+    swatch_colors: tuple[str, str] | None
     operations: frozenset[str]
     supports_size_limit: bool = False
     allow_same_format_compression: bool = False
@@ -35,49 +35,56 @@ class FormatChoice:
 
     key: str
     display_name: str
-    tone: str
     enabled: bool
     disabled_reason: str
     help_text: str
 
 
-_TONES: dict[str, str] = {
-    "docx": "primary",
-    "doc": "info",
-    "odt": "success",
-    "rtf": "warning",
-    "wps": "info",
-    "txt": "secondary",
-    "xlsx": "primary",
-    "xls": "info",
-    "ods": "success",
-    "csv": "warning",
-    "tsv": "warning",
-    "et": "info",
-    "png": "primary",
-    "jpg": "primary",
-    "jpeg": "primary",
-    "bmp": "info",
-    "gif": "success",
-    "tif": "warning",
-    "tiff": "warning",
-    "webp": "danger",
-    "heic": "info",
-    "heif": "info",
-    "pdf": "danger",
-    "ofd": "success",
-    "xps": "info",
-    "md": "secondary",
-    "markdown": "secondary",
-    "html": "info",
-    "htm": "info",
-    "mhtml": "info",
-    "mht": "info",
-    "epub": "success",
-    "enex": "warning",
-    "ppt": "info",
-    "pptx": "primary",
-    "ceb": "warning",
+# Light/dark swatches identify file families, independently of task status colors.
+# Names remain the primary identifiers; aliases share colors. Related formats use
+# nearby hues with visible differences in lightness and saturation.
+_SWATCH_COLORS: dict[str, tuple[str, str]] = {
+    # Documents: blue, with a softer blue for legacy DOC.
+    "docx": ("#2563EB", "#60A5FA"),
+    "doc": ("#6586B5", "#B0C7E3"),
+    "odt": ("#167F98", "#56B9CA"),
+    "rtf": ("#5F879C", "#94B8C9"),
+    "wps": ("#5962BA", "#9DABF2"),
+    # Spreadsheets: green/teal.
+    "xlsx": ("#16824D", "#4DD49A"),
+    "xls": ("#64866F", "#A5C9AD"),
+    "ods": ("#087D79", "#51C7BE"),
+    "csv": ("#477D35", "#A3CA75"),
+    "tsv": ("#747B31", "#C0C982"),
+    "et": ("#3C8273", "#8BCAB8"),
+    # Images: purple/magenta. Equivalent extensions keep the same identity.
+    "png": ("#8050C3", "#BC96ED"),
+    "jpg": ("#A34F91", "#E3A0CB"),
+    "jpeg": ("#A34F91", "#E3A0CB"),
+    "bmp": ("#857493", "#BEAFCD"),
+    "gif": ("#6446A6", "#A99BEB"),
+    "tif": ("#6F619F", "#B0AED6"),
+    "tiff": ("#6F619F", "#B0AED6"),
+    "webp": ("#9C42BA", "#D88AE7"),
+    "heic": ("#875782", "#CAA0C7"),
+    "heif": ("#875782", "#CAA0C7"),
+    # Fixed layout: red/rose; presentations: orange.
+    "pdf": ("#CB4054", "#F58B98"),
+    "ofd": ("#AA5B79", "#D9A1B6"),
+    "xps": ("#A2665C", "#DCB0A5"),
+    "ceb": ("#9B5368", "#D39CA8"),
+    "pptx": ("#BD5A21", "#F5A46D"),
+    "ppt": ("#A67550", "#D9BA99"),
+    # Plain/Markdown text is neutral; web and ebook formats use amber.
+    "txt": ("#7B8491", "#B3BDCB"),
+    "md": ("#475569", "#CBD5E1"),
+    "markdown": ("#475569", "#CBD5E1"),
+    "html": ("#A16D16", "#E9BE68"),
+    "htm": ("#A16D16", "#E9BE68"),
+    "mhtml": ("#8B774E", "#D6C299"),
+    "mht": ("#8B774E", "#D6C299"),
+    "epub": ("#8D7630", "#D0BF77"),
+    "enex": ("#9A7042", "#DDB88B"),
 }
 
 _DISPLAY_NAMES: dict[str, str] = {
@@ -114,14 +121,14 @@ def _presentation(key: str) -> FormatPresentation:
         key=normalized,
         display_name=_DISPLAY_NAMES.get(normalized, normalized.upper()),
         category=category,
-        tone=_TONES.get(normalized, "secondary"),
+        swatch_colors=_SWATCH_COLORS.get(normalized),
         operations=frozenset(operations),
         supports_size_limit=supports_size_limit,
         allow_same_format_compression=supports_size_limit,
     )
 
 
-FORMAT_PRESENTATIONS: dict[str, FormatPresentation] = {key: _presentation(key) for key in _TONES}
+FORMAT_PRESENTATIONS: dict[str, FormatPresentation] = {key: _presentation(key) for key in _SWATCH_COLORS}
 
 
 def normalize_format(fmt: str) -> str:
@@ -181,7 +188,6 @@ def format_choice(
     return FormatChoice(
         key=presentation.key,
         display_name=presentation.display_name,
-        tone=presentation.tone,
         enabled=enabled,
         disabled_reason=disabled_reason,
         help_text=help_text,

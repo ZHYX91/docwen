@@ -23,7 +23,6 @@ from docwen_gui import numbering_schemes
 from docwen_gui.styles.action_area import build_action_area_stylesheet
 from docwen_gui.styles.design_tokens import Sizing
 from docwen_gui.styles.theme_manager import ThemeManager
-from docwen_gui.styles.theme_semantics import get_theme_class_color
 from docwen_gui.view_models._optimization_filter import OptimizationChoice, OptimizationChoicesResult
 from docwen_gui.view_models.action_area_vm import ActionAreaViewModel
 from docwen_gui.widgets.action_area import ActionArea
@@ -107,7 +106,6 @@ __all__ = (
     "_grid_position",
     "_install_optimization_lookup",
     "build_action_area_stylesheet",
-    "get_theme_class_color",
     "numbering_schemes",
     "pytest",
     "pytestmark",

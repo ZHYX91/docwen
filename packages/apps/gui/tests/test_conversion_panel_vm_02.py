@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from ._conversion_panel_vm_support import (
-    BUTTON_COLORS,
     COMPRESSIBLE_FORMATS,
     VALIDATION_OPTION_KEYS,
     ConversionPanelViewModel,
@@ -181,14 +180,6 @@ class TestNamedAction:
 
 
 class TestFormatConstants:
-    def test_button_colors(self) -> None:
-        assert BUTTON_COLORS["DOCX"] == "primary"
-        assert BUTTON_COLORS["WPS"] == "info"
-        assert BUTTON_COLORS["ET"] == "info"
-        assert BUTTON_COLORS["TSV"] == "warning"
-        assert BUTTON_COLORS["PDF"] == "danger"
-        assert BUTTON_COLORS["OFD"] == "success"
-
     def test_compressible_formats(self) -> None:
         assert set(COMPRESSIBLE_FORMATS) == {"JPG", "JPEG", "WEBP"}
 
