@@ -28,8 +28,8 @@ from PySide6.QtWidgets import (
     QSpinBox,
     QToolButton,
     QVBoxLayout,
-    QWidgetAction,
     QWidget,
+    QWidgetAction,
 )
 
 from docwen_gui.widgets.value_controls import ScrollSafeComboBox, ScrollSafeDoubleSpinBox, ScrollSafeSpinBox
@@ -251,11 +251,7 @@ class BaseSettingsTab(QWidget):
         if not label_text.strip():
             form.addRow(widget)
             return None
-        suffix = (
-            _create_info_button(effective_tooltip, accessible_name=label_text)
-            if effective_tooltip
-            else None
-        )
+        suffix = _create_info_button(effective_tooltip, accessible_name=label_text) if effective_tooltip else None
         peers = form.alignment_group if isinstance(form, _SettingsFormLayout) else None
         row = FormRow(
             label_text, widget, label_suffix=suffix, alignment_group=peers, minimum_label_height=CONTROL_HEIGHT
@@ -321,9 +317,7 @@ class BaseSettingsTab(QWidget):
         layout.addWidget(checkbox, 1)
         if tooltip:
             layout.addWidget(
-                _create_info_button(tooltip, container, accessible_name=text),
-                0,
-                Qt.AlignmentFlag.AlignVCenter,
+                _create_info_button(tooltip, container, accessible_name=text), 0, Qt.AlignmentFlag.AlignVCenter
             )
         return container, checkbox
 
