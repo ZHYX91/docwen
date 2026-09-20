@@ -79,7 +79,7 @@ def test_custom_template_without_body_placeholder_omits_markdown_body(tmp_path: 
     template = Document()
     template.paragraphs[0].text = "Title: {{title}}"
     template.add_paragraph("Template suffix")
-    template.save(template_path)
+    template.save(str(template_path))
 
     context, _workspace = make_context(
         str(source),
