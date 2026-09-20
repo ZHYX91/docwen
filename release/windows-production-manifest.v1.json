@@ -257,16 +257,7 @@
     "excluded": [
       "assets/screenshots/**"
     ],
-    "readmeSourceGlob": "docs/user-guides/README.*.md",
-    "allowlist": {
-      "path": "release/windows-payload-allowlist.v1.json",
-      "status": "CALIBRATION_REQUIRED",
-      "sha256": null,
-      "rejectMissing": true,
-      "rejectUnexpected": true,
-      "rejectCaseFoldCollision": true,
-      "rejectLinksAndNonRegular": true
-    }
+    "readmeSourceGlob": "docs/user-guides/README.*.md"
   },
   "channels": {
     "offlineZip": {

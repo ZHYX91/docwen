@@ -6,7 +6,7 @@ DocWen 的发布目标为一个 Windows x64 完整包和两个 Ubuntu 24.04 x64 
 
 | Platform / 平台 | Distribution status / 发行状态 | Required validation / 所需验证 |
 | --- | --- | --- |
-| Windows x64 | Release package / 正式发行包 | Exact packaged candidate plus automated and manual Windows acceptance / 精确打包候选及 Windows 自动与人工验收 |
+| Windows x64 | Release package / 正式发行包 | Exact packaged candidate and automated checks; selected native acceptance recorded separately / 精确打包候选及自动检查；所选原生验收另行记录 |
 | Ubuntu 24.04 x64 | Release package / 正式发行包 | Exact manifest-bound package and post-extract automation; native desktop evidence is recorded separately / 精确清单绑定包与解压后自动化；原生桌面证据另行记录 |
 | macOS x64/arm64 | No release asset / 无正式附件 | Source CI and opt-in packaging experiment only; primary document operations are unavailable / 仅源码 CI 与手动打包实验，主要文档操作不可用 |
 
@@ -25,9 +25,13 @@ PyInstaller 收集参数使用可导入包名，不一定等于发行包名；`p
 
 `pymupdf-layout` 1.27.2.2 在锁定资源清单覆盖的平台上提供相同的七条资源路径，但三个 YAML 描述文件在 Windows wheel 中使用 CRLF 字节，在 Linux 与 macOS wheel 中使用 LF 字节。因此 DocWen 固定两套完整的原始字节清单：`win32` 一套，`linux` 与 `darwin` 共用一套。该资源完整性覆盖与正式发布平台边界相互独立。未知平台以 `unsupported_resource_platform` 失败关闭；校验过程不规范化换行、不接受备选哈希，也不从已安装包自举可信字节。升级依赖时必须审计锁文件中的每个平台 wheel，并显式更新两套清单。
 
-The Windows production builder limits PyInstaller's DLL search path to the clean project environment, the manifest-verified CPython base directory, and the Windows system directories. Host-selected `api-ms-win-*` forwarders and `ucrtbase.dll` are forbidden in the payload; supported Windows supplies those system components. The four packaged MSVC runtime files are instead replaced from the locked `pikepdf` wheel before the frozen payload allowlist is checked.
+The Windows production builder limits PyInstaller's DLL search path to the clean project environment, the manifest-verified CPython base directory, and the Windows system directories. Host-selected `api-ms-win-*` forwarders and `ucrtbase.dll` are forbidden in the payload; supported Windows supplies those system components. The four packaged MSVC runtime files are instead replaced from the locked `pikepdf` wheel before the actual payload inventory and SHA-256 hashes are recorded.
 
-Windows 生产构建器把 PyInstaller 的 DLL 搜索路径限制为干净项目环境、清单验证过的 CPython 基础目录和 Windows 系统目录。载荷禁止包含由宿主偶然选中的 `api-ms-win-*` 转发 DLL 与 `ucrtbase.dll`，这些系统组件由受支持的 Windows 提供；随包发布的四个 MSVC 运行库文件则在冻结载荷白名单检查前统一替换为锁定 `pikepdf` wheel 中的副本。
+Windows 生产构建器把 PyInstaller 的 DLL 搜索路径限制为干净项目环境、清单验证过的 CPython 基础目录和 Windows 系统目录。载荷禁止包含由宿主偶然选中的 `api-ms-win-*` 转发 DLL 与 `ucrtbase.dll`，这些系统组件由受支持的 Windows 提供；随包发布的四个 MSVC 运行库文件统一替换为锁定 `pikepdf` wheel 中的副本，再记录本次实际文件清单和 SHA-256。
+
+Windows builds once from the verified source and locked toolchain. The resulting payload manifest records actual file paths, sizes and hashes; it is not a checked-in prediction of future executable bytes. There is no preliminary calibration build or per-version payload-hash update. Required entry points, resource/layout checks, path safety, packaged functionality, candidate provenance and hosted-byte verification remain required.
+
+Windows 从已验证源码和锁定工具链构建一次，随后记录实际文件路径、大小与哈希；成品清单不再作为预先提交的可执行文件哈希预测表。不需要预校准构建或逐版本修改成品哈希。必需入口、资源/布局、路径安全、实际包功能、候选来源和公开字节验证继续执行。
 
 ## Release gates / 发布门禁
 
