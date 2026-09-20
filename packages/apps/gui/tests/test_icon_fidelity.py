@@ -80,3 +80,19 @@ def test_main_window_bottom_actions_use_twenty_pixel_vector_icons(main_window) -
     assert main_window._font_size_btn.iconSize() == QSize(20, 20)  # pyright: ignore[reportPrivateUsage]
     assert main_window._about_btn.iconSize() == QSize(20, 20)  # pyright: ignore[reportPrivateUsage]
     assert main_window._settings_btn.iconSize() == QSize(20, 20)  # pyright: ignore[reportPrivateUsage]
+
+
+def test_location_button_prefers_application_open_folder_svg(qapp, monkeypatch: pytest.MonkeyPatch) -> None:
+    from docwen_gui.widgets import location_button as location_module
+
+    calls: list[str] = []
+
+    def load(name: str, *, color=None):
+        calls.append(name)
+        return QIcon()
+
+    monkeypatch.setattr(location_module, "load_svg_icon", load)
+    button = location_module.LocationButton(label="Locate")
+
+    assert calls == ["open_folder.svg"]
+    assert button.iconSize() == QSize(20, 20)
