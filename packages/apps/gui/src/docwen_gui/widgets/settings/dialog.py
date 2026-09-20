@@ -478,7 +478,11 @@ class SettingsDialog(QDialog):
         super().resizeEvent(event)
         if not hasattr(self, "_compact_navigation"):
             return
-        compact = self.width() < 700
+        # The fixed-height navigation entries do not scroll in Fluent's TOP
+        # section. Reserve both footer rows before choosing the full sidebar.
+        sidebar_height = len(TAB_KEYS) * (Sizing.CONTROL_HEIGHT + Spacing.XS)
+        footer_height = 2 * ACTION_BUTTON_MIN_HEIGHT + 3 * DIALOG_PADDING
+        compact = self.width() < 700 or self.height() < sidebar_height + footer_height
         self._compact_navigation.setVisible(compact)
         if self._navigation is not None:
             self._navigation.setVisible(not compact)

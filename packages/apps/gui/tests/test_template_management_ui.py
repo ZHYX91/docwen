@@ -118,6 +118,62 @@ def test_settings_has_shared_template_page_and_no_text_selector(qapp, template_v
     dialog.close()
 
 
+@pytest.mark.parametrize("locale", ["zh_CN", "en_US"])
+@pytest.mark.parametrize("preset", ["default", "xlarge"])
+@pytest.mark.parametrize("width", [600, 700])
+def test_template_action_captions_fit_narrow_settings(qapp, template_vm, locale, preset, width):
+    from PySide6.QtCore import QRect, Qt
+    from PySide6.QtWidgets import QStyle, QStyleOptionButton
+
+    from docwen_gui.i18n import get_locale, set_locale
+    from docwen_gui.styles.theme_manager import ThemeManager
+    from docwen_gui.widgets.settings.dialog import SettingsDialog
+    from docwen_gui.widgets.settings.templates_tab import TemplatesTab
+
+    previous_locale = get_locale()
+    set_locale(locale)
+    ThemeManager.reset_instance()
+    theme = ThemeManager.get_instance()
+    theme.initialize(qapp, "light")
+    theme.apply_font_size_preset(preset)
+    dialog = SettingsDialog(template_view_model=template_vm)
+    dialog.resize(width, 830)
+    dialog.activate_section("templates")
+    dialog.show()
+    try:
+        for _ in range(4):
+            qapp.processEvents()
+        page = dialog._tabs["templates"]
+        assert isinstance(page, TemplatesTab)
+        for button in (
+            page._import_button,
+            page._copy_button,
+            page._up_button,
+            page._down_button,
+            page._default_button,
+            page._folder_button,
+            page._refresh_button,
+        ):
+            option = QStyleOptionButton()
+            button.initStyleOption(option)
+            style = button.style()
+            assert style is not None
+            contents = style.subElementRect(QStyle.SubElement.SE_PushButtonContents, option, button)
+            caption = button.fontMetrics().boundingRect(
+                QRect(0, 0, contents.width(), 10000), Qt.TextFlag.TextWordWrap, button.text()
+            )
+            assert caption.width() <= contents.width(), button.text()
+            assert caption.height() <= contents.height(), button.text()
+            parent = button.parentWidget()
+            assert parent is not None
+            assert button.geometry().right() < parent.width(), button.text()
+        assert page._scroll_area.horizontalScrollBar().maximum() == 0
+    finally:
+        dialog.close()
+        ThemeManager.reset_instance()
+        set_locale(previous_locale)
+
+
 def test_template_selector_exposes_management_actions(qapp) -> None:
     selector = TemplateSelector(template_type="docx")
     assert selector._empty_manage_button.text()

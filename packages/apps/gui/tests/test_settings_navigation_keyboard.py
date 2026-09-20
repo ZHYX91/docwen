@@ -87,3 +87,21 @@ def test_compact_selector_can_traverse_multiple_pages_without_focus_escaping(dia
     assert dialog.current_section() == "document"
     assert qapp.focusWidget() is selector
     assert selector.accessibleName() == t("settings.title")
+
+
+def test_short_wide_window_keeps_all_pages_reachable_and_restores_sidebar(dialog, qapp) -> None:
+    dialog.resize(960, 450)
+    qapp.processEvents()
+    selector = dialog.findChild(QComboBox, "settingsPageSelector")
+    assert selector is not None and selector.isVisible()
+    assert dialog._navigation.isHidden()
+    selector.setFocus(Qt.FocusReason.TabFocusReason)
+    QTest.keyClick(selector, Qt.Key.Key_End)
+    assert dialog.current_section() == "logging"
+    assert qapp.focusWidget() is selector
+    assert selector.count() == len(TAB_KEYS)
+    dialog.resize(960, 800)
+    qapp.processEvents()
+    assert selector.isHidden()
+    assert dialog._navigation.isVisible()
+    assert dialog.current_section() == "logging"

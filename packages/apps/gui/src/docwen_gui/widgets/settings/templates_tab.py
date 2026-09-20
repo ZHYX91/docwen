@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from qfluentwidgets import Pivot, PrimaryPushButton, PushButton
+from qfluentwidgets import Pivot, PushButton
 
 from docwen_runtime.templates import TemplateManagementError
 
@@ -35,6 +35,7 @@ from ...i18n import t
 from ...styles.design_tokens import Sizing, Spacing
 from ...styles.theme_semantics import apply_theme_class
 from ...view_models.template_vm import TemplateViewModel
+from ..action_button import ActionButton
 from ..template_item_delegate import CUSTOM_ROLE, DEFAULT_ROLE, SOURCE_ROLE, TemplateItemDelegate
 from .base_tab import BaseSettingsTab
 
@@ -138,6 +139,7 @@ class TemplatesTab(BaseSettingsTab):
             self._import_templates,
             primary=True,
         )
+        self._import_button.setObjectName("templateImportButton")
         self._copy_button = self._button(
             t("settings.templates.copy_edit", "Copy and edit"),
             self._copy_and_edit,
@@ -197,7 +199,7 @@ class TemplatesTab(BaseSettingsTab):
         root.addWidget(self._import_summary)
 
     def _button(self, text: str, callback, *, primary: bool = False) -> QPushButton:
-        button = PrimaryPushButton(text, self) if primary else PushButton(text, self)
+        button = ActionButton(text, self)
         button.setMinimumHeight(Sizing.CONTROL_HEIGHT)
         button.clicked.connect(callback)
         apply_theme_class(button, "primary" if primary else "secondary")
