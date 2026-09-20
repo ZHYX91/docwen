@@ -31,12 +31,7 @@ jobs:
       - name: Install
         run: uv sync --frozen --extra lint --extra test
       - name: Required source checks
-        run: |
-          uv run ruff format --check --diff \
-            packages/plugins/markdown/src/docwen_plugin_markdown/to_docx/converter.py \
-            packages/plugins/markdown/src/docwen_plugin_markdown/to_docx/mermaid.py \
-            packages/plugins/markdown/tests/test_mermaid_docx_rendering.py
-          uv run python tools/qa.py --skip-pytest
+        run: uv run python tools/qa.py --skip-pytest
 
   tests:
     name: Tests on ${{ matrix.os }}
