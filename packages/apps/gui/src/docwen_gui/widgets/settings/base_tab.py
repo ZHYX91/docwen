@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import QPoint, QSize, Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -21,12 +21,14 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMenu,
     QPushButton,
     QScrollArea,
     QSizePolicy,
     QSpinBox,
     QToolButton,
     QVBoxLayout,
+    QWidgetAction,
     QWidget,
 )
 
@@ -77,21 +79,58 @@ def _prepare_combo(widget: QComboBox) -> None:
     widget.setView(view)
 
 
-def _create_info_button(tooltip: str, parent: QWidget | None = None) -> QToolButton:
-    """Create a small visible info affordance for settings help text."""
-    btn = QToolButton(parent)
+class _SettingsInfoButton(QToolButton):
+    """Keyboard-operable settings help affordance."""
+
+    def keyPressEvent(self, event) -> None:
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            if not event.isAutoRepeat():
+                self.click()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+
+def _show_info_popup(button: QToolButton, text: str) -> None:
+    """Show bounded plain-text help; QMenu keeps it on the active screen."""
+    menu = QMenu(button)
+    menu.setObjectName("settingsHelpPopup")
+    label = WrappingLabel(text, menu)
+    label.setObjectName("settingsHelpPopupText")
+    label.setTextFormat(Qt.TextFormat.PlainText)
+    label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+    label.setMinimumWidth(260)
+    label.setMaximumWidth(420)
+    label.setContentsMargins(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM)
+    action = QWidgetAction(menu)
+    action.setDefaultWidget(label)
+    menu.addAction(action)
+    button._docwen_help_popup = menu  # type: ignore[attr-defined]
+    menu.popup(button.mapToGlobal(QPoint(0, button.height() + Spacing.XS)))
+
+
+def _create_info_button(
+    tooltip: str,
+    parent: QWidget | None = None,
+    *,
+    accessible_name: str = "",
+) -> QToolButton:
+    """Create one shared, focusable settings help affordance."""
+    btn = _SettingsInfoButton(parent)
     btn.setObjectName(SETTINGS_INFO_BUTTON_OBJECT_NAME)
     btn.setAutoRaise(True)
-    btn.setFixedSize(18, 18)
-    btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+    btn.setFixedSize(30, 30)
+    btn.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
     btn.setToolTip(tooltip)
-    btn.setAccessibleName(tooltip)
+    btn.setAccessibleName(accessible_name or "Info")
+    btn.setAccessibleDescription(tooltip)
     icon = load_svg_icon("info.svg")
-    btn.setIconSize(QSize(14, 14))
+    btn.setIconSize(QSize(17, 17))
     if icon is not None and not icon.isNull():
         btn.setIcon(icon)
     else:
         btn.setText("i")
+    btn.clicked.connect(lambda _checked=False, owner=btn, text=tooltip: _show_info_popup(owner, text))
     return btn
 
 
@@ -212,7 +251,11 @@ class BaseSettingsTab(QWidget):
         if not label_text.strip():
             form.addRow(widget)
             return None
-        suffix = _create_info_button(effective_tooltip) if effective_tooltip else None
+        suffix = (
+            _create_info_button(effective_tooltip, accessible_name=label_text)
+            if effective_tooltip
+            else None
+        )
         peers = form.alignment_group if isinstance(form, _SettingsFormLayout) else None
         row = FormRow(
             label_text, widget, label_suffix=suffix, alignment_group=peers, minimum_label_height=CONTROL_HEIGHT
@@ -277,7 +320,11 @@ class BaseSettingsTab(QWidget):
         checkbox = self.create_settings_toggle(text, tooltip)
         layout.addWidget(checkbox, 1)
         if tooltip:
-            layout.addWidget(_create_info_button(tooltip, container), 0, Qt.AlignmentFlag.AlignVCenter)
+            layout.addWidget(
+                _create_info_button(tooltip, container, accessible_name=text),
+                0,
+                Qt.AlignmentFlag.AlignVCenter,
+            )
         return container, checkbox
 
     def create_combobox(
