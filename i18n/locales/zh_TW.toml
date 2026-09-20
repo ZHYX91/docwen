@@ -594,6 +594,12 @@ heading_merge_punctuation_tooltip = "「有標點才合併」模式下用來觸�
 # MD转文档分隔符映射
 md_separator_mapping = "分隔符映射"
 md_separator_mapping_tooltip = "配置 Markdown 分隔符轉換為哪種 Word 分頁符/分節符/分隔線\n\n分頁符：Word 中的分頁符\n分節符：Word 中的分節符（下一頁類型）\n分隔線：段落底部邊框（視覺分隔線）"
+mermaid_title = "Mermaid 圖表"
+mermaid_tooltip = "選擇 Mermaid 圍欄程式碼區塊在文件中渲染為圖片，或保留為原始碼。圖片模式使用本機 Mermaid CLI；渲染不可用或失敗時會回退為程式碼區塊並回報警告。"
+mermaid_mode_label = "輸出方式："
+mermaid_mode_tooltip = "選擇 Mermaid 圍欄程式碼區塊寫入產生文件時的呈現方式。"
+mermaid_code = "保留為程式碼區塊"
+mermaid_image = "渲染為圖片"
 dash_label = "--- (三個短橫線):"
 dash_tooltip = "Markdown --- 分隔符轉換為 Word 分頁符/分節符"
 asterisk_label = "*** (三個星號):"
