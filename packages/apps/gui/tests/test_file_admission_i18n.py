@@ -8,11 +8,13 @@ from pathlib import Path
 
 import pytest
 
-from docwen_core.models import FileInspection
+from docwen_core.models import FILE_INSPECTION_METADATA_KEY, FileInspection
+from docwen_core.models.file_ref import FileRef
 from docwen_gui.file_admission_i18n import (
     file_admission_message_key,
     render_file_admission_code,
     render_file_admission_message,
+    render_file_format_notice,
     render_file_inspection_message,
 )
 from docwen_gui.i18n import get_locale, set_locale
@@ -88,7 +90,7 @@ def test_every_locale_has_complete_file_admission_tables(locale: str) -> None:
     assert isinstance(main_window, dict)
     assert isinstance(admission, dict)
     assert set(main_window) >= _MAIN_WINDOW_KEYS
-    assert set(admission) >= set(_CODE_TO_KEY.values())
+    assert set(admission) >= set(_CODE_TO_KEY.values()) | {"actual_format"}
     for key in (*_MAIN_WINDOW_KEYS, *_CODE_TO_KEY.values()):
         source = main_window if key in _MAIN_WINDOW_KEYS else admission
         assert str(source[key]).strip(), f"{locale}: empty translation for {key}"
@@ -213,3 +215,38 @@ def test_inspection_renderer_preserves_additional_unmapped_diagnostics() -> None
 
     assert "DOCX" in rendered
     assert "[OOXML_SIGNATURE_VALIDATION_UNAVAILABLE] Signature verification is unavailable." in rendered
+
+
+@pytest.mark.parametrize("locale", _LOCALES)
+def test_compact_format_notice_uses_detected_format_only_for_mismatch_codes(locale: str) -> None:
+    original_locale = get_locale()
+    try:
+        set_locale(locale)
+        inspection = _inspection(
+            declared_format="docx",
+            detected_format="doc",
+            warning_code="FILE_FORMAT_SAME_FAMILY_MISMATCH",
+            warning_message="long diagnostic",
+        )
+        ref = FileRef(
+            path="sample.docx",
+            format="doc",
+            category="document",
+            warning_message="long diagnostic",
+            metadata={FILE_INSPECTION_METADATA_KEY: inspection.to_dict()},
+        )
+        notice = render_file_format_notice(ref)
+        assert "DOC" in notice
+        assert "DOCX" not in notice
+        assert "{" not in notice and "}" not in notice
+
+        exact = _inspection(
+            declared_format="docx",
+            detected_format="docx",
+            warning_code="",
+            warning_message="",
+        )
+        ref.metadata[FILE_INSPECTION_METADATA_KEY] = exact.to_dict()
+        assert render_file_format_notice(ref) == ""
+    finally:
+        set_locale(original_locale)
