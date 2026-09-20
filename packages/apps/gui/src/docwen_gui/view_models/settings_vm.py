@@ -1142,6 +1142,7 @@ class SettingsViewModel(QObject):
                 subscript_syntax=syntax.get("subscript", "html") if isinstance(syntax, dict) else "html",
                 unordered_list_syntax=syntax.get("unordered_list", "dash") if isinstance(syntax, dict) else "dash",
                 indent_spaces=syntax.get("indent_spaces", 4) if isinstance(syntax, dict) else 4,
+                mermaid_mode=m2d.get("mermaid_mode", "code") if isinstance(m2d, dict) else "code",
                 dash_sep=hr_m2d.get("dash", "page_break") if isinstance(hr_m2d, dict) else "page_break",
                 asterisk_sep=hr_m2d.get("asterisk", "section_break") if isinstance(hr_m2d, dict) else "section_break",
                 underscore_sep=hr_m2d.get("underscore", "horizontal_rule_1")
@@ -1383,6 +1384,7 @@ class SettingsViewModel(QObject):
         put("conversion.syntax.subscript", fmt.subscript_syntax)
         put("conversion.syntax.unordered_list", fmt.unordered_list_syntax)
         put("conversion.syntax.indent_spaces", int(fmt.indent_spaces))
+        put("conversion.md_to_docx.mermaid_mode", fmt.mermaid_mode)
         put("conversion.md_to_docx.formatting_mode", text.md_body_format)
         put("conversion.md_to_docx.heading_formatting_mode", text.md_heading_format)
         put("conversion.md_to_docx.table_header_formatting_mode", text.md_table_header_format)
