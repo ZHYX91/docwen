@@ -33,17 +33,9 @@ Phần mềm được tạo ra để giải quyết các vấn đề thường g
 
 ## 📸 Ảnh chụp màn hình
 
-| Hàng loạt | Markdown |
+| Tạo tài liệu từ Markdown | Quản lý mẫu |
 | --- | --- |
-| ![Bảng hàng loạt](../assets/screenshots/batch-light.png) | ![Cửa sổ chính](../assets/screenshots/main-light.png) |
-
-| Tài liệu | Bảng tính |
-| --- | --- |
-| ![Bảng tài liệu](../assets/screenshots/conversion-document-light.png) | ![Bảng bảng tính](../assets/screenshots/conversion-spreadsheet-light.png) |
-
-| Ảnh | Tệp bố cục |
-| --- | --- |
-| ![Bảng ảnh](../assets/screenshots/conversion-image-light.png) | ![Bảng bố cục](../assets/screenshots/conversion-layout-light.png) |
+| ![Tạo tài liệu từ Markdown](../assets/screenshots/markdown-generation-en.png) | ![Quản lý mẫu](../assets/screenshots/template-management-en.png) |
 
 Nhật ký thay đổi: xem [CHANGELOG.md](../CHANGELOG.md)
 

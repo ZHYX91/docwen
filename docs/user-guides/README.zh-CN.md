@@ -34,17 +34,9 @@ DocWen - 支持 Word/Markdown/Excel 互转，完全本地运行，数据安全�
 
 ## 📸 界面截图
 
-| 批处理                                    | Markdown                                        |
-| -------------------------------------- | ----------------------------------------------- |
-| ![批处理界面](../assets/screenshots/batch-light.png) | ![主窗口](../assets/screenshots/main-light.png) |
-
-| 文档                                       | 表格                                          |
-| ---------------------------------------- | ------------------------------------------- |
-| ![文档界面](../assets/screenshots/conversion-document-light.png) | ![表格界面](../assets/screenshots/conversion-spreadsheet-light.png) |
-
-| 图片                                    | 版式文件                                     |
-| ------------------------------------- | ---------------------------------------- |
-| ![图片界面](../assets/screenshots/conversion-image-light.png) | ![版式文件界面](../assets/screenshots/conversion-layout-light.png) |
+| Markdown 生成文档 | 模板管理 |
+| --- | --- |
+| ![Markdown 生成文档](../assets/screenshots/markdown-generation-en.png) | ![模板管理](../assets/screenshots/template-management-en.png) |
 
 更新日志：见 [CHANGELOG.md](../CHANGELOG.md)
 

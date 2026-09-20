@@ -33,17 +33,9 @@
 
 ## 📸 介面截圖
 
-| 批次處理 | Markdown |
+| Markdown 產生文件 | 範本管理 |
 | --- | --- |
-| ![批次處理介面](../assets/screenshots/batch-light.png) | ![主視窗](../assets/screenshots/main-light.png) |
-
-| 文檔 | 表格 |
-| --- | --- |
-| ![文檔介面](../assets/screenshots/conversion-document-light.png) | ![表格介面](../assets/screenshots/conversion-spreadsheet-light.png) |
-
-| 圖片 | 版式檔案 |
-| --- | --- |
-| ![圖片介面](../assets/screenshots/conversion-image-light.png) | ![版式檔案介面](../assets/screenshots/conversion-layout-light.png) |
+| ![Markdown 產生文件](../assets/screenshots/markdown-generation-en.png) | ![範本管理](../assets/screenshots/template-management-en.png) |
 
 更新日誌：見 [CHANGELOG.md](../CHANGELOG.md)
 

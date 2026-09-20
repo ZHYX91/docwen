@@ -33,17 +33,9 @@ Este software se diseñó originalmente para resolver problemas comunes en entor
 
 ## 📸 Capturas de pantalla
 
-| Lote | Markdown |
+| De Markdown a documento | Gestión de plantillas |
 | --- | --- |
-| ![Panel de lote](../assets/screenshots/batch-light.png) | ![Ventana principal](../assets/screenshots/main-light.png) |
-
-| Documento | Hoja de cálculo |
-| --- | --- |
-| ![Panel de documento](../assets/screenshots/conversion-document-light.png) | ![Panel de hoja de cálculo](../assets/screenshots/conversion-spreadsheet-light.png) |
-
-| Imagen | Archivos de maquetación |
-| --- | --- |
-| ![Panel de imagen](../assets/screenshots/conversion-image-light.png) | ![Panel de maquetación](../assets/screenshots/conversion-layout-light.png) |
+| ![De Markdown a documento](../assets/screenshots/markdown-generation-en.png) | ![Gestión de plantillas](../assets/screenshots/template-management-en.png) |
 
 Registro de cambios: ver [CHANGELOG.md](../CHANGELOG.md)
 

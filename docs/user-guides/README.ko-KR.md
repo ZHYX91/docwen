@@ -33,17 +33,9 @@ Word/Markdown/Excel 양방향 변환을 지원하는 문서·표 변환 도구�
 
 ## 📸 스크린샷
 
-| 일괄 | Markdown |
+| Markdown에서 문서 생성 | 템플릿 관리 |
 | --- | --- |
-| ![일괄 패널](../assets/screenshots/batch-light.png) | ![메인 창](../assets/screenshots/main-light.png) |
-
-| 문서 | 스프레드시트 |
-| --- | --- |
-| ![문서 패널](../assets/screenshots/conversion-document-light.png) | ![스프레드시트 패널](../assets/screenshots/conversion-spreadsheet-light.png) |
-
-| 이미지 | 레이아웃 파일 |
-| --- | --- |
-| ![이미지 패널](../assets/screenshots/conversion-image-light.png) | ![레이아웃 패널](../assets/screenshots/conversion-layout-light.png) |
+| ![Markdown에서 문서 생성](../assets/screenshots/markdown-generation-en.png) | ![템플릿 관리](../assets/screenshots/template-management-en.png) |
 
 변경 이력: [CHANGELOG.md](../CHANGELOG.md) 참고
 

@@ -33,17 +33,9 @@ This software was originally designed for the daily work of the printing office 
 
 ## 📸 Screenshots
 
-| Main window | Batch |
+| Markdown to document | Template management |
 | --- | --- |
-| ![Main window](docs/assets/screenshots/main-light.png) | ![Batch panel](docs/assets/screenshots/batch-light.png) |
-
-| Document | Spreadsheet |
-| --- | --- |
-| ![Document panel](docs/assets/screenshots/conversion-document-light.png) | ![Spreadsheet panel](docs/assets/screenshots/conversion-spreadsheet-light.png) |
-
-| Image | Layout |
-| --- | --- |
-| ![Image panel](docs/assets/screenshots/conversion-image-light.png) | ![Layout panel](docs/assets/screenshots/conversion-layout-light.png) |
+| ![Markdown to document](docs/assets/screenshots/markdown-generation-en.png) | ![Template management](docs/assets/screenshots/template-management-en.png) |
 
 Changelog: see [CHANGELOG.md](docs/CHANGELOG.md)
 

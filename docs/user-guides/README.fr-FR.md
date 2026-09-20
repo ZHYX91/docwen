@@ -33,17 +33,9 @@ Ce logiciel a été conçu à l'origine pour le travail quotidien du service d'i
 
 ## 📸 Captures d’écran
 
-| Lot | Markdown |
+| De Markdown au document | Gestion des modèles |
 | --- | --- |
-| ![Panneau lot](../assets/screenshots/batch-light.png) | ![Fenêtre principale](../assets/screenshots/main-light.png) |
-
-| Document | Tableur |
-| --- | --- |
-| ![Panneau document](../assets/screenshots/conversion-document-light.png) | ![Panneau tableur](../assets/screenshots/conversion-spreadsheet-light.png) |
-
-| Image | Fichiers de mise en page |
-| --- | --- |
-| ![Panneau image](../assets/screenshots/conversion-image-light.png) | ![Panneau mise en page](../assets/screenshots/conversion-layout-light.png) |
+| ![De Markdown au document](../assets/screenshots/markdown-generation-en.png) | ![Gestion des modèles](../assets/screenshots/template-management-en.png) |
 
 Journal des modifications : voir [CHANGELOG.md](../CHANGELOG.md)
 

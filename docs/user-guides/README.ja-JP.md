@@ -33,17 +33,9 @@ Word/Markdown/Excelの双方向変換をサポートするドキュメントお�
 
 ## 📸 スクリーンショット
 
-| 一括 | Markdown |
+| Markdown から文書を生成 | テンプレート管理 |
 | --- | --- |
-| ![一括パネル](../assets/screenshots/batch-light.png) | ![メインウィンドウ](../assets/screenshots/main-light.png) |
-
-| ドキュメント | スプレッドシート |
-| --- | --- |
-| ![ドキュメントパネル](../assets/screenshots/conversion-document-light.png) | ![スプレッドシートパネル](../assets/screenshots/conversion-spreadsheet-light.png) |
-
-| 画像 | レイアウトファイル |
-| --- | --- |
-| ![画像パネル](../assets/screenshots/conversion-image-light.png) | ![レイアウトパネル](../assets/screenshots/conversion-layout-light.png) |
+| ![Markdown から文書を生成](../assets/screenshots/markdown-generation-en.png) | ![テンプレート管理](../assets/screenshots/template-management-en.png) |
 
 更新履歴： [CHANGELOG.md](../CHANGELOG.md) を参照
 
