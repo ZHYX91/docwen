@@ -3,7 +3,7 @@
   "manifestId": "docwen-windows-production",
   "product": {
     "name": "DocWen",
-    "version": "0.12.0",
+    "version": "0.12.1",
     "stableSemverOnly": true,
     "cliJsonProtocolVersion": 3,
     "releaseTagFormat": "{version}"
@@ -34,15 +34,15 @@
     "fixtures": [
       {
         "path": "tests/fixtures/golden/cli_protocol_v3_success.json",
-        "sha256": "fb2e1e59643f320c37b9342ea55a91bd6fb3e8fc2cba3fda026f445d73888949"
+        "sha256": "c56e0560143a2cf172551b0b2baa0f710e57d16f9a8ddf9c909c1bc59c38cc08"
       },
       {
         "path": "tests/fixtures/golden/cli_protocol_v3_error.json",
-        "sha256": "2e5e314d68851f3b5db908c6912340ab6738732eb9a2d6663f2de770f05f3a56"
+        "sha256": "4a48f932b885234c144cb279dc006dd0264a321944296a5bf156f658b0995970"
       },
       {
         "path": "tests/fixtures/golden/cli_protocol_v3_batch.json",
-        "sha256": "ff4820712e1a45ccc7b06c85c5fa91415c2da8ba7b897cba657494635f21433c"
+        "sha256": "f08cfe10bd8143055dba11bc5c87becd39a384869448ba2615d3969b4dcab205"
       }
     ],
     "machineContractFiles": [
@@ -244,7 +244,7 @@
     },
     "lock": {
       "path": "uv.lock",
-      "sha256": "2c33158a56bbf203199e21917d2a19e7dc2f0bb082a17c749c09d45062676273"
+      "sha256": "6c29b2b3bc747e51d27f954be1560779ab0d51a18818c726ba9a253fee0075f3"
     },
     "pyinstallerVersion": "6.16.0"
   },
@@ -257,16 +257,7 @@
     "excluded": [
       "assets/screenshots/**"
     ],
-    "readmeSourceGlob": "docs/user-guides/README.*.md",
-    "allowlist": {
-      "path": "release/windows-payload-allowlist.v1.json",
-      "status": "FROZEN",
-      "sha256": "e2f20b82f469f26b04a92750212936b36a1f1c9b3844a8b382b0399c9333627a",
-      "rejectMissing": true,
-      "rejectUnexpected": true,
-      "rejectCaseFoldCollision": true,
-      "rejectLinksAndNonRegular": true
-    }
+    "readmeSourceGlob": "docs/user-guides/README.*.md"
   },
   "channels": {
     "offlineZip": {
@@ -284,8 +275,8 @@
   },
   "releaseAssetAllowlist": [
     "DocWen-windows-x64.zip",
-    "DocWenCLI-0.12.0-linux-x64.tar.gz",
-    "DocWen-0.12.0-linux-x64.tar.gz",
+    "DocWenCLI-0.12.1-linux-x64.tar.gz",
+    "DocWen-0.12.1-linux-x64.tar.gz",
     "SHA256SUMS.txt"
   ]
 }

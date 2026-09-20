@@ -1,8 +1,7 @@
-"""Platform-independent single-instance lock using file locks.
+"""Platform-independent single-instance ownership.
 
-Uses msvcrt.locking on Windows and fcntl.flock on Unix for non-blocking
-exclusive file locks.  Windows retains the historical temporary-directory
-layout.  Unix uses a user-private runtime directory and a persistent lock
+Windows holds an exclusive named-pipe listener independent of TEMP. Unix uses
+fcntl.flock in a user-private runtime directory and a persistent lock
 sentinel so that unlink/recreate races cannot split ownership between two
 processes.
 
@@ -24,45 +23,36 @@ import os
 import stat
 import sys
 import tempfile
+from multiprocessing.connection import Listener
 from pathlib import Path
 from typing import IO
 
-# Platform-specific locking primitives
-if sys.platform == "win32":
-    import msvcrt  # type: ignore[import-untyped]
+from .namespace import user_namespace
 
-    def _acquire_file_lock(fd: int) -> None:
-        """Non-blocking exclusive lock on Windows."""
-        msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
 
-    def _release_file_lock(fd: int) -> None:
-        """Release exclusive lock on Windows."""
-        msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
-
-else:
+def _acquire_file_lock(fd: int) -> None:
+    """Non-blocking exclusive lock on Unix."""
+    if sys.platform == "win32":
+        raise RuntimeError("Windows ownership uses a named pipe")
     import fcntl
 
-    def _acquire_file_lock(fd: int) -> None:
-        """Non-blocking exclusive lock on Unix."""
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
 
-    def _release_file_lock(fd: int) -> None:
-        """Release exclusive lock on Unix."""
-        fcntl.flock(fd, fcntl.LOCK_UN)
+
+def _release_file_lock(fd: int) -> None:
+    """Release exclusive lock on Unix."""
+    if sys.platform == "win32":
+        raise RuntimeError("Windows ownership uses a named pipe")
+    import fcntl
+
+    fcntl.flock(fd, fcntl.LOCK_UN)
 
 
 logger = logging.getLogger(__name__)
 
 # ── Process-level guard ──────────────────────────────────────────────────
-# On some platforms (notably Windows), file locks are per-process, not
-# per-file-descriptor.  This means a second ``SingleInstance`` in the
-# *same* process could acquire the same lock again, defeating the purpose
-# of single-instance detection.
-#
-# We track which lock paths have already been acquired in this process
-# and refuse to re-acquire them.  This also makes tests more robust
-# because two ``SingleInstance`` objects in the same pytest process
-# cannot both claim the same lock.
+# Track ownership in this process as well as the OS primitive, so repeated
+# acquisitions have the same behavior across supported platforms.
 _acquired_locks: set[str] = set()
 
 _UNIX_DIRECTORY_MODE = 0o700
@@ -317,10 +307,10 @@ def _open_unix_lock_file(ipc_dir: Path) -> IO[str]:
 
 
 class SingleInstance:
-    """File-lock based single-instance manager.
+    """Process-owned single-instance manager.
 
     Ensures only one instance of the application runs at a time by
-    acquiring an exclusive, non-blocking file lock.
+    acquiring exclusive, non-blocking process ownership.
 
     Usage::
 
@@ -347,40 +337,32 @@ class SingleInstance:
         """Initialise the single-instance manager.
 
         Args:
-            app_name: Application name used to derive the lock identity.  On
-                Windows the lock file remains at
-                ``{tempdir}/{app_name}/instance.lock``.  Unix hashes the name
-                into a user-private runtime namespace.
+            app_name: Application name used to derive the ownership identity.
+                Windows uses a per-user named pipe; Unix hashes the name into
+                a user-private runtime namespace.
         """
         if not app_name or not app_name.strip():
             raise ValueError("app_name must be a non-empty string")
 
         self._app_name: str = app_name.strip()
         self._lock_file: object | None = None
+        self._windows_listener: Listener | None = None
         self._ipc_dir: str = self._compute_ipc_dir()
-        self._lock_path: str = str(Path(self._ipc_dir) / "instance.lock")
+        self._lock_path: str = self._ipc_dir if sys.platform == "win32" else str(Path(self._ipc_dir) / "instance.lock")
         self._acquired: bool = False
-
-        if sys.platform == "win32":
-            # Preserve the established Windows path and creation behavior.
-            try:
-                Path(self._ipc_dir).mkdir(parents=True, exist_ok=True)
-            except OSError as exc:
-                raise SingleInstanceError(f"无法创建 IPC 目录 {self._ipc_dir}: {exc}") from exc
 
         logger.debug("IPC directory: %s", self._ipc_dir)
 
     def _compute_ipc_dir(self) -> str:
         """Return the IPC directory path.
 
-        Windows uses the historical system-temp path.  Unix prefers a valid
+        Windows uses the same stable user scope as GUI control. Unix prefers a valid
         private ``XDG_RUNTIME_DIR`` and otherwise creates a per-user namespace
         below a verified temporary root.
         """
         if sys.platform != "win32":
             return str(_prepare_unix_ipc_directory(self._app_name))
-        temp_dir = tempfile.gettempdir()
-        return str(Path(temp_dir) / self._app_name)
+        return rf"\\.\pipe\{self._app_name}-instance-v1-{user_namespace()}"
 
     # ── Public API ────────────────────────────────────────────────────────
 
@@ -404,9 +386,6 @@ class SingleInstance:
             return True
 
         # Process-level guard: prevent re-acquire in the same process.
-        # On Windows file locks are per-process, so a second open()+lock
-        # on the same lock file would succeed even though another instance
-        # of SingleInstance in the same process already holds it.
         if self._lock_path in _acquired_locks:
             logger.info(
                 "Another instance in this process already holds the lock: %s",
@@ -420,39 +399,19 @@ class SingleInstance:
         return self._acquire_unix()
 
     def _acquire_windows(self) -> bool:
-        """Acquire using the established Windows behavior unchanged."""
+        """Keep the first pipe instance open until release or process death."""
         try:
-            lock_file = Path(self._lock_path).open("w", encoding="utf-8")  # noqa: SIM115 — lock must stay open
+            listener = Listener(self._lock_path, family="AF_PIPE", authkey=None)
         except OSError as exc:
-            raise SingleInstanceError(f"无法打开锁文件 {self._lock_path}: {exc}") from exc
-
-        try:
-            _acquire_file_lock(lock_file.fileno())
-        except OSError:
-            # Lock contention — another instance is running.
-            with contextlib.suppress(Exception):
-                lock_file.close()
-            logger.info("Another instance is already running (lock held: %s)", self._lock_path)
-            self._lock_file = None
-            self._acquired = False
-            return False
-
-        # Lock acquired — write PID for diagnostic visibility.
-        try:
-            lock_file.write(str(os.getpid()))
-            lock_file.flush()
-        except OSError as exc:
-            # Write failed but lock is held — release and report.
-            with contextlib.suppress(Exception):
-                _release_file_lock(lock_file.fileno())
-            with contextlib.suppress(Exception):
-                lock_file.close()
-            raise SingleInstanceError(f"无法写入 PID 到锁文件 {self._lock_path}: {exc}") from exc
-
-        self._lock_file = lock_file
+            # FILE_FLAG_FIRST_PIPE_INSTANCE reports access denied when an owner
+            # already exists. Other failures must not masquerade as contention.
+            if getattr(exc, "winerror", None) == 5:
+                return False
+            raise SingleInstanceError(f"windows_instance_acquire_failed:{exc}") from exc
+        self._windows_listener = listener
         self._acquired = True
         _acquired_locks.add(self._lock_path)
-        logger.info("Single-instance lock acquired: %s (PID %d)", self._lock_path, os.getpid())
+        logger.info("Single-instance pipe acquired: %s (PID %d)", self._lock_path, os.getpid())
         return True
 
     def _acquire_unix(self) -> bool:
@@ -492,7 +451,7 @@ class SingleInstance:
     def release(self) -> None:
         """Release the single-instance lock; safe to call multiple times.
 
-        Windows retains its historical best-effort lock-file deletion.
+        Windows closes the process-owned pipe handle without filesystem cleanup.
         Unix clears the diagnostic PID but keeps the sentinel inode so a
         waiter can never race an unlink and acquire a different lock file.
         Cleanup errors are logged rather than re-raised during shutdown.
@@ -504,6 +463,12 @@ class SingleInstance:
 
         # Remove from process-level guard set.
         _acquired_locks.discard(self._lock_path)
+
+        if self._windows_listener is not None:
+            listener, self._windows_listener = self._windows_listener, None
+            self._acquired = False
+            listener.close()
+            return
 
         if is_ipc_disabled():
             self._acquired = False
@@ -517,35 +482,7 @@ class SingleInstance:
         if lock_file is None:
             return
 
-        if sys.platform != "win32":
-            self._release_unix(lock_file)
-            return
-
-        fd = getattr(lock_file, "fileno", lambda: -1)()
-
-        # Release the OS-level lock.
-        if fd >= 0:
-            try:
-                _release_file_lock(fd)
-            except Exception as exc:
-                err_no = getattr(exc, "errno", None)
-                if not (isinstance(exc, PermissionError) or err_no == 13):
-                    logger.debug("Unlock error (ignorable): %s", exc)
-
-        # Close the file handle.
-        with contextlib.suppress(Exception):
-            lock_file.close()  # pyright: ignore[reportAttributeAccessIssue]
-
-        # Best-effort delete the lock file.
-        try:
-            lock_path = Path(self._lock_path)
-            if lock_path.exists():
-                lock_path.unlink()
-                logger.debug("Lock file deleted: %s", self._lock_path)
-        except Exception as exc:
-            logger.debug("Could not delete lock file (OS will reclaim): %s", exc)
-
-        logger.info("Single-instance lock released: %s", self._lock_path)
+        self._release_unix(lock_file)
 
     def _release_unix(self, lock_file: object) -> None:
         """Release Unix ownership without unlinking the shared sentinel inode."""

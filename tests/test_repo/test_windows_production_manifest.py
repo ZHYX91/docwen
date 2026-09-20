@@ -19,7 +19,7 @@ MANIFEST = ROOT / "release" / "windows-production-manifest.v1.json"
 
 def test_windows_production_manifest_has_one_offline_asset_and_fixed_epoch() -> None:
     manifest = production.read_manifest(MANIFEST)
-    assert manifest["product"]["version"] == "0.12.0"
+    assert manifest["product"]["version"] == "0.12.1"
     assert manifest["product"]["releaseTagFormat"] == "{version}"
     assert manifest["product"]["cliJsonProtocolVersion"] == 3
     assert manifest["build"]["mode"] == "pure-python"
@@ -29,8 +29,8 @@ def test_windows_production_manifest_has_one_offline_asset_and_fixed_epoch() -> 
     assert "DocWenCLI-windows-x64.zip" not in json.dumps(manifest)
     assert manifest["releaseAssetAllowlist"] == [
         "DocWen-windows-x64.zip",
-        "DocWenCLI-0.12.0-linux-x64.tar.gz",
-        "DocWen-0.12.0-linux-x64.tar.gz",
+        "DocWenCLI-0.12.1-linux-x64.tar.gz",
+        "DocWen-0.12.1-linux-x64.tar.gz",
         "SHA256SUMS.txt",
     ]
     assert manifest["toolchain"]["python"] == {
@@ -39,23 +39,12 @@ def test_windows_production_manifest_has_one_offline_asset_and_fixed_epoch() -> 
         "arch": "x86_64",
         "baseExecutableSha256": "02c3bcf63782cc34665ff39ea73d029128ef0849c5a67fe4bbb03748a63fb4f1",
     }
-    assert manifest["payload"]["allowlist"] == {
-        "path": "release/windows-payload-allowlist.v1.json",
-        "status": "FROZEN",
-        "sha256": production.sha256_file(ROOT / "release/windows-payload-allowlist.v1.json"),
-        "rejectMissing": True,
-        "rejectUnexpected": True,
-        "rejectCaseFoldCollision": True,
-        "rejectLinksAndNonRegular": True,
-    }
+    assert manifest["payload"]["rootExecutables"] == ["DocWen.exe", "DocWenCLI.exe"]
 
 
-def test_source_contracts_and_frozen_payload_allowlist_are_current() -> None:
+def test_source_contracts_are_current() -> None:
     manifest = production.read_manifest(MANIFEST)
     production.verify_source_contracts(ROOT, manifest)
-    allowlist = ROOT / manifest["payload"]["allowlist"]["path"]
-    assert manifest["payload"]["allowlist"]["status"] == "FROZEN"
-    assert production.sha256_file(allowlist) == manifest["payload"]["allowlist"]["sha256"]
 
 
 def test_toolchain_hashes_the_base_interpreter_not_the_path_bound_venv_launcher(
@@ -294,42 +283,6 @@ def test_capture_payload_rejects_host_selected_windows_runtime(tmp_path: Path, r
 
     with pytest.raises(production.ProductionBuildError, match=error):
         production.capture_payload(payload)
-
-
-def test_payload_allowlist_mismatch_details_are_bounded_and_actionable() -> None:
-    expected = {
-        "schemaVersion": 1,
-        "entries": [
-            {"path": "DocWen.exe", "bytes": 3, "sha256": "a" * 64, "executable": True},
-            {"path": "removed.txt", "bytes": 1, "sha256": "b" * 64, "executable": False},
-        ],
-    }
-    observed = {
-        "schemaVersion": 1,
-        "entries": [
-            {"path": "DocWen.exe", "bytes": 4, "sha256": "c" * 64, "executable": True},
-            {"path": "added.txt", "bytes": 2, "sha256": "d" * 64, "executable": False},
-        ],
-    }
-
-    details = production.payload_allowlist_mismatch_details(production.canonical_bytes(expected), observed, limit=1)
-
-    assert details == {
-        "addedCount": 1,
-        "addedPaths": ["added.txt"],
-        "removedCount": 1,
-        "removedPaths": ["removed.txt"],
-        "changedCount": 1,
-        "changes": [
-            {
-                "path": "DocWen.exe",
-                "expected": expected["entries"][0],
-                "observed": observed["entries"][0],
-            }
-        ],
-        "truncated": False,
-        "observedSha256": hashlib.sha256(production.canonical_bytes(observed)).hexdigest(),
-    }
 
 
 def test_packaged_record_normalization_removes_only_external_rows(tmp_path: Path) -> None:

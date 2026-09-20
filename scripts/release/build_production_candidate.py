@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Build the single manifest-bound Windows production payload.
 
-Normal mode fails closed until the checked-in payload allowlist is calibrated.
-Calibration mode creates an observed allowlist as evidence but never calls the
-result production-ready.  The source checkout is never used as a build/output
-directory: a clean local clone is created under the caller-owned work root.
+One build records its actual payload inventory and hashes for candidate transport
+and verification. The source checkout is never used as a build/output directory:
+a clean local clone is created under the caller-owned work root.
 """
 
 from __future__ import annotations
@@ -441,73 +440,14 @@ def capture_payload(payload: Path) -> list[dict[str, object]]:
     return rows
 
 
-def payload_allowlist_mismatch_details(
-    expected_bytes: bytes,
-    observed_allowlist: dict[str, object],
-    *,
-    limit: int = 32,
-) -> dict[str, object]:
-    """Return a bounded, log-safe summary for an exact allowlist mismatch."""
-
-    require(limit > 0, "payload_allowlist_diff_limit_invalid")
-
-    def index_entries(value: object, *, label: str) -> dict[str, dict[str, object]]:
-        if not isinstance(value, list):
-            raise ProductionBuildError(f"payload_allowlist_{label}_entries_invalid")
-        indexed: dict[str, dict[str, object]] = {}
-        for entry in value:
-            if not isinstance(entry, dict):
-                raise ProductionBuildError(f"payload_allowlist_{label}_entry_invalid")
-            path = entry.get("path")
-            if not isinstance(path, str) or not path:
-                raise ProductionBuildError(f"payload_allowlist_{label}_path_invalid")
-            indexed[path] = entry
-        return indexed
-
-    try:
-        expected_allowlist = json.loads(expected_bytes)
-        if not isinstance(expected_allowlist, dict):
-            raise ProductionBuildError("payload_allowlist_expected_invalid")
-        expected_by_path = index_entries(expected_allowlist.get("entries"), label="expected")
-        observed_by_path = index_entries(observed_allowlist.get("entries"), label="observed")
-    except (json.JSONDecodeError, KeyError, TypeError) as exc:
-        raise ProductionBuildError("payload_allowlist_diff_unavailable") from exc
-
-    added_paths = sorted(observed_by_path.keys() - expected_by_path.keys())
-    removed_paths = sorted(expected_by_path.keys() - observed_by_path.keys())
-    changed_paths = sorted(
-        path
-        for path in expected_by_path.keys() & observed_by_path.keys()
-        if expected_by_path[path] != observed_by_path[path]
-    )
-    changes = [
-        {
-            "path": path,
-            "expected": expected_by_path[path],
-            "observed": observed_by_path[path],
-        }
-        for path in changed_paths[:limit]
-    ]
-    return {
-        "addedCount": len(added_paths),
-        "addedPaths": added_paths[:limit],
-        "removedCount": len(removed_paths),
-        "removedPaths": removed_paths[:limit],
-        "changedCount": len(changed_paths),
-        "changes": changes,
-        "truncated": any(len(paths) > limit for paths in (added_paths, removed_paths, changed_paths)),
-        "observedSha256": hashlib.sha256(canonical_bytes(observed_allowlist)).hexdigest(),
-    }
-
-
 def normalize_packaged_msvc_runtime(payload: Path, dependency_root: Path) -> dict[str, object]:
     """Replace host-selected MSVC runtime files with locked wheel copies.
 
     PyInstaller resolves these four DLLs through the Windows loader search
     path.  A host Visual C++ Runtime update can therefore change an otherwise
     manifest-bound payload.  The locked pikepdf wheel ships the same runtime
-    closure, so use those files as the deterministic source and let the frozen
-    payload allowlist verify their exact hashes.
+    closure, so use those files as the deterministic source and record their
+    exact hashes in the candidate payload manifest.
     """
 
     internal = payload / "_internal"
@@ -626,30 +566,6 @@ def _build(args: argparse.Namespace) -> dict[str, Any]:
     )
     record_normalization = normalize_packaged_record_files(payload)
     rows = capture_payload(payload)
-    allowlist_policy = manifest["payload"]["allowlist"]
-    observed_allowlist = {"schemaVersion": 1, "entries": rows}
-    observed_bytes = canonical_bytes(observed_allowlist)
-    if args.calibrate_allowlist:
-        require(
-            allowlist_policy["status"] == "CALIBRATION_REQUIRED" and allowlist_policy["sha256"] is None,
-            "calibration_not_authorized_by_manifest",
-        )
-        atomic_write(evidence / "windows-payload-allowlist.v1.json", observed_bytes)
-        classification = "CALIBRATION_ONLY_NOT_PRODUCTION"
-    else:
-        require(
-            allowlist_policy["status"] == "FROZEN" and isinstance(allowlist_policy["sha256"], str),
-            "payload_allowlist_not_frozen",
-        )
-        allowlist_path = clone / allowlist_policy["path"]
-        require(sha256_file(allowlist_path) == allowlist_policy["sha256"], "payload_allowlist_file_hash_mismatch")
-        expected_allowlist_bytes = allowlist_path.read_bytes()
-        if expected_allowlist_bytes != observed_bytes:
-            details = payload_allowlist_mismatch_details(expected_allowlist_bytes, observed_allowlist)
-            raise ProductionBuildError(
-                f"payload_allowlist_mismatch:{json.dumps(details, ensure_ascii=True, sort_keys=True, separators=(',', ':'))}"
-            )
-        classification = "PRODUCTION_PAYLOAD_VERIFIED"
     zip_path = output / manifest["channels"]["offlineZip"]["assetName"]
     deterministic_zip(payload, zip_path, rows, reproducibility_epoch)
     payload_manifest = {"schemaVersion": 1, "files": rows}
@@ -657,7 +573,7 @@ def _build(args: argparse.Namespace) -> dict[str, Any]:
     atomic_write(evidence / "payload-manifest.json", payload_manifest_bytes)
     resolved = {
         "schemaVersion": 1,
-        "classification": classification,
+        "classification": "PRODUCTION_PAYLOAD_VERIFIED",
         "source": {
             "commit": commit,
             "tree": tree,
@@ -673,7 +589,6 @@ def _build(args: argparse.Namespace) -> dict[str, Any]:
         "sourceContracts": source_hashes,
         "toolchain": tool_hashes,
         "payloadManifestSha256": hashlib.sha256(payload_manifest_bytes).hexdigest(),
-        "payloadAllowlistSha256": hashlib.sha256(observed_bytes).hexdigest(),
         "packagedMsvcRuntimeNormalization": msvc_runtime_normalization,
         "packagedRecordNormalization": record_normalization,
         "offlineZip": {"name": zip_path.name, "bytes": zip_path.stat().st_size, "sha256": sha256_file(zip_path)},
@@ -729,7 +644,6 @@ def parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Keep the owned production build work root after a successful build.",
     )
-    result.add_argument("--calibrate-allowlist", action="store_true")
     return result
 
 

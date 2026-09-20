@@ -19,6 +19,8 @@ Whitespace-only environment values are absent. Relative profile selections are e
 
 GUI instance identity includes both the canonical data and configuration directories. Separate configurations over the same template data use separate GUI instances. Log preferences do not create another instance. A package upgrade keeps its user-data identity; a copied archive uses the copy's own data unless an explicit environment selection overrides it.
 
+Windows single-instance ownership uses a process-owned named pipe in the same user scope as GUI control. Changing `TEMP`, `TMP` or `TMPDIR` cannot create another owner for the same profile. Normal shutdown closes the ownership handle after control has stopped; process termination releases it without deleting a lock file.
+
 ## Copying or importing existing data
 
 Close processes that use the source and destination profiles. For an archive, copy the application's `data` directory together with the executable directory. To import a current profile into a new location, create a new empty directory and copy `configs/`, `templates/` and `template-state.json` into it. Select that directory with `DOCWEN_DATA_DIR` before starting DocWen or its consumer. Logs are optional and are not needed to preserve settings.

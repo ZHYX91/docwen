@@ -118,7 +118,8 @@ class GitHub:
         if remaining_limit > 0:
             raise PendingRead("waiting for GitHub rate limit", retry_after=remaining_limit)
         host = "https://uploads.github.com" if data is not None else "https://api.github.com"
-        if not path.startswith(f"/repos/{self.repository}/"):
+        repository_path = f"/repos/{self.repository}"
+        if path != repository_path and not path.startswith(f"{repository_path}/"):
             raise PublicationError("request outside the publication repository")
         headers = {
             "Authorization": f"Bearer {self._token}",

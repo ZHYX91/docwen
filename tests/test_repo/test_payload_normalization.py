@@ -72,4 +72,5 @@ def test_production_builder_direct_entrypoint_resolves_shared_normalizer() -> No
     )
 
     assert result.returncode == 0, result.stderr
-    assert "--calibrate-allowlist" in result.stdout
+    assert "--manifest" in result.stdout
+    assert "--output-root" in result.stdout
