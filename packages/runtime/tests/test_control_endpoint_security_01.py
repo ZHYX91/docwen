@@ -457,7 +457,7 @@ def test_selected_fallback_root_does_not_change_when_child_is_unsafe(
     monkeypatch.setattr(transport, "_fallback_root_paths", lambda: (first, second))
     monkeypatch.setattr(transport, "_UNIX_SOCKET_PATH_MAX_BYTES", 4096)
     app_name = f"docwen-fixed-root-{uuid4().hex}"
-    namespace = transport._user_namespace()
+    namespace = transport.user_namespace()
     app_namespace = transport.hashlib.sha256(app_name.encode()).hexdigest()[:12]
     child = first / f"docwen-{namespace}-{app_namespace}"
     child.write_text("occupied", encoding="utf-8")

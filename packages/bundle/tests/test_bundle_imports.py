@@ -9,4 +9,4 @@ def test_bundle_importable() -> None:
     """docwen_bundle should be importable."""
     import docwen_bundle
 
-    assert docwen_bundle.__version__ == "0.12.0"
+    assert docwen_bundle.__version__ == "0.12.1"

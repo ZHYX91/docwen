@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import contextlib
 import errno
-import getpass
 import hashlib
 import json
 import math
@@ -27,6 +26,7 @@ from pathlib import Path
 from typing import Any, Protocol, cast
 from uuid import uuid4
 
+from docwen_runtime.ipc.namespace import user_namespace
 from docwen_runtime.security.network import LocalUnixStreamChannel, probe_local_unix_stream_endpoint
 
 CONTROL_PROTOCOL_VERSION = 1
@@ -210,11 +210,6 @@ class ControlEndpointError(ControlError):
             "gui_control_endpoint_unavailable",
             "The DocWen GUI control endpoint is unavailable.",
         )
-
-
-def _user_namespace() -> str:
-    identity = f"{getpass.getuser()}|{Path.home()}".encode("utf-8", errors="replace")
-    return hashlib.sha256(identity).hexdigest()[:16]
 
 
 @dataclass(frozen=True, slots=True)
@@ -644,7 +639,7 @@ def _release_unix_server_endpoint(lease: _UnixEndpointLease) -> None:
 def control_endpoint(app_name: str = "docwen") -> tuple[str, str]:
     """Plan the current user's stable endpoint without creating filesystem state."""
 
-    namespace = _user_namespace()
+    namespace = user_namespace()
     if sys.platform == "win32":
         return rf"\\.\pipe\{app_name}-runtime-control-v1-{namespace}", "AF_PIPE"
 
@@ -754,7 +749,7 @@ class ControlClient:
                 raise exc from self._endpoint_error
             self._endpoint_error = None
         if sys.platform != "win32":
-            plan = _plan_unix_endpoint(self._app_name, _user_namespace())
+            plan = _plan_unix_endpoint(self._app_name, user_namespace())
             try:
                 _validate_unix_client_endpoint(plan)
             except FileNotFoundError as exc:
@@ -1054,7 +1049,7 @@ class ControlServer:
     def _serve(self) -> None:
         listener: Listener | None = None
         try:
-            namespace = _user_namespace()
+            namespace = user_namespace()
             if sys.platform == "win32":
                 self._address, self._family = control_endpoint(self._app_name)
             else:

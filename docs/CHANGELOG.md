@@ -5,7 +5,12 @@
 
 ## Unreleased / 未发布
 
-## 0.12.0 (2026-09-20)
+## 0.12.1 (2026-09-20)
+
+0.12.0 候选在发布前撤回；0.12.1 包含以下全部变更。The 0.12.0 candidate was withdrawn before publication; 0.12.1 includes all changes below.
+
+- 修复 Windows 同一资料目录从不同临时目录二次启动时的崩溃，文件交给已有窗口；实例退出后由系统释放所有权。
+- Fix Windows second-launch crashes when the same profile is opened with a different temporary directory; hand files to the existing window and release ownership on process exit.
 
 - Machine Protocol 升至 2.0、Artifact Bundle 升至 v3；模板使用规范 ID，并明确来源、默认状态、启停与顺序。集成需要 DocWen Assistant 3.0 或 DocWen OpenClaw 3.0，不接受旧协议。
 - 便携包默认使用程序旁的 `data`，MSIX 使用用户可写资料目录；GUI、CLI、Machine 和单实例控制固定同一份资料选择，配置和日志覆盖只影响各自组件。

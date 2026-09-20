@@ -116,17 +116,18 @@ class TestSingleInstance:
         instance = SingleInstance("test_ipc_dir")
         try:
             if sys.platform == "win32":
-                assert "test_ipc_dir" in instance.ipc_dir
+                assert instance.ipc_dir.startswith(r"\\.\pipe\test_ipc_dir-instance-v1-")
             else:
                 assert Path(instance.ipc_dir).name.startswith("docwen-instance-")
-            assert os.path.isdir(instance.ipc_dir)
+                assert os.path.isdir(instance.ipc_dir)
         finally:
             instance.close()
 
     def test_lock_path_property(self) -> None:
         instance = SingleInstance("test_lock_path")
         try:
-            assert instance.lock_path.endswith("instance.lock")
+            if sys.platform != "win32":
+                assert instance.lock_path.endswith("instance.lock")
             assert instance.ipc_dir in instance.lock_path
         finally:
             instance.close()
@@ -142,6 +143,68 @@ class TestSingleInstance:
 
     def test_create_single_instance_factory(self) -> None:
         assert isinstance(create_single_instance("test_factory"), SingleInstance)
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows process-owned pipe")
+class TestWindowsSingleInstance:
+    def test_different_temporary_directories_share_ownership_and_release_on_death(self, tmp_path: Path) -> None:
+        from uuid import uuid4
+
+        name = "temp-independent-" + uuid4().hex
+        first_temp = tmp_path / "first"
+        second_temp = tmp_path / "second"
+        first_temp.mkdir()
+        second_temp.mkdir()
+
+        def environment(directory: Path) -> dict[str, str]:
+            return dict(os.environ, TEMP=str(directory), TMP=str(directory), TMPDIR=str(directory))
+
+        holder = subprocess.Popen(
+            [
+                sys.executable,
+                "-u",
+                "-c",
+                "from docwen_runtime.ipc import SingleInstance; import sys; "
+                "lock=SingleInstance(sys.argv[1]); print(lock.acquire(),flush=True); sys.stdin.readline()",
+                name,
+            ],
+            env=environment(first_temp),
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            assert holder.stdout is not None
+            assert holder.stdout.readline().strip() == "True"
+            probe = [
+                sys.executable,
+                "-c",
+                "from docwen_runtime.ipc import SingleInstance; import sys; "
+                "lock=SingleInstance(sys.argv[1]); acquired=lock.acquire(); lock.release(); print(acquired)",
+                name,
+            ]
+            denied = subprocess.run(probe, env=environment(second_temp), capture_output=True, text=True, timeout=10)
+            assert denied.returncode == 0 and denied.stdout.strip() == "False", denied.stderr
+            holder.kill()
+            holder.wait(timeout=10)
+            acquired = subprocess.run(probe, env=environment(second_temp), capture_output=True, text=True, timeout=10)
+            assert acquired.returncode == 0 and acquired.stdout.strip() == "True", acquired.stderr
+            assert list(first_temp.iterdir()) == list(second_temp.iterdir()) == []
+        finally:
+            if holder.poll() is None:
+                holder.kill()
+            holder.communicate(timeout=10)
+
+    def test_other_named_pipe_errors_are_not_reported_as_contention(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from docwen_runtime.ipc import single_instance
+
+        def failed_listener(*_args: object, **_kwargs: object) -> None:
+            raise OSError("unavailable transport")
+
+        monkeypatch.setattr(single_instance, "Listener", failed_listener)
+        with pytest.raises(SingleInstanceError, match="windows_instance_acquire_failed"):
+            SingleInstance("failed-listener").acquire()
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="Unix descriptor and permission contract")
