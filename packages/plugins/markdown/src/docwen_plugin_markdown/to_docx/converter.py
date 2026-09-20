@@ -188,16 +188,34 @@ def _process_yaml_non_embed_links(
     if not isinstance(value, str):
         return value
 
-    return _process_non_embed_links(
-        value,
-        source_file_path=source_file_path,
-        wiki_mode=link_config.non_embed_wiki_mode,
-        markdown_mode=link_config.non_embed_markdown_mode,
-        search_dirs=link_config.search_dirs,
-        target_format="docx",
-        on_not_found=link_config.file_not_found_mode,
-        canonicalize_local_docx_targets=True,
-    )
+    result = value
+    # Process the two syntaxes independently so a keep choice remains
+    # literal source text in a template field. The shared DOCX link processor
+    # escapes kept syntax for the Markdown renderer; YAML placeholders do not
+    # pass through that renderer and therefore must not receive those escapes.
+    if link_config.non_embed_markdown_mode != "keep":
+        result = _process_non_embed_links(
+            result,
+            source_file_path=source_file_path,
+            wiki_mode="pass",
+            markdown_mode=link_config.non_embed_markdown_mode,
+            search_dirs=link_config.search_dirs,
+            target_format="docx",
+            on_not_found=link_config.file_not_found_mode,
+            canonicalize_local_docx_targets=True,
+        )
+    if link_config.non_embed_wiki_mode != "keep":
+        result = _process_non_embed_links(
+            result,
+            source_file_path=source_file_path,
+            wiki_mode=link_config.non_embed_wiki_mode,
+            markdown_mode="pass",
+            search_dirs=link_config.search_dirs,
+            target_format="docx",
+            on_not_found=link_config.file_not_found_mode,
+            canonicalize_local_docx_targets=True,
+        )
+    return result
 
 
 def _request_heading_merge_punctuation(options: dict[str, object], config: object) -> frozenset[str]:
