@@ -1191,8 +1191,7 @@ class MdToDocxConverter:
                 for item in managed_styles.conflicts
             ]
             diagnostics[0:0] = [
-                ConversionDiagnostic(level="warning", message=message, code=code)
-                for code, message in renderer.warnings
+                ConversionDiagnostic(level="warning", message=message, code=code) for code, message in renderer.warnings
             ]
             if approximate_warning:
                 diagnostics.insert(
