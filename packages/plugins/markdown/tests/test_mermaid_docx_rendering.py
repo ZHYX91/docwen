@@ -5,6 +5,7 @@ import base64
 import pytest
 from docx import Document
 from docx.oxml.ns import qn
+from docx.text.paragraph import Paragraph
 
 from docwen_plugin_markdown.renderer import MdToDocxRenderer
 
@@ -36,6 +37,7 @@ def test_mermaid_image_mode_embeds_png_instead_of_visible_source() -> None:
     )
 
     paragraph = renderer._handle_block_code(_mermaid_node())
+    assert isinstance(paragraph, Paragraph)
 
     assert rendered_sources == ["graph TD\nA-->B\n"]
     assert paragraph.text == ""
@@ -54,6 +56,7 @@ def test_mermaid_image_failure_falls_back_to_code_with_warning() -> None:
     )
 
     paragraph = renderer._handle_block_code(_mermaid_node())
+    assert isinstance(paragraph, Paragraph)
 
     assert paragraph.text == "graph TD\nA-->B"
     assert renderer.warnings[0][0] == "MD2DOCX-MERMAID-FALLBACK"
@@ -72,6 +75,7 @@ def test_non_mermaid_fence_never_calls_mermaid_renderer() -> None:
     node = {"type": "block_code", "attrs": {"info": "python"}, "raw": "print('ok')\n"}
 
     paragraph = renderer._handle_block_code(node)
+    assert isinstance(paragraph, Paragraph)
 
     assert paragraph.text == "print('ok')"
     assert renderer.warnings == ()
