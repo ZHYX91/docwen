@@ -34,6 +34,46 @@ class FileAdmissionDiagnostic(Protocol):
     def warnings(self) -> tuple[dict[str, Any], ...]: ...
 
 
+_FORMAT_NOTICE_CODES = frozenset(
+    {
+        "FILE_FORMAT_COMPATIBLE_TEXT",
+        "FILE_FORMAT_SAME_FAMILY_MISMATCH",
+        "FILE_FORMAT_CROSS_FAMILY_MISMATCH",
+        "FILE_EXTENSION_UNSUPPORTED",
+    }
+)
+
+
+def render_file_format_notice(file_ref: Any) -> str:
+    """Return a compact actual-format notice for one admitted mismatch.
+
+    This is presentation-only.  Admission and confirmation semantics remain
+    owned by the frozen inspection fact.
+    """
+
+    try:
+        from docwen_core.models import FILE_INSPECTION_METADATA_KEY
+    except Exception:
+        return ""
+
+    metadata = getattr(file_ref, "metadata", {})
+    inspection = metadata.get(FILE_INSPECTION_METADATA_KEY) if isinstance(metadata, dict) else None
+    if not isinstance(inspection, Mapping):
+        return ""
+
+    code = str(inspection.get("warning_code", "") or "").strip().upper()
+    if code not in _FORMAT_NOTICE_CODES:
+        return ""
+
+    detected = str(inspection.get("detected_format", "") or getattr(file_ref, "format", "") or "").strip()
+    if not detected or detected.casefold() == "unknown":
+        return ""
+    return t(
+        "file_admission.actual_format",
+        "Actual format: {detected_format}",
+        detected_format=detected.upper(),
+    )
+
 _ENGLISH_FALLBACKS: dict[str, str] = {
     "FILE_FORMAT_COMPATIBLE_TEXT": (
         "The filename declares {declared_format}, while the content was detected as "
@@ -180,5 +220,6 @@ def render_file_inspection_message(
 __all__ = [
     "render_file_admission_code",
     "render_file_admission_message",
+    "render_file_format_notice",
     "render_file_inspection_message",
 ]
