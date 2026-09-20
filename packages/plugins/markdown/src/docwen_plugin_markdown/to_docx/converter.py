@@ -917,6 +917,14 @@ class MdToDocxConverter:
                 allowed={"apply", "keep", "remove"},
             )
             formatting_mode = _resolve_body_formatting_mode(options, context.config)
+            mermaid_mode = _option_or_config(
+                options,
+                "mermaid_mode",
+                context.config,
+                "conversion.md_to_docx.mermaid_mode",
+                "code",
+                allowed={"code", "image"},
+            )
             table_style_mode = _option_or_config(
                 options,
                 "table_style_mode",
@@ -993,6 +1001,8 @@ class MdToDocxConverter:
                 note_ctx=note_ctx,
                 source_file_path=input_path,
                 declared_resource_resolver=declared_resource_resolver,
+                mermaid_mode=mermaid_mode,
+                mermaid_work_dir=str(workspace.staging_dir),
             )
             try:
                 paragraphs = renderer.render(semantic_analysis.ast)
@@ -1179,6 +1189,10 @@ class MdToDocxConverter:
                     ),
                 )
                 for item in managed_styles.conflicts
+            ]
+            diagnostics[0:0] = [
+                ConversionDiagnostic(level="warning", message=message, code=code)
+                for code, message in renderer.warnings
             ]
             if approximate_warning:
                 diagnostics.insert(
