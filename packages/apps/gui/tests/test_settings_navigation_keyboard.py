@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAccessible
+from PySide6.QtGui import QAccessible, QPalette
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QComboBox, QFocusFrame, QWidget
+from PySide6.QtWidgets import QComboBox, QWidget
 
 from docwen_gui.i18n import t
 from docwen_gui.view_models.settings_vm import SettingsViewModel
@@ -45,13 +45,19 @@ def test_all_sidebar_pages_and_language_expose_accessible_names(dialog) -> None:
 
 def test_arrows_keep_sidebar_focus_enter_does_not_submit_and_tab_enters_content(dialog, qapp) -> None:
     first = _item(dialog, "general")
+    frame = dialog.findChild(QWidget, "settingsNavigationFocusFrame")
+    assert frame is not None and not frame.isVisible()
     first.setFocus(Qt.FocusReason.TabFocusReason)
     qapp.processEvents()
-    frame = dialog.findChild(QFocusFrame, "settingsNavigationFocusFrame")
-    assert frame is not None and frame.isVisible()
+    assert frame.isVisible() and frame.parentWidget() is first
+    focus_image = frame.grab().toImage()
+    highlight = frame.palette().color(QPalette.ColorRole.Highlight)
+    assert any(focus_image.pixelColor(focus_image.width() // 2, y) == highlight for y in range(4))
     QTest.keyClick(first, Qt.Key.Key_Down)
     assert dialog.current_section() == "text"
     assert qapp.focusWidget() is _item(dialog, "text")
+    assert frame.isVisible() and frame.parentWidget() is _item(dialog, "text")
+    assert frame.geometry() == _item(dialog, "text").rect()
     assert not first.focusPolicy() & Qt.FocusPolicy.TabFocus
     QTest.keyClick(_item(dialog, "text"), Qt.Key.Key_End)
     assert dialog.current_section() == "logging"

@@ -2,9 +2,34 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QEvent, QObject, Qt
-from PySide6.QtGui import QKeyEvent
-from PySide6.QtWidgets import QFocusFrame, QTabWidget, QWidget
+from PySide6.QtCore import QEvent, QObject, QRectF, Qt
+from PySide6.QtGui import QKeyEvent, QPainter, QPaintEvent, QPalette, QPen
+from PySide6.QtWidgets import QTabWidget, QWidget
+
+
+class _NavigationFocusFrame(QWidget):
+    """A mouse-transparent overlay unaffected by native focus-frame masks."""
+
+    def __init__(self, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.hide()
+
+    def follow(self, widget: QWidget) -> None:
+        self.setParent(widget)
+        self.setGeometry(widget.rect())
+        self.show()
+        self.raise_()
+
+    def paintEvent(self, event: QPaintEvent) -> None:
+        del event
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(QPen(self.palette().color(QPalette.ColorRole.Highlight), 2.0))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 5, 5)
+        painter.end()
 
 
 class SettingsNavigationKeyboard(QObject):
@@ -14,7 +39,7 @@ class SettingsNavigationKeyboard(QObject):
         super().__init__(parent)
         self._tabs = tabs
         self._items: dict[int, QWidget] = {}
-        self._focus_frame = QFocusFrame(parent)
+        self._focus_frame = _NavigationFocusFrame(parent)
         self._focus_frame.setObjectName("settingsNavigationFocusFrame")
 
     def add(self, index: int, key: str, entry: QWidget, title: str) -> None:
@@ -43,10 +68,11 @@ class SettingsNavigationKeyboard(QObject):
         if index is None or not isinstance(watched, QWidget):
             return super().eventFilter(watched, event)
         if event.type() == QEvent.Type.FocusIn:
-            self._focus_frame.setWidget(watched)
-            self._focus_frame.show()
+            self._focus_frame.follow(watched)
         elif event.type() == QEvent.Type.FocusOut:
             self._focus_frame.hide()
+        elif event.type() == QEvent.Type.Resize and self._focus_frame.parentWidget() is watched:
+            self._focus_frame.setGeometry(watched.rect())
         elif event.type() == QEvent.Type.KeyPress and isinstance(event, QKeyEvent):
             keys = sorted(self._items)
             position = keys.index(index)
