@@ -105,7 +105,7 @@ def _show_info_popup(button: QToolButton, text: str) -> None:
     action = QWidgetAction(menu)
     action.setDefaultWidget(label)
     menu.addAction(action)
-    button._docwen_help_popup = menu  # type: ignore[attr-defined]
+    menu.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
     menu.popup(button.mapToGlobal(QPoint(0, button.height() + Spacing.XS)))
 
 
