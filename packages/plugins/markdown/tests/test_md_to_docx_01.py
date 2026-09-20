@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from docx import Document
+
 from ._md_to_docx_support import (
     MdToDocxConverter,
     Path,
@@ -65,3 +67,33 @@ def test_unsupported_source_eol_fails_semantics_v3_with_zero_artifacts(tmp_path:
     assert result.error.diagnostic_code == "MD2DOCX-SEMANTICS-V3-UNSUPPORTED"
     assert "only LF and CRLF" in result.error.message
     assert [item.code for item in result.diagnostics] == ["MD2DOCX-SEMANTICS-V3-UNSUPPORTED"]
+
+
+def test_custom_template_without_body_placeholder_omits_markdown_body(tmp_path: Path) -> None:
+    source = tmp_path / "metadata-only.md"
+    source.write_text(
+        "---\ntitle: Metadata title\n---\n\n# Body heading\n\nBody paragraph that must not be appended.\n",
+        encoding="utf-8",
+    )
+    template_path = tmp_path / "metadata-only-template.docx"
+    template = Document()
+    template.paragraphs[0].text = "Title: {{title}}"
+    template.add_paragraph("Template suffix")
+    template.save(template_path)
+
+    context, _workspace = make_context(
+        str(source),
+        target_format="docx",
+        options={"template_name": str(template_path)},
+    )
+    result = MdToDocxConverter().convert(context)
+
+    assert result.success is True, result.error
+    output = Path(result.artifacts[0].staging_path)
+    reopened = Document(str(output))
+    visible_text = "\n".join(paragraph.text for paragraph in reopened.paragraphs)
+
+    assert "Metadata title" in visible_text
+    assert "Template suffix" in visible_text
+    assert "Body heading" not in visible_text
+    assert "Body paragraph that must not be appended." not in visible_text
