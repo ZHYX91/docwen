@@ -368,11 +368,35 @@ def test_settings_dialog_restores_visible_info_affordances(qapp) -> None:
     dialog = SettingsDialog(view_model=SettingsViewModel())
     info_buttons = dialog.findChildren(QToolButton, "settingsInfoButton")
 
+    from PySide6.QtCore import Qt
+
     assert len(info_buttons) >= 12
     assert all(btn.toolTip() for btn in info_buttons)
+    assert all(btn.focusPolicy() == Qt.FocusPolicy.StrongFocus for btn in info_buttons)
+    assert all(btn.width() >= 28 and btn.height() >= 28 for btn in info_buttons)
+    assert all(btn.accessibleName() for btn in info_buttons)
+    assert all(btn.accessibleDescription() == btn.toolTip() for btn in info_buttons)
     assert all((not btn.icon().isNull()) or btn.text() == "i" for btn in info_buttons)
 
     dialog.close()
+
+
+def test_settings_multiline_help_is_parsed_as_real_line_breaks(qapp) -> None:
+    from docwen_gui.i18n import get_locale, set_locale, t
+
+    previous = get_locale()
+    try:
+        for locale in ("zh_CN", "zh_TW", "en_US", "ja_JP"):
+            set_locale(locale)
+            for key in (
+                "settings.formatting.md_body_format_tooltip",
+                "settings.formatting.md_heading_format_tooltip",
+            ):
+                value = t(key)
+                assert "\n" in value
+                assert "\\n" not in value
+    finally:
+        set_locale(previous)
 
 
 def test_settings_dialog_changes_summary_uses_locale(qapp) -> None:
