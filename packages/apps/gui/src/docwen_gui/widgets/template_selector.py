@@ -18,11 +18,11 @@ from typing import Any
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QFrame,
-    QHBoxLayout,
     QLabel,
     QListWidget,
     QListWidgetItem,
     QMenu,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -30,6 +30,7 @@ from qfluentwidgets import PushButton
 
 from ..i18n import t
 from ..styles.design_tokens import Spacing
+from .panel_card import FormRow
 from .template_item_delegate import CUSTOM_ROLE, SOURCE_ROLE, TemplateItemDelegate
 
 logger = logging.getLogger(__name__)
@@ -142,28 +143,24 @@ class TemplateSelector(QWidget):
         self._list.currentItemChanged.connect(self._on_item_changed)
 
         self._list.customContextMenuRequested.connect(self._show_list_context_menu)
-        layout.addWidget(self._list)
+        layout.addWidget(self._list, 1)
 
         # ── 底部信息栏 ───────────────────────────────────────────────────
+        self._manage_button = PushButton(t("components.template_selector.manage_templates", "管理模板"), self)
+        self._manage_button.setObjectName("templateSelectorManageButton")
+        self._manage_button.clicked.connect(self._open_template_management)
         self._footer_row = QWidget(self)
         self._footer_row.setObjectName("templateSelectorFooterRow")
-        footer_layout = QHBoxLayout(self._footer_row)
+        self._footer_row.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+        footer_layout = QVBoxLayout(self._footer_row)
         footer_layout.setContentsMargins(Spacing.SM, Spacing.XS, Spacing.XS, Spacing.XS)
-        footer_layout.setSpacing(Spacing.XS)
-
-        self._details_label = QLabel()
+        footer_form = FormRow("", self._manage_button, self._footer_row)
+        footer_layout.addWidget(footer_form)
+        self._details_label = footer_form.label
         self._details_label.setObjectName("templateSelectorMetaLabel")
         self._details_label.setWordWrap(True)
         self._details_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
         self._details_label.setVisible(False)
-        footer_layout.addWidget(self._details_label, 1)
-
-        self._manage_button = PushButton(
-            t("components.template_selector.manage_templates", "管理模板"), self._footer_row
-        )
-        self._manage_button.setObjectName("templateSelectorManageButton")
-        self._manage_button.clicked.connect(self._open_template_management)
-        footer_layout.addWidget(self._manage_button, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
 
         layout.addWidget(self._footer_row)
 

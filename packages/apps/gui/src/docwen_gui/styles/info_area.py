@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from ._hex_helper import _hex_to_rgba
 from .control_metrics import button_geometry_qss
-from .design_tokens import Border, Radius, Sizing, Typography
+from .design_tokens import Border, Radius, Sizing, Spacing, Typography
 from .theme_semantics import (
     COLOR_INFO,
     COLOR_SECONDARY,
@@ -26,6 +26,26 @@ def build_info_area_stylesheet(theme_name: str, font_size_preset: str | None = N
     return "\n".join(
         [
             "/* docwen-status-bar-foundation */",
+            "QTabWidget#diagnosticView::pane { border: none; background: transparent; }",
+            "QTabWidget#diagnosticView QTabBar {",
+            f"    border: {Border.THIN}px solid transparent;",
+            f"    border-radius: {Radius.SMALL}px;",
+            "}",
+            "QTabWidget#diagnosticView QTabBar:focus { border-color: palette(highlight); }",
+            "QTabWidget#diagnosticView QTabBar::tab {",
+            f"    color: {'#E2E8F0' if dark_theme else '#0F172A'};",
+            "    background: transparent;",
+            "    border: none; border-bottom: 2px solid transparent;",
+            f"    padding: {Spacing.SM}px {Spacing.MD}px;",
+            f"    margin-right: {Spacing.XS}px;",
+            "}",
+            "QTabWidget#diagnosticView QTabBar::tab:selected {",
+            f"    background: {section_background};",
+            "    border-bottom-color: palette(highlight);",
+            "}",
+            "QTabWidget#diagnosticView QTabBar::tab:hover {",
+            f"    background: {_hex_to_rgba(activity_accent, 40 if dark_theme else 24)};",
+            "}",
             "QToolButton#outputFileCount {",
             f"    border: {Border.THIN}px solid palette(mid);",
             f"    border-radius: {Sizing.CONTROL_HEIGHT // 2}px;",
