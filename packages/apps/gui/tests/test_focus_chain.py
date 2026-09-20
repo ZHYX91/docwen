@@ -206,7 +206,6 @@ class TestSettingsDialogFocusChain:
 
         vm = SettingsViewModel(parent=None)
         dialog = SettingsDialog(parent=None, view_model=vm)
-        dialog._build_ui()
         yield dialog
         dialog.close()
 
