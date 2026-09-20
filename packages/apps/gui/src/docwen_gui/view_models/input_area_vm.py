@@ -20,8 +20,8 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import QObject, QUrl, Signal
 
 from docwen_core.paths import scan_input_directory
-from docwen_gui.file_types import FILE_CATEGORY_ORDER, FILE_EXTENSIONS_BY_CATEGORY
 from docwen_gui.file_admission_i18n import render_file_format_notice
+from docwen_gui.file_types import FILE_CATEGORY_ORDER, FILE_EXTENSIONS_BY_CATEGORY
 from docwen_gui.i18n import t as _t
 
 if TYPE_CHECKING:
