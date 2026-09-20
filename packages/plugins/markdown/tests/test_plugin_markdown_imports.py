@@ -159,6 +159,7 @@ def test_manifest_declares_consumed_docx_intermediate_rendering_options() -> Non
         "formatting_mode",
         "heading_formatting_mode",
         "table_header_formatting_mode",
+        "mermaid_mode",
         "code_font",
         "code_background_color",
         "table_style_mode",
