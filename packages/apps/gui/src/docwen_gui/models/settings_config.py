@@ -187,6 +187,9 @@ class FormattingConfig:
     unordered_list_syntax: str = "dash"
     indent_spaces: int = 4
 
+    # MD -> DOCX Mermaid
+    mermaid_mode: str = "code"
+
     # MD -> DOCX separators
     dash_sep: str = "page_break"
     asterisk_sep: str = "section_break"
