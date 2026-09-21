@@ -222,6 +222,9 @@ DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --o
 # Markdown を Word に変換（テンプレート指定 + 見出し/本文結合モード）
 DocWenCLI.exe convert document.md --to docx --output-dir exports --template template.docx.16f7dd4daed94f3a1130ef0999b3ae1f738a6b3cd185bebe363ada6536f8815f --heading-merge-mode punct_required
 
+# Markdown から Word へ変換し、公開前に生成 DOCX を校正
+DocWenCLI.exe convert document.md --to docx --output-dir exports --proofread --check typo --check punct
+
 # Markdown 出力時の画像モードと OCR テキスト配置を制御
 DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --image-mode file --ocr --ocr-placement image_md
 
@@ -246,6 +249,7 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | コマンド / オプション | 説明 |
 | --- | --- |
 | `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | 変換の統一エントリポイントです。 |
+| `convert <markdown> --to docx --output-dir <dir> --proofread [--check ...]` | Markdown→DOCX 後に生成 DOCX を校正します。`convert` の `--check` には `--proofread` が必要で、`--check` を省略すると設定済みの校正既定値を使用します。 |
 | `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | 実変換は行わず、検出、正規化、ルーティング、有効オプションだけを事前確認します。 |
 | `schema convert` | `convert` の機械可読な契約、デフォルト値、条件、正規キーを出力します。 |
 | `validate <file> --check ...` | 文書校正（`typo/punct/symbol/sensitive/all/none`）。CLI エンベロープには `--json` を使用します。`--report` は省略可能なレポートファイルのパスです。 |
