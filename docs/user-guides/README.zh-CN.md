@@ -601,7 +601,7 @@ DocWen Assistant 3.1 仍仅限 Windows 桌面端，尚无 Linux/macOS 组合验�
 
 ### 安装方法
 
-DocWen Assistant 3.1 使用 DocWen Machine Protocol v2 与唯一的 Artifact Bundle v3 合同。源码版本不能
+DocWen Assistant 3.1 要求 DocWen 0.13.0 或更高版本；转换、校对等内容操作使用 Machine Protocol v2 与唯一的 Artifact Bundle v3 合同，启动/打开桌面应用则使用独立的本机 GUI 控制面。源码版本不能
 证明已经发布；请只安装明确标识了兼容且已发布 DocWen 版本的数字版本 Release。
 
 ## 🔌 OpenClaw（插件 + Skill）
