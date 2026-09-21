@@ -7,9 +7,51 @@ import struct
 import time
 from pathlib import Path
 
+_RECYCLE_FLAGS = 0x80000 | 0x20000000 | 0x100000 | 0x400 | 0x10 | 0x4
+
+
+def _recycle_guard():
+    import pythoncom
+    from win32com.server.exception import COMException
+    from win32com.server.policy import DesignatedWrapPolicy
+    from win32com.shell import shell
+
+    class Guard(DesignatedWrapPolicy):
+        _com_interfaces_ = [shell.IID_IFileOperationProgressSink]
+        _public_methods_ = [
+            "PreDeleteItem",
+            "PostDeleteItem",
+            "StartOperations",
+            "FinishOperations",
+            "UpdateProgress",
+            "ResetTimer",
+            "PauseTimer",
+            "ResumeTimer",
+        ]
+        refused = False
+
+        def __init__(self):
+            self._wrap_(self)
+
+        def PreDeleteItem(self, flags, item):
+            # Raise a COM failure: returning an HRESULT integer from this Python
+            # callback does not cancel the operation in pywin32.
+            if not flags & 0x80:  # TSF_DELETE_RECYCLE_IF_POSSIBLE
+                self.refused = True
+                raise COMException(desc="permanent_deletion_refused", scode=pythoncom.E_ABORT)
+
+        def _noop(self, *args):
+            pass
+
+        PostDeleteItem = StartOperations = FinishOperations = UpdateProgress = _noop
+        ResetTimer = PauseTimer = ResumeTimer = _noop
+
+    return Guard()
+
 
 def _perform_recycle(path: Path) -> None:
     import pythoncom
+    import pywintypes
     from win32com.shell import shell
 
     pythoncom.CoInitialize()
@@ -17,11 +59,22 @@ def _perform_recycle(path: Path) -> None:
         operation = pythoncom.CoCreateInstance(
             shell.CLSID_FileOperation, None, pythoncom.CLSCTX_ALL, shell.IID_IFileOperation
         )
-        # RECYCLEONDELETE, EARLYFAILURE, ALLOWUNDO, NOERRORUI, NOCONFIRMATION, SILENT.
-        # RECYCLEONDELETE fails when recycling is unavailable; no permanent fallback.
-        operation.SetOperationFlags(0x80000 | 0x100000 | 0x40 | 0x400 | 0x10 | 0x4)
-        operation.DeleteItem(shell.SHCreateItemFromParsingName(str(path), None, shell.IID_IShellItem), None)
-        operation.PerformOperations()
+        # Request recycling and veto any permanent-delete operation before it runs.
+        # Flags alone do not provide that veto for every Shell fallback.
+        operation.SetOperationFlags(_RECYCLE_FLAGS)
+        guard = _recycle_guard()
+        operation.DeleteItem(
+            shell.SHCreateItemFromParsingName(str(path), None, shell.IID_IShellItem),
+            pythoncom.WrapObject(guard, shell.IID_IFileOperationProgressSink),
+        )
+        try:
+            operation.PerformOperations()
+        except pywintypes.com_error as error:
+            if guard.refused:
+                raise OSError(f"permanent_deletion_refused:{path}") from error
+            raise OSError(f"recycle_failed:{path}:{error}") from error
+        if guard.refused:
+            raise OSError(f"permanent_deletion_refused:{path}")
         if operation.GetAnyOperationsAborted():
             raise OSError(f"recycle_aborted:{path}")
     finally:

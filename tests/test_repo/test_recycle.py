@@ -37,6 +37,17 @@ def test_recycle_failure_keeps_target(tmp_path: Path, monkeypatch: pytest.Monkey
     assert target.read_text() == "keep"
 
 
+def test_shell_permanent_delete_is_vetoed_before_mutation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    target = tmp_path / "must-survive.txt"
+    target.write_text("keep")
+    # Deliberately request permanent deletion of this disposable fixture. The real
+    # COM callback must abort it; a Python HRESULT return alone is not sufficient.
+    monkeypatch.setattr(recycle, "_RECYCLE_FLAGS", 0x100000 | 0x400 | 0x10 | 0x4)
+    with pytest.raises(OSError, match="permanent_deletion_refused"):
+        recycle.recycle_path(target)
+    assert target.read_text() == "keep"
+
+
 def test_recycle_waits_for_new_metadata(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     target = tmp_path / "source"
     target.write_text("keep")
