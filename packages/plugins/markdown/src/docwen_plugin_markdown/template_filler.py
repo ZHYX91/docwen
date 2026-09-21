@@ -266,9 +266,7 @@ def _materialize_markdown_links_in_text_node(para: Any, text_node: Any) -> None:
     # additional visible children, retain the conservative plain-text result
     # rather than rewriting a more complex run structure.
     visible_children = [
-        child
-        for child in run
-        if isinstance(child.tag, str) and _local_name(child.tag) not in {"rPr", "t"}
+        child for child in run if isinstance(child.tag, str) and _local_name(child.tag) not in {"rPr", "t"}
     ]
     text_children = [child for child in run if isinstance(child.tag, str) and _local_name(child.tag) == "t"]
     if visible_children or len(text_children) != 1:
