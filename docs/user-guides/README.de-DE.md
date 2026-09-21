@@ -200,8 +200,8 @@ Für Skripte, Agents oder Plugin-Integrationen wird diese Reihenfolge empfohlen:
 
 1. `inspect <file> [--json]`: zuerst den tatsächlichen Dateityp, das Format und die unterstützten Aktionen erkennen.
 2. `schema convert`: den maschinenlesbaren Vertrag und die Bedingungen von `convert` abrufen.
-3. `convert <file> --to <fmt> --output <path> --dry-run --json`: Erkennung, Normalisierung und Routing vorab prüfen, ohne Dateien zu schreiben.
-4. `convert <file> --to <fmt> --output <path> ...`: die echte Konvertierung erst danach ausführen.
+3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: Erkennung, Normalisierung und Routing vorab prüfen, ohne Dateien zu schreiben.
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: die echte Konvertierung erst danach ausführen.
 
 ### Häufige Beispiele
 
@@ -248,8 +248,8 @@ Die folgende Tabelle zeigt nur haeufige Befehle. Fuer die vollstaendige Befehlsf
 
 | Befehl / Option | Beschreibung |
 | --- | --- |
-| `convert <file> --to <fmt> --output <path>` | Einheitlicher Einstiegspunkt für Konvertierungen. |
-| `convert <file> --to <fmt> --output <path> --dry-run --json` | Prüft Erkennung, Normalisierung, Routing und wirksame Optionen, ohne die Konvertierung wirklich auszuführen. |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | Einheitlicher Einstiegspunkt für Konvertierungen. |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | Prüft Erkennung, Normalisierung, Routing und wirksame Optionen, ohne die Konvertierung wirklich auszuführen. |
 | `schema convert` | Exportiert den maschinenlesbaren Vertrag, Standardwerte, Bedingungen und die kanonischen Schlüssel von `convert`. |
 | `validate <file> --check ...` | Dokumentprüfung (`typo/punct/symbol/sensitive/all/none`). Verwenden Sie `--json` für die CLI-Hülle; `--report` ist ein optionaler Bericht-Dateipfad. |
 | `inspect <file> [--json]` | Dateikategorie/-format, empfohlene Aktionen und Warnungen bei Erweiterungs-/Inhaltsabweichungen anzeigen. |
@@ -259,7 +259,7 @@ Die folgende Tabelle zeigt nur haeufige Befehle. Fuer die vollstaendige Befehlsf
 | `resources list numbering-schemes` | Verfügbare Nummerierungsschemata auflisten. |
 | `--template <id>` | Exakte kanonische Ressourcen-ID aus `resources list templates`; Anzeigenamen, Dateinamen und Pfade werden abgelehnt. DOCX-IDs gelten für `docx/doc/odt/rtf/wps/pdf`, XLSX-IDs für `xlsx/xls/ods/csv`. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Bildextraktion und OCR für `convert --to md`. |
-| `--image-mode file|base64` | Steuert, wie Bilder beim Markdown-Export ausgegeben werden. |
+| `--image-mode file|base64|embed|omit` | Steuert, wie Bilder beim Markdown-Export ausgegeben werden. |
 | `--ocr-placement image_md|main_md` | Legt fest, ob OCR-Text in begleitendes Bild-Markdown oder in die Haupt-Markdown-Datei geschrieben wird. |
 | `--heading-merge-mode punct_required|always|never` | Steuert die Strategie für die Zusammenführung von Überschrift + Text bei `convert --to docx`. |
 | `--optimization <id>` | Aktiviert explizit ein Optimierungsprofil (siehe `resources list optimizations`). |
