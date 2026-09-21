@@ -11,6 +11,7 @@ import pytest
 from docwen_core.detection import inspect_file
 from docwen_core.models import FILE_ADMISSION_ACCEPTANCE_METADATA_KEY, FILE_INSPECTION_METADATA_KEY
 from docwen_core.models.file_ref import FileRef
+from docwen_core.models.request import POSTPROCESS_PROOFREAD_OPTION
 from docwen_gui.execution_admission import ExecutionAdmission, ExecutionAdmissionError, check_frozen_request
 from docwen_gui.execution_requests import ExecutionRequestBuilder
 from docwen_gui.path_identity import normalize_path
@@ -78,6 +79,76 @@ def test_requests_own_nested_state_and_preserve_typed_input(mode, tmp_path):
     assert context["file_path"] == source.as_posix()
     assert context.get(mode) is (None if mode == "single" else True)
     check_frozen_request(request)
+
+
+def test_md_to_docx_proofread_options_survive_route_scoping_as_application_intent(tmp_path):
+    source = tmp_path / "input.md"
+    source.write_text("# Source", encoding="utf-8")
+    inspection = inspect_file(source)
+    ref = FileRef(
+        path=str(source),
+        format="markdown",
+        category="markdown",
+        metadata={FILE_INSPECTION_METADATA_KEY: inspection.to_dict()},
+    )
+    builder = ExecutionRequestBuilder(
+        *_models([ref]),
+        file_contexts=lambda: {normalize_path(str(source)): ("markdown", "markdown")},
+        selected_template=lambda: None,
+    )
+
+    request, _ = builder.single(
+        file_path=str(source),
+        target_format="docx",
+        action_name="",
+        options={
+            "symbol_pairing": True,
+            "symbol_correction": False,
+            "typos_rule": True,
+            "sensitive_word": False,
+            "remove_numbering": True,
+        },
+        route_options=("remove_numbering",),
+    )
+
+    assert request.options == {
+        "remove_numbering": True,
+        POSTPROCESS_PROOFREAD_OPTION: {
+            "enable_symbol_pairing": True,
+            "enable_symbol_correction": False,
+            "enable_typos_rule": True,
+            "enable_sensitive_word": False,
+        },
+    }
+
+
+def test_non_docx_conversion_does_not_carry_inert_proofread_options(tmp_path):
+    source = tmp_path / "input.md"
+    source.write_text("# Source", encoding="utf-8")
+    inspection = inspect_file(source)
+    ref = FileRef(
+        path=str(source),
+        format="markdown",
+        category="markdown",
+        metadata={FILE_INSPECTION_METADATA_KEY: inspection.to_dict()},
+    )
+    builder = ExecutionRequestBuilder(
+        *_models([ref]),
+        file_contexts=lambda: {normalize_path(str(source)): ("markdown", "markdown")},
+        selected_template=lambda: None,
+    )
+
+    request, _ = builder.single(
+        file_path=str(source),
+        target_format="pdf",
+        action_name="",
+        options={"symbol_pairing": True, "typos_rule": True},
+        route_options=(),
+    )
+
+    assert POSTPROCESS_PROOFREAD_OPTION not in request.options
+    assert "symbol_pairing" not in request.options
+    assert "typos_rule" not in request.options
 
 
 def test_builder_reads_replaced_context_and_current_template(tmp_path):
