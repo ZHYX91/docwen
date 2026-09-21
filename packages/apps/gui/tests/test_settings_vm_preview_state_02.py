@@ -19,6 +19,23 @@ from ._settings_vm_preview_state_support import (
 )
 
 
+class TestChangedOnlyPersistence:
+    def test_apply_writes_only_the_changed_effective_key(self, vm, config_port, monkeypatch) -> None:
+        batches: list[dict[str, object]] = []
+        vm.begin_session()
+        new_value = not vm.config.gui.auto_center
+        vm.set_field(SECTION_GUI, "auto_center", new_value)
+
+        monkeypatch.setattr(
+            config_port,
+            "set_many",
+            lambda values: batches.append(dict(values)) or True,
+        )
+
+        assert vm.apply_changes() is True
+        assert batches == [{"gui.window.auto_center": new_value}]
+
+
 class TestPartialPersistenceFailure:
     """A failed multi-file Apply must reconcile its partial source honestly."""
 
