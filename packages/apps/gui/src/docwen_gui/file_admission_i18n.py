@@ -34,6 +34,91 @@ class FileAdmissionDiagnostic(Protocol):
     def warnings(self) -> tuple[dict[str, Any], ...]: ...
 
 
+_FORMAT_NOTICE_CODES = frozenset(
+    {
+        "FILE_FORMAT_COMPATIBLE_TEXT",
+        "FILE_FORMAT_SAME_FAMILY_MISMATCH",
+        "FILE_FORMAT_CROSS_FAMILY_MISMATCH",
+        "FILE_EXTENSION_UNSUPPORTED",
+    }
+)
+
+
+def render_file_format_notice(file_ref: Any) -> str:
+    """Return a compact actual-format notice for one admitted mismatch.
+
+    This is presentation-only.  Admission and confirmation semantics remain
+    owned by the frozen inspection fact.
+    """
+
+    try:
+        from docwen_core.models import FILE_INSPECTION_METADATA_KEY
+    except Exception:
+        return ""
+
+    metadata = getattr(file_ref, "metadata", {})
+    inspection = metadata.get(FILE_INSPECTION_METADATA_KEY) if isinstance(metadata, dict) else None
+    if not isinstance(inspection, Mapping):
+        return ""
+
+    code = str(inspection.get("warning_code", "") or "").strip().upper()
+    if code not in _FORMAT_NOTICE_CODES:
+        return ""
+
+    detected = str(inspection.get("detected_format", "") or getattr(file_ref, "format", "") or "").strip()
+    if not detected or detected.casefold() == "unknown":
+        return ""
+    return t(
+        "file_admission.actual_format",
+        "Actual format: {detected_format}",
+        detected_format=detected.upper(),
+    )
+
+
+def render_remaining_file_warnings(file_ref: Any) -> str:
+    """Retain diagnostics not represented by the compact format notice."""
+    from docwen_core.models import FILE_INSPECTION_METADATA_KEY
+
+    metadata = getattr(file_ref, "metadata", {})
+    inspection = metadata.get(FILE_INSPECTION_METADATA_KEY, {}) if isinstance(metadata, Mapping) else {}
+    warning = str(getattr(file_ref, "warning_message", "") or "").strip()
+    if not isinstance(inspection, Mapping):
+        return warning
+    primary = str(inspection.get("warning_message", "") or "").strip()
+    code = str(inspection.get("warning_code", "") or "").upper()
+    messages: list[str] = []
+    if code not in _FORMAT_NOTICE_CODES:
+        messages.append(warning or primary)
+    elif warning:
+        declared = str(inspection.get("declared_format", "") or "").upper()
+        detected = str(inspection.get("detected_format", "") or "").upper()
+        raw_warnings = inspection.get("warnings", ()) or ()
+        known_format_messages = {
+            render_file_admission_code(code, declared_format=declared, detected_format=detected, fallback=primary),
+            _ENGLISH_FALLBACKS.get(code, "").format(declared_format=declared, detected_format=detected),
+        }
+        if not raw_warnings:
+            known_format_messages.add(primary)
+        known_format_messages.update(
+            str(item.get("message", "") or "").strip()
+            for item in raw_warnings
+            if isinstance(item, Mapping) and str(item.get("code", "")).upper() in _FORMAT_NOTICE_CODES
+        )
+        # Filter only identified format messages, retaining unrelated diagnostics.
+        for message in sorted(known_format_messages, key=len, reverse=True):
+            if message:
+                warning = warning.replace(message, "")
+        messages.extend(line.strip() for line in warning.splitlines() if line.strip())
+    for item in inspection.get("warnings", ()) or ():
+        if isinstance(item, Mapping) and str(item.get("code", "")).upper() not in _FORMAT_NOTICE_CODES:
+            message = str(item.get("message", "") or "").strip()
+            if message and not any(message in existing for existing in messages):
+                messages.append(message)
+    if str(inspection.get("reason_code", "")).upper() not in _FORMAT_NOTICE_CODES:
+        messages.append(str(inspection.get("reason_message", "") or "").strip())
+    return "\n".join(dict.fromkeys(message for message in messages if message))
+
+
 _ENGLISH_FALLBACKS: dict[str, str] = {
     "FILE_FORMAT_COMPATIBLE_TEXT": (
         "The filename declares {declared_format}, while the content was detected as "
@@ -180,5 +265,7 @@ def render_file_inspection_message(
 __all__ = [
     "render_file_admission_code",
     "render_file_admission_message",
+    "render_file_format_notice",
     "render_file_inspection_message",
+    "render_remaining_file_warnings",
 ]

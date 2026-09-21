@@ -7,6 +7,8 @@ from .design_tokens import Border, Radius, Spacing, Typography
 from .theme_semantics import (
     COLOR_PRIMARY,
     COLOR_SECONDARY,
+    get_card_colors,
+    get_theme_class_color,
     is_dark_theme,
 )
 
@@ -39,6 +41,8 @@ def build_panel_stylesheet(theme_name: str, font_size_preset: str | None = None)
     scrollbar_handle = _hex_to_rgba(COLOR_SECONDARY, 168 if dark_theme else 132)
     scrollbar_handle_hover = _hex_to_rgba(COLOR_PRIMARY, 196 if dark_theme else 154)
     settings_changes_color = _hex_to_rgba("#E2E8F0" if dark_theme else "#334155", 188 if dark_theme else 154)
+    warning_border = _hex_to_rgba(get_theme_class_color("warning", theme_name), 170 if dark_theme else 125)
+    warning_background, warning_text = get_card_colors("warning", theme_name)
     subtle_divider = _hex_to_rgba(COLOR_SECONDARY, 110 if dark_theme else 42)
     combo_arrow = (
         ":/qfluentwidgets/images/icons/ChevronDown_white.svg"
@@ -138,6 +142,15 @@ def build_panel_stylesheet(theme_name: str, font_size_preset: str | None = None)
             "    color: palette(text);",
             "    padding-top: 0;",
             f"    font-size: {Typography.qss(Typography.BODY_SIZE, font_size_preset)};",
+            "}",
+            "QLabel#fileDropFormatNotice, QLabel#batchFormatNotice {",
+            f"    border: {Border.THIN}px solid {warning_border};",
+            f"    border-radius: {Radius.MEDIUM}px;",
+            f"    background-color: {warning_background};",
+            f"    color: {warning_text};",
+            f"    padding: 2px {Spacing.SM}px;",
+            f"    font-size: {Typography.qss(Typography.CAPTION_SIZE, font_size_preset)};",
+            "    font-weight: 600;",
             "}",
             "QLabel#fileDropSelectionDetailLabel {",
             f"    color: {hint_color};",

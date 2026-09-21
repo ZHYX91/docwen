@@ -17,6 +17,37 @@ def _files(tmp_path):
 
 
 @pytest.mark.parametrize("entry", ["input", "ipc", "model"])
+def test_real_admission_keeps_compact_notice_after_async_add_completes(
+    main_window_with_controller, tmp_path, entry, qtbot
+):
+    from docx import Document
+
+    from docwen_gui.file_admission_i18n import render_file_format_notice
+
+    window = main_window_with_controller
+    renamed = tmp_path / "renamed.doc"
+    document = Document()
+    document.add_paragraph("Keep this original.")
+    document.save(renamed)
+    original = renamed.read_bytes()
+    if entry == "input":
+        window._input_area_vm.add_files([str(renamed)])
+    elif entry == "ipc":
+        assert window.handle_ipc_command("open_file", str(renamed))
+    else:
+        window._view_model.add_files([str(renamed)])
+    qtbot.waitUntil(lambda: bool(window._view_model.files) and not window._view_model.inspection_busy)
+    selected = window._view_model.selected_file
+    assert selected.format == "docx"
+    expected = render_file_format_notice(selected)
+    assert expected and "DOCX" in expected
+    assert window._input_area_vm.format_notice == expected
+    assert window._input_area._format_notice_label.text() == expected
+    assert window._input_area_vm.selection_message == t("components.file_drop.file_selected_msg", filename=renamed.name)
+    assert renamed.read_bytes() == original
+
+
+@pytest.mark.parametrize("entry", ["input", "ipc", "model"])
 def test_single_input_replaces_previous_and_never_resurrects_it(main_window, tmp_path, entry, qtbot):
     window = main_window
     vm = window._view_model

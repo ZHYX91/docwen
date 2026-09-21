@@ -57,6 +57,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from docwen_gui.file_admission_i18n import render_file_format_notice, render_remaining_file_warnings
 from docwen_gui.font_utils import DEFAULT_FONT_SIZE, resolve_font_size_preset
 from docwen_gui.i18n import t as _t
 from docwen_gui.resources import set_action_icon
@@ -68,6 +69,7 @@ from .elided_label import MiddleElidedLabel
 from .location_button import LocationButton
 from .output_file_row import OutputFileRow
 from .panel_card import WrappingLabel
+from .warning_badge import WarningBadge
 
 if TYPE_CHECKING:
     from ..view_models.batch_list_vm import BatchFileEntry, BatchListViewModel
@@ -441,6 +443,12 @@ class BatchEntryItemWidget(QWidget):
         self.badge_strip = QWidget(self)
         self.badge_strip.setObjectName("batchBadgeRow")
         self._badge_strip_layout = WrapRowLayout(self.badge_strip, spacing=_SPACING_XS)
+        self.format_notice_badge = WarningBadge(self.badge_strip)
+        self.format_notice_badge.setObjectName("batchFormatNotice")
+        self.format_notice_badge.setTextFormat(Qt.TextFormat.PlainText)
+        self.format_notice_badge.setWordWrap(True)
+        self.format_notice_badge.setVisible(False)
+        self._badge_strip_layout.addWidget(self.format_notice_badge)
         root.addWidget(self.badge_strip)
 
         # ── Body section ───────────────────────────────────────────
@@ -553,6 +561,14 @@ class BatchEntryItemWidget(QWidget):
                 )
         self.info_badge.setText(badge_text)
 
+        format_notice = render_file_format_notice(entry)
+        self.format_notice_badge.setText(format_notice)
+        self.format_notice_badge.setToolTip(entry.warning_message or "")
+        self.format_notice_badge.setAccessibleName(format_notice)
+        self.format_notice_badge.setAccessibleDescription(entry.warning_message or format_notice)
+        self.format_notice_badge.setVisible(bool(format_notice))
+        self.badge_strip.setVisible(bool(format_notice))
+
         # Body rows
         self._set_row_text(self.path_row, "", _source_path_text(entry.file_path))
         detail_text = self._get_detail_text(entry)
@@ -633,7 +649,7 @@ class BatchEntryItemWidget(QWidget):
         if entry.skip_reason:
             return entry.skip_reason
         if entry.warning_message:
-            return entry.warning_message
+            return render_remaining_file_warnings(entry) if render_file_format_notice(entry) else entry.warning_message
         return ""
 
     def _get_detail_label_text(self, entry: BatchFileEntry) -> str:
@@ -644,6 +660,8 @@ class BatchEntryItemWidget(QWidget):
             return _t("common.error", "Error")
         if entry.skip_reason:
             return _t("components.file_drop.status.skipped", "Skipped")
+        if entry.warning_message and render_file_format_notice(entry) and not render_remaining_file_warnings(entry):
+            return ""
         return _t("editors.common.description", "Description")
 
     def _apply_detail_tone(self, entry: BatchFileEntry) -> None:

@@ -194,6 +194,41 @@ class TestBatchEntryItemWidget:
         assert entry_widget.info_badge is not None
         assert _t("components.file_drop.status.pending", "Pending") in entry_widget.info_badge.text()
 
+    def test_format_mismatch_uses_compact_notice_instead_of_long_batch_detail(self, qapp: QApplication) -> None:
+        from docwen_core.models import FILE_INSPECTION_METADATA_KEY
+
+        entry = BatchFileEntry(
+            file_path="/test/actual-doc.docx",
+            file_name="actual-doc.docx",
+            detected_format="doc",
+            workflow_category="document",
+            warning_message=(
+                "The filename declares DOCX, while the content was detected as DOC. "
+                "Both formats use the same processing family, so the detected format will be used."
+            ),
+            metadata={
+                FILE_INSPECTION_METADATA_KEY: {
+                    "declared_format": "docx",
+                    "detected_format": "doc",
+                    "warning_code": "FILE_FORMAT_SAME_FAMILY_MISMATCH",
+                    "warning_message": "long core warning",
+                    "reason_code": "",
+                    "reason_message": "",
+                    "warnings": [],
+                }
+            },
+        )
+        widget = BatchEntryItemWidget(entry)
+        try:
+            assert widget.format_notice_badge.isVisible() is False  # hidden parent until shown
+            widget.show()
+            qapp.processEvents()
+            assert "DOC" in widget.format_notice_badge.text()
+            assert "processing family" not in widget.format_notice_badge.text()
+            assert widget._get_detail_text(entry) == ""
+        finally:
+            widget.deleteLater()
+
     def test_has_action_buttons(self, entry_widget: BatchEntryItemWidget) -> None:
         assert entry_widget.primary_action_button is not None
         assert entry_widget.retry_button is not None
