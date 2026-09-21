@@ -580,7 +580,7 @@ Plugin Obsidian đồng hành được phát hành ở repo riêng và hoạt đ
 
 Runtime/control transport của DocWen Core có thể dùng named pipe trên Windows hoặc socket AF_UNIX trên
 Linux/macOS. Khóa file chỉ xác lập quyền sở hữu một phiên bản đang chạy; file không được dùng để truyền
-lệnh điều khiển. Đây chỉ là mô tả capability của Core. DocWen Assistant 3.0 vẫn chỉ dành cho Windows
+lệnh điều khiển. Đây chỉ là mô tả capability của Core. DocWen Assistant 3.1 vẫn chỉ dành cho Windows
 desktop và chưa có nghiệm thu kết hợp trên Linux/macOS.
 
 1.  **Nhấn lần đầu** → Khởi chạy bộ chuyển đổi và truyền file hiện tại.
@@ -589,7 +589,7 @@ desktop và chưa có nghiệm thu kết hợp trên Linux/macOS.
 
 ### Cài đặt
 
-DocWen Assistant 3.0 dùng DocWen Machine Protocol v2 và hợp đồng Artifact Bundle v3 duy nhất. Phiên bản mã nguồn
+DocWen Assistant 3.1 dùng DocWen Machine Protocol v2 và hợp đồng Artifact Bundle v3 duy nhất. Phiên bản mã nguồn
 không chứng minh rằng sản phẩm đã được phát hành; chỉ cài bản phát hành dạng số xác định rõ một bản DocWen đã phát
 hành và tương thích.
 
