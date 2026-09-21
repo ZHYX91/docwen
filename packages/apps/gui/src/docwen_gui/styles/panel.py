@@ -142,7 +142,7 @@ def build_panel_stylesheet(theme_name: str, font_size_preset: str | None = None)
             "    padding-top: 0;",
             f"    font-size: {Typography.qss(Typography.BODY_SIZE, font_size_preset)};",
             "}",
-            "QLabel#fileDropFormatNotice {",
+            "QLabel#fileDropFormatNotice, QLabel#batchFormatNotice {",
             f"    border: {Border.THIN}px solid {warning_border};",
             f"    border-radius: {Radius.MEDIUM}px;",
             f"    background-color: {warning_background};",
