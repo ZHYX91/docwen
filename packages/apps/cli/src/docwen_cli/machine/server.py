@@ -57,6 +57,24 @@ _MAX_FIX_EDITS = 16
 _MAX_FIX_REPLACEMENT_CODE_POINTS = 4096
 
 
+def _is_protocol_identity_shape(value: object) -> bool:
+    """Return whether *value* is a well-formed negotiable protocol identity."""
+
+    if not isinstance(value, dict) or set(value) != {"name", "major", "minor"}:
+        return False
+    name = value.get("name")
+    major = value.get("major")
+    minor = value.get("minor")
+    return (
+        isinstance(name, str)
+        and 1 <= len(name) <= _PROTOCOL_NAME_LIMIT
+        and type(major) is int
+        and 0 <= major <= 2_147_483_647
+        and type(minor) is int
+        and 0 <= minor <= 2_147_483_647
+    )
+
+
 def _protocol_diagnostic(value: object) -> dict[str, object | None]:
     """Return bounded protocol facts safe to echo in a diagnostic response."""
 
@@ -146,7 +164,7 @@ class MachineProtocolServer:
                 method == "initialize"
                 and message.get("jsonrpc") == "2.0"
                 and isinstance(params, dict)
-                and isinstance(params.get("protocol"), dict)
+                and _is_protocol_identity_shape(params.get("protocol"))
                 and params["protocol"] != _SUPPORTED_PROTOCOL
             ):
                 self._write_error(
