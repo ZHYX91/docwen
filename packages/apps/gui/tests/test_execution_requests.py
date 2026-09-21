@@ -94,7 +94,7 @@ def test_md_to_docx_proofread_options_survive_route_scoping_as_application_inten
     builder = ExecutionRequestBuilder(
         *_models([ref]),
         file_contexts=lambda: {normalize_path(str(source)): ("markdown", "markdown")},
-        selected_template=lambda: None,
+        selected_template=lambda: ("docx", "standard"),
     )
 
     request, context = builder.single(
@@ -108,10 +108,11 @@ def test_md_to_docx_proofread_options_survive_route_scoping_as_application_inten
             "sensitive_word": False,
             "remove_numbering": True,
         },
-        route_options=("remove_numbering",),
+        route_options=("remove_numbering", "template_name"),
     )
 
     assert request.options == {
+        "template_name": "standard",
         "remove_numbering": True,
         POSTPROCESS_PROOFREAD_OPTION: {
             "enable_symbol_pairing": True,
@@ -145,7 +146,7 @@ def test_non_docx_conversion_does_not_carry_inert_proofread_options(tmp_path):
     builder = ExecutionRequestBuilder(
         *_models([ref]),
         file_contexts=lambda: {normalize_path(str(source)): ("markdown", "markdown")},
-        selected_template=lambda: None,
+        selected_template=lambda: ("docx", "standard"),
     )
 
     request, _ = builder.single(

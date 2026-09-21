@@ -427,37 +427,6 @@ class ApplicationController:
 
         return AggregateCommand(self._runtime_port, action_name=action_name)
 
-    @staticmethod
-    def _postprocess_proofread_options(request: Any) -> dict[str, bool] | None:
-        """Return validated Application-owned DOCX post-processing options."""
-
-        from docwen_application.postprocessing import postprocess_proofread_options
-
-        return postprocess_proofread_options(request)
-
-    @staticmethod
-    def _pipeline_conversion_identity(request: Any, task_id: str) -> Any:
-        """Freeze the original Markdown identity once for every pipeline stage."""
-
-        from docwen_core.models import FILE_INSPECTION_METADATA_KEY
-        from docwen_core.models.document_node import ConversionIdentity
-
-        source = next((ref for ref in request.input_refs if ref.input_role == "source"), request.input_refs[0])
-        inspection = source.metadata.get(FILE_INSPECTION_METADATA_KEY)
-        source_sha256 = (
-            str(inspection.get("content_sha256") or "")
-            if isinstance(inspection, dict)
-            else ""
-        )
-        source_name = Path(source.logical_path or source.path).name
-        return ConversionIdentity.create(
-            task_id=task_id,
-            source_stem=Path(source_name).stem or "document",
-            source_format=source.format,
-            source_name=source_name,
-            source_sha256=source_sha256,
-        )
-
     def _execute_runtime_stage(
         self,
         request: Any,
@@ -466,10 +435,11 @@ class ApplicationController:
     ) -> Any:
         """Execute one admitted Runtime stage under the operation cancellation owner."""
 
+        command = self._convert_command()
         if not self._begin_runtime_task(scope, task_id):
             return self._cancelled_result(task_id)
         try:
-            return self._convert_command().execute(request)
+            return command.execute(request)
         finally:
             self._finish_runtime_task(scope, task_id)
 
@@ -479,178 +449,11 @@ class ApplicationController:
         scope: _ExecutionCancellationScope,
         task_id: str,
     ) -> Any:
-        """Execute a request, composing DOCX proofreading without plugin coupling."""
+        from docwen_application.postprocess_pipeline import execute_postprocessed_request
 
-        proofread_options = self._postprocess_proofread_options(request)
-        if proofread_options is None:
-            return self._execute_runtime_stage(request, scope, task_id)
-        return self._execute_docx_proofread_pipeline(
-            request,
-            scope,
-            task_id,
-            proofread_options=proofread_options,
+        return execute_postprocessed_request(
+            request, task_id, lambda stage, identity: self._execute_runtime_stage(stage, scope, identity)
         )
-
-    def _execute_docx_proofread_pipeline(
-        self,
-        request: Any,
-        scope: _ExecutionCancellationScope,
-        task_id: str,
-        *,
-        proofread_options: dict[str, bool],
-    ) -> Any:
-        """Render Markdown privately, then run the existing DOCX validator.
-
-        The Markdown and proofread plugins remain unaware of each other.  The
-        first stage publishes only inside an Application-owned temporary
-        directory; only the validated second stage reaches the caller's output
-        policy.
-        """
-
-        from docwen_core.formats import get_category, get_media_type
-        from docwen_core.models.file_ref import FileRef
-        from docwen_core.models.request import (
-            POSTPROCESS_PROOFREAD_OPTION,
-            ConversionRequest,
-            OutputPolicy,
-        )
-        from docwen_core.models.result import (
-            ConversionDiagnostic,
-            ConversionErrorInfo,
-            ConversionMetrics,
-            ConversionResult,
-        )
-
-        source = next((ref for ref in request.input_refs if ref.input_role == "source"), None)
-        if source is None or source.format not in {"md", "markdown", "txt"}:
-            raise ValueError("Post-conversion proofreading requires an admitted Markdown source")
-
-        identity = request.conversion_identity or self._pipeline_conversion_identity(request, task_id)
-        render_options = dict(request.options)
-        render_options.pop(POSTPROCESS_PROOFREAD_OPTION, None)
-
-        with tempfile.TemporaryDirectory(prefix="docwen_postprocess_", ignore_cleanup_errors=True) as private_output:
-            render_task_id = f"{task_id}-render"
-            render_request = replace(
-                request,
-                request_id=render_task_id,
-                options=render_options,
-                output_policy=OutputPolicy(
-                    output_dir=private_output,
-                    overwrite_mode="error",
-                    write_artifacts=True,
-                    group_outputs=True,
-                    open_after_done=False,
-                ),
-                conversion_identity=replace(identity, task_id=render_task_id),
-            )
-            render_result = self._execute_runtime_stage(render_request, scope, render_task_id)
-            if not isinstance(render_result, ConversionResult):
-                return render_result
-
-            private_codes = {"FINALIZER_DONE", "DOCUMENT_NODE_REUSED", "OUTPUT_MANIFEST_WRITE_FAILED"}
-            render_diagnostics = [
-                item for item in render_result.diagnostics if item.code not in private_codes
-            ]
-            if not render_result.success or render_result.error is not None:
-                return replace(
-                    render_result,
-                    task_id=task_id,
-                    artifacts=[],
-                    diagnostics=render_diagnostics,
-                    metrics=ConversionMetrics(
-                        duration_ms=render_result.metrics.duration_ms,
-                        input_bytes=source.size_bytes,
-                        output_bytes=0,
-                        extra={"proofread_postprocess": True, "stage": "render"},
-                    ),
-                )
-
-            primary_docx = [
-                artifact
-                for artifact in render_result.artifacts
-                if artifact.is_primary
-                and artifact.media_type
-                == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            ]
-            if len(primary_docx) != 1:
-                message = "Markdown rendering did not produce exactly one primary DOCX for proofreading."
-                return ConversionResult(
-                    task_id=task_id,
-                    success=False,
-                    diagnostics=[
-                        *render_diagnostics,
-                        ConversionDiagnostic(
-                            level="error",
-                            message=message,
-                            code="POSTPROCESS_PROOFREAD_INPUT_INVALID",
-                        ),
-                    ],
-                    error=ConversionErrorInfo(
-                        error_type="conversion_failed",
-                        message=message,
-                        diagnostic_code="POSTPROCESS_PROOFREAD_INPUT_INVALID",
-                    ),
-                    metrics=ConversionMetrics(
-                        duration_ms=render_result.metrics.duration_ms,
-                        input_bytes=source.size_bytes,
-                        output_bytes=0,
-                        extra={"proofread_postprocess": True, "stage": "render"},
-                    ),
-                )
-
-            artifact = primary_docx[0]
-            proofread_ref = FileRef(
-                path=artifact.staging_path,
-                format="docx",
-                category=get_category("docx"),
-                input_kind="document",
-                input_role="source",
-                logical_path=artifact.suggested_name or f"{request.source_stem}.docx",
-                media_type=get_media_type("docx"),
-                size_bytes=artifact.size_bytes or 0,
-            )
-            proofread_request = ConversionRequest(
-                request_id=task_id,
-                input_refs=[proofread_ref],
-                target_format="docx",
-                action_name="validate",
-                options=dict(proofread_options),
-                output_policy=replace(request.output_policy, group_outputs=True),
-                config_snapshot=dict(request.config_snapshot),
-                manifest_context=request.manifest_context,
-                conversion_identity=identity,
-            )
-            proofread_result = self._execute_runtime_stage(proofread_request, scope, task_id)
-            if not isinstance(proofread_result, ConversionResult):
-                return proofread_result
-
-            diagnostics = [
-                *render_diagnostics,
-                *proofread_result.diagnostics,
-            ]
-            if proofread_result.success:
-                diagnostics.append(
-                    ConversionDiagnostic(
-                        level="info",
-                        message="Generated DOCX was proofread before publication.",
-                        code="POSTPROCESS_PROOFREAD_APPLIED",
-                    )
-                )
-            return replace(
-                proofread_result,
-                task_id=task_id,
-                diagnostics=diagnostics,
-                metrics=ConversionMetrics(
-                    duration_ms=render_result.metrics.duration_ms + proofread_result.metrics.duration_ms,
-                    input_bytes=source.size_bytes,
-                    output_bytes=proofread_result.metrics.output_bytes,
-                    extra={
-                        **proofread_result.metrics.extra,
-                        "proofread_postprocess": True,
-                    },
-                ),
-            )
 
     # ── Convenience: direct execution ───────────────────────────────
 
@@ -852,9 +655,7 @@ class ApplicationController:
                     request.manifest_context.for_input(index) if request.manifest_context is not None else None
                 ),
             )
-            runtime_results.append(
-                self._execute_runtime_request(child_request, scope, task_id)
-            )
+            runtime_results.append(self._execute_runtime_request(child_request, scope, task_id))
         return runtime_results
 
     def _maybe_preconvert(

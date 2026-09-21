@@ -50,36 +50,14 @@ def resolve_proofread_options(
         Dict with keys ``enable_symbol_pairing``, ``enable_symbol_correction``,
         ``enable_typos_rule``, ``enable_sensitive_word`` (all ``bool``).
     """
-    # Read engine defaults from config — engine is namespaced under proofread
+    from docwen_core.options.proofread import resolve_proofread_switches
+
     config = _safe_get_attr(context, "config", {})
-    proofread = config.get("proofread", {}) if hasattr(config, "get") else {}
-    engine = proofread.get("engine", {}) if isinstance(proofread, dict) else {}
-    if not isinstance(engine, dict):
-        engine = {}
-
-    options: dict[str, bool] = {
-        "enable_symbol_pairing": bool(engine.get("enable_symbol_pairing", True)),
-        "enable_symbol_correction": bool(engine.get("enable_symbol_correction", True)),
-        "enable_typos_rule": bool(engine.get("enable_typos_rule", True)),
-        "enable_sensitive_word": bool(engine.get("enable_sensitive_word", True)),
-    }
-
-    # Request options override config
-    req_options = _safe_get_attr(context, "request", None)
-    if req_options is not None:
-        req_opts = getattr(req_options, "options", {}) or {}
-        if isinstance(req_opts, dict):
-            for key in options:
-                if key in req_opts:
-                    options[key] = bool(req_opts[key])
-
-    # Explicit extra_options take highest precedence
-    if extra_options:
-        for key in options:
-            if key in extra_options:
-                options[key] = bool(extra_options[key])
-
-    return options
+    request = _safe_get_attr(context, "request", None)
+    request_options = getattr(request, "options", {}) or {}
+    options = dict(request_options) if isinstance(request_options, dict) else {}
+    options.update(extra_options or {})
+    return resolve_proofread_switches(config, options)
 
 
 def _safe_get_attr(obj: object, attr: str, default: Any = None) -> Any:

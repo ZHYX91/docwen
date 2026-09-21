@@ -23,7 +23,7 @@ DocWen 的源码态与打包态使用同一套 `docwen` 命令树。精确契约
 - `schema [COMMAND_PATH...]`: export the active parser contract.
 - `convert FILE --to FORMAT --output-dir DIR`: convert one file into the chosen parent; required for conversions from or to Markdown.
 - `convert FILE --to FORMAT --output PATH`: exact-file output for other single-file conversions.
-- `convert MARKDOWN --to docx --output-dir DIR --proofread [--check CHECK]...`: render DOCX privately, proofread the generated DOCX, then publish the final result. `--check` on `convert` requires `--proofread`; omitting `--check` uses the configured proofreading defaults. Conversion proofreading is not available for non-Markdown sources or non-DOCX targets.
+- `convert MARKDOWN --to docx --output-dir DIR --proofread [--check CHECK]...`: render DOCX privately, proofread the generated DOCX, then publish the final result. `--check` on `convert` requires `--proofread`; omitting `--check` uses the configured proofreading defaults. If all four checks are disabled, conversion still publishes the generated DOCX with a skipped-proofreading diagnostic. Conversion proofreading is not available for non-Markdown sources or non-DOCX targets.
 - `validate FILE [--report PATH]`: validate DOCX, Markdown, or legacy Word-family content
   (`DOC`/`WPS`/`RTF`/`ODT` is pre-converted to DOCX by the Application layer); the default is read-only.
 - `number markdown FILE --operation add|remove [--scheme ID] (--output PATH | --in-place)`: explicitly add or remove Markdown heading numbering.

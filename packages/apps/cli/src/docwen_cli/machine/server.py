@@ -166,6 +166,7 @@ class MachineProtocolServer:
                 and isinstance(params, dict)
                 and _is_protocol_identity_shape(params.get("protocol"))
                 and params["protocol"] != _SUPPORTED_PROTOCOL
+                and self._valid_initialize_except_protocol(message, params)
             ):
                 self._write_error(
                     request_id,
@@ -173,6 +174,7 @@ class MachineProtocolServer:
                     "DocWen Machine Protocol 2.0 is required",
                     data={
                         "code": "incompatible_protocol",
+                        "phase": "initialize",
                         "received_protocol": _protocol_diagnostic(params["protocol"]),
                         "supported_protocol": dict(_SUPPORTED_PROTOCOL),
                         "server": {"name": "DocWen", "version": PRODUCT_VERSION},
@@ -183,7 +185,18 @@ class MachineProtocolServer:
                 request_id,
                 -32602 if message.get("jsonrpc") == "2.0" else -32600,
                 "Invalid params" if message.get("jsonrpc") == "2.0" else "Invalid Request",
-                data={"validation": self._bounded_validation_message(exc)},
+                data={
+                    "validation": self._bounded_validation_message(exc),
+                    **(
+                        {
+                            "code": "invalid_params",
+                            "phase": "initialize",
+                            "server": {"name": "DocWen", "version": PRODUCT_VERSION},
+                        }
+                        if method == "initialize"
+                        else {}
+                    ),
+                },
             )
             return
 
@@ -207,6 +220,15 @@ class MachineProtocolServer:
             self._handle_execute(request_id, str(message["params"]["plan_id"]))
         else:
             self._handle_cancel(request_id, str(message["params"]["task_id"]))
+
+    def _valid_initialize_except_protocol(self, message: dict[str, Any], params: dict[str, Any]) -> bool:
+        """Keep malformed client/features fields distinct from version negotiation."""
+        normalized = {**message, "params": {**params, "protocol": dict(_SUPPORTED_PROTOCOL)}}
+        try:
+            self._validator.validate_message(normalized)
+        except ValidationError:
+            return False
+        return True
 
     def _handle_query(self, request_id: str | int | None, method: str, params: dict[str, Any]) -> None:
         service = self._query_service

@@ -12,6 +12,7 @@ from typing import Any
 
 from docwen_application.controller import CapabilityUnavailableError
 from docwen_application.postprocessing import prepare_postprocess_options
+from docwen_application.runtime_capability_catalog import RuntimeRoute
 from docwen_cli.i18n import cli_t, get_cli_locale
 from docwen_core.detection import FileAdmissionError, inspect_file
 from docwen_core.detection.ooxml_signature import OOXML_SIGNATURE_INFO_METADATA_KEY
@@ -33,6 +34,28 @@ def resolve_cli_action(args: argparse.Namespace) -> str:
 def _translation_or_default(key: str, default: str) -> str:
     value = cli_t(key, default="")
     return default if value == key or not value else value
+
+
+def project_request_options(
+    args: argparse.Namespace,
+    options: dict[str, Any],
+    route: RuntimeRoute,
+    *,
+    source_format: str,
+    configured_ocr_language: str | None = None,
+) -> dict[str, Any]:
+    """Project one admitted CLI request consistently in execute and dry-run paths."""
+    return project_route_options(
+        options,
+        route_id=route.id,
+        route_options=route.options,
+        configured_ocr_language=configured_ocr_language,
+        ocr_requested=bool(getattr(args, "ocr", False)),
+        source_format=source_format,
+        target_format=route.target,
+        action_name=route.action_name,
+        proofread_requested=bool(getattr(args, "proofread", False)),
+    )
 
 
 def project_route_options(

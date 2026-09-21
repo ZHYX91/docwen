@@ -410,16 +410,12 @@ def _execute_single(
         inspection,
         explicit_acceptance=bool(getattr(args, "use_detected_format", False)),
     )
-    request_options = execution_request.project_route_options(
+    request_options = execution_request.project_request_options(
+        args,
         options,
-        route_id=route.id,
-        route_options=route.options,
+        route,
         configured_ocr_language=configured_ocr_language,
-        ocr_requested=bool(getattr(args, "ocr", False)),
         source_format=input_ref.format,
-        target_format=request_target,
-        action_name=request_action,
-        proofread_requested=bool(getattr(args, "proofread", False)),
     )
 
     request = ConversionRequest(
@@ -577,16 +573,12 @@ def _execute_batch(
             inspection,
             explicit_acceptance=bool(getattr(args, "use_detected_format", False)),
         )
-        request_options = execution_request.project_route_options(
+        request_options = execution_request.project_request_options(
+            args,
             options,
-            route_id=route.id,
-            route_options=route.options,
+            route,
             configured_ocr_language=configured_ocr_language,
-            ocr_requested=bool(getattr(args, "ocr", False)),
             source_format=input_ref.format,
-            target_format=request_target,
-            action_name=request_action,
-            proofread_requested=bool(getattr(args, "proofread", False)),
         )
         return ConversionRequest(
             request_id=str(uuid.uuid4()),
@@ -816,16 +808,12 @@ def _execute_aggregate(
                 explicit_acceptance=bool(getattr(args, "use_detected_format", False)),
             )
         )
-    request_options = execution_request.project_route_options(
+    request_options = execution_request.project_request_options(
+        args,
         options,
-        route_id=route.id,
-        route_options=route.options,
+        route,
         configured_ocr_language=configured_ocr_language,
-        ocr_requested=bool(getattr(args, "ocr", False)),
         source_format=input_refs[0].format if input_refs else "",
-        target_format=request_target,
-        action_name=request_action,
-        proofread_requested=bool(getattr(args, "proofread", False)),
     )
 
     request = ConversionRequest(
@@ -942,16 +930,12 @@ def _execute_dry_run(
         )
     )
     category_fallback = source_category if source_category not in {"", "other", source_format} else None
-    effective_options = execution_request.project_route_options(
+    effective_options = execution_request.project_request_options(
+        args,
         options,
-        route_id=route.id,
-        route_options=route.options,
+        route,
         configured_ocr_language=configured_ocr_language,
-        ocr_requested=bool(getattr(args, "ocr", False)),
         source_format=source_format,
-        target_format=request_target,
-        action_name=request_action,
-        proofread_requested=bool(getattr(args, "proofread", False)),
     )
 
     if json_mode:

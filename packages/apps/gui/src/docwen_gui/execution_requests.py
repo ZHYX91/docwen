@@ -99,7 +99,7 @@ def _to_markdown_locale_options(
 
 
 def _normalize_proofread_action_options(options: dict[str, Any], *, action_name: str) -> dict[str, Any]:
-    if action_name not in _PROOFREAD_ACTIONS:
+    if action_name and action_name not in _PROOFREAD_ACTIONS:
         return options
     normalized = dict(options)
     for gui_key, plugin_key in _PROOFREAD_GUI_OPTION_ALIASES.items():
@@ -118,11 +118,7 @@ def _route_scoped_options(
     if route_options is None:
         return dict(options)
     supported = frozenset(route_options)
-    return {
-        key: value
-        for key, value in options.items()
-        if key in supported or key == POSTPROCESS_PROOFREAD_OPTION
-    }
+    return {key: value for key, value in options.items() if key in supported or key == POSTPROCESS_PROOFREAD_OPTION}
 
 
 def _output_date_subfolder_token(date_folder_format: str) -> str:

@@ -269,7 +269,6 @@ class ActionArea(QWidget):
             self._vm.file_type,
             self._vm.show_numbering,
             self._vm.show_optimize,
-            self._vm.show_proofread,
             tuple(self._vm.available_target_formats),
             target_result.status,
             target_result.targets,
@@ -327,6 +326,8 @@ class ActionArea(QWidget):
 
     def _sync_dynamic_controls(self) -> None:
         """Update option widgets in place without replacing their QWidget tree."""
+        if self._proofread_grid_widget is not None:
+            self._proofread_grid_widget.setVisible(self._vm.show_proofread)
         self._set_checkbox_checked(self._image_cb, self._vm.extract_image)
         self._set_checkbox_checked(self._ocr_cb, self._vm.extract_ocr)
         if self._ocr_settings_group is not None:

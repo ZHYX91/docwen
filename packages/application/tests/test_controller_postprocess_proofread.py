@@ -16,11 +16,79 @@ from docwen_core.models.request import (
     ConversionRequest,
     OutputPolicy,
 )
-from docwen_core.models.result import ConversionDiagnostic, ConversionMetrics, ConversionResult
+from docwen_core.models.result import ConversionDiagnostic, ConversionErrorInfo, ConversionMetrics, ConversionResult
 
 pytestmark = pytest.mark.unit
 
 _DOCX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+
+@pytest.mark.parametrize("failure", ["render", "proofread", "cancel_render", "cancel_proofread"])
+def test_failure_or_cancellation_never_publishes_private_render(tmp_path, monkeypatch, failure):
+    monkeypatch.setattr("docwen_core.detection.enforce_file_admission", lambda request: request)
+    source = tmp_path / "note.md"
+    source.write_text("# 原文\n公文才料（", encoding="utf-8")
+    original = source.read_bytes()
+    output = tmp_path / "public"
+    runtime = MagicMock(spec=RuntimePort)
+    controller = ApplicationController(runtime_port=runtime)
+    private_paths = []
+
+    def execute(stage):
+        if not stage.action_name:
+            private = Path(stage.output_policy.output_dir)
+            private_paths.append(private)
+            docx = private / "note.docx"
+            docx.write_bytes(b"private")
+            if failure == "render":
+                return ConversionResult(
+                    task_id=stage.request_id,
+                    success=False,
+                    error=ConversionErrorInfo(error_type="conversion_failed", message="render failure"),
+                )
+            if failure == "cancel_render":
+                controller.cancel("pipeline-failure")
+            return ConversionResult(
+                task_id=stage.request_id,
+                success=True,
+                artifacts=[
+                    ArtifactManifest(
+                        artifact_id="render",
+                        kind="primary",
+                        staging_path=str(docx),
+                        suggested_name="note.docx",
+                        media_type=_DOCX_MEDIA_TYPE,
+                        is_primary=True,
+                    )
+                ],
+            )
+        if failure == "cancel_proofread":
+            controller.cancel("pipeline-failure")
+        return ConversionResult(
+            task_id=stage.request_id,
+            success=False,
+            error=ConversionErrorInfo(
+                error_type="cancelled" if failure.startswith("cancel") else "conversion_failed",
+                message="proofread stopped",
+            ),
+        )
+
+    runtime.execute.side_effect = execute
+    result = controller.execute_single(
+        ConversionRequest(
+            request_id="pipeline-failure",
+            input_refs=[FileRef(path=str(source), format="markdown", category="markdown")],
+            target_format="docx",
+            options={POSTPROCESS_PROOFREAD_OPTION: {"enable_typos_rule": True}},
+            output_policy=OutputPolicy(output_dir=str(output)),
+        )
+    )
+    assert not result.success and not result.artifacts
+    assert result.error.error_type == ("cancelled" if failure.startswith("cancel") else "conversion_failed")
+    assert runtime.execute.call_count == (1 if failure in {"render", "cancel_render"} else 2)
+    assert not output.exists()
+    assert private_paths and all(not path.exists() for path in private_paths)
+    assert source.read_bytes() == original
 
 
 def test_markdown_docx_proofread_is_two_private_then_public_runtime_stages(

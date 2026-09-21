@@ -35,9 +35,7 @@ def prepare_postprocess_options(
     prepared = dict(options)
     source = source_format.strip().lower()
     target = target_format.strip().lower()
-    if proofread_requested and (
-        action_name or source not in _MARKDOWN_SOURCE_FORMATS or target != "docx"
-    ):
+    if proofread_requested and (action_name or source not in _MARKDOWN_SOURCE_FORMATS or target != "docx"):
         raise ValueError("--proofread requires an ordinary Markdown-to-DOCX conversion")
     if action_name:
         return prepared

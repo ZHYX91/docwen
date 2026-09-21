@@ -293,12 +293,14 @@ class TestPolicy02SpreadsheetPasswordOptions:
         from docwen_cli.commands.execution_request import redacted_options
         from docwen_core.models.request import POSTPROCESS_PROOFREAD_OPTION
 
-        presented = redacted_options({
-            POSTPROCESS_PROOFREAD_OPTION: {
-                "enable_typos_rule": True,
-                "enable_sensitive_word": False,
+        presented = redacted_options(
+            {
+                POSTPROCESS_PROOFREAD_OPTION: {
+                    "enable_typos_rule": True,
+                    "enable_sensitive_word": False,
+                }
             }
-        })
+        )
 
         assert POSTPROCESS_PROOFREAD_OPTION not in presented
         assert presented == {
