@@ -129,9 +129,16 @@ def _footnote_relationships_xml(damage: str | None) -> bytes:
     return etree.tostring(root, xml_declaration=True, encoding="UTF-8", standalone=True)
 
 
-def _inject_existing_footnote_graph(path: Path, *, damage: str | None = None) -> None:
+def _inject_existing_footnote_graph(
+    path: Path,
+    *,
+    damage: str | None = None,
+    include_body_placeholder: bool = False,
+) -> None:
     document = Document()
     document.add_paragraph("Existing body")
+    if include_body_placeholder:
+        document.add_paragraph("{{正文}}")
     _append_footnote_reference(document, 1)
     document.save(str(path))
 
@@ -343,9 +350,35 @@ def test_existing_endnote_domain_allocates_lowest_gap_and_preserves_relationship
     )
 
 
+def test_metadata_only_template_preserves_existing_note_graph_without_materializing_source_body(
+    tmp_path: Path,
+) -> None:
+    template = tmp_path / "metadata-note-template.docx"
+    _inject_existing_footnote_graph(template)
+    before = _existing_graph_snapshot(template)
+    source = tmp_path / "metadata-note-source.md"
+    source.write_text("Body that must remain omitted.\n", encoding="utf-8")
+    context, _workspace = make_context(
+        str(source),
+        target_format="docx",
+        options={"template_name": str(template)},
+    )
+
+    result = MdToDocxConverter().convert(context)
+
+    assert result.success, result.error
+    output = Path(result.artifacts[0].staging_path)
+    assert _footnote_ids(output) == {-1, 0, 1}
+    assert _body_footnote_ids(output) == {1}
+    assert _existing_graph_snapshot(output) == before
+    assert "Body that must remain omitted." not in "\n".join(
+        paragraph.text for paragraph in Document(str(output)).paragraphs
+    )
+
+
 def test_converter_preserves_existing_graph_and_allocates_matching_body_and_part_id(tmp_path: Path) -> None:
     template = tmp_path / "rich-template.docx"
-    _inject_existing_footnote_graph(template)
+    _inject_existing_footnote_graph(template, include_body_placeholder=True)
     template_hash = hashlib.sha256(template.read_bytes()).hexdigest()
     before = _existing_graph_snapshot(template)
     source = tmp_path / "source.md"
@@ -372,15 +405,19 @@ def test_converter_preserves_existing_graph_and_allocates_matching_body_and_part
     "damage",
     ("duplicate_positive", "malformed_id", "missing_reserved", "reserved_kind", "missing_relationship"),
 )
+@pytest.mark.parametrize("with_body", [False, True])
+@pytest.mark.parametrize("with_new_note", [False, True])
 def test_converter_fails_closed_before_artifact_for_malformed_existing_note_graph(
     tmp_path: Path,
     damage: str,
+    with_body: bool,
+    with_new_note: bool,
 ) -> None:
     template = tmp_path / f"damaged-{damage}.docx"
-    _inject_existing_footnote_graph(template, damage=damage)
+    _inject_existing_footnote_graph(template, damage=damage, include_body_placeholder=with_body)
     template_hash = hashlib.sha256(template.read_bytes()).hexdigest()
     source = tmp_path / "source.md"
-    source.write_text("Body[^new].\n\n[^new]: New note.\n", encoding="utf-8")
+    source.write_text("Body[^new].\n\n[^new]: New note.\n" if with_new_note else "Body.\n", encoding="utf-8")
     context, workspace = make_context(
         str(source),
         target_format="docx",

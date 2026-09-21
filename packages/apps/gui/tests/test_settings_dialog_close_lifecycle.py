@@ -212,3 +212,69 @@ def test_reentrant_reject_during_preview_restore_does_not_repeat_cleanup(
             vm.cancel_changes()
             dialog.close()
         parent.close()
+
+
+def test_clean_cancel_skips_global_preview_restore_and_draft_rebuild(
+    qapp,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    parent = QWidget()
+    vm = SettingsViewModel()
+    dialog = SettingsDialog(parent=parent, view_model=vm)
+    dialog.show()
+    qapp.processEvents()
+
+    theme_restores: list[str] = []
+    opacity_restores: list[float] = []
+    cancel_calls: list[bool] = []
+    monkeypatch.setattr(
+        dialog_module,
+        "_apply_theme_no_persist",
+        lambda theme: theme_restores.append(theme),
+    )
+    monkeypatch.setattr(
+        dialog_module,
+        "_apply_opacity_no_persist",
+        lambda opacity, _parent: opacity_restores.append(opacity),
+    )
+    monkeypatch.setattr(vm, "cancel_changes", lambda: cancel_calls.append(True))
+
+    try:
+        dialog.reject()
+
+        assert dialog.isVisible() is False
+        assert vm.is_dirty is False
+        assert theme_restores == []
+        assert opacity_restores == []
+        assert cancel_calls == []
+    finally:
+        parent.close()
+
+
+def test_clean_ok_closes_without_persisting_or_refreshing_runtime(
+    qapp,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    parent = QWidget()
+    vm = SettingsViewModel()
+    dialog = SettingsDialog(parent=parent, view_model=vm)
+    dialog.show()
+    qapp.processEvents()
+
+    persist_calls: list[bool] = []
+    source_refreshes = QSignalSpy(dialog.settings_source_changed)
+
+    def unexpected_persist() -> bool:
+        persist_calls.append(True)
+        raise AssertionError("clean OK must not persist settings")
+
+    monkeypatch.setattr(vm, "ok_changes", unexpected_persist)
+
+    try:
+        dialog._on_ok()  # pyright: ignore[reportPrivateUsage]
+
+        assert dialog.isVisible() is False
+        assert persist_calls == []
+        assert source_refreshes.count() == 0
+    finally:
+        parent.close()

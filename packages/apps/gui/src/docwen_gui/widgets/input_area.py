@@ -58,11 +58,13 @@ from qfluentwidgets import (
 
 from docwen_gui.format_presentation import SUPPORTED_FORMAT_GROUPS, presentation_for
 from docwen_gui.i18n import t
+from docwen_gui.resources import set_action_icon
 from docwen_gui.styles.design_tokens import Sizing, Spacing
 
 from .elided_label import MiddleElidedLabel
 from .location_button import LocationButton
 from .panel_card import WrappingLabel
+from .warning_badge import WarningBadge
 
 if TYPE_CHECKING:
     from ..view_models.input_area_vm import InputAreaViewModel
@@ -352,6 +354,14 @@ class InputArea(QFrame):
         self._selection_label.setMinimumWidth(0)
         self._selection_label.setText("")
 
+        self._format_notice_label = WarningBadge(self._feedback_frame)
+        self._format_notice_label.setObjectName("fileDropFormatNotice")
+        self._format_notice_label.setTextFormat(Qt.TextFormat.PlainText)
+        self._format_notice_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        self._format_notice_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
+        self._format_notice_label.setWordWrap(True)
+        self._format_notice_label.setVisible(False)
+
         self._selection_detail_label = MiddleElidedLabel("", self._feedback_frame)
         self._selection_detail_label.setObjectName("fileDropSelectionDetailLabel")
         self._selection_detail_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
@@ -359,6 +369,7 @@ class InputArea(QFrame):
         self._selection_detail_label.setVisible(False)
 
         feedback_layout.addWidget(self._selection_label)
+        feedback_layout.addWidget(self._format_notice_label, alignment=Qt.AlignmentFlag.AlignLeft)
         path_row = QHBoxLayout()
         path_row.setSpacing(Spacing.SM)
         path_row.addWidget(self._selection_detail_label, 1)
@@ -417,6 +428,9 @@ class InputArea(QFrame):
 
     def _on_selection_message_changed(self, message: str, tone: str) -> None:
         self._selection_label.setText(message)
+        format_notice = self._vm.format_notice
+        self._format_notice_label.setText(format_notice)
+        self._format_notice_label.setVisible(bool(format_notice))
         detail = self._vm.selection_detail
         self._selection_detail_label.set_full_text(detail)
         self._selection_detail_label.setVisible(bool(detail))
@@ -442,6 +456,9 @@ class InputArea(QFrame):
     def _restore_drag_preview_message(self) -> None:
         self._selection_label.setText(self._vm.selection_message or "")
         self._selection_label.setToolTip("")
+        format_notice = self._vm.format_notice
+        self._format_notice_label.setText(format_notice)
+        self._format_notice_label.setVisible(bool(format_notice))
         detail = self._vm.selection_detail
         self._selection_detail_label.set_full_text(detail)
         self._selection_detail_label.setVisible(bool(detail))
@@ -455,6 +472,7 @@ class InputArea(QFrame):
             preview = self._vm.build_drag_preview(self._drag_paths_from_mime_data(event.mimeData()))
             self._selection_label.setText(preview.message)
             self._selection_label.setToolTip(preview.tooltip)
+            self._format_notice_label.setVisible(False)
             self._selection_detail_label.set_full_text("")
             self._selection_detail_label.setVisible(False)
             self._feedback_frame.setProperty("feedbackTone", preview.tone)
@@ -770,12 +788,7 @@ class InputArea(QFrame):
             self._top_layout.setSpacing(Spacing.GROUP_GAP)
             self._clear_button.setText("")
             self._clear_button.setToolTip(_i18n(_I_CLEAR_BUTTON, "Clear"))
-            self._clear_button.setIconSize(QSize(16, 16))
-            style = self.style() or QApplication.style()
-            if style is not None:
-                icon = style.standardIcon(QStyle.StandardPixmap.SP_LineEditClearButton)
-                if not icon.isNull():
-                    self._clear_button.setIcon(icon)
+            set_action_icon(self._clear_button, "clear.svg", size=16)
         else:
             self._top_layout.setDirection(QBoxLayout.Direction.LeftToRight)
             self._top_layout.setSpacing(Spacing.GROUP_GAP)

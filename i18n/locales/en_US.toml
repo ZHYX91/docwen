@@ -1435,6 +1435,7 @@ other_short = "Other"
 [file_format_validation]
 
 [file_admission]
+actual_format = "Actual format: {detected_format}"
 compatible_text = "The filename declares {declared_format}, while the content was detected as {detected_format}; both use the same text workflow."
 same_family_mismatch = "The filename declares {declared_format}, while the content was detected as {detected_format}. Both formats use the same processing family, so the detected format will be used."
 cross_family_mismatch = "The filename declares {declared_format}, while the content was detected as {detected_format}. The formats use different processing families; confirm processing as the detected format."

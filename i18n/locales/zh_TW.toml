@@ -1391,6 +1391,7 @@ other_short = "其他"
 [file_format_validation]
 
 [file_admission]
+actual_format = "實際格式：{detected_format}"
 compatible_text = "檔名宣告為 {declared_format}，內容偵測為 {detected_format}；兩者使用相同的文字處理流程。"
 same_family_mismatch = "檔名宣告為 {declared_format}，內容偵測為 {detected_format}。兩者屬於相同的處理類別，將依偵測到的格式處理。"
 cross_family_mismatch = "檔名宣告為 {declared_format}，內容偵測為 {detected_format}。兩者屬於不同的處理類別；請確認是否依偵測到的格式處理。"

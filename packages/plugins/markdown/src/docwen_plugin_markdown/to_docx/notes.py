@@ -867,8 +867,6 @@ _RELATIONSHIP_ATTRIBUTE_NAMES = frozenset({"id", "embed", "link"})
 def prepare_note_context_for_document(document, note_ctx: NoteContext) -> None:
     """Audit request-template note graphs and seed collision-free ID allocation."""
 
-    if not note_ctx.has_notes:
-        return
     buffer = BytesIO()
     try:
         document.save(buffer)
