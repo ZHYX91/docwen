@@ -45,6 +45,7 @@ def project_route_options(
     source_format: str = "",
     target_format: str = "",
     action_name: str = "",
+    proofread_requested: bool = False,
 ) -> dict[str, Any]:
     """Validate and project options through one canonical runtime route.
 
@@ -59,6 +60,7 @@ def project_route_options(
         source_format=source_format,
         target_format=target_format,
         action_name=action_name,
+        proofread_requested=proofread_requested,
     )
     supported = frozenset(route_options)
     unsupported = sorted(set(prepared) - supported - {POSTPROCESS_PROOFREAD_OPTION})
