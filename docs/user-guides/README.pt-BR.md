@@ -199,8 +199,8 @@ Para scripts, agentes ou plugins, recomenda-se esta ordem:
 
 1. `inspect <file> [--json]`: detectar primeiro a categoria real do arquivo, o formato e as ações suportadas.
 2. `schema convert`: ler o contrato legível por máquina e as regras condicionais de `convert`.
-3. `convert <file> --to <fmt> --output <path> --dry-run --json`: pré-visualizar detecção, normalização e roteamento sem gravar arquivos.
-4. `convert <file> --to <fmt> --output <path> ...`: executar a conversão real somente depois.
+3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: pré-visualizar detecção, normalização e roteamento sem gravar arquivos.
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: executar a conversão real somente depois.
 
 ### Exemplos comuns
 
@@ -245,8 +245,8 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 | Comando / opção | Descrição |
 | --- | --- |
-| `convert <file> --to <fmt> --output <path>` | Ponto de entrada unificado para conversões. |
-| `convert <file> --to <fmt> --output <path> --dry-run --json` | Pré-visualiza detecção, normalização, roteamento e opções efetivas sem executar a conversão real. |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | Ponto de entrada unificado para conversões. |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | Pré-visualiza detecção, normalização, roteamento e opções efetivas sem executar a conversão real. |
 | `schema convert` | Exporta o contrato legível por máquina, valores padrão, condições e chaves canônicas de `convert`. |
 | `validate <file> --check ...` | Revisão de documentos (`typo/punct/symbol/sensitive/all/none`). Use `--json` para o envelope da CLI; `--report` é um caminho opcional para o arquivo de relatório. |
 | `inspect <file> [--json]` | Inspeciona categoria/formato do arquivo, ações recomendadas e avisos de divergência entre extensão e conteúdo. |
@@ -256,7 +256,7 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `resources list numbering-schemes` | Lista os esquemas de numeração disponíveis. |
 | `--template <id>` | ID canônico exato retornado por `resources list templates`; nomes exibidos, nomes de arquivos e caminhos são rejeitados. IDs DOCX valem para `docx/doc/odt/rtf/wps/pdf`, IDs XLSX para `xlsx/xls/ods/csv`. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Extração de imagens e OCR para `convert --to md`. |
-| `--image-mode file|base64` | Controla como as imagens são emitidas durante a exportação para Markdown. |
+| `--image-mode file|base64|embed|omit` | Controla como as imagens são emitidas durante a exportação para Markdown. |
 | `--ocr-placement image_md|main_md` | Controla se o texto OCR é gravado no Markdown auxiliar da imagem ou no Markdown principal. |
 | `--heading-merge-mode punct_required|always|never` | Controla a estratégia de mesclagem entre título + corpo para `convert --to docx`. |
 | `--optimization <id>` | Ativa explicitamente um perfil de otimização (veja `resources list optimizations`). |
