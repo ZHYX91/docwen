@@ -16,6 +16,7 @@ from docwen_application.conversion_contracts import (
 from docwen_cli.machine.contracts import MachineContractValidator
 from docwen_cli.machine.framing import MAX_MESSAGE_BYTES, FrameWriter, read_frame
 from docwen_cli.machine.server import MachineProtocolServer
+from docwen_core.version import PRODUCT_VERSION
 from docwen_core.models import (
     ArtifactBundle,
     BundleArtifact,
@@ -296,7 +297,9 @@ def test_incompatible_handshake_does_not_initialize_session(major: int, minor: i
     assert exit_code == 0
     assert responses[0]["error"]["data"] == {
         "code": "incompatible_protocol",
+        "received_protocol": {"name": "docwen.machine", "major": major, "minor": minor},
         "supported_protocol": {"name": "docwen.machine", "major": 2, "minor": 0},
+        "server": {"name": "DocWen", "version": PRODUCT_VERSION},
     }
     assert responses[1]["error"]["message"] == "initialize must be called first"
 
