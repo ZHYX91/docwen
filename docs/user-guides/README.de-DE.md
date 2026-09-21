@@ -591,7 +591,7 @@ Assistant 3.0 bleibt auf Windows-Desktop beschränkt und besitzt keine Linux/mac
 
 ### Installation
 
-DocWen Assistant 3.0 verwendet DocWen Machine Protocol v2 und den einzigen Artifact-Bundle-v3-Vertrag. Die
+DocWen Assistant 3.1 verwendet DocWen Machine Protocol v2 und den einzigen Artifact-Bundle-v3-Vertrag. Die
 Quellversion belegt keine Veröffentlichung; installieren Sie nur einen numerischen Release, der ausdrücklich einen
 kompatiblen veröffentlichten DocWen-Release nennt.
 
