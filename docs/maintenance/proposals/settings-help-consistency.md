@@ -1,6 +1,6 @@
-# Implementation proposal: consistent settings help
+# Implementation record: consistent settings help
 
-Status: **implementation in progress on this Draft PR**. Production GUI/i18n changes and focused tests are now present on the branch; this document is not a completion report and does not supersede current specifications.
+The shared settings-help control implements plain-text hover/click help and keyboard access. This record explains the design and regression coverage; release and host validation are recorded separately.
 
 ## Reported problems
 
@@ -48,18 +48,11 @@ The exact implementation must verify the wording against each formatting mode. D
 9. Avoid repeating the same giant help text on every combo popup item. Distinguish field-level explanations from genuinely option-specific descriptions.
 10. Where useful, show a small current-choice example, such as `[[target|label]] -> label`. It must reflect the actual implementation and not advertise YAML support until that restoration is implemented.
 
-## Acceptance and regression checks
+## Implementation and validation boundaries
 
-- [ ] Parse affected TOML resources and verify intended actual line breaks.
-- [ ] Preserve intentionally literal `\n`, backslashes, paths, quotes and regex examples.
-- [ ] Verify `**粗体**`, `<...>`, ampersands and bracket syntax display literally when instructional.
-- [ ] Test help association and geometry in short/long labels, Chinese/English and a long-text locale.
-- [ ] Test all font presets, light/dark themes and representative display scaling, including screen-edge placement.
-- [ ] Test keyboard focus, Enter/Space activation, Escape dismissal and focus restoration.
-- [ ] Check hover/click transitions do not flicker, immediately dismiss or strand a popup.
-- [ ] Retain checkbox/combo behavior, wheel safety, scroll behavior and common row alignment.
-- [ ] Inspect before/after screenshots in the actual Qt application, including Windows and a Linux desktop.
-- [ ] Run applicable repository checks and report only tests actually executed.
+Locale-source corrections provide actual line breaks without a global escape decoder. The shared control uses a focusable information button, plain-text hover help and a bounded scrollable click popup. Form rows use polished widget metrics and the actual allocated label width, including style padding, to keep the icon adjacent without clipping large-font labels.
+
+`test_settings_help_popup.py` and settings alignment tests exercise literal content, keyboard activation/dismissal, bounded popup geometry, Chinese/English labels, large fonts and layout changes. Selected Windows native checks cover click/Enter/Escape and the final large-font settings view. Linux desktop interaction, every locale and the full font/display/screen matrix are not claimed by those checks; [testing guidance](../../testing.md) governs additional host acceptance.
 
 ## Scope and coordination
 
@@ -67,4 +60,4 @@ Likely changes: `widgets/settings/base_tab.py`, shared form/help components, loc
 
 Mermaid PR #18 changes locale files, so source fixes must be reconciled rather than replacing its strings. The icon-unification work may share low-level resources; keep ownership clear to avoid duplicate tooltip or SVG engines.
 
-Do not mark ready or merge until production changes and validation are complete. This initial commit contains only this plan.
+The implementation uses the existing help and SVG infrastructure. PR validation records bind executed checks to their source and preserve the limits above.
