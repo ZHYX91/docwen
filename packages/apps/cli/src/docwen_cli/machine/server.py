@@ -66,8 +66,8 @@ def _protocol_diagnostic(value: object) -> dict[str, object | None]:
     name = raw_name[:_PROTOCOL_NAME_LIMIT] if isinstance(raw_name, str) else None
     raw_major = value.get("major")
     raw_minor = value.get("minor")
-    major = raw_major if type(raw_major) is int else None
-    minor = raw_minor if type(raw_minor) is int else None
+    major = raw_major if type(raw_major) is int and 0 <= raw_major <= 2_147_483_647 else None
+    minor = raw_minor if type(raw_minor) is int and 0 <= raw_minor <= 2_147_483_647 else None
     return {"name": name, "major": major, "minor": minor}
 
 
