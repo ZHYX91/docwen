@@ -199,8 +199,8 @@ pip install pillow-heif
 
 1. `inspect <file> [--json]`: сначала определить реальную категорию файла, формат и поддерживаемые действия.
 2. `schema convert`: получить машиночитаемый контракт и условные правила для `convert`.
-3. `convert <file> --to <fmt> --output <path> --dry-run --json`: предварительно проверить распознавание, нормализацию и маршрутизацию без записи файлов.
-4. `convert <file> --to <fmt> --output <path> ...`: затем выполнить реальное преобразование.
+3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: предварительно проверить распознавание, нормализацию и маршрутизацию без записи файлов.
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: затем выполнить реальное преобразование.
 
 ### Типовые примеры
 
@@ -247,8 +247,8 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 | Команда / параметр | Описание |
 | --- | --- |
-| `convert <file> --to <fmt> --output <path>` | Единая точка входа для конвертации. |
-| `convert <file> --to <fmt> --output <path> --dry-run --json` | Предварительно показывает распознавание, нормализацию, маршрутизацию и итоговые параметры без реального запуска конвертации. |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | Единая точка входа для конвертации. |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | Предварительно показывает распознавание, нормализацию, маршрутизацию и итоговые параметры без реального запуска конвертации. |
 | `schema convert` | Экспортирует машиночитаемый контракт, значения по умолчанию, условия и канонические ключи для `convert`. |
 | `validate <file> --check ...` | Проверка документов (`typo/punct/symbol/sensitive/all/none`). Используйте `--json` для оболочки CLI; `--report` — необязательный путь к файлу отчета. |
 | `inspect <file> [--json]` | Показывает категорию/формат файла, рекомендуемые действия и предупреждения о расхождении расширения и содержимого. |
@@ -258,7 +258,7 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `resources list numbering-schemes` | Список доступных схем нумерации. |
 | `--template <id>` | Точный канонический ID из `resources list templates`; отображаемые имена, имена файлов и пути отклоняются. ID DOCX применяются к `docx/doc/odt/rtf/wps/pdf`, ID XLSX — к `xlsx/xls/ods/csv`. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Извлечение изображений и OCR для `convert --to md`. |
-| `--image-mode file|base64` | Управляет способом вывода изображений при экспорте в Markdown. |
+| `--image-mode file|base64|embed|omit` | Управляет способом вывода изображений при экспорте в Markdown. |
 | `--ocr-placement image_md|main_md` | Определяет, записывать OCR-текст в Markdown рядом с изображением или в основной Markdown-файл. |
 | `--heading-merge-mode punct_required|always|never` | Управляет стратегией объединения «заголовок + текст» для `convert --to docx`. |
 | `--optimization <id>` | Явно включает профиль оптимизации (см. `resources list optimizations`). |
