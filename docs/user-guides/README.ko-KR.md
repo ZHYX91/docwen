@@ -220,6 +220,9 @@ DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --o
 # Markdown 을 Word 로 변환 (템플릿 + 제목/본문 병합 모드)
 DocWenCLI.exe convert document.md --to docx --output-dir exports --template template.docx.6cd486f34e59c79ded078a008b269af37860b63ccb74d8d0ab0080a7229a9ab5 --heading-merge-mode punct_required
 
+# Markdown을 Word로 변환한 뒤 게시 전에 생성된 DOCX 교정
+DocWenCLI.exe convert document.md --to docx --output-dir exports --proofread --check typo --check punct
+
 # Markdown 출력 시 이미지 모드와 OCR 텍스트 배치 제어
 DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --image-mode file --ocr --ocr-placement image_md
 
@@ -246,6 +249,7 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | 명령 / 옵션 | 설명 |
 | --- | --- |
 | `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | 변환의 통합 진입점입니다. |
+| `convert <markdown> --to docx --output-dir <dir> --proofread [--check ...]` | Markdown→DOCX 뒤 생성된 DOCX를 교정합니다. `convert`의 `--check`는 `--proofread`와 함께 사용해야 하며, `--check`를 생략하면 구성된 교정 기본값을 사용합니다. |
 | `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | 실제 변환 없이 탐지, 정규화, 라우팅, 적용 옵션만 미리 확인합니다. |
 | `schema convert` | `convert` 의 기계 판독 가능한 계약, 기본값, 조건, 정규 키를 내보냅니다. |
 | `validate <file> --check ...` | 문서 교정(`typo/punct/symbol/sensitive/all/none`). CLI envelope에는 `--json`을 사용합니다. `--report`는 선택적 보고서 파일 경로입니다. |
