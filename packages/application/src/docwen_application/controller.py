@@ -431,29 +431,9 @@ class ApplicationController:
     def _postprocess_proofread_options(request: Any) -> dict[str, bool] | None:
         """Return validated Application-owned DOCX post-processing options."""
 
-        from docwen_core.models.request import POSTPROCESS_PROOFREAD_OPTION
-        from docwen_core.options import PROOFREAD_OPTIONS_SCHEMA
+        from docwen_application.postprocessing import postprocess_proofread_options
 
-        raw = getattr(request, "options", {}).get(POSTPROCESS_PROOFREAD_OPTION)
-        if raw is None:
-            return None
-        if getattr(request, "action_name", "") or str(getattr(request, "target_format", "")).lower() != "docx":
-            raise ValueError("Post-conversion proofreading is supported only for ordinary DOCX conversion")
-        if not isinstance(raw, dict):
-            raise ValueError("Post-conversion proofreading options must be an object")
-
-        properties = PROOFREAD_OPTIONS_SCHEMA.get("properties", {})
-        allowed = set(properties) if isinstance(properties, dict) else set()
-        unknown = sorted(set(raw) - allowed)
-        if unknown:
-            raise ValueError(f"Unsupported post-conversion proofreading option(s): {', '.join(unknown)}")
-
-        normalized: dict[str, bool] = {}
-        for key, value in raw.items():
-            if type(value) is not bool:
-                raise ValueError(f"Post-conversion proofreading option {key!r} must be boolean")
-            normalized[key] = value
-        return normalized if any(normalized.values()) else None
+        return postprocess_proofread_options(request)
 
     @staticmethod
     def _pipeline_conversion_identity(request: Any, task_id: str) -> Any:
