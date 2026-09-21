@@ -49,7 +49,9 @@ def test_main_window_general_policy_source_and_lifecycle_stay_wired() -> None:
     assert "3 if expand and right_visible else 0" in main
     assert "cfg_port.set_many(" in main
     assert "settings_source_changed = Signal()" in dialog
-    assert "settings_source_changed.connect(self._apply_runtime_window_settings)" in main
+    assert "settings_source_changed.connect(" in main
+    assert "self._apply_runtime_window_settings" in main
+    assert "Qt.ConnectionType.QueuedConnection" in main
     assert "finally:\n            self.settings_source_changed.emit()" in dialog
     assert "gui = self._vm.persisted_config.gui" in dialog
     assert "self._commit_preview_state()" in dialog

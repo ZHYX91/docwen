@@ -1837,7 +1837,10 @@ class MainWindow(QWidget):
             if self._settings_request_expired(deadline):
                 dialog.deleteLater()
                 return self._settings_timeout_result(section, reused=False)
-            dialog.settings_source_changed.connect(self._apply_runtime_window_settings)
+            dialog.settings_source_changed.connect(
+                self._apply_runtime_window_settings,
+                Qt.ConnectionType.QueuedConnection,
+            )
             dialog.destroyed.connect(lambda _object=None, owned=dialog: self._clear_settings_dialog(owned))
             dialog.finished.connect(lambda _result=0, owned=dialog: self._clear_settings_dialog(owned))
             self._settings_dialog = dialog

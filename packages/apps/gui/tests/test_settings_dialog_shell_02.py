@@ -237,11 +237,12 @@ def test_settings_dialog_reset_reload_failures_are_contained_and_other_tabs_cont
 def test_settings_dialog_ok_refreshes_every_attempt_and_closes_only_after_success(qapp, monkeypatch) -> None:
     from PySide6.QtTest import QSignalSpy
 
-    from docwen_gui.view_models.settings_vm import SettingsViewModel
+    from docwen_gui.view_models.settings_vm import SECTION_GUI, SettingsViewModel
     from docwen_gui.widgets.settings.dialog import SettingsDialog
 
     vm = SettingsViewModel()
     dialog = SettingsDialog(view_model=vm)
+    vm.set_field(SECTION_GUI, "auto_center", not vm.config.gui.auto_center)
     spy = QSignalSpy(dialog.settings_source_changed)
     accept_calls: list[bool] = []
     monkeypatch.setattr(dialog, "accept", lambda: accept_calls.append(True))
