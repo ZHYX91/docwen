@@ -580,7 +580,7 @@ Excel 範本中的 `{{→月份}}` 會依次向右填充"1月"、"2月"、"3月"
 
 DocWen Core 的 runtime/control transport 可在 Windows 使用命名管道，在 Linux/macOS 使用
 AF_UNIX 通訊端。檔案鎖只負責單一實例所有權，控制命令不透過檔案傳輸。這只是 Core 能力
-說明；DocWen Assistant 3.0 仍僅限 Windows 桌面端，尚無 Linux/macOS 組合驗收。
+說明；DocWen Assistant 3.1 仍僅限 Windows 桌面端，尚無 Linux/macOS 組合驗收。
 
 1. **首次點擊** → 啟動轉換器並傳入當前文件
 2. **再次點擊（有文件）** → 替換為新文件（單文件模式）
@@ -588,7 +588,7 @@ AF_UNIX 通訊端。檔案鎖只負責單一實例所有權，控制命令不透
 
 ### 安裝方法
 
-DocWen Assistant 3.0 使用 DocWen Machine Protocol v2 與唯一的 Artifact Bundle v3 合同。原始碼版本不能
+DocWen Assistant 3.1 使用 DocWen Machine Protocol v2 與唯一的 Artifact Bundle v3 合同。原始碼版本不能
 證明已經發布；請只安裝明確標識了相容且已發布 DocWen 版本的數字版本 Release。
 
 ## 🔌 OpenClaw（插件 + Skill）
