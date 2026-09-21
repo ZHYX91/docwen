@@ -55,6 +55,12 @@ def _redacted_request_options(options: dict[str, Any]) -> dict[str, Any]:
     redacted = deepcopy(options)
     if "spreadsheet_password" in redacted:
         redacted["spreadsheet_password"] = "<redacted>"
+    postprocess = redacted.pop(POSTPROCESS_PROOFREAD_OPTION, None)
+    if isinstance(postprocess, dict):
+        redacted["proofread"] = {
+            "enabled": True,
+            "options": deepcopy(postprocess),
+        }
     return redacted
 
 
