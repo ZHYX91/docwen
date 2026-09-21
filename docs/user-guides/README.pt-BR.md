@@ -222,6 +222,9 @@ DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --o
 # Markdown para Word (modelo + modo de mesclagem título/corpo)
 DocWenCLI.exe convert document.md --to docx --output-dir exports --template template.docx.bc1e1d050b189f112cd8137fe505d8fa3259d2552b382f4d0025ac279660ddcf --heading-merge-mode punct_required
 
+# Markdown para Word e revisão do DOCX gerado antes da publicação
+DocWenCLI.exe convert document.md --to docx --output-dir exports --proofread --check typo --check punct
+
 # Controlar modo de imagem e posição do texto OCR no Markdown
 DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --image-mode file --ocr --ocr-placement image_md
 
@@ -246,6 +249,7 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | Comando / opção | Descrição |
 | --- | --- |
 | `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | Ponto de entrada unificado para conversões. |
+| `convert <markdown> --to docx --output-dir <dir> --proofread [--check ...]` | Revisa o DOCX gerado após Markdown→DOCX; `--check` em `convert` exige `--proofread`. Sem `--check`, são usados os padrões de revisão configurados. |
 | `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | Pré-visualiza detecção, normalização, roteamento e opções efetivas sem executar a conversão real. |
 | `schema convert` | Exporta o contrato legível por máquina, valores padrão, condições e chaves canônicas de `convert`. |
 | `validate <file> --check ...` | Revisão de documentos (`typo/punct/symbol/sensitive/all/none`). Use `--json` para o envelope da CLI; `--report` é um caminho opcional para o arquivo de relatório. |
