@@ -592,7 +592,7 @@ DocWen Assistant 3.1 sigue limitado al escritorio de Windows y no tiene aceptaci
 
 ### Instalación
 
-DocWen Assistant 3.1 usa DocWen Machine Protocol v2 y el único contrato Artifact Bundle v3. La versión del código
+DocWen Assistant 3.1 requiere DocWen 0.13.0 o posterior. Las operaciones de contenido usan Machine Protocol v2 y Artifact Bundle v3; iniciar/abrir la aplicación de escritorio usa el control GUI local independiente. La versión del código
 fuente no demuestra que esté publicada; instala solo una versión numérica que identifique explícitamente una versión
 publicada y compatible de DocWen.
 
