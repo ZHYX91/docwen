@@ -97,7 +97,7 @@ def test_md_to_docx_proofread_options_survive_route_scoping_as_application_inten
         selected_template=lambda: None,
     )
 
-    request, _ = builder.single(
+    request, context = builder.single(
         file_path=str(source),
         target_format="docx",
         action_name="",
@@ -114,6 +114,16 @@ def test_md_to_docx_proofread_options_survive_route_scoping_as_application_inten
     assert request.options == {
         "remove_numbering": True,
         POSTPROCESS_PROOFREAD_OPTION: {
+            "enable_symbol_pairing": True,
+            "enable_symbol_correction": False,
+            "enable_typos_rule": True,
+            "enable_sensitive_word": False,
+        },
+    }
+    assert POSTPROCESS_PROOFREAD_OPTION not in context["options"]
+    assert context["options"]["proofread"] == {
+        "enabled": True,
+        "options": {
             "enable_symbol_pairing": True,
             "enable_symbol_correction": False,
             "enable_typos_rule": True,
