@@ -150,7 +150,19 @@ def test_markdown_docx_proofread_is_two_private_then_public_runtime_stages(
     }
     assert proofread.output_policy.output_dir == str(published)
     assert proofread.output_policy.group_outputs is True
-    assert proofread.conversion_identity == render.conversion_identity
+    assert render.conversion_identity is not None
+    assert proofread.conversion_identity is not None
+    assert render.conversion_identity.task_id == "pipeline-render"
+    assert proofread.conversion_identity.task_id == "pipeline"
+    assert (
+        render.conversion_identity.source_stem,
+        render.conversion_identity.source_format,
+        render.conversion_identity.created_at,
+    ) == (
+        proofread.conversion_identity.source_stem,
+        proofread.conversion_identity.source_format,
+        proofread.conversion_identity.created_at,
+    )
     assert proofread.input_refs[0].path.endswith("rendered.docx")
     assert proofread.input_refs[0].format == "docx"
     assert not Path(private_output).exists()
