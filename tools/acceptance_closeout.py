@@ -53,8 +53,10 @@ def _validate_subject(*, name: str, sha256: str, size: int) -> dict[str, object]
 
 
 def _managed_boundary(run_root: Path, *, workspace_root: Path) -> Path:
-    for name in workspace_cleanup.MANAGED_ROOT_NAMES:
-        boundary = (workspace_root / name).resolve(strict=True)
+    for managed in workspace_cleanup._managed_roots(workspace_root):
+        if not managed.exists():
+            continue
+        boundary = managed.resolve(strict=True)
         if run_root == boundary or boundary in run_root.parents:
             if run_root == boundary:
                 raise AcceptanceCloseoutError(f"managed_root_itself_not_a_run:{run_root}")
@@ -72,6 +74,10 @@ def close_run(
     subject_sha256: str,
     subject_bytes: int,
     limitations: tuple[str, ...] = (),
+    result: str = "passed",
+    reason: str = "",
+    disposition: str = "delete",
+    evidence_files: tuple[str, ...] = (),
 ) -> Path:
     workspace = resolve_workspace_root(Path(__file__).resolve().parents[1], explicit=workspace_root)
     candidate = _validate_token(candidate_id, field="candidate_id")
@@ -89,12 +95,39 @@ def close_run(
         raise AcceptanceCloseoutError(f"run_lease_not_object:{run}")
     if lease.get("root") != str(run) or not str(lease.get("owner", "")).startswith("docwen."):
         raise AcceptanceCloseoutError(f"run_lease_identity_mismatch:{run}")
-    if str(lease.get("state", "")).casefold() not in workspace_cleanup.SUCCESS_STATES:
-        raise AcceptanceCloseoutError(f"run_not_success_terminal:{run}:{lease.get('state')}")
+    state = str(lease.get("state", "")).casefold()
+    if result not in {"passed", "failed", "superseded"}:
+        raise AcceptanceCloseoutError("invalid_result")
+    if result == "passed" and state not in workspace_cleanup.SUCCESS_STATES:
+        raise AcceptanceCloseoutError(f"run_not_success_terminal:{run}:{state}")
+    if result != "passed":
+        allowed = workspace_cleanup.SUCCESS_STATES | workspace_cleanup.FAILURE_STATES | {"retained-manual"}
+        if state not in allowed or (result == "failed" and state not in workspace_cleanup.FAILURE_STATES):
+            raise AcceptanceCloseoutError(f"run_not_terminal:{run}:{state}")
+        if not reason.strip():
+            raise AcceptanceCloseoutError("nonpassing_closeout_reason_required")
     if workspace_cleanup._lease_process_alive(lease):
         raise AcceptanceCloseoutError(f"run_owner_still_alive:{run}:{lease.get('pid')}")
 
     identity = workspace_cleanup._snapshot_tree(run)
+    if len(evidence_files) > 8:
+        raise AcceptanceCloseoutError("too_many_evidence_files")
+    evidence: list[dict[str, Any]] = []
+    for relative in evidence_files:
+        path = run / relative
+        if Path(relative).is_absolute() or Path(relative).drive or ".." in Path(relative).parts or ":" in relative:
+            raise AcceptanceCloseoutError("evidence_path_outside_run")
+        if any(part.casefold().startswith(".env") for part in Path(relative).parts):
+            raise AcceptanceCloseoutError("credential_evidence_forbidden")
+        if not path.is_file() or not workspace_cleanup._chain_is_plain(path, boundary=run):
+            raise AcceptanceCloseoutError("evidence_must_be_plain_file")
+        if path.stat().st_size > 65536:
+            raise AcceptanceCloseoutError("evidence_too_large")
+        with path.open("rb") as stream:
+            content = stream.read(65537)
+        if len(content) > 65536:
+            raise AcceptanceCloseoutError("evidence_too_large")
+        evidence.append({"path": relative, "bytes": len(content), "text": content.decode("utf-8")})
     receipt = workspace / "acceptance" / f"{candidate}--{gate_name}.json"
     if receipt.exists():
         raise AcceptanceCloseoutError(f"receipt_exists:{receipt}")
@@ -103,7 +136,10 @@ def close_run(
         "schema": RECEIPT_SCHEMA,
         "candidateId": candidate,
         "gate": gate_name,
-        "result": "passed",
+        "result": result,
+        "reason": reason,
+        "originalLease": lease,
+        "evidence": evidence,
         "generatedAt": generated_at,
         "subject": subject,
         "runSummary": {
@@ -125,10 +161,18 @@ def close_run(
     plan = workspace_cleanup.create_plan(
         workspace_root=workspace,
         explicit_targets=(run,),
-        reason=f"acceptance closeout {candidate}/{gate_name}",
+        reason=f"acceptance closeout {candidate}/{gate_name}: {result} {reason}",
+        disposition=disposition,
     )
     workspace_cleanup.save_plan(plan, plan_path)
-    workspace_cleanup.apply_saved_plan(plan_path, workspace_root=workspace)
+    _atomic_json(receipt, payload)
+    try:
+        payload["cleanup"] = workspace_cleanup.apply_saved_plan(plan_path, workspace_root=workspace)
+    except Exception as error:
+        payload["cleanupError"] = f"{type(error).__name__}: {error}"
+        payload["rawRunRemoved"] = not run.exists()
+        _atomic_json(receipt, payload)
+        raise
     payload["rawRunRemoved"] = True
     _atomic_json(receipt, payload)
     plan_path.unlink()
@@ -146,6 +190,15 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--subject-sha256", required=True)
     result.add_argument("--subject-bytes", type=int, required=True)
     result.add_argument("--limitation", action="append", default=[])
+    result.add_argument("--result", choices=["passed", "failed", "superseded"], default="passed")
+    result.add_argument("--reason", default="")
+    result.add_argument("--disposition", choices=["delete", "recycle"], default="delete")
+    result.add_argument(
+        "--evidence",
+        action="append",
+        default=[],
+        help="Relative UTF-8 summary file inside the run (up to 64 KiB each, eight files).",
+    )
     return result
 
 
@@ -161,6 +214,10 @@ def main(argv: list[str] | None = None) -> int:
             subject_sha256=args.subject_sha256,
             subject_bytes=args.subject_bytes,
             limitations=tuple(args.limitation),
+            result=args.result,
+            reason=args.reason,
+            disposition=args.disposition,
+            evidence_files=tuple(args.evidence),
         )
     except (AcceptanceCloseoutError, workspace_cleanup.HousekeepingError, OSError, ValueError) as error:
         print(f"acceptance_closeout_error:{error}", file=sys.stderr)

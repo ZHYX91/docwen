@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from functools import partial
 from pathlib import Path
 
 import pytest
@@ -37,7 +38,7 @@ def _leased_run(workspace: Path, *, state: str, pid: int = 999_999_999) -> Path:
         + "\n",
         encoding="utf-8",
     )
-    (run / "summary.log").write_text("passed\n", encoding="utf-8")
+    (run / "summary.log").write_bytes(b"passed\n")
     return run
 
 
@@ -85,3 +86,83 @@ def test_closeout_rejects_nonterminal_or_live_run(tmp_path: Path, monkeypatch: p
         )
 
     assert run.is_dir()
+
+
+@pytest.mark.parametrize("result", ["failed", "superseded"])
+def test_closeout_preserves_failure_state(tmp_path: Path, result: str) -> None:
+    workspace = _workspace(tmp_path)
+    run = _leased_run(workspace, state="retained-failure")
+    close = partial(
+        acceptance_closeout.close_run,
+        workspace_root=workspace,
+        run_root=run,
+        candidate_id="candidate-2",
+        gate="source",
+        subject_name="candidate.zip",
+        subject_sha256="0" * 64,
+        subject_bytes=0,
+        result=result,
+    )
+    with pytest.raises(acceptance_closeout.AcceptanceCloseoutError, match="reason_required"):
+        close()
+    assert run.exists()
+    (run / "summary.log").write_bytes(b"Assertion failed: target changed\n")
+    receipt = close(
+        reason="Original assertion failed; replaced by candidate-3/source.", evidence_files=("summary.log",)
+    )
+    payload = json.loads(receipt.read_text())
+    assert payload["result"] == result
+    assert payload["originalLease"]["state"] == "retained-failure"
+    assert payload["rawRunRemoved"]
+    assert payload["evidence"][0]["text"] == "Assertion failed: target changed\n"
+
+
+def test_closeout_cleanup_failure_preserves_receipt_and_raw_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    workspace = _workspace(tmp_path)
+    run = _leased_run(workspace, state="retained-failure")
+
+    def fail(*args: object, **kwargs: object) -> None:
+        raise PermissionError("denied")
+
+    monkeypatch.setattr(workspace_cleanup, "apply_saved_plan", fail)
+    with pytest.raises(PermissionError, match="denied"):
+        acceptance_closeout.close_run(
+            workspace_root=workspace,
+            run_root=run,
+            candidate_id="failure",
+            gate="test",
+            subject_name="candidate.zip",
+            subject_sha256="0" * 64,
+            subject_bytes=0,
+            result="failed",
+            reason="original failure",
+            evidence_files=("summary.log",),
+        )
+    payload = json.loads((workspace / "acceptance/failure--test.json").read_text())
+    assert payload["result"] == "failed"
+    assert payload["cleanupError"] == "PermissionError: denied"
+    assert payload["rawRunRemoved"] is False
+    assert run.exists()
+    assert payload["evidence"][0]["text"] == "passed\n"
+
+
+@pytest.mark.parametrize("relative", ["../secret.txt", ".env", "missing.log"])
+def test_closeout_rejects_unsafe_evidence_before_cleanup(tmp_path: Path, relative: str) -> None:
+    workspace = _workspace(tmp_path)
+    run = _leased_run(workspace, state="completed-success")
+    (run / ".env").write_text("secret")
+    with pytest.raises(acceptance_closeout.AcceptanceCloseoutError):
+        acceptance_closeout.close_run(
+            workspace_root=workspace,
+            run_root=run,
+            candidate_id="invalid",
+            gate="test",
+            subject_name="candidate.zip",
+            subject_sha256="0" * 64,
+            subject_bytes=0,
+            evidence_files=(relative,),
+        )
+    assert run.exists()
+    assert not list((workspace / "acceptance").iterdir())
