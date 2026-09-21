@@ -1,6 +1,6 @@
-# Implementation proposal: compact file-format warning
+# Implementation record: compact file-format warning
 
-Status: **implementation in progress on this Draft PR**. Single-file and batch presentation code is now present on the branch, but it is not a released GUI capability until validation and merge.
+Single-file and batch presentation implement a separate actual-format notice. This record explains the design and regression coverage; release and host validation are recorded separately.
 
 ## User-visible outcome
 
@@ -64,12 +64,10 @@ Review baseline: `93227f5d2a921e7168344903bccd1c3f0095f38d`.
 | Dark/light theme; all font presets; narrow width | Readable and visually distinct filename, badge and path |
 | Long localized text and literal special characters | No clipping, rich-text injection or unintended elision of actual format |
 
-## Completion gate
+## Implementation and validation boundaries
 
-- [ ] Implement structured view-model presentation and both display modes.
-- [ ] Run admission non-regression and focused GUI tests.
-- [ ] Capture before/after screenshots from the real application on target platforms.
-- [ ] Check keyboard/readout accessibility and path actions.
-- [ ] Record executed tests and exact commit; keep draft until implemented and validated.
+`render_file_format_notice` projects frozen inspection facts; `render_remaining_file_warnings` retains unrelated diagnostics. Single-file and batch widgets display the shared warning badge separately from filename and path. The asynchronous input-completion path resynchronizes the selected item so it cannot overwrite the compact notice with the old combined message.
 
-This work must not be used as a reason to weaken detection, consent, error reporting or transaction boundaries. No automatic merge.
+Admission, single-input and batch regression tests cover real controller entry points, mismatch classification, preserved warnings and replacement behavior. Selected Windows native checks use actual DOC bytes with a misleading DOCX extension and exercise light/dark themes, large fonts and batch presentation. [Testing guidance](../../testing.md) governs host evidence; these selected checks do not certify every locale, font/display combination or platform.
+
+Detection, consent, error reporting and transaction boundaries retain their existing contracts. The acceptance matrix above describes the maintained requirements, not a claim that every native combination has been executed.
