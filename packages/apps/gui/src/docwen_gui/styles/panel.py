@@ -49,8 +49,6 @@ def build_panel_stylesheet(theme_name: str, font_size_preset: str | None = None)
     return "\n".join(
         [
             "/* docwen-global-panel-foundation */",
-            # -- Status & about hero cards (grouped with theme preview) --
-            "QWidget#aboutHeroCard,",
             # -- Settings cards & sections --
             "QToolButton#settingsInfoButton {",
             "    border: none;",
@@ -62,7 +60,7 @@ def build_panel_stylesheet(theme_name: str, font_size_preset: str | None = None)
             "QToolButton#settingsInfoButton:focus {",
             f"    background-color: {_hex_to_rgba(COLOR_PRIMARY, 30 if dark_theme else 18)};",
             "}",
-            "QMenu#settingsHelpPopup {",
+            "QMenu#settingsHelpPopup, QFrame#settingsHelpPopup {",
             f"    border: {Border.THIN}px solid {section_border};",
             f"    background-color: {section_background};",
             f"    border-radius: {Radius.MEDIUM}px;",
@@ -72,6 +70,7 @@ def build_panel_stylesheet(theme_name: str, font_size_preset: str | None = None)
             "    color: palette(text);",
             f"    font-size: {Typography.qss(Typography.BODY_SIZE, font_size_preset)};",
             "}",
+            "QWidget#aboutHeroCard,",
             "QWidget#generalThemePreviewFrame {",
             f"    border: {Border.THIN}px solid {section_border};",
             f"    border-radius: {Radius.LARGE}px;",

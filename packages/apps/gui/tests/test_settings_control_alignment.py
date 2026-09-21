@@ -86,7 +86,7 @@ def test_settings_checkbox_wraps_without_losing_native_mouse_keyboard_or_accessi
 
 @pytest.mark.parametrize("locale", ["zh_CN", "en_US"])
 @pytest.mark.parametrize("tab_name", ["export", "logging"])
-def test_help_checkbox_uses_available_row_width(qapp, qtbot, locale, tab_name) -> None:
+def test_help_checkbox_wraps_and_keeps_help_next_to_text(qapp, qtbot, locale, tab_name) -> None:
     from PySide6.QtWidgets import QCheckBox, QToolButton, QWidget
 
     from docwen_gui.i18n import get_locale, set_locale
@@ -112,7 +112,8 @@ def test_help_checkbox_uses_available_row_width(qapp, qtbot, locale, tab_name) -
                 if not icons:
                     continue
                 icon = icons[0]
-                assert checkbox.width() >= wrapper.width() - icon.width() - 8
+                assert checkbox.width() >= min(checkbox.sizeHint().width(), wrapper.width() - icon.width() - 8)
+                assert icon.x() - checkbox.geometry().right() <= 9
                 assert not checkbox.geometry().intersects(icon.geometry())
                 assert checkbox.height() >= checkbox.heightForWidth(checkbox.width())
                 if width == 700:

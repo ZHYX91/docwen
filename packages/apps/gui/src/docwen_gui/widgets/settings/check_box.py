@@ -80,7 +80,9 @@ class SettingsCheckBox(_CheckBox):
             metrics.height() + (len(paragraphs) - 1) * metrics.lineSpacing(),
         )
         size = self.style().sizeFromContents(QStyle.ContentsType.CT_CheckBox, option, size, self)
-        return QSize(size.width(), max(Sizing.CONTROL_HEIGHT, size.height()))
+        # Match the additional text inset used by _lines(), so a natural-width
+        # checkbox does not wrap its last word despite having enough row space.
+        return QSize(size.width() + 6, max(Sizing.CONTROL_HEIGHT, size.height()))
 
     def _reflow_text(self) -> None:
         rendered = "\n".join(self._lines(self.width()))

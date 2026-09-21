@@ -160,14 +160,16 @@ class FormRow(_ResponsiveFrame):
         self.alignment_group = alignment_group
         self.minimum_label_height = minimum_label_height
         self.label_container: QWidget = self.label
+        self._label_layout: QHBoxLayout | None = None
         if label_suffix is not None:
             self.label_container = QWidget(self)
             label_layout = QHBoxLayout(self.label_container)
             label_layout.setContentsMargins(0, 0, 0, 0)
             label_layout.setSpacing(6)
-            label_layout.addWidget(self.label, 0, Qt.AlignmentFlag.AlignVCenter)
+            label_layout.addWidget(self.label)
             label_layout.addWidget(label_suffix, 0, Qt.AlignmentFlag.AlignVCenter)
             label_layout.addStretch(1)
+            self._label_layout = label_layout
         self.control = control
         self.content_layout.addWidget(self.label_container)
         self.content_layout.addWidget(control, stretch=1)
@@ -180,6 +182,7 @@ class FormRow(_ResponsiveFrame):
         peers = self.alignment_group or (self,)
         column_width = max(
             row.label.fontMetrics().horizontalAdvance(row.label.text())
+            + 2
             + (row.label_suffix.sizeHint().width() + 6 if row.label_suffix is not None else 0)
             for row in peers
         )
@@ -193,9 +196,7 @@ class FormRow(_ResponsiveFrame):
             if self.label_suffix is not None:
                 # Keep the help affordance visually attached to its label while
                 # the outer container still reserves the shared form column.
-                self.label.setMinimumWidth(0)
-                self.label.setMaximumWidth(label_width)
-                self.label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+                self.label.setFixedWidth(self.label.fontMetrics().horizontalAdvance(self.label.text()) + 2)
             else:
                 self.label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
                 self.label.setFixedWidth(label_width)
@@ -208,6 +209,9 @@ class FormRow(_ResponsiveFrame):
             self.label_container.setMinimumWidth(0)
             self.label_container.setMaximumWidth(16777215)
             self.label_container.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        if self._label_layout is not None:
+            self._label_layout.setStretch(0, 0 if horizontal else 1)
+            self._label_layout.setStretch(2, 1 if horizontal else 0)
         direction = QBoxLayout.Direction.LeftToRight if horizontal else QBoxLayout.Direction.TopToBottom
         if self.content_layout.direction() != direction:
             self.content_layout.setDirection(direction)
