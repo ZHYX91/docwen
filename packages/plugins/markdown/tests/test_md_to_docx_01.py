@@ -99,7 +99,7 @@ def test_custom_template_without_body_placeholder_omits_markdown_body(tmp_path: 
     assert "Body paragraph that must not be appended." not in visible_text
 
 
-@pytest.mark.parametrize("placement", ["inline", "table", "header", "duplicate"])
+@pytest.mark.parametrize("placement", ["inline", "table", "header", "duplicate", "content_control", "broken_marker"])
 def test_unsupported_body_placement_fails_explicitly(tmp_path: Path, placement: str) -> None:
     source = tmp_path / "source.md"
     source.write_text("Body", encoding="utf-8")
@@ -110,6 +110,20 @@ def test_unsupported_body_placement_fails_explicitly(tmp_path: Path, placement: 
         template.add_table(rows=1, cols=1).cell(0, 0).text = "{{body}}"
     elif placement == "header":
         template.sections[0].header.paragraphs[0].text = "{{body}}"
+    elif placement == "content_control":
+        from docx.oxml import OxmlElement
+
+        paragraph = template.add_paragraph()
+        control = OxmlElement("w:sdt")
+        content = OxmlElement("w:sdtContent")
+        run = paragraph.add_run("{{body}}")
+        content.append(run._r)
+        control.append(content)
+        paragraph._p.append(control)
+    elif placement == "broken_marker":
+        run = template.add_paragraph().add_run("{{bo")
+        run.add_break()
+        run.add_text("dy}}")
     else:
         template.add_paragraph("{{body}}")
         template.add_paragraph("{{正文}}")
@@ -120,6 +134,7 @@ def test_unsupported_body_placement_fails_explicitly(tmp_path: Path, placement: 
     assert not result.success
     assert result.error is not None
     assert result.error.diagnostic_code == "MD2DOCX-TEMPLATE-BODY-PLACEMENT"
+    assert result.artifacts == []
     assert workspace.registered_artifacts == []
 
 

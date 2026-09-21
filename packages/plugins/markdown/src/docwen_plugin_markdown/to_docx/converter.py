@@ -110,6 +110,7 @@ from docwen_plugin_markdown.to_docx.notes import (
     prepare_note_context_for_document,
     write_notes_to_docx,
 )
+from docwen_plugin_markdown.yaml_links import YamlLinkProjection
 from docwen_plugin_markdown.yaml_processor import (
     TITLE_PLACEHOLDER_ALIASES,
     ensure_title_fallback,
@@ -707,9 +708,9 @@ class MdToDocxConverter:
             # ── Stage 1: YAML extraction ───────────────────────────────
             progress.report_progress(15.0, "Extracting YAML front matter")
             yaml_dict, md_body = extract_yaml_front_matter(content)
+            link_config = _request_link_config(context.config)
             field_processors_config = context.config.get("field_processors", {})
             current_locale = _resolve_locale(context.config.get("gui", {}))
-            run_yaml_processors(yaml_dict, field_processors_config, current_locale=current_locale)
             placeholder_rules = collect_placeholder_rules(field_processors_config, current_locale=current_locale)
             special_placeholder_handlers = collect_special_placeholder_handlers(
                 field_processors_config,
@@ -903,6 +904,13 @@ class MdToDocxConverter:
                 placeholder_names=placeholder_map,
                 source_stem=Path(input_path).stem,
             )
+            yaml_links = YamlLinkProjection(
+                input_path, link_config, declared_inputs=declared_resource_resolver is not None
+            )
+            for key in placeholder_map:
+                if key in yaml_dict:
+                    yaml_dict[key] = yaml_links.project(yaml_dict[key])
+            run_yaml_processors(yaml_dict, field_processors_config, current_locale=current_locale)
             body_font = extract_body_font(doc)
             body_style = extract_body_style(doc)
             body_paragraph_format = extract_body_paragraph_format(doc)
@@ -1029,6 +1037,8 @@ class MdToDocxConverter:
                 special_placeholder_handlers=special_placeholder_handlers,
                 list_separator=template_list_separator(context.config),
             )
+            yaml_links.materialize(doc)
+            yaml_dict = yaml_links.plain(yaml_dict)
             if semantic_v3_session is not None:
                 try:
                     semantic_v3_session.finalize_document()

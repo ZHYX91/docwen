@@ -45,6 +45,7 @@ from docwen_core.links._markdown_orchestrator import (
 )
 from docwen_core.links._non_embed import (
     _process_non_embed_links,
+    project_field_links,
     split_markdown_block_segments,
     split_markdown_inline_segments,
 )
@@ -97,6 +98,7 @@ __all__ = [
     "process_embedded_md_file",
     "process_markdown_links",
     "process_single_embed",
+    "project_field_links",
     "reject_declared_input_link_lookups",
     "resolve_data_uri_image_to_temp_file",
     "resolve_embedded_links",
