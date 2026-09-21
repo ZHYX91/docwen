@@ -9,6 +9,7 @@ import signal
 import subprocess
 import tempfile
 import time
+from collections.abc import Iterator
 from io import BytesIO
 from pathlib import Path
 from typing import Any, cast
@@ -97,6 +98,22 @@ def _attach_windows_job(process: subprocess.Popen) -> Any:
         raise
 
 
+def _stop_windows_job(job: Any) -> None:
+    import win32job
+
+    try:
+        # Closing a kill-on-close job only initiates termination. Chromium can
+        # still hold profile files after the Node parent has exited.
+        win32job.TerminateJobObject(job, 1)
+        deadline = time.monotonic() + 5
+        while win32job.QueryInformationJobObject(job, win32job.JobObjectBasicAccountingInformation)["ActiveProcesses"]:
+            if time.monotonic() >= deadline:
+                raise MermaidRenderError("Mermaid child processes did not stop before cleanup")
+            time.sleep(0.01)
+    finally:
+        job.Close()
+
+
 def _run_renderer(command: list[str], job_dir: Path, cancellation: Any, timeout: float) -> None:
     environment = dict(os.environ)
     environment.pop("NODE_OPTIONS", None)
@@ -140,17 +157,39 @@ def _run_renderer(command: list[str], job_dir: Path, cancellation: Any, timeout:
                     detail = " ".join(diagnostic.read(4800).decode("utf-8", errors="replace").split())[-1200:]
                 raise MermaidRenderError(f"Mermaid CLI exited with status {process.returncode}: {detail}")
     finally:
-        if job is not None:
-            job.Close()
-        elif process is not None and os.name != "nt":
-            with contextlib.suppress(ProcessLookupError):
-                os.killpg(process.pid, signal.SIGKILL)
-        if process is not None:
-            if process.poll() is None:
-                process.kill()
-            process.wait(timeout=5)
-            if process.stdin is not None:
-                process.stdin.close()
+        try:
+            if job is not None:
+                _stop_windows_job(job)
+            elif process is not None and os.name != "nt":
+                with contextlib.suppress(ProcessLookupError):
+                    os.killpg(process.pid, signal.SIGKILL)
+        finally:
+            if process is not None:
+                if process.poll() is None:
+                    process.kill()
+                process.wait(timeout=5)
+                if process.stdin is not None:
+                    process.stdin.close()
+
+
+@contextlib.contextmanager
+def _renderer_directory(root: Path) -> Iterator[Path]:
+    temporary = tempfile.TemporaryDirectory(prefix="docwen-mermaid-", dir=root)
+    try:
+        yield Path(temporary.name)
+    finally:
+        # Windows may briefly retain a browser profile's file handles after
+        # every process in the job has exited. Retry only sharing violations;
+        # access-control failures and an exhausted deadline remain visible.
+        deadline = time.monotonic() + 5
+        while True:
+            try:
+                temporary.cleanup()
+                break
+            except PermissionError as error:
+                if getattr(error, "winerror", None) not in (32, 33) or time.monotonic() >= deadline:
+                    raise
+                time.sleep(0.05)
 
 
 def render_mermaid_png(
@@ -178,8 +217,7 @@ def render_mermaid_png(
         )
     root = Path(work_dir).resolve()
     root.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="docwen-mermaid-", dir=root) as temporary:
-        job_dir = Path(temporary)
+    with _renderer_directory(root) as job_dir:
         (job_dir / "bootstrap.mjs").write_text(_BOOTSTRAP, encoding="utf-8")
         (job_dir / "diagram.mmd").write_text(source, encoding="utf-8", newline="")
         config = {

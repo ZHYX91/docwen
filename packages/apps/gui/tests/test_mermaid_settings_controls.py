@@ -13,6 +13,17 @@ from docwen_gui.widgets.settings.formatting_tab import FormattingTab
 pytestmark = pytest.mark.gui
 
 
+@pytest.mark.parametrize("browser", ["Chrome", "chrome-headless-shell"])
+def test_missing_browser_reports_installation_hint(qtbot, browser) -> None:
+    from docwen_gui.widgets.settings import mermaid_controls
+
+    tab = FormattingTab(SettingsViewModel(config=SettingsConfig()))
+    qtbot.addWidget(tab)
+    controls = tab._mermaid_controls
+    controls._completed(None, RuntimeError(f"Could not find {browser} (ver. 153.0.8010.36)"))
+    assert controls.status.text() == mermaid_controls.t("settings.formatting.mermaid_browser_missing")
+
+
 def test_mermaid_path_is_draft_state_and_detection_does_not_change_mode(qtbot, monkeypatch) -> None:
     from docwen_gui.widgets.settings import mermaid_controls
 

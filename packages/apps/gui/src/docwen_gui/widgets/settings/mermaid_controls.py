@@ -109,7 +109,7 @@ class MermaidControls(QWidget):
         if error is not None:
             message = (
                 t("settings.formatting.mermaid_browser_missing")
-                if "Could not find Chrome" in str(error)
+                if "could not find chrome" in str(error).lower()
                 else t("settings.formatting.mermaid_test_failed", reason=str(error)[:1200])
             )
             self.status.setText(message)
