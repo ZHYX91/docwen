@@ -587,7 +587,7 @@ Ein begleitendes Obsidian-Plugin wird separat veröffentlicht und arbeitet mit d
 Der runtime/control-Transport von DocWen Core verwendet unter Windows eine Named Pipe und unter
 Linux/macOS einen AF_UNIX-Socket. Eine Dateisperre stellt nur den Besitz der Einzelinstanz sicher;
 Steuerbefehle werden nicht über Dateien übertragen. Dies beschreibt nur die Core-Fähigkeit. DocWen
-Assistant 3.0 bleibt auf Windows-Desktop beschränkt und besitzt keine Linux/macOS-Kombinationsabnahme.
+Assistant 3.1 bleibt auf Windows-Desktop beschränkt und besitzt keine Linux/macOS-Kombinationsabnahme.
 
 1.  **Erster Klick** → Konverter starten und aktuelle Datei übergeben.
 2.  **Klick erneut (Mit Datei)** → Durch neue Datei ersetzen (Einzeldateimodus).
