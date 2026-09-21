@@ -194,17 +194,19 @@ Settings are organized into tabs: **General**, **Text**, **Proofread**, **Docume
 
 ## 🔧 Command Line Usage
 
-In addition to the GUI, DocWen provides a Command Line Interface (CLI) for automation scripts, batch processing, and external integrations.
+In addition to the GUI, DocWen provides a human-facing Command Line Interface (CLI) for terminal use, local automation scripts, and batch processing. Cross-product consumers such as DocWen Assistant should use the stable Machine Protocol instead of parsing CLI presentation output.
 
-### Recommended Automation Flow
+### Recommended CLI Automation Flow
 
-For scripts, agents, or plugin integrations, use this order:
+For terminal use and local automation scripts, use this order:
 
 1. `inspect <file> [--json]`: detect the real file category, format, and supported actions first.
 2. `resources list formats --json`: read the loaded Runtime's available routes and dependency gates.
 3. `schema convert`: read the machine-readable conversion contract and conditional rules.
 4. `convert <file> --to <fmt> --output <path> --dry-run --json`: preview detection, normalization, and routing without writing outputs.
 5. `convert <file> --to <fmt> --output <path> ...`: run the actual conversion after the preview is acceptable.
+
+External consumers use `serve --stdio` with Machine Protocol v2: discover capabilities, plan a task, then execute it. The CLI `--json` envelope is for presentation/automation and is not the cross-product compatibility boundary.
 
 ### Common Examples
 
@@ -225,6 +227,10 @@ DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --o
 
 # Markdown to Word (select a template and heading/body merge mode)
 DocWenCLI.exe convert document.md --to docx --output-dir exports --template template.docx.f1eeb0a008ce3eae0619ecae6e185ab132a3ee0abdd382c8863481d9af1dc77f --heading-merge-mode punct_required
+
+# Markdown to Word, then proofread the generated DOCX before publication
+# --check is valid on convert only together with --proofread.
+DocWenCLI.exe convert document.md --to docx --output-dir exports --proofread --check typo --check punct
 
 # Control Markdown image export mode and OCR placement
 DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --image-mode file --ocr --ocr-placement image_md
@@ -259,9 +265,10 @@ The table below lists common commands only. For the full command surface, use `d
 
 | Command / Option | Description |
 | --- | --- |
-| `convert <file> --to <fmt> --output <path>` | Convert one file to one exact output path. Existing targets require explicit `--overwrite`. |
-| `convert <file> --to <fmt> --output <path> --dry-run --json` | Preview detection, normalization, routing, and effective options without writing the output. |
-| `convert <file> --to <fmt> --output <path> --optimization <id>` | Select an optimization by the public resource ID returned by `resources list optimizations`. |
+| `convert <file> --to <fmt> (--output-dir <dir> \| --output <path>)` | Convert one file. Conversions from or to Markdown require `--output-dir`; other one-file conversions use exact `--output`. Existing targets require explicit `--overwrite`. |
+| `convert <file> --to <fmt> ... --dry-run --json` | Preview detection, normalization, routing, and effective options without writing output. |
+| `convert <markdown> --to docx --output-dir <dir> --proofread [--check ...]` | Generate DOCX, proofread that generated DOCX, then publish the final result. `--check` without `--proofread` is rejected; omitting `--check` uses configured proofreading defaults. |
+| `convert <file> --to <fmt> ... --optimization <id>` | Select an optimization by the public resource ID returned by `resources list optimizations`. |
 | `validate <file> --check ... [--report <path>]` | Proofread DOCX, Markdown, or legacy Word-family content. The default is read-only; `--report` writes annotated DOCX for document input or JSON for Markdown. |
 | `number markdown <file> --operation add\|remove (--output <path> \| --in-place)` | Explicitly add or remove Markdown heading numbering. |
 | `merge pdf\|tables\|images <files...> --output <path>` | Run an explicit aggregate operation. |
@@ -281,7 +288,7 @@ The table below lists common commands only. For the full command surface, use `d
 | `--heading-merge-mode punct_required|always|never` | Control the heading + body merge strategy for `convert --to docx`. |
 | `--optimization <id>` | Select a typed optimization resource for conversion; internal Runtime action names are not public CLI options. |
 | `--jobs` / `--continue-on-error` | Controls provided by explicit `batch` subcommands. |
-| `--json` / `--quiet` / `--timing` | Structured output, reduced logs, and timing data for scripts or plugins. |
+| `--json` / `--quiet` / `--timing` | Structured CLI presentation, reduced logs, and timing data for terminal automation. Cross-product integrations use Machine Protocol instead. |
 
 
 ## 📝 Markdown Syntax Conventions
