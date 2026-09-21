@@ -1,6 +1,6 @@
-# Implementation proposal: YAML ordinary-link policy parity
+# Implementation record: YAML ordinary-link policy parity
 
-Status: **implementation in progress on this Draft PR**. Production code and focused tests are now present on the branch; this proposal does not override active specifications until validation and merge.
+The implementation applies ordinary-link policy to YAML fields used by DOCX templates. This record explains the design and regression coverage; [the current specification](../../specs/markdown-compatibility.md) defines supported behavior.
 
 ## Reported reproduction
 
@@ -67,17 +67,10 @@ Wiki and Markdown settings remain independent. Do not replace the user's existin
 - Shared ordinary-link and DOCX inline-rendering utilities.
 - Link-tab help text and focused conversion/package tests.
 
-## Acceptance and completion
+## Implementation and validation boundaries
 
-- [ ] Implement all four ordinary-link modes without changing existing defaults.
-- [ ] Test the reported quoted alias in `抄送机关` and a generic list field; assert visible result, not only helper output.
-- [ ] Test Wiki/Markdown mode combinations independently in YAML and body.
-- [ ] Verify missing targets do not matter in Extract Text/Remove; mock lookup to fail if called.
-- [ ] Assert real hyperlink relationships only in Hyperlink mode and correct fallback for unsupported targets.
-- [ ] Test dates, `false`, `0`, `"001"`, nested list structure, inline-code literals and escaped bracket syntax.
-- [ ] Test existing template runs, repeated/split placeholders and empty-field cleanup.
-- [ ] Test metadata-only templates with no body placeholder, coordinating with the body-placement restoration.
-- [ ] Reopen DOCX packages and inspect representative documents in Word/WPS.
-- [ ] Update documentation only after behavior is implemented; record exact executed tests and tested commit.
+`YamlLinkProjection` processes string leaves before field-specific formatting and carries only issued hyperlink tokens through those formatters. The DOCX pass materializes relationships in the owning document/header/footer part, preserving neighboring text, structural breaks and run properties. Literal Keep values are not reparsed, unused fields do not trigger lookup, and non-string values retain their types.
 
-PR #18 also modifies the converter and some locale files. Rebase/reconcile implementation without overwriting its Mermaid behavior. Keep this PR in draft until implemented and locally validated; no automatic merge.
+`test_yaml_link_policy.py` exercises all sixteen independent mode combinations, the reported alias, special attachment formatting, repeated/split markers, literal template text, scalar preservation and declared-resource rejection through generated DOCX packages. Existing link-route tests cover shared parser and target policies. Body/notes tests cover metadata-only integration; YAML materialization stays outside the optional body-rendering session.
+
+Executable regressions and the current specification own the maintained behavior. [Testing guidance](../../testing.md) governs actual host checks; a successful package test does not certify every Word/WPS/LibreOffice version. PR validation records identify the source and selected real-document checks. Mermaid integration preserves the same field path without launching a renderer for an omitted body.

@@ -1,6 +1,6 @@
-# Implementation proposal: explicit template body placement
+# Implementation record: explicit template body placement
 
-Status: **implementation in progress on this Draft PR**. Production code and regression tests are now present on the branch, but this file does not supersede `docs/specs/` and the behavior is not a released capability until validation and merge.
+The authored-Markdown converter implements explicit template body placement. This record explains the design and regression coverage; [the current specification](../../specs/markdown-compatibility.md) defines supported behavior.
 
 ## User-approved outcome
 
@@ -55,13 +55,12 @@ A missing placeholder in an intentionally metadata-only template should not requ
 - `packages/plugins/markdown/tests/test_managed_style_rendering.py`
 - Additional focused converter/artifact regressions and user-facing template documentation.
 
-## Coordination and completion gate
+## Implementation and validation boundaries
 
-PR #18 (Mermaid rendering) also touches the authored-Markdown converter. Re-read its merged/current changes before integrating this work; an omitted body must not launch a Mermaid renderer solely for body content that will not be output.
+The converter determines body placement before body rendering. It independently validates existing template notes, and only creates the body renderer, semantic session, new notes and numbering when a valid body marker exists. An omitted body must not launch a Mermaid renderer solely for content that will not be output. YAML field filling remains independent of that decision.
 
-- [ ] Implement the production behavior and review the full diff.
-- [ ] Add and execute focused unit and DOCX package tests.
-- [ ] Run applicable repository checks; do not claim unexecuted checks passed.
-- [ ] Open generated fixtures in the user's target Word/WPS environment.
-- [ ] Record exact tested commit and any remaining host limitations in the PR.
-- [ ] Mark ready only after implementation and validation; do not auto-merge.
+`test_md_to_docx_01.py` and `test_docx_notes_v4.py` cover metadata-only output, valid split-run markers, invalid/duplicate placement, default body behavior, existing note graph preservation and invalid note graph rejection. These exercise conversion and saved packages rather than source-text projections alone.
+
+Body markers are supported only as a unique standalone paragraph in the main document. Table, textbox, header/footer and inline placements fail explicitly; their expansion is not part of this restoration. The separate resolved-v4 route keeps its own documented placement contract.
+
+[Testing guidance](../../testing.md) governs actual host checks. PR validation records identify the source and selected real-document checks; package tests do not certify every Word/WPS/LibreOffice version or every original fixture.
