@@ -21,6 +21,7 @@ def prepare_postprocess_options(
     source_format: str,
     target_format: str,
     action_name: str,
+    proofread_requested: bool = False,
 ) -> dict[str, Any]:
     """Move canonical proofreading switches into the Application pipeline.
 
@@ -47,7 +48,7 @@ def prepare_postprocess_options(
         if type(value) is not bool:
             raise ValueError(f"Proofreading option {key!r} must be boolean")
         proofread[key] = value
-    if any(proofread.values()):
+    if proofread_requested or any(proofread.values()):
         prepared[POSTPROCESS_PROOFREAD_OPTION] = proofread
     return prepared
 
@@ -78,7 +79,7 @@ def postprocess_proofread_options(request: Any) -> dict[str, bool] | None:
         if type(value) is not bool:
             raise ValueError(f"Post-conversion proofreading option {key!r} must be boolean")
         normalized[key] = value
-    return normalized if any(normalized.values()) else None
+    return normalized
 
 
 __all__ = ["postprocess_proofread_options", "prepare_postprocess_options"]
