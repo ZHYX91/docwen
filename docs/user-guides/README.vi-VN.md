@@ -593,7 +593,7 @@ desktop và chưa có nghiệm thu kết hợp trên Linux/macOS.
 
 ### Cài đặt
 
-DocWen Assistant 3.1 dùng DocWen Machine Protocol v2 và hợp đồng Artifact Bundle v3 duy nhất. Phiên bản mã nguồn
+DocWen Assistant 3.1 yêu cầu DocWen 0.13.0 trở lên. Các thao tác nội dung dùng Machine Protocol v2 và Artifact Bundle v3; việc khởi chạy/mở ứng dụng desktop dùng đường điều khiển GUI cục bộ độc lập. Phiên bản mã nguồn
 không chứng minh rằng sản phẩm đã được phát hành; chỉ cài bản phát hành dạng số xác định rõ một bản DocWen đã phát
 hành và tương thích.
 
