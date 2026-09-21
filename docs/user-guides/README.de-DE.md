@@ -595,7 +595,7 @@ Assistant 3.1 bleibt auf Windows-Desktop beschränkt und besitzt keine Linux/mac
 
 ### Installation
 
-DocWen Assistant 3.1 verwendet DocWen Machine Protocol v2 und den einzigen Artifact-Bundle-v3-Vertrag. Die
+DocWen Assistant 3.1 erfordert DocWen 0.13.0 oder neuer. Inhaltsoperationen verwenden Machine Protocol v2 und Artifact Bundle v3; Starten/Öffnen der Desktop-App nutzt die separate lokale GUI-Steuerung. Die
 Quellversion belegt keine Veröffentlichung; installieren Sie nur einen numerischen Release, der ausdrücklich einen
 kompatiblen veröffentlichten DocWen-Release nennt.
 
