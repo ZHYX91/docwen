@@ -580,7 +580,7 @@ Hay un plugin complementario de Obsidian publicado por separado que funciona jun
 El transporte runtime/control de DocWen Core usa una canalización con nombre de Windows o un socket
 AF_UNIX en Linux/macOS. Un bloqueo de archivo solo establece la propiedad de la instancia única; los
 comandos de control no se transportan mediante archivos. Esto solo describe la capacidad del Core.
-DocWen Assistant 3.0 sigue limitado al escritorio de Windows y no tiene aceptación combinada en Linux/macOS.
+DocWen Assistant 3.1 sigue limitado al escritorio de Windows y no tiene aceptación combinada en Linux/macOS.
 
 1.  **Primer clic** → Inicia el convertidor y pasa el archivo actual.
 2.  **Clic de nuevo (con archivo)** → Sustituye el archivo (modo de archivo único).
@@ -588,7 +588,7 @@ DocWen Assistant 3.0 sigue limitado al escritorio de Windows y no tiene aceptaci
 
 ### Instalación
 
-DocWen Assistant 3.0 usa DocWen Machine Protocol v2 y el único contrato Artifact Bundle v3. La versión del código
+DocWen Assistant 3.1 usa DocWen Machine Protocol v2 y el único contrato Artifact Bundle v3. La versión del código
 fuente no demuestra que esté publicada; instala solo una versión numérica que identifique explícitamente una versión
 publicada y compatible de DocWen.
 
