@@ -10,6 +10,8 @@ Review baseline: `93227f5d2a921e7168344903bccd1c3f0095f38d`.
 
 ## Evidence and correct historical classification
 
+历史对照：以下 v0.8.5 `src/docwen/` 路径仅用于重构前行为比较，不代表当前目录结构。
+
 - [Current Chinese locale](https://github.com/ZHYX91/docwen/blob/93227f5d2a921e7168344903bccd1c3f0095f38d/i18n/locales/zh_CN.toml) uses literal single-quoted strings containing `\n` for the body/heading formatting help.
 - [v0.8.5 locale](https://github.com/ZHYX91/docwen/blob/v0.8.5/src/docwen/i18n/locales/zh_CN.toml) already contains this translation problem. It is an inherited bug, not proof of a PySide regression.
 - [Old settings layout](https://github.com/ZHYX91/docwen/blob/v0.8.5/src/docwen/gui/settings/base_tab.py) places the information icon next to the label.
