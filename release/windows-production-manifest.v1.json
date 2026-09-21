@@ -34,15 +34,15 @@
     "fixtures": [
       {
         "path": "tests/fixtures/golden/cli_protocol_v3_success.json",
-        "sha256": "c56e0560143a2cf172551b0b2baa0f710e57d16f9a8ddf9c909c1bc59c38cc08"
+        "sha256": "d9456a0c1039e3735187d228e9273e282e2a7f13dab94e76e213ed7b15ed5c21"
       },
       {
         "path": "tests/fixtures/golden/cli_protocol_v3_error.json",
-        "sha256": "4a48f932b885234c144cb279dc006dd0264a321944296a5bf156f658b0995970"
+        "sha256": "2e805432d87a9bac23ced276193b19b872ddbb6a7795a444e582e3fa857b0224"
       },
       {
         "path": "tests/fixtures/golden/cli_protocol_v3_batch.json",
-        "sha256": "f08cfe10bd8143055dba11bc5c87becd39a384869448ba2615d3969b4dcab205"
+        "sha256": "e962d2058db9a3596b6d94baabbc5926dd307f16ba2bf45dabb358b8728ead24"
       }
     ],
     "machineContractFiles": [
