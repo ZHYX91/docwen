@@ -99,6 +99,7 @@ REQUIRED_ASSET_FILES = (
     "icons/spreadsheet.svg",
     "icons/sync.svg",
     "icons/templates.svg",
+    "icons/warning.svg",
     "icons/text.svg",
 )
 LOCALE_DIR_CANDIDATES = (
