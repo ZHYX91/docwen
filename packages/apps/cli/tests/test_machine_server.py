@@ -304,6 +304,26 @@ def test_incompatible_handshake_does_not_initialize_session(major: int, minor: i
     assert responses[1]["error"]["message"] == "initialize must be called first"
 
 
+@pytest.mark.parametrize(
+    "protocol",
+    [
+        {"name": "docwen.machine", "major": 2, "minor": 0, "extra": True},
+        {"name": "docwen.machine", "major": "2", "minor": 0},
+        {"name": "docwen.machine", "major": 2},
+    ],
+)
+def test_malformed_protocol_descriptor_is_invalid_params_not_version_mismatch(protocol: dict[str, Any]) -> None:
+    request = _initialize()
+    request["params"]["protocol"] = protocol
+
+    exit_code, responses = _run([request], _Service())
+
+    assert exit_code == 0
+    assert responses[0]["error"]["code"] == -32602
+    assert responses[0]["error"]["message"] == "Invalid params"
+    assert responses[0]["error"]["data"].get("code") != "incompatible_protocol"
+
+
 def test_plan_accepts_exact_resolved_numbering_handles() -> None:
     plan = _plan()
 
