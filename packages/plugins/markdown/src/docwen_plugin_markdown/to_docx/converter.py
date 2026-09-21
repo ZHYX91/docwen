@@ -146,11 +146,11 @@ def _request_link_config(config: object) -> LinkRuntimeConfig:
 
 
 def _process_yaml_non_embed_links(
-    value: object,
+    value: Any,
     *,
     source_file_path: str,
     link_config: LinkRuntimeConfig,
-) -> object:
+) -> Any:
     """Apply only ordinary-link policy to YAML string leaves.
 
     YAML structure and scalar types are preserved. Embedded image/document
