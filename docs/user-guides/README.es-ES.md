@@ -197,8 +197,8 @@ Para scripts, agentes o plugins, se recomienda este orden:
 
 1. `inspect <file> [--json]`: detectar primero la categoría real del archivo, el formato y las acciones disponibles.
 2. `schema convert`: leer el contrato legible por máquina y las reglas condicionales de `convert`.
-3. `convert <file> --to <fmt> --output <path> --dry-run --json`: previsualizar detección, normalización y enrutamiento sin escribir archivos.
-4. `convert <file> --to <fmt> --output <path> ...`: ejecutar la conversión real después de validar la previsualización.
+3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: previsualizar detección, normalización y enrutamiento sin escribir archivos.
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: ejecutar la conversión real después de validar la previsualización.
 
 ### Ejemplos comunes
 
@@ -245,8 +245,8 @@ La tabla siguiente solo enumera los comandos mas habituales. Para la superficie 
 
 | Comando / opción | Descripción |
 | --- | --- |
-| `convert <file> --to <fmt> --output <path>` | Punto de entrada unificado para conversiones. |
-| `convert <file> --to <fmt> --output <path> --dry-run --json` | Previsualiza detección, normalización, enrutamiento y opciones efectivas sin ejecutar la conversión real. |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | Punto de entrada unificado para conversiones. |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | Previsualiza detección, normalización, enrutamiento y opciones efectivas sin ejecutar la conversión real. |
 | `schema convert` | Exporta el contrato legible por máquina, los valores por defecto, las condiciones y las claves canónicas de `convert`. |
 | `validate <file> --check ...` | Revisión documental (`typo/punct/symbol/sensitive/all/none`). Use `--json` para la envoltura de la CLI; `--report` es una ruta de archivo de informe opcional. |
 | `inspect <file> [--json]` | Inspecciona categoría/formato del archivo, acciones recomendadas y advertencias por desajuste entre extensión y contenido. |
@@ -256,7 +256,7 @@ La tabla siguiente solo enumera los comandos mas habituales. Para la superficie 
 | `resources list numbering-schemes` | Lista los esquemas de numeración disponibles. |
 | `--template <id>` | ID canónico exacto devuelto por `resources list templates`; se rechazan nombres visibles, nombres de archivo y rutas. Los ID DOCX se aplican a `docx/doc/odt/rtf/wps/pdf` y los ID XLSX a `xlsx/xls/ods/csv`. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Extracción de imágenes y OCR para `convert --to md`. |
-| `--image-mode file|base64` | Controla cómo se emiten las imágenes durante la exportación a Markdown. |
+| `--image-mode file|base64|embed|omit` | Controla cómo se emiten las imágenes durante la exportación a Markdown. |
 | `--ocr-placement image_md|main_md` | Controla si el texto OCR se escribe en el Markdown auxiliar de la imagen o en el Markdown principal. |
 | `--heading-merge-mode punct_required|always|never` | Controla la estrategia de combinación de encabezado + cuerpo para `convert --to docx`. |
 | `--optimization <id>` | Activa explícitamente un perfil de optimización (vea `resources list optimizations`). |
