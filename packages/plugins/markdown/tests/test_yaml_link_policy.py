@@ -31,10 +31,10 @@ def _gongwen_config(*, wiki_mode: str, markdown_mode: str) -> dict:
 def _template(tmp_path: Path) -> Path:
     path = tmp_path / "yaml-links-template.docx"
     doc = Document()
-    doc.paragraphs[0].text = "抄送：{{抄送机关}}"
+    doc.add_paragraph("抄送：{{抄送机关}}")
     doc.add_paragraph("网站：{{site}}")
     doc.add_paragraph("{{正文}}")
-    doc.save(path)
+    doc.save(str(path))
     return path
 
 
