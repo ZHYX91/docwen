@@ -594,7 +594,7 @@ não transportam comandos de controle. Isso descreve apenas a capacidade do Core
 
 ### Instalação
 
-O DocWen Assistant 3.1 usa o DocWen Machine Protocol v2 e o contrato único Artifact Bundle v3. A versão do código
+O DocWen Assistant 3.1 exige DocWen 0.13.0 ou posterior. Operações de conteúdo usam Machine Protocol v2 e Artifact Bundle v3; iniciar/abrir o aplicativo de desktop usa o controle GUI local separado. A versão do código
 fonte não comprova a publicação; instale somente uma versão numérica que identifique explicitamente uma versão
 publicada e compatível do DocWen.
 
