@@ -44,10 +44,10 @@ def _source(tmp_path: Path) -> Path:
     source.write_text(
         "---\n"
         "抄送机关:\n"
-        "  - \"[[guide|喵喵]]\"\n"
+        '  - "[[guide|喵喵]]"\n'
         "  - 钱钱钱\n"
-        "site: \"[项目主页](https://example.com/project)\"\n"
-        "份号: \"001\"\n"
+        'site: "[项目主页](https://example.com/project)"\n'
+        '份号: "001"\n'
         "enabled: false\n"
         "count: 0\n"
         "---\n\n"
