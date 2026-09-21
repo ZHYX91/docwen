@@ -18,6 +18,8 @@ Do not display internal processing-family explanations in this routine summary. 
 
 ## Baseline and historical evidence
 
+历史对照：以下 v0.8.5 `src/docwen/` 路径仅用于重构前行为比较，不代表当前目录结构。
+
 Review baseline: `93227f5d2a921e7168344903bccd1c3f0095f38d`.
 
 - [v0.8.5 file-drop widget](https://github.com/ZHYX91/docwen/blob/v0.8.5/src/docwen/gui/components/file_drop.py) creates a distinct small warning-styled label.
