@@ -27,7 +27,6 @@ from docwen_core.docx_semantics_v3 import (
 from docwen_core.export_semantics import LinkRuntimeConfig
 from docwen_core.links import (
     DeclaredResourceResolver,
-    _process_non_embed_links,
     bind_declared_markdown_images,
     process_markdown_links,
     reject_declared_input_link_lookups,
@@ -109,6 +108,7 @@ from docwen_plugin_markdown.to_docx.notes import (
     prepare_note_context_for_document,
     write_notes_to_docx,
 )
+from docwen_plugin_markdown.yaml_links import YamlLinkProjection
 from docwen_plugin_markdown.yaml_processor import (
     TITLE_PLACEHOLDER_ALIASES,
     ensure_title_fallback,
@@ -143,79 +143,6 @@ def _request_link_config(config: object) -> LinkRuntimeConfig:
     if not isinstance(raw, Mapping):
         return LinkRuntimeConfig()
     return LinkRuntimeConfig.from_config(dict(raw))
-
-
-def _process_yaml_non_embed_links(
-    value: Any,
-    *,
-    source_file_path: str,
-    link_config: LinkRuntimeConfig,
-) -> Any:
-    """Apply only ordinary-link policy to YAML string leaves.
-
-    YAML structure and scalar types are preserved. Embedded image/document
-    syntax remains literal because this path intentionally calls only the
-    shared non-embed processor.
-    """
-
-    if isinstance(value, dict):
-        return {
-            key: _process_yaml_non_embed_links(
-                item,
-                source_file_path=source_file_path,
-                link_config=link_config,
-            )
-            for key, item in value.items()
-        }
-    if isinstance(value, list):
-        return [
-            _process_yaml_non_embed_links(
-                item,
-                source_file_path=source_file_path,
-                link_config=link_config,
-            )
-            for item in value
-        ]
-    if isinstance(value, tuple):
-        return tuple(
-            _process_yaml_non_embed_links(
-                item,
-                source_file_path=source_file_path,
-                link_config=link_config,
-            )
-            for item in value
-        )
-    if not isinstance(value, str):
-        return value
-
-    result = value
-    # Process the two syntaxes independently so a keep choice remains
-    # literal source text in a template field. The shared DOCX link processor
-    # escapes kept syntax for the Markdown renderer; YAML placeholders do not
-    # pass through that renderer and therefore must not receive those escapes.
-    if link_config.non_embed_markdown_mode != "keep":
-        result = _process_non_embed_links(
-            result,
-            source_file_path=source_file_path,
-            wiki_mode="pass",
-            markdown_mode=link_config.non_embed_markdown_mode,
-            search_dirs=link_config.search_dirs,
-            target_format="docx",
-            on_not_found=link_config.file_not_found_mode,
-            canonicalize_local_docx_targets=True,
-        )
-    if link_config.non_embed_wiki_mode != "keep":
-        result = _process_non_embed_links(
-            result,
-            source_file_path=source_file_path,
-            wiki_mode=link_config.non_embed_wiki_mode,
-            markdown_mode="pass",
-            search_dirs=link_config.search_dirs,
-            target_format="docx",
-            on_not_found=link_config.file_not_found_mode,
-            canonicalize_local_docx_targets=True,
-        )
-    return result
 
 
 def _request_heading_merge_punctuation(options: dict[str, object], config: object) -> frozenset[str]:
@@ -754,14 +681,8 @@ class MdToDocxConverter:
             progress.report_progress(15.0, "Extracting YAML front matter")
             yaml_dict, md_body = extract_yaml_front_matter(content)
             link_config = _request_link_config(context.config)
-            yaml_dict = _process_yaml_non_embed_links(
-                yaml_dict,
-                source_file_path=input_path,
-                link_config=link_config,
-            )
             field_processors_config = context.config.get("field_processors", {})
             current_locale = _resolve_locale(context.config.get("gui", {}))
-            run_yaml_processors(yaml_dict, field_processors_config, current_locale=current_locale)
             placeholder_rules = collect_placeholder_rules(field_processors_config, current_locale=current_locale)
             special_placeholder_handlers = collect_special_placeholder_handlers(
                 field_processors_config,
@@ -974,6 +895,13 @@ class MdToDocxConverter:
                 placeholder_names=placeholder_map,
                 source_stem=Path(input_path).stem,
             )
+            yaml_links = YamlLinkProjection(
+                input_path, link_config, declared_inputs=declared_resource_resolver is not None
+            )
+            for key in placeholder_map:
+                if key in yaml_dict:
+                    yaml_dict[key] = yaml_links.project(yaml_dict[key])
+            run_yaml_processors(yaml_dict, field_processors_config, current_locale=current_locale)
             body_font = extract_body_font(doc)
             body_style = extract_body_style(doc)
             body_paragraph_format = extract_body_paragraph_format(doc)
@@ -1095,8 +1023,9 @@ class MdToDocxConverter:
                 placeholder_rules=placeholder_rules,
                 special_placeholder_handlers=special_placeholder_handlers,
                 list_separator=template_list_separator(context.config),
-                materialize_yaml_links=True,
             )
+            yaml_links.materialize(doc)
+            yaml_dict = yaml_links.plain(yaml_dict)
             try:
                 semantic_v3_session.finalize_document()
             except DocxSemanticsV3Error as exc:

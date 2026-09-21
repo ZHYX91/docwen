@@ -942,3 +942,8 @@ Layout、presentation 与 markup 路由在 manifest 声明后使用共享的 Mar
 - `packages/plugins/markdown/tests/test_md_to_docx_formatting.py`
 - `packages/plugins/markdown/tests/test_md_to_spreadsheet_*.py`
 - `packages/core/tests/test_links_markdown_orchestrator.py`
+## YAML field links
+
+Authored Markdown-to-DOCX applies ordinary Wiki and Markdown link policies independently to string leaves used by template fields, before field-specific list/punctuation formatting. `keep` retains literal syntax, `extract_text` inserts display text, `remove` removes the link, and `hyperlink` produces a real DOCX relationship where the ordinary-link contract provides a navigable target. Numbers, booleans, dates, keys and container structure are preserved; embedded resources are not expanded from YAML.
+
+Only links explicitly selected by the policy are materialized. Existing template text is not reparsed as Markdown. Split text runs, run breaks and special attachment fields retain their surrounding structure and formatting. An inserted hyperlink inside an existing hyperlink is rejected rather than nesting invalid OOXML. Declared-input requests retain their no-local-lookup boundary; unused fields do not trigger resolution. DOCX metadata receives display text, never internal projection markers. Spreadsheet YAML behavior is unchanged by this DOCX change.

@@ -16,15 +16,7 @@ import inspect
 import logging
 import re
 from collections.abc import Iterator, Mapping
-from copy import deepcopy
 from typing import Any
-
-from docx.oxml import OxmlElement
-from docx.oxml.ns import qn
-
-from docwen_core.links._markdown_inline import parse_inline_link, parse_markdown_destination
-from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
-from docwen_plugin_markdown.renderer_inlines import add_hyperlink, extract_text_content
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +30,6 @@ def fill_template(
     placeholder_rules: list[Mapping[str, Any]] | None = None,
     special_placeholder_handlers: Mapping[str, Any] | None = None,
     list_separator: str = "、",
-    materialize_yaml_links: bool = False,
 ) -> None:
     """Main entry: inject body, fill YAML placeholders, apply rules.
 
@@ -59,8 +50,6 @@ def fill_template(
         special_placeholder_handlers: Optional special handlers exposed by
             enabled field processor modules.
         list_separator: Exact separator used for generic YAML list values.
-        materialize_yaml_links: Convert renderer-ready Markdown links produced
-            by the request-scoped YAML link policy into real DOCX hyperlinks.
     """
     # ── 1. Inject rendered body paragraphs ──────────────────────────────────
     if rendered_paragraphs and placeholder_para is not None:
@@ -86,7 +75,6 @@ def fill_template(
             yaml_dict,
             placeholder_map,
             list_separator=list_separator,
-            materialize_links=materialize_yaml_links,
         )
 
     # ── 4. Apply rules (conditional deletes for empty fields) ───────────────
@@ -144,7 +132,6 @@ def fill_yaml_placeholders(
     placeholder_map: dict[str, list[Any]],
     skip_keys: set[str] | None = None,
     list_separator: str = "、",
-    materialize_links: bool = False,
 ) -> None:
     """Replace ``{{key}}`` placeholders with corresponding YAML values.
 
@@ -167,19 +154,11 @@ def fill_yaml_placeholders(
             continue
 
         for para in paragraphs:
-            inserted_text_nodes = _replace_placeholder_runs(para, key, text)
-            if materialize_links:
-                for text_node in inserted_text_nodes:
-                    _materialize_markdown_links_in_text_node(para, text_node)
+            _replace_placeholder_runs(para, key, text)
 
 
-def _replace_placeholder_runs(para, key: str, replacement: str) -> set[Any]:
-    """Replace all occurrences without flattening runs or hyperlinks.
-
-    Return the text nodes that receive replacement content so a caller can
-    materialize only newly projected YAML links without interpreting unrelated
-    template text as Markdown.
-    """
+def _replace_placeholder_runs(para, key: str, replacement: str) -> None:
+    """Replace all occurrences without flattening runs or hyperlinks."""
     pattern = re.compile(r"\{\{\s*" + re.escape(key) + r"\s*\}\}")
     characters: list[str] = []
     locations: list[tuple[Any, int] | None] = []
@@ -198,7 +177,6 @@ def _replace_placeholder_runs(para, key: str, replacement: str) -> set[Any]:
             locations.append(None)
 
     matches = list(pattern.finditer("".join(characters)))
-    inserted_text_nodes: set[Any] = set()
 
     for match in reversed(matches):
         start_location = locations[match.start()]
@@ -211,12 +189,10 @@ def _replace_placeholder_runs(para, key: str, replacement: str) -> set[Any]:
         if start_element is end_element:
             current_text = start_element.text or ""
             _set_word_text(start_element, current_text[:start_offset] + replacement + current_text[end_offset:])
-            inserted_text_nodes.add(start_element)
             continue
         start_text = start_element.text or ""
         end_text = end_element.text or ""
         _set_word_text(start_element, start_text[:start_offset] + replacement)
-        inserted_text_nodes.add(start_element)
         seen_elements: set[Any] = {start_element, end_element}
         for location in locations[match.start() + 1 : match.end() - 1]:
             if location is None:
@@ -226,106 +202,6 @@ def _replace_placeholder_runs(para, key: str, replacement: str) -> set[Any]:
                 _set_word_text(element, "")
                 seen_elements.add(element)
         _set_word_text(end_element, end_text[end_offset:])
-
-    return inserted_text_nodes
-
-
-def _materialize_markdown_links_in_text_node(para: Any, text_node: Any) -> None:
-    """Replace processed Markdown links in one injected YAML text node.
-
-    The ordinary-link policy has already decided which source links are kept,
-    removed, converted to text, or converted to renderer-ready Markdown.
-    Only the last form is materialized here.  Existing template text and
-    hyperlinks are not reparsed.
-    """
-
-    source = text_node.text or ""
-    links: list[tuple[int, int, str, str]] = []
-    cursor = 0
-    while cursor < len(source):
-        match = parse_inline_link(source, cursor, image=False)
-        if match is None:
-            cursor += 1
-            continue
-        destination = parse_markdown_destination(match.target)
-        if destination is None:
-            cursor = match.end
-            continue
-        links.append((cursor, match.end, match.label, destination.destination))
-        cursor = match.end
-
-    if not links:
-        return
-
-    run = text_node.getparent()
-    paragraph_element = para._element
-    if run is None or run.getparent() is not paragraph_element or _local_name(run.tag) != "r":
-        return
-
-    # The replacement text is written into one w:t.  If a template run owns
-    # additional visible children, retain the conservative plain-text result
-    # rather than rewriting a more complex run structure.
-    visible_children = [
-        child for child in run if isinstance(child.tag, str) and _local_name(child.tag) not in {"rPr", "t"}
-    ]
-    text_children = [child for child in run if isinstance(child.tag, str) and _local_name(child.tag) == "t"]
-    if visible_children or len(text_children) != 1:
-        return
-
-    insertion_index = paragraph_element.index(run)
-    r_pr = run.find(qn("w:rPr"))
-    paragraph_element.remove(run)
-
-    def insert_plain(value: str) -> None:
-        nonlocal insertion_index
-        if not value:
-            return
-        new_run = OxmlElement("w:r")
-        if r_pr is not None:
-            new_run.append(deepcopy(r_pr))
-        new_text = OxmlElement("w:t")
-        _set_word_text(new_text, value)
-        new_run.append(new_text)
-        paragraph_element.insert(insertion_index, new_run)
-        insertion_index += 1
-
-    last_end = 0
-    for start, end, label, destination in links:
-        insert_plain(source[last_end:start])
-
-        before_count = len(paragraph_element)
-        add_hyperlink(para, destination, text=_visible_markdown_label(label))
-        added = list(paragraph_element)[before_count:]
-        if not added:
-            insert_plain(source[start:end])
-        else:
-            for child in added:
-                paragraph_element.remove(child)
-                paragraph_element.insert(insertion_index, child)
-                insertion_index += 1
-        last_end = end
-
-    insert_plain(source[last_end:])
-
-
-def _visible_markdown_label(label: str) -> str:
-    """Return the visible text of one Markdown link label."""
-
-    try:
-        ast = parse_markdown_text(label)
-        parts: list[str] = []
-        for node in ast:
-            children = node.get("children", []) if isinstance(node, dict) else []
-            if isinstance(children, list):
-                parts.append(extract_text_content(children))
-            elif isinstance(node, dict):
-                parts.append(str(node.get("raw", "") or node.get("text", "")))
-        visible = "".join(parts)
-        if visible:
-            return visible
-    except Exception:
-        pass
-    return re.sub(r"\\([!\"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~])", r"\1", label)
 
 
 def _set_word_text(element, text: str) -> None:

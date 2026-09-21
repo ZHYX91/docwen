@@ -24,6 +24,8 @@ Under Extract Text, the first list item must become `喵喵`; the website field 
 
 ## Historical evidence
 
+历史对照：以下 `src/docwen/` 路径仅指重构前版本，不是当前源码入口。
+
 Review baseline: `93227f5d2a921e7168344903bccd1c3f0095f38d`.
 
 - [v0.8.5 reader](https://github.com/ZHYX91/docwen/blob/v0.8.5/src/docwen/converter/md2docx/core.py): `read_and_parse_md()` recursively processes YAML dictionaries, lists and string leaves using `process_markdown_links()`, before field-specific processors.
