@@ -542,7 +542,7 @@ class ApplicationController:
                     group_outputs=True,
                     open_after_done=False,
                 ),
-                conversion_identity=identity,
+                conversion_identity=replace(identity, task_id=render_task_id),
             )
             render_result = self._execute_runtime_stage(render_request, scope, render_task_id)
             if not isinstance(render_result, ConversionResult):
