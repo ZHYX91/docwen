@@ -198,8 +198,8 @@ Ngoài giao diện đồ họa, DocWen còn cung cấp giao diện dòng lệnh 
 
 1. `inspect <file> [--json]`: trước tiên nhận diện loại tệp thực tế, định dạng và các thao tác được hỗ trợ.
 2. `schema convert`: đọc hợp đồng máy đọc được và các ràng buộc điều kiện của `convert`.
-3. `convert <file> --to <fmt> --output <path> --dry-run --json`: xem trước quá trình nhận diện, chuẩn hóa và định tuyến mà không ghi tệp đầu ra.
-4. `convert <file> --to <fmt> --output <path> ...`: sau khi xác nhận, mới chạy chuyển đổi thật.
+3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: xem trước quá trình nhận diện, chuẩn hóa và định tuyến mà không ghi tệp đầu ra.
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: sau khi xác nhận, mới chạy chuyển đổi thật.
 
 ### Ví dụ thường dùng
 
@@ -246,8 +246,8 @@ Bảng dưới đây chỉ liệt kê các lệnh thông dụng. Để xem đầ
 
 | Lệnh / tùy chọn | Mô tả |
 | --- | --- |
-| `convert <file> --to <fmt> --output <path>` | Điểm vào thống nhất cho chuyển đổi. |
-| `convert <file> --to <fmt> --output <path> --dry-run --json` | Xem trước nhận diện, chuẩn hóa, định tuyến và các tùy chọn hiệu lực mà không thực hiện chuyển đổi thật. |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | Điểm vào thống nhất cho chuyển đổi. |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | Xem trước nhận diện, chuẩn hóa, định tuyến và các tùy chọn hiệu lực mà không thực hiện chuyển đổi thật. |
 | `schema convert` | Xuất hợp đồng máy đọc được, giá trị mặc định, điều kiện và khóa chuẩn của `convert`. |
 | `validate <file> --check ...` | Soát lỗi tài liệu (`typo/punct/symbol/sensitive/all/none`). Dùng `--json` cho envelope của CLI; `--report` là đường dẫn tệp báo cáo tùy chọn. |
 | `inspect <file> [--json]` | Kiểm tra loại/định dạng tệp, hành động gợi ý và cảnh báo khi phần mở rộng không khớp nội dung. |
@@ -257,7 +257,7 @@ Bảng dưới đây chỉ liệt kê các lệnh thông dụng. Để xem đầ
 | `resources list numbering-schemes` | Liệt kê các sơ đồ đánh số có sẵn. |
 | `--template <id>` | ID tài nguyên chuẩn chính xác từ `resources list templates`; tên hiển thị, tên tệp và đường dẫn đều bị từ chối. ID DOCX dùng cho `docx/doc/odt/rtf/wps/pdf`, ID XLSX cho `xlsx/xls/ods/csv`. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Tùy chọn trích ảnh và OCR cho `convert --to md`. |
-| `--image-mode file|base64` | Kiểm soát cách ảnh được xuất ra khi xuất Markdown. |
+| `--image-mode file|base64|embed|omit` | Kiểm soát cách ảnh được xuất ra khi xuất Markdown. |
 | `--ocr-placement image_md|main_md` | Kiểm soát việc ghi văn bản OCR vào Markdown phụ của ảnh hay Markdown chính. |
 | `--heading-merge-mode punct_required|always|never` | Kiểm soát chiến lược gộp "tiêu đề + nội dung" cho `convert --to docx`. |
 | `--optimization <id>` | Bật rõ ràng một hồ sơ tối ưu hóa (xem `resources list optimizations`). |
