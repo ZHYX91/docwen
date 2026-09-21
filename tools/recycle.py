@@ -6,6 +6,7 @@ import os
 import struct
 import time
 from pathlib import Path
+from typing import ClassVar
 
 _RECYCLE_FLAGS = 0x80000 | 0x20000000 | 0x100000 | 0x400 | 0x10 | 0x4
 
@@ -17,8 +18,8 @@ def _recycle_guard():
     from win32com.shell import shell
 
     class Guard(DesignatedWrapPolicy):
-        _com_interfaces_ = [shell.IID_IFileOperationProgressSink]
-        _public_methods_ = [
+        _com_interfaces_: ClassVar[list[object]] = [shell.IID_IFileOperationProgressSink]
+        _public_methods_: ClassVar[list[str]] = [
             "PreDeleteItem",
             "PostDeleteItem",
             "StartOperations",
