@@ -182,8 +182,7 @@ class FormRow(_ResponsiveFrame):
         for row in peers:
             row.label.ensurePolished()
         column_width = max(
-            row._label_text_width()
-            + (row.label_suffix.sizeHint().width() + 6 if row.label_suffix is not None else 0)
+            row._label_text_width() + (row.label_suffix.sizeHint().width() + 6 if row.label_suffix is not None else 0)
             for row in peers
         )
         suffix_width = self.label_suffix.sizeHint().width() + 6 if self.label_suffix is not None else 0
