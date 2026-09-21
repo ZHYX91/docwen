@@ -95,6 +95,12 @@ def redacted_options(options: dict[str, Any]) -> dict[str, Any]:
     redacted = dict(options)
     if "spreadsheet_password" in redacted:
         redacted["spreadsheet_password"] = "<redacted>"
+    postprocess = redacted.pop(POSTPROCESS_PROOFREAD_OPTION, None)
+    if isinstance(postprocess, dict):
+        redacted["proofread"] = {
+            "enabled": True,
+            "options": dict(postprocess),
+        }
     return redacted
 
 
