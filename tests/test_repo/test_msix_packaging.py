@@ -87,7 +87,7 @@ def test_store_config_and_manifest_bind_partner_center_identity() -> None:
     assert identity.attrib == {
         "Name": "ZHYX.DocWen",
         "Publisher": "CN=9E46E7F1-F057-4B88-BF71-7C9CB77AF9C6",
-        "Version": "1.0.6.0",
+        "Version": "1.0.7.0",
         "ProcessorArchitecture": "x64",
     }
     target = manifest.find("f:Dependencies/f:TargetDeviceFamily", namespaces)
