@@ -492,12 +492,24 @@ class SettingsDialog(QDialog):
     # ── Preview restore ────────────────────────────────────────────────────
 
     def _restore_preview_state(self) -> None:
-        """Restore theme and opacity to the baseline captured at dialog open
-        or by the most recent successful Apply operation."""
-        if self._initial_theme is not None:
+        """Restore only visual preview state that actually diverged.
+
+        Reapplying the active Qt theme rebuilds the application palette/QSS and
+        repolishes every visible top-level widget.  Avoid that global work on a
+        routine Cancel when the user never changed the theme.  The same rule
+        applies to opacity so a no-op close stays on the fast path.
+        """
+        if self._initial_theme is not None and _read_initial_theme() != self._initial_theme:
             _apply_theme_no_persist(self._initial_theme)
-        if self._initial_opacity is not None:
-            _apply_opacity_no_persist(self._initial_opacity, self.parentWidget())
+
+        parent = self.parentWidget()
+        if self._initial_opacity is not None and parent is not None:
+            try:
+                current_opacity = float(parent.windowOpacity())
+            except Exception:
+                current_opacity = None
+            if current_opacity is None or abs(current_opacity - self._initial_opacity) > 1e-6:
+                _apply_opacity_no_persist(self._initial_opacity, parent)
 
     def _build_navigation(self, content_row: QHBoxLayout) -> None:
         """Build the FluentNavigationInterface sidebar (or fallback)."""
@@ -809,6 +821,8 @@ class SettingsDialog(QDialog):
     def _find_focus_target(tab: QWidget) -> QWidget | None:
         """Return the first eligible control, preserving the old Qt focus UX."""
         for widget in tab.findChildren(QWidget):
+            if widget.objectName() == "settingsInfoButton":
+                continue
             if not widget.isEnabled() or widget.focusPolicy() == Qt.FocusPolicy.NoFocus:
                 continue
             if isinstance(widget, (QAbstractButton, QCheckBox, QComboBox, QLineEdit, QSpinBox, QDoubleSpinBox)):
@@ -820,7 +834,17 @@ class SettingsDialog(QDialog):
     # ── Action handlers ─────────────────────────────────────────────────────
 
     def _on_ok(self) -> None:
-        """Apply settings and close."""
+        """Apply changed settings and close.
+
+        A clean dialog has nothing to persist.  In particular, do not send a
+        full multi-file durable configuration transaction through the runtime
+        merely because the user pressed OK after inspecting settings.
+        """
+        if not self._vm.is_dirty:
+            self._close_cleanup_done = True
+            self.accept()
+            return
+
         applied = False
         try:
             applied = self._vm.ok_changes()
@@ -905,7 +929,8 @@ class SettingsDialog(QDialog):
             ):
                 return False
             self._restore_preview_state()
-            self._vm.cancel_changes()
+            if self._vm.is_dirty:
+                self._vm.cancel_changes()
             self._close_cleanup_done = True
             return True
         except Exception:

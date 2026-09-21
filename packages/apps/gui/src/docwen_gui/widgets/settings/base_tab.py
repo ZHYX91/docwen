@@ -11,16 +11,18 @@ from __future__ import annotations
 
 from typing import Any
 
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import QEvent, QPoint, QSize, Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
     QFormLayout,
+    QFrame,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMenu,
     QPushButton,
     QScrollArea,
     QSizePolicy,
@@ -28,6 +30,7 @@ from PySide6.QtWidgets import (
     QToolButton,
     QVBoxLayout,
     QWidget,
+    QWidgetAction,
 )
 
 from docwen_gui.widgets.value_controls import ScrollSafeComboBox, ScrollSafeDoubleSpinBox, ScrollSafeSpinBox
@@ -77,21 +80,126 @@ def _prepare_combo(widget: QComboBox) -> None:
     widget.setView(view)
 
 
-def _create_info_button(tooltip: str, parent: QWidget | None = None) -> QToolButton:
-    """Create a small visible info affordance for settings help text."""
-    btn = QToolButton(parent)
+class _SettingsInfoButton(QToolButton):
+    """Keyboard-operable settings help affordance."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._help_menu: QMenu | None = None
+        self._hover_help: QFrame | None = None
+
+    def event(self, event: QEvent) -> bool:
+        if event.type() == QEvent.Type.ToolTip:
+            if self._help_menu is None or not self._help_menu.isVisible():
+                self._close_hover_help()
+                popup = QFrame(self, Qt.WindowType.ToolTip)
+                popup.setObjectName("settingsHelpPopup")
+                layout = QVBoxLayout(popup)
+                layout.setContentsMargins(1, 1, 1, 1)
+                layout.addWidget(_help_content(self, popup, self.toolTip()))
+                popup.adjustSize()
+                position = self.mapToGlobal(QPoint(0, self.height() + Spacing.XS))
+                screen = self.screen().availableGeometry().adjusted(4, 4, -4, -4)
+                position.setX(max(screen.left(), min(position.x(), screen.right() - popup.width() + 1)))
+                position.setY(max(screen.top(), min(position.y(), screen.bottom() - popup.height() + 1)))
+                popup.move(position)
+                self._hover_help = popup
+                popup.show()
+            event.accept()
+            return True
+        if event.type() in {QEvent.Type.Leave, QEvent.Type.Hide, QEvent.Type.MouseButtonPress, QEvent.Type.FocusOut}:
+            self._close_hover_help()
+        return super().event(event)
+
+    def _close_hover_help(self) -> None:
+        popup = getattr(self, "_hover_help", None)
+        if popup is not None:
+            popup.hide()
+            popup.deleteLater()
+            self._hover_help = None
+
+    def eventFilter(self, watched, event: QEvent) -> bool:
+        if event.type() == QEvent.Type.ToolTip:
+            return self.event(event)
+        if event.type() in {QEvent.Type.Leave, QEvent.Type.Hide, QEvent.Type.MouseButtonPress, QEvent.Type.FocusOut}:
+            self._close_hover_help()
+        return super().eventFilter(watched, event)
+
+    def keyPressEvent(self, event) -> None:
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            if not event.isAutoRepeat():
+                self.click()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+
+def _help_content(button: QWidget, parent: QWidget, text: str) -> QScrollArea:
+    """Bound both dimensions and keep long help reachable by scrolling."""
+    available = button.screen().availableGeometry()
+    width = min(420, max(1, available.width() - 32))
+    scroll = QScrollArea(parent)
+    scroll.setFrameShape(QFrame.Shape.NoFrame)
+    scroll.setWidgetResizable(True)
+    scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+    label = WrappingLabel(text, scroll)
+    label.setObjectName("settingsHelpPopupText")
+    label.setTextFormat(Qt.TextFormat.PlainText)
+    label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+    label.setContentsMargins(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM)
+    label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+    label.resize(width - 20, 1)
+    label.sync_wrapped_height()
+    scroll.setWidget(label)
+    scroll.setFixedSize(width, min(label.minimumHeight() + 2, max(1, min(480, available.height() - 40))))
+    return scroll
+
+
+def _show_info_popup(button: _SettingsInfoButton, text: str) -> None:
+    """Show bounded plain-text help; QMenu keeps it on the active screen."""
+    button._close_hover_help()
+    menu = button._help_menu
+    if menu is not None:
+        if menu.isVisible():
+            menu.close()
+            return
+        menu.clear()
+    else:
+        menu = QMenu(button)
+        menu.setObjectName("settingsHelpPopup")
+        button._help_menu = menu
+        menu.aboutToHide.connect(lambda: button.setFocus(Qt.FocusReason.PopupFocusReason))
+    action = QWidgetAction(menu)
+    content = _help_content(button, menu, text)
+    action.setDefaultWidget(content)
+    menu.addAction(action)
+    menu.popup(button.mapToGlobal(QPoint(0, button.height() + Spacing.XS)))
+    content.setFocus(Qt.FocusReason.PopupFocusReason)
+
+
+def _create_info_button(
+    tooltip: str,
+    parent: QWidget | None = None,
+    *,
+    accessible_name: str = "",
+) -> QToolButton:
+    """Create one shared, focusable settings help affordance."""
+    btn = _SettingsInfoButton(parent)
     btn.setObjectName(SETTINGS_INFO_BUTTON_OBJECT_NAME)
     btn.setAutoRaise(True)
-    btn.setFixedSize(18, 18)
-    btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+    btn.setFixedSize(30, 30)
+    btn.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
     btn.setToolTip(tooltip)
-    btn.setAccessibleName(tooltip)
+    btn.setAccessibleName(accessible_name or tooltip)
+    btn.setAccessibleDescription(tooltip)
     icon = load_svg_icon("info.svg")
-    btn.setIconSize(QSize(14, 14))
+    btn.setIconSize(QSize(17, 17))
     if icon is not None and not icon.isNull():
         btn.setIcon(icon)
     else:
         btn.setText("i")
+    btn.clicked.connect(lambda _checked=False, owner=btn, text=tooltip: _show_info_popup(owner, text))
     return btn
 
 
@@ -212,11 +320,15 @@ class BaseSettingsTab(QWidget):
         if not label_text.strip():
             form.addRow(widget)
             return None
-        suffix = _create_info_button(effective_tooltip) if effective_tooltip else None
+        suffix = _create_info_button(effective_tooltip, accessible_name=label_text) if effective_tooltip else None
         peers = form.alignment_group if isinstance(form, _SettingsFormLayout) else None
         row = FormRow(
             label_text, widget, label_suffix=suffix, alignment_group=peers, minimum_label_height=CONTROL_HEIGHT
         )
+        if suffix is not None:
+            QWidget.setTabOrder(widget, suffix)
+            widget.installEventFilter(suffix)
+            row.label.installEventFilter(suffix)
         if peers is not None:
             peers.append(row)
         if isinstance(form, _SettingsFormLayout):
@@ -269,15 +381,21 @@ class BaseSettingsTab(QWidget):
         return self.create_checkbox(text, tooltip, default=default, object_name=SETTINGS_TOGGLE_OBJECT_NAME)
 
     def _create_toggle_with_info(self, text: str, tooltip: str) -> tuple[QWidget, QCheckBox]:
-        """Let the checkbox use the row width while reserving only the help icon."""
+        """Keep help next to the label, allowing long checkboxes to wrap."""
         container = QWidget(self._scroll_container)
         layout = QHBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(Spacing.CONTROL_GAP)
         checkbox = self.create_settings_toggle(text, tooltip)
-        layout.addWidget(checkbox, 1)
+        policy = checkbox.sizePolicy()
+        policy.setHorizontalPolicy(QSizePolicy.Policy.Preferred)
+        checkbox.setSizePolicy(policy)
+        layout.addWidget(checkbox)
         if tooltip:
-            layout.addWidget(_create_info_button(tooltip, container), 0, Qt.AlignmentFlag.AlignVCenter)
+            info = _create_info_button(tooltip, container, accessible_name=text)
+            layout.addWidget(info, 0, Qt.AlignmentFlag.AlignVCenter)
+            checkbox.installEventFilter(info)
+        layout.addStretch(1)
         return container, checkbox
 
     def create_combobox(

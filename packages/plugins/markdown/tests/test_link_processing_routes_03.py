@@ -23,7 +23,7 @@ from ._link_processing_routes_support import (
 pytestmark = pytest.mark.contract
 
 
-def test_docx_yaml_front_matter_is_not_link_processed_before_template_fill(
+def test_docx_yaml_and_body_follow_remove_policy_without_rewriting_front_matter(
     tmp_path: Path,
 ) -> None:
     template = tmp_path / "yaml-link-template.docx"
@@ -43,9 +43,11 @@ def test_docx_yaml_front_matter_is_not_link_processed_before_template_fill(
         options={"template_name": str(template)},
     )
 
-    assert "[keep literal](https://yaml.example)" in observation.text
-    assert "yaml.example" in observation.text
+    assert "keep literal" not in observation.text
+    assert "yaml.example" not in observation.text
     assert "body.example" not in observation.text
+    assert not observation.hyperlink_targets
+    assert "[keep literal](https://yaml.example)" in source.read_text(encoding="utf-8")
 
 
 def test_csv_literal_percent_7c_filename_round_trips_exactly_once(

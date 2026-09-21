@@ -73,6 +73,12 @@ class TemplatePackageError(ValueError):
     diagnostic_code = "MD2DOCX-TEMPLATE-PACKAGE-INVALID"
 
 
+class BodyPlaceholderPlacementError(TemplatePackageError):
+    """A body marker exists outside the supported single-paragraph anchor."""
+
+    diagnostic_code = "MD2DOCX-TEMPLATE-BODY-PLACEMENT"
+
+
 @dataclass(frozen=True, slots=True)
 class BodyParagraphFormat:
     """Direct paragraph-format contract projected from ``{{body}}``."""
@@ -212,6 +218,42 @@ def find_body_placeholder(doc: Document) -> Any | None:
         if key in BODY_PLACEHOLDER_ALIASES:
             return p
     return None
+
+
+def validate_body_placeholder_placement(doc: Document) -> None:
+    """Require one standalone main-body anchor, or no authored body marker."""
+    markers = []
+    # XML scanning also sees text in unsupported wrappers and across breaks.
+    # Every accepted marker must be discoverable by the actual body finder.
+    visible_anchors = {
+        paragraph._p
+        for paragraph in doc.paragraphs
+        if _whole_paragraph_placeholder_key(paragraph.text) in BODY_PLACEHOLDER_ALIASES
+    }
+    pattern = re.compile(r"\{\{\s*([^{}\r\n]+?)\s*\}\}")
+    roots = [doc.element]
+    roots.extend(
+        part.element
+        for part in doc.part.related_parts.values()
+        if hasattr(part, "element") and str(part.partname).startswith(("/word/header", "/word/footer"))
+    )
+    for root in roots:
+        for paragraph in root.iter(qn("w:p")):
+            text = "".join(node.text or "" for node in paragraph.iter(qn("w:t")))
+            for match in pattern.finditer(text):
+                if match.group(1).strip() not in BODY_PLACEHOLDER_ALIASES:
+                    continue
+                if (
+                    paragraph.getparent() is not doc.element.body
+                    or text.strip() != match.group(0)
+                    or paragraph not in visible_anchors
+                ):
+                    raise BodyPlaceholderPlacementError(
+                        "A body placeholder must occupy a standalone main-document paragraph."
+                    )
+                markers.append(paragraph)
+    if len(markers) > 1:
+        raise BodyPlaceholderPlacementError("A template may contain only one body placeholder.")
 
 
 def extract_body_font(doc: Document) -> dict[str, Any]:

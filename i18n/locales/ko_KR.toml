@@ -1411,6 +1411,7 @@ other_short = "기타"
 [file_format_validation]
 
 [file_admission]
+actual_format = "실제 형식: {detected_format}"
 compatible_text = "파일 이름은 {declared_format} 형식이지만 내용은 {detected_format} 형식으로 감지되었습니다. 두 형식은 같은 텍스트 처리 흐름을 사용합니다."
 same_family_mismatch = "파일 이름은 {declared_format} 형식이지만 내용은 {detected_format} 형식으로 감지되었습니다. 두 형식은 같은 처리 계열이므로 감지된 형식을 사용합니다."
 cross_family_mismatch = "파일 이름은 {declared_format} 형식이지만 내용은 {detected_format} 형식으로 감지되었습니다. 처리 계열이 다르므로 감지된 형식으로 처리할지 확인하세요."

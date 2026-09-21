@@ -682,6 +682,31 @@ def _canonical_local_docx_target(
     return f"<{target}>{suffix}"
 
 
+def project_field_links(
+    text: str,
+    *,
+    source_file_path: str,
+    wiki_mode: str,
+    markdown_mode: str,
+    search_dirs: Sequence[str],
+    on_not_found: str,
+    hyperlink_renderer: Callable[[str, str], str],
+) -> str:
+    """Project ordinary links into a field consumer without reparsing kept text."""
+    return _process_non_embed_links(
+        text,
+        source_file_path=source_file_path,
+        wiki_mode=wiki_mode,
+        markdown_mode=markdown_mode,
+        search_dirs=search_dirs,
+        on_not_found=on_not_found,
+        target_format="docx",
+        canonicalize_local_docx_targets=True,
+        literal_keep=True,
+        hyperlink_renderer=hyperlink_renderer,
+    )
+
+
 def _process_non_embed_links(
     text: str,
     *,
@@ -693,6 +718,8 @@ def _process_non_embed_links(
     on_not_found: str = "placeholder",
     canonicalize_local_docx_targets: bool = False,
     table_safe: bool = False,
+    literal_keep: bool = False,
+    hyperlink_renderer: Callable[[str, str], str] | None = None,
 ) -> str:
     """Process links outside fenced and inline code.
 
@@ -706,12 +733,18 @@ def _process_non_embed_links(
 
     normalized_target = (target_format or "").strip().lower()
 
+    def emit_link(label: str, target: str) -> str:
+        parsed = parse_markdown_destination(target)
+        if hyperlink_renderer is not None and parsed is not None:
+            return hyperlink_renderer(label, parsed.destination)
+        return f"[{label}]({target})"
+
     def _replace_wiki(match: re.Match[str]) -> str:
         target = _unescape_pipe((match.group(1) or "").strip())
         display_raw = match.group(2)
         display = _unescape_pipe(display_raw.strip()) if display_raw else target
 
-        if wiki_mode == "keep" and normalized_target == "docx":
+        if wiki_mode == "keep" and normalized_target == "docx" and not literal_keep:
             return escape_markdown_source_literal(match.group(0))
         if wiki_mode == "extract_text":
             return display or target
@@ -738,7 +771,7 @@ def _process_non_embed_links(
 
         if re.match(r"^(?:https?|ftp|file|mailto):", raw_path, re.IGNORECASE):
             destination = encode_markdown_angle_destination(target)
-            return f"[{escape_markdown_label(display)}](<{destination}>)"
+            return emit_link(escape_markdown_label(display), f"<{destination}>")
         if encoded_target.startswith("//"):
             return display
 
@@ -758,7 +791,7 @@ def _process_non_embed_links(
                 block_id=block_id,
                 original_link=match.group(0),
             )
-            if normalized_target == "docx" and error_output == match.group(0):
+            if normalized_target == "docx" and not literal_keep and error_output == match.group(0):
                 return escape_markdown_source_literal(error_output)
             return error_output
         if canonicalize_local_docx_targets and normalized_target == "docx":
@@ -767,7 +800,7 @@ def _process_non_embed_links(
                 path_text = f"{path_text}?{raw_query}"
             if separator:
                 path_text = f"{path_text}#{quote(unquote(fragment), safe='/-._~')}"
-            return f"[{escape_markdown_label(display)}](<{path_text}>)"
+            return emit_link(escape_markdown_label(display), f"<{path_text}>")
 
         try:
             source_dir = Path(source_file_path).parent
@@ -779,7 +812,7 @@ def _process_non_embed_links(
             path_text = f"{path_text}?{raw_query}"
         if separator:
             path_text = f"{path_text}#{quote(fragment, safe='/-._~')}"
-        return f"[{escape_markdown_label(display)}](<{path_text}>)"
+        return emit_link(escape_markdown_label(display), f"<{path_text}>")
 
     def _replace_markdown(display: str, target: str, original: str) -> str | None:
         display_text = display.strip()
@@ -788,7 +821,7 @@ def _process_non_embed_links(
             return display_text or target_text or ""
         if markdown_mode == "remove":
             return ""
-        if markdown_mode == "keep" and normalized_target == "docx":
+        if markdown_mode == "keep" and normalized_target == "docx" and not literal_keep:
             return escape_markdown_source_literal(original)
         if markdown_mode == "hyperlink" and normalized_target == "docx":
             parsed_target = parse_markdown_destination(target_text)
@@ -808,7 +841,7 @@ def _process_non_embed_links(
             # ``display`` is the original, validated Markdown label source.
             # Re-encoding its backslashes would change escape/formatting
             # semantics (for example ``\*literal\*``).
-            return f"[{display}]({canonical_target})"
+            return emit_link(display, canonical_target)
         return None
 
     def _replace_wiki_links(segment: str) -> str:

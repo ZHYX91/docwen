@@ -79,7 +79,9 @@ def test_general_and_link_config_roundtrip_contract_stays_wired_with_current_run
     assert "WindowBehaviorPolicy" in window_policy
     assert "cfg_port.set_many(" in main_window
     assert "settings_source_changed" in settings_dialog
-    assert "settings_source_changed.connect(self._apply_runtime_window_settings)" in main_window
+    assert "settings_source_changed.connect(" in main_window
+    assert "self._apply_runtime_window_settings" in main_window
+    assert "Qt.ConnectionType.QueuedConnection" in main_window
     assert "_get_link_cfg" not in production_sources
     assert "configure_link_runtime_config" not in production_sources
     assert production_sources.count("process_markdown_links(") >= 3

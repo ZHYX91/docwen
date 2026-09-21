@@ -969,3 +969,17 @@ Layout、presentation 与 markup 路由在 manifest 声明后使用共享的 Mar
 - `packages/plugins/markdown/tests/test_md_to_docx_formatting.py`
 - `packages/plugins/markdown/tests/test_md_to_spreadsheet_*.py`
 - `packages/core/tests/test_links_markdown_orchestrator.py`
+
+## Authored Markdown template body placement
+
+Authored Markdown inserts body content only at a single, standalone main-document body placeholder (including the supported localized aliases and markers split across text runs). A custom template with no body marker is metadata-only: YAML fields and explicit bibliography placement remain available, but body links/resources, notes, numbering, semantic body sessions and rendering are not materialized. Existing template notes are still audited and preserved. An empty body leaves no visible marker.
+
+Inline markers, table-cell/textbox/header/footer markers and duplicate body markers fail with `MD2DOCX-TEMPLATE-BODY-PLACEMENT`, rather than being mistaken for a metadata-only template. The same rejection applies when XML scanning finds a marker hidden in an unsupported inline content control or split within its alias by a structural break: every accepted marker must also be recognizable by the body-placement finder. Invalid source semantic syntax remains invalid even when the body is omitted. Source and template bytes are never rewritten.
+
+The separately validated resolved-v4 port retains its explicit full-document rendering contract, including its existing append behavior without a body marker; this authored-Markdown rule does not redirect or weaken that port.
+
+## YAML field links
+
+Authored Markdown-to-DOCX applies ordinary Wiki and Markdown link policies independently to string leaves used by template fields, before field-specific list/punctuation formatting. `keep` retains literal syntax, `extract_text` inserts display text, `remove` removes the link, and `hyperlink` produces a real DOCX relationship where the ordinary-link contract provides a navigable target. Numbers, booleans, dates, keys and container structure are preserved; embedded resources are not expanded from YAML.
+
+Only links explicitly selected by the policy are materialized. Existing template text is not reparsed as Markdown. Split text runs, run breaks and special attachment fields retain their surrounding structure and formatting. An inserted hyperlink inside an existing hyperlink is rejected rather than nesting invalid OOXML. Declared-input requests retain their no-local-lookup boundary; unused fields do not trigger resolution. DOCX metadata receives display text, never internal projection markers. Spreadsheet YAML behavior is unchanged by this DOCX change.

@@ -1457,6 +1457,7 @@ other_short = "Khác"
 [file_format_validation]
 
 [file_admission]
+actual_format = "Định dạng thực tế: {detected_format}"
 compatible_text = "Tên tệp khai báo định dạng {declared_format}, nhưng nội dung được phát hiện là {detected_format}; cả hai dùng cùng quy trình xử lý văn bản."
 same_family_mismatch = "Tên tệp khai báo định dạng {declared_format}, nhưng nội dung được phát hiện là {detected_format}. Hai định dạng thuộc cùng nhóm xử lý; định dạng đã phát hiện sẽ được dùng."
 cross_family_mismatch = "Tên tệp khai báo định dạng {declared_format}, nhưng nội dung được phát hiện là {detected_format}. Hai định dạng thuộc các nhóm xử lý khác nhau; hãy xác nhận xử lý theo định dạng đã phát hiện."
