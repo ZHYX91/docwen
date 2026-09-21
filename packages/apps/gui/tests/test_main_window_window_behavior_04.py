@@ -34,7 +34,7 @@ def test_settings_dialog_source_signal_refreshes_main_window_policy(
         def __init__(self) -> None:
             self._callbacks: list[Any] = []
 
-        def connect(self, callback: Any) -> None:
+        def connect(self, callback: Any, *_args: object) -> None:
             self._callbacks.append(callback)
 
         def emit(self) -> None:
@@ -102,7 +102,7 @@ def test_main_window_reuses_owned_nonblocking_settings_dialog(main_window, monke
         def __init__(self) -> None:
             self._callbacks: list[Any] = []
 
-        def connect(self, callback: Any) -> None:
+        def connect(self, callback: Any, *_args: object) -> None:
             self._callbacks.append(callback)
 
         def emit(self) -> None:
@@ -167,7 +167,7 @@ def test_main_window_discards_settings_dialog_when_construction_crosses_deadline
     monkeypatch.setattr(main_window, "bring_to_front", lambda: pytest.fail("must not focus after timeout"))
 
     class _Signal:
-        def connect(self, _callback: Any) -> None:
+        def connect(self, _callback: Any, *_args: object) -> None:
             return None
 
     class _Dialog:
