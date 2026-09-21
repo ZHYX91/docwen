@@ -6,6 +6,7 @@ import json
 import os
 import shutil
 import stat
+import subprocess
 import sys
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
@@ -458,7 +459,11 @@ def _snapshot_lease(marker: Path, *, root: Path) -> dict[str, Any]:
 
 
 def _managed_roots(workspace: Path) -> tuple[Path, ...]:
-    return tuple(workspace / name for name in MANAGED_ROOT_NAMES)
+    return tuple(workspace / name for name in MANAGED_ROOT_NAMES) + tuple(
+        workspace.parent / "repos" / name / "build"
+        for name in ("docwen", "docwen-openclaw")
+        if (workspace.parent / "repos" / name / ".git").exists()
+    )
 
 
 def _protected_roots(workspace: Path) -> tuple[Path, ...]:
@@ -481,6 +486,23 @@ def _classify_target(
         if _is_within(absolute_target, protected):
             raise HousekeepingError(f"protected_target:{absolute_target}")
     repository_root = engineering_root / "repos"
+    for managed in _managed_roots(workspace):
+        if managed.parent.parent == repository_root and _is_within(absolute_target, managed):
+            if not _chain_is_plain(managed, boundary=engineering_root):
+                raise HousekeepingError(f"unsafe_managed_root:{managed}")
+            if absolute_target == managed:
+                raise HousekeepingError(f"managed_root_forbidden:{absolute_target}")
+            if not (absolute_target / LEASE_NAME).is_file():
+                raise HousekeepingError(f"repository_build_lease_required:{absolute_target}")
+            tracked = subprocess.run(
+                ["git", "-C", str(managed.parent), "ls-files", "--", str(absolute_target.relative_to(managed.parent))],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout
+            if tracked.strip():
+                raise HousekeepingError(f"tracked_build_content:{absolute_target}")
+            return "explicit", managed
     if _is_within(absolute_target, repository_root):
         if not clean_dependencies or absolute_target.name not in DEPENDENCY_DIRECTORY_NAMES:
             raise HousekeepingError(f"repository_target_requires_clean_deps:{absolute_target}")
@@ -581,7 +603,7 @@ def _automatic_lease_candidates(
     for managed_root in _managed_roots(workspace):
         if not managed_root.exists():
             continue
-        if not managed_root.is_dir() or not _chain_is_plain(managed_root, boundary=workspace):
+        if not managed_root.is_dir() or not _chain_is_plain(managed_root, boundary=workspace.parent):
             raise HousekeepingError(f"unsafe_managed_root:{managed_root}")
         scan_errors: list[dict[str, str]] = []
         markers = _lease_markers(managed_root, errors=scan_errors)
@@ -902,11 +924,17 @@ def apply_saved_plan(plan_path: Path, *, workspace_root: Path) -> dict[str, Any]
         if disposition == "recycle":
             from tools.recycle import recycle_directory
 
-            recycle_directory(path)
+            recovery = recycle_directory(path)
         else:
             shutil.rmtree(_windows_extended_path(path), onexc=_remove_owned_readonly_path)
         removed.append(str(path))
-        removed_entries.append({"path": str(path), "bytes": int(entry["identity"]["bytes"])})
+        removed_entries.append(
+            {
+                "path": str(path),
+                "bytes": int(entry["identity"]["bytes"]),
+                **({"recovery": recovery} if disposition == "recycle" else {}),
+            }
+        )
         removed_bytes += int(entry["identity"]["bytes"])
     return {
         "schema": "docwen.housekeeping-apply-result.v1",
