@@ -1,6 +1,6 @@
 # Implementation proposal: explicit template body placement
 
-Status: **draft implementation plan; production code is unchanged**. This file is not a statement of current capability and does not supersede `docs/specs/`. Do not describe the regression as fixed until implementation and artifact tests have landed.
+Status: **implementation in progress on this Draft PR**. Production code and regression tests are now present on the branch, but this file does not supersede `docs/specs/` and the behavior is not a released capability until validation and merge.
 
 ## User-approved outcome
 
