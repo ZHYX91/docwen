@@ -581,9 +581,9 @@ md_to_docx_section = "Markdownからドキュメント"
 md_format_processing = "フォーマット処理"
 md_format_processing_tooltip = "MarkdownをWordドキュメントに変換する際のフォーマットマークアップ処理を構成します"
 md_body_format_label = "本文フォーマットマークアップ処理："
-md_body_format_tooltip = 'フォーマット適用：**太字** を実際の太字フォーマットに変換\nマークアップ保持：**太字** をそのまま表示\nマークアップ削除："太字" テキストのみ表示し、フォーマットなし'
+md_body_format_tooltip = "フォーマット適用：**太字** を実際の太字書式に変換します。\nマークアップ保持：**太字** をそのまま表示します。\nマークアップ削除：Markdown 記号を除去し、テンプレートのスタイルを維持します。"
 md_heading_format_label = "見出しフォーマットマークアップ処理："
-md_heading_format_tooltip = 'フォーマット適用：デフォルトの見出しスタイルフォーマットを上書きし、部分的な太字効果を有効にします\nマークアップ保持：マークアップをそのまま表示\nマークアップ削除：Wordの見出しスタイルフォーマットを自然に適用\n注：見出しスタイル自体が太字の場合、"フォーマット適用" で部分的な太字を実現できます'
+md_heading_format_tooltip = "フォーマット適用：ソースの指定に応じて見出しスタイルの書式を上書きします。\nマークアップ保持：ソースの記号をそのまま表示します。\nマークアップ削除：Markdown 記号を除去し、Word の見出しスタイルを自然に適用します。\n注：見出しスタイル自体が太字でも、フォーマット適用で局所的な書式差を保持できます。"
 md_table_header_format_label = "テーブルヘッダーフォーマットマークアップ処理："
 md_table_header_format_tooltip = 'フォーマット適用：**太字** を実際の太字に変換（テーブルスタイルと重複する可能性があります）\nマークアップ保持：マークアップをそのまま表示\nマークアップ削除：テーブルスタイル（例：最初の行を太字）を自然に適用\n注：テーブルスタイルは通常ヘッダーの太字を定義しているため、"マークアップ削除" を推奨します'
 heading_merge_mode_label = "見出し+本文の結合モード:"
@@ -1391,6 +1391,7 @@ other_short = "その他"
 [file_format_validation]
 
 [file_admission]
+actual_format = "実際の形式：{detected_format}"
 compatible_text = "ファイル名は {declared_format} ですが、内容は {detected_format} と検出されました。どちらも同じテキスト処理を使用します。"
 same_family_mismatch = "ファイル名は {declared_format} ですが、内容は {detected_format} と検出されました。どちらも同じ処理種別のため、検出した形式を使用します。"
 cross_family_mismatch = "ファイル名は {declared_format} ですが、内容は {detected_format} と検出されました。処理種別が異なるため、検出した形式で処理することを確認してください。"

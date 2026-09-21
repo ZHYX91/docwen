@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import QObject, QUrl, Signal
 
 from docwen_core.paths import scan_input_directory
+from docwen_gui.file_admission_i18n import render_file_format_notice, render_remaining_file_warnings
 from docwen_gui.file_types import FILE_CATEGORY_ORDER, FILE_EXTENSIONS_BY_CATEGORY
 from docwen_gui.i18n import t as _t
 
@@ -106,6 +107,7 @@ class InputAreaViewModel(QObject):
         self._selection_message: str = ""
         self._selection_detail: str = ""
         self._selection_tone: str = "secondary"
+        self._format_notice: str = ""
         self._file_filter: Callable[[str], bool] | None = None
 
         # Read default mode from config, then honor the owning VM's current mode.
@@ -143,6 +145,11 @@ class InputAreaViewModel(QObject):
     def selection_detail(self) -> str:
         """Secondary selection detail shown below the primary feedback."""
         return self._selection_detail
+
+    @property
+    def format_notice(self) -> str:
+        """Compact actual-format notice for the committed selection."""
+        return self._format_notice
 
     @property
     def file_filter(self) -> Callable[[str], bool] | None:
@@ -290,7 +297,11 @@ class InputAreaViewModel(QObject):
         if not normalized:
             self._emit_message("", "secondary")
             return
-        warning_message = self._selection_warning_from_refs(refs)
+        format_notice = render_file_format_notice(refs[0]) if refs else ""
+        single_selection = self._mode == "single" or current
+        warning_message = self._selection_warning_from_refs(
+            refs, skip_format_mismatch=bool(format_notice and single_selection)
+        )
         if self._mode == "single" or current:
             file_path = normalized[0]
             message = _t(
@@ -300,7 +311,12 @@ class InputAreaViewModel(QObject):
             )
             if warning_message:
                 message = f"{message}\n{warning_message}"
-            self._emit_message(message, "warning" if warning_message else "success", detail=str(Path(file_path).parent))
+            self._emit_message(
+                message,
+                "warning" if (warning_message or format_notice) else "success",
+                detail=str(Path(file_path).parent),
+                format_notice=format_notice,
+            )
             return
         message = _t(
             "components.file_drop.files_added_msg",
@@ -310,21 +326,25 @@ class InputAreaViewModel(QObject):
         self._emit_message(message, "warning" if warning_message else "success", detail=warning_message)
 
     @staticmethod
-    def _selection_warning_from_refs(file_refs: Sequence[FileRef]) -> str:
+    def _selection_warning_from_refs(
+        file_refs: Sequence[FileRef],
+        *,
+        skip_format_mismatch: bool = False,
+    ) -> str:
         from docwen_core.models import FILE_INSPECTION_METADATA_KEY
 
+        messages: list[str] = []
         for ref in file_refs:
-            warning = str(ref.warning_message or "").strip()
-            if warning:
-                return warning
-            inspection = ref.metadata.get(FILE_INSPECTION_METADATA_KEY)
-            if not isinstance(inspection, dict):
-                continue
-            for key in ("warning_message", "reason_message"):
-                message = str(inspection.get(key) or "").strip()
-                if message:
-                    return message
-        return ""
+            if skip_format_mismatch:
+                message = render_remaining_file_warnings(ref)
+            else:
+                inspection = ref.metadata.get(FILE_INSPECTION_METADATA_KEY)
+                message = str(ref.warning_message or "").strip()
+                if not message and isinstance(inspection, dict):
+                    message = str(inspection.get("warning_message") or inspection.get("reason_message") or "").strip()
+            if message and message not in messages:
+                messages.append(message)
+        return "\n".join(messages)
 
     def request_add_dialog(self, *, force_batch_mode: bool = False) -> None:
         """Request that the add-file dialog be opened.
@@ -636,10 +656,18 @@ class InputAreaViewModel(QObject):
             has_degraded_preview=has_degraded_preview,
         )
 
-    def _emit_message(self, message: str, tone: str, *, detail: str = "") -> None:
+    def _emit_message(
+        self,
+        message: str,
+        tone: str,
+        *,
+        detail: str = "",
+        format_notice: str = "",
+    ) -> None:
         self._selection_message = message
         self._selection_detail = detail
         self._selection_tone = tone
+        self._format_notice = format_notice
         self.selection_message_changed.emit(message, tone)
 
     def _emit_rejection(self, message: str, tone: str) -> None:
@@ -682,6 +710,12 @@ class InputAreaViewModel(QObject):
                 self._emit_rejection(outcome.rejected[0][1], "danger")
             return
         paths = admitted_paths
+        if self._mode == "single":
+            # Picker/drop completion must use the same structured presentation
+            # as IPC and selection changes, including the separate format notice.
+            self.sync_selection(outcome.added, current=True)
+            self.files_added.emit(paths)
+            return
         skipped_count += len(outcome.rejected)
         normalized_paths = {str(Path(path)) for path in admitted_paths}
         warnings = [
@@ -693,16 +727,7 @@ class InputAreaViewModel(QObject):
             warning_message = warnings[0]
 
         file_count = len(paths)
-        if self._mode == "single":
-            msg = _t(
-                "components.file_drop.file_selected_msg",
-                "Current file: {filename}",
-                filename=Path(paths[0]).name if paths else "",
-            )
-            if warning_message:
-                msg = f"{msg}\n{warning_message}"
-            tone = "warning" if warning_message else "success"
-        elif skipped_count > 0:
+        if skipped_count > 0:
             msg = _t(
                 "components.file_drop.files_added_with_skipped_msg",
                 "Added {added} file(s), skipped {skipped}",
@@ -724,8 +749,7 @@ class InputAreaViewModel(QObject):
                 count=file_count,
             )
             tone = "success"
-        detail = str(Path(paths[0]).parent) if self._mode == "single" and paths else warning_message
-        self._emit_message(msg, tone, detail=detail)
+        self._emit_message(msg, tone, detail=warning_message)
         self.files_added.emit(paths)
 
 

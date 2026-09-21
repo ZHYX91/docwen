@@ -1391,6 +1391,7 @@ other_short = "Другое"
 [file_format_validation]
 
 [file_admission]
+actual_format = "Фактический формат: {detected_format}"
 compatible_text = "Имя файла указывает формат {declared_format}, но содержимое определено как {detected_format}; оба формата используют один процесс обработки текста."
 same_family_mismatch = "Имя файла указывает формат {declared_format}, но содержимое определено как {detected_format}. Оба формата относятся к одной категории обработки; будет использован обнаруженный формат."
 cross_family_mismatch = "Имя файла указывает формат {declared_format}, но содержимое определено как {detected_format}. Форматы относятся к разным категориям обработки; подтвердите обработку в обнаруженном формате."
