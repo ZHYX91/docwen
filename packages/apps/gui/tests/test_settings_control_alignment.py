@@ -6,7 +6,8 @@ pytestmark = pytest.mark.gui
 
 
 @pytest.mark.parametrize("locale,font_size", [("zh_CN", 12), ("en_US", 15)])
-def test_settings_cards_keep_field_columns_aligned_across_all_tabs(qapp, qtbot, locale, font_size) -> None:
+@pytest.mark.parametrize("styled", [False, True])
+def test_settings_cards_keep_field_columns_aligned_across_all_tabs(qapp, qtbot, locale, font_size, styled) -> None:
     from PySide6.QtCore import QPoint
     from PySide6.QtGui import QFont
 
@@ -23,6 +24,8 @@ def test_settings_cards_keep_field_columns_aligned_across_all_tabs(qapp, qtbot, 
             tab = spec.factory(SettingsViewModel(config=SettingsConfig()))
             assert isinstance(tab, BaseSettingsTab)
             tab.setFont(QFont("Microsoft YaHei", font_size))
+            if styled:
+                tab.setStyleSheet('QLabel[settingsRole="fieldLabel"] { font-weight: 600; padding: 2px; }')
             tab.show()
             try:
                 wide_heights = None
@@ -40,7 +43,15 @@ def test_settings_cards_keep_field_columns_aligned_across_all_tabs(qapp, qtbot, 
                         for row in rows:
                             assert not row.label_container.geometry().intersects(row.control.geometry()), key
                             assert row.control.geometry().right() < row.width(), key
-                            assert row.label.height() >= row.label.heightForWidth(row.label.width()), key
+                            assert row.label.height() >= row.label.heightForWidth(row.label.width()), (
+                                key,
+                                width,
+                                row.label.text(),
+                                row.label.size(),
+                                row.label_container.size(),
+                            )
+                            if row.label_suffix is not None:
+                                assert row.label_suffix.x() - row.label.geometry().right() <= 9, (key, width)
                     all_rows = [row for form in tab.findChildren(_SettingsFormLayout) for row in form.field_rows]
                     if all_rows:
                         assert len({row.control.mapTo(tab, QPoint()).x() for row in all_rows}) == 1, key
