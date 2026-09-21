@@ -27,10 +27,10 @@ from docwen_core.docx_semantics_v3 import (
 from docwen_core.export_semantics import LinkRuntimeConfig
 from docwen_core.links import (
     DeclaredResourceResolver,
+    _process_non_embed_links,
     bind_declared_markdown_images,
     process_markdown_links,
     reject_declared_input_link_lookups,
-    _process_non_embed_links,
 )
 from docwen_core.markdown_extensions import resolve_markdown_extensions
 from docwen_core.models.artifact import (
