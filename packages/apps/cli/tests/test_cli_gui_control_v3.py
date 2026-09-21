@@ -111,6 +111,36 @@ def test_gui_open_passes_canonical_absolute_path(tmp_path: Path, capsys: pytest.
     assert control.calls == [("open", str(source.resolve()), 30.0)]
 
 
+def test_gui_open_accepts_machine_independent_assistant_argument_order(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from docwen_cli.main import main
+
+    source = tmp_path / "assistant note.md"
+    source.write_text("hello", encoding="utf-8")
+    control = _Control()
+    exit_code = main(
+        [
+            "gui",
+            "open",
+            "--json",
+            "--quiet",
+            "--timeout",
+            "10",
+            str(source.resolve()),
+        ],
+        gui_control_port_factory=lambda: control,
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["protocol_version"] == 3
+    assert payload["command"] == "gui open"
+    assert payload["success"] is True
+    assert control.calls == [("open", str(source.resolve()), 10.0)]
+
+
 def test_gui_open_without_file_launches_or_activates(capsys: pytest.CaptureFixture[str]) -> None:
     from docwen_cli.main import main
 
