@@ -6,6 +6,7 @@ import hashlib
 import json
 import stat
 import tomllib
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 VISIBILITY_REPORTS = (
@@ -38,7 +39,9 @@ def coverage_checks(runtime: Path) -> list[list[str]]:
     ]
 
 
-def export_reports(runtime: Path, output: Path, *, coverage: bool, exit_code: int) -> None:
+def export_reports(
+    runtime: Path, output: Path, *, coverage: bool, exit_code: int, coverage_detail: bool = True
+) -> None:
     """Copy only named reports; never preserve test fixtures, cache, or credentials."""
 
     if output.is_relative_to(runtime) or runtime.is_relative_to(output):
@@ -62,6 +65,23 @@ def export_reports(runtime: Path, output: Path, *, coverage: bool, exit_code: in
         if not stat.S_ISREG(info.st_mode) or source.is_symlink() or getattr(info, "st_file_attributes", 0) & 0x400:
             raise ValueError(f"QA report must be a regular file: {name}")
         content = source.read_bytes()
+        if name == "coverage.xml" and not coverage_detail:
+            tree = ET.fromstring(content)
+            content = (
+                json.dumps(
+                    {
+                        "schema": "docwen-coverage-summary-v1",
+                        "sourceSha256": hashlib.sha256(content).hexdigest(),
+                        "sourceBytes": len(content),
+                        "totals": tree.attrib,
+                        "packages": [package.attrib for package in tree.findall("./packages/package")],
+                        "limitation": "Aggregate evidence only; cannot rerun line-level coverage checks.",
+                    },
+                    indent=2,
+                )
+                + "\n"
+            ).encode("utf-8")
+            name = "coverage-summary.json"
         with (output / name).open("xb") as stream:
             stream.write(content)
         records[name] = {"bytes": len(content), "sha256": hashlib.sha256(content).hexdigest()}

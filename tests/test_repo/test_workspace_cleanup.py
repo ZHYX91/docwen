@@ -203,3 +203,56 @@ def test_cleanup_unmounts_an_owned_short_drive_only_when_applying(
 
     assert applied["removed"] == [str(runtime.resolve())]
     assert unmounted == [("W:", runtime.resolve())]
+
+
+def test_repository_build_discovery_requires_lease_and_rejects_tracked_content(tmp_path: Path) -> None:
+    import subprocess
+
+    workspace = _governance_root(tmp_path)
+    repo = tmp_path / "repos" / "docwen"
+    repo.mkdir(parents=True)
+    subprocess.run(["git", "init", str(repo)], check=True, capture_output=True)
+    run = repo / "build" / "old"
+    now = datetime.now(UTC)
+    _lease(run, created_at=now - timedelta(days=4))
+    unowned = repo / "build" / "unowned"
+    unowned.mkdir()
+    plan = workspace_cleanup.create_plan(workspace_root=workspace, now=now)
+    assert [entry["path"] for entry in plan["entries"]] == [str(run)]
+    with pytest.raises(workspace_cleanup.HousekeepingError, match="repository_build_lease_required"):
+        workspace_cleanup.create_plan(workspace_root=workspace, explicit_targets=[unowned], reason="test")
+    subprocess.run(["git", "-C", str(repo), "add", "build"], check=True, capture_output=True)
+    with pytest.raises(workspace_cleanup.HousekeepingError, match="tracked_build_content"):
+        workspace_cleanup.create_plan(workspace_root=workspace, now=now)
+    assert run.exists()
+
+
+def test_repository_build_rechecks_tracked_content_before_apply(tmp_path: Path) -> None:
+    import subprocess
+
+    workspace = _governance_root(tmp_path)
+    repo = tmp_path / "repos" / "docwen-openclaw"
+    repo.mkdir(parents=True)
+    subprocess.run(["git", "init", str(repo)], check=True, capture_output=True)
+    run = repo / "build" / "old"
+    _lease(run, created_at=datetime.now(UTC) - timedelta(days=4))
+    plan = workspace_cleanup.create_plan(workspace_root=workspace)
+    saved = workspace_cleanup.save_plan(plan, workspace / "diagnostics" / "plan.json")
+    subprocess.run(["git", "-C", str(repo), "add", "build"], check=True, capture_output=True)
+    with pytest.raises(workspace_cleanup.HousekeepingError, match="tracked_build_content"):
+        workspace_cleanup.apply_saved_plan(saved, workspace_root=workspace)
+    assert run.exists()
+
+
+def test_repository_build_root_and_live_owner_are_protected(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    workspace = _governance_root(tmp_path)
+    repo = tmp_path / "repos" / "docwen"
+    (repo / ".git").mkdir(parents=True)
+    run = repo / "build" / "active"
+    _lease(run, created_at=datetime.now(UTC) - timedelta(days=4), pid=1234)
+    monkeypatch.setattr(workspace_cleanup, "_process_alive", lambda pid: pid == 1234)
+    plan = workspace_cleanup.create_plan(workspace_root=workspace)
+    assert plan["entries"] == []
+    with pytest.raises(workspace_cleanup.HousekeepingError, match="managed_root_forbidden"):
+        workspace_cleanup.create_plan(workspace_root=workspace, explicit_targets=[run.parent], reason="test")
+    assert run.exists()
