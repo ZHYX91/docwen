@@ -159,14 +159,13 @@ class FormRow(_ResponsiveFrame):
         self.label_suffix = label_suffix
         self.alignment_group = alignment_group
         self.minimum_label_height = minimum_label_height
-        self.label_container: QWidget = self.label
+        self.label_container = QWidget(self)
+        label_layout = QHBoxLayout(self.label_container)
+        label_layout.setContentsMargins(0, 0, 0, 0)
+        label_layout.setSpacing(6)
+        label_layout.addWidget(self.label)
         self._label_layout: QHBoxLayout | None = None
         if label_suffix is not None:
-            self.label_container = QWidget(self)
-            label_layout = QHBoxLayout(self.label_container)
-            label_layout.setContentsMargins(0, 0, 0, 0)
-            label_layout.setSpacing(6)
-            label_layout.addWidget(self.label)
             label_layout.addWidget(label_suffix, 0, Qt.AlignmentFlag.AlignVCenter)
             label_layout.addStretch(1)
             self._label_layout = label_layout
@@ -233,6 +232,10 @@ class FormRow(_ResponsiveFrame):
                 .height()
             )
         label_height += vertical_padding
+        # QLabel includes font fallback, leading and style padding that raw
+        # fontMetrics can miss. Keep its height unconstrained inside a separate
+        # container so heightForWidth can also shrink after a narrow layout.
+        label_height = max(label_height, self.label.heightForWidth(text_width))
         label_height = max(label_height, self.minimum_label_height)
         if self.label_suffix is not None:
             label_height = max(label_height, self.label_suffix.sizeHint().height())
