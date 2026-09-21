@@ -77,7 +77,7 @@ def test_custom_template_without_body_placeholder_omits_markdown_body(tmp_path: 
     )
     template_path = tmp_path / "metadata-only-template.docx"
     template = Document()
-    template.paragraphs[0].text = "Title: {{title}}"
+    template.add_paragraph("Title: {{title}}")
     template.add_paragraph("Template suffix")
     template.save(str(template_path))
 
