@@ -1,6 +1,6 @@
 # Implementation proposal: YAML ordinary-link policy parity
 
-Status: **draft implementation plan; production code is unchanged**. This is a work proposal, not current capability documentation. It must not override the active specification before implementation and validation.
+Status: **implementation in progress on this Draft PR**. Production code and focused tests are now present on the branch; this proposal does not override active specifications until validation and merge.
 
 ## Reported reproduction
 
