@@ -416,6 +416,9 @@ def _execute_single(
         route_options=route.options,
         configured_ocr_language=configured_ocr_language,
         ocr_requested=bool(getattr(args, "ocr", False)),
+        source_format=input_ref.format,
+        target_format=request_target,
+        action_name=request_action,
     )
 
     request = ConversionRequest(
@@ -579,6 +582,9 @@ def _execute_batch(
             route_options=route.options,
             configured_ocr_language=configured_ocr_language,
             ocr_requested=bool(getattr(args, "ocr", False)),
+            source_format=input_ref.format,
+            target_format=request_target,
+            action_name=request_action,
         )
         return ConversionRequest(
             request_id=str(uuid.uuid4()),
@@ -814,6 +820,9 @@ def _execute_aggregate(
         route_options=route.options,
         configured_ocr_language=configured_ocr_language,
         ocr_requested=bool(getattr(args, "ocr", False)),
+        source_format=input_refs[0].format if input_refs else "",
+        target_format=request_target,
+        action_name=request_action,
     )
 
     request = ConversionRequest(
@@ -936,6 +945,9 @@ def _execute_dry_run(
         route_options=route.options,
         configured_ocr_language=configured_ocr_language,
         ocr_requested=bool(getattr(args, "ocr", False)),
+        source_format=source_format,
+        target_format=request_target,
+        action_name=request_action,
     )
 
     if json_mode:
