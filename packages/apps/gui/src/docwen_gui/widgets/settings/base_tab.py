@@ -122,7 +122,7 @@ def _create_info_button(
     btn.setFixedSize(30, 30)
     btn.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
     btn.setToolTip(tooltip)
-    btn.setAccessibleName(accessible_name or "Info")
+    btn.setAccessibleName(accessible_name or tooltip)
     btn.setAccessibleDescription(tooltip)
     icon = load_svg_icon("info.svg")
     btn.setIconSize(QSize(17, 17))
