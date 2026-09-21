@@ -221,6 +221,9 @@ DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --o
 # Markdown 转 Word（指定模板，并设置标题+正文合并模式）
 DocWenCLI.exe convert document.md --to docx --output-dir exports --template template.docx.4be17c7a0791c896a542605427f1c3cb6597892292f2f9ddc6df82047d2120bf --heading-merge-mode punct_required
 
+# Markdown 转 Word，并在发布前校对生成的 DOCX
+DocWenCLI.exe convert document.md --to docx --output-dir exports --proofread --check typo --check punct
+
 # 控制 Markdown 导出图片与 OCR 文本落位
 DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --image-mode file --ocr --ocr-placement image_md
 
@@ -247,6 +250,7 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | 命令/选项 | 说明 |
 | --- | --- |
 | `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | 统一转换入口。 |
+| `convert <markdown> --to docx --output-dir <dir> --proofread [--check ...]` | Markdown→DOCX 转换后校对；`--check` 必须与 `--proofread` 同时使用，省略 `--check` 时使用已配置的校对默认值。 |
 | `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | 仅预演检测、归一化、路由与生效参数，不执行实际转换。 |
 | `validate` / `number markdown` / `merge` / `split` | 校对、编号、合并和拆分使用各自的领域命令，不暴露内部 action 名称。 |
 | `validate <file> --check ... [--report <path>]` | 默认只读校对；只有显式指定 `--report` 才写出报告文件。 |
