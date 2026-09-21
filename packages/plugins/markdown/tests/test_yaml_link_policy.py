@@ -90,3 +90,27 @@ def test_yaml_links_follow_request_scoped_ordinary_link_policy(tmp_path: Path, m
             target.startswith("file:") and target.endswith("/guide.md") for target in observation.hyperlink_targets
         )
         assert "<w:hyperlink" in observation.document_xml
+
+
+@pytest.mark.parametrize(
+    ("wiki_mode", "markdown_mode", "wiki_text", "markdown_text"),
+    [
+        ("extract_text", "keep", "抄送：喵喵，钱钱钱", "[项目主页](https://example.com/project)"),
+        ("keep", "extract_text", "[[guide|喵喵]]", "网站：项目主页"),
+    ],
+)
+def test_yaml_wiki_and_markdown_link_modes_are_independent(
+    tmp_path: Path,
+    wiki_mode: str,
+    markdown_mode: str,
+    wiki_text: str,
+    markdown_text: str,
+) -> None:
+    observation = _convert_docx(
+        _source(tmp_path),
+        _gongwen_config(wiki_mode=wiki_mode, markdown_mode=markdown_mode),
+        options={"template_name": str(_template(tmp_path))},
+    )
+
+    assert wiki_text in observation.text
+    assert markdown_text in observation.text
