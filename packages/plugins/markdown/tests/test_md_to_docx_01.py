@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from docx import Document
+
 from ._md_to_docx_support import (
     MdToDocxConverter,
     Path,
@@ -65,3 +67,101 @@ def test_unsupported_source_eol_fails_semantics_v3_with_zero_artifacts(tmp_path:
     assert result.error.diagnostic_code == "MD2DOCX-SEMANTICS-V3-UNSUPPORTED"
     assert "only LF and CRLF" in result.error.message
     assert [item.code for item in result.diagnostics] == ["MD2DOCX-SEMANTICS-V3-UNSUPPORTED"]
+
+
+def test_custom_template_without_body_placeholder_omits_markdown_body(tmp_path: Path) -> None:
+    source = tmp_path / "metadata-only.md"
+    source.write_text(
+        "---\ntitle: Metadata title\n---\n\n# Body heading\n\nBody paragraph that must not be appended.\n",
+        encoding="utf-8",
+    )
+    template_path = tmp_path / "metadata-only-template.docx"
+    template = Document()
+    template.add_paragraph("Title: {{title}}")
+    template.add_paragraph("Template suffix")
+    template.save(str(template_path))
+
+    context, _workspace = make_context(
+        str(source),
+        target_format="docx",
+        options={"template_name": str(template_path)},
+    )
+    result = MdToDocxConverter().convert(context)
+
+    assert result.success is True, result.error
+    output = Path(result.artifacts[0].staging_path)
+    reopened = Document(str(output))
+    visible_text = "\n".join(paragraph.text for paragraph in reopened.paragraphs)
+
+    assert "Metadata title" in visible_text
+    assert "Template suffix" in visible_text
+    assert "Body heading" not in visible_text
+    assert "Body paragraph that must not be appended." not in visible_text
+
+
+@pytest.mark.parametrize("placement", ["inline", "table", "header", "duplicate"])
+def test_unsupported_body_placement_fails_explicitly(tmp_path: Path, placement: str) -> None:
+    source = tmp_path / "source.md"
+    source.write_text("Body", encoding="utf-8")
+    template = Document()
+    if placement == "inline":
+        template.add_paragraph("Prefix {{body}} suffix")
+    elif placement == "table":
+        template.add_table(rows=1, cols=1).cell(0, 0).text = "{{body}}"
+    elif placement == "header":
+        template.sections[0].header.paragraphs[0].text = "{{body}}"
+    else:
+        template.add_paragraph("{{body}}")
+        template.add_paragraph("{{正文}}")
+    path = tmp_path / "template.docx"
+    template.save(str(path))
+    context, workspace = make_context(str(source), target_format="docx", options={"template_name": str(path)})
+    result = MdToDocxConverter().convert(context)
+    assert not result.success
+    assert result.error is not None
+    assert result.error.diagnostic_code == "MD2DOCX-TEMPLATE-BODY-PLACEMENT"
+    assert workspace.registered_artifacts == []
+
+
+@pytest.mark.parametrize("body", ["", "Rendered body"])
+@pytest.mark.parametrize("alias", ["body", "正文"])
+def test_split_run_body_marker_keeps_template_order(tmp_path: Path, body: str, alias: str) -> None:
+    source = tmp_path / "source.md"
+    source.write_text(body, encoding="utf-8")
+    template = Document()
+    template.add_paragraph("Prefix")
+    marker = template.add_paragraph()
+    marker.add_run("{{")
+    marker.add_run(alias).bold = True
+    marker.add_run("}}")
+    template.add_paragraph("Suffix")
+    path = tmp_path / "template.docx"
+    template.save(str(path))
+    context, _ = make_context(str(source), target_format="docx", options={"template_name": str(path)})
+    result = MdToDocxConverter().convert(context)
+    assert result.success, result.error
+    output = Document(str(result.artifacts[0].staging_path))
+    text = [p.text for p in output.paragraphs if p.text]
+    assert text == (["Prefix", body, "Suffix"] if body else ["Prefix", "Suffix"])
+
+
+def test_omitted_body_never_preprocesses_resources(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import docwen_plugin_markdown.to_docx.converter as converter
+
+    source = tmp_path / "source.md"
+    source.write_text("---\ntitle: Title\n---\n![[missing.pdf]]\n\n![image](missing.png)", encoding="utf-8")
+    template = Document()
+    template.add_paragraph("{{title}}")
+    path = tmp_path / "template.docx"
+    template.save(str(path))
+
+    def unexpected(*args, **kwargs):
+        raise AssertionError("Omitted body must not process resources or create a renderer")
+
+    monkeypatch.setattr(converter, "process_markdown_links", unexpected)
+    monkeypatch.setattr(converter, "MdToDocxRenderer", unexpected)
+    context, workspace = make_context(str(source), target_format="docx", options={"template_name": str(path)})
+    result = MdToDocxConverter().convert(context)
+    assert result.success, result.error
+    assert len(workspace.registered_artifacts) == 1
+    assert [p.text for p in Document(str(result.artifacts[0].staging_path)).paragraphs] == ["Title"]
