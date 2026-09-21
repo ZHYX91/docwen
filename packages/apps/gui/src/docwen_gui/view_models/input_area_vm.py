@@ -710,6 +710,12 @@ class InputAreaViewModel(QObject):
                 self._emit_rejection(outcome.rejected[0][1], "danger")
             return
         paths = admitted_paths
+        if self._mode == "single":
+            # Picker/drop completion must use the same structured presentation
+            # as IPC and selection changes, including the separate format notice.
+            self.sync_selection(outcome.added, current=True)
+            self.files_added.emit(paths)
+            return
         skipped_count += len(outcome.rejected)
         normalized_paths = {str(Path(path)) for path in admitted_paths}
         warnings = [
@@ -721,16 +727,7 @@ class InputAreaViewModel(QObject):
             warning_message = warnings[0]
 
         file_count = len(paths)
-        if self._mode == "single":
-            msg = _t(
-                "components.file_drop.file_selected_msg",
-                "Current file: {filename}",
-                filename=Path(paths[0]).name if paths else "",
-            )
-            if warning_message:
-                msg = f"{msg}\n{warning_message}"
-            tone = "warning" if warning_message else "success"
-        elif skipped_count > 0:
+        if skipped_count > 0:
             msg = _t(
                 "components.file_drop.files_added_with_skipped_msg",
                 "Added {added} file(s), skipped {skipped}",
@@ -752,8 +749,7 @@ class InputAreaViewModel(QObject):
                 count=file_count,
             )
             tone = "success"
-        detail = str(Path(paths[0]).parent) if self._mode == "single" and paths else warning_message
-        self._emit_message(msg, tone, detail=detail)
+        self._emit_message(msg, tone, detail=warning_message)
         self.files_added.emit(paths)
 
 
