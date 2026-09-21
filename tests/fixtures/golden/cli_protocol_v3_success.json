@@ -1,6 +1,6 @@
 {
   "protocol_version": 3,
-  "product_version": "0.12.1",
+  "product_version": "0.13.0",
   "success": true,
   "command": "convert",
   "data": {
