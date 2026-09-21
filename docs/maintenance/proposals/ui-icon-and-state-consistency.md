@@ -1,6 +1,6 @@
-# Implementation proposal: UI icon and visual-state consistency
+# Implementation record: UI icon and visual-state consistency
 
-Status: **implementation in progress on this Draft PR**. Core operation/status assets and consumers are being migrated, but this is not a completed redesign or a replacement for active design specifications.
+Core operation/status assets and their consumers use the shared application SVG system. This record explains that migration and its validation boundaries; it does not claim a redesign of every screen or replace active design specifications.
 
 ## Goal and exclusions
 
@@ -54,22 +54,16 @@ Before removing any raster or SVG file, establish that it is not used by source 
 
 Do not delete an asset merely because a similarly named SVG exists. Do not change executable packaging or remove supported platform resources to make the directory appear tidy.
 
-## Acceptance criteria
+## Implementation and validation boundaries
 
-- [ ] Produce a consumer/resource inventory and document the concrete inconsistencies being addressed.
-- [ ] Implement shared icon/state changes and targeted consumer migrations without introducing another loading stack.
-- [ ] Test missing/corrupt asset fallback; icon-only actions must remain identifiable and operable.
-- [ ] Test icon state and theme changes, including disabled and selected/checked controls.
-- [ ] Validate representative 100%, 125%, 150%, 200% display scales and all application font presets.
-- [ ] Capture real light/dark screenshots of single-file, batch, settings/help and status views at regular and narrow widths.
-- [ ] Check keyboard focus, accessible names and hit areas without changing operation semantics.
-- [ ] Confirm file-location behavior and batch/result actions still work.
-- [ ] Run applicable icon-fidelity, GUI geometry, resource inventory and packaging checks.
-- [ ] Confirm brand SVG/PNG/ICO output remains unchanged unless an explicitly approved derivative fix is necessary.
-- [ ] Record tested commit, actual results and untested host environments before marking ready.
+[The asset inventory](../../../assets/icons/README.md) records the 31 role assets, their pinned Fluent source and license. Navigation, location, copy, delete, sorting, retry, template and software-priority controls use the shared loader. Status controls retain semantic colors and text; wrapped action buttons reserve icon space and draw disabled/RTL states correctly. Platform artwork remains only in missing-resource fallbacks and system-owned surfaces.
+
+`test_icon_fidelity.py`, GUI control tests and resource/packaging checks cover the migrated assets and consumers. Unreferenced legacy operation/status PNGs were removed together with their packaging entries. Brand derivatives and the composite file-drop illustration keep their separate roles.
+
+[Testing guidance](../../testing.md) governs native inspection. Validation records distinguish automated rendering/geometry tests from selected Windows light/dark, large-font, batch and action checks. Those checks do not establish every screen, all display scales, every font preset or every host combination; this record does not mark that broader matrix as passed.
 
 ## Integration order
 
 Land behavioral fixes separately: body-placeholder restoration and YAML link-policy restoration. Common icon/state work can precede the feature-specific format badge and help UI, or those features can use the existing loader and later receive this resource update. Do not require an all-or-nothing visual mega-merge.
 
-This initial PR contains the implementation plan only. Keep draft and do not auto-merge. No claim is made that the icon inventory, production changes, rendering checks or packaging validation have already been completed.
+The implementation uses one icon engine and the existing GUI framework. Feature-specific format and help behavior remains owned by the corresponding components and regression tests.
