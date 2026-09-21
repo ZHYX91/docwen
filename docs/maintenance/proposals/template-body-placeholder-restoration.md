@@ -10,6 +10,8 @@ The user explicitly retains the current default DOCX-to-Markdown heading rule: o
 
 ## Historical evidence and baseline
 
+历史对照：以下 v0.8.5 `src/docwen/` 路径仅用于重构前行为比较，不代表当前目录结构。
+
 Review baseline: `93227f5d2a921e7168344903bccd1c3f0095f38d`.
 
 - [v0.8.5 document processor](https://github.com/ZHYX91/docwen/blob/v0.8.5/src/docwen/converter/md2docx/processors/docx_processor.py): `process_main_content()` inserts only after finding a body placeholder; otherwise it returns `False` and records that the Markdown body was not inserted.
