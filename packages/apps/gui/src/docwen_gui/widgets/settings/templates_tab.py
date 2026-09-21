@@ -32,6 +32,7 @@ from docwen_runtime.templates import TemplateManagementError
 
 from ...dialogs import feedback
 from ...i18n import t
+from ...resources import set_action_icon
 from ...styles.design_tokens import Sizing, Spacing
 from ...styles.theme_semantics import apply_theme_class
 from ...view_models.template_vm import TemplateViewModel
@@ -150,12 +151,12 @@ class TemplatesTab(BaseSettingsTab):
         primary_row.addWidget(self._edit_button, 0, 1)
         self._more_button = PushButton(t("settings.templates.more", "More"), self)
         menu = QMenu(self._more_button)
-        for label, callback in (
-            (t("settings.templates.rename", "Rename"), self._rename_selected),
-            (t("settings.templates.export", "Export"), self._export_selected),
-            (t("settings.templates.delete", "Delete"), self._delete_selected),
+        for label, callback, icon_name in (
+            (t("settings.templates.rename", "Rename"), self._rename_selected, "text.svg"),
+            (t("settings.templates.export", "Export"), self._export_selected, "export.svg"),
+            (t("settings.templates.delete", "Delete"), self._delete_selected, "delete.svg"),
         ):
-            menu.addAction(label, callback)
+            set_action_icon(menu.addAction(label, callback), icon_name)
         self._more_button.setMenu(menu)
         primary_row.addWidget(self._more_button, 0, 2)
         root.addLayout(primary_row)
@@ -179,6 +180,15 @@ class TemplatesTab(BaseSettingsTab):
         self._default_button = self._button(t("settings.templates.set_default", "Set as default"), self._set_default)
         secondary_row.addWidget(self._default_button, 0, 2)
         root.addLayout(secondary_row)
+        for button, icon_name in (
+            (self._copy_button, "copy.svg"),
+            (self._more_button, "other.svg"),
+            (self._up_button, "move_up.svg"),
+            (self._down_button, "move_down.svg"),
+            (self._folder_button, "open_folder.svg"),
+            (self._refresh_button, "refresh.svg"),
+        ):
+            set_action_icon(button, icon_name)
 
         note = QLabel(
             t(

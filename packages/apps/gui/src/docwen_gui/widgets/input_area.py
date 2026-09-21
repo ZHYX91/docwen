@@ -58,6 +58,7 @@ from qfluentwidgets import (
 
 from docwen_gui.format_presentation import SUPPORTED_FORMAT_GROUPS, presentation_for
 from docwen_gui.i18n import t
+from docwen_gui.resources import set_action_icon
 from docwen_gui.styles.design_tokens import Sizing, Spacing
 
 from .elided_label import MiddleElidedLabel
@@ -770,12 +771,7 @@ class InputArea(QFrame):
             self._top_layout.setSpacing(Spacing.GROUP_GAP)
             self._clear_button.setText("")
             self._clear_button.setToolTip(_i18n(_I_CLEAR_BUTTON, "Clear"))
-            self._clear_button.setIconSize(QSize(16, 16))
-            style = self.style() or QApplication.style()
-            if style is not None:
-                icon = style.standardIcon(QStyle.StandardPixmap.SP_LineEditClearButton)
-                if not icon.isNull():
-                    self._clear_button.setIcon(icon)
+            set_action_icon(self._clear_button, "clear.svg", size=16)
         else:
             self._top_layout.setDirection(QBoxLayout.Direction.LeftToRight)
             self._top_layout.setSpacing(Spacing.GROUP_GAP)

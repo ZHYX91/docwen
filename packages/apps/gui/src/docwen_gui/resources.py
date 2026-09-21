@@ -12,8 +12,9 @@ from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import QByteArray, QRectF, QSize, Qt
-from PySide6.QtGui import QIcon, QIconEngine, QPainter, QPixmap
+from PySide6.QtGui import QAction, QIcon, QIconEngine, QPainter, QPixmap
 from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtWidgets import QAbstractButton
 
 from docwen_runtime.resources import ResourceRegistry
 
@@ -65,8 +66,12 @@ class _SvgIconEngine(QIconEngine):
     def clone(self) -> _SvgIconEngine:
         return _SvgIconEngine(self._svg_bytes, color=self._color)
 
-    def _renderer(self) -> QSvgRenderer:
-        color = self._color or _resolve_theme_icon_color()
+    def _renderer(self, mode: QIcon.Mode = QIcon.Mode.Normal) -> QSvgRenderer:
+        color = (
+            _resolve_theme_icon_color(mode)
+            if mode == QIcon.Mode.Disabled
+            else self._color or _resolve_theme_icon_color(mode)
+        )
         svg_text = self._svg_bytes.decode("utf-8")
         for attribute in ("fill", "stroke"):
             for old_color in ("#000", "#000000", "black"):
@@ -84,20 +89,20 @@ class _SvgIconEngine(QIconEngine):
         return QSize(size)
 
     def paint(self, painter: QPainter, rect, mode: QIcon.Mode, state: QIcon.State) -> None:
-        del mode, state
-        renderer = self._renderer()
+        del state
+        renderer = self._renderer(mode)
         if renderer.isValid():
             renderer.render(painter, QRectF(rect))
 
     def pixmap(self, size: QSize, mode: QIcon.Mode, state: QIcon.State) -> QPixmap:
-        del mode, state
-        return self._render_pixmap(size, 1.0)
+        del state
+        return self._render_pixmap(size, 1.0, mode)
 
     def scaledPixmap(self, size: QSize, mode: QIcon.Mode, state: QIcon.State, scale: float) -> QPixmap:
-        del mode, state
-        return self._render_pixmap(size, scale)
+        del state
+        return self._render_pixmap(size, scale, mode)
 
-    def _render_pixmap(self, size: QSize, scale: float) -> QPixmap:
+    def _render_pixmap(self, size: QSize, scale: float, mode: QIcon.Mode) -> QPixmap:
         effective_scale = max(float(scale), 1.0)
         physical_size = QSize(
             max(1, round(size.width() * effective_scale)),
@@ -108,7 +113,7 @@ class _SvgIconEngine(QIconEngine):
         pixmap.setDevicePixelRatio(effective_scale)
         painter = QPainter(pixmap)
         try:
-            renderer = self._renderer()
+            renderer = self._renderer(mode)
             if renderer.isValid():
                 renderer.render(painter, QRectF(0, 0, size.width(), size.height()))
         finally:
@@ -116,7 +121,7 @@ class _SvgIconEngine(QIconEngine):
         return pixmap
 
 
-def _resolve_theme_icon_color() -> str:
+def _resolve_theme_icon_color(mode: QIcon.Mode = QIcon.Mode.Normal) -> str:
     """Determine the current theme's text color for SVG fill adaptation."""
     try:
         from PySide6.QtGui import QPalette
@@ -124,7 +129,8 @@ def _resolve_theme_icon_color() -> str:
 
         app = QApplication.instance()
         if isinstance(app, QApplication):
-            color = app.palette().color(QPalette.ColorRole.WindowText)
+            group = QPalette.ColorGroup.Disabled if mode == QIcon.Mode.Disabled else QPalette.ColorGroup.Active
+            color = app.palette().color(group, QPalette.ColorRole.WindowText)
             return str(color.name())
     except Exception:
         pass
@@ -180,6 +186,15 @@ def load_svg_icon(
     return load_svg_asset_icon(f"icons/{icon_name}", color=color)
 
 
+def set_action_icon(target: QAbstractButton | QAction, name: str, *, size: int = 18) -> None:
+    """Apply the shared vector family while retaining the action's text label."""
+    icon = load_svg_icon(name)
+    if icon is not None and not icon.isNull():
+        target.setIcon(icon)
+        if isinstance(target, QAbstractButton):
+            target.setIconSize(QSize(size, size))
+
+
 def load_image_icon(
     icon_name: str,
     size: tuple[int, int] | None = None,
@@ -187,7 +202,7 @@ def load_image_icon(
     """Load a raster icon (PNG/ICO) from assets/, optionally scaled.
 
     Args:
-        icon_name: Filename under assets/ (e.g. ``"complete_icon.png"``).
+        icon_name: Filename under assets/ (e.g. ``"icon.png"``).
         size: Optional target pixel size ``(width, height)`` for scaling.
 
     Returns:

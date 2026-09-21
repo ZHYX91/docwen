@@ -96,3 +96,61 @@ def test_location_button_prefers_application_open_folder_svg(qapp, monkeypatch: 
 
     assert calls == ["open_folder.svg"]
     assert button.iconSize() == QSize(20, 20)
+
+
+@pytest.mark.parametrize("asset", ["copy.svg", "delete.svg", "move_up.svg", "move_down.svg", "refresh.svg"])
+def test_action_icons_use_disabled_palette_for_disabled_controls(qapp, asset: str) -> None:
+    from PySide6.QtGui import QColor, QPalette
+    from PySide6.QtWidgets import QPushButton
+
+    from docwen_gui.resources import set_action_icon
+
+    original = qapp.palette()
+    button = QPushButton("Action")
+    set_action_icon(button, asset)
+    try:
+        for foreground, disabled in (("#172331", "#8899aa"), ("#f1f5f9", "#64748b")):
+            palette = QPalette(original)
+            palette.setColor(QPalette.ColorGroup.Active, QPalette.ColorRole.WindowText, QColor(foreground))
+            palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, QColor(disabled))
+            qapp.setPalette(palette)
+            for enabled, expected in ((True, foreground), (False, disabled)):
+                button.setEnabled(enabled)
+                mode = QIcon.Mode.Normal if button.isEnabled() else QIcon.Mode.Disabled
+                raster = button.icon().pixmap(QSize(18, 18), 2.0, mode).toImage()
+                opaque = {
+                    raster.pixelColor(x, y).name()
+                    for y in range(raster.height())
+                    for x in range(raster.width())
+                    if raster.pixelColor(x, y).alpha() == 255
+                }
+                assert opaque == {expected}
+        assert button.text() == "Action"
+    finally:
+        qapp.setPalette(original)
+        button.deleteLater()
+
+
+def test_narrow_action_button_keeps_icon_separate_from_wrapped_caption(qapp, qtbot) -> None:
+    from docwen_gui.resources import load_svg_icon
+    from docwen_gui.widgets.action_button import ActionButton
+
+    button = ActionButton("Copy and edit this template")
+    qtbot.addWidget(button)
+    icon = load_svg_icon("copy.svg", color="#ff0000")
+    assert isinstance(icon, QIcon)
+    button.setIcon(icon)
+    button.setIconSize(QSize(18, 18))
+    button.resize(130, button.heightForWidth(130))
+    button.show()
+    qapp.processEvents()
+    raster = button.grab().toImage()
+    red_pixels = [
+        (x, y)
+        for y in range(raster.height())
+        for x in range(raster.width())
+        if (color := raster.pixelColor(x, y)).red() - max(color.green(), color.blue()) > 80
+    ]
+    assert red_pixels
+    assert max(x for x, _y in red_pixels) < raster.width() // 3
+    assert button.height() >= button.heightForWidth(button.width())
