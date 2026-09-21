@@ -44,6 +44,8 @@ _METHODS = [
     "task/execute",
     "task/cancel",
 ]
+_SUPPORTED_PROTOCOL = {"name": "docwen.machine", "major": 2, "minor": 0}
+_PROTOCOL_NAME_LIMIT = 128
 _PROGRESS_PHASE = "conversion"
 _PROGRESS_TOTAL = 100
 _MAX_RUNTIME_PROGRESS = 95
@@ -53,6 +55,20 @@ _MAX_RELATED_RANGES = 16
 _MAX_DIAGNOSTIC_FIXES = 8
 _MAX_FIX_EDITS = 16
 _MAX_FIX_REPLACEMENT_CODE_POINTS = 4096
+
+
+def _protocol_diagnostic(value: object) -> dict[str, object | None]:
+    """Return bounded protocol facts safe to echo in a diagnostic response."""
+
+    if not isinstance(value, dict):
+        return {"name": None, "major": None, "minor": None}
+    raw_name = value.get("name")
+    name = raw_name[:_PROTOCOL_NAME_LIMIT] if isinstance(raw_name, str) else None
+    raw_major = value.get("major")
+    raw_minor = value.get("minor")
+    major = raw_major if type(raw_major) is int else None
+    minor = raw_minor if type(raw_minor) is int else None
+    return {"name": name, "major": major, "minor": minor}
 
 
 @dataclass(slots=True)
@@ -131,7 +147,7 @@ class MachineProtocolServer:
                 and message.get("jsonrpc") == "2.0"
                 and isinstance(params, dict)
                 and isinstance(params.get("protocol"), dict)
-                and params["protocol"] != {"name": "docwen.machine", "major": 2, "minor": 0}
+                and params["protocol"] != _SUPPORTED_PROTOCOL
             ):
                 self._write_error(
                     request_id,
@@ -139,7 +155,9 @@ class MachineProtocolServer:
                     "DocWen Machine Protocol 2.0 is required",
                     data={
                         "code": "incompatible_protocol",
-                        "supported_protocol": {"name": "docwen.machine", "major": 2, "minor": 0},
+                        "received_protocol": _protocol_diagnostic(params["protocol"]),
+                        "supported_protocol": dict(_SUPPORTED_PROTOCOL),
+                        "server": {"name": "DocWen", "version": PRODUCT_VERSION},
                     },
                 )
                 return
@@ -217,7 +235,7 @@ class MachineProtocolServer:
         self._write_result(
             request_id,
             {
-                "protocol": {"name": "docwen.machine", "major": 2, "minor": 0},
+                "protocol": dict(_SUPPORTED_PROTOCOL),
                 "server": {"name": "DocWen", "version": PRODUCT_VERSION},
                 "features": {"progress": True, "cancellation": True},
                 "methods": list(_METHODS),
