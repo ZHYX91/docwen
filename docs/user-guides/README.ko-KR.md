@@ -197,8 +197,8 @@ DocWen은 GUI 외에도 자동화 스크립트, 배치 처리, 외부 연동을 
 
 1. `inspect <file> [--json]`: 먼저 실제 파일 범주, 형식, 지원 동작을 확인합니다.
 2. `schema convert`: `convert` 의 기계 판독 가능한 계약과 조건 규칙을 읽습니다.
-3. `convert <file> --to <fmt> --output <path> --dry-run --json`: 결과를 쓰지 않고 탐지, 정규화, 라우팅을 미리 확인합니다.
-4. `convert <file> --to <fmt> --output <path> ...`: 확인 후 실제 변환을 실행합니다.
+3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: 결과를 쓰지 않고 탐지, 정규화, 라우팅을 미리 확인합니다.
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: 확인 후 실제 변환을 실행합니다.
 
 ### 자주 쓰는 예시
 
@@ -245,8 +245,8 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 | 명령 / 옵션 | 설명 |
 | --- | --- |
-| `convert <file> --to <fmt> --output <path>` | 변환의 통합 진입점입니다. |
-| `convert <file> --to <fmt> --output <path> --dry-run --json` | 실제 변환 없이 탐지, 정규화, 라우팅, 적용 옵션만 미리 확인합니다. |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | 변환의 통합 진입점입니다. |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | 실제 변환 없이 탐지, 정규화, 라우팅, 적용 옵션만 미리 확인합니다. |
 | `schema convert` | `convert` 의 기계 판독 가능한 계약, 기본값, 조건, 정규 키를 내보냅니다. |
 | `validate <file> --check ...` | 문서 교정(`typo/punct/symbol/sensitive/all/none`). CLI envelope에는 `--json`을 사용합니다. `--report`는 선택적 보고서 파일 경로입니다. |
 | `inspect <file> [--json]` | 파일 범주/형식, 권장 동작, 확장자와 내용 불일치 경고를 확인합니다. |
@@ -256,7 +256,7 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `resources list numbering-schemes` | 사용 가능한 번호 체계를 나열합니다. |
 | `--template <id>` | `resources list templates`가 반환한 정규 리소스 ID를 그대로 사용합니다. 표시 이름·파일명·경로는 거부됩니다. DOCX ID는 `docx/doc/odt/rtf/wps/pdf`, XLSX ID는 `xlsx/xls/ods/csv`에 적용됩니다. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | `convert --to md` 용 이미지 추출 및 OCR 옵션입니다. |
-| `--image-mode file|base64` | Markdown 내보내기 시 이미지 출력 방식을 제어합니다. |
+| `--image-mode file|base64|embed|omit` | Markdown 내보내기 시 이미지 출력 방식을 제어합니다. |
 | `--ocr-placement image_md|main_md` | OCR 텍스트를 이미지용 Markdown 에 쓸지 메인 Markdown 에 쓸지 제어합니다. |
 | `--heading-merge-mode punct_required|always|never` | `convert --to docx` 시 "제목 + 본문" 병합 전략을 제어합니다. |
 | `--optimization <id>` | 최적화 프로필을 명시적으로 활성화합니다 (`resources list optimizations` 참고). |
