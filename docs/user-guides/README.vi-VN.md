@@ -221,6 +221,9 @@ DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --o
 # Markdown sang Word (mẫu + chế độ gộp tiêu đề/nội dung)
 DocWenCLI.exe convert document.md --to docx --output-dir exports --template template.docx.da28ee624892975bc590fd419880875136f22e0edcd878bca69472e81297c0bc --heading-merge-mode punct_required
 
+# Markdown sang Word và soát lỗi DOCX đã tạo trước khi xuất bản
+DocWenCLI.exe convert document.md --to docx --output-dir exports --proofread --check typo --check punct
+
 # Điều khiển chế độ ảnh và vị trí văn bản OCR trong Markdown
 DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --image-mode file --ocr --ocr-placement image_md
 
@@ -247,6 +250,7 @@ Bảng dưới đây chỉ liệt kê các lệnh thông dụng. Để xem đầ
 | Lệnh / tùy chọn | Mô tả |
 | --- | --- |
 | `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | Điểm vào thống nhất cho chuyển đổi. |
+| `convert <markdown> --to docx --output-dir <dir> --proofread [--check ...]` | Soát lỗi DOCX được tạo sau Markdown→DOCX; `--check` trong `convert` yêu cầu `--proofread`. Nếu bỏ `--check`, các mặc định soát lỗi đã cấu hình sẽ được dùng. |
 | `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | Xem trước nhận diện, chuẩn hóa, định tuyến và các tùy chọn hiệu lực mà không thực hiện chuyển đổi thật. |
 | `schema convert` | Xuất hợp đồng máy đọc được, giá trị mặc định, điều kiện và khóa chuẩn của `convert`. |
 | `validate <file> --check ...` | Soát lỗi tài liệu (`typo/punct/symbol/sensitive/all/none`). Dùng `--json` cho envelope của CLI; `--report` là đường dẫn tệp báo cáo tùy chọn. |
