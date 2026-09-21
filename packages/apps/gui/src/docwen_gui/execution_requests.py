@@ -14,6 +14,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
+from docwen_application.postprocessing import prepare_postprocess_options
 from docwen_core.models.request import POSTPROCESS_PROOFREAD_OPTION
 from docwen_gui.file_admission_i18n import render_file_inspection_message
 from docwen_gui.i18n import t as _t
@@ -101,26 +102,6 @@ def _normalize_proofread_action_options(options: dict[str, Any], *, action_name:
         value = normalized.pop(gui_key)
         normalized.setdefault(plugin_key, bool(value))
     return normalized
-
-
-def _project_conversion_proofread_options(
-    options: dict[str, Any],
-    *,
-    target_format: str,
-    action_name: str,
-) -> dict[str, Any]:
-    """Move transient GUI proofread toggles into the Application pipeline contract."""
-
-    if action_name:
-        return options
-    projected = dict(options)
-    proofread: dict[str, bool] = {}
-    for gui_key, plugin_key in _PROOFREAD_GUI_OPTION_ALIASES.items():
-        if gui_key in projected:
-            proofread[plugin_key] = bool(projected.pop(gui_key))
-    if target_format == "docx" and any(proofread.values()):
-        projected[POSTPROCESS_PROOFREAD_OPTION] = proofread
-    return projected
 
 
 def _route_scoped_options(
@@ -236,8 +217,9 @@ class ExecutionRequestBuilder:
                 action_name=action_name,
             )
             request_options = _normalize_proofread_action_options(request_options, action_name=action_name)
-            request_options = _project_conversion_proofread_options(
+            request_options = prepare_postprocess_options(
                 request_options,
+                source_format=source_context[0] if source_context else "",
                 target_format=target_format,
                 action_name=action_name,
             )
