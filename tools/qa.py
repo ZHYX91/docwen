@@ -443,6 +443,11 @@ def main(argv: list[str]) -> int:
     parser.add_argument(
         "--tests-only", action="store_true", help="Run tests after a separate required source-check job."
     )
+    parser.add_argument(
+        "--compact-coverage",
+        action="store_true",
+        help="Export aggregate coverage instead of XML; all coverage gates still run on the original XML.",
+    )
     parser.add_argument("--coverage", action="store_true", help="Measure full-suite coverage and all domain reports.")
     parser.add_argument(
         "--report-output", type=Path, help="Export compact reports to a new external directory before cleanup."
@@ -474,6 +479,8 @@ def main(argv: list[str]) -> int:
         parser.error("--tests-only cannot skip pytest")
     if args.coverage and (args.suite != "full" or args.skip_pytest):
         parser.error("--coverage requires the full test suite")
+    if args.compact_coverage and (not args.coverage or not args.report_output):
+        parser.error("--compact-coverage requires --coverage and --report-output")
     if args.report_output and args.skip_pytest:
         parser.error("--report-output requires pytest")
 
@@ -635,7 +642,11 @@ def main(argv: list[str]) -> int:
         if args.report_output:
             try:
                 qa_reports.export_reports(
-                    runtime_root, args.report_output, coverage=args.coverage, exit_code=return_code
+                    runtime_root,
+                    args.report_output,
+                    coverage=args.coverage,
+                    exit_code=return_code,
+                    coverage_detail=not args.compact_coverage,
                 )
             except (OSError, ValueError) as error:
                 print(f"[qa] compact report export failed: {error}", file=sys.stderr)
