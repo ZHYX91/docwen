@@ -221,6 +221,9 @@ DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --o
 # Markdown 轉 Word（指定模板，並設定標題 + 正文合併模式）
 DocWenCLI.exe convert document.md --to docx --output-dir exports --template template.docx.926a8bcb579f16e796662bff35edb7bb437aa718b7b7739b2461f4641128001e --heading-merge-mode punct_required
 
+# Markdown 轉 Word，並在發佈前校對產生的 DOCX
+DocWenCLI.exe convert document.md --to docx --output-dir exports --proofread --check typo --check punct
+
 # 控制 Markdown 匯出圖片與 OCR 文字落位
 DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --image-mode file --ocr --ocr-placement image_md
 
@@ -247,6 +250,7 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | 命令/選項 | 說明 |
 | --- | --- |
 | `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | 統一轉換入口。 |
+| `convert <markdown> --to docx --output-dir <dir> --proofread [--check ...]` | Markdown→DOCX 轉換後校對；`--check` 必須與 `--proofread` 同時使用，省略 `--check` 時使用已設定的校對預設值。 |
 | `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | 只預演檢測、正規化、路由與生效參數，不執行實際轉換。 |
 | `schema convert` | 匯出 `convert` 的機器可讀參數契約、預設值、條件約束與規範鍵。 |
 | `validate <file> --check ...` | 文件校對（`typo/punct/symbol/sensitive/all/none`）。需要 CLI 頂層 Envelope JSON 時使用 `--json`；`--report` 是可選的報告檔案路徑。 |
