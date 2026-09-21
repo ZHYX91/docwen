@@ -1,11 +1,13 @@
 # CLI / 命令行
 
-> This page documents the human-facing command tree. External integrations use
-> [`serve --stdio` Machine Protocol v2 and Artifact Bundle v3](specs/machine-protocol-v2.md). `--json` is a CLI
-> presentation mode, not the stable cross-product process boundary.
+> This page documents the human-facing command tree plus the bounded local GUI-control surface. External
+> content integrations use [`serve --stdio` Machine Protocol v2 and Artifact Bundle v3](specs/machine-protocol-v2.md);
+> ordinary `--json` remains a CLI presentation mode. The deliberate exception is `gui open|activate|status`, whose
+> protocol-3 JSON envelope is the public local desktop-control boundary and does not require a Machine session.
 >
-> 本页记录面向人的命令树。外部集成使用 [`serve --stdio` Machine Protocol v2 与 Artifact Bundle
-> v3](specs/machine-protocol-v2.md)；`--json` 只是 CLI 展示模式，不是跨产品稳定进程边界。
+> 本页记录面向人的命令树以及有界的本机 GUI 控制面。外部内容集成使用 [`serve --stdio` Machine Protocol v2
+> 与 Artifact Bundle v3](specs/machine-protocol-v2.md)；普通 `--json` 仍只是 CLI 展示模式。明确的例外是
+> `gui open|activate|status`：其 protocol 3 JSON 信封是公开的本机桌面控制边界，不要求先建立 Machine 会话。
 
 DocWen source and packaged builds use the same `docwen` command tree. Run `docwen --help`, `docwen <command> --help`, or `docwen schema <command>` for the executable contract.
 
