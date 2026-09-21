@@ -233,8 +233,9 @@ def test_current_docs_do_not_depend_on_completed_audit_material() -> None:
 def test_capability_inventory_has_one_row_per_current_feature() -> None:
     text = (DOCS / "capabilities.md").read_text(encoding="utf-8")
     rows = [line for line in text.splitlines() if line.startswith("| FEAT-")]
-    assert len(rows) == 163
-    assert len({line.split("|", 2)[1].strip() for line in rows}) == 163
+    assert len(rows) == 164
+    assert "FEAT-MD-MERMAID-001" in text
+    assert len({line.split("|", 2)[1].strip() for line in rows}) == len(rows)
 
 
 def test_current_documentation_local_links_resolve() -> None:

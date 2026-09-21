@@ -41,12 +41,12 @@ class MermaidControls(QWidget):
         self.status = owner.add_form_description(form, "")
         self.status.setTextFormat(Qt.TextFormat.PlainText)
         self.status.setObjectName("formattingMermaidAvailability")
-        for key, callback in (
-            ("mermaid_recheck", self.refresh),
-            ("mermaid_test", self.test_render),
-            ("mermaid_install", self._instructions),
+        for key, label, callback in (
+            ("mermaid_recheck", t("settings.formatting.mermaid_recheck"), self.refresh),
+            ("mermaid_test", t("settings.formatting.mermaid_test"), self.test_render),
+            ("mermaid_install", t("settings.formatting.mermaid_install"), self._instructions),
         ):
-            button = QPushButton(t(f"settings.formatting.{key}"))
+            button = QPushButton(label)
             button.setObjectName(key)
             button.clicked.connect(callback)
             form.addRow(button)
@@ -105,8 +105,12 @@ class MermaidControls(QWidget):
 
     def _completed(self, data: Any, error: Exception | None) -> None:
         if error is not None:
-            key = "mermaid_browser_missing" if "Could not find Chrome" in str(error) else "mermaid_test_failed"
-            self.status.setText(t(f"settings.formatting.{key}", reason=str(error)[:1200]))
+            message = (
+                t("settings.formatting.mermaid_browser_missing")
+                if "Could not find Chrome" in str(error)
+                else t("settings.formatting.mermaid_test_failed", reason=str(error)[:1200])
+            )
+            self.status.setText(message)
             return
         pixmap = QPixmap()
         if not pixmap.loadFromData(data):
