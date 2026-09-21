@@ -578,7 +578,7 @@ Markdown 표에서 데이터를 추출해 플레이스홀더 위치부터 **오�
 
 DocWen Core의 runtime/control transport는 Windows 명명된 파이프 또는 Linux/macOS의 AF_UNIX
 소켓을 사용할 수 있습니다. 파일 잠금은 단일 인스턴스 소유권만 설정하며 제어 명령 전송에는
-파일을 사용하지 않습니다. 이는 Core 기능 설명일 뿐입니다. DocWen Assistant 3.0은 Windows
+파일을 사용하지 않습니다. 이는 Core 기능 설명일 뿐입니다. DocWen Assistant 3.1은 Windows
 데스크톱 전용이며 Linux/macOS 조합 검수는 없습니다.
 
 1.  **첫 클릭** → 변환기를 실행하고 현재 파일을 전달
@@ -587,7 +587,7 @@ DocWen Core의 runtime/control transport는 Windows 명명된 파이프 또는 L
 
 ### 설치
 
-DocWen Assistant 3.0은 DocWen Machine Protocol v2과 단일 Artifact Bundle v3 계약을 사용합니다. 소스
+DocWen Assistant 3.1은 DocWen Machine Protocol v2과 단일 Artifact Bundle v3 계약을 사용합니다. 소스
 버전만으로 게시 여부를 증명할 수 없습니다. 호환되는 게시된 DocWen 릴리스를 명시한 숫자 형식의 릴리스만
 설치하세요.
 
