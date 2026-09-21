@@ -593,7 +593,7 @@ ne transporte les commandes de contrôle. Cela décrit uniquement la capacité d
 
 ### Installation
 
-DocWen Assistant 3.0 utilise DocWen Machine Protocol v2 et l'unique contrat Artifact Bundle v3. La version du code
+DocWen Assistant 3.1 utilise DocWen Machine Protocol v2 et l'unique contrat Artifact Bundle v3. La version du code
 source ne prouve pas sa publication ; installez uniquement une version numérique qui identifie explicitement une
 version publiée et compatible de DocWen.
 
