@@ -289,6 +289,28 @@ class TestPolicy02SpreadsheetPasswordOptions:
                 route_options=(),
             )
 
+    def test_dry_run_presents_postprocess_proofread_without_internal_key(self) -> None:
+        from docwen_cli.commands.execution_request import redacted_options
+        from docwen_core.models.request import POSTPROCESS_PROOFREAD_OPTION
+
+        presented = redacted_options({
+            POSTPROCESS_PROOFREAD_OPTION: {
+                "enable_typos_rule": True,
+                "enable_sensitive_word": False,
+            }
+        })
+
+        assert POSTPROCESS_PROOFREAD_OPTION not in presented
+        assert presented == {
+            "proofread": {
+                "enabled": True,
+                "options": {
+                    "enable_typos_rule": True,
+                    "enable_sensitive_word": False,
+                },
+            }
+        }
+
     def test_dry_run_redaction_never_projects_password(self) -> None:
         from docwen_cli.commands.execution_request import redacted_options
 
