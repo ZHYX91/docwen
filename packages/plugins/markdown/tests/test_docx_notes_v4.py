@@ -350,6 +350,30 @@ def test_existing_endnote_domain_allocates_lowest_gap_and_preserves_relationship
     )
 
 
+def test_metadata_only_template_preserves_existing_note_graph_without_materializing_source_body(
+    tmp_path: Path,
+) -> None:
+    template = tmp_path / "metadata-note-template.docx"
+    _inject_existing_footnote_graph(template)
+    before = _existing_graph_snapshot(template)
+    source = tmp_path / "metadata-note-source.md"
+    source.write_text("Body that must remain omitted.\n", encoding="utf-8")
+    context, _workspace = make_context(
+        str(source),
+        target_format="docx",
+        options={"template_name": str(template)},
+    )
+
+    result = MdToDocxConverter().convert(context)
+
+    assert result.success, result.error
+    output = Path(result.artifacts[0].staging_path)
+    assert _footnote_ids(output) == {-1, 0, 1}
+    assert _body_footnote_ids(output) == {1}
+    assert _existing_graph_snapshot(output) == before
+    assert "Body that must remain omitted." not in "\n".join(paragraph.text for paragraph in Document(str(output)).paragraphs)
+
+
 def test_converter_preserves_existing_graph_and_allocates_matching_body_and_part_id(tmp_path: Path) -> None:
     template = tmp_path / "rich-template.docx"
     _inject_existing_footnote_graph(template, include_body_placeholder=True)
