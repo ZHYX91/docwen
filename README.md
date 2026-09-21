@@ -194,7 +194,7 @@ Settings are organized into tabs: **General**, **Text**, **Proofread**, **Docume
 
 ## 🔧 Command Line Usage
 
-In addition to the GUI, DocWen provides a human-facing Command Line Interface (CLI) for terminal use, local automation scripts, and batch processing. Cross-product consumers such as DocWen Assistant should use the stable Machine Protocol instead of parsing CLI presentation output.
+In addition to the GUI, DocWen provides a human-facing Command Line Interface (CLI) for terminal use, local automation scripts, and batch processing. Cross-product content operations use the stable Machine Protocol rather than parsing CLI presentation output; the public `gui` command family is the deliberate exception for bounded local desktop-app control.
 
 ### Recommended CLI Automation Flow
 
@@ -203,10 +203,10 @@ For terminal use and local automation scripts, use this order:
 1. `inspect <file> [--json]`: detect the real file category, format, and supported actions first.
 2. `resources list formats --json`: read the loaded Runtime's available routes and dependency gates.
 3. `schema convert`: read the machine-readable conversion contract and conditional rules.
-4. `convert <file> --to <fmt> --output <path> --dry-run --json`: preview detection, normalization, and routing without writing outputs.
-5. `convert <file> --to <fmt> --output <path> ...`: run the actual conversion after the preview is acceptable.
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: preview detection, normalization, and routing without writing outputs.
+5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: run the actual conversion after the preview is acceptable.
 
-External consumers use `serve --stdio` with Machine Protocol v2: discover capabilities, plan a task, then execute it. The CLI `--json` envelope is for presentation/automation and is not the cross-product compatibility boundary.
+External content consumers use `serve --stdio` with Machine Protocol v2: discover capabilities, plan a task, then execute it. The CLI `--json` envelope is not the content-integration compatibility boundary. Local desktop control may instead use the stable `gui open|activate|status` command surface with protocol-3 JSON output.
 
 ### Common Examples
 
@@ -281,6 +281,7 @@ The table below lists common commands only. For the full command surface, use `d
 | `resources list optimizations --json` | List typed optimization resources and their canonical route bindings. |
 | `resources list templates [--target docx\|xlsx]` | List available templates. |
 | `resources list numbering-schemes` | List available numbering schemes. |
+| `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | Start or activate DocWen and optionally open one absolute file path through the local GUI-control boundary; this does not require a Machine session. |
 | `--template <id>` | Exact canonical resource ID returned by `resources list templates`; display names, filenames, and paths are rejected. DOCX IDs apply to `docx/doc/odt/rtf/wps/pdf`, XLSX IDs to `xlsx/xls/ods/csv`. CSV without a template remains direct table export; CSV with an XLSX template uses the MD→XLSX template workbook → per-sheet CSV artifact chain. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Image extraction and OCR options for `convert --to md`. |
 | `--image-mode file|base64|embed|omit` | Control how images are emitted during Markdown export. |
