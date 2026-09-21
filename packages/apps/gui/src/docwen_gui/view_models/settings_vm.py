@@ -1429,7 +1429,43 @@ class SettingsViewModel(QObject):
             title_locale = config.gui.language
         put(f"conversion.ocr_output.blockquote_title_override_by_locale.{title_locale}", exp.ocr_title_text)
 
+        values = self._filter_unchanged_config_values(cfg_port, values)
         return self._persist_config_values(cfg_port, values)
+
+    @staticmethod
+    def _snapshot_dotted_value(snapshot: Mapping[str, Any], dotted_key: str) -> object:
+        current: object = snapshot
+        for part in dotted_key.split("."):
+            if not isinstance(current, Mapping) or part not in current:
+                return _MISSING
+            current = current[part]
+        return current
+
+    @classmethod
+    def _filter_unchanged_config_values(cls, cfg_port: Any, values: dict[str, Any]) -> dict[str, Any]:
+        """Keep only values that differ from the current effective config.
+
+        The durable transaction remains the sole write boundary.  This helper
+        only narrows its input.  Ports that cannot provide a trustworthy
+        snapshot fall back to the existing full-write behavior.
+        """
+        snapshot_fn = getattr(cfg_port, "snapshot", None)
+        if not callable(snapshot_fn):
+            return values
+        try:
+            snapshot = snapshot_fn()
+        except Exception:
+            logger.exception("Failed to snapshot config before Settings persistence")
+            return values
+        if not isinstance(snapshot, Mapping):
+            return values
+
+        changed: dict[str, Any] = {}
+        for key, value in values.items():
+            current = cls._snapshot_dotted_value(snapshot, key)
+            if current is _MISSING or current != value:
+                changed[key] = value
+        return changed
 
     @staticmethod
     def _collect_conversion_defaults(values: dict[str, Any], defaults: ConversionDefaultsConfig) -> None:
