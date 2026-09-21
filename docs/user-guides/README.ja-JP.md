@@ -583,7 +583,7 @@ Excelテンプレート内の `{{→Month}}` は、右方向に「1月」、「2
 DocWen Core の runtime/control transport は、Windows では名前付きパイプ、Linux/macOS では
 AF_UNIX ソケットを使用します。ファイルロックは単一インスタンスの所有権だけを確立し、
 制御コマンドの転送にはファイルを使用しません。これは Core の能力説明だけです。DocWen
-Assistant 3.0 は Windows デスクトップ専用のままで、Linux/macOS の組み合わせ受入実績はありません。
+Assistant 3.1 は Windows デスクトップ専用のままで、Linux/macOS の組み合わせ受入実績はありません。
 
 1.  **最初のクリック** → コンバーターを起動し、現在のファイルを渡します。
 2.  **再クリック（ファイルあり）** → 新しいファイルに置き換えます（単一ファイルモード）。
