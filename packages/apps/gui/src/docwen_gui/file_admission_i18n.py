@@ -75,6 +75,50 @@ def render_file_format_notice(file_ref: Any) -> str:
     )
 
 
+def render_remaining_file_warnings(file_ref: Any) -> str:
+    """Retain diagnostics not represented by the compact format notice."""
+    from docwen_core.models import FILE_INSPECTION_METADATA_KEY
+
+    metadata = getattr(file_ref, "metadata", {})
+    inspection = metadata.get(FILE_INSPECTION_METADATA_KEY, {}) if isinstance(metadata, Mapping) else {}
+    warning = str(getattr(file_ref, "warning_message", "") or "").strip()
+    if not isinstance(inspection, Mapping):
+        return warning
+    primary = str(inspection.get("warning_message", "") or "").strip()
+    code = str(inspection.get("warning_code", "") or "").upper()
+    messages: list[str] = []
+    if code not in _FORMAT_NOTICE_CODES:
+        messages.append(warning or primary)
+    elif warning:
+        declared = str(inspection.get("declared_format", "") or "").upper()
+        detected = str(inspection.get("detected_format", "") or "").upper()
+        raw_warnings = inspection.get("warnings", ()) or ()
+        known_format_messages = {
+            render_file_admission_code(code, declared_format=declared, detected_format=detected, fallback=primary),
+            _ENGLISH_FALLBACKS.get(code, "").format(declared_format=declared, detected_format=detected),
+        }
+        if not raw_warnings:
+            known_format_messages.add(primary)
+        known_format_messages.update(
+            str(item.get("message", "") or "").strip()
+            for item in raw_warnings
+            if isinstance(item, Mapping) and str(item.get("code", "")).upper() in _FORMAT_NOTICE_CODES
+        )
+        # Filter only identified format messages, retaining unrelated diagnostics.
+        for message in sorted(known_format_messages, key=len, reverse=True):
+            if message:
+                warning = warning.replace(message, "")
+        messages.extend(line.strip() for line in warning.splitlines() if line.strip())
+    for item in inspection.get("warnings", ()) or ():
+        if isinstance(item, Mapping) and str(item.get("code", "")).upper() not in _FORMAT_NOTICE_CODES:
+            message = str(item.get("message", "") or "").strip()
+            if message and not any(message in existing for existing in messages):
+                messages.append(message)
+    if str(inspection.get("reason_code", "")).upper() not in _FORMAT_NOTICE_CODES:
+        messages.append(str(inspection.get("reason_message", "") or "").strip())
+    return "\n".join(dict.fromkeys(message for message in messages if message))
+
+
 _ENGLISH_FALLBACKS: dict[str, str] = {
     "FILE_FORMAT_COMPATIBLE_TEXT": (
         "The filename declares {declared_format}, while the content was detected as "
@@ -223,4 +267,5 @@ __all__ = [
     "render_file_admission_message",
     "render_file_format_notice",
     "render_file_inspection_message",
+    "render_remaining_file_warnings",
 ]

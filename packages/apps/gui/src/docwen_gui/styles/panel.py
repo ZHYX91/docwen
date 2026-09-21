@@ -7,6 +7,8 @@ from .design_tokens import Border, Radius, Spacing, Typography
 from .theme_semantics import (
     COLOR_PRIMARY,
     COLOR_SECONDARY,
+    get_card_colors,
+    get_theme_class_color,
     is_dark_theme,
 )
 
@@ -39,9 +41,8 @@ def build_panel_stylesheet(theme_name: str, font_size_preset: str | None = None)
     scrollbar_handle = _hex_to_rgba(COLOR_SECONDARY, 168 if dark_theme else 132)
     scrollbar_handle_hover = _hex_to_rgba(COLOR_PRIMARY, 196 if dark_theme else 154)
     settings_changes_color = _hex_to_rgba("#E2E8F0" if dark_theme else "#334155", 188 if dark_theme else 154)
-    warning_border = _hex_to_rgba("#F59E0B", 170 if dark_theme else 125)
-    warning_background = _hex_to_rgba("#78350F" if dark_theme else "#FFFBEB", 108 if dark_theme else 255)
-    warning_text = _hex_to_rgba("#FDE68A" if dark_theme else "#92400E", 255)
+    warning_border = _hex_to_rgba(get_theme_class_color("warning", theme_name), 170 if dark_theme else 125)
+    warning_background, warning_text = get_card_colors("warning", theme_name)
     subtle_divider = _hex_to_rgba(COLOR_SECONDARY, 110 if dark_theme else 42)
     combo_arrow = (
         ":/qfluentwidgets/images/icons/ChevronDown_white.svg"

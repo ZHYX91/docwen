@@ -204,7 +204,7 @@ class TestBatchEntryItemWidget:
             workflow_category="document",
             warning_message=(
                 "The filename declares DOCX, while the content was detected as DOC. "
-                "Both formats use the same processing family."
+                "Both formats use the same processing family, so the detected format will be used."
             ),
             metadata={
                 FILE_INSPECTION_METADATA_KEY: {

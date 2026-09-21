@@ -356,7 +356,8 @@ class InputArea(QFrame):
         self._format_notice_label.setObjectName("fileDropFormatNotice")
         self._format_notice_label.setTextFormat(Qt.TextFormat.PlainText)
         self._format_notice_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        self._format_notice_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
+        self._format_notice_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
+        self._format_notice_label.setWordWrap(True)
         self._format_notice_label.setVisible(False)
 
         self._selection_detail_label = MiddleElidedLabel("", self._feedback_frame)

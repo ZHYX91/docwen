@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import QObject, QUrl, Signal
 
 from docwen_core.paths import scan_input_directory
-from docwen_gui.file_admission_i18n import render_file_format_notice
+from docwen_gui.file_admission_i18n import render_file_format_notice, render_remaining_file_warnings
 from docwen_gui.file_types import FILE_CATEGORY_ORDER, FILE_EXTENSIONS_BY_CATEGORY
 from docwen_gui.i18n import t as _t
 
@@ -298,7 +298,10 @@ class InputAreaViewModel(QObject):
             self._emit_message("", "secondary")
             return
         format_notice = render_file_format_notice(refs[0]) if refs else ""
-        warning_message = self._selection_warning_from_refs(refs, skip_format_mismatch=bool(format_notice))
+        single_selection = self._mode == "single" or current
+        warning_message = self._selection_warning_from_refs(
+            refs, skip_format_mismatch=bool(format_notice and single_selection)
+        )
         if self._mode == "single" or current:
             file_path = normalized[0]
             message = _t(
@@ -306,6 +309,8 @@ class InputAreaViewModel(QObject):
                 "Current file: {filename}",
                 filename=Path(file_path).name,
             )
+            if warning_message:
+                message = f"{message}\n{warning_message}"
             self._emit_message(
                 message,
                 "warning" if (warning_message or format_notice) else "success",
@@ -328,41 +333,18 @@ class InputAreaViewModel(QObject):
     ) -> str:
         from docwen_core.models import FILE_INSPECTION_METADATA_KEY
 
-        format_codes = {
-            "FILE_FORMAT_COMPATIBLE_TEXT",
-            "FILE_FORMAT_SAME_FAMILY_MISMATCH",
-            "FILE_FORMAT_CROSS_FAMILY_MISMATCH",
-            "FILE_EXTENSION_UNSUPPORTED",
-        }
+        messages: list[str] = []
         for ref in file_refs:
-            inspection = ref.metadata.get(FILE_INSPECTION_METADATA_KEY)
-            inspection_code = ""
-            if isinstance(inspection, dict):
-                inspection_code = str(inspection.get("warning_code", "") or "").strip().upper()
-
-            warning = str(ref.warning_message or "").strip()
-            if warning and not (skip_format_mismatch and inspection_code in format_codes):
-                return warning
-            if not isinstance(inspection, dict):
-                continue
-
-            raw_warnings = inspection.get("warnings", ())
-            if isinstance(raw_warnings, (tuple, list)):
-                for raw_warning in raw_warnings:
-                    if not isinstance(raw_warning, dict):
-                        continue
-                    code = str(raw_warning.get("code", "") or "").strip().upper()
-                    if skip_format_mismatch and code in format_codes:
-                        continue
-                    message = str(raw_warning.get("message", "") or "").strip()
-                    if message:
-                        return message
-
-            reason_message = str(inspection.get("reason_message", "") or "").strip()
-            reason_code = str(inspection.get("reason_code", "") or "").strip().upper()
-            if reason_message and reason_code and reason_code not in format_codes:
-                return reason_message
-        return ""
+            if skip_format_mismatch:
+                message = render_remaining_file_warnings(ref)
+            else:
+                inspection = ref.metadata.get(FILE_INSPECTION_METADATA_KEY)
+                message = str(ref.warning_message or "").strip()
+                if not message and isinstance(inspection, dict):
+                    message = str(inspection.get("warning_message") or inspection.get("reason_message") or "").strip()
+            if message and message not in messages:
+                messages.append(message)
+        return "\n".join(messages)
 
     def request_add_dialog(self, *, force_batch_mode: bool = False) -> None:
         """Request that the add-file dialog be opened.

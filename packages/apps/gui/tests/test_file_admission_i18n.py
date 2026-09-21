@@ -16,10 +16,38 @@ from docwen_gui.file_admission_i18n import (
     render_file_admission_message,
     render_file_format_notice,
     render_file_inspection_message,
+    render_remaining_file_warnings,
 )
 from docwen_gui.i18n import get_locale, set_locale
 
 pytestmark = pytest.mark.unit
+
+
+def test_compact_format_notice_preserves_other_warning_and_reason() -> None:
+    ref = FileRef(
+        path="sample.docx",
+        format="doc",
+        category="document",
+        warning_message="Another consumer warning",
+        metadata={
+            FILE_INSPECTION_METADATA_KEY: {
+                "warning_code": "FILE_FORMAT_SAME_FAMILY_MISMATCH",
+                "warning_message": "Format mismatch",
+                "declared_format": "docx",
+                "detected_format": "doc",
+                "warnings": [
+                    {"code": "FILE_FORMAT_SAME_FAMILY_MISMATCH", "message": "Format mismatch"},
+                    {"code": "SIGNATURE_UNKNOWN", "message": "Signature unavailable"},
+                ],
+                "reason_code": "CONTENT_LIMITED",
+                "reason_message": "Limited preview",
+            }
+        },
+    )
+    warning = render_remaining_file_warnings(ref)
+    assert "Format mismatch" not in warning
+    assert warning.splitlines() == ["Another consumer warning", "Signature unavailable", "Limited preview"]
+
 
 _LOCALES_DIR = Path(__file__).resolve().parents[4] / "i18n" / "locales"
 _LOCALES = (
@@ -35,6 +63,35 @@ _LOCALES = (
     "zh_CN",
     "zh_TW",
 )
+
+
+@pytest.mark.parametrize("locale", _LOCALES)
+def test_compact_notice_filters_format_from_combined_localized_diagnostics(locale: str) -> None:
+    original_locale = get_locale()
+    try:
+        set_locale(locale)
+        inspection = _inspection(
+            declared_format="docx",
+            detected_format="doc",
+            warning_code="FILE_FORMAT_SAME_FAMILY_MISMATCH",
+            warning_message="Format mismatch. Signature unavailable.",
+            warnings=(
+                {"code": "FILE_FORMAT_SAME_FAMILY_MISMATCH", "message": "Format mismatch."},
+                {"code": "SIGNATURE_UNKNOWN", "message": "Signature unavailable."},
+            ),
+        )
+        ref = FileRef(
+            path="sample.docx",
+            format="doc",
+            category="document",
+            warning_message=render_file_inspection_message(inspection),
+            metadata={FILE_INSPECTION_METADATA_KEY: inspection.to_dict()},
+        )
+        assert render_remaining_file_warnings(ref) == "[SIGNATURE_UNKNOWN] Signature unavailable."
+    finally:
+        set_locale(original_locale)
+
+
 _MAIN_WINDOW_KEYS = frozenset(
     {
         "file_admission_invalid",
