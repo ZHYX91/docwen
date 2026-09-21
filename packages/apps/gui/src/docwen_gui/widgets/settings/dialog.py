@@ -821,6 +821,8 @@ class SettingsDialog(QDialog):
     def _find_focus_target(tab: QWidget) -> QWidget | None:
         """Return the first eligible control, preserving the old Qt focus UX."""
         for widget in tab.findChildren(QWidget):
+            if widget.objectName() == "settingsInfoButton":
+                continue
             if not widget.isEnabled() or widget.focusPolicy() == Qt.FocusPolicy.NoFocus:
                 continue
             if isinstance(widget, (QAbstractButton, QCheckBox, QComboBox, QLineEdit, QSpinBox, QDoubleSpinBox)):

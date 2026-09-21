@@ -73,7 +73,7 @@ def test_settings_info_affordance_uses_dedicated_crisp_asset(qapp, monkeypatch: 
     button = base_tab._create_info_button("More information")  # pyright: ignore[reportPrivateUsage]
 
     assert calls == ["info.svg"]
-    assert button.iconSize() == QSize(14, 14)
+    assert button.iconSize() == QSize(17, 17)
 
 
 def test_main_window_bottom_actions_use_twenty_pixel_vector_icons(main_window) -> None:

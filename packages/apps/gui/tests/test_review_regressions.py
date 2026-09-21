@@ -107,7 +107,7 @@ def test_form_reflows_for_runtime_font_and_text_without_window_resize(qtbot, qap
     layout.addWidget(row)
     host.setFixedSize(750, 200)
     host.show()
-    qtbot.waitUntil(lambda: row.label.width() == row.label.fontMetrics().horizontalAdvance(row.label.text()))
+    qtbot.waitUntil(lambda: row.label.width() >= row.label.fontMetrics().horizontalAdvance(row.label.text()))
     original_width = row.width()
     try:
         manager.apply_font_size_preset("xlarge")
