@@ -592,7 +592,7 @@ AF_UNIX 通訊端。檔案鎖只負責單一實例所有權，控制命令不透
 
 ### 安裝方法
 
-DocWen Assistant 3.1 使用 DocWen Machine Protocol v2 與唯一的 Artifact Bundle v3 合同。原始碼版本不能
+DocWen Assistant 3.1 要求 DocWen 0.13.0 或更新版本；轉換、校對等內容操作使用 Machine Protocol v2 與唯一的 Artifact Bundle v3 合同，啟動/開啟桌面應用則使用獨立的本機 GUI 控制面。原始碼版本不能
 證明已經發布；請只安裝明確標識了相容且已發布 DocWen 版本的數字版本 Release。
 
 ## 🔌 OpenClaw（插件 + Skill）
