@@ -129,9 +129,16 @@ def _footnote_relationships_xml(damage: str | None) -> bytes:
     return etree.tostring(root, xml_declaration=True, encoding="UTF-8", standalone=True)
 
 
-def _inject_existing_footnote_graph(path: Path, *, damage: str | None = None) -> None:
+def _inject_existing_footnote_graph(
+    path: Path,
+    *,
+    damage: str | None = None,
+    include_body_placeholder: bool = False,
+) -> None:
     document = Document()
     document.add_paragraph("Existing body")
+    if include_body_placeholder:
+        document.add_paragraph("{{正文}}")
     _append_footnote_reference(document, 1)
     document.save(str(path))
 
@@ -345,7 +352,7 @@ def test_existing_endnote_domain_allocates_lowest_gap_and_preserves_relationship
 
 def test_converter_preserves_existing_graph_and_allocates_matching_body_and_part_id(tmp_path: Path) -> None:
     template = tmp_path / "rich-template.docx"
-    _inject_existing_footnote_graph(template)
+    _inject_existing_footnote_graph(template, include_body_placeholder=True)
     template_hash = hashlib.sha256(template.read_bytes()).hexdigest()
     before = _existing_graph_snapshot(template)
     source = tmp_path / "source.md"
@@ -377,7 +384,7 @@ def test_converter_fails_closed_before_artifact_for_malformed_existing_note_grap
     damage: str,
 ) -> None:
     template = tmp_path / f"damaged-{damage}.docx"
-    _inject_existing_footnote_graph(template, damage=damage)
+    _inject_existing_footnote_graph(template, damage=damage, include_body_placeholder=True)
     template_hash = hashlib.sha256(template.read_bytes()).hexdigest()
     source = tmp_path / "source.md"
     source.write_text("Body[^new].\n\n[^new]: New note.\n", encoding="utf-8")
