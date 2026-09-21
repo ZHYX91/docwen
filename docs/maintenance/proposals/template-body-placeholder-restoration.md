@@ -61,6 +61,6 @@ The converter determines body placement before body rendering. It independently 
 
 `test_md_to_docx_01.py` and `test_docx_notes_v4.py` cover metadata-only output, valid split-run markers, invalid/duplicate placement, default body behavior, existing note graph preservation and invalid note graph rejection. These exercise conversion and saved packages rather than source-text projections alone.
 
-Body markers are supported only as a unique standalone paragraph in the main document. Table, textbox, header/footer and inline placements fail explicitly; their expansion is not part of this restoration. The separate resolved-v4 route keeps its own documented placement contract.
+Body markers are supported only as a unique standalone paragraph in the main document. Table, textbox, header/footer and inline placements fail explicitly; so do markers hidden inside unsupported inline content controls or split within the alias by structural breaks. A marker found by XML scanning must also be recognizable by the body-placement finder, preventing silent metadata-only output. Expanding placement support is not part of this restoration. The separate resolved-v4 route keeps its own documented placement contract.
 
 [Testing guidance](../../testing.md) governs actual host checks. PR validation records identify the source and selected real-document checks; package tests do not certify every Word/WPS/LibreOffice version or every original fixture.

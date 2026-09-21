@@ -193,6 +193,13 @@ def find_body_placeholder(doc: Document) -> Any | None:
 def validate_body_placeholder_placement(doc: Document) -> None:
     """Require one standalone main-body anchor, or no authored body marker."""
     markers = []
+    # XML scanning also sees text in unsupported wrappers and across breaks.
+    # Every accepted marker must be discoverable by the actual body finder.
+    visible_anchors = {
+        paragraph._p
+        for paragraph in doc.paragraphs
+        if _whole_paragraph_placeholder_key(paragraph.text) in BODY_PLACEHOLDER_ALIASES
+    }
     pattern = re.compile(r"\{\{\s*([^{}\r\n]+?)\s*\}\}")
     roots = [doc.element]
     roots.extend(
@@ -206,7 +213,11 @@ def validate_body_placeholder_placement(doc: Document) -> None:
             for match in pattern.finditer(text):
                 if match.group(1).strip() not in BODY_PLACEHOLDER_ALIASES:
                     continue
-                if paragraph.getparent() is not doc.element.body or text.strip() != match.group(0):
+                if (
+                    paragraph.getparent() is not doc.element.body
+                    or text.strip() != match.group(0)
+                    or paragraph not in visible_anchors
+                ):
                     raise BodyPlaceholderPlacementError(
                         "A body placeholder must occupy a standalone main-document paragraph."
                     )
