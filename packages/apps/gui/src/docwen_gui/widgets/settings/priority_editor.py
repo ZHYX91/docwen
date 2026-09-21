@@ -4,6 +4,7 @@ from PySide6.QtCore import QEvent, QRect, QSize, Qt, QTimer
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QListWidget, QPushButton, QVBoxLayout, QWidget
 
 from ...i18n import t
+from ...resources import set_action_icon
 from ...styles.design_tokens import Sizing, Spacing
 
 
@@ -38,6 +39,8 @@ class SoftwarePriorityEditor(QWidget):
         buttons.setSpacing(Spacing.CONTROL_GAP)
         self.move_up_button = QPushButton(t("editors.common.move_up", "Move Up"), self)
         self.move_down_button = QPushButton(t("editors.common.move_down", "Move Down"), self)
+        set_action_icon(self.move_up_button, "move_up.svg")
+        set_action_icon(self.move_down_button, "move_down.svg")
         buttons.addWidget(self.move_up_button)
         buttons.addWidget(self.move_down_button)
         buttons.addStretch(1)
