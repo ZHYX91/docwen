@@ -93,3 +93,26 @@ The default packaged GUI smoke uses `DOCWEN_GUI_TEST_AUTOCLOSE_MS`. Add `--notif
 Successful packaged-GUI runs are ephemeral by default. In the governed local layout, raw runs are created below `.workspace/temp` with a lease; success removes them immediately, while failure or cleanup failure enters the bounded retention policy. Use `--candidate-id ID --receipt-output <ABSOLUTE_JSON_BELOW_WORKSPACE_ACCEPTANCE>` to close a successful run into a compact identity/result/limitation receipt. Use `--evidence-dir <ABSOLUTE_NEW_DIRECTORY>` only when a reviewer explicitly needs the complete run. The verifier rejects unsafe destinations and verifies exact copied bytes. Copy failure retains the authoritative leased source and fails the gate rather than silently reporting success.
 
 打包 GUI 成功运行默认不保留原始目录。本地治理布局会把原始运行放入带租约的 `.workspace/temp`：成功立即删除，失败或清理失败进入有上限的保留策略。使用 `--candidate-id ID --receipt-output <位于 workspace/acceptance 下的绝对 JSON 路径>` 可把成功运行关闭为紧凑回执；只有复核者明确需要完整现场时才使用 `--evidence-dir <绝对且不存在的目录>`。复制失败会保留带租约的权威临时源并使门禁失败，绝不静默报告成功。
+
+
+## Change-scoped acceptance and closeout
+
+Keep the existing required CI lanes. Select additional host checks by the affected behavior; do not make every release repeat every historical scenario.
+
+| Change | Additional acceptance |
+|---|---|
+| Documentation or public screenshots | References, English README / listing language, actual Qt layout; no package rebuild for media-only changes |
+| GUI behavior or layout | Changed interaction on the real application; representative light/dark, language and DPI cases |
+| Conversion, templates or Office integration | Affected formats with representative real inputs and relevant installed host software |
+| Machine protocol or consumers | Producer/consumer contract checks plus affected real consumer operations |
+| Packaging, launcher or installer | Exact candidate startup, CLI/GUI identity, upgrade and repeat launch on the affected platform |
+
+Build once per platform, accept those bytes, publish them, then perform one independent public readback. Store certification and UOS prerequisites are channel-specific; missing external access does not turn an untested scope into a pass or block unrelated channels. Retries revalidate identity and reuse the verified candidate.
+
+Cleanup also discovers leased runs under the registered `repos/docwen/build` and `repos/docwen-openclaw/build` directories. It never selects either build root itself, unleased repository directories or tracked files. Source directories such as `scripts/build` remain outside this boundary. Existing owner, retention and content identity checks still apply.
+
+`tools/acceptance_closeout.py` accepts `--result passed|failed|superseded`. Nonpassing closeout requires `--reason` explaining the original failure and, when applicable, its replacement. Original leases remain in the receipt; live owners and active/nonterminal runs are rejected. `--disposition recycle` retains verified recovery locations on Windows. Recycling uses the same implementation for files and directories, fails when unavailable, and never falls back to permanent deletion.
+
+Add repeated `--evidence <relative-file>` arguments to preserve UTF-8 failure summaries before raw cleanup (at most eight files, 64 KiB each). Files must be plain files inside the owned run; credential files are excluded. The formal receipt is written before cleanup and records cleanup errors without changing the original result.
+
+For routine local coverage history, use `tools/qa.py --suite full --coverage --compact-coverage --report-output <new-directory>`. All coverage gates still consume the full original XML before export. The compact export retains total/package statistics and the original XML hash; it cannot rerun line-level checks. Omit `--compact-coverage` for the current release or CI evidence that needs full XML. Keep result/identity/limitations and necessary screenshots, not duplicate runtime trees. Public product screenshots use real Qt rendering; they are not evidence of native interaction.
