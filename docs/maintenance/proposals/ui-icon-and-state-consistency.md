@@ -1,6 +1,6 @@
 # Implementation proposal: UI icon and visual-state consistency
 
-Status: **draft implementation plan; production code and assets are unchanged**. This is not a new approved art pack, a completed redesign, or a replacement for the active design specifications.
+Status: **implementation in progress on this Draft PR**. Core operation/status assets and consumers are being migrated, but this is not a completed redesign or a replacement for active design specifications.
 
 ## Goal and exclusions
 
