@@ -82,6 +82,7 @@ from docwen_plugin_markdown.template_filler import fill_template
 from docwen_plugin_markdown.template_policy import template_list_separator
 from docwen_plugin_markdown.template_utils import (
     TemplatePackageError,
+    body_content_extent,
     extract_body_font,
     extract_body_paragraph_format,
     extract_body_style,
@@ -1002,7 +1003,9 @@ class MdToDocxConverter:
                 source_file_path=input_path,
                 declared_resource_resolver=declared_resource_resolver,
                 mermaid_mode=mermaid_mode,
+                mermaid_cli_path=str(context.config.get("conversion.md_to_docx.mermaid_cli_path", "") or ""),
                 mermaid_work_dir=str(workspace.staging_dir),
+                content_extent=body_content_extent(doc, placeholder_para),
             )
             try:
                 paragraphs = renderer.render(semantic_analysis.ast)

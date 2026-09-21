@@ -584,6 +584,19 @@ embed = "Embed content"
 # 格式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.formatting]
+mermaid_auto = "Automatic discovery"
+mermaid_browse = "Select Mermaid CLI"
+mermaid_path = "CLI path:"
+mermaid_recheck = "Detect again"
+mermaid_test = "Test rendering"
+mermaid_install = "Installation instructions"
+mermaid_incompatible = "Incompatible CLI {cli} / Mermaid {mermaid}; both require 11.16+ in the 11.x family."
+mermaid_testing = "Rendering a test diagram…"
+mermaid_browser_missing = "Matching browser missing. Follow the installation instructions to install the browser, then test again."
+mermaid_test_failed = "Test rendering failed: {reason}"
+mermaid_test_passed = "Available: test diagram rendered successfully."
+mermaid_ready = "Detected CLI {cli} / Mermaid {mermaid}. Browser availability is checked during conversion."
+mermaid_unavailable = "Image rendering unavailable: install local CLI and Mermaid 11.16+ (11.x), with Node on PATH. Code is preserved if rendering fails."
 # 文档转为Markdown部分
 docx_to_md_section = "Document to Markdown"
 format_processing = "Format Processing"

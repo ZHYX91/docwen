@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.image.image import Image as DocxImage
 from docx.shared import Pt
 
 from docwen_core.docx_semantics import (
@@ -132,8 +133,10 @@ class MdToDocxRenderer:
         resolved_numbering_session: ResolvedNumberingDocxSession | None = None,
         resolved_image_urls: tuple[str, ...] | None = None,
         mermaid_mode: str = "code",
+        mermaid_cli_path: str = "",
         mermaid_work_dir: str | None = None,
         mermaid_render: Any = None,
+        content_extent: tuple[int, int] | None = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -290,9 +293,13 @@ class MdToDocxRenderer:
         self._resolved_image_inventory = Counter(resolved_image_urls) if resolved_image_urls is not None else None
         normalized_mermaid_mode = str(mermaid_mode or "code").strip().lower()
         self._mermaid_mode = normalized_mermaid_mode if normalized_mermaid_mode in {"code", "image"} else "code"
+        self._mermaid_cli_path = mermaid_cli_path
         self._mermaid_work_dir = mermaid_work_dir
         self._mermaid_render = mermaid_render
         self._warnings: list[tuple[str, str]] = []
+        self._content_extent = content_extent
+        self._mermaid_images: list[tuple[Any, Any, int, int, int]] = []
+        self._mermaid_occurrences = 0
 
         # Heading counters for optional numbering.
         self._h_counters: list[int] = [0] * 9
@@ -392,6 +399,7 @@ class MdToDocxRenderer:
                     paragraphs.append(result)
         if self._resolved_image_inventory is not None and any(self._resolved_image_inventory.values()):
             raise ValueError("not every authenticated resolved-v4 image occurrence was rendered")
+        self._fit_mermaid_images()
         return paragraphs
 
     # ── Node dispatcher ─────────────────────────────────────────────────
@@ -639,23 +647,53 @@ class MdToDocxRenderer:
             return bytes(rendered)
         if not self._mermaid_work_dir:
             raise ValueError("Mermaid rendering has no request-private working directory")
-        from docwen_plugin_markdown.to_docx.mermaid import render_mermaid_png
+        from docwen_core.mermaid_render import render_mermaid_png
 
         return render_mermaid_png(
             source,
             work_dir=self._mermaid_work_dir,
             cancellation=self._cancellation,
+            cli_path=self._mermaid_cli_path,
         )
 
-    def _available_content_width(self):
-        if not self._doc.sections:
-            return None
-        section = self._doc.sections[0]
-        values = (section.page_width, section.left_margin, section.right_margin)
-        if any(value is None for value in values):
-            return None
-        width = int(section.page_width) - int(section.left_margin) - int(section.right_margin)
-        return width if width > 0 else None
+    @staticmethod
+    def _paragraph_length(paragraph, name: str) -> int:
+        value = getattr(paragraph.paragraph_format, name)
+        style = paragraph.style
+        seen = set()
+        while value is None and style is not None and style.style_id not in seen:
+            seen.add(style.style_id)
+            value = getattr(style.paragraph_format, name)
+            style = style.base_style
+        return int(value or 0)
+
+    def _fit_mermaid_images(self) -> None:
+        if not self._mermaid_images:
+            return
+        from docwen_plugin_markdown.template_utils import body_content_extent
+
+        width, height = self._content_extent or body_content_extent(self._doc)
+        for paragraph, shape, pixels_w, pixels_h, occurrence in self._mermaid_images:
+            available_w = max(
+                1, width - sum(self._paragraph_length(paragraph, key) for key in ("left_indent", "right_indent"))
+            )
+            available_h = max(
+                1, height - sum(self._paragraph_length(paragraph, key) for key in ("space_before", "space_after"))
+            )
+            # The renderer supplies 2 backing pixels per CSS pixel (96 CSS dpi).
+            natural_w, natural_h = pixels_w * 914400 / 192, pixels_h * 914400 / 192
+            scale = min(1.0, available_w / natural_w, available_h / natural_h)
+            shape.width = max(1, round(natural_w * scale))
+            shape.height = max(1, round(natural_h * scale))
+            paragraph.paragraph_format.line_spacing = 1.0
+            if scale < 0.65:
+                self._warnings.append(
+                    (
+                        "MD2DOCX-MERMAID-SCALED",
+                        f"Mermaid diagram {occurrence} was reduced to {scale:.0%}; check diagram text readability.",
+                    )
+                )
+        self._mermaid_images.clear()
 
     def _try_render_mermaid_image(
         self,
@@ -668,18 +706,21 @@ class MdToDocxRenderer:
             # and image inventories. It remains source-preserving until that
             # closed port explicitly adds rendered-diagram ownership.
             return None
+        self._mermaid_occurrences += 1
+        occurrence = self._mermaid_occurrences
+        paragraph = None
         try:
             png_bytes = self._render_mermaid_png_bytes(source_text)
+            image = DocxImage.from_blob(png_bytes)
             paragraph = self._doc.add_paragraph(style=self._paragraph_style(image_only=True))
             run = paragraph.add_run()
-            width = self._available_content_width()
-            if width is None:
-                run.add_picture(BytesIO(png_bytes))
-            else:
-                run.add_picture(BytesIO(png_bytes), width=width)
+            shape = run.add_picture(BytesIO(png_bytes))
+            self._mermaid_images.append((paragraph, shape, image.px_width, image.px_height, occurrence))
             paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            return self._finalize_block_code_object(node, paragraph, caption_data)
         except Exception as exc:
+            if paragraph is not None and paragraph._p.getparent() is not None:
+                paragraph._p.getparent().remove(paragraph._p)
+                self._mermaid_images = [entry for entry in self._mermaid_images if entry[0] is not paragraph]
             # Cancellation is request control flow, not a rendering failure.
             # Re-check here so a cancellation raised by the renderer is never
             # swallowed and converted into a successful code fallback.
@@ -689,10 +730,12 @@ class MdToDocxRenderer:
             self._warnings.append(
                 (
                     "MD2DOCX-MERMAID-FALLBACK",
-                    f"Mermaid diagram rendering failed; preserved as a code block: {exc}",
+                    f"Mermaid diagram {occurrence} rendering failed; preserved as a code block: {exc}",
                 )
             )
             return None
+
+        return self._finalize_block_code_object(node, paragraph, caption_data)
 
     def _handle_block_code(self, node: dict[str, Any]):
         """Render a fenced block as code, or Mermaid as an image when selected."""

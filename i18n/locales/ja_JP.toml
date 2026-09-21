@@ -535,6 +535,26 @@ embed = "コンテンツ埋め込み"
 # 格式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.formatting]
+mermaid_auto = "自動検出"
+mermaid_browse = "Mermaid CLI を選択"
+mermaid_path = "CLI のパス:"
+mermaid_recheck = "再検出"
+mermaid_test = "描画をテスト"
+mermaid_install = "インストール手順"
+mermaid_incompatible = "非対応バージョン: CLI {cli} / Mermaid {mermaid}。両方とも 11.16 以上の 11.x が必要です。"
+mermaid_testing = "テスト図を描画中…"
+mermaid_browser_missing = "対応ブラウザーがありません。手順に従ってブラウザーをインストールし、再テストしてください。"
+mermaid_test_failed = "テスト描画に失敗しました: {reason}"
+mermaid_test_passed = "利用可能: テスト図を描画しました。"
+
+mermaid_title = "Mermaid 図"
+mermaid_tooltip = "ローカルの Mermaid CLI で図を画像化するか、コードのまま保持します。失敗時は警告とともにコードを保持します。"
+mermaid_mode_label = "出力:"
+mermaid_mode_tooltip = "文書内の Mermaid コードブロックの表示方法を選択します。"
+mermaid_code = "コードとして保持"
+mermaid_image = "画像として出力"
+mermaid_ready = "CLI {cli} / Mermaid {mermaid} を検出しました。ブラウザーは変換時に確認します。"
+mermaid_unavailable = "画像化できません。CLI と Mermaid 11.16 以上の 11.x をローカルに導入し、Node を PATH に追加してください。失敗時はコードを保持します。"
 # 文档转为Markdown部分
 docx_to_md_section = "ドキュメントからMarkdown"
 format_processing = "フォーマット処理"

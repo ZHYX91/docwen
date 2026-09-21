@@ -189,6 +189,7 @@ class FormattingConfig:
 
     # MD -> DOCX Mermaid
     mermaid_mode: str = "code"
+    mermaid_cli_path: str = ""
 
     # MD -> DOCX separators
     dash_sep: str = "page_break"

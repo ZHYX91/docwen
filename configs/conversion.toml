@@ -47,6 +47,7 @@ table_header_formatting_mode = "remove"
 # "code"  - 保留为代码块（兼容既有行为）
 # "image" - 使用本地 Mermaid CLI (mmdc) 渲染为 PNG；失败时回退为代码块并报告警告
 mermaid_mode = "code"
+mermaid_cli_path = ""
 
 # 标题+正文合并模式（MD → DOCX 时生效）
 # 控制小标题与紧邻下一行普通正文是否合并为同一段落

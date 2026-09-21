@@ -46,7 +46,9 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
         "conversion.export.base64_compress_threshold_kb",
     }
     assert formatting_plan.files == ()
-    assert len(formatting_plan.dotted_keys) == 22
+    assert len(formatting_plan.dotted_keys) == 24
+    assert "conversion.md_to_docx.mermaid_cli_path" in formatting_plan.dotted_keys
+    assert "conversion.md_to_docx.mermaid_mode" in formatting_plan.dotted_keys
     assert "document.style.table.md_to_docx.table_style_mode" in reset_plan_for_group("text").dotted_keys
     assert "conversion.code_detection.code_font" not in formatting_plan.dotted_keys
     assert "conversion.export.base64_compress_enabled" not in formatting_plan.dotted_keys
@@ -59,7 +61,7 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
         "general": 4,
         "text": 15,
         "proofread": 6,
-        "formatting": 22,
+        "formatting": 24,
         "document": 11,
         "spreadsheet": 4,
         "layout": 5,

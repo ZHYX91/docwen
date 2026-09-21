@@ -11,6 +11,7 @@ from docwen_core.markdown_extensions import EXTENSION_NAMES
 from ...i18n import t
 from ...view_models.settings_vm import SECTION_FORMATTING, SettingsViewModel
 from .base_tab import BaseSettingsTab
+from .mermaid_controls import MermaidControls
 
 
 def _sep_options() -> list[tuple[str, str]]:
@@ -212,6 +213,7 @@ class FormattingTab(BaseSettingsTab):
             t("settings.formatting.mermaid_mode_label", "Output:"),
             self._mermaid_mode,
         )
+        self._mermaid_controls = MermaidControls(self, f_mermaid, self._vm)
 
         # ── MD → DOCX: Separator Mapping ───────────────────────────────
         _c5, f5 = self.add_settings_card(
@@ -287,6 +289,7 @@ class FormattingTab(BaseSettingsTab):
         self.set_combo_data(self._ul_syntax, fmt.unordered_list_syntax)
         self.set_combo_data(self._indent_spaces, fmt.indent_spaces)
         self.set_combo_data(self._mermaid_mode, fmt.mermaid_mode)
+        self._mermaid_controls.load(fmt.mermaid_cli_path)
         self.set_combo_data(self._dash_sep, fmt.dash_sep)
         self.set_combo_data(self._asterisk_sep, fmt.asterisk_sep)
         self.set_combo_data(self._underscore_sep, fmt.underscore_sep)

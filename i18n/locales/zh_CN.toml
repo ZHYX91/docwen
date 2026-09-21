@@ -584,6 +584,19 @@ embed = "插入内容"
 # 格式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.formatting]
+mermaid_auto = "自动查找"
+mermaid_browse = "选择 Mermaid CLI"
+mermaid_path = "CLI 路径："
+mermaid_recheck = "重新检测"
+mermaid_test = "测试渲染"
+mermaid_install = "安装说明"
+mermaid_incompatible = "版本不兼容：CLI {cli} / Mermaid {mermaid}；两者均需 11.16 以上的 11.x 版本。"
+mermaid_testing = "正在渲染测试图…"
+mermaid_browser_missing = "缺少配套浏览器。请按安装说明安装浏览器后重新测试。"
+mermaid_test_failed = "测试渲染失败：{reason}"
+mermaid_test_passed = "可用：测试图已成功渲染。"
+mermaid_ready = "已检测到 CLI {cli} / Mermaid {mermaid}；浏览器可用性将在转换时检查。"
+mermaid_unavailable = "图片渲染不可用：请安装本地 CLI 与 Mermaid 11.16 以上的 11.x 版本，并将 Node 加入 PATH。渲染失败时保留代码。"
 # 文档转为Markdown部分
 docx_to_md_section = "文档转为Markdown"
 format_processing = "格式处理"

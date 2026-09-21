@@ -54,7 +54,12 @@ For the ordinary Markdown -> DOCX source route, `conversion.md_to_docx.mermaid_m
 ```mermaid``` fenced block is presented. `code` is the compatibility default and preserves the existing
 fenced-source code-block behavior. `image` invokes a local Mermaid CLI (`mmdc`) and embeds the generated PNG in
 the document. DocWen does not download Mermaid or call an online rendering service; `DOCWEN_MERMAID_CLI` may point
-to an explicit executable when `mmdc` is not on `PATH`.
+to an explicit executable when `mmdc` is not on `PATH`. The saved `conversion.md_to_docx.mermaid_cli_path` takes
+precedence over that environment fallback. CLI and Mermaid must both be 11.16+ within 11.x. Settings distinguishes
+package detection from a successful browser test, supports path selection and repeat detection, and preserves the mode.
+See [installation and verified versions](../mermaid.md). Each render is bounded and cancellable; external/local-file
+diagram images are rejected. PNGs fit the body section/columns and paragraph indents while preserving aspect ratio;
+large reductions emit `MD2DOCX-MERMAID-SCALED` to prompt a readability check.
 
 Image rendering is best-effort per diagram. An unavailable CLI, invalid Mermaid source, timeout, or renderer failure
 produces `MD2DOCX-MERMAID-FALLBACK` and that occurrence remains a visible code block; other diagrams continue.
