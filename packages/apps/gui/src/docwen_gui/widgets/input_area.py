@@ -63,6 +63,7 @@ from docwen_gui.styles.design_tokens import Sizing, Spacing
 from .elided_label import MiddleElidedLabel
 from .location_button import LocationButton
 from .panel_card import WrappingLabel
+from .warning_badge import WarningBadge
 
 if TYPE_CHECKING:
     from ..view_models.input_area_vm import InputAreaViewModel
@@ -352,7 +353,7 @@ class InputArea(QFrame):
         self._selection_label.setMinimumWidth(0)
         self._selection_label.setText("")
 
-        self._format_notice_label = QLabel(self._feedback_frame)
+        self._format_notice_label = WarningBadge(self._feedback_frame)
         self._format_notice_label.setObjectName("fileDropFormatNotice")
         self._format_notice_label.setTextFormat(Qt.TextFormat.PlainText)
         self._format_notice_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)

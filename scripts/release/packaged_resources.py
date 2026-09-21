@@ -99,6 +99,8 @@ REQUIRED_ASSET_FILES = (
     "icons/sync.svg",
     "icons/templates.svg",
     "icons/text.svg",
+    "icons/warning.svg",
+    "icons/FLUENT_SYSTEM_ICONS_LICENSE.txt",
 )
 LOCALE_DIR_CANDIDATES = (
     "i18n/locales",

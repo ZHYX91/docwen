@@ -68,6 +68,7 @@ from .elided_label import MiddleElidedLabel
 from .location_button import LocationButton
 from .output_file_row import OutputFileRow
 from .panel_card import WrappingLabel
+from .warning_badge import WarningBadge
 
 if TYPE_CHECKING:
     from ..view_models.batch_list_vm import BatchFileEntry, BatchListViewModel
@@ -440,7 +441,7 @@ class BatchEntryItemWidget(QWidget):
         self.badge_strip = QWidget(self)
         self.badge_strip.setObjectName("batchBadgeRow")
         self._badge_strip_layout = WrapRowLayout(self.badge_strip, spacing=_SPACING_XS)
-        self.format_notice_badge = QLabel(self.badge_strip)
+        self.format_notice_badge = WarningBadge(self.badge_strip)
         self.format_notice_badge.setObjectName("batchFormatNotice")
         self.format_notice_badge.setTextFormat(Qt.TextFormat.PlainText)
         self.format_notice_badge.setWordWrap(True)
