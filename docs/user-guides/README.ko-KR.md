@@ -591,7 +591,7 @@ DocWen Core의 runtime/control transport는 Windows 명명된 파이프 또는 L
 
 ### 설치
 
-DocWen Assistant 3.1은 DocWen Machine Protocol v2과 단일 Artifact Bundle v3 계약을 사용합니다. 소스
+DocWen Assistant 3.1에는 DocWen 0.13.0 이상이 필요합니다. 변환·교정 같은 콘텐츠 작업은 Machine Protocol v2와 Artifact Bundle v3를 사용하고, 데스크톱 앱 실행/열기는 독립된 로컬 GUI 제어를 사용합니다. 소스
 버전만으로 게시 여부를 증명할 수 없습니다. 호환되는 게시된 DocWen 릴리스를 명시한 숫자 형식의 릴리스만
 설치하세요.
 
