@@ -75,6 +75,7 @@ REQUIRED_ASSET_FILES = (
     "settings_icon.png",
     "skip_icon.png",
     "file_drop_empty_state.svg",
+    "icons/FLUENT_SYSTEM_ICONS_LICENSE.txt",
     "icons/about.svg",
     "icons/complete.svg",
     "icons/document.svg",
