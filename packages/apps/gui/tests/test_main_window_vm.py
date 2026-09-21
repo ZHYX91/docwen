@@ -385,6 +385,22 @@ class TestStatusMessage:
 
 
 class TestTaskEventHandling:
+    def test_private_render_reports_progress_without_completing_the_document(self, vm: MainWindowViewModel) -> None:
+        events: list[dict] = []
+        vm.execution_progress_changed.connect(events.append)
+        vm.begin_execution_telemetry("batch", ("batch-0",), intermediate_task_owners={"batch-0-render": "batch-0"})
+        vm.on_task_event("task_progress", {"task_id": "batch-0-render", "percent": 30, "message": "Rendering"})
+        assert events[-1]["task_id"] == "batch-0"
+        assert events[-1]["completed_count"] == 0
+        vm.on_task_event("task_completed", {"task_id": "batch-0-render"})
+        vm.on_task_event("task_started", {"task_id": "batch-0", "message": "Proofreading"})
+        assert events[-1]["completed_count"] == 0
+        count = len(events)
+        vm.on_task_event("task_progress", {"task_id": "batch-0-render", "message": "Late render"})
+        assert len(events) == count
+        vm.on_task_event("task_completed", {"task_id": "batch-0"})
+        assert events[-1]["completed_count"] == 1
+
     def test_task_started(self, vm: MainWindowViewModel) -> None:
         vm.begin_execution_telemetry("t1", ("t1",))
         vm.on_task_event("task_started", {"task_id": "t1", "message": "Converting"})

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -13,7 +14,12 @@ from docwen_bundle.runtime_factory import create_runtime_port
 from docwen_cli.main import main
 from docwen_runtime.config import ConfigLoader
 
-pytestmark = [pytest.mark.integration, pytest.mark.pr_gate, pytest.mark.release_gate]
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.pr_gate,
+    pytest.mark.release_gate,
+    pytest.mark.skipif(sys.platform == "darwin", reason="Primary document operations support Windows and Linux"),
+]
 
 
 @pytest.fixture

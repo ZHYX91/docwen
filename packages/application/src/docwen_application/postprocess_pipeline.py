@@ -192,7 +192,15 @@ def _execute_docx_proofread_pipeline(
             target_format="docx",
             action_name="validate",
             options=dict(proofread_options),
-            output_policy=replace(request.output_policy, group_outputs=True),
+            output_policy=replace(
+                request.output_policy,
+                group_outputs=True,
+                output_dir=(
+                    request.output_policy.output_dir
+                    if request.output_policy.output_dir or request.output_policy.output_path
+                    else str(Path(source.path).parent)
+                ),
+            ),
             config_snapshot=dict(request.config_snapshot),
             manifest_context=request.manifest_context,
             conversion_identity=identity,
