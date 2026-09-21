@@ -76,5 +76,7 @@ def test_root_readme_does_not_document_removed_cli_surfaces() -> None:
     for stale_surface in forbidden:
         assert stale_surface not in readme
     assert "--proofread" in readme
-    assert "Cross-product consumers" in readme
+    assert "Cross-product content operations" in readme
     assert "Machine Protocol" in readme
+    assert "gui open|activate|status" in readme
+    assert "does not require a Machine session" in readme
