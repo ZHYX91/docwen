@@ -419,6 +419,7 @@ def _execute_single(
         source_format=input_ref.format,
         target_format=request_target,
         action_name=request_action,
+        proofread_requested=bool(getattr(args, "proofread", False)),
     )
 
     request = ConversionRequest(
@@ -585,6 +586,7 @@ def _execute_batch(
             source_format=input_ref.format,
             target_format=request_target,
             action_name=request_action,
+            proofread_requested=bool(getattr(args, "proofread", False)),
         )
         return ConversionRequest(
             request_id=str(uuid.uuid4()),
@@ -823,6 +825,7 @@ def _execute_aggregate(
         source_format=input_refs[0].format if input_refs else "",
         target_format=request_target,
         action_name=request_action,
+        proofread_requested=bool(getattr(args, "proofread", False)),
     )
 
     request = ConversionRequest(
@@ -948,6 +951,7 @@ def _execute_dry_run(
         source_format=source_format,
         target_format=request_target,
         action_name=request_action,
+        proofread_requested=bool(getattr(args, "proofread", False)),
     )
 
     if json_mode:
