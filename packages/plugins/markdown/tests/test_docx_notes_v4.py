@@ -371,7 +371,9 @@ def test_metadata_only_template_preserves_existing_note_graph_without_materializ
     assert _footnote_ids(output) == {-1, 0, 1}
     assert _body_footnote_ids(output) == {1}
     assert _existing_graph_snapshot(output) == before
-    assert "Body that must remain omitted." not in "\n".join(paragraph.text for paragraph in Document(str(output)).paragraphs)
+    assert "Body that must remain omitted." not in "\n".join(
+        paragraph.text for paragraph in Document(str(output)).paragraphs
+    )
 
 
 def test_converter_preserves_existing_graph_and_allocates_matching_body_and_part_id(tmp_path: Path) -> None:
@@ -403,15 +405,19 @@ def test_converter_preserves_existing_graph_and_allocates_matching_body_and_part
     "damage",
     ("duplicate_positive", "malformed_id", "missing_reserved", "reserved_kind", "missing_relationship"),
 )
+@pytest.mark.parametrize("with_body", [False, True])
+@pytest.mark.parametrize("with_new_note", [False, True])
 def test_converter_fails_closed_before_artifact_for_malformed_existing_note_graph(
     tmp_path: Path,
     damage: str,
+    with_body: bool,
+    with_new_note: bool,
 ) -> None:
     template = tmp_path / f"damaged-{damage}.docx"
-    _inject_existing_footnote_graph(template, damage=damage, include_body_placeholder=True)
+    _inject_existing_footnote_graph(template, damage=damage, include_body_placeholder=with_body)
     template_hash = hashlib.sha256(template.read_bytes()).hexdigest()
     source = tmp_path / "source.md"
-    source.write_text("Body[^new].\n\n[^new]: New note.\n", encoding="utf-8")
+    source.write_text("Body[^new].\n\n[^new]: New note.\n" if with_new_note else "Body.\n", encoding="utf-8")
     context, workspace = make_context(
         str(source),
         target_format="docx",

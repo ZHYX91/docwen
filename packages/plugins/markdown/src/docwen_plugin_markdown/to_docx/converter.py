@@ -88,6 +88,7 @@ from docwen_plugin_markdown.template_utils import (
     find_body_placeholder,
     resolve_template,
     scan_placeholders,
+    validate_body_placeholder_placement,
 )
 from docwen_plugin_markdown.to_docx.bibliography import (
     BibliographyConversionError,
@@ -102,6 +103,7 @@ from docwen_plugin_markdown.to_docx.managed_styles import (
     validate_managed_style_package,
 )
 from docwen_plugin_markdown.to_docx.notes import (
+    NoteContext,
     NoteWritebackError,
     extract_notes_from_ast,
     normalize_note_syntax,
@@ -594,10 +596,36 @@ class MdToDocxConverter:
                 )
             content = semantic_v3_plan.shielded_source
 
+            try:
+                doc = resolve_template(options.get("template_name"))
+                validate_body_placeholder_placement(doc)
+                render_body = find_body_placeholder(doc) is not None
+            except TemplatePackageError as exc:
+                return ConversionResult(
+                    task_id=task_id,
+                    success=False,
+                    error=ConversionErrorInfo(
+                        error_type="invalid_input",
+                        message=str(exc),
+                        diagnostic_code=exc.diagnostic_code,
+                    ),
+                    diagnostics=[
+                        ConversionDiagnostic(
+                            level="error",
+                            message=str(exc),
+                            code=exc.diagnostic_code,
+                        )
+                    ],
+                    metrics=ConversionMetrics(
+                        duration_ms=(time.monotonic() - t_start) * 1000.0,
+                        input_bytes=input_bytes,
+                    ),
+                )
+
             # ── 3. Optionally remove/add heading numbering ────────────
             remove_num: bool = options.get("remove_numbering", False)
             cleanup_rules = getattr(context, "heading_cleanup_rules", ()) or ()
-            if remove_num:
+            if remove_num and render_body:
                 progress.report_progress(10.0, "Removing heading numbering")
                 content = remove_md_numbering(content, rules=cleanup_rules)
 
@@ -606,7 +634,7 @@ class MdToDocxConverter:
             word_native_translation = None  # set if word_native mode is used
             approximate_warning: str | None = None
 
-            if add_num:
+            if add_num and render_body:
                 scheme: str = options.get("numbering_scheme", "")
                 try:
                     if render_mode == "word_native":
@@ -691,92 +719,95 @@ class MdToDocxConverter:
             # ── Stage 2: Preprocess & Parse ────────────────────────────
             progress.report_progress(20.0, "Preprocessing Markdown")
 
-            source_image_alt_texts = _markdown_image_alt_texts(md_body)
+            cleaned_ast = []
+            note_ctx = NoteContext()
+            if render_body:
+                source_image_alt_texts = _markdown_image_alt_texts(md_body)
 
-            # Numbering may have changed the full shielded source. Use the
-            # freshly extracted body rather than the plan's old YAML offset.
-            link_source = md_body
-            if declared_resource_resolver is not None:
-                # Semantic references are inert in ``link_source`` and cannot
-                # trigger a filesystem lookup. Ordinary WikiLinks remain
-                # visible here and are rejected at the declared-input boundary.
-                reject_declared_input_link_lookups(link_source)
-                # Bind request-declared resources in the already shielded
-                # projection.  Replacing the authored body here would discard
-                # semantic markers and, conversely, processing the pre-bind
-                # snapshot would fall back to the physical source directory.
-                link_source = bind_declared_markdown_images(
+                # Numbering may have changed the full shielded source. Use the
+                # freshly extracted body rather than the plan's old YAML offset.
+                link_source = md_body
+                if declared_resource_resolver is not None:
+                    # Semantic references are inert in ``link_source`` and cannot
+                    # trigger a filesystem lookup. Ordinary WikiLinks remain
+                    # visible here and are rejected at the declared-input boundary.
+                    reject_declared_input_link_lookups(link_source)
+                    # Bind request-declared resources in the already shielded
+                    # projection.  Replacing the authored body here would discard
+                    # semantic markers and, conversely, processing the pre-bind
+                    # snapshot would fall back to the physical source directory.
+                    link_source = bind_declared_markdown_images(
+                        link_source,
+                        declared_resource_resolver,
+                    )
+
+                # 2a. Apply the request-scoped link policy after YAML extraction.
+                link_config = _request_link_config(context.config)
+                image_scope = secrets.token_urlsafe(24)
+                md_body = process_markdown_links(
                     link_source,
-                    declared_resource_resolver,
+                    input_path,
+                    link_config=link_config,
+                    target_format="docx",
+                    temp_dir=str(workspace.staging_dir),
+                    image_scope=image_scope,
+                )
+                md_body = materialize_image_placeholders(
+                    md_body,
+                    image_scope=image_scope,
                 )
 
-            # 2a. Apply the request-scoped link policy after YAML extraction.
-            link_config = _request_link_config(context.config)
-            image_scope = secrets.token_urlsafe(24)
-            md_body = process_markdown_links(
-                link_source,
-                input_path,
-                link_config=link_config,
-                target_format="docx",
-                temp_dir=str(workspace.staging_dir),
-                image_scope=image_scope,
-            )
-            md_body = materialize_image_placeholders(
-                md_body,
-                image_scope=image_scope,
-            )
+                # 2d. Validate the cross-project footnote/endnote contract and
+                # create a request-local parser projection.  The source Markdown
+                # is never rewritten.
+                try:
+                    md_body = normalize_note_syntax(md_body, typed_endnotes=extensions.typed_endnotes)
+                except NoteWritebackError as exc:
+                    return _note_failure(task_id, t_start, exc)
 
-            # 2d. Validate the cross-project footnote/endnote contract and
-            # create a request-local parser projection.  The source Markdown
-            # is never rewritten.
-            try:
-                md_body = normalize_note_syntax(md_body, typed_endnotes=extensions.typed_endnotes)
-            except NoteWritebackError as exc:
-                return _note_failure(task_id, t_start, exc)
-
-            # 2e. Detect heading merge boundaries
-            heading_merge_mode = _option_or_config(
-                options,
-                "heading_merge_mode",
-                context.config,
-                "conversion.md_to_docx.heading_merge_mode",
-                "punct_required",
-                allowed={"punct_required", "always", "never"},
-            )
-            # 2g. Parse with extended mistune
-            progress.report_progress(30.0, "Parsing Markdown")
-            raw_ast = parse_markdown_text(md_body, auto_link_bare_url=False, extensions=extensions)
-            _restore_markdown_image_alt_texts(raw_ast, source_image_alt_texts)
-            try:
-                raw_ast = apply_runtime_semantics_v3(raw_ast, semantic_v3_plan)
-            except RuntimeSemanticsV3InvariantError as exc:
-                return _semantic_v3_internal_failure(
-                    task_id,
-                    t_start,
-                    str(exc),
-                    input_bytes=input_bytes,
+                # 2e. Detect heading merge boundaries
+                heading_merge_mode = _option_or_config(
+                    options,
+                    "heading_merge_mode",
+                    context.config,
+                    "conversion.md_to_docx.heading_merge_mode",
+                    "punct_required",
+                    allowed={"punct_required", "always", "never"},
                 )
-            except RuntimeSemanticsV3Unsupported as exc:
-                return _semantic_v3_failure(
-                    task_id,
-                    t_start,
-                    str(exc),
-                    [],
-                    input_bytes=input_bytes,
+                # 2g. Parse with extended mistune
+                progress.report_progress(30.0, "Parsing Markdown")
+                raw_ast = parse_markdown_text(md_body, auto_link_bare_url=False, extensions=extensions)
+                _restore_markdown_image_alt_texts(raw_ast, source_image_alt_texts)
+                try:
+                    raw_ast = apply_runtime_semantics_v3(raw_ast, semantic_v3_plan)
+                except RuntimeSemanticsV3InvariantError as exc:
+                    return _semantic_v3_internal_failure(
+                        task_id,
+                        t_start,
+                        str(exc),
+                        input_bytes=input_bytes,
+                    )
+                except RuntimeSemanticsV3Unsupported as exc:
+                    return _semantic_v3_failure(
+                        task_id,
+                        t_start,
+                        str(exc),
+                        [],
+                        input_bytes=input_bytes,
+                    )
+
+                # 2h. Annotate AST with merge info
+                annotate_ast_with_merges(
+                    raw_ast,
+                    mode=heading_merge_mode,
+                    punctuation=_request_heading_merge_punctuation(options, context.config),
                 )
 
-            # 2h. Annotate AST with merge info
-            annotate_ast_with_merges(
-                raw_ast,
-                mode=heading_merge_mode,
-                punctuation=_request_heading_merge_punctuation(options, context.config),
-            )
-
-            # 2j. Extract notes from AST
-            cleaned_ast, note_ctx = extract_notes_from_ast(raw_ast)
+                # 2j. Extract notes from AST
+                cleaned_ast, note_ctx = extract_notes_from_ast(raw_ast)
 
             # 2k. Recognize the frozen document-semantics v1 slice.  Errors
-            # are rejected before template resolution so an invalid semantic
+            # are rejected before rendering so an invalid semantic
             # document never produces a seemingly successful DOCX artifact.
             semantic_analysis = analyze_document_semantics(cleaned_ast, current_v3=True)
             if semantic_analysis.has_errors:
@@ -804,7 +835,6 @@ class MdToDocxConverter:
 
             # ── Stage 3: Template resolution ──────────────────────────
             progress.report_progress(40.0, "Resolving template")
-            template_name: str | None = options.get("template_name")
             code_font = _option_or_config(
                 options,
                 "code_font",
@@ -820,29 +850,6 @@ class MdToDocxConverter:
                 "E7E6E6",
             )
 
-            try:
-                doc = resolve_template(template_name)
-            except TemplatePackageError as exc:
-                return ConversionResult(
-                    task_id=task_id,
-                    success=False,
-                    error=ConversionErrorInfo(
-                        error_type="invalid_input",
-                        message=str(exc),
-                        diagnostic_code=exc.diagnostic_code,
-                    ),
-                    diagnostics=[
-                        ConversionDiagnostic(
-                            level="error",
-                            message=str(exc),
-                            code=exc.diagnostic_code,
-                        )
-                    ],
-                    metrics=ConversionMetrics(
-                        duration_ms=(time.monotonic() - t_start) * 1000.0,
-                        input_bytes=input_bytes,
-                    ),
-                )
             try:
                 validate_bibliography_placement(doc, bibliography_fragment)
             except BibliographyConversionError as exc:
@@ -877,11 +884,10 @@ class MdToDocxConverter:
                 )
             placeholder_para = find_body_placeholder(doc)
             render_body = placeholder_para is not None
-            if render_body:
-                try:
-                    prepare_note_context_for_document(doc, note_ctx)
-                except NoteWritebackError as exc:
-                    return _note_failure(task_id, t_start, exc)
+            try:
+                prepare_note_context_for_document(doc, note_ctx)
+            except NoteWritebackError as exc:
+                return _note_failure(task_id, t_start, exc)
             placeholder_map = scan_placeholders(doc)
             try:
                 bibliography_anchor = prepare_bibliography_anchor(
