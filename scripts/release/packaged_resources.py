@@ -68,6 +68,7 @@ REQUIRED_ASSET_FILES = (
     "icon.svg",
     "file_drop_empty_state.svg",
     "icons/FLUENT_SYSTEM_ICONS_LICENSE.txt",
+    "icons/README.md",
     "icons/about.svg",
     "icons/clear.svg",
     "icons/complete.svg",
