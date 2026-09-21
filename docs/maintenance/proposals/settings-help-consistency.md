@@ -1,6 +1,6 @@
 # Implementation proposal: consistent settings help
 
-Status: **draft implementation plan; production code is unchanged**. This document is not a completion report and does not supersede current specifications.
+Status: **implementation in progress on this Draft PR**. Production GUI/i18n changes and focused tests are now present on the branch; this document is not a completion report and does not supersede current specifications.
 
 ## Reported problems
 
