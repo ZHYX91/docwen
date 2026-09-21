@@ -199,8 +199,8 @@ DocWen は GUI に加えて、自動化スクリプト、バッチ処理、外�
 
 1. `inspect <file> [--json]`：まず実際のファイル種別、形式、利用可能なアクションを確認します。
 2. `schema convert`：`convert` の機械可読な契約と条件ルールを取得します。
-3. `convert <file> --to <fmt> --output <path> --dry-run --json`：出力を書き出さずに検出、正規化、ルーティングを事前確認します。
-4. `convert <file> --to <fmt> --output <path> ...`：問題がなければ本番の変換を実行します。
+3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`：出力を書き出さずに検出、正規化、ルーティングを事前確認します。
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`：問題がなければ本番の変換を実行します。
 
 ### よく使う例
 
@@ -245,8 +245,8 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 | コマンド / オプション | 説明 |
 | --- | --- |
-| `convert <file> --to <fmt> --output <path>` | 変換の統一エントリポイントです。 |
-| `convert <file> --to <fmt> --output <path> --dry-run --json` | 実変換は行わず、検出、正規化、ルーティング、有効オプションだけを事前確認します。 |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | 変換の統一エントリポイントです。 |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | 実変換は行わず、検出、正規化、ルーティング、有効オプションだけを事前確認します。 |
 | `schema convert` | `convert` の機械可読な契約、デフォルト値、条件、正規キーを出力します。 |
 | `validate <file> --check ...` | 文書校正（`typo/punct/symbol/sensitive/all/none`）。CLI エンベロープには `--json` を使用します。`--report` は省略可能なレポートファイルのパスです。 |
 | `inspect <file> [--json]` | ファイル種別/形式、推奨アクション、拡張子と内容の不一致に関する警告を確認します。 |
@@ -256,7 +256,7 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `resources list numbering-schemes` | 利用可能な番号付けスキームを一覧表示します。 |
 | `--template <id>` | `resources list templates` が返す正規リソース ID をそのまま指定します。表示名・ファイル名・パスは拒否されます。DOCX ID は `docx/doc/odt/rtf/wps/pdf`、XLSX ID は `xlsx/xls/ods/csv` 用です。 |
 | `--extract-img` / `--no-extract-img` / `--ocr` | `convert --to md` 向けの画像抽出と OCR オプションです。 |
-| `--image-mode file|base64` | Markdown エクスポート時の画像出力方法を制御します。 |
+| `--image-mode file|base64|embed|omit` | Markdown エクスポート時の画像出力方法を制御します。 |
 | `--ocr-placement image_md|main_md` | OCR テキストを画像側 Markdown に書くか、メイン Markdown に書くかを制御します。 |
 | `--heading-merge-mode punct_required|always|never` | `convert --to docx` 時の「見出し + 本文」結合戦略を制御します。 |
 | `--optimization <id>` | 最適化プロファイルを明示的に有効化します（`resources list optimizations` を参照）。 |
