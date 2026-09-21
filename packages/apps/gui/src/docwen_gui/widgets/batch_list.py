@@ -59,6 +59,7 @@ from PySide6.QtWidgets import (
 
 from docwen_gui.font_utils import DEFAULT_FONT_SIZE, resolve_font_size_preset
 from docwen_gui.i18n import t as _t
+from docwen_gui.resources import set_action_icon
 from docwen_gui.styles.design_tokens import Sizing
 from docwen_gui.styles.theme_semantics import apply_theme_class
 from docwen_gui.widgets.value_controls import ScrollSafeComboBox
@@ -244,6 +245,7 @@ class _InteractivePathLabel(WrappingLabel):
     def _create_context_menu(self) -> QMenu:
         menu = QMenu(self)
         copy_action = menu.addAction(_t("info_area.copy_path", "Copy Path"))
+        set_action_icon(copy_action, "copy.svg")
         copy_action.triggered.connect(self._copy_path_to_clipboard)
         return menu
 
@@ -486,6 +488,9 @@ class BatchEntryItemWidget(QWidget):
         self.primary_action_button = QPushButton(self.actions_row)
         self.retry_button = QPushButton(self.actions_row)
         self.remove_button = QPushButton(self.actions_row)
+        set_action_icon(self.primary_action_button, "info.svg")
+        set_action_icon(self.retry_button, "refresh.svg")
+        set_action_icon(self.remove_button, "delete.svg")
         self.primary_action_button.clicked.connect(self._emit_primary_action)
         self.retry_button.clicked.connect(lambda: self.action_requested.emit("retry_failed", self._entry.file_path))
         self.remove_button.clicked.connect(lambda: self.action_requested.emit("remove_entry", self._entry.file_path))
@@ -1138,6 +1143,8 @@ class BatchList(QWidget):
 
         self.move_up_button = QPushButton(_t("components.file_drop.batch_list.action_move_up", "Move Up"))
         self.move_down_button = QPushButton(_t("components.file_drop.batch_list.action_move_down", "Move Down"))
+        set_action_icon(self.move_up_button, "move_up.svg")
+        set_action_icon(self.move_down_button, "move_down.svg")
         self.move_up_button.setObjectName("batchReorderButton")
         self.move_down_button.setObjectName("batchReorderButton")
         self.move_up_button.setMinimumHeight(Sizing.CONTROL_HEIGHT)
@@ -1749,12 +1756,14 @@ class BatchList(QWidget):
         dir_group = QActionGroup(menu)
         dir_group.setExclusive(True)
         asc_action = menu.addAction(_t("components.file_drop.batch_list.sort_ascending", "Ascending"))
+        set_action_icon(asc_action, "move_up.svg")
         asc_action.setCheckable(True)
         asc_action.setChecked(self._vm.sort_ascending)
         asc_action.setData(True)
         dir_group.addAction(asc_action)
 
         desc_action = menu.addAction(_t("components.file_drop.batch_list.sort_descending", "Descending"))
+        set_action_icon(desc_action, "move_down.svg")
         desc_action.setCheckable(True)
         desc_action.setChecked(not self._vm.sort_ascending)
         desc_action.setData(False)
@@ -1882,10 +1891,12 @@ class BatchList(QWidget):
                 _t("components.file_drop.batch_list.retry_selected_failed", "Retry Selected Failed")
             )
             retry_selected.triggered.connect(lambda: self._vm.reset_failed_files(selected_failed))
+            set_action_icon(retry_selected, "refresh.svg")
 
         if category_failed:
             retry_all = menu.addAction(_t("components.file_drop.batch_list.retry_all_failed", "Retry All Failed"))
             retry_all.triggered.connect(lambda: self._vm.reset_failed_files(category_failed))
+            set_action_icon(retry_all, "refresh.svg")
 
         # Error details for failed entries
         if file_path:
@@ -1898,12 +1909,14 @@ class BatchList(QWidget):
                 _action_view.triggered.connect(
                     lambda: self.entry_action_requested.emit("show_error_details", file_path),
                 )
+                set_action_icon(_action_view, "error.svg")
                 _action_copy = menu.addAction(
                     _t("diagnostics.preview"),
                 )
                 _action_copy.triggered.connect(
                     lambda: self.entry_action_requested.emit("show_diagnostics", file_path),
                 )
+                set_action_icon(_action_copy, "logging.svg")
 
         # Location and removal actions remain useful for one selected file too.
         selected = self.get_selected_files(category)
@@ -1918,6 +1931,7 @@ class BatchList(QWidget):
             )
             _action_remove.triggered.connect(lambda _checked=False, paths=selected: self._remove_selected(paths))
             _action_remove.setEnabled(all(self._vm.can_remove_file(path) for path in selected))
+            set_action_icon(_action_remove, "delete.svg")
             _action_open = menu.addAction(
                 _t(
                     "components.file_drop.batch_list.action_open_selected_locations",
@@ -1926,6 +1940,7 @@ class BatchList(QWidget):
                 ),
             )
             _action_open.triggered.connect(lambda _checked=False, paths=selected: self._open_selected_locations(paths))
+            set_action_icon(_action_open, "open_folder.svg")
 
         menu.exec(list_widget.mapToGlobal(position))
 

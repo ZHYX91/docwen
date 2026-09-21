@@ -48,13 +48,17 @@ pytestmark = pytest.mark.gui
 
 
 def _dominant_opaque_pixmap_color(label) -> str | None:
-    pixmap = label.icon().pixmap(16, 16)
+    from PySide6.QtCore import QSize
+
+    pixmap = label.icon().pixmap(QSize(16, 16), 2.0)
     image = pixmap.toImage()
     colors = Counter(
         image.pixelColor(x, y).name().upper()
         for y in range(image.height())
         for x in range(image.width())
-        if image.pixelColor(x, y).alpha() > 0
+        # Antialiased fringe pixels lose RGB precision when Qt unpremultiplies.
+        # Fully opaque backing pixels test the actual semantic foreground.
+        if image.pixelColor(x, y).alpha() == 255
     )
     return colors.most_common(1)[0][0] if colors else None
 

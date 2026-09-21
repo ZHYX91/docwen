@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QEvent, QRect, QSize, Qt
-from PySide6.QtGui import QPalette
+from PySide6.QtGui import QIcon, QPalette
 from PySide6.QtWidgets import QPushButton, QSizePolicy, QStyle, QStyleOptionButton, QStylePainter
 
 from ..styles.design_tokens import Border, Sizing, Spacing
@@ -24,13 +24,24 @@ class ActionButton(QPushButton):
 
     def heightForWidth(self, width: int) -> int:
         horizontal_padding = 2 * (Spacing.MD + Border.THIN)
+        if not self.icon().isNull():
+            horizontal_padding += self.iconSize().width() + Spacing.SM
         vertical_padding = 2 * (Spacing.XS + Border.THIN)
         text_rect = self.fontMetrics().boundingRect(
             QRect(0, 0, max(1, width - horizontal_padding), 100000),
             Qt.TextFlag.TextWordWrap,
             self.text(),
         )
-        return max(Sizing.ACTION_HEIGHT, text_rect.height() + vertical_padding)
+        icon_height = 0 if self.icon().isNull() else self.iconSize().height()
+        return max(Sizing.ACTION_HEIGHT, max(text_rect.height(), icon_height) + vertical_padding)
+
+    def setIcon(self, icon: QIcon) -> None:
+        super().setIcon(icon)
+        self._sync_height()
+
+    def setIconSize(self, size: QSize) -> None:
+        super().setIconSize(size)
+        self._sync_height()
 
     def setText(self, text: str) -> None:
         super().setText(text)
@@ -59,12 +70,26 @@ class ActionButton(QPushButton):
             super().paintEvent(event)
             return
         contents = style.subElementRect(QStyle.SubElement.SE_PushButtonContents, option, self)
-        if self.fontMetrics().horizontalAdvance(self.text()) <= contents.width():
+        icon_width = self.iconSize().width() + Spacing.SM if not self.icon().isNull() else 0
+        if self.fontMetrics().horizontalAdvance(self.text()) + icon_width <= contents.width():
             super().paintEvent(event)
             return
         painter = QStylePainter(self)
         option.text = ""
+        option.icon = QIcon()
         painter.drawControl(QStyle.ControlElement.CE_PushButton, option)
+        if icon_width:
+            icon_rect = QRect(
+                contents.left(),
+                contents.center().y() - self.iconSize().height() // 2,
+                self.iconSize().width(),
+                self.iconSize().height(),
+            )
+            icon_rect = QStyle.visualRect(self.layoutDirection(), contents, icon_rect)
+            mode = QIcon.Mode.Normal if self.isEnabled() else QIcon.Mode.Disabled
+            self.icon().paint(painter, icon_rect, Qt.AlignmentFlag.AlignCenter, mode)
+            text_rect = contents.adjusted(icon_width, 0, 0, 0)
+            contents = QStyle.visualRect(self.layoutDirection(), contents, text_rect)
         painter.drawItemText(
             contents,
             Qt.AlignmentFlag.AlignCenter | Qt.TextFlag.TextWordWrap,
