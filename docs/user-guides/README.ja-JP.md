@@ -591,7 +591,7 @@ Assistant 3.1 は Windows デスクトップ専用のままで、Linux/macOS の
 
 ### インストール
 
-DocWen Assistant 3.1 は DocWen Machine Protocol v2 と単一の Artifact Bundle v3 契約を使用します。
+DocWen Assistant 3.1 には DocWen 0.13.0 以降が必要です。変換・校正などの内容操作は Machine Protocol v2 と Artifact Bundle v3 を使用し、デスクトップアプリの起動／オープンは独立したローカル GUI 制御を使用します。
 ソースのバージョンだけでは公開済みであることを証明できません。互換性のある公開済み DocWen リリースを
 明示した数字形式のリリースだけをインストールしてください。
 
