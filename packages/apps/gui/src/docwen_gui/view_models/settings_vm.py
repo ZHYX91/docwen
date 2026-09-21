@@ -575,11 +575,25 @@ class SettingsViewModel(QObject):
             self.status_changed.emit(f"{_t('settings.status.apply_failed')}{failure_detail}", True)
             return False
 
+        # A narrow transaction preserves other writers' values. Keep Cancel's
+        # baseline and the visible draft in agreement with those unedited values.
+        cfg_port = getattr(self._controller, "config_port", None)
+        raw = self._try_snapshot_config_port(cfg_port) if cfg_port is not None else None
+        if raw is not None:
+            source = self._map_raw_to_config(raw)
+            edited_paths = _changed_model_paths(baseline, draft)
+            for path in _changed_model_paths(baseline, source):
+                if not any(_model_paths_overlap(path, edited) for edited in edited_paths):
+                    _write_model_path(draft, path, _read_model_path(source, path))
         with QMutexLocker(self._mutex):
+            refreshed = bool(_changed_model_paths(self._config, draft))
+            self._config = draft
             self._config.mark_clean()
             self._snapshot = deepcopy(self._config)
             self._persisted_baseline = deepcopy(self._config)
             self._is_dirty = False
+        if refreshed:
+            self.config_reloaded.emit()
         self.status_changed.emit(_t("settings.status.apply_success"), False)
         self.dirty_state_changed.emit(False)
         return True
@@ -1292,6 +1306,21 @@ class SettingsViewModel(QObject):
         if cfg_port is None:
             return True
 
+        try:
+            from docwen_gui.i18n import get_locale
+
+            title_locale = get_locale()
+        except Exception:
+            title_locale = config.gui.language
+        values = self._serialize_config_values(config, title_locale=title_locale)
+        if baseline is not None:
+            previous = self._serialize_config_values(baseline, title_locale=title_locale)
+            values = {key: value for key, value in values.items() if previous.get(key, _MISSING) != value}
+        values = self._filter_unchanged_config_values(cfg_port, values)
+        return self._persist_config_values(cfg_port, values)
+
+    def _serialize_config_values(self, config: SettingsConfig, *, title_locale: str) -> dict[str, Any]:
+        """Serialize effective draft or baseline through the same key mapping."""
         values: dict[str, Any] = {}
 
         def put(key: str, value: Any) -> None:
@@ -1406,13 +1435,9 @@ class SettingsViewModel(QObject):
         put("proofread.engine.enable_sensitive_word", proof.sensitive_word)
         put("proofread.skip.code_blocks", proof.skip_code_blocks)
         put("proofread.skip.quote_blocks", proof.skip_quote_blocks)
-        baseline_proof = baseline.proofread if baseline is not None else None
-        if baseline_proof is None or proof.symbol_mappings != baseline_proof.symbol_mappings:
-            put("proofread.symbol_map.entries", proof.symbol_mappings)
-        if baseline_proof is None or proof.typos_dict != baseline_proof.typos_dict:
-            put("proofread.typos.entries", proof.typos_dict)
-        if baseline_proof is None or proof.sensitive_words != baseline_proof.sensitive_words:
-            put("proofread.sensitive_words.entries", proof.sensitive_words)
+        put("proofread.symbol_map.entries", proof.symbol_mappings)
+        put("proofread.typos.entries", proof.typos_dict)
+        put("proofread.sensitive_words.entries", proof.sensitive_words)
 
         exp = config.export
         put("ocr.language", exp.ocr_language)
@@ -1421,16 +1446,8 @@ class SettingsViewModel(QObject):
         put("conversion.export.base64_compress_enabled", bool(exp.base64_compress_enabled))
         put("conversion.export.base64_compress_threshold_kb", int(exp.base64_compress_threshold_kb))
         put("conversion.ocr_output.show_blockquote_title", bool(exp.ocr_title_enabled))
-        try:
-            from docwen_gui.i18n import get_locale
-
-            title_locale = get_locale()
-        except Exception:
-            title_locale = config.gui.language
         put(f"conversion.ocr_output.blockquote_title_override_by_locale.{title_locale}", exp.ocr_title_text)
-
-        values = self._filter_unchanged_config_values(cfg_port, values)
-        return self._persist_config_values(cfg_port, values)
+        return values
 
     @staticmethod
     def _snapshot_dotted_value(snapshot: Mapping[str, Any], dotted_key: str) -> object:

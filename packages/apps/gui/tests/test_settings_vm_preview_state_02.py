@@ -35,6 +35,45 @@ class TestChangedOnlyPersistence:
         assert vm.apply_changes() is True
         assert batches == [{"gui.window.auto_center": new_value}]
 
+    def test_unchanged_apply_does_not_write_model_defaults(self, vm, config_port, monkeypatch) -> None:
+        batches: list[dict[str, object]] = []
+        monkeypatch.setattr(config_port, "set_many", lambda values: batches.append(dict(values)) or True)
+        vm.begin_session()
+        assert vm.apply_changes() is True
+        assert batches == []
+
+    def test_apply_preserves_external_edit_and_cancel_keeps_applied_baseline(
+        self, vm, config_port, monkeypatch
+    ) -> None:
+        vm.begin_session()
+        vm.set_field(SECTION_GUI, "auto_center", True)
+        assert config_port.set_many({"gui.theme.default_theme": "dark"}) is True
+        batches: list[dict[str, object]] = []
+        real_set_many = config_port.set_many
+
+        def persist(values):
+            batches.append(dict(values))
+            return real_set_many(values)
+
+        monkeypatch.setattr(config_port, "set_many", persist)
+        assert vm.apply_changes() is True
+        assert batches == [{"gui.window.auto_center": True}]
+        assert config_port.snapshot()["gui"]["theme"]["default_theme"] == "dark"
+        assert vm.persisted_config.gui.theme == "dark"
+        vm.set_field(SECTION_GUI, "auto_center", False)
+        vm.cancel_changes()
+        assert vm.config.gui.auto_center is True
+        assert vm.config.gui.theme == "dark"
+        assert len(batches) == 1
+
+    def test_apply_can_write_false_after_prior_apply(self, vm, config_port) -> None:
+        vm.begin_session()
+        vm.set_field(SECTION_GUI, "auto_center", True)
+        assert vm.apply_changes() is True
+        vm.set_field(SECTION_GUI, "auto_center", False)
+        assert vm.apply_changes() is True
+        assert config_port.snapshot()["gui"]["window"]["auto_center"] is False
+
 
 class TestPartialPersistenceFailure:
     """A failed multi-file Apply must reconcile its partial source honestly."""
