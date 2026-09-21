@@ -38,9 +38,11 @@ class MermaidControls(QWidget):
         layout.addWidget(self.path, 1)
         layout.addWidget(browse)
         owner.add_form_row(form, t("settings.formatting.mermaid_path"), self)
-        self.status = owner.add_form_description(form, "")
+        self.status = QLabel()
+        self.status.setWordWrap(True)
         self.status.setTextFormat(Qt.TextFormat.PlainText)
         self.status.setObjectName("formattingMermaidAvailability")
+        form.addRow(self.status)
         for key, label, callback in (
             ("mermaid_recheck", t("settings.formatting.mermaid_recheck"), self.refresh),
             ("mermaid_test", t("settings.formatting.mermaid_test"), self.test_render),
