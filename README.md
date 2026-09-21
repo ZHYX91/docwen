@@ -605,7 +605,7 @@ A companion Obsidian plugin is published separately and works in tandem with the
 
 DocWen Core's runtime/control transport uses a Windows named pipe or an AF_UNIX socket on
 Linux/macOS. A file lock only establishes single-instance ownership; files are not used to transport
-control commands. This describes the Core transport only. DocWen Assistant 3.0 remains Windows
+control commands. This describes the Core transport only. DocWen Assistant 3.1 remains Windows
 desktop-only and has no Linux/macOS combination acceptance.
 
 1.  **First Click** → Launch converter and pass current file.
@@ -614,9 +614,10 @@ desktop-only and has no Linux/macOS combination acceptance.
 
 ### Installation
 
-DocWen Assistant 3.0 uses DocWen Machine Protocol v2 and the single Artifact Bundle v3 contract. Its
-source version does not prove publication; install only a numeric release that explicitly identifies a
-compatible published DocWen release.
+DocWen Assistant 3.1 is paired with DocWen 0.13.0 or later, using DocWen Machine Protocol v2 and the
+single Artifact Bundle v3 contract for content operations. Launch/open uses DocWen's separate local GUI
+control surface. Source versions do not prove publication; install only numeric releases that explicitly
+identify compatible published versions.
 
 ## 🔌 OpenClaw (Plugin + Skill)
 
