@@ -1,6 +1,6 @@
 # Implementation proposal: compact file-format warning
 
-Status: **draft implementation plan; production code is unchanged**. This document records intended work, not an implemented GUI capability.
+Status: **implementation in progress on this Draft PR**. Single-file and batch presentation code is now present on the branch, but it is not a released GUI capability until validation and merge.
 
 ## User-visible outcome
 
