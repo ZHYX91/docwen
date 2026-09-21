@@ -535,6 +535,19 @@ embed = "插入內容"
 # 格式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.formatting]
+mermaid_auto = "自動尋找"
+mermaid_browse = "選擇 Mermaid CLI"
+mermaid_path = "CLI 路徑："
+mermaid_recheck = "重新偵測"
+mermaid_test = "測試轉譯"
+mermaid_install = "安裝說明"
+mermaid_incompatible = "版本不相容：CLI {cli} / Mermaid {mermaid}；兩者皆需 11.16 以上的 11.x 版本。"
+mermaid_testing = "正在轉譯測試圖…"
+mermaid_browser_missing = "缺少配套瀏覽器。請依安裝說明安裝瀏覽器後重新測試。"
+mermaid_test_failed = "測試轉譯失敗：{reason}"
+mermaid_test_passed = "可用：測試圖已成功轉譯。"
+mermaid_ready = "已偵測到 CLI {cli} / Mermaid {mermaid}；瀏覽器可用性將於轉換時檢查。"
+mermaid_unavailable = "圖片轉譯不可用：請安裝本機 CLI 與 Mermaid 11.16 以上的 11.x 版本，並將 Node 加入 PATH。失敗時保留程式碼。"
 # 文档转为Markdown部分
 docx_to_md_section = "文件轉為Markdown"
 format_processing = "格式處理"
@@ -594,6 +607,12 @@ heading_merge_punctuation_tooltip = "「有標點才合併」模式下用來觸�
 # MD转文档分隔符映射
 md_separator_mapping = "分隔符映射"
 md_separator_mapping_tooltip = "配置 Markdown 分隔符轉換為哪種 Word 分頁符/分節符/分隔線\n\n分頁符：Word 中的分頁符\n分節符：Word 中的分節符（下一頁類型）\n分隔線：段落底部邊框（視覺分隔線）"
+mermaid_title = "Mermaid 圖表"
+mermaid_tooltip = "選擇 Mermaid 圍欄程式碼區塊在文件中渲染為圖片，或保留為原始碼。圖片模式使用本機 Mermaid CLI；渲染不可用或失敗時會回退為程式碼區塊並回報警告。"
+mermaid_mode_label = "輸出方式："
+mermaid_mode_tooltip = "選擇 Mermaid 圍欄程式碼區塊寫入產生文件時的呈現方式。"
+mermaid_code = "保留為程式碼區塊"
+mermaid_image = "渲染為圖片"
 dash_label = "--- (三個短橫線):"
 dash_tooltip = "Markdown --- 分隔符轉換為 Word 分頁符/分節符"
 asterisk_label = "*** (三個星號):"

@@ -535,6 +535,26 @@ embed = "Вставить контент"
 # 格式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.formatting]
+mermaid_auto = "Автоматический поиск"
+mermaid_browse = "Выбрать Mermaid CLI"
+mermaid_path = "Путь к CLI:"
+mermaid_recheck = "Проверить снова"
+mermaid_test = "Проверить отрисовку"
+mermaid_install = "Инструкция по установке"
+mermaid_incompatible = "Несовместимые версии: CLI {cli} / Mermaid {mermaid}; требуются версии 11.16+ из семейства 11.x."
+mermaid_testing = "Отрисовка тестовой диаграммы…"
+mermaid_browser_missing = "Совместимый браузер не найден. Установите его по инструкции и повторите проверку."
+mermaid_test_failed = "Ошибка тестовой отрисовки: {reason}"
+mermaid_test_passed = "Доступно: тестовая диаграмма создана."
+
+mermaid_title = "Диаграммы Mermaid"
+mermaid_tooltip = "Создавать изображения через локальную Mermaid CLI или сохранять код. При ошибке код сохраняется с предупреждением."
+mermaid_mode_label = "Вывод:"
+mermaid_mode_tooltip = "Выберите способ отображения блоков Mermaid в документах."
+mermaid_code = "Сохранить код"
+mermaid_image = "Создать изображение"
+mermaid_ready = "Обнаружены CLI {cli} / Mermaid {mermaid}. Браузер проверяется при преобразовании."
+mermaid_unavailable = "Изображения недоступны: установите локальную CLI и Mermaid 11.16+ (11.x), добавьте Node в PATH. При ошибке код сохраняется."
 # 文档转为Markdown部分
 docx_to_md_section = "Документ в Markdown"
 format_processing = "Обработка формата"

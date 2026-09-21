@@ -535,6 +535,26 @@ embed = "콘텐츠 임베드"
 # 格式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.formatting]
+mermaid_auto = "자동 검색"
+mermaid_browse = "Mermaid CLI 선택"
+mermaid_path = "CLI 경로:"
+mermaid_recheck = "다시 검색"
+mermaid_test = "렌더링 테스트"
+mermaid_install = "설치 안내"
+mermaid_incompatible = "호환되지 않는 버전: CLI {cli} / Mermaid {mermaid}. 둘 다 11.16 이상인 11.x가 필요합니다."
+mermaid_testing = "테스트 다이어그램 렌더링 중…"
+mermaid_browser_missing = "호환 브라우저가 없습니다. 설치 안내에 따라 브라우저를 설치한 후 다시 테스트하세요."
+mermaid_test_failed = "렌더링 테스트 실패: {reason}"
+mermaid_test_passed = "사용 가능: 테스트 다이어그램을 렌더링했습니다."
+
+mermaid_title = "Mermaid 다이어그램"
+mermaid_tooltip = "로컬 Mermaid CLI로 이미지를 만들거나 코드를 유지합니다. 렌더링 실패 시 경고와 함께 코드를 유지합니다."
+mermaid_mode_label = "출력:"
+mermaid_mode_tooltip = "문서에서 Mermaid 코드 블록을 표시할 방법을 선택합니다."
+mermaid_code = "코드 블록 유지"
+mermaid_image = "이미지로 출력"
+mermaid_ready = "CLI {cli} / Mermaid {mermaid} 감지됨. 브라우저는 변환 시 확인합니다."
+mermaid_unavailable = "이미지 출력 불가: 로컬 CLI 및 Mermaid 11.16 이상(11.x)을 설치하고 Node를 PATH에 추가하세요. 실패 시 코드를 유지합니다."
 # 文档转为Markdown部分
 docx_to_md_section = "문서 → 마크다운"
 format_processing = "서식 처리"

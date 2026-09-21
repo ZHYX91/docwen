@@ -11,6 +11,7 @@ from docwen_core.markdown_extensions import EXTENSION_NAMES
 from ...i18n import t
 from ...view_models.settings_vm import SECTION_FORMATTING, SettingsViewModel
 from .base_tab import BaseSettingsTab
+from .mermaid_controls import MermaidControls
 
 
 def _sep_options() -> list[tuple[str, str]]:
@@ -69,6 +70,13 @@ def _syntax_indent_options() -> list[tuple[str, int]]:
     ]
 
 
+def _mermaid_options() -> list[tuple[str, str]]:
+    return [
+        (t("settings.formatting.mermaid_code", "Keep as code block"), "code"),
+        (t("settings.formatting.mermaid_image", "Render as image"), "image"),
+    ]
+
+
 class FormattingTab(BaseSettingsTab):
     """Formatting settings tab backed by typed draft state."""
 
@@ -87,6 +95,7 @@ class FormattingTab(BaseSettingsTab):
         self._sub_syntax: QComboBox = _cast(QComboBox, None)
         self._ul_syntax: QComboBox = _cast(QComboBox, None)
         self._indent_spaces: QComboBox = _cast(QComboBox, None)
+        self._mermaid_mode: QComboBox = _cast(QComboBox, None)
         self._dash_sep: QComboBox = _cast(QComboBox, None)
         self._asterisk_sep: QComboBox = _cast(QComboBox, None)
         self._underscore_sep: QComboBox = _cast(QComboBox, None)
@@ -181,6 +190,31 @@ class FormattingTab(BaseSettingsTab):
         )
         self.add_form_row(f3, t("settings.formatting.indent_spaces_label", "Indent:"), self._indent_spaces)
 
+        # ── MD → DOCX: Mermaid ────────────────────────────────────────
+        _c_mermaid, f_mermaid = self.add_settings_card(
+            f"{t('settings.formatting.md_to_docx_section', 'MD to DOCX')} — {t('settings.formatting.mermaid_title', 'Mermaid diagrams')}",
+            t(
+                "settings.formatting.mermaid_tooltip",
+                "Render Mermaid fenced blocks as images with the local Mermaid CLI, or keep the source as code. "
+                "If image rendering is unavailable or fails, DocWen preserves the code block and reports a warning.",
+            ),
+            object_name="formattingMdMermaidCard",
+        )
+        self._mermaid_mode = self.create_combobox(
+            _mermaid_options(),
+            t(
+                "settings.formatting.mermaid_mode_tooltip",
+                "Choose how Mermaid fenced blocks are written to generated documents.",
+            ),
+        )
+        self._mermaid_mode.setObjectName("formattingMermaidMode")
+        self.add_form_row(
+            f_mermaid,
+            t("settings.formatting.mermaid_mode_label", "Output:"),
+            self._mermaid_mode,
+        )
+        self._mermaid_controls = MermaidControls(self, f_mermaid, self._vm)
+
         # ── MD → DOCX: Separator Mapping ───────────────────────────────
         _c5, f5 = self.add_settings_card(
             f"{t('settings.formatting.md_to_docx_section', 'MD to DOCX')} — {t('settings.formatting.md_separator_mapping', 'Separator Mapping')}",
@@ -212,6 +246,7 @@ class FormattingTab(BaseSettingsTab):
         self._wire_combo(self._sub_syntax, "subscript_syntax")
         self._wire_combo(self._ul_syntax, "unordered_list_syntax")
         self._wire_combo(self._indent_spaces, "indent_spaces")
+        self._wire_combo(self._mermaid_mode, "mermaid_mode")
         self._wire_combo(self._dash_sep, "dash_sep")
         self._wire_combo(self._asterisk_sep, "asterisk_sep")
         self._wire_combo(self._underscore_sep, "underscore_sep")
@@ -253,6 +288,8 @@ class FormattingTab(BaseSettingsTab):
         self.set_combo_data(self._sub_syntax, fmt.subscript_syntax)
         self.set_combo_data(self._ul_syntax, fmt.unordered_list_syntax)
         self.set_combo_data(self._indent_spaces, fmt.indent_spaces)
+        self.set_combo_data(self._mermaid_mode, fmt.mermaid_mode)
+        self._mermaid_controls.load(fmt.mermaid_cli_path)
         self.set_combo_data(self._dash_sep, fmt.dash_sep)
         self.set_combo_data(self._asterisk_sep, fmt.asterisk_sep)
         self.set_combo_data(self._underscore_sep, fmt.underscore_sep)

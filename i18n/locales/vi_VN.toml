@@ -584,6 +584,26 @@ embed = "Nhúng nội dung"
 # 格式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.formatting]
+mermaid_auto = "Tự động tìm"
+mermaid_browse = "Chọn Mermaid CLI"
+mermaid_path = "Đường dẫn CLI:"
+mermaid_recheck = "Kiểm tra lại"
+mermaid_test = "Thử tạo ảnh"
+mermaid_install = "Hướng dẫn cài đặt"
+mermaid_incompatible = "Phiên bản không tương thích: CLI {cli} / Mermaid {mermaid}; cả hai cần 11.16+ thuộc dòng 11.x."
+mermaid_testing = "Đang tạo sơ đồ thử…"
+mermaid_browser_missing = "Thiếu trình duyệt tương thích. Cài theo hướng dẫn rồi thử lại."
+mermaid_test_failed = "Tạo ảnh thử thất bại: {reason}"
+mermaid_test_passed = "Sẵn sàng: đã tạo sơ đồ thử thành công."
+
+mermaid_title = "Sơ đồ Mermaid"
+mermaid_tooltip = "Tạo ảnh từ khối Mermaid bằng CLI cục bộ hoặc giữ mã nguồn. Khi lỗi, giữ mã nguồn và hiển thị cảnh báo."
+mermaid_mode_label = "Đầu ra:"
+mermaid_mode_tooltip = "Chọn cách hiển thị khối Mermaid trong tài liệu."
+mermaid_code = "Giữ khối mã"
+mermaid_image = "Tạo hình ảnh"
+mermaid_ready = "Đã tìm thấy CLI {cli} / Mermaid {mermaid}. Trình duyệt được kiểm tra khi chuyển đổi."
+mermaid_unavailable = "Chưa thể tạo ảnh: cài CLI cục bộ và Mermaid 11.16+ (11.x), thêm Node vào PATH. Khi lỗi, mã nguồn được giữ lại."
 # 文档转为Markdown部分
 docx_to_md_section = "Tài liệu → Markdown"
 format_processing = "Xử lý định dạng"

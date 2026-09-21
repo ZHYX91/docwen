@@ -29,18 +29,21 @@ def test_formatting_tab_updates_combo_fields_including_indent(qapp) -> None:
 
     assert _combo_values(document._body_format) == ["preserve", "discard"]  # pyright: ignore[reportPrivateUsage]
     assert _combo_values(tab._indent_spaces) == [2, 4]  # pyright: ignore[reportPrivateUsage]
+    assert _combo_values(tab._mermaid_mode) == ["code", "image"]  # pyright: ignore[reportPrivateUsage]
     assert _combo_values(text._heading_merge_mode) == ["punct_required", "always", "never"]  # pyright: ignore[reportPrivateUsage]
     assert _combo_values(text._table_style_mode) == ["builtin", "custom"]  # pyright: ignore[reportPrivateUsage]
     assert _combo_values(text._builtin_table_style) == ["three_line_table", "table_grid"]  # pyright: ignore[reportPrivateUsage]
 
     tab.set_combo_data(document._body_format, "discard")  # pyright: ignore[reportPrivateUsage]
     tab.set_combo_data(tab._indent_spaces, 2)  # pyright: ignore[reportPrivateUsage]
+    tab.set_combo_data(tab._mermaid_mode, "image")  # pyright: ignore[reportPrivateUsage]
     tab.set_combo_data(text._heading_merge_mode, "always")  # pyright: ignore[reportPrivateUsage]
     tab.set_combo_data(text._table_style_mode, "custom")  # pyright: ignore[reportPrivateUsage]
     text._custom_table_style_name.setText("My Table")  # pyright: ignore[reportPrivateUsage]
 
     assert vm.config.document.body_format == "discard"
     assert vm.config.formatting.indent_spaces == 2
+    assert vm.config.formatting.mermaid_mode == "image"
     assert vm.config.text.heading_merge_mode == "always"
     assert vm.config.text.table_style_mode == "custom"
     assert vm.config.text.custom_table_style_name == "My Table"
@@ -153,6 +156,7 @@ def test_formatting_tab_user_edits_update_all_view_model_fields(qapp) -> None:
         ("_sub_syntax", "subscript_syntax", "extended"),
         ("_ul_syntax", "unordered_list_syntax", "plus"),
         ("_indent_spaces", "indent_spaces", 2),
+        ("_mermaid_mode", "mermaid_mode", "image"),
         ("_md_body_format", "md_body_format", "apply"),
         ("_md_heading_format", "md_heading_format", "keep"),
         ("_md_table_header_format", "md_table_header_format", "remove"),

@@ -43,6 +43,12 @@ heading_formatting_mode = "remove"
 # 注意：表格样式通常已定义表头加粗，建议使用 "remove" 避免冗余
 table_header_formatting_mode = "remove"
 
+# Mermaid 围栏块输出方式:
+# "code"  - 保留为代码块（兼容既有行为）
+# "image" - 使用本地 Mermaid CLI (mmdc) 渲染为 PNG；失败时回退为代码块并报告警告
+mermaid_mode = "code"
+mermaid_cli_path = ""
+
 # 标题+正文合并模式（MD → DOCX 时生效）
 # 控制小标题与紧邻下一行普通正文是否合并为同一段落
 # "punct_required" - 标题末尾有结束标点且下一行是普通正文时合并（默认）

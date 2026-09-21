@@ -82,6 +82,7 @@ from docwen_plugin_markdown.template_filler import fill_template
 from docwen_plugin_markdown.template_policy import template_list_separator
 from docwen_plugin_markdown.template_utils import (
     TemplatePackageError,
+    body_content_extent,
     extract_body_font,
     extract_body_paragraph_format,
     extract_body_style,
@@ -933,6 +934,14 @@ class MdToDocxConverter:
                 allowed={"apply", "keep", "remove"},
             )
             formatting_mode = _resolve_body_formatting_mode(options, context.config)
+            mermaid_mode = _option_or_config(
+                options,
+                "mermaid_mode",
+                context.config,
+                "conversion.md_to_docx.mermaid_mode",
+                "code",
+                allowed={"code", "image"},
+            )
             table_style_mode = _option_or_config(
                 options,
                 "table_style_mode",
@@ -1013,6 +1022,10 @@ class MdToDocxConverter:
                     note_ctx=note_ctx,
                     source_file_path=input_path,
                     declared_resource_resolver=declared_resource_resolver,
+                    mermaid_mode=mermaid_mode,
+                    mermaid_cli_path=str(context.config.get("conversion.md_to_docx.mermaid_cli_path", "") or ""),
+                    mermaid_work_dir=str(workspace.staging_dir),
+                    content_extent=body_content_extent(doc, placeholder_para),
                 )
                 try:
                     paragraphs = renderer.render(semantic_analysis.ast)
@@ -1204,6 +1217,10 @@ class MdToDocxConverter:
                     ),
                 )
                 for item in managed_styles.conflicts
+            ]
+            diagnostics[0:0] = [
+                ConversionDiagnostic(level="warning", message=message, code=code)
+                for code, message in (renderer.warnings if renderer is not None else ())
             ]
             if approximate_warning:
                 diagnostics.insert(

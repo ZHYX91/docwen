@@ -535,6 +535,26 @@ embed = "Inhalt einfügen"
 # 格式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.formatting]
+mermaid_auto = "Automatisch suchen"
+mermaid_browse = "Mermaid CLI auswählen"
+mermaid_path = "CLI-Pfad:"
+mermaid_recheck = "Erneut erkennen"
+mermaid_test = "Rendern testen"
+mermaid_install = "Installationsanleitung"
+mermaid_incompatible = "Inkompatibel: CLI {cli} / Mermaid {mermaid}; beide benötigen 11.16+ aus der 11.x-Reihe."
+mermaid_testing = "Testdiagramm wird gerendert…"
+mermaid_browser_missing = "Passender Browser fehlt. Browser gemäß Installationsanleitung installieren und erneut testen."
+mermaid_test_failed = "Test fehlgeschlagen: {reason}"
+mermaid_test_passed = "Verfügbar: Testdiagramm erfolgreich gerendert."
+
+mermaid_title = "Mermaid-Diagramme"
+mermaid_tooltip = "Mermaid-Codeblöcke als Bild mit der lokalen Mermaid CLI rendern oder als Code beibehalten. Bei Fehlern bleibt der Code mit einer Warnung erhalten."
+mermaid_mode_label = "Ausgabe:"
+mermaid_mode_tooltip = "Darstellung von Mermaid-Codeblöcken im Dokument auswählen."
+mermaid_code = "Als Codeblock beibehalten"
+mermaid_image = "Als Bild rendern"
+mermaid_ready = "CLI {cli} / Mermaid {mermaid} erkannt. Der Browser wird bei der Konvertierung geprüft."
+mermaid_unavailable = "Bilddarstellung nicht verfügbar: lokale CLI und Mermaid 11.16+ (11.x) sowie Node im PATH erforderlich. Bei Fehlern bleibt der Code erhalten."
 # 文档转为Markdown部分
 docx_to_md_section = "Dokument zu Markdown"
 format_processing = "Formatverarbeitung"

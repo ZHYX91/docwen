@@ -584,6 +584,26 @@ embed = "Incrustar contenido"
 # 格式设置选项卡
 # -----------------------------------------------------------------------------
 [settings.formatting]
+mermaid_auto = "Detección automática"
+mermaid_browse = "Seleccionar Mermaid CLI"
+mermaid_path = "Ruta de CLI:"
+mermaid_recheck = "Detectar de nuevo"
+mermaid_test = "Probar renderizado"
+mermaid_install = "Instrucciones de instalación"
+mermaid_incompatible = "Versiones incompatibles: CLI {cli} / Mermaid {mermaid}; ambas requieren 11.16+ de la serie 11.x."
+mermaid_testing = "Renderizando un diagrama de prueba…"
+mermaid_browser_missing = "Falta el navegador compatible. Instálelo según las instrucciones y vuelva a probar."
+mermaid_test_failed = "Error de renderizado: {reason}"
+mermaid_test_passed = "Disponible: diagrama de prueba renderizado."
+
+mermaid_title = "Diagramas Mermaid"
+mermaid_tooltip = "Renderizar bloques Mermaid como imágenes con la CLI local o conservar el código. Si falla, se conserva el código con una advertencia."
+mermaid_mode_label = "Salida:"
+mermaid_mode_tooltip = "Elija cómo se muestran los bloques Mermaid en los documentos."
+mermaid_code = "Conservar como código"
+mermaid_image = "Renderizar como imagen"
+mermaid_ready = "Detectado: CLI {cli} / Mermaid {mermaid}. El navegador se comprueba al convertir."
+mermaid_unavailable = "Imágenes no disponibles: instale la CLI local y Mermaid 11.16+ (11.x), con Node en PATH. Si falla, se conserva el código."
 # 文档转为Markdown部分
 docx_to_md_section = "Documento → Markdown"
 format_processing = "Procesamiento de formato"

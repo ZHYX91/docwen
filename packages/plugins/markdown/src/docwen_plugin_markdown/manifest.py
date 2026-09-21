@@ -101,6 +101,15 @@ MD_TO_DOCX_OPTIONS_SCHEMA: dict = {
                 "inline formatting from header cells."
             ),
         },
+        "mermaid_mode": {
+            "type": "string",
+            "enum": ["code", "image"],
+            "default": "code",
+            "description": (
+                "Mermaid fenced-block output: code preserves the source as a code block; "
+                "image renders a PNG with the local Mermaid CLI and falls back to code on failure."
+            ),
+        },
         "code_font": {
             "type": "string",
             "default": "Consolas",
