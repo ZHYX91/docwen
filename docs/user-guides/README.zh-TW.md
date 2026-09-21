@@ -198,8 +198,8 @@ pip install pillow-heif
 
 1. `inspect <file> [--json]`：先識別檔案的真實類別、格式與可執行動作。
 2. `schema convert`：讀取 `convert` 的機器可讀參數契約與條件約束。
-3. `convert <file> --to <fmt> --output <path> --dry-run --json`：先預演檢測、正規化與路由結果，不直接落地轉換。
-4. `convert <file> --to <fmt> --output <path> ...`：確認後再執行正式轉換。
+3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`：先預演檢測、正規化與路由結果，不直接落地轉換。
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`：確認後再執行正式轉換。
 
 ### 常用範例
 
@@ -246,8 +246,8 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 | 命令/選項 | 說明 |
 | --- | --- |
-| `convert <file> --to <fmt> --output <path>` | 統一轉換入口。 |
-| `convert <file> --to <fmt> --output <path> --dry-run --json` | 只預演檢測、正規化、路由與生效參數，不執行實際轉換。 |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | 統一轉換入口。 |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | 只預演檢測、正規化、路由與生效參數，不執行實際轉換。 |
 | `schema convert` | 匯出 `convert` 的機器可讀參數契約、預設值、條件約束與規範鍵。 |
 | `validate <file> --check ...` | 文件校對（`typo/punct/symbol/sensitive/all/none`）。需要 CLI 頂層 Envelope JSON 時使用 `--json`；`--report` 是可選的報告檔案路徑。 |
 | `inspect <file> [--json]` | 查詢檔案類別/格式、建議動作，以及副檔名與內容不一致警告。 |
@@ -257,7 +257,7 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `resources list numbering-schemes` | 列出可用編號方案。 |
 | `--template <id>` | 原樣使用 `resources list templates` 回傳的 canonical 資源 ID；顯示名稱、檔名與路徑直接拒絕。DOCX ID 用於 `docx/doc/odt/rtf/wps/pdf`，XLSX ID 用於 `xlsx/xls/ods/csv`。 |
 | `--extract-img` / `--no-extract-img` / `--ocr` | `convert --to md` 的圖片提取與 OCR 選項。 |
-| `--image-mode file|base64` | 控制 Markdown 匯出時圖片的落地方式。 |
+| `--image-mode file|base64|embed|omit` | 控制 Markdown 匯出時圖片的落地方式。 |
 | `--ocr-placement image_md|main_md` | 控制 OCR 文字寫入圖片配套 Markdown 或主 Markdown。 |
 | `--heading-merge-mode punct_required|always|never` | 控制 `convert --to docx` 時「標題 + 正文」段落合併策略。 |
 | `--optimization <id>` | 明確啟用某個最佳化配置（可用列表見 `resources list optimizations`）。 |
