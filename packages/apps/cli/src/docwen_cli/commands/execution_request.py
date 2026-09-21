@@ -11,6 +11,7 @@ from collections.abc import Collection
 from typing import Any
 
 from docwen_application.controller import CapabilityUnavailableError
+from docwen_application.postprocessing import prepare_postprocess_options
 from docwen_cli.i18n import cli_t, get_cli_locale
 from docwen_core.detection import FileAdmissionError, inspect_file
 from docwen_core.detection.ooxml_signature import OOXML_SIGNATURE_INFO_METADATA_KEY
@@ -20,7 +21,7 @@ from docwen_core.models.file_inspection import (
     FileInspection,
     make_admission_acceptance,
 )
-from docwen_core.models.request import FileRef, OutputPolicy
+from docwen_core.models.request import POSTPROCESS_PROOFREAD_OPTION, FileRef, OutputPolicy
 
 
 def resolve_cli_action(args: argparse.Namespace) -> str:
@@ -41,6 +42,9 @@ def project_route_options(
     route_options: Collection[str],
     configured_ocr_language: str | None = None,
     ocr_requested: bool = False,
+    source_format: str = "",
+    target_format: str = "",
+    action_name: str = "",
 ) -> dict[str, Any]:
     """Validate and project options through one canonical runtime route.
 
@@ -50,12 +54,18 @@ def project_route_options(
     reconstructing route semantics from source categories or action names.
     """
 
+    prepared = prepare_postprocess_options(
+        options,
+        source_format=source_format,
+        target_format=target_format,
+        action_name=action_name,
+    )
     supported = frozenset(route_options)
-    unsupported = sorted(set(options) - supported)
+    unsupported = sorted(set(prepared) - supported - {POSTPROCESS_PROOFREAD_OPTION})
     if unsupported:
         raise ValueError(f"Canonical runtime route {route_id} does not declare option(s): {', '.join(unsupported)}")
 
-    projected = dict(options)
+    projected = dict(prepared)
     if "to_md_enable_ocr" in supported:
         # ``--ocr`` is deliberately opt-in at the CLI boundary.  Project the
         # negative default only after resolving a route that explicitly owns
