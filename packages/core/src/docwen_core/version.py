@@ -7,7 +7,7 @@ against this value by repository contract tests.
 
 from __future__ import annotations
 
-PRODUCT_VERSION = "0.12.1"
+PRODUCT_VERSION = "0.13.0"
 __version__ = PRODUCT_VERSION
 
 __all__ = ["PRODUCT_VERSION", "__version__"]
