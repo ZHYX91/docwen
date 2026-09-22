@@ -595,6 +595,7 @@ def _ocr_image_link(
     from docwen_core.detection import detect_content_format
     from docwen_core.export_semantics import format_image_link
     from docwen_core.text.ocr import OcrOutcome, OcrStatus, format_ocr_best_effort_warning, run_ocr_outcome
+    from docwen_core.text.table_recognition import enrich_ocr_table_structure
 
     image_link = format_image_link(filename, filename, style=image_link_style)
 
@@ -608,6 +609,9 @@ def _ocr_image_link(
             ocr_language=ocr_language,
             current_locale=current_locale,
         )
+        outcome, table_outcome = enrich_ocr_table_structure(image_path, outcome)
+        if table_outcome.message and table_outcome.status.value == "failed":
+            logger.warning("Table structure recognition failed for %s: %s", filename, table_outcome.message)
     except Exception as exc:
         outcome = OcrOutcome(OcrStatus.RECOGNITION_FAILED, message=str(exc))
 
@@ -616,6 +620,8 @@ def _ocr_image_link(
             logger.warning("%s %s", warning, outcome.message)
         return image_link
     ocr_text = outcome.recognized_text
+    if outcome.structured_markdown:
+        return f"{image_link}\n\n{outcome.structured_markdown}\n"
 
     if ocr_blockquote_title:
         return f"{image_link}\n\n> **{ocr_blockquote_title}**\n>\n> " + ocr_text.replace("\n", "\n> ") + "\n"
