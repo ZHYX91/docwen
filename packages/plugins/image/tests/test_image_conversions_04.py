@@ -16,7 +16,7 @@ pytestmark = pytest.mark.golden
 
 class TestImageToMarkdown:
     @pytest.mark.contract
-    def test_image_to_markdown_ocr_success_warns_and_preserves_recognized_text(
+    def test_image_to_markdown_ocr_success_is_informational_and_preserves_recognized_text(
         self, sample_png_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """OCR success path should append recognised text to the Markdown output."""
@@ -62,10 +62,11 @@ class TestImageToMarkdown:
             assert result.metrics.extra["ocr_chars"] == len("识别文本\n第二行")
             assert any(d.code == "IMG2MD-OCR-OK" for d in result.diagnostics)
             assert len(context.progress.diagnostics) == 1
-            warning = context.progress.diagnostics[0]
-            assert warning[2] == "OCR-BEST-EFFORT"
-            assert "status=success" in warning[1]
-            assert "may contain recognition errors or omissions" in warning[1]
+            notice = context.progress.diagnostics[0]
+            assert notice[0] == "info"
+            assert notice[2] == "OCR-QUALITY-NOTICE"
+            assert "status=success" in notice[1]
+            assert "may contain recognition errors or omissions" in notice[1]
 
     @pytest.mark.contract
     def test_image_to_markdown_ocr_disabled_skips_ocr(self, sample_png_path: Path) -> None:
