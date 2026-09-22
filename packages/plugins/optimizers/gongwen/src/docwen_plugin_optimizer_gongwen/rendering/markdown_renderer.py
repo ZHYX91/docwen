@@ -83,8 +83,11 @@ def render(
                 image_link_style=image_link_style,
                 export_semantics=export_semantics,
             )
+            ocr_markdown = pf.image_ocr_markdown.get(img_path, "")
             ocr_text = pf.image_ocr_texts.get(img_path, "")
-            if ocr_text:
+            if ocr_markdown:
+                img_md += f"\n\n{ocr_markdown}"
+            elif ocr_text:
                 img_md += f"\n> {ocr_text}"
             output_parts.append(img_md)
             output_parts.append("")
