@@ -204,13 +204,7 @@ def enrich_ocr_table_structure(
 
 
 def table_recognition_available(model_path: str | Path | None = None) -> bool:
-    if resolve_rapidtable_model(model_path) is None:
-        return False
-    try:
-        import rapid_table  # noqa: F401
-    except ImportError:
-        return False
-    return True
+    return resolve_rapidtable_model(model_path) is not None
 
 
 def recognize_table_markdown(
@@ -235,25 +229,21 @@ def recognize_table_markdown(
 
     try:
         import numpy as np
-        from rapid_table import ModelType, RapidTable, RapidTableInput
-    except ImportError as exc:
-        return TableRecognitionOutcome(TableRecognitionStatus.UNAVAILABLE, message=str(exc))
 
-    try:
+        from docwen_core.text._slanet_table import infer_table_html
+
         boxes = np.asarray([region.points for region in regions], dtype=np.float32)
         texts = tuple(region.text for region in regions)
         scores = tuple(region.confidence for region in regions)
-        config = RapidTableInput(
-            model_type=ModelType.SLANETPLUS,
-            model_dir_or_path=str(resolved_model),
-            use_ocr=True,
+        raw_html = infer_table_html(
+            image_path,
+            resolved_model,
+            boxes=boxes,
+            texts=texts,
+            scores=scores,
         )
-        engine = RapidTable(config)
-        result = engine(str(image_path), ocr_results=[(boxes, texts, scores)])
-        if not result.pred_htmls:
+        if not raw_html:
             return TableRecognitionOutcome(TableRecognitionStatus.NOT_TABLE)
-
-        raw_html = result.pred_htmls[0]
         normalized_html = html.unescape(raw_html)
         matched_regions = sum(1 for region in regions if region.text and region.text in normalized_html)
         minimum_matches = min(4, max(2, len(regions) // 3))
