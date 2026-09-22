@@ -406,8 +406,12 @@ def _extract_result_region(item: Any) -> OcrTextRegion | None:
         return None
 
     points: list[tuple[float, float]] = []
-    if isinstance(raw_points, (list, tuple)):
-        for raw_point in raw_points:
+    try:
+        normalized_points = raw_points.tolist() if hasattr(raw_points, "tolist") else raw_points
+    except Exception:
+        normalized_points = ()
+    if isinstance(normalized_points, (list, tuple)):
+        for raw_point in normalized_points:
             if not isinstance(raw_point, (list, tuple)) or len(raw_point) < 2:
                 points = []
                 break
