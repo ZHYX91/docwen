@@ -110,9 +110,9 @@ class TestImageToMarkdown:
                 },
             )
             result = ImageToMarkdownConverter().convert(context)
+            markdown = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
 
         assert result.success is True
-        markdown = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
         assert table_markdown in markdown
         assert "> 姓名" not in markdown
         assert result.metrics.extra["table_recognized"] is True
@@ -285,8 +285,11 @@ class TestTiffToMarkdown:
         assert "PAGE 4" not in primary_text
         assert private_pngs == []
         warnings = [diagnostic for diagnostic in result.diagnostics if diagnostic.code == "OCR-BEST-EFFORT"]
-        assert len(warnings) == 4
-        assert all(diagnostic.artifact_id is not None for diagnostic in warnings)
+        assert len(warnings) == 2
+        assert [warning.artifact_id for warning in warnings] == [
+            fragments[1].artifact_id,
+            fragments[2].artifact_id,
+        ]
         assert all("private" not in diagnostic.message for diagnostic in warnings)
 
     @pytest.mark.parametrize(
