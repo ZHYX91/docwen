@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import sys
-import types
 from pathlib import Path
 
 import pytest
@@ -53,6 +51,7 @@ def test_table_recognition_reuses_existing_ocr_geometry(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    import docwen_core.text._slanet_table as slanet
     from docwen_core.text.table_recognition import (
         TableRecognitionStatus,
         recognize_table_markdown,
@@ -64,45 +63,33 @@ def test_table_recognition_reuses_existing_ocr_geometry(
     model.write_bytes(b"model")
     observed: dict[str, object] = {}
 
-    class _ModelType:
-        SLANETPLUS = object()
+    def _infer(
+        image_path: str | Path,
+        model_path: str | Path,
+        *,
+        boxes: object,
+        texts: tuple[str, ...],
+        scores: tuple[float, ...],
+    ) -> str:
+        observed["image_path"] = str(image_path)
+        observed["model_path"] = str(model_path)
+        observed["boxes"] = boxes
+        observed["texts"] = texts
+        observed["scores"] = scores
+        return (
+            "<table><tr><th>姓名</th><th>金额</th></tr>"
+            "<tr><td>甲</td><td>100</td></tr></table>"
+        )
 
-    class _Input:
-        def __init__(self, **kwargs: object) -> None:
-            observed["config"] = kwargs
-
-    class _Engine:
-        def __init__(self, config: object) -> None:
-            observed["engine_config"] = config
-
-        def __call__(
-            self,
-            image_path: str,
-            *,
-            ocr_results: list[object],
-        ) -> object:
-            observed["image_path"] = image_path
-            observed["ocr_results"] = ocr_results
-            return types.SimpleNamespace(
-                pred_htmls=[
-                    "<table><tr><th>姓名</th><th>金额</th></tr>"
-                    "<tr><td>甲</td><td>100</td></tr></table>"
-                ]
-            )
-
-    monkeypatch.setitem(
-        sys.modules,
-        "rapid_table",
-        types.SimpleNamespace(ModelType=_ModelType, RapidTable=_Engine, RapidTableInput=_Input),
-    )
+    monkeypatch.setattr(slanet, "infer_table_html", _infer)
 
     outcome = recognize_table_markdown(image, _ocr_outcome(), model_path=model)
 
     assert outcome.status is TableRecognitionStatus.SUCCESS
     assert outcome.markdown == "| 姓名 | 金额 |\n| --- | --- |\n| 甲 | 100 |"
     assert observed["image_path"] == str(image)
-    ocr_results = observed["ocr_results"]
-    assert isinstance(ocr_results, list) and len(ocr_results) == 1
+    assert observed["model_path"] == str(model)
+    assert observed["texts"] == ("姓名", "金额", "甲", "100")
 
 
 def test_table_html_merged_cells_are_projected_without_dropping_values() -> None:
