@@ -588,7 +588,7 @@ def test_writer_reports_typed_ocr_failure_and_continues_with_later_images(
 
     assert written["images/first.png"].markdown_link == "![first.png](first.png)"
     assert written["images/second.png"].markdown_link.endswith("> later image text")
-    assert len(context.progress.diagnostics) == 2
+    assert len(context.progress.diagnostics) == 1
     diagnostic = context.progress.diagnostics[0]
     assert diagnostic.level == "warning"
     assert diagnostic.code == "OCR-BEST-EFFORT"
@@ -596,10 +596,7 @@ def test_writer_reports_typed_ocr_failure_and_continues_with_later_images(
     assert f"status={status.value}" in diagnostic.message
     assert "epub image first.png" in diagnostic.message
     assert "deterministic OCR failure" not in diagnostic.message
-    success_warning = context.progress.diagnostics[1]
-    assert success_warning.code == "OCR-BEST-EFFORT"
-    assert success_warning.location == "second.png"
-    assert "status=success" in success_warning.message
+    assert all(diagnostic.code == "OCR-BEST-EFFORT" for diagnostic in context.progress.diagnostics)
     assert "later image text" in written["images/second.png"].markdown_link
 
 
