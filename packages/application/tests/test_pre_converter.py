@@ -271,8 +271,6 @@ def test_pre_convert_honors_configured_word_priority(tmp_path, monkeypatch) -> N
     assert set(candidates) == {"wps_writer", "msoffice_word"}
 
 
-
-
 def test_wps_pre_convert_keeps_word_as_legal_backend_and_honors_word_first_priority(
     tmp_path,
     monkeypatch,
