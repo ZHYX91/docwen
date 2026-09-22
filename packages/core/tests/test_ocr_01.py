@@ -521,6 +521,25 @@ def test_run_ocr_outcome_reports_success(tmp_path: Path, monkeypatch: pytest.Mon
     assert outcome.regions[0].points == ((10.0, 20.0), (110.0, 20.0), (110.0, 50.0), (10.0, 50.0))
 
 
+def test_run_ocr_outcome_preserves_array_like_geometry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import docwen_core.text.ocr as ocr
+
+    class _ArrayLike:
+        def tolist(self) -> list[list[int]]:
+            return [[10, 20], [110, 20], [110, 50], [10, 50]]
+
+    class _Engine:
+        def __call__(self, _path: str) -> tuple[list[tuple[object, str, float]], float]:
+            return [(_ArrayLike(), "array geometry", 0.99)], 0.1
+
+    monkeypatch.setattr(ocr, "_get_ocr_slot", lambda *_args, **_kwargs: ocr._OcrEngineSlot(_Engine()))
+
+    outcome = ocr.run_ocr_outcome(_write_ocr_input(tmp_path), source_format="png")
+
+    assert outcome.status is ocr.OcrStatus.SUCCESS
+    assert outcome.regions[0].points == ((10.0, 20.0), (110.0, 20.0), (110.0, 50.0), (10.0, 50.0))
+
+
 @pytest.mark.parametrize(
     ("status", "expected"),
     [
