@@ -121,7 +121,12 @@ def test_mixed_prose_and_table_does_not_replace_plain_ocr(
     values = ("姓名", "金额", "甲", "100", "正文一", "正文二", "正文三", "正文四")
     regions = tuple(
         OcrTextRegion(
-            points=((10.0, float(index * 25)), (50.0, float(index * 25)), (50.0, float(index * 25 + 20)), (10.0, float(index * 25 + 20))),
+            points=(
+                (10.0, float(index * 25)),
+                (50.0, float(index * 25)),
+                (50.0, float(index * 25 + 20)),
+                (10.0, float(index * 25 + 20)),
+            ),
             text=value,
             confidence=0.99,
         )
