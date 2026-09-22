@@ -761,6 +761,10 @@ class PptxToMarkdownConverter:
                         try:
                             from docwen_core.detection import detect_content_format
                             from docwen_core.text.ocr import run_ocr_outcome
+                            from docwen_core.text.table_recognition import (
+                                TableRecognitionStatus,
+                                enrich_ocr_table_structure,
+                            )
 
                             outcome = run_ocr_outcome(
                                 img_path,
@@ -768,13 +772,22 @@ class PptxToMarkdownConverter:
                                 ocr_language=ocr_language,
                                 current_locale=current_locale,
                             )
+                            outcome, table_outcome = enrich_ocr_table_structure(img_path, outcome)
+                            if table_outcome.status is TableRecognitionStatus.FAILED:
+                                context.progress.report_diagnostic(
+                                    "warning",
+                                    "Table structure recognition failed; plain OCR text was retained.",
+                                    code="OCR-TABLE-FALLBACK",
+                                    location=f"slide {slide_index}: {display_filename}",
+                                )
                             _report_ocr_best_effort(
                                 context.progress,
                                 outcome.status,
                                 location=f"slide {slide_index}: {display_filename}",
                             )
                             ocr_text = outcome.recognized_text
-                            if ocr_text:
+                            ocr_markdown = outcome.structured_markdown
+                            if ocr_text or ocr_markdown:
                                 if ocr_placement == "image_md":
                                     from docwen_core.text.image_markdown import build_image_ocr_sidecar
 
@@ -786,6 +799,7 @@ class PptxToMarkdownConverter:
                                         image_markdown=image_markdown,
                                         ocr_text=ocr_text,
                                         md_link_style=md_file_link_style,
+                                        ocr_markdown=ocr_markdown or None,
                                         ocr_blockquote_title=ocr_blockquote_title,
                                         yaml_key_labels=opts.get("yaml_key_labels"),
                                     )
@@ -797,6 +811,7 @@ class PptxToMarkdownConverter:
                                         image_markdown=image_markdown,
                                         ocr_text=ocr_text,
                                         md_link_style=md_file_link_style,
+                                        ocr_markdown=ocr_markdown or None,
                                         ocr_blockquote_title=ocr_blockquote_title,
                                         yaml_key_labels=opts.get("yaml_key_labels"),
                                     )
@@ -815,19 +830,22 @@ class PptxToMarkdownConverter:
                                     context.workspace.add_artifact(sidecar_artifact)
                                     image_markdown = replacement_link
                                 else:
-                                    ocr_lines = []
-                                    ocr_title = policy.ocr_blockquote_title
-                                    if ocr_title:
-                                        ocr_lines.append(f"> **{ocr_title}**")
-                                        ocr_lines.append(">")
-                                    for ocr_line in ocr_text.split("\n"):
-                                        stripped = ocr_line.strip()
-                                        if stripped:
-                                            ocr_lines.append(f"> {stripped}")
-                                        else:
+                                    if ocr_markdown:
+                                        image_markdown = f"{image_markdown}\n\n{ocr_markdown}".strip()
+                                    else:
+                                        ocr_lines = []
+                                        ocr_title = policy.ocr_blockquote_title
+                                        if ocr_title:
+                                            ocr_lines.append(f"> **{ocr_title}**")
                                             ocr_lines.append(">")
-                                    if ocr_lines:
-                                        image_markdown = f"{image_markdown}\n\n" + "\n".join(ocr_lines)
+                                        for ocr_line in ocr_text.split("\n"):
+                                            stripped = ocr_line.strip()
+                                            if stripped:
+                                                ocr_lines.append(f"> {stripped}")
+                                            else:
+                                                ocr_lines.append(">")
+                                        if ocr_lines:
+                                            image_markdown = f"{image_markdown}\n\n" + "\n".join(ocr_lines)
                         except ImportError:
                             pass
 
