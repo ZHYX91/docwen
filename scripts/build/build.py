@@ -163,7 +163,6 @@ _PACKAGE_SRC_DIRS: list[Path] = sorted(
 _PYMUPDF_LAYOUT_IMPORT_PACKAGE = "pymupdf.layout"
 _PYINSTALLER_COMMON_COLLECT_ALL_TARGETS = (
     "rapidocr_onnxruntime",
-    "rapid_table",
     "pymupdf4llm",
     _PYMUPDF_LAYOUT_IMPORT_PACKAGE,
     "easyofd",
