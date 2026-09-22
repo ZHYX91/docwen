@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QApplication
 
 from docwen_gui.diagnostics import DiagnosticSummary
 from docwen_gui.i18n import t
+from docwen_gui.path_identity import display_path
 from docwen_gui.styles.theme_semantics import get_status_theme_class, get_theme_class_color
 
 from .info_area_vm import InfoAreaViewModel
@@ -103,9 +104,9 @@ class ActivityRecordsModel(QAbstractTableModel):
                     dict.fromkeys(row.message for row in matching if not warnings or row.message_type != "warning")
                 )
                 has_warning = bool(warnings) or any(row.message_type == "warning" for row in matching)
-                details = [f"{t('activity.input')}: {path}"]
+                details = [f"{t('activity.input')}: {display_path(path)}"]
                 if output:
-                    details.extend(f"{t('activity.output')}: {path}" for path in outputs or (output,))
+                    details.extend(f"{t('activity.output')}: {display_path(path)}" for path in outputs or (output,))
                 if outcome and outcome.error_message:
                     details.append(outcome.error_message)
                 if outcome and outcome.skip_reason:
@@ -143,7 +144,7 @@ class ActivityRecordsModel(QAbstractTableModel):
                 details += "\n" + t("info_area.history_repeated", count=row.repeat_count)
             path = row.file_path or row.navigate_file_path
             if path:
-                details += "\n\n" + path
+                details += "\n\n" + display_path(path)
             records.append(
                 ActivityRecord(
                     f"notice:{row.created_at.isoformat()}:{row.message}",
