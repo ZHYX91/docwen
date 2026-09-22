@@ -43,7 +43,7 @@ def _result_warning_messages(result: ConversionResult) -> list[str]:
             continue
         if diagnostic.code == "OCR-BEST-EFFORT":
             raw_message = diagnostic.message.strip()
-            status_match = re.search(r"\\bstatus=([a-z_]+)\\b", raw_message)
+            status_match = re.search(r"\bstatus=([a-z_]+)\b", raw_message)
             status = status_match.group(1) if status_match else "unknown"
             if status == "no_text":
                 message = _t(
