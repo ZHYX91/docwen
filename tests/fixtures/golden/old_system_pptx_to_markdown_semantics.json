@@ -294,8 +294,6 @@
         "success": true,
         "diagnostic_codes": [
           "PPTX2MD-OK",
-          "OCR-BEST-EFFORT",
-          "OCR-BEST-EFFORT",
           "FINALIZER_DONE"
         ],
         "artifact_count": 5,
