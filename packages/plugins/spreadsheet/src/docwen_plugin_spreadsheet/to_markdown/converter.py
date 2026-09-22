@@ -734,6 +734,10 @@ class SpreadsheetToMarkdownConverter:
                         if enable_ocr:
                             from docwen_core.detection import detect_content_format
                             from docwen_core.text.ocr import run_ocr_outcome
+                            from docwen_core.text.table_recognition import (
+                                TableRecognitionStatus,
+                                enrich_ocr_table_structure,
+                            )
 
                             outcome = run_ocr_outcome(
                                 img_info["staging_path"],
@@ -741,13 +745,24 @@ class SpreadsheetToMarkdownConverter:
                                 ocr_language=ocr_language,
                                 current_locale=current_locale,
                             )
+                            outcome, table_outcome = enrich_ocr_table_structure(img_info["staging_path"], outcome)
+                            if table_outcome.status is TableRecognitionStatus.FAILED:
+                                context.progress.report_diagnostic(
+                                    "warning",
+                                    "Table structure recognition failed; plain OCR text was retained.",
+                                    code="OCR-TABLE-FALLBACK",
+                                    location=(
+                                        f"{sheet_name}:{img_info.get('suggested_name', img_info['staging_path'])}"
+                                    ),
+                                )
                             _report_ocr_best_effort(
                                 context.progress,
                                 outcome.status,
                                 location=(f"{sheet_name}:{img_info.get('suggested_name', img_info['staging_path'])}"),
                             )
                             ocr_text = outcome.recognized_text
-                            if ocr_text:
+                            ocr_markdown = outcome.structured_markdown
+                            if ocr_text or ocr_markdown:
                                 if ocr_placement == "image_md":
                                     img_seq += 1
                                     sidecar_stem = f"{main_stem}__img_{img_seq:03d}_ocr"
@@ -759,6 +774,7 @@ class SpreadsheetToMarkdownConverter:
                                         image_markdown=img_md,
                                         ocr_text=ocr_text,
                                         md_link_style=md_link_style,
+                                        ocr_markdown=ocr_markdown or None,
                                         ocr_blockquote_title=request_policy.ocr_blockquote_title,
                                     )
                                     from pathlib import Path as _Path
@@ -783,9 +799,13 @@ class SpreadsheetToMarkdownConverter:
                                     context.workspace.add_artifact(sidecar_artifact)
                                     img_md = repl_link
                                 else:
-                                    ocr_block = f"\n> {request_policy.ocr_blockquote_title}\n> "
-                                    ocr_block += "\n> ".join(ocr_text.splitlines()) + "\n"
-                                    img_md += "\n" + ocr_block if img_md else ocr_block
+                                    if ocr_markdown:
+                                        structured = f"\n\n{ocr_markdown}\n"
+                                        img_md += structured if img_md else structured.lstrip()
+                                    else:
+                                        ocr_block = f"\n> {request_policy.ocr_blockquote_title}\n> "
+                                        ocr_block += "\n> ".join(ocr_text.splitlines()) + "\n"
+                                        img_md += "\n" + ocr_block if img_md else ocr_block
 
                         # Record position for H6 cell injection (0-indexed)
                         r = img_info.get("row")
