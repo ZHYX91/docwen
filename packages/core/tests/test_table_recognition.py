@@ -104,4 +104,3 @@ def test_table_html_merged_cells_are_projected_without_dropping_values() -> None
     assert "| 项目 | 数值 | 数值 |" in markdown
     assert "| 项目 | 本期 | 上期 |" in markdown
     assert "| 收入 | 10 | 9 |" in markdown
-
