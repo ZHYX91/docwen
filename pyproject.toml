@@ -16,6 +16,7 @@ required-version = "==0.12.0"
 # transitive edge and fail closed again when its version changes.
 exclude-dependencies = [
     { package = { name = "rapidocr-onnxruntime", version = "1.4.4" }, dependencies = ["opencv-python"] },
+    { package = { name = "rapid-table", version = "2.0.3" }, dependencies = ["opencv-python"] },
 ]
 
 [tool.uv.workspace]
@@ -110,8 +111,9 @@ dependencies = [
     # 图片转换
     "img2pdf>=0.6.1",
     "pillow-heif>=1.1.1",
-    # OCR支持
+    # OCR / table-structure recognition
     "rapidocr_onnxruntime>=1.4.0",
+    "rapid-table==2.0.3",
     # ONNX Runtime 1.24.x emits a hard-coded Linux device-discovery warning
     # while its Python extension is importing, before its logging API exists.
     # Conversely, 1.23.x misclassifies Windows Server 2025 during import. The
