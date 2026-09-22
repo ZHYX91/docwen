@@ -139,7 +139,20 @@ def _convert_tiff_physical_pages(
 
                         page_path = Path(context.workspace.create_artifact_path("auxiliary", ".md"))
                         created_paths.append(page_path)
-                        page_text = outcome.recognized_text.rstrip()
+                        table_outcome = recognize_table_markdown(str(frame_path), outcome)
+                        if table_outcome.status is TableRecognitionStatus.SUCCESS:
+                            page_text = table_outcome.markdown.rstrip()
+                        else:
+                            page_text = outcome.recognized_text.rstrip()
+                            if table_outcome.status is TableRecognitionStatus.FAILED:
+                                diagnostics.append(
+                                    ConversionDiagnostic(
+                                        level="warning",
+                                        message="Table structure recognition failed; plain OCR text was retained.",
+                                        code="OCR-TABLE-FALLBACK",
+                                        location=f"{Path(input_path).name}:frame-{page_number}",
+                                    )
+                                )
                         page_path.write_bytes(f"{page_text}\n".encode() if page_text else b"")
                         page_artifact = ArtifactManifest(
                             artifact_id=new_artifact_id(),
