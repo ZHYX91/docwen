@@ -244,7 +244,10 @@ def recognize_table_markdown(
             return TableRecognitionOutcome(TableRecognitionStatus.NOT_TABLE)
         normalized_html = html.unescape(raw_html)
         matched_regions = sum(1 for region in regions if region.text and region.text in normalized_html)
-        minimum_matches = min(4, max(2, len(regions) // 3))
+        # Only replace ordinary OCR when the predicted table explains most of
+        # the page/image OCR. This keeps mixed prose+table pages lossless: they
+        # fall back to plain OCR instead of silently dropping surrounding text.
+        minimum_matches = max(4, (len(regions) * 7 + 9) // 10)
         if matched_regions < minimum_matches:
             return TableRecognitionOutcome(TableRecognitionStatus.NOT_TABLE)
 
