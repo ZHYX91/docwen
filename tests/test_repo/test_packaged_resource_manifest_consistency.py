@@ -72,13 +72,14 @@ def test_packaged_resource_gate_rejects_qt_network_stack(tmp_path: Path, relativ
 
 
 def test_packaged_model_manifests_match_current_runtime_models() -> None:
-    from scripts.release import verify_packaged_cli, verify_packaged_gui
+    from scripts.release import packaged_resources, verify_packaged_cli, verify_packaged_gui
 
     models_dir = Path("models")
     runtime_models = {path.relative_to(models_dir).as_posix() for path in models_dir.rglob("*.onnx") if path.is_file()}
+    expected_models = runtime_models | set(packaged_resources.EXTERNAL_MODEL_SPECS)
 
-    assert set(verify_packaged_cli._REQUIRED_MODEL_FILES) == runtime_models
-    assert set(verify_packaged_gui._REQUIRED_MODEL_FILES) == runtime_models
+    assert set(verify_packaged_cli._REQUIRED_MODEL_FILES) == expected_models
+    assert set(verify_packaged_gui._REQUIRED_MODEL_FILES) == expected_models
 
 
 def test_packaged_ocr_model_manifest_covers_configured_language_models() -> None:
@@ -90,9 +91,10 @@ def test_packaged_ocr_model_manifest_covers_configured_language_models() -> None
         f"rapidocr/{filename}" for model_files in OCR_LANGUAGE_MODELS.values() for filename in model_files.values()
     }
     required_model_files = set(packaged_resources.REQUIRED_MODEL_FILES)
-    reserved_model_files = required_model_files - configured_model_files
+    required_ocr_model_files = {path for path in required_model_files if path.startswith("rapidocr/")}
+    reserved_model_files = required_ocr_model_files - configured_model_files
 
-    assert configured_model_files <= required_model_files
+    assert configured_model_files <= required_ocr_model_files
     assert reserved_model_files == {"rapidocr/arabic_PP-OCRv4_rec_infer.onnx"}
     assert "arabic" not in OCR_LANGUAGE_MODELS
     assert Path("models/rapidocr/arabic_PP-OCRv4_rec_infer.onnx").is_file()
