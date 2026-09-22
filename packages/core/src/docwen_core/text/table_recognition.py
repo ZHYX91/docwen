@@ -10,7 +10,7 @@ from __future__ import annotations
 import html
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 from html.parser import HTMLParser
 from pathlib import Path
@@ -189,6 +189,20 @@ def resolve_rapidtable_model(model_path: str | Path | None = None) -> Path | Non
     return None
 
 
+def enrich_ocr_table_structure(
+    image_path: str | Path,
+    outcome: OcrOutcome,
+    *,
+    model_path: str | Path | None = None,
+) -> tuple[OcrOutcome, TableRecognitionOutcome]:
+    """Return *outcome* enriched with table Markdown when structure is proven."""
+
+    table_outcome = recognize_table_markdown(image_path, outcome, model_path=model_path)
+    if table_outcome.status is TableRecognitionStatus.SUCCESS:
+        outcome = replace(outcome, structured_markdown=table_outcome.markdown)
+    return outcome, table_outcome
+
+
 def table_recognition_available(model_path: str | Path | None = None) -> bool:
     if resolve_rapidtable_model(model_path) is None:
         return False
@@ -260,6 +274,7 @@ __all__ = [
     "RAPIDTABLE_MODEL_URL",
     "TableRecognitionOutcome",
     "TableRecognitionStatus",
+    "enrich_ocr_table_structure",
     "recognize_table_markdown",
     "resolve_rapidtable_model",
     "table_recognition_available",
