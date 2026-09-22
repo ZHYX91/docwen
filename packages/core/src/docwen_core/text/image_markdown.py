@@ -206,6 +206,7 @@ def build_image_ocr_sidecar(
     image_markdown: str,
     ocr_text: str,
     md_link_style: str,
+    ocr_markdown: str | None = None,
     ocr_blockquote_title: str | None = None,
     yaml_key_labels: object | None = None,
 ) -> tuple[str, str]:
@@ -222,6 +223,8 @@ def build_image_ocr_sidecar(
         image_markdown: The fully-resolved image link as it should appear
             in the sidecar (e.g. ``![[foo.png]]``).
         ocr_text: Raw OCR output text.
+        ocr_markdown: Optional already-structured OCR Markdown (for example a
+            recognized table). When supplied it replaces the blockquote body.
         md_link_style: Link style for the main-document replacement link
             (``wiki_embed``, ``wiki_link``, ``markdown_embed``, ``markdown_link``).
         ocr_blockquote_title: Optional bold title line prepended to the
@@ -258,11 +261,12 @@ def build_image_ocr_sidecar(
         else:
             ocr_lines.append(f"> {stripped}")
     ocr_block = "\n".join(ocr_lines) + "\n"
+    ocr_body = ocr_markdown.rstrip() + "\n" if ocr_markdown is not None else ocr_block
 
     # ── Assemble sidecar content ───────────────────────────────────
     # Structure: front matter → empty line → image link → empty line →
     #            OCR blockquote → trailing empty line
-    sidecar_text = front_matter + image_markdown.rstrip("\n") + "\n\n" + ocr_block + "\n"
+    sidecar_text = front_matter + image_markdown.rstrip("\n") + "\n\n" + ocr_body + "\n"
 
     # ── Main-document replacement link ─────────────────────────────
     replacement_link = format_md_file_link(sidecar_filename, style=md_link_style)
