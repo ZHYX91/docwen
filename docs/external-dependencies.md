@@ -8,8 +8,14 @@ DocWen 优先使用随包或进程本地组件。外部应用通过明确 adapte
 
 - Microsoft Office and WPS may provide Windows COM conversion routes.
 - LibreOffice provides registered-install or explicitly selected executable routes.
-- Adapter priority and supported source/target pairs are route-specific.
+- DOC/WPS/RTF → DOCX pre-conversion is backend-agnostic: `software.default_priority.word_processors` controls the attempt order across WPS Writer, Microsoft Word, and LibreOffice. A WPS source does **not** require WPS Writer; Microsoft Word remains a legal Windows COM candidate and failure proceeds to the next legal backend.
+- Backend selection consumes the admitted source format and configured priority; it must not infer that a `.wps` filename binds conversion to one vendor application.
+- Adapter priority and supported source/target pairs are route-specific. ODT is narrower and deliberately excludes WPS Writer.
 - Cancellation owns the child process/profile lifecycle and must clean request-owned profiles.
+
+For DOC/WPS/RTF → DOCX pre-conversion, the Windows COM candidates are therefore compatibility backends rather than format owners. The configured order is policy; successful opening/export by the selected backend is the runtime fact. This distinction is important because a `.wps` suffix alone is not evidence that WPS Writer must be installed.
+
+对于 DOC/WPS/RTF → DOCX 预转换，Windows COM 后端是“兼容性后端”，不是格式所有者：`software.default_priority.word_processors` 决定 WPS 文字、Microsoft Word、LibreOffice 的尝试顺序。WPS 来源**不要求必须安装 WPS 文字**；Microsoft Word 仍是合法候选，某个后端失败后继续尝试下一个合法后端。后端选择依据已准入的来源格式和用户配置，不得仅凭 `.wps` 扩展名把转换绑定到某一家软件。ODT 的候选范围更窄，明确排除 WPS 文字。
 
 ## Network boundary / 网络边界
 
