@@ -499,11 +499,11 @@ class TestGongwenGolden:
             assert "附件内容：项目管理办法全文......" in attachment_markdown
 
 
-def test_gongwen_all_ocr_outcomes_warn_and_continue_later_images(
+def test_gongwen_degraded_ocr_outcomes_warn_and_continue_later_images(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Every OCR outcome warns while base Gongwen Markdown and later OCR survive."""
+    """Only degraded OCR outcomes warn while base Gongwen Markdown and later OCR survive."""
     import docwen_core.text.ocr as ocr
     import docwen_plugin_optimizer_gongwen.extraction.paragraph_reader as paragraph_reader
     from docwen_plugin_optimizer_gongwen.models import ParagraphFeature
@@ -578,9 +578,9 @@ def test_gongwen_all_ocr_outcomes_warn_and_continue_later_images(
     assert "gongwen base content" in result["markdown"]
     assert "later gongwen OCR" in result["markdown"]
     assert len(calls) == 7
-    assert len(progress.diagnostics) == 7
-    assert [diagnostic[0] for diagnostic in progress.diagnostics] == ["warning"] * 7
-    assert [diagnostic[2] for diagnostic in progress.diagnostics] == ["OCR-BEST-EFFORT"] * 7
+    assert len(progress.diagnostics) == 6
+    assert [diagnostic[0] for diagnostic in progress.diagnostics] == ["warning"] * 6
+    assert [diagnostic[2] for diagnostic in progress.diagnostics] == ["OCR-BEST-EFFORT"] * 6
     assert [
         message.split("status=", 1)[1].split(";", 1)[0] for _level, message, _code, _location in progress.diagnostics
     ] == [
@@ -590,7 +590,6 @@ def test_gongwen_all_ocr_outcomes_warn_and_continue_later_images(
         "initialization_failed",
         "recognition_failed",
         "no_text",
-        "success",
     ]
     assert all(location for _level, _message, _code, location in progress.diagnostics)
     assert all("private" not in message for _level, message, _code, _location in progress.diagnostics)
