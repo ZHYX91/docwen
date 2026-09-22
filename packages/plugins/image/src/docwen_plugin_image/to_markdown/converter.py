@@ -24,8 +24,10 @@ from docwen_core.text.ocr import (
     OcrOutcome,
     OcrStatus,
     format_ocr_best_effort_warning,
+    format_ocr_success_notice,
     run_ocr_outcome,
 )
+from docwen_core.text.table_recognition import TableRecognitionStatus, recognize_table_markdown
 from docwen_core.yaml_tools import extract_yaml, generate_basic_yaml_frontmatter
 from docwen_plugin_image._common import (
     file_size,
@@ -321,8 +323,10 @@ class ImageToMarkdownConverter:
                 current_locale=current_locale,
             )
 
-        # ── OCR ────────────────────────────────────────────────────
+        # ── OCR / table structure ───────────────────────────────────
         ocr_text = ""
+        table_markdown = ""
+        table_recognition_status = ""
         if enable_ocr:
             context.progress.report_progress(5.0, "Running OCR on image")
             try:
@@ -343,7 +347,29 @@ class ImageToMarkdownConverter:
                     code="OCR-BEST-EFFORT",
                     location=Path(input_path).name,
                 )
+            elif outcome.status is OcrStatus.SUCCESS:
+                context.progress.report_diagnostic(
+                    "info",
+                    format_ocr_success_notice(),
+                    code="OCR-QUALITY-NOTICE",
+                    location=Path(input_path).name,
+                )
+
             ocr_text = outcome.recognized_text
+            if outcome.status is OcrStatus.SUCCESS and outcome.regions:
+                context.progress.report_progress(10.0, "Checking table structure")
+                table_outcome = recognize_table_markdown(input_path, outcome)
+                table_recognition_status = table_outcome.status.value
+                if table_outcome.status is TableRecognitionStatus.SUCCESS:
+                    table_markdown = table_outcome.markdown
+                elif table_outcome.status is TableRecognitionStatus.FAILED:
+                    context.logger.warning("Table recognition failed: %s", table_outcome.message)
+                    context.progress.report_diagnostic(
+                        "warning",
+                        "Table structure recognition failed; plain OCR text was retained.",
+                        code="OCR-TABLE-FALLBACK",
+                        location=Path(input_path).name,
+                    )
             context.progress.report_progress(15.0, "OCR complete")
 
         def _format_ocr_blockquote(text: str) -> str:
@@ -444,6 +470,7 @@ class ImageToMarkdownConverter:
                     image_markdown=link,
                     ocr_text=ocr_text,
                     md_link_style=md_file_style,
+                    ocr_markdown=table_markdown or None,
                     ocr_blockquote_title=ocr_title,
                     yaml_key_labels=options.get("yaml_key_labels"),
                 )
@@ -467,6 +494,11 @@ class ImageToMarkdownConverter:
 
                 # Replace image link with .md file link in primary output.
                 lines = [yaml_frontmatter.rstrip(), "", replacement_link]
+            elif table_markdown:
+                # A recognized table is structural Markdown, not quoted OCR prose.
+                lines.append("")
+                lines.append(table_markdown)
+                lines.append("")
             elif ocr_text:
                 # main_md (default): append OCR blockquote inline.
                 ocr_block = _format_ocr_blockquote(ocr_text)
@@ -510,7 +542,12 @@ class ImageToMarkdownConverter:
             staging_path=md_path,
             suggested_name=f"{input_stem(input_path)}.md",
             media_type="text/markdown",
-            metadata={"image_mode": image_mode, "keep_images": keep_images, "ocr_enabled": enable_ocr},
+            metadata={
+                "image_mode": image_mode,
+                "keep_images": keep_images,
+                "ocr_enabled": enable_ocr,
+                "table_recognized": bool(table_markdown),
+            },
             is_primary=True,
         )
         context.workspace.add_artifact(md_artifact)
@@ -526,6 +563,14 @@ class ImageToMarkdownConverter:
                     level="info", message=f"OCR extracted {len(ocr_text)} characters", code="IMG2MD-OCR-OK"
                 )
             )
+        if table_markdown:
+            diagnostics.append(
+                ConversionDiagnostic(
+                    level="info",
+                    message="Recognized table structure and emitted Markdown table",
+                    code="IMG2MD-TABLE-OK",
+                )
+            )
 
         return ConversionResult(
             task_id=task_id,
@@ -535,6 +580,12 @@ class ImageToMarkdownConverter:
             metrics=ConversionMetrics(
                 input_bytes=file_size(input_path),
                 output_bytes=sum(file_size(a.staging_path) for a in artifacts),
-                extra={"artifact_count": len(artifacts), "ocr_enabled": enable_ocr, "ocr_chars": len(ocr_text)},
+                extra={
+                    "artifact_count": len(artifacts),
+                    "ocr_enabled": enable_ocr,
+                    "ocr_chars": len(ocr_text),
+                    "table_recognized": bool(table_markdown),
+                    "table_recognition_status": table_recognition_status,
+                },
             ),
         )
