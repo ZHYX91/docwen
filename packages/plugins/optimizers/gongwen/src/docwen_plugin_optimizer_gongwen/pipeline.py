@@ -249,6 +249,10 @@ def convert_docx_to_md_gongwen(
             progress.report_progress(10.0, "Running OCR on embedded images")
         from docwen_core.detection import detect_content_format
         from docwen_core.text.ocr import OcrOutcome, OcrStatus, run_ocr_outcome
+        from docwen_core.text.table_recognition import (
+            TableRecognitionStatus,
+            enrich_ocr_table_structure,
+        )
 
         for pf in features:
             for img_path in pf.extracted_images:
@@ -262,6 +266,14 @@ def convert_docx_to_md_gongwen(
                         )
                     except Exception as exc:
                         outcome = OcrOutcome(OcrStatus.RECOGNITION_FAILED, message=str(exc))
+                    outcome, table_outcome = enrich_ocr_table_structure(img_path, outcome)
+                    if table_outcome.status is TableRecognitionStatus.FAILED and progress is not None:
+                        progress.report_diagnostic(
+                            "warning",
+                            "Table structure recognition failed; plain OCR text was retained.",
+                            code="OCR-TABLE-FALLBACK",
+                            location=str(img_path),
+                        )
                     _report_ocr_best_effort(
                         progress,
                         outcome.status,
@@ -269,6 +281,8 @@ def convert_docx_to_md_gongwen(
                     )
                     if outcome.recognized_text and outcome.recognized_text.strip():
                         pf.image_ocr_texts[img_path] = outcome.recognized_text
+                    if outcome.structured_markdown:
+                        pf.image_ocr_markdown[img_path] = outcome.structured_markdown
 
     # ── 2.  Recognition (three rounds + re-evaluation) ──────────────
     if progress:
