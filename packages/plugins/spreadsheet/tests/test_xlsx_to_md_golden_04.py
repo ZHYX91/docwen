@@ -198,7 +198,7 @@ class TestSpreadsheetToMdPipeline:
             for token in expected["required_sidecar_markdown_tokens"]:
                 assert token in content
 
-    def test_pipeline_xlsx_all_ocr_outcomes_warn_and_continue_later_images(
+    def test_pipeline_xlsx_degraded_ocr_outcomes_warn_and_continue_later_images(
         self,
         pipeline: dict[str, Any],
         tmp_path: Path,
