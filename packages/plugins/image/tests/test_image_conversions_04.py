@@ -69,6 +69,56 @@ class TestImageToMarkdown:
             assert "may contain recognition errors or omissions" in notice[1]
 
     @pytest.mark.contract
+    def test_image_to_markdown_ocr_table_emits_structural_markdown(
+        self, sample_png_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import docwen_plugin_image.to_markdown.converter as converter_mod
+        from docwen_core.text.ocr import OcrOutcome, OcrStatus, OcrTextRegion
+        from docwen_core.text.table_recognition import TableRecognitionOutcome, TableRecognitionStatus
+        from docwen_plugin_image.to_markdown.converter import ImageToMarkdownConverter
+
+        outcome = OcrOutcome(
+            OcrStatus.SUCCESS,
+            text="姓名\n金额\n甲\n100",
+            regions=(
+                OcrTextRegion(((0, 0), (20, 0), (20, 10), (0, 10)), "姓名", 0.99),
+                OcrTextRegion(((30, 0), (50, 0), (50, 10), (30, 10)), "金额", 0.99),
+                OcrTextRegion(((0, 20), (20, 20), (20, 30), (0, 30)), "甲", 0.99),
+                OcrTextRegion(((30, 20), (50, 20), (50, 30), (30, 30)), "100", 0.99),
+            ),
+        )
+        table_markdown = "| 姓名 | 金额 |\n| --- | --- |\n| 甲 | 100 |"
+        monkeypatch.setattr(converter_mod, "run_ocr_outcome", lambda *_args, **_kwargs: outcome)
+        monkeypatch.setattr(
+            converter_mod,
+            "recognize_table_markdown",
+            lambda *_args, **_kwargs: TableRecognitionOutcome(
+                TableRecognitionStatus.SUCCESS,
+                markdown=table_markdown,
+            ),
+        )
+
+        with tempfile.TemporaryDirectory() as staging:
+            context = _build_fake_context(
+                str(sample_png_path),
+                staging,
+                "md",
+                {
+                    "to_md_enable_ocr": True,
+                    "to_md_keep_images": True,
+                    "ocr_placement": "main_md",
+                },
+            )
+            result = ImageToMarkdownConverter().convert(context)
+
+        assert result.success is True
+        markdown = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
+        assert table_markdown in markdown
+        assert "> 姓名" not in markdown
+        assert result.metrics.extra["table_recognized"] is True
+        assert any(d.code == "IMG2MD-TABLE-OK" for d in result.diagnostics)
+
+    @pytest.mark.contract
     def test_image_to_markdown_ocr_disabled_skips_ocr(self, sample_png_path: Path) -> None:
         """When OCR is explicitly disabled, no OCR error should occur."""
         from docwen_plugin_image.to_markdown.converter import ImageToMarkdownConverter
