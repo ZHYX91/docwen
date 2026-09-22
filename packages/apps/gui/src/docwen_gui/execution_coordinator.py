@@ -15,6 +15,7 @@ from docwen_gui.i18n import t as _t
 from docwen_gui.view_models._runtime_route_filter import (
     RuntimeRouteChoice,
     RuntimeRouteSource,
+    discover_composed_action_route_choices,
     discover_runtime_route_choices,
 )
 
@@ -217,12 +218,21 @@ class ExecutionCoordinator(QObject):
                 return None
             detected_format, source_category = context
             sources.append(RuntimeRouteSource(detected_format, source_category))
-        result = discover_runtime_route_choices(
-            controller,
-            sources=tuple(sources),
-            operation="action" if action_name else "conversion",
-            action_name=action_name,
-        )
+        normalized_target = str(target_format or "").strip().lower()
+        if action_name and normalized_target:
+            result = discover_composed_action_route_choices(
+                controller,
+                sources=tuple(sources),
+                target=normalized_target,
+                action_name=action_name,
+            )
+        else:
+            result = discover_runtime_route_choices(
+                controller,
+                sources=tuple(sources),
+                operation="action" if action_name else "conversion",
+                action_name=action_name,
+            )
         if result.status == "failed":
             self._info_area_vm.add_message(
                 _t(
@@ -232,7 +242,6 @@ class ExecutionCoordinator(QObject):
                 "warning",
             )
             return None
-        normalized_target = str(target_format or "").strip().lower()
         choice = result.get(normalized_target) if normalized_target else None
         if choice is None and not normalized_target and len(result.choices) == 1:
             choice = result.choices[0]
