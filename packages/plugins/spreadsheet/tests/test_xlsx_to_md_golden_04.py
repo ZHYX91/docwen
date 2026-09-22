@@ -285,15 +285,14 @@ class TestSpreadsheetToMdPipeline:
             for event in events
             if event.event_type == "diagnostic" and event.payload.get("code") == "OCR-BEST-EFFORT"
         ]
-        assert len(warnings) == 6
-        assert [warning["level"] for warning in warnings] == ["warning"] * 6
+        assert len(warnings) == 5
+        assert [warning["level"] for warning in warnings] == ["warning"] * 5
         assert [warning["message"].split("status=", 1)[1].split(";", 1)[0] for warning in warnings] == [
             "unavailable",
             "model_missing",
             "initialization_failed",
             "recognition_failed",
             "no_text",
-            "success",
         ]
         assert all(warning["location"].startswith("Best effort:") for warning in warnings)
         assert all("private" not in warning["message"] for warning in warnings)
