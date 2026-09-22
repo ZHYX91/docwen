@@ -20,6 +20,8 @@ HEADLESS_NAME = "opencv-python-headless"
 HEADLESS_VERSION = "4.13.0.92"
 RAPIDOCR_NAME = "rapidocr-onnxruntime"
 RAPIDOCR_VERSION = "1.4.4"
+RAPIDTABLE_NAME = "rapid-table"
+RAPIDTABLE_VERSION = "2.0.3"
 UV_VERSION = "0.12.0"
 MUTUALLY_EXCLUSIVE_OPENCV_DISTRIBUTIONS = {
     "opencv-python",
@@ -85,16 +87,24 @@ def test_lock_selects_one_headless_opencv_distribution() -> None:
     assert selected_variants == {HEADLESS_NAME}
     assert packages[HEADLESS_NAME]["version"] == HEADLESS_VERSION
     assert packages[RAPIDOCR_NAME]["version"] == RAPIDOCR_VERSION
+    assert packages[RAPIDTABLE_NAME]["version"] == RAPIDTABLE_VERSION
     assert HEADLESS_NAME in _dependency_names(packages["pdf2docx"])
     assert "opencv-python" not in _dependency_names(packages[RAPIDOCR_NAME])
+    assert "opencv-python" not in _dependency_names(packages[RAPIDTABLE_NAME])
 
-    expected_exclusion = {
-        "package": {"name": RAPIDOCR_NAME, "version": RAPIDOCR_VERSION},
-        "dependencies": ["opencv-python"],
-    }
+    expected_exclusions = [
+        {
+            "package": {"name": RAPIDOCR_NAME, "version": RAPIDOCR_VERSION},
+            "dependencies": ["opencv-python"],
+        },
+        {
+            "package": {"name": RAPIDTABLE_NAME, "version": RAPIDTABLE_VERSION},
+            "dependencies": ["opencv-python"],
+        },
+    ]
     assert project["tool"]["uv"]["required-version"] == f"=={UV_VERSION}"
-    assert project["tool"]["uv"]["exclude-dependencies"] == [expected_exclusion]
-    assert lock["manifest"]["excludes"] == [expected_exclusion]
+    assert project["tool"]["uv"]["exclude-dependencies"] == expected_exclusions
+    assert lock["manifest"]["excludes"] == expected_exclusions
 
 
 def test_installed_cv2_has_one_distribution_owner() -> None:
@@ -121,7 +131,13 @@ def test_installed_cv2_has_one_distribution_owner() -> None:
         for requirement in importlib.metadata.requires(RAPIDOCR_NAME) or []
         if canonicalize_name(Requirement(requirement).name) == "opencv-python"
     }
+    rapidtable_requirements = {
+        str(Requirement(requirement))
+        for requirement in importlib.metadata.requires(RAPIDTABLE_NAME) or []
+        if canonicalize_name(Requirement(requirement).name) == "opencv-python"
+    }
     assert rapidocr_requirements == {"opencv-python>=4.5.1.48"}
+    assert rapidtable_requirements == {"opencv-python>=4.5.1.48"}
 
     # Both upstream consumers must remain importable from the one shared cv2
     # implementation selected by the lock-aware environment.
