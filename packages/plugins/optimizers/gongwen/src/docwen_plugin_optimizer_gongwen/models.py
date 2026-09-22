@@ -43,6 +43,7 @@ class ParagraphFeature:
     heading_body_boundary_source: str = ""  # "run_format" | "punctuation_fallback" | ""
     extracted_images: list[str] = field(default_factory=list)  # staging paths
     image_ocr_texts: dict[str, str] = field(default_factory=dict)  # path → OCR text
+    image_ocr_markdown: dict[str, str] = field(default_factory=dict)  # path → structured OCR Markdown
     raw_text: str = ""  # original text before heading cleaning
     source: str = "body"  # body, textbox, table, header, footer
     # Position of the owning top-level element in ``document.xml``.  Unlike
