@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt
 from docwen_core.models.artifact import ArtifactManifest
 from docwen_core.models.result import ConversionResult
 from docwen_gui.dialogs.activity_records import ActivityRecordsDialog
+from docwen_gui.path_identity import display_path
 from docwen_gui.view_models.activity_records import ActivityRecordsModel
 from docwen_gui.view_models.batch_list_vm import BatchFileEntry, BatchListViewModel
 from docwen_gui.view_models.info_area_vm import InfoAreaViewModel
@@ -127,7 +128,7 @@ def test_multiple_outputs_remain_available_after_list_changes(qtbot):
     qtbot.addWidget(view)
     view.show_records(operation_id="op")
     assert view.outputs.count() == 2
-    assert all(path in view.details.toPlainText() for path in outputs)
+    assert all(display_path(path) in view.details.toPlainText() for path in outputs)
     opened = []
     view.location_requested.connect(lambda path, parent: opened.append((path, parent)))
     view.outputs.setCurrentIndex(1)
