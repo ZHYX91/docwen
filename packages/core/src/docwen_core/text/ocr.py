@@ -49,6 +49,7 @@ class OcrOutcome:
     text: str = ""
     message: str = ""
     regions: tuple[OcrTextRegion, ...] = ()
+    structured_markdown: str = ""
 
     @property
     def recognized_text(self) -> str:
