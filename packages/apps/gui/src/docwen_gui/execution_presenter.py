@@ -41,6 +41,34 @@ def _result_warning_messages(result: ConversionResult) -> list[str]:
         if diagnostic.code in extension_messages:
             messages.append(extension_messages[diagnostic.code])
             continue
+        if diagnostic.code == "OCR-BEST-EFFORT":
+            raw_message = diagnostic.message.strip()
+            status_match = re.search(r"\\bstatus=([a-z_]+)\\b", raw_message)
+            status = status_match.group(1) if status_match else "unknown"
+            if status == "no_text":
+                message = _t(
+                    "main_window.ocr_no_text",
+                    "OCR detected no text; verify this image against the source.",
+                )
+            else:
+                message = _t(
+                    "main_window.ocr_degraded",
+                    "OCR did not complete normally (status={status}); usable results were retained.",
+                    status=status,
+                )
+            if diagnostic.location:
+                message = f"{message} ({diagnostic.location})"
+            messages.append(message)
+            continue
+        if diagnostic.code == "OCR-TABLE-FALLBACK":
+            message = _t(
+                "main_window.ocr_table_fallback",
+                "Table structure recognition failed; plain OCR text was retained.",
+            )
+            if diagnostic.location:
+                message = f"{message} ({diagnostic.location})"
+            messages.append(message)
+            continue
         message = diagnostic.message.strip() or diagnostic.code.strip()
         if not message:
             message = _t("main_window.conversion_warning", "Conversion completed with a warning")
