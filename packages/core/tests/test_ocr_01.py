@@ -496,8 +496,17 @@ def test_run_ocr_outcome_reports_success(tmp_path: Path, monkeypatch: pytest.Mon
     import docwen_core.text.ocr as ocr
 
     class _Engine:
-        def __call__(self, _path: str) -> tuple[list[tuple[str, float]], float]:
-            return ([(" recognized ", 0.99)], 0.1)
+        def __call__(self, _path: str) -> tuple[list[tuple[object, str, float]], float]:
+            return (
+                [
+                    (
+                        [[10, 20], [110, 20], [110, 50], [10, 50]],
+                        " recognized ",
+                        0.99,
+                    )
+                ],
+                0.1,
+            )
 
     monkeypatch.setattr(ocr, "_get_ocr_slot", lambda *_args, **_kwargs: ocr._OcrEngineSlot(_Engine()))
 
@@ -506,16 +515,15 @@ def test_run_ocr_outcome_reports_success(tmp_path: Path, monkeypatch: pytest.Mon
     assert outcome.status is ocr.OcrStatus.SUCCESS
     assert outcome.text == "recognized"
     assert outcome.message == ""
+    assert len(outcome.regions) == 1
+    assert outcome.regions[0].text == "recognized"
+    assert outcome.regions[0].confidence == 0.99
+    assert outcome.regions[0].points == ((10.0, 20.0), (110.0, 20.0), (110.0, 50.0), (10.0, 50.0))
 
 
 @pytest.mark.parametrize(
     ("status", "expected"),
     [
-        (
-            "success",
-            "OCR best-effort result: status=success; OCR text is machine-generated and may contain "
-            "recognition errors or omissions; verify it against the source.",
-        ),
         (
             "no_text",
             "OCR best-effort result: status=no_text; OCR detected no text; text may have been missed, "
@@ -549,3 +557,13 @@ def test_format_ocr_best_effort_warning_ignores_unknown_status(status: object) -
     import docwen_core.text.ocr as ocr
 
     assert ocr.format_ocr_best_effort_warning(status) is None
+
+
+
+def test_successful_ocr_uses_informational_notice_not_warning() -> None:
+    import docwen_core.text.ocr as ocr
+
+    assert ocr.format_ocr_best_effort_warning(ocr.OcrStatus.SUCCESS) is None
+    notice = ocr.format_ocr_success_notice()
+    assert "status=success" in notice
+    assert "verify it against the source" in notice
