@@ -9,6 +9,7 @@ from tests.support.gui_vm_fakes import optimization_capability_projection
 
 from docwen_gui.view_models._runtime_route_filter import (
     RuntimeRouteSource,
+    discover_composed_action_route_choices,
     discover_runtime_route_choices,
     load_runtime_catalog,
 )
@@ -112,3 +113,39 @@ def test_duplicate_action_target_signature_fails_closed() -> None:
 
     assert result.status == "failed"
     assert result.error is not None
+
+
+
+@pytest.mark.parametrize("source_format", ["wps", "doc", "rtf", "odt"])
+def test_composed_gongwen_action_uses_document_hub_preconversion(source_format: str) -> None:
+    result = discover_composed_action_route_choices(
+        _Controller(optimization_capability_projection()),
+        sources=(RuntimeRouteSource(source_format, "document"),),
+        target="md",
+        action_name="gongwen",
+    )
+
+    assert result.status == "ready"
+    assert result.targets == ("md",)
+    assert result.get("md") is not None
+    assert result.get("md").routes[0].source == "docx"  # type: ignore[union-attr]
+    assert result.get("md").options == ("locale",)  # type: ignore[union-attr]
+
+
+def test_composed_gongwen_action_fails_closed_when_preconversion_is_unavailable() -> None:
+    projection = deepcopy(optimization_capability_projection())
+    document_source = next(source for source in projection["sources"] if source["id"] == "document")  # type: ignore[index]
+    route = next(candidate for candidate in document_source["routes"] if candidate["target"] == "docx")
+    route["available"] = False
+    route["state"] = "unavailable"
+    projection["counts"]["available_routes"] -= 1  # type: ignore[index,operator]
+    projection["counts"]["unavailable_routes"] += 1  # type: ignore[index,operator]
+
+    result = discover_composed_action_route_choices(
+        _Controller(projection),
+        sources=(RuntimeRouteSource("wps", "document"),),
+        target="md",
+        action_name="gongwen",
+    )
+
+    assert result.status == "empty"
