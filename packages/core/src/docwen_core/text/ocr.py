@@ -33,12 +33,22 @@ class OcrStatus(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
+class OcrTextRegion:
+    """One admitted OCR text region in source-image coordinates."""
+
+    points: tuple[tuple[float, float], ...]
+    text: str
+    confidence: float
+
+
+@dataclass(frozen=True, slots=True)
 class OcrOutcome:
     """Typed OCR result used when callers need failure observability."""
 
     status: OcrStatus
     text: str = ""
     message: str = ""
+    regions: tuple[OcrTextRegion, ...] = ()
 
     @property
     def recognized_text(self) -> str:
@@ -55,15 +65,20 @@ _OCR_OPERATIONAL_FAILURE_DETAILS: dict[OcrStatus, str] = {
 }
 
 _OCR_RESULT_QUALITY_DETAILS: dict[OcrStatus, str] = {
-    OcrStatus.SUCCESS: (
-        "OCR text is machine-generated and may contain recognition errors or omissions; verify it against the source"
-    ),
     OcrStatus.NO_TEXT: "OCR detected no text; text may have been missed, so verify it against the source",
 }
 
+_OCR_SUCCESS_NOTICE = (
+    "OCR text is machine-generated and may contain recognition errors or omissions; verify it against the source"
+)
+
 
 def format_ocr_best_effort_warning(status: object, *, context: str = "") -> str | None:
-    """Return the canonical safe warning for a fallible best-effort OCR outcome."""
+    """Return a warning only when OCR is blank or operationally degraded.
+
+    A successful OCR result is fallible, but that quality caveat is informational
+    and must not downgrade an otherwise successful conversion to warning state.
+    """
     try:
         normalized = status if isinstance(status, OcrStatus) else OcrStatus(str(status))
     except ValueError:
@@ -76,6 +91,12 @@ def format_ocr_best_effort_warning(status: object, *, context: str = "") -> str 
     if detail is None:
         return None
     return f"OCR best-effort fallback: status={normalized.value}; {detail}{suffix}."
+
+
+def format_ocr_success_notice(*, context: str = "") -> str:
+    """Return the non-warning quality notice for a successful OCR result."""
+    suffix = f"; {context}" if context else ""
+    return f"OCR result: status=success; {_OCR_SUCCESS_NOTICE}{suffix}."
 
 
 class _OcrModelFilesMissing(FileNotFoundError):
@@ -338,27 +359,31 @@ def run_ocr_outcome(
             result, _elapsed = engine(str(image_file))
         if result is None:
             return OcrOutcome(OcrStatus.NO_TEXT)
-        lines = [text for item in result if (text := _extract_result_text(item))]
-        if not lines:
+        regions = tuple(region for item in result if (region := _extract_result_region(item)) is not None)
+        if not regions:
             return OcrOutcome(OcrStatus.NO_TEXT)
-        return OcrOutcome(OcrStatus.SUCCESS, text="\n".join(lines))
+        return OcrOutcome(
+            OcrStatus.SUCCESS,
+            text="\n".join(region.text for region in regions),
+            regions=regions,
+        )
     except Exception as exc:
         logger.warning("OCR failed for %s: %s", image_file, exc)
         return OcrOutcome(OcrStatus.RECOGNITION_FAILED, message=str(exc))
 
 
-def _extract_result_text(item: Any) -> str:
-    """Extract trusted text from known RapidOCR result item shapes."""
+def _extract_result_region(item: Any) -> OcrTextRegion | None:
+    """Extract trusted text, confidence and geometry from known RapidOCR shapes."""
     if not isinstance(item, (list, tuple)):
-        return ""
+        return None
+
+    raw_points: object = ()
     if len(item) >= 3 and isinstance(item[1], str):
-        text = item[1]
-        confidence = item[2]
+        raw_points, text, confidence = item[0], item[1], item[2]
     elif len(item) >= 2 and isinstance(item[0], str):
-        text = item[0]
-        confidence = item[1]
+        text, confidence = item[0], item[1]
     else:
-        return ""
+        return None
 
     if isinstance(confidence, (int, float)):
         confidence_value = float(confidence)
@@ -366,16 +391,38 @@ def _extract_result_text(item: Any) -> str:
         try:
             confidence_value = float(confidence)
         except ValueError:
-            return ""
+            return None
     else:
-        return ""
+        return None
+
     # The OCR admission contract accepts only scores above 0.5. Keep this as
     # a positive allow condition so non-finite NaN values are rejected too.
-    # RapidOCR filters low scores by default, but retaining the explicit owner
-    # boundary prevents custom engine noise from leaking downstream.
-    if confidence_value > 0.5:
-        return text.strip()
-    return ""
+    if not confidence_value > 0.5:
+        return None
+
+    normalized_text = text.strip()
+    if not normalized_text:
+        return None
+
+    points: list[tuple[float, float]] = []
+    if isinstance(raw_points, (list, tuple)):
+        for raw_point in raw_points:
+            if not isinstance(raw_point, (list, tuple)) or len(raw_point) < 2:
+                points = []
+                break
+            x, y = raw_point[0], raw_point[1]
+            if not isinstance(x, (int, float)) or not isinstance(y, (int, float)):
+                points = []
+                break
+            points.append((float(x), float(y)))
+
+    return OcrTextRegion(points=tuple(points), text=normalized_text, confidence=confidence_value)
+
+
+def _extract_result_text(item: Any) -> str:
+    """Compatibility helper returning only admitted text."""
+    region = _extract_result_region(item)
+    return region.text if region is not None else ""
 
 
 def reset_ocr() -> None:
