@@ -1,0 +1,122 @@
+"""Tests for offline OCR table-structure recognition."""
+
+from __future__ import annotations
+
+import sys
+import types
+from pathlib import Path
+
+import pytest
+
+pytestmark = pytest.mark.unit
+
+
+def _ocr_outcome():
+    from docwen_core.text.ocr import OcrOutcome, OcrStatus, OcrTextRegion
+
+    regions = tuple(
+        OcrTextRegion(
+            points=((x, y), (x + 40, y), (x + 40, y + 20), (x, y + 20)),
+            text=text,
+            confidence=0.99,
+        )
+        for x, y, text in (
+            (10, 10, "姓名"),
+            (80, 10, "金额"),
+            (10, 50, "甲"),
+            (80, 50, "100"),
+        )
+    )
+    return OcrOutcome(OcrStatus.SUCCESS, text="姓名\n金额\n甲\n100", regions=regions)
+
+
+def test_missing_table_model_is_explicitly_unavailable(tmp_path: Path) -> None:
+    from docwen_core.text.table_recognition import (
+        TableRecognitionStatus,
+        recognize_table_markdown,
+    )
+
+    image = tmp_path / "table.png"
+    image.write_bytes(b"image")
+
+    outcome = recognize_table_markdown(
+        image,
+        _ocr_outcome(),
+        model_path=tmp_path / "missing.onnx",
+    )
+
+    assert outcome.status is TableRecognitionStatus.UNAVAILABLE
+    assert "model" in outcome.message.lower()
+
+
+def test_table_recognition_reuses_existing_ocr_geometry(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from docwen_core.text.table_recognition import (
+        TableRecognitionStatus,
+        recognize_table_markdown,
+    )
+
+    image = tmp_path / "table.png"
+    image.write_bytes(b"image")
+    model = tmp_path / "slanet-plus.onnx"
+    model.write_bytes(b"model")
+    observed: dict[str, object] = {}
+
+    class _ModelType:
+        SLANETPLUS = object()
+
+    class _Input:
+        def __init__(self, **kwargs: object) -> None:
+            observed["config"] = kwargs
+
+    class _Engine:
+        def __init__(self, config: object) -> None:
+            observed["engine_config"] = config
+
+        def __call__(
+            self,
+            image_path: str,
+            *,
+            ocr_results: list[object],
+        ) -> object:
+            observed["image_path"] = image_path
+            observed["ocr_results"] = ocr_results
+            return types.SimpleNamespace(
+                pred_htmls=[
+                    "<table><tr><th>姓名</th><th>金额</th></tr>"
+                    "<tr><td>甲</td><td>100</td></tr></table>"
+                ]
+            )
+
+    monkeypatch.setitem(
+        sys.modules,
+        "rapid_table",
+        types.SimpleNamespace(ModelType=_ModelType, RapidTable=_Engine, RapidTableInput=_Input),
+    )
+
+    outcome = recognize_table_markdown(image, _ocr_outcome(), model_path=model)
+
+    assert outcome.status is TableRecognitionStatus.SUCCESS
+    assert outcome.markdown == "| 姓名 | 金额 |\n| --- | --- |\n| 甲 | 100 |"
+    assert observed["image_path"] == str(image)
+    ocr_results = observed["ocr_results"]
+    assert isinstance(ocr_results, list) and len(ocr_results) == 1
+
+
+def test_table_html_merged_cells_are_projected_without_dropping_values() -> None:
+    from docwen_core.text.table_recognition import _html_table_to_markdown
+
+    markdown = _html_table_to_markdown(
+        "<table>"
+        "<tr><th rowspan='2'>项目</th><th colspan='2'>数值</th></tr>"
+        "<tr><td>本期</td><td>上期</td></tr>"
+        "<tr><td>收入</td><td>10</td><td>9</td></tr>"
+        "</table>",
+        minimum_matches=2,
+    )
+
+    assert "| 项目 | 数值 | 数值 |" in markdown
+    assert "| 项目 | 本期 | 上期 |" in markdown
+    assert "| 收入 | 10 | 9 |" in markdown
