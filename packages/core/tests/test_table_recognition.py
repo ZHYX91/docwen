@@ -76,10 +76,7 @@ def test_table_recognition_reuses_existing_ocr_geometry(
         observed["boxes"] = boxes
         observed["texts"] = texts
         observed["scores"] = scores
-        return (
-            "<table><tr><th>姓名</th><th>金额</th></tr>"
-            "<tr><td>甲</td><td>100</td></tr></table>"
-        )
+        return "<table><tr><th>姓名</th><th>金额</th></tr><tr><td>甲</td><td>100</td></tr></table>"
 
     monkeypatch.setattr(slanet, "infer_table_html", _infer)
 

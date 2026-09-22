@@ -19,9 +19,7 @@ from docwen_core.text.ocr import OcrOutcome, OcrStatus
 
 RAPIDTABLE_MODEL_FILENAME = "slanet-plus.onnx"
 RAPIDTABLE_MODEL_SHA256 = "d57a942af6a2f57d6a4a0372573c696a2379bf5857c45e2ac69993f3b334514b"
-RAPIDTABLE_MODEL_URL = (
-    "https://www.modelscope.cn/models/RapidAI/RapidTable/resolve/v2.0.0/slanet-plus.onnx"
-)
+RAPIDTABLE_MODEL_URL = "https://www.modelscope.cn/models/RapidAI/RapidTable/resolve/v2.0.0/slanet-plus.onnx"
 
 
 class TableRecognitionStatus(StrEnum):

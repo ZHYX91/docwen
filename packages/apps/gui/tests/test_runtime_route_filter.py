@@ -115,7 +115,6 @@ def test_duplicate_action_target_signature_fails_closed() -> None:
     assert result.error is not None
 
 
-
 @pytest.mark.parametrize("source_format", ["wps", "doc", "rtf", "odt"])
 def test_composed_gongwen_action_uses_document_hub_preconversion(source_format: str) -> None:
     result = discover_composed_action_route_choices(

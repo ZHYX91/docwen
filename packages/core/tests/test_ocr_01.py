@@ -559,7 +559,6 @@ def test_format_ocr_best_effort_warning_ignores_unknown_status(status: object) -
     assert ocr.format_ocr_best_effort_warning(status) is None
 
 
-
 def test_successful_ocr_uses_informational_notice_not_warning() -> None:
     import docwen_core.text.ocr as ocr
 

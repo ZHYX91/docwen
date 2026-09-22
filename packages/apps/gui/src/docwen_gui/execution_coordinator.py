@@ -31,9 +31,6 @@ if TYPE_CHECKING:
     from docwen_gui.view_models.task_history import TaskHistory
 
 
-
-
-
 def _route_operation_label(target_format: str, action_name: str) -> str:
     target = str(target_format or "").strip().upper()
     action = str(action_name or "").strip()
