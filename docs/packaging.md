@@ -14,6 +14,7 @@ DocWen 的发布目标为一个 Windows x64 完整包和两个 Ubuntu 24.04 x64 
 
 - `DocWen.exe` or `DocWenCLI.exe` and PyInstaller `_internal` content.
 - `configs/`, `templates/`, `models/`, locale files and application assets.
+- The table-structure model is `models/rapidtable/slanet-plus.onnx`. If it is not already present in the source model tree, the production build downloads only this hash-pinned build input before PyInstaller packaging, rejects size/digest mismatches, and copies the verified bytes into both GUI and CLI payloads. Packaged/runtime code never downloads models.
 - The complete `pymupdf-layout` distribution resource manifest under `_internal/pymupdf/layout/resources`, including its ONNX models and YAML descriptors.
 - License, third-party notices and the supported runtime metadata.
 
