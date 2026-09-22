@@ -21,11 +21,15 @@ The guarantee is intentionally limited to CPython events that can be audited. Or
 
 该保证只覆盖 CPython 能够审计的事件。若某个 IP 套接字在守卫启用前已经连接或被继承，其普通载荷写入不会产生 `socket.send` 审计事件，因此不属于承诺边界。受支持的打包入口会在产品和 Qt 模块导入前启用守卫、拒绝携带未使用的 Qt 网络组件，并且不会有意创建这类套接字；这仍是防止依赖意外出站的纵深防御，而不是对恶意代码的隔离。
 
-## OCR
+## OCR and table structure / OCR 与表格结构
 
-RapidOCR models are stored under `models/rapidocr/`. Language selection is request-scoped. OCR is best effort: unavailable engines, recognition failure and no-text results remain distinguishable and produce user-visible warnings where applicable.
+RapidOCR models are stored under `models/rapidocr/`. Language selection is request-scoped. A successful OCR result is normal completion; the UI may show an informational quality notice, but success does not create a warning. No-text and operationally degraded outcomes remain typed and user-visible.
 
-RapidOCR 模型位于 `models/rapidocr/`，语言选择按请求隔离。OCR 属于尽力而为能力：引擎不可用、识别失败和未检测到文字必须保持可区分，并在适用场景给出可见警告。
+Table structure recognition reuses the same admitted OCR boxes/text/confidence and the existing NumPy/OpenCV/ONNX Runtime stack. DocWen embeds only the CPU SLANet inference/matching subset adapted from RapidTable/PaddleOCR under Apache-2.0; it does not add RapidTable's downloader/configuration dependencies or run a second OCR pass. The pinned `slanet-plus.onnx` resource is installed as `models/rapidtable/slanet-plus.onnx`. Production builds acquire it before packaging, enforce the frozen SHA-256, and the runtime never downloads it. `DOCWEN_RAPIDTABLE_MODEL` may point source/development runs to the same model file.
+
+RapidOCR 模型位于 `models/rapidocr/`，语言选择按请求隔离。OCR 成功属于正常完成：界面可以显示普通质量说明，但不会因此把任务降为警告；未检测到文字和运行故障仍保留类型化状态并向用户明确展示。
+
+表格结构识别复用同一次 OCR 已取得的文字框、文本和置信度，并继续使用项目现有 NumPy/OpenCV/ONNX Runtime。DocWen 仅内置由 RapidTable/PaddleOCR Apache-2.0 代码适配的 CPU SLANet 推理/匹配子集，不引入其下载器、配置依赖，也不会重复执行 OCR。固定的 `slanet-plus.onnx` 在打包后位于 `models/rapidtable/slanet-plus.onnx`；生产构建在打包前取得模型并核对冻结 SHA-256，运行时绝不联网下载。源码/开发环境可用 `DOCWEN_RAPIDTABLE_MODEL` 指向同一模型。
 
 ### OpenCV distribution ownership / OpenCV 分发所有权
 
@@ -33,8 +37,10 @@ RapidOCR 模型位于 `models/rapidocr/`，语言选择按请求隔离。OCR 属
 `opencv-python-headless`. Those distributions install the same `cv2` paths and must never coexist.
 DocWen explicitly selects `opencv-python-headless==4.13.0.92`: the product uses PySide6 for windows,
 and neither its production sources nor the exercised OCR/PDF paths require OpenCV HighGUI. The root
-uv configuration removes only RapidOCR 1.4.4's conflicting dependency edge. A RapidOCR version
-change therefore fails the exact contract until the declaration and runtime behavior are reviewed again.
+uv configuration removes only RapidOCR 1.4.4's conflicting dependency edge. The embedded SLANet
+table runtime imports DocWen's already-selected headless `cv2` and therefore adds no second OpenCV
+distribution. A RapidOCR version change therefore fails the exact contract until the declaration and
+runtime behavior are reviewed again.
 
 `rapidocr-onnxruntime==1.4.4` 声明 `opencv-python`，而 PDF→DOCX 兜底声明
 `opencv-python-headless`；两者会安装同一组 `cv2` 路径，禁止共存。DocWen 明确选择
