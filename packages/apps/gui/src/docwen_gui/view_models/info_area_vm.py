@@ -90,6 +90,7 @@ class HistoryRowData:
     file_path: str = ""
     navigate_file_path: str = ""
     operation_id: str = ""
+    operation: str = ""
     repeat_count: int = 1
     created_at: datetime = field(default_factory=datetime.now)
 
@@ -346,6 +347,7 @@ class InfoAreaViewModel(QObject):
         file_path: str | None = None,
         navigate_file_path: str | None = None,
         operation_id: str | None = None,
+        operation: str = "",
     ) -> None:
         """Add a message to the history area.
 
@@ -359,6 +361,7 @@ class InfoAreaViewModel(QObject):
             file_path: File path for the location button.
             navigate_file_path: Path to navigate to when the status summary is clicked.
             operation_id: Associated operation ID (triggers terminal transient).
+            operation: Optional user-facing operation label for preflight notices.
         """
         navigation_target = navigate_file_path or ""
         resolved_operation_id = operation_id or ""
@@ -369,6 +372,7 @@ class InfoAreaViewModel(QObject):
             file_path or "",
             navigation_target,
             resolved_operation_id,
+            operation,
         )
         timestamp = datetime.now().strftime("%H:%M:%S")
         if signature == self._last_message_signature and self._history_rows:
@@ -391,6 +395,7 @@ class InfoAreaViewModel(QObject):
             file_path=file_path or "",
             navigate_file_path=navigation_target,
             operation_id=resolved_operation_id,
+            operation=operation,
         )
         self._history_rows.append(row)
         self._enforce_message_limit()
