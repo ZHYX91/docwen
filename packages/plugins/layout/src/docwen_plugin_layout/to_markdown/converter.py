@@ -30,6 +30,7 @@ from docwen_core.text.ocr import (
     format_ocr_best_effort_warning,
     run_ocr_outcome,
 )
+from docwen_core.text.table_recognition import enrich_ocr_table_structure
 from docwen_plugin_layout._common import file_size, new_artifact_id, request_source_format
 
 logger = logging.getLogger(__name__)
@@ -116,6 +117,7 @@ def _ocr_page_outcomes(
                     ocr_language=ocr_language,
                     current_locale=current_locale,
                 )
+                outcome, _table_outcome = enrich_ocr_table_structure(page_img_path, outcome)
             except Exception as exc:
                 outcome = OcrOutcome(OcrStatus.RECOGNITION_FAILED, message=str(exc))
             finally:
@@ -542,7 +544,7 @@ class LayoutToMarkdownConverter:
                 for page_number, outcome in enumerate(page_outcomes, start=1):
                     location = f"{Path(input_path).name}:page-{page_number}"
                     page_path = context.workspace.create_artifact_path("auxiliary", ".md")
-                    page_text = outcome.recognized_text.rstrip()
+                    page_text = (outcome.structured_markdown or outcome.recognized_text).rstrip()
                     Path(page_path).write_text(f"{page_text}\n" if page_text else "", encoding="utf-8")
                     page_artifact = ArtifactManifest(
                         artifact_id=new_artifact_id(),
@@ -623,6 +625,7 @@ class LayoutToMarkdownConverter:
                 )
             ]
             ocr_chars = sum(len(outcome.recognized_text) for outcome in page_outcomes)
+            table_pages = sum(bool(outcome.structured_markdown) for outcome in page_outcomes)
             if page_outcomes:
                 diagnostics.append(
                     ConversionDiagnostic(
@@ -648,6 +651,7 @@ class LayoutToMarkdownConverter:
                         "image_count": len(image_artifacts),
                         "ocr_enabled": enable_ocr,
                         "ocr_pages": len(page_outcomes),
+                        "ocr_table_pages": table_pages if page_outcomes else 0,
                         "ocr_images": 0,
                     },
                 ),
