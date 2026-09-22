@@ -145,15 +145,16 @@ class ActivityRecordsModel(QAbstractTableModel):
             path = row.file_path or row.navigate_file_path
             if path:
                 details += "\n\n" + display_path(path)
+            output_notice = bool(row.navigate_file_path)
             records.append(
                 ActivityRecord(
                     f"notice:{row.created_at.isoformat()}:{row.message}",
                     row.operation_id,
                     row.created_at,
                     status,
-                    "",
-                    path if row.show_location else "",
-                    t("activity.info"),
+                    "" if output_notice else path,
+                    path if row.show_location and output_notice else "",
+                    row.operation or t("activity.info"),
                     details,
                     diagnostic=DiagnosticSummary(status=status),
                 )
