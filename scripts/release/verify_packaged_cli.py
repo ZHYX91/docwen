@@ -850,7 +850,11 @@ def _verify_physical_page_bundle(
             f"packaged_physical_page_unresolved_diagnostic_invalid:{unresolved_resource_ids}:{unresolved_diagnostics}"
         )
     if ocr_enabled:
-        expected_ocr_diagnostic_ids = sorted(relation["source_artifact_id"] for relation in page_relations)
+        expected_ocr_diagnostic_ids = sorted(
+            relation["source_artifact_id"]
+            for relation in page_relations
+            if relation.get("page_fragment", {}).get("ocr_status") != "success"
+        )
         actual_ocr_diagnostic_ids = sorted(
             artifact_id
             for diagnostic in diagnostics
