@@ -31,6 +31,17 @@ if TYPE_CHECKING:
     from docwen_gui.view_models.task_history import TaskHistory
 
 
+
+
+
+def _route_operation_label(target_format: str, action_name: str) -> str:
+    target = str(target_format or "").strip().upper()
+    action = str(action_name or "").strip()
+    if action:
+        return f"{action} → {target}" if target else action
+    return _t("conversion_panel.convert") + (f" → {target}" if target else "")
+
+
 class ExecutionCoordinator(QObject):
     """One route/admit/reserve/start path for single, batch and aggregate work."""
 
@@ -214,6 +225,9 @@ class ExecutionCoordinator(QObject):
                 self._info_area_vm.add_message(
                     _t("main_window.route_unavailable", "No compatible operation is available for this file."),
                     "warning",
+                    show_location=True,
+                    file_path=file_path,
+                    operation=_route_operation_label(target_format, action_name),
                 )
                 return None
             detected_format, source_category = context
@@ -246,9 +260,13 @@ class ExecutionCoordinator(QObject):
         if choice is None and not normalized_target and len(result.choices) == 1:
             choice = result.choices[0]
         if choice is None:
+            source_path = file_paths[0] if len(file_paths) == 1 else ""
             self._info_area_vm.add_message(
                 _t("main_window.route_unavailable", "No compatible operation is available for this file."),
                 "warning",
+                show_location=bool(source_path),
+                file_path=source_path or None,
+                operation=_route_operation_label(target_format, action_name),
             )
             return None
         return choice.target, choice
