@@ -376,7 +376,7 @@ class ImageToMarkdownConverter:
                 if table_outcome.status is TableRecognitionStatus.SUCCESS:
                     table_markdown = table_outcome.markdown
                 elif table_outcome.status is TableRecognitionStatus.FAILED:
-                    context.logger.warning("Table recognition failed: %s", table_outcome.message)
+                    context.logger.warning(f"Table recognition failed: {table_outcome.message}")
                     context.progress.report_diagnostic(
                         "warning",
                         "Table structure recognition failed; plain OCR text was retained.",
