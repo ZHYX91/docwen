@@ -2239,6 +2239,10 @@ class DocxToMarkdownConverter:
         """
         from docwen_core.detection import detect_content_format
         from docwen_core.text.ocr import run_ocr_outcome
+        from docwen_core.text.table_recognition import (
+            TableRecognitionStatus,
+            enrich_ocr_table_structure,
+        )
 
         md_style = self._request_policy.export.md_file_link_style
         for i, info in enumerate(infos):
@@ -2248,13 +2252,22 @@ class DocxToMarkdownConverter:
                 ocr_language=ocr_language,
                 current_locale=current_locale,
             )
+            outcome, table_outcome = enrich_ocr_table_structure(info.path, outcome)
+            if table_outcome.status is TableRecognitionStatus.FAILED:
+                context.progress.report_diagnostic(
+                    "warning",
+                    "Table structure recognition failed; plain OCR text was retained.",
+                    code="OCR-TABLE-FALLBACK",
+                    location=str(info.path),
+                )
             _report_ocr_best_effort(
                 context.progress,
                 outcome.status,
                 location=str(info.path),
             )
             ocr_text = outcome.recognized_text
-            if not ocr_text:
+            ocr_markdown = outcome.structured_markdown
+            if not ocr_text and not ocr_markdown:
                 continue
 
             if ocr_placement == "image_md":
@@ -2266,6 +2279,7 @@ class DocxToMarkdownConverter:
                     image_markdown="" if retain_image_owner else img_refs[i],
                     ocr_text=ocr_text,
                     md_link_style=md_style,
+                    ocr_markdown=ocr_markdown or None,
                 )
                 # Write sidecar to staging
                 from pathlib import Path
@@ -2297,14 +2311,16 @@ class DocxToMarkdownConverter:
                 if not retain_image_owner:
                     img_refs[i] = repl_link + "\n"
             else:
-                # The configured title is specifically a main-Markdown
-                # presentation fragment.  Preserve its Markdown markup;
-                # image_md sidecars intentionally remain title-free.
-                ocr_block = _format_main_ocr_blockquote(
-                    ocr_text,
-                    self._request_policy.ocr_blockquote_title,
-                )
-                img_refs[i] = img_refs[i].rstrip("\n") + f"\n{ocr_block}\n\n"
+                if ocr_markdown:
+                    img_refs[i] = img_refs[i].rstrip("\n") + f"\n\n{ocr_markdown}\n\n"
+                else:
+                    # The configured title is specifically a main-Markdown
+                    # presentation fragment. Preserve its Markdown markup.
+                    ocr_block = _format_main_ocr_blockquote(
+                        ocr_text,
+                        self._request_policy.ocr_blockquote_title,
+                    )
+                    img_refs[i] = img_refs[i].rstrip("\n") + f"\n{ocr_block}\n\n"
 
         return img_refs, img_seq
 
