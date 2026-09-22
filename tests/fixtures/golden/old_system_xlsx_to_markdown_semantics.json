@@ -613,7 +613,6 @@
           "success": true,
           "diagnostic_codes": [
             "SHEET2MD-OK",
-            "OCR-BEST-EFFORT",
             "FINALIZER_DONE"
           ],
           "artifact_count": 2,
@@ -719,8 +718,6 @@
           "success": true,
           "diagnostic_codes": [
             "SHEET2MD-OK",
-            "OCR-BEST-EFFORT",
-            "OCR-BEST-EFFORT",
             "FINALIZER_DONE"
           ],
           "artifact_count": 3,
@@ -857,8 +854,6 @@
           "success": true,
           "diagnostic_codes": [
             "SHEET2MD-OK",
-            "OCR-BEST-EFFORT",
-            "OCR-BEST-EFFORT",
             "FINALIZER_DONE"
           ],
           "artifact_count": 5,
