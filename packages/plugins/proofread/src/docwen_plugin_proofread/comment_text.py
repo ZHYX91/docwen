@@ -104,7 +104,7 @@ def resolve_comment_locale(context: object) -> str:
     request = getattr(context, "request", None)
     options = getattr(request, "options", {})
     if isinstance(options, Mapping):
-        explicit = options.get("locale") or options.get("lang")
+        explicit = options.get("locale")
         if explicit:
             return normalize_comment_locale(explicit)
     snapshot = getattr(request, "config_snapshot", {})
