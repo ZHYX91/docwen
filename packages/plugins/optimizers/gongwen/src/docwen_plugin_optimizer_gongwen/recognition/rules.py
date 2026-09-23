@@ -20,7 +20,7 @@ SCORING_RULES: dict[str, list[ScoringRule]] = {
     ],
     # ── 份号 (纯数字序列) ──
     "copy_id": [
-        ScoringRule("is_numeric_sequence", 60),
+        ScoringRule("is_copy_id_candidate", 60),
         ScoringRule("is_after_last_unique_element", 40),
     ],
     # ── 密级和保密期限 ──

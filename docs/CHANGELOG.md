@@ -19,12 +19,14 @@
 - 新增轻量离线表格结构识别：复用同一次 OCR 的文字框和置信度，用 SLANet-plus 将表格恢复为 Markdown；不增加公式 OCR。
 - 修复 WPS/DOC/RTF/ODT 选择公文优化后执行前被直接路由检查错误拒绝的问题；GUI 现在复用 Application 的完整预转换链。
 - 路由预检失败记录输入文件与实际操作，活动记录可定位输入，不再显示“文件：— / 操作：提示”。
+- 公文优化不再把普通表格中的数量误作份号；带明确标签或文首公文上下文的表格份号仍可提取。普通 Word 有序/无序列表保留编号、嵌套及续行，不受公文标题序号清理开关影响。
 
 - Use native path spelling in Activity Records without changing internal path identity or Markdown links.
 - Successful OCR no longer turns a completed task into a warning; no-text and operational degradation remain explicit and localized.
 - Add lightweight offline table-structure recognition that reuses existing OCR geometry and emits Markdown tables with the pinned SLANet-plus model; formula OCR is not added.
 - Fix Gongwen execution for WPS/DOC/RTF/ODT by using the same Application-owned preconversion plan that capability discovery already uses.
 - Preserve source-file and operation context for preflight route failures so Activity Records can navigate to the input.
+- Keep ordinary table quantities out of Gongwen copy identifiers while retaining labelled and official-header layout fields. Preserve ordinary Word list markers, nesting and continuation lines independently of heading-number cleanup.
 
 - DOCX 四类校对批注支持全部 11 种界面语言并统一作者 DocWen；敏感词和符号配对提供核查提示，只有明确替换才显示箭头。修复 `([)]` 等交叉嵌套漏报，默认用户词典保持为空。
 - Localize all four DOCX proofreading comment types in the eleven interface languages, use author DocWen, and reserve replacement arrows for explicit edits. Detect crossed symbol nesting such as `([)]`; user dictionaries remain empty by default.

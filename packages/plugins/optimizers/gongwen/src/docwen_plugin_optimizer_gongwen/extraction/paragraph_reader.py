@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 from docx.oxml.ns import qn
 
 from docwen_core.docx_parsing.image_extraction import extract_images_from_element
-from docwen_core.docx_parsing.list_processing import ListCounterManager
+from docwen_core.docx_parsing.list_processing import ListCounterManager, format_list_marker
 from docwen_core.docx_parsing.textbox_extraction import (
     ExtractedParagraph,
     extract_textbox_paragraphs,
@@ -154,7 +154,7 @@ def read_paragraphs(
         fml_detected, fml_type, fml_latex = extract_formula_info(para)
 
         # ── Heading detection ──
-        cleaned_text, heading_lvl, heading_num = _detect_heading(
+        cleaned_text, heading_lvl, heading_num, list_marker, list_level = _detect_paragraph_structure(
             text,
             style_name,
             para,
@@ -210,6 +210,8 @@ def read_paragraphs(
             has_section_break=has_sb,
             heading_level=heading_lvl,
             heading_numbering_text=heading_num,
+            list_marker=list_marker,
+            list_level=list_level,
             heading_body_boundary=heading_body_boundary,
             heading_body_boundary_source=heading_body_boundary_source,
             extracted_images=images,
@@ -240,7 +242,7 @@ def read_paragraphs(
     return features
 
 
-def _detect_heading(
+def _detect_paragraph_structure(
     text: str,
     style_name: str = "",
     para=None,
@@ -250,8 +252,8 @@ def _detect_heading(
     diagnostic_sink: ProgressSink | None = None,
     diagnostic_location: str = "",
     neighboring_paragraphs: tuple[Any, ...] = (),
-) -> tuple[str, int, str]:
-    """Three-pass heading detection for body paragraphs.
+) -> tuple[str, int, str, str, int]:
+    """Distinguish Gongwen headings from ordinary Word lists.
 
     Pass 1: Detect heading numbering prefix via shared core rules
             (``docwen_core.text.heading_numbering.detect_heading_prefix``).
@@ -260,20 +262,22 @@ def _detect_heading(
     Pass 2: Check Word pStyle (Heading 1-5).
     Pass 3 (fallback): Try Word numbering definitions via NumberingIndex.
 
-    Returns (cleaned_text, heading_level, numbering_text) where
-    heading_level is 1-5 or 0 if not a heading.
+    Returns cleaned text, heading level/prefix, and ordinary list marker/level.
+    Heading cleanup must not discard the structure of an ordinary list.
     """
     # Pass 1: Shared heading numbering detection
     info = detect_heading_prefix(text, rules=cleanup_rules)
     # A prefix that consumes the whole paragraph (for example a pure numeric
     # 份号 such as ``001``) is metadata, not an empty heading.
     if info is not None and info.clean_text.strip():
-        return info.clean_text.strip(), info.numbering_level, info.prefix
+        return info.clean_text.strip(), info.numbering_level, info.prefix, "", 0
 
     # Pass 2: Word style
     style_map = {"Heading 1": 1, "Heading 2": 2, "Heading 3": 3, "Heading 4": 4, "Heading 5": 5}
     heading_level = style_map.get(style_name, 0)
     heading_num = ""
+    list_marker = ""
+    list_level = 0
 
     # Pass 3: Word numbering definitions via NumberingIndex.  This also runs
     # for style-recognised headings so Word's generated marker is retained.
@@ -300,6 +304,10 @@ def _detect_heading(
                         counter_value,
                         counters.snapshot(counter_key),
                     )
+                elif not heading_level:
+                    list_type = "bullet" if str(level_info.num_fmt).casefold() == "bullet" else "ordered"
+                    list_marker = format_list_marker(list_type, counter_value)
+                    list_level = max(0, ilvl)
         except Exception as exc:
             if diagnostic_sink is not None:
                 diagnostic_sink.report_diagnostic(
@@ -312,7 +320,7 @@ def _detect_heading(
                     location=diagnostic_location,
                 )
 
-    return text, heading_level, heading_num
+    return text, heading_level, heading_num, list_marker, list_level
 
 
 def _resolve_word_numbering(para: Any, numbering_index: Any) -> tuple[str, int, Any] | None:

@@ -163,8 +163,14 @@ def render(
                 append_images(pf)
             continue
 
-        # Plain text
-        output_parts.append(line)
+        # Ordinary lists are independent of Gongwen heading-number cleanup.
+        if pf and pf.list_marker:
+            indent = "    " * pf.list_level
+            prefix = f"{indent}{pf.list_marker} "
+            continuation = " " * len(prefix)
+            output_parts.append(prefix + line.replace("\n", f"\n{continuation}"))
+        else:
+            output_parts.append(line)
 
         # Images after paragraph
         if pf and pf.extracted_images:

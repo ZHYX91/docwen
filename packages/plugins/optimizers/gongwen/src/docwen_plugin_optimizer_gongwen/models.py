@@ -39,6 +39,8 @@ class ParagraphFeature:
     has_section_break: bool = False
     heading_level: int = 0  # 1-5 if heading detected, 0 otherwise
     heading_numbering_text: str = ""  # the numbering prefix (e.g. "一、")
+    list_marker: str = ""  # ordinary Word list rendered as Markdown, independently of headings
+    list_level: int = 0
     heading_body_boundary: int | None = None  # character boundary in cleaned text
     heading_body_boundary_source: str = ""  # "run_format" | "punctuation_fallback" | ""
     extracted_images: list[str] = field(default_factory=list)  # staging paths

@@ -33,3 +33,20 @@ optional gate may leave the route available while reporting a limitation. A runt
 zero routes returns a successful empty matrix, while runtime initialization/query failure is a typed error.
 
 Route additions require manifest tests, option-consumption tests, entry-point coverage and an update to [Capabilities](../capabilities.md).
+
+## Gongwen metadata and body / 公文元数据与正文
+
+Numeric table cells alone are not evidence of a copy identifier. A table value needs an adjacent
+explicit copy-ID label, or must lead the document with following official-header evidence
+(security, urgency or document number). Ordinary data tables remain in the body. Leading zeroes
+in legitimate copy identifiers remain strings.
+
+Ordinary Word lists remain Markdown lists: numbering counters, starts/restarts, nesting and
+continuation lines are retained. Ordered markers normalize to decimal Markdown markers and bullets
+to `-`. Gongwen heading-number removal/replacement applies only to recognised headings, not to
+ordinary list items.
+
+表格单元格是纯数字不能单独证明其为份号；需要相邻的明确份号标签，或位于文首且后续有密级、
+紧急程度、发文字号等公文版头依据。普通数据表留在正文，合法份号保留前导零字符串。
+普通 Word 列表保留计数、起始/重启、嵌套与续行；有序标记规范为 Markdown 十进制数字，无序标记为
+`-`。公文标题序号清理/替换只作用于识别为标题的段落，不删除普通列表标记。
