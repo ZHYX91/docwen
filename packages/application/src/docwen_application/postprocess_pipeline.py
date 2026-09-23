@@ -191,7 +191,10 @@ def _execute_docx_proofread_pipeline(
             input_refs=[proofread_ref],
             target_format="docx",
             action_name="validate",
-            options=dict(proofread_options),
+            options={
+                **proofread_options,
+                **({"locale": request.options["locale"]} if "locale" in request.options else {}),
+            },
             output_policy=replace(
                 request.output_policy,
                 group_outputs=True,

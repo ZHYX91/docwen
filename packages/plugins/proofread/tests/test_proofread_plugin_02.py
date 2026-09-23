@@ -5,7 +5,6 @@ from __future__ import annotations
 from ._proofread_plugin_support import (
     Path,
     _build_fake_context,
-    _count_by_key,
     _create_test_docx,
     _load_proofread_old_system_fixture,
     _proofread_options_from_fixture,
@@ -45,12 +44,7 @@ class TestDocxValidation:
             assert result.artifacts[0].metadata["errors_found"] == len(fixture["expected_issues"])
             comments = _extract_comments(Path(result.artifacts[0].staging_path))
             assert len(comments) == len(fixture["expected_issues"])
-            assert _count_by_key(comment.author.removeprefix("DocWen-") for comment in comments) == {
-                "sensitive": 1,
-                "typo": 1,
-                "symbol": 3,
-                "pairing": 1,
-            }
+            assert {comment.author for comment in comments} == {"DocWen"}
             comment_texts = [comment.text for comment in comments]
             for expected in fixture["expected_issues"]:
                 assert any(expected["error_text"] in text for text in comment_texts)

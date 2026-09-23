@@ -1,0 +1,11 @@
+# DOCX proofreading comments
+
+Direct DOCX validation (including Application-preconverted legacy documents) and Markdown-to-DOCX postprocessing use the same validator and comment formatter. Four independent switches control typo rules, sensitive-word rules, symbol correction and symbol pairing. The shipped typo and sensitive-word dictionaries remain empty and user-managed; this does not add grammar correction.
+
+Comments use author `DocWen` and initials `DW`. A rule with an explicit `replacement` produces a localized label and `original → replacement`. Sensitive words and unmatched or crossed symbol pairs have no replacement: their comments ask for contextual review and contain no replacement arrow. Stable `source` and `rule_key` identities and Machine fix eligibility are independent of comment language.
+
+The request's `locale` takes precedence, then its frozen GUI language configuration; legacy lower-level `lang` input remains readable. DOCX validation capabilities declare `locale` for all eleven shipped languages. GUI requests use the current interface language, explicit CLI `--lang` is forwarded to locale-aware routes, and Application postprocessing preserves the original request locale. When neither a request locale nor a configured language exists, the fallback is English. Markdown report field names and internal rule identifiers are unchanged.
+
+Pairing uses one nesting stack across symbol types. A closer that matches a non-top opener reports the exact crossing position, then removes that matched opener while leaving inner symbols available for later closers. This finds `([)]` without reporting valid `([])` as an error. Existing contraction, possessive and elision handling and DOCX/Markdown skip policies remain active. The additional reason distinguishes crossed nesting from a genuinely unmatched symbol in DOCX comment wording.
+
+Comment ranges remain half-open ranges in paragraph text. Run splitting and exact range selection are unchanged. Tests write and inspect real DOCX comment parts for every supported locale, four issue kinds, stable author, unchanged input and exact anchors; separate tests cover request/config precedence, CLI and postprocess language transfer, crossed nesting and existing skip/apostrophe behavior. Real Word presentation is an additional host acceptance boundary, not a claim made by those source tests.

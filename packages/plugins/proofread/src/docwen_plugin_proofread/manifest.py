@@ -13,10 +13,19 @@ chain without duplicating Office bridge code inside this plugin.
 from __future__ import annotations
 
 from docwen_core.models.manifest import PluginManifest, RouteCapabilityRule, RouteSpec
+from docwen_plugin_proofread.comment_text import SUPPORTED_COMMENT_LOCALES
 from docwen_plugin_proofread.rules import PROOFREAD_OPTIONS_SCHEMA
 
 PLUGIN_ID = "docwen_plugin_proofread"
 PLUGIN_VERSION = "0.1.0"
+
+DOCX_PROOFREAD_OPTIONS_SCHEMA = {
+    **PROOFREAD_OPTIONS_SCHEMA,
+    "properties": {
+        **PROOFREAD_OPTIONS_SCHEMA["properties"],
+        "locale": {"type": "string", "enum": list(SUPPORTED_COMMENT_LOCALES)},
+    },
+}
 
 # ── Route definitions ──────────────────────────────────────────────────
 
@@ -25,7 +34,7 @@ ROUTE_VALIDATE_DOCX = RouteSpec(
     target_format="docx",
     action_name="validate",
     label="DOCX Proofread — validate text and annotate issues as comments",
-    options_schema=PROOFREAD_OPTIONS_SCHEMA,
+    options_schema=DOCX_PROOFREAD_OPTIONS_SCHEMA,
 )
 
 ROUTE_VALIDATE_DOCUMENT = RouteSpec(
@@ -33,7 +42,7 @@ ROUTE_VALIDATE_DOCUMENT = RouteSpec(
     target_format="docx",
     action_name="validate",
     label="Legacy document proofread — pre-convert to DOCX and annotate issues as comments",
-    options_schema=PROOFREAD_OPTIONS_SCHEMA,
+    options_schema=DOCX_PROOFREAD_OPTIONS_SCHEMA,
 )
 
 ROUTE_VALIDATE_MD = RouteSpec(

@@ -14,6 +14,9 @@
 
 ### 修复与改进 / Fixed and changed
 
+- DOCX 四类校对批注支持全部 11 种界面语言并统一作者 DocWen；敏感词和符号配对提供核查提示，只有明确替换才显示箭头。修复 `([)]` 等交叉嵌套漏报，默认用户词典保持为空。
+- Localize all four DOCX proofreading comment types in the eleven interface languages, use author DocWen, and reserve replacement arrows for explicit edits. Detect crossed symbol nesting such as `([)]`; user dictionaries remain empty by default.
+
 - 修复 GUI 中 Markdown 转 DOCX 时校对复选项“显示但无效”的问题。Application 层现在编排“私有 DOCX 渲染 → 复用现有 DOCX 校对器 → 一次最终发布”，Markdown 插件与校对插件保持解耦；校对失败不会把未校对产物当成功结果发布。
 - Fix the inert proofreading controls on Markdown→DOCX. The Application layer now composes private DOCX rendering, the existing DOCX validator, and one final publication without coupling the Markdown and proofreading plugins; proofreading failure cannot publish an unchecked document as success.
 - `--proofread` 仅接受实际识别为 Markdown 的 DOCX 转换；省略 `--check` 时使用校对配置默认值。独立 `validate` 仍用于现有 DOCX/Markdown/旧 Word 家族内容。

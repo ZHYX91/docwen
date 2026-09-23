@@ -145,6 +145,8 @@ def build_execution_options(
     """Normalize explicit CLI values without guessing route applicability."""
 
     options: dict[str, Any] = {}
+    if route_options is not None and "locale" in route_options and (locale := getattr(args, "lang", None)):
+        options["locale"] = str(locale)
 
     if template := getattr(args, "template", None):
         options["template_name"] = str(template)

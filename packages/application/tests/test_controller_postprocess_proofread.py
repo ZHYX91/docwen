@@ -91,7 +91,9 @@ def test_failure_or_cancellation_never_publishes_private_render(tmp_path, monkey
     assert source.read_bytes() == original
 
 
+@pytest.mark.parametrize("locale", [None, "zh_CN", "fr_FR"])
 def test_markdown_docx_proofread_is_two_private_then_public_runtime_stages(
+    locale,
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -171,6 +173,7 @@ def test_markdown_docx_proofread_is_two_private_then_public_runtime_stages(
         ],
         target_format="docx",
         options={
+            **({"locale": locale} if locale else {}),
             "remove_numbering": True,
             POSTPROCESS_PROOFREAD_OPTION: {
                 "enable_symbol_pairing": True,
@@ -211,6 +214,7 @@ def test_markdown_docx_proofread_is_two_private_then_public_runtime_stages(
     assert proofread.action_name == "validate"
     assert proofread.target_format == "docx"
     assert proofread.options == {
+        **({"locale": locale} if locale else {}),
         "enable_symbol_pairing": True,
         "enable_symbol_correction": False,
         "enable_typos_rule": True,
