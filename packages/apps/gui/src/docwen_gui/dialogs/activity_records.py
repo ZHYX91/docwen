@@ -119,7 +119,17 @@ class ActivityRecordsDialog(QDialog):
         self.status_filter = ScrollSafeComboBox(self)
         self.status_filter.setAccessibleName(t("activity.status"))
         self.status_filter.addItem(t("activity.all_statuses"), "")
-        for status in ("failed", "warning", "completed", "processing", "pending", "skipped", "cancelled", "info"):
+        for status in (
+            "failed",
+            "warning",
+            "not_started",
+            "completed",
+            "processing",
+            "pending",
+            "skipped",
+            "cancelled",
+            "info",
+        ):
             label = activity_status_label(status)
             self.status_filter.addItem(label, status)
         self.operation_filter = ScrollSafeComboBox(self)

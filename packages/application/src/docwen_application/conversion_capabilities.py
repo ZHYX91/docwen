@@ -75,6 +75,7 @@ def _strict_options(properties: dict[str, Any], *, required: tuple[str, ...] = (
 _PHYSICAL_PAGE_OCR_COMMON_PROPERTIES: dict[str, Any] = {
     "recognize_text": {"type": "boolean", "default": False},
     "preserve_resources": {"type": "boolean", "default": True},
+    "recognize_tables": {"type": "boolean"},
     "ocr_language": {
         "type": "string",
         "enum": ["auto", "chinese", "chinese_cht", "english", "japanese", "korean", "latin", "cyrillic"],
@@ -233,6 +234,7 @@ _XLSX_TO_MARKDOWN_OPTIONS = _strict_options(
         "markdown_extensions": MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA,
         "to_md_keep_images": {"type": "boolean", "default": True},
         "to_md_enable_ocr": {"type": "boolean", "default": False},
+        "recognize_tables": {"type": "boolean"},
         "ocr_language": {
             "type": "string",
             "enum": ["auto", "chinese", "chinese_cht", "english", "japanese", "korean", "latin", "cyrillic"],

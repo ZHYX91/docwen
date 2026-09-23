@@ -271,6 +271,46 @@ def test_pre_convert_honors_configured_word_priority(tmp_path, monkeypatch) -> N
     assert set(candidates) == {"wps_writer", "msoffice_word"}
 
 
+def test_wps_pre_convert_keeps_word_as_legal_backend_and_honors_word_first_priority(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    from docwen_application.preconversion import pre_converter
+    from docwen_core.office_bridge import BridgeResult
+
+    source = tmp_path / "legacy.wps"
+    source.write_bytes(b"legacy-wps")
+    observed: dict[str, object] = {}
+
+    def fake_convert(input_path, output_path, **kwargs):
+        observed["input_path"] = input_path
+        observed["output_path"] = output_path
+        observed.update(kwargs)
+        Path(output_path).write_bytes(b"converted")
+        return BridgeResult(True, output_path=output_path, backend="Microsoft Word")
+
+    monkeypatch.setattr(pre_converter, "convert_with_backend_priority", fake_convert)
+
+    result = pre_converter.pre_convert(
+        str(source),
+        "wps",
+        staging_dir=str(tmp_path),
+        backend_priority=["msoffice_word", "wps_writer", "libreoffice"],
+    )
+
+    assert isinstance(result, pre_converter.PreConversionResult)
+    assert result.backend == "Microsoft Word"
+    assert result.original_source_format == "wps"
+    assert observed["source_format"] == "wps"
+    assert observed["backend_priority"] == ["msoffice_word", "wps_writer", "libreoffice"]
+    assert Path(str(observed["input_path"])).name == "input.doc"
+    candidates = observed["com_candidates"]
+    assert isinstance(candidates, dict)
+    assert set(candidates) == {"wps_writer", "msoffice_word"}
+    assert candidates["msoffice_word"].prog_id == "Word.Application"
+    assert candidates["wps_writer"].prog_id == "Kwps.Application"
+
+
 def test_pre_convert_odt_excludes_wps_even_if_configured(tmp_path, monkeypatch) -> None:
     from docwen_application.preconversion import pre_converter
     from docwen_core.office_bridge import BridgeResult

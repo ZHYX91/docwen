@@ -143,6 +143,8 @@ class ActionAreaViewModel(QObject):
         self._extract_image: bool = True
         self._extract_ocr: bool = False
         self._ocr_language: str | None = None
+        self._recognize_tables = True
+        self._table_recognition_available = False
         self._ocr_placement: str | None = None
         self._optimize_for_type: str | None = None
         self._optimization_choices_result = OptimizationChoicesResult(status="ready", choices=())
@@ -228,6 +230,14 @@ class ActionAreaViewModel(QObject):
         if self._extract_ocr != value:
             self._extract_ocr = value
             self.state_changed.emit()
+
+    @property
+    def recognize_tables(self) -> bool:
+        return self._recognize_tables
+
+    @property
+    def table_recognition_available(self) -> bool:
+        return self._table_recognition_available
 
     @property
     def ocr_language(self) -> str | None:
@@ -703,6 +713,10 @@ class ActionAreaViewModel(QObject):
         section = file_type if file_type in {MODE_DOCUMENT, MODE_SPREADSHEET, MODE_IMAGE, MODE_LAYOUT} else "other"
         self._extract_image = bool(self._read_file_to_md_default(section, "to_md_keep_images", True))
         self._extract_ocr = bool(self._read_file_to_md_default(section, "to_md_enable_ocr", extract_ocr))
+        from docwen_core.text.table_recognition import table_recognition_available
+
+        self._recognize_tables = bool(self._read_config_default("ocr.recognize_tables", True))
+        self._table_recognition_available = table_recognition_available()
         language = str(self._read_config_default("ocr.language", "") or "").strip().lower()
         self._ocr_language = language if language in _OCR_LANGUAGES else None
         placement = str(self._read_export_file_to_md_default("to_md_ocr_placement_mode", "") or "").strip().lower()
@@ -910,6 +924,7 @@ class ActionAreaViewModel(QObject):
                 build_to_markdown_options(
                     keep_images=self._extract_image,
                     enable_ocr=self._extract_ocr,
+                    recognize_tables=self._recognize_tables,
                     image_mode=self._file_to_md_image_mode_option(),
                     ocr_placement=self._file_to_md_ocr_placement_option(),
                     ocr_language=self._file_to_md_ocr_language_option(),
@@ -995,6 +1010,9 @@ class ActionAreaViewModel(QObject):
             self.extract_image = bool(value)
         elif key == "extract_ocr":
             self.extract_ocr = bool(value)
+        elif key == "recognize_tables":
+            self._recognize_tables = bool(value)
+            self.state_changed.emit()
         elif key == "ocr_language":
             self.ocr_language = str(value)
         elif key == "ocr_placement":

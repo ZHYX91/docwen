@@ -220,6 +220,7 @@ class ExportConfig:
     """Export (image extraction / OCR placement / Base64) settings."""
 
     ocr_language: str = "auto"
+    recognize_tables: bool = True
     image_mode: str = "file"  # file / base64
     ocr_mode: str = "image_md"  # image_md / main_md
     ocr_title_enabled: bool = True

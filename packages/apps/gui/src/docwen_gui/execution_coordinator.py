@@ -9,12 +9,14 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from PySide6.QtCore import QObject, Slot
 
+from docwen_gui.diagnostics import DiagnosticSummary
 from docwen_gui.execution_admission import ExecutionAdmissionError
 from docwen_gui.execution_requests import OutputPolicyConfigError
 from docwen_gui.i18n import t as _t
 from docwen_gui.view_models._runtime_route_filter import (
     RuntimeRouteChoice,
     RuntimeRouteSource,
+    discover_composed_action_route_choices,
     discover_runtime_route_choices,
 )
 
@@ -28,6 +30,14 @@ if TYPE_CHECKING:
     from docwen_gui.view_models.info_area_vm import InfoAreaViewModel
     from docwen_gui.view_models.main_window_vm import MainWindowViewModel
     from docwen_gui.view_models.task_history import TaskHistory
+
+
+def _route_operation_label(target_format: str, action_name: str) -> str:
+    target = str(target_format or "").strip().upper()
+    action = str(action_name or "").strip()
+    if action:
+        return f"{action} → {target}" if target else action
+    return _t("conversion_panel.convert") + (f" → {target}" if target else "")
 
 
 class ExecutionCoordinator(QObject):
@@ -205,6 +215,26 @@ class ExecutionCoordinator(QObject):
             batch_execution=mode == "batch",
         )
 
+    def _preflight_notice(
+        self, *, files: Sequence[str], source_formats: Sequence[str], target: str, action: str, code: str, message: str
+    ) -> None:
+        for index, path in enumerate(files):
+            self._info_area_vm.add_message(
+                message,
+                "warning",
+                show_location=True,
+                file_path=path,
+                operation=_route_operation_label(target, action),
+                diagnostic=DiagnosticSummary(
+                    status="not_started",
+                    phase="preflight",
+                    diagnostic_code=code,
+                    source_format=source_formats[index] if index < len(source_formats) else "",
+                    target_format=target.strip().lower(),
+                    error_category="unsupported_route",
+                ),
+            )
+
     def _resolve_route(
         self,
         *,
@@ -219,36 +249,53 @@ class ExecutionCoordinator(QObject):
         for file_path in file_paths:
             context = self._requests.file_context(file_path)
             if context is None:
-                self._info_area_vm.add_message(
-                    _t("main_window.route_unavailable", "No compatible operation is available for this file."),
-                    "warning",
+                self._preflight_notice(
+                    files=[file_path],
+                    source_formats=[],
+                    target=target_format,
+                    action=action_name,
+                    code="ROUTE-INPUT-UNAVAILABLE",
+                    message=_t("main_window.route_unavailable"),
                 )
                 return None
             detected_format, source_category = context
             sources.append(RuntimeRouteSource(detected_format, source_category))
-        result = discover_runtime_route_choices(
-            controller,
-            sources=tuple(sources),
-            operation="action" if action_name else "conversion",
-            action_name=action_name,
-        )
+        normalized_target = str(target_format or "").strip().lower()
+        if action_name and normalized_target:
+            result = discover_composed_action_route_choices(
+                controller,
+                sources=tuple(sources),
+                target=normalized_target,
+                action_name=action_name,
+            )
+        else:
+            result = discover_runtime_route_choices(
+                controller,
+                sources=tuple(sources),
+                operation="action" if action_name else "conversion",
+                action_name=action_name,
+            )
         if result.status == "failed":
-            self._info_area_vm.add_message(
-                _t(
-                    "main_window.route_catalog_failed",
-                    "Available operations could not be loaded; the request was not started.",
-                ),
-                "warning",
+            self._preflight_notice(
+                files=file_paths,
+                source_formats=[source.detected_format for source in sources],
+                target=target_format,
+                action=action_name,
+                code="ROUTE-CATALOG-UNAVAILABLE",
+                message=_t("main_window.route_catalog_failed"),
             )
             return None
-        normalized_target = str(target_format or "").strip().lower()
         choice = result.get(normalized_target) if normalized_target else None
         if choice is None and not normalized_target and len(result.choices) == 1:
             choice = result.choices[0]
         if choice is None:
-            self._info_area_vm.add_message(
-                _t("main_window.route_unavailable", "No compatible operation is available for this file."),
-                "warning",
+            self._preflight_notice(
+                files=file_paths,
+                source_formats=[source.detected_format for source in sources],
+                target=target_format,
+                action=action_name,
+                code="ROUTE-NOT-AVAILABLE",
+                message=_t("main_window.route_unavailable"),
             )
             return None
         return choice.target, choice

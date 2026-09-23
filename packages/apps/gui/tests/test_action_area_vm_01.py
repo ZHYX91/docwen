@@ -271,6 +271,7 @@ class TestSetupOtherFile:
         assert vm.extract_ocr is True
         assert vm.action_name == ""
         assert vm.collect_options() == {
+            "recognize_tables": True,
             "to_md_keep_images": False,
             "to_md_enable_ocr": True,
         }
@@ -285,6 +286,7 @@ class TestSetupOtherFile:
         vm.set_file_to_md_option("extract_ocr", True)
 
         assert vm.collect_options() == {
+            "recognize_tables": True,
             "to_md_keep_images": False,
             "to_md_enable_ocr": True,
         }
@@ -299,6 +301,7 @@ class TestSetupOtherFile:
         vm.setup_for_other_file("/test.pptx", "pptx")
 
         assert vm.collect_options() == {
+            "recognize_tables": True,
             "to_md_keep_images": True,
             "to_md_enable_ocr": False,
             "image_link_style": "markdown_link",
@@ -317,6 +320,7 @@ class TestSetupOtherFile:
         vm.setup_for_other_file("/test.pptx", "pptx")
 
         assert vm.collect_options() == {
+            "recognize_tables": True,
             "to_md_keep_images": True,
             "to_md_enable_ocr": False,
             "image_mode": "base64",
@@ -337,6 +341,7 @@ class TestSetupOtherFile:
         vm.setup_for_other_file("/test.ppt", "ppt")
 
         assert vm.collect_options() == {
+            "recognize_tables": True,
             "to_md_keep_images": True,
             "to_md_enable_ocr": False,
             "image_mode": "omit",
@@ -353,6 +358,7 @@ class TestSetupOtherFile:
         vm.setup_for_other_file("/test.epub", "epub")
 
         assert vm.collect_options() == {
+            "recognize_tables": True,
             "to_md_keep_images": True,
             "to_md_enable_ocr": False,
         }
@@ -370,6 +376,7 @@ class TestSetupOtherFile:
         vm.setup_for_other_file("/test.epub", "epub")
 
         assert vm.collect_options() == {
+            "recognize_tables": True,
             "to_md_keep_images": True,
             "to_md_enable_ocr": False,
             "image_mode": "base64",
@@ -388,6 +395,7 @@ class TestSetupOtherFile:
         vm.setup_for_other_file("/test.mhtml", "mhtml")
 
         assert vm.collect_options() == {
+            "recognize_tables": True,
             "to_md_keep_images": True,
             "to_md_enable_ocr": False,
             "image_mode": "omit",
@@ -406,6 +414,7 @@ class TestSetupOtherFile:
         vm.setup_for_other_file("/test.mhtml", "mhtml")
 
         assert vm.collect_options() == {
+            "recognize_tables": True,
             "to_md_keep_images": True,
             "to_md_enable_ocr": False,
             "ocr_placement": "main_md",
@@ -426,6 +435,7 @@ class TestSetupOtherFile:
         vm.setup_for_other_file("/test.mhtml", "mhtml")
 
         assert vm.collect_options() == {
+            "recognize_tables": True,
             "to_md_keep_images": True,
             "to_md_enable_ocr": False,
             "ocr_placement": "image_md",
@@ -446,6 +456,7 @@ class TestSetupOtherFile:
         vm.setup_for_other_file("/test.pptx", "pptx")
 
         assert vm.collect_options() == {
+            "recognize_tables": True,
             "to_md_keep_images": True,
             "to_md_enable_ocr": False,
             "ocr_placement": "main_md",

@@ -110,7 +110,7 @@ dependencies = [
     # 图片转换
     "img2pdf>=0.6.1",
     "pillow-heif>=1.1.1",
-    # OCR支持
+    # OCR / table-structure recognition
     "rapidocr_onnxruntime>=1.4.0",
     # ONNX Runtime 1.24.x emits a hard-coded Linux device-discovery warning
     # while its Python extension is importing, before its logging API exists.

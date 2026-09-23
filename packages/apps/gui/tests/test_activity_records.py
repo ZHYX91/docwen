@@ -166,3 +166,36 @@ def test_file_sort_uses_visible_basename_before_directory(activity):
     dialog.table.sortByColumn(2, Qt.SortOrder.AscendingOrder)
     names = [dialog._proxy.index(row, 2).data() for row in range(dialog._proxy.rowCount())]
     assert names.index("alpha.md") < names.index("zebra.md")
+
+
+def test_preflight_notices_keep_file_operation_reason_and_safe_copy(qtbot):
+    from docwen_gui.diagnostics import DiagnosticSummary
+
+    history, feedback = TaskHistory(), InfoAreaViewModel()
+    model = ActivityRecordsModel(history, feedback)
+    facts = DiagnosticSummary(
+        status="not_started",
+        phase="preflight",
+        diagnostic_code="ROUTE-NOT-AVAILABLE",
+        source_format="wps",
+        target_format="md",
+    )
+    for _ in range(2):
+        feedback.add_message("No route", "warning", file_path="/private/one.wps", operation="Gongwen", diagnostic=facts)
+    feedback.add_message("No route", "warning", file_path="/private/two.wps", operation="Gongwen", diagnostic=facts)
+    assert len(model.records) == 2
+    assert all(row.status == "not_started" for row in model.records)
+    assert model.failed_count == 0
+    assert feedback.history_rows[0].repeat_count == 2
+    copied = facts.to_text()
+    assert json.loads(copied)["phase"] == "preflight"
+    assert "/private/" not in copied
+    unsafe = DiagnosticSummary(
+        status="not_started",
+        phase="preflight",
+        diagnostic_code="secret-user-value",
+        source_format="private-path",
+        target_format="private-target",
+    )
+    assert "private" not in unsafe.to_text() and "secret" not in unsafe.to_text()
+    feedback.stop_all_timers()

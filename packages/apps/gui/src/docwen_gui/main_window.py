@@ -820,7 +820,7 @@ class MainWindow(QWidget):
             self._geometry_source_change_rect = self._last_normal_window_rect
             self._geometry_source_transition_rebase_pending = True
             self._geometry_source_transition_settling = True
-            QTimer.singleShot(16, self._finish_geometry_source_transition_settling)
+            QTimer.singleShot(16, self, self._finish_geometry_source_transition_settling)
 
         if projection.right_panel_slot == RightPanelSlot.TEMPLATE:
             template_selector = self._template_selector
@@ -1368,7 +1368,7 @@ class MainWindow(QWidget):
         self._file_clear_updates_suspended = True
         self._applying_internal_panel_geometry = True
         self.setUpdatesEnabled(False)
-        QTimer.singleShot(0, self._finish_prepared_file_clear_panel_transition)
+        QTimer.singleShot(0, self, self._finish_prepared_file_clear_panel_transition)
 
     def _on_mode_changed(self, mode: str) -> None:
         self._current_mode = mode
@@ -2060,7 +2060,7 @@ class MainWindow(QWidget):
             timer.timeout.connect(self._poll_execution_close)
             self._execution_drain_timer = timer
         timer.start()
-        QTimer.singleShot(0, self._poll_execution_close)
+        QTimer.singleShot(0, self, self._poll_execution_close)
 
     def _poll_execution_close(self) -> None:
         """Re-enter close only after every parented worker emitted ``finished``."""
@@ -2072,7 +2072,7 @@ class MainWindow(QWidget):
         if not self._execution.busy:
             if timer is not None:
                 timer.stop()
-            QTimer.singleShot(0, self.close)
+            QTimer.singleShot(0, self, self.close)
             return
         if self._execution_drain_timed_out or time.monotonic() < self._execution_drain_deadline:
             return
@@ -2155,7 +2155,7 @@ class MainWindow(QWidget):
         if not self._window_state_needs_shown_restore:
             return
         self._window_state_needs_shown_restore = False
-        QTimer.singleShot(0, self._finalize_shown_window_restore)
+        QTimer.singleShot(0, self, self._finalize_shown_window_restore)
 
     def _finalize_shown_window_restore(self) -> None:
         """Restore after Qt has resolved native frame margins and child layout."""
@@ -2207,7 +2207,7 @@ class MainWindow(QWidget):
         if self._pending_normal_center_anchor is not None:
             if not self._pending_anchor_restore_scheduled:
                 self._pending_anchor_restore_scheduled = True
-                QTimer.singleShot(0, self._apply_pending_normal_center_anchor)
+                QTimer.singleShot(0, self, self._apply_pending_normal_center_anchor)
             return
         self._capture_normal_window_geometry()
 
@@ -2216,7 +2216,7 @@ class MainWindow(QWidget):
             self._view_model.cancel_inspection()
             self._path_operation.cancel()
             event.ignore()
-            QTimer.singleShot(25, self.close)
+            QTimer.singleShot(25, self, self.close)
             return
         if self._execution.busy:
             event.ignore()
@@ -2290,10 +2290,10 @@ class MainWindow(QWidget):
         # from the cached frame, so exact equality is not a readiness signal.
         self._pending_normal_frame_restored = True
         if self._pending_anchor_restore_scheduled:
-            QTimer.singleShot(0, self._apply_pending_normal_center_anchor)
+            QTimer.singleShot(0, self, self._apply_pending_normal_center_anchor)
             return
         self._pending_anchor_restore_scheduled = True
-        QTimer.singleShot(0, self._apply_pending_normal_center_anchor)
+        QTimer.singleShot(0, self, self._apply_pending_normal_center_anchor)
 
     def _apply_pending_normal_center_anchor(self) -> None:
         self._pending_anchor_restore_scheduled = False
@@ -2316,7 +2316,7 @@ class MainWindow(QWidget):
             # zero-delay path; the fallback also covers the reverse ordering
             # where the final frame arrived just before WindowStateChange.
             self._pending_anchor_restore_scheduled = True
-            QTimer.singleShot(16, self._force_pending_normal_center_anchor)
+            QTimer.singleShot(16, self, self._force_pending_normal_center_anchor)
             return
         self._pending_normal_frame_restored = True
         self._pending_normal_center_anchor = None

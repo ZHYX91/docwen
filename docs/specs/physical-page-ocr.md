@@ -61,6 +61,7 @@ Markdown routes each publish the same exact closed object:
 {
   "type": "object",
   "properties": {
+    "recognize_tables": {"type": "boolean"},
     "recognize_text": {"type": "boolean", "default": false},
     "preserve_resources": {"type": "boolean", "default": true},
     "ocr_language": {
@@ -83,6 +84,7 @@ as the fixed-layout routes:
 {
   "type": "object",
   "properties": {
+    "recognize_tables": {"type": "boolean"},
     "recognize_text": {"type": "boolean", "default": false},
     "preserve_resources": {"type": "boolean", "default": true},
     "ocr_language": {
@@ -95,6 +97,8 @@ as the fixed-layout routes:
   "additionalProperties": false
 }
 ```
+
+`recognize_tables` optionally overrides the captured `ocr.recognize_tables` setting (shipped default: true). It only applies while OCR runs and does not alter page or resource ownership.
 
 `recognize_text` and `preserve_resources` are negotiated independently; neither implies the other. The public keys
 `to_md_enable_ocr` and `to_md_keep_images` are undeclared and rejected. A producer may translate the new names to a

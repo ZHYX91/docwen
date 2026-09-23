@@ -29,6 +29,7 @@ SPREADSHEET_TO_MD_OPTIONS_SCHEMA = {
             "description": "Run OCR on embedded images and append recognised text as a blockquote. Requires to_md_keep_images=True.",
             "x-docwen-status": "implemented",
         },
+        "recognize_tables": {"type": "boolean", "x-docwen-status": "implemented"},
         "ocr_language": {
             "type": "string",
             "enum": ["auto", "chinese", "chinese_cht", "english", "japanese", "korean", "latin", "cyrillic"],

@@ -11,6 +11,7 @@ template_name = "Modelo Geral Português"
 # Janela principal
 # =============================================================================
 [main_window]
+ocr_quality_notice = "O OCR pode conter erros ou omissões; confira os resultados com o original."
 file_admission_missing = "O arquivo de entrada não existe mais: {path}"
 file_admission_unreadable = "Não foi possível ler o arquivo de entrada: {path}"
 extension_loss_endnotes = "As notas de fim foram convertidas em notas de rodapé comuns do Markdown."
@@ -20,6 +21,9 @@ extension_loss_tables = "As células mescladas e a estrutura do cabeçalho foram
 route_catalog_failed = "Não foi possível carregar as operações disponíveis; a solicitação não foi iniciada."
 conversion_failed = "A conversão falhou. Abra os detalhes da falha para consultar as informações de diagnóstico."
 conversion_warning = "A conversão foi concluída com um aviso."
+ocr_no_text = "O OCR não detectou texto; confira esta imagem com a fonte."
+ocr_degraded = "O OCR não foi concluído normalmente (status: {status}); os resultados utilizáveis foram preservados."
+ocr_table_fallback = "O reconhecimento da estrutura da tabela falhou; o texto OCR simples foi preservado."
 aggregate_need_two = "São necessários pelo menos dois arquivos correspondentes (encontrados: {count})."
 route_unavailable = "Não há operação compatível disponível para este arquivo."
 output_settings_unavailable = "Não foi possível carregar as configurações de saída; a tarefa não foi iniciada."
@@ -1175,6 +1179,8 @@ no_table_selected = "Sem tabela"
 # 操作面板区域
 # =============================================================================
 [action_area]
+recognize_tables = "Reconhecer estrutura de tabelas"
+table_model_unavailable = "Modelos de tabela indisponíveis; o texto OCR será preservado."
 route_options_unavailable = "Não foi possível carregar as operações disponíveis; a geração está desativada para evitar uma solicitação incorreta."
 no_compatible_output = "Não há formato de saída compatível disponível para este arquivo."
 export_options = "Opções de exportação"
@@ -1685,6 +1691,7 @@ typed_endnotes = "Notas de rodapé e de fim tipadas"
 obsidian_preset = "Usar extensões do Obsidian"
 
 [activity]
+not_started = "Não iniciada"
 record_unavailable = "Este registro de atividade foi limpo ou não está disponível."
 title = "Registro de atividades"
 search = "Pesquisar nomes de arquivos ou atividades"

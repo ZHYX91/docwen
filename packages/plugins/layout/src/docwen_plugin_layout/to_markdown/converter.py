@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from docwen_core.detection import detect_content_format
+from docwen_core.errors import CancellationRequested
 from docwen_core.export_semantics import LinkRuntimeConfig
 from docwen_core.formats import get_category, get_media_type
 from docwen_core.paths import input_stem
@@ -28,8 +29,10 @@ from docwen_core.text.ocr import (
     OcrOutcome,
     OcrStatus,
     format_ocr_best_effort_warning,
+    ocr_diagnostic_code,
     run_ocr_outcome,
 )
+from docwen_core.text.table_recognition import enrich_ocr_table_structure
 from docwen_plugin_layout._common import file_size, new_artifact_id, request_source_format
 
 logger = logging.getLogger(__name__)
@@ -94,6 +97,7 @@ def _ocr_page_outcomes(
     *,
     ocr_language: str | None = None,
     current_locale: str = "zh_CN",
+    context: ConverterContext | None = None,
 ) -> list[OcrOutcome]:
     """Render every page of *pdf_path* to a PNG and run OCR on each.
 
@@ -107,6 +111,8 @@ def _ocr_page_outcomes(
         for page_num in range(len(doc)):
             page_img_path = os.path.join(staging_dir, f"_ocr_page_{page_num + 1}.png")
             try:
+                if context is not None:
+                    context.cancellation.check()
                 page = doc[page_num]
                 pix = page.get_pixmap(dpi=dpi)
                 pix.save(page_img_path)
@@ -116,6 +122,21 @@ def _ocr_page_outcomes(
                     ocr_language=ocr_language,
                     current_locale=current_locale,
                 )
+                outcome, table_outcome = enrich_ocr_table_structure(page_img_path, outcome, context=context)
+                if context is not None:
+                    if table_outcome.fallback_required:
+                        context.progress.report_diagnostic(
+                            "warning",
+                            "Some table structures could not be recognized; plain OCR text was retained.",
+                            code=table_outcome.diagnostic_code,
+                            location=f"{Path(pdf_path).name}:page-{page_num + 1}",
+                        )
+                    if outcome.status is OcrStatus.SUCCESS:
+                        from docwen_core.text.ocr import report_ocr_outcome
+
+                        report_ocr_outcome(context.progress, outcome.status)
+            except CancellationRequested:
+                raise
             except Exception as exc:
                 outcome = OcrOutcome(OcrStatus.RECOGNITION_FAILED, message=str(exc))
             finally:
@@ -240,6 +261,8 @@ def convert_html_to_markdown_text(
     unified_timestamp_desc: str = "export",
     ocr_language: str = "auto",
     current_locale: str = "zh_CN",
+    recognize_tables: bool = True,
+    table_merge_strategy: str = "fill",
 ) -> str:
     """Convert HTML text to Markdown with image preprocessing.
 
@@ -269,6 +292,8 @@ def convert_html_to_markdown_text(
         unified_timestamp_desc=unified_timestamp_desc,
         ocr_language=ocr_language,
         current_locale=current_locale,
+        recognize_tables=recognize_tables,
+        table_merge_strategy=table_merge_strategy,
     )
 
     import re
@@ -530,9 +555,12 @@ class LayoutToMarkdownConverter:
                         input_path,
                         context.workspace.staging_dir,
                         dpi=render_dpi,
+                        context=context,
                         ocr_language=ocr_language,
                         current_locale=current_locale,
                     )
+                except CancellationRequested:
+                    raise
                 except Exception as exc:
                     page_outcomes = [
                         OcrOutcome(OcrStatus.RECOGNITION_FAILED, message=str(exc)) for _ in range(physical_page_count)
@@ -542,7 +570,7 @@ class LayoutToMarkdownConverter:
                 for page_number, outcome in enumerate(page_outcomes, start=1):
                     location = f"{Path(input_path).name}:page-{page_number}"
                     page_path = context.workspace.create_artifact_path("auxiliary", ".md")
-                    page_text = outcome.recognized_text.rstrip()
+                    page_text = (outcome.structured_markdown or outcome.recognized_text).rstrip()
                     Path(page_path).write_text(f"{page_text}\n" if page_text else "", encoding="utf-8")
                     page_artifact = ArtifactManifest(
                         artifact_id=new_artifact_id(),
@@ -565,7 +593,7 @@ class LayoutToMarkdownConverter:
                             ConversionDiagnostic(
                                 level="warning",
                                 message=warning,
-                                code="OCR-BEST-EFFORT",
+                                code=ocr_diagnostic_code(outcome.status),
                                 location=location,
                                 artifact_id=page_artifact.artifact_id,
                             )
@@ -623,6 +651,7 @@ class LayoutToMarkdownConverter:
                 )
             ]
             ocr_chars = sum(len(outcome.recognized_text) for outcome in page_outcomes)
+            table_pages = sum(bool(outcome.structured_markdown) for outcome in page_outcomes)
             if page_outcomes:
                 diagnostics.append(
                     ConversionDiagnostic(
@@ -648,6 +677,7 @@ class LayoutToMarkdownConverter:
                         "image_count": len(image_artifacts),
                         "ocr_enabled": enable_ocr,
                         "ocr_pages": len(page_outcomes),
+                        "ocr_table_pages": table_pages if page_outcomes else 0,
                         "ocr_images": 0,
                     },
                 ),

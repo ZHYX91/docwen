@@ -26,6 +26,7 @@
 import argparse
 import contextlib
 import datetime
+import hashlib
 import importlib.metadata
 import importlib.util
 import logging
@@ -38,6 +39,7 @@ import subprocess
 import sys
 import time
 import tomllib
+import urllib.request
 from pathlib import Path, PurePosixPath
 from typing import cast
 
@@ -252,6 +254,68 @@ def _verify_pyinstaller_runtime_hook_order(build_name: str, *, entry_name: str) 
         raise RuntimeError(f"pyinstaller_runtime_hook_or_entry_missing:{build_name}")
     if guard_index >= entry_index or (built_in_indices and guard_index >= min(built_in_indices)):
         raise RuntimeError(f"pyinstaller_runtime_hook_order_invalid:{build_name}")
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _prepare_external_models(destination_root: Path) -> dict[str, Path]:
+    """Materialize hash-pinned build-time models without runtime downloads."""
+
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+    from scripts.release.packaged_resources import EXTERNAL_MODEL_SPECS
+
+    prepared: dict[str, Path] = {}
+    overrides = {
+        "rapidtable/slanet-plus.onnx": os.environ.get("DOCWEN_RAPIDTABLE_MODEL", "").strip(),
+        "rapidtable/layout_table.onnx": os.environ.get("DOCWEN_TABLE_LAYOUT_MODEL", "").strip(),
+    }
+    for relative_path, (url, expected_sha256) in EXTERNAL_MODEL_SPECS.items():
+        destination = destination_root / relative_path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+
+        candidates: list[Path] = []
+        if override := overrides.get(relative_path):
+            candidates.append(Path(override).expanduser())
+        candidates.append(PROJECT_ROOT / "models" / relative_path)
+
+        source = next((candidate for candidate in candidates if candidate.is_file()), None)
+        if source is not None:
+            if _sha256_file(source) != expected_sha256:
+                raise RuntimeError(f"external_model_digest_mismatch:{relative_path}:{source}")
+            shutil.copy2(source, destination)
+            prepared[relative_path] = destination
+            continue
+
+        temporary = destination.with_suffix(destination.suffix + ".part")
+        temporary.unlink(missing_ok=True)
+        request = urllib.request.Request(url, headers={"User-Agent": "DocWen-build/1"})
+        try:
+            with urllib.request.urlopen(request, timeout=120) as response, temporary.open("wb") as output:
+                digest = hashlib.sha256()
+                total = 0
+                while chunk := response.read(1024 * 1024):
+                    total += len(chunk)
+                    if total > 32 * 1024 * 1024:
+                        raise RuntimeError(f"external_model_too_large:{relative_path}:{total}")
+                    digest.update(chunk)
+                    output.write(chunk)
+        except Exception:
+            temporary.unlink(missing_ok=True)
+            raise
+        if digest.hexdigest() != expected_sha256:
+            temporary.unlink(missing_ok=True)
+            raise RuntimeError(f"external_model_digest_mismatch:{relative_path}:download")
+        temporary.replace(destination)
+        prepared[relative_path] = destination
+
+    return prepared
 
 
 # ==================== 日志系统配置 ====================
@@ -780,6 +844,16 @@ def build_app(
         return None
     logger.end_step()
 
+    # 3. Prepare hash-pinned external models before expensive compilation.
+    logger.start_step("外部模型准备")
+    try:
+        external_models = _prepare_external_models(BUILD_DIR / "external_models")
+    except Exception as exc:
+        logger.error(f"外部模型准备失败: {exc}")
+        return None
+    logger.info(f"已准备外部模型: {sorted(external_models)}")
+    logger.end_step()
+
     # 3. Cython 编译
     cython_ok = False
     if not skip_cython:
@@ -1030,11 +1104,16 @@ def build_app(
                 copytree_robust(src, dst)
                 logger.info(f"复制: {src.name} -> {dst}")
 
-        # OCR 模型
+        # OCR and table-structure models.
         models_dest = deploy_dir / "models"
         if not models_dest.exists() and models_src.exists() and list(models_src.iterdir()):
             copytree_robust(models_src, models_dest)
             logger.info(f"复制 OCR 模型到: {models_dest}")
+        for relative_path, prepared_path in external_models.items():
+            target = models_dest / relative_path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(prepared_path, target)
+            logger.info(f"复制外部模型到: {target}")
 
         # CLI 独立目录资源补充
         # PyInstaller onedir 模式将 --add-data 数据放在 _internal/ 下，
@@ -1052,6 +1131,10 @@ def build_app(
                 if not dst.exists() and src.exists():
                     copytree_robust(src, dst)
                     logger.info(f"补充复制到 CLI 目录: {src.name} -> {dst}")
+            for relative_path, prepared_path in external_models.items():
+                target = cli_output_dir / "models" / relative_path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(prepared_path, target)
 
         # 复制 README 文件（所有语言版本，同级目录）
         copy_readme_files(deploy_dir)

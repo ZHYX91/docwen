@@ -1129,6 +1129,8 @@ no_table_selected = "テーブルが選択されていません"
 # 操作面板区域
 # =============================================================================
 [action_area]
+recognize_tables = "表の構造を認識"
+table_model_unavailable = "表認識モデルを利用できません。通常の OCR テキストを保持します。"
 route_options_unavailable = "利用可能な操作を読み込めなかったため、誤った要求を防ぐために生成を無効にしました。"
 no_compatible_output = "このファイルで利用できる互換出力形式はありません。"
 export_options = "エクスポートオプション"
@@ -1632,6 +1634,7 @@ subtitle = "サブタイトル"
 
 
 [main_window]
+ocr_quality_notice = "OCR 結果には誤りや抜けが含まれる場合があります。原文と照合してください。"
 file_admission_missing = "入力ファイルが存在しないか、移動されています：{path}"
 file_admission_unreadable = "入力ファイルを読み取れません：{path}"
 extension_loss_endnotes = "文末脚注を通常の Markdown 脚注に変換しました。"
@@ -1641,6 +1644,9 @@ extension_loss_tables = "結合セルと見出し構造を通常の Markdown 表
 route_catalog_failed = "利用可能な操作を読み込めなかったため、要求は開始されませんでした。"
 conversion_failed = "変換に失敗しました。診断情報は失敗の詳細を開いて確認してください。"
 conversion_warning = "変換は完了しましたが、警告があります。"
+ocr_no_text = "OCR で文字を検出できませんでした。元画像と照合してください。"
+ocr_degraded = "OCR は正常に完了しませんでした（状態: {status}）。利用可能な結果は保持しました。"
+ocr_table_fallback = "表構造の認識に失敗したため、通常の OCR テキストを保持しました。"
 aggregate_need_two = "一致するファイルが少なくとも2つ必要です（検出: {count}）。"
 route_unavailable = "このファイルで利用できる互換操作はありません。"
 output_settings_unavailable = "出力設定を読み込めなかったため、処理を開始しませんでした。"
@@ -1690,6 +1696,7 @@ typed_endnotes = "種類を区別する脚注と文末脚注"
 obsidian_preset = "Obsidian 拡張を使用"
 
 [activity]
+not_started = "未開始"
 record_unavailable = "このアクティビティ記録は削除されたか、利用できません。"
 title = "操作履歴"
 search = "ファイル名または履歴を検索"

@@ -1199,6 +1199,7 @@ class SettingsViewModel(QObject):
         ocr = raw.get("ocr", {})
         config.export = ExportConfig(
             ocr_language=ocr.get("language", "auto") if isinstance(ocr, dict) else "auto",
+            recognize_tables=bool(ocr.get("recognize_tables", True)) if isinstance(ocr, dict) else True,
             image_mode=export_defaults.get("to_md_image_extraction_mode", "file"),
             ocr_mode=export_defaults.get("to_md_ocr_placement_mode", "image_md"),
             ocr_title_enabled=ocr_output.get("show_blockquote_title", True) if isinstance(ocr_output, dict) else True,
@@ -1445,6 +1446,7 @@ class SettingsViewModel(QObject):
 
         exp = config.export
         put("ocr.language", exp.ocr_language)
+        put("ocr.recognize_tables", exp.recognize_tables)
         put("export.to_md_image_extraction_mode", exp.image_mode)
         put("export.to_md_ocr_placement_mode", exp.ocr_mode)
         put("conversion.export.base64_compress_enabled", bool(exp.base64_compress_enabled))

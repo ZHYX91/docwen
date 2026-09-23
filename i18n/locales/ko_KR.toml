@@ -1129,6 +1129,8 @@ no_table_selected = "선택된 표가 없습니다"
 # 操作面板区域
 # =============================================================================
 [action_area]
+recognize_tables = "표 구조 인식"
+table_model_unavailable = "표 모델을 사용할 수 없습니다. 일반 OCR 텍스트를 유지합니다."
 route_options_unavailable = "사용 가능한 작업을 불러오지 못해 잘못된 요청을 방지하도록 생성을 비활성화했습니다."
 no_compatible_output = "이 파일에 사용할 수 있는 호환 출력 형식이 없습니다."
 export_options = "내보내기 옵션"
@@ -1632,6 +1634,7 @@ subtitle = "부제"
 
 
 [main_window]
+ocr_quality_notice = "OCR 결과에 오류나 누락이 있을 수 있습니다. 원본과 대조하세요."
 file_admission_missing = "입력 파일이 없거나 이동되었습니다: {path}"
 file_admission_unreadable = "입력 파일을 읽을 수 없습니다: {path}"
 extension_loss_endnotes = "미주를 일반 Markdown 각주로 변환했습니다."
@@ -1641,6 +1644,9 @@ extension_loss_tables = "병합 셀과 머리글 구조를 일반 Markdown 표�
 route_catalog_failed = "사용 가능한 작업을 불러오지 못해 요청을 시작하지 않았습니다."
 conversion_failed = "변환에 실패했습니다. 진단 정보는 실패 상세 정보를 열어 확인하세요."
 conversion_warning = "변환은 완료되었지만 경고가 있습니다."
+ocr_no_text = "OCR에서 텍스트를 감지하지 못했습니다. 원본 이미지와 확인하세요."
+ocr_degraded = "OCR이 정상적으로 완료되지 않았습니다(상태: {status}). 사용 가능한 결과는 유지했습니다."
+ocr_table_fallback = "표 구조 인식에 실패하여 일반 OCR 텍스트를 유지했습니다."
 aggregate_need_two = "일치하는 파일이 두 개 이상 필요합니다(발견: {count})."
 route_unavailable = "이 파일에 사용할 수 있는 호환 작업이 없습니다."
 output_settings_unavailable = "출력 설정을 불러올 수 없어 작업을 시작하지 않았습니다."
@@ -1690,6 +1696,7 @@ typed_endnotes = "유형이 있는 각주 및 미주"
 obsidian_preset = "Obsidian 확장 사용"
 
 [activity]
+not_started = "시작되지 않음"
 record_unavailable = "이 활동 기록은 삭제되었거나 사용할 수 없습니다."
 title = "활동 기록"
 search = "파일 이름 또는 활동 검색"

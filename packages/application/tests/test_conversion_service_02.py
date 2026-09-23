@@ -113,6 +113,7 @@ def test_docx_to_markdown_declares_document_resource_graph_and_preserves_images(
         "recognize_text",
         "preserve_resources",
         "ocr_language",
+        "recognize_tables",
         "image_mode",
         "ocr_placement",
         "image_link_style",
@@ -208,7 +209,7 @@ def test_physical_page_machine_capabilities_are_consumer_neutral(
     assert schema["properties"]["preserve_resources"] == {"type": "boolean", "default": True}
     assert "to_md_enable_ocr" not in schema["properties"]
     assert "to_md_keep_images" not in schema["properties"]
-    expected_keys = {"recognize_text", "preserve_resources", "ocr_language"}
+    expected_keys = {"recognize_text", "preserve_resources", "ocr_language", "recognize_tables"}
     if capability_id != TIFF_TO_MARKDOWN_CAPABILITY_ID:
         expected_keys.update({"image_mode", "render_dpi"})
     assert set(schema["properties"]) == expected_keys

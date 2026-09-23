@@ -26,6 +26,9 @@ if TYPE_CHECKING:
     from docwen_core.protocols import CancellationTokenView
 
 # Legal COM candidates for application-owned document-to-DOCX pre-conversion.
+# A WPS-family source is not bound to WPS Writer: Microsoft Word remains a
+# legal compatibility backend, and the configured priority decides which
+# backend is attempted first.  Only ODT narrows this candidate set below.
 _DOCUMENT_CANDIDATES: dict[str, BridgeCandidate] = {
     "wps_writer": BridgeCandidate("WPS Writer", "Kwps.Application", 12, "word"),
     "msoffice_word": BridgeCandidate("Microsoft Word", "Word.Application", 12, "word"),
@@ -377,8 +380,11 @@ def pre_convert(
     """Pre-convert a document-family non-hub file to the hub format.
 
     Uses the caller-supplied configured priority. If no order is supplied,
-    the authoritative config defaults are used defensively. ODT excludes WPS
-    because that backend is not a legal candidate for this route.
+    the authoritative config defaults are used defensively. DOC/WPS/RTF may
+    be handled by either WPS Writer or Microsoft Word (plus LibreOffice where
+    available); the source format does not bind the request to the vendor that
+    shares its filename extension. ODT excludes WPS because that backend is not
+    a legal candidate for this route.
 
     Before invoking an external backend, the source is copied to
     ``input.{canonical_source_extension}`` inside ``staging_dir``.  Only that

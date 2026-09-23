@@ -473,6 +473,8 @@ def build_image_markdown(
     ocr_blockquote_title: str = "",
     ocr_language: str = "auto",
     current_locale: str = "zh_CN",
+    recognize_tables: bool = True,
+    table_merge_strategy: str = "fill",
 ) -> str:
     """Convert an HTML ``<img src>`` into a Markdown image link.
 
@@ -567,6 +569,8 @@ def build_image_markdown(
             ocr_blockquote_title=ocr_blockquote_title,
             ocr_language=ocr_language,
             current_locale=current_locale,
+            recognize_tables=recognize_tables,
+            table_merge_strategy=table_merge_strategy,
         )
     return format_image_link(filename, filename, style=image_link_style)
 
@@ -582,6 +586,8 @@ def _ocr_image_link(
     ocr_blockquote_title: str,
     ocr_language: str,
     current_locale: str,
+    recognize_tables: bool = True,
+    table_merge_strategy: str = "fill",
 ) -> str:
     """Build a Markdown link for an image, optionally including OCR text.
 
@@ -595,6 +601,7 @@ def _ocr_image_link(
     from docwen_core.detection import detect_content_format
     from docwen_core.export_semantics import format_image_link
     from docwen_core.text.ocr import OcrOutcome, OcrStatus, format_ocr_best_effort_warning, run_ocr_outcome
+    from docwen_core.text.table_recognition import enrich_ocr_table_structure
 
     image_link = format_image_link(filename, filename, style=image_link_style)
 
@@ -608,6 +615,11 @@ def _ocr_image_link(
             ocr_language=ocr_language,
             current_locale=current_locale,
         )
+        outcome, table_outcome = enrich_ocr_table_structure(
+            image_path, outcome, enabled=recognize_tables, merge_strategy=table_merge_strategy
+        )
+        if table_outcome.fallback_required:
+            logger.warning("Table structure recognition failed for %s: %s", filename, table_outcome.message)
     except Exception as exc:
         outcome = OcrOutcome(OcrStatus.RECOGNITION_FAILED, message=str(exc))
 
@@ -616,6 +628,8 @@ def _ocr_image_link(
             logger.warning("%s %s", warning, outcome.message)
         return image_link
     ocr_text = outcome.recognized_text
+    if outcome.structured_markdown:
+        return f"{image_link}\n\n{outcome.structured_markdown}\n"
 
     if ocr_blockquote_title:
         return f"{image_link}\n\n> **{ocr_blockquote_title}**\n>\n> " + ocr_text.replace("\n", "\n> ") + "\n"
@@ -637,6 +651,8 @@ def preprocess_html_images(
     unified_timestamp_desc: str = "export",
     ocr_language: str = "auto",
     current_locale: str = "zh_CN",
+    recognize_tables: bool = True,
+    table_merge_strategy: str = "fill",
 ) -> dict[str, str]:
     """Preprocess ``<img>`` elements in *html_text* for Markdown conversion.
 
@@ -687,6 +703,8 @@ def preprocess_html_images(
             ocr_blockquote_title=ocr_blockquote_title,
             ocr_language=ocr_language,
             current_locale=current_locale,
+            recognize_tables=recognize_tables,
+            table_merge_strategy=table_merge_strategy,
         )
         token_map[token] = md_link
         return token

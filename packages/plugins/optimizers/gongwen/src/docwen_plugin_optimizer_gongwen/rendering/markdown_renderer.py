@@ -83,8 +83,11 @@ def render(
                 image_link_style=image_link_style,
                 export_semantics=export_semantics,
             )
+            ocr_markdown = pf.image_ocr_markdown.get(img_path, "")
             ocr_text = pf.image_ocr_texts.get(img_path, "")
-            if ocr_text:
+            if ocr_markdown:
+                img_md += f"\n\n{ocr_markdown}"
+            elif ocr_text:
                 img_md += f"\n> {ocr_text}"
             output_parts.append(img_md)
             output_parts.append("")
@@ -160,8 +163,14 @@ def render(
                 append_images(pf)
             continue
 
-        # Plain text
-        output_parts.append(line)
+        # Ordinary lists are independent of Gongwen heading-number cleanup.
+        if pf and pf.list_marker:
+            indent = "    " * pf.list_level
+            prefix = f"{indent}{pf.list_marker} "
+            continuation = " " * len(prefix)
+            output_parts.append(prefix + line.replace("\n", f"\n{continuation}"))
+        else:
+            output_parts.append(line)
 
         # Images after paragraph
         if pf and pf.extracted_images:

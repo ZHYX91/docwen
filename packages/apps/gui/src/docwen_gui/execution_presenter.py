@@ -41,6 +41,38 @@ def _result_warning_messages(result: ConversionResult) -> list[str]:
         if diagnostic.code in extension_messages:
             messages.append(extension_messages[diagnostic.code])
             continue
+        if diagnostic.code == "OCR-BEST-EFFORT" or diagnostic.code.startswith("OCR-BEST-EFFORT."):
+            status = diagnostic.code.partition(".")[2] or "unknown"
+            if status == "no_text":
+                message = _t(
+                    "main_window.ocr_no_text",
+                    "OCR detected no text; verify this image against the source.",
+                )
+            else:
+                message = _t(
+                    "main_window.ocr_degraded",
+                    "OCR did not complete normally (status={status}); usable results were retained.",
+                    status=status,
+                )
+            if diagnostic.location:
+                message = f"{message} ({diagnostic.location})"
+            messages.append(message)
+            continue
+        if diagnostic.code == "OCR-TABLE-UNAVAILABLE":
+            message = _t("action_area.table_model_unavailable")
+            if diagnostic.location:
+                message = f"{message} ({diagnostic.location})"
+            messages.append(message)
+            continue
+        if diagnostic.code == "OCR-TABLE-FALLBACK":
+            message = _t(
+                "main_window.ocr_table_fallback",
+                "Table structure recognition failed; plain OCR text was retained.",
+            )
+            if diagnostic.location:
+                message = f"{message} ({diagnostic.location})"
+            messages.append(message)
+            continue
         message = diagnostic.message.strip() or diagnostic.code.strip()
         if not message:
             message = _t("main_window.conversion_warning", "Conversion completed with a warning")
@@ -96,6 +128,12 @@ class ExecutionPresenter(QObject):
         self._info_area_vm = info_area_vm
         self._task_history = task_history
 
+    def _show_ocr_notice(self, results: list[ConversionResult], context: dict[str, Any]) -> None:
+        if any(d.code == "OCR-QUALITY-NOTICE" for result in results for d in result.diagnostics):
+            self._info_area_vm.add_message(
+                _t("main_window.ocr_quality_notice"), "info", operation_id=context.get("request_id", "")
+            )
+
     @Slot(object, dict)
     def finished(self, result: object, context: dict[str, Any]) -> None:
         from docwen_core.models.result import ConversionResult
@@ -119,6 +157,7 @@ class ExecutionPresenter(QObject):
             return
 
         if result.success:
+            self._show_ocr_notice([result], context)
             output_path = self._output_path(result)
             result_paths = result_output_paths(result)
             warning_messages = _result_warning_messages(result)
@@ -252,6 +291,7 @@ class ExecutionPresenter(QObject):
         first_error_output = ""
         first_retained_failure: tuple[str, str, str] | None = None
 
+        self._show_ocr_notice([r for r in results if isinstance(r, ConversionResult)], context)
         for index, file_path in enumerate(file_paths):
             raw_result = results[index] if index < len(results) else None
             if not isinstance(raw_result, ConversionResult):

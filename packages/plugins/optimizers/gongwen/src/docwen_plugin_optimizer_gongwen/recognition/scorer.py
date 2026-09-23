@@ -286,6 +286,38 @@ class ElementScorer:
         """Check whether text is a pure numeric copy-ID sequence."""
         return pf.text.strip().isdigit()
 
+    def is_copy_id_candidate(self, pf: ParagraphFeature) -> bool:
+        """Require an explicit label or leading official-header context in tables."""
+        if not self.is_numeric_sequence(pf) or pf.list_marker:
+            return False
+        if pf.source != "table":
+            return True
+        if pf.table_index is None or pf.table_row_index is None or pf.table_cell_index is None:
+            return False
+
+        # A neighbouring label is stronger evidence than a numeric data cell.
+        if any(
+            other.table_index == pf.table_index
+            and other.table_row_index == pf.table_row_index
+            and other.table_cell_index == pf.table_cell_index - 1
+            and re.sub(r"\s", "", other.text).rstrip("：:") == "份号"
+            for other in self._all_features
+        ):
+            return True
+
+        # Unlabelled layout tables can carry a genuine leading copy ID followed
+        # by secrecy/urgency/document-number fields. Numeric tables in the body
+        # (or numeric cells below a data header) do not have this evidence.
+        nonempty = [other for other in self._all_features if other.text.strip()]
+        if pf.table_row_index != 0 or not nonempty or nonempty[0].index != pf.index:
+            return False
+        return any(
+            self.starts_with_security_keyword(other)
+            or self.starts_with_urgency_keyword(other)
+            or self.is_document_number_format(other)
+            for other in nonempty[1:4]
+        )
+
     def starts_with_security_keyword(self, pf: ParagraphFeature) -> bool:
         """Check whether text starts with a secrecy-level keyword."""
         t = pf.text.strip()

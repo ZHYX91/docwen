@@ -82,11 +82,11 @@ def _canonical_terminal(root: Path) -> dict[str, Any]:
     diagnostics = [
         {
             "severity": "warning",
-            "code": "OCR-BEST-EFFORT",
+            "code": "OCR-BEST-EFFORT.no_text",
             "message": "best effort",
             "artifact_id": f"fragment.{page}",
         }
-        for page in range(1, 5)
+        for page in (2, 3)
     ]
     diagnostics.append(
         {

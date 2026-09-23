@@ -73,6 +73,12 @@ def _add_convert_options(parser: argparse.ArgumentParser) -> None:
     extraction.add_argument("--extract-img", action="store_true")
     extraction.add_argument("--no-extract-img", action="store_true")
     parser.add_argument("--ocr", action="store_true")
+    parser.add_argument(
+        "--recognize-tables",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Recognize table structure with OCR; --no-recognize-tables keeps plain text.",
+    )
     parser.add_argument("--ocr-language", choices=sorted(OCR_LANGUAGE_CHOICES))
     parser.add_argument("--image-mode", choices=sorted(IMAGE_MODE_CHOICES))
     parser.add_argument("--image-link-style", choices=sorted(IMAGE_LINK_STYLE_CHOICES))

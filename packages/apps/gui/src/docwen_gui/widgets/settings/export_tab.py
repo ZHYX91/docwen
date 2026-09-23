@@ -55,6 +55,11 @@ class ExportTab(BaseSettingsTab):
         self._ocr_language.currentIndexChanged.connect(
             lambda _index: self._vm.set_field(SECTION_EXPORT, "ocr_language", self._ocr_language.currentData())
         )
+        self._recognize_tables = QCheckBox(t("action_area.recognize_tables", "Recognize table structure"))
+        self._recognize_tables.toggled.connect(
+            lambda value: self._vm.set_field(SECTION_EXPORT, "recognize_tables", value)
+        )
+        self.add_form_row(ocr_form, "", self._recognize_tables)
         _card, form = self.add_settings_card(
             t("settings.export.md_export_section", "MD Export Options"),
             t("settings.export.md_export_desc", "Configure how images are handled in Markdown output."),
@@ -205,6 +210,8 @@ class ExportTab(BaseSettingsTab):
         with QSignalBlocker(self._ocr_language):
             self.set_combo_data(self._ocr_language, self._vm.config.export.ocr_language)
         exp = self._vm.config.export
+        with QSignalBlocker(self._recognize_tables):
+            self._recognize_tables.setChecked(exp.recognize_tables)
         self.set_combo_data(self._image_mode, exp.image_mode)
         self.set_combo_data(self._ocr_mode, exp.ocr_mode)
         self._ocr_title_enabled.setChecked(exp.ocr_title_enabled)

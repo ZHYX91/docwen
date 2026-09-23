@@ -44,6 +44,8 @@ def validate_execution_options(
     if getattr(args, "spreadsheet_password_prompt", False) and len(getattr(args, "files", ()) or ()) != 1:
         raise ValueError("--spreadsheet-password-prompt requires exactly one input")
 
+    if getattr(args, "recognize_tables", None) is not None and not getattr(args, "ocr", False):
+        raise ValueError("--recognize-tables / --no-recognize-tables requires --ocr")
     ocr_language = getattr(args, "ocr_language", None)
     if ocr_language and not getattr(args, "ocr", False):
         raise ValueError("--ocr-language 需要与 --ocr 同时使用")
@@ -164,6 +166,7 @@ def build_execution_options(
             image_mode=getattr(args, "image_mode", None),
             ocr_placement=getattr(args, "ocr_placement", None),
             ocr_language=getattr(args, "ocr_language", None),
+            recognize_tables=getattr(args, "recognize_tables", None),
             image_link_style=getattr(args, "image_link_style", None),
             table_merge_strategy=getattr(args, "table_merge_strategy", None),
         )

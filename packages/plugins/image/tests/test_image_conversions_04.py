@@ -16,7 +16,7 @@ pytestmark = pytest.mark.golden
 
 class TestImageToMarkdown:
     @pytest.mark.contract
-    def test_image_to_markdown_ocr_success_warns_and_preserves_recognized_text(
+    def test_image_to_markdown_ocr_success_is_informational_and_preserves_recognized_text(
         self, sample_png_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """OCR success path should append recognised text to the Markdown output."""
@@ -62,10 +62,61 @@ class TestImageToMarkdown:
             assert result.metrics.extra["ocr_chars"] == len("识别文本\n第二行")
             assert any(d.code == "IMG2MD-OCR-OK" for d in result.diagnostics)
             assert len(context.progress.diagnostics) == 1
-            warning = context.progress.diagnostics[0]
-            assert warning[2] == "OCR-BEST-EFFORT"
-            assert "status=success" in warning[1]
-            assert "may contain recognition errors or omissions" in warning[1]
+            notice = context.progress.diagnostics[0]
+            assert notice[0] == "info"
+            assert notice[2] == "OCR-QUALITY-NOTICE"
+            assert "status=success" in notice[1]
+            assert "may contain recognition errors or omissions" in notice[1]
+
+    @pytest.mark.contract
+    def test_image_to_markdown_ocr_table_emits_structural_markdown(
+        self, sample_png_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import docwen_plugin_image.to_markdown.converter as converter_mod
+        from docwen_core.text.ocr import OcrOutcome, OcrStatus, OcrTextRegion
+        from docwen_core.text.table_recognition import TableRecognitionOutcome, TableRecognitionStatus
+        from docwen_plugin_image.to_markdown.converter import ImageToMarkdownConverter
+
+        outcome = OcrOutcome(
+            OcrStatus.SUCCESS,
+            text="姓名\n金额\n甲\n100",
+            regions=(
+                OcrTextRegion(((0, 0), (20, 0), (20, 10), (0, 10)), "姓名", 0.99),
+                OcrTextRegion(((30, 0), (50, 0), (50, 10), (30, 10)), "金额", 0.99),
+                OcrTextRegion(((0, 20), (20, 20), (20, 30), (0, 30)), "甲", 0.99),
+                OcrTextRegion(((30, 20), (50, 20), (50, 30), (30, 30)), "100", 0.99),
+            ),
+        )
+        table_markdown = "| 姓名 | 金额 |\n| --- | --- |\n| 甲 | 100 |"
+        monkeypatch.setattr(converter_mod, "run_ocr_outcome", lambda *_args, **_kwargs: outcome)
+        monkeypatch.setattr(
+            converter_mod,
+            "recognize_table_markdown",
+            lambda *_args, **_kwargs: TableRecognitionOutcome(
+                TableRecognitionStatus.SUCCESS,
+                markdown=table_markdown,
+            ),
+        )
+
+        with tempfile.TemporaryDirectory() as staging:
+            context = _build_fake_context(
+                str(sample_png_path),
+                staging,
+                "md",
+                {
+                    "to_md_enable_ocr": True,
+                    "to_md_keep_images": True,
+                    "ocr_placement": "main_md",
+                },
+            )
+            result = ImageToMarkdownConverter().convert(context)
+            markdown = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
+
+        assert result.success is True
+        assert table_markdown in markdown
+        assert "> 姓名" not in markdown
+        assert result.metrics.extra["table_recognized"] is True
+        assert any(d.code == "IMG2MD-TABLE-OK" for d in result.diagnostics)
 
     @pytest.mark.contract
     def test_image_to_markdown_ocr_disabled_skips_ocr(self, sample_png_path: Path) -> None:
@@ -233,9 +284,12 @@ class TestTiffToMarkdown:
         assert "PAGE 1" not in primary_text
         assert "PAGE 4" not in primary_text
         assert private_pngs == []
-        warnings = [diagnostic for diagnostic in result.diagnostics if diagnostic.code == "OCR-BEST-EFFORT"]
-        assert len(warnings) == 4
-        assert all(diagnostic.artifact_id is not None for diagnostic in warnings)
+        warnings = [diagnostic for diagnostic in result.diagnostics if diagnostic.code.startswith("OCR-BEST-EFFORT.")]
+        assert len(warnings) == 2
+        assert [warning.artifact_id for warning in warnings] == [
+            fragments[1].artifact_id,
+            fragments[2].artifact_id,
+        ]
         assert all("private" not in diagnostic.message for diagnostic in warnings)
 
     @pytest.mark.parametrize(
@@ -430,7 +484,7 @@ class TestTiffToMarkdown:
 
         assert result.success is True
         fragments = [artifact for artifact in result.artifacts if artifact.kind == "auxiliary"]
-        warnings = [diagnostic for diagnostic in result.diagnostics if diagnostic.code == "OCR-BEST-EFFORT"]
+        warnings = [diagnostic for diagnostic in result.diagnostics if diagnostic.code.startswith("OCR-BEST-EFFORT.")]
         assert len(fragments) == 4
         assert len(warnings) == 4
         assert [diagnostic.artifact_id for diagnostic in warnings] == [artifact.artifact_id for artifact in fragments]

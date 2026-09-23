@@ -59,6 +59,7 @@ def test_gongwen_manifest_declares_only_consumed_action_options() -> None:
         "image_link_style",
         "to_md_enable_ocr",
         "ocr_language",
+        "recognize_tables",
         "locale",
         "table_merge_strategy",
     }

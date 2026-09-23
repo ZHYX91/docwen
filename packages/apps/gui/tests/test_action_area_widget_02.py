@@ -251,7 +251,7 @@ class TestMdToDocument:
         assert len(widget.findChildren(QCheckBox)) == 6
 
         vm.setup_for_document_file("/test.docx")
-        assert len(widget.findChildren(QCheckBox)) == 4
+        assert len(widget.findChildren(QCheckBox)) == 5
 
         vm.setup_for_md_to_document("/test.md")
         assert len(widget.findChildren(QCheckBox)) == 6

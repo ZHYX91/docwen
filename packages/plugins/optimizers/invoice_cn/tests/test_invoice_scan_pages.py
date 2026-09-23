@@ -423,7 +423,7 @@ class TestScanPageInConverter:
 
             assert result.success is True
             assert result.error is None
-            assert any(item[2] == "OCR-BEST-EFFORT" for item in context.progress.diagnostics)
+            assert any(item[2].startswith("OCR-BEST-EFFORT.") for item in context.progress.diagnostics)
             assert any(d.code == "INVOICE-SCAN-DETECTED" for d in result.diagnostics)
             assert not any(d.code == "INVOICE-OCR-OK" for d in result.diagnostics)
 
@@ -477,7 +477,7 @@ class TestScanPageInConverter:
         assert result.success is True
         assert fallback_calls == [str(pdf_path)]
         assert "BASE-PARSER-RESULT" in markdown
-        assert any(item[2] == "OCR-BEST-EFFORT" for item in context.progress.diagnostics)
+        assert any(item[2].startswith("OCR-BEST-EFFORT.") for item in context.progress.diagnostics)
         assert not any(d.code == "INVOICE-OCR-OK" for d in result.diagnostics)
 
     def test_scan_pdf_without_ocr_uses_text_path(self, tmp_path: Path) -> None:

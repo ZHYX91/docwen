@@ -9,7 +9,7 @@ from docwen_core.text.heading_numbering import (
     HeadingFormatter,
     resolve_heading_numbering_scheme,
 )
-from docwen_core.text.ocr import format_ocr_best_effort_warning
+from docwen_core.text.ocr import report_ocr_outcome
 
 if TYPE_CHECKING:
     from docwen_core.export_semantics import MarkdownExportSemantics
@@ -126,18 +126,7 @@ def _prepare_table_rendering(features: list[Any], result: Any) -> None:
 
 
 def _report_ocr_best_effort(progress: ProgressSink | None, status: object, *, location: str) -> None:
-    """Report one safe warning for a fallible OCR outcome."""
-    if progress is None:
-        return
-    message = format_ocr_best_effort_warning(status)
-    if message is None:
-        return
-    progress.report_diagnostic(
-        "warning",
-        message,
-        code="OCR-BEST-EFFORT",
-        location=location,
-    )
+    report_ocr_outcome(progress, status, location=location)
 
 
 def _attachment_line_text(feature: Any, *, remove_numbering: bool) -> str:
@@ -249,6 +238,9 @@ def convert_docx_to_md_gongwen(
             progress.report_progress(10.0, "Running OCR on embedded images")
         from docwen_core.detection import detect_content_format
         from docwen_core.text.ocr import OcrOutcome, OcrStatus, run_ocr_outcome
+        from docwen_core.text.table_recognition import (
+            enrich_ocr_table_structure,
+        )
 
         for pf in features:
             for img_path in pf.extracted_images:
@@ -262,6 +254,23 @@ def convert_docx_to_md_gongwen(
                         )
                     except Exception as exc:
                         outcome = OcrOutcome(OcrStatus.RECOGNITION_FAILED, message=str(exc))
+                    outcome, table_outcome = enrich_ocr_table_structure(
+                        img_path,
+                        outcome,
+                        enabled=bool(options.get("recognize_tables", True)),
+                        merge_strategy=str(
+                            options.get("table_merge_strategy")
+                            or (export_semantics.table_merge_export_strategy if export_semantics else "fill")
+                        ),
+                        check_cancelled=cancellation.check if cancellation else None,
+                    )
+                    if table_outcome.fallback_required and progress is not None:
+                        progress.report_diagnostic(
+                            "warning",
+                            "Table structure recognition failed; plain OCR text was retained.",
+                            code=table_outcome.diagnostic_code,
+                            location=str(img_path),
+                        )
                     _report_ocr_best_effort(
                         progress,
                         outcome.status,
@@ -269,6 +278,8 @@ def convert_docx_to_md_gongwen(
                     )
                     if outcome.recognized_text and outcome.recognized_text.strip():
                         pf.image_ocr_texts[img_path] = outcome.recognized_text
+                    if outcome.structured_markdown:
+                        pf.image_ocr_markdown[img_path] = outcome.structured_markdown
 
     # ── 2.  Recognition (three rounds + re-evaluation) ──────────────
     if progress:

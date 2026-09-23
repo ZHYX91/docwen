@@ -24,7 +24,7 @@ This software was originally designed for the daily work of the printing office 
 - **📑 PDF and Layout Files** - PDF/XPS/OFD to Markdown or DOCX conversion. Supports PDF merging, splitting, and other operations.
 - **🖼️ Image Processing** - Supports bidirectional conversion and compression of JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC formats.
 - **📥 Other Format Import** - Supports one-way conversion of HTML/MHTML/ENEX/EPUB/PPTX/PPT to Markdown.
-- **🔍 OCR Text Recognition** - Integrated RapidOCR to extract text from images and PDFs.
+- **🔍 OCR Text & Table Recognition** - Integrated RapidOCR for offline text recognition plus a lightweight RapidTable/SLANet table-structure path. Table-dominant images and OCR pages can be emitted as Markdown tables; successful OCR is reported as normal completion, while blank or degraded recognition remains explicit. Formula OCR is not included.
 - **✏️ Text Proofreading** - Checks for typos, punctuation, symbols, and sensitive words based on custom dictionaries. Supports Word (.docx) and Markdown (.md) files. Rules can be edited in the settings interface.
 - **📝 Template System** - Flexible template mechanism supporting custom document and report formats.
 - **💻 Dual Mode Operation** - Graphical User Interface (GUI) + Command Line Interface (CLI).

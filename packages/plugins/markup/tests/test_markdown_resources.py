@@ -588,18 +588,16 @@ def test_writer_reports_typed_ocr_failure_and_continues_with_later_images(
 
     assert written["images/first.png"].markdown_link == "![first.png](first.png)"
     assert written["images/second.png"].markdown_link.endswith("> later image text")
-    assert len(context.progress.diagnostics) == 2
-    diagnostic = context.progress.diagnostics[0]
+    warnings = [d for d in context.progress.diagnostics if d.level == "warning"]
+    assert len(warnings) == 1
+    diagnostic = warnings[0]
     assert diagnostic.level == "warning"
-    assert diagnostic.code == "OCR-BEST-EFFORT"
+    assert diagnostic.code.startswith("OCR-BEST-EFFORT.")
     assert diagnostic.location == "first.png"
     assert f"status={status.value}" in diagnostic.message
     assert "epub image first.png" in diagnostic.message
     assert "deterministic OCR failure" not in diagnostic.message
-    success_warning = context.progress.diagnostics[1]
-    assert success_warning.code == "OCR-BEST-EFFORT"
-    assert success_warning.location == "second.png"
-    assert "status=success" in success_warning.message
+    assert all(diagnostic.code.startswith("OCR-BEST-EFFORT.") for diagnostic in warnings)
     assert "later image text" in written["images/second.png"].markdown_link
 
 
@@ -627,9 +625,10 @@ def test_writer_warns_that_no_text_may_be_a_missed_best_effort_result(tmp_path, 
     )
 
     assert written["images/blank.png"].markdown_link == "![blank.png](blank.png)"
-    assert len(context.progress.diagnostics) == 1
-    diagnostic = context.progress.diagnostics[0]
-    assert diagnostic.code == "OCR-BEST-EFFORT"
+    warnings = [d for d in context.progress.diagnostics if d.level == "warning"]
+    assert len(warnings) == 1
+    diagnostic = warnings[0]
+    assert diagnostic.code.startswith("OCR-BEST-EFFORT.")
     assert diagnostic.location == "blank.png"
     assert "status=no_text" in diagnostic.message
     assert "may have been missed" in diagnostic.message

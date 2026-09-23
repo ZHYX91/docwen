@@ -32,6 +32,7 @@ def _relative_files(root: Path, pattern: str = "*") -> set[str]:
 
 def test_packaged_resource_manifest_matches_the_current_source_tree() -> None:
     from scripts.release.packaged_resources import (
+        EXTERNAL_MODEL_SPECS,
         REQUIRED_ASSET_FILES,
         REQUIRED_CONFIG_FILES,
         REQUIRED_LOCALE_FILES,
@@ -49,7 +50,8 @@ def test_packaged_resource_manifest_matches_the_current_source_tree() -> None:
     assert set(REQUIRED_ASSET_FILES) == assets
     assert set(REQUIRED_CONFIG_FILES) == _config_registry_paths()
     assert set(REQUIRED_TEMPLATE_FILES) == templates
-    assert set(REQUIRED_MODEL_FILES) == _relative_files(ROOT / "models", "*.onnx")
+    source_models = _relative_files(ROOT / "models", "*.onnx")
+    assert set(REQUIRED_MODEL_FILES) == source_models | set(EXTERNAL_MODEL_SPECS)
     assert set(REQUIRED_LOCALE_FILES) == {path.name for path in (ROOT / "i18n" / "locales").glob("*.toml")}
 
 

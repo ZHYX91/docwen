@@ -135,8 +135,14 @@ def test_core_has_one_typed_ocr_execution_entry_with_exact_statuses() -> None:
 def test_all_and_only_routed_ocr_consumers_use_typed_outcomes_and_warnings() -> None:
     sources = _production_plugin_sources()
     typed_callers = {path for path, source in sources.items() if "run_ocr_outcome" in source}
-    warning_owners = {path for path, source in sources.items() if "OCR-BEST-EFFORT" in source}
-    formatter_callers = {path for path, source in sources.items() if "format_ocr_best_effort_warning" in source}
+    warning_owners = {
+        path for path, source in sources.items() if "ocr_diagnostic_code" in source or "report_ocr_outcome" in source
+    }
+    formatter_callers = {
+        path
+        for path, source in sources.items()
+        if "format_ocr_best_effort_warning" in source or "report_ocr_outcome" in source
+    }
 
     assert typed_callers == EXPECTED_TYPED_CALLERS
     assert warning_owners == EXPECTED_WARNING_OWNERS
@@ -250,7 +256,7 @@ def test_typed_ocr_paths_and_best_effort_regressions_are_guarded() -> None:
             "test_image_to_markdown_ocr_failure_is_best_effort",
             "test_image_to_markdown_typed_ocr_failures_are_safe_and_nonfatal",
             "test_image_to_markdown_no_text_warns_about_possible_missed_text",
-            "test_image_to_markdown_ocr_success_warns_and_preserves_recognized_text",
+            "test_image_to_markdown_ocr_success_is_informational_and_preserves_recognized_text",
             "test_tiff_to_markdown_emits_one_fragment_per_frame_and_continues_after_ocr_failure",
         ),
         "packages/plugins/markup/tests/test_markdown_resources.py": (
@@ -264,16 +270,16 @@ def test_typed_ocr_paths_and_best_effort_regressions_are_guarded() -> None:
         ),
         "packages/plugins/layout/tests/test_markdown_preprocess_*.py": ("test_ocr_failure_preserves_local_image_link",),
         "packages/plugins/document/tests/test_request_scoped_docx_policy_*.py": (
-            "test_document_all_ocr_outcomes_warn_and_continue_later_images",
+            "test_document_degraded_ocr_outcomes_warn_and_continue_later_images",
         ),
         "packages/plugins/spreadsheet/tests/test_xlsx_to_md_golden_*.py": (
-            "test_pipeline_xlsx_all_ocr_outcomes_warn_and_continue_later_images",
+            "test_pipeline_xlsx_degraded_ocr_outcomes_warn_and_continue_later_images",
         ),
         "packages/plugins/presentation/tests/test_presentation_to_md_*.py": (
-            "test_pptx_all_ocr_outcomes_warn_and_continue_later_images",
+            "test_pptx_degraded_ocr_outcomes_warn_and_continue_later_images",
         ),
         "packages/plugins/optimizers/gongwen/tests/test_gongwen_golden.py": (
-            "test_gongwen_all_ocr_outcomes_warn_and_continue_later_images",
+            "test_gongwen_degraded_ocr_outcomes_warn_and_continue_later_images",
         ),
         "packages/plugins/optimizers/invoice_cn/tests/test_invoice_conversions_*.py": (
             "test_direct_image_parser_preserves_typed_ocr_failure",

@@ -275,7 +275,9 @@ class TestPptxToMd:
 
         expected = scope["current_projection"]
         assert result.success is expected["success"]
-        assert [diagnostic.code for diagnostic in result.diagnostics] == expected["diagnostic_codes"]
+        assert [
+            diagnostic.code for diagnostic in result.diagnostics if diagnostic.code != "OCR-QUALITY-NOTICE"
+        ] == expected["diagnostic_codes"]
         assert len(_deliverable_artifacts(result)) == expected["artifact_count"]
         primary_artifacts = [artifact for artifact in result.artifacts if artifact.is_primary]
         image_artifacts = [artifact for artifact in result.artifacts if artifact.kind == "image"]
@@ -427,7 +429,9 @@ class TestPptxToMd:
 
         expected = scope["current_projection"]
         assert result.success is expected["success"]
-        assert [diagnostic.code for diagnostic in result.diagnostics] == expected["diagnostic_codes"]
+        assert [
+            diagnostic.code for diagnostic in result.diagnostics if diagnostic.code != "OCR-QUALITY-NOTICE"
+        ] == expected["diagnostic_codes"]
         assert len(_deliverable_artifacts(result)) == expected["artifact_count"]
         primary_artifacts = [artifact for artifact in result.artifacts if artifact.is_primary]
         image_artifacts = [artifact for artifact in result.artifacts if artifact.kind == "image"]

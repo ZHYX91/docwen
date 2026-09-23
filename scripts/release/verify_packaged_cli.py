@@ -850,11 +850,15 @@ def _verify_physical_page_bundle(
             f"packaged_physical_page_unresolved_diagnostic_invalid:{unresolved_resource_ids}:{unresolved_diagnostics}"
         )
     if ocr_enabled:
-        expected_ocr_diagnostic_ids = sorted(relation["source_artifact_id"] for relation in page_relations)
+        expected_ocr_diagnostic_ids = sorted(
+            relation["source_artifact_id"]
+            for relation in page_relations
+            if relation.get("page_fragment", {}).get("ocr_status") != "success"
+        )
         actual_ocr_diagnostic_ids = sorted(
             artifact_id
             for diagnostic in diagnostics
-            if isinstance(diagnostic, dict) and diagnostic.get("code") == "OCR-BEST-EFFORT"
+            if isinstance(diagnostic, dict) and str(diagnostic.get("code", "")).startswith("OCR-BEST-EFFORT.")
             for artifact_id in (diagnostic.get("artifact_id"),)
             if isinstance(artifact_id, str)
         )
@@ -864,7 +868,8 @@ def _verify_physical_page_bundle(
                 f"{expected_ocr_diagnostic_ids}:{actual_ocr_diagnostic_ids}"
             )
     elif any(
-        isinstance(diagnostic, dict) and diagnostic.get("code") == "OCR-BEST-EFFORT" for diagnostic in diagnostics
+        isinstance(diagnostic, dict) and str(diagnostic.get("code", "")).startswith("OCR-BEST-EFFORT.")
+        for diagnostic in diagnostics
     ):
         raise RuntimeError(f"packaged_physical_page_unexpected_ocr_diagnostic:{diagnostics}")
     for artifact_id, artifact in by_id.items():
@@ -1763,6 +1768,59 @@ def _run_optional_ocr_smoke(binary_path: Path, *, work_dir: Path) -> Path:
     return output_file
 
 
+def _run_optional_table_smoke(binary_path: Path, *, work_dir: Path) -> tuple[Path, Path]:
+    """Exercise actual packaged layout/structure models and the independent off switch."""
+    fixture = Path(__file__).resolve().parents[2] / "tests/fixtures/files/ocr_tables/mixed-tables.png"
+    source = work_dir / "mixed-tables.png"
+    shutil.copyfile(fixture, source)
+    paths = []
+    for enabled in (True, False):
+        payload = _load_json_payload(
+            _run(
+                binary_path,
+                "convert",
+                str(source),
+                "--to",
+                "md",
+                "--output-dir",
+                str(work_dir / ("tables-on" if enabled else "tables-off")),
+                "--ocr",
+                "--ocr-language",
+                "english",
+                "--ocr-placement",
+                "main_md",
+                "--recognize-tables" if enabled else "--no-recognize-tables",
+                "--json",
+                "--quiet",
+                cwd=work_dir,
+            ),
+            command_name="table recognition on/off",
+        )
+        if payload.get("success") is not True:
+            raise RuntimeError(f"packaged_table_conversion_failed:{payload}")
+        output = _verify_md_output_file(payload, work_dir=work_dir, command_name="table recognition")
+        content = _read_text_with_long_path(output)
+        for text in (
+            "Report heading outside the tables",
+            "Body text between the tables",
+            "Footnote text must remain",
+            "Apple",
+            "North",
+        ):
+            if content.count(text) != 1:
+                raise RuntimeError(f"packaged_table_prose_or_cell_lost_or_duplicated:{text}")
+        separators = content.count("| --- | --- | --- |")
+        if separators != (2 if enabled else 0):
+            raise RuntimeError(f"packaged_table_structure_count_invalid:{enabled}:{separators}")
+        if enabled and any(
+            row not in content
+            for row in ("| Apple | 12 | 30 |", "| Pear | 10 | 50 |", "| North | 150 | 2025 |", "| South | 280 | 2026 |")
+        ):
+            raise RuntimeError("packaged_table_cell_alignment_invalid")
+        paths.append(output)
+    return paths[0], paths[1]
+
+
 def _run_numbering_smoke(binary_path: Path, *, work_dir: Path) -> tuple[Path, Path]:
     del work_dir
     # The v0.9 input contract intentionally rejects user-supplied paths above
@@ -2635,6 +2693,7 @@ def _run_machine_protocol_smoke_impl(
         "relation_payloads": ["page_fragment", "page_resource"],
     }
     fixed_layout_properties = {
+        "recognize_tables": {"type": "boolean"},
         "recognize_text": {"type": "boolean", "default": False},
         "preserve_resources": {"type": "boolean", "default": True},
         "ocr_language": {
@@ -2656,6 +2715,7 @@ def _run_machine_protocol_smoke_impl(
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "properties": {
+            "recognize_tables": {"type": "boolean"},
             "recognize_text": {"type": "boolean", "default": False},
             "preserve_resources": {"type": "boolean", "default": True},
             "ocr_language": fixed_layout_properties["ocr_language"],
@@ -3384,6 +3444,9 @@ def main(argv: list[str]) -> int:
         help="Also run packaged image->Markdown OCR using the bundled RapidOCR models.",
     )
     parser.add_argument(
+        "--table-smoke", action="store_true", help="Verify packaged table models, mixed prose and the table off switch."
+    )
+    parser.add_argument(
         "--proofread-report-smoke",
         action="store_true",
         help="Also verify the packaged Markdown proofread report 2.0 coordinate and empty-result contracts.",
@@ -3468,6 +3531,7 @@ def main(argv: list[str]) -> int:
         content_first_output_file = _run_content_first_contract_smoke(binary_path, work_dir=work_dir)
         numbering_added, numbering_removed = _run_numbering_smoke(binary_path, work_dir=work_dir)
         ocr_output_file = _run_optional_ocr_smoke(binary_path, work_dir=work_dir) if args.ocr_smoke else None
+        table_output_files = _run_optional_table_smoke(binary_path, work_dir=work_dir) if args.table_smoke else None
         proofread_report_files = (
             _run_optional_proofread_report_smoke(binary_path, work_dir=work_dir)
             if args.proofread_report_smoke
@@ -3501,6 +3565,8 @@ def main(argv: list[str]) -> int:
         message += f"; numbering -> {numbering_added.name} / {numbering_removed.name}"
         if ocr_output_file is not None:
             message += f"; ocr -> {ocr_output_file.name}"
+        if table_output_files is not None:
+            message += f"; tables on/off -> {table_output_files[0].name} / {table_output_files[1].name}"
         if proofread_report_files is not None:
             message += f"; proofread-report -> {proofread_report_files[0].name} / {proofread_report_files[1].name}"
         if warning_output_file is not None:

@@ -11,6 +11,23 @@ import pytest
 pytestmark = pytest.mark.gui
 
 
+def test_queued_execution_close_is_cancelled_when_window_is_destroyed(qapp):
+    """A drained worker may queue close just before the owner is deleted."""
+    from PySide6.QtCore import QCoreApplication, QEvent
+
+    from docwen_gui.main_window import MainWindow
+    from docwen_gui.view_models.main_window_vm import MainWindowViewModel
+
+    window = MainWindow(view_model=MainWindowViewModel(controller=None))
+    window.setup_ui()
+    window._execution_close_pending = True
+    window._poll_execution_close()
+    window.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    # The old context-free singleShot invoked QWidget.close on a dead wrapper.
+    qapp.processEvents()
+
+
 class _BlockingController:
     has_runtime = True
     config_port = None

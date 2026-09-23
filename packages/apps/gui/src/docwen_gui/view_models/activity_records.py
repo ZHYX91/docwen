@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QApplication
 
 from docwen_gui.diagnostics import DiagnosticSummary
 from docwen_gui.i18n import t
+from docwen_gui.path_identity import display_path
 from docwen_gui.styles.theme_semantics import get_status_theme_class, get_theme_class_color
 
 from .info_area_vm import InfoAreaViewModel
@@ -19,6 +20,7 @@ from .task_history import TaskHistory
 def activity_status_label(status: str) -> str:
     return {
         "info": t("activity.info"),
+        "not_started": t("activity.not_started"),
         "warning": t("activity.warning"),
         "pending": t("components.file_drop.status.pending"),
         "processing": t("components.file_drop.status.processing"),
@@ -103,9 +105,9 @@ class ActivityRecordsModel(QAbstractTableModel):
                     dict.fromkeys(row.message for row in matching if not warnings or row.message_type != "warning")
                 )
                 has_warning = bool(warnings) or any(row.message_type == "warning" for row in matching)
-                details = [f"{t('activity.input')}: {path}"]
+                details = [f"{t('activity.input')}: {display_path(path)}"]
                 if output:
-                    details.extend(f"{t('activity.output')}: {path}" for path in outputs or (output,))
+                    details.extend(f"{t('activity.output')}: {display_path(path)}" for path in outputs or (output,))
                 if outcome and outcome.error_message:
                     details.append(outcome.error_message)
                 if outcome and outcome.skip_reason:
@@ -138,23 +140,26 @@ class ActivityRecordsModel(QAbstractTableModel):
                 if task is None or len(task.paths) == 1 or row.file_path or row.message_type != "warning":
                     continue
             status = {"success": "completed", "danger": "failed", "warning": "warning"}.get(row.message_type, "info")
+            if row.diagnostic is not None and row.diagnostic.status == "not_started":
+                status = "not_started"
             details = row.message
             if row.repeat_count > 1:
                 details += "\n" + t("info_area.history_repeated", count=row.repeat_count)
             path = row.file_path or row.navigate_file_path
             if path:
-                details += "\n\n" + path
+                details += "\n\n" + display_path(path)
+            output_notice = bool(row.navigate_file_path)
             records.append(
                 ActivityRecord(
                     f"notice:{row.created_at.isoformat()}:{row.message}",
                     row.operation_id,
                     row.created_at,
                     status,
-                    "",
-                    path if row.show_location else "",
-                    t("activity.info"),
+                    "" if output_notice else path,
+                    path if row.show_location and output_notice else "",
+                    row.operation or t("activity.info"),
                     details,
-                    diagnostic=DiagnosticSummary(status=status),
+                    diagnostic=row.diagnostic or DiagnosticSummary(status=status),
                 )
             )
         if records == self.records:

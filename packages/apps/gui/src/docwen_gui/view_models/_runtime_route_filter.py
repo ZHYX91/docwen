@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from docwen_application.controller import CapabilityUnavailableError
+from docwen_application.conversion_routes import resolve_conversion_route_plan
 from docwen_application.runtime_capability_catalog import (
     RouteOperation,
     RuntimeCapabilityCatalog,
@@ -101,6 +102,56 @@ def _common_options(routes: tuple[RuntimeRoute, ...]) -> tuple[str, ...]:
     return tuple(option for option in routes[0].options if option in common)
 
 
+def discover_composed_action_route_choices(
+    controller: Any,
+    *,
+    sources: tuple[RuntimeRouteSource, ...],
+    target: str,
+    action_name: str,
+) -> RuntimeRouteChoicesResult:
+    """Resolve an Application-owned preconversion chain ending in one Runtime action."""
+
+    loaded = load_runtime_catalog(controller)
+    if loaded.status == "failed" or loaded.catalog is None:
+        return RuntimeRouteChoicesResult(status="failed", choices=(), error=loaded.error)
+    if not sources:
+        return RuntimeRouteChoicesResult(status="empty", choices=())
+
+    normalized_target = str(target or "").strip().lower()
+    normalized_action = str(action_name or "").strip().lower()
+    if not normalized_target or not normalized_action:
+        return RuntimeRouteChoicesResult(status="empty", choices=())
+
+    final_routes: list[RuntimeRoute] = []
+    try:
+        for source in sources:
+            plan = resolve_conversion_route_plan(
+                loaded.catalog,
+                source_format=source.detected_format,
+                source_category=source.source_category,
+                target_format=normalized_target,
+                action_name=normalized_action,
+            )
+            if plan is None or not plan.available:
+                return RuntimeRouteChoicesResult(status="empty", choices=())
+            final_routes.append(plan.final_route)
+    except Exception as exc:
+        error = exc if isinstance(exc, CapabilityUnavailableError) else CapabilityUnavailableError(str(exc))
+        return RuntimeRouteChoicesResult(status="failed", choices=(), error=error)
+
+    route_tuple = tuple(final_routes)
+    return RuntimeRouteChoicesResult(
+        status="ready",
+        choices=(
+            RuntimeRouteChoice(
+                target=normalized_target,
+                routes=route_tuple,
+                options=_common_options(route_tuple),
+            ),
+        ),
+    )
+
+
 def discover_runtime_route_choices(
     controller: Any,
     *,
@@ -166,6 +217,7 @@ __all__ = [
     "RuntimeRouteChoice",
     "RuntimeRouteChoicesResult",
     "RuntimeRouteSource",
+    "discover_composed_action_route_choices",
     "discover_runtime_route_choices",
     "load_runtime_catalog",
 ]

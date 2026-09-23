@@ -424,7 +424,7 @@ class TestImageToMarkdown:
 
             assert result.success is True
             assert result.error is None
-            assert any(item[2] == "OCR-BEST-EFFORT" for item in context.progress.diagnostics)
+            assert any(item[2].startswith("OCR-BEST-EFFORT.") for item in context.progress.diagnostics)
             assert not any(d.code == "IMG2MD-OCR-OK" for d in result.diagnostics)
             assert Path(result.artifacts[0].staging_path).is_file()
 
@@ -464,7 +464,7 @@ class TestImageToMarkdown:
         assert result.success is True
         assert len(context.progress.diagnostics) == 1
         warning = context.progress.diagnostics[0]
-        assert warning[2] == "OCR-BEST-EFFORT"
+        assert warning[2].startswith("OCR-BEST-EFFORT.")
         assert f"status={status_value}" in warning[1]
         assert "private" not in warning[1]
         assert not any(d.code == "IMG2MD-OCR-OK" for d in result.diagnostics)
@@ -497,7 +497,7 @@ class TestImageToMarkdown:
         assert result.success is True
         assert len(context.progress.diagnostics) == 1
         warning = context.progress.diagnostics[0]
-        assert warning[2] == "OCR-BEST-EFFORT"
+        assert warning[2].startswith("OCR-BEST-EFFORT.")
         assert "status=no_text" in warning[1]
         assert "may have been missed" in warning[1]
         assert not any(d.code == "IMG2MD-OCR-OK" for d in result.diagnostics)

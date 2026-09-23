@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from docwen_core.text.ocr import OcrOutcome, OcrStatus, format_ocr_best_effort_warning
+from docwen_core.text.ocr import OcrOutcome, OcrStatus, format_ocr_best_effort_warning, ocr_diagnostic_code
 
 if TYPE_CHECKING:
     from docwen_core.models.result import ConversionResult
@@ -52,7 +52,7 @@ def _report_ocr_best_effort(
     context.progress.report_diagnostic(
         "warning",
         message,
-        code="OCR-BEST-EFFORT",
+        code=ocr_diagnostic_code(outcome.status),
         location=location,
     )
 

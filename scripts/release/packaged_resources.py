@@ -50,7 +50,20 @@ REQUIRED_TEMPLATE_FILES = (
     "繁體中文通用模板.docx",
     "한국어 범용 템플릿.docx",
 )
+EXTERNAL_MODEL_SPECS: dict[str, tuple[str, str]] = {
+    "rapidtable/layout_table.onnx": (
+        "https://www.modelscope.cn/models/RapidAI/RapidLayout/resolve/v1.0.0/onnx/pp_layout/layout_table.onnx",
+        "5b07ba6df1d1889bed2877c9d7501235c6fb6e2212aca8f2f56f4b1b8d0e37b5",
+    ),
+    "rapidtable/slanet-plus.onnx": (
+        "https://www.modelscope.cn/models/RapidAI/RapidTable/resolve/v2.0.0/slanet-plus.onnx",
+        "d57a942af6a2f57d6a4a0372573c696a2379bf5857c45e2ac69993f3b334514b",
+    ),
+}
+
 REQUIRED_MODEL_FILES = (
+    "rapidtable/layout_table.onnx",
+    "rapidtable/slanet-plus.onnx",
     "rapidocr/arabic_PP-OCRv4_rec_infer.onnx",
     "rapidocr/ch_PP-OCRv4_det_infer.onnx",
     "rapidocr/ch_PP-OCRv4_rec_infer.onnx",

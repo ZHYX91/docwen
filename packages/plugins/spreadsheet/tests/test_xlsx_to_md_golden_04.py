@@ -144,7 +144,9 @@ class TestSpreadsheetToMdPipeline:
 
         expected = scope["current_projection"]
         assert result.success is True
-        assert [diagnostic.code for diagnostic in result.diagnostics] == expected["diagnostic_codes"]
+        assert [
+            diagnostic.code for diagnostic in result.diagnostics if diagnostic.code != "OCR-QUALITY-NOTICE"
+        ] == expected["diagnostic_codes"]
         assert len(_deliverable_artifacts(result)) == expected["artifact_count"]
         primary_artifacts = [artifact for artifact in result.artifacts if artifact.is_primary]
         auxiliary_artifacts = [artifact for artifact in result.artifacts if artifact.kind == "auxiliary"]
@@ -198,7 +200,7 @@ class TestSpreadsheetToMdPipeline:
             for token in expected["required_sidecar_markdown_tokens"]:
                 assert token in content
 
-    def test_pipeline_xlsx_all_ocr_outcomes_warn_and_continue_later_images(
+    def test_pipeline_xlsx_degraded_ocr_outcomes_warn_and_continue_later_images(
         self,
         pipeline: dict[str, Any],
         tmp_path: Path,
@@ -283,17 +285,16 @@ class TestSpreadsheetToMdPipeline:
         warnings = [
             event.payload
             for event in events
-            if event.event_type == "diagnostic" and event.payload.get("code") == "OCR-BEST-EFFORT"
+            if event.event_type == "diagnostic" and event.payload.get("code").startswith("OCR-BEST-EFFORT.")
         ]
-        assert len(warnings) == 6
-        assert [warning["level"] for warning in warnings] == ["warning"] * 6
+        assert len(warnings) == 5
+        assert [warning["level"] for warning in warnings] == ["warning"] * 5
         assert [warning["message"].split("status=", 1)[1].split(";", 1)[0] for warning in warnings] == [
             "unavailable",
             "model_missing",
             "initialization_failed",
             "recognition_failed",
             "no_text",
-            "success",
         ]
         assert all(warning["location"].startswith("Best effort:") for warning in warnings)
         assert all("private" not in warning["message"] for warning in warnings)
