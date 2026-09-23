@@ -144,7 +144,9 @@ class TestSpreadsheetToMdPipeline:
 
         expected = scope["current_projection"]
         assert result.success is True
-        assert [diagnostic.code for diagnostic in result.diagnostics] == expected["diagnostic_codes"]
+        assert [
+            diagnostic.code for diagnostic in result.diagnostics if diagnostic.code != "OCR-QUALITY-NOTICE"
+        ] == expected["diagnostic_codes"]
         assert len(_deliverable_artifacts(result)) == expected["artifact_count"]
         primary_artifacts = [artifact for artifact in result.artifacts if artifact.is_primary]
         auxiliary_artifacts = [artifact for artifact in result.artifacts if artifact.kind == "auxiliary"]
@@ -283,7 +285,7 @@ class TestSpreadsheetToMdPipeline:
         warnings = [
             event.payload
             for event in events
-            if event.event_type == "diagnostic" and event.payload.get("code") == "OCR-BEST-EFFORT"
+            if event.event_type == "diagnostic" and event.payload.get("code").startswith("OCR-BEST-EFFORT.")
         ]
         assert len(warnings) == 5
         assert [warning["level"] for warning in warnings] == ["warning"] * 5

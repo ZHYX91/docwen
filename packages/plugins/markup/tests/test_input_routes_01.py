@@ -87,13 +87,17 @@ def test_markup_routes_keep_base_markdown_when_typed_ocr_fails(
     )
 
     assert result.success
-    merged_warnings = [diagnostic for diagnostic in result.diagnostics if diagnostic.code == "OCR-BEST-EFFORT"]
+    merged_warnings = [
+        diagnostic for diagnostic in result.diagnostics if diagnostic.code.startswith("OCR-BEST-EFFORT.")
+    ]
     assert len(merged_warnings) == 1
     assert merged_warnings[0].location == expected_location
     primary = next(artifact for artifact in result.artifacts if artifact.is_primary)
     assert Path(primary.staging_path).read_text(encoding="utf-8").strip()
     best_effort = [
-        event for event in events if event.event_type == "diagnostic" and event.payload["code"] == "OCR-BEST-EFFORT"
+        event
+        for event in events
+        if event.event_type == "diagnostic" and event.payload["code"].startswith("OCR-BEST-EFFORT.")
     ]
     assert len(best_effort) == 1
     payload = best_effort[0].payload

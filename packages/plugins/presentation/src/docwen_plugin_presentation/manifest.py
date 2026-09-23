@@ -31,6 +31,7 @@ PPTX_TO_MD_OPTIONS_SCHEMA: dict = {
             "default": "main_md",
             "description": "Where OCR text from slide images is written.",
         },
+        "recognize_tables": {"type": "boolean"},
         "ocr_language": {
             "type": "string",
             "enum": ["auto", "chinese", "chinese_cht", "english", "japanese", "korean", "latin", "cyrillic"],

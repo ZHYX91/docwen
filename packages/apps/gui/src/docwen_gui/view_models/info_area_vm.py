@@ -21,6 +21,7 @@ from datetime import datetime
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
+from docwen_gui.diagnostics import DiagnosticSummary
 from docwen_gui.i18n import t as _t
 
 logger = logging.getLogger(__name__)
@@ -91,6 +92,7 @@ class HistoryRowData:
     navigate_file_path: str = ""
     operation_id: str = ""
     operation: str = ""
+    diagnostic: DiagnosticSummary | None = None
     repeat_count: int = 1
     created_at: datetime = field(default_factory=datetime.now)
 
@@ -348,6 +350,7 @@ class InfoAreaViewModel(QObject):
         navigate_file_path: str | None = None,
         operation_id: str | None = None,
         operation: str = "",
+        diagnostic: DiagnosticSummary | None = None,
     ) -> None:
         """Add a message to the history area.
 
@@ -373,6 +376,7 @@ class InfoAreaViewModel(QObject):
             navigation_target,
             resolved_operation_id,
             operation,
+            diagnostic,
         )
         timestamp = datetime.now().strftime("%H:%M:%S")
         if signature == self._last_message_signature and self._history_rows:
@@ -396,6 +400,7 @@ class InfoAreaViewModel(QObject):
             navigate_file_path=navigation_target,
             operation_id=resolved_operation_id,
             operation=operation,
+            diagnostic=diagnostic,
         )
         self._history_rows.append(row)
         self._enforce_message_limit()

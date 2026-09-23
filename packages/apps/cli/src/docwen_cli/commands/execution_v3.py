@@ -36,6 +36,7 @@ _EXECUTION_DEFAULTS: dict[str, Any] = {
     "no_extract_img": False,
     "ocr": False,
     "ocr_language": None,
+    "recognize_tables": None,
     "image_mode": None,
     "image_link_style": None,
     "table_merge_strategy": None,

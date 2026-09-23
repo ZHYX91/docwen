@@ -107,7 +107,7 @@ class TestPptxToMd:
         warnings = [
             event.payload
             for event in events
-            if event.event_type == "diagnostic" and event.payload.get("code") == "OCR-BEST-EFFORT"
+            if event.event_type == "diagnostic" and event.payload.get("code").startswith("OCR-BEST-EFFORT.")
         ]
         assert len(warnings) == 5
         assert [warning["level"] for warning in warnings] == ["warning"] * 5

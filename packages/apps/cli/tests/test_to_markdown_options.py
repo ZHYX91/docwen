@@ -217,3 +217,16 @@ class TestNormalizeToMarkdownOptions:
         raw: dict[str, object] = {"to_md_keep_images": None}
         with pytest.raises(ValueError, match="to_md_keep_images"):
             normalize_to_markdown_options(raw)
+
+
+@pytest.mark.parametrize("enabled", [True, False])
+def test_table_recognition_option_preserves_explicit_boolean(enabled):
+    options = build_to_markdown_options(enable_ocr=True, recognize_tables=enabled)
+    assert options == {"to_md_enable_ocr": True, "recognize_tables": enabled}
+    assert normalize_to_markdown_options(options) == options
+
+
+@pytest.mark.parametrize("value", ["false", 0, 1])
+def test_table_recognition_option_rejects_non_boolean(value):
+    with pytest.raises(ValueError, match="recognize_tables"):
+        normalize_to_markdown_options({"recognize_tables": value})

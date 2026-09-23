@@ -85,6 +85,7 @@ def test_layout_manifest_keeps_route_specific_options_scoped() -> None:
         "to_md_keep_images",
         "to_md_enable_ocr",
         "ocr_language",
+        "recognize_tables",
         "locale",
         "yaml_key_labels",
         "image_mode",

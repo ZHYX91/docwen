@@ -135,8 +135,14 @@ def test_core_has_one_typed_ocr_execution_entry_with_exact_statuses() -> None:
 def test_all_and_only_routed_ocr_consumers_use_typed_outcomes_and_warnings() -> None:
     sources = _production_plugin_sources()
     typed_callers = {path for path, source in sources.items() if "run_ocr_outcome" in source}
-    warning_owners = {path for path, source in sources.items() if "OCR-BEST-EFFORT" in source}
-    formatter_callers = {path for path, source in sources.items() if "format_ocr_best_effort_warning" in source}
+    warning_owners = {
+        path for path, source in sources.items() if "ocr_diagnostic_code" in source or "report_ocr_outcome" in source
+    }
+    formatter_callers = {
+        path
+        for path, source in sources.items()
+        if "format_ocr_best_effort_warning" in source or "report_ocr_outcome" in source
+    }
 
     assert typed_callers == EXPECTED_TYPED_CALLERS
     assert warning_owners == EXPECTED_WARNING_OWNERS

@@ -74,6 +74,26 @@ _OCR_SUCCESS_NOTICE = (
 )
 
 
+def ocr_diagnostic_code(status: object) -> str:
+    """Keep outcome status structured across progress, result and Machine boundaries."""
+    try:
+        value = OcrStatus(str(status)).value
+    except ValueError:
+        value = "unknown"
+    return f"OCR-BEST-EFFORT.{value}"
+
+
+def report_ocr_outcome(progress: object, status: object, *, location: str = "", context: str = "") -> None:
+    """Publish typed failures and a non-warning quality notice through the request sink."""
+    report = getattr(progress, "report_diagnostic", None)
+    if not callable(report):
+        return
+    if message := format_ocr_best_effort_warning(status, context=context):
+        report("warning", message, code=ocr_diagnostic_code(status), location=location)
+    elif status == OcrStatus.SUCCESS:
+        report("info", format_ocr_success_notice(), code="OCR-QUALITY-NOTICE", location=location)
+
+
 def format_ocr_best_effort_warning(status: object, *, context: str = "") -> str | None:
     """Return a warning only when OCR is blank or operationally degraded.
 

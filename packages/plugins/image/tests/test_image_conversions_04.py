@@ -284,7 +284,7 @@ class TestTiffToMarkdown:
         assert "PAGE 1" not in primary_text
         assert "PAGE 4" not in primary_text
         assert private_pngs == []
-        warnings = [diagnostic for diagnostic in result.diagnostics if diagnostic.code == "OCR-BEST-EFFORT"]
+        warnings = [diagnostic for diagnostic in result.diagnostics if diagnostic.code.startswith("OCR-BEST-EFFORT.")]
         assert len(warnings) == 2
         assert [warning.artifact_id for warning in warnings] == [
             fragments[1].artifact_id,
@@ -484,7 +484,7 @@ class TestTiffToMarkdown:
 
         assert result.success is True
         fragments = [artifact for artifact in result.artifacts if artifact.kind == "auxiliary"]
-        warnings = [diagnostic for diagnostic in result.diagnostics if diagnostic.code == "OCR-BEST-EFFORT"]
+        warnings = [diagnostic for diagnostic in result.diagnostics if diagnostic.code.startswith("OCR-BEST-EFFORT.")]
         assert len(fragments) == 4
         assert len(warnings) == 4
         assert [diagnostic.artifact_id for diagnostic in warnings] == [artifact.artifact_id for artifact in fragments]

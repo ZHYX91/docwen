@@ -134,6 +134,7 @@ _GROUP_RESET_DOTTED_KEYS: dict[str, tuple[str, ...]] = {
     ),
     "export": (
         "ocr.language",
+        "ocr.recognize_tables",
         "conversion.ocr_output.show_blockquote_title",
         "conversion.ocr_output.blockquote_title_override_by_locale",
         "conversion.export.base64_compress_enabled",

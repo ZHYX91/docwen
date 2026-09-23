@@ -16,6 +16,7 @@ _STATUSES = frozenset(
         "warning",
         "error",
         "pending",
+        "not_started",
         "processing",
         "completed",
         "partial",
@@ -71,6 +72,10 @@ class DiagnosticSummary:
     """
 
     status: str = "unknown"
+    phase: str = ""
+    diagnostic_code: str = ""
+    source_format: str = ""
+    target_format: str = ""
     error_category: str = ""
     exception_type: str = ""
     output_count: int = 0
@@ -87,6 +92,18 @@ class DiagnosticSummary:
             "output_count": _count(self.output_count),
             "warning_count": _count(self.warning_count),
         }
+        if self.phase == "preflight":
+            from docwen_core.formats import FORMAT_CATEGORY
+
+            payload["phase"] = "preflight"
+            payload["diagnostic_code"] = (
+                self.diagnostic_code
+                if self.diagnostic_code
+                in {"ROUTE-INPUT-UNAVAILABLE", "ROUTE-CATALOG-UNAVAILABLE", "ROUTE-NOT-AVAILABLE"}
+                else "unknown"
+            )
+            payload["source_format"] = self.source_format if self.source_format in FORMAT_CATEGORY else "unknown"
+            payload["target_format"] = self.target_format if self.target_format in FORMAT_CATEGORY else "unknown"
         if self.error_category:
             payload["error_category"] = self.error_category if self.error_category in _ERROR_CATEGORIES else "unknown"
         if self.exception_type:

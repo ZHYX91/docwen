@@ -11,6 +11,7 @@ template_name = "简体中文通用模板"
 # 主窗口
 # =============================================================================
 [main_window]
+ocr_quality_notice = "OCR 结果可能存在错漏，请对照原文校对。"
 file_admission_missing = "输入文件不存在或已移走：{path}"
 file_admission_unreadable = "无法读取输入文件：{path}"
 extension_loss_endnotes = "尾注已转换为普通 Markdown 脚注。"
@@ -1178,6 +1179,8 @@ no_table_selected = "未选中表格"
 # 操作面板区域
 # =============================================================================
 [action_area]
+recognize_tables = "识别表格结构"
+table_model_unavailable = "表格模型不可用；将保留普通 OCR 文本。"
 route_options_unavailable = "无法加载可用操作；为避免发出错误请求，生成已禁用。"
 no_compatible_output = "此文件没有兼容的输出格式。"
 export_options = "导出选项"
@@ -1688,6 +1691,7 @@ typed_endnotes = "类型化脚注和尾注"
 obsidian_preset = "使用 Obsidian 扩展预设"
 
 [activity]
+not_started = "未启动"
 record_unavailable = "该活动记录已清除或不可用。"
 title = "活动记录"
 search = "搜索文件名或记录内容"

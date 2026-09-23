@@ -14,7 +14,7 @@ DocWen 的发布目标为一个 Windows x64 完整包和两个 Ubuntu 24.04 x64 
 
 - `DocWen.exe` or `DocWenCLI.exe` and PyInstaller `_internal` content.
 - `configs/`, `templates/`, `models/`, locale files and application assets.
-- The table-structure model is `models/rapidtable/slanet-plus.onnx`. If it is not already present in the source model tree, the production build downloads only this hash-pinned build input before PyInstaller packaging, rejects size/digest mismatches, and copies the verified bytes into both GUI and CLI payloads. Packaged/runtime code never downloads models.
+- The table models are `models/rapidtable/slanet-plus.onnx` (structure) and `models/rapidtable/layout_table.onnx` (localisation). If they are not already present in the source model tree, the production build downloads only these hash-pinned build inputs before PyInstaller packaging, rejects size/digest mismatches, and copies the verified bytes into both GUI and CLI payloads. Packaged/runtime code never downloads models.
 - The complete `pymupdf-layout` distribution resource manifest under `_internal/pymupdf/layout/resources`, including its ONNX models and YAML descriptors.
 - License, third-party notices and the supported runtime metadata.
 
@@ -127,3 +127,5 @@ The optional packaged CLI flag `--proofread-report-smoke` creates its own byte-s
 ## Source entrypoints / 源码入口
 
 The release-gate source-tree smoke runs the installed `docwen --help` and `docwen-gui` console scripts from `tests/e2e/test_source_tree_entrypoints.py`. It uses `release_gate and (integration or gui_smoke or e2e)` and does not fall back to direct imports.
+
+The two table models total 15,163,177 uncompressed bytes. They reuse the existing CPU ONNX Runtime, NumPy and OpenCV dependencies; neither RapidLayout nor RapidTable is added as a Python runtime dependency. Actual compressed-package and unpacked-payload deltas must be measured from the built candidate. `verify_packaged_cli.py --table-smoke` executes the actual models against the checked mixed-table corpus and verifies the independent off switch.

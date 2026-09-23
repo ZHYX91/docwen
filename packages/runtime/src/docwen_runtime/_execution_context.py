@@ -76,6 +76,8 @@ class _RuntimeProgressSink:
         self._emit(event)
 
     def report_diagnostic(self, level: str, message: str, code: str = "", location: str = "") -> None:
+        if code == "OCR-QUALITY-NOTICE" and any(d.code == code for d in self.diagnostics):
+            return
         self.diagnostics.append(
             ConversionDiagnostic(
                 level=level,

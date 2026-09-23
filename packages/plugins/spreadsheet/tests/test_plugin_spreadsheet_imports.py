@@ -123,6 +123,7 @@ def test_spreadsheet_to_md_manifest_declares_consumed_markdown_export_options() 
         "to_md_keep_images",
         "to_md_enable_ocr",
         "ocr_language",
+        "recognize_tables",
         "locale",
         "yaml_key_labels",
         "image_mode",

@@ -11,6 +11,7 @@ template_name = "English General Template"
 # Main Window
 # =============================================================================
 [main_window]
+ocr_quality_notice = "OCR results may contain errors or omissions; verify them against the source."
 file_admission_missing = "The input file no longer exists: {path}"
 file_admission_unreadable = "The input file cannot be read: {path}"
 extension_loss_endnotes = "Endnotes were converted to ordinary Markdown footnotes."
@@ -1177,6 +1178,8 @@ no_table_selected = "No table selected"
 # 操作面板区域
 # =============================================================================
 [action_area]
+recognize_tables = "Recognize table structure"
+table_model_unavailable = "Table models unavailable; plain OCR text will be retained."
 route_options_unavailable = "Available operations could not be loaded; generation is disabled to avoid an incorrect request."
 no_compatible_output = "No compatible output is available for this file."
 export_options = "Export Options"
@@ -1687,6 +1690,7 @@ typed_endnotes = "Typed footnotes and endnotes"
 obsidian_preset = "Use Obsidian extensions"
 
 [activity]
+not_started = "Not started"
 record_unavailable = "This activity record has been cleared or is unavailable."
 title = "Activity records"
 search = "Search filenames or activity"

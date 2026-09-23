@@ -15,6 +15,7 @@ template_name = "Plantilla General Española"
 # 主窗口
 # =============================================================================
 [main_window]
+ocr_quality_notice = "Los resultados OCR pueden contener errores u omisiones; compárelos con el original."
 file_admission_missing = "El archivo de entrada ya no existe: {path}"
 file_admission_unreadable = "No se puede leer el archivo de entrada: {path}"
 extension_loss_endnotes = "Las notas finales se convirtieron en notas al pie normales de Markdown."
@@ -1184,6 +1185,8 @@ no_table_selected = "No hay tabla seleccionada"
 # 操作面板区域
 # =============================================================================
 [action_area]
+recognize_tables = "Reconocer estructura de tablas"
+table_model_unavailable = "Modelos de tablas no disponibles; se conservará el texto OCR."
 route_options_unavailable = "No se pudieron cargar las operaciones disponibles; la generación está desactivada para evitar una solicitud incorrecta."
 no_compatible_output = "No hay ningún formato de salida compatible con este archivo."
 export_options = "Opciones de exportación"
@@ -1699,6 +1702,7 @@ typed_endnotes = "Notas al pie y finales tipificadas"
 obsidian_preset = "Usar extensiones de Obsidian"
 
 [activity]
+not_started = "No iniciada"
 record_unavailable = "Este registro de actividad se ha borrado o no está disponible."
 title = "Registro de actividad"
 search = "Buscar nombres de archivo o actividad"

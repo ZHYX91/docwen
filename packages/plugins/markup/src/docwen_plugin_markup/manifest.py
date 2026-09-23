@@ -42,6 +42,7 @@ _MARKUP_OPTIONS_SCHEMA: dict = {
             "default": "wiki_embed",
             "description": "Markdown image link style used for retained local and remote images.",
         },
+        "recognize_tables": {"type": "boolean"},
         "ocr_language": {
             "type": "string",
             "enum": ["auto", "chinese", "chinese_cht", "english", "japanese", "korean", "latin", "cyrillic"],

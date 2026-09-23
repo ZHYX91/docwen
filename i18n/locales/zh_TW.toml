@@ -1128,6 +1128,8 @@ no_table_selected = "未選中表格"
 # 操作面板区域
 # =============================================================================
 [action_area]
+recognize_tables = "辨識表格結構"
+table_model_unavailable = "表格模型無法使用；將保留一般 OCR 文字。"
 route_options_unavailable = "無法載入可用操作；為避免送出錯誤要求，產生功能已停用。"
 no_compatible_output = "此檔案沒有相容的輸出格式。"
 export_options = "導出選項"
@@ -1631,6 +1633,7 @@ subtitle = "副標題"
 
 
 [main_window]
+ocr_quality_notice = "OCR 結果可能有錯漏，請對照原文校對。"
 file_admission_missing = "輸入檔案不存在或已移走：{path}"
 file_admission_unreadable = "無法讀取輸入檔案：{path}"
 extension_loss_endnotes = "尾註已轉換為一般 Markdown 註腳。"
@@ -1692,6 +1695,7 @@ typed_endnotes = "類型化註腳和章節附註"
 obsidian_preset = "使用 Obsidian 擴充預設"
 
 [activity]
+not_started = "未啟動"
 record_unavailable = "此活動記錄已清除或無法使用。"
 title = "活動記錄"
 search = "搜尋檔名或記錄內容"

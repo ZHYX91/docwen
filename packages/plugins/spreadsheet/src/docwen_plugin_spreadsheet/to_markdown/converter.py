@@ -20,7 +20,7 @@ from collections import deque
 from typing import TYPE_CHECKING, Any
 
 from docwen_core.markdown_extensions import resolve_markdown_extensions
-from docwen_core.text.ocr import format_ocr_best_effort_warning
+from docwen_core.text.ocr import report_ocr_outcome
 from docwen_plugin_spreadsheet.delimited import decoded_samples
 
 if TYPE_CHECKING:
@@ -28,16 +28,7 @@ if TYPE_CHECKING:
 
 
 def _report_ocr_best_effort(progress: Any, status: object, *, location: str) -> None:
-    """Report one safe, request-visible warning for a fallible OCR outcome."""
-    message = format_ocr_best_effort_warning(status)
-    if message is None:
-        return
-    progress.report_diagnostic(
-        "warning",
-        message,
-        code="OCR-BEST-EFFORT",
-        location=location,
-    )
+    report_ocr_outcome(progress, status, location=location)
 
 
 def _cell_has_value(value: Any) -> bool:
@@ -735,7 +726,6 @@ class SpreadsheetToMarkdownConverter:
                             from docwen_core.detection import detect_content_format
                             from docwen_core.text.ocr import run_ocr_outcome
                             from docwen_core.text.table_recognition import (
-                                TableRecognitionStatus,
                                 enrich_ocr_table_structure,
                             )
 
@@ -745,12 +735,14 @@ class SpreadsheetToMarkdownConverter:
                                 ocr_language=ocr_language,
                                 current_locale=current_locale,
                             )
-                            outcome, table_outcome = enrich_ocr_table_structure(img_info["staging_path"], outcome)
-                            if table_outcome.status is TableRecognitionStatus.FAILED:
+                            outcome, table_outcome = enrich_ocr_table_structure(
+                                img_info["staging_path"], outcome, context=context
+                            )
+                            if table_outcome.fallback_required:
                                 context.progress.report_diagnostic(
                                     "warning",
                                     "Table structure recognition failed; plain OCR text was retained.",
-                                    code="OCR-TABLE-FALLBACK",
+                                    code=table_outcome.diagnostic_code,
                                     location=(
                                         f"{sheet_name}:{img_info.get('suggested_name', img_info['staging_path'])}"
                                     ),

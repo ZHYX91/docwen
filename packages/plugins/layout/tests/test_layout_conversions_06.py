@@ -358,7 +358,7 @@ class TestPreprocessChain:
         assert page_fragment.metadata["ocr_status"] == "recognition_failed"
         assert fragment_bytes == b""
         assert any(
-            diagnostic.code == "OCR-BEST-EFFORT" and diagnostic.artifact_id == page_fragment.artifact_id
+            diagnostic.code.startswith("OCR-BEST-EFFORT.") and diagnostic.artifact_id == page_fragment.artifact_id
             for diagnostic in result.diagnostics
         )
         assert any(d.code == "PDF2MD-OCR-OK" for d in result.diagnostics)
@@ -400,7 +400,9 @@ class TestPreprocessChain:
         page_fragment = _page_fragments(result)[0]
         assert page_fragment.metadata["ocr_status"] == "no_text"
         assert fragment_bytes == b""
-        warning = next(diagnostic for diagnostic in result.diagnostics if diagnostic.code == "OCR-BEST-EFFORT")
+        warning = next(
+            diagnostic for diagnostic in result.diagnostics if diagnostic.code.startswith("OCR-BEST-EFFORT.")
+        )
         assert warning.artifact_id == page_fragment.artifact_id
         assert "status=no_text" in warning.message
         assert "may have been missed" in warning.message
@@ -454,7 +456,9 @@ class TestPreprocessChain:
             assert result.success is True
             assert result.error is None
             page_fragment = _page_fragments(result)[0]
-            warning = next(diagnostic for diagnostic in result.diagnostics if diagnostic.code == "OCR-BEST-EFFORT")
+            warning = next(
+                diagnostic for diagnostic in result.diagnostics if diagnostic.code.startswith("OCR-BEST-EFFORT.")
+            )
             assert warning.artifact_id == page_fragment.artifact_id
             assert f"status={status_value}" in warning.message
             assert "private" not in warning.message

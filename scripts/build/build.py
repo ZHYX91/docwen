@@ -270,13 +270,16 @@ def _prepare_external_models(destination_root: Path) -> dict[str, Path]:
     from scripts.release.packaged_resources import EXTERNAL_MODEL_SPECS
 
     prepared: dict[str, Path] = {}
-    override = os.environ.get("DOCWEN_RAPIDTABLE_MODEL", "").strip()
+    overrides = {
+        "rapidtable/slanet-plus.onnx": os.environ.get("DOCWEN_RAPIDTABLE_MODEL", "").strip(),
+        "rapidtable/layout_table.onnx": os.environ.get("DOCWEN_TABLE_LAYOUT_MODEL", "").strip(),
+    }
     for relative_path, (url, expected_sha256) in EXTERNAL_MODEL_SPECS.items():
         destination = destination_root / relative_path
         destination.parent.mkdir(parents=True, exist_ok=True)
 
         candidates: list[Path] = []
-        if relative_path == "rapidtable/slanet-plus.onnx" and override:
+        if override := overrides.get(relative_path):
             candidates.append(Path(override).expanduser())
         candidates.append(PROJECT_ROOT / "models" / relative_path)
 

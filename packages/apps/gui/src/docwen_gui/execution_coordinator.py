@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from PySide6.QtCore import QObject, Slot
 
+from docwen_gui.diagnostics import DiagnosticSummary
 from docwen_gui.execution_admission import ExecutionAdmissionError
 from docwen_gui.execution_requests import OutputPolicyConfigError
 from docwen_gui.i18n import t as _t
@@ -205,6 +206,26 @@ class ExecutionCoordinator(QObject):
             batch_execution=mode == "batch",
         )
 
+    def _preflight_notice(
+        self, *, files: Sequence[str], source_formats: Sequence[str], target: str, action: str, code: str, message: str
+    ) -> None:
+        for index, path in enumerate(files):
+            self._info_area_vm.add_message(
+                message,
+                "warning",
+                show_location=True,
+                file_path=path,
+                operation=_route_operation_label(target, action),
+                diagnostic=DiagnosticSummary(
+                    status="not_started",
+                    phase="preflight",
+                    diagnostic_code=code,
+                    source_format=source_formats[index] if index < len(source_formats) else "",
+                    target_format=target.strip().lower(),
+                    error_category="unsupported_route",
+                ),
+            )
+
     def _resolve_route(
         self,
         *,
@@ -219,12 +240,13 @@ class ExecutionCoordinator(QObject):
         for file_path in file_paths:
             context = self._requests.file_context(file_path)
             if context is None:
-                self._info_area_vm.add_message(
-                    _t("main_window.route_unavailable", "No compatible operation is available for this file."),
-                    "warning",
-                    show_location=True,
-                    file_path=file_path,
-                    operation=_route_operation_label(target_format, action_name),
+                self._preflight_notice(
+                    files=[file_path],
+                    source_formats=[],
+                    target=target_format,
+                    action=action_name,
+                    code="ROUTE-INPUT-UNAVAILABLE",
+                    message=_t("main_window.route_unavailable"),
                 )
                 return None
             detected_format, source_category = context
@@ -245,25 +267,26 @@ class ExecutionCoordinator(QObject):
                 action_name=action_name,
             )
         if result.status == "failed":
-            self._info_area_vm.add_message(
-                _t(
-                    "main_window.route_catalog_failed",
-                    "Available operations could not be loaded; the request was not started.",
-                ),
-                "warning",
+            self._preflight_notice(
+                files=file_paths,
+                source_formats=[source.detected_format for source in sources],
+                target=target_format,
+                action=action_name,
+                code="ROUTE-CATALOG-UNAVAILABLE",
+                message=_t("main_window.route_catalog_failed"),
             )
             return None
         choice = result.get(normalized_target) if normalized_target else None
         if choice is None and not normalized_target and len(result.choices) == 1:
             choice = result.choices[0]
         if choice is None:
-            source_path = file_paths[0] if len(file_paths) == 1 else ""
-            self._info_area_vm.add_message(
-                _t("main_window.route_unavailable", "No compatible operation is available for this file."),
-                "warning",
-                show_location=bool(source_path),
-                file_path=source_path or None,
-                operation=_route_operation_label(target_format, action_name),
+            self._preflight_notice(
+                files=file_paths,
+                source_formats=[source.detected_format for source in sources],
+                target=target_format,
+                action=action_name,
+                code="ROUTE-NOT-AVAILABLE",
+                message=_t("main_window.route_unavailable"),
             )
             return None
         return choice.target, choice

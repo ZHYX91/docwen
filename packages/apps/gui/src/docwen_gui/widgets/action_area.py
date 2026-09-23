@@ -34,6 +34,7 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QLabel,
+    QLayout,
     QPushButton,
     QSizePolicy,
     QStackedWidget,
@@ -124,6 +125,7 @@ class ActionArea(QWidget):
         self._image_cb: QCheckBox = _cast(QCheckBox, None)
         self._ocr_cb: QCheckBox = _cast(QCheckBox, None)
         self._ocr_settings_group: ChoiceGroup = _cast(ChoiceGroup, None)
+        self._table_recognition_cb: QCheckBox = _cast(QCheckBox, None)
         self._ocr_language_combo: QComboBox = _cast(QComboBox, None)
         self._ocr_placement_combo: QComboBox = _cast(QComboBox, None)
         self._optimize_combo: QComboBox = _cast(QComboBox, None)
@@ -329,6 +331,9 @@ class ActionArea(QWidget):
         """Update option widgets in place without replacing their QWidget tree."""
         self._set_checkbox_checked(self._image_cb, self._vm.extract_image)
         self._set_checkbox_checked(self._ocr_cb, self._vm.extract_ocr)
+        self._set_checkbox_checked(self._table_recognition_cb, self._vm.recognize_tables)
+        if self._table_recognition_cb is not None:
+            self._table_recognition_cb.setEnabled(self._vm.extract_ocr and self._vm.table_recognition_available)
         if self._ocr_settings_group is not None:
             self._ocr_settings_group.setVisible(self._vm.extract_ocr)
         self._set_combo_data(self._ocr_language_combo, self._vm.ocr_language or "auto")
@@ -369,6 +374,7 @@ class ActionArea(QWidget):
             self.md_spreadsheet_format_combo,
             self._image_cb,
             self._ocr_cb,
+            self._table_recognition_cb,
             self._ocr_language_combo,
             self._ocr_placement_combo,
             self._optimize_combo,
@@ -428,6 +434,7 @@ class ActionArea(QWidget):
             "md_spreadsheet_format_combo",
             "_image_cb",
             "_ocr_cb",
+            "_table_recognition_cb",
             "_ocr_settings_group",
             "_ocr_language_combo",
             "_ocr_placement_combo",
@@ -635,6 +642,20 @@ class ActionArea(QWidget):
         self._build_file_to_md_options()
         self._content_layout.addWidget(button_row)
 
+    def _build_table_recognition_option(self, parent: QWidget, layout: QLayout) -> None:
+        self._table_recognition_cb = self._make_checkbox(
+            _t("action_area.recognize_tables", "Recognize table structure"),
+            checked=self._vm.recognize_tables,
+            parent=parent,
+        )
+        self._table_recognition_cb.setEnabled(self._vm.extract_ocr and self._vm.table_recognition_available)
+        if not self._vm.table_recognition_available:
+            self._table_recognition_cb.setToolTip(_t("action_area.table_model_unavailable"))
+        self._table_recognition_cb.toggled.connect(
+            lambda value: self._vm.set_file_to_md_option("recognize_tables", value)
+        )
+        layout.addWidget(self._table_recognition_cb)
+
     def _build_file_to_md_options(self) -> None:
         """Build extract_image, OCR, optimize, and numbering options rows."""
         if self._content_layout is None:
@@ -658,6 +679,7 @@ class ActionArea(QWidget):
         )
         self._ocr_cb.stateChanged.connect(lambda state: self._vm.set_file_to_md_option("extract_ocr", bool(state)))
         img_layout.addWidget(self._ocr_cb)
+        self._build_table_recognition_option(img_row, img_layout)
         self._content_layout.addWidget(img_row)
         self._build_ocr_settings()
 
@@ -871,6 +893,7 @@ class ActionArea(QWidget):
         )
         self._ocr_cb.stateChanged.connect(lambda state: self._vm.set_file_to_md_option("extract_ocr", bool(state)))
         img_layout.addWidget(self._ocr_cb)
+        self._build_table_recognition_option(img_row, img_layout)
         self._content_layout.addWidget(img_row)
         self._build_ocr_settings()
 

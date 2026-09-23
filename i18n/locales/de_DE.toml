@@ -1129,6 +1129,8 @@ no_table_selected = "Keine Tabelle"
 # 操作面板区域
 # =============================================================================
 [action_area]
+recognize_tables = "Tabellenstruktur erkennen"
+table_model_unavailable = "Tabellenmodelle nicht verfügbar; der OCR-Text bleibt erhalten."
 route_options_unavailable = "Verfügbare Vorgänge konnten nicht geladen werden; die Erzeugung ist deaktiviert, um eine falsche Anfrage zu vermeiden."
 no_compatible_output = "Für diese Datei ist kein kompatibles Ausgabeformat verfügbar."
 export_options = "Export"
@@ -1632,6 +1634,7 @@ subtitle = "Untertitel"
 
 
 [main_window]
+ocr_quality_notice = "OCR-Ergebnisse können Fehler oder Auslassungen enthalten; bitte mit der Vorlage vergleichen."
 file_admission_missing = "Die Eingabedatei ist nicht mehr vorhanden: {path}"
 file_admission_unreadable = "Die Eingabedatei kann nicht gelesen werden: {path}"
 extension_loss_endnotes = "Endnoten wurden in normale Markdown-Fußnoten umgewandelt."
@@ -1693,6 +1696,7 @@ typed_endnotes = "Typisierte Fuß- und Endnoten"
 obsidian_preset = "Obsidian-Erweiterungen verwenden"
 
 [activity]
+not_started = "Nicht gestartet"
 record_unavailable = "Dieser Aktivitätseintrag wurde gelöscht oder ist nicht verfügbar."
 title = "Aktivitäten"
 search = "Dateinamen oder Aktivitäten suchen"

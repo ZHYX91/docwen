@@ -20,6 +20,7 @@ from .task_history import TaskHistory
 def activity_status_label(status: str) -> str:
     return {
         "info": t("activity.info"),
+        "not_started": t("activity.not_started"),
         "warning": t("activity.warning"),
         "pending": t("components.file_drop.status.pending"),
         "processing": t("components.file_drop.status.processing"),
@@ -139,6 +140,8 @@ class ActivityRecordsModel(QAbstractTableModel):
                 if task is None or len(task.paths) == 1 or row.file_path or row.message_type != "warning":
                     continue
             status = {"success": "completed", "danger": "failed", "warning": "warning"}.get(row.message_type, "info")
+            if row.diagnostic is not None and row.diagnostic.status == "not_started":
+                status = "not_started"
             details = row.message
             if row.repeat_count > 1:
                 details += "\n" + t("info_area.history_repeated", count=row.repeat_count)
@@ -156,7 +159,7 @@ class ActivityRecordsModel(QAbstractTableModel):
                     path if row.show_location and output_notice else "",
                     row.operation or t("activity.info"),
                     details,
-                    diagnostic=DiagnosticSummary(status=status),
+                    diagnostic=row.diagnostic or DiagnosticSummary(status=status),
                 )
             )
         if records == self.records:

@@ -49,6 +49,7 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
     assert export_plan.files == ("export.toml",)
     assert set(export_plan.dotted_keys) == {
         "ocr.language",
+        "ocr.recognize_tables",
         "conversion.ocr_output.show_blockquote_title",
         "conversion.ocr_output.blockquote_title_override_by_locale",
         "conversion.export.base64_compress_enabled",

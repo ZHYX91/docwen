@@ -9,6 +9,7 @@ from urllib.parse import unquote, urlsplit
 from PIL import Image
 
 from docwen_core.detection import detect_content_format
+from docwen_core.errors import CancellationRequested
 from docwen_core.export_semantics import (
     MarkdownExportSemantics,
     format_image_link,
@@ -22,7 +23,12 @@ from docwen_core.models.artifact import (
     ArtifactManifest,
 )
 from docwen_core.text.image_markdown import build_base64_image_data_uri, build_image_ocr_sidecar
-from docwen_core.text.ocr import OcrOutcome, OcrStatus, format_ocr_best_effort_warning, run_ocr_outcome
+from docwen_core.text.ocr import (
+    OcrOutcome,
+    OcrStatus,
+    report_ocr_outcome,
+    run_ocr_outcome,
+)
 from docwen_plugin_markup._common import new_artifact_id
 
 
@@ -278,21 +284,22 @@ def _apply_image_ocr(
             current_locale=current_locale,
         )
         from docwen_core.text.table_recognition import (
-            TableRecognitionStatus,
             enrich_ocr_table_structure,
         )
 
-        outcome, table_outcome = enrich_ocr_table_structure(image_staging_path, outcome)
-        if table_outcome.status is TableRecognitionStatus.FAILED:
+        outcome, table_outcome = enrich_ocr_table_structure(image_staging_path, outcome, context=context)
+        if table_outcome.fallback_required:
             progress = getattr(context, "progress", None)
             report_diagnostic = getattr(progress, "report_diagnostic", None)
             if callable(report_diagnostic):
                 report_diagnostic(
                     "warning",
                     "Table structure recognition failed; plain OCR text was retained.",
-                    code="OCR-TABLE-FALLBACK",
+                    code=table_outcome.diagnostic_code,
                     location=suggested_name,
                 )
+    except CancellationRequested:
+        raise
     except Exception as exc:
         # Keep the compatibility boundary best-effort even if a custom OCR
         # implementation violates the core typed-outcome contract.
@@ -335,27 +342,12 @@ def _report_best_effort_ocr_warning(
     suggested_name: str,
     source_format: str,
 ) -> None:
-    """Report one non-fatal OCR quality or fallback warning through the request sink."""
-    message = format_ocr_best_effort_warning(
+    report_ocr_outcome(
+        getattr(context, "progress", None),
         outcome.status,
+        location=suggested_name,
         context=f"{source_format} image {suggested_name}",
     )
-    if message is None:
-        return
-
-    # ``MarkdownResourceWriter`` is also a public lower-level helper and some
-    # extension callers provide a workspace-only context.  The production
-    # ConverterContext always has this sink; keep workspace-only callers
-    # compatible instead of introducing process-global diagnostic state.
-    progress = getattr(context, "progress", None)
-    report_diagnostic = getattr(progress, "report_diagnostic", None)
-    if callable(report_diagnostic):
-        report_diagnostic(
-            "warning",
-            message,
-            code="OCR-BEST-EFFORT",
-            location=suggested_name,
-        )
 
 
 def _write_image_ocr_sidecar(

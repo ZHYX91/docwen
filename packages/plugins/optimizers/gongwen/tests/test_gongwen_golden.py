@@ -578,9 +578,11 @@ def test_gongwen_degraded_ocr_outcomes_warn_and_continue_later_images(
     assert "gongwen base content" in result["markdown"]
     assert "later gongwen OCR" in result["markdown"]
     assert len(calls) == 7
+    assert sum(d[2] == "OCR-QUALITY-NOTICE" for d in progress.diagnostics) == 1
+    progress.diagnostics = [d for d in progress.diagnostics if d[0] == "warning"]
     assert len(progress.diagnostics) == 6
     assert [diagnostic[0] for diagnostic in progress.diagnostics] == ["warning"] * 6
-    assert [diagnostic[2] for diagnostic in progress.diagnostics] == ["OCR-BEST-EFFORT"] * 6
+    assert all(diagnostic[2].startswith("OCR-BEST-EFFORT.") for diagnostic in progress.diagnostics)
     assert [
         message.split("status=", 1)[1].split(";", 1)[0] for _level, message, _code, _location in progress.diagnostics
     ] == [

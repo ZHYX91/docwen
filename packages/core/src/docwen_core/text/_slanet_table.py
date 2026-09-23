@@ -10,6 +10,7 @@ the Apache License 2.0. See LICENSE_THIRD_PARTY.txt.
 
 from __future__ import annotations
 
+import html
 import threading
 from pathlib import Path
 
@@ -60,7 +61,7 @@ _ENGINE_CACHE: dict[str, _SLANetEngine] = {}
 
 
 def _engine(model_path: Path) -> _SLANetEngine:
-    key = str(model_path.resolve())
+    key = f"{model_path.resolve()}:{model_path.stat().st_mtime_ns}"
     with _ENGINE_LOCK:
         cached = _ENGINE_CACHE.get(key)
         if cached is None:
@@ -74,31 +75,31 @@ def reset_table_engine_cache() -> None:
         _ENGINE_CACHE.clear()
 
 
-def infer_table_html(
-    image_path: str | Path,
+def infer_table_structure(
+    image: np.ndarray,
     model_path: str | Path,
     *,
     boxes: np.ndarray,
     texts: tuple[str, ...],
     scores: tuple[float, ...],
-) -> str:
+) -> tuple[str, frozenset[int]]:
     """Infer one table and merge existing OCR text into predicted cells."""
 
     if len(texts) != len(scores) or len(texts) != len(boxes):
         raise ValueError("OCR table inputs must have equal cardinality")
 
-    image = _load_image(Path(image_path))
     structures, cell_bboxes = _engine(Path(model_path)).infer(image)
     if not structures or cell_bboxes.size == 0:
-        return ""
+        return "", frozenset()
 
     dt_boxes, rec_res = _format_ocr(boxes, texts, scores, image.shape[:2])
-    dt_boxes, rec_res = _filter_caption_ocr(cell_bboxes, dt_boxes, rec_res)
     if len(dt_boxes) == 0:
-        return ""
+        return "", frozenset()
 
     matched = _match_result(dt_boxes, cell_bboxes)
-    return _fill_structure(structures, matched, rec_res)
+    cell_count = sum("</td>" in token for token in structures)
+    matched = {cell: indexes for cell, indexes in matched.items() if cell < cell_count}
+    return _fill_structure(structures, matched, rec_res), frozenset(i for values in matched.values() for i in values)
 
 
 def _load_image(path: Path) -> np.ndarray:
@@ -180,7 +181,8 @@ def _rescale_and_filter_bboxes(image: np.ndarray, cell_bboxes: np.ndarray) -> np
     ratio = min(_MODEL_SIZE / height, _MODEL_SIZE / width)
     result[:, 0::2] *= _MODEL_SIZE / (width * ratio)
     result[:, 1::2] *= _MODEL_SIZE / (height * ratio)
-    return result[~np.all(result == 0, axis=1)]
+    # Preserve cell indices; removing a degenerate box shifts later OCR text.
+    return result
 
 
 def _format_ocr(
@@ -196,18 +198,6 @@ def _format_ocr(
     min_coords = np.maximum(min_coords, 0)
     max_coords = np.minimum(max_coords, [width, height])
     return np.hstack([min_coords, max_coords]), list(zip(texts, scores, strict=True))
-
-
-def _filter_caption_ocr(
-    cell_bboxes: np.ndarray,
-    dt_boxes: np.ndarray,
-    rec_res: list[tuple[str, float]],
-) -> tuple[np.ndarray, list[tuple[str, float]]]:
-    if cell_bboxes.size == 0:
-        return np.empty((0, 4), dtype=np.float32), []
-    top = float(cell_bboxes[:, 1::2].min())
-    keep = [index for index, box in enumerate(dt_boxes) if float(np.max(box[1::2])) >= top]
-    return dt_boxes[keep], [rec_res[index] for index in keep]
 
 
 def _rect_from_cell(box: np.ndarray) -> tuple[float, float, float, float]:
@@ -283,7 +273,7 @@ def _fill_structure(
                 continue
             if position != len(indexes) - 1:
                 content += " "
-            output.append(content)
+            output.append(html.escape(content))
 
         output.append("</td>" if empty_cell else token)
         cell_index += 1
@@ -291,4 +281,4 @@ def _fill_structure(
     return "".join(token for token in output if token not in {"<thead>", "</thead>", "<tbody>", "</tbody>"})
 
 
-__all__ = ["infer_table_html", "reset_table_engine_cache"]
+__all__ = ["infer_table_structure", "reset_table_engine_cache"]

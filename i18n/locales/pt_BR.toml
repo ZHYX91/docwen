@@ -11,6 +11,7 @@ template_name = "Modelo Geral Português"
 # Janela principal
 # =============================================================================
 [main_window]
+ocr_quality_notice = "O OCR pode conter erros ou omissões; confira os resultados com o original."
 file_admission_missing = "O arquivo de entrada não existe mais: {path}"
 file_admission_unreadable = "Não foi possível ler o arquivo de entrada: {path}"
 extension_loss_endnotes = "As notas de fim foram convertidas em notas de rodapé comuns do Markdown."
@@ -1178,6 +1179,8 @@ no_table_selected = "Sem tabela"
 # 操作面板区域
 # =============================================================================
 [action_area]
+recognize_tables = "Reconhecer estrutura de tabelas"
+table_model_unavailable = "Modelos de tabela indisponíveis; o texto OCR será preservado."
 route_options_unavailable = "Não foi possível carregar as operações disponíveis; a geração está desativada para evitar uma solicitação incorreta."
 no_compatible_output = "Não há formato de saída compatível disponível para este arquivo."
 export_options = "Opções de exportação"
@@ -1688,6 +1691,7 @@ typed_endnotes = "Notas de rodapé e de fim tipadas"
 obsidian_preset = "Usar extensões do Obsidian"
 
 [activity]
+not_started = "Não iniciada"
 record_unavailable = "Este registro de atividade foi limpo ou não está disponível."
 title = "Registro de atividades"
 search = "Pesquisar nomes de arquivos ou atividades"

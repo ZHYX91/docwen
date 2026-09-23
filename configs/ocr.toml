@@ -2,3 +2,5 @@
 # auto follows the interface language. Explicit task options take precedence.
 # auto / chinese / chinese_cht / english / japanese / korean / latin / cyrillic
 language = "auto"
+# Detect table regions and reuse OCR text; disabling keeps plain OCR.
+recognize_tables = true

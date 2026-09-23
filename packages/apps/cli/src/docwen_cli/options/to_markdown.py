@@ -21,6 +21,7 @@ CANONICAL_KEYS = frozenset(
         "image_mode",
         "ocr_placement",
         "ocr_language",
+        "recognize_tables",
         "image_link_style",
         "table_merge_strategy",
     }
@@ -55,6 +56,7 @@ def build_to_markdown_options(
     image_mode: str | None = None,
     ocr_placement: str | None = None,
     ocr_language: str | None = None,
+    recognize_tables: bool | None = None,
     image_link_style: str | None = None,
     table_merge_strategy: str | None = None,
 ) -> dict[str, object]:
@@ -71,6 +73,9 @@ def build_to_markdown_options(
 
     if enable_ocr is not None:
         options["to_md_enable_ocr"] = _exact_bool("to_md_enable_ocr", enable_ocr)
+
+    if recognize_tables is not None:
+        options["recognize_tables"] = _exact_bool("recognize_tables", recognize_tables)
 
     if image_mode is not None:
         options["image_mode"] = _exact_choice("image_mode", image_mode, _IMAGE_MODE_VALUES)
@@ -100,7 +105,7 @@ def normalize_to_markdown_options(raw: dict[str, object]) -> dict[str, object]:
         if key not in CANONICAL_KEYS:
             raise ValueError(f"Unsupported to-Markdown option: {key!r}")
 
-        if key in ("to_md_keep_images", "to_md_enable_ocr"):
+        if key in ("to_md_keep_images", "to_md_enable_ocr", "recognize_tables"):
             cleaned[key] = _exact_bool(key, value)
         elif key == "image_mode":
             cleaned[key] = _exact_choice(key, value, _IMAGE_MODE_VALUES)

@@ -55,6 +55,7 @@ DOCX_TO_MD_OPTIONS_SCHEMA: dict = {
             "description": "Run OCR on extracted images and append recognised text as a blockquote.",
             "x-docwen-status": "implemented",
         },
+        "recognize_tables": {"type": "boolean"},
         "ocr_language": {
             "type": "string",
             "enum": ["auto", "chinese", "chinese_cht", "english", "japanese", "korean", "latin", "cyrillic"],

@@ -76,6 +76,7 @@ class GongwenOptimizerPlugin:
             input_path = context.workspace.input_path
             doc = Document(input_path)
             options = dict(context.request.options or {})
+            options.setdefault("recognize_tables", context.config.get("ocr.recognize_tables", True))
             # Image extraction belongs in the task staging directory so the
             # plugin can register resources and OutputFinalizer can place them.
             options["output_dir"] = str(context.workspace.staging_dir)

@@ -172,3 +172,9 @@
 - 使用本软件即表示您同意遵守上述所有许可证条款
 - 本软件可调用用户系统中已安装的 Microsoft Office、WPS Office 或
   LibreOffice 进行格式转换，这些软件不包含在本项目中，用户需自行获取授权
+
+RapidLayout / PP-Structure PicoDet table localisation
+    License: Apache-2.0
+    Copyright: RapidAI and PaddlePaddle contributors
+    Website: https://github.com/RapidAI/RapidLayout
+    Note: preprocessing and decoding adapted from RapidLayout v1.0.2; CPU ONNX model fetched at build time with SHA-256 verification.

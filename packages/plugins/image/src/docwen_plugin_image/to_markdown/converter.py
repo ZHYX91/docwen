@@ -25,6 +25,7 @@ from docwen_core.text.ocr import (
     OcrStatus,
     format_ocr_best_effort_warning,
     format_ocr_success_notice,
+    ocr_diagnostic_code,
     run_ocr_outcome,
 )
 from docwen_core.text.table_recognition import TableRecognitionStatus, recognize_table_markdown
@@ -139,20 +140,20 @@ def _convert_tiff_physical_pages(
 
                         page_path = Path(context.workspace.create_artifact_path("auxiliary", ".md"))
                         created_paths.append(page_path)
-                        table_outcome = recognize_table_markdown(str(frame_path), outcome)
+                        table_outcome = recognize_table_markdown(str(frame_path), outcome, context=context)
                         if table_outcome.status is TableRecognitionStatus.SUCCESS:
                             page_text = table_outcome.markdown.rstrip()
                         else:
                             page_text = outcome.recognized_text.rstrip()
-                            if table_outcome.status is TableRecognitionStatus.FAILED:
-                                diagnostics.append(
-                                    ConversionDiagnostic(
-                                        level="warning",
-                                        message="Table structure recognition failed; plain OCR text was retained.",
-                                        code="OCR-TABLE-FALLBACK",
-                                        location=f"{Path(input_path).name}:frame-{page_number}",
-                                    )
+                        if table_outcome.fallback_required:
+                            diagnostics.append(
+                                ConversionDiagnostic(
+                                    level="warning",
+                                    message="Some table structures could not be recognized; plain OCR text was retained.",
+                                    code=table_outcome.diagnostic_code,
+                                    location=f"{Path(input_path).name}:frame-{page_number}",
                                 )
+                            )
                         page_path.write_bytes(f"{page_text}\n".encode() if page_text else b"")
                         page_artifact = ArtifactManifest(
                             artifact_id=new_artifact_id(),
@@ -170,6 +171,10 @@ def _convert_tiff_physical_pages(
                             is_primary=False,
                         )
                         page_artifacts.append(page_artifact)
+                        if outcome.status is OcrStatus.SUCCESS:
+                            from docwen_core.text.ocr import report_ocr_outcome
+
+                            report_ocr_outcome(context.progress, outcome.status)
                         ocr_chars += len(outcome.recognized_text)
                         if warning := format_ocr_best_effort_warning(outcome.status):
                             location = f"{Path(input_path).name}:frame-{page_number}"
@@ -177,7 +182,7 @@ def _convert_tiff_physical_pages(
                                 ConversionDiagnostic(
                                     level="warning",
                                     message=warning,
-                                    code="OCR-BEST-EFFORT",
+                                    code=ocr_diagnostic_code(outcome.status),
                                     location=location,
                                     artifact_id=page_artifact.artifact_id,
                                 )
@@ -357,7 +362,7 @@ class ImageToMarkdownConverter:
                 context.progress.report_diagnostic(
                     "warning",
                     message,
-                    code="OCR-BEST-EFFORT",
+                    code=ocr_diagnostic_code(outcome.status),
                     location=Path(input_path).name,
                 )
             elif outcome.status is OcrStatus.SUCCESS:
@@ -371,16 +376,16 @@ class ImageToMarkdownConverter:
             ocr_text = outcome.recognized_text
             if outcome.status is OcrStatus.SUCCESS and outcome.regions:
                 context.progress.report_progress(10.0, "Checking table structure")
-                table_outcome = recognize_table_markdown(input_path, outcome)
+                table_outcome = recognize_table_markdown(input_path, outcome, context=context)
                 table_recognition_status = table_outcome.status.value
                 if table_outcome.status is TableRecognitionStatus.SUCCESS:
                     table_markdown = table_outcome.markdown
-                elif table_outcome.status is TableRecognitionStatus.FAILED:
+                if table_outcome.fallback_required:
                     context.logger.warning(f"Table recognition failed: {table_outcome.message}")
                     context.progress.report_diagnostic(
                         "warning",
                         "Table structure recognition failed; plain OCR text was retained.",
-                        code="OCR-TABLE-FALLBACK",
+                        code=table_outcome.diagnostic_code,
                         location=Path(input_path).name,
                     )
             context.progress.report_progress(15.0, "OCR complete")

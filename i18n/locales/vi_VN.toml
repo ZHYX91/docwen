@@ -12,6 +12,7 @@ template_name = "Mẫu Chung Tiếng Việt"
 # Cua so chinh
 # =============================================================================
 [main_window]
+ocr_quality_notice = "Kết quả OCR có thể có lỗi hoặc thiếu sót; hãy đối chiếu với bản gốc."
 file_admission_missing = "Tệp đầu vào không còn tồn tại: {path}"
 file_admission_unreadable = "Không thể đọc tệp đầu vào: {path}"
 extension_loss_endnotes = "Chú thích cuối tài liệu đã được chuyển thành chú thích chân trang Markdown thông thường."
@@ -1180,6 +1181,8 @@ no_table_selected = "Chưa chọn bảng"
 # 操作面板区域
 # =============================================================================
 [action_area]
+recognize_tables = "Nhận dạng cấu trúc bảng"
+table_model_unavailable = "Không có mô hình bảng; văn bản OCR thông thường sẽ được giữ lại."
 route_options_unavailable = "Không thể tải các thao tác khả dụng; chức năng tạo đã bị tắt để tránh yêu cầu sai."
 no_compatible_output = "Không có định dạng đầu ra tương thích cho tệp này."
 export_options = "Tùy chọn xuất"
@@ -1690,6 +1693,7 @@ typed_endnotes = "Chú thích chân trang và cuối tài liệu có kiểu"
 obsidian_preset = "Dùng phần mở rộng Obsidian"
 
 [activity]
+not_started = "Chưa bắt đầu"
 record_unavailable = "Bản ghi hoạt động này đã bị xóa hoặc không còn khả dụng."
 title = "Nhật ký hoạt động"
 search = "Tìm tên tệp hoặc nội dung hoạt động"

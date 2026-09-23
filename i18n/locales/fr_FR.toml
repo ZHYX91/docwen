@@ -11,6 +11,7 @@ template_name = "Modèle Général Français"
 # 通用文本
 # =============================================================================
 [main_window]
+ocr_quality_notice = "Les résultats OCR peuvent contenir des erreurs ou omissions ; vérifiez-les avec la source."
 file_admission_missing = "Le fichier source n’existe plus : {path}"
 file_admission_unreadable = "Impossible de lire le fichier source : {path}"
 extension_loss_endnotes = "Les notes de fin ont été converties en notes de bas de page Markdown ordinaires."
@@ -1177,6 +1178,8 @@ no_table_selected = "Pas de tableau"
 # 操作面板区域
 # =============================================================================
 [action_area]
+recognize_tables = "Reconnaître la structure des tableaux"
+table_model_unavailable = "Modèles de tableaux indisponibles ; le texte OCR sera conservé."
 route_options_unavailable = "Les opérations disponibles n’ont pas pu être chargées ; la génération est désactivée pour éviter une demande incorrecte."
 no_compatible_output = "Aucun format de sortie compatible n’est disponible pour ce fichier."
 export_options = "Export"
@@ -1689,6 +1692,7 @@ typed_endnotes = "Notes de bas de page et de fin typées"
 obsidian_preset = "Utiliser les extensions Obsidian"
 
 [activity]
+not_started = "Non démarré"
 record_unavailable = "Cette activité a été effacée ou n’est plus disponible."
 title = "Historique des activités"
 search = "Rechercher un fichier ou une activité"
