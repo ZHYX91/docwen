@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import ast
 import os
+import subprocess
+import sys
 import textwrap
 from pathlib import Path
 from unittest.mock import Mock
@@ -11,6 +13,34 @@ from unittest.mock import Mock
 import pytest
 
 pytestmark = pytest.mark.unit
+
+
+def test_direct_build_entry_resolves_model_manifest_outside_repo(tmp_path: Path) -> None:
+    source = Path("scripts/build/build.py").resolve()
+    invalid_model = tmp_path / "invalid.onnx"
+    invalid_model.write_bytes(b"invalid-model")
+    code = """
+import runpy, sys
+from pathlib import Path
+source = Path(sys.argv[1])
+sys.path.insert(0, str(source.parent))
+build = runpy.run_path(str(source), run_name='build_test')
+try:
+    build['_prepare_external_models'](Path(sys.argv[2]))
+except RuntimeError as error:
+    assert str(error).startswith('external_model_digest_mismatch:'), error
+else:
+    raise AssertionError('Invalid model was accepted')
+"""
+    result = subprocess.run(
+        [sys.executable, "-I", "-c", code, str(source), str(tmp_path / "models")],
+        cwd=tmp_path,
+        env={**os.environ, "DOCWEN_RAPIDTABLE_MODEL": str(invalid_model)},
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
 
 
 def test_build_version_reads_current_project_metadata(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

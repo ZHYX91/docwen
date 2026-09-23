@@ -267,6 +267,8 @@ def _sha256_file(path: Path) -> str:
 def _prepare_external_models(destination_root: Path) -> dict[str, Path]:
     """Materialize hash-pinned build-time models without runtime downloads."""
 
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
     from scripts.release.packaged_resources import EXTERNAL_MODEL_SPECS
 
     prepared: dict[str, Path] = {}
