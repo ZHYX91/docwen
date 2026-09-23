@@ -58,7 +58,17 @@ def _add_write_controls(parser: argparse.ArgumentParser, *, timeout: int = 600) 
 def _add_convert_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--template", metavar="ID", help=cli_t("cli.help.template"))
     parser.add_argument("--optimization", metavar="ID")
-    parser.add_argument("--check", action="append", choices=sorted(CHECK_CHOICES))
+    parser.add_argument(
+        "--proofread",
+        action="store_true",
+        help="Proofread the generated DOCX before publishing it; valid only with --to docx.",
+    )
+    parser.add_argument(
+        "--check",
+        action="append",
+        choices=sorted(CHECK_CHOICES),
+        help="Select proofreading checks for --proofread; without --check the configured defaults are used.",
+    )
     extraction = parser.add_mutually_exclusive_group()
     extraction.add_argument("--extract-img", action="store_true")
     extraction.add_argument("--no-extract-img", action="store_true")

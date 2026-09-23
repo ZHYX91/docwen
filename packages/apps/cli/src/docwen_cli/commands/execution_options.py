@@ -22,6 +22,12 @@ TABLE_MERGE_STRATEGY_CHOICES = frozenset({"fill", "empty", "marker"})
 HEADING_NUMBERING_RENDER_MODE_CHOICES = frozenset({"text", "word_native"})
 
 
+def _is_convert_command(args: argparse.Namespace) -> bool:
+    return getattr(args, "command", "") == "convert" or (
+        getattr(args, "command", "") == "batch" and getattr(args, "batch_command", "") == "convert"
+    )
+
+
 def validate_execution_options(
     args: argparse.Namespace,
 ) -> None:
@@ -56,6 +62,15 @@ def validate_execution_options(
     checks = getattr(args, "check", None) or []
     if "none" in checks and len(checks) > 1:
         raise ValueError("--check none 不能与其它 --check 同时使用")
+
+    if _is_convert_command(args):
+        proofread = bool(getattr(args, "proofread", False))
+        if checks and not proofread:
+            raise ValueError("convert --check requires --proofread")
+        if proofread and str(getattr(args, "to", "")).strip().lower() != "docx":
+            raise ValueError("--proofread is supported only with convert --to docx")
+        if proofread and "none" in checks:
+            raise ValueError("--proofread cannot be combined with --check none")
 
 
 def parse_pages(value: str) -> list[int]:
@@ -132,10 +147,14 @@ def build_execution_options(
     """Normalize explicit CLI values without guessing route applicability."""
 
     options: dict[str, Any] = {}
+    if route_options is not None and "locale" in route_options and (locale := getattr(args, "lang", None)):
+        options["locale"] = str(locale)
 
     if template := getattr(args, "template", None):
         options["template_name"] = str(template)
-    options.update(normalize_proofread_options(getattr(args, "check", None) or []))
+    checks = getattr(args, "check", None) or []
+    if not _is_convert_command(args) or getattr(args, "proofread", False):
+        options.update(normalize_proofread_options(checks))
 
     keep_images = True if getattr(args, "extract_img", False) else None
     if getattr(args, "no_extract_img", False):

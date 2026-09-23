@@ -427,6 +427,34 @@ class ApplicationController:
 
         return AggregateCommand(self._runtime_port, action_name=action_name)
 
+    def _execute_runtime_stage(
+        self,
+        request: Any,
+        scope: _ExecutionCancellationScope,
+        task_id: str,
+    ) -> Any:
+        """Execute one admitted Runtime stage under the operation cancellation owner."""
+
+        command = self._convert_command()
+        if not self._begin_runtime_task(scope, task_id):
+            return self._cancelled_result(task_id)
+        try:
+            return command.execute(request)
+        finally:
+            self._finish_runtime_task(scope, task_id)
+
+    def _execute_runtime_request(
+        self,
+        request: Any,
+        scope: _ExecutionCancellationScope,
+        task_id: str,
+    ) -> Any:
+        from docwen_application.postprocess_pipeline import execute_postprocessed_request
+
+        return execute_postprocessed_request(
+            request, task_id, lambda stage, identity: self._execute_runtime_stage(stage, scope, identity)
+        )
+
     # ── Convenience: direct execution ───────────────────────────────
 
     def execute_single(self, request: Any) -> Any:
@@ -469,16 +497,9 @@ class ApplicationController:
                     result = self._cancelled_results(original_request, batch=False)[0]
                     return self._persist_output_manifests(manifest_request, result)
                 return self._persist_output_manifests(manifest_request, request)
-            cmd = self._convert_command()
             task_id = str(request.request_id)
-            if not self._begin_runtime_task(scope, task_id):
-                result = self._cancelled_results(original_request, batch=False)[0]
-                return self._persist_output_manifests(manifest_request, result)
-            try:
-                result = cmd.execute(request)
-                return self._persist_output_manifests(request, result)
-            finally:
-                self._finish_runtime_task(scope, task_id)
+            result = self._execute_runtime_request(request, scope, task_id)
+            return self._persist_output_manifests(request, result)
         finally:
             try:
                 if managed is not None:
@@ -618,7 +639,6 @@ class ApplicationController:
         from docwen_core.models.request import ConversionRequest
 
         runtime_results: list[Any] = []
-        cmd = self._convert_command()
         indices = range(len(request.input_refs)) if input_indices is None else input_indices
         policies = [request.output_policy] * len(request.input_refs) if output_policies is None else output_policies
         for input_ref, index, output_policy in zip(request.input_refs, indices, policies, strict=True):
@@ -635,13 +655,7 @@ class ApplicationController:
                     request.manifest_context.for_input(index) if request.manifest_context is not None else None
                 ),
             )
-            if not self._begin_runtime_task(scope, task_id):
-                runtime_results.append(self._cancelled_result(task_id))
-                continue
-            try:
-                runtime_results.append(cmd.execute(child_request))
-            finally:
-                self._finish_runtime_task(scope, task_id)
+            runtime_results.append(self._execute_runtime_request(child_request, scope, task_id))
         return runtime_results
 
     def _maybe_preconvert(

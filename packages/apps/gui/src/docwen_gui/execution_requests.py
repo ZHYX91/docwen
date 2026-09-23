@@ -14,6 +14,8 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
+from docwen_application.postprocessing import prepare_postprocess_options
+from docwen_core.models.request import POSTPROCESS_PROOFREAD_OPTION
 from docwen_gui.file_admission_i18n import render_file_inspection_message
 from docwen_gui.i18n import t as _t
 from docwen_gui.path_identity import normalize_path
@@ -53,6 +55,12 @@ def _redacted_request_options(options: dict[str, Any]) -> dict[str, Any]:
     redacted = deepcopy(options)
     if "spreadsheet_password" in redacted:
         redacted["spreadsheet_password"] = "<redacted>"
+    postprocess = redacted.pop(POSTPROCESS_PROOFREAD_OPTION, None)
+    if isinstance(postprocess, dict):
+        redacted["proofread"] = {
+            "enabled": True,
+            "options": deepcopy(postprocess),
+        }
     return redacted
 
 
@@ -91,7 +99,7 @@ def _to_markdown_locale_options(
 
 
 def _normalize_proofread_action_options(options: dict[str, Any], *, action_name: str) -> dict[str, Any]:
-    if action_name not in _PROOFREAD_ACTIONS:
+    if action_name and action_name not in _PROOFREAD_ACTIONS:
         return options
     normalized = dict(options)
     for gui_key, plugin_key in _PROOFREAD_GUI_OPTION_ALIASES.items():
@@ -110,7 +118,7 @@ def _route_scoped_options(
     if route_options is None:
         return dict(options)
     supported = frozenset(route_options)
-    return {key: value for key, value in options.items() if key in supported}
+    return {key: value for key, value in options.items() if key in supported or key == POSTPROCESS_PROOFREAD_OPTION}
 
 
 def _output_date_subfolder_token(date_folder_format: str) -> str:
@@ -211,6 +219,12 @@ class ExecutionRequestBuilder:
                 action_name=action_name,
             )
             request_options = _normalize_proofread_action_options(request_options, action_name=action_name)
+            request_options = prepare_postprocess_options(
+                request_options,
+                source_format=source_context[0] if source_context else "",
+                target_format=target_format,
+                action_name=action_name,
+            )
             request_options = _to_markdown_locale_options(
                 request_options,
                 target_format=target_format,

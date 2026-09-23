@@ -276,7 +276,7 @@ class TestCliPluginContractAlignment:
         """Keys match md_validator.py:71-74 / docx_validator.py:64-67 contract."""
         from docwen_cli.commands.execution_options import build_execution_options
 
-        args = _fake_convert_args({"check": ["punct", "typo"]})
+        args = _fake_convert_args({"proofread": True, "check": ["punct", "typo"]})
         opts = build_execution_options(args)
 
         # Simulate what proofread validators do:
@@ -321,6 +321,7 @@ class TestDryRunEffectiveOptions:
         args = _fake_convert_args(
             {
                 "check": ["all"],
+                "proofread": True,
                 "clean_numbering": "remove",
                 "add_numbering": "gongwen_standard",
             }

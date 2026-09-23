@@ -11,6 +11,8 @@ from collections.abc import Collection
 from typing import Any
 
 from docwen_application.controller import CapabilityUnavailableError
+from docwen_application.postprocessing import prepare_postprocess_options
+from docwen_application.runtime_capability_catalog import RuntimeRoute
 from docwen_cli.i18n import cli_t, get_cli_locale
 from docwen_core.detection import FileAdmissionError, inspect_file
 from docwen_core.detection.ooxml_signature import OOXML_SIGNATURE_INFO_METADATA_KEY
@@ -20,7 +22,7 @@ from docwen_core.models.file_inspection import (
     FileInspection,
     make_admission_acceptance,
 )
-from docwen_core.models.request import FileRef, OutputPolicy
+from docwen_core.models.request import POSTPROCESS_PROOFREAD_OPTION, FileRef, OutputPolicy
 
 
 def resolve_cli_action(args: argparse.Namespace) -> str:
@@ -34,6 +36,28 @@ def _translation_or_default(key: str, default: str) -> str:
     return default if value == key or not value else value
 
 
+def project_request_options(
+    args: argparse.Namespace,
+    options: dict[str, Any],
+    route: RuntimeRoute,
+    *,
+    source_format: str,
+    configured_ocr_language: str | None = None,
+) -> dict[str, Any]:
+    """Project one admitted CLI request consistently in execute and dry-run paths."""
+    return project_route_options(
+        options,
+        route_id=route.id,
+        route_options=route.options,
+        configured_ocr_language=configured_ocr_language,
+        ocr_requested=bool(getattr(args, "ocr", False)),
+        source_format=source_format,
+        target_format=route.target,
+        action_name=route.action_name,
+        proofread_requested=bool(getattr(args, "proofread", False)),
+    )
+
+
 def project_route_options(
     options: dict[str, Any],
     *,
@@ -41,6 +65,10 @@ def project_route_options(
     route_options: Collection[str],
     configured_ocr_language: str | None = None,
     ocr_requested: bool = False,
+    source_format: str = "",
+    target_format: str = "",
+    action_name: str = "",
+    proofread_requested: bool = False,
 ) -> dict[str, Any]:
     """Validate and project options through one canonical runtime route.
 
@@ -50,12 +78,19 @@ def project_route_options(
     reconstructing route semantics from source categories or action names.
     """
 
+    prepared = prepare_postprocess_options(
+        options,
+        source_format=source_format,
+        target_format=target_format,
+        action_name=action_name,
+        proofread_requested=proofread_requested,
+    )
     supported = frozenset(route_options)
-    unsupported = sorted(set(options) - supported)
+    unsupported = sorted(set(prepared) - supported - {POSTPROCESS_PROOFREAD_OPTION})
     if unsupported:
         raise ValueError(f"Canonical runtime route {route_id} does not declare option(s): {', '.join(unsupported)}")
 
-    projected = dict(options)
+    projected = dict(prepared)
     if "to_md_enable_ocr" in supported:
         # ``--ocr`` is deliberately opt-in at the CLI boundary.  Project the
         # negative default only after resolving a route that explicitly owns
@@ -83,6 +118,12 @@ def redacted_options(options: dict[str, Any]) -> dict[str, Any]:
     redacted = dict(options)
     if "spreadsheet_password" in redacted:
         redacted["spreadsheet_password"] = "<redacted>"
+    postprocess = redacted.pop(POSTPROCESS_PROOFREAD_OPTION, None)
+    if isinstance(postprocess, dict):
+        redacted["proofread"] = {
+            "enabled": True,
+            "options": dict(postprocess),
+        }
     return redacted
 
 

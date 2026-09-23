@@ -289,6 +289,30 @@ class TestPolicy02SpreadsheetPasswordOptions:
                 route_options=(),
             )
 
+    def test_dry_run_presents_postprocess_proofread_without_internal_key(self) -> None:
+        from docwen_cli.commands.execution_request import redacted_options
+        from docwen_core.models.request import POSTPROCESS_PROOFREAD_OPTION
+
+        presented = redacted_options(
+            {
+                POSTPROCESS_PROOFREAD_OPTION: {
+                    "enable_typos_rule": True,
+                    "enable_sensitive_word": False,
+                }
+            }
+        )
+
+        assert POSTPROCESS_PROOFREAD_OPTION not in presented
+        assert presented == {
+            "proofread": {
+                "enabled": True,
+                "options": {
+                    "enable_typos_rule": True,
+                    "enable_sensitive_word": False,
+                },
+            }
+        }
+
     def test_dry_run_redaction_never_projects_password(self) -> None:
         from docwen_cli.commands.execution_request import redacted_options
 
@@ -303,13 +327,55 @@ class TestPolicy02SpreadsheetPasswordOptions:
         }
 
 
+class TestConvertProofreadValidation:
+    def test_convert_check_requires_explicit_proofread(self) -> None:
+        from docwen_cli.commands.execution_options import validate_execution_options
+
+        args = _fake_convert_args({"to": "docx", "check": ["typo"], "proofread": False})
+        with pytest.raises(ValueError, match="requires --proofread"):
+            validate_execution_options(args)
+
+    def test_convert_proofread_requires_docx_target(self) -> None:
+        from docwen_cli.commands.execution_options import validate_execution_options
+
+        args = _fake_convert_args({"to": "pdf", "proofread": True})
+        with pytest.raises(ValueError, match="only with convert --to docx"):
+            validate_execution_options(args)
+
+    def test_convert_proofread_rejects_none_check(self) -> None:
+        from docwen_cli.commands.execution_options import validate_execution_options
+
+        args = _fake_convert_args({"to": "docx", "proofread": True, "check": ["none"]})
+        with pytest.raises(ValueError, match="cannot be combined"):
+            validate_execution_options(args)
+
+    def test_convert_proofread_without_check_uses_application_defaults(self) -> None:
+        from docwen_cli.commands.execution_options import build_execution_options, validate_execution_options
+        from docwen_cli.commands.execution_request import project_route_options
+        from docwen_core.models.request import POSTPROCESS_PROOFREAD_OPTION
+
+        args = _fake_convert_args({"to": "docx", "proofread": True, "check": []})
+        validate_execution_options(args)
+        options = build_execution_options(args)
+        projected = project_route_options(
+            options,
+            route_id="convert.markdown.to_docx",
+            route_options=(),
+            source_format="markdown",
+            target_format="docx",
+            action_name="",
+            proofread_requested=True,
+        )
+        assert projected == {POSTPROCESS_PROOFREAD_OPTION: {}}
+
+
 class TestBuildConvertOptionsProofread:
     """``build_execution_options()`` produces normalized proofread keys."""
 
     def test_check_all_expands(self) -> None:
         from docwen_cli.commands.execution_options import build_execution_options
 
-        args = _fake_convert_args({"check": ["all"]})
+        args = _fake_convert_args({"proofread": True, "check": ["all"]})
         opts = build_execution_options(args)
         assert opts["enable_symbol_pairing"] is True
         assert opts["enable_symbol_correction"] is True
@@ -321,7 +387,7 @@ class TestBuildConvertOptionsProofread:
     def test_check_none_all_false(self) -> None:
         from docwen_cli.commands.execution_options import build_execution_options
 
-        args = _fake_convert_args({"check": ["none"]})
+        args = _fake_convert_args({"proofread": True, "check": ["none"]})
         opts = build_execution_options(args)
         assert opts["enable_symbol_pairing"] is False
         assert opts["enable_symbol_correction"] is False
@@ -331,7 +397,7 @@ class TestBuildConvertOptionsProofread:
     def test_check_punct_typo(self) -> None:
         from docwen_cli.commands.execution_options import build_execution_options
 
-        args = _fake_convert_args({"check": ["punct", "typo"]})
+        args = _fake_convert_args({"proofread": True, "check": ["punct", "typo"]})
         opts = build_execution_options(args)
         assert opts["enable_symbol_pairing"] is True
         assert opts["enable_symbol_correction"] is False
@@ -353,6 +419,7 @@ class TestBuildConvertOptionsProofread:
 
         args = _fake_convert_args(
             {
+                "command": "validate",
                 "action": "validate",
                 "check": ["typo", "sensitive"],
             }

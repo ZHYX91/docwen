@@ -81,6 +81,27 @@ class TestMdToDocument:
         assert widget.md_document_format_combo is combo_identity
         assert combo.currentData() == "rtf"
 
+    @pytest.mark.parametrize("target", ["pdf", "doc", "wps", "odt", "rtf"])
+    def test_proofread_controls_follow_supported_target_without_losing_selection(
+        self, widget: ActionArea, vm: ActionAreaViewModel, target: str
+    ) -> None:
+        vm.setup_for_md_to_document("/test.md")
+        combo = widget.md_document_format_combo
+        assert combo is not None
+        grid = widget._proofread_grid_widget
+        assert grid is not None and not grid.isHidden()
+        widget.checkbox_vars["typos_rule"].setChecked(True)
+
+        combo.setCurrentIndex(combo.findData(target))
+        assert vm.target_format == target
+        assert grid.isHidden()
+        assert "typos_rule" not in vm.collect_options()
+
+        combo.setCurrentIndex(combo.findData("docx"))
+        assert widget.md_document_format_combo is combo
+        assert not grid.isHidden()
+        assert widget.checkbox_vars["typos_rule"].isChecked()
+
     def test_document_combos_have_localized_accessible_names(self, widget: ActionArea, vm: ActionAreaViewModel) -> None:
         vm.setup_for_md_to_document("/test.md")
 
@@ -143,13 +164,14 @@ class TestMdToDocument:
         self,
         qapp: QApplication,
         locale: str,
+        vm: ActionAreaViewModel,
     ) -> None:
         from docwen_gui.i18n import get_locale, set_locale
 
         previous_locale = get_locale()
         manager = ThemeManager.get_instance()
         previous_preset = manager.get_font_size_preset()
-        localized_vm = ActionAreaViewModel()
+        localized_vm = vm
         localized_widget: ActionArea | None = None
         try:
             set_locale(locale)

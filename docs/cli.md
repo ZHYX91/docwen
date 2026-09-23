@@ -1,11 +1,13 @@
 # CLI / 命令行
 
-> This page documents the human-facing command tree. External integrations use
-> [`serve --stdio` Machine Protocol v2 and Artifact Bundle v3](specs/machine-protocol-v2.md). `--json` is a CLI
-> presentation mode, not the stable cross-product process boundary.
+> This page documents the human-facing command tree plus the bounded local GUI-control surface. External
+> content integrations use [`serve --stdio` Machine Protocol v2 and Artifact Bundle v3](specs/machine-protocol-v2.md);
+> ordinary `--json` remains a CLI presentation mode. The deliberate exception is `gui open|activate|status`, whose
+> protocol-3 JSON envelope is the public local desktop-control boundary and does not require a Machine session.
 >
-> 本页记录面向人的命令树。外部集成使用 [`serve --stdio` Machine Protocol v2 与 Artifact Bundle
-> v2](specs/machine-protocol-v2.md)；`--json` 只是 CLI 展示模式，不是跨产品稳定进程边界。
+> 本页记录面向人的命令树以及有界的本机 GUI 控制面。外部内容集成使用 [`serve --stdio` Machine Protocol v2
+> 与 Artifact Bundle v3](specs/machine-protocol-v2.md)；普通 `--json` 仍只是 CLI 展示模式。明确的例外是
+> `gui open|activate|status`：其 protocol 3 JSON 信封是公开的本机桌面控制边界，不要求先建立 Machine 会话。
 
 DocWen source and packaged builds use the same `docwen` command tree. Run `docwen --help`, `docwen <command> --help`, or `docwen schema <command>` for the executable contract.
 
@@ -21,6 +23,7 @@ DocWen 的源码态与打包态使用同一套 `docwen` 命令树。精确契约
 - `schema [COMMAND_PATH...]`: export the active parser contract.
 - `convert FILE --to FORMAT --output-dir DIR`: convert one file into the chosen parent; required for conversions from or to Markdown.
 - `convert FILE --to FORMAT --output PATH`: exact-file output for other single-file conversions.
+- `convert MARKDOWN --to docx --output-dir DIR --proofread [--check CHECK]...`: render DOCX privately, proofread the generated DOCX, then publish the final result. `--check` on `convert` requires `--proofread`; omitting `--check` uses the configured proofreading defaults. If all four checks are disabled, conversion still publishes the generated DOCX with a skipped-proofreading diagnostic. Conversion proofreading is not available for non-Markdown sources or non-DOCX targets.
 - `validate FILE [--report PATH]`: validate DOCX, Markdown, or legacy Word-family content
   (`DOC`/`WPS`/`RTF`/`ODT` is pre-converted to DOCX by the Application layer); the default is read-only.
 - `number markdown FILE --operation add|remove [--scheme ID] (--output PATH | --in-place)`: explicitly add or remove Markdown heading numbering.
@@ -68,6 +71,7 @@ Conversions from or to Markdown publish a result folder inside the parent select
 - Write commands require an explicit destination.
 - `validate` is read-only unless `--report PATH` is present. A Markdown input writes a structured JSON
   report; DOCX and pre-converted DOC/WPS/RTF/ODT inputs write an annotated DOCX report.
+- `convert --proofread` is a different intent: only Markdown→DOCX is accepted, the generated DOCX is proofread before publication, and a proofreading failure prevents the generated document from being published as a successful result.
 - Existing targets are rejected by default; `--overwrite` is required to replace one intentionally.
 - Single-file commands never silently rename a requested output.
 - On Windows, every public input and output path must use ordinary absolute syntax and be at most 259 UTF-16 code units. DocWen rejects `\\?\` / `\\.\` extended-length syntax before a backend starts because the supported conversion backends do not share one reliable extended-path contract. Runtime-generated artifact names may cross that boundary internally; DocWen keeps reported paths ordinary while adapting only its own filesystem calls.
@@ -133,6 +137,7 @@ docwen resources list formats --json
 docwen resources list optimizations --json
 docwen schema convert --json
 docwen convert document.docx --to md --output-dir exports
+docwen convert note.md --to docx --output-dir exports --proofread --check typo --check punct
 docwen validate document.docx --check typo --check punct --json
 docwen merge pdf part-1.pdf part-2.pdf --output combined.pdf
 docwen gui status --json

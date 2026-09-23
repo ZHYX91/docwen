@@ -47,6 +47,7 @@ class TextError:
     ``suggestion`` remains presentation text and must never be interpreted as
     an edit.  Only typo and symbol-correction rules populate this field.
     """
+    pairing_reason: str | None = None
 
 
 # ── Stable rule-key mapping ──────────────────────────────────────────
@@ -270,51 +271,47 @@ class TextValidator:
         if not self._symbol_pairs:
             return errors
 
-        stacks: dict[str, list[int]] = {pair[0]: [] for pair in self._symbol_pairs}
-        closing_map: dict[str, str] = {pair[1]: pair[0] for pair in self._symbol_pairs}
+        openings = {pair[0] for pair in self._symbol_pairs}
+        closing_map = {pair[1]: pair[0] for pair in self._symbol_pairs}
         symmetric_symbols = {opening for opening, closing in self._symbol_pairs if opening == closing}
+        stack: list[tuple[str, int]] = []
 
-        for i, char in enumerate(text):
-            if char in symmetric_symbols:
-                stack = stacks[char]
-                if _is_apostrophe_usage(text, i, has_opening=bool(stack)):
-                    continue
-                if stack:
-                    stack.pop()
-                else:
-                    stack.append(i)
-            elif char in stacks:
-                stacks[char].append(i)
-            elif char in closing_map:
-                opening_char = closing_map[char]
-                if _is_apostrophe_usage(text, i, has_opening=bool(stacks[opening_char])):
-                    continue
-                if stacks[opening_char]:
-                    stacks[opening_char].pop()
-                else:
-                    errors.append(
-                        TextError(
-                            start_pos=i,
-                            end_pos=i + 1,
-                            error_text=char,
-                            suggestion=_get_error_label("symbol", self._lang),
-                            error_type=_get_error_label("symbol", self._lang),
-                            source="pairing",
-                        )
-                    )
-
-        for opening_char, stack in stacks.items():
-            for pos in stack:
-                errors.append(
-                    TextError(
-                        start_pos=pos,
-                        end_pos=pos + 1,
-                        error_text=opening_char,
-                        suggestion=_get_error_label("symbol", self._lang),
-                        error_type=_get_error_label("symbol", self._lang),
-                        source="pairing",
-                    )
+        def issue(index: int, reason: str = "unmatched") -> None:
+            errors.append(
+                TextError(
+                    start_pos=index,
+                    end_pos=index + 1,
+                    error_text=text[index],
+                    suggestion=_get_error_label("symbol", self._lang),
+                    error_type=_get_error_label("symbol", self._lang),
+                    source="pairing",
+                    pairing_reason=reason,
                 )
+            )
+
+        for index, char in enumerate(text):
+            if char in openings and char not in symmetric_symbols:
+                stack.append((char, index))
+                continue
+            if char not in closing_map:
+                continue
+            opening = closing_map[char]
+            match = next((i for i in range(len(stack) - 1, -1, -1) if stack[i][0] == opening), None)
+            if _is_apostrophe_usage(text, index, has_opening=match is not None):
+                continue
+            if char in symmetric_symbols and match is None:
+                stack.append((char, index))
+            elif char in closing_map:
+                if match is None:
+                    issue(index)
+                else:
+                    if match != len(stack) - 1:
+                        issue(index, "crossed")
+                    # Recover the matching opener while leaving inner unmatched symbols
+                    # available for subsequent closers; report the exact crossing point once.
+                    del stack[match]
+        for _opening, index in stack:
+            issue(index)
 
         return errors
 

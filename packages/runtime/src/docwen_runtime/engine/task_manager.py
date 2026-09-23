@@ -214,7 +214,11 @@ class TaskManager:
             sequence=[0],
         )
         try:
-            state.identity = conversion_identity(state.task_id, state.input_ref, cancellation=state.token)
+            state.identity = state.request.conversion_identity or conversion_identity(
+                state.task_id,
+                state.input_ref,
+                cancellation=state.token,
+            )
             state.request = replace(state.request, conversion_identity=state.identity)
             if (
                 request.output_policy.output_path
@@ -584,7 +588,10 @@ class TaskManager:
             duration_ms=state.duration_ms,
             input_bytes=state.input_ref.size_bytes,
             cancellation=state.token.view(),
-            group_outputs=not state.request.action_name and state.input_ref.format in {"md", "markdown"},
+            group_outputs=(
+                state.request.output_policy.group_outputs
+                or (not state.request.action_name and state.input_ref.format in {"md", "markdown"})
+            ),
             identity=state.identity,
             audit_document=OutputManifestWriter.build_for_success(
                 state.request, replace(state.plugin_result, artifacts=artifacts)

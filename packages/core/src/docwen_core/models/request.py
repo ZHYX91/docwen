@@ -13,6 +13,9 @@ from docwen_core.models.file_ref import FileRef
 PRECONVERSION_INTERMEDIATES_OPTION = "_docwen_preconversion_intermediates"
 """Internal request option carrying pre-conversion artifacts to finalize."""
 
+POSTPROCESS_PROOFREAD_OPTION = "_docwen_postprocess_proofread"
+"""Application-owned request option for DOCX proofreading after Markdown rendering."""
+
 
 @dataclass(slots=True)
 class OutputPolicy:
@@ -62,6 +65,14 @@ class OutputPolicy:
     private and is cleaned by the runtime in either mode.
     """
 
+    group_outputs: bool = False
+    """Publish artifacts as one result directory instead of loose files.
+
+    Runtime normally derives this from Markdown source/target semantics.  The
+    Application sets it explicitly when a private conversion stage is followed
+    by a post-processing stage so the public result keeps the original layout.
+    """
+
     open_after_done: bool = False
     """Whether to open the output folder after completion.
 
@@ -81,6 +92,7 @@ class OutputPolicy:
             "date_subfolder": self.date_subfolder,
             "overwrite_mode": self.overwrite_mode,
             "write_artifacts": self.write_artifacts,
+            "group_outputs": self.group_outputs,
             "open_after_done": self.open_after_done,
         }
 
@@ -92,6 +104,7 @@ class OutputPolicy:
             date_subfolder=data.get("date_subfolder", ""),
             overwrite_mode=data.get("overwrite_mode", "rename"),
             write_artifacts=data.get("write_artifacts", True),
+            group_outputs=data.get("group_outputs", False),
             open_after_done=data.get("open_after_done", False),
         )
 

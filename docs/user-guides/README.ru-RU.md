@@ -199,8 +199,8 @@ pip install pillow-heif
 
 1. `inspect <file> [--json]`: сначала определить реальную категорию файла, формат и поддерживаемые действия.
 2. `schema convert`: получить машиночитаемый контракт и условные правила для `convert`.
-3. `convert <file> --to <fmt> --output <path> --dry-run --json`: предварительно проверить распознавание, нормализацию и маршрутизацию без записи файлов.
-4. `convert <file> --to <fmt> --output <path> ...`: затем выполнить реальное преобразование.
+3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: предварительно проверить распознавание, нормализацию и маршрутизацию без записи файлов.
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: затем выполнить реальное преобразование.
 
 ### Типовые примеры
 
@@ -221,6 +221,9 @@ DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --o
 
 # Markdown в Word (шаблон + режим объединения заголовка и текста)
 DocWenCLI.exe convert document.md --to docx --output-dir exports --template template.docx.402044547bbb3acc1c7b3469d495c788647b3bb23ffdcff5427730c8baa711f1 --heading-merge-mode punct_required
+
+# Markdown в Word с проверкой созданного DOCX перед публикацией
+DocWenCLI.exe convert document.md --to docx --output-dir exports --proofread --check typo --check punct
 
 # Управление режимом изображений и размещением OCR-текста в Markdown
 DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --image-mode file --ocr --ocr-placement image_md
@@ -247,8 +250,9 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 | Команда / параметр | Описание |
 | --- | --- |
-| `convert <file> --to <fmt> --output <path>` | Единая точка входа для конвертации. |
-| `convert <file> --to <fmt> --output <path> --dry-run --json` | Предварительно показывает распознавание, нормализацию, маршрутизацию и итоговые параметры без реального запуска конвертации. |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | Единая точка входа для конвертации. |
+| `convert <markdown> --to docx --output-dir <dir> --proofread [--check ...]` | Проверяет созданный DOCX после Markdown→DOCX; `--check` в `convert` требует `--proofread`. Без `--check` используются настроенные значения проверки по умолчанию. |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | Предварительно показывает распознавание, нормализацию, маршрутизацию и итоговые параметры без реального запуска конвертации. |
 | `schema convert` | Экспортирует машиночитаемый контракт, значения по умолчанию, условия и канонические ключи для `convert`. |
 | `validate <file> --check ...` | Проверка документов (`typo/punct/symbol/sensitive/all/none`). Используйте `--json` для оболочки CLI; `--report` — необязательный путь к файлу отчета. |
 | `inspect <file> [--json]` | Показывает категорию/формат файла, рекомендуемые действия и предупреждения о расхождении расширения и содержимого. |
@@ -258,7 +262,7 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `resources list numbering-schemes` | Список доступных схем нумерации. |
 | `--template <id>` | Точный канонический ID из `resources list templates`; отображаемые имена, имена файлов и пути отклоняются. ID DOCX применяются к `docx/doc/odt/rtf/wps/pdf`, ID XLSX — к `xlsx/xls/ods/csv`. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Извлечение изображений и OCR для `convert --to md`. |
-| `--image-mode file|base64` | Управляет способом вывода изображений при экспорте в Markdown. |
+| `--image-mode file|base64|embed|omit` | Управляет способом вывода изображений при экспорте в Markdown. |
 | `--ocr-placement image_md|main_md` | Определяет, записывать OCR-текст в Markdown рядом с изображением или в основной Markdown-файл. |
 | `--heading-merge-mode punct_required|always|never` | Управляет стратегией объединения «заголовок + текст» для `convert --to docx`. |
 | `--optimization <id>` | Явно включает профиль оптимизации (см. `resources list optimizations`). |
@@ -583,7 +587,7 @@ Unit: Отдел продаж
 
 Транспорт runtime/control в DocWen Core может использовать именованный канал Windows либо сокет AF_UNIX
 в Linux/macOS. Файловая блокировка отвечает только за владение единственным экземпляром; файлы не
-используются для передачи команд управления. Это описание возможности Core. DocWen Assistant 3.0
+используются для передачи команд управления. Это описание возможности Core. DocWen Assistant 3.1
 остаётся только для Windows desktop и не имеет комбинированной приёмки в Linux/macOS.
 
 1.  **Первый клик** → Запустить конвертер и передать текущий файл.
@@ -592,7 +596,7 @@ Unit: Отдел продаж
 
 ### Установка
 
-DocWen Assistant 3.0 использует DocWen Machine Protocol v2 и единственный контракт Artifact Bundle v3. Версия
+DocWen Assistant 3.1 требует DocWen 0.13.0 или новее. Операции с содержимым используют Machine Protocol v2 и Artifact Bundle v3; запуск/открытие настольного приложения использует отдельный локальный GUI-контур управления. Версия
 исходного кода не подтверждает публикацию; устанавливайте только числовой выпуск, в котором явно указан совместимый
 опубликованный выпуск DocWen.
 

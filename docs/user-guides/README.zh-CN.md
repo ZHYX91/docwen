@@ -198,8 +198,8 @@ pip install pillow-heif
 
 1. `inspect <file> [--json]`：先识别文件真实类别、格式与可执行动作。
 2. `schema convert`：读取 `convert` 的机器可读参数契约与条件约束。
-3. `convert <file> --to <fmt> --output <path> --dry-run --json`：先预演检测、归一化和路由结果，不直接落地转换。
-4. `convert <file> --to <fmt> --output <path> ...`：确认后再执行正式转换。
+3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`：先预演检测、归一化和路由结果，不直接落地转换。
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`：确认后再执行正式转换。
 
 ### 常用示例
 
@@ -220,6 +220,9 @@ DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --o
 
 # Markdown 转 Word（指定模板，并设置标题+正文合并模式）
 DocWenCLI.exe convert document.md --to docx --output-dir exports --template template.docx.4be17c7a0791c896a542605427f1c3cb6597892292f2f9ddc6df82047d2120bf --heading-merge-mode punct_required
+
+# Markdown 转 Word，并在发布前校对生成的 DOCX
+DocWenCLI.exe convert document.md --to docx --output-dir exports --proofread --check typo --check punct
 
 # 控制 Markdown 导出图片与 OCR 文本落位
 DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --image-mode file --ocr --ocr-placement image_md
@@ -246,8 +249,9 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 | 命令/选项 | 说明 |
 | --- | --- |
-| `convert <file> --to <fmt> --output <path>` | 统一转换入口。 |
-| `convert <file> --to <fmt> --output <path> --dry-run --json` | 仅预演检测、归一化、路由与生效参数，不执行实际转换。 |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | 统一转换入口。 |
+| `convert <markdown> --to docx --output-dir <dir> --proofread [--check ...]` | Markdown→DOCX 转换后校对；`--check` 必须与 `--proofread` 同时使用，省略 `--check` 时使用已配置的校对默认值。 |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | 仅预演检测、归一化、路由与生效参数，不执行实际转换。 |
 | `validate` / `number markdown` / `merge` / `split` | 校对、编号、合并和拆分使用各自的领域命令，不暴露内部 action 名称。 |
 | `validate <file> --check ... [--report <path>]` | 默认只读校对；只有显式指定 `--report` 才写出报告文件。 |
 | `schema convert` | 导出 `convert` 的机器可读参数契约、默认值、条件约束与规范键。 |
@@ -258,7 +262,7 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `resources list numbering-schemes` | 列出可用序号方案。 |
 | `--template <id>` | 原样使用 `resources list templates` 返回的 canonical 资源 ID；显示名、文件名和路径直接拒绝。DOCX ID 用于 `docx/doc/odt/rtf/wps/pdf`，XLSX ID 用于 `xlsx/xls/ods/csv`。 |
 | `--extract-img` / `--no-extract-img` / `--ocr` | `convert --to md` 的图片提取与 OCR 选项。 |
-| `--image-mode file|base64` | 控制 Markdown 导出中的图片落地方式。 |
+| `--image-mode file|base64|embed|omit` | 控制 Markdown 导出中的图片落地方式。 |
 | `--ocr-placement image_md|main_md` | 控制 OCR 文本写入图片配套 Markdown 还是主 Markdown。 |
 | `--heading-merge-mode punct_required|always|never` | 控制 `convert --to docx` 时“标题 + 正文”段落合并策略。 |
 | `--optimization <id>` | 显式启用某个优化配置（可用列表见 `resources list optimizations`）。 |
@@ -589,7 +593,7 @@ Excel 模板中的 `{{→月份}}` 会依次向右填充"1月"、"2月"、"3月"
 
 DocWen Core 的 runtime/control transport 可在 Windows 使用命名管道，在 Linux/macOS 使用
 AF_UNIX 套接字。文件锁只负责单实例所有权，控制命令不通过文件传输。这只是 Core 能力说明；
-DocWen Assistant 3.0 仍仅限 Windows 桌面端，尚无 Linux/macOS 组合验收。
+DocWen Assistant 3.1 仍仅限 Windows 桌面端，尚无 Linux/macOS 组合验收。
 
 1. **首次点击** → 启动转换器并传入当前文件
 2. **再次点击（有文件）** → 替换为新文件（单文件模式）
@@ -597,7 +601,7 @@ DocWen Assistant 3.0 仍仅限 Windows 桌面端，尚无 Linux/macOS 组合验�
 
 ### 安装方法
 
-DocWen Assistant 3.0 使用 DocWen Machine Protocol v2 与唯一的 Artifact Bundle v3 合同。源码版本不能
+DocWen Assistant 3.1 要求 DocWen 0.13.0 或更高版本；转换、校对等内容操作使用 Machine Protocol v2 与唯一的 Artifact Bundle v3 合同，启动/打开桌面应用则使用独立的本机 GUI 控制面。源码版本不能
 证明已经发布；请只安装明确标识了兼容且已发布 DocWen 版本的数字版本 Release。
 
 ## 🔌 OpenClaw（插件 + Skill）

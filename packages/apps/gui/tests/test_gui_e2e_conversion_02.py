@@ -349,6 +349,10 @@ class TestGuiBatchExecution:
             if app is not None:
                 app.processEvents()
 
+            # This fixture only registers a text-writing conversion plugin.
+            # Real composed DOCX proofreading is covered by the template workflow.
+            for key in window._action_area_vm.proofread_options:
+                window._action_area_vm.set_proofread_option(key, False)
             window._action_area_vm.request_conversion("docx")
 
             def _batch_finished() -> bool:
@@ -447,6 +451,7 @@ class TestMarkdownTemplateWorkflow:
 
         output_path = Path(entry.output_path)
         assert output_path.exists()
+        assert output_path.parent.parent == source.parent
         assert output_path.name.startswith("brief_") and output_path.name.endswith("_fromMd.docx")
         assert output_path.parent.name == output_path.stem
         output_doc = Document(str(output_path))

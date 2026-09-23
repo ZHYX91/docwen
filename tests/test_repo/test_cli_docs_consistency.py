@@ -30,6 +30,7 @@ def test_cli_docs_describe_the_current_public_commands() -> None:
         "`resources list|show TYPE`",
         "`schema [COMMAND_PATH...]`",
         "`convert FILE --to FORMAT --output PATH`",
+        "`convert MARKDOWN --to docx --output-dir DIR --proofread [--check CHECK]...`",
         "`validate FILE [--report PATH]`",
         "`config reset GROUP --yes`",
         "`doctor`",
@@ -38,6 +39,8 @@ def test_cli_docs_describe_the_current_public_commands() -> None:
     assert "convert FILE --to FORMAT (--output-dir DIR" in row
     assert "--output PATH)" in row
     assert "`run` 命令" not in row
+    assert "Artifact Bundle\n> v2" not in cli
+    assert "Artifact Bundle v3" in cli
 
 
 def test_cli_docs_link_the_machine_readable_schema() -> None:
@@ -72,3 +75,8 @@ def test_root_readme_does_not_document_removed_cli_surfaces() -> None:
     )
     for stale_surface in forbidden:
         assert stale_surface not in readme
+    assert "--proofread" in readme
+    assert "Cross-product content operations" in readme
+    assert "Machine Protocol" in readme
+    assert "gui open|activate|status" in readme
+    assert "does not require a Machine session" in readme
