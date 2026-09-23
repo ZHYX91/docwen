@@ -13,6 +13,7 @@ from docwen_plugin_proofread.text_validator import TextError
 
 from ._proofread_plugin_support import _build_fake_context, _create_test_docx
 
+
 @pytest.mark.integration
 @pytest.mark.parametrize("locale", SUPPORTED_COMMENT_LOCALES)
 def test_four_localized_comments_keep_exact_text_anchors(tmp_path, locale):
