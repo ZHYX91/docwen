@@ -176,7 +176,16 @@ class ExecutionCoordinator(QObject):
             runtime_ids = (
                 tuple(f"{task_id}-{index}" for index in range(len(file_paths))) if mode == "batch" else (task_id,)
             )
-            self._view_model.begin_execution_telemetry(task_id, runtime_ids)
+            from docwen_core.models.request import POSTPROCESS_PROOFREAD_OPTION
+
+            intermediate_owners = (
+                {f"{identity}-render": identity for identity in runtime_ids}
+                if POSTPROCESS_PROOFREAD_OPTION in request.options
+                else {}
+            )
+            self._view_model.begin_execution_telemetry(
+                task_id, runtime_ids, intermediate_task_owners=intermediate_owners
+            )
             for path in file_paths:
                 self._results.file_status(path, "processing", operation_id=task_id)
             self._action_area_vm.show_cancel()

@@ -199,8 +199,8 @@ DocWen は GUI に加えて、自動化スクリプト、バッチ処理、外�
 
 1. `inspect <file> [--json]`：まず実際のファイル種別、形式、利用可能なアクションを確認します。
 2. `schema convert`：`convert` の機械可読な契約と条件ルールを取得します。
-3. `convert <file> --to <fmt> --output <path> --dry-run --json`：出力を書き出さずに検出、正規化、ルーティングを事前確認します。
-4. `convert <file> --to <fmt> --output <path> ...`：問題がなければ本番の変換を実行します。
+3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`：出力を書き出さずに検出、正規化、ルーティングを事前確認します。
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`：問題がなければ本番の変換を実行します。
 
 ### よく使う例
 
@@ -221,6 +221,9 @@ DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --o
 
 # Markdown を Word に変換（テンプレート指定 + 見出し/本文結合モード）
 DocWenCLI.exe convert document.md --to docx --output-dir exports --template template.docx.16f7dd4daed94f3a1130ef0999b3ae1f738a6b3cd185bebe363ada6536f8815f --heading-merge-mode punct_required
+
+# Markdown から Word へ変換し、公開前に生成 DOCX を校正
+DocWenCLI.exe convert document.md --to docx --output-dir exports --proofread --check typo --check punct
 
 # Markdown 出力時の画像モードと OCR テキスト配置を制御
 DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --image-mode file --ocr --ocr-placement image_md
@@ -245,8 +248,9 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 | コマンド / オプション | 説明 |
 | --- | --- |
-| `convert <file> --to <fmt> --output <path>` | 変換の統一エントリポイントです。 |
-| `convert <file> --to <fmt> --output <path> --dry-run --json` | 実変換は行わず、検出、正規化、ルーティング、有効オプションだけを事前確認します。 |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | 変換の統一エントリポイントです。 |
+| `convert <markdown> --to docx --output-dir <dir> --proofread [--check ...]` | Markdown→DOCX 後に生成 DOCX を校正します。`convert` の `--check` には `--proofread` が必要で、`--check` を省略すると設定済みの校正既定値を使用します。 |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | 実変換は行わず、検出、正規化、ルーティング、有効オプションだけを事前確認します。 |
 | `schema convert` | `convert` の機械可読な契約、デフォルト値、条件、正規キーを出力します。 |
 | `validate <file> --check ...` | 文書校正（`typo/punct/symbol/sensitive/all/none`）。CLI エンベロープには `--json` を使用します。`--report` は省略可能なレポートファイルのパスです。 |
 | `inspect <file> [--json]` | ファイル種別/形式、推奨アクション、拡張子と内容の不一致に関する警告を確認します。 |
@@ -256,7 +260,7 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `resources list numbering-schemes` | 利用可能な番号付けスキームを一覧表示します。 |
 | `--template <id>` | `resources list templates` が返す正規リソース ID をそのまま指定します。表示名・ファイル名・パスは拒否されます。DOCX ID は `docx/doc/odt/rtf/wps/pdf`、XLSX ID は `xlsx/xls/ods/csv` 用です。 |
 | `--extract-img` / `--no-extract-img` / `--ocr` | `convert --to md` 向けの画像抽出と OCR オプションです。 |
-| `--image-mode file|base64` | Markdown エクスポート時の画像出力方法を制御します。 |
+| `--image-mode file|base64|embed|omit` | Markdown エクスポート時の画像出力方法を制御します。 |
 | `--ocr-placement image_md|main_md` | OCR テキストを画像側 Markdown に書くか、メイン Markdown に書くかを制御します。 |
 | `--heading-merge-mode punct_required|always|never` | `convert --to docx` 時の「見出し + 本文」結合戦略を制御します。 |
 | `--optimization <id>` | 最適化プロファイルを明示的に有効化します（`resources list optimizations` を参照）。 |
@@ -579,7 +583,7 @@ Excelテンプレート内の `{{→Month}}` は、右方向に「1月」、「2
 DocWen Core の runtime/control transport は、Windows では名前付きパイプ、Linux/macOS では
 AF_UNIX ソケットを使用します。ファイルロックは単一インスタンスの所有権だけを確立し、
 制御コマンドの転送にはファイルを使用しません。これは Core の能力説明だけです。DocWen
-Assistant 3.0 は Windows デスクトップ専用のままで、Linux/macOS の組み合わせ受入実績はありません。
+Assistant 3.1 は Windows デスクトップ専用のままで、Linux/macOS の組み合わせ受入実績はありません。
 
 1.  **最初のクリック** → コンバーターを起動し、現在のファイルを渡します。
 2.  **再クリック（ファイルあり）** → 新しいファイルに置き換えます（単一ファイルモード）。
@@ -587,7 +591,7 @@ Assistant 3.0 は Windows デスクトップ専用のままで、Linux/macOS の
 
 ### インストール
 
-DocWen Assistant 3.0 は DocWen Machine Protocol v2 と単一の Artifact Bundle v3 契約を使用します。
+DocWen Assistant 3.1 には DocWen 0.13.0 以降が必要です。変換・校正などの内容操作は Machine Protocol v2 と Artifact Bundle v3 を使用し、デスクトップアプリの起動／オープンは独立したローカル GUI 制御を使用します。
 ソースのバージョンだけでは公開済みであることを証明できません。互換性のある公開済み DocWen リリースを
 明示した数字形式のリリースだけをインストールしてください。
 

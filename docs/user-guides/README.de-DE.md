@@ -200,8 +200,8 @@ Für Skripte, Agents oder Plugin-Integrationen wird diese Reihenfolge empfohlen:
 
 1. `inspect <file> [--json]`: zuerst den tatsächlichen Dateityp, das Format und die unterstützten Aktionen erkennen.
 2. `schema convert`: den maschinenlesbaren Vertrag und die Bedingungen von `convert` abrufen.
-3. `convert <file> --to <fmt> --output <path> --dry-run --json`: Erkennung, Normalisierung und Routing vorab prüfen, ohne Dateien zu schreiben.
-4. `convert <file> --to <fmt> --output <path> ...`: die echte Konvertierung erst danach ausführen.
+3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: Erkennung, Normalisierung und Routing vorab prüfen, ohne Dateien zu schreiben.
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: die echte Konvertierung erst danach ausführen.
 
 ### Häufige Beispiele
 
@@ -222,6 +222,9 @@ DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --o
 
 # Markdown nach Word (Vorlage und Überschrift/Text-Zusammenführung)
 DocWenCLI.exe convert document.md --to docx --output-dir exports --template template.docx.e26c3c7ebfb4e8bb1118e913afe80ace9ff4371da48bc1ba988e4b7578c609df --heading-merge-mode punct_required
+
+# Markdown nach Word und erzeugte DOCX-Datei vor der Veröffentlichung prüfen
+DocWenCLI.exe convert document.md --to docx --output-dir exports --proofread --check typo --check punct
 
 # Bildmodus und OCR-Platzierung für Markdown steuern
 DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --image-mode file --ocr --ocr-placement image_md
@@ -248,8 +251,9 @@ Die folgende Tabelle zeigt nur haeufige Befehle. Fuer die vollstaendige Befehlsf
 
 | Befehl / Option | Beschreibung |
 | --- | --- |
-| `convert <file> --to <fmt> --output <path>` | Einheitlicher Einstiegspunkt für Konvertierungen. |
-| `convert <file> --to <fmt> --output <path> --dry-run --json` | Prüft Erkennung, Normalisierung, Routing und wirksame Optionen, ohne die Konvertierung wirklich auszuführen. |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | Einheitlicher Einstiegspunkt für Konvertierungen. |
+| `convert <markdown> --to docx --output-dir <dir> --proofread [--check ...]` | Korrektur nach Markdown→DOCX; `--check` ist bei `convert` nur zusammen mit `--proofread` gültig. Ohne `--check` gelten die konfigurierten Korrektur-Standardwerte. |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | Prüft Erkennung, Normalisierung, Routing und wirksame Optionen, ohne die Konvertierung wirklich auszuführen. |
 | `schema convert` | Exportiert den maschinenlesbaren Vertrag, Standardwerte, Bedingungen und die kanonischen Schlüssel von `convert`. |
 | `validate <file> --check ...` | Dokumentprüfung (`typo/punct/symbol/sensitive/all/none`). Verwenden Sie `--json` für die CLI-Hülle; `--report` ist ein optionaler Bericht-Dateipfad. |
 | `inspect <file> [--json]` | Dateikategorie/-format, empfohlene Aktionen und Warnungen bei Erweiterungs-/Inhaltsabweichungen anzeigen. |
@@ -259,7 +263,7 @@ Die folgende Tabelle zeigt nur haeufige Befehle. Fuer die vollstaendige Befehlsf
 | `resources list numbering-schemes` | Verfügbare Nummerierungsschemata auflisten. |
 | `--template <id>` | Exakte kanonische Ressourcen-ID aus `resources list templates`; Anzeigenamen, Dateinamen und Pfade werden abgelehnt. DOCX-IDs gelten für `docx/doc/odt/rtf/wps/pdf`, XLSX-IDs für `xlsx/xls/ods/csv`. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Bildextraktion und OCR für `convert --to md`. |
-| `--image-mode file|base64` | Steuert, wie Bilder beim Markdown-Export ausgegeben werden. |
+| `--image-mode file|base64|embed|omit` | Steuert, wie Bilder beim Markdown-Export ausgegeben werden. |
 | `--ocr-placement image_md|main_md` | Legt fest, ob OCR-Text in begleitendes Bild-Markdown oder in die Haupt-Markdown-Datei geschrieben wird. |
 | `--heading-merge-mode punct_required|always|never` | Steuert die Strategie für die Zusammenführung von Überschrift + Text bei `convert --to docx`. |
 | `--optimization <id>` | Aktiviert explizit ein Optimierungsprofil (siehe `resources list optimizations`). |
@@ -583,7 +587,7 @@ Ein begleitendes Obsidian-Plugin wird separat veröffentlicht und arbeitet mit d
 Der runtime/control-Transport von DocWen Core verwendet unter Windows eine Named Pipe und unter
 Linux/macOS einen AF_UNIX-Socket. Eine Dateisperre stellt nur den Besitz der Einzelinstanz sicher;
 Steuerbefehle werden nicht über Dateien übertragen. Dies beschreibt nur die Core-Fähigkeit. DocWen
-Assistant 3.0 bleibt auf Windows-Desktop beschränkt und besitzt keine Linux/macOS-Kombinationsabnahme.
+Assistant 3.1 bleibt auf Windows-Desktop beschränkt und besitzt keine Linux/macOS-Kombinationsabnahme.
 
 1.  **Erster Klick** → Konverter starten und aktuelle Datei übergeben.
 2.  **Klick erneut (Mit Datei)** → Durch neue Datei ersetzen (Einzeldateimodus).
@@ -591,7 +595,7 @@ Assistant 3.0 bleibt auf Windows-Desktop beschränkt und besitzt keine Linux/mac
 
 ### Installation
 
-DocWen Assistant 3.0 verwendet DocWen Machine Protocol v2 und den einzigen Artifact-Bundle-v3-Vertrag. Die
+DocWen Assistant 3.1 erfordert DocWen 0.13.0 oder neuer. Inhaltsoperationen verwenden Machine Protocol v2 und Artifact Bundle v3; Starten/Öffnen der Desktop-App nutzt die separate lokale GUI-Steuerung. Die
 Quellversion belegt keine Veröffentlichung; installieren Sie nur einen numerischen Release, der ausdrücklich einen
 kompatiblen veröffentlichten DocWen-Release nennt.
 

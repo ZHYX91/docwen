@@ -5,6 +5,31 @@
 
 ## Unreleased / 未发布
 
+## 0.13.0 (2026-09-21)
+
+### 破坏性变化 / Breaking changes
+
+- CLI 保持面向任务的 `convert / validate / number / merge / split / batch` 命令树，不恢复 `run --action`。Markdown→DOCX 的转换后校对现在必须显式使用 `convert ... --proofread`；`convert --check` 不再隐式启用校对，单独使用会直接报参数错误。
+- Keep the task-oriented `convert / validate / number / merge / split / batch` CLI and do not restore `run --action`. Post-conversion proofreading for Markdown→DOCX now requires explicit `convert ... --proofread`; `convert --check` no longer enables proofreading implicitly and is rejected on its own.
+
+### 修复与改进 / Fixed and changed
+
+- DOCX 四类校对批注支持全部 11 种界面语言并统一作者 DocWen；敏感词和符号配对提供核查提示，只有明确替换才显示箭头。修复 `([)]` 等交叉嵌套漏报，默认用户词典保持为空。
+- Localize all four DOCX proofreading comment types in the eleven interface languages, use author DocWen, and reserve replacement arrows for explicit edits. Detect crossed symbol nesting such as `([)]`; user dictionaries remain empty by default.
+
+- 修复 GUI 中 Markdown 转 DOCX 时校对复选项“显示但无效”的问题。Application 层现在编排“私有 DOCX 渲染 → 复用现有 DOCX 校对器 → 一次最终发布”，Markdown 插件与校对插件保持解耦；校对失败不会把未校对产物当成功结果发布。
+- Fix the inert proofreading controls on Markdown→DOCX. The Application layer now composes private DOCX rendering, the existing DOCX validator, and one final publication without coupling the Markdown and proofreading plugins; proofreading failure cannot publish an unchecked document as success.
+- `--proofread` 仅接受实际识别为 Markdown 的 DOCX 转换；省略 `--check` 时使用校对配置默认值。独立 `validate` 仍用于现有 DOCX/Markdown/旧 Word 家族内容。
+- Restrict `--proofread` to admitted Markdown→DOCX conversion; omitting `--check` uses configured proofreading defaults. Standalone `validate` remains the command for existing DOCX, Markdown, and legacy Word-family content.
+- Machine 协议不兼容错误现在返回实际收到的协议、支持协议和正在运行的服务端产品身份；普通初始化参数错误不再被误报成协议版本不兼容。
+- Machine protocol mismatch errors now report the received protocol, supported protocol, and running server identity; ordinary invalid initialize parameters are no longer mislabeled as version incompatibility.
+- 修复 Markdown 模板正文占位符/追加语义、YAML 与正文 Wiki/Markdown 链接策略、实际格式警示、帮助图标与浮层、统一 SVG 美术资源及设置窗口无改动关闭性能。
+- Fix Markdown template body-placement semantics, YAML/body Wiki and Markdown link policies, actual-format warnings, help icon/popover behavior, shared SVG assets, and no-change Settings close performance.
+- Mermaid 转文档继续支持代码/图片模式，并保留明确的依赖、失败和取消语义。
+- Keep Mermaid-to-document code/image modes with explicit dependency, failure, and cancellation semantics.
+- 发布版本提升至 0.13.0；Machine Protocol 仍为 2.0，Artifact Bundle 仍为 v3，CLI JSON presentation protocol 仍为 3。
+- Bump the product release to 0.13.0 while retaining Machine Protocol 2.0, Artifact Bundle v3, and CLI JSON presentation protocol 3.
+
 ## 0.12.1 (2026-09-20)
 
 0.12.0 候选在发布前撤回；0.12.1 包含以下全部变更。The 0.12.0 candidate was withdrawn before publication; 0.12.1 includes all changes below.

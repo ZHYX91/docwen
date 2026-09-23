@@ -209,6 +209,7 @@ class TestExecuteMethods:
                     "date_subfolder": "compact",
                     "overwrite_mode": "skip",
                     "write_artifacts": True,
+                    "group_outputs": False,
                     "open_after_done": True,
                 },
                 {
@@ -217,6 +218,7 @@ class TestExecuteMethods:
                     "date_subfolder": "compact",
                     "overwrite_mode": "skip",
                     "write_artifacts": True,
+                    "group_outputs": False,
                     "open_after_done": True,
                 },
             ]

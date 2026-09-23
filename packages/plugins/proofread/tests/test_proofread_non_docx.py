@@ -161,8 +161,13 @@ class TestNonDocxRoutes:
         }
         for route in routes.values():
             properties = route.options_schema["properties"]
-            assert set(properties) == expected
-            assert all(spec["type"] == "boolean" for spec in properties.values())
+            docx_output = route.target_format == "docx"
+            assert set(properties) == expected | ({"locale"} if docx_output else set())
+            assert all(properties[key]["type"] == "boolean" for key in expected)
+            if docx_output:
+                assert properties["locale"]["type"] == "string"
+                assert "zh_CN" in properties["locale"]["enum"]
+                assert "default" not in properties["locale"]
             assert properties["enable_symbol_pairing"]["default"] is True
             assert properties["enable_symbol_correction"]["default"] is True
             assert properties["enable_typos_rule"]["default"] is True

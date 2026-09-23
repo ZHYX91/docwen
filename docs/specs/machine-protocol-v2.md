@@ -24,11 +24,19 @@ The handshake requires exactly protocol 2.0. Template resources require `origin`
 `is_default` (boolean), alongside canonical `id`, `name`, `description`, and `target` (`docx|xlsx`).
 The target matches the ID format segment. Consumers preserve the server's enabled-template order and
 execute by ID. Product version numbers cannot substitute for negotiation. Update the server and consumer
-together; v1 and unknown minors fail at initialization, with no silent downgrade.
+together; v1 and unknown minors fail at initialization, with no silent downgrade. An
+`incompatible_protocol` initialization error includes the bounded protocol identity actually received by
+DocWen, the protocol DocWen supports, and the running server product identity so consumers can present
+actionable diagnostics without inferring either side from a filename or folder name. This typed mismatch
+is emitted only for a structurally valid protocol descriptor whose identity differs from 2.0; malformed
+descriptors remain ordinary JSON-RPC `-32602 Invalid params` and are not mislabeled as version conflicts.
 
 握手要求协议 2.0。模板必须返回来源 `origin`、布尔默认标志 `is_default`，以及规范 ID、显示名、
 说明和目标格式；ID 中的格式必须与 `target` 一致。消费者保留服务端的启用模板顺序，执行时只用 ID。
 产品版本号不能代替协议协商；服务端和客户端需要一起更新，旧协议和未知次版本在初始化时明确失败。
+`incompatible_protocol` 初始化错误会返回 DocWen 实际收到的有界协议身份、服务端支持的协议以及正在运行的
+服务端产品身份，消费者无需从文件名或目录名推断任一方版本。只有结构合法但身份不等于 2.0 的协议描述符才使用
+这一类型化不兼容错误；结构畸形的描述符继续返回普通 JSON-RPC `-32602 Invalid params`，不会伪装成版本冲突。
 Artifact Bundle v3 的图结构不变；因生产者协议标识也是闭合字段，产物包同步升级主版本，
 当前唯一生产者协议身份为 `docwen.machine.v2`，旧版不进入执行路径。
 

@@ -149,8 +149,9 @@ class DocxValidator:
             context.logger.info(f"Loaded DOCX with {len(doc.paragraphs)} paragraphs")
 
             # ── Resolve language ────────────────────────────────────────
-            lang = getattr(context, "request", None)
-            lang = str(getattr(lang, "options", {}).get("lang", "en")) if lang else "en"
+            from docwen_plugin_proofread.comment_text import format_comment, resolve_comment_locale
+
+            lang = resolve_comment_locale(context)
 
             # L31: Validator is lazily initialized here (inside convert())
             # rather than in __init__, so it is only constructed when needed.
@@ -209,7 +210,7 @@ class DocxValidator:
 
                 # ── Annotate errors as Word comments ─────────────
                 for err in errors:
-                    comment_text = f"{err.error_type}: {err.error_text} → {err.suggestion}"
+                    comment_text = format_comment(err, lang)
                     try:
                         runs = runs_for_range(para, err.start_pos, err.end_pos)
                         if not runs:
@@ -217,7 +218,7 @@ class DocxValidator:
                         doc.add_comment(
                             runs,
                             text=comment_text,
-                            author=f"DocWen-{err.source}",
+                            author="DocWen",
                             initials="DW",
                         )
                         comments_added += 1

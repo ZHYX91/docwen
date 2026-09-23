@@ -352,6 +352,10 @@ def test_option_manifest_static_scan_candidate_source_keys_match_schemas() -> No
     proofread_skip_source = (
         PROJECT_ROOT / "packages" / "plugins" / "proofread" / "src" / "docwen_plugin_proofread" / "skip_policy.py"
     ).read_text(encoding="utf-8")
+    assert "resolve_proofread_switches(config, options)" in proofread_common_source
+    proofread_policy_source = (PROJECT_ROOT / "packages/core/src/docwen_core/options/proofread.py").read_text(
+        encoding="utf-8"
+    )
     proofread_properties = PROOFREAD_OPTIONS_SCHEMA["properties"]
     for key in (
         "enable_symbol_pairing",
@@ -359,7 +363,7 @@ def test_option_manifest_static_scan_candidate_source_keys_match_schemas() -> No
         "enable_typos_rule",
         "enable_sensitive_word",
     ):
-        assert f'engine.get("{key}"' in proofread_common_source
+        assert f'options.get("{key}"' in proofread_policy_source
         assert key in proofread_properties
     for key in ("skip_code_blocks", "skip_quote_blocks"):
         assert key in proofread_skip_source

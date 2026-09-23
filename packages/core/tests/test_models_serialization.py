@@ -83,6 +83,7 @@ class TestOutputPolicySerialization:
         assert pol2.date_subfolder == ""
         assert pol2.overwrite_mode == "rename"
         assert pol2.write_artifacts is True
+        assert pol2.group_outputs is False
         assert pol2.open_after_done is False
 
     def test_round_trip_custom(self) -> None:
@@ -91,6 +92,7 @@ class TestOutputPolicySerialization:
             date_subfolder="iso",
             overwrite_mode="skip",
             write_artifacts=False,
+            group_outputs=True,
             open_after_done=True,
         )
         data = pol.to_dict()
@@ -99,6 +101,7 @@ class TestOutputPolicySerialization:
         assert pol2.date_subfolder == "iso"
         assert pol2.overwrite_mode == "skip"
         assert pol2.write_artifacts is False
+        assert pol2.group_outputs is True
         assert pol2.open_after_done is True
 
     def test_round_trip_exact_output_path(self) -> None:

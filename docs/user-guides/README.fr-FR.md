@@ -200,8 +200,8 @@ Pour les scripts, agents ou plugins, l'ordre recommandé est le suivant :
 
 1. `inspect <file> [--json]` : détecter d'abord la catégorie réelle du fichier, son format et les actions prises en charge.
 2. `schema convert` : lire le contrat lisible par machine et les contraintes conditionnelles de `convert`.
-3. `convert <file> --to <fmt> --output <path> --dry-run --json` : prévisualiser détection, normalisation et routage sans écrire de sortie.
-4. `convert <file> --to <fmt> --output <path> ...` : lancer ensuite la conversion réelle.
+3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` : prévisualiser détection, normalisation et routage sans écrire de sortie.
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...` : lancer ensuite la conversion réelle.
 
 ### Exemples courants
 
@@ -222,6 +222,9 @@ DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --o
 
 # Markdown vers Word (modèle + mode de fusion titre/corps)
 DocWenCLI.exe convert document.md --to docx --output-dir exports --template template.docx.abaa27b964bf8589a411a696f0f5781e0917b8950067268ca15c6941668e39e9 --heading-merge-mode punct_required
+
+# Markdown vers Word puis relecture du DOCX généré avant publication
+DocWenCLI.exe convert document.md --to docx --output-dir exports --proofread --check typo --check punct
 
 # Contrôler le mode image et l'emplacement du texte OCR dans Markdown
 DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --image-mode file --ocr --ocr-placement image_md
@@ -248,8 +251,9 @@ Le tableau ci-dessous ne liste que les commandes les plus courantes. Pour la sur
 
 | Commande / option | Description |
 | --- | --- |
-| `convert <file> --to <fmt> --output <path>` | Point d'entrée unifié pour les conversions. |
-| `convert <file> --to <fmt> --output <path> --dry-run --json` | Prévisualise détection, normalisation, routage et options effectives sans exécuter la conversion réelle. |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | Point d'entrée unifié pour les conversions. |
+| `convert <markdown> --to docx --output-dir <dir> --proofread [--check ...]` | Relit le DOCX généré après Markdown→DOCX ; `--check` avec `convert` nécessite `--proofread`. Sans `--check`, les valeurs de relecture configurées sont utilisées. |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | Prévisualise détection, normalisation, routage et options effectives sans exécuter la conversion réelle. |
 | `schema convert` | Exporte le contrat lisible par machine, les valeurs par défaut, les conditions et les clés canoniques de `convert`. |
 | `validate <file> --check ...` | Correction documentaire (`typo/punct/symbol/sensitive/all/none`). Utilisez `--json` pour l'enveloppe CLI ; `--report` est un chemin de fichier de rapport facultatif. |
 | `inspect <file> [--json]` | Inspecte la catégorie/le format du fichier, les actions recommandées et les avertissements de décalage entre extension et contenu. |
@@ -259,7 +263,7 @@ Le tableau ci-dessous ne liste que les commandes les plus courantes. Pour la sur
 | `resources list numbering-schemes` | Liste les schémas de numérotation disponibles. |
 | `--template <id>` | ID canonique exact renvoyé par `resources list templates` ; les noms affichés, noms de fichier et chemins sont rejetés. Les ID DOCX s'appliquent à `docx/doc/odt/rtf/wps/pdf`, les ID XLSX à `xlsx/xls/ods/csv`. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Extraction d'images et OCR pour `convert --to md`. |
-| `--image-mode file|base64` | Contrôle la façon dont les images sont émises pendant l'export Markdown. |
+| `--image-mode file|base64|embed|omit` | Contrôle la façon dont les images sont émises pendant l'export Markdown. |
 | `--ocr-placement image_md|main_md` | Contrôle si le texte OCR est écrit dans le Markdown associé à l'image ou dans le Markdown principal. |
 | `--heading-merge-mode punct_required|always|never` | Contrôle la stratégie de fusion titre + corps pour `convert --to docx`. |
 | `--optimization <id>` | Active explicitement un profil d'optimisation (voir `resources list optimizations`). |
@@ -593,7 +597,7 @@ ne transporte les commandes de contrôle. Cela décrit uniquement la capacité d
 
 ### Installation
 
-DocWen Assistant 3.0 utilise DocWen Machine Protocol v2 et l'unique contrat Artifact Bundle v3. La version du code
+DocWen Assistant 3.1 nécessite DocWen 0.13.0 ou ultérieur. Les opérations de contenu utilisent Machine Protocol v2 et Artifact Bundle v3 ; le lancement/l’ouverture de l’application de bureau utilise le contrôle GUI local séparé. La version du code
 source ne prouve pas sa publication ; installez uniquement une version numérique qui identifie explicitement une
 version publiée et compatible de DocWen.
 

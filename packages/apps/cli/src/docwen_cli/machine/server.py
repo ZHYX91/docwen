@@ -44,6 +44,8 @@ _METHODS = [
     "task/execute",
     "task/cancel",
 ]
+_SUPPORTED_PROTOCOL = {"name": "docwen.machine", "major": 2, "minor": 0}
+_PROTOCOL_NAME_LIMIT = 128
 _PROGRESS_PHASE = "conversion"
 _PROGRESS_TOTAL = 100
 _MAX_RUNTIME_PROGRESS = 95
@@ -53,6 +55,38 @@ _MAX_RELATED_RANGES = 16
 _MAX_DIAGNOSTIC_FIXES = 8
 _MAX_FIX_EDITS = 16
 _MAX_FIX_REPLACEMENT_CODE_POINTS = 4096
+
+
+def _is_protocol_identity_shape(value: object) -> bool:
+    """Return whether *value* is a well-formed negotiable protocol identity."""
+
+    if not isinstance(value, dict) or set(value) != {"name", "major", "minor"}:
+        return False
+    name = value.get("name")
+    major = value.get("major")
+    minor = value.get("minor")
+    return (
+        isinstance(name, str)
+        and 1 <= len(name) <= _PROTOCOL_NAME_LIMIT
+        and type(major) is int
+        and 0 <= major <= 2_147_483_647
+        and type(minor) is int
+        and 0 <= minor <= 2_147_483_647
+    )
+
+
+def _protocol_diagnostic(value: object) -> dict[str, object | None]:
+    """Return bounded protocol facts safe to echo in a diagnostic response."""
+
+    if not isinstance(value, dict):
+        return {"name": None, "major": None, "minor": None}
+    raw_name = value.get("name")
+    name = raw_name[:_PROTOCOL_NAME_LIMIT] if isinstance(raw_name, str) else None
+    raw_major = value.get("major")
+    raw_minor = value.get("minor")
+    major = raw_major if type(raw_major) is int and 0 <= raw_major <= 2_147_483_647 else None
+    minor = raw_minor if type(raw_minor) is int and 0 <= raw_minor <= 2_147_483_647 else None
+    return {"name": name, "major": major, "minor": minor}
 
 
 @dataclass(slots=True)
@@ -130,8 +164,9 @@ class MachineProtocolServer:
                 method == "initialize"
                 and message.get("jsonrpc") == "2.0"
                 and isinstance(params, dict)
-                and isinstance(params.get("protocol"), dict)
-                and params["protocol"] != {"name": "docwen.machine", "major": 2, "minor": 0}
+                and _is_protocol_identity_shape(params.get("protocol"))
+                and params["protocol"] != _SUPPORTED_PROTOCOL
+                and self._valid_initialize_except_protocol(message, params)
             ):
                 self._write_error(
                     request_id,
@@ -139,7 +174,10 @@ class MachineProtocolServer:
                     "DocWen Machine Protocol 2.0 is required",
                     data={
                         "code": "incompatible_protocol",
-                        "supported_protocol": {"name": "docwen.machine", "major": 2, "minor": 0},
+                        "phase": "initialize",
+                        "received_protocol": _protocol_diagnostic(params["protocol"]),
+                        "supported_protocol": dict(_SUPPORTED_PROTOCOL),
+                        "server": {"name": "DocWen", "version": PRODUCT_VERSION},
                     },
                 )
                 return
@@ -147,7 +185,18 @@ class MachineProtocolServer:
                 request_id,
                 -32602 if message.get("jsonrpc") == "2.0" else -32600,
                 "Invalid params" if message.get("jsonrpc") == "2.0" else "Invalid Request",
-                data={"validation": self._bounded_validation_message(exc)},
+                data={
+                    "validation": self._bounded_validation_message(exc),
+                    **(
+                        {
+                            "code": "invalid_params",
+                            "phase": "initialize",
+                            "server": {"name": "DocWen", "version": PRODUCT_VERSION},
+                        }
+                        if method == "initialize"
+                        else {}
+                    ),
+                },
             )
             return
 
@@ -171,6 +220,15 @@ class MachineProtocolServer:
             self._handle_execute(request_id, str(message["params"]["plan_id"]))
         else:
             self._handle_cancel(request_id, str(message["params"]["task_id"]))
+
+    def _valid_initialize_except_protocol(self, message: dict[str, Any], params: dict[str, Any]) -> bool:
+        """Keep malformed client/features fields distinct from version negotiation."""
+        normalized = {**message, "params": {**params, "protocol": dict(_SUPPORTED_PROTOCOL)}}
+        try:
+            self._validator.validate_message(normalized)
+        except ValidationError:
+            return False
+        return True
 
     def _handle_query(self, request_id: str | int | None, method: str, params: dict[str, Any]) -> None:
         service = self._query_service
@@ -217,7 +275,7 @@ class MachineProtocolServer:
         self._write_result(
             request_id,
             {
-                "protocol": {"name": "docwen.machine", "major": 2, "minor": 0},
+                "protocol": dict(_SUPPORTED_PROTOCOL),
                 "server": {"name": "DocWen", "version": PRODUCT_VERSION},
                 "features": {"progress": True, "cancellation": True},
                 "methods": list(_METHODS),

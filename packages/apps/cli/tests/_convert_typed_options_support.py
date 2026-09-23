@@ -33,6 +33,7 @@ def _fake_convert_args(extra: dict | None = None) -> argparse.Namespace:
     # Convert-specific
     ns.to = "md"
     ns.template = None
+    ns.proofread = False
     ns.check = []
     ns.extract_img = False
     ns.no_extract_img = False

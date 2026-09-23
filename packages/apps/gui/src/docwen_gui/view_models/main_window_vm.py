@@ -146,6 +146,7 @@ class MainWindowViewModel(QObject):
         self._current_task_id: str | None = None
         self._active_execution_id: str | None = None
         self._accepted_runtime_task_ids: frozenset[str] = frozenset()
+        self._intermediate_task_owners: dict[str, str] = {}
         self._ended_runtime_task_ids: set[str] = set()
         # Selected-file source state — the single source of truth for which
         # file drives the right-panel projection.  Held as the raw FileRef so
@@ -508,7 +509,13 @@ class MainWindowViewModel(QObject):
         """Ask the owning window to begin graceful application shutdown."""
         self.shutdown_requested.emit()
 
-    def begin_execution_telemetry(self, operation_id: str, runtime_task_ids: tuple[str, ...]) -> None:
+    def begin_execution_telemetry(
+        self,
+        operation_id: str,
+        runtime_task_ids: tuple[str, ...],
+        *,
+        intermediate_task_owners: dict[str, str] | None = None,
+    ) -> None:
         """Admit runtime telemetry identities for one GUI-owned execution."""
         normalized_operation_id = str(operation_id)
         accepted_ids = frozenset(str(task_id) for task_id in runtime_task_ids if str(task_id))
@@ -517,6 +524,7 @@ class MainWindowViewModel(QObject):
         with QMutexLocker(self._mutex):
             self._active_execution_id = normalized_operation_id
             self._accepted_runtime_task_ids = accepted_ids
+            self._intermediate_task_owners = dict(intermediate_task_owners or {})
             self._ended_runtime_task_ids.clear()
             self._current_task_id = None
 
@@ -551,6 +559,13 @@ class MainWindowViewModel(QObject):
         publish_live_status = False
         telemetry: dict[str, Any] | None = None
         with QMutexLocker(self._mutex):
+            if task_id in self._intermediate_task_owners:
+                if task_id in self._ended_runtime_task_ids:
+                    return
+                if event_type in (TASK_COMPLETED, TASK_FAILED, TASK_CANCELLED):
+                    self._ended_runtime_task_ids.add(task_id)
+                    return
+                task_id = self._intermediate_task_owners[task_id]
             if task_id not in self._accepted_runtime_task_ids:
                 return
             if event_type == TASK_STARTED and task_id not in self._ended_runtime_task_ids:
@@ -570,7 +585,7 @@ class MainWindowViewModel(QObject):
                 "event_type": event_type,
                 "message": str(message),
                 "percent": payload.get("percent"),
-                "completed_count": len(self._ended_runtime_task_ids),
+                "completed_count": len(self._ended_runtime_task_ids & self._accepted_runtime_task_ids),
             }
 
         self.execution_progress_changed.emit(telemetry)
@@ -597,6 +612,7 @@ class MainWindowViewModel(QObject):
             if not self._active_execution_id or self._active_execution_id == operation_id:
                 self._active_execution_id = None
                 self._accepted_runtime_task_ids = frozenset()
+                self._intermediate_task_owners = {}
                 self._ended_runtime_task_ids.clear()
                 self._current_task_id = None
 

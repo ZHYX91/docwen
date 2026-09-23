@@ -198,8 +198,8 @@ Ngoài giao diện đồ họa, DocWen còn cung cấp giao diện dòng lệnh 
 
 1. `inspect <file> [--json]`: trước tiên nhận diện loại tệp thực tế, định dạng và các thao tác được hỗ trợ.
 2. `schema convert`: đọc hợp đồng máy đọc được và các ràng buộc điều kiện của `convert`.
-3. `convert <file> --to <fmt> --output <path> --dry-run --json`: xem trước quá trình nhận diện, chuẩn hóa và định tuyến mà không ghi tệp đầu ra.
-4. `convert <file> --to <fmt> --output <path> ...`: sau khi xác nhận, mới chạy chuyển đổi thật.
+3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: xem trước quá trình nhận diện, chuẩn hóa và định tuyến mà không ghi tệp đầu ra.
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: sau khi xác nhận, mới chạy chuyển đổi thật.
 
 ### Ví dụ thường dùng
 
@@ -220,6 +220,9 @@ DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --o
 
 # Markdown sang Word (mẫu + chế độ gộp tiêu đề/nội dung)
 DocWenCLI.exe convert document.md --to docx --output-dir exports --template template.docx.da28ee624892975bc590fd419880875136f22e0edcd878bca69472e81297c0bc --heading-merge-mode punct_required
+
+# Markdown sang Word và soát lỗi DOCX đã tạo trước khi xuất bản
+DocWenCLI.exe convert document.md --to docx --output-dir exports --proofread --check typo --check punct
 
 # Điều khiển chế độ ảnh và vị trí văn bản OCR trong Markdown
 DocWenCLI.exe convert report.docx --to md --output-dir exports --extract-img --image-mode file --ocr --ocr-placement image_md
@@ -246,8 +249,9 @@ Bảng dưới đây chỉ liệt kê các lệnh thông dụng. Để xem đầ
 
 | Lệnh / tùy chọn | Mô tả |
 | --- | --- |
-| `convert <file> --to <fmt> --output <path>` | Điểm vào thống nhất cho chuyển đổi. |
-| `convert <file> --to <fmt> --output <path> --dry-run --json` | Xem trước nhận diện, chuẩn hóa, định tuyến và các tùy chọn hiệu lực mà không thực hiện chuyển đổi thật. |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | Điểm vào thống nhất cho chuyển đổi. |
+| `convert <markdown> --to docx --output-dir <dir> --proofread [--check ...]` | Soát lỗi DOCX được tạo sau Markdown→DOCX; `--check` trong `convert` yêu cầu `--proofread`. Nếu bỏ `--check`, các mặc định soát lỗi đã cấu hình sẽ được dùng. |
+| `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | Xem trước nhận diện, chuẩn hóa, định tuyến và các tùy chọn hiệu lực mà không thực hiện chuyển đổi thật. |
 | `schema convert` | Xuất hợp đồng máy đọc được, giá trị mặc định, điều kiện và khóa chuẩn của `convert`. |
 | `validate <file> --check ...` | Soát lỗi tài liệu (`typo/punct/symbol/sensitive/all/none`). Dùng `--json` cho envelope của CLI; `--report` là đường dẫn tệp báo cáo tùy chọn. |
 | `inspect <file> [--json]` | Kiểm tra loại/định dạng tệp, hành động gợi ý và cảnh báo khi phần mở rộng không khớp nội dung. |
@@ -257,7 +261,7 @@ Bảng dưới đây chỉ liệt kê các lệnh thông dụng. Để xem đầ
 | `resources list numbering-schemes` | Liệt kê các sơ đồ đánh số có sẵn. |
 | `--template <id>` | ID tài nguyên chuẩn chính xác từ `resources list templates`; tên hiển thị, tên tệp và đường dẫn đều bị từ chối. ID DOCX dùng cho `docx/doc/odt/rtf/wps/pdf`, ID XLSX cho `xlsx/xls/ods/csv`. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Tùy chọn trích ảnh và OCR cho `convert --to md`. |
-| `--image-mode file|base64` | Kiểm soát cách ảnh được xuất ra khi xuất Markdown. |
+| `--image-mode file|base64|embed|omit` | Kiểm soát cách ảnh được xuất ra khi xuất Markdown. |
 | `--ocr-placement image_md|main_md` | Kiểm soát việc ghi văn bản OCR vào Markdown phụ của ảnh hay Markdown chính. |
 | `--heading-merge-mode punct_required|always|never` | Kiểm soát chiến lược gộp "tiêu đề + nội dung" cho `convert --to docx`. |
 | `--optimization <id>` | Bật rõ ràng một hồ sơ tối ưu hóa (xem `resources list optimizations`). |
@@ -580,7 +584,7 @@ Plugin Obsidian đồng hành được phát hành ở repo riêng và hoạt đ
 
 Runtime/control transport của DocWen Core có thể dùng named pipe trên Windows hoặc socket AF_UNIX trên
 Linux/macOS. Khóa file chỉ xác lập quyền sở hữu một phiên bản đang chạy; file không được dùng để truyền
-lệnh điều khiển. Đây chỉ là mô tả capability của Core. DocWen Assistant 3.0 vẫn chỉ dành cho Windows
+lệnh điều khiển. Đây chỉ là mô tả capability của Core. DocWen Assistant 3.1 vẫn chỉ dành cho Windows
 desktop và chưa có nghiệm thu kết hợp trên Linux/macOS.
 
 1.  **Nhấn lần đầu** → Khởi chạy bộ chuyển đổi và truyền file hiện tại.
@@ -589,7 +593,7 @@ desktop và chưa có nghiệm thu kết hợp trên Linux/macOS.
 
 ### Cài đặt
 
-DocWen Assistant 3.0 dùng DocWen Machine Protocol v2 và hợp đồng Artifact Bundle v3 duy nhất. Phiên bản mã nguồn
+DocWen Assistant 3.1 yêu cầu DocWen 0.13.0 trở lên. Các thao tác nội dung dùng Machine Protocol v2 và Artifact Bundle v3; việc khởi chạy/mở ứng dụng desktop dùng đường điều khiển GUI cục bộ độc lập. Phiên bản mã nguồn
 không chứng minh rằng sản phẩm đã được phát hành; chỉ cài bản phát hành dạng số xác định rõ một bản DocWen đã phát
 hành và tương thích.
 

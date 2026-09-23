@@ -45,6 +45,10 @@ def _plugin_request_option_read_keys() -> set[str]:
         path.read_text(encoding="utf-8") for path in source_root.glob("**/src/**/*.py")
     )
     keys.update(_OPTION_GET_LITERAL_RE.findall(shared_policy.read_text(encoding="utf-8")))
+    proofread_common = source_root / "proofread/src/docwen_plugin_proofread/_common.py"
+    assert "resolve_proofread_switches(config, options)" in proofread_common.read_text(encoding="utf-8")
+    shared_proofread = PROJECT_ROOT / "packages/core/src/docwen_core/options/proofread.py"
+    keys.update(_OPTION_GET_LITERAL_RE.findall(shared_proofread.read_text(encoding="utf-8")))
     return keys
 
 

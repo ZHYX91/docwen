@@ -22,6 +22,49 @@ class TestCanonicalRouteOptionProjection:
                 route_options=(),
             )
 
+    def test_markdown_docx_checks_become_application_postprocess_intent(self) -> None:
+        from docwen_cli.commands.execution_request import project_route_options
+        from docwen_core.models.request import POSTPROCESS_PROOFREAD_OPTION
+
+        projected = project_route_options(
+            {
+                "enable_symbol_pairing": True,
+                "enable_symbol_correction": False,
+                "enable_typos_rule": True,
+                "enable_sensitive_word": False,
+                "remove_numbering": True,
+            },
+            route_id="convert.markdown.to_docx",
+            route_options=("remove_numbering",),
+            source_format="markdown",
+            target_format="docx",
+            action_name="",
+        )
+
+        assert projected == {
+            "remove_numbering": True,
+            POSTPROCESS_PROOFREAD_OPTION: {
+                "enable_symbol_pairing": True,
+                "enable_symbol_correction": False,
+                "enable_typos_rule": True,
+                "enable_sensitive_word": False,
+            },
+        }
+
+    def test_explicit_proofread_rejects_non_markdown_source(self) -> None:
+        from docwen_cli.commands.execution_request import project_route_options
+
+        with pytest.raises(ValueError, match="Markdown-to-DOCX"):
+            project_route_options(
+                {},
+                route_id="convert.docx.to_docx",
+                route_options=(),
+                source_format="docx",
+                target_format="docx",
+                action_name="",
+                proofread_requested=True,
+            )
+
     def test_runtime_defaults_are_only_injected_when_declared(self) -> None:
         from docwen_cli.commands.execution_request import project_route_options
 
