@@ -17,7 +17,7 @@ IMAGE_TO_MD_OPTIONS_SCHEMA = {
             "default": True,
             "description": "Run OCR; multi-frame TIFF emits one typed fragment per physical frame",
         },
-        "recognize_tables": {"type": "boolean"},
+        "recognize_tables": {"type": "boolean", "x-docwen-status": "implemented"},
         "ocr_language": {
             "type": "string",
             "enum": ["auto", "chinese", "chinese_cht", "english", "japanese", "korean", "latin", "cyrillic"],

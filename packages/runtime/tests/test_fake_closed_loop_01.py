@@ -519,6 +519,6 @@ class TestFullClosedLoop:
         result = task_manager.execute_single(request)
 
         assert result.success is True
-        warnings = [diagnostic for diagnostic in result.diagnostics if diagnostic.code.startswith("OCR-BEST-EFFORT.")]
+        warnings = [diagnostic for diagnostic in result.diagnostics if diagnostic.code == "OCR-BEST-EFFORT"]
         assert len(warnings) == 1
         assert warnings[0].location == "sample.png"

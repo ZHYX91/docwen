@@ -55,7 +55,7 @@ GONGWEN_OPTIONS_SCHEMA: dict = {
             "default": False,
             "description": "Run OCR on embedded images during Markdown export.",
         },
-        "recognize_tables": {"type": "boolean"},
+        "recognize_tables": {"type": "boolean", "x-docwen-status": "implemented"},
         "ocr_language": {
             "type": "string",
             "enum": ["auto", "chinese", "chinese_cht", "english", "japanese", "korean", "latin", "cyrillic"],
