@@ -15,7 +15,6 @@ _GOVERNANCE_DIRECTORIES = (
     "diagnostics",
     "quarantine",
     "temp",
-    "tmp",
     "tools",
 )
 _README_HEADING = "# DocWen 本地工作区"
