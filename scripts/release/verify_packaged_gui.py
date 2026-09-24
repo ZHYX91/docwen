@@ -326,9 +326,7 @@ def _gate_evidence_summary(
         except (OSError, json.JSONDecodeError) as exc:
             raise RuntimeError(f"packaged_gui_office_evidence_invalid:{evidence_path}") from exc
         if payload.get("schema") != _OFFICE_EVIDENCE_SCHEMA:
-            raise RuntimeError(
-                f"packaged_gui_office_evidence_schema_invalid:{payload.get('schema')!r}"
-            )
+            raise RuntimeError(f"packaged_gui_office_evidence_schema_invalid:{payload.get('schema')!r}")
         host = payload.get("host")
         cases = payload.get("cases")
         if not isinstance(host, dict) or not isinstance(cases, list) or len(cases) != 3:
