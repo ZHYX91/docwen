@@ -96,6 +96,24 @@ class TestSmartSheetConverter:
         ]
         assert result.artifacts[0].metadata["backend"] == "openpyxl -> fake-office"
 
+    def test_csv_hub_rejects_cell_text_that_would_be_truncated(self, tmp_path: Path) -> None:
+        from docwen_plugin_spreadsheet.format_conversion.converter import SmartSheetConverter
+
+        source_path = tmp_path / "too-long.csv"
+        source_path.write_text("x" * 32768, encoding="utf-8")
+        with tempfile.TemporaryDirectory() as staging:
+            context = _build_fake_context(str(source_path), staging, target_format="xls")
+            context.request.input_refs[0] = type(context.request.input_refs[0])(
+                path=str(source_path), format="csv", category="spreadsheet"
+            )
+            result = SmartSheetConverter().convert(context)
+
+        assert result.success is False
+        assert result.error is not None
+        assert result.error.error_type == "conversion_failed"
+        assert result.error.diagnostic_code == "SHEETFMT-XLSX-CELL-TEXT-TOO-LONG"
+        assert not result.artifacts
+
     def test_binary_to_csv_pipeline_finalizes_every_sheet(
         self,
         tmp_path: Path,
