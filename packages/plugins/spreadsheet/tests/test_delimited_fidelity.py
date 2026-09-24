@@ -120,20 +120,19 @@ def test_delimited_xlsx_cell_text_limit_accepts_exact_boundary(
 
 
 @pytest.mark.parametrize("sep", [",", "\t"])
-@pytest.mark.parametrize(
-    "value",
-    [
-        "x" * 32768,
-        "中" * 32768,
-        "😀" * 32768,
-        ("line\n" * 6554)[:32768],
-    ],
-)
+@pytest.mark.parametrize("value_kind", ["ascii", "cjk", "emoji", "newline"])
 def test_delimited_xlsx_cell_text_limit_rejects_without_truncation(
     tmp_path: Path,
     sep: str,
-    value: str,
+    value_kind: str,
 ) -> None:
+    values = {
+        "ascii": "x" * 32768,
+        "cjk": "中" * 32768,
+        "emoji": "😀" * 32768,
+        "newline": ("line\n" * 6554)[:32768],
+    }
+    value = values[value_kind]
     source = tmp_path / "too-long.txt"
     with source.open("w", encoding="utf-8", newline="") as handle:
         csv.writer(handle, delimiter=sep).writerow([value])
