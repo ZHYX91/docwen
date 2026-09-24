@@ -343,18 +343,17 @@ class XlsxToCsvConverter:
                 ],
             )
 
-        formula_cache_unavailable_count, formula_cache_locations = _find_unavailable_formula_caches(
-            wb,
-            formula_wb,
-            cancel_check=context.cancellation.check,
-        )
-
         # ── Phase 2: Write CSV per sheet ───────────────────────────────
         artifacts: list[ArtifactManifest] = []
         total_sheets = len(wb.sheetnames)
         total_rows = 0
 
         try:
+            formula_cache_unavailable_count, formula_cache_locations = _find_unavailable_formula_caches(
+                wb,
+                formula_wb,
+                cancel_check=context.cancellation.check,
+            )
             for idx, sheet_name in enumerate(wb.sheetnames):
                 context.cancellation.check()
                 progress = progress_start + (100.0 - progress_start) * (idx / max(total_sheets, 1))
@@ -632,18 +631,17 @@ class XlsxToTsvConverter:
                 ],
             )
 
-        formula_cache_unavailable_count, formula_cache_locations = _find_unavailable_formula_caches(
-            wb,
-            formula_wb,
-            cancel_check=context.cancellation.check,
-        )
-
         # ── Phase 2: Write TSV per sheet ───────────────────────────────
         artifacts: list[ArtifactManifest] = []
         total_sheets = len(wb.sheetnames)
         total_rows = 0
 
         try:
+            formula_cache_unavailable_count, formula_cache_locations = _find_unavailable_formula_caches(
+                wb,
+                formula_wb,
+                cancel_check=context.cancellation.check,
+            )
             for idx, sheet_name in enumerate(wb.sheetnames):
                 context.cancellation.check()
                 progress = 50.0 * (idx / max(total_sheets, 1))
