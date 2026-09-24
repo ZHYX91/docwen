@@ -96,7 +96,7 @@ def test_default_plan_covers_managed_roots_and_only_reports_root_bypasses(tmp_pa
     engineering, workspace = _workspace(tmp_path)
     now = datetime(2026, 8, 31, tzinfo=UTC)
     success = workspace / "build" / "success"
-    old_failure = workspace / "tmp" / "old-failure"
+    old_failure = workspace / "temp" / "old-failure"
     recent_failures = [workspace / "temp" / f"failure-{index}" for index in range(3)]
     _lease(success, created_at=now - timedelta(minutes=1), state="completed-success", kind="build")
     _lease(old_failure, created_at=now - timedelta(days=4), state="retained-failure", kind="old")
@@ -401,7 +401,7 @@ def test_protected_and_repository_targets_are_not_normal_housekeeping(tmp_path: 
 
 def test_managed_dependency_requires_explicit_clean_deps_and_is_not_auto_planned(tmp_path: Path) -> None:
     _, workspace = _workspace(tmp_path)
-    dependency = workspace / "tmp" / "probe" / "node_modules"
+    dependency = workspace / "temp" / "probe" / "node_modules"
     _lease(
         dependency,
         created_at=datetime(2020, 1, 1, tzinfo=UTC),

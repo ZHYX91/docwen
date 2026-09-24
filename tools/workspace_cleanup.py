@@ -28,7 +28,7 @@ PLAN_SCHEMA = "docwen.housekeeping-plan.v1"
 WORKSPACE_ROOT_ENV = _WORKSPACE_ROOT_ENV
 DEFAULT_FAILURE_TTL = timedelta(hours=72)
 DEFAULT_FAILURE_MAX_PER_KIND = 2
-MANAGED_ROOT_NAMES = ("temp", "build", "tmp")
+MANAGED_ROOT_NAMES = ("temp", "build")
 PROTECTED_WORKSPACE_ROOT_NAMES = (
     "acceptance",
     "artifacts",
