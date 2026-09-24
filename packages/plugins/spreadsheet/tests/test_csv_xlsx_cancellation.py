@@ -143,9 +143,8 @@ def test_formula_cache_scan_cancellation_closes_both_workbook_views(
     context = _build_fake_context(str(source), str(staging), target_format="csv")
 
     class _WorkbookView:
-        sheetnames = ["Sheet1"]
-
         def __init__(self) -> None:
+            self.sheetnames = ["Sheet1"]
             self.closed = False
 
         def close(self) -> None:
