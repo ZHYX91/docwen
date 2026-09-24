@@ -7,6 +7,7 @@ import pytest
 from ._csv_xlsx_support import (
     Path,
     _build_fake_context,
+    _write_cached_formula_merge_workbook,
     os,
     tempfile,
 )
@@ -138,6 +139,61 @@ class TestXlsxToCsv:
             assert rows[0][0] == "Product"
             assert rows[1][0] == "Alpha"
 
+    def test_xlsx_to_csv_warns_when_formula_cache_is_unavailable(self, tmp_path: Path) -> None:
+        import openpyxl
+
+        from docwen_plugin_spreadsheet.csv_xlsx.converter import XlsxToCsvConverter
+
+        source = tmp_path / "formula-no-cache.xlsx"
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        assert sheet is not None
+        sheet.title = "Calc"
+        sheet["A1"] = "=1+1"
+        sheet["B1"] = "plain"
+        workbook.save(source)
+        workbook.close()
+
+        staging = tmp_path / "formula-no-cache-csv"
+        staging.mkdir()
+        context = _build_fake_context(str(source), str(staging), target_format="csv")
+        result = XlsxToCsvConverter().convert(context)
+
+        assert result.success is True
+        warnings = [item for item in result.diagnostics if item.level == "warning"]
+        assert [item.code for item in warnings] == ["XLSX2CSV-FORMULA-CACHE-UNAVAILABLE"]
+        assert "Calc!A1" in warnings[0].message
+        assert "B1" not in warnings[0].message
+        assert "does not establish whether any existing cached values are current" in warnings[0].message
+
+    def test_xlsx_to_csv_does_not_warn_when_formula_cache_is_available(self, tmp_path: Path) -> None:
+        import csv
+
+        from docwen_plugin_spreadsheet.csv_xlsx.converter import XlsxToCsvConverter
+
+        source = tmp_path / "formula-cached.xlsx"
+        _write_cached_formula_merge_workbook(
+            source,
+            {
+                "worksheet": "Calc",
+                "rows": [["Label", "Value"], ["A", 8], ["B", 12], ["Total", "=SUM(B2:B3)"]],
+                "formula_cell": "B4",
+                "formula_text": "=SUM(B2:B3)",
+                "cached_value": "20",
+            },
+        )
+
+        staging = tmp_path / "formula-cached-csv"
+        staging.mkdir()
+        context = _build_fake_context(str(source), str(staging), target_format="csv")
+        result = XlsxToCsvConverter().convert(context)
+
+        assert result.success is True
+        assert "XLSX2CSV-FORMULA-CACHE-UNAVAILABLE" not in {item.code for item in result.diagnostics}
+        with Path(result.artifacts[0].staging_path).open(encoding="utf-8-sig", newline="") as handle:
+            rows = list(csv.reader(handle))
+        assert rows[3][1] == "20"
+
     def test_xlsx_to_csv_uses_admitted_format_when_suffix_is_wrong(
         self,
         sample_xlsx_path: Path,
@@ -230,6 +286,30 @@ class TestXlsxToTsv:
 
             assert rows[0][0] == "Product"
             assert rows[1][0] == "Alpha"
+
+    def test_xlsx_to_tsv_warns_when_formula_cache_is_unavailable(self, tmp_path: Path) -> None:
+        import openpyxl
+
+        from docwen_plugin_spreadsheet.csv_xlsx.converter import XlsxToTsvConverter
+
+        source = tmp_path / "formula-no-cache.xlsx"
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        assert sheet is not None
+        sheet.title = "Calc"
+        sheet["C3"] = "=2+2"
+        workbook.save(source)
+        workbook.close()
+
+        staging = tmp_path / "formula-no-cache-tsv"
+        staging.mkdir()
+        context = _build_fake_context(str(source), str(staging), target_format="tsv")
+        result = XlsxToTsvConverter().convert(context)
+
+        assert result.success is True
+        warnings = [item for item in result.diagnostics if item.level == "warning"]
+        assert [item.code for item in warnings] == ["XLSX2TSV-FORMULA-CACHE-UNAVAILABLE"]
+        assert "Calc!C3" in warnings[0].message
 
     def test_xlsx_to_tsv_uses_admitted_format_when_suffix_is_wrong(
         self,

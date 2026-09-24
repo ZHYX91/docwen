@@ -54,6 +54,60 @@ def _load_admitted_xlsx(file_path: str, *, data_only: bool = True) -> Any:
         return openpyxl.load_workbook(workbook_stream, data_only=data_only)
 
 
+def _load_xlsx_views(file_path: str) -> tuple[Any, Any]:
+    """Load cached-value and formula views of the same admitted workbook."""
+
+    values = _load_admitted_xlsx(file_path, data_only=True)
+    try:
+        formulas = _load_admitted_xlsx(file_path, data_only=False)
+    except BaseException:
+        values.close()
+        raise
+    return values, formulas
+
+
+def _find_unavailable_formula_caches(
+    values_workbook: Any,
+    formula_workbook: Any,
+    *,
+    input_path: str,
+    location_limit: int = 20,
+) -> tuple[int, list[str]]:
+    """Find formula cells whose cached scalar value is unavailable to openpyxl."""
+
+    from .formula_cache import empty_string_caches
+
+    known_empty = empty_string_caches(input_path)
+    count = 0
+    locations: list[str] = []
+    for sheet_name in formula_workbook.sheetnames:
+        formula_sheet = formula_workbook[sheet_name]
+        values_sheet = values_workbook[sheet_name]
+        for row in formula_sheet.iter_rows():
+            for formula_cell in row:
+                if formula_cell.data_type != "f":
+                    continue
+                if values_sheet[formula_cell.coordinate].value is not None:
+                    continue
+                if (sheet_name, formula_cell.coordinate) in known_empty:
+                    continue
+                count += 1
+                if len(locations) < location_limit:
+                    locations.append(f"{sheet_name}!{formula_cell.coordinate}")
+    return count, locations
+
+
+def _formula_cache_warning_message(count: int, locations: list[str]) -> str:
+    shown = ", ".join(locations)
+    omitted = count - len(locations)
+    suffix = f"; {omitted} more not listed" if omitted > 0 else ""
+    return (
+        f"{count} formula cell(s) have no usable cached value in this workbook and were exported as empty text. "
+        f"Locations: {shown}{suffix}. Recalculate and save the workbook in a spreadsheet application when values "
+        "are required. This warning does not establish whether any existing cached values are current."
+    )
+
+
 def _build_delimited_workbook(
     input_path: str,
     *,
@@ -263,8 +317,9 @@ class XlsxToCsvConverter:
 
         # ── Phase 1: Parse XLSX ───────────────────────────────────────
         wb = None
+        formula_wb = None
         try:
-            wb = _load_admitted_xlsx(input_path, data_only=True)
+            wb, formula_wb = _load_xlsx_views(input_path)
         except Exception as exc:
             context.logger.error(f"XLSX→CSV parse failed: {exc}")
             return ConversionResult(
@@ -290,6 +345,11 @@ class XlsxToCsvConverter:
         total_rows = 0
 
         try:
+            formula_cache_unavailable_count, formula_cache_locations = _find_unavailable_formula_caches(
+                wb,
+                formula_wb,
+                input_path=input_path,
+            )
             for idx, sheet_name in enumerate(wb.sheetnames):
                 context.cancellation.check()
                 progress = progress_start + (100.0 - progress_start) * (idx / max(total_sheets, 1))
@@ -348,21 +408,37 @@ class XlsxToCsvConverter:
         finally:
             if wb is not None:
                 wb.close()
+            if formula_wb is not None:
+                formula_wb.close()
 
         context.progress.report_progress(100.0, "XLSX → CSV complete")
         context.logger.info(f"XLSX→CSV complete: {len(artifacts)} sheets, {total_rows} rows")
+
+        diagnostics = [
+            ConversionDiagnostic(
+                level="info",
+                message=f"Converted XLSX to CSV: {len(artifacts)} sheets",
+                code="XLSX2CSV-OK",
+            )
+        ]
+        if formula_cache_unavailable_count:
+            diagnostics.insert(
+                0,
+                ConversionDiagnostic(
+                    level="warning",
+                    message=_formula_cache_warning_message(
+                        formula_cache_unavailable_count,
+                        formula_cache_locations,
+                    ),
+                    code="XLSX2CSV-FORMULA-CACHE-UNAVAILABLE",
+                ),
+            )
 
         return ConversionResult(
             task_id=task_id,
             success=True,
             artifacts=artifacts,
-            diagnostics=[
-                ConversionDiagnostic(
-                    level="info",
-                    message=f"Converted XLSX to CSV: {len(artifacts)} sheets",
-                    code="XLSX2CSV-OK",
-                ),
-            ],
+            diagnostics=diagnostics,
             error=None,
             metrics=ConversionMetrics(
                 duration_ms=0.0,
@@ -519,8 +595,9 @@ class XlsxToTsvConverter:
 
         # ── Phase 1: Parse XLSX ───────────────────────────────────────
         wb = None
+        formula_wb = None
         try:
-            wb = _load_admitted_xlsx(input_path, data_only=True)
+            wb, formula_wb = _load_xlsx_views(input_path)
         except Exception as exc:
             context.logger.error(f"XLSX→TSV parse failed: {exc}")
             return ConversionResult(
@@ -546,6 +623,11 @@ class XlsxToTsvConverter:
         total_rows = 0
 
         try:
+            formula_cache_unavailable_count, formula_cache_locations = _find_unavailable_formula_caches(
+                wb,
+                formula_wb,
+                input_path=input_path,
+            )
             for idx, sheet_name in enumerate(wb.sheetnames):
                 context.cancellation.check()
                 progress = 50.0 * (idx / max(total_sheets, 1))
@@ -602,21 +684,37 @@ class XlsxToTsvConverter:
         finally:
             if wb is not None:
                 wb.close()
+            if formula_wb is not None:
+                formula_wb.close()
 
         context.progress.report_progress(100.0, "XLSX → TSV complete")
         context.logger.info(f"XLSX→TSV complete: {len(artifacts)} sheets, {total_rows} rows")
+
+        diagnostics = [
+            ConversionDiagnostic(
+                level="info",
+                message=f"Converted XLSX to TSV: {len(artifacts)} sheets",
+                code="XLSX2TSV-OK",
+            )
+        ]
+        if formula_cache_unavailable_count:
+            diagnostics.insert(
+                0,
+                ConversionDiagnostic(
+                    level="warning",
+                    message=_formula_cache_warning_message(
+                        formula_cache_unavailable_count,
+                        formula_cache_locations,
+                    ),
+                    code="XLSX2TSV-FORMULA-CACHE-UNAVAILABLE",
+                ),
+            )
 
         return ConversionResult(
             task_id=task_id,
             success=True,
             artifacts=artifacts,
-            diagnostics=[
-                ConversionDiagnostic(
-                    level="info",
-                    message=f"Converted XLSX to TSV: {len(artifacts)} sheets",
-                    code="XLSX2TSV-OK",
-                ),
-            ],
+            diagnostics=diagnostics,
             error=None,
             metrics=ConversionMetrics(
                 duration_ms=0.0,
