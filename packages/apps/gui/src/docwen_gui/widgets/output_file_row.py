@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QHBoxLayout, QToolButton, QWidget
 
 from docwen_gui.i18n import t
 from docwen_gui.styles.design_tokens import Sizing, Spacing
+from docwen_gui.styles.ui_scale import set_metric
 
 from .elided_label import MiddleElidedLabel
 from .location_button import LocationButton
@@ -19,13 +20,13 @@ class OutputFileRow(QWidget):
         self._path = ""
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(Spacing.CONTROL_GAP)
+        set_metric(layout, "setSpacing", Spacing.CONTROL_GAP)
         self.name_label = MiddleElidedLabel("", self)
         self.name_label.setObjectName("outputFileName")
         layout.addWidget(self.name_label, 1)
         self.count_button = QToolButton(self)
         self.count_button.setObjectName("outputFileCount")
-        self.count_button.setMinimumHeight(Sizing.CONTROL_HEIGHT)
+        set_metric(self.count_button, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
         self.count_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.count_button.clicked.connect(self.details_requested.emit)
         layout.addWidget(self.count_button)

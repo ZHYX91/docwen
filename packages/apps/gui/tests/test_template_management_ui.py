@@ -119,7 +119,7 @@ def test_settings_has_shared_template_page_and_no_text_selector(qapp, template_v
 
 
 @pytest.mark.parametrize("locale", ["zh_CN", "en_US"])
-@pytest.mark.parametrize("preset", ["default", "xlarge"])
+@pytest.mark.parametrize("preset", ["default", "large"])
 @pytest.mark.parametrize("width", [600, 700])
 def test_template_action_captions_fit_narrow_settings(qapp, template_vm, locale, preset, width):
     from PySide6.QtCore import QRect, Qt

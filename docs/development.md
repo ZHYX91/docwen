@@ -26,6 +26,10 @@ changing it; use `--check` to verify that they have not drifted from the SVG.
 .\.venv\Scripts\python.exe scripts\maintenance\generate_app_icons.py --check
 ```
 
+## UI dimensions and resources / 界面尺寸与资源
+
+See [GUI behavior and visual ownership](specs/gui-behavior.md#visual-system--视觉规范). Add baseline dimensions to shared tokens, bind static geometry through `set_metric`, and use font metrics for responsive text layout. Keep new assets in the existing licensed icon collection or the canonical brand source. MSIX builds require the Windows SDK MakePri tool beside MakeAppx; the package must include `resources.pri`.
+
 ## Contribution rules / 开发规则
 
 - Put shared contracts and pure logic in core.

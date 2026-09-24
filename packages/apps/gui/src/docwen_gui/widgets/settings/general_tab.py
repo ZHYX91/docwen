@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from docwen_gui.styles.ui_scale import set_metric
 from docwen_gui.widgets.value_controls import ScrollSafeComboBox, ScrollSafeDoubleSpinBox
 
 from ...i18n import t
@@ -65,7 +66,7 @@ class GeneralTab(BaseSettingsTab):
         lang_container = QWidget(lang_card)
         lang_container_layout = QVBoxLayout(lang_container)
         lang_container_layout.setContentsMargins(0, 0, 0, 0)
-        lang_container_layout.setSpacing(8)
+        set_metric(lang_container_layout, "setSpacing", 8)
 
         lang_combo = ScrollSafeComboBox(lang_container)
         lang_combo.setObjectName("generalLanguageCombo")
@@ -96,8 +97,8 @@ class GeneralTab(BaseSettingsTab):
 
         # ── Theme card ──────────────────────────────────────────────────
         theme_card, theme_form = self.add_settings_card(
-            t("settings.general.theme_section", "Theme"),
-            t("settings.general.theme_description", "Choose between light, dark, or follow system theme."),
+            t("settings.general.theme_section", "Appearance"),
+            t("settings.general.theme_description", "Choose the theme, text size and interface scale."),
             object_name="generalThemeCard",
         )
         theme_combo = ScrollSafeComboBox(theme_card)
@@ -114,11 +115,38 @@ class GeneralTab(BaseSettingsTab):
         )
         theme_combo.currentIndexChanged.connect(self._on_theme_changed)
 
+        from docwen_gui.font_utils import FONT_SIZE_PRESETS
+        from docwen_gui.styles.ui_scale import SCALE_PRESETS
+
+        self._font_combo = ScrollSafeComboBox(theme_card)
+        self._font_combo.setObjectName("generalFontCombo")
+        _prepare_combo(self._font_combo)
+        for preset in FONT_SIZE_PRESETS:
+            self._font_combo.addItem(t(f"components.font_size.{preset}", preset.title()), preset)
+        self.add_form_row(theme_form, t("settings.general.font_label", "Text size:"), self._font_combo)
+        self._font_combo.currentIndexChanged.connect(self._on_font_changed)
+
+        self._scale_combo = ScrollSafeComboBox(theme_card)
+        self._scale_combo.setObjectName("generalScaleCombo")
+        _prepare_combo(self._scale_combo)
+        for percent in SCALE_PRESETS:
+            self._scale_combo.addItem(f"{percent}%", percent)
+        self.add_form_row(
+            theme_form,
+            t("settings.general.scale_label", "Interface scale:"),
+            self._scale_combo,
+            t(
+                "settings.general.scale_tooltip",
+                "Relative to system scaling. Changes text, icons and spacing together.",
+            ),
+        )
+        self._scale_combo.currentIndexChanged.connect(self._on_scale_changed)
+
         # Theme preview
         preview_container = QWidget(theme_card)
         preview_layout = QVBoxLayout(preview_container)
         preview_layout.setContentsMargins(0, 0, 0, 0)
-        preview_layout.setSpacing(8)
+        set_metric(preview_layout, "setSpacing", 8)
         preview_title = QLabel(t("settings.general.theme_preview", "Preview:"), preview_container)
         preview_title.setObjectName("generalThemePreviewTitle")
         preview_title.setAlignment(Qt.AlignmentFlag.AlignLeft)
@@ -127,8 +155,8 @@ class GeneralTab(BaseSettingsTab):
         preview_frame = QWidget(preview_container)
         preview_frame.setObjectName("generalThemePreviewFrame")
         preview_frame_layout = QHBoxLayout(preview_frame)
-        preview_frame_layout.setContentsMargins(12, 12, 12, 12)
-        preview_frame_layout.setSpacing(12)
+        set_metric(preview_frame_layout, "setContentsMargins", 12, 12, 12, 12)
+        set_metric(preview_frame_layout, "setSpacing", 12)
         sample_button = QPushButton(t("settings.general.sample_button", "Sample Button"), preview_frame)
         sample_button.setObjectName("generalThemePreviewButton")
         sample_text = QLabel(
@@ -150,7 +178,7 @@ class GeneralTab(BaseSettingsTab):
         transp_container = QWidget(transp_card)
         transp_container_layout = QVBoxLayout(transp_container)
         transp_container_layout.setContentsMargins(0, 0, 0, 0)
-        transp_container_layout.setSpacing(8)
+        set_metric(transp_container_layout, "setSpacing", 8)
 
         enabled = self.create_settings_toggle(
             t("settings.general.transparency.enable", "Enable Window Transparency"),
@@ -164,14 +192,14 @@ class GeneralTab(BaseSettingsTab):
         value_row.setObjectName("generalTransparencyValueRow")
         value_row_layout = QHBoxLayout(value_row)
         value_row_layout.setContentsMargins(0, 0, 0, 0)
-        value_row_layout.setSpacing(8)
+        set_metric(value_row_layout, "setSpacing", 8)
 
         value = ScrollSafeDoubleSpinBox(value_row)
         value.setObjectName("generalTransparencySpinBox")
         value.setRange(0.20, 1.00)
         value.setSingleStep(0.05)
         value.setDecimals(2)
-        value.setMaximumWidth(92)
+        set_metric(value, "setMaximumWidth", 92)
         value.setToolTip(
             t(
                 "settings.general.transparency.opacity_value_tooltip",
@@ -184,7 +212,7 @@ class GeneralTab(BaseSettingsTab):
 
         value_label = QLabel(value_row)
         value_label.setObjectName("generalTransparencyPercentLabel")
-        value_label.setMinimumWidth(40)
+        set_metric(value_label, "setMinimumWidth", 40)
         self._transparency_value_label = value_label
         value_row_layout.addWidget(value_label)
         value_row_layout.addStretch(1)
@@ -256,6 +284,8 @@ class GeneralTab(BaseSettingsTab):
 
         # Block signals to prevent spurious dirty-state emissions during load
         signal_widgets = [
+            self._font_combo,
+            self._scale_combo,
             self._language_combo,
             self._theme_combo,
             self._transparency_enabled,
@@ -270,6 +300,8 @@ class GeneralTab(BaseSettingsTab):
                 w.blockSignals(True)
 
         try:
+            self.set_combo_data(self._font_combo, gui.font_size_preset)
+            self.set_combo_data(self._scale_combo, gui.scale_percent)
             if self._language_combo is not None:
                 self.set_combo_data(self._language_combo, gui.language)
             if self._theme_combo is not None:
@@ -313,6 +345,20 @@ class GeneralTab(BaseSettingsTab):
             from docwen_gui.styles.theme_manager import ThemeManager
 
             ThemeManager.get_instance().apply_theme(theme)
+
+    def _on_font_changed(self, _index: int) -> None:
+        from docwen_gui.styles.theme_manager import ThemeManager
+
+        preset = str(self._font_combo.currentData())
+        self._vm.set_field(SECTION_GUI, "font_size_preset", preset)
+        ThemeManager.get_instance().apply_font_size_preset(preset)
+
+    def _on_scale_changed(self, _index: int) -> None:
+        from docwen_gui.styles.theme_manager import ThemeManager
+
+        percent = int(self._scale_combo.currentData())
+        self._vm.set_field(SECTION_GUI, "scale_percent", percent)
+        ThemeManager.get_instance().apply_ui_scale(percent)
 
     def _on_transparency_toggled(self, checked: bool) -> None:
         if self._transparency_value is not None:

@@ -202,14 +202,17 @@ save_success_message = "Konfiguration gespeichert und neu geladen."
 # 通用设置选项卡
 # -----------------------------------------------------------------------------
 [settings.general]
+font_label = "Textgröße:"
+scale_label = "Oberflächenskalierung:"
+scale_tooltip = "Relativ zur Systemskalierung. Passt Text, Symbole und Abstände gemeinsam an."
 # 语言设置区域
 language_section = "Sprache"
 language_label = "Sprache wählen:"
 language_tooltip = "Anzeigesprache wählen.\nNeustart erforderlich."
 
 # 主题设置区域
-theme_section = "Design"
-theme_description = "Zwischen hellem, dunklem und dem Systemdesign wählen."
+theme_section = "Darstellung"
+theme_description = "Design, Schriftgröße und Oberflächenskalierung anpassen."
 theme_label = "Design wählen:"
 theme_tooltip = "Visuelles Design der Anwendung wählen."
 theme_preview = "Vorschau:"
@@ -885,7 +888,6 @@ emoji = "Emoji-Erkennungs- und Verarbeitungsbibliothek"
 small = "Klein"
 default = "Standard"
 large = "Gross"
-xlarge = "Sehr gross"
 
 # 文件拖拽区
 [components.file_drop]

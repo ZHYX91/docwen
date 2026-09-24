@@ -202,14 +202,17 @@ save_success_message = "구성이 저장되고 다시 불러와졌습니다."
 # 通用设置选项卡
 # -----------------------------------------------------------------------------
 [settings.general]
+font_label = "글자 크기:"
+scale_label = "화면 배율:"
+scale_tooltip = "시스템 배율을 기준으로 글자, 아이콘, 간격을 함께 조정합니다."
 # 语言设置区域
 language_section = "언어"
 language_label = "인터페이스 언어 선택:"
 language_tooltip = "애플리케이션의 표시 언어를 선택합니다.\n변경 사항은 재시작 후 적용됩니다."
 
 # 主题设置区域
-theme_section = "인터페이스 테마"
-theme_description = "밝게, 어둡게 또는 시스템 테마 따르기 중에서 선택합니다."
+theme_section = "모양"
+theme_description = "테마, 글자 크기 및 인터페이스 배율을 조정합니다."
 theme_label = "애플리케이션 테마 선택:"
 theme_tooltip = "애플리케이션의 시각적 테마를 선택합니다.\n테마마다 색상/스타일이 다릅니다.\n변경 사항은 저장 후 적용됩니다."
 theme_preview = "테마 미리보기:"
@@ -883,9 +886,8 @@ emoji = "이모지 감지 및 처리 라이브러리"
 # 글자 크기
 [components.font_size]
 small = "작게"
-default = "기본"
+default = "표준"
 large = "크게"
-xlarge = "아주 크게"
 
 # 文件拖拽区
 [components.file_drop]

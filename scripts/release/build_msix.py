@@ -22,6 +22,7 @@ import zipfile
 from collections.abc import Mapping, Sequence
 from pathlib import Path, PurePosixPath
 from typing import Any, cast
+from xml.etree import ElementTree
 from xml.sax.saxutils import escape, quoteattr
 
 from PIL import Image
@@ -57,11 +58,11 @@ _ASSET_SPECS = {
     "Square150x150Logo.scale-150.png": ((225, 225), 0.64),
     "Square150x150Logo.scale-200.png": ((300, 300), 0.64),
     "Square150x150Logo.scale-400.png": ((600, 600), 0.64),
-    "Square44x44Logo.targetsize-16_altform-unplated.png": ((16, 16), 1.0),
-    "Square44x44Logo.targetsize-24_altform-unplated.png": ((24, 24), 1.0),
-    "Square44x44Logo.targetsize-32_altform-unplated.png": ((32, 32), 1.0),
-    "Square44x44Logo.targetsize-48_altform-unplated.png": ((48, 48), 1.0),
-    "Square44x44Logo.targetsize-256_altform-unplated.png": ((256, 256), 1.0),
+    **{
+        f"Square44x44Logo.targetsize-{size}{variant}.png": ((size, size), 1.0)
+        for size in (16, 20, 24, 30, 32, 36, 40, 44, 48, 60, 64, 72, 80, 96, 256)
+        for variant in ("", "_altform-unplated", "_altform-lightunplated")
+    },
 }
 
 
@@ -493,6 +494,44 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def write_resource_index(staging_root: Path, work: Path, makepri: Path) -> None:
+    """Index Shell icon qualifiers; loose qualified PNGs alone are insufficient.
+
+    Keep the SDK-generated defaults but index only the Shell assets. Python
+    payload paths are not Windows localized resources. Do not split scale
+    resources out of the single Store package.
+    """
+    _require(makepri.is_file(), "makepri_not_found")
+    config_path = work / "priconfig.xml"
+
+    def run(arguments: list[str]) -> None:
+        completed = subprocess.run(
+            [str(makepri), *arguments],
+            cwd=work,
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=120,
+        )
+        _require(completed.returncode == 0, f"makepri_failed:{completed.stdout}:{completed.stderr}")
+
+    run(["createconfig", "/cf", str(config_path), "/dq", "en-US", "/o"])
+    tree = ElementTree.parse(config_path)
+    root = tree.getroot()
+    for packaging in root.findall("packaging"):
+        root.remove(packaging)
+    index = root.find("index")
+    _require(index is not None, "makepri_config_index_missing")
+    assert index is not None
+    index.set("root", "")
+    index.set("startIndexAt", "assets/msix")
+    tree.write(config_path, encoding="utf-8", xml_declaration=True)
+    run(["new", "/pr", str(staging_root), "/cf", str(config_path), "/of", str(staging_root / "resources.pri"), "/o"])
+    _require((staging_root / "resources.pri").is_file(), "makepri_output_missing")
+
+
 def package_content_identity(path: Path) -> tuple[int, str]:
     """Hash package paths and uncompressed bytes while ignoring ZIP timestamps."""
 
@@ -572,10 +611,11 @@ def _build_msix(
     safe_work_root = work
     staging_root = safe_work_root / "staging"
     sanitized_pe_certificates = prepare_layout(payload_root.resolve(), staging_root, config)
-    _normalize_timestamps(staging_root, int(config["reproducibilityEpoch"]))
 
     output = output.resolve()
     _require(not output.exists() and not output.is_relative_to(work), "msix_output_must_be_new_outside_work")
+    write_resource_index(staging_root, work, makeappx.with_name("makepri.exe"))
+    _normalize_timestamps(staging_root, int(config["reproducibilityEpoch"]))
     output.parent.mkdir(parents=True, exist_ok=True)
     built = work / "built.msix"
     completed = subprocess.run(

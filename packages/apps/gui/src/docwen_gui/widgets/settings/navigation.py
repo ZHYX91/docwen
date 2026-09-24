@@ -1,10 +1,60 @@
-"""Keyboard and accessible names for the custom-painted settings sidebar."""
+"""Keyboard and accessible names for the Qt settings sidebar."""
 
 from __future__ import annotations
 
-from PySide6.QtCore import QEvent, QObject, QRectF, Qt
-from PySide6.QtGui import QKeyEvent, QPainter, QPaintEvent, QPalette, QPen
-from PySide6.QtWidgets import QTabWidget, QWidget
+from PySide6.QtCore import QEvent, QObject, QRectF, QSize, Qt, Signal
+from PySide6.QtGui import QIcon, QKeyEvent, QPainter, QPaintEvent, QPalette, QPen
+from PySide6.QtWidgets import QFrame, QPushButton, QSizePolicy, QTabWidget, QVBoxLayout, QWidget
+
+from docwen_gui.styles.design_tokens import Sizing, Spacing
+from docwen_gui.styles.ui_scale import dp, set_metric
+
+
+class SettingsSidebar(QFrame):
+    """Native Qt buttons share application typography, metrics and vector icons."""
+
+    page_requested = Signal(int)
+
+    def __init__(self, parent: QWidget) -> None:
+        super().__init__(parent)
+        self.setObjectName("settingsNavigation")
+        self._buttons: dict[str, QPushButton] = {}
+        self._layout = QVBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        set_metric(self._layout, "setSpacing", Spacing.XS)
+        self._layout.addStretch(1)
+
+    def add_page(self, key: str, index: int, title: str, icon: QIcon | None) -> QPushButton:
+        button = QPushButton(title, self)
+        button.setProperty("settingsNavigationItem", True)
+        button.setCheckable(True)
+        button.setAutoExclusive(True)
+        button.setAutoDefault(False)
+        button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        button.setToolTip(title)
+        if icon is not None:
+            button.setIcon(icon)
+        set_metric(button, "setIconSize", QSize(18, 18))
+        set_metric(button, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
+        button.clicked.connect(lambda _checked=False: self.page_requested.emit(index))
+        self._buttons[key] = button
+        self._layout.insertWidget(self._layout.count() - 1, button)
+        return button
+
+    def page_button(self, key: str) -> QPushButton | None:
+        return self._buttons.get(key)
+
+    def select_page(self, key: str) -> None:
+        button = self.page_button(key)
+        if button is not None:
+            button.setChecked(True)
+
+    def refresh_width(self) -> None:
+        for button in self._buttons.values():
+            button.ensurePolished()
+        self.setFixedWidth(
+            max(dp(168), max((button.sizeHint().width() for button in self._buttons.values()), default=0))
+        )
 
 
 class _NavigationFocusFrame(QWidget):

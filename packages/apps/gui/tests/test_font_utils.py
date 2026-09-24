@@ -109,14 +109,13 @@ def test_apply_application_font_preserves_cjk_family_in_offscreen_qapp(qapp, mon
     assert qapp.font().pointSize() == 13
 
 
-def test_font_size_preset_contract_matches_old_projects() -> None:
+def test_font_size_presets_are_three_distinct_accessible_sizes() -> None:
     from docwen_gui import font_utils
 
     assert font_utils.FONT_SIZE_PRESETS == {
-        "small": 11,
-        "default": 12,
+        "small": 9,
+        "default": 10.5,
         "large": 13,
-        "xlarge": 15,
     }
-    assert font_utils.resolve_font_size_preset("extra-large") == 15
-    assert font_utils.resolve_font_size_preset("unknown") == 12
+    assert font_utils.resolve_font_size_preset("extra-large") == 10.5
+    assert font_utils.resolve_font_size_preset("unknown") == 10.5

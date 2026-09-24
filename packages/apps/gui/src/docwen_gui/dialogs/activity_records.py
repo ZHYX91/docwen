@@ -25,6 +25,7 @@ from docwen_gui.dialogs.diagnostics import DiagnosticView
 from docwen_gui.i18n import t
 from docwen_gui.styles.design_tokens import Sizing, Spacing
 from docwen_gui.styles.theme_semantics import apply_theme_class
+from docwen_gui.styles.ui_scale import dp, set_metric
 from docwen_gui.view_models.activity_records import ActivityRecord, ActivityRecordsModel, activity_status_label
 from docwen_gui.widgets.panel_card import ChoiceGroup
 from docwen_gui.widgets.value_controls import ScrollSafeComboBox
@@ -73,7 +74,9 @@ class _ActivityFilter(QSortFilterProxyModel):
 class _ActivityDelegate(QStyledItemDelegate):
     def sizeHint(self, option, index) -> QSize:
         hint = super().sizeHint(option, index)
-        hint.setHeight(max(hint.height(), Sizing.CONTROL_HEIGHT, option.fontMetrics.height() + 2 * Spacing.CONTROL_GAP))
+        hint.setHeight(
+            max(hint.height(), dp(Sizing.CONTROL_HEIGHT), option.fontMetrics.height() + 2 * dp(Spacing.CONTROL_GAP))
+        )
         return hint
 
     def initStyleOption(self, option, index) -> None:
@@ -96,7 +99,7 @@ class ActivityRecordsDialog(QDialog):
         self.setWindowTitle(t("activity.title"))
         self.setModal(False)
         self.resize(800, 600)
-        self.setMinimumSize(420, 360)
+        set_metric(self, "setMinimumSize", 420, 360)
         self._model = model
         self._selected_key = ""
         self._resetting = False
@@ -105,17 +108,22 @@ class ActivityRecordsDialog(QDialog):
         self._proxy.setSortRole(Qt.ItemDataRole.UserRole + 1)
         self._proxy.setSortCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(
-            Spacing.CARD_PADDING, Spacing.CARD_PADDING, Spacing.CARD_PADDING, Spacing.CARD_PADDING
+        set_metric(
+            layout,
+            "setContentsMargins",
+            Spacing.CARD_PADDING,
+            Spacing.CARD_PADDING,
+            Spacing.CARD_PADDING,
+            Spacing.CARD_PADDING,
         )
-        layout.setSpacing(Spacing.GROUP_GAP)
+        set_metric(layout, "setSpacing", Spacing.GROUP_GAP)
         self.search = QLineEdit(self)
         self.search.setPlaceholderText(t("activity.search"))
         self.search.setAccessibleName(t("activity.search"))
         self.search.setClearButtonEnabled(True)
         layout.addWidget(self.search)
         filters = QHBoxLayout()
-        filters.setSpacing(Spacing.CONTROL_GAP)
+        set_metric(filters, "setSpacing", Spacing.CONTROL_GAP)
         self.status_filter = ScrollSafeComboBox(self)
         self.status_filter.setAccessibleName(t("activity.status"))
         self.status_filter.addItem(t("activity.all_statuses"), "")
@@ -167,7 +175,7 @@ class ActivityRecordsDialog(QDialog):
         layout.addWidget(self.outputs)
         actions = QDialogButtonBox(QDialogButtonBox.StandardButton.Close, self)
         actions.button(QDialogButtonBox.StandardButton.Close).setText(t("common.close"))
-        selection_actions = ChoiceGroup(self, responsive=True, spacing=Spacing.CONTROL_GAP)
+        selection_actions = ChoiceGroup(self, responsive=True, spacing=dp(Spacing.CONTROL_GAP))
         self.open_source = QPushButton(t("file_locations.input"), selection_actions)
         self.open_output = QPushButton(t("file_locations.output"), selection_actions)
         self.copy = QPushButton(t("diagnostics.copy"), selection_actions)

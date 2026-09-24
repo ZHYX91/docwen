@@ -23,6 +23,15 @@ def build_settings_stylesheet(theme_name: str, font_size_preset: str | None = No
     return "\n".join(
         [
             "/* docwen-settings-foundation */",
+            "QFrame#settingsNavigation { border: none; background: transparent; }",
+            'QPushButton[settingsNavigationItem="true"] {',
+            "    text-align: left; border: 1px solid transparent; border-radius: 6px;",
+            "    padding: 4px 8px; background: transparent; color: palette(text);",
+            "}",
+            'QPushButton[settingsNavigationItem="true"]:hover { background: palette(alternate-base); }',
+            'QPushButton[settingsNavigationItem="true"]:checked {',
+            "    background: palette(alternate-base); border-left: 3px solid palette(highlight); font-weight: 600;",
+            "}",
             "QMessageBox QPushButton {",
             f"    color: {secondary_button_text};",
             f"    background-color: {secondary_button_surface};",

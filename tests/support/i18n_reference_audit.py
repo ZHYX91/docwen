@@ -98,7 +98,7 @@ _ABOUT_TOOL_KEYS = _keys(
         "emoji",
     },
 )
-_FONT_SIZE_KEYS = _keys("components.font_size.", {"small", "default", "large", "xlarge"})
+_FONT_SIZE_KEYS = _keys("components.font_size.", {"small", "default", "large"})
 _TASK_NOTIFICATION_KEYS = _keys(
     "components.info_area.task_completion_notification_", {"success", "partial", "failed", "cancelled"}
 )
@@ -257,6 +257,10 @@ DYNAMIC_CALL_CONTRACTS: Mapping[tuple[str, str], DynamicCallContract] = {
         "packages/apps/gui/src/docwen_gui/dialogs/about.py",
         "f'about.tools.{tooltip_key}'",
     ): _contract(2, _ABOUT_TOOL_KEYS, "finite _TOOLS_LEFT/_TOOLS_RIGHT suffixes"),
+    (
+        "packages/apps/gui/src/docwen_gui/widgets/settings/general_tab.py",
+        "f'components.font_size.{preset}'",
+    ): _contract(1, _FONT_SIZE_KEYS, "FONT_SIZE_PRESETS loop"),
     (
         "packages/apps/gui/src/docwen_gui/main_window.py",
         "f'components.font_size.{preset}'",

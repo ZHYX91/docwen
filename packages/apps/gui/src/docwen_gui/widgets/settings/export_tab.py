@@ -12,6 +12,9 @@ from typing import cast as _cast
 from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLineEdit, QPushButton, QSpinBox, QWidget
 
+from docwen_gui.styles.ui_scale import set_metric
+from docwen_gui.widgets.check_box import CheckBox
+
 from ...i18n import t
 from ...styles.design_tokens import Spacing
 from ...view_models.settings_vm import SECTION_EXPORT, SettingsViewModel
@@ -55,7 +58,7 @@ class ExportTab(BaseSettingsTab):
         self._ocr_language.currentIndexChanged.connect(
             lambda _index: self._vm.set_field(SECTION_EXPORT, "ocr_language", self._ocr_language.currentData())
         )
-        self._recognize_tables = QCheckBox(t("action_area.recognize_tables", "Recognize table structure"))
+        self._recognize_tables = CheckBox(t("action_area.recognize_tables", "Recognize table structure"))
         self._recognize_tables.toggled.connect(
             lambda value: self._vm.set_field(SECTION_EXPORT, "recognize_tables", value)
         )
@@ -100,7 +103,7 @@ class ExportTab(BaseSettingsTab):
         title_row = QWidget(self._scroll_container)
         title_layout = QHBoxLayout(title_row)
         title_layout.setContentsMargins(0, 0, 0, 0)
-        title_layout.setSpacing(Spacing.CONTROL_GAP)
+        set_metric(title_layout, "setSpacing", Spacing.CONTROL_GAP)
         self._ocr_title_text = QLineEdit(self._scroll_container)
         self._ocr_title_text.setPlaceholderText(t("conversion.ocr_output.blockquote_prefix", "🖼️ **Image OCR**:"))
         self._ocr_title_text.setToolTip(

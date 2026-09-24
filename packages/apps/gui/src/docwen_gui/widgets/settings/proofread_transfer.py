@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from docwen_gui.styles.ui_scale import set_metric
 from docwen_runtime.config import atomic_write_text
 from docwen_runtime.config.proofread_transfer import RuleImportPlan, plan_rule_import
 
@@ -69,13 +70,18 @@ class RuleImportDialog(QDialog):
         self.setObjectName("ruleImportDialog")
         self.setWindowTitle(t("settings.rule_transfer.preview"))
         self.resize(720, 480)
-        self.setMinimumSize(360, 320)
+        set_metric(self, "setMinimumSize", 360, 320)
         self.plan = plan
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(
-            Spacing.CARD_PADDING, Spacing.CARD_PADDING, Spacing.CARD_PADDING, Spacing.CARD_PADDING
+        set_metric(
+            layout,
+            "setContentsMargins",
+            Spacing.CARD_PADDING,
+            Spacing.CARD_PADDING,
+            Spacing.CARD_PADDING,
+            Spacing.CARD_PADDING,
         )
-        layout.setSpacing(Spacing.GROUP_GAP)
+        set_metric(layout, "setSpacing", Spacing.GROUP_GAP)
         counts = {key: sum(change.kind == key for change in plan.changes) for key in _CHANGE_LABEL_KEYS}
         summary = QLabel(
             t(

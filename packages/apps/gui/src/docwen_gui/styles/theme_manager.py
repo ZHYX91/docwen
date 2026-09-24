@@ -11,7 +11,7 @@ from contextlib import suppress
 from typing import Literal
 from typing import cast as _cast
 
-from PySide6.QtCore import QMetaObject, QObject, Qt
+from PySide6.QtCore import QMetaObject, QObject, Qt, Signal
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QApplication, QWidget
 
@@ -19,23 +19,28 @@ from docwen_gui.font_utils import apply_application_font, normalize_font_size_pr
 
 from .global_aggregate import build_global_stylesheet
 from .theme_semantics import DEFAULT_THEME
+from .ui_scale import apply_scale_percent, scale_percent, scaled_stylesheet
 
 logger = logging.getLogger(__name__)
 
 ThemeName = Literal["light", "dark", "system"]
 
 
-class ThemeManager:
+class ThemeManager(QObject):
     """Singleton that manages application-wide theme state."""
+
+    appearance_changed = Signal()
 
     _instance: ThemeManager | None = None
 
     def __init__(self) -> None:
+        super().__init__()
         self._current_theme: str = DEFAULT_THEME
         self._requested_theme: str = DEFAULT_THEME
         self._font_size_preset: str = "default"
         self._app: QApplication | None = None
         self._system_theme_connection: QMetaObject.Connection | None = None
+        self._setting_color_scheme = False
 
     @classmethod
     def get_instance(cls) -> ThemeManager:
@@ -71,7 +76,7 @@ class ThemeManager:
                 QObject.disconnect(connection)
 
     def _on_system_theme_changed(self, _scheme: Qt.ColorScheme) -> None:
-        if self._requested_theme == "system":
+        if self._requested_theme == "system" and not self._setting_color_scheme:
             self.apply_theme("system")
 
     def apply_theme(self, theme_name: str) -> None:
@@ -81,6 +86,18 @@ class ThemeManager:
             theme_name: One of ``"light"``, ``"dark"``, ``"system"``.
         """
         self._requested_theme = theme_name if theme_name in {"light", "dark", "system"} else DEFAULT_THEME
+        if isinstance(self._app, QApplication):
+            # Qt's platform integration owns native frames, including future
+            # dialogs. Keep its scheme aligned with our client palette; a
+            # separate DWM override is overwritten on native activation.
+            scheme = {"light": Qt.ColorScheme.Light, "dark": Qt.ColorScheme.Dark}.get(
+                self._requested_theme, Qt.ColorScheme.Unknown
+            )
+            self._setting_color_scheme = True
+            try:
+                self._app.styleHints().setColorScheme(scheme)
+            finally:
+                self._setting_color_scheme = False
         resolved = self._resolve_system_theme(self._requested_theme)
         self._current_theme = resolved
 
@@ -106,7 +123,7 @@ class ThemeManager:
 
         # 3. Apply global QSS stylesheet
         stylesheet = build_global_stylesheet(resolved, self._font_size_preset)
-        self._app.setStyleSheet(stylesheet)
+        self._app.setStyleSheet(scaled_stylesheet(stylesheet))
 
         # 4. Force repaint for visible top-level widgets. Hidden dialogs pick
         # up the global palette/stylesheet when shown and do not need an eager
@@ -139,10 +156,20 @@ class ThemeManager:
 
         apply_application_font(self._app, font_size_preset=normalized)
         self.apply_theme(self._requested_theme)
+        self.appearance_changed.emit()
         return normalized
 
     def get_font_size_preset(self) -> str:
         return self._font_size_preset
+
+    def apply_ui_scale(self, percent: object) -> int:
+        """Relayout existing controls and set the scale for future controls."""
+        normalized = apply_scale_percent(percent)
+        self.apply_font_size_preset(self._font_size_preset)
+        return normalized
+
+    def get_ui_scale(self) -> int:
+        return scale_percent()
 
     @staticmethod
     def get_available_themes() -> list[str]:

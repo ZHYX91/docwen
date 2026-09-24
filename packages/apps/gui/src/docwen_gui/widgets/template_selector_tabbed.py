@@ -17,6 +17,8 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QStackedWidget, QVBoxLayout, QWidget
 from qfluentwidgets import Pivot
 
+from docwen_gui.styles.ui_scale import set_metric
+
 from ..i18n import t
 from ..styles.design_tokens import Spacing
 from .template_selector import (
@@ -57,7 +59,7 @@ class TabbedTemplateSelector(QWidget):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(Spacing.GROUP_GAP)
+        set_metric(layout, "setSpacing", Spacing.GROUP_GAP)
 
         self._tab_titles: dict[str, str] = {}
         self._pivot = Pivot(self)

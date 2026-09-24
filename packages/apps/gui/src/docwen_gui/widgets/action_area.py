@@ -41,16 +41,17 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from qfluentwidgets import CheckBox as FluentCheckBox
 from qfluentwidgets import PushButton as FluentPushButton
 
 from docwen_gui import numbering_schemes
 from docwen_gui.i18n import t as _t
 from docwen_gui.styles.design_tokens import Sizing, Spacing
 from docwen_gui.styles.theme_semantics import apply_theme_class
+from docwen_gui.styles.ui_scale import dp, set_metric
 from docwen_gui.widgets.value_controls import ScrollSafeComboBox
 
 from .action_button import ActionButton
+from .check_box import CheckBox
 from .panel_card import ActionFooter, ChoiceGroup, FormRow, InlineNotice, PanelCard
 
 if TYPE_CHECKING:
@@ -63,27 +64,6 @@ _SPACING_XS = Spacing.XS
 _SPACING_SM = Spacing.SM
 _SPACING_MD = Spacing.MD
 _SPACING_LG = Spacing.LG
-
-
-class _ActionCheckBox(FluentCheckBox):
-    """Fluent checkbox that retains DocWen's semantic control height."""
-
-    _METRIC_EVENTS = frozenset(
-        {
-            QEvent.Type.Polish,
-            QEvent.Type.StyleChange,
-            QEvent.Type.FontChange,
-            QEvent.Type.ApplicationFontChange,
-        }
-    )
-
-    def event(self, event: QEvent) -> bool:
-        handled = super().event(event)
-        if event.type() in self._METRIC_EVENTS and self.minimumHeight() < Sizing.CONTROL_HEIGHT:
-            # qfluentwidgets' private CheckBox QSS specifies min-height: 22px.
-            # Reassert the application token after that stylesheet is polished.
-            self.setMinimumHeight(Sizing.CONTROL_HEIGHT)
-        return handled
 
 
 class ActionArea(QWidget):
@@ -164,7 +144,7 @@ class ActionArea(QWidget):
         """Build the action area skeleton."""
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
-        root.setSpacing(_SPACING_XS)
+        set_metric(root, "setSpacing", _SPACING_XS)
         root.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         # Stacked widget: page 0 = content, page 1 = cancel
@@ -176,14 +156,14 @@ class ActionArea(QWidget):
         content_page.setObjectName("actionContentCard")
         self._content_card = content_page
         self._content_layout = content_page.content_layout
-        self._content_layout.setSpacing(Spacing.FORM_ROW_GAP)
+        set_metric(self._content_layout, "setSpacing", Spacing.FORM_ROW_GAP)
         self._button_stack.addWidget(content_page)
 
         # Page 1: cancel area
         cancel_page = QFrame()
         cancel_page.setObjectName("actionCancelCard")
         cancel_layout = QVBoxLayout(cancel_page)
-        cancel_layout.setContentsMargins(_SPACING_LG, _SPACING_LG, _SPACING_LG, _SPACING_LG)
+        set_metric(cancel_layout, "setContentsMargins", _SPACING_LG, _SPACING_LG, _SPACING_LG, _SPACING_LG)
 
         cancel_text = _t("common.cancel", "Cancel")
         cancel_btn = FluentPushButton(cancel_text, cancel_page)
@@ -191,7 +171,7 @@ class ActionArea(QWidget):
         cancel_btn.setProperty("usesFluentActionButton", True)
         cancel_btn.setProperty("actionButtonRole", "cancel")
         apply_theme_class(cancel_btn, "secondary")
-        cancel_btn.setMinimumHeight(Sizing.ACTION_HEIGHT)
+        set_metric(cancel_btn, "setMinimumHeight", Sizing.ACTION_HEIGHT)
         cancel_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         cancel_btn.setToolTip(cancel_text)
         cancel_btn.setAccessibleName(cancel_text)
@@ -405,8 +385,8 @@ class ActionArea(QWidget):
         freezing widths or replacing the widgets.
         """
         for control in self._interactive_controls():
-            if control.minimumHeight() < Sizing.CONTROL_HEIGHT:
-                control.setMinimumHeight(Sizing.CONTROL_HEIGHT)
+            if control.minimumHeight() < dp(Sizing.CONTROL_HEIGHT):
+                set_metric(control, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
 
     def _clear_content(self) -> None:
         """Remove all dynamic widgets from the content layout."""
@@ -463,15 +443,15 @@ class ActionArea(QWidget):
         return btn
 
     def _make_checkbox(self, text: str, checked: bool = False, parent: QWidget | None = None) -> QCheckBox:
-        cb = _ActionCheckBox(text, parent or self)
+        cb = CheckBox(text, parent or self)
         cb.setChecked(checked)
-        cb.setMinimumHeight(Sizing.CONTROL_HEIGHT)
+        set_metric(cb, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
         cb.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         return cb
 
     def _make_combo(self, items: list[str] | None = None, parent: QWidget | None = None) -> QComboBox:
         combo = ScrollSafeComboBox(parent or self)
-        combo.setMinimumHeight(Sizing.CONTROL_HEIGHT)
+        set_metric(combo, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
         # Option rows already end in a stretch.  A preferred-width combo keeps
         # the control visually distinct from a text field without claiming the
         # whole row, while still allowing the layout to shrink when necessary.
@@ -532,7 +512,7 @@ class ActionArea(QWidget):
         row.setObjectName("actionOptionRow")
         layout = QHBoxLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(_SPACING_MD)
+        set_metric(layout, "setSpacing", _SPACING_MD)
         return row, layout
 
     def _make_responsive_option_grid(
@@ -545,8 +525,8 @@ class ActionArea(QWidget):
         row.setObjectName("actionOptionRow")
         layout = QGridLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setHorizontalSpacing(Spacing.CONTROL_GAP)
-        layout.setVerticalSpacing(Spacing.FORM_ROW_GAP)
+        set_metric(layout, "setHorizontalSpacing", Spacing.CONTROL_GAP)
+        set_metric(layout, "setVerticalSpacing", Spacing.FORM_ROW_GAP)
         return row, layout
 
     def resizeEvent(self, event) -> None:
@@ -561,7 +541,7 @@ class ActionArea(QWidget):
         for row, layout, checkbox, combo in self._responsive_numbering_rows:
             available = row.contentsRect().width()
             if available <= 0:
-                available = max(0, self.contentsRect().width() - (2 * _SPACING_MD))
+                available = max(0, self.contentsRect().width() - (2 * dp(_SPACING_MD)))
             required = checkbox.sizeHint().width() + combo.sizeHint().width() + layout.horizontalSpacing()
             stacked = available > 0 and required > available
             state_key = id(row)
@@ -1037,8 +1017,8 @@ class ActionArea(QWidget):
         grid_widget = QWidget(self)
         grid = QGridLayout(grid_widget)
         grid.setContentsMargins(0, 0, 0, 0)
-        grid.setHorizontalSpacing(_SPACING_MD)
-        grid.setVerticalSpacing(Spacing.FORM_ROW_GAP)
+        set_metric(grid, "setHorizontalSpacing", _SPACING_MD)
+        set_metric(grid, "setVerticalSpacing", Spacing.FORM_ROW_GAP)
         grid.setColumnStretch(0, 1)
         grid.setColumnStretch(1, 1)
         self._proofread_grid_widget = grid_widget

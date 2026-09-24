@@ -255,14 +255,17 @@ save_success_message = "Config saved and reloaded."
 # 通用设置选项卡
 # -----------------------------------------------------------------------------
 [settings.general]
+font_label = "Text size:"
+scale_label = "Interface scale:"
+scale_tooltip = "Relative to system scaling. Changes text, icons and spacing together."
 # 语言设置区域
 language_section = "Language"
 language_label = "Select interface language:"
 language_tooltip = "Select the display language for the application.\nChanges will take effect after restart."
 
 # 主题设置区域
-theme_section = "Interface Theme"
-theme_description = "Choose between light, dark, or follow system theme."
+theme_section = "Appearance"
+theme_description = "Choose the theme, text size and interface scale."
 theme_label = "Select application theme:"
 theme_tooltip = "Select the visual theme for the application.\nDifferent themes provide different color schemes and interface styles.\nChanges will take effect after saving."
 theme_preview = "Theme Preview:"
@@ -934,9 +937,8 @@ emoji = "Emoji detection and processing library"
 # Text size
 [components.font_size]
 small = "Small"
-default = "Default"
+default = "Standard"
 large = "Large"
-xlarge = "Extra large"
 
 # 文件拖拽区
 [components.file_drop]
@@ -1198,7 +1200,7 @@ export_markdown = "Export Markdown"
 export_markdown_tooltip = "Convert document to Markdown format"
 optimize_for_type = "Optimize for document type"
 remove_existing_numbering = "Remove original document heading num"
-add_new_numbering = "Add new heading num"
+add_new_numbering = "Add heading numbering"
 
 # 表格转MD面板
 [action_area.spreadsheet]
@@ -1222,8 +1224,8 @@ optimize_for_type = "Optimize for layout type"
 [action_area.md_to_document]
 generate_tooltip = "Generate document in selected format"
 format_combo_tooltip = "Choose target document format"
-remove_existing_numbering = "Remove original Markdown heading num"
-add_new_numbering = "Add new heading num"
+remove_existing_numbering = "Remove existing heading numbering"
+add_new_numbering = "Add heading numbering"
 
 # MD转表格面板
 [action_area.md_to_spreadsheet]

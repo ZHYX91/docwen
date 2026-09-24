@@ -246,6 +246,12 @@ def _validate_output(data: dict[str, Any]) -> None:
 
 
 def _validate_gui(data: dict[str, Any]) -> None:
+    _canonical_choice(data, "font.size_preset", frozenset({"small", "default", "large"}), label="gui.font.size_preset")
+    percent = _read_path(data, "appearance.scale_percent")
+    if percent is not None and (type(percent) is not int or percent not in (90, 100, 110, 125, 150)):
+        raise ConfigSemanticError("gui.appearance.scale_percent must be 90, 100, 110, 125 or 150")
+    if any(_read_path(data, key) is not None for key in ("dpi.ui_scale", "dpi.enable_dpi_scaling")):
+        raise ConfigSemanticError("gui.dpi was retired; use gui.appearance.scale_percent for content scale")
     _canonical_choice(
         data,
         "theme.default_theme",

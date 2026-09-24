@@ -97,7 +97,7 @@ def test_font_size_getter_defaults_and_tracks_normalized_writes(monkeypatch: pyt
         ("", "default"),
         (" unsupported ", "default"),
         (" LARGE ", "large"),
-        ("xlarge", "xlarge"),
+        ("xlarge", "default"),
     ):
         assert manager.apply_font_size_preset(raw) == expected
         assert manager.get_font_size_preset() == expected

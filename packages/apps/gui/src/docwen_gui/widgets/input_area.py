@@ -9,7 +9,7 @@ Key behaviors:
 - Add button: file dialog (single) or popup menu (batch)
 - Clear button: reset selection
 - Compact layout at width <= 340px
-- Default height 230px with a compact title icon and semantic prompt label
+- Default height 200px with a compact title icon and semantic prompt label
 """
 
 from __future__ import annotations
@@ -29,8 +29,6 @@ from PySide6.QtGui import (
     QDragMoveEvent,
     QDropEvent,
     QIcon,
-    QPalette,
-    QPixmap,
     QResizeEvent,
     QShowEvent,
 )
@@ -39,7 +37,6 @@ from PySide6.QtWidgets import (
     QBoxLayout,
     QFileDialog,
     QFrame,
-    QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
     QMenu,
@@ -60,8 +57,10 @@ from docwen_gui.format_presentation import SUPPORTED_FORMAT_GROUPS, presentation
 from docwen_gui.i18n import t
 from docwen_gui.resources import set_action_icon
 from docwen_gui.styles.design_tokens import Sizing, Spacing
+from docwen_gui.styles.ui_scale import dp, set_metric
 
 from .elided_label import MiddleElidedLabel
+from .icon_label import IconLabel
 from .location_button import LocationButton
 from .panel_card import WrappingLabel
 from .warning_badge import WarningBadge
@@ -70,7 +69,7 @@ if TYPE_CHECKING:
     from ..view_models.input_area_vm import InputAreaViewModel
 
 # ── Design constants ────────────────────────────────────────────────────
-_DEFAULT_HEIGHT = 230
+_DEFAULT_HEIGHT = 200
 _COMPACT_WIDTH_THRESHOLD = 340
 _ORNAMENT_SIZE = QSize(72, 72)
 _SPACING_XS = Spacing.XS
@@ -89,22 +88,15 @@ _MIME_URL = "text/uri-list"
 _MIME_TEXT = "text/plain"
 
 
-def _load_hero_icon() -> QPixmap | None:
-    """Load the composite drop artwork, falling back to a platform file icon."""
+def _load_hero_icon() -> QIcon:
+    """Keep decorative artwork as a vector until the actual screen paint."""
     from ..resources import load_svg_asset_icon
 
     artwork = load_svg_asset_icon("file_drop_empty_state.svg")
-    if artwork is not None and not artwork.isNull():
-        screen = QApplication.primaryScreen()
-        dpr = screen.devicePixelRatio() if screen is not None else 1.0
-        return artwork.pixmap(_ORNAMENT_SIZE, dpr)
+    if isinstance(artwork, QIcon) and not artwork.isNull():
+        return artwork
     style = QApplication.style()
-    if style is None:
-        return None
-    icon = style.standardIcon(QStyle.StandardPixmap.SP_FileIcon)
-    if icon.isNull():
-        return None
-    return icon.pixmap(_ORNAMENT_SIZE)
+    return style.standardIcon(QStyle.StandardPixmap.SP_FileIcon) if style is not None else QIcon()
 
 
 def _i18n(key: str, default: str = "", **kwargs) -> str:
@@ -162,7 +154,7 @@ class InputArea(QFrame):
 
         self.setObjectName("inputArea")
         self.setAcceptDrops(True)
-        self.setMinimumHeight(_DEFAULT_HEIGHT)
+        set_metric(self, "setMinimumHeight", _DEFAULT_HEIGHT)
 
         self._build_ui()
         self._wire_view_model()
@@ -172,27 +164,27 @@ class InputArea(QFrame):
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, _SPACING_XS, 0, _SPACING_XS)
-        layout.setSpacing(_SPACING_SM)
+        set_metric(layout, "setContentsMargins", 0, _SPACING_XS, 0, _SPACING_XS)
+        set_metric(layout, "setSpacing", _SPACING_SM)
 
         # Drop group frame
         self._drop_group = QFrame(self)
         self._drop_group.setObjectName("fileDropGroup")
         drop_layout = QVBoxLayout(self._drop_group)
         padding = Spacing.CARD_PADDING
-        drop_layout.setContentsMargins(padding, padding, padding, padding)
-        drop_layout.setSpacing(Spacing.GROUP_GAP)
+        set_metric(drop_layout, "setContentsMargins", padding, padding, padding, padding)
+        set_metric(drop_layout, "setSpacing", Spacing.GROUP_GAP)
         layout.addWidget(self._drop_group)
 
         # Top controls layout (mode switch + buttons)
         self._top_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight)
         self._top_layout.setContentsMargins(0, 0, 0, 0)
-        self._top_layout.setSpacing(Spacing.GROUP_GAP)
+        set_metric(self._top_layout, "setSpacing", Spacing.GROUP_GAP)
 
         # Mode switch
         self._mode_switch = SegmentedWidget(self._drop_group)
         self._mode_switch.setObjectName("fileDropModeSwitch")
-        self._mode_switch.setMinimumHeight(Sizing.CONTROL_HEIGHT)
+        set_metric(self._mode_switch, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
         self._mode_switch.setAccessibleName(_i18n(_I_BATCH_MODE))
         self._mode_switch.addItem(
             "batch",
@@ -212,19 +204,19 @@ class InputArea(QFrame):
         self._action_frame.setObjectName("fileDropActionButtonsFrame")
         action_layout = QHBoxLayout(self._action_frame)
         action_layout.setContentsMargins(0, 0, 0, 0)
-        action_layout.setSpacing(Spacing.CONTROL_GAP)
+        set_metric(action_layout, "setSpacing", Spacing.CONTROL_GAP)
 
         # Add button
         self._add_button = PrimaryPushButton(_i18n(_I_ADD_BUTTON, "Add"), self._drop_group)
         self._add_button.setObjectName("fileDropPrimaryButton")
-        self._add_button.setMinimumSize(_ACTION_BUTTON_MIN_WIDTH, Sizing.CONTROL_HEIGHT)
+        set_metric(self._add_button, "setMinimumSize", _ACTION_BUTTON_MIN_WIDTH, Sizing.CONTROL_HEIGHT)
         self._add_button.clicked.connect(self._on_add_clicked)
         action_layout.addWidget(self._add_button)
 
         # Clear button (danger theme for destructive action)
         self._clear_button = PushButton(_i18n(_I_CLEAR_BUTTON, "Clear"), self._drop_group)
         self._clear_button.setObjectName("fileDropClearButton")
-        self._clear_button.setMinimumSize(_ACTION_BUTTON_MIN_WIDTH, Sizing.CONTROL_HEIGHT)
+        set_metric(self._clear_button, "setMinimumSize", _ACTION_BUTTON_MIN_WIDTH, Sizing.CONTROL_HEIGHT)
         self._clear_button.setProperty("danger", True)
         self._clear_button.setToolTip(_i18n(_I_CLEAR_BUTTON, "Clear"))
         self._clear_button.setAccessibleName(_i18n(_I_CLEAR_BUTTON, "Clear"))
@@ -243,8 +235,8 @@ class InputArea(QFrame):
         self._empty_state_frame = QWidget(self._drop_group)
         self._empty_state_frame.setObjectName("fileDropEmptyStateFrame")
         empty_layout = QVBoxLayout(self._empty_state_frame)
-        empty_layout.setContentsMargins(_SPACING_MD, _SPACING_SM, _SPACING_MD, _SPACING_MD)
-        empty_layout.setSpacing(_SPACING_SM)
+        set_metric(empty_layout, "setContentsMargins", _SPACING_MD, _SPACING_SM, _SPACING_MD, _SPACING_MD)
+        set_metric(empty_layout, "setSpacing", _SPACING_SM)
         empty_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         # Eyebrow label
@@ -259,7 +251,7 @@ class InputArea(QFrame):
         self._empty_content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         content_layout = QHBoxLayout(self._empty_content)
         content_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.setSpacing(_SPACING_SM)
+        set_metric(content_layout, "setSpacing", _SPACING_SM)
         content_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         self._empty_center_panel = QWidget(self._empty_content)
@@ -267,28 +259,21 @@ class InputArea(QFrame):
         self._empty_center_panel.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         center_layout = QVBoxLayout(self._empty_center_panel)
         center_layout.setContentsMargins(0, 0, 0, 0)
-        center_layout.setSpacing(_SPACING_SM)
+        set_metric(center_layout, "setSpacing", _SPACING_SM)
         center_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
 
         self._empty_title_row = QWidget(self._empty_center_panel)
         self._empty_title_row.setObjectName("fileDropEmptyStateTitleRow")
         title_layout = QHBoxLayout(self._empty_title_row)
         title_layout.setContentsMargins(0, 0, 0, 0)
-        title_layout.setSpacing(_SPACING_SM)
+        set_metric(title_layout, "setSpacing", _SPACING_SM)
         title_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
 
         # Hero icon
-        self._hero_icon_label = QLabel(self._empty_content)
+        self._hero_icon_label = IconLabel(_load_hero_icon(), self._empty_content)
         self._hero_icon_label.setObjectName("fileDropHeroIconLabel")
-        self._hero_icon_label.setProperty("heroVariant", "symbol")
         self._hero_icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._hero_icon_label.setFixedSize(_ORNAMENT_SIZE)
-        hero_icon = _load_hero_icon()
-        if hero_icon is not None and not hero_icon.isNull():
-            self._hero_icon_label.setPixmap(hero_icon)
-        self._hero_opacity = QGraphicsOpacityEffect(self._hero_icon_label)
-        self._sync_hero_icon_opacity()
-        self._hero_icon_label.setGraphicsEffect(self._hero_opacity)
+        set_metric(self._hero_icon_label, "setFixedSize", _ORNAMENT_SIZE)
 
         # Prompt label
         self._prompt_label = StrongBodyLabel(self._empty_title_row)
@@ -306,7 +291,7 @@ class InputArea(QFrame):
         self._types_container.setObjectName("fileDropTypesContainer")
         self._types_layout = QVBoxLayout(self._types_container)
         self._types_layout.setContentsMargins(0, 0, 0, 0)
-        self._types_layout.setSpacing(2)
+        set_metric(self._types_layout, "setSpacing", 2)
         self._types_container.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         self._type_prompt_rows: list[tuple[QWidget, QHBoxLayout, QLabel, QLabel]] = []
         for label_key, fallback_label, formats in _SUPPORTED_TYPE_ROWS:
@@ -315,7 +300,7 @@ class InputArea(QFrame):
             row_widget.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
             row_layout = QHBoxLayout(row_widget)
             row_layout.setContentsMargins(0, 0, 0, 0)
-            row_layout.setSpacing(_SPACING_SM)
+            set_metric(row_layout, "setSpacing", _SPACING_SM)
 
             type_label = QLabel(f"{_i18n(label_key, fallback_label)}:", row_widget)
             type_label.setObjectName("fileDropTypesTypeLabel")
@@ -343,8 +328,8 @@ class InputArea(QFrame):
         self._feedback_frame = QWidget(self._empty_state_frame)
         self._feedback_frame.setObjectName("fileDropFeedbackArea")
         feedback_layout = QVBoxLayout(self._feedback_frame)
-        feedback_layout.setContentsMargins(_SPACING_MD, _SPACING_SM, _SPACING_MD, _SPACING_SM)
-        feedback_layout.setSpacing(_SPACING_XS)
+        set_metric(feedback_layout, "setContentsMargins", _SPACING_MD, _SPACING_SM, _SPACING_MD, _SPACING_SM)
+        set_metric(feedback_layout, "setSpacing", _SPACING_XS)
 
         self._selection_label = QLabel(self._feedback_frame)
         self._selection_label.setObjectName("fileDropSelectionLabel")
@@ -371,7 +356,7 @@ class InputArea(QFrame):
         feedback_layout.addWidget(self._selection_label)
         feedback_layout.addWidget(self._format_notice_label, alignment=Qt.AlignmentFlag.AlignLeft)
         path_row = QHBoxLayout()
-        path_row.setSpacing(Spacing.SM)
+        set_metric(path_row, "setSpacing", Spacing.SM)
         path_row.addWidget(self._selection_detail_label, 1)
         self._open_location_button = LocationButton(self._feedback_frame, label=t("file_locations.input"))
         self._open_location_button.setObjectName("fileDropOpenLocationButton")
@@ -610,12 +595,9 @@ class InputArea(QFrame):
             style.polish(self._drop_group)
 
         if has_selection:
-            self.setMinimumHeight(self._compact_min_for_feedback())
+            set_metric(self, "setMinimumHeight", 80)
         else:
-            self.setMinimumHeight(_DEFAULT_HEIGHT)
-
-    def _compact_min_for_feedback(self) -> int:
-        return max(_SPACING_MD * 2, 80)
+            set_metric(self, "setMinimumHeight", _DEFAULT_HEIGHT)
 
     def _update_prompt_text(self) -> None:
         if self._vm.mode == "batch":
@@ -663,7 +645,6 @@ class InputArea(QFrame):
         super().changeEvent(event)
         if event.type() in {QEvent.Type.FontChange, QEvent.Type.StyleChange}:
             self._schedule_deferred_layout_sync(prompt=True, supported_types=True)
-            self._sync_hero_icon_opacity()
 
     def _schedule_deferred_layout_sync(
         self,
@@ -706,19 +687,12 @@ class InputArea(QFrame):
         if sync_supported_types:
             self._sync_supported_type_layout()
 
-    def _sync_hero_icon_opacity(self) -> None:
-        effect = getattr(self, "_hero_opacity", None)
-        if effect is None:
-            return
-        window_lightness = self.palette().color(QPalette.ColorRole.Window).lightness()
-        effect.setOpacity(0.54 if window_lightness < 128 else 0.82)
-
     def _sync_prompt_layout(self) -> None:
         """Keep the hero prompt on one line whenever the visible card can hold it."""
         if not self._prompt_layout_objects_are_valid():
             return
-        artwork_width = _ORNAMENT_SIZE.width() + _SPACING_SM
-        fallback_width = self._drop_group.width() - (_SPACING_MD * 4)
+        artwork_width = dp(_ORNAMENT_SIZE.width()) + dp(_SPACING_SM)
+        fallback_width = self._drop_group.width() - (dp(_SPACING_MD) * 4)
         panel_width = self._empty_center_panel.width()
         available_width = max(panel_width if panel_width > 0 else fallback_width, 0)
         if available_width <= 0:
@@ -759,9 +733,9 @@ class InputArea(QFrame):
             for control in (self._drop_group, self._mode_switch, self._add_button, self._clear_button)
         ):
             return
-        content_width = max(self._drop_group.width() - (Spacing.CARD_PADDING * 2), 0)
+        content_width = max(self._drop_group.width() - (dp(Spacing.CARD_PADDING) * 2), 0)
         control_height = max(
-            Sizing.CONTROL_HEIGHT,
+            dp(Sizing.CONTROL_HEIGHT),
             self._mode_switch.sizeHint().height(),
             self._add_button.sizeHint().height(),
             self._clear_button.sizeHint().height(),
@@ -769,48 +743,51 @@ class InputArea(QFrame):
         for control in (self._mode_switch, self._add_button, self._clear_button):
             control.setMinimumHeight(control_height)
         action_width = max(
-            _ACTION_BUTTON_MIN_WIDTH, self._add_button.sizeHint().width(), self._clear_button.sizeHint().width()
+            dp(_ACTION_BUTTON_MIN_WIDTH), self._add_button.sizeHint().width(), self._clear_button.sizeHint().width()
         )
         required = (
-            self._mode_switch.minimumSizeHint().width() + 2 * action_width + Spacing.CONTROL_GAP + Spacing.GROUP_GAP
+            self._mode_switch.minimumSizeHint().width()
+            + 2 * action_width
+            + dp(Spacing.CONTROL_GAP)
+            + dp(Spacing.GROUP_GAP)
         )
-        compact = 0 < content_width < max(_COMPACT_WIDTH_THRESHOLD, required)
+        compact = 0 < content_width < max(dp(_COMPACT_WIDTH_THRESHOLD), required)
 
         if compact == self._top_controls_compact:
             self._add_button.setMinimumWidth(action_width)
-            self._clear_button.setMinimumWidth(Sizing.CONTROL_HEIGHT if compact else action_width)
+            self._clear_button.setMinimumWidth(dp(Sizing.CONTROL_HEIGHT) if compact else action_width)
             return
 
         self._top_controls_compact = compact
 
         if compact:
             self._top_layout.setDirection(QBoxLayout.Direction.TopToBottom)
-            self._top_layout.setSpacing(Spacing.GROUP_GAP)
+            set_metric(self._top_layout, "setSpacing", Spacing.GROUP_GAP)
             self._clear_button.setText("")
             self._clear_button.setToolTip(_i18n(_I_CLEAR_BUTTON, "Clear"))
             set_action_icon(self._clear_button, "clear.svg", size=16)
         else:
             self._top_layout.setDirection(QBoxLayout.Direction.LeftToRight)
-            self._top_layout.setSpacing(Spacing.GROUP_GAP)
+            set_metric(self._top_layout, "setSpacing", Spacing.GROUP_GAP)
             self._clear_button.setText(_i18n(_I_CLEAR_BUTTON, "Clear"))
             self._clear_button.setIcon(QIcon())
 
         # Keep the two text actions visually balanced at normal widths.  The
         # icon-only clear action remains intentionally smaller in compact mode.
         self._add_button.setMinimumWidth(action_width)
-        self._clear_button.setMinimumWidth(Sizing.CONTROL_HEIGHT if compact else action_width)
+        self._clear_button.setMinimumWidth(dp(Sizing.CONTROL_HEIGHT) if compact else action_width)
         self.height_changed.emit(self.minimumHeight())
 
     def _sync_supported_type_layout(self) -> None:
         if not self._supported_type_layout_objects_are_valid():
             return
-        fallback_width = self._drop_group.width() - (_SPACING_MD * 4)
+        fallback_width = self._drop_group.width() - (dp(_SPACING_MD) * 4)
         panel_width = self._empty_center_panel.width()
         available_width = max(panel_width if panel_width > 0 else fallback_width, 0)
-        middle_gap = max(_SPACING_MD, 24)
+        middle_gap = max(dp(_SPACING_MD), 24)
         row_widths = []
         for index, (_, row_layout, type_label, value_label) in enumerate(self._type_prompt_rows):
-            desired_indent = _PYRAMID_INDENTS[min(index, len(_PYRAMID_INDENTS) - 1)]
+            desired_indent = dp(_PYRAMID_INDENTS[min(index, len(_PYRAMID_INDENTS) - 1)])
             label_width = type_label.sizeHint().width()
             required_width = (
                 label_width

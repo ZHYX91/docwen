@@ -255,14 +255,17 @@ save_success_message = "Cau hinh da duoc luu va tai lai."
 # 通用设置选项卡
 # -----------------------------------------------------------------------------
 [settings.general]
+font_label = "Cỡ chữ:"
+scale_label = "Tỷ lệ giao diện:"
+scale_tooltip = "Tương đối với tỷ lệ hệ thống. Điều chỉnh chữ, biểu tượng và khoảng cách cùng nhau."
 # 语言设置区域
 language_section = "Ngôn ngữ"
 language_label = "Chọn ngôn ngữ giao diện:"
 language_tooltip = "Chọn ngôn ngữ hiển thị của ứng dụng.\nThay đổi sẽ có hiệu lực sau khi khởi động lại."
 
 # 主题设置区域
-theme_section = "Chủ đề giao diện"
-theme_description = "Chọn giao diện sáng, tối hoặc theo hệ thống."
+theme_section = "Diện mạo"
+theme_description = "Điều chỉnh chủ đề, cỡ chữ và tỷ lệ giao diện."
 theme_label = "Chọn chủ đề ứng dụng:"
 theme_tooltip = "Chọn chủ đề hiển thị của ứng dụng.\nMỗi chủ đề có bảng màu và phong cách giao diện khác nhau.\nThay đổi sẽ có hiệu lực sau khi lưu."
 theme_preview = "Xem trước chủ đề:"
@@ -935,9 +938,8 @@ emoji = "Thư viện phát hiện và xử lý emoji"
 # Co chu
 [components.font_size]
 small = "Nho"
-default = "Mac dinh"
+default = "Tiêu chuẩn"
 large = "Lon"
-xlarge = "Rat lon"
 
 # 文件拖拽区
 [components.file_drop]

@@ -20,6 +20,8 @@ def test_registry_reset_plans_model_cross_file_logical_ownership() -> None:
     assert general_plan.files == ()
     assert set(general_plan.dotted_keys) == {
         "gui.theme",
+        "gui.font",
+        "gui.appearance",
         "gui.window",
         "gui.transparency",
         "gui.language",

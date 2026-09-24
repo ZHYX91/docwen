@@ -59,7 +59,7 @@ def test_logical_reset_plan_stays_runtime_owned_and_shared_by_gui_cli() -> None:
     assert "document.to_md_ocr_placement_mode" not in document_plan.dotted_keys
 
     precise_counts = {
-        "general": 4,
+        "general": 6,
         "text": 15,
         "proofread": 6,
         "formatting": 24,

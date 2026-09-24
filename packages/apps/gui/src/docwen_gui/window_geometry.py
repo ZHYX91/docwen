@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from math import isfinite
 from typing import Literal, Protocol
@@ -12,9 +12,9 @@ GEOMETRY_SCHEMA_VERSION = 2
 DEFAULT_CENTER_PANEL_SCREEN_X = 420
 DEFAULT_WINDOW_Y = 0
 DEFAULT_WINDOW_WIDTH = 476
-DEFAULT_WINDOW_HEIGHT = 860
+DEFAULT_WINDOW_HEIGHT = 720
 DEFAULT_MIN_WIDTH = 420
-DEFAULT_MIN_HEIGHT = 720
+DEFAULT_MIN_HEIGHT = 560
 
 GeometrySource = Literal["canonical", "startup-default"]
 
@@ -126,22 +126,6 @@ def _read_positive_int(
     return fallback if value is None else value
 
 
-def _scale_int(scale_value: Callable[[int], int], value: int) -> int:
-    try:
-        scaled = _finite_int(scale_value(value))
-    except Exception:
-        scaled = None
-    return value if scaled is None else scaled
-
-
-def _unscale_int(unscale_value: Callable[[int], int], value: int) -> int:
-    try:
-        logical = _finite_int(unscale_value(value))
-    except Exception:
-        logical = None
-    return value if logical is None else logical
-
-
 def _read_schema_version(
     config_port: GeometryConfigReader | None,
 ) -> tuple[int | None, bool]:
@@ -165,7 +149,6 @@ def load_window_geometry_policy(
     config_port: GeometryConfigReader | None,
     *,
     center_offset: int,
-    scale_value: Callable[[int], int],
 ) -> WindowGeometryPolicy:
     """Load schema-v2 geometry and fail safely for unsupported versions."""
 
@@ -182,8 +165,8 @@ def load_window_geometry_policy(
         if schema_supported
         else DEFAULT_MIN_HEIGHT
     )
-    min_width = _scale_int(scale_value, logical_min_width)
-    min_height = _scale_int(scale_value, logical_min_height)
+    min_width = logical_min_width
+    min_height = logical_min_height
     min_width = max(1, min_width)
     min_height = max(1, min_height)
 
@@ -209,10 +192,10 @@ def load_window_geometry_policy(
         logical_y = DEFAULT_WINDOW_Y
         logical_width = DEFAULT_WINDOW_WIDTH
         logical_height = DEFAULT_WINDOW_HEIGHT
-    anchor_x = _scale_int(scale_value, logical_anchor_x)
-    y = _scale_int(scale_value, logical_y)
-    width = max(1, _scale_int(scale_value, logical_width))
-    height = max(1, _scale_int(scale_value, logical_height))
+    anchor_x = logical_anchor_x
+    y = logical_y
+    width = max(1, logical_width)
+    height = max(1, logical_height)
     return WindowGeometryPolicy(
         rect=WindowRect(
             x=anchor_x - int(center_offset),
@@ -232,19 +215,15 @@ def build_canonical_geometry_values(
     rect: WindowRect,
     *,
     center_offset: int,
-    unscale_value: Callable[[int], int],
 ) -> dict[str, object]:
     """Build the single sparse write used to persist normal window geometry."""
 
     return {
         "gui.window.geometry_schema_version": GEOMETRY_SCHEMA_VERSION,
-        "gui.window.center_panel_screen_x": _unscale_int(
-            unscale_value,
-            rect.x + int(center_offset),
-        ),
-        "gui.window.window_y": _unscale_int(unscale_value, rect.y),
-        "gui.window.default_width": max(1, _unscale_int(unscale_value, rect.width)),
-        "gui.window.default_height": max(1, _unscale_int(unscale_value, rect.height)),
+        "gui.window.center_panel_screen_x": rect.x + int(center_offset),
+        "gui.window.window_y": rect.y,
+        "gui.window.default_width": max(1, rect.width),
+        "gui.window.default_height": max(1, rect.height),
     }
 
 
@@ -362,51 +341,6 @@ def center_window_geometry(
     )
 
 
-def normalize_ui_scale(value: object) -> float | None:
-    """Normalize a factor or percentage to a bounded UI scale."""
-
-    if isinstance(value, bool):
-        return None
-    percentage = False
-    if isinstance(value, str):
-        text = value.strip()
-        if not text:
-            return None
-        if text.endswith("%"):
-            percentage = True
-            text = text[:-1].strip()
-        try:
-            numeric = float(text)
-        except ValueError:
-            return None
-    elif isinstance(value, int | float):
-        numeric = float(value)
-    else:
-        return None
-    if not isfinite(numeric) or numeric == 0:
-        return None
-    if percentage or numeric > 4:
-        numeric /= 100
-    return numeric if 0.5 <= numeric <= 4 else None
-
-
-def load_window_scale_factor(
-    config_port: GeometryConfigReader | None,
-    *,
-    detected_factor: float,
-) -> float:
-    """Resolve the declared window scale with strict enable-flag handling."""
-
-    enabled = _config_get(config_port, "gui.dpi.enable_dpi_scaling", True)
-    if enabled is False:
-        return 1.0
-    forced = normalize_ui_scale(_config_get(config_port, "gui.dpi.ui_scale", 0))
-    if forced is not None:
-        return forced
-    detected = normalize_ui_scale(detected_factor)
-    return 1.0 if detected is None else detected
-
-
 __all__ = [
     "DEFAULT_CENTER_PANEL_SCREEN_X",
     "DEFAULT_MIN_HEIGHT",
@@ -422,7 +356,5 @@ __all__ = [
     "build_canonical_geometry_values",
     "center_window_geometry",
     "load_window_geometry_policy",
-    "load_window_scale_factor",
-    "normalize_ui_scale",
     "recover_window_geometry",
 ]

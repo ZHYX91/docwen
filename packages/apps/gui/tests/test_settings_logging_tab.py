@@ -114,16 +114,15 @@ def test_logging_tab_path_buttons_use_settings_secondary_style(qapp) -> None:
 
 
 def test_logging_tab_uses_fluent_settings_checkbox(qapp) -> None:
-    from qfluentwidgets import CheckBox as FluentCheckBox
-
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
+    from docwen_gui.widgets.check_box import CheckBox
     from docwen_gui.widgets.settings.logging_tab import LoggingTab
 
     tab = LoggingTab(SettingsViewModel(config=SettingsConfig()))
 
-    assert isinstance(tab._enable_checkbox, FluentCheckBox)  # pyright: ignore[reportPrivateUsage]
-    assert isinstance(tab._console_enable, FluentCheckBox)  # pyright: ignore[reportPrivateUsage]
+    assert isinstance(tab._enable_checkbox, CheckBox)  # pyright: ignore[reportPrivateUsage]
+    assert isinstance(tab._console_enable, CheckBox)  # pyright: ignore[reportPrivateUsage]
 
 
 @pytest.mark.parametrize("failed_query", [False, True])

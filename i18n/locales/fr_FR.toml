@@ -251,14 +251,17 @@ save_success_message = "Configuration enregistree et rechargee."
 # 通用设置选项卡
 # -----------------------------------------------------------------------------
 [settings.general]
+font_label = "Taille du texte :"
+scale_label = "Échelle de l’interface :"
+scale_tooltip = "Relative à l’échelle du système. Ajuste le texte, les icônes et les espacements."
 # 语言设置区域
 language_section = "Langue"
 language_label = "Choisir la langue :"
 language_tooltip = "Choisir la langue d'affichage.\nRedémarrage requis."
 
 # 主题设置区域
-theme_section = "Thème"
-theme_description = "Choisissez le thème clair, sombre ou celui du système."
+theme_section = "Apparence"
+theme_description = "Choisissez le thème, la taille du texte et la mise à l’échelle de l’interface."
 theme_label = "Choisir le thème :"
 theme_tooltip = "Choisir le thème visuel de l'application."
 theme_preview = "Aperçu :"
@@ -932,9 +935,8 @@ emoji = "Bibliothèque de détection et traitement des emojis"
 # Taille du texte
 [components.font_size]
 small = "Petite"
-default = "Par defaut"
+default = "Standard"
 large = "Grande"
-xlarge = "Tres grande"
 
 # 文件拖拽区
 [components.file_drop]

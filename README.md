@@ -180,9 +180,11 @@ The operation panel automatically adjusts available options based on file type:
 
 ### Settings Interface
 
-Click the "Settings" button in the operation header to open settings:
+Click the settings icon at the bottom of the window or press **Ctrl+,**.
 
-Settings are organized into tabs: **General**, **Text**, **Proofread**, **Document**, **Spreadsheet**, **Image**, **Layout**, **Link**, **Formatting**, **Output**, **Export**, **Logging**, **Other**.
+Under **General → Appearance**, choose **Small / Standard / Large** text and **90 / 100 / 110 / 125 / 150%** interface scale. Scaling is relative to the system setting: system 200% with application 90% gives a nominal 180%. Changes preview immediately; Apply or OK saves them, and Cancel restores the last saved appearance.
+
+Other pages cover incoming files, proofreading, Markdown syntax and resources, templates, links, conversion software, file saving and logging.
 
 ### Shortcuts
 

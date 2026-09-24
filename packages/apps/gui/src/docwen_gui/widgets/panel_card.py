@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from docwen_gui.styles.ui_scale import dp, set_metric
 from docwen_gui.widgets.value_controls import ScrollSafeComboBox
 
 from ..styles.design_tokens import Border, Sizing, Spacing
@@ -149,7 +150,7 @@ class FormRow(_ResponsiveFrame):
         self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self.content_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight, self)
         self.content_layout.setContentsMargins(0, 0, 0, 0)
-        self.content_layout.setSpacing(Spacing.CONTROL_GAP)
+        set_metric(self.content_layout, "setSpacing", Spacing.CONTROL_GAP)
         self.label = _FormLabel(label, self)
         self.label.geometryChanged.connect(self._schedule_group_reflow)
         self.label.setObjectName("panelFormLabel")
@@ -162,7 +163,7 @@ class FormRow(_ResponsiveFrame):
         self.label_container = QWidget(self)
         label_layout = QHBoxLayout(self.label_container)
         label_layout.setContentsMargins(0, 0, 0, 0)
-        label_layout.setSpacing(6)
+        set_metric(label_layout, "setSpacing", 6)
         label_layout.addWidget(self.label)
         self._label_layout: QHBoxLayout | None = None
         if label_suffix is not None:
@@ -182,13 +183,14 @@ class FormRow(_ResponsiveFrame):
         for row in peers:
             row.label.ensurePolished()
         column_width = max(
-            row._label_text_width() + (row.label_suffix.sizeHint().width() + 6 if row.label_suffix is not None else 0)
+            row._label_text_width()
+            + (row.label_suffix.sizeHint().width() + dp(6) if row.label_suffix is not None else 0)
             for row in peers
         )
-        suffix_width = self.label_suffix.sizeHint().width() + 6 if self.label_suffix is not None else 0
+        suffix_width = self.label_suffix.sizeHint().width() + dp(6) if self.label_suffix is not None else 0
         label_width = column_width - suffix_width
         control_min_width = max(row._control_readable_width() for row in peers)
-        required_width = column_width + control_min_width + 8
+        required_width = column_width + control_min_width + dp(8)
         horizontal = required_width <= self.contentsRect().width()
         self.label.setWordWrap(not horizontal)
         available_text_width = label_width if horizontal else max(1, self.contentsRect().width() - suffix_width)
@@ -213,7 +215,7 @@ class FormRow(_ResponsiveFrame):
         direction = QBoxLayout.Direction.LeftToRight if horizontal else QBoxLayout.Direction.TopToBottom
         if self.content_layout.direction() != direction:
             self.content_layout.setDirection(direction)
-            self.content_layout.setSpacing(8 if horizontal else 4)
+            self.content_layout.setSpacing(dp(8 if horizontal else 4))
             self.updateGeometry()
         margins = self.label.contentsMargins()
         horizontal_padding = margins.left() + margins.right() + 2 * self.label.margin()
@@ -234,12 +236,12 @@ class FormRow(_ResponsiveFrame):
         # fontMetrics can miss. Keep its height unconstrained inside a separate
         # container so heightForWidth can also shrink after a narrow layout.
         label_height = max(label_height, self.label.heightForWidth(text_width))
-        label_height = max(label_height, self.minimum_label_height)
+        label_height = max(label_height, dp(self.minimum_label_height))
         if self.label_suffix is not None:
             label_height = max(label_height, self.label_suffix.sizeHint().height())
         self.label_container.setFixedHeight(label_height)
         control_width = (
-            max(1, self.contentsRect().width() - label_width - suffix_width - 8)
+            max(1, self.contentsRect().width() - label_width - suffix_width - dp(8))
             if horizontal
             else self.contentsRect().width()
         )
@@ -249,7 +251,7 @@ class FormRow(_ResponsiveFrame):
             else self.control.sizeHint().height()
         )
         control_height = max(control_height, self.control.minimumHeight(), self.control.minimumSizeHint().height())
-        self.setFixedHeight(max(label_height, control_height) if horizontal else label_height + control_height + 4)
+        self.setFixedHeight(max(label_height, control_height) if horizontal else label_height + control_height + dp(4))
 
     def _label_text_width(self) -> int:
         margins = self.label.contentsMargins()
@@ -275,7 +277,7 @@ class FormRow(_ResponsiveFrame):
                 (metrics.horizontalAdvance(control.itemText(index)) for index in range(control.count())),
                 default=0,
             )
-            width = max(width, text_width + 48)
+            width = max(width, text_width + dp(48))
         else:
             layout = control.layout()
             if isinstance(layout, QBoxLayout):
@@ -320,7 +322,7 @@ class ChoiceGroup(_ResponsiveFrame):
         direction = QBoxLayout.Direction.LeftToRight if responsive else QBoxLayout.Direction.TopToBottom
         self.content_layout = QBoxLayout(direction, self)
         self.content_layout.setContentsMargins(0, 0, 0, 0)
-        self.content_layout.setSpacing(spacing if responsive else Spacing.FORM_ROW_GAP)
+        set_metric(self.content_layout, "setSpacing", spacing if responsive else Spacing.FORM_ROW_GAP)
         if responsive:
             self.content_layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 
@@ -334,12 +336,12 @@ class ChoiceGroup(_ResponsiveFrame):
             if widget is not None:
                 widgets.append(widget)
         required = sum(widget.sizeHint().width() for widget in widgets)
-        required += max(0, len(widgets) - 1) * self._horizontal_spacing
+        required += max(0, len(widgets) - 1) * dp(self._horizontal_spacing)
         horizontal = required <= self.contentsRect().width()
         self.content_layout.setDirection(
             QBoxLayout.Direction.LeftToRight if horizontal else QBoxLayout.Direction.TopToBottom
         )
-        self.content_layout.setSpacing(self._horizontal_spacing if horizontal else Spacing.FORM_ROW_GAP)
+        self.content_layout.setSpacing(dp(self._horizontal_spacing) if horizontal else dp(Spacing.FORM_ROW_GAP))
 
 
 class ActionFooter(QFrame):
@@ -350,7 +352,7 @@ class ActionFooter(QFrame):
         self.setObjectName("panelActionFooter")
         self.content_layout = QHBoxLayout(self)
         self.content_layout.setContentsMargins(0, 0, 0, 0)
-        self.content_layout.setSpacing(Spacing.CONTROL_GAP)
+        set_metric(self.content_layout, "setSpacing", Spacing.CONTROL_GAP)
 
 
 class InlineNotice(QFrame):
@@ -361,7 +363,7 @@ class InlineNotice(QFrame):
         self.setObjectName("panelInlineNotice")
         self.setProperty("noticeTone", tone)
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(8, 6, 8, 6)
+        set_metric(layout, "setContentsMargins", 8, 6, 8, 6)
         self.label = WrappingLabel(text, self)
         layout.addWidget(self.label, stretch=1)
 
@@ -377,7 +379,7 @@ class TaskActivityList(QFrame):
         self.setObjectName("taskActivityList")
         self.content_layout = QVBoxLayout(self)
         self.content_layout.setContentsMargins(0, 0, 0, 0)
-        self.content_layout.setSpacing(8)
+        set_metric(self.content_layout, "setSpacing", 8)
         self.content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
 
@@ -389,8 +391,8 @@ class FormatSelector(ScrollSafeComboBox):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("formatSelector")
-        self.setMinimumHeight(Sizing.CONTROL_HEIGHT)
-        self.setMinimumWidth(100)
+        set_metric(self, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
+        set_metric(self, "setMinimumWidth", 100)
         self.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.currentIndexChanged.connect(self._sync_tooltip)
@@ -423,7 +425,7 @@ class FormatSelector(ScrollSafeComboBox):
         longest = max(
             (self.fontMetrics().horizontalAdvance(self.itemText(index)) for index in range(self.count())), default=0
         )
-        self.setMinimumWidth(max(100, longest + 48))
+        self.setMinimumWidth(max(dp(100), longest + dp(48)))
         self._sync_tooltip()
         self.choices_changed.emit()
 
@@ -453,8 +455,8 @@ class PanelCard(QFrame):
         self.setProperty("panelLevel", level)
         outer = QVBoxLayout(self)
         edge = Border.THIN if level == "card" else 0
-        outer.setContentsMargins(edge, edge, edge, edge)
-        outer.setSpacing(0 if level == "card" else Spacing.CONTROL_GAP)
+        set_metric(outer, "setContentsMargins", edge, edge, edge, edge)
+        set_metric(outer, "setSpacing", 0 if level == "card" else Spacing.CONTROL_GAP)
 
         self._title_label = SectionHeader(parent=self, level=level)
         outer.addWidget(self._title_label)
@@ -463,8 +465,8 @@ class PanelCard(QFrame):
         self._content.setObjectName("panelCardContent")
         self._content_layout = QVBoxLayout(self._content)
         padding = Spacing.CARD_PADDING if level == "card" else 0
-        self._content_layout.setContentsMargins(padding, padding, padding, padding)
-        self._content_layout.setSpacing(Spacing.FORM_ROW_GAP)
+        set_metric(self._content_layout, "setContentsMargins", padding, padding, padding, padding)
+        set_metric(self._content_layout, "setSpacing", Spacing.FORM_ROW_GAP)
         outer.addWidget(self._content)
 
         self.setTone("primary")

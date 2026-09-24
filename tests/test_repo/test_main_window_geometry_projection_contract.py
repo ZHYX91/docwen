@@ -28,23 +28,22 @@ def test_geometry_schema_v2_and_recovery_stay_declared() -> None:
         "center_panel_screen_x": 420,
         "window_y": 0,
         "default_width": 476,
-        "default_height": 860,
+        "default_height": 720,
         "min_width": 420,
-        "min_height": 720,
+        "min_height": 560,
     }
     for token in (
         "GEOMETRY_SCHEMA_VERSION = 2",
         "DEFAULT_CENTER_PANEL_SCREEN_X = 420",
         "DEFAULT_WINDOW_Y = 0",
         "DEFAULT_WINDOW_WIDTH = 476",
-        "DEFAULT_WINDOW_HEIGHT = 860",
+        "DEFAULT_WINDOW_HEIGHT = 720",
         "DEFAULT_MIN_WIDTH = 420",
-        "DEFAULT_MIN_HEIGHT = 720",
+        "DEFAULT_MIN_HEIGHT = 560",
         "def _read_schema_version(",
         "def load_window_geometry_policy(",
         "def build_canonical_geometry_values(",
         "def recover_window_geometry(",
-        "def normalize_ui_scale(",
     ):
         assert token in geometry
 
@@ -63,7 +62,7 @@ def test_geometry_schema_v2_and_recovery_stay_declared() -> None:
         "test_unknown_future_schema_uses_safe_defaults_and_disables_save_contract",
         "test_schema_version_read_error_fails_closed_instead_of_using_configured_values",
         "test_explicit_invalid_schema_version_is_not_treated_as_missing",
-        "test_canonical_scale_round_trip_is_symmetric",
+        "test_canonical_geometry_round_trip_is_symmetric",
         "test_negative_coordinate_secondary_screen_is_preserved",
         "test_disconnected_screen_geometry_centers_on_nearest_remaining_work_area",
         "test_oversized_geometry_and_minima_fit_a_tiny_work_area",

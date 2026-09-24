@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
 )
 
 from docwen_core.toml_tools import toml_table, toml_value
+from docwen_gui.styles.ui_scale import set_metric
 from docwen_runtime.config import atomic_write_text
 
 from ...i18n import t
@@ -372,7 +373,7 @@ class _SymbolPairingEditor(_BaseEditorDialog):
 
     def _setup_ui(self) -> None:
         self.setWindowTitle(t("editors.mapping.symbol_editor_title", "Punctuation Pairing Rules"))
-        self.setMinimumSize(550, 400)
+        set_metric(self, "setMinimumSize", 550, 400)
 
         layout = QVBoxLayout(self)
 
@@ -393,7 +394,7 @@ class _SymbolPairingEditor(_BaseEditorDialog):
         btn_row = QWidget(self)
         btn_layout = QHBoxLayout(btn_row)
         btn_layout.setContentsMargins(0, 0, 0, 0)
-        btn_layout.setSpacing(8)
+        set_metric(btn_layout, "setSpacing", 8)
 
         add_btn = QPushButton(t("editors.mapping.add_entry", "Add Row"), btn_row)
         add_btn.clicked.connect(self._add_row)
@@ -548,7 +549,7 @@ class _TyposDictionaryEditor(_BaseEditorDialog):
 
     def _setup_ui(self) -> None:
         self.setWindowTitle(t("editors.mapping.typo_editor_title", "Edit Typos Dictionary"))
-        self.setMinimumSize(550, 400)
+        set_metric(self, "setMinimumSize", 550, 400)
 
         layout = QVBoxLayout(self)
 
@@ -571,7 +572,7 @@ class _TyposDictionaryEditor(_BaseEditorDialog):
         btn_row = QWidget(self)
         btn_layout = QHBoxLayout(btn_row)
         btn_layout.setContentsMargins(0, 0, 0, 0)
-        btn_layout.setSpacing(8)
+        set_metric(btn_layout, "setSpacing", 8)
 
         add_btn = QPushButton(t("editors.mapping.add_entry", "Add Row"), btn_row)
         add_btn.clicked.connect(self._add_row)
@@ -743,7 +744,7 @@ class _SymbolErrorEditor(_BaseEditorDialog):
 
     def _setup_ui(self) -> None:
         self.setWindowTitle(t("settings.proofread.symbol_correction_section", "Edit Symbol Correction"))
-        self.setMinimumSize(550, 400)
+        set_metric(self, "setMinimumSize", 550, 400)
 
         layout = QVBoxLayout(self)
 
@@ -766,7 +767,7 @@ class _SymbolErrorEditor(_BaseEditorDialog):
         btn_row = QWidget(self)
         btn_layout = QHBoxLayout(btn_row)
         btn_layout.setContentsMargins(0, 0, 0, 0)
-        btn_layout.setSpacing(8)
+        set_metric(btn_layout, "setSpacing", 8)
 
         add_btn = QPushButton(t("editors.mapping.add_entry", "Add Row"), btn_row)
         add_btn.clicked.connect(self._add_row)
@@ -942,7 +943,7 @@ class _SensitiveWordEditor(_BaseEditorDialog):
 
     def _setup_ui(self) -> None:
         self.setWindowTitle(t("editors.mapping.sensitive_editor_title", "Edit Sensitive Words"))
-        self.setMinimumSize(550, 400)
+        set_metric(self, "setMinimumSize", 550, 400)
 
         layout = QVBoxLayout(self)
 
@@ -965,7 +966,7 @@ class _SensitiveWordEditor(_BaseEditorDialog):
         btn_row = QWidget(self)
         btn_layout = QHBoxLayout(btn_row)
         btn_layout.setContentsMargins(0, 0, 0, 0)
-        btn_layout.setSpacing(8)
+        set_metric(btn_layout, "setSpacing", 8)
 
         add_btn = QPushButton(t("editors.mapping.add_entry", "Add Row"), btn_row)
         add_btn.clicked.connect(self._add_row)

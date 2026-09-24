@@ -63,6 +63,7 @@ from docwen_gui.i18n import t as _t
 from docwen_gui.resources import set_action_icon
 from docwen_gui.styles.design_tokens import Sizing
 from docwen_gui.styles.theme_semantics import apply_theme_class
+from docwen_gui.styles.ui_scale import dp, set_metric
 from docwen_gui.widgets.value_controls import ScrollSafeComboBox
 
 from .elided_label import MiddleElidedLabel
@@ -265,7 +266,7 @@ class WrapRowLayout(QLayout):
         super().__init__(parent)
         self._items: list[QWidget | QLayout] = []
         self.setContentsMargins(0, 0, 0, 0)
-        self.setSpacing(spacing)
+        set_metric(self, "setSpacing", spacing)
 
     def addItem(self, item) -> None:
         self._items.append(item)
@@ -378,7 +379,7 @@ class BatchEntryItemWidget(QWidget):
         self._is_current = False
         self._is_compact = False
         self._status_badge_pulse: QVariantAnimation | None = None
-        self._status_badge_pulse_base_size: int | None = None
+        self._status_badge_pulse_base_size: float | None = None
         self._typography_layout_timer = QTimer(self)
         self._typography_layout_timer.setSingleShot(True)
         self._typography_layout_timer.timeout.connect(self._sync_typography_layout)
@@ -398,21 +399,21 @@ class BatchEntryItemWidget(QWidget):
     def _build_ui(self) -> None:
         """Construct the widget layout tree."""
         root = QVBoxLayout(self)
-        root.setContentsMargins(_SPACING_SM, _SPACING_SM, _SPACING_SM, _SPACING_SM)
-        root.setSpacing(_SPACING_SM)
+        set_metric(root, "setContentsMargins", _SPACING_SM, _SPACING_SM, _SPACING_SM, _SPACING_SM)
+        set_metric(root, "setSpacing", _SPACING_SM)
 
         # ── Header row ─────────────────────────────────────────────
         header_row = QWidget(self)
         header_row.setObjectName("batchHeaderRow")
         self._header_layout = QGridLayout(header_row)
         self._header_layout.setContentsMargins(0, 0, 0, 0)
-        self._header_layout.setSpacing(_SPACING_XS)
+        set_metric(self._header_layout, "setSpacing", _SPACING_XS)
         self._header_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self.status_button = QToolButton(header_row)
         self.status_button.setObjectName("batchEntryStatusIcon")
-        self.status_button.setFixedSize(Sizing.CONTROL_HEIGHT, Sizing.CONTROL_HEIGHT)
-        self.status_button.setIconSize(QSize(16, 16))
+        set_metric(self.status_button, "setFixedSize", Sizing.CONTROL_HEIGHT, Sizing.CONTROL_HEIGHT)
+        set_metric(self.status_button, "setIconSize", QSize(16, 16))
         self.status_button.setAutoRaise(True)
         self.status_button.clicked.connect(self._activate_status)
         self._header_layout.addWidget(self.status_button, 0, 0, Qt.AlignmentFlag.AlignTop)
@@ -442,7 +443,7 @@ class BatchEntryItemWidget(QWidget):
         # ── Badge strip ────────────────────────────────────────────
         self.badge_strip = QWidget(self)
         self.badge_strip.setObjectName("batchBadgeRow")
-        self._badge_strip_layout = WrapRowLayout(self.badge_strip, spacing=_SPACING_XS)
+        self._badge_strip_layout = WrapRowLayout(self.badge_strip, spacing=dp(_SPACING_XS))
         self.format_notice_badge = WarningBadge(self.badge_strip)
         self.format_notice_badge.setObjectName("batchFormatNotice")
         self.format_notice_badge.setTextFormat(Qt.TextFormat.PlainText)
@@ -455,8 +456,8 @@ class BatchEntryItemWidget(QWidget):
         self.body_section = QWidget(self)
         self.body_section.setObjectName("batchBodySection")
         body_layout = QVBoxLayout(self.body_section)
-        body_layout.setContentsMargins(0, _SPACING_SM, 0, 0)
-        body_layout.setSpacing(_SPACING_XS)
+        set_metric(body_layout, "setContentsMargins", 0, _SPACING_SM, 0, 0)
+        set_metric(body_layout, "setSpacing", _SPACING_XS)
 
         # path_row
         self.path_row = self._create_body_row(
@@ -491,8 +492,8 @@ class BatchEntryItemWidget(QWidget):
         self.actions_row = QWidget(self)
         self.actions_row.setObjectName("batchActionsRow")
         actions_layout = QHBoxLayout(self.actions_row)
-        actions_layout.setContentsMargins(0, _SPACING_XS, 0, 0)
-        actions_layout.setSpacing(_SPACING_XS)
+        set_metric(actions_layout, "setContentsMargins", 0, _SPACING_XS, 0, 0)
+        set_metric(actions_layout, "setSpacing", _SPACING_XS)
         self.primary_action_button = QPushButton(self.actions_row)
         self.retry_button = QPushButton(self.actions_row)
         self.remove_button = QPushButton(self.actions_row)
@@ -503,8 +504,8 @@ class BatchEntryItemWidget(QWidget):
         self.retry_button.clicked.connect(lambda: self.action_requested.emit("retry_failed", self._entry.file_path))
         self.remove_button.clicked.connect(lambda: self.action_requested.emit("remove_entry", self._entry.file_path))
         for btn in (self.primary_action_button, self.retry_button, self.remove_button):
-            btn.setMinimumWidth(Sizing.BUTTON_MIN_WIDTH)
-            btn.setMinimumHeight(Sizing.CONTROL_HEIGHT)
+            set_metric(btn, "setMinimumWidth", Sizing.BUTTON_MIN_WIDTH)
+            set_metric(btn, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
             actions_layout.addWidget(btn)
         actions_layout.addStretch(1)
         root.addWidget(self.actions_row)
@@ -522,7 +523,7 @@ class BatchEntryItemWidget(QWidget):
         row.setObjectName(row_object_name)
         row_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight, row)
         row_layout.setContentsMargins(0, 0, 0, 0)
-        row_layout.setSpacing(_SPACING_XS)
+        set_metric(row_layout, "setSpacing", _SPACING_XS)
         row_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         title = QLabel(label_text, row)
         title.setObjectName("batchInfoLabel")
@@ -744,7 +745,7 @@ class BatchEntryItemWidget(QWidget):
         if self._status_badge_pulse is not None:
             self._status_badge_pulse.stop()
             self._status_badge_pulse.deleteLater()
-        self._status_badge_pulse_base_size = self.info_badge.font().pointSize()
+        self._status_badge_pulse_base_size = self.info_badge.font().pointSizeF()
         animation = QVariantAnimation(self)
         animation.setDuration(220)
         animation.setStartValue(0)
@@ -759,10 +760,10 @@ class BatchEntryItemWidget(QWidget):
         font = self.info_badge.font()
         base_size = self._status_badge_pulse_base_size
         if base_size is None:
-            base_size = font.pointSize()
+            base_size = font.pointSizeF()
         if base_size <= 0:
             return
-        font.setPointSize(max(1, base_size + int(delta)))
+        font.setPointSizeF(max(1, base_size + int(delta)))
         self.info_badge.setFont(font)
 
     def _finish_pulse(self) -> None:
@@ -934,7 +935,7 @@ class BatchEntryItemWidget(QWidget):
         from docwen_gui.styles.theme_manager import ThemeManager
 
         font_size = resolve_font_size_preset(ThemeManager.get_instance().get_font_size_preset())
-        compact_threshold = round(self._COMPACT_WIDTH_THRESHOLD * font_size / DEFAULT_FONT_SIZE)
+        compact_threshold = dp(self._COMPACT_WIDTH_THRESHOLD * font_size / DEFAULT_FONT_SIZE)
         compact = 0 < content_width < compact_threshold
         if compact == self._is_compact:
             return
@@ -950,7 +951,7 @@ class BatchEntryItemWidget(QWidget):
             2 if compact else 1,
             Qt.AlignmentFlag.AlignTop,
         )
-        spacing = _SPACING_SM if compact else _SPACING_XS
+        spacing = dp(_SPACING_SM) if compact else dp(_SPACING_XS)
         self._header_layout.setSpacing(spacing)
         if compact:
             self.name_label.setWordWrap(True)
@@ -1037,8 +1038,8 @@ class BatchList(QWidget):
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(_SPACING_XS, _SPACING_XS, _SPACING_XS, _SPACING_XS)
-        layout.setSpacing(_SPACING_SM)
+        set_metric(layout, "setContentsMargins", _SPACING_XS, _SPACING_XS, _SPACING_XS, _SPACING_XS)
+        set_metric(layout, "setSpacing", _SPACING_SM)
 
         # ── Summary section ─────────────────────────────────────────
         self._build_summary_section()
@@ -1047,8 +1048,8 @@ class BatchList(QWidget):
         self.tabs_frame = QFrame(self)
         self.tabs_frame.setObjectName("batchListTabsFrame")
         tabs_layout = QVBoxLayout(self.tabs_frame)
-        tabs_layout.setContentsMargins(_SPACING_XS, _SPACING_XS, _SPACING_XS, _SPACING_XS)
-        tabs_layout.setSpacing(_SPACING_XS)
+        set_metric(tabs_layout, "setContentsMargins", _SPACING_XS, _SPACING_XS, _SPACING_XS, _SPACING_XS)
+        set_metric(tabs_layout, "setSpacing", _SPACING_XS)
 
         try:
             from qfluentwidgets import Pivot as FluentPivot
@@ -1098,7 +1099,7 @@ class BatchList(QWidget):
             list_widget.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
             list_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
             list_widget.setFrameShape(QFrame.Shape.NoFrame)
-            list_widget.setSpacing(_SPACING_XS)
+            set_metric(list_widget, "setSpacing", _SPACING_XS)
             list_widget.itemSelectionChanged.connect(self._handle_selection_changed)
             list_widget.currentItemChanged.connect(self._handle_current_item_changed)
             list_widget.item_reordered.connect(self._handle_manual_reorder)
@@ -1136,7 +1137,7 @@ class BatchList(QWidget):
         self.summary_section.setObjectName("batchListSummarySection")
         summary_layout = QVBoxLayout(self.summary_section)
         summary_layout.setContentsMargins(0, 0, 0, 0)
-        summary_layout.setSpacing(_SPACING_XS)
+        set_metric(summary_layout, "setSpacing", _SPACING_XS)
 
         summary_header = QFrame(self.summary_section)
         summary_header.setObjectName("batchListSummaryHeader")
@@ -1145,11 +1146,11 @@ class BatchList(QWidget):
         header_row = QGridLayout(summary_header)
         self._summary_header_layout = header_row
         header_row.setContentsMargins(0, 0, 0, 0)
-        header_row.setSpacing(_SPACING_XS)
+        set_metric(header_row, "setSpacing", _SPACING_XS)
 
         self.filter_button = QPushButton(_t("components.file_drop.batch_list.filter_button", "Filter: All"))
         self.filter_button.setObjectName("batchFilterButton")
-        self.filter_button.setMinimumHeight(Sizing.CONTROL_HEIGHT)
+        set_metric(self.filter_button, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
         self.filter_button.clicked.connect(self._show_filter_menu)
         header_row.addWidget(self.filter_button, 0, 0, alignment=Qt.AlignmentFlag.AlignLeft)
         header_row.setColumnStretch(0, 1)
@@ -1157,7 +1158,7 @@ class BatchList(QWidget):
         reorder_frame = QFrame(summary_header)
         reorder_row = QHBoxLayout(reorder_frame)
         reorder_row.setContentsMargins(0, 0, 0, 0)
-        reorder_row.setSpacing(_SPACING_XS)
+        set_metric(reorder_row, "setSpacing", _SPACING_XS)
 
         self.move_up_button = QPushButton(_t("components.file_drop.batch_list.action_move_up", "Move Up"))
         self.move_down_button = QPushButton(_t("components.file_drop.batch_list.action_move_down", "Move Down"))
@@ -1165,8 +1166,8 @@ class BatchList(QWidget):
         set_action_icon(self.move_down_button, "move_down.svg")
         self.move_up_button.setObjectName("batchReorderButton")
         self.move_down_button.setObjectName("batchReorderButton")
-        self.move_up_button.setMinimumHeight(Sizing.CONTROL_HEIGHT)
-        self.move_down_button.setMinimumHeight(Sizing.CONTROL_HEIGHT)
+        set_metric(self.move_up_button, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
+        set_metric(self.move_down_button, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
         move_up_hint = f"{self.move_up_button.text()} (Ctrl+↑)"
         move_down_hint = f"{self.move_down_button.text()} (Ctrl+↓)"
         self.move_up_button.setToolTip(move_up_hint)
@@ -1182,7 +1183,7 @@ class BatchList(QWidget):
 
         self.sort_button = QPushButton(_t("components.file_drop.batch_list.sort_button", "Sort: Custom"))
         self.sort_button.setObjectName("batchSortButton")
-        self.sort_button.setMinimumHeight(Sizing.CONTROL_HEIGHT)
+        set_metric(self.sort_button, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
         self.sort_button.clicked.connect(self._show_sort_menu)
         reorder_row.addWidget(self.sort_button)
 
@@ -1410,7 +1411,7 @@ class BatchList(QWidget):
             + self._summary_reorder_frame.sizeHint().width()
             + self._summary_header_layout.horizontalSpacing()
         )
-        compact = required_width + (_SPACING_SM * 2) > available_width
+        compact = required_width + (dp(_SPACING_SM) * 2) > available_width
         if compact == self._summary_header_compact:
             return
         self._summary_header_compact = compact

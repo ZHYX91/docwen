@@ -10,8 +10,8 @@ from tests.support.gui_vm_fakes import FakeMainWindowViewModel
 pytestmark = pytest.mark.gui
 
 
-def _point_size(widget) -> int:
-    size = widget.font().pointSize()
+def _point_size(widget) -> float:
+    size = widget.font().pointSizeF()
     assert size > 0
     return size
 
@@ -20,10 +20,9 @@ def test_semantic_typography_preserves_role_hierarchy() -> None:
     from docwen_gui.styles.design_tokens import Typography
 
     expected = {
-        "small": (10, 11, 12, 13, 14, 15, 17, 19),
-        "default": (11, 12, 13, 14, 15, 16, 18, 20),
-        "large": (12, 13, 14, 15, 16, 17, 19, 21),
-        "xlarge": (14, 15, 16, 17, 18, 19, 21, 23),
+        "small": (8, 9, 9.5, 10.5, 11.5, 12.5, 14.5, 16.5),
+        "default": (9, 10.5, 11, 12, 13, 14, 16, 18),
+        "large": (11.5, 13, 13.5, 14.5, 15.5, 16.5, 18.5, 20.5),
     }
     bases = (
         Typography.CAPTION_SIZE,
@@ -44,20 +43,20 @@ def test_global_stylesheet_has_one_dynamic_typography_owner() -> None:
     from docwen_gui.styles.global_aggregate import build_global_stylesheet
 
     default_css = build_global_stylesheet("light", "default")
-    xlarge_css = build_global_stylesheet("light", "xlarge")
+    large_css = build_global_stylesheet("light", "large")
 
     assert "/* docwen-application-typography */" in default_css
-    assert "font-size: 12pt;" in default_css
-    assert "font-size: 16pt;" in default_css
-    assert "font-size: 15pt;" in xlarge_css
-    assert "font-size: 19pt;" in xlarge_css
+    assert "font-size: 10.5pt;" in default_css
+    assert "font-size: 14pt;" in default_css
+    assert "font-size: 13pt;" in large_css
+    assert "font-size: 16.5pt;" in large_css
     assert re.search(r"font-size\s*:\s*\d+px", default_css) is None
 
 
 def test_dark_settings_secondary_buttons_use_application_theme() -> None:
     from docwen_gui.styles.global_aggregate import build_global_stylesheet
 
-    dark_css = build_global_stylesheet("dark", "xlarge")
+    dark_css = build_global_stylesheet("dark", "large")
 
     assert "QWidget#settingsTabRoot QPushButton" in dark_css
     assert "QDialog#numberingAddDialog QPushButton" in dark_css
@@ -89,17 +88,17 @@ def test_existing_main_window_roles_follow_runtime_preset(qapp) -> None:
 
         window._apply_font_size_preset("default")
         qapp.processEvents()
-        assert (_point_size(prompt), _point_size(conversion_description), _point_size(version)) == (16, 12, 12)
+        assert (_point_size(prompt), _point_size(conversion_description), _point_size(version)) == (14, 10.5, 10.5)
 
-        window._apply_font_size_preset("xlarge")
+        window._apply_font_size_preset("large")
         qapp.processEvents()
-        assert (_point_size(prompt), _point_size(conversion_description), _point_size(version)) == (19, 15, 15)
+        assert (_point_size(prompt), _point_size(conversion_description), _point_size(version)) == (16.5, 13, 13)
     finally:
         window.close()
         ThemeManager.reset_instance()
 
 
-def test_xlarge_drop_formats_keep_every_label_inside_its_row(qapp, qtbot) -> None:
+def test_large_drop_formats_keep_every_label_inside_its_row(qapp, qtbot) -> None:
     from docwen_gui.styles.theme_manager import ThemeManager
     from docwen_gui.view_models.input_area_vm import InputAreaViewModel
     from docwen_gui.view_models.main_window_vm import MainWindowViewModel
@@ -108,7 +107,7 @@ def test_xlarge_drop_formats_keep_every_label_inside_its_row(qapp, qtbot) -> Non
     ThemeManager.reset_instance()
     manager = ThemeManager.get_instance()
     manager.initialize(qapp, "light")
-    manager.apply_font_size_preset("xlarge")
+    manager.apply_font_size_preset("large")
     main_vm = MainWindowViewModel(controller=None)
     input_vm = InputAreaViewModel(main_vm=main_vm)
     widget = InputArea(view_model=input_vm)
@@ -145,7 +144,7 @@ def test_xlarge_drop_formats_keep_every_label_inside_its_row(qapp, qtbot) -> Non
         ThemeManager.reset_instance()
 
 
-def test_xlarge_batch_toolbar_wraps_before_labels_are_squeezed(qapp, qtbot) -> None:
+def test_large_batch_toolbar_wraps_before_labels_are_squeezed(qapp, qtbot) -> None:
     from docwen_gui.styles.theme_manager import ThemeManager
     from docwen_gui.view_models.batch_list_vm import BatchListViewModel
     from docwen_gui.widgets.batch_list import BatchList
@@ -153,7 +152,7 @@ def test_xlarge_batch_toolbar_wraps_before_labels_are_squeezed(qapp, qtbot) -> N
     ThemeManager.reset_instance()
     manager = ThemeManager.get_instance()
     manager.initialize(qapp, "light")
-    manager.apply_font_size_preset("xlarge")
+    manager.apply_font_size_preset("large")
     widget = BatchList(view_model=BatchListViewModel())
     widget.setFixedWidth(375)
     widget.resize(375, 640)
@@ -203,7 +202,7 @@ def test_batch_status_pulse_returns_to_semantic_font_size(qapp) -> None:
         widget.close()
 
 
-@pytest.mark.parametrize("preset", ["default", "large", "xlarge"])
+@pytest.mark.parametrize("preset", ["small", "default", "large"])
 @pytest.mark.parametrize(
     "filename", ["27-markdown.markdown", "very_long_filename_for_status_balance_review_document_v3.docx"]
 )
@@ -237,7 +236,7 @@ def test_batch_entry_wraps_before_name_and_badge_collide(qapp, preset, filename)
     try:
         for _ in range(3):
             qapp.processEvents()
-        assert widget._is_compact
+        # Both layouts are valid; the contract is that name and status fit.
         assert widget.name_label.text().replace("\u200b", "") == entry.file_name
         wrapped_name_height = widget.name_label.heightForWidth(widget.name_label.width())
         assert wrapped_name_height <= widget.name_label.height()
@@ -250,7 +249,7 @@ def test_batch_entry_wraps_before_name_and_badge_collide(qapp, preset, filename)
         ThemeManager.reset_instance()
 
 
-@pytest.mark.parametrize("preset", ["default", "large", "xlarge"])
+@pytest.mark.parametrize("preset", ["small", "default", "large"])
 @pytest.mark.parametrize("status", ["pending", "failed"])
 def test_themed_batch_details_fit_inside_the_actual_list_item(qapp, qtbot, preset, status) -> None:
     from PySide6.QtCore import QPoint
@@ -301,7 +300,7 @@ def test_themed_batch_details_fit_inside_the_actual_list_item(qapp, qtbot, prese
         ThemeManager.reset_instance()
 
 
-def test_xlarge_batch_target_notice_fits_narrow_panel(qapp, qtbot, tmp_path) -> None:
+def test_large_batch_target_notice_fits_narrow_panel(qapp, qtbot, tmp_path) -> None:
     from openpyxl import Workbook
     from PySide6.QtCore import QPoint
 
@@ -313,7 +312,7 @@ def test_xlarge_batch_target_notice_fits_narrow_panel(qapp, qtbot, tmp_path) -> 
     ThemeManager.reset_instance()
     manager = ThemeManager.get_instance()
     manager.initialize(qapp, "dark")
-    manager.apply_font_size_preset("xlarge")
+    manager.apply_font_size_preset("large")
     formats = {str(tmp_path / f"sample.{fmt}"): fmt for fmt in ("xlsx", "xls", "ods", "csv")}
     xlsx = next(iter(formats))
     Workbook().save(xlsx)
@@ -339,7 +338,7 @@ def test_xlarge_batch_target_notice_fits_narrow_panel(qapp, qtbot, tmp_path) -> 
         ThemeManager.reset_instance()
 
 
-def test_xlarge_layout_render_controls_stay_inside_right_panel(qapp) -> None:
+def test_large_layout_render_controls_stay_inside_right_panel(qapp) -> None:
     from docwen_gui.styles.theme_manager import ThemeManager
     from docwen_gui.view_models.conversion_panel_vm import ConversionPanelViewModel
     from docwen_gui.widgets.conversion_panel import ConversionPanel
@@ -347,7 +346,7 @@ def test_xlarge_layout_render_controls_stay_inside_right_panel(qapp) -> None:
     ThemeManager.reset_instance()
     manager = ThemeManager.get_instance()
     manager.initialize(qapp, "dark")
-    manager.apply_font_size_preset("xlarge")
+    manager.apply_font_size_preset("large")
     vm = ConversionPanelViewModel(FakeMainWindowViewModel())  # type: ignore[arg-type]
     widget = ConversionPanel(view_model=vm)
     widget.resize(576, 760)
@@ -368,7 +367,7 @@ def test_xlarge_layout_render_controls_stay_inside_right_panel(qapp) -> None:
         ThemeManager.reset_instance()
 
 
-def test_xlarge_conversion_detail_controls_wrap_without_clipping(qapp, tmp_path, qtbot) -> None:
+def test_large_conversion_detail_controls_wrap_without_clipping(qapp, tmp_path, qtbot) -> None:
     import zipfile
 
     from PySide6.QtWidgets import QLabel
@@ -380,7 +379,7 @@ def test_xlarge_conversion_detail_controls_wrap_without_clipping(qapp, tmp_path,
     ThemeManager.reset_instance()
     manager = ThemeManager.get_instance()
     manager.initialize(qapp, "light")
-    manager.apply_font_size_preset("xlarge")
+    manager.apply_font_size_preset("large")
     vm = ConversionPanelViewModel(FakeMainWindowViewModel())  # type: ignore[arg-type]
     widget = ConversionPanel(view_model=vm)
     widget.resize(576, 760)
@@ -420,7 +419,7 @@ def test_xlarge_conversion_detail_controls_wrap_without_clipping(qapp, tmp_path,
         ThemeManager.reset_instance()
 
 
-def test_xlarge_guide_actions_wrap_before_labels_are_squeezed(qapp, qtbot) -> None:
+def test_large_guide_actions_wrap_before_labels_are_squeezed(qapp, qtbot) -> None:
     from docwen_gui.styles.theme_manager import ThemeManager
     from docwen_gui.view_models.info_area_vm import InfoAreaViewModel
     from docwen_gui.widgets.info_area import InfoArea
@@ -428,14 +427,14 @@ def test_xlarge_guide_actions_wrap_before_labels_are_squeezed(qapp, qtbot) -> No
     ThemeManager.reset_instance()
     manager = ThemeManager.get_instance()
     manager.initialize(qapp, "dark")
-    manager.apply_font_size_preset("xlarge")
+    manager.apply_font_size_preset("large")
     vm = InfoAreaViewModel()
     widget = InfoArea(view_model=vm)
     widget.setFixedWidth(576)
     widget.resize(576, 500)
     widget.show()
     vm.set_task_summary(
-        operation_id="failed-xlarge",
+        operation_id="failed-large",
         state="failed",
         tone="danger",
         guide_actions=[
@@ -486,11 +485,11 @@ def test_existing_and_later_settings_widgets_agree(qapp) -> None:
         existing_apply = existing.findChild(QPushButton, "settingsApplyButton")
         assert existing_title is not None
         assert existing_apply is not None
-        assert (_point_size(existing_title), _point_size(existing_apply)) == (18, 12)
+        assert (_point_size(existing_title), _point_size(existing_apply)) == (16, 10.5)
 
-        manager.apply_font_size_preset("xlarge")
+        manager.apply_font_size_preset("large")
         qapp.processEvents()
-        assert (_point_size(existing_title), _point_size(existing_apply)) == (21, 15)
+        assert (_point_size(existing_title), _point_size(existing_apply)) == (18.5, 13)
 
         later = SettingsDialog(view_model=SettingsViewModel())
         later.show()
@@ -499,7 +498,7 @@ def test_existing_and_later_settings_widgets_agree(qapp) -> None:
         later_apply = later.findChild(QPushButton, "settingsApplyButton")
         assert later_title is not None
         assert later_apply is not None
-        assert (_point_size(later_title), _point_size(later_apply)) == (21, 15)
+        assert (_point_size(later_title), _point_size(later_apply)) == (18.5, 13)
     finally:
         existing.close()
         if later is not None:
@@ -507,7 +506,7 @@ def test_existing_and_later_settings_widgets_agree(qapp) -> None:
         ThemeManager.reset_instance()
 
 
-def test_xlarge_settings_pages_do_not_require_horizontal_scrolling(qapp) -> None:
+def test_large_settings_pages_do_not_require_horizontal_scrolling(qapp) -> None:
     from PySide6.QtWidgets import QScrollArea
 
     from docwen_gui.styles.theme_manager import ThemeManager
@@ -517,7 +516,7 @@ def test_xlarge_settings_pages_do_not_require_horizontal_scrolling(qapp) -> None
     ThemeManager.reset_instance()
     manager = ThemeManager.get_instance()
     manager.initialize(qapp, "light")
-    manager.apply_font_size_preset("xlarge")
+    manager.apply_font_size_preset("large")
     dialog = SettingsDialog(view_model=SettingsViewModel())
     dialog.show()
     try:

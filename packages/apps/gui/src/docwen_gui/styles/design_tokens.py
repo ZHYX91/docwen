@@ -16,33 +16,33 @@ class Spacing:
 
     CONTROL_GAP = SM
     GROUP_GAP = MD
-    FORM_ROW_GAP = MD
-    CARD_PADDING = LG
-    CARD_GAP = LG
-    COLUMN_GAP = LG
+    FORM_ROW_GAP = SM
+    CARD_PADDING = MD
+    CARD_GAP = MD
+    COLUMN_GAP = MD
 
 
 class Typography:
     """全局字体层级（具体字体由 font_utils 提供）。"""
 
-    CAPTION_SIZE = 11
-    BODY_SIZE = 12
-    CARD_TITLE_SIZE = 13
-    SECTION_TITLE_SIZE = 14
-    EMPHASIS_TITLE_SIZE = 15
-    HERO_SIZE = 16
-    PAGE_TITLE_SIZE = 18
-    DIALOG_TITLE_SIZE = 20
+    CAPTION_SIZE = 9
+    BODY_SIZE = 10.5
+    CARD_TITLE_SIZE = 11
+    SECTION_TITLE_SIZE = 12
+    EMPHASIS_TITLE_SIZE = 13
+    HERO_SIZE = 14
+    PAGE_TITLE_SIZE = 16
+    DIALOG_TITLE_SIZE = 18
 
     @staticmethod
-    def resolve(default_size: int, preset: str | None = None) -> int:
+    def resolve(default_size: float, preset: str | None = None) -> float:
         from docwen_gui.font_utils import resolve_typography_size
 
         return resolve_typography_size(default_size, preset)
 
     @classmethod
-    def qss(cls, default_size: int, preset: str | None = None) -> str:
-        return f"{cls.resolve(default_size, preset)}pt"
+    def qss(cls, default_size: float, preset: str | None = None) -> str:
+        return f"{cls.resolve(default_size, preset):g}pt"
 
 
 class Radius:
@@ -70,8 +70,8 @@ class Sizing:
     边框及内边距的内容高度，避免两套盒模型产生不一致的实际尺寸。
     """
 
-    CONTROL_HEIGHT = 36
-    ACTION_HEIGHT = 40
+    CONTROL_HEIGHT = 32
+    ACTION_HEIGHT = 36
     BUTTON_MIN_WIDTH = 80
 
 

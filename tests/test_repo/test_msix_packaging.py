@@ -87,7 +87,7 @@ def test_store_config_and_manifest_bind_partner_center_identity() -> None:
     assert identity.attrib == {
         "Name": "ZHYX.DocWen",
         "Publisher": "CN=9E46E7F1-F057-4B88-BF71-7C9CB77AF9C6",
-        "Version": "1.0.7.0",
+        "Version": "1.0.8.0",
         "ProcessorArchitecture": "x64",
     }
     target = manifest.find("f:Dependencies/f:TargetDeviceFamily", namespaces)
@@ -206,7 +206,7 @@ def _inspection_receipt(tmp_path: Path, archive: Path) -> Path:
                 "stage": "candidate-verified",
                 "provenance": "verified",
                 "repository": "ZHYX91/docwen",
-                "version": "0.13.1",
+                "version": "0.14.0",
                 "sourceCommit": "a" * 40,
                 "manifestSha256": "b" * 64,
                 "artifactId": 20,
@@ -257,9 +257,33 @@ def test_makeappx_accepts_generated_layout_when_windows_sdk_is_available(tmp_pat
     with zipfile.ZipFile(output) as package:
         names = set(package.namelist())
         assert "AppxManifest.xml" in names
+        assert "resources.pri" in names
         assert "assets/msix/StoreLogo.png" in names
         assert "DocWen.exe" in names
         assert "DocWenCLI.exe" in names
+
+
+def test_shell_resource_index_contains_both_unplated_themes_and_start_sizes(tmp_path: Path) -> None:
+    try:
+        sdk = build_msix.find_makeappx().parent
+    except build_msix.MsixBuildError:
+        pytest.skip("Windows SDK required for real PRI verification")
+    config = build_msix.read_config(_CONFIG_PATH)
+    staging = tmp_path / "staging"
+    build_msix.prepare_layout(_fake_payload(tmp_path / "payload"), staging, config)
+    build_msix.write_resource_index(staging, tmp_path, sdk / "makepri.exe")
+    dump = tmp_path / "pri.xml"
+    subprocess.run(
+        [str(sdk / "makepri.exe"), "dump", "/if", str(staging / "resources.pri"), "/of", str(dump), "/dt", "detailed"],
+        check=True,
+        capture_output=True,
+    )
+    document = ElementTree.parse(dump)
+    values = [node.text for node in document.iter("Value")]
+    for size in (32, 40, 48, 64, 80, 96, 256):
+        for variant in ("", "_altform-unplated", "_altform-lightunplated"):
+            filename = f"Square44x44Logo.targetsize-{size}{variant}.png"
+            assert any(value and value.endswith(filename) for value in values), filename
 
 
 @pytest.mark.parametrize(
@@ -286,7 +310,7 @@ def test_portable_candidate_rejects_unsafe_entries_before_extraction(tmp_path: P
     receipt = _inspection_receipt(tmp_path, archive)
     output = tmp_path / "extracted"
     with pytest.raises(PublicationError):
-        extract_candidate(archive, receipt, output, version="0.13.1")
+        extract_candidate(archive, receipt, output, version="0.14.0")
     assert not output.exists()
     assert not (tmp_path / "escaped.txt").exists()
 
@@ -294,7 +318,7 @@ def test_portable_candidate_rejects_unsafe_entries_before_extraction(tmp_path: P
 @pytest.mark.parametrize("failure", ["changed-archive", "uninspected", "wrong-version"])
 def test_portable_candidate_requires_inspected_bytes_and_version(tmp_path: Path, failure: str) -> None:
     archive, receipt = _portable_candidate(tmp_path, _fake_payload(tmp_path / "payload"))
-    version = "0.13.1"
+    version = "0.14.0"
     if failure == "changed-archive":
         with archive.open("ab") as stream:
             stream.write(b"changed")
@@ -348,7 +372,7 @@ def test_msix_build_failure_retains_an_owned_run_and_does_not_overwrite_output(t
 def test_checked_in_store_config_is_stable_json() -> None:
     config = json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
     assert config["storeId"] == "9NR2211SJH97"
-    assert config["sourceVersion"] == "0.13.1"
+    assert config["sourceVersion"] == "0.14.0"
 
 
 def test_package_content_identity_ignores_zip_timestamps(tmp_path: Path) -> None:

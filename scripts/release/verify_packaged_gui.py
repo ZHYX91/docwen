@@ -7,6 +7,7 @@ import hashlib
 import json
 import math
 import os
+import platform
 import re
 import shutil
 import signal
@@ -98,6 +99,7 @@ _FILE_ATTRIBUTE_REPARSE_POINT = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x
 _VERIFICATION_LEASE = ".docwen-temp-lease.json"
 _VERIFICATION_OWNER = "docwen.release.verify-packaged-gui"
 _RECEIPT_SCHEMA = "docwen.acceptance-receipt.v1"
+_OFFICE_EVIDENCE_SCHEMA = "docwen.packaged-gui-office-smoke.v1"
 
 
 def _default_binary_name() -> str:
@@ -307,6 +309,72 @@ def _validate_receipt_destination(requested: Path, *, workspace_root: Path) -> P
     return destination
 
 
+def _gate_evidence_summary(
+    verification_dir: Path,
+    *,
+    selected_gates: list[str],
+) -> dict[str, Any]:
+    """Project compact, hash-bound summaries for host-sensitive selected gates."""
+
+    summaries: dict[str, Any] = {}
+    if "office" in selected_gates:
+        evidence_path = verification_dir / "gui_office_smoke" / "office-smoke-evidence.json"
+        if not evidence_path.is_file():
+            raise RuntimeError(f"packaged_gui_office_evidence_missing:{evidence_path}")
+        try:
+            payload = json.loads(evidence_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise RuntimeError(f"packaged_gui_office_evidence_invalid:{evidence_path}") from exc
+        if payload.get("schema") != _OFFICE_EVIDENCE_SCHEMA:
+            raise RuntimeError(f"packaged_gui_office_evidence_schema_invalid:{payload.get('schema')!r}")
+        host = payload.get("host")
+        cases = payload.get("cases")
+        if not isinstance(host, dict) or not isinstance(cases, list) or len(cases) != 3:
+            raise RuntimeError("packaged_gui_office_evidence_shape_invalid")
+        if {case.get("case") for case in cases if isinstance(case, dict)} != {"docx", "xlsx", "markdown"}:
+            raise RuntimeError("packaged_gui_office_evidence_cases_invalid")
+        backends: list[str] = []
+        for case in cases:
+            backend = case.get("backend") if isinstance(case, dict) else None
+            if not isinstance(backend, str) or not backend.strip():
+                raise RuntimeError(f"packaged_gui_office_evidence_backend_invalid:{case!r}")
+            identity = case.get("backendIdentity")
+            if not isinstance(identity, dict) or not identity.get("version") or identity.get("backend") != backend:
+                raise RuntimeError("packaged_gui_office_evidence_version_invalid")
+            for subject in ("source", "output", "report"):
+                metadata = case.get(subject)
+                if (
+                    not isinstance(metadata, dict)
+                    or not isinstance(metadata.get("bytes"), int)
+                    or metadata["bytes"] <= 0
+                    or not re.fullmatch(r"[a-f0-9]{64}", str(metadata.get("sha256", "")))
+                ):
+                    raise RuntimeError("packaged_gui_office_evidence_identity_invalid")
+            checks = case.get("checks")
+            if (
+                not isinstance(checks, dict)
+                or checks.get("contentPassed") is not True
+                or not 1 <= checks.get("pageCount", 0) <= 3
+            ):
+                raise RuntimeError("packaged_gui_office_evidence_checks_invalid")
+            backends.append(backend.strip())
+        size, sha256 = _hash_regular_file(evidence_path)
+        summaries["office"] = {
+            "path": evidence_path.relative_to(verification_dir).as_posix(),
+            "bytes": size,
+            "sha256": sha256,
+            "host": {
+                "system": str(host.get("system", "")),
+                "release": str(host.get("release", "")),
+                "machine": str(host.get("machine", "")),
+                "pythonPlatform": str(host.get("pythonPlatform", "")),
+            },
+            "backends": backends,
+            "cases": cases,
+        }
+    return summaries
+
+
 def _build_acceptance_receipt(
     verification_dir: Path,
     *,
@@ -321,6 +389,7 @@ def _build_acceptance_receipt(
     }
     manifest_bytes = json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     binary_size, binary_sha256 = _hash_regular_file(binary_path)
+    gate_evidence = _gate_evidence_summary(verification_dir, selected_gates=selected_gates)
     return {
         "schema": _RECEIPT_SCHEMA,
         "candidateId": candidate_id,
@@ -335,6 +404,7 @@ def _build_acceptance_receipt(
             "bytes": sum(value[0] for value in files.values()),
             "manifestSha256": hashlib.sha256(manifest_bytes).hexdigest(),
         },
+        "gateEvidence": gate_evidence,
         "limitations": [
             "This receipt proves only the selected packaged GUI gates.",
             "It does not prove public release, Store state, or unselected external hosts.",
@@ -542,6 +612,10 @@ def _run_office_smoke(
     work_dir.mkdir(parents=True)
 
     outputs: list[Path] = []
+    case_evidence: list[dict[str, Any]] = []
+    import fitz
+    from scripts.release.office_host_identity import office_host_identity
+
     stdout_parts: list[str] = []
     stderr_parts: list[str] = []
     for case_name, source_path, surface, expected_tokens in _write_office_smoke_inputs(work_dir):
@@ -567,13 +641,64 @@ def _run_office_smoke(
                 f"STDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}"
             )
         output_path = _verify_conversion_smoke_report(report_path, expected_tokens=expected_tokens)
-        _verify_office_conversion_metrics(
+        backend = _verify_office_conversion_metrics(
             report_path,
             case_name=case_name,
             input_path=source_path,
             output_path=output_path,
         )
+        backend_identity = office_host_identity(backend)
+        with fitz.open(output_path) as pdf:
+            page_count = pdf.page_count
+        if not 1 <= page_count <= 3:
+            raise RuntimeError(f"packaged_gui_office_page_count_unexpected:{case_name}:{page_count}")
+        source_size, source_sha256 = _hash_regular_file(source_path)
+        output_size, output_sha256 = _hash_regular_file(output_path)
+        report_size, report_sha256 = _hash_regular_file(report_path)
+        case_evidence.append(
+            {
+                "case": case_name,
+                "surface": surface,
+                "backend": backend,
+                "backendIdentity": backend_identity,
+                "checks": {
+                    "contentPassed": True,
+                    "expectedTokens": list(expected_tokens),
+                    "pageCount": page_count,
+                    "layoutReview": "not_performed",
+                },
+                "source": {
+                    "path": source_path.relative_to(work_dir).as_posix(),
+                    "bytes": source_size,
+                    "sha256": source_sha256,
+                },
+                "output": {
+                    "path": output_path.relative_to(work_dir).as_posix(),
+                    "bytes": output_size,
+                    "sha256": output_sha256,
+                },
+                "report": {
+                    "path": report_path.relative_to(work_dir).as_posix(),
+                    "bytes": report_size,
+                    "sha256": report_sha256,
+                },
+            }
+        )
         outputs.append(output_path)
+
+    _atomic_json_write(
+        work_dir / "office-smoke-evidence.json",
+        {
+            "schema": _OFFICE_EVIDENCE_SCHEMA,
+            "host": {
+                "system": platform.system(),
+                "release": platform.release(),
+                "machine": platform.machine(),
+                "pythonPlatform": sys.platform,
+            },
+            "cases": case_evidence,
+        },
+    )
 
     return outputs, subprocess.CompletedProcess(
         [str(binary_path), "--office-smoke"],
@@ -1882,7 +2007,7 @@ def _verify_office_conversion_metrics(
     case_name: str,
     input_path: Path,
     output_path: Path,
-) -> None:
+) -> str:
     report = json.loads(report_path.read_text(encoding="utf-8"))
     metrics = report.get("conversionMetrics") if isinstance(report, dict) else None
     if not isinstance(metrics, dict):
@@ -1931,6 +2056,7 @@ def _verify_office_conversion_metrics(
     backend_valid = isinstance(backend, str) and bool(backend.strip())
     if not all((duration_valid, input_valid, output_valid, engine_valid, backend_valid)):
         raise RuntimeError(f"packaged_gui_office_metrics_invalid: {case_name}: {metrics!r}")
+    return backend.strip()
 
 
 def _snapshot_relevant_processes() -> dict[int, str]:

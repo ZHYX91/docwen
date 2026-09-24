@@ -62,17 +62,16 @@ def test_export_tab_writes_all_controls_to_view_model(qapp) -> None:
     assert vm.config.export.ocr_title_text == t("conversion.ocr_output.blockquote_prefix")
 
 
-def test_export_tab_uses_fluent_settings_checkboxes(qapp) -> None:
-    from qfluentwidgets import CheckBox as FluentCheckBox
-
+def test_export_tab_uses_shared_settings_checkboxes(qapp) -> None:
     from docwen_gui.models.settings_config import SettingsConfig
     from docwen_gui.view_models.settings_vm import SettingsViewModel
+    from docwen_gui.widgets.check_box import CheckBox
     from docwen_gui.widgets.settings.export_tab import ExportTab
 
     tab = ExportTab(SettingsViewModel(config=SettingsConfig()))
 
-    assert isinstance(tab._ocr_title_enabled, FluentCheckBox)  # pyright: ignore[reportPrivateUsage]
-    assert isinstance(tab._compress_enabled, FluentCheckBox)  # pyright: ignore[reportPrivateUsage]
+    assert isinstance(tab._ocr_title_enabled, CheckBox)  # pyright: ignore[reportPrivateUsage]
+    assert isinstance(tab._compress_enabled, CheckBox)  # pyright: ignore[reportPrivateUsage]
 
 
 class _FakeConfigPort:

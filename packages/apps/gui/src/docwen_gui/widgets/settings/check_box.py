@@ -1,28 +1,21 @@
 """Native settings checkboxes with readable labels at narrow widths."""
 
-from typing import TYPE_CHECKING
-
 from PySide6.QtCore import QEvent, QSize
 from PySide6.QtGui import QTextLayout, QTextOption
 from PySide6.QtWidgets import QCheckBox, QSizePolicy, QStyle, QStyleOptionButton, QWidget
 
+from docwen_gui.styles.ui_scale import dp
+
 from ...styles.design_tokens import Sizing
-
-if TYPE_CHECKING:
-    from PySide6.QtWidgets import QCheckBox as _CheckBox
-else:
-    try:
-        from qfluentwidgets import CheckBox as _CheckBox
-    except ImportError:
-        from PySide6.QtWidgets import QCheckBox as _CheckBox
+from ..check_box import CheckBox
 
 
-class SettingsCheckBox(_CheckBox):
+class SettingsCheckBox(CheckBox):
     """Preserve native interaction while wrapping the painted label as needed."""
 
     def __init__(self, text: str, parent: QWidget | None = None) -> None:
         self._source_text = ""
-        super().__init__(parent)
+        super().__init__(parent=parent)
         policy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         policy.setHeightForWidth(True)
         self.setSizePolicy(policy)
@@ -39,7 +32,7 @@ class SettingsCheckBox(_CheckBox):
     def _lines(self, width: int) -> list[str]:
         style = self.style()
         inset = style.pixelMetric(QStyle.PixelMetric.PM_IndicatorWidth, None, self)
-        inset += style.pixelMetric(QStyle.PixelMetric.PM_CheckBoxLabelSpacing, None, self) + 6
+        inset += style.pixelMetric(QStyle.PixelMetric.PM_CheckBoxLabelSpacing, None, self) + dp(6)
         lines: list[str] = []
         for paragraph in self._source_text.split("\n"):
             layout = QTextLayout(paragraph, self.font())
@@ -63,10 +56,10 @@ class SettingsCheckBox(_CheckBox):
         option = QStyleOptionButton()
         self.initStyleOption(option)
         size = self.style().sizeFromContents(QStyle.ContentsType.CT_CheckBox, option, QSize(0, height), self)
-        return max(Sizing.CONTROL_HEIGHT, size.height())
+        return max(dp(Sizing.CONTROL_HEIGHT), size.height())
 
     def minimumSizeHint(self) -> QSize:
-        return QSize(0, Sizing.CONTROL_HEIGHT)
+        return QSize(0, dp(Sizing.CONTROL_HEIGHT))
 
     def sizeHint(self) -> QSize:
         # Geometry must depend on the original label, never the last narrow paint.
@@ -82,7 +75,7 @@ class SettingsCheckBox(_CheckBox):
         size = self.style().sizeFromContents(QStyle.ContentsType.CT_CheckBox, option, size, self)
         # Match the additional text inset used by _lines(), so a natural-width
         # checkbox does not wrap its last word despite having enough row space.
-        return QSize(size.width() + 6, max(Sizing.CONTROL_HEIGHT, size.height()))
+        return QSize(size.width() + dp(6), max(dp(Sizing.CONTROL_HEIGHT), size.height()))
 
     def _reflow_text(self) -> None:
         rendered = "\n".join(self._lines(self.width()))

@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QStyle, QToolButton, QWidget
 from docwen_gui.i18n import t
 from docwen_gui.resources import load_svg_icon
 from docwen_gui.styles.design_tokens import Sizing
+from docwen_gui.styles.ui_scale import set_metric
 
 
 class LocationButton(QToolButton):
@@ -22,8 +23,8 @@ class LocationButton(QToolButton):
             # application-owned visual language.
             icon = self.style().standardIcon(QStyle.StandardPixmap.SP_DirOpenIcon)
         self.setIcon(icon)
-        self.setIconSize(QSize(20, 20))
-        self.setFixedSize(Sizing.CONTROL_HEIGHT, Sizing.CONTROL_HEIGHT)
+        set_metric(self, "setIconSize", QSize(20, 20))
+        set_metric(self, "setFixedSize", Sizing.CONTROL_HEIGHT, Sizing.CONTROL_HEIGHT)
         self.setAutoRaise(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
