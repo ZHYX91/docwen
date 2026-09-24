@@ -5,6 +5,16 @@
 
 ## Unreleased / 未发布
 
+## 0.14.0 (2026-09-24)
+
+- Compact desktop layout, three font presets and five relative UI scales with live preview/cancel; shared controls, transparent drop artwork and native window theme synchronization.
+- 更紧凑的桌面布局、三档字号、五档应用缩放及预览/取消；统一控件、透明拖拽插图和原生窗口主题。默认/最小高度调整为 720/560 逻辑像素。
+- Complete Windows package icon variants and SDK-generated resource index; installed Store display is a separate channel acceptance.
+- Rejected artifact cleanup now anchors deletion to OS handles instead of following replaceable parent paths.
+- CSV/TSV imports reject oversized cell text instead of silently truncating it; XLSX exports warn about unavailable formula caches while recognizing explicit empty-string results.
+- Improve cancellation within wide rows and at save/publication boundaries; retain per-case Office acceptance identities and backend versions.
+- 修复失败清理的目录链接边界、长单元格静默截断；补充公式缓存缺失警告、宽表取消及逐场景 Office 验收证据。
+
 ## 0.13.1 (2026-09-24)
 
 - Route preflight rejection now replaces an earlier success summary and output shortcut while preserving activity history.

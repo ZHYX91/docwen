@@ -1200,7 +1200,7 @@ export_markdown = "Export Markdown"
 export_markdown_tooltip = "Convert document to Markdown format"
 optimize_for_type = "Optimize for document type"
 remove_existing_numbering = "Remove original document heading num"
-add_new_numbering = "Add new heading num"
+add_new_numbering = "Add heading numbering"
 
 # 表格转MD面板
 [action_area.spreadsheet]
@@ -1224,8 +1224,8 @@ optimize_for_type = "Optimize for layout type"
 [action_area.md_to_document]
 generate_tooltip = "Generate document in selected format"
 format_combo_tooltip = "Choose target document format"
-remove_existing_numbering = "Remove original Markdown heading num"
-add_new_numbering = "Add new heading num"
+remove_existing_numbering = "Remove existing heading numbering"
+add_new_numbering = "Add heading numbering"
 
 # MD转表格面板
 [action_area.md_to_spreadsheet]
