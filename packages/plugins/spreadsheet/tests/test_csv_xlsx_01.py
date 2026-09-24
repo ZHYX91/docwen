@@ -58,6 +58,24 @@ class TestCsvToXlsx:
 
             wb.close()
 
+    def test_csv_to_xlsx_rejects_cell_text_that_would_be_truncated(self, tmp_path: Path) -> None:
+        from docwen_plugin_spreadsheet.csv_xlsx.converter import CsvToXlsxConverter
+
+        source = tmp_path / "too-long.csv"
+        source.write_text("x" * 32768, encoding="utf-8")
+        with tempfile.TemporaryDirectory() as staging:
+            context = _build_fake_context(str(source), staging, target_format="xlsx")
+            result = CsvToXlsxConverter().convert(context)
+
+        assert result.success is False
+        assert result.error is not None
+        assert result.error.error_type == "conversion_failed"
+        assert result.error.diagnostic_code == "CSV2XLSX-CELL-TEXT-TOO-LONG"
+        assert not result.artifacts
+        assert "row 1, column 1" in result.error.message
+        assert "32768" in result.error.message
+        assert "32767" in result.error.message
+
     def test_csv_to_xlsx_numeric_text(self, sample_csv_path: Path) -> None:
         """Numeric-looking fields remain literal text."""
         import openpyxl
@@ -152,6 +170,21 @@ class TestXlsxToCsv:
 
 class TestTsvToXlsx:
     """ROUTE-TSV-XLSX-001: TSV → XLSX conversion."""
+
+    def test_tsv_to_xlsx_rejects_cell_text_that_would_be_truncated(self, tmp_path: Path) -> None:
+        from docwen_plugin_spreadsheet.csv_xlsx.converter import TsvToXlsxConverter
+
+        source = tmp_path / "too-long.tsv"
+        source.write_text("x" * 32768, encoding="utf-8")
+        with tempfile.TemporaryDirectory() as staging:
+            context = _build_fake_context(str(source), staging, target_format="xlsx")
+            result = TsvToXlsxConverter().convert(context)
+
+        assert result.success is False
+        assert result.error is not None
+        assert result.error.error_type == "conversion_failed"
+        assert result.error.diagnostic_code == "TSV2XLSX-CELL-TEXT-TOO-LONG"
+        assert not result.artifacts
 
     def test_tsv_to_xlsx_basic(self, sample_tsv_path: Path) -> None:
         """TSV should be converted to a valid XLSX."""
