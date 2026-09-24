@@ -95,15 +95,73 @@ def test_xlsx_to_delimited_propagates_mid_write_cancellation_without_registering
     staging = tmp_path / "staging"
     staging.mkdir()
     context = _build_fake_context(str(source), str(staging), target_format=target_format)
-    cancellation = _CancelAfterChecks(fail_at=5)
+
+    class _CancelAfterOutputStarts(_CancelAfterChecks):
+        def check(self) -> None:
+            if any(path.stat().st_size > 0 for path in staging.glob(f"*{suffix}")):
+                super().check()
+
+    cancellation = _CancelAfterOutputStarts(fail_at=1)
     context._cancellation = cancellation
 
     with pytest.raises(CancellationRequested, match="test cancellation"):
         converter_type().convert(context)
 
-    assert cancellation.checks == 5
+    assert cancellation.checks == 1
     assert context.workspace.registered_artifacts == []
     partials = list(staging.glob(f"*{suffix}"))
+    assert len(partials) == 1
+    assert partials[0].stat().st_size > 0
+
+
+@pytest.mark.parametrize("sep", [",", "\t"])
+def test_single_wide_row_can_cancel_before_completing(tmp_path: Path, sep: str) -> None:
+    source = tmp_path / "wide.txt"
+    source.write_text(sep.join(["value"] * 16000), encoding="utf-8")
+    cancellation = _CancelAfterChecks(2)
+    with pytest.raises(CancellationRequested):
+        _build_delimited_workbook(str(source), sep=sep, cancel_check=cancellation.check)
+    assert cancellation.checks == 2
+
+
+@pytest.mark.parametrize("converter", [CsvToXlsxConverter, TsvToXlsxConverter])
+def test_cancel_after_xlsx_save_closes_workbook_and_does_not_register(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, converter
+) -> None:
+    source = tmp_path / "input.csv"
+    source.write_text("literal", encoding="utf-8")
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    context = _build_fake_context(str(source), str(staging), target_format="xlsx")
+    cancellation = _CancelAfterChecks(1)
+    context._cancellation = cancellation
+    saved = False
+    closed = False
+    original_save = openpyxl.Workbook.save
+    original_close = openpyxl.Workbook.close
+
+    def save(workbook, path):
+        nonlocal saved
+        original_save(workbook, path)
+        saved = True
+
+    def close(workbook):
+        nonlocal closed
+        closed = True
+        original_close(workbook)
+
+    def check():
+        if saved:
+            raise CancellationRequested("after save")
+
+    monkeypatch.setattr(cancellation, "check", check)
+    monkeypatch.setattr(openpyxl.Workbook, "save", save)
+    monkeypatch.setattr(openpyxl.Workbook, "close", close)
+    with pytest.raises(CancellationRequested, match="after save"):
+        converter().convert(context)
+    assert saved and closed
+    assert context.workspace.registered_artifacts == []
+    partials = list(staging.glob("*.xlsx"))
     assert len(partials) == 1
     assert partials[0].stat().st_size > 0
 

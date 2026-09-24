@@ -155,6 +155,8 @@ def _build_delimited_workbook(
                         cell = ws.cell(row=r_idx, column=c_idx, value=value)
                         cell.data_type = "s"
                     row_count = r_idx
+                if cancel_check is not None:
+                    cancel_check()
         except UnicodeError:
             wb.close()
             if candidate_index == len(candidates) - 1:
