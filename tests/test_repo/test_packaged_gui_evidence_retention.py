@@ -323,3 +323,73 @@ def test_governed_success_writes_compact_receipt_and_removes_raw_run(
     assert payload["candidateId"] == "candidate-1"
     assert payload["result"] == "passed"
     assert payload["selectedGates"] == ["default-smoke"]
+
+
+def test_office_gate_receipt_binds_host_backends_and_evidence_hash(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from scripts.release import verify_packaged_gui
+
+    binary_dir, binary_name = _packaged_gui(tmp_path)
+    verification_dir = tmp_path / "verification"
+    office_dir = verification_dir / "gui_office_smoke"
+    office_dir.mkdir(parents=True)
+    (verification_dir / "log_home" / "logs").mkdir(parents=True)
+    (verification_dir / "log_home" / "logs" / "docwen.log").write_text("ok", encoding="utf-8")
+    evidence = {
+        "schema": verify_packaged_gui._OFFICE_EVIDENCE_SCHEMA,
+        "host": {
+            "system": "Windows",
+            "release": "11",
+            "machine": "AMD64",
+            "pythonPlatform": "win32",
+        },
+        "cases": [
+            {"case": "docx", "backend": "msoffice_word"},
+            {"case": "xlsx", "backend": "msoffice_excel"},
+            {"case": "markdown", "backend": "msoffice_word"},
+        ],
+    }
+    evidence_path = office_dir / "office-smoke-evidence.json"
+    verify_packaged_gui._atomic_json_write(evidence_path, evidence)
+
+    payload = verify_packaged_gui._build_acceptance_receipt(
+        verification_dir,
+        candidate_id="candidate-office",
+        binary_path=binary_dir / binary_name,
+        selected_gates=["office"],
+    )
+
+    office = payload["gateEvidence"]["office"]
+    assert office["path"] == "gui_office_smoke/office-smoke-evidence.json"
+    assert office["bytes"] == evidence_path.stat().st_size
+    assert office["sha256"] == hashlib.sha256(evidence_path.read_bytes()).hexdigest()
+    assert office["host"] == evidence["host"]
+    assert office["backends"] == ["msoffice_word", "msoffice_excel", "msoffice_word"]
+    assert payload["selectedGates"] == ["office"]
+
+
+def test_office_gate_receipt_fails_closed_without_three_case_evidence(tmp_path: Path) -> None:
+    from scripts.release import verify_packaged_gui
+
+    binary_dir, binary_name = _packaged_gui(tmp_path)
+    verification_dir = tmp_path / "verification"
+    office_dir = verification_dir / "gui_office_smoke"
+    office_dir.mkdir(parents=True)
+    verify_packaged_gui._atomic_json_write(
+        office_dir / "office-smoke-evidence.json",
+        {
+            "schema": verify_packaged_gui._OFFICE_EVIDENCE_SCHEMA,
+            "host": {"system": "Windows", "release": "11", "machine": "AMD64", "pythonPlatform": "win32"},
+            "cases": [{"case": "docx", "backend": "msoffice_word"}],
+        },
+    )
+
+    with pytest.raises(RuntimeError, match="office_evidence_shape_invalid"):
+        verify_packaged_gui._build_acceptance_receipt(
+            verification_dir,
+            candidate_id="candidate-office",
+            binary_path=binary_dir / binary_name,
+            selected_gates=["office"],
+        )
