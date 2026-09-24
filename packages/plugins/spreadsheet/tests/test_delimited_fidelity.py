@@ -111,6 +111,9 @@ def test_delimited_xlsx_cell_text_limit_accepts_exact_boundary(
     source = tmp_path / "boundary.txt"
     unit = {"ascii": "x", "cjk": "中", "non-bmp": "😀", "newline": "a\n"}[kind]
     value = (unit * length)[:length]
+    if kind == "non-bmp":
+        value = "😀" * (length // 2) + "a" * (length % 2)
+    assert len(value.encode("utf-16-le")) // 2 == length
     with source.open("w", encoding="utf-8", newline="") as handle:
         csv.writer(handle, delimiter=sep).writerow([value])
     workbook, rows = _build_delimited_workbook(str(source), sep=sep)
@@ -142,7 +145,7 @@ def test_delimited_xlsx_cell_text_limit_rejects_without_truncation(
     values = {
         "ascii": "x" * length,
         "cjk": "中" * length,
-        "emoji": "😀" * length,
+        "emoji": "😀" * (length // 2) + "a" * (length % 2),
         "newline": ("line\n" * length)[:length],
     }
     value = values[value_kind]
