@@ -326,7 +326,9 @@ def _gate_evidence_summary(
         except (OSError, json.JSONDecodeError) as exc:
             raise RuntimeError(f"packaged_gui_office_evidence_invalid:{evidence_path}") from exc
         if payload.get("schema") != _OFFICE_EVIDENCE_SCHEMA:
-            raise RuntimeError(f"packaged_gui_office_evidence_schema_invalid:{payload.get('schema')!r}")
+            raise RuntimeError(
+                f"packaged_gui_office_evidence_schema_invalid:{payload.get('schema')!r}"
+            )
         host = payload.get("host")
         cases = payload.get("cases")
         if not isinstance(host, dict) or not isinstance(cases, list) or len(cases) != 3:
@@ -669,6 +671,7 @@ def _run_office_smoke(
         stdout="".join(stdout_parts),
         stderr="".join(stderr_parts),
     )
+
 
 def _write_presentation_smoke_input(work_dir: Path) -> tuple[Path, str]:
     from pptx import Presentation
