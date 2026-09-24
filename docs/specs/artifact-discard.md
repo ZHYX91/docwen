@@ -1,0 +1,7 @@
+# Rejected artifact cleanup
+
+`ArtifactBundleCommitter.discard` is best-effort cleanup of explicitly named files or leaf links inside request-owned staging. It rejects relative paths, traversal components, linked parents and ordinary directory leaves. Missing files, invalid/missing staging and operating-system access errors do not replace the original conversion failure. Unnamed files are retained; only empty ancestors below staging may be pruned.
+
+POSIX lookups use directory descriptors with `O_DIRECTORY | O_NOFOLLOW`; deletion is relative to the opened parent. Renaming an ancestor after lookup cannot redirect deletion into a symlink target. Windows opens ancestors without write/delete sharing, inspects handle attributes with `FILE_FLAG_OPEN_REPARSE_POINT`, and removes the validated leaf with `SetFileInformationByHandle`. Parent directories remain pinned while children are removed; pruning uses those same handles. Unsupported primitives or sharing violations leave the rejected artifact for its owning workspace lifecycle to handle.
+
+The contract covers symlink/junction redirection during rejected-artifact cleanup. It does not make conversion a filesystem sandbox or promise protection from a privileged process modifying the filesystem outside normal handle-sharing rules. Tests exercise POSIX parent replacement and Windows blocked parent rename separately, plus nested external links, leaf links, ordinary cleanup, missing paths and access failure.

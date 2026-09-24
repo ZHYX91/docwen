@@ -62,73 +62,21 @@ class ArtifactBundleCommitter:
     def discard(self, *, staging_root: str, artifact_paths: list[str]) -> None:
         """Remove exact rejected paths without following links outside staging."""
 
-        root = self._validated_root(staging_root)
-        parents: set[Path] = set()
+        from .discard import discard_file
+
+        try:
+            root = self._validated_root(staging_root)
+        except (ArtifactBundleCommitError, OSError):
+            return
         for raw_path in artifact_paths:
             candidate = filesystem_path(raw_path, force_extended=sys.platform == "win32")
             if not candidate.is_absolute():
                 continue
             try:
-                lexical_relative = candidate.absolute().relative_to(root)
+                relative = candidate.relative_to(root)
             except ValueError:
                 continue
-            current = root / lexical_relative
-
-            # A lexical path under staging is not sufficient ownership proof:
-            # resolving the leaf can traverse a symlink/junction in one of its
-            # parents. Refuse every candidate whose parent chain contains a
-            # link before touching the leaf or pruning directories.
-            if not self._parent_chain_is_owned(root, lexical_relative.parent):
-                continue
-            try:
-                resolved_parent = current.parent.resolve(strict=True)
-                resolved_parent.relative_to(root)
-            except (OSError, ValueError):
-                continue
-
-            if self._is_link_or_junction(current):
-                try:
-                    self._remove_link(current)
-                except OSError:
-                    continue
-                parents.add(resolved_parent)
-                continue
-            try:
-                resolved = current.resolve(strict=True)
-                resolved.relative_to(root)
-            except (OSError, ValueError):
-                continue
-            if resolved.is_file():
-                try:
-                    resolved.unlink()
-                except OSError:
-                    continue
-                parents.add(resolved.parent)
-
-        for parent in sorted(parents, key=lambda item: len(item.parts), reverse=True):
-            current = parent
-            while current != root:
-                try:
-                    current.rmdir()
-                except OSError:
-                    break
-                current = current.parent
-
-    @classmethod
-    def _parent_chain_is_owned(cls, root: Path, relative_parent: Path) -> bool:
-        """Return whether every parent below root is a real directory, not a link."""
-
-        current = root
-        for part in relative_parent.parts:
-            if part in {"", "."}:
-                continue
-            current /= part
-            try:
-                if cls._is_link_or_junction(current):
-                    return False
-            except OSError:
-                return False
-        return True
+            discard_file(root, relative)
 
     @classmethod
     def _commit_artifact(cls, root: Path, draft_artifact: BundleDraftArtifact) -> BundleArtifact:
