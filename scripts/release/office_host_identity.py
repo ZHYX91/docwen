@@ -24,10 +24,18 @@ _PROGIDS = {
 def _com_executable(prog_id: str) -> Path:
     import winreg
 
-    with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, f"{prog_id}\\CLSID") as key:
-        class_id = str(winreg.QueryValueEx(key, None)[0])
-    with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, f"CLSID\\{class_id}\\LocalServer32") as key:
-        command = os.path.expandvars(str(winreg.QueryValueEx(key, None)[0])).strip()
+    command = ""
+    for view in (winreg.KEY_WOW64_64KEY, winreg.KEY_WOW64_32KEY):
+        try:
+            with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, f"{prog_id}\\CLSID", 0, winreg.KEY_READ | view) as key:
+                class_id = str(winreg.QueryValueEx(key, None)[0])
+            with winreg.OpenKey(
+                winreg.HKEY_CLASSES_ROOT, f"CLSID\\{class_id}\\LocalServer32", 0, winreg.KEY_READ | view
+            ) as key:
+                command = os.path.expandvars(str(winreg.QueryValueEx(key, None)[0])).strip()
+            break
+        except FileNotFoundError:
+            continue
     match = re.match(r'^"([^"]+\.exe)"|^(.+?\.exe)(?:\s|$)', command, re.IGNORECASE)
     if match is None:
         raise RuntimeError("office_registered_executable_unrecognized")
