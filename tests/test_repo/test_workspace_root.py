@@ -26,6 +26,19 @@ def test_resolver_supports_the_current_repos_layout(tmp_path: Path) -> None:
     assert workspace_root.resolve_workspace_root(repo, environment={}) == governed
 
 
+def test_resolver_does_not_require_or_create_a_second_temporary_root(tmp_path: Path) -> None:
+    engineering_root = tmp_path / "engineering"
+    repo = engineering_root / "repos" / "docwen"
+    repo.mkdir(parents=True)
+    governed = _governance_root(engineering_root)
+    unused_root = governed / "tmp"
+    if unused_root.exists():
+        unused_root.rmdir()
+
+    assert workspace_root.resolve_workspace_root(repo, environment={}) == governed
+    assert not unused_root.exists()
+
+
 def test_explicit_path_precedes_environment_and_discovery(tmp_path: Path) -> None:
     repo = tmp_path / "engineering" / "repos" / "docwen"
     repo.mkdir(parents=True)

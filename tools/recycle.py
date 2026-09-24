@@ -12,7 +12,7 @@ _RECYCLE_FLAGS = 0x80000 | 0x20000000 | 0x100000 | 0x400 | 0x10 | 0x4
 
 
 def _recycle_guard():
-    import pythoncom
+    import winerror
     from win32com.server.exception import COMException
     from win32com.server.policy import DesignatedWrapPolicy
     from win32com.shell import shell
@@ -39,7 +39,7 @@ def _recycle_guard():
             # callback does not cancel the operation in pywin32.
             if not flags & 0x80:  # TSF_DELETE_RECYCLE_IF_POSSIBLE
                 self.refused = True
-                raise COMException(desc="permanent_deletion_refused", scode=pythoncom.E_ABORT)
+                raise COMException(desc="permanent_deletion_refused", scode=winerror.E_ABORT)
 
         def _noop(self, *args):
             pass
