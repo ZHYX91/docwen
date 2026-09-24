@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import os
+import subprocess
 from dataclasses import replace
 from pathlib import Path
 
@@ -18,6 +20,26 @@ from docwen_core.models import (
 from docwen_runtime.output.artifact_bundle import ArtifactBundleCommitError, ArtifactBundleCommitter
 
 pytestmark = pytest.mark.contract
+
+
+def _create_directory_link(link: Path, target: Path) -> None:
+    """Create a directory symlink, or a Windows junction when symlinks are unavailable."""
+
+    if os.name == "nt":
+        completed = subprocess.run(
+            ["cmd.exe", "/d", "/c", "mklink", "/J", str(link), str(target.resolve(strict=True))],
+            check=False,
+            capture_output=True,
+            text=True,
+            errors="replace",
+        )
+        if completed.returncode != 0:
+            pytest.skip(f"directory junction creation is unavailable: {completed.stderr or completed.stdout}")
+        return
+    try:
+        link.symlink_to(target, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"directory symlink creation is unavailable: {exc}")
 
 
 def _single_document(path: Path) -> BundleDraft:
@@ -220,3 +242,49 @@ def test_discard_removes_only_named_staging_artifacts(tmp_path: Path) -> None:
     assert not nested.exists()
     assert retained.read_text(encoding="utf-8") == "retained"
     assert outside.read_text(encoding="utf-8") == "outside"
+
+
+def test_discard_does_not_follow_linked_parent_outside_staging(tmp_path: Path) -> None:
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    outside = tmp_path / "outside"
+    nested = outside / "nested"
+    nested.mkdir(parents=True)
+    target = tmp_path / "target"
+    target.mkdir()
+    marker = target / "keep.txt"
+    marker.write_text("keep", encoding="utf-8")
+
+    parent_link = staging / "alias"
+    external_leaf_link = nested / "external-link"
+    _create_directory_link(parent_link, outside)
+    _create_directory_link(external_leaf_link, target)
+
+    ArtifactBundleCommitter().discard(
+        staging_root=str(staging),
+        artifact_paths=[str(parent_link / "nested" / "external-link")],
+    )
+
+    assert parent_link.exists()
+    assert nested.exists()
+    assert external_leaf_link.exists()
+    assert marker.read_text(encoding="utf-8") == "keep"
+
+
+def test_discard_removes_internal_leaf_link_without_touching_target(tmp_path: Path) -> None:
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    target = staging / "target"
+    target.mkdir()
+    marker = target / "keep.txt"
+    marker.write_text("keep", encoding="utf-8")
+    link = staging / "discard-me"
+    _create_directory_link(link, target)
+
+    ArtifactBundleCommitter().discard(
+        staging_root=str(staging),
+        artifact_paths=[str(link)],
+    )
+
+    assert not link.exists()
+    assert marker.read_text(encoding="utf-8") == "keep"
