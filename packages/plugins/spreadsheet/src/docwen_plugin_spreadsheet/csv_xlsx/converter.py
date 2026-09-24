@@ -18,6 +18,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from docwen_core.errors import CancellationRequested
 from docwen_plugin_spreadsheet.delimited import decoded_samples
 
 if TYPE_CHECKING:
@@ -25,6 +26,7 @@ if TYPE_CHECKING:
 
 
 _XLSX_CELL_TEXT_LIMIT = 32767
+_CANCEL_CHECK_ROW_INTERVAL = 1000
 
 
 class DelimitedCellTextTooLongError(ValueError):
@@ -72,19 +74,24 @@ def _find_unavailable_formula_caches(
     *,
     input_path: str,
     location_limit: int = 20,
+    cancel_check: Callable[[], None] | None = None,
 ) -> tuple[int, list[str]]:
     """Find formula cells whose cached scalar value is unavailable to openpyxl."""
 
     from .formula_cache import empty_string_caches
 
-    known_empty = empty_string_caches(input_path)
+    known_empty = empty_string_caches(input_path, cancel_check=cancel_check)
     count = 0
     locations: list[str] = []
     for sheet_name in formula_workbook.sheetnames:
         formula_sheet = formula_workbook[sheet_name]
         values_sheet = values_workbook[sheet_name]
-        for row in formula_sheet.iter_rows():
-            for formula_cell in row:
+        for row_index, row in enumerate(formula_sheet.iter_rows(), 1):
+            if cancel_check is not None and row_index % _CANCEL_CHECK_ROW_INTERVAL == 0:
+                cancel_check()
+            for column_index, formula_cell in enumerate(row, 1):
+                if cancel_check is not None and column_index % 1000 == 0:
+                    cancel_check()
                 if formula_cell.data_type != "f":
                     continue
                 if values_sheet[formula_cell.coordinate].value is not None:
@@ -134,9 +141,11 @@ def _build_delimited_workbook(
             with open(input_path, encoding=encoding, newline="") as f:
                 reader = csv.reader(f, delimiter=sep)
                 for r_idx, row in enumerate(reader, 1):
-                    if cancel_check is not None and r_idx % 1000 == 0:
+                    if cancel_check is not None and r_idx % _CANCEL_CHECK_ROW_INTERVAL == 0:
                         cancel_check()
                     for c_idx, value in enumerate(row, 1):
+                        if cancel_check is not None and c_idx % 1000 == 0:
+                            cancel_check()
                         text_length = len(value.encode("utf-16-le")) // 2
                         if text_length > _XLSX_CELL_TEXT_LIMIT:
                             raise DelimitedCellTextTooLongError(
@@ -147,6 +156,8 @@ def _build_delimited_workbook(
                         cell = ws.cell(row=r_idx, column=c_idx, value=value)
                         cell.data_type = "s"
                     row_count = r_idx
+                if cancel_check is not None:
+                    cancel_check()
         except UnicodeError:
             wb.close()
             if candidate_index == len(candidates) - 1:
@@ -187,6 +198,8 @@ class CsvToXlsxConverter:
             )
 
             context.progress.report_progress(50.0, "Writing XLSX...")
+        except CancellationRequested:
+            raise
         except DelimitedCellTextTooLongError as exc:
             context.logger.error(f"CSV→XLSX rejected unrepresentable cell: {exc}")
             return ConversionResult(
@@ -227,7 +240,11 @@ class CsvToXlsxConverter:
         # ── Phase 2: Write XLSX ───────────────────────────────────────
         output_path = context.workspace.create_artifact_path("primary", ".xlsx")
         try:
+            context.cancellation.check()
             wb.save(output_path)
+            context.cancellation.check()
+        except CancellationRequested:
+            raise
         except Exception as exc:
             context.logger.error(f"CSV→XLSX write failed: {exc}")
             return ConversionResult(
@@ -348,6 +365,7 @@ class XlsxToCsvConverter:
             formula_cache_unavailable_count, formula_cache_locations = _find_unavailable_formula_caches(
                 wb,
                 formula_wb,
+                cancel_check=context.cancellation.check,
                 input_path=input_path,
             )
             for idx, sheet_name in enumerate(wb.sheetnames):
@@ -363,10 +381,18 @@ class XlsxToCsvConverter:
                 row_count = 0
                 with open(output_path, "w", encoding="utf-8-sig", newline="") as f:
                     writer = csv.writer(f)
-                    for row in ws.iter_rows(values_only=True):
-                        writer.writerow(["" if v is None else v for v in row])
+                    for row_index, row in enumerate(ws.iter_rows(values_only=True), 1):
+                        if row_index % _CANCEL_CHECK_ROW_INTERVAL == 0:
+                            context.cancellation.check()
+                        output_row = []
+                        for column_index, value in enumerate(row, 1):
+                            if column_index % 1000 == 0:
+                                context.cancellation.check()
+                            output_row.append("" if value is None else value)
+                        writer.writerow(output_row)
                         row_count += 1
 
+                context.cancellation.check()
                 total_rows += row_count
 
                 artifact = ArtifactManifest(
@@ -387,6 +413,8 @@ class XlsxToCsvConverter:
                 context.workspace.add_artifact(artifact)
                 artifacts.append(artifact)
 
+        except CancellationRequested:
+            raise
         except Exception as exc:
             context.logger.error(f"XLSX→CSV write failed: {exc}")
             return ConversionResult(
@@ -473,6 +501,8 @@ class TsvToXlsxConverter:
             wb, row_count = _build_delimited_workbook(input_path, sep="\t", cancel_check=context.cancellation.check)
 
             context.progress.report_progress(50.0, "Writing XLSX...")
+        except CancellationRequested:
+            raise
         except DelimitedCellTextTooLongError as exc:
             context.logger.error(f"TSV→XLSX rejected unrepresentable cell: {exc}")
             return ConversionResult(
@@ -513,7 +543,11 @@ class TsvToXlsxConverter:
         # ── Phase 2: Write XLSX ───────────────────────────────────────
         output_path = context.workspace.create_artifact_path("primary", ".xlsx")
         try:
+            context.cancellation.check()
             wb.save(output_path)
+            context.cancellation.check()
+        except CancellationRequested:
+            raise
         except Exception as exc:
             context.logger.error(f"TSV→XLSX write failed: {exc}")
             return ConversionResult(
@@ -626,6 +660,7 @@ class XlsxToTsvConverter:
             formula_cache_unavailable_count, formula_cache_locations = _find_unavailable_formula_caches(
                 wb,
                 formula_wb,
+                cancel_check=context.cancellation.check,
                 input_path=input_path,
             )
             for idx, sheet_name in enumerate(wb.sheetnames):
@@ -641,10 +676,18 @@ class XlsxToTsvConverter:
                 row_count = 0
                 with open(output_path, "w", encoding="utf-8-sig", newline="") as f:
                     writer = csv.writer(f, delimiter="\t")
-                    for row in ws.iter_rows(values_only=True):
-                        writer.writerow(["" if v is None else v for v in row])
+                    for row_index, row in enumerate(ws.iter_rows(values_only=True), 1):
+                        if row_index % _CANCEL_CHECK_ROW_INTERVAL == 0:
+                            context.cancellation.check()
+                        output_row = []
+                        for column_index, value in enumerate(row, 1):
+                            if column_index % 1000 == 0:
+                                context.cancellation.check()
+                            output_row.append("" if value is None else value)
+                        writer.writerow(output_row)
                         row_count += 1
 
+                context.cancellation.check()
                 total_rows += row_count
 
                 artifact = ArtifactManifest(
@@ -663,6 +706,8 @@ class XlsxToTsvConverter:
                 context.workspace.add_artifact(artifact)
                 artifacts.append(artifact)
 
+        except CancellationRequested:
+            raise
         except Exception as exc:
             context.logger.error(f"XLSX→TSV write failed: {exc}")
             return ConversionResult(
