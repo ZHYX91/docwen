@@ -5,6 +5,13 @@
 
 ## Unreleased / 未发布
 
+## 0.13.1 (2026-09-24)
+
+- Route preflight rejection now replaces an earlier success summary and output shortcut while preserving activity history.
+- 路线预检拒绝新请求时，不再残留旧成功摘要和输出入口，活动历史仍保留。
+- Document the best-effort XLSX→ODS boundary: frozen and split panes are not guaranteed to survive conversion or round-trip export.
+- 明确 XLSX→ODS 尽力保留的边界：冻结及拆分窗格不保证在转换或往返导出后保留。
+
 ## 0.13.0 (2026-09-21)
 
 ### 破坏性变化 / Breaking changes
