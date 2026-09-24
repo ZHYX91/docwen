@@ -70,10 +70,14 @@ def _find_unavailable_formula_caches(
     values_workbook: Any,
     formula_workbook: Any,
     *,
+    input_path: str,
     location_limit: int = 20,
 ) -> tuple[int, list[str]]:
     """Find formula cells whose cached scalar value is unavailable to openpyxl."""
 
+    from .formula_cache import empty_string_caches
+
+    known_empty = empty_string_caches(input_path)
     count = 0
     locations: list[str] = []
     for sheet_name in formula_workbook.sheetnames:
@@ -84,6 +88,8 @@ def _find_unavailable_formula_caches(
                 if formula_cell.data_type != "f":
                     continue
                 if values_sheet[formula_cell.coordinate].value is not None:
+                    continue
+                if (sheet_name, formula_cell.coordinate) in known_empty:
                     continue
                 count += 1
                 if len(locations) < location_limit:
@@ -332,17 +338,17 @@ class XlsxToCsvConverter:
                 ],
             )
 
-        formula_cache_unavailable_count, formula_cache_locations = _find_unavailable_formula_caches(
-            wb,
-            formula_wb,
-        )
-
         # ── Phase 2: Write CSV per sheet ───────────────────────────────
         artifacts: list[ArtifactManifest] = []
         total_sheets = len(wb.sheetnames)
         total_rows = 0
 
         try:
+            formula_cache_unavailable_count, formula_cache_locations = _find_unavailable_formula_caches(
+                wb,
+                formula_wb,
+                input_path=input_path,
+            )
             for idx, sheet_name in enumerate(wb.sheetnames):
                 context.cancellation.check()
                 progress = progress_start + (100.0 - progress_start) * (idx / max(total_sheets, 1))
@@ -610,17 +616,17 @@ class XlsxToTsvConverter:
                 ],
             )
 
-        formula_cache_unavailable_count, formula_cache_locations = _find_unavailable_formula_caches(
-            wb,
-            formula_wb,
-        )
-
         # ── Phase 2: Write TSV per sheet ───────────────────────────────
         artifacts: list[ArtifactManifest] = []
         total_sheets = len(wb.sheetnames)
         total_rows = 0
 
         try:
+            formula_cache_unavailable_count, formula_cache_locations = _find_unavailable_formula_caches(
+                wb,
+                formula_wb,
+                input_path=input_path,
+            )
             for idx, sheet_name in enumerate(wb.sheetnames):
                 context.cancellation.check()
                 progress = 50.0 * (idx / max(total_sheets, 1))
