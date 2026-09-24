@@ -331,11 +331,32 @@ def _gate_evidence_summary(
         cases = payload.get("cases")
         if not isinstance(host, dict) or not isinstance(cases, list) or len(cases) != 3:
             raise RuntimeError("packaged_gui_office_evidence_shape_invalid")
+        if {case.get("case") for case in cases if isinstance(case, dict)} != {"docx", "xlsx", "markdown"}:
+            raise RuntimeError("packaged_gui_office_evidence_cases_invalid")
         backends: list[str] = []
         for case in cases:
             backend = case.get("backend") if isinstance(case, dict) else None
             if not isinstance(backend, str) or not backend.strip():
                 raise RuntimeError(f"packaged_gui_office_evidence_backend_invalid:{case!r}")
+            identity = case.get("backendIdentity")
+            if not isinstance(identity, dict) or not identity.get("version") or identity.get("backend") != backend:
+                raise RuntimeError("packaged_gui_office_evidence_version_invalid")
+            for subject in ("source", "output", "report"):
+                metadata = case.get(subject)
+                if (
+                    not isinstance(metadata, dict)
+                    or not isinstance(metadata.get("bytes"), int)
+                    or metadata["bytes"] <= 0
+                    or not re.fullmatch(r"[a-f0-9]{64}", str(metadata.get("sha256", "")))
+                ):
+                    raise RuntimeError("packaged_gui_office_evidence_identity_invalid")
+            checks = case.get("checks")
+            if (
+                not isinstance(checks, dict)
+                or checks.get("contentPassed") is not True
+                or not 1 <= checks.get("pageCount", 0) <= 3
+            ):
+                raise RuntimeError("packaged_gui_office_evidence_checks_invalid")
             backends.append(backend.strip())
         size, sha256 = _hash_regular_file(evidence_path)
         summaries["office"] = {
@@ -349,6 +370,7 @@ def _gate_evidence_summary(
                 "pythonPlatform": str(host.get("pythonPlatform", "")),
             },
             "backends": backends,
+            "cases": cases,
         }
     return summaries
 
@@ -591,6 +613,9 @@ def _run_office_smoke(
 
     outputs: list[Path] = []
     case_evidence: list[dict[str, Any]] = []
+    import fitz
+    from scripts.release.office_host_identity import office_host_identity
+
     stdout_parts: list[str] = []
     stderr_parts: list[str] = []
     for case_name, source_path, surface, expected_tokens in _write_office_smoke_inputs(work_dir):
@@ -622,6 +647,11 @@ def _run_office_smoke(
             input_path=source_path,
             output_path=output_path,
         )
+        backend_identity = office_host_identity(backend)
+        with fitz.open(output_path) as pdf:
+            page_count = pdf.page_count
+        if not 1 <= page_count <= 3:
+            raise RuntimeError(f"packaged_gui_office_page_count_unexpected:{case_name}:{page_count}")
         source_size, source_sha256 = _hash_regular_file(source_path)
         output_size, output_sha256 = _hash_regular_file(output_path)
         report_size, report_sha256 = _hash_regular_file(report_path)
@@ -630,6 +660,13 @@ def _run_office_smoke(
                 "case": case_name,
                 "surface": surface,
                 "backend": backend,
+                "backendIdentity": backend_identity,
+                "checks": {
+                    "contentPassed": True,
+                    "expectedTokens": list(expected_tokens),
+                    "pageCount": page_count,
+                    "layoutReview": "not_performed",
+                },
                 "source": {
                     "path": source_path.relative_to(work_dir).as_posix(),
                     "bytes": source_size,

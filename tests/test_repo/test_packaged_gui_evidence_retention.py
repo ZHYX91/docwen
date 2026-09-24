@@ -351,6 +351,11 @@ def test_office_gate_receipt_binds_host_backends_and_evidence_hash(
             {"case": "markdown", "backend": "msoffice_word"},
         ],
     }
+    for case in evidence["cases"]:
+        case["backendIdentity"] = {"backend": case["backend"], "version": "16.0.1.2"}
+        for subject in ("source", "output", "report"):
+            case[subject] = {"bytes": 12, "sha256": "a" * 64}
+        case["checks"] = {"contentPassed": True, "pageCount": 1, "layoutReview": "not_performed"}
     evidence_path = office_dir / "office-smoke-evidence.json"
     verify_packaged_gui._atomic_json_write(evidence_path, evidence)
 
@@ -365,6 +370,7 @@ def test_office_gate_receipt_binds_host_backends_and_evidence_hash(
     assert office["path"] == "gui_office_smoke/office-smoke-evidence.json"
     assert office["bytes"] == evidence_path.stat().st_size
     assert office["sha256"] == hashlib.sha256(evidence_path.read_bytes()).hexdigest()
+    assert office["cases"] == evidence["cases"]
     assert office["host"] == evidence["host"]
     assert office["backends"] == ["msoffice_word", "msoffice_excel", "msoffice_word"]
     assert payload["selectedGates"] == ["office"]
