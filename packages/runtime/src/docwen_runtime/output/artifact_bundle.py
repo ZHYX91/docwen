@@ -73,9 +73,25 @@ class ArtifactBundleCommitter:
             except ValueError:
                 continue
             current = root / lexical_relative
+
+            # A lexical path under staging is not sufficient ownership proof:
+            # resolving the leaf can traverse a symlink/junction in one of its
+            # parents. Refuse every candidate whose parent chain contains a
+            # link before touching the leaf or pruning directories.
+            if not self._parent_chain_is_owned(root, lexical_relative.parent):
+                continue
+            try:
+                resolved_parent = current.parent.resolve(strict=True)
+                resolved_parent.relative_to(root)
+            except (OSError, ValueError):
+                continue
+
             if self._is_link_or_junction(current):
-                self._remove_link(current)
-                parents.add(current.parent)
+                try:
+                    self._remove_link(current)
+                except OSError:
+                    continue
+                parents.add(resolved_parent)
                 continue
             try:
                 resolved = current.resolve(strict=True)
@@ -83,7 +99,10 @@ class ArtifactBundleCommitter:
             except (OSError, ValueError):
                 continue
             if resolved.is_file():
-                resolved.unlink()
+                try:
+                    resolved.unlink()
+                except OSError:
+                    continue
                 parents.add(resolved.parent)
 
         for parent in sorted(parents, key=lambda item: len(item.parts), reverse=True):
@@ -94,6 +113,22 @@ class ArtifactBundleCommitter:
                 except OSError:
                     break
                 current = current.parent
+
+    @classmethod
+    def _parent_chain_is_owned(cls, root: Path, relative_parent: Path) -> bool:
+        """Return whether every parent below root is a real directory, not a link."""
+
+        current = root
+        for part in relative_parent.parts:
+            if part in {"", "."}:
+                continue
+            current /= part
+            try:
+                if cls._is_link_or_junction(current):
+                    return False
+            except OSError:
+                return False
+        return True
 
     @classmethod
     def _commit_artifact(cls, root: Path, draft_artifact: BundleDraftArtifact) -> BundleArtifact:
