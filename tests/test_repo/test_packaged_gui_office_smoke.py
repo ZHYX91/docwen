@@ -25,7 +25,13 @@ def test_packaged_gui_office_smoke_drives_panel_and_action_routes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from scripts.release import verify_packaged_gui
+    from scripts.release import office_host_identity, verify_packaged_gui
+
+    monkeypatch.setattr(
+        office_host_identity,
+        "office_host_identity",
+        lambda backend: {"backend": backend, "version": "fixture-version", "versionSource": "test fixture"},
+    )
 
     binary_dir = tmp_path / "dist"
     binary_dir.mkdir()
