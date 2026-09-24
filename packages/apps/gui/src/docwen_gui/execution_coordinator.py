@@ -218,6 +218,10 @@ class ExecutionCoordinator(QObject):
     def _preflight_notice(
         self, *, files: Sequence[str], source_formats: Sequence[str], target: str, action: str, code: str, message: str
     ) -> None:
+        # A rejected new request owns the visible feedback, even without a worker.
+        # Keep prior operations in history, but do not present their output as its result.
+        self._info_area_vm.clear_all_transients()
+        self._info_area_vm.clear_task_summary()
         for index, path in enumerate(files):
             self._info_area_vm.add_message(
                 message,

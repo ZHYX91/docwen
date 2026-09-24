@@ -11,6 +11,37 @@ from ._main_window_projection_binding_support import window as window
 pytestmark = pytest.mark.gui
 
 
+def test_rejected_route_replaces_previous_success_summary_without_erasing_history(window):
+    from docwen_gui.diagnostics import DiagnosticSummary
+    from docwen_gui.view_models.activity_records import ActivityRecordsModel
+
+    feedback = window._info_area_vm
+    feedback.set_task_summary(
+        operation_id="previous",
+        state="success",
+        total_count=1,
+        completed_count=1,
+        output_path="/previous/result.md",
+    )
+    feedback.add_message(
+        "Previous conversion completed",
+        "success",
+        operation_id="previous",
+        diagnostic=DiagnosticSummary(status="completed", output_count=1),
+    )
+    model = ActivityRecordsModel(window._task_history, feedback)
+
+    window._workflow.single(file_path="/missing/context.docx", target_format="md", action_name="", options={})
+
+    assert feedback.output_file_text == ""
+    assert not feedback.has_task_summary
+    assert feedback.status_tone == "warning"
+    assert feedback.history_rows[-1].message in feedback.status_summary_text
+    assert feedback.history_rows[-1].diagnostic.status == "not_started"
+    assert feedback.history_rows[0].message == "Previous conversion completed"
+    assert any(row.status == "not_started" for row in model.records)
+
+
 @pytest.mark.parametrize("mode", ["single", "batch"])
 def test_ipc_new_and_repeated_open_selects_requested_input(window, tmp_path, qtbot, mode):
     first = tmp_path / "first.md"

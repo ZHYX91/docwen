@@ -173,6 +173,12 @@ Test family names in this table denote their focused shards; for example, `test_
 | FEAT-DETECT-003 | detection | 内容检查返回具体 ``detected_format``、``detected_category`` 与 ``workflow_category``；未知内容保持未知并阻止执行，不再回退到文件后缀类别 | docwen_core | detection/_sniffing.py + detection/_validation.py | test_detection.py + test_file_admission.py | tested |
 | FEAT-DETECT-004 | detection | ``FileInspection`` 冻结路径、大小、mtime、声明/真实格式、结构状态和准入决定；跨族显式接受绑定同一文件事实，执行前重新核验，防止伪造或过期 metadata 绕过准入 | docwen_core | models/file_inspection.py + detection/_validation.py | test_file_admission.py + test_controller_file_admission.py | tested |
 
+## Spreadsheet fidelity / 表格保真边界
+
+Office-backed spreadsheet format conversion is best effort. XLSX→ODS does not guarantee preservation of frozen or split panes, including when the ODS is converted back to XLSX. Excel's ODS export can omit the view settings; selecting LibreOffice is not a preservation guarantee. Check important sheets in the target application and restore the required panes there. Source files are not changed.
+
+依赖外部 Office 的表格格式转换采用尽力保留策略。XLSX→ODS 不保证保留冻结或拆分窗格，ODS 再转回 XLSX 也不保证恢复。Excel 导出 ODS 时可能省略视图设置；选择 LibreOffice 同样不能作为保真保证。请在目标软件检查重要工作表，并按需要重新设置窗格。原文件不变。
+
 ## State vocabulary / 状态说明
 
 - `verified`: automated or executed acceptance evidence covers the current contract.

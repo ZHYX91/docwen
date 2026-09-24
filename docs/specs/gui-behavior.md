@@ -45,6 +45,10 @@ The four proofreading rule sets expose edit, import and export together. The pai
 
 Visible controls require localized labels or accessible names. Errors, warnings and confirmations use the shared feedback layer. Terminal summaries, history and retained artifacts must agree with runtime truth.
 
+If route preflight rejects a new request, the main feedback shows that rejection and clears the previous task's result shortcut. Earlier operations remain available in activity records; a rejected request is recorded as not started, without inventing a failed worker or a new output.
+
+新请求在路线预检中被拒绝时，主反馈显示本次拒绝原因，并清除旧任务的输出快捷入口。先前操作仍保留在活动记录；被拒请求记为未开始，不伪造执行失败或新产物。
+
 Activity records open directly in one modeless window with search, status/operation filters, sorting and an integrated detail pane. Per-file warnings and skip reasons remain available independently of the bounded notification feed. Selection remains readable in both themes. The main result card uses its terminal state as its title, omits redundant single-file counts, and links to this same activity window; failures give the entry a warning colour.
 
 Activity records and copyable feedback separate local details from redacted diagnostics. The diagnostic preview and Copy diagnostics use the same finite summary: status, reviewed error/exception categories, output/warning counts and an explicitly reported recoverability flag when available. They exclude document content, paths, identifiers, arbitrary error codes, raw errors, tracebacks, commands and configuration. Unknown categories remain unknown. Reading local details is independent of sharing a summary; nothing is copied automatically. Copying keeps the diagnostic dialog open, and viewing diagnostics does not resolve or cancel a pending recovery choice.
