@@ -128,3 +128,41 @@ def test_delimited_wide_row_preserves_all_columns_without_timing_assumptions(
         assert sheet.cell(1, len(values)).value == values[-1]
     finally:
         workbook.close()
+
+
+def test_formula_cache_scan_cancellation_closes_both_workbook_views(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from docwen_plugin_spreadsheet.csv_xlsx import converter as converter_module
+
+    source = tmp_path / "input.xlsx"
+    source.write_bytes(b"placeholder")
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    context = _build_fake_context(str(source), str(staging), target_format="csv")
+
+    class _WorkbookView:
+        sheetnames = ["Sheet1"]
+
+        def __init__(self) -> None:
+            self.closed = False
+
+        def close(self) -> None:
+            self.closed = True
+
+    values = _WorkbookView()
+    formulas = _WorkbookView()
+    monkeypatch.setattr(converter_module, "_load_xlsx_views", lambda _path: (values, formulas))
+
+    def cancel_scan(*_args: object, **_kwargs: object) -> tuple[int, list[str]]:
+        raise CancellationRequested("scan cancellation")
+
+    monkeypatch.setattr(converter_module, "_find_unavailable_formula_caches", cancel_scan)
+
+    with pytest.raises(CancellationRequested, match="scan cancellation"):
+        XlsxToCsvConverter().convert(context)
+
+    assert values.closed is True
+    assert formulas.closed is True
+    assert context.workspace.registered_artifacts == []
