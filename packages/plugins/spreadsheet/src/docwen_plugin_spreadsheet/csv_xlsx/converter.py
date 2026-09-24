@@ -24,6 +24,23 @@ if TYPE_CHECKING:
     from docwen_core.protocols.execution_context import ConverterContext
 
 
+_XLSX_CELL_TEXT_LIMIT = 32767
+
+
+class DelimitedCellTextTooLongError(ValueError):
+    """A delimited field cannot be represented without openpyxl truncating it."""
+
+    def __init__(self, *, row: int, column: int, length: int) -> None:
+        self.row = row
+        self.column = column
+        self.length = length
+        self.limit = _XLSX_CELL_TEXT_LIMIT
+        super().__init__(
+            f"Cell text at row {row}, column {column} has {length} characters; "
+            f"XLSX supports at most {self.limit} characters in one cell."
+        )
+
+
 def _load_admitted_xlsx(file_path: str, *, data_only: bool = True) -> Any:
     """Load admitted XLSX content without consulting its user-facing suffix.
 
@@ -66,6 +83,12 @@ def _build_delimited_workbook(
                     if cancel_check is not None and r_idx % 1000 == 0:
                         cancel_check()
                     for c_idx, value in enumerate(row, 1):
+                        if len(value) > _XLSX_CELL_TEXT_LIMIT:
+                            raise DelimitedCellTextTooLongError(
+                                row=r_idx,
+                                column=c_idx,
+                                length=len(value),
+                            )
                         cell = ws.cell(row=r_idx, column=c_idx, value=value)
                         cell.data_type = "s"
                     row_count = r_idx
@@ -109,6 +132,24 @@ class CsvToXlsxConverter:
             )
 
             context.progress.report_progress(50.0, "Writing XLSX...")
+        except DelimitedCellTextTooLongError as exc:
+            context.logger.error(f"CSV→XLSX rejected unrepresentable cell: {exc}")
+            return ConversionResult(
+                task_id=task_id,
+                success=False,
+                error=ConversionErrorInfo(
+                    error_type="conversion_failed",
+                    message=str(exc),
+                    diagnostic_code="CSV2XLSX-CELL-TEXT-TOO-LONG",
+                ),
+                diagnostics=[
+                    ConversionDiagnostic(
+                        level="error",
+                        message=str(exc),
+                        code="CSV2XLSX-CELL-TEXT-TOO-LONG",
+                    ),
+                ],
+            )
         except Exception as exc:
             context.logger.error(f"CSV→XLSX parse failed: {exc}")
             return ConversionResult(
@@ -355,6 +396,24 @@ class TsvToXlsxConverter:
             wb, row_count = _build_delimited_workbook(input_path, sep="\t", cancel_check=context.cancellation.check)
 
             context.progress.report_progress(50.0, "Writing XLSX...")
+        except DelimitedCellTextTooLongError as exc:
+            context.logger.error(f"TSV→XLSX rejected unrepresentable cell: {exc}")
+            return ConversionResult(
+                task_id=task_id,
+                success=False,
+                error=ConversionErrorInfo(
+                    error_type="conversion_failed",
+                    message=str(exc),
+                    diagnostic_code="TSV2XLSX-CELL-TEXT-TOO-LONG",
+                ),
+                diagnostics=[
+                    ConversionDiagnostic(
+                        level="error",
+                        message=str(exc),
+                        code="TSV2XLSX-CELL-TEXT-TOO-LONG",
+                    ),
+                ],
+            )
         except Exception as exc:
             context.logger.error(f"TSV→XLSX parse failed: {exc}")
             return ConversionResult(
