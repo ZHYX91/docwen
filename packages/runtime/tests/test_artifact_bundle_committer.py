@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import os
+import subprocess
 from dataclasses import replace
 from pathlib import Path
 
@@ -18,6 +20,26 @@ from docwen_core.models import (
 from docwen_runtime.output.artifact_bundle import ArtifactBundleCommitError, ArtifactBundleCommitter
 
 pytestmark = pytest.mark.contract
+
+
+def _create_directory_link(link: Path, target: Path) -> None:
+    """Create a directory symlink, or a Windows junction when symlinks are unavailable."""
+
+    if os.name == "nt":
+        completed = subprocess.run(
+            ["cmd.exe", "/d", "/c", "mklink", "/J", str(link), str(target.resolve(strict=True))],
+            check=False,
+            capture_output=True,
+            text=True,
+            errors="replace",
+        )
+        if completed.returncode != 0:
+            pytest.skip(f"directory junction creation is unavailable: {completed.stderr or completed.stdout}")
+        return
+    try:
+        link.symlink_to(target, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"directory symlink creation is unavailable: {exc}")
 
 
 def _single_document(path: Path) -> BundleDraft:
@@ -220,3 +242,133 @@ def test_discard_removes_only_named_staging_artifacts(tmp_path: Path) -> None:
     assert not nested.exists()
     assert retained.read_text(encoding="utf-8") == "retained"
     assert outside.read_text(encoding="utf-8") == "outside"
+
+
+def test_discard_does_not_follow_linked_parent_outside_staging(tmp_path: Path) -> None:
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    outside = tmp_path / "outside"
+    nested = outside / "nested"
+    nested.mkdir(parents=True)
+    target = tmp_path / "target"
+    target.mkdir()
+    marker = target / "keep.txt"
+    marker.write_text("keep", encoding="utf-8")
+
+    parent_link = staging / "alias"
+    external_leaf_link = nested / "external-link"
+    _create_directory_link(parent_link, outside)
+    _create_directory_link(external_leaf_link, target)
+
+    ArtifactBundleCommitter().discard(
+        staging_root=str(staging),
+        artifact_paths=[str(parent_link / "nested" / "external-link")],
+    )
+
+    assert parent_link.exists()
+    assert nested.exists()
+    assert external_leaf_link.exists()
+    assert marker.read_text(encoding="utf-8") == "keep"
+
+
+def test_discard_removes_internal_leaf_link_without_touching_target(tmp_path: Path) -> None:
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    target = staging / "target"
+    target.mkdir()
+    marker = target / "keep.txt"
+    marker.write_text("keep", encoding="utf-8")
+    link = staging / "discard-me"
+    _create_directory_link(link, target)
+
+    ArtifactBundleCommitter().discard(
+        staging_root=str(staging),
+        artifact_paths=[str(link)],
+    )
+
+    assert not link.exists()
+    assert marker.read_text(encoding="utf-8") == "keep"
+
+
+def test_discard_repeated_missing_and_dotdot_paths_are_harmless(tmp_path: Path) -> None:
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    outside = tmp_path / "keep.md"
+    outside.write_text("keep", encoding="utf-8")
+    rejected = staging / "rejected.md"
+    rejected.write_text("remove", encoding="utf-8")
+    committer = ArtifactBundleCommitter()
+    paths = [str(rejected), str(staging / ".." / outside.name), str(staging)]
+    committer.discard(staging_root=str(staging), artifact_paths=paths)
+    committer.discard(staging_root=str(staging), artifact_paths=paths)
+    committer.discard(staging_root=str(staging / "missing"), artifact_paths=paths)
+    assert outside.read_text(encoding="utf-8") == "keep"
+    assert not rejected.exists()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX directory-descriptor replacement boundary")
+def test_discard_parent_swap_cannot_redirect_unlink(tmp_path: Path, monkeypatch) -> None:
+    staging = tmp_path / "staging"
+    parent = staging / "parent"
+    parent.mkdir(parents=True)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (parent / "result.md").write_text("owned", encoding="utf-8")
+    protected = outside / "result.md"
+    protected.write_text("keep", encoding="utf-8")
+    original_unlink = os.unlink
+
+    def swap_then_unlink(path, *, dir_fd=None):
+        parent.rename(staging / "moved")
+        parent.symlink_to(outside, target_is_directory=True)
+        original_unlink(path, dir_fd=dir_fd)
+
+    monkeypatch.setattr(os, "unlink", swap_then_unlink)
+    ArtifactBundleCommitter().discard(staging_root=str(staging), artifact_paths=[str(parent / "result.md")])
+    assert protected.read_text(encoding="utf-8") == "keep"
+    assert parent.is_symlink()
+    assert not (staging / "moved" / "result.md").exists()
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows directory handle sharing boundary")
+def test_discard_pins_parent_against_replacement_before_delete(tmp_path: Path, monkeypatch) -> None:
+    from docwen_runtime.output.discard_windows import _Handles
+
+    staging = tmp_path / "staging"
+    parent = staging / "parent"
+    parent.mkdir(parents=True)
+    rejected = parent / "result.md"
+    rejected.write_text("owned", encoding="utf-8")
+    original_remove = _Handles.remove
+    attempts = []
+
+    def replace_before_remove(self, handle):
+        with pytest.raises(OSError):
+            parent.rename(staging / "moved")
+        attempts.append(True)
+        original_remove(self, handle)
+
+    monkeypatch.setattr(_Handles, "remove", replace_before_remove)
+    ArtifactBundleCommitter().discard(staging_root=str(staging), artifact_paths=[str(rejected)])
+    assert attempts
+    assert not rejected.exists()
+    assert not parent.exists()
+
+
+def test_discard_io_failure_does_not_escape(tmp_path: Path, monkeypatch) -> None:
+    from docwen_runtime.output import discard
+
+    rejected = tmp_path / "keep.md"
+    rejected.write_text("keep", encoding="utf-8")
+
+    def denied(*args, **kwargs):
+        raise PermissionError("test denial")
+
+    if os.name == "nt":
+        from docwen_runtime.output import discard_windows
+
+        monkeypatch.setattr(discard_windows, "discard_windows", denied)
+    else:
+        monkeypatch.setattr(discard, "_discard_posix", denied)
+    ArtifactBundleCommitter().discard(staging_root=str(tmp_path), artifact_paths=[str(rejected)])
+    assert rejected.read_text(encoding="utf-8") == "keep"
