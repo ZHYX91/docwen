@@ -101,13 +101,16 @@ def test_delimited_cancellation_is_not_retried_as_encoding(tmp_path: Path) -> No
 
 @pytest.mark.parametrize("sep", [",", "\t"])
 @pytest.mark.parametrize("length", [32766, 32767])
+@pytest.mark.parametrize("kind", ["ascii", "cjk", "non-bmp", "newline"])
 def test_delimited_xlsx_cell_text_limit_accepts_exact_boundary(
     tmp_path: Path,
     sep: str,
     length: int,
+    kind: str,
 ) -> None:
     source = tmp_path / "boundary.txt"
-    value = "中" * length
+    unit = {"ascii": "x", "cjk": "中", "non-bmp": "😀", "newline": "a\n"}[kind]
+    value = (unit * length)[:length]
     with source.open("w", encoding="utf-8", newline="") as handle:
         csv.writer(handle, delimiter=sep).writerow([value])
     workbook, rows = _build_delimited_workbook(str(source), sep=sep)
@@ -115,22 +118,32 @@ def test_delimited_xlsx_cell_text_limit_accepts_exact_boundary(
         assert rows == 1
         assert workbook.active is not None
         assert workbook.active.cell(1, 1).value == value
+        output = tmp_path / "boundary.xlsx"
+        workbook.save(output)
     finally:
         workbook.close()
+    loaded = openpyxl.load_workbook(output)
+    try:
+        assert loaded.active is not None
+        assert loaded.active.cell(1, 1).value == value
+    finally:
+        loaded.close()
 
 
 @pytest.mark.parametrize("sep", [",", "\t"])
 @pytest.mark.parametrize("value_kind", ["ascii", "cjk", "emoji", "newline"])
+@pytest.mark.parametrize("length", [32768, 40000])
 def test_delimited_xlsx_cell_text_limit_rejects_without_truncation(
     tmp_path: Path,
     sep: str,
     value_kind: str,
+    length: int,
 ) -> None:
     values = {
-        "ascii": "x" * 32768,
-        "cjk": "中" * 32768,
-        "emoji": "😀" * 32768,
-        "newline": ("line\n" * 6554)[:32768],
+        "ascii": "x" * length,
+        "cjk": "中" * length,
+        "emoji": "😀" * length,
+        "newline": ("line\n" * length)[:length],
     }
     value = values[value_kind]
     source = tmp_path / "too-long.txt"
@@ -142,6 +155,6 @@ def test_delimited_xlsx_cell_text_limit_rejects_without_truncation(
 
     assert rejected.value.row == 1
     assert rejected.value.column == 1
-    assert rejected.value.length == 32768
+    assert rejected.value.length == length
     assert rejected.value.limit == 32767
     assert value[:32] not in str(rejected.value)
