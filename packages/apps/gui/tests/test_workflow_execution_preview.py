@@ -102,4 +102,4 @@ def test_execution_caption_wraps_without_losing_keyboard_activation(qtbot):
     with qtbot.waitSignal(button.clicked):
         qtbot.keyClick(button, Qt.Key.Key_Space)
     button.resize(500, button.height())
-    qtbot.waitUntil(lambda: button.minimumHeight() == 40)
+    qtbot.waitUntil(lambda: button.minimumHeight() == button.heightForWidth(button.width()))

@@ -18,6 +18,7 @@ from docwen_gui.diagnostics import DiagnosticSummary
 from docwen_gui.i18n import t
 from docwen_gui.styles.design_tokens import Spacing
 from docwen_gui.styles.theme_semantics import apply_theme_class
+from docwen_gui.styles.ui_scale import set_metric
 
 
 class DiagnosticView(QTabWidget):
@@ -32,7 +33,7 @@ class DiagnosticView(QTabWidget):
         self.addTab(self.details, t("diagnostics.local_details"))
         preview_page = QWidget(self)
         layout = QVBoxLayout(preview_page)
-        layout.setContentsMargins(0, Spacing.CONTROL_GAP, 0, 0)
+        set_metric(layout, "setContentsMargins", 0, Spacing.CONTROL_GAP, 0, 0)
         note = QLabel(t("diagnostics.redacted_hint"), preview_page)
         note.setWordWrap(True)
         note.setTextFormat(Qt.TextFormat.PlainText)
@@ -72,12 +73,17 @@ class DiagnosticDialog(QDialog):
         self.setObjectName("feedbackDiagnosticDialog")
         self.setWindowTitle(title)
         self.resize(620, 440)
-        self.setMinimumSize(360, 300)
+        set_metric(self, "setMinimumSize", 360, 300)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(
-            Spacing.CARD_PADDING, Spacing.CARD_PADDING, Spacing.CARD_PADDING, Spacing.CARD_PADDING
+        set_metric(
+            layout,
+            "setContentsMargins",
+            Spacing.CARD_PADDING,
+            Spacing.CARD_PADDING,
+            Spacing.CARD_PADDING,
+            Spacing.CARD_PADDING,
         )
-        layout.setSpacing(Spacing.GROUP_GAP)
+        set_metric(layout, "setSpacing", Spacing.GROUP_GAP)
         message_label = QLabel(message, self)
         message_label.setWordWrap(True)
         message_label.setTextFormat(Qt.TextFormat.PlainText)

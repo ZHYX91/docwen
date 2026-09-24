@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 from docwen_gui.i18n import t as _t
 from docwen_gui.resources import load_svg_icon
 from docwen_gui.styles.design_tokens import Sizing, Spacing
+from docwen_gui.styles.ui_scale import dp, set_metric
 
 from .elided_label import MiddleElidedLabel
 from .output_file_row import OutputFileRow
@@ -135,14 +136,14 @@ class InfoArea(QWidget):
     def _build_ui(self) -> None:
         """Build the InfoArea widget skeleton."""
         root_layout = QVBoxLayout(self)
-        root_layout.setContentsMargins(0, _SPACING_XS, 0, _SPACING_XS)
-        root_layout.setSpacing(_SPACING_SM)
+        set_metric(root_layout, "setContentsMargins", 0, _SPACING_XS, 0, _SPACING_XS)
+        set_metric(root_layout, "setSpacing", _SPACING_SM)
 
         # Content card
         self._content_card = PanelCard(parent=self)
         self._content_card.setObjectName("infoAreaContentCard")
         card_layout = self._content_card.content_layout
-        card_layout.setSpacing(_SPACING_SM)
+        set_metric(card_layout, "setSpacing", _SPACING_SM)
 
         # Status section
         status_section = QWidget()
@@ -150,7 +151,7 @@ class InfoArea(QWidget):
         status_section.setProperty("infoStatusTone", "secondary")
         overview_layout = QVBoxLayout(status_section)
         overview_layout.setContentsMargins(0, 0, 0, 0)
-        overview_layout.setSpacing(_SPACING_XS)
+        set_metric(overview_layout, "setSpacing", _SPACING_XS)
 
         # Meta label (e.g. "Task active...", "History (3)")
         self._status_meta_label = self._content_card.header
@@ -171,7 +172,7 @@ class InfoArea(QWidget):
         self._progress = QProgressBar(status_section)
         self._progress.setObjectName("infoTaskProgress")
         self._progress.setTextVisible(False)
-        self._progress.setFixedHeight(5)
+        set_metric(self._progress, "setFixedHeight", 5)
         self._progress.hide()
         overview_layout.addWidget(self._progress)
 
@@ -180,7 +181,7 @@ class InfoArea(QWidget):
         self._status_guide_row.setObjectName("infoStatusGuideRow")
         guide_outer_layout = QHBoxLayout(self._status_guide_row)
         guide_outer_layout.setContentsMargins(0, 0, 0, 0)
-        guide_outer_layout.setSpacing(_SPACING_XS)
+        set_metric(guide_outer_layout, "setSpacing", _SPACING_XS)
 
         guide_actions_widget = QWidget(self._status_guide_row)
         guide_actions_widget.setObjectName("infoStatusGuideActions")
@@ -188,7 +189,7 @@ class InfoArea(QWidget):
         guide_actions_widget.installEventFilter(self)
         self._status_guide_actions_layout = QGridLayout(guide_actions_widget)
         self._status_guide_actions_layout.setContentsMargins(0, 0, 0, 0)
-        self._status_guide_actions_layout.setSpacing(_SPACING_XS)
+        set_metric(self._status_guide_actions_layout, "setSpacing", _SPACING_XS)
         guide_outer_layout.addWidget(guide_actions_widget, stretch=1)
 
         self._status_guide_row.setVisible(False)
@@ -207,7 +208,7 @@ class InfoArea(QWidget):
         self._activity_button.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self._activity_button.setAutoDefault(False)
         self._activity_button.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
-        self._activity_button.setIconSize(QSize(18, 18))
+        set_metric(self._activity_button, "setIconSize", QSize(18, 18))
         self._activity_button.clicked.connect(self._vm.activity_requested.emit)
         card_layout.addWidget(self._activity_button, alignment=Qt.AlignmentFlag.AlignLeft)
 
@@ -348,7 +349,7 @@ class InfoArea(QWidget):
             )
             button.setAccessibleName(label)
             button.setAccessibleDescription(target_path or label)
-            button.setMinimumHeight(Sizing.CONTROL_HEIGHT)
+            set_metric(button, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
             self._refresh_widget_style(button)
 
             # Capture action_key and target_path for the lambda
@@ -386,7 +387,7 @@ class InfoArea(QWidget):
         one_row_width = sum(widths) + spacing * (len(buttons) - 1)
         # Keep a small reserve for style/palette metrics that are not reflected
         # consistently in QPushButton.sizeHint() across native Windows themes.
-        if one_row_width + (_SPACING_SM * 2) <= available_width:
+        if one_row_width + (dp(_SPACING_SM) * 2) <= available_width:
             columns = len(buttons)
         elif len(buttons) > 1 and (max(widths) * 2 + spacing) <= available_width:
             columns = 2

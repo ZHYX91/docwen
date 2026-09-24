@@ -8,8 +8,9 @@ Loads configuration from:
 Each file is declared in the ConfigFileSpec registry
 (packages/runtime/src/docwen_runtime/config/registry.py).
 ``reload()`` reads base + user per spec, deep-merges per-file, and wraps
-each file under its declared namespace. User files are never backfilled or
-migrated. Invalid user files are quarantined; invalid base/runtime values
+each file under its declared namespace. User files are never backfilled.
+Retired display preferences receive one explicit, idempotent migration.
+Invalid user files are quarantined; invalid base/runtime values
 fail closed. Base files must exist and user files are optional.
 """
 
@@ -25,6 +26,7 @@ from tomllib import TOMLDecodeError
 from typing import Any
 
 import docwen_runtime.file_transactions as config_transaction
+from docwen_runtime.config.display_migration import migrate_display_preferences
 from docwen_runtime.config.registry import (
     CONFIG_FILES,
     relative_key_for_spec,
@@ -486,8 +488,12 @@ class ConfigLoader:
 
             try:
                 user_data = _read_toml_file(user_path, missing_ok=True)
-                file_data = _merge_file_layers(spec, base_data, user_data)
+                migrated = migrate_display_preferences(user_data) if spec.rel_path == "gui.toml" else user_data
+                file_data = _merge_file_layers(spec, base_data, migrated)
                 file_data = validate_config_file(spec.rel_path, file_data, base_data)
+                if migrated != user_data:
+                    # Only persist a validated sparse user layer; never backfill defaults.
+                    write_toml_file(user_path, migrated)
             except (TOMLDecodeError, ConfigSemanticError) as exc:
                 if getattr(_CONFIG_TRANSACTION_STATE, "operation", None) is not None:
                     raise

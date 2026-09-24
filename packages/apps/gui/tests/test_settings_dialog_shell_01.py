@@ -171,13 +171,13 @@ def test_settings_dialog_tab_order_follows_input_processing_and_delivery(qapp) -
 
 def test_settings_dialog_sidebar_items_are_reachable_and_click_through(qapp) -> None:
     from docwen_gui.view_models.settings_vm import SettingsViewModel
-    from docwen_gui.widgets.settings.dialog import TAB_KEYS, SettingsDialog, _try_fluent_panel
+    from docwen_gui.widgets.settings.dialog import TAB_KEYS, SettingsDialog
 
     dialog = SettingsDialog(view_model=SettingsViewModel())
     try:
         assert dialog._navigation is not None  # pyright: ignore[reportPrivateUsage]
         items = {
-            key: _try_fluent_panel(dialog._navigation, key)  # pyright: ignore[reportPrivateUsage]
+            key: dialog._navigation.page_button(key)  # pyright: ignore[reportPrivateUsage]
             for key in TAB_KEYS
         }
         assert all(item is not None for item in items.values())
@@ -194,23 +194,18 @@ def test_settings_dialog_sidebar_items_are_reachable_and_click_through(qapp) -> 
 
 
 def test_settings_dialog_sidebar_width_fits_longest_localized_label(qapp) -> None:
-    from PySide6.QtGui import QFontMetrics
-
     from docwen_gui.view_models.settings_vm import SettingsViewModel
-    from docwen_gui.widgets.settings.dialog import (
-        NAVIGATION_TEXT_CHROME_WIDTH,
-        TAB_NAMES,
-        SettingsDialog,
-    )
+    from docwen_gui.widgets.settings.dialog import TAB_KEYS, SettingsDialog
 
     dialog = SettingsDialog(view_model=SettingsViewModel())
     try:
-        navigation = dialog._navigation  # pyright: ignore[reportPrivateUsage]
+        qapp.processEvents()
+        navigation = dialog._navigation
         assert navigation is not None
-        longest_label_width = max(
-            QFontMetrics(navigation.font()).horizontalAdvance(title) for title in TAB_NAMES.values()
-        )
-        assert navigation.width() >= longest_label_width + NAVIGATION_TEXT_CHROME_WIDTH
+        for key in TAB_KEYS:
+            button = navigation.page_button(key)
+            assert button is not None
+            assert navigation.width() >= button.sizeHint().width()
     finally:
         dialog.close()
 
@@ -304,7 +299,7 @@ def test_settings_dialog_isolates_one_page_import_failure(qapp, monkeypatch: pyt
         dialog.close()
 
 
-def test_settings_dialog_nav_item_failure_exposes_scrollable_tab_fallback(
+def test_settings_dialog_missing_icon_keeps_page_navigation_usable(
     qapp,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -326,9 +321,10 @@ def test_settings_dialog_nav_item_failure_exposes_scrollable_tab_fallback(
     try:
         tab_widget = dialog.findChild(QTabWidget)
         assert tab_widget is not None
-        assert tab_widget.tabBar().isHidden() is False
-        assert tab_widget.usesScrollButtons() is True
-        assert dialog._navigation is None  # pyright: ignore[reportPrivateUsage]
+        assert dialog._navigation is not None
+        button = dialog._navigation.page_button("document")
+        assert button is not None and button.icon().isNull()
+        button.click()
 
         document_index = TAB_KEYS.index("document")
         tab_widget.setCurrentIndex(document_index)
@@ -495,9 +491,20 @@ def test_settings_dialog_reset_general_updates_visual_cancel_baseline(qapp, monk
     manager = ThemeManager.get_instance()
     manager.initialize(qapp, "dark")
 
+    manager.apply_ui_scale(150)
+    manager.apply_font_size_preset("large")
+
     parent = QWidget()
     parent.setWindowOpacity(0.55)
-    initial = SettingsConfig(gui=GUIConfig(theme="dark", transparency_enabled=True, transparency_value=0.55))
+    initial = SettingsConfig(
+        gui=GUIConfig(
+            theme="dark",
+            transparency_enabled=True,
+            transparency_value=0.55,
+            scale_percent=150,
+            font_size_preset="large",
+        )
+    )
     vm = SettingsViewModel(config=initial)
     dialog = SettingsDialog(parent=parent, view_model=vm)
     monkeypatch.setattr(dialog_module, "_show_confirm", lambda *_args, **_kwargs: True)
@@ -516,6 +523,8 @@ def test_settings_dialog_reset_general_updates_visual_cancel_baseline(qapp, monk
         dialog._on_reset_tab()  # pyright: ignore[reportPrivateUsage]
 
         assert manager.get_current_theme() == "light"
+        assert manager.get_ui_scale() == 100
+        assert manager.get_font_size_preset() == "default"
         assert abs(parent.windowOpacity() - 1.0) < 0.01
 
         manager.apply_theme("dark")

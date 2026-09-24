@@ -257,9 +257,33 @@ def test_makeappx_accepts_generated_layout_when_windows_sdk_is_available(tmp_pat
     with zipfile.ZipFile(output) as package:
         names = set(package.namelist())
         assert "AppxManifest.xml" in names
+        assert "resources.pri" in names
         assert "assets/msix/StoreLogo.png" in names
         assert "DocWen.exe" in names
         assert "DocWenCLI.exe" in names
+
+
+def test_shell_resource_index_contains_both_unplated_themes_and_start_sizes(tmp_path: Path) -> None:
+    try:
+        sdk = build_msix.find_makeappx().parent
+    except build_msix.MsixBuildError:
+        pytest.skip("Windows SDK required for real PRI verification")
+    config = build_msix.read_config(_CONFIG_PATH)
+    staging = tmp_path / "staging"
+    build_msix.prepare_layout(_fake_payload(tmp_path / "payload"), staging, config)
+    build_msix.write_resource_index(staging, tmp_path, sdk / "makepri.exe")
+    dump = tmp_path / "pri.xml"
+    subprocess.run(
+        [str(sdk / "makepri.exe"), "dump", "/if", str(staging / "resources.pri"), "/of", str(dump), "/dt", "detailed"],
+        check=True,
+        capture_output=True,
+    )
+    document = ElementTree.parse(dump)
+    values = [node.text for node in document.iter("Value")]
+    for size in (32, 40, 48, 64, 80, 96, 256):
+        for variant in ("", "_altform-unplated", "_altform-lightunplated"):
+            filename = f"Square44x44Logo.targetsize-{size}{variant}.png"
+            assert any(value and value.endswith(filename) for value in values), filename
 
 
 @pytest.mark.parametrize(

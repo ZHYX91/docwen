@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
     QWidgetAction,
 )
 
+from docwen_gui.styles.ui_scale import dp, set_metric
 from docwen_gui.widgets.value_controls import ScrollSafeComboBox, ScrollSafeDoubleSpinBox, ScrollSafeSpinBox
 
 from ...resources import load_svg_icon
@@ -63,7 +64,7 @@ class _SettingsFormLayout(QFormLayout):
 
 def _apply_control_height(widget: QWidget) -> None:
     """Set a standard control height on a widget."""
-    widget.setMinimumHeight(CONTROL_HEIGHT)
+    set_metric(widget, "setMinimumHeight", CONTROL_HEIGHT)
 
 
 def _prepare_combo(widget: QComboBox) -> None:
@@ -95,10 +96,10 @@ class _SettingsInfoButton(QToolButton):
                 popup = QFrame(self, Qt.WindowType.ToolTip)
                 popup.setObjectName("settingsHelpPopup")
                 layout = QVBoxLayout(popup)
-                layout.setContentsMargins(1, 1, 1, 1)
+                set_metric(layout, "setContentsMargins", 1, 1, 1, 1)
                 layout.addWidget(_help_content(self, popup, self.toolTip()))
                 popup.adjustSize()
-                position = self.mapToGlobal(QPoint(0, self.height() + Spacing.XS))
+                position = self.mapToGlobal(QPoint(0, self.height() + dp(Spacing.XS)))
                 screen = self.screen().availableGeometry().adjusted(4, 4, -4, -4)
                 position.setX(max(screen.left(), min(position.x(), screen.right() - popup.width() + 1)))
                 position.setY(max(screen.top(), min(position.y(), screen.bottom() - popup.height() + 1)))
@@ -147,7 +148,7 @@ def _help_content(button: QWidget, parent: QWidget, text: str) -> QScrollArea:
     label.setObjectName("settingsHelpPopupText")
     label.setTextFormat(Qt.TextFormat.PlainText)
     label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-    label.setContentsMargins(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM)
+    set_metric(label, "setContentsMargins", Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM)
     label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
     label.resize(width - 20, 1)
     label.sync_wrapped_height()
@@ -174,7 +175,7 @@ def _show_info_popup(button: _SettingsInfoButton, text: str) -> None:
     content = _help_content(button, menu, text)
     action.setDefaultWidget(content)
     menu.addAction(action)
-    menu.popup(button.mapToGlobal(QPoint(0, button.height() + Spacing.XS)))
+    menu.popup(button.mapToGlobal(QPoint(0, button.height() + dp(Spacing.XS))))
     content.setFocus(Qt.FocusReason.PopupFocusReason)
 
 
@@ -188,13 +189,13 @@ def _create_info_button(
     btn = _SettingsInfoButton(parent)
     btn.setObjectName(SETTINGS_INFO_BUTTON_OBJECT_NAME)
     btn.setAutoRaise(True)
-    btn.setFixedSize(30, 30)
+    set_metric(btn, "setFixedSize", 30, 30)
     btn.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
     btn.setToolTip(tooltip)
     btn.setAccessibleName(accessible_name or tooltip)
     btn.setAccessibleDescription(tooltip)
     icon = load_svg_icon("info.svg")
-    btn.setIconSize(QSize(17, 17))
+    set_metric(btn, "setIconSize", QSize(17, 17))
     if icon is not None and not icon.isNull():
         btn.setIcon(icon)
     else:
@@ -216,8 +217,8 @@ class BaseSettingsTab(QWidget):
         self._field_rows: list[FormRow] = []
 
         root_layout = QVBoxLayout(self)
-        root_layout.setContentsMargins(SPACING_SM, 0, 0, 0)
-        root_layout.setSpacing(SPACING_SM)
+        set_metric(root_layout, "setContentsMargins", SPACING_SM, 0, 0, 0)
+        set_metric(root_layout, "setSpacing", SPACING_SM)
 
         self._tab_title = QLabel("", self)
         self._tab_title.setObjectName("settingsTabTitle")
@@ -245,8 +246,8 @@ class BaseSettingsTab(QWidget):
         self._scroll_container.setMinimumWidth(0)
         self._scroll_container.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self._scroll_layout = QVBoxLayout(self._scroll_container)
-        self._scroll_layout.setContentsMargins(SPACING_MD, SPACING_MD, SPACING_MD, SPACING_MD)
-        self._scroll_layout.setSpacing(Spacing.CARD_GAP)
+        set_metric(self._scroll_layout, "setContentsMargins", SPACING_MD, SPACING_MD, SPACING_MD, SPACING_MD)
+        set_metric(self._scroll_layout, "setSpacing", Spacing.CARD_GAP)
         self._scroll_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self._scroll_layout.addWidget(self._tab_desc)
         self._scroll_area.setWidget(self._scroll_container)
@@ -254,9 +255,9 @@ class BaseSettingsTab(QWidget):
         self._create_interface()
         for control in self.findChildren(QWidget):
             if isinstance(control, (QPushButton, QComboBox, QLineEdit, QSpinBox, QDoubleSpinBox)):
-                control.setMinimumHeight(Sizing.CONTROL_HEIGHT)
+                set_metric(control, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
             if isinstance(control, QPushButton):
-                control.setMinimumWidth(max(control.minimumWidth(), Sizing.BUTTON_MIN_WIDTH))
+                control.setMinimumWidth(max(control.minimumWidth(), dp(Sizing.BUTTON_MIN_WIDTH)))
 
     def set_tab_description(self, text: str) -> None:
         """Set the introduction that scrolls with the page's settings."""
@@ -385,7 +386,7 @@ class BaseSettingsTab(QWidget):
         container = QWidget(self._scroll_container)
         layout = QHBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(Spacing.CONTROL_GAP)
+        set_metric(layout, "setSpacing", Spacing.CONTROL_GAP)
         checkbox = self.create_settings_toggle(text, tooltip)
         policy = checkbox.sizePolicy()
         policy.setHorizontalPolicy(QSizePolicy.Policy.Preferred)
@@ -465,8 +466,8 @@ class BaseSettingsTab(QWidget):
     def _make_form(self, parent: QWidget | None = None) -> QFormLayout:
         form = _SettingsFormLayout(self._field_rows, parent)
         form.setContentsMargins(0, 0, 0, 0)
-        form.setVerticalSpacing(Spacing.FORM_ROW_GAP)
-        form.setHorizontalSpacing(SPACING_MD)
+        set_metric(form, "setVerticalSpacing", Spacing.FORM_ROW_GAP)
+        set_metric(form, "setHorizontalSpacing", SPACING_MD)
         form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
         form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         return form

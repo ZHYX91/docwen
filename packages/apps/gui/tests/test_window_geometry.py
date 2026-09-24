@@ -15,8 +15,6 @@ from docwen_gui.window_geometry import (
     build_canonical_geometry_values,
     center_window_geometry,
     load_window_geometry_policy,
-    load_window_scale_factor,
-    normalize_ui_scale,
     recover_window_geometry,
 )
 
@@ -31,15 +29,11 @@ class _ConfigPort:
         return self.values.get(key, default)
 
 
-def _identity(value: int) -> int:
-    return value
-
-
 def test_current_default_window_width_owns_outer_margins_around_the_reference_center() -> None:
     assert DEFAULT_WINDOW_WIDTH == 476
 
 
-def test_canonical_geometry_uses_anchor_and_scales_signed_coordinates() -> None:
+def test_canonical_geometry_preserves_signed_qt_coordinates() -> None:
     policy = load_window_geometry_policy(
         _ConfigPort(
             {
@@ -53,13 +47,12 @@ def test_canonical_geometry_uses_anchor_and_scales_signed_coordinates() -> None:
             }
         ),
         center_offset=24,
-        scale_value=lambda value: round(value * 1.5),
     )
 
     assert policy.source == "canonical"
-    assert policy.rect == WindowRect(x=-1074, y=-180, width=960, height=1140)
-    assert policy.min_width == 600
-    assert policy.min_height == 750
+    assert policy.rect == WindowRect(x=-724, y=-120, width=640, height=760)
+    assert policy.min_width == 400
+    assert policy.min_height == 500
 
 
 def test_invalid_canonical_values_use_declared_defaults() -> None:
@@ -76,7 +69,6 @@ def test_invalid_canonical_values_use_declared_defaults() -> None:
             }
         ),
         center_offset=20,
-        scale_value=_identity,
     )
 
     assert policy.rect == WindowRect(
@@ -103,12 +95,11 @@ def test_unknown_future_schema_uses_safe_defaults_and_disables_save_contract() -
             }
         ),
         center_offset=20,
-        scale_value=_identity,
     )
 
     assert policy.schema_version == 999
     assert policy.schema_supported is False
-    assert policy.rect == WindowRect(x=400, y=0, width=476, height=860)
+    assert policy.rect == WindowRect(x=400, y=0, width=476, height=720)
     assert policy.min_width == DEFAULT_MIN_WIDTH
     assert policy.min_height == DEFAULT_MIN_HEIGHT
 
@@ -130,13 +121,12 @@ def test_schema_version_read_error_fails_closed_instead_of_using_configured_valu
             }
         ),
         center_offset=20,
-        scale_value=_identity,
     )
 
     assert policy.schema_version is None
     assert policy.schema_supported is False
     assert policy.source == "canonical"
-    assert policy.rect == WindowRect(x=400, y=0, width=476, height=860)
+    assert policy.rect == WindowRect(x=400, y=0, width=476, height=720)
 
 
 def test_missing_schema_version_ignores_unversioned_persisted_geometry() -> None:
@@ -150,12 +140,11 @@ def test_missing_schema_version_ignores_unversioned_persisted_geometry() -> None
             }
         ),
         center_offset=20,
-        scale_value=_identity,
     )
 
     assert policy.schema_version is None
     assert policy.schema_supported is False
-    assert policy.rect == WindowRect(x=400, y=0, width=476, height=860)
+    assert policy.rect == WindowRect(x=400, y=0, width=476, height=720)
 
 
 @pytest.mark.parametrize("version", ["999", True, 0, -1, 1.0, 1.4])
@@ -173,18 +162,16 @@ def test_explicit_invalid_schema_version_is_not_treated_as_missing(version: obje
             }
         ),
         center_offset=20,
-        scale_value=_identity,
     )
 
     assert policy.schema_version is None
     assert policy.schema_supported is False
-    assert policy.rect == WindowRect(x=400, y=0, width=476, height=860)
+    assert policy.rect == WindowRect(x=400, y=0, width=476, height=720)
     assert policy.min_width == DEFAULT_MIN_WIDTH
     assert policy.min_height == DEFAULT_MIN_HEIGHT
 
 
-@pytest.mark.parametrize("factor", [1.0, 1.25, 1.5, 2.0])
-def test_canonical_scale_round_trip_is_symmetric(factor: float) -> None:
+def test_canonical_geometry_round_trip_is_symmetric() -> None:
     policy = load_window_geometry_policy(
         _ConfigPort(
             {
@@ -195,13 +182,11 @@ def test_canonical_scale_round_trip_is_symmetric(factor: float) -> None:
                 "gui.window.default_height": 760,
             }
         ),
-        center_offset=round(16 * factor),
-        scale_value=lambda value: round(value * factor),
+        center_offset=16,
     )
     values = build_canonical_geometry_values(
         policy.rect,
-        center_offset=round(16 * factor),
-        unscale_value=lambda value: round(value / factor),
+        center_offset=16,
     )
 
     assert values == {
@@ -311,41 +296,6 @@ def test_centering_caps_size_and_minimum_to_work_area() -> None:
     assert recovered.effective_min_height == 600
 
 
-@pytest.mark.parametrize(
-    ("value", "expected"),
-    [
-        (0, None),
-        (1.25, 1.25),
-        (150, 1.5),
-        ("200%", 2.0),
-        (" 1.5 ", 1.5),
-        (True, None),
-        (nan, None),
-        ("bad", None),
-        (499, None),
-    ],
-)
-def test_normalize_ui_scale(value: object, expected: float | None) -> None:
-    assert normalize_ui_scale(value) == expected
-
-
-@pytest.mark.parametrize(
-    ("values", "detected", "expected"),
-    [
-        ({"gui.dpi.enable_dpi_scaling": False, "gui.dpi.ui_scale": 2}, 1.5, 1.0),
-        ({"gui.dpi.enable_dpi_scaling": True, "gui.dpi.ui_scale": 150}, 1.25, 1.5),
-        ({"gui.dpi.enable_dpi_scaling": True, "gui.dpi.ui_scale": 0}, 1.25, 1.25),
-        ({"gui.dpi.enable_dpi_scaling": "false", "gui.dpi.ui_scale": 0}, 1.5, 1.5),
-    ],
-)
-def test_load_window_scale_factor(
-    values: dict[str, object],
-    detected: float,
-    expected: float,
-) -> None:
-    assert load_window_scale_factor(_ConfigPort(values), detected_factor=detected) == expected
-
-
 def test_broken_port_falls_back_without_leaking_exception() -> None:
     class _BrokenPort:
         def get(self, key: str, default: object = None) -> object:
@@ -355,17 +305,9 @@ def test_broken_port_falls_back_without_leaking_exception() -> None:
     policy = load_window_geometry_policy(
         _BrokenPort(),  # type: ignore[arg-type]
         center_offset=20,
-        scale_value=_identity,
     )
 
-    assert policy.rect == WindowRect(x=400, y=0, width=476, height=860)
-    assert (
-        load_window_scale_factor(  # type: ignore[arg-type]
-            _BrokenPort(),
-            detected_factor=1.25,
-        )
-        == 1.25
-    )
+    assert policy.rect == WindowRect(x=400, y=0, width=476, height=720)
 
 
 def test_real_sparse_config_port_round_trips_schema_v2_geometry(tmp_path: Path) -> None:
@@ -377,23 +319,20 @@ def test_real_sparse_config_port_round_trips_schema_v2_geometry(tmp_path: Path) 
     shipped = load_window_geometry_policy(
         port,
         center_offset=0,
-        scale_value=_identity,
     )
     assert shipped.source == "canonical"
-    assert shipped.rect == WindowRect(x=420, y=0, width=476, height=860)
+    assert shipped.rect == WindowRect(x=420, y=0, width=476, height=720)
 
     expected = WindowRect(x=-1500, y=75, width=900, height=700)
     assert port.set_many(
         build_canonical_geometry_values(
             expected,
             center_offset=20,
-            unscale_value=_identity,
         )
     )
     reloaded = load_window_geometry_policy(
         port,
         center_offset=20,
-        scale_value=_identity,
     )
     assert reloaded.source == "canonical"
     assert reloaded.schema_version == 2

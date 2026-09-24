@@ -212,7 +212,7 @@ class TestSettingsDialogFocusChain:
     def test_dialog_has_focusable_content(self, settings_dialog) -> None:
         chain = _collect_focus_chain(settings_dialog)
         found = _names_to_set(chain)
-        assert "settingsFluentNavigation" in found, f"Settings sidebar nav not in focus chain: {chain}"
+        assert "settingsNavigation" in found, f"Settings sidebar nav not in focus chain: {chain}"
         assert "settingsTabRoot" in found, f"No settings tab in focus chain: {chain}"
 
     def test_action_buttons_in_chain(self, settings_dialog) -> None:
@@ -231,7 +231,7 @@ class TestSettingsDialogFocusChain:
         """Action buttons (Ok/Cancel/Apply/Reset) appear after tab content."""
         chain = _collect_focus_chain(settings_dialog)
         tab_indices = []
-        for name in ("settingsTabRoot", "settingsFluentNavigation"):
+        for name in ("settingsTabRoot", "settingsNavigation"):
             if name in chain:
                 tab_indices.append(chain.index(name))
         last_tab = max(tab_indices) if tab_indices else -1

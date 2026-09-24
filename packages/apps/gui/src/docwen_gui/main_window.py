@@ -64,6 +64,7 @@ from docwen_gui.qt_bridge.execution_supervisor import ExecutionSupervisor
 from docwen_gui.resources import load_svg_icon
 from docwen_gui.styles.design_tokens import Spacing
 from docwen_gui.styles.theme_manager import ThemeManager
+from docwen_gui.styles.ui_scale import dp, set_metric
 from docwen_gui.view_models.task_history import TaskHistory
 from docwen_gui.window_behavior import (
     DEFAULT_WINDOW_BEHAVIOR,
@@ -83,7 +84,6 @@ from docwen_gui.window_geometry import (
     build_canonical_geometry_values,
     center_window_geometry,
     load_window_geometry_policy,
-    load_window_scale_factor,
     recover_window_geometry,
 )
 
@@ -116,22 +116,6 @@ _AGGREGATE_ACTIONS: frozenset[str] = frozenset({"merge_pdfs", "merge_tables", "m
 _ConversionRequestOrigin = Literal["action_area", "conversion_panel"]
 
 logger = logging.getLogger(__name__)
-
-
-def _detected_dpi_scale() -> float:
-    """Return the primary screen's bounded logical-DPI factor."""
-    try:
-        app = QApplication.instance()
-        if isinstance(app, QApplication):
-            screen = app.primaryScreen()
-            if screen is not None:
-                dpi = screen.logicalDotsPerInch()
-                factor = float(dpi) / 96.0
-                if 0.5 <= factor <= 4.0:
-                    return factor
-    except (AttributeError, RuntimeError):
-        pass
-    return 1.0
 
 
 def _format_template_modified_label(modified_ns: object) -> str | None:
@@ -190,17 +174,15 @@ class MainWindow(QWidget):
         self._path_operation = BackgroundOperation(self)
         self._view_model = view_model
         self._window_behavior = self._load_window_behavior()
-        self._window_scale_factor = self._load_window_scale_factor()
-        self._CENTER_PANEL_MIN_WIDTH: int = self._scale_window_value(self._window_behavior.center_panel_width)
-        self._LEFT_PANEL_MIN_WIDTH: int = self._scale_window_value(self._window_behavior.left_panel_width)
-        self._RIGHT_PANEL_MIN_WIDTH: int = self._scale_window_value(self._window_behavior.right_panel_width)
+        self._CENTER_PANEL_MIN_WIDTH: int = dp(self._window_behavior.center_panel_width)
+        self._LEFT_PANEL_MIN_WIDTH: int = dp(self._window_behavior.left_panel_width)
+        self._RIGHT_PANEL_MIN_WIDTH: int = dp(self._window_behavior.right_panel_width)
         persisted_window_geometry = self._load_window_geometry(center_offset=0)
         self._persisted_window_geometry_policy = persisted_window_geometry
         if not self._window_behavior.remember_gui_state:
             default_window_geometry = load_window_geometry_policy(
                 None,
                 center_offset=0,
-                scale_value=self._scale_window_value,
             )
             self._window_geometry = WindowGeometryPolicy(
                 rect=default_window_geometry.rect,
@@ -266,7 +248,6 @@ class MainWindow(QWidget):
         self._current_mode = view_model.mode
         self._file_contexts: dict[str, tuple[str, str]] = {}
         self._always_on_top_enabled = False
-        self._font_size_preset: str = "default"
         self._system_tray_icon: QSystemTrayIcon | None = None
         self._settings_dialog: Any | None = None
 
@@ -291,27 +272,12 @@ class MainWindow(QWidget):
         cfg_port = getattr(controller, "config_port", None) if controller is not None else None
         return load_window_behavior_policy(cfg_port)
 
-    def _load_window_scale_factor(self) -> float:
-        controller = self._view_model.controller
-        cfg_port = getattr(controller, "config_port", None) if controller is not None else None
-        return load_window_scale_factor(
-            cfg_port,
-            detected_factor=_detected_dpi_scale(),
-        )
-
-    def _scale_window_value(self, value: int) -> int:
-        return round(int(value) * self._window_scale_factor)
-
-    def _unscale_window_value(self, value: int) -> int:
-        return round(int(value) / self._window_scale_factor)
-
     def _load_window_geometry(self, *, center_offset: int) -> WindowGeometryPolicy:
         controller = self._view_model.controller
         cfg_port = getattr(controller, "config_port", None) if controller is not None else None
         return load_window_geometry_policy(
             cfg_port,
             center_offset=center_offset,
-            scale_value=self._scale_window_value,
         )
 
     def _setup_window_properties(self) -> None:
@@ -344,9 +310,9 @@ class MainWindow(QWidget):
         central_container = QWidget()
         central_container.setObjectName("centralContainer")
         grid = QGridLayout(central_container)
-        grid.setContentsMargins(8, 8, 8, 8)
-        grid.setSpacing(8)
-        grid.setHorizontalSpacing(Spacing.COLUMN_GAP)
+        set_metric(grid, "setContentsMargins", 8, 8, 8, 8)
+        set_metric(grid, "setSpacing", 8)
+        set_metric(grid, "setHorizontalSpacing", Spacing.COLUMN_GAP)
 
         # ── Left panel: batch list (visible in batch mode) ──────────────
         self._left_panel_frame = QFrame()
@@ -370,7 +336,7 @@ class MainWindow(QWidget):
         self._right_panel_frame.setVisible(False)
         right_layout = QVBoxLayout(self._right_panel_frame)
         right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.setSpacing(8)
+        set_metric(right_layout, "setSpacing", 8)
 
         from .widgets.template_selector_tabbed import TabbedTemplateSelector
 
@@ -401,6 +367,7 @@ class MainWindow(QWidget):
         self._wire_view_model()
         self._wire_projection()
         self._load_initial_preferences()
+        ThemeManager.get_instance().appearance_changed.connect(self._apply_runtime_window_settings)
         self._install_shortcuts()
         self._sync_files_from_main_vm(self._view_model.files)
         self._setup_system_tray()
@@ -535,7 +502,7 @@ class MainWindow(QWidget):
         column.setObjectName("mainWindowCenterColumn")
         layout = QVBoxLayout(column)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
+        set_metric(layout, "setSpacing", 8)
         scroll = QScrollArea(column)
         scroll.setObjectName("centerWorkflowScroll")
         scroll.setFrameShape(QFrame.Shape.NoFrame)
@@ -544,7 +511,7 @@ class MainWindow(QWidget):
         content = QWidget(scroll)
         flow = QVBoxLayout(content)
         flow.setContentsMargins(0, 0, 0, 0)
-        flow.setSpacing(Spacing.CARD_GAP)
+        set_metric(flow, "setSpacing", Spacing.CARD_GAP)
         flow.addWidget(self._input_area)
         flow.addWidget(self._action_area)
         flow.addWidget(self._info_area)
@@ -557,17 +524,17 @@ class MainWindow(QWidget):
     def _build_bottom_bar(self) -> QWidget:
         bar = QWidget()
         bar.setObjectName("bottomBar")
-        bar.setFixedHeight(self._scale_window_value(48))
+        set_metric(bar, "setFixedHeight", 40)
 
         layout = QGridLayout(bar)
-        layout.setContentsMargins(12, 0, 12, 0)
-        layout.setSpacing(4)
+        set_metric(layout, "setContentsMargins", 12, 0, 12, 0)
+        set_metric(layout, "setSpacing", 4)
 
         left_actions = QWidget(bar)
         left_actions.setObjectName("bottomBarLeftActions")
         left_layout = QHBoxLayout(left_actions)
         left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(4)
+        set_metric(left_layout, "setSpacing", 4)
 
         self._font_size_btn = self._create_bottom_tool_button(
             object_name="fontSizeButton",
@@ -591,7 +558,7 @@ class MainWindow(QWidget):
         right_actions.setObjectName("bottomBarRightActions")
         right_layout = QHBoxLayout(right_actions)
         right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.setSpacing(4)
+        set_metric(right_layout, "setSpacing", 4)
 
         self._settings_btn = self._create_bottom_tool_button(
             object_name="settingsButton",
@@ -624,12 +591,12 @@ class MainWindow(QWidget):
         button.setObjectName(object_name)
         button.setToolTip(tooltip)
         button.setAccessibleName(tooltip)
-        button.setFixedSize(36, 36)
+        set_metric(button, "setFixedSize", 36, 36)
 
         icon = load_svg_icon(icon_name)
         if icon is not None and not icon.isNull():
             button.setIcon(icon)
-            button.setIconSize(QSize(20, 20))
+            set_metric(button, "setIconSize", QSize(20, 20))
             button.setText("")
         else:
             button.setText(fallback_text)
@@ -1025,7 +992,7 @@ class MainWindow(QWidget):
             spacing=spacing,
             left_visible=left_visible,
             right_visible=right_visible,
-            scale_factor=self._window_scale_factor,
+            scale_factor=ThemeManager.get_instance().get_ui_scale() / 100,
         )
 
     def _apply_side_panel_stretch(self, *, left_visible: bool, right_visible: bool) -> None:
@@ -1048,9 +1015,9 @@ class MainWindow(QWidget):
             self._geometry_source_transition_settling = False
             self._persisted_window_geometry_policy = persisted_geometry
         self._window_behavior = self._load_window_behavior()
-        self._CENTER_PANEL_MIN_WIDTH = self._scale_window_value(self._window_behavior.center_panel_width)
-        self._LEFT_PANEL_MIN_WIDTH = self._scale_window_value(self._window_behavior.left_panel_width)
-        self._RIGHT_PANEL_MIN_WIDTH = self._scale_window_value(self._window_behavior.right_panel_width)
+        self._CENTER_PANEL_MIN_WIDTH = dp(self._window_behavior.center_panel_width)
+        self._LEFT_PANEL_MIN_WIDTH = dp(self._window_behavior.left_panel_width)
+        self._RIGHT_PANEL_MIN_WIDTH = dp(self._window_behavior.right_panel_width)
         projection = self._view_model.ui_projection
         self._apply_projection_minimum_widths(
             left_visible=projection.left_panel_visible,
@@ -1937,13 +1904,12 @@ class MainWindow(QWidget):
 
     # ── Font size presets (M-2) ─────────────────────────────────────
 
-    _FONT_SIZE_PRESETS: ClassVar[dict[str, int]] = FONT_SIZE_PRESETS
+    _FONT_SIZE_PRESETS: ClassVar[dict[str, float]] = FONT_SIZE_PRESETS
 
     _FONT_PRESET_LABELS: ClassVar[dict[str, str]] = {
         "small": "Small",
         "default": "Default",
         "large": "Large",
-        "xlarge": "XLarge",
     }
 
     def _show_font_size_menu(self) -> None:
@@ -1951,9 +1917,9 @@ class MainWindow(QWidget):
         menu = QMenu(self)
         group = QActionGroup(menu)
         group.setExclusive(True)
-        current = self._font_size_preset
+        current = ThemeManager.get_instance().get_font_size_preset()
 
-        for preset in ("small", "default", "large", "xlarge"):
+        for preset in ("small", "default", "large"):
             action = QAction(
                 _t(
                     f"components.font_size.{preset}",
@@ -1974,8 +1940,6 @@ class MainWindow(QWidget):
     def _apply_font_size_preset(self, preset: str, *, persist: bool = True) -> None:
         """Set the application-wide font size for the given preset."""
         normalized = normalize_font_size_preset(preset)
-
-        self._font_size_preset = normalized
 
         ThemeManager.get_instance().apply_font_size_preset(normalized)
 
@@ -2571,7 +2535,6 @@ class MainWindow(QWidget):
             values = build_canonical_geometry_values(
                 normal_rect,
                 center_offset=center_offset,
-                unscale_value=self._unscale_window_value,
             )
             if cfg_port.set_many(values):
                 self._persisted_window_geometry_policy = self._load_window_geometry(center_offset=0)

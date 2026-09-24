@@ -43,6 +43,7 @@ from PySide6.QtWidgets import (
 from docwen_gui.format_presentation import FormatChoice, presentation_for
 from docwen_gui.i18n import t as _t
 from docwen_gui.styles.design_tokens import Sizing, Spacing
+from docwen_gui.styles.ui_scale import set_metric
 from docwen_gui.widgets.value_controls import ScrollSafeComboBox
 
 from .panel_card import ActionFooter, ChoiceGroup, FormatSelector, FormRow, InlineNotice, PanelCard, WrappingLabel
@@ -228,8 +229,8 @@ class ConversionPanel(QWidget):
         scroll_content = QWidget(scroll_area)
         scroll_content.setObjectName("conversionPanelScrollContent")
         content_layout = QVBoxLayout(scroll_content)
-        content_layout.setContentsMargins(0, 0, 0, _SPACING_SM * 2)
-        content_layout.setSpacing(Spacing.CARD_GAP)
+        set_metric(content_layout, "setContentsMargins", 0, 0, 0, _SPACING_SM * 2)
+        set_metric(content_layout, "setSpacing", Spacing.CARD_GAP)
         content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         # Conversion group
@@ -269,7 +270,7 @@ class ConversionPanel(QWidget):
         group.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
 
         layout = group.content_layout
-        layout.setSpacing(Spacing.FORM_ROW_GAP)
+        set_metric(layout, "setSpacing", Spacing.FORM_ROW_GAP)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         desc_label = WrappingLabel(parent=group)
@@ -279,7 +280,7 @@ class ConversionPanel(QWidget):
         setattr(self, "_" + object_name + "_desc", desc_label)
 
         content = QVBoxLayout()
-        content.setSpacing(Spacing.FORM_ROW_GAP)
+        set_metric(content, "setSpacing", Spacing.FORM_ROW_GAP)
         content.setAlignment(Qt.AlignmentFlag.AlignTop)
         layout.addLayout(content)
         setattr(self, "_" + object_name + "_content", content)
@@ -391,7 +392,7 @@ class ConversionPanel(QWidget):
             self._arrange_section_actions(content)
         for control in self.findChildren(QWidget):
             if isinstance(control, (QComboBox, QLineEdit, QRadioButton)):
-                control.setMinimumHeight(Sizing.CONTROL_HEIGHT)
+                set_metric(control, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
         self._sync_controls_from_vm()
 
     def _arrange_section_actions(self, layout: QVBoxLayout) -> None:
@@ -746,15 +747,15 @@ class ConversionPanel(QWidget):
         row.setObjectName("conversionButtonRow")
         layout = QHBoxLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(_SPACING_SM)
+        set_metric(layout, "setSpacing", _SPACING_SM)
         return row, layout
 
     def _make_combo(self, items: list[str], parent: QWidget | None = None) -> QComboBox:
         combo = ScrollSafeComboBox(parent or self)
         combo.addItems(items)
         apply_format_swatch_icons(combo)
-        combo.setMinimumWidth(100)
-        combo.setMinimumHeight(Sizing.CONTROL_HEIGHT)
+        set_metric(combo, "setMinimumWidth", 100)
+        set_metric(combo, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
         combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         return combo
 
@@ -808,14 +809,11 @@ class ConversionPanel(QWidget):
         return footer, combo, btn
 
     def _make_checkbox(self, text: str, checked: bool = False) -> QCheckBox:
-        try:
-            from qfluentwidgets import CheckBox as FluentCheckBox
+        from .check_box import CheckBox
 
-            cb = FluentCheckBox(text, self)
-        except ImportError:
-            cb = QCheckBox(text, self)
+        cb = CheckBox(text, self)
         cb.setChecked(checked)
-        cb.setMinimumHeight(Sizing.CONTROL_HEIGHT)
+        set_metric(cb, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
         return cb
 
     def _make_wrapping_checkbox(self, text: str, checked: bool = False) -> tuple[QWidget, QCheckBox]:
@@ -823,7 +821,7 @@ class ConversionPanel(QWidget):
         row.setObjectName("conversionWrappingCheckRow")
         layout = QHBoxLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(_SPACING_SM)
+        set_metric(layout, "setSpacing", _SPACING_SM)
 
         checkbox = self._make_checkbox("", checked=checked)
         checkbox.setAccessibleName(text)
@@ -850,7 +848,7 @@ class ConversionPanel(QWidget):
         group = PanelCard(title, self, level="section")
         group.setObjectName("conversionOptionGroup")
         layout = group.content_layout
-        layout.setSpacing(_SPACING_SM)
+        set_metric(layout, "setSpacing", _SPACING_SM)
         return group
 
     # ── Document Section ────────────────────────────────────────────────
@@ -1170,7 +1168,7 @@ class ConversionPanel(QWidget):
         size_control = QWidget(self)
         size_layout = QHBoxLayout(size_control)
         size_layout.setContentsMargins(0, 0, 0, 0)
-        size_layout.setSpacing(_SPACING_SM)
+        set_metric(size_layout, "setSpacing", _SPACING_SM)
 
         size_edit = QLineEdit(str(self._vm.size_limit), self)
         size_edit.setEnabled(is_limit)
@@ -1181,7 +1179,7 @@ class ConversionPanel(QWidget):
         unit_combo = self._make_combo(["KB", "MB"], parent=size_control)
         unit_combo.setCurrentText(self._vm.size_unit)
         unit_combo.setEnabled(is_limit)
-        unit_combo.setMinimumWidth(84)
+        set_metric(unit_combo, "setMinimumWidth", 84)
         unit_combo.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
         unit_combo.currentTextChanged.connect(self._on_size_input_changed)
         self._size_unit_combo = unit_combo
@@ -1300,7 +1298,7 @@ class ConversionPanel(QWidget):
             export_section = QWidget(self)
             export_layout = QVBoxLayout(export_section)
             export_layout.setContentsMargins(0, 0, 0, 0)
-            export_layout.setSpacing(Spacing.FORM_ROW_GAP)
+            set_metric(export_layout, "setSpacing", Spacing.FORM_ROW_GAP)
             row_container, combo, btn = self._make_dropdown_action_row(
                 export_formats, _t("conversion_panel.export", "Export")
             )
@@ -1325,14 +1323,14 @@ class ConversionPanel(QWidget):
         render_row_container.setObjectName("conversionButtonRow")
         render_row = QVBoxLayout(render_row_container)
         render_row.setContentsMargins(0, 0, 0, 0)
-        render_row.setSpacing(Spacing.FORM_ROW_GAP)
+        set_metric(render_row, "setSpacing", Spacing.FORM_ROW_GAP)
         render_fields: list[FormRow] = []
 
         render_format_combo = self._make_combo(render_formats, parent=render_row_container)
         render_format_combo.setCurrentText(
             self._vm.render_format if self._vm.render_format in render_formats else render_formats[0]
         )
-        render_format_combo.setMinimumWidth(100)
+        set_metric(render_format_combo, "setMinimumWidth", 100)
         render_format_combo.currentTextChanged.connect(lambda value: setattr(self._vm, "render_format", value))
         self._layout_render_format_combo = render_format_combo
         format_row = FormRow(
@@ -1343,7 +1341,7 @@ class ConversionPanel(QWidget):
 
         dpi_combo = self._make_combo(["150", "300", "600"], parent=render_row_container)
         dpi_combo.setCurrentText(str(self._vm.render_dpi))
-        dpi_combo.setMinimumWidth(80)
+        set_metric(dpi_combo, "setMinimumWidth", 80)
         dpi_combo.currentTextChanged.connect(lambda value: setattr(self._vm, "render_dpi", int(value)))
         self._layout_render_dpi_combo = dpi_combo
         dpi_row = FormRow(_t("conversion_panel.layout.resolution"), dpi_combo, alignment_group=render_fields)
@@ -1396,7 +1394,7 @@ class ConversionPanel(QWidget):
 
         # Page range input row
         page_edit = QLineEdit(self._vm.page_input, self)
-        page_edit.setMinimumWidth(Sizing.BUTTON_MIN_WIDTH)
+        set_metric(page_edit, "setMinimumWidth", Sizing.BUTTON_MIN_WIDTH)
         page_edit.setPlaceholderText(_t("conversion_panel.layout.page_range_placeholder", "e.g., 1-5,7,9-12 or *"))
         page_edit.setToolTip(page_edit.placeholderText())
         page_edit.textChanged.connect(self._on_page_input_changed)

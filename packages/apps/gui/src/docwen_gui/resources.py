@@ -192,7 +192,9 @@ def set_action_icon(target: QAbstractButton | QAction, name: str, *, size: int =
     if icon is not None and not icon.isNull():
         target.setIcon(icon)
         if isinstance(target, QAbstractButton):
-            target.setIconSize(QSize(size, size))
+            from docwen_gui.styles.ui_scale import set_metric
+
+            set_metric(target, "setIconSize", QSize(size, size))
 
 
 def load_image_icon(

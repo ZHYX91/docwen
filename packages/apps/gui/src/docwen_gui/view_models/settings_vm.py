@@ -81,6 +81,8 @@ _RESET_GROUP_DRAFT_PATHS: dict[str, tuple[tuple[str, ...], ...]] = {
     "general": (
         ("gui", "language"),
         ("gui", "theme"),
+        ("gui", "font_size_preset"),
+        ("gui", "scale_percent"),
         ("gui", "transparency_enabled"),
         ("gui", "transparency_value"),
         ("gui", "remember_gui_state"),
@@ -949,6 +951,12 @@ class SettingsViewModel(QObject):
                 theme=gui.get("theme", {}).get("default_theme", "light")
                 if isinstance(gui.get("theme"), dict)
                 else "light",
+                font_size_preset=gui.get("font", {}).get("size_preset", "default")
+                if isinstance(gui.get("font"), dict)
+                else "default",
+                scale_percent=gui.get("appearance", {}).get("scale_percent", 100)
+                if isinstance(gui.get("appearance"), dict)
+                else 100,
                 transparency_enabled=gui.get("transparency", {}).get("enabled", False)
                 if isinstance(gui.get("transparency"), dict)
                 else False,
@@ -1332,6 +1340,8 @@ class SettingsViewModel(QObject):
         gui = config.gui
         put("gui.language.locale", gui.language)
         put("gui.theme.default_theme", gui.theme)
+        put("gui.font.size_preset", gui.font_size_preset)
+        put("gui.appearance.scale_percent", gui.scale_percent)
         put("gui.transparency.enabled", bool(gui.transparency_enabled))
         put("gui.transparency.default_value", float(gui.transparency_value))
         put("gui.window.remember_gui_state", bool(gui.remember_gui_state))

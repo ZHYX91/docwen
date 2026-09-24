@@ -39,7 +39,7 @@ def build_panel_card_stylesheet(font_size_preset: str | None = None, *, theme_na
             "    background: palette(alternate-base);",
             f"    font-size: {Typography.qss(Typography.CARD_TITLE_SIZE, font_size_preset)};",
             "    font-weight: 600;",
-            f"    padding: {Spacing.MD}px {Spacing.CARD_PADDING}px;",
+            f"    padding: {Spacing.SM}px {Spacing.CARD_PADDING}px;",
             "    border: none;",
             f"    border-top-left-radius: {Radius.LARGE - Border.THIN}px;",
             f"    border-top-right-radius: {Radius.LARGE - Border.THIN}px;",

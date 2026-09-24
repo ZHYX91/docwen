@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pytest
 
+from docwen_gui.styles.theme_manager import ThemeManager
+
 from ._main_window_features_support import (
     cast,
 )
@@ -278,56 +280,51 @@ class TestFontSizePresets:
         assert "small" in main_window._FONT_SIZE_PRESETS
         assert "default" in main_window._FONT_SIZE_PRESETS
         assert "large" in main_window._FONT_SIZE_PRESETS
-        assert "xlarge" in main_window._FONT_SIZE_PRESETS
+        assert len(main_window._FONT_SIZE_PRESETS) == 3
 
     def test_preset_sizes_are_valid(self, main_window) -> None:
         for _preset, size in main_window._FONT_SIZE_PRESETS.items():
-            assert isinstance(size, int)
+            assert isinstance(size, (int, float))
             assert size > 0
 
     def test_preset_sizes_match_declared_design_scale(self, main_window) -> None:
-        """Font presets keep the declared 11/12/13/15 design scale."""
-        assert main_window._FONT_SIZE_PRESETS["small"] == 11
-        assert main_window._FONT_SIZE_PRESETS["default"] == 12
+        """Font presets keep the declared 9/10.5/13 point design scale."""
+        assert main_window._FONT_SIZE_PRESETS["small"] == 9
+        assert main_window._FONT_SIZE_PRESETS["default"] == 10.5
         assert main_window._FONT_SIZE_PRESETS["large"] == 13
-        assert main_window._FONT_SIZE_PRESETS["xlarge"] == 15
 
     def test_preset_labels_defined(self, main_window) -> None:
         assert isinstance(main_window._FONT_PRESET_LABELS, dict)
-        for preset in ("small", "default", "large", "xlarge"):
+        for preset in ("small", "default", "large"):
             assert preset in main_window._FONT_PRESET_LABELS
 
     def test_default_preset_is_default(self, main_window) -> None:
-        assert main_window._font_size_preset == "default"
+        assert ThemeManager.get_instance().get_font_size_preset() == "default"
 
     def test_apply_small_preset(self, main_window) -> None:
         main_window._apply_font_size_preset("small")
-        assert main_window._font_size_preset == "small"
+        assert ThemeManager.get_instance().get_font_size_preset() == "small"
 
     def test_apply_default_preset(self, main_window) -> None:
         main_window._apply_font_size_preset("small")
         main_window._apply_font_size_preset("default")
-        assert main_window._font_size_preset == "default"
+        assert ThemeManager.get_instance().get_font_size_preset() == "default"
 
     def test_apply_large_preset(self, main_window) -> None:
         main_window._apply_font_size_preset("large")
-        assert main_window._font_size_preset == "large"
-
-    def test_apply_xlarge_preset(self, main_window) -> None:
-        main_window._apply_font_size_preset("xlarge")
-        assert main_window._font_size_preset == "xlarge"
+        assert ThemeManager.get_instance().get_font_size_preset() == "large"
 
     def test_invalid_preset_falls_back_to_default(self, main_window) -> None:
         main_window._apply_font_size_preset("invalid")
-        assert main_window._font_size_preset == "default"
+        assert ThemeManager.get_instance().get_font_size_preset() == "default"
 
     def test_empty_preset_falls_back_to_default(self, main_window) -> None:
         main_window._apply_font_size_preset("")
-        assert main_window._font_size_preset == "default"
+        assert ThemeManager.get_instance().get_font_size_preset() == "default"
 
     def test_none_preset_falls_back_to_default(self, main_window) -> None:
         main_window._apply_font_size_preset(None)  # type: ignore[arg-type]
-        assert main_window._font_size_preset == "default"
+        assert ThemeManager.get_instance().get_font_size_preset() == "default"
 
     def test_font_size_button_connected(self, main_window) -> None:
         """Verify _show_font_size_menu is callable and button exists."""
@@ -421,7 +418,7 @@ class TestFontSizePresets:
         window = MainWindow(view_model=vm)
         window.setup_ui()
         try:
-            assert window._font_size_preset == "large"
+            assert ThemeManager.get_instance().get_font_size_preset() == "large"
         finally:
             window.close()
 

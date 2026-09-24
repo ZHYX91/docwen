@@ -6,6 +6,8 @@ from PySide6.QtCore import QEvent, QRect, QSize, Qt
 from PySide6.QtGui import QIcon, QPalette
 from PySide6.QtWidgets import QPushButton, QSizePolicy, QStyle, QStyleOptionButton, QStylePainter
 
+from docwen_gui.styles.ui_scale import dp, set_metric
+
 from ..styles.design_tokens import Border, Sizing, Spacing
 
 
@@ -17,23 +19,23 @@ class ActionButton(QPushButton):
         policy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         policy.setHeightForWidth(True)
         self.setSizePolicy(policy)
-        self.setMinimumHeight(Sizing.ACTION_HEIGHT)
+        set_metric(self, "setMinimumHeight", Sizing.ACTION_HEIGHT)
 
     def minimumSizeHint(self) -> QSize:
-        return QSize(Sizing.BUTTON_MIN_WIDTH, Sizing.ACTION_HEIGHT)
+        return QSize(dp(Sizing.BUTTON_MIN_WIDTH), dp(Sizing.ACTION_HEIGHT))
 
     def heightForWidth(self, width: int) -> int:
-        horizontal_padding = 2 * (Spacing.MD + Border.THIN)
+        horizontal_padding = 2 * (dp(Spacing.MD) + dp(Border.THIN))
         if not self.icon().isNull():
-            horizontal_padding += self.iconSize().width() + Spacing.SM
-        vertical_padding = 2 * (Spacing.XS + Border.THIN)
+            horizontal_padding += self.iconSize().width() + dp(Spacing.SM)
+        vertical_padding = 2 * (dp(Spacing.XS) + dp(Border.THIN))
         text_rect = self.fontMetrics().boundingRect(
             QRect(0, 0, max(1, width - horizontal_padding), 100000),
             Qt.TextFlag.TextWordWrap,
             self.text(),
         )
         icon_height = 0 if self.icon().isNull() else self.iconSize().height()
-        return max(Sizing.ACTION_HEIGHT, max(text_rect.height(), icon_height) + vertical_padding)
+        return max(dp(Sizing.ACTION_HEIGHT), max(text_rect.height(), icon_height) + vertical_padding)
 
     def setIcon(self, icon: QIcon) -> None:
         super().setIcon(icon)
@@ -70,7 +72,7 @@ class ActionButton(QPushButton):
             super().paintEvent(event)
             return
         contents = style.subElementRect(QStyle.SubElement.SE_PushButtonContents, option, self)
-        icon_width = self.iconSize().width() + Spacing.SM if not self.icon().isNull() else 0
+        icon_width = self.iconSize().width() + dp(Spacing.SM) if not self.icon().isNull() else 0
         if self.fontMetrics().horizontalAdvance(self.text()) + icon_width <= contents.width():
             super().paintEvent(event)
             return

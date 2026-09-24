@@ -202,14 +202,17 @@ save_success_message = "設定を保存し、再読み込みしました。"
 # 通用设置选项卡
 # -----------------------------------------------------------------------------
 [settings.general]
+font_label = "文字サイズ："
+scale_label = "画面の拡大率："
+scale_tooltip = "システムの拡大率を基準に、文字・アイコン・余白をまとめて調整します。"
 # 语言设置区域
 language_section = "言語"
 language_label = "インターフェース言語を選択："
 language_tooltip = "アプリケーションの表示言語を選択します。\n変更は再起動後に有効になります。"
 
 # 主题设置区域
-theme_section = "インターフェーステーマ"
-theme_description = "ライト、ダーク、またはシステムに合わせるテーマを選択します。"
+theme_section = "外観"
+theme_description = "テーマ、文字サイズ、インターフェースの拡大率を調整します。"
 theme_label = "アプリケーションテーマを選択："
 theme_tooltip = "アプリケーションの視覚テーマを選択します。\nテーマによって配色やインターフェーススタイルが異なります。\n変更は保存後に有効になります。"
 theme_preview = "テーマプレビュー："
@@ -885,7 +888,6 @@ emoji = "絵文字検出・処理ライブラリ"
 small = "小"
 default = "標準"
 large = "大"
-xlarge = "特大"
 
 # 文件拖拽区
 [components.file_drop]

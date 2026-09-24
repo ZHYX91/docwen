@@ -110,7 +110,7 @@ def test_form_reflows_for_runtime_font_and_text_without_window_resize(qtbot, qap
     qtbot.waitUntil(lambda: row.label.width() >= row.label.fontMetrics().horizontalAdvance(row.label.text()))
     original_width = row.width()
     try:
-        manager.apply_font_size_preset("xlarge")
+        manager.apply_font_size_preset("large")
         qtbot.waitUntil(lambda: row.label.width() >= row.label.fontMetrics().horizontalAdvance(row.label.text()))
         assert row.width() == original_width
         row.label.setText("A much longer output format label")
@@ -157,7 +157,7 @@ def test_pdf_workflow_fits_default_columns_with_large_typography(main_window_wit
         document.save(source)
     manager = ThemeManager.get_instance()
     manager.initialize(qapp, "dark")
-    manager.apply_font_size_preset("xlarge")
+    manager.apply_font_size_preset("large")
     window = main_window_with_controller
     try:
         window._input_area_vm.set_mode("batch")

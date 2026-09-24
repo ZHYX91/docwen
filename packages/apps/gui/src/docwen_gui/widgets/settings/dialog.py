@@ -2,7 +2,7 @@
 
 Replicates the user-visible behavior of the old ``SettingsDialog``:
 - 700x800 initial, 510x750 minimum, modal
-- FluentNavigationInterface sidebar sized for the active locale + hidden QTabWidget tabBar
+- Qt sidebar sized for the active locale and appearance + hidden QTabWidget tabBar
 - 15 pages: general, incoming formats, templates, content processing, converter software, output and logging
 - Bottom bar: Reset Tab + Reset All + Ok/Cancel/Apply (QDialogButtonBox)
 - Dirty tracking with auto-signal monitoring
@@ -16,11 +16,11 @@ from __future__ import annotations
 import contextlib
 import logging
 from collections.abc import Callable
-from typing import Any, NamedTuple
+from typing import NamedTuple
 from typing import cast as _cast
 
 from PySide6.QtCore import QSignalBlocker, Qt, QTimer, Signal
-from PySide6.QtGui import QCloseEvent, QFontMetrics, QIcon
+from PySide6.QtGui import QCloseEvent, QIcon
 from PySide6.QtWidgets import (
     QAbstractButton,
     QCheckBox,
@@ -41,12 +41,13 @@ from PySide6.QtWidgets import (
 
 from docwen_gui.i18n import t
 from docwen_gui.styles.design_tokens import Sizing, Spacing
+from docwen_gui.styles.ui_scale import dp, set_metric
 from docwen_gui.widgets.value_controls import ScrollSafeComboBox
 
 from ...styles.theme_semantics import apply_theme_class
 from ...view_models.settings_vm import SettingsViewModel
 from ...view_models.template_vm import TemplateViewModel
-from .navigation import SettingsNavigationKeyboard
+from .navigation import SettingsNavigationKeyboard, SettingsSidebar
 
 logger = logging.getLogger(__name__)
 
@@ -60,8 +61,6 @@ ACTION_BUTTON_MIN_HEIGHT = Sizing.CONTROL_HEIGHT
 RESET_TAB_BUTTON_MIN_WIDTH = 116
 RESET_ALL_BUTTON_MIN_WIDTH = 104
 STATUS_DISPLAY_MS = 3000
-NAVIGATION_MIN_WIDTH = 168
-NAVIGATION_TEXT_CHROME_WIDTH = 72
 
 
 def _safe_settings_error_detail(error: Exception) -> str:
@@ -289,17 +288,6 @@ def _show_confirm(parent: QWidget, title: str, message: str, danger: bool = True
     return mb.exec() == QMessageBox.StandardButton.Yes
 
 
-def _try_fluent_panel(navigation: Any, key: str) -> Any | None:
-    """Safely access the FluentNavigationInterface panel widget for a key."""
-    panel = getattr(navigation, "panel", None)
-    if panel is None or not hasattr(panel, "widget"):
-        return None
-    try:
-        return panel.widget(key)
-    except Exception:
-        return None
-
-
 class SettingsDialog(QDialog):
     """Settings dialog with task-oriented navigation and dirty tracking.
 
@@ -331,10 +319,15 @@ class SettingsDialog(QDialog):
         self._vm.begin_session()
         # Save initial visual state for Cancel rollback
         self._initial_theme = _read_initial_theme()
+        from docwen_gui.styles.theme_manager import ThemeManager
+
+        appearance = ThemeManager.get_instance()
+        self._initial_font = appearance.get_font_size_preset()
+        self._initial_scale = appearance.get_ui_scale()
         self._initial_opacity = _read_initial_opacity(parent)
         self._tabs: dict[str, QWidget] = {}
         self._tab_widget: QTabWidget = _cast(QTabWidget, None)
-        self._navigation: Any = None
+        self._navigation: SettingsSidebar | None = None
         self._navigation_keyboard: SettingsNavigationKeyboard | None = None
         self._status_timer: QTimer = _cast(QTimer, None)
         self._cancel_close_in_progress = False
@@ -342,21 +335,23 @@ class SettingsDialog(QDialog):
 
         self._build_ui()
         self._wire_view_model()
+        appearance.appearance_changed.connect(self._queue_navigation_layout)
+        self._queue_navigation_layout()
 
     # ── UI construction ─────────────────────────────────────────────────────
 
     def _build_ui(self) -> None:
         self.setObjectName("settingsDialog")
         self.resize(DEFAULT_WIDTH, DEFAULT_HEIGHT)
-        self.setMinimumSize(MIN_WIDTH, MIN_HEIGHT)
+        set_metric(self, "setMinimumSize", MIN_WIDTH, MIN_HEIGHT)
         screen = self.screen()
         if screen is not None:
             available = screen.availableGeometry()
             self.resize(min(DEFAULT_WIDTH, available.width() - 32), min(DEFAULT_HEIGHT, available.height() - 64))
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(DIALOG_PADDING, DIALOG_PADDING, DIALOG_PADDING, DIALOG_PADDING)
-        layout.setSpacing(DIALOG_PADDING)
+        set_metric(layout, "setContentsMargins", DIALOG_PADDING, DIALOG_PADDING, DIALOG_PADDING, DIALOG_PADDING)
+        set_metric(layout, "setSpacing", DIALOG_PADDING)
         self._compact_navigation = ScrollSafeComboBox(self)
         self._compact_navigation.setObjectName("settingsPageSelector")
         self._compact_navigation.setAccessibleName(t("settings.title"))
@@ -376,7 +371,7 @@ class SettingsDialog(QDialog):
         # ── Sidebar + content row ───────────────────────────────────────
         content_row = QHBoxLayout()
         content_row.setContentsMargins(0, 0, 0, 0)
-        content_row.setSpacing(8)
+        set_metric(content_row, "setSpacing", 8)
 
         self._build_navigation(content_row)
         content_row.addWidget(self._tab_widget, 1)
@@ -395,13 +390,13 @@ class SettingsDialog(QDialog):
 
         # ── Bottom action bar ───────────────────────────────────────────
         action_row = QHBoxLayout()
-        action_row.setContentsMargins(0, 4, 0, 0)
-        action_row.setSpacing(8)
+        set_metric(action_row, "setContentsMargins", 0, 4, 0, 0)
+        set_metric(action_row, "setSpacing", 8)
 
         reset_tab_btn = QPushButton(t("settings.reset.tab_button"), self)
         reset_tab_btn.setObjectName("settingsResetTabButton")
-        reset_tab_btn.setMinimumHeight(ACTION_BUTTON_MIN_HEIGHT)
-        reset_tab_btn.setMinimumWidth(RESET_TAB_BUTTON_MIN_WIDTH)
+        set_metric(reset_tab_btn, "setMinimumHeight", ACTION_BUTTON_MIN_HEIGHT)
+        set_metric(reset_tab_btn, "setMinimumWidth", RESET_TAB_BUTTON_MIN_WIDTH)
         apply_theme_class(reset_tab_btn, "secondary")
         reset_tab_btn.clicked.connect(self._on_reset_tab)
         self._tab_widget.currentChanged.connect(
@@ -411,8 +406,8 @@ class SettingsDialog(QDialog):
 
         reset_all_btn = QPushButton(t("settings.reset.all_button"), self)
         reset_all_btn.setObjectName("settingsResetAllButton")
-        reset_all_btn.setMinimumHeight(ACTION_BUTTON_MIN_HEIGHT)
-        reset_all_btn.setMinimumWidth(RESET_ALL_BUTTON_MIN_WIDTH)
+        set_metric(reset_all_btn, "setMinimumHeight", ACTION_BUTTON_MIN_HEIGHT)
+        set_metric(reset_all_btn, "setMinimumWidth", RESET_ALL_BUTTON_MIN_WIDTH)
         apply_theme_class(reset_all_btn, "secondary")
         reset_all_btn.clicked.connect(self._on_reset_all)
 
@@ -431,24 +426,24 @@ class SettingsDialog(QDialog):
         if ok_btn:
             ok_btn.setText(t("common.ok"))
             ok_btn.setObjectName("settingsOkButton")
-            ok_btn.setMinimumHeight(ACTION_BUTTON_MIN_HEIGHT)
+            set_metric(ok_btn, "setMinimumHeight", ACTION_BUTTON_MIN_HEIGHT)
             apply_theme_class(ok_btn, "primary")
         cancel_btn = button_box.button(QDialogButtonBox.StandardButton.Cancel)
         if cancel_btn:
             cancel_btn.setText(t("common.cancel"))
             cancel_btn.setObjectName("settingsCancelButton")
-            cancel_btn.setMinimumHeight(ACTION_BUTTON_MIN_HEIGHT)
+            set_metric(cancel_btn, "setMinimumHeight", ACTION_BUTTON_MIN_HEIGHT)
             apply_theme_class(cancel_btn, "secondary")
         apply_btn = button_box.button(QDialogButtonBox.StandardButton.Apply)
         if apply_btn:
             apply_btn.setText(t("common.apply"))
             apply_btn.setObjectName("settingsApplyButton")
-            apply_btn.setMinimumHeight(ACTION_BUTTON_MIN_HEIGHT)
+            set_metric(apply_btn, "setMinimumHeight", ACTION_BUTTON_MIN_HEIGHT)
             apply_theme_class(apply_btn, "secondary")
 
         button_box.accepted.connect(self._on_ok)
         for button in button_box.buttons():
-            button.setMinimumWidth(Sizing.BUTTON_MIN_WIDTH)
+            set_metric(button, "setMinimumWidth", Sizing.BUTTON_MIN_WIDTH)
         button_box.rejected.connect(self._on_cancel)
         if apply_btn:
             apply_btn.clicked.connect(self._on_apply)
@@ -474,15 +469,23 @@ class SettingsDialog(QDialog):
         self._tab_widget.currentChanged.connect(self._on_tab_changed)
         self._on_tab_changed(self._tab_widget.currentIndex())
 
+    def _queue_navigation_layout(self) -> None:
+        QTimer.singleShot(0, self, self._sync_navigation_layout)
+
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
+        self._sync_navigation_layout()
+
+    def _sync_navigation_layout(self) -> None:
         if not hasattr(self, "_compact_navigation"):
             return
-        # The fixed-height navigation entries do not scroll in Fluent's TOP
-        # section. Reserve both footer rows before choosing the full sidebar.
-        sidebar_height = len(TAB_KEYS) * (Sizing.CONTROL_HEIGHT + Spacing.XS)
-        footer_height = 2 * ACTION_BUTTON_MIN_HEIGHT + 3 * DIALOG_PADDING
-        compact = self.width() < 700 or self.height() < sidebar_height + footer_height
+        # Use real button size hints so translated text and large fonts fit.
+        if self._navigation is not None:
+            self._navigation.refresh_width()
+        sidebar_height = self._navigation.minimumSizeHint().height() if self._navigation is not None else 0
+        footer_height = 2 * dp(ACTION_BUTTON_MIN_HEIGHT) + 3 * dp(DIALOG_PADDING)
+        sidebar_width = self._navigation.width() if self._navigation is not None else 0
+        compact = self.width() < sidebar_width + dp(480) or self.height() < sidebar_height + footer_height
         self._compact_navigation.setVisible(compact)
         if self._navigation is not None:
             self._navigation.setVisible(not compact)
@@ -499,6 +502,13 @@ class SettingsDialog(QDialog):
         routine Cancel when the user never changed the theme.  The same rule
         applies to opacity so a no-op close stays on the fast path.
         """
+        from docwen_gui.styles.theme_manager import ThemeManager
+
+        appearance = ThemeManager.get_instance()
+        if appearance.get_ui_scale() != self._initial_scale:
+            appearance.apply_ui_scale(self._initial_scale)
+        if appearance.get_font_size_preset() != self._initial_font:
+            appearance.apply_font_size_preset(self._initial_font)
         if self._initial_theme is not None and _read_initial_theme() != self._initial_theme:
             _apply_theme_no_persist(self._initial_theme)
 
@@ -512,65 +522,23 @@ class SettingsDialog(QDialog):
                 _apply_opacity_no_persist(self._initial_opacity, parent)
 
     def _build_navigation(self, content_row: QHBoxLayout) -> None:
-        """Build the FluentNavigationInterface sidebar (or fallback)."""
-        try:
-            from qfluentwidgets import NavigationInterface, NavigationItemPosition
-
-            nav = NavigationInterface(self, showMenuButton=False, showReturnButton=False, collapsible=True)
-            nav.setObjectName("settingsFluentNavigation")
-            text_width = max(QFontMetrics(nav.font()).horizontalAdvance(title) for title in TAB_NAMES.values())
-            navigation_width = max(NAVIGATION_MIN_WIDTH, text_width + NAVIGATION_TEXT_CHROME_WIDTH)
-            nav.setExpandWidth(navigation_width)
-            nav.setMinimumExpandWidth(0)
-            nav.setCollapsible(False)
-            nav.setFixedWidth(navigation_width)
-            self._navigation = nav
-            self._navigation_keyboard = SettingsNavigationKeyboard(self._tab_widget, nav)
-            self._nav_position = NavigationItemPosition.TOP
-            content_row.addWidget(nav, 0)
-        except Exception:
-            logger.debug("qfluentwidgets NavigationInterface not available — using tab bar fallback")
-            self._navigation = None
-            self._activate_tab_bar_fallback()
-
-    def _activate_tab_bar_fallback(self) -> None:
-        """Expose a stable, scrollable navigation surface for every page."""
-        navigation = self._navigation
-        if navigation is not None:
-            with contextlib.suppress(Exception):
-                navigation.hide()
-        self._navigation = None
-        self._tab_widget.setUsesScrollButtons(True)
-        self._tab_widget.tabBar().show()
+        nav = SettingsSidebar(self)
+        nav.page_requested.connect(self._tab_widget.setCurrentIndex)
+        self._navigation = nav
+        self._navigation_keyboard = SettingsNavigationKeyboard(self._tab_widget, nav)
+        content_row.addWidget(nav, 0)
 
     def _add_nav_item(self, key: str, index: int, title: str) -> None:
-        if self._navigation is None:
-            return
+        assert self._navigation is not None and self._navigation_keyboard is not None
         try:
-            from PySide6.QtWidgets import QStyle
-
-            # Prefer the tab's dedicated SVG before the platform fallback.
             icon = self._load_tab_icon(key)
-            if icon is None:
-                icon = self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView)
-
-            self._navigation.addItem(
-                key,
-                icon,
-                title,
-                onClick=lambda _checked=False, idx=index: self._tab_widget.setCurrentIndex(idx),
-                position=self._nav_position,
-                tooltip=title,
-            )
-            entry = _try_fluent_panel(self._navigation, key)
-            if not isinstance(entry, QWidget) or self._navigation_keyboard is None:
-                raise TypeError("settings_navigation_entry_unavailable")
-            self._navigation_keyboard.add(index, key, entry, title)
-            if index == 0:
-                self._navigation.setCurrentItem(key)
-        except Exception as exc:
-            logger.debug("Failed to add nav item %s: %s", key, exc)
-            self._activate_tab_bar_fallback()
+        except Exception:
+            logger.exception("Unable to load settings navigation icon: %s", key)
+            icon = None
+        button = self._navigation.add_page(key, index, title, icon)
+        self._navigation_keyboard.add(index, key, button, title)
+        if index == 0:
+            self._navigation.select_page(key)
 
     @staticmethod
     def _load_tab_icon(tab_key: str) -> QIcon | None:
@@ -604,18 +572,11 @@ class SettingsDialog(QDialog):
             return None
 
     def _update_nav_item_title(self, key: str, title: str) -> None:
-        item = _try_fluent_panel(self._navigation, key)
-        if item is None:
-            return
-        if hasattr(item, "setText"):
+        item = self._navigation.page_button(key) if self._navigation is not None else None
+        if item is not None:
             item.setText(title)
-        if hasattr(item, "setToolTip"):
             item.setToolTip(title)
-        if isinstance(item, QWidget):
             item.setAccessibleName(title)
-            inner = getattr(item, "itemWidget", None)
-            if isinstance(inner, QWidget):
-                inner.setAccessibleName(title)
 
     # ── Tab management ──────────────────────────────────────────────────────
 
@@ -668,8 +629,8 @@ class SettingsDialog(QDialog):
         tab.setProperty("failedTabKey", key)
 
         layout = QVBoxLayout(tab)
-        layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(12)
+        set_metric(layout, "setContentsMargins", 16, 16, 16, 16)
+        set_metric(layout, "setSpacing", 12)
 
         title_label = QLabel(title, tab)
         title_label.setObjectName("settingsTabTitle")
@@ -770,7 +731,7 @@ class SettingsDialog(QDialog):
                 self._tab_widget.setCurrentIndex(idx)
                 if self._navigation is not None:
                     with contextlib.suppress(Exception):
-                        self._navigation.setCurrentItem(initial)
+                        self._navigation.select_page(initial)
 
     def activate_section(self, section: str) -> bool:
         """Select a public settings section, rejecting failed page placeholders."""
@@ -783,7 +744,7 @@ class SettingsDialog(QDialog):
         self._tab_widget.setCurrentWidget(tab)
         if self._navigation is not None:
             with contextlib.suppress(Exception):
-                self._navigation.setCurrentItem(section)
+                self._navigation.select_page(section)
         return True
 
     def current_section(self) -> str | None:
@@ -805,7 +766,7 @@ class SettingsDialog(QDialog):
             key = TAB_KEYS[index]
             if self._navigation is not None:
                 with contextlib.suppress(Exception):
-                    self._navigation.setCurrentItem(key)
+                    self._navigation.select_page(key)
 
         # Auto-focus first eligible widget in the new tab.
         tab = self._tab_widget.currentWidget()
@@ -877,12 +838,19 @@ class SettingsDialog(QDialog):
         """Bind the visual Cancel target to the VM's persisted baseline."""
         gui = self._vm.persisted_config.gui
         self._initial_theme = gui.theme
+        self._initial_font = gui.font_size_preset
+        self._initial_scale = gui.scale_percent
         self._initial_opacity = gui.transparency_value if gui.transparency_enabled else 1.0
 
     def _apply_visual_config_as_preview_baseline(self) -> None:
         """Apply persisted visual settings after an immediate reset action."""
         gui = self._vm.persisted_config.gui
         _apply_theme_no_persist(gui.theme)
+        from docwen_gui.styles.theme_manager import ThemeManager
+
+        appearance = ThemeManager.get_instance()
+        appearance.apply_ui_scale(gui.scale_percent)
+        appearance.apply_font_size_preset(gui.font_size_preset)
         opacity = gui.transparency_value if gui.transparency_enabled else 1.0
         _apply_opacity_no_persist(opacity, self.parentWidget())
         self._commit_preview_state()

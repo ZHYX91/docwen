@@ -28,6 +28,8 @@ from PySide6.QtWidgets import (
 )
 from qfluentwidgets import PushButton
 
+from docwen_gui.styles.ui_scale import set_metric
+
 from ..i18n import t
 from ..styles.design_tokens import Spacing
 from .panel_card import FormRow
@@ -103,14 +105,14 @@ class TemplateSelector(QWidget):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(Spacing.XS)
+        set_metric(layout, "setSpacing", Spacing.XS)
 
         # ── 空状态 ──────────────────────────────────────────────────────
         self._empty_state = QFrame(self)
         self._empty_state.setObjectName("templateSelectorEmptyState")
         empty_layout = QVBoxLayout(self._empty_state)
-        empty_layout.setContentsMargins(Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM)
-        empty_layout.setSpacing(Spacing.XS)
+        set_metric(empty_layout, "setContentsMargins", Spacing.SM, Spacing.SM, Spacing.SM, Spacing.SM)
+        set_metric(empty_layout, "setSpacing", Spacing.XS)
 
         self._empty_label = QLabel(t("components.template_selector.no_templates"))
         self._empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -126,7 +128,7 @@ class TemplateSelector(QWidget):
 
         self._empty_manage_button = PushButton(t("components.template_selector.manage_templates", "管理模板"))
         self._empty_manage_button.setObjectName("templateSelectorEmptyManageButton")
-        self._empty_manage_button.setMinimumHeight(32)
+        set_metric(self._empty_manage_button, "setMinimumHeight", 32)
         self._empty_manage_button.clicked.connect(self._open_template_management)
         empty_layout.addWidget(self._empty_manage_button, alignment=Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(self._empty_state)
@@ -153,7 +155,7 @@ class TemplateSelector(QWidget):
         self._footer_row.setObjectName("templateSelectorFooterRow")
         self._footer_row.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
         footer_layout = QVBoxLayout(self._footer_row)
-        footer_layout.setContentsMargins(Spacing.SM, Spacing.XS, Spacing.XS, Spacing.XS)
+        set_metric(footer_layout, "setContentsMargins", Spacing.SM, Spacing.XS, Spacing.XS, Spacing.XS)
         footer_form = FormRow("", self._manage_button, self._footer_row)
         footer_layout.addWidget(footer_form)
         self._details_label = footer_form.label

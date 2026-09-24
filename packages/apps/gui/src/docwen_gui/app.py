@@ -81,7 +81,11 @@ def _initialize_application_theme(app: object, controller: object | None) -> Non
 
     if not isinstance(theme_name, str) or theme_name not in ThemeManager.get_available_themes():
         theme_name = DEFAULT_THEME
-    ThemeManager.get_instance().initialize(cast("QApplication", app), theme_name)
+    manager = ThemeManager.get_instance()
+    manager.initialize(cast("QApplication", app), theme_name)
+    if config_port is not None:
+        manager.apply_ui_scale(config_port.get("gui.appearance.scale_percent", 100))
+        manager.apply_font_size_preset(config_port.get("gui.font.size_preset", "default"))
 
 
 def create_main_window(

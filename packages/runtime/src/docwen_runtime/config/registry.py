@@ -103,6 +103,8 @@ _BY_PATH: dict[str, ConfigFileSpec] = {spec.rel_path: spec for spec in CONFIG_FI
 _GROUP_RESET_DOTTED_KEYS: dict[str, tuple[str, ...]] = {
     "general": (
         "gui.theme",
+        "gui.font",
+        "gui.appearance",
         "gui.window",
         "gui.transparency",
         "gui.language",

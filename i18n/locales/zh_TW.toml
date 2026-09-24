@@ -202,14 +202,17 @@ save_success_message = "配置已保存並重新載入。"
 # 通用设置选项卡
 # -----------------------------------------------------------------------------
 [settings.general]
+font_label = "字級："
+scale_label = "介面縮放："
+scale_tooltip = "相對系統縮放，同時調整文字、圖示和間距。"
 # 语言设置区域
 language_section = "語言"
 language_label = "選擇介面語言:"
 language_tooltip = "選擇應用程式的介面顯示語言。\n更改語言後需要重啟應用才能生效。"
 
 # 主题设置区域
-theme_section = "介面主題"
-theme_description = "選擇淺色、深色或跟隨系統主題。"
+theme_section = "介面外觀"
+theme_description = "調整主題、字級和介面縮放。"
 theme_label = "選擇應用程式主題:"
 theme_tooltip = "選擇應用程式的視覺主題。\n不同的主題提供不同的顏色方案和介面風格。\n更改主題會在保存後生效。"
 theme_preview = "主題預覽:"
@@ -882,9 +885,8 @@ emoji = "Emoji 檢測與處理庫"
 # 字號
 [components.font_size]
 small = "小"
-default = "預設"
+default = "標準"
 large = "大"
-xlarge = "特大"
 
 # 文件拖拽区
 [components.file_drop]

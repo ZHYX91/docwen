@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
 )
 from qfluentwidgets import Pivot, PushButton
 
+from docwen_gui.styles.ui_scale import set_metric
 from docwen_runtime.templates import TemplateManagementError
 
 from ...dialogs import feedback
@@ -72,8 +73,8 @@ class TemplatesTab(BaseSettingsTab):
 
     def _create_interface(self) -> None:
         root = self._scroll_layout
-        root.setContentsMargins(Spacing.MD, Spacing.MD, Spacing.MD, Spacing.MD)
-        root.setSpacing(Spacing.SM)
+        set_metric(root, "setContentsMargins", Spacing.MD, Spacing.MD, Spacing.MD, Spacing.MD)
+        set_metric(root, "setSpacing", Spacing.SM)
 
         intro = QLabel(
             t(
@@ -104,14 +105,14 @@ class TemplatesTab(BaseSettingsTab):
         root.addWidget(self._pivot)
         self._tabs = QStackedWidget(self)
         self._tabs.setObjectName("templateManagementTabs")
-        self._tabs.setMinimumHeight(240)
+        set_metric(self._tabs, "setMinimumHeight", 240)
         for target, title in (
             ("docx", t("components.template_selector_tabbed.document_templates", "DOCX templates")),
             ("xlsx", t("components.template_selector_tabbed.spreadsheet_templates", "XLSX templates")),
         ):
             page = QWidget(self._tabs)
             layout = QVBoxLayout(page)
-            layout.setContentsMargins(0, Spacing.SM, 0, 0)
+            set_metric(layout, "setContentsMargins", 0, Spacing.SM, 0, 0)
             template_list = QListWidget(page)
             template_list.setObjectName(f"templateManagementList-{target}")
             template_list.setItemDelegate(TemplateItemDelegate(template_list, draggable=True))
@@ -121,7 +122,7 @@ class TemplatesTab(BaseSettingsTab):
             template_list.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
             template_list.setDefaultDropAction(Qt.DropAction.MoveAction)
             template_list.setTextElideMode(Qt.TextElideMode.ElideMiddle)
-            template_list.setSpacing(2)
+            set_metric(template_list, "setSpacing", 2)
             template_list.model().rowsMoved.connect(
                 lambda *args, tt=target: QTimer.singleShot(0, lambda: self._persist_order(tt))
             )
@@ -134,7 +135,7 @@ class TemplatesTab(BaseSettingsTab):
         root.addWidget(self._tabs, 1)
 
         primary_row = QGridLayout()
-        primary_row.setSpacing(Spacing.XS)
+        set_metric(primary_row, "setSpacing", Spacing.XS)
         self._import_button = self._button(
             t("settings.templates.import", "Import templates"),
             self._import_templates,
@@ -162,7 +163,7 @@ class TemplatesTab(BaseSettingsTab):
         root.addLayout(primary_row)
 
         secondary_row = QGridLayout()
-        secondary_row.setSpacing(Spacing.XS)
+        set_metric(secondary_row, "setSpacing", Spacing.XS)
         self._up_button = self._button(t("settings.templates.move_up", "Move up"), lambda: self._move_selected(-1))
         self._down_button = self._button(
             t("settings.templates.move_down", "Move down"),
@@ -210,7 +211,7 @@ class TemplatesTab(BaseSettingsTab):
 
     def _button(self, text: str, callback, *, primary: bool = False) -> QPushButton:
         button = ActionButton(text, self)
-        button.setMinimumHeight(Sizing.CONTROL_HEIGHT)
+        set_metric(button, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
         button.clicked.connect(callback)
         apply_theme_class(button, "primary" if primary else "secondary")
         return button
@@ -419,13 +420,13 @@ class TemplatesTab(BaseSettingsTab):
     def _ask_name(self, title: str, initial: str) -> tuple[str, bool]:
         dialog = QDialog(self)
         dialog.setWindowTitle(title)
-        dialog.setMinimumWidth(420)
+        set_metric(dialog, "setMinimumWidth", 420)
         layout = QVBoxLayout(dialog)
-        layout.setContentsMargins(Spacing.MD, Spacing.MD, Spacing.MD, Spacing.MD)
+        set_metric(layout, "setContentsMargins", Spacing.MD, Spacing.MD, Spacing.MD, Spacing.MD)
         label = QLabel(t("settings.templates.name_prompt"), dialog)
         editor = QLineEdit(initial, dialog)
         label.setBuddy(editor)
-        editor.setMinimumHeight(Sizing.CONTROL_HEIGHT)
+        set_metric(editor, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
         editor.selectAll()
         layout.addWidget(label)
         layout.addWidget(editor)

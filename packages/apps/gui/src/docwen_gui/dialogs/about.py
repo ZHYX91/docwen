@@ -18,6 +18,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from docwen_gui.styles.ui_scale import set_metric
+
 from ..i18n import t
 from ..resources import load_svg_icon
 from ..widgets.panel_card import ChoiceGroup, WrappingLabel
@@ -98,7 +100,7 @@ def _tool_info_button(tooltip_key: str) -> QToolButton:
     btn = _ToolInfoButton(tooltip)
     btn.setObjectName("aboutToolInfoButton")
     btn.setAutoRaise(True)
-    btn.setFixedSize(18, 18)
+    set_metric(btn, "setFixedSize", 18, 18)
     btn.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
     btn.setToolTip(tooltip)
     btn.setAccessibleName(tooltip)
@@ -117,7 +119,7 @@ def _tool_entry_widget(name: str, tooltip_key: str) -> QWidget:
     widget.setObjectName("aboutToolEntry")
     layout = QHBoxLayout(widget)
     layout.setContentsMargins(0, 0, 0, 0)
-    layout.setSpacing(4)
+    set_metric(layout, "setSpacing", 4)
 
     label = _tool_tip_label(name, tooltip_key)
     layout.addWidget(label, 1)
@@ -133,7 +135,7 @@ class AboutDialog(QDialog):
         self.setObjectName("aboutDialog")
         self.setModal(True)
         self.resize(640, 680)
-        self.setMinimumSize(360, 320)
+        set_metric(self, "setMinimumSize", 360, 320)
         self.setWindowTitle(t("about.title", default="About DocWen"))
         self._create_interface()
         self._center_on_parent()
@@ -149,8 +151,8 @@ class AboutDialog(QDialog):
 
     def _create_interface(self) -> None:
         root_layout = QVBoxLayout(self)
-        root_layout.setContentsMargins(16, 16, 16, 16)
-        root_layout.setSpacing(8)
+        set_metric(root_layout, "setContentsMargins", 16, 16, 16, 16)
+        set_metric(root_layout, "setSpacing", 8)
 
         # Scroll area for main content
         scroll = QScrollArea(self)
@@ -163,7 +165,7 @@ class AboutDialog(QDialog):
         content.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         content_layout = QVBoxLayout(content)
         content_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.setSpacing(8)
+        set_metric(content_layout, "setSpacing", 8)
         content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         scroll.setWidget(content)
 
@@ -171,8 +173,8 @@ class AboutDialog(QDialog):
         hero_card = QWidget(content)
         hero_card.setObjectName("aboutHeroCard")
         hero_layout = QVBoxLayout(hero_card)
-        hero_layout.setContentsMargins(16, 16, 16, 16)
-        hero_layout.setSpacing(4)
+        set_metric(hero_layout, "setContentsMargins", 16, 16, 16, 16)
+        set_metric(hero_layout, "setSpacing", 4)
 
         title_label = QLabel(t("common.app_name", default="DocWen"))
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -221,7 +223,7 @@ class AboutDialog(QDialog):
         disclaimer_card = QWidget(content)
         disclaimer_card.setObjectName("aboutGroup")
         disclaimer_layout = QVBoxLayout(disclaimer_card)
-        disclaimer_layout.setContentsMargins(16, 16, 16, 16)
+        set_metric(disclaimer_layout, "setContentsMargins", 16, 16, 16, 16)
         disclaimer_label = WrappingLabel(t("common.disclaimer", default=""))
         disclaimer_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         disclaimer_label.setWordWrap(True)
@@ -233,7 +235,7 @@ class AboutDialog(QDialog):
         ack_card = QWidget(content)
         ack_card.setObjectName("aboutGroup")
         ack_layout = QVBoxLayout(ack_card)
-        ack_layout.setContentsMargins(16, 16, 16, 16)
+        set_metric(ack_layout, "setContentsMargins", 16, 16, 16, 16)
 
         ack_title = QLabel(t("about.acknowledgments", default="Acknowledgments"))
         ack_title.setObjectName("aboutGroupTitle")
@@ -251,7 +253,7 @@ class AboutDialog(QDialog):
             column.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
             column_layout = QVBoxLayout(column)
             column_layout.setContentsMargins(0, 0, 0, 0)
-            column_layout.setSpacing(4)
+            set_metric(column_layout, "setSpacing", 4)
             column_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
             for name, tooltip_key in entries:
                 column_layout.addWidget(_tool_entry_widget(name, tooltip_key))
@@ -270,7 +272,7 @@ class AboutDialog(QDialog):
 
             close_btn = QPushButton(t("common.close", default="Close"))
         close_btn.setObjectName("aboutCloseButton")
-        close_btn.setFixedWidth(120)
+        set_metric(close_btn, "setFixedWidth", 120)
         close_btn.clicked.connect(self.accept)
         btn_row = QHBoxLayout()
         btn_row.addStretch()

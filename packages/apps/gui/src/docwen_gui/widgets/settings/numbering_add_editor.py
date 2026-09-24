@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from docwen_gui.styles.ui_scale import set_metric
 from docwen_gui.widgets.value_controls import ScrollSafeComboBox
 
 from ...dialogs import feedback
@@ -264,7 +265,7 @@ class NumberingAddDialog(QDialog):
             placeholder_btn.setText("+")
             placeholder_btn.clicked.connect(lambda _checked=False, level=idx: self._show_placeholder_menu(level))
             status_label = QLabel("", self)
-            status_label.setMinimumWidth(24)
+            set_metric(status_label, "setMinimumWidth", 24)
             self.level_edits[idx] = edit
             self.level_status_labels[idx] = status_label
             row = idx - 1

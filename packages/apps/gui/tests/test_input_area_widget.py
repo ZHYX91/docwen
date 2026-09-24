@@ -225,7 +225,7 @@ class TestConstruction:
 
         normal_width = measured_widths[2]
         widget.resize(1920, _DEFAULT_HEIGHT)
-        widget.setStyleSheet(build_panel_stylesheet(theme, "xlarge"))
+        widget.setStyleSheet(build_panel_stylesheet(theme, "large"))
         qapp.processEvents()
         widget._sync_supported_type_layout()
         qapp.processEvents()
@@ -256,7 +256,7 @@ class TestConstruction:
             previous_bottom = row.geometry().bottom()
 
     def test_large_empty_prompt_uses_available_width_without_vertical_clipping(self, widget, qapp):
-        widget.setStyleSheet(build_panel_stylesheet("light", "xlarge"))
+        widget.setStyleSheet(build_panel_stylesheet("light", "large"))
         widget._prompt_label.setText("Drag a single document here")
         # Match the main window: its workflow scroll area gives the input
         # widget its minimum content height even when the viewport is shorter.

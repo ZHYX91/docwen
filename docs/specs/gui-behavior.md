@@ -57,14 +57,32 @@ Activity records and copyable feedback separate local details from redacted diag
 
 ## Visual system / 视觉规范
 
-- Shared cards use a left-aligned, theme-aware header band and 16 logical-pixel body padding. Main workflow and settings cards share this primitive.
-- Regular controls have a 36 logical-pixel minimum height; execution buttons have a 40 logical-pixel minimum height and fill their card's content width. Short text buttons have an 80 logical-pixel minimum width. Font metrics may increase these dimensions.
-- Related controls use an 8-pixel horizontal gap, functional groups and form rows use 12 pixels, and cards use 16 pixels. Qt handles system DPI scaling; these tokens are not scaled a second time.
+The initial main-window client size is 476×720 Qt logical pixels, with a 420×560 minimum. Saved user geometry takes precedence. Content scrolls independently of the fixed bottom bar when the window is short; available-screen fitting remains authoritative on smaller work areas.
+
+- Shared cards use a left-aligned, theme-aware header band and 12 logical-pixel body padding. Main workflow and settings cards share this primitive.
+- Regular controls have a 32 logical-pixel minimum height; execution buttons have a 36 logical-pixel minimum height and fill their card's content width. Short text buttons have an 80 logical-pixel minimum width. Font metrics may increase these dimensions.
+- Related controls and form rows use an 8-pixel gap; cards use 12 pixels. These are 100% design values. Application zoom scales them once in Qt logical coordinates; Qt independently handles physical screen DPI.
 - Checkbox labels follow the indicator on its right. Form fields align within a settings page; narrow rows and long localized text reflow without clipping. Proofreading choices use one column when two do not fit.
 - Markdown target selection occupies a separate form row above the full-width generation action. The action names its target format. Batch conversion buttons show the same category count used by request dispatch; merge buttons show their own matching-input count.
 - The workspace previews committed output-directory settings. Template selection has a persistent check marker and a visible selected name. Idle feedback shows a compact ready-state card header; its body expands when work starts and remains open for results. Existing activity and non-default output hints remain reachable while idle.
 - Light and dark themes use identical geometry, with readable hover, pressed, disabled and keyboard-focus states.
 - Theme-independent design tokens and shared control geometry own dimensions and spacing. Theme colour changes reuse the same complete button box model; new themes do not redeclare padding or minimum sizes.
+
+## Text size and interface scale / 字号与界面缩放
+
+General → Appearance provides three text sizes (Small / Standard / Large) and five interface scales (90 / 100 / 110 / 125 / 150%). Standard body text is 10.5 pt (14 logical pixels at 96 DPI); Small and Large use 9 pt and 13 pt. Semantic headings keep their hierarchy.
+
+“通用 → 界面外观”提供小、标准、大三档字号，以及 90 / 100 / 110 / 125 / 150% 五档界面缩放。字号只调整文字层级；界面缩放同时调整文字、图标、控件、边距与间距。系统 200% 配合应用 90% 的名义物理比例为 180%，由 Qt 直接绘制文字与矢量资源，不缩放整张窗口位图。像素取整和屏幕字体渲染仍可能产生细微差别。
+
+Changes preview immediately. Apply or OK saves them; Cancel restores the last saved appearance. Reset uses the existing confirmed reset transaction. Existing and newly opened controls use the same scale. Settings navigation becomes a page selector when the sidebar and content cannot fit. Scroll areas keep long forms and the main workflow reachable.
+
+`styles/design_tokens.py` owns baseline sizes; `styles/ui_scale.py` owns content scaling and baseline metric bindings; `font_utils.py` owns text presets; `ThemeManager` applies the assembled stylesheet and application font. Font-measured layout dimensions are not scaled a second time. `window_geometry.py` owns Qt logical window positions, sizes, restoration and screen fitting, independently of content zoom.
+
+`gui.appearance.scale_percent` is the sole content-scale setting. The loader removes retired `gui.dpi.ui_scale` and `gui.dpi.enable_dpi_scaling` preferences without interpreting them as the new zoom. It maps the old extra-large font preference to Large once, preserves unrelated preferences and does not write defaults into sparse user files. Runtime controls accept only the current presets.
+
+Windows native title bars follow the resolved Light / Dark / System theme through `ThemeManager` and Qt’s application color-scheme hint. Existing windows update on preview and rollback; Qt applies the current scheme to newly shown or recreated native window handles. The operating system retains the title bar, caption buttons, system menu and geometry behavior. There is no separate caption-color preference.
+
+Shared checkboxes preserve Qt keyboard/accessibility behavior and draw their indicators as vectors. Brand art uses `assets/icon.svg`; action icons use the licensed SVG collection under `assets/icons`. Runtime icons render for the current paint device. Windows package builds generate theme-aware target-size variants and a `resources.pri` index before MakeAppx packaging; asset/index checks do not replace installed Start menu verification.
 
 ## Regression / 回归
 

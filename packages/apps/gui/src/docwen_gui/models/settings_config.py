@@ -27,6 +27,8 @@ class GUIConfig:
 
     language: str = "zh_CN"
     theme: str = "light"  # light / dark / system
+    font_size_preset: str = "default"
+    scale_percent: int = 100
     transparency_enabled: bool = False
     transparency_value: float = 1.0  # 0.20 .. 1.00
     remember_gui_state: bool = DEFAULT_WINDOW_BEHAVIOR.remember_gui_state

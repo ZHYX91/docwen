@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from docwen_gui.styles.ui_scale import set_metric
 from docwen_gui.widgets.value_controls import ScrollSafeComboBox
 from docwen_runtime.config import atomic_write_text
 
@@ -118,10 +119,10 @@ class TomlEditorWidget(QWidget):
     def _build_ui(self) -> None:
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
-        root.setSpacing(8)
+        set_metric(root, "setSpacing", 8)
 
         header = QHBoxLayout()
-        header.setSpacing(8)
+        set_metric(header, "setSpacing", 8)
 
         label = QLabel(t("settings.toml_editor.config_label", "Config:") + " ", self)
         header.addWidget(label)
@@ -309,7 +310,7 @@ class TomlEditorDialog(QWidget):
         self.editor = editor
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
+        set_metric(layout, "setSpacing", 8)
         layout.addWidget(editor, 1)
 
         buttons = QDialogButtonBox(

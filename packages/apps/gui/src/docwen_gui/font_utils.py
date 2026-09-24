@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from docwen_gui.styles.design_tokens import Typography
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_FONT_FAMILIES = [
@@ -18,14 +20,13 @@ DEFAULT_FONT_FAMILIES = [
     "Helvetica",
     "sans-serif",
 ]
-DEFAULT_FONT_SIZE = 12
-FONT_SIZE_PRESETS: dict[str, int] = {
-    "small": 11,
+DEFAULT_FONT_SIZE = Typography.BODY_SIZE
+FONT_SIZE_PRESETS: dict[str, float] = {
+    "small": 9,
     "default": DEFAULT_FONT_SIZE,
     "large": 13,
-    "xlarge": 15,
 }
-FONT_SIZE_PRESET_DELTAS: dict[str, int] = {name: size - DEFAULT_FONT_SIZE for name, size in FONT_SIZE_PRESETS.items()}
+FONT_SIZE_PRESET_DELTAS: dict[str, float] = {name: size - DEFAULT_FONT_SIZE for name, size in FONT_SIZE_PRESETS.items()}
 
 _FONT_ALIASES = {
     "Microsoft YaHei": ["Microsoft YaHei", "微软雅黑", "YaHei"],
@@ -141,19 +142,17 @@ def _known_cjk_font_files() -> list[Path]:
 
 def normalize_font_size_preset(preset: str | None) -> str:
     normalized = str(preset or "").strip().lower()
-    if normalized in {"extra_large", "extra-large"}:
-        normalized = "xlarge"
     return normalized if normalized in FONT_SIZE_PRESETS else "default"
 
 
-def resolve_font_size_preset(preset: str | None) -> int:
+def resolve_font_size_preset(preset: str | None) -> float:
     return FONT_SIZE_PRESETS[normalize_font_size_preset(preset)]
 
 
-def resolve_typography_size(default_size: int, preset: str | None) -> int:
+def resolve_typography_size(default_size: float, preset: str | None) -> float:
     """Apply a font preset as a delta while preserving semantic hierarchy."""
     normalized = normalize_font_size_preset(preset)
-    return max(9, int(default_size) + FONT_SIZE_PRESET_DELTAS[normalized])
+    return max(8, default_size + FONT_SIZE_PRESET_DELTAS[normalized])
 
 
 def apply_application_font(app: object, *, font_size_preset: str | None = None) -> None:
@@ -171,5 +170,7 @@ def apply_application_font(app: object, *, font_size_preset: str | None = None) 
     font = QFont(current_font)
     if family:
         font.setFamily(family)
-    font.setPointSize(resolve_font_size_preset(font_size_preset))
+    from docwen_gui.styles.ui_scale import scale_percent
+
+    font.setPointSizeF(resolve_font_size_preset(font_size_preset) * scale_percent() / 100)
     app.setFont(font)

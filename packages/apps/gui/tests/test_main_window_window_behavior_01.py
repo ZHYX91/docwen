@@ -229,7 +229,7 @@ def test_real_general_reset_survives_main_window_close(
         assert config_port.get("gui.window.center_panel_screen_x") == 420
         assert config_port.get("gui.window.window_y") == 0
         assert config_port.get("gui.window.default_width") == 476
-        assert config_port.get("gui.window.default_height") == 860
+        assert config_port.get("gui.window.default_height") == 720
     finally:
         monkeypatch.setenv("DOCWEN_GUI_DISABLE_STATE_SAVE", "1")
         window.close()
@@ -238,9 +238,9 @@ def test_real_general_reset_survives_main_window_close(
 @pytest.mark.parametrize(
     ("remember_gui_state", "auto_center", "expected_size"),
     [
-        (False, False, (476, 860)),
+        (False, False, (476, 720)),
         (True, True, (1_200, 1_000)),
-        (False, True, (476, 860)),
+        (False, True, (476, 720)),
     ],
 )
 def test_startup_center_policy_retains_size_only_when_state_is_remembered(
