@@ -30,7 +30,7 @@ _CANCEL_CHECK_ROW_INTERVAL = 1000
 
 
 class DelimitedCellTextTooLongError(ValueError):
-    """A delimited field cannot be represented without openpyxl truncating it."""
+    """A delimited field exceeds Excel's UTF-16 cell text boundary."""
 
     def __init__(self, *, row: int, column: int, length: int) -> None:
         self.row = row
@@ -38,8 +38,8 @@ class DelimitedCellTextTooLongError(ValueError):
         self.length = length
         self.limit = _XLSX_CELL_TEXT_LIMIT
         super().__init__(
-            f"Cell text at row {row}, column {column} has {length} characters; "
-            f"XLSX supports at most {self.limit} characters in one cell."
+            f"Cell text at row {row}, column {column} has {length} UTF-16 code units; "
+            f"Excel supports at most {self.limit} UTF-16 code units in one cell."
         )
 
 
@@ -146,11 +146,12 @@ def _build_delimited_workbook(
                     for c_idx, value in enumerate(row, 1):
                         if cancel_check is not None and c_idx % 1000 == 0:
                             cancel_check()
-                        if len(value) > _XLSX_CELL_TEXT_LIMIT:
+                        text_length = len(value.encode("utf-16-le")) // 2
+                        if text_length > _XLSX_CELL_TEXT_LIMIT:
                             raise DelimitedCellTextTooLongError(
                                 row=r_idx,
                                 column=c_idx,
-                                length=len(value),
+                                length=text_length,
                             )
                         cell = ws.cell(row=r_idx, column=c_idx, value=value)
                         cell.data_type = "s"
