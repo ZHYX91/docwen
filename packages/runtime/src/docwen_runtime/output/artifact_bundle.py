@@ -62,38 +62,21 @@ class ArtifactBundleCommitter:
     def discard(self, *, staging_root: str, artifact_paths: list[str]) -> None:
         """Remove exact rejected paths without following links outside staging."""
 
-        root = self._validated_root(staging_root)
-        parents: set[Path] = set()
+        from .discard import discard_file
+
+        try:
+            root = self._validated_root(staging_root)
+        except (ArtifactBundleCommitError, OSError):
+            return
         for raw_path in artifact_paths:
             candidate = filesystem_path(raw_path, force_extended=sys.platform == "win32")
             if not candidate.is_absolute():
                 continue
             try:
-                lexical_relative = candidate.absolute().relative_to(root)
+                relative = candidate.relative_to(root)
             except ValueError:
                 continue
-            current = root / lexical_relative
-            if self._is_link_or_junction(current):
-                self._remove_link(current)
-                parents.add(current.parent)
-                continue
-            try:
-                resolved = current.resolve(strict=True)
-                resolved.relative_to(root)
-            except (OSError, ValueError):
-                continue
-            if resolved.is_file():
-                resolved.unlink()
-                parents.add(resolved.parent)
-
-        for parent in sorted(parents, key=lambda item: len(item.parts), reverse=True):
-            current = parent
-            while current != root:
-                try:
-                    current.rmdir()
-                except OSError:
-                    break
-                current = current.parent
+            discard_file(root, relative)
 
     @classmethod
     def _commit_artifact(cls, root: Path, draft_artifact: BundleDraftArtifact) -> BundleArtifact:
