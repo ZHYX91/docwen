@@ -1,0 +1,130 @@
+"""Cancellation and large-shape contracts for delimited/XLSX conversion."""
+
+from __future__ import annotations
+
+import csv
+from pathlib import Path
+
+import openpyxl
+import pytest
+
+from docwen_core.errors import CancellationRequested
+from docwen_plugin_spreadsheet.csv_xlsx.converter import (
+    CsvToXlsxConverter,
+    TsvToXlsxConverter,
+    XlsxToCsvConverter,
+    XlsxToTsvConverter,
+    _build_delimited_workbook,
+)
+
+from ._csv_xlsx_support import _build_fake_context
+
+pytestmark = [pytest.mark.golden, pytest.mark.contract]
+
+
+class _CancelAfterChecks:
+    def __init__(self, fail_at: int) -> None:
+        self.fail_at = fail_at
+        self.checks = 0
+
+    @property
+    def is_cancelled(self) -> bool:
+        return self.checks >= self.fail_at
+
+    def check(self) -> None:
+        self.checks += 1
+        if self.checks >= self.fail_at:
+            raise CancellationRequested("test cancellation")
+
+
+@pytest.mark.parametrize(
+    ("converter_type", "suffix", "sep"),
+    [
+        (CsvToXlsxConverter, ".csv", ","),
+        (TsvToXlsxConverter, ".tsv", "\t"),
+    ],
+)
+def test_delimited_to_xlsx_propagates_mid_parse_cancellation(
+    tmp_path: Path,
+    converter_type: type,
+    suffix: str,
+    sep: str,
+) -> None:
+    source = tmp_path / f"large{suffix}"
+    with source.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle, delimiter=sep)
+        for index in range(2500):
+            writer.writerow([index, f"value-{index}"])
+
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    context = _build_fake_context(str(source), str(staging), target_format="xlsx")
+    cancellation = _CancelAfterChecks(fail_at=3)
+    context._cancellation = cancellation
+
+    with pytest.raises(CancellationRequested, match="test cancellation"):
+        converter_type().convert(context)
+
+    assert cancellation.checks == 3
+    assert context.workspace.registered_artifacts == []
+    assert not list(staging.glob("*.xlsx"))
+
+
+@pytest.mark.parametrize(
+    ("converter_type", "target_format", "suffix"),
+    [
+        (XlsxToCsvConverter, "csv", ".csv"),
+        (XlsxToTsvConverter, "tsv", ".tsv"),
+    ],
+)
+def test_xlsx_to_delimited_propagates_mid_write_cancellation_without_registering_partial_artifact(
+    tmp_path: Path,
+    converter_type: type,
+    target_format: str,
+    suffix: str,
+) -> None:
+    source = tmp_path / "large.xlsx"
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    assert sheet is not None
+    for index in range(2500):
+        sheet.append([index, f"value-{index}"])
+    workbook.save(source)
+    workbook.close()
+
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    context = _build_fake_context(str(source), str(staging), target_format=target_format)
+    cancellation = _CancelAfterChecks(fail_at=5)
+    context._cancellation = cancellation
+
+    with pytest.raises(CancellationRequested, match="test cancellation"):
+        converter_type().convert(context)
+
+    assert cancellation.checks == 5
+    assert context.workspace.registered_artifacts == []
+    partials = list(staging.glob(f"*{suffix}"))
+    assert len(partials) == 1
+    assert partials[0].stat().st_size > 0
+
+
+@pytest.mark.parametrize("sep", [",", "\t"])
+def test_delimited_wide_row_preserves_all_columns_without_timing_assumptions(
+    tmp_path: Path,
+    sep: str,
+) -> None:
+    source = tmp_path / "wide.txt"
+    values = [f"c{index:04d}" for index in range(1024)]
+    with source.open("w", encoding="utf-8", newline="") as handle:
+        csv.writer(handle, delimiter=sep).writerow(values)
+
+    workbook, row_count = _build_delimited_workbook(str(source), sep=sep)
+    try:
+        assert row_count == 1
+        sheet = workbook.active
+        assert sheet is not None
+        assert sheet.max_column == len(values)
+        assert sheet.cell(1, 1).value == values[0]
+        assert sheet.cell(1, len(values)).value == values[-1]
+    finally:
+        workbook.close()
