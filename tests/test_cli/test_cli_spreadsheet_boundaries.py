@@ -37,15 +37,18 @@ def _run(source: Path, output: Path, target: str, *, json_mode: bool = True):
 
 
 @pytest.mark.parametrize("suffix", ["csv", "tsv"])
-def test_rejected_long_text_does_not_publish_partial_result(tmp_path: Path, suffix: str) -> None:
+@pytest.mark.parametrize(("value", "units"), [("x" * 40000, 40000), ("😀" * 16384, 32768)], ids=["ascii", "non-bmp"])
+def test_rejected_long_text_does_not_publish_partial_result(
+    tmp_path: Path, suffix: str, value: str, units: int
+) -> None:
     source = tmp_path / f"long.{suffix}"
-    source.write_text("x" * 40000, encoding="utf-8")
+    source.write_text(value, encoding="utf-8")
     output = tmp_path / "published"
     process = _run(source, output, "xlsx")
     payload = json.loads(process.stdout)
     assert process.returncode != 0 and payload["success"] is False
     assert "CELL-TEXT-TOO-LONG" in json.dumps(payload)
-    assert "40000" in json.dumps(payload)
+    assert str(units) in json.dumps(payload)
     assert not output.exists() or not list(output.iterdir())
 
 
