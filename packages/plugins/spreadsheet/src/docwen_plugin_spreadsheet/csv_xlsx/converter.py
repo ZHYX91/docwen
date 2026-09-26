@@ -45,6 +45,22 @@ class DelimitedWorkbookDimensionError(ValueError):
         )
 
 
+def _check_delimited_dimensions(*, row: int, columns: int) -> None:
+    if row > _XLSX_MAX_ROWS:
+        raise DelimitedWorkbookDimensionError(
+            axis="row",
+            actual=row,
+            limit=_XLSX_MAX_ROWS,
+        )
+    if columns > _XLSX_MAX_COLUMNS:
+        raise DelimitedWorkbookDimensionError(
+            axis="column",
+            actual=columns,
+            limit=_XLSX_MAX_COLUMNS,
+            row=row,
+        )
+
+
 class DelimitedCellTextTooLongError(ValueError):
     """A delimited field exceeds Excel's UTF-16 cell text boundary."""
 
@@ -159,19 +175,7 @@ def _build_delimited_workbook(
                 for r_idx, row in enumerate(reader, 1):
                     if cancel_check is not None and r_idx % _CANCEL_CHECK_ROW_INTERVAL == 0:
                         cancel_check()
-                    if r_idx > _XLSX_MAX_ROWS:
-                        raise DelimitedWorkbookDimensionError(
-                            axis="row",
-                            actual=r_idx,
-                            limit=_XLSX_MAX_ROWS,
-                        )
-                    if len(row) > _XLSX_MAX_COLUMNS:
-                        raise DelimitedWorkbookDimensionError(
-                            axis="column",
-                            actual=len(row),
-                            limit=_XLSX_MAX_COLUMNS,
-                            row=r_idx,
-                        )
+                    _check_delimited_dimensions(row=r_idx, columns=len(row))
                     for c_idx, value in enumerate(row, 1):
                         if cancel_check is not None and c_idx % 1000 == 0:
                             cancel_check()
