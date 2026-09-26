@@ -77,11 +77,11 @@ def _safe_settings_error_detail(error: Exception) -> str:
 
 
 def _read_initial_theme() -> str:
-    """Read the current active theme before the dialog opens."""
+    """Read the requested theme mode before the dialog opens."""
     try:
         from docwen_gui.styles.theme_manager import ThemeManager
 
-        return ThemeManager.get_instance().get_current_theme()
+        return ThemeManager.get_instance().get_requested_theme()
     except Exception:
         return "light"
 

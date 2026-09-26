@@ -141,6 +141,10 @@ class ThemeManager(QObject):
         """Return the currently active (resolved) theme name."""
         return self._current_theme
 
+    def get_requested_theme(self) -> str:
+        """Return the requested theme mode before system resolution."""
+        return self._requested_theme
+
     def apply_font_size_preset(self, preset: str | None) -> str:
         """Apply one semantic typography preset to existing and future UI."""
         normalized = normalize_font_size_preset(preset)
