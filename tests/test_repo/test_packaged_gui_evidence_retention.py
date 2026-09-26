@@ -36,6 +36,56 @@ def _packaged_gui(tmp_path: Path) -> tuple[Path, str]:
     return binary_dir, binary_name
 
 
+def _write_office_evidence_fixture(
+    verification_dir: Path,
+) -> tuple[dict[str, object], Path]:
+    from scripts.release import verify_packaged_gui
+
+    office_dir = verification_dir / "gui_office_smoke"
+    office_dir.mkdir(parents=True, exist_ok=True)
+    cases: list[dict[str, object]] = []
+    for case_name, backend in (
+        ("docx", "msoffice_word"),
+        ("xlsx", "msoffice_excel"),
+        ("markdown", "msoffice_word"),
+    ):
+        case_dir = office_dir / case_name
+        case_dir.mkdir()
+        case: dict[str, object] = {
+            "case": case_name,
+            "surface": "action",
+            "backend": backend,
+            "backendIdentity": {"backend": backend, "version": "16.0.1.2"},
+            "checks": {"contentPassed": True, "pageCount": 1, "layoutReview": "not_performed"},
+        }
+        for subject, content in (
+            ("source", f"{case_name}-source".encode()),
+            ("output", f"{case_name}-output".encode()),
+            ("report", f"{case_name}-report".encode()),
+        ):
+            file_path = case_dir / f"{subject}.bin"
+            file_path.write_bytes(content)
+            case[subject] = {
+                "path": file_path.relative_to(office_dir).as_posix(),
+                "bytes": len(content),
+                "sha256": hashlib.sha256(content).hexdigest(),
+            }
+        cases.append(case)
+    evidence: dict[str, object] = {
+        "schema": verify_packaged_gui._OFFICE_EVIDENCE_SCHEMA,
+        "host": {
+            "system": "Windows",
+            "release": "11",
+            "machine": "AMD64",
+            "pythonPlatform": "win32",
+        },
+        "cases": cases,
+    }
+    evidence_path = office_dir / "office-smoke-evidence.json"
+    verify_packaged_gui._atomic_json_write(evidence_path, evidence)
+    return evidence, evidence_path
+
+
 def _make_directory_link(link: Path, target: Path) -> None:
     if os.name == "nt":
         completed = subprocess.run(
@@ -333,31 +383,10 @@ def test_office_gate_receipt_binds_host_backends_and_evidence_hash(
 
     binary_dir, binary_name = _packaged_gui(tmp_path)
     verification_dir = tmp_path / "verification"
-    office_dir = verification_dir / "gui_office_smoke"
-    office_dir.mkdir(parents=True)
+    verification_dir.mkdir()
     (verification_dir / "log_home" / "logs").mkdir(parents=True)
     (verification_dir / "log_home" / "logs" / "docwen.log").write_text("ok", encoding="utf-8")
-    evidence = {
-        "schema": verify_packaged_gui._OFFICE_EVIDENCE_SCHEMA,
-        "host": {
-            "system": "Windows",
-            "release": "11",
-            "machine": "AMD64",
-            "pythonPlatform": "win32",
-        },
-        "cases": [
-            {"case": "docx", "backend": "msoffice_word"},
-            {"case": "xlsx", "backend": "msoffice_excel"},
-            {"case": "markdown", "backend": "msoffice_word"},
-        ],
-    }
-    for case in evidence["cases"]:
-        case["backendIdentity"] = {"backend": case["backend"], "version": "16.0.1.2"}
-        for subject in ("source", "output", "report"):
-            case[subject] = {"bytes": 12, "sha256": "a" * 64}
-        case["checks"] = {"contentPassed": True, "pageCount": 1, "layoutReview": "not_performed"}
-    evidence_path = office_dir / "office-smoke-evidence.json"
-    verify_packaged_gui._atomic_json_write(evidence_path, evidence)
+    evidence, evidence_path = _write_office_evidence_fixture(verification_dir)
 
     payload = verify_packaged_gui._build_acceptance_receipt(
         verification_dir,
@@ -374,6 +403,84 @@ def test_office_gate_receipt_binds_host_backends_and_evidence_hash(
     assert office["host"] == evidence["host"]
     assert office["backends"] == ["msoffice_word", "msoffice_excel", "msoffice_word"]
     assert payload["selectedGates"] == ["office"]
+
+
+@pytest.mark.parametrize(
+    ("mutation", "error_code"),
+    [
+        ("wrong-hash", "office_evidence_file_mismatch"),
+        ("missing-file", "office_evidence_file_missing"),
+        ("boolean-bytes", "office_evidence_identity_invalid"),
+        ("boolean-page-count", "office_evidence_checks_invalid"),
+        ("parent-traversal", "office_evidence_identity_invalid"),
+    ],
+)
+def test_office_gate_receipt_rejects_claims_that_do_not_match_evidence_tree(
+    tmp_path: Path,
+    mutation: str,
+    error_code: str,
+) -> None:
+    from scripts.release import verify_packaged_gui
+
+    binary_dir, binary_name = _packaged_gui(tmp_path)
+    verification_dir = tmp_path / "verification"
+    verification_dir.mkdir()
+    evidence, evidence_path = _write_office_evidence_fixture(verification_dir)
+    cases = evidence["cases"]
+    assert isinstance(cases, list)
+    first = cases[0]
+    assert isinstance(first, dict)
+    source = first["source"]
+    checks = first["checks"]
+    assert isinstance(source, dict)
+    assert isinstance(checks, dict)
+
+    if mutation == "wrong-hash":
+        source["sha256"] = "0" * 64
+    elif mutation == "missing-file":
+        source["path"] = "docx/missing.bin"
+    elif mutation == "boolean-bytes":
+        source["bytes"] = True
+    elif mutation == "boolean-page-count":
+        checks["pageCount"] = True
+    elif mutation == "parent-traversal":
+        source["path"] = "../outside.bin"
+    else:
+        raise AssertionError(mutation)
+    verify_packaged_gui._atomic_json_write(evidence_path, evidence)
+
+    with pytest.raises(RuntimeError, match=error_code):
+        verify_packaged_gui._build_acceptance_receipt(
+            verification_dir,
+            candidate_id="candidate-office",
+            binary_path=binary_dir / binary_name,
+            selected_gates=["office"],
+        )
+
+
+def test_office_gate_summary_rejects_files_changed_after_tree_capture(tmp_path: Path) -> None:
+    from scripts.release import verify_packaged_gui
+
+    verification_dir = tmp_path / "verification"
+    verification_dir.mkdir()
+    evidence, _evidence_path = _write_office_evidence_fixture(verification_dir)
+    _directories, files = verify_packaged_gui._capture_evidence_tree(verification_dir)
+
+    cases = evidence["cases"]
+    assert isinstance(cases, list)
+    first = cases[0]
+    assert isinstance(first, dict)
+    source = first["source"]
+    assert isinstance(source, dict)
+    source_path = verification_dir / "gui_office_smoke" / str(source["path"])
+    source_path.write_bytes(b"changed after capture")
+
+    with pytest.raises(RuntimeError, match="office_evidence_file_mismatch"):
+        verify_packaged_gui._gate_evidence_summary(
+            verification_dir,
+            selected_gates=["office"],
+            files=files,
+        )
 
 
 def test_office_gate_receipt_fails_closed_without_three_case_evidence(tmp_path: Path) -> None:
