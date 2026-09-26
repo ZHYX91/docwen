@@ -10,6 +10,7 @@ from docwen_plugin_spreadsheet.csv_xlsx.converter import (
     DelimitedCellTextTooLongError,
     DelimitedWorkbookDimensionError,
     _build_delimited_workbook,
+    _check_delimited_dimensions,
 )
 from docwen_plugin_spreadsheet.delimited import decoded_samples
 from docwen_plugin_spreadsheet.to_markdown.converter import _read_csv_flexible
@@ -205,3 +206,18 @@ def test_delimited_xlsx_column_limit_rejects_16385_columns(
     assert rejected.value.actual == 16385
     assert rejected.value.limit == 16384
     assert rejected.value.row == 1
+
+
+@pytest.mark.parametrize(("row", "columns"), [(1048576, 16384), (1, 16384)])
+def test_delimited_xlsx_dimension_check_accepts_native_limits(row: int, columns: int) -> None:
+    _check_delimited_dimensions(row=row, columns=columns)
+
+
+def test_delimited_xlsx_dimension_check_rejects_row_1048577() -> None:
+    with pytest.raises(DelimitedWorkbookDimensionError) as rejected:
+        _check_delimited_dimensions(row=1048577, columns=1)
+
+    assert rejected.value.axis == "row"
+    assert rejected.value.actual == 1048577
+    assert rejected.value.limit == 1048576
+    assert rejected.value.row is None
