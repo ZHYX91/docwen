@@ -6,7 +6,11 @@ from pathlib import Path
 import openpyxl
 import pytest
 
-from docwen_plugin_spreadsheet.csv_xlsx.converter import DelimitedCellTextTooLongError, _build_delimited_workbook
+from docwen_plugin_spreadsheet.csv_xlsx.converter import (
+    DelimitedCellTextTooLongError,
+    DelimitedWorkbookDimensionError,
+    _build_delimited_workbook,
+)
 from docwen_plugin_spreadsheet.delimited import decoded_samples
 from docwen_plugin_spreadsheet.to_markdown.converter import _read_csv_flexible
 
@@ -161,3 +165,43 @@ def test_delimited_xlsx_cell_text_limit_rejects_without_truncation(
     assert rejected.value.length == length
     assert rejected.value.limit == 32767
     assert value[:32] not in str(rejected.value)
+
+
+@pytest.mark.parametrize("sep", [",", "\t"])
+@pytest.mark.parametrize("columns", [16383, 16384])
+def test_delimited_xlsx_column_limit_accepts_native_boundary(
+    tmp_path: Path,
+    sep: str,
+    columns: int,
+) -> None:
+    source = tmp_path / "wide-ok.txt"
+    values = [f"v{index}" for index in range(columns)]
+    with source.open("w", encoding="utf-8", newline="") as handle:
+        csv.writer(handle, delimiter=sep).writerow(values)
+
+    workbook, rows = _build_delimited_workbook(str(source), sep=sep)
+    try:
+        assert rows == 1
+        assert workbook.active is not None
+        assert workbook.active.max_column == columns
+        assert workbook.active.cell(1, columns).value == values[-1]
+    finally:
+        workbook.close()
+
+
+@pytest.mark.parametrize("sep", [",", "\t"])
+def test_delimited_xlsx_column_limit_rejects_16385_columns(
+    tmp_path: Path,
+    sep: str,
+) -> None:
+    source = tmp_path / "wide-rejected.txt"
+    with source.open("w", encoding="utf-8", newline="") as handle:
+        csv.writer(handle, delimiter=sep).writerow(["x"] * 16385)
+
+    with pytest.raises(DelimitedWorkbookDimensionError) as rejected:
+        _build_delimited_workbook(str(source), sep=sep)
+
+    assert rejected.value.axis == "column"
+    assert rejected.value.actual == 16385
+    assert rejected.value.limit == 16384
+    assert rejected.value.row == 1
