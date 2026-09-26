@@ -364,10 +364,12 @@ def _gate_evidence_summary(
                 ):
                     raise RuntimeError("packaged_gui_office_evidence_identity_invalid")
                 evidence_relative = f"gui_office_smoke/{relative_path}"
-                actual = files.get(evidence_relative)
-                if actual is None:
+                captured = files.get(evidence_relative)
+                if captured is None:
                     raise RuntimeError("packaged_gui_office_evidence_file_missing")
-                if actual != (declared_bytes, declared_sha256):
+                live = _hash_regular_file(verification_dir / evidence_relative)
+                declared = (declared_bytes, declared_sha256)
+                if captured != declared or live != declared:
                     raise RuntimeError("packaged_gui_office_evidence_file_mismatch")
             checks = case.get("checks")
             page_count = checks.get("pageCount") if isinstance(checks, dict) else None
@@ -380,6 +382,9 @@ def _gate_evidence_summary(
                 raise RuntimeError("packaged_gui_office_evidence_checks_invalid")
             backends.append(backend.strip())
         size, sha256 = _hash_regular_file(evidence_path)
+        captured_evidence = files.get("gui_office_smoke/office-smoke-evidence.json")
+        if captured_evidence != (size, sha256):
+            raise RuntimeError("packaged_gui_office_evidence_changed_after_capture")
         summaries["office"] = {
             "path": evidence_path.relative_to(verification_dir).as_posix(),
             "bytes": size,
