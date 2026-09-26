@@ -114,6 +114,51 @@ class TestSmartSheetConverter:
         assert result.error.diagnostic_code == "SHEETFMT-XLSX-CELL-TEXT-TOO-LONG"
         assert not result.artifacts
 
+    def test_binary_to_csv_preserves_downstream_formula_cache_warning(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import openpyxl
+
+        from docwen_plugin_spreadsheet.format_conversion.converter import SmartSheetConverter
+
+        source_path = tmp_path / "legacy.xls"
+        source_path.write_bytes(b"legacy placeholder")
+        hub_path = tmp_path / "hub.xlsx"
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        assert sheet is not None
+        sheet.title = "Calc"
+        sheet["A1"] = "=1+1"
+        workbook.save(hub_path)
+        workbook.close()
+
+        def prepare_hub(
+            _self: SmartSheetConverter,
+            _context: Any,
+            _input_path: str,
+            _source: str,
+        ) -> tuple[str, str]:
+            return str(hub_path), "fixture-office"
+
+        monkeypatch.setattr(SmartSheetConverter, "_prepare_hub_xlsx", prepare_hub)
+
+        with tempfile.TemporaryDirectory() as staging:
+            context = _build_fake_context(str(source_path), staging, target_format="csv")
+            context.request.input_refs[0] = type(context.request.input_refs[0])(
+                path=str(source_path), format="xls", category="spreadsheet"
+            )
+            result = SmartSheetConverter().convert(context)
+
+        assert result.success is True
+        assert [diagnostic.code for diagnostic in result.diagnostics] == [
+            "SHEETFMT-OK",
+            "XLSX2CSV-FORMULA-CACHE-UNAVAILABLE",
+        ]
+        assert result.diagnostics[1].level == "warning"
+        assert "Calc!A1" in result.diagnostics[1].message
+
     def test_binary_to_csv_pipeline_finalizes_every_sheet(
         self,
         tmp_path: Path,
