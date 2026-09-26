@@ -20,7 +20,10 @@ from docwen_core.models.result import (
 )
 from docwen_core.office_bridge import BridgeCandidate, BridgeResult, convert_with_backend_priority
 from docwen_core.protocols.hub_context import HubConversionContext, HubWorkspaceHandle
-from docwen_plugin_spreadsheet.csv_xlsx.converter import DelimitedCellTextTooLongError
+from docwen_plugin_spreadsheet.csv_xlsx.converter import (
+    DelimitedCellTextTooLongError,
+    DelimitedWorkbookDimensionError,
+)
 from docwen_plugin_spreadsheet.format_conversion.legacy_xls_limits import (
     LEGACY_XLS_MAX_COLUMNS,
     LEGACY_XLS_MAX_ROWS,
@@ -129,6 +132,13 @@ class SmartSheetConverter:
 
         try:
             hub_xlsx, inbound_backend = self._prepare_hub_xlsx(context, input_path, source)
+        except DelimitedWorkbookDimensionError as exc:
+            return self._error(
+                task_id,
+                "conversion_failed",
+                "SHEETFMT-XLSX-DIMENSION-LIMIT",
+                str(exc),
+            )
         except DelimitedCellTextTooLongError as exc:
             return self._error(
                 task_id,

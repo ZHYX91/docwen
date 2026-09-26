@@ -96,6 +96,26 @@ class TestSmartSheetConverter:
         ]
         assert result.artifacts[0].metadata["backend"] == "openpyxl -> fake-office"
 
+    def test_csv_hub_rejects_too_many_columns(self, tmp_path: Path) -> None:
+        import csv
+
+        from docwen_plugin_spreadsheet.format_conversion.converter import SmartSheetConverter
+
+        source_path = tmp_path / "too-wide.csv"
+        with source_path.open("w", encoding="utf-8", newline="") as handle:
+            csv.writer(handle).writerow(["x"] * 16385)
+        with tempfile.TemporaryDirectory() as staging:
+            context = _build_fake_context(str(source_path), staging, target_format="xls")
+            context.request.input_refs[0] = type(context.request.input_refs[0])(
+                path=str(source_path), format="csv", category="spreadsheet"
+            )
+            result = SmartSheetConverter().convert(context)
+
+        assert result.success is False
+        assert result.error is not None
+        assert result.error.diagnostic_code == "SHEETFMT-XLSX-DIMENSION-LIMIT"
+        assert not result.artifacts
+
     def test_csv_hub_rejects_cell_text_that_would_be_truncated(self, tmp_path: Path) -> None:
         from docwen_plugin_spreadsheet.format_conversion.converter import SmartSheetConverter
 

@@ -26,7 +26,37 @@ if TYPE_CHECKING:
 
 
 _XLSX_CELL_TEXT_LIMIT = 32767
+_XLSX_MAX_COLUMNS = 16384
+_XLSX_MAX_ROWS = 1048576
 _CANCEL_CHECK_ROW_INTERVAL = 1000
+
+
+class DelimitedWorkbookDimensionError(ValueError):
+    """A delimited grid cannot fit in one native Excel worksheet."""
+
+    def __init__(self, *, axis: str, actual: int, limit: int, row: int | None = None) -> None:
+        self.axis = axis
+        self.actual = actual
+        self.limit = limit
+        self.row = row
+        location = f" at row {row}" if row is not None else ""
+        super().__init__(f"Delimited input exceeds Excel's {axis} limit{location}: {actual} > {limit}.")
+
+
+def _check_delimited_dimensions(*, row: int, columns: int) -> None:
+    if row > _XLSX_MAX_ROWS:
+        raise DelimitedWorkbookDimensionError(
+            axis="row",
+            actual=row,
+            limit=_XLSX_MAX_ROWS,
+        )
+    if columns > _XLSX_MAX_COLUMNS:
+        raise DelimitedWorkbookDimensionError(
+            axis="column",
+            actual=columns,
+            limit=_XLSX_MAX_COLUMNS,
+            row=row,
+        )
 
 
 class DelimitedCellTextTooLongError(ValueError):
@@ -143,6 +173,7 @@ def _build_delimited_workbook(
                 for r_idx, row in enumerate(reader, 1):
                     if cancel_check is not None and r_idx % _CANCEL_CHECK_ROW_INTERVAL == 0:
                         cancel_check()
+                    _check_delimited_dimensions(row=r_idx, columns=len(row))
                     for c_idx, value in enumerate(row, 1):
                         if cancel_check is not None and c_idx % 1000 == 0:
                             cancel_check()
@@ -200,6 +231,24 @@ class CsvToXlsxConverter:
             context.progress.report_progress(50.0, "Writing XLSX...")
         except CancellationRequested:
             raise
+        except DelimitedWorkbookDimensionError as exc:
+            context.logger.error(f"CSV→XLSX rejected oversized worksheet: {exc}")
+            return ConversionResult(
+                task_id=task_id,
+                success=False,
+                error=ConversionErrorInfo(
+                    error_type="conversion_failed",
+                    message=str(exc),
+                    diagnostic_code="CSV2XLSX-DIMENSION-LIMIT",
+                ),
+                diagnostics=[
+                    ConversionDiagnostic(
+                        level="error",
+                        message=str(exc),
+                        code="CSV2XLSX-DIMENSION-LIMIT",
+                    ),
+                ],
+            )
         except DelimitedCellTextTooLongError as exc:
             context.logger.error(f"CSV→XLSX rejected unrepresentable cell: {exc}")
             return ConversionResult(
@@ -503,6 +552,24 @@ class TsvToXlsxConverter:
             context.progress.report_progress(50.0, "Writing XLSX...")
         except CancellationRequested:
             raise
+        except DelimitedWorkbookDimensionError as exc:
+            context.logger.error(f"TSV→XLSX rejected oversized worksheet: {exc}")
+            return ConversionResult(
+                task_id=task_id,
+                success=False,
+                error=ConversionErrorInfo(
+                    error_type="conversion_failed",
+                    message=str(exc),
+                    diagnostic_code="TSV2XLSX-DIMENSION-LIMIT",
+                ),
+                diagnostics=[
+                    ConversionDiagnostic(
+                        level="error",
+                        message=str(exc),
+                        code="TSV2XLSX-DIMENSION-LIMIT",
+                    ),
+                ],
+            )
         except DelimitedCellTextTooLongError as exc:
             context.logger.error(f"TSV→XLSX rejected unrepresentable cell: {exc}")
             return ConversionResult(
