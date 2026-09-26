@@ -318,17 +318,19 @@ class SmartSheetConverter:
             for artifact in downstream.artifacts
             if os.path.isfile(artifact.staging_path)
         )
+        diagnostics = [
+            ConversionDiagnostic(
+                level="info",
+                message=f"Converted {source.upper()} to CSV via {backend}: {sheet_count} sheets.",
+                code="SHEETFMT-OK",
+            ),
+            *(diagnostic for diagnostic in downstream.diagnostics if diagnostic.level != "info"),
+        ]
         return ConversionResult(
             task_id=task_id,
             success=True,
             artifacts=downstream.artifacts,
-            diagnostics=[
-                ConversionDiagnostic(
-                    level="info",
-                    message=f"Converted {source.upper()} to CSV via {backend}: {sheet_count} sheets.",
-                    code="SHEETFMT-OK",
-                )
-            ],
+            diagnostics=diagnostics,
             metrics=ConversionMetrics(
                 duration_ms=(time.monotonic() - started_at) * 1000.0,
                 input_bytes=os.path.getsize(context.workspace.input_path)
