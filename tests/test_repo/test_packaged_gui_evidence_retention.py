@@ -458,6 +458,31 @@ def test_office_gate_receipt_rejects_claims_that_do_not_match_evidence_tree(
         )
 
 
+def test_office_gate_summary_rejects_files_changed_after_tree_capture(tmp_path: Path) -> None:
+    from scripts.release import verify_packaged_gui
+
+    verification_dir = tmp_path / "verification"
+    verification_dir.mkdir()
+    evidence, _evidence_path = _write_office_evidence_fixture(verification_dir)
+    _directories, files = verify_packaged_gui._capture_evidence_tree(verification_dir)
+
+    cases = evidence["cases"]
+    assert isinstance(cases, list)
+    first = cases[0]
+    assert isinstance(first, dict)
+    source = first["source"]
+    assert isinstance(source, dict)
+    source_path = verification_dir / "gui_office_smoke" / str(source["path"])
+    source_path.write_bytes(b"changed after capture")
+
+    with pytest.raises(RuntimeError, match="office_evidence_file_mismatch"):
+        verify_packaged_gui._gate_evidence_summary(
+            verification_dir,
+            selected_gates=["office"],
+            files=files,
+        )
+
+
 def test_office_gate_receipt_fails_closed_without_three_case_evidence(tmp_path: Path) -> None:
     from scripts.release import verify_packaged_gui
 
