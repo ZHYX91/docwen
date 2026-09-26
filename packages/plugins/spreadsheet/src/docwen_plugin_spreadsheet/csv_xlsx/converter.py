@@ -40,9 +40,7 @@ class DelimitedWorkbookDimensionError(ValueError):
         self.limit = limit
         self.row = row
         location = f" at row {row}" if row is not None else ""
-        super().__init__(
-            f"Delimited input exceeds Excel's {axis} limit{location}: {actual} > {limit}."
-        )
+        super().__init__(f"Delimited input exceeds Excel's {axis} limit{location}: {actual} > {limit}.")
 
 
 def _check_delimited_dimensions(*, row: int, columns: int) -> None:
