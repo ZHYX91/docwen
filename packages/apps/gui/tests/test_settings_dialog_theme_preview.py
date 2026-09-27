@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from PySide6.QtCore import QCoreApplication, QEvent
 
+from docwen_gui.models.settings_config import GUIConfig, SettingsConfig
 from docwen_gui.view_models.settings_vm import SettingsViewModel
 from docwen_gui.widgets.settings.dialog import SettingsDialog
 from docwen_gui.widgets.settings.general_tab import GeneralTab
@@ -87,6 +88,60 @@ def test_apply_updates_theme_cancel_rollback_baseline(monkeypatch: pytest.Monkey
         cancelled = True
         qapp.processEvents()
 
+        assert manager.get_current_theme() == "dark"
+    finally:
+        if not cancelled:
+            dialog.close()
+        _flush_deferred_deletes(qapp)
+        manager.apply_theme("light")
+
+
+@pytest.mark.parametrize("preview_theme", ["dark", "light"])
+def test_cancel_restores_follow_system_mode_even_when_resolved_color_matches_preview(
+    monkeypatch: pytest.MonkeyPatch,
+    qapp,
+    preview_theme: str,
+) -> None:
+    from PySide6.QtCore import Qt
+
+    from docwen_gui.styles.theme_manager import ThemeManager
+    from docwen_gui.widgets.settings import dialog as dialog_module
+
+    ThemeManager.reset_instance()
+    manager = ThemeManager.get_instance()
+    system_color = ["light"]
+    monkeypatch.setattr(
+        manager,
+        "_resolve_system_theme",
+        lambda name: system_color[0] if name == "system" else name,
+    )
+    manager.initialize(qapp, "system")
+    vm = SettingsViewModel(config=SettingsConfig(gui=GUIConfig(theme="system")))
+    dialog = SettingsDialog(view_model=vm)
+    monkeypatch.setattr(dialog_module, "_show_confirm", lambda *args, **kwargs: True)
+    cancelled = False
+    try:
+        general = dialog._tabs["general"]  # pyright: ignore[reportPrivateUsage]
+        assert isinstance(general, GeneralTab)
+        combo = general._theme_combo  # pyright: ignore[reportPrivateUsage]
+        preview_index = combo.findData(preview_theme)
+        assert preview_index >= 0
+
+        combo.setCurrentIndex(preview_index)
+        qapp.processEvents()
+        assert manager.get_requested_theme() == preview_theme
+
+        dialog._on_cancel()  # pyright: ignore[reportPrivateUsage]
+        cancelled = True
+        qapp.processEvents()
+
+        assert manager.get_requested_theme() == "system"
+        assert vm.config.gui.theme == "system"
+
+        system_color[0] = "dark"
+        qapp.styleHints().colorSchemeChanged.emit(Qt.ColorScheme.Dark)
+        qapp.processEvents()
+        assert manager.get_requested_theme() == "system"
         assert manager.get_current_theme() == "dark"
     finally:
         if not cancelled:
