@@ -313,10 +313,13 @@ def _gate_evidence_summary(
     verification_dir: Path,
     *,
     selected_gates: list[str],
+    files: dict[str, tuple[int, str]] | None = None,
 ) -> dict[str, Any]:
     """Project compact, hash-bound summaries for host-sensitive selected gates."""
 
     summaries: dict[str, Any] = {}
+    if files is None:
+        _directories, files = _capture_evidence_tree(verification_dir)
     if "office" in selected_gates:
         evidence_path = verification_dir / "gui_office_smoke" / "office-smoke-evidence.json"
         if not evidence_path.is_file():
@@ -343,22 +346,45 @@ def _gate_evidence_summary(
                 raise RuntimeError("packaged_gui_office_evidence_version_invalid")
             for subject in ("source", "output", "report"):
                 metadata = case.get(subject)
+                if not isinstance(metadata, dict):
+                    raise RuntimeError("packaged_gui_office_evidence_identity_invalid")
+                relative_path = metadata.get("path")
+                declared_bytes = metadata.get("bytes")
+                declared_sha256 = metadata.get("sha256")
                 if (
-                    not isinstance(metadata, dict)
-                    or not isinstance(metadata.get("bytes"), int)
-                    or metadata["bytes"] <= 0
-                    or not re.fullmatch(r"[a-f0-9]{64}", str(metadata.get("sha256", "")))
+                    not isinstance(relative_path, str)
+                    or not relative_path
+                    or "\\" in relative_path
+                    or relative_path.startswith("/")
+                    or any(part in {"", ".", ".."} for part in relative_path.split("/"))
+                    or type(declared_bytes) is not int
+                    or declared_bytes <= 0
+                    or not isinstance(declared_sha256, str)
+                    or not re.fullmatch(r"[a-f0-9]{64}", declared_sha256)
                 ):
                     raise RuntimeError("packaged_gui_office_evidence_identity_invalid")
+                evidence_relative = f"gui_office_smoke/{relative_path}"
+                captured = files.get(evidence_relative)
+                if captured is None:
+                    raise RuntimeError("packaged_gui_office_evidence_file_missing")
+                live = _hash_regular_file(verification_dir / evidence_relative)
+                declared = (declared_bytes, declared_sha256)
+                if captured != declared or live != declared:
+                    raise RuntimeError("packaged_gui_office_evidence_file_mismatch")
             checks = case.get("checks")
+            page_count = checks.get("pageCount") if isinstance(checks, dict) else None
             if (
                 not isinstance(checks, dict)
                 or checks.get("contentPassed") is not True
-                or not 1 <= checks.get("pageCount", 0) <= 3
+                or type(page_count) is not int
+                or not 1 <= page_count <= 3
             ):
                 raise RuntimeError("packaged_gui_office_evidence_checks_invalid")
             backends.append(backend.strip())
         size, sha256 = _hash_regular_file(evidence_path)
+        captured_evidence = files.get("gui_office_smoke/office-smoke-evidence.json")
+        if captured_evidence != (size, sha256):
+            raise RuntimeError("packaged_gui_office_evidence_changed_after_capture")
         summaries["office"] = {
             "path": evidence_path.relative_to(verification_dir).as_posix(),
             "bytes": size,
@@ -389,7 +415,11 @@ def _build_acceptance_receipt(
     }
     manifest_bytes = json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     binary_size, binary_sha256 = _hash_regular_file(binary_path)
-    gate_evidence = _gate_evidence_summary(verification_dir, selected_gates=selected_gates)
+    gate_evidence = _gate_evidence_summary(
+        verification_dir,
+        selected_gates=selected_gates,
+        files=files,
+    )
     return {
         "schema": _RECEIPT_SCHEMA,
         "candidateId": candidate_id,

@@ -59,6 +59,23 @@ class TestCsvToXlsx:
 
             wb.close()
 
+    def test_csv_to_xlsx_rejects_too_many_columns(self, tmp_path: Path) -> None:
+        import csv
+
+        from docwen_plugin_spreadsheet.csv_xlsx.converter import CsvToXlsxConverter
+
+        source = tmp_path / "too-wide.csv"
+        with source.open("w", encoding="utf-8", newline="") as handle:
+            csv.writer(handle).writerow(["x"] * 16385)
+        with tempfile.TemporaryDirectory() as staging:
+            context = _build_fake_context(str(source), staging, target_format="xlsx")
+            result = CsvToXlsxConverter().convert(context)
+
+        assert result.success is False
+        assert result.error is not None
+        assert result.error.diagnostic_code == "CSV2XLSX-DIMENSION-LIMIT"
+        assert not result.artifacts
+
     def test_csv_to_xlsx_rejects_cell_text_that_would_be_truncated(self, tmp_path: Path) -> None:
         from docwen_plugin_spreadsheet.csv_xlsx.converter import CsvToXlsxConverter
 
@@ -226,6 +243,23 @@ class TestXlsxToCsv:
 
 class TestTsvToXlsx:
     """ROUTE-TSV-XLSX-001: TSV → XLSX conversion."""
+
+    def test_tsv_to_xlsx_rejects_too_many_columns(self, tmp_path: Path) -> None:
+        import csv
+
+        from docwen_plugin_spreadsheet.csv_xlsx.converter import TsvToXlsxConverter
+
+        source = tmp_path / "too-wide.tsv"
+        with source.open("w", encoding="utf-8", newline="") as handle:
+            csv.writer(handle, delimiter="\t").writerow(["x"] * 16385)
+        with tempfile.TemporaryDirectory() as staging:
+            context = _build_fake_context(str(source), staging, target_format="xlsx")
+            result = TsvToXlsxConverter().convert(context)
+
+        assert result.success is False
+        assert result.error is not None
+        assert result.error.diagnostic_code == "TSV2XLSX-DIMENSION-LIMIT"
+        assert not result.artifacts
 
     def test_tsv_to_xlsx_rejects_cell_text_that_would_be_truncated(self, tmp_path: Path) -> None:
         from docwen_plugin_spreadsheet.csv_xlsx.converter import TsvToXlsxConverter
