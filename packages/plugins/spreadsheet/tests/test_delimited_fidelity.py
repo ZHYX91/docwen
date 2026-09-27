@@ -191,12 +191,16 @@ def test_delimited_xlsx_column_limit_accepts_native_boundary(
 
 
 @pytest.mark.parametrize("sep", [",", "\t"])
+@pytest.mark.parametrize("preceding_rows", [0, 1])
 def test_delimited_xlsx_column_limit_rejects_16385_columns(
     tmp_path: Path,
     sep: str,
+    preceding_rows: int,
 ) -> None:
     source = tmp_path / "wide-rejected.txt"
     with source.open("w", encoding="utf-8", newline="") as handle:
+        for _ in range(preceding_rows):
+            csv.writer(handle, delimiter=sep).writerow(["valid"])
         csv.writer(handle, delimiter=sep).writerow(["x"] * 16385)
 
     with pytest.raises(DelimitedWorkbookDimensionError) as rejected:
@@ -205,7 +209,7 @@ def test_delimited_xlsx_column_limit_rejects_16385_columns(
     assert rejected.value.axis == "column"
     assert rejected.value.actual == 16385
     assert rejected.value.limit == 16384
-    assert rejected.value.row == 1
+    assert rejected.value.row == preceding_rows + 1
 
 
 @pytest.mark.parametrize(("row", "columns"), [(1048576, 16384), (1, 16384)])

@@ -5,6 +5,13 @@
 
 ## Unreleased / 未发布
 
+## 0.14.1 (2026-09-27)
+
+- Reject CSV/TSV rows beyond XLSX dimensions before writing cells, including spreadsheet hub conversions.
+- Preserve downstream spreadsheet diagnostics and restore the requested system theme after cancelling settings previews.
+- Cross-check packaged Office acceptance evidence against actual file sizes and hashes.
+- 修复超界表格导入、下游诊断丢失和系统主题预览回滚；加强 Office 验收证据身份检查。
+
 ## 0.14.0 (2026-09-24)
 
 - Compact desktop layout, three font presets and five relative UI scales with live preview/cancel; shared controls, transparent drop artwork and native window theme synchronization.

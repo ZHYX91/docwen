@@ -409,6 +409,7 @@ def test_office_gate_receipt_binds_host_backends_and_evidence_hash(
     ("mutation", "error_code"),
     [
         ("wrong-hash", "office_evidence_file_mismatch"),
+        ("wrong-size", "office_evidence_file_mismatch"),
         ("missing-file", "office_evidence_file_missing"),
         ("boolean-bytes", "office_evidence_identity_invalid"),
         ("boolean-page-count", "office_evidence_checks_invalid"),
@@ -437,6 +438,8 @@ def test_office_gate_receipt_rejects_claims_that_do_not_match_evidence_tree(
 
     if mutation == "wrong-hash":
         source["sha256"] = "0" * 64
+    elif mutation == "wrong-size":
+        source["bytes"] = 999
     elif mutation == "missing-file":
         source["path"] = "docx/missing.bin"
     elif mutation == "boolean-bytes":

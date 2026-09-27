@@ -334,7 +334,11 @@ class SmartSheetConverter:
                 message=f"Converted {source.upper()} to CSV via {backend}: {sheet_count} sheets.",
                 code="SHEETFMT-OK",
             ),
-            *(diagnostic for diagnostic in downstream.diagnostics if diagnostic.level != "info"),
+            *(
+                diagnostic
+                for diagnostic in downstream.diagnostics
+                if not (diagnostic.level == "info" and diagnostic.code == "XLSX2CSV-OK")
+            ),
         ]
         return ConversionResult(
             task_id=task_id,

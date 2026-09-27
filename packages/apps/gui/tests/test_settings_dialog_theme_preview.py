@@ -97,10 +97,12 @@ def test_apply_updates_theme_cancel_rollback_baseline(monkeypatch: pytest.Monkey
 
 
 @pytest.mark.parametrize("preview_theme", ["dark", "light"])
+@pytest.mark.parametrize("close_method", ["cancel", "escape", "close"])
 def test_cancel_restores_follow_system_mode_even_when_resolved_color_matches_preview(
     monkeypatch: pytest.MonkeyPatch,
     qapp,
     preview_theme: str,
+    close_method: str,
 ) -> None:
     from PySide6.QtCore import Qt
 
@@ -131,7 +133,16 @@ def test_cancel_restores_follow_system_mode_even_when_resolved_color_matches_pre
         qapp.processEvents()
         assert manager.get_requested_theme() == preview_theme
 
-        dialog._on_cancel()  # pyright: ignore[reportPrivateUsage]
+        if close_method == "escape":
+            from PySide6.QtTest import QTest
+
+            dialog.show()
+            QTest.keyClick(dialog, Qt.Key.Key_Escape)
+        elif close_method == "close":
+            dialog.show()
+            dialog.close()
+        else:
+            dialog._on_cancel()  # pyright: ignore[reportPrivateUsage]
         cancelled = True
         qapp.processEvents()
 
