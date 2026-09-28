@@ -1048,10 +1048,11 @@ def _resolve_image_path(src: str, source_dir: Path | None) -> Path:
             file_path = f"//{parsed.netloc}{file_path}"
         elif re.match(r"^/[A-Za-z]:/", file_path):
             file_path = file_path[1:]
-        return Path(file_path)
-    if src.startswith("//") or parsed.scheme:
+        path = Path(file_path)
+    elif src.startswith("//") or parsed.scheme:
         raise ValueError(f"remote image target is not a local path: {src}")
-    path = Path(unquote(parsed.path))
+    else:
+        path = Path(unquote(parsed.path))
     if not path.is_absolute():
         if source_dir is None:
             raise ValueError("relative image target has no source directory")

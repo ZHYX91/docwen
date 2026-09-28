@@ -412,4 +412,3 @@ def test_main_window_source_location_receiver_rejects_synthetic_input(
     clipboard_window._open_location(path)
 
     assert calls == []
-

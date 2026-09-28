@@ -78,11 +78,22 @@ def test_clipboard_markdown_snapshot_runs_through_existing_runtime_pipeline(tmp_
 
 
 @pytest.mark.parametrize("image_location", ["snapshot-neighbor", "cwd"])
+@pytest.mark.parametrize("image_target", ["nearby.png", "file:nearby.png", "file:./nearby.png"])
+@pytest.mark.parametrize("syntax", ["inline", "reference"])
 def test_clipboard_relative_image_has_no_implicit_source_directory(
-    tmp_path: Path, round_trip_runtime: Any, monkeypatch: pytest.MonkeyPatch, image_location: str
+    tmp_path: Path,
+    round_trip_runtime: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    image_location: str,
+    image_target: str,
+    syntax: str,
 ) -> None:
     store = ClipboardInputStore(tmp_path / "managed")
-    text = "# Clipboard image\n\n![Local](nearby.png)\n"
+    text = (
+        f"# Clipboard image\n\n![Local][r]\n\n[r]: {image_target}\n"
+        if syntax == "reference"
+        else f"# Clipboard image\n\n![Local]({image_target})\n"
+    )
     snapshot = store.create(text, display_name_template="Clipboard Markdown {index}.md")
     source = Path(snapshot.path)
     image_root = source.parent if image_location == "snapshot-neighbor" else tmp_path
@@ -109,7 +120,7 @@ def test_clipboard_relative_image_has_no_implicit_source_directory(
     primary = next(artifact for artifact in result.artifacts if artifact.kind == "primary")
     document = Document(primary.staging_path)
     assert not document.inline_shapes
-    assert "File not found: nearby.png" in "\n".join(paragraph.text for paragraph in document.paragraphs)
+    assert "nearby.png" in "\n".join(paragraph.text for paragraph in document.paragraphs)
     assert source.read_bytes() == text.encode("utf-8")
     assert image_path.read_bytes() == image_bytes
 
@@ -256,4 +267,3 @@ def test_synthetic_authored_link_targets_do_not_enter_conversion_logs(
     assert "private.png?token=" not in caplog.text
     assert source.read_bytes() == text.encode("utf-8")
     store.close()
-

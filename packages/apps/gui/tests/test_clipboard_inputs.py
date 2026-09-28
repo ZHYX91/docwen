@@ -50,7 +50,7 @@ def test_clipboard_snapshot_empty_and_whitespace_are_rejected_without_files(tmp_
         with pytest.raises(ValueError, match="empty"):
             store.create(text, display_name_template="Clipboard Markdown {index}.md")
 
-    assert list(store.session_root.iterdir()) == []
+    assert [path.name for path in store.session_root.iterdir()] == [".owner.lock"]
     store.close()
 
 
@@ -138,7 +138,7 @@ def test_session_lock_preserves_live_instance_and_recovers_provably_stale_sessio
     root = tmp_path / "managed"
     live = ClipboardInputStore(root)
     live_snapshot = live.create("# live\n", display_name_template="Clipboard {index}.md")
-    live_marker = (live.session_root / ".owner.lock").read_bytes()
+    from docwen_gui.clipboard_inputs import _OWNER_MARKER
 
     peer = ClipboardInputStore(root)
     assert Path(live_snapshot.path).is_file()
@@ -146,7 +146,7 @@ def test_session_lock_preserves_live_instance_and_recovers_provably_stale_sessio
 
     stale = root / "session-crashed-fixture"
     stale.mkdir()
-    (stale / ".owner.lock").write_bytes(live_marker)
+    (stale / ".owner.lock").write_bytes(_OWNER_MARKER)
     (stale / "clipboard-orphan.md").write_text("# orphan\n", encoding="utf-8")
 
     recovery = ClipboardInputStore(root)
@@ -157,4 +157,3 @@ def test_session_lock_preserves_live_instance_and_recovers_provably_stale_sessio
     recovery.close()
     peer.close()
     live.close()
-

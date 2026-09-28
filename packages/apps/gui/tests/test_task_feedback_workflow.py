@@ -422,4 +422,3 @@ def test_batch_progress_uses_synthetic_logical_name_instead_of_backing_path(main
 
     assert main_window._info_area_vm.task_summary.current_file == label
     assert "clipboard-opaque.md" not in main_window._info_area_vm.task_summary.current_file
-

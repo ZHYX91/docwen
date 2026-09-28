@@ -99,9 +99,12 @@ class TestShortcutsRegistered:
 
         shortcuts: list[QShortcut] = main_window.findChildren(QShortcut)
         for sc in shortcuts:
-            assert sc.context() == Qt.ShortcutContext.WindowShortcut, (
-                f"Shortcut {sc.key().toString()} has wrong context: {sc.context()}"
+            expected = (
+                Qt.ShortcutContext.WidgetWithChildrenShortcut
+                if sc.key().toString() == "Ctrl+V"
+                else Qt.ShortcutContext.WindowShortcut
             )
+            assert sc.context() == expected, f"Shortcut {sc.key().toString()} has wrong context: {sc.context()}"
 
     def test_shortcuts_have_auto_repeat_disabled(self, main_window) -> None:
         from PySide6.QtGui import QShortcut

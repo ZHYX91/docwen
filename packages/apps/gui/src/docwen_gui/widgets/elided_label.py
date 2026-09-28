@@ -14,9 +14,7 @@ def safe_tooltip_text(text: str, *, limit: int = 512) -> str:
 
     normalized = str(text).replace("\r\n", "\n").replace("\r", "\n")
     visible = "".join(
-        char
-        if char in {"\n", "\t"} or not unicodedata.category(char).startswith("C")
-        else "\ufffd"
+        char if char in {"\n", "\t"} or not unicodedata.category(char).startswith("C") else "\ufffd"
         for char in normalized
     )
     truncated = len(visible) > limit

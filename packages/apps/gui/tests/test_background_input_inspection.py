@@ -238,7 +238,6 @@ def test_clipboard_inspection_lease_survives_supersede_and_clear_until_physical_
     store = ClipboardInputStore(tmp_path / "managed")
     first = store.create("# First\n", display_name_template="Clipboard {index}.md")
     second = store.create("# Second\n", display_name_template="Clipboard {index}.md")
-    third = store.create("# Third\n", display_name_template="Clipboard {index}.md")
     first_entered = threading.Event()
     first_release = threading.Event()
     third_entered = threading.Event()
@@ -274,6 +273,7 @@ def test_clipboard_inspection_lease_survives_supersede_and_clear_until_physical_
         assert not Path(second.path).exists()
         assert vm.files == []
 
+        third = store.create("# Third\n", display_name_template="Clipboard {index}.md")
         vm.request_files([third.path], file_inspector=blocking_third)
         qtbot.waitUntil(third_entered.is_set)
         vm.clear_files()
@@ -287,4 +287,3 @@ def test_clipboard_inspection_lease_survives_supersede_and_clear_until_physical_
         vm.cancel_inspection()
         qtbot.waitUntil(lambda: not vm.inspection_busy)
         store.close()
-

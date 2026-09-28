@@ -1989,15 +1989,16 @@ class MainWindow(QWidget):
                         except (TypeError, ValueError):
                             frozen_inspection = None
                         if frozen_inspection is not None:
+                            frozen_items = tuple(raw_inspection.items())
 
                             def inspect_retry(
                                 current_path: str,
                                 *,
                                 frozen=frozen_inspection,
-                                expected=dict(raw_inspection),
+                                expected_items=frozen_items,
                             ):
                                 current = reinspect_frozen_file(current_path, frozen)
-                                if current.to_dict() != expected:
+                                if current.to_dict() != dict(expected_items):
                                     raise ValueError("retry input changed after frozen admission")
                                 return current
 

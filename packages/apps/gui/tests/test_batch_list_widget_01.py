@@ -274,7 +274,7 @@ def test_open_selected_locations_emits_only_real_source_locations(
         file_resolver=lambda path: {
             "detected_format": "markdown",
             "workflow_category": "markdown",
-            "source_location_available": path == str(regular),
+            "source_location_available": Path(path) == regular,
         },
     )
     widget = BatchList(vm)
@@ -285,4 +285,3 @@ def test_open_selected_locations_emits_only_real_source_locations(
     widget._open_selected_locations([str(regular), str(synthetic)])
 
     assert emitted == [("open_source_location", str(regular))]
-

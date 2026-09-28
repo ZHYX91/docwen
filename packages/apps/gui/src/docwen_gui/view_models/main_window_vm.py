@@ -368,7 +368,9 @@ class MainWindowViewModel(QObject):
         def apply(inspected: Any, error: Exception | None) -> None:
             self._pending_inspection_intents = []
             self._pending_inspection_completions = []
-            actual = inspected if error is None else [(intent.path, None) for intent in intents]
+            actual: list[tuple[str, FileInspection | None]] = (
+                inspected if error is None else [(intent.path, None) for intent in intents]
+            )
             outcome = self._apply_inspections(actual)
             for completion in completion_intents:
                 completion.callback(self._scope_add_outcome(outcome, completion.paths))
@@ -385,10 +387,7 @@ class MainWindowViewModel(QObject):
         paths = list(dict.fromkeys(path for path in paths if path))
         if self._reserved_inputs or (self.mode == "single" and len(paths) != 1):
             return self._apply_inspections([(path, None) for path in paths])
-        intents = [
-            _InspectionIntent(path, self._file_inspector)
-            for path in paths
-        ]
+        intents = [_InspectionIntent(path, self._file_inspector) for path in paths]
         return self._apply_inspections(self._inspect_intents(intents, CancellationToken()))
 
     def _apply_inspections(self, inspected: list[tuple[str, FileInspection | None]]) -> FileAddOutcome:

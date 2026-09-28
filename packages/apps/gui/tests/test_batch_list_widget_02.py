@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from html import unescape
+
 from ._batch_list_widget_support import (
     _BATCH_SCAN_LIMIT,
     CATEGORY_ORDER,
@@ -300,9 +302,11 @@ class TestBatchEntryItemWidget:
         assert path_value is not None
         assert not entry_widget.path_row.isHidden()
         source_directory = _source_path_text("/test/doc.docx")
-        assert path_value.toolTip() == source_directory
+        assert unescape(path_value.toolTip().removeprefix("<qt>").removesuffix("</qt>")) == source_directory
         assert path_value.accessibleName() == source_directory
-        assert entry_widget.name_label.toolTip() == "/test/doc.docx"
+        assert (
+            unescape(entry_widget.name_label.toolTip().removeprefix("<qt>").removesuffix("</qt>")) == "/test/doc.docx"
+        )
         assert entry_widget.name_label.accessibleDescription() == "/test/doc.docx"
 
     def test_pending_entry_uses_sequence_marker(self, entry_widget: BatchEntryItemWidget) -> None:
@@ -336,7 +340,7 @@ class TestBatchEntryItemWidget:
 
             assert path_value.text() != source_directory
             assert "…" in path_value.text()
-            assert path_value.toolTip() == source_directory
+            assert unescape(path_value.toolTip().removeprefix("<qt>").removesuffix("</qt>")) == source_directory
             assert path_value.accessibleName() == source_directory
         finally:
             widget.deleteLater()
@@ -602,4 +606,3 @@ def test_user_text_tooltips_escape_markup_controls_and_bound_length(qtbot) -> No
     assert "&lt;b&gt;" in tooltip
     assert "\x00" not in tooltip
     assert len(tooltip) < 700
-
