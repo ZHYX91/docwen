@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import threading
 import time
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -67,11 +68,12 @@ class _BlockingController:
         self.stop_count += 1
 
 
-def _launch_blocking_execution(window, tmp_path, controller: _BlockingController, task_id: str):
+def _launch_blocking_execution(window, tmp_path, controller: _BlockingController, task_id: str, *, source=None):
     from docwen_gui.path_identity import normalize_path
 
-    source = tmp_path / f"{task_id}.md"
-    source.write_text("# lifecycle", encoding="utf-8")
+    if source is None:
+        source = tmp_path / f"{task_id}.md"
+        source.write_text("# lifecycle", encoding="utf-8")
     file_path = normalize_path(str(source))
     window._batch_list_vm.add_files([file_path])
     window._view_model._controller = controller
@@ -96,6 +98,64 @@ def _launch_blocking_execution(window, tmp_path, controller: _BlockingController
         project_reserved_execution=project_reserved_execution,
     )
     return request, window._execution.threads[task_id]
+
+
+@pytest.mark.parametrize("cancel_by_close", [False, True])
+def test_clipboard_snapshot_survives_real_worker_until_cancel_drain(
+    main_window, qapp, qtbot, tmp_path, cancel_by_close
+):
+    main_window._clipboard_input_root = tmp_path / "clipboard-inputs"
+    original = "# Frozen clipboard\n\n  exact bytes  \n"
+    qapp.clipboard().setText(original)
+    main_window.input_area.paste_button.click()
+    qtbot.waitUntil(lambda: not main_window.view_model.inspection_busy)
+    qtbot.waitUntil(lambda: len(main_window.view_model.files) == 1)
+    source = Path(main_window.view_model.files[0].path)
+    store = main_window._clipboard_store
+    assert store is not None
+    release_event = threading.Event()
+    started = threading.Event()
+    observed: list[bytes] = []
+
+    class ReadingController(_BlockingController):
+        def execute_single(self, request):
+            observed.append(source.read_bytes())
+            started.set()
+            result = super().execute_single(request)
+            observed.append(source.read_bytes())
+            return result
+
+    controller = ReadingController(release_event, release_on_cancel=False)
+    request, thread = _launch_blocking_execution(main_window, tmp_path, controller, "clipboard-drain", source=source)
+    qtbot.waitUntil(started.is_set)
+    main_window.show()
+    try:
+        qapp.clipboard().setText("# Must not replace active input\n")
+        if cancel_by_close:
+            assert not main_window.close()
+            assert main_window.isVisible()
+            assert not main_window._shutdown_finalized
+        else:
+            main_window._workflow.cancel()
+        assert controller.cancelled == [request.request_id]
+        assert thread.isRunning()
+        assert source.read_bytes() == original.encode("utf-8")
+        assert store.session_root.is_dir()
+    finally:
+        release_event.set()
+        qtbot.waitUntil(lambda: not main_window._execution.busy, timeout=3000)
+    assert observed == [original.encode("utf-8")] * 2
+    if cancel_by_close:
+        qtbot.waitUntil(lambda: main_window._shutdown_finalized)
+    else:
+        # The visible input remains retryable after cancellation; explicit
+        # removal releases it only after the real worker has returned.
+        assert source.is_file()
+        main_window.view_model.remove_file(str(source))
+        qapp.processEvents()
+        assert not source.exists()
+        main_window.close()
+    assert not store.session_root.exists()
 
 
 def test_close_drains_cooperative_worker_without_blocking_gui(
