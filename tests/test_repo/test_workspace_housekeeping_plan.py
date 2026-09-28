@@ -437,7 +437,8 @@ def test_reparse_target_outside_planned_root_is_rejected(tmp_path: Path) -> None
     _, workspace = _workspace(tmp_path)
     target = workspace / "temp" / "linked"
     outside = workspace / "temp" / "outside"
-    target.mkdir()
+    now = datetime.now(UTC)
+    _lease(target, created_at=now - timedelta(days=4), state="retained-cleanup-failure")
     outside.mkdir()
     link = target / "escape"
     try:
@@ -460,6 +461,16 @@ def test_reparse_target_outside_planned_root_is_rejected(tmp_path: Path) -> None
             explicit_targets=(target,),
             reason="unsafe link",
         )
+
+    safe = workspace / "temp" / "safe-success"
+    _lease(safe, created_at=now, state="completed-success")
+    plan = workspace_cleanup.create_plan(workspace_root=workspace, now=now)
+    assert [entry["path"] for entry in plan["entries"]] == [str(safe.resolve())]
+    assert any(
+        item["path"] == str(target.resolve()) and "reparse_target_outside_target" in item["reason"]
+        for item in plan["observations"]["skipped"]
+    )
+    assert target.is_dir() and outside.is_dir() and link.is_dir()
 
 
 def test_plan_must_be_saved_under_workspace_diagnostics(tmp_path: Path) -> None:

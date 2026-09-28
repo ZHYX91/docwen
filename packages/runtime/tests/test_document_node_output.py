@@ -121,6 +121,10 @@ def test_document_node_link_relocation_preserves_external_targets_and_integrity(
     spaced_image = staging / "space-image.png"
     main_original = (
         "[online](https://example.test/image.png#section)\n"
+        '[angle-online](<https://example.test/image.png#section> "title")\n'
+        '[angle-network](<//example.test/image.png#section> "title")\n'
+        '[angle-local](<assets/my image.png#part> "local title")\n'
+        '[angle-hash](<assets/image%23v1.png#part> "hash title")\n'
         "[invalid](https://[broken/image.png)\n"
         "[nfkc](https://／example.test/image.png)\n"
         "[different](https://example.test/other.png#other)\n"
@@ -137,10 +141,16 @@ def test_document_node_link_relocation_preserves_external_targets_and_integrity(
         "[space-name](assets/my%20image.png#space)\n"
         '<a href="https://example.test/image.png#html-online">online</a>\n'
         '<a href="https://[broken/image.png">broken</a>\n'
+        '<a href="https&colon;//example.test/image.png#part">entity</a>\n'
+        '<a href="https&#58;//example.test/image.png#part">numeric</a>\n'
+        '<a href="part%3Aone.png#part&amp;tail">local colon</a>\n'
         '<img src="assets/image.png#part%22tail">\n'
     )
     child_original = (
         "[local](assets/image.png#child%29tail)\n"
+        '[angle-local](<assets/my image.png#part> "local title")\n'
+        '[angle-online](<https://example.test/image.png#part> "title")\n'
+        '<a href="https&colon;//example.test/image.png#part">entity</a>\n'
         '<img src="assets/image.png#child%22tail">\n'
         "![[assets/image.png#child%29wiki]]\n"
         "[hash](assets/image%23v1.png#child)\n"
@@ -201,6 +211,10 @@ def test_document_node_link_relocation_preserves_external_targets_and_integrity(
     assert result.success is True, result.diagnostics
     expected_main = (
         "[online](https://example.test/image.png#section)\n"
+        '[angle-online](<https://example.test/image.png#section> "title")\n'
+        '[angle-network](<//example.test/image.png#section> "title")\n'
+        '[angle-local](<my%20image.png#part> "local title")\n'
+        '[angle-hash](<image%23v1.png#part> "hash title")\n'
         "[invalid](https://[broken/image.png)\n"
         "[nfkc](https://／example.test/image.png)\n"
         "[different](https://example.test/other.png#other)\n"
@@ -217,10 +231,16 @@ def test_document_node_link_relocation_preserves_external_targets_and_integrity(
         "[space-name](my%20image.png#space)\n"
         '<a href="https://example.test/image.png#html-online">online</a>\n'
         '<a href="https://[broken/image.png">broken</a>\n'
+        '<a href="https&colon;//example.test/image.png#part">entity</a>\n'
+        '<a href="https&#58;//example.test/image.png#part">numeric</a>\n'
+        '<a href="part_one.png#part&amp;tail">local colon</a>\n'
         '<img src="image.png#part%22tail">\n'
     ).encode()
     expected_child = (
         b"[local](../image.png#child%29tail)\n"
+        b'[angle-local](<../my%20image.png#part> "local title")\n'
+        b'[angle-online](<https://example.test/image.png#part> "title")\n'
+        b'<a href="https&colon;//example.test/image.png#part">entity</a>\n'
         b'<img src="../image.png#child%22tail">\n'
         b"![[../image.png#child%29wiki]]\n"
         b"[hash](../image%23v1.png#child)\n"
