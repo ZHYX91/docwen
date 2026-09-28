@@ -7,6 +7,7 @@ import posixpath
 import re
 from dataclasses import dataclass, replace
 from datetime import datetime
+from html import escape, unescape
 from pathlib import Path, PurePosixPath
 from urllib.parse import unquote
 
@@ -22,7 +23,7 @@ from docwen_core.models import (
 
 MARKDOWN_MEDIA_TYPE = "text/markdown"
 
-_MARKDOWN_LINK = re.compile(r"(?P<prefix>!?\[[^\]\n]*\]\()(?P<target>[^)\s]+)(?P<suffix>[^)]*\))")
+_MARKDOWN_LINK = re.compile(r"(?P<prefix>!?\[[^\]\n]*\]\()(?P<target><[^<>\n]*>|[^)\s]+)(?P<suffix>[^)]*\))")
 _WIKI_LINK = re.compile(r"(?P<prefix>!?\[\[)(?P<body>[^\]\n]+)(?P<suffix>\]\])")
 _HTML_LINK = re.compile(
     r"(?P<prefix>\b(?:src|href)\s*=\s*[\"'])(?P<target>[^\"']+)(?P<suffix>[\"'])",
@@ -296,7 +297,12 @@ def _rewrite_known_links(text: str, replacements: dict[str, str]) -> str:
         return serialized + (f"#{raw_anchor}" if marker else "")
 
     def markdown_sub(match: re.Match[str]) -> str:
-        return f"{match.group('prefix')}{replace_target(match.group('target'))}{match.group('suffix')}"
+        target = match.group("target")
+        if target.startswith("<") and target.endswith(">"):
+            target = f"<{replace_target(target[1:-1])}>"
+        else:
+            target = replace_target(target)
+        return f"{match.group('prefix')}{target}{match.group('suffix')}"
 
     def wiki_sub(match: re.Match[str]) -> str:
         body = match.group("body")
@@ -306,7 +312,13 @@ def _rewrite_known_links(text: str, replacements: dict[str, str]) -> str:
         return f"{match.group('prefix')}{replaced}{suffix}{match.group('suffix')}"
 
     def html_sub(match: re.Match[str]) -> str:
-        return f"{match.group('prefix')}{replace_target(match.group('target'))}{match.group('suffix')}"
+        raw = match.group("target")
+        semantic = unescape(raw)
+        replaced = replace_target(semantic)
+        # Classify decoded HTML semantics, but keep untouched external/local
+        # attributes byte-for-byte. Only rewritten local values need escaping.
+        target = raw if replaced == semantic else escape(replaced, quote=True)
+        return f"{match.group('prefix')}{target}{match.group('suffix')}"
 
     text = _MARKDOWN_LINK.sub(markdown_sub, text)
     text = _WIKI_LINK.sub(wiki_sub, text)

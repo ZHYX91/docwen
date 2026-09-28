@@ -646,12 +646,19 @@ def _automatic_lease_candidates(
         if not decision["eligible"]:
             skipped.append({"path": str(leased_root), "reason": str(decision["reason"])})
             continue
-        entry = _entry_for_target(
-            leased_root,
-            workspace=workspace,
-            reason=str(decision["reason"]),
-            source="lease-policy",
-        )
+        try:
+            entry = _entry_for_target(
+                leased_root,
+                workspace=workspace,
+                reason=str(decision["reason"]),
+                source="lease-policy",
+            )
+        except (OSError, ValueError) as error:
+            # An automatic sweep must preserve rejected roots and report the
+            # refusal, rather than retrying it through another deletion path
+            # or preventing unrelated, safely owned QA runs from starting.
+            skipped.append({"path": str(leased_root), "reason": str(error)})
+            continue
         entry["allowedBoundary"] = str(_absolute(managed_root))
         entries.append(entry)
     return entries, skipped
