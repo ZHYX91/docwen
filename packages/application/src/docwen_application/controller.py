@@ -640,7 +640,11 @@ class ApplicationController:
 
         runtime_results: list[Any] = []
         indices = range(len(request.input_refs)) if input_indices is None else input_indices
-        policies = [request.output_policy] * len(request.input_refs) if output_policies is None else output_policies
+        policies = (
+            [request.output_policy.for_input(ref.path) for ref in request.input_refs]
+            if output_policies is None
+            else output_policies
+        )
         for input_ref, index, output_policy in zip(request.input_refs, indices, policies, strict=True):
             task_id = f"{request.request_id}-{index}"
             child_request = ConversionRequest(
@@ -981,10 +985,11 @@ class ApplicationController:
 
     @staticmethod
     def _source_anchored_output_policy(output_policy: Any, source_path: str) -> Any:
-        """Preserve same-as-source semantics after the physical input moves."""
-        if output_policy.output_path or output_policy.output_dir:
-            return output_policy
-        return replace(output_policy, output_dir=str(Path(source_path).parent))
+        """Preserve source-specific output semantics after the physical input moves."""
+        projected = output_policy.for_input(source_path)
+        if projected.output_path or projected.output_dir:
+            return projected
+        return replace(projected, output_dir=str(Path(source_path).parent))
 
     def _configured_priority(
         self,

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
+import os
 from pathlib import Path
 from typing import Any
 
@@ -85,8 +86,36 @@ class OutputPolicy:
         know about GUI concepts.
     """
 
+    per_input_output_dirs: dict[str, str] = field(default_factory=dict)
+    """Optional batch-only output parent overrides keyed by source path.
+
+    This keeps ordinary inputs on the existing same-as-source policy while a
+    subset of synthetic or otherwise source-less inputs can receive an explicit
+    persistent parent. A global output_dir or output_path takes precedence.
+    Child requests never retain this mapping.
+    """
+
+    @staticmethod
+    def _input_key(path: str) -> str:
+        return os.path.normcase(os.path.abspath(os.fspath(path)))
+
+    def for_input(self, input_path: str) -> OutputPolicy:
+        """Project this policy onto one independent batch source."""
+        if self.output_path or self.output_dir:
+            return replace(self, per_input_output_dirs={})
+        key = self._input_key(input_path)
+        output_dir = next(
+            (
+                value
+                for path, value in self.per_input_output_dirs.items()
+                if value and self._input_key(path) == key
+            ),
+            None,
+        )
+        return replace(self, output_dir=output_dir, per_input_output_dirs={})
+
     def to_dict(self) -> dict[str, Any]:
-        return {
+        data = {
             "output_dir": self.output_dir,
             "output_path": self.output_path,
             "date_subfolder": self.date_subfolder,
@@ -95,6 +124,9 @@ class OutputPolicy:
             "group_outputs": self.group_outputs,
             "open_after_done": self.open_after_done,
         }
+        if self.per_input_output_dirs:
+            data["per_input_output_dirs"] = dict(self.per_input_output_dirs)
+        return data
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> OutputPolicy:
@@ -106,6 +138,11 @@ class OutputPolicy:
             write_artifacts=data.get("write_artifacts", True),
             group_outputs=data.get("group_outputs", False),
             open_after_done=data.get("open_after_done", False),
+            per_input_output_dirs={
+                str(path): str(value)
+                for path, value in dict(data.get("per_input_output_dirs") or {}).items()
+                if str(path) and str(value)
+            },
         )
 
 

@@ -236,6 +236,46 @@ class TestExecuteMethods:
             for root in tmp_path.glob("docwen_pre_*"):
                 shutil.rmtree(root, ignore_errors=True)
 
+    def test_batch_projects_per_input_output_directory_without_redirecting_other_sources(
+        self,
+        mock_runtime: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        from docwen_core.models.result import ConversionResult
+
+        first = tmp_path / "regular.csv"
+        second = tmp_path / "synthetic.csv"
+        first.write_text("a,b\n1,2\n", encoding="utf-8")
+        second.write_text("a,b\n3,4\n", encoding="utf-8")
+        persistent = tmp_path / "persistent"
+        seen: list[tuple[str, str | None]] = []
+
+        def fake_runtime_execute(runtime_request: ConversionRequest) -> ConversionResult:
+            seen.append((runtime_request.input_refs[0].path, runtime_request.output_policy.output_dir))
+            assert runtime_request.output_policy.per_input_output_dirs == {}
+            return ConversionResult(task_id=runtime_request.request_id, success=True)
+
+        mock_runtime.execute.side_effect = fake_runtime_execute
+        ctrl = ApplicationController(runtime_port=mock_runtime)
+        request = ConversionRequest(
+            request_id="per-input-output",
+            input_refs=[
+                FileRef(path=str(first), format="csv", category="spreadsheet"),
+                FileRef(path=str(second), format="csv", category="spreadsheet"),
+            ],
+            target_format="xlsx",
+            output_policy=OutputPolicy(per_input_output_dirs={str(second): str(persistent)}),
+        )
+
+        with patch(
+            "docwen_application.preconversion.chain_resolver.resolve_chain",
+            return_value=["xlsx"],
+        ):
+            results = ctrl.execute_batch(request)
+
+        assert [result.success for result in results] == [True, True]
+        assert seen == [(str(first), None), (str(second), str(persistent))]
+
     def test_preconversion_staging_is_cleaned_when_runtime_raises(
         self,
         mock_runtime: MagicMock,
