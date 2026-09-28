@@ -673,6 +673,8 @@ def _canonical_local_docx_target(
 
     local_path = Path(unquote(parsed.path))
     if not local_path.is_absolute():
+        if not source_file_path:
+            return None
         local_path = Path(source_file_path).parent / local_path
     target = local_path.resolve().as_uri()
     if parsed.query:

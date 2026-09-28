@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import Any
 
 from docwen_core.links import restore_table_safe_breaks
+from docwen_core.models.file_inspection import FILE_INSPECTION_METADATA_KEY, DetectionMethod
+from docwen_core.models.request import ConversionRequest
 from docwen_core.text.heading_numbering import (
     HeadingFormatter,
     resolve_heading_numbering_scheme,
@@ -22,6 +24,20 @@ from docwen_core.text.heading_numbering import (
 )
 
 # ── File reading ───────────────────────────────────────────────────────
+
+
+def link_source_path(request: ConversionRequest, physical_path: str) -> str:
+    """Keep synthetic storage out of the authored-resource lookup boundary."""
+    for ref in request.input_refs:
+        if ref.input_role != "source":
+            continue
+        inspection = ref.metadata.get(FILE_INSPECTION_METADATA_KEY)
+        if (
+            isinstance(inspection, dict)
+            and inspection.get("detection_method") == DetectionMethod.SYNTHETIC_MARKDOWN.value
+        ):
+            return ""
+    return physical_path
 
 
 def read_input_markdown(path: str) -> tuple[str, int]:

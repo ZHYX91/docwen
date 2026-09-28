@@ -86,6 +86,9 @@ def resolve_file_path(
 
     Returns the normalised absolute path as a string, or *None* when the
     file cannot be found.
+
+    An empty source path explicitly means there is no source directory.
+    Only authored absolute targets can be resolved in that case.
     """
     import contextlib
 
@@ -136,6 +139,9 @@ def resolve_file_path(
             logger.debug("Resolved as absolute path: %s", result)
             return result
         logger.debug("Absolute path does not exist: %s", normalized)
+        return None
+
+    if not source_file_path:
         return None
 
     # 2. Relative path (contains directory separator)

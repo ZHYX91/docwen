@@ -346,7 +346,7 @@ def process_markdown_links(
     resolved_max_depth_mode = link_config.max_depth_reached_mode
     resolved_detect_circular = link_config.detect_circular
     normalized_target = target_format.strip().lower()
-    resolved_source = str(Path(source_file_path).resolve())
+    resolved_source = str(Path(source_file_path).resolve()) if source_file_path else ""
 
     logger.info(
         "process_markdown_links | source=%s | target=%s | depth<=%d",

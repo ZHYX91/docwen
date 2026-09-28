@@ -1052,7 +1052,9 @@ def _resolve_image_path(src: str, source_dir: Path | None) -> Path:
     if src.startswith("//") or parsed.scheme:
         raise ValueError(f"remote image target is not a local path: {src}")
     path = Path(unquote(parsed.path))
-    if not path.is_absolute() and source_dir is not None:
+    if not path.is_absolute():
+        if source_dir is None:
+            raise ValueError("relative image target has no source directory")
         path = source_dir / path
     return path.resolve()
 

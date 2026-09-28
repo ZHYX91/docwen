@@ -7,9 +7,10 @@ from typing import Any
 
 import pytest
 from docx import Document
+from PIL import Image
 
 from docwen_application.controller import ApplicationController
-from docwen_core.detection import inspect_utf8_markdown_snapshot
+from docwen_core.detection import inspect_file, inspect_utf8_markdown_snapshot
 from docwen_core.models import FILE_INSPECTION_METADATA_KEY
 from docwen_core.models.file_ref import FileRef
 from docwen_core.models.request import ConversionRequest, OutputPolicy
@@ -72,6 +73,58 @@ def test_clipboard_markdown_snapshot_runs_through_existing_runtime_pipeline(tmp_
     assert "00123" in delivered
     assert len(workspaces) == 0
 
+    store.close()
+
+
+@pytest.mark.parametrize("image_location", ["snapshot-neighbor", "cwd"])
+def test_clipboard_relative_image_has_no_implicit_source_directory(
+    tmp_path: Path, round_trip_runtime: Any, monkeypatch: pytest.MonkeyPatch, image_location: str
+) -> None:
+    store = ClipboardInputStore(tmp_path / "managed")
+    text = "# Clipboard image\n\n![Local](nearby.png)\n"
+    snapshot = store.create(text, display_name_template="Clipboard Markdown {index}.md")
+    source = Path(snapshot.path)
+    image_root = source.parent if image_location == "snapshot-neighbor" else tmp_path
+    image_path = image_root / "nearby.png"
+    Image.new("RGB", (2, 2), "red").save(image_path)
+    image_bytes = image_path.read_bytes()
+    monkeypatch.chdir(tmp_path)
+    inspection = inspect_utf8_markdown_snapshot(source)
+    ref = FileRef(
+        path=str(source),
+        format="markdown",
+        category="markdown",
+        metadata={FILE_INSPECTION_METADATA_KEY: inspection.to_dict()},
+    )
+    request = ConversionRequest(
+        request_id="clipboard-resource-boundary",
+        input_refs=[ref],
+        target_format="docx",
+        output_policy=OutputPolicy(output_dir=str(tmp_path / "synthetic-output")),
+    )
+    controller = ApplicationController(runtime_port=round_trip_runtime)
+    result = controller.execute_single(request)
+    assert result.success, result.error
+    primary = next(artifact for artifact in result.artifacts if artifact.kind == "primary")
+    document = Document(primary.staging_path)
+    assert not document.inline_shapes
+    assert "File not found: nearby.png" in "\n".join(paragraph.text for paragraph in document.paragraphs)
+    assert source.read_bytes() == text.encode("utf-8")
+    assert image_path.read_bytes() == image_bytes
+
+    # An ordinary file genuinely located beside that image retains its normal
+    # source-relative behavior through exactly the same conversion pipeline.
+    regular = image_root / "regular.md"
+    regular.write_text(text, encoding="utf-8")
+    ref.path = str(regular)
+    ref.metadata = {FILE_INSPECTION_METADATA_KEY: inspect_file(regular).to_dict()}
+    request.request_id = "ordinary-resource-control"
+    request.output_policy = OutputPolicy(output_dir=str(tmp_path / "ordinary-output"))
+    control = controller.execute_single(request)
+    assert control.success, control.error
+    primary = next(artifact for artifact in control.artifacts if artifact.kind == "primary")
+    assert len(Document(primary.staging_path).inline_shapes) == 1
+    assert image_path.read_bytes() == image_bytes
     store.close()
 
 

@@ -26,6 +26,7 @@ from docwen_core.models.result import (
     ConversionResult,
 )
 from docwen_plugin_markdown.common_utils import (
+    link_source_path,
     parse_md_tables,
     read_input_markdown,
     write_table_to_csv,
@@ -121,7 +122,7 @@ class MdToXlsxConverter:
             image_scope = secrets.token_urlsafe(24)
             markdown_body = process_markdown_links(
                 markdown_body,
-                input_path,
+                link_source_path(context.request, input_path),
                 link_config=_request_link_config(context),
                 target_format="xlsx",
                 table_safe=True,
@@ -309,7 +310,7 @@ class MdToCsvConverter:
             image_scope = secrets.token_urlsafe(24)
             markdown_body = process_markdown_links(
                 markdown_body,
-                input_path,
+                link_source_path(context.request, input_path),
                 link_config=_request_link_config(context),
                 target_format="csv",
                 table_safe=True,

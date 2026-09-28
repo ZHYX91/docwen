@@ -426,7 +426,7 @@ def resolve_embedded_links(
     if not content:
         return content
 
-    source_file_path = str(Path(source_file_path).resolve())
+    source_file_path = str(Path(source_file_path).resolve()) if source_file_path else ""
     visited_files.add(source_file_path)
 
     # Build a closure that calls *this* function recursively so that nested

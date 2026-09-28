@@ -57,6 +57,7 @@ from docwen_core.text.heading_numbering import (
 from docwen_plugin_markdown.ast_transforms import annotate_ast_with_merges
 from docwen_plugin_markdown.common_utils import (
     add_md_numbering,
+    link_source_path,
     read_input_markdown,
     remove_md_numbering,
 )
@@ -538,6 +539,7 @@ class MdToDocxConverter:
 
             # ── 2. Read input ──────────────────────────────────────────
             input_path = workspace.input_path
+            resource_source_path = link_source_path(context.request, input_path)
             declared_inputs = workspace.input_resources()
             if claims_resolved_v4_inputs(declared_inputs):
                 # The resolved-document port is an exact-two capability, not
@@ -748,7 +750,7 @@ class MdToDocxConverter:
                 image_scope = secrets.token_urlsafe(24)
                 md_body = process_markdown_links(
                     link_source,
-                    input_path,
+                    resource_source_path,
                     link_config=link_config,
                     target_format="docx",
                     temp_dir=str(workspace.staging_dir),
@@ -906,7 +908,7 @@ class MdToDocxConverter:
                 source_stem=Path(input_path).stem,
             )
             yaml_links = YamlLinkProjection(
-                input_path, link_config, declared_inputs=declared_resource_resolver is not None
+                resource_source_path, link_config, declared_inputs=declared_resource_resolver is not None
             )
             for key in placeholder_map:
                 if key in yaml_dict:
@@ -1020,7 +1022,7 @@ class MdToDocxConverter:
                     hr_actions=hr_actions,
                     cancellation=cancellable,
                     note_ctx=note_ctx,
-                    source_file_path=input_path,
+                    source_file_path=resource_source_path or None,
                     declared_resource_resolver=declared_resource_resolver,
                     mermaid_mode=mermaid_mode,
                     mermaid_cli_path=str(context.config.get("conversion.md_to_docx.mermaid_cli_path", "") or ""),
