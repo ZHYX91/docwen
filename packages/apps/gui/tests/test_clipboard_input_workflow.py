@@ -1,0 +1,271 @@
+"""GUI clipboard Markdown input contracts: paste, output, retry, and safe presentation."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+from PySide6.QtCore import QMimeData, Qt
+from PySide6.QtWidgets import QApplication
+
+from docwen_core.models.request import OutputPolicy
+from docwen_gui.dialogs.activity_records import ActivityRecordsDialog
+from docwen_gui.main_window import MainWindow
+from docwen_gui.path_identity import normalize_path
+from docwen_gui.view_models.activity_records import ActivityRecordsModel
+from docwen_gui.view_models.main_window_vm import MainWindowViewModel
+
+pytestmark = pytest.mark.gui
+
+
+@pytest.fixture
+def clipboard_window(qapp: QApplication, qtbot, tmp_path: Path):
+    window = MainWindow(
+        view_model=MainWindowViewModel(controller=None),
+        clipboard_input_root=tmp_path / "clipboard-inputs",
+    )
+    qtbot.addWidget(window)
+    window.resize(720, 620)
+    window.show()
+    qapp.processEvents()
+    yield window
+    window.close()
+
+
+def _paste_text(window: MainWindow, qapp: QApplication, qtbot, text: str) -> str:
+    qapp.clipboard().setText(text)
+    qtbot.mouseClick(window.input_area.paste_button, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: not window.view_model.inspection_busy)
+    qtbot.waitUntil(lambda: bool(window.view_model.files))
+    selected = window.view_model.selected_file
+    assert selected is not None
+    return selected.path
+
+
+def test_single_paste_freezes_exact_utf8_and_replaces_only_after_admission(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+) -> None:
+    first_text = "  ---\ntitle: 保留\n---\n\n```text\n  keep  \n```\n"
+    first_path = _paste_text(clipboard_window, qapp, qtbot, first_text)
+    first = Path(first_path)
+    descriptor = clipboard_window._clipboard_store.descriptor(first_path)
+    assert descriptor is not None
+    assert first.read_bytes() == first_text.encode("utf-8")
+    assert descriptor.display_name in clipboard_window._input_area_vm.selection_message
+    assert first_path not in clipboard_window._input_area_vm.selection_message
+    assert clipboard_window.input_area._open_location_button.isHidden()
+
+    qapp.clipboard().setText("new clipboard value")
+    assert first.read_bytes() == first_text.encode("utf-8")
+
+    second_text = "Ordinary unmarked text is still Markdown workflow input."
+    second_path = _paste_text(clipboard_window, qapp, qtbot, second_text)
+    assert second_path != first_path
+    assert len(clipboard_window.view_model.files) == 1
+    assert Path(second_path).read_bytes() == second_text.encode("utf-8")
+    assert not first.exists()
+
+
+def test_batch_paste_appends_independent_visible_snapshots(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+) -> None:
+    clipboard_window._input_area_vm.set_mode("batch")
+    qapp.processEvents()
+
+    for text in ("# First\n", "# Second\n"):
+        qapp.clipboard().setText(text)
+        qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
+        qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
+
+    qtbot.waitUntil(lambda: len(clipboard_window.view_model.files) == 2)
+    refs = clipboard_window.view_model.files
+    entries = [clipboard_window._batch_list_vm.get_file_entry(ref.path) for ref in refs]
+    assert [entry.file_name for entry in entries] == ["Clipboard Markdown 1.md", "Clipboard Markdown 2.md"]
+    assert [Path(ref.path).read_text(encoding="utf-8") for ref in refs] == ["# First\n", "# Second\n"]
+    assert all(entry.source_location_available is False for entry in entries)
+
+
+def test_empty_or_non_text_clipboard_never_creates_input(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+) -> None:
+    qapp.clipboard().setText(" \t\r\n ")
+    qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
+    qapp.processEvents()
+    assert clipboard_window.view_model.files == []
+
+    mime = QMimeData()
+    mime.setData("application/octet-stream", b"binary")
+    qapp.clipboard().setMimeData(mime)
+    qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
+    qapp.processEvents()
+    assert clipboard_window.view_model.files == []
+    assert clipboard_window._clipboard_store is None
+
+
+def test_source_output_policy_cancel_custom_and_mixed_batch(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    synthetic = _paste_text(clipboard_window, qapp, qtbot, "# Clipboard\n")
+    regular = tmp_path / "regular.md"
+    regular.write_text("# Regular\n", encoding="utf-8")
+
+    monkeypatch.setattr("docwen_gui.main_window.QFileDialog.getExistingDirectory", lambda *_a, **_k: "")
+    assert clipboard_window._prepare_clipboard_output_policy([synthetic], "single", OutputPolicy()) is None
+
+    custom = tmp_path / "custom"
+    custom_policy = OutputPolicy(output_dir=str(custom))
+    monkeypatch.setattr(
+        "docwen_gui.main_window.QFileDialog.getExistingDirectory",
+        lambda *_a, **_k: pytest.fail("custom output must not ask again"),
+    )
+    assert clipboard_window._prepare_clipboard_output_policy([synthetic], "single", custom_policy) is custom_policy
+
+    persistent = tmp_path / "persistent"
+    monkeypatch.setattr(
+        "docwen_gui.main_window.QFileDialog.getExistingDirectory",
+        lambda *_a, **_k: str(persistent),
+    )
+    mixed = clipboard_window._prepare_clipboard_output_policy(
+        [str(regular), synthetic],
+        "batch",
+        OutputPolicy(),
+    )
+    assert mixed is not None
+    assert mixed.output_dir is None
+    assert mixed.for_input(str(regular)).output_dir is None
+    assert mixed.for_input(synthetic).output_dir == str(persistent.resolve())
+
+
+def test_failed_retry_reuses_original_snapshot_not_current_clipboard(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original = "# Original clipboard snapshot\n"
+    path = _paste_text(clipboard_window, qapp, qtbot, original)
+    normalized = normalize_path(path)
+    descriptor = clipboard_window._clipboard_store.descriptor(path)
+    assert descriptor is not None
+
+    context = {
+        "request_id": "clipboard-retry",
+        "file_path": normalized,
+        "target_format": "docx",
+        "action_name": "",
+        "options": {},
+        "synthetic_input_paths": [normalized],
+        "source_labels": {normalized: descriptor.display_name},
+    }
+    clipboard_window._task_history.remember(context)
+    clipboard_window._task_history.record("clipboard-retry", normalized, "failed")
+    clipboard_window._info_area_vm.set_task_summary(operation_id="clipboard-retry", state="failed")
+
+    clipboard_window.view_model.remove_file(path)
+    qapp.processEvents()
+    assert Path(path).is_file()
+    qapp.clipboard().setText("# Changed clipboard\n")
+
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr(clipboard_window._workflow, "single", lambda **kwargs: calls.append(kwargs))
+    clipboard_window._retry_failed_request()
+    qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
+    qtbot.waitUntil(lambda: len(calls) == 1)
+
+    assert Path(path).read_text(encoding="utf-8") == original
+    assert calls[0]["file_path"] == normalized
+
+
+def test_missing_retry_snapshot_does_not_read_new_clipboard(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = _paste_text(clipboard_window, qapp, qtbot, "# Original\n")
+    normalized = normalize_path(path)
+    descriptor = clipboard_window._clipboard_store.descriptor(path)
+    assert descriptor is not None
+    clipboard_window._task_history.remember(
+        {
+            "request_id": "missing-clipboard-retry",
+            "file_path": normalized,
+            "target_format": "docx",
+            "action_name": "",
+            "options": {},
+            "synthetic_input_paths": [normalized],
+            "source_labels": {normalized: descriptor.display_name},
+        }
+    )
+    clipboard_window._task_history.record("missing-clipboard-retry", normalized, "failed")
+    clipboard_window._info_area_vm.set_task_summary(operation_id="missing-clipboard-retry", state="failed")
+    Path(path).unlink()
+    qapp.clipboard().setText("# Replacement must not be used\n")
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr(clipboard_window._workflow, "single", lambda **kwargs: calls.append(kwargs))
+
+    clipboard_window._retry_failed_request()
+    qapp.processEvents()
+
+    assert calls == []
+
+
+def test_running_state_locks_all_input_mutation_controls(clipboard_window: MainWindow, qapp: QApplication) -> None:
+    clipboard_window._action_area_vm.show_cancel()
+    qapp.processEvents()
+    controls = (
+        clipboard_window.input_area.add_button,
+        clipboard_window.input_area.paste_button,
+        clipboard_window.input_area.clear_button,
+        clipboard_window.input_area.single_mode_button,
+        clipboard_window.input_area.batch_mode_button,
+    )
+    assert all(not control.isEnabled() for control in controls)
+
+    clipboard_window._action_area_vm.hide_cancel()
+    qapp.processEvents()
+    assert all(control.isEnabled() for control in controls)
+
+
+def test_activity_records_show_clipboard_label_without_backing_path(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+) -> None:
+    path = _paste_text(clipboard_window, qapp, qtbot, "# Private backing path must stay hidden\n")
+    normalized = normalize_path(path)
+    descriptor = clipboard_window._clipboard_store.descriptor(path)
+    assert descriptor is not None
+    clipboard_window._task_history.remember(
+        {
+            "request_id": "activity-clipboard",
+            "file_path": normalized,
+            "target_format": "docx",
+            "action_name": "",
+            "options": {},
+            "synthetic_input_paths": [normalized],
+            "source_labels": {normalized: descriptor.display_name},
+        }
+    )
+    clipboard_window._task_history.record("activity-clipboard", normalized, "failed", "Conversion failed")
+
+    model = ActivityRecordsModel(clipboard_window._task_history, clipboard_window._info_area_vm)
+    dialog = ActivityRecordsDialog(model)
+    qtbot.addWidget(dialog)
+    dialog.show_records(operation_id="activity-clipboard")
+    qapp.processEvents()
+
+    assert model.records[0].source_label == descriptor.display_name
+    assert normalized not in model.records[0].details
+    assert dialog.table.model().index(0, 2).data() == descriptor.display_name
+    assert not dialog.open_source.isEnabled()
