@@ -31,6 +31,7 @@ _HTML_LINK = re.compile(
 
 _WINDOWS_DRIVE_TARGET = re.compile(r"^[A-Za-z]:[\\/]")
 
+
 @dataclass(frozen=True, slots=True)
 class DocumentNodeLayoutPlan:
     identity: ConversionIdentity
