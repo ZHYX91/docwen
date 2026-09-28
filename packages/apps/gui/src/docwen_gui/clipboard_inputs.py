@@ -26,9 +26,7 @@ def bounded_plaintext_preview(text: str) -> str:
 
     normalized = text.replace("\r\n", "\n").replace("\r", "\n")
     safe = "".join(
-        char
-        if char in {"\n", "\t"} or not unicodedata.category(char).startswith("C")
-        else "\ufffd"
+        char if char in {"\n", "\t"} or not unicodedata.category(char).startswith("C") else "\ufffd"
         for char in normalized
     )
     lines = safe.strip().splitlines()
