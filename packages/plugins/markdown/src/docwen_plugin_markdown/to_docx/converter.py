@@ -57,6 +57,7 @@ from docwen_core.text.heading_numbering import (
 from docwen_plugin_markdown.ast_transforms import annotate_ast_with_merges
 from docwen_plugin_markdown.common_utils import (
     add_md_numbering,
+    conversion_error_text,
     link_source_path,
     read_input_markdown,
     remove_md_numbering,
@@ -1258,20 +1259,21 @@ class MdToDocxConverter:
             if isinstance(pending_output, str):
                 Path(pending_output).unlink(missing_ok=True)
             elapsed_ms = (time.monotonic() - t_start) * 1000.0
-            logger.error(f"MD→DOCX failed: {exc}")
+            error_text = conversion_error_text(context.request, exc)
+            logger.error(f"MD→DOCX failed: {error_text}")
             return ConversionResult(
                 task_id=task_id,
                 success=False,
                 error=ConversionErrorInfo(
                     error_type="conversion_failed",
-                    message=str(exc),
+                    message=error_text,
                     diagnostic_code="MD2DOCX-ERROR",
                 ),
                 metrics=ConversionMetrics(duration_ms=elapsed_ms),
                 diagnostics=[
                     ConversionDiagnostic(
                         level="error",
-                        message=f"MD→DOCX conversion failed: {exc}",
+                        message=f"MD→DOCX conversion failed: {error_text}",
                         code="MD2DOCX-ERROR",
                     )
                 ],

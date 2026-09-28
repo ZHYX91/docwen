@@ -38,7 +38,7 @@ def _convert_cell_content_to_mathml(cell_str: str, parent_elem) -> None:
                     parent_elem.append(child)
                 return
         except Exception as e:
-            logger.debug(f"Cell latex2mathml conversion failed, using simple processing: {e}")
+            logger.debug("Cell latex2mathml conversion failed, using simple processing: %s", type(e).__name__)
 
     # Simple number
     if cell_str.isdigit() or (cell_str.startswith("-") and cell_str[1:].isdigit()):
@@ -101,7 +101,7 @@ def _convert_matrix_latex_to_mathml(latex_str: str) -> str | None:
         logger.info(f"Manual single matrix conversion succeeded: {matrix_type}")
         return etree.tostring(math, encoding="unicode")
     except Exception as e:
-        logger.error(f"Manual matrix conversion failed: {e}")
+        logger.error("Manual matrix conversion failed: %s", type(e).__name__)
         return None
 
 
@@ -134,7 +134,7 @@ def latex_to_mathml(latex_str: str) -> str | None:
         mathml = _latex_to_mathml_convert(latex_str)
         return mathml
     except Exception as e:
-        logger.error(f"LaTeX to MathML failed: {e}, LaTeX: {latex_str}")
+        logger.error("LaTeX to MathML failed: %s", type(e).__name__)
         # Second attempt: try manual matrix conversion on failure
         if r"\begin{" in latex_str and "matrix" in latex_str:
             logger.debug("latex2mathml failed, trying manual matrix conversion")

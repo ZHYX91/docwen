@@ -19,6 +19,7 @@ from docwen_core.models.result import (
 from docwen_core.text.heading_numbering import NumberingSchemeResolutionError
 from docwen_plugin_markdown.common_utils import (
     add_md_numbering,
+    conversion_error_text,
     read_input_markdown,
     remove_md_numbering,
 )
@@ -159,40 +160,42 @@ class MdNumberingProcessor:
 
         except NumberingSchemeResolutionError as exc:
             elapsed_ms = (time.monotonic() - t_start) * 1000.0
-            logger.error(f"MD numbering rejected: {exc}")
+            error_text = conversion_error_text(context.request, exc)
+            logger.error(f"MD numbering rejected: {error_text}")
             return ConversionResult(
                 task_id=task_id,
                 success=False,
                 error=ConversionErrorInfo(
                     error_type=exc.error_type,
-                    message=str(exc),
+                    message=error_text,
                     diagnostic_code=exc.diagnostic_code,
                 ),
                 metrics=ConversionMetrics(duration_ms=elapsed_ms),
                 diagnostics=[
                     ConversionDiagnostic(
                         level="error",
-                        message=str(exc),
+                        message=error_text,
                         code=exc.diagnostic_code,
                     )
                 ],
             )
         except Exception as exc:
             elapsed_ms = (time.monotonic() - t_start) * 1000.0
-            logger.error(f"MD numbering failed: {exc}")
+            error_text = conversion_error_text(context.request, exc)
+            logger.error(f"MD numbering failed: {error_text}")
             return ConversionResult(
                 task_id=task_id,
                 success=False,
                 error=ConversionErrorInfo(
                     error_type="conversion_failed",
-                    message=str(exc),
+                    message=error_text,
                     diagnostic_code="MDNUM-ERROR",
                 ),
                 metrics=ConversionMetrics(duration_ms=elapsed_ms),
                 diagnostics=[
                     ConversionDiagnostic(
                         level="error",
-                        message=f"MD numbering failed: {exc}",
+                        message=f"MD numbering failed: {error_text}",
                         code="MDNUM-ERROR",
                     )
                 ],

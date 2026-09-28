@@ -26,6 +26,7 @@ from docwen_core.models.result import (
     ConversionResult,
 )
 from docwen_plugin_markdown.common_utils import (
+    conversion_error_text,
     link_source_path,
     parse_md_tables,
     read_input_markdown,
@@ -264,20 +265,21 @@ class MdToXlsxConverter:
 
         except Exception as exc:
             elapsed_ms = (time.monotonic() - t_start) * 1000.0
-            logger.error(f"MD→XLSX failed: {exc}")
+            error_text = conversion_error_text(context.request, exc)
+            logger.error(f"MD→XLSX failed: {error_text}")
             return ConversionResult(
                 task_id=task_id,
                 success=False,
                 error=ConversionErrorInfo(
                     error_type="conversion_failed",
-                    message=str(exc),
+                    message=error_text,
                     diagnostic_code="MD2XLSX-ERROR",
                 ),
                 metrics=ConversionMetrics(duration_ms=elapsed_ms),
                 diagnostics=[
                     ConversionDiagnostic(
                         level="error",
-                        message=f"MD→XLSX conversion failed: {exc}",
+                        message=f"MD→XLSX conversion failed: {error_text}",
                         code="MD2XLSX-ERROR",
                     )
                 ],
@@ -455,20 +457,21 @@ class MdToCsvConverter:
 
         except Exception as exc:
             elapsed_ms = (time.monotonic() - t_start) * 1000.0
-            logger.error(f"MD→CSV failed: {exc}")
+            error_text = conversion_error_text(context.request, exc)
+            logger.error(f"MD→CSV failed: {error_text}")
             return ConversionResult(
                 task_id=task_id,
                 success=False,
                 error=ConversionErrorInfo(
                     error_type="conversion_failed",
-                    message=str(exc),
+                    message=error_text,
                     diagnostic_code="MD2CSV-ERROR",
                 ),
                 metrics=ConversionMetrics(duration_ms=elapsed_ms),
                 diagnostics=[
                     ConversionDiagnostic(
                         level="error",
-                        message=f"MD→CSV conversion failed: {exc}",
+                        message=f"MD→CSV conversion failed: {error_text}",
                         code="MD2CSV-ERROR",
                     )
                 ],

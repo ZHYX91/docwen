@@ -1072,7 +1072,7 @@ def _paragraph_usable_width_emu(paragraph) -> int | None:
             return max(0, int(cell_width) - (2 * int(Pt(5.4))))
         return page_usable
     except Exception as exc:
-        logger.debug("Could not determine paragraph image width: %s", exc)
+        logger.debug("Could not determine paragraph image width: %s", type(exc).__name__)
         return None
 
 

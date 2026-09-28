@@ -28,6 +28,10 @@ from docwen_core.text.heading_numbering import (
 
 def link_source_path(request: ConversionRequest, physical_path: str) -> str:
     """Keep synthetic storage out of the authored-resource lookup boundary."""
+    return "" if has_synthetic_source(request) else physical_path
+
+
+def has_synthetic_source(request: ConversionRequest) -> bool:
     for ref in request.input_refs:
         if ref.input_role != "source":
             continue
@@ -36,8 +40,13 @@ def link_source_path(request: ConversionRequest, physical_path: str) -> str:
             isinstance(inspection, dict)
             and inspection.get("detection_method") == DetectionMethod.SYNTHETIC_MARKDOWN.value
         ):
-            return ""
-    return physical_path
+            return True
+    return False
+
+
+def conversion_error_text(request: ConversionRequest, error: Exception) -> str:
+    """Synthetic input diagnostics must not echo authored text from exceptions."""
+    return f"Markdown conversion failed ({type(error).__name__})." if has_synthetic_source(request) else str(error)
 
 
 def read_input_markdown(path: str) -> tuple[str, int]:

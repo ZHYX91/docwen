@@ -202,5 +202,5 @@ def mathml_to_omml(mathml_str: str) -> str | None:
         _convert_mathml_to_omml_node(mathml_tree, omml_math)
         return etree.tostring(omml_math, encoding="unicode", pretty_print=True)
     except Exception as e:
-        logger.error(f"MathML to OMML failed: {e}")
+        logger.error("MathML to OMML failed: %s", type(e).__name__)
         return None

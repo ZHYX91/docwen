@@ -351,5 +351,5 @@ def mathml_to_latex(mathml_str: str) -> str | None:
 
         return result
     except Exception as e:
-        logger.error(f"MathML to LaTeX failed: {e}")
+        logger.error("MathML to LaTeX failed: %s", type(e).__name__)
         return None

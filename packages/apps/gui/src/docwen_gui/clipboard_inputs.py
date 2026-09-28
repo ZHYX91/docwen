@@ -7,6 +7,7 @@ import os
 import shutil
 import unicodedata
 import uuid
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -15,6 +16,20 @@ _PREVIEW_MAX_LINES = 3
 _SESSION_PREFIX = "session-"
 _OWNER_LOCK_NAME = ".owner.lock"
 _OWNER_MARKER = b"docwen-clipboard-session-v1\n"
+
+
+@contextmanager
+def _session_namespace_lock(root: Path):
+    """Serialize session publication and retirement across all Store instances."""
+    with (root / ".sessions.lock").open("a+b") as stream:
+        if os.fstat(stream.fileno()).st_size == 0:
+            stream.write(b"\0")
+            stream.flush()
+        _lock_owner_stream(stream, blocking=True)
+        try:
+            yield
+        finally:
+            _unlock_owner_stream(stream)
 
 
 def _lock_owner_stream(stream, *, blocking: bool) -> None:
@@ -78,22 +93,31 @@ class ClipboardInputStore:
         if root == Path(root.anchor):
             raise ValueError("clipboard input root must not be a filesystem root")
         root.mkdir(parents=True, exist_ok=True)
-        self._cleanup_stale_sessions(root)
+        self._root = root
         self._session_root = root / f"{_SESSION_PREFIX}{uuid.uuid4().hex}"
-        self._session_root.mkdir()
         self._owner_lock = None
         self._cleanup_pending = False
-        try:
-            lock_path = self._session_root / _OWNER_LOCK_NAME
-            owner_lock = lock_path.open("x+b")
-            owner_lock.write(_OWNER_MARKER)
-            owner_lock.flush()
-            os.fsync(owner_lock.fileno())
-            _lock_owner_stream(owner_lock, blocking=True)
-            self._owner_lock = owner_lock
-        except BaseException:
-            shutil.rmtree(self._session_root, ignore_errors=True)
-            raise
+        with _session_namespace_lock(root):
+            self._cleanup_stale_sessions(root)
+            self._session_root.mkdir()
+            owner_lock = None
+            try:
+                lock_path = self._session_root / _OWNER_LOCK_NAME
+                owner_lock = lock_path.open("x+b")
+                owner_lock.write(b"\0")
+                owner_lock.flush()
+                _lock_owner_stream(owner_lock, blocking=True)
+                # A valid recovery marker is only published with ownership held.
+                owner_lock.seek(0)
+                owner_lock.write(_OWNER_MARKER)
+                owner_lock.flush()
+                os.fsync(owner_lock.fileno())
+                self._owner_lock = owner_lock
+            except BaseException:
+                if owner_lock is not None:
+                    owner_lock.close()
+                shutil.rmtree(self._session_root, ignore_errors=True)
+                raise
         self._snapshots: dict[str, ClipboardInputDescriptor] = {}
         self._visible: set[str] = set()
         self._inspection: dict[str, set[str]] = {}
@@ -107,7 +131,11 @@ class ClipboardInputStore:
 
     @classmethod
     def _cleanup_stale_sessions(cls, root: Path) -> None:
-        """Remove only sessions carrying our marker whose owner lock is free."""
+        """Remove idle sessions while the caller holds the namespace lock.
+
+        The namespace lock remains held through deletion, including on Windows
+        where the per-session file must be closed before removing its directory.
+        """
 
         try:
             candidates = tuple(root.iterdir())
@@ -279,9 +307,10 @@ class ClipboardInputStore:
             self._cleanup_pending = True
             return
 
-        self._release_owner_lock()
         try:
-            shutil.rmtree(self._session_root)
+            with _session_namespace_lock(self._root):
+                self._release_owner_lock()
+                shutil.rmtree(self._session_root)
         except FileNotFoundError:
             self._cleanup_pending = False
         except OSError:

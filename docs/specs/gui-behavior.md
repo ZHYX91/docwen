@@ -36,9 +36,9 @@ UI selection owns snapshots while they remain editable; the execution supervisor
 
 A synthetic clipboard source has no user source directory for the default source-output policy. Before conversion starts, GUI therefore asks for a persistent output parent. Cancelling that chooser does not start conversion and does not modify saved output preferences. A valid configured custom output directory is reused without prompting. In a mixed ordinary-file/clipboard batch, only clipboard inputs receive per-input output-directory overrides; Application preserves those per-input choices for both direct children and siblings that need document preconversion.
 
-User-authored clipboard text is not diagnostic log content. Shared Markdown link/embed diagnostics record bounded reasons, modes and counts rather than authored targets, query strings, headings, display text or resolved filenames. Tooltips render bounded escaped text so literal markup and control characters cannot become tooltip markup. Synthetic rows and final source-location handlers reject opening the managed backing directory; progress uses the logical clipboard label.
+User-authored clipboard text is not diagnostic log content. Shared Markdown link/embed diagnostics record bounded reasons, modes and counts rather than authored targets, query strings, headings, display text or resolved filenames. Synthetic conversion exceptions expose only the exception class; formula conversion failures never log authored formulas or raw library exception messages. Tooltips render bounded escaped text so literal markup and control characters cannot become tooltip markup. Synthetic rows and final source-location handlers reject opening the managed backing directory; progress uses the logical clipboard label.
 
-Clipboard materialization is transactional around write/flush/fsync. A failed create attempts compensation; if deletion itself fails, the file remains tracked for a later cleanup attempt. Each current session holds a small owner lock with a fixed marker. Startup recovery removes only marked old session directories whose owner lock can be acquired non-blocking; active sessions and unmarked legacy directories are left alone. This is a Store-level crash-recovery boundary, not evidence that every application-crash path or native filesystem failure has been physically accepted.
+Clipboard materialization is transactional around write/flush/fsync. A failed create attempts compensation; if deletion itself fails, the file remains tracked for a later cleanup attempt. A root namespace lock serializes session publication and retirement, remaining held through directory removal. Each current session acquires its owner lock before publishing the fixed recovery marker. Startup recovery removes only marked old session directories whose owner lock can be acquired non-blocking; active sessions and unmarked legacy directories are left alone. This is a Store-level crash-recovery boundary, not evidence that every application-crash path or native filesystem failure has been physically accepted.
 
 输入区左侧用纵向单选显示“单文件/批量”，右侧保留“添加/粘贴/清空”完整文字；“添加”为主操作，“粘贴”为普通操作，“清空”为弱化操作并与前两者留出间隔。空间不足时模式组与操作组分行；更窄或大字号/长翻译场景继续重排，而不是把文字截断或退化成纯图标。
 
@@ -52,9 +52,9 @@ Clipboard materialization is transactional around write/flush/fsync. A failed cr
 
 合成剪贴板输入在默认 source 输出策略下没有用户源目录，因此执行前必须选择持久输出父目录；取消选择不启动转换，也不更改已保存输出偏好。已有有效 custom 输出目录直接沿用。普通文件与剪贴板混合批量时，只为剪贴板项设置逐输入输出父目录；Application 对直达子任务和需要文档预转换的兄弟输入都保留各自逐输入输出选择。
 
-剪贴板正文不是诊断日志内容。共享 Markdown link/embed 日志只记录有界原因、模式和计数，不回显 authored target、query、heading、display text 或解析出的文件名。Tooltip 对用户文本做有界转义，字面 <>& 和控制字符不能被解释成 tooltip 富文本。synthetic 条目和最终源位置接收器都拒绝打开受管 backing 目录，批量进度显示逻辑剪贴板名称。
+剪贴板正文不是诊断日志内容。共享 Markdown link/embed 日志只记录有界原因、模式和计数，不回显 authored target、query、heading、display text 或解析出的文件名。合成输入转换异常只暴露异常类型；公式转换失败不记录公式正文或底层库原始异常文本。Tooltip 对用户文本做有界转义，字面 <>& 和控制字符不能被解释成 tooltip 富文本。synthetic 条目和最终源位置接收器都拒绝打开受管 backing 目录，批量进度显示逻辑剪贴板名称。
 
-快照创建以 write/flush/fsync 为事务边界：创建失败先补偿删除；若删除本身失败则继续保留跟踪，供后续 cleanup 重试。每个当前 session 持有带固定 marker 的 owner lock；启动时只回收“marker 可证明且 owner lock 可非阻塞取得”的旧 session，活动 session 和无 marker 的旧目录都不删除。这是 Store 层的 crash-recovery 边界，不代表整个应用所有崩溃路径或原生文件系统失败都已做物理验收。
+快照创建以 write/flush/fsync 为事务边界：创建失败先补偿删除；若删除本身失败则继续保留跟踪，供后续 cleanup 重试。根目录 namespace lock 串行保护 session 发布与回收，并持有到目录删除结束。当前 session 先取得 owner lock，再发布固定 recovery marker；启动时只回收“marker 可证明且 owner lock 可非阻塞取得”的旧 session，活动 session 和无 marker 的旧目录都不删除。这是 Store 层的 crash-recovery 边界，不代表整个应用所有崩溃路径或原生文件系统失败都已做物理验收。
 
 Execution owns independent input metadata and option snapshots. Confirming a detected format applies only
 to the facts shown, and updates the live list only while those facts still match. The worker rechecks the
