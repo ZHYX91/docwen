@@ -906,7 +906,7 @@ class MdToDocxConverter:
             ensure_title_fallback(
                 yaml_dict,
                 placeholder_names=placeholder_map,
-                source_stem=Path(input_path).stem,
+                source_stem=context.request.source_stem,
             )
             yaml_links = YamlLinkProjection(
                 resource_source_path, link_config, declared_inputs=declared_resource_resolver is not None
@@ -1090,8 +1090,7 @@ class MdToDocxConverter:
             progress.report_progress(80.0, "Writing DOCX to staging")
 
             output_path = workspace.create_artifact_path(ARTIFACT_KIND_PRIMARY, ".docx")
-            input_stem = Path(input_path).stem
-            suggested_name = f"{input_stem}.docx"
+            suggested_name = f"{context.request.source_stem}.docx"
 
             # Inject DOCX metadata (title/subject) from YAML
             if yaml_dict:

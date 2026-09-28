@@ -267,3 +267,88 @@ def test_synthetic_authored_link_targets_do_not_enter_conversion_logs(
     assert "private.png?token=" not in caplog.text
     assert source.read_bytes() == text.encode("utf-8")
     store.close()
+
+@pytest.mark.parametrize(
+    ("yaml_title", "expected_title"),
+    [
+        (None, "剪贴板 Markdown 1"),
+        ("显式宠物标题", "显式宠物标题"),
+    ],
+)
+def test_clipboard_docx_uses_logical_name_for_publication_and_only_as_title_fallback(
+    tmp_path: Path,
+    round_trip_runtime: Any,
+    yaml_title: str | None,
+    expected_title: str,
+) -> None:
+    yaml_lines = [
+        "---",
+        "文字测试: 保留普通字段",
+        "列表测试:",
+        "  - 第一项",
+        "  - 第二项",
+    ]
+    if yaml_title is not None:
+        yaml_lines.append(f"title: {yaml_title}")
+    yaml_lines.extend(
+        [
+            "---",
+            "",
+            "# 宠物档案",
+            "",
+            "## 小猫",
+            "",
+            "| 名称 | 年龄 |",
+            "| --- | --- |",
+            "| 花花 | 2 |",
+            "",
+            "## 小狗",
+            "",
+            "| 名称 | 年龄 |",
+            "| --- | --- |",
+            "| 旺财 | 3 |",
+            "",
+        ]
+    )
+    text = "\n".join(yaml_lines)
+    store = ClipboardInputStore(tmp_path / "managed")
+    snapshot = store.create(text, display_name_template="剪贴板 Markdown {index}.md")
+    source = Path(snapshot.path)
+    physical_stem = source.stem
+    inspection = inspect_utf8_markdown_snapshot(source)
+    logical_name = snapshot.display_name
+    logical_stem = Path(logical_name).stem
+    request = ConversionRequest(
+        request_id=f"clipboard-logical-docx-{'explicit' if yaml_title else 'fallback'}",
+        input_refs=[
+            FileRef(
+                path=str(source),
+                format="markdown",
+                category="markdown",
+                logical_path=logical_name,
+                metadata={FILE_INSPECTION_METADATA_KEY: inspection.to_dict()},
+            )
+        ],
+        target_format="docx",
+        output_policy=OutputPolicy(output_dir=str(tmp_path / "published")),
+    )
+
+    result = ApplicationController(runtime_port=round_trip_runtime).execute_single(request)
+
+    assert result.success, result.error
+    primary = next(artifact for artifact in result.artifacts if artifact.kind == "primary")
+    output = Path(primary.staging_path)
+    assert primary.suggested_name == f"{logical_stem}.docx"
+    assert logical_stem in output.name
+    assert logical_stem in output.parent.name
+    assert physical_stem not in output.name
+    assert physical_stem not in output.parent.name
+
+    document = Document(output)
+    paragraphs = [paragraph.text for paragraph in document.paragraphs if paragraph.text]
+    assert paragraphs[:4] == [expected_title, "宠物档案", "小猫", "小狗"]
+    assert physical_stem not in paragraphs
+    assert len(document.tables) == 2
+    assert source.read_bytes() == text.encode("utf-8")
+    store.close()
+

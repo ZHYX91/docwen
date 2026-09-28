@@ -345,12 +345,18 @@ class ExecutionRequestBuilder:
         from docwen_core.models.file_ref import FileRef
 
         normalized = normalize_path(source_path)
+        logical_path = self._source_label(source_path) or ""
         source_ref = next(
             (ref for ref in self._view_model.files if normalize_path(getattr(ref, "path", "")) == normalized),
             None,
         )
         if source_ref is not None:
-            return replace(source_ref, path=source_path, metadata=deepcopy(source_ref.metadata))
+            return replace(
+                source_ref,
+                path=source_path,
+                logical_path=logical_path or source_ref.logical_path,
+                metadata=deepcopy(source_ref.metadata),
+            )
 
         entry = self._batch_list_vm.get_file_entry(source_path)
         if entry is not None:
@@ -360,6 +366,7 @@ class ExecutionRequestBuilder:
                 category=entry.workflow_category,
                 warning_message=entry.warning_message or "",
                 size_bytes=entry.size_bytes,
+                logical_path=logical_path,
                 metadata=deepcopy(entry.metadata),
             )
 
@@ -379,6 +386,7 @@ class ExecutionRequestBuilder:
             category=inspection.workflow_category,
             warning_message=render_file_inspection_message(inspection),
             size_bytes=inspection.size_bytes,
+            logical_path=logical_path,
             metadata={
                 FILE_INSPECTION_METADATA_KEY: inspection.to_dict(),
                 OOXML_SIGNATURE_INFO_METADATA_KEY: dict(inspection.ooxml_signature),

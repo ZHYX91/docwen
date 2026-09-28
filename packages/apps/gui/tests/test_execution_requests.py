@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, cast
 
 import pytest
 
-from docwen_core.detection import inspect_file
+from docwen_core.detection import inspect_file, inspect_utf8_markdown_snapshot
 from docwen_core.models import FILE_ADMISSION_ACCEPTANCE_METADATA_KEY, FILE_INSPECTION_METADATA_KEY
 from docwen_core.models.file_ref import FileRef
 from docwen_core.models.request import POSTPROCESS_PROOFREAD_OPTION
@@ -78,6 +78,41 @@ def test_requests_own_nested_state_and_preserve_typed_input(mode, tmp_path):
     assert context["request_id"] == request.request_id
     assert context["file_path"] == source.as_posix()
     assert context.get(mode) is (None if mode == "single" else True)
+    check_frozen_request(request)
+
+
+def test_synthetic_source_label_projects_to_logical_path_without_changing_physical_identity(tmp_path):
+    source = tmp_path / "clipboard-deadbeef.md"
+    source.write_text("<html><body>literal clipboard text</body></html>", encoding="utf-8")
+    inspection = inspect_utf8_markdown_snapshot(source)
+    ref = FileRef(
+        path=str(source),
+        format=inspection.detected_format,
+        category=inspection.workflow_category,
+        metadata={FILE_INSPECTION_METADATA_KEY: inspection.to_dict()},
+    )
+    logical_name = "剪贴板 Markdown 1.md"
+    builder = ExecutionRequestBuilder(
+        *_models([ref]),
+        file_contexts=lambda: {normalize_path(str(source)): ("markdown", "markdown")},
+        selected_template=lambda: None,
+        source_label=lambda path: logical_name if normalize_path(path) == normalize_path(str(source)) else None,
+        synthetic_input=lambda path: normalize_path(path) == normalize_path(str(source)),
+    )
+
+    request, context = builder.single(
+        file_path=str(source),
+        target_format="csv",
+        action_name="",
+        options={},
+    )
+
+    frozen = request.input_refs[0]
+    assert frozen.path == str(source)
+    assert frozen.logical_path == logical_name
+    assert frozen.metadata[FILE_INSPECTION_METADATA_KEY] == inspection.to_dict()
+    assert context["display_name"] == logical_name
+    assert context["input_refs"][0]["logical_path"] == logical_name
     check_frozen_request(request)
 
 
