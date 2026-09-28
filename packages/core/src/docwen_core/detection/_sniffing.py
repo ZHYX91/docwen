@@ -511,7 +511,7 @@ def matches_single_record_delimited_declaration(file_path: str, declared_format:
     delimiter = "," if declared_format == "csv" else "\t"
     for encoding in _declared_text_encodings(file_path):
         try:
-            with open(file_path, "r", encoding=encoding, errors="strict", newline="") as stream:
+            with open(file_path, encoding=encoding, errors="strict", newline="") as stream:
                 rows = csv.reader(stream, delimiter=delimiter, strict=True)
                 record_count = 0
                 width = 0

@@ -154,15 +154,15 @@ def test_document_node_link_relocation_preserves_external_targets_and_integrity(
     primary = next(artifact for artifact in result.artifacts if artifact.is_primary)
     published = Path(primary.staging_path)
     expected = (
-        "[online](https://example.test/image.png#section)\n"
-        "[local](image.png#local)\n"
-        "[encoded](image.png#encoded)\n"
-        "[different](https://example.test/other.png#other)\n"
-        "[network](//example.test/image.png#network)\n"
-        "[anchor](#section)\n"
-        '<a href="https://example.test/image.png#html-online">online</a>\n'
-        '<img src="image.png#html-local">\n'
-    ).encode()
+        b"[online](https://example.test/image.png#section)\n"
+        b"[local](image.png#local)\n"
+        b"[encoded](image.png#encoded)\n"
+        b"[different](https://example.test/other.png#other)\n"
+        b"[network](//example.test/image.png#network)\n"
+        b"[anchor](#section)\n"
+        b'<a href="https://example.test/image.png#html-online">online</a>\n'
+        b'<img src="image.png#html-local">\n'
+    )
     assert published.parent.parent == output
     assert published.read_bytes() == expected
     assert primary.size_bytes == len(expected)
