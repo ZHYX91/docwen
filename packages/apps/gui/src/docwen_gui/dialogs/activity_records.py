@@ -65,7 +65,13 @@ class _ActivityFilter(QSortFilterProxyModel):
                 not self.query
                 or self.query
                 in "\n".join(
-                    (record.source_path, record.output_path, record.details, record.operation, record.status_label)
+                    (
+                        record.source_label,
+                        record.output_path,
+                        record.details,
+                        record.operation,
+                        record.status_label,
+                    )
                 ).casefold()
             )
         )
@@ -265,7 +271,9 @@ class ActivityRecordsDialog(QDialog):
         self.diagnostic_view.set_content(text, record.diagnostic if record else None)
         self.details.setProperty("activityStatus", record.status if record else "")
         self.copy.setEnabled(bool(self.diagnostic_view.preview.toPlainText()))
-        self.open_source.setEnabled(bool(record and record.source_path))
+        self.open_source.setEnabled(
+            bool(record and record.source_path and record.source_location_available)
+        )
         self.open_output.setEnabled(bool(record and record.output_path))
         selected_output = self.outputs.currentData()
         self.outputs.blockSignals(True)
@@ -280,6 +288,8 @@ class ActivityRecordsDialog(QDialog):
     def _open_selected(self, output: bool) -> None:
         record = self._selected()
         if record:
+            if not output and not record.source_location_available:
+                return
             path = str(self.outputs.currentData() or record.output_path) if output else record.source_path
             if path:
                 self.location_requested.emit(path, True)

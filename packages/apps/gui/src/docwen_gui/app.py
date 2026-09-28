@@ -93,6 +93,7 @@ def create_main_window(
     controller: ApplicationController | None = None,
     task_event_bridge: object | None = None,
     initial_files: list[str] | None = None,
+    clipboard_input_root: str | None = None,
 ) -> MainWindow:
     """Create and configure the main window.
 
@@ -101,6 +102,8 @@ def create_main_window(
             If None, the window starts without a runtime backend (limited mode).
         initial_files: Optional list of file paths to load on startup
             (e.g. from command-line args or IPC forwarding).
+        clipboard_input_root: Optional application-owned directory for
+            session-scoped clipboard Markdown materialization.
 
     Returns:
         A configured MainWindow instance (not yet shown).
@@ -117,6 +120,7 @@ def create_main_window(
     window = MainWindow(
         view_model=view_model,
         task_event_bridge=bridge,
+        clipboard_input_root=clipboard_input_root,
     )  # setup_ui() is called inside __init__
 
     if initial_files:
