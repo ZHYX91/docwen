@@ -218,13 +218,13 @@ def test_document_node_link_relocation_preserves_external_targets_and_integrity(
         '<a href="https://example.test/image.png#html-online">online</a>\n'
         '<a href="https://[broken/image.png">broken</a>\n'
         '<img src="image.png#part%22tail">\n'
-    ).encode("utf-8")
+    ).encode()
     expected_child = (
-        "[local](../image.png#child%29tail)\n"
-        '<img src="../image.png#child%22tail">\n'
-        "![[../image.png#child%29wiki]]\n"
-        "[hash](../image%23v1.png#child)\n"
-    ).encode("utf-8")
+        b"[local](../image.png#child%29tail)\n"
+        b'<img src="../image.png#child%22tail">\n'
+        b"![[../image.png#child%29wiki]]\n"
+        b"[hash](../image%23v1.png#child)\n"
+    )
     artifacts = {artifact.artifact_id: artifact for artifact in result.artifacts}
     for artifact_id, expected in {"main": expected_main, "child": expected_child}.items():
         artifact = artifacts[artifact_id]
