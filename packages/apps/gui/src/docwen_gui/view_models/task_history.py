@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import OrderedDict
+from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -55,10 +56,18 @@ class TaskHistory(QObject):
 
     changed = Signal()
 
-    def __init__(self, limit: int = 100) -> None:
+    def __init__(
+        self,
+        limit: int = 100,
+        *,
+        retain_paths: Callable[[str, tuple[str, ...]], None] | None = None,
+        release_owner: Callable[[str], None] | None = None,
+    ) -> None:
         super().__init__()
         self._limit = limit
         self._records: OrderedDict[str, TaskRecord] = OrderedDict()
+        self._retain_paths = retain_paths or (lambda _owner, _paths: None)
+        self._release_owner = release_owner or (lambda _owner: None)
 
     def remember(self, context: dict[str, Any]) -> TaskRecord:
         operation_id = str(context.get("request_id", ""))
@@ -69,8 +78,10 @@ class TaskHistory(QObject):
             if intent.get("file_paths"):
                 intent["file_paths"] = [Path(path).as_posix() for path in intent["file_paths"]]
             self._records[operation_id] = TaskRecord(intent)
+            self._retain_paths(operation_id, self._records[operation_id].paths)
             while len(self._records) > self._limit:
-                self._records.popitem(last=False)
+                evicted_id, _evicted = self._records.popitem(last=False)
+                self._release_owner(evicted_id)
             self.changed.emit()
         return self._records[operation_id]
 
@@ -108,22 +119,40 @@ class TaskHistory(QObject):
                     warning_count=len(warnings),
                 ),
             )
+            self._sync_snapshot_retention(operation_id, record)
             self.changed.emit()
+
+    def _sync_snapshot_retention(self, operation_id: str, record: TaskRecord) -> None:
+        active = {"pending", "processing"}
+        if any(path not in record.outcomes or record.outcomes[path].status in active for path in record.paths):
+            return
+        failed_paths = tuple(record.failed_paths)
+        if failed_paths:
+            self._retain_paths(operation_id, failed_paths)
+        else:
+            self._release_owner(operation_id)
 
     @property
     def entries(self) -> tuple[tuple[str, TaskRecord], ...]:
         return tuple(self._records.items())
 
     def clear(self) -> None:
+        operation_ids = tuple(self._records)
         self._records.clear()
+        for operation_id in operation_ids:
+            self._release_owner(operation_id)
         self.changed.emit()
 
     def clear_finished(self) -> None:
         """Clearing visible history never discards an in-flight task's outcomes."""
         active = {"pending", "processing"}
-        self._records = OrderedDict(
+        retained = OrderedDict(
             (key, record)
             for key, record in self._records.items()
             if any(path not in record.outcomes or record.outcomes[path].status in active for path in record.paths)
         )
+        removed = set(self._records) - set(retained)
+        self._records = retained
+        for operation_id in removed:
+            self._release_owner(operation_id)
         self.changed.emit()

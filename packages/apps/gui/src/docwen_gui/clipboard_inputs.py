@@ -115,7 +115,9 @@ class ClipboardInputStore:
     def retain_history(self, owner: str, paths: list[str] | tuple[str, ...]) -> None:
         retained = {key for path in paths if (key := self._key(path)) in self._snapshots}
         if retained:
-            self._history.setdefault(owner, set()).update(retained)
+            self._history[owner] = retained
+        else:
+            self._history.pop(owner, None)
 
     def release_history(self, owner: str) -> None:
         self._history.pop(owner, None)

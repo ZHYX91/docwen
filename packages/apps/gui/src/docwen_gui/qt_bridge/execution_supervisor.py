@@ -29,9 +29,18 @@ class ExecutionSupervisor(QObject):
     failed = Signal(str, dict)
     warning = Signal(str)
 
-    def __init__(self, view_model: MainWindowViewModel, parent: QObject) -> None:
+    def __init__(
+        self,
+        view_model: MainWindowViewModel,
+        parent: QObject,
+        *,
+        retain_inputs: Callable[[str, tuple[str, ...]], None] | None = None,
+        release_inputs: Callable[[str], None] | None = None,
+    ) -> None:
         super().__init__(parent)
         self._view_model = view_model
+        self._retain_inputs = retain_inputs or (lambda _owner, _paths: None)
+        self._release_inputs = release_inputs or (lambda _owner: None)
         self._threads: dict[str, QThread] = {}
         self._owners: dict[QThread, tuple[str, ApplicationController, object]] = {}
         self._starting = False
@@ -70,9 +79,9 @@ class ExecutionSupervisor(QObject):
         self._starting = True
         try:
             reservation = controller.prepare_execution_cancellation(request, batch=batch_execution)
-            self._view_model.reserve_execution_inputs(
-                task_id, tuple(context.get("file_paths") or [context.get("file_path", "")])
-            )
+            input_paths = tuple(context.get("file_paths") or [context.get("file_path", "")])
+            self._view_model.reserve_execution_inputs(task_id, input_paths)
+            self._retain_inputs(task_id, input_paths)
             on_reserved()
             thread = ExecutionThread(
                 controller=controller,
@@ -103,6 +112,7 @@ class ExecutionSupervisor(QObject):
                 return True
             self._threads.pop(task_id, None)
             self._view_model.release_execution_inputs(task_id)
+            self._release_inputs(task_id)
             if thread is not None:
                 self._owners.pop(thread, None)
             if reservation is not reservation_missing:
@@ -152,4 +162,5 @@ class ExecutionSupervisor(QObject):
         finally:
             self._threads.pop(task_id, None)
             self._view_model.release_execution_inputs(task_id)
+            self._release_inputs(task_id)
             thread.deleteLater()
