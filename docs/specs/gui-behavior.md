@@ -30,9 +30,15 @@ Paste is an explicit snapshot operation. A button click or Ctrl+V while the inpu
 
 The backing filename is opaque and is not a user source path. The visible identity is a localized “Clipboard Markdown N.md” label with a bounded, control-safe plain-text preview. Clipboard snapshots never enter Recent Files and do not expose an Open source location action. They have no source resource directory: relative resources are not guessed from the process working directory or the managed snapshot directory, and remote resources retain the existing link/network policy.
 
-Single-file paste replaces the current input only after the normal Core admission succeeds. Batch paste adds one independently visible snapshot per user action. UI selection owns snapshots while they remain editable; the execution supervisor independently retains them through worker shutdown; failed task history retains only snapshots needed for retry. Successful, skipped and cancelled terminal records release their snapshot history ownership. Clearing history or the input list removes snapshots once no live owner remains. Retry always reuses the original snapshot and fails explicitly if that snapshot is no longer available; it never rereads the clipboard.
+Single-file paste replaces the current input only after the normal Core admission succeeds. Batch paste adds one independently visible snapshot per user action. Every asynchronous ingress keeps the inspector chosen for that individual input even when batch requests overlap or supersede one another. A separate inspection lease owns managed bytes until the physical background reader exits; UI cancellation, replacement or clear only suppresses stale publication and cannot remove bytes still being read. Execution then re-inspects with the method frozen in the original FileInspection and compares the complete fact, so an ordinary file remains ordinary and an explicitly synthetic Markdown snapshot remains synthetic.
 
-A synthetic clipboard source has no user source directory for the default source-output policy. Before conversion starts, GUI therefore asks for a persistent output parent. Cancelling that chooser does not start conversion and does not modify saved output preferences. A valid configured custom output directory is reused without prompting. In a mixed ordinary-file/clipboard batch, only clipboard inputs receive per-input output-directory overrides; ordinary files retain same-as-source placement.
+UI selection owns snapshots while they remain editable; the execution supervisor independently retains them through worker shutdown; failed task history retains the frozen FileRef/inspection facts needed for retry. Successful, skipped and cancelled terminal records release their snapshot history ownership. Clearing history or the input list removes snapshots once no live owner remains. Retry restores a removed input with that frozen inspection method and exact identity, reuses the original snapshot, and fails explicitly on missing or modified bytes; it never rereads the clipboard.
+
+A synthetic clipboard source has no user source directory for the default source-output policy. Before conversion starts, GUI therefore asks for a persistent output parent. Cancelling that chooser does not start conversion and does not modify saved output preferences. A valid configured custom output directory is reused without prompting. In a mixed ordinary-file/clipboard batch, only clipboard inputs receive per-input output-directory overrides; Application preserves those per-input choices for both direct children and siblings that need document preconversion.
+
+User-authored clipboard text is not diagnostic log content. Shared Markdown link/embed diagnostics record bounded reasons, modes and counts rather than authored targets, query strings, headings, display text or resolved filenames. Tooltips render bounded escaped text so literal markup and control characters cannot become tooltip markup. Synthetic rows and final source-location handlers reject opening the managed backing directory; progress uses the logical clipboard label.
+
+Clipboard materialization is transactional around write/flush/fsync. A failed create attempts compensation; if deletion itself fails, the file remains tracked for a later cleanup attempt. Each current session holds a small owner lock with a fixed marker. Startup recovery removes only marked old session directories whose owner lock can be acquired non-blocking; active sessions and unmarked legacy directories are left alone. This is a Store-level crash-recovery boundary, not evidence that every application-crash path or native filesystem failure has been physically accepted.
 
 输入区左侧用纵向单选显示“单文件/批量”，右侧保留“添加/粘贴/清空”完整文字；“添加”为主操作，“粘贴”为普通操作，“清空”为弱化操作并与前两者留出间隔。空间不足时模式组与操作组分行；更窄或大字号/长翻译场景继续重排，而不是把文字截断或退化成纯图标。
 
@@ -40,9 +46,15 @@ A synthetic clipboard source has no user source directory for the default source
 
 底层文件名是内部不透明身份，不作为用户源路径。界面显示本地化“剪贴板 Markdown N.md”及有界、控制字符安全的纯文本预览；不会加入“最近文件”，活动记录也不提供源位置入口。合成输入没有来源资源目录，不从 cwd 或受管目录猜测相对资源；远程资源继续遵循既有链接/网络策略。
 
-单文件粘贴仅在正常 Core 准入成功后替换当前输入；批量每次用户操作追加一个独立快照。可编辑列表、活动 worker 与失败重试历史分别持有快照：worker 完整结束前不会被清理，失败重试只保留所需原快照；成功、跳过、取消以及历史清理会释放无主快照。重试必须复用原快照，原快照缺失时明确失败，不读取新剪贴板冒充旧输入。
+单文件粘贴仅在正常 Core 准入成功后替换当前输入；批量每次用户操作追加一个独立快照。异步准入按输入分别保留其检查器，即使批量请求交错或互相替换也不能用后一项的检查意图覆盖前一项。受管字节另由独立 inspection lease 持有到后台读取线程物理结束；UI 取消、替换或清空只能抑制过期结果，不能提前删除仍在读取的快照。执行线程随后按冻结 FileInspection 中的 detection method 使用相同检查器并比较完整事实，因此普通文件仍按普通内容检测，显式 synthetic Markdown 仍按窄 synthetic 合同重检。
 
-合成剪贴板输入在默认 source 输出策略下没有用户源目录，因此执行前必须选择持久输出父目录；取消选择不启动转换，也不更改已保存输出偏好。已有有效 custom 输出目录直接沿用。普通文件与剪贴板混合批量时，只为剪贴板项设置逐输入输出父目录，普通文件仍按 same-as-source 规则发布。
+可编辑列表、活动 worker 与失败重试历史分别持有快照；失败历史同时保留原冻结 FileRef/inspection。成功、跳过、取消以及历史清理会释放无主快照。失败项从列表移除后，重试仍按原冻结检查方法和完整身份恢复；原快照缺失或字节变化都明确拒绝，不读取新剪贴板冒充旧输入。
+
+合成剪贴板输入在默认 source 输出策略下没有用户源目录，因此执行前必须选择持久输出父目录；取消选择不启动转换，也不更改已保存输出偏好。已有有效 custom 输出目录直接沿用。普通文件与剪贴板混合批量时，只为剪贴板项设置逐输入输出父目录；Application 对直达子任务和需要文档预转换的兄弟输入都保留各自逐输入输出选择。
+
+剪贴板正文不是诊断日志内容。共享 Markdown link/embed 日志只记录有界原因、模式和计数，不回显 authored target、query、heading、display text 或解析出的文件名。Tooltip 对用户文本做有界转义，字面 <>& 和控制字符不能被解释成 tooltip 富文本。synthetic 条目和最终源位置接收器都拒绝打开受管 backing 目录，批量进度显示逻辑剪贴板名称。
+
+快照创建以 write/flush/fsync 为事务边界：创建失败先补偿删除；若删除本身失败则继续保留跟踪，供后续 cleanup 重试。每个当前 session 持有带固定 marker 的 owner lock；启动时只回收“marker 可证明且 owner lock 可非阻塞取得”的旧 session，活动 session 和无 marker 的旧目录都不删除。这是 Store 层的 crash-recovery 边界，不代表整个应用所有崩溃路径或原生文件系统失败都已做物理验收。
 
 Execution owns independent input metadata and option snapshots. Confirming a detected format applies only
 to the facts shown, and updates the live list only while those facts still match. The worker rechecks the
