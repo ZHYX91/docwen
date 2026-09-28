@@ -1,14 +1,14 @@
-"""InputArea widget — file drop area with mode switch, add/clear buttons.
+"""InputArea widget — file drop area with vertical mode choices and explicit actions.
 
 Widgets never call runtime/plugins directly — they go through
 ``InputAreaViewModel`` which delegates to ``MainWindowViewModel``.
 
 Key behaviors:
 - Drag-and-drop from file manager (URL) or text editor (text/plain)
-- Single/batch mode switch via ``FluentSegmentedWidget``
-- Add button: file dialog (single) or popup menu (batch)
-- Clear button: reset selection
-- Compact layout at width <= 340px
+- Single/batch mode choices remain fully labelled in a vertical group
+- Add, Paste, and Clear actions stay textual and reflow when space is tight
+- Paste delegates one explicit clipboard read to the owning main window
+- Clear resets the editable selection
 - Default height 200px with a compact title icon and semantic prompt label
 """
 
@@ -29,17 +29,21 @@ from PySide6.QtGui import (
     QDragMoveEvent,
     QDropEvent,
     QIcon,
+    QKeySequence,
     QResizeEvent,
+    QShortcut,
     QShowEvent,
 )
 from PySide6.QtWidgets import (
     QApplication,
     QBoxLayout,
+    QButtonGroup,
     QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
     QMenu,
+    QRadioButton,
     QSizePolicy,
     QStyle,
     QVBoxLayout,
@@ -49,13 +53,11 @@ from qfluentwidgets import (
     CaptionLabel,
     PrimaryPushButton,
     PushButton,
-    SegmentedWidget,
     StrongBodyLabel,
 )
 
 from docwen_gui.format_presentation import SUPPORTED_FORMAT_GROUPS, presentation_for
 from docwen_gui.i18n import t
-from docwen_gui.resources import set_action_icon
 from docwen_gui.styles.design_tokens import Sizing, Spacing
 from docwen_gui.styles.ui_scale import dp, set_metric
 
@@ -108,6 +110,7 @@ def _i18n(key: str, default: str = "", **kwargs) -> str:
 _I_BATCH_MODE = "components.file_drop.batch_mode"
 _I_SINGLE_MODE = "components.file_drop.single_mode"
 _I_ADD_BUTTON = "components.file_drop.add_button"
+_I_PASTE_BUTTON = "components.file_drop.paste_button"
 _I_CLEAR_BUTTON = "components.file_drop.clear_button"
 _I_ADD_FILE = "components.file_drop.add_file_action"
 _I_ADD_FOLDER = "components.file_drop.add_folder_action"
@@ -132,6 +135,7 @@ class InputArea(QFrame):
 
     height_changed = Signal(int)
     location_requested = Signal(str)
+    paste_requested = Signal()
 
     def __init__(
         self,
@@ -154,6 +158,7 @@ class InputArea(QFrame):
 
         self.setObjectName("inputArea")
         self.setAcceptDrops(True)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         set_metric(self, "setMinimumHeight", _DEFAULT_HEIGHT)
 
         self._build_ui()
@@ -176,59 +181,73 @@ class InputArea(QFrame):
         set_metric(drop_layout, "setSpacing", Spacing.GROUP_GAP)
         layout.addWidget(self._drop_group)
 
-        # Top controls layout (mode switch + buttons)
+        # Top controls: a vertical mode group on the left and explicit actions
+        # on the right. The two groups stack when translations or large text
+        # need more width; button labels are never collapsed into icons.
         self._top_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight)
         self._top_layout.setContentsMargins(0, 0, 0, 0)
         set_metric(self._top_layout, "setSpacing", Spacing.GROUP_GAP)
 
-        # Mode switch
-        self._mode_switch = SegmentedWidget(self._drop_group)
-        self._mode_switch.setObjectName("fileDropModeSwitch")
-        set_metric(self._mode_switch, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
-        self._mode_switch.setAccessibleName(_i18n(_I_BATCH_MODE))
-        self._mode_switch.addItem(
-            "batch",
-            _i18n(_I_BATCH_MODE, "Batch"),
-            onClick=lambda: self._request_mode("batch"),
-        )
-        self._mode_switch.addItem(
-            "single",
-            _i18n(_I_SINGLE_MODE, "Single"),
-            onClick=lambda: self._request_mode("single"),
-        )
-        self._mode_switch.setCurrentItem(self._vm.mode)
-        self._top_layout.addWidget(self._mode_switch)
+        self._mode_frame = QFrame(self._drop_group)
+        self._mode_frame.setObjectName("fileDropModeChoices")
+        mode_layout = QVBoxLayout(self._mode_frame)
+        mode_layout.setContentsMargins(0, 0, 0, 0)
+        set_metric(mode_layout, "setSpacing", Spacing.XS)
+        self._mode_group = QButtonGroup(self._mode_frame)
+        self._mode_group.setExclusive(True)
+        self._single_mode_button = QRadioButton(_i18n(_I_SINGLE_MODE, "Single File"), self._mode_frame)
+        self._single_mode_button.setObjectName("fileDropSingleMode")
+        self._batch_mode_button = QRadioButton(_i18n(_I_BATCH_MODE, "Batch"), self._mode_frame)
+        self._batch_mode_button.setObjectName("fileDropBatchMode")
+        self._mode_group.addButton(self._single_mode_button)
+        self._mode_group.addButton(self._batch_mode_button)
+        self._single_mode_button.clicked.connect(lambda: self._request_mode("single"))
+        self._batch_mode_button.clicked.connect(lambda: self._request_mode("batch"))
+        mode_layout.addWidget(self._single_mode_button)
+        mode_layout.addWidget(self._batch_mode_button)
+        (self._single_mode_button if self._vm.mode == "single" else self._batch_mode_button).setChecked(True)
+        self._top_layout.addWidget(self._mode_frame)
 
-        # Action buttons frame
         self._action_frame = QFrame(self._drop_group)
         self._action_frame.setObjectName("fileDropActionButtonsFrame")
-        action_layout = QHBoxLayout(self._action_frame)
-        action_layout.setContentsMargins(0, 0, 0, 0)
-        set_metric(action_layout, "setSpacing", Spacing.CONTROL_GAP)
+        self._action_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight, self._action_frame)
+        self._action_layout.setContentsMargins(0, 0, 0, 0)
+        set_metric(self._action_layout, "setSpacing", Spacing.CONTROL_GAP)
 
-        # Add button
         self._add_button = PrimaryPushButton(_i18n(_I_ADD_BUTTON, "Add"), self._drop_group)
         self._add_button.setObjectName("fileDropPrimaryButton")
         set_metric(self._add_button, "setMinimumSize", _ACTION_BUTTON_MIN_WIDTH, Sizing.CONTROL_HEIGHT)
         self._add_button.clicked.connect(self._on_add_clicked)
-        action_layout.addWidget(self._add_button)
+        self._action_layout.addWidget(self._add_button)
 
-        # Clear button (danger theme for destructive action)
+        self._paste_button = PushButton(_i18n(_I_PASTE_BUTTON, "Paste"), self._drop_group)
+        self._paste_button.setObjectName("fileDropPasteButton")
+        set_metric(self._paste_button, "setMinimumSize", _ACTION_BUTTON_MIN_WIDTH, Sizing.CONTROL_HEIGHT)
+        self._paste_button.clicked.connect(self.request_paste)
+        self._action_layout.addWidget(self._paste_button)
+
+        self._action_layout.addSpacing(dp(Spacing.GROUP_GAP))
         self._clear_button = PushButton(_i18n(_I_CLEAR_BUTTON, "Clear"), self._drop_group)
         self._clear_button.setObjectName("fileDropClearButton")
+        self._clear_button.setProperty("quietAction", True)
         set_metric(self._clear_button, "setMinimumSize", _ACTION_BUTTON_MIN_WIDTH, Sizing.CONTROL_HEIGHT)
-        self._clear_button.setProperty("danger", True)
         self._clear_button.setToolTip(_i18n(_I_CLEAR_BUTTON, "Clear"))
         self._clear_button.setAccessibleName(_i18n(_I_CLEAR_BUTTON, "Clear"))
         self._clear_button.setAccessibleDescription(_i18n(_I_CLEAR_BUTTON, "Clear"))
         self._clear_button.clicked.connect(self._on_clear_clicked)
-        action_layout.addWidget(self._clear_button)
+        self._action_layout.addWidget(self._clear_button)
 
         self._top_layout.addWidget(self._action_frame)
 
-        # Set tab order: mode switch items -> add -> clear
-        self.setTabOrder(self._mode_switch, self._add_button)
-        self.setTabOrder(self._add_button, self._clear_button)
+        self.setTabOrder(self._single_mode_button, self._batch_mode_button)
+        self.setTabOrder(self._batch_mode_button, self._add_button)
+        self.setTabOrder(self._add_button, self._paste_button)
+        self.setTabOrder(self._paste_button, self._clear_button)
+
+        self._paste_shortcut = QShortcut(QKeySequence.StandardKey.Paste, self)
+        self._paste_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self._paste_shortcut.setAutoRepeat(False)
+        self._paste_shortcut.activated.connect(self.request_paste)
 
         # The drop group is the single framed surface; the state content stays
         # unframed so selection feedback does not create a nested card stack.
@@ -406,8 +425,8 @@ class InputArea(QFrame):
         vm.selection_message_changed.connect(self._on_selection_message_changed)
 
     def _on_mode_changed(self, mode: str) -> None:
-        # Update switch to reflect current mode
-        self._mode_switch.setCurrentItem(mode)
+        self._single_mode_button.setChecked(mode == "single")
+        self._batch_mode_button.setChecked(mode == "batch")
         self._update_prompt_text()
         self._sync_visual_state()
 
@@ -573,7 +592,11 @@ class InputArea(QFrame):
 
     def _sync_visual_state(self) -> None:
         """Sync visual state. Selection state is derived from ViewModel message."""
-        self._open_location_button.setVisible(bool(self._vm.selected_file_path) and not self._drag_active)
+        self._open_location_button.setVisible(
+            bool(self._vm.selected_file_path)
+            and self._vm.selected_location_available
+            and not self._drag_active
+        )
         has_selection = bool(self._vm.selection_message.strip())
 
         self._empty_content.setVisible(not has_selection)
@@ -728,55 +751,55 @@ class InputArea(QFrame):
         )
 
     def _sync_top_control_layout(self) -> None:
-        if not all(
-            shiboken6.isValid(control)
-            for control in (self._drop_group, self._mode_switch, self._add_button, self._clear_button)
-        ):
+        controls = (
+            self._drop_group,
+            self._mode_frame,
+            self._single_mode_button,
+            self._batch_mode_button,
+            self._add_button,
+            self._paste_button,
+            self._clear_button,
+        )
+        if not all(shiboken6.isValid(control) for control in controls):
             return
+
         content_width = max(self._drop_group.width() - (dp(Spacing.CARD_PADDING) * 2), 0)
         control_height = max(
             dp(Sizing.CONTROL_HEIGHT),
-            self._mode_switch.sizeHint().height(),
             self._add_button.sizeHint().height(),
+            self._paste_button.sizeHint().height(),
             self._clear_button.sizeHint().height(),
         )
-        for control in (self._mode_switch, self._add_button, self._clear_button):
+        for control in (self._add_button, self._paste_button, self._clear_button):
             control.setMinimumHeight(control_height)
-        action_width = max(
-            dp(_ACTION_BUTTON_MIN_WIDTH), self._add_button.sizeHint().width(), self._clear_button.sizeHint().width()
-        )
-        required = (
-            self._mode_switch.minimumSizeHint().width()
-            + 2 * action_width
-            + dp(Spacing.CONTROL_GAP)
+            control.setMinimumWidth(max(dp(_ACTION_BUTTON_MIN_WIDTH), control.sizeHint().width()))
+
+        mode_width = max(self._single_mode_button.sizeHint().width(), self._batch_mode_button.sizeHint().width())
+        action_width = (
+            self._add_button.minimumWidth()
+            + self._paste_button.minimumWidth()
+            + self._clear_button.minimumWidth()
             + dp(Spacing.GROUP_GAP)
+            + 2 * dp(Spacing.CONTROL_GAP)
         )
+        required = mode_width + action_width + dp(Spacing.GROUP_GAP)
         compact = 0 < content_width < max(dp(_COMPACT_WIDTH_THRESHOLD), required)
+        actions_stacked = 0 < content_width < action_width
 
-        if compact == self._top_controls_compact:
-            self._add_button.setMinimumWidth(action_width)
-            self._clear_button.setMinimumWidth(dp(Sizing.CONTROL_HEIGHT) if compact else action_width)
-            return
-
+        direction_changed = compact != self._top_controls_compact
         self._top_controls_compact = compact
+        self._top_layout.setDirection(
+            QBoxLayout.Direction.TopToBottom if compact else QBoxLayout.Direction.LeftToRight
+        )
+        self._action_layout.setDirection(
+            QBoxLayout.Direction.TopToBottom if actions_stacked else QBoxLayout.Direction.LeftToRight
+        )
+        set_metric(self._top_layout, "setSpacing", Spacing.GROUP_GAP)
+        set_metric(self._action_layout, "setSpacing", Spacing.CONTROL_GAP)
+        self._action_frame.setMinimumWidth(action_width if not actions_stacked else 0)
 
-        if compact:
-            self._top_layout.setDirection(QBoxLayout.Direction.TopToBottom)
-            set_metric(self._top_layout, "setSpacing", Spacing.GROUP_GAP)
-            self._clear_button.setText("")
-            self._clear_button.setToolTip(_i18n(_I_CLEAR_BUTTON, "Clear"))
-            set_action_icon(self._clear_button, "clear.svg", size=16)
-        else:
-            self._top_layout.setDirection(QBoxLayout.Direction.LeftToRight)
-            set_metric(self._top_layout, "setSpacing", Spacing.GROUP_GAP)
-            self._clear_button.setText(_i18n(_I_CLEAR_BUTTON, "Clear"))
-            self._clear_button.setIcon(QIcon())
-
-        # Keep the two text actions visually balanced at normal widths.  The
-        # icon-only clear action remains intentionally smaller in compact mode.
-        self._add_button.setMinimumWidth(action_width)
-        self._clear_button.setMinimumWidth(dp(Sizing.CONTROL_HEIGHT) if compact else action_width)
-        self.height_changed.emit(self.minimumHeight())
+        if direction_changed:
+            self.height_changed.emit(self.minimumHeight())
 
     def _sync_supported_type_layout(self) -> None:
         if not self._supported_type_layout_objects_are_valid():
@@ -840,14 +863,31 @@ class InputArea(QFrame):
         return self._add_button
 
     @property
+    def paste_button(self) -> PushButton:
+        """Public access to the explicit clipboard action."""
+        return self._paste_button
+
+    @property
     def clear_button(self) -> PushButton:
         """Public access to the clear button for external wiring."""
         return self._clear_button
 
     @property
-    def mode_switch(self) -> SegmentedWidget:
-        """Public access to the mode switch for external wiring."""
-        return self._mode_switch
+    def mode_switch(self) -> QFrame:
+        """Compatibility access to the visible mode-choice container."""
+        return self._mode_frame
+
+    @property
+    def single_mode_button(self) -> QRadioButton:
+        return self._single_mode_button
+
+    @property
+    def batch_mode_button(self) -> QRadioButton:
+        return self._batch_mode_button
+
+    def request_paste(self) -> None:
+        """Request one immediate clipboard read from the owning window."""
+        self.paste_requested.emit()
 
     def open_file_dialog(self, *, force_batch_mode: bool = False) -> None:
         """Public entry point: open the file dialog (single or multi, per mode).
