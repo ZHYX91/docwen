@@ -34,6 +34,7 @@ from PySide6.QtWidgets import (
     QAbstractSpinBox,
     QApplication,
     QComboBox,
+    QFileDialog,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -623,7 +624,11 @@ class MainWindow(QWidget):
         from .widgets.info_area import InfoArea
         from .widgets.input_area import InputArea
 
-        self._input_area_vm = InputAreaViewModel(main_vm=self._view_model, parent=self)
+        self._input_area_vm = InputAreaViewModel(
+            main_vm=self._view_model,
+            parent=self,
+            presentation_for=self._clipboard_presentation,
+        )
         self._batch_list_vm = BatchListViewModel(main_vm=self._view_model, parent=self)
         self._admission = ExecutionAdmission(self._view_model, self._batch_list_vm)
         self._requests = ExecutionRequestBuilder(
@@ -633,6 +638,8 @@ class MainWindow(QWidget):
             selected_template=lambda: (
                 self._template_selector.get_selected_template_resource() if self._template_selector else None
             ),
+            source_label=self._clipboard_source_label,
+            synthetic_input=self._is_clipboard_input,
         )
         self._conversion_panel_vm = ConversionPanelViewModel(main_vm=self._view_model, parent=self)
         self._action_area_vm = ActionAreaViewModel(main_vm=self._view_model, parent=self)
@@ -654,6 +661,7 @@ class MainWindow(QWidget):
             presenter=self._results,
             history=self._task_history,
             confirm_request=lambda request: self._confirm_request_admission(request),
+            prepare_output_policy=self._prepare_clipboard_output_policy,
             parent=self,
         )
         self._execution.result_ready.connect(self._results.finished)
@@ -671,6 +679,7 @@ class MainWindow(QWidget):
 
         self._input_area = InputArea(view_model=self._input_area_vm, parent=self)
         self._input_area.location_requested.connect(self._open_location)
+        self._input_area.paste_requested.connect(self._on_paste_requested)
         self._batch_list = BatchList(view_model=self._batch_list_vm, parent=self)
         self._conversion_panel = ConversionPanel(view_model=self._conversion_panel_vm, parent=self)
         self._action_area = ActionArea(view_model=self._action_area_vm, parent=self)
@@ -810,11 +819,18 @@ class MainWindow(QWidget):
         self._sync_execution_context()
 
     def _sync_session_mutation_controls(self) -> None:
-        """Prevent clearing the working set while an execution can still emit results."""
-        clear_button = getattr(self._input_area, "clear_button", None)
-        if clear_button is not None:
-            clear_button.setEnabled(not self._action_area_vm.cancel_visible)
-        self._conversion_panel.setEnabled(not self._action_area_vm.cancel_visible)
+        """Prevent input mutation while an execution can still emit results."""
+        enabled = not self._action_area_vm.cancel_visible
+        for control in (
+            getattr(self._input_area, "add_button", None),
+            getattr(self._input_area, "paste_button", None),
+            getattr(self._input_area, "clear_button", None),
+            getattr(self._input_area, "single_mode_button", None),
+            getattr(self._input_area, "batch_mode_button", None),
+        ):
+            if control is not None:
+                control.setEnabled(enabled)
+        self._conversion_panel.setEnabled(enabled)
         self._sync_execution_context()
 
     def _sync_execution_context(self, *_args: object) -> None:
@@ -838,6 +854,11 @@ class MainWindow(QWidget):
             else:
                 if policy.output_dir:
                     text = f"{_t('settings.output.output_mode_label')} {policy.output_dir}"
+                elif any(self._is_clipboard_input(path) for path in paths):
+                    text = _t(
+                        "components.file_drop.clipboard_output_hint",
+                        "Clipboard Markdown will ask for an output folder before conversion.",
+                    )
                 elif self._view_model.mode == "batch":
                     text = _t("info_area.output_each_source")
                 if policy.date_subfolder:
@@ -1463,11 +1484,15 @@ class MainWindow(QWidget):
                 ref = refs_by_path.get(normalize_path(path))
                 if ref is None:
                     return None
+                presentation = self._clipboard_presentation(ref.path)
                 return {
                     "detected_format": ref.format,
                     "workflow_category": ref.category,
                     "warning_message": ref.warning_message,
                     "metadata": dict(ref.metadata),
+                    "display_name": presentation.display_name if presentation is not None else "",
+                    "source_preview": presentation.detail if presentation is not None else "",
+                    "source_location_available": presentation.location_available if presentation is not None else True,
                 }
 
             self._batch_list_vm.add_files(missing, file_resolver=resolve_existing_ref)
@@ -1491,6 +1516,7 @@ class MainWindow(QWidget):
                 self._view_model.set_selected_file(preferred_ref)
                 with contextlib.suppress(Exception):
                     self._batch_list.select_file(preferred_ref.path)
+        self._sync_clipboard_visible_inputs()
 
     def _on_files_cleared(self) -> None:
         self._prepare_file_clear_panel_transition()
@@ -1500,6 +1526,7 @@ class MainWindow(QWidget):
         self._info_area_vm.reset_session()
         self._workflow.clear_context()
         self._task_history.clear()
+        self._sync_clipboard_visible_inputs()
 
     def _prepare_file_clear_panel_transition(self) -> None:
         """Freeze geometry before content reset and right-panel removal run synchronously."""
@@ -1829,6 +1856,36 @@ class MainWindow(QWidget):
                 return
             options["spreadsheet_password"] = password
         retry_paths = record.paths if context.get("aggregate") else failed_files
+        synthetic_keys = {
+            normalize_path(path)
+            for path in context.get("synthetic_input_paths", [])
+            if isinstance(path, str)
+        }
+        unavailable_snapshots = [
+            path
+            for path in retry_paths
+            if normalize_path(path) in synthetic_keys
+            and (
+                self._clipboard_store is None
+                or not self._clipboard_store.snapshot_available(path)
+            )
+        ]
+        if unavailable_snapshots:
+            labels = context.get("source_labels", {})
+            label = (
+                labels.get(normalize_path(unavailable_snapshots[0]))
+                if isinstance(labels, dict)
+                else None
+            )
+            self._info_area_vm.add_message(
+                _t(
+                    "components.file_drop.clipboard_retry_unavailable",
+                    "The original clipboard snapshot for {name} is no longer available; paste again to create a new input.",
+                    name=label or _t("components.file_drop.clipboard_name_generic", "Clipboard Markdown"),
+                ),
+                "warning",
+            )
+            return
         if len(retry_paths) > 1:
             self._view_model.set_mode("batch")
         missing_paths = [path for path in retry_paths if self._batch_list_vm.get_file_entry(path) is None]
@@ -2248,6 +2305,8 @@ class MainWindow(QWidget):
         if controller is not None:
             with contextlib.suppress(Exception):
                 controller.stop()
+        if self._clipboard_store is not None:
+            self._clipboard_store.close()
 
     # ── Public API ─────────────────────────────────────────────────
 
