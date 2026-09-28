@@ -108,6 +108,67 @@ def test_markdown_bundle_is_published_as_one_document_node(tmp_path: Path) -> No
     assert "../seal.png" in attachment_path.read_text(encoding="utf-8")
 
 
+def test_document_node_link_relocation_preserves_external_targets_and_integrity(tmp_path: Path) -> None:
+    source = tmp_path / "report.docx"
+    source.write_bytes(b"source")
+    staging = tmp_path / "staging-links"
+    staging.mkdir()
+    main = staging / "main.md"
+    image = staging / "image.png"
+    original = (
+        "[online](https://example.test/image.png#section)\n"
+        "[local](assets/image.png#local)\n"
+        "[encoded](assets%2Fimage.png#encoded)\n"
+        "[different](https://example.test/other.png#other)\n"
+        "[network](//example.test/image.png#network)\n"
+        "[anchor](#section)\n"
+        '<a href="https://example.test/image.png#html-online">online</a>\n'
+        '<img src="assets/image.png#html-local">\n'
+    )
+    main.write_text(original, encoding="utf-8")
+    image.write_bytes(b"png")
+    output = tmp_path / "output-links"
+
+    result = OutputFinalizer().finalize(
+        "task.node.links",
+        [
+            _artifact(
+                main,
+                artifact_id="main",
+                suggested_name="report.md",
+                media_type="text/markdown",
+                primary=True,
+            ),
+            _artifact(
+                image,
+                artifact_id="image",
+                suggested_name="assets/image.png",
+                media_type="image/png",
+            ),
+        ],
+        OutputPolicy(output_dir=str(output), overwrite_mode="error"),
+        input_path=str(source),
+    )
+
+    assert result.success is True
+    primary = next(artifact for artifact in result.artifacts if artifact.is_primary)
+    published = Path(primary.staging_path)
+    expected = (
+        "[online](https://example.test/image.png#section)\n"
+        "[local](image.png#local)\n"
+        "[encoded](image.png#encoded)\n"
+        "[different](https://example.test/other.png#other)\n"
+        "[network](//example.test/image.png#network)\n"
+        "[anchor](#section)\n"
+        '<a href="https://example.test/image.png#html-online">online</a>\n'
+        '<img src="image.png#html-local">\n'
+    ).encode()
+    assert published.parent.parent == output
+    assert published.read_bytes() == expected
+    assert primary.size_bytes == len(expected)
+    assert primary.sha256 == hashlib.sha256(expected).hexdigest()
+
+
 def test_document_node_failure_leaves_no_partial_root(tmp_path: Path) -> None:
     source = tmp_path / "report.docx"
     source.write_bytes(b"source")

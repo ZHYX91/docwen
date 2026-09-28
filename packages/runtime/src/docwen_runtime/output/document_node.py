@@ -8,7 +8,7 @@ import re
 from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path, PurePosixPath
-from urllib.parse import unquote
+from urllib.parse import unquote, urlsplit
 
 from docwen_core.models import (
     DOCUMENT_NODE_SCHEMA,
@@ -29,6 +29,7 @@ _HTML_LINK = re.compile(
     re.IGNORECASE,
 )
 
+_WINDOWS_DRIVE_TARGET = re.compile(r"^[A-Za-z]:[\\/]")
 
 @dataclass(frozen=True, slots=True)
 class DocumentNodeLayoutPlan:
@@ -252,10 +253,24 @@ def _artifact_reference_names(artifact: ArtifactManifest) -> set[str]:
     return {value for value in values if value}
 
 
+def _is_external_link_target(raw: str) -> bool:
+    """Return whether a Markdown/HTML target is a URI or network location."""
+
+    decoded = unquote(raw).replace("\\", "/")
+    if decoded.startswith("//"):
+        return True
+    if _WINDOWS_DRIVE_TARGET.match(decoded):
+        return False
+    parsed = urlsplit(decoded)
+    return bool(parsed.scheme or parsed.netloc)
+
+
 def _rewrite_known_links(text: str, replacements: dict[str, str]) -> str:
     normalized = {key.replace("\\", "/"): value for key, value in replacements.items()}
 
     def replace_target(raw: str) -> str:
+        if _is_external_link_target(raw):
+            return raw
         decoded = unquote(raw).replace("\\", "/")
         path, marker, anchor = decoded.partition("#")
         replacement = normalized.get(path) or normalized.get(PurePosixPath(path).name)

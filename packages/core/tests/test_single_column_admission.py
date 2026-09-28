@@ -21,6 +21,52 @@ def test_literal_single_column_is_admitted_as_declared_table(tmp_path: Path, suf
     assert inspection.may_execute and not inspection.requires_explicit_acceptance
 
 
+@pytest.mark.parametrize(
+    ("suffix", "content"),
+    [
+        ("csv", "a,b\n"),
+        ("tsv", "a\tb\n"),
+        ("csv", 'a,"b,c"\n'),
+        ("csv", 'a,"b\nc"\n'),
+        ("tsv", 'a\t"b\nc"\n'),
+    ],
+)
+def test_declared_single_record_multicolumn_table_is_admitted(
+    tmp_path: Path,
+    suffix: str,
+    content: str,
+) -> None:
+    source = tmp_path / f"input.{suffix}"
+    source.write_text(content, encoding="utf-8")
+    assert detect_text_format(str(source)) == "txt"
+    inspection = inspect_file(str(source))
+    assert inspection.detected_format == suffix
+    assert inspection.workflow_category == "spreadsheet"
+    assert inspection.may_execute and not inspection.requires_explicit_acceptance
+
+
+@pytest.mark.parametrize(
+    ("suffix", "content"),
+    [
+        ("csv", 'a,"unterminated\n'),
+        ("tsv", 'a\t"unterminated\n'),
+        ("csv", "a,b\ntrailing\n"),
+        ("tsv", "a\tb\ntrailing\n"),
+    ],
+)
+def test_declared_single_record_multicolumn_fallback_stays_strict(
+    tmp_path: Path,
+    suffix: str,
+    content: str,
+) -> None:
+    source = tmp_path / f"input.{suffix}"
+    source.write_text(content, encoding="utf-8")
+    assert detect_text_format(str(source)) == "txt"
+    inspection = inspect_file(str(source))
+    assert inspection.detected_format != suffix
+    assert inspection.requires_explicit_acceptance
+
+
 def test_quoted_comma_is_a_single_csv_cell(tmp_path: Path) -> None:
     source = tmp_path / "input.csv"
     source.write_text('literal\n"one,two"\n', encoding="utf-8")

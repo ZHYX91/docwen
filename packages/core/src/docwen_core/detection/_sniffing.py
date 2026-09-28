@@ -484,6 +484,52 @@ def _detect_delimited_format(text: str) -> str | None:
     return "tsv" if dialect.delimiter == "\t" else "csv"
 
 
+def _declared_text_encodings(file_path: str) -> tuple[str, ...]:
+    try:
+        with open(file_path, "rb") as fh:
+            head = fh.read(4)
+    except OSError:
+        return ()
+
+    for bom, encoding in (
+        (codecs.BOM_UTF32_LE, "utf-32"),
+        (codecs.BOM_UTF32_BE, "utf-32"),
+        (codecs.BOM_UTF8, "utf-8-sig"),
+        (codecs.BOM_UTF16_LE, "utf-16"),
+        (codecs.BOM_UTF16_BE, "utf-16"),
+    ):
+        if head.startswith(bom):
+            return (encoding,)
+    return ("utf-8", "gbk")
+
+
+def matches_single_record_delimited_declaration(file_path: str, declared_format: str) -> bool:
+    """Validate one strict multi-column record for an explicit CSV/TSV declaration."""
+    if declared_format not in {"csv", "tsv"}:
+        return False
+
+    delimiter = "," if declared_format == "csv" else "\t"
+    for encoding in _declared_text_encodings(file_path):
+        try:
+            with open(file_path, "r", encoding=encoding, errors="strict", newline="") as stream:
+                rows = csv.reader(stream, delimiter=delimiter, strict=True)
+                record_count = 0
+                width = 0
+                for row in rows:
+                    if not row or not any(cell.strip() for cell in row):
+                        continue
+                    record_count += 1
+                    if record_count > 1:
+                        return False
+                    width = len(row)
+            return record_count == 1 and width >= 2
+        except UnicodeDecodeError:
+            continue
+        except (OSError, csv.Error):
+            return False
+    return False
+
+
 def matches_single_column_declaration(file_path: str, declared_format: str) -> bool:
     """Validate the ambiguous single-column subset after neutral text sniffing."""
     if declared_format not in {"csv", "tsv"}:

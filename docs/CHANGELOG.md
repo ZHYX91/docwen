@@ -5,6 +5,11 @@
 
 ## Unreleased / 未发布
 
+- Admit strictly parsed single-record multi-column CSV/TSV when the filename explicitly declares the table format, without relaxing generic text sniffing.
+- Preserve external/network Markdown and HTML targets during document-node link relocation even when their basename matches a local artifact.
+- 明确声明为 CSV/TSV 的中性文本可严格准入单条多列记录，不放宽通用文本嗅探。
+- 文档节点搬迁链接时保护外部 URI/网络目标，避免与本地产物同 basename 时被误改写。
+
 ## 0.14.1 (2026-09-27)
 
 - Reject CSV/TSV rows beyond XLSX dimensions before writing cells, including spreadsheet hub conversions.

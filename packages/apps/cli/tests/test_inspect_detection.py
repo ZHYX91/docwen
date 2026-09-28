@@ -415,6 +415,37 @@ class TestInspectInfoIntegration:
             os.unlink(path)
 
     @pytest.mark.parametrize(
+        ("suffix", "content"),
+        [
+            ("csv", "a,b\n"),
+            ("tsv", "a\tb\n"),
+        ],
+    )
+    def test_info_json_routes_declared_single_record_table(
+        self,
+        tmp_path: Path,
+        capsys,
+        suffix: str,
+        content: str,
+    ) -> None:
+        source = tmp_path / f"single-row.{suffix}"
+        source.write_text(content, encoding="utf-8")
+        controller = _CapabilityController(
+            [_source(suffix, "spreadsheet", [_route(f"{suffix}-xlsx", source=suffix, target="xlsx")])]
+        )
+
+        result = execute_inspect(_make_args(str(source), json_mode=True), controller=controller)
+
+        assert result == 0
+        data = json.loads(capsys.readouterr().out)["data"]
+        assert data["detected_format"] == suffix
+        assert data["detected_category"] == "spreadsheet"
+        assert data["relation"] == "exact_match"
+        assert data["decision"] == "allow"
+        assert data["supported_actions"] == ["inspect", "convert"]
+        assert data["supported_actions_discovery"]["matched_by"] == "detected_format"
+
+    @pytest.mark.parametrize(
         "payload",
         [
             "city;value\n北京;1\n上海;2\n".encode(),
