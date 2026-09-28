@@ -22,6 +22,28 @@ Single-file mode retains exactly one validated current input across file picking
 
 单文件模式在添加、拖入、二次启动和 Assistant GUI 传入时均只保留一个验证通过的当前文件。批量模式保留完整可见清单；多文件批次切回单文件时确认保留项。运行中不替换输入，外部请求被拒绝时向调用方报告失败。普通接收不进入活动记录；Assistant CLI 处理不改变 GUI 选择。
 
+### Clipboard Markdown input / 剪贴板 Markdown 输入
+
+The input header keeps Single File and Batch as a vertical choice group on the left. Add remains the primary action; Paste is a normal action; Clear is visually quiet and separated from the other actions. The action group stays horizontal when it fits. When translated labels, large text or a narrow viewport do not fit, the mode and action groups reflow to separate rows; at still smaller widths the action group may stack rather than hide, truncate or replace labels with icons.
+
+Paste is an explicit snapshot operation. A button click or Ctrl+V while the input area (and not an unrelated text editor) owns focus reads the clipboard's current plain text once and writes those exact Unicode characters as UTF-8 Markdown in a DocWen-owned profile directory. No background listener exists. YAML front matter, fenced code and meaningful leading/trailing whitespace are preserved. Path-shaped strings, URLs and HTML are ordinary Markdown text, not commands. Empty or whitespace-only text creates no input, and non-text clipboard data reports an explicit message. A later clipboard change cannot mutate an admitted snapshot.
+
+The backing filename is opaque and is not a user source path. The visible identity is a localized “Clipboard Markdown N.md” label with a bounded, control-safe plain-text preview. Clipboard snapshots never enter Recent Files and do not expose an Open source location action. They have no source resource directory: relative resources are not guessed from the process working directory or the managed snapshot directory, and remote resources retain the existing link/network policy.
+
+Single-file paste replaces the current input only after the normal Core admission succeeds. Batch paste adds one independently visible snapshot per user action. UI selection owns snapshots while they remain editable; the execution supervisor independently retains them through worker shutdown; failed task history retains only snapshots needed for retry. Successful, skipped and cancelled terminal records release their snapshot history ownership. Clearing history or the input list removes snapshots once no live owner remains. Retry always reuses the original snapshot and fails explicitly if that snapshot is no longer available; it never rereads the clipboard.
+
+A synthetic clipboard source has no user source directory for the default source-output policy. Before conversion starts, GUI therefore asks for a persistent output parent. Cancelling that chooser does not start conversion and does not modify saved output preferences. A valid configured custom output directory is reused without prompting. In a mixed ordinary-file/clipboard batch, only clipboard inputs receive per-input output-directory overrides; ordinary files retain same-as-source placement.
+
+输入区左侧用纵向单选显示“单文件/批量”，右侧保留“添加/粘贴/清空”完整文字；“添加”为主操作，“粘贴”为普通操作，“清空”为弱化操作并与前两者留出间隔。空间不足时模式组与操作组分行；更窄或大字号/长翻译场景继续重排，而不是把文字截断或退化成纯图标。
+
+“粘贴”是显式快照操作：仅在用户点击按钮，或输入区（而非其他文本编辑框）拥有焦点时按 Ctrl+V，才读取一次当前纯文本并将完全相同的字符按 UTF-8 Markdown 写入 DocWen profile 所有的受管目录。不会后台监听剪贴板；YAML front matter、代码块及有意义的首尾空白原样保留；看似文件路径、URL 或 HTML 的文本仍只是 Markdown 内容。空值/纯空白不创建输入，非文本剪贴板给出明确提示；之后的剪贴板变化不能改变已接纳快照。
+
+底层文件名是内部不透明身份，不作为用户源路径。界面显示本地化“剪贴板 Markdown N.md”及有界、控制字符安全的纯文本预览；不会加入“最近文件”，活动记录也不提供源位置入口。合成输入没有来源资源目录，不从 cwd 或受管目录猜测相对资源；远程资源继续遵循既有链接/网络策略。
+
+单文件粘贴仅在正常 Core 准入成功后替换当前输入；批量每次用户操作追加一个独立快照。可编辑列表、活动 worker 与失败重试历史分别持有快照：worker 完整结束前不会被清理，失败重试只保留所需原快照；成功、跳过、取消以及历史清理会释放无主快照。重试必须复用原快照，原快照缺失时明确失败，不读取新剪贴板冒充旧输入。
+
+合成剪贴板输入在默认 source 输出策略下没有用户源目录，因此执行前必须选择持久输出父目录；取消选择不启动转换，也不更改已保存输出偏好。已有有效 custom 输出目录直接沿用。普通文件与剪贴板混合批量时，只为剪贴板项设置逐输入输出父目录，普通文件仍按 same-as-source 规则发布。
+
 Execution owns independent input metadata and option snapshots. Confirming a detected format applies only
 to the facts shown, and updates the live list only while those facts still match. The worker rechecks the
 input before conversion. Cancellation and reservation release use the controller that started the task;
@@ -86,4 +108,4 @@ Shared checkboxes preserve Qt keyboard/accessibility behavior and draw their ind
 
 ## Regression / 回归
 
-Widget/view-model tests cover deterministic behavior. GUI smoke, screenshots and physical desktop interaction cover the final host-dependent surface. Current reference screenshots are stored under `docs/assets/screenshots/`.
+Widget/view-model and Runtime integration tests cover deterministic clipboard, ownership, routing and publication behavior. GUI smoke, screenshots and physical desktop interaction remain the authority for final host-dependent layout and clipboard interaction. In particular, minimum-width, Large text, 150% application scale, long translations, Light/Dark themes, Tab order and physical clipboard conversion require Computer Use or equivalent desktop acceptance; automated Qt tests do not claim that pass. Current reference screenshots are stored under `docs/assets/screenshots/`.

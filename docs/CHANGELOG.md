@@ -5,6 +5,13 @@
 
 ## Unreleased / 未发布
 
+- Add explicit GUI clipboard Markdown input: one user-triggered plain-text snapshot becomes exact UTF-8 Markdown, uses the normal admission/conversion pipeline, keeps an opaque profile-owned backing file out of Recent Files and source-location UI, and reuses the original snapshot for failed retry.
+- Rework the input header to vertical Single File/Batch choices plus textual Add/Paste/Clear actions with responsive reflow. Source-mode clipboard input asks for a persistent output parent before execution; custom output remains unchanged and mixed batches redirect only synthetic inputs.
+- GUI/Runtime automated coverage exercises clipboard snapshot bytes and ownership, output-policy cancellation/custom/mixed behavior, retry stability, focus-scoped Ctrl+V and a real Markdown Runtime publication path. Physical minimum-width/large-text/150%/long-translation/theme/keyboard acceptance remains a separate Computer Use gate.
+- 新增 GUI 剪贴板 Markdown 输入：仅在用户触发时读取一次纯文本并原样物化为 UTF-8 Markdown，继续走既有准入/转换链；profile 所有的内部快照路径不进入最近文件或源位置界面，失败重试复用原快照。
+- 输入区调整为左侧纵向“单文件/批量”和右侧完整文字“添加/粘贴/清空”，按可用宽度响应式重排。默认 source 输出遇到剪贴板输入时在执行前选择持久父目录；已有 custom 不变，混合批量只重定向合成输入。
+- 自动化覆盖快照字节与所有权、输出选择取消/custom/混合策略、重试稳定性、输入区 Ctrl+V 焦点范围及真实 Markdown Runtime 发布；最小宽度/大字号/150%/长翻译/主题/键盘的物理表现仍由后续 Computer Use 验收。
+
 - Admit strictly parsed single-record multi-column CSV/TSV when the filename explicitly declares the table format, without relaxing generic text sniffing; align Core admission and Spreadsheet conversion on one BOM-first UTF-8/16/32 and GBK decoding contract.
 - Preserve external/network Markdown, Wiki and HTML targets during document-node link relocation even when malformed or sharing a local basename; keep encoded local path/fragment structure intact while safely serializing relocated paths.
 - 明确声明为 CSV/TSV 的中性文本可严格准入单条多列记录，不放宽通用文本嗅探；Core 准入与 Spreadsheet 转换统一使用 BOM 优先的 UTF-8/16/32 与 GBK 编码合同。
