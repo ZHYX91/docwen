@@ -21,8 +21,10 @@ class ExecutionThread(QThread):
     MainWindow context.
     """
 
-    result_signal = Signal(object, dict)
-    error_signal = Signal(str, dict)
+    # Frozen contexts contain Python identities (including unsigned file IDs).
+    # QVariantMap recursively coerces these integers and can overflow on Windows.
+    result_signal = Signal(object, object)
+    error_signal = Signal(str, object)
 
     def __init__(
         self,

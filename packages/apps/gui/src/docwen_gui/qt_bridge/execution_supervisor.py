@@ -25,8 +25,8 @@ class ExecutionSupervisor(QObject):
     result, cancellation request or startup error never destroys a live thread.
     """
 
-    result_ready = Signal(object, dict)
-    failed = Signal(str, dict)
+    result_ready = Signal(object, object)
+    failed = Signal(str, object)
     warning = Signal(str)
 
     def __init__(
