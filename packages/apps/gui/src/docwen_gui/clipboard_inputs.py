@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import shutil
 import unicodedata
@@ -19,6 +20,7 @@ class ClipboardInputDescriptor:
     display_name: str
     preview: str
     size_bytes: int
+    sha256: str
 
 
 def bounded_plaintext_preview(text: str) -> str:
@@ -51,6 +53,7 @@ class ClipboardInputStore:
         self._session_root.mkdir()
         self._snapshots: dict[str, ClipboardInputDescriptor] = {}
         self._visible: set[str] = set()
+        self._inspection: dict[str, set[str]] = {}
         self._active: dict[str, set[str]] = {}
         self._history: dict[str, set[str]] = {}
         self._sequence = 0
@@ -85,6 +88,7 @@ class ClipboardInputStore:
             display_name=display_name,
             preview=bounded_plaintext_preview(text),
             size_bytes=len(payload),
+            sha256=hashlib.sha256(payload).hexdigest(),
         )
         self._snapshots[self._key(path)] = descriptor
         return descriptor
@@ -97,7 +101,28 @@ class ClipboardInputStore:
 
     def snapshot_available(self, path: str | os.PathLike[str]) -> bool:
         descriptor = self.descriptor(path)
-        return descriptor is not None and Path(descriptor.path).is_file()
+        if descriptor is None:
+            return False
+        snapshot = Path(descriptor.path)
+        try:
+            if not snapshot.is_file() or snapshot.stat().st_size != descriptor.size_bytes:
+                return False
+            digest = hashlib.sha256()
+            with snapshot.open("rb") as stream:
+                while chunk := stream.read(1024 * 1024):
+                    digest.update(chunk)
+            return digest.hexdigest() == descriptor.sha256
+        except OSError:
+            return False
+
+    def retain_inspection(self, owner: str, paths: list[str] | tuple[str, ...]) -> None:
+        retained = {key for path in paths if (key := self._key(path)) in self._snapshots}
+        if retained:
+            self._inspection[owner] = retained
+
+    def release_inspection(self, owner: str) -> None:
+        self._inspection.pop(owner, None)
+        self._collect_unowned()
 
     def sync_visible(self, paths: list[str] | tuple[str, ...]) -> None:
         self._visible = {key for path in paths if (key := self._key(path)) in self._snapshots}
@@ -128,6 +153,8 @@ class ClipboardInputStore:
 
     def _owned_keys(self) -> set[str]:
         owned = set(self._visible)
+        for paths in self._inspection.values():
+            owned.update(paths)
         for paths in self._active.values():
             owned.update(paths)
         for paths in self._history.values():
@@ -150,7 +177,7 @@ class ClipboardInputStore:
         self._visible.clear()
         self._history.clear()
         self._collect_unowned()
-        if self._active:
+        if self._inspection or self._active:
             return
         shutil.rmtree(self._session_root, ignore_errors=True)
         self._snapshots.clear()

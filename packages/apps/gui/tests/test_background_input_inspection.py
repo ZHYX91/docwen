@@ -6,7 +6,8 @@ from pathlib import Path
 import pytest
 from PySide6.QtCore import QThread, QTimer
 
-from docwen_core.detection import inspect_file
+from docwen_core.detection import inspect_file, inspect_utf8_markdown_snapshot
+from docwen_core.models import FILE_INSPECTION_METADATA_KEY
 from docwen_gui.view_models.main_window_vm import MainWindowViewModel
 
 pytestmark = pytest.mark.gui
@@ -179,3 +180,110 @@ def test_reveal_fallback_runs_on_ui_thread(qtbot, tmp_path: Path, monkeypatch: p
     finally:
         operation.cancel()
         qtbot.waitUntil(lambda: not operation.busy)
+
+@pytest.mark.parametrize("synthetic_first", [False, True])
+def test_batch_interleaving_preserves_each_paths_inspection_intent(
+    qtbot,
+    tmp_path: Path,
+    synthetic_first: bool,
+) -> None:
+    ordinary = tmp_path / "ordinary.md"
+    synthetic = tmp_path / "clipboard.md"
+    ordinary.write_text("ordinary text", encoding="utf-8")
+    synthetic.write_text("<html><body>literal clipboard text</body></html>", encoding="utf-8")
+    first = synthetic if synthetic_first else ordinary
+    second = ordinary if synthetic_first else synthetic
+    entered = threading.Event()
+    release = threading.Event()
+
+    def first_inspector(path: str):
+        entered.set()
+        release.wait(5)
+        return inspect_utf8_markdown_snapshot(path) if path == str(synthetic) else inspect_file(path)
+
+    vm = MainWindowViewModel()
+    vm.set_mode("batch")
+    try:
+        vm.request_files(
+            [str(first)],
+            file_inspector=first_inspector,
+        )
+        qtbot.waitUntil(entered.is_set)
+        vm.request_files(
+            [str(second)],
+            file_inspector=inspect_utf8_markdown_snapshot if second == synthetic else inspect_file,
+        )
+        release.set()
+        qtbot.waitUntil(lambda: not vm.inspection_busy)
+        by_path = {Path(ref.path): ref for ref in vm.files}
+        assert set(by_path) == {ordinary, synthetic}
+        ordinary_fact = by_path[ordinary].metadata[FILE_INSPECTION_METADATA_KEY]
+        synthetic_fact = by_path[synthetic].metadata[FILE_INSPECTION_METADATA_KEY]
+        assert ordinary_fact["detection_method"] != "synthetic_markdown"
+        assert synthetic_fact["detection_method"] == "synthetic_markdown"
+        assert synthetic_fact["detected_format"] == "markdown"
+    finally:
+        release.set()
+        vm.cancel_inspection()
+        qtbot.waitUntil(lambda: not vm.inspection_busy)
+
+
+def test_clipboard_inspection_lease_survives_supersede_and_clear_until_physical_end(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    from docwen_gui.clipboard_inputs import ClipboardInputStore
+
+    store = ClipboardInputStore(tmp_path / "managed")
+    first = store.create("# First\n", display_name_template="Clipboard {index}.md")
+    second = store.create("# Second\n", display_name_template="Clipboard {index}.md")
+    third = store.create("# Third\n", display_name_template="Clipboard {index}.md")
+    first_entered = threading.Event()
+    first_release = threading.Event()
+    third_entered = threading.Event()
+    third_release = threading.Event()
+
+    def blocking_first(path: str):
+        first_entered.set()
+        first_release.wait(5)
+        return inspect_utf8_markdown_snapshot(path)
+
+    def reject_second(_path: str):
+        raise ValueError("test rejection")
+
+    def blocking_third(path: str):
+        third_entered.set()
+        third_release.wait(5)
+        return inspect_utf8_markdown_snapshot(path)
+
+    vm = MainWindowViewModel(
+        retain_inspection_inputs=store.retain_inspection,
+        release_inspection_inputs=store.release_inspection,
+    )
+    try:
+        vm.request_files([first.path], file_inspector=blocking_first)
+        qtbot.waitUntil(first_entered.is_set)
+        vm.request_files([second.path], file_inspector=reject_second)
+        assert Path(first.path).is_file()
+        assert Path(second.path).is_file()
+
+        first_release.set()
+        qtbot.waitUntil(lambda: not vm.inspection_busy)
+        assert not Path(first.path).exists()
+        assert not Path(second.path).exists()
+        assert vm.files == []
+
+        vm.request_files([third.path], file_inspector=blocking_third)
+        qtbot.waitUntil(third_entered.is_set)
+        vm.clear_files()
+        assert Path(third.path).is_file()
+        third_release.set()
+        qtbot.waitUntil(lambda: not vm.inspection_busy)
+        assert not Path(third.path).exists()
+    finally:
+        first_release.set()
+        third_release.set()
+        vm.cancel_inspection()
+        qtbot.waitUntil(lambda: not vm.inspection_busy)
+        store.close()
+

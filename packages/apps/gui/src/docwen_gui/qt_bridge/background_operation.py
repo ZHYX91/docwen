@@ -42,29 +42,43 @@ class BackgroundOperation(QObject):
         super().__init__(parent)
         self._task: _OperationTask | None = None
         self._completion: Callable[[Any, Exception | None], None] | None = None
-        self._pending: tuple[Callable[[CancellationToken], Any], Callable[[Any, Exception | None], None]] | None = None
+        self._finalized: Callable[[], None] | None = None
+        self._pending: tuple[
+            Callable[[CancellationToken], Any],
+            Callable[[Any, Exception | None], None],
+            Callable[[], None] | None,
+        ] | None = None
 
     @property
     def busy(self) -> bool:
         return self._task is not None or self._pending is not None
 
     def submit(
-        self, work: Callable[[CancellationToken], Any], completed: Callable[[Any, Exception | None], None]
+        self,
+        work: Callable[[CancellationToken], Any],
+        completed: Callable[[Any, Exception | None], None],
+        *,
+        finalized: Callable[[], None] | None = None,
     ) -> None:
         self.cancel()
-        self._pending = (work, completed)
+        self._pending = (work, completed, finalized)
         self._start_pending()
         self.busy_changed.emit(True)
 
     def cancel(self) -> None:
+        pending = self._pending
         self._pending = None
+        if pending is not None:
+            finalized = pending[2]
+            if finalized is not None:
+                finalized()
         if self._task is not None:
             self._task.token.cancel()
 
     def _start_pending(self) -> None:
         if self._task is not None or self._pending is None:
             return
-        work, self._completion = self._pending
+        work, self._completion, self._finalized = self._pending
         self._pending = None
         self._task = _OperationTask(work)
         self._task.signals.finished.connect(self._finished)
@@ -78,11 +92,15 @@ class BackgroundOperation(QObject):
         if task is None:
             return
         completed = self._completion
+        finalized = self._finalized
         self._task = None
         self._completion = None
+        self._finalized = None
         try:
             if not task.token.is_cancelled and completed is not None:
                 completed(task.result, task.error)
         finally:
+            if finalized is not None:
+                finalized()
             self._start_pending()
             self.busy_changed.emit(self.busy)

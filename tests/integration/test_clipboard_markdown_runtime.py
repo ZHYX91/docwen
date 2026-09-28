@@ -156,3 +156,63 @@ def test_plain_clipboard_text_exports_real_docx_without_reclassification(
     assert text in "\n".join(paragraph.text for paragraph in document.paragraphs)
     assert source.read_bytes() == text.encode("utf-8")
     store.close()
+
+@pytest.mark.parametrize(
+    ("synthetic", "text"),
+    [
+        (False, "# Ordinary Markdown\n\nExecutionThread control path.\n"),
+        (True, "<html><body>literal clipboard markup</body></html>\n\n# Synthetic Markdown\n"),
+    ],
+)
+def test_execution_thread_revalidates_matching_inspection_through_real_runtime(
+    tmp_path: Path,
+    round_trip_runtime: Any,
+    qtbot,
+    synthetic: bool,
+    text: str,
+) -> None:
+    from docwen_gui.qt_bridge.execution import ExecutionThread
+
+    source = tmp_path / ("clipboard.md" if synthetic else "ordinary.md")
+    source.write_text(text, encoding="utf-8")
+    inspection = inspect_utf8_markdown_snapshot(source) if synthetic else inspect_file(source)
+    request = ConversionRequest(
+        request_id=f"execution-thread-{'synthetic' if synthetic else 'ordinary'}",
+        input_refs=[
+            FileRef(
+                path=str(source),
+                format=inspection.detected_format,
+                category=inspection.workflow_category,
+                size_bytes=inspection.size_bytes,
+                metadata={FILE_INSPECTION_METADATA_KEY: inspection.to_dict()},
+            )
+        ],
+        target_format="docx",
+        output_policy=OutputPolicy(output_dir=str(tmp_path / "thread-output")),
+    )
+    controller = ApplicationController(runtime_port=round_trip_runtime)
+    context = {
+        "request_id": request.request_id,
+        "file_path": str(source),
+        "display_name": source.name,
+    }
+    results: list[Any] = []
+    errors: list[str] = []
+    thread = ExecutionThread(
+        controller=controller,
+        request=request,
+        context=context,
+    )
+    thread.result_signal.connect(lambda result, _context: results.append(result))
+    thread.error_signal.connect(lambda message, _context: errors.append(message))
+    thread.start()
+    qtbot.waitUntil(lambda: bool(results or errors), timeout=15000)
+    thread.wait(15000)
+
+    assert errors == []
+    assert len(results) == 1
+    result = results[0]
+    assert result.success, result.error
+    primary = next(artifact for artifact in result.artifacts if artifact.kind == "primary")
+    assert Path(primary.staging_path).is_file()
+

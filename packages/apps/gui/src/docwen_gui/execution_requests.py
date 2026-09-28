@@ -270,6 +270,7 @@ class ExecutionRequestBuilder:
             "action_name": action_name,
             "options": _redacted_request_options(request_options),
             "open_after_done": output_policy.open_after_done,
+            "input_refs": [ref.to_dict() for ref in request.input_refs],
         }
         if source_labels:
             context["source_labels"] = source_labels

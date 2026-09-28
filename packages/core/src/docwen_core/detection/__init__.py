@@ -21,6 +21,7 @@ from docwen_core.detection._validation import (
     has_supported_filename_declaration,
     inspect_file,
     inspect_utf8_markdown_snapshot,
+    reinspect_frozen_file,
 )
 from docwen_core.detection.ooxml_signature import (
     OOXML_SIGNATURE_DERIVED_OUTPUT_UNSIGNED,
@@ -51,6 +52,7 @@ __all__ = [
     "inspect_file",
     "inspect_ooxml_signature_graph",
     "inspect_utf8_markdown_snapshot",
+    "reinspect_frozen_file",
     "signature_derived_output_diagnostic",
     "signature_info_for_ref",
     "signature_validation_diagnostic",

@@ -429,6 +429,25 @@ def inspect_utf8_markdown_snapshot(
     )
 
 
+
+def reinspect_frozen_file(
+    file_path: str,
+    frozen: FileInspection,
+    *,
+    cancel_check: Callable[[], None] | None = None,
+) -> FileInspection:
+    """Repeat the inspection method represented by one frozen ingress fact.
+
+    Generic files keep the canonical content-first inspector. Explicit managed
+    clipboard Markdown snapshots keep their narrow UTF-8 Markdown producer
+    contract. Callers remain responsible for comparing the complete returned
+    fact with the frozen fact when exact identity is required.
+    """
+
+    if frozen.detection_method is DetectionMethod.SYNTHETIC_MARKDOWN:
+        return inspect_utf8_markdown_snapshot(file_path, cancel_check=cancel_check)
+    return inspect_file(file_path, cancel_check=cancel_check)
+
 def has_supported_filename_declaration(file_path: str) -> bool:
     """Return whether the filename declaration is accepted by file pickers.
 
@@ -513,4 +532,5 @@ __all__ = [
     "has_supported_filename_declaration",
     "inspect_file",
     "inspect_utf8_markdown_snapshot",
+    "reinspect_frozen_file",
 ]

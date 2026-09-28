@@ -346,6 +346,14 @@ class MainWindow(QWidget):
         store = self._clipboard_store
         return bool(store is not None and store.is_snapshot(file_path))
 
+    def _retain_clipboard_inspection(self, owner: str, paths: tuple[str, ...]) -> None:
+        if self._clipboard_store is not None:
+            self._clipboard_store.retain_inspection(owner, paths)
+
+    def _release_clipboard_inspection(self, owner: str) -> None:
+        if self._clipboard_store is not None:
+            self._clipboard_store.release_inspection(owner)
+
     def _retain_clipboard_active(self, owner: str, paths: tuple[str, ...]) -> None:
         if self._clipboard_store is not None:
             self._clipboard_store.retain_active(owner, paths)
@@ -635,6 +643,10 @@ class MainWindow(QWidget):
         from .widgets.info_area import InfoArea
         from .widgets.input_area import InputArea
 
+        self._view_model.set_inspection_ownership(
+            retain=self._retain_clipboard_inspection,
+            release=self._release_clipboard_inspection,
+        )
         self._input_area_vm = InputAreaViewModel(
             main_vm=self._view_model,
             parent=self,
@@ -1877,16 +1889,21 @@ class MainWindow(QWidget):
             and (self._clipboard_store is None or not self._clipboard_store.snapshot_available(path))
         ]
         if unavailable_snapshots:
+            changed_path = unavailable_snapshots[0]
             labels = context.get("source_labels", {})
-            label = labels.get(normalize_path(unavailable_snapshots[0])) if isinstance(labels, dict) else None
-            self._info_area_vm.add_message(
-                _t(
+            label = labels.get(normalize_path(changed_path)) if isinstance(labels, dict) else None
+            if Path(changed_path).exists():
+                message = _t(
+                    "main_window.file_admission_changed",
+                    "The file changed after it was added. Remove it from the list and add it again to re-check the file, then retry.",
+                )
+            else:
+                message = _t(
                     "components.file_drop.clipboard_retry_unavailable",
                     "The original clipboard snapshot for {name} is no longer available; paste again to create a new input.",
                     name=label or _t("components.file_drop.clipboard_name_generic", "Clipboard Markdown"),
-                ),
-                "warning",
-            )
+                )
+            self._info_area_vm.add_message(message, "warning")
             return
         if len(retry_paths) > 1:
             self._view_model.set_mode("batch")
@@ -1917,9 +1934,74 @@ class MainWindow(QWidget):
                 )
 
         if missing_paths:
-            self._view_model.request_files(
-                missing_paths, lambda outcome: resume_retry() if not outcome.rejected else None
-            )
+            from docwen_core.detection import reinspect_frozen_file
+            from docwen_core.models import FILE_INSPECTION_METADATA_KEY, FileInspection
+            from docwen_core.models.file_ref import FileRef
+
+            frozen_refs: dict[str, FileRef] = {}
+            for raw_ref in context.get("input_refs", []):
+                if not isinstance(raw_ref, dict):
+                    continue
+                try:
+                    frozen_ref = FileRef.from_dict(raw_ref)
+                except (TypeError, ValueError):
+                    continue
+                frozen_refs[normalize_path(frozen_ref.path)] = frozen_ref
+
+            pending_restore = {normalize_path(path) for path in missing_paths}
+            restore_failed = False
+
+            def restored(path: str, outcome) -> None:
+                nonlocal restore_failed
+                key = normalize_path(path)
+                pending_restore.discard(key)
+                if outcome.rejected:
+                    restore_failed = True
+                    message = (
+                        _t(
+                            "main_window.file_admission_changed",
+                            "The file changed after it was added. Remove it from the list and add it again to re-check the file, then retry.",
+                        )
+                        if Path(path).exists()
+                        else _t(
+                            "main_window.file_admission_missing",
+                            "The input file no longer exists: {path}",
+                            path=path,
+                        )
+                    )
+                    self._info_area_vm.add_message(message, "warning")
+                if not pending_restore and not restore_failed:
+                    resume_retry()
+
+            for path in missing_paths:
+                frozen_ref = frozen_refs.get(normalize_path(path))
+                inspector = None
+                if frozen_ref is not None:
+                    raw_inspection = frozen_ref.metadata.get(FILE_INSPECTION_METADATA_KEY)
+                    if isinstance(raw_inspection, dict):
+                        try:
+                            frozen_inspection = FileInspection.from_dict(raw_inspection)
+                        except (TypeError, ValueError):
+                            frozen_inspection = None
+                        if frozen_inspection is not None:
+
+                            def inspect_retry(
+                                current_path: str,
+                                *,
+                                frozen=frozen_inspection,
+                                expected=dict(raw_inspection),
+                            ):
+                                current = reinspect_frozen_file(current_path, frozen)
+                                if current.to_dict() != expected:
+                                    raise ValueError("retry input changed after frozen admission")
+                                return current
+
+                            inspector = inspect_retry
+                self._view_model.request_files(
+                    [path],
+                    lambda outcome, restored_path=path: restored(restored_path, outcome),
+                    file_inspector=inspector,
+                )
         else:
             resume_retry()
 

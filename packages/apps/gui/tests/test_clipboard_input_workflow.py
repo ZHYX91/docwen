@@ -8,6 +8,7 @@ import pytest
 from PySide6.QtCore import QMimeData, Qt
 from PySide6.QtWidgets import QApplication
 
+from docwen_core.models import FILE_INSPECTION_METADATA_KEY
 from docwen_core.models.request import OutputPolicy
 from docwen_gui.dialogs.activity_records import ActivityRecordsDialog
 from docwen_gui.main_window import MainWindow
@@ -302,3 +303,92 @@ def test_activity_records_show_clipboard_label_without_backing_path(
     assert normalized not in model.records[0].details
     assert dialog.table.model().index(0, 2).data() == descriptor.display_name
     assert not dialog.open_source.isEnabled()
+
+def test_failed_html_clipboard_retry_restores_original_synthetic_inspection(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    text = "<html><body>literal clipboard body</body></html>\n"
+    path = _paste_text(clipboard_window, qapp, qtbot, text)
+    normalized = normalize_path(path)
+    original_ref = clipboard_window.view_model.files[0]
+    original_fact = dict(original_ref.metadata[FILE_INSPECTION_METADATA_KEY])
+    assert original_fact["detection_method"] == "synthetic_markdown"
+    assert clipboard_window._clipboard_store is not None
+    descriptor = clipboard_window._clipboard_store.descriptor(path)
+    assert descriptor is not None
+
+    context = {
+        "request_id": "clipboard-html-retry",
+        "file_path": normalized,
+        "target_format": "docx",
+        "action_name": "",
+        "options": {},
+        "input_refs": [original_ref.to_dict()],
+        "synthetic_input_paths": [normalized],
+        "source_labels": {normalized: descriptor.display_name},
+    }
+    clipboard_window._task_history.remember(context)
+    clipboard_window._task_history.record("clipboard-html-retry", normalized, "failed")
+    clipboard_window._info_area_vm.set_task_summary(operation_id="clipboard-html-retry", state="failed")
+    clipboard_window.view_model.remove_file(path)
+    qapp.processEvents()
+    assert Path(path).is_file()
+
+    qapp.clipboard().setText("# New clipboard must not replace retry bytes\n")
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr(clipboard_window._workflow, "single", lambda **kwargs: calls.append(kwargs))
+
+    clipboard_window._retry_failed_request()
+    qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
+    qtbot.waitUntil(lambda: len(calls) == 1)
+
+    restored_ref = clipboard_window.view_model.files[0]
+    assert restored_ref.path == normalized
+    assert restored_ref.metadata[FILE_INSPECTION_METADATA_KEY] == original_fact
+    assert Path(path).read_text(encoding="utf-8") == text
+    assert calls[0]["file_path"] == normalized
+
+
+def test_tampered_failed_clipboard_snapshot_is_rejected_before_retry(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = _paste_text(clipboard_window, qapp, qtbot, "<html>original</html>\n")
+    normalized = normalize_path(path)
+    original_ref = clipboard_window.view_model.files[0]
+    assert clipboard_window._clipboard_store is not None
+    descriptor = clipboard_window._clipboard_store.descriptor(path)
+    assert descriptor is not None
+    clipboard_window._task_history.remember(
+        {
+            "request_id": "clipboard-tamper-retry",
+            "file_path": normalized,
+            "target_format": "docx",
+            "action_name": "",
+            "options": {},
+            "input_refs": [original_ref.to_dict()],
+            "synthetic_input_paths": [normalized],
+            "source_labels": {normalized: descriptor.display_name},
+        }
+    )
+    clipboard_window._task_history.record("clipboard-tamper-retry", normalized, "failed")
+    clipboard_window._info_area_vm.set_task_summary(operation_id="clipboard-tamper-retry", state="failed")
+    clipboard_window.view_model.remove_file(path)
+    qapp.processEvents()
+
+    Path(path).write_text("<html>tampered</html>\n", encoding="utf-8")
+    qapp.clipboard().setText("# Replacement clipboard\n")
+    calls: list[dict[str, object]] = []
+    monkeypatch.setattr(clipboard_window._workflow, "single", lambda **kwargs: calls.append(kwargs))
+
+    clipboard_window._retry_failed_request()
+    qapp.processEvents()
+
+    assert calls == []
+    assert clipboard_window.view_model.files == []
+

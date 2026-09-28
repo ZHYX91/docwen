@@ -29,12 +29,17 @@ class ExecutionAdmissionError(RuntimeError):
 
 def check_frozen_request(request: ConversionRequest) -> None:
     """Revalidate exact ingress bytes on the execution worker before conversion."""
-    from docwen_core.detection import inspect_file
+    from docwen_core.detection import reinspect_frozen_file
 
     for ref in request.input_refs:
         raw_inspection = ref.metadata.get(FILE_INSPECTION_METADATA_KEY)
+        if not isinstance(raw_inspection, dict):
+            raise ExecutionAdmissionError(
+                _t("main_window.file_admission_invalid", "File inspection data is invalid.")
+            )
         try:
-            inspection = inspect_file(ref.path)
+            frozen = FileInspection.from_dict(raw_inspection)
+            inspection = reinspect_frozen_file(ref.path, frozen)
         except FileNotFoundError as exc:
             raise ExecutionAdmissionError(
                 _t("main_window.file_admission_missing", "The input file no longer exists: {path}", path=ref.path)
