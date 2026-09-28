@@ -391,8 +391,8 @@ class MainWindow(QWidget):
                 "warning",
             )
             return
-        store = self._clipboard_store_for_paste()
         try:
+            store = self._clipboard_store_for_paste()
             snapshot = store.create(
                 text,
                 display_name_template=_t(
@@ -431,9 +431,10 @@ class MainWindow(QWidget):
         policy: OutputPolicy,
     ) -> OutputPolicy | None:
         synthetic = [path for path in file_paths if self._is_clipboard_input(path)]
-        if not synthetic or policy.output_dir or policy.output_path:
+        if not synthetic:
             return policy
-        selected = QFileDialog.getExistingDirectory(
+        explicit_output = policy.output_dir or policy.output_path
+        selected = explicit_output or QFileDialog.getExistingDirectory(
             self,
             _t(
                 "components.file_drop.clipboard_output_title",
@@ -452,6 +453,8 @@ class MainWindow(QWidget):
             return None
         try:
             output_dir = Path(selected).expanduser().resolve(strict=False)
+            if policy.output_path and not policy.output_dir:
+                output_dir = output_dir.parent
         except (OSError, RuntimeError, ValueError):
             self._info_area_vm.add_message(
                 _t(
@@ -473,6 +476,8 @@ class MainWindow(QWidget):
                     "warning",
                 )
                 return None
+        if explicit_output:
+            return policy
         if mode != "batch":
             return replace(policy, output_dir=str(output_dir), per_input_output_dirs={})
         return replace(

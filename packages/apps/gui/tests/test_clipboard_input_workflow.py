@@ -135,6 +135,11 @@ def test_source_output_policy_cancel_custom_and_mixed_batch(
         lambda *_a, **_k: pytest.fail("custom output must not ask again"),
     )
     assert clipboard_window._prepare_clipboard_output_policy([synthetic], "single", custom_policy) is custom_policy
+    for unsafe in (
+        OutputPolicy(output_dir=str(Path(synthetic).parent)),
+        OutputPolicy(output_path=str(Path(synthetic).parent / "result.docx")),
+    ):
+        assert clipboard_window._prepare_clipboard_output_policy([synthetic], "single", unsafe) is None
 
     persistent = tmp_path / "persistent"
     monkeypatch.setattr(
@@ -150,6 +155,25 @@ def test_source_output_policy_cancel_custom_and_mixed_batch(
     assert mixed.output_dir is None
     assert mixed.for_input(str(regular)).output_dir is None
     assert mixed.for_input(synthetic).output_dir == str(persistent.resolve())
+
+
+def test_unwritable_snapshot_root_rejects_paste_without_changing_selection(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original = _paste_text(clipboard_window, qapp, qtbot, "# Retained input\n")
+
+    def unavailable_store():
+        raise PermissionError("test-only denied root")
+
+    monkeypatch.setattr(clipboard_window, "_clipboard_store_for_paste", unavailable_store)
+    qapp.clipboard().setText("# Replacement\n")
+    qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
+    qapp.processEvents()
+    assert [ref.path for ref in clipboard_window.view_model.files] == [original]
+    assert Path(original).read_text(encoding="utf-8") == "# Retained input\n"
 
 
 def test_failed_retry_reuses_original_snapshot_not_current_clipboard(
