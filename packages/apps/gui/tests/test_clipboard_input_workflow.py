@@ -304,6 +304,7 @@ def test_activity_records_show_clipboard_label_without_backing_path(
     assert dialog.table.model().index(0, 2).data() == descriptor.display_name
     assert not dialog.open_source.isEnabled()
 
+
 def test_failed_html_clipboard_retry_restores_original_synthetic_inspection(
     clipboard_window: MainWindow,
     qapp: QApplication,
@@ -391,6 +392,7 @@ def test_tampered_failed_clipboard_snapshot_is_rejected_before_retry(
 
     assert calls == []
     assert clipboard_window.view_model.files == []
+
 
 def test_main_window_source_location_receiver_rejects_synthetic_input(
     clipboard_window: MainWindow,

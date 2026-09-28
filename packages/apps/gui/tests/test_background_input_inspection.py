@@ -181,6 +181,7 @@ def test_reveal_fallback_runs_on_ui_thread(qtbot, tmp_path: Path, monkeypatch: p
         operation.cancel()
         qtbot.waitUntil(lambda: not operation.busy)
 
+
 @pytest.mark.parametrize("synthetic_first", [False, True])
 def test_batch_interleaving_preserves_each_paths_inspection_intent(
     qtbot,

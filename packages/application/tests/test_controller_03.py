@@ -334,7 +334,6 @@ class TestExecuteMethods:
         assert seen[0][1] == str(legacy_output)
         assert seen[1] == (str(direct), str(direct_output))
 
-
     def test_preconversion_staging_is_cleaned_when_runtime_raises(
         self,
         mock_runtime: MagicMock,

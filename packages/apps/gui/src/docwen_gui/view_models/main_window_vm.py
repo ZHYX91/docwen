@@ -344,15 +344,10 @@ class MainWindowViewModel(QObject):
             _InspectionIntent(path, file_inspector if file_inspector is not None else self._file_inspector)
             for path in paths
         ]
-        completions = (
-            [_InspectionCompletion(tuple(paths), completed)]
-            if completed is not None
-            else []
-        )
+        completions = [_InspectionCompletion(tuple(paths), completed)] if completed is not None else []
         if self.mode == "batch":
             merged: dict[str, _InspectionIntent] = {
-                self._inspection_key(intent.path): intent
-                for intent in self._pending_inspection_intents
+                self._inspection_key(intent.path): intent for intent in self._pending_inspection_intents
             }
             for intent in requested:
                 merged[self._inspection_key(intent.path)] = intent

@@ -9,7 +9,6 @@ from PySide6.QtCore import QEvent, Qt
 from PySide6.QtWidgets import QLabel, QSizePolicy, QWidget
 
 
-
 def safe_tooltip_text(text: str, *, limit: int = 512) -> str:
     """Render bounded user text literally inside Qt's rich tooltip surface."""
 

@@ -1962,10 +1962,7 @@ class BatchList(QWidget):
             locatable = [
                 path
                 for path in selected
-                if (
-                    (entry := self._vm.get_file_entry(path)) is not None
-                    and entry.source_location_available
-                )
+                if (entry := self._vm.get_file_entry(path)) is not None and entry.source_location_available
             ]
             if locatable:
                 _action_open = menu.addAction(

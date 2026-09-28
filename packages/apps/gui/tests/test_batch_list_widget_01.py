@@ -256,7 +256,11 @@ class TestConstruction:
         assert categories[-1] == "spreadsheet"
         assert selections[-1] is None
 
-def test_open_selected_locations_emits_only_real_source_locations(qtbot, tmp_path: Path) -> None:
+
+def test_open_selected_locations_emits_only_real_source_locations(
+    qtbot,
+    tmp_path: Path,
+) -> None:
     from docwen_gui.view_models.batch_list_vm import BatchListViewModel
     from docwen_gui.widgets.batch_list import BatchList
 

@@ -573,6 +573,7 @@ class TestSixTabs:
         finally:
             widget.deleteLater()
 
+
 def test_user_text_tooltips_escape_markup_controls_and_bound_length(qtbot) -> None:
     from docwen_gui.widgets.elided_label import MiddleElidedLabel
 

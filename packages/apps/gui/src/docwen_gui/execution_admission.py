@@ -35,18 +35,29 @@ def check_frozen_request(request: ConversionRequest) -> None:
         raw_inspection = ref.metadata.get(FILE_INSPECTION_METADATA_KEY)
         if not isinstance(raw_inspection, dict):
             raise ExecutionAdmissionError(
-                _t("main_window.file_admission_invalid", "File inspection data is invalid.")
+                _t(
+                    "main_window.file_admission_invalid",
+                    "File inspection data is invalid.",
+                )
             )
         try:
             frozen = FileInspection.from_dict(raw_inspection)
             inspection = reinspect_frozen_file(ref.path, frozen)
         except FileNotFoundError as exc:
             raise ExecutionAdmissionError(
-                _t("main_window.file_admission_missing", "The input file no longer exists: {path}", path=ref.path)
+                _t(
+                    "main_window.file_admission_missing",
+                    "The input file no longer exists: {path}",
+                    path=ref.path,
+                )
             ) from exc
         except OSError as exc:
             raise ExecutionAdmissionError(
-                _t("main_window.file_admission_unreadable", "The input file cannot be read: {path}", path=ref.path)
+                _t(
+                    "main_window.file_admission_unreadable",
+                    "The input file cannot be read: {path}",
+                    path=ref.path,
+                )
             ) from exc
         except (TypeError, ValueError) as exc:
             raise ExecutionAdmissionError(

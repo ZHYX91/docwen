@@ -43,11 +43,14 @@ class BackgroundOperation(QObject):
         self._task: _OperationTask | None = None
         self._completion: Callable[[Any, Exception | None], None] | None = None
         self._finalized: Callable[[], None] | None = None
-        self._pending: tuple[
-            Callable[[CancellationToken], Any],
-            Callable[[Any, Exception | None], None],
-            Callable[[], None] | None,
-        ] | None = None
+        self._pending: (
+            tuple[
+                Callable[[CancellationToken], Any],
+                Callable[[Any, Exception | None], None],
+                Callable[[], None] | None,
+            ]
+            | None
+        ) = None
 
     @property
     def busy(self) -> bool:

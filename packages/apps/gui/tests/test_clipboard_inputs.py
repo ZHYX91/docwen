@@ -57,6 +57,7 @@ def test_clipboard_snapshot_empty_and_whitespace_are_rejected_without_files(tmp_
 def test_plaintext_preview_replaces_controls_without_mutating_content_contract() -> None:
     assert bounded_plaintext_preview("A\x00B\nC") == "A�B\nC"
 
+
 def test_create_fsync_failure_compensates_partial_snapshot(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -131,7 +132,9 @@ def test_close_delete_failure_does_not_forget_snapshot_tracking(
     assert not store.session_root.exists()
 
 
-def test_session_lock_preserves_live_instance_and_recovers_provably_stale_session(tmp_path: Path) -> None:
+def test_session_lock_preserves_live_instance_and_recovers_provably_stale_session(
+    tmp_path: Path,
+) -> None:
     root = tmp_path / "managed"
     live = ClipboardInputStore(root)
     live_snapshot = live.create("# live\n", display_name_template="Clipboard {index}.md")

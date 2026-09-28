@@ -429,7 +429,6 @@ def inspect_utf8_markdown_snapshot(
     )
 
 
-
 def reinspect_frozen_file(
     file_path: str,
     frozen: FileInspection,
@@ -447,6 +446,7 @@ def reinspect_frozen_file(
     if frozen.detection_method is DetectionMethod.SYNTHETIC_MARKDOWN:
         return inspect_utf8_markdown_snapshot(file_path, cancel_check=cancel_check)
     return inspect_file(file_path, cancel_check=cancel_check)
+
 
 def has_supported_filename_declaration(file_path: str) -> bool:
     """Return whether the filename declaration is accepted by file pickers.

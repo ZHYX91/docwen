@@ -158,6 +158,7 @@ def test_plain_clipboard_text_exports_real_docx_without_reclassification(
     assert source.read_bytes() == text.encode("utf-8")
     store.close()
 
+
 @pytest.mark.parametrize(
     ("synthetic", "text"),
     [
@@ -216,6 +217,7 @@ def test_execution_thread_revalidates_matching_inspection_through_real_runtime(
     assert result.success, result.error
     primary = next(artifact for artifact in result.artifacts if artifact.kind == "primary")
     assert Path(primary.staging_path).is_file()
+
 
 def test_synthetic_authored_link_targets_do_not_enter_conversion_logs(
     tmp_path: Path,

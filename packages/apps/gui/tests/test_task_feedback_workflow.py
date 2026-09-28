@@ -395,6 +395,7 @@ def test_settings_short_window_keeps_navigation_and_confirmation_reachable(qtbot
         assert dialog.rect().contains(button.mapTo(dialog, button.rect().bottomRight()))
     dialog.close()
 
+
 def test_batch_progress_uses_synthetic_logical_name_instead_of_backing_path(main_window) -> None:
     backing = "/managed/session/clipboard-opaque.md"
     label = "Clipboard Markdown 7.md"
