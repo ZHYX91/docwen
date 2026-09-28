@@ -114,19 +114,43 @@ def test_document_node_link_relocation_preserves_external_targets_and_integrity(
     staging = tmp_path / "staging-links"
     staging.mkdir()
     main = staging / "main.md"
+    child = staging / "child.md"
     image = staging / "image.png"
-    original = (
+    hash_image = staging / "hash-image.png"
+    colon_image = staging / "colon-image.png"
+    spaced_image = staging / "space-image.png"
+    main_original = (
         "[online](https://example.test/image.png#section)\n"
-        "[local](assets/image.png#local)\n"
-        "[encoded](assets%2Fimage.png#encoded)\n"
+        "[invalid](https://[broken/image.png)\n"
+        "[nfkc](https://／example.test/image.png)\n"
         "[different](https://example.test/other.png#other)\n"
         "[network](//example.test/image.png#network)\n"
+        r"[unc](\\server\image.png#unc)" "\n"
         "[anchor](#section)\n"
+        "[local](assets/image.png#local)\n"
+        "[encoded-path](assets%2Fimage.png#encoded)\n"
+        "[encoded-fragment](assets/image.png#part%29tail)\n"
+        "![[assets/image.png#part%29wiki]]\n"
+        "[wiki-online](https://example.test/image.png#wiki-online)\n"
+        "[encoded-hash-name](assets/image%23v1.png#p)\n"
+        "[encoded-colon-name](part%3Aone.png)\n"
+        "[space-name](assets/my%20image.png#space)\n"
         '<a href="https://example.test/image.png#html-online">online</a>\n'
-        '<img src="assets/image.png#html-local">\n'
+        '<a href="https://[broken/image.png">broken</a>\n'
+        '<img src="assets/image.png#part%22tail">\n'
     )
-    main.write_text(original, encoding="utf-8")
+    child_original = (
+        "[local](assets/image.png#child%29tail)\n"
+        '<img src="assets/image.png#child%22tail">\n'
+        "![[assets/image.png#child%29wiki]]\n"
+        "[hash](assets/image%23v1.png#child)\n"
+    )
+    main.write_bytes(main_original.encode("utf-8"))
+    child.write_bytes(child_original.encode("utf-8"))
     image.write_bytes(b"png")
+    hash_image.write_bytes(b"hash-png")
+    colon_image.write_bytes(b"colon-png")
+    spaced_image.write_bytes(b"space-png")
     output = tmp_path / "output-links"
 
     result = OutputFinalizer().finalize(
@@ -140,9 +164,33 @@ def test_document_node_link_relocation_preserves_external_targets_and_integrity(
                 primary=True,
             ),
             _artifact(
+                child,
+                artifact_id="child",
+                suggested_name="child.md",
+                media_type="text/markdown",
+            ),
+            _artifact(
                 image,
                 artifact_id="image",
                 suggested_name="assets/image.png",
+                media_type="image/png",
+            ),
+            _artifact(
+                hash_image,
+                artifact_id="hash-image",
+                suggested_name="assets/image#v1.png",
+                media_type="image/png",
+            ),
+            _artifact(
+                colon_image,
+                artifact_id="colon-image",
+                suggested_name="part:one.png",
+                media_type="image/png",
+            ),
+            _artifact(
+                spaced_image,
+                artifact_id="space-image",
+                suggested_name="assets/my image.png",
                 media_type="image/png",
             ),
         ],
@@ -150,24 +198,42 @@ def test_document_node_link_relocation_preserves_external_targets_and_integrity(
         input_path=str(source),
     )
 
-    assert result.success is True
-    primary = next(artifact for artifact in result.artifacts if artifact.is_primary)
-    published = Path(primary.staging_path)
-    expected = (
-        b"[online](https://example.test/image.png#section)\n"
-        b"[local](image.png#local)\n"
-        b"[encoded](image.png#encoded)\n"
-        b"[different](https://example.test/other.png#other)\n"
-        b"[network](//example.test/image.png#network)\n"
-        b"[anchor](#section)\n"
-        b'<a href="https://example.test/image.png#html-online">online</a>\n'
-        b'<img src="image.png#html-local">\n'
-    )
-    assert published.parent.parent == output
-    assert published.read_bytes() == expected
-    assert primary.size_bytes == len(expected)
-    assert primary.sha256 == hashlib.sha256(expected).hexdigest()
-
+    assert result.success is True, result.diagnostics
+    expected_main = (
+        "[online](https://example.test/image.png#section)\n"
+        "[invalid](https://[broken/image.png)\n"
+        "[nfkc](https://／example.test/image.png)\n"
+        "[different](https://example.test/other.png#other)\n"
+        "[network](//example.test/image.png#network)\n"
+        r"[unc](\\server\image.png#unc)" "\n"
+        "[anchor](#section)\n"
+        "[local](image.png#local)\n"
+        "[encoded-path](image.png#encoded)\n"
+        "[encoded-fragment](image.png#part%29tail)\n"
+        "![[image.png#part%29wiki]]\n"
+        "[wiki-online](https://example.test/image.png#wiki-online)\n"
+        "[encoded-hash-name](image%23v1.png#p)\n"
+        "[encoded-colon-name](part_one.png)\n"
+        "[space-name](my%20image.png#space)\n"
+        '<a href="https://example.test/image.png#html-online">online</a>\n'
+        '<a href="https://[broken/image.png">broken</a>\n'
+        '<img src="image.png#part%22tail">\n'
+    ).encode("utf-8")
+    expected_child = (
+        "[local](../image.png#child%29tail)\n"
+        '<img src="../image.png#child%22tail">\n'
+        "![[../image.png#child%29wiki]]\n"
+        "[hash](../image%23v1.png#child)\n"
+    ).encode("utf-8")
+    artifacts = {artifact.artifact_id: artifact for artifact in result.artifacts}
+    for artifact_id, expected in {"main": expected_main, "child": expected_child}.items():
+        artifact = artifacts[artifact_id]
+        published = Path(artifact.staging_path)
+        assert published.read_bytes() == expected
+        assert artifact.size_bytes == len(expected)
+        assert artifact.sha256 == hashlib.sha256(expected).hexdigest()
+    assert Path(artifacts["main"].staging_path).parent.parent == output
+    assert Path(artifacts["child"].staging_path).parent.parent.parent == output
 
 def test_document_node_failure_leaves_no_partial_root(tmp_path: Path) -> None:
     source = tmp_path / "report.docx"

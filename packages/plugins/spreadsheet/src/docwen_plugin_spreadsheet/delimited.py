@@ -5,6 +5,8 @@ from __future__ import annotations
 import codecs
 from pathlib import Path
 
+from docwen_core.detection import delimited_text_encodings
+
 _SAMPLE_LIMIT = 65536
 
 
@@ -14,12 +16,7 @@ def decoded_samples(file_path: str) -> list[tuple[str, str]]:
         raw = stream.read(_SAMPLE_LIMIT + 1)
     final = len(raw) <= _SAMPLE_LIMIT
     sample = raw[:_SAMPLE_LIMIT]
-    if sample.startswith(codecs.BOM_UTF8):
-        candidates = ("utf-8-sig",)
-    elif sample.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
-        candidates = ("utf-16",)
-    else:
-        candidates = ("utf-8-sig", "gbk", "utf-16")
+    candidates = delimited_text_encodings(file_path)
     result: list[tuple[str, str]] = []
     for encoding in candidates:
         try:

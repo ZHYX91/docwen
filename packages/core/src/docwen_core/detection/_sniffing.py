@@ -484,7 +484,9 @@ def _detect_delimited_format(text: str) -> str | None:
     return "tsv" if dialect.delimiter == "\t" else "csv"
 
 
-def _declared_text_encodings(file_path: str) -> tuple[str, ...]:
+def delimited_text_encodings(file_path: str) -> tuple[str, ...]:
+    """Return the strict BOM-first decoding candidates for delimited text."""
+
     try:
         with open(file_path, "rb") as fh:
             head = fh.read(4)
@@ -500,7 +502,7 @@ def _declared_text_encodings(file_path: str) -> tuple[str, ...]:
     ):
         if head.startswith(bom):
             return (encoding,)
-    return ("utf-8", "gbk")
+    return ("utf-8-sig", "gbk")
 
 
 def matches_single_record_delimited_declaration(file_path: str, declared_format: str) -> bool:
@@ -509,7 +511,7 @@ def matches_single_record_delimited_declaration(file_path: str, declared_format:
         return False
 
     delimiter = "," if declared_format == "csv" else "\t"
-    for encoding in _declared_text_encodings(file_path):
+    for encoding in delimited_text_encodings(file_path):
         try:
             with open(file_path, encoding=encoding, errors="strict", newline="") as stream:
                 rows = csv.reader(stream, delimiter=delimiter, strict=True)

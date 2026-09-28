@@ -40,7 +40,7 @@ Gongwen produces one combined attachment node, without an attachment number or t
     通知_附件_20260907_180000_fromDocx.md
 ```
 
-Attachment titles remain in the content. Other auxiliary Markdown outputs are child nodes. Images and other linked resources retain safe names within the root, and Markdown links are rewritten relative to their final logical paths. Link relocation applies only to known local artifact targets: URI-scheme targets plus scheme-relative or UNC network targets remain byte-for-byte unchanged even when their basename matches a local artifact. Local encoded paths are still decoded for artifact matching, and existing fragments are preserved on rewritten local targets.
+Attachment titles remain in the content. Other auxiliary Markdown outputs are child nodes. Images and other linked resources retain safe names within the root, and Markdown links are rewritten relative to their final logical paths. Link relocation applies only to known local artifact targets: URI-scheme targets plus scheme-relative or UNC network targets remain byte-for-byte unchanged even when malformed or when their basename matches a local artifact; relocation does not require a target to pass complete URL validation. The raw target is split at the literal fragment marker before matching. Only the local path portion is percent-decoded for artifact lookup, the authored fragment spelling is preserved verbatim, and structural delimiters in the new local relative path are percent-escaped. This keeps encoded filename characters such as `%23` and `%3A` distinct from URI structure and avoids decoding `%29` / `%22` into Markdown or HTML delimiters.
 
 ## Publication and collisions
 

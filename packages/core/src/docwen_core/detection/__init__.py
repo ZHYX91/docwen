@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from docwen_core.detection._sniffing import (
     SUPPORTED_EXTENSION_FORMATS,
+    delimited_text_encodings,
     detect_content_format,
 )
 from docwen_core.detection._validation import (
@@ -41,6 +42,7 @@ __all__ = [
     "FileAdmissionPathError",
     "OoxmlSignatureInfo",
     "admission_error_type",
+    "delimited_text_encodings",
     "detect_content_format",
     "enforce_file_admission",
     "freeze_ooxml_signature_info",

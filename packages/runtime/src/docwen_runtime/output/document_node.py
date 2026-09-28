@@ -8,7 +8,7 @@ import re
 from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path, PurePosixPath
-from urllib.parse import unquote, urlsplit
+from urllib.parse import unquote
 
 from docwen_core.models import (
     DOCUMENT_NODE_SCHEMA,
@@ -30,6 +30,8 @@ _HTML_LINK = re.compile(
 )
 
 _WINDOWS_DRIVE_TARGET = re.compile(r"^[A-Za-z]:[\\/]")
+_URI_SCHEME_TARGET = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
+_LOCAL_LINK_UNSAFE = frozenset("%#? \t\r\n<>\"'()[]|&")
 
 
 @dataclass(frozen=True, slots=True)
@@ -255,29 +257,42 @@ def _artifact_reference_names(artifact: ArtifactManifest) -> set[str]:
 
 
 def _is_external_link_target(raw: str) -> bool:
-    """Return whether a Markdown/HTML target is a URI or network location."""
+    """Return whether a link target is lexically a URI or network location."""
 
-    decoded = unquote(raw).replace("\\", "/")
-    if decoded.startswith("//"):
+    raw_path = raw.partition("#")[0]
+    candidate = raw_path.lstrip()
+    normalized = candidate.replace("\\", "/")
+    if normalized.startswith("//"):
         return True
-    if _WINDOWS_DRIVE_TARGET.match(decoded):
+    if _WINDOWS_DRIVE_TARGET.match(candidate):
         return False
-    parsed = urlsplit(decoded)
-    return bool(parsed.scheme or parsed.netloc)
+    return _URI_SCHEME_TARGET.match(candidate) is not None
 
+
+def _serialize_local_link_path(path: str) -> str:
+    """Percent-escape delimiters that would change Markdown/HTML link structure."""
+
+    result: list[str] = []
+    for char in path:
+        if char not in _LOCAL_LINK_UNSAFE:
+            result.append(char)
+            continue
+        result.extend(f"%{byte:02X}" for byte in char.encode("utf-8"))
+    return "".join(result)
 
 def _rewrite_known_links(text: str, replacements: dict[str, str]) -> str:
     normalized = {key.replace("\\", "/"): value for key, value in replacements.items()}
 
     def replace_target(raw: str) -> str:
+        raw_path, marker, raw_anchor = raw.partition("#")
         if _is_external_link_target(raw):
             return raw
-        decoded = unquote(raw).replace("\\", "/")
-        path, marker, anchor = decoded.partition("#")
-        replacement = normalized.get(path) or normalized.get(PurePosixPath(path).name)
+        decoded_path = unquote(raw_path).replace("\\", "/")
+        replacement = normalized.get(decoded_path) or normalized.get(PurePosixPath(decoded_path).name)
         if replacement is None:
             return raw
-        return replacement + (f"#{anchor}" if marker else "")
+        serialized = _serialize_local_link_path(replacement)
+        return serialized + (f"#{raw_anchor}" if marker else "")
 
     def markdown_sub(match: re.Match[str]) -> str:
         return f"{match.group('prefix')}{replace_target(match.group('target'))}{match.group('suffix')}"
