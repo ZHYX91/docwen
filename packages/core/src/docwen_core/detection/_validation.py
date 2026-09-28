@@ -371,6 +371,62 @@ def inspect_file(file_path: str, *, cancel_check: Callable[[], None] | None = No
     return inspection
 
 
+def inspect_utf8_markdown_snapshot(
+    file_path: str,
+    *,
+    cancel_check: Callable[[], None] | None = None,
+) -> FileInspection:
+    """Inspect an explicitly synthetic UTF-8 Markdown snapshot.
+
+    This is a narrow producer contract for text already supplied by a user as
+    plain clipboard text. It does not alter generic content sniffing. The
+    backing file must still be a regular .md file, decode completely as UTF-8,
+    contain non-whitespace text, and retain the same filesystem identity
+    throughout validation.
+    """
+
+    inspection = inspect_file(file_path, cancel_check=cancel_check)
+    if inspection.declared_format != "markdown":
+        raise ValueError("Synthetic Markdown snapshots require a .md declaration.")
+
+    io_path = filesystem_path(Path(inspection.file_path))
+    expected_identity = (
+        inspection.device_id,
+        inspection.inode,
+        inspection.ctime_ns,
+        inspection.mtime_ns,
+        inspection.size_bytes,
+    )
+    has_content = False
+    with io_path.open("r", encoding="utf-8", errors="strict", newline="") as stream:
+        while chunk := stream.read(_HASH_CHUNK_SIZE):
+            if cancel_check is not None:
+                cancel_check()
+            if not chunk.isspace():
+                has_content = True
+    if not has_content:
+        raise ValueError("Synthetic Markdown snapshot must contain non-whitespace text.")
+    if _file_identity(io_path.stat()) != expected_identity:
+        raise OSError(f"File changed while it was being inspected: {file_path}")
+
+    return replace(
+        inspection,
+        detected_format="markdown",
+        detected_category=get_category("markdown"),
+        workflow_category="markdown",
+        detection_method=DetectionMethod.SYNTHETIC_MARKDOWN,
+        confidence=DetectionConfidence.CERTAIN,
+        structure_status=StructureStatus.NOT_APPLICABLE,
+        relation=FormatRelation.EXACT_MATCH,
+        decision=AdmissionDecision.ALLOW,
+        detected_supported=True,
+        warning_code="",
+        warning_message="",
+        reason_code="",
+        reason_message="",
+        warnings=(),
+    )
+
 def has_supported_filename_declaration(file_path: str) -> bool:
     """Return whether the filename declaration is accepted by file pickers.
 
@@ -402,8 +458,25 @@ def enforce_file_admission(request: Any) -> Any:
         if _path_traverses_link_or_junction(lexical_path):
             raise FileAdmissionPathError(lexical_path)
         current_path = str(lexical_path.expanduser().resolve(strict=False))
-        inspection = inspect_file(current_path)
+        synthetic_markdown = (
+            isinstance(raw, dict)
+            and raw.get("detection_method") == DetectionMethod.SYNTHETIC_MARKDOWN.value
+        )
+        inspection = (
+            inspect_utf8_markdown_snapshot(current_path)
+            if synthetic_markdown
+            else inspect_file(current_path)
+        )
         canonical_fact = inspection.to_dict()
+        if synthetic_markdown and raw != canonical_fact:
+            raise FileAdmissionError(
+                replace(
+                    inspection,
+                    decision=AdmissionDecision.BLOCK,
+                    reason_code="FILE_SYNTHETIC_INPUT_CHANGED",
+                    reason_message="Managed Markdown snapshot changed after admission.",
+                )
+            )
         if not isinstance(raw, dict) or raw != canonical_fact:
             metadata[FILE_INSPECTION_METADATA_KEY] = canonical_fact
             metadata.pop(FILE_ADMISSION_ACCEPTANCE_METADATA_KEY, None)
@@ -442,4 +515,5 @@ __all__ = [
     "enforce_file_admission",
     "has_supported_filename_declaration",
     "inspect_file",
+    "inspect_utf8_markdown_snapshot",
 ]

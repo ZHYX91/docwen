@@ -416,7 +416,13 @@ class MainWindow(QWidget):
                 store.discard_if_unowned(snapshot.path)
             self._sync_clipboard_visible_inputs()
 
-        self._input_area_vm.add_files([snapshot.path], completed=completed)
+        from docwen_core.detection import inspect_utf8_markdown_snapshot
+
+        self._input_area_vm.add_files(
+            [snapshot.path],
+            completed=completed,
+            file_inspector=inspect_utf8_markdown_snapshot,
+        )
 
     def _prepare_clipboard_output_policy(
         self,

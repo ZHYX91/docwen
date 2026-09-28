@@ -48,6 +48,7 @@ class DetectionMethod(StrEnum):
     SIGNATURE = "signature"
     CONTAINER = "container"
     TEXT_SNIFF = "text_sniff"
+    SYNTHETIC_MARKDOWN = "synthetic_markdown"
     UNKNOWN = "unknown"
 
 

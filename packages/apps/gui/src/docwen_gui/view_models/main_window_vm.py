@@ -258,16 +258,23 @@ class MainWindowViewModel(QObject):
         self._pending_inspection_paths = []
         self._inspection.cancel()
 
-    def _inspect_paths(self, paths: list[str], token: CancellationToken) -> list[tuple[str, FileInspection | None]]:
+    def _inspect_paths(
+        self,
+        paths: list[str],
+        token: CancellationToken,
+        *,
+        file_inspector: Callable[[str], FileInspection] | None = None,
+    ) -> list[tuple[str, FileInspection | None]]:
         from docwen_core.detection import inspect_file
 
         inspected: list[tuple[str, FileInspection | None]] = []
         for path in paths:
             token.check()
             try:
+                inspector = file_inspector or self._file_inspector
                 inspection = (
-                    self._file_inspector(path)
-                    if self._file_inspector is not None
+                    inspector(path)
+                    if inspector is not None
                     else inspect_file(path, cancel_check=token.check)
                 )
                 inspected.append((path, inspection))
@@ -275,7 +282,13 @@ class MainWindowViewModel(QObject):
                 inspected.append((path, None))
         return inspected
 
-    def request_files(self, paths: list[str], completed: Callable[[FileAddOutcome], None] | None = None) -> None:
+    def request_files(
+        self,
+        paths: list[str],
+        completed: Callable[[FileAddOutcome], None] | None = None,
+        *,
+        file_inspector: Callable[[str], FileInspection] | None = None,
+    ) -> None:
         """Inspect interactive inputs off-thread and commit only the latest request."""
         paths = list(dict.fromkeys(path for path in paths if path))
         if not paths:
@@ -296,7 +309,10 @@ class MainWindowViewModel(QObject):
             if completed is not None:
                 completed(outcome)
 
-        self._inspection.submit(lambda token: self._inspect_paths(paths, token), apply)
+        self._inspection.submit(
+            lambda token: self._inspect_paths(paths, token, file_inspector=file_inspector),
+            apply,
+        )
 
     def add_files(self, paths: list[str]) -> FileAddOutcome:
         """Synchronously admit files for noninteractive setup and smoke probes."""

@@ -25,6 +25,7 @@ from docwen_gui.file_types import FILE_CATEGORY_ORDER, FILE_EXTENSIONS_BY_CATEGO
 from docwen_gui.i18n import t as _t
 
 if TYPE_CHECKING:
+    from docwen_core.models import FileInspection
     from docwen_core.models.file_ref import FileRef
 
     from .main_window_vm import FileAddOutcome, MainWindowViewModel
@@ -221,6 +222,8 @@ class InputAreaViewModel(QObject):
         self,
         paths: list[str],
         completed: Callable[[FileAddOutcome], None] | None = None,
+        *,
+        file_inspector: Callable[[str], FileInspection] | None = None,
     ) -> None:
         """Validate and add file paths.
 
@@ -235,15 +238,16 @@ class InputAreaViewModel(QObject):
             return
 
         if self._mode == "single":
-            self._add_single(normalized, completed=completed)
+            self._add_single(normalized, completed=completed, file_inspector=file_inspector)
         else:
-            self._add_batch(normalized, completed=completed)
+            self._add_batch(normalized, completed=completed, file_inspector=file_inspector)
 
     def _add_single(
         self,
         paths: list[str],
         *,
         completed: Callable[[FileAddOutcome], None] | None = None,
+        file_inspector: Callable[[str], FileInspection] | None = None,
     ) -> None:
         folder_paths = [p for p in paths if Path(p).is_dir()]
         if folder_paths:
@@ -276,13 +280,18 @@ class InputAreaViewModel(QObject):
 
         # MainWindowViewModel owns the one canonical content inspection and
         # stores the result on FileRef; this renderer never inspects twice.
-        self._emit_files_added([file_path], completed=completed)
+        self._emit_files_added(
+            [file_path],
+            completed=completed,
+            file_inspector=file_inspector,
+        )
 
     def _add_batch(
         self,
         paths: list[str],
         *,
         completed: Callable[[FileAddOutcome], None] | None = None,
+        file_inspector: Callable[[str], FileInspection] | None = None,
     ) -> None:
         collection = self._collect_batch_files_with_feedback(paths)
         if not collection.files:
@@ -295,6 +304,7 @@ class InputAreaViewModel(QObject):
             collection.files,
             skipped_count=collection.skipped_count,
             completed=completed,
+            file_inspector=file_inspector,
         )
 
     def _collect_batch_files(self, paths: list[str]) -> list[str]:
@@ -733,6 +743,7 @@ class InputAreaViewModel(QObject):
         skipped_count: int = 0,
         warning_message: str = "",
         completed: Callable[[FileAddOutcome], None] | None = None,
+        file_inspector: Callable[[str], FileInspection] | None = None,
     ) -> None:
         self._emit_message(_t("components.file_drop.inspecting"), "info")
 
@@ -746,7 +757,7 @@ class InputAreaViewModel(QObject):
             if completed is not None:
                 completed(outcome)
 
-        self._main_vm.request_files(paths, finish)
+        self._main_vm.request_files(paths, finish, file_inspector=file_inspector)
 
     def _finish_files_added(
         self, outcome: FileAddOutcome, paths: list[str], *, skipped_count: int, warning_message: str
