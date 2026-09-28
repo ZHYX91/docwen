@@ -129,11 +129,7 @@ def process_embedded_image(
     """
     mode = EmbeddedImageMode(mode)
 
-    logger.debug(
-        "Processing embedded image: %s | mode: %s",
-        Path(image_path).name,
-        mode.value,
-    )
+    logger.debug("Processing embedded image: mode=%s", mode.value)
 
     if mode == EmbeddedImageMode.EMBED:
         placeholder = format_image_placeholder(
@@ -142,18 +138,18 @@ def process_embedded_image(
             height=height,
             image_scope=image_scope,
         )
-        logger.info("Generated image placeholder: %s", placeholder)
+        logger.info("Generated image placeholder")
         return placeholder
     elif mode == EmbeddedImageMode.KEEP:
-        logger.debug("Keeping original image link: %s", original_link)
+        logger.debug("Keeping original image link")
         return original_link
     elif mode == EmbeddedImageMode.EXTRACT_TEXT:
         if display_text:
-            logger.debug("Extracting image display text: %s", display_text)
+            logger.debug("Extracting image display text")
             return display_text
         else:
             filename = Path(image_path).name
-            logger.debug("Extracting image filename: %s", filename)
+            logger.debug("Extracting image filename")
             return filename
     elif mode == EmbeddedImageMode.REMOVE:
         logger.debug("Removing image link")

@@ -1,7 +1,31 @@
-"""Compact path labels with complete accessible text and tooltips."""
+"""Compact path labels with complete accessible text and safe tooltips."""
+
+from __future__ import annotations
+
+import html
+import unicodedata
 
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtWidgets import QLabel, QSizePolicy, QWidget
+
+
+
+def safe_tooltip_text(text: str, *, limit: int = 512) -> str:
+    """Render bounded user text literally inside Qt's rich tooltip surface."""
+
+    normalized = str(text).replace("\r\n", "\n").replace("\r", "\n")
+    visible = "".join(
+        char
+        if char in {"\n", "\t"} or not unicodedata.category(char).startswith("C")
+        else "\ufffd"
+        for char in normalized
+    )
+    truncated = len(visible) > limit
+    visible = visible[:limit]
+    if truncated:
+        visible += "…"
+    escaped = html.escape(visible, quote=True).replace("\n", "<br/>").replace("\t", "&#9;")
+    return f"<qt>{escaped}</qt>"
 
 
 class MiddleElidedLabel(QLabel):
@@ -19,7 +43,7 @@ class MiddleElidedLabel(QLabel):
 
     def set_full_text(self, text: str) -> None:
         self._full_text = text
-        self.setToolTip(text)
+        self.setToolTip(safe_tooltip_text(text))
         self.setAccessibleName(text)
         self._refresh_elision()
 

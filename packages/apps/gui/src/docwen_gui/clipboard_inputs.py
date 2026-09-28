@@ -12,6 +12,35 @@ from pathlib import Path
 
 _PREVIEW_MAX_CHARS = 240
 _PREVIEW_MAX_LINES = 3
+_SESSION_PREFIX = "session-"
+_OWNER_LOCK_NAME = ".owner.lock"
+_OWNER_MARKER = b"docwen-clipboard-session-v1\n"
+
+
+def _lock_owner_stream(stream, *, blocking: bool) -> None:
+    stream.seek(0)
+    if os.name == "nt":
+        import msvcrt  # type: ignore[import-untyped]
+
+        mode = msvcrt.LK_LOCK if blocking else msvcrt.LK_NBLCK
+        msvcrt.locking(stream.fileno(), mode, 1)
+    else:
+        import fcntl
+
+        flags = fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB)
+        fcntl.flock(stream.fileno(), flags)
+
+
+def _unlock_owner_stream(stream) -> None:
+    stream.seek(0)
+    if os.name == "nt":
+        import msvcrt  # type: ignore[import-untyped]
+
+        msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+    else:
+        import fcntl
+
+        fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,8 +78,22 @@ class ClipboardInputStore:
         if root == Path(root.anchor):
             raise ValueError("clipboard input root must not be a filesystem root")
         root.mkdir(parents=True, exist_ok=True)
-        self._session_root = root / f"session-{uuid.uuid4().hex}"
+        self._cleanup_stale_sessions(root)
+        self._session_root = root / f"{_SESSION_PREFIX}{uuid.uuid4().hex}"
         self._session_root.mkdir()
+        self._owner_lock = None
+        self._cleanup_pending = False
+        try:
+            lock_path = self._session_root / _OWNER_LOCK_NAME
+            owner_lock = lock_path.open("x+b")
+            owner_lock.write(_OWNER_MARKER)
+            owner_lock.flush()
+            os.fsync(owner_lock.fileno())
+            _lock_owner_stream(owner_lock, blocking=True)
+            self._owner_lock = owner_lock
+        except BaseException:
+            shutil.rmtree(self._session_root, ignore_errors=True)
+            raise
         self._snapshots: dict[str, ClipboardInputDescriptor] = {}
         self._visible: set[str] = set()
         self._inspection: dict[str, set[str]] = {}
@@ -61,6 +104,54 @@ class ClipboardInputStore:
     @staticmethod
     def _key(path: str | os.PathLike[str]) -> str:
         return os.path.normcase(os.path.abspath(os.fspath(path)))
+
+    @classmethod
+    def _cleanup_stale_sessions(cls, root: Path) -> None:
+        """Remove only sessions carrying our marker whose owner lock is free."""
+
+        try:
+            candidates = tuple(root.iterdir())
+        except OSError:
+            return
+        for session in candidates:
+            if not session.name.startswith(_SESSION_PREFIX):
+                continue
+            try:
+                if session.is_symlink() or not session.is_dir():
+                    continue
+                lock_path = session / _OWNER_LOCK_NAME
+                if not lock_path.is_file():
+                    continue
+                stream = lock_path.open("r+b")
+                try:
+                    marker = stream.read(len(_OWNER_MARKER))
+                    if marker != _OWNER_MARKER:
+                        continue
+                    try:
+                        _lock_owner_stream(stream, blocking=False)
+                    except OSError:
+                        continue
+                    else:
+                        _unlock_owner_stream(stream)
+                finally:
+                    stream.close()
+                shutil.rmtree(session)
+            except OSError:
+                continue
+
+    def _release_owner_lock(self) -> None:
+        stream = self._owner_lock
+        self._owner_lock = None
+        if stream is None:
+            return
+        try:
+            _unlock_owner_stream(stream)
+        finally:
+            stream.close()
+
+    @property
+    def cleanup_pending(self) -> bool:
+        return self._cleanup_pending
 
     @property
     def session_root(self) -> Path:
@@ -79,10 +170,6 @@ class ClipboardInputStore:
             display_name = f"Clipboard Markdown {self._sequence}.md"
         path = self._session_root / f"clipboard-{uuid.uuid4().hex}.md"
         payload = text.encode("utf-8")
-        with path.open("xb") as stream:
-            stream.write(payload)
-            stream.flush()
-            os.fsync(stream.fileno())
         descriptor = ClipboardInputDescriptor(
             path=str(path),
             display_name=display_name,
@@ -90,6 +177,17 @@ class ClipboardInputStore:
             size_bytes=len(payload),
             sha256=hashlib.sha256(payload).hexdigest(),
         )
+        try:
+            with path.open("xb") as stream:
+                stream.write(payload)
+                stream.flush()
+                os.fsync(stream.fileno())
+        except BaseException:
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                self._snapshots[self._key(path)] = descriptor
+            raise
         self._snapshots[self._key(path)] = descriptor
         return descriptor
 
@@ -172,15 +270,24 @@ class ClipboardInputStore:
                 self._snapshots[key] = descriptor
 
     def close(self) -> None:
-        """Release session-owned snapshots after active workers have drained."""
+        """Release owned files without forgetting cleanup failures."""
 
         self._visible.clear()
         self._history.clear()
         self._collect_unowned()
-        if self._inspection or self._active:
+        if self._inspection or self._active or self._snapshots:
+            self._cleanup_pending = True
             return
-        shutil.rmtree(self._session_root, ignore_errors=True)
-        self._snapshots.clear()
+
+        self._release_owner_lock()
+        try:
+            shutil.rmtree(self._session_root)
+        except FileNotFoundError:
+            self._cleanup_pending = False
+        except OSError:
+            self._cleanup_pending = True
+        else:
+            self._cleanup_pending = False
 
 
 __all__ = ["ClipboardInputDescriptor", "ClipboardInputStore", "bounded_plaintext_preview"]

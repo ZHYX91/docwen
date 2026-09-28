@@ -1827,6 +1827,9 @@ class MainWindow(QWidget):
                 self._open_path(entry.output_path, open_parent=True)
             return
         if action_key == "open_source_location":
+            entry = self._batch_list_vm.get_file_entry(file_path)
+            if entry is None or not entry.source_location_available or self._is_clipboard_input(file_path):
+                return
             self._open_path(file_path, open_parent=True)
             return
         if action_key in {"show_error_details", "show_skip_details", "show_output_details", "show_diagnostics"}:
@@ -1840,6 +1843,8 @@ class MainWindow(QWidget):
         self._open_path(target_path, open_parent=True)
 
     def _open_location(self, file_path: str) -> None:
+        if self._is_clipboard_input(file_path):
+            return
         self._open_path(file_path, open_parent=True)
 
     def _handle_task_guide_action(self, action_key: str, target_path: str) -> None:

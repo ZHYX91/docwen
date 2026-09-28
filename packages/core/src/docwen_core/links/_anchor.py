@@ -74,11 +74,11 @@ def extract_section_by_heading(content: str, heading: str) -> str | None:
         if title.lower().replace(" ", "") == target_heading.lower().replace(" ", ""):
             start_index = i
             start_level = level
-            logger.debug("Found target heading: '%s' (level %d) at line %d", title, level, i)
+            logger.debug("Found target heading (level %d) at line %d", level, i)
             break
 
     if start_index is None:
-        logger.warning("Heading not found: '%s'", heading)
+        logger.warning("Requested heading was not found")
         return None
     if start_level is None:
         return None
@@ -165,7 +165,7 @@ def extract_block_by_id(content: str, block_id: str) -> str | None:
         logger.debug("Extracted block (inline): %d lines", len(paragraph_lines))
         return result
 
-    logger.warning("Block id not found: ^%s", block_id)
+    logger.warning("Requested block id was not found")
     return None
 
 

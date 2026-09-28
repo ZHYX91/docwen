@@ -184,22 +184,13 @@ def process_embedded_md_file(
     elif block_id:
         embed_desc += f"#^{block_id}"
 
-    logger.debug(
-        "process_embedded_md_file: %s | mode=%s | depth=%d",
-        embed_desc,
-        mode.value,
-        depth,
-    )
+    logger.debug("Processing Markdown embed: mode=%s depth=%d", mode.value, depth)
 
     normalized_path = str(Path(md_path).resolve())
 
     # ── circular-reference check ──────────────────────────────────────
     if detect_circular and normalized_path in visited_files:
-        logger.warning(
-            "Circular reference: %s (embedded from %s)",
-            filename,
-            Path(source_file_path).name,
-        )
+        logger.warning("Circular Markdown embed reference")
         return dispatch_error_output(
             LinkErrorKind.CIRCULAR_REFERENCE,
             on_circular,
@@ -212,7 +203,7 @@ def process_embedded_md_file(
     # ── mode dispatch ─────────────────────────────────────────────────
     if mode == EmbeddedMdMode.EMBED:
         try:
-            logger.info("Reading MD file: %s (depth: %d)", embed_desc, depth + 1)
+            logger.info("Reading Markdown embed (depth=%d)", depth + 1)
             content = Path(md_path).read_text(encoding="utf-8")
             logger.debug("Read %d characters", len(content))
 
@@ -223,11 +214,7 @@ def process_embedded_md_file(
             if heading:
                 extracted = extract_section_by_heading(content, heading)
                 if extracted is None:
-                    logger.warning(
-                        "Section not found: %s#%s",
-                        filename,
-                        heading,
-                    )
+                    logger.warning("Requested Markdown embed section was not found")
                     return dispatch_error_output(
                         LinkErrorKind.SECTION_NOT_FOUND,
                         on_not_found,
@@ -236,20 +223,11 @@ def process_embedded_md_file(
                         original_link=original_link,
                     )
                 content = extracted
-                logger.info(
-                    "Extracted section: %s#%s (%d chars)",
-                    filename,
-                    heading,
-                    len(content),
-                )
+                logger.info("Extracted Markdown embed section (%d chars)", len(content))
             elif block_id:
                 extracted = extract_block_by_id(content, block_id)
                 if extracted is None:
-                    logger.warning(
-                        "Block not found: %s#^%s",
-                        filename,
-                        block_id,
-                    )
+                    logger.warning("Requested Markdown embed block was not found")
                     return dispatch_error_output(
                         LinkErrorKind.BLOCK_NOT_FOUND,
                         on_not_found,
@@ -258,12 +236,7 @@ def process_embedded_md_file(
                         original_link=original_link,
                     )
                 content = extracted
-                logger.info(
-                    "Extracted block: %s#^%s (%d chars)",
-                    filename,
-                    block_id,
-                    len(content),
-                )
+                logger.info("Extracted Markdown embed block (%d chars)", len(content))
 
             # ── recursive expansion ───────────────────────────────────
             visited_files.add(normalized_path)
@@ -284,11 +257,11 @@ def process_embedded_md_file(
             if table_safe:
                 expanded = _make_table_safe(expanded)
 
-            logger.info("MD file expansion complete: %s", embed_desc)
+            logger.info("Markdown embed expansion complete")
             return expanded
 
         except FileNotFoundError:
-            logger.error("MD file not found: %s", md_path)
+            logger.error("Markdown embed file was not found")
             return dispatch_error_output(
                 LinkErrorKind.FILE_NOT_FOUND,
                 on_not_found,
@@ -298,7 +271,7 @@ def process_embedded_md_file(
                 original_link=original_link,
             )
         except OSError as exc:
-            logger.error("Failed to read MD file %s: %s", md_path, exc)
+            logger.error("Failed to read Markdown embed: %s", type(exc).__name__)
             if on_not_found == NotFoundAction.IGNORE:
                 return ""
             if on_not_found == NotFoundAction.KEEP:
@@ -310,7 +283,7 @@ def process_embedded_md_file(
                 block_id,
             )
         except Exception:
-            logger.exception("Unexpected error processing: %s", embed_desc)
+            logger.error("Unexpected Markdown embed error")
             return _mk_missing_text(
                 "Error reading",
                 filename,
@@ -319,19 +292,19 @@ def process_embedded_md_file(
             )
 
     elif mode == EmbeddedMdMode.KEEP:
-        logger.debug("Keeping original embed link: %s", embed_desc)
+        logger.debug("Keeping original Markdown embed link")
         return original_link or _fmt_keep_link(filename, heading, block_id)
 
     elif mode == EmbeddedMdMode.EXTRACT_TEXT:
         if display_text:
-            logger.debug("Extracting display text: %s", display_text)
+            logger.debug("Extracting Markdown embed display text")
             return display_text
         stem = Path(md_path).stem
-        logger.debug("Extracting filename stem: %s", stem)
+        logger.debug("Extracting Markdown embed filename stem")
         return stem
 
     elif mode == EmbeddedMdMode.REMOVE:
-        logger.debug("Removing embed link: %s", embed_desc)
+        logger.debug("Removing Markdown embed link")
         return ""
 
     else:

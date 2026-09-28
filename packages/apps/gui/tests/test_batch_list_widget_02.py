@@ -572,3 +572,33 @@ class TestSixTabs:
             assert attached == paths
         finally:
             widget.deleteLater()
+
+def test_user_text_tooltips_escape_markup_controls_and_bound_length(qtbot) -> None:
+    from docwen_gui.widgets.elided_label import MiddleElidedLabel
+
+    authored = "<b>secret & literal</b>\x00" + ("x" * 900)
+    label = MiddleElidedLabel(authored)
+    qtbot.addWidget(label)
+    assert label.toolTip().startswith("<qt>")
+    assert "<b>" not in label.toolTip()
+    assert "&lt;b&gt;" in label.toolTip()
+    assert "\x00" not in label.toolTip()
+    assert len(label.toolTip()) < 700
+
+    entry = BatchFileEntry(
+        file_path="/managed/opaque.md",
+        file_name="Clipboard Markdown 1.md",
+        detected_format="markdown",
+        workflow_category="markdown",
+        source_preview=authored,
+        source_location_available=False,
+    )
+    widget = BatchEntryItemWidget(entry)
+    qtbot.addWidget(widget)
+    tooltip = widget.name_label.toolTip()
+    assert tooltip.startswith("<qt>")
+    assert "<b>" not in tooltip
+    assert "&lt;b&gt;" in tooltip
+    assert "\x00" not in tooltip
+    assert len(tooltip) < 700
+

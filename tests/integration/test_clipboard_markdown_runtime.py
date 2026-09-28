@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -215,4 +216,42 @@ def test_execution_thread_revalidates_matching_inspection_through_real_runtime(
     assert result.success, result.error
     primary = next(artifact for artifact in result.artifacts if artifact.kind == "primary")
     assert Path(primary.staging_path).is_file()
+
+def test_synthetic_authored_link_targets_do_not_enter_conversion_logs(
+    tmp_path: Path,
+    round_trip_runtime: Any,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    sentinel = "CLIPBOARD_SECRET_QUERY_TOKEN_9f6d"
+    text = (
+        "# Sensitive links\n\n"
+        f"![Remote](https://example.invalid/private.png?token={sentinel})\n\n"
+        f"![Missing]({sentinel}.png)\n"
+    )
+    store = ClipboardInputStore(tmp_path / "managed")
+    snapshot = store.create(text, display_name_template="Clipboard Markdown {index}.md")
+    source = Path(snapshot.path)
+    inspection = inspect_utf8_markdown_snapshot(source)
+    request = ConversionRequest(
+        request_id="clipboard-log-privacy",
+        input_refs=[
+            FileRef(
+                path=str(source),
+                format="markdown",
+                category="markdown",
+                metadata={FILE_INSPECTION_METADATA_KEY: inspection.to_dict()},
+            )
+        ],
+        target_format="docx",
+        output_policy=OutputPolicy(output_dir=str(tmp_path / "published")),
+    )
+
+    caplog.set_level(logging.DEBUG)
+    result = ApplicationController(runtime_port=round_trip_runtime).execute_single(request)
+
+    assert result.success, result.error
+    assert sentinel not in caplog.text
+    assert "private.png?token=" not in caplog.text
+    assert source.read_bytes() == text.encode("utf-8")
+    store.close()
 

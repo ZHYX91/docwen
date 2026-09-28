@@ -381,9 +381,14 @@ class ExecutionCoordinator(QObject):
         current_file = ""
         if context.get("batch"):
             task_id = str(payload.get("task_id", ""))
+            source_labels = context.get("source_labels", {})
             for index, path in enumerate(paths):
                 if task_id == f"{operation_id}-{index}":
-                    current_file = Path(path).name
+                    current_file = (
+                        str(source_labels.get(path) or Path(path).name)
+                        if isinstance(source_labels, dict)
+                        else Path(path).name
+                    )
                     break
         percent = payload.get("percent")
         completed = int(payload.get("completed_count", 0))

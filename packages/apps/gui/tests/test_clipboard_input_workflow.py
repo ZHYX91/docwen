@@ -392,3 +392,22 @@ def test_tampered_failed_clipboard_snapshot_is_rejected_before_retry(
     assert calls == []
     assert clipboard_window.view_model.files == []
 
+def test_main_window_source_location_receiver_rejects_synthetic_input(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = _paste_text(clipboard_window, qapp, qtbot, "# Synthetic\n")
+    calls: list[tuple[str, bool]] = []
+    monkeypatch.setattr(
+        clipboard_window,
+        "_open_path",
+        lambda target, *, open_parent=False: calls.append((target, open_parent)) or True,
+    )
+
+    clipboard_window._handle_batch_entry_action("open_source_location", path)
+    clipboard_window._open_location(path)
+
+    assert calls == []
+

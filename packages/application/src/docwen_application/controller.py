@@ -782,7 +782,7 @@ class ApplicationController:
                 )
                 if len(chain) <= 1:
                     new_refs.append(ref)
-                    output_policies.append(request.output_policy)
+                    output_policies.append(request.output_policy.for_input(ref.path))
                     input_indices.append(idx)
                     result_slots.append(None)
                     continue

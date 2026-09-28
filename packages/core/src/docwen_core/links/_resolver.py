@@ -95,7 +95,7 @@ def resolve_file_path(
     if search_dirs is None:
         search_dirs = [".", "assets", "images", "attachments"]
 
-    logger.debug("Resolving file path: %s", link_target)
+    logger.debug("Resolving link target (source_context=%s)", bool(source_file_path))
 
     if decoded_path:
         target = link_target.replace("\\", "/").strip()
@@ -103,7 +103,7 @@ def resolve_file_path(
             target = target.lstrip("/")
     else:
         target = normalize_link_target(link_target, preserve_absolute=True)
-    logger.debug("Normalised target: %s", target)
+    logger.debug("Normalised link target")
 
     source_dir = Path(source_file_path).parent
 
@@ -127,7 +127,7 @@ def resolve_file_path(
             md_path = candidate.with_suffix(".md")
             admitted = _admit(md_path)
             if admitted is not None:
-                logger.debug("Auto-added .md extension: %s -> %s", candidate, md_path)
+                logger.debug("Resolved link by adding Markdown extension")
                 return admitted
         return None
 
@@ -136,9 +136,9 @@ def resolve_file_path(
         normalized = os.path.normpath(target)
         result = _try_find_file(normalized)
         if result:
-            logger.debug("Resolved as absolute path: %s", result)
+            logger.debug("Resolved link as absolute path")
             return result
-        logger.debug("Absolute path does not exist: %s", normalized)
+        logger.debug("Absolute link target is unavailable")
         return None
 
     if not source_file_path:
@@ -149,9 +149,9 @@ def resolve_file_path(
         full_path = os.path.normpath(str(source_dir / target))
         result = _try_find_file(full_path)
         if result:
-            logger.debug("Resolved as relative path: %s", result)
+            logger.debug("Resolved link as source-relative path")
             return result
-        logger.debug("Relative path does not exist: %s", full_path)
+        logger.debug("Source-relative link target is unavailable")
         return None
 
     # 3. Same-name folder
@@ -161,24 +161,24 @@ def resolve_file_path(
         search_path = os.path.normpath(str(same_name_folder / target))
         result = _try_find_file(search_path, allowed_root=source_dir)
         if result:
-            logger.debug("Found in same-name folder '%s': %s", source_basename, result)
+            logger.debug("Resolved link in source sibling resource directory")
             return result
 
     # 4. Search directories
-    logger.debug("Searching for file: %s (in dirs: %s)", target, search_dirs)
+    logger.debug("Searching configured source-local link directories (count=%d)", len(search_dirs))
     for search_dir in search_dirs:
         normalized_dir = search_dir.replace("\\", "/").strip()
         search_parts = Path(normalized_dir).parts
         if not normalized_dir or Path(normalized_dir).is_absolute() or any(part in {"..", ""} for part in search_parts):
-            logger.warning("Ignoring search directory outside the source-local boundary: %s", search_dir)
+            logger.warning("Ignoring a search directory outside the source-local boundary")
             continue
         search_path = os.path.normpath(str(source_dir / normalized_dir / target))
         result = _try_find_file(search_path, allowed_root=source_dir)
         if result:
-            logger.debug("Found in search dir '%s': %s", search_dir, result)
+            logger.debug("Resolved link in configured source-local directory")
             return result
 
-    logger.debug("File not found in any search directory: %s", target)
+    logger.debug("Link target was not found in configured source-local directories")
     return None
 
 
