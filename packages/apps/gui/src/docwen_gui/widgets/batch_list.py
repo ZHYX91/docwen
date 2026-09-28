@@ -543,9 +543,11 @@ class BatchEntryItemWidget(QWidget):
         # Name
         self.name_label.setText(_soft_wrap_filename(entry.file_name))
         self.name_label.set_file_path(entry.file_path)
-        self.name_label.setToolTip(entry.file_path)
+        self.name_label.setEnabled(entry.source_location_available)
+        source_description = entry.source_preview or entry.file_path
+        self.name_label.setToolTip(source_description)
         self.name_label.setAccessibleName(entry.file_name)
-        self.name_label.setAccessibleDescription(entry.file_path)
+        self.name_label.setAccessibleDescription(source_description)
 
         # Info badge
         size_str = _format_size(entry.size_bytes)
@@ -571,7 +573,9 @@ class BatchEntryItemWidget(QWidget):
         self.badge_strip.setVisible(bool(format_notice))
 
         # Body rows
-        self._set_row_text(self.path_row, "", _source_path_text(entry.file_path))
+        source_path_text = _source_path_text(entry.file_path) if entry.source_location_available else ""
+        self._set_row_text(self.path_row, "", source_path_text)
+        self.open_location_button.setVisible(entry.source_location_available and bool(source_path_text))
         detail_text = self._get_detail_text(entry)
         detail_label = self._get_detail_label_text(entry)
         self._set_row_text(self.detail_row, detail_label, detail_text)
@@ -651,6 +655,8 @@ class BatchEntryItemWidget(QWidget):
             return entry.skip_reason
         if entry.warning_message:
             return render_remaining_file_warnings(entry) if render_file_format_notice(entry) else entry.warning_message
+        if entry.source_preview:
+            return entry.source_preview
         return ""
 
     def _get_detail_label_text(self, entry: BatchFileEntry) -> str:
@@ -663,6 +669,8 @@ class BatchEntryItemWidget(QWidget):
             return _t("components.file_drop.status.skipped", "Skipped")
         if entry.warning_message and render_file_format_notice(entry) and not render_remaining_file_warnings(entry):
             return ""
+        if entry.source_preview:
+            return _t("components.file_drop.clipboard_preview_label", "Preview")
         return _t("editors.common.description", "Description")
 
     def _apply_detail_tone(self, entry: BatchFileEntry) -> None:

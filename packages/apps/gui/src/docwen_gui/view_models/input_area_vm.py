@@ -53,6 +53,15 @@ class DragPreview:
 
 
 @dataclass(frozen=True)
+class InputPresentation:
+    """User-facing source identity without exposing a managed backing path."""
+
+    display_name: str
+    detail: str = ""
+    location_available: bool = True
+
+
+@dataclass(frozen=True)
 class _BatchCollection:
     files: list[str]
     skipped_count: int = 0
@@ -101,9 +110,12 @@ class InputAreaViewModel(QObject):
         self,
         main_vm: MainWindowViewModel,
         parent: QObject | None = None,
+        *,
+        presentation_for: Callable[[str], InputPresentation | None] | None = None,
     ) -> None:
         super().__init__(parent)
         self._main_vm = main_vm
+        self._presentation_for = presentation_for or (lambda _path: None)
         self._selection_message: str = ""
         self._selection_detail: str = ""
         self._selection_tone: str = "secondary"
@@ -125,6 +137,21 @@ class InputAreaViewModel(QObject):
         """The committed selection, independent of feedback and drag previews."""
         selected = self._main_vm.selected_file
         return selected.path if selected is not None else ""
+
+    @property
+    def selected_location_available(self) -> bool:
+        """Whether the selected input has a user-owned filesystem location."""
+
+        path = self.selected_file_path
+        presentation = self._presentation_for(path) if path else None
+        return presentation.location_available if presentation is not None else bool(path)
+
+    def _presentation(self, file_path: str) -> InputPresentation:
+        presentation = self._presentation_for(file_path)
+        if presentation is not None:
+            return presentation
+        path = Path(file_path)
+        return InputPresentation(path.name, str(path.parent), True)
 
     @property
     def mode(self) -> str:
@@ -188,9 +215,13 @@ class InputAreaViewModel(QObject):
         if self._mode != "batch" or len(files) <= 1:
             return None
         selected = self._main_vm.selected_file or files[0]
-        return Path(selected.path).name
+        return self._presentation(selected.path).display_name
 
-    def add_files(self, paths: list[str]) -> None:
+    def add_files(
+        self,
+        paths: list[str],
+        completed: Callable[[FileAddOutcome], None] | None = None,
+    ) -> None:
         """Validate and add file paths.
 
         For single mode: rejects folders, requires exactly 1 supported file.
@@ -204,11 +235,16 @@ class InputAreaViewModel(QObject):
             return
 
         if self._mode == "single":
-            self._add_single(normalized)
+            self._add_single(normalized, completed=completed)
         else:
-            self._add_batch(normalized)
+            self._add_batch(normalized, completed=completed)
 
-    def _add_single(self, paths: list[str]) -> None:
+    def _add_single(
+        self,
+        paths: list[str],
+        *,
+        completed: Callable[[FileAddOutcome], None] | None = None,
+    ) -> None:
         folder_paths = [p for p in paths if Path(p).is_dir()]
         if folder_paths:
             self._emit_rejection(
@@ -240,9 +276,14 @@ class InputAreaViewModel(QObject):
 
         # MainWindowViewModel owns the one canonical content inspection and
         # stores the result on FileRef; this renderer never inspects twice.
-        self._emit_files_added([file_path])
+        self._emit_files_added([file_path], completed=completed)
 
-    def _add_batch(self, paths: list[str]) -> None:
+    def _add_batch(
+        self,
+        paths: list[str],
+        *,
+        completed: Callable[[FileAddOutcome], None] | None = None,
+    ) -> None:
         collection = self._collect_batch_files_with_feedback(paths)
         if not collection.files:
             self._emit_message(
@@ -250,7 +291,11 @@ class InputAreaViewModel(QObject):
                 "warning",
             )
             return
-        self._emit_files_added(collection.files, skipped_count=collection.skipped_count)
+        self._emit_files_added(
+            collection.files,
+            skipped_count=collection.skipped_count,
+            completed=completed,
+        )
 
     def _collect_batch_files(self, paths: list[str]) -> list[str]:
         return self._collect_batch_files_with_feedback(paths).files
@@ -304,17 +349,18 @@ class InputAreaViewModel(QObject):
         )
         if self._mode == "single" or current:
             file_path = normalized[0]
+            presentation = self._presentation(file_path)
             message = _t(
                 "components.file_drop.file_selected_msg",
                 "Current file: {filename}",
-                filename=Path(file_path).name,
+                filename=presentation.display_name,
             )
             if warning_message:
                 message = f"{message}\n{warning_message}"
             self._emit_message(
                 message,
                 "warning" if (warning_message or format_notice) else "success",
-                detail=str(Path(file_path).parent),
+                detail=presentation.detail,
                 format_notice=format_notice,
             )
             return
@@ -674,9 +720,10 @@ class InputAreaViewModel(QObject):
         selected = self._main_vm.selected_file
         detail = ""
         if self._mode == "single" and selected is not None:
-            current = _t("components.file_drop.file_selected_msg", filename=Path(selected.path).name)
+            presentation = self._presentation(selected.path)
+            current = _t("components.file_drop.file_selected_msg", filename=presentation.display_name)
             message = f"{current}\n{message}"
-            detail = str(Path(selected.path).parent)
+            detail = presentation.detail
         self._emit_message(message, tone, detail=detail)
 
     def _emit_files_added(
@@ -685,14 +732,21 @@ class InputAreaViewModel(QObject):
         *,
         skipped_count: int = 0,
         warning_message: str = "",
+        completed: Callable[[FileAddOutcome], None] | None = None,
     ) -> None:
         self._emit_message(_t("components.file_drop.inspecting"), "info")
-        self._main_vm.request_files(
-            paths,
-            lambda outcome: self._finish_files_added(
-                outcome, paths, skipped_count=skipped_count, warning_message=warning_message
-            ),
-        )
+
+        def finish(outcome: FileAddOutcome) -> None:
+            self._finish_files_added(
+                outcome,
+                paths,
+                skipped_count=skipped_count,
+                warning_message=warning_message,
+            )
+            if completed is not None:
+                completed(outcome)
+
+        self._main_vm.request_files(paths, finish)
 
     def _finish_files_added(
         self, outcome: FileAddOutcome, paths: list[str], *, skipped_count: int, warning_message: str
@@ -757,4 +811,5 @@ __all__ = [
     "_TEXT_PAYLOAD_MAX_PATHS",
     "DragPreview",
     "InputAreaViewModel",
+    "InputPresentation",
 ]
