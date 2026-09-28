@@ -131,7 +131,7 @@ def test_document_node_link_relocation_preserves_external_targets_and_integrity(
         "[encoded-path](assets%2Fimage.png#encoded)\n"
         "[encoded-fragment](assets/image.png#part%29tail)\n"
         "![[assets/image.png#part%29wiki]]\n"
-        "[wiki-online](https://example.test/image.png#wiki-online)\n"
+        "[[https://example.test/image.png#wiki-online]]\n"
         "[encoded-hash-name](assets/image%23v1.png#p)\n"
         "[encoded-colon-name](part%3Aone.png)\n"
         "[space-name](assets/my%20image.png#space)\n"
@@ -211,7 +211,7 @@ def test_document_node_link_relocation_preserves_external_targets_and_integrity(
         "[encoded-path](image.png#encoded)\n"
         "[encoded-fragment](image.png#part%29tail)\n"
         "![[image.png#part%29wiki]]\n"
-        "[wiki-online](https://example.test/image.png#wiki-online)\n"
+        "[[https://example.test/image.png#wiki-online]]\n"
         "[encoded-hash-name](image%23v1.png#p)\n"
         "[encoded-colon-name](part_one.png)\n"
         "[space-name](my%20image.png#space)\n"
@@ -234,6 +234,7 @@ def test_document_node_link_relocation_preserves_external_targets_and_integrity(
         assert artifact.sha256 == hashlib.sha256(expected).hexdigest()
     assert Path(artifacts["main"].staging_path).parent.parent == output
     assert Path(artifacts["child"].staging_path).parent.parent.parent == output
+
 
 def test_document_node_failure_leaves_no_partial_root(tmp_path: Path) -> None:
     source = tmp_path / "report.docx"

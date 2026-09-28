@@ -7,8 +7,8 @@
 
 - Admit strictly parsed single-record multi-column CSV/TSV when the filename explicitly declares the table format, without relaxing generic text sniffing; align Core admission and Spreadsheet conversion on one BOM-first UTF-8/16/32 and GBK decoding contract.
 - Preserve external/network Markdown, Wiki and HTML targets during document-node link relocation even when malformed or sharing a local basename; keep encoded local path/fragment structure intact while safely serializing relocated paths.
-- 明确声明为 CSV/TSV 的中性文本可严格准入单条多列记录，不放宽通用文本嗅探。
-- 文档节点搬迁链接时保护外部 URI/网络目标，避免与本地产物同 basename 时被误改写。
+- 明确声明为 CSV/TSV 的中性文本可严格准入单条多列记录，不放宽通用文本嗅探；Core 准入与 Spreadsheet 转换统一使用 BOM 优先的 UTF-8/16/32 与 GBK 编码合同。
+- 文档节点搬迁链接时保护外部 URI/网络目标（包括结构无效的外链），避免与本地产物同 basename 时误改写；本地编码路径仅用于匹配，保留原始片段编码并安全序列化搬迁路径。
 
 ## 0.14.1 (2026-09-27)
 
