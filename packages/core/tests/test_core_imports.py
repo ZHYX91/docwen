@@ -9,7 +9,7 @@ def test_core_importable() -> None:
     """docwen_core should be importable."""
     import docwen_core
 
-    assert docwen_core.__version__ == "0.14.1"
+    assert docwen_core.__version__ == "0.15.0"
 
 
 def test_core_submodules_importable() -> None:

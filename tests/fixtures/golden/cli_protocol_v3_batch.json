@@ -1,6 +1,6 @@
 {
   "protocol_version": 3,
-  "product_version": "0.14.1",
+  "product_version": "0.15.0",
   "success": true,
   "command": "batch convert",
   "data": {

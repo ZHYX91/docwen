@@ -5,16 +5,18 @@
 
 ## Unreleased / 未发布
 
+## 0.15.0 (2026-09-28)
+
 - Add explicit GUI clipboard Markdown input: one user-triggered plain-text snapshot becomes exact UTF-8 Markdown, uses the normal admission/conversion pipeline, keeps an opaque profile-owned backing file out of Recent Files and source-location UI, and reuses the original snapshot for failed retry.
 - Rework the input header to vertical Single File/Batch choices plus textual Add/Paste/Clear actions with responsive reflow. Source-mode clipboard input asks for a persistent output parent before execution; custom output remains unchanged and mixed batches redirect only synthetic inputs.
-- GUI/Runtime automated coverage exercises clipboard snapshot bytes and ownership, output-policy cancellation/custom/mixed behavior, retry stability, focus-scoped Ctrl+V and a real Markdown Runtime publication path. Physical minimum-width/large-text/150%/long-translation/theme/keyboard acceptance remains a separate Computer Use gate.
-- Harden clipboard admission and lifecycle: execution reuses the frozen inspection method, overlapping batch inspections retain per-input intent and a physical-reader lease, failed retry restores the frozen FileRef and rejects changed bytes, and source-location/progress presentation never falls back to an opaque synthetic path.
-- Bound clipboard-derived UI/log surfaces and cleanup: tooltips escape and cap authored text; shared Markdown link diagnostics no longer echo authored targets; failed fsync/delete remains tracked; stale-session recovery requires the DocWen marker plus an unlocked owner file. Preserve per-input output directories across mixed document preconversion/direct batches.
+- Keep Ctrl+V scoped to the input area and preserve each admitted clipboard snapshot through background inspection, conversion and failed retry; reject changed input bytes before retrying.
+- Bound clipboard previews and diagnostics, avoid exposing internal snapshot paths or authored link targets, and retain recoverable snapshots when cleanup fails. Preserve per-input output directories across mixed document batches.
+- Fix Windows conversion result and error delivery when filesystem identity values exceed signed 64-bit integers.
 - 新增 GUI 剪贴板 Markdown 输入：仅在用户触发时读取一次纯文本并原样物化为 UTF-8 Markdown，继续走既有准入/转换链；profile 所有的内部快照路径不进入最近文件或源位置界面，失败重试复用原快照。
 - 输入区调整为左侧纵向“单文件/批量”和右侧完整文字“添加/粘贴/清空”，按可用宽度响应式重排。默认 source 输出遇到剪贴板输入时在执行前选择持久父目录；已有 custom 不变，混合批量只重定向合成输入。
-- 自动化覆盖快照字节与所有权、输出选择取消/custom/混合策略、重试稳定性、输入区 Ctrl+V 焦点范围及真实 Markdown Runtime 发布；最小宽度/大字号/150%/长翻译/主题/键盘的物理表现仍由后续 Computer Use 验收。
-- 加固剪贴板准入与生命周期：执行按冻结检查类型重检；交错批量准入按输入保留检查意图并增加后台物理读取 lease；失败重试恢复冻结 FileRef 并拒绝字节变化；源位置和进度显示不回退到 synthetic 内部路径。
-- 收紧剪贴板正文的展示、日志和清理边界：tooltip 有界转义；共享 Markdown 链接日志不回显 authored target；fsync/删除失败继续跟踪；旧 session 仅在固定 marker 存在且 owner lock 可取得时回收；混合文档预转换/直达批次继续保留逐输入输出目录。
+- Ctrl+V 仅在输入区生效；后台检查、转换及失败重试期间保留每份已准入的剪贴板快照，重试前拒绝已变化的输入字节。
+- 限制剪贴板预览和诊断的内容长度，避免暴露内部快照路径或原文链接目标；清理失败时保留可回收快照，混合文档批次继续保留逐输入输出目录。
+- 修复 Windows 文件系统身份值超出有符号 64 位整数时，转换结果和错误无法正常传递的问题。
 
 - Admit strictly parsed single-record multi-column CSV/TSV when the filename explicitly declares the table format, without relaxing generic text sniffing; align Core admission and Spreadsheet conversion on one BOM-first UTF-8/16/32 and GBK decoding contract.
 - Preserve external/network Markdown, Wiki and HTML targets during document-node link relocation even when malformed or sharing a local basename; keep encoded local path/fragment structure intact while safely serializing relocated paths.

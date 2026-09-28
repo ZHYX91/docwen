@@ -9,7 +9,7 @@ def test_runtime_importable() -> None:
     """docwen_runtime should be importable."""
     import docwen_runtime
 
-    assert docwen_runtime.__version__ == "0.14.1"
+    assert docwen_runtime.__version__ == "0.15.0"
 
 
 def test_runtime_submodules_importable() -> None:
