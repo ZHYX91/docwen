@@ -13,6 +13,7 @@ import os
 import sys
 import time
 from collections.abc import Sequence
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
@@ -89,7 +90,8 @@ from docwen_gui.window_geometry import (
 
 if TYPE_CHECKING:
     from docwen_core.models.file_ref import FileRef
-    from docwen_core.models.request import ConversionRequest
+    from docwen_core.models.request import ConversionRequest, OutputPolicy
+    from docwen_gui.clipboard_inputs import ClipboardInputStore
     from docwen_gui.qt_bridge.task_event_bridge import TaskEventBridge
 
     from .view_models.action_area_vm import ActionAreaViewModel
@@ -167,12 +169,16 @@ class MainWindow(QWidget):
         view_model: MainWindowViewModel,
         task_event_bridge: TaskEventBridge | None = None,
         parent: QWidget | None = None,
+        *,
+        clipboard_input_root: str | Path | None = None,
     ) -> None:
         super().__init__(parent)
         from docwen_gui.qt_bridge.background_operation import BackgroundOperation
 
         self._path_operation = BackgroundOperation(self)
         self._view_model = view_model
+        self._clipboard_input_root = Path(clipboard_input_root).expanduser() if clipboard_input_root else None
+        self._clipboard_store: ClipboardInputStore | None = None
         self._window_behavior = self._load_window_behavior()
         self._CENTER_PANEL_MIN_WIDTH: int = dp(self._window_behavior.center_panel_width)
         self._LEFT_PANEL_MIN_WIDTH: int = dp(self._window_behavior.left_panel_width)
@@ -237,14 +243,22 @@ class MainWindow(QWidget):
         self._right_stack: QStackedWidget = _cast("QStackedWidget", None)
         self._center_column: QWidget = _cast("QWidget", None)
 
-        self._execution = ExecutionSupervisor(self._view_model, self)
+        self._execution = ExecutionSupervisor(
+            self._view_model,
+            self,
+            retain_inputs=self._retain_clipboard_active,
+            release_inputs=self._release_clipboard_active,
+        )
         self._execution.warning.connect(self._on_execution_warning)
         self._execution_close_pending = False
         self._execution_drain_timed_out = False
         self._execution_drain_deadline = 0.0
         self._execution_drain_timer: QTimer | None = None
         self._shutdown_finalized = False
-        self._task_history = TaskHistory()
+        self._task_history = TaskHistory(
+            retain_paths=self._retain_clipboard_history,
+            release_owner=self._release_clipboard_history,
+        )
         self._current_mode = view_model.mode
         self._file_contexts: dict[str, tuple[str, str]] = {}
         self._always_on_top_enabled = False
@@ -289,6 +303,174 @@ class MainWindow(QWidget):
         self.resize(
             max(geometry.rect.width, geometry.min_width),
             max(geometry.rect.height, geometry.min_height),
+        )
+
+    # ── Managed clipboard inputs ───────────────────────────────────
+
+    def _clipboard_store_for_paste(self) -> ClipboardInputStore:
+        if self._clipboard_store is not None:
+            return self._clipboard_store
+        from platformdirs import user_cache_dir
+
+        from docwen_gui.clipboard_inputs import ClipboardInputStore
+
+        root = self._clipboard_input_root
+        if root is None:
+            root = Path(user_cache_dir("docwen", appauthor=False)) / "clipboard-inputs"
+        self._clipboard_store = ClipboardInputStore(root.resolve(strict=False))
+        return self._clipboard_store
+
+    def _clipboard_descriptor(self, file_path: str):
+        store = self._clipboard_store
+        return store.descriptor(file_path) if store is not None else None
+
+    def _clipboard_presentation(self, file_path: str):
+        descriptor = self._clipboard_descriptor(file_path)
+        if descriptor is None:
+            return None
+        from .view_models.input_area_vm import InputPresentation
+
+        preview = _t(
+            "components.file_drop.clipboard_preview",
+            "Clipboard preview: {preview}",
+            preview=descriptor.preview,
+        )
+        return InputPresentation(descriptor.display_name, preview, False)
+
+    def _clipboard_source_label(self, file_path: str) -> str | None:
+        descriptor = self._clipboard_descriptor(file_path)
+        return descriptor.display_name if descriptor is not None else None
+
+    def _is_clipboard_input(self, file_path: str) -> bool:
+        store = self._clipboard_store
+        return bool(store is not None and store.is_snapshot(file_path))
+
+    def _retain_clipboard_active(self, owner: str, paths: tuple[str, ...]) -> None:
+        if self._clipboard_store is not None:
+            self._clipboard_store.retain_active(owner, paths)
+
+    def _release_clipboard_active(self, owner: str) -> None:
+        if self._clipboard_store is not None:
+            self._clipboard_store.release_active(owner)
+
+    def _retain_clipboard_history(self, owner: str, paths: tuple[str, ...]) -> None:
+        if self._clipboard_store is not None:
+            self._clipboard_store.retain_history(owner, paths)
+
+    def _release_clipboard_history(self, owner: str) -> None:
+        if self._clipboard_store is not None:
+            self._clipboard_store.release_history(owner)
+
+    def _sync_clipboard_visible_inputs(self) -> None:
+        if self._clipboard_store is not None:
+            self._clipboard_store.sync_visible(tuple(ref.path for ref in self._view_model.files))
+
+    def _on_paste_requested(self) -> None:
+        if self._execution.busy or self._action_area_vm.cancel_visible:
+            self._info_area_vm.add_message(_t("components.file_drop.input_busy"), "warning")
+            return
+        clipboard = QApplication.clipboard()
+        mime_data = clipboard.mimeData()
+        if mime_data is None or not mime_data.hasText():
+            self._info_area_vm.add_message(
+                _t(
+                    "components.file_drop.clipboard_non_text",
+                    "The clipboard does not contain plain text.",
+                ),
+                "warning",
+            )
+            return
+        text = mime_data.text()
+        if not text.strip():
+            self._info_area_vm.add_message(
+                _t(
+                    "components.file_drop.clipboard_empty",
+                    "The clipboard text is empty.",
+                ),
+                "warning",
+            )
+            return
+        store = self._clipboard_store_for_paste()
+        try:
+            snapshot = store.create(
+                text,
+                display_name_template=_t(
+                    "components.file_drop.clipboard_name",
+                    "Clipboard Markdown {index}.md",
+                    index="{index}",
+                ),
+            )
+        except (OSError, TypeError, ValueError):
+            self._info_area_vm.add_message(
+                _t(
+                    "components.file_drop.clipboard_create_failed",
+                    "Clipboard text could not be prepared as a Markdown input.",
+                ),
+                "danger",
+            )
+            return
+
+        def completed(outcome) -> None:
+            if not outcome.added:
+                store.discard_if_unowned(snapshot.path)
+            self._sync_clipboard_visible_inputs()
+
+        self._input_area_vm.add_files([snapshot.path], completed=completed)
+
+    def _prepare_clipboard_output_policy(
+        self,
+        file_paths: Sequence[str],
+        mode: Literal["single", "batch", "aggregate"],
+        policy: OutputPolicy,
+    ) -> OutputPolicy | None:
+        synthetic = [path for path in file_paths if self._is_clipboard_input(path)]
+        if not synthetic or policy.output_dir or policy.output_path:
+            return policy
+        selected = QFileDialog.getExistingDirectory(
+            self,
+            _t(
+                "components.file_drop.clipboard_output_title",
+                "Choose an output folder for clipboard Markdown",
+            ),
+            str(Path.home()),
+        )
+        if not selected:
+            self._info_area_vm.add_message(
+                _t(
+                    "components.file_drop.clipboard_output_cancelled",
+                    "Conversion was not started because no output folder was selected.",
+                ),
+                "warning",
+            )
+            return None
+        try:
+            output_dir = Path(selected).expanduser().resolve(strict=False)
+        except (OSError, RuntimeError, ValueError):
+            self._info_area_vm.add_message(
+                _t(
+                    "components.file_drop.clipboard_output_invalid",
+                    "The selected output folder is unavailable.",
+                ),
+                "warning",
+            )
+            return None
+        store = self._clipboard_store
+        if store is not None:
+            managed_root = store.session_root.parent
+            if output_dir == managed_root or managed_root in output_dir.parents:
+                self._info_area_vm.add_message(
+                    _t(
+                        "components.file_drop.clipboard_output_invalid",
+                        "The selected output folder is unavailable.",
+                    ),
+                    "warning",
+                )
+                return None
+        if mode != "batch":
+            return replace(policy, output_dir=str(output_dir), per_input_output_dirs={})
+        return replace(
+            policy,
+            per_input_output_dirs={path: str(output_dir) for path in synthetic},
         )
 
     # ── UI construction ────────────────────────────────────────────

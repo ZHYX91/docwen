@@ -136,11 +136,15 @@ class ExecutionRequestBuilder:
         *,
         file_contexts: Callable[[], dict[str, tuple[str, str]]],
         selected_template: Callable[[], tuple[str, str] | None],
+        source_label: Callable[[str], str | None] | None = None,
+        synthetic_input: Callable[[str], bool] | None = None,
     ) -> None:
         self._view_model = view_model
         self._batch_list_vm = batch_list_vm
         self._file_contexts = file_contexts
         self._selected_template = selected_template
+        self._source_label = source_label or (lambda _path: None)
+        self._synthetic_input = synthetic_input or (lambda _path: False)
 
     def single(
         self,
@@ -150,6 +154,7 @@ class ExecutionRequestBuilder:
         action_name: str,
         options: dict[str, Any],
         route_options: Sequence[str] | None = None,
+        output_policy: OutputPolicy | None = None,
     ) -> tuple[ConversionRequest, dict[str, Any]]:
         return self._build(
             file_paths=[file_path],
@@ -158,6 +163,7 @@ class ExecutionRequestBuilder:
             action_name=action_name,
             options=options,
             route_options=route_options,
+            output_policy=output_policy,
         )
 
     def batch(
@@ -168,6 +174,7 @@ class ExecutionRequestBuilder:
         action_name: str,
         options: dict[str, Any],
         route_options: Sequence[str] | None = None,
+        output_policy: OutputPolicy | None = None,
     ) -> tuple[ConversionRequest, dict[str, Any]]:
         return self._build(
             file_paths=file_paths,
@@ -176,6 +183,7 @@ class ExecutionRequestBuilder:
             action_name=action_name,
             options=options,
             route_options=route_options,
+            output_policy=output_policy,
         )
 
     def aggregate(
@@ -186,6 +194,7 @@ class ExecutionRequestBuilder:
         action_name: str,
         options: dict[str, Any],
         route_options: Sequence[str] | None = None,
+        output_policy: OutputPolicy | None = None,
     ) -> tuple[ConversionRequest, dict[str, Any]]:
         return self._build(
             file_paths=file_paths,
@@ -194,6 +203,7 @@ class ExecutionRequestBuilder:
             action_name=action_name,
             options=options,
             route_options=route_options,
+            output_policy=output_policy,
         )
 
     def _build(
@@ -205,6 +215,7 @@ class ExecutionRequestBuilder:
         action_name: str,
         options: dict[str, Any],
         route_options: Sequence[str] | None,
+        output_policy: OutputPolicy | None,
     ) -> tuple[ConversionRequest, dict[str, Any]]:
         from docwen_core.models.request import ConversionRequest
 
@@ -232,7 +243,7 @@ class ExecutionRequestBuilder:
                 route_options=route_options,
             )
         request_options = _route_scoped_options(request_options, route_options=route_options)
-        output_policy = self.output_policy()
+        output_policy = output_policy or self.output_policy()
         request = ConversionRequest(
             request_id=str(uuid.uuid4()),
             input_refs=[self.file_ref(path) for path in source_paths],
@@ -242,6 +253,16 @@ class ExecutionRequestBuilder:
             output_policy=output_policy,
         )
         normalized_paths = [normalize_path(path) for path in source_paths]
+        source_labels = {
+            normalized: label
+            for source, normalized in zip(source_paths, normalized_paths, strict=True)
+            if (label := self._source_label(source))
+        }
+        synthetic_paths = [
+            normalized
+            for source, normalized in zip(source_paths, normalized_paths, strict=True)
+            if self._synthetic_input(source)
+        ]
         context: dict[str, Any] = {
             "request_id": request.request_id,
             "file_path": normalized_paths[0] if normalized_paths else "",
@@ -250,8 +271,15 @@ class ExecutionRequestBuilder:
             "options": _redacted_request_options(request_options),
             "open_after_done": output_policy.open_after_done,
         }
+        if source_labels:
+            context["source_labels"] = source_labels
+        if synthetic_paths:
+            context["synthetic_input_paths"] = synthetic_paths
         if mode == "single":
-            context["display_name"] = Path(source_paths[0]).name
+            context["display_name"] = source_labels.get(
+                normalized_paths[0],
+                Path(source_paths[0]).name,
+            )
         else:
             context.update(
                 file_paths=normalized_paths,

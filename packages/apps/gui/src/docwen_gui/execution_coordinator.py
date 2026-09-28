@@ -22,7 +22,7 @@ from docwen_gui.view_models._runtime_route_filter import (
 
 if TYPE_CHECKING:
     from docwen_application.controller import ApplicationController
-    from docwen_core.models.request import ConversionRequest
+    from docwen_core.models.request import ConversionRequest, OutputPolicy
     from docwen_gui.execution_presenter import ExecutionPresenter
     from docwen_gui.execution_requests import ExecutionRequestBuilder
     from docwen_gui.qt_bridge.execution_supervisor import ExecutionSupervisor
@@ -54,6 +54,9 @@ class ExecutionCoordinator(QObject):
         presenter: ExecutionPresenter,
         history: TaskHistory,
         confirm_request: Callable[[ConversionRequest], bool],
+        prepare_output_policy: (
+            Callable[[Sequence[str], Literal["single", "batch", "aggregate"], OutputPolicy], OutputPolicy | None] | None
+        ) = None,
         parent: QObject,
     ) -> None:
         super().__init__(parent)
@@ -65,6 +68,7 @@ class ExecutionCoordinator(QObject):
         self._results = presenter
         self._task_history = history
         self._confirm_request = confirm_request
+        self._prepare_output_policy = prepare_output_policy or (lambda _paths, _mode, policy: policy)
         self._context: dict[str, Any] = {}
         self.started_at: float | None = None
         self._accepting = True
@@ -154,6 +158,10 @@ class ExecutionCoordinator(QObject):
             return
         target_format, choice = resolved
         try:
+            output_policy = self._requests.output_policy()
+            output_policy = self._prepare_output_policy(file_paths, mode, output_policy)
+            if output_policy is None:
+                return
             if mode == "single":
                 request, context = self._requests.single(
                     file_path=file_paths[0],
@@ -161,6 +169,7 @@ class ExecutionCoordinator(QObject):
                     action_name=action_name,
                     options=options,
                     route_options=choice.options,
+                    output_policy=output_policy,
                 )
             else:
                 build = self._requests.batch if mode == "batch" else self._requests.aggregate
@@ -170,6 +179,7 @@ class ExecutionCoordinator(QObject):
                     action_name=action_name,
                     options=options,
                     route_options=choice.options,
+                    output_policy=output_policy,
                 )
         except OutputPolicyConfigError:
             self._report_output_policy_config_error()
