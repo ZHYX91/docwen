@@ -210,6 +210,7 @@ class InputArea(QFrame):
 
         self._action_frame = QFrame(self._drop_group)
         self._action_frame.setObjectName("fileDropActionButtonsFrame")
+        self._action_frame.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self._action_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight, self._action_frame)
         self._action_layout.setContentsMargins(0, 0, 0, 0)
         set_metric(self._action_layout, "setSpacing", Spacing.CONTROL_GAP)
@@ -593,9 +594,7 @@ class InputArea(QFrame):
     def _sync_visual_state(self) -> None:
         """Sync visual state. Selection state is derived from ViewModel message."""
         self._open_location_button.setVisible(
-            bool(self._vm.selected_file_path)
-            and self._vm.selected_location_available
-            and not self._drag_active
+            bool(self._vm.selected_file_path) and self._vm.selected_location_available and not self._drag_active
         )
         has_selection = bool(self._vm.selection_message.strip())
 
@@ -788,15 +787,15 @@ class InputArea(QFrame):
 
         direction_changed = compact != self._top_controls_compact
         self._top_controls_compact = compact
-        self._top_layout.setDirection(
-            QBoxLayout.Direction.TopToBottom if compact else QBoxLayout.Direction.LeftToRight
-        )
+        self._top_layout.setDirection(QBoxLayout.Direction.TopToBottom if compact else QBoxLayout.Direction.LeftToRight)
         self._action_layout.setDirection(
             QBoxLayout.Direction.TopToBottom if actions_stacked else QBoxLayout.Direction.LeftToRight
         )
         set_metric(self._top_layout, "setSpacing", Spacing.GROUP_GAP)
         set_metric(self._action_layout, "setSpacing", Spacing.CONTROL_GAP)
-        self._action_frame.setMinimumWidth(action_width if not actions_stacked else 0)
+        # Allow the parent to shrink first so the responsive layout can choose
+        # its stacked form; a horizontal minimum would prevent that resize.
+        self._action_frame.setMinimumWidth(0)
 
         if direction_changed:
             self.height_changed.emit(self.minimumHeight())

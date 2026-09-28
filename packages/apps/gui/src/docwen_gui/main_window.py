@@ -1863,26 +1863,17 @@ class MainWindow(QWidget):
             options["spreadsheet_password"] = password
         retry_paths = record.paths if context.get("aggregate") else failed_files
         synthetic_keys = {
-            normalize_path(path)
-            for path in context.get("synthetic_input_paths", [])
-            if isinstance(path, str)
+            normalize_path(path) for path in context.get("synthetic_input_paths", []) if isinstance(path, str)
         }
         unavailable_snapshots = [
             path
             for path in retry_paths
             if normalize_path(path) in synthetic_keys
-            and (
-                self._clipboard_store is None
-                or not self._clipboard_store.snapshot_available(path)
-            )
+            and (self._clipboard_store is None or not self._clipboard_store.snapshot_available(path))
         ]
         if unavailable_snapshots:
             labels = context.get("source_labels", {})
-            label = (
-                labels.get(normalize_path(unavailable_snapshots[0]))
-                if isinstance(labels, dict)
-                else None
-            )
+            label = labels.get(normalize_path(unavailable_snapshots[0])) if isinstance(labels, dict) else None
             self._info_area_vm.add_message(
                 _t(
                     "components.file_drop.clipboard_retry_unavailable",

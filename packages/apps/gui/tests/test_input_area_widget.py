@@ -9,8 +9,9 @@ from itertools import pairwise
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QCoreApplication, QEvent, QMimeData, QPoint, QPointF, QSignalSpy, Qt, QUrl
+from PySide6.QtCore import QCoreApplication, QEvent, QMimeData, QPoint, QPointF, Qt, QUrl
 from PySide6.QtGui import QDragEnterEvent, QDropEvent, QKeySequence
+from PySide6.QtTest import QSignalSpy
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -360,11 +361,15 @@ class TestPasteAction:
         editor = QLineEdit(container)
         layout.addWidget(widget)
         layout.addWidget(editor)
+        qtbot.addWidget(container)
         container.show()
+        container.activateWindow()
+        qapp.processEvents()
         qapp.clipboard().setText("editor text")
         spy = QSignalSpy(widget.paste_requested)
 
         widget.setFocus()
+        qtbot.waitUntil(widget.hasFocus)
         qtbot.keySequence(widget, QKeySequence.StandardKey.Paste)
         qapp.processEvents()
         assert spy.count() == 1
@@ -640,8 +645,8 @@ class TestViewModelWiring:
 
     def test_mode_changed_updates_switch(self, widget: InputArea) -> None:
         widget.view_model.set_mode("batch")
-        current = widget.mode_switch.currentItem()
-        assert current is not None
+        assert widget.batch_mode_button.isChecked()
+        assert not widget.single_mode_button.isChecked()
         assert widget.view_model.mode == "batch"
 
     def test_selection_message_visible(self, widget: InputArea) -> None:

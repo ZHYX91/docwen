@@ -35,6 +35,7 @@ from docwen_core.models.file_inspection import (
     AdmissionDecision,
     ContentDetection,
     DetectionConfidence,
+    DetectionMethod,
     FileInspection,
     FormatRelation,
     StructureStatus,
@@ -427,6 +428,7 @@ def inspect_utf8_markdown_snapshot(
         warnings=(),
     )
 
+
 def has_supported_filename_declaration(file_path: str) -> bool:
     """Return whether the filename declaration is accepted by file pickers.
 
@@ -459,14 +461,9 @@ def enforce_file_admission(request: Any) -> Any:
             raise FileAdmissionPathError(lexical_path)
         current_path = str(lexical_path.expanduser().resolve(strict=False))
         synthetic_markdown = (
-            isinstance(raw, dict)
-            and raw.get("detection_method") == DetectionMethod.SYNTHETIC_MARKDOWN.value
+            isinstance(raw, dict) and raw.get("detection_method") == DetectionMethod.SYNTHETIC_MARKDOWN.value
         )
-        inspection = (
-            inspect_utf8_markdown_snapshot(current_path)
-            if synthetic_markdown
-            else inspect_file(current_path)
-        )
+        inspection = inspect_utf8_markdown_snapshot(current_path) if synthetic_markdown else inspect_file(current_path)
         canonical_fact = inspection.to_dict()
         if synthetic_markdown and raw != canonical_fact:
             raise FileAdmissionError(

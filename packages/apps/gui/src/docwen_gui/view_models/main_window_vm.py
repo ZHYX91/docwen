@@ -272,11 +272,7 @@ class MainWindowViewModel(QObject):
             token.check()
             try:
                 inspector = file_inspector or self._file_inspector
-                inspection = (
-                    inspector(path)
-                    if inspector is not None
-                    else inspect_file(path, cancel_check=token.check)
-                )
+                inspection = inspector(path) if inspector is not None else inspect_file(path, cancel_check=token.check)
                 inspected.append((path, inspection))
             except (ValueError, OSError):
                 inspected.append((path, None))

@@ -105,11 +105,7 @@ class OutputPolicy:
             return replace(self, per_input_output_dirs={})
         key = self._input_key(input_path)
         output_dir = next(
-            (
-                value
-                for path, value in self.per_input_output_dirs.items()
-                if value and self._input_key(path) == key
-            ),
+            (value for path, value in self.per_input_output_dirs.items() if value and self._input_key(path) == key),
             None,
         )
         return replace(self, output_dir=output_dir, per_input_output_dirs={})

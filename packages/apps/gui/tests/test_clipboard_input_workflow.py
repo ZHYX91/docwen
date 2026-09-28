@@ -50,6 +50,7 @@ def test_single_paste_freezes_exact_utf8_and_replaces_only_after_admission(
     first_text = "  ---\ntitle: 保留\n---\n\n```text\n  keep  \n```\n"
     first_path = _paste_text(clipboard_window, qapp, qtbot, first_text)
     first = Path(first_path)
+    assert clipboard_window._clipboard_store is not None
     descriptor = clipboard_window._clipboard_store.descriptor(first_path)
     assert descriptor is not None
     assert first.read_bytes() == first_text.encode("utf-8")
@@ -84,9 +85,14 @@ def test_batch_paste_appends_independent_visible_snapshots(
     qtbot.waitUntil(lambda: len(clipboard_window.view_model.files) == 2)
     refs = clipboard_window.view_model.files
     entries = [clipboard_window._batch_list_vm.get_file_entry(ref.path) for ref in refs]
-    assert [entry.file_name for entry in entries] == ["Clipboard Markdown 1.md", "Clipboard Markdown 2.md"]
+    assert clipboard_window._clipboard_store is not None
+    for entry, ref in zip(entries, refs, strict=True):
+        assert entry is not None
+        descriptor = clipboard_window._clipboard_store.descriptor(ref.path)
+        assert descriptor is not None
+        assert entry.file_name == descriptor.display_name
+        assert entry.source_location_available is False
     assert [Path(ref.path).read_text(encoding="utf-8") for ref in refs] == ["# First\n", "# Second\n"]
-    assert all(entry.source_location_available is False for entry in entries)
 
 
 def test_empty_or_non_text_clipboard_never_creates_input(
@@ -155,6 +161,7 @@ def test_failed_retry_reuses_original_snapshot_not_current_clipboard(
     original = "# Original clipboard snapshot\n"
     path = _paste_text(clipboard_window, qapp, qtbot, original)
     normalized = normalize_path(path)
+    assert clipboard_window._clipboard_store is not None
     descriptor = clipboard_window._clipboard_store.descriptor(path)
     assert descriptor is not None
 
@@ -194,6 +201,7 @@ def test_missing_retry_snapshot_does_not_read_new_clipboard(
 ) -> None:
     path = _paste_text(clipboard_window, qapp, qtbot, "# Original\n")
     normalized = normalize_path(path)
+    assert clipboard_window._clipboard_store is not None
     descriptor = clipboard_window._clipboard_store.descriptor(path)
     assert descriptor is not None
     clipboard_window._task_history.remember(
@@ -244,6 +252,7 @@ def test_activity_records_show_clipboard_label_without_backing_path(
 ) -> None:
     path = _paste_text(clipboard_window, qapp, qtbot, "# Private backing path must stay hidden\n")
     normalized = normalize_path(path)
+    assert clipboard_window._clipboard_store is not None
     descriptor = clipboard_window._clipboard_store.descriptor(path)
     assert descriptor is not None
     clipboard_window._task_history.remember(

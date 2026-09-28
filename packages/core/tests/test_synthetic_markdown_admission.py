@@ -4,7 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from docwen_core.detection import FileAdmissionError, enforce_file_admission, inspect_file, inspect_utf8_markdown_snapshot
+from docwen_core.detection import (
+    FileAdmissionError,
+    enforce_file_admission,
+    inspect_file,
+    inspect_utf8_markdown_snapshot,
+)
 from docwen_core.models import FILE_INSPECTION_METADATA_KEY
 from docwen_core.models.file_inspection import DetectionMethod
 from docwen_core.models.file_ref import FileRef

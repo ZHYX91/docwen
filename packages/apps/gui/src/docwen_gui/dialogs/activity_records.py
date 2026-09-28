@@ -271,9 +271,7 @@ class ActivityRecordsDialog(QDialog):
         self.diagnostic_view.set_content(text, record.diagnostic if record else None)
         self.details.setProperty("activityStatus", record.status if record else "")
         self.copy.setEnabled(bool(self.diagnostic_view.preview.toPlainText()))
-        self.open_source.setEnabled(
-            bool(record and record.source_path and record.source_location_available)
-        )
+        self.open_source.setEnabled(bool(record and record.source_path and record.source_location_available))
         self.open_output.setEnabled(bool(record and record.output_path))
         selected_output = self.outputs.currentData()
         self.outputs.blockSignals(True)

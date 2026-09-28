@@ -86,19 +86,13 @@ class ActivityRecordsModel(QAbstractTableModel):
                     operation = t("activity.validate")
             source_labels = task.context.get("source_labels", {})
             synthetic_paths = {
-                Path(item).as_posix()
-                for item in task.context.get("synthetic_input_paths", [])
-                if isinstance(item, str)
+                Path(item).as_posix() for item in task.context.get("synthetic_input_paths", []) if isinstance(item, str)
             }
             for path in task.paths:
                 if not path:
                     continue
                 outcome = task.outcomes.get(path)
-                source_label = (
-                    str(source_labels.get(path) or "")
-                    if isinstance(source_labels, dict)
-                    else ""
-                )
+                source_label = str(source_labels.get(path) or "") if isinstance(source_labels, dict) else ""
                 source_location_available = path not in synthetic_paths
                 output = outcome.output_path if outcome else ""
                 outputs = outcome.output_paths if outcome else ()
