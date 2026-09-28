@@ -280,6 +280,7 @@ def _serialize_local_link_path(path: str) -> str:
         result.extend(f"%{byte:02X}" for byte in char.encode("utf-8"))
     return "".join(result)
 
+
 def _rewrite_known_links(text: str, replacements: dict[str, str]) -> str:
     normalized = {key.replace("\\", "/"): value for key, value in replacements.items()}
 

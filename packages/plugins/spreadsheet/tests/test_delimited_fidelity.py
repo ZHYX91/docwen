@@ -182,6 +182,7 @@ def test_delimited_runtime_pipeline_honors_shared_encoding_contract(
         workbook.close()
     assert not list(workspace_root.rglob("*.xlsx"))
 
+
 def test_delimited_bom_decode_error_is_not_reinterpreted(tmp_path: Path) -> None:
     source = tmp_path / "invalid-utf8.csv"
     source.write_bytes(b"\xef\xbb\xbf" + b"a,b\n" * 17000 + "中文".encode("gbk"))
