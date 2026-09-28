@@ -268,6 +268,7 @@ def test_synthetic_authored_link_targets_do_not_enter_conversion_logs(
     assert source.read_bytes() == text.encode("utf-8")
     store.close()
 
+
 @pytest.mark.parametrize(
     ("yaml_title", "expected_title"),
     [
