@@ -222,8 +222,14 @@ def test_repository_build_discovery_requires_lease_and_rejects_tracked_content(t
     with pytest.raises(workspace_cleanup.HousekeepingError, match="repository_build_lease_required"):
         workspace_cleanup.create_plan(workspace_root=workspace, explicit_targets=[unowned], reason="test")
     subprocess.run(["git", "-C", str(repo), "add", "build"], check=True, capture_output=True)
+    protected = workspace_cleanup.create_plan(workspace_root=workspace, now=now)
+    assert protected["entries"] == []
+    assert any(
+        item["path"] == str(run) and "tracked_build_content" in item["reason"]
+        for item in protected["observations"]["skipped"]
+    )
     with pytest.raises(workspace_cleanup.HousekeepingError, match="tracked_build_content"):
-        workspace_cleanup.create_plan(workspace_root=workspace, now=now)
+        workspace_cleanup.create_plan(workspace_root=workspace, explicit_targets=[run], reason="test", now=now)
     assert run.exists()
 
 
