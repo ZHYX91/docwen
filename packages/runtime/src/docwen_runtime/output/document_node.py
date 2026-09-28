@@ -8,6 +8,7 @@ import re
 from dataclasses import dataclass, replace
 from datetime import datetime
 from html import escape, unescape
+from html.entities import html5
 from pathlib import Path, PurePosixPath
 from urllib.parse import unquote
 
@@ -33,6 +34,31 @@ _HTML_LINK = re.compile(
 _WINDOWS_DRIVE_TARGET = re.compile(r"^[A-Za-z]:[\\/]")
 _URI_SCHEME_TARGET = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
 _LOCAL_LINK_UNSAFE = frozenset("%#? \t\r\n<>\"'()[]|&")
+_HTML_ATTRIBUTE_REFERENCE = re.compile(r"&#(?:[xX][0-9a-fA-F]+|[0-9]+);?|&[A-Za-z][A-Za-z0-9]*;?")
+
+
+def _decode_html_attribute(value: str) -> str:
+    """Decode references using HTML's attribute-context legacy-name rule."""
+
+    def decode(match: re.Match[str]) -> str:
+        token = match.group()[1:]
+        if token.startswith("#"):
+            return unescape(match.group())
+        for length in range(len(token), 0, -1):
+            name = token[:length]
+            if name not in html5:
+                continue
+            following = token[length : length + 1] or value[match.end() : match.end() + 1]
+            if (
+                not name.endswith(";")
+                and following
+                and (following == "=" or (following.isascii() and following.isalnum()))
+            ):
+                return match.group()
+            return html5[name] + token[length:]
+        return match.group()
+
+    return _HTML_ATTRIBUTE_REFERENCE.sub(decode, value)
 
 
 @dataclass(frozen=True, slots=True)
@@ -313,7 +339,7 @@ def _rewrite_known_links(text: str, replacements: dict[str, str]) -> str:
 
     def html_sub(match: re.Match[str]) -> str:
         raw = match.group("target")
-        semantic = unescape(raw)
+        semantic = _decode_html_attribute(raw)
         replaced = replace_target(semantic)
         # Classify decoded HTML semantics, but keep untouched external/local
         # attributes byte-for-byte. Only rewritten local values need escaping.
