@@ -28,7 +28,7 @@ def test_session_namespace_excludes_concurrent_publication_and_recovery(
     peer_attempted = threading.Event()
     peer_acquired = threading.Event()
     lock = clipboard._lock_owner_stream
-    remove = clipboard.shutil.rmtree
+    remove = clipboard._retire_stale_session
 
     def observed_lock(stream, *, blocking: bool) -> None:
         name = Path(stream.name).name
@@ -49,7 +49,7 @@ def test_session_namespace_excludes_concurrent_publication_and_recovery(
         remove(path, *args, **kwargs)
 
     monkeypatch.setattr(clipboard, "_lock_owner_stream", observed_lock)
-    monkeypatch.setattr(clipboard.shutil, "rmtree", observed_remove)
+    monkeypatch.setattr(clipboard, "_retire_stale_session", observed_remove)
     stores: list[clipboard.ClipboardInputStore] = []
     snapshots: list[str] = []
     errors: list[BaseException] = []

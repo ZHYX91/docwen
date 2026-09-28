@@ -58,6 +58,23 @@ def _unlock_owner_stream(stream) -> None:
         fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
 
 
+def _retire_stale_session(session: Path) -> None:
+    """Keep recovery authority until all authored bytes have been removed.
+
+    The caller holds the root namespace lock and has proved the owner idle.
+    A partial content deletion must leave the marker for the next startup.
+    """
+    for child in session.iterdir():
+        if child.name == _OWNER_LOCK_NAME:
+            continue
+        if child.is_dir() and not child.is_symlink():
+            shutil.rmtree(child)
+        else:
+            child.unlink()
+    (session / _OWNER_LOCK_NAME).unlink()
+    session.rmdir()
+
+
 @dataclass(frozen=True, slots=True)
 class ClipboardInputDescriptor:
     path: str
@@ -163,7 +180,7 @@ class ClipboardInputStore:
                         _unlock_owner_stream(stream)
                 finally:
                     stream.close()
-                shutil.rmtree(session)
+                _retire_stale_session(session)
             except OSError:
                 continue
 
