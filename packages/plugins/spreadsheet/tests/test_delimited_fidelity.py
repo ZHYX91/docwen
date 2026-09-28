@@ -80,6 +80,7 @@ def test_delimited_fidelity_gbk_after_ascii_sample(tmp_path: Path, sep: str) -> 
     frame = _read_csv_flexible(str(source), "tsv" if sep == "\t" else "csv")
     assert frame.iloc[-1].tolist() == values
 
+
 def test_delimited_bom_decode_error_is_not_reinterpreted(tmp_path: Path) -> None:
     source = tmp_path / "invalid-utf8.csv"
     source.write_bytes(b"\xef\xbb\xbf" + b"a,b\n" * 17000 + "中文".encode("gbk"))
