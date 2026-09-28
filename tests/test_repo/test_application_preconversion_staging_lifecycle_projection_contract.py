@@ -40,9 +40,10 @@ def test_preconversion_preserves_source_policy_and_file_identity() -> None:
     preconverter = PRECONVERTER.read_text(encoding="utf-8")
 
     source_policy = controller.split("def _source_anchored_output_policy", 1)[1].split("def _configured_priority", 1)[0]
-    assert "if output_policy.output_path or output_policy.output_dir:" in source_policy
-    assert "return output_policy" in source_policy
-    assert "return replace(output_policy, output_dir=str(Path(source_path).parent))" in source_policy
+    assert "projected = output_policy.for_input(source_path)" in source_policy
+    assert "if projected.output_path or projected.output_dir:" in source_policy
+    assert "return projected" in source_policy
+    assert "return replace(projected, output_dir=str(Path(source_path).parent))" in source_policy
     for token in (
         "category=ref.category",
         "encoding=ref.encoding",

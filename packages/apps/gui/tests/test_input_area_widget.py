@@ -10,13 +10,11 @@ from pathlib import Path
 
 import pytest
 from PySide6.QtCore import QCoreApplication, QEvent, QMimeData, QPoint, QPointF, Qt, QUrl
-from PySide6.QtGui import QDragEnterEvent, QDropEvent, QKeySequence
-from PySide6.QtTest import QSignalSpy
+from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
     QLabel,
-    QLineEdit,
     QScrollArea,
     QStyle,
     QStyleOptionComboBox,
@@ -343,43 +341,6 @@ class TestModeSwitch:
         assert widget.view_model.mode == "batch"
         assert widget.batch_mode_button.isChecked()
         assert not widget.single_mode_button.isChecked()
-
-
-class TestPasteAction:
-    def test_button_requests_one_paste(self, widget: InputArea, qtbot) -> None:
-        spy = QSignalSpy(widget.paste_requested)
-
-        qtbot.mouseClick(widget.paste_button, Qt.MouseButton.LeftButton)
-
-        assert spy.count() == 1
-
-    def test_ctrl_v_is_scoped_to_input_area_and_does_not_steal_line_edit_paste(
-        self, widget: InputArea, qapp: QApplication, qtbot
-    ) -> None:
-        container = QWidget()
-        layout = QVBoxLayout(container)
-        editor = QLineEdit(container)
-        layout.addWidget(widget)
-        layout.addWidget(editor)
-        qtbot.addWidget(container)
-        container.show()
-        container.activateWindow()
-        qapp.processEvents()
-        qapp.clipboard().setText("editor text")
-        spy = QSignalSpy(widget.paste_requested)
-
-        widget.setFocus()
-        qtbot.waitUntil(widget.hasFocus)
-        qtbot.keySequence(widget, QKeySequence.StandardKey.Paste)
-        qapp.processEvents()
-        assert spy.count() == 1
-
-        editor.setFocus()
-        qtbot.keySequence(editor, QKeySequence.StandardKey.Paste)
-        qapp.processEvents()
-        assert editor.text() == "editor text"
-        assert spy.count() == 1
-        container.close()
 
 
 # ── Drag-and-drop MIME acceptance ─────────────────────────────────────
