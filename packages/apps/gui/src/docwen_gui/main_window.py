@@ -380,6 +380,11 @@ class MainWindow(QWidget):
             return
         clipboard = QApplication.clipboard()
         mime_data = clipboard.mimeData()
+        if mime_data is not None and mime_data.hasUrls():
+            file_paths = self._input_area_vm.extract_urls_from_mime_data(mime_data.urls())
+            if file_paths:
+                self._input_area_vm.add_files(file_paths)
+                return
         if mime_data is None or not mime_data.hasText():
             self._info_area_vm.add_message(
                 _t(

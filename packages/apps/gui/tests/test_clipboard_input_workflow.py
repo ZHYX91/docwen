@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QMimeData, Qt
+from PySide6.QtCore import QMimeData, Qt, QUrl
 from PySide6.QtWidgets import QApplication
 
 from docwen_core.models import FILE_INSPECTION_METADATA_KEY
@@ -94,6 +94,92 @@ def test_batch_paste_appends_independent_visible_snapshots(
         assert entry.file_name == descriptor.display_name
         assert entry.source_location_available is False
     assert [Path(ref.path).read_text(encoding="utf-8") for ref in refs] == ["# First\n", "# Second\n"]
+
+
+def test_file_clipboard_prefers_real_file_over_url_text(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "copied.md"
+    source.write_text("# Copied file\n", encoding="utf-8")
+    mime = QMimeData()
+    mime.setUrls([QUrl.fromLocalFile(str(source))])
+    mime.setText(f"file:///{source.as_posix()}")
+    qapp.clipboard().setMimeData(mime)
+
+    qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
+    qtbot.waitUntil(lambda: len(clipboard_window.view_model.files) == 1)
+
+    selected = clipboard_window.view_model.selected_file
+    assert selected is not None
+    assert Path(selected.path).resolve() == source.resolve()
+    assert clipboard_window._clipboard_store is None
+
+
+def test_single_file_clipboard_rejects_multiple_and_preserves_current_input(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    original = _paste_text(clipboard_window, qapp, qtbot, "# Keep current\n")
+    first = tmp_path / "first.md"
+    second = tmp_path / "second.md"
+    first.write_text("# First\n", encoding="utf-8")
+    second.write_text("# Second\n", encoding="utf-8")
+    mime = QMimeData()
+    mime.setUrls([QUrl.fromLocalFile(str(first)), QUrl.fromLocalFile(str(second))])
+    qapp.clipboard().setMimeData(mime)
+
+    qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
+    qapp.processEvents()
+
+    assert [ref.path for ref in clipboard_window.view_model.files] == [original]
+    assert clipboard_window.view_model.selected_file is not None
+    assert clipboard_window.view_model.selected_file.path == original
+    assert clipboard_window._input_area_vm.selection_tone == "warning"
+
+
+def test_batch_file_clipboard_adds_mixed_real_files(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    clipboard_window._input_area_vm.set_mode("batch")
+    markdown = tmp_path / "notes.md"
+    spreadsheet = tmp_path / "data.csv"
+    markdown.write_text("# Notes\n", encoding="utf-8")
+    spreadsheet.write_text("name,value\nA,1\n", encoding="utf-8")
+    mime = QMimeData()
+    mime.setUrls([QUrl.fromLocalFile(str(markdown)), QUrl.fromLocalFile(str(spreadsheet))])
+    qapp.clipboard().setMimeData(mime)
+
+    qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
+    qtbot.waitUntil(lambda: len(clipboard_window.view_model.files) == 2)
+
+    refs = clipboard_window.view_model.files
+    assert {Path(ref.path).resolve() for ref in refs} == {markdown.resolve(), spreadsheet.resolve()}
+    assert {ref.category for ref in refs} == {"markdown", "spreadsheet"}
+    assert clipboard_window._clipboard_store is None
+
+
+def test_nonlocal_url_clipboard_still_uses_text_fallback(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+) -> None:
+    mime = QMimeData()
+    mime.setUrls([QUrl("https://example.invalid/report")])
+    mime.setText("https://example.invalid/report")
+    qapp.clipboard().setMimeData(mime)
+
+    path = _paste_text(clipboard_window, qapp, qtbot, "https://example.invalid/report")
+    assert Path(path).read_text(encoding="utf-8") == "https://example.invalid/report"
 
 
 def test_empty_or_non_text_clipboard_never_creates_input(
