@@ -136,6 +136,7 @@ class InputArea(QFrame):
     height_changed = Signal(int)
     location_requested = Signal(str)
     paste_requested = Signal()
+    paste_plain_text_requested = Signal()
 
     def __init__(
         self,
@@ -249,6 +250,11 @@ class InputArea(QFrame):
         self._paste_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         self._paste_shortcut.setAutoRepeat(False)
         self._paste_shortcut.activated.connect(self.request_paste)
+
+        self._plain_text_paste_shortcut = QShortcut(QKeySequence("Ctrl+Shift+V"), self)
+        self._plain_text_paste_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self._plain_text_paste_shortcut.setAutoRepeat(False)
+        self._plain_text_paste_shortcut.activated.connect(self.request_plain_text_paste)
 
         # The drop group is the single framed surface; the state content stays
         # unframed so selection feedback does not create a nested card stack.
@@ -887,6 +893,10 @@ class InputArea(QFrame):
     def request_paste(self) -> None:
         """Request one immediate clipboard read from the owning window."""
         self.paste_requested.emit()
+
+    def request_plain_text_paste(self) -> None:
+        """Request clipboard text without file or rich-table interpretation."""
+        self.paste_plain_text_requested.emit()
 
     def open_file_dialog(self, *, force_batch_mode: bool = False) -> None:
         """Public entry point: open the file dialog (single or multi, per mode).

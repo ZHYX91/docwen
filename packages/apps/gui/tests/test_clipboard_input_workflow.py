@@ -189,6 +189,69 @@ def test_nonlocal_url_clipboard_still_uses_text_fallback(
     assert clipboard_window._clipboard_store is not None
 
 
+def test_rich_clipboard_preserves_simple_table_structure_and_order(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+) -> None:
+    mime = QMimeData()
+    mime.setText("Before\nName\tValue\nA\t00123\nAfter")
+    mime.setHtml(
+        "<p>Before</p><table><tr><th>Name</th><th>Value</th></tr><tr><td>A</td><td>00123</td></tr></table><p>After</p>"
+    )
+    qapp.clipboard().setMimeData(mime)
+
+    qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
+    qtbot.waitUntil(lambda: len(clipboard_window.view_model.files) == 1)
+
+    selected = clipboard_window.view_model.selected_file
+    assert selected is not None
+    content = Path(selected.path).read_text(encoding="utf-8")
+    assert content.index("Before") < content.index("| Name | Value |") < content.index("After")
+    assert "| A | 00123 |" in content
+
+
+def test_unsafe_table_structure_falls_back_to_plain_text_with_warning(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+) -> None:
+    mime = QMimeData()
+    mime.setText("A\tB\n1\t2")
+    mime.setHtml("<table><tr><td>A</td><td>B</td></tr><tr><td>1</td><td>2</td></tr></table>")
+    qapp.clipboard().setMimeData(mime)
+
+    qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
+    qtbot.waitUntil(lambda: len(clipboard_window.view_model.files) == 1)
+
+    selected = clipboard_window.view_model.selected_file
+    assert selected is not None
+    assert Path(selected.path).read_text(encoding="utf-8") == "A\tB\n1\t2\n"
+    assert any(row.message_type == "warning" for row in clipboard_window._info_area_vm.history_rows)
+
+
+def test_plain_text_paste_bypasses_rich_table_projection(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+) -> None:
+    plain = "Name\tValue\nA\t00123"
+    mime = QMimeData()
+    mime.setText(plain)
+    mime.setHtml("<table><tr><th>Name</th><th>Value</th></tr><tr><td>A</td><td>00123</td></tr></table>")
+    qapp.clipboard().setMimeData(mime)
+
+    clipboard_window.input_area.request_plain_text_paste()
+    qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
+    qtbot.waitUntil(lambda: len(clipboard_window.view_model.files) == 1)
+
+    selected = clipboard_window.view_model.selected_file
+    assert selected is not None
+    assert Path(selected.path).read_text(encoding="utf-8") == plain
+
+
 def test_empty_or_non_text_clipboard_never_creates_input(
     clipboard_window: MainWindow,
     qapp: QApplication,

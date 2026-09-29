@@ -374,13 +374,13 @@ class MainWindow(QWidget):
         if self._clipboard_store is not None:
             self._clipboard_store.sync_visible(tuple(ref.path for ref in self._view_model.files))
 
-    def _on_paste_requested(self) -> None:
+    def _on_paste_requested(self, *, plain_text_only: bool = False) -> None:
         if self._execution.busy or self._action_area_vm.cancel_visible:
             self._info_area_vm.add_message(_t("components.file_drop.input_busy"), "warning")
             return
         clipboard = QApplication.clipboard()
         mime_data = clipboard.mimeData()
-        if mime_data is not None and mime_data.hasUrls():
+        if not plain_text_only and mime_data is not None and mime_data.hasUrls():
             file_paths = self._input_area_vm.extract_urls_from_mime_data(mime_data.urls())
             if file_paths:
                 self._input_area_vm.add_files(file_paths)
@@ -395,6 +395,18 @@ class MainWindow(QWidget):
             )
             return
         text = mime_data.text()
+        fallback_table_count = 0
+        if not plain_text_only and mime_data.hasHtml():
+            try:
+                from docwen_gui.clipboard_content import project_clipboard_html
+
+                projection = project_clipboard_html(mime_data.html())
+            except Exception:
+                logger.debug("Clipboard HTML projection failed; retaining plain text", exc_info=True)
+            else:
+                if (projection.table_count or projection.fallback_table_count) and projection.text.strip():
+                    text = projection.text
+                    fallback_table_count = projection.fallback_table_count
         if not text.strip():
             self._info_area_vm.add_message(
                 _t(
@@ -427,6 +439,16 @@ class MainWindow(QWidget):
         def completed(outcome) -> None:
             if not outcome.added:
                 store.discard_if_unowned(snapshot.path)
+            elif fallback_table_count:
+                self._info_area_vm.add_message(
+                    _t(
+                        "clipboard.table_fallback",
+                        "{count} clipboard tables could not be represented safely as Markdown tables; "
+                        "their cell text was kept as plain text.",
+                        count=fallback_table_count,
+                    ),
+                    "warning",
+                )
             self._sync_clipboard_visible_inputs()
 
         from docwen_core.detection import inspect_utf8_markdown_snapshot
@@ -708,6 +730,7 @@ class MainWindow(QWidget):
         self._input_area = InputArea(view_model=self._input_area_vm, parent=self)
         self._input_area.location_requested.connect(self._open_location)
         self._input_area.paste_requested.connect(self._on_paste_requested)
+        self._input_area.paste_plain_text_requested.connect(lambda: self._on_paste_requested(plain_text_only=True))
         self._batch_list = BatchList(view_model=self._batch_list_vm, parent=self)
         self._conversion_panel = ConversionPanel(view_model=self._conversion_panel_vm, parent=self)
         self._action_area = ActionArea(view_model=self._action_area_vm, parent=self)
