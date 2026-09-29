@@ -336,7 +336,9 @@ def test_clipboard_docx_uses_logical_name_for_publication_and_only_as_title_fall
     assert result.success, result.error
     primary = next(artifact for artifact in result.artifacts if artifact.kind == "primary")
     output = Path(primary.staging_path)
-    assert primary.suggested_name == f"{logical_stem}.docx"
+    assert primary.suggested_name.startswith(f"{logical_stem}_")
+    assert primary.suggested_name.endswith("_fromMd.docx")
+    assert physical_stem not in primary.suggested_name
     assert logical_stem in output.name
     assert logical_stem in output.parent.name
     assert physical_stem not in output.name
