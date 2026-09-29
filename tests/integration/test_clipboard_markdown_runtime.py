@@ -142,7 +142,9 @@ def test_clipboard_relative_image_has_no_implicit_source_directory(
 
 @pytest.mark.parametrize("text", ["Ordinary unmarked clipboard text 00123", "https://example.invalid/no-request"])
 def test_plain_clipboard_text_exports_real_docx_without_reclassification(
-    tmp_path: Path, round_trip_runtime: Any, text: str
+    tmp_path: Path,
+    round_trip_runtime: Any,
+    text: str,
 ) -> None:
     store = ClipboardInputStore(tmp_path / "managed")
     snapshot = store.create(text, display_name_template="Clipboard Markdown {index}.md")
