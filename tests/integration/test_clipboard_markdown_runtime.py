@@ -349,4 +349,3 @@ def test_clipboard_docx_uses_logical_name_for_publication_and_only_as_title_fall
     assert len(document.tables) == 2
     assert source.read_bytes() == text.encode("utf-8")
     store.close()
-
