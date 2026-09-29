@@ -95,7 +95,7 @@ def test_synthetic_source_label_projects_to_logical_path_without_changing_physic
     builder = ExecutionRequestBuilder(
         *_models([ref]),
         file_contexts=lambda: {normalize_path(str(source)): ("markdown", "markdown")},
-        selected_template=lambda: None,
+        selected_template=lambda: ("xlsx", "standard"),
         source_label=lambda path: logical_name if normalize_path(path) == normalize_path(str(source)) else None,
         synthetic_input=lambda path: normalize_path(path) == normalize_path(str(source)),
     )
