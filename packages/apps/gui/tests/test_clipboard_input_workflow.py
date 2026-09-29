@@ -173,13 +173,20 @@ def test_nonlocal_url_clipboard_still_uses_text_fallback(
     qapp: QApplication,
     qtbot,
 ) -> None:
+    text = "https://example.invalid/report"
     mime = QMimeData()
-    mime.setUrls([QUrl("https://example.invalid/report")])
-    mime.setText("https://example.invalid/report")
+    mime.setUrls([QUrl(text)])
+    mime.setText(text)
     qapp.clipboard().setMimeData(mime)
 
-    path = _paste_text(clipboard_window, qapp, qtbot, "https://example.invalid/report")
-    assert Path(path).read_text(encoding="utf-8") == "https://example.invalid/report"
+    qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
+    qtbot.waitUntil(lambda: len(clipboard_window.view_model.files) == 1)
+
+    selected = clipboard_window.view_model.selected_file
+    assert selected is not None
+    assert Path(selected.path).read_text(encoding="utf-8") == text
+    assert clipboard_window._clipboard_store is not None
 
 
 def test_empty_or_non_text_clipboard_never_creates_input(
