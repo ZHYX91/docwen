@@ -349,3 +349,28 @@ def test_pymupdf_capability_gate_fails_closed_when_resources_are_missing(
     assert status["available"] is False
     assert status["reason"] == "required_resource_missing"
     assert status["kind"] == "python_module_with_resources"
+
+
+
+def test_internal_routes_are_hidden_from_public_projection_but_available_to_gui_projection() -> None:
+    manifest = PluginManifest(
+        plugin_id="visibility-probe",
+        name="Visibility Probe",
+        version="1",
+        routes=[
+            RouteSpec("public_source", "md"),
+            RouteSpec("internal_source", "docx", visibility="internal"),
+        ],
+    )
+
+    public = capabilities.build_runtime_capability_projection([manifest], platform_id="windows")
+    internal = capabilities.build_runtime_capability_projection(
+        [manifest],
+        platform_id="windows",
+        include_internal=True,
+    )
+
+    assert [source["id"] for source in public["sources"]] == ["public_source"]
+    assert {source["id"] for source in internal["sources"]} == {"public_source", "internal_source"}
+    internal_source = next(source for source in internal["sources"] if source["id"] == "internal_source")
+    assert internal_source["routes"][0]["target"] == "docx"
