@@ -30,7 +30,7 @@ jobs:
           enable-cache: true
       - name: Install
         run: uv sync --frozen --extra lint --extra test
-      - name: Required source checks
+      - name: Diagnostic Ruff format diff (temporary)\n        continue-on-error: true\n        run: uv run ruff format --diff .\n      - name: Required source checks
         run: uv run python tools/qa.py --skip-pytest
 
   tests:
