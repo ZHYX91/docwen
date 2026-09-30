@@ -104,10 +104,7 @@ def _builder(store: ClipboardInputStore, refs: list[FileRef]) -> ExecutionReques
     template = next(
         item for item in TemplateRegistry.default().list_templates("docx") if item.name == "English General Template"
     )
-    contexts = {
-        normalize_path(ref.path): ("clipboard_document", "markdown")
-        for ref in refs
-    }
+    contexts = {normalize_path(ref.path): ("clipboard_document", "markdown") for ref in refs}
     return ExecutionRequestBuilder(
         cast("MainWindowViewModel", SimpleNamespace(files=refs, controller=None)),
         cast("BatchListViewModel", SimpleNamespace(get_file_entry=lambda _path: None)),
@@ -288,7 +285,6 @@ def test_parent_cancel_before_grouped_worker_prevents_all_runtime_starts(tmp_pat
     finally:
         controller.release_execution_cancellation(parent.request_id, reservation)
         store.close()
-
 
 
 def test_execution_thread_keeps_frozen_validation_failure_scoped_to_one_group(tmp_path: Path) -> None:
