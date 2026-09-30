@@ -1779,6 +1779,8 @@ copy = "Sao chép chẩn đoán"
 redacted_hint = "Bản sao chỉ chứa trạng thái, loại và số lượng. Không bao gồm nội dung, đường dẫn, lỗi gốc, lệnh hoặc cấu hình."
 
 [clipboard]
+structured_plain_fallback = "Không thể đối chiếu tin cậy cấu trúc bảng phong phú với văn bản thuần; toàn bộ văn bản thuần đã được giữ lại."
+structured_html_only = "Bộ nhớ tạm không có phần thân văn bản thuần; HTML có bảng đã được xác minh được dùng làm nguồn nội dung."
 structured_invalid = "Cấu trúc bảng trong bộ nhớ tạm không hợp lệ nên không được nhập."
 table_fallback = "Không thể biểu diễn an toàn {count} bảng trong bộ nhớ tạm dưới dạng bảng Markdown; văn bản trong ô đã được giữ lại dưới dạng văn bản thuần túy."
 images_omitted = "Không nhập {count} hình ảnh từ bộ nhớ tạm; văn bản có sẵn đã được giữ lại."
