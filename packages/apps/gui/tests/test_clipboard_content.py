@@ -85,3 +85,15 @@ def test_script_style_and_remote_images_are_inert_and_reported() -> None:
     assert "DO_NOT_RUN" not in result.text
     assert "display:none" not in result.text
     assert result.image_count == 1
+
+
+
+def test_fallback_table_preserves_empty_spaces_nbsp_pipe_and_line_breaks_exactly() -> None:
+    result = project_clipboard_html(
+        "<table><tr><td></td><td>  edge  </td><td>&nbsp;x&nbsp;</td>"
+        "<td>00123</td><td>x|y</td><td>one<br>two</td></tr></table>"
+    )
+
+    assert result.table_count == 0
+    assert result.fallback_table_count == 1
+    assert result.text == "\t  edge  \t\u00a0x\u00a0\t00123\tx|y\tone\ntwo\n"
