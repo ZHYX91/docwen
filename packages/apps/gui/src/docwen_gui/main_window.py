@@ -445,7 +445,9 @@ class MainWindow(QWidget):
                 store.discard_if_unowned(snapshot.path)
             else:
                 if fallback_table_count:
-                    self._info_area_vm.add_message(_t("clipboard.table_fallback", count=fallback_table_count), "warning")
+                    self._info_area_vm.add_message(
+                        _t("clipboard.table_fallback", count=fallback_table_count), "warning"
+                    )
                 if image_count:
                     self._info_area_vm.add_message(_t("clipboard.images_omitted", count=image_count), "warning")
             self._sync_clipboard_visible_inputs()
@@ -490,6 +492,7 @@ class MainWindow(QWidget):
         # confirmation dialog was open and must not be read a second time.
         self._input_area_vm.set_mode("batch")
         self._input_area_vm.add_files(file_paths)
+
     def _prepare_clipboard_output_policy(
         self,
         file_paths: Sequence[str],
