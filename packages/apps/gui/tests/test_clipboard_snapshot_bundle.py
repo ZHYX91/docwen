@@ -153,7 +153,6 @@ def test_bundle_marker_is_not_published_when_creation_fails(tmp_path: Path, monk
     store.close()
 
 
-
 def test_bundle_delete_failure_keeps_tracking_until_retry_succeeds(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
