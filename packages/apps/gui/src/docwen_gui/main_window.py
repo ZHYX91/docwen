@@ -386,6 +386,10 @@ class MainWindow(QWidget):
                 self._paste_file_paths(file_paths)
                 return
 
+        if not plain_text_only and mime_data is not None and mime_data.hasHtml():
+            if self._try_structured_clipboard_paste(mime_data):
+                return
+
         projection = None
         if not plain_text_only and mime_data is not None and mime_data.hasHtml():
             try:
@@ -462,6 +466,71 @@ class MainWindow(QWidget):
             completed=completed,
             file_inspector=inspect_utf8_markdown_snapshot,
         )
+
+    def _try_structured_clipboard_paste(self, mime_data) -> bool:
+        """Handle table-bearing HTML as one recursive managed document input."""
+
+        from docwen_core.models.clipboard_document import (
+            ClipboardImageRef,
+            clipboard_document_preview,
+            clipboard_document_to_bytes,
+            iter_clipboard_inlines,
+        )
+        from docwen_gui.clipboard_structured import (
+            html_contains_table,
+            project_structured_clipboard_html,
+        )
+
+        html_bytes = bytes(mime_data.data("text/html"))
+        if not html_bytes:
+            return False
+        try:
+            contains_table = html_contains_table(html_bytes)
+        except (UnicodeDecodeError, ValueError):
+            self._info_area_vm.add_message(
+                _t("clipboard.structured_invalid", "Clipboard table structure is invalid and was not imported."),
+                "danger",
+            )
+            return True
+        if not contains_table:
+            return False
+        try:
+            document = project_structured_clipboard_html(html_bytes)
+            payload = clipboard_document_to_bytes(document)
+            store = self._clipboard_store_for_paste()
+            bundle = store.create_bundle(
+                payload,
+                display_name_template=_t(
+                    "components.file_drop.clipboard_document_name",
+                    "Clipboard Document {index}.dwclip",
+                    index="{index}",
+                ),
+                preview=clipboard_document_preview(document),
+            )
+        except (OSError, TypeError, ValueError):
+            self._info_area_vm.add_message(
+                _t("clipboard.structured_invalid", "Clipboard table structure is invalid and was not imported."),
+                "danger",
+            )
+            return True
+
+        image_count = sum(isinstance(item, ClipboardImageRef) for item in iter_clipboard_inlines(document))
+
+        def completed(outcome) -> None:
+            if not outcome.added:
+                store.discard_if_unowned(bundle.main.path)
+            elif image_count:
+                self._info_area_vm.add_message(_t("clipboard.images_omitted", count=image_count), "warning")
+            self._sync_clipboard_visible_inputs()
+
+        from docwen_core.detection import inspect_structured_clipboard_snapshot
+
+        self._input_area_vm.add_files(
+            [bundle.main.path],
+            completed=completed,
+            file_inspector=inspect_structured_clipboard_snapshot,
+        )
+        return True
 
     def _paste_file_paths(self, file_paths: list[str]) -> None:
         """Paste one captured local-file list through normal file admission."""
