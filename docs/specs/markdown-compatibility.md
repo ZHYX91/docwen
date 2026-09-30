@@ -122,6 +122,129 @@ authenticated heading/caption/reference facts and their effective displayed coun
 and exact-two numbering plan. DocWen does not import Number Suite code, scan a Vault, or infer numbers from visible
 prefixes.
 
+The GUI-internal structured clipboard source follows the same request-scoped output policy rather than enabling this
+dialect globally. With `markdown_extensions.output.structural_tables=true`, a flat clipboard table is emitted in
+Structural Tables syntax only when its contiguous header rows/columns and merge rectangles are representable by that
+dialect. With the extension disabled, or when recursive/nested structure or a richer HTML header-association graph has
+no lossless spelling, the output uses an explicit visible structure projection and a loss diagnostic instead of
+inventing a first header row, deleting associations, or embedding raw HTML.
+
+Clipboard cell values are authored text, not Markdown source. Before a representable table is written, characters
+that can activate the shipping inline grammar are backslash-escaped, including pipes/backslashes, code/emphasis
+markers, `$...# Markdown compatibility / Markdown 兼容
+
+DocWen supports a documented Markdown subset for conversion to and from office formats. Route options freeze syntax, link, image, numbering and template behavior per request.
+
+DocWen 为 Office 双向转换支持一组明确的 Markdown 子集。语法、链接、图片、编号和模板行为在每个请求开始前冻结。
+
+## Supported structures / 支持结构
+
+- headings, paragraphs, emphasis, code, quotes and horizontal rules;
+- ordered and unordered lists with nested continuation handling;
+- tables, including the documented merge markers;
+- links, wiki links, embedded resources and request-scoped link policies;
+- YAML front matter and template field projection;
+- inline/block formulas and supported note forms;
+- local images, optional Base64 output and OCR sidecars where the route declares them.
+- authored `Figure:`, `Table:`, `Equation:`, and `Code:` declarations with distinct DOCX paragraph styles, plus
+  structure-owned Heading and caption semantic targets;
+- one exclusive `{{ bibliography }}` template paragraph when an already-presented typed bibliography resource is supplied.
+
+ATX Heading levels 1..6 follow CommonMark; levels 7..9 are DocWen extensions that map one-to-one to Word
+`Heading 7`..`Heading 9`. Ten or more leading `#` markers remain visible paragraph text. DOCX import resolves both
+direct `outlineLvl=0..8` values and outline levels inherited through paragraph styles.
+
+Setext headings use the parser's complete paragraph and underline grammar, including multiline titles. Code
+examples, lists and ATX headings cannot be reclassified by a text preprocessor. Heading/body merging applies only
+to an actual heading followed immediately by an ordinary paragraph; blank lines and other block types stop it.
+The punctuation policy reads the heading's inline text. A trailing formula or image is not discarded to find an
+earlier punctuation mark. Each thematic break retains its own marker and adjacency at parsing time, so literal
+examples and Setext underlines cannot shift another break's action. Inline `<br>`, `<br/>` and `<br />` remain
+line breaks inside their heading, table cell or link; code and formula contents stay literal.
+DOCX import serializes line breaks inside a heading as `<br>` so a second conversion retains one heading. Formula
+paragraphs use the same text renderer as ordinary paragraphs, preserving inline code, accepted revisions, links,
+notes and text on both sides of a run's break or tab under the selected formatting policy.
+
+Setext 标题按解析器的完整段落及下划线语法识别，支持多行标题；代码示例、列表及 ATX 标题不会被预处理改成
+另一种块。标题合并只作用于实际相邻的标题与普通段落，空行和其他块类型会阻止合并。标点策略读取标题行内
+文本，标题末尾的公式或图片不会被忽略以寻找更早的标点。分隔线在解析时绑定自身标记与相邻关系，代码和
+Setext 下划线不会错移其动作。行内 `<br>` 在标题、表格单元格和链接中仍是换行，不会提前拆分物理行；
+代码和公式中的字面内容不改写。
+DOCX 导入把标题内换行表示为 `<br>`，再次转换仍保持一个标题。公式段落复用普通段落的文本渲染器，按所选
+格式策略保留行内代码、接受的修订、链接、注释，以及同一文本片段换行或制表符两侧的内容。
+
+## Rules / 规则
+
+- Parsers must not fetch remote content implicitly.
+- Missing or unsafe local resources produce diagnostics instead of traversal.
+- Source syntax and target rendering are compared semantically unless exact text is the contract.
+- Unsupported constructs remain visible as text or emit a warning; they must not disappear silently.
+- Configuration and per-request options have one precedence chain and no process-global fallback after admission.
+
+## Mermaid document rendering / Mermaid 文档渲染
+
+For the ordinary Markdown -> DOCX source route, `conversion.md_to_docx.mermaid_mode` controls how a
+```mermaid``` fenced block is presented. `code` is the compatibility default and preserves the existing
+fenced-source code-block behavior. `image` invokes a local Mermaid CLI (`mmdc`) and embeds the generated PNG in
+the document. DocWen does not download Mermaid or call an online rendering service; `DOCWEN_MERMAID_CLI` may point
+to an explicit executable when `mmdc` is not on `PATH`. The saved `conversion.md_to_docx.mermaid_cli_path` takes
+precedence over that environment fallback. CLI and Mermaid must both be 11.16+ within 11.x. Settings distinguishes
+package detection from a successful browser test, supports path selection and repeat detection, and preserves the mode.
+See [installation and verified versions](../mermaid.md). Each render is bounded and cancellable; external/local-file
+diagram images are rejected. PNGs fit the body section/columns and paragraph indents while preserving aspect ratio;
+large reductions emit `MD2DOCX-MERMAID-SCALED` to prompt a readability check.
+
+Image rendering is best-effort per diagram. An unavailable CLI, invalid Mermaid source, timeout, or renderer failure
+produces `MD2DOCX-MERMAID-FALLBACK` and that occurrence remains a visible code block; other diagrams continue.
+A successfully rendered diagram is an ordinary document image and does not carry the fenced-source recovery
+carrier, so DOCX -> Markdown treats it as an image rather than reconstructing Mermaid source. The original Markdown
+file is never rewritten. The exact resolved-v4 input route remains source-preserving and does not opt into this
+presentation transform.
+
+普通 Markdown -> DOCX 源文件路径可通过 `conversion.md_to_docx.mermaid_mode` 选择 Mermaid 围栏块的呈现方式。
+`code` 为兼容默认值，继续按代码块保留源码；`image` 使用本地 Mermaid CLI（`mmdc`）生成 PNG 并插入文档。
+DocWen 不会为此下载 Mermaid，也不会调用在线渲染服务；当 `mmdc` 不在 `PATH` 中时，可通过
+`DOCWEN_MERMAID_CLI` 指定可执行文件。单个图表渲染失败时会产生 `MD2DOCX-MERMAID-FALLBACK`，并将该图表
+回退为可见代码块，不影响其他图表继续转换。成功渲染的图表按普通文档图片处理，DOCX -> Markdown 不承诺
+还原 Mermaid 源码；原始 Markdown 文件始终不被改写。
+
+## Obsidian extension interoperability / Obsidian 扩展互通
+
+DOCX→Markdown always reconstructs the document's current content and supported semantics. The reverse converter
+needs only the DOCX and never loads the original Markdown, a `.docwen` companion, or a saved source snapshot.
+Users retain their originals. Round-trip tests use the original solely as an independent test oracle, inspect the
+intermediate OOXML, and repeat reverse conversion with an isolated DOCX, including after document edits.
+BOM, line endings, whitespace and equivalent Markdown spellings are normalized; byte-identical restoration is not
+a product promise. Images and OCR resources remain ordinary output resources.
+
+DOCX→Markdown 始终从当前文档重建内容和可表达的语义，不读取原 Markdown、`.docwen` 伴随文件或原文快照。
+原文件由用户自行保留。往返测试把原文仅用作独立期望，检查中间 DOCX，并用隔离的 DOCX 验证回转和编辑后回转。
+BOM、换行、空白和等价语法可以规范化，不承诺逐字节还原。图片、OCR 资源和通用 Artifact Bundle 清单不受影响。
+
+### Optional dialect policy / 可选扩展策略
+
+New installations disable all four optional dialects. Settings → Markdown syntax exposes independent input and
+output controls and an Obsidian preset for each direction. Persisted values live under
+`conversion.markdown_extensions.input` and `.output`; request option `markdown_extensions` uses the same two
+objects and overrides only explicitly supplied booleans. The four keys are `structural_tables`,
+`captions_references`, `extended_headings`, and `typed_endnotes`.
+
+| Extension | Disabled input recognition | Disabled Markdown output |
+|---|---|---|
+| Structural Tables | Ordinary pipe tables; merge-marker cells stay literal | Ordinary tables; merged cells and header roles are flattened with a warning |
+| Number Suite captions/references | Caption declarations and `@[[...]]` remain visible text | Current caption/reference presentation becomes ordinary text, with a warning for lost semantics |
+| H7–H9 | Seven to nine leading hashes remain visible text | Heading levels 7–9 become H6 with a warning |
+| Typed notes | Labels such as `endnote:id` belong to ordinary footnotes | Endnotes become ordinary footnotes with distinct `endnote-` IDs and a warning |
+
+The neutral-document port is already resolved semantic input: its explicit heading/caption/reference records are
+authoritative, like Word's explicit structures, rather than inferred from Markdown spellings. Its untyped tables
+and note syntax use the input dialect policy. Markdown output always uses the selected output policy.
+
+ math, `==...==` mark syntax, HTML-like angle brackets, and literal `<`/`^`. The only unescaped
+`<` and `^` cells generated by this exporter are merge carriers for covered cells; authored literal markers remain
+escaped and reparse as text. This escaping is an output transport rule only: parsing ordinary user-authored Markdown
+continues to use the selected input dialect and is not globally made literal.
+
 除普通 GFM 表格外，DocWen 还接受 Structural Tables 管道表格语法：分隔行前连续且等宽的行是多行列表头；
 分隔行内唯一相邻的 `||` 标记其左侧为行表头且不增加列；严格匹配的 `<` 向左合并、`^` 向上合并，`\<` 与
 `\^` 表示字面量；转义管道和代码跨度中的管道不会切分单元格；无效宽度或结构保持为可见源码而不猜测。
@@ -129,6 +252,264 @@ DOCX 导出把这些角色与矩形合并映射为原生表格语义；导入在
 规范 Structural Tables 写法，普通表格仍输出普通 GFM。Number Suite 互通通过消费者无关数据完成：Obsidian
 适配器提供经过认证的标题、题注、引用和实际显示计数；DocWen 不导入 Number Suite 代码、不扫描 Vault，
 也不从可见前缀猜测编号。
+
+GUI 内部的结构化剪贴板来源也遵守同一个 request-scoped 输出策略，不会全局开启该方言。当
+`markdown_extensions.output.structural_tables=true` 时，只有其连续行/列表头和 merge 矩形能够被该方言表达的
+平面剪贴板表格才输出 Structural Tables 语法；关闭扩展，或递归/嵌套结构、较丰富的 HTML 表头关联没有无损
+写法时，输出改用明确可见的结构投影并附损失诊断，而不是发明首行表头、删除关联或塞入原始 HTML。
+
+剪贴板单元格值是作者文字，不是待二次解释的 Markdown 源码。可表达表格输出前，会对可能激活发货版 inline
+grammar 的字符做反斜杠转义，包括管道/反斜杠、代码/强调标记、`$...# Markdown compatibility / Markdown 兼容
+
+DocWen supports a documented Markdown subset for conversion to and from office formats. Route options freeze syntax, link, image, numbering and template behavior per request.
+
+DocWen 为 Office 双向转换支持一组明确的 Markdown 子集。语法、链接、图片、编号和模板行为在每个请求开始前冻结。
+
+## Supported structures / 支持结构
+
+- headings, paragraphs, emphasis, code, quotes and horizontal rules;
+- ordered and unordered lists with nested continuation handling;
+- tables, including the documented merge markers;
+- links, wiki links, embedded resources and request-scoped link policies;
+- YAML front matter and template field projection;
+- inline/block formulas and supported note forms;
+- local images, optional Base64 output and OCR sidecars where the route declares them.
+- authored `Figure:`, `Table:`, `Equation:`, and `Code:` declarations with distinct DOCX paragraph styles, plus
+  structure-owned Heading and caption semantic targets;
+- one exclusive `{{ bibliography }}` template paragraph when an already-presented typed bibliography resource is supplied.
+
+ATX Heading levels 1..6 follow CommonMark; levels 7..9 are DocWen extensions that map one-to-one to Word
+`Heading 7`..`Heading 9`. Ten or more leading `#` markers remain visible paragraph text. DOCX import resolves both
+direct `outlineLvl=0..8` values and outline levels inherited through paragraph styles.
+
+Setext headings use the parser's complete paragraph and underline grammar, including multiline titles. Code
+examples, lists and ATX headings cannot be reclassified by a text preprocessor. Heading/body merging applies only
+to an actual heading followed immediately by an ordinary paragraph; blank lines and other block types stop it.
+The punctuation policy reads the heading's inline text. A trailing formula or image is not discarded to find an
+earlier punctuation mark. Each thematic break retains its own marker and adjacency at parsing time, so literal
+examples and Setext underlines cannot shift another break's action. Inline `<br>`, `<br/>` and `<br />` remain
+line breaks inside their heading, table cell or link; code and formula contents stay literal.
+DOCX import serializes line breaks inside a heading as `<br>` so a second conversion retains one heading. Formula
+paragraphs use the same text renderer as ordinary paragraphs, preserving inline code, accepted revisions, links,
+notes and text on both sides of a run's break or tab under the selected formatting policy.
+
+Setext 标题按解析器的完整段落及下划线语法识别，支持多行标题；代码示例、列表及 ATX 标题不会被预处理改成
+另一种块。标题合并只作用于实际相邻的标题与普通段落，空行和其他块类型会阻止合并。标点策略读取标题行内
+文本，标题末尾的公式或图片不会被忽略以寻找更早的标点。分隔线在解析时绑定自身标记与相邻关系，代码和
+Setext 下划线不会错移其动作。行内 `<br>` 在标题、表格单元格和链接中仍是换行，不会提前拆分物理行；
+代码和公式中的字面内容不改写。
+DOCX 导入把标题内换行表示为 `<br>`，再次转换仍保持一个标题。公式段落复用普通段落的文本渲染器，按所选
+格式策略保留行内代码、接受的修订、链接、注释，以及同一文本片段换行或制表符两侧的内容。
+
+## Rules / 规则
+
+- Parsers must not fetch remote content implicitly.
+- Missing or unsafe local resources produce diagnostics instead of traversal.
+- Source syntax and target rendering are compared semantically unless exact text is the contract.
+- Unsupported constructs remain visible as text or emit a warning; they must not disappear silently.
+- Configuration and per-request options have one precedence chain and no process-global fallback after admission.
+
+## Mermaid document rendering / Mermaid 文档渲染
+
+For the ordinary Markdown -> DOCX source route, `conversion.md_to_docx.mermaid_mode` controls how a
+```mermaid``` fenced block is presented. `code` is the compatibility default and preserves the existing
+fenced-source code-block behavior. `image` invokes a local Mermaid CLI (`mmdc`) and embeds the generated PNG in
+the document. DocWen does not download Mermaid or call an online rendering service; `DOCWEN_MERMAID_CLI` may point
+to an explicit executable when `mmdc` is not on `PATH`. The saved `conversion.md_to_docx.mermaid_cli_path` takes
+precedence over that environment fallback. CLI and Mermaid must both be 11.16+ within 11.x. Settings distinguishes
+package detection from a successful browser test, supports path selection and repeat detection, and preserves the mode.
+See [installation and verified versions](../mermaid.md). Each render is bounded and cancellable; external/local-file
+diagram images are rejected. PNGs fit the body section/columns and paragraph indents while preserving aspect ratio;
+large reductions emit `MD2DOCX-MERMAID-SCALED` to prompt a readability check.
+
+Image rendering is best-effort per diagram. An unavailable CLI, invalid Mermaid source, timeout, or renderer failure
+produces `MD2DOCX-MERMAID-FALLBACK` and that occurrence remains a visible code block; other diagrams continue.
+A successfully rendered diagram is an ordinary document image and does not carry the fenced-source recovery
+carrier, so DOCX -> Markdown treats it as an image rather than reconstructing Mermaid source. The original Markdown
+file is never rewritten. The exact resolved-v4 input route remains source-preserving and does not opt into this
+presentation transform.
+
+普通 Markdown -> DOCX 源文件路径可通过 `conversion.md_to_docx.mermaid_mode` 选择 Mermaid 围栏块的呈现方式。
+`code` 为兼容默认值，继续按代码块保留源码；`image` 使用本地 Mermaid CLI（`mmdc`）生成 PNG 并插入文档。
+DocWen 不会为此下载 Mermaid，也不会调用在线渲染服务；当 `mmdc` 不在 `PATH` 中时，可通过
+`DOCWEN_MERMAID_CLI` 指定可执行文件。单个图表渲染失败时会产生 `MD2DOCX-MERMAID-FALLBACK`，并将该图表
+回退为可见代码块，不影响其他图表继续转换。成功渲染的图表按普通文档图片处理，DOCX -> Markdown 不承诺
+还原 Mermaid 源码；原始 Markdown 文件始终不被改写。
+
+## Obsidian extension interoperability / Obsidian 扩展互通
+
+DOCX→Markdown always reconstructs the document's current content and supported semantics. The reverse converter
+needs only the DOCX and never loads the original Markdown, a `.docwen` companion, or a saved source snapshot.
+Users retain their originals. Round-trip tests use the original solely as an independent test oracle, inspect the
+intermediate OOXML, and repeat reverse conversion with an isolated DOCX, including after document edits.
+BOM, line endings, whitespace and equivalent Markdown spellings are normalized; byte-identical restoration is not
+a product promise. Images and OCR resources remain ordinary output resources.
+
+DOCX→Markdown 始终从当前文档重建内容和可表达的语义，不读取原 Markdown、`.docwen` 伴随文件或原文快照。
+原文件由用户自行保留。往返测试把原文仅用作独立期望，检查中间 DOCX，并用隔离的 DOCX 验证回转和编辑后回转。
+BOM、换行、空白和等价语法可以规范化，不承诺逐字节还原。图片、OCR 资源和通用 Artifact Bundle 清单不受影响。
+
+### Optional dialect policy / 可选扩展策略
+
+New installations disable all four optional dialects. Settings → Markdown syntax exposes independent input and
+output controls and an Obsidian preset for each direction. Persisted values live under
+`conversion.markdown_extensions.input` and `.output`; request option `markdown_extensions` uses the same two
+objects and overrides only explicitly supplied booleans. The four keys are `structural_tables`,
+`captions_references`, `extended_headings`, and `typed_endnotes`.
+
+| Extension | Disabled input recognition | Disabled Markdown output |
+|---|---|---|
+| Structural Tables | Ordinary pipe tables; merge-marker cells stay literal | Ordinary tables; merged cells and header roles are flattened with a warning |
+| Number Suite captions/references | Caption declarations and `@[[...]]` remain visible text | Current caption/reference presentation becomes ordinary text, with a warning for lost semantics |
+| H7–H9 | Seven to nine leading hashes remain visible text | Heading levels 7–9 become H6 with a warning |
+| Typed notes | Labels such as `endnote:id` belong to ordinary footnotes | Endnotes become ordinary footnotes with distinct `endnote-` IDs and a warning |
+
+The neutral-document port is already resolved semantic input: its explicit heading/caption/reference records are
+authoritative, like Word's explicit structures, rather than inferred from Markdown spellings. Its untyped tables
+and note syntax use the input dialect policy. Markdown output always uses the selected output policy.
+
+DocWen accepts the Structural Tables pipe-table dialect in addition to ordinary GFM tables:
+
+- consecutive equal-width rows before the delimiter are column-header rows;
+- one adjacent `||` inside the delimiter marks the columns to its left as row headers and adds no column;
+- an exact `<` merges left and an exact `^` merges up; `\<` and `\^` are literal cell text;
+- escaped pipes and pipes inside code spans do not split cells; and
+- invalid widths or structures remain visible source text instead of being guessed.
+
+DOCX export maps these roles and merge rectangles to native table semantics. DOCX import emits the canonical
+Structural Tables spelling when native table metadata requires multiple column-header rows or row-header columns;
+ordinary tables remain ordinary GFM. Number Suite interoperation is consumer-neutral: an Obsidian adapter supplies
+authenticated heading/caption/reference facts and their effective displayed counters in DocWen's resolved document
+and exact-two numbering plan. DocWen does not import Number Suite code, scan a Vault, or infer numbers from visible
+prefixes.
+
+The GUI-internal structured clipboard source follows the same request-scoped output policy rather than enabling this
+dialect globally. With `markdown_extensions.output.structural_tables=true`, a flat clipboard table is emitted in
+Structural Tables syntax only when its contiguous header rows/columns and merge rectangles are representable by that
+dialect. With the extension disabled, or when recursive/nested structure or a richer HTML header-association graph has
+no lossless spelling, the output uses an explicit visible structure projection and a loss diagnostic instead of
+inventing a first header row, deleting associations, or embedding raw HTML.
+
+Clipboard cell values are authored text, not Markdown source. Before a representable table is written, characters
+that can activate the shipping inline grammar are backslash-escaped, including pipes/backslashes, code/emphasis
+markers, `$...# Markdown compatibility / Markdown 兼容
+
+DocWen supports a documented Markdown subset for conversion to and from office formats. Route options freeze syntax, link, image, numbering and template behavior per request.
+
+DocWen 为 Office 双向转换支持一组明确的 Markdown 子集。语法、链接、图片、编号和模板行为在每个请求开始前冻结。
+
+## Supported structures / 支持结构
+
+- headings, paragraphs, emphasis, code, quotes and horizontal rules;
+- ordered and unordered lists with nested continuation handling;
+- tables, including the documented merge markers;
+- links, wiki links, embedded resources and request-scoped link policies;
+- YAML front matter and template field projection;
+- inline/block formulas and supported note forms;
+- local images, optional Base64 output and OCR sidecars where the route declares them.
+- authored `Figure:`, `Table:`, `Equation:`, and `Code:` declarations with distinct DOCX paragraph styles, plus
+  structure-owned Heading and caption semantic targets;
+- one exclusive `{{ bibliography }}` template paragraph when an already-presented typed bibliography resource is supplied.
+
+ATX Heading levels 1..6 follow CommonMark; levels 7..9 are DocWen extensions that map one-to-one to Word
+`Heading 7`..`Heading 9`. Ten or more leading `#` markers remain visible paragraph text. DOCX import resolves both
+direct `outlineLvl=0..8` values and outline levels inherited through paragraph styles.
+
+Setext headings use the parser's complete paragraph and underline grammar, including multiline titles. Code
+examples, lists and ATX headings cannot be reclassified by a text preprocessor. Heading/body merging applies only
+to an actual heading followed immediately by an ordinary paragraph; blank lines and other block types stop it.
+The punctuation policy reads the heading's inline text. A trailing formula or image is not discarded to find an
+earlier punctuation mark. Each thematic break retains its own marker and adjacency at parsing time, so literal
+examples and Setext underlines cannot shift another break's action. Inline `<br>`, `<br/>` and `<br />` remain
+line breaks inside their heading, table cell or link; code and formula contents stay literal.
+DOCX import serializes line breaks inside a heading as `<br>` so a second conversion retains one heading. Formula
+paragraphs use the same text renderer as ordinary paragraphs, preserving inline code, accepted revisions, links,
+notes and text on both sides of a run's break or tab under the selected formatting policy.
+
+Setext 标题按解析器的完整段落及下划线语法识别，支持多行标题；代码示例、列表及 ATX 标题不会被预处理改成
+另一种块。标题合并只作用于实际相邻的标题与普通段落，空行和其他块类型会阻止合并。标点策略读取标题行内
+文本，标题末尾的公式或图片不会被忽略以寻找更早的标点。分隔线在解析时绑定自身标记与相邻关系，代码和
+Setext 下划线不会错移其动作。行内 `<br>` 在标题、表格单元格和链接中仍是换行，不会提前拆分物理行；
+代码和公式中的字面内容不改写。
+DOCX 导入把标题内换行表示为 `<br>`，再次转换仍保持一个标题。公式段落复用普通段落的文本渲染器，按所选
+格式策略保留行内代码、接受的修订、链接、注释，以及同一文本片段换行或制表符两侧的内容。
+
+## Rules / 规则
+
+- Parsers must not fetch remote content implicitly.
+- Missing or unsafe local resources produce diagnostics instead of traversal.
+- Source syntax and target rendering are compared semantically unless exact text is the contract.
+- Unsupported constructs remain visible as text or emit a warning; they must not disappear silently.
+- Configuration and per-request options have one precedence chain and no process-global fallback after admission.
+
+## Mermaid document rendering / Mermaid 文档渲染
+
+For the ordinary Markdown -> DOCX source route, `conversion.md_to_docx.mermaid_mode` controls how a
+```mermaid``` fenced block is presented. `code` is the compatibility default and preserves the existing
+fenced-source code-block behavior. `image` invokes a local Mermaid CLI (`mmdc`) and embeds the generated PNG in
+the document. DocWen does not download Mermaid or call an online rendering service; `DOCWEN_MERMAID_CLI` may point
+to an explicit executable when `mmdc` is not on `PATH`. The saved `conversion.md_to_docx.mermaid_cli_path` takes
+precedence over that environment fallback. CLI and Mermaid must both be 11.16+ within 11.x. Settings distinguishes
+package detection from a successful browser test, supports path selection and repeat detection, and preserves the mode.
+See [installation and verified versions](../mermaid.md). Each render is bounded and cancellable; external/local-file
+diagram images are rejected. PNGs fit the body section/columns and paragraph indents while preserving aspect ratio;
+large reductions emit `MD2DOCX-MERMAID-SCALED` to prompt a readability check.
+
+Image rendering is best-effort per diagram. An unavailable CLI, invalid Mermaid source, timeout, or renderer failure
+produces `MD2DOCX-MERMAID-FALLBACK` and that occurrence remains a visible code block; other diagrams continue.
+A successfully rendered diagram is an ordinary document image and does not carry the fenced-source recovery
+carrier, so DOCX -> Markdown treats it as an image rather than reconstructing Mermaid source. The original Markdown
+file is never rewritten. The exact resolved-v4 input route remains source-preserving and does not opt into this
+presentation transform.
+
+普通 Markdown -> DOCX 源文件路径可通过 `conversion.md_to_docx.mermaid_mode` 选择 Mermaid 围栏块的呈现方式。
+`code` 为兼容默认值，继续按代码块保留源码；`image` 使用本地 Mermaid CLI（`mmdc`）生成 PNG 并插入文档。
+DocWen 不会为此下载 Mermaid，也不会调用在线渲染服务；当 `mmdc` 不在 `PATH` 中时，可通过
+`DOCWEN_MERMAID_CLI` 指定可执行文件。单个图表渲染失败时会产生 `MD2DOCX-MERMAID-FALLBACK`，并将该图表
+回退为可见代码块，不影响其他图表继续转换。成功渲染的图表按普通文档图片处理，DOCX -> Markdown 不承诺
+还原 Mermaid 源码；原始 Markdown 文件始终不被改写。
+
+## Obsidian extension interoperability / Obsidian 扩展互通
+
+DOCX→Markdown always reconstructs the document's current content and supported semantics. The reverse converter
+needs only the DOCX and never loads the original Markdown, a `.docwen` companion, or a saved source snapshot.
+Users retain their originals. Round-trip tests use the original solely as an independent test oracle, inspect the
+intermediate OOXML, and repeat reverse conversion with an isolated DOCX, including after document edits.
+BOM, line endings, whitespace and equivalent Markdown spellings are normalized; byte-identical restoration is not
+a product promise. Images and OCR resources remain ordinary output resources.
+
+DOCX→Markdown 始终从当前文档重建内容和可表达的语义，不读取原 Markdown、`.docwen` 伴随文件或原文快照。
+原文件由用户自行保留。往返测试把原文仅用作独立期望，检查中间 DOCX，并用隔离的 DOCX 验证回转和编辑后回转。
+BOM、换行、空白和等价语法可以规范化，不承诺逐字节还原。图片、OCR 资源和通用 Artifact Bundle 清单不受影响。
+
+### Optional dialect policy / 可选扩展策略
+
+New installations disable all four optional dialects. Settings → Markdown syntax exposes independent input and
+output controls and an Obsidian preset for each direction. Persisted values live under
+`conversion.markdown_extensions.input` and `.output`; request option `markdown_extensions` uses the same two
+objects and overrides only explicitly supplied booleans. The four keys are `structural_tables`,
+`captions_references`, `extended_headings`, and `typed_endnotes`.
+
+| Extension | Disabled input recognition | Disabled Markdown output |
+|---|---|---|
+| Structural Tables | Ordinary pipe tables; merge-marker cells stay literal | Ordinary tables; merged cells and header roles are flattened with a warning |
+| Number Suite captions/references | Caption declarations and `@[[...]]` remain visible text | Current caption/reference presentation becomes ordinary text, with a warning for lost semantics |
+| H7–H9 | Seven to nine leading hashes remain visible text | Heading levels 7–9 become H6 with a warning |
+| Typed notes | Labels such as `endnote:id` belong to ordinary footnotes | Endnotes become ordinary footnotes with distinct `endnote-` IDs and a warning |
+
+The neutral-document port is already resolved semantic input: its explicit heading/caption/reference records are
+authoritative, like Word's explicit structures, rather than inferred from Markdown spellings. Its untyped tables
+and note syntax use the input dialect policy. Markdown output always uses the selected output policy.
+
+ math, `==...==` mark syntax, HTML-like angle brackets, and literal `<`/`^`. The only unescaped
+`<` and `^` cells generated by this exporter are merge carriers for covered cells; authored literal markers remain
+escaped and reparse as text. This escaping is an output transport rule only: parsing ordinary user-authored Markdown
+continues to use the selected input dialect and is not globally made literal.
+
+ 公式、`==...==` 高亮语法、
+HTML 样尖括号以及字面 `<`/`^`。本导出器生成的未转义 `<`/`^` 只用于 covered cell 的 merge carrier；
+作者输入的同字符保持转义并在再次解析时仍是文字。这个转义只属于输出传输规则；普通用户 Markdown 输入仍按
+所选 input dialect 解释，不会被全局改成字面模式。
 
 ## Anchors and semantic targets / 锚点与语义目标
 
