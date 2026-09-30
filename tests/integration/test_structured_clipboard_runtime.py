@@ -11,6 +11,8 @@ from openpyxl import load_workbook
 
 from docwen_application.controller import ApplicationController
 from docwen_core.detection import inspect_file, inspect_structured_clipboard_snapshot
+from docwen_core.docx_parsing.document_semantics import extract_semantic_table_metadata
+from docwen_core.docx_semantics import apply_semantic_table_roles
 from docwen_core.models import FILE_INSPECTION_METADATA_KEY
 from docwen_core.models.clipboard_document import CLIPBOARD_DOCUMENT_MEDIA_TYPE, clipboard_document_to_bytes
 from docwen_core.models.file_ref import (
@@ -142,6 +144,89 @@ def test_docx_route_preserves_merges_header_and_nested_cell_order(tmp_path: Path
     with ZipFile(output) as package:
         xml = package.read("word/document.xml").decode("utf-8")
     assert xml.index("before") < xml.index("nested") < xml.index("after")
+
+
+def _runtime_docx_for_html(tmp_path: Path, html: bytes) -> Document:
+    request = _request(
+        tmp_path,
+        "docx",
+        options={"template_name": _template_id("docx", "English General Template.docx")},
+        html=html,
+    )
+    result = _controller(tmp_path).execute_single(request)
+    assert result.success, result.error
+    output = Path(next(item for item in result.artifacts if item.is_primary).staging_path)
+    return Document(output)
+
+
+@pytest.mark.parametrize(
+    ("html", "sentinel"),
+    [
+        (
+            b"<table><tr><td>plain-a</td><td>plain-b</td></tr><tr><td>1</td><td>2</td></tr></table>",
+            "plain-a",
+        ),
+        (
+            b"<table><tr><th id='a' scope='row'>row-a</th><th id='b' scope='row'>row-b</th></tr>"
+            b"<tr><td headers='a'>1</td><td headers='b'>2</td></tr></table>",
+            "row-a",
+        ),
+    ],
+)
+def test_runtime_docx_explicit_first_row_false_suppresses_default_header_inference(
+    tmp_path: Path,
+    html: bytes,
+    sentinel: str,
+) -> None:
+    document = _runtime_docx_for_html(tmp_path, html)
+    table = next(
+        table
+        for table in document.tables
+        if any(sentinel in cell.text for row in table.rows for cell in row.cells)
+    )
+
+    metadata = extract_semantic_table_metadata(table._tbl)
+
+    assert metadata.header_rows == 0
+    assert metadata.header_columns == 0
+    table_look = table._tbl.tblPr.tblLook
+    assert table_look is not None
+    assert table_look.firstRow is False
+
+
+def test_default_table_metadata_keeps_legacy_inference_and_native_positive_roles(tmp_path: Path) -> None:
+    legacy = Document()
+    legacy_table = legacy.add_table(rows=2, cols=2)
+    legacy_table.cell(0, 0).text = "legacy-heading"
+    legacy_table.cell(1, 0).text = "legacy-data"
+    legacy_path = tmp_path / "legacy-unmarked.docx"
+    legacy.save(legacy_path)
+    legacy_loaded = Document(legacy_path)
+
+    legacy_metadata = extract_semantic_table_metadata(legacy_loaded.tables[0]._tbl)
+
+    assert legacy_metadata.header_rows == 1
+    assert legacy_metadata.repeat_header == "inherit"
+
+    native = Document()
+    native_table = native.add_table(rows=2, cols=2)
+    native_table.cell(0, 0).text = "native-heading"
+    native_table.cell(1, 0).text = "native-data"
+    apply_semantic_table_roles(
+        native_table,
+        header_rows=1,
+        header_columns=0,
+        repeat_header="always",
+    )
+    native_path = tmp_path / "native-header.docx"
+    native.save(native_path)
+    native_loaded = Document(native_path)
+
+    native_metadata = extract_semantic_table_metadata(native_loaded.tables[0]._tbl)
+
+    assert native_metadata.header_rows == 1
+    assert native_metadata.header_columns == 0
+    assert native_metadata.repeat_header == "always"
 
 
 def test_xlsx_route_preserves_string_values_merges_and_document_order(tmp_path: Path) -> None:
