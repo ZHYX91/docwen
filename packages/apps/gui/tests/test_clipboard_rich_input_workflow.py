@@ -242,3 +242,67 @@ def test_html_only_structured_table_is_explicitly_warned(
     selected = clipboard_window.view_model.selected_file
     assert selected is not None and selected.format == "clipboard_document"
     assert any(row.message_type == "warning" for row in clipboard_window._info_area_vm.history_rows)
+
+
+
+def test_main_window_snapshot_to_runtime_keeps_plain_body_and_structured_table(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    from docwen_application.controller import ApplicationController
+    from docwen_core.models.request import OutputPolicy
+    from docwen_plugin_markdown.plugin import MarkdownPlugin
+    from docwen_runtime.adapters import RuntimePortAdapter
+    from docwen_runtime.engine.route_resolver import RouteResolver
+    from docwen_runtime.engine.task_manager import TaskManager
+    from docwen_runtime.output.finalizer import OutputFinalizer
+    from docwen_runtime.plugin_registry.registry import PluginRegistry
+    from docwen_runtime.workspace.manager import WorkspaceManager
+
+    plain = "  https://example.test/a **plain-markdown**  \nA\tB\n1\t2\n  tail  "
+    mime = QMimeData()
+    mime.setText(plain)
+    mime.setHtml(
+        "<p>HTML lead is different</p><table><tr><th>A</th><th>B</th></tr>"
+        "<tr><td>1</td><td>2</td></tr></table><p>HTML tail is different</p>"
+    )
+    qapp.clipboard().setMimeData(mime)
+    qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
+    selected = clipboard_window.view_model.selected_file
+    assert selected is not None and selected.format == "clipboard_document"
+
+    request, _context = clipboard_window._requests.single(
+        file_path=selected.path,
+        target_format="md",
+        action_name="",
+        options={"markdown_extensions": {"output": {"structural_tables": True}}},
+        route_options=("markdown_extensions",),
+        output_policy=OutputPolicy(output_dir=str(tmp_path / "runtime-output")),
+    )
+    registry = PluginRegistry()
+    registry.register(MarkdownPlugin())
+    controller = ApplicationController(
+        runtime_port=RuntimePortAdapter(
+            TaskManager(
+                registry,
+                RouteResolver(registry),
+                WorkspaceManager(root_dir=str(tmp_path / "runtime-workspaces")),
+                OutputFinalizer(),
+            )
+        )
+    )
+
+    result = controller.execute_single(request)
+
+    assert result.success, result.error
+    output = Path(next(item for item in result.artifacts if item.is_primary).staging_path)
+    text = output.read_text(encoding="utf-8")
+    assert "  https://example.test/a **plain-markdown**  \n" in text
+    assert "\n  tail  " in text
+    assert "HTML lead is different" not in text
+    assert "HTML tail is different" not in text
+    assert "| A | B |" in text
+    assert "| 1 | 2 |" in text
