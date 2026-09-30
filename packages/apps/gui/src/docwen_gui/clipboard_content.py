@@ -70,10 +70,9 @@ def _normalize_text(value: str) -> str:
 
 
 def _normalize_cell(value: str) -> str:
-    value = value.replace("\r\n", "\n").replace("\r", "\n").replace("\u00a0", " ")
-    value = re.sub(r"[ \t\f\v]+", " ", value)
-    value = re.sub(r" *\n *", "\n", value)
-    return value.strip()
+    """Preserve authored cell characters; normalize only newline encoding."""
+
+    return value.replace("\r\n", "\n").replace("\r", "\n")
 
 
 def _markdown_cell(value: str) -> str:
