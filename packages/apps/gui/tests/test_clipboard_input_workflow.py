@@ -204,6 +204,7 @@ def test_switch_to_batch_add_uses_captured_clipboard_file_list(
     def accept_and_change_clipboard(*_args, **_kwargs):
         qapp.clipboard().setText("# changed after capture\n")
         return True
+
     monkeypatch.setattr("docwen_gui.dialogs.feedback.confirm", accept_and_change_clipboard)
     qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
     qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
