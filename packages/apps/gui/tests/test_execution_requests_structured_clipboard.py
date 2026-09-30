@@ -77,7 +77,6 @@ def test_builder_separates_public_name_virtual_path_and_managed_integrity(tmp_pa
     assert request.options["template_name"] == template.id
 
 
-
 def test_builder_freezes_complete_structured_resource_group_before_request(tmp_path) -> None:
     resource_bytes = b"opaque-resource-bytes"
     resource_sha = hashlib.sha256(resource_bytes).hexdigest()
