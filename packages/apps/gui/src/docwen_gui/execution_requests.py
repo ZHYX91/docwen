@@ -23,6 +23,7 @@ from docwen_gui.path_identity import normalize_path
 if TYPE_CHECKING:
     from docwen_core.models.file_ref import FileRef
     from docwen_core.models.request import ConversionRequest, OutputPolicy
+    from docwen_gui.clipboard_inputs import ClipboardSnapshotBundle
     from docwen_gui.view_models.batch_list_vm import BatchListViewModel
     from docwen_gui.view_models.main_window_vm import MainWindowViewModel
 
@@ -138,6 +139,7 @@ class ExecutionRequestBuilder:
         selected_template: Callable[[], tuple[str, str] | None],
         source_label: Callable[[str], str | None] | None = None,
         synthetic_input: Callable[[str], bool] | None = None,
+        snapshot_bundle: Callable[[str], ClipboardSnapshotBundle | None] | None = None,
     ) -> None:
         self._view_model = view_model
         self._batch_list_vm = batch_list_vm
@@ -145,6 +147,7 @@ class ExecutionRequestBuilder:
         self._selected_template = selected_template
         self._source_label = source_label or (lambda _path: None)
         self._synthetic_input = synthetic_input or (lambda _path: False)
+        self._snapshot_bundle = snapshot_bundle or (lambda _path: None)
 
     def single(
         self,
@@ -244,9 +247,16 @@ class ExecutionRequestBuilder:
             )
         request_options = _route_scoped_options(request_options, route_options=route_options)
         output_policy = output_policy or self.output_policy()
+        request_id = str(uuid.uuid4())
+        groups = [self.input_group(path) for path in source_paths]
+        grouped_batch = mode == "batch" and any(len(group) > 1 for group in groups)
         request = ConversionRequest(
-            request_id=str(uuid.uuid4()),
-            input_refs=[self.file_ref(path) for path in source_paths],
+            request_id=request_id,
+            input_refs=(
+                [group[0] for group in groups]
+                if grouped_batch
+                else [ref for group in groups for ref in group]
+            ),
             target_format=target_format,
             action_name=action_name,
             options=request_options,
@@ -272,6 +282,18 @@ class ExecutionRequestBuilder:
             "open_after_done": output_policy.open_after_done,
             "input_refs": [ref.to_dict() for ref in request.input_refs],
         }
+        if grouped_batch:
+            context["_document_group_requests"] = tuple(
+                ConversionRequest(
+                    request_id=f"{request_id}-{index}",
+                    input_refs=[replace(ref, metadata=deepcopy(ref.metadata)) for ref in group],
+                    target_format=target_format,
+                    action_name=action_name,
+                    options=deepcopy(request_options),
+                    output_policy=output_policy.for_input(group[0].path),
+                )
+                for index, group in enumerate(groups)
+            )
         if source_labels:
             context["source_labels"] = source_labels
         if synthetic_paths:
@@ -417,6 +439,51 @@ class ExecutionRequestBuilder:
                 }
             ),
         )
+
+    def input_group(self, source_path: str) -> tuple[FileRef, ...]:
+        """Freeze one source and its managed linked resources as one request group."""
+
+        from docwen_core.models.clipboard_document import (
+            load_clipboard_document_bytes,
+            validate_clipboard_resource_refs,
+        )
+        from docwen_core.models.file_ref import (
+            MANAGED_INPUT_SHA256_METADATA_KEY,
+            MANAGED_INPUT_SIZE_BYTES_METADATA_KEY,
+            MANAGED_RESOURCE_ID_METADATA_KEY,
+            FileRef,
+        )
+
+        source = self.file_ref(source_path)
+        source = replace(source, metadata=deepcopy(source.metadata))
+        if source.format != "clipboard_document":
+            return (source,)
+
+        bundle = self._snapshot_bundle(source_path)
+        resources: list[FileRef] = []
+        if bundle is not None:
+            for descriptor in bundle.resources:
+                resources.append(
+                    FileRef(
+                        path=descriptor.path,
+                        format="resource",
+                        category="other",
+                        size_bytes=descriptor.size_bytes,
+                        input_kind="resource",
+                        input_role="linked_resource",
+                        logical_path=descriptor.logical_path,
+                        media_type=descriptor.media_type,
+                        metadata={
+                            MANAGED_RESOURCE_ID_METADATA_KEY: descriptor.resource_id,
+                            MANAGED_INPUT_SIZE_BYTES_METADATA_KEY: descriptor.size_bytes,
+                            MANAGED_INPUT_SHA256_METADATA_KEY: descriptor.sha256,
+                        },
+                    )
+                )
+        document = load_clipboard_document_bytes(Path(source.path).read_bytes())
+        validate_clipboard_resource_refs(document, resources)
+        return (source, *resources)
+
 
     def output_policy(self) -> OutputPolicy:
         from docwen_core.models.request import OutputPolicy
