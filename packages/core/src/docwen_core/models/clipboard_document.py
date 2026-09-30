@@ -451,65 +451,74 @@ def _validate_table_geometry(table: ClipboardTable, *, where: str) -> None:
         )
 
 
-def clipboard_table_header_shape(table: ClipboardTable) -> tuple[int, int]:
-    """Return only contiguous header prefixes justified by explicit evidence."""
-
-    coverage: dict[tuple[int, int], ClipboardTableCell] = {}
-    for cell in table.cells:
-        for row in range(cell.row, cell.row + cell.row_span):
-            for column in range(cell.column, cell.column + cell.column_span):
-                coverage[(row, column)] = cell
-
-    header_rows = 0
-    for row in range(table.row_count):
-        if all(coverage[(row, column)].header for column in range(table.column_count)):
-            header_rows += 1
-        else:
-            break
-
-    header_columns = 0
-    for column in range(table.column_count):
-        if all(
-            coverage[(row, column)].header and coverage[(row, column)].scope in {"row", "rowgroup"}
-            for row in range(table.row_count)
-        ):
-            header_columns += 1
-        else:
-            break
-
+def _native_header_candidate(table: ClipboardTable, header_rows: int, header_columns: int) -> bool:
     semantic_cells: list[SemanticTableCell] = []
     for cell in table.cells:
-        rows = range(cell.row, cell.row + cell.row_span)
-        columns = range(cell.column, cell.column + cell.column_span)
-        in_header_rows = all(row < header_rows for row in rows)
-        in_header_columns = all(column < header_columns for column in columns)
-        if (any(row < header_rows for row in rows) and any(row >= header_rows for row in rows)) or (
-            any(column < header_columns for column in columns) and any(column >= header_columns for column in columns)
+        rows = tuple(range(cell.row, cell.row + cell.row_span))
+        columns = tuple(range(cell.column, cell.column + cell.column_span))
+        in_rows = bool(header_rows) and all(row < header_rows for row in rows)
+        in_columns = bool(header_columns) and all(column < header_columns for column in columns)
+        if header_rows and any(row < header_rows for row in rows) and any(row >= header_rows for row in rows):
+            return False
+        if header_columns and any(column < header_columns for column in columns) and any(
+            column >= header_columns for column in columns
         ):
-            return 0, 0
+            return False
+        native_header = in_rows or in_columns
+        if not cell.header and native_header:
+            return False
+        if cell.header and cell.scope in {"col", "colgroup"} and not in_rows:
+            return False
+        if cell.header and cell.scope in {"row", "rowgroup"} and not in_columns:
+            return False
+        if cell.header and not cell.scope and not native_header:
+            return False
         role: Literal["data", "column_header", "row_header", "corner_header"] = "data"
-        if in_header_rows and in_header_columns:
+        if in_rows and in_columns:
             role = "corner_header"
-        elif in_header_rows:
+        elif in_rows:
             role = "column_header"
-        elif in_header_columns:
+        elif in_columns:
             role = "row_header"
         semantic_cells.append(
             SemanticTableCell(
-                row=cell.row,
-                column=cell.column,
-                text=clipboard_cell_text(cell),
-                role=role,
-                row_span=cell.row_span,
-                column_span=cell.column_span,
+                row=cell.row, column=cell.column, text=clipboard_cell_text(cell), role=role,
+                row_span=cell.row_span, column_span=cell.column_span,
             )
         )
     try:
-        return derive_table_header_shape(SemanticTable(table.row_count, table.column_count, tuple(semantic_cells)))
+        derived = derive_table_header_shape(SemanticTable(table.row_count, table.column_count, tuple(semantic_cells)))
     except SemanticDocumentValidationError:
+        return False
+    return derived == (header_rows, header_columns)
+
+
+def clipboard_table_header_shape(table: ClipboardTable) -> tuple[int, int]:
+    """Return native header prefixes justified by explicit th/scope evidence.
+
+    scope=row/rowgroup is row-header evidence, never evidence for a repeated
+    Word column-header row. td cells are never promoted merely by position.
+    Association graphs that cannot fit contiguous Word row/column prefixes
+    return (0, 0) and remain reversible in the dedicated association map.
+    """
+
+    candidates: list[tuple[int, int, int]] = []
+    for header_rows in range(table.row_count + 1):
+        for header_columns in range(table.column_count + 1):
+            if header_rows == header_columns == 0 and any(cell.header for cell in table.cells):
+                continue
+            if not _native_header_candidate(table, header_rows, header_columns):
+                continue
+            area = (
+                header_rows * table.column_count
+                + header_columns * table.row_count
+                - header_rows * header_columns
+            )
+            candidates.append((area, header_columns, header_rows))
+    if not candidates:
         return 0, 0
-
-
+    _area, header_columns, header_rows = min(candidates, key=lambda item: (item[0], item[1], -item[2]))
+    return header_rows, header_columns
 def clipboard_inline_text(inline: ClipboardInline) -> str:
     if isinstance(inline, ClipboardText):
         return inline.value
