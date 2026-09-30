@@ -268,7 +268,11 @@ class InputAreaViewModel(QObject):
             return
         if not Path(file_path).is_file():
             self._emit_rejection(
-                _t("components.file_drop.drag_preview_skipped_unreadable", "Unavailable: {path}", path=file_path),
+                _t(
+                    "components.file_drop.drag_preview_skipped_unreadable",
+                    "Unavailable: {path}",
+                    path=file_path,
+                ),
                 "danger",
             )
             return
@@ -339,7 +343,11 @@ class InputAreaViewModel(QObject):
                 candidates = list(scan.files)
                 for unreadable in scan.unreadable_paths:
                     record_skip(
-                        _t("components.file_drop.drag_preview_skipped_unreadable", "Unavailable: {path}", path=str(unreadable))
+                        _t(
+                            "components.file_drop.drag_preview_skipped_unreadable",
+                            "Unavailable: {path}",
+                            path=str(unreadable),
+                        )
                     )
             for candidate in candidates:
                 normalized = str(candidate)
@@ -351,11 +359,19 @@ class InputAreaViewModel(QObject):
                     collected.append(normalized)
                 elif candidate.exists():
                     record_skip(
-                        _t("components.file_drop.unsupported_type_msg", "Unsupported file type: {filename}", filename=candidate.name or normalized)
+                        _t(
+                            "components.file_drop.unsupported_type_msg",
+                            "Unsupported file type: {filename}",
+                            filename=candidate.name or normalized,
+                        )
                     )
                 else:
                     record_skip(
-                        _t("components.file_drop.drag_preview_skipped_unreadable", "Unavailable: {path}", path=normalized)
+                        _t(
+                            "components.file_drop.drag_preview_skipped_unreadable",
+                            "Unavailable: {path}",
+                            path=normalized,
+                        )
                     )
         return _BatchCollection(collected, skipped_count, tuple(skipped_details))
 
