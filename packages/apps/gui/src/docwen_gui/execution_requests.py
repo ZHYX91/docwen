@@ -352,6 +352,7 @@ class ExecutionRequestBuilder:
             if source_label:
                 metadata[SOURCE_PRESENTATION_NAME_METADATA_KEY] = source_label
             return metadata
+
         source_ref = next(
             (ref for ref in self._view_model.files if normalize_path(getattr(ref, "path", "")) == normalized),
             None,
