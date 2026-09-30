@@ -20,6 +20,7 @@ from docwen_core.detection._validation import (
     enforce_file_admission,
     has_supported_filename_declaration,
     inspect_file,
+    inspect_structured_clipboard_snapshot,
     inspect_utf8_markdown_snapshot,
     reinspect_frozen_file,
 )
@@ -51,6 +52,7 @@ __all__ = [
     "has_supported_filename_declaration",
     "inspect_file",
     "inspect_ooxml_signature_graph",
+    "inspect_structured_clipboard_snapshot",
     "inspect_utf8_markdown_snapshot",
     "reinspect_frozen_file",
     "signature_derived_output_diagnostic",
