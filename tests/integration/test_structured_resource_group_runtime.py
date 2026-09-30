@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import threading
 import time
 from pathlib import Path
@@ -25,6 +26,7 @@ from docwen_gui.clipboard_inputs import ClipboardInputStore
 from docwen_gui.execution_requests import ExecutionRequestBuilder
 from docwen_gui.path_identity import normalize_path
 from docwen_plugin_markdown.plugin import MarkdownPlugin
+from docwen_runtime._execution_context import _RuntimePluginLogger
 from docwen_runtime.adapters import RuntimePortAdapter
 from docwen_runtime.engine.route_resolver import RouteResolver
 from docwen_runtime.engine.task_manager import TaskManager
@@ -41,7 +43,7 @@ if TYPE_CHECKING:
 pytestmark = [pytest.mark.integration, pytest.mark.pr_gate, pytest.mark.release_gate]
 
 
-def _payload(resource_id: str, resource_bytes: bytes) -> bytes:
+def _payload(resource_id: str, resource_bytes: bytes, *, sentinel: str = "") -> bytes:
     logical_path = f"resources/{resource_id}.bin"
     return json.dumps(
         {
@@ -52,12 +54,12 @@ def _payload(resource_id: str, resource_bytes: bytes) -> bytes:
                     "inlines": [
                         {
                             "type": "text",
-                            "value": f"document-{resource_id}:",
+                            "value": f"document-{resource_id}:{sentinel}",
                         },
                         {
                             "type": "image",
                             "resourceId": resource_id,
-                            "alt": resource_id,
+                            "alt": f"{resource_id}{sentinel}",
                             "missingReason": "",
                         },
                     ],
@@ -79,10 +81,10 @@ def _payload(resource_id: str, resource_bytes: bytes) -> bytes:
     ).encode("utf-8")
 
 
-def _bundle(store: ClipboardInputStore, resource_id: str, resource_bytes: bytes):
+def _bundle(store: ClipboardInputStore, resource_id: str, resource_bytes: bytes, *, sentinel: str = ""):
     logical_path = f"resources/{resource_id}.bin"
     return store.create_bundle(
-        _payload(resource_id, resource_bytes),
+        _payload(resource_id, resource_bytes, sentinel=sentinel),
         display_name_template="Clipboard Document {index}.dwclip",
         preview=resource_id,
         resources=((resource_id, logical_path, "application/octet-stream", resource_bytes),),
@@ -131,10 +133,10 @@ def _controller(tmp_path: Path, plugin) -> ApplicationController:
     )
 
 
-def _build_grouped_request(tmp_path: Path):
+def _build_grouped_request(tmp_path: Path, *, sentinel: str = ""):
     store = ClipboardInputStore(tmp_path / "managed")
-    first = _bundle(store, "asset-one", b"first-resource")
-    second = _bundle(store, "asset-two", b"second-resource")
+    first = _bundle(store, "asset-one", b"first-resource", sentinel=sentinel)
+    second = _bundle(store, "asset-two", b"second-resource", sentinel=sentinel)
     refs = [_source_ref(first), _source_ref(second)]
     builder = _builder(store, refs)
     parent, context = builder.batch(
@@ -170,6 +172,62 @@ def test_builder_application_runtime_executes_two_resource_groups_in_order(tmp_p
             assert f"document-{resource_id}" in text
             assert resource_id in text
         assert bundles[0].resources[0].path != bundles[1].resources[0].path
+    finally:
+        store.close()
+
+
+@pytest.mark.parametrize("failure", ["none", "tampered", "raw-exception"])
+def test_resource_group_content_and_exceptions_stay_out_of_shared_messages(tmp_path, monkeypatch, caplog, failure):
+    sentinel = "RESOURCE_PRIVATE_83b2"
+    private_text = f"https://example.invalid/{sentinel}/private?alt={sentinel}"
+    store, bundles, parent, groups = _build_grouped_request(tmp_path, sentinel=private_text)
+    controller = _controller(tmp_path, MarkdownPlugin())
+    loggers: list[_RuntimePluginLogger] = []
+    original_init = _RuntimePluginLogger.__init__
+    attempted: list[str] = []
+
+    def capture_logger(self, task_id: str) -> None:
+        original_init(self, task_id)
+        loggers.append(self)
+
+    def fail_preconversion(request, **_kwargs):
+        attempted.append(request.request_id)
+        raise ValueError(f"raw authored exception: {sentinel}")
+
+    monkeypatch.setattr(_RuntimePluginLogger, "__init__", capture_logger)
+    caplog.set_level(logging.DEBUG)
+    if failure == "tampered":
+        Path(bundles[0].resources[0].path).write_bytes(private_text.encode())
+    elif failure == "raw-exception":
+        monkeypatch.setattr(controller, "_maybe_preconvert", fail_preconversion)
+    try:
+        results = controller.execute_document_group_batch(parent, groups)
+        assert len(results) == 2
+        if failure == "none":
+            assert all(result.success for result in results)
+            assert all(
+                "CLIPBOARD-IMAGE-RESOURCE-NOT-RENDERED" in {item.code for item in result.diagnostics}
+                for result in results
+            )
+            for result in results:
+                primary = next(item for item in result.artifacts if item.is_primary)
+                assert sentinel in Path(primary.staging_path).read_text(encoding="utf-8")
+        elif failure == "tampered":
+            assert not results[0].success and results[1].success
+            assert results[0].artifacts == []
+        else:
+            assert attempted == [f"{parent.request_id}-0", f"{parent.request_id}-1"]
+            assert all(not result.success and not result.artifacts for result in results)
+            assert all(
+                result.error is not None and result.error.message == "Document group execution failed."
+                for result in results
+            )
+        if failure != "raw-exception":
+            assert loggers, "Observe the actual Runtime logging channel"
+        assert sentinel not in caplog.text
+        assert sentinel not in repr([logger.messages for logger in loggers])
+        assert sentinel not in repr([result.diagnostics for result in results])
+        assert sentinel not in repr([result.error for result in results])
     finally:
         store.close()
 

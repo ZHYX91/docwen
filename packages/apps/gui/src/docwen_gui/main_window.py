@@ -407,7 +407,7 @@ class MainWindow(QWidget):
 
                 projection = project_clipboard_html(mime_data.html())
             except Exception:
-                logger.debug("Clipboard HTML projection failed; retaining plain text", exc_info=True)
+                logger.debug("Clipboard HTML projection failed; retaining plain text")
 
         if mime_data is None or not mime_data.hasText():
             if projection is not None and projection.image_count:
