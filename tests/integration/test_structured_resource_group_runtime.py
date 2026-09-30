@@ -164,6 +164,7 @@ def test_builder_application_runtime_executes_two_resource_groups_in_order(tmp_p
             codes = {item.code for item in result.diagnostics}
             assert "CLIPBOARD-IMAGE-RESOURCE-UNAVAILABLE" not in codes
             assert "CLIPBOARD-IMAGE-RESOURCE-NOT-RENDERED" in codes
+            assert resource_id not in "\n".join(item.message for item in result.diagnostics)
             primary = next(item for item in result.artifacts if item.is_primary)
             text = Path(primary.staging_path).read_text(encoding="utf-8")
             assert f"document-{resource_id}" in text
