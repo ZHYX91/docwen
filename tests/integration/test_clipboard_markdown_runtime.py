@@ -22,6 +22,7 @@ from docwen_runtime.engine.route_resolver import RouteResolver
 from docwen_runtime.engine.task_manager import TaskManager
 from docwen_runtime.output.finalizer import OutputFinalizer
 from docwen_runtime.plugin_registry.registry import PluginRegistry
+from docwen_runtime.templates import TemplateRegistry
 from docwen_runtime.workspace.manager import WorkspaceManager
 
 pytestmark = [pytest.mark.integration, pytest.mark.pr_gate, pytest.mark.release_gate]
@@ -276,11 +277,17 @@ def test_synthetic_authored_link_targets_do_not_enter_conversion_logs(
         ("显式宠物标题", "显式宠物标题"),
     ],
 )
+@pytest.mark.parametrize(
+    ("template_name", "title_key"),
+    [("简体中文通用模板", "标题"), ("English General Template", "title")],
+)
 def test_clipboard_docx_uses_logical_name_for_publication_and_only_as_title_fallback(
     tmp_path: Path,
     round_trip_runtime: Any,
     yaml_title: str | None,
     expected_title: str,
+    template_name: str,
+    title_key: str,
 ) -> None:
     yaml_lines = [
         "---",
@@ -290,7 +297,7 @@ def test_clipboard_docx_uses_logical_name_for_publication_and_only_as_title_fall
         "  - 第二项",
     ]
     if yaml_title is not None:
-        yaml_lines.append(f"title: {yaml_title}")
+        yaml_lines.append(f"{title_key}: {yaml_title}")
     yaml_lines.extend(
         [
             "---",
@@ -319,6 +326,9 @@ def test_clipboard_docx_uses_logical_name_for_publication_and_only_as_title_fall
     inspection = inspect_utf8_markdown_snapshot(source)
     logical_name = snapshot.display_name
     logical_stem = Path(logical_name).stem
+    # The GUI selects a shipped template with a title placeholder. The
+    # no-template fallback contains only a body and cannot exercise its title.
+    template = next(item for item in TemplateRegistry.default().list_templates("docx") if item.name == template_name)
     request = ConversionRequest(
         request_id=f"clipboard-logical-docx-{'explicit' if yaml_title else 'fallback'}",
         input_refs=[
@@ -332,6 +342,7 @@ def test_clipboard_docx_uses_logical_name_for_publication_and_only_as_title_fall
         ],
         target_format="docx",
         output_policy=OutputPolicy(output_dir=str(tmp_path / "published")),
+        options={"template_name": template.id},
     )
 
     result = ApplicationController(runtime_port=round_trip_runtime).execute_single(request)
@@ -339,7 +350,9 @@ def test_clipboard_docx_uses_logical_name_for_publication_and_only_as_title_fall
     assert result.success, result.error
     primary = next(artifact for artifact in result.artifacts if artifact.kind == "primary")
     output = Path(primary.staging_path)
-    assert primary.suggested_name == f"{logical_stem}.docx"
+    assert primary.suggested_name == output.name
+    assert primary.suggested_name.startswith(f"{logical_stem}_")
+    assert output.suffix == ".docx"
     assert logical_stem in output.name
     assert logical_stem in output.parent.name
     assert physical_stem not in output.name
@@ -352,4 +365,3 @@ def test_clipboard_docx_uses_logical_name_for_publication_and_only_as_title_fall
     assert len(document.tables) == 2
     assert source.read_bytes() == text.encode("utf-8")
     store.close()
-
