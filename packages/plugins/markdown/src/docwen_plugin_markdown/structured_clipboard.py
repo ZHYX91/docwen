@@ -342,7 +342,9 @@ def convert_clipboard_document_to_xlsx(context: Any) -> ConversionResult:
                 )
 
     output = context.workspace.create_artifact_path(ARTIFACT_KIND_PRIMARY, ".xlsx")
-    workbook.save(output)
+    from docwen_plugin_markdown.structured_clipboard_strings import save_workbook_preserving_empty_strings
+
+    save_workbook_preserving_empty_strings(workbook, output)
     artifact = ArtifactManifest(
         artifact_id="clipboard-document-xlsx",
         kind=ARTIFACT_KIND_PRIMARY,

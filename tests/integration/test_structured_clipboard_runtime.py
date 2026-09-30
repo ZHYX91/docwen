@@ -68,8 +68,8 @@ def _controller(tmp_path: Path) -> ApplicationController:
     return ApplicationController(runtime_port=runtime)
 
 
-def _request(tmp_path: Path, target: str, *, options: dict | None = None) -> ConversionRequest:
-    model = project_structured_clipboard_html(HTML)
+def _request(tmp_path: Path, target: str, *, options: dict | None = None, html: bytes = HTML) -> ConversionRequest:
+    model = project_structured_clipboard_html(html)
     payload = clipboard_document_to_bytes(model)
     source = tmp_path / "managed.dwclip"
     source.write_bytes(payload)
@@ -197,3 +197,49 @@ def test_ordinary_json_never_acquires_structured_clipboard_admission(tmp_path: P
     inspection = inspect_file(str(source))
     assert inspection.detected_format != "clipboard_document"
     assert inspection.decision.value != "allow"
+
+
+def test_xlsx_authored_empty_strings_remain_distinct_from_covered_blank_cells(tmp_path: Path) -> None:
+    from xml.etree import ElementTree
+
+    html = b"""<table>
+    <tr><th>empty</th><th>space</th><th>nbsp</th><th>zero</th><th>formula text</th>
+    <th>pipe</th><th>less</th><th>caret</th><th>break</th></tr>
+    <tr><td></td><td> </td><td>&nbsp;</td><td>00123</td><td>=1+1</td>
+    <td>|</td><td>&lt;</td><td>^</td><td>before<br>after</td></tr>
+    <tr><td colspan="9">merged anchor</td></tr></table>"""
+    request = _request(
+        tmp_path,
+        "xlsx",
+        options={"template_name": _template_id("xlsx", "English Sample Sheet Template.xlsx")},
+        html=html,
+    )
+    result = _controller(tmp_path).execute_single(request)
+    assert result.success, result.error
+    output = Path(next(item for item in result.artifacts if item.is_primary).staging_path)
+    workbook = load_workbook(output, data_only=False)
+    table = workbook["Table 1"]
+    expected = ("", " ", "\u00a0", "00123", "=1+1", "|", "<", "^", "before\nafter")
+    assert tuple(table.cell(2, column).value for column in range(1, 10)) == expected
+    assert all(table.cell(2, column).data_type == "s" for column in range(1, 10))
+    assert table["A3"].value == "merged anchor"
+    assert table["B3"].value is None
+
+    namespace = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+    with ZipFile(output) as package:
+        worksheets = [
+            ElementTree.fromstring(package.read(name))
+            for name in package.namelist()
+            if name.startswith("xl/worksheets/") and name.endswith(".xml")
+        ]
+    table_xml = next(
+        root
+        for root in worksheets
+        if any(node.attrib.get("ref") == "A3:I3" for node in root.findall("./m:mergeCells/m:mergeCell", namespace))
+    )
+    cells = {cell.attrib["r"]: cell for cell in table_xml.findall("./m:sheetData/m:row/m:c", namespace)}
+    assert cells["A2"].attrib["t"] == "inlineStr"
+    empty_text = cells["A2"].find("m:is/m:t", namespace)
+    assert empty_text is not None and (empty_text.text or "") == ""
+    assert cells["E2"].find("m:f", namespace) is None
+    assert "B3" not in cells or cells["B3"].find("m:is", namespace) is None
