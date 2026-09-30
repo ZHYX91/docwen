@@ -28,8 +28,7 @@ _SEMANTIC_COLUMNS = (
 )
 
 
-def native_cell_role(table: ClipboardTable, cell: ClipboardTableCell) -> str:
-    header_rows, header_columns = clipboard_table_header_shape(table)
+def _cell_role(cell: ClipboardTableCell, header_rows: int, header_columns: int) -> str:
     in_rows = header_rows > 0 and cell.row + cell.row_span <= header_rows
     in_columns = header_columns > 0 and cell.column + cell.column_span <= header_columns
     if in_rows and in_columns:
@@ -39,6 +38,11 @@ def native_cell_role(table: ClipboardTable, cell: ClipboardTableCell) -> str:
     if in_columns:
         return "row_header"
     return "associated_header" if cell.header else "data"
+
+
+def native_cell_role(table: ClipboardTable, cell: ClipboardTableCell) -> str:
+    header_rows, header_columns = clipboard_table_header_shape(table)
+    return _cell_role(cell, header_rows, header_columns)
 
 
 def table_semantics_rows(
@@ -60,7 +64,7 @@ def table_semantics_rows(
                     f"R{cell.row + 1}C{cell.column + 1}",
                     str(cell.row_span),
                     str(cell.column_span),
-                    native_cell_role(table, cell),
+                    _cell_role(cell, header_rows, header_columns),
                     "1" if cell.header else "0",
                     cell.scope,
                     cell.html_id,
@@ -174,7 +178,7 @@ def table_semantics_text(table_id: str, table: ClipboardTable, *, sheet: str = "
                 (
                     f"anchor=R{cell.row + 1}C{cell.column + 1}",
                     f"span={cell.row_span}x{cell.column_span}",
-                    f"role={native_cell_role(table, cell)}",
+                    f"role={_cell_role(cell, header_rows, header_columns)}",
                     f"header={1 if cell.header else 0}",
                     f"scope={cell.scope or '-'}",
                     f"id={cell.html_id or '-'}",
