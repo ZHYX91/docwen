@@ -469,7 +469,6 @@ def test_thread_start_error_after_native_start_retains_ownership_until_finished(
     assert main_window._execution._owners == {}
 
 
-
 def _structured_bundle_for_lifecycle(window, tmp_path: Path):
     from docwen_core.models.clipboard_document import CLIPBOARD_DOCUMENT_SCHEMA
 
