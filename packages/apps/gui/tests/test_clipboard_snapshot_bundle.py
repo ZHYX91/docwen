@@ -151,3 +151,36 @@ def test_bundle_marker_is_not_published_when_creation_fails(tmp_path: Path, monk
     assert not list(store.session_root.glob("bundle-*/.bundle.marker"))
     assert not list(store.session_root.glob("bundle-*"))
     store.close()
+
+
+
+def test_bundle_delete_failure_keeps_tracking_until_retry_succeeds(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = ClipboardInputStore(tmp_path / "managed")
+    bundle = store.create_bundle(
+        _payload(),
+        display_name_template="Clipboard Document {index}.dwclip",
+        preview="",
+        resources=(("resource-a", "resources/a.bin", "application/octet-stream", b"original"),),
+    )
+    bundle_root = Path(bundle.root_path)
+    store.sync_visible([bundle.main.path])
+    original_rmtree = __import__("shutil").rmtree
+
+    def deny_bundle_delete(path, *args, **kwargs):
+        if Path(path) == bundle_root:
+            raise PermissionError("test bundle delete denied")
+        return original_rmtree(path, *args, **kwargs)
+
+    monkeypatch.setattr("docwen_gui.clipboard_inputs.shutil.rmtree", deny_bundle_delete)
+    store.sync_visible([])
+    assert bundle_root.exists()
+    assert store.bundle(bundle.main.path) == bundle
+    assert store.snapshot_available(bundle.main.path)
+
+    monkeypatch.setattr("docwen_gui.clipboard_inputs.shutil.rmtree", original_rmtree)
+    store.discard_if_unowned(bundle.main.path)
+    assert not bundle_root.exists()
+    store.close()
