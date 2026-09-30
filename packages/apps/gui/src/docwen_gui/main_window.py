@@ -407,10 +407,13 @@ class MainWindow(QWidget):
         text = mime_data.text()
         fallback_table_count = 0
         image_count = projection.image_count if projection is not None else 0
-        if projection is not None and (projection.table_count or projection.fallback_table_count):
-            if projection.text.strip():
-                text = projection.text
-                fallback_table_count = projection.fallback_table_count
+        if (
+            projection is not None
+            and (projection.table_count or projection.fallback_table_count)
+            and projection.text.strip()
+        ):
+            text = projection.text
+            fallback_table_count = projection.fallback_table_count
         if not text.strip():
             self._info_area_vm.add_message(
                 _t(
