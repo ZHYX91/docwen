@@ -1777,6 +1777,8 @@ copy = "Copiar diagnóstico"
 redacted_hint = "A cópia contém apenas status, categorias e contagens. Conteúdo, caminhos, erros originais, comandos e configurações são excluídos."
 
 [clipboard]
+structured_plain_fallback = "Não foi possível associar com segurança a estrutura de tabela rica ao texto simples; todo o texto simples foi preservado."
+structured_html_only = "A área de transferência não continha corpo em texto simples; o HTML validado com tabela foi usado como fonte de conteúdo."
 structured_invalid = "A estrutura da tabela da área de transferência é inválida e não foi importada."
 table_fallback = "{count} tabela(s) da área de transferência não puderam ser representadas com segurança como tabelas Markdown; o texto das células foi mantido como texto simples."
 images_omitted = "{count} imagem(ns) da área de transferência não foram importadas; o texto disponível foi mantido."
