@@ -51,3 +51,37 @@ def test_markdown_table_cells_escape_pipe_and_keep_line_breaks() -> None:
     assert result.table_count == 1
     assert "| A\\|B | Lines |" in result.text
     assert "| x\\|y | one<br>two |" in result.text
+
+
+def test_multiple_tables_keep_textual_order_empty_cells_and_values() -> None:
+    result = project_clipboard_html(
+        "<p>Before</p><table><tr><th>A</th><th>B</th></tr><tr><td></td><td>00123</td></tr></table>"
+        "<p>Middle</p><table><tr><th>Pipe</th><th>Lines</th></tr>"
+        "<tr><td>x|y</td><td>one<br>two</td></tr></table><p>After</p>"
+    )
+    assert result.table_count == 2
+    assert result.fallback_table_count == 0
+    assert result.text.index("Before") < result.text.index("| A | B |") < result.text.index("Middle")
+    assert result.text.index("Middle") < result.text.index("| Pipe | Lines |") < result.text.index("After")
+    assert "|  | 00123 |" in result.text
+    assert "| x\\|y | one<br>two |" in result.text
+
+
+def test_complex_table_keeps_all_extractable_cell_text() -> None:
+    result = project_clipboard_html(
+        "<table><tr><th>A</th><th>B</th></tr>"
+        "<tr><td rowspan='2'>kept-rowspan</td><td>first</td></tr><tr><td>second</td></tr></table>"
+    )
+    assert result.fallback_table_count == 1
+    assert all(value in result.text for value in ("A", "B", "kept-rowspan", "first", "second"))
+
+
+def test_script_style_and_remote_images_are_inert_and_reported() -> None:
+    result = project_clipboard_html(
+        "<p>Before</p><script>DO_NOT_RUN()</script><style>body{display:none}</style>"
+        "<img src='https://example.invalid/private.png'><p>After</p>"
+    )
+    assert result.text == "Before\n\nAfter\n"
+    assert "DO_NOT_RUN" not in result.text
+    assert "display:none" not in result.text
+    assert result.image_count == 1

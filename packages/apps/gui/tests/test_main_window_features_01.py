@@ -101,7 +101,7 @@ class TestShortcutsRegistered:
         for sc in shortcuts:
             expected = (
                 Qt.ShortcutContext.WidgetWithChildrenShortcut
-                if sc.key().toString() == "Ctrl+V"
+                if sc.key().toString() in {"Ctrl+V", "Ctrl+Shift+V"}
                 else Qt.ShortcutContext.WindowShortcut
             )
             assert sc.context() == expected, f"Shortcut {sc.key().toString()} has wrong context: {sc.context()}"

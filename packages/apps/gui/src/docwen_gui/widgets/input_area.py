@@ -46,6 +46,7 @@ from PySide6.QtWidgets import (
     QRadioButton,
     QSizePolicy,
     QStyle,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -111,6 +112,7 @@ _I_BATCH_MODE = "components.file_drop.batch_mode"
 _I_SINGLE_MODE = "components.file_drop.single_mode"
 _I_ADD_BUTTON = "components.file_drop.add_button"
 _I_PASTE_BUTTON = "components.file_drop.paste_button"
+_I_PASTE_PLAIN_TEXT = "components.file_drop.paste_plain_text_action"
 _I_CLEAR_BUTTON = "components.file_drop.clear_button"
 _I_ADD_FILE = "components.file_drop.add_file_action"
 _I_ADD_FOLDER = "components.file_drop.add_folder_action"
@@ -228,6 +230,20 @@ class InputArea(QFrame):
         self._paste_button.clicked.connect(self.request_paste)
         self._action_layout.addWidget(self._paste_button)
 
+        self._paste_menu_button = QToolButton(self._drop_group)
+        self._paste_menu_button.setObjectName("fileDropPasteMenuButton")
+        self._paste_menu_button.setText("▾")
+        self._paste_menu_button.setToolTip(_i18n(_I_PASTE_PLAIN_TEXT, "Paste as Plain Text"))
+        self._paste_menu_button.setAccessibleName(_i18n(_I_PASTE_PLAIN_TEXT, "Paste as Plain Text"))
+        paste_menu = QMenu(self._paste_menu_button)
+        self._paste_plain_text_action = QAction(_i18n(_I_PASTE_PLAIN_TEXT, "Paste as Plain Text"), paste_menu)
+        self._paste_plain_text_action.triggered.connect(self.request_plain_text_paste)
+        paste_menu.addAction(self._paste_plain_text_action)
+        self._paste_menu_button.setMenu(paste_menu)
+        self._paste_menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        set_metric(self._paste_menu_button, "setMinimumHeight", Sizing.CONTROL_HEIGHT)
+        self._action_layout.addWidget(self._paste_menu_button)
+
         self._action_layout.addSpacing(dp(Spacing.GROUP_GAP))
         self._clear_button = PushButton(_i18n(_I_CLEAR_BUTTON, "Clear"), self._drop_group)
         self._clear_button.setObjectName("fileDropClearButton")
@@ -244,7 +260,8 @@ class InputArea(QFrame):
         self.setTabOrder(self._single_mode_button, self._batch_mode_button)
         self.setTabOrder(self._batch_mode_button, self._add_button)
         self.setTabOrder(self._add_button, self._paste_button)
-        self.setTabOrder(self._paste_button, self._clear_button)
+        self.setTabOrder(self._paste_button, self._paste_menu_button)
+        self.setTabOrder(self._paste_menu_button, self._clear_button)
 
         self._paste_shortcut = QShortcut(QKeySequence.StandardKey.Paste, self)
         self._paste_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
@@ -763,6 +780,7 @@ class InputArea(QFrame):
             self._batch_mode_button,
             self._add_button,
             self._paste_button,
+            self._paste_menu_button,
             self._clear_button,
         )
         if not all(shiboken6.isValid(control) for control in controls):
@@ -773,6 +791,7 @@ class InputArea(QFrame):
             dp(Sizing.CONTROL_HEIGHT),
             self._add_button.sizeHint().height(),
             self._paste_button.sizeHint().height(),
+            self._paste_menu_button.sizeHint().height(),
             self._clear_button.sizeHint().height(),
         )
         for control in (self._add_button, self._paste_button, self._clear_button):
@@ -783,9 +802,10 @@ class InputArea(QFrame):
         action_width = (
             self._add_button.minimumWidth()
             + self._paste_button.minimumWidth()
+            + self._paste_menu_button.sizeHint().width()
             + self._clear_button.minimumWidth()
             + dp(Spacing.GROUP_GAP)
-            + 2 * dp(Spacing.CONTROL_GAP)
+            + 3 * dp(Spacing.CONTROL_GAP)
         )
         required = mode_width + action_width + dp(Spacing.GROUP_GAP)
         compact = 0 < content_width < max(dp(_COMPACT_WIDTH_THRESHOLD), required)
@@ -871,6 +891,11 @@ class InputArea(QFrame):
     def paste_button(self) -> PushButton:
         """Public access to the explicit clipboard action."""
         return self._paste_button
+
+    @property
+    def paste_menu_button(self) -> QToolButton:
+        """Visible menu for alternate paste actions."""
+        return self._paste_menu_button
 
     @property
     def clear_button(self) -> PushButton:

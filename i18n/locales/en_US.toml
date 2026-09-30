@@ -932,9 +932,6 @@ emoji = "Emoji detection and processing library"
 # =============================================================================
 # 主界面组件
 # =============================================================================
-[clipboard]
-table_fallback = "{count} clipboard tables could not be represented safely as Markdown tables; their cell text was kept as plain text."
-
 [components]
 
 # Text size

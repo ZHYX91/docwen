@@ -9,7 +9,7 @@ from typing import Any
 
 from docwen_core.models.conversion_manifest import ConversionManifestContext
 from docwen_core.models.document_node import ConversionIdentity
-from docwen_core.models.file_ref import FileRef
+from docwen_core.models.file_ref import FileRef, source_presentation_name
 
 PRECONVERSION_INTERMEDIATES_OPTION = "_docwen_preconversion_intermediates"
 """Internal request option carrying pre-conversion artifacts to finalize."""
@@ -186,7 +186,7 @@ class ConversionRequest:
         if self.conversion_identity is not None:
             return self.conversion_identity.source_stem
         source = next((ref for ref in self.input_refs if ref.input_role in {"source", "neutral_document"}), None)
-        return Path(source.logical_path or source.path).stem if source is not None else "document"
+        return Path(source_presentation_name(source)).stem if source is not None else "document"
 
     def to_dict(self) -> dict[str, Any]:
         return {

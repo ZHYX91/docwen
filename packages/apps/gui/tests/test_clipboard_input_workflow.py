@@ -143,6 +143,63 @@ def test_single_file_clipboard_rejects_multiple_and_preserves_current_input(
     assert clipboard_window._input_area_vm.selection_tone == "warning"
 
 
+def test_single_file_clipboard_counts_original_list_before_filtering(
+    clipboard_window: MainWindow, qapp: QApplication, qtbot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original = _paste_text(clipboard_window, qapp, qtbot, "# Keep current\n")
+    valid = tmp_path / "valid.md"
+    missing = tmp_path / "missing.bin"
+    valid.write_text("# Valid\n", encoding="utf-8")
+    mime = QMimeData()
+    mime.setUrls([QUrl.fromLocalFile(str(valid)), QUrl.fromLocalFile(str(missing))])
+    qapp.clipboard().setMimeData(mime)
+    monkeypatch.setattr("docwen_gui.dialogs.feedback.confirm", lambda *_a, **_k: False)
+    qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
+    qapp.processEvents()
+    assert [ref.path for ref in clipboard_window.view_model.files] == [original]
+    assert clipboard_window._input_area_vm.selection_tone == "warning"
+
+
+def test_single_folder_clipboard_keeps_input_when_batch_switch_declined(
+    clipboard_window: MainWindow, qapp: QApplication, qtbot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original = _paste_text(clipboard_window, qapp, qtbot, "# Keep current\n")
+    folder = tmp_path / "folder"
+    folder.mkdir()
+    (folder / "inside.md").write_text("# Inside\n", encoding="utf-8")
+    mime = QMimeData()
+    mime.setUrls([QUrl.fromLocalFile(str(folder))])
+    qapp.clipboard().setMimeData(mime)
+    monkeypatch.setattr("docwen_gui.dialogs.feedback.confirm", lambda *_a, **_k: False)
+    qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
+    qapp.processEvents()
+    assert clipboard_window._input_area_vm.mode == "single"
+    assert [ref.path for ref in clipboard_window.view_model.files] == [original]
+
+
+def test_switch_to_batch_add_uses_captured_clipboard_file_list(
+    clipboard_window: MainWindow, qapp: QApplication, qtbot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original = _paste_text(clipboard_window, qapp, qtbot, "# Keep current\n")
+    first = tmp_path / "first.md"
+    second = tmp_path / "second.csv"
+    first.write_text("# First\n", encoding="utf-8")
+    second.write_text("name,value\nA,1\n", encoding="utf-8")
+    mime = QMimeData()
+    mime.setUrls([QUrl.fromLocalFile(str(first)), QUrl.fromLocalFile(str(second))])
+    qapp.clipboard().setMimeData(mime)
+    def accept_and_change_clipboard(*_args, **_kwargs):
+        qapp.clipboard().setText("# changed after capture\n")
+        return True
+    monkeypatch.setattr("docwen_gui.dialogs.feedback.confirm", accept_and_change_clipboard)
+    qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
+    qtbot.waitUntil(lambda: len(clipboard_window.view_model.files) == 3)
+    assert clipboard_window._input_area_vm.mode == "batch"
+    assert {Path(ref.path).resolve() for ref in clipboard_window.view_model.files} == {
+        Path(original).resolve(), first.resolve(), second.resolve(),
+    }
+
 def test_batch_file_clipboard_adds_mixed_real_files(
     clipboard_window: MainWindow,
     qapp: QApplication,
@@ -168,6 +225,28 @@ def test_batch_file_clipboard_adds_mixed_real_files(
     assert clipboard_window._clipboard_store is None
 
 
+def test_batch_file_clipboard_deduplicates_and_reports_partial_unavailable_inputs(
+    clipboard_window: MainWindow, qapp: QApplication, qtbot, tmp_path: Path
+) -> None:
+    clipboard_window._input_area_vm.set_mode("batch")
+    valid = tmp_path / "valid.md"
+    blocked = tmp_path / "blocked.bin"
+    missing = tmp_path / "missing.pdf"
+    valid.write_text("# Valid\n", encoding="utf-8")
+    blocked.write_bytes(b"\x00\x01\x02\x03")
+    mime = QMimeData()
+    mime.setUrls([QUrl.fromLocalFile(str(valid)), QUrl.fromLocalFile(str(valid)),
+                  QUrl.fromLocalFile(str(blocked)), QUrl.fromLocalFile(str(missing))])
+    qapp.clipboard().setMimeData(mime)
+    qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
+    qtbot.waitUntil(lambda: len(clipboard_window.view_model.files) == 1)
+    assert Path(clipboard_window.view_model.files[0].path).resolve() == valid.resolve()
+    assert "2" in clipboard_window._input_area_vm.selection_message
+    detail = clipboard_window._input_area_vm.selection_detail
+    assert str(missing) in detail
+    assert "blocked" in detail.lower() or "support" in detail.lower() or "内容" in detail
+
 def test_nonlocal_url_clipboard_still_uses_text_fallback(
     clipboard_window: MainWindow,
     qapp: QApplication,
@@ -189,68 +268,86 @@ def test_nonlocal_url_clipboard_still_uses_text_fallback(
     assert clipboard_window._clipboard_store is not None
 
 
-def test_rich_clipboard_preserves_simple_table_structure_and_order(
-    clipboard_window: MainWindow,
-    qapp: QApplication,
-    qtbot,
+def test_rich_clipboard_preserves_multiple_tables_and_body_order(
+    clipboard_window: MainWindow, qapp: QApplication, qtbot
 ) -> None:
     mime = QMimeData()
-    mime.setText("Before\nName\tValue\nA\t00123\nAfter")
+    mime.setText("Before\nA\tB\n\t00123\nMiddle\nPipe\tLines\nx|y\tone two\nAfter")
     mime.setHtml(
-        "<p>Before</p><table><tr><th>Name</th><th>Value</th></tr><tr><td>A</td><td>00123</td></tr></table><p>After</p>"
+        "<p>Before</p><table><tr><th>A</th><th>B</th></tr><tr><td></td><td>00123</td></tr></table>"
+        "<p>Middle</p><table><tr><th>Pipe</th><th>Lines</th></tr>"
+        "<tr><td>x|y</td><td>one<br>two</td></tr></table><p>After</p>"
     )
     qapp.clipboard().setMimeData(mime)
-
     qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
     qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
-    qtbot.waitUntil(lambda: len(clipboard_window.view_model.files) == 1)
-
     selected = clipboard_window.view_model.selected_file
     assert selected is not None
     content = Path(selected.path).read_text(encoding="utf-8")
-    assert content.index("Before") < content.index("| Name | Value |") < content.index("After")
-    assert "| A | 00123 |" in content
+    assert content.index("Before") < content.index("| A | B |") < content.index("Middle")
+    assert content.index("Middle") < content.index("| Pipe | Lines |") < content.index("After")
+    assert "|  | 00123 |" in content
+    assert "| x\\|y | one<br>two |" in content
 
 
-def test_unsafe_table_structure_falls_back_to_plain_text_with_warning(
-    clipboard_window: MainWindow,
-    qapp: QApplication,
-    qtbot,
+def test_unsafe_table_keeps_extractable_text_and_warns(
+    clipboard_window: MainWindow, qapp: QApplication, qtbot
 ) -> None:
     mime = QMimeData()
-    mime.setText("A\tB\n1\t2")
-    mime.setHtml("<table><tr><td>A</td><td>B</td></tr><tr><td>1</td><td>2</td></tr></table>")
+    mime.setText("A\tB\nkept-rowspan\tfirst\nsecond")
+    mime.setHtml("<table><tr><th>A</th><th>B</th></tr><tr><td rowspan='2'>kept-rowspan</td><td>first</td></tr><tr><td>second</td></tr></table>")
     qapp.clipboard().setMimeData(mime)
-
     qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
     qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
-    qtbot.waitUntil(lambda: len(clipboard_window.view_model.files) == 1)
-
     selected = clipboard_window.view_model.selected_file
     assert selected is not None
-    assert Path(selected.path).read_text(encoding="utf-8") == "A\tB\n1\t2\n"
+    text = Path(selected.path).read_text(encoding="utf-8")
+    assert all(value in text for value in ("A", "B", "kept-rowspan", "first", "second"))
     assert any(row.message_type == "warning" for row in clipboard_window._info_area_vm.history_rows)
 
 
-def test_plain_text_paste_bypasses_rich_table_projection(
-    clipboard_window: MainWindow,
-    qapp: QApplication,
-    qtbot,
+def test_plain_markdown_paste_remains_exact_text(
+    clipboard_window: MainWindow, qapp: QApplication, qtbot
+) -> None:
+    raw = "# Heading\n\n| A | B |\n| --- | --- |\n| x\\|y | 00123 |\n"
+    selected = _paste_text(clipboard_window, qapp, qtbot, raw)
+    assert Path(selected).read_text(encoding="utf-8") == raw
+
+
+def test_visible_plain_text_menu_bypasses_rich_projection(
+    clipboard_window: MainWindow, qapp: QApplication, qtbot
 ) -> None:
     plain = "Name\tValue\nA\t00123"
     mime = QMimeData()
     mime.setText(plain)
     mime.setHtml("<table><tr><th>Name</th><th>Value</th></tr><tr><td>A</td><td>00123</td></tr></table>")
     qapp.clipboard().setMimeData(mime)
-
-    clipboard_window.input_area.request_plain_text_paste()
+    button = clipboard_window.input_area.paste_menu_button
+    assert button.isVisible()
+    menu = button.menu()
+    assert menu is not None
+    actions = menu.actions()
+    assert len(actions) == 1 and actions[0].text()
+    actions[0].trigger()
     qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
-    qtbot.waitUntil(lambda: len(clipboard_window.view_model.files) == 1)
-
     selected = clipboard_window.view_model.selected_file
     assert selected is not None
     assert Path(selected.path).read_text(encoding="utf-8") == plain
 
+
+def test_rich_clipboard_reports_images_without_importing_them(
+    clipboard_window: MainWindow, qapp: QApplication, qtbot
+) -> None:
+    mime = QMimeData()
+    mime.setText("Before\nAfter")
+    mime.setHtml("<p>Before</p><img src='https://example.invalid/private.png'><p>After</p>")
+    qapp.clipboard().setMimeData(mime)
+    qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
+    selected = clipboard_window.view_model.selected_file
+    assert selected is not None
+    assert Path(selected.path).read_text(encoding="utf-8") == "Before\nAfter"
+    assert any(row.message_type == "warning" for row in clipboard_window._info_area_vm.history_rows)
 
 def test_empty_or_non_text_clipboard_never_creates_input(
     clipboard_window: MainWindow,

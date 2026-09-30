@@ -383,30 +383,34 @@ class MainWindow(QWidget):
         if not plain_text_only and mime_data is not None and mime_data.hasUrls():
             file_paths = self._input_area_vm.extract_urls_from_mime_data(mime_data.urls())
             if file_paths:
-                self._input_area_vm.add_files(file_paths)
+                self._paste_file_paths(file_paths)
                 return
-        if mime_data is None or not mime_data.hasText():
-            self._info_area_vm.add_message(
-                _t(
-                    "components.file_drop.clipboard_non_text",
-                    "The clipboard does not contain plain text.",
-                ),
-                "warning",
-            )
-            return
-        text = mime_data.text()
-        fallback_table_count = 0
-        if not plain_text_only and mime_data.hasHtml():
+
+        projection = None
+        if not plain_text_only and mime_data is not None and mime_data.hasHtml():
             try:
                 from docwen_gui.clipboard_content import project_clipboard_html
 
                 projection = project_clipboard_html(mime_data.html())
             except Exception:
                 logger.debug("Clipboard HTML projection failed; retaining plain text", exc_info=True)
+
+        if mime_data is None or not mime_data.hasText():
+            if projection is not None and projection.image_count:
+                self._info_area_vm.add_message(_t("clipboard.images_omitted", count=projection.image_count), "warning")
             else:
-                if (projection.table_count or projection.fallback_table_count) and projection.text.strip():
-                    text = projection.text
-                    fallback_table_count = projection.fallback_table_count
+                self._info_area_vm.add_message(
+                    _t("components.file_drop.clipboard_non_text", "The clipboard does not contain plain text."),
+                    "warning",
+                )
+            return
+        text = mime_data.text()
+        fallback_table_count = 0
+        image_count = projection.image_count if projection is not None else 0
+        if projection is not None and (projection.table_count or projection.fallback_table_count):
+            if projection.text.strip():
+                text = projection.text
+                fallback_table_count = projection.fallback_table_count
         if not text.strip():
             self._info_area_vm.add_message(
                 _t(
@@ -439,16 +443,11 @@ class MainWindow(QWidget):
         def completed(outcome) -> None:
             if not outcome.added:
                 store.discard_if_unowned(snapshot.path)
-            elif fallback_table_count:
-                self._info_area_vm.add_message(
-                    _t(
-                        "clipboard.table_fallback",
-                        "{count} clipboard tables could not be represented safely as Markdown tables; "
-                        "their cell text was kept as plain text.",
-                        count=fallback_table_count,
-                    ),
-                    "warning",
-                )
+            else:
+                if fallback_table_count:
+                    self._info_area_vm.add_message(_t("clipboard.table_fallback", count=fallback_table_count), "warning")
+                if image_count:
+                    self._info_area_vm.add_message(_t("clipboard.images_omitted", count=image_count), "warning")
             self._sync_clipboard_visible_inputs()
 
         from docwen_core.detection import inspect_utf8_markdown_snapshot
@@ -459,6 +458,38 @@ class MainWindow(QWidget):
             file_inspector=inspect_utf8_markdown_snapshot,
         )
 
+    def _paste_file_paths(self, file_paths: list[str]) -> None:
+        """Paste one captured local-file list through normal file admission."""
+
+        needs_batch = self._input_area_vm.mode == "single" and (
+            len(file_paths) != 1 or Path(file_paths[0]).is_dir()
+        )
+        if not needs_batch:
+            self._input_area_vm.add_files(file_paths)
+            return
+
+        # Show the ordinary non-mutating rejection first. Declining the mode
+        # switch therefore preserves both the current input and its feedback.
+        self._input_area_vm.add_files(file_paths)
+        from docwen_gui.dialogs.feedback import confirm
+
+        reason = (
+            _t("messages.no_folder_in_single_mode", "Single mode does not support folders")
+            if len(file_paths) == 1 and Path(file_paths[0]).is_dir()
+            else _t("components.file_drop.single_mode_only_one", "Please select exactly one file in single mode")
+        )
+        if not confirm(
+            _t("components.file_drop.batch_mode", "Batch"),
+            reason,
+            parent=self,
+            confirm_label=_t("components.file_drop.batch_mode", "Batch"),
+        ):
+            return
+
+        # Use the captured list. The clipboard may have changed while the
+        # confirmation dialog was open and must not be read a second time.
+        self._input_area_vm.set_mode("batch")
+        self._input_area_vm.add_files(file_paths)
     def _prepare_clipboard_output_policy(
         self,
         file_paths: Sequence[str],
@@ -875,6 +906,7 @@ class MainWindow(QWidget):
         for control in (
             getattr(self._input_area, "add_button", None),
             getattr(self._input_area, "paste_button", None),
+            getattr(self._input_area, "paste_menu_button", None),
             getattr(self._input_area, "clear_button", None),
             getattr(self._input_area, "single_mode_button", None),
             getattr(self._input_area, "batch_mode_button", None),

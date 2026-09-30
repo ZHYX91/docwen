@@ -43,6 +43,7 @@ class ClipboardMarkdownProjection:
     text: str
     table_count: int = 0
     fallback_table_count: int = 0
+    image_count: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,6 +88,7 @@ class _ClipboardHTMLParser(HTMLParser):
         self.text_parts: list[str] = []
         self.table_count = 0
         self.fallback_table_count = 0
+        self.image_count = 0
         self._skip_depth = 0
         self._table_depth = 0
         self._table_nested = False
@@ -115,6 +117,11 @@ class _ClipboardHTMLParser(HTMLParser):
             return
         if tag in _SKIP_TAGS:
             self._skip_depth = 1
+            return
+
+        if tag == "img":
+            # Basic content paste never fetches or materializes images.
+            self.image_count += 1
             return
 
         if tag == "table":
@@ -243,7 +250,7 @@ class _ClipboardHTMLParser(HTMLParser):
         value = "\n\n".join(block for block in self.blocks if block.strip()).strip("\n")
         if value:
             value += "\n"
-        return ClipboardMarkdownProjection(value, self.table_count, self.fallback_table_count)
+        return ClipboardMarkdownProjection(value, self.table_count, self.fallback_table_count, self.image_count)
 
 
 def project_clipboard_html(html_text: str) -> ClipboardMarkdownProjection:
