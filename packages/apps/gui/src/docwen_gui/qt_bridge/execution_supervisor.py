@@ -63,6 +63,7 @@ class ExecutionSupervisor(QObject):
         on_reserved: Callable[[], None],
         aggregate_action_name: str = "",
         batch_execution: bool = False,
+        document_group_requests: tuple[ConversionRequest, ...] = (),
     ) -> bool:
         if self.busy:
             self.warning.emit(
@@ -89,6 +90,7 @@ class ExecutionSupervisor(QObject):
                 context=context,
                 aggregate_action_name=aggregate_action_name,
                 batch_execution=batch_execution,
+                document_group_requests=document_group_requests,
                 parent=self,
             )
             thread.result_signal.connect(self.result_ready)
