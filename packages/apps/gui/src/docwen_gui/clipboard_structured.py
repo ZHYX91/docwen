@@ -265,12 +265,16 @@ def _blocks_from_children(
             continue
         if child.tag in _PARAGRAPH_TAGS:
             flush_inline()
-            nested_table = any(isinstance(item, _Node) and item.tag == "table" for item in child.children)
-            if nested_table:
+            if _contains_table(child):
                 for block in _blocks_from_children(child.children, counters=counters, depth=depth + 1):
                     blocks.append(block)
             else:
                 append_block(ClipboardParagraph(_inline_nodes(child.children)))
+            continue
+        if _contains_table(child):
+            flush_inline()
+            for block in _blocks_from_children(child.children, counters=counters, depth=depth + 1):
+                blocks.append(block)
             continue
         inline_buffer.append(child)
     flush_inline()
