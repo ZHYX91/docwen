@@ -10,7 +10,11 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from docwen_core.models.file_ref import FileRef
 
 from docwen_core.models.semantic_document import (
     SemanticDocument,
@@ -573,6 +577,68 @@ def iter_clipboard_inlines(document: ClipboardDocument):
             yield from block.inlines
 
 
+def validate_clipboard_resource_refs(
+    document: ClipboardDocument,
+    refs: "Sequence[FileRef]",
+) -> None:
+    """Validate one frozen typed-resource set against the document declaration."""
+
+    from docwen_core.models.file_ref import (
+        MANAGED_INPUT_SHA256_METADATA_KEY,
+        MANAGED_INPUT_SIZE_BYTES_METADATA_KEY,
+        MANAGED_RESOURCE_ID_METADATA_KEY,
+    )
+
+    declarations = {item.resource_id: item for item in document.resources}
+    if len(refs) != len(declarations):
+        raise ClipboardDocumentError(
+            "clipboard.resource_set_mismatch",
+            "Structured clipboard resource count does not match the document declaration.",
+        )
+
+    seen: set[str] = set()
+    for ref in refs:
+        resource_id = ref.metadata.get(MANAGED_RESOURCE_ID_METADATA_KEY)
+        if (
+            ref.input_role != "linked_resource"
+            or ref.input_kind != "resource"
+            or not isinstance(resource_id, str)
+            or not resource_id
+            or resource_id in seen
+        ):
+            raise ClipboardDocumentError(
+                "clipboard.resource_ref_invalid",
+                "Structured clipboard linked resource identity is invalid.",
+            )
+        seen.add(resource_id)
+        declaration = declarations.get(resource_id)
+        if declaration is None:
+            raise ClipboardDocumentError(
+                "clipboard.resource_set_mismatch",
+                "Structured clipboard linked resource is not declared by the document.",
+            )
+        managed_size = ref.metadata.get(MANAGED_INPUT_SIZE_BYTES_METADATA_KEY)
+        managed_sha = ref.metadata.get(MANAGED_INPUT_SHA256_METADATA_KEY)
+        if (
+            ref.logical_path != declaration.logical_path
+            or ref.media_type != declaration.media_type
+            or ref.size_bytes != declaration.size_bytes
+            or type(managed_size) is not int
+            or managed_size != declaration.size_bytes
+            or not isinstance(managed_sha, str)
+            or managed_sha != declaration.sha256
+        ):
+            raise ClipboardDocumentError(
+                "clipboard.resource_ref_mismatch",
+                "Structured clipboard linked resource metadata does not match its declaration.",
+            )
+    if seen != set(declarations):
+        raise ClipboardDocumentError(
+            "clipboard.resource_set_mismatch",
+            "Structured clipboard linked resources do not match the document declaration.",
+        )
+
+
 def clipboard_document_preview(document: ClipboardDocument, *, max_chars: int = 240) -> str:
     parts: list[str] = []
     for block in document.blocks:
@@ -611,4 +677,5 @@ __all__ = [
     "iter_clipboard_blocks",
     "iter_clipboard_inlines",
     "load_clipboard_document_bytes",
+    "validate_clipboard_resource_refs",
 ]
