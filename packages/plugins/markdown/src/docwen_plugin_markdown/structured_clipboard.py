@@ -91,6 +91,7 @@ def _image_diagnostics(document: ClipboardDocument) -> list[ConversionDiagnostic
         )
     return diagnostics
 
+
 def _paragraph_projection(paragraph: ClipboardParagraph) -> str:
     parts: list[str] = []
     for inline in paragraph.inlines:
