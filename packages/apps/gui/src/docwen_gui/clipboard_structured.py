@@ -402,6 +402,96 @@ def _parse_table(table: _Node, *, counters: dict[str, int], depth: int) -> Clipb
     return ClipboardTable(len(rows), max_column, tuple(anchors))
 
 
+def _plain_paragraph_value(paragraph: ClipboardParagraph) -> str | None:
+    parts: list[str] = []
+    for inline in paragraph.inlines:
+        if isinstance(inline, ClipboardText):
+            parts.append(inline.value)
+        elif isinstance(inline, ClipboardHardBreak):
+            parts.append("\n")
+        else:
+            return None
+    return "".join(parts)
+
+
+def _plain_table_value(table: ClipboardTable) -> str | None:
+    matrix = [["" for _column in range(table.column_count)] for _row in range(table.row_count)]
+    for cell in table.cells:
+        parts: list[str] = []
+        for block in cell.blocks:
+            if isinstance(block, ClipboardParagraph):
+                value = _plain_paragraph_value(block)
+            else:
+                value = _plain_table_value(block)
+            if value is None:
+                return None
+            parts.append(value)
+        matrix[cell.row][cell.column] = "\n".join(parts)
+    return "\n".join("\t".join(row) for row in matrix)
+
+
+def _normalized_newlines_with_offsets(value: str) -> tuple[str, list[int]]:
+    normalized: list[str] = []
+    offsets = [0]
+    index = 0
+    while index < len(value):
+        character = value[index]
+        if character == "\r":
+            if index + 1 < len(value) and value[index + 1] == "\n":
+                index += 2
+            else:
+                index += 1
+            normalized.append("\n")
+            offsets.append(index)
+            continue
+        normalized.append(character)
+        index += 1
+        offsets.append(index)
+    return "".join(normalized), offsets
+
+
+def splice_plain_text_with_structured_tables(
+    document: ClipboardDocument,
+    plain_text: str,
+) -> ClipboardDocument | None:
+    """Use plain text as authoritative body and replace only uniquely matched tables."""
+
+    if not isinstance(plain_text, str):
+        raise TypeError("clipboard plain text must be text")
+    tables = [block for block in document.blocks if isinstance(block, ClipboardTable)]
+    if not tables:
+        return None
+
+    normalized_plain, offsets = _normalized_newlines_with_offsets(plain_text)
+    cursor_normalized = 0
+    cursor_original = 0
+    blocks: list[ClipboardBlock] = []
+    for table in tables:
+        signature = _plain_table_value(table)
+        if signature is None or not signature:
+            return None
+        normalized_signature, _unused_offsets = _normalized_newlines_with_offsets(signature)
+        start = normalized_plain.find(normalized_signature, cursor_normalized)
+        if start < 0:
+            return None
+        if normalized_plain.find(normalized_signature, start + 1) >= 0:
+            return None
+        end = start + len(normalized_signature)
+        prefix = plain_text[cursor_original : offsets[start]]
+        if prefix:
+            blocks.append(ClipboardParagraph((ClipboardText(prefix),)))
+        blocks.append(table)
+        cursor_normalized = end
+        cursor_original = offsets[end]
+
+    suffix = plain_text[cursor_original:]
+    if suffix:
+        blocks.append(ClipboardParagraph((ClipboardText(suffix),)))
+    merged = ClipboardDocument(blocks=tuple(blocks), resources=document.resources)
+    clipboard_document_to_bytes(merged)
+    return merged
+
+
 def project_structured_clipboard_html(payload: bytes) -> ClipboardDocument:
     """Parse one captured HTML/CF_HTML byte snapshot without external reads."""
 
@@ -416,4 +506,9 @@ def project_structured_clipboard_html(payload: bytes) -> ClipboardDocument:
     return document
 
 
-__all__ = ["extract_cf_html_fragment", "html_contains_table", "project_structured_clipboard_html"]
+__all__ = [
+    "extract_cf_html_fragment",
+    "html_contains_table",
+    "project_structured_clipboard_html",
+    "splice_plain_text_with_structured_tables",
+]
