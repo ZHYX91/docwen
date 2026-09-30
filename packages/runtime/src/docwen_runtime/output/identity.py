@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from docwen_core.models.document_node import ConversionIdentity
-from docwen_core.models.file_ref import FileRef
+from docwen_core.models.file_ref import FileRef, source_presentation_name
 from docwen_runtime.path_io import filesystem_path
 
 if TYPE_CHECKING:
@@ -34,7 +34,7 @@ def conversion_identity(
         frozen_sha256 = str(original.get("sha256") or "")
         if original.get("created_at"):
             created_at = datetime.fromisoformat(str(original["created_at"]))
-    name = Path(source.logical_path or original_path).name
+    name = source_presentation_name(source, fallback_path=original_path)
     stem = Path(name).stem or "document"
     return ConversionIdentity.create(
         task_id=task_id,

@@ -10,7 +10,7 @@ import pytest
 
 from docwen_core.detection import inspect_file, inspect_utf8_markdown_snapshot
 from docwen_core.models import FILE_ADMISSION_ACCEPTANCE_METADATA_KEY, FILE_INSPECTION_METADATA_KEY
-from docwen_core.models.file_ref import FileRef
+from docwen_core.models.file_ref import SOURCE_PRESENTATION_NAME_METADATA_KEY, FileRef
 from docwen_core.models.request import POSTPROCESS_PROOFREAD_OPTION
 from docwen_gui.execution_admission import ExecutionAdmission, ExecutionAdmissionError, check_frozen_request
 from docwen_gui.execution_requests import ExecutionRequestBuilder
@@ -81,7 +81,7 @@ def test_requests_own_nested_state_and_preserve_typed_input(mode, tmp_path):
     check_frozen_request(request)
 
 
-def test_synthetic_source_label_projects_to_logical_path_without_changing_physical_identity(tmp_path):
+def test_synthetic_source_label_does_not_declare_a_typed_resource_root(tmp_path):
     source = tmp_path / "clipboard-deadbeef.md"
     source.write_text("<html><body>literal clipboard text</body></html>", encoding="utf-8")
     inspection = inspect_utf8_markdown_snapshot(source)
@@ -109,10 +109,13 @@ def test_synthetic_source_label_projects_to_logical_path_without_changing_physic
 
     frozen = request.input_refs[0]
     assert frozen.path == str(source)
-    assert frozen.logical_path == logical_name
+    assert frozen.logical_path == ""
+    assert frozen.metadata[SOURCE_PRESENTATION_NAME_METADATA_KEY] == logical_name
+    assert request.source_stem == "剪贴板 Markdown 1"
     assert frozen.metadata[FILE_INSPECTION_METADATA_KEY] == inspection.to_dict()
     assert context["display_name"] == logical_name
-    assert context["input_refs"][0]["logical_path"] == logical_name
+    assert context["input_refs"][0]["logical_path"] == ""
+    assert context["input_refs"][0]["metadata"][SOURCE_PRESENTATION_NAME_METADATA_KEY] == logical_name
     check_frozen_request(request)
 
 

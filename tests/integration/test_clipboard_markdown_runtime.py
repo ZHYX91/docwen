@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -13,9 +14,11 @@ from PIL import Image
 from docwen_application.controller import ApplicationController
 from docwen_core.detection import inspect_file, inspect_utf8_markdown_snapshot
 from docwen_core.models import FILE_INSPECTION_METADATA_KEY
-from docwen_core.models.file_ref import FileRef
+from docwen_core.models.file_ref import SOURCE_PRESENTATION_NAME_METADATA_KEY, FileRef
 from docwen_core.models.request import ConversionRequest, OutputPolicy
 from docwen_gui.clipboard_inputs import ClipboardInputStore
+from docwen_gui.execution_requests import ExecutionRequestBuilder
+from docwen_gui.path_identity import normalize_path
 from docwen_plugin_markdown.plugin import MarkdownPlugin
 from docwen_runtime.adapters import RuntimePortAdapter
 from docwen_runtime.engine.route_resolver import RouteResolver
@@ -109,12 +112,27 @@ def test_clipboard_relative_image_has_no_implicit_source_directory(
         category="markdown",
         metadata={FILE_INSPECTION_METADATA_KEY: inspection.to_dict()},
     )
-    request = ConversionRequest(
-        request_id="clipboard-resource-boundary",
-        input_refs=[ref],
+    logical_name = snapshot.display_name
+    template = next(
+        item for item in TemplateRegistry.default().list_templates("docx") if item.name == "English General Template"
+    )
+    builder = ExecutionRequestBuilder(
+        SimpleNamespace(files=[ref], controller=None),
+        SimpleNamespace(get_file_entry=lambda _path: None),
+        file_contexts=lambda: {normalize_path(str(source)): ("markdown", "markdown")},
+        selected_template=lambda: ("docx", template.id),
+        source_label=lambda path: logical_name if normalize_path(path) == normalize_path(str(source)) else None,
+        synthetic_input=lambda path: normalize_path(path) == normalize_path(str(source)),
+    )
+    request, _ = builder.single(
+        file_path=str(source),
         target_format="docx",
+        action_name="",
+        options={},
         output_policy=OutputPolicy(output_dir=str(tmp_path / "synthetic-output")),
     )
+    assert request.input_refs[0].logical_path == ""
+    assert request.input_refs[0].metadata[SOURCE_PRESENTATION_NAME_METADATA_KEY] == logical_name
     controller = ApplicationController(runtime_port=round_trip_runtime)
     result = controller.execute_single(request)
     assert result.success, result.error
@@ -138,6 +156,80 @@ def test_clipboard_relative_image_has_no_implicit_source_directory(
     primary = next(artifact for artifact in control.artifacts if artifact.kind == "primary")
     assert len(Document(primary.staging_path).inline_shapes) == 1
     assert image_path.read_bytes() == image_bytes
+    store.close()
+
+
+def test_clipboard_public_name_preserves_genuine_declared_resource_contract(
+    tmp_path: Path,
+    round_trip_runtime: Any,
+) -> None:
+    store = ClipboardInputStore(tmp_path / "managed-typed")
+    image = tmp_path / "declared.png"
+    Image.new("RGB", (3, 3), "blue").save(image)
+    snapshot = store.create(
+        "# Clipboard\n\n![x](images/declared.png)\n",
+        display_name_template="剪贴板 Markdown {index}.md",
+    )
+    source = Path(snapshot.path)
+    inspection = inspect_utf8_markdown_snapshot(source)
+    source_ref = FileRef(
+        path=str(source),
+        format="markdown",
+        category="markdown",
+        input_kind="document",
+        input_role="source",
+        logical_path="notes/source.md",
+        media_type="text/markdown",
+        metadata={FILE_INSPECTION_METADATA_KEY: inspection.to_dict()},
+    )
+    template = next(
+        item for item in TemplateRegistry.default().list_templates("docx") if item.name == "English General Template"
+    )
+    builder = ExecutionRequestBuilder(
+        SimpleNamespace(files=[source_ref], controller=None),
+        SimpleNamespace(get_file_entry=lambda _path: None),
+        file_contexts=lambda: {normalize_path(str(source)): ("markdown", "markdown")},
+        selected_template=lambda: ("docx", template.id),
+        source_label=lambda _path: snapshot.display_name,
+        synthetic_input=lambda _path: True,
+    )
+
+    request, _ = builder.single(
+        file_path=str(source),
+        target_format="docx",
+        action_name="",
+        options={},
+        output_policy=OutputPolicy(output_dir=str(tmp_path / "declared-output")),
+    )
+    assert request.input_refs[0].logical_path == "notes/source.md"
+    assert request.input_refs[0].metadata[SOURCE_PRESENTATION_NAME_METADATA_KEY] == snapshot.display_name
+    request.input_refs.append(
+        FileRef(
+            path=str(image),
+            format="png",
+            category="image",
+            input_kind="resource",
+            input_role="linked_resource",
+            logical_path="notes/images/declared.png",
+            media_type="image/png",
+        )
+    )
+    result = ApplicationController(runtime_port=round_trip_runtime).execute_single(request)
+    assert result.success, result.error
+    primary = next(artifact for artifact in result.artifacts if artifact.kind == "primary")
+    assert len(Document(primary.staging_path).inline_shapes) == 1
+    assert "剪贴板 Markdown 1" in Path(primary.staging_path).name
+
+    missing, _ = builder.single(
+        file_path=str(source),
+        target_format="docx",
+        action_name="",
+        options={},
+        output_policy=OutputPolicy(output_dir=str(tmp_path / "declared-missing")),
+    )
+    failed = ApplicationController(runtime_port=round_trip_runtime).execute_single(missing)
+    assert not failed.success
+    assert failed.error is not None
     store.close()
 
 
@@ -329,21 +421,29 @@ def test_clipboard_docx_uses_logical_name_for_publication_and_only_as_title_fall
     # The GUI selects a shipped template with a title placeholder. The
     # no-template fallback contains only a body and cannot exercise its title.
     template = next(item for item in TemplateRegistry.default().list_templates("docx") if item.name == template_name)
-    request = ConversionRequest(
-        request_id=f"clipboard-logical-docx-{'explicit' if yaml_title else 'fallback'}",
-        input_refs=[
-            FileRef(
-                path=str(source),
-                format="markdown",
-                category="markdown",
-                logical_path=logical_name,
-                metadata={FILE_INSPECTION_METADATA_KEY: inspection.to_dict()},
-            )
-        ],
-        target_format="docx",
-        output_policy=OutputPolicy(output_dir=str(tmp_path / "published")),
-        options={"template_name": template.id},
+    source_ref = FileRef(
+        path=str(source),
+        format="markdown",
+        category="markdown",
+        metadata={FILE_INSPECTION_METADATA_KEY: inspection.to_dict()},
     )
+    builder = ExecutionRequestBuilder(
+        SimpleNamespace(files=[source_ref], controller=None),
+        SimpleNamespace(get_file_entry=lambda _path: None),
+        file_contexts=lambda: {normalize_path(str(source)): ("markdown", "markdown")},
+        selected_template=lambda: ("docx", template.id),
+        source_label=lambda path: logical_name if normalize_path(path) == normalize_path(str(source)) else None,
+        synthetic_input=lambda path: normalize_path(path) == normalize_path(str(source)),
+    )
+    request, _ = builder.single(
+        file_path=str(source),
+        target_format="docx",
+        action_name="",
+        options={},
+        output_policy=OutputPolicy(output_dir=str(tmp_path / "published")),
+    )
+    assert request.input_refs[0].logical_path == ""
+    assert request.input_refs[0].metadata[SOURCE_PRESENTATION_NAME_METADATA_KEY] == logical_name
 
     result = ApplicationController(runtime_port=round_trip_runtime).execute_single(request)
 
@@ -363,5 +463,13 @@ def test_clipboard_docx_uses_logical_name_for_publication_and_only_as_title_fall
     assert paragraphs[:4] == [expected_title, "宠物档案", "小猫", "小狗"]
     assert physical_stem not in paragraphs
     assert len(document.tables) == 2
+    assert [[cell.text for cell in row.cells] for row in document.tables[0].rows] == [
+        ["名称", "年龄"],
+        ["花花", "2"],
+    ]
+    assert [[cell.text for cell in row.cells] for row in document.tables[1].rows] == [
+        ["名称", "年龄"],
+        ["旺财", "3"],
+    ]
     assert source.read_bytes() == text.encode("utf-8")
     store.close()
