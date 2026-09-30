@@ -155,6 +155,18 @@ class ApplicationController:
             raise CapabilityUnavailableError("Runtime capability discovery is unavailable in this assembly.")
         return runtime_port.describe_capabilities()
 
+    def describe_gui_runtime_capabilities(self) -> dict[str, Any]:
+        """Return the loaded route catalog including GUI-only internal sources."""
+
+        from docwen_application.ports.runtime import GuiCapabilityDiscoveryPort
+
+        runtime_port = self._runtime_port
+        if runtime_port is None:
+            raise CapabilityUnavailableError("GUI capability discovery is unavailable: no runtime is configured.")
+        if not isinstance(runtime_port, GuiCapabilityDiscoveryPort):
+            raise CapabilityUnavailableError("GUI capability discovery is unavailable in this assembly.")
+        return runtime_port.describe_gui_capabilities()
+
     # ── Operation cancellation ownership ───────────────────────────
 
     def prepare_execution_cancellation(
