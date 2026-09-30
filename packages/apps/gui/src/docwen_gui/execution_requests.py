@@ -342,7 +342,12 @@ class ExecutionRequestBuilder:
         attached so application/runtime admission can enforce the same
         decision without opening and guessing the file again.
         """
-        from docwen_core.models.file_ref import SOURCE_PRESENTATION_NAME_METADATA_KEY, FileRef
+        from docwen_core.models.file_ref import (
+            MANAGED_INPUT_SHA256_METADATA_KEY,
+            MANAGED_INPUT_SIZE_BYTES_METADATA_KEY,
+            SOURCE_PRESENTATION_NAME_METADATA_KEY,
+            FileRef,
+        )
 
         normalized = normalize_path(source_path)
         source_label = self._source_label(source_path) or ""
@@ -351,28 +356,42 @@ class ExecutionRequestBuilder:
             metadata = deepcopy(raw)
             if source_label:
                 metadata[SOURCE_PRESENTATION_NAME_METADATA_KEY] = source_label
+            inspection = metadata.get("_docwen_file_inspection")
+            if isinstance(inspection, dict) and inspection.get("detection_method") == "structured_clipboard":
+                metadata[MANAGED_INPUT_SHA256_METADATA_KEY] = str(inspection.get("content_sha256") or "")
+                metadata[MANAGED_INPUT_SIZE_BYTES_METADATA_KEY] = int(inspection.get("size_bytes") or 0)
             return metadata
+
+        def projected_logical_path(raw: str, metadata: dict[str, Any]) -> str:
+            inspection = metadata.get("_docwen_file_inspection")
+            if isinstance(inspection, dict) and inspection.get("detection_method") == "structured_clipboard":
+                return raw or "document.dwclip"
+            return raw
 
         source_ref = next(
             (ref for ref in self._view_model.files if normalize_path(getattr(ref, "path", "")) == normalized),
             None,
         )
         if source_ref is not None:
+            metadata = projected_metadata(source_ref.metadata)
             return replace(
                 source_ref,
                 path=source_path,
-                metadata=projected_metadata(source_ref.metadata),
+                logical_path=projected_logical_path(source_ref.logical_path, metadata),
+                metadata=metadata,
             )
 
         entry = self._batch_list_vm.get_file_entry(source_path)
         if entry is not None:
+            metadata = projected_metadata(entry.metadata)
             return FileRef(
                 path=source_path,
                 format=entry.detected_format,
                 category=entry.workflow_category,
                 warning_message=entry.warning_message or "",
                 size_bytes=entry.size_bytes,
-                metadata=projected_metadata(entry.metadata),
+                logical_path=projected_logical_path("", metadata),
+                metadata=metadata,
             )
 
         # Programmatic callers that bypass the visual list still cross the
