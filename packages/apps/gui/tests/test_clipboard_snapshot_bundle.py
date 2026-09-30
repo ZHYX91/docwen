@@ -2,22 +2,53 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 
 import pytest
 
+from docwen_core.models.clipboard_document import CLIPBOARD_DOCUMENT_SCHEMA
 from docwen_gui.clipboard_inputs import ClipboardInputStore
 
 pytestmark = [pytest.mark.integration, pytest.mark.pr_gate, pytest.mark.release_gate]
 
 
+def _payload(
+    resource_id: str = "resource-a",
+    logical_path: str = "resources/a.bin",
+    media_type: str = "application/octet-stream",
+    resource_bytes: bytes = b"original",
+    *,
+    include_resource: bool = True,
+) -> bytes:
+    resources = []
+    if include_resource:
+        resources.append(
+            {
+                "resourceId": resource_id,
+                "logicalPath": logical_path,
+                "mediaType": media_type,
+                "sizeBytes": len(resource_bytes),
+                "sha256": hashlib.sha256(resource_bytes).hexdigest(),
+            }
+        )
+    return json.dumps(
+        {"schema": CLIPBOARD_DOCUMENT_SCHEMA, "blocks": [], "resources": resources},
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+
+
 def test_bundle_owns_main_and_resources_as_one_lifecycle(tmp_path: Path) -> None:
     store = ClipboardInputStore(tmp_path / "managed")
+    resource_bytes = b"png-a"
     bundle = store.create_bundle(
-        b'{"schema":"docwen.clipboard_document.v1","blocks":[]}',
+        _payload("image-a", "resources/a.png", "image/png", resource_bytes),
         display_name_template="Clipboard Document {index}.dwclip",
         preview="[Table 1x1]",
-        resources=(("image-a", "resources/a.png", "image/png", b"png-a"),),
+        resources=(("image-a", "resources/a.png", "image/png", resource_bytes),),
     )
     main = Path(bundle.main.path)
     resource = Path(bundle.resources[0].path)
@@ -39,10 +70,51 @@ def test_bundle_owns_main_and_resources_as_one_lifecycle(tmp_path: Path) -> None
     store.close()
 
 
+@pytest.mark.parametrize(
+    ("payload", "resources"),
+    [
+        (_payload(), ()),
+        (
+            _payload(include_resource=False),
+            (("resource-a", "resources/a.bin", "application/octet-stream", b"original"),),
+        ),
+        (
+            _payload(),
+            (("resource-a", "resources/other.bin", "application/octet-stream", b"original"),),
+        ),
+        (
+            _payload(),
+            (("resource-a", "resources/a.bin", "image/png", b"original"),),
+        ),
+        (
+            _payload(resource_bytes=b"expected"),
+            (("resource-a", "resources/a.bin", "application/octet-stream", b"tampered"),),
+        ),
+    ],
+)
+def test_bundle_rejects_resource_declaration_member_mismatches(
+    tmp_path: Path,
+    payload: bytes,
+    resources: tuple[tuple[str, str, str, bytes], ...],
+) -> None:
+    store = ClipboardInputStore(tmp_path / "managed")
+
+    with pytest.raises(ValueError, match="resource"):
+        store.create_bundle(
+            payload,
+            display_name_template="Clipboard Document {index}.dwclip",
+            preview="",
+            resources=resources,
+        )
+
+    assert not list(store.session_root.glob("bundle-*"))
+    store.close()
+
+
 def test_bundle_tamper_or_missing_marker_invalidates_whole_snapshot(tmp_path: Path) -> None:
     store = ClipboardInputStore(tmp_path / "managed")
     bundle = store.create_bundle(
-        b'{"schema":"docwen.clipboard_document.v1","blocks":[]}',
+        _payload(),
         display_name_template="Clipboard Document {index}.dwclip",
         preview="",
         resources=(("resource-a", "resources/a.bin", "application/octet-stream", b"original"),),
@@ -71,10 +143,11 @@ def test_bundle_marker_is_not_published_when_creation_fails(tmp_path: Path, monk
     monkeypatch.setattr(store, "_write_fsynced", fail_second)
     with pytest.raises(OSError, match="resource write failed"):
         store.create_bundle(
-            b"main",
+            _payload(resource_bytes=b"resource"),
             display_name_template="Clipboard Document {index}.dwclip",
             preview="",
             resources=(("resource-a", "resources/a.bin", "application/octet-stream", b"resource"),),
         )
     assert not list(store.session_root.glob("bundle-*/.bundle.marker"))
+    assert not list(store.session_root.glob("bundle-*"))
     store.close()
