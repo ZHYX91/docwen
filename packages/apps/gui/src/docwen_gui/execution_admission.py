@@ -29,7 +29,7 @@ class ExecutionAdmissionError(RuntimeError):
     """A localized reason why a requested execution cannot start."""
 
 
-def _managed_resource_integrity(ref: "FileRef") -> None:
+def _managed_resource_integrity(ref: FileRef) -> None:
     from docwen_core.models.file_ref import (
         MANAGED_INPUT_SHA256_METADATA_KEY,
         MANAGED_INPUT_SIZE_BYTES_METADATA_KEY,
@@ -84,7 +84,7 @@ def _managed_resource_integrity(ref: "FileRef") -> None:
         ) from exc
 
 
-def _validate_structured_resource_group(request: "ConversionRequest") -> None:
+def _validate_structured_resource_group(request: ConversionRequest) -> None:
     from docwen_core.models.clipboard_document import (
         ClipboardDocumentError,
         load_clipboard_document_bytes,

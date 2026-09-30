@@ -87,6 +87,7 @@ def _select_docx_template(window: MainWindow) -> str:
     template = next(
         item for item in TemplateRegistry.default().list_templates("docx") if item.name == "English General Template"
     )
+    assert window._template_selector is not None
     selector = window._template_selector.get_selector("docx")
     assert selector is not None
     selector.select_template(template.id, selection_source="user")
@@ -172,10 +173,10 @@ def test_main_window_batch_freezes_two_isolated_document_groups_in_source_order(
         ["source", "linked_resource"],
         ["source", "linked_resource"],
     ]
-    assert [
-        group.input_refs[1].metadata[MANAGED_RESOURCE_ID_METADATA_KEY]
-        for group in groups
-    ] == ["asset-one", "asset-two"]
+    assert [group.input_refs[1].metadata[MANAGED_RESOURCE_ID_METADATA_KEY] for group in groups] == [
+        "asset-one",
+        "asset-two",
+    ]
     assert groups[0].input_refs[1].path != groups[1].input_refs[1].path
 
 
@@ -317,6 +318,7 @@ def test_main_window_grouped_batch_reaches_runtime_with_isolated_resource_bytes(
         first_entry = window._batch_list_vm.get_file_entry(first_path)
         second_entry = window._batch_list_vm.get_file_entry(second_path)
         assert first_entry is not None and second_entry is not None
+        assert first_entry.output_path is not None and second_entry.output_path is not None
         assert Path(first_entry.output_path).read_bytes() == b"one-runtime-bytes"
         assert Path(second_entry.output_path).read_bytes() == b"two-runtime-bytes"
     finally:

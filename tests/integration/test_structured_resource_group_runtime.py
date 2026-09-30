@@ -187,7 +187,8 @@ def test_resource_tamper_after_build_fails_only_its_group_and_keeps_order(tmp_pa
         ]
         assert results[0].success is False
         assert results[0].error is not None
-        assert results[0].error.message == "Document group execution failed."
+        assert results[0].error.message == "typed input copy failed integrity verification"
+        assert results[0].artifacts == []
         assert results[1].success is True
     finally:
         store.close()

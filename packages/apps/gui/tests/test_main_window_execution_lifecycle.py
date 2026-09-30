@@ -516,7 +516,7 @@ def test_structured_bundle_survives_clear_until_background_inspection_finalizes(
 ) -> None:
     from docwen_core.detection import inspect_structured_clipboard_snapshot
 
-    store, bundle = _structured_bundle_for_lifecycle(main_window, tmp_path)
+    _store, bundle = _structured_bundle_for_lifecycle(main_window, tmp_path)
     entered = threading.Event()
     release = threading.Event()
 
@@ -590,6 +590,7 @@ def test_structured_bundle_failed_history_retains_whole_group_for_retry(
     qtbot,
     tmp_path: Path,
 ) -> None:
+    from docwen_core.models.request import ConversionRequest
     from docwen_core.models.result import ConversionErrorInfo, ConversionResult
 
     store, bundle = _structured_bundle_for_lifecycle(main_window, tmp_path)
@@ -598,6 +599,7 @@ def test_structured_bundle_failed_history_retains_whole_group_for_retry(
 
     class FailedController(_BlockingController):
         def execute_single(self, request):
+            assert isinstance(request, ConversionRequest)
             return ConversionResult(
                 task_id=str(request.request_id),
                 success=False,

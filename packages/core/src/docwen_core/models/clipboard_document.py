@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+
     from docwen_core.models.file_ref import FileRef
 
 from docwen_core.models.semantic_document import (
@@ -579,7 +580,7 @@ def iter_clipboard_inlines(document: ClipboardDocument):
 
 def validate_clipboard_resource_refs(
     document: ClipboardDocument,
-    refs: "Sequence[FileRef]",
+    refs: Sequence[FileRef],
 ) -> None:
     """Validate one frozen typed-resource set against the document declaration."""
 

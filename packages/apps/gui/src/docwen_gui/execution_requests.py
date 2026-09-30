@@ -253,9 +253,7 @@ class ExecutionRequestBuilder:
         request = ConversionRequest(
             request_id=request_id,
             input_refs=(
-                [group[0] for group in groups]
-                if grouped_batch
-                else [ref for group in groups for ref in group]
+                [group[0] for group in groups] if grouped_batch else [ref for group in groups for ref in group]
             ),
             target_format=target_format,
             action_name=action_name,

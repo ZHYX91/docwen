@@ -367,10 +367,7 @@ class ExecutionCoordinator(QObject):
         """Confirm every frozen document group while reporting one parent operation."""
 
         try:
-            for request in requests:
-                if not self._confirm_request(request):
-                    return False
-            return True
+            return all(self._confirm_request(request) for request in requests)
         except ExecutionAdmissionError as exc:
             self.started_at = time.monotonic()
             self._context = dict(context)
