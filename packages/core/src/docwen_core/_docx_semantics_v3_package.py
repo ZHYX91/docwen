@@ -34,6 +34,11 @@ from docwen_core._docx_semantics_v3_model import (
 )
 from docwen_core._docx_semantics_v3_styles import caption_style_binding_map_xml, parse_caption_style_binding_map
 from docwen_core._docx_semantics_v3_topology import anchor_topology_map_xml, parse_anchor_topology_map
+from docwen_core.clipboard_table_associations import (
+    CLIPBOARD_TABLE_ASSOCIATION_MAP_NAMESPACE,
+    clipboard_table_association_map_xml,
+    parse_clipboard_table_association_map,
+)
 from docwen_core.docx_citation_ooxml import (
     CITATION_ITEM_MAP_NAMESPACE,
     CITATION_OCCURRENCE_MAP_NAMESPACE,
@@ -41,11 +46,6 @@ from docwen_core.docx_citation_ooxml import (
     citation_occurrence_map_xml,
     parse_citation_item_map,
     parse_citation_occurrence_map,
-)
-from docwen_core.clipboard_table_associations import (
-    CLIPBOARD_TABLE_ASSOCIATION_MAP_NAMESPACE,
-    clipboard_table_association_map_xml,
-    parse_clipboard_table_association_map,
 )
 from docwen_core.docx_numbering_occurrence import (
     NUMBERING_OCCURRENCE_MAP_NAMESPACE,

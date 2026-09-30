@@ -108,7 +108,7 @@ def clipboard_table_association_map_xml(records: tuple[ClipboardTableAssociation
         )
     root = (
         f'<clipboardTableAssociations xmlns="{CLIPBOARD_TABLE_ASSOCIATION_MAP_NAMESPACE}" version="1">'
-        f'{"".join(table_xml)}</clipboardTableAssociations>'
+        f"{''.join(table_xml)}</clipboardTableAssociations>"
     )
     return f"{_XML_DECLARATION}\n{root}\n".encode()
 
@@ -147,16 +147,13 @@ def parse_clipboard_table_association_map(root: Any) -> tuple[ClipboardTableAsso
         if index != expected_index:
             raise ClipboardTableAssociationError("clipboard table indices are not contiguous")
         header_rows = _require_int(table_node.get("header_rows"), minimum=0, field="table.header_rows")
-        header_columns = _require_int(
-            table_node.get("header_columns"), minimum=0, field="table.header_columns"
-        )
+        header_columns = _require_int(table_node.get("header_columns"), minimum=0, field="table.header_columns")
         cells: list[ClipboardCellAssociation] = []
         previous_position: tuple[int, int] | None = None
         for cell_node in table_node:
             if (
                 cell_node.tag != f"{namespace}cell"
-                or tuple(cell_node.attrib)
-                != ("row", "column", "row_span", "column_span", "header", "scope", "html_id")
+                or tuple(cell_node.attrib) != ("row", "column", "row_span", "column_span", "header", "scope", "html_id")
                 or cell_node.text is not None
                 or cell_node.tail is not None
             ):
@@ -254,7 +251,7 @@ def read_clipboard_table_associations(path: Path) -> tuple[ClipboardTableAssocia
             return ()
         if len(matches) != 1:
             raise ClipboardTableAssociationError("DOCX package contains duplicate clipboard table associations")
-        item_number, root = matches
+        item_number, root = matches[0]
 
         from docwen_core._docx_semantics_v3_package import verify_custom_xml_support
 

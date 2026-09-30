@@ -632,9 +632,7 @@ def extract_semantic_table_metadata(
     table_properties = tbl_element.find(qn("w:tblPr"))
     table_look = table_properties.find(qn("w:tblLook")) if table_properties is not None else None
     first_row_value = table_look.get(qn("w:firstRow")) if table_look is not None else None
-    explicit_first_row_false = (
-        first_row_value is not None and first_row_value.casefold() in {"0", "false", "off"}
-    )
+    explicit_first_row_false = first_row_value is not None and first_row_value.casefold() in {"0", "false", "off"}
     if header_rows == 0 and default_first_row and not explicit_first_row_false:
         header_rows = 1 if rows else 0
     return DocxSemanticTableMetadata(

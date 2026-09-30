@@ -7,6 +7,8 @@ from zipfile import ZipFile
 
 import pytest
 from docx import Document
+from docx.document import Document as DocxDocument
+from docx.oxml.ns import qn
 from openpyxl import load_workbook
 
 from docwen_application.controller import ApplicationController
@@ -146,7 +148,7 @@ def test_docx_route_preserves_merges_header_and_nested_cell_order(tmp_path: Path
     assert xml.index("before") < xml.index("nested") < xml.index("after")
 
 
-def _runtime_docx_for_html(tmp_path: Path, html: bytes) -> Document:
+def _runtime_docx_for_html(tmp_path: Path, html: bytes) -> DocxDocument:
     request = _request(
         tmp_path,
         "docx",
@@ -180,18 +182,16 @@ def test_runtime_docx_explicit_first_row_false_suppresses_default_header_inferen
 ) -> None:
     document = _runtime_docx_for_html(tmp_path, html)
     table = next(
-        table
-        for table in document.tables
-        if any(sentinel in cell.text for row in table.rows for cell in row.cells)
+        table for table in document.tables if any(sentinel in cell.text for row in table.rows for cell in row.cells)
     )
 
     metadata = extract_semantic_table_metadata(table._tbl)
 
     assert metadata.header_rows == 0
     assert metadata.header_columns == 0
-    table_look = table._tbl.tblPr.tblLook
+    table_look = table._tbl.tblPr.find(qn("w:tblLook"))
     assert table_look is not None
-    assert table_look.firstRow is False
+    assert table_look.get(qn("w:firstRow")) == "0"
 
 
 def test_default_table_metadata_keeps_legacy_inference_and_native_positive_roles(tmp_path: Path) -> None:

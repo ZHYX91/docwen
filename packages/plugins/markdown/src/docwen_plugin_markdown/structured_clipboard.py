@@ -416,6 +416,7 @@ def convert_clipboard_document_to_xlsx(context: Any) -> ConversionResult:
         diagnostics=diagnostics,
     )
 
+
 def _markdown_fence(text: str) -> str:
     longest = max((len(match.group(0)) for match in __import__("re").finditer(r"`+", text)), default=0)
     fence = "`" * max(3, longest + 1)
@@ -522,6 +523,8 @@ def _markdown_projection(
             )
         )
     return "\n".join(lines).rstrip() + "\n", diagnostics
+
+
 def convert_clipboard_document_to_markdown(context: Any) -> ConversionResult:
     document = _load(context)
     extensions = resolve_markdown_extensions(

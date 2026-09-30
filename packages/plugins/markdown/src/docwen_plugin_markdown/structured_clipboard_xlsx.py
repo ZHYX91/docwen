@@ -68,6 +68,8 @@ def _copy_prototype_runtime_properties(source: Any, target: Any) -> None:
 
 def _ranges_intersect_data_area(range_string: str, row_count: int, column_count: int) -> bool:
     min_col, min_row, max_col, max_row = range_boundaries(range_string)
+    if min_col is None or min_row is None or max_col is None or max_row is None:
+        raise ValueError("prototype merged range must have finite row and column bounds")
     return not (max_row < 1 or min_row > row_count or max_col < 1 or min_col > column_count)
 
 

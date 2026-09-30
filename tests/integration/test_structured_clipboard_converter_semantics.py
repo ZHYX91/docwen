@@ -33,7 +33,7 @@ from docwen_runtime.templates import TemplateRegistry
 from docwen_runtime.templates.state import user_templates_dir
 from docwen_runtime.workspace.manager import WorkspaceManager
 
-pytestmark = [pytest.mark.integration, pytest.mark.pr_gate]
+pytestmark = [pytest.mark.integration, pytest.mark.pr_gate, pytest.mark.release_gate]
 
 
 HEADER_HTML = b"""
@@ -186,16 +186,11 @@ def test_xlsx_and_csv_publish_visible_header_association_indices(tmp_path: Path)
         for row in rows
     )
     assert any(row["Table"] == "T1" and row["Anchor"] == "R2C1" and row["Headers"] == "a" for row in rows)
-    assert any(
-        row["Table"] == "T2" and row["Anchor"] == "R1C1" and row["Role"] == "corner_header"
-        for row in rows
-    )
+    assert any(row["Table"] == "T2" and row["Anchor"] == "R1C1" and row["Role"] == "corner_header" for row in rows)
     assert all(row["Role"] == "data" for row in rows if row["Table"] == "T3")
     assert "CLIPBOARD-XLSX-HEADER-ASSOCIATIONS-PROJECTED" in {item.code for item in xlsx.diagnostics}
 
-    csv_result = controller.execute_single(
-        _request(tmp_path, request_id="header-csv", target="csv", html=HEADER_HTML)
-    )
+    csv_result = controller.execute_single(_request(tmp_path, request_id="header-csv", target="csv", html=HEADER_HTML))
     assert csv_result.success, csv_result.error
     semantics_artifact = next(
         item for item in csv_result.artifacts if item.suggested_name.endswith("-table-semantics.csv")
@@ -303,8 +298,7 @@ def test_xlsx_table_sheets_really_derive_selected_template_prototype(
     order = workbook["Document Order"]
     order_headers = [cell.value for cell in order[1]]
     order_rows = [
-        dict(zip(order_headers, [cell.value for cell in row], strict=True))
-        for row in order.iter_rows(min_row=2)
+        dict(zip(order_headers, [cell.value for cell in row], strict=True)) for row in order.iter_rows(min_row=2)
     ]
     assert any(row["Kind"] == "table_ref" and row["Sheet"] == generated for row in order_rows)
 

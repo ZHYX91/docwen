@@ -153,11 +153,7 @@ def structural_table_markdown(table: ClipboardTable) -> tuple[str | None, str]:
         delimiters = ["---"] * table.column_count
         if 0 < header_columns < table.column_count:
             lines.append(
-                "| "
-                + " | ".join(delimiters[:header_columns])
-                + " || "
-                + " | ".join(delimiters[header_columns:])
-                + " |"
+                "| " + " | ".join(delimiters[:header_columns]) + " || " + " | ".join(delimiters[header_columns:]) + " |"
             )
         else:
             lines.append("| " + " | ".join(delimiters) + " |")

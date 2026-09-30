@@ -460,8 +460,10 @@ def _native_header_candidate(table: ClipboardTable, header_rows: int, header_col
         in_columns = bool(header_columns) and all(column < header_columns for column in columns)
         if header_rows and any(row < header_rows for row in rows) and any(row >= header_rows for row in rows):
             return False
-        if header_columns and any(column < header_columns for column in columns) and any(
-            column >= header_columns for column in columns
+        if (
+            header_columns
+            and any(column < header_columns for column in columns)
+            and any(column >= header_columns for column in columns)
         ):
             return False
         native_header = in_rows or in_columns
@@ -482,8 +484,12 @@ def _native_header_candidate(table: ClipboardTable, header_rows: int, header_col
             role = "row_header"
         semantic_cells.append(
             SemanticTableCell(
-                row=cell.row, column=cell.column, text=clipboard_cell_text(cell), role=role,
-                row_span=cell.row_span, column_span=cell.column_span,
+                row=cell.row,
+                column=cell.column,
+                text=clipboard_cell_text(cell),
+                role=role,
+                row_span=cell.row_span,
+                column_span=cell.column_span,
             )
         )
     try:
@@ -526,16 +532,14 @@ def clipboard_table_header_shape(table: ClipboardTable) -> tuple[int, int]:
     for header_rows, header_columns in candidates:
         if not _native_header_candidate(table, header_rows, header_columns):
             continue
-        area = (
-            header_rows * table.column_count
-            + header_columns * table.row_count
-            - header_rows * header_columns
-        )
+        area = header_rows * table.column_count + header_columns * table.row_count - header_rows * header_columns
         valid.append((area, header_columns, header_rows))
     if not valid:
         return 0, 0
     _area, header_columns, header_rows = min(valid, key=lambda item: (item[0], item[1], -item[2]))
     return header_rows, header_columns
+
+
 def clipboard_inline_text(inline: ClipboardInline) -> str:
     if isinstance(inline, ClipboardText):
         return inline.value
