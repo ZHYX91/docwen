@@ -288,3 +288,40 @@ def test_parent_cancel_before_grouped_worker_prevents_all_runtime_starts(tmp_pat
     finally:
         controller.release_execution_cancellation(parent.request_id, reservation)
         store.close()
+
+
+
+def test_execution_thread_keeps_frozen_validation_failure_scoped_to_one_group(tmp_path: Path) -> None:
+    from docwen_gui.qt_bridge.execution import ExecutionThread
+
+    store, bundles, parent, groups = _build_grouped_request(tmp_path)
+    controller = _controller(tmp_path, MarkdownPlugin())
+    Path(bundles[0].resources[0].path).write_bytes(b"tampered-before-worker")
+    results: list[list[ConversionResult]] = []
+    errors: list[str] = []
+    thread = ExecutionThread(
+        controller=controller,
+        request=parent,
+        context={"request_id": parent.request_id},
+        batch_execution=True,
+        document_group_requests=groups,
+    )
+    thread.result_signal.connect(lambda result, _context: results.append(result))
+    thread.error_signal.connect(lambda message, _context: errors.append(message))
+    try:
+        thread.run()
+        assert errors == []
+        assert len(results) == 1
+        batch = results[0]
+        assert [item.task_id for item in batch] == [
+            f"{parent.request_id}-0",
+            f"{parent.request_id}-1",
+        ]
+        assert batch[0].success is False
+        assert batch[0].error is not None
+        assert batch[0].error.error_type == "invalid_input"
+        assert batch[0].error.message == "Document group validation failed."
+        assert "tampered" not in batch[0].error.message
+        assert batch[1].success is True
+    finally:
+        store.close()
