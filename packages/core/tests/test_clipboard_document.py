@@ -18,6 +18,8 @@ from docwen_core.models.clipboard_document import (
     load_clipboard_document_bytes,
 )
 
+pytestmark = pytest.mark.contract
+
 
 def _payload(blocks, resources=None) -> bytes:
     return json.dumps(

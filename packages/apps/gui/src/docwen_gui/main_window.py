@@ -386,9 +386,13 @@ class MainWindow(QWidget):
                 self._paste_file_paths(file_paths)
                 return
 
-        if not plain_text_only and mime_data is not None and mime_data.hasHtml():
-            if self._try_structured_clipboard_paste(mime_data):
-                return
+        if (
+            not plain_text_only
+            and mime_data is not None
+            and mime_data.hasHtml()
+            and self._try_structured_clipboard_paste(mime_data)
+        ):
+            return
 
         projection = None
         if not plain_text_only and mime_data is not None and mime_data.hasHtml():

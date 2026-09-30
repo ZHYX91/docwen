@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
-from typing import Iterable
 
 from docwen_core.models.clipboard_document import (
     MAX_CLIPBOARD_BLOCKS,
@@ -59,7 +59,7 @@ _MAX_HTML_DEPTH = 32
 class _Node:
     tag: str
     attrs: dict[str, str]
-    children: list["_Node | str"] = field(default_factory=list)
+    children: list[_Node | str] = field(default_factory=list)
 
 
 class _TreeBuilder(HTMLParser):
@@ -144,11 +144,7 @@ def _decode_html(payload: bytes) -> str:
 
 
 def _contains_table(node: _Node) -> bool:
-    for child in node.children:
-        if isinstance(child, _Node):
-            if child.tag == "table" or _contains_table(child):
-                return True
-    return False
+    return any(isinstance(child, _Node) and (child.tag == "table" or _contains_table(child)) for child in node.children)
 
 
 def html_contains_table(payload: bytes) -> bool:
@@ -305,9 +301,9 @@ def _table_rows(table: _Node) -> list[_Row]:
             continue
         if child.tag in _ROW_GROUP_TAGS:
             flush_direct()
-            rows = [item for item in child.children if isinstance(item, _Node) and item.tag == "tr"]
-            if rows:
-                grouped.append(rows)
+            group_rows = [item for item in child.children if isinstance(item, _Node) and item.tag == "tr"]
+            if group_rows:
+                grouped.append(group_rows)
     flush_direct()
 
     rows: list[_Row] = []
@@ -349,7 +345,7 @@ def _parse_table(table: _Node, *, counters: dict[str, int], depth: int) -> Clipb
     max_column = 0
     for row_index, row_info in enumerate(rows):
         column = 0
-        for cell_index, node in enumerate(_cell_nodes(row_info.node)):
+        for node in _cell_nodes(row_info.node):
             while (row_index, column) in coverage:
                 column += 1
             column_span = _span(node.attrs.get("colspan"), allow_zero=False, where="colspan")
@@ -395,10 +391,7 @@ def _parse_table(table: _Node, *, counters: dict[str, int], depth: int) -> Clipb
     if not max_column or len(rows) * max_column > MAX_CLIPBOARD_CELLS:
         raise ClipboardDocumentError("clipboard.budget_exceeded", "Clipboard table grid budget exceeded.")
     missing = [
-        (row, column)
-        for row in range(len(rows))
-        for column in range(max_column)
-        if (row, column) not in coverage
+        (row, column) for row in range(len(rows)) for column in range(max_column) if (row, column) not in coverage
     ]
     if missing:
         row, column = missing[0]

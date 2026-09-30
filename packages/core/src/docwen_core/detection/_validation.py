@@ -28,12 +28,11 @@ from docwen_core.detection.ooxml_signature import (
     signature_validation_diagnostic,
 )
 from docwen_core.errors import ValidationError
+from docwen_core.formats.categories import get_category, get_media_type
 from docwen_core.models.clipboard_document import (
     CLIPBOARD_DOCUMENT_FORMAT,
-    CLIPBOARD_DOCUMENT_MEDIA_TYPE,
     load_clipboard_document_bytes,
 )
-from docwen_core.formats.categories import get_category, get_media_type
 from docwen_core.models.file_inspection import (
     FILE_ADMISSION_ACCEPTANCE_METADATA_KEY,
     FILE_INSPECTION_METADATA_KEY,

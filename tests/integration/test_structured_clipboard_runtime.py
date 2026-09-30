@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import csv
 from pathlib import Path
 from zipfile import ZipFile
 
+import pytest
 from docx import Document
 from openpyxl import load_workbook
 
@@ -28,8 +28,6 @@ from docwen_runtime.output.finalizer import OutputFinalizer
 from docwen_runtime.plugin_registry.registry import PluginRegistry
 from docwen_runtime.templates import TemplateRegistry
 from docwen_runtime.workspace.manager import WorkspaceManager
-
-import pytest
 
 pytestmark = [pytest.mark.integration, pytest.mark.pr_gate]
 
@@ -122,7 +120,11 @@ def test_docx_route_preserves_merges_header_and_nested_cell_order(tmp_path: Path
     assert "{{body}}" not in "\n".join(body_text)
     assert "{{title}}" not in "\n".join(body_text)
 
-    outer = next(table for table in document.tables if any(cell.text.startswith("Group") for row in table.rows for cell in row.cells))
+    outer = next(
+        table
+        for table in document.tables
+        if any(cell.text.startswith("Group") for row in table.rows for cell in row.cells)
+    )
     assert outer.cell(0, 0)._tc is outer.cell(1, 0)._tc
     assert outer.cell(0, 1)._tc is outer.cell(0, 2)._tc
     header_xml = outer.rows[0]._tr.xml + outer.rows[1]._tr.xml

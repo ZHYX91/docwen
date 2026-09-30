@@ -80,7 +80,7 @@ class ClipboardTableCell:
     column: int
     row_span: int
     column_span: int
-    blocks: tuple["ClipboardBlock", ...]
+    blocks: tuple[ClipboardBlock, ...]
     header: bool = False
     scope: str = ""
     headers: tuple[str, ...] = ()
@@ -261,9 +261,7 @@ def _parse_block(data: object, counters: dict[str, int], *, depth: int, where: s
                 column=_require_int(
                     raw_cell["column"], minimum=0, maximum=column_count - 1, where=f"{cell_where}.column"
                 ),
-                row_span=_require_int(
-                    raw_cell["rowSpan"], minimum=1, maximum=row_count, where=f"{cell_where}.rowSpan"
-                ),
+                row_span=_require_int(raw_cell["rowSpan"], minimum=1, maximum=row_count, where=f"{cell_where}.rowSpan"),
                 column_span=_require_int(
                     raw_cell["columnSpan"], minimum=1, maximum=column_count, where=f"{cell_where}.columnSpan"
                 ),
@@ -318,7 +316,9 @@ def load_clipboard_document_bytes(payload: bytes) -> ClipboardDocument:
     try:
         data = json.loads(payload.decode("utf-8", errors="strict"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ClipboardDocumentError("clipboard.json_invalid", "Structured clipboard payload is not valid UTF-8 JSON.") from exc
+        raise ClipboardDocumentError(
+            "clipboard.json_invalid", "Structured clipboard payload is not valid UTF-8 JSON."
+        ) from exc
     if not isinstance(data, dict):
         raise ClipboardDocumentError("clipboard.root_invalid", "Structured clipboard payload must be an object.")
     _require_keys(data, {"schema", "blocks", "resources"}, {"schema", "blocks"}, where="document")
@@ -329,14 +329,18 @@ def load_clipboard_document_bytes(payload: bytes) -> ClipboardDocument:
         raise ClipboardDocumentError("clipboard.blocks_invalid", "document.blocks must be an array.")
     raw_resources = data.get("resources", [])
     if not isinstance(raw_resources, list) or len(raw_resources) > MAX_CLIPBOARD_RESOURCES:
-        raise ClipboardDocumentError("clipboard.resources_invalid", "document.resources exceeds the supported resource budget.")
+        raise ClipboardDocumentError(
+            "clipboard.resources_invalid", "document.resources exceeds the supported resource budget."
+        )
     counters = {"blocks": 0, "tables": 0, "cells": 0, "inlines": 0, "text": 0}
     document = ClipboardDocument(
         blocks=tuple(
             _parse_block(item, counters, depth=1, where=f"document.blocks[{index}]")
             for index, item in enumerate(raw_blocks)
         ),
-        resources=tuple(_parse_resource(item, where=f"document.resources[{index}]") for index, item in enumerate(raw_resources)),
+        resources=tuple(
+            _parse_resource(item, where=f"document.resources[{index}]") for index, item in enumerate(raw_resources)
+        ),
     )
     resource_ids = {item.resource_id for item in document.resources}
     if len(resource_ids) != len(document.resources):
@@ -346,8 +350,14 @@ def load_clipboard_document_bytes(payload: bytes) -> ClipboardDocument:
     if sum(item.size_bytes for item in document.resources) > MAX_CLIPBOARD_RESOURCE_BYTES:
         raise ClipboardDocumentError("clipboard.budget_exceeded", "Clipboard resource byte budget exceeded.")
     for inline in iter_clipboard_inlines(document):
-        if isinstance(inline, ClipboardImageRef) and inline.resource_id is not None and inline.resource_id not in resource_ids:
-            raise ClipboardDocumentError("clipboard.resource_missing", "Image reference points to an undeclared resource.")
+        if (
+            isinstance(inline, ClipboardImageRef)
+            and inline.resource_id is not None
+            and inline.resource_id not in resource_ids
+        ):
+            raise ClipboardDocumentError(
+                "clipboard.resource_missing", "Image reference points to an undeclared resource."
+            )
     return document
 
 
@@ -436,7 +446,9 @@ def _validate_table_geometry(table: ClipboardTable, *, where: str) -> None:
     diagnostics = validate_semantic_document(SemanticDocument(blocks=(semantic,)))
     if diagnostics:
         message = "; ".join(f"{item.code}@{item.location}" for item in diagnostics[:4])
-        raise ClipboardDocumentError("clipboard.table_geometry_invalid", f"{where} has invalid table geometry: {message}")
+        raise ClipboardDocumentError(
+            "clipboard.table_geometry_invalid", f"{where} has invalid table geometry: {message}"
+        )
 
 
 def clipboard_table_header_shape(table: ClipboardTable) -> tuple[int, int]:
@@ -472,8 +484,7 @@ def clipboard_table_header_shape(table: ClipboardTable) -> tuple[int, int]:
         in_header_rows = all(row < header_rows for row in rows)
         in_header_columns = all(column < header_columns for column in columns)
         if (any(row < header_rows for row in rows) and any(row >= header_rows for row in rows)) or (
-            any(column < header_columns for column in columns)
-            and any(column >= header_columns for column in columns)
+            any(column < header_columns for column in columns) and any(column >= header_columns for column in columns)
         ):
             return 0, 0
         role: Literal["data", "column_header", "row_header", "corner_header"] = "data"

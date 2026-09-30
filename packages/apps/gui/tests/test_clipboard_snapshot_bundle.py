@@ -8,6 +8,8 @@ import pytest
 
 from docwen_gui.clipboard_inputs import ClipboardInputStore
 
+pytestmark = [pytest.mark.integration, pytest.mark.pr_gate, pytest.mark.release_gate]
+
 
 def test_bundle_owns_main_and_resources_as_one_lifecycle(tmp_path: Path) -> None:
     store = ClipboardInputStore(tmp_path / "managed")

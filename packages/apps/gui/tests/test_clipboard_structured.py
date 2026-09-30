@@ -4,8 +4,25 @@ from __future__ import annotations
 
 import pytest
 
-from docwen_core.models.clipboard_document import ClipboardDocumentError, ClipboardParagraph, ClipboardTable
+from docwen_core.models.clipboard_document import (
+    ClipboardBlock,
+    ClipboardDocumentError,
+    ClipboardParagraph,
+    ClipboardTable,
+    ClipboardText,
+)
 from docwen_gui.clipboard_structured import extract_cf_html_fragment, project_structured_clipboard_html
+
+pytestmark = pytest.mark.contract
+
+
+def _first_text(block: ClipboardBlock) -> str:
+    assert isinstance(block, ClipboardParagraph)
+    if not block.inlines:
+        return ""
+    inline = block.inlines[0]
+    assert isinstance(inline, ClipboardText)
+    return inline.value
 
 
 def _cf_html(fragment: str) -> bytes:
@@ -65,23 +82,20 @@ def test_rowspan_zero_stops_at_own_row_group_and_nested_order_is_preserved() -> 
     anchor = outer.cells[0]
     assert anchor.row_span == 2
     assert [type(block) for block in anchor.blocks] == [ClipboardParagraph, ClipboardTable, ClipboardParagraph]
-    assert anchor.blocks[0].inlines[0].value == "before"
-    assert anchor.blocks[2].inlines[0].value == "after"
+    assert _first_text(anchor.blocks[0]) == "before"
+    assert _first_text(anchor.blocks[2]) == "after"
 
 
 def test_no_header_all_empty_single_row_and_text_fidelity_are_valid() -> None:
     document = project_structured_clipboard_html(
-        "<table><tr><td></td><td> </td><td>&nbsp;</td><td>00123</td><td>$A^2$ | &lt; ^</td></tr></table>".encode()
+        b"<table><tr><td></td><td> </td><td>&nbsp;</td><td>00123</td><td>$A^2$ | &lt; ^</td></tr></table>"
     )
     table = document.blocks[0]
     assert isinstance(table, ClipboardTable)
     assert (table.row_count, table.column_count) == (1, 5)
-    values = [
-        block.inlines[0].value if block.inlines else ""
-        for cell in table.cells
-        for block in cell.blocks
-        if isinstance(block, ClipboardParagraph)
-    ]
+    assert table.cells[0].blocks == ()
+    assert all(len(cell.blocks) <= 1 for cell in table.cells)
+    values = [_first_text(cell.blocks[0]) if cell.blocks else "" for cell in table.cells]
     assert values == ["", " ", "\u00a0", "00123", "$A^2$ | < ^"]
 
 

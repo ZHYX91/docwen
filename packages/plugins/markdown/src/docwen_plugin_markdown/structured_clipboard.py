@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -16,8 +17,6 @@ from docwen_core.models.clipboard_document import (
     ClipboardTable,
     ClipboardTableCell,
     ClipboardText,
-    clipboard_cell_text,
-    clipboard_paragraph_text,
     clipboard_table_header_shape,
     load_clipboard_document_bytes,
 )
@@ -135,10 +134,8 @@ def _render_docx_blocks(container: Any, blocks: tuple[ClipboardBlock, ...]) -> l
 
 def _render_docx_table(container: Any, model: ClipboardTable) -> Any:
     table = container.add_table(rows=model.row_count, cols=model.column_count)
-    try:
+    with suppress(KeyError, ValueError):
         table.style = "Table Grid"
-    except (KeyError, ValueError):
-        pass
 
     for cell_model in model.cells:
         if cell_model.row_span > 1 or cell_model.column_span > 1:
@@ -153,9 +150,7 @@ def _render_docx_table(container: Any, model: ClipboardTable) -> Any:
         cell = table.cell(cell_model.row, cell_model.column)
         _clear_docx_cell(cell)
         _render_docx_blocks(cell, cell_model.blocks)
-        if not list(cell._tc):
-            cell.add_paragraph()
-        elif list(cell._tc)[-1].tag.rsplit("}", 1)[-1] != "p":
+        if not list(cell._tc) or list(cell._tc)[-1].tag.rsplit("}", 1)[-1] != "p":
             cell.add_paragraph()
     header_rows, _header_columns = clipboard_table_header_shape(model)
     _set_docx_header_rows(table, header_rows)
@@ -220,13 +215,15 @@ def convert_clipboard_document_to_docx(context: Any) -> ConversionResult:
 
 class _OrderRecorder:
     def __init__(self) -> None:
-        self.rows: list[tuple[str, str, str, str, str, str]] = []
+        self.rows: list[tuple[str, str, str, str, str, str, str]] = []
         self._sequence = 0
         self._table_sequence = 0
         self.table_ids: dict[int, str] = {}
         self.tables: list[tuple[str, ClipboardTable, str, str]] = []
 
-    def add(self, kind: str, text: str = "", sheet: str = "", parent: str = "", anchor: str = "", child: str = "") -> None:
+    def add(
+        self, kind: str, text: str = "", sheet: str = "", parent: str = "", anchor: str = "", child: str = ""
+    ) -> None:
         self._sequence += 1
         self.rows.append((str(self._sequence), kind, text, sheet, parent, anchor, child))
 
@@ -380,9 +377,7 @@ def _markdown_projection(document: ClipboardDocument) -> tuple[str, list[Convers
                 [
                     f"## {sequence}. table",
                     "",
-                    _markdown_fence(
-                        f"table={child}\nsheet={sheet}\nparent={parent or '-'}\nanchor={anchor or '-'}"
-                    ),
+                    _markdown_fence(f"table={child}\nsheet={sheet}\nparent={parent or '-'}\nanchor={anchor or '-'}"),
                     "",
                 ]
             )

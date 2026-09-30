@@ -27,6 +27,8 @@ def window(qapp: QApplication, qtbot, tmp_path: Path):
     qapp.processEvents()
     yield value
     value.close()
+    qapp.clipboard().clear()
+    qapp.processEvents()
 
 
 def test_default_table_paste_creates_one_structured_managed_input(window, qapp, qtbot) -> None:
