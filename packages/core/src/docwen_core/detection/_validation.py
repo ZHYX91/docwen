@@ -28,6 +28,11 @@ from docwen_core.detection.ooxml_signature import (
     signature_validation_diagnostic,
 )
 from docwen_core.errors import ValidationError
+from docwen_core.models.clipboard_document import (
+    CLIPBOARD_DOCUMENT_FORMAT,
+    CLIPBOARD_DOCUMENT_MEDIA_TYPE,
+    load_clipboard_document_bytes,
+)
 from docwen_core.formats.categories import get_category, get_media_type
 from docwen_core.models.file_inspection import (
     FILE_ADMISSION_ACCEPTANCE_METADATA_KEY,
@@ -429,6 +434,61 @@ def inspect_utf8_markdown_snapshot(
     )
 
 
+def inspect_structured_clipboard_snapshot(
+    file_path: str,
+    *,
+    cancel_check: Callable[[], None] | None = None,
+) -> FileInspection:
+    """Validate one managed recursive clipboard-document snapshot.
+
+    Generic inspection never calls this function. The GUI producer must opt in
+    explicitly, so ordinary JSON or text files cannot acquire this format.
+    """
+
+    resolved = str(Path(file_path).expanduser().resolve(strict=False))
+    public_path = Path(resolved)
+    io_path = filesystem_path(public_path)
+    if not io_path.is_file():
+        raise FileNotFoundError(f"File not found: {file_path}")
+    stat_before = io_path.stat()
+    identity = _file_identity(stat_before)
+    digest = hashlib.sha256()
+    payload = bytearray()
+    with io_path.open("rb") as stream:
+        while chunk := stream.read(_HASH_CHUNK_SIZE):
+            if cancel_check is not None:
+                cancel_check()
+            digest.update(chunk)
+            payload.extend(chunk)
+    load_clipboard_document_bytes(bytes(payload))
+    stat_after = io_path.stat()
+    if _file_identity(stat_after) != identity:
+        raise OSError(f"File changed while it was being inspected: {file_path}")
+    category = get_category(CLIPBOARD_DOCUMENT_FORMAT)
+    return FileInspection(
+        file_path=resolved,
+        size_bytes=stat_after.st_size,
+        mtime_ns=stat_after.st_mtime_ns,
+        extension=public_path.suffix.lower(),
+        declared_format=CLIPBOARD_DOCUMENT_FORMAT,
+        declared_category=category,
+        detected_format=CLIPBOARD_DOCUMENT_FORMAT,
+        detected_category=category,
+        workflow_category=category,
+        detection_method=DetectionMethod.STRUCTURED_CLIPBOARD,
+        confidence=DetectionConfidence.CERTAIN,
+        structure_status=StructureStatus.VALID,
+        relation=FormatRelation.EXACT_MATCH,
+        decision=AdmissionDecision.ALLOW,
+        declared_supported=True,
+        detected_supported=True,
+        device_id=stat_after.st_dev,
+        inode=stat_after.st_ino,
+        ctime_ns=stat_after.st_ctime_ns,
+        content_sha256=digest.hexdigest(),
+    )
+
+
 def reinspect_frozen_file(
     file_path: str,
     frozen: FileInspection,
@@ -445,6 +505,8 @@ def reinspect_frozen_file(
 
     if frozen.detection_method is DetectionMethod.SYNTHETIC_MARKDOWN:
         return inspect_utf8_markdown_snapshot(file_path, cancel_check=cancel_check)
+    if frozen.detection_method is DetectionMethod.STRUCTURED_CLIPBOARD:
+        return inspect_structured_clipboard_snapshot(file_path, cancel_check=cancel_check)
     return inspect_file(file_path, cancel_check=cancel_check)
 
 
@@ -482,15 +544,23 @@ def enforce_file_admission(request: Any) -> Any:
         synthetic_markdown = (
             isinstance(raw, dict) and raw.get("detection_method") == DetectionMethod.SYNTHETIC_MARKDOWN.value
         )
-        inspection = inspect_utf8_markdown_snapshot(current_path) if synthetic_markdown else inspect_file(current_path)
+        structured_clipboard = (
+            isinstance(raw, dict) and raw.get("detection_method") == DetectionMethod.STRUCTURED_CLIPBOARD.value
+        )
+        if synthetic_markdown:
+            inspection = inspect_utf8_markdown_snapshot(current_path)
+        elif structured_clipboard:
+            inspection = inspect_structured_clipboard_snapshot(current_path)
+        else:
+            inspection = inspect_file(current_path)
         canonical_fact = inspection.to_dict()
-        if synthetic_markdown and raw != canonical_fact:
+        if (synthetic_markdown or structured_clipboard) and raw != canonical_fact:
             raise FileAdmissionError(
                 replace(
                     inspection,
                     decision=AdmissionDecision.BLOCK,
                     reason_code="FILE_SYNTHETIC_INPUT_CHANGED",
-                    reason_message="Managed Markdown snapshot changed after admission.",
+                    reason_message="Managed synthetic snapshot changed after admission.",
                 )
             )
         if not isinstance(raw, dict) or raw != canonical_fact:
@@ -531,6 +601,7 @@ __all__ = [
     "enforce_file_admission",
     "has_supported_filename_declaration",
     "inspect_file",
+    "inspect_structured_clipboard_snapshot",
     "inspect_utf8_markdown_snapshot",
     "reinspect_frozen_file",
 ]
