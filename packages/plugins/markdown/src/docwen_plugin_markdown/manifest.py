@@ -3,7 +3,7 @@
 Declares every conversion and action route this plugin handles. Office-backed
 routes use ``docwen_core.office_bridge``.
 
-Declared routes (11 total):
+Declared public Markdown routes plus four GUI-internal structured-clipboard routes:
     ROUTE-MD-DOCX-001  markdown -> docx   (implemented)
     ROUTE-MD-DOC-001   markdown -> doc    (Office bridge-backed)
     ROUTE-MD-ODT-001   markdown -> odt    (Office bridge-backed)
