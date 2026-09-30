@@ -66,6 +66,7 @@ class InputPresentation:
 class _BatchCollection:
     files: list[str]
     skipped_count: int = 0
+    skipped_details: tuple[str, ...] = ()
 
 
 def _read_default_mode(main_vm: MainWindowViewModel) -> str:
@@ -249,23 +250,28 @@ class InputAreaViewModel(QObject):
         completed: Callable[[FileAddOutcome], None] | None = None,
         file_inspector: Callable[[str], FileInspection] | None = None,
     ) -> None:
-        folder_paths = [p for p in paths if Path(p).is_dir()]
-        if folder_paths:
-            self._emit_rejection(
-                _t("messages.no_folder_in_single_mode", "Single mode does not support folders"),
-                "warning",
-            )
-            return
-
-        file_paths = [p for p in paths if Path(p).is_file()]
-        if len(file_paths) != 1:
+        # Judge the original selection before filtering: single mode must not
+        # silently accept one survivor from a multi-item clipboard list.
+        if len(paths) != 1:
             self._emit_rejection(
                 _t("components.file_drop.single_mode_only_one", "Please select exactly one file in single mode"),
                 "warning",
             )
             return
 
-        file_path = file_paths[0]
+        file_path = paths[0]
+        if Path(file_path).is_dir():
+            self._emit_rejection(
+                _t("messages.no_folder_in_single_mode", "Single mode does not support folders"),
+                "warning",
+            )
+            return
+        if not Path(file_path).is_file():
+            self._emit_rejection(
+                _t("components.file_drop.drag_preview_skipped_unreadable", "Unavailable: {path}", path=file_path),
+                "danger",
+            )
+            return
         supported = self._is_supported(file_path)
         if not supported:
             self._emit_rejection(
@@ -294,15 +300,18 @@ class InputAreaViewModel(QObject):
         file_inspector: Callable[[str], FileInspection] | None = None,
     ) -> None:
         collection = self._collect_batch_files_with_feedback(paths)
+        skipped_detail = "\n".join(collection.skipped_details)
         if not collection.files:
             self._emit_message(
                 _t("components.file_drop.no_supported_files", "No supported files found"),
                 "warning",
+                detail=skipped_detail,
             )
             return
         self._emit_files_added(
             collection.files,
             skipped_count=collection.skipped_count,
+            warning_message=skipped_detail,
             completed=completed,
             file_inspector=file_inspector,
         )
@@ -314,13 +323,24 @@ class InputAreaViewModel(QObject):
         collected: list[str] = []
         seen: set[str] = set()
         skipped_count = 0
+        skipped_details: list[str] = []
+
+        def record_skip(message: str) -> None:
+            nonlocal skipped_count
+            skipped_count += 1
+            if message and message not in skipped_details:
+                skipped_details.append(message)
+
         for raw_path in paths:
             path = Path(raw_path)
             candidates: list[Path] = [path]
             if path.is_dir():
                 scan = scan_input_directory(path)
                 candidates = list(scan.files)
-                skipped_count += len(scan.unreadable_paths)
+                for unreadable in scan.unreadable_paths:
+                    record_skip(
+                        _t("components.file_drop.drag_preview_skipped_unreadable", "Unavailable: {path}", path=str(unreadable))
+                    )
             for candidate in candidates:
                 normalized = str(candidate)
                 key = normalized.casefold()
@@ -330,10 +350,14 @@ class InputAreaViewModel(QObject):
                 if self._is_supported(normalized):
                     collected.append(normalized)
                 elif candidate.exists():
-                    skipped_count += 1
+                    record_skip(
+                        _t("components.file_drop.unsupported_type_msg", "Unsupported file type: {filename}", filename=candidate.name or normalized)
+                    )
                 else:
-                    skipped_count += 1
-        return _BatchCollection(collected, skipped_count)
+                    record_skip(
+                        _t("components.file_drop.drag_preview_skipped_unreadable", "Unavailable: {path}", path=normalized)
+                    )
+        return _BatchCollection(collected, skipped_count, tuple(skipped_details))
 
     def clear_files(self) -> None:
         """Clear all files and reset selection state."""
@@ -783,13 +807,14 @@ class InputAreaViewModel(QObject):
             return
         skipped_count += len(outcome.rejected)
         normalized_paths = {str(Path(path)) for path in admitted_paths}
-        warnings = [
+        details = [part for part in warning_message.splitlines() if part.strip()]
+        details.extend(reason for _path, reason in outcome.rejected if reason)
+        details.extend(
             str(ref.warning_message)
             for ref in outcome.added
             if str(Path(ref.path)) in normalized_paths and ref.warning_message
-        ]
-        if warnings:
-            warning_message = warnings[0]
+        )
+        warning_message = "\n".join(dict.fromkeys(detail for detail in details if detail))
 
         file_count = len(paths)
         if skipped_count > 0:

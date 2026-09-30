@@ -383,7 +383,7 @@ class MainWindow(QWidget):
         if mime_data is not None and mime_data.hasUrls():
             file_paths = self._input_area_vm.extract_urls_from_mime_data(mime_data.urls())
             if file_paths:
-                self._input_area_vm.add_files(file_paths)
+                self._paste_file_paths(file_paths)
                 return
         if mime_data is None or not mime_data.hasText():
             self._info_area_vm.add_message(
@@ -437,6 +437,38 @@ class MainWindow(QWidget):
             file_inspector=inspect_utf8_markdown_snapshot,
         )
 
+    def _paste_file_paths(self, file_paths: list[str]) -> None:
+        """Paste one captured local-file list through normal file admission."""
+
+        needs_batch = self._input_area_vm.mode == "single" and (
+            len(file_paths) != 1 or Path(file_paths[0]).is_dir()
+        )
+        if not needs_batch:
+            self._input_area_vm.add_files(file_paths)
+            return
+
+        # Show the ordinary non-mutating rejection first. Declining the mode
+        # switch therefore preserves both the current input and its feedback.
+        self._input_area_vm.add_files(file_paths)
+        from docwen_gui.dialogs.feedback import confirm
+
+        reason = (
+            _t("messages.no_folder_in_single_mode", "Single mode does not support folders")
+            if len(file_paths) == 1 and Path(file_paths[0]).is_dir()
+            else _t("components.file_drop.single_mode_only_one", "Please select exactly one file in single mode")
+        )
+        if not confirm(
+            _t("components.file_drop.batch_mode", "Batch"),
+            reason,
+            parent=self,
+            confirm_label=_t("components.file_drop.batch_mode", "Batch"),
+        ):
+            return
+
+        # Use the captured list. The clipboard may have changed while the
+        # confirmation dialog was open and must not be read a second time.
+        self._input_area_vm.set_mode("batch")
+        self._input_area_vm.add_files(file_paths)
     def _prepare_clipboard_output_policy(
         self,
         file_paths: Sequence[str],

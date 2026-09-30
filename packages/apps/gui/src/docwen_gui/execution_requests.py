@@ -342,10 +342,16 @@ class ExecutionRequestBuilder:
         attached so application/runtime admission can enforce the same
         decision without opening and guessing the file again.
         """
-        from docwen_core.models.file_ref import FileRef
+        from docwen_core.models.file_ref import SOURCE_PRESENTATION_NAME_METADATA_KEY, FileRef
 
         normalized = normalize_path(source_path)
-        logical_path = self._source_label(source_path) or ""
+        source_label = self._source_label(source_path) or ""
+
+        def projected_metadata(raw: dict[str, Any]) -> dict[str, Any]:
+            metadata = deepcopy(raw)
+            if source_label:
+                metadata[SOURCE_PRESENTATION_NAME_METADATA_KEY] = source_label
+            return metadata
         source_ref = next(
             (ref for ref in self._view_model.files if normalize_path(getattr(ref, "path", "")) == normalized),
             None,
@@ -354,8 +360,7 @@ class ExecutionRequestBuilder:
             return replace(
                 source_ref,
                 path=source_path,
-                logical_path=logical_path or source_ref.logical_path,
-                metadata=deepcopy(source_ref.metadata),
+                metadata=projected_metadata(source_ref.metadata),
             )
 
         entry = self._batch_list_vm.get_file_entry(source_path)
@@ -366,8 +371,7 @@ class ExecutionRequestBuilder:
                 category=entry.workflow_category,
                 warning_message=entry.warning_message or "",
                 size_bytes=entry.size_bytes,
-                logical_path=logical_path,
-                metadata=deepcopy(entry.metadata),
+                metadata=projected_metadata(entry.metadata),
             )
 
         # Programmatic callers that bypass the visual list still cross the
@@ -386,11 +390,12 @@ class ExecutionRequestBuilder:
             category=inspection.workflow_category,
             warning_message=render_file_inspection_message(inspection),
             size_bytes=inspection.size_bytes,
-            logical_path=logical_path,
-            metadata={
-                FILE_INSPECTION_METADATA_KEY: inspection.to_dict(),
-                OOXML_SIGNATURE_INFO_METADATA_KEY: dict(inspection.ooxml_signature),
-            },
+            metadata=projected_metadata(
+                {
+                    FILE_INSPECTION_METADATA_KEY: inspection.to_dict(),
+                    OOXML_SIGNATURE_INFO_METADATA_KEY: dict(inspection.ooxml_signature),
+                }
+            ),
         )
 
     def output_policy(self) -> OutputPolicy:
