@@ -61,6 +61,7 @@ FORMAT_CATEGORY: dict[str, str] = {
     # Markdown
     "md": CATEGORY_MARKDOWN,
     "markdown": CATEGORY_MARKDOWN,
+    "clipboard_document": CATEGORY_MARKDOWN,
     # HTML family → markup
     "html": CATEGORY_MARKUP,
     "htm": CATEGORY_MARKUP,
@@ -80,6 +81,7 @@ FORMAT_MEDIA_TYPE: dict[str, str] = {
     # Markdown / text
     "md": "text/markdown",
     "markdown": "text/markdown",
+    "clipboard_document": "application/vnd.docwen.clipboard-document+json",
     "txt": "text/plain",
     "csv": "text/csv",
     "tsv": "text/tab-separated-values",
