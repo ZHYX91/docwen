@@ -46,6 +46,8 @@ User-authored clipboard text is not diagnostic log content. Shared Markdown link
 
 Clipboard materialization is transactional around write/flush/fsync. A failed create attempts compensation; if deletion itself fails, the file remains tracked for a later cleanup attempt. A root namespace lock serializes session publication and retirement, remaining held through directory removal. Each current session acquires its owner lock before publishing the fixed recovery marker. Startup recovery removes only marked old session directories whose owner lock can be acquired non-blocking; active sessions and unmarked legacy directories are left alone. Recovery removes content before its owner marker, so a failed content deletion remains eligible for the next startup. This is a Store-level crash-recovery boundary, not evidence that every application-crash path or native filesystem failure has been physically accepted.
 
+Implementation boundary for the current structured-clipboard stack: the repository now owns the recursive source model, offline HTML/CF_HTML table parsing, authoritative-plain alignment, DOCX/XLSX/Markdown/CSV converter projections, reversible DOCX header-association metadata, canonical XLSX-template projection, managed resource groups, and GUI-internal route discovery. Automated repository tests may prove these software contracts, but they are not physical Office-provider evidence. Native Word/WPS/Excel clipboard MIME association, screenshot/QImage normalization, image-byte decoding and rendering, real desktop clipboard interoperability, final packaged GUI acceptance, Store/UOS acceptance and release publication remain separate evidence gates and are not claimed by this section.
+
 输入区左侧用纵向单选显示“单文件/批量”，右侧保留“添加/粘贴/清空”完整文字；“添加”为主操作，“粘贴”为普通操作，“清空”为弱化操作并与前两者留出间隔。空间不足时模式组与操作组分行；更窄或大字号/长翻译场景继续重排，而不是把文字截断或退化成纯图标。
 
 “粘贴”是显式快照操作：仅在用户点击按钮，或输入区（而非其他文本编辑框）拥有焦点时按 Ctrl+V，才一次性捕获当前剪贴板；不会后台监听，异步处理也不会再次读取系统剪贴板。“仅粘贴文本”把当次 plain Unicode 字符逐字写成 UTF-8 Markdown。默认富粘贴仍以同一份 plain 正文为权威，只在表格 plain 签名能够唯一、按顺序对应时，把对应区段升级为受管递归结构。YAML front matter、代码块、URL、Markdown 样文字及有意义的首尾空白因此继续来自 plain 原文。plain 为空/纯空白时不创建普通文本输入；仅 HTML 且含通过验证的表格时才进入明确提示的结构化来源路径。之后的剪贴板变化不能改变已接纳快照。
@@ -65,6 +67,8 @@ Clipboard materialization is transactional around write/flush/fsync. A failed cr
 剪贴板正文不是诊断日志内容。共享 Markdown link/embed 日志只记录有界原因、模式和计数，不回显 authored target、query、heading、display text 或解析出的文件名。合成输入转换异常只暴露异常类型；公式转换失败不记录公式正文或底层库原始异常文本。Tooltip 对用户文本做有界转义，字面 <>& 和控制字符不能被解释成 tooltip 富文本。synthetic 条目和最终源位置接收器都拒绝打开受管 backing 目录，批量进度显示展示用剪贴板名称，而不是资源 `logical_path`。
 
 快照创建以 write/flush/fsync 为事务边界：创建失败先补偿删除；若删除本身失败则继续保留跟踪，供后续 cleanup 重试。根目录 namespace lock 串行保护 session 发布与回收，并持有到目录删除结束。当前 session 先取得 owner lock，再发布固定 recovery marker；启动时只回收“marker 可证明且 owner lock 可非阻塞取得”的旧 session，活动 session 和无 marker 的旧目录都不删除。回收先删除正文等内容，最后才移除 owner marker；内容删除失败时保留凭据供下次启动重试。这是 Store 层的 crash-recovery 边界，不代表整个应用所有崩溃路径或原生文件系统失败都已做物理验收。
+
+当前结构化剪贴板栈的实现边界：仓库已经实现递归来源模型、离线 HTML/CF_HTML 表格解析、plain 正文权威对齐、DOCX/XLSX/Markdown/CSV 投影、可逆 DOCX 表头关联元数据、canonical XLSX 模板投影、受管资源组以及 GUI internal route 发现。仓库自动化可以证明这些软件合同，但不能替代真实 Office/provider 证据。Word/WPS/Excel 原生剪贴板 MIME 关联、截图/QImage 规范化、图片字节解码与渲染、真实桌面剪贴板互通、最终打包 GUI、Store/UOS 验收和发布均是独立证据门，本节不宣称其已完成。
 
 Execution owns independent input metadata and option snapshots. Confirming a detected format applies only
 to the facts shown, and updates the live list only while those facts still match. The worker rechecks the
