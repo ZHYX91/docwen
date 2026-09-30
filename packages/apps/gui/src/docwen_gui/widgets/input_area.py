@@ -112,7 +112,6 @@ _I_BATCH_MODE = "components.file_drop.batch_mode"
 _I_SINGLE_MODE = "components.file_drop.single_mode"
 _I_ADD_BUTTON = "components.file_drop.add_button"
 _I_PASTE_BUTTON = "components.file_drop.paste_button"
-_I_PASTE_PLAIN_TEXT = "components.file_drop.paste_plain_text_action"
 _I_CLEAR_BUTTON = "components.file_drop.clear_button"
 _I_ADD_FILE = "components.file_drop.add_file_action"
 _I_ADD_FOLDER = "components.file_drop.add_folder_action"
@@ -233,10 +232,11 @@ class InputArea(QFrame):
         self._paste_menu_button = QToolButton(self._drop_group)
         self._paste_menu_button.setObjectName("fileDropPasteMenuButton")
         self._paste_menu_button.setText("▾")
-        self._paste_menu_button.setToolTip(_i18n(_I_PASTE_PLAIN_TEXT, "Paste as Plain Text"))
-        self._paste_menu_button.setAccessibleName(_i18n(_I_PASTE_PLAIN_TEXT, "Paste as Plain Text"))
+        plain_text_label = t("components.file_drop.paste_plain_text_action", default="Paste as Plain Text")
+        self._paste_menu_button.setToolTip(plain_text_label)
+        self._paste_menu_button.setAccessibleName(plain_text_label)
         paste_menu = QMenu(self._paste_menu_button)
-        self._paste_plain_text_action = QAction(_i18n(_I_PASTE_PLAIN_TEXT, "Paste as Plain Text"), paste_menu)
+        self._paste_plain_text_action = QAction(plain_text_label, paste_menu)
         self._paste_plain_text_action.triggered.connect(self.request_plain_text_paste)
         paste_menu.addAction(self._paste_plain_text_action)
         self._paste_menu_button.setMenu(paste_menu)
