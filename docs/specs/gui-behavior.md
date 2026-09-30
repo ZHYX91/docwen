@@ -8,6 +8,7 @@ GUI 通过 ViewModel 呈现唯一的 application/runtime 状态。Widget 负责�
 
 - Single and batch input modes support file dialog, drag/drop, filtering and stable ordering.
 - Clipboard local-file lists take precedence over their text/URL rendering and enter the same admission path as Add/drag. Single mode judges the captured list before filtering, keeps the current input on multi-file/folder rejection, and offers an explicit switch-to-batch-and-add action without rereading the clipboard; ordinary path-shaped text remains text.
+- Default content paste keeps plain text verbatim and may consult inert clipboard HTML only to preserve simple explicit-header tables. Multiple text/table blocks retain source order; empty cells, leading-zero text, escaped pipes and cell line breaks are preserved. Complex/merged/nested tables fall back to all extractable cell text with a warning, images are not imported and are reported, script/style content is discarded, and this path never downloads external resources. The visible “Paste as Plain Text” action and input-area `Ctrl+Shift+V` bypass rich interpretation.
 - Available conversion panels and actions derive from selected files and route capabilities.
 - Batch rows expose truthful pending, processing, completed, partial, failed and cancelled states.
 - Admitted input files cannot be removed until their worker finishes. Completed operation records own failure details and retry intent independently of editable batch rows; retry restores removed inputs through normal admission.
