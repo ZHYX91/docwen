@@ -124,6 +124,7 @@ def test_single_file_clipboard_rejects_multiple_and_preserves_current_input(
     qapp: QApplication,
     qtbot,
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     original = _paste_text(clipboard_window, qapp, qtbot, "# Keep current\n")
     first = tmp_path / "first.md"
@@ -133,6 +134,7 @@ def test_single_file_clipboard_rejects_multiple_and_preserves_current_input(
     mime = QMimeData()
     mime.setUrls([QUrl.fromLocalFile(str(first)), QUrl.fromLocalFile(str(second))])
     qapp.clipboard().setMimeData(mime)
+    monkeypatch.setattr("docwen_gui.dialogs.feedback.confirm", lambda *_a, **_k: False)
 
     qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
     qapp.processEvents()
