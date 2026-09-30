@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 _RESOURCE_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 
@@ -127,6 +127,9 @@ class RouteSpec:
     options_schema: dict[str, Any] = field(default_factory=dict)
     """JSON Schema describing accepted options for this route."""
 
+    visibility: Literal["public", "internal"] = "public"
+    """Discovery visibility. Internal routes remain executable but are not public file formats."""
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "source_format": self.source_format,
@@ -134,6 +137,7 @@ class RouteSpec:
             "action_name": self.action_name,
             "label": self.label,
             "options_schema": dict(self.options_schema),
+            "visibility": self.visibility,
         }
 
     @classmethod
@@ -144,6 +148,7 @@ class RouteSpec:
             action_name=data.get("action_name", ""),
             label=data.get("label", ""),
             options_schema=dict(data.get("options_schema", {})),
+            visibility=data.get("visibility", "public"),
         )
 
 
