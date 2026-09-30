@@ -185,12 +185,17 @@ def _place_docx_body(document: Any, elements: list[Any], placeholder: Any | None
 
 
 def convert_clipboard_document_to_docx(context: Any) -> ConversionResult:
-    from docwen_plugin_markdown.template_utils import find_body_placeholder, resolve_template
+    from docwen_plugin_markdown.template_filler import fill_template
+    from docwen_plugin_markdown.template_utils import find_body_placeholder, resolve_template, scan_placeholders
 
     document_model = _load(context)
     context.cancellation.check()
     document = resolve_template(context.request.options.get("template_name"))
     placeholder = find_body_placeholder(document)
+    # Clear template-only fields before authored clipboard blocks are appended,
+    # so authored text resembling {{placeholders}} is never reinterpreted.
+    template_placeholders = scan_placeholders(document)
+    fill_template(document, {}, [], None, placeholder_map=template_placeholders)
     elements = _render_docx_blocks(document, document_model.blocks)
     _place_docx_body(document, elements, placeholder)
     context.cancellation.check()
