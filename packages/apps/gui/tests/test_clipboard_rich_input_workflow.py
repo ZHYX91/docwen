@@ -53,7 +53,7 @@ def test_rich_clipboard_preserves_multiple_tables_and_body_order(
     qtbot,
 ) -> None:
     mime = QMimeData()
-    mime.setText("Before\nA\tB\n\t00123\nMiddle\nPipe\tLines\nx|y\tone two\nAfter")
+    mime.setText("  Before https://example.test/a **plain-md**  \nA\tB\n\t00123\nMiddle\nPipe\tLines\nx|y\tone\ntwo\nAfter  ")
     mime.setHtml(
         "<p>Before</p><table><tr><th>A</th><th>B</th></tr><tr><td></td><td>00123</td></tr></table>"
         "<p>Middle</p><table><tr><th>Pipe</th><th>Lines</th></tr>"
@@ -67,9 +67,9 @@ def test_rich_clipboard_preserves_multiple_tables_and_body_order(
     document = load_clipboard_document_bytes(Path(selected.path).read_bytes())
     assert [isinstance(block, ClipboardTable) for block in document.blocks] == [False, True, False, True, False]
     assert [clipboard_paragraph_text(block) for block in document.blocks if isinstance(block, ClipboardParagraph)] == [
-        "Before",
-        "Middle",
-        "After",
+        "  Before https://example.test/a **plain-md**  \n",
+        "\nMiddle\n",
+        "\nAfter  ",
     ]
     tables = [block for block in document.blocks if isinstance(block, ClipboardTable)]
     assert [clipboard_cell_text(cell) for cell in tables[0].cells] == ["A", "B", "", "00123"]
@@ -83,7 +83,7 @@ def test_valid_rowspan_is_preserved_without_fallback_warning(
     qtbot,
 ) -> None:
     mime = QMimeData()
-    mime.setText("A\tB\nkept-rowspan\tfirst\nsecond")
+    mime.setText("A\tB\nkept-rowspan\tfirst\n\tsecond")
     mime.setHtml(
         "<table><tr><th>A</th><th>B</th></tr>"
         "<tr><td rowspan='2'>kept-rowspan</td><td>first</td></tr><tr><td>second</td></tr></table>"
@@ -167,4 +167,78 @@ def test_rich_clipboard_reports_images_without_importing_them(
     selected = clipboard_window.view_model.selected_file
     assert selected is not None
     assert Path(selected.path).read_text(encoding="utf-8") == "Before\nAfter"
+    assert any(row.message_type == "warning" for row in clipboard_window._info_area_vm.history_rows)
+
+
+
+def test_reliable_plain_alignment_preserves_nested_merged_table_structure_and_plain_boundaries(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+) -> None:
+    mime = QMimeData()
+    plain = "  Lead  \nA\tB\nbefore\ninner\nafter\t\nTail  "
+    mime.setText(plain)
+    mime.setHtml(
+        "<p>HTML lead must not win</p><table><tr><th>A</th><th>B</th></tr>"
+        "<tr><td colspan='2'><p>before</p><table><tr><td>inner</td></tr></table>"
+        "<p>after</p></td></tr></table><p>HTML tail must not win</p>"
+    )
+    qapp.clipboard().setMimeData(mime)
+
+    qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
+    selected = clipboard_window.view_model.selected_file
+    assert selected is not None and selected.format == "clipboard_document"
+    document = load_clipboard_document_bytes(Path(selected.path).read_bytes())
+    assert isinstance(document.blocks[0], ClipboardParagraph)
+    assert clipboard_paragraph_text(document.blocks[0]) == "  Lead  \n"
+    table = document.blocks[1]
+    assert isinstance(table, ClipboardTable)
+    merged = next(cell for cell in table.cells if cell.row == 1 and cell.column == 0)
+    assert merged.column_span == 2
+    assert [type(block).__name__ for block in merged.blocks] == [
+        "ClipboardParagraph",
+        "ClipboardTable",
+        "ClipboardParagraph",
+    ]
+    assert clipboard_paragraph_text(document.blocks[2]) == "\nTail  "
+
+
+def test_unreliable_html_table_alignment_keeps_complete_plain_text(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+) -> None:
+    plain = "  KEEP https://example.test/x **markdown**  \nnot the HTML table\nTAIL\u00a0 "
+    mime = QMimeData()
+    mime.setText(plain)
+    mime.setHtml(
+        "<p>different HTML body</p><table><tr><th>A</th><th>B</th></tr>"
+        "<tr><td>1</td><td>2</td></tr></table><p>different tail</p>"
+    )
+    qapp.clipboard().setMimeData(mime)
+
+    qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
+    selected = clipboard_window.view_model.selected_file
+    assert selected is not None
+    assert selected.format == "markdown"
+    assert Path(selected.path).read_text(encoding="utf-8") == plain
+    assert any(row.message_type == "warning" for row in clipboard_window._info_area_vm.history_rows)
+
+
+def test_html_only_structured_table_is_explicitly_warned(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+) -> None:
+    mime = QMimeData()
+    mime.setHtml("<table><tr><th>A</th><th>B</th></tr><tr><td>1</td><td>2</td></tr></table>")
+    qapp.clipboard().setMimeData(mime)
+
+    qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
+    selected = clipboard_window.view_model.selected_file
+    assert selected is not None and selected.format == "clipboard_document"
     assert any(row.message_type == "warning" for row in clipboard_window._info_area_vm.history_rows)
