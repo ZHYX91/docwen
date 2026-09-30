@@ -9,6 +9,7 @@ from typing import Any
 
 from docwen_core.clipboard_table_associations import inject_clipboard_table_associations
 from docwen_core.docx_semantics import apply_semantic_table_roles
+from docwen_core.markdown_extensions import resolve_markdown_extensions
 from docwen_core.models.artifact import ARTIFACT_KIND_AUXILIARY, ARTIFACT_KIND_PRIMARY, ArtifactManifest
 from docwen_core.models.clipboard_document import (
     ClipboardBlock,
@@ -23,6 +24,19 @@ from docwen_core.models.clipboard_document import (
     load_clipboard_document_bytes,
 )
 from docwen_core.models.result import ConversionDiagnostic, ConversionMetrics, ConversionResult
+from docwen_plugin_markdown.structured_clipboard_projection import (
+    has_html_header_associations,
+    semantics_headers,
+    structural_table_markdown,
+    table_semantics_rows,
+    table_semantics_text,
+)
+from docwen_plugin_markdown.structured_clipboard_xlsx import (
+    create_table_sheet,
+    materialize_order_rows,
+    prepare_projection_workbook,
+    write_string_matrix,
+)
 
 _DOCX_MEDIA = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 _XLSX_MEDIA = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -267,13 +281,19 @@ def _record_order(
             _record_order(cell.blocks, recorder, parent_table=table_id, anchor=cell_anchor)
 
 
-def _xlsx_cell_value(cell: ClipboardTableCell, recorder: _OrderRecorder) -> str:
+def _xlsx_cell_value(
+    cell: ClipboardTableCell,
+    recorder: _OrderRecorder,
+    table_titles: dict[str, str] | None = None,
+) -> str:
     parts: list[str] = []
+    titles = table_titles or {}
     for block in cell.blocks:
         if isinstance(block, ClipboardParagraph):
             parts.append(_paragraph_projection(block))
         else:
-            parts.append(f"[Nested table {recorder.table_id(block)}]")
+            table_id = recorder.table_id(block)
+            parts.append(f"[Nested table {titles.get(table_id, table_id)}]")
     return "\n".join(parts)
 
 
@@ -308,36 +328,26 @@ def convert_clipboard_document_to_xlsx(context: Any) -> ConversionResult:
     document = _load(context)
     recorder = _OrderRecorder()
     _record_order(document.blocks, recorder)
-    workbook = _new_projection_workbook(context.request.options.get("template_name"))
-    order_sheet = workbook["Document Order"]
-    headers = ("Sequence", "Kind", "Text", "Sheet", "Parent Table", "Anchor", "Child Table")
-    for column, value in enumerate(headers, 1):
-        cell = order_sheet.cell(1, column, value)
-        cell.data_type = "s"
-        cell.number_format = "@"
-    for row_index, values in enumerate(recorder.rows, 2):
-        for column, value in enumerate(values, 1):
-            cell = order_sheet.cell(row_index, column, str(value))
-            cell.data_type = "s"
-            cell.number_format = "@"
+    projection = prepare_projection_workbook(context.request.options.get("template_name"))
 
-    diagnostics = _image_diagnostics(document)
-    if any(parent for _table_id, _table, parent, _anchor in recorder.tables) or any(
-        isinstance(block, ClipboardParagraph) for block in document.blocks
-    ):
-        diagnostics.append(
-            ConversionDiagnostic(
-                level="warning",
-                code="CLIPBOARD-XLSX-DOCUMENT-PROJECTION",
-                message="Document text and nested-table relationships are preserved in the Document Order worksheet; XLSX has no native nested-table model.",
-            )
+    table_sheets: dict[str, Any] = {}
+    for table_id, table_model, _parent, _anchor in recorder.tables:
+        table_sheets[table_id] = create_table_sheet(
+            projection,
+            table_id=table_id,
+            requested_name=f"Table {table_id[1:]}",
+            row_count=table_model.row_count,
+            column_count=table_model.column_count,
         )
 
     for table_id, table_model, _parent, _anchor in recorder.tables:
-        requested_name = f"Table {table_id[1:]}"
-        sheet = workbook.create_sheet(_unique_sheet_name(workbook, requested_name))
+        sheet = table_sheets[table_id]
         for cell_model in table_model.cells:
-            output_cell = sheet.cell(cell_model.row + 1, cell_model.column + 1, _xlsx_cell_value(cell_model, recorder))
+            output_cell = sheet.cell(
+                cell_model.row + 1,
+                cell_model.column + 1,
+                _xlsx_cell_value(cell_model, recorder, projection.table_titles),
+            )
             output_cell.data_type = "s"
             output_cell.number_format = "@"
         for cell_model in table_model.cells:
@@ -349,10 +359,48 @@ def convert_clipboard_document_to_xlsx(context: Any) -> ConversionResult:
                     end_column=cell_model.column + cell_model.column_span,
                 )
 
+    order_headers = ("Sequence", "Kind", "Text", "Sheet", "Parent Table", "Anchor", "Child Table")
+    write_string_matrix(
+        projection.order_sheet,
+        order_headers,
+        materialize_order_rows(recorder.rows, projection.table_titles),
+    )
+    write_string_matrix(
+        projection.semantics_sheet,
+        semantics_headers(),
+        table_semantics_rows(recorder.tables, projection.table_titles),
+    )
+
+    diagnostics = _image_diagnostics(document)
+    if any(parent for _table_id, _table, parent, _anchor in recorder.tables) or any(
+        isinstance(block, ClipboardParagraph) for block in document.blocks
+    ):
+        diagnostics.append(
+            ConversionDiagnostic(
+                level="warning",
+                code="CLIPBOARD-XLSX-DOCUMENT-PROJECTION",
+                message=(
+                    "Document text and nested-table relationships are preserved in the Document Order worksheet; "
+                    "XLSX has no native nested-table model."
+                ),
+            )
+        )
+    if any(has_html_header_associations(table) for _table_id, table, _parent, _anchor in recorder.tables):
+        diagnostics.append(
+            ConversionDiagnostic(
+                level="warning",
+                code="CLIPBOARD-XLSX-HEADER-ASSOCIATIONS-PROJECTED",
+                message=(
+                    "HTML table header scope/id/headers associations are preserved in the visible Table Semantics "
+                    "worksheet because XLSX has no equivalent native association graph."
+                ),
+            )
+        )
+
     output = context.workspace.create_artifact_path(ARTIFACT_KIND_PRIMARY, ".xlsx")
     from docwen_plugin_markdown.structured_clipboard_strings import save_workbook_preserving_empty_strings
 
-    save_workbook_preserving_empty_strings(workbook, output)
+    save_workbook_preserving_empty_strings(projection.workbook, output)
     artifact = ArtifactManifest(
         artifact_id="clipboard-document-xlsx",
         kind=ARTIFACT_KIND_PRIMARY,
@@ -368,14 +416,17 @@ def convert_clipboard_document_to_xlsx(context: Any) -> ConversionResult:
         diagnostics=diagnostics,
     )
 
-
 def _markdown_fence(text: str) -> str:
     longest = max((len(match.group(0)) for match in __import__("re").finditer(r"`+", text)), default=0)
     fence = "`" * max(3, longest + 1)
     return f"{fence}text\n{text}\n{fence}"
 
 
-def _markdown_projection(document: ClipboardDocument) -> tuple[str, list[ConversionDiagnostic]]:
+def _markdown_projection(
+    document: ClipboardDocument,
+    *,
+    structural_tables: bool,
+) -> tuple[str, list[ConversionDiagnostic]]:
     recorder = _OrderRecorder()
     _record_order(document.blocks, recorder)
     lines = ["# Clipboard document", ""]
@@ -391,36 +442,94 @@ def _markdown_projection(document: ClipboardDocument) -> tuple[str, list[Convers
                     "",
                 ]
             )
+
+    fallback_reasons: list[str] = []
+    association_projection = False
     for table_id, table, parent, anchor in recorder.tables:
         lines.extend([f"## Table {table_id}", ""])
-        lines.append(
-            _markdown_fence(
-                "\n".join(
-                    [
-                        f"rows={table.row_count} columns={table.column_count} parent={parent or '-'} anchor={anchor or '-'}",
-                        *[
-                            f"R{cell.row + 1}C{cell.column + 1} span={cell.row_span}x{cell.column_span} value={_xlsx_cell_value(cell, recorder)}"
-                            for cell in table.cells
-                        ],
-                    ]
+        rendered = None
+        reason = "extension_disabled"
+        if structural_tables:
+            rendered, reason = structural_table_markdown(table)
+        if rendered is not None:
+            lines.extend([rendered, ""])
+        else:
+            if structural_tables:
+                fallback_reasons.append(reason)
+            lines.append(
+                _markdown_fence(
+                    "\n".join(
+                        [
+                            (
+                                f"rows={table.row_count} columns={table.column_count} "
+                                f"parent={parent or '-'} anchor={anchor or '-'}"
+                            ),
+                            *[
+                                (
+                                    f"R{cell.row + 1}C{cell.column + 1} "
+                                    f"span={cell.row_span}x{cell.column_span} "
+                                    f"value={_xlsx_cell_value(cell, recorder)}"
+                                )
+                                for cell in table.cells
+                            ],
+                        ]
+                    )
                 )
             )
+            lines.append("")
+        lines.extend(
+            [
+                "### Table semantics",
+                "",
+                _markdown_fence(table_semantics_text(table_id, table)),
+                "",
+            ]
         )
-        lines.append("")
+        association_projection = association_projection or has_html_header_associations(table)
+
     diagnostics = _image_diagnostics(document)
-    diagnostics.append(
-        ConversionDiagnostic(
-            level="warning",
-            code="CLIPBOARD-MARKDOWN-STRUCTURE-PROJECTION",
-            message="Recursive clipboard structure was projected as visible literal Markdown text; raw HTML and implicit Structural Tables were not emitted.",
+    if not structural_tables:
+        diagnostics.append(
+            ConversionDiagnostic(
+                level="warning",
+                code="CLIPBOARD-MARKDOWN-STRUCTURE-PROJECTION",
+                message=(
+                    "Structural Tables output is disabled; recursive clipboard tables were emitted as visible "
+                    "literal structure with their values, spans, and roles."
+                ),
+            )
         )
-    )
+    elif fallback_reasons:
+        diagnostics.append(
+            ConversionDiagnostic(
+                level="warning",
+                code="CLIPBOARD-MARKDOWN-STRUCTURAL-FALLBACK",
+                message=(
+                    "Some clipboard tables cannot be represented losslessly by the selected Structural Tables "
+                    f"dialect and were kept as literal structure: {', '.join(sorted(set(fallback_reasons)))}."
+                ),
+            )
+        )
+    if association_projection:
+        diagnostics.append(
+            ConversionDiagnostic(
+                level="warning",
+                code="CLIPBOARD-MARKDOWN-HEADER-ASSOCIATIONS-PROJECTED",
+                message=(
+                    "HTML scope/id/headers associations have no native Structural Tables spelling and are "
+                    "preserved in each visible Table semantics block."
+                ),
+            )
+        )
     return "\n".join(lines).rstrip() + "\n", diagnostics
-
-
 def convert_clipboard_document_to_markdown(context: Any) -> ConversionResult:
     document = _load(context)
-    text, diagnostics = _markdown_projection(document)
+    extensions = resolve_markdown_extensions(
+        context.request.options,
+        context.config,
+        direction="output",
+    )
+    text, diagnostics = _markdown_projection(document, structural_tables=extensions.structural_tables)
     output = context.workspace.create_artifact_path(ARTIFACT_KIND_PRIMARY, ".md")
     Path(output).write_text(text, encoding="utf-8", newline="\n")
     artifact = ArtifactManifest(
@@ -467,6 +576,22 @@ def convert_clipboard_document_to_csv(context: Any) -> ConversionResult:
             is_primary=True,
         )
     )
+
+    semantics_path = context.workspace.create_artifact_path(ARTIFACT_KIND_AUXILIARY, ".csv")
+    with Path(semantics_path).open("w", encoding="utf-8-sig", newline="") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(semantics_headers())
+        writer.writerows(table_semantics_rows(recorder.tables))
+    artifacts.append(
+        ArtifactManifest(
+            artifact_id="clipboard-table-semantics",
+            kind=ARTIFACT_KIND_AUXILIARY,
+            staging_path=semantics_path,
+            suggested_name=f"{context.request.source_stem}-table-semantics.csv",
+            media_type="text/csv",
+        )
+    )
+
     for table_id, table, _parent, _anchor in recorder.tables:
         path = context.workspace.create_artifact_path(ARTIFACT_KIND_AUXILIARY, ".csv")
         with Path(path).open("w", encoding="utf-8-sig", newline="") as stream:
@@ -486,7 +611,10 @@ def convert_clipboard_document_to_csv(context: Any) -> ConversionResult:
         ConversionDiagnostic(
             level="warning",
             code="CLIPBOARD-CSV-STRUCTURE-PROJECTION",
-            message="CSV cannot natively represent merged or nested tables; anchor values and document-order relationships were exported explicitly.",
+            message=(
+                "CSV cannot natively represent merged/nested tables or HTML header associations; anchor values "
+                "are exported per table and spans/roles/scope/id/headers are preserved in table-semantics.csv."
+            ),
         )
     )
     return ConversionResult(
