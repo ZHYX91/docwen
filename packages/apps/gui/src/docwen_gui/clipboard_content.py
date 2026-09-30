@@ -116,11 +116,16 @@ class _ClipboardHTMLParser(HTMLParser):
                 self._skip_depth += 1
             return
         if tag in _SKIP_TAGS:
+            if self.text_parts and self.text_parts[-1].endswith("\n"):
+                self._flush_text()
             self._skip_depth = 1
             return
 
         if tag == "img":
-            # Basic content paste never fetches or materializes images.
+            # Keep an existing paragraph boundary while dropping the image.
+            # Inline images do not invent a paragraph break.
+            if self.text_parts and self.text_parts[-1].endswith("\n"):
+                self._flush_text()
             self.image_count += 1
             return
 
