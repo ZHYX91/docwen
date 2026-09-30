@@ -1788,6 +1788,8 @@ copy = "Copiar diagnóstico"
 redacted_hint = "La copia solo contiene el estado, las categorías y las cantidades. Se excluyen el contenido, las rutas, los errores originales, los comandos y la configuración."
 
 [clipboard]
+structured_plain_fallback = "La estructura de tabla enriquecida no pudo vincularse de forma fiable con el texto sin formato; se conservó todo el texto sin formato."
+structured_html_only = "El portapapeles no contenía cuerpo de texto sin formato; se usó como fuente de contenido el HTML validado con tabla."
 structured_invalid = "La estructura de la tabla del portapapeles no es válida y no se importó."
 table_fallback = "{count} tabla(s) del portapapeles no se pudieron representar de forma segura como tablas Markdown; se conservó el texto de las celdas."
 images_omitted = "No se importaron {count} imagen(es) del portapapeles; se conservó el texto disponible."
