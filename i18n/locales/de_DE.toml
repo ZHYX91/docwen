@@ -1782,6 +1782,8 @@ copy = "Diagnose kopieren"
 redacted_hint = "Die Kopie enthält nur Status, Kategorien und Anzahlen. Dokumentinhalte, Pfade, ursprüngliche Fehler, Befehle und Einstellungen sind ausgeschlossen."
 
 [clipboard]
+structured_plain_fallback = "Die Rich-Table-Struktur konnte dem Klartext nicht zuverlässig zugeordnet werden; der vollständige Klartext wurde beibehalten."
+structured_html_only = "Die Zwischenablage enthielt keinen Klartexttext; validiertes HTML mit Tabelle wurde als Inhaltsquelle verwendet."
 structured_invalid = "Die Tabellenstruktur der Zwischenablage ist ungültig und wurde nicht importiert."
 table_fallback = "{count} Zwischenablage-Tabelle(n) konnten nicht sicher als Markdown-Tabelle dargestellt werden; der Zelltext wurde als Klartext beibehalten."
 images_omitted = "{count} Zwischenablage-Bild(er) wurden nicht importiert; verfügbarer Text wurde beibehalten."
