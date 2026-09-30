@@ -130,6 +130,10 @@ class RouteSpec:
     visibility: Literal["public", "internal"] = "public"
     """Discovery visibility. Internal routes remain executable but are not public file formats."""
 
+    def __post_init__(self) -> None:
+        if self.visibility not in {"public", "internal"}:
+            raise ValueError("route visibility must be 'public' or 'internal'")
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "source_format": self.source_format,
