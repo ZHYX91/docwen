@@ -11,6 +11,11 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
+from docwen_core.models.clipboard_document import (
+    MAX_CLIPBOARD_RESOURCE_BYTES,
+    load_clipboard_document_bytes,
+)
+
 _PREVIEW_MAX_CHARS = 240
 _PREVIEW_MAX_LINES = 3
 _SESSION_PREFIX = "session-"
@@ -279,6 +284,37 @@ class ClipboardInputStore:
 
         if not isinstance(payload, bytes) or not payload:
             raise ValueError("clipboard bundle main payload must be non-empty bytes")
+        document = load_clipboard_document_bytes(payload)
+        supplied: dict[str, tuple[str, str, bytes]] = {}
+        for resource_id, logical_path, media_type, resource_bytes in resources:
+            if (
+                not resource_id
+                or resource_id in supplied
+                or not logical_path
+                or not media_type
+                or not isinstance(resource_bytes, bytes)
+            ):
+                raise ValueError("invalid clipboard bundle resource")
+            supplied[resource_id] = (logical_path, media_type, resource_bytes)
+        declarations = {item.resource_id: item for item in document.resources}
+        if set(supplied) != set(declarations):
+            raise ValueError("clipboard bundle resources do not match document declarations")
+        ordered_resources: list[tuple[str, str, str, bytes]] = []
+        total_resource_bytes = 0
+        for declaration in document.resources:
+            logical_path, media_type, resource_bytes = supplied[declaration.resource_id]
+            digest = hashlib.sha256(resource_bytes).hexdigest()
+            if (
+                logical_path != declaration.logical_path
+                or media_type != declaration.media_type
+                or len(resource_bytes) != declaration.size_bytes
+                or digest != declaration.sha256
+            ):
+                raise ValueError("clipboard bundle resource identity does not match document declaration")
+            total_resource_bytes += len(resource_bytes)
+            ordered_resources.append((declaration.resource_id, logical_path, media_type, resource_bytes))
+        if total_resource_bytes > MAX_CLIPBOARD_RESOURCE_BYTES:
+            raise ValueError("clipboard bundle resource byte budget exceeded")
         self._sequence += 1
         display_name = display_name_template.format(index=self._sequence).strip()
         if not display_name:
@@ -303,7 +339,7 @@ class ClipboardInputStore:
             resource_root = bundle_root / "resources"
             if resources:
                 resource_root.mkdir()
-            for index, (resource_id, logical_path, media_type, resource_bytes) in enumerate(resources):
+            for index, (resource_id, logical_path, media_type, resource_bytes) in enumerate(ordered_resources):
                 if (
                     not resource_id
                     or resource_id in seen_ids
