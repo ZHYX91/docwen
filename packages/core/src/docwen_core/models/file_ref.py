@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 SOURCE_PRESENTATION_NAME_METADATA_KEY = "_docwen_source_presentation_name"
+MANAGED_INPUT_SHA256_METADATA_KEY = "_docwen_managed_input_sha256"
+MANAGED_INPUT_SIZE_BYTES_METADATA_KEY = "_docwen_managed_input_size_bytes"
 
 
 @dataclass(slots=True)
