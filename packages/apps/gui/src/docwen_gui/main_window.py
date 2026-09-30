@@ -421,12 +421,7 @@ class MainWindow(QWidget):
         text = mime_data.text()
         fallback_table_count = 0
         image_count = projection.image_count if projection is not None else 0
-        if (
-            projection is not None
-            and (projection.table_count or projection.fallback_table_count)
-            and projection.text.strip()
-        ):
-            text = projection.text
+        if projection is not None and (projection.table_count or projection.fallback_table_count):
             fallback_table_count = projection.fallback_table_count
         if not text.strip():
             self._info_area_vm.add_message(
@@ -489,6 +484,7 @@ class MainWindow(QWidget):
         from docwen_gui.clipboard_structured import (
             html_contains_table,
             project_structured_clipboard_html,
+            splice_plain_text_with_structured_tables,
         )
 
         html_bytes = bytes(mime_data.data("text/html"))
@@ -504,8 +500,21 @@ class MainWindow(QWidget):
             return True
         if not contains_table:
             return False
+        html_only = not mime_data.hasText()
         try:
             document = project_structured_clipboard_html(html_bytes)
+            if not html_only:
+                merged = splice_plain_text_with_structured_tables(document, mime_data.text())
+                if merged is None:
+                    self._info_area_vm.add_message(
+                        _t(
+                            "clipboard.structured_plain_fallback",
+                            "Rich table structure could not be matched reliably to plain text; the complete plain text was kept.",
+                        ),
+                        "warning",
+                    )
+                    return False
+                document = merged
             payload = clipboard_document_to_bytes(document)
             store = self._clipboard_store_for_paste()
             bundle = store.create_bundle(
@@ -529,8 +538,17 @@ class MainWindow(QWidget):
         def completed(outcome) -> None:
             if not outcome.added:
                 store.discard_if_unowned(bundle.main.path)
-            elif image_count:
-                self._info_area_vm.add_message(_t("clipboard.images_omitted", count=image_count), "warning")
+            else:
+                if html_only:
+                    self._info_area_vm.add_message(
+                        _t(
+                            "clipboard.structured_html_only",
+                            "The clipboard had no plain-text body; verified table-bearing HTML was used as the content source.",
+                        ),
+                        "warning",
+                    )
+                if image_count:
+                    self._info_area_vm.add_message(_t("clipboard.images_omitted", count=image_count), "warning")
             self._sync_clipboard_visible_inputs()
 
         from docwen_core.detection import inspect_structured_clipboard_snapshot
