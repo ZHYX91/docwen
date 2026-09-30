@@ -396,6 +396,7 @@ ROUTE_CLIPBOARD_TO_DOCX = RouteSpec(
     target_format="docx",
     label="Structured Clipboard → DOCX",
     options_schema=CLIPBOARD_TO_DOCX_OPTIONS_SCHEMA,
+    visibility="internal",
 )
 
 ROUTE_CLIPBOARD_TO_XLSX = RouteSpec(
@@ -403,6 +404,7 @@ ROUTE_CLIPBOARD_TO_XLSX = RouteSpec(
     target_format="xlsx",
     label="Structured Clipboard → XLSX",
     options_schema=CLIPBOARD_TO_XLSX_OPTIONS_SCHEMA,
+    visibility="internal",
 )
 
 ROUTE_CLIPBOARD_TO_MARKDOWN = RouteSpec(
@@ -410,6 +412,7 @@ ROUTE_CLIPBOARD_TO_MARKDOWN = RouteSpec(
     target_format="md",
     label="Structured Clipboard → Markdown",
     options_schema=CLIPBOARD_TO_MARKDOWN_OPTIONS_SCHEMA,
+    visibility="internal",
 )
 
 ROUTE_CLIPBOARD_TO_CSV = RouteSpec(
@@ -417,6 +420,7 @@ ROUTE_CLIPBOARD_TO_CSV = RouteSpec(
     target_format="csv",
     label="Structured Clipboard → CSV",
     options_schema=_NOT_IMPL_OPTIONS_SCHEMA,
+    visibility="internal",
 )
 
 
