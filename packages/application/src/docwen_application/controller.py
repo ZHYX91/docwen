@@ -618,7 +618,11 @@ class ApplicationController:
         if len(group_requests) != len(request.input_refs) or not group_requests:
             raise ValueError("document-group batch must align one frozen group to each parent source")
 
-        request = self._freeze_manifest_context(request)
+        parent_config = deepcopy(getattr(request, "config_snapshot", {}))
+        if not parent_config and self._config_port is not None:
+            captured = cast(object, self._config_port.snapshot())
+            parent_config = deepcopy(captured) if isinstance(captured, dict) else {}
+        request = replace(request, config_snapshot=parent_config, manifest_context=None)
         scope = self._obtain_cancellation_scope(request, batch=True, claim=True, retain=False)
         results: list[Any] = []
         try:
