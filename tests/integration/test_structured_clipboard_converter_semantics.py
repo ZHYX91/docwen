@@ -22,6 +22,8 @@ from docwen_core.models.file_ref import (
     FileRef,
 )
 from docwen_core.models.request import ConversionRequest, OutputPolicy
+from docwen_core.markdown_extensions import MarkdownExtensions
+from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
 from docwen_gui.clipboard_structured import project_structured_clipboard_html
 from docwen_plugin_markdown.plugin import MarkdownPlugin
 from docwen_runtime.adapters import RuntimePortAdapter
@@ -362,3 +364,52 @@ def test_structural_markdown_falls_back_for_nested_or_headerless_tables(tmp_path
     assert "before" in text and "nested" in text and "after" in text
     assert "header_rows=0" in text
     assert "CLIPBOARD-MARKDOWN-STRUCTURAL-FALLBACK" in {item.code for item in result.diagnostics}
+
+
+
+def _ast_descendants(nodes):
+    for node in nodes:
+        yield node
+        yield from _ast_descendants(node.get("children", []))
+
+
+def test_structural_markdown_final_file_reparses_authored_punctuation_as_text(tmp_path: Path) -> None:
+    literals = (
+        "$A^2$",
+        "$P(A|B)$",
+        "==mark==",
+        "`code`",
+        "**bold**",
+        "<b>raw</b>",
+        r"pipe|slash\literal",
+        "<",
+        "^",
+    )
+    header = "".join(f"<th>H{index}</th>" for index in range(len(literals)))
+    body = "".join(f"<td>{value.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')}</td>" for value in literals)
+    html = f"<table><tr>{header}</tr><tr>{body}</tr></table>".encode()
+    result = _controller(tmp_path).execute_single(
+        _request(
+            tmp_path,
+            request_id="md-literal-reparse",
+            target="md",
+            html=html,
+            options={"markdown_extensions": {"output": {"structural_tables": True}}},
+        )
+    )
+    output = _primary(result)
+    markdown = output.read_text(encoding="utf-8")
+    ast = parse_markdown_text(markdown, extensions=MarkdownExtensions(structural_tables=True))
+    table = next(node for node in ast if node.get("type") == "table")
+    descendants = tuple(_ast_descendants([table]))
+    forbidden = {"inline_math", "mark", "highlight", "codespan", "emphasis", "strong", "inline_html"}
+    assert not any(node.get("type") in forbidden for node in descendants)
+    visible_text = "".join(str(node.get("raw", "")) for node in descendants if node.get("type") == "text")
+    for literal in literals:
+        assert literal in visible_text
+    structural = table.get("_structural_table")
+    assert isinstance(structural, dict)
+    rows = table["children"]
+    authored_cells = rows[-1]["children"]
+    assert authored_cells[-2]["attrs"]["docwen_literal_merge_marker"] is True
+    assert authored_cells[-1]["attrs"]["docwen_literal_merge_marker"] is True
