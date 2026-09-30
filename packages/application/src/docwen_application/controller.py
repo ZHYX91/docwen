@@ -628,9 +628,7 @@ class ApplicationController:
         scope = self._obtain_cancellation_scope(request, batch=True, claim=True, retain=False)
         results: list[Any] = []
         try:
-            for index, (parent_source, frozen_group) in enumerate(
-                zip(request.input_refs, group_requests, strict=True)
-            ):
+            for index, (parent_source, frozen_group) in enumerate(zip(request.input_refs, group_requests, strict=True)):
                 task_id = f"{request.request_id}-{index}"
                 if scope.token.is_cancelled:
                     results.extend(
@@ -709,7 +707,6 @@ class ApplicationController:
             return results
         finally:
             self._complete_cancellation_scope(scope)
-
 
     @staticmethod
     def _cancelled_results(
