@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import threading
 import time
 from pathlib import Path
@@ -465,3 +467,153 @@ def test_thread_start_error_after_native_start_retains_ownership_until_finished(
 
     assert controller.released == [(request.request_id, controller.reservation)]
     assert main_window._execution._owners == {}
+
+
+
+def _structured_bundle_for_lifecycle(window, tmp_path: Path):
+    from docwen_core.models.clipboard_document import CLIPBOARD_DOCUMENT_SCHEMA
+
+    window._clipboard_input_root = tmp_path / "structured-clipboard-inputs"
+    store = window._clipboard_store_for_paste()
+    resource_bytes = b"lifecycle-resource"
+    payload = json.dumps(
+        {
+            "schema": CLIPBOARD_DOCUMENT_SCHEMA,
+            "blocks": [],
+            "resources": [
+                {
+                    "resourceId": "asset-lifecycle",
+                    "logicalPath": "resources/lifecycle.bin",
+                    "mediaType": "application/octet-stream",
+                    "sizeBytes": len(resource_bytes),
+                    "sha256": hashlib.sha256(resource_bytes).hexdigest(),
+                }
+            ],
+        },
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    bundle = store.create_bundle(
+        payload,
+        display_name_template="Clipboard Document {index}.dwclip",
+        preview="lifecycle",
+        resources=(
+            (
+                "asset-lifecycle",
+                "resources/lifecycle.bin",
+                "application/octet-stream",
+                resource_bytes,
+            ),
+        ),
+    )
+    return store, bundle
+
+
+def test_structured_bundle_survives_clear_until_background_inspection_finalizes(
+    main_window,
+    qapp,
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    from docwen_core.detection import inspect_structured_clipboard_snapshot
+
+    store, bundle = _structured_bundle_for_lifecycle(main_window, tmp_path)
+    entered = threading.Event()
+    release = threading.Event()
+
+    def slow_inspector(path: str):
+        entered.set()
+        assert release.wait(3.0)
+        return inspect_structured_clipboard_snapshot(path)
+
+    main_window._input_area_vm.add_files(
+        [bundle.main.path],
+        file_inspector=slow_inspector,
+    )
+    assert entered.wait(1.0)
+    resource = Path(bundle.resources[0].path)
+    assert Path(bundle.main.path).is_file() and resource.is_file()
+
+    main_window._input_area_vm.clear_files()
+    qapp.processEvents()
+    assert main_window.view_model.files == []
+    assert Path(bundle.main.path).is_file() and resource.is_file()
+
+    release.set()
+    qtbot.waitUntil(lambda: not main_window.view_model.inspection_busy, timeout=3000)
+    qtbot.waitUntil(lambda: not Path(bundle.root_path).exists(), timeout=3000)
+
+
+def test_structured_bundle_active_owner_keeps_resources_until_worker_finishes(
+    main_window,
+    qapp,
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    store, bundle = _structured_bundle_for_lifecycle(main_window, tmp_path)
+    store.sync_visible([bundle.main.path])
+    resource = Path(bundle.resources[0].path)
+    release_event = threading.Event()
+    controller = _BlockingController(release_event, release_on_cancel=False)
+    request, thread = _launch_blocking_execution(
+        main_window,
+        tmp_path,
+        controller,
+        "structured-active",
+        source=Path(bundle.main.path),
+    )
+    qtbot.waitUntil(thread.isRunning, timeout=1000)
+
+    store.sync_visible([])
+    assert Path(bundle.main.path).is_file() and resource.is_file()
+    main_window._workflow.cancel()
+    assert controller.cancelled == [request.request_id]
+    assert thread.isRunning()
+    assert Path(bundle.main.path).is_file() and resource.is_file()
+
+    release_event.set()
+    qtbot.waitUntil(lambda: not main_window._execution.busy, timeout=3000)
+    qtbot.waitUntil(lambda: not Path(bundle.root_path).exists(), timeout=3000)
+
+
+def test_structured_bundle_failed_history_retains_whole_group_for_retry(
+    main_window,
+    qapp,
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    from docwen_core.models.result import ConversionErrorInfo, ConversionResult
+
+    store, bundle = _structured_bundle_for_lifecycle(main_window, tmp_path)
+    store.sync_visible([bundle.main.path])
+    resource = Path(bundle.resources[0].path)
+
+    class FailedController(_BlockingController):
+        def execute_single(self, request):
+            return ConversionResult(
+                task_id=str(request.request_id),
+                success=False,
+                error=ConversionErrorInfo(error_type="conversion_failed", message="retryable failure"),
+            )
+
+    controller = FailedController(threading.Event(), release_on_cancel=False)
+    request, _thread = _launch_blocking_execution(
+        main_window,
+        tmp_path,
+        controller,
+        "structured-failed-history",
+        source=Path(bundle.main.path),
+    )
+    store.sync_visible([])
+
+    def failed() -> bool:
+        record = main_window._task_history.get(request.request_id)
+        return bool(record and record.failed_paths)
+
+    qtbot.waitUntil(failed, timeout=3000)
+    qtbot.waitUntil(lambda: not main_window._execution.busy, timeout=3000)
+    assert Path(bundle.main.path).is_file() and resource.is_file()
+
+    main_window._task_history.clear()
+    qapp.processEvents()
+    qtbot.waitUntil(lambda: not Path(bundle.root_path).exists(), timeout=3000)
