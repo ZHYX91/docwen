@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QObject, QThread, Signal
 
-from docwen_gui.execution_admission import check_frozen_request
+from docwen_gui.execution_admission import ExecutionAdmissionError, check_frozen_request
 
 if TYPE_CHECKING:
     from docwen_application.controller import ApplicationController
@@ -52,7 +52,7 @@ class ExecutionThread(QThread):
                 for index, group in enumerate(self._document_group_requests):
                     try:
                         check_frozen_request(group)
-                    except Exception:
+                    except ExecutionAdmissionError:
                         frozen_invalid_indices.add(index)
             else:
                 check_frozen_request(self._request)
