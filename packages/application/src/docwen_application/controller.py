@@ -595,6 +595,103 @@ class ApplicationController:
             finally:
                 self._complete_cancellation_scope(scope)
 
+    def execute_document_group_batch(
+        self,
+        request: Any,
+        group_requests: tuple[Any, ...],
+    ) -> list[Any]:
+        """Execute GUI document groups with resources under one batch cancellation scope.
+
+        The parent request contains only independent sources and therefore keeps
+        the existing parent/index cancellation identity. Each frozen child owns
+        exactly one source plus its typed resources. Ordinary execute_batch is
+        intentionally unchanged.
+        """
+
+        from copy import deepcopy
+
+        from docwen_core.detection import enforce_file_admission, freeze_ooxml_signature_info
+        from docwen_core.models.result import ConversionErrorInfo, ConversionResult
+
+        if any(ref.input_role != "source" for ref in request.input_refs):
+            raise ValueError("document-group batch parent accepts only independent source inputs")
+        if len(group_requests) != len(request.input_refs) or not group_requests:
+            raise ValueError("document-group batch must align one frozen group to each parent source")
+
+        request = self._freeze_manifest_context(request)
+        scope = self._obtain_cancellation_scope(request, batch=True, claim=True, retain=False)
+        results: list[Any] = []
+        try:
+            for index, (parent_source, frozen_group) in enumerate(
+                zip(request.input_refs, group_requests, strict=True)
+            ):
+                task_id = f"{request.request_id}-{index}"
+                if scope.token.is_cancelled:
+                    results.extend(
+                        self._cancelled_result(f"{request.request_id}-{remaining}")
+                        for remaining in range(index, len(group_requests))
+                    )
+                    break
+
+                group_sources = [
+                    ref for ref in frozen_group.input_refs if ref.input_role in {"source", "neutral_document"}
+                ]
+                if (
+                    len(group_sources) != 1
+                    or group_sources[0].path != parent_source.path
+                    or frozen_group.target_format != request.target_format
+                    or frozen_group.action_name != request.action_name
+                ):
+                    raise ValueError("document-group batch child does not match its parent source or route")
+
+                child = replace(
+                    frozen_group,
+                    request_id=task_id,
+                    options=deepcopy(request.options),
+                    output_policy=request.output_policy.for_input(parent_source.path),
+                    config_snapshot=deepcopy(request.config_snapshot),
+                    manifest_context=None,
+                )
+                managed: _ManagedPreconversion | None = None
+                manifest_request = child
+                try:
+                    child = enforce_file_admission(child)
+                    child = freeze_ooxml_signature_info(child)
+                    child = self._freeze_manifest_context(child)
+                    manifest_request = child
+                    prepared = self._maybe_preconvert(child, cancellation=scope.token.view(), batch=False)
+                    managed = prepared if isinstance(prepared, _ManagedPreconversion) else None
+                    prepared_payload = prepared.payload if isinstance(prepared, _ManagedPreconversion) else prepared
+                    manifest_request = managed.manifest_request if managed is not None else child
+                    if isinstance(prepared_payload, _PreconversionTerminal):
+                        result = prepared_payload.results[0]
+                    elif isinstance(prepared_payload, ConversionResult):
+                        result = prepared_payload
+                    else:
+                        result = self._execute_runtime_request(prepared_payload, scope, task_id)
+                    results.append(self._persist_output_manifests(manifest_request, result))
+                except Exception as exc:
+                    error_type = getattr(exc, "error_type", "conversion_failed")
+                    diagnostic_code = getattr(exc, "diagnostic_code", "")
+                    results.append(
+                        ConversionResult(
+                            task_id=task_id,
+                            success=False,
+                            error=ConversionErrorInfo(
+                                error_type=str(error_type or "conversion_failed"),
+                                message="Document group execution failed.",
+                                diagnostic_code=str(diagnostic_code or ""),
+                            ),
+                        )
+                    )
+                finally:
+                    if managed is not None:
+                        managed.cleanup()
+            return results
+        finally:
+            self._complete_cancellation_scope(scope)
+
+
     @staticmethod
     def _cancelled_results(
         request: Any,
