@@ -58,6 +58,7 @@ class RuntimePortAdapter:
         event_callback: Callable[[TaskEvent], None] | None = None,
         config_loader: ConfigLoader | None = None,
         capability_provider: Callable[[], dict[str, Any]] | None = None,
+        gui_capability_provider: Callable[[], dict[str, Any]] | None = None,
         output_manifest_writer: OutputManifestWriter | None = None,
     ) -> None:
         self._task_manager = task_manager
@@ -66,6 +67,7 @@ class RuntimePortAdapter:
         self._collected_events: list[TaskEvent] = []
         self._config_loader = config_loader
         self._capability_provider = capability_provider
+        self._gui_capability_provider = gui_capability_provider
         self._output_manifest_writer = output_manifest_writer
 
     def execute(self, request: Any) -> Any:
@@ -174,6 +176,16 @@ class RuntimePortAdapter:
         provider = self._capability_provider
         if provider is None:
             raise RuntimeError("runtime_capability_discovery_unavailable")
+        return provider()
+
+    def describe_gui_capabilities(self) -> dict[str, Any]:
+        """Reflect the same loaded composition including internal desktop routes."""
+
+        provider = self._gui_capability_provider
+        if provider is None:
+            provider = self._capability_provider
+        if provider is None:
+            raise RuntimeError("runtime_gui_capability_discovery_unavailable")
         return provider()
 
     def shutdown(self) -> None:
