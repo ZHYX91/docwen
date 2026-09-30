@@ -327,7 +327,9 @@ class MainWindow(QWidget):
 
     def _clipboard_bundle(self, file_path: str):
         store = self._clipboard_store
-        return store.bundle(file_path) if store is not None else None
+        if store is None or not store.snapshot_available(file_path):
+            return None
+        return store.bundle(file_path)
 
     def _clipboard_presentation(self, file_path: str):
         descriptor = self._clipboard_descriptor(file_path)
