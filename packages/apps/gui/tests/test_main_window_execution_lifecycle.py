@@ -544,11 +544,13 @@ def test_structured_bundle_survives_clear_until_background_inspection_finalizes(
     qtbot.waitUntil(lambda: not Path(bundle.root_path).exists(), timeout=3000)
 
 
+@pytest.mark.parametrize("cancel_by_close", [False, True])
 def test_structured_bundle_active_owner_keeps_resources_until_worker_finishes(
     main_window,
     qapp,
     qtbot,
     tmp_path: Path,
+    cancel_by_close: bool,
 ) -> None:
     store, bundle = _structured_bundle_for_lifecycle(main_window, tmp_path)
     store.sync_visible([bundle.main.path])
@@ -566,13 +568,20 @@ def test_structured_bundle_active_owner_keeps_resources_until_worker_finishes(
 
     store.sync_visible([])
     assert Path(bundle.main.path).is_file() and resource.is_file()
-    main_window._workflow.cancel()
+    main_window.show()
+    if cancel_by_close:
+        assert not main_window.close()
+        assert main_window.isVisible()
+    else:
+        main_window._workflow.cancel()
     assert controller.cancelled == [request.request_id]
     assert thread.isRunning()
     assert Path(bundle.main.path).is_file() and resource.is_file()
 
     release_event.set()
     qtbot.waitUntil(lambda: not main_window._execution.busy, timeout=3000)
+    if cancel_by_close:
+        qtbot.waitUntil(lambda: main_window._shutdown_finalized, timeout=3000)
     qtbot.waitUntil(lambda: not Path(bundle.root_path).exists(), timeout=3000)
 
 
