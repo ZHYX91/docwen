@@ -154,7 +154,8 @@ def test_xlsx_route_preserves_string_values_merges_and_document_order(tmp_path: 
     assert result.success, result.error
     output = Path(next(item for item in result.artifacts if item.is_primary).staging_path)
     workbook = load_workbook(output)
-    assert workbook.sheetnames[:3] == ["Document Order", "Table 1", "Table 2"]
+    assert workbook.sheetnames[:2] == ["Document Order", "Table Semantics"]
+    assert {"Table 1", "Table 2"} <= set(workbook.sheetnames)
 
     outer = workbook["Table 1"]
     assert {"A1:A2", "B1:C1", "A3:A4"} <= {str(item) for item in outer.merged_cells.ranges}
@@ -186,7 +187,7 @@ def test_lossy_text_targets_publish_visible_projection_and_diagnostic(tmp_path: 
         assert "Intro 00123" in text and "before" in text and "nested" in text and "after" in text
         assert "<table" not in text.lower()
     else:
-        assert len(paths) == 3
+        assert len(paths) == 4
         combined = "\n".join(path.read_text(encoding="utf-8-sig") for path in paths)
         assert "Intro 00123" in combined and "before" in combined and "nested" in combined and "after" in combined
 
