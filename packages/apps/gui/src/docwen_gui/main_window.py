@@ -440,9 +440,7 @@ class MainWindow(QWidget):
     def _paste_file_paths(self, file_paths: list[str]) -> None:
         """Paste one captured local-file list through normal file admission."""
 
-        needs_batch = self._input_area_vm.mode == "single" and (
-            len(file_paths) != 1 or Path(file_paths[0]).is_dir()
-        )
+        needs_batch = self._input_area_vm.mode == "single" and (len(file_paths) != 1 or Path(file_paths[0]).is_dir())
         if not needs_batch:
             self._input_area_vm.add_files(file_paths)
             return

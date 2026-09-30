@@ -144,14 +144,31 @@ def test_clipboard_relative_image_has_no_implicit_source_directory(
     assert image_path.read_bytes() == image_bytes
 
     # An ordinary file genuinely located beside that image retains its normal
-    # source-relative behavior through exactly the same conversion pipeline.
+    # source-relative behavior through exactly the same GUI Builder + runtime
+    # pipeline, but without the synthetic no-source boundary.
     regular = image_root / "regular.md"
     regular.write_text(text, encoding="utf-8")
-    ref.path = str(regular)
-    ref.metadata = {FILE_INSPECTION_METADATA_KEY: inspect_file(regular).to_dict()}
-    request.request_id = "ordinary-resource-control"
-    request.output_policy = OutputPolicy(output_dir=str(tmp_path / "ordinary-output"))
-    control = controller.execute_single(request)
+    ordinary_inspection = inspect_file(regular)
+    ordinary_ref = FileRef(
+        path=str(regular),
+        format=ordinary_inspection.detected_format,
+        category=ordinary_inspection.workflow_category,
+        metadata={FILE_INSPECTION_METADATA_KEY: ordinary_inspection.to_dict()},
+    )
+    ordinary_builder = ExecutionRequestBuilder(
+        SimpleNamespace(files=[ordinary_ref], controller=None),
+        SimpleNamespace(get_file_entry=lambda _path: None),
+        file_contexts=lambda: {normalize_path(str(regular)): ("markdown", "markdown")},
+        selected_template=lambda: ("docx", template.id),
+    )
+    ordinary_request, _ = ordinary_builder.single(
+        file_path=str(regular),
+        target_format="docx",
+        action_name="",
+        options={},
+        output_policy=OutputPolicy(output_dir=str(tmp_path / "ordinary-output")),
+    )
+    control = controller.execute_single(ordinary_request)
     assert control.success, control.error
     primary = next(artifact for artifact in control.artifacts if artifact.kind == "primary")
     assert len(Document(primary.staging_path).inline_shapes) == 1
