@@ -187,7 +187,11 @@ class ExecutionCoordinator(QObject):
         except ValueError as exc:
             self._info_area_vm.add_message(str(exc), "warning")
             return
-        if not self._admit(request, context) or not self._accepting:
+        document_group_requests = tuple(context.pop("_document_group_requests", ()))
+        if document_group_requests and mode != "batch":
+            raise ValueError("document-group execution is only valid for batch mode")
+        admission_requests = document_group_requests or (request,)
+        if not self._admit_many(request, admission_requests, context) or not self._accepting:
             return
         task_id = request.request_id
 
@@ -223,6 +227,7 @@ class ExecutionCoordinator(QObject):
             project_reserved_execution=project_reserved_execution,
             aggregate_action_name=action_name if mode == "aggregate" else "",
             batch_execution=mode == "batch",
+            document_group_requests=document_group_requests,
         )
 
     def _preflight_notice(
@@ -323,6 +328,7 @@ class ExecutionCoordinator(QObject):
         project_reserved_execution: Callable[[], None],
         aggregate_action_name: str = "",
         batch_execution: bool = False,
+        document_group_requests: tuple[ConversionRequest, ...] = (),
     ) -> bool:
         """Project an owned request; the supervisor owns reservation and cleanup."""
         if not self._accepting:
@@ -345,17 +351,31 @@ class ExecutionCoordinator(QObject):
             on_reserved=on_reserved,
             aggregate_action_name=aggregate_action_name,
             batch_execution=batch_execution,
+            document_group_requests=document_group_requests,
         )
 
     def _admit(self, request: ConversionRequest, context: dict[str, Any]) -> bool:
         """Project rejected attempts through the same result and history as worker failures."""
+        return self._admit_many(request, (request,), context)
+
+    def _admit_many(
+        self,
+        parent_request: ConversionRequest,
+        requests: tuple[ConversionRequest, ...],
+        context: dict[str, Any],
+    ) -> bool:
+        """Confirm every frozen document group while reporting one parent operation."""
+
         try:
-            return self._confirm_request(request)
+            for request in requests:
+                if not self._confirm_request(request):
+                    return False
+            return True
         except ExecutionAdmissionError as exc:
             self.started_at = time.monotonic()
             self._context = dict(context)
             self._info_area_vm.begin_task(
-                operation_id=request.request_id,
+                operation_id=parent_request.request_id,
                 current_file=context.get("display_name", Path(context.get("file_path", "")).name),
                 total_count=int(context.get("total_count", 1)),
             )
