@@ -16,6 +16,9 @@ _PREVIEW_MAX_LINES = 3
 _SESSION_PREFIX = "session-"
 _OWNER_LOCK_NAME = ".owner.lock"
 _OWNER_MARKER = b"docwen-clipboard-session-v1\n"
+_BUNDLE_MARKER = b"docwen-clipboard-bundle-v1\n"
+_BUNDLE_MARKER_NAME = ".bundle.marker"
+_BUNDLE_PARTIAL_NAME = ".bundle.partial"
 
 
 @contextmanager
@@ -84,6 +87,24 @@ class ClipboardInputDescriptor:
     sha256: str
 
 
+@dataclass(frozen=True, slots=True)
+class ClipboardResourceDescriptor:
+    resource_id: str
+    path: str
+    logical_path: str
+    media_type: str
+    size_bytes: int
+    sha256: str
+
+
+@dataclass(frozen=True, slots=True)
+class ClipboardSnapshotBundle:
+    root_path: str
+    main: ClipboardInputDescriptor
+    resources: tuple[ClipboardResourceDescriptor, ...]
+    marker_path: str
+
+
 def bounded_plaintext_preview(text: str) -> str:
     """Return a short display-only preview without changing the stored bytes."""
 
@@ -136,6 +157,8 @@ class ClipboardInputStore:
                 shutil.rmtree(self._session_root, ignore_errors=True)
                 raise
         self._snapshots: dict[str, ClipboardInputDescriptor] = {}
+        self._bundles: dict[str, ClipboardSnapshotBundle] = {}
+        self._bundle_members: dict[str, str] = {}
         self._visible: set[str] = set()
         self._inspection: dict[str, set[str]] = {}
         self._active: dict[str, set[str]] = {}
@@ -236,30 +259,150 @@ class ClipboardInputStore:
         self._snapshots[self._key(path)] = descriptor
         return descriptor
 
+    @staticmethod
+    def _write_fsynced(path: Path, payload: bytes) -> None:
+        with path.open("xb") as stream:
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+
+    def create_bundle(
+        self,
+        payload: bytes,
+        *,
+        display_name_template: str,
+        preview: str,
+        suffix: str = ".dwclip",
+        resources: tuple[tuple[str, str, str, bytes], ...] = (),
+    ) -> ClipboardSnapshotBundle:
+        """Freeze one structured main input and all of its resource bytes as one owner group."""
+
+        if not isinstance(payload, bytes) or not payload:
+            raise ValueError("clipboard bundle main payload must be non-empty bytes")
+        self._sequence += 1
+        display_name = display_name_template.format(index=self._sequence).strip()
+        if not display_name:
+            display_name = f"Clipboard Document {self._sequence}{suffix}"
+        bundle_root = self._session_root / f"bundle-{uuid.uuid4().hex}"
+        main_path = bundle_root / f"main{suffix}"
+        marker_path = bundle_root / _BUNDLE_MARKER_NAME
+        partial_path = bundle_root / _BUNDLE_PARTIAL_NAME
+        main = ClipboardInputDescriptor(
+            path=str(main_path),
+            display_name=display_name,
+            preview=preview[:_PREVIEW_MAX_CHARS],
+            size_bytes=len(payload),
+            sha256=hashlib.sha256(payload).hexdigest(),
+        )
+        resource_descriptors: list[ClipboardResourceDescriptor] = []
+        seen_ids: set[str] = set()
+        seen_logical: set[str] = set()
+        try:
+            bundle_root.mkdir()
+            self._write_fsynced(partial_path, b"creating\n")
+            resource_root = bundle_root / "resources"
+            if resources:
+                resource_root.mkdir()
+            for index, (resource_id, logical_path, media_type, resource_bytes) in enumerate(resources):
+                if (
+                    not resource_id
+                    or resource_id in seen_ids
+                    or not logical_path
+                    or logical_path in seen_logical
+                    or not isinstance(resource_bytes, bytes)
+                ):
+                    raise ValueError("invalid clipboard bundle resource")
+                seen_ids.add(resource_id)
+                seen_logical.add(logical_path)
+                resource_path = resource_root / f"resource-{index:04d}"
+                self._write_fsynced(resource_path, resource_bytes)
+                resource_descriptors.append(
+                    ClipboardResourceDescriptor(
+                        resource_id=resource_id,
+                        path=str(resource_path),
+                        logical_path=logical_path,
+                        media_type=media_type,
+                        size_bytes=len(resource_bytes),
+                        sha256=hashlib.sha256(resource_bytes).hexdigest(),
+                    )
+                )
+            self._write_fsynced(main_path, payload)
+            partial_path.unlink()
+            self._write_fsynced(marker_path, _BUNDLE_MARKER)
+        except BaseException:
+            try:
+                shutil.rmtree(bundle_root)
+            except OSError:
+                self._cleanup_pending = True
+            raise
+
+        bundle = ClipboardSnapshotBundle(
+            root_path=str(bundle_root),
+            main=main,
+            resources=tuple(resource_descriptors),
+            marker_path=str(marker_path),
+        )
+        main_key = self._key(main.path)
+        self._snapshots[main_key] = main
+        self._bundles[main_key] = bundle
+        self._bundle_members[main_key] = main_key
+        for resource in resource_descriptors:
+            self._bundle_members[self._key(resource.path)] = main_key
+        return bundle
+
+    def _snapshot_key(self, path: str | os.PathLike[str]) -> str | None:
+        key = self._key(path)
+        if key in self._snapshots:
+            return key
+        return self._bundle_members.get(key)
+
     def descriptor(self, path: str | os.PathLike[str]) -> ClipboardInputDescriptor | None:
-        return self._snapshots.get(self._key(path))
+        key = self._snapshot_key(path)
+        return self._snapshots.get(key) if key is not None else None
+
+    def bundle(self, path: str | os.PathLike[str]) -> ClipboardSnapshotBundle | None:
+        key = self._snapshot_key(path)
+        return self._bundles.get(key) if key is not None else None
 
     def is_snapshot(self, path: str | os.PathLike[str]) -> bool:
-        return self._key(path) in self._snapshots
+        return self._snapshot_key(path) is not None
+
+    @staticmethod
+    def _descriptor_available(path: str, size_bytes: int, sha256: str) -> bool:
+        candidate = Path(path)
+        if not candidate.is_file() or candidate.stat().st_size != size_bytes:
+            return False
+        digest = hashlib.sha256()
+        with candidate.open("rb") as stream:
+            while chunk := stream.read(1024 * 1024):
+                digest.update(chunk)
+        return digest.hexdigest() == sha256
 
     def snapshot_available(self, path: str | os.PathLike[str]) -> bool:
-        descriptor = self.descriptor(path)
-        if descriptor is None:
+        key = self._snapshot_key(path)
+        if key is None:
             return False
-        snapshot = Path(descriptor.path)
+        descriptor = self._snapshots[key]
+        bundle = self._bundles.get(key)
         try:
-            if not snapshot.is_file() or snapshot.stat().st_size != descriptor.size_bytes:
+            if not self._descriptor_available(descriptor.path, descriptor.size_bytes, descriptor.sha256):
                 return False
-            digest = hashlib.sha256()
-            with snapshot.open("rb") as stream:
-                while chunk := stream.read(1024 * 1024):
-                    digest.update(chunk)
-            return digest.hexdigest() == descriptor.sha256
+            if bundle is None:
+                return True
+            marker = Path(bundle.marker_path)
+            if not marker.is_file() or marker.read_bytes() != _BUNDLE_MARKER:
+                return False
+            if Path(bundle.root_path, _BUNDLE_PARTIAL_NAME).exists():
+                return False
+            return all(
+                self._descriptor_available(resource.path, resource.size_bytes, resource.sha256)
+                for resource in bundle.resources
+            )
         except OSError:
             return False
 
     def retain_inspection(self, owner: str, paths: list[str] | tuple[str, ...]) -> None:
-        retained = {key for path in paths if (key := self._key(path)) in self._snapshots}
+        retained = {key for path in paths if (key := self._snapshot_key(path)) is not None}
         if retained:
             self._inspection[owner] = retained
 
@@ -268,11 +411,11 @@ class ClipboardInputStore:
         self._collect_unowned()
 
     def sync_visible(self, paths: list[str] | tuple[str, ...]) -> None:
-        self._visible = {key for path in paths if (key := self._key(path)) in self._snapshots}
+        self._visible = {key for path in paths if (key := self._snapshot_key(path)) is not None}
         self._collect_unowned()
 
     def retain_active(self, owner: str, paths: list[str] | tuple[str, ...]) -> None:
-        retained = {key for path in paths if (key := self._key(path)) in self._snapshots}
+        retained = {key for path in paths if (key := self._snapshot_key(path)) is not None}
         if retained:
             self._active[owner] = retained
 
@@ -281,7 +424,7 @@ class ClipboardInputStore:
         self._collect_unowned()
 
     def retain_history(self, owner: str, paths: list[str] | tuple[str, ...]) -> None:
-        retained = {key for path in paths if (key := self._key(path)) in self._snapshots}
+        retained = {key for path in paths if (key := self._snapshot_key(path)) is not None}
         if retained:
             self._history[owner] = retained
         else:
@@ -292,7 +435,9 @@ class ClipboardInputStore:
         self._collect_unowned()
 
     def discard_if_unowned(self, path: str | os.PathLike[str]) -> None:
-        self._collect_unowned({self._key(path)})
+        key = self._snapshot_key(path)
+        if key is not None:
+            self._collect_unowned({key})
 
     def _owned_keys(self) -> set[str]:
         owned = set(self._visible)
@@ -308,11 +453,21 @@ class ClipboardInputStore:
         owned = self._owned_keys()
         keys = set(self._snapshots) if candidates is None else candidates & set(self._snapshots)
         for key in keys - owned:
-            descriptor = self._snapshots.pop(key)
+            descriptor = self._snapshots[key]
+            bundle = self._bundles.get(key)
             try:
-                Path(descriptor.path).unlink(missing_ok=True)
+                if bundle is not None:
+                    shutil.rmtree(bundle.root_path)
+                else:
+                    Path(descriptor.path).unlink(missing_ok=True)
             except OSError:
-                self._snapshots[key] = descriptor
+                continue
+            self._snapshots.pop(key, None)
+            removed_bundle = self._bundles.pop(key, None)
+            if removed_bundle is not None:
+                self._bundle_members.pop(key, None)
+                for resource in removed_bundle.resources:
+                    self._bundle_members.pop(self._key(resource.path), None)
 
     def close(self) -> None:
         """Release owned files without forgetting cleanup failures."""
@@ -336,4 +491,10 @@ class ClipboardInputStore:
             self._cleanup_pending = False
 
 
-__all__ = ["ClipboardInputDescriptor", "ClipboardInputStore", "bounded_plaintext_preview"]
+__all__ = [
+    "ClipboardInputDescriptor",
+    "ClipboardInputStore",
+    "ClipboardResourceDescriptor",
+    "ClipboardSnapshotBundle",
+    "bounded_plaintext_preview",
+]
