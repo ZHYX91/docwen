@@ -47,28 +47,49 @@ def _load(context: Any) -> ClipboardDocument:
 
 
 def _image_diagnostics(document: ClipboardDocument) -> list[ConversionDiagnostic]:
-    count = 0
+    missing_count = 0
+    bound_count = 0
 
     def walk(blocks: tuple[ClipboardBlock, ...]) -> None:
-        nonlocal count
+        nonlocal missing_count, bound_count
         for block in blocks:
             if isinstance(block, ClipboardParagraph):
-                count += sum(isinstance(item, ClipboardImageRef) for item in block.inlines)
+                for item in block.inlines:
+                    if not isinstance(item, ClipboardImageRef):
+                        continue
+                    if item.resource_id is None:
+                        missing_count += 1
+                    else:
+                        bound_count += 1
             else:
                 for cell in block.cells:
                     walk(cell.blocks)
 
     walk(document.blocks)
-    if not count:
-        return []
-    return [
-        ConversionDiagnostic(
-            level="warning",
-            code="CLIPBOARD-IMAGE-RESOURCE-UNAVAILABLE",
-            message=f"{count} clipboard image occurrence(s) had no verified resource bytes and were kept as text placeholders.",
+    diagnostics: list[ConversionDiagnostic] = []
+    if missing_count:
+        diagnostics.append(
+            ConversionDiagnostic(
+                level="warning",
+                code="CLIPBOARD-IMAGE-RESOURCE-UNAVAILABLE",
+                message=(
+                    f"{missing_count} clipboard image occurrence(s) had no verified resource bytes "
+                    "and were kept as text placeholders."
+                ),
+            )
         )
-    ]
-
+    if bound_count:
+        diagnostics.append(
+            ConversionDiagnostic(
+                level="warning",
+                code="CLIPBOARD-IMAGE-RESOURCE-NOT-RENDERED",
+                message=(
+                    f"{bound_count} clipboard image occurrence(s) have verified linked resources; "
+                    "this structured-table converter preserves their bindings but does not render image bytes yet."
+                ),
+            )
+        )
+    return diagnostics
 
 def _paragraph_projection(paragraph: ClipboardParagraph) -> str:
     parts: list[str] = []
