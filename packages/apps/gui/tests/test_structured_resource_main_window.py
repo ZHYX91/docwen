@@ -171,7 +171,6 @@ def test_main_window_batch_freezes_two_isolated_document_groups_in_source_order(
     assert groups[0].input_refs[1].path != groups[1].input_refs[1].path
 
 
-
 def test_main_window_grouped_batch_reaches_runtime_with_isolated_resource_bytes(
     qapp,
     qtbot,
