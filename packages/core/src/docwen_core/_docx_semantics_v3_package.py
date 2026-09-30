@@ -42,6 +42,11 @@ from docwen_core.docx_citation_ooxml import (
     parse_citation_item_map,
     parse_citation_occurrence_map,
 )
+from docwen_core.clipboard_table_associations import (
+    CLIPBOARD_TABLE_ASSOCIATION_MAP_NAMESPACE,
+    clipboard_table_association_map_xml,
+    parse_clipboard_table_association_map,
+)
 from docwen_core.docx_numbering_occurrence import (
     NUMBERING_OCCURRENCE_MAP_NAMESPACE,
     numbering_occurrence_map_xml,
@@ -61,6 +66,7 @@ _OWNED_MAP_NAMESPACES = frozenset(
     {
         ANCHOR_TOPOLOGY_MAP_NAMESPACE,
         CAPTION_STYLE_BINDING_MAP_NAMESPACE,
+        CLIPBOARD_TABLE_ASSOCIATION_MAP_NAMESPACE,
         FENCED_SOURCE_MAP_NAMESPACE,
         CITATION_ITEM_MAP_NAMESPACE,
         CITATION_OCCURRENCE_MAP_NAMESPACE,
@@ -531,6 +537,8 @@ def _canonical_owned_map_bytes(namespace: str, root: Any) -> bytes:
         expected = caption_style_binding_map_xml(parse_caption_style_binding_map(root))
     elif namespace == FENCED_SOURCE_MAP_NAMESPACE:
         expected = fenced_source_map_xml(parse_fenced_source_map(root))
+    elif namespace == CLIPBOARD_TABLE_ASSOCIATION_MAP_NAMESPACE:
+        expected = clipboard_table_association_map_xml(parse_clipboard_table_association_map(root))
     elif namespace == NUMBERING_OCCURRENCE_MAP_NAMESPACE:
         expected = numbering_occurrence_map_xml(parse_numbering_occurrence_map(root))
     elif namespace == CITATION_ITEM_MAP_NAMESPACE:
