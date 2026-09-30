@@ -101,7 +101,7 @@ def _simple_cell_text(cell: ClipboardTableCell) -> str | None:
 
 def _escape_structural_value(value: str) -> str:
     escaped: list[str] = []
-    markdown_punctuation = frozenset("\\`*_{}[]()#+-.!|>~")
+    markdown_punctuation = frozenset("\\`*_{}[]()#+-.!|>~$=")
     for character in value:
         if character in markdown_punctuation or character in {"<", "^"}:
             escaped.append("\\")
