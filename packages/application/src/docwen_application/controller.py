@@ -599,6 +599,8 @@ class ApplicationController:
         self,
         request: Any,
         group_requests: tuple[Any, ...],
+        *,
+        frozen_invalid_indices: frozenset[int] = frozenset(),
     ) -> list[Any]:
         """Execute GUI document groups with resources under one batch cancellation scope.
 
@@ -636,6 +638,19 @@ class ApplicationController:
                         for remaining in range(index, len(group_requests))
                     )
                     break
+
+                if index in frozen_invalid_indices:
+                    results.append(
+                        ConversionResult(
+                            task_id=task_id,
+                            success=False,
+                            error=ConversionErrorInfo(
+                                error_type="invalid_input",
+                                message="Document group validation failed.",
+                            ),
+                        )
+                    )
+                    continue
 
                 group_sources = [
                     ref for ref in frozen_group.input_refs if ref.input_role in {"source", "neutral_document"}
