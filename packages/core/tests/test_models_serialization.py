@@ -438,6 +438,26 @@ class TestPluginManifestSerialization:
         assert manifest.capability_rules == []
         assert manifest.optimization_resources == []
 
+    def test_route_visibility_round_trip_and_rejects_unknown_values(self) -> None:
+        route = RouteSpec(
+            source_format="clipboard_document",
+            target_format="md",
+            visibility="internal",
+        )
+
+        restored = RouteSpec.from_dict(route.to_dict())
+
+        assert restored.visibility == "internal"
+        assert restored.to_dict()["visibility"] == "internal"
+        with pytest.raises(ValueError, match="route visibility"):
+            RouteSpec.from_dict(
+                {
+                    "source_format": "probe",
+                    "target_format": "md",
+                    "visibility": "private",
+                }
+            )
+
     @pytest.mark.parametrize(
         "overrides",
         [
