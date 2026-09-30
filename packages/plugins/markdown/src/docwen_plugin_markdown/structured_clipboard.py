@@ -7,6 +7,8 @@ from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
+from docwen_core.clipboard_table_associations import inject_clipboard_table_associations
+from docwen_core.docx_semantics import apply_semantic_table_roles
 from docwen_core.models.artifact import ARTIFACT_KIND_AUXILIARY, ARTIFACT_KIND_PRIMARY, ArtifactManifest
 from docwen_core.models.clipboard_document import (
     ClipboardBlock,
@@ -152,8 +154,13 @@ def _render_docx_table(container: Any, model: ClipboardTable) -> Any:
         _render_docx_blocks(cell, cell_model.blocks)
         if not list(cell._tc) or list(cell._tc)[-1].tag.rsplit("}", 1)[-1] != "p":
             cell.add_paragraph()
-    header_rows, _header_columns = clipboard_table_header_shape(model)
-    _set_docx_header_rows(table, header_rows)
+    header_rows, header_columns = clipboard_table_header_shape(model)
+    apply_semantic_table_roles(
+        table,
+        header_rows=header_rows,
+        header_columns=header_columns,
+        repeat_header="always" if header_rows else "inherit",
+    )
     return table
 
 
@@ -196,6 +203,7 @@ def convert_clipboard_document_to_docx(context: Any) -> ConversionResult:
     context.cancellation.check()
     output = context.workspace.create_artifact_path(ARTIFACT_KIND_PRIMARY, ".docx")
     document.save(output)
+    inject_clipboard_table_associations(Path(output), document_model)
     artifact = ArtifactManifest(
         artifact_id="clipboard-document-docx",
         kind=ARTIFACT_KIND_PRIMARY,
