@@ -502,22 +502,39 @@ def clipboard_table_header_shape(table: ClipboardTable) -> tuple[int, int]:
     return (0, 0) and remain reversible in the dedicated association map.
     """
 
-    candidates: list[tuple[int, int, int]] = []
-    for header_rows in range(table.row_count + 1):
-        for header_columns in range(table.column_count + 1):
-            if header_rows == header_columns == 0 and any(cell.header for cell in table.cells):
-                continue
-            if not _native_header_candidate(table, header_rows, header_columns):
-                continue
-            area = (
-                header_rows * table.column_count
-                + header_columns * table.row_count
-                - header_rows * header_columns
-            )
-            candidates.append((area, header_columns, header_rows))
-    if not candidates:
+    coverage: dict[tuple[int, int], ClipboardTableCell] = {}
+    for cell in table.cells:
+        for row in range(cell.row, cell.row + cell.row_span):
+            for column in range(cell.column, cell.column + cell.column_span):
+                coverage[(row, column)] = cell
+
+    row_prefix = 0
+    for row in range(table.row_count):
+        if all(coverage[(row, column)].header for column in range(table.column_count)):
+            row_prefix += 1
+        else:
+            break
+    column_prefix = 0
+    for column in range(table.column_count):
+        if all(coverage[(row, column)].header for row in range(table.row_count)):
+            column_prefix += 1
+        else:
+            break
+
+    candidates = {(0, 0), (row_prefix, 0), (0, column_prefix), (row_prefix, column_prefix)}
+    valid: list[tuple[int, int, int]] = []
+    for header_rows, header_columns in candidates:
+        if not _native_header_candidate(table, header_rows, header_columns):
+            continue
+        area = (
+            header_rows * table.column_count
+            + header_columns * table.row_count
+            - header_rows * header_columns
+        )
+        valid.append((area, header_columns, header_rows))
+    if not valid:
         return 0, 0
-    _area, header_columns, header_rows = min(candidates, key=lambda item: (item[0], item[1], -item[2]))
+    _area, header_columns, header_rows = min(valid, key=lambda item: (item[0], item[1], -item[2]))
     return header_rows, header_columns
 def clipboard_inline_text(inline: ClipboardInline) -> str:
     if isinstance(inline, ClipboardText):
