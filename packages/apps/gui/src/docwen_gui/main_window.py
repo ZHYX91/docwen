@@ -325,6 +325,10 @@ class MainWindow(QWidget):
         store = self._clipboard_store
         return store.descriptor(file_path) if store is not None else None
 
+    def _clipboard_bundle(self, file_path: str):
+        store = self._clipboard_store
+        return store.bundle(file_path) if store is not None else None
+
     def _clipboard_presentation(self, file_path: str):
         descriptor = self._clipboard_descriptor(file_path)
         if descriptor is None:
@@ -798,6 +802,7 @@ class MainWindow(QWidget):
             ),
             source_label=self._clipboard_source_label,
             synthetic_input=self._is_clipboard_input,
+            snapshot_bundle=self._clipboard_bundle,
         )
         self._conversion_panel_vm = ConversionPanelViewModel(main_vm=self._view_model, parent=self)
         self._action_area_vm = ActionAreaViewModel(main_vm=self._view_model, parent=self)
