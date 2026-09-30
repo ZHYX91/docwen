@@ -252,11 +252,7 @@ class ExecutionRequestBuilder:
         grouped_batch = mode == "batch" and any(len(group) > 1 for group in groups)
         request = ConversionRequest(
             request_id=request_id,
-            input_refs=(
-                [group[0] for group in groups]
-                if grouped_batch
-                else [ref for group in groups for ref in group]
-            ),
+            input_refs=([group[0] for group in groups] if grouped_batch else [ref for group in groups for ref in group]),
             target_format=target_format,
             action_name=action_name,
             options=request_options,
@@ -483,7 +479,6 @@ class ExecutionRequestBuilder:
         document = load_clipboard_document_bytes(Path(source.path).read_bytes())
         validate_clipboard_resource_refs(document, resources)
         return (source, *resources)
-
 
     def output_policy(self) -> OutputPolicy:
         from docwen_core.models.request import OutputPolicy
