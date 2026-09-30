@@ -47,15 +47,20 @@ class ExecutionThread(QThread):
 
     def run(self) -> None:
         try:
+            frozen_invalid_indices: set[int] = set()
             if self._document_group_requests:
-                for group in self._document_group_requests:
-                    check_frozen_request(group)
+                for index, group in enumerate(self._document_group_requests):
+                    try:
+                        check_frozen_request(group)
+                    except Exception:
+                        frozen_invalid_indices.add(index)
             else:
                 check_frozen_request(self._request)
             if self._document_group_requests:
                 result = self._controller.execute_document_group_batch(
                     self._request,
                     self._document_group_requests,
+                    frozen_invalid_indices=frozenset(frozen_invalid_indices),
                 )
             elif self._aggregate_action_name:
                 result = self._controller.execute_aggregate(self._request, self._aggregate_action_name)
