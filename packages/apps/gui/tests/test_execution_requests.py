@@ -125,11 +125,14 @@ def test_synthetic_clipboard_csv_uses_shipped_xlsx_template_identity(tmp_path):
     source.write_text("| Name | Value |\n| --- | --- |\n| A | 00123 |\n", encoding="utf-8")
     inspection = inspect_utf8_markdown_snapshot(source)
     ref = FileRef(
-        path=str(source), format="markdown", category="markdown",
+        path=str(source),
+        format="markdown",
+        category="markdown",
         metadata={FILE_INSPECTION_METADATA_KEY: inspection.to_dict()},
     )
     template_id = next(
-        item.id for item in TemplateRegistry.default().list_templates("xlsx")
+        item.id
+        for item in TemplateRegistry.default().list_templates("xlsx")
         if item.path.name == "English Sample Sheet Template.xlsx"
     )
     builder = ExecutionRequestBuilder(
@@ -140,10 +143,14 @@ def test_synthetic_clipboard_csv_uses_shipped_xlsx_template_identity(tmp_path):
         synthetic_input=lambda _path: True,
     )
     request, _ = builder.single(
-        file_path=str(source), target_format="csv", action_name="", options={},
+        file_path=str(source),
+        target_format="csv",
+        action_name="",
+        options={},
     )
     assert request.options["template_name"] == template_id
     assert request.source_stem == "Clipboard Markdown 1"
+
 
 def test_md_to_docx_proofread_options_survive_route_scoping_as_application_intent(tmp_path):
     source = tmp_path / "input.md"

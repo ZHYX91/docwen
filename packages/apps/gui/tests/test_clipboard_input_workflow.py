@@ -144,7 +144,11 @@ def test_single_file_clipboard_rejects_multiple_and_preserves_current_input(
 
 
 def test_single_file_clipboard_counts_original_list_before_filtering(
-    clipboard_window: MainWindow, qapp: QApplication, qtbot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     original = _paste_text(clipboard_window, qapp, qtbot, "# Keep current\n")
     valid = tmp_path / "valid.md"
@@ -161,7 +165,11 @@ def test_single_file_clipboard_counts_original_list_before_filtering(
 
 
 def test_single_folder_clipboard_keeps_input_when_batch_switch_declined(
-    clipboard_window: MainWindow, qapp: QApplication, qtbot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     original = _paste_text(clipboard_window, qapp, qtbot, "# Keep current\n")
     folder = tmp_path / "folder"
@@ -178,7 +186,11 @@ def test_single_folder_clipboard_keeps_input_when_batch_switch_declined(
 
 
 def test_switch_to_batch_add_uses_captured_clipboard_file_list(
-    clipboard_window: MainWindow, qapp: QApplication, qtbot, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     original = _paste_text(clipboard_window, qapp, qtbot, "# Keep current\n")
     first = tmp_path / "first.md"
@@ -188,6 +200,7 @@ def test_switch_to_batch_add_uses_captured_clipboard_file_list(
     mime = QMimeData()
     mime.setUrls([QUrl.fromLocalFile(str(first)), QUrl.fromLocalFile(str(second))])
     qapp.clipboard().setMimeData(mime)
+
     def accept_and_change_clipboard(*_args, **_kwargs):
         qapp.clipboard().setText("# changed after capture\n")
         return True
@@ -197,8 +210,11 @@ def test_switch_to_batch_add_uses_captured_clipboard_file_list(
     qtbot.waitUntil(lambda: len(clipboard_window.view_model.files) == 3)
     assert clipboard_window._input_area_vm.mode == "batch"
     assert {Path(ref.path).resolve() for ref in clipboard_window.view_model.files} == {
-        Path(original).resolve(), first.resolve(), second.resolve(),
+        Path(original).resolve(),
+        first.resolve(),
+        second.resolve(),
     }
+
 
 def test_batch_file_clipboard_adds_mixed_real_files(
     clipboard_window: MainWindow,
@@ -226,7 +242,10 @@ def test_batch_file_clipboard_adds_mixed_real_files(
 
 
 def test_batch_file_clipboard_deduplicates_and_reports_partial_unavailable_inputs(
-    clipboard_window: MainWindow, qapp: QApplication, qtbot, tmp_path: Path
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+    tmp_path: Path,
 ) -> None:
     clipboard_window._input_area_vm.set_mode("batch")
     valid = tmp_path / "valid.md"
@@ -235,8 +254,14 @@ def test_batch_file_clipboard_deduplicates_and_reports_partial_unavailable_input
     valid.write_text("# Valid\n", encoding="utf-8")
     blocked.write_bytes(b"\x00\x01\x02\x03")
     mime = QMimeData()
-    mime.setUrls([QUrl.fromLocalFile(str(valid)), QUrl.fromLocalFile(str(valid)),
-                  QUrl.fromLocalFile(str(blocked)), QUrl.fromLocalFile(str(missing))])
+    mime.setUrls(
+        [
+            QUrl.fromLocalFile(str(valid)),
+            QUrl.fromLocalFile(str(valid)),
+            QUrl.fromLocalFile(str(blocked)),
+            QUrl.fromLocalFile(str(missing)),
+        ]
+    )
     qapp.clipboard().setMimeData(mime)
     qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
     qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
@@ -246,6 +271,7 @@ def test_batch_file_clipboard_deduplicates_and_reports_partial_unavailable_input
     detail = clipboard_window._input_area_vm.selection_detail
     assert str(missing) in detail
     assert "blocked" in detail.lower() or "support" in detail.lower() or "内容" in detail
+
 
 def test_nonlocal_url_clipboard_still_uses_text_fallback(
     clipboard_window: MainWindow,

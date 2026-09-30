@@ -469,6 +469,7 @@ class MainWindow(QWidget):
         # confirmation dialog was open and must not be read a second time.
         self._input_area_vm.set_mode("batch")
         self._input_area_vm.add_files(file_paths)
+
     def _prepare_clipboard_output_policy(
         self,
         file_paths: Sequence[str],
