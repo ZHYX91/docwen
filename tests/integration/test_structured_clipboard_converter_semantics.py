@@ -51,7 +51,7 @@ HEADER_HTML = b"""
 STRUCTURAL_HTML = b"""
 <table>
 <tr><th id="corner">Region</th><th id="q1" scope="col">Q1</th><th id="q2" scope="col">Q2</th></tr>
-<tr><th id="north" scope="row">North</th><td colspan="2">**literal** | &lt; ^ \ path</td></tr>
+<tr><th id="north" scope="row">North</th><td colspan="2">**literal** | &lt; ^ \\ path</td></tr>
 </table>
 """
 
@@ -302,7 +302,10 @@ def test_xlsx_table_sheets_really_derive_selected_template_prototype(
 
     order = workbook["Document Order"]
     order_headers = [cell.value for cell in order[1]]
-    order_rows = [dict(zip(order_headers, [cell.value for cell in row], strict=True)) for row in order.iter_rows(min_row=2)]
+    order_rows = [
+        dict(zip(order_headers, [cell.value for cell in row], strict=True))
+        for row in order.iter_rows(min_row=2)
+    ]
     assert any(row["Kind"] == "table_ref" and row["Sheet"] == generated for row in order_rows)
 
 
@@ -342,7 +345,7 @@ def test_markdown_output_extension_changes_real_projection_without_reinterpretin
     assert "CLIPBOARD-MARKDOWN-HEADER-ASSOCIATIONS-PROJECTED" in {item.code for item in enabled.diagnostics}
     assert "CLIPBOARD-MARKDOWN-STRUCTURE-PROJECTION" in {item.code for item in disabled.diagnostics}
     assert "| --- || --- | --- |" not in disabled_text
-    assert "**literal** | < ^ \ path" in disabled_text
+    assert "**literal** | < ^ \\ path" in disabled_text
 
 
 def test_structural_markdown_falls_back_for_nested_or_headerless_tables(tmp_path: Path) -> None:
