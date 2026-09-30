@@ -18,7 +18,11 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from docwen_core.models.file_ref import FileRef
+from docwen_core.models.file_ref import (
+    MANAGED_INPUT_SHA256_METADATA_KEY,
+    MANAGED_INPUT_SIZE_BYTES_METADATA_KEY,
+    FileRef,
+)
 from docwen_runtime.path_io import filesystem_path
 
 if TYPE_CHECKING:
@@ -191,8 +195,13 @@ class WorkspaceManager:
             suffix = source.suffix if len(source.suffix) <= 32 else ""
             destination = input_root / f"input-{index:04d}{suffix}"
             shutil.copy2(source, destination)
-            expected_sha = item.metadata.get("machine_input_sha256")
-            expected_size = item.metadata.get("machine_input_size_bytes")
+            expected_sha = item.metadata.get(MANAGED_INPUT_SHA256_METADATA_KEY)
+            expected_size = item.metadata.get(MANAGED_INPUT_SIZE_BYTES_METADATA_KEY)
+            if expected_sha is None and expected_size is None:
+                expected_sha = item.metadata.get("machine_input_sha256")
+                expected_size = item.metadata.get("machine_input_size_bytes")
+            if (expected_sha is None) != (expected_size is None):
+                raise ValueError("typed input integrity metadata must provide both size and sha256")
             if isinstance(expected_sha, str) and isinstance(expected_size, int):
                 digest = hashlib.sha256()
                 size_bytes = 0
