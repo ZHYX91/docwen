@@ -11,6 +11,8 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
+from docwen_gui.clipboard_image_bytes import ClipboardImageBytesError, inspect_png_bytes
+
 from docwen_core.models.clipboard_document import (
     MAX_CLIPBOARD_RESOURCE_BYTES,
     load_clipboard_document_bytes,
@@ -264,6 +266,41 @@ class ClipboardInputStore:
         self._snapshots[self._key(path)] = descriptor
         return descriptor
 
+    def create_binary(
+        self,
+        payload: bytes,
+        *,
+        suffix: str,
+        display_name_template: str,
+        preview: str = "",
+    ) -> ClipboardInputDescriptor:
+        """Freeze one already-normalized binary input as a session-owned source."""
+
+        if not isinstance(payload, bytes) or not payload or not suffix.startswith("."):
+            raise ValueError("clipboard binary snapshot is invalid")
+        self._sequence += 1
+        display_name = display_name_template.format(index=self._sequence).strip()
+        if not display_name:
+            display_name = f"Clipboard Input {self._sequence}{suffix}"
+        path = self._session_root / f"clipboard-{uuid.uuid4().hex}{suffix}"
+        descriptor = ClipboardInputDescriptor(
+            path=str(path),
+            display_name=display_name,
+            preview=preview[:_PREVIEW_MAX_CHARS],
+            size_bytes=len(payload),
+            sha256=hashlib.sha256(payload).hexdigest(),
+        )
+        try:
+            self._write_fsynced(path, payload)
+        except BaseException:
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                self._snapshots[self._key(path)] = descriptor
+            raise
+        self._snapshots[self._key(path)] = descriptor
+        return descriptor
+
     @staticmethod
     def _write_fsynced(path: Path, payload: bytes) -> None:
         with path.open("xb") as stream:
@@ -304,6 +341,17 @@ class ClipboardInputStore:
         for declaration in document.resources:
             logical_path, media_type, resource_bytes = supplied[declaration.resource_id]
             digest = hashlib.sha256(resource_bytes).hexdigest()
+            if declaration.media_type == "image/png":
+                try:
+                    frozen_png = inspect_png_bytes(resource_bytes)
+                except ClipboardImageBytesError as exc:
+                    raise ValueError("clipboard bundle PNG resource is invalid") from exc
+                if (
+                    declaration.pixel_width != frozen_png.width
+                    or declaration.pixel_height != frozen_png.height
+                    or declaration.rgba_sha256 != frozen_png.rgba_sha256
+                ):
+                    raise ValueError("clipboard bundle PNG pixel identity does not match document declaration")
             if (
                 logical_path != declaration.logical_path
                 or media_type != declaration.media_type
