@@ -26,7 +26,7 @@ from docwen_core.models.semantic_document import (
     validate_semantic_document,
 )
 
-CLIPBOARD_DOCUMENT_SCHEMA = "docwen.clipboard_document.v1"
+CLIPBOARD_DOCUMENT_SCHEMA = "docwen.clipboard_document.v2"
 CLIPBOARD_DOCUMENT_FORMAT = "clipboard_document"
 CLIPBOARD_DOCUMENT_MEDIA_TYPE = "application/vnd.docwen.clipboard-document+json"
 
@@ -39,6 +39,9 @@ MAX_CLIPBOARD_INLINES = 262144
 MAX_CLIPBOARD_TEXT_CODEPOINTS = 4_000_000
 MAX_CLIPBOARD_RESOURCES = 256
 MAX_CLIPBOARD_RESOURCE_BYTES = 64 * 1024 * 1024
+MAX_CLIPBOARD_IMAGE_PIXELS = 64 * 1024 * 1024
+MAX_CLIPBOARD_IMAGE_SIDE = 32768
+MAX_CLIPBOARD_IMAGE_PIXELS_PER_RESOURCE = 32 * 1024 * 1024
 
 _RESOURCE_ID_RE = re.compile(r"^[A-Za-z][A-Za-z0-9._-]{0,127}$")
 _HEADER_SCOPES = frozenset({"", "row", "col", "rowgroup", "colgroup"})
@@ -69,6 +72,8 @@ class ClipboardImageRef:
     resource_id: str | None
     alt: str
     missing_reason: str = ""
+    extent_cx_emu: int | None = None
+    extent_cy_emu: int | None = None
 
 
 type ClipboardInline = ClipboardText | ClipboardHardBreak | ClipboardImageRef
@@ -109,6 +114,9 @@ class ClipboardResource:
     media_type: str
     size_bytes: int
     sha256: str
+    pixel_width: int | None = None
+    pixel_height: int | None = None
+    rgba_sha256: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -168,7 +176,12 @@ def _parse_inline(data: object, counters: dict[str, int], *, where: str) -> Clip
         _require_keys(data, {"type"}, {"type"}, where=where)
         return ClipboardHardBreak()
     if kind == "image":
-        _require_keys(data, {"type", "resourceId", "alt", "missingReason"}, {"type", "alt"}, where=where)
+        _require_keys(
+            data,
+            {"type", "resourceId", "alt", "missingReason", "extentCxEmu", "extentCyEmu"},
+            {"type", "alt"},
+            where=where,
+        )
         resource_id = data.get("resourceId")
         if resource_id is not None:
             resource_id = _require_string(resource_id, where=f"{where}.resourceId", allow_empty=False)
@@ -187,7 +200,23 @@ def _parse_inline(data: object, counters: dict[str, int], *, where: str) -> Clip
             raise ClipboardDocumentError(
                 "clipboard.image_binding_invalid", "An image cannot be both resource-bound and missing."
             )
-        return ClipboardImageRef(resource_id, alt, reason)
+        raw_cx = data.get("extentCxEmu")
+        raw_cy = data.get("extentCyEmu")
+        if (raw_cx is None) != (raw_cy is None):
+            raise ClipboardDocumentError(
+                "clipboard.image_extent_invalid", "Image extent must provide both EMU dimensions."
+            )
+        extent_cx = (
+            None
+            if raw_cx is None
+            else _require_int(raw_cx, minimum=1, maximum=2_147_483_647, where=f"{where}.extentCxEmu")
+        )
+        extent_cy = (
+            None
+            if raw_cy is None
+            else _require_int(raw_cy, minimum=1, maximum=2_147_483_647, where=f"{where}.extentCyEmu")
+        )
+        return ClipboardImageRef(resource_id, alt, reason, extent_cx, extent_cy)
     raise ClipboardDocumentError("clipboard.inline_type_invalid", f"{where} has unsupported inline type.")
 
 
@@ -290,7 +319,16 @@ def _parse_resource(data: object, *, where: str) -> ClipboardResource:
         raise ClipboardDocumentError("clipboard.resource_invalid", f"{where} must be an object.")
     _require_keys(
         data,
-        {"resourceId", "logicalPath", "mediaType", "sizeBytes", "sha256"},
+        {
+            "resourceId",
+            "logicalPath",
+            "mediaType",
+            "sizeBytes",
+            "sha256",
+            "pixelWidth",
+            "pixelHeight",
+            "rgbaSha256",
+        },
         {"resourceId", "logicalPath", "mediaType", "sizeBytes", "sha256"},
         where=where,
     )
@@ -308,7 +346,44 @@ def _parse_resource(data: object, *, where: str) -> ClipboardResource:
     sha256 = _require_string(data["sha256"], where=f"{where}.sha256", allow_empty=False).lower()
     if re.fullmatch(r"[0-9a-f]{64}", sha256) is None:
         raise ClipboardDocumentError("clipboard.resource_hash_invalid", f"{where}.sha256 is invalid.")
-    return ClipboardResource(resource_id, logical_path, media_type, size_bytes, sha256)
+    raw_width = data.get("pixelWidth")
+    raw_height = data.get("pixelHeight")
+    rgba_sha256 = _require_string(data.get("rgbaSha256", ""), where=f"{where}.rgbaSha256")
+    if (raw_width is None) != (raw_height is None):
+        raise ClipboardDocumentError("clipboard.resource_pixels_invalid", "Image pixel facts must provide both dimensions.")
+    pixel_width = (
+        None
+        if raw_width is None
+        else _require_int(raw_width, minimum=1, maximum=MAX_CLIPBOARD_IMAGE_SIDE, where=f"{where}.pixelWidth")
+    )
+    pixel_height = (
+        None
+        if raw_height is None
+        else _require_int(raw_height, minimum=1, maximum=MAX_CLIPBOARD_IMAGE_SIDE, where=f"{where}.pixelHeight")
+    )
+    if pixel_width is not None and pixel_height is not None:
+        if pixel_width * pixel_height > MAX_CLIPBOARD_IMAGE_PIXELS_PER_RESOURCE:
+            raise ClipboardDocumentError("clipboard.budget_exceeded", "Clipboard image pixel budget exceeded.")
+        if media_type != "image/png" or re.fullmatch(r"[0-9a-f]{64}", rgba_sha256) is None:
+            raise ClipboardDocumentError(
+                "clipboard.resource_pixels_invalid",
+                "Clipboard image pixel facts require PNG media and an RGBA SHA-256.",
+            )
+    elif rgba_sha256:
+        raise ClipboardDocumentError(
+            "clipboard.resource_pixels_invalid",
+            "RGBA SHA-256 requires image pixel dimensions.",
+        )
+    return ClipboardResource(
+        resource_id,
+        logical_path,
+        media_type,
+        size_bytes,
+        sha256,
+        pixel_width,
+        pixel_height,
+        rgba_sha256,
+    )
 
 
 def load_clipboard_document_bytes(payload: bytes) -> ClipboardDocument:
@@ -354,6 +429,13 @@ def load_clipboard_document_bytes(payload: bytes) -> ClipboardDocument:
         raise ClipboardDocumentError("clipboard.resource_path_duplicate", "Resource logical paths must be unique.")
     if sum(item.size_bytes for item in document.resources) > MAX_CLIPBOARD_RESOURCE_BYTES:
         raise ClipboardDocumentError("clipboard.budget_exceeded", "Clipboard resource byte budget exceeded.")
+    total_pixels = sum(
+        item.pixel_width * item.pixel_height
+        for item in document.resources
+        if item.pixel_width is not None and item.pixel_height is not None
+    )
+    if total_pixels > MAX_CLIPBOARD_IMAGE_PIXELS:
+        raise ClipboardDocumentError("clipboard.budget_exceeded", "Clipboard total image pixel budget exceeded.")
     for inline in iter_clipboard_inlines(document):
         if (
             isinstance(inline, ClipboardImageRef)
@@ -390,6 +472,9 @@ def clipboard_document_to_dict(document: ClipboardDocument) -> dict[str, Any]:
                 "mediaType": item.media_type,
                 "sizeBytes": item.size_bytes,
                 "sha256": item.sha256,
+                **({"pixelWidth": item.pixel_width} if item.pixel_width is not None else {}),
+                **({"pixelHeight": item.pixel_height} if item.pixel_height is not None else {}),
+                **({"rgbaSha256": item.rgba_sha256} if item.rgba_sha256 else {}),
             }
             for item in document.resources
         ],
@@ -430,6 +515,8 @@ def _inline_to_dict(inline: ClipboardInline) -> dict[str, Any]:
         "resourceId": inline.resource_id,
         "alt": inline.alt,
         "missingReason": inline.missing_reason,
+        **({"extentCxEmu": inline.extent_cx_emu} if inline.extent_cx_emu is not None else {}),
+        **({"extentCyEmu": inline.extent_cy_emu} if inline.extent_cy_emu is not None else {}),
     }
 
 
@@ -657,6 +744,9 @@ __all__ = [
     "CLIPBOARD_DOCUMENT_MEDIA_TYPE",
     "CLIPBOARD_DOCUMENT_SCHEMA",
     "MAX_CLIPBOARD_DOCUMENT_BYTES",
+    "MAX_CLIPBOARD_IMAGE_PIXELS",
+    "MAX_CLIPBOARD_IMAGE_PIXELS_PER_RESOURCE",
+    "MAX_CLIPBOARD_IMAGE_SIDE",
     "ClipboardBlock",
     "ClipboardDocument",
     "ClipboardDocumentError",
