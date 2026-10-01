@@ -87,7 +87,6 @@ def test_script_style_and_remote_images_are_inert_and_reported() -> None:
     assert result.image_count == 1
 
 
-
 def test_fallback_table_preserves_empty_spaces_nbsp_pipe_and_line_breaks_exactly() -> None:
     result = project_clipboard_html(
         "<table><tr><td></td><td>  edge  </td><td>&nbsp;x&nbsp;</td>"

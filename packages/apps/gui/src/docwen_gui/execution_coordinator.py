@@ -191,7 +191,16 @@ class ExecutionCoordinator(QObject):
         if document_group_requests and mode != "batch":
             raise ValueError("document-group execution is only valid for batch mode")
         admission_requests = document_group_requests or (request,)
-        if not self._admit_many(request, admission_requests, context) or not self._accepting:
+        pending_invalid_indices: set[int] = set()
+        if (
+            not self._admit_many(
+                request,
+                admission_requests,
+                context,
+                invalid_indices=pending_invalid_indices if document_group_requests else None,
+            )
+            or not self._accepting
+        ):
             return
         task_id = request.request_id
 
@@ -228,6 +237,7 @@ class ExecutionCoordinator(QObject):
             aggregate_action_name=action_name if mode == "aggregate" else "",
             batch_execution=mode == "batch",
             document_group_requests=document_group_requests,
+            pending_invalid_indices=frozenset(pending_invalid_indices),
         )
 
     def _preflight_notice(
@@ -329,6 +339,7 @@ class ExecutionCoordinator(QObject):
         aggregate_action_name: str = "",
         batch_execution: bool = False,
         document_group_requests: tuple[ConversionRequest, ...] = (),
+        pending_invalid_indices: frozenset[int] = frozenset(),
     ) -> bool:
         """Project an owned request; the supervisor owns reservation and cleanup."""
         if not self._accepting:
@@ -352,6 +363,7 @@ class ExecutionCoordinator(QObject):
             aggregate_action_name=aggregate_action_name,
             batch_execution=batch_execution,
             document_group_requests=document_group_requests,
+            pending_invalid_indices=pending_invalid_indices,
         )
 
     def _admit(self, request: ConversionRequest, context: dict[str, Any]) -> bool:
@@ -363,11 +375,22 @@ class ExecutionCoordinator(QObject):
         parent_request: ConversionRequest,
         requests: tuple[ConversionRequest, ...],
         context: dict[str, Any],
+        *,
+        invalid_indices: set[int] | None = None,
     ) -> bool:
         """Confirm every frozen document group while reporting one parent operation."""
 
         try:
-            return all(self._confirm_request(request) for request in requests)
+            for index, request in enumerate(requests):
+                try:
+                    if not self._confirm_request(request):
+                        # A user's declined confirmation cancels the operation.
+                        return False
+                except ExecutionAdmissionError:
+                    if invalid_indices is None:
+                        raise
+                    invalid_indices.add(index)
+            return True
         except ExecutionAdmissionError as exc:
             self.started_at = time.monotonic()
             self._context = dict(context)

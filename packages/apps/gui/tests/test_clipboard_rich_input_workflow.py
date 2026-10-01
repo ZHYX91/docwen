@@ -53,7 +53,9 @@ def test_rich_clipboard_preserves_multiple_tables_and_body_order(
     qtbot,
 ) -> None:
     mime = QMimeData()
-    mime.setText("  Before https://example.test/a **plain-md**  \nA\tB\n\t00123\nMiddle\nPipe\tLines\nx|y\tone\ntwo\nAfter  ")
+    mime.setText(
+        "  Before https://example.test/a **plain-md**  \nA\tB\n\t00123\nMiddle\nPipe\tLines\nx|y\tone\ntwo\nAfter  "
+    )
     mime.setHtml(
         "<p>Before</p><table><tr><th>A</th><th>B</th></tr><tr><td></td><td>00123</td></tr></table>"
         "<p>Middle</p><table><tr><th>Pipe</th><th>Lines</th></tr>"
@@ -170,7 +172,6 @@ def test_rich_clipboard_reports_images_without_importing_them(
     assert any(row.message_type == "warning" for row in clipboard_window._info_area_vm.history_rows)
 
 
-
 def test_reliable_plain_alignment_preserves_nested_merged_table_structure_and_plain_boundaries(
     clipboard_window: MainWindow,
     qapp: QApplication,
@@ -202,6 +203,7 @@ def test_reliable_plain_alignment_preserves_nested_merged_table_structure_and_pl
         "ClipboardTable",
         "ClipboardParagraph",
     ]
+    assert isinstance(document.blocks[2], ClipboardParagraph)
     assert clipboard_paragraph_text(document.blocks[2]) == "\nTail  "
 
 
@@ -242,7 +244,6 @@ def test_html_only_structured_table_is_explicitly_warned(
     selected = clipboard_window.view_model.selected_file
     assert selected is not None and selected.format == "clipboard_document"
     assert any(row.message_type == "warning" for row in clipboard_window._info_area_vm.history_rows)
-
 
 
 def test_main_window_snapshot_to_runtime_keeps_plain_body_and_structured_table(

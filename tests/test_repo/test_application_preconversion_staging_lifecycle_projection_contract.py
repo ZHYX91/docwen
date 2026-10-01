@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 import pytest
@@ -29,7 +30,29 @@ def test_preconversion_staging_has_owner_isolation_and_original_index_alignment(
     assert "strict=True" in controller
     assert 'task_id = f"{request.request_id}-{index}"' in controller
     assert "request_id=task_id" in controller
-    assert controller.count("managed.cleanup()") == 2
+    controller_class = next(
+        node
+        for node in ast.parse(controller).body
+        if isinstance(node, ast.ClassDef) and node.name == "ApplicationController"
+    )
+    for name in ("execute_single", "execute_batch", "execute_document_group_batch"):
+        method = next(node for node in controller_class.body if isinstance(node, ast.FunctionDef) and node.name == name)
+        cleanup_calls = [
+            node
+            for node in ast.walk(method)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == "managed"
+            and node.func.attr == "cleanup"
+        ]
+        assert len(cleanup_calls) == 1, name
+        assert any(
+            cleanup_calls[0] in list(ast.walk(statement))
+            for node in ast.walk(method)
+            if isinstance(node, ast.Try)
+            for statement in node.finalbody
+        ), f"{name} must retire its managed staging in finally"
     assert controller.index("if errors and not batch:") < controller.index(
         "converted_options = deepcopy(request.options)"
     )

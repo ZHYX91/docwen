@@ -14,6 +14,7 @@ from docwen_application.controller import ApplicationController
 from docwen_core.clipboard_table_associations import read_clipboard_table_associations
 from docwen_core.detection import inspect_structured_clipboard_snapshot
 from docwen_core.docx_parsing.document_semantics import extract_semantic_table_metadata
+from docwen_core.markdown_extensions import MarkdownExtensions
 from docwen_core.models import FILE_INSPECTION_METADATA_KEY
 from docwen_core.models.clipboard_document import CLIPBOARD_DOCUMENT_MEDIA_TYPE, clipboard_document_to_bytes
 from docwen_core.models.file_ref import (
@@ -22,9 +23,8 @@ from docwen_core.models.file_ref import (
     FileRef,
 )
 from docwen_core.models.request import ConversionRequest, OutputPolicy
-from docwen_core.markdown_extensions import MarkdownExtensions
-from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
 from docwen_gui.clipboard_structured import project_structured_clipboard_html
+from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
 from docwen_plugin_markdown.plugin import MarkdownPlugin
 from docwen_runtime.adapters import RuntimePortAdapter
 from docwen_runtime.engine.route_resolver import RouteResolver
@@ -366,14 +366,14 @@ def test_structural_markdown_falls_back_for_nested_or_headerless_tables(tmp_path
     assert "CLIPBOARD-MARKDOWN-STRUCTURAL-FALLBACK" in {item.code for item in result.diagnostics}
 
 
-
 def _ast_descendants(nodes):
     for node in nodes:
         yield node
         yield from _ast_descendants(node.get("children", []))
 
 
-def test_structural_markdown_final_file_reparses_authored_punctuation_as_text(tmp_path: Path) -> None:
+@pytest.mark.parametrize("header_rows", [1, 2])
+def test_structural_markdown_final_file_reparses_authored_punctuation_as_text(tmp_path: Path, header_rows: int) -> None:
     literals = (
         "$A^2$",
         "$P(A|B)$",
@@ -386,8 +386,10 @@ def test_structural_markdown_final_file_reparses_authored_punctuation_as_text(tm
         "^",
     )
     header = "".join(f"<th>H{index}</th>" for index in range(len(literals)))
-    body = "".join(f"<td>{value.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')}</td>" for value in literals)
-    html = f"<table><tr>{header}</tr><tr>{body}</tr></table>".encode()
+    body = "".join(
+        f"<td>{value.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')}</td>" for value in literals
+    )
+    html = ("<table>" + f"<tr>{header}</tr>" * header_rows + f"<tr>{body}</tr></table>").encode()
     result = _controller(tmp_path).execute_single(
         _request(
             tmp_path,
@@ -407,9 +409,7 @@ def test_structural_markdown_final_file_reparses_authored_punctuation_as_text(tm
     visible_text = "".join(str(node.get("raw", "")) for node in descendants if node.get("type") == "text")
     for literal in literals:
         assert literal in visible_text
-    structural = table.get("_structural_table")
-    assert isinstance(structural, dict)
-    rows = table["children"]
-    authored_cells = rows[-1]["children"]
+    assert ("_structural_table" in table) is (header_rows > 1)
+    authored_cells = table["children"][-1]["children"][-1]["children"]
     assert authored_cells[-2]["attrs"]["docwen_literal_merge_marker"] is True
     assert authored_cells[-1]["attrs"]["docwen_literal_merge_marker"] is True

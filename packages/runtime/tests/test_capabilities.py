@@ -351,7 +351,6 @@ def test_pymupdf_capability_gate_fails_closed_when_resources_are_missing(
     assert status["kind"] == "python_module_with_resources"
 
 
-
 def test_internal_routes_are_hidden_from_public_projection_but_available_to_gui_projection() -> None:
     manifest = PluginManifest(
         plugin_id="visibility-probe",

@@ -33,7 +33,7 @@ def window(qapp: QApplication, qtbot, tmp_path: Path):
 
 def test_default_table_paste_creates_one_structured_managed_input(window, qapp, qtbot) -> None:
     mime = QMimeData()
-    mime.setText("Before\nA\tB\n1\t2\nAfter")
+    mime.setText("Before\nA\tB\n1\tbefore\nnested\nafter\n\t2\nAfter")
     mime.setHtml(
         "<p>Before</p><table><tr><th>A</th><th>B</th></tr>"
         "<tr><td rowspan='2'>1</td><td><p>before</p>"

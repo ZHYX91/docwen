@@ -64,6 +64,7 @@ class ExecutionSupervisor(QObject):
         aggregate_action_name: str = "",
         batch_execution: bool = False,
         document_group_requests: tuple[ConversionRequest, ...] = (),
+        pending_invalid_indices: frozenset[int] = frozenset(),
     ) -> bool:
         if self.busy:
             self.warning.emit(
@@ -91,6 +92,7 @@ class ExecutionSupervisor(QObject):
                 aggregate_action_name=aggregate_action_name,
                 batch_execution=batch_execution,
                 document_group_requests=document_group_requests,
+                pending_invalid_indices=pending_invalid_indices,
                 parent=self,
             )
             thread.result_signal.connect(self.result_ready)

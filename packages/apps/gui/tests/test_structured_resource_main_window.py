@@ -131,14 +131,16 @@ def test_main_window_single_request_carries_resource_without_fake_source_inspect
         ExecutionAdmission.pending(request)
     with pytest.raises(ExecutionAdmissionError):
         check_frozen_request(request)
-    with pytest.raises(ValueError):
-        resource_window._requests.single(
-            file_path=bundle.main.path,
-            target_format="docx",
-            action_name="",
-            options={},
-            route_options=("template_name",),
-        )
+    rebuilt, _context = resource_window._requests.single(
+        file_path=bundle.main.path,
+        target_format="docx",
+        action_name="",
+        options={},
+        route_options=("template_name",),
+    )
+    assert rebuilt.input_refs[1].metadata == resource.metadata
+    with pytest.raises(ExecutionAdmissionError):
+        ExecutionAdmission.pending(rebuilt)
 
 
 def test_main_window_batch_freezes_two_isolated_document_groups_in_source_order(

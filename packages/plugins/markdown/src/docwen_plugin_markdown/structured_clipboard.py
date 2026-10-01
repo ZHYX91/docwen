@@ -92,6 +92,11 @@ def _image_diagnostics(document: ClipboardDocument) -> list[ConversionDiagnostic
     return diagnostics
 
 
+def _image_placeholder(image: ClipboardImageRef) -> str:
+    state = "not rendered" if image.resource_id is not None else "unavailable"
+    return f"[Image {state}: {image.alt}]" if image.alt else f"[Image {state}]"
+
+
 def _paragraph_projection(paragraph: ClipboardParagraph) -> str:
     parts: list[str] = []
     for inline in paragraph.inlines:
@@ -99,10 +104,8 @@ def _paragraph_projection(paragraph: ClipboardParagraph) -> str:
             parts.append(inline.value)
         elif isinstance(inline, ClipboardHardBreak):
             parts.append("\n")
-        elif inline.alt:
-            parts.append(f"[Image unavailable: {inline.alt}]")
         else:
-            parts.append("[Image unavailable]")
+            parts.append(_image_placeholder(inline))
     return "".join(parts)
 
 
@@ -133,10 +136,8 @@ def _write_docx_paragraph(container: Any, paragraph: ClipboardParagraph) -> Any:
             run.add_text(inline.value)
         elif isinstance(inline, ClipboardHardBreak):
             run.add_break()
-        elif inline.alt:
-            run.add_text(f"[Image unavailable: {inline.alt}]")
         else:
-            run.add_text("[Image unavailable]")
+            run.add_text(_image_placeholder(inline))
     return output
 
 

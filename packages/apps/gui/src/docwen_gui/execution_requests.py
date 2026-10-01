@@ -249,7 +249,7 @@ class ExecutionRequestBuilder:
         output_policy = output_policy or self.output_policy()
         request_id = str(uuid.uuid4())
         groups = [self.input_group(path) for path in source_paths]
-        grouped_batch = mode == "batch" and any(len(group) > 1 for group in groups)
+        grouped_batch = mode == "batch" and any(group[0].format == "clipboard_document" for group in groups)
         request = ConversionRequest(
             request_id=request_id,
             input_refs=(
@@ -441,10 +441,6 @@ class ExecutionRequestBuilder:
     def input_group(self, source_path: str) -> tuple[FileRef, ...]:
         """Freeze one source and its managed linked resources as one request group."""
 
-        from docwen_core.models.clipboard_document import (
-            load_clipboard_document_bytes,
-            validate_clipboard_resource_refs,
-        )
         from docwen_core.models.file_ref import (
             MANAGED_INPUT_SHA256_METADATA_KEY,
             MANAGED_INPUT_SIZE_BYTES_METADATA_KEY,
@@ -478,8 +474,9 @@ class ExecutionRequestBuilder:
                         },
                     )
                 )
-        document = load_clipboard_document_bytes(Path(source.path).read_bytes())
-        validate_clipboard_resource_refs(document, resources)
+        # Freeze the Store's original descriptors even if bytes disappeared or
+        # changed after ingress. Pending and worker admission validate the
+        # complete group; a bad group must not prevent building its siblings.
         return (source, *resources)
 
     def output_policy(self) -> OutputPolicy:

@@ -35,6 +35,7 @@ class ExecutionThread(QThread):
         aggregate_action_name: str = "",
         batch_execution: bool = False,
         document_group_requests: tuple[ConversionRequest, ...] = (),
+        pending_invalid_indices: frozenset[int] = frozenset(),
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
@@ -44,12 +45,15 @@ class ExecutionThread(QThread):
         self._aggregate_action_name = aggregate_action_name
         self._batch_execution = batch_execution
         self._document_group_requests = document_group_requests
+        self._pending_invalid_indices = pending_invalid_indices
 
     def run(self) -> None:
         try:
-            frozen_invalid_indices: set[int] = set()
+            frozen_invalid_indices = set(self._pending_invalid_indices)
             if self._document_group_requests:
                 for index, group in enumerate(self._document_group_requests):
+                    if index in frozen_invalid_indices:
+                        continue
                     try:
                         check_frozen_request(group)
                     except ExecutionAdmissionError:

@@ -31,7 +31,11 @@ from docwen_core.events.task_events import (
     make_task_started,
 )
 from docwen_core.models.document_node import ConversionIdentity
-from docwen_core.models.file_ref import FileRef
+from docwen_core.models.file_ref import (
+    MANAGED_INPUT_SHA256_METADATA_KEY,
+    MANAGED_INPUT_SIZE_BYTES_METADATA_KEY,
+    FileRef,
+)
 from docwen_core.models.request import PRECONVERSION_INTERMEDIATES_OPTION, ConversionRequest
 from docwen_core.models.result import (
     ConversionDiagnostic,
@@ -53,6 +57,7 @@ from docwen_runtime.templates import (
     is_canonical_template_id,
     validate_template_path,
 )
+from docwen_runtime.workspace.manager import TypedInputIntegrityError
 
 if TYPE_CHECKING:
     from docwen_runtime._execution_context import RuntimeExecutionContext
@@ -291,6 +296,16 @@ class TaskManager:
                     else 0.0,
                     input_bytes=input_ref.size_bytes,
                 ),
+            )
+        except TypedInputIntegrityError as exc:
+            return self._known_failure_result(
+                state,
+                ConversionErrorInfo(
+                    error_type="invalid_input",
+                    message=str(exc),
+                    diagnostic_code="INPUT_INTEGRITY_MISMATCH",
+                ),
+                metrics=ConversionMetrics(input_bytes=input_ref.size_bytes),
             )
         except Exception as exc:
             return self._unexpected_failure_result(state, exc)
@@ -736,9 +751,13 @@ class TaskManager:
         plugin_diagnostics = state.plugin_result.diagnostics if state.plugin_result is not None else []
         plugin_metrics = state.plugin_result.metrics if state.plugin_result is not None else ConversionMetrics()
         runtime_diagnostics = state.runtime_context.reported_diagnostics if state.runtime_context is not None else []
+        managed_input = (
+            MANAGED_INPUT_SHA256_METADATA_KEY in state.input_ref.metadata
+            and MANAGED_INPUT_SIZE_BYTES_METADATA_KEY in state.input_ref.metadata
+        )
         runtime_error = ConversionErrorInfo(
             error_type="conversion_failed",
-            message=str(exc),
+            message="Managed input conversion failed." if managed_input else str(exc),
         )
         terminal_diagnostics = self._emit_terminal(
             state.on_event,

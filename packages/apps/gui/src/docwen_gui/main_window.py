@@ -327,7 +327,7 @@ class MainWindow(QWidget):
 
     def _clipboard_bundle(self, file_path: str):
         store = self._clipboard_store
-        if store is None or not store.snapshot_available(file_path):
+        if store is None:
             return None
         return store.bundle(file_path)
 
@@ -1932,8 +1932,24 @@ class MainWindow(QWidget):
         self._info_area_vm.add_message(message, "warning")
 
     def _confirm_request_admission(self, request: ConversionRequest) -> bool:
-        """Confirm frozen ingress facts without reading file contents on the UI thread."""
+        """Validate managed snapshots and confirm any pending ingress decision."""
         from docwen_gui.dialogs.feedback import confirm
+        from docwen_gui.execution_admission import ExecutionAdmissionError
+
+        store = self._clipboard_store
+        if store is not None:
+            for ref in request.input_refs:
+                if (
+                    ref.input_role == "source"
+                    and store.bundle(ref.path) is not None
+                    and not store.snapshot_available(ref.path)
+                ):
+                    raise ExecutionAdmissionError(
+                        _t(
+                            "main_window.file_admission_changed",
+                            "The file changed after it was added. Remove it from the list and add it again to re-check the file, then retry.",
+                        )
+                    )
 
         pending = self._admission.pending(request)
         if not pending:

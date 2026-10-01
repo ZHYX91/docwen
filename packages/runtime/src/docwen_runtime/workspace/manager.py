@@ -82,6 +82,13 @@ class WorkspaceHandle:
         return list(self._artifacts)
 
 
+class TypedInputIntegrityError(ValueError):
+    """An admitted typed input no longer matches its frozen bytes."""
+
+    def __init__(self) -> None:
+        super().__init__("typed input copy failed integrity verification")
+
+
 class WorkspaceManager:
     """Creates and cleans up per-task workspace directories.
 
@@ -210,7 +217,7 @@ class WorkspaceManager:
                         size_bytes += len(chunk)
                         digest.update(chunk)
                 if size_bytes != expected_size or digest.hexdigest() != expected_sha:
-                    raise ValueError("typed input copy failed integrity verification")
+                    raise TypedInputIntegrityError()
             copied = replace(item, path=str(destination))
             materialized.append(copied)
             if item.input_role in {"source", "neutral_document"} and source_path is None:
