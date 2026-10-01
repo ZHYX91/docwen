@@ -113,6 +113,51 @@ class TestConstruction:
         assert widget.single_mode_button.isChecked()
         assert not widget.batch_mode_button.isChecked()
 
+    @pytest.mark.parametrize("scale", [100, 150])
+    @pytest.mark.parametrize("font_preset", ["default", "large"])
+    def test_actions_remain_visible_and_separate_during_live_resize(
+        self, widget: InputArea, qapp: QApplication, qtbot, scale: int, font_preset: str
+    ) -> None:
+        from PySide6.QtCore import QRect
+
+        from docwen_gui.styles.theme_manager import ThemeManager
+
+        manager = ThemeManager.get_instance()
+        manager.initialize(qapp, "light")
+        manager.apply_font_size_preset(font_preset)
+        manager.apply_ui_scale(scale)
+        controls = (widget.add_button, widget.paste_button, widget._paste_menu_button, widget.clear_button)
+
+        def visible_and_separate() -> None:
+            frame = widget._action_frame
+            rects = [QRect(control.mapTo(frame, QPoint(0, 0)), control.size()) for control in controls]
+            detail = (widget.width(), frame.rect(), rects, [control.sizeHint() for control in controls])
+            assert all(frame.rect().contains(rect) for rect in rects), detail
+            assert all(
+                not left.intersects(right) for index, left in enumerate(rects) for right in rects[index + 1 :]
+            ), detail
+            assert all(control.width() >= control.sizeHint().width() for control in controls), detail
+            assert all(control.height() >= control.sizeHint().height() for control in controls), detail
+
+        try:
+            widget.show()
+            for width in (720, 460, 360, 720):
+                widget.resize(width, 760)
+                qtbot.waitUntil(visible_and_separate, timeout=1000)
+            for control, label in zip(
+                (widget.add_button, widget.paste_button, widget.clear_button),
+                ("Add a document", "Paste clipboard content", "Clear current input"),
+                strict=True,
+            ):
+                control.setText(label)
+            for width in (720, 460, 360, 720):
+                widget.resize(width, 760)
+                qtbot.waitUntil(visible_and_separate, timeout=1000)
+        finally:
+            widget.close()
+            manager.apply_ui_scale(100)
+            manager.apply_font_size_preset("default")
+
     def test_narrow_or_long_localized_controls_reflow_without_collapsing_text(
         self, widget: InputArea, qapp: QApplication
     ) -> None:

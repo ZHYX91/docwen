@@ -192,6 +192,7 @@ class InputArea(QFrame):
 
         self._mode_frame = QFrame(self._drop_group)
         self._mode_frame.setObjectName("fileDropModeChoices")
+        self._mode_frame.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
         mode_layout = QVBoxLayout(self._mode_frame)
         mode_layout.setContentsMargins(0, 0, 0, 0)
         set_metric(mode_layout, "setSpacing", Spacing.XS)
@@ -231,7 +232,8 @@ class InputArea(QFrame):
 
         self._paste_menu_button = QToolButton(self._drop_group)
         self._paste_menu_button.setObjectName("fileDropPasteMenuButton")
-        self._paste_menu_button.setText("▾")
+        self._paste_menu_button.setArrowType(Qt.ArrowType.DownArrow)
+        self._paste_menu_button.setStyleSheet("QToolButton::menu-indicator { image: none; }")
         plain_text_label = t("components.file_drop.paste_plain_text_action", default="Paste as Plain Text")
         self._paste_menu_button.setToolTip(plain_text_label)
         self._paste_menu_button.setAccessibleName(plain_text_label)
@@ -255,7 +257,7 @@ class InputArea(QFrame):
         self._clear_button.clicked.connect(self._on_clear_clicked)
         self._action_layout.addWidget(self._clear_button)
 
-        self._top_layout.addWidget(self._action_frame)
+        self._top_layout.addWidget(self._action_frame, 1)
 
         self.setTabOrder(self._single_mode_button, self._batch_mode_button)
         self.setTabOrder(self._batch_mode_button, self._add_button)
@@ -797,12 +799,15 @@ class InputArea(QFrame):
         for control in (self._add_button, self._paste_button, self._clear_button):
             control.setMinimumHeight(control_height)
             control.setMinimumWidth(max(dp(_ACTION_BUTTON_MIN_WIDTH), control.sizeHint().width()))
+        self._paste_menu_button.setMinimumSize(
+            max(dp(Sizing.CONTROL_HEIGHT), self._paste_menu_button.sizeHint().width()), control_height
+        )
 
         mode_width = max(self._single_mode_button.sizeHint().width(), self._batch_mode_button.sizeHint().width())
         action_width = (
             self._add_button.minimumWidth()
             + self._paste_button.minimumWidth()
-            + self._paste_menu_button.sizeHint().width()
+            + self._paste_menu_button.minimumWidth()
             + self._clear_button.minimumWidth()
             + dp(Spacing.GROUP_GAP)
             + 3 * dp(Spacing.CONTROL_GAP)
@@ -811,17 +816,22 @@ class InputArea(QFrame):
         compact = 0 < content_width < max(dp(_COMPACT_WIDTH_THRESHOLD), required)
         actions_stacked = 0 < content_width < action_width
 
-        direction_changed = compact != self._top_controls_compact
+        action_direction = QBoxLayout.Direction.TopToBottom if actions_stacked else QBoxLayout.Direction.LeftToRight
+        direction_changed = compact != self._top_controls_compact or action_direction != self._action_layout.direction()
         self._top_controls_compact = compact
         self._top_layout.setDirection(QBoxLayout.Direction.TopToBottom if compact else QBoxLayout.Direction.LeftToRight)
-        self._action_layout.setDirection(
-            QBoxLayout.Direction.TopToBottom if actions_stacked else QBoxLayout.Direction.LeftToRight
-        )
+        # The action frame ignores its horizontal size hint to allow reflow.
+        # Reserve the remaining row width explicitly; otherwise the mode group
+        # takes that width and Qt positions minimum-width buttons on top of each other.
+        self._top_layout.setStretch(1, 0 if compact else 1)
+        self._action_layout.setDirection(action_direction)
         set_metric(self._top_layout, "setSpacing", Spacing.GROUP_GAP)
         set_metric(self._action_layout, "setSpacing", Spacing.CONTROL_GAP)
-        # Allow the parent to shrink first so the responsive layout can choose
-        # its stacked form; a horizontal minimum would prevent that resize.
-        self._action_frame.setMinimumWidth(0)
+        # Keep one complete button readable, while allowing the horizontal row
+        # to shrink far enough to switch to its stacked form.
+        self._action_frame.setMinimumWidth(
+            max(control.minimumWidth() for control in (self._add_button, self._paste_button, self._clear_button))
+        )
 
         if direction_changed:
             self.height_changed.emit(self.minimumHeight())
