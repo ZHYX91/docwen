@@ -10,7 +10,6 @@ from docwen_core.models.clipboard_document import (
     ClipboardHardBreak,
     ClipboardImageRef,
     ClipboardParagraph,
-    ClipboardTable,
     ClipboardText,
     clipboard_document_to_bytes,
 )

@@ -8,10 +8,10 @@ from docwen_core.models.clipboard_document import ClipboardDocument, clipboard_d
 from docwen_gui.clipboard_capture import FrozenClipboardCapture
 from docwen_gui.clipboard_image_binding import bind_provider_images
 from docwen_gui.clipboard_office_provider import (
-    ClipboardOfficeProviderError,
     WORD_EMBED_SOURCE_MIME,
     WPS_DOCUMENT_MIME,
     WPS_IMAGE_DATA_MIME,
+    ClipboardOfficeProviderError,
     parse_word_embed_source,
     parse_wps_writer,
 )

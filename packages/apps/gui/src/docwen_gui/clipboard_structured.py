@@ -305,14 +305,16 @@ def _blocks_from_children(
         if child.tag in _PARAGRAPH_TAGS:
             flush_inline()
             if _contains_table(child):
-                for block in _blocks_from_children(child.children, counters=counters, depth=depth + 1, collector=collector):
+                for block in _blocks_from_children(
+                    child.children, counters=counters, depth=depth + 1, collector=collector
+                ):
                     blocks.append(block)
             else:
                 append_block(ClipboardParagraph(_inline_nodes(child.children, collector)))
             continue
         if _contains_table(child):
             flush_inline()
-            for block in _blocks_from_children(child.children, counters=counters, depth=depth + 1):
+            for block in _blocks_from_children(child.children, counters=counters, depth=depth + 1, collector=collector):
                 blocks.append(block)
             continue
         inline_buffer.append(child)
@@ -648,9 +650,7 @@ def project_structured_clipboard_html_with_resources(payload: bytes) -> Structur
     clipboard_document_to_bytes(document)
     return StructuredClipboardProjection(
         document=document,
-        resources=tuple(
-            (item[0].resource_id, item[0].logical_path, item[0].media_type, item[1]) for item in ordered
-        ),
+        resources=tuple((item[0].resource_id, item[0].logical_path, item[0].media_type, item[1]) for item in ordered),
     )
 
 
@@ -661,9 +661,9 @@ def project_structured_clipboard_html(payload: bytes) -> ClipboardDocument:
 
 
 __all__ = [
+    "StructuredClipboardProjection",
     "extract_cf_html_fragment",
     "html_contains_table",
-    "StructuredClipboardProjection",
     "project_structured_clipboard_html",
     "project_structured_clipboard_html_with_resources",
     "splice_plain_text_with_structured_tables",

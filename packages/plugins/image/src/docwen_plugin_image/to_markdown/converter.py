@@ -272,7 +272,7 @@ def _convert_tiff_physical_pages(
             except OSError:
                 _logger.warning("Unable to remove cancelled TIFF artifact %s", path)
         raise
-    except Exception as exc:
+    except Exception:
         for path in created_paths:
             try:
                 path.unlink(missing_ok=True)

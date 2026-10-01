@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import shutil
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from docwen_core.export_semantics import (
     VALID_LINK_STYLES,
@@ -132,9 +133,7 @@ def prepare_markdown_images(
             is_primary=False,
         )
         artifacts.append(artifact)
-        targets[resource_id] = (
-            f"./{bound.suggested_name}" if mode == "embed" else bound.suggested_name
-        )
+        targets[resource_id] = f"./{bound.suggested_name}" if mode == "embed" else bound.suggested_name
 
     return MarkdownImagePlan(tuple(artifacts), targets, style, mode)
 

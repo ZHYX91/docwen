@@ -350,7 +350,9 @@ def _parse_resource(data: object, *, where: str) -> ClipboardResource:
     raw_height = data.get("pixelHeight")
     rgba_sha256 = _require_string(data.get("rgbaSha256", ""), where=f"{where}.rgbaSha256")
     if (raw_width is None) != (raw_height is None):
-        raise ClipboardDocumentError("clipboard.resource_pixels_invalid", "Image pixel facts must provide both dimensions.")
+        raise ClipboardDocumentError(
+            "clipboard.resource_pixels_invalid", "Image pixel facts must provide both dimensions."
+        )
     pixel_width = (
         None
         if raw_width is None

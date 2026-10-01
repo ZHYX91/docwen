@@ -15,7 +15,6 @@ from docwen_core.models.clipboard_document import (
     ClipboardBlock,
     ClipboardDocument,
     ClipboardHardBreak,
-    ClipboardImageRef,
     ClipboardParagraph,
     ClipboardTable,
     ClipboardTableCell,
@@ -447,7 +446,7 @@ def _markdown_projection(
     recorder = _OrderRecorder()
     _record_order(document.blocks, recorder, resources=resources)
     lines = ["# Clipboard document", ""]
-    for sequence, kind, text, sheet, parent, anchor, child in recorder.rows:
+    for sequence, kind, _text, sheet, parent, anchor, child in recorder.rows:
         if kind in {"paragraph", "cell_paragraph"}:
             lines.extend([f"## {sequence}. {kind}", ""])
             lines.extend(
@@ -646,9 +645,7 @@ def convert_clipboard_document_to_csv(context: Any) -> ConversionResult:
         )
 
     occurrences = collect_image_occurrences(document, recorder.table_id)
-    image_semantics_path = Path(
-        context.workspace.create_artifact_path(ARTIFACT_KIND_AUXILIARY, ".csv")
-    )
+    image_semantics_path = Path(context.workspace.create_artifact_path(ARTIFACT_KIND_AUXILIARY, ".csv"))
     write_csv_image_semantics(image_semantics_path, occurrences, resources)
     artifacts.append(
         ArtifactManifest(

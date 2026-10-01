@@ -11,12 +11,11 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
-from docwen_gui.clipboard_image_bytes import ClipboardImageBytesError, inspect_png_bytes
-
 from docwen_core.models.clipboard_document import (
     MAX_CLIPBOARD_RESOURCE_BYTES,
     load_clipboard_document_bytes,
 )
+from docwen_gui.clipboard_image_bytes import ClipboardImageBytesError, inspect_png_bytes
 
 _PREVIEW_MAX_CHARS = 240
 _PREVIEW_MAX_LINES = 3

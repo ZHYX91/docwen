@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from PySide6.QtCore import QMimeData
+
 from docwen_gui.clipboard_image_bytes import ClipboardImageBytesError, FrozenPng, freeze_qimage
 from docwen_gui.clipboard_office_provider import (
     WORD_EMBED_SOURCE_MIME,
@@ -35,24 +37,24 @@ class FrozenClipboardCapture:
         return next((payload for key, payload in self.binary_formats if key == mime_type), None)
 
 
-def freeze_clipboard_mime(mime_data: object) -> FrozenClipboardCapture:
+def freeze_clipboard_mime(mime_data: QMimeData) -> FrozenClipboardCapture:
     """Freeze allowlisted clipboard values exactly once on the Qt owner thread."""
 
-    has_text = bool(getattr(mime_data, "hasText")())
-    plain_text = str(getattr(mime_data, "text")()) if has_text else None
-    formats = set(str(value) for value in getattr(mime_data, "formats")())
+    has_text = bool(mime_data.hasText())
+    plain_text = str(mime_data.text()) if has_text else None
+    formats = {str(value) for value in mime_data.formats()}
     frozen: list[tuple[str, bytes]] = []
     for mime_type in sorted(_ALLOWED_BINARY_MIME.intersection(formats)):
-        payload = bytes(getattr(mime_data, "data")(mime_type))
+        payload = bytes(mime_data.data(mime_type).data())
         if payload:
             frozen.append((mime_type, payload))
 
     html_bytes = next((payload for key, payload in frozen if key == "text/html"), b"")
     image: FrozenPng | None = None
     image_error_code = ""
-    if bool(getattr(mime_data, "hasImage")()):
+    if bool(mime_data.hasImage()):
         try:
-            image = freeze_qimage(getattr(mime_data, "imageData")())
+            image = freeze_qimage(mime_data.imageData())
         except ClipboardImageBytesError as exc:
             image_error_code = exc.code
         except Exception:

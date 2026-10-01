@@ -1,0 +1,25 @@
+{
+  "kind": "derived-controlled-native-clipboard-provider-fixtures",
+  "sourceArchiveSha256": "1b079fb8d012278fe25d4eb92a7b309af170e858be35f21554d7f321093c06b8",
+  "notOriginalNativeBytes": true,
+  "notProductAcceptance": true,
+  "derivation": "Retain original document.xml, image relationships/IDs and PNG bytes; remove unrelated package parts/metadata, rebuild a deterministic minimal ZIP/CFB container with exact logical stream tail. WPS image record bytes preserved. No original input changed.",
+  "originalWordMimeSha256": "2d717cbb327338f4f8e5f0e1a6b47307d74294a956a566f0203fdd82a4911e79",
+  "originalWordPackageSha256": "960569ba7b76965b1bae6bdc1955dd6496d41fbd71a357a10db533446c40de65",
+  "originalWpsPackageSha256": "15c4d334cd80409b45cb28d500334d415663b93d310da55222f8c0ee283e2ed9",
+  "originalWpsImageDataSha256": "bf68bc3bb9d3216c537717d8da06504d544c643a1ac92c770db34a3d09444863",
+  "files": {
+    "word-derived.ole": {
+      "bytes": 13301,
+      "sha256": "ba1ff66fdbb146b8a1e9c076ebee4844230a0e32c38d3d40f81013bf4e1a1f7a"
+    },
+    "wps-writer-derived.zip": {
+      "bytes": 10296,
+      "sha256": "ca23f38e8bc2b39ef74a2cad11cade88548d9f349cd1164b230ce3fe073486a9"
+    },
+    "wps-images.bin": {
+      "bytes": 489,
+      "sha256": "bf68bc3bb9d3216c537717d8da06504d544c643a1ac92c770db34a3d09444863"
+    }
+  }
+}

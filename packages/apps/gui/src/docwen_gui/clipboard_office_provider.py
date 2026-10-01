@@ -11,9 +11,10 @@ import io
 import posixpath
 import struct
 import zipfile
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import PurePosixPath
-from typing import Callable
+from typing import NoReturn
 
 from lxml import etree
 
@@ -79,17 +80,17 @@ class ProviderImageProjection:
     identifier_to_resource_id: tuple[tuple[str, str], ...]
 
 
-def _fail(code: str, message: str) -> None:
+def _fail(code: str, message: str) -> NoReturn:
     raise ClipboardOfficeProviderError(code, message)
 
 
 def _bounded_chain(start: int, table: list[int], *, max_items: int) -> list[int]:
-    if start in {_CFB_END, _CFB_FREE}:
+    if start == _CFB_END:
         return []
     chain: list[int] = []
     seen: set[int] = set()
     current = start
-    while current not in {_CFB_END, _CFB_FREE}:
+    while current != _CFB_END:
         if current >= 0xFFFFFFFA or current < 0 or current >= len(table):
             _fail("clipboard.provider_ole_invalid", "Word clipboard package has an invalid sector chain.")
         if current in seen or len(chain) >= max_items:
@@ -108,18 +109,20 @@ def _read_cfb_package(payload: bytes) -> bytes:
     if payload[:8] != _CFB_SIGNATURE:
         _fail("clipboard.provider_ole_invalid", "Word clipboard package is not a supported OLE container.")
 
-    minor, major, byte_order, sector_shift, mini_shift = struct.unpack_from("<HHHHH", payload, 24)
-    if byte_order != 0xFFFE or major not in {3, 4} or sector_shift not in {9, 12} or mini_shift != 6:
+    _minor, major, byte_order, sector_shift, mini_shift = struct.unpack_from("<HHHHH", payload, 24)
+    if byte_order != 0xFFFE or (major, sector_shift) not in {(3, 9), (4, 12)} or mini_shift != 6:
         _fail("clipboard.provider_ole_invalid", "Word clipboard package uses an unsupported OLE layout.")
     sector_size = 1 << sector_shift
     if len(payload) < sector_size:
         _fail("clipboard.provider_ole_invalid", "Word clipboard package is truncated.")
-    sector_count = (len(payload) - sector_size) // sector_size
+    # Native Word clipboard data can omit padding after the last logical
+    # Package byte. Metadata sectors must still be physically complete.
+    sector_count = (len(payload) - sector_size + sector_size - 1) // sector_size
     if sector_count < 1 or sector_count > _MAX_CFB_SECTORS:
         _fail("clipboard.provider_ole_invalid", "Word clipboard package exceeds the supported sector budget.")
 
     (
-        _num_directory_sectors,
+        num_directory_sectors,
         num_fat_sectors,
         first_directory_sector,
         _transaction_signature,
@@ -132,47 +135,103 @@ def _read_cfb_package(payload: bytes) -> bytes:
     if mini_cutoff != 4096:
         _fail("clipboard.provider_ole_invalid", "Word clipboard package has an unsupported mini-stream cutoff.")
 
+    entries_per_sector = sector_size // 4
+    expected_difat = max(0, (num_fat_sectors - 109 + entries_per_sector - 2) // (entries_per_sector - 1))
+    if (
+        not 1 <= num_fat_sectors <= sector_count
+        or num_mini_fat_sectors > sector_count
+        or num_directory_sectors > sector_count
+        or (major == 3 and num_directory_sectors != 0)
+        or num_difat_sectors > sector_count
+        or num_difat_sectors != expected_difat
+        or (num_difat_sectors == 0 and first_difat_sector != _CFB_END)
+    ):
+        _fail("clipboard.provider_ole_invalid", "Word clipboard package has inconsistent sector counts.")
+
+    def sector_bytes(sector: int, *, complete: bool = False) -> bytes:
+        if sector < 0 or sector >= sector_count:
+            _fail("clipboard.provider_ole_invalid", "Word clipboard package references an invalid sector.")
+        start = sector_size + sector * sector_size
+        data = payload[start : start + sector_size]
+        if complete and len(data) != sector_size:
+            _fail("clipboard.provider_ole_invalid", "Word clipboard package has truncated metadata.")
+        return data
+
     difat = list(struct.unpack_from("<109I", payload, 76))
     next_difat = first_difat_sector
+    difat_sectors: set[int] = set()
     for _ in range(num_difat_sectors):
-        if next_difat >= sector_count:
+        if next_difat >= sector_count or next_difat in difat_sectors:
             _fail("clipboard.provider_ole_invalid", "Word clipboard package has an invalid DIFAT chain.")
-        offset = sector_size + next_difat * sector_size
-        values = struct.unpack_from(f"<{sector_size // 4}I", payload, offset)
+        difat_sectors.add(next_difat)
+        values = struct.unpack(f"<{entries_per_sector}I", sector_bytes(next_difat, complete=True))
         difat.extend(values[:-1])
         next_difat = values[-1]
-    fat_sectors = [value for value in difat if value not in {_CFB_FREE, _CFB_END}]
-    if len(fat_sectors) < num_fat_sectors:
-        _fail("clipboard.provider_ole_invalid", "Word clipboard package is missing FAT sectors.")
-    fat_sectors = fat_sectors[:num_fat_sectors]
-    if any(value >= sector_count for value in fat_sectors):
+    if next_difat != _CFB_END:
+        _fail("clipboard.provider_ole_invalid", "Word clipboard package has an unterminated DIFAT chain.")
+    fat_sectors = [value for value in difat if value != _CFB_FREE]
+    if (
+        len(fat_sectors) != num_fat_sectors
+        or len(set(fat_sectors)) != len(fat_sectors)
+        or difat_sectors.intersection(fat_sectors)
+        or any(value >= sector_count for value in fat_sectors)
+    ):
         _fail("clipboard.provider_ole_invalid", "Word clipboard package references an invalid FAT sector.")
 
     fat: list[int] = []
     for sector in fat_sectors:
-        offset = sector_size + sector * sector_size
-        fat.extend(struct.unpack_from(f"<{sector_size // 4}I", payload, offset))
+        values = struct.unpack(f"<{entries_per_sector}I", sector_bytes(sector, complete=True))
+        # The input bounds the physical sector count, including its logical
+        # tail. Surplus FAT capacity must not amplify the in-memory table.
+        fat.extend(values[: max(0, sector_count - len(fat))])
+    if len(fat) != sector_count or any(fat[sector] != _CFB_FAT for sector in fat_sectors):
+        _fail("clipboard.provider_ole_invalid", "Word clipboard package has inconsistent FAT metadata.")
+    if any(fat[sector] != _CFB_DIFAT for sector in difat_sectors):
+        _fail("clipboard.provider_ole_invalid", "Word clipboard package has inconsistent DIFAT metadata.")
 
-    def sector_bytes(sector: int) -> bytes:
-        if sector < 0 or sector >= sector_count:
-            _fail("clipboard.provider_ole_invalid", "Word clipboard package references an invalid sector.")
-        start = sector_size + sector * sector_size
-        return payload[start : start + sector_size]
+    claimed_sectors = set(fat_sectors) | difat_sectors
 
-    directory = b"".join(
-        sector_bytes(sector)
-        for sector in _bounded_chain(first_directory_sector, fat, max_items=sector_count)
-    )
+    def claim_chain(start: int, *, max_items: int = sector_count) -> list[int]:
+        chain = _bounded_chain(start, fat, max_items=max_items)
+        if claimed_sectors.intersection(chain):
+            _fail("clipboard.provider_ole_invalid", "Word clipboard package has overlapping sector chains.")
+        claimed_sectors.update(chain)
+        return chain
+
+    def read_stream(start: int, size: int) -> bytes:
+        if not 1 <= size <= _MAX_PROVIDER_BYTES:
+            _fail("clipboard.provider_ole_invalid", "Word clipboard stream exceeds the supported size.")
+        expected_count = (size + sector_size - 1) // sector_size
+        chain = claim_chain(start, max_items=expected_count)
+        if len(chain) != expected_count:
+            _fail("clipboard.provider_ole_invalid", "Word clipboard stream has an inconsistent sector count.")
+        chunks = [sector_bytes(sector, complete=index < len(chain) - 1) for index, sector in enumerate(chain)]
+        stream = b"".join(chunks)
+        if len(stream) < size:
+            _fail("clipboard.provider_ole_invalid", "Word clipboard Package stream is truncated.")
+        return stream[:size]
+
+    directory_chain = claim_chain(first_directory_sector)
+    if not directory_chain or (major == 4 and len(directory_chain) != num_directory_sectors):
+        _fail("clipboard.provider_ole_invalid", "Word clipboard package has an invalid directory chain.")
+    directory = b"".join(sector_bytes(sector, complete=True) for sector in directory_chain)
     entries: list[tuple[str, int, int, int]] = []
     root_start = _CFB_END
     root_size = 0
+    root_entries = 0
     for offset in range(0, len(directory) - 127, 128):
         entry = directory[offset : offset + 128]
         name_length = struct.unpack_from("<H", entry, 64)[0]
         entry_type = entry[66]
         if entry_type == 0:
             continue
-        if name_length < 2 or name_length > 64 or name_length % 2:
+        if (
+            name_length < 2
+            or name_length > 64
+            or name_length % 2
+            or entry[name_length - 2 : name_length] != b"\0\0"
+            or entry_type not in {1, 2, 5}
+        ):
             _fail("clipboard.provider_ole_invalid", "Word clipboard directory contains an invalid name.")
         try:
             name = entry[: name_length - 2].decode("utf-16le", errors="strict")
@@ -180,36 +239,37 @@ def _read_cfb_package(payload: bytes) -> bytes:
             _fail("clipboard.provider_ole_invalid", "Word clipboard directory contains an invalid name.")
         start_sector = struct.unpack_from("<I", entry, 116)[0]
         size = struct.unpack_from("<Q", entry, 120)[0]
+        if major == 3 and size > 0xFFFFFFFF:
+            _fail("clipboard.provider_ole_invalid", "Word clipboard stream has an invalid size.")
         if entry_type == 5:
+            root_entries += 1
             root_start, root_size = start_sector, size
         entries.append((name, entry_type, start_sector, size))
 
     packages = [entry for entry in entries if entry[0] == "Package" and entry[1] == 2]
-    if len(packages) != 1:
+    if root_entries != 1 or len(packages) != 1:
         _fail("clipboard.provider_ole_invalid", "Word clipboard package must contain exactly one Package stream.")
     _name, _entry_type, package_start, package_size = packages[0]
     if package_size < 1 or package_size > _MAX_PROVIDER_BYTES:
         _fail("clipboard.provider_ole_invalid", "Word clipboard Package stream exceeds the supported size.")
 
     if package_size >= mini_cutoff:
-        stream = b"".join(
-            sector_bytes(sector) for sector in _bounded_chain(package_start, fat, max_items=sector_count)
-        )
-        if len(stream) < package_size:
-            _fail("clipboard.provider_ole_invalid", "Word clipboard Package stream is truncated.")
-        return stream[:package_size]
+        return read_stream(package_start, package_size)
 
     if root_size < 1 or root_start in {_CFB_END, _CFB_FREE}:
         _fail("clipboard.provider_ole_invalid", "Word clipboard mini stream is missing.")
-    root_stream = b"".join(
-        sector_bytes(sector) for sector in _bounded_chain(root_start, fat, max_items=sector_count)
-    )[:root_size]
-    mini_fat_bytes = b"".join(
-        sector_bytes(sector)
-        for sector in _bounded_chain(first_mini_fat_sector, fat, max_items=max(1, num_mini_fat_sectors))
-    )
+    root_stream = read_stream(root_start, root_size)
+    mini_fat_chain = claim_chain(first_mini_fat_sector, max_items=num_mini_fat_sectors)
+    if not mini_fat_chain or len(mini_fat_chain) != num_mini_fat_sectors:
+        _fail("clipboard.provider_ole_invalid", "Word clipboard mini FAT is inconsistent.")
+    mini_fat_bytes = b"".join(sector_bytes(sector, complete=True) for sector in mini_fat_chain)
     mini_fat = list(struct.unpack_from(f"<{len(mini_fat_bytes) // 4}I", mini_fat_bytes, 0))
-    mini_chain = _bounded_chain(package_start, mini_fat, max_items=len(mini_fat))
+    mini_count = (root_size + 63) // 64
+    mini_fat = mini_fat[:mini_count]
+    expected_count = (package_size + 63) // 64
+    mini_chain = _bounded_chain(package_start, mini_fat, max_items=expected_count)
+    if len(mini_chain) != expected_count:
+        _fail("clipboard.provider_ole_invalid", "Word clipboard mini stream has an inconsistent sector count.")
     stream = b"".join(root_stream[index * 64 : (index + 1) * 64] for index in mini_chain)
     if len(stream) < package_size:
         _fail("clipboard.provider_ole_invalid", "Word clipboard Package stream is truncated.")
@@ -264,7 +324,7 @@ def _parse_xml(payload: bytes, *, code: str, message: str):
         root = etree.fromstring(payload, parser)
     except (etree.XMLSyntaxError, ValueError):
         _fail(code, message)
-    if root.getroottree().docinfo.doctype:
+    if getattr(root.getroottree().docinfo, "doctype", ""):
         _fail(code, message)
     return root
 
@@ -308,7 +368,9 @@ def _extent_for_blip(blip) -> tuple[int, int]:
     return cx, cy
 
 
-def _collect_occurrences(document_xml: bytes, resolve_identifier: Callable[[str], str]) -> tuple[ProviderImageOccurrence, ...]:
+def _collect_occurrences(
+    document_xml: bytes, resolve_identifier: Callable[[str], str]
+) -> tuple[ProviderImageOccurrence, ...]:
     root = _parse_xml(
         document_xml,
         code="clipboard.provider_document_invalid",
@@ -329,7 +391,9 @@ def _collect_occurrences(document_xml: bytes, resolve_identifier: Callable[[str]
                 for blip in blips:
                     raw_identifier = blip.get(f"{{{_R_NS}}}embed")
                     if not raw_identifier:
-                        _fail("clipboard.provider_image_invalid", "Clipboard document image has no embedded identifier.")
+                        _fail(
+                            "clipboard.provider_image_invalid", "Clipboard document image has no embedded identifier."
+                        )
                     cx, cy = _extent_for_blip(blip)
                     output.append(
                         ProviderImageOccurrence(
@@ -387,13 +451,7 @@ def _relationship_targets(parts: dict[str, bytes]) -> dict[str, str]:
             _fail("clipboard.provider_external_relationship", "External clipboard image relationships are not allowed.")
         target = relation.get("Target") or ""
         normalized = posixpath.normpath(posixpath.join("word", target))
-        if (
-            not rel_id
-            or normalized.startswith("../")
-            or normalized.startswith("/")
-            or "\\" in normalized
-            or normalized not in parts
-        ):
+        if not rel_id or normalized.startswith(("../", "/")) or "\\" in normalized or normalized not in parts:
             _fail("clipboard.provider_document_invalid", "Clipboard Word image relationship target is invalid.")
         if rel_id in relationships:
             _fail("clipboard.provider_document_invalid", "Clipboard Word image relationship is duplicated.")
@@ -515,12 +573,12 @@ def parse_wps_writer(document_payload: bytes, image_data_payload: bytes) -> Prov
 
 
 __all__ = [
-    "ClipboardOfficeProviderError",
-    "ProviderImageOccurrence",
-    "ProviderImageProjection",
     "WORD_EMBED_SOURCE_MIME",
     "WPS_DOCUMENT_MIME",
     "WPS_IMAGE_DATA_MIME",
+    "ClipboardOfficeProviderError",
+    "ProviderImageOccurrence",
+    "ProviderImageProjection",
     "parse_word_embed_source",
     "parse_wps_writer",
 ]

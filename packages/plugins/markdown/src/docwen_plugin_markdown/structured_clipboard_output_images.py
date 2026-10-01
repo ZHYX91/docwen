@@ -124,7 +124,9 @@ def add_xlsx_images(
     """Add one drawing per bound occurrence and return visible semantics rows."""
 
     from openpyxl.drawing.image import Image as XlsxImage
-    from openpyxl.utils import get_column_letter
+    from openpyxl.drawing.spreadsheet_drawing import AnchorMarker, OneCellAnchor
+    from openpyxl.drawing.xdr import XDRPositiveSize2D
+    from openpyxl.utils import coordinate_to_tuple, get_column_letter
 
     semantics = projection.workbook.create_sheet("Image Semantics")
     headers = (
@@ -175,12 +177,18 @@ def add_xlsx_images(
 
         drawing = XlsxImage(str(bound.path))
         if image.extent_cx_emu is not None and image.extent_cy_emu is not None:
-            drawing.width = image.extent_cx_emu / 9525
-            drawing.height = image.extent_cy_emu / 9525
+            row, column = coordinate_to_tuple(drawing_anchor)
+            drawing.anchor = OneCellAnchor(
+                _from=AnchorMarker(col=column - 1, row=row - 1),
+                ext=XDRPositiveSize2D(cx=image.extent_cx_emu, cy=image.extent_cy_emu),
+            )
         elif bound.resource.pixel_width is not None and bound.resource.pixel_height is not None:
             drawing.width = bound.resource.pixel_width
             drawing.height = bound.resource.pixel_height
-        sheet.add_image(drawing, drawing_anchor)
+        if image.extent_cx_emu is not None and image.extent_cy_emu is not None:
+            sheet.add_image(drawing)
+        else:
+            sheet.add_image(drawing, drawing_anchor)
         rows.append(
             (
                 str(occurrence.ordinal),

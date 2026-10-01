@@ -158,7 +158,7 @@ def freeze_qimage(image: object) -> FrozenPng:
             "Clipboard image could not be encoded.",
         )
     try:
-        if not detached.save(buffer, "PNG"):
+        if not detached.save(buffer, b"PNG"):
             raise ClipboardImageBytesError(
                 "clipboard.image_encode_failed",
                 "Clipboard image could not be encoded.",
@@ -166,7 +166,7 @@ def freeze_qimage(image: object) -> FrozenPng:
     finally:
         buffer.close()
 
-    frozen = inspect_png_bytes(bytes(encoded), device_pixel_ratio=dpr)
+    frozen = inspect_png_bytes(bytes(encoded.data()), device_pixel_ratio=dpr)
     if frozen.width != width or frozen.height != height or frozen.rgba_sha256 != rgba_sha:
         raise ClipboardImageBytesError(
             "clipboard.image_encode_failed",
