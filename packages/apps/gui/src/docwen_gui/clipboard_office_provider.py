@@ -48,6 +48,11 @@ _A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main"
 _R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 _WP_NS = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
 _REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
+_CT_NS = "http://schemas.openxmlformats.org/package/2006/content-types"
+_S_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+_SHEET_MAIN_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"
+_WORKSHEET_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"
+_REL_CONTENT_TYPE = "application/vnd.openxmlformats-package.relationships+xml"
 _IMAGE_REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"
 _NS = {"w": _W_NS, "a": _A_NS, "r": _R_NS, "wp": _WP_NS}
 
@@ -607,36 +612,171 @@ def _word_image_projection(parts: dict[str, bytes]) -> ProviderImageProjection:
 
 
 def _validate_biff_workbook(payload: bytes) -> None:
-    """Recognize bounded BIFF5/8 substreams; do not interpret or execute records."""
+    """Check BIFF8 framing and BOF identity; do not interpret cell/other record data.
+
+    BIFF5 and nested chart substreams are outside this conservative identity
+    adapter. Unsupported layouts retain plain text rather than guessing.
+    """
     offset = 0
     records = 0
-    open_substreams = 0
+    open_substream = False
+    substreams = 0
     while offset < len(payload):
         if len(payload) - offset < 4 or records >= 131072:
             _fail("clipboard.provider_document_invalid", "Clipboard workbook records are invalid.")
         identifier, size = struct.unpack_from("<HH", payload, offset)
         end = offset + 4 + size
-        if end > len(payload):
+        if size > 8224 or end > len(payload):
             _fail("clipboard.provider_document_invalid", "Clipboard workbook record is truncated.")
         if identifier == 0x0809:
-            if size < 4:
+            if size != 16 or open_substream:
                 _fail("clipboard.provider_document_invalid", "Clipboard workbook BOF record is invalid.")
-            version, kind = struct.unpack_from("<HH", payload, offset + 4)
-            if version not in {0x0500, 0x0600} or kind not in {0x0005, 0x0010, 0x0020, 0x0040}:
+            version, kind, _build, year, _history, lowest = struct.unpack_from("<HHHHII", payload, offset + 4)
+            if version != 0x0600 or year not in {0x07CC, 0x07CD} or lowest & 0xFF != 6:
                 _fail("clipboard.provider_document_invalid", "Clipboard workbook version is unsupported.")
-            if records == 0 and kind != 0x0005:
+            if (substreams == 0 and kind != 0x0005) or (substreams > 0 and kind not in {0x0010, 0x0020, 0x0040}):
                 _fail("clipboard.provider_document_invalid", "Clipboard workbook global substream is missing.")
-            open_substreams += 1
+            substreams += 1
+            open_substream = True
         elif identifier == 0x000A:
-            if size != 0 or open_substreams < 1:
+            if size != 0 or not open_substream:
                 _fail("clipboard.provider_document_invalid", "Clipboard workbook EOF record is invalid.")
-            open_substreams -= 1
-        elif open_substreams == 0:
+            open_substream = False
+        elif not open_substream:
             _fail("clipboard.provider_document_invalid", "Clipboard workbook records have no substream.")
         records += 1
         offset = end
-    if records < 2 or open_substreams != 0:
+    if substreams < 2 or open_substream:
         _fail("clipboard.provider_document_invalid", "Clipboard workbook substream is incomplete.")
+
+
+def _identity_xml(parts: dict[str, bytes], path: str):
+    payload = parts.get(path)
+    if payload is None:
+        _fail("clipboard.provider_document_invalid", "Clipboard spreadsheet package identity is incomplete.")
+    return _parse_xml(
+        payload,
+        code="clipboard.provider_document_invalid",
+        message="Clipboard spreadsheet package identity XML is invalid.",
+    )
+
+
+def _identity_relationships(parts: dict[str, bytes], path: str) -> dict[str, tuple[str, str, str]]:
+    root = _identity_xml(parts, path)
+    if root.tag != f"{{{_REL_NS}}}Relationships":
+        _fail("clipboard.provider_document_invalid", "Clipboard package relationships root is invalid.")
+    result: dict[str, tuple[str, str, str]] = {}
+    for relation in root:
+        identifier = relation.get("Id") or ""
+        kind = relation.get("Type") or ""
+        target = relation.get("Target") or ""
+        mode = relation.get("TargetMode") or "Internal"
+        if (
+            relation.tag != f"{{{_REL_NS}}}Relationship"
+            or not identifier
+            or not kind
+            or not target
+            or identifier in result
+        ):
+            _fail("clipboard.provider_document_invalid", "Clipboard package relationship is invalid or duplicated.")
+        result[identifier] = (kind, target, mode)
+    return result
+
+
+def _internal_part(parts: dict[str, bytes], base: str, target: str, mode: str) -> str:
+    # Resolve only an in-memory package key; never a filesystem path or URL.
+    if mode != "Internal" or not target or target.startswith("//") or any(char in target for char in "\\:%?#"):
+        _fail("clipboard.provider_document_invalid", "Clipboard package identity target is not internal.")
+    path = posixpath.normpath(target[1:] if target.startswith("/") else posixpath.join(base, target))
+    if path.startswith(("../", "/")) or path not in parts:
+        _fail("clipboard.provider_document_invalid", "Clipboard package identity target is unresolved.")
+    return path
+
+
+def _spreadsheet_content_types(parts: dict[str, bytes]) -> tuple[dict[str, str], dict[str, str]]:
+    root = _identity_xml(parts, "[Content_Types].xml")
+    if root.tag != f"{{{_CT_NS}}}Types":
+        _fail("clipboard.provider_document_invalid", "Clipboard package content types root is invalid.")
+    overrides: dict[str, str] = {}
+    defaults: dict[str, str] = {}
+    for item in root:
+        content_type = item.get("ContentType") or ""
+        if item.tag == f"{{{_CT_NS}}}Override":
+            name = item.get("PartName") or ""
+            if not name.startswith("/") or name.startswith("//") or posixpath.normpath(name) != name:
+                _fail("clipboard.provider_document_invalid", "Clipboard package content type part is invalid.")
+            target, key = overrides, name[1:]
+        elif item.tag == f"{{{_CT_NS}}}Default":
+            target, key = defaults, (item.get("Extension") or "").lower()
+        else:
+            _fail("clipboard.provider_document_invalid", "Clipboard package content type declaration is invalid.")
+        if not key or not content_type or key in target:
+            _fail("clipboard.provider_document_invalid", "Clipboard package content type is invalid or duplicated.")
+        target[key] = content_type
+    return overrides, defaults
+
+
+def _validate_spreadsheet_package(parts: dict[str, bytes]) -> None:
+    """Prove OPC main-part and worksheet identity without interpreting cells."""
+    overrides, defaults = _spreadsheet_content_types(parts)
+
+    def content_type(path: str) -> str:
+        # OPC's package relationship item is the dotfile `_rels/.rels`;
+        # pathlib intentionally reports no suffix for that filename.
+        filename = posixpath.basename(path)
+        extension = filename.rsplit(".", 1)[1].lower() if "." in filename else ""
+        return overrides.get(path, defaults.get(extension, ""))
+
+    if content_type("_rels/.rels") != _REL_CONTENT_TYPE:
+        _fail("clipboard.provider_document_invalid", "Clipboard package relationship content type is invalid.")
+    relations = _identity_relationships(parts, "_rels/.rels")
+    mains = [value for value in relations.values() if value[0] == f"{_R_NS}/officeDocument"]
+    if len(mains) != 1:
+        _fail("clipboard.provider_document_invalid", "Clipboard package main part is not unique.")
+    _kind, target, mode = mains[0]
+    main = _internal_part(parts, "", target, mode)
+    if content_type(main) != _SHEET_MAIN_TYPE:
+        _fail("clipboard.provider_document_invalid", "Clipboard package main part is not a supported workbook.")
+    workbook = _identity_xml(parts, main)
+    if workbook.tag != f"{{{_S_NS}}}workbook":
+        _fail("clipboard.provider_document_invalid", "Clipboard workbook root is invalid.")
+    sheets_nodes = workbook.findall(f"{{{_S_NS}}}sheets")
+    if len(sheets_nodes) != 1 or not len(sheets_nodes[0]):
+        _fail("clipboard.provider_document_invalid", "Clipboard workbook has no unique sheet collection.")
+    directory, filename = posixpath.split(main)
+    relation_path = posixpath.join(directory, "_rels", filename + ".rels")
+    if content_type(relation_path) != _REL_CONTENT_TYPE:
+        _fail("clipboard.provider_document_invalid", "Clipboard workbook relationship content type is invalid.")
+    sheet_relations = _identity_relationships(parts, relation_path)
+    ids: set[int] = set()
+    targets: set[str] = set()
+    names: set[str] = set()
+    for sheet in sheets_nodes[0]:
+        try:
+            sheet_id = int(sheet.get("sheetId") or "0")
+        except ValueError:
+            _fail("clipboard.provider_document_invalid", "Clipboard sheet identity is invalid.")
+        name = sheet.get("name") or ""
+        relation = sheet_relations.get(sheet.get(f"{{{_R_NS}}}id") or "")
+        if (
+            sheet.tag != f"{{{_S_NS}}}sheet"
+            or not 1 <= sheet_id <= 0xFFFFFFFF
+            or sheet_id in ids
+            or not name
+            or name.casefold() in names
+            or relation is None
+            or relation[0] != f"{_R_NS}/worksheet"
+        ):
+            _fail("clipboard.provider_document_invalid", "Clipboard sheet identity is invalid or unresolved.")
+        part = _internal_part(parts, directory, relation[1], relation[2])
+        if part in targets or content_type(part) != _WORKSHEET_TYPE:
+            _fail("clipboard.provider_document_invalid", "Clipboard worksheet identity is invalid or duplicated.")
+        worksheet = _identity_xml(parts, part)
+        if worksheet.tag != f"{{{_S_NS}}}worksheet" or len(worksheet.findall(f"{{{_S_NS}}}sheetData")) != 1:
+            _fail("clipboard.provider_document_invalid", "Clipboard worksheet root or data container is invalid.")
+        ids.add(sheet_id)
+        targets.add(part)
+        names.add(name.casefold())
 
 
 def parse_embed_source_images(payload: bytes) -> ProviderImageProjection | None:
@@ -649,6 +789,8 @@ def parse_embed_source_images(payload: bytes) -> ProviderImageProjection | None:
     if name in {"Workbook", "Book"}:
         _validate_biff_workbook(stream)
         return None
+    if name == "WordDocument":
+        _fail("clipboard.provider_document_invalid", "Legacy Word clipboard sources are unsupported.")
     parts = _safe_zip_parts(stream)
     word = parts.get("word/document.xml")
     workbook = parts.get("xl/workbook.xml")
@@ -656,16 +798,8 @@ def parse_embed_source_images(payload: bytes) -> ProviderImageProjection | None:
         _fail("clipboard.provider_document_invalid", "Clipboard OOXML document kind is ambiguous.")
     if word is not None:
         return _word_image_projection(parts)
-    if workbook is not None:
-        root = _parse_xml(
-            workbook,
-            code="clipboard.provider_document_invalid",
-            message="Clipboard workbook XML is invalid.",
-        )
-        if root.tag != "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}workbook":
-            _fail("clipboard.provider_document_invalid", "Clipboard workbook root is invalid.")
-        return None
-    _fail("clipboard.provider_document_invalid", "Clipboard OLE source is not a supported document.")
+    _validate_spreadsheet_package(parts)
+    return None
 
 
 def _parse_wps_image_data(payload: bytes) -> dict[str, bytes]:
