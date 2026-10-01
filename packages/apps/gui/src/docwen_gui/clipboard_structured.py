@@ -466,8 +466,16 @@ def _plain_paragraph_value(paragraph: ClipboardParagraph) -> str | None:
 
 
 def _plain_table_value(table: ClipboardTable) -> str | None:
-    matrix = [["" for _column in range(table.column_count)] for _row in range(table.row_count)]
-    for cell in table.cells:
+    """Build the provider plain-text signature from anchor cells only.
+
+    Office plain-text clipboard formats do not emit synthetic fields for cells
+    covered by colspan/rowspan. Pure NBSP/space paragraphs commonly represent
+    layout padding and are treated as empty only for alignment; the model keeps
+    the authored characters unchanged.
+    """
+
+    rows: list[list[str]] = [[] for _row in range(table.row_count)]
+    for cell in sorted(table.cells, key=lambda item: (item.row, item.column)):
         parts: list[str] = []
         for block in cell.blocks:
             if isinstance(block, ClipboardParagraph):
@@ -476,9 +484,11 @@ def _plain_table_value(table: ClipboardTable) -> str | None:
                 value = _plain_table_value(block)
             if value is None:
                 return None
+            if value.strip(" \t\r\n\u00a0") == "":
+                value = ""
             parts.append(value)
-        matrix[cell.row][cell.column] = "\n".join(parts)
-    return "\n".join("\t".join(row) for row in matrix)
+        rows[cell.row].append("\n".join(parts))
+    return "\n".join("\t".join(row) for row in rows)
 
 
 def _top_level_image_anchors(
