@@ -72,7 +72,11 @@ class ImagePlugin:
                 else:
                     error_type = "conversion_failed"
                     code = "IMG-HEIC-PREPROCESS-ERROR"
-                msg = str(exc)
+                msg = (
+                    "Required HEIC/HEIF image support is unavailable."
+                    if error_type == "dependency_missing"
+                    else "HEIC/HEIF preprocessing failed."
+                )
                 return ConversionResult(
                     task_id=context.request.request_id,
                     success=False,
