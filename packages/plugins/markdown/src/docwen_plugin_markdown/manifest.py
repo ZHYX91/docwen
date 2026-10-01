@@ -296,6 +296,16 @@ CLIPBOARD_TO_MARKDOWN_OPTIONS_SCHEMA: dict = {
     "additionalProperties": False,
     "properties": {
         "markdown_extensions": MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA,
+        "image_mode": {
+            "type": "string",
+            "enum": ["file", "base64", "embed", "omit"],
+            "default": "file",
+        },
+        "image_link_style": {
+            "type": "string",
+            "enum": ["wiki_embed", "wiki_link", "markdown_embed", "markdown_link"],
+            "default": "wiki_embed",
+        },
     },
     "required": [],
 }
