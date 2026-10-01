@@ -134,8 +134,8 @@ def _convert_tiff_physical_pages(
                             )
                         except CancellationRequested:
                             raise
-                        except Exception as exc:
-                            outcome = OcrOutcome(OcrStatus.RECOGNITION_FAILED, message=str(exc))
+                        except Exception:
+                            outcome = OcrOutcome(OcrStatus.RECOGNITION_FAILED, message="")
                         context.cancellation.check()
 
                         page_path = Path(context.workspace.create_artifact_path("auxiliary", ".md"))
@@ -278,13 +278,13 @@ def _convert_tiff_physical_pages(
                 path.unlink(missing_ok=True)
             except OSError:
                 _logger.warning("Unable to remove failed TIFF artifact %s", path)
-        context.logger.error(f"TIFF to Markdown failed: {exc}")
+        context.logger.error("TIFF to Markdown failed")
         return ConversionResult(
             task_id=task_id,
             success=False,
             error=ConversionErrorInfo(
                 error_type="conversion_failed",
-                message=str(exc),
+                message="TIFF to Markdown conversion failed.",
                 diagnostic_code="IMG2MD-ERROR",
             ),
             diagnostics=[ConversionDiagnostic(level="error", message="TIFF to Markdown failed", code="IMG2MD-ERROR")],
@@ -354,11 +354,11 @@ class ImageToMarkdownConverter:
                     ocr_language=ocr_language,
                     current_locale=current_locale,
                 )
-            except Exception as exc:
-                outcome = OcrOutcome(OcrStatus.RECOGNITION_FAILED, message=str(exc))
+            except Exception:
+                outcome = OcrOutcome(OcrStatus.RECOGNITION_FAILED, message="")
 
             if message := format_ocr_best_effort_warning(outcome.status):
-                context.logger.warning(f"{message} {outcome.message}".rstrip())
+                context.logger.warning(message)
                 context.progress.report_diagnostic(
                     "warning",
                     message,
@@ -381,7 +381,7 @@ class ImageToMarkdownConverter:
                 if table_outcome.status is TableRecognitionStatus.SUCCESS:
                     table_markdown = table_outcome.markdown
                 if table_outcome.fallback_required:
-                    context.logger.warning(f"Table recognition failed: {table_outcome.message}")
+                    context.logger.warning("Table recognition failed")
                     context.progress.report_diagnostic(
                         "warning",
                         "Table structure recognition failed; plain OCR text was retained.",
@@ -537,21 +537,20 @@ class ImageToMarkdownConverter:
                 elif input_stem(input_path) not in yaml_extracted:
                     _logger.warning("Generated YAML front matter may be malformed")
             except Exception:
-                _logger.warning("YAML front matter validation failed", exc_info=True)
+                _logger.warning("YAML front matter validation failed")
 
             md_path = context.workspace.create_artifact_path("primary", ".md")
             Path(md_path).write_text(md_text, encoding="utf-8")
-        except Exception as exc:
-            context.logger.error(f"Image to Markdown failed: {exc}")
+        except Exception:
+            context.logger.error("Image to Markdown failed")
+            message = "Image to Markdown conversion failed."
             return ConversionResult(
                 task_id=task_id,
                 success=False,
                 error=ConversionErrorInfo(
-                    error_type="conversion_failed", message=str(exc), diagnostic_code="IMG2MD-ERROR"
+                    error_type="conversion_failed", message=message, diagnostic_code="IMG2MD-ERROR"
                 ),
-                diagnostics=[
-                    ConversionDiagnostic(level="error", message=f"Image to Markdown failed: {exc}", code="IMG2MD-ERROR")
-                ],
+                diagnostics=[ConversionDiagnostic(level="error", message=message, code="IMG2MD-ERROR")],
             )
 
         md_artifact = ArtifactManifest(
