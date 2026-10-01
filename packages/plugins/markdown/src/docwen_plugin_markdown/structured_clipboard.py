@@ -24,6 +24,21 @@ from docwen_core.models.clipboard_document import (
     load_clipboard_document_bytes,
 )
 from docwen_core.models.result import ConversionDiagnostic, ConversionMetrics, ConversionResult
+from docwen_plugin_markdown.structured_clipboard_images import (
+    collect_image_occurrences,
+    copy_bound_image_artifacts,
+    prepare_markdown_images,
+    resolve_bound_images,
+)
+from docwen_plugin_markdown.structured_clipboard_output_images import (
+    add_xlsx_images,
+    deduplicate_xlsx_png_media,
+    image_placeholder,
+    markdown_paragraph_blocks,
+    missing_image_diagnostics,
+    write_csv_image_semantics,
+    write_docx_paragraph,
+)
 from docwen_plugin_markdown.structured_clipboard_projection import (
     has_html_header_associations,
     semantics_headers,
@@ -46,66 +61,18 @@ def _load(context: Any) -> ClipboardDocument:
     return load_clipboard_document_bytes(Path(context.workspace.input_path).read_bytes())
 
 
-def _image_diagnostics(document: ClipboardDocument) -> list[ConversionDiagnostic]:
-    missing_count = 0
-    bound_count = 0
-
-    def walk(blocks: tuple[ClipboardBlock, ...]) -> None:
-        nonlocal missing_count, bound_count
-        for block in blocks:
-            if isinstance(block, ClipboardParagraph):
-                for item in block.inlines:
-                    if not isinstance(item, ClipboardImageRef):
-                        continue
-                    if item.resource_id is None:
-                        missing_count += 1
-                    else:
-                        bound_count += 1
-            else:
-                for cell in block.cells:
-                    walk(cell.blocks)
-
-    walk(document.blocks)
-    diagnostics: list[ConversionDiagnostic] = []
-    if missing_count:
-        diagnostics.append(
-            ConversionDiagnostic(
-                level="warning",
-                code="CLIPBOARD-IMAGE-RESOURCE-UNAVAILABLE",
-                message=(
-                    f"{missing_count} clipboard image occurrence(s) had no verified resource bytes "
-                    "and were kept as text placeholders."
-                ),
-            )
-        )
-    if bound_count:
-        diagnostics.append(
-            ConversionDiagnostic(
-                level="warning",
-                code="CLIPBOARD-IMAGE-RESOURCE-NOT-RENDERED",
-                message=(
-                    f"{bound_count} clipboard image occurrence(s) have verified linked resources; "
-                    "this structured-table converter preserves their bindings but does not render image bytes yet."
-                ),
-            )
-        )
-    return diagnostics
-
-
-def _image_placeholder(image: ClipboardImageRef) -> str:
-    state = "not rendered" if image.resource_id is not None else "unavailable"
-    return f"[Image {state}: {image.alt}]" if image.alt else f"[Image {state}]"
-
-
-def _paragraph_projection(paragraph: ClipboardParagraph) -> str:
+def _paragraph_projection(paragraph: ClipboardParagraph, resources: dict[str, Any] | None = None) -> str:
     parts: list[str] = []
+    resources = resources or {}
     for inline in paragraph.inlines:
         if isinstance(inline, ClipboardText):
             parts.append(inline.value)
         elif isinstance(inline, ClipboardHardBreak):
             parts.append("\n")
+        elif inline.resource_id is not None and inline.resource_id in resources:
+            parts.append(f"[Image: {resources[inline.resource_id].suggested_name}]")
         else:
-            parts.append(_image_placeholder(inline))
+            parts.append(image_placeholder(inline))
     return "".join(parts)
 
 
@@ -128,19 +95,6 @@ def _remove_trailing_empty_paragraph(cell: Any) -> None:
         cell._tc.remove(last)
 
 
-def _write_docx_paragraph(container: Any, paragraph: ClipboardParagraph) -> Any:
-    output = container.add_paragraph()
-    run = output.add_run()
-    for inline in paragraph.inlines:
-        if isinstance(inline, ClipboardText):
-            run.add_text(inline.value)
-        elif isinstance(inline, ClipboardHardBreak):
-            run.add_break()
-        else:
-            run.add_text(_image_placeholder(inline))
-    return output
-
-
 def _set_docx_header_rows(table: Any, header_rows: int) -> None:
     if header_rows <= 0:
         return
@@ -154,24 +108,28 @@ def _set_docx_header_rows(table: Any, header_rows: int) -> None:
         tr_pr.append(marker)
 
 
-def _render_docx_blocks(container: Any, blocks: tuple[ClipboardBlock, ...]) -> list[Any]:
+def _render_docx_blocks(
+    container: Any,
+    blocks: tuple[ClipboardBlock, ...],
+    resources: dict[str, Any],
+) -> list[Any]:
     elements: list[Any] = []
     previous_table = False
     for block in blocks:
         if previous_table and hasattr(container, "_tc"):
             _remove_trailing_empty_paragraph(container)
         if isinstance(block, ClipboardParagraph):
-            paragraph = _write_docx_paragraph(container, block)
+            paragraph = write_docx_paragraph(container, block, resources)
             elements.append(paragraph._element)
             previous_table = False
             continue
-        table = _render_docx_table(container, block)
+        table = _render_docx_table(container, block, resources)
         elements.append(table._element)
         previous_table = True
     return elements
 
 
-def _render_docx_table(container: Any, model: ClipboardTable) -> Any:
+def _render_docx_table(container: Any, model: ClipboardTable, resources: dict[str, Any]) -> Any:
     table = container.add_table(rows=model.row_count, cols=model.column_count)
     with suppress(KeyError, ValueError):
         table.style = "Table Grid"
@@ -188,7 +146,7 @@ def _render_docx_table(container: Any, model: ClipboardTable) -> Any:
     for cell_model in model.cells:
         cell = table.cell(cell_model.row, cell_model.column)
         _clear_docx_cell(cell)
-        _render_docx_blocks(cell, cell_model.blocks)
+        _render_docx_blocks(cell, cell_model.blocks, resources)
         if not list(cell._tc) or list(cell._tc)[-1].tag.rsplit("}", 1)[-1] != "p":
             cell.add_paragraph()
     header_rows, header_columns = clipboard_table_header_shape(model)
@@ -228,6 +186,7 @@ def convert_clipboard_document_to_docx(context: Any) -> ConversionResult:
     from docwen_plugin_markdown.template_utils import find_body_placeholder, resolve_template, scan_placeholders
 
     document_model = _load(context)
+    resources = resolve_bound_images(context, document_model)
     context.cancellation.check()
     document = resolve_template(context.request.options.get("template_name"))
     placeholder = find_body_placeholder(document)
@@ -235,7 +194,7 @@ def convert_clipboard_document_to_docx(context: Any) -> ConversionResult:
     # so authored text resembling {{placeholders}} is never reinterpreted.
     template_placeholders = scan_placeholders(document)
     fill_template(document, {}, [], None, placeholder_map=template_placeholders)
-    elements = _render_docx_blocks(document, document_model.blocks)
+    elements = _render_docx_blocks(document, document_model.blocks, resources)
     _place_docx_body(document, elements, placeholder)
     context.cancellation.check()
     output = context.workspace.create_artifact_path(ARTIFACT_KIND_PRIMARY, ".docx")
@@ -253,7 +212,7 @@ def convert_clipboard_document_to_docx(context: Any) -> ConversionResult:
         task_id=context.request.request_id,
         success=True,
         artifacts=[artifact],
-        diagnostics=_image_diagnostics(document_model),
+        diagnostics=missing_image_diagnostics(document_model),
         metrics=ConversionMetrics(input_bytes=Path(context.workspace.input_path).stat().st_size),
     )
 
@@ -265,12 +224,15 @@ class _OrderRecorder:
         self._table_sequence = 0
         self.table_ids: dict[int, str] = {}
         self.tables: list[tuple[str, ClipboardTable, str, str]] = []
+        self.paragraphs: dict[str, ClipboardParagraph] = {}
 
     def add(
         self, kind: str, text: str = "", sheet: str = "", parent: str = "", anchor: str = "", child: str = ""
-    ) -> None:
+    ) -> str:
         self._sequence += 1
-        self.rows.append((str(self._sequence), kind, text, sheet, parent, anchor, child))
+        sequence = str(self._sequence)
+        self.rows.append((sequence, kind, text, sheet, parent, anchor, child))
+        return sequence
 
     def table_id(self, table: ClipboardTable) -> str:
         key = id(table)
@@ -289,11 +251,18 @@ def _record_order(
     *,
     parent_table: str = "",
     anchor: str = "",
+    resources: dict[str, Any] | None = None,
 ) -> None:
     for block in blocks:
         if isinstance(block, ClipboardParagraph):
             kind = "paragraph" if not parent_table else "cell_paragraph"
-            recorder.add(kind, _paragraph_projection(block), parent=parent_table, anchor=anchor)
+            sequence = recorder.add(
+                kind,
+                _paragraph_projection(block, resources),
+                parent=parent_table,
+                anchor=anchor,
+            )
+            recorder.paragraphs[sequence] = block
             continue
         table_id = recorder.table_id(block)
         sheet = f"Table {table_id[1:]}"
@@ -301,19 +270,26 @@ def _record_order(
         recorder.add("table_ref", sheet=sheet, parent=parent_table, anchor=anchor, child=table_id)
         for cell in block.cells:
             cell_anchor = f"R{cell.row + 1}C{cell.column + 1}"
-            _record_order(cell.blocks, recorder, parent_table=table_id, anchor=cell_anchor)
+            _record_order(
+                cell.blocks,
+                recorder,
+                parent_table=table_id,
+                anchor=cell_anchor,
+                resources=resources,
+            )
 
 
 def _xlsx_cell_value(
     cell: ClipboardTableCell,
     recorder: _OrderRecorder,
     table_titles: dict[str, str] | None = None,
+    resources: dict[str, Any] | None = None,
 ) -> str:
     parts: list[str] = []
     titles = table_titles or {}
     for block in cell.blocks:
         if isinstance(block, ClipboardParagraph):
-            parts.append(_paragraph_projection(block))
+            parts.append(_paragraph_projection(block, resources))
         else:
             table_id = recorder.table_id(block)
             parts.append(f"[Nested table {titles.get(table_id, table_id)}]")
