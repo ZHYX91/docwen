@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import os
 import posixpath
 import tempfile
 from pathlib import Path
+from typing import Any
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 from lxml import etree
@@ -117,7 +119,7 @@ def add_xlsx_images(
     projection,
     occurrences: tuple[ClipboardImageOccurrenceInfo, ...],
     resources: dict[str, BoundClipboardImage],
-    table_sheets: dict[str, object],
+    table_sheets: dict[str, Any],
 ) -> list[tuple[str, ...]]:
     """Add one drawing per bound occurrence and return visible semantics rows."""
 
@@ -289,6 +291,7 @@ def deduplicate_xlsx_png_media(path: Path) -> None:
         data.pop(duplicate, None)
 
     descriptor, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    os.close(descriptor)
     Path(temp_name).unlink(missing_ok=True)
     temporary = Path(temp_name)
     try:
