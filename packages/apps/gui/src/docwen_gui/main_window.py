@@ -633,7 +633,7 @@ class MainWindow(QWidget):
             self,
             _t(
                 "components.file_drop.clipboard_output_title",
-                "Choose an output folder for clipboard Markdown",
+                "Choose an output folder for clipboard content",
             ),
             str(Path.home()),
         )
@@ -1070,7 +1070,7 @@ class MainWindow(QWidget):
                 elif any(self._is_clipboard_input(path) for path in paths):
                     text = _t(
                         "components.file_drop.clipboard_output_hint",
-                        "Clipboard Markdown will ask for an output folder before conversion.",
+                        "Clipboard content will ask for an output folder before conversion.",
                     )
                 elif self._view_model.mode == "batch":
                     text = _t("info_area.output_each_source")
@@ -1483,6 +1483,19 @@ class MainWindow(QWidget):
 
     def _show_template_target_mode(self, template_type: str, file_path: str) -> None:
         """Project a template target into the matching Markdown generation mode."""
+        from docwen_gui.view_models._runtime_route_filter import RuntimeRouteSource
+
+        selected = self._view_model.selected_file
+        refs = (
+            [ref for ref in self._view_model.files if selected is not None and ref.category == selected.category]
+            if self._view_model.mode == "batch"
+            else ([selected] if selected is not None else [])
+        )
+        sources = (
+            tuple(RuntimeRouteSource(ref.format, ref.category) for ref in refs)
+            if any(ref.format == "clipboard_document" for ref in refs)
+            else (RuntimeRouteSource("md", "markdown"),)
+        )
         normalized_type = str(template_type or "").strip().lower()
         selector = self._template_selector.get_selector(normalized_type) if self._template_selector else None
         self._action_area_vm.set_template_ready(
@@ -1493,13 +1506,15 @@ class MainWindow(QWidget):
             self._action_area_vm.mode == self._view_model.mode
             and self._action_area_vm.file_type == expected_mode
             and normalize_path(self._action_area_vm.file_path or "") == normalize_path(file_path)
+            and self._action_area_vm.target_route_sources == sources
         ):
             return
         self._action_area_vm.set_mode(self._view_model.mode)
+        source_options = {"source_inputs": sources} if any(ref.format == "clipboard_document" for ref in refs) else {}
         if normalized_type == "xlsx":
-            self._action_area_vm.setup_for_md_to_spreadsheet(file_path)
+            self._action_area_vm.setup_for_md_to_spreadsheet(file_path, **source_options)
         else:
-            self._action_area_vm.setup_for_md_to_document(file_path)
+            self._action_area_vm.setup_for_md_to_document(file_path, **source_options)
 
     def _configured_main_template_type(self) -> str:
         """Read and normalize the persisted Markdown template target."""

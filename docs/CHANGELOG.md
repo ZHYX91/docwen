@@ -5,7 +5,18 @@
 
 ## Unreleased / 未发布
 
-## 0.15.0 (2026-09-28)
+## 0.15.0 (2026-10-02)
+
+- Import copied local files through the existing admission and deduplication rules. Single-file mode rejects multi-file input without replacing the current input and offers an explicit switch using the captured file list.
+- Preserve ordered clipboard text and reliable basic or complex tables, including empty cells, leading zeros, line breaks, merged cells and nested tables. Keep complete plain text with diagnostics when structure cannot be bound reliably, and provide plain-only paste.
+- Support standalone clipboard images and verified embedded images from supported Office representations. Preserve image positions and repeated-image identities; retain visible placeholders for missing or unsupported resources. Output semantics follow each format's documented capabilities.
+- Prevent input action buttons from overlapping during window resize, large-font use and UI scaling; retain full labels and one native menu arrow. Use generic clipboard-content wording when choosing the output folder for text, tables or images.
+- Populate structured-clipboard generation targets from their actual Runtime routes, expose MD export without requiring a template, and limit mixed batches to common targets.
+- 复制本地文件走统一准入与去重规则；单文件模式拒绝多文件并保留原输入，可按本次捕获列表明确切换至批量添加。
+- 粘贴内容保留正文与可靠表格顺序，支持空单元格、前导零、换行、合并和嵌套表格；无法可靠绑定时完整保留纯文本并提示，提供“仅粘贴文本”。
+- 支持直接复制的图片及受支持 Office 表示中经验证的内嵌图片绑定，保留图片位置与重复资源身份；缺失或不支持资源显示占位，各输出格式按其能力呈现。
+- 修复大字号、界面缩放和窗口重排时输入区操作按钮重叠，保留完整文字及单个原生菜单箭头；文本、表格和图片共用的输出文件夹提示统一称为“剪贴板内容”。
+- 结构化剪贴板输入按实际 Runtime 路线列出目标，提供无需模板的 MD 导出；混合批次仅显示共同支持的目标。
 
 - Add explicit GUI clipboard Markdown input: one user-triggered plain-text snapshot becomes exact UTF-8 Markdown, uses the normal admission/conversion pipeline, keeps an opaque profile-owned backing file out of Recent Files and source-location UI, and reuses the original snapshot for failed retry.
 - Rework the input header to vertical Single File/Batch choices plus textual Add/Paste/Clear actions with responsive reflow. Source-mode clipboard input asks for a persistent output parent before execution; custom output remains unchanged and mixed batches redirect only synthetic inputs.
