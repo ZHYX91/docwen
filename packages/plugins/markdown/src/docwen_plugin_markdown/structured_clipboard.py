@@ -325,8 +325,9 @@ def _new_projection_workbook(template_path: str | None) -> Any:
 
 def convert_clipboard_document_to_xlsx(context: Any) -> ConversionResult:
     document = _load(context)
+    resources = resolve_bound_images(context, document)
     recorder = _OrderRecorder()
-    _record_order(document.blocks, recorder)
+    _record_order(document.blocks, recorder, resources=resources)
     projection = prepare_projection_workbook(context.request.options.get("template_name"))
 
     table_sheets: dict[str, Any] = {}
@@ -345,7 +346,7 @@ def convert_clipboard_document_to_xlsx(context: Any) -> ConversionResult:
             output_cell = sheet.cell(
                 cell_model.row + 1,
                 cell_model.column + 1,
-                _xlsx_cell_value(cell_model, recorder, projection.table_titles),
+                _xlsx_cell_value(cell_model, recorder, projection.table_titles, resources),
             )
             output_cell.data_type = "s"
             output_cell.number_format = "@"
@@ -370,7 +371,20 @@ def convert_clipboard_document_to_xlsx(context: Any) -> ConversionResult:
         table_semantics_rows(recorder.tables, projection.table_titles),
     )
 
-    diagnostics = _image_diagnostics(document)
+    occurrences = collect_image_occurrences(document, recorder.table_id)
+    add_xlsx_images(projection, occurrences, resources, table_sheets)
+    diagnostics = missing_image_diagnostics(document)
+    if any(occurrence.image.resource_id is not None for occurrence in occurrences):
+        diagnostics.append(
+            ConversionDiagnostic(
+                level="warning",
+                code="CLIPBOARD-XLSX-IMAGE-PROJECTION",
+                message=(
+                    "Clipboard images are preserved as worksheet drawings with visible Image Semantics; "
+                    "XLSX does not provide native inline or nested-table-cell image semantics."
+                ),
+            )
+        )
     if any(parent for _table_id, _table, parent, _anchor in recorder.tables) or any(
         isinstance(block, ClipboardParagraph) for block in document.blocks
     ):
@@ -400,6 +414,7 @@ def convert_clipboard_document_to_xlsx(context: Any) -> ConversionResult:
     from docwen_plugin_markdown.structured_clipboard_strings import save_workbook_preserving_empty_strings
 
     save_workbook_preserving_empty_strings(projection.workbook, output)
+    deduplicate_xlsx_png_media(Path(output))
     artifact = ArtifactManifest(
         artifact_id="clipboard-document-xlsx",
         kind=ARTIFACT_KIND_PRIMARY,
@@ -426,13 +441,23 @@ def _markdown_projection(
     document: ClipboardDocument,
     *,
     structural_tables: bool,
+    image_plan: Any,
+    resources: dict[str, Any],
 ) -> tuple[str, list[ConversionDiagnostic]]:
     recorder = _OrderRecorder()
-    _record_order(document.blocks, recorder)
+    _record_order(document.blocks, recorder, resources=resources)
     lines = ["# Clipboard document", ""]
     for sequence, kind, text, sheet, parent, anchor, child in recorder.rows:
         if kind in {"paragraph", "cell_paragraph"}:
-            lines.extend([f"## {sequence}. {kind}", "", _markdown_fence(text), ""])
+            lines.extend([f"## {sequence}. {kind}", ""])
+            lines.extend(
+                markdown_paragraph_blocks(
+                    recorder.paragraphs[sequence],
+                    image_plan,
+                    resources,
+                    _markdown_fence,
+                )
+            )
         else:
             lines.extend(
                 [
@@ -468,7 +493,7 @@ def _markdown_projection(
                                 (
                                     f"R{cell.row + 1}C{cell.column + 1} "
                                     f"span={cell.row_span}x{cell.column_span} "
-                                    f"value={_xlsx_cell_value(cell, recorder)}"
+                                    f"value={_xlsx_cell_value(cell, recorder, resources=resources)}"
                                 )
                                 for cell in table.cells
                             ],
@@ -487,7 +512,7 @@ def _markdown_projection(
         )
         association_projection = association_projection or has_html_header_associations(table)
 
-    diagnostics = _image_diagnostics(document)
+    diagnostics = missing_image_diagnostics(document)
     if not structural_tables:
         diagnostics.append(
             ConversionDiagnostic(
@@ -526,12 +551,19 @@ def _markdown_projection(
 
 def convert_clipboard_document_to_markdown(context: Any) -> ConversionResult:
     document = _load(context)
+    resources = resolve_bound_images(context, document)
+    image_plan = prepare_markdown_images(context, resources)
     extensions = resolve_markdown_extensions(
         context.request.options,
         context.config,
         direction="output",
     )
-    text, diagnostics = _markdown_projection(document, structural_tables=extensions.structural_tables)
+    text, diagnostics = _markdown_projection(
+        document,
+        structural_tables=extensions.structural_tables,
+        image_plan=image_plan,
+        resources=resources,
+    )
     output = context.workspace.create_artifact_path(ARTIFACT_KIND_PRIMARY, ".md")
     Path(output).write_text(text, encoding="utf-8", newline="\n")
     artifact = ArtifactManifest(
@@ -545,22 +577,27 @@ def convert_clipboard_document_to_markdown(context: Any) -> ConversionResult:
     return ConversionResult(
         task_id=context.request.request_id,
         success=True,
-        artifacts=[artifact],
+        artifacts=[artifact, *image_plan.artifacts],
         diagnostics=diagnostics,
     )
 
 
-def _table_matrix(table: ClipboardTable, recorder: _OrderRecorder) -> list[list[str]]:
+def _table_matrix(
+    table: ClipboardTable,
+    recorder: _OrderRecorder,
+    resources: dict[str, Any] | None = None,
+) -> list[list[str]]:
     matrix = [["" for _column in range(table.column_count)] for _row in range(table.row_count)]
     for cell in table.cells:
-        matrix[cell.row][cell.column] = _xlsx_cell_value(cell, recorder)
+        matrix[cell.row][cell.column] = _xlsx_cell_value(cell, recorder, resources=resources)
     return matrix
 
 
 def convert_clipboard_document_to_csv(context: Any) -> ConversionResult:
     document = _load(context)
+    resources = resolve_bound_images(context, document)
     recorder = _OrderRecorder()
-    _record_order(document.blocks, recorder)
+    _record_order(document.blocks, recorder, resources=resources)
     artifacts: list[ArtifactManifest] = []
 
     order_path = context.workspace.create_artifact_path(ARTIFACT_KIND_PRIMARY, ".csv")
@@ -595,20 +632,47 @@ def convert_clipboard_document_to_csv(context: Any) -> ConversionResult:
     )
 
     for table_id, table, _parent, _anchor in recorder.tables:
-        path = context.workspace.create_artifact_path(ARTIFACT_KIND_AUXILIARY, ".csv")
-        with Path(path).open("w", encoding="utf-8-sig", newline="") as stream:
-            csv.writer(stream).writerows(_table_matrix(table, recorder))
+        table_path = context.workspace.create_artifact_path(ARTIFACT_KIND_AUXILIARY, ".csv")
+        with Path(table_path).open("w", encoding="utf-8-sig", newline="") as stream:
+            csv.writer(stream).writerows(_table_matrix(table, recorder, resources))
         artifacts.append(
             ArtifactManifest(
                 artifact_id=f"clipboard-{table_id.lower()}",
                 kind=ARTIFACT_KIND_AUXILIARY,
-                staging_path=path,
+                staging_path=table_path,
                 suggested_name=f"{context.request.source_stem}-{table_id}.csv",
                 media_type="text/csv",
             )
         )
 
-    diagnostics = _image_diagnostics(document)
+    occurrences = collect_image_occurrences(document, recorder.table_id)
+    image_semantics_path = Path(
+        context.workspace.create_artifact_path(ARTIFACT_KIND_AUXILIARY, ".csv")
+    )
+    write_csv_image_semantics(image_semantics_path, occurrences, resources)
+    artifacts.append(
+        ArtifactManifest(
+            artifact_id="clipboard-image-semantics",
+            kind=ARTIFACT_KIND_AUXILIARY,
+            staging_path=str(image_semantics_path),
+            suggested_name=f"{context.request.source_stem}-image-semantics.csv",
+            media_type="text/csv",
+        )
+    )
+    artifacts.extend(copy_bound_image_artifacts(context, resources))
+
+    diagnostics = missing_image_diagnostics(document)
+    if any(occurrence.image.resource_id is not None for occurrence in occurrences):
+        diagnostics.append(
+            ConversionDiagnostic(
+                level="warning",
+                code="CLIPBOARD-CSV-IMAGE-PROJECTION",
+                message=(
+                    "CSV cannot embed images; bound PNG resources are exported separately and "
+                    "their occurrence locations are preserved in image-semantics.csv."
+                ),
+            )
+        )
     diagnostics.append(
         ConversionDiagnostic(
             level="warning",
