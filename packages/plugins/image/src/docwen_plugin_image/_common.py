@@ -108,7 +108,7 @@ def preconvert_heic_to_png(input_path: str, staging_dir: str) -> str:
             finally:
                 converted.close()
     except Exception as exc:
-        raise RuntimeError(f"HEIC/HEIF preprocessing failed: {exc}") from exc
+        raise RuntimeError("HEIC/HEIF preprocessing failed.") from exc
     return str(output_path)
 
 
