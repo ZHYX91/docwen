@@ -392,37 +392,33 @@ class MainWindow(QWidget):
                 self._paste_file_paths(file_paths)
                 return
 
-        if (
-            not plain_text_only
-            and mime_data is not None
-            and mime_data.hasHtml()
-            and self._try_structured_clipboard_paste(mime_data)
-        ):
-            return
+        capture = None
+        if not plain_text_only and mime_data is not None:
+            from docwen_gui.clipboard_capture import freeze_clipboard_mime
 
-        projection = None
-        if not plain_text_only and mime_data is not None and mime_data.hasHtml():
-            try:
-                from docwen_gui.clipboard_content import project_clipboard_html
-
-                projection = project_clipboard_html(mime_data.html())
-            except Exception:
-                logger.debug("Clipboard HTML projection failed; retaining plain text")
+            capture = freeze_clipboard_mime(mime_data)
+            if self._try_structured_clipboard_paste(capture):
+                return
+            if capture.image is not None:
+                self._paste_standalone_clipboard_image(capture.image)
+                return
+            if capture.image_error_code and capture.plain_text is None:
+                self._info_area_vm.add_message(
+                    _t(
+                        "clipboard.image_invalid",
+                        "Clipboard image data is invalid or exceeds the supported size.",
+                    ),
+                    "danger",
+                )
+                return
 
         if mime_data is None or not mime_data.hasText():
-            if projection is not None and projection.image_count:
-                self._info_area_vm.add_message(_t("clipboard.images_omitted", count=projection.image_count), "warning")
-            else:
-                self._info_area_vm.add_message(
-                    _t("components.file_drop.clipboard_non_text", "The clipboard does not contain plain text."),
-                    "warning",
-                )
+            self._info_area_vm.add_message(
+                _t("components.file_drop.clipboard_non_text", "The clipboard does not contain plain text."),
+                "warning",
+            )
             return
         text = mime_data.text()
-        fallback_table_count = 0
-        image_count = projection.image_count if projection is not None else 0
-        if projection is not None and (projection.table_count or projection.fallback_table_count):
-            fallback_table_count = projection.fallback_table_count
         if not text.strip():
             self._info_area_vm.add_message(
                 _t(
@@ -455,13 +451,6 @@ class MainWindow(QWidget):
         def completed(outcome) -> None:
             if not outcome.added:
                 store.discard_if_unowned(snapshot.path)
-            else:
-                if fallback_table_count:
-                    self._info_area_vm.add_message(
-                        _t("clipboard.table_fallback", count=fallback_table_count), "warning"
-                    )
-                if image_count:
-                    self._info_area_vm.add_message(_t("clipboard.images_omitted", count=image_count), "warning")
             self._sync_clipboard_visible_inputs()
 
         from docwen_core.detection import inspect_utf8_markdown_snapshot
@@ -472,8 +461,8 @@ class MainWindow(QWidget):
             file_inspector=inspect_utf8_markdown_snapshot,
         )
 
-    def _try_structured_clipboard_paste(self, mime_data) -> bool:
-        """Handle table-bearing HTML as one recursive managed document input."""
+    def _try_structured_clipboard_paste(self, capture) -> bool:
+        """Handle one already-frozen rich clipboard document."""
 
         from docwen_core.models.clipboard_document import (
             ClipboardImageRef,
@@ -481,40 +470,37 @@ class MainWindow(QWidget):
             clipboard_document_to_bytes,
             iter_clipboard_inlines,
         )
-        from docwen_gui.clipboard_structured import (
-            html_contains_table,
-            project_structured_clipboard_html,
-            splice_plain_text_with_structured_tables,
+        from docwen_gui.clipboard_rich_document import (
+            ClipboardRichDocumentError,
+            project_frozen_rich_document,
         )
 
-        html_bytes = bytes(mime_data.data("text/html"))
-        if not html_bytes:
-            return False
         try:
-            contains_table = html_contains_table(html_bytes)
-        except (UnicodeDecodeError, ValueError):
+            decision = project_frozen_rich_document(capture)
+        except ClipboardRichDocumentError:
             self._info_area_vm.add_message(
-                _t("clipboard.structured_invalid", "Clipboard table structure is invalid and was not imported."),
+                _t(
+                    "clipboard.structured_invalid",
+                    "Clipboard table/image structure is invalid and was not imported.",
+                ),
                 "danger",
             )
             return True
-        if not contains_table:
+        if decision.plain_fallback:
+            self._info_area_vm.add_message(
+                _t(
+                    "clipboard.structured_plain_fallback",
+                    "Rich table/image structure could not be matched reliably to plain text; the complete plain text was kept.",
+                ),
+                "warning",
+            )
             return False
-        html_only = not mime_data.hasText()
+        projection = decision.projection
+        if not decision.handled or projection is None:
+            return False
+
+        document = projection.document
         try:
-            document = project_structured_clipboard_html(html_bytes)
-            if not html_only:
-                merged = splice_plain_text_with_structured_tables(document, mime_data.text())
-                if merged is None:
-                    self._info_area_vm.add_message(
-                        _t(
-                            "clipboard.structured_plain_fallback",
-                            "Rich table structure could not be matched reliably to plain text; the complete plain text was kept.",
-                        ),
-                        "warning",
-                    )
-                    return False
-                document = merged
             payload = clipboard_document_to_bytes(document)
             store = self._clipboard_store_for_paste()
             bundle = store.create_bundle(
@@ -525,21 +511,28 @@ class MainWindow(QWidget):
                     index="{index}",
                 ),
                 preview=clipboard_document_preview(document),
+                resources=projection.resources,
             )
         except (OSError, TypeError, ValueError):
             self._info_area_vm.add_message(
-                _t("clipboard.structured_invalid", "Clipboard table structure is invalid and was not imported."),
+                _t(
+                    "clipboard.structured_invalid",
+                    "Clipboard table/image structure is invalid and was not imported.",
+                ),
                 "danger",
             )
             return True
 
-        image_count = sum(isinstance(item, ClipboardImageRef) for item in iter_clipboard_inlines(document))
+        missing_count = sum(
+            isinstance(item, ClipboardImageRef) and item.resource_id is None
+            for item in iter_clipboard_inlines(document)
+        )
 
         def completed(outcome) -> None:
             if not outcome.added:
                 store.discard_if_unowned(bundle.main.path)
             else:
-                if html_only:
+                if projection.html_only:
                     self._info_area_vm.add_message(
                         _t(
                             "clipboard.structured_html_only",
@@ -547,8 +540,11 @@ class MainWindow(QWidget):
                         ),
                         "warning",
                     )
-                if image_count:
-                    self._info_area_vm.add_message(_t("clipboard.images_omitted", count=image_count), "warning")
+                if missing_count:
+                    self._info_area_vm.add_message(
+                        _t("clipboard.images_omitted", count=missing_count),
+                        "warning",
+                    )
             self._sync_clipboard_visible_inputs()
 
         from docwen_core.detection import inspect_structured_clipboard_snapshot
@@ -559,6 +555,38 @@ class MainWindow(QWidget):
             file_inspector=inspect_structured_clipboard_snapshot,
         )
         return True
+
+    def _paste_standalone_clipboard_image(self, frozen) -> None:
+        """Publish one normalized Qt image through the ordinary PNG route."""
+
+        try:
+            store = self._clipboard_store_for_paste()
+            snapshot = store.create_binary(
+                frozen.payload,
+                suffix=".png",
+                display_name_template=_t(
+                    "components.file_drop.clipboard_image_name",
+                    "Clipboard Image {index}.png",
+                    index="{index}",
+                ),
+                preview=f"{frozen.width}×{frozen.height} PNG",
+            )
+        except (OSError, TypeError, ValueError):
+            self._info_area_vm.add_message(
+                _t(
+                    "clipboard.image_invalid",
+                    "Clipboard image data is invalid or exceeds the supported size.",
+                ),
+                "danger",
+            )
+            return
+
+        def completed(outcome) -> None:
+            if not outcome.added:
+                store.discard_if_unowned(snapshot.path)
+            self._sync_clipboard_visible_inputs()
+
+        self._input_area_vm.add_files([snapshot.path], completed=completed)
 
     def _paste_file_paths(self, file_paths: list[str]) -> None:
         """Paste one captured local-file list through normal file admission."""
