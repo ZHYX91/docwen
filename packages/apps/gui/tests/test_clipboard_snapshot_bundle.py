@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 from pathlib import Path
 
 import pytest
+from PIL import Image
 
 from docwen_core.models.clipboard_document import CLIPBOARD_DOCUMENT_SCHEMA
 from docwen_gui.clipboard_inputs import ClipboardInputStore
@@ -43,9 +45,18 @@ def _payload(
 
 def test_bundle_owns_main_and_resources_as_one_lifecycle(tmp_path: Path) -> None:
     store = ClipboardInputStore(tmp_path / "managed")
-    resource_bytes = b"png-a"
+    image = Image.new("RGBA", (2, 2), (20, 40, 60, 120))
+    with io.BytesIO() as stream:
+        image.save(stream, "PNG")
+        resource_bytes = stream.getvalue()
+    payload = json.loads(_payload("image-a", "resources/a.png", "image/png", resource_bytes))
+    payload["resources"][0].update(
+        pixelWidth=image.width,
+        pixelHeight=image.height,
+        rgbaSha256=hashlib.sha256(image.tobytes()).hexdigest(),
+    )
     bundle = store.create_bundle(
-        _payload("image-a", "resources/a.png", "image/png", resource_bytes),
+        json.dumps(payload).encode("utf-8"),
         display_name_template="Clipboard Document {index}.dwclip",
         preview="[Table 1x1]",
         resources=(("image-a", "resources/a.png", "image/png", resource_bytes),),
@@ -68,6 +79,22 @@ def test_bundle_owns_main_and_resources_as_one_lifecycle(tmp_path: Path) -> None
     store.release_history("task")
     assert not Path(bundle.root_path).exists()
     store.close()
+
+
+def test_bundle_rejects_invalid_png_without_publishing_a_partial_bundle(tmp_path: Path) -> None:
+    store = ClipboardInputStore(tmp_path / "managed")
+    try:
+        resource_bytes = b"png-a"
+        with pytest.raises(ValueError, match="PNG resource is invalid"):
+            store.create_bundle(
+                _payload("image-a", "resources/a.png", "image/png", resource_bytes),
+                display_name_template="Clipboard Document {index}.dwclip",
+                preview="",
+                resources=(("image-a", "resources/a.png", "image/png", resource_bytes),),
+            )
+        assert not list(store.session_root.glob("bundle-*"))
+    finally:
+        store.close()
 
 
 @pytest.mark.parametrize(

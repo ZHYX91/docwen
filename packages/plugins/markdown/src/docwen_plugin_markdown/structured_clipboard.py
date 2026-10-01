@@ -33,8 +33,8 @@ from docwen_plugin_markdown.structured_clipboard_output_images import (
     add_xlsx_images,
     deduplicate_xlsx_png_media,
     image_placeholder,
+    image_resource_diagnostics,
     markdown_paragraph_blocks,
-    missing_image_diagnostics,
     write_csv_image_semantics,
     write_docx_paragraph,
 )
@@ -211,7 +211,7 @@ def convert_clipboard_document_to_docx(context: Any) -> ConversionResult:
         task_id=context.request.request_id,
         success=True,
         artifacts=[artifact],
-        diagnostics=missing_image_diagnostics(document_model),
+        diagnostics=image_resource_diagnostics(document_model),
         metrics=ConversionMetrics(input_bytes=Path(context.workspace.input_path).stat().st_size),
     )
 
@@ -372,8 +372,8 @@ def convert_clipboard_document_to_xlsx(context: Any) -> ConversionResult:
 
     occurrences = collect_image_occurrences(document, recorder.table_id)
     add_xlsx_images(projection, occurrences, resources, table_sheets)
-    diagnostics = missing_image_diagnostics(document)
-    if any(occurrence.image.resource_id is not None for occurrence in occurrences):
+    diagnostics = image_resource_diagnostics(document)
+    if any(occurrence.image.resource_id in resources for occurrence in occurrences):
         diagnostics.append(
             ConversionDiagnostic(
                 level="warning",
@@ -511,7 +511,7 @@ def _markdown_projection(
         )
         association_projection = association_projection or has_html_header_associations(table)
 
-    diagnostics = missing_image_diagnostics(document)
+    diagnostics = image_resource_diagnostics(document)
     if not structural_tables:
         diagnostics.append(
             ConversionDiagnostic(
@@ -658,8 +658,8 @@ def convert_clipboard_document_to_csv(context: Any) -> ConversionResult:
     )
     artifacts.extend(copy_bound_image_artifacts(context, resources))
 
-    diagnostics = missing_image_diagnostics(document)
-    if any(occurrence.image.resource_id is not None for occurrence in occurrences):
+    diagnostics = image_resource_diagnostics(document)
+    if any(occurrence.image.resource_id in resources for occurrence in occurrences):
         diagnostics.append(
             ConversionDiagnostic(
                 level="warning",

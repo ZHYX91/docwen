@@ -106,6 +106,7 @@ def test_final_artifact_distinguishes_bound_but_not_rendered_from_missing(tmp_pa
         assert result.success, result.error
         code = "NOT-RENDERED" if bound else "UNAVAILABLE"
         assert f"CLIPBOARD-IMAGE-RESOURCE-{code}" in {item.code for item in result.diagnostics}
+        assert f"CLIPBOARD-{target.upper()}-IMAGE-PROJECTION" not in {item.code for item in result.diagnostics}
         primary = next(item for item in result.artifacts if item.is_primary)
         output = Path(primary.staging_path)
         if target == "docx":
@@ -117,12 +118,22 @@ def test_final_artifact_distinguishes_bound_but_not_rendered_from_missing(tmp_pa
 
             workbook = load_workbook(output)
             text = repr([list(sheet.values) for sheet in workbook])
+            states = [row[1] for row in list(workbook["Image Semantics"].values)[1:]]
+            assert states == ["not_rendered" if bound else "missing"]
             workbook.close()
         else:
             text = output.read_text(encoding="utf-8-sig")
         expected, absent = ("not rendered", "unavailable") if bound else ("unavailable", "not rendered")
         assert f"Image {expected}" in text
         assert f"Image {absent}" not in text
+        if target == "csv":
+            import csv
+
+            side = next(item for item in result.artifacts if "image-semantics" in item.suggested_name)
+            with Path(side.staging_path).open(encoding="utf-8-sig", newline="") as stream:
+                rows = list(csv.reader(stream))
+            assert rows[1][1] == ("not_rendered" if bound else "missing")
+        assert not [item for item in result.artifacts if item.media_type == "image/png"]
     finally:
         store.close()
 

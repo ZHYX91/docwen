@@ -361,6 +361,7 @@ def test_execution_thread_keeps_frozen_validation_failure_scoped_to_one_group(tm
         context={"request_id": parent.request_id},
         batch_execution=True,
         document_group_requests=groups,
+        clipboard_bundles=bundles,
     )
     thread.result_signal.connect(lambda result, _context: results.append(result))
     thread.error_signal.connect(lambda message, _context: errors.append(message))

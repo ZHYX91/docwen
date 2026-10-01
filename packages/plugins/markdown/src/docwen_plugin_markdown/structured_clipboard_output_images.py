@@ -32,23 +32,42 @@ from docwen_plugin_markdown.structured_clipboard_images import (
 _REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
 
 
-def missing_image_diagnostics(document: ClipboardDocument) -> list[ConversionDiagnostic]:
-    count = sum(
+def image_resource_diagnostics(document: ClipboardDocument) -> list[ConversionDiagnostic]:
+    missing_count = sum(
         isinstance(inline, ClipboardImageRef) and inline.resource_id is None
         for inline in iter_clipboard_inlines(document)
     )
-    if not count:
-        return []
-    return [
-        ConversionDiagnostic(
-            level="warning",
-            code="CLIPBOARD-IMAGE-RESOURCE-UNAVAILABLE",
-            message=(
-                f"{count} clipboard image occurrence(s) had no verified resource bytes "
-                "and were kept as text placeholders."
-            ),
+    renderable_ids = {resource.resource_id for resource in document.resources if resource.media_type == "image/png"}
+    not_rendered_count = sum(
+        isinstance(inline, ClipboardImageRef)
+        and inline.resource_id is not None
+        and inline.resource_id not in renderable_ids
+        for inline in iter_clipboard_inlines(document)
+    )
+    diagnostics = []
+    if missing_count:
+        diagnostics.append(
+            ConversionDiagnostic(
+                level="warning",
+                code="CLIPBOARD-IMAGE-RESOURCE-UNAVAILABLE",
+                message=(
+                    f"{missing_count} clipboard image occurrence(s) had no verified resource bytes "
+                    "and were kept as text placeholders."
+                ),
+            )
         )
-    ]
+    if not_rendered_count:
+        diagnostics.append(
+            ConversionDiagnostic(
+                level="warning",
+                code="CLIPBOARD-IMAGE-RESOURCE-NOT-RENDERED",
+                message=(
+                    f"{not_rendered_count} clipboard image occurrence(s) had verified opaque resources "
+                    "without a supported PNG representation and were kept as text placeholders."
+                ),
+            )
+        )
+    return diagnostics
 
 
 def image_placeholder(image: ClipboardImageRef) -> str:
@@ -77,7 +96,8 @@ def write_docx_paragraph(
         else:
             bound = resources.get(inline.resource_id)
             if bound is None:
-                raise ValueError("structured clipboard linked image is missing")
+                run.add_text(image_placeholder(inline))
+                continue
             kwargs = {}
             if inline.extent_cx_emu is not None and inline.extent_cy_emu is not None:
                 kwargs = {"width": Emu(inline.extent_cx_emu), "height": Emu(inline.extent_cy_emu)}
@@ -164,7 +184,21 @@ def add_xlsx_images(
             continue
         bound = resources.get(image.resource_id)
         if bound is None:
-            raise ValueError("structured clipboard linked image is missing")
+            rows.append(
+                (
+                    str(occurrence.ordinal),
+                    "not_rendered",
+                    image.resource_id,
+                    "",
+                    occurrence.table_id,
+                    occurrence.cell_anchor,
+                    "",
+                    "",
+                    str(image.extent_cx_emu or ""),
+                    str(image.extent_cy_emu or ""),
+                )
+            )
+            continue
 
         if occurrence.table_id:
             sheet = table_sheets[occurrence.table_id]
@@ -241,7 +275,7 @@ def write_csv_image_semantics(
             writer.writerow(
                 (
                     occurrence.ordinal,
-                    "bound" if bound is not None else "missing",
+                    "bound" if bound is not None else ("not_rendered" if image.resource_id is not None else "missing"),
                     image.resource_id or "",
                     bound.resource.logical_path if bound is not None else "",
                     bound.suggested_name if bound is not None else "",
@@ -325,8 +359,8 @@ __all__ = [
     "add_xlsx_images",
     "deduplicate_xlsx_png_media",
     "image_placeholder",
+    "image_resource_diagnostics",
     "markdown_paragraph_blocks",
-    "missing_image_diagnostics",
     "write_csv_image_semantics",
     "write_docx_paragraph",
 ]
