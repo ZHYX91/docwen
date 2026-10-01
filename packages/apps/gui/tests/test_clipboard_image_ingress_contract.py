@@ -180,7 +180,7 @@ def test_rich_adapter_uses_complete_wps_pair_even_if_generic_embed_source_is_pre
         return document, html_resources
 
     monkeypatch.setattr(rich, "parse_wps_writer", parse_wps)
-    monkeypatch.setattr(rich, "parse_word_embed_source", reject_word)
+    monkeypatch.setattr(rich, "parse_embed_source_images", reject_word)
     monkeypatch.setattr(rich, "bind_provider_images", accept_binding)
     frozen = FrozenClipboardCapture(
         plain_text=None,
@@ -205,7 +205,7 @@ def test_incomplete_wps_pair_with_generic_embed_source_falls_back_without_guessi
 ) -> None:
     monkeypatch.setattr(
         rich,
-        "parse_word_embed_source",
+        "parse_embed_source_images",
         lambda _payload: pytest.fail("incomplete WPS pair must not guess that generic Embed Source is Word"),
     )
     frozen = FrozenClipboardCapture(

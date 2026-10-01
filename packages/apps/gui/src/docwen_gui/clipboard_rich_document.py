@@ -16,7 +16,7 @@ from docwen_gui.clipboard_office_provider import (
     WPS_DOCUMENT_MIME,
     WPS_IMAGE_DATA_MIME,
     ClipboardOfficeProviderError,
-    parse_word_embed_source,
+    parse_embed_source_images,
     parse_wps_writer,
 )
 from docwen_gui.clipboard_structured import (
@@ -93,7 +93,7 @@ def _project_frozen_rich_document(capture: FrozenClipboardCapture) -> RichDocume
         if wps_document is not None and wps_images is not None:
             provider_projection = parse_wps_writer(wps_document, wps_images)
         elif word_payload is not None:
-            provider_projection = parse_word_embed_source(word_payload)
+            provider_projection = parse_embed_source_images(word_payload)
 
         html_projection: StructuredClipboardProjection = project_structured_clipboard_html_with_resources(
             html_bytes, decode_inline_images=provider_projection is None

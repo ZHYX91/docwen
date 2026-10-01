@@ -10,8 +10,12 @@ import zipfile
 from pathlib import Path
 
 import pytest
+from PySide6.QtCore import QMimeData
 
+from docwen_core.models.clipboard_document import ClipboardParagraph, ClipboardTable, ClipboardText
 from docwen_gui import clipboard_office_provider as provider
+from docwen_gui.clipboard_capture import freeze_clipboard_mime
+from docwen_gui.clipboard_rich_document import project_frozen_rich_document
 
 pytestmark = pytest.mark.contract
 
@@ -103,6 +107,96 @@ def _patch_u32(payload: bytes, offset: int, value: int) -> bytes:
 
 def _package() -> bytes:
     return _sample("word-derived.ole")[1536:]
+
+
+def _named_stream(name: str, stream: bytes) -> bytes:
+    payload = bytearray(_ole(stream))
+    label = (name + "\0").encode("utf-16le")
+    payload[640:704] = label.ljust(64, b"\0")
+    struct.pack_into("<H", payload, 704, len(label))
+    return bytes(payload)
+
+
+def _biff_workbook() -> bytes:
+    bof = struct.pack("<HHHH", 0x0809, 4, 0x0600, 0x0005)
+    record = struct.pack("<HH", 0x0018, 4096) + b"\0" * 4096
+    return bof + record + struct.pack("<HH", 0x000A, 0)
+
+
+def _xlsx_package(*, root: str = "workbook", include_word: bool = False) -> bytes:
+    target = io.BytesIO()
+    with zipfile.ZipFile(target, "w", compression=zipfile.ZIP_STORED) as archive:
+        archive.writestr(
+            "xl/workbook.xml",
+            f'<{root} xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"/>',
+        )
+        archive.writestr("padding.bin", b"\0" * 4096)
+        if include_word:
+            archive.writestr("word/document.xml", b"<document/>")
+    return target.getvalue()
+
+
+@pytest.mark.parametrize("name", ["Workbook", "Book"])
+def test_generic_valid_biff_source_does_not_displace_html_table(name: str, qapp) -> None:
+    mime = QMimeData()
+    mime.setText("00123\t2\r\n")
+    mime.setHtml("<table><tr><td>00123</td><td>2</td></tr></table>")
+    mime.setData(provider.WORD_EMBED_SOURCE_MIME, _named_stream(name, _biff_workbook()))
+    decision = project_frozen_rich_document(freeze_clipboard_mime(mime))
+    assert decision.projection is not None and not decision.plain_fallback
+    assert decision.projection.provider == "" and not decision.projection.resources
+    table, trailing = decision.projection.document.blocks
+    assert isinstance(table, ClipboardTable)
+    assert (table.row_count, table.column_count) == (1, 2)
+    assert table.cells[0].blocks == (ClipboardParagraph((ClipboardText("00123"),)),)
+    assert table.cells[1].blocks == (ClipboardParagraph((ClipboardText("2"),)),)
+    assert trailing == ClipboardParagraph((ClipboardText("\r\n"),))
+
+
+@pytest.mark.parametrize("name", ["Package", "package"])
+def test_generic_valid_ooxml_sheet_does_not_displace_html_table(name: str, qapp) -> None:
+    mime = QMimeData()
+    mime.setText("00123\t2\r\n")
+    mime.setHtml("<table><tr><td>00123</td><td>2</td></tr></table>")
+    mime.setData(provider.WORD_EMBED_SOURCE_MIME, _named_stream(name, _xlsx_package()))
+    decision = project_frozen_rich_document(freeze_clipboard_mime(mime))
+    assert decision.projection is not None and not decision.plain_fallback
+    assert not decision.projection.resources
+    table, trailing = decision.projection.document.blocks
+    assert isinstance(table, ClipboardTable)
+    assert (table.row_count, table.column_count) == (1, 2)
+    assert trailing == ClipboardParagraph((ClipboardText("\r\n"),))
+
+
+@pytest.mark.parametrize("defect", ["missing_eof", "truncated", "bad_version", "wrong_root", "mixed"])
+def test_generic_malformed_or_ambiguous_sheet_source_preserves_full_plain(defect: str, qapp) -> None:
+    name, stream = "Workbook", _biff_workbook()
+    if defect == "missing_eof":
+        stream = stream[:-4]
+    elif defect == "truncated":
+        stream = stream[:-5]
+    elif defect == "bad_version":
+        value = bytearray(stream)
+        struct.pack_into("<H", value, 4, 0x0000)
+        stream = bytes(value)
+    else:
+        name = "package"
+        stream = _xlsx_package(root="wrong" if defect == "wrong_root" else "workbook", include_word=defect == "mixed")
+    mime = QMimeData()
+    plain = " 00123\t2\r\nUNCHANGED  \t\n"
+    mime.setText(plain)
+    mime.setHtml("<table><tr><td>00123</td><td>2</td></tr></table>")
+    mime.setData(provider.WORD_EMBED_SOURCE_MIME, _named_stream(name, stream))
+    frozen = freeze_clipboard_mime(mime)
+    decision = project_frozen_rich_document(frozen)
+    assert decision.projection is None and decision.plain_fallback
+    assert frozen.plain_text == plain
+
+
+def test_generic_word_source_still_binds_original_images() -> None:
+    projection = provider.parse_embed_source_images(_sample("word-derived.ole"))
+    assert projection is not None and projection.provider == "word"
+    assert len(projection.occurrences) == 3 and len(projection.resources) == 2
 
 
 @pytest.mark.parametrize("source", ["word", "wps_writer"])

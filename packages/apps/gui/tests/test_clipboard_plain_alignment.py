@@ -126,10 +126,36 @@ def test_nonempty_covered_tsv_field_cannot_be_discarded() -> None:
     assert match_plain_table(table, 'A\tlost value\t"line one\nline two"') is None
 
 
+@pytest.mark.parametrize("newlines", ["\n", "\r\n"])
+@pytest.mark.parametrize("quoted_first", [False, True])
+def test_mixed_literal_and_quoted_tsv_representations_are_ambiguous(newlines: str, quoted_first: bool) -> None:
+    html = b"<table><tr><td>A</td><td>line one<br>line two</td></tr></table>"
+    table = _table(html.decode())
+    literal = "A\tline one\nline two"
+    quoted = 'A\t"line one\nline two"'
+    representations = (quoted, literal) if quoted_first else (literal, quoted)
+    plain = "\nSEPARATOR\n".join(representations).replace("\n", newlines)
+
+    assert match_plain_table(table, plain) is None
+    capture = FrozenClipboardCapture(plain, html, (), None)
+    decision = project_frozen_rich_document(capture)
+    assert decision.projection is None and decision.plain_fallback
+    assert capture.plain_text == plain
+
+
 def test_empty_table_keeps_captured_space_characters() -> None:
     match = match_plain_table(_table("<table><tr><td></td></tr></table>"), " \u00a0 ")
     assert match is not None
     assert _text(match.table.cells[0].blocks) == " \u00a0 "
+
+
+def test_literal_match_cannot_bypass_the_quoted_tsv_candidate_budget(monkeypatch) -> None:
+    from docwen_gui import clipboard_plain_alignment as alignment
+
+    monkeypatch.setattr(alignment, "_MAX_CANDIDATES", 1)
+    table = _table("<table><tr><td>A</td><td>line one<br>line two</td></tr></table>")
+    plain = "A\tline one\nline two\nA unrelated text"
+    assert match_plain_table(table, plain) is None
 
 
 def test_provider_two_inline_images_match_distinct_text_segments_without_ordinal_guess() -> None:

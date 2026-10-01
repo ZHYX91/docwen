@@ -116,8 +116,8 @@ def _bounded_chain(start: int, table: list[int], *, max_items: int) -> list[int]
     return chain
 
 
-def _read_cfb_package(payload: bytes) -> bytes:
-    """Read the unique Package stream from one bounded CFB payload."""
+def _read_cfb_stream(payload: bytes, names: tuple[str, ...]) -> tuple[str, bytes]:
+    """Read one unambiguous embedded source stream through the shared CFB bounds."""
 
     if not isinstance(payload, bytes) or len(payload) < 512 or len(payload) > _MAX_PROVIDER_BYTES:
         _fail("clipboard.provider_ole_invalid", "Word clipboard package is invalid.")
@@ -261,15 +261,15 @@ def _read_cfb_package(payload: bytes) -> bytes:
             root_start, root_size = start_sector, size
         entries.append((name, entry_type, start_sector, size))
 
-    packages = [entry for entry in entries if entry[0] == "Package" and entry[1] == 2]
+    packages = [entry for entry in entries if entry[0] in names and entry[1] == 2]
     if root_entries != 1 or len(packages) != 1:
         _fail("clipboard.provider_ole_invalid", "Word clipboard package must contain exactly one Package stream.")
-    _name, _entry_type, package_start, package_size = packages[0]
+    name, _entry_type, package_start, package_size = packages[0]
     if package_size < 1 or package_size > _MAX_PROVIDER_BYTES:
         _fail("clipboard.provider_ole_invalid", "Word clipboard Package stream exceeds the supported size.")
 
     if package_size >= mini_cutoff:
-        return read_stream(package_start, package_size)
+        return name, read_stream(package_start, package_size)
 
     if root_size < 1 or root_start in {_CFB_END, _CFB_FREE}:
         _fail("clipboard.provider_ole_invalid", "Word clipboard mini stream is missing.")
@@ -288,7 +288,12 @@ def _read_cfb_package(payload: bytes) -> bytes:
     stream = b"".join(root_stream[index * 64 : (index + 1) * 64] for index in mini_chain)
     if len(stream) < package_size:
         _fail("clipboard.provider_ole_invalid", "Word clipboard Package stream is truncated.")
-    return stream[:package_size]
+    return name, stream[:package_size]
+
+
+def _read_cfb_package(payload: bytes) -> bytes:
+    """Read the unique Word Package stream without accepting other OLE sources."""
+    return _read_cfb_stream(payload, ("Package",))[1]
 
 
 def _safe_zip_parts(payload: bytes) -> dict[str, bytes]:
@@ -581,6 +586,10 @@ def _resource_projection(
 def parse_word_embed_source(payload: bytes) -> ProviderImageProjection:
     package = _read_cfb_package(payload)
     parts = _safe_zip_parts(package)
+    return _word_image_projection(parts)
+
+
+def _word_image_projection(parts: dict[str, bytes]) -> ProviderImageProjection:
     document_xml = parts.get("word/document.xml")
     if document_xml is None:
         _fail("clipboard.provider_document_invalid", "Clipboard Word package is missing document XML.")
@@ -595,6 +604,68 @@ def parse_word_embed_source(payload: bytes) -> ProviderImageProjection:
     identifiers = {occurrence.identifier for occurrence in occurrences}
     payloads = {identifier: parts[relationships[identifier]] for identifier in identifiers}
     return _resource_projection("word", occurrences, payloads)
+
+
+def _validate_biff_workbook(payload: bytes) -> None:
+    """Recognize bounded BIFF5/8 substreams; do not interpret or execute records."""
+    offset = 0
+    records = 0
+    open_substreams = 0
+    while offset < len(payload):
+        if len(payload) - offset < 4 or records >= 131072:
+            _fail("clipboard.provider_document_invalid", "Clipboard workbook records are invalid.")
+        identifier, size = struct.unpack_from("<HH", payload, offset)
+        end = offset + 4 + size
+        if end > len(payload):
+            _fail("clipboard.provider_document_invalid", "Clipboard workbook record is truncated.")
+        if identifier == 0x0809:
+            if size < 4:
+                _fail("clipboard.provider_document_invalid", "Clipboard workbook BOF record is invalid.")
+            version, kind = struct.unpack_from("<HH", payload, offset + 4)
+            if version not in {0x0500, 0x0600} or kind not in {0x0005, 0x0010, 0x0020, 0x0040}:
+                _fail("clipboard.provider_document_invalid", "Clipboard workbook version is unsupported.")
+            if records == 0 and kind != 0x0005:
+                _fail("clipboard.provider_document_invalid", "Clipboard workbook global substream is missing.")
+            open_substreams += 1
+        elif identifier == 0x000A:
+            if size != 0 or open_substreams < 1:
+                _fail("clipboard.provider_document_invalid", "Clipboard workbook EOF record is invalid.")
+            open_substreams -= 1
+        elif open_substreams == 0:
+            _fail("clipboard.provider_document_invalid", "Clipboard workbook records have no substream.")
+        records += 1
+        offset = end
+    if records < 2 or open_substreams != 0:
+        _fail("clipboard.provider_document_invalid", "Clipboard workbook substream is incomplete.")
+
+
+def parse_embed_source_images(payload: bytes) -> ProviderImageProjection | None:
+    """Distinguish actual Word images from validated spreadsheet OLE representations.
+
+    None means a recognized spreadsheet source. Unknown or malformed generic OLE
+    still fails closed; a MIME label alone never proves that images are absent.
+    """
+    name, stream = _read_cfb_stream(payload, ("Package", "package", "Workbook", "Book", "WordDocument"))
+    if name in {"Workbook", "Book"}:
+        _validate_biff_workbook(stream)
+        return None
+    parts = _safe_zip_parts(stream)
+    word = parts.get("word/document.xml")
+    workbook = parts.get("xl/workbook.xml")
+    if word is not None and workbook is not None:
+        _fail("clipboard.provider_document_invalid", "Clipboard OOXML document kind is ambiguous.")
+    if word is not None:
+        return _word_image_projection(parts)
+    if workbook is not None:
+        root = _parse_xml(
+            workbook,
+            code="clipboard.provider_document_invalid",
+            message="Clipboard workbook XML is invalid.",
+        )
+        if root.tag != "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}workbook":
+            _fail("clipboard.provider_document_invalid", "Clipboard workbook root is invalid.")
+        return None
+    _fail("clipboard.provider_document_invalid", "Clipboard OLE source is not a supported document.")
 
 
 def _parse_wps_image_data(payload: bytes) -> dict[str, bytes]:
@@ -649,6 +720,7 @@ __all__ = [
     "ClipboardOfficeProviderError",
     "ProviderImageOccurrence",
     "ProviderImageProjection",
+    "parse_embed_source_images",
     "parse_word_embed_source",
     "parse_wps_writer",
 ]

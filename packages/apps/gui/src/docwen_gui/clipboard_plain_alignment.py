@@ -230,7 +230,7 @@ def _cell_from_plain(blocks: tuple[ClipboardBlock, ...], value: str) -> tuple[Cl
     return None
 
 
-def _tsv_matches(table: ClipboardTable, plain_text: str, minimum: int) -> list[PlainTableMatch]:
+def _tsv_matches(table: ClipboardTable, plain_text: str, minimum: int) -> list[PlainTableMatch] | None:
     first_cells = sorted((cell for cell in table.cells if cell.row == 0), key=lambda cell: cell.column)
     key = ""
     for cell in first_cells:
@@ -248,11 +248,11 @@ def _tsv_matches(table: ClipboardTable, plain_text: str, minimum: int) -> list[P
         while index >= 0:
             candidates.add(line_starts[bisect_right(line_starts, index) - 1])
             if len(candidates) > _MAX_CANDIDATES:
-                return []
+                return None
             index = plain_text.find(key, index + len(key))
     else:
         if len(line_starts) > _MAX_CANDIDATES:
-            return []
+            return None
         candidates = set(line_starts)
     matches = []
     for start in sorted(candidates):
@@ -299,8 +299,11 @@ def match_plain_table(table: ClipboardTable, plain_text: str, *, minimum: int = 
         return None
     source = canonical_clipboard_text(plain_text)
     matches = _literal_matches(table, source, minimum)
-    if not matches:
-        matches = _tsv_matches(table, plain_text, minimum)
+    tsv_matches = _tsv_matches(table, plain_text, minimum)
+    if tsv_matches is None:
+        # Exceeding the search budget cannot establish global uniqueness.
+        return None
+    matches.extend(tsv_matches)
     unique: dict[tuple[int, int], PlainTableMatch] = {}
     for match in matches:
         identity = (match.start, match.end)
