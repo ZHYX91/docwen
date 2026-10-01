@@ -481,6 +481,69 @@ def _plain_table_value(table: ClipboardTable) -> str | None:
     return "\n".join("\t".join(row) for row in matrix)
 
 
+def _top_level_image_anchors(
+    document: ClipboardDocument,
+) -> tuple[tuple[tuple[ClipboardImageRef, str], ...], ...]:
+    """Return top-level image occurrences partitioned by surrounding table segment."""
+
+    segments: list[list[tuple[ClipboardImageRef, str]]] = [[]]
+    last_text = ""
+    for block in document.blocks:
+        if isinstance(block, ClipboardTable):
+            segments.append([])
+            last_text = ""
+            continue
+        running: list[str] = []
+        for inline in block.inlines:
+            if isinstance(inline, ClipboardText):
+                running.append(inline.value)
+            elif isinstance(inline, ClipboardHardBreak):
+                running.append("\n")
+            elif isinstance(inline, ClipboardImageRef):
+                anchor = "".join(running) or last_text
+                segments[-1].append((inline, anchor))
+        value = _plain_paragraph_value(block)
+        if value:
+            last_text = value
+    return tuple(tuple(segment) for segment in segments)
+
+
+def _insert_segment_images(
+    text: str,
+    anchors: tuple[tuple[ClipboardImageRef, str], ...],
+) -> ClipboardParagraph | None:
+    if not anchors:
+        return ClipboardParagraph((ClipboardText(text),)) if text else None
+
+    positions: list[tuple[int, ClipboardImageRef]] = []
+    cursor = 0
+    for image, anchor in anchors:
+        if anchor:
+            start = text.find(anchor, cursor)
+            if start < 0 or text.find(anchor, start + 1) >= 0:
+                return None
+            position = start + len(anchor)
+        elif len(anchors) == 1:
+            position = 0
+        else:
+            return None
+        positions.append((position, image))
+        cursor = position
+
+    inlines: list = []
+    offset = 0
+    for position, image in positions:
+        if position < offset:
+            return None
+        if position > offset:
+            inlines.append(ClipboardText(text[offset:position]))
+        inlines.append(image)
+        offset = position
+    if offset < len(text):
+        inlines.append(ClipboardText(text[offset:]))
+    return ClipboardParagraph(tuple(inlines))
+
+
 def _normalized_newlines_with_offsets(value: str) -> tuple[str, list[int]]:
     normalized: list[str] = []
     offsets = [0]
@@ -514,9 +577,11 @@ def splice_plain_text_with_structured_tables(
         return None
 
     normalized_plain, offsets = _normalized_newlines_with_offsets(plain_text)
+    image_segments = _top_level_image_anchors(document)
     cursor_normalized = 0
     cursor_original = 0
     blocks: list[ClipboardBlock] = []
+    segment = 0
     for table in tables:
         signature = _plain_table_value(table)
         if signature is None or not signature:
@@ -529,15 +594,28 @@ def splice_plain_text_with_structured_tables(
             return None
         end = start + len(normalized_signature)
         prefix = plain_text[cursor_original : offsets[start]]
-        if prefix:
-            blocks.append(ClipboardParagraph((ClipboardText(prefix),)))
+        projected_prefix = _insert_segment_images(
+            prefix,
+            image_segments[segment] if segment < len(image_segments) else (),
+        )
+        if projected_prefix is None and (prefix or (segment < len(image_segments) and image_segments[segment])):
+            return None
+        if projected_prefix is not None:
+            blocks.append(projected_prefix)
         blocks.append(table)
+        segment += 1
         cursor_normalized = end
         cursor_original = offsets[end]
 
     suffix = plain_text[cursor_original:]
-    if suffix:
-        blocks.append(ClipboardParagraph((ClipboardText(suffix),)))
+    projected_suffix = _insert_segment_images(
+        suffix,
+        image_segments[segment] if segment < len(image_segments) else (),
+    )
+    if projected_suffix is None and (suffix or (segment < len(image_segments) and image_segments[segment])):
+        return None
+    if projected_suffix is not None:
+        blocks.append(projected_suffix)
     merged = ClipboardDocument(blocks=tuple(blocks), resources=document.resources)
     clipboard_document_to_bytes(merged)
     return merged
