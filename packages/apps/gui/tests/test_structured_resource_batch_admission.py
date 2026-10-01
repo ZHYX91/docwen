@@ -25,7 +25,7 @@ from docwen_runtime.output.finalizer import OutputFinalizer
 from docwen_runtime.plugin_registry.registry import PluginRegistry
 from docwen_runtime.workspace.manager import WorkspaceManager
 
-pytestmark = [pytest.mark.integration, pytest.mark.pr_gate, pytest.mark.release_gate]
+pytestmark = [pytest.mark.gui, pytest.mark.pr_gate, pytest.mark.release_gate]
 
 
 class _ResourceEcho:
@@ -70,7 +70,6 @@ class _ResourceEcho:
         )
 
 
-@pytest.mark.gui
 @pytest.mark.parametrize(
     "fault",
     [

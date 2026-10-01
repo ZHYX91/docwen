@@ -38,15 +38,21 @@ def test_runtime_factory_separates_public_machine_formats_from_gui_internal_rout
         public_projection = controller.describe_runtime_capabilities()
         gui_projection = controller.describe_gui_runtime_capabilities()
         assert all(source["id"] != "clipboard_document" for source in public_projection["sources"])
-        assert any(source["id"] == "clipboard_document" for source in gui_projection["sources"])
+        clipboard_source = next(source for source in gui_projection["sources"] if source["id"] == "clipboard_document")
+        assert {"md", "docx", "xlsx", "csv"} == {route["target"] for route in clipboard_source["routes"]}
 
         choices = discover_runtime_route_choices(
             controller,
             sources=(RuntimeRouteSource("clipboard_document", "markdown"),),
             operation="conversion",
         )
-        assert choices.status == "ready"
-        assert {"md", "docx", "xlsx", "csv"} <= set(choices.targets)
+        if gui_projection["runtime"]["platform"] in {"windows", "linux"}:
+            assert choices.status == "ready"
+            assert {"md", "docx", "xlsx", "csv"} <= set(choices.targets)
+        else:
+            assert choices.status == "empty"
+            assert not choices.targets
+            assert all(not route["platform_supported"] for route in clipboard_source["routes"])
 
         public_optimizations = machine.list_resources("optimizations")
         assert public_optimizations["kind"] == "optimizations"
