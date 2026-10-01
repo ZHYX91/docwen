@@ -90,17 +90,16 @@ class ImageToPdfConverter:
 
             output_path = context.workspace.create_artifact_path("primary", ".pdf")
             Path(output_path).write_bytes(pdf_bytes)
-        except Exception as exc:
-            context.logger.error(f"Image to PDF failed: {exc}")
+        except Exception:
+            context.logger.error("Image to PDF failed")
+            message = "Image to PDF conversion failed."
             return ConversionResult(
                 task_id=task_id,
                 success=False,
                 error=ConversionErrorInfo(
-                    error_type="conversion_failed", message=str(exc), diagnostic_code="IMG2PDF-ERROR"
+                    error_type="conversion_failed", message=message, diagnostic_code="IMG2PDF-ERROR"
                 ),
-                diagnostics=[
-                    ConversionDiagnostic(level="error", message=f"Image to PDF failed: {exc}", code="IMG2PDF-ERROR")
-                ],
+                diagnostics=[ConversionDiagnostic(level="error", message=message, code="IMG2PDF-ERROR")],
             )
 
         artifact = ArtifactManifest(
