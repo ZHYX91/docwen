@@ -143,21 +143,18 @@ class ImageFormatConverter:
                     )
                     context.workspace.add_artifact(artifact)
                     artifacts.append(artifact)
-        except Exception as exc:
-            context.logger.error(f"Image format conversion failed: {exc}")
+        except Exception:
+            context.logger.error("Image format conversion failed")
+            message = "Image format conversion failed."
             return ConversionResult(
                 task_id=task_id,
                 success=False,
                 error=ConversionErrorInfo(
                     error_type="conversion_failed",
-                    message=str(exc),
+                    message=message,
                     diagnostic_code="IMAGEFMT-CONVERT-ERROR",
                 ),
-                diagnostics=[
-                    ConversionDiagnostic(
-                        level="error", message=f"Image conversion failed: {exc}", code="IMAGEFMT-CONVERT-ERROR"
-                    )
-                ],
+                diagnostics=[ConversionDiagnostic(level="error", message=message, code="IMAGEFMT-CONVERT-ERROR")],
             )
 
         context.progress.report_progress(100.0, "Image format conversion complete")
