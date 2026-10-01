@@ -29,6 +29,7 @@ class FrozenClipboardCapture:
     html_bytes: bytes
     binary_formats: tuple[tuple[str, bytes], ...]
     image: FrozenPng | None
+    image_error_code: str = ""
 
     def get(self, mime_type: str) -> bytes | None:
         return next((payload for key, payload in self.binary_formats if key == mime_type), None)
@@ -48,21 +49,20 @@ def freeze_clipboard_mime(mime_data: object) -> FrozenClipboardCapture:
 
     html_bytes = next((payload for key, payload in frozen if key == "text/html"), b"")
     image: FrozenPng | None = None
+    image_error_code = ""
     if bool(getattr(mime_data, "hasImage")()):
         try:
             image = freeze_qimage(getattr(mime_data, "imageData")())
-        except ClipboardImageBytesError:
-            raise
-        except Exception as exc:
-            raise ClipboardImageBytesError(
-                "clipboard.image_qt_invalid",
-                "Clipboard image data is unavailable.",
-            ) from exc
+        except ClipboardImageBytesError as exc:
+            image_error_code = exc.code
+        except Exception:
+            image_error_code = "clipboard.image_qt_invalid"
     return FrozenClipboardCapture(
         plain_text=plain_text,
         html_bytes=html_bytes,
         binary_formats=tuple(frozen),
         image=image,
+        image_error_code=image_error_code,
     )
 
 
