@@ -27,7 +27,7 @@ def _load_image(path: str) -> Image.Image:
             copy.load()
             return copy
     except Exception as exc:
-        raise RuntimeError(f"Failed to load image '{Path(path).name}': {exc}") from exc
+        raise RuntimeError("Image input could not be decoded.") from exc
 
 
 def _to_rgb_with_white(img: Image.Image) -> Image.Image:
@@ -100,19 +100,16 @@ class ImageToTiffMerger:
                 append_images=converted[1:],
                 compression="tiff_lzw",
             )
-        except Exception as exc:
-            context.logger.error(f"Image merge to TIFF failed: {exc}")
+        except Exception:
+            context.logger.error("Image merge to TIFF failed")
+            message = "Image merge to TIFF failed."
             return ConversionResult(
                 task_id=task_id,
                 success=False,
                 error=ConversionErrorInfo(
-                    error_type="conversion_failed", message=str(exc), diagnostic_code="IMG2TIFF-ERROR"
+                    error_type="conversion_failed", message=message, diagnostic_code="IMG2TIFF-ERROR"
                 ),
-                diagnostics=[
-                    ConversionDiagnostic(
-                        level="error", message=f"Image merge to TIFF failed: {exc}", code="IMG2TIFF-ERROR"
-                    )
-                ],
+                diagnostics=[ConversionDiagnostic(level="error", message=message, code="IMG2TIFF-ERROR")],
             )
         finally:
             seen: set[int] = set()
