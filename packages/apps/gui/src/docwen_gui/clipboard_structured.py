@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -12,6 +13,9 @@ from docwen_core.models.clipboard_document import (
     MAX_CLIPBOARD_BLOCKS,
     MAX_CLIPBOARD_CELLS,
     MAX_CLIPBOARD_DEPTH,
+    MAX_CLIPBOARD_IMAGE_PIXELS,
+    MAX_CLIPBOARD_RESOURCE_BYTES,
+    MAX_CLIPBOARD_RESOURCES,
     MAX_CLIPBOARD_TABLES,
     ClipboardBlock,
     ClipboardDocument,
@@ -25,7 +29,12 @@ from docwen_core.models.clipboard_document import (
     ClipboardText,
     clipboard_document_to_bytes,
 )
-from docwen_gui.clipboard_image_bytes import ClipboardImageBytesError, inspect_png_bytes
+from docwen_gui.clipboard_image_bytes import (
+    ClipboardImageBytesError,
+    FrozenPng,
+    inspect_png_bytes,
+    preflight_png_resources,
+)
 
 _CF_HTML_FIELDS = ("StartHTML", "EndHTML", "StartFragment", "EndFragment")
 _SKIP_TAGS = frozenset({"head", "script", "style", "noscript", "template"})
@@ -61,20 +70,20 @@ _MAX_HTML_DEPTH = 32
 @dataclass(slots=True)
 class _ResourceCollector:
     resources: dict[str, tuple[ClipboardResource, bytes]] = field(default_factory=dict)
+    png_by_src: dict[str, FrozenPng] = field(default_factory=dict)
+    decode_inline_images: bool = True
 
     def image_from_src(self, src: str, alt: str) -> ClipboardImageRef:
         prefix = "data:image/png;base64,"
-        if not src.startswith(prefix):
+        if not src.startswith(prefix) or not self.decode_inline_images:
             return ClipboardImageRef(None, alt, "clipboard_resource_unavailable")
-        encoded = src[len(prefix) :]
-        try:
-            payload = base64.b64decode(encoded, validate=True)
-            png = inspect_png_bytes(payload)
-        except (ValueError, ClipboardImageBytesError):
+        png = self.png_by_src.get(src)
+        if png is None:
             raise ClipboardDocumentError(
                 "clipboard.image_data_uri_invalid",
                 "Clipboard PNG data URI is invalid or exceeds the image budget.",
             ) from None
+        payload = png.payload
         resource_id = f"img-{png.payload_sha256[:24]}"
         logical_path = f"resources/{png.payload_sha256[:24]}.png"
         resource = ClipboardResource(
@@ -129,7 +138,27 @@ class _TreeBuilder(HTMLParser):
             self._stack.append(node)
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        self._append_node(tag, attrs, push=tag.lower() not in {"br", "img", "meta", "link", "hr", "input"})
+        self._append_node(
+            tag,
+            attrs,
+            push=tag.lower()
+            not in {
+                "area",
+                "base",
+                "br",
+                "col",
+                "embed",
+                "hr",
+                "img",
+                "input",
+                "link",
+                "meta",
+                "param",
+                "source",
+                "track",
+                "wbr",
+            },
+        )
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         self._append_node(tag, attrs, push=False)
@@ -192,7 +221,14 @@ def _decode_html(payload: bytes) -> str:
 
 
 def _contains_table(node: _Node) -> bool:
-    return any(isinstance(child, _Node) and (child.tag == "table" or _contains_table(child)) for child in node.children)
+    return _contains_tag(node, "table")
+
+
+def _contains_tag(node: _Node, tag: str) -> bool:
+    return any(
+        isinstance(child, _Node) and child.tag not in _SKIP_TAGS and (child.tag == tag or _contains_tag(child, tag))
+        for child in node.children
+    )
 
 
 def html_contains_table(payload: bytes) -> bool:
@@ -200,6 +236,57 @@ def html_contains_table(payload: bytes) -> bool:
     parser.feed(_decode_html(payload))
     parser.close()
     return _contains_table(parser.root)
+
+
+def html_contains_image(payload: bytes) -> bool:
+    parser = _TreeBuilder()
+    parser.feed(_decode_html(payload))
+    parser.close()
+    return _contains_tag(parser.root, "img")
+
+
+def _preflight_inline_pngs(root: _Node) -> dict[str, FrozenPng]:
+    payload_by_src: dict[str, bytes] = {}
+
+    def walk(node: _Node) -> None:
+        if node.tag in _SKIP_TAGS:
+            return
+        src = node.attrs.get("src", "")
+        prefix = "data:image/png;base64,"
+        if node.tag == "img" and src.startswith(prefix):
+            encoded = src[len(prefix) :]
+            if len(encoded) > ((MAX_CLIPBOARD_RESOURCE_BYTES + 2) // 3) * 4:
+                raise ClipboardImageBytesError(
+                    "clipboard.image_budget_exceeded", "Clipboard image exceeds the byte budget."
+                )
+            payload_by_src[src] = base64.b64decode(encoded, validate=True)
+        for child in node.children:
+            if isinstance(child, _Node):
+                walk(child)
+
+    try:
+        walk(root)
+        preflight_png_resources(
+            payload_by_src.values(),
+            max_resources=MAX_CLIPBOARD_RESOURCES,
+            max_bytes=MAX_CLIPBOARD_RESOURCE_BYTES,
+            max_pixels=MAX_CLIPBOARD_IMAGE_PIXELS,
+        )
+        decoded: dict[str, FrozenPng] = {}
+        png_by_src: dict[str, FrozenPng] = {}
+        for src, payload in payload_by_src.items():
+            digest = hashlib.sha256(payload).hexdigest()
+            png = decoded.get(digest)
+            if png is None:
+                png = inspect_png_bytes(payload)
+                decoded[digest] = png
+            png_by_src[src] = png
+        return png_by_src
+    except (ValueError, ClipboardImageBytesError):
+        raise ClipboardDocumentError(
+            "clipboard.image_data_uri_invalid",
+            "Clipboard PNG data URI is invalid or exceeds the image budget.",
+        ) from None
 
 
 def _inline_nodes(items: Iterable[_Node | str], collector: _ResourceCollector) -> tuple:
@@ -531,11 +618,13 @@ def _insert_segment_images(
     cursor = 0
     for image, anchor in anchors:
         if anchor:
-            start = text.find(anchor, cursor)
+            start = text.find(anchor)
             if start < 0 or text.find(anchor, start + 1) >= 0:
                 return None
             position = start + len(anchor)
-        elif len(anchors) == 1:
+            if position < cursor:
+                return None
+        elif len(anchors) == 1 and not text.strip():
             position = 0
         else:
             return None
@@ -586,7 +675,15 @@ def splice_plain_text_with_structured_tables(
         raise TypeError("clipboard plain text must be text")
     tables = [block for block in document.blocks if isinstance(block, ClipboardTable)]
     if not tables:
-        return None
+        anchors = _top_level_image_anchors(document)[0]
+        if not anchors:
+            return None
+        paragraph = _insert_segment_images(plain_text, anchors)
+        if paragraph is None:
+            return None
+        merged = ClipboardDocument(blocks=(paragraph,), resources=document.resources)
+        clipboard_document_to_bytes(merged)
+        return merged
 
     normalized_plain, offsets = _normalized_newlines_with_offsets(plain_text)
     image_segments = _top_level_image_anchors(document)
@@ -633,14 +730,19 @@ def splice_plain_text_with_structured_tables(
     return merged
 
 
-def project_structured_clipboard_html_with_resources(payload: bytes) -> StructuredClipboardProjection:
+def project_structured_clipboard_html_with_resources(
+    payload: bytes, *, decode_inline_images: bool = True
+) -> StructuredClipboardProjection:
     """Parse captured HTML and freeze only allowlisted inline PNG data URIs."""
 
     parser = _TreeBuilder()
     parser.feed(_decode_html(payload))
     parser.close()
     counters = {"blocks": 0, "tables": 0, "cells": 0}
-    collector = _ResourceCollector()
+    collector = _ResourceCollector(
+        png_by_src=_preflight_inline_pngs(parser.root) if decode_inline_images else {},
+        decode_inline_images=decode_inline_images,
+    )
     blocks = _blocks_from_children(parser.root.children, counters=counters, depth=1, collector=collector)
     ordered = tuple(sorted(collector.resources.values(), key=lambda item: item[0].resource_id))
     document = ClipboardDocument(
@@ -663,6 +765,7 @@ def project_structured_clipboard_html(payload: bytes) -> ClipboardDocument:
 __all__ = [
     "StructuredClipboardProjection",
     "extract_cf_html_fragment",
+    "html_contains_image",
     "html_contains_table",
     "project_structured_clipboard_html",
     "project_structured_clipboard_html_with_resources",

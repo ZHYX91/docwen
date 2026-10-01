@@ -412,13 +412,13 @@ class MainWindow(QWidget):
                 )
                 return
 
-        if mime_data is None or not mime_data.hasText():
+        text = capture.plain_text if capture is not None else (mime_data.text() if mime_data is not None else None)
+        if text is None:
             self._info_area_vm.add_message(
                 _t("components.file_drop.clipboard_non_text", "The clipboard does not contain plain text."),
                 "warning",
             )
             return
-        text = mime_data.text()
         if not text.strip():
             self._info_area_vm.add_message(
                 _t(

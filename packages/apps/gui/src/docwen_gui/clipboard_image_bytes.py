@@ -10,11 +10,13 @@ from __future__ import annotations
 import hashlib
 import io
 import struct
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 from docwen_core.models.clipboard_document import (
     MAX_CLIPBOARD_IMAGE_PIXELS_PER_RESOURCE,
     MAX_CLIPBOARD_IMAGE_SIDE,
+    MAX_CLIPBOARD_RESOURCE_BYTES,
 )
 
 _PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
@@ -59,11 +61,44 @@ def _png_dimensions(payload: bytes) -> tuple[int, int]:
     return width, height
 
 
+def preflight_png_resources(
+    payloads: Iterable[bytes],
+    *,
+    max_resources: int,
+    max_bytes: int,
+    max_pixels: int,
+) -> None:
+    """Check all unique encoded bytes and PNG headers before any pixel decode."""
+
+    seen: set[str] = set()
+    total_bytes = 0
+    total_pixels = 0
+    for payload in payloads:
+        if not isinstance(payload, bytes) or not payload:
+            raise ClipboardImageBytesError("clipboard.image_png_invalid", "Clipboard PNG is empty or invalid.")
+        digest = hashlib.sha256(payload).hexdigest()
+        if digest in seen:
+            continue
+        seen.add(digest)
+        total_bytes += len(payload)
+        width, height = _png_dimensions(payload)
+        total_pixels += width * height
+        if len(seen) > max_resources or total_bytes > max_bytes or total_pixels > max_pixels:
+            raise ClipboardImageBytesError(
+                "clipboard.image_budget_exceeded",
+                "Clipboard images exceed the supported resource budget.",
+            )
+
+
 def inspect_png_bytes(payload: bytes, *, device_pixel_ratio: float = 1.0) -> FrozenPng:
     """Decode one bounded PNG and hash its straight RGBA pixels."""
 
     if not isinstance(payload, bytes) or not payload:
         raise ClipboardImageBytesError("clipboard.image_png_invalid", "Clipboard PNG is empty or invalid.")
+    if len(payload) > MAX_CLIPBOARD_RESOURCE_BYTES:
+        raise ClipboardImageBytesError(
+            "clipboard.image_budget_exceeded", "Clipboard PNG exceeds the supported byte budget."
+        )
     width, height = _png_dimensions(payload)
     try:
         from PIL import Image
@@ -101,7 +136,6 @@ def inspect_png_bytes(payload: bytes, *, device_pixel_ratio: float = 1.0) -> Fro
 def freeze_qimage(image: object) -> FrozenPng:
     """Detach a Qt image as physical-pixel straight RGBA8 and encode PNG once."""
 
-    from PySide6.QtCore import QBuffer, QByteArray, QIODevice
     from PySide6.QtGui import QImage, QPixmap
 
     if isinstance(image, QPixmap):
@@ -150,23 +184,19 @@ def freeze_qimage(image: object) -> FrozenPng:
     rgba = b"".join(raw[row * stride : row * stride + row_bytes] for row in range(height))
     rgba_sha = hashlib.sha256(rgba).hexdigest()
 
-    encoded = QByteArray()
-    buffer = QBuffer(encoded)
-    if not buffer.open(QIODevice.OpenModeFlag.WriteOnly):
-        raise ClipboardImageBytesError(
-            "clipboard.image_encode_failed",
-            "Clipboard image could not be encoded.",
-        )
     try:
-        if not detached.save(buffer, b"PNG"):
-            raise ClipboardImageBytesError(
-                "clipboard.image_encode_failed",
-                "Clipboard image could not be encoded.",
-            )
-    finally:
-        buffer.close()
+        from PIL import Image
 
-    frozen = inspect_png_bytes(bytes(encoded.data()), device_pixel_ratio=dpr)
+        with io.BytesIO() as stream:
+            with Image.frombytes("RGBA", (width, height), rgba) as normalized:
+                normalized.save(stream, format="PNG")
+            payload = stream.getvalue()
+    except Exception as exc:
+        raise ClipboardImageBytesError(
+            "clipboard.image_encode_failed", "Clipboard image could not be encoded."
+        ) from exc
+
+    frozen = inspect_png_bytes(payload, device_pixel_ratio=dpr)
     if frozen.width != width or frozen.height != height or frozen.rgba_sha256 != rgba_sha:
         raise ClipboardImageBytesError(
             "clipboard.image_encode_failed",
@@ -180,4 +210,5 @@ __all__ = [
     "FrozenPng",
     "freeze_qimage",
     "inspect_png_bytes",
+    "preflight_png_resources",
 ]

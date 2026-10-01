@@ -7,6 +7,7 @@ SourceURL/base values, external OOXML relationships, or execute payload data.
 from __future__ import annotations
 
 import base64
+import hashlib
 import io
 import posixpath
 import struct
@@ -18,8 +19,18 @@ from typing import NoReturn
 
 from lxml import etree
 
-from docwen_core.models.clipboard_document import ClipboardResource
-from docwen_gui.clipboard_image_bytes import FrozenPng, inspect_png_bytes
+from docwen_core.models.clipboard_document import (
+    MAX_CLIPBOARD_IMAGE_PIXELS,
+    MAX_CLIPBOARD_RESOURCE_BYTES,
+    MAX_CLIPBOARD_RESOURCES,
+    ClipboardResource,
+)
+from docwen_gui.clipboard_image_bytes import (
+    ClipboardImageBytesError,
+    FrozenPng,
+    inspect_png_bytes,
+    preflight_png_resources,
+)
 
 WORD_EMBED_SOURCE_MIME = 'application/x-qt-windows-mime;value="Embed Source"'
 WPS_DOCUMENT_MIME = 'application/x-qt-windows-mime;value="Kingsoft WPS 9.0 Format"'
@@ -464,10 +475,38 @@ def _resource_projection(
     occurrences: tuple[ProviderImageOccurrence, ...],
     identifier_payloads: dict[str, bytes],
 ) -> ProviderImageProjection:
+    referenced = {occurrence.identifier for occurrence in occurrences}
+    if referenced != set(identifier_payloads):
+        _fail(
+            "clipboard.provider_binding_invalid",
+            "Clipboard document image identifiers do not exactly match provided image resources.",
+        )
+    try:
+        preflight_png_resources(
+            identifier_payloads.values(),
+            max_resources=MAX_CLIPBOARD_RESOURCES,
+            max_bytes=MAX_CLIPBOARD_RESOURCE_BYTES,
+            max_pixels=MAX_CLIPBOARD_IMAGE_PIXELS,
+        )
+    except ClipboardImageBytesError as exc:
+        if exc.code == "clipboard.image_budget_exceeded":
+            _fail(
+                "clipboard.provider_image_budget_exceeded",
+                "Clipboard provider images exceed the supported resource budget.",
+            )
+        _fail("clipboard.provider_image_invalid", "Clipboard provider image is invalid.")
     identifier_to_resource: dict[str, str] = {}
     resources_by_sha: dict[str, tuple[ClipboardResource, bytes]] = {}
+    decoded: dict[str, FrozenPng] = {}
     for identifier, payload in identifier_payloads.items():
-        png = inspect_png_bytes(payload)
+        digest = hashlib.sha256(payload).hexdigest()
+        png = decoded.get(digest)
+        if png is None:
+            try:
+                png = inspect_png_bytes(payload)
+            except ClipboardImageBytesError:
+                _fail("clipboard.provider_image_invalid", "Clipboard provider image is invalid.")
+            decoded[digest] = png
         resource_id = f"img-{png.payload_sha256[:24]}"
         logical_path = f"resources/{png.payload_sha256[:24]}.png"
         identifier_to_resource[identifier] = resource_id
@@ -486,13 +525,6 @@ def _resource_projection(
                 ),
                 payload,
             ),
-        )
-
-    referenced = {occurrence.identifier for occurrence in occurrences}
-    if referenced != set(identifier_payloads):
-        _fail(
-            "clipboard.provider_binding_invalid",
-            "Clipboard document image identifiers do not exactly match provided image resources.",
         )
 
     ordered = sorted(resources_by_sha.values(), key=lambda item: item[0].resource_id)
@@ -545,7 +577,6 @@ def _parse_wps_image_data(payload: bytes) -> dict[str, bytes]:
         identifier = base64.b64encode(identifier_raw).decode("ascii")
         if identifier in records:
             _fail("clipboard.provider_wps_image_data_invalid", "WPS clipboard image identifier is duplicated.")
-        inspect_png_bytes(image_payload)
         records[identifier] = image_payload
     if offset != len(payload):
         _fail("clipboard.provider_wps_image_data_invalid", "WPS clipboard image data was not fully consumed.")

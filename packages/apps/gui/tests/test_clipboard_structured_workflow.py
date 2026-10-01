@@ -59,9 +59,25 @@ def test_default_table_paste_creates_one_structured_managed_input(window, qapp, 
     assert window._clipboard_store.snapshot_available(ref.path)
 
 
-def test_invalid_table_structure_is_rejected_without_plain_text_fallback(window, qapp, qtbot) -> None:
+def test_invalid_table_structure_keeps_complete_plain_text_with_warning(window, qapp, qtbot) -> None:
     mime = QMimeData()
-    mime.setText("A B C")
+    plain = "  A B C\nhttps://example.test/a **authored**\u00a0 "
+    mime.setText(plain)
+    mime.setHtml("<table><tr><td>A</td><td>B</td></tr><tr><td>C</td></tr></table>")
+    qapp.clipboard().setMimeData(mime)
+
+    qtbot.mouseClick(window.input_area.paste_button, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: not window.view_model.inspection_busy)
+    assert len(window.view_model.files) == 1
+    ref = window.view_model.files[0]
+    assert ref.format == "markdown"
+    assert Path(ref.path).read_text(encoding="utf-8") == plain
+    assert any(row.message_type == "warning" for row in window._info_area_vm.history_rows)
+    assert not any(row.message_type == "danger" for row in window._info_area_vm.history_rows)
+
+
+def test_invalid_table_structure_without_plain_body_is_rejected(window, qapp, qtbot) -> None:
+    mime = QMimeData()
     mime.setHtml("<table><tr><td>A</td><td>B</td></tr><tr><td>C</td></tr></table>")
     qapp.clipboard().setMimeData(mime)
 

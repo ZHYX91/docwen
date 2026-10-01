@@ -12,10 +12,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from docwen_core.models.clipboard_document import (
+    MAX_CLIPBOARD_IMAGE_PIXELS,
     MAX_CLIPBOARD_RESOURCE_BYTES,
+    MAX_CLIPBOARD_RESOURCES,
     load_clipboard_document_bytes,
 )
-from docwen_gui.clipboard_image_bytes import ClipboardImageBytesError, inspect_png_bytes
+from docwen_gui.clipboard_image_bytes import ClipboardImageBytesError, inspect_png_bytes, preflight_png_resources
 
 _PREVIEW_MAX_CHARS = 240
 _PREVIEW_MAX_LINES = 3
@@ -396,6 +398,15 @@ class ClipboardInputStore:
         declarations = {item.resource_id: item for item in document.resources}
         if set(supplied) != set(declarations):
             raise ValueError("clipboard bundle resources do not match document declarations")
+        try:
+            preflight_png_resources(
+                (supplied[item.resource_id][2] for item in document.resources if item.media_type == "image/png"),
+                max_resources=MAX_CLIPBOARD_RESOURCES,
+                max_bytes=MAX_CLIPBOARD_RESOURCE_BYTES,
+                max_pixels=MAX_CLIPBOARD_IMAGE_PIXELS,
+            )
+        except ClipboardImageBytesError as exc:
+            raise ValueError("clipboard bundle PNG resource is invalid") from exc
         ordered_resources: list[tuple[str, str, str, bytes]] = []
         total_resource_bytes = 0
         for declaration in document.resources:

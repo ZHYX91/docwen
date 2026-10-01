@@ -17,6 +17,7 @@ from docwen_gui.clipboard_office_provider import (
 )
 from docwen_gui.clipboard_structured import (
     StructuredClipboardProjection,
+    html_contains_image,
     html_contains_table,
     project_structured_clipboard_html_with_resources,
     splice_plain_text_with_structured_tables,
@@ -46,7 +47,7 @@ class RichDocumentDecision:
     plain_fallback: bool = False
 
 
-def project_frozen_rich_document(capture: FrozenClipboardCapture) -> RichDocumentDecision:
+def _project_frozen_rich_document(capture: FrozenClipboardCapture) -> RichDocumentDecision:
     """Use plain text as body authority and provider bytes only for proven images."""
 
     html_bytes = capture.html_bytes
@@ -54,6 +55,13 @@ def project_frozen_rich_document(capture: FrozenClipboardCapture) -> RichDocumen
     wps_document = capture.get(WPS_DOCUMENT_MIME)
     wps_images = capture.get(WPS_IMAGE_DATA_MIME)
     has_provider = word_payload is not None or wps_document is not None or wps_images is not None
+    if capture.rich_error_code:
+        raise ClipboardRichDocumentError(capture.rich_error_code, "Clipboard rich capture could not be frozen safely.")
+    has_wps = wps_document is not None or wps_images is not None
+    if has_wps and (wps_document is None or wps_images is None):
+        raise ClipboardRichDocumentError(
+            "clipboard.provider_incomplete", "WPS clipboard image provider data is incomplete."
+        )
 
     if not html_bytes:
         if has_provider:
@@ -65,44 +73,38 @@ def project_frozen_rich_document(capture: FrozenClipboardCapture) -> RichDocumen
 
     try:
         contains_table = html_contains_table(html_bytes)
+        contains_image = html_contains_image(html_bytes)
     except (UnicodeDecodeError, ValueError) as exc:
         raise ClipboardRichDocumentError(
             "clipboard.structured_invalid",
             "Clipboard rich document structure is invalid.",
         ) from exc
-    if not contains_table and not has_provider:
+    if not contains_table and not contains_image:
         return RichDocumentDecision(None, False)
 
     try:
-        html_projection: StructuredClipboardProjection = project_structured_clipboard_html_with_resources(html_bytes)
-        document = html_projection.document
-        if capture.plain_text is not None:
-            merged = splice_plain_text_with_structured_tables(document, capture.plain_text)
-            if merged is None:
-                return RichDocumentDecision(None, True, plain_fallback=True)
-            document = merged
-
         provider_projection = None
-        if word_payload is not None:
-            if wps_document is not None or wps_images is not None:
-                raise ClipboardRichDocumentError(
-                    "clipboard.provider_ambiguous",
-                    "Clipboard exposes more than one rich document provider.",
-                )
-            provider_projection = parse_word_embed_source(word_payload)
-        elif wps_document is not None or wps_images is not None:
-            if wps_document is None or wps_images is None:
-                raise ClipboardRichDocumentError(
-                    "clipboard.provider_incomplete",
-                    "WPS clipboard image provider data is incomplete.",
-                )
+        if contains_image and wps_document is not None and wps_images is not None:
             provider_projection = parse_wps_writer(wps_document, wps_images)
+        elif contains_image and word_payload is not None:
+            provider_projection = parse_word_embed_source(word_payload)
+
+        html_projection: StructuredClipboardProjection = project_structured_clipboard_html_with_resources(
+            html_bytes, decode_inline_images=provider_projection is None
+        )
+        document = html_projection.document
 
         resources = html_projection.resources
         provider_name = ""
         if provider_projection is not None:
             document, resources = bind_provider_images(document, provider_projection, resources)
             provider_name = provider_projection.provider
+
+        if capture.plain_text is not None:
+            merged = splice_plain_text_with_structured_tables(document, capture.plain_text)
+            if merged is None:
+                return RichDocumentDecision(None, True, plain_fallback=True)
+            document = merged
 
         clipboard_document_to_bytes(document)
         return RichDocumentDecision(
@@ -123,6 +125,17 @@ def project_frozen_rich_document(capture: FrozenClipboardCapture) -> RichDocumen
             "clipboard.structured_invalid",
             "Clipboard rich document could not be projected safely.",
         ) from exc
+
+
+def project_frozen_rich_document(capture: FrozenClipboardCapture) -> RichDocumentDecision:
+    """Preserve complete captured plain text when rich representation is invalid."""
+
+    try:
+        return _project_frozen_rich_document(capture)
+    except ClipboardRichDocumentError:
+        if capture.plain_text is not None:
+            return RichDocumentDecision(None, True, plain_fallback=True)
+        raise
 
 
 __all__ = [
