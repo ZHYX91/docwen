@@ -131,11 +131,15 @@ def _biff_workbook() -> bytes:
     return bof + record + eof + bytes(sheet) + struct.pack("<HHH", 0x0081, 2, 0) + eof
 
 
-def _xlsx_package(*, root: str = "workbook", include_word: bool = False) -> bytes:
+def _xlsx_package(
+    *, root: str = "workbook", include_word: bool = False, workbook_path: str = "xl/workbook.xml"
+) -> bytes:
+    directory, filename = workbook_path.rsplit("/", 1)
+    worksheet_path = f"{directory}/worksheets/sheet1.xml"
     target = io.BytesIO()
     with zipfile.ZipFile(target, "w", compression=zipfile.ZIP_STORED) as archive:
         archive.writestr(
-            "xl/workbook.xml",
+            workbook_path,
             f'<{root} xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
             'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
             f'<sheets><sheet name="Controlled" sheetId="1" r:id="rId1"/></sheets></{root}>',
@@ -144,9 +148,9 @@ def _xlsx_package(*, root: str = "workbook", include_word: bool = False) -> byte
             "[Content_Types].xml",
             '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
             '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
-            '<Override PartName="/xl/workbook.xml" '
+            f'<Override PartName="/{workbook_path}" '
             'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
-            '<Override PartName="/xl/worksheets/sheet1.xml" '
+            f'<Override PartName="/{worksheet_path}" '
             'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',
         )
         archive.writestr(
@@ -154,22 +158,30 @@ def _xlsx_package(*, root: str = "workbook", include_word: bool = False) -> byte
             '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
             '<Relationship Id="rId1" '
             'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
-            'Target="xl/workbook.xml"/></Relationships>',
+            f'Target="{workbook_path}"/></Relationships>',
         )
         archive.writestr(
-            "xl/_rels/workbook.xml.rels",
+            f"{directory}/_rels/{filename}.rels",
             '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
             '<Relationship Id="rId1" '
             'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" '
             'Target="worksheets/sheet1.xml"/></Relationships>',
         )
         archive.writestr(
-            "xl/worksheets/sheet1.xml",
+            worksheet_path,
             '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData/></worksheet>',
         )
         archive.writestr("padding.bin", b"\0" * 4096)
         if include_word:
-            archive.writestr("word/document.xml", b"<document/>")
+            archive.writestr(
+                "word/document.xml",
+                '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+                "<w:body/></w:document>",
+            )
+            archive.writestr(
+                "word/_rels/document.xml.rels",
+                '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>',
+            )
     return target.getvalue()
 
 
@@ -330,11 +342,12 @@ def test_generic_supported_biff_framing_does_not_displace_html_table(name: str, 
 
 
 @pytest.mark.parametrize("name", ["Package", "package"])
-def test_generic_valid_ooxml_sheet_does_not_displace_html_table(name: str, qapp) -> None:
+@pytest.mark.parametrize("workbook_path", ["xl/workbook.xml", "custom/workbook.xml"])
+def test_generic_valid_ooxml_sheet_does_not_displace_html_table(name: str, workbook_path: str, qapp) -> None:
     mime = QMimeData()
     mime.setText("00123\t2\r\n")
     mime.setHtml("<table><tr><td>00123</td><td>2</td></tr></table>")
-    mime.setData(provider.WORD_EMBED_SOURCE_MIME, _named_stream(name, _xlsx_package()))
+    mime.setData(provider.WORD_EMBED_SOURCE_MIME, _named_stream(name, _xlsx_package(workbook_path=workbook_path)))
     decision = project_frozen_rich_document(freeze_clipboard_mime(mime))
     assert decision.projection is not None and not decision.plain_fallback
     assert not decision.projection.resources
@@ -342,6 +355,12 @@ def test_generic_valid_ooxml_sheet_does_not_displace_html_table(name: str, qapp)
     assert isinstance(table, ClipboardTable)
     assert (table.row_count, table.column_count) == (1, 2)
     assert trailing == ClipboardParagraph((ClipboardText("\r\n"),))
+
+
+@pytest.mark.parametrize("name", ["Package", "package"])
+def test_generic_custom_workbook_with_valid_word_decoy_preserves_full_plain(name: str, qapp) -> None:
+    stream = _xlsx_package(workbook_path="custom/workbook.xml", include_word=True)
+    _assert_sheet_source_falls_back(name, stream, qapp)
 
 
 @pytest.mark.parametrize("defect", ["missing_eof", "truncated", "bad_version", "wrong_root", "mixed"])
@@ -373,6 +392,38 @@ def test_generic_word_source_still_binds_original_images() -> None:
     projection = provider.parse_embed_source_images(_sample("word-derived.ole"))
     assert projection is not None and projection.provider == "word"
     assert len(projection.occurrences) == 3 and len(projection.resources) == 2
+
+
+@pytest.mark.parametrize(
+    "defect",
+    ["missing_types", "missing_root_rels", "external_main", "unresolved_main", "duplicate_main", "wrong_main_type"],
+)
+def test_generic_word_decoy_cannot_bypass_opc_main_identity(defect: str) -> None:
+    stream = _package()
+    changes: dict[str, bytes | None] = {}
+    if defect == "missing_types":
+        changes["[Content_Types].xml"] = None
+    elif defect == "missing_root_rels":
+        changes["_rels/.rels"] = None
+    else:
+        with zipfile.ZipFile(io.BytesIO(stream)) as archive:
+            if defect == "wrong_main_type":
+                changes["[Content_Types].xml"] = archive.read("[Content_Types].xml").replace(
+                    b"wordprocessingml.document.main+xml", b"unsupported.main+xml"
+                )
+            else:
+                data = archive.read("_rels/.rels")
+                if defect == "external_main":
+                    data = data.replace(b'Target="', b'TargetMode="External" Target="')
+                elif defect == "unresolved_main":
+                    data = data.replace(b"word/document.xml", b"missing.xml")
+                else:
+                    data = data.replace(
+                        b"</Relationships>", data[data.index(b"<Relationship Id=") :].replace(b"rId1", b"rId2")
+                    )
+                changes["_rels/.rels"] = data
+    with pytest.raises(provider.ClipboardOfficeProviderError, match="Clipboard"):
+        provider.parse_embed_source_images(_named_stream("Package", _rewrite_package(stream, changes)))
 
 
 def test_generic_legacy_word_stream_cannot_masquerade_as_ooxml_sheet(qapp) -> None:

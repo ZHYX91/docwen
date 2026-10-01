@@ -50,6 +50,7 @@ _WP_NS = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing
 _REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
 _CT_NS = "http://schemas.openxmlformats.org/package/2006/content-types"
 _S_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+_WORD_MAIN_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
 _SHEET_MAIN_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"
 _WORKSHEET_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"
 _REL_CONTENT_TYPE = "application/vnd.openxmlformats-package.relationships+xml"
@@ -653,11 +654,11 @@ def _validate_biff_workbook(payload: bytes) -> None:
 def _identity_xml(parts: dict[str, bytes], path: str):
     payload = parts.get(path)
     if payload is None:
-        _fail("clipboard.provider_document_invalid", "Clipboard spreadsheet package identity is incomplete.")
+        _fail("clipboard.provider_document_invalid", "Clipboard package identity is incomplete.")
     return _parse_xml(
         payload,
         code="clipboard.provider_document_invalid",
-        message="Clipboard spreadsheet package identity XML is invalid.",
+        message="Clipboard package identity XML is invalid.",
     )
 
 
@@ -693,14 +694,14 @@ def _internal_part(parts: dict[str, bytes], base: str, target: str, mode: str) -
     return path
 
 
-def _spreadsheet_content_types(parts: dict[str, bytes]) -> tuple[dict[str, str], dict[str, str]]:
+def _package_content_types(parts: dict[str, bytes]) -> Callable[[str], str]:
     root = _identity_xml(parts, "[Content_Types].xml")
     if root.tag != f"{{{_CT_NS}}}Types":
         _fail("clipboard.provider_document_invalid", "Clipboard package content types root is invalid.")
     overrides: dict[str, str] = {}
     defaults: dict[str, str] = {}
     for item in root:
-        content_type = item.get("ContentType") or ""
+        declared_type = item.get("ContentType") or ""
         if item.tag == f"{{{_CT_NS}}}Override":
             name = item.get("PartName") or ""
             if not name.startswith("/") or name.startswith("//") or posixpath.normpath(name) != name:
@@ -710,15 +711,9 @@ def _spreadsheet_content_types(parts: dict[str, bytes]) -> tuple[dict[str, str],
             target, key = defaults, (item.get("Extension") or "").lower()
         else:
             _fail("clipboard.provider_document_invalid", "Clipboard package content type declaration is invalid.")
-        if not key or not content_type or key in target:
+        if not key or not declared_type or key in target:
             _fail("clipboard.provider_document_invalid", "Clipboard package content type is invalid or duplicated.")
-        target[key] = content_type
-    return overrides, defaults
-
-
-def _validate_spreadsheet_package(parts: dict[str, bytes]) -> None:
-    """Prove OPC main-part and worksheet identity without interpreting cells."""
-    overrides, defaults = _spreadsheet_content_types(parts)
+        target[key] = declared_type
 
     def content_type(path: str) -> str:
         # OPC's package relationship item is the dotfile `_rels/.rels`;
@@ -727,14 +722,25 @@ def _validate_spreadsheet_package(parts: dict[str, bytes]) -> None:
         extension = filename.rsplit(".", 1)[1].lower() if "." in filename else ""
         return overrides.get(path, defaults.get(extension, ""))
 
-    if content_type("_rels/.rels") != _REL_CONTENT_TYPE:
-        _fail("clipboard.provider_document_invalid", "Clipboard package relationship content type is invalid.")
+    return content_type
+
+
+def _package_main_part(parts: dict[str, bytes]) -> tuple[str, Callable[[str], str]]:
+    """Resolve the actual OPC identity before choosing any generic adapter."""
+    content_type = _package_content_types(parts)
     relations = _identity_relationships(parts, "_rels/.rels")
     mains = [value for value in relations.values() if value[0] == f"{_R_NS}/officeDocument"]
     if len(mains) != 1:
         _fail("clipboard.provider_document_invalid", "Clipboard package main part is not unique.")
     _kind, target, mode = mains[0]
     main = _internal_part(parts, "", target, mode)
+    return main, content_type
+
+
+def _validate_spreadsheet_package(parts: dict[str, bytes], main: str, content_type: Callable[[str], str]) -> None:
+    """Prove OPC main-part and worksheet identity without interpreting cells."""
+    if content_type("_rels/.rels") != _REL_CONTENT_TYPE:
+        _fail("clipboard.provider_document_invalid", "Clipboard package relationship content type is invalid.")
     if content_type(main) != _SHEET_MAIN_TYPE:
         _fail("clipboard.provider_document_invalid", "Clipboard package main part is not a supported workbook.")
     workbook = _identity_xml(parts, main)
@@ -792,13 +798,16 @@ def parse_embed_source_images(payload: bytes) -> ProviderImageProjection | None:
     if name == "WordDocument":
         _fail("clipboard.provider_document_invalid", "Legacy Word clipboard sources are unsupported.")
     parts = _safe_zip_parts(stream)
-    word = parts.get("word/document.xml")
-    workbook = parts.get("xl/workbook.xml")
-    if word is not None and workbook is not None:
+    main, content_type = _package_main_part(parts)
+    word = "word/document.xml" in parts or any(content_type(path) == _WORD_MAIN_TYPE for path in parts)
+    workbook = "xl/workbook.xml" in parts or any(content_type(path) == _SHEET_MAIN_TYPE for path in parts)
+    if word and workbook:
         _fail("clipboard.provider_document_invalid", "Clipboard OOXML document kind is ambiguous.")
-    if word is not None:
+    if content_type(main) == _WORD_MAIN_TYPE:
+        if main != "word/document.xml":
+            _fail("clipboard.provider_document_invalid", "Clipboard Word main-part layout is unsupported.")
         return _word_image_projection(parts)
-    _validate_spreadsheet_package(parts)
+    _validate_spreadsheet_package(parts, main, content_type)
     return None
 
 
