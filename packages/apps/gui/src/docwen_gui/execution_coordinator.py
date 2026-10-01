@@ -23,6 +23,7 @@ from docwen_gui.view_models._runtime_route_filter import (
 if TYPE_CHECKING:
     from docwen_application.controller import ApplicationController
     from docwen_core.models.request import ConversionRequest, OutputPolicy
+    from docwen_gui.clipboard_inputs import ClipboardSnapshotBundle
     from docwen_gui.execution_presenter import ExecutionPresenter
     from docwen_gui.execution_requests import ExecutionRequestBuilder
     from docwen_gui.qt_bridge.execution_supervisor import ExecutionSupervisor
@@ -188,6 +189,7 @@ class ExecutionCoordinator(QObject):
             self._info_area_vm.add_message(str(exc), "warning")
             return
         document_group_requests = tuple(context.pop("_document_group_requests", ()))
+        clipboard_bundles = tuple(context.pop("_clipboard_bundles", ()))
         if document_group_requests and mode != "batch":
             raise ValueError("document-group execution is only valid for batch mode")
         admission_requests = document_group_requests or (request,)
@@ -237,6 +239,7 @@ class ExecutionCoordinator(QObject):
             aggregate_action_name=action_name if mode == "aggregate" else "",
             batch_execution=mode == "batch",
             document_group_requests=document_group_requests,
+            clipboard_bundles=clipboard_bundles,
             pending_invalid_indices=frozenset(pending_invalid_indices),
         )
 
@@ -339,6 +342,7 @@ class ExecutionCoordinator(QObject):
         aggregate_action_name: str = "",
         batch_execution: bool = False,
         document_group_requests: tuple[ConversionRequest, ...] = (),
+        clipboard_bundles: tuple[ClipboardSnapshotBundle, ...] = (),
         pending_invalid_indices: frozenset[int] = frozenset(),
     ) -> bool:
         """Project an owned request; the supervisor owns reservation and cleanup."""
@@ -363,6 +367,7 @@ class ExecutionCoordinator(QObject):
             aggregate_action_name=aggregate_action_name,
             batch_execution=batch_execution,
             document_group_requests=document_group_requests,
+            clipboard_bundles=clipboard_bundles,
             pending_invalid_indices=pending_invalid_indices,
         )
 

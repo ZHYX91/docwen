@@ -7,6 +7,7 @@ import hashlib
 import os
 import posixpath
 import tempfile
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
@@ -80,7 +81,7 @@ def write_docx_paragraph(
             kwargs = {}
             if inline.extent_cx_emu is not None and inline.extent_cy_emu is not None:
                 kwargs = {"width": Emu(inline.extent_cx_emu), "height": Emu(inline.extent_cy_emu)}
-            run.add_picture(str(bound.path), **kwargs)
+            run.add_picture(BytesIO(bound.path.read_bytes()), **kwargs)
     return output
 
 
@@ -286,7 +287,11 @@ def deduplicate_xlsx_png_media(path: Path) -> None:
             target = relation.get("Target")
             if not target or relation.get("TargetMode") == "External":
                 continue
-            absolute = posixpath.normpath(posixpath.join(drawing_dir, target))
+            absolute = (
+                posixpath.normpath(target).lstrip("/")
+                if target.startswith("/")
+                else posixpath.normpath(posixpath.join(drawing_dir, target))
+            )
             canonical = replacement.get(absolute)
             if canonical is None:
                 continue

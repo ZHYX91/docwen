@@ -111,6 +111,67 @@ class ClipboardSnapshotBundle:
     marker_path: str
 
 
+def _frozen_file_available(path: Path, size_bytes: int, sha256: str) -> bool:
+    stat = path.lstat()
+    if path.is_symlink() or getattr(stat, "st_file_attributes", 0) & 0x400:
+        return False
+    if not path.is_file() or stat.st_size != size_bytes:
+        return False
+    digest = hashlib.sha256()
+    remaining = size_bytes
+    with path.open("rb") as stream:
+        while remaining:
+            chunk = stream.read(min(1024 * 1024, remaining))
+            if not chunk:
+                return False
+            digest.update(chunk)
+            remaining -= len(chunk)
+        if stream.read(1):
+            return False
+    return digest.hexdigest() == sha256
+
+
+def _bundle_member_available(root: Path, path: Path) -> bool:
+    if not root.is_absolute() or not path.is_absolute():
+        return False
+    try:
+        relative = path.relative_to(root)
+    except ValueError:
+        return False
+    if ".." in relative.parts:
+        return False
+    for member in (path, *path.parents):
+        stat = member.lstat()
+        if member.is_symlink() or getattr(stat, "st_file_attributes", 0) & 0x400:
+            return False
+        if member == root:
+            return True
+    return False
+
+
+def clipboard_bundle_available(bundle: ClipboardSnapshotBundle) -> bool:
+    """Revalidate frozen Store facts without accessing a mutable Store or Qt."""
+    try:
+        root = Path(bundle.root_path)
+        marker = Path(bundle.marker_path)
+        if marker != root / _BUNDLE_MARKER_NAME or not _bundle_member_available(root, marker):
+            return False
+        if not root.is_dir() or not marker.is_file() or os.path.lexists(root / _BUNDLE_PARTIAL_NAME):
+            return False
+        with marker.open("rb") as stream:
+            if stream.read(len(_BUNDLE_MARKER) + 1) != _BUNDLE_MARKER:
+                return False
+        for descriptor in (bundle.main, *bundle.resources):
+            candidate = Path(descriptor.path)
+            if not _bundle_member_available(root, candidate):
+                return False
+            if not _frozen_file_available(candidate, descriptor.size_bytes, descriptor.sha256):
+                return False
+        return True
+    except OSError:
+        return False
+
+
 def bounded_plaintext_preview(text: str) -> str:
     """Return a short display-only preview without changing the stored bytes."""
 
@@ -452,14 +513,7 @@ class ClipboardInputStore:
 
     @staticmethod
     def _descriptor_available(path: str, size_bytes: int, sha256: str) -> bool:
-        candidate = Path(path)
-        if not candidate.is_file() or candidate.stat().st_size != size_bytes:
-            return False
-        digest = hashlib.sha256()
-        with candidate.open("rb") as stream:
-            while chunk := stream.read(1024 * 1024):
-                digest.update(chunk)
-        return digest.hexdigest() == sha256
+        return _frozen_file_available(Path(path), size_bytes, sha256)
 
     def snapshot_available(self, path: str | os.PathLike[str]) -> bool:
         key = self._snapshot_key(path)
@@ -468,19 +522,9 @@ class ClipboardInputStore:
         descriptor = self._snapshots[key]
         bundle = self._bundles.get(key)
         try:
-            if not self._descriptor_available(descriptor.path, descriptor.size_bytes, descriptor.sha256):
-                return False
-            if bundle is None:
-                return True
-            marker = Path(bundle.marker_path)
-            if not marker.is_file() or marker.read_bytes() != _BUNDLE_MARKER:
-                return False
-            if Path(bundle.root_path, _BUNDLE_PARTIAL_NAME).exists():
-                return False
-            return all(
-                self._descriptor_available(resource.path, resource.size_bytes, resource.sha256)
-                for resource in bundle.resources
-            )
+            if bundle is not None:
+                return clipboard_bundle_available(bundle)
+            return self._descriptor_available(descriptor.path, descriptor.size_bytes, descriptor.sha256)
         except OSError:
             return False
 

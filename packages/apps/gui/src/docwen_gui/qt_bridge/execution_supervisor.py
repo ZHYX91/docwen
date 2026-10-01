@@ -15,6 +15,7 @@ from docwen_gui.qt_bridge.execution import ExecutionThread
 if TYPE_CHECKING:
     from docwen_application.controller import ApplicationController
     from docwen_core.models.request import ConversionRequest
+    from docwen_gui.clipboard_inputs import ClipboardSnapshotBundle
     from docwen_gui.view_models.main_window_vm import MainWindowViewModel
 
 
@@ -64,6 +65,7 @@ class ExecutionSupervisor(QObject):
         aggregate_action_name: str = "",
         batch_execution: bool = False,
         document_group_requests: tuple[ConversionRequest, ...] = (),
+        clipboard_bundles: tuple[ClipboardSnapshotBundle, ...] = (),
         pending_invalid_indices: frozenset[int] = frozenset(),
     ) -> bool:
         if self.busy:
@@ -92,6 +94,7 @@ class ExecutionSupervisor(QObject):
                 aggregate_action_name=aggregate_action_name,
                 batch_execution=batch_execution,
                 document_group_requests=document_group_requests,
+                clipboard_bundles=clipboard_bundles,
                 pending_invalid_indices=pending_invalid_indices,
                 parent=self,
             )

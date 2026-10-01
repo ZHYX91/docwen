@@ -21,6 +21,7 @@ from docwen_gui.path_identity import normalize_path
 if TYPE_CHECKING:
     from docwen_core.models.file_ref import FileRef
     from docwen_core.models.request import ConversionRequest
+    from docwen_gui.clipboard_inputs import ClipboardSnapshotBundle
     from docwen_gui.view_models.batch_list_vm import BatchListViewModel
     from docwen_gui.view_models.main_window_vm import MainWindowViewModel
 
@@ -117,6 +118,48 @@ def _validate_structured_resource_group(request: ConversionRequest) -> None:
         raise ExecutionAdmissionError(
             _t("main_window.file_admission_invalid", "File inspection data is invalid.")
         ) from exc
+
+
+def check_frozen_clipboard_bundles(request: ConversionRequest, bundles: tuple[ClipboardSnapshotBundle, ...]) -> None:
+    """Match each GUI structured group to its original immutable Store facts."""
+    from docwen_core.models.file_ref import (
+        MANAGED_INPUT_SHA256_METADATA_KEY,
+        MANAGED_INPUT_SIZE_BYTES_METADATA_KEY,
+        MANAGED_RESOURCE_ID_METADATA_KEY,
+    )
+    from docwen_gui.clipboard_inputs import clipboard_bundle_available
+
+    for source in request.input_refs:
+        if source.input_role == "linked_resource" or source.format != "clipboard_document":
+            continue
+        matched = [bundle for bundle in bundles if normalize_path(bundle.main.path) == normalize_path(source.path)]
+        if len(matched) != 1 or not clipboard_bundle_available(matched[0]):
+            raise ExecutionAdmissionError(_t("main_window.file_admission_invalid", "File inspection data is invalid."))
+        expected = [
+            (
+                normalize_path(item.path),
+                item.resource_id,
+                item.logical_path,
+                item.media_type,
+                item.size_bytes,
+                item.sha256,
+            )
+            for item in matched[0].resources
+        ]
+        actual = [
+            (
+                normalize_path(ref.path),
+                ref.metadata.get(MANAGED_RESOURCE_ID_METADATA_KEY),
+                ref.logical_path,
+                ref.media_type,
+                ref.metadata.get(MANAGED_INPUT_SIZE_BYTES_METADATA_KEY),
+                ref.metadata.get(MANAGED_INPUT_SHA256_METADATA_KEY),
+            )
+            for ref in request.input_refs
+            if ref.input_role == "linked_resource"
+        ]
+        if actual != expected:
+            raise ExecutionAdmissionError(_t("main_window.file_admission_invalid", "File inspection data is invalid."))
 
 
 def check_frozen_request(request: ConversionRequest) -> None:

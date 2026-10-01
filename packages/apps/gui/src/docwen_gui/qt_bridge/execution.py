@@ -6,11 +6,16 @@ from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QObject, QThread, Signal
 
-from docwen_gui.execution_admission import ExecutionAdmissionError, check_frozen_request
+from docwen_gui.execution_admission import (
+    ExecutionAdmissionError,
+    check_frozen_clipboard_bundles,
+    check_frozen_request,
+)
 
 if TYPE_CHECKING:
     from docwen_application.controller import ApplicationController
     from docwen_core.models.request import ConversionRequest
+    from docwen_gui.clipboard_inputs import ClipboardSnapshotBundle
 
 
 class ExecutionThread(QThread):
@@ -35,6 +40,7 @@ class ExecutionThread(QThread):
         aggregate_action_name: str = "",
         batch_execution: bool = False,
         document_group_requests: tuple[ConversionRequest, ...] = (),
+        clipboard_bundles: tuple[ClipboardSnapshotBundle, ...] = (),
         pending_invalid_indices: frozenset[int] = frozenset(),
         parent: QObject | None = None,
     ) -> None:
@@ -45,6 +51,7 @@ class ExecutionThread(QThread):
         self._aggregate_action_name = aggregate_action_name
         self._batch_execution = batch_execution
         self._document_group_requests = document_group_requests
+        self._clipboard_bundles = clipboard_bundles
         self._pending_invalid_indices = pending_invalid_indices
 
     def run(self) -> None:
@@ -55,10 +62,12 @@ class ExecutionThread(QThread):
                     if index in frozen_invalid_indices:
                         continue
                     try:
+                        check_frozen_clipboard_bundles(group, self._clipboard_bundles)
                         check_frozen_request(group)
                     except ExecutionAdmissionError:
                         frozen_invalid_indices.add(index)
             else:
+                check_frozen_clipboard_bundles(self._request, self._clipboard_bundles)
                 check_frozen_request(self._request)
             if self._document_group_requests:
                 result = self._controller.execute_document_group_batch(

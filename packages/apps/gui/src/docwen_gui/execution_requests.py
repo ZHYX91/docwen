@@ -280,6 +280,11 @@ class ExecutionRequestBuilder:
             "open_after_done": output_policy.open_after_done,
             "input_refs": [ref.to_dict() for ref in request.input_refs],
         }
+        clipboard_bundles = tuple(
+            bundle for path in source_paths if (bundle := self._snapshot_bundle(path)) is not None
+        )
+        if clipboard_bundles:
+            context["_clipboard_bundles"] = clipboard_bundles
         if grouped_batch:
             context["_document_group_requests"] = tuple(
                 ConversionRequest(
