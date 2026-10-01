@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -18,11 +19,13 @@ from docwen_core.models.clipboard_document import (
     ClipboardHardBreak,
     ClipboardImageRef,
     ClipboardParagraph,
+    ClipboardResource,
     ClipboardTable,
     ClipboardTableCell,
     ClipboardText,
     clipboard_document_to_bytes,
 )
+from docwen_gui.clipboard_image_bytes import ClipboardImageBytesError, inspect_png_bytes
 
 _CF_HTML_FIELDS = ("StartHTML", "EndHTML", "StartFragment", "EndFragment")
 _SKIP_TAGS = frozenset({"head", "script", "style", "noscript", "template"})
@@ -53,6 +56,51 @@ _ROW_GROUP_TAGS = frozenset({"thead", "tbody", "tfoot"})
 _MAX_HTML_BYTES = 8 * 1024 * 1024
 _MAX_HTML_NODES = 300_000
 _MAX_HTML_DEPTH = 32
+
+
+@dataclass(slots=True)
+class _ResourceCollector:
+    resources: dict[str, tuple[ClipboardResource, bytes]] = field(default_factory=dict)
+
+    def image_from_src(self, src: str, alt: str) -> ClipboardImageRef:
+        prefix = "data:image/png;base64,"
+        if not src.startswith(prefix):
+            return ClipboardImageRef(None, alt, "clipboard_resource_unavailable")
+        encoded = src[len(prefix) :]
+        try:
+            payload = base64.b64decode(encoded, validate=True)
+            png = inspect_png_bytes(payload)
+        except (ValueError, ClipboardImageBytesError):
+            raise ClipboardDocumentError(
+                "clipboard.image_data_uri_invalid",
+                "Clipboard PNG data URI is invalid or exceeds the image budget.",
+            ) from None
+        resource_id = f"img-{png.payload_sha256[:24]}"
+        logical_path = f"resources/{png.payload_sha256[:24]}.png"
+        resource = ClipboardResource(
+            resource_id=resource_id,
+            logical_path=logical_path,
+            media_type="image/png",
+            size_bytes=len(payload),
+            sha256=png.payload_sha256,
+            pixel_width=png.width,
+            pixel_height=png.height,
+            rgba_sha256=png.rgba_sha256,
+        )
+        existing = self.resources.get(resource_id)
+        if existing is not None and existing != (resource, payload):
+            raise ClipboardDocumentError(
+                "clipboard.resource_duplicate",
+                "Clipboard image resource identity is inconsistent.",
+            )
+        self.resources[resource_id] = (resource, payload)
+        return ClipboardImageRef(resource_id, alt)
+
+
+@dataclass(frozen=True, slots=True)
+class StructuredClipboardProjection:
+    document: ClipboardDocument
+    resources: tuple[tuple[str, str, str, bytes], ...]
 
 
 @dataclass(slots=True)
@@ -154,7 +202,7 @@ def html_contains_table(payload: bytes) -> bool:
     return _contains_table(parser.root)
 
 
-def _inline_nodes(items: Iterable[_Node | str]) -> tuple:
+def _inline_nodes(items: Iterable[_Node | str], collector: _ResourceCollector) -> tuple:
     result: list = []
 
     def append_text(value: str) -> None:
@@ -175,13 +223,7 @@ def _inline_nodes(items: Iterable[_Node | str]) -> tuple:
             result.append(ClipboardHardBreak())
             return
         if item.tag == "img":
-            result.append(
-                ClipboardImageRef(
-                    None,
-                    item.attrs.get("alt", ""),
-                    "clipboard_resource_unavailable",
-                )
-            )
+            result.append(collector.image_from_src(item.attrs.get("src", ""), item.attrs.get("alt", "")))
             return
         if item.tag == "table":
             raise ClipboardDocumentError(
@@ -227,6 +269,7 @@ def _blocks_from_children(
     *,
     counters: dict[str, int],
     depth: int,
+    collector: _ResourceCollector,
 ) -> tuple[ClipboardBlock, ...]:
     if depth > MAX_CLIPBOARD_DEPTH:
         raise ClipboardDocumentError("clipboard.depth_exceeded", "Clipboard nesting depth exceeded.")
@@ -245,7 +288,7 @@ def _blocks_from_children(
                 append_block(ClipboardParagraph(()))
             return
         if force or _has_meaningful_inline(inline_buffer):
-            append_block(ClipboardParagraph(_inline_nodes(inline_buffer)))
+            append_block(ClipboardParagraph(_inline_nodes(inline_buffer, collector)))
         inline_buffer.clear()
 
     for child in children:
@@ -257,15 +300,15 @@ def _blocks_from_children(
             continue
         if child.tag == "table":
             flush_inline()
-            append_block(_parse_table(child, counters=counters, depth=depth))
+            append_block(_parse_table(child, counters=counters, depth=depth, collector=collector))
             continue
         if child.tag in _PARAGRAPH_TAGS:
             flush_inline()
             if _contains_table(child):
-                for block in _blocks_from_children(child.children, counters=counters, depth=depth + 1):
+                for block in _blocks_from_children(child.children, counters=counters, depth=depth + 1, collector=collector):
                     blocks.append(block)
             else:
-                append_block(ClipboardParagraph(_inline_nodes(child.children)))
+                append_block(ClipboardParagraph(_inline_nodes(child.children, collector)))
             continue
         if _contains_table(child):
             flush_inline()
@@ -332,7 +375,13 @@ def _cell_nodes(row: _Node) -> list[_Node]:
     return [child for child in row.children if isinstance(child, _Node) and child.tag in {"td", "th"}]
 
 
-def _parse_table(table: _Node, *, counters: dict[str, int], depth: int) -> ClipboardTable:
+def _parse_table(
+    table: _Node,
+    *,
+    counters: dict[str, int],
+    depth: int,
+    collector: _ResourceCollector,
+) -> ClipboardTable:
     counters["tables"] += 1
     if counters["tables"] > MAX_CLIPBOARD_TABLES:
         raise ClipboardDocumentError("clipboard.budget_exceeded", "Clipboard table budget exceeded.")
@@ -359,7 +408,7 @@ def _parse_table(table: _Node, *, counters: dict[str, int], depth: int) -> Clipb
                 )
             if column + column_span > MAX_CLIPBOARD_CELLS:
                 raise ClipboardDocumentError("clipboard.budget_exceeded", "Clipboard table width budget exceeded.")
-            blocks = _blocks_from_children(node.children, counters=counters, depth=depth + 1)
+            blocks = _blocks_from_children(node.children, counters=counters, depth=depth + 1, collector=collector)
             headers = tuple(part for part in node.attrs.get("headers", "").split() if part)
             cell = ClipboardTableCell(
                 row=row_index,
@@ -409,6 +458,8 @@ def _plain_paragraph_value(paragraph: ClipboardParagraph) -> str | None:
             parts.append(inline.value)
         elif isinstance(inline, ClipboardHardBreak):
             parts.append("\n")
+        elif isinstance(inline, ClipboardImageRef):
+            continue
         else:
             return None
     return "".join(parts)
@@ -492,23 +543,40 @@ def splice_plain_text_with_structured_tables(
     return merged
 
 
-def project_structured_clipboard_html(payload: bytes) -> ClipboardDocument:
-    """Parse one captured HTML/CF_HTML byte snapshot without external reads."""
+def project_structured_clipboard_html_with_resources(payload: bytes) -> StructuredClipboardProjection:
+    """Parse captured HTML and freeze only allowlisted inline PNG data URIs."""
 
     parser = _TreeBuilder()
     parser.feed(_decode_html(payload))
     parser.close()
     counters = {"blocks": 0, "tables": 0, "cells": 0}
-    document = ClipboardDocument(blocks=_blocks_from_children(parser.root.children, counters=counters, depth=1))
-    # Core strict validation and deterministic serialization are the final
-    # producer check before any managed snapshot can be published.
+    collector = _ResourceCollector()
+    blocks = _blocks_from_children(parser.root.children, counters=counters, depth=1, collector=collector)
+    ordered = tuple(sorted(collector.resources.values(), key=lambda item: item[0].resource_id))
+    document = ClipboardDocument(
+        blocks=blocks,
+        resources=tuple(item[0] for item in ordered),
+    )
     clipboard_document_to_bytes(document)
-    return document
+    return StructuredClipboardProjection(
+        document=document,
+        resources=tuple(
+            (item[0].resource_id, item[0].logical_path, item[0].media_type, item[1]) for item in ordered
+        ),
+    )
+
+
+def project_structured_clipboard_html(payload: bytes) -> ClipboardDocument:
+    """Parse one captured HTML/CF_HTML byte snapshot without external reads."""
+
+    return project_structured_clipboard_html_with_resources(payload).document
 
 
 __all__ = [
     "extract_cf_html_fragment",
     "html_contains_table",
+    "StructuredClipboardProjection",
     "project_structured_clipboard_html",
+    "project_structured_clipboard_html_with_resources",
     "splice_plain_text_with_structured_tables",
 ]
