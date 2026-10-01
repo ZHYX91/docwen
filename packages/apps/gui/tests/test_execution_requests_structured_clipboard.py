@@ -165,3 +165,59 @@ def test_builder_freezes_complete_structured_resource_group_before_request(tmp_p
     assert len(request.input_refs) == 2
     store.sync_visible([bundle.main.path])
     store.close()
+
+
+@pytest.mark.parametrize("mode", ["single", "batch"])
+@pytest.mark.parametrize("target", ["md", "markdown"])
+def test_structured_markdown_request_does_not_require_template(tmp_path, mode, target) -> None:
+    refs = []
+    for index in range(2 if mode == "batch" else 1):
+        source = tmp_path / f"document-{index}.dwclip"
+        source.write_text(
+            json.dumps({"schema": CLIPBOARD_DOCUMENT_SCHEMA, "blocks": [], "resources": []}),
+            encoding="utf-8",
+        )
+        inspection = inspect_structured_clipboard_snapshot(str(source))
+        refs.append(
+            FileRef(
+                path=str(source),
+                format="clipboard_document",
+                category="markdown",
+                metadata={FILE_INSPECTION_METADATA_KEY: inspection.to_dict()},
+            )
+        )
+    builder = ExecutionRequestBuilder(
+        cast("MainWindowViewModel", SimpleNamespace(files=refs, controller=None)),
+        cast("BatchListViewModel", SimpleNamespace(get_file_entry=lambda _path: None)),
+        file_contexts=lambda: {normalize_path(ref.path): ("clipboard_document", "markdown") for ref in refs},
+        selected_template=lambda: None,
+    )
+    if mode == "single":
+        request, context = builder.single(
+            file_path=refs[0].path, target_format=target, action_name="", options={}, route_options=()
+        )
+    else:
+        request, context = builder.batch(
+            file_paths=[ref.path for ref in refs], target_format=target, action_name="", options={}, route_options=()
+        )
+
+    assert request.target_format == target
+    assert request.options == context["options"] == {}
+    assert [ref.format for ref in request.input_refs] == ["clipboard_document"] * len(refs)
+    if mode == "batch":
+        groups = context["_document_group_requests"]
+        assert len(groups) == len(refs)
+        assert all(group.target_format == target and group.options == {} for group in groups)
+
+
+@pytest.mark.parametrize("target", ["docx", "xlsx"])
+def test_structured_template_request_still_requires_template(tmp_path, target) -> None:
+    source = str(tmp_path / "document.dwclip")
+    builder = ExecutionRequestBuilder(
+        cast("MainWindowViewModel", SimpleNamespace(files=[], controller=None)),
+        cast("BatchListViewModel", SimpleNamespace(get_file_entry=lambda _path: None)),
+        file_contexts=lambda: {normalize_path(source): ("clipboard_document", "markdown")},
+        selected_template=lambda: None,
+    )
+    with pytest.raises(ValueError):
+        builder.single(file_path=source, target_format=target, action_name="", options={})

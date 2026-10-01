@@ -340,7 +340,7 @@ class ExecutionRequestBuilder:
         """Add selected template metadata for Markdown document/spreadsheet targets."""
         merged = dict(options)
         target = str(target_format or "").lower()
-        if action_name or "template_name" in merged:
+        if target in _MARKDOWN_TARGET_FORMATS or action_name or "template_name" in merged:
             return merged
         from .view_models.interaction import FileCapability, resolve_capabilities
 
