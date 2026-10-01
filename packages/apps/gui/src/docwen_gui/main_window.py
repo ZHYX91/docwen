@@ -536,7 +536,7 @@ class MainWindow(QWidget):
                     self._info_area_vm.add_message(
                         _t(
                             "clipboard.structured_html_only",
-                            "The clipboard had no plain-text body; verified table-bearing HTML was used as the content source.",
+                            "The clipboard had no plain-text body; validated HTML was used as the content source.",
                         ),
                         "warning",
                     )

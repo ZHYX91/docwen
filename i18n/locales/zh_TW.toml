@@ -1782,9 +1782,8 @@ copy = "複製診斷"
 redacted_hint = "複製內容僅含狀態、類別和數量，不含內文、路徑、原始錯誤、命令或設定。"
 
 [clipboard]
-structured_plain_fallback = "無法將富表格結構與純文字可靠對應；已完整保留純文字內容。"
-structured_html_only = "剪貼簿沒有純文字正文；已使用通過驗證的含表格 HTML 作為內容來源。"
-structured_invalid = "剪貼簿表格結構無效，未匯入。"
+structured_plain_fallback = "無法將表格或圖片結構與純文字可靠對應；已完整保留純文字內容。"
+structured_html_only = "剪貼簿沒有純文字正文；已使用通過驗證的 HTML 作為內容來源。"
+structured_invalid = "剪貼簿表格或圖片結構無效，未匯入。"
 image_invalid = "剪貼簿圖片資料無效或超過支援的大小。"
-table_fallback = "有 {count} 個剪貼簿表格無法安全表示為 Markdown 表格；已保留其中的儲存格文字。"
-images_omitted = "有 {count} 張剪貼簿圖片未匯入；已保留可用文字。"
+images_omitted = "有 {count} 張剪貼簿圖片沒有可驗證的內嵌資料；已保留預留位置及可用文字。"

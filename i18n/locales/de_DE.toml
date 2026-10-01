@@ -1783,9 +1783,8 @@ copy = "Diagnose kopieren"
 redacted_hint = "Die Kopie enthält nur Status, Kategorien und Anzahlen. Dokumentinhalte, Pfade, ursprüngliche Fehler, Befehle und Einstellungen sind ausgeschlossen."
 
 [clipboard]
-structured_plain_fallback = "Die Rich-Table-Struktur konnte dem Klartext nicht zuverlässig zugeordnet werden; der vollständige Klartext wurde beibehalten."
-structured_html_only = "Die Zwischenablage enthielt keinen Klartexttext; validiertes HTML mit Tabelle wurde als Inhaltsquelle verwendet."
-structured_invalid = "Die Tabellenstruktur der Zwischenablage ist ungültig und wurde nicht importiert."
+structured_plain_fallback = "Die Tabellen- oder Bildstruktur konnte dem Klartext nicht zuverlässig zugeordnet werden; der vollständige Klartext wurde beibehalten."
+structured_html_only = "Die Zwischenablage enthielt keinen Klartext; validiertes HTML wurde als Inhaltsquelle verwendet."
+structured_invalid = "Die Tabellen- oder Bildstruktur der Zwischenablage ist ungültig und wurde nicht importiert."
 image_invalid = "Die Bilddaten der Zwischenablage sind ungültig oder überschreiten die unterstützte Größe."
-table_fallback = "{count} Zwischenablage-Tabelle(n) konnten nicht sicher als Markdown-Tabelle dargestellt werden; der Zelltext wurde als Klartext beibehalten."
-images_omitted = "{count} Zwischenablage-Bild(er) wurden nicht importiert; verfügbarer Text wurde beibehalten."
+images_omitted = "{count} Zwischenablage-Bild(er) hatten keine überprüfbaren eingebetteten Daten; Platzhalter und verfügbarer Text wurden beibehalten."

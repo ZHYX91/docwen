@@ -1777,9 +1777,8 @@ copy = "Copy diagnostics"
 redacted_hint = "Copied diagnostics contain only status, categories and counts. Document content, paths, raw errors, commands and settings are excluded."
 
 [clipboard]
-structured_plain_fallback = "Rich table structure could not be matched reliably to plain text; the complete plain text was kept."
-structured_html_only = "The clipboard had no plain-text body; verified table-bearing HTML was used as the content source."
-structured_invalid = "Clipboard table structure is invalid and was not imported."
+structured_plain_fallback = "Rich table/image structure could not be matched reliably to plain text; the complete plain text was kept."
+structured_html_only = "The clipboard had no plain-text body; validated HTML was used as the content source."
+structured_invalid = "Clipboard table/image structure is invalid and was not imported."
 image_invalid = "Clipboard image data is invalid or exceeds the supported size."
-table_fallback = "{count} clipboard table(s) could not be represented safely as Markdown tables; their cell text was kept as plain text."
-images_omitted = "{count} clipboard image(s) were not imported; available text was kept."
+images_omitted = "{count} clipboard image(s) had no verifiable embedded data; placeholders and available text were kept."

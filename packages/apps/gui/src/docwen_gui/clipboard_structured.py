@@ -35,6 +35,7 @@ from docwen_gui.clipboard_image_bytes import (
     inspect_png_bytes,
     preflight_png_resources,
 )
+from docwen_gui.clipboard_plain_alignment import match_plain_table
 
 _CF_HTML_FIELDS = ("StartHTML", "EndHTML", "StartFragment", "EndFragment")
 _SKIP_TAGS = frozenset({"head", "script", "style", "noscript", "template"})
@@ -554,38 +555,19 @@ def _plain_paragraph_value(paragraph: ClipboardParagraph) -> str | None:
     return "".join(parts)
 
 
-def _plain_table_value(table: ClipboardTable) -> str | None:
-    """Build the provider plain-text signature from anchor cells only.
-
-    Office plain-text clipboard formats do not emit synthetic fields for cells
-    covered by colspan/rowspan. Pure NBSP/space paragraphs commonly represent
-    layout padding and are treated as empty only for alignment; the model keeps
-    the authored characters unchanged.
-    """
-
-    rows: list[list[str]] = [[] for _row in range(table.row_count)]
-    for cell in sorted(table.cells, key=lambda item: (item.row, item.column)):
-        parts: list[str] = []
-        for block in cell.blocks:
-            if isinstance(block, ClipboardParagraph):
-                value = _plain_paragraph_value(block)
-            else:
-                value = _plain_table_value(block)
-            if value is None:
-                return None
-            if value.strip(" \t\r\n\u00a0") == "":
-                value = ""
-            parts.append(value)
-        rows[cell.row].append("\n".join(parts))
-    return "\n".join("\t".join(row) for row in rows)
+@dataclass(frozen=True, slots=True)
+class _ImageAnchor:
+    image: ClipboardImageRef
+    text: str
+    after_paragraph: bool = False
 
 
 def _top_level_image_anchors(
     document: ClipboardDocument,
-) -> tuple[tuple[tuple[ClipboardImageRef, str], ...], ...]:
+) -> tuple[tuple[_ImageAnchor, ...], ...]:
     """Return top-level image occurrences partitioned by surrounding table segment."""
 
-    segments: list[list[tuple[ClipboardImageRef, str]]] = [[]]
+    segments: list[list[_ImageAnchor]] = [[]]
     last_text = ""
     for block in document.blocks:
         if isinstance(block, ClipboardTable):
@@ -599,8 +581,9 @@ def _top_level_image_anchors(
             elif isinstance(inline, ClipboardHardBreak):
                 running.append("\n")
             elif isinstance(inline, ClipboardImageRef):
-                anchor = "".join(running) or last_text
-                segments[-1].append((inline, anchor))
+                before = "".join(running)
+                anchor = before if before.strip() else last_text
+                segments[-1].append(_ImageAnchor(inline, anchor, not before.strip() and bool(last_text)))
         value = _plain_paragraph_value(block)
         if value:
             last_text = value
@@ -609,19 +592,47 @@ def _top_level_image_anchors(
 
 def _insert_segment_images(
     text: str,
-    anchors: tuple[tuple[ClipboardImageRef, str], ...],
+    anchors: tuple[_ImageAnchor, ...],
 ) -> ClipboardParagraph | None:
     if not anchors:
         return ClipboardParagraph((ClipboardText(text),)) if text else None
 
     positions: list[tuple[int, ClipboardImageRef]] = []
     cursor = 0
-    for image, anchor in anchors:
+    # Only comparison is folded. Every captured character stays in the result.
+    normalized: list[str] = []
+    ends: list[int] = []
+    index = 0
+    while index < len(text):
+        end = index + 1
+        if text[index].isspace():
+            while end < len(text) and text[end].isspace():
+                end += 1
+            normalized.append(" ")
+        else:
+            normalized.append(text[index])
+        ends.append(end)
+        index = end
+    comparison = "".join(normalized)
+    for item in anchors:
+        image = item.image
+        anchor = " ".join(item.text.split())
         if anchor:
-            start = text.find(anchor)
-            if start < 0 or text.find(anchor, start + 1) >= 0:
+            start = comparison.find(anchor)
+            if start < 0 or comparison.find(anchor, start + 1) >= 0:
                 return None
-            position = start + len(anchor)
+            if item.after_paragraph and start and not comparison[start - 1].isspace():
+                return None
+            following = start + len(anchor)
+            if item.after_paragraph and following < len(comparison) and not comparison[following].isspace():
+                return None
+            position = ends[following - 1]
+            if item.after_paragraph:
+                remainder = text[position:]
+                boundary = re.match(r"[ \t\u00a0]*(?:\r\n|\r|\n)", remainder)
+                if boundary is None:
+                    return None
+                position += boundary.end()
             if position < cursor:
                 return None
         elif len(anchors) == 1 and not text.strip():
@@ -645,26 +656,6 @@ def _insert_segment_images(
     return ClipboardParagraph(tuple(inlines))
 
 
-def _normalized_newlines_with_offsets(value: str) -> tuple[str, list[int]]:
-    normalized: list[str] = []
-    offsets = [0]
-    index = 0
-    while index < len(value):
-        character = value[index]
-        if character == "\r":
-            if index + 1 < len(value) and value[index + 1] == "\n":
-                index += 2
-            else:
-                index += 1
-            normalized.append("\n")
-            offsets.append(index)
-            continue
-        normalized.append(character)
-        index += 1
-        offsets.append(index)
-    return "".join(normalized), offsets
-
-
 def splice_plain_text_with_structured_tables(
     document: ClipboardDocument,
     plain_text: str,
@@ -685,24 +676,15 @@ def splice_plain_text_with_structured_tables(
         clipboard_document_to_bytes(merged)
         return merged
 
-    normalized_plain, offsets = _normalized_newlines_with_offsets(plain_text)
     image_segments = _top_level_image_anchors(document)
-    cursor_normalized = 0
     cursor_original = 0
     blocks: list[ClipboardBlock] = []
     segment = 0
     for table in tables:
-        signature = _plain_table_value(table)
-        if signature is None or not signature:
+        match = match_plain_table(table, plain_text, minimum=cursor_original)
+        if match is None:
             return None
-        normalized_signature, _unused_offsets = _normalized_newlines_with_offsets(signature)
-        start = normalized_plain.find(normalized_signature, cursor_normalized)
-        if start < 0:
-            return None
-        if normalized_plain.find(normalized_signature, start + 1) >= 0:
-            return None
-        end = start + len(normalized_signature)
-        prefix = plain_text[cursor_original : offsets[start]]
+        prefix = plain_text[cursor_original : match.start]
         projected_prefix = _insert_segment_images(
             prefix,
             image_segments[segment] if segment < len(image_segments) else (),
@@ -711,10 +693,9 @@ def splice_plain_text_with_structured_tables(
             return None
         if projected_prefix is not None:
             blocks.append(projected_prefix)
-        blocks.append(table)
+        blocks.append(match.table)
         segment += 1
-        cursor_normalized = end
-        cursor_original = offsets[end]
+        cursor_original = match.end
 
     suffix = plain_text[cursor_original:]
     projected_suffix = _insert_segment_images(

@@ -9,10 +9,12 @@ from PySide6.QtCore import QMimeData, Qt
 from PySide6.QtWidgets import QApplication
 
 from docwen_core.models.clipboard_document import (
+    ClipboardImageRef,
     ClipboardParagraph,
     ClipboardTable,
     clipboard_cell_text,
     clipboard_paragraph_text,
+    iter_clipboard_inlines,
     load_clipboard_document_bytes,
 )
 from docwen_gui.main_window import MainWindow
@@ -104,14 +106,13 @@ def test_valid_rowspan_is_preserved_without_fallback_warning(
     assert not any(row.message_type in {"warning", "danger"} for row in clipboard_window._info_area_vm.history_rows)
 
 
-def test_invalid_rowspan_rejects_paste_and_preserves_existing_input(
+def test_invalid_rowspan_without_plain_rejects_paste_and_preserves_existing_input(
     clipboard_window: MainWindow,
     qapp: QApplication,
     qtbot,
 ) -> None:
     original = _paste_text(clipboard_window, qapp, qtbot, "original text")
     mime = QMimeData()
-    mime.setText("malformed table text")
     mime.setHtml("<table><tr><td rowspan='2'>outside declared rows</td></tr></table>")
     qapp.clipboard().setMimeData(mime)
     qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
@@ -120,6 +121,26 @@ def test_invalid_rowspan_rejects_paste_and_preserves_existing_input(
     assert selected is not None and selected.path == original
     assert Path(original).read_text(encoding="utf-8") == "original text"
     assert any(row.message_type == "danger" for row in clipboard_window._info_area_vm.history_rows)
+
+
+def test_invalid_rowspan_with_plain_preserves_complete_text_and_warns(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+) -> None:
+    _paste_text(clipboard_window, qapp, qtbot, "previous input")
+    plain = "  Lead\n00123\tkept value\nTail\u00a0 "
+    mime = QMimeData()
+    mime.setText(plain)
+    mime.setHtml("<table><tr><td rowspan='2'>outside declared rows</td></tr></table>")
+    qapp.clipboard().setMimeData(mime)
+    qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
+    selected = clipboard_window.view_model.selected_file
+    assert selected is not None
+    assert Path(selected.path).read_text(encoding="utf-8") == plain
+    assert any(row.message_type == "warning" for row in clipboard_window._info_area_vm.history_rows)
+    assert not any(row.message_type == "danger" for row in clipboard_window._info_area_vm.history_rows)
 
 
 def test_plain_markdown_paste_remains_exact_text(
@@ -155,7 +176,7 @@ def test_visible_plain_text_menu_bypasses_rich_projection(
     assert Path(selected.path).read_text(encoding="utf-8") == plain
 
 
-def test_rich_clipboard_reports_images_without_importing_them(
+def test_rich_clipboard_keeps_external_image_placeholder_and_plain_without_importing_bytes(
     clipboard_window: MainWindow,
     qapp: QApplication,
     qtbot,
@@ -168,7 +189,16 @@ def test_rich_clipboard_reports_images_without_importing_them(
     qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
     selected = clipboard_window.view_model.selected_file
     assert selected is not None
-    assert Path(selected.path).read_text(encoding="utf-8") == "Before\nAfter"
+    assert selected.format == "clipboard_document"
+    document = load_clipboard_document_bytes(Path(selected.path).read_bytes())
+    assert document.resources == ()
+    assert (
+        "".join(clipboard_paragraph_text(block) for block in document.blocks if isinstance(block, ClipboardParagraph))
+        == "Before\nAfter"
+    )
+    images = [item for item in iter_clipboard_inlines(document) if isinstance(item, ClipboardImageRef)]
+    assert len(images) == 1 and images[0].resource_id is None
+    assert images[0].missing_reason == "clipboard_resource_unavailable"
     assert any(row.message_type == "warning" for row in clipboard_window._info_area_vm.history_rows)
 
 

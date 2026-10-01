@@ -27,8 +27,16 @@ from docwen_core.models.clipboard_document import (
     clipboard_document_to_bytes,
 )
 from docwen_core.models.request import OutputPolicy
+from docwen_gui.clipboard_capture import FrozenClipboardCapture
 from docwen_gui.clipboard_inputs import ClipboardInputStore
-from docwen_gui.clipboard_office_provider import parse_word_embed_source, parse_wps_writer
+from docwen_gui.clipboard_office_provider import (
+    WORD_EMBED_SOURCE_MIME,
+    WPS_DOCUMENT_MIME,
+    WPS_IMAGE_DATA_MIME,
+    parse_word_embed_source,
+    parse_wps_writer,
+)
+from docwen_gui.clipboard_rich_document import project_frozen_rich_document
 from docwen_plugin_markdown.plugin import MarkdownPlugin
 from tests.integration.test_structured_clipboard_runtime import _template_id
 from tests.integration.test_structured_resource_group_runtime import _builder, _controller, _source_ref
@@ -78,7 +86,8 @@ def _assert_pngs(payloads):
 
 @pytest.mark.parametrize("producer", ["word", "wps"])
 @pytest.mark.parametrize("target", ["md", "docx", "xlsx", "csv"])
-def test_derived_provider_resources_through_final_artifacts(tmp_path, producer, target):
+@pytest.mark.parametrize("source", ["explicit-model", "frozen-rich"])
+def test_derived_provider_resources_through_final_artifacts(tmp_path, producer, target, source):
     def sample(name):
         data = (_SAMPLES / name).read_bytes()
         facts = json.loads((_SAMPLES / "provenance.json").read_text(encoding="utf-8"))["files"][name]
@@ -91,6 +100,26 @@ def test_derived_provider_resources_through_final_artifacts(tmp_path, producer, 
     else:
         provider = parse_wps_writer(sample("wps-writer-derived.zip"), sample("wps-images.bin"))
     model = _controlled_model(provider)
+    if source == "frozen-rich":
+        formats = (
+            ((WORD_EMBED_SOURCE_MIME, sample("word-derived.ole")),)
+            if producer == "word"
+            else (
+                (WPS_DOCUMENT_MIME, sample("wps-writer-derived.zip")),
+                (WPS_IMAGE_DATA_MIME, sample("wps-images.bin")),
+            )
+        )
+        decision = project_frozen_rich_document(
+            FrozenClipboardCapture(
+                sample("rich-derived.txt").decode("utf-8"),
+                sample("rich-derived.html"),
+                formats,
+                None,
+            )
+        )
+        assert decision.projection is not None and not decision.plain_fallback
+        model = decision.projection.document
+        assert decision.projection.resources == provider.resource_bytes
     store = ClipboardInputStore(tmp_path / "managed")
     try:
         bundle = store.create_bundle(
@@ -147,7 +176,19 @@ def test_derived_provider_resources_through_final_artifacts(tmp_path, producer, 
                     assert len(root.findall(".//a:blip", ns)) == 3
                     assert len(root.findall(".//w:tbl/w:tr/w:tc/w:tbl//a:blip", ns)) == 1
                     xml = package.read("word/document.xml").decode()
-                    assert xml.index("probe-0-before") < xml.index("probe-1-before") < xml.index("probe-2-before")
+                    anchors = (
+                        ("probe-0-before", "probe-1-before", "probe-2-before")
+                        if source == "explicit-model"
+                        else ("BEFORE / 00123", "NESTED-BEFORE", "AFTER / repeated")
+                    )
+                    assert xml.index(anchors[0]) < xml.index(anchors[1]) < xml.index(anchors[2])
+                    if source == "frozen-rich":
+                        multiline = [
+                            paragraph
+                            for paragraph in root.findall(".//w:p", ns)
+                            if "line one" in "".join(node.text or "" for node in paragraph.findall(".//w:t", ns))
+                        ]
+                        assert len(multiline) == 1 and multiline[0].find(".//w:br", ns) is not None
                 else:
                     ns = {"xdr": "http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing"}
                     extents = []
@@ -165,6 +206,10 @@ def test_derived_provider_resources_through_final_artifacts(tmp_path, producer, 
                     assert len(rows) == 4
                     assert [row[1] for row in rows[1:]] == ["bound"] * 3
                     assert rows[1][2] == rows[3][2] != rows[2][2]
+                    assert rows[1][6] == rows[3][6] != rows[2][6]
+                    assert rows[2][6] in workbook.sheetnames
+                    if source == "frozen-rich":
+                        assert any("INNER-A" in str(value) for row in workbook[rows[2][6]].values for value in row)
                 finally:
                     workbook.close()
         else:
@@ -175,8 +220,12 @@ def test_derived_provider_resources_through_final_artifacts(tmp_path, producer, 
             assert len(images) == 2
             text = primary.read_text(encoding="utf-8-sig")
             if target == "md":
-                assert text.count("![probe-") == 3
-                assert text.index("probe-0-before") < text.index("probe-1-before") < text.index("probe-2-before")
+                if source == "explicit-model":
+                    assert text.count("![probe-") == 3
+                    assert text.index("probe-0-before") < text.index("probe-1-before") < text.index("probe-2-before")
+                else:
+                    assert all(text.count(f"![{alt}]") == 1 for alt in ["alpha-first", "nested-blue", "alpha-repeat"])
+                    assert text.index("BEFORE / 00123") < text.index("NESTED-BEFORE") < text.index("AFTER / repeated")
             else:
                 assert "CLIPBOARD-CSV-IMAGE-PROJECTION" in {item.code for item in result.diagnostics}
                 semantics = next(

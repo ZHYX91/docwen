@@ -13,6 +13,7 @@ from docwen_core.models.clipboard_document import (
     ClipboardParagraph,
     ClipboardTable,
     ClipboardText,
+    clipboard_paragraph_text,
     load_clipboard_document_bytes,
 )
 from docwen_gui.main_window import MainWindow
@@ -55,13 +56,17 @@ def test_main_window_provider_metadata_and_raw_exception_privacy(qapp, qtbot, tm
     payload = _cf_html(fragment, source_url)
     if case == "invalid-offsets":
         payload = payload.replace(b"EndFragment:", b"BadFragment:", 1)
+    projection_calls: list[bool] = []
     if case == "projection-exception":
-        from docwen_gui import clipboard_content
+        from docwen_gui import clipboard_rich_document
 
-        def fail_projection(_html):
+        def fail_projection(_html, **_kwargs):
+            projection_calls.append(True)
             raise ValueError(raw_exception)
 
-        monkeypatch.setattr(clipboard_content, "project_clipboard_html", fail_projection)
+        monkeypatch.setattr(
+            clipboard_rich_document, "project_structured_clipboard_html_with_resources", fail_projection
+        )
     mime = QMimeData()
     mime.setData("text/html", payload)
     plain = "before\n00123\nafter" if case == "structured-plain" else "original plain body"
@@ -76,35 +81,40 @@ def test_main_window_provider_metadata_and_raw_exception_privacy(qapp, qtbot, tm
     try:
         qapp.clipboard().setMimeData(mime)
         window._on_paste_requested()
-        if case == "invalid-offsets":
-            assert window.view_model.files == []
+        qtbot.waitUntil(lambda: not window.view_model.inspection_busy and len(window.view_model.files) == 1)
+        path = Path(window.view_model.files[0].path)
+        saved = path.read_text(encoding="utf-8")
+        if case == "structured-html-only":
+            assert path.suffix == ".dwclip"
+            document = load_clipboard_document_bytes(path.read_bytes())
+            paragraph = document.blocks[0]
+            assert isinstance(paragraph, ClipboardParagraph)
+            assert isinstance(paragraph.inlines[1], ClipboardImageRef)
+            assert paragraph.inlines[1].alt == alt
+            assert alt in saved and "00123" in saved
+            assert source_url not in saved and image_url not in saved
+        elif case == "structured-plain":
+            assert path.suffix == ".dwclip"
+            document = load_clipboard_document_bytes(path.read_bytes())
+            prefix, table, suffix = document.blocks
+            assert isinstance(prefix, ClipboardParagraph)
+            authored_prefix = ClipboardParagraph(
+                tuple(item for item in prefix.inlines if not isinstance(item, ClipboardImageRef))
+            )
+            assert clipboard_paragraph_text(authored_prefix) == "before\n"
+            images = [item for item in prefix.inlines if isinstance(item, ClipboardImageRef)]
+            assert len(images) == 1 and images[0].resource_id is None and images[0].alt == alt
+            assert isinstance(table, ClipboardTable)
+            assert table.row_count == table.column_count == 1
+            assert table.cells[0].blocks == (ClipboardParagraph((ClipboardText("00123"),)),)
+            assert suffix == ClipboardParagraph((ClipboardText("\nafter"),))
+            assert alt in saved and all(value not in saved for value in (source_url, image_url))
         else:
-            qtbot.waitUntil(lambda: not window.view_model.inspection_busy and len(window.view_model.files) == 1)
-            path = Path(window.view_model.files[0].path)
-            saved = path.read_text(encoding="utf-8")
-            if case == "structured-html-only":
-                assert path.suffix == ".dwclip"
-                document = load_clipboard_document_bytes(path.read_bytes())
-                paragraph = document.blocks[0]
-                assert isinstance(paragraph, ClipboardParagraph)
-                assert isinstance(paragraph.inlines[1], ClipboardImageRef)
-                assert paragraph.inlines[1].alt == alt
-                assert alt in saved and "00123" in saved
-                assert source_url not in saved and image_url not in saved
-            elif case == "structured-plain":
-                assert path.suffix == ".dwclip"
-                document = load_clipboard_document_bytes(path.read_bytes())
-                prefix, table, suffix = document.blocks
-                assert prefix == ClipboardParagraph((ClipboardText("before\n"),))
-                assert isinstance(table, ClipboardTable)
-                assert table.row_count == table.column_count == 1
-                assert table.cells[0].blocks == (ClipboardParagraph((ClipboardText("00123"),)),)
-                assert suffix == ClipboardParagraph((ClipboardText("\nafter"),))
-                assert all(value not in saved for value in (source_url, alt, image_url))
-            else:
-                assert saved == plain
-                if case == "projection-exception":
-                    assert "Clipboard HTML projection failed" in caplog.text
+            assert saved == plain
+            if case == "projection-exception":
+                assert projection_calls == [True]
+            if case in {"projection-exception", "invalid-offsets"}:
+                assert any(row.message_type == "warning" for row in window._info_area_vm.history_rows)
         for private_value in (source_url, alt, image_url, raw_exception):
             assert private_value not in caplog.text
     finally:

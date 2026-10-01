@@ -17,3 +17,11 @@ The provider contract tests check order, nesting, physical pixel dimensions,
 encoded-byte identity, drawing extents and duplicate resource reuse. They also
 exercise complete FAT/DIFAT/mini-stream controls and malformed container rejection.
 They do not establish GUI paste, final output or native host acceptance.
+
+`rich-derived.html` and `rich-derived.txt` are compact **synthesized** inputs
+based on the observed source shape. They retain the provider's literal paragraph
+contexts and nested cell positions, and deliberately include HTML source
+wrapping, NBSP padding, a void `col`, and a non-PNG inline representation. They
+do not preserve original HTML or plain-format bytes. Rich ingress tests use
+these files with the separately identified provider fixtures and exercise the
+public frozen-rich adapter through actual output conversion.

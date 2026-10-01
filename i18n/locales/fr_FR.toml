@@ -1779,9 +1779,8 @@ copy = "Copier le diagnostic"
 redacted_hint = "La copie contient uniquement l’état, les catégories et les nombres. Le contenu, les chemins, les erreurs brutes, les commandes et les paramètres sont exclus."
 
 [clipboard]
-structured_plain_fallback = "La structure de tableau enrichie n’a pas pu être mise en correspondance de façon fiable avec le texte brut ; le texte brut complet a été conservé."
-structured_html_only = "Le presse-papiers ne contenait aucun corps en texte brut ; le HTML validé contenant un tableau a été utilisé comme source de contenu."
-structured_invalid = "La structure du tableau du presse-papiers est invalide et n'a pas été importée."
+structured_plain_fallback = "La structure des tableaux ou des images n’a pas pu être associée de façon fiable au texte brut ; le texte brut complet a été conservé."
+structured_html_only = "Le presse-papiers ne contenait pas de texte brut ; le HTML validé a été utilisé comme source de contenu."
+structured_invalid = "La structure des tableaux ou des images du presse-papiers est invalide et n’a pas été importée."
 image_invalid = "Les données d’image du presse-papiers sont invalides ou dépassent la taille prise en charge."
-table_fallback = "{count} tableau(x) du presse-papiers n'ont pas pu être représentés de façon sûre en tableau Markdown ; le texte des cellules a été conservé."
-images_omitted = "{count} image(s) du presse-papiers n'ont pas été importées ; le texte disponible a été conservé."
+images_omitted = "{count} image(s) du presse-papiers n’avaient pas de données intégrées vérifiables ; les espaces réservés et le texte disponible ont été conservés."

@@ -97,6 +97,55 @@ def test_bundle_rejects_invalid_png_without_publishing_a_partial_bundle(tmp_path
         store.close()
 
 
+@pytest.mark.parametrize("invalid_alias", [False, True])
+def test_png_aliases_decode_once_but_each_declaration_is_validated(tmp_path, monkeypatch, invalid_alias) -> None:
+    from docwen_gui import clipboard_inputs
+    from docwen_gui.clipboard_image_bytes import inspect_png_bytes
+
+    image = Image.new("RGBA", (2, 2), (20, 40, 60, 120))
+    with io.BytesIO() as stream:
+        image.save(stream, "PNG")
+        resource_bytes = stream.getvalue()
+    payload = json.loads(_payload("image-a", "resources/a.png", "image/png", resource_bytes))
+    first = payload["resources"][0]
+    first.update(pixelWidth=2, pixelHeight=2, rgbaSha256=hashlib.sha256(image.tobytes()).hexdigest())
+    payload["resources"].append({**first, "resourceId": "image-b", "logicalPath": "resources/b.png"})
+    if invalid_alias:
+        payload["resources"][1]["rgbaSha256"] = "0" * 64
+    calls = []
+
+    def record_decode(data):
+        calls.append(data)
+        return inspect_png_bytes(data)
+
+    monkeypatch.setattr(clipboard_inputs, "inspect_png_bytes", record_decode)
+    store = ClipboardInputStore(tmp_path / "managed")
+    try:
+
+        def publish():
+            return store.create_bundle(
+                json.dumps(payload).encode(),
+                display_name_template="Aliases {index}.dwclip",
+                preview="aliases",
+                resources=(
+                    ("image-a", "resources/a.png", "image/png", resource_bytes),
+                    ("image-b", "resources/b.png", "image/png", resource_bytes),
+                ),
+            )
+
+        if invalid_alias:
+            with pytest.raises(ValueError, match="pixel identity"):
+                publish()
+            assert not list(store.session_root.glob("bundle-*"))
+        else:
+            bundle = publish()
+            assert len(bundle.resources) == 2
+            assert all(Path(item.path).read_bytes() == resource_bytes for item in bundle.resources)
+        assert calls == [resource_bytes]
+    finally:
+        store.close()
+
+
 @pytest.mark.parametrize(
     ("payload", "resources"),
     [

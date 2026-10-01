@@ -20,7 +20,9 @@ from typing import NoReturn
 from lxml import etree
 
 from docwen_core.models.clipboard_document import (
+    MAX_CLIPBOARD_BLOCKS,
     MAX_CLIPBOARD_IMAGE_PIXELS,
+    MAX_CLIPBOARD_INLINES,
     MAX_CLIPBOARD_RESOURCE_BYTES,
     MAX_CLIPBOARD_RESOURCES,
     ClipboardResource,
@@ -72,6 +74,8 @@ class ProviderImageOccurrence:
     next_text: str
     extent_cx_emu: int
     extent_cy_emu: int
+    before_text: str = ""
+    after_text: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -340,26 +344,29 @@ def _parse_xml(payload: bytes, *, code: str, message: str):
     return root
 
 
+def _paragraph_events(paragraph) -> list:
+    events: list = []
+
+    def walk(node) -> None:
+        if node is not paragraph and node.tag == f"{{{_W_NS}}}p":
+            return
+        if node.tag == f"{{{_W_NS}}}t":
+            events.append(node.text or "")
+        elif node.tag == f"{{{_W_NS}}}tab":
+            events.append("\t")
+        elif node.tag in {f"{{{_W_NS}}}br", f"{{{_W_NS}}}cr"}:
+            events.append("\n")
+        elif node.tag == f"{{{_A_NS}}}blip":
+            events.append(node)
+        for child in node:
+            walk(child)
+
+    walk(paragraph)
+    return events
+
+
 def _paragraph_text(paragraph) -> str:
-    return "".join(paragraph.xpath(".//w:t/text()", namespaces=_NS))
-
-
-def _direct_paragraph_context(children: list[object], index: int) -> tuple[str, str]:
-    previous = ""
-    following = ""
-    for candidate in reversed(children[:index]):
-        if getattr(candidate, "tag", None) == f"{{{_W_NS}}}p":
-            text = _paragraph_text(candidate)
-            if text:
-                previous = text
-                break
-    for candidate in children[index + 1 :]:
-        if getattr(candidate, "tag", None) == f"{{{_W_NS}}}p":
-            text = _paragraph_text(candidate)
-            if text:
-                following = text
-                break
-    return previous, following
+    return "".join(event for event in _paragraph_events(paragraph) if isinstance(event, str))
 
 
 def _extent_for_blip(blip) -> tuple[int, int]:
@@ -391,15 +398,45 @@ def _collect_occurrences(
     if body is None:
         _fail("clipboard.provider_document_invalid", "Clipboard document XML has no body.")
     output: list[ProviderImageOccurrence] = []
+    block_count = 0
 
     def walk_container(container, path: str) -> None:
+        nonlocal block_count
         children = [child for child in container if isinstance(getattr(child, "tag", None), str)]
+        block_count += sum(child.tag in {f"{{{_W_NS}}}p", f"{{{_W_NS}}}tbl"} for child in children)
+        if block_count > MAX_CLIPBOARD_BLOCKS:
+            _fail("clipboard.provider_document_invalid", "Clipboard provider document exceeds the block budget.")
+        texts = [_paragraph_text(child) if child.tag == f"{{{_W_NS}}}p" else "" for child in children]
+        previous_texts: list[str] = []
+        previous_text = ""
+        for text in texts:
+            previous_texts.append(previous_text)
+            if text.strip():
+                previous_text = text
+        next_texts = [""] * len(children)
+        next_text = ""
+        for index in range(len(children) - 1, -1, -1):
+            next_texts[index] = next_text
+            if texts[index].strip():
+                next_text = texts[index]
         table_index = 0
         for index, child in enumerate(children):
             if child.tag == f"{{{_W_NS}}}p":
-                previous, following = _direct_paragraph_context(children, index)
-                blips = child.xpath(".//a:blip", namespaces=_NS)
-                for blip in blips:
+                previous, following = previous_texts[index], next_texts[index]
+                segments: list[list[str]] = [[]]
+                blips: list = []
+                for event in _paragraph_events(child):
+                    if isinstance(event, str):
+                        segments[-1].append(event)
+                    else:
+                        blips.append(event)
+                        segments.append([])
+                for image_index, blip in enumerate(blips):
+                    if len(output) >= MAX_CLIPBOARD_INLINES:
+                        _fail(
+                            "clipboard.provider_document_invalid",
+                            "Clipboard provider image occurrence budget exceeded.",
+                        )
                     raw_identifier = blip.get(f"{{{_R_NS}}}embed")
                     if not raw_identifier:
                         _fail(
@@ -414,6 +451,8 @@ def _collect_occurrences(
                             next_text=following,
                             extent_cx_emu=cx,
                             extent_cy_emu=cy,
+                            before_text="".join(segments[image_index]),
+                            after_text="".join(segments[image_index + 1]),
                         )
                     )
             elif child.tag == f"{{{_W_NS}}}tbl":

@@ -17,7 +17,12 @@ from docwen_core.models.clipboard_document import (
     MAX_CLIPBOARD_RESOURCES,
     load_clipboard_document_bytes,
 )
-from docwen_gui.clipboard_image_bytes import ClipboardImageBytesError, inspect_png_bytes, preflight_png_resources
+from docwen_gui.clipboard_image_bytes import (
+    ClipboardImageBytesError,
+    FrozenPng,
+    inspect_png_bytes,
+    preflight_png_resources,
+)
 
 _PREVIEW_MAX_CHARS = 240
 _PREVIEW_MAX_LINES = 3
@@ -409,12 +414,16 @@ class ClipboardInputStore:
             raise ValueError("clipboard bundle PNG resource is invalid") from exc
         ordered_resources: list[tuple[str, str, str, bytes]] = []
         total_resource_bytes = 0
+        decoded_pngs: dict[str, FrozenPng] = {}
         for declaration in document.resources:
             logical_path, media_type, resource_bytes = supplied[declaration.resource_id]
             digest = hashlib.sha256(resource_bytes).hexdigest()
             if declaration.media_type == "image/png":
                 try:
-                    frozen_png = inspect_png_bytes(resource_bytes)
+                    frozen_png = decoded_pngs.get(digest)
+                    if frozen_png is None:
+                        frozen_png = inspect_png_bytes(resource_bytes)
+                        decoded_pngs[digest] = frozen_png
                 except ClipboardImageBytesError as exc:
                     raise ValueError("clipboard bundle PNG resource is invalid") from exc
                 if (

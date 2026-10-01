@@ -88,7 +88,9 @@ def write_docx_paragraph(
     run = output.add_run()
     for inline in paragraph.inlines:
         if isinstance(inline, ClipboardText):
-            run.add_text(inline.value)
+            # add_run converts literal tabs/newlines into native w:tab/w:br.
+            # add_text would leave them inside w:t and lose the visible breaks.
+            run = output.add_run(inline.value)
         elif isinstance(inline, ClipboardHardBreak):
             run.add_break()
         elif inline.resource_id is None:

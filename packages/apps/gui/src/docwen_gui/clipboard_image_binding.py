@@ -24,19 +24,44 @@ from docwen_gui.clipboard_office_provider import (
 class _ImageCandidate:
     path: str
     before_text: str
+    after_text: str
+    previous_text: str
+    next_text: str
     image: ClipboardImageRef
 
 
-def _paragraph_candidates(paragraph: ClipboardParagraph, path: str) -> list[_ImageCandidate]:
+def _paragraph_text(paragraph: ClipboardParagraph) -> str:
+    return "".join(
+        inline.value if isinstance(inline, ClipboardText) else "\n"
+        for inline in paragraph.inlines
+        if isinstance(inline, (ClipboardText, ClipboardHardBreak))
+    )
+
+
+def _context_text(value: str) -> str:
+    # HTML source wrapping and Office's NBSP padding are comparison-only.
+    # Authored body characters are retained from the captured plain format.
+    return " ".join(value.split())
+
+
+def _paragraph_candidates(
+    paragraph: ClipboardParagraph, path: str, previous: str, following: str
+) -> list[_ImageCandidate]:
     output: list[_ImageCandidate] = []
-    before: list[str] = []
+    segments: list[list[str]] = [[]]
+    images: list[ClipboardImageRef] = []
     for inline in paragraph.inlines:
         if isinstance(inline, ClipboardText):
-            before.append(inline.value)
+            segments[-1].append(inline.value)
         elif isinstance(inline, ClipboardHardBreak):
-            before.append("\n")
+            segments[-1].append("\n")
         elif isinstance(inline, ClipboardImageRef):
-            output.append(_ImageCandidate(path, "".join(before), inline))
+            images.append(inline)
+            segments.append([])
+    for index, image in enumerate(images):
+        output.append(
+            _ImageCandidate(path, "".join(segments[index]), "".join(segments[index + 1]), previous, following, image)
+        )
     return output
 
 
@@ -44,10 +69,23 @@ def _collect_candidates(document: ClipboardDocument) -> tuple[_ImageCandidate, .
     output: list[_ImageCandidate] = []
 
     def walk_blocks(blocks: tuple[ClipboardBlock, ...], path: str) -> None:
+        texts = [_paragraph_text(block) if isinstance(block, ClipboardParagraph) else "" for block in blocks]
+        previous_texts: list[str] = []
+        previous = ""
+        for text in texts:
+            previous_texts.append(previous)
+            if _context_text(text):
+                previous = text
+        next_texts = [""] * len(blocks)
+        following = ""
+        for index in range(len(blocks) - 1, -1, -1):
+            next_texts[index] = following
+            if _context_text(texts[index]):
+                following = texts[index]
         table_index = 0
-        for block in blocks:
+        for block_index, block in enumerate(blocks):
             if isinstance(block, ClipboardParagraph):
-                output.extend(_paragraph_candidates(block, path))
+                output.extend(_paragraph_candidates(block, path, previous_texts[block_index], next_texts[block_index]))
                 continue
             table_path = f"{path}/table:{table_index}"
             table_index += 1
@@ -67,7 +105,13 @@ def _match_occurrence(
     for index, candidate in enumerate(candidates):
         if index in used or candidate.path != occurrence.container_path:
             continue
-        if occurrence.previous_text and not candidate.before_text.endswith(occurrence.previous_text):
+        if _context_text(candidate.previous_text) != _context_text(occurrence.previous_text):
+            continue
+        if _context_text(candidate.next_text) != _context_text(occurrence.next_text):
+            continue
+        if _context_text(candidate.before_text) != _context_text(occurrence.before_text):
+            continue
+        if _context_text(candidate.after_text) != _context_text(occurrence.after_text):
             continue
         matches.append(index)
     if len(matches) != 1:
@@ -89,8 +133,15 @@ def bind_provider_images(
     identifier_to_resource = dict(projection.identifier_to_resource_id)
     replacements: dict[int, ClipboardImageRef] = {}
     used: set[int] = set()
+    previous_candidate = -1
     for occurrence in projection.occurrences:
         candidate_index = _match_occurrence(occurrence, candidates, used)
+        if candidate_index <= previous_candidate:
+            raise ClipboardOfficeProviderError(
+                "clipboard.provider_binding_invalid",
+                "Clipboard provider image order conflicts with document structure.",
+            )
+        previous_candidate = candidate_index
         used.add(candidate_index)
         candidate = candidates[candidate_index]
         resource_id = identifier_to_resource.get(occurrence.identifier)

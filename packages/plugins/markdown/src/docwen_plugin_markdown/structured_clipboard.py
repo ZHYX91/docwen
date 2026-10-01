@@ -645,17 +645,18 @@ def convert_clipboard_document_to_csv(context: Any) -> ConversionResult:
         )
 
     occurrences = collect_image_occurrences(document, recorder.table_id)
-    image_semantics_path = Path(context.workspace.create_artifact_path(ARTIFACT_KIND_AUXILIARY, ".csv"))
-    write_csv_image_semantics(image_semantics_path, occurrences, resources)
-    artifacts.append(
-        ArtifactManifest(
-            artifact_id="clipboard-image-semantics",
-            kind=ARTIFACT_KIND_AUXILIARY,
-            staging_path=str(image_semantics_path),
-            suggested_name=f"{context.request.source_stem}-image-semantics.csv",
-            media_type="text/csv",
+    if occurrences:
+        image_semantics_path = Path(context.workspace.create_artifact_path(ARTIFACT_KIND_AUXILIARY, ".csv"))
+        write_csv_image_semantics(image_semantics_path, occurrences, resources)
+        artifacts.append(
+            ArtifactManifest(
+                artifact_id="clipboard-image-semantics",
+                kind=ARTIFACT_KIND_AUXILIARY,
+                staging_path=str(image_semantics_path),
+                suggested_name=f"{context.request.source_stem}-image-semantics.csv",
+                media_type="text/csv",
+            )
         )
-    )
     artifacts.extend(copy_bound_image_artifacts(context, resources))
 
     diagnostics = image_resource_diagnostics(document)

@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from docwen_core.models.clipboard_document import ClipboardDocument, clipboard_document_to_bytes
+from docwen_core.models.clipboard_document import (
+    MAX_CLIPBOARD_TEXT_CODEPOINTS,
+    ClipboardDocument,
+    clipboard_document_to_bytes,
+)
 from docwen_gui.clipboard_capture import FrozenClipboardCapture
 from docwen_gui.clipboard_image_binding import bind_provider_images
 from docwen_gui.clipboard_office_provider import (
@@ -51,6 +55,8 @@ def _project_frozen_rich_document(capture: FrozenClipboardCapture) -> RichDocume
     """Use plain text as body authority and provider bytes only for proven images."""
 
     html_bytes = capture.html_bytes
+    if capture.plain_text is not None and len(capture.plain_text) > MAX_CLIPBOARD_TEXT_CODEPOINTS:
+        return RichDocumentDecision(None, True, plain_fallback=True)
     word_payload = capture.get(WORD_EMBED_SOURCE_MIME)
     wps_document = capture.get(WPS_DOCUMENT_MIME)
     wps_images = capture.get(WPS_IMAGE_DATA_MIME)
@@ -79,14 +85,14 @@ def _project_frozen_rich_document(capture: FrozenClipboardCapture) -> RichDocume
             "clipboard.structured_invalid",
             "Clipboard rich document structure is invalid.",
         ) from exc
-    if not contains_table and not contains_image:
+    if not contains_table and not contains_image and not has_provider:
         return RichDocumentDecision(None, False)
 
     try:
         provider_projection = None
-        if contains_image and wps_document is not None and wps_images is not None:
+        if wps_document is not None and wps_images is not None:
             provider_projection = parse_wps_writer(wps_document, wps_images)
-        elif contains_image and word_payload is not None:
+        elif word_payload is not None:
             provider_projection = parse_word_embed_source(word_payload)
 
         html_projection: StructuredClipboardProjection = project_structured_clipboard_html_with_resources(

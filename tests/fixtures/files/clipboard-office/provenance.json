@@ -20,6 +20,18 @@
     "wps-images.bin": {
       "bytes": 489,
       "sha256": "bf68bc3bb9d3216c537717d8da06504d544c643a1ac92c770db34a3d09444863"
+    },
+    "rich-derived.html": {
+      "bytes": 772,
+      "sha256": "6040dd5e8feb2934b1438e9efe47b375088ba912c09387d92dcbb65b11877e44",
+      "kind": "synthesized-shape-regression",
+      "notOriginalNativeBytes": true
+    },
+    "rich-derived.txt": {
+      "bytes": 299,
+      "sha256": "66da78e0f65594210b8b576de6e401bcd553165c36e9897c6cb0a50724670c5c",
+      "kind": "synthesized-shape-regression",
+      "notOriginalNativeBytes": true
     }
   }
 }

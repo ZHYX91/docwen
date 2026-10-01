@@ -38,7 +38,19 @@ def project_markdown_ocr_options(
     never reads live configuration or mutates the caller's request.
     """
     options = dict(request.options)
-    if request.target_format != "md" or request.action_name == "process_md_numbering" or not config_snapshot:
+    structured_input = any(
+        ref.format == "clipboard_document" and ref.input_role in {"source", "neutral_document"}
+        for ref in request.input_refs
+    )
+    if (
+        request.target_format != "md"
+        or request.action_name == "process_md_numbering"
+        or structured_input
+        or not config_snapshot
+    ):
+        # Structured clipboard conversion consumes frozen text and images;
+        # its route does not perform OCR or accept OCR/locale defaults.
+        # Keep explicit caller keys so ordinary route validation still applies.
         return options
 
     if "ocr_language" not in options:

@@ -1,0 +1,14 @@
+DOCWEN-CONTROLLED-CLIPBOARD-cdz0b6i9
+BEFORE / 00123 / | < ^ / alpha image follows
+ 
+MERGED-ANCHOR	00123
+NESTED-BEFORE
+INNER-A	INNER-B
+00123	 
+ 
+NESTED-AFTER	line one
+line two	=1+1
+EMPTY-CELL-FOLLOWS		  spaces  / NBSP: 
+AFTER / repeated alpha image follows
+ 
+END DOCWEN-CONTROLLED-CLIPBOARD-cdz0b6i9
