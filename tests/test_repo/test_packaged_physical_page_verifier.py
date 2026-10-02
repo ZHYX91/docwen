@@ -220,13 +220,17 @@ def _tiff_terminal(root: Path, *, ocr: bool, images: bool) -> dict[str, Any]:
     terminal["params"]["diagnostics"] = [
         item for item in terminal["params"]["diagnostics"] if item.get("artifact_id") in ids
     ]
-    links = [f"[{page}](fragment.{page}.bin)" if ocr else f"![{page}](resource.{page}.bin)" for page in range(1, 5)]
+    links = [
+        f"[Page {page}](fragment.{page}.bin)" if ocr else f"![Page {page}](resource.{page}.bin)" for page in range(1, 5)
+    ]
     _replace_payload(
         terminal, root, "document.main", ("source context\n" + "\n".join(links if ocr or images else [])).encode()
     )
     if ocr and images:
         for page, body in enumerate(("page one", "", "", "page four"), 1):
-            _replace_payload(terminal, root, f"fragment.{page}", f"![{page}](resource.{page}.bin)\n\n{body}\n".encode())
+            _replace_payload(
+                terminal, root, f"fragment.{page}", f"![Page {page}](resource.{page}.bin)\n\n{body}\n".encode()
+            )
     return terminal
 
 
@@ -250,6 +254,19 @@ def test_tiff_release_verifier_requires_navigation_for_all_four_combinations(
     tmp_path: Path, ocr: bool, images: bool
 ) -> None:
     _verify_tiff(_tiff_terminal(tmp_path, ocr=ocr, images=images), tmp_path, ocr=ocr, images=images)
+
+
+@pytest.mark.parametrize("ocr", [False, True])
+@pytest.mark.parametrize("label", ["", " ", "1", "1x2"])
+def test_tiff_release_verifier_rejects_invisible_image_labels(tmp_path: Path, ocr: bool, label: str) -> None:
+    terminal = _tiff_terminal(tmp_path, ocr=ocr, images=True)
+    artifact_id = "fragment.2" if ocr else "document.main"
+    artifact = next(item for item in terminal["params"]["bundle"]["artifacts"] if item["artifact_id"] == artifact_id)
+    payload = (tmp_path / artifact["locator"]).read_text(encoding="utf-8")
+    old_label = "Page 2" if ocr else "Page 1"
+    _replace_payload(terminal, tmp_path, artifact_id, payload.replace(f"![{old_label}]", f"![{label}]").encode())
+    with pytest.raises(RuntimeError, match="tiff_image_label_invalid"):
+        _verify_tiff(terminal, tmp_path, ocr=ocr, images=True)
 
 
 @pytest.mark.parametrize(
@@ -276,7 +293,7 @@ def test_tiff_release_verifier_requires_navigation_for_all_four_combinations(
             False,
             True,
             "document.main",
-            "![2](resource.2.bin)\n![1](resource.1.bin)\n![3](resource.3.bin)\n![4](resource.4.bin)",
+            "![Page 2](resource.2.bin)\n![Page 1](resource.1.bin)\n![Page 3](resource.3.bin)\n![Page 4](resource.4.bin)",
         ),
         (False, False, "document.main", "[unexpected](fragment.1.bin)"),
     ],

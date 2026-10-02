@@ -750,10 +750,15 @@ def _verify_tiff_navigation(
     def check(document: dict[str, Any], expected: list[tuple[bool, str]]) -> None:
         path = staging_root / document["locator"]
         text = _read_text_with_long_path(path)
-        actual = [
-            (bool(embed), _portable_physical_navigation_target(target, document=path, staging_root=staging_root))
-            for embed, target in re.findall(r"(!?)\[[^\]\r\n]*\]\(([^()\s]+)\)", text)
-        ]
+        actual = []
+        for embed, label, target in re.findall(r"(!?)\[([^\]\r\n]*)\]\(([^()\s]+)\)", text):
+            # Obsidian interprets numeric image labels as display dimensions.
+            # Such labels can hide a correct full-size PNG from the user.
+            if embed and (not label.strip() or re.fullmatch(r"\d+(?:x\d+)?", label.strip())):
+                raise RuntimeError(f"packaged_tiff_image_label_invalid:{document['artifact_id']}:{label}")
+            actual.append(
+                (bool(embed), _portable_physical_navigation_target(target, document=path, staging_root=staging_root))
+            )
         wanted = [(embed, (staging_root / by_id[item_id]["locator"]).resolve()) for embed, item_id in expected]
         if actual != wanted:
             raise RuntimeError(f"packaged_tiff_navigation_invalid:{document['artifact_id']}:{actual}:{wanted}")
