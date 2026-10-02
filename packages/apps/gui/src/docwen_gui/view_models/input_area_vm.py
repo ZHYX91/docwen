@@ -11,6 +11,7 @@ ViewModel which delegates to the parent ``MainWindowViewModel``.
 from __future__ import annotations
 
 import logging
+import os
 import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -351,7 +352,7 @@ class InputAreaViewModel(QObject):
                     )
             for candidate in candidates:
                 normalized = str(candidate)
-                key = normalized.casefold()
+                key = os.path.normcase(os.path.abspath(normalized))
                 if key in seen:
                     continue
                 seen.add(key)
@@ -484,7 +485,7 @@ class InputAreaViewModel(QObject):
         - space-separated paths
         - file:// URLs
         - quote-wrapped paths
-        - deduplication (case-insensitive)
+        - deduplication using the host platform's path spelling rules
 
         Args:
             text: Raw text from drag-and-drop MIME data.
@@ -535,7 +536,7 @@ class InputAreaViewModel(QObject):
             if not exists:
                 return
             normalized = str(candidate_path)
-            key = normalized.casefold()
+            key = os.path.normcase(os.path.abspath(normalized))
             if key in seen:
                 return
             seen.add(key)
@@ -689,7 +690,7 @@ class InputAreaViewModel(QObject):
 
             for candidate in candidates:
                 normalized = str(candidate)
-                key = normalized.casefold()
+                key = os.path.normcase(os.path.abspath(normalized))
                 if key in seen:
                     continue
                 seen.add(key)
