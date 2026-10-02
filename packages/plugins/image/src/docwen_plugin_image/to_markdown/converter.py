@@ -115,7 +115,11 @@ def _convert_tiff_physical_pages(
                 page_number = zero_index + 1
                 image_name = f"{input_stem_value}__page_{page_number:04d}.png"
                 page_name = f"{input_stem_value}__page_{page_number:04d}_ocr.md"
-                image_link = format_image_link(str(page_number), quote(image_name, safe=""), style="markdown_embed")
+                # Numeric alt text is interpreted as image dimensions by readers
+                # such as Obsidian; retain the page number in a descriptive label.
+                image_link = format_image_link(
+                    f"Page {page_number}", quote(image_name, safe=""), style="markdown_embed"
+                )
                 source.seek(zero_index)
                 frame = source.copy()
                 frame_path: Path | None = None

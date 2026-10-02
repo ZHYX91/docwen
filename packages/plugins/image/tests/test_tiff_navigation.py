@@ -22,6 +22,14 @@ def _links(text: str) -> list[tuple[bool, str]]:
     return [(bool(embed), target) for embed, target in re.findall(r"(!?)\[[^\]]*\]\(([^)]+)\)", text)]
 
 
+def _assert_visible_image_labels(text: str) -> None:
+    for label in re.findall(r"!\[([^\]]*)\]\(", text):
+        assert label.strip()
+        # Obsidian treats numeric Markdown image labels as dimensions, so a page
+        # number alone would make the first page only one pixel wide.
+        assert not re.fullmatch(r"\d+(?:x\d+)?", label.strip())
+
+
 @pytest.mark.contract
 @pytest.mark.parametrize("frames", [1, 4])
 @pytest.mark.parametrize("enable_ocr", [False, True])
@@ -72,6 +80,7 @@ def test_tiff_navigation_follows_frame_ownership(
     assert len(resources) == (frames if keep_images else 0)
     assert len(calls) == (frames if enable_ocr else 0)
     primary_text = Path(primary.staging_path).read_text(encoding="utf-8")
+    _assert_visible_image_labels(primary_text)
     targets = _links(primary_text)
     expected = fragments if enable_ocr else resources
     assert [unquote(target) for _, target in targets] == [item.suggested_name for item in expected]
@@ -82,6 +91,7 @@ def test_tiff_navigation_follows_frame_ownership(
         assert " " not in target and "(" not in target and ")" not in target
     for page, fragment in enumerate(fragments, 1):
         text = Path(fragment.staging_path).read_text(encoding="utf-8")
+        _assert_visible_image_labels(text)
         image_links = _links(text)
         assert [(embed, unquote(target)) for embed, target in image_links] == (
             [(True, resources[page - 1].suggested_name)] if keep_images else []
@@ -158,6 +168,7 @@ def test_tiff_navigation_survives_final_directory_relocation_and_collision(
             if artifact.media_type != "text/markdown":
                 continue
             text = data.decode("utf-8")
+            _assert_visible_image_labels(text)
             for embed, target in _links(text):
                 target_path = (Path(artifact.staging_path).parent / unquote(target)).resolve()
                 linked = by_path[target_path]
