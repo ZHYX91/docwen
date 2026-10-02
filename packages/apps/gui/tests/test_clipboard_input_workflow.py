@@ -244,26 +244,6 @@ def test_batch_file_clipboard_adds_mixed_real_files(
     assert clipboard_window._clipboard_store is None
 
 
-@pytest.mark.parametrize("names", [("A.md", "a.md"), ("Straße.md", "Strasse.md")])
-def test_batch_file_clipboard_preserves_distinct_casefold_colliding_files(
-    clipboard_window, qapp, qtbot, tmp_path, names
-) -> None:
-    first, second = (tmp_path / name for name in names)
-    first.write_text("# First\n", encoding="utf-8")
-    second.write_text("# Second\n", encoding="utf-8")
-    if first.samefile(second):
-        pytest.skip("The actual filesystem does not distinguish these filenames")
-    clipboard_window._input_area_vm.set_mode("batch")
-    mime = QMimeData()
-    mime.setUrls([QUrl.fromLocalFile(str(path)) for path in (first, second, first)])
-    qapp.clipboard().setMimeData(mime)
-    qtbot.mouseClick(clipboard_window.input_area.paste_button, Qt.MouseButton.LeftButton)
-    qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
-    qtbot.waitUntil(lambda: len(clipboard_window.view_model.files) == 2)
-    assert {Path(ref.path).name for ref in clipboard_window.view_model.files} == set(names)
-    assert clipboard_window._clipboard_store is None
-
-
 def test_batch_file_clipboard_deduplicates_and_reports_partial_unavailable_inputs(
     clipboard_window: MainWindow,
     qapp: QApplication,

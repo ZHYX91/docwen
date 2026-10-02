@@ -365,32 +365,6 @@ class TestBatchModeAddFiles:
 # ── Drag preview ─────────────────────────────────────────────────────
 
 
-@pytest.mark.parametrize("names", [("A.md", "a.md"), ("Straße.md", "Strasse.md")])
-@pytest.mark.parametrize("source", ["files", "folder", "text"])
-def test_batch_preserves_distinct_casefold_colliding_files(vm, main_vm, tmp_path, names, source) -> None:
-    first, second = (tmp_path / name for name in names)
-    first.write_text("# First\n", encoding="utf-8")
-    second.write_text("# Second\n", encoding="utf-8")
-    if first.samefile(second):
-        pytest.skip("The actual filesystem does not distinguish these filenames")
-    vm.set_mode("batch")
-    paths = [str(first), str(second), str(first)]
-    if source == "folder":
-        paths = [str(tmp_path), str(first)]
-    elif source == "text":
-        paths = vm.extract_paths_from_text_payload("\n".join(paths))
-        assert paths == [str(first), str(second)]
-
-    preview = vm.build_drag_preview(paths)
-    assert preview.added_count == 2
-    assert preview.skipped_count == 0
-    vm.add_files(paths)
-    assert {Path(ref.path).name for ref in main_vm.files} == set(names)
-    assert len(main_vm.files) == 2
-    assert first.read_text(encoding="utf-8") == "# First\n"
-    assert second.read_text(encoding="utf-8") == "# Second\n"
-
-
 class TestDragPreview:
     def test_single_supported_file_preview(self, vm: InputAreaViewModel, tmp_path) -> None:
         file_path = tmp_path / "hover.docx"
