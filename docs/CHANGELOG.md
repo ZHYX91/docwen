@@ -7,6 +7,8 @@
 
 ## 0.15.0 (2026-10-02)
 
+- Make TIFF Markdown results navigable: show preserved frames when OCR is off, or link ordered OCR pages and their images when OCR is on. Preserve links through result-directory relocation.
+- 修复 TIFF 转 Markdown 首选笔记正文为空：关闭 OCR 时直接显示保留的帧图片，开启 OCR 时链接有序分页及其图片，结果目录重定位后链接仍有效。
 - Import copied local files through the existing admission and deduplication rules. Single-file mode rejects multi-file input without replacing the current input and offers an explicit switch using the captured file list.
 - Preserve ordered clipboard text and reliable basic or complex tables, including empty cells, leading zeros, line breaks, merged cells and nested tables. Keep complete plain text with diagnostics when structure cannot be bound reliably, and provide plain-only paste.
 - Support standalone clipboard images and verified embedded images from supported Office representations. Preserve image positions and repeated-image identities; retain visible placeholders for missing or unsupported resources. Output semantics follow each format's documented capabilities.

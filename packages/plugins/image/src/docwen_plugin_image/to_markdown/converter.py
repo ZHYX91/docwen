@@ -6,6 +6,7 @@ import logging
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import quote
 
 from docwen_core.errors import CancellationRequested
 from docwen_core.export_semantics import (
@@ -99,6 +100,7 @@ def _convert_tiff_physical_pages(
     created_paths: list[Path] = []
     page_artifacts: list[ArtifactManifest] = []
     image_artifacts: list[ArtifactManifest] = []
+    navigation: list[str] = []
     diagnostics: list[ConversionDiagnostic] = []
     ocr_chars = 0
 
@@ -111,6 +113,9 @@ def _convert_tiff_physical_pages(
             for zero_index in range(physical_page_count):
                 context.cancellation.check()
                 page_number = zero_index + 1
+                image_name = f"{input_stem_value}__page_{page_number:04d}.png"
+                page_name = f"{input_stem_value}__page_{page_number:04d}_ocr.md"
+                image_link = format_image_link(str(page_number), quote(image_name, safe=""), style="markdown_embed")
                 source.seek(zero_index)
                 frame = source.copy()
                 frame_path: Path | None = None
@@ -154,12 +159,16 @@ def _convert_tiff_physical_pages(
                                     location=f"{Path(input_path).name}:frame-{page_number}",
                                 )
                             )
+                        # Keep page content with its typed owner. The primary only
+                        # navigates to this fragment and never duplicates its OCR.
+                        if keep_images:
+                            page_text = f"{image_link}\n\n{page_text}".rstrip()
                         page_path.write_bytes(f"{page_text}\n".encode() if page_text else b"")
                         page_artifact = ArtifactManifest(
                             artifact_id=new_artifact_id(),
                             kind="auxiliary",
                             staging_path=str(page_path),
-                            suggested_name=f"{input_stem_value}__page_{page_number:04d}_ocr.md",
+                            suggested_name=page_name,
                             media_type="text/markdown",
                             metadata={
                                 "fragment_kind": "page",
@@ -171,6 +180,7 @@ def _convert_tiff_physical_pages(
                             is_primary=False,
                         )
                         page_artifacts.append(page_artifact)
+                        navigation.append(f"[{page_number}]({quote(page_name, safe='')})")
                         if outcome.status is OcrStatus.SUCCESS:
                             from docwen_core.text.ocr import report_ocr_outcome
 
@@ -195,12 +205,14 @@ def _convert_tiff_physical_pages(
                             artifact_id=new_artifact_id(),
                             kind="image",
                             staging_path=str(frame_path),
-                            suggested_name=f"{input_stem_value}__page_{page_number:04d}.png",
+                            suggested_name=image_name,
                             media_type="image/png",
                             metadata={"source_format": "tif", "source_page": page_number},
                             is_primary=False,
                         )
                         image_artifacts.append(image_artifact)
+                        if not enable_ocr:
+                            navigation.append(image_link)
                 finally:
                     frame.close()
                     if frame_path is not None and not retain_frame:
@@ -209,6 +221,7 @@ def _convert_tiff_physical_pages(
                         except OSError:
                             _logger.warning("Unable to remove request-owned TIFF OCR frame %s", frame_path)
 
+        context.cancellation.check()
         yaml_frontmatter = generate_basic_yaml_frontmatter(
             input_stem_value,
             extra={"source_format": "tif"},
@@ -216,7 +229,8 @@ def _convert_tiff_physical_pages(
         )
         primary_path = Path(context.workspace.create_artifact_path("primary", ".md"))
         created_paths.append(primary_path)
-        primary_path.write_text(yaml_frontmatter, encoding="utf-8")
+        primary_text = yaml_frontmatter + ("\n\n".join(navigation) + "\n" if navigation else "")
+        primary_path.write_text(primary_text, encoding="utf-8")
         primary = ArtifactManifest(
             artifact_id=new_artifact_id(),
             kind="primary",
