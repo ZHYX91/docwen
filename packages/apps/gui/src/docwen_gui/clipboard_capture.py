@@ -71,16 +71,18 @@ def freeze_clipboard_mime(mime_data: QMimeData) -> FrozenClipboardCapture:
     image: FrozenPng | None = None
     image_error_code = ""
     # Paint also exports generic Embed Source. Prove its bitmap class and
-    # unique native bitmap before treating it as a standalone image. Office
-    # previews and unknown generic sources retain the rich-document boundary.
+    # unique native bitmap before excluding it from Office providers. Text/HTML
+    # keep priority without reading the bitmap preview. Unknown generic sources
+    # retain the Office fail-closed boundary.
     paint_dimensions = None
-    if not has_text and not rich_error_code and selected_formats == {WORD_EMBED_SOURCE_MIME}:
+    if not rich_error_code and WORD_EMBED_SOURCE_MIME in selected_formats:
         paint_dimensions = paint_bitmap_dimensions(
             next(payload for key, payload in frozen if key == WORD_EMBED_SOURCE_MIME)
         )
-    if not has_text and (not selected_formats or paint_dimensions is not None) and bool(mime_data.hasImage()):
         if paint_dimensions is not None:
-            frozen.clear()
+            frozen = [(key, payload) for key, payload in frozen if key != WORD_EMBED_SOURCE_MIME]
+            selected_formats.discard(WORD_EMBED_SOURCE_MIME)
+    if not has_text and not selected_formats and bool(mime_data.hasImage()):
         try:
             image = freeze_qimage(mime_data.imageData())
             if paint_dimensions is not None and (image.width, image.height) != paint_dimensions:

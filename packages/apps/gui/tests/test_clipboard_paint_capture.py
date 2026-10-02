@@ -8,6 +8,7 @@ import pytest
 from PySide6.QtCore import QMimeData
 from PySide6.QtGui import QImage
 
+from docwen_core.models.clipboard_document import ClipboardTable, clipboard_cell_text
 from docwen_gui.clipboard_capture import freeze_clipboard_mime
 from docwen_gui.clipboard_office_provider import WORD_EMBED_SOURCE_MIME
 from docwen_gui.clipboard_paint_provider import paint_bitmap_dimensions
@@ -15,6 +16,47 @@ from docwen_gui.clipboard_rich_document import project_frozen_rich_document
 
 pytestmark = pytest.mark.contract
 _SAMPLES = Path(__file__).resolve().parents[4] / "tests/fixtures/files/clipboard-paint"
+
+
+class _PreviewCountingMime(QMimeData):
+    def __init__(self) -> None:
+        super().__init__()
+        self.image_reads = 0
+
+    def imageData(self) -> object:
+        self.image_reads += 1
+        return super().imageData()
+
+
+def test_known_paint_source_does_not_block_html_table_or_read_preview(qapp) -> None:
+    mime = _PreviewCountingMime()
+    mime.setData(WORD_EMBED_SOURCE_MIME, _paint_payload())
+    mime.setImageData(QImage(str(_SAMPLES / "paint-qt-image.png")))
+    mime.setHtml("<table><tr><th>Name</th><th>Value</th></tr><tr><td>00123</td><td>=1+1</td></tr></table>")
+
+    capture = freeze_clipboard_mime(mime)
+    decision = project_frozen_rich_document(capture)
+
+    assert capture.image is None and mime.image_reads == 0
+    assert decision.projection is not None and not decision.plain_fallback
+    table = decision.projection.document.blocks[0]
+    assert isinstance(table, ClipboardTable)
+    assert [clipboard_cell_text(cell) for cell in table.cells] == ["Name", "Value", "00123", "=1+1"]
+    assert decision.projection.resources == ()
+
+
+def test_known_paint_source_does_not_trigger_plain_fallback_or_read_preview(qapp) -> None:
+    mime = _PreviewCountingMime()
+    mime.setData(WORD_EMBED_SOURCE_MIME, _paint_payload())
+    mime.setImageData(QImage(str(_SAMPLES / "paint-qt-image.png")))
+    mime.setText("preserve this body exactly")
+
+    capture = freeze_clipboard_mime(mime)
+    decision = project_frozen_rich_document(capture)
+
+    assert capture.plain_text == "preserve this body exactly"
+    assert capture.image is None and mime.image_reads == 0
+    assert not decision.handled and not decision.plain_fallback
 
 
 def _paint_payload() -> bytes:
@@ -79,7 +121,7 @@ def test_paint_like_generic_source_does_not_override_other_content(qapp, other: 
     assert capture.image is None
     if other == "text":
         assert capture.plain_text == "preserve this body"
-        assert project_frozen_rich_document(capture).plain_fallback
+        assert not project_frozen_rich_document(capture).handled
 
 
 def test_paint_bitmap_dimensions_must_match_qimage(qapp) -> None:
