@@ -28,6 +28,44 @@ from ._main_window_projection_binding_support import (
 
 
 class TestExecutionThreadDispatch:
+    @pytest.mark.parametrize("fails", [False, True])
+    def test_queued_terminal_context_preserves_unsigned_file_identity(self, window, tmp_path, qtbot, fails):
+        from docwen_core.models.result import ConversionResult
+        from docwen_gui.qt_bridge.execution import ExecutionThread
+
+        source = tmp_path / "identity.md"
+        source.write_text("# Identity", encoding="utf-8")
+        window._view_model.add_files([str(source)])
+        request, context = window._requests.single(
+            file_path=str(source), target_format="docx", action_name="", options={}
+        )
+        # Some Windows device IDs exceed signed int64. Keep that Python value
+        # through the real worker -> supervisor -> presenter -> completion path.
+        context["transport_identity"] = {"device": 2**64 - 1, "mtime_ns": 2**63 + 17}
+
+        class Controller:
+            def execute_single(self, candidate):
+                if fails:
+                    raise RuntimeError("controlled worker failure")
+                return ConversionResult(task_id=candidate.request_id, success=True)
+
+        received = []
+        window._results.completed.connect(received.append)
+        thread = ExecutionThread(controller=Controller(), request=request, context=context)  # type: ignore[arg-type]
+        thread.result_signal.connect(window._execution.result_ready)
+        thread.error_signal.connect(window._execution.failed)
+        try:
+            with qtbot.waitSignal(thread.finished, timeout=5000):
+                thread.start()
+            qtbot.waitUntil(lambda: bool(received), timeout=5000)
+            assert received == [context]
+            assert received[0] is context
+            assert received[0]["transport_identity"] == {"device": 2**64 - 1, "mtime_ns": 2**63 + 17}
+            assert window._info_area_vm.task_summary.state == ("failed" if fails else "success")
+        finally:
+            assert thread.wait(5000)
+            thread.deleteLater()
+
     def test_batch_thread_uses_controller_execute_batch(self, qapp) -> None:
         from docwen_gui.qt_bridge.execution import ExecutionThread
 

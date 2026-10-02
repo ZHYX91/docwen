@@ -3,7 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
+
+SOURCE_PRESENTATION_NAME_METADATA_KEY = "_docwen_source_presentation_name"
+MANAGED_INPUT_SHA256_METADATA_KEY = "_docwen_managed_input_sha256"
+MANAGED_INPUT_SIZE_BYTES_METADATA_KEY = "_docwen_managed_input_size_bytes"
+MANAGED_RESOURCE_ID_METADATA_KEY = "_docwen_managed_resource_id"
 
 
 @dataclass(slots=True)
@@ -95,3 +101,20 @@ class FileRef:
             media_type=data.get("media_type", ""),
             metadata=dict(data.get("metadata", {})),
         )
+
+
+def source_presentation_name(ref: FileRef, *, fallback_path: str | None = None) -> str:
+    """Return the public filename without changing typed-input identity.
+
+    ``logical_path`` belongs to the request's declared virtual resource root.
+    Synthetic/UI inputs carry a separate presentation filename in metadata so
+    output naming does not opt them into declared-resource semantics.
+    """
+
+    raw = ref.metadata.get(SOURCE_PRESENTATION_NAME_METADATA_KEY)
+    if isinstance(raw, str):
+        label = raw.strip()
+        if label and not any(token in label for token in ("/", "\\", "\x00")):
+            return label
+    candidate = ref.logical_path or fallback_path or ref.path
+    return Path(candidate).name or "document"

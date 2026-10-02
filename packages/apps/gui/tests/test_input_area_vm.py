@@ -21,7 +21,8 @@ pytestmark = pytest.mark.gui
 def synchronous_inspection_port(monkeypatch):
     """These state tests use an immediate port; background delivery has separate tests."""
 
-    def request_files(self, paths, completed=None):
+    def request_files(self, paths, completed=None, *, file_inspector=None):
+        assert file_inspector is None, "Synthetic inspection uses the actual asynchronous port tests"
         outcome = self.add_files(paths)
         if completed is not None:
             completed(outcome)

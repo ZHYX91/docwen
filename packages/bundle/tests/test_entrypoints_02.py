@@ -203,6 +203,7 @@ class TestGuiEntry:
         _captured_window_controller: object = _sentinel
         _captured_window_bridge: object = _sentinel
         _captured_initial_files: object = _sentinel
+        _captured_clipboard_input_root: object = _sentinel
 
         def _fake_create_runtime_port(*, config_loader=None, event_callback=None):
             nonlocal _captured_event_callback
@@ -241,11 +242,21 @@ class TestGuiEntry:
         window = SimpleNamespace(shown=False, close=lambda: None)
         window.show = lambda: setattr(window, "shown", True)
 
-        def _fake_create_main_window(*, controller=None, task_event_bridge=None, initial_files=None):
-            nonlocal _captured_window_controller, _captured_window_bridge, _captured_initial_files
+        def _fake_create_main_window(
+            *,
+            controller=None,
+            task_event_bridge=None,
+            initial_files=None,
+            clipboard_input_root=None,
+        ):
+            nonlocal _captured_window_controller
+            nonlocal _captured_window_bridge
+            nonlocal _captured_initial_files
+            nonlocal _captured_clipboard_input_root
             _captured_window_controller = controller
             _captured_window_bridge = task_event_bridge
             _captured_initial_files = initial_files
+            _captured_clipboard_input_root = clipboard_input_root
             return window
 
         monkeypatch.setattr(gui_app_module, "create_main_window", _fake_create_main_window)
@@ -276,6 +287,8 @@ class TestGuiEntry:
         assert app.exec_called is True
         assert window.shown is True
         assert _captured_initial_files == ["startup.docx"]
+        assert isinstance(_captured_clipboard_input_root, str)
+        assert _captured_clipboard_input_root.endswith("clipboard-inputs")
         assert _captured_window_bridge is bridge
         assert _captured_window_controller is _captured_controller
         assert initialized_theme == [(app, _captured_controller)]

@@ -3,7 +3,7 @@
 Declares every conversion and action route this plugin handles. Office-backed
 routes use ``docwen_core.office_bridge``.
 
-Declared routes (11 total):
+Declared public Markdown routes plus four GUI-internal structured-clipboard routes:
     ROUTE-MD-DOCX-001  markdown -> docx   (implemented)
     ROUTE-MD-DOC-001   markdown -> doc    (Office bridge-backed)
     ROUTE-MD-ODT-001   markdown -> odt    (Office bridge-backed)
@@ -265,6 +265,51 @@ MD_NUMBERING_OPTIONS_SCHEMA: dict = {
     "required": [],
 }
 
+CLIPBOARD_TO_DOCX_OPTIONS_SCHEMA: dict = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "template_name": {
+            "type": "string",
+            "pattern": r"^template\.docx\.[0-9a-f]{64}$",
+            "description": "Canonical DOCX template resource ID for structured clipboard output.",
+        },
+    },
+    "required": [],
+}
+
+CLIPBOARD_TO_XLSX_OPTIONS_SCHEMA: dict = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "template_name": {
+            "type": "string",
+            "pattern": r"^template\.xlsx\.[0-9a-f]{64}$",
+            "description": "Canonical XLSX template resource ID for structured clipboard output.",
+        },
+    },
+    "required": [],
+}
+
+CLIPBOARD_TO_MARKDOWN_OPTIONS_SCHEMA: dict = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "markdown_extensions": MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA,
+        "image_mode": {
+            "type": "string",
+            "enum": ["file", "base64", "embed", "omit"],
+            "default": "file",
+        },
+        "image_link_style": {
+            "type": "string",
+            "enum": ["wiki_embed", "wiki_link", "markdown_embed", "markdown_link"],
+            "default": "wiki_embed",
+        },
+    },
+    "required": [],
+}
+
 # Shared empty options schema for routes without user-facing options.
 _NOT_IMPL_OPTIONS_SCHEMA: dict = {
     "type": "object",
@@ -356,6 +401,39 @@ ROUTE_MD_TO_CSV = RouteSpec(
     options_schema=MD_TO_SPREADSHEET_TEMPLATE_OPTIONS_SCHEMA,
 )
 
+ROUTE_CLIPBOARD_TO_DOCX = RouteSpec(
+    source_format="clipboard_document",
+    target_format="docx",
+    label="Structured Clipboard → DOCX",
+    options_schema=CLIPBOARD_TO_DOCX_OPTIONS_SCHEMA,
+    visibility="internal",
+)
+
+ROUTE_CLIPBOARD_TO_XLSX = RouteSpec(
+    source_format="clipboard_document",
+    target_format="xlsx",
+    label="Structured Clipboard → XLSX",
+    options_schema=CLIPBOARD_TO_XLSX_OPTIONS_SCHEMA,
+    visibility="internal",
+)
+
+ROUTE_CLIPBOARD_TO_MARKDOWN = RouteSpec(
+    source_format="clipboard_document",
+    target_format="md",
+    label="Structured Clipboard → Markdown",
+    options_schema=CLIPBOARD_TO_MARKDOWN_OPTIONS_SCHEMA,
+    visibility="internal",
+)
+
+ROUTE_CLIPBOARD_TO_CSV = RouteSpec(
+    source_format="clipboard_document",
+    target_format="csv",
+    label="Structured Clipboard → CSV",
+    options_schema=_NOT_IMPL_OPTIONS_SCHEMA,
+    visibility="internal",
+)
+
+
 ROUTE_MD_NUMBERING = RouteSpec(
     source_format="markdown",
     target_format="md",
@@ -368,6 +446,10 @@ ROUTE_MD_NUMBERING = RouteSpec(
 # ── All routes ─────────────────────────────────────────────────────────
 
 ALL_ROUTES: list[RouteSpec] = [
+    ROUTE_CLIPBOARD_TO_DOCX,
+    ROUTE_CLIPBOARD_TO_XLSX,
+    ROUTE_CLIPBOARD_TO_MARKDOWN,
+    ROUTE_CLIPBOARD_TO_CSV,
     # Document routes
     ROUTE_MD_TO_DOCX,
     ROUTE_MD_TO_DOC,
@@ -393,6 +475,7 @@ def build_manifest() -> PluginManifest:
         version=PLUGIN_VERSION,
         description=(
             "Converts Markdown files to DOCX, DOC, ODT, RTF, WPS, PDF, XLSX, XLS, ODS, CSV; "
+            "renders managed recursive clipboard documents to DOCX, XLSX, Markdown, and CSV; "
             "handles heading numbering processing. "
             "Office formats are produced through the core Office bridge."
         ),

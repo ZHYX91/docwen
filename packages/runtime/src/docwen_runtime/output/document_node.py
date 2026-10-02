@@ -7,6 +7,8 @@ import posixpath
 import re
 from dataclasses import dataclass, replace
 from datetime import datetime
+from html import escape, unescape
+from html.entities import html5
 from pathlib import Path, PurePosixPath
 from urllib.parse import unquote
 
@@ -22,12 +24,41 @@ from docwen_core.models import (
 
 MARKDOWN_MEDIA_TYPE = "text/markdown"
 
-_MARKDOWN_LINK = re.compile(r"(?P<prefix>!?\[[^\]\n]*\]\()(?P<target>[^)\s]+)(?P<suffix>[^)]*\))")
+_MARKDOWN_LINK = re.compile(r"(?P<prefix>!?\[[^\]\n]*\]\()(?P<target><[^<>\n]*>|[^)\s]+)(?P<suffix>[^)]*\))")
 _WIKI_LINK = re.compile(r"(?P<prefix>!?\[\[)(?P<body>[^\]\n]+)(?P<suffix>\]\])")
 _HTML_LINK = re.compile(
     r"(?P<prefix>\b(?:src|href)\s*=\s*[\"'])(?P<target>[^\"']+)(?P<suffix>[\"'])",
     re.IGNORECASE,
 )
+
+_WINDOWS_DRIVE_TARGET = re.compile(r"^[A-Za-z]:[\\/]")
+_URI_SCHEME_TARGET = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
+_LOCAL_LINK_UNSAFE = frozenset("%#? \t\r\n<>\"'()[]|&")
+_HTML_ATTRIBUTE_REFERENCE = re.compile(r"&#(?:[xX][0-9a-fA-F]+|[0-9]+);?|&[A-Za-z][A-Za-z0-9]*;?")
+
+
+def _decode_html_attribute(value: str) -> str:
+    """Decode references using HTML's attribute-context legacy-name rule."""
+
+    def decode(match: re.Match[str]) -> str:
+        token = match.group()[1:]
+        if token.startswith("#"):
+            return unescape(match.group())
+        for length in range(len(token), 0, -1):
+            name = token[:length]
+            if name not in html5:
+                continue
+            following = token[length : length + 1] or value[match.end() : match.end() + 1]
+            if (
+                not name.endswith(";")
+                and following
+                and (following == "=" or (following.isascii() and following.isalnum()))
+            ):
+                return match.group()
+            return html5[name] + token[length:]
+        return match.group()
+
+    return _HTML_ATTRIBUTE_REFERENCE.sub(decode, value)
 
 
 @dataclass(frozen=True, slots=True)
@@ -252,19 +283,52 @@ def _artifact_reference_names(artifact: ArtifactManifest) -> set[str]:
     return {value for value in values if value}
 
 
+def _is_external_link_target(raw: str) -> bool:
+    """Return whether a link target is lexically a URI or network location."""
+
+    raw_path = raw.partition("#")[0]
+    candidate = raw_path.lstrip()
+    normalized = candidate.replace("\\", "/")
+    if normalized.startswith("//"):
+        return True
+    if _WINDOWS_DRIVE_TARGET.match(candidate):
+        return False
+    return _URI_SCHEME_TARGET.match(candidate) is not None
+
+
+def _serialize_local_link_path(path: str) -> str:
+    """Percent-escape delimiters that would change Markdown/HTML link structure."""
+
+    result: list[str] = []
+    for char in path:
+        if char not in _LOCAL_LINK_UNSAFE:
+            result.append(char)
+            continue
+        result.extend(f"%{byte:02X}" for byte in char.encode("utf-8"))
+    return "".join(result)
+
+
 def _rewrite_known_links(text: str, replacements: dict[str, str]) -> str:
     normalized = {key.replace("\\", "/"): value for key, value in replacements.items()}
 
     def replace_target(raw: str) -> str:
-        decoded = unquote(raw).replace("\\", "/")
-        path, marker, anchor = decoded.partition("#")
-        replacement = normalized.get(path) or normalized.get(PurePosixPath(path).name)
+        raw_path, marker, raw_anchor = raw.partition("#")
+        if _is_external_link_target(raw):
+            return raw
+        decoded_path = unquote(raw_path).replace("\\", "/")
+        replacement = normalized.get(decoded_path) or normalized.get(PurePosixPath(decoded_path).name)
         if replacement is None:
             return raw
-        return replacement + (f"#{anchor}" if marker else "")
+        serialized = _serialize_local_link_path(replacement)
+        return serialized + (f"#{raw_anchor}" if marker else "")
 
     def markdown_sub(match: re.Match[str]) -> str:
-        return f"{match.group('prefix')}{replace_target(match.group('target'))}{match.group('suffix')}"
+        target = match.group("target")
+        if target.startswith("<") and target.endswith(">"):
+            target = f"<{replace_target(target[1:-1])}>"
+        else:
+            target = replace_target(target)
+        return f"{match.group('prefix')}{target}{match.group('suffix')}"
 
     def wiki_sub(match: re.Match[str]) -> str:
         body = match.group("body")
@@ -274,7 +338,13 @@ def _rewrite_known_links(text: str, replacements: dict[str, str]) -> str:
         return f"{match.group('prefix')}{replaced}{suffix}{match.group('suffix')}"
 
     def html_sub(match: re.Match[str]) -> str:
-        return f"{match.group('prefix')}{replace_target(match.group('target'))}{match.group('suffix')}"
+        raw = match.group("target")
+        semantic = _decode_html_attribute(raw)
+        replaced = replace_target(semantic)
+        # Classify decoded HTML semantics, but keep untouched external/local
+        # attributes byte-for-byte. Only rewritten local values need escaping.
+        target = raw if replaced == semantic else escape(replaced, quote=True)
+        return f"{match.group('prefix')}{target}{match.group('suffix')}"
 
     text = _MARKDOWN_LINK.sub(markdown_sub, text)
     text = _WIKI_LINK.sub(wiki_sub, text)

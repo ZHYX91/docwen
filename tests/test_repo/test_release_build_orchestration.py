@@ -245,6 +245,17 @@ def test_release_workflow_connects_tag_build_publication_and_independent_readbac
     candidate_upload = next(step for step in verify["steps"] if step.get("id") == "publication")
     assert "if" not in candidate_upload
     assert int(candidate_upload["with"]["retention-days"]) >= 30
+    metadata_upload = next(
+        step for step in verify["steps"] if step.get("name") == "Upload small manifest for selected-platform acceptance"
+    )
+    assert (
+        metadata_upload["with"]["name"] == "docwen-publication-metadata-${{ github.run_id }}-${{ github.run_attempt }}"
+    )
+    assert set(metadata_upload["with"]["path"].split()) == {"publication/candidate.json", "publication/SHA256SUMS.txt"}
+    assert metadata_upload["with"]["overwrite"] == "false"
+    assert metadata_upload["with"]["if-no-files-found"] == "error"
+    assert int(metadata_upload["with"]["retention-days"]) >= 30
+    assert verify["steps"].index(metadata_upload) > verify["steps"].index(candidate_upload)
     for job in jobs.values():
         for step in job.get("steps", []):
             if "uses" in step:

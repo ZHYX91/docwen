@@ -55,10 +55,10 @@ class TestRuntimeRequestBinding:
             source.unlink()
         elif failure == "unreadable":
 
-            def inaccessible(_path):
+            def inaccessible(_path, _frozen):
                 raise PermissionError("test access denied")
 
-            monkeypatch.setattr("docwen_core.detection.inspect_file", inaccessible)
+            monkeypatch.setattr("docwen_core.detection.reinspect_frozen_file", inaccessible)
         else:
             source.write_text("# Changed content with a different size\n", encoding="utf-8")
 

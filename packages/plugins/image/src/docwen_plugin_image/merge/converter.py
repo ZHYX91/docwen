@@ -7,6 +7,11 @@ from typing import TYPE_CHECKING
 
 from PIL import Image
 
+from docwen_core.models.file_ref import (
+    MANAGED_INPUT_SHA256_METADATA_KEY,
+    MANAGED_INPUT_SIZE_BYTES_METADATA_KEY,
+    source_presentation_name,
+)
 from docwen_plugin_image._common import (
     file_size,
     has_alpha,
@@ -27,7 +32,7 @@ def _load_image(path: str) -> Image.Image:
             copy.load()
             return copy
     except Exception as exc:
-        raise RuntimeError(f"Failed to load image '{Path(path).name}': {exc}") from exc
+        raise RuntimeError("Image input could not be decoded.") from exc
 
 
 def _to_rgb_with_white(img: Image.Image) -> Image.Image:
@@ -75,6 +80,7 @@ class ImageToTiffMerger:
 
         loaded: list[Image.Image] = []
         converted: list[Image.Image] = []
+        failed_input_name: str | None = None
         try:
             if any(is_heic_format(ref.format) for ref in input_refs):
                 register_heic_decoder()
@@ -83,7 +89,15 @@ class ImageToTiffMerger:
                 context.progress.report_progress(
                     20.0 * idx / max(len(input_paths), 1), f"Loading image {idx}/{len(input_paths)}"
                 )
+                ref = input_refs[idx - 1]
+                managed = (
+                    MANAGED_INPUT_SHA256_METADATA_KEY in ref.metadata
+                    and MANAGED_INPUT_SIZE_BYTES_METADATA_KEY in ref.metadata
+                )
+                failed_input_name = None if managed else source_presentation_name(ref)
                 loaded.append(_load_image(path))
+
+            failed_input_name = None
 
             target_mode = "RGBA" if mode == "smart" and all(has_alpha(img) for img in loaded) else "RGB"
             for img in loaded:
@@ -100,19 +114,18 @@ class ImageToTiffMerger:
                 append_images=converted[1:],
                 compression="tiff_lzw",
             )
-        except Exception as exc:
-            context.logger.error(f"Image merge to TIFF failed: {exc}")
+        except Exception:
+            context.logger.error("Image merge to TIFF failed")
+            message = "Image merge to TIFF failed."
+            if failed_input_name is not None:
+                message = f"Failed to load image: {failed_input_name}."
             return ConversionResult(
                 task_id=task_id,
                 success=False,
                 error=ConversionErrorInfo(
-                    error_type="conversion_failed", message=str(exc), diagnostic_code="IMG2TIFF-ERROR"
+                    error_type="conversion_failed", message=message, diagnostic_code="IMG2TIFF-ERROR"
                 ),
-                diagnostics=[
-                    ConversionDiagnostic(
-                        level="error", message=f"Image merge to TIFF failed: {exc}", code="IMG2TIFF-ERROR"
-                    )
-                ],
+                diagnostics=[ConversionDiagnostic(level="error", message=message, code="IMG2TIFF-ERROR")],
             )
         finally:
             seen: set[int] = set()

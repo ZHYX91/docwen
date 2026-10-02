@@ -18,6 +18,12 @@ from typing import TYPE_CHECKING, cast
 from docwen_plugin_markdown.manifest import build_manifest
 from docwen_plugin_markdown.numbering.converter import MdNumberingProcessor
 from docwen_plugin_markdown.office_bridge.converter import MarkdownOfficeBridgeConverter
+from docwen_plugin_markdown.structured_clipboard import (
+    convert_clipboard_document_to_csv,
+    convert_clipboard_document_to_docx,
+    convert_clipboard_document_to_markdown,
+    convert_clipboard_document_to_xlsx,
+)
 from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
 from docwen_plugin_markdown.to_spreadsheet.converter import (
     MdToCsvConverter,
@@ -95,6 +101,16 @@ class MarkdownPlugin:
         # or inferring execution behavior from the filename declaration.
         admitted_markdown_text = source == "txt" and input_ref is not None and input_ref.category == "markdown"
         source_format = "markdown" if source == "markdown" or admitted_markdown_text else source
+
+        if source == "clipboard_document":
+            if target == "docx":
+                return convert_clipboard_document_to_docx(context)
+            if target == "xlsx":
+                return convert_clipboard_document_to_xlsx(context)
+            if target == "md":
+                return convert_clipboard_document_to_markdown(context)
+            if target == "csv":
+                return convert_clipboard_document_to_csv(context)
 
         # ── Action: MD numbering ─────────────────────────────────
         if action == "process_md_numbering":

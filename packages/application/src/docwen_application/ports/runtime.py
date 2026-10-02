@@ -55,6 +55,15 @@ class CapabilityDiscoveryPort(Protocol):
 
 
 @runtime_checkable
+class GuiCapabilityDiscoveryPort(Protocol):
+    """Optional GUI-only reflection surface including internal desktop routes."""
+
+    def describe_gui_capabilities(self) -> dict[str, Any]:
+        """Return the loaded composition including routes hidden from public discovery."""
+        ...
+
+
+@runtime_checkable
 class CancellationReservationPort(Protocol):
     """Optional Runtime capability for one Application-owned task lifetime.
 

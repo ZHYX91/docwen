@@ -68,12 +68,14 @@ def test_create_runtime_port_wires_config_loader_to_adapter(
             event_callback=None,
             config_loader=None,
             capability_provider=None,
+            gui_capability_provider=None,
             output_manifest_writer=None,
         ) -> None:
             captured["task_manager"] = task_manager
             captured["event_callback"] = event_callback
             captured["config_loader"] = config_loader
             captured["capability_provider"] = capability_provider
+            captured["gui_capability_provider"] = gui_capability_provider
             captured["output_manifest_writer"] = output_manifest_writer
 
     monkeypatch.setattr(adapters_module, "RuntimePortAdapter", _Adapter)
@@ -88,6 +90,7 @@ def test_create_runtime_port_wires_config_loader_to_adapter(
     assert captured["event_callback"] is event_callback
     assert captured["config_loader"] is config_loader
     assert callable(captured["capability_provider"])
+    assert callable(captured["gui_capability_provider"])
     assert captured["output_manifest_writer"] is not None
 
 

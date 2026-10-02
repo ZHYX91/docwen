@@ -386,7 +386,7 @@ class ActionAreaViewModel(QObject):
     @property
     def show_numbering(self) -> bool:
         """Whether numbering options are visible."""
-        return self._show_numbering
+        return self._show_numbering and not (self._file_type == MODE_MD_TO_DOCUMENT and self._target_format == "md")
 
     @property
     def show_optimize(self) -> bool:
@@ -433,6 +433,17 @@ class ActionAreaViewModel(QObject):
 
         choice = self._target_route_choices_result.get(self._target_format)
         return choice.options if choice is not None else ()
+
+    @property
+    def generation_ready(self) -> bool:
+        """Markdown export does not require a document or spreadsheet template."""
+        return self._target_route_choices_result.get(self._target_format) is not None and (
+            self.template_ready or self._target_format == "md"
+        )
+
+    @property
+    def target_route_sources(self) -> tuple[RuntimeRouteSource, ...]:
+        return getattr(self, "_target_route_sources", (RuntimeRouteSource("md", "markdown"),))
 
     @property
     def last_document_format(self) -> str:
@@ -590,7 +601,9 @@ class ActionAreaViewModel(QObject):
         )
         logger.info("ActionArea set to %s→MD mode", detected_format)
 
-    def setup_for_md_to_document(self, file_path: str) -> None:
+    def setup_for_md_to_document(
+        self, file_path: str, *, source_inputs: tuple[RuntimeRouteSource, ...] | None = None
+    ) -> None:
         """Mode 6: Set up for MD → Document conversion.
 
         Includes numbering options and proofread grid.
@@ -619,8 +632,17 @@ class ActionAreaViewModel(QObject):
         self._md_add_numbering = bool(add_numbering)
         self._md_numbering_scheme = str(numbering_scheme or "hierarchical_standard")
         self._set_markdown_target_routes(
-            lambda target: get_category(target) == CATEGORY_DOCUMENT or target == "pdf",
+            lambda target: (
+                get_category(target) == CATEGORY_DOCUMENT
+                or target == "pdf"
+                or (
+                    target == "md"
+                    and bool(source_inputs)
+                    and all(s.detected_format == "clipboard_document" for s in source_inputs)
+                )
+            ),
             preferred=self._last_document_format,
+            source_inputs=source_inputs,
         )
         self._proofread_options = dict(DEFAULT_PROOFREAD_OPTIONS)
         self._visible = True
@@ -628,7 +650,9 @@ class ActionAreaViewModel(QObject):
         self.state_changed.emit()
         logger.info("ActionArea set to MD→Document mode")
 
-    def setup_for_md_to_spreadsheet(self, file_path: str) -> None:
+    def setup_for_md_to_spreadsheet(
+        self, file_path: str, *, source_inputs: tuple[RuntimeRouteSource, ...] | None = None
+    ) -> None:
         """Mode 7: Set up for MD → Spreadsheet conversion."""
         self._clear_mutually_exclusive_action_state()
         self._file_type = MODE_MD_TO_SPREADSHEET
@@ -641,6 +665,7 @@ class ActionAreaViewModel(QObject):
         self._set_markdown_target_routes(
             lambda target: get_category(target) == CATEGORY_SPREADSHEET,
             preferred=self._last_spreadsheet_format,
+            source_inputs=source_inputs,
         )
         self._visible = True
         self._cancel_visible = False
@@ -649,14 +674,17 @@ class ActionAreaViewModel(QObject):
 
     # ── Internal helpers ─────────────────────────────────────────────────
 
-    def _set_markdown_target_routes(self, predicate: Any, *, preferred: str) -> None:
+    def _set_markdown_target_routes(
+        self, predicate: Any, *, preferred: str, source_inputs: tuple[RuntimeRouteSource, ...] | None = None
+    ) -> None:
         """Populate a generation picker from Runtime's canonical Markdown routes."""
 
         main_vm = self._main_vm
         controller = getattr(main_vm, "controller", None) if main_vm is not None else None
+        self._target_route_sources = source_inputs or (RuntimeRouteSource("md", "markdown"),)
         discovered = discover_runtime_route_choices(
             controller,
-            sources=(RuntimeRouteSource(detected_format="md", source_category="markdown"),),
+            sources=self._target_route_sources,
             operation="conversion",
         )
         if discovered.status == "failed":
@@ -913,6 +941,8 @@ class ActionAreaViewModel(QObject):
     def collect_options(self) -> dict[str, Any]:
         """Build the full options dict from current ViewModel state."""
         options: dict[str, Any] = {}
+        if self._file_type == MODE_MD_TO_DOCUMENT and self._target_format == "md":
+            return options
 
         # File→MD options
         if self._is_file_to_md_mode():

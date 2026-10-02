@@ -48,6 +48,8 @@ class DetectionMethod(StrEnum):
     SIGNATURE = "signature"
     CONTAINER = "container"
     TEXT_SNIFF = "text_sniff"
+    SYNTHETIC_MARKDOWN = "synthetic_markdown"
+    STRUCTURED_CLIPBOARD = "structured_clipboard"
     UNKNOWN = "unknown"
 
 

@@ -41,6 +41,8 @@ class ActivityRecord:
     output_path: str
     operation: str
     details: str
+    source_label: str = ""
+    source_location_available: bool = True
     output_paths: tuple[str, ...] = ()
     diagnostic: DiagnosticSummary | None = None
 
@@ -82,10 +84,16 @@ class ActivityRecordsModel(QAbstractTableModel):
                     operation = t("activity.numbering")
                 elif "validate" in action:
                     operation = t("activity.validate")
+            source_labels = task.context.get("source_labels", {})
+            synthetic_paths = {
+                Path(item).as_posix() for item in task.context.get("synthetic_input_paths", []) if isinstance(item, str)
+            }
             for path in task.paths:
                 if not path:
                     continue
                 outcome = task.outcomes.get(path)
+                source_label = str(source_labels.get(path) or "") if isinstance(source_labels, dict) else ""
+                source_location_available = path not in synthetic_paths
                 output = outcome.output_path if outcome else ""
                 outputs = outcome.output_paths if outcome else ()
                 matching = [
@@ -105,7 +113,8 @@ class ActivityRecordsModel(QAbstractTableModel):
                     dict.fromkeys(row.message for row in matching if not warnings or row.message_type != "warning")
                 )
                 has_warning = bool(warnings) or any(row.message_type == "warning" for row in matching)
-                details = [f"{t('activity.input')}: {display_path(path)}"]
+                input_display = source_label or display_path(path)
+                details = [f"{t('activity.input')}: {input_display}"]
                 if output:
                     details.extend(f"{t('activity.output')}: {display_path(path)}" for path in outputs or (output,))
                 if outcome and outcome.error_message:
@@ -128,6 +137,8 @@ class ActivityRecordsModel(QAbstractTableModel):
                         output,
                         operation,
                         "\n\n".join(dict.fromkeys(details)),
+                        source_label,
+                        source_location_available,
                         outputs,
                         outcome.diagnostic if outcome else DiagnosticSummary(status="pending"),
                     )
@@ -192,7 +203,8 @@ class ActivityRecordsModel(QAbstractTableModel):
             tone = record.status if record.status in {"info", "warning"} else get_status_theme_class(record.status)
             return QColor(get_theme_class_color(tone, theme))
         if role == Qt.ItemDataRole.UserRole + 1:
-            return (record.timestamp.isoformat(), record.status_label, record.source_path.casefold(), record.operation)[
+            source_sort = record.source_label or Path(record.source_path).name
+            return (record.timestamp.isoformat(), record.status_label, source_sort.casefold(), record.operation)[
                 index.column()
             ]
         if role == Qt.ItemDataRole.UserRole:
@@ -203,7 +215,7 @@ class ActivityRecordsModel(QAbstractTableModel):
             return (
                 record.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
                 record.status_label,
-                Path(record.source_path).name if record.source_path else "—",
+                record.source_label or (Path(record.source_path).name if record.source_path else "—"),
                 record.operation,
             )[index.column()]
         return None

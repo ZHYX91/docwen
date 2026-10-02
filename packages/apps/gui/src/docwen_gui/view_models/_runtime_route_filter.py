@@ -73,7 +73,9 @@ class RuntimeRouteChoicesResult:
 def load_runtime_catalog(controller: Any) -> RuntimeCatalogResult:
     """Load and validate Runtime's projection without reconstructing route facts."""
 
-    describe = getattr(controller, "describe_runtime_capabilities", None)
+    describe = getattr(controller, "describe_gui_runtime_capabilities", None)
+    if not callable(describe):
+        describe = getattr(controller, "describe_runtime_capabilities", None)
     if not callable(describe):
         error = CapabilityUnavailableError("Runtime capability discovery is unavailable.")
         return RuntimeCatalogResult(status="failed", catalog=None, projection=None, error=error)

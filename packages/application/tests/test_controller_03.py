@@ -236,6 +236,104 @@ class TestExecuteMethods:
             for root in tmp_path.glob("docwen_pre_*"):
                 shutil.rmtree(root, ignore_errors=True)
 
+    def test_batch_projects_per_input_output_directory_without_redirecting_other_sources(
+        self,
+        mock_runtime: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        from docwen_core.models.result import ConversionResult
+
+        first = tmp_path / "regular.csv"
+        second = tmp_path / "synthetic.csv"
+        first.write_text("a,b\n1,2\n", encoding="utf-8")
+        second.write_text("a,b\n3,4\n", encoding="utf-8")
+        persistent = tmp_path / "persistent"
+        seen: list[tuple[str, str | None]] = []
+
+        def fake_runtime_execute(runtime_request: ConversionRequest) -> ConversionResult:
+            seen.append((runtime_request.input_refs[0].path, runtime_request.output_policy.output_dir))
+            assert runtime_request.output_policy.per_input_output_dirs == {}
+            return ConversionResult(task_id=runtime_request.request_id, success=True)
+
+        mock_runtime.execute.side_effect = fake_runtime_execute
+        ctrl = ApplicationController(runtime_port=mock_runtime)
+        request = ConversionRequest(
+            request_id="per-input-output",
+            input_refs=[
+                FileRef(path=str(first), format="csv", category="spreadsheet"),
+                FileRef(path=str(second), format="csv", category="spreadsheet"),
+            ],
+            target_format="xlsx",
+            output_policy=OutputPolicy(per_input_output_dirs={str(second): str(persistent)}),
+        )
+
+        with patch(
+            "docwen_application.preconversion.chain_resolver.resolve_chain",
+            return_value=["xlsx"],
+        ):
+            results = ctrl.execute_batch(request)
+
+        assert [result.success for result in results] == [True, True]
+        assert seen == [(str(first), None), (str(second), str(persistent))]
+
+    def test_real_doc_to_markdown_preconversion_keeps_direct_sibling_per_input_output_override(
+        self,
+        mock_runtime: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        from docwen_application.preconversion.pre_converter import PreConversionResult
+        from docwen_core.models.result import ConversionResult
+
+        legacy = tmp_path / "legacy.doc"
+        direct = tmp_path / "direct.docx"
+        legacy.write_bytes(b"legacy")
+        direct.write_bytes(b"direct")
+        legacy_output = tmp_path / "legacy-output"
+        direct_output = tmp_path / "direct-output"
+        seen: list[tuple[str, str | None]] = []
+
+        def fake_pre_convert(input_path: str, source_format: str, *, staging_dir: str, **_kwargs):
+            assert input_path == str(legacy)
+            assert source_format == "doc"
+            converted = Path(staging_dir) / "legacy.docx"
+            converted.parent.mkdir(parents=True, exist_ok=True)
+            converted.write_bytes(b"converted")
+            return PreConversionResult(str(converted), "doc", "Fake Office")
+
+        def fake_runtime_execute(runtime_request: ConversionRequest) -> ConversionResult:
+            seen.append((runtime_request.input_refs[0].path, runtime_request.output_policy.output_dir))
+            assert runtime_request.output_policy.per_input_output_dirs == {}
+            return ConversionResult(task_id=runtime_request.request_id, success=True)
+
+        mock_runtime.execute.side_effect = fake_runtime_execute
+        controller = ApplicationController(runtime_port=mock_runtime)
+        request = ConversionRequest(
+            request_id="mixed-preconversion-output",
+            input_refs=[
+                FileRef(path=str(legacy), format="doc", category="document"),
+                FileRef(path=str(direct), format="docx", category="document"),
+            ],
+            target_format="md",
+            output_policy=OutputPolicy(
+                per_input_output_dirs={
+                    str(legacy): str(legacy_output),
+                    str(direct): str(direct_output),
+                }
+            ),
+        )
+
+        with patch(
+            "docwen_application.preconversion.pre_converter.pre_convert",
+            side_effect=fake_pre_convert,
+        ):
+            results = controller.execute_batch(request)
+
+        assert [result.success for result in results] == [True, True]
+        assert len(seen) == 2
+        assert Path(seen[0][0]).name == "legacy.docx"
+        assert seen[0][1] == str(legacy_output)
+        assert seen[1] == (str(direct), str(direct_output))
+
     def test_preconversion_staging_is_cleaned_when_runtime_raises(
         self,
         mock_runtime: MagicMock,

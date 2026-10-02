@@ -57,6 +57,8 @@ from docwen_core.text.heading_numbering import (
 from docwen_plugin_markdown.ast_transforms import annotate_ast_with_merges
 from docwen_plugin_markdown.common_utils import (
     add_md_numbering,
+    conversion_error_text,
+    link_source_path,
     read_input_markdown,
     remove_md_numbering,
 )
@@ -538,6 +540,7 @@ class MdToDocxConverter:
 
             # ── 2. Read input ──────────────────────────────────────────
             input_path = workspace.input_path
+            resource_source_path = link_source_path(context.request, input_path)
             declared_inputs = workspace.input_resources()
             if claims_resolved_v4_inputs(declared_inputs):
                 # The resolved-document port is an exact-two capability, not
@@ -748,7 +751,7 @@ class MdToDocxConverter:
                 image_scope = secrets.token_urlsafe(24)
                 md_body = process_markdown_links(
                     link_source,
-                    input_path,
+                    resource_source_path,
                     link_config=link_config,
                     target_format="docx",
                     temp_dir=str(workspace.staging_dir),
@@ -903,10 +906,10 @@ class MdToDocxConverter:
             ensure_title_fallback(
                 yaml_dict,
                 placeholder_names=placeholder_map,
-                source_stem=Path(input_path).stem,
+                source_stem=context.request.source_stem,
             )
             yaml_links = YamlLinkProjection(
-                input_path, link_config, declared_inputs=declared_resource_resolver is not None
+                resource_source_path, link_config, declared_inputs=declared_resource_resolver is not None
             )
             for key in placeholder_map:
                 if key in yaml_dict:
@@ -1020,7 +1023,7 @@ class MdToDocxConverter:
                     hr_actions=hr_actions,
                     cancellation=cancellable,
                     note_ctx=note_ctx,
-                    source_file_path=input_path,
+                    source_file_path=resource_source_path or None,
                     declared_resource_resolver=declared_resource_resolver,
                     mermaid_mode=mermaid_mode,
                     mermaid_cli_path=str(context.config.get("conversion.md_to_docx.mermaid_cli_path", "") or ""),
@@ -1087,8 +1090,7 @@ class MdToDocxConverter:
             progress.report_progress(80.0, "Writing DOCX to staging")
 
             output_path = workspace.create_artifact_path(ARTIFACT_KIND_PRIMARY, ".docx")
-            input_stem = Path(input_path).stem
-            suggested_name = f"{input_stem}.docx"
+            suggested_name = f"{context.request.source_stem}.docx"
 
             # Inject DOCX metadata (title/subject) from YAML
             if yaml_dict:
@@ -1256,20 +1258,21 @@ class MdToDocxConverter:
             if isinstance(pending_output, str):
                 Path(pending_output).unlink(missing_ok=True)
             elapsed_ms = (time.monotonic() - t_start) * 1000.0
-            logger.error(f"MD→DOCX failed: {exc}")
+            error_text = conversion_error_text(context.request, exc)
+            logger.error(f"MD→DOCX failed: {error_text}")
             return ConversionResult(
                 task_id=task_id,
                 success=False,
                 error=ConversionErrorInfo(
                     error_type="conversion_failed",
-                    message=str(exc),
+                    message=error_text,
                     diagnostic_code="MD2DOCX-ERROR",
                 ),
                 metrics=ConversionMetrics(duration_ms=elapsed_ms),
                 diagnostics=[
                     ConversionDiagnostic(
                         level="error",
-                        message=f"MD→DOCX conversion failed: {exc}",
+                        message=f"MD→DOCX conversion failed: {error_text}",
                         code="MD2DOCX-ERROR",
                     )
                 ],

@@ -49,6 +49,12 @@ ownership as described below; it does not change entry cardinality.
   remaining pages.
 - Temporary rendered page images used only for OCR are not exported when `preserve_resources=false`.
 - The primary document carries source/navigation context and does not duplicate the same page OCR text.
+- TIFF navigation uses portable Markdown links in physical-frame order. With OCR off, preserved frame images are
+  embedded in the primary. With OCR on, the primary links each page fragment, and each fragment embeds its own
+  preserved image when requested. OCR text exists only in its fragment. With both options off, no page content or
+  links are invented. Navigation does not add artifacts, entries, or relations; typed page facts remain authoritative.
+  The producer encodes literal filename delimiters, and the existing document-node relocation resolves these links
+  against final logical paths, including collision-renamed directories. Consumers preserve the resulting bytes.
 - `recognize_text=false` never creates page fragments or auxiliary page Markdown because images happened to be
   preserved.
 

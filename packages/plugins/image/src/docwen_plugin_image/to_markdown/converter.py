@@ -6,6 +6,7 @@ import logging
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import quote
 
 from docwen_core.errors import CancellationRequested
 from docwen_core.export_semantics import (
@@ -18,7 +19,7 @@ from docwen_core.markdown_utils import (
     format_sanitized_image_link,
     sanitize_filename,
 )
-from docwen_core.paths import input_stem, normalize_path
+from docwen_core.paths import normalize_path
 from docwen_core.text.image_markdown import build_base64_image_data_uri, build_image_ocr_sidecar
 from docwen_core.text.ocr import (
     OcrOutcome,
@@ -95,10 +96,11 @@ def _convert_tiff_physical_pages(
     )
 
     task_id = context.request.request_id
-    input_stem_value = input_stem(input_path)
+    input_stem_value = context.request.source_stem
     created_paths: list[Path] = []
     page_artifacts: list[ArtifactManifest] = []
     image_artifacts: list[ArtifactManifest] = []
+    navigation: list[str] = []
     diagnostics: list[ConversionDiagnostic] = []
     ocr_chars = 0
 
@@ -111,6 +113,13 @@ def _convert_tiff_physical_pages(
             for zero_index in range(physical_page_count):
                 context.cancellation.check()
                 page_number = zero_index + 1
+                image_name = f"{input_stem_value}__page_{page_number:04d}.png"
+                page_name = f"{input_stem_value}__page_{page_number:04d}_ocr.md"
+                # Numeric alt text is interpreted as image dimensions by readers
+                # such as Obsidian; retain the page number in a descriptive label.
+                image_link = format_image_link(
+                    f"Page {page_number}", quote(image_name, safe=""), style="markdown_embed"
+                )
                 source.seek(zero_index)
                 frame = source.copy()
                 frame_path: Path | None = None
@@ -134,8 +143,8 @@ def _convert_tiff_physical_pages(
                             )
                         except CancellationRequested:
                             raise
-                        except Exception as exc:
-                            outcome = OcrOutcome(OcrStatus.RECOGNITION_FAILED, message=str(exc))
+                        except Exception:
+                            outcome = OcrOutcome(OcrStatus.RECOGNITION_FAILED, message="")
                         context.cancellation.check()
 
                         page_path = Path(context.workspace.create_artifact_path("auxiliary", ".md"))
@@ -154,12 +163,16 @@ def _convert_tiff_physical_pages(
                                     location=f"{Path(input_path).name}:frame-{page_number}",
                                 )
                             )
+                        # Keep page content with its typed owner. The primary only
+                        # navigates to this fragment and never duplicates its OCR.
+                        if keep_images:
+                            page_text = f"{image_link}\n\n{page_text}".rstrip()
                         page_path.write_bytes(f"{page_text}\n".encode() if page_text else b"")
                         page_artifact = ArtifactManifest(
                             artifact_id=new_artifact_id(),
                             kind="auxiliary",
                             staging_path=str(page_path),
-                            suggested_name=f"{input_stem_value}__page_{page_number:04d}_ocr.md",
+                            suggested_name=page_name,
                             media_type="text/markdown",
                             metadata={
                                 "fragment_kind": "page",
@@ -171,6 +184,7 @@ def _convert_tiff_physical_pages(
                             is_primary=False,
                         )
                         page_artifacts.append(page_artifact)
+                        navigation.append(f"[{page_number}]({quote(page_name, safe='')})")
                         if outcome.status is OcrStatus.SUCCESS:
                             from docwen_core.text.ocr import report_ocr_outcome
 
@@ -195,12 +209,14 @@ def _convert_tiff_physical_pages(
                             artifact_id=new_artifact_id(),
                             kind="image",
                             staging_path=str(frame_path),
-                            suggested_name=f"{input_stem_value}__page_{page_number:04d}.png",
+                            suggested_name=image_name,
                             media_type="image/png",
                             metadata={"source_format": "tif", "source_page": page_number},
                             is_primary=False,
                         )
                         image_artifacts.append(image_artifact)
+                        if not enable_ocr:
+                            navigation.append(image_link)
                 finally:
                     frame.close()
                     if frame_path is not None and not retain_frame:
@@ -209,6 +225,7 @@ def _convert_tiff_physical_pages(
                         except OSError:
                             _logger.warning("Unable to remove request-owned TIFF OCR frame %s", frame_path)
 
+        context.cancellation.check()
         yaml_frontmatter = generate_basic_yaml_frontmatter(
             input_stem_value,
             extra={"source_format": "tif"},
@@ -216,7 +233,8 @@ def _convert_tiff_physical_pages(
         )
         primary_path = Path(context.workspace.create_artifact_path("primary", ".md"))
         created_paths.append(primary_path)
-        primary_path.write_text(yaml_frontmatter, encoding="utf-8")
+        primary_text = yaml_frontmatter + ("\n\n".join(navigation) + "\n" if navigation else "")
+        primary_path.write_text(primary_text, encoding="utf-8")
         primary = ArtifactManifest(
             artifact_id=new_artifact_id(),
             kind="primary",
@@ -272,19 +290,19 @@ def _convert_tiff_physical_pages(
             except OSError:
                 _logger.warning("Unable to remove cancelled TIFF artifact %s", path)
         raise
-    except Exception as exc:
+    except Exception:
         for path in created_paths:
             try:
                 path.unlink(missing_ok=True)
             except OSError:
                 _logger.warning("Unable to remove failed TIFF artifact %s", path)
-        context.logger.error(f"TIFF to Markdown failed: {exc}")
+        context.logger.error("TIFF to Markdown failed")
         return ConversionResult(
             task_id=task_id,
             success=False,
             error=ConversionErrorInfo(
                 error_type="conversion_failed",
-                message=str(exc),
+                message="TIFF to Markdown conversion failed.",
                 diagnostic_code="IMG2MD-ERROR",
             ),
             diagnostics=[ConversionDiagnostic(level="error", message="TIFF to Markdown failed", code="IMG2MD-ERROR")],
@@ -329,7 +347,7 @@ class ImageToMarkdownConverter:
 
         artifacts: list[ArtifactManifest] = []
         source_format = source_format_from_context(context)
-        image_filename = sanitize_filename(f"{input_stem(input_path)}.{source_format}")
+        image_filename = sanitize_filename(f"{context.request.source_stem}.{source_format}")
 
         if source_format == "tif":
             return _convert_tiff_physical_pages(
@@ -354,11 +372,11 @@ class ImageToMarkdownConverter:
                     ocr_language=ocr_language,
                     current_locale=current_locale,
                 )
-            except Exception as exc:
-                outcome = OcrOutcome(OcrStatus.RECOGNITION_FAILED, message=str(exc))
+            except Exception:
+                outcome = OcrOutcome(OcrStatus.RECOGNITION_FAILED, message="")
 
             if message := format_ocr_best_effort_warning(outcome.status):
-                context.logger.warning(f"{message} {outcome.message}".rstrip())
+                context.logger.warning(message)
                 context.progress.report_diagnostic(
                     "warning",
                     message,
@@ -381,7 +399,7 @@ class ImageToMarkdownConverter:
                 if table_outcome.status is TableRecognitionStatus.SUCCESS:
                     table_markdown = table_outcome.markdown
                 if table_outcome.fallback_required:
-                    context.logger.warning(f"Table recognition failed: {table_outcome.message}")
+                    context.logger.warning("Table recognition failed")
                     context.progress.report_diagnostic(
                         "warning",
                         "Table structure recognition failed; plain OCR text was retained.",
@@ -443,7 +461,7 @@ class ImageToMarkdownConverter:
                     media_type=media_type_for(source_format),
                     export_semantics=export_semantics,
                 )
-                link = format_image_link(input_stem(input_path), target, style=image_style)
+                link = format_image_link(context.request.source_stem, target, style=image_style)
             elif keep_images:
                 image_staging_path = context.workspace.create_artifact_path("image", f".{source_format}")
                 shutil.copyfile(input_path, image_staging_path)
@@ -464,13 +482,13 @@ class ImageToMarkdownConverter:
                     link = format_sanitized_image_link(image_filename, style=image_style)
                 else:
                     target = normalize_link_target("./" + image_filename)
-                    link = format_image_link(input_stem(input_path), target, style=image_style)
+                    link = format_image_link(context.request.source_stem, target, style=image_style)
             else:
                 raise ValueError(f"Unexpected state: image_mode={image_mode!r}, keep_images={keep_images!r}")
 
             # ── Build Markdown ─────────────────────────────────────
             yaml_frontmatter = generate_basic_yaml_frontmatter(
-                input_stem(input_path),
+                context.request.source_stem,
                 extra={"source_format": source_format},
                 yaml_key_labels=options.get("yaml_key_labels"),
             )
@@ -481,7 +499,7 @@ class ImageToMarkdownConverter:
             # F-G1-005, F-G2-003: restored ocr_placement_mode support.
             if enable_ocr and ocr_placement_mode == "image_md":
                 # Build sidecar .md via shared core helper (image + OCR).
-                sidecar_stem = f"{input_stem(input_path)}_ocr"
+                sidecar_stem = f"{context.request.source_stem}_ocr"
                 sidecar_text, replacement_link = build_image_ocr_sidecar(
                     sidecar_stem=sidecar_stem,
                     source_format=source_format,
@@ -534,31 +552,30 @@ class ImageToMarkdownConverter:
                 yaml_extracted, _ = extract_yaml(md_text)
                 if not yaml_extracted:
                     _logger.warning("Generated Markdown has no parseable YAML front matter")
-                elif input_stem(input_path) not in yaml_extracted:
+                elif context.request.source_stem not in yaml_extracted:
                     _logger.warning("Generated YAML front matter may be malformed")
             except Exception:
-                _logger.warning("YAML front matter validation failed", exc_info=True)
+                _logger.warning("YAML front matter validation failed")
 
             md_path = context.workspace.create_artifact_path("primary", ".md")
             Path(md_path).write_text(md_text, encoding="utf-8")
-        except Exception as exc:
-            context.logger.error(f"Image to Markdown failed: {exc}")
+        except Exception:
+            context.logger.error("Image to Markdown failed")
+            message = "Image to Markdown conversion failed."
             return ConversionResult(
                 task_id=task_id,
                 success=False,
                 error=ConversionErrorInfo(
-                    error_type="conversion_failed", message=str(exc), diagnostic_code="IMG2MD-ERROR"
+                    error_type="conversion_failed", message=message, diagnostic_code="IMG2MD-ERROR"
                 ),
-                diagnostics=[
-                    ConversionDiagnostic(level="error", message=f"Image to Markdown failed: {exc}", code="IMG2MD-ERROR")
-                ],
+                diagnostics=[ConversionDiagnostic(level="error", message=message, code="IMG2MD-ERROR")],
             )
 
         md_artifact = ArtifactManifest(
             artifact_id=new_artifact_id(),
             kind="primary",
             staging_path=md_path,
-            suggested_name=f"{input_stem(input_path)}.md",
+            suggested_name=f"{context.request.source_stem}.md",
             media_type="text/markdown",
             metadata={
                 "image_mode": image_mode,

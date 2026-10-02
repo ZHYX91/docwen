@@ -19,8 +19,9 @@ import zipfile
 from bisect import bisect_right
 from collections.abc import Sequence
 from hashlib import sha256
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import IO, Any
+from urllib.parse import unquote, urlsplit
 from xml.etree import ElementTree
 
 import openpyxl
@@ -678,6 +679,96 @@ def _write_physical_page_xps(path: Path) -> None:
             archive.writestr(name, body)
 
 
+def _portable_physical_navigation_target(target: str, *, document: Path, staging_root: Path) -> Path:
+    url = urlsplit(target)
+    decoded = unquote(url.path)
+    if (
+        url.scheme
+        or url.netloc
+        or url.query
+        or url.fragment
+        or not decoded
+        or decoded.startswith(("/", "\\"))
+        or "\\" in decoded
+        or PureWindowsPath(decoded).drive
+    ):
+        raise RuntimeError(f"packaged_physical_page_navigation_not_portable:{target}")
+    resolved = (document.parent / decoded).resolve()
+    if not resolved.is_relative_to(staging_root.resolve()):
+        raise RuntimeError(f"packaged_physical_page_navigation_escapes_root:{target}")
+    return resolved
+
+
+def _physical_fragment_ocr_payload(
+    payload: bytes,
+    *,
+    fragment: dict[str, Any],
+    by_id: dict[str, dict[str, Any]],
+    resource_relations: list[dict[str, Any]],
+    staging_root: Path,
+) -> bytes:
+    """Separate portable image navigation from OCR text, checking its typed owner."""
+
+    owner_id = fragment["artifact_id"]
+    owned_paths = {
+        (staging_root / by_id[relation["source_artifact_id"]]["locator"]).resolve()
+        for relation in resource_relations
+        if relation.get("target_artifact_id") == owner_id
+    }
+    seen: set[Path] = set()
+
+    def remove_image(match: re.Match[str]) -> str:
+        target = match.group(1)
+        resolved = _portable_physical_navigation_target(
+            target, document=staging_root / fragment["locator"], staging_root=staging_root
+        )
+        if resolved not in owned_paths or resolved in seen:
+            raise RuntimeError(f"packaged_physical_page_fragment_image_invalid:{owner_id}:{target}")
+        seen.add(resolved)
+        return ""
+
+    text = re.sub(r"(?m)^!\[[^\]\r\n]*\]\(([^()\s]+)\)[ \t]*(?:\r?\n|$)", remove_image, payload.decode("utf-8"))
+    return text.strip().encode("utf-8")
+
+
+def _verify_tiff_navigation(
+    bundle: dict[str, Any], *, staging_root: Path, ocr_enabled: bool, keep_images: bool
+) -> None:
+    """Require ordered user navigation in addition to the machine's typed page facts."""
+
+    by_id = {item["artifact_id"]: item for item in bundle["artifacts"]}
+    primary = next(item for item in by_id.values() if item["kind"] == "document")
+    pages = sorted(
+        (item for item in bundle["relations"] if item["type"] == "fragment_of"),
+        key=lambda item: item["page_fragment"]["page_index"],
+    )
+    images = sorted(
+        (item for item in bundle["relations"] if item["type"] == "resource_of"),
+        key=lambda item: item.get("page_resource", {}).get("source_page", 0),
+    )
+
+    def check(document: dict[str, Any], expected: list[tuple[bool, str]]) -> None:
+        path = staging_root / document["locator"]
+        text = _read_text_with_long_path(path)
+        actual = [
+            (bool(embed), _portable_physical_navigation_target(target, document=path, staging_root=staging_root))
+            for embed, target in re.findall(r"(!?)\[[^\]\r\n]*\]\(([^()\s]+)\)", text)
+        ]
+        wanted = [(embed, (staging_root / by_id[item_id]["locator"]).resolve()) for embed, item_id in expected]
+        if actual != wanted:
+            raise RuntimeError(f"packaged_tiff_navigation_invalid:{document['artifact_id']}:{actual}:{wanted}")
+
+    check(primary, [(not ocr_enabled, item["source_artifact_id"]) for item in (pages if ocr_enabled else images)])
+    for page in pages:
+        page_id = page["source_artifact_id"]
+        expected_images = [
+            (True, item["source_artifact_id"])
+            for item in images
+            if keep_images and item["target_artifact_id"] == page_id
+        ]
+        check(by_id[page_id], expected_images)
+
+
 def _verify_physical_page_bundle(
     *,
     terminal: dict[str, Any],
@@ -688,6 +779,7 @@ def _verify_physical_page_bundle(
     ocr_enabled: bool,
     keep_images: bool,
     expected_statuses: tuple[str, ...] | None = None,
+    tiff_navigation: bool = False,
 ) -> dict[str, Any]:
     """Verify page facts without deriving P from the number of extracted resources."""
 
@@ -792,11 +884,18 @@ def _verify_physical_page_bundle(
         for relation, status in zip(page_relations, statuses, strict=True):
             fragment = by_id[relation["source_artifact_id"]]
             fragment_payload = _read_bytes_with_long_path(staging_root / Path(fragment["locator"]))
-            if status != "success" and fragment_payload:
+            ocr_payload = _physical_fragment_ocr_payload(
+                fragment_payload,
+                fragment=fragment,
+                by_id=by_id,
+                resource_relations=resource_relations,
+                staging_root=staging_root,
+            )
+            if status != "success" and ocr_payload:
                 raise RuntimeError(f"packaged_physical_page_empty_placeholder_invalid:{status}:{fragment}")
-            if status == "success" and not fragment_payload:
+            if status == "success" and not ocr_payload:
                 raise RuntimeError(f"packaged_physical_page_success_fragment_empty:{fragment}")
-            if fragment_payload and fragment_payload in primary_payload:
+            if ocr_payload and ocr_payload in primary_payload:
                 raise RuntimeError("packaged_physical_page_primary_duplicates_ocr_fragment")
     resolved_resource_pages: list[int] = []
     unresolved_resource_ids: list[str] = []
@@ -888,6 +987,8 @@ def _verify_physical_page_bundle(
         payload = _read_bytes_with_long_path(output_path)
         if len(payload) != artifact.get("size_bytes") or hashlib.sha256(payload).hexdigest() != artifact.get("sha256"):
             raise RuntimeError(f"packaged_physical_page_integrity_invalid:{artifact_id}")
+    if tiff_navigation:
+        _verify_tiff_navigation(bundle, staging_root=staging_root, ocr_enabled=ocr_enabled, keep_images=keep_images)
     return bundle
 
 
@@ -3209,7 +3310,7 @@ def _run_machine_protocol_smoke_impl(
             raise RuntimeError("packaged_physical_page_workspace_residue_after_task")
         return task_id_value, terminal_value, output_root
 
-    physical_results: list[tuple[str, dict[str, Any], Path, bool, bool, int, int, tuple[str, ...] | None]] = []
+    physical_results: list[tuple[str, dict[str, Any], Path, bool, bool, int, int, tuple[str, ...] | None, bool]] = []
     for ordinal, (ocr_enabled, keep_images) in enumerate(
         ((False, False), (False, True), (True, False), (True, True)),
         start=1,
@@ -3224,7 +3325,7 @@ def _run_machine_protocol_smoke_impl(
             inject_unresolved_resource=keep_images,
         )
         expected_statuses = ("success", "no_text", "recognition_failed", "success") if ocr_enabled else None
-        physical_results.append((*task_result, ocr_enabled, keep_images, 4, 5, expected_statuses))
+        physical_results.append((*task_result, ocr_enabled, keep_images, 4, 5, expected_statuses, False))
     for ordinal, (ocr_enabled, keep_images) in enumerate(
         ((False, False), (False, True), (True, False), (True, True)),
         start=5,
@@ -3238,7 +3339,7 @@ def _run_machine_protocol_smoke_impl(
             keep_images=keep_images,
         )
         expected_statuses = ("success", "no_text", "recognition_failed", "success") if ocr_enabled else None
-        physical_results.append((*task_result, ocr_enabled, keep_images, 4, 4, expected_statuses))
+        physical_results.append((*task_result, ocr_enabled, keep_images, 4, 4, expected_statuses, True))
     for ordinal, (capability_id, source_path, media_type) in enumerate(
         (
             ("convert.ofd.to_markdown", physical_ofd, "application/vnd.ofd"),
@@ -3254,7 +3355,7 @@ def _run_machine_protocol_smoke_impl(
             ocr_enabled=True,
             keep_images=False,
         )
-        physical_results.append((*task_result, True, False, 2, 0, None))
+        physical_results.append((*task_result, True, False, 2, 0, None, False))
 
     machine_stdin.close()
     return_code = process.wait(timeout=120)
@@ -3271,6 +3372,7 @@ def _run_machine_protocol_smoke_impl(
         page_count,
         resource_count,
         expected_statuses,
+        tiff_navigation,
     ) in physical_results:
         bundle = _verify_physical_page_bundle(
             terminal=physical_terminal,
@@ -3281,6 +3383,7 @@ def _run_machine_protocol_smoke_impl(
             ocr_enabled=ocr_enabled,
             keep_images=keep_images,
             expected_statuses=expected_statuses,
+            tiff_navigation=tiff_navigation,
         )
         primary = next(artifact for artifact in bundle["artifacts"] if artifact["kind"] == "document")
         primary_text = _read_text_with_long_path(physical_staging / Path(primary["locator"]))

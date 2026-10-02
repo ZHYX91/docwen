@@ -29,6 +29,7 @@ from scripts.release.publication_contract import (
     verify_origin,
 )
 from scripts.release.publication_http import GitHub, env_seconds
+from scripts.release.publication_platform import fetch_platform
 from scripts.release.publication_session import ReleaseSession, verify_candidate_jobs
 
 
@@ -144,7 +145,7 @@ def fetch_candidate(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="operation", required=True)
-    for operation in ("assemble", "fetch", "inspect", "publish", "verify"):
+    for operation in ("assemble", "fetch", "fetch-platform", "inspect", "publish", "verify"):
         command = subparsers.add_parser(operation)
         command.add_argument("--repository", required=True)
         command.add_argument("--version", required=True)
@@ -159,8 +160,10 @@ def main(argv: list[str] | None = None) -> int:
         else:
             command.add_argument("--artifact-id", type=int, required=True)
             command.add_argument("--artifact-digest", type=canonical_digest)
-        if operation in {"inspect", "publish", "verify"}:
+        if operation in {"fetch-platform", "inspect", "publish", "verify"}:
             command.add_argument("--receipt", type=Path, required=True)
+        if operation == "fetch-platform":
+            command.add_argument("--platform", choices=("windows", "linux"), required=True)
         if operation == "publish":
             command.add_argument("--notes", type=Path, required=True)
             command.add_argument("--resume-artifact-id", type=int)
@@ -183,6 +186,20 @@ def main(argv: list[str] | None = None) -> int:
                 source=args.source,
                 source_ref=args.source_ref,
             )
+        elif args.operation == "fetch-platform":
+            assert api is not None
+            result = fetch_platform(
+                api,
+                output=args.directory,
+                receipt=args.receipt,
+                artifact_id=args.artifact_id,
+                digest=args.artifact_digest,
+                repository=args.repository,
+                version=args.version,
+                commit=args.commit,
+                platform=args.platform,
+            )
+            print(json.dumps(result, ensure_ascii=False))
         elif args.operation == "fetch":
             assert api is not None
             fetch_candidate(
@@ -228,7 +245,7 @@ def main(argv: list[str] | None = None) -> int:
                     session.save(releaseId=release["id"])
                     result = session.verify_published()
             print(json.dumps(result, ensure_ascii=False))
-    except (PublicationError, OSError, ValueError, subprocess.SubprocessError) as error:
+    except (PublicationError, OSError, ValueError, zipfile.BadZipFile, subprocess.SubprocessError) as error:
         print(f"publication failed: {error}", file=sys.stderr)
         return 1
     return 0

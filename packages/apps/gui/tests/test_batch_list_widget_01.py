@@ -255,3 +255,33 @@ class TestConstruction:
         assert vm.current_category == "spreadsheet"
         assert categories[-1] == "spreadsheet"
         assert selections[-1] is None
+
+
+def test_open_selected_locations_emits_only_real_source_locations(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    from docwen_gui.view_models.batch_list_vm import BatchListViewModel
+    from docwen_gui.widgets.batch_list import BatchList
+
+    regular = tmp_path / "regular.md"
+    synthetic = tmp_path / "clipboard.md"
+    regular.write_text("# regular\n", encoding="utf-8")
+    synthetic.write_text("# synthetic\n", encoding="utf-8")
+    vm = BatchListViewModel()
+    vm.add_files(
+        [str(regular), str(synthetic)],
+        file_resolver=lambda path: {
+            "detected_format": "markdown",
+            "workflow_category": "markdown",
+            "source_location_available": Path(path) == regular,
+        },
+    )
+    widget = BatchList(vm)
+    qtbot.addWidget(widget)
+    emitted: list[tuple[str, str]] = []
+    widget.entry_action_requested.connect(lambda action, path: emitted.append((action, path)))
+
+    widget._open_selected_locations([str(regular), str(synthetic)])
+
+    assert emitted == [("open_source_location", str(regular))]

@@ -153,6 +153,9 @@ def create_runtime_port(
         event_callback=event_callback,
         config_loader=config_loader,
         capability_provider=lambda: build_runtime_capability_projection(registry.list_manifests()),
+        gui_capability_provider=lambda: build_runtime_capability_projection(
+            registry.list_manifests(), include_internal=True
+        ),
         output_manifest_writer=OutputManifestWriter(output_finalizer),
     )
     logger.info(

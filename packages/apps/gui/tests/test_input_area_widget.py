@@ -83,26 +83,61 @@ class TestConstruction:
         btn = widget.clear_button
         assert btn is not None
 
-    def test_action_buttons_share_minimum_geometry(self, widget: InputArea, qapp: QApplication) -> None:
+    def test_action_buttons_keep_full_text_and_horizontal_order(self, widget: InputArea, qapp: QApplication) -> None:
+        from PySide6.QtWidgets import QBoxLayout
+
         from docwen_gui.styles.design_tokens import Sizing
         from docwen_gui.widgets.input_area import _ACTION_BUTTON_MIN_WIDTH
 
         widget.resize(720, 480)
         widget.show()
         qapp.processEvents()
+        widget._sync_top_control_layout()
 
-        add_button = widget.add_button
-        clear_button = widget.clear_button
-        assert add_button.minimumWidth() == clear_button.minimumWidth() >= _ACTION_BUTTON_MIN_WIDTH
-        assert add_button.minimumHeight() == clear_button.minimumHeight() >= Sizing.CONTROL_HEIGHT
-        assert add_button.height() == clear_button.height() == widget.mode_switch.height()
+        buttons = (widget.add_button, widget.paste_button, widget.clear_button)
+        assert all(button.text() for button in buttons)
+        assert all(button.minimumWidth() >= _ACTION_BUTTON_MIN_WIDTH for button in buttons)
+        assert all(button.minimumHeight() >= Sizing.CONTROL_HEIGHT for button in buttons)
+        assert widget._top_layout.direction() == QBoxLayout.Direction.LeftToRight
+        assert widget._action_layout.direction() == QBoxLayout.Direction.LeftToRight
+        assert widget._mode_frame.geometry().right() < widget._action_frame.geometry().right()
 
-    def test_mode_switch_exists(self, widget: InputArea) -> None:
-        switch = widget.mode_switch
-        assert switch is not None
-        # SegmentedWidget.currentItem() returns a SegmentedItem, use text to verify
-        current = switch.currentItem()
-        assert current is not None
+    def test_mode_choices_are_vertical_and_fully_labelled(self, widget: InputArea, qapp: QApplication) -> None:
+        widget.resize(720, 480)
+        widget.show()
+        qapp.processEvents()
+
+        assert widget.single_mode_button.text()
+        assert widget.batch_mode_button.text()
+        assert widget.single_mode_button.geometry().bottom() < widget.batch_mode_button.geometry().top()
+        assert widget.single_mode_button.isChecked()
+        assert not widget.batch_mode_button.isChecked()
+
+    def test_narrow_or_long_localized_controls_reflow_without_collapsing_text(
+        self, widget: InputArea, qapp: QApplication
+    ) -> None:
+        from PySide6.QtWidgets import QBoxLayout
+
+        labels = {
+            widget.add_button: "Add a document from the computer",
+            widget.paste_button: "Paste Markdown text from the clipboard",
+            widget.clear_button: "Clear all current input items",
+        }
+        for control, text in labels.items():
+            control.setText(text)
+            font = control.font()
+            font.setPixelSize(22)
+            control.setFont(font)
+
+        widget.resize(360, 520)
+        widget.show()
+        qapp.processEvents()
+        widget._sync_top_control_layout()
+        qapp.processEvents()
+
+        assert widget._top_layout.direction() == QBoxLayout.Direction.TopToBottom
+        assert all(control.text() == text for control, text in labels.items())
+        assert all(control.minimumWidth() >= control.sizeHint().width() for control in labels)
 
     def test_empty_state_shows_supported_formats(self, widget: InputArea) -> None:
         type_labels = widget.findChildren(QLabel, "fileDropTypesTypeLabel")
@@ -296,15 +331,16 @@ class TestConstruction:
 
 class TestModeSwitch:
     def test_default_mode_single(self, widget: InputArea) -> None:
-        current = widget.mode_switch.currentItem()
-        assert current is not None
         assert widget.view_model.mode == "single"
+        assert widget.single_mode_button.isChecked()
+        assert not widget.batch_mode_button.isChecked()
 
-    def test_switch_to_batch(self, widget: InputArea) -> None:
+    def test_switch_to_batch(self, widget: InputArea, qapp: QApplication) -> None:
         widget.view_model.set_mode("batch")
-        current = widget.mode_switch.currentItem()
-        assert current is not None
+        qapp.processEvents()
         assert widget.view_model.mode == "batch"
+        assert widget.batch_mode_button.isChecked()
+        assert not widget.single_mode_button.isChecked()
 
 
 # ── Drag-and-drop MIME acceptance ─────────────────────────────────────
@@ -570,8 +606,8 @@ class TestViewModelWiring:
 
     def test_mode_changed_updates_switch(self, widget: InputArea) -> None:
         widget.view_model.set_mode("batch")
-        current = widget.mode_switch.currentItem()
-        assert current is not None
+        assert widget.batch_mode_button.isChecked()
+        assert not widget.single_mode_button.isChecked()
         assert widget.view_model.mode == "batch"
 
     def test_selection_message_visible(self, widget: InputArea) -> None:

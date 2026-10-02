@@ -1165,10 +1165,9 @@ class ConversionPanel(QWidget):
         self._compress_btn_group.idToggled.connect(self._on_compress_mode_changed)
 
         # Size limit row
-        size_control = QWidget(self)
-        size_layout = QHBoxLayout(size_control)
-        size_layout.setContentsMargins(0, 0, 0, 0)
-        set_metric(size_layout, "setSpacing", _SPACING_SM)
+        size_control = ChoiceGroup(self, responsive=True, spacing=_SPACING_SM)
+        size_layout = size_control.content_layout
+        size_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         size_edit = QLineEdit(str(self._vm.size_limit), self)
         size_edit.setEnabled(is_limit)

@@ -118,6 +118,7 @@ _INPUT_AREA_KEYS = frozenset(
         "components.file_drop.batch_mode",
         "components.file_drop.single_mode",
         "components.file_drop.add_button",
+        "components.file_drop.paste_button",
         "components.file_drop.clear_button",
         "components.file_drop.add_file_action",
         "components.file_drop.add_folder_action",

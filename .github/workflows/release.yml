@@ -256,6 +256,17 @@ jobs:
           echo "Candidate artifact ID: $ARTIFACT_ID" >> "$GITHUB_STEP_SUMMARY"
           echo "Candidate artifact digest: $ARTIFACT_DIGEST" >> "$GITHUB_STEP_SUMMARY"
           echo "Verify mode leaves this candidate unpublished for selected host acceptance. Publish reuses its exact artifact ID." >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload small manifest for selected-platform acceptance
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: docwen-publication-metadata-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            publication/candidate.json
+            publication/SHA256SUMS.txt
+          compression-level: 0
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 30
 
   publish:
     needs: [identity, verify-release]

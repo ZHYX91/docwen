@@ -85,7 +85,7 @@ class TestGuiCancellationExecution:
         # production ``resolve_chain('doc', 'md')`` selects preconversion.
         window.view_model._file_inspector = lambda _path: admitted_doc
         monkeypatch.setattr("docwen_core.detection.inspect_file", lambda _path: admitted_doc)
-        monkeypatch.setattr("docwen_core.detection._validation.inspect_file", lambda _path: admitted_doc)
+        monkeypatch.setattr("docwen_core.detection._validation.inspect_file", lambda _path, **_kwargs: admitted_doc)
         monkeypatch.setattr(
             "docwen_application.preconversion.pre_converter.pre_convert",
             fake_pre_convert,

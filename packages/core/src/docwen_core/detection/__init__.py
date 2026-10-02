@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from docwen_core.detection._sniffing import (
     SUPPORTED_EXTENSION_FORMATS,
+    delimited_text_encodings,
     detect_content_format,
 )
 from docwen_core.detection._validation import (
@@ -19,6 +20,9 @@ from docwen_core.detection._validation import (
     enforce_file_admission,
     has_supported_filename_declaration,
     inspect_file,
+    inspect_structured_clipboard_snapshot,
+    inspect_utf8_markdown_snapshot,
+    reinspect_frozen_file,
 )
 from docwen_core.detection.ooxml_signature import (
     OOXML_SIGNATURE_DERIVED_OUTPUT_UNSIGNED,
@@ -41,12 +45,16 @@ __all__ = [
     "FileAdmissionPathError",
     "OoxmlSignatureInfo",
     "admission_error_type",
+    "delimited_text_encodings",
     "detect_content_format",
     "enforce_file_admission",
     "freeze_ooxml_signature_info",
     "has_supported_filename_declaration",
     "inspect_file",
     "inspect_ooxml_signature_graph",
+    "inspect_structured_clipboard_snapshot",
+    "inspect_utf8_markdown_snapshot",
+    "reinspect_frozen_file",
     "signature_derived_output_diagnostic",
     "signature_info_for_ref",
     "signature_validation_diagnostic",

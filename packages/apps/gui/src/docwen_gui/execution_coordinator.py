@@ -22,7 +22,8 @@ from docwen_gui.view_models._runtime_route_filter import (
 
 if TYPE_CHECKING:
     from docwen_application.controller import ApplicationController
-    from docwen_core.models.request import ConversionRequest
+    from docwen_core.models.request import ConversionRequest, OutputPolicy
+    from docwen_gui.clipboard_inputs import ClipboardSnapshotBundle
     from docwen_gui.execution_presenter import ExecutionPresenter
     from docwen_gui.execution_requests import ExecutionRequestBuilder
     from docwen_gui.qt_bridge.execution_supervisor import ExecutionSupervisor
@@ -54,6 +55,9 @@ class ExecutionCoordinator(QObject):
         presenter: ExecutionPresenter,
         history: TaskHistory,
         confirm_request: Callable[[ConversionRequest], bool],
+        prepare_output_policy: (
+            Callable[[Sequence[str], Literal["single", "batch", "aggregate"], OutputPolicy], OutputPolicy | None] | None
+        ) = None,
         parent: QObject,
     ) -> None:
         super().__init__(parent)
@@ -65,6 +69,7 @@ class ExecutionCoordinator(QObject):
         self._results = presenter
         self._task_history = history
         self._confirm_request = confirm_request
+        self._prepare_output_policy = prepare_output_policy or (lambda _paths, _mode, policy: policy)
         self._context: dict[str, Any] = {}
         self.started_at: float | None = None
         self._accepting = True
@@ -154,6 +159,10 @@ class ExecutionCoordinator(QObject):
             return
         target_format, choice = resolved
         try:
+            output_policy = self._requests.output_policy()
+            output_policy = self._prepare_output_policy(file_paths, mode, output_policy)
+            if output_policy is None:
+                return
             if mode == "single":
                 request, context = self._requests.single(
                     file_path=file_paths[0],
@@ -161,6 +170,7 @@ class ExecutionCoordinator(QObject):
                     action_name=action_name,
                     options=options,
                     route_options=choice.options,
+                    output_policy=output_policy,
                 )
             else:
                 build = self._requests.batch if mode == "batch" else self._requests.aggregate
@@ -170,6 +180,7 @@ class ExecutionCoordinator(QObject):
                     action_name=action_name,
                     options=options,
                     route_options=choice.options,
+                    output_policy=output_policy,
                 )
         except OutputPolicyConfigError:
             self._report_output_policy_config_error()
@@ -177,7 +188,21 @@ class ExecutionCoordinator(QObject):
         except ValueError as exc:
             self._info_area_vm.add_message(str(exc), "warning")
             return
-        if not self._admit(request, context) or not self._accepting:
+        document_group_requests = tuple(context.pop("_document_group_requests", ()))
+        clipboard_bundles = tuple(context.pop("_clipboard_bundles", ()))
+        if document_group_requests and mode != "batch":
+            raise ValueError("document-group execution is only valid for batch mode")
+        admission_requests = document_group_requests or (request,)
+        pending_invalid_indices: set[int] = set()
+        if (
+            not self._admit_many(
+                request,
+                admission_requests,
+                context,
+                invalid_indices=pending_invalid_indices if document_group_requests else None,
+            )
+            or not self._accepting
+        ):
             return
         task_id = request.request_id
 
@@ -213,6 +238,9 @@ class ExecutionCoordinator(QObject):
             project_reserved_execution=project_reserved_execution,
             aggregate_action_name=action_name if mode == "aggregate" else "",
             batch_execution=mode == "batch",
+            document_group_requests=document_group_requests,
+            clipboard_bundles=clipboard_bundles,
+            pending_invalid_indices=frozenset(pending_invalid_indices),
         )
 
     def _preflight_notice(
@@ -313,6 +341,9 @@ class ExecutionCoordinator(QObject):
         project_reserved_execution: Callable[[], None],
         aggregate_action_name: str = "",
         batch_execution: bool = False,
+        document_group_requests: tuple[ConversionRequest, ...] = (),
+        clipboard_bundles: tuple[ClipboardSnapshotBundle, ...] = (),
+        pending_invalid_indices: frozenset[int] = frozenset(),
     ) -> bool:
         """Project an owned request; the supervisor owns reservation and cleanup."""
         if not self._accepting:
@@ -335,17 +366,41 @@ class ExecutionCoordinator(QObject):
             on_reserved=on_reserved,
             aggregate_action_name=aggregate_action_name,
             batch_execution=batch_execution,
+            document_group_requests=document_group_requests,
+            clipboard_bundles=clipboard_bundles,
+            pending_invalid_indices=pending_invalid_indices,
         )
 
     def _admit(self, request: ConversionRequest, context: dict[str, Any]) -> bool:
         """Project rejected attempts through the same result and history as worker failures."""
+        return self._admit_many(request, (request,), context)
+
+    def _admit_many(
+        self,
+        parent_request: ConversionRequest,
+        requests: tuple[ConversionRequest, ...],
+        context: dict[str, Any],
+        *,
+        invalid_indices: set[int] | None = None,
+    ) -> bool:
+        """Confirm every frozen document group while reporting one parent operation."""
+
         try:
-            return self._confirm_request(request)
+            for index, request in enumerate(requests):
+                try:
+                    if not self._confirm_request(request):
+                        # A user's declined confirmation cancels the operation.
+                        return False
+                except ExecutionAdmissionError:
+                    if invalid_indices is None:
+                        raise
+                    invalid_indices.add(index)
+            return True
         except ExecutionAdmissionError as exc:
             self.started_at = time.monotonic()
             self._context = dict(context)
             self._info_area_vm.begin_task(
-                operation_id=request.request_id,
+                operation_id=parent_request.request_id,
                 current_file=context.get("display_name", Path(context.get("file_path", "")).name),
                 total_count=int(context.get("total_count", 1)),
             )
@@ -371,9 +426,14 @@ class ExecutionCoordinator(QObject):
         current_file = ""
         if context.get("batch"):
             task_id = str(payload.get("task_id", ""))
+            source_labels = context.get("source_labels", {})
             for index, path in enumerate(paths):
                 if task_id == f"{operation_id}-{index}":
-                    current_file = Path(path).name
+                    current_file = (
+                        str(source_labels.get(path) or Path(path).name)
+                        if isinstance(source_labels, dict)
+                        else Path(path).name
+                    )
                     break
         percent = payload.get("percent")
         completed = int(payload.get("completed_count", 0))

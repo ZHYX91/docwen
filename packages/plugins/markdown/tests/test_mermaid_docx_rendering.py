@@ -46,14 +46,16 @@ def test_mermaid_image_mode_embeds_png_instead_of_visible_source() -> None:
     assert renderer.warnings == ()
 
 
-def test_mermaid_image_failure_falls_back_to_code_with_warning() -> None:
-    def fail(_source: str) -> bytes:
-        raise RuntimeError("renderer unavailable")
+@pytest.mark.parametrize("has_source", [False, True])
+def test_mermaid_image_failure_falls_back_to_code_with_warning(tmp_path, caplog, has_source) -> None:
+    def fail(source: str) -> bytes:
+        raise RuntimeError("renderer unavailable: " + source)
 
     renderer = MdToDocxRenderer(
         Document(),
         mermaid_mode="image",
         mermaid_render=fail,
+        source_file_path=str(tmp_path / "ordinary.md") if has_source else None,
     )
 
     paragraph = renderer._handle_block_code(_mermaid_node())
@@ -61,7 +63,13 @@ def test_mermaid_image_failure_falls_back_to_code_with_warning() -> None:
 
     assert paragraph.text == "graph TD\nA-->B"
     assert renderer.warnings[0][0] == "MD2DOCX-MERMAID-FALLBACK"
-    assert "renderer unavailable" in renderer.warnings[0][1]
+    if has_source:
+        assert "renderer unavailable" in renderer.warnings[0][1]
+    else:
+        assert "RuntimeError" in renderer.warnings[0][1]
+        assert "renderer unavailable" not in renderer.warnings[0][1]
+        assert "graph TD" not in repr(renderer.warnings)
+        assert "graph TD" not in caplog.text
 
 
 def test_non_mermaid_fence_never_calls_mermaid_renderer() -> None:

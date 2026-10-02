@@ -16,11 +16,12 @@ def _pipeline_conversion_identity(request: Any, task_id: str) -> Any:
 
     from docwen_core.models import FILE_INSPECTION_METADATA_KEY
     from docwen_core.models.document_node import ConversionIdentity
+    from docwen_core.models.file_ref import source_presentation_name
 
     source = next((ref for ref in request.input_refs if ref.input_role == "source"), request.input_refs[0])
     inspection = source.metadata.get(FILE_INSPECTION_METADATA_KEY)
     source_sha256 = str(inspection.get("content_sha256") or "") if isinstance(inspection, dict) else ""
-    source_name = Path(source.logical_path or source.path).name
+    source_name = source_presentation_name(source)
     return ConversionIdentity.create(
         task_id=task_id,
         source_stem=Path(source_name).stem or "document",

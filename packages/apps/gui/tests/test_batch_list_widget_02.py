@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from html import unescape
+
 from ._batch_list_widget_support import (
     _BATCH_SCAN_LIMIT,
     CATEGORY_ORDER,
@@ -300,9 +302,11 @@ class TestBatchEntryItemWidget:
         assert path_value is not None
         assert not entry_widget.path_row.isHidden()
         source_directory = _source_path_text("/test/doc.docx")
-        assert path_value.toolTip() == source_directory
+        assert unescape(path_value.toolTip().removeprefix("<qt>").removesuffix("</qt>")) == source_directory
         assert path_value.accessibleName() == source_directory
-        assert entry_widget.name_label.toolTip() == "/test/doc.docx"
+        assert (
+            unescape(entry_widget.name_label.toolTip().removeprefix("<qt>").removesuffix("</qt>")) == "/test/doc.docx"
+        )
         assert entry_widget.name_label.accessibleDescription() == "/test/doc.docx"
 
     def test_pending_entry_uses_sequence_marker(self, entry_widget: BatchEntryItemWidget) -> None:
@@ -336,7 +340,7 @@ class TestBatchEntryItemWidget:
 
             assert path_value.text() != source_directory
             assert "…" in path_value.text()
-            assert path_value.toolTip() == source_directory
+            assert unescape(path_value.toolTip().removeprefix("<qt>").removesuffix("</qt>")) == source_directory
             assert path_value.accessibleName() == source_directory
         finally:
             widget.deleteLater()
@@ -572,3 +576,33 @@ class TestSixTabs:
             assert attached == paths
         finally:
             widget.deleteLater()
+
+
+def test_user_text_tooltips_escape_markup_controls_and_bound_length(qtbot) -> None:
+    from docwen_gui.widgets.elided_label import MiddleElidedLabel
+
+    authored = "<b>secret & literal</b>\x00" + ("x" * 900)
+    label = MiddleElidedLabel(authored)
+    qtbot.addWidget(label)
+    assert label.toolTip().startswith("<qt>")
+    assert "<b>" not in label.toolTip()
+    assert "&lt;b&gt;" in label.toolTip()
+    assert "\x00" not in label.toolTip()
+    assert len(label.toolTip()) < 700
+
+    entry = BatchFileEntry(
+        file_path="/managed/opaque.md",
+        file_name="Clipboard Markdown 1.md",
+        detected_format="markdown",
+        workflow_category="markdown",
+        source_preview=authored,
+        source_location_available=False,
+    )
+    widget = BatchEntryItemWidget(entry)
+    qtbot.addWidget(widget)
+    tooltip = widget.name_label.toolTip()
+    assert tooltip.startswith("<qt>")
+    assert "<b>" not in tooltip
+    assert "&lt;b&gt;" in tooltip
+    assert "\x00" not in tooltip
+    assert len(tooltip) < 700

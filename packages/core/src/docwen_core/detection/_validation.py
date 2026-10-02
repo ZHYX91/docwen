@@ -1,8 +1,9 @@
 """Canonical file inspection, validation, and admission decisions.
 
 The suffix is treated as a declaration, never as content evidence. A declared
-CSV/TSV parser may resolve neutral text that validates as a single column; it
-cannot override distinctive content detected in another format. Every
+CSV/TSV parser may resolve neutral text that validates as a single column or
+one strict multi-column record; it cannot override distinctive content detected
+in another format. Every
 application ingress should call :func:`inspect_file` once and carry the result
 forward with the request instead of independently guessing a route.
 """
@@ -20,6 +21,7 @@ from docwen_core.detection._sniffing import (
     SUPPORTED_EXTENSION_FORMATS,
     detect_content_format,
     matches_single_column_declaration,
+    matches_single_record_delimited_declaration,
 )
 from docwen_core.detection.ooxml_signature import (
     inspect_ooxml_signature_graph,
@@ -27,12 +29,17 @@ from docwen_core.detection.ooxml_signature import (
 )
 from docwen_core.errors import ValidationError
 from docwen_core.formats.categories import get_category, get_media_type
+from docwen_core.models.clipboard_document import (
+    CLIPBOARD_DOCUMENT_FORMAT,
+    load_clipboard_document_bytes,
+)
 from docwen_core.models.file_inspection import (
     FILE_ADMISSION_ACCEPTANCE_METADATA_KEY,
     FILE_INSPECTION_METADATA_KEY,
     AdmissionDecision,
     ContentDetection,
     DetectionConfidence,
+    DetectionMethod,
     FileInspection,
     FormatRelation,
     StructureStatus,
@@ -279,7 +286,10 @@ def inspect_file(file_path: str, *, cancel_check: Callable[[], None] | None = No
     declared_category = get_category(declared_format)
     declared_supported = extension in _SUPPORTED_EXTENSIONS
     detection = detect_content_format(str(io_path))
-    if detection.format == "txt" and matches_single_column_declaration(str(io_path), declared_format):
+    if detection.format == "txt" and (
+        matches_single_column_declaration(str(io_path), declared_format)
+        or matches_single_record_delimited_declaration(str(io_path), declared_format)
+    ):
         detection = replace(detection, format=declared_format, confidence=DetectionConfidence.PROBABLE)
     encrypted_ooxml_container = detection.format == ENCRYPTED_OOXML_CONTAINER_FORMAT
     if encrypted_ooxml_container and declared_format in _ENCRYPTED_OOXML_FORMATS:
@@ -366,6 +376,139 @@ def inspect_file(file_path: str, *, cancel_check: Callable[[], None] | None = No
     return inspection
 
 
+def inspect_utf8_markdown_snapshot(
+    file_path: str,
+    *,
+    cancel_check: Callable[[], None] | None = None,
+) -> FileInspection:
+    """Inspect an explicitly synthetic UTF-8 Markdown snapshot.
+
+    This is a narrow producer contract for text already supplied by a user as
+    plain clipboard text. It does not alter generic content sniffing. The
+    backing file must still be a regular .md file, decode completely as UTF-8,
+    contain non-whitespace text, and retain the same filesystem identity
+    throughout validation.
+    """
+
+    inspection = inspect_file(file_path, cancel_check=cancel_check)
+    if inspection.declared_format != "markdown":
+        raise ValueError("Synthetic Markdown snapshots require a .md declaration.")
+
+    io_path = filesystem_path(Path(inspection.file_path))
+    expected_identity = (
+        inspection.device_id,
+        inspection.inode,
+        inspection.ctime_ns,
+        inspection.mtime_ns,
+        inspection.size_bytes,
+    )
+    has_content = False
+    with io_path.open("r", encoding="utf-8", errors="strict", newline="") as stream:
+        while chunk := stream.read(_HASH_CHUNK_SIZE):
+            if cancel_check is not None:
+                cancel_check()
+            if not chunk.isspace():
+                has_content = True
+    if not has_content:
+        raise ValueError("Synthetic Markdown snapshot must contain non-whitespace text.")
+    if _file_identity(io_path.stat()) != expected_identity:
+        raise OSError(f"File changed while it was being inspected: {file_path}")
+
+    return replace(
+        inspection,
+        detected_format="markdown",
+        detected_category=get_category("markdown"),
+        workflow_category="markdown",
+        detection_method=DetectionMethod.SYNTHETIC_MARKDOWN,
+        confidence=DetectionConfidence.CERTAIN,
+        structure_status=StructureStatus.NOT_APPLICABLE,
+        relation=FormatRelation.EXACT_MATCH,
+        decision=AdmissionDecision.ALLOW,
+        detected_supported=True,
+        warning_code="",
+        warning_message="",
+        reason_code="",
+        reason_message="",
+        warnings=(),
+    )
+
+
+def inspect_structured_clipboard_snapshot(
+    file_path: str,
+    *,
+    cancel_check: Callable[[], None] | None = None,
+) -> FileInspection:
+    """Validate one managed recursive clipboard-document snapshot.
+
+    Generic inspection never calls this function. The GUI producer must opt in
+    explicitly, so ordinary JSON or text files cannot acquire this format.
+    """
+
+    resolved = str(Path(file_path).expanduser().resolve(strict=False))
+    public_path = Path(resolved)
+    io_path = filesystem_path(public_path)
+    if not io_path.is_file():
+        raise FileNotFoundError(f"File not found: {file_path}")
+    stat_before = io_path.stat()
+    identity = _file_identity(stat_before)
+    digest = hashlib.sha256()
+    payload = bytearray()
+    with io_path.open("rb") as stream:
+        while chunk := stream.read(_HASH_CHUNK_SIZE):
+            if cancel_check is not None:
+                cancel_check()
+            digest.update(chunk)
+            payload.extend(chunk)
+    load_clipboard_document_bytes(bytes(payload))
+    stat_after = io_path.stat()
+    if _file_identity(stat_after) != identity:
+        raise OSError(f"File changed while it was being inspected: {file_path}")
+    category = get_category(CLIPBOARD_DOCUMENT_FORMAT)
+    return FileInspection(
+        file_path=resolved,
+        size_bytes=stat_after.st_size,
+        mtime_ns=stat_after.st_mtime_ns,
+        extension=public_path.suffix.lower(),
+        declared_format=CLIPBOARD_DOCUMENT_FORMAT,
+        declared_category=category,
+        detected_format=CLIPBOARD_DOCUMENT_FORMAT,
+        detected_category=category,
+        workflow_category=category,
+        detection_method=DetectionMethod.STRUCTURED_CLIPBOARD,
+        confidence=DetectionConfidence.CERTAIN,
+        structure_status=StructureStatus.VALID,
+        relation=FormatRelation.EXACT_MATCH,
+        decision=AdmissionDecision.ALLOW,
+        declared_supported=True,
+        detected_supported=True,
+        device_id=stat_after.st_dev,
+        inode=stat_after.st_ino,
+        ctime_ns=stat_after.st_ctime_ns,
+        content_sha256=digest.hexdigest(),
+    )
+
+
+def reinspect_frozen_file(
+    file_path: str,
+    frozen: FileInspection,
+    *,
+    cancel_check: Callable[[], None] | None = None,
+) -> FileInspection:
+    """Repeat the inspection method represented by one frozen ingress fact.
+
+    Generic files keep the canonical content-first inspector. Explicit managed
+    clipboard Markdown snapshots keep their narrow UTF-8 Markdown producer
+    contract. Callers remain responsible for comparing the complete returned
+    fact with the frozen fact when exact identity is required.
+    """
+
+    if frozen.detection_method is DetectionMethod.SYNTHETIC_MARKDOWN:
+        return inspect_utf8_markdown_snapshot(file_path, cancel_check=cancel_check)
+    if frozen.detection_method is DetectionMethod.STRUCTURED_CLIPBOARD:
+        return inspect_structured_clipboard_snapshot(file_path, cancel_check=cancel_check)
+    return inspect_file(file_path, cancel_check=cancel_check)
+
+
 def has_supported_filename_declaration(file_path: str) -> bool:
     """Return whether the filename declaration is accepted by file pickers.
 
@@ -397,8 +540,28 @@ def enforce_file_admission(request: Any) -> Any:
         if _path_traverses_link_or_junction(lexical_path):
             raise FileAdmissionPathError(lexical_path)
         current_path = str(lexical_path.expanduser().resolve(strict=False))
-        inspection = inspect_file(current_path)
+        synthetic_markdown = (
+            isinstance(raw, dict) and raw.get("detection_method") == DetectionMethod.SYNTHETIC_MARKDOWN.value
+        )
+        structured_clipboard = (
+            isinstance(raw, dict) and raw.get("detection_method") == DetectionMethod.STRUCTURED_CLIPBOARD.value
+        )
+        if synthetic_markdown:
+            inspection = inspect_utf8_markdown_snapshot(current_path)
+        elif structured_clipboard:
+            inspection = inspect_structured_clipboard_snapshot(current_path)
+        else:
+            inspection = inspect_file(current_path)
         canonical_fact = inspection.to_dict()
+        if (synthetic_markdown or structured_clipboard) and raw != canonical_fact:
+            raise FileAdmissionError(
+                replace(
+                    inspection,
+                    decision=AdmissionDecision.BLOCK,
+                    reason_code="FILE_SYNTHETIC_INPUT_CHANGED",
+                    reason_message="Managed synthetic snapshot changed after admission.",
+                )
+            )
         if not isinstance(raw, dict) or raw != canonical_fact:
             metadata[FILE_INSPECTION_METADATA_KEY] = canonical_fact
             metadata.pop(FILE_ADMISSION_ACCEPTANCE_METADATA_KEY, None)
@@ -437,4 +600,7 @@ __all__ = [
     "enforce_file_admission",
     "has_supported_filename_declaration",
     "inspect_file",
+    "inspect_structured_clipboard_snapshot",
+    "inspect_utf8_markdown_snapshot",
+    "reinspect_frozen_file",
 ]

@@ -394,3 +394,31 @@ def test_settings_short_window_keeps_navigation_and_confirmation_reachable(qtbot
         assert button.isVisible()
         assert dialog.rect().contains(button.mapTo(dialog, button.rect().bottomRight()))
     dialog.close()
+
+
+def test_batch_progress_uses_synthetic_logical_name_instead_of_backing_path(main_window) -> None:
+    backing = "/managed/session/clipboard-opaque.md"
+    label = "Clipboard Markdown 7.md"
+    main_window._workflow._context = {
+        "request_id": "clipboard-batch",
+        "batch": True,
+        "file_paths": [backing],
+        "source_labels": {backing: label},
+    }
+    main_window._info_area_vm.begin_task(
+        operation_id="clipboard-batch",
+        current_file="Batch",
+        total_count=1,
+    )
+
+    main_window._workflow.progress(
+        {
+            "operation_id": "clipboard-batch",
+            "task_id": "clipboard-batch-0",
+            "percent": 25,
+            "completed_count": 0,
+        }
+    )
+
+    assert main_window._info_area_vm.task_summary.current_file == label
+    assert "clipboard-opaque.md" not in main_window._info_area_vm.task_summary.current_file

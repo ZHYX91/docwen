@@ -15,6 +15,7 @@ from docwen_gui.qt_bridge.execution import ExecutionThread
 if TYPE_CHECKING:
     from docwen_application.controller import ApplicationController
     from docwen_core.models.request import ConversionRequest
+    from docwen_gui.clipboard_inputs import ClipboardSnapshotBundle
     from docwen_gui.view_models.main_window_vm import MainWindowViewModel
 
 
@@ -25,13 +26,22 @@ class ExecutionSupervisor(QObject):
     result, cancellation request or startup error never destroys a live thread.
     """
 
-    result_ready = Signal(object, dict)
-    failed = Signal(str, dict)
+    result_ready = Signal(object, object)
+    failed = Signal(str, object)
     warning = Signal(str)
 
-    def __init__(self, view_model: MainWindowViewModel, parent: QObject) -> None:
+    def __init__(
+        self,
+        view_model: MainWindowViewModel,
+        parent: QObject,
+        *,
+        retain_inputs: Callable[[str, tuple[str, ...]], None] | None = None,
+        release_inputs: Callable[[str], None] | None = None,
+    ) -> None:
         super().__init__(parent)
         self._view_model = view_model
+        self._retain_inputs = retain_inputs or (lambda _owner, _paths: None)
+        self._release_inputs = release_inputs or (lambda _owner: None)
         self._threads: dict[str, QThread] = {}
         self._owners: dict[QThread, tuple[str, ApplicationController, object]] = {}
         self._starting = False
@@ -54,6 +64,9 @@ class ExecutionSupervisor(QObject):
         on_reserved: Callable[[], None],
         aggregate_action_name: str = "",
         batch_execution: bool = False,
+        document_group_requests: tuple[ConversionRequest, ...] = (),
+        clipboard_bundles: tuple[ClipboardSnapshotBundle, ...] = (),
+        pending_invalid_indices: frozenset[int] = frozenset(),
     ) -> bool:
         if self.busy:
             self.warning.emit(
@@ -70,9 +83,9 @@ class ExecutionSupervisor(QObject):
         self._starting = True
         try:
             reservation = controller.prepare_execution_cancellation(request, batch=batch_execution)
-            self._view_model.reserve_execution_inputs(
-                task_id, tuple(context.get("file_paths") or [context.get("file_path", "")])
-            )
+            input_paths = tuple(context.get("file_paths") or [context.get("file_path", "")])
+            self._view_model.reserve_execution_inputs(task_id, input_paths)
+            self._retain_inputs(task_id, input_paths)
             on_reserved()
             thread = ExecutionThread(
                 controller=controller,
@@ -80,6 +93,9 @@ class ExecutionSupervisor(QObject):
                 context=context,
                 aggregate_action_name=aggregate_action_name,
                 batch_execution=batch_execution,
+                document_group_requests=document_group_requests,
+                clipboard_bundles=clipboard_bundles,
+                pending_invalid_indices=pending_invalid_indices,
                 parent=self,
             )
             thread.result_signal.connect(self.result_ready)
@@ -103,6 +119,7 @@ class ExecutionSupervisor(QObject):
                 return True
             self._threads.pop(task_id, None)
             self._view_model.release_execution_inputs(task_id)
+            self._release_inputs(task_id)
             if thread is not None:
                 self._owners.pop(thread, None)
             if reservation is not reservation_missing:
@@ -152,4 +169,5 @@ class ExecutionSupervisor(QObject):
         finally:
             self._threads.pop(task_id, None)
             self._view_model.release_execution_inputs(task_id)
+            self._release_inputs(task_id)
             thread.deleteLater()

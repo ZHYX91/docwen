@@ -11,6 +11,7 @@ are protected by ``QMutex`` or use ``Signal`` with ``Qt.QueuedConnection``.
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -51,6 +52,18 @@ class FileAddOutcome:
 
     added: tuple[FileRef, ...]
     rejected: tuple[tuple[str, str], ...]
+
+
+@dataclass(frozen=True)
+class _InspectionIntent:
+    path: str
+    inspector: Callable[[str], FileInspection] | None
+
+
+@dataclass(frozen=True)
+class _InspectionCompletion:
+    paths: tuple[str, ...]
+    callback: Callable[[FileAddOutcome], None]
 
 
 def _read_default_mode(controller: Any | None) -> str:
@@ -130,11 +143,17 @@ class MainWindowViewModel(QObject):
         parent: QObject | None = None,
         *,
         file_inspector: Callable[[str], FileInspection] | None = None,
+        retain_inspection_inputs: Callable[[str, tuple[str, ...]], None] | None = None,
+        release_inspection_inputs: Callable[[str], None] | None = None,
     ) -> None:
         super().__init__(parent)
         self._controller = controller
         self._file_inspector = file_inspector
-        self._pending_inspection_paths: list[str] = []
+        self._retain_inspection_inputs = retain_inspection_inputs or (lambda _owner, _paths: None)
+        self._release_inspection_inputs = release_inspection_inputs or (lambda _owner: None)
+        self._pending_inspection_intents: list[_InspectionIntent] = []
+        self._pending_inspection_completions: list[_InspectionCompletion] = []
+        self._inspection_sequence = 0
         self._inspection = BackgroundOperation(self)
         self._inspection.busy_changed.connect(self._inspection_busy_changed)
         self._mutex = QMutex()
@@ -254,29 +273,64 @@ class MainWindowViewModel(QObject):
     def inspection_busy(self) -> bool:
         return self._inspection.busy
 
+    def set_inspection_ownership(
+        self,
+        *,
+        retain: Callable[[str, tuple[str, ...]], None],
+        release: Callable[[str], None],
+    ) -> None:
+        """Bind physical inspection leases before interactive input begins."""
+        if self.inspection_busy:
+            raise RuntimeError("cannot replace inspection ownership while inspection is active")
+        self._retain_inspection_inputs = retain
+        self._release_inspection_inputs = release
+
+    @staticmethod
+    def _inspection_key(path: str) -> str:
+        return os.path.normcase(os.path.abspath(os.fspath(path)))
+
     def cancel_inspection(self) -> None:
-        self._pending_inspection_paths = []
+        self._pending_inspection_intents = []
+        self._pending_inspection_completions = []
         self._inspection.cancel()
 
-    def _inspect_paths(self, paths: list[str], token: CancellationToken) -> list[tuple[str, FileInspection | None]]:
+    def _inspect_intents(
+        self,
+        intents: list[_InspectionIntent],
+        token: CancellationToken,
+    ) -> list[tuple[str, FileInspection | None]]:
         from docwen_core.detection import inspect_file
 
         inspected: list[tuple[str, FileInspection | None]] = []
-        for path in paths:
+        for intent in intents:
             token.check()
             try:
                 inspection = (
-                    self._file_inspector(path)
-                    if self._file_inspector is not None
-                    else inspect_file(path, cancel_check=token.check)
+                    intent.inspector(intent.path)
+                    if intent.inspector is not None
+                    else inspect_file(intent.path, cancel_check=token.check)
                 )
-                inspected.append((path, inspection))
+                inspected.append((intent.path, inspection))
             except (ValueError, OSError):
-                inspected.append((path, None))
+                inspected.append((intent.path, None))
         return inspected
 
-    def request_files(self, paths: list[str], completed: Callable[[FileAddOutcome], None] | None = None) -> None:
-        """Inspect interactive inputs off-thread and commit only the latest request."""
+    @classmethod
+    def _scope_add_outcome(cls, outcome: FileAddOutcome, paths: tuple[str, ...]) -> FileAddOutcome:
+        keys = {cls._inspection_key(path) for path in paths}
+        return FileAddOutcome(
+            added=tuple(ref for ref in outcome.added if cls._inspection_key(ref.path) in keys),
+            rejected=tuple(item for item in outcome.rejected if cls._inspection_key(item[0]) in keys),
+        )
+
+    def request_files(
+        self,
+        paths: list[str],
+        completed: Callable[[FileAddOutcome], None] | None = None,
+        *,
+        file_inspector: Callable[[str], FileInspection] | None = None,
+    ) -> None:
+        """Inspect interactive inputs off-thread while preserving each input's intent."""
         paths = list(dict.fromkeys(path for path in paths if path))
         if not paths:
             return
@@ -285,18 +339,47 @@ class MainWindowViewModel(QObject):
             if completed is not None:
                 completed(outcome)
             return
+
+        requested = [
+            _InspectionIntent(path, file_inspector if file_inspector is not None else self._file_inspector)
+            for path in paths
+        ]
+        completions = [_InspectionCompletion(tuple(paths), completed)] if completed is not None else []
         if self.mode == "batch":
-            paths = list(dict.fromkeys([*self._pending_inspection_paths, *paths]))
-        self._pending_inspection_paths = paths
+            merged: dict[str, _InspectionIntent] = {
+                self._inspection_key(intent.path): intent for intent in self._pending_inspection_intents
+            }
+            for intent in requested:
+                merged[self._inspection_key(intent.path)] = intent
+            intents = list(merged.values())
+            completion_intents = [*self._pending_inspection_completions, *completions]
+        else:
+            intents = requested
+            completion_intents = completions
+
+        self._pending_inspection_intents = intents
+        self._pending_inspection_completions = completion_intents
+        self._inspection_sequence += 1
+        owner = f"input-inspection-{self._inspection_sequence}"
+        owner_paths = tuple(intent.path for intent in intents)
+        self._retain_inspection_inputs(owner, owner_paths)
         self.set_status_message(_t("components.file_drop.inspecting"))
 
         def apply(inspected: Any, error: Exception | None) -> None:
-            self._pending_inspection_paths = []
-            outcome = self._apply_inspections(inspected if error is None else [(path, None) for path in paths])
-            if completed is not None:
-                completed(outcome)
+            self._pending_inspection_intents = []
+            self._pending_inspection_completions = []
+            actual: list[tuple[str, FileInspection | None]] = (
+                inspected if error is None else [(intent.path, None) for intent in intents]
+            )
+            outcome = self._apply_inspections(actual)
+            for completion in completion_intents:
+                completion.callback(self._scope_add_outcome(outcome, completion.paths))
 
-        self._inspection.submit(lambda token: self._inspect_paths(paths, token), apply)
+        self._inspection.submit(
+            lambda token: self._inspect_intents(intents, token),
+            apply,
+            finalized=lambda: self._release_inspection_inputs(owner),
+        )
 
     def add_files(self, paths: list[str]) -> FileAddOutcome:
         """Synchronously admit files for noninteractive setup and smoke probes."""
@@ -304,7 +387,8 @@ class MainWindowViewModel(QObject):
         paths = list(dict.fromkeys(path for path in paths if path))
         if self._reserved_inputs or (self.mode == "single" and len(paths) != 1):
             return self._apply_inspections([(path, None) for path in paths])
-        return self._apply_inspections(self._inspect_paths(paths, CancellationToken()))
+        intents = [_InspectionIntent(path, self._file_inspector) for path in paths]
+        return self._apply_inspections(self._inspect_intents(intents, CancellationToken()))
 
     def _apply_inspections(self, inspected: list[tuple[str, FileInspection | None]]) -> FileAddOutcome:
         """Commit inspected data on the owning thread, checking current reservations."""

@@ -212,7 +212,7 @@ def process_single_embed(
                 image_scope=image_scope,
             )
         # Data URI failed to decode — treat as not-found
-        logger.warning("Data URI image decode failed; link=%s...", link_target[:60])
+        logger.warning("Data URI image decode failed")
         if image_mode == EmbeddedImageMode.KEEP:
             return original_link
         if image_mode == EmbeddedImageMode.EXTRACT_TEXT:
@@ -233,7 +233,7 @@ def process_single_embed(
     if (normalized_target.startswith("//") and not is_raw_unc) or (
         parsed_target.scheme and parsed_target.scheme.lower() != "file" and not is_windows_drive
     ):
-        logger.warning("Remote embed targets are not local capabilities: %s", link_target)
+        logger.warning("Remote embed target is not a local capability")
         # Remote resources are a distinct unsupported capability, not a
         # missing local file.  This branch intentionally does not consult the
         # local not-found policy: embed mode must leave an explicit,
@@ -252,9 +252,9 @@ def process_single_embed(
         file_path_part, heading, block_id = parse_anchor(normalized_target)
 
     if heading:
-        logger.debug("Detected heading embed: %s#%s", file_path_part, heading)
+        logger.debug("Detected heading embed")
     elif block_id:
-        logger.debug("Detected block-id embed: %s#^%s", file_path_part, block_id)
+        logger.debug("Detected block-id embed")
 
     # ── 3. Resolve file path ──────────────────────────────────────────
     resolved_path = resolve_file_path(
@@ -266,11 +266,7 @@ def process_single_embed(
     )
 
     if resolved_path is None:
-        logger.warning(
-            "File not found for embed: %s (source: %s)",
-            link_target,
-            Path(source_file_path).name,
-        )
+        logger.warning("Embed target was not found (source_context=%s)", bool(source_file_path))
         if on_not_found in {"ignore", "keep"}:
             return _unresolved_embed_output(original_link, link_target, on_not_found)
         # placeholder
@@ -281,17 +277,13 @@ def process_single_embed(
             desc += f"#^{block_id}"
         return f"[File not found: {desc}]"
 
-    logger.debug(
-        "Resolved path: %s → %s",
-        file_path_part or link_target,
-        resolved_path,
-    )
+    logger.debug("Resolved embed target")
 
     # ── 4. Route by file type ─────────────────────────────────────────
     file_type = get_file_type(resolved_path)
 
     if file_type == "image":
-        logger.info("Dispatching image embed: %s", Path(resolved_path).name)
+        logger.info("Dispatching image embed")
         return process_embedded_image(
             resolved_path,
             original_link,
@@ -303,7 +295,7 @@ def process_single_embed(
         )
 
     if file_type == "markdown":
-        logger.info("Dispatching Markdown embed: %s", Path(resolved_path).name)
+        logger.info("Dispatching Markdown embed")
         if md_mode_enum == EmbeddedMdMode.KEEP:
             # The dispatcher still resolves the target first so the independent
             # not-found policy applies, but an existing file in keep mode must
@@ -337,11 +329,7 @@ def process_single_embed(
 
     # Unknown content type — caller decides.  Keep the user-authored suffix in
     # the log only as diagnostic context; it was not used for dispatch.
-    logger.warning(
-        "Unsupported content for embed: %s (declared_ext=%s)",
-        resolved_path,
-        Path(resolved_path).suffix,
-    )
+    logger.warning("Resolved embed content is unsupported")
     return None
 
 
@@ -426,7 +414,7 @@ def resolve_embedded_links(
     if not content:
         return content
 
-    source_file_path = str(Path(source_file_path).resolve())
+    source_file_path = str(Path(source_file_path).resolve()) if source_file_path else ""
     visited_files.add(source_file_path)
 
     # Build a closure that calls *this* function recursively so that nested
@@ -490,7 +478,7 @@ def resolve_embedded_links(
         else:
             display_text, width, height = _parse_embed_display(raw_display)
 
-        logger.debug("Found wiki embed: %s", original_link)
+        logger.debug("Found wiki embed")
 
         replacement = process_single_embed(
             link_target=link_target,

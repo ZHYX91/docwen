@@ -259,7 +259,7 @@ def _main_with_guard_active(argv: list[str] | None = None) -> int:
     from docwen_gui.release_smoke import _schedule_test_conversion_report
     from docwen_gui.settings_smoke import _schedule_test_settings_report
     from docwen_runtime.config import ConfigLoader
-    from docwen_runtime.profile_paths import profile_instance_name
+    from docwen_runtime.profile_paths import current_profile_paths, profile_instance_name
 
     args = argv if argv is not None else sys.argv
     app_name = profile_instance_name()
@@ -289,6 +289,7 @@ def _main_with_guard_active(argv: list[str] | None = None) -> int:
         controller=controller,
         task_event_bridge=task_event_bridge,
         initial_files=decision.files_to_add,
+        clipboard_input_root=str(current_profile_paths().data_dir / "clipboard-inputs"),
     )
 
     control_server: object | None = None

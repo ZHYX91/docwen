@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from hashlib import sha256
+
 from ._image_conversions_support import (
     PROJECT_ROOT,
     Any,
@@ -222,6 +224,34 @@ class TestImageMergeToTiff:
             assert result.error.diagnostic_code == "IMG2TIFF-ERROR"
             assert "notanimage.png" in result.error.message
             assert "Failed to load image" in result.error.message
+            assert str(tmp_path) not in result.error.message
+
+    @pytest.mark.contract
+    def test_merge_managed_decode_failure_does_not_expose_backing_name(self, tmp_path: Path) -> None:
+        from docwen_core.models.file_ref import (
+            MANAGED_INPUT_SHA256_METADATA_KEY,
+            MANAGED_INPUT_SIZE_BYTES_METADATA_KEY,
+        )
+        from docwen_plugin_image.merge.converter import ImageToTiffMerger
+
+        bad_path = tmp_path / "BACKING_NAME_PRIVATE_294e.png"
+        payload = b"not an image"
+        bad_path.write_bytes(payload)
+        staging = tmp_path / "staging"
+        staging.mkdir()
+        context = _build_fake_context(str(bad_path), str(staging), "tif", action_name="merge_images_to_tiff")
+        context.request.input_refs[0].metadata.update(
+            {
+                MANAGED_INPUT_SHA256_METADATA_KEY: sha256(payload).hexdigest(),
+                MANAGED_INPUT_SIZE_BYTES_METADATA_KEY: len(payload),
+            }
+        )
+        result = ImageToTiffMerger().convert(context)
+        assert not result.success and result.error is not None
+        assert result.error.message == "Image merge to TIFF failed."
+        messages = [result.error.message, *(item.message for item in result.diagnostics)]
+        assert all(str(tmp_path) not in message and bad_path.name not in message for message in messages)
+        assert result.artifacts == []
 
     @pytest.mark.contract
     def test_merge_initializes_heic_decoder_without_a_prior_conversion(

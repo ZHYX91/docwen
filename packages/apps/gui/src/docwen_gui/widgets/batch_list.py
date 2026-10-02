@@ -66,7 +66,7 @@ from docwen_gui.styles.theme_semantics import apply_theme_class
 from docwen_gui.styles.ui_scale import dp, set_metric
 from docwen_gui.widgets.value_controls import ScrollSafeComboBox
 
-from .elided_label import MiddleElidedLabel
+from .elided_label import MiddleElidedLabel, safe_tooltip_text
 from .location_button import LocationButton
 from .output_file_row import OutputFileRow
 from .panel_card import WrappingLabel
@@ -543,9 +543,11 @@ class BatchEntryItemWidget(QWidget):
         # Name
         self.name_label.setText(_soft_wrap_filename(entry.file_name))
         self.name_label.set_file_path(entry.file_path)
-        self.name_label.setToolTip(entry.file_path)
+        self.name_label.setEnabled(entry.source_location_available)
+        source_description = entry.source_preview or entry.file_path
+        self.name_label.setToolTip(safe_tooltip_text(source_description))
         self.name_label.setAccessibleName(entry.file_name)
-        self.name_label.setAccessibleDescription(entry.file_path)
+        self.name_label.setAccessibleDescription(source_description)
 
         # Info badge
         size_str = _format_size(entry.size_bytes)
@@ -571,7 +573,9 @@ class BatchEntryItemWidget(QWidget):
         self.badge_strip.setVisible(bool(format_notice))
 
         # Body rows
-        self._set_row_text(self.path_row, "", _source_path_text(entry.file_path))
+        source_path_text = _source_path_text(entry.file_path) if entry.source_location_available else ""
+        self._set_row_text(self.path_row, "", source_path_text)
+        self.open_location_button.setVisible(entry.source_location_available and bool(source_path_text))
         detail_text = self._get_detail_text(entry)
         detail_label = self._get_detail_label_text(entry)
         self._set_row_text(self.detail_row, detail_label, detail_text)
@@ -651,6 +655,8 @@ class BatchEntryItemWidget(QWidget):
             return entry.skip_reason
         if entry.warning_message:
             return render_remaining_file_warnings(entry) if render_file_format_notice(entry) else entry.warning_message
+        if entry.source_preview:
+            return entry.source_preview
         return ""
 
     def _get_detail_label_text(self, entry: BatchFileEntry) -> str:
@@ -663,6 +669,8 @@ class BatchEntryItemWidget(QWidget):
             return _t("components.file_drop.status.skipped", "Skipped")
         if entry.warning_message and render_file_format_notice(entry) and not render_remaining_file_warnings(entry):
             return ""
+        if entry.source_preview:
+            return _t("components.file_drop.clipboard_preview_label", "Preview")
         return _t("editors.common.description", "Description")
 
     def _apply_detail_tone(self, entry: BatchFileEntry) -> None:
@@ -1951,15 +1959,23 @@ class BatchList(QWidget):
             _action_remove.triggered.connect(lambda _checked=False, paths=selected: self._remove_selected(paths))
             _action_remove.setEnabled(all(self._vm.can_remove_file(path) for path in selected))
             set_action_icon(_action_remove, "delete.svg")
-            _action_open = menu.addAction(
-                _t(
-                    "components.file_drop.batch_list.action_open_selected_locations",
-                    "Open Selected Locations ({count})",
-                    count=len(selected),
-                ),
-            )
-            _action_open.triggered.connect(lambda _checked=False, paths=selected: self._open_selected_locations(paths))
-            set_action_icon(_action_open, "open_folder.svg")
+            locatable = [
+                path
+                for path in selected
+                if (entry := self._vm.get_file_entry(path)) is not None and entry.source_location_available
+            ]
+            if locatable:
+                _action_open = menu.addAction(
+                    _t(
+                        "components.file_drop.batch_list.action_open_selected_locations",
+                        "Open Selected Locations ({count})",
+                        count=len(locatable),
+                    ),
+                )
+                _action_open.triggered.connect(
+                    lambda _checked=False, paths=locatable: self._open_selected_locations(paths)
+                )
+                set_action_icon(_action_open, "open_folder.svg")
 
         menu.exec(list_widget.mapToGlobal(position))
 
@@ -1969,7 +1985,9 @@ class BatchList(QWidget):
 
     def _open_selected_locations(self, paths: list[str]) -> None:
         for path in paths:
-            self.entry_action_requested.emit("open_source_location", path)
+            entry = self._vm.get_file_entry(path)
+            if entry is not None and entry.source_location_available:
+                self.entry_action_requested.emit("open_source_location", path)
 
     # ── Public helpers ───────────────────────────────────────────────────
 

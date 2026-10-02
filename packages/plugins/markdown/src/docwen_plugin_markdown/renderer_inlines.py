@@ -1048,11 +1048,14 @@ def _resolve_image_path(src: str, source_dir: Path | None) -> Path:
             file_path = f"//{parsed.netloc}{file_path}"
         elif re.match(r"^/[A-Za-z]:/", file_path):
             file_path = file_path[1:]
-        return Path(file_path)
-    if src.startswith("//") or parsed.scheme:
+        path = Path(file_path)
+    elif src.startswith("//") or parsed.scheme:
         raise ValueError(f"remote image target is not a local path: {src}")
-    path = Path(unquote(parsed.path))
-    if not path.is_absolute() and source_dir is not None:
+    else:
+        path = Path(unquote(parsed.path))
+    if not path.is_absolute():
+        if source_dir is None:
+            raise ValueError("relative image target has no source directory")
         path = source_dir / path
     return path.resolve()
 
@@ -1069,7 +1072,7 @@ def _paragraph_usable_width_emu(paragraph) -> int | None:
             return max(0, int(cell_width) - (2 * int(Pt(5.4))))
         return page_usable
     except Exception as exc:
-        logger.debug("Could not determine paragraph image width: %s", exc)
+        logger.debug("Could not determine paragraph image width: %s", type(exc).__name__)
         return None
 
 

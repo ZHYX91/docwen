@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from docwen_core.models import (
@@ -19,6 +21,7 @@ from docwen_gui.path_identity import normalize_path
 if TYPE_CHECKING:
     from docwen_core.models.file_ref import FileRef
     from docwen_core.models.request import ConversionRequest
+    from docwen_gui.clipboard_inputs import ClipboardSnapshotBundle
     from docwen_gui.view_models.batch_list_vm import BatchListViewModel
     from docwen_gui.view_models.main_window_vm import MainWindowViewModel
 
@@ -27,21 +30,172 @@ class ExecutionAdmissionError(RuntimeError):
     """A localized reason why a requested execution cannot start."""
 
 
+def _managed_resource_integrity(ref: FileRef) -> None:
+    from docwen_core.models.file_ref import (
+        MANAGED_INPUT_SHA256_METADATA_KEY,
+        MANAGED_INPUT_SIZE_BYTES_METADATA_KEY,
+        MANAGED_RESOURCE_ID_METADATA_KEY,
+    )
+
+    resource_id = ref.metadata.get(MANAGED_RESOURCE_ID_METADATA_KEY)
+    expected_size = ref.metadata.get(MANAGED_INPUT_SIZE_BYTES_METADATA_KEY)
+    expected_sha = ref.metadata.get(MANAGED_INPUT_SHA256_METADATA_KEY)
+    if (
+        ref.input_role != "linked_resource"
+        or ref.input_kind != "resource"
+        or not isinstance(resource_id, str)
+        or not resource_id
+        or type(expected_size) is not int
+        or expected_size < 0
+        or not isinstance(expected_sha, str)
+        or len(expected_sha) != 64
+    ):
+        raise ExecutionAdmissionError(_t("main_window.file_admission_invalid", "File inspection data is invalid."))
+
+    path = Path(ref.path)
+    try:
+        if path.is_symlink() or not path.is_file():
+            raise FileNotFoundError(ref.path)
+        is_junction = getattr(path, "is_junction", None)
+        if callable(is_junction) and is_junction():
+            raise OSError("managed resource must not be a junction")
+        stat = path.stat()
+        if stat.st_size != expected_size:
+            raise ValueError("managed resource size changed")
+        digest = hashlib.sha256()
+        with path.open("rb") as stream:
+            while chunk := stream.read(1024 * 1024):
+                digest.update(chunk)
+        if digest.hexdigest() != expected_sha:
+            raise ValueError("managed resource hash changed")
+    except FileNotFoundError as exc:
+        raise ExecutionAdmissionError(
+            _t("main_window.file_admission_missing", "The input file no longer exists: {path}", path=ref.path)
+        ) from exc
+    except OSError as exc:
+        raise ExecutionAdmissionError(
+            _t("main_window.file_admission_unreadable", "The input file cannot be read: {path}", path=ref.path)
+        ) from exc
+    except ValueError as exc:
+        raise ExecutionAdmissionError(
+            _t(
+                "main_window.file_admission_changed",
+                "The file changed after it was added. Remove it from the list and add it again to re-check the file, then retry.",
+            )
+        ) from exc
+
+
+def _validate_structured_resource_group(request: ConversionRequest) -> None:
+    from docwen_core.models.clipboard_document import (
+        ClipboardDocumentError,
+        load_clipboard_document_bytes,
+        validate_clipboard_resource_refs,
+    )
+
+    resources = tuple(ref for ref in request.input_refs if ref.input_role == "linked_resource")
+    structured_sources = tuple(
+        ref for ref in request.input_refs if ref.input_role == "source" and ref.format == "clipboard_document"
+    )
+    if not resources and not structured_sources:
+        return
+    if len(structured_sources) != 1 or any(
+        ref.input_role not in {"source", "linked_resource"} for ref in request.input_refs
+    ):
+        raise ExecutionAdmissionError(_t("main_window.file_admission_invalid", "File inspection data is invalid."))
+    source = structured_sources[0]
+    try:
+        document = load_clipboard_document_bytes(Path(source.path).read_bytes())
+        validate_clipboard_resource_refs(document, resources)
+    except FileNotFoundError as exc:
+        raise ExecutionAdmissionError(
+            _t("main_window.file_admission_missing", "The input file no longer exists: {path}", path=source.path)
+        ) from exc
+    except OSError as exc:
+        raise ExecutionAdmissionError(
+            _t("main_window.file_admission_unreadable", "The input file cannot be read: {path}", path=source.path)
+        ) from exc
+    except (ClipboardDocumentError, TypeError, ValueError) as exc:
+        raise ExecutionAdmissionError(
+            _t("main_window.file_admission_invalid", "File inspection data is invalid.")
+        ) from exc
+
+
+def check_frozen_clipboard_bundles(request: ConversionRequest, bundles: tuple[ClipboardSnapshotBundle, ...]) -> None:
+    """Match each GUI structured group to its original immutable Store facts."""
+    from docwen_core.models.file_ref import (
+        MANAGED_INPUT_SHA256_METADATA_KEY,
+        MANAGED_INPUT_SIZE_BYTES_METADATA_KEY,
+        MANAGED_RESOURCE_ID_METADATA_KEY,
+    )
+    from docwen_gui.clipboard_inputs import clipboard_bundle_available
+
+    for source in request.input_refs:
+        if source.input_role == "linked_resource" or source.format != "clipboard_document":
+            continue
+        matched = [bundle for bundle in bundles if normalize_path(bundle.main.path) == normalize_path(source.path)]
+        if len(matched) != 1 or not clipboard_bundle_available(matched[0]):
+            raise ExecutionAdmissionError(_t("main_window.file_admission_invalid", "File inspection data is invalid."))
+        expected = [
+            (
+                normalize_path(item.path),
+                item.resource_id,
+                item.logical_path,
+                item.media_type,
+                item.size_bytes,
+                item.sha256,
+            )
+            for item in matched[0].resources
+        ]
+        actual = [
+            (
+                normalize_path(ref.path),
+                ref.metadata.get(MANAGED_RESOURCE_ID_METADATA_KEY),
+                ref.logical_path,
+                ref.media_type,
+                ref.metadata.get(MANAGED_INPUT_SIZE_BYTES_METADATA_KEY),
+                ref.metadata.get(MANAGED_INPUT_SHA256_METADATA_KEY),
+            )
+            for ref in request.input_refs
+            if ref.input_role == "linked_resource"
+        ]
+        if actual != expected:
+            raise ExecutionAdmissionError(_t("main_window.file_admission_invalid", "File inspection data is invalid."))
+
+
 def check_frozen_request(request: ConversionRequest) -> None:
     """Revalidate exact ingress bytes on the execution worker before conversion."""
-    from docwen_core.detection import inspect_file
+    from docwen_core.detection import reinspect_frozen_file
 
     for ref in request.input_refs:
+        if ref.input_role == "linked_resource":
+            _managed_resource_integrity(ref)
+            continue
         raw_inspection = ref.metadata.get(FILE_INSPECTION_METADATA_KEY)
+        if not isinstance(raw_inspection, dict):
+            raise ExecutionAdmissionError(
+                _t(
+                    "main_window.file_admission_invalid",
+                    "File inspection data is invalid.",
+                )
+            )
         try:
-            inspection = inspect_file(ref.path)
+            frozen = FileInspection.from_dict(raw_inspection)
+            inspection = reinspect_frozen_file(ref.path, frozen)
         except FileNotFoundError as exc:
             raise ExecutionAdmissionError(
-                _t("main_window.file_admission_missing", "The input file no longer exists: {path}", path=ref.path)
+                _t(
+                    "main_window.file_admission_missing",
+                    "The input file no longer exists: {path}",
+                    path=ref.path,
+                )
             ) from exc
         except OSError as exc:
             raise ExecutionAdmissionError(
-                _t("main_window.file_admission_unreadable", "The input file cannot be read: {path}", path=ref.path)
+                _t(
+                    "main_window.file_admission_unreadable",
+                    "The input file cannot be read: {path}",
+                    path=ref.path,
+                )
             ) from exc
         except (TypeError, ValueError) as exc:
             raise ExecutionAdmissionError(
@@ -54,6 +208,7 @@ def check_frozen_request(request: ConversionRequest) -> None:
                     "The file changed after it was added. Remove it from the list and add it again to re-check the file, then retry.",
                 )
             )
+    _validate_structured_resource_group(request)
 
 
 class ExecutionAdmission:
@@ -67,6 +222,9 @@ class ExecutionAdmission:
     def pending(request: ConversionRequest) -> list[tuple[FileRef, FileInspection]]:
         pending: list[tuple[FileRef, FileInspection]] = []
         for ref in request.input_refs:
+            if ref.input_role == "linked_resource":
+                _managed_resource_integrity(ref)
+                continue
             raw_inspection = ref.metadata.get(FILE_INSPECTION_METADATA_KEY)
             if not isinstance(raw_inspection, dict):
                 raise ExecutionAdmissionError(
@@ -85,6 +243,7 @@ class ExecutionAdmission:
                 )
             if not admission_is_satisfied(inspection, ref.metadata):
                 pending.append((ref, inspection))
+        _validate_structured_resource_group(request)
         return pending
 
     def accept(self, pending: list[tuple[FileRef, FileInspection]]) -> None:

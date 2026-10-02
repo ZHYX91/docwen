@@ -82,11 +82,17 @@ When native acceptance must precede merging and publication, select the candidat
 
 For independent hosted verification, use `operation=verify` with the candidate `artifact_id` and a selected ref pointing to its source commit. For an interrupted publication, use `operation=publish`, that same candidate ID and the saved `docwen-publication-progress-RUN-ATTEMPT` ID in `resume_artifact_id`. The IDs retrieve their transport digests from GitHub; there is no manual version, run lookup or digest copying. The previous progress owner must have completed. Uncertain tag, draft, upload or publish writes are reconciled by reading before further action. Exact published releases are read-only; matching drafts upload only missing assets. Do not rerun build jobs to recover publication. A manual `publish` without an artifact ID performs the normal build chain from the selected ref and still requires default-branch acceptance before publication.
 
+For a local host, prefer `publication.py fetch-platform --platform windows` (or `linux`) with the same `--repository`, `--version`, `--commit`, `--artifact-id`, `--directory` and `--receipt` arguments. The workflow uploads a small `docwen-publication-metadata-RUN-ATTEMPT` artifact containing the attested `candidate.json` and checksums. The command resolves only the exact producer run/attempt's metadata and platform artifact IDs, checks every required producer job, verifies archive digests and the selected package against the full manifest, and verifies provenance. It downloads no other platform or aggregate archive. Missing metadata fails explicitly; there is no silent full-download fallback.
+
+An existing complete platform directory is reusable: the command rechecks its bytes, current remote identities, jobs and provenance without downloading it again. Corrupt, partial or mixed directories fail without overwriting files. A `docwen-platform-candidate-v1` receipt proves only the selected platform identity, not native acceptance or a complete publication inventory. Reuse those same bytes across selected GUI and consumer checks. `fetch`/`inspect`, cloud publication and independent hosted verification retain their full-inventory checks; a platform-only directory cannot pass them. All local materialization still requires a caller-owned, leased directory.
+
 Transient reads use bounded backoff and honor Retry-After; the default 60-second recovery budget and 600-second upload/artifact-download ceilings can be raised for slow transports with `DOCWEN_PUBLICATION_READ_BUDGET`, `DOCWEN_PUBLICATION_DATA_TIMEOUT` and `DOCWEN_PUBLICATION_ARTIFACT_TIMEOUT`. Permission, source, inventory and hash conflicts stop immediately.
 
 在默认分支已接纳的提交推送数字版本标签，同一次运行完成统一 CI、每平台一次构建、候选签证、immutable 发布和一次独立资产下载回验。需先做原生验收时，在候选分支手动运行 `verify` 且不填 artifact ID，只构建候选，不写标签或 Release；用 `fetch` 和 `inspect` 生成身份回执，验收并合并后，以仍指向该候选源码的分支/标签运行 `publish` 并填写同一候选 ID。发布前确认源码已被默认分支接纳：相同提交、祖先提交，或 squash/rebase 后完整 Git tree 相同。标签始终指向实际构建源码，原始 `sourceRef` 保留用于来源验证，不能把旧产物冒充新提交构建。
 
 手动 `verify` 填候选 ID 是公开 Release 的只读回验。发布中断后用 `publish`、同一候选 ID 和原进度 `resume_artifact_id` 恢复；原所有者必须结束，结果不明的写入先读回核实，精确已发布资产不再写入，匹配草稿只补缺项。真实宿主验收按每版变更范围选择，单独记录证据，不增加永久人工审批门。
+
+本机原生验收优先使用 `publication.py fetch-platform --platform windows`（或 `linux`），并提供同样的 repository、version、commit、artifact-id、directory、receipt 参数。只在指定候选的精确运行及 attempt 内解析小型元数据附件和平台包，核验所有生产任务、归档摘要、完整清单中的所选包身份和来源证明，不下载其他平台或全量归档。缺少元数据时明确失败，不自动改成全量下载。完整本地目录可经重验后复用，损坏、部分下载或混杂目录拒绝覆盖。平台回执只证明所选包身份；真实交互仍需另验，完整发布及公开回验保持全资产门禁。所有本地物化仍须进入调用者持有租约的受管目录。
 
 ### Independent MSIX channel / 独立 MSIX 渠道
 

@@ -405,6 +405,7 @@ def build_runtime_capability_projection(
     *,
     platform_id: str | None = None,
     egress_guard_status: Mapping[str, object] | None = None,
+    include_internal: bool = False,
 ) -> dict[str, Any]:
     """Build the protocol-facing capability matrix for one loaded runtime.
 
@@ -428,6 +429,8 @@ def build_runtime_capability_projection(
     referenced_gates: set[str] = set()
     for manifest in sorted(manifests, key=lambda item: item.plugin_id):
         for route in manifest.routes:
+            if route.visibility == "internal" and not include_internal:
+                continue
             route_specs.append((manifest, route))
             _platforms, required, optional, _limitations = _matching_contract(manifest, route)
             referenced_gates.update(required)

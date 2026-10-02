@@ -5,6 +5,37 @@
 
 ## Unreleased / 未发布
 
+## 0.15.0 (2026-10-02)
+
+- Make TIFF Markdown results navigable: show preserved frames when OCR is off, or link ordered OCR pages and their images when OCR is on. Preserve links through result-directory relocation.
+- 修复 TIFF 转 Markdown 首选笔记正文为空：关闭 OCR 时直接显示保留的帧图片，开启 OCR 时链接有序分页及其图片，结果目录重定位后链接仍有效。
+- Import copied local files through the existing admission and deduplication rules. Single-file mode rejects multi-file input without replacing the current input and offers an explicit switch using the captured file list.
+- Preserve ordered clipboard text and reliable basic or complex tables, including empty cells, leading zeros, line breaks, merged cells and nested tables. Keep complete plain text with diagnostics when structure cannot be bound reliably, and provide plain-only paste.
+- Support standalone clipboard images and verified embedded images from supported Office representations. Preserve image positions and repeated-image identities; retain visible placeholders for missing or unsupported resources. Output semantics follow each format's documented capabilities.
+- Prevent input action buttons from overlapping during window resize, large-font use and UI scaling; retain full labels and one native menu arrow. Use generic clipboard-content wording when choosing the output folder for text, tables or images.
+- Populate structured-clipboard generation targets from their actual Runtime routes, expose MD export without requiring a template, and limit mixed batches to common targets.
+- 复制本地文件走统一准入与去重规则；单文件模式拒绝多文件并保留原输入，可按本次捕获列表明确切换至批量添加。
+- 粘贴内容保留正文与可靠表格顺序，支持空单元格、前导零、换行、合并和嵌套表格；无法可靠绑定时完整保留纯文本并提示，提供“仅粘贴文本”。
+- 支持直接复制的图片及受支持 Office 表示中经验证的内嵌图片绑定，保留图片位置与重复资源身份；缺失或不支持资源显示占位，各输出格式按其能力呈现。
+- 修复大字号、界面缩放和窗口重排时输入区操作按钮重叠，保留完整文字及单个原生菜单箭头；文本、表格和图片共用的输出文件夹提示统一称为“剪贴板内容”。
+- 结构化剪贴板输入按实际 Runtime 路线列出目标，提供无需模板的 MD 导出；混合批次仅显示共同支持的目标。
+
+- Add explicit GUI clipboard Markdown input: one user-triggered plain-text snapshot becomes exact UTF-8 Markdown, uses the normal admission/conversion pipeline, keeps an opaque profile-owned backing file out of Recent Files and source-location UI, and reuses the original snapshot for failed retry.
+- Rework the input header to vertical Single File/Batch choices plus textual Add/Paste/Clear actions with responsive reflow. Source-mode clipboard input asks for a persistent output parent before execution; custom output remains unchanged and mixed batches redirect only synthetic inputs.
+- Keep Ctrl+V scoped to the input area and preserve each admitted clipboard snapshot through background inspection, conversion and failed retry; reject changed input bytes before retrying.
+- Bound clipboard previews and diagnostics, avoid exposing internal snapshot paths or authored link targets, and retain recoverable snapshots when cleanup fails. Preserve per-input output directories across mixed document batches.
+- Fix Windows conversion result and error delivery when filesystem identity values exceed signed 64-bit integers.
+- 新增 GUI 剪贴板 Markdown 输入：仅在用户触发时读取一次纯文本并原样物化为 UTF-8 Markdown，继续走既有准入/转换链；profile 所有的内部快照路径不进入最近文件或源位置界面，失败重试复用原快照。
+- 输入区调整为左侧纵向“单文件/批量”和右侧完整文字“添加/粘贴/清空”，按可用宽度响应式重排。默认 source 输出遇到剪贴板输入时在执行前选择持久父目录；已有 custom 不变，混合批量只重定向合成输入。
+- Ctrl+V 仅在输入区生效；后台检查、转换及失败重试期间保留每份已准入的剪贴板快照，重试前拒绝已变化的输入字节。
+- 限制剪贴板预览和诊断的内容长度，避免暴露内部快照路径或原文链接目标；清理失败时保留可回收快照，混合文档批次继续保留逐输入输出目录。
+- 修复 Windows 文件系统身份值超出有符号 64 位整数时，转换结果和错误无法正常传递的问题。
+
+- Admit strictly parsed single-record multi-column CSV/TSV when the filename explicitly declares the table format, without relaxing generic text sniffing; align Core admission and Spreadsheet conversion on one BOM-first UTF-8/16/32 and GBK decoding contract.
+- Preserve external/network Markdown, Wiki and HTML targets during document-node link relocation even when malformed or sharing a local basename; keep encoded local path/fragment structure intact while safely serializing relocated paths.
+- 明确声明为 CSV/TSV 的中性文本可严格准入单条多列记录，不放宽通用文本嗅探；Core 准入与 Spreadsheet 转换统一使用 BOM 优先的 UTF-8/16/32 与 GBK 编码合同。
+- 文档节点搬迁链接时保护外部 URI/网络目标（包括结构无效的外链），避免与本地产物同 basename 时误改写；本地编码路径仅用于匹配，保留原始片段编码并安全序列化搬迁路径。
+
 ## 0.14.1 (2026-09-27)
 
 - Reject CSV/TSV rows beyond XLSX dimensions before writing cells, including spreadsheet hub conversions.

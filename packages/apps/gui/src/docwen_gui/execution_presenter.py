@@ -109,7 +109,7 @@ class ExecutionPresenter(QObject):
     """
 
     open_output = Signal(str)
-    completed = Signal(dict)
+    completed = Signal(object)
 
     def __init__(
         self,
@@ -134,7 +134,7 @@ class ExecutionPresenter(QObject):
                 _t("main_window.ocr_quality_notice"), "info", operation_id=context.get("request_id", "")
             )
 
-    @Slot(object, dict)
+    @Slot(object, object)
     def finished(self, result: object, context: dict[str, Any]) -> None:
         from docwen_core.models.result import ConversionResult
 
@@ -226,7 +226,7 @@ class ExecutionPresenter(QObject):
             )
             self.completed.emit(context)
 
-    @Slot(str, dict)
+    @Slot(str, object)
     def failed(self, error_message: str, context: dict[str, Any]) -> None:
         self._task_history.remember(context)
         task_id = context.get("request_id", "")

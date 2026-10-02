@@ -98,6 +98,8 @@ class BatchFileEntry:
     error_count: int = 0  # Number of diagnostics/errors for this file
     operation_id: str | None = None
     output_paths: tuple[str, ...] = ()
+    source_preview: str = ""
+    source_location_available: bool = True
 
     def __post_init__(self) -> None:
         detected_format = str(self.detected_format).strip().lower()
@@ -338,12 +340,14 @@ class BatchListViewModel(QObject):
 
             entry = BatchFileEntry(
                 file_path=normalized,
-                file_name=Path(fs_path).name,
+                file_name=str(info.get("display_name") or Path(fs_path).name),
                 detected_format=detected_format,
                 workflow_category=workflow_category,
                 warning_message=info.get("warning_message") or None,
                 metadata=dict(info.get("metadata") or {}),
                 size_bytes=size_bytes,
+                source_preview=str(info.get("source_preview") or ""),
+                source_location_available=bool(info.get("source_location_available", True)),
             )
             self._entries[normalized] = (display_category, entry)
             added.append(normalized)

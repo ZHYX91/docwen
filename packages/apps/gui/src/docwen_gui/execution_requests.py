@@ -23,6 +23,7 @@ from docwen_gui.path_identity import normalize_path
 if TYPE_CHECKING:
     from docwen_core.models.file_ref import FileRef
     from docwen_core.models.request import ConversionRequest, OutputPolicy
+    from docwen_gui.clipboard_inputs import ClipboardSnapshotBundle
     from docwen_gui.view_models.batch_list_vm import BatchListViewModel
     from docwen_gui.view_models.main_window_vm import MainWindowViewModel
 
@@ -136,11 +137,17 @@ class ExecutionRequestBuilder:
         *,
         file_contexts: Callable[[], dict[str, tuple[str, str]]],
         selected_template: Callable[[], tuple[str, str] | None],
+        source_label: Callable[[str], str | None] | None = None,
+        synthetic_input: Callable[[str], bool] | None = None,
+        snapshot_bundle: Callable[[str], ClipboardSnapshotBundle | None] | None = None,
     ) -> None:
         self._view_model = view_model
         self._batch_list_vm = batch_list_vm
         self._file_contexts = file_contexts
         self._selected_template = selected_template
+        self._source_label = source_label or (lambda _path: None)
+        self._synthetic_input = synthetic_input or (lambda _path: False)
+        self._snapshot_bundle = snapshot_bundle or (lambda _path: None)
 
     def single(
         self,
@@ -150,6 +157,7 @@ class ExecutionRequestBuilder:
         action_name: str,
         options: dict[str, Any],
         route_options: Sequence[str] | None = None,
+        output_policy: OutputPolicy | None = None,
     ) -> tuple[ConversionRequest, dict[str, Any]]:
         return self._build(
             file_paths=[file_path],
@@ -158,6 +166,7 @@ class ExecutionRequestBuilder:
             action_name=action_name,
             options=options,
             route_options=route_options,
+            output_policy=output_policy,
         )
 
     def batch(
@@ -168,6 +177,7 @@ class ExecutionRequestBuilder:
         action_name: str,
         options: dict[str, Any],
         route_options: Sequence[str] | None = None,
+        output_policy: OutputPolicy | None = None,
     ) -> tuple[ConversionRequest, dict[str, Any]]:
         return self._build(
             file_paths=file_paths,
@@ -176,6 +186,7 @@ class ExecutionRequestBuilder:
             action_name=action_name,
             options=options,
             route_options=route_options,
+            output_policy=output_policy,
         )
 
     def aggregate(
@@ -186,6 +197,7 @@ class ExecutionRequestBuilder:
         action_name: str,
         options: dict[str, Any],
         route_options: Sequence[str] | None = None,
+        output_policy: OutputPolicy | None = None,
     ) -> tuple[ConversionRequest, dict[str, Any]]:
         return self._build(
             file_paths=file_paths,
@@ -194,6 +206,7 @@ class ExecutionRequestBuilder:
             action_name=action_name,
             options=options,
             route_options=route_options,
+            output_policy=output_policy,
         )
 
     def _build(
@@ -205,6 +218,7 @@ class ExecutionRequestBuilder:
         action_name: str,
         options: dict[str, Any],
         route_options: Sequence[str] | None,
+        output_policy: OutputPolicy | None,
     ) -> tuple[ConversionRequest, dict[str, Any]]:
         from docwen_core.models.request import ConversionRequest
 
@@ -232,16 +246,31 @@ class ExecutionRequestBuilder:
                 route_options=route_options,
             )
         request_options = _route_scoped_options(request_options, route_options=route_options)
-        output_policy = self.output_policy()
+        output_policy = output_policy or self.output_policy()
+        request_id = str(uuid.uuid4())
+        groups = [self.input_group(path) for path in source_paths]
+        grouped_batch = mode == "batch" and any(group[0].format == "clipboard_document" for group in groups)
         request = ConversionRequest(
-            request_id=str(uuid.uuid4()),
-            input_refs=[self.file_ref(path) for path in source_paths],
+            request_id=request_id,
+            input_refs=(
+                [group[0] for group in groups] if grouped_batch else [ref for group in groups for ref in group]
+            ),
             target_format=target_format,
             action_name=action_name,
             options=request_options,
             output_policy=output_policy,
         )
         normalized_paths = [normalize_path(path) for path in source_paths]
+        source_labels = {
+            normalized: label
+            for source, normalized in zip(source_paths, normalized_paths, strict=True)
+            if (label := self._source_label(source))
+        }
+        synthetic_paths = [
+            normalized
+            for source, normalized in zip(source_paths, normalized_paths, strict=True)
+            if self._synthetic_input(source)
+        ]
         context: dict[str, Any] = {
             "request_id": request.request_id,
             "file_path": normalized_paths[0] if normalized_paths else "",
@@ -249,9 +278,34 @@ class ExecutionRequestBuilder:
             "action_name": action_name,
             "options": _redacted_request_options(request_options),
             "open_after_done": output_policy.open_after_done,
+            "input_refs": [ref.to_dict() for ref in request.input_refs],
         }
+        clipboard_bundles = tuple(
+            bundle for path in source_paths if (bundle := self._snapshot_bundle(path)) is not None
+        )
+        if clipboard_bundles:
+            context["_clipboard_bundles"] = clipboard_bundles
+        if grouped_batch:
+            context["_document_group_requests"] = tuple(
+                ConversionRequest(
+                    request_id=f"{request_id}-{index}",
+                    input_refs=[replace(ref, metadata=deepcopy(ref.metadata)) for ref in group],
+                    target_format=target_format,
+                    action_name=action_name,
+                    options=deepcopy(request_options),
+                    output_policy=output_policy.for_input(group[0].path),
+                )
+                for index, group in enumerate(groups)
+            )
+        if source_labels:
+            context["source_labels"] = source_labels
+        if synthetic_paths:
+            context["synthetic_input_paths"] = synthetic_paths
         if mode == "single":
-            context["display_name"] = Path(source_paths[0]).name
+            context["display_name"] = source_labels.get(
+                normalized_paths[0],
+                Path(source_paths[0]).name,
+            )
         else:
             context.update(
                 file_paths=normalized_paths,
@@ -286,7 +340,7 @@ class ExecutionRequestBuilder:
         """Add selected template metadata for Markdown document/spreadsheet targets."""
         merged = dict(options)
         target = str(target_format or "").lower()
-        if action_name or "template_name" in merged:
+        if target in _MARKDOWN_TARGET_FORMATS or action_name or "template_name" in merged:
             return merged
         from .view_models.interaction import FileCapability, resolve_capabilities
 
@@ -313,25 +367,56 @@ class ExecutionRequestBuilder:
         attached so application/runtime admission can enforce the same
         decision without opening and guessing the file again.
         """
-        from docwen_core.models.file_ref import FileRef
+        from docwen_core.models.file_ref import (
+            MANAGED_INPUT_SHA256_METADATA_KEY,
+            MANAGED_INPUT_SIZE_BYTES_METADATA_KEY,
+            SOURCE_PRESENTATION_NAME_METADATA_KEY,
+            FileRef,
+        )
 
         normalized = normalize_path(source_path)
+        source_label = self._source_label(source_path) or ""
+
+        def projected_metadata(raw: dict[str, Any]) -> dict[str, Any]:
+            metadata = deepcopy(raw)
+            if source_label:
+                metadata[SOURCE_PRESENTATION_NAME_METADATA_KEY] = source_label
+            inspection = metadata.get("_docwen_file_inspection")
+            if isinstance(inspection, dict) and inspection.get("detection_method") == "structured_clipboard":
+                metadata[MANAGED_INPUT_SHA256_METADATA_KEY] = str(inspection.get("content_sha256") or "")
+                metadata[MANAGED_INPUT_SIZE_BYTES_METADATA_KEY] = int(inspection.get("size_bytes") or 0)
+            return metadata
+
+        def projected_logical_path(raw: str, metadata: dict[str, Any]) -> str:
+            inspection = metadata.get("_docwen_file_inspection")
+            if isinstance(inspection, dict) and inspection.get("detection_method") == "structured_clipboard":
+                return raw or "document.dwclip"
+            return raw
+
         source_ref = next(
             (ref for ref in self._view_model.files if normalize_path(getattr(ref, "path", "")) == normalized),
             None,
         )
         if source_ref is not None:
-            return replace(source_ref, path=source_path, metadata=deepcopy(source_ref.metadata))
+            metadata = projected_metadata(source_ref.metadata)
+            return replace(
+                source_ref,
+                path=source_path,
+                logical_path=projected_logical_path(source_ref.logical_path, metadata),
+                metadata=metadata,
+            )
 
         entry = self._batch_list_vm.get_file_entry(source_path)
         if entry is not None:
+            metadata = projected_metadata(entry.metadata)
             return FileRef(
                 path=source_path,
                 format=entry.detected_format,
                 category=entry.workflow_category,
                 warning_message=entry.warning_message or "",
                 size_bytes=entry.size_bytes,
-                metadata=deepcopy(entry.metadata),
+                logical_path=projected_logical_path("", metadata),
+                metadata=metadata,
             )
 
         # Programmatic callers that bypass the visual list still cross the
@@ -350,11 +435,54 @@ class ExecutionRequestBuilder:
             category=inspection.workflow_category,
             warning_message=render_file_inspection_message(inspection),
             size_bytes=inspection.size_bytes,
-            metadata={
-                FILE_INSPECTION_METADATA_KEY: inspection.to_dict(),
-                OOXML_SIGNATURE_INFO_METADATA_KEY: dict(inspection.ooxml_signature),
-            },
+            metadata=projected_metadata(
+                {
+                    FILE_INSPECTION_METADATA_KEY: inspection.to_dict(),
+                    OOXML_SIGNATURE_INFO_METADATA_KEY: dict(inspection.ooxml_signature),
+                }
+            ),
         )
+
+    def input_group(self, source_path: str) -> tuple[FileRef, ...]:
+        """Freeze one source and its managed linked resources as one request group."""
+
+        from docwen_core.models.file_ref import (
+            MANAGED_INPUT_SHA256_METADATA_KEY,
+            MANAGED_INPUT_SIZE_BYTES_METADATA_KEY,
+            MANAGED_RESOURCE_ID_METADATA_KEY,
+            FileRef,
+        )
+
+        source = self.file_ref(source_path)
+        source = replace(source, metadata=deepcopy(source.metadata))
+        if source.format != "clipboard_document":
+            return (source,)
+
+        bundle = self._snapshot_bundle(source_path)
+        resources: list[FileRef] = []
+        if bundle is not None:
+            for descriptor in bundle.resources:
+                resources.append(
+                    FileRef(
+                        path=descriptor.path,
+                        format="resource",
+                        category="other",
+                        size_bytes=descriptor.size_bytes,
+                        input_kind="resource",
+                        input_role="linked_resource",
+                        logical_path=descriptor.logical_path,
+                        media_type=descriptor.media_type,
+                        metadata={
+                            MANAGED_RESOURCE_ID_METADATA_KEY: descriptor.resource_id,
+                            MANAGED_INPUT_SIZE_BYTES_METADATA_KEY: descriptor.size_bytes,
+                            MANAGED_INPUT_SHA256_METADATA_KEY: descriptor.sha256,
+                        },
+                    )
+                )
+        # Freeze the Store's original descriptors even if bytes disappeared or
+        # changed after ingress. Pending and worker admission validate the
+        # complete group; a bad group must not prevent building its siblings.
+        return (source, *resources)
 
     def output_policy(self) -> OutputPolicy:
         from docwen_core.models.request import OutputPolicy

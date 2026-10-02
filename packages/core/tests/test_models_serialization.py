@@ -113,6 +113,25 @@ class TestOutputPolicySerialization:
         assert pol2.output_dir is None
         assert pol2.overwrite_mode == "error"
 
+    def test_batch_per_input_output_directory_round_trip_and_projection(self) -> None:
+        first = "/tmp/source-a.md"
+        second = "/tmp/source-b.md"
+        pol = OutputPolicy(
+            date_subfolder="compact",
+            per_input_output_dirs={second: "/tmp/persistent-output"},
+        )
+
+        restored = OutputPolicy.from_dict(pol.to_dict())
+
+        assert restored.per_input_output_dirs == {second: "/tmp/persistent-output"}
+        first_policy = restored.for_input(first)
+        second_policy = restored.for_input(second)
+        assert first_policy.output_dir is None
+        assert first_policy.per_input_output_dirs == {}
+        assert second_policy.output_dir == "/tmp/persistent-output"
+        assert second_policy.per_input_output_dirs == {}
+        assert second_policy.date_subfolder == "compact"
+
 
 class TestOutputManifestContextSerialization:
     @pytest.mark.parametrize(
@@ -418,6 +437,26 @@ class TestPluginManifestSerialization:
         assert manifest.platforms == ("windows", "linux")
         assert manifest.capability_rules == []
         assert manifest.optimization_resources == []
+
+    def test_route_visibility_round_trip_and_rejects_unknown_values(self) -> None:
+        route = RouteSpec(
+            source_format="clipboard_document",
+            target_format="md",
+            visibility="internal",
+        )
+
+        restored = RouteSpec.from_dict(route.to_dict())
+
+        assert restored.visibility == "internal"
+        assert restored.to_dict()["visibility"] == "internal"
+        with pytest.raises(ValueError, match="route visibility"):
+            RouteSpec.from_dict(
+                {
+                    "source_format": "probe",
+                    "target_format": "md",
+                    "visibility": "private",
+                }
+            )
 
     @pytest.mark.parametrize(
         "overrides",

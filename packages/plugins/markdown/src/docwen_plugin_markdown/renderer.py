@@ -726,11 +726,12 @@ class MdToDocxRenderer:
             # swallowed and converted into a successful code fallback.
             if self._cancellation is not None:
                 self._cancellation.check()
-            logger.warning("Mermaid rendering failed; preserving source code block: %s", exc)
+            failure = str(exc) if self._source_dir is not None else type(exc).__name__
+            logger.warning("Mermaid rendering failed; preserving source code block: %s", failure)
             self._warnings.append(
                 (
                     "MD2DOCX-MERMAID-FALLBACK",
-                    f"Mermaid diagram {occurrence} rendering failed; preserved as a code block: {exc}",
+                    f"Mermaid diagram {occurrence} rendering failed; preserved as a code block: {failure}",
                 )
             )
             return None

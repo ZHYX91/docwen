@@ -6,11 +6,16 @@ from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QObject, QThread, Signal
 
-from docwen_gui.execution_admission import check_frozen_request
+from docwen_gui.execution_admission import (
+    ExecutionAdmissionError,
+    check_frozen_clipboard_bundles,
+    check_frozen_request,
+)
 
 if TYPE_CHECKING:
     from docwen_application.controller import ApplicationController
     from docwen_core.models.request import ConversionRequest
+    from docwen_gui.clipboard_inputs import ClipboardSnapshotBundle
 
 
 class ExecutionThread(QThread):
@@ -21,8 +26,10 @@ class ExecutionThread(QThread):
     MainWindow context.
     """
 
-    result_signal = Signal(object, dict)
-    error_signal = Signal(str, dict)
+    # Frozen contexts contain Python identities (including unsigned file IDs).
+    # QVariantMap recursively coerces these integers and can overflow on Windows.
+    result_signal = Signal(object, object)
+    error_signal = Signal(str, object)
 
     def __init__(
         self,
@@ -32,6 +39,9 @@ class ExecutionThread(QThread):
         context: dict[str, Any],
         aggregate_action_name: str = "",
         batch_execution: bool = False,
+        document_group_requests: tuple[ConversionRequest, ...] = (),
+        clipboard_bundles: tuple[ClipboardSnapshotBundle, ...] = (),
+        pending_invalid_indices: frozenset[int] = frozenset(),
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
@@ -40,11 +50,32 @@ class ExecutionThread(QThread):
         self._context = context
         self._aggregate_action_name = aggregate_action_name
         self._batch_execution = batch_execution
+        self._document_group_requests = document_group_requests
+        self._clipboard_bundles = clipboard_bundles
+        self._pending_invalid_indices = pending_invalid_indices
 
     def run(self) -> None:
         try:
-            check_frozen_request(self._request)
-            if self._aggregate_action_name:
+            frozen_invalid_indices = set(self._pending_invalid_indices)
+            if self._document_group_requests:
+                for index, group in enumerate(self._document_group_requests):
+                    if index in frozen_invalid_indices:
+                        continue
+                    try:
+                        check_frozen_clipboard_bundles(group, self._clipboard_bundles)
+                        check_frozen_request(group)
+                    except ExecutionAdmissionError:
+                        frozen_invalid_indices.add(index)
+            else:
+                check_frozen_clipboard_bundles(self._request, self._clipboard_bundles)
+                check_frozen_request(self._request)
+            if self._document_group_requests:
+                result = self._controller.execute_document_group_batch(
+                    self._request,
+                    self._document_group_requests,
+                    frozen_invalid_indices=frozenset(frozen_invalid_indices),
+                )
+            elif self._aggregate_action_name:
                 result = self._controller.execute_aggregate(self._request, self._aggregate_action_name)
             elif self._batch_execution:
                 result = self._controller.execute_batch(self._request)

@@ -13,6 +13,7 @@ import os
 import sys
 import time
 from collections.abc import Sequence
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
@@ -33,6 +34,7 @@ from PySide6.QtWidgets import (
     QAbstractSpinBox,
     QApplication,
     QComboBox,
+    QFileDialog,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -89,7 +91,8 @@ from docwen_gui.window_geometry import (
 
 if TYPE_CHECKING:
     from docwen_core.models.file_ref import FileRef
-    from docwen_core.models.request import ConversionRequest
+    from docwen_core.models.request import ConversionRequest, OutputPolicy
+    from docwen_gui.clipboard_inputs import ClipboardInputStore
     from docwen_gui.qt_bridge.task_event_bridge import TaskEventBridge
 
     from .view_models.action_area_vm import ActionAreaViewModel
@@ -167,12 +170,16 @@ class MainWindow(QWidget):
         view_model: MainWindowViewModel,
         task_event_bridge: TaskEventBridge | None = None,
         parent: QWidget | None = None,
+        *,
+        clipboard_input_root: str | Path | None = None,
     ) -> None:
         super().__init__(parent)
         from docwen_gui.qt_bridge.background_operation import BackgroundOperation
 
         self._path_operation = BackgroundOperation(self)
         self._view_model = view_model
+        self._clipboard_input_root = Path(clipboard_input_root).expanduser() if clipboard_input_root else None
+        self._clipboard_store: ClipboardInputStore | None = None
         self._window_behavior = self._load_window_behavior()
         self._CENTER_PANEL_MIN_WIDTH: int = dp(self._window_behavior.center_panel_width)
         self._LEFT_PANEL_MIN_WIDTH: int = dp(self._window_behavior.left_panel_width)
@@ -237,14 +244,22 @@ class MainWindow(QWidget):
         self._right_stack: QStackedWidget = _cast("QStackedWidget", None)
         self._center_column: QWidget = _cast("QWidget", None)
 
-        self._execution = ExecutionSupervisor(self._view_model, self)
+        self._execution = ExecutionSupervisor(
+            self._view_model,
+            self,
+            retain_inputs=self._retain_clipboard_active,
+            release_inputs=self._release_clipboard_active,
+        )
         self._execution.warning.connect(self._on_execution_warning)
         self._execution_close_pending = False
         self._execution_drain_timed_out = False
         self._execution_drain_deadline = 0.0
         self._execution_drain_timer: QTimer | None = None
         self._shutdown_finalized = False
-        self._task_history = TaskHistory()
+        self._task_history = TaskHistory(
+            retain_paths=self._retain_clipboard_history,
+            release_owner=self._release_clipboard_history,
+        )
         self._current_mode = view_model.mode
         self._file_contexts: dict[str, tuple[str, str]] = {}
         self._always_on_top_enabled = False
@@ -289,6 +304,380 @@ class MainWindow(QWidget):
         self.resize(
             max(geometry.rect.width, geometry.min_width),
             max(geometry.rect.height, geometry.min_height),
+        )
+
+    # ── Managed clipboard inputs ───────────────────────────────────
+
+    def _clipboard_store_for_paste(self) -> ClipboardInputStore:
+        if self._clipboard_store is not None:
+            return self._clipboard_store
+        from platformdirs import user_cache_dir
+
+        from docwen_gui.clipboard_inputs import ClipboardInputStore
+
+        root = self._clipboard_input_root
+        if root is None:
+            root = Path(user_cache_dir("docwen", appauthor=False)) / "clipboard-inputs"
+        self._clipboard_store = ClipboardInputStore(root.resolve(strict=False))
+        return self._clipboard_store
+
+    def _clipboard_descriptor(self, file_path: str):
+        store = self._clipboard_store
+        return store.descriptor(file_path) if store is not None else None
+
+    def _clipboard_bundle(self, file_path: str):
+        store = self._clipboard_store
+        if store is None:
+            return None
+        return store.bundle(file_path)
+
+    def _clipboard_presentation(self, file_path: str):
+        descriptor = self._clipboard_descriptor(file_path)
+        if descriptor is None:
+            return None
+        from .view_models.input_area_vm import InputPresentation
+
+        preview = _t(
+            "components.file_drop.clipboard_preview",
+            "Clipboard preview: {preview}",
+            preview=descriptor.preview,
+        )
+        return InputPresentation(descriptor.display_name, preview, False)
+
+    def _clipboard_source_label(self, file_path: str) -> str | None:
+        descriptor = self._clipboard_descriptor(file_path)
+        return descriptor.display_name if descriptor is not None else None
+
+    def _is_clipboard_input(self, file_path: str) -> bool:
+        store = self._clipboard_store
+        return bool(store is not None and store.is_snapshot(file_path))
+
+    def _retain_clipboard_inspection(self, owner: str, paths: tuple[str, ...]) -> None:
+        if self._clipboard_store is not None:
+            self._clipboard_store.retain_inspection(owner, paths)
+
+    def _release_clipboard_inspection(self, owner: str) -> None:
+        if self._clipboard_store is not None:
+            self._clipboard_store.release_inspection(owner)
+
+    def _retain_clipboard_active(self, owner: str, paths: tuple[str, ...]) -> None:
+        if self._clipboard_store is not None:
+            self._clipboard_store.retain_active(owner, paths)
+
+    def _release_clipboard_active(self, owner: str) -> None:
+        if self._clipboard_store is not None:
+            self._clipboard_store.release_active(owner)
+
+    def _retain_clipboard_history(self, owner: str, paths: tuple[str, ...]) -> None:
+        if self._clipboard_store is not None:
+            self._clipboard_store.retain_history(owner, paths)
+
+    def _release_clipboard_history(self, owner: str) -> None:
+        if self._clipboard_store is not None:
+            self._clipboard_store.release_history(owner)
+
+    def _sync_clipboard_visible_inputs(self) -> None:
+        if self._clipboard_store is not None:
+            self._clipboard_store.sync_visible(tuple(ref.path for ref in self._view_model.files))
+
+    def _on_paste_requested(self, *, plain_text_only: bool = False) -> None:
+        if self._execution.busy or self._action_area_vm.cancel_visible:
+            self._info_area_vm.add_message(_t("components.file_drop.input_busy"), "warning")
+            return
+        clipboard = QApplication.clipboard()
+        mime_data = clipboard.mimeData()
+        if not plain_text_only and mime_data is not None and mime_data.hasUrls():
+            file_paths = self._input_area_vm.extract_urls_from_mime_data(mime_data.urls())
+            if file_paths:
+                self._paste_file_paths(file_paths)
+                return
+
+        capture = None
+        if not plain_text_only and mime_data is not None:
+            from docwen_gui.clipboard_capture import freeze_clipboard_mime
+
+            capture = freeze_clipboard_mime(mime_data)
+            if self._try_structured_clipboard_paste(capture):
+                return
+            if capture.image is not None:
+                self._paste_standalone_clipboard_image(capture.image)
+                return
+            if capture.image_error_code and capture.plain_text is None:
+                self._info_area_vm.add_message(
+                    _t(
+                        "clipboard.image_invalid",
+                        "Clipboard image data is invalid or exceeds the supported size.",
+                    ),
+                    "danger",
+                )
+                return
+
+        text = capture.plain_text if capture is not None else (mime_data.text() if mime_data is not None else None)
+        if text is None:
+            self._info_area_vm.add_message(
+                _t("components.file_drop.clipboard_non_text", "The clipboard does not contain plain text."),
+                "warning",
+            )
+            return
+        if not text.strip():
+            self._info_area_vm.add_message(
+                _t(
+                    "components.file_drop.clipboard_empty",
+                    "The clipboard text is empty.",
+                ),
+                "warning",
+            )
+            return
+        try:
+            store = self._clipboard_store_for_paste()
+            snapshot = store.create(
+                text,
+                display_name_template=_t(
+                    "components.file_drop.clipboard_name",
+                    "Clipboard Markdown {index}.md",
+                    index="{index}",
+                ),
+            )
+        except (OSError, TypeError, ValueError):
+            self._info_area_vm.add_message(
+                _t(
+                    "components.file_drop.clipboard_create_failed",
+                    "Clipboard text could not be prepared as a Markdown input.",
+                ),
+                "danger",
+            )
+            return
+
+        def completed(outcome) -> None:
+            if not outcome.added:
+                store.discard_if_unowned(snapshot.path)
+            self._sync_clipboard_visible_inputs()
+
+        from docwen_core.detection import inspect_utf8_markdown_snapshot
+
+        self._input_area_vm.add_files(
+            [snapshot.path],
+            completed=completed,
+            file_inspector=inspect_utf8_markdown_snapshot,
+        )
+
+    def _try_structured_clipboard_paste(self, capture) -> bool:
+        """Handle one already-frozen rich clipboard document."""
+
+        from docwen_core.models.clipboard_document import (
+            ClipboardImageRef,
+            clipboard_document_preview,
+            clipboard_document_to_bytes,
+            iter_clipboard_inlines,
+        )
+        from docwen_gui.clipboard_rich_document import (
+            ClipboardRichDocumentError,
+            project_frozen_rich_document,
+        )
+
+        try:
+            decision = project_frozen_rich_document(capture)
+        except ClipboardRichDocumentError:
+            self._info_area_vm.add_message(
+                _t(
+                    "clipboard.structured_invalid",
+                    "Clipboard table/image structure is invalid and was not imported.",
+                ),
+                "danger",
+            )
+            return True
+        if decision.plain_fallback:
+            self._info_area_vm.add_message(
+                _t(
+                    "clipboard.structured_plain_fallback",
+                    "Rich table/image structure could not be matched reliably to plain text; the complete plain text was kept.",
+                ),
+                "warning",
+            )
+            return False
+        projection = decision.projection
+        if not decision.handled or projection is None:
+            return False
+
+        document = projection.document
+        try:
+            payload = clipboard_document_to_bytes(document)
+            store = self._clipboard_store_for_paste()
+            bundle = store.create_bundle(
+                payload,
+                display_name_template=_t(
+                    "components.file_drop.clipboard_document_name",
+                    "Clipboard Document {index}.dwclip",
+                    index="{index}",
+                ),
+                preview=clipboard_document_preview(document),
+                resources=projection.resources,
+            )
+        except (OSError, TypeError, ValueError):
+            self._info_area_vm.add_message(
+                _t(
+                    "clipboard.structured_invalid",
+                    "Clipboard table/image structure is invalid and was not imported.",
+                ),
+                "danger",
+            )
+            return True
+
+        missing_count = sum(
+            isinstance(item, ClipboardImageRef) and item.resource_id is None
+            for item in iter_clipboard_inlines(document)
+        )
+
+        def completed(outcome) -> None:
+            if not outcome.added:
+                store.discard_if_unowned(bundle.main.path)
+            else:
+                if projection.html_only:
+                    self._info_area_vm.add_message(
+                        _t(
+                            "clipboard.structured_html_only",
+                            "The clipboard had no plain-text body; validated HTML was used as the content source.",
+                        ),
+                        "warning",
+                    )
+                if missing_count:
+                    self._info_area_vm.add_message(
+                        _t("clipboard.images_omitted", count=missing_count),
+                        "warning",
+                    )
+            self._sync_clipboard_visible_inputs()
+
+        from docwen_core.detection import inspect_structured_clipboard_snapshot
+
+        self._input_area_vm.add_files(
+            [bundle.main.path],
+            completed=completed,
+            file_inspector=inspect_structured_clipboard_snapshot,
+        )
+        return True
+
+    def _paste_standalone_clipboard_image(self, frozen) -> None:
+        """Publish one normalized Qt image through the ordinary PNG route."""
+
+        try:
+            store = self._clipboard_store_for_paste()
+            snapshot = store.create_binary(
+                frozen.payload,
+                suffix=".png",
+                display_name_template=_t(
+                    "components.file_drop.clipboard_image_name",
+                    "Clipboard Image {index}.png",
+                    index="{index}",
+                ),
+                preview=f"{frozen.width}×{frozen.height} PNG",
+            )
+        except (OSError, TypeError, ValueError):
+            self._info_area_vm.add_message(
+                _t(
+                    "clipboard.image_invalid",
+                    "Clipboard image data is invalid or exceeds the supported size.",
+                ),
+                "danger",
+            )
+            return
+
+        def completed(outcome) -> None:
+            if not outcome.added:
+                store.discard_if_unowned(snapshot.path)
+            self._sync_clipboard_visible_inputs()
+
+        self._input_area_vm.add_files([snapshot.path], completed=completed)
+
+    def _paste_file_paths(self, file_paths: list[str]) -> None:
+        """Paste one captured local-file list through normal file admission."""
+
+        needs_batch = self._input_area_vm.mode == "single" and (len(file_paths) != 1 or Path(file_paths[0]).is_dir())
+        if not needs_batch:
+            self._input_area_vm.add_files(file_paths)
+            return
+
+        # Show the ordinary non-mutating rejection first. Declining the mode
+        # switch therefore preserves both the current input and its feedback.
+        self._input_area_vm.add_files(file_paths)
+        from docwen_gui.dialogs.feedback import confirm
+
+        reason = (
+            _t("messages.no_folder_in_single_mode", "Single mode does not support folders")
+            if len(file_paths) == 1 and Path(file_paths[0]).is_dir()
+            else _t("components.file_drop.single_mode_only_one", "Please select exactly one file in single mode")
+        )
+        if not confirm(
+            _t("components.file_drop.batch_mode", "Batch"),
+            reason,
+            parent=self,
+            confirm_label=_t("components.file_drop.batch_mode", "Batch"),
+        ):
+            return
+
+        # Use the captured list. The clipboard may have changed while the
+        # confirmation dialog was open and must not be read a second time.
+        self._input_area_vm.set_mode("batch")
+        self._input_area_vm.add_files(file_paths)
+
+    def _prepare_clipboard_output_policy(
+        self,
+        file_paths: Sequence[str],
+        mode: Literal["single", "batch", "aggregate"],
+        policy: OutputPolicy,
+    ) -> OutputPolicy | None:
+        synthetic = [path for path in file_paths if self._is_clipboard_input(path)]
+        if not synthetic:
+            return policy
+        explicit_output = policy.output_dir or policy.output_path
+        selected = explicit_output or QFileDialog.getExistingDirectory(
+            self,
+            _t(
+                "components.file_drop.clipboard_output_title",
+                "Choose an output folder for clipboard content",
+            ),
+            str(Path.home()),
+        )
+        if not selected:
+            self._info_area_vm.add_message(
+                _t(
+                    "components.file_drop.clipboard_output_cancelled",
+                    "Conversion was not started because no output folder was selected.",
+                ),
+                "warning",
+            )
+            return None
+        try:
+            output_dir = Path(selected).expanduser().resolve(strict=False)
+            if policy.output_path and not policy.output_dir:
+                output_dir = output_dir.parent
+        except (OSError, RuntimeError, ValueError):
+            self._info_area_vm.add_message(
+                _t(
+                    "components.file_drop.clipboard_output_invalid",
+                    "The selected output folder is unavailable.",
+                ),
+                "warning",
+            )
+            return None
+        store = self._clipboard_store
+        if store is not None:
+            managed_root = store.session_root.parent
+            if output_dir == managed_root or managed_root in output_dir.parents:
+                self._info_area_vm.add_message(
+                    _t(
+                        "components.file_drop.clipboard_output_invalid",
+                        "The selected output folder is unavailable.",
+                    ),
+                    "warning",
+                )
+                return None
+        if explicit_output:
+            return policy
+        if mode != "batch":
+            return replace(policy, output_dir=str(output_dir), per_input_output_dirs={})
+        return replace(
+            policy,
+            per_input_output_dirs={path: str(output_dir) for path in synthetic},
         )
 
     # ── UI construction ────────────────────────────────────────────
@@ -441,7 +830,15 @@ class MainWindow(QWidget):
         from .widgets.info_area import InfoArea
         from .widgets.input_area import InputArea
 
-        self._input_area_vm = InputAreaViewModel(main_vm=self._view_model, parent=self)
+        self._view_model.set_inspection_ownership(
+            retain=self._retain_clipboard_inspection,
+            release=self._release_clipboard_inspection,
+        )
+        self._input_area_vm = InputAreaViewModel(
+            main_vm=self._view_model,
+            parent=self,
+            presentation_for=self._clipboard_presentation,
+        )
         self._batch_list_vm = BatchListViewModel(main_vm=self._view_model, parent=self)
         self._admission = ExecutionAdmission(self._view_model, self._batch_list_vm)
         self._requests = ExecutionRequestBuilder(
@@ -451,6 +848,9 @@ class MainWindow(QWidget):
             selected_template=lambda: (
                 self._template_selector.get_selected_template_resource() if self._template_selector else None
             ),
+            source_label=self._clipboard_source_label,
+            synthetic_input=self._is_clipboard_input,
+            snapshot_bundle=self._clipboard_bundle,
         )
         self._conversion_panel_vm = ConversionPanelViewModel(main_vm=self._view_model, parent=self)
         self._action_area_vm = ActionAreaViewModel(main_vm=self._view_model, parent=self)
@@ -472,6 +872,7 @@ class MainWindow(QWidget):
             presenter=self._results,
             history=self._task_history,
             confirm_request=lambda request: self._confirm_request_admission(request),
+            prepare_output_policy=self._prepare_clipboard_output_policy,
             parent=self,
         )
         self._execution.result_ready.connect(self._results.finished)
@@ -489,6 +890,8 @@ class MainWindow(QWidget):
 
         self._input_area = InputArea(view_model=self._input_area_vm, parent=self)
         self._input_area.location_requested.connect(self._open_location)
+        self._input_area.paste_requested.connect(self._on_paste_requested)
+        self._input_area.paste_plain_text_requested.connect(lambda: self._on_paste_requested(plain_text_only=True))
         self._batch_list = BatchList(view_model=self._batch_list_vm, parent=self)
         self._conversion_panel = ConversionPanel(view_model=self._conversion_panel_vm, parent=self)
         self._action_area = ActionArea(view_model=self._action_area_vm, parent=self)
@@ -628,11 +1031,19 @@ class MainWindow(QWidget):
         self._sync_execution_context()
 
     def _sync_session_mutation_controls(self) -> None:
-        """Prevent clearing the working set while an execution can still emit results."""
-        clear_button = getattr(self._input_area, "clear_button", None)
-        if clear_button is not None:
-            clear_button.setEnabled(not self._action_area_vm.cancel_visible)
-        self._conversion_panel.setEnabled(not self._action_area_vm.cancel_visible)
+        """Prevent input mutation while an execution can still emit results."""
+        enabled = not self._action_area_vm.cancel_visible
+        for control in (
+            getattr(self._input_area, "add_button", None),
+            getattr(self._input_area, "paste_button", None),
+            getattr(self._input_area, "paste_menu_button", None),
+            getattr(self._input_area, "clear_button", None),
+            getattr(self._input_area, "single_mode_button", None),
+            getattr(self._input_area, "batch_mode_button", None),
+        ):
+            if control is not None:
+                control.setEnabled(enabled)
+        self._conversion_panel.setEnabled(enabled)
         self._sync_execution_context()
 
     def _sync_execution_context(self, *_args: object) -> None:
@@ -656,6 +1067,11 @@ class MainWindow(QWidget):
             else:
                 if policy.output_dir:
                     text = f"{_t('settings.output.output_mode_label')} {policy.output_dir}"
+                elif any(self._is_clipboard_input(path) for path in paths):
+                    text = _t(
+                        "components.file_drop.clipboard_output_hint",
+                        "Clipboard content will ask for an output folder before conversion.",
+                    )
                 elif self._view_model.mode == "batch":
                     text = _t("info_area.output_each_source")
                 if policy.date_subfolder:
@@ -1067,6 +1483,19 @@ class MainWindow(QWidget):
 
     def _show_template_target_mode(self, template_type: str, file_path: str) -> None:
         """Project a template target into the matching Markdown generation mode."""
+        from docwen_gui.view_models._runtime_route_filter import RuntimeRouteSource
+
+        selected = self._view_model.selected_file
+        refs = (
+            [ref for ref in self._view_model.files if selected is not None and ref.category == selected.category]
+            if self._view_model.mode == "batch"
+            else ([selected] if selected is not None else [])
+        )
+        sources = (
+            tuple(RuntimeRouteSource(ref.format, ref.category) for ref in refs)
+            if any(ref.format == "clipboard_document" for ref in refs)
+            else (RuntimeRouteSource("md", "markdown"),)
+        )
         normalized_type = str(template_type or "").strip().lower()
         selector = self._template_selector.get_selector(normalized_type) if self._template_selector else None
         self._action_area_vm.set_template_ready(
@@ -1077,13 +1506,15 @@ class MainWindow(QWidget):
             self._action_area_vm.mode == self._view_model.mode
             and self._action_area_vm.file_type == expected_mode
             and normalize_path(self._action_area_vm.file_path or "") == normalize_path(file_path)
+            and self._action_area_vm.target_route_sources == sources
         ):
             return
         self._action_area_vm.set_mode(self._view_model.mode)
+        source_options = {"source_inputs": sources} if any(ref.format == "clipboard_document" for ref in refs) else {}
         if normalized_type == "xlsx":
-            self._action_area_vm.setup_for_md_to_spreadsheet(file_path)
+            self._action_area_vm.setup_for_md_to_spreadsheet(file_path, **source_options)
         else:
-            self._action_area_vm.setup_for_md_to_document(file_path)
+            self._action_area_vm.setup_for_md_to_document(file_path, **source_options)
 
     def _configured_main_template_type(self) -> str:
         """Read and normalize the persisted Markdown template target."""
@@ -1281,11 +1712,15 @@ class MainWindow(QWidget):
                 ref = refs_by_path.get(normalize_path(path))
                 if ref is None:
                     return None
+                presentation = self._clipboard_presentation(ref.path)
                 return {
                     "detected_format": ref.format,
                     "workflow_category": ref.category,
                     "warning_message": ref.warning_message,
                     "metadata": dict(ref.metadata),
+                    "display_name": presentation.display_name if presentation is not None else "",
+                    "source_preview": presentation.detail if presentation is not None else "",
+                    "source_location_available": presentation.location_available if presentation is not None else True,
                 }
 
             self._batch_list_vm.add_files(missing, file_resolver=resolve_existing_ref)
@@ -1309,6 +1744,7 @@ class MainWindow(QWidget):
                 self._view_model.set_selected_file(preferred_ref)
                 with contextlib.suppress(Exception):
                     self._batch_list.select_file(preferred_ref.path)
+        self._sync_clipboard_visible_inputs()
 
     def _on_files_cleared(self) -> None:
         self._prepare_file_clear_panel_transition()
@@ -1318,6 +1754,7 @@ class MainWindow(QWidget):
         self._info_area_vm.reset_session()
         self._workflow.clear_context()
         self._task_history.clear()
+        self._sync_clipboard_visible_inputs()
 
     def _prepare_file_clear_panel_transition(self) -> None:
         """Freeze geometry before content reset and right-panel removal run synchronously."""
@@ -1538,8 +1975,24 @@ class MainWindow(QWidget):
         self._info_area_vm.add_message(message, "warning")
 
     def _confirm_request_admission(self, request: ConversionRequest) -> bool:
-        """Confirm frozen ingress facts without reading file contents on the UI thread."""
+        """Validate managed snapshots and confirm any pending ingress decision."""
         from docwen_gui.dialogs.feedback import confirm
+        from docwen_gui.execution_admission import ExecutionAdmissionError
+
+        store = self._clipboard_store
+        if store is not None:
+            for ref in request.input_refs:
+                if (
+                    ref.input_role == "source"
+                    and store.bundle(ref.path) is not None
+                    and not store.snapshot_available(ref.path)
+                ):
+                    raise ExecutionAdmissionError(
+                        _t(
+                            "main_window.file_admission_changed",
+                            "The file changed after it was added. Remove it from the list and add it again to re-check the file, then retry.",
+                        )
+                    )
 
         pending = self._admission.pending(request)
         if not pending:
@@ -1595,6 +2048,9 @@ class MainWindow(QWidget):
                 self._open_path(entry.output_path, open_parent=True)
             return
         if action_key == "open_source_location":
+            entry = self._batch_list_vm.get_file_entry(file_path)
+            if entry is None or not entry.source_location_available or self._is_clipboard_input(file_path):
+                return
             self._open_path(file_path, open_parent=True)
             return
         if action_key in {"show_error_details", "show_skip_details", "show_output_details", "show_diagnostics"}:
@@ -1608,6 +2064,8 @@ class MainWindow(QWidget):
         self._open_path(target_path, open_parent=True)
 
     def _open_location(self, file_path: str) -> None:
+        if self._is_clipboard_input(file_path):
+            return
         self._open_path(file_path, open_parent=True)
 
     def _handle_task_guide_action(self, action_key: str, target_path: str) -> None:
@@ -1647,6 +2105,32 @@ class MainWindow(QWidget):
                 return
             options["spreadsheet_password"] = password
         retry_paths = record.paths if context.get("aggregate") else failed_files
+        synthetic_keys = {
+            normalize_path(path) for path in context.get("synthetic_input_paths", []) if isinstance(path, str)
+        }
+        unavailable_snapshots = [
+            path
+            for path in retry_paths
+            if normalize_path(path) in synthetic_keys
+            and (self._clipboard_store is None or not self._clipboard_store.snapshot_available(path))
+        ]
+        if unavailable_snapshots:
+            changed_path = unavailable_snapshots[0]
+            labels = context.get("source_labels", {})
+            label = labels.get(normalize_path(changed_path)) if isinstance(labels, dict) else None
+            if Path(changed_path).exists():
+                message = _t(
+                    "main_window.file_admission_changed",
+                    "The file changed after it was added. Remove it from the list and add it again to re-check the file, then retry.",
+                )
+            else:
+                message = _t(
+                    "components.file_drop.clipboard_retry_unavailable",
+                    "The original clipboard snapshot for {name} is no longer available; paste again to create a new input.",
+                    name=label or _t("components.file_drop.clipboard_name_generic", "Clipboard Markdown"),
+                )
+            self._info_area_vm.add_message(message, "warning")
+            return
         if len(retry_paths) > 1:
             self._view_model.set_mode("batch")
         missing_paths = [path for path in retry_paths if self._batch_list_vm.get_file_entry(path) is None]
@@ -1676,9 +2160,75 @@ class MainWindow(QWidget):
                 )
 
         if missing_paths:
-            self._view_model.request_files(
-                missing_paths, lambda outcome: resume_retry() if not outcome.rejected else None
-            )
+            from docwen_core.detection import reinspect_frozen_file
+            from docwen_core.models import FILE_INSPECTION_METADATA_KEY, FileInspection
+            from docwen_core.models.file_ref import FileRef
+
+            frozen_refs: dict[str, FileRef] = {}
+            for raw_ref in context.get("input_refs", []):
+                if not isinstance(raw_ref, dict):
+                    continue
+                try:
+                    frozen_ref = FileRef.from_dict(raw_ref)
+                except (TypeError, ValueError):
+                    continue
+                frozen_refs[normalize_path(frozen_ref.path)] = frozen_ref
+
+            pending_restore = {normalize_path(path) for path in missing_paths}
+            restore_failed = False
+
+            def restored(path: str, outcome) -> None:
+                nonlocal restore_failed
+                key = normalize_path(path)
+                pending_restore.discard(key)
+                if outcome.rejected:
+                    restore_failed = True
+                    message = (
+                        _t(
+                            "main_window.file_admission_changed",
+                            "The file changed after it was added. Remove it from the list and add it again to re-check the file, then retry.",
+                        )
+                        if Path(path).exists()
+                        else _t(
+                            "main_window.file_admission_missing",
+                            "The input file no longer exists: {path}",
+                            path=path,
+                        )
+                    )
+                    self._info_area_vm.add_message(message, "warning")
+                if not pending_restore and not restore_failed:
+                    resume_retry()
+
+            for path in missing_paths:
+                frozen_ref = frozen_refs.get(normalize_path(path))
+                inspector = None
+                if frozen_ref is not None:
+                    raw_inspection = frozen_ref.metadata.get(FILE_INSPECTION_METADATA_KEY)
+                    if isinstance(raw_inspection, dict):
+                        try:
+                            frozen_inspection = FileInspection.from_dict(raw_inspection)
+                        except (TypeError, ValueError):
+                            frozen_inspection = None
+                        if frozen_inspection is not None:
+                            frozen_items = tuple(raw_inspection.items())
+
+                            def inspect_retry(
+                                current_path: str,
+                                *,
+                                frozen=frozen_inspection,
+                                expected_items=frozen_items,
+                            ):
+                                current = reinspect_frozen_file(current_path, frozen)
+                                if current.to_dict() != dict(expected_items):
+                                    raise ValueError("retry input changed after frozen admission")
+                                return current
+
+                            inspector = inspect_retry
+                self._view_model.request_files(
+                    [path],
+                    lambda outcome, restored_path=path: restored(restored_path, outcome),
+                    file_inspector=inspector,
+                )
         else:
             resume_retry()
 
@@ -2066,6 +2616,8 @@ class MainWindow(QWidget):
         if controller is not None:
             with contextlib.suppress(Exception):
                 controller.stop()
+        if self._clipboard_store is not None:
+            self._clipboard_store.close()
 
     # ── Public API ─────────────────────────────────────────────────
 

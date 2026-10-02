@@ -1,0 +1,11 @@
+{
+  "kind": "controlled-native-paint-regression-fixtures",
+  "capturedAt": "2026-10-02T04:04:53.068874+00:00",
+  "sourcePngSha256": "66d68226db981e8856cd373abedf046917cd5d801498754efdf1b4ecf70d6633",
+  "capturedRgbaSha256": "313143bd124d48f05ab6219fe45a7678c5e24366432d33aa0045391f8abc5be9",
+  "notProductAcceptance": true,
+  "files": {
+    "paint-native.ole": {"bytes": 27648, "sha256": "ee74060b3182d0ba4e63788f7a16bb61f91c4462d7835af75e5bd6362e095515", "untouchedNativeBytes": true},
+    "paint-qt-image.png": {"bytes": 608, "sha256": "2db2893ef347166d22e008b94823da6c81929680cc5f1ea33a1297ef5466d5d5", "kind": "qt-lossless-captured-image-serialization"}
+  }
+}
