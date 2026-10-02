@@ -130,6 +130,49 @@ def test_packaged_physical_page_verifier_accepts_canonical_p4_k5(tmp_path: Path)
     _verify(_canonical_terminal(tmp_path), tmp_path)
 
 
+def _replace_payload(terminal: dict[str, Any], root: Path, artifact_id: str, payload: bytes) -> None:
+    artifact = next(item for item in terminal["params"]["bundle"]["artifacts"] if item["artifact_id"] == artifact_id)
+    (root / artifact["locator"]).write_bytes(payload)
+    artifact.update(size_bytes=len(payload), sha256=hashlib.sha256(payload).hexdigest())
+
+
+def test_packaged_physical_page_verifier_accepts_owned_images_without_inventing_ocr(tmp_path: Path) -> None:
+    terminal = _canonical_terminal(tmp_path)
+    for page, body in enumerate(("page one", "", "", "page four"), 1):
+        payload = f"![{page}](resource.{page}.bin)\n\n{body}\n".encode()
+        _replace_payload(terminal, tmp_path, f"fragment.{page}", payload)
+    _verify(terminal, tmp_path)
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        b"![2](missing.png)\n",
+        b"![2](resource.1.bin)\n",
+        b"![2](https://example.invalid/resource.2.bin)\n",
+        b"![2](resource.2.bin)\n![2](resource.2.bin)\n",
+        b"![2](resource.2.bin)\nInvented OCR text\n",
+    ],
+)
+def test_packaged_physical_page_verifier_rejects_damaged_page_navigation(tmp_path: Path, payload: bytes) -> None:
+    terminal = _canonical_terminal(tmp_path)
+    _replace_payload(terminal, tmp_path, "fragment.2", payload)
+    with pytest.raises(RuntimeError):
+        _verify(terminal, tmp_path)
+
+
+@pytest.mark.parametrize("damage", ["empty_success", "duplicate_ocr"])
+def test_packaged_physical_page_images_do_not_hide_ocr_damage(tmp_path: Path, damage: str) -> None:
+    terminal = _canonical_terminal(tmp_path)
+    if damage == "empty_success":
+        _replace_payload(terminal, tmp_path, "fragment.1", b"![1](resource.1.bin)\n")
+    else:
+        _replace_payload(terminal, tmp_path, "fragment.1", b"![1](resource.1.bin)\n\npage one\n")
+        _replace_payload(terminal, tmp_path, "document.main", b"primary only\n\npage one\n")
+    with pytest.raises(RuntimeError):
+        _verify(terminal, tmp_path)
+
+
 @pytest.mark.parametrize(
     "damage",
     [

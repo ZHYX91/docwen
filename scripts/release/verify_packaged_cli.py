@@ -21,6 +21,7 @@ from collections.abc import Sequence
 from hashlib import sha256
 from pathlib import Path
 from typing import IO, Any
+from urllib.parse import unquote, urlsplit
 from xml.etree import ElementTree
 
 import openpyxl
@@ -678,6 +679,38 @@ def _write_physical_page_xps(path: Path) -> None:
             archive.writestr(name, body)
 
 
+def _physical_fragment_ocr_payload(
+    payload: bytes,
+    *,
+    fragment: dict[str, Any],
+    by_id: dict[str, dict[str, Any]],
+    resource_relations: list[dict[str, Any]],
+    staging_root: Path,
+) -> bytes:
+    """Separate portable image navigation from OCR text, checking its typed owner."""
+
+    owner_id = fragment["artifact_id"]
+    owned_paths = {
+        (staging_root / by_id[relation["source_artifact_id"]]["locator"]).resolve()
+        for relation in resource_relations
+        if relation.get("target_artifact_id") == owner_id
+    }
+    seen: set[Path] = set()
+
+    def remove_image(match: re.Match[str]) -> str:
+        target = match.group(1)
+        url = urlsplit(target)
+        path = (staging_root / fragment["locator"]).parent / unquote(url.path)
+        resolved = path.resolve()
+        if url.scheme or url.netloc or url.query or url.fragment or resolved not in owned_paths or resolved in seen:
+            raise RuntimeError(f"packaged_physical_page_fragment_image_invalid:{owner_id}:{target}")
+        seen.add(resolved)
+        return ""
+
+    text = re.sub(r"(?m)^!\[[^\]\r\n]*\]\(([^()\s]+)\)[ \t]*(?:\r?\n|$)", remove_image, payload.decode("utf-8"))
+    return text.strip().encode("utf-8")
+
+
 def _verify_physical_page_bundle(
     *,
     terminal: dict[str, Any],
@@ -792,11 +825,18 @@ def _verify_physical_page_bundle(
         for relation, status in zip(page_relations, statuses, strict=True):
             fragment = by_id[relation["source_artifact_id"]]
             fragment_payload = _read_bytes_with_long_path(staging_root / Path(fragment["locator"]))
-            if status != "success" and fragment_payload:
+            ocr_payload = _physical_fragment_ocr_payload(
+                fragment_payload,
+                fragment=fragment,
+                by_id=by_id,
+                resource_relations=resource_relations,
+                staging_root=staging_root,
+            )
+            if status != "success" and ocr_payload:
                 raise RuntimeError(f"packaged_physical_page_empty_placeholder_invalid:{status}:{fragment}")
-            if status == "success" and not fragment_payload:
+            if status == "success" and not ocr_payload:
                 raise RuntimeError(f"packaged_physical_page_success_fragment_empty:{fragment}")
-            if fragment_payload and fragment_payload in primary_payload:
+            if ocr_payload and ocr_payload in primary_payload:
                 raise RuntimeError("packaged_physical_page_primary_duplicates_ocr_fragment")
     resolved_resource_pages: list[int] = []
     unresolved_resource_ids: list[str] = []
