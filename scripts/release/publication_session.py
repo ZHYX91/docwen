@@ -61,6 +61,32 @@ def verify_candidate_jobs(payload: dict[str, Any]) -> None:
         )
 
 
+def verify_provenance(directory: Path, manifest: dict[str, Any], names: tuple[str, ...]) -> None:
+    """Check provenance for the bytes actually being consumed."""
+    for name in names:
+        result = subprocess.run(
+            [
+                "gh",
+                "attestation",
+                "verify",
+                str(directory / name),
+                "--repo",
+                manifest["repository"],
+                "--signer-workflow",
+                f"{manifest['repository']}/{WORKFLOW}",
+                "--source-digest",
+                manifest["sourceCommit"],
+                "--source-ref",
+                manifest["origin"]["sourceRef"],
+                "--deny-self-hosted-runners",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        require(result.returncode == 0, f"build provenance verification failed: {name}")
+
+
 class ReleaseSession:
     def __init__(
         self,
@@ -190,28 +216,7 @@ class ReleaseSession:
             self.save(pending=None, stage="tag-confirmed")
 
     def verify_provenance(self) -> None:
-        for name in (*self.assets, MANIFEST_NAME):
-            result = subprocess.run(
-                [
-                    "gh",
-                    "attestation",
-                    "verify",
-                    str(self.directory / name),
-                    "--repo",
-                    self.repository,
-                    "--signer-workflow",
-                    f"{self.repository}/{WORKFLOW}",
-                    "--source-digest",
-                    self.commit,
-                    "--source-ref",
-                    self.manifest["origin"]["sourceRef"],
-                    "--deny-self-hosted-runners",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=60,
-            )
-            require(result.returncode == 0, f"build provenance verification failed: {name}")
+        verify_provenance(self.directory, self.manifest, (*self.assets, MANIFEST_NAME))
         self.save(provenance="verified")
 
     def validate_release(self, release: dict[str, Any]) -> None:

@@ -119,8 +119,8 @@ def assemble(
     return manifest
 
 
-def verify_inventory(directory: Path, *, repository: str, version: str, commit: str) -> dict[str, Any]:
-    manifest = read_object(directory / MANIFEST_NAME)
+def verify_manifest(manifest: dict[str, Any], *, repository: str, version: str, commit: str) -> None:
+    """Validate the full candidate identity without requiring every platform locally."""
     require(manifest.get("schema") == SCHEMA, "unsupported candidate manifest")
     require(
         (manifest.get("repository"), manifest.get("version"), manifest.get("sourceCommit"))
@@ -129,15 +129,10 @@ def verify_inventory(directory: Path, *, repository: str, version: str, commit: 
     )
     names = set(package_names(version))
     require(set(manifest.get("assets", {})) == names, "candidate asset inventory mismatch")
-    require(
-        {path.name for path in directory.iterdir()} == names | {CHECKSUM_NAME, MANIFEST_NAME},
-        "unexpected candidate files",
-    )
-    for name in names:
-        require(file_identity(directory / name) == manifest["assets"][name], f"candidate asset hash mismatch: {name}")
-    require(
-        (directory / CHECKSUM_NAME).read_bytes() == checksum_bytes(manifest["assets"]), "checksum inventory mismatch"
-    )
+    for identity in manifest["assets"].values():
+        require(isinstance(identity, dict), "invalid candidate asset identity")
+        require(type(identity.get("bytes")) is int and 0 < identity["bytes"] <= 2 * 1024**3, "invalid asset size")
+        require(bool(re.fullmatch(r"[0-9a-f]{64}", str(identity.get("sha256", "")))), "invalid asset digest")
     origin = manifest.get("origin", {})
     require(origin.get("workflow") == WORKFLOW, "unexpected builder workflow")
     require(type(origin.get("runId")) is int and origin["runId"] > 0, "candidate run missing")
@@ -157,6 +152,21 @@ def verify_inventory(directory: Path, *, repository: str, version: str, commit: 
         "release/linux-production-manifest.v1.json",
     }
     require(set(manifest.get("sourceInputs", {})) == expected_inputs, "source input identities missing")
+
+
+def verify_inventory(directory: Path, *, repository: str, version: str, commit: str) -> dict[str, Any]:
+    manifest = read_object(directory / MANIFEST_NAME)
+    verify_manifest(manifest, repository=repository, version=version, commit=commit)
+    names = set(package_names(version))
+    require(
+        {path.name for path in directory.iterdir()} == names | {CHECKSUM_NAME, MANIFEST_NAME},
+        "unexpected candidate files",
+    )
+    for name in names:
+        require(file_identity(directory / name) == manifest["assets"][name], f"candidate asset hash mismatch: {name}")
+    require(
+        (directory / CHECKSUM_NAME).read_bytes() == checksum_bytes(manifest["assets"]), "checksum inventory mismatch"
+    )
     return manifest
 
 
