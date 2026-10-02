@@ -12,6 +12,7 @@ from docwen_gui.clipboard_office_provider import (
     WPS_DOCUMENT_MIME,
     WPS_IMAGE_DATA_MIME,
 )
+from docwen_gui.clipboard_paint_provider import paint_bitmap_dimensions
 
 _CAPTURE_FORMAT_LIMITS = {
     "text/html": 8 * 1024 * 1024,
@@ -69,11 +70,22 @@ def freeze_clipboard_mime(mime_data: QMimeData) -> FrozenClipboardCapture:
     html_bytes = next((payload for key, payload in frozen if key == "text/html"), b"")
     image: FrozenPng | None = None
     image_error_code = ""
-    # Office exports a bitmap preview alongside text/rich formats. Only a
-    # standalone bitmap has authority to become a separate image input.
-    if not has_text and not selected_formats and bool(mime_data.hasImage()):
+    # Paint also exports generic Embed Source. Prove its bitmap class and
+    # unique native bitmap before treating it as a standalone image. Office
+    # previews and unknown generic sources retain the rich-document boundary.
+    paint_dimensions = None
+    if not has_text and not rich_error_code and selected_formats == {WORD_EMBED_SOURCE_MIME}:
+        paint_dimensions = paint_bitmap_dimensions(
+            next(payload for key, payload in frozen if key == WORD_EMBED_SOURCE_MIME)
+        )
+    if not has_text and (not selected_formats or paint_dimensions is not None) and bool(mime_data.hasImage()):
+        if paint_dimensions is not None:
+            frozen.clear()
         try:
             image = freeze_qimage(mime_data.imageData())
+            if paint_dimensions is not None and (image.width, image.height) != paint_dimensions:
+                image = None
+                image_error_code = "clipboard.image_provider_mismatch"
         except ClipboardImageBytesError as exc:
             image_error_code = exc.code
         except Exception:

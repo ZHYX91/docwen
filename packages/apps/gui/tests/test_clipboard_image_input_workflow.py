@@ -23,10 +23,54 @@ from docwen_core.models.clipboard_document import (
     load_clipboard_document_bytes,
 )
 from docwen_gui.clipboard_image_bytes import freeze_qimage
+from docwen_gui.clipboard_office_provider import WORD_EMBED_SOURCE_MIME
 from docwen_gui.main_window import MainWindow
 from docwen_gui.view_models.main_window_vm import MainWindowViewModel
 
 pytestmark = pytest.mark.gui
+
+_PAINT_SAMPLES = Path(__file__).resolve().parents[4] / "tests/fixtures/files/clipboard-paint"
+
+
+def test_captured_paint_source_creates_a_standalone_image_with_captured_alpha(
+    window: MainWindow, qapp: QApplication, qtbot
+) -> None:
+    mime = _CountingMimeData()
+    mime.setData(WORD_EMBED_SOURCE_MIME, (_PAINT_SAMPLES / "paint-native.ole").read_bytes())
+    mime.setImageData(QImage(str(_PAINT_SAMPLES / "paint-qt-image.png")))
+    qapp.clipboard().setMimeData(mime)
+    mime.reset_calls()
+
+    window._on_paste_requested()
+
+    selected = _selected(window, qtbot)
+    assert selected.format == "png"
+    with Image.open(selected.path) as image:
+        assert image.size == (96, 64)
+        rgba = image.convert("RGBA").tobytes()
+    assert hashlib.sha256(rgba).hexdigest() == "313143bd124d48f05ab6219fe45a7678c5e24366432d33aa0045391f8abc5be9"
+    assert mime.calls["image_data"] == 1
+    assert mime.calls["data"] == 1
+
+
+def test_paint_bitmap_qimage_mismatch_preserves_existing_input(window: MainWindow, qapp: QApplication, qtbot) -> None:
+    plain = QMimeData()
+    plain.setText("keep existing input")
+    qapp.clipboard().setMimeData(plain)
+    window._on_paste_requested()
+    original = _selected(window, qtbot)
+    mime = QMimeData()
+    mime.setData(WORD_EMBED_SOURCE_MIME, (_PAINT_SAMPLES / "paint-native.ole").read_bytes())
+    image = QImage(3, 2, QImage.Format.Format_RGBA8888)
+    image.fill(0)
+    mime.setImageData(image)
+    qapp.clipboard().setMimeData(mime)
+
+    window._on_paste_requested()
+
+    assert window.view_model.selected_file == original
+    assert Path(original.path).read_text(encoding="utf-8") == "keep existing input"
+    assert any(row.message_type == "danger" for row in window._info_area_vm.history_rows)
 
 
 class _CountingMimeData(QMimeData):

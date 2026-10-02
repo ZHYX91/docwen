@@ -122,7 +122,9 @@ def _bounded_chain(start: int, table: list[int], *, max_items: int) -> list[int]
     return chain
 
 
-def _read_cfb_stream(payload: bytes, names: tuple[str, ...]) -> tuple[str, bytes]:
+def _read_cfb_stream(
+    payload: bytes, names: tuple[str, ...], *, expected_root_clsid: bytes | None = None
+) -> tuple[str, bytes]:
     """Read one unambiguous embedded source stream through the shared CFB bounds."""
 
     if not isinstance(payload, bytes) or len(payload) < 512 or len(payload) > _MAX_PROVIDER_BYTES:
@@ -264,6 +266,8 @@ def _read_cfb_stream(payload: bytes, names: tuple[str, ...]) -> tuple[str, bytes
             _fail("clipboard.provider_ole_invalid", "Word clipboard stream has an invalid size.")
         if entry_type == 5:
             root_entries += 1
+            if expected_root_clsid is not None and entry[80:96] != expected_root_clsid:
+                _fail("clipboard.provider_ole_invalid", "Clipboard source class does not match the bitmap provider.")
             root_start, root_size = start_sector, size
         entries.append((name, entry_type, start_sector, size))
 

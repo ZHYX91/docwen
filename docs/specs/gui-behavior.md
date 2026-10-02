@@ -54,6 +54,8 @@ Structured-clipboard generation pickers use the admitted source formats and Runt
 
 “粘贴”是显式快照操作：仅在用户点击按钮，或输入区（而非其他文本编辑框）拥有焦点时按 Ctrl+V，才一次性捕获当前剪贴板；不会后台监听，异步处理也不会再次读取系统剪贴板。“仅粘贴文本”把当次 plain Unicode 字符逐字写成 UTF-8 Markdown。默认富粘贴仍以同一份 plain 正文为权威，在表格 plain 签名能够唯一、按顺序对应时，把对应区段升级为受管递归结构；支持 anchor-only、完整网格及带引号多行 TSV，并在所有允许表示之间判断唯一性；搜索预算不足时保留完整 plain。图片仅在内嵌字节及结构/文字上下文绑定均可证明时纳入。YAML front matter、代码块、URL、Markdown 样文字及有意义的首尾空白因此继续来自 plain 原文。plain 为空/纯空白时不创建普通文本输入；仅 HTML 且含通过验证的表格或图片时才进入明确提示的结构化来源路径。之后的剪贴板变化不能改变已接纳快照。
 
+独立 QImage 沿用有界 RGBA/PNG 快照入口。画图在没有正文、HTML 或 WPS 来源时，同时提供的 generic Embed Source 只有通过 Paint 根 CLSID、唯一 Ole10Native 来源流、完整有界 BI_RGB 32位位图及零填充检查，且其物理尺寸与 QImage 相同时，才按独立图片接纳；透明像素仍取当次 QImage，不用 OLE 中白底合成的像素替换。未知、损坏、混合 OLE 和 Office 预览图不因此取得独立图片权威；Object Descriptor 中的源路径不读取。
+
 底层文件名是内部不透明身份，不作为用户源路径。界面显示本地化“剪贴板 Markdown N.md”或结构化文档展示名及有界、控制字符安全的预览；不会加入“最近文件”，活动记录也不提供源位置入口。三种身份严格分离：display name 仅是展示/公开输出命名元数据；受管物理路径承担准入与所有权；`logical_path` 只表示 typed request 中大小写敏感的虚拟输入根。普通 synthetic Markdown 不会因为展示名而制造 typed logical path；结构化主输入固定使用 `document.dwclip`，linked resource 使用递归模型声明的真正 logical path。三者都不授予用户源目录，因此不从 cwd 或受管 backing 目录猜测相对资源。
 
 单文件粘贴仅在正常 Core 准入成功后替换当前输入；批量每次用户操作追加一个独立快照。异步准入按输入分别保留其检查器，即使批量请求交错或互相替换也不能用后一项的检查意图覆盖前一项。受管字节另由独立 inspection lease 持有到后台读取线程物理结束；UI 取消、替换或清空只能抑制过期结果，不能提前删除仍在读取的快照。执行线程随后按冻结 FileInspection 中的 detection method 使用相同检查器并比较完整事实，因此普通文件仍按普通内容检测，显式 synthetic Markdown 仍按窄 synthetic 合同重检。
