@@ -6,6 +6,7 @@ import copy
 import hashlib
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import pytest
 from scripts.release.verify_packaged_cli import _OFD_FIXTURE_SCRIPT, _verify_physical_page_bundle
@@ -171,6 +172,122 @@ def test_packaged_physical_page_images_do_not_hide_ocr_damage(tmp_path: Path, da
         _replace_payload(terminal, tmp_path, "document.main", b"primary only\n\npage one\n")
     with pytest.raises(RuntimeError):
         _verify(terminal, tmp_path)
+
+
+@pytest.mark.parametrize("encoded", [False, True])
+def test_packaged_physical_page_rejects_absolute_owned_image(tmp_path: Path, encoded: bool) -> None:
+    terminal = _canonical_terminal(tmp_path)
+    resource = tmp_path / "resource.2.bin"
+    # A rooted POSIX spelling also resolves on the current Windows drive.
+    target = resource.as_posix().removeprefix(resource.drive)
+    if encoded:
+        target = quote(target, safe="")
+    _replace_payload(terminal, tmp_path, "fragment.2", f"![2]({target})\n".encode())
+    with pytest.raises(RuntimeError, match="navigation_not_portable"):
+        _verify(terminal, tmp_path)
+
+
+def test_packaged_physical_page_accepts_encoded_relative_parent_image(tmp_path: Path) -> None:
+    terminal = _canonical_terminal(tmp_path)
+    bundle = terminal["params"]["bundle"]
+    image = next(item for item in bundle["artifacts"] if item["artifact_id"] == "resource.2")
+    target = tmp_path / "图 # % (2).png"
+    (tmp_path / image["locator"]).rename(target)
+    image.update(locator=target.name, logical_path=target.name, suggested_name=target.name)
+    fragment = next(item for item in bundle["artifacts"] if item["artifact_id"] == "fragment.2")
+    (tmp_path / "page").mkdir()
+    (tmp_path / fragment["locator"]).rename(tmp_path / "page/2.md")
+    fragment.update(locator="page/2.md", logical_path="page/2.md", suggested_name="2.md")
+    _replace_payload(terminal, tmp_path, "fragment.2", f"![2](../{quote(target.name, safe='')})\n".encode())
+    _verify(terminal, tmp_path)
+
+
+def _tiff_terminal(root: Path, *, ocr: bool, images: bool) -> dict[str, Any]:
+    terminal = _canonical_terminal(root)
+    bundle = terminal["params"]["bundle"]
+    bundle["artifacts"] = [
+        item
+        for item in bundle["artifacts"]
+        if item["artifact_id"] != "resource.5"
+        and (item["kind"] != "fragment" or ocr)
+        and (item["kind"] != "resource" or images)
+    ]
+    ids = {item["artifact_id"] for item in bundle["artifacts"]}
+    bundle["relations"] = [item for item in bundle["relations"] if item["source_artifact_id"] in ids]
+    for relation in bundle["relations"]:
+        if not ocr:
+            relation["target_artifact_id"] = "document.main"
+    terminal["params"]["diagnostics"] = [
+        item for item in terminal["params"]["diagnostics"] if item.get("artifact_id") in ids
+    ]
+    links = [f"[{page}](fragment.{page}.bin)" if ocr else f"![{page}](resource.{page}.bin)" for page in range(1, 5)]
+    _replace_payload(
+        terminal, root, "document.main", ("source context\n" + "\n".join(links if ocr or images else [])).encode()
+    )
+    if ocr and images:
+        for page, body in enumerate(("page one", "", "", "page four"), 1):
+            _replace_payload(terminal, root, f"fragment.{page}", f"![{page}](resource.{page}.bin)\n\n{body}\n".encode())
+    return terminal
+
+
+def _verify_tiff(terminal: dict[str, Any], root: Path, *, ocr: bool, images: bool) -> None:
+    _verify_physical_page_bundle(
+        terminal=terminal,
+        task_id="task.physical",
+        staging_root=root,
+        page_count=4,
+        resource_count=4,
+        ocr_enabled=ocr,
+        keep_images=images,
+        expected_statuses=("success", "no_text", "recognition_failed", "success") if ocr else None,
+        tiff_navigation=True,
+    )
+
+
+@pytest.mark.parametrize("ocr", [False, True])
+@pytest.mark.parametrize("images", [False, True])
+def test_tiff_release_verifier_requires_navigation_for_all_four_combinations(
+    tmp_path: Path, ocr: bool, images: bool
+) -> None:
+    _verify_tiff(_tiff_terminal(tmp_path, ocr=ocr, images=images), tmp_path, ocr=ocr, images=images)
+
+
+@pytest.mark.parametrize(
+    ("ocr", "images", "artifact", "payload"),
+    [
+        (False, True, "document.main", "---\ntitle: old empty primary\n---\n"),
+        (True, False, "document.main", "source context\n"),
+        (True, True, "fragment.2", ""),
+        (True, True, "fragment.3", ""),
+        (True, False, "document.main", "[1](fragment.1.bin)\n[3](fragment.3.bin)\n[4](fragment.4.bin)"),
+        (
+            True,
+            False,
+            "document.main",
+            "[1](fragment.1.bin)\n[2](fragment.2.bin)\n[2](fragment.2.bin)\n[4](fragment.4.bin)",
+        ),
+        (
+            True,
+            False,
+            "document.main",
+            "[2](fragment.2.bin)\n[1](fragment.1.bin)\n[3](fragment.3.bin)\n[4](fragment.4.bin)",
+        ),
+        (
+            False,
+            True,
+            "document.main",
+            "![2](resource.2.bin)\n![1](resource.1.bin)\n![3](resource.3.bin)\n![4](resource.4.bin)",
+        ),
+        (False, False, "document.main", "[unexpected](fragment.1.bin)"),
+    ],
+)
+def test_tiff_release_verifier_rejects_missing_duplicate_and_reordered_navigation(
+    tmp_path: Path, ocr: bool, images: bool, artifact: str, payload: str
+) -> None:
+    terminal = _tiff_terminal(tmp_path, ocr=ocr, images=images)
+    _replace_payload(terminal, tmp_path, artifact, payload.encode())
+    with pytest.raises(RuntimeError, match="tiff_navigation_invalid"):
+        _verify_tiff(terminal, tmp_path, ocr=ocr, images=images)
 
 
 @pytest.mark.parametrize(
