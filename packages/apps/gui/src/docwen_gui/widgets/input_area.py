@@ -546,24 +546,14 @@ class InputArea(QFrame):
     def _open_file_dialog(self) -> None:
         initial_dir = self._resolve_initial_dir()
         filter_text = self._vm.build_file_dialog_filter()
-        if self._vm.mode == "batch":
-            paths, _ = QFileDialog.getOpenFileNames(
-                self,
-                _i18n(_I_SELECT_FILE, "Select Files"),
-                initial_dir,
-                filter_text,
-            )
-            if paths:
-                self._vm.add_files(list(paths))
-        else:
-            path, _ = QFileDialog.getOpenFileName(
-                self,
-                _i18n(_I_SELECT_FILE, "Select File"),
-                initial_dir,
-                filter_text,
-            )
-            if path:
-                self._vm.add_files([path])
+        paths, _ = QFileDialog.getOpenFileNames(
+            self,
+            _i18n(_I_SELECT_FILE, "Select Files"),
+            initial_dir,
+            filter_text,
+        )
+        if paths:
+            self._vm.add_files(list(paths))
 
     def _open_folder_dialog(self) -> None:
         initial_dir = self._resolve_initial_dir()

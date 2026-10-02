@@ -18,7 +18,7 @@ from docwen_core.markdown_utils import (
     format_sanitized_image_link,
     sanitize_filename,
 )
-from docwen_core.paths import input_stem, normalize_path
+from docwen_core.paths import normalize_path
 from docwen_core.text.image_markdown import build_base64_image_data_uri, build_image_ocr_sidecar
 from docwen_core.text.ocr import (
     OcrOutcome,
@@ -95,7 +95,7 @@ def _convert_tiff_physical_pages(
     )
 
     task_id = context.request.request_id
-    input_stem_value = input_stem(input_path)
+    input_stem_value = context.request.source_stem
     created_paths: list[Path] = []
     page_artifacts: list[ArtifactManifest] = []
     image_artifacts: list[ArtifactManifest] = []
@@ -329,7 +329,7 @@ class ImageToMarkdownConverter:
 
         artifacts: list[ArtifactManifest] = []
         source_format = source_format_from_context(context)
-        image_filename = sanitize_filename(f"{input_stem(input_path)}.{source_format}")
+        image_filename = sanitize_filename(f"{context.request.source_stem}.{source_format}")
 
         if source_format == "tif":
             return _convert_tiff_physical_pages(
@@ -443,7 +443,7 @@ class ImageToMarkdownConverter:
                     media_type=media_type_for(source_format),
                     export_semantics=export_semantics,
                 )
-                link = format_image_link(input_stem(input_path), target, style=image_style)
+                link = format_image_link(context.request.source_stem, target, style=image_style)
             elif keep_images:
                 image_staging_path = context.workspace.create_artifact_path("image", f".{source_format}")
                 shutil.copyfile(input_path, image_staging_path)
@@ -464,13 +464,13 @@ class ImageToMarkdownConverter:
                     link = format_sanitized_image_link(image_filename, style=image_style)
                 else:
                     target = normalize_link_target("./" + image_filename)
-                    link = format_image_link(input_stem(input_path), target, style=image_style)
+                    link = format_image_link(context.request.source_stem, target, style=image_style)
             else:
                 raise ValueError(f"Unexpected state: image_mode={image_mode!r}, keep_images={keep_images!r}")
 
             # ── Build Markdown ─────────────────────────────────────
             yaml_frontmatter = generate_basic_yaml_frontmatter(
-                input_stem(input_path),
+                context.request.source_stem,
                 extra={"source_format": source_format},
                 yaml_key_labels=options.get("yaml_key_labels"),
             )
@@ -481,7 +481,7 @@ class ImageToMarkdownConverter:
             # F-G1-005, F-G2-003: restored ocr_placement_mode support.
             if enable_ocr and ocr_placement_mode == "image_md":
                 # Build sidecar .md via shared core helper (image + OCR).
-                sidecar_stem = f"{input_stem(input_path)}_ocr"
+                sidecar_stem = f"{context.request.source_stem}_ocr"
                 sidecar_text, replacement_link = build_image_ocr_sidecar(
                     sidecar_stem=sidecar_stem,
                     source_format=source_format,
@@ -534,7 +534,7 @@ class ImageToMarkdownConverter:
                 yaml_extracted, _ = extract_yaml(md_text)
                 if not yaml_extracted:
                     _logger.warning("Generated Markdown has no parseable YAML front matter")
-                elif input_stem(input_path) not in yaml_extracted:
+                elif context.request.source_stem not in yaml_extracted:
                     _logger.warning("Generated YAML front matter may be malformed")
             except Exception:
                 _logger.warning("YAML front matter validation failed")
@@ -557,7 +557,7 @@ class ImageToMarkdownConverter:
             artifact_id=new_artifact_id(),
             kind="primary",
             staging_path=md_path,
-            suggested_name=f"{input_stem(input_path)}.md",
+            suggested_name=f"{context.request.source_stem}.md",
             media_type="text/markdown",
             metadata={
                 "image_mode": image_mode,

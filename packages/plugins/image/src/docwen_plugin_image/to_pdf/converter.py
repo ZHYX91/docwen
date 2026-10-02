@@ -106,7 +106,7 @@ class ImageToPdfConverter:
             artifact_id=new_artifact_id(),
             kind="primary",
             staging_path=output_path,
-            suggested_name=f"{input_stem(input_path)}.pdf",
+            suggested_name=f"{context.request.source_stem}.pdf",
             media_type="application/pdf",
             metadata={"quality_mode": quality_mode},
             is_primary=True,

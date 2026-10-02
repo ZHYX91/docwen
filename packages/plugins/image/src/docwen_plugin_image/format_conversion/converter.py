@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 from PIL import Image
 
-from docwen_core.paths import input_stem
 from docwen_plugin_image._common import (
     file_size,
     media_type_for,
@@ -79,7 +78,7 @@ class ImageFormatConverter:
                             artifact_id=new_artifact_id(),
                             kind="primary" if idx == 1 else "auxiliary",
                             staging_path=output_path,
-                            suggested_name=f"{input_stem(input_path)}_{frame_label}{idx}.{target}",
+                            suggested_name=f"{context.request.source_stem}_{frame_label}{idx}.{target}",
                             media_type=media_type_for(target),
                             metadata={
                                 "source_format": source_format,
@@ -136,7 +135,7 @@ class ImageFormatConverter:
                         artifact_id=new_artifact_id(),
                         kind="primary",
                         staging_path=output_path,
-                        suggested_name=f"{input_stem(input_path)}.{target}",
+                        suggested_name=f"{context.request.source_stem}.{target}",
                         media_type=media_type_for(target),
                         metadata={"target_format": target, "width": width, "height": height},
                         is_primary=True,
