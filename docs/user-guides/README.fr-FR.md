@@ -588,11 +588,11 @@ Un plugin Obsidian compagnon est publié séparément et fonctionne avec le conv
 -   **🚀 Lancement en un clic** - Icône de la barre latérale pour lancer rapidement le convertisseur.
 -   **📂 Transfert automatique** - Passe automatiquement le chemin du fichier actuellement ouvert.
 -   **🔄 Gestion d'instance unique** - Envoie automatiquement le fichier si le programme est déjà en cours d'exécution, pas besoin de redémarrer.
--   **🔒 Contrôle local borné** - Utilise des requêtes typées `status`, `open` et `activate`, sans recherche de processus par nom ni fichiers de commande ou d'état.
+-   **🔒 Contrôle local sécurisé** - Utilise des requêtes structurées `status`, `open` et `activate`, sans recherche de processus par nom ni fichiers de commande ou d’état.
 
 ### Principe de fonctionnement
 
-Le transport Runtime/Control de DocWen Core utilise un canal nommé sous Windows et un socket AF_UNIX sous Linux/macOS. Le verrou de fichier sert uniquement à la propriété de l’instance unique ; les commandes de contrôle ne transitent pas par des fichiers. Cette description concerne uniquement Core. DocWen Assistant 3.1 prend en charge les postes de bureau Windows et Linux. Sous Windows, l’installation Microsoft Store peut être détectée automatiquement ; sous Linux, un paquet compatible extrait est sélectionné manuellement. Assistant ne prend actuellement pas en charge macOS.
+DocWen Core utilise un canal nommé pour le contrôle local sous Windows et un socket AF_UNIX sous Linux/macOS. Le verrou de fichier sert uniquement à la propriété de l’instance unique ; les commandes de contrôle ne transitent pas par des fichiers. Cette description concerne uniquement Core. DocWen Assistant 3.1 prend en charge les postes de bureau Windows et Linux. Sous Windows, l’installation Microsoft Store peut être détectée automatiquement ; sous Linux, un paquet compatible extrait est sélectionné manuellement. Assistant ne prend actuellement pas en charge macOS.
 
 1.  **Premier clic** → Lancer le convertisseur et passer le fichier actuel.
 2.  **Cliquer à nouveau (Avec fichier)** → Remplacer par le nouveau fichier (Mode fichier unique).
