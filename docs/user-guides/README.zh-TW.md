@@ -71,8 +71,7 @@ docwen      # 命令列
 
 ### macOS 安裝說明
 
-**目前限制**：macOS 上的 `convert`、`validate`、`number`、`merge`、`split` capability 目前均為
-unavailable。以下只記錄開發實驗所需的選用相依套件。
+**目前限制**：macOS 上的 `convert`、`validate`、`number`、`merge`、`split` 功能目前都無法使用。以下只記錄開發實驗所需的選用相依套件。
 
 **LibreOffice 支援（可選）**
 
