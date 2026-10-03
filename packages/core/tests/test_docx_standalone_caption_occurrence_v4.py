@@ -54,7 +54,7 @@ def _wrapped_caption(*, enabled: bool):
     identity = _identity(enabled=enabled, derived_number="3" if enabled else None)
     wrap_standalone_caption_occurrence(caption._p, identity)
     [wrapper] = list(document.element.body)[:-1]
-    return document, wrapper, style.style_id, identity
+    return document, wrapper, caption, style.style_id, identity
 
 
 @pytest.mark.parametrize(
@@ -76,7 +76,7 @@ def test_map_round_trips_enabled_and_disabled_occurrences(
 
 @pytest.mark.parametrize("enabled", [False, True])
 def test_single_caption_sdt_is_exact_and_has_no_invented_target(enabled: bool) -> None:
-    _document, wrapper, style_id, identity = _wrapped_caption(enabled=enabled)
+    _document, wrapper, _caption, style_id, identity = _wrapped_caption(enabled=enabled)
 
     caption = prove_standalone_caption_occurrence_sdt(
         wrapper,
@@ -89,11 +89,9 @@ def test_single_caption_sdt_is_exact_and_has_no_invented_target(enabled: bool) -
 
 
 def test_disabled_occurrence_rejects_unowned_seq_field() -> None:
-    _document, wrapper, style_id, identity = _wrapped_caption(enabled=False)
-    content = wrapper[-1]
-    caption = content[0]
+    _document, wrapper, caption, style_id, identity = _wrapped_caption(enabled=False)
     append_complex_field(
-        type("_Paragraph", (), {"_p": caption, "add_run": lambda *_args, **_kwargs: None})(),
+        caption,
         instruction=" SEQ Table \\* ARABIC ",
         cached_result="9",
     )
