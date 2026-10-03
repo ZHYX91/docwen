@@ -494,7 +494,6 @@ Quản lý mẫu DOCX/XLSX trong **Cài đặt → Mẫu**: bật, tắt, sắp 
 
 ### Template tuỳ chỉnh
 
-
 1. Sao chép và chỉnh sửa mẫu tích hợp, hoặc nhập tệp DOCX/XLSX có sẵn.
 2. Sửa nội dung, kiểu và chỗ giữ chỗ của bản sao bằng Word, Excel hoặc WPS; xem quy tắc bên dưới.
 3. Lưu tệp rồi làm mới danh sách trong DocWen. Không cần khởi động lại.
