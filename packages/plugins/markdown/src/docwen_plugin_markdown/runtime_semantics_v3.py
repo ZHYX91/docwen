@@ -66,7 +66,7 @@ class RuntimeMarkerV3:
 class RuntimeSemanticsV3Plan:
     """One immutable source analysis and its inert preprocessor projection."""
 
-    analysis: MarkdownSemanticsV3Analysis | number_suite_direct_semantics.MarkdownSemanticsV3Analysis
+    analysis: MarkdownSemanticsV3Analysis
     shielded_source: str
     markers: tuple[RuntimeMarkerV3, ...]
     body_start: int
