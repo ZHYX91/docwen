@@ -199,7 +199,7 @@ En plus de l'interface graphique, DocWen fournit une interface en ligne de comma
 Pour les scripts, agents ou plugins, l'ordre recommandé est le suivant :
 
 1. `inspect <file> [--json]` : détecter d'abord la catégorie réelle du fichier, son format et les actions prises en charge.
-2. `resources list formats --json` : lire les routes Runtime réellement disponibles et leurs dépendances.
+2. `resources list formats --json` : lire les routes réellement disponibles dans DocWen et leurs conditions de dépendance.
 3. `schema convert` : lire le contrat lisible par machine et les contraintes conditionnelles de `convert`.
 4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` : prévisualiser détection, normalisation et routage sans écrire de sortie.
 5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...` : lancer ensuite la conversion réelle.
