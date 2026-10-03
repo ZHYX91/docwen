@@ -6,7 +6,7 @@
 
 [English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)
 
-Công cụ chuyển đổi định dạng tài liệu và bảng biểu: hỗ trợ chuyển đổi hai chiều Word/Markdown/Excel. Chạy trên máy (offline), đảm bảo an toàn dữ liệu.
+DocWen là công cụ chuyển đổi tài liệu và bảng biểu cục bộ cho Word, Markdown, Excel và các định dạng văn phòng liên quan. Công cụ ưu tiên quy trình offline ổn định và xử lý tài liệu ngay trên thiết bị của người dùng.
 
 ## 📖 Bối cảnh dự án
 
@@ -15,11 +15,11 @@ Phần mềm được tạo ra để giải quyết các vấn đề thường g
 - Nhiều loại file với yêu cầu định dạng khác nhau.
 - Cần chạy offline trong môi trường intranet/thiết bị cũ.
 
-**Triết lý thiết kế**: công cụ nhẹ, dễ dùng, chi phí học thấp. Không nhằm thay thế các công cụ chuyên nghiệp như LaTeX/Pandoc.
+**Triết lý thiết kế**: DocWen ưu tiên các quy trình chuyển đổi và sắp xếp tài liệu hằng ngày dễ học và có thể dùng ngay. Công cụ không nhằm thay thế các hệ thống dàn trang hoặc chuyển đổi chuyên biệt như LaTeX hay Pandoc; mục tiêu là làm cho các tác vụ tài liệu phổ biến trở nên trực tiếp, rõ ràng và vẫn giữ ranh giới kỹ thuật minh bạch.
 
 ## ✨ Tính năng chính
 
-- **📄 Chuyển đổi tài liệu** - Word ↔ Markdown, hỗ trợ công thức, ánh xạ dấu phân cách (---/***/___) với ngắt trang/ngắt mục/dòng kẻ và khôi phục marker bảng Markdown `<` / `^` thành gộp ô hình chữ nhật trong Word. DOCX/DOC/WPS/RTF/ODT.
+- **📄 Chuyển đổi tài liệu** - Word ↔ Markdown, hỗ trợ công thức, ánh xạ dấu phân cách (---/***/___) với ngắt trang/ngắt mục/dòng kẻ và khôi phục dấu gộp `<` / `^` trong bảng Markdown thành gộp ô hình chữ nhật trong Word. DOCX/DOC/WPS/RTF/ODT.
 - **📊 Chuyển đổi bảng tính** - Excel ↔ Markdown. XLSX/XLS/ET/ODS/CSV/TSV. Có chiến lược xuất ô gộp cấu hình được (`fill / empty / marker`), công cụ tóm tắt bảng và các placeholder template được mô tả bên dưới.
 - **📑 PDF & file bố cục** - PDF/XPS/OFD → Markdown hoặc DOCX. Hỗ trợ gộp/tách PDF.
 - **🖼️ Ảnh** - Chuyển đổi và nén JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC.
@@ -71,8 +71,7 @@ docwen      # Chế độ CLI
 
 ### Ghi chú cho macOS
 
-**Giới hạn hiện tại**: Trên macOS, các capability `convert`, `validate`, `number`, `merge`, `split`
-hiện không khả dụng. Phần dưới chỉ ghi các phụ thuộc tùy chọn cho thử nghiệm phát triển.
+**Giới hạn hiện tại**: Trên macOS, các chức năng `convert`, `validate`, `number`, `merge`, `split` hiện không khả dụng. Phần dưới chỉ ghi các phụ thuộc tùy chọn cho thử nghiệm phát triển.
 
 **Hỗ trợ LibreOffice (Tùy chọn)**
 
@@ -94,7 +93,7 @@ pip install pillow-heif
 không mở rộng cam kết sang bản phân phối hoặc kiến trúc khác.
 
 - Có môi trường desktop (GNOME, KDE, XFCE, ...)
-- GUI dùng PySide6 (Qt6) và không còn phụ thuộc vào Python Tk. Nếu khởi động lỗi vì thiếu thư viện hệ thống, hãy cài các phụ thuộc runtime của Qt theo thông báo lỗi (thường liên quan OpenGL/X11).
+- GUI dùng PySide6 (Qt6) và không còn phụ thuộc vào Python Tk. Nếu khởi động lỗi vì thiếu thư viện hệ thống, hãy cài các thư viện cần thiết để chạy Qt theo thông báo lỗi (thường liên quan OpenGL/X11).
 - Với máy chủ headless, hãy ưu tiên entry CLI `docwen` thay vì GUI; bản đóng gói Windows cũng cung cấp `DocWenCLI.exe`.
 
 ### Hướng dẫn nhanh
@@ -197,9 +196,12 @@ Ngoài giao diện đồ họa, DocWen còn cung cấp giao diện dòng lệnh 
 Đối với script, agent hoặc plugin, nên dùng thứ tự sau:
 
 1. `inspect <file> [--json]`: trước tiên nhận diện loại tệp thực tế, định dạng và các thao tác được hỗ trợ.
-2. `schema convert`: đọc hợp đồng máy đọc được và các ràng buộc điều kiện của `convert`.
-3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: xem trước quá trình nhận diện, chuẩn hóa và định tuyến mà không ghi tệp đầu ra.
-4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: sau khi xác nhận, mới chạy chuyển đổi thật.
+2. `resources list formats --json`: đọc các tuyến thực sự khả dụng trong DocWen và các điều kiện phụ thuộc.
+3. `schema convert`: đọc hợp đồng máy đọc được và các ràng buộc điều kiện của `convert`.
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: xem trước quá trình nhận diện, chuẩn hóa và định tuyến mà không ghi tệp đầu ra.
+5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: sau khi xác nhận, mới chạy chuyển đổi thật.
+
+Tích hợp nội dung bên ngoài dùng `serve --stdio` với Machine Protocol v2: khám phá khả năng, lập kế hoạch tác vụ rồi thực thi. `--json` của CLI chỉ là định dạng trình bày cho terminal, không phải ranh giới tương thích giữa các sản phẩm. Điều khiển ứng dụng desktop cục bộ dùng riêng giao diện ổn định `gui open|activate|status`.
 
 ### Ví dụ thường dùng
 
@@ -257,8 +259,10 @@ Bảng dưới đây chỉ liệt kê các lệnh thông dụng. Để xem đầ
 | `inspect <file> [--json]` | Kiểm tra loại/định dạng tệp, hành động gợi ý và cảnh báo khi phần mở rộng không khớp nội dung. |
 | `doctor --json` | Trả về chẩn đoán cùng với phần tóm tắt khả năng chạy và cổng phụ thuộc. |
 | `resources list formats --json` | Liệt kê định dạng đích theo loại nguồn và kèm cổng phụ thuộc / bản tóm tắt giới hạn. |
+| `resources list optimizations --json` | Liệt kê các tài nguyên tối ưu hóa có kiểu và liên kết tuyến chuẩn của chúng. |
 | `resources list templates` | Liệt kê các mẫu có sẵn. |
 | `resources list numbering-schemes` | Liệt kê các sơ đồ đánh số có sẵn. |
+| `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | Khởi chạy hoặc kích hoạt DocWen qua đường điều khiển GUI cục bộ riêng và tùy chọn mở một tệp bằng đường dẫn tuyệt đối. |
 | `--template <id>` | ID tài nguyên chuẩn chính xác từ `resources list templates`; tên hiển thị, tên tệp và đường dẫn đều bị từ chối. ID DOCX dùng cho `docx/doc/odt/rtf/wps/pdf`, ID XLSX cho `xlsx/xls/ods/csv`. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Tùy chọn trích ảnh và OCR cho `convert --to md`. |
 | `--image-mode file|base64|embed|omit` | Kiểm soát cách ảnh được xuất ra khi xuất Markdown. |
@@ -563,7 +567,7 @@ Trích dữ liệu từ bảng Markdown và điền **sang phải** theo từng 
 **Xử lý ô gộp**:
 
 - Markdown -> Excel tiếp tục giữ nguyên các merged ranges có sẵn của mẫu.
-- Với các vùng mẫu dạng cột đã biết, được tạo bởi các placeholder `{{↓Field Name}}` liên tiếp, chương trình có thể khôi phục gộp hình chữ nhật từ marker `<` / `^` tường minh trong bảng Markdown.
+- Với các vùng mẫu dạng cột đã biết, được tạo bởi các placeholder `{{↓Field Name}}` liên tiếp, chương trình có thể khôi phục gộp hình chữ nhật từ dấu gộp `<` / `^` tường minh trong bảng Markdown.
 - Chỉ những ô có nội dung sau khi bỏ khoảng trắng đầu/cuối chính xác là `<` hoặc `^` mới tham gia nhận diện gộp; `\<` và `\^` được giữ lại như văn bản literal.
 - Hình chữ nhật không hợp lệ hoặc xung đột với merged ranges có sẵn của mẫu sẽ bị hạ cấp thành văn bản thường kèm cảnh báo, thay vì cưỡng ép ghi đè cấu trúc mẫu.
 
@@ -578,14 +582,11 @@ Plugin Obsidian đồng hành được phát hành ở repo riêng và hoạt đ
 -   **🚀 Khởi chạy 1 lần nhấn** - Icon ở sidebar để mở nhanh bộ chuyển đổi.
 -   **📂 Bàn giao tự động** - Tự truyền đường dẫn file đang mở.
 -   **🔄 Quản lý đơn phiên bản** - Nếu chương trình đang chạy, chỉ gửi file, không cần khởi chạy lại.
--   **🔒 Điều khiển cục bộ có giới hạn** - Dùng các yêu cầu có kiểu `status`, `open`, `activate`, không dò tên tiến trình và không dùng file lệnh/trạng thái.
+-   **🔒 Điều khiển cục bộ an toàn** - Dùng các yêu cầu có cấu trúc `status`, `open`, `activate`, không dò tên tiến trình và không dùng tệp lệnh/trạng thái.
 
 ### Nguyên lý hoạt động
 
-Runtime/control transport của DocWen Core có thể dùng named pipe trên Windows hoặc socket AF_UNIX trên
-Linux/macOS. Khóa file chỉ xác lập quyền sở hữu một phiên bản đang chạy; file không được dùng để truyền
-lệnh điều khiển. Đây chỉ là mô tả capability của Core. DocWen Assistant 3.1 vẫn chỉ dành cho Windows
-desktop và chưa có nghiệm thu kết hợp trên Linux/macOS.
+DocWen Core dùng named pipe để điều khiển cục bộ trên Windows và socket AF_UNIX trên Linux/macOS. Khóa tệp chỉ xác lập quyền sở hữu một phiên bản chạy; lệnh điều khiển không được truyền qua tệp. Nội dung này chỉ mô tả ranh giới Core. DocWen Assistant 3.1 hỗ trợ máy tính để bàn Windows và Linux. Bản Microsoft Store trên Windows có thể dùng tự động phát hiện; trên Linux người dùng chọn thủ công gói tương thích đã giải nén. Assistant hiện chưa hỗ trợ macOS.
 
 1.  **Nhấn lần đầu** → Khởi chạy bộ chuyển đổi và truyền file hiện tại.
 2.  **Nhấn lại (có file)** → Thay file mới (chế độ 1 file).

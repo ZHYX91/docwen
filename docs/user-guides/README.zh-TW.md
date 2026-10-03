@@ -6,20 +6,20 @@
 
 [English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)
 
-文檔圖表格式轉換軟體 - 支持 Word/Markdown/Excel 互轉，完全本地運行，數據安全可靠。
+DocWen 是面向 Word、Markdown、Excel 等辦公格式的本機文件與表格轉換工具，強調離線可用、流程清楚，並將文件處理留在使用者裝置上。
 
 ## 📖 專案背景
 
-本軟體最初為文印室日常工作設計，解決以下問題：
-- 各科室發來的文檔格式混亂，需要整理為規範格式
-- 文檔類型繁多，每種類型有不同的固定格式要求
-- 需要離線運行，適配內網環境和老舊設備
+DocWen 最初面向文印室等日常文件整理情境，主要解決這些問題：
+- 不同部門提供的文件格式不一致，需要整理為規範格式
+- 檔案類型多，不同類型有各自的格式要求
+- 需要在內網、離線環境和較舊裝置上穩定工作
 
-**設計理念**：本軟體定位為輕量級傻瓜式工具，在專業性和功能完整性上無法與 LaTeX、Pandoc 等專業工具相比，但勝在零學習成本、開箱即用，適合對格式要求不高的日常辦公場景。
+**設計理念**：DocWen 優先提供低門檻、開箱即用的日常辦公轉換與整理流程。它不以取代 LaTeX、Pandoc 等專業排版或轉換系統為目標，而是把常見文件工作做得直接、清楚，同時保留明確的技術邊界。
 
 ## ✨ 核心功能
 
-- **📄 文檔格式轉換** - Word ↔ Markdown 互轉，支持數學公式轉換、分隔符雙向轉換（Markdown 的三種分隔線與文檔中的分頁符、分節符、分隔線），以及將 Markdown 表格顯式 `<` / `^` marker 恢復為 Word 矩形合併。支持 DOCX/DOC/WPS/RTF/ODT 等格式。
+- **📄 文檔格式轉換** - Word ↔ Markdown 互轉，支持數學公式轉換、分隔符雙向轉換（Markdown 的三種分隔線與文檔中的分頁符、分節符、分隔線），以及將 Markdown 表格顯式 `<` / `^` 合併標記恢復為 Word 矩形合併。支持 DOCX/DOC/WPS/RTF/ODT 等格式。
 - **📊 表格格式轉換** - Excel ↔ Markdown 互轉，支持 XLSX/XLS/ET/ODS/CSV/TSV 等格式；支持合併單元格導出策略（`fill / empty / marker`）和表格匯總工具。Markdown→XLSX 範本已恢復 YAML 欄位、縱向和橫向欄占位符核心能力，完整 Excel 範本區域/圖片/合併恢復仍是對照審計中的遷移目標。
 - **📑 PDF與版式文件** - PDF/XPS/OFD 轉 Markdown 或 DOCX，支持 PDF 合併、拆分等操作。
 - **🖼️ 圖片處理** - 支持 JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC 等格式互轉和壓縮。
@@ -71,8 +71,7 @@ docwen      # 命令列
 
 ### macOS 安裝說明
 
-**目前限制**：macOS 上的 `convert`、`validate`、`number`、`merge`、`split` capability 目前均為
-unavailable。以下只記錄開發實驗所需的選用相依套件。
+**目前限制**：macOS 上的 `convert`、`validate`、`number`、`merge`、`split` 功能目前都無法使用。以下只記錄開發實驗所需的選用相依套件。
 
 **LibreOffice 支援（可選）**
 
@@ -197,9 +196,12 @@ pip install pillow-heif
 對於腳本、Agent 或外掛整合，建議依照以下順序呼叫：
 
 1. `inspect <file> [--json]`：先識別檔案的真實類別、格式與可執行動作。
-2. `schema convert`：讀取 `convert` 的機器可讀參數契約與條件約束。
-3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`：先預演檢測、正規化與路由結果，不直接落地轉換。
-4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`：確認後再執行正式轉換。
+2. `resources list formats --json`：讀取目前 DocWen 實際可用的轉換路線與相依性條件。
+3. `schema convert`：讀取 `convert` 的機器可讀參數契約與條件約束。
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`：先預演檢測、正規化與路由結果，不直接落地轉換。
+5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`：確認後再執行正式轉換。
+
+外部內容消費者使用 `serve --stdio` 與 Machine Protocol v2：先探索能力，再規劃工作，最後執行。CLI 的 `--json` 只是終端呈現格式，不是跨產品相容邊界。本機桌面控制使用獨立且穩定的 `gui open|activate|status` 介面。
 
 ### 常用範例
 
@@ -257,9 +259,11 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `inspect <file> [--json]` | 查詢檔案類別/格式、建議動作，以及副檔名與內容不一致警告。 |
 | `doctor --json` | 輸出診斷結果，並附帶執行期能力摘要與依賴門控資訊。 |
 | `resources list formats --json` | 按來源類別列出可用目標格式，並附帶執行期依賴門控 / 限制摘要。 |
+| `resources list optimizations --json` | 列出可用最佳化資源及其規範路線綁定。 |
 | `resources list templates` | 列出可用模板。 |
 | `resources list numbering-schemes` | 列出可用編號方案。 |
-| `--template <id>` | 原樣使用 `resources list templates` 回傳的 canonical 資源 ID；顯示名稱、檔名與路徑直接拒絕。DOCX ID 用於 `docx/doc/odt/rtf/wps/pdf`，XLSX ID 用於 `xlsx/xls/ods/csv`。 |
+| `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | 透過獨立的本機 GUI 控制介面啟動或啟用 DocWen，並可開啟一個絕對路徑檔案。 |
+| `--template <id>` | 原樣使用 `resources list templates` 回傳的資源 ID；顯示名稱、檔名與路徑直接拒絕。DOCX ID 用於 `docx/doc/odt/rtf/wps/pdf`，XLSX ID 用於 `xlsx/xls/ods/csv`。 |
 | `--extract-img` / `--no-extract-img` / `--ocr` | `convert --to md` 的圖片提取與 OCR 選項。 |
 | `--image-mode file|base64|embed|omit` | 控制 Markdown 匯出時圖片的落地方式。 |
 | `--ocr-placement image_md|main_md` | 控制 OCR 文字寫入圖片配套 Markdown 或主 Markdown。 |
@@ -563,7 +567,7 @@ Excel 範本中的 `{{→月份}}` 會依次向右填充"1月"、"2月"、"3月"
 **合併儲存格處理**：
 
 - Markdown -> Excel 會繼續保留範本原有的 merged ranges。
-- 對由連續整格 `{{↓欄位名}}` 組成的已知列式範本區域，支援根據 Markdown 表格中的顯式 `<` / `^` marker 還原矩形合併。
+- 對由連續整格 `{{↓欄位名}}` 組成的已知列式範本區域，支援根據 Markdown 表格中的顯式 `<` / `^` 合併標記還原矩形合併。
 - 僅當儲存格去掉首尾空白後精確等於 `<` 或 `^` 時才參與 merge 識別；`\<`、`\^` 會保留為字面文字。
 - 非法矩形或與範本原有 merged ranges 衝突時，預設降級為普通文字並記錄警告，不會強制覆蓋範本結構。
 
@@ -578,13 +582,11 @@ Excel 範本中的 `{{→月份}}` 會依次向右填充"1月"、"2月"、"3月"
 - **🚀 一鍵啟動** - 側邊欄圖標快速啟動轉換器
 - **📂 自動傳遞** - 自動傳遞當前打開的文件路徑
 - **🔄 單實例管理** - 程式已運行時自動發送文件，無需重複啟動
-- **🔒 有界本機控制** - 使用有類型的 `status`、`open`、`activate` 請求，不按進程名稱探測，也不使用命令檔或狀態檔
+- **🔒 安全的本機控制** - 使用結構化的 `status`、`open`、`activate` 請求，不按程序名稱探測，也不使用命令檔或狀態檔
 
 ### 工作原理
 
-DocWen Core 的 runtime/control transport 可在 Windows 使用命名管道，在 Linux/macOS 使用
-AF_UNIX 通訊端。檔案鎖只負責單一實例所有權，控制命令不透過檔案傳輸。這只是 Core 能力
-說明；DocWen Assistant 3.1 仍僅限 Windows 桌面端，尚無 Linux/macOS 組合驗收。
+DocWen Core 在 Windows 使用命名管道進行本機控制，在 Linux/macOS 使用 AF_UNIX socket。檔案鎖只負責單一執行個體所有權，不承載控制命令。這裡描述的是 Core 能力。DocWen Assistant 3.1 支援 Windows 與 Linux 桌面端；Windows Microsoft Store 安裝版可使用自動偵測，Linux 使用手動選取的相容解壓縮套件。Assistant 目前不支援 macOS。
 
 1. **首次點擊** → 啟動轉換器並傳入當前文件
 2. **再次點擊（有文件）** → 替換為新文件（單文件模式）
