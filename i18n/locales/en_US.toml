@@ -204,7 +204,7 @@ title = "Settings"
 general = "General"
 text = "Incoming text"
 proofread = "Proofread"
-export = "Markdown resources"
+export = "OCR & Markdown resources"
 document = "Incoming documents"
 spreadsheet = "Incoming spreadsheets"
 image = "Incoming images"
@@ -240,6 +240,10 @@ failed = "Failed to reset settings. Please check the logs."
 summary = "Unsaved changes ({count})"
 more = "... and {count} more"
 
+enabled = "On"
+disabled = "Off"
+empty_value = "(empty)"
+field_fallback = "Setting ({field})"
 [settings.errors]
 tab_load_failed_message = "Failed to load {tab}\n\nError: {error}"
 
@@ -257,7 +261,7 @@ save_success_message = "Config saved and reloaded."
 [settings.general]
 font_label = "Text size:"
 scale_label = "Interface scale:"
-scale_tooltip = "Relative to system scaling. Changes text, icons and spacing together."
+scale_tooltip = "Preview immediately relative to system scaling, adjusting text, icons and spacing together. Apply or OK saves the scale; Cancel restores the last saved value."
 # 语言设置区域
 language_section = "Language"
 language_label = "Select interface language:"
@@ -267,11 +271,12 @@ language_tooltip = "Select the display language for the application.\nChanges wi
 theme_section = "Appearance"
 theme_description = "Choose the theme, text size and interface scale."
 theme_label = "Select application theme:"
-theme_tooltip = "Select the visual theme for the application.\nDifferent themes provide different color schemes and interface styles.\nChanges will take effect after saving."
+theme_tooltip = "Preview immediately after selection. Apply or OK saves the theme; Cancel restores the last saved theme."
 theme_preview = "Theme Preview:"
 sample_button = "Sample Button"
 sample_text = "Sample Text"
 
+font_tooltip = "Preview immediately. Apply or OK saves the text size; Cancel restores the last saved value."
 [settings.general.languages]
 zh_CN = "Chinese (Simplified)"
 en_US = "English"
@@ -317,8 +322,8 @@ batch_mode = "Batch Mode"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
-output_format = "Default output format"
-output_format_hint = "Show templates for this format when adding Markdown."
+output_format = "Preferred template type"
+output_format_hint = "When Markdown is added, prefer templates of this type. This does not change the conversion output format by itself."
 # MD转文档序号设置
 md_to_docx_section = "Heading Numbering (Markdown to Document)"
 remove_numbering = "Remove original Markdown heading numbering by default"
@@ -341,7 +346,7 @@ field_processors_toggle_failed = "Failed to update “{name}”. The previous va
 
 # 序号设置区域
 numbering_settings_section = "Numbering Settings"
-numbering_settings_desc = "Manage heading numbering cleanup and addition schemes for Markdown and document conversion."
+numbering_settings_desc = "Incoming text and Incoming documents open the same global numbering configuration. Saving in either editor takes effect immediately and is not undone by Cancel in this Settings window."
 edit_numbering_add = "Edit heading numbering add schemes"
 edit_numbering_clean = "Edit heading numbering cleanup rules"
 
@@ -352,8 +357,8 @@ edit_numbering_clean = "Edit heading numbering cleanup rules"
 # 词库配置
 
 # 错误消息
-save_numbering_schemes_failed = "Failed to save numbering schemes to disk. Changes were not persisted."
-save_numbering_clean_rules_failed = "Failed to save numbering clean rules to disk. Changes were not persisted."
+save_numbering_schemes_failed = "Failed to save numbering schemes to disk. Changes were not saved."
+save_numbering_clean_rules_failed = "Failed to save numbering cleanup rules to disk. Changes were not saved."
 
 # -----------------------------------------------------------------------------
 # 文档设置选项卡
@@ -379,13 +384,14 @@ sensitive_words_section = "Sensitive word dictionary"
 sensitive_words_desc = "Manage sensitive word detection entries."
 edit = "Edit"
 
+save_boundary_hint = "Rule editor saves and rule imports take effect immediately. Canceling this Settings window does not undo them; the switches on this page still use Apply/OK."
 [settings.extraction]
 image_extraction_mode_label = "Image extraction mode:"
 image_extraction_mode_tooltip = "Choose how images are embedded in Markdown.\n\n• Image files: save as separate images and reference in MD\n• Base64 inline: encode images as Base64 and embed directly in MD"
 image_extraction_mode_file = "Image files"
 image_extraction_mode_base64 = "Base64 inline"
 ocr_placement_mode_label = "OCR placement:"
-ocr_placement_mode_tooltip = "Choose where OCR text is stored.\n\n• Image MD: generate a separate MD file for each image containing the image and OCR text\n• Main document: insert OCR text as a blockquote below the image in the main MD (many images may make the main MD very long)"
+ocr_placement_mode_tooltip = "Choose where image + OCR output is stored. Image MD creates one Markdown file per image; Main document writes the image and OCR into the main Markdown. Base64 inline requires Main document, so this control is disabled and forced to Main document until image-file mode is restored; the previous choice is then restored."
 ocr_placement_mode_image_md = "Image MD"
 ocr_placement_mode_main_md = "Main document"
 ocr_blockquote_title_enabled_label = "Main MD OCR title line"
@@ -413,6 +419,7 @@ section = "Merge Cell Export"
 desc = "Controls how merged cells are represented in Markdown output."
 merge_strategy_label = "Merge Cell Export Strategy:"
 
+merge_strategy_help = "For ordinary Markdown only: Fill repeats the merged anchor text (for example, Title | Title); Empty leaves covered cells blank (Title | ). When Structural Tables output is enabled, merged cells use < and ^ structure markers instead."
 [settings.table_export.strategies]
 fill = "Fill"
 empty = "Empty"
@@ -459,13 +466,14 @@ keep_images_tooltip = "Check \"Extract images\" by default when converting sprea
 enable_ocr = "Check \"Image OCR\" by default"
 enable_ocr_tooltip = "Check \"Image OCR\" by default when converting spreadsheet to MD"
 merge_mode_section = "Merge Mode Settings"
-merge_mode_desc = "Set the default mode for table merging"
+merge_mode_desc = "Choose the default aggregation strategy when combining tables."
 default_merge_mode_label = "Default Merge Mode:"
 spreadsheet_processors_label = "Spreadsheet Processing Software Priority"
 ods_conversion_label = "ODS Format Conversion"
 spreadsheet_to_pdf_label = "Spreadsheet to PDF"
 
 # 汇总模式选项
+merge_mode_help = "By row/column matches incoming rows/columns against the base: a covering incoming item replaces the base item, a covered incoming item keeps the base, otherwise it is inserted near the closest match. By cell ignores incoming blanks, keeps the nonblank value, adds numbers, keeps equal text once, and joins differing nonnumeric text with a comma."
 [settings.spreadsheet.merge_modes]
 by_row = "Merge by Row"
 by_column = "Merge by Column"
@@ -540,7 +548,7 @@ enable_ocr_tooltip = "Check \"Image OCR\" by default when converting other files
 [settings.link]
 # Markdown链接格式区域
 format_section = "Markdown Link Format"
-format_desc = "Set the link format in generated Markdown files"
+format_desc = "Choose the link syntax used when DocWen generates Markdown."
 image_link_style_label = "Image link format:"
 image_link_style_tooltip = "Set the link format for images in MD files\n\n• Markdown embed: ![alt](image.png)\n• Markdown link: [alt](image.png)\n• Wiki embed: ![[image.png]] (Obsidian)\n• Wiki link: [[image.png]] (Obsidian)"
 md_file_link_style_label = "MD file link format:"
@@ -548,19 +556,19 @@ md_file_link_style_tooltip = "Set the link format for MD files in MD files\n\n�
 
 # 非嵌入链接处理区域
 non_embed_section = "Non-Embed Link Processing"
-non_embed_desc = "Set how to handle regular links (without ! prefix) when converting MD to document/table"
+non_embed_desc = "Choose how ordinary links in Markdown input are handled when generating documents or spreadsheets."
 wiki_link_mode = "Wiki link processing:"
-wiki_link_tooltip = "Process [[link]] or [[link|text]] format\n\nKeep as-is: [[link|text]]\nExtract text: text (remove markup)\nRemove: Delete entire link"
+wiki_link_tooltip = "Process [[link]] or [[link|text]]. Keep keeps the source markup; Extract text keeps only display text; Hyperlink keeps display text and target and creates a clickable link when the target format supports it; Remove deletes the link."
 markdown_link_mode = "Markdown link processing:"
-markdown_link_tooltip = "Process [text](url) format\n\nKeep as-is: [text](url)\nExtract text: text (remove markup)\nRemove: Delete entire link"
+markdown_link_tooltip = "Process [text](url). Keep keeps the source markup; Extract text keeps only text; Hyperlink keeps text and target and creates a clickable link when the target format supports it; Remove deletes the link."
 
 # 嵌入链接处理区域
 embed_section = "Embed Link Processing"
-embed_desc = "Set how to handle embed links (with ! prefix) when converting MD to document/table"
+embed_desc = "Choose how embedded links and images in Markdown input are handled when generating documents or spreadsheets."
 wiki_embed_image_mode = "Wiki embed image processing:"
 wiki_embed_image_tooltip = "Process ![[image.png]] format\n\nKeep as-is: ![[image.png]]\nExtract text: image.png\nRemove: Delete link\nEmbed content: Insert image into document"
 markdown_embed_image_mode = "Markdown embed image processing:"
-markdown_embed_image_tooltip = "Process ![alt](image.png) format\n\nKeep as-is: ![alt](image.png)\nExtract text: image.png\nRemove: Delete link\nEmbed content: Insert image into document"
+markdown_embed_image_tooltip = "Process ![alt](image.png). Keep preserves the markup; Extract text uses the alt/display text when present and falls back to the file name only when no alt text is present; Remove deletes the link; Embed content inserts the image."
 embed_md_file_mode = "Wiki embed MD file processing:"
 embed_md_file_tooltip = "Process ![[file.md]] format (Wiki only)\n\nKeep as-is: ![[file.md]]\nExtract text: file.md\nRemove: Delete link\nEmbed content: Recursively process and insert"
 max_depth_label = "Max embed depth:"
@@ -627,7 +635,7 @@ horizontal_rule_tooltip = "Convert Word horizontal rules (Horizontal Rule 1/2/3 
 
 # 语法选择
 syntax_selection = "Syntax Selection"
-syntax_selection_tooltip = "Select the syntax format output when converting documents to Markdown\n(All format syntaxes are automatically recognized during input)"
+syntax_selection_tooltip = "Choose the Markdown syntax emitted when converting documents to Markdown. On input, DocWen recognizes the supported corresponding syntax; optional dialects are controlled by the extension switches above."
 bold_syntax_label = "Bold syntax:"
 bold_syntax_tooltip = "Select the output syntax format for bold text"
 italic_syntax_label = "Italic syntax:"
@@ -654,7 +662,7 @@ md_body_format_tooltip = "Apply format: convert **Bold** to actual bold formatti
 md_heading_format_label = "Heading format markup handling:"
 md_heading_format_tooltip = "Apply format: override the heading style where source markup requests it.\nKeep markup: display source markers literally.\nClean markup: remove Markdown markers and let the Word heading style apply naturally.\nNote: when the heading style is already bold, Apply format can still preserve local formatting differences."
 md_table_header_format_label = "Table header format markup handling:"
-md_table_header_format_tooltip = 'Apply format: **Bold** converted to actual bold (may duplicate with table style)\nKeep markup: Keep markup displayed as-is\nClean markup: Let table style (e.g., firstRow bold) take effect naturally\nNote: Table styles usually define header bold, recommended to use "Clean markup"'
+md_table_header_format_tooltip = "Apply formatting: turn **bold** into actual bold (which can overlap the table style). Keep markup: show the markup literally. Clean markup: remove Markdown markers and let the table style’s header-row formatting apply. Table styles commonly format the first row, so Clean markup is usually preferable."
 heading_merge_mode_label = "Heading + body merge mode:"
 heading_merge_mode_tooltip = "Controls whether a heading and the adjacent next line of plain body text are merged into one paragraph\nPunctuation required: Merge only when heading ends with a sentence-ending punctuation and next line is plain body text (default)\nAlways merge: Merge when next line is plain body text (punctuation not required)\nNever merge: Never merge; parse heading/body as separate paragraphs\nNote: Lists/code blocks/tables/quotes/separators are not merged"
 heading_merge_punctuation_label = "Merge punctuation:"
@@ -664,9 +672,9 @@ heading_merge_punctuation_tooltip = "Characters that trigger heading/body mergin
 md_separator_mapping = "Separator Mapping"
 md_separator_mapping_tooltip = "Configure which Word page break/section break/horizontal rule to convert Markdown separators to\n\nPage break: Page breaks in Word\nSection break: Section breaks in Word (next page type)\nHorizontal rule: Paragraph bottom border (visual separator)"
 mermaid_title = "Mermaid diagrams"
-mermaid_tooltip = "Choose whether Mermaid fenced blocks are rendered as images or kept as source code. Image mode uses the local Mermaid CLI; failures fall back to code with a warning."
+mermaid_tooltip = "Choose whether `mermaid` code blocks are rendered as images or kept as source code. Image mode uses the local Mermaid CLI; if rendering is unavailable or fails, the code block is preserved and a warning is reported."
 mermaid_mode_label = "Output:"
-mermaid_mode_tooltip = "Choose how Mermaid fenced blocks are written to generated documents."
+mermaid_mode_tooltip = "Choose how `mermaid` code blocks are written to generated documents."
 mermaid_code = "Keep as code block"
 mermaid_image = "Render as image"
 dash_label = "--- (three dashes):"
@@ -687,6 +695,8 @@ list_separator_label = "YAML List Separator"
 list_separator_tooltip = "Separator used when joining YAML list values into a string\n\nCommon values:\n• Chinese enumeration comma (、)\n• Comma (，)\n• Comma + space (, )\n• Empty string: direct concatenation"
 
 # 格式处理选项
+mermaid_output_group = "Output method"
+mermaid_renderer_group = "Local renderer"
 [settings.formatting.options]
 preserve_format = "Preserve format"
 discard_format = "Discard format"
@@ -752,6 +762,7 @@ custom_path_label = "Custom path:"
 browse_title = "Select Output Directory"
 
 # 输出模式选项
+validation_custom_path_required = "File saving: choose a non-empty custom output directory, or switch the output location back to the source folder."
 [settings.output.output_modes]
 source = "Source file directory"
 custom = "Custom directory"
@@ -802,9 +813,9 @@ enable_console_label = "Show logs in console"
 enable_console_tooltip = "When enabled, logs will also be output to the console window"
 console_level_label = "Console log level:"
 console_level_tooltip = "Set the log level for console output, can be different from file log level"
-validation_custom_directory_required = "Custom directory mode requires a non-empty directory path."
-validation_prefix_invalid = 'Log file prefix contains invalid characters: \ / : * ? " < > |'
-validation_prefix_required = "Log file prefix cannot be empty."
+validation_custom_directory_required = "Logging: Custom directory mode requires a non-empty directory path."
+validation_prefix_invalid = "Logging: the file-name prefix cannot contain \\ / : * ? \" < > |."
+validation_prefix_required = "Logging: enter a file-name prefix."
 directory_auto_notice = "Directory is auto-determined by mode; custom input is disabled."
 directory_env_override_notice = "Log directory is controlled by an environment variable; directory controls are disabled."
 console_format_tooltip = "Console format string (empty = reuse file format)"
@@ -855,7 +866,7 @@ powerpoint = "PowerPoint"
 
 [settings.ocr]
 language_label = "OCR recognition language:"
-language_tooltip = "OCR language shared by all input formats."
+language_tooltip = "OCR language shared by all input formats. “Follow interface language” chooses from the current UI language; it does not detect the language in the image."
 language_auto = "Follow interface language"
 language_chinese = "Chinese/English"
 language_japanese = "Japanese"
@@ -866,6 +877,7 @@ language_latin = "Latin script (DE/FR/PT, etc.)"
 language_cyrillic = "Cyrillic script (RU, etc.)"
 section = "OCR recognition"
 
+recognize_tables_tooltip = "Applies only to OCR. Table-structure recognition is best effort; failed table regions remain ordinary OCR text. Formula recognition is not included."
 [settings.rule_transfer]
 read_failed = "Unable to read the current rule configuration."
 added = "Added"
@@ -1704,7 +1716,7 @@ output_hint = "When disabled, export ordinary Markdown and report losses of tabl
 structural_tables = "Structural Tables"
 captions_references = "Number Suite captions and cross-references"
 extended_headings = "Heading levels 7–9 (H7–H9)"
-typed_endnotes = "Typed footnotes and endnotes"
+typed_endnotes = "Footnote/endnote distinction (endnote:)"
 obsidian_preset = "Use Obsidian extensions"
 
 [activity]
@@ -1782,3 +1794,22 @@ structured_html_only = "The clipboard had no plain-text body; validated HTML was
 structured_invalid = "Clipboard table/image structure is invalid and was not imported."
 image_invalid = "Clipboard image data is invalid or exceeds the supported size."
 images_omitted = "{count} clipboard image(s) had no verifiable embedded data; placeholders and available text were kept."
+
+[settings.markdown_extensions.input_help]
+structural_tables = "Supports multiple header rows, row-header columns, tables without a header row, and merged cells. Recognize Structural Tables markers such as < and ^ and preserve extended table structure. When disabled, treat them as ordinary Markdown table content."
+
+captions_references = "Recognize Number Suite captions, identifiers and cross-references. When disabled, declarations and @ references remain visible text."
+extended_headings = "Recognize H7–H9 syntax. When disabled, seven to nine leading # characters remain visible text."
+typed_endnotes = "Use note labels such as endnote: to distinguish endnotes from footnotes. When disabled, those labels are treated as ordinary footnotes."
+
+[settings.markdown_extensions.output_help]
+structural_tables = "Supports multiple header rows, row-header columns, tables without a header row, and merged cells. Write Structural Tables markers and extended structure when needed. When disabled, flatten to ordinary Markdown tables and report lost structure."
+
+captions_references = "Generate Number Suite captions and cross-references when available. When disabled, emit ordinary text and report lost references."
+extended_headings = "Generate H7–H9 headings. When disabled, those headings become H6 and the loss is reported."
+typed_endnotes = "Preserve the footnote/endnote distinction with typed note labels. When disabled, endnotes are exported as ordinary footnotes and the loss is reported."
+
+[settings.optimization]
+availability_help = "Optimization types come from the current runtime. If none apply to this input category, these controls are disabled; discovery failures are reported separately."
+
+none_available = "No optimization types are available for this input category in the current runtime."

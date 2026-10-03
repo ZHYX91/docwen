@@ -151,7 +151,7 @@ title = "Einstellungen"
 general = "Allgemein"
 text = "Texteingabe"
 proofread = "Prüfung"
-export = "Markdown-Ressourcen"
+export = "OCR- und Markdown-Ressourcen"
 document = "Dokumenteingabe"
 spreadsheet = "Tabelleneingabe"
 image = "Bildeingabe"
@@ -187,6 +187,10 @@ failed = "Zurücksetzen der Einstellungen fehlgeschlagen. Bitte prüfen Sie die 
 summary = "Ungespeicherte Änderungen ({count})"
 more = "… und {count} weitere"
 
+enabled = "Ein"
+disabled = "Aus"
+empty_value = "(leer)"
+field_fallback = "Einstellung ({field})"
 [settings.errors]
 tab_load_failed_message = "{tab} konnte nicht geladen werden\n\nFehler: {error}"
 
@@ -204,7 +208,7 @@ save_success_message = "Konfiguration gespeichert und neu geladen."
 [settings.general]
 font_label = "Textgröße:"
 scale_label = "Oberflächenskalierung:"
-scale_tooltip = "Relativ zur Systemskalierung. Passt Text, Symbole und Abstände gemeinsam an."
+scale_tooltip = "Die Auswahl wird sofort relativ zur Systemskalierung angezeigt und passt Text, Symbole und Abstände gemeinsam an. Anwenden oder OK speichert den Wert; Abbrechen stellt den zuletzt gespeicherten Wert wieder her."
 # 语言设置区域
 language_section = "Sprache"
 language_label = "Sprache wählen:"
@@ -214,11 +218,12 @@ language_tooltip = "Anzeigesprache wählen.\nNeustart erforderlich."
 theme_section = "Darstellung"
 theme_description = "Design, Schriftgröße und Oberflächenskalierung anpassen."
 theme_label = "Design wählen:"
-theme_tooltip = "Visuelles Design der Anwendung wählen."
+theme_tooltip = "Die Auswahl wird sofort als Vorschau angewendet. Anwenden oder OK speichert das Design; Abbrechen stellt das zuletzt gespeicherte Design wieder her."
 theme_preview = "Vorschau:"
 sample_button = "Beispiel"
 sample_text = "Text"
 
+font_tooltip = "Die Auswahl wird sofort als Vorschau angewendet. Anwenden oder OK speichert die Textgröße; Abbrechen stellt den zuletzt gespeicherten Wert wieder her."
 [settings.general.languages]
 zh_CN = "Chinesisch (vereinfacht)"
 en_US = "Englisch"
@@ -264,8 +269,8 @@ batch_mode = "Stapelverarbeitung"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
-output_format = "Standardausgabeformat"
-output_format_hint = "Beim Hinzufügen von Markdown Vorlagen für dieses Format anzeigen."
+output_format = "Bevorzugter Vorlagentyp"
+output_format_hint = "Beim Hinzufügen von Markdown werden Vorlagen dieses Typs bevorzugt. Das ändert nicht selbst das Konvertierungsausgabeformat."
 # MD转文档序号设置
 md_to_docx_section = "Nummerierung (MD zu DOCX)"
 remove_numbering = "Alte Nummerierung entfernen"
@@ -288,7 +293,7 @@ field_processors_toggle_failed = "„{name}“ konnte nicht aktualisiert werden.
 
 # 序号设置区域
 numbering_settings_section = "Nummerierungseinstellungen"
-numbering_settings_desc = "Regeln für Hinzufügen und Entfernen verwalten."
+numbering_settings_desc = "„Eingehender Text“ und „Eingehende Dokumente“ öffnen dieselbe globale Nummerierungskonfiguration. Speichern in einem Editor wirkt sofort und wird durch Abbrechen in diesem Einstellungsfenster nicht rückgängig gemacht."
 edit_numbering_add = "Hinzufügeschemata bearbeiten"
 edit_numbering_clean = "Bereinigungsregeln bearbeiten"
 
@@ -299,8 +304,8 @@ edit_numbering_clean = "Bereinigungsregeln bearbeiten"
 # 词库配置
 
 # 错误消息
-save_numbering_schemes_failed = "Die Nummerierungsschemata konnten nicht gespeichert werden. Die Änderungen wurden nicht übernommen."
-save_numbering_clean_rules_failed = "Die Regeln zum Bereinigen der Nummerierung konnten nicht gespeichert werden. Die Änderungen wurden nicht übernommen."
+save_numbering_schemes_failed = "Die Nummerierungsschemata konnten nicht gespeichert werden. Die Änderungen wurden nicht gespeichert."
+save_numbering_clean_rules_failed = "Die Regeln zum Bereinigen der Nummerierung konnten nicht gespeichert werden. Die Änderungen wurden nicht gespeichert."
 
 # -----------------------------------------------------------------------------
 # 文档设置选项卡
@@ -326,13 +331,14 @@ sensitive_words_section = "Wörterbuch sensibler Begriffe"
 sensitive_words_desc = "Einträge zur Erkennung markierter Begriffe verwalten."
 edit = "Bearbeiten"
 
+save_boundary_hint = "Speichern im Regel-Editor und Regelimporte wirken sofort. Abbrechen in diesem Einstellungsfenster macht sie nicht rückgängig; die Schalter auf dieser Seite werden weiterhin mit Anwenden/OK gespeichert."
 [settings.extraction]
 image_extraction_mode_label = "Bildextraktionsmodus:"
 image_extraction_mode_tooltip = "Wählen Sie, wie Bilder in Markdown eingebettet werden.\n\n• Bilddateien: als separate Bilder speichern und in MD referenzieren\n• Base64 inline: Bilder als Base64 kodieren und direkt in MD einbetten"
 image_extraction_mode_file = "Bilddateien"
 image_extraction_mode_base64 = "Base64 inline"
 ocr_placement_mode_label = "OCR-Position:"
-ocr_placement_mode_tooltip = "Wählen Sie, wo OCR-Text gespeichert wird.\n\n• Bild-MD: separate MD-Datei pro Bild mit Bild und OCR-Text\n• Hauptdokument: OCR-Text als Blockquote unter dem Bild im Haupt-MD einfügen (bei vielen Bildern kann das Haupt-MD sehr lang werden)"
+ocr_placement_mode_tooltip = "Wählen Sie den Ablageort für Bild + OCR. Bild-MD erstellt pro Bild eine eigene Markdown-Datei; Hauptdokument schreibt Bild und OCR in das Haupt-Markdown. Base64-Inline erfordert Hauptdokument: die Auswahl wird deaktiviert und erzwungen, bis wieder Bilddateien gewählt werden; dann wird die vorherige Auswahl wiederhergestellt."
 ocr_placement_mode_image_md = "Bild-MD"
 ocr_placement_mode_main_md = "Hauptdokument"
 ocr_blockquote_title_enabled_label = "OCR-Titelzeile (Haupt-MD)"
@@ -360,6 +366,7 @@ section = "Export verbundener Zellen"
 desc = "Legt fest, wie verbundene Zellen in der Markdown-Ausgabe dargestellt werden."
 merge_strategy_label = "Exportstrategie für verbundene Zellen:"
 
+merge_strategy_help = "Nur für normales Markdown: Füllen wiederholt den Text der Ankerzelle (z. B. „Titel | Titel“); Leer lässt überdeckte Zellen leer („Titel | “). Bei aktivierter Structural-Tables-Ausgabe werden stattdessen die Strukturmarkierungen < und ^ verwendet."
 [settings.table_export.strategies]
 fill = "Ausfüllen"
 empty = "Leer lassen"
@@ -406,13 +413,14 @@ keep_images_tooltip = "Bilder extrahieren."
 enable_ocr = "OCR aktivieren"
 enable_ocr_tooltip = "OCR aktivieren."
 merge_mode_section = "Zusammenführungsmodus"
-merge_mode_desc = "Standardmodus für Tabellenzusammenführung."
+merge_mode_desc = "Wählt die Standardstrategie zum Zusammenführen von Tabellen."
 default_merge_mode_label = "Standardmodus für das Zusammenführen:"
 spreadsheet_processors_label = "Tabellenkalkulation"
 ods_conversion_label = "ODS-Konvertierung"
 spreadsheet_to_pdf_label = "Tabelle zu PDF"
 
 # 汇总模式选项
+merge_mode_help = "Nach Zeile/Spalte gleicht eingehende Zeilen/Spalten mit der Basistabelle ab: Deckt der eingehende Eintrag den Basiseintrag ab, wird ersetzt; wird er vom Basiseintrag abgedeckt, bleibt die Basis erhalten; sonst wird er nahe der ähnlichsten Stelle eingefügt. Nach Zelle ignoriert leere Eingaben, behält nichtleere Werte, addiert Zahlen, behält gleichen Text einmal und verbindet unterschiedlichen nichtnumerischen Text mit Komma."
 [settings.spreadsheet.merge_modes]
 by_row = "Nach Zeile"
 by_column = "Nach Spalte"
@@ -487,7 +495,7 @@ enable_ocr_tooltip = "Bild-OCR standardmäßig aktivieren, wenn andere Dateien n
 [settings.link]
 # Markdown链接格式区域
 format_section = "Markdown Linkformat"
-format_desc = "Format für Links im Markdown."
+format_desc = "Legt die Linksyntax fest, die DocWen beim Erzeugen von Markdown verwendet."
 image_link_style_label = "Bildlink:"
 image_link_style_tooltip = "Stil für Bildeinbettung."
 md_file_link_style_label = "Dateilink:"
@@ -495,19 +503,19 @@ md_file_link_style_tooltip = "Stil für Dateilinks."
 
 # 非嵌入链接处理区域
 non_embed_section = "Nicht-eingebettete Links"
-non_embed_desc = "Behandlung normaler Links."
+non_embed_desc = "Legt fest, wie normale Links aus der Markdown-Eingabe beim Erzeugen von Dokumenten oder Tabellen behandelt werden."
 wiki_link_mode = "Wiki-Links:"
-wiki_link_tooltip = "Behandlung von [[Wiki-Links]]."
+wiki_link_tooltip = "Verarbeitet [[link]] oder [[link|text]]. Beibehalten erhält die Quellmarkierung; Text extrahieren behält nur den Anzeigetext; Hyperlink behält Text und Ziel und erzeugt einen anklickbaren Link, wenn das Zielformat dies unterstützt; Entfernen löscht den Link."
 markdown_link_mode = "Markdown-Links:"
-markdown_link_tooltip = "Behandlung von [Markdown-Links]."
+markdown_link_tooltip = "Verarbeitet [text](url). Beibehalten erhält die Quellmarkierung; Text extrahieren behält nur den Text; Hyperlink behält Text und Ziel und erzeugt einen anklickbaren Link, wenn das Zielformat dies unterstützt; Entfernen löscht den Link."
 
 # 嵌入链接处理区域
 embed_section = "Eingebettete Links"
-embed_desc = "Behandlung von Einbettungen (!)."
+embed_desc = "Legt fest, wie eingebettete Links und Bilder aus der Markdown-Eingabe beim Erzeugen von Dokumenten oder Tabellen behandelt werden."
 wiki_embed_image_mode = "Wiki-Bildeinbettung:"
 wiki_embed_image_tooltip = "![[Bild]]."
 markdown_embed_image_mode = "Markdown-Bildeinbettung:"
-markdown_embed_image_tooltip = "![Bild]."
+markdown_embed_image_tooltip = "Verarbeitet ![alt](image.png). Beibehalten erhält die Markierung; Text extrahieren verwendet vorhandenen Alt-/Anzeigetext und nur ohne Alt-Text den Dateinamen; Entfernen löscht den Link; Inhalt einbetten fügt das Bild ein."
 embed_md_file_mode = "Eingebettete MD-Dateien:"
 embed_md_file_tooltip = "![[Datei.md]]."
 max_depth_label = "Max. Einbettungstiefe:"
@@ -551,9 +559,9 @@ mermaid_test_failed = "Test fehlgeschlagen: {reason}"
 mermaid_test_passed = "Verfügbar: Testdiagramm erfolgreich gerendert."
 
 mermaid_title = "Mermaid-Diagramme"
-mermaid_tooltip = "Mermaid-Codeblöcke als Bild mit der lokalen Mermaid CLI rendern oder als Code beibehalten. Bei Fehlern bleibt der Code mit einer Warnung erhalten."
+mermaid_tooltip = "Wählen Sie, ob `mermaid`-Codeblöcke als Bilder gerendert oder als Quellcode beibehalten werden. Der Bildmodus verwendet die lokale Mermaid CLI; ist das Rendern nicht verfügbar oder schlägt es fehl, bleibt der Codeblock erhalten und eine Warnung wird gemeldet."
 mermaid_mode_label = "Ausgabe:"
-mermaid_mode_tooltip = "Darstellung von Mermaid-Codeblöcken im Dokument auswählen."
+mermaid_mode_tooltip = "Wählen Sie, wie `mermaid`-Codeblöcke in erzeugte Dokumente geschrieben werden."
 mermaid_code = "Als Codeblock beibehalten"
 mermaid_image = "Als Bild rendern"
 mermaid_ready = "CLI {cli} / Mermaid {mermaid} erkannt. Der Browser wird bei der Konvertierung geprüft."
@@ -581,7 +589,7 @@ horizontal_rule_tooltip = "Word Rahmenlinie unten."
 
 # 语法选择
 syntax_selection = "Syntaxwahl"
-syntax_selection_tooltip = "Markdown-Syntax für Ausgabe."
+syntax_selection_tooltip = "Wählen Sie die Markdown-Syntax für die Ausgabe bei der Dokument-zu-Markdown-Konvertierung. Bei der Eingabe erkennt DocWen die unterstützte entsprechende Syntax; optionale Dialekte werden über die Erweiterungsschalter oben gesteuert."
 bold_syntax_label = "Fett:"
 bold_syntax_tooltip = "Syntax für Fett."
 italic_syntax_label = "Kursiv:"
@@ -608,7 +616,7 @@ md_body_format_tooltip = "Tags anwenden oder entfernen."
 md_heading_format_label = "Überschriften:"
 md_heading_format_tooltip = "Tags in Überschriften."
 md_table_header_format_label = "Tabellenkopf:"
-md_table_header_format_tooltip = "Tags in Tabellenköpfen."
+md_table_header_format_tooltip = "Format anwenden: **fett** wird echte Fettschrift (kann sich mit dem Tabellenstil überschneiden). Markup behalten: Markup wörtlich anzeigen. Markup bereinigen: Markdown-Markierungen entfernen und die Formatierung der ersten Zeile des Tabellenstils wirken lassen. Tabellenstile formatieren häufig die erste Zeile, daher ist „Markup bereinigen“ meist sinnvoll."
 heading_merge_mode_label = "Modus zum Zusammenführen von Überschrift und Text:"
 heading_merge_mode_tooltip = "Steuert, ob eine Überschrift und die direkt folgende normale Textzeile zu einem Absatz zusammengeführt werden\nSatzzeichen erforderlich: nur zusammenführen, wenn die Überschrift mit einem abschließenden Satzzeichen endet und die nächste Zeile normaler Text ist (Standard)\nImmer zusammenführen: zusammenführen, wenn die nächste Zeile normaler Text ist (kein Satzzeichen erforderlich)\nNiemals zusammenführen: Überschrift und Text werden immer als getrennte Absätze verarbeitet\nHinweis: Listen/Codeblöcke/Tabellen/Zitate/Trennlinien werden nicht zusammengeführt"
 heading_merge_punctuation_label = "Satzzeichen für die Zusammenführung:"
@@ -635,6 +643,8 @@ list_separator_label = "YAML-Listen-Trennzeichen"
 list_separator_tooltip = "Trennzeichen beim Zusammenfügen von YAML-Listenwerten zu einer Zeichenkette\n\nHäufige Werte:\n• Chinesisches Aufzählungskomma (、)\n• Komma (，)\n• Komma + Leerzeichen (, )\n• Leere Zeichenkette: direkte Verkettung"
 
 # 格式处理选项
+mermaid_output_group = "Ausgabemethode"
+mermaid_renderer_group = "Lokaler Renderer"
 [settings.formatting.options]
 preserve_format = "Format behalten"
 discard_format = "Format verwerfen"
@@ -700,6 +710,7 @@ custom_path_label = "Pfad:"
 browse_title = "Ausgabeordner wählen"
 
 # 输出模式选项
+validation_custom_path_required = "Dateispeicherung: Wählen Sie ein nicht leeres benutzerdefiniertes Ausgabeverzeichnis oder wechseln Sie zurück zum Quellordner."
 [settings.output.output_modes]
 source = "Quellverzeichnis"
 custom = "Benutzerdefiniert"
@@ -750,9 +761,9 @@ enable_console_label = "Konsolenausgabe"
 enable_console_tooltip = "Logs in der Konsole anzeigen."
 console_level_label = "Konsolen-Level:"
 console_level_tooltip = "Level für Konsole."
-validation_custom_directory_required = "Im Modus für ein benutzerdefiniertes Verzeichnis muss ein Verzeichnispfad angegeben werden."
-validation_prefix_invalid = 'Das Präfix der Protokolldatei enthält ungültige Zeichen: \ / : * ? " < > |'
-validation_prefix_required = "Das Präfix der Protokolldatei darf nicht leer sein."
+validation_custom_directory_required = "Protokollierung: Im Modus „Benutzerdefiniertes Verzeichnis“ muss ein nicht leerer Pfad angegeben werden."
+validation_prefix_invalid = "Protokollierung: Das Dateinamenpräfix darf \\ / : * ? \" < > | nicht enthalten."
+validation_prefix_required = "Protokollierung: Geben Sie ein Präfix für den Dateinamen ein."
 directory_auto_notice = "Das Verzeichnis wird durch den Modus automatisch bestimmt; die benutzerdefinierte Eingabe ist deaktiviert."
 directory_env_override_notice = "Das Protokollverzeichnis wird durch eine Umgebungsvariable festgelegt; die Verzeichnisoptionen sind deaktiviert."
 console_format_tooltip = "Formatzeichenfolge für die Konsole (leer = Dateiformat wiederverwenden)"
@@ -803,8 +814,8 @@ powerpoint = "PowerPoint"
 
 [settings.ocr]
 language_label = "OCR-Sprache:"
-language_tooltip = "Gemeinsame OCR-Sprache für alle Eingabeformate."
-language_auto = "UI-Sprache folgen"
+language_tooltip = "Gemeinsame OCR-Sprache für alle Eingabeformate. „Oberflächensprache verwenden“ wählt anhand der aktuellen UI-Sprache; die Sprache im Bild wird nicht automatisch erkannt."
+language_auto = "Oberflächensprache verwenden"
 language_chinese = "Chinesisch/Englisch"
 language_japanese = "Japanisch"
 language_chinese_cht = "Traditionelles Chinesisch"
@@ -814,6 +825,7 @@ language_latin = "Lateinische Schrift (DE/FR/PT usw.)"
 language_cyrillic = "Kyrillische Schrift (RU usw.)"
 section = "OCR-Erkennung"
 
+recognize_tables_tooltip = "Gilt nur für OCR. Die Erkennung der Tabellenstruktur erfolgt bestmöglich; nicht erkannte Tabellenbereiche bleiben normaler OCR-Text. Formelerkennung ist nicht enthalten."
 [settings.rule_transfer]
 read_failed = "Die aktuelle Regelkonfiguration kann nicht gelesen werden."
 added = "Neu"
@@ -1710,7 +1722,7 @@ output_hint = "Normales Markdown verwenden und nicht darstellbare Strukturen mel
 structural_tables = "Structural Tables: strukturierte Tabellen"
 captions_references = "Number Suite: Beschriftungen und Querverweise"
 extended_headings = "Überschriften der Ebenen 7–9"
-typed_endnotes = "Typisierte Fuß- und Endnoten"
+typed_endnotes = "Fuß-/Endnoten unterscheiden (endnote:)"
 obsidian_preset = "Obsidian-Erweiterungen verwenden"
 
 [activity]
@@ -1788,3 +1800,22 @@ structured_html_only = "Die Zwischenablage enthielt keinen Klartext; validiertes
 structured_invalid = "Die Tabellen- oder Bildstruktur der Zwischenablage ist ungültig und wurde nicht importiert."
 image_invalid = "Die Bilddaten der Zwischenablage sind ungültig oder überschreiten die unterstützte Größe."
 images_omitted = "{count} Zwischenablage-Bild(er) hatten keine überprüfbaren eingebetteten Daten; Platzhalter und verfügbarer Text wurden beibehalten."
+
+[settings.markdown_extensions.input_help]
+structural_tables = "Unterstützt mehrere Kopfzeilen, Zeilenüberschriften, Tabellen ohne Kopfzeile und verbundene Zellen. Erkennt Structural-Tables-Markierungen wie < und ^ und erhält erweiterte Tabellenstrukturen. Deaktiviert werden sie als normaler Markdown-Tabelleninhalt behandelt."
+
+captions_references = "Erkennt Number-Suite-Beschriftungen, Kennungen und Querverweise. Deaktiviert bleiben Deklarationen und @-Verweise als sichtbarer Text erhalten."
+extended_headings = "Erkennt H7–H9. Deaktiviert bleiben sieben bis neun führende #-Zeichen als sichtbarer Text erhalten."
+typed_endnotes = "Verwendet Notizkennungen wie endnote:, um Endnoten von Fußnoten zu unterscheiden. Deaktiviert werden diese Kennungen als normale Fußnoten behandelt."
+
+[settings.markdown_extensions.output_help]
+structural_tables = "Unterstützt mehrere Kopfzeilen, Zeilenüberschriften, Tabellen ohne Kopfzeile und verbundene Zellen. Gibt bei Bedarf Structural-Tables-Markierungen und erweiterte Strukturen aus. Deaktiviert werden normale Markdown-Tabellen erzeugt und Strukturverluste gemeldet."
+
+captions_references = "Gibt Number-Suite-Beschriftungen und Querverweise aus, wenn die Semantik vorhanden ist. Deaktiviert wird normaler Text ausgegeben und Referenzverlust gemeldet."
+extended_headings = "Gibt H7–H9 aus. Deaktiviert werden diese Überschriften zu H6 und der Verlust wird gemeldet."
+typed_endnotes = "Erhält die Unterscheidung zwischen Fuß- und Endnoten mit typisierten Notizkennungen. Deaktiviert werden Endnoten als normale Fußnoten exportiert und der Verlust gemeldet."
+
+[settings.optimization]
+availability_help = "Optimierungstypen stammen aus der aktuellen Laufzeitumgebung. Passt keiner zu dieser Eingabekategorie, werden die Steuerelemente deaktiviert; Fehler bei der Ermittlung werden separat angezeigt."
+
+none_available = "In der aktuellen Laufzeitumgebung ist für diese Eingabekategorie kein Optimierungstyp verfügbar."

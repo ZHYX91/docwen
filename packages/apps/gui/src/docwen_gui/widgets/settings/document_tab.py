@@ -86,6 +86,11 @@ class DocumentTab(DynamicSettingsTab):
             },
             {
                 "title": t("settings.document.optimization_section", "Optimization"),
+                "description": t(
+                    "settings.optimization.availability_help",
+                    "Optimization types come from the current runtime. If none apply to this input category, "
+                    "the controls are disabled; discovery failures are reported separately.",
+                ),
                 "presentation": "card",
                 "fields": [
                     {
@@ -104,12 +109,21 @@ class DocumentTab(DynamicSettingsTab):
             },
             {
                 "title": t("settings.table_export.section", "Table Export"),
+                "description": t(
+                    "settings.table_export.desc",
+                    "Controls how merged cells are represented in Markdown output.",
+                ),
                 "presentation": "card",
                 "fields": [
                     {
                         "key": "to_md_table_merge_export_strategy",
                         "type": "combobox",
                         "label": t("settings.table_export.merge_strategy_label", "Merge Cell Export Strategy:"),
+                        "tooltip": t(
+                            "settings.table_export.merge_strategy_help",
+                            "For ordinary Markdown only: Fill repeats the merged anchor text; Empty leaves covered "
+                            "cells blank. With Structural Tables output enabled, merges use < and ^ structure markers.",
+                        ),
                         "items": [
                             (t("settings.table_export.strategies.fill", "Fill"), "fill"),
                             (t("settings.table_export.strategies.empty", "Empty"), "empty"),

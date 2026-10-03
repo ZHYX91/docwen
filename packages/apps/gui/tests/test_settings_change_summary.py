@@ -9,7 +9,12 @@ from __future__ import annotations
 import pytest
 
 from docwen_gui.view_models.settings_vm import SECTION_GUI, SECTION_OUTPUT, SettingsViewModel
-from docwen_gui.widgets.settings.dialog import _abbreviate_value
+from docwen_gui.widgets.settings.dialog import (
+    _abbreviate_value,
+    _friendly_change_field,
+    _friendly_change_lines,
+    _friendly_change_value,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -64,3 +69,61 @@ def test_change_summary_tooltip_values_are_abbreviated() -> None:
 
     assert _abbreviate_value(long_value) == ("x" * 57) + "..."
     assert _abbreviate_value("short") == "short"
+
+
+def test_change_summary_projects_known_fields_and_values_but_keeps_honest_fallbacks() -> None:
+    from docwen_gui.i18n import t
+
+    assert _friendly_change_field("gui.theme") == t("settings.general.theme_label").rstrip(":：")
+    assert _friendly_change_value("gui.theme", "dark") == t("settings.general.themes.dark")
+    assert _friendly_change_value("output.create_date_subfolder", True) == t("settings.changes.enabled")
+    unknown = _friendly_change_field("future.section.value")
+    assert "future.section.value" in unknown
+
+
+def test_change_summary_expands_dict_backed_conversion_defaults_to_leaf_lines() -> None:
+    lines = _friendly_change_lines(
+        {
+            "field": "conversion_defaults.image",
+            "old": {"compress_mode": "lossless", "size_limit": 512},
+            "new": {"compress_mode": "limit_size", "size_limit": 1024},
+        }
+    )
+
+    from docwen_gui.i18n import t
+
+    assert len(lines) == 2
+    assert all("conversion_defaults.image" not in line for line in lines)
+    assert t("settings.image.compress_mode_label").rstrip(":：") in lines[0]
+    assert t("settings.image.compress_lossless") in lines[0]
+    assert t("settings.image.compress_limit_size") in lines[0]
+
+
+def test_change_summary_explains_nested_dialect_change_from_real_draft() -> None:
+    from copy import deepcopy
+
+    from docwen_gui.i18n import t
+    from docwen_gui.view_models.settings_vm import SECTION_FORMATTING
+
+    vm = SettingsViewModel()
+    vm.begin_session()
+    extensions = deepcopy(vm.config.formatting.markdown_extensions)
+    extensions["input"]["structural_tables"] = not extensions["input"]["structural_tables"]
+    vm.set_field(SECTION_FORMATTING, "markdown_extensions", extensions)
+    lines = [line for change in vm.get_change_summary() for line in _friendly_change_lines(change)]
+    assert len(lines) == 1
+    assert t("settings.markdown_extensions.input") in lines[0]
+    assert t("settings.markdown_extensions.structural_tables") in lines[0]
+    assert "{" not in lines[0]
+
+
+def test_change_summary_handles_software_priority_list() -> None:
+    from docwen_gui.view_models.settings_vm import SECTION_SOFTWARE_PRIORITY
+
+    vm = SettingsViewModel()
+    vm.begin_session()
+    order = list(reversed(vm.config.software_priority.word_processors))
+    vm.set_field(SECTION_SOFTWARE_PRIORITY, "word_processors", order)
+    lines = [line for change in vm.get_change_summary() for line in _friendly_change_lines(change)]
+    assert len(lines) == 1
+    assert order[0] in lines[0]

@@ -60,7 +60,7 @@ def test_settings_dialog_partial_apply_uses_persisted_visual_cancel_baseline(
                     "theme": {"default_theme": "dark"},
                     "transparency": {"enabled": True, "default_value": 0.55},
                 },
-                "output": {"directory": {"mode": "source"}},
+                "output": {"directory": {"mode": "source", "custom_path": "D:/Exports"}},
             }
 
         def snapshot(self) -> dict[str, object]:
@@ -357,7 +357,7 @@ def test_settings_dialog_reset_tab_preserves_other_tab_draft_and_widget(
                         "expand_side_panels": True,
                     }
                 },
-                "output": {"directory": {"mode": "source"}},
+                "output": {"directory": {"mode": "source", "custom_path": "D:/Exports"}},
             }
 
         def snapshot(self) -> dict[str, object]:
@@ -425,3 +425,42 @@ def test_settings_dialog_reset_tab_preserves_other_tab_draft_and_widget(
         assert vm.persisted_config.output.output_mode == "custom"
         assert port.raw["output"]["directory"]["mode"] == "custom"  # type: ignore[index]
         assert vm.is_dirty is False
+
+
+def test_settings_error_remains_visible_until_replaced(qapp, qtbot) -> None:
+    from docwen_gui.view_models.settings_vm import SettingsViewModel
+    from docwen_gui.widgets.settings.dialog import SettingsDialog
+
+    vm = SettingsViewModel()
+    dialog = SettingsDialog(view_model=vm)
+    qtbot.addWidget(dialog)
+    dialog.show()
+    vm.status_changed.emit("Choose a valid output folder.", True)
+    assert dialog._status_label.isVisible()  # pyright: ignore[reportPrivateUsage]
+    assert not dialog._status_timer.isActive()  # pyright: ignore[reportPrivateUsage]
+    vm.status_changed.emit("Settings saved.", False)
+    assert dialog._status_timer.isActive()  # pyright: ignore[reportPrivateUsage]
+    vm.status_changed.emit("Enter a log file prefix.", True)
+    assert not dialog._status_timer.isActive()  # pyright: ignore[reportPrivateUsage]
+    assert dialog._status_label.text() == "Enter a log file prefix."  # pyright: ignore[reportPrivateUsage]
+
+
+def test_settings_summary_tracks_successive_edits_while_already_dirty(qapp, qtbot) -> None:
+    from docwen_gui.i18n import t
+    from docwen_gui.view_models.settings_vm import SECTION_GUI, SECTION_OUTPUT, SettingsViewModel
+    from docwen_gui.widgets.settings.dialog import SettingsDialog
+
+    vm = SettingsViewModel()
+    dialog = SettingsDialog(view_model=vm)
+    qtbot.addWidget(dialog)
+    vm.set_field(SECTION_GUI, "theme", "dark")
+    vm.set_field(SECTION_OUTPUT, "custom_path", "D:/Exports")
+    assert dialog._changes_label.text() == t("settings.changes.summary", count=2)  # pyright: ignore[reportPrivateUsage]
+    assert "D:/Exports" in dialog._changes_label.toolTip()  # pyright: ignore[reportPrivateUsage]
+    vm.set_field(SECTION_OUTPUT, "custom_path", "D:/Other")
+    assert "D:/Other" in dialog._changes_label.toolTip()  # pyright: ignore[reportPrivateUsage]
+    assert "D:/Exports" not in dialog._changes_label.toolTip()  # pyright: ignore[reportPrivateUsage]
+    vm.set_field_batch(SECTION_OUTPUT, {"custom_path": "", "output_mode": "source"})
+    assert dialog._changes_label.text() == t("settings.changes.summary", count=1)  # pyright: ignore[reportPrivateUsage]
+    vm.cancel_changes()
+    assert dialog._changes_label.isHidden()  # pyright: ignore[reportPrivateUsage]

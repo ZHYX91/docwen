@@ -46,7 +46,7 @@ def test_logging_tab_updates_directory_and_runtime_path(qapp, tmp_path, monkeypa
     assert custom_dir in tab._resolved_path.text()  # pyright: ignore[reportPrivateUsage]
 
     tab._file_prefix_edit.setText("")  # pyright: ignore[reportPrivateUsage]
-    assert tab.validate()
+    assert vm.config.logging.file_prefix == ""
 
 
 def test_logging_tab_disables_directory_controls_when_env_override_active(

@@ -1738,12 +1738,58 @@ class SettingsViewModel(QObject):
             if not item.name.startswith("_")
         )
 
-    @staticmethod
-    def _validate() -> list[str]:
-        """Return a list of human-readable validation error messages."""
-        # Validation is section-specific; base VM has no mandatory checks.
-        # LoggingTab validation is handled by the tab's own validate method.
-        return []
+    def _validate(self) -> list[str]:
+        """Return localized GUI admission errors before durable persistence.
+
+        Runtime/ConfigPort validation remains authoritative.  The GUI reuses
+        the runtime logger validator for the small set of values that users can
+        correct here, while adding the output-directory requirement that is
+        specific to this settings workflow.
+        """
+        from docwen_runtime.config.validation import ConfigSemanticError, validate_config_file
+        from docwen_runtime.logging import log_directory_override_source
+
+        errors: list[str] = []
+        logging_config = self._config.logging
+
+        try:
+            validate_config_file(
+                "logger.toml",
+                {"file_prefix": logging_config.file_prefix},
+                {"file_prefix": "docwen"},
+            )
+        except ConfigSemanticError:
+            errors.append(
+                _t("settings.logging.validation_prefix_required")
+                if not logging_config.file_prefix.strip()
+                else _t("settings.logging.validation_prefix_invalid")
+            )
+
+        try:
+            directory_overridden = bool(log_directory_override_source())
+        except Exception:
+            directory_overridden = False
+        if logging_config.directory_mode == "custom" and not directory_overridden:
+            try:
+                validate_config_file(
+                    "logger.toml",
+                    {
+                        "directory_mode": "custom",
+                        "directory": logging_config.directory,
+                    },
+                    {
+                        "directory_mode": "user",
+                        "directory": "",
+                    },
+                )
+            except ConfigSemanticError:
+                errors.append(_t("settings.logging.validation_custom_directory_required"))
+
+        output = self._config.output
+        if output.output_mode == "custom" and not output.custom_path.strip():
+            errors.append(_t("settings.output.validation_custom_path_required"))
+
+        return errors
 
 
 # ── Diff helper ──────────────────────────────────────────────────────────

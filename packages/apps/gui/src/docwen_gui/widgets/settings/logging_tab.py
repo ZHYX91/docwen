@@ -6,7 +6,6 @@ copy path / open directory buttons.
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import cast as _cast
 
@@ -22,6 +21,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from docwen_gui.styles.design_tokens import Spacing
 from docwen_gui.styles.ui_scale import set_metric
 
 from ...i18n import t
@@ -131,7 +131,7 @@ class LoggingTab(BaseSettingsTab):
         dir_row = QWidget(self._scroll_container)
         dir_layout = QHBoxLayout(dir_row)
         dir_layout.setContentsMargins(0, 0, 0, 0)
-        set_metric(dir_layout, "setSpacing", 8)
+        set_metric(dir_layout, "setSpacing", Spacing.CONTROL_GAP)
         self._dir_edit = QLineEdit(self._scroll_container)
         self._dir_edit.setToolTip(
             t("settings.logging.custom_directory_tooltip", "Custom log directory (only used in Custom mode)")
@@ -163,7 +163,7 @@ class LoggingTab(BaseSettingsTab):
         btn_row = QWidget(self._scroll_container)
         btn_layout = QHBoxLayout(btn_row)
         btn_layout.setContentsMargins(0, 0, 0, 0)
-        set_metric(btn_layout, "setSpacing", 8)
+        set_metric(btn_layout, "setSpacing", Spacing.CONTROL_GAP)
         copy_btn = QPushButton(t("info_area.copy_path", "Copy path"), btn_row)
         copy_btn.setObjectName("settingsLoggingCopyPathButton")
         apply_theme_class(copy_btn, "secondary")
@@ -358,29 +358,3 @@ class LoggingTab(BaseSettingsTab):
 
     def reload_from_config(self) -> None:
         self._load_values()
-
-    def validate(self) -> list[str]:
-        """Validate logging-specific inputs."""
-        errors: list[str] = []
-        prefix = self._file_prefix_edit.text().strip() if self._file_prefix_edit else ""
-        if not prefix:
-            errors.append(t("settings.logging.validation_prefix_required", "Log file prefix cannot be empty."))
-        elif re.search(r'[\\/*?:"<>|]', prefix):
-            errors.append(
-                t(
-                    "settings.logging.validation_prefix_invalid",
-                    'Log file prefix contains invalid characters: \\ / : * ? " < > |',
-                )
-            )
-
-        dir_mode = self.get_combo_data(self._dir_mode) if self._dir_mode else "user"
-        override = bool((self._override_source.text() or "").strip()) if self._override_source else False
-        custom_dir = self._dir_edit.text().strip() if self._dir_edit else ""
-        if dir_mode == "custom" and not override and not custom_dir:
-            errors.append(
-                t(
-                    "settings.logging.validation_custom_directory_required",
-                    "Custom directory mode requires a non-empty directory path.",
-                )
-            )
-        return errors

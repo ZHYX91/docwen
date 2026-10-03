@@ -132,3 +132,38 @@ def test_export_settings_round_trip_locale_title_override(monkeypatch: pytest.Mo
         "conversion.ocr_output.blockquote_title_override_by_locale.zh_CN",
         "新标题",
     ) in controller.config_port.set_calls
+
+
+def test_export_disabled_ocr_placement_reason_and_table_help_are_keyboard_reachable(qapp, qtbot) -> None:
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QMenu, QToolButton
+
+    from docwen_gui.i18n import t
+    from docwen_gui.models.settings_config import SettingsConfig
+    from docwen_gui.view_models.settings_vm import SettingsViewModel
+    from docwen_gui.widgets.settings.export_tab import ExportTab
+
+    tab = ExportTab(SettingsViewModel(config=SettingsConfig()))
+    qtbot.addWidget(tab)
+    tab.show()
+    qapp.processEvents()
+
+    tab.set_combo_data(tab._image_mode, "base64")  # pyright: ignore[reportPrivateUsage]
+    assert tab._ocr_mode.isEnabled() is False  # pyright: ignore[reportPrivateUsage]
+
+    info_buttons = tab.findChildren(QToolButton, "settingsInfoButton")
+    placement = [
+        button
+        for button in info_buttons
+        if button.accessibleName() == t("settings.extraction.ocr_placement_mode_label")
+    ]
+    table_help = [button for button in info_buttons if button.accessibleName() == t("action_area.recognize_tables")]
+    assert len(placement) == 1 and "Base64" in placement[0].toolTip()
+    assert len(table_help) == 1 and "OCR" in table_help[0].toolTip()
+    assert table_help[0].focusPolicy() == Qt.FocusPolicy.StrongFocus
+
+    placement[0].setFocus()
+    qtbot.keyClick(placement[0], Qt.Key.Key_Return)
+    menu = placement[0].findChild(QMenu, "settingsHelpPopup")
+    assert menu is not None and menu.isVisible()
+    menu.close()

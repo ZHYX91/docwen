@@ -204,7 +204,7 @@ title = "Cài đặt"
 general = "Chung"
 text = "Văn bản đầu vào"
 proofread = "Kiểm tra"
-export = "Tài nguyên Markdown"
+export = "Tài nguyên OCR và Markdown"
 document = "Tài liệu đầu vào"
 spreadsheet = "Bảng tính đầu vào"
 image = "Hình ảnh đầu vào"
@@ -240,6 +240,10 @@ failed = "Đặt lại cài đặt thất bại. Vui lòng kiểm tra nhật ký
 summary = "Thay đổi chưa lưu ({count})"
 more = "… và thêm {count} mục"
 
+enabled = "Bật"
+disabled = "Tắt"
+empty_value = "(trống)"
+field_fallback = "Thiết lập ({field})"
 [settings.errors]
 tab_load_failed_message = "Không thể tải {tab}\n\nLỗi: {error}"
 
@@ -257,7 +261,7 @@ save_success_message = "Cấu hình đã được lưu và tải lại."
 [settings.general]
 font_label = "Cỡ chữ:"
 scale_label = "Tỷ lệ giao diện:"
-scale_tooltip = "Tương đối với tỷ lệ hệ thống. Điều chỉnh chữ, biểu tượng và khoảng cách cùng nhau."
+scale_tooltip = "Lựa chọn được xem trước ngay theo tỷ lệ hệ thống, đồng thời điều chỉnh chữ, biểu tượng và khoảng cách. Áp dụng hoặc OK sẽ lưu; Hủy sẽ khôi phục giá trị đã lưu gần nhất."
 # 语言设置区域
 language_section = "Ngôn ngữ"
 language_label = "Chọn ngôn ngữ giao diện:"
@@ -267,11 +271,12 @@ language_tooltip = "Chọn ngôn ngữ hiển thị của ứng dụng.\nThay đ
 theme_section = "Diện mạo"
 theme_description = "Điều chỉnh chủ đề, cỡ chữ và tỷ lệ giao diện."
 theme_label = "Chọn chủ đề ứng dụng:"
-theme_tooltip = "Chọn chủ đề hiển thị của ứng dụng.\nMỗi chủ đề có bảng màu và phong cách giao diện khác nhau.\nThay đổi sẽ có hiệu lực sau khi lưu."
+theme_tooltip = "Lựa chọn được xem trước ngay. Áp dụng hoặc OK sẽ lưu chủ đề; Hủy sẽ khôi phục chủ đề đã lưu gần nhất."
 theme_preview = "Xem trước chủ đề:"
 sample_button = "Nút mẫu"
 sample_text = "Văn bản mẫu"
 
+font_tooltip = "Lựa chọn được xem trước ngay. Áp dụng hoặc OK sẽ lưu cỡ chữ; Hủy sẽ khôi phục giá trị đã lưu gần nhất."
 [settings.general.languages]
 zh_CN = "Tiếng Trung (Giản thể)"
 en_US = "Tiếng Anh"
@@ -317,8 +322,8 @@ batch_mode = "Chế độ hàng loạt"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
-output_format = "Định dạng đầu ra mặc định"
-output_format_hint = "Hiển thị mẫu của định dạng này khi thêm Markdown."
+output_format = "Loại mẫu ưu tiên"
+output_format_hint = "Khi thêm Markdown, ưu tiên mẫu thuộc loại này. Thiết lập này tự nó không đổi định dạng đầu ra chuyển đổi."
 # MD转文档序号设置
 md_to_docx_section = "Đánh số tiêu đề (Markdown → Tài liệu)"
 remove_numbering = "Mặc định xóa đánh số tiêu đề trong Markdown"
@@ -341,7 +346,7 @@ field_processors_toggle_failed = "Không thể cập nhật “{name}”. Đã k
 
 # 序号设置区域
 numbering_settings_section = "Thiết lập đánh số"
-numbering_settings_desc = "Quản lý các sơ đồ thêm số và quy tắc xóa số cho Markdown và chuyển đổi tài liệu."
+numbering_settings_desc = "“Văn bản đầu vào” và “Tài liệu đầu vào” mở cùng một cấu hình đánh số toàn cục. Lưu trong bất kỳ trình sửa nào có hiệu lực ngay và nút Hủy của cửa sổ Cài đặt này không hoàn tác."
 edit_numbering_add = "Sửa sơ đồ thêm số"
 edit_numbering_clean = "Sửa quy tắc xóa số"
 
@@ -352,8 +357,8 @@ edit_numbering_clean = "Sửa quy tắc xóa số"
 # 词库配置
 
 # 错误消息
-save_numbering_schemes_failed = "Không thể lưu các lược đồ đánh số. Các thay đổi không được giữ lại."
-save_numbering_clean_rules_failed = "Không thể lưu các quy tắc xóa số. Các thay đổi không được giữ lại."
+save_numbering_schemes_failed = "Không thể lưu sơ đồ đánh số. Các thay đổi chưa được lưu."
+save_numbering_clean_rules_failed = "Không thể lưu quy tắc làm sạch đánh số. Các thay đổi chưa được lưu."
 
 # -----------------------------------------------------------------------------
 # 文档设置选项卡
@@ -379,13 +384,14 @@ sensitive_words_section = "Từ điển từ nhạy cảm"
 sensitive_words_desc = "Quản lý các mục phát hiện thuật ngữ được đánh dấu."
 edit = "Sửa"
 
+save_boundary_hint = "Lưu trong trình sửa quy tắc và nhập quy tắc có hiệu lực ngay. Hủy cửa sổ Cài đặt này không hoàn tác; các công tắc trên trang vẫn được lưu bằng Áp dụng/OK."
 [settings.extraction]
 image_extraction_mode_label = "Chế độ trích xuất ảnh:"
 image_extraction_mode_tooltip = "Chọn cách ảnh được nhúng vào Markdown.\n\n• Tệp ảnh: lưu thành tệp ảnh riêng và tham chiếu trong MD\n• Base64 nội tuyến: mã hóa ảnh Base64 và nhúng trực tiếp vào MD"
 image_extraction_mode_file = "Tệp ảnh"
 image_extraction_mode_base64 = "Base64 nội tuyến"
 ocr_placement_mode_label = "Vị trí OCR:"
-ocr_placement_mode_tooltip = "Chọn nơi lưu văn bản OCR.\n\n• MD ảnh: tạo một tệp MD riêng cho mỗi ảnh chứa ảnh và văn bản OCR\n• Tài liệu chính: chèn OCR dạng trích dẫn dưới ảnh trong MD chính (nhiều ảnh có thể khiến MD chính rất dài)"
+ocr_placement_mode_tooltip = "Chọn nơi lưu ảnh + OCR. MD ảnh tạo một Markdown riêng cho mỗi ảnh; Tài liệu chính ghi ảnh và OCR vào Markdown chính. Base64 nội tuyến bắt buộc dùng Tài liệu chính nên điều khiển bị khóa và ép giá trị này; khi quay lại chế độ tệp ảnh, lựa chọn trước đó được khôi phục."
 ocr_placement_mode_image_md = "MD ảnh"
 ocr_placement_mode_main_md = "Tài liệu chính"
 ocr_blockquote_title_enabled_label = "Dòng tiêu đề OCR (MD chính)"
@@ -413,6 +419,7 @@ section = "Xuất ô đã hợp nhất"
 desc = "Kiểm soát cách thể hiện ô đã hợp nhất trong đầu ra Markdown."
 merge_strategy_label = "Cách xuất ô đã hợp nhất:"
 
+merge_strategy_help = "Chỉ áp dụng cho Markdown thường: Điền lặp lại văn bản ô neo (ví dụ “Tiêu đề | Tiêu đề”); Trống để các ô bị phủ trống (“Tiêu đề | ”). Khi bật đầu ra Structural Tables, dùng dấu cấu trúc < và ^ thay thế."
 [settings.table_export.strategies]
 fill = "Điền"
 empty = "Để trống"
@@ -459,13 +466,14 @@ keep_images_tooltip = "Mặc định bật \"Trích xuất hình ảnh\" khi chu
 enable_ocr = "Mặc định chọn \"OCR hình ảnh\""
 enable_ocr_tooltip = "Mặc định bật \"OCR hình ảnh\" khi chuyển bảng tính → MD"
 merge_mode_section = "Thiết lập chế độ trộn"
-merge_mode_desc = "Đặt chế độ mặc định để trộn bảng"
+merge_mode_desc = "Chọn chiến lược tổng hợp mặc định khi kết hợp bảng."
 default_merge_mode_label = "Chế độ hợp nhất mặc định:"
 spreadsheet_processors_label = "Ưu tiên phần mềm xử lý bảng tính"
 ods_conversion_label = "Chuyển đổi định dạng ODS"
 spreadsheet_to_pdf_label = "Bảng tính → PDF"
 
 # 汇总模式选项
+merge_mode_help = "Theo hàng/cột so khớp hàng/cột đầu vào với bảng gốc: đầu vào bao phủ mục gốc thì thay thế; mục gốc bao phủ đầu vào thì giữ mục gốc; nếu không thì chèn gần vị trí giống nhất. Theo ô bỏ qua đầu vào trống, giữ giá trị không trống, cộng số, giữ văn bản giống nhau một lần và nối văn bản không phải số khác nhau bằng dấu phẩy."
 [settings.spreadsheet.merge_modes]
 by_row = "Trộn theo hàng"
 by_column = "Trộn theo cột"
@@ -540,7 +548,7 @@ enable_ocr_tooltip = "Mặc định bật \"OCR hình ảnh\" khi chuyển tệp
 [settings.link]
 # Markdown链接格式区域
 format_section = "Định dạng liên kết Markdown"
-format_desc = "Đặt định dạng liên kết trong tệp Markdown tạo ra"
+format_desc = "Chọn cú pháp liên kết DocWen dùng khi tạo Markdown."
 image_link_style_label = "Định dạng liên kết ảnh:"
 image_link_style_tooltip = "Đặt định dạng liên kết cho ảnh trong tệp MD\n\n• Nhúng Markdown: ![alt](image.png)\n• Liên kết Markdown: [alt](image.png)\n• Nhúng Wiki: ![[image.png]] (Obsidian)\n• Liên kết Wiki: [[image.png]] (Obsidian)"
 md_file_link_style_label = "Định dạng liên kết tệp MD:"
@@ -548,19 +556,19 @@ md_file_link_style_tooltip = "Đặt định dạng liên kết cho tệp MD tro
 
 # 非嵌入链接处理区域
 non_embed_section = "Xử lý liên kết không nhúng"
-non_embed_desc = "Đặt cách xử lý liên kết thường (không có tiền tố !) khi chuyển MD → tài liệu/bảng"
+non_embed_desc = "Chọn cách xử lý liên kết thường trong đầu vào Markdown khi tạo tài liệu hoặc bảng tính."
 wiki_link_mode = "Xử lý liên kết Wiki:"
-wiki_link_tooltip = "Xử lý định dạng [[link]] hoặc [[link|text]]\n\nGiữ nguyên: [[link|text]]\nTrích văn bản: text (bỏ markup)\nXóa: Xóa toàn bộ liên kết"
+wiki_link_tooltip = "Xử lý [[link]] hoặc [[link|text]]. Giữ nguyên giữ markup nguồn; Trích văn bản chỉ giữ văn bản hiển thị; Siêu liên kết giữ văn bản và đích rồi tạo liên kết bấm được nếu định dạng đích hỗ trợ; Xóa sẽ xóa liên kết."
 markdown_link_mode = "Xử lý liên kết Markdown:"
-markdown_link_tooltip = "Xử lý định dạng [text](url)\n\nGiữ nguyên: [text](url)\nTrích văn bản: text (bỏ markup)\nXóa: Xóa toàn bộ liên kết"
+markdown_link_tooltip = "Xử lý [text](url). Giữ nguyên giữ markup nguồn; Trích văn bản chỉ giữ text; Siêu liên kết giữ văn bản và đích rồi tạo liên kết bấm được nếu định dạng đích hỗ trợ; Xóa sẽ xóa liên kết."
 
 # 嵌入链接处理区域
 embed_section = "Xử lý liên kết nhúng"
-embed_desc = "Đặt cách xử lý liên kết nhúng (có tiền tố !) khi chuyển MD → tài liệu/bảng"
+embed_desc = "Chọn cách xử lý liên kết và ảnh nhúng trong đầu vào Markdown khi tạo tài liệu hoặc bảng tính."
 wiki_embed_image_mode = "Xử lý ảnh nhúng Wiki:"
 wiki_embed_image_tooltip = "Xử lý định dạng ![[image.png]]\n\nGiữ nguyên: ![[image.png]]\nTrích văn bản: image.png\nXóa: Xóa liên kết\nNhúng nội dung: Chèn ảnh vào tài liệu"
 markdown_embed_image_mode = "Xử lý ảnh nhúng Markdown:"
-markdown_embed_image_tooltip = "Xử lý định dạng ![alt](image.png)\n\nGiữ nguyên: ![alt](image.png)\nTrích văn bản: image.png\nXóa: Xóa liên kết\nNhúng nội dung: Chèn ảnh vào tài liệu"
+markdown_embed_image_tooltip = "Xử lý ![alt](image.png). Giữ nguyên giữ markup; Trích văn bản ưu tiên alt/văn bản hiển thị nếu có và chỉ dùng tên tệp khi không có alt; Xóa sẽ xóa liên kết; Nhúng nội dung sẽ chèn ảnh."
 embed_md_file_mode = "Xử lý nhúng tệp MD (Wiki):"
 embed_md_file_tooltip = "Xử lý định dạng ![[file.md]] (chỉ Wiki)\n\nGiữ nguyên: ![[file.md]]\nTrích văn bản: file.md\nXóa: Xóa liên kết\nNhúng nội dung: Xử lý đệ quy và chèn vào"
 max_depth_label = "Độ sâu nhúng tối đa:"
@@ -604,9 +612,9 @@ mermaid_test_failed = "Tạo ảnh thử thất bại: {reason}"
 mermaid_test_passed = "Sẵn sàng: đã tạo sơ đồ thử thành công."
 
 mermaid_title = "Sơ đồ Mermaid"
-mermaid_tooltip = "Tạo ảnh từ khối Mermaid bằng CLI cục bộ hoặc giữ mã nguồn. Khi lỗi, giữ mã nguồn và hiển thị cảnh báo."
+mermaid_tooltip = "Chọn render khối mã `mermaid` thành ảnh hay giữ mã nguồn. Chế độ ảnh dùng Mermaid CLI cục bộ; nếu không thể render hoặc lỗi, khối mã được giữ lại và có cảnh báo."
 mermaid_mode_label = "Đầu ra:"
-mermaid_mode_tooltip = "Chọn cách hiển thị khối Mermaid trong tài liệu."
+mermaid_mode_tooltip = "Chọn cách ghi khối mã `mermaid` vào tài liệu tạo ra."
 mermaid_code = "Giữ khối mã"
 mermaid_image = "Tạo hình ảnh"
 mermaid_ready = "Đã tìm thấy CLI {cli} / Mermaid {mermaid}. Trình duyệt được kiểm tra khi chuyển đổi."
@@ -634,7 +642,7 @@ horizontal_rule_tooltip = "Chuyển đường ngang Word (Horizontal Rule 1/2/3)
 
 # 语法选择
 syntax_selection = "Chọn cú pháp"
-syntax_selection_tooltip = "Chọn cú pháp đầu ra khi chuyển tài liệu → Markdown\n(Mọi cú pháp định dạng sẽ được tự động nhận dạng khi đọc vào)"
+syntax_selection_tooltip = "Chọn cú pháp Markdown xuất ra khi chuyển tài liệu sang Markdown. Ở đầu vào, DocWen nhận dạng cú pháp tương ứng được hỗ trợ; các phương ngữ tùy chọn do các công tắc mở rộng phía trên điều khiển."
 bold_syntax_label = "Cú pháp in đậm:"
 bold_syntax_tooltip = "Chọn cú pháp đầu ra cho chữ in đậm"
 italic_syntax_label = "Cú pháp in nghiêng:"
@@ -661,7 +669,7 @@ md_body_format_tooltip = "Áp dụng định dạng: **Bold** chuyển thành ch
 md_heading_format_label = "Xử lý markup tiêu đề:"
 md_heading_format_tooltip = "Áp dụng định dạng: Ghi đè định dạng tiêu đề, cho phép in đậm cục bộ\nGiữ markup: Hiển thị markup nguyên dạng\nLàm sạch markup: Để định dạng style tiêu đề Word tự áp dụng\nLưu ý: Khi tiêu đề vốn đã in đậm, 'Áp dụng định dạng' giúp đạt hiệu ứng in đậm từng phần"
 md_table_header_format_label = "Xử lý markup tiêu đề bảng:"
-md_table_header_format_tooltip = "Áp dụng định dạng: **Bold** chuyển thành in đậm thực (có thể trùng với style bảng)\nGiữ markup: Hiển thị markup nguyên dạng\nLàm sạch markup: Để style bảng (vd: firstRow in đậm) tự áp dụng\nLưu ý: Style bảng thường đã in đậm tiêu đề, khuyến nghị dùng 'Làm sạch markup'"
+md_table_header_format_tooltip = "Áp dụng định dạng: biến **đậm** thành chữ đậm thật (có thể chồng với kiểu bảng). Giữ markup: hiển thị markup nguyên dạng. Làm sạch markup: bỏ dấu Markdown và để định dạng hàng đầu của kiểu bảng tự áp dụng. Kiểu bảng thường định dạng hàng đầu, vì vậy Làm sạch markup thường phù hợp hơn."
 heading_merge_mode_label = "Chế độ gộp tiêu đề và nội dung:"
 heading_merge_mode_tooltip = "Điều khiển việc gộp tiêu đề và dòng nội dung thường ngay bên dưới thành một đoạn\nChỉ gộp khi có dấu câu: Chỉ gộp khi tiêu đề kết thúc bằng dấu câu và dòng sau là nội dung thường (mặc định)\nGặp nội dung là gộp: Gộp nếu dòng sau là nội dung thường (không cần dấu câu)\nKhông bao giờ gộp: Tiêu đề và nội dung luôn được tách riêng\nLưu ý: danh sách/khối mã/bảng/trích dẫn/đường phân cách sẽ không được gộp"
 heading_merge_punctuation_label = "Dấu câu để gộp:"
@@ -688,6 +696,8 @@ list_separator_label = "Dấu phân cách danh sách YAML"
 list_separator_tooltip = "Dấu phân cách khi nối các giá trị danh sách YAML thành chuỗi\n\nGiá trị phổ biến:\n• Dấu phẩy Trung（、）\n• Dấu phẩy toàn chiều rộng（，）\n• Dấu phẩy + khoảng trắng（, ）\n• Chuỗi rỗng：nối trực tiếp"
 
 # 格式处理选项
+mermaid_output_group = "Cách xuất"
+mermaid_renderer_group = "Bộ render cục bộ"
 [settings.formatting.options]
 preserve_format = "Giữ định dạng"
 discard_format = "Bỏ định dạng"
@@ -753,6 +763,7 @@ custom_path_label = "Đường dẫn tùy chỉnh:"
 browse_title = "Chọn thư mục đầu ra"
 
 # 输出模式选项
+validation_custom_path_required = "Lưu tệp: chọn thư mục đầu ra tùy chỉnh không trống hoặc chuyển vị trí đầu ra về thư mục tệp nguồn."
 [settings.output.output_modes]
 source = "Thư mục của tệp nguồn"
 custom = "Thư mục tùy chỉnh"
@@ -803,9 +814,9 @@ enable_console_label = "Hiển thị log trong console"
 enable_console_tooltip = "Khi bật, log cũng sẽ được in ra cửa sổ console"
 console_level_label = "Mức log console:"
 console_level_tooltip = "Đặt mức log cho console; có thể khác mức ghi ra tệp"
-validation_custom_directory_required = "Chế độ thư mục tùy chỉnh yêu cầu đường dẫn không được để trống."
-validation_prefix_invalid = 'Tiền tố tệp nhật ký chứa ký tự không hợp lệ: \ / : * ? " < > |'
-validation_prefix_required = "Tiền tố tệp nhật ký không được để trống."
+validation_custom_directory_required = "Nhật ký: chế độ thư mục tùy chỉnh yêu cầu đường dẫn không trống."
+validation_prefix_invalid = "Nhật ký: tiền tố tên tệp không được chứa \\ / : * ? \" < > |."
+validation_prefix_required = "Nhật ký: hãy nhập tiền tố tên tệp."
 directory_auto_notice = "Chế độ tự xác định thư mục; phần nhập tùy chỉnh đã bị tắt."
 directory_env_override_notice = "Biến môi trường đang kiểm soát thư mục nhật ký; các tùy chọn thư mục đã bị tắt."
 console_format_tooltip = "Chuỗi định dạng bảng điều khiển (để trống = dùng lại định dạng tệp)"
@@ -856,7 +867,7 @@ powerpoint = "PowerPoint"
 
 [settings.ocr]
 language_label = "Ngôn ngữ OCR:"
-language_tooltip = "Ngôn ngữ OCR dùng chung cho mọi định dạng đầu vào."
+language_tooltip = "Ngôn ngữ OCR dùng chung cho mọi định dạng đầu vào. “Theo ngôn ngữ giao diện” chọn theo ngôn ngữ UI hiện tại; không tự nhận dạng ngôn ngữ trong ảnh."
 language_auto = "Theo ngôn ngữ giao diện"
 language_chinese = "Trung/Anh"
 language_japanese = "Tiếng Nhật"
@@ -867,6 +878,7 @@ language_latin = "Chữ cái Latinh (Đức/Pháp/Bồ Đào Nha, v.v.)"
 language_cyrillic = "Chữ cái Cyrillic (Nga, v.v.)"
 section = "Nhận dạng OCR"
 
+recognize_tables_tooltip = "Chỉ áp dụng cho OCR. Nhận dạng cấu trúc bảng theo mức tốt nhất; vùng bảng thất bại vẫn là văn bản OCR thường. Không bao gồm nhận dạng công thức."
 [settings.rule_transfer]
 read_failed = "Không thể đọc cấu hình quy tắc hiện tại."
 added = "Thêm mới"
@@ -1707,7 +1719,7 @@ output_hint = "Dùng Markdown thông thường và báo cấu trúc không thể
 structural_tables = "Structural Tables: bảng có cấu trúc"
 captions_references = "Number Suite: chú thích và tham chiếu chéo"
 extended_headings = "Tiêu đề cấp 7–9"
-typed_endnotes = "Chú thích chân trang và cuối tài liệu có kiểu"
+typed_endnotes = "Phân biệt chú thích chân trang/cuối tài liệu (endnote:)"
 obsidian_preset = "Dùng phần mở rộng Obsidian"
 
 [activity]
@@ -1785,3 +1797,22 @@ structured_html_only = "Bộ nhớ tạm không có văn bản thuần; HTML đ�
 structured_invalid = "Cấu trúc bảng hoặc hình ảnh trong bộ nhớ tạm không hợp lệ nên không được nhập."
 image_invalid = "Dữ liệu ảnh trong bảng nhớ tạm không hợp lệ hoặc vượt quá kích thước được hỗ trợ."
 images_omitted = "{count} hình ảnh trong bộ nhớ tạm không có dữ liệu nhúng có thể xác minh; các chỗ giữ hình ảnh và văn bản có sẵn đã được giữ lại."
+
+[settings.markdown_extensions.input_help]
+structural_tables = "Hỗ trợ nhiều hàng tiêu đề, tiêu đề hàng, bảng không có hàng tiêu đề và ô gộp. Nhận dạng dấu Structural Tables như < và ^ và giữ cấu trúc bảng mở rộng. Khi tắt, xử lý chúng như nội dung bảng Markdown thông thường."
+
+captions_references = "Nhận dạng chú thích, mã định danh và tham chiếu chéo của Number Suite. Khi tắt, khai báo và tham chiếu @ vẫn là văn bản hiển thị."
+extended_headings = "Nhận dạng H7–H9. Khi tắt, 7–9 dấu # đầu dòng vẫn là văn bản hiển thị."
+typed_endnotes = "Dùng nhãn như endnote: để phân biệt chú thích cuối với chú thích chân trang. Khi tắt, các nhãn đó được xử lý như chú thích chân trang thông thường."
+
+[settings.markdown_extensions.output_help]
+structural_tables = "Hỗ trợ nhiều hàng tiêu đề, tiêu đề hàng, bảng không có hàng tiêu đề và ô gộp. Xuất dấu và cấu trúc mở rộng của Structural Tables khi cần. Khi tắt, làm phẳng thành bảng Markdown thường và báo mất cấu trúc."
+
+captions_references = "Xuất chú thích và tham chiếu chéo Number Suite khi có. Khi tắt, xuất văn bản thường và báo mất tham chiếu."
+extended_headings = "Xuất H7–H9. Khi tắt, các tiêu đề này chuyển thành H6 và báo mất cấp."
+typed_endnotes = "Giữ phân biệt chú thích chân trang/cuối tài liệu bằng nhãn có kiểu. Khi tắt, chú thích cuối được xuất thành chú thích chân trang thường và báo mất kiểu."
+
+[settings.optimization]
+availability_help = "Loại tối ưu hóa đến từ môi trường chạy hiện tại. Nếu không có loại phù hợp với nhóm đầu vào này, các điều khiển sẽ bị vô hiệu hóa; lỗi khám phá được báo riêng."
+
+none_available = "Môi trường chạy hiện tại không có loại tối ưu hóa phù hợp với nhóm đầu vào này."

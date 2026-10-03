@@ -125,15 +125,20 @@ class TestDialogOptimizationPopulation:
             dialog.close()
             dialog.deleteLater()
 
-    def test_ready_empty_is_blank_without_error_placeholder(self, qapp) -> None:
+    def test_ready_empty_has_localized_reason_without_failure_placeholder(self, qapp) -> None:
+        from docwen_gui.i18n import t
         from docwen_gui.widgets.settings.dialog import SettingsDialog
 
         controller = FakeController()
         controller.describe_runtime_capabilities = _empty_projection  # type: ignore[method-assign]
         dialog = SettingsDialog(view_model=_vm(controller))
         try:
-            assert _combo(dialog, "document").count() == 0
-            assert not _combo(dialog, "document").isEnabled()
+            combo = _combo(dialog, "document")
+            assert combo.count() == 1
+            assert combo.itemData(0) is None
+            assert combo.itemText(0) == t("settings.optimization.none_available")
+            assert not combo.isEnabled()
+            assert combo.itemText(0) != t("main_window.runtime_unavailable")
         finally:
             dialog.close()
             dialog.deleteLater()
