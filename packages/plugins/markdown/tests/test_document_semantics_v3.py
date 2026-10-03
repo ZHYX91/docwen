@@ -166,6 +166,20 @@ See @[[#^figure-id|  Figure alias  ]] and @[[#figure: standalone caption]].
     assert references[1]["resolved_target_id"] == "Figure-ID"
 
 
+def test_direct_number_suite_profile_does_not_invent_hierarchical_title_references() -> None:
+    source = "# Parent\n## Child\n\n@[[#Parent#Child]]\n"
+
+    analysis = _analyze(source, consumer_profile="number_suite_direct")
+
+    assert analysis.has_errors
+    [reference] = analysis.projection["references"]
+    assert reference["heading_path"] == ["Parent#Child"]
+    assert reference["resolution_status"] == "missing"
+    assert [item["code"] for item in analysis.diagnostics] == [
+        "docwen.markdown.cross_reference.missing"
+    ]
+
+
 def test_direct_number_suite_profile_treats_case_only_block_ids_as_duplicate() -> None:
     source = "# One ^Same\n\nParagraph ^same\n"
 
