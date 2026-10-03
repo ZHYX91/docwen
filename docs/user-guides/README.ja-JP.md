@@ -493,7 +493,6 @@ Markdown -> DOCX でクリック可能なリンクをサポートします:
 
 ### カスタムテンプレート
 
-DocWen Core の Runtime/Control 通信は Windows では名前付きパイプ、Linux/macOS では AF_UNIX ソケットを使用します。ファイルロックは単一インスタンスの所有権だけを確立し、制御コマンドの転送には使用しません。これは Core の境界だけを説明しています。DocWen Assistant 3.1 は Windows と Linux のデスクトップ環境をサポートします。Windows の Microsoft Store 版は自動検出を利用でき、Linux では互換性のある展開済みパッケージを手動で選択します。Assistant は現在 macOS をサポートしていません。
 
 1. 内蔵テンプレートをコピーして編集するか、既存の DOCX/XLSX ファイルをインポートします。
 2. Word、Excel、WPS でコピーの内容、スタイル、プレースホルダーを編集します。規則は以下を参照してください。
@@ -587,10 +586,7 @@ Excelテンプレート内の `{{→Month}}` は、右方向に「1月」、「2
 
 ### 動作原理
 
-DocWen Core の runtime/control transport は、Windows では名前付きパイプ、Linux/macOS では
-AF_UNIX ソケットを使用します。ファイルロックは単一インスタンスの所有権だけを確立し、
-制御コマンドの転送にはファイルを使用しません。これは Core の能力説明だけです。DocWen
-Assistant 3.1 は Windows デスクトップ専用のままで、Linux/macOS の組み合わせ受入実績はありません。
+DocWen Core の Runtime/Control 通信は Windows では名前付きパイプ、Linux/macOS では AF_UNIX ソケットを使用します。ファイルロックは単一インスタンスの所有権だけを確立し、制御コマンドの転送には使用しません。これは Core の境界だけを説明しています。DocWen Assistant 3.1 は Windows と Linux のデスクトップ環境をサポートします。Windows の Microsoft Store 版は自動検出を利用でき、Linux では互換性のある展開済みパッケージを手動で選択します。Assistant は現在 macOS をサポートしていません。
 
 1.  **最初のクリック** → コンバーターを起動し、現在のファイルを渡します。
 2.  **再クリック（ファイルあり）** → 新しいファイルに置き換えます（単一ファイルモード）。
