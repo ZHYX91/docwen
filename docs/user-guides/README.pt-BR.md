@@ -496,7 +496,6 @@ Gerencie modelos DOCX/XLSX em **Configurações → Modelos**: ativação, ordem
 
 ### Modelos Personalizados
 
-O transporte Runtime/Control do DocWen Core usa named pipe no Windows e socket AF_UNIX no Linux/macOS. O bloqueio de arquivo apenas estabelece a propriedade da instância única; comandos de controle não são transportados por arquivos. Isto descreve somente a fronteira do Core. O DocWen Assistant 3.1 oferece suporte a desktops Windows e Linux. No Windows, instalações da Microsoft Store podem usar detecção automática; no Linux, um pacote compatível extraído é selecionado manualmente. O Assistant atualmente não oferece suporte ao macOS.
 
 1. Copie e edite um modelo integrado ou importe um arquivo DOCX/XLSX existente.
 2. Ajuste conteúdo, estilos e espaços reservados da cópia no Word, Excel ou WPS; consulte as regras abaixo.
@@ -590,10 +589,7 @@ Um plugin Obsidian complementar é publicado separadamente e funciona integrado 
 
 ### Princípio de Funcionamento
 
-O transporte runtime/control do DocWen Core pode usar um pipe nomeado do Windows ou um socket AF_UNIX
-no Linux/macOS. Um bloqueio de arquivo estabelece apenas a propriedade da instância única; arquivos
-não transportam comandos de controle. Isso descreve apenas a capacidade do Core. O DocWen Assistant
-2.0 permanece exclusivo para desktop Windows e não tem aceite combinado no Linux/macOS.
+O transporte Runtime/Control do DocWen Core usa named pipe no Windows e socket AF_UNIX no Linux/macOS. O bloqueio de arquivo apenas estabelece a propriedade da instância única; comandos de controle não são transportados por arquivos. Isto descreve somente a fronteira do Core. O DocWen Assistant 3.1 oferece suporte a desktops Windows e Linux. No Windows, instalações da Microsoft Store podem usar detecção automática; no Linux, um pacote compatível extraído é selecionado manualmente. O Assistant atualmente não oferece suporte ao macOS.
 
 1.  **Primeiro Clique** → Inicia o conversor e passa o arquivo atual.
 2.  **Clique Novamente (Com Arquivo)** → Substitui pelo novo arquivo (Modo de Arquivo Único).
