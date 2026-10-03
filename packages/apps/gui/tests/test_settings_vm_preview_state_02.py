@@ -454,3 +454,62 @@ class TestPartialPersistenceFailure:
         assert ("proofread", "symbol_mappings") not in _RESET_GROUP_DRAFT_PATHS["proofread"]
         for group in ("document", "spreadsheet", "layout", "other"):
             assert ("conversion_defaults",) not in _RESET_GROUP_DRAFT_PATHS[group]
+
+
+class TestSettingsApplyValidation:
+    def test_invalid_custom_output_is_rejected_before_config_port_write(self, vm, config_port, monkeypatch) -> None:
+        from docwen_gui.i18n import t
+
+        batches: list[dict[str, object]] = []
+        statuses: list[tuple[str, bool]] = []
+        monkeypatch.setattr(config_port, "set_many", lambda values: batches.append(dict(values)) or True)
+        vm.status_changed.connect(lambda message, is_error: statuses.append((message, is_error)))
+        vm.begin_session()
+        vm.set_field(SECTION_OUTPUT, "output_mode", "custom")
+        vm.set_field(SECTION_OUTPUT, "custom_path", "   ")
+
+        assert vm.apply_changes() is False
+        assert batches == []
+        assert statuses[-1] == (t("settings.output.validation_custom_path_required"), True)
+        assert vm.is_dirty is True
+
+    def test_valid_custom_output_reaches_config_port_and_saves(self, vm, config_port, monkeypatch) -> None:
+        batches: list[dict[str, object]] = []
+        monkeypatch.setattr(config_port, "set_many", lambda values: batches.append(dict(values)) or True)
+        vm.begin_session()
+        vm.set_field(SECTION_OUTPUT, "output_mode", "custom")
+        vm.set_field(SECTION_OUTPUT, "custom_path", "D:/Exports")
+
+        assert vm.apply_changes() is True
+        assert batches
+        assert any("output.directory.mode" in batch for batch in batches)
+        assert any("output.directory.custom_path" in batch for batch in batches)
+
+    def test_logger_prefix_reuses_runtime_validation_before_write(self, vm, config_port, monkeypatch) -> None:
+        from docwen_gui.i18n import t
+        from docwen_gui.view_models.settings_vm import SECTION_LOGGING
+
+        batches: list[dict[str, object]] = []
+        statuses: list[tuple[str, bool]] = []
+        monkeypatch.setattr(config_port, "set_many", lambda values: batches.append(dict(values)) or True)
+        vm.status_changed.connect(lambda message, is_error: statuses.append((message, is_error)))
+        vm.begin_session()
+        vm.set_field(SECTION_LOGGING, "file_prefix", "bad:name")
+
+        assert vm.apply_changes() is False
+        assert batches == []
+        assert statuses[-1] == (t("settings.logging.validation_prefix_invalid"), True)
+
+    def test_env_log_directory_override_does_not_add_gui_blocker(self, vm, monkeypatch) -> None:
+        from docwen_gui.view_models.settings_vm import SECTION_LOGGING
+
+        vm.begin_session()
+        vm.set_field(SECTION_LOGGING, "directory_mode", "custom")
+        vm.set_field(SECTION_LOGGING, "directory", "   ")
+        monkeypatch.setattr(
+            "docwen_runtime.logging.log_directory_override_source",
+            lambda: "DOCWEN_LOG_DIR",
+        )
+
+        errors = vm._validate()  # pyright: ignore[reportPrivateUsage]
+        assert not any("directory" in error.lower() or "目录" in error for error in errors)
