@@ -140,7 +140,7 @@ def test_structural_table_dialect_accepts_no_column_header_rows() -> None:
     assert all(anchor["role"] == "data" for anchor in metadata["anchors"])
 
 
-def test_structural_table_dialect_accepts_optional_outer_pipes_and_short_delimiters() -> None:
+def test_structural_table_accepts_short_delimiters_without_outer_pipes() -> None:
     source = "Region | Sales | <\nQuarter | Q1 | Q2\n- | - | -\nNorth | 10 | 12"
     analysis = analyze_document_semantics(parse_markdown_text(source), current_v3=True)
 
