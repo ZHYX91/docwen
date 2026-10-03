@@ -761,7 +761,7 @@ enable_console_tooltip = "啟用後，日誌將同時輸出到控制台窗口"
 console_level_label = "控制台日誌級別:"
 console_level_tooltip = "設定控制台輸出的日誌級別，可以與文件日誌級別不同"
 validation_custom_directory_required = "日誌：選擇「自訂目錄」時必須填寫非空目錄路徑。"
-validation_prefix_invalid = "日誌：檔名前綴不能包含 \\\\ / : * ? \" < > |。"
+validation_prefix_invalid = "日誌：檔名前綴不能包含 \\ / : * ? \" < > |。"
 validation_prefix_required = "日誌：請填寫日誌檔名前綴。"
 directory_auto_notice = "目錄由目前模式自動決定，自訂輸入已停用。"
 directory_env_override_notice = "日誌目錄由環境變數控制，目錄相關控制項已停用。"
@@ -1721,7 +1721,7 @@ output_hint = "關閉時使用一般 Markdown，並提示無法表達的結構�
 structural_tables = "Structural Tables 結構表格"
 captions_references = "Number Suite 題注和交互參照"
 extended_headings = "七至九級標題（H7–H9）"
-typed_endnotes = "區分註腳與尾註（`endnote:`）"
+typed_endnotes = "區分註腳與尾註（endnote:）"
 obsidian_preset = "使用 Obsidian 擴充預設"
 
 [activity]
@@ -1801,14 +1801,14 @@ image_invalid = "剪貼簿圖片資料無效或超過支援的大小。"
 images_omitted = "有 {count} 張剪貼簿圖片沒有可驗證的內嵌資料；已保留預留位置及可用文字。"
 
 [settings.markdown_extensions.input_help]
-structural_tables = "辨識 Structural Tables 的 <、^ 等標記並保留延伸表格結構；關閉時按一般 Markdown 表格內容處理。"
+structural_tables = "支援多列表頭、列標題欄、無表頭及合併儲存格。辨識 Structural Tables 的 <、^ 等標記並保留延伸表格結構；關閉時按一般 Markdown 表格內容處理。"
 
 captions_references = "辨識 Number Suite 的題注、識別碼與交叉引用；關閉時宣告與 @ 引用保留為可見文字。"
 extended_headings = "辨識 H7–H9；關閉時開頭七至九個 # 保留為可見文字。"
 typed_endnotes = "以 endnote: 等註記標籤區分尾註與註腳；關閉時這些標籤按一般註腳處理。"
 
 [settings.markdown_extensions.output_help]
-structural_tables = "需要時輸出 Structural Tables 標記與延伸結構；關閉時攤平成一般 Markdown 表格並回報結構損失。"
+structural_tables = "支援多列表頭、列標題欄、無表頭及合併儲存格。需要時輸出 Structural Tables 標記與延伸結構；關閉時攤平成一般 Markdown 表格並回報結構損失。"
 
 captions_references = "有相應語意時輸出 Number Suite 題注與交叉引用；關閉時輸出一般文字並回報引用損失。"
 extended_headings = "輸出 H7–H9；關閉時這些標題降為 H6，並回報層級損失。"

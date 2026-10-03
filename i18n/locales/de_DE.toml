@@ -762,7 +762,7 @@ enable_console_tooltip = "Logs in der Konsole anzeigen."
 console_level_label = "Konsolen-Level:"
 console_level_tooltip = "Level für Konsole."
 validation_custom_directory_required = "Protokollierung: Im Modus „Benutzerdefiniertes Verzeichnis“ muss ein nicht leerer Pfad angegeben werden."
-validation_prefix_invalid = "Protokollierung: Das Dateinamenpräfix darf \\\\ / : * ? \" < > | nicht enthalten."
+validation_prefix_invalid = "Protokollierung: Das Dateinamenpräfix darf \\ / : * ? \" < > | nicht enthalten."
 validation_prefix_required = "Protokollierung: Geben Sie ein Präfix für den Dateinamen ein."
 directory_auto_notice = "Das Verzeichnis wird durch den Modus automatisch bestimmt; die benutzerdefinierte Eingabe ist deaktiviert."
 directory_env_override_notice = "Das Protokollverzeichnis wird durch eine Umgebungsvariable festgelegt; die Verzeichnisoptionen sind deaktiviert."
@@ -1722,7 +1722,7 @@ output_hint = "Normales Markdown verwenden und nicht darstellbare Strukturen mel
 structural_tables = "Structural Tables: strukturierte Tabellen"
 captions_references = "Number Suite: Beschriftungen und Querverweise"
 extended_headings = "Überschriften der Ebenen 7–9"
-typed_endnotes = "Fuß-/Endnoten unterscheiden (`endnote:`)"
+typed_endnotes = "Fuß-/Endnoten unterscheiden (endnote:)"
 obsidian_preset = "Obsidian-Erweiterungen verwenden"
 
 [activity]
@@ -1802,14 +1802,14 @@ image_invalid = "Die Bilddaten der Zwischenablage sind ungültig oder überschre
 images_omitted = "{count} Zwischenablage-Bild(er) hatten keine überprüfbaren eingebetteten Daten; Platzhalter und verfügbarer Text wurden beibehalten."
 
 [settings.markdown_extensions.input_help]
-structural_tables = "Erkennt Structural-Tables-Markierungen wie < und ^ und erhält erweiterte Tabellenstrukturen. Deaktiviert werden sie als normaler Markdown-Tabelleninhalt behandelt."
+structural_tables = "Unterstützt mehrere Kopfzeilen, Zeilenüberschriften, Tabellen ohne Kopfzeile und verbundene Zellen. Erkennt Structural-Tables-Markierungen wie < und ^ und erhält erweiterte Tabellenstrukturen. Deaktiviert werden sie als normaler Markdown-Tabelleninhalt behandelt."
 
 captions_references = "Erkennt Number-Suite-Beschriftungen, Kennungen und Querverweise. Deaktiviert bleiben Deklarationen und @-Verweise als sichtbarer Text erhalten."
 extended_headings = "Erkennt H7–H9. Deaktiviert bleiben sieben bis neun führende #-Zeichen als sichtbarer Text erhalten."
 typed_endnotes = "Verwendet Notizkennungen wie endnote:, um Endnoten von Fußnoten zu unterscheiden. Deaktiviert werden diese Kennungen als normale Fußnoten behandelt."
 
 [settings.markdown_extensions.output_help]
-structural_tables = "Gibt bei Bedarf Structural-Tables-Markierungen und erweiterte Strukturen aus. Deaktiviert werden normale Markdown-Tabellen erzeugt und Strukturverluste gemeldet."
+structural_tables = "Unterstützt mehrere Kopfzeilen, Zeilenüberschriften, Tabellen ohne Kopfzeile und verbundene Zellen. Gibt bei Bedarf Structural-Tables-Markierungen und erweiterte Strukturen aus. Deaktiviert werden normale Markdown-Tabellen erzeugt und Strukturverluste gemeldet."
 
 captions_references = "Gibt Number-Suite-Beschriftungen und Querverweise aus, wenn die Semantik vorhanden ist. Deaktiviert wird normaler Text ausgegeben und Referenzverlust gemeldet."
 extended_headings = "Gibt H7–H9 aus. Deaktiviert werden diese Überschriften zu H6 und der Verlust wird gemeldet."

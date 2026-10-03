@@ -762,7 +762,7 @@ enable_console_tooltip = "有効にすると、ログはコンソールウィン
 console_level_label = "コンソールログレベル："
 console_level_tooltip = "コンソール出力のログレベルを設定します。ファイルログレベルとは異なる場合があります"
 validation_custom_directory_required = "ログ：カスタムディレクトリを選ぶ場合は空でないパスを入力してください。"
-validation_prefix_invalid = "ログ：ファイル名の接頭辞には \\\\ / : * ? \" < > | を使用できません。"
+validation_prefix_invalid = "ログ：ファイル名の接頭辞には \\ / : * ? \" < > | を使用できません。"
 validation_prefix_required = "ログ：ファイル名の接頭辞を入力してください。"
 directory_auto_notice = "ディレクトリはモードに応じて自動決定されるため、カスタム入力は無効です。"
 directory_env_override_notice = "ログディレクトリは環境変数で指定されているため、ディレクトリ設定は無効です。"
@@ -1722,7 +1722,7 @@ output_hint = "通常の Markdown を使用し、表現できない構造や種�
 structural_tables = "Structural Tables の構造化テーブル"
 captions_references = "Number Suite のキャプションと相互参照"
 extended_headings = "レベル 7～9 の見出し"
-typed_endnotes = "脚注と文末脚注を区別（`endnote:`）"
+typed_endnotes = "脚注と文末脚注を区別（endnote:）"
 obsidian_preset = "Obsidian 拡張を使用"
 
 [activity]
@@ -1802,14 +1802,14 @@ image_invalid = "クリップボードの画像データが無効か、対応サ
 images_omitted = "クリップボードの画像 {count} 件には検証可能な埋め込みデータがないため、プレースホルダーと利用可能なテキストを保持しました。"
 
 [settings.markdown_extensions.input_help]
-structural_tables = "< や ^ などの Structural Tables マーカーを認識し、拡張表構造を保持します。無効時は通常の Markdown 表内容として扱います。"
+structural_tables = "複数行の列見出し、行見出し、見出し行のない表、セルの結合に対応します。< や ^ などの Structural Tables マーカーを認識し、拡張表構造を保持します。無効時は通常の Markdown 表内容として扱います。"
 
 captions_references = "Number Suite のキャプション、識別子、相互参照を認識します。無効時は宣言と @ 参照を見えるテキストとして残します。"
 extended_headings = "H7–H9 を認識します。無効時は先頭の 7～9 個の # を見えるテキストとして残します。"
 typed_endnotes = "endnote: などの注記ラベルで文末脚注と脚注を区別します。無効時はそれらを通常の脚注として扱います。"
 
 [settings.markdown_extensions.output_help]
-structural_tables = "必要に応じて Structural Tables のマーカーと拡張構造を出力します。無効時は通常の Markdown 表へ平坦化し、構造損失を通知します。"
+structural_tables = "複数行の列見出し、行見出し、見出し行のない表、セルの結合に対応します。必要に応じて Structural Tables のマーカーと拡張構造を出力します。無効時は通常の Markdown 表へ平坦化し、構造損失を通知します。"
 
 captions_references = "該当する意味情報がある場合に Number Suite のキャプションと相互参照を出力します。無効時は通常のテキストを出力し、参照損失を通知します。"
 extended_headings = "H7–H9 を出力します。無効時は H6 に下げ、階層損失を通知します。"

@@ -1072,7 +1072,7 @@ class SettingsDialog(QDialog):
     # ── Status & summary ────────────────────────────────────────────────────
 
     def _show_status(self, message: str, is_error: bool) -> None:
-        """Display a status message with auto-hide."""
+        """Keep actionable errors visible; auto-hide successful status updates."""
         self._status_label.setText(message)
         self._status_label.setProperty("class", "danger" if is_error else "success")
         self._status_label.style().unpolish(self._status_label)
@@ -1084,7 +1084,8 @@ class SettingsDialog(QDialog):
             self._status_timer.setSingleShot(True)
             self._status_timer.timeout.connect(lambda: self._status_label.setVisible(False))
         self._status_timer.stop()
-        self._status_timer.start(STATUS_DISPLAY_MS)
+        if not is_error:
+            self._status_timer.start(STATUS_DISPLAY_MS)
 
     def _refresh_changes_summary(self, _dirty: bool | None = None) -> None:
         """Update the changes-summary label with field-level old→new info."""
@@ -1182,21 +1183,27 @@ def _friendly_change_lines(change: Mapping[str, object]) -> list[str]:
             if old_value == new_value:
                 continue
             child_field = f"{field}.{key}"
-            lines.append(
-                f"{_friendly_change_field(child_field)}: "
-                f"{_friendly_change_value(child_field, old_value)} → "
-                f"{_friendly_change_value(child_field, new_value)}"
-            )
+            lines.extend(_friendly_change_lines({"field": child_field, "old": old_value, "new": new_value}))
         if lines:
             return lines
     return [
-        f"{_friendly_change_field(field)}: "
-        f"{_friendly_change_value(field, old)} → {_friendly_change_value(field, new)}"
+        f"{_friendly_change_field(field)}: {_friendly_change_value(field, old)} → {_friendly_change_value(field, new)}"
     ]
 
 
 def _friendly_change_field(field: str) -> str:
     """Return a localized field label, with an honest dotted-path fallback."""
+    if field.startswith("formatting.markdown_extensions."):
+        parts = field.split(".")
+        if len(parts) == 4:
+            direction, name = parts[2:]
+            if direction in ("input", "output") and name in (
+                "structural_tables",
+                "captions_references",
+                "extended_headings",
+                "typed_endnotes",
+            ):
+                return f"{t(f'settings.markdown_extensions.{direction}')} / {t(f'settings.markdown_extensions.{name}')}"
     key = _CHANGE_FIELD_LABEL_KEYS.get(field)
     if key is None:
         return t("settings.changes.field_fallback", "Setting ({field})", field=field)

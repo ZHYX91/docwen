@@ -13,6 +13,7 @@ from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLineEdit, QPushButton, QSpinBox, QWidget
 
 from docwen_gui.styles.ui_scale import set_metric
+
 from ...i18n import t
 from ...styles.design_tokens import Spacing
 from ...view_models.settings_vm import SECTION_EXPORT, SettingsViewModel

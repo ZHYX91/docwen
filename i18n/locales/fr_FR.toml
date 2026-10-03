@@ -811,7 +811,7 @@ enable_console_tooltip = "Afficher les journaux dans la console."
 console_level_label = "Niveau console :"
 console_level_tooltip = "Niveau pour la console."
 validation_custom_directory_required = "Journalisation : le mode de répertoire personnalisé exige un chemin non vide."
-validation_prefix_invalid = "Journalisation : le préfixe ne peut pas contenir \\\\ / : * ? \" < > |."
+validation_prefix_invalid = "Journalisation : le préfixe ne peut pas contenir \\ / : * ? \" < > |."
 validation_prefix_required = "Journalisation : saisissez un préfixe de nom de fichier."
 directory_auto_notice = "Le mode détermine automatiquement le répertoire ; la saisie personnalisée est désactivée."
 directory_env_override_notice = "Une variable d’environnement contrôle le répertoire des journaux ; ses réglages sont désactivés."
@@ -1718,7 +1718,7 @@ output_hint = "Utiliser le Markdown courant et signaler les structures non repr�
 structural_tables = "Structural Tables : tableaux structurés"
 captions_references = "Number Suite : légendes et renvois"
 extended_headings = "Titres de niveaux 7 à 9"
-typed_endnotes = "Distinguer notes de bas de page et notes de fin (`endnote:`)"
+typed_endnotes = "Distinguer notes de bas de page et notes de fin (endnote:)"
 obsidian_preset = "Utiliser les extensions Obsidian"
 
 [activity]
@@ -1798,14 +1798,14 @@ image_invalid = "Les données d’image du presse-papiers sont invalides ou dép
 images_omitted = "{count} image(s) du presse-papiers n’avaient pas de données intégrées vérifiables ; les espaces réservés et le texte disponible ont été conservés."
 
 [settings.markdown_extensions.input_help]
-structural_tables = "Reconnaît les marqueurs Structural Tables tels que < et ^ et conserve la structure étendue des tableaux. Désactivé, ils sont traités comme du contenu de tableau Markdown ordinaire."
+structural_tables = "Prend en charge plusieurs lignes d’en-tête, les en-têtes de ligne, les tableaux sans en-tête et les cellules fusionnées. Reconnaît les marqueurs Structural Tables tels que < et ^ et conserve la structure étendue des tableaux. Désactivé, ils sont traités comme du contenu de tableau Markdown ordinaire."
 
 captions_references = "Reconnaît les légendes, identifiants et renvois Number Suite. Désactivé, les déclarations et références @ restent du texte visible."
 extended_headings = "Reconnaît H7–H9. Désactivé, sept à neuf # initiaux restent du texte visible."
 typed_endnotes = "Utilise des étiquettes comme endnote: pour distinguer notes de fin et notes de bas de page. Désactivé, ces étiquettes sont traitées comme des notes de bas de page ordinaires."
 
 [settings.markdown_extensions.output_help]
-structural_tables = "Écrit les marqueurs et structures étendues Structural Tables lorsque nécessaire. Désactivé, aplatit en tableaux Markdown ordinaires et signale les pertes de structure."
+structural_tables = "Prend en charge plusieurs lignes d’en-tête, les en-têtes de ligne, les tableaux sans en-tête et les cellules fusionnées. Écrit les marqueurs et structures étendues Structural Tables lorsque nécessaire. Désactivé, aplatit en tableaux Markdown ordinaires et signale les pertes de structure."
 
 captions_references = "Génère les légendes et renvois Number Suite lorsqu’ils existent. Désactivé, émet du texte ordinaire et signale les références perdues."
 extended_headings = "Génère H7–H9. Désactivé, ces titres deviennent H6 et la perte est signalée."

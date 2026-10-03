@@ -157,11 +157,7 @@ def test_export_disabled_ocr_placement_reason_and_table_help_are_keyboard_reacha
         for button in info_buttons
         if button.accessibleName() == t("settings.extraction.ocr_placement_mode_label")
     ]
-    table_help = [
-        button
-        for button in info_buttons
-        if button.accessibleName() == t("action_area.recognize_tables")
-    ]
+    table_help = [button for button in info_buttons if button.accessibleName() == t("action_area.recognize_tables")]
     assert len(placement) == 1 and "Base64" in placement[0].toolTip()
     assert len(table_help) == 1 and "OCR" in table_help[0].toolTip()
     assert table_help[0].focusPolicy() == Qt.FocusPolicy.StrongFocus

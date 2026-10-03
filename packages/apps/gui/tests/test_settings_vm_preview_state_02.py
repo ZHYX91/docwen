@@ -113,7 +113,7 @@ class TestPartialPersistenceFailure:
                             "expand_side_panels": False,
                         }
                     },
-                    "output": {"directory": {"mode": "source"}},
+                    "output": {"directory": {"mode": "source", "custom_path": "D:/Exports"}},
                 }
                 self.reload_count = 0
 

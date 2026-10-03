@@ -814,7 +814,7 @@ enable_console_tooltip = "When enabled, logs will also be output to the console 
 console_level_label = "Console log level:"
 console_level_tooltip = "Set the log level for console output, can be different from file log level"
 validation_custom_directory_required = "Logging: Custom directory mode requires a non-empty directory path."
-validation_prefix_invalid = "Logging: the file-name prefix cannot contain \\\\ / : * ? \" < > |."
+validation_prefix_invalid = "Logging: the file-name prefix cannot contain \\ / : * ? \" < > |."
 validation_prefix_required = "Logging: enter a file-name prefix."
 directory_auto_notice = "Directory is auto-determined by mode; custom input is disabled."
 directory_env_override_notice = "Log directory is controlled by an environment variable; directory controls are disabled."
@@ -1716,7 +1716,7 @@ output_hint = "When disabled, export ordinary Markdown and report losses of tabl
 structural_tables = "Structural Tables"
 captions_references = "Number Suite captions and cross-references"
 extended_headings = "Heading levels 7–9 (H7–H9)"
-typed_endnotes = "Footnote/endnote distinction (`endnote:`)"
+typed_endnotes = "Footnote/endnote distinction (endnote:)"
 obsidian_preset = "Use Obsidian extensions"
 
 [activity]
@@ -1796,14 +1796,14 @@ image_invalid = "Clipboard image data is invalid or exceeds the supported size."
 images_omitted = "{count} clipboard image(s) had no verifiable embedded data; placeholders and available text were kept."
 
 [settings.markdown_extensions.input_help]
-structural_tables = "Recognize Structural Tables markers such as < and ^ and preserve extended table structure. When disabled, treat them as ordinary Markdown table content."
+structural_tables = "Supports multiple header rows, row-header columns, tables without a header row, and merged cells. Recognize Structural Tables markers such as < and ^ and preserve extended table structure. When disabled, treat them as ordinary Markdown table content."
 
 captions_references = "Recognize Number Suite captions, identifiers and cross-references. When disabled, declarations and @ references remain visible text."
 extended_headings = "Recognize H7–H9 syntax. When disabled, seven to nine leading # characters remain visible text."
 typed_endnotes = "Use note labels such as endnote: to distinguish endnotes from footnotes. When disabled, those labels are treated as ordinary footnotes."
 
 [settings.markdown_extensions.output_help]
-structural_tables = "Write Structural Tables markers and extended structure when needed. When disabled, flatten to ordinary Markdown tables and report lost structure."
+structural_tables = "Supports multiple header rows, row-header columns, tables without a header row, and merged cells. Write Structural Tables markers and extended structure when needed. When disabled, flatten to ordinary Markdown tables and report lost structure."
 
 captions_references = "Generate Number Suite captions and cross-references when available. When disabled, emit ordinary text and report lost references."
 extended_headings = "Generate H7–H9 headings. When disabled, those headings become H6 and the loss is reported."

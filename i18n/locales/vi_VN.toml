@@ -815,7 +815,7 @@ enable_console_tooltip = "Khi bật, log cũng sẽ được in ra cửa sổ co
 console_level_label = "Mức log console:"
 console_level_tooltip = "Đặt mức log cho console; có thể khác mức ghi ra tệp"
 validation_custom_directory_required = "Nhật ký: chế độ thư mục tùy chỉnh yêu cầu đường dẫn không trống."
-validation_prefix_invalid = "Nhật ký: tiền tố tên tệp không được chứa \\\\ / : * ? \" < > |."
+validation_prefix_invalid = "Nhật ký: tiền tố tên tệp không được chứa \\ / : * ? \" < > |."
 validation_prefix_required = "Nhật ký: hãy nhập tiền tố tên tệp."
 directory_auto_notice = "Chế độ tự xác định thư mục; phần nhập tùy chỉnh đã bị tắt."
 directory_env_override_notice = "Biến môi trường đang kiểm soát thư mục nhật ký; các tùy chọn thư mục đã bị tắt."
@@ -1719,7 +1719,7 @@ output_hint = "Dùng Markdown thông thường và báo cấu trúc không thể
 structural_tables = "Structural Tables: bảng có cấu trúc"
 captions_references = "Number Suite: chú thích và tham chiếu chéo"
 extended_headings = "Tiêu đề cấp 7–9"
-typed_endnotes = "Phân biệt chú thích chân trang/cuối tài liệu (`endnote:`)"
+typed_endnotes = "Phân biệt chú thích chân trang/cuối tài liệu (endnote:)"
 obsidian_preset = "Dùng phần mở rộng Obsidian"
 
 [activity]
@@ -1799,14 +1799,14 @@ image_invalid = "Dữ liệu ảnh trong bảng nhớ tạm không hợp lệ ho
 images_omitted = "{count} hình ảnh trong bộ nhớ tạm không có dữ liệu nhúng có thể xác minh; các chỗ giữ hình ảnh và văn bản có sẵn đã được giữ lại."
 
 [settings.markdown_extensions.input_help]
-structural_tables = "Nhận dạng dấu Structural Tables như < và ^ và giữ cấu trúc bảng mở rộng. Khi tắt, xử lý chúng như nội dung bảng Markdown thông thường."
+structural_tables = "Hỗ trợ nhiều hàng tiêu đề, tiêu đề hàng, bảng không có hàng tiêu đề và ô gộp. Nhận dạng dấu Structural Tables như < và ^ và giữ cấu trúc bảng mở rộng. Khi tắt, xử lý chúng như nội dung bảng Markdown thông thường."
 
 captions_references = "Nhận dạng chú thích, mã định danh và tham chiếu chéo của Number Suite. Khi tắt, khai báo và tham chiếu @ vẫn là văn bản hiển thị."
 extended_headings = "Nhận dạng H7–H9. Khi tắt, 7–9 dấu # đầu dòng vẫn là văn bản hiển thị."
 typed_endnotes = "Dùng nhãn như endnote: để phân biệt chú thích cuối với chú thích chân trang. Khi tắt, các nhãn đó được xử lý như chú thích chân trang thông thường."
 
 [settings.markdown_extensions.output_help]
-structural_tables = "Xuất dấu và cấu trúc mở rộng của Structural Tables khi cần. Khi tắt, làm phẳng thành bảng Markdown thường và báo mất cấu trúc."
+structural_tables = "Hỗ trợ nhiều hàng tiêu đề, tiêu đề hàng, bảng không có hàng tiêu đề và ô gộp. Xuất dấu và cấu trúc mở rộng của Structural Tables khi cần. Khi tắt, làm phẳng thành bảng Markdown thường và báo mất cấu trúc."
 
 captions_references = "Xuất chú thích và tham chiếu chéo Number Suite khi có. Khi tắt, xuất văn bản thường và báo mất tham chiếu."
 extended_headings = "Xuất H7–H9. Khi tắt, các tiêu đề này chuyển thành H6 và báo mất cấp."

@@ -814,7 +814,7 @@ enable_console_tooltip = "Exibir logs no console."
 console_level_label = "Nível do console:"
 console_level_tooltip = "Nível para o console."
 validation_custom_directory_required = "Registro: o modo de diretório personalizado exige um caminho não vazio."
-validation_prefix_invalid = "Registro: o prefixo não pode conter \\\\ / : * ? \" < > |."
+validation_prefix_invalid = "Registro: o prefixo não pode conter \\ / : * ? \" < > |."
 validation_prefix_required = "Registro: informe um prefixo para o nome do arquivo."
 directory_auto_notice = "O modo determina o diretório automaticamente; a entrada personalizada está desativada."
 directory_env_override_notice = "Uma variável de ambiente controla o diretório de registros; os controles de diretório estão desativados."
@@ -1717,7 +1717,7 @@ output_hint = "Usar Markdown comum e informar estruturas que não podem ser repr
 structural_tables = "Structural Tables: tabelas estruturadas"
 captions_references = "Number Suite: legendas e referências cruzadas"
 extended_headings = "Títulos de níveis 7–9"
-typed_endnotes = "Distinção entre notas de rodapé e de fim (`endnote:`)"
+typed_endnotes = "Distinção entre notas de rodapé e de fim (endnote:)"
 obsidian_preset = "Usar extensões do Obsidian"
 
 [activity]
@@ -1797,14 +1797,14 @@ image_invalid = "Os dados de imagem da área de transferência são inválidos o
 images_omitted = "{count} imagem(ns) da área de transferência não tinham dados incorporados verificáveis; os espaços reservados e o texto disponível foram preservados."
 
 [settings.markdown_extensions.input_help]
-structural_tables = "Reconhece marcadores de Structural Tables como < e ^ e preserva a estrutura estendida da tabela. Desativado, trata-os como conteúdo normal de tabela Markdown."
+structural_tables = "Aceita várias linhas de cabeçalho, cabeçalhos de linha, tabelas sem cabeçalho e células mescladas. Reconhece marcadores de Structural Tables como < e ^ e preserva a estrutura estendida da tabela. Desativado, trata-os como conteúdo normal de tabela Markdown."
 
 captions_references = "Reconhece legendas, identificadores e referências cruzadas do Number Suite. Desativado, declarações e referências @ permanecem como texto visível."
 extended_headings = "Reconhece H7–H9. Desativado, sete a nove # iniciais permanecem como texto visível."
 typed_endnotes = "Usa rótulos como endnote: para distinguir notas de fim de notas de rodapé. Desativado, esses rótulos são tratados como notas de rodapé comuns."
 
 [settings.markdown_extensions.output_help]
-structural_tables = "Escreve marcadores e estrutura estendida de Structural Tables quando necessário. Desativado, achata para tabelas Markdown comuns e informa perda de estrutura."
+structural_tables = "Aceita várias linhas de cabeçalho, cabeçalhos de linha, tabelas sem cabeçalho e células mescladas. Escreve marcadores e estrutura estendida de Structural Tables quando necessário. Desativado, achata para tabelas Markdown comuns e informa perda de estrutura."
 
 captions_references = "Gera legendas e referências cruzadas do Number Suite quando disponíveis. Desativado, emite texto comum e informa perda de referências."
 extended_headings = "Gera H7–H9. Desativado, esses títulos viram H6 e a perda é informada."

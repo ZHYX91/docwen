@@ -814,7 +814,7 @@ enable_console_tooltip = "启用后，日志将同时输出到控制台窗口"
 console_level_label = "控制台日志级别:"
 console_level_tooltip = "设置控制台输出的日志级别，可以与文件日志级别不同"
 validation_custom_directory_required = "日志：选择“自定义目录”时必须填写非空目录路径。"
-validation_prefix_invalid = "日志：文件名前缀不能包含 \\\\ / : * ? \" < > |。"
+validation_prefix_invalid = "日志：文件名前缀不能包含 \\ / : * ? \" < > |。"
 validation_prefix_required = "日志：请填写日志文件名前缀。"
 directory_auto_notice = "目录由当前模式自动决定，自定义输入已禁用。"
 directory_env_override_notice = "日志目录由环境变量控制，目录相关控件已禁用。"
@@ -877,7 +877,7 @@ language_latin = "拉丁语系 (德/法/葡等)"
 language_cyrillic = "西里尔语系 (俄语等)"
 section = "OCR 识别"
 
-recognize_tables_tooltip = "仅作用于 OCR。表格结构采用尽力识别；识别失败的表格区域仍保留为普通 OCR 文本，不包含公式识别。"
+recognize_tables_tooltip = "仅作用于 OCR。尝试识别表格结构；识别失败的表格区域仍保留为普通 OCR 文本，不包含公式识别。"
 [settings.rule_transfer]
 read_failed = "无法读取当前规则配置。"
 added = "新增"
@@ -1717,7 +1717,7 @@ output_hint = "关闭时使用普通 Markdown；不能表达的表格结构、�
 structural_tables = "Structural Tables 结构表格"
 captions_references = "Number Suite 题注和交叉引用"
 extended_headings = "七至九级标题（H7–H9）"
-typed_endnotes = "区分脚注与尾注（`endnote:`）"
+typed_endnotes = "区分脚注与尾注（endnote:）"
 obsidian_preset = "使用 Obsidian 扩展预设"
 
 [activity]
@@ -1797,18 +1797,18 @@ image_invalid = "剪贴板图片数据无效或超过支持的大小。"
 images_omitted = "有 {count} 张剪贴板图片没有可验证的内嵌数据；已保留占位及可用文字。"
 
 [settings.markdown_extensions.input_help]
-structural_tables = "识别 Structural Tables 的 <、^ 等标记并保留扩展表格结构；关闭时按普通 Markdown 表格内容处理。"
+structural_tables = "支持多行表头、行标题列、无表头和合并单元格。识别 Structural Tables 的 <、^ 等标记并保留扩展表格结构；关闭时按普通 Markdown 表格内容处理。"
 
 captions_references = "识别 Number Suite 的题注、标识符和交叉引用；关闭时声明和 @ 引用保留为可见文本。"
 extended_headings = "识别 H7–H9；关闭时七至九个开头 # 保留为可见文本。"
 typed_endnotes = "用 endnote: 等注释标签区分尾注与脚注；关闭时这些标签按普通脚注处理。"
 
 [settings.markdown_extensions.output_help]
-structural_tables = "需要时输出 Structural Tables 标记和扩展结构；关闭时扁平化为普通 Markdown 表格，并报告结构损失。"
+structural_tables = "支持多行表头、行标题列、无表头和合并单元格。需要时输出 Structural Tables 标记和扩展结构；关闭时扁平化为普通 Markdown 表格，并报告结构损失。"
 
 captions_references = "有相应语义时输出 Number Suite 题注和交叉引用；关闭时输出普通文本并报告引用损失。"
 extended_headings = "输出 H7–H9；关闭时这些标题降为 H6，并报告层级损失。"
-typed_endnotes = "用类型化注释标签保留脚注/尾注区别；关闭时尾注输出为普通脚注，并报告类型损失。"
+typed_endnotes = "用 endnote: 标签保留脚注与尾注的区别；关闭时尾注输出为普通脚注，并报告类型损失。"
 
 [settings.optimization]
 availability_help = "优化类型来自当前运行环境。若没有适用于此输入类别的类型，相关控件会禁用；资源发现失败会单独显示错误。"

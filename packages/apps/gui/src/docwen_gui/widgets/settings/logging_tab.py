@@ -358,4 +358,3 @@ class LoggingTab(BaseSettingsTab):
 
     def reload_from_config(self) -> None:
         self._load_values()
-
