@@ -44,6 +44,7 @@ from docwen_core.resolved_resource_staging import (
     bind_resolved_document_resources,
 )
 from docwen_plugin_markdown.ast_transforms import annotate_ast_with_merges
+from docwen_plugin_markdown.document_semantics import annotate_table_semantics
 from docwen_plugin_markdown.field_registry import (
     collect_placeholder_rules,
     collect_special_placeholder_handlers,
@@ -317,6 +318,14 @@ def _render_resolved_v4_docx(
         punctuation=_request_heading_merge_punctuation({}, context.config),
     )
     render_ast, note_ctx = extract_notes_from_ast(raw_ast)
+    render_ast, table_diagnostics = annotate_table_semantics(render_ast)
+    table_errors = [item for item in table_diagnostics if item.level == "error"]
+    if table_errors:
+        detail = "; ".join(item.message for item in table_errors)
+        raise ResolvedConversionV4Unsupported(
+            "MD2DOCX-DOCUMENT-SEMANTICS-INVALID",
+            detail or "Markdown table semantics are invalid.",
+        )
 
     context.progress.report_progress(40.0, "Resolving template and managed styles")
     doc = resolve_template(template_name or None)

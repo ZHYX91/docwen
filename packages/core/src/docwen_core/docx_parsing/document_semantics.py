@@ -604,12 +604,18 @@ def extract_semantic_table_metadata(
     for row in rows:
         tr_pr = row.find(qn("w:trPr"))
         cnf = tr_pr.find(qn("w:cnfStyle")) if tr_pr is not None else None
-        is_header = cnf is not None and (cnf.get(qn("w:firstRow")) or "") in {"1", "true"}
-        if not is_header:
+        conditional_header = cnf is not None and (cnf.get(qn("w:firstRow")) or "") in {"1", "true"}
+        tbl_header = tr_pr.find(qn("w:tblHeader")) if tr_pr is not None else None
+        repeat_header_value = (
+            None if tbl_header is None else (tbl_header.get(qn("w:val")) or "1").casefold() not in {"0", "false", "off"}
+        )
+        # Word can mark several leading rows as repeating headers using
+        # w:tblHeader without duplicating cnfStyle firstRow on every row.
+        # Treat an enabled repeat marker as independent native header evidence.
+        if not conditional_header and repeat_header_value is not True:
             break
         header_rows += 1
-        tbl_header = tr_pr.find(qn("w:tblHeader")) if tr_pr is not None else None
-        repeat_values.append(None if tbl_header is None else (tbl_header.get(qn("w:val")) or "1") not in {"0", "false"})
+        repeat_values.append(repeat_header_value)
 
     header_columns = 0
     if rows:

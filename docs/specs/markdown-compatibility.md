@@ -109,15 +109,17 @@ and note syntax use the input dialect policy. Markdown output always uses the se
 
 DocWen accepts the Structural Tables pipe-table dialect in addition to ordinary GFM tables:
 
-- consecutive equal-width rows before the delimiter are column-header rows;
+- consecutive equal-width rows before the delimiter are column-header rows; the delimiter may be the first row,
+  which represents zero column-header rows;
 - one adjacent `||` inside the delimiter marks the columns to its left as row headers and adds no column;
 - an exact `<` merges left and an exact `^` merges up; `\<` and `\^` are literal cell text;
 - escaped pipes and pipes inside code spans do not split cells; and
 - invalid widths or structures remain visible source text instead of being guessed.
 
 DOCX export maps these roles and merge rectangles to native table semantics. DOCX import emits the canonical
-Structural Tables spelling when native table metadata requires multiple column-header rows or row-header columns;
-ordinary tables remain ordinary GFM. Number Suite dialect interoperation is source-defined for ordinary conversion: DocWen reads authenticated
+Structural Tables spelling when native table metadata requires zero or multiple column-header rows, or row-header
+columns; a one-row column header without row headers remains ordinary GFM. Number Suite dialect interoperation is
+source-defined for ordinary conversion: DocWen reads authenticated
 heading/caption/reference syntax from the Markdown source and applies the explicit conversion numbering policy.
 An Obsidian adapter may supply declared image resources, but Number Suite plugin state is not conversion authority.
 The separate resolved-provider route remains available for consumers that intentionally supply a complete resolved plan.
@@ -138,10 +140,12 @@ escaped and reparse as text. This escaping is an output transport rule only: par
 continues to use the selected input dialect and is not globally made literal.
 
 除普通 GFM 表格外，DocWen 还接受 Structural Tables 管道表格语法：分隔行前连续且等宽的行是多行列表头；
+分隔行也可以直接作为第一行，此时表示零行列表头；
 分隔行内唯一相邻的 `||` 标记其左侧为行表头且不增加列；严格匹配的 `<` 向左合并、`^` 向上合并，`\<` 与
 `\^` 表示字面量；转义管道和代码跨度中的管道不会切分单元格；无效宽度或结构保持为可见源码而不猜测。
-DOCX 导出把这些角色与矩形合并映射为原生表格语义；导入在原生表格元数据要求多行列表头或行表头时输出
-规范 Structural Tables 写法，普通表格仍输出普通 GFM。普通转换中的 Number Suite 方言由 Markdown 源码本身
+DOCX 导出把这些角色与矩形合并映射为原生表格语义；导入在原生表格元数据要求零行或多行列表头、或存在
+行表头列时输出规范 Structural Tables 写法；只有一行列表头且没有行表头列的普通表格继续输出普通 GFM。
+普通转换中的 Number Suite 方言由 Markdown 源码本身
 定义：DocWen 识别标题、题注、引用语法，并按本次显式转换编号策略输出；Obsidian 适配器可声明图片资源，
 但 Number Suite 插件安装状态或私有配置不是转换 authority。完整 resolved plan 仍可通过独立 provider route
 显式提供。DocWen 不导入 Number Suite 代码，也不扫描 Vault。

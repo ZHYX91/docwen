@@ -155,25 +155,7 @@ def analyze_document_semantics(
                 }
             )
 
-    for index, node in enumerate(ast):
-        if node.get("type") != "table":
-            continue
-        attributes = None
-        attribute_index = index + 1
-        if attribute_index < len(ast) and ast[attribute_index].get("type") == "paragraph":
-            attributes = _parse_table_attributes(ast[attribute_index])
-            if attributes is not None:
-                removed.add(attribute_index)
-        elif (
-            attribute_index + 1 < len(ast)
-            and ast[attribute_index].get("type") == "blank_line"
-            and _looks_like_table_attribute(ast[attribute_index + 1])
-        ):
-            diagnostics.append(_attribute_invalid("Table attributes must immediately follow the table."))
-
-        metadata, table_diagnostics = _analyze_table(node, attributes)
-        node["_document_semantics_table"] = metadata
-        diagnostics.extend(table_diagnostics)
+    _annotate_tables(ast, diagnostics, removed)
 
     targets: dict[str, dict[str, Any]] = {}
     for target_id, occurrences in target_occurrences.items():
@@ -223,6 +205,45 @@ def analyze_document_semantics(
         oracle_projection=projection,
         diagnostics=diagnostics,
     )
+
+
+def annotate_table_semantics(
+    ast_nodes: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[SemanticDiagnostic]]:
+    """Annotate only shared table roles/merges without interpreting other semantics."""
+
+    ast = copy.deepcopy(ast_nodes)
+    diagnostics: list[SemanticDiagnostic] = []
+    removed: set[int] = set()
+    _annotate_tables(ast, diagnostics, removed)
+    transformed = [node for index, node in enumerate(ast) if index not in removed]
+    return transformed, _deduplicate_and_sort_diagnostics(diagnostics)
+
+
+def _annotate_tables(
+    ast: list[dict[str, Any]],
+    diagnostics: list[SemanticDiagnostic],
+    removed: set[int],
+) -> None:
+    for index, node in enumerate(ast):
+        if node.get("type") != "table":
+            continue
+        attributes = None
+        attribute_index = index + 1
+        if attribute_index < len(ast) and ast[attribute_index].get("type") == "paragraph":
+            attributes = _parse_table_attributes(ast[attribute_index])
+            if attributes is not None:
+                removed.add(attribute_index)
+        elif (
+            attribute_index + 1 < len(ast)
+            and ast[attribute_index].get("type") == "blank_line"
+            and _looks_like_table_attribute(ast[attribute_index + 1])
+        ):
+            diagnostics.append(_attribute_invalid("Table attributes must immediately follow the table."))
+
+        metadata, table_diagnostics = _analyze_table(node, attributes)
+        node["_document_semantics_table"] = metadata
+        diagnostics.extend(table_diagnostics)
 
 
 def _parse_caption(node: dict[str, Any]) -> dict[str, Any] | None:
@@ -417,11 +438,10 @@ def _table_anchor_cells(
         for column_index in range(column_count):
             cell = row[column_index] if column_index < len(row) else {"type": "table_cell", "children": []}
             cell_nodes[(row_index, column_index)] = cell
-            raw = _plain_inline_text(cell.get("children", [])).strip()
             attributes = cell.get("attrs", {})
-            literal_marker = isinstance(attributes, dict) and attributes.get("docwen_literal_merge_marker") is True
-            if raw in {"<", "^"} and not literal_marker:
-                markers[(row_index, column_index)] = raw
+            merge_marker = attributes.get("docwen_merge_marker") if isinstance(attributes, dict) else None
+            if merge_marker in {"<", "^"}:
+                markers[(row_index, column_index)] = merge_marker
 
     resolved: dict[tuple[int, int], tuple[int, int] | None] = {}
 

@@ -1,13 +1,21 @@
 """Exercise dialect switches on real DOCX bytes, independently in both directions."""
 
+import hashlib
+import json
 from pathlib import Path
+from typing import Any
 from zipfile import ZipFile
 
 import pytest
+from docx import Document
+from docx.oxml.ns import qn
 
+from docwen_core.docx_parsing.document_semantics import extract_semantic_table_metadata
+from docwen_core.docx_parsing.table_extraction import build_docx_table_semantic_grid
 from docwen_core.markdown_extensions import EXTENSION_NAMES, MarkdownExtensions, resolve_markdown_extensions
 from docwen_core.models.file_ref import FileRef
 from docwen_core.models.request import ConversionRequest, OutputPolicy
+from docwen_core.models.resolved_numbering import canonicalize_numbering_plan
 from docwen_plugin_document.to_markdown.converter import DocxToMarkdownConverter
 from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
 from docwen_runtime.config.document_styles import build_document_style_catalog
@@ -71,6 +79,143 @@ def _context(tmp_path: Path, source: Path, target: str, extensions: dict) -> Fak
     )
 
 
+def _structural_config() -> FakeConfigView:
+    return FakeConfigView({"conversion": {"markdown_extensions": {"input": {"structural_tables": True}}}})
+
+
+def _structural_direct_context(tmp_path: Path, source: Path) -> FakeExecutionContext:
+    staging = tmp_path / "staging-direct"
+    staging.mkdir()
+    ref = FileRef(path=str(source), format="markdown", category="document")
+    request = ConversionRequest(
+        request_id="structural-direct",
+        input_refs=[ref],
+        target_format="docx",
+        options={"heading_merge_mode": "never"},
+        output_policy=OutputPolicy(),
+    )
+    return FakeExecutionContext(
+        request,
+        FakeWorkspaceHandle(str(source), str(staging), (ref,)),
+        _structural_config(),
+        FakeProgressSink(),
+        FakeCancellationTokenView(),
+        FakePluginLogger(),
+        document_style_catalog=build_document_style_catalog(
+            {"gui": {"language": {"locale": "zh_CN"}}},
+            locales_dir=ROOT / "i18n" / "locales",
+        ),
+    )
+
+
+def _structural_resolved_context(tmp_path: Path, authored_markdown: str) -> FakeExecutionContext:
+    plan_value = {"heading_definitions": [], "heading_instances": [], "targets": []}
+    source_sha256 = hashlib.sha256(authored_markdown.encode()).hexdigest()
+    plan_sha256 = hashlib.sha256(canonicalize_numbering_plan(plan_value)).hexdigest()
+    document_value = {
+        "$schema": "urn:docwen:schema:resolved-document:v1",
+        "schema": "docwen.resolved_document.v1",
+        "input_id": "structural-parity",
+        "source_sha256": source_sha256,
+        "plan_sha256": plan_sha256,
+        "document": {
+            "authored_markdown": authored_markdown,
+            "targets": [],
+            "references": [],
+            "resource_occurrences": [],
+            "citations": [],
+            "resources": [],
+        },
+    }
+    plan_envelope = {
+        "$schema": "urn:docwen:schema:numbering-export-plan:v1",
+        "schema": "docwen.numbering_export_plan.v1",
+        "input_id": "structural-parity",
+        "source_sha256": source_sha256,
+        "plan_sha256": plan_sha256,
+        "plan": plan_value,
+    }
+    neutral = tmp_path / "resolved-document.json"
+    plan = tmp_path / "numbering-export-plan.json"
+    neutral.write_text(json.dumps(document_value, separators=(",", ":")), encoding="utf-8")
+    plan.write_text(json.dumps(plan_envelope, separators=(",", ":")), encoding="utf-8")
+    refs = (
+        FileRef(
+            path=str(neutral),
+            format="markdown",
+            category="document",
+            input_kind="document",
+            input_role="neutral_document",
+            logical_path="tables/structural.md",
+            media_type="application/vnd.docwen.resolved-document+json",
+        ),
+        FileRef(
+            path=str(plan),
+            format="json",
+            category="resource",
+            input_kind="resource",
+            input_role="numbering_export_plan",
+            logical_path="numbering-export-plan.json",
+            media_type="application/vnd.docwen.numbering-export-plan+json",
+        ),
+    )
+    staging = tmp_path / "staging-resolved"
+    staging.mkdir()
+    request = ConversionRequest(
+        request_id="structural-resolved",
+        input_refs=list(refs),
+        target_format="docx",
+        options={"heading_merge_mode": "never"},
+        output_policy=OutputPolicy(),
+    )
+    return FakeExecutionContext(
+        request,
+        FakeWorkspaceHandle(str(neutral), str(staging), refs),
+        _structural_config(),
+        FakeProgressSink(),
+        FakeCancellationTokenView(),
+        FakePluginLogger(),
+        document_style_catalog=build_document_style_catalog(
+            {"gui": {"language": {"locale": "zh_CN"}}},
+            locales_dir=ROOT / "i18n" / "locales",
+        ),
+    )
+
+
+def _table_signatures(path: Path) -> list[tuple[Any, ...]]:
+    document = Document(path)
+
+    def cell_text(cell, _row: int, _column: int) -> str:
+        return "".join(node.text or "" for node in cell.iter(qn("w:t")))
+
+    signatures: list[tuple[Any, ...]] = []
+    for table in document.tables:
+        metadata = extract_semantic_table_metadata(table._tbl)
+        grid = build_docx_table_semantic_grid(table._tbl, cell_text_resolver=cell_text)
+        signatures.append(
+            (
+                metadata.header_rows,
+                metadata.header_columns,
+                metadata.repeat_header,
+                tuple(
+                    tuple(
+                        (
+                            cell.anchor_text,
+                            cell.anchor_row,
+                            cell.anchor_col,
+                            cell.rowspan,
+                            cell.colspan,
+                            cell.is_covered,
+                        )
+                        for cell in row
+                    )
+                    for row in grid
+                ),
+            )
+        )
+    return signatures
+
+
 @pytest.mark.parametrize("dialect", DIALECTS)
 def test_input_switches_control_native_structures_and_preserve_disabled_syntax(
     tmp_path: Path, dialect: MarkdownExtensions
@@ -125,6 +270,79 @@ def test_output_switches_are_independent_and_need_only_docx(tmp_path: Path, dial
         assert "^metrics" not in markdown
     if dialect != MarkdownExtensions.obsidian():
         assert any("flattened" in (item.code or "") for item in result.diagnostics)
+
+
+def test_structural_tables_direct_and_resolved_routes_share_docx_semantics(tmp_path: Path) -> None:
+    authored = """| Region | Sales | < |
+| Quarter | Q1 | Q2 |
+| --- || --- | --- |
+| North | 10 | 12 |
+| ^ | 8 | 11 |
+
+| --- | --- | --- |
+| Block | < | Tail |
+| ^ | ^ | Done |
+
+| Code left | Strong up |
+| --- | --- |
+| `<` | **^** |
+"""
+    source = tmp_path / "structural.md"
+    source.write_text(authored, encoding="utf-8")
+
+    direct_root = tmp_path / "direct"
+    direct_root.mkdir()
+    direct = MdToDocxConverter().convert(_structural_direct_context(direct_root, source))
+    assert direct.success, direct.error
+
+    resolved_root = tmp_path / "resolved"
+    resolved_root.mkdir()
+    resolved = MdToDocxConverter().convert(_structural_resolved_context(resolved_root, authored))
+    assert resolved.success, resolved.error
+
+    direct_signatures = _table_signatures(Path(direct.artifacts[0].staging_path))
+    resolved_signatures = _table_signatures(Path(resolved.artifacts[0].staging_path))
+    assert resolved_signatures == direct_signatures
+    assert len(direct_signatures) == 3
+    assert direct_signatures[0][:2] == (2, 1)
+    assert direct_signatures[1][:2] == (0, 0)
+    assert any(cell[3:5] == (2, 2) for row in direct_signatures[1][3] for cell in row if not cell[5])
+
+
+def test_no_header_structural_table_round_trips_from_isolated_docx(tmp_path: Path) -> None:
+    source = tmp_path / "no-header.md"
+    source.write_text("| --- | --- |\n| Alice | 10 |\n| Bob | 20 |\n", encoding="utf-8")
+    structural = MarkdownExtensions(structural_tables=True).to_dict()
+
+    forward_root = tmp_path / "forward"
+    forward_root.mkdir()
+    forward_context = _context(forward_root, source, "docx", {"input": structural})
+    forward = MdToDocxConverter().convert(forward_context)
+    assert forward.success, forward.error
+    generated = Path(forward.artifacts[0].staging_path)
+    with ZipFile(generated) as package:
+        xml = package.read("word/document.xml").decode()
+        assert 'w:firstRow="0"' in xml
+
+    isolated = tmp_path / "isolated.docx"
+    isolated.write_bytes(generated.read_bytes())
+    source.unlink()
+
+    enabled_root = tmp_path / "enabled"
+    enabled_root.mkdir()
+    enabled_context = _context(enabled_root, isolated, "md", {"output": structural})
+    enabled = DocxToMarkdownConverter().convert(enabled_context)
+    assert enabled.success, enabled.error
+    markdown = Path(enabled.artifacts[0].staging_path).read_text(encoding="utf-8")
+    assert "| --- | --- |\n| Alice | 10 |\n| Bob | 20 |" in markdown
+
+    disabled_root = tmp_path / "disabled"
+    disabled_root.mkdir()
+    disabled_context = _context(disabled_root, isolated, "md", {"output": MarkdownExtensions().to_dict()})
+    disabled = DocxToMarkdownConverter().convert(disabled_context)
+    assert disabled.success, disabled.error
+    codes = {item.code for item in disabled.diagnostics}
+    assert "docwen.conversion.markdown_extension.structural_tables.flattened" in codes
 
 
 def test_request_override_does_not_change_other_direction_or_config() -> None:
