@@ -604,11 +604,11 @@ A companion Obsidian plugin is published separately and works in tandem with the
 -   **🚀 One-Click Launch** - Sidebar icon to quickly launch the converter.
 -   **📂 Automatic Handover** - Automatically passes the currently open file path.
 -   **🔄 Single Instance Management** - Automatically sends file if the program is already running, no need to restart.
--   **🔒 Bounded Local Control** - Uses typed `status`, `open`, and `activate` requests without process-name probing or command/status files.
+-   **🔒 Safe Local Control** - Uses structured `status`, `open`, and `activate` requests without process-name probing or command/status files.
 
 ### Working Principle
 
-DocWen Core's runtime/control transport uses a Windows named pipe or an AF_UNIX socket on Linux/macOS. A file lock only establishes single-instance ownership; files are not used to transport control commands. This describes the Core transport only. DocWen Assistant 3.1 supports Windows and Linux desktop hosts. Windows Microsoft Store installations can use automatic detection; Linux uses manual package selection. The Assistant does not currently support macOS.
+DocWen Core uses a Windows named pipe for local control on Windows and an AF_UNIX socket on Linux/macOS. A file lock only establishes single-instance ownership; files are not used to transport control commands. This describes the Core transport only. DocWen Assistant 3.1 supports Windows and Linux desktop hosts. Windows Microsoft Store installations can use automatic detection; Linux uses manual package selection. The Assistant does not currently support macOS.
 
 1.  **First Click** → Launch converter and pass current file.
 2.  **Click Again (With File)** → Replace with new file (Single File Mode).
