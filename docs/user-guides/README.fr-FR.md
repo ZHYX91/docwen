@@ -499,7 +499,6 @@ Gérez les modèles DOCX/XLSX dans **Paramètres → Modèles** : activation, d�
 
 ### Modèles personnalisés
 
-
 1. Copiez et modifiez un modèle intégré, ou importez un fichier DOCX/XLSX existant.
 2. Modifiez le contenu, les styles et les espaces réservés de la copie dans Word, Excel ou WPS ; les règles figurent ci-dessous.
 3. Enregistrez le fichier puis actualisez la liste dans DocWen. Aucun redémarrage nécessaire.
