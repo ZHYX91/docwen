@@ -189,7 +189,7 @@ def test_representative_exact_two_materializes_all_physical_semantics_without_le
         "remove_md_numbering",
         "add_md_numbering",
         "process_markdown_links",
-        "bind_declared_markdown_images",
+        "DeclaredResourceResolver",
     ):
         monkeypatch.setattr(converter_module, name, _forbidden_legacy)
     context, workspace = _context(tmp_path, _refs(_NEUTRAL, _PLAN))
