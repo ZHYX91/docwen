@@ -363,6 +363,7 @@ def test_restored_locale_typography_is_preserved() -> None:
             "components.file_drop.add_file_action": "Thêm tệp",
             "components.file_drop.batch_list.filter_button": "Lọc",
             "conversion_panel.layout.split_mode_single_page_warning": "⚠️ Tệp này chỉ có 1 trang; không cần tách",
+            "action_area.generate": "Tạo",
             "action_area.md_to_spreadsheet.generate": "Tạo",
         },
         "ru_RU.toml": {
