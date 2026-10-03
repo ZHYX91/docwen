@@ -1033,7 +1033,7 @@ unavailable = "範本選擇器不可用"
 usage_line = "適用：{value}"
 source_line = "來源：{value}"
 updated_line = "更新：{value}"
-source_tooltip = "Source folder: {value}"
+source_tooltip = "來源資料夾：{value}"
 auto_selected_reason = "已依預設設定自動選取 {template_kind} 中的可用範本。"
 open_location = "開啟檔案位置"
 
