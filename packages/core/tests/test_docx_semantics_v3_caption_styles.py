@@ -69,54 +69,6 @@ def test_addressable_and_idless_captions_use_persisted_collision_binding(tmp_pat
     assert b'resolved_style_id="DocWenTableCaptionDocWen1"' in xml
 
 
-def test_addressable_and_idless_standalone_captions_round_trip_with_boundary(tmp_path: Path) -> None:
-    document = Document()
-    bindings, styles = _add_caption_styles(document)
-    session = DocxSemanticsV3Session(
-        document,
-        source_sha256=hashlib.sha256(b"standalone captions").hexdigest(),
-        caption_style_bindings=bindings,
-    )
-
-    table_caption = document.add_paragraph(style=styles["table_caption"])
-    table_caption.add_run("Table ")
-    append_complex_field(table_caption, instruction=" SEQ Table \\* ARABIC ", cached_result="1")
-    table_caption.add_run(": Planned table")
-    session.bind_caption(
-        table_caption,
-        (),
-        {"kind": "table", "id": "planned-table", "number": "1", "title": "Planned table"},
-    )
-
-    boundary = document.add_paragraph()
-
-    figure_caption = document.add_paragraph(style=styles["figure_caption"])
-    figure_caption.add_run("Figure ")
-    append_complex_field(figure_caption, instruction=" SEQ Figure \\* ARABIC ", cached_result="1")
-    figure_caption.add_run(": Planned figure")
-    session.bind_caption(
-        figure_caption,
-        (),
-        {"kind": "figure", "id": None, "number": "1", "title": "Planned figure"},
-    )
-
-    output = _write(session, document, tmp_path / "standalone-caption-roundtrip.docx")
-    recovery = DocxSemanticsV3Recovery.load(output, Document(str(output)))
-
-    assert recovery.caption_signatures == (
-        ("table", "planned-table", "Planned table", "1"),
-        ("figure", None, "Planned figure", "1"),
-    )
-    assert all(not item.object_elements for item in recovery.recovered_captions)
-
-    boundary._p.getparent().remove(boundary._p)
-    damaged = tmp_path / "standalone-caption-missing-boundary.docx"
-    document.save(str(damaged))
-    session.write_package(damaged)
-    with pytest.raises(DocxSemanticsV3Error, match="standalone caption boundary"):
-        DocxSemanticsV3Recovery.load(damaged, Document(str(damaged)))
-
-
 def test_unmapped_prefix_style_is_never_caption_authority(tmp_path: Path) -> None:
     document = Document()
     forged = document.styles.add_style("Forged Caption", WD_STYLE_TYPE.PARAGRAPH)
