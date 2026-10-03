@@ -6,7 +6,7 @@
 
 [English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)
 
-Herramienta de conversión de formatos de documentos y tablas: conversión bidireccional Word/Markdown/Excel. Se ejecuta completamente en local, garantizando seguridad y fiabilidad de los datos.
+DocWen es una herramienta local de conversión de documentos y tablas para Word, Markdown, Excel y otros formatos de oficina. Está pensada para flujos de trabajo fiables sin conexión y mantiene el procesamiento de los documentos en el equipo del usuario.
 
 ## 📖 Contexto del proyecto
 
@@ -15,7 +15,7 @@ Este software se diseñó originalmente para resolver problemas comunes en entor
 - Hay muchos tipos de archivo y cada uno tiene requisitos de formato distintos.
 - Debe funcionar sin conexión (intranet/equipos antiguos).
 
-**Filosofía de diseño**: herramienta ligera y “lista para usar”, con coste de aprendizaje muy bajo. No pretende sustituir a herramientas profesionales como LaTeX o Pandoc.
+**Filosofía de diseño**: DocWen prioriza flujos cotidianos de conversión y organización fáciles de aprender y listos para usar. No pretende sustituir sistemas especializados de composición o conversión como LaTeX o Pandoc; busca hacer directas las tareas documentales frecuentes manteniendo límites técnicos claros.
 
 ## ✨ Funciones principales
 
