@@ -228,7 +228,11 @@ class TaskManager:
             if (
                 request.output_policy.output_path
                 and not request.action_name
-                and (input_ref.format in {"md", "markdown"} or request.target_format in {"md", "markdown"})
+                and (
+                    (input_ref.category == "markdown" and input_ref.format == "txt")
+                    or input_ref.format in {"md", "markdown"}
+                    or request.target_format in {"md", "markdown"}
+                )
             ):
                 raise ValueError("Markdown conversions require output_dir, not an exact output_path")
             self._run_plugin(state, reserved_cancellation=is_reserved_cancellation)
@@ -605,7 +609,13 @@ class TaskManager:
             cancellation=state.token.view(),
             group_outputs=(
                 state.request.output_policy.group_outputs
-                or (not state.request.action_name and state.input_ref.format in {"md", "markdown"})
+                or (
+                    not state.request.action_name
+                    and (
+                        state.input_ref.format in {"md", "markdown"}
+                        or (state.input_ref.category == "markdown" and state.input_ref.format == "txt")
+                    )
+                )
             ),
             identity=state.identity,
             audit_document=OutputManifestWriter.build_for_success(
