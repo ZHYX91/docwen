@@ -78,6 +78,146 @@ def _context(tmp_path: Path, source: Path, target: str, extensions: dict) -> Fak
     )
 
 
+
+def _structural_config() -> FakeConfigView:
+    return FakeConfigView(
+        {"conversion": {"markdown_extensions": {"input": {"structural_tables": True}}}}
+    )
+
+
+def _structural_direct_context(tmp_path: Path, source: Path) -> FakeExecutionContext:
+    staging = tmp_path / "staging-direct"
+    staging.mkdir()
+    ref = FileRef(path=str(source), format="markdown", category="document")
+    request = ConversionRequest(
+        request_id="structural-direct",
+        input_refs=[ref],
+        target_format="docx",
+        options={"heading_merge_mode": "never"},
+        output_policy=OutputPolicy(),
+    )
+    return FakeExecutionContext(
+        request,
+        FakeWorkspaceHandle(str(source), str(staging), (ref,)),
+        _structural_config(),
+        FakeProgressSink(),
+        FakeCancellationTokenView(),
+        FakePluginLogger(),
+        document_style_catalog=build_document_style_catalog(
+            {"gui": {"language": {"locale": "zh_CN"}}},
+            locales_dir=ROOT / "i18n" / "locales",
+        ),
+    )
+
+
+def _structural_resolved_context(tmp_path: Path, authored_markdown: str) -> FakeExecutionContext:
+    plan_value = {"heading_definitions": [], "heading_instances": [], "targets": []}
+    source_sha256 = hashlib.sha256(authored_markdown.encode()).hexdigest()
+    plan_sha256 = hashlib.sha256(canonicalize_numbering_plan(plan_value)).hexdigest()
+    document_value = {
+        "$schema": "urn:docwen:schema:resolved-document:v1",
+        "schema": "docwen.resolved_document.v1",
+        "input_id": "structural-parity",
+        "source_sha256": source_sha256,
+        "plan_sha256": plan_sha256,
+        "document": {
+            "authored_markdown": authored_markdown,
+            "targets": [],
+            "references": [],
+            "resource_occurrences": [],
+            "citations": [],
+            "resources": [],
+        },
+    }
+    plan_envelope = {
+        "$schema": "urn:docwen:schema:numbering-export-plan:v1",
+        "schema": "docwen.numbering_export_plan.v1",
+        "input_id": "structural-parity",
+        "source_sha256": source_sha256,
+        "plan_sha256": plan_sha256,
+        "plan": plan_value,
+    }
+    neutral = tmp_path / "resolved-document.json"
+    plan = tmp_path / "numbering-export-plan.json"
+    neutral.write_text(json.dumps(document_value, separators=(",", ":")), encoding="utf-8")
+    plan.write_text(json.dumps(plan_envelope, separators=(",", ":")), encoding="utf-8")
+    refs = (
+        FileRef(
+            path=str(neutral),
+            format="markdown",
+            category="document",
+            input_kind="document",
+            input_role="neutral_document",
+            logical_path="tables/structural.md",
+            media_type="application/vnd.docwen.resolved-document+json",
+        ),
+        FileRef(
+            path=str(plan),
+            format="json",
+            category="resource",
+            input_kind="resource",
+            input_role="numbering_export_plan",
+            logical_path="numbering-export-plan.json",
+            media_type="application/vnd.docwen.numbering-export-plan+json",
+        ),
+    )
+    staging = tmp_path / "staging-resolved"
+    staging.mkdir()
+    request = ConversionRequest(
+        request_id="structural-resolved",
+        input_refs=list(refs),
+        target_format="docx",
+        options={"heading_merge_mode": "never"},
+        output_policy=OutputPolicy(),
+    )
+    return FakeExecutionContext(
+        request,
+        FakeWorkspaceHandle(str(neutral), str(staging), refs),
+        _structural_config(),
+        FakeProgressSink(),
+        FakeCancellationTokenView(),
+        FakePluginLogger(),
+        document_style_catalog=build_document_style_catalog(
+            {"gui": {"language": {"locale": "zh_CN"}}},
+            locales_dir=ROOT / "i18n" / "locales",
+        ),
+    )
+
+
+def _table_signatures(path: Path) -> list[tuple[object, ...]]:
+    document = Document(path)
+
+    def cell_text(cell, _row: int, _column: int) -> str:
+        return "".join(node.text or "" for node in cell.iter(qn("w:t")))
+
+    signatures: list[tuple[object, ...]] = []
+    for table in document.tables:
+        metadata = extract_semantic_table_metadata(table._tbl)
+        grid = build_docx_table_semantic_grid(table._tbl, cell_text_resolver=cell_text)
+        signatures.append(
+            (
+                metadata.header_rows,
+                metadata.header_columns,
+                metadata.repeat_header,
+                tuple(
+                    tuple(
+                        (
+                            cell.anchor_text,
+                            cell.anchor_row,
+                            cell.anchor_col,
+                            cell.rowspan,
+                            cell.colspan,
+                            cell.is_covered,
+                        )
+                        for cell in row
+                    )
+                    for row in grid
+                ),
+            )
+        )
+    return signatures
+
+
 @pytest.mark.parametrize("dialect", DIALECTS)
 def test_input_switches_control_native_structures_and_preserve_disabled_syntax(
     tmp_path: Path, dialect: MarkdownExtensions
