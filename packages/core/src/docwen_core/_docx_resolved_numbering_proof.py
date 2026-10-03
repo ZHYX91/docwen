@@ -74,16 +74,16 @@ from docwen_core.docx_numbering_occurrence import (
     parse_numbering_occurrence_map,
     prove_numbering_occurrence_sdt,
 )
+from docwen_core.docx_numbering_ooxml import (
+    ResolvedNumberingOoxmlError,
+    prove_caption_number,
+    prove_heading_numbering_projection,
+)
 from docwen_core.docx_standalone_caption_occurrence import (
     STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE,
     STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX,
     parse_standalone_caption_occurrence_map,
     prove_standalone_caption_occurrence_sdt,
-)
-from docwen_core.docx_numbering_ooxml import (
-    ResolvedNumberingOoxmlError,
-    prove_caption_number,
-    prove_heading_numbering_projection,
 )
 
 
