@@ -392,10 +392,10 @@ def test_exact_markers_bind_all_targets_references_and_citations_without_derivin
     assert body_citation["raw"] == "[@smith; @wang]"
 
 
-def test_idless_heading_closing_marks_and_nested_case_insensitive_caption_bind_structurally() -> None:
-    source = "# **2.3 标题** @key #\n\n> figure: Nested\n>\n> ![x](image.png)\n"
+def test_idless_heading_closing_marks_and_nested_canonical_caption_bind_structurally() -> None:
+    source = "# **2.3 标题** @key #\n\n> Figure: Nested\n>\n> ![x](image.png)\n"
     heading_end = source.index("\n")
-    figure_start = source.index("> figure:")
+    figure_start = source.index("> Figure:")
     targets = (
         _target(
             source,
@@ -425,6 +425,24 @@ def test_idless_heading_closing_marks_and_nested_case_insensitive_caption_bind_s
     assert _inline_text(heading["children"]) == "2.3 标题 @key"
     assert any(_CITATION_KEY in node for node in _walk(heading["children"]))
     assert _inline_text(bound[1][_CAPTION_CHILDREN_KEY]) == "Nested"
+
+
+def test_lowercase_caption_keyword_is_not_an_interop_declaration() -> None:
+    source = "figure: Nested\n\n![x](image.png)\n"
+    target = _target(
+        source,
+        0,
+        len("figure: Nested"),
+        kind="figure",
+        target_id=None,
+        authored_text="Nested",
+    )
+
+    with pytest.raises(
+        ResolvedRuntimeV4Unsupported,
+        match="does not contain one exact declaration kind",
+    ):
+        prepare_resolved_runtime_v4(_port(source, (target,)))
 
 
 def test_caption_first_inline_markers_compose_at_the_same_authenticated_boundary() -> None:
