@@ -452,7 +452,17 @@ class ResolvedNumberingProofMixin:
                 if owner is None or owner.tag != qn("w:sdtContent") or sdt_tag(sdt) != identity.tag:
                     raise ResolvedNumberingDocxError("addressable caption is outside its target SDT")
             elif plan_target.enabled:
-                if owner is document.element.body:
+                wrapper_tag = sdt_tag(sdt) if sdt is not None else None
+                if binding.object_count == 0:
+                    if (
+                        owner is None
+                        or owner.tag != qn("w:sdtContent")
+                        or not (wrapper_tag or "").startswith(STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX)
+                    ):
+                        raise ResolvedNumberingDocxError(
+                            "enabled standalone ID-less caption lacks its occurrence wrapper"
+                        )
+                elif owner is document.element.body:
                     pass
                 elif (
                     owner is None
