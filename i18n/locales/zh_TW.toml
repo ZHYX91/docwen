@@ -638,8 +638,8 @@ builtin_style_radio = "使用內置樣式"
 custom_style_radio = "使用自定義樣式名稱"
 
 # 列表拼接符
-list_separator_label = "YAML 列表拼接符"
-list_separator_tooltip = "YAML 列表值拼接為字串時使用的分隔符\n\n常見值：\n• 中文頓號（、）\n• 全形逗號（，）\n• 逗號+空格（, ）\n• 空字串：直接拼接"
+list_separator_label = "YAML 清單分隔符"
+list_separator_tooltip = "範本填入時，若 YAML 欄位值為清單，使用此分隔符連接各項\n\n常見值：\n• 中文頓號（、）\n• 全形逗號（，）\n• 逗號 + 空格（, ）\n• 空字串：各項直接連接"
 
 # 格式处理选项
 mermaid_output_group = "輸出方式"
