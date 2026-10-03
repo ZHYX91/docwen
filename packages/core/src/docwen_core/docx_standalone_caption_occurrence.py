@@ -11,9 +11,7 @@ from typing import Any, Literal
 from docwen_core._docx_semantics_v3_model import DocxSemanticsV3Error, require_sha256
 from docwen_core._docx_semantics_v3_ooxml import sdt_tag, wrap_direct_body_group
 
-STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE = (
-    "https://docwen.dev/schema/document-standalone-caption-occurrence-map/v1"
-)
+STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE = "https://docwen.dev/schema/document-standalone-caption-occurrence-map/v1"
 STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX = "docwen-standalone-caption-v1:"
 _XML_DECLARATION = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
 
