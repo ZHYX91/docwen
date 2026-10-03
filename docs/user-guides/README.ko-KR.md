@@ -582,11 +582,11 @@ Markdown 표에서 데이터를 추출해 플레이스홀더 위치부터 **오�
 -   **🚀 원클릭 실행** - 사이드바 아이콘으로 변환기 빠르게 실행
 -   **📂 자동 전달** - 현재 열려 있는 파일 경로를 자동으로 전달
 -   **🔄 단일 인스턴스 관리** - 이미 실행 중이면 파일만 전송하고 재시작 불필요
--   **🔒 범위가 제한된 로컬 제어** - 프로세스 이름 탐색이나 명령/상태 파일 없이 형식화된 `status`, `open`, `activate` 요청을 사용
+-   **🔒 안전한 로컬 제어** - 프로세스 이름 탐색이나 명령/상태 파일 없이 구조화된 `status`, `open`, `activate` 요청을 사용
 
 ### 동작 원리
 
-DocWen Core의 Runtime/Control 전송은 Windows에서는 named pipe, Linux/macOS에서는 AF_UNIX 소켓을 사용합니다. 파일 잠금은 단일 인스턴스 소유권만 설정하며 제어 명령을 파일로 전달하지 않습니다. 이는 Core 경계에 대한 설명입니다. DocWen Assistant 3.1은 Windows와 Linux 데스크톱 호스트를 지원합니다. Windows Microsoft Store 설치는 자동 감지를 사용할 수 있고, Linux에서는 호환되는 압축 해제 패키지를 수동으로 선택합니다. Assistant는 현재 macOS를 지원하지 않습니다.
+DocWen Core는 Windows의 로컬 제어에 named pipe를, Linux/macOS에서는 AF_UNIX 소켓을 사용합니다. 파일 잠금은 단일 인스턴스 소유권만 설정하며 제어 명령을 파일로 전달하지 않습니다. 이는 Core 경계에 대한 설명입니다. DocWen Assistant 3.1은 Windows와 Linux 데스크톱 호스트를 지원합니다. Windows Microsoft Store 설치는 자동 감지를 사용할 수 있고, Linux에서는 호환되는 압축 해제 패키지를 수동으로 선택합니다. Assistant는 현재 macOS를 지원하지 않습니다.
 
 1.  **첫 클릭** → 변환기를 실행하고 현재 파일을 전달
 2.  **다시 클릭(파일 있음)** → 새 파일로 교체(단일 파일 모드)
