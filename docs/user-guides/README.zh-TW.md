@@ -197,9 +197,12 @@ pip install pillow-heif
 對於腳本、Agent 或外掛整合，建議依照以下順序呼叫：
 
 1. `inspect <file> [--json]`：先識別檔案的真實類別、格式與可執行動作。
-2. `schema convert`：讀取 `convert` 的機器可讀參數契約與條件約束。
-3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`：先預演檢測、正規化與路由結果，不直接落地轉換。
-4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`：確認後再執行正式轉換。
+2. `resources list formats --json`：讀取目前 Runtime 實際可用的轉換路線與相依性門檻。
+3. `schema convert`：讀取 `convert` 的機器可讀參數契約與條件約束。
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`：先預演檢測、正規化與路由結果，不直接落地轉換。
+5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`：確認後再執行正式轉換。
+
+外部內容消費者使用 `serve --stdio` 與 Machine Protocol v2：先探索能力，再規劃工作，最後執行。CLI 的 `--json` 只是終端呈現格式，不是跨產品相容邊界。本機桌面控制使用獨立且穩定的 `gui open|activate|status` 介面。
 
 ### 常用範例
 
@@ -257,8 +260,10 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `inspect <file> [--json]` | 查詢檔案類別/格式、建議動作，以及副檔名與內容不一致警告。 |
 | `doctor --json` | 輸出診斷結果，並附帶執行期能力摘要與依賴門控資訊。 |
 | `resources list formats --json` | 按來源類別列出可用目標格式，並附帶執行期依賴門控 / 限制摘要。 |
+| `resources list optimizations --json` | 列出可用最佳化資源及其規範路線綁定。 |
 | `resources list templates` | 列出可用模板。 |
 | `resources list numbering-schemes` | 列出可用編號方案。 |
+| `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | 透過獨立的本機 GUI 控制介面啟動或啟用 DocWen，並可開啟一個絕對路徑檔案。 |
 | `--template <id>` | 原樣使用 `resources list templates` 回傳的 canonical 資源 ID；顯示名稱、檔名與路徑直接拒絕。DOCX ID 用於 `docx/doc/odt/rtf/wps/pdf`，XLSX ID 用於 `xlsx/xls/ods/csv`。 |
 | `--extract-img` / `--no-extract-img` / `--ocr` | `convert --to md` 的圖片提取與 OCR 選項。 |
 | `--image-mode file|base64|embed|omit` | 控制 Markdown 匯出時圖片的落地方式。 |
@@ -488,6 +493,8 @@ DocWenCLI.exe validate input.md --check typo --check punct
 在**設定 → 範本**中統一管理 DOCX/XLSX 範本，可啟用、停用、排序及設定預設項目。內建範本唯讀，自訂範本儲存在使用者可寫目錄；MSIX 使用者無須修改 WindowsApps。
 
 ### 自定義範本
+
+DocWen Core 的執行階段/控制傳輸在 Windows 使用命名管道，在 Linux/macOS 使用 AF_UNIX socket。檔案鎖只負責單一執行個體所有權，不承載控制命令。這裡描述的是 Core 能力。DocWen Assistant 3.1 支援 Windows 與 Linux 桌面端；Windows Microsoft Store 安裝版可使用自動偵測，Linux 使用手動選取的相容解壓縮套件。Assistant 目前不支援 macOS。
 
 1. 選擇內建範本並**複製並編輯**，或匯入現有 DOCX/XLSX 檔案。
 2. 在 Word、Excel 或 WPS 中修改自訂副本的內容、樣式與預留位置，規則見下文。
