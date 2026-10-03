@@ -123,7 +123,15 @@ class GeneralTab(BaseSettingsTab):
         _prepare_combo(self._font_combo)
         for preset in FONT_SIZE_PRESETS:
             self._font_combo.addItem(t(f"components.font_size.{preset}", preset.title()), preset)
-        self.add_form_row(theme_form, t("settings.general.font_label", "Text size:"), self._font_combo)
+        self.add_form_row(
+            theme_form,
+            t("settings.general.font_label", "Text size:"),
+            self._font_combo,
+            t(
+                "settings.general.font_tooltip",
+                "Preview immediately. Apply or OK saves the selection; Cancel restores the last saved value.",
+            ),
+        )
         self._font_combo.currentIndexChanged.connect(self._on_font_changed)
 
         self._scale_combo = ScrollSafeComboBox(theme_card)
