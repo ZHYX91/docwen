@@ -1,12 +1,19 @@
 """Exercise dialect switches on real DOCX bytes, independently in both directions."""
 
+import hashlib
+import json
 from pathlib import Path
 from zipfile import ZipFile
 
 import pytest
+from docx import Document
+from docx.oxml.ns import qn
 
+from docwen_core.docx_parsing.document_semantics import extract_semantic_table_metadata
+from docwen_core.docx_parsing.table_extraction import build_docx_table_semantic_grid
 from docwen_core.markdown_extensions import EXTENSION_NAMES, MarkdownExtensions, resolve_markdown_extensions
 from docwen_core.models.file_ref import FileRef
+from docwen_core.models.resolved_numbering import canonicalize_numbering_plan
 from docwen_core.models.request import ConversionRequest, OutputPolicy
 from docwen_plugin_document.to_markdown.converter import DocxToMarkdownConverter
 from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
