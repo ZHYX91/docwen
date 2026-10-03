@@ -137,7 +137,6 @@ def _reference_locale_path() -> Path:
     return LOCALES_DIR / "zh_CN.toml"
 
 
-
 def _flatten_string_values(data: dict[str, Any], prefix: str = "") -> dict[str, str]:
     result: dict[str, str] = {}
     for key, value in data.items():
@@ -169,9 +168,7 @@ def test_all_locale_string_keys_and_placeholders_match_zh_cn() -> None:
             for key, source in reference.items()
             if _placeholders(actual[key]) != _placeholders(source)
         ]
-        assert not mismatches, (
-            f"{path.name} changed interpolation placeholders for: {mismatches[:20]}"
-        )
+        assert not mismatches, f"{path.name} changed interpolation placeholders for: {mismatches[:20]}"
 
 
 def test_locales_dir_exists() -> None:
