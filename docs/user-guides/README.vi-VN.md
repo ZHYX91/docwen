@@ -71,8 +71,7 @@ docwen      # Chế độ CLI
 
 ### Ghi chú cho macOS
 
-**Giới hạn hiện tại**: Trên macOS, các capability `convert`, `validate`, `number`, `merge`, `split`
-hiện không khả dụng. Phần dưới chỉ ghi các phụ thuộc tùy chọn cho thử nghiệm phát triển.
+**Giới hạn hiện tại**: Trên macOS, các chức năng `convert`, `validate`, `number`, `merge`, `split` hiện không khả dụng. Phần dưới chỉ ghi các phụ thuộc tùy chọn cho thử nghiệm phát triển.
 
 **Hỗ trợ LibreOffice (Tùy chọn)**
 
