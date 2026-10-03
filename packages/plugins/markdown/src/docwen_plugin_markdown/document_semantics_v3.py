@@ -35,7 +35,7 @@ DIAGNOSTIC_EVIDENCE_SCHEMA = "docwen.machine.diagnostic_evidence.v1"
 _ID_RE = re.compile(r"^[A-Za-z0-9-]{1,128}$")
 _CITATION_KEY_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
 _CAPTION_RE = re.compile(r"^(Figure|Table|Equation|Code):(.*)$", re.IGNORECASE)
-_NUMBER_SUITE_CAPTION_RE = re.compile(r"^(Figure|Table|Equation|Code):(.*)$")
+_NUMBER_SUITE_CAPTION_RE = re.compile(r"^(?: {0,3})(Figure|Table|Equation|Code):(?:[ \t]+)(.*\S|\S)[ \t]*$")
 _HEADING_RE = re.compile(r"^( {0,3})(#{1,9})(?!#)[ \t]+(.+?)\s*$")
 _FENCE_RE = re.compile(r"^( {0,3})(?P<fence>`{3,}|~{3,})(?P<info>[^\r\n]*)$")
 _QUOTE_PREFIX_RE = re.compile(r"^ {0,3}>[ \t]?")
@@ -1684,6 +1684,9 @@ def _resolve_reference(
     body = match.group("body")
     try:
         page_locator, fragment, alias = _parse_reference_body(body)
+        if normalize_titles or normalize_ids:
+            fragment = fragment.strip()
+            alias = alias.strip() if alias is not None else None
     except ValueError:
         record = {
             "selector_kind": "heading_path",
