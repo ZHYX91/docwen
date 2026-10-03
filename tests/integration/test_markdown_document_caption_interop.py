@@ -108,10 +108,7 @@ def test_direct_number_suite_standalone_caption_round_trips_without_inventing_ca
 
     reopened = Document(str(output))
     recovery = DocxSemanticsV3Recovery.load(output, reopened)
-    assert [
-        (item.kind, item.source_id, item.title, item.cached_number)
-        for item in recovery.recovered_captions
-    ] == [
+    assert [(item.kind, item.source_id, item.title, item.cached_number) for item in recovery.recovered_captions] == [
         ("figure", "Plan", "Planned architecture", "1"),
         ("table", None, "Planned table", "1"),
     ]
