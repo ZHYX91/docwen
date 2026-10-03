@@ -494,7 +494,6 @@ Gestiona las plantillas DOCX/XLSX en **Configuración → Plantillas**: activar,
 
 ### Plantillas personalizadas
 
-
 1. Copia y edita una plantilla integrada o importa un archivo DOCX/XLSX existente.
 2. Modifica el contenido, los estilos y los marcadores de la copia en Word, Excel o WPS; consulta las reglas siguientes.
 3. Guarda el archivo y actualiza la lista en DocWen. No hace falta reiniciar.
