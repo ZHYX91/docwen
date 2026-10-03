@@ -6,16 +6,16 @@
 
 [English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)
 
-文檔圖表格式轉換軟體 - 支持 Word/Markdown/Excel 互轉，完全本地運行，數據安全可靠。
+DocWen 是面向 Word、Markdown、Excel 等辦公格式的本機文件與表格轉換工具，強調離線可用、流程清楚，並將文件處理留在使用者裝置上。
 
 ## 📖 專案背景
 
-本軟體最初為文印室日常工作設計，解決以下問題：
-- 各科室發來的文檔格式混亂，需要整理為規範格式
-- 文檔類型繁多，每種類型有不同的固定格式要求
-- 需要離線運行，適配內網環境和老舊設備
+DocWen 最初面向文印室等日常文件整理情境，主要解決這些問題：
+- 不同部門提供的文件格式不一致，需要整理為規範格式
+- 檔案類型多，不同類型有各自的格式要求
+- 需要在內網、離線環境和較舊裝置上穩定工作
 
-**設計理念**：本軟體定位為輕量級傻瓜式工具，在專業性和功能完整性上無法與 LaTeX、Pandoc 等專業工具相比，但勝在零學習成本、開箱即用，適合對格式要求不高的日常辦公場景。
+**設計理念**：DocWen 優先提供低門檻、開箱即用的日常辦公轉換與整理流程。它不以取代 LaTeX、Pandoc 等專業排版或轉換系統為目標，而是把常見文件工作做得直接、清楚，同時保留明確的技術邊界。
 
 ## ✨ 核心功能
 
