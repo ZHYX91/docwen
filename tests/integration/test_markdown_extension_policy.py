@@ -274,6 +274,49 @@ def test_output_switches_are_independent_and_need_only_docx(tmp_path: Path, dial
         assert any("flattened" in (item.code or "") for item in result.diagnostics)
 
 
+
+def test_structural_tables_direct_and_resolved_routes_share_docx_semantics(tmp_path: Path) -> None:
+    authored = """| Region | Sales | < |
+| Quarter | Q1 | Q2 |
+| --- || --- | --- |
+| North | 10 | 12 |
+| ^ | 8 | 11 |
+
+| --- | --- | --- |
+| Block | < | Tail |
+| ^ | ^ | Done |
+
+| Code left | Strong up |
+| --- | --- |
+| `<` | **^** |
+"""
+    source = tmp_path / "structural.md"
+    source.write_text(authored, encoding="utf-8")
+
+    direct_root = tmp_path / "direct"
+    direct_root.mkdir()
+    direct = MdToDocxConverter().convert(_structural_direct_context(direct_root, source))
+    assert direct.success, direct.error
+
+    resolved_root = tmp_path / "resolved"
+    resolved_root.mkdir()
+    resolved = MdToDocxConverter().convert(_structural_resolved_context(resolved_root, authored))
+    assert resolved.success, resolved.error
+
+    direct_signatures = _table_signatures(Path(direct.artifacts[0].staging_path))
+    resolved_signatures = _table_signatures(Path(resolved.artifacts[0].staging_path))
+    assert resolved_signatures == direct_signatures
+    assert len(direct_signatures) == 3
+    assert direct_signatures[0][:2] == (2, 1)
+    assert direct_signatures[1][:2] == (0, 0)
+    assert any(
+        cell[3:5] == (2, 2)
+        for row in direct_signatures[1][3]
+        for cell in row
+        if not cell[5]
+    )
+
+
 def test_no_header_structural_table_round_trips_from_isolated_docx(tmp_path: Path) -> None:
     source = tmp_path / "no-header.md"
     source.write_text("| --- | --- |\n| Alice | 10 |\n| Bob | 20 |\n", encoding="utf-8")
