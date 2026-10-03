@@ -461,7 +461,7 @@ def _machine_item_is_resolved_owned(item: Any, anchor_wrapper: Any, allowed_capt
     allowed_inline_prefixes = (
         TARGET_TAG_PREFIX,
         _NUMBERING_OCCURRENCE_TAG_PREFIX,
-        _STANDALONE_CAPTION_TAG_PREFIX,
+        STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX,
         "docwen-soft-ref-v1:",
         "docwen-ref-occurrence-v1:",
         "docwen-citation-occurrence-v1:",
