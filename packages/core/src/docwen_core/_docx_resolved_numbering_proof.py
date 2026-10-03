@@ -542,13 +542,15 @@ class ResolvedNumberingProofMixin:
             self._standalone_occurrence_bindings,
             key=lambda item: (item.identity.source_start, item.identity.source_end, item.identity.tag),
         )
+        idless = [item for item in expected if item.identity.target_id is None]
+        addressable = [item for item in expected if item.identity.target_id is not None]
         body = document.element.body
         physical = [
             sdt
             for sdt in body.iter(qn("w:sdt"))
             if (sdt_tag(sdt) or "").startswith(STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX)
         ]
-        expected_tags = [item.identity.tag for item in expected]
+        expected_tags = [item.identity.tag for item in idless]
         if [sdt_tag(item) for item in physical] != expected_tags:
             raise ResolvedNumberingDocxError(
                 "standalone-caption occurrence physical order/cardinality differs from source authority"
@@ -561,7 +563,7 @@ class ResolvedNumberingProofMixin:
         }
         style_ids = {item.semantic_key: item.resolved_style_id for item in self._caption_style_bindings}
         binding_by_key = {item.document_target.occurrence_key: item for item in self._caption_plan_bindings}
-        for sdt, occurrence in zip(physical, expected, strict=True):
+        for sdt, occurrence in zip(physical, idless, strict=True):
             if sdt.getparent() is not body:
                 raise ResolvedNumberingDocxError("standalone-caption occurrence must be a direct main-body block")
             key = (
@@ -587,6 +589,25 @@ class ResolvedNumberingProofMixin:
                 raise ResolvedNumberingDocxError(
                     "standalone-caption occurrence tag is not bound to its exact caption paragraph"
                 )
+        for occurrence in addressable:
+            key = (
+                occurrence.identity.source_start,
+                occurrence.identity.source_end,
+                occurrence.identity.kind,
+            )
+            binding = binding_by_key[key]
+            if binding.object_count != 0 or binding.document_target.target_id != occurrence.identity.target_id:
+                raise ResolvedNumberingDocxError("addressable standalone-caption authority contradicts its target")
+            caption = caption_paragraphs.get(key)
+            owner = None if caption is None else caption.getparent()
+            wrapper = None if owner is None else owner.getparent()
+            if (
+                caption is None
+                or owner is None
+                or owner.tag != qn("w:sdtContent")
+                or sdt_tag(wrapper) != occurrence.identity.tag
+            ):
+                raise ResolvedNumberingDocxError("addressable standalone caption is not inside its exact target SDT")
 
     def _prove_source_carriers(self, document: Any, caption_paragraphs: set[Any]) -> None:
         """Reopen and authenticate the carrier-only source projection."""
