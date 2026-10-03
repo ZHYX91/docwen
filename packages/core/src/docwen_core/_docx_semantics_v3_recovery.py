@@ -167,14 +167,8 @@ class DocxSemanticsV3Recovery:
             if occurrence.target_id is None:
                 continue
             target = target_by_tag.get(occurrence.tag)
-            if (
-                target is None
-                or target.kind != occurrence.kind
-                or target.source_id != occurrence.target_id
-            ):
-                raise DocxSemanticsV3Error(
-                    "direct Number Suite standalone authority contradicts the target map"
-                )
+            if target is None or target.kind != occurrence.kind or target.source_id != occurrence.target_id:
+                raise DocxSemanticsV3Error("direct Number Suite standalone authority contradicts the target map")
             addressable_standalone_tags.add(occurrence.tag)
         recovery = cls._bind_document_evidence(
             document,
@@ -194,8 +188,7 @@ class DocxSemanticsV3Recovery:
             caption_styles,
         )
         recovery.caption_signatures = tuple(
-            (item.kind, item.source_id, item.title, item.cached_number)
-            for item in recovery.recovered_captions
+            (item.kind, item.source_id, item.title, item.cached_number) for item in recovery.recovered_captions
         )
         return recovery
 
@@ -389,8 +382,7 @@ class DocxSemanticsV3Recovery:
         physical = [
             item
             for item in body
-            if item.tag == qn("w:sdt")
-            and (sdt_tag(item) or "").startswith(STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX)
+            if item.tag == qn("w:sdt") and (sdt_tag(item) or "").startswith(STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX)
         ]
         nested = [
             item
@@ -421,9 +413,7 @@ class DocxSemanticsV3Recovery:
             title, number = _parse_v3_caption(caption, occurrence.kind, required_bookmark=None)
             expected_number = occurrence.derived_number or ""
             if not occurrence.enabled or number != expected_number:
-                raise DocxSemanticsV3Error(
-                    "direct standalone caption numbering differs from its authority"
-                )
+                raise DocxSemanticsV3Error("direct standalone caption numbering differs from its authority")
             content = wrapper.find(qn("w:sdtContent"))
             if content is None:
                 raise DocxSemanticsV3Error("direct standalone caption has no physical content")
@@ -440,23 +430,17 @@ class DocxSemanticsV3Recovery:
             )
         for occurrence in addressable:
             matches = [
-                item
-                for item in recovered
-                if item.kind == occurrence.kind and item.source_id == occurrence.target_id
+                item for item in recovered if item.kind == occurrence.kind and item.source_id == occurrence.target_id
             ]
             if len(matches) != 1:
-                raise DocxSemanticsV3Error(
-                    "direct addressable standalone caption is missing or duplicated"
-                )
+                raise DocxSemanticsV3Error("direct addressable standalone caption is missing or duplicated")
             [caption] = matches
             if (
                 caption.object_elements
                 or not occurrence.enabled
                 or caption.cached_number != (occurrence.derived_number or "")
             ):
-                raise DocxSemanticsV3Error(
-                    "direct addressable standalone caption contradicts its authority"
-                )
+                raise DocxSemanticsV3Error("direct addressable standalone caption contradicts its authority")
         self.recovered_captions = tuple(recovered)
 
     def logical_body_elements(self, document: Any) -> list[Any]:
