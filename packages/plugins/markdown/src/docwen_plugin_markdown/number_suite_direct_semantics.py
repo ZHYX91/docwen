@@ -20,6 +20,12 @@ from dataclasses import dataclass
 from typing import Any, Literal, cast
 
 from docwen_core.markdown_extensions import MarkdownExtensions
+from docwen_plugin_markdown.document_semantics_v3 import (
+    ExternalCitationResolution,
+    ExternalReferenceResolution,
+    MarkdownSemanticsV3Analysis,
+    SourceRange,
+)
 from docwen_plugin_markdown.document_semantics_v3_fenced_source import (
     project_fenced_source_v3,
 )
@@ -90,62 +96,6 @@ _CAPTION_KIND_BY_KEYWORD: dict[str, TargetKind] = {
     "equation": "equation",
     "code": "code_block",
 }
-
-
-@dataclass(frozen=True, slots=True)
-class SourceRange:
-    """A half-open Unicode code-point range in authenticated source."""
-
-    start: int
-    end: int
-
-    def as_dict(self) -> dict[str, int]:
-        return {"start": self.start, "end": self.end}
-
-
-@dataclass(frozen=True, slots=True)
-class ExternalReferenceResolution:
-    """One neutral cross-document resolution supplied by an external owner."""
-
-    page_locator: str
-    selector_kind: Literal["stable_id", "heading_path"]
-    resolved_document_id: str
-    resolved_document_sha256: str
-    resolved_kind: TargetKind
-    cached_number: str | None
-    current_title: str
-    target_id: str | None = None
-    heading_path: tuple[str, ...] = ()
-
-
-@dataclass(frozen=True, slots=True)
-class ExternalCitationResolution:
-    """One neutral citation-key result; the key is not record identity."""
-
-    key: str
-    record_id: str
-    record_sha256: str
-    presentation: str
-
-
-@dataclass(frozen=True, slots=True)
-class MarkdownSemanticsV3Analysis:
-    """Closed source projection plus exact source-backed diagnostics."""
-
-    projection: dict[str, Any]
-    diagnostics: tuple[dict[str, Any], ...]
-    literal_ranges: tuple[SourceRange, ...] = ()
-
-    @property
-    def has_errors(self) -> bool:
-        return any(item["severity"] == "error" for item in self.diagnostics)
-
-    def authored_tokens(self) -> tuple[str, ...]:
-        """Return every semantic/link/citation token exactly as authored."""
-
-        records = [*self.projection["links"], *self.projection["references"], *self.projection["citations"]]
-        records.sort(key=lambda item: (item["range"]["start"], item["range"]["end"]))
-        return tuple(str(item["raw"]) for item in records)
 
 
 def is_resource_less_image_carrier_v3(source: str) -> bool:
