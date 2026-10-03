@@ -185,6 +185,51 @@ def test_public_readmes_share_one_language_navigation_contract() -> None:
     assert LANGUAGE_NAV in docs_readme
 
 
+
+def _public_readme_paths() -> list[Path]:
+    return [ROOT / "README.md", *(DOCS / "user-guides" / name for name in LOCALIZED_READMES)]
+
+
+def _h2_sections(text: str) -> list[str]:
+    return re.split(r"^## .+$", text, flags=re.MULTILINE)[1:]
+
+
+def test_public_readmes_keep_cli_integration_anchors() -> None:
+    required = (
+        "inspect <file> [--json]",
+        "resources list formats --json",
+        "schema convert",
+        "--dry-run --json",
+        "serve --stdio",
+        "Machine Protocol v2",
+        "resources list optimizations --json",
+        "gui open",
+    )
+    for path in _public_readme_paths():
+        sections = _h2_sections(path.read_text(encoding="utf-8"))
+        assert len(sections) >= 10, path.name
+        cli = sections[5]
+        assert all(token in cli for token in required), path.name
+        ordered = [
+            cli.index("inspect <file> [--json]"),
+            cli.index("resources list formats --json"),
+            cli.index("schema convert"),
+            cli.index("--dry-run --json"),
+        ]
+        assert ordered == sorted(ordered), path.name
+
+
+def test_public_readmes_describe_current_assistant_platform_boundary() -> None:
+    for path in _public_readme_paths():
+        sections = _h2_sections(path.read_text(encoding="utf-8"))
+        assert len(sections) >= 10, path.name
+        obsidian = sections[9]
+        assert "DocWen Assistant 3.1" in obsidian, path.name
+        assert "Windows" in obsidian, path.name
+        assert "Linux" in obsidian, path.name
+        assert "macOS" in obsidian, path.name
+
+
 def test_public_readmes_describe_the_exact_network_guard_boundary() -> None:
     public_readmes = [ROOT / "README.md", *(DOCS / "user-guides" / name for name in LOCALIZED_READMES)]
     assert {path.name for path in public_readmes} == set(NETWORK_GUARD_DNS_MARKERS)
