@@ -93,7 +93,9 @@ def test_direct_number_suite_standalone_caption_round_trips_without_inventing_ca
     source = (
         "Figure: Planned architecture ^Plan\n\n\n"
         "ordinary paragraph\n\n"
-        "See @[[#^plan]] and @[[#figure: planned architecture]].\n"
+        "Table: Planned table\n\n\n"
+        "second ordinary paragraph\n\n"
+        "See @[[#^plan]], @[[#figure: planned architecture]], and @[[#table: planned table]].\n"
     )
     source_path.write_text(source, encoding="utf-8")
 
@@ -106,16 +108,17 @@ def test_direct_number_suite_standalone_caption_round_trips_without_inventing_ca
 
     reopened = Document(str(output))
     recovery = DocxSemanticsV3Recovery.load(output, reopened)
-    [caption] = recovery.recovered_captions
-    assert (caption.kind, caption.source_id, caption.title, caption.cached_number) == (
-        "figure",
-        "Plan",
-        "Planned architecture",
-        "1",
-    )
-    assert caption.object_elements == ()
+    assert [
+        (item.kind, item.source_id, item.title, item.cached_number)
+        for item in recovery.recovered_captions
+    ] == [
+        ("figure", "Plan", "Planned architecture", "1"),
+        ("table", None, "Planned table", "1"),
+    ]
+    assert all(item.object_elements == () for item in recovery.recovered_captions)
     instructions = [item.text or "" for item in reopened.element.iter(qn("w:instrText"))]
     assert any("SEQ Figure" in item for item in instructions)
+    assert any("SEQ Table" in item for item in instructions)
     assert sum(" REF " in item for item in instructions) == 1
 
     markdown = docx_to_md(
@@ -127,8 +130,11 @@ def test_direct_number_suite_standalone_caption_round_trips_without_inventing_ca
     )
     assert "Figure: Planned architecture ^Plan" in markdown
     assert "ordinary paragraph" in markdown
+    assert "Table: Planned table" in markdown
+    assert "second ordinary paragraph" in markdown
     assert "@[[#^plan]]" in markdown
     assert "@[[#figure: planned architecture]]" in markdown
+    assert "@[[#table: planned table]]" in markdown
     assert "![image omitted]()" not in markdown
 
 
