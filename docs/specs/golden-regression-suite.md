@@ -142,6 +142,12 @@ Candidate-blocking corpora additionally include:
   disabled absences pass headless round-trip before separate Word, WPS, and LibreOffice host observations. Reverse
   fixtures separate a number only from authenticated Word list/field semantics; ambiguous visible prefixes remain
   authored text plus diagnostic and semantic numbering is never written into Markdown;
+- resolved-v4 standalone caption fixtures cover an addressable enabled caption, an enabled ID-less caption and a
+  disabled ID-less caption with no unique carrier. The addressable target proves a caption-only target SDT and stable
+  REF; both ID-less cases prove the closed standalone-caption occurrence map/SDT, exact enabled/derived-number
+  authority, no invented target ID, isolated DOCX reopening, and canonical Markdown reconstruction without changing
+  subsequent caption counters;
+
 - every disabled ID-less caption has one canonical `document-numbering-occurrence-map/v1` record and one exact
   two-block `docwen-numbering-occurrence-v1:` SDT, bound to source hash/range, kind, false enabled state, empty
   target/derived values, and plan SHA. Fixtures inspect the digest preimage, closed attribute order, canonical
