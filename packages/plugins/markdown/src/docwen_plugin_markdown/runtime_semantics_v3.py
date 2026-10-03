@@ -25,15 +25,19 @@ from docwen_core.docx_semantics_v3 import fenced_source_identity_from_mapping_v3
 from docwen_core.markdown_extensions import MarkdownExtensions
 from docwen_plugin_markdown.document_semantics_v3 import (
     MarkdownSemanticsV3Analysis,
-    SemanticConsumerProfile,
     analyze_markdown_semantics_v3,
     markdown_semantics_body_start_v3,
+)
+from docwen_plugin_markdown.number_suite_direct_semantics import (
+    MarkdownSemanticsV3Analysis as NumberSuiteDirectAnalysis,
+    analyze_markdown_semantics_v3 as analyze_number_suite_direct_semantics,
 )
 from docwen_plugin_markdown.document_semantics_v3_fenced_source import (
     fenced_source_info_insertion_offset_v3,
     recover_fenced_logical_body_v3,
 )
 
+type SemanticConsumerProfile = Literal["frozen_v3", "number_suite_direct"]
 type _MarkerRole = Literal[
     "heading_target",
     "caption_declaration",
@@ -65,7 +69,7 @@ class RuntimeMarkerV3:
 class RuntimeSemanticsV3Plan:
     """One immutable source analysis and its inert preprocessor projection."""
 
-    analysis: MarkdownSemanticsV3Analysis
+    analysis: MarkdownSemanticsV3Analysis | NumberSuiteDirectAnalysis
     shielded_source: str
     markers: tuple[RuntimeMarkerV3, ...]
     body_start: int
@@ -97,11 +101,19 @@ def prepare_runtime_semantics_v3(
     """Analyze and shield one exact accepted input before generic processing."""
 
     try:
-        analysis = analyze_markdown_semantics_v3(
-            source,
-            input_id=input_id,
-            extensions=extensions,
-            consumer_profile=consumer_profile,
+        analysis = (
+            analyze_number_suite_direct_semantics(
+                source,
+                input_id=input_id,
+                extensions=extensions,
+                consumer_profile="number_suite_direct",
+            )
+            if consumer_profile == "number_suite_direct"
+            else analyze_markdown_semantics_v3(
+                source,
+                input_id=input_id,
+                extensions=extensions,
+            )
         )
     except ValueError as exc:
         raise RuntimeSemanticsV3Unsupported(str(exc)) from exc
