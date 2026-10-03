@@ -19,7 +19,7 @@ Phần mềm được tạo ra để giải quyết các vấn đề thường g
 
 ## ✨ Tính năng chính
 
-- **📄 Chuyển đổi tài liệu** - Word ↔ Markdown, hỗ trợ công thức, ánh xạ dấu phân cách (---/***/___) với ngắt trang/ngắt mục/dòng kẻ và khôi phục marker bảng Markdown `<` / `^` thành gộp ô hình chữ nhật trong Word. DOCX/DOC/WPS/RTF/ODT.
+- **📄 Chuyển đổi tài liệu** - Word ↔ Markdown, hỗ trợ công thức, ánh xạ dấu phân cách (---/***/___) với ngắt trang/ngắt mục/dòng kẻ và khôi phục dấu gộp `<` / `^` trong bảng Markdown thành gộp ô hình chữ nhật trong Word. DOCX/DOC/WPS/RTF/ODT.
 - **📊 Chuyển đổi bảng tính** - Excel ↔ Markdown. XLSX/XLS/ET/ODS/CSV/TSV. Có chiến lược xuất ô gộp cấu hình được (`fill / empty / marker`), công cụ tóm tắt bảng và các placeholder template được mô tả bên dưới.
 - **📑 PDF & file bố cục** - PDF/XPS/OFD → Markdown hoặc DOCX. Hỗ trợ gộp/tách PDF.
 - **🖼️ Ảnh** - Chuyển đổi và nén JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC.
@@ -569,7 +569,7 @@ Trích dữ liệu từ bảng Markdown và điền **sang phải** theo từng 
 **Xử lý ô gộp**:
 
 - Markdown -> Excel tiếp tục giữ nguyên các merged ranges có sẵn của mẫu.
-- Với các vùng mẫu dạng cột đã biết, được tạo bởi các placeholder `{{↓Field Name}}` liên tiếp, chương trình có thể khôi phục gộp hình chữ nhật từ marker `<` / `^` tường minh trong bảng Markdown.
+- Với các vùng mẫu dạng cột đã biết, được tạo bởi các placeholder `{{↓Field Name}}` liên tiếp, chương trình có thể khôi phục gộp hình chữ nhật từ dấu gộp `<` / `^` tường minh trong bảng Markdown.
 - Chỉ những ô có nội dung sau khi bỏ khoảng trắng đầu/cuối chính xác là `<` hoặc `^` mới tham gia nhận diện gộp; `\<` và `\^` được giữ lại như văn bản literal.
 - Hình chữ nhật không hợp lệ hoặc xung đột với merged ranges có sẵn của mẫu sẽ bị hạ cấp thành văn bản thường kèm cảnh báo, thay vì cưỡng ép ghi đè cấu trúc mẫu.
 
