@@ -85,6 +85,53 @@ def test_figure_captioned_multi_image_table_round_trips_as_native_table(
     assert "| --- | --- |" in markdown
 
 
+def test_direct_number_suite_standalone_caption_round_trips_without_inventing_carrier(
+    round_trip_runtime: Any,
+    tmp_path: Path,
+) -> None:
+    source_path = tmp_path / "direct-standalone.md"
+    source = (
+        "Figure: Planned architecture ^Plan\n\n\n"
+        "ordinary paragraph\n\n"
+        "See @[[#^plan]] and @[[#figure: planned architecture]].\n"
+    )
+    source_path.write_text(source, encoding="utf-8")
+
+    output = md_to_docx(
+        round_trip_runtime,
+        source_path,
+        tmp_path / "direct-standalone-docx",
+        request_id="direct-number-suite-standalone",
+    )
+
+    reopened = Document(str(output))
+    recovery = DocxSemanticsV3Recovery.load(output, reopened)
+    [caption] = recovery.recovered_captions
+    assert (caption.kind, caption.source_id, caption.title, caption.cached_number) == (
+        "figure",
+        "Plan",
+        "Planned architecture",
+        "1",
+    )
+    assert caption.object_elements == ()
+    instructions = [item.text or "" for item in reopened.element.iter(qn("w:instrText"))]
+    assert any("SEQ Figure" in item for item in instructions)
+    assert sum(" REF " in item for item in instructions) == 1
+
+    markdown = docx_to_md(
+        round_trip_runtime,
+        output,
+        tmp_path / "direct-standalone-md",
+        request_id="direct-number-suite-standalone-reverse",
+        preserve_numbering=False,
+    )
+    assert "Figure: Planned architecture ^Plan" in markdown
+    assert "ordinary paragraph" in markdown
+    assert "@[[#^Plan]]" in markdown
+    assert "@[[#Figure: Planned architecture]]" in markdown
+    assert "![image omitted]()" not in markdown
+
+
 def test_exact_two_figure_captioned_multi_image_table_round_trips_with_short_target_range(
     round_trip_runtime: Any,
     tmp_path: Path,
