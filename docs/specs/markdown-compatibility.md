@@ -367,6 +367,17 @@ accepts only explicitly declared linked raster resources, and applies request-sc
 the conversion request, not to any installed editor plugin. Number Suite installation/configuration therefore cannot change
 an otherwise identical source-native conversion.
 
+The Machine source capability advertises `markdown_resource_bindings` with shape
+`{authored_sha256, images: [{authored_token, logical_path}]}`. The SHA-256 binds the complete UTF-8 source;
+each token must be a visible authored image and each path must identify a declared resource. Bindings preserve
+short Wiki names, cross-folder targets and spaces without basename discovery or source rewriting. Wiki and
+Markdown image policies remain independent. Local Wiki navigation requiring filesystem search and Markdown
+transclusion are outside this declared-image route; text-only link policies do not require file discovery.
+
+Machine 原文入口通过 `markdown_resource_bindings` 将完整 UTF-8 原文 SHA-256、可见图片标记和已声明资源逻辑路径绑定。
+短 Wiki 名称、跨目录目标及空格文件名不需要按文件名搜索，也不改写原文。Wiki 图片与 Markdown 图片分别遵循各自策略。
+需要文件搜索的本地 Wiki 导航及 Markdown 嵌入展开不在此声明图片入口的范围内；纯文本链接策略无需搜索文件。
+
 A separate provider-neutral route consumes `resolved_document` plus `numbering_export_plan` under
 [Resolved structured numbering and export plan](structured-numbering-phases.md). On that exact-two route the upstream
 provider already owns profile selection, counter scope/reset/format/label/chapter inclusion and WikiLink resolution;

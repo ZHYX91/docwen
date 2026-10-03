@@ -56,6 +56,7 @@ from docwen_core.formats import (
     CATEGORY_MARKDOWN,
     CATEGORY_SPREADSHEET,
 )
+from docwen_core.links.declared_resources import MARKDOWN_RESOURCE_BINDINGS_SCHEMA
 from docwen_core.markdown_extensions import MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA
 from docwen_core.models.resolved_numbering import (
     NUMBERING_EXPORT_PLAN_MEDIA_TYPE,
@@ -220,6 +221,7 @@ _MARKDOWN_TO_DOCX_OPTIONS = _strict_options(
 _MARKDOWN_SOURCE_TO_DOCX_OPTIONS = _strict_options(
     {
         **_MARKDOWN_TO_DOCX_OPTIONS["properties"],
+        "markdown_resource_bindings": MARKDOWN_RESOURCE_BINDINGS_SCHEMA,
         "remove_numbering": {"type": "boolean"},
         "add_numbering": {"type": "boolean"},
         "numbering_scheme": {

@@ -20,6 +20,7 @@ Declared public Markdown routes plus four GUI-internal structured-clipboard rout
 from __future__ import annotations
 
 from docwen_core.docx_styles import SHIPPED_STYLE_LOCALES
+from docwen_core.links.declared_resources import MARKDOWN_RESOURCE_BINDINGS_SCHEMA
 from docwen_core.markdown_extensions import MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA
 from docwen_core.models.manifest import HonestyRoute, PluginManifest, RouteCapabilityRule, RouteSpec
 from docwen_core.text.heading_merge import DEFAULT_HEADING_MERGE_PUNCTUATION
@@ -34,6 +35,7 @@ MD_TO_DOCX_OPTIONS_SCHEMA: dict = {
     "additionalProperties": False,
     "properties": {
         "markdown_extensions": MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA,
+        "markdown_resource_bindings": MARKDOWN_RESOURCE_BINDINGS_SCHEMA,
         "locale": {
             "type": "string",
             "enum": list(SHIPPED_STYLE_LOCALES),
