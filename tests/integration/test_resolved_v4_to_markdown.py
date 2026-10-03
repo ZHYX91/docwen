@@ -15,7 +15,12 @@ from docx.enum.style import WD_STYLE_TYPE
 from docx.oxml.ns import qn
 from lxml import etree
 
-from docwen_core._docx_semantics_v3_model import CaptionStyleBindingV3, CaptionStyleKeyV3
+from docwen_core._docx_semantics_v3_model import (
+    CaptionStyleBindingV3,
+    CaptionStyleKeyV3,
+    DocxSemanticsV3Error,
+    derive_target_identity_v3,
+)
 from docwen_core.docx_numbering_import import AMBIGUOUS_VISIBLE_PREFIX_DIAGNOSTIC
 from docwen_core.docx_resolved_numbering import ResolvedNumberingDocxSession
 from docwen_core.docx_resolved_numbering_recovery import (
@@ -322,6 +327,41 @@ def test_representative_proves_four_kinds_refs_citation_and_preserves_tokens_wit
         ("equation", "energy-main", "", "1"),
         ("code_block", "entry-main", "Entry point", "1"),
     )
+
+
+def test_bound_caption_cannot_be_downgraded_to_standalone_by_removing_its_carrier(tmp_path: Path) -> None:
+    source = _forward_representative(tmp_path)
+    tampered = tmp_path / "bound-caption-without-carrier.docx"
+    tampered.write_bytes(source.read_bytes())
+
+    with ZipFile(tampered) as package:
+        infos = package.infolist()
+        members = {item.filename: package.read(item.filename) for item in infos}
+    root = etree.fromstring(members["word/document.xml"])
+    target_tag = derive_target_identity_v3("figure", "system-overview").tag
+    target = next(
+        item
+        for item in root.iter(qn("w:sdt"))
+        if (tag := item.find(f"{qn('w:sdtPr')}/{qn('w:tag')}")) is not None
+        and tag.get(qn("w:val")) == target_tag
+    )
+    content = target.find(qn("w:sdtContent"))
+    assert content is not None and len(content) == 2
+    content.remove(content[0])
+    members["word/document.xml"] = etree.tostring(
+        root,
+        encoding="UTF-8",
+        xml_declaration=True,
+        standalone=True,
+    )
+    rewritten = tampered.with_suffix(".rewrite.docx")
+    with ZipFile(rewritten, "w", compression=ZIP_DEFLATED) as output:
+        for info in infos:
+            output.writestr(info, members[info.filename])
+    rewritten.replace(tampered)
+
+    with pytest.raises(DocxSemanticsV3Error, match="caption target SDT"):
+        ResolvedNumberingV4Recovery.load_if_present(tampered, Document(str(tampered)))
 
 
 def test_standalone_captions_round_trip_with_numbering_and_reference_authority(tmp_path: Path) -> None:
