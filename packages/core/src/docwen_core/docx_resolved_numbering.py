@@ -102,13 +102,6 @@ from docwen_core.docx_numbering_occurrence import (
     numbering_occurrence_map_xml,
     wrap_numbering_occurrence,
 )
-from docwen_core.docx_standalone_caption_occurrence import (
-    STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE,
-    StandaloneCaptionOccurrenceIdentity,
-    derive_standalone_caption_occurrence,
-    standalone_caption_occurrence_map_xml,
-    wrap_standalone_caption_occurrence,
-)
 from docwen_core.docx_numbering_ooxml import (
     HeadingNumberingProjection,
     apply_heading_numbering,
@@ -117,6 +110,13 @@ from docwen_core.docx_numbering_ooxml import (
     inline_reference_sdt,
     materialize_caption_number,
     write_heading_numbering_projection,
+)
+from docwen_core.docx_standalone_caption_occurrence import (
+    STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE,
+    StandaloneCaptionOccurrenceIdentity,
+    derive_standalone_caption_occurrence,
+    standalone_caption_occurrence_map_xml,
+    wrap_standalone_caption_occurrence,
 )
 from docwen_core.models._resolved_numbering_semantics import (
     validate_document,
