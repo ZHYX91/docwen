@@ -95,7 +95,7 @@ pip install pillow-heif
 24.04 x64. Estes pré-requisitos não ampliam esse compromisso para outra distribuição ou arquitetura.
 
 - Ambiente de desktop instalado (GNOME, KDE, XFCE, etc.)
-- A GUI usa PySide6 (Qt6) e não depende mais de Python Tk. Se a inicialização falhar por falta de bibliotecas do sistema, instale as dependências de runtime do Qt indicadas pelo erro (geralmente relacionadas a OpenGL/X11).
+- A GUI usa PySide6 (Qt6) e não depende mais de Python Tk. Se a inicialização falhar por falta de bibliotecas do sistema, instale as bibliotecas necessárias para executar o Qt indicadas pelo erro (geralmente relacionadas a OpenGL/X11).
 - Para servidores headless, priorize a entrada CLI `docwen` em vez da GUI; as compilações empacotadas para Windows também incluem `DocWenCLI.exe`.
 
 ### Guia de Início Rápido
