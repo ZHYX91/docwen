@@ -196,9 +196,12 @@ Además de la interfaz gráfica, DocWen ofrece una interfaz de línea de comando
 Para scripts, agentes o plugins, se recomienda este orden:
 
 1. `inspect <file> [--json]`: detectar primero la categoría real del archivo, el formato y las acciones disponibles.
-2. `schema convert`: leer el contrato legible por máquina y las reglas condicionales de `convert`.
-3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: previsualizar detección, normalización y enrutamiento sin escribir archivos.
-4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: ejecutar la conversión real después de validar la previsualización.
+2. `resources list formats --json`: leer las rutas Runtime realmente disponibles y sus dependencias.
+3. `schema convert`: leer el contrato legible por máquina y las reglas condicionales de `convert`.
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: previsualizar detección, normalización y enrutamiento sin escribir archivos.
+5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: ejecutar la conversión real después de validar la previsualización.
+
+Las integraciones externas de contenido usan `serve --stdio` con Machine Protocol v2: descubren capacidades, planifican una tarea y después la ejecutan. La salida CLI `--json` es una presentación para terminal, no el límite de compatibilidad entre productos. El control local de escritorio usa por separado la interfaz estable `gui open|activate|status`.
 
 ### Ejemplos comunes
 
@@ -256,8 +259,10 @@ La tabla siguiente solo enumera los comandos mas habituales. Para la superficie 
 | `inspect <file> [--json]` | Inspecciona categoría/formato del archivo, acciones recomendadas y advertencias por desajuste entre extensión y contenido. |
 | `doctor --json` | Devuelve diagnósticos junto con resúmenes de capacidades en tiempo de ejecución y puertas de dependencia. |
 | `resources list formats --json` | Lista formatos de destino por categoría de origen e incluye resúmenes de dependencias en tiempo de ejecución y limitaciones. |
+| `resources list optimizations --json` | Enumerar recursos de optimización tipados y sus enlaces de ruta canónicos. |
 | `resources list templates` | Lista las plantillas disponibles. |
 | `resources list numbering-schemes` | Lista los esquemas de numeración disponibles. |
+| `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | Iniciar o activar DocWen mediante el control GUI local independiente y, opcionalmente, abrir un archivo absoluto. |
 | `--template <id>` | ID canónico exacto devuelto por `resources list templates`; se rechazan nombres visibles, nombres de archivo y rutas. Los ID DOCX se aplican a `docx/doc/odt/rtf/wps/pdf` y los ID XLSX a `xlsx/xls/ods/csv`. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Extracción de imágenes y OCR para `convert --to md`. |
 | `--image-mode file|base64|embed|omit` | Controla cómo se emiten las imágenes durante la exportación a Markdown. |
@@ -488,6 +493,8 @@ Nota (informe JSON de revisión para Markdown):
 Gestiona las plantillas DOCX/XLSX en **Configuración → Plantillas**: activar, desactivar, ordenar y elegir valores predeterminados. Las integradas son de solo lectura; las personalizadas se guardan en una carpeta de usuario con permisos de escritura. MSIX no requiere modificar WindowsApps.
 
 ### Plantillas personalizadas
+
+El transporte Runtime/Control de DocWen Core usa una canalización con nombre en Windows y un socket AF_UNIX en Linux/macOS. El bloqueo de archivo solo establece la propiedad de instancia única; los comandos de control no se transportan mediante archivos. Esto describe únicamente el límite de Core. DocWen Assistant 3.1 admite hosts de escritorio Windows y Linux. En Windows, las instalaciones de Microsoft Store pueden detectarse automáticamente; en Linux se selecciona manualmente un paquete compatible ya extraído. Assistant no admite macOS actualmente.
 
 1. Copia y edita una plantilla integrada o importa un archivo DOCX/XLSX existente.
 2. Modifica el contenido, los estilos y los marcadores de la copia en Word, Excel o WPS; consulta las reglas siguientes.
