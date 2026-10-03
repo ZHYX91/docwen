@@ -151,7 +151,7 @@ title = "設定"
 general = "一般"
 text = "入力テキスト"
 proofread = "校正"
-export = "Markdown リソース"
+export = "OCR と Markdown リソース"
 document = "入力文書"
 spreadsheet = "入力スプレッドシート"
 image = "入力画像"
@@ -187,6 +187,10 @@ failed = "設定のリセットに失敗しました。ログを確認してく�
 summary = "未保存の変更（{count} 件）"
 more = "…ほか {count} 件"
 
+enabled = "オン"
+disabled = "オフ"
+empty_value = "（空）"
+field_fallback = "設定項目（{field}）"
 [settings.errors]
 tab_load_failed_message = "{tab} を読み込めませんでした\n\nエラー: {error}"
 
@@ -204,7 +208,7 @@ save_success_message = "設定を保存し、再読み込みしました。"
 [settings.general]
 font_label = "文字サイズ："
 scale_label = "画面の拡大率："
-scale_tooltip = "システムの拡大率を基準に、文字・アイコン・余白をまとめて調整します。"
+scale_tooltip = "選択するとシステム倍率を基準に文字・アイコン・余白をすぐにプレビューします。［適用］または［OK］で保存し、［キャンセル］で最後に保存した値へ戻します。"
 # 语言设置区域
 language_section = "言語"
 language_label = "インターフェース言語を選択："
@@ -214,11 +218,12 @@ language_tooltip = "アプリケーションの表示言語を選択します。
 theme_section = "外観"
 theme_description = "テーマ、文字サイズ、インターフェースの拡大率を調整します。"
 theme_label = "アプリケーションテーマを選択："
-theme_tooltip = "アプリケーションの視覚テーマを選択します。\nテーマによって配色やインターフェーススタイルが異なります。\n変更は保存後に有効になります。"
+theme_tooltip = "選択するとすぐにプレビューされます。［適用］または［OK］でテーマを保存し、［キャンセル］で最後に保存したテーマへ戻します。"
 theme_preview = "テーマプレビュー："
 sample_button = "サンプルボタン"
 sample_text = "サンプルテキスト"
 
+font_tooltip = "選択するとすぐにプレビューされます。［適用］または［OK］で文字サイズを保存し、［キャンセル］で最後に保存した値へ戻します。"
 [settings.general.languages]
 zh_CN = "中国語（簡体字）"
 en_US = "英語"
@@ -264,8 +269,8 @@ batch_mode = "バッチモード"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
-output_format = "既定の出力形式"
-output_format_hint = "Markdown を追加したときに、この形式のテンプレートを表示します。"
+output_format = "優先テンプレート種類"
+output_format_hint = "Markdown を追加したとき、この種類のテンプレートを優先表示します。この設定だけで変換の出力形式が変わるわけではありません。"
 # MD转文档序号设置
 md_to_docx_section = "見出し番号付け (Markdownからドキュメント)"
 remove_numbering = "デフォルトで元のMarkdown見出し番号を削除"
@@ -288,7 +293,7 @@ field_processors_toggle_failed = "「{name}」を更新できませんでした�
 
 # 序号设置区域
 numbering_settings_section = "番号付け設定"
-numbering_settings_desc = "Markdownとドキュメント変換のための見出し番号のクリーンアップと追加スキームを管理します。"
+numbering_settings_desc = "「入力テキスト」と「入力文書」は同じグローバル番号設定を開きます。どちらのエディターでも保存は直ちに反映され、この設定ウィンドウの［キャンセル］では取り消されません。"
 edit_numbering_add = "見出し番号追加を編集"
 edit_numbering_clean = "見出し番号削除ルールを編集"
 
@@ -299,8 +304,8 @@ edit_numbering_clean = "見出し番号削除ルールを編集"
 # 词库配置
 
 # 错误消息
-save_numbering_schemes_failed = "番号体系を保存できませんでした。変更は保持されていません。"
-save_numbering_clean_rules_failed = "番号除去ルールを保存できませんでした。変更は保持されていません。"
+save_numbering_schemes_failed = "番号付けスキームを保存できませんでした。変更は保存されていません。"
+save_numbering_clean_rules_failed = "番号削除ルールを保存できませんでした。変更は保存されていません。"
 
 # -----------------------------------------------------------------------------
 # 文档设置选项卡
@@ -326,13 +331,14 @@ sensitive_words_section = "注意語辞書"
 sensitive_words_desc = "要注意語の検出項目を管理します。"
 edit = "編集"
 
+save_boundary_hint = "ルールエディターの保存とルールのインポートは直ちに反映され、この設定ウィンドウの［キャンセル］では取り消されません。本ページのスイッチは引き続き［適用］/［OK］で保存されます。"
 [settings.extraction]
 image_extraction_mode_label = "画像抽出方式:"
 image_extraction_mode_tooltip = "Markdown に画像を埋め込む方法を選択します。\n\n• 画像ファイル：個別の画像として保存し MD から参照\n• Base64 埋め込み：画像を Base64 に変換して MD に直接埋め込み"
 image_extraction_mode_file = "画像ファイル"
 image_extraction_mode_base64 = "Base64 埋め込み"
 ocr_placement_mode_label = "OCR 配置:"
-ocr_placement_mode_tooltip = "OCR テキストの保存場所を選択します。\n\n• 画像MD：画像ごとに画像+OCR を含む独立 MD を生成\n• メイン文書：メイン MD の画像の下に引用ブロックとして OCR を挿入（画像が多いとメイン MD が長くなります）"
+ocr_placement_mode_tooltip = "画像 + OCR の出力先を選びます。画像 Markdown は画像ごとに独立した Markdown を作成し、メイン文書は画像と OCR をメイン Markdown に書きます。Base64 インラインはメイン文書が必須のため、この項目を無効化して強制します。画像ファイルへ戻すと以前の選択を復元します。"
 ocr_placement_mode_image_md = "画像MD"
 ocr_placement_mode_main_md = "メイン文書"
 ocr_blockquote_title_enabled_label = "OCR タイトル行（主MD）"
@@ -360,6 +366,7 @@ section = "結合セルのエクスポート"
 desc = "Markdown 出力で結合セルをどのように表現するかを設定します。"
 merge_strategy_label = "結合セルのエクスポート方式："
 
+merge_strategy_help = "通常の Markdown のみ：［埋める］は結合領域の左上セルの文字を繰り返します（例「見出し | 見出し」）。［空］は覆われるセルを空にします（「見出し | 」）。Structural Tables 出力が有効な場合は代わりに < と ^ の構造マーカーを使います。"
 [settings.table_export.strategies]
 fill = "埋める"
 empty = "空にする"
@@ -406,13 +413,14 @@ keep_images_tooltip = "スプレッドシートをMDに変換する際、デフ�
 enable_ocr = "デフォルトで「画像OCR」をチェック"
 enable_ocr_tooltip = "スプレッドシートをMDに変換する際、デフォルトで「画像OCR」をチェックします"
 merge_mode_section = "結合モード設定"
-merge_mode_desc = "テーブル結合のデフォルトモードを設定します"
+merge_mode_desc = "表をまとめる際の既定の集約方式を選びます。"
 default_merge_mode_label = "既定の結合モード："
 spreadsheet_processors_label = "スプレッドシート処理ソフトウェアの優先順位"
 ods_conversion_label = "ODS形式変換"
 spreadsheet_to_pdf_label = "スプレッドシートからPDF"
 
 # 汇总模式选项
+merge_mode_help = "行/列単位では入力行/列を基準表と照合します。入力側が基準側を包含すれば置換し、基準側が入力側を包含すれば基準を保持し、それ以外は最も近い位置へ挿入します。セル単位では入力の空値を無視し、非空値を保持し、数値は加算、同じ文字列は一度だけ保持し、異なる非数値文字列はカンマで連結します。"
 [settings.spreadsheet.merge_modes]
 by_row = "行で結合"
 by_column = "列で結合"
@@ -487,7 +495,7 @@ enable_ocr_tooltip = "その他のファイルをMDに変換する際、デフ�
 [settings.link]
 # Markdown链接格式区域
 format_section = "Markdownリンク形式"
-format_desc = "生成されるMarkdownファイル内のリンク形式を設定します"
+format_desc = "DocWen が Markdown を生成するときに使うリンク構文を設定します。"
 image_link_style_label = "画像リンク形式："
 image_link_style_tooltip = "MDファイル内の画像のリンク形式を設定します\n\n• Markdown埋め込み：![alt](image.png)\n• Markdownリンク：[alt](image.png)\n• Wiki埋め込み：![[image.png]] (Obsidian)\n• Wikiリンク：[[image.png]] (Obsidian)"
 md_file_link_style_label = "MDファイルリンク形式："
@@ -495,19 +503,19 @@ md_file_link_style_tooltip = "MDファイル内のMDファイルのリンク形�
 
 # 非嵌入链接处理区域
 non_embed_section = "非埋め込みリンク処理"
-non_embed_desc = "MDをドキュメント/テーブルに変換する際の通常のリンク（! 接頭辞なし）の処理方法を設定します"
+non_embed_desc = "Markdown 入力の通常リンクを文書または表計算ファイル生成時にどう扱うか設定します。"
 wiki_link_mode = "Wikiリンク処理："
-wiki_link_tooltip = "[[link]] または [[link|text]] 形式を処理します\n\nそのまま保持：[[link|text]]\nテキスト抽出：text（マークアップを削除）\n削除：リンク全体を削除"
+wiki_link_tooltip = "[[link]] または [[link|text]] を処理します。保持：元のマークアップを保持。テキスト抽出：表示テキストのみ保持。ハイパーリンク：表示テキストとリンク先を保持し、出力形式が対応する場合はクリック可能なリンクを作成。削除：リンクを削除。"
 markdown_link_mode = "Markdownリンク処理："
-markdown_link_tooltip = "[text](url) 形式を処理します\n\nそのまま保持：[text](url)\nテキスト抽出：text（マークアップを削除）\n削除：リンク全体を削除"
+markdown_link_tooltip = "[text](url) を処理します。保持：元のマークアップを保持。テキスト抽出：text のみ保持。ハイパーリンク：テキストとリンク先を保持し、出力形式が対応する場合はクリック可能なリンクを作成。削除：リンクを削除。"
 
 # 嵌入链接处理区域
 embed_section = "埋め込みリンク処理"
-embed_desc = "MDをドキュメント/テーブルに変換する際の埋め込みリンク（! 接頭辞あり）の処理方法を設定します"
+embed_desc = "Markdown 入力の埋め込みリンクや画像を文書または表計算ファイル生成時にどう扱うか設定します。"
 wiki_embed_image_mode = "Wiki埋め込み画像処理："
 wiki_embed_image_tooltip = "![[image.png]] 形式を処理します\n\nそのまま保持：![[image.png]]\nテキスト抽出：image.png\n削除：リンクを削除\nコンテンツ埋め込み：ドキュメントに画像を挿入"
 markdown_embed_image_mode = "Markdown埋め込み画像処理："
-markdown_embed_image_tooltip = "![alt](image.png) 形式を処理します\n\nそのまま保持：![alt](image.png)\nテキスト抽出：image.png\n削除：リンクを削除\nコンテンツ埋め込み：ドキュメントに画像を挿入"
+markdown_embed_image_tooltip = "![alt](image.png) を処理します。保持：マークアップを保持。テキスト抽出：alt/表示テキストがあれば優先し、ない場合だけファイル名を使います。削除：リンクを削除。コンテンツ埋め込み：画像を挿入。"
 embed_md_file_mode = "Wiki埋め込みMDファイル処理："
 embed_md_file_tooltip = "![[file.md]] 形式を処理します（Wikiのみ）\n\nそのまま保持：![[file.md]]\nテキスト抽出：file.md\n削除：リンクを削除\nコンテンツ埋め込み：再帰的に処理して挿入"
 max_depth_label = "最大埋め込み深度："
@@ -551,9 +559,9 @@ mermaid_test_failed = "テスト描画に失敗しました: {reason}"
 mermaid_test_passed = "利用可能: テスト図を描画しました。"
 
 mermaid_title = "Mermaid 図"
-mermaid_tooltip = "ローカルの Mermaid CLI で図を画像化するか、コードのまま保持します。失敗時は警告とともにコードを保持します。"
+mermaid_tooltip = "`mermaid` コードブロックを画像化するか、ソースコードのまま保持するかを選びます。画像モードはローカル Mermaid CLI を使い、利用不可または失敗時はコードブロックを保持して警告します。"
 mermaid_mode_label = "出力:"
-mermaid_mode_tooltip = "文書内の Mermaid コードブロックの表示方法を選択します。"
+mermaid_mode_tooltip = "生成文書へ `mermaid` コードブロックを書き込む方法を選びます。"
 mermaid_code = "コードとして保持"
 mermaid_image = "画像として出力"
 mermaid_ready = "CLI {cli} / Mermaid {mermaid} を検出しました。ブラウザーは変換時に確認します。"
@@ -581,7 +589,7 @@ horizontal_rule_tooltip = "Wordの水平線（水平線1/2/3スタイル）をMa
 
 # 语法选择
 syntax_selection = "構文選択"
-syntax_selection_tooltip = "ドキュメントをMarkdownに変換する際に出力する構文形式を選択します\n（すべてのフォーマット構文は入力時に自動的に認識されます）"
+syntax_selection_tooltip = "文書から Markdown へ変換するときに出力する構文を選びます。入力時は DocWen が対応するサポート済み Markdown 構文を認識し、任意の方言は上の拡張スイッチで制御します。"
 bold_syntax_label = "太字構文："
 bold_syntax_tooltip = "太字テキストの出力構文形式を選択します"
 italic_syntax_label = "斜体構文："
@@ -608,7 +616,7 @@ md_body_format_tooltip = "フォーマット適用：**太字** を実際の太�
 md_heading_format_label = "見出しフォーマットマークアップ処理："
 md_heading_format_tooltip = "フォーマット適用：ソースの指定に応じて見出しスタイルの書式を上書きします。\nマークアップ保持：ソースの記号をそのまま表示します。\nマークアップ削除：Markdown 記号を除去し、Word の見出しスタイルを自然に適用します。\n注：見出しスタイル自体が太字でも、フォーマット適用で局所的な書式差を保持できます。"
 md_table_header_format_label = "テーブルヘッダーフォーマットマークアップ処理："
-md_table_header_format_tooltip = 'フォーマット適用：**太字** を実際の太字に変換（テーブルスタイルと重複する可能性があります）\nマークアップ保持：マークアップをそのまま表示\nマークアップ削除：テーブルスタイル（例：最初の行を太字）を自然に適用\n注：テーブルスタイルは通常ヘッダーの太字を定義しているため、"マークアップ削除" を推奨します'
+md_table_header_format_tooltip = "書式を適用：**太字**を実際の太字にします（表スタイルと重なる場合があります）。マークアップ保持：記号をそのまま表示。マークアップ削除：Markdown 記号を除き、表スタイルの先頭行書式を適用させます。表スタイルは先頭行を装飾することが多いため、通常はマークアップ削除が適します。"
 heading_merge_mode_label = "見出し+本文の結合モード:"
 heading_merge_mode_tooltip = "見出しと直後の通常本文行を1つの段落として結合するかを制御します\n句読点がある場合のみ結合: 見出し末尾に文末記号があり、次の行が通常本文の場合のみ結合します（既定）\n本文が続けば結合: 次の行が通常本文なら結合します（文末記号は不要）\n結合しない: 見出しと本文を常に別段落として解析します\n注: リスト/コードブロック/表/引用/区切り線などは結合されません"
 heading_merge_punctuation_label = "結合を判定する句読点:"
@@ -635,6 +643,8 @@ list_separator_label = "YAMLリストセパレーター"
 list_separator_tooltip = "YAMLリスト値を文字列に結合する際に使用するセパレーター\n\n一般的な値：\n• 読点（、）\n• カンマ（，）\n• カンマ + スペース（, ）\n• 空文字列：直接連結"
 
 # 格式处理选项
+mermaid_output_group = "出力方法"
+mermaid_renderer_group = "ローカルレンダラー"
 [settings.formatting.options]
 preserve_format = "フォーマット保持"
 discard_format = "フォーマット破棄"
@@ -700,6 +710,7 @@ custom_path_label = "カスタムパス："
 browse_title = "出力ディレクトリを選択"
 
 # 输出模式选项
+validation_custom_path_required = "ファイル保存：空でないカスタム出力フォルダーを選ぶか、出力先を元ファイルのフォルダーへ戻してください。"
 [settings.output.output_modes]
 source = "ソースファイルディレクトリ"
 custom = "カスタムディレクトリ"
@@ -803,8 +814,8 @@ powerpoint = "PowerPoint"
 
 [settings.ocr]
 language_label = "OCR認識言語:"
-language_tooltip = "すべての入力形式で使用する OCR 認識言語。"
-language_auto = "UI言語に従う"
+language_tooltip = "すべての入力形式で共通です。［インターフェース言語に従う］は現在の UI 言語から OCR 言語を選び、画像内の言語を自動判定する機能ではありません。"
+language_auto = "インターフェース言語に従う"
 language_chinese = "中国語/英語"
 language_japanese = "日本語"
 language_chinese_cht = "繁体字中国語"
@@ -814,6 +825,7 @@ language_latin = "ラテン文字系（独/仏/葡など）"
 language_cyrillic = "キリル文字系（露など）"
 section = "OCR 認識"
 
+recognize_tables_tooltip = "OCR にのみ適用します。表構造の認識はベストエフォートで、失敗した領域は通常の OCR テキストとして残ります。数式認識は含みません。"
 [settings.rule_transfer]
 read_failed = "現在のルール設定を読み込めません。"
 added = "追加"
@@ -1710,7 +1722,7 @@ output_hint = "通常の Markdown を使用し、表現できない構造や種�
 structural_tables = "Structural Tables の構造化テーブル"
 captions_references = "Number Suite のキャプションと相互参照"
 extended_headings = "レベル 7～9 の見出し"
-typed_endnotes = "種類を区別する脚注と文末脚注"
+typed_endnotes = "脚注と文末脚注を区別（`endnote:`）"
 obsidian_preset = "Obsidian 拡張を使用"
 
 [activity]
@@ -1788,3 +1800,22 @@ structured_html_only = "クリップボードにプレーンテキスト本文�
 structured_invalid = "クリップボードの表や画像の構造が無効なため、取り込みませんでした。"
 image_invalid = "クリップボードの画像データが無効か、対応サイズを超えています。"
 images_omitted = "クリップボードの画像 {count} 件には検証可能な埋め込みデータがないため、プレースホルダーと利用可能なテキストを保持しました。"
+
+[settings.markdown_extensions.input_help]
+structural_tables = "< や ^ などの Structural Tables マーカーを認識し、拡張表構造を保持します。無効時は通常の Markdown 表内容として扱います。"
+
+captions_references = "Number Suite のキャプション、識別子、相互参照を認識します。無効時は宣言と @ 参照を見えるテキストとして残します。"
+extended_headings = "H7–H9 を認識します。無効時は先頭の 7～9 個の # を見えるテキストとして残します。"
+typed_endnotes = "endnote: などの注記ラベルで文末脚注と脚注を区別します。無効時はそれらを通常の脚注として扱います。"
+
+[settings.markdown_extensions.output_help]
+structural_tables = "必要に応じて Structural Tables のマーカーと拡張構造を出力します。無効時は通常の Markdown 表へ平坦化し、構造損失を通知します。"
+
+captions_references = "該当する意味情報がある場合に Number Suite のキャプションと相互参照を出力します。無効時は通常のテキストを出力し、参照損失を通知します。"
+extended_headings = "H7–H9 を出力します。無効時は H6 に下げ、階層損失を通知します。"
+typed_endnotes = "型付き注記ラベルで脚注/文末脚注の区別を保持します。無効時は文末脚注を通常の脚注として出力し、型の損失を通知します。"
+
+[settings.optimization]
+availability_help = "最適化タイプは現在の実行環境から取得します。この入力カテゴリに適用できるものがなければ関連項目は無効になり、検出失敗は別途エラー表示されます。"
+
+none_available = "現在の実行環境には、この入力カテゴリに適用できる最適化タイプがありません。"
