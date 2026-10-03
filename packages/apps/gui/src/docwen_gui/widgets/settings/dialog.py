@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import NamedTuple
 from typing import cast as _cast
 
@@ -1095,19 +1095,16 @@ class SettingsDialog(QDialog):
             return
 
         changes = self._vm.get_change_summary()
-        count = len(changes)
+        tooltip_lines = [line for change in changes for line in _friendly_change_lines(change)]
+        count = len(tooltip_lines)
         self._changes_label.setText(t("settings.changes.summary", "Unsaved changes ({count})", count=count))
 
-        # Build tooltip as user-facing field/value old → new (max 10 lines).
-        tooltip_lines: list[str] = []
-        for c in changes[:10]:
-            field = str(c["field"])
-            old_str = _friendly_change_value(field, c.get("old"))
-            new_str = _friendly_change_value(field, c.get("new"))
-            tooltip_lines.append(f"{_friendly_change_field(field)}: {old_str} → {new_str}")
-        if len(changes) > 10:
-            tooltip_lines.append(t("settings.changes.more", "... and {count} more", count=len(changes) - 10))
-        self._changes_label.setToolTip("\n".join(tooltip_lines))
+        # Keep the visible count and tooltip at user-facing leaf granularity,
+        # including dict-backed conversion-default categories.
+        visible_lines = tooltip_lines[:10]
+        if len(tooltip_lines) > 10:
+            visible_lines.append(t("settings.changes.more", "... and {count} more", count=len(tooltip_lines) - 10))
+        self._changes_label.setToolTip("\n".join(visible_lines))
         self._changes_label.setVisible(True)
 
     # ── Tab-section mapping ─────────────────────────────────────────────────
@@ -1170,6 +1167,32 @@ def _abbreviate_value(val: object) -> str:
     if len(s) > 60:
         return s[:57] + "..."
     return s
+
+
+def _friendly_change_lines(change: Mapping[str, object]) -> list[str]:
+    """Render one VM change as one or more understandable leaf-level lines."""
+    field = str(change.get("field", ""))
+    old = change.get("old")
+    new = change.get("new")
+    if isinstance(old, Mapping) and isinstance(new, Mapping):
+        lines: list[str] = []
+        for key in sorted(set(old) | set(new), key=str):
+            old_value = old.get(key)
+            new_value = new.get(key)
+            if old_value == new_value:
+                continue
+            child_field = f"{field}.{key}"
+            lines.append(
+                f"{_friendly_change_field(child_field)}: "
+                f"{_friendly_change_value(child_field, old_value)} → "
+                f"{_friendly_change_value(child_field, new_value)}"
+            )
+        if lines:
+            return lines
+    return [
+        f"{_friendly_change_field(field)}: "
+        f"{_friendly_change_value(field, old)} → {_friendly_change_value(field, new)}"
+    ]
 
 
 def _friendly_change_field(field: str) -> str:
