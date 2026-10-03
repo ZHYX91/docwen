@@ -62,6 +62,78 @@ RESET_TAB_BUTTON_MIN_WIDTH = 116
 RESET_ALL_BUTTON_MIN_WIDTH = 104
 STATUS_DISPLAY_MS = 3000
 
+_CHANGE_FIELD_LABEL_KEYS: dict[str, str] = {
+    "gui.language": "settings.general.language_label",
+    "gui.theme": "settings.general.theme_label",
+    "gui.font_size_preset": "settings.general.font_label",
+    "gui.scale_percent": "settings.general.scale_label",
+    "gui.md_default_template": "settings.text.output_format",
+    "output.output_mode": "settings.output.output_mode_label",
+    "output.custom_path": "settings.output.custom_path_label",
+    "output.create_date_subfolder": "settings.output.date_folder.create_label",
+    "output.date_folder_format": "settings.output.date_folder.format_label",
+    "export.ocr_language": "settings.ocr.language_label",
+    "export.recognize_tables": "action_area.recognize_tables",
+    "formatting.mermaid_mode": "settings.formatting.mermaid_mode_label",
+    "logging.file_prefix": "settings.logging.file_prefix_label",
+    "logging.directory_mode": "settings.logging.directory_mode_label",
+    "logging.directory": "settings.logging.custom_directory_label",
+    "conversion_defaults.image.compress_mode": "settings.image.compress_mode_label",
+    "conversion_defaults.image.size_limit": "settings.image.size_limit_label",
+    "conversion_defaults.image.size_unit": "settings.image.size_unit_label",
+    "conversion_defaults.document.to_md_table_merge_export_strategy": "settings.table_export.merge_strategy_label",
+    "conversion_defaults.spreadsheet.to_md_table_merge_export_strategy": "settings.table_export.merge_strategy_label",
+    "conversion_defaults.spreadsheet.merge_mode": "settings.spreadsheet.default_merge_mode_label",
+}
+
+_CHANGE_VALUE_LABEL_KEYS: dict[str, dict[object, str]] = {
+    "gui.theme": {
+        "light": "settings.general.themes.light",
+        "dark": "settings.general.themes.dark",
+        "system": "settings.general.themes.system",
+    },
+    "output.output_mode": {
+        "source": "settings.output.output_modes.source",
+        "custom": "settings.output.output_modes.custom",
+    },
+    "export.ocr_language": {
+        "auto": "settings.ocr.language_auto",
+        "chinese": "settings.ocr.language_chinese",
+        "chinese_cht": "settings.ocr.language_chinese_cht",
+        "english": "settings.ocr.language_english",
+        "japanese": "settings.ocr.language_japanese",
+        "korean": "settings.ocr.language_korean",
+        "latin": "settings.ocr.language_latin",
+        "cyrillic": "settings.ocr.language_cyrillic",
+    },
+    "formatting.mermaid_mode": {
+        "code": "settings.formatting.mermaid_code",
+        "image": "settings.formatting.mermaid_image",
+    },
+    "logging.directory_mode": {
+        "user": "settings.logging.dir_modes.user",
+        "temp": "settings.logging.dir_modes.temp",
+        "custom": "settings.logging.dir_modes.custom",
+    },
+    "conversion_defaults.image.compress_mode": {
+        "lossless": "settings.image.compress_lossless",
+        "limit_size": "settings.image.compress_limit_size",
+    },
+    "conversion_defaults.document.to_md_table_merge_export_strategy": {
+        "fill": "settings.table_export.strategies.fill",
+        "empty": "settings.table_export.strategies.empty",
+    },
+    "conversion_defaults.spreadsheet.to_md_table_merge_export_strategy": {
+        "fill": "settings.table_export.strategies.fill",
+        "empty": "settings.table_export.strategies.empty",
+    },
+    "conversion_defaults.spreadsheet.merge_mode": {
+        1: "settings.spreadsheet.merge_modes.by_row",
+        2: "settings.spreadsheet.merge_modes.by_column",
+        3: "settings.spreadsheet.merge_modes.by_cell",
+    },
+}
+
 
 def _safe_settings_error_detail(error: Exception) -> str:
     """Return a bounded, plain-text detail for a failed settings page."""
@@ -702,10 +774,19 @@ class SettingsDialog(QDialog):
                     enable_checkbox.setToolTip(error_text)
             else:
                 combo.setToolTip("")
-                for choice in result.choices:
-                    combo.addItem(choice.label, choice.id)
-                if configured_id is not None:
-                    BaseSettingsTab.set_combo_data(combo, configured_id)
+                if not result.choices:
+                    combo.addItem(
+                        t(
+                            "settings.optimization.none_available",
+                            "No optimization types are available for this input category in the current runtime.",
+                        ),
+                        None,
+                    )
+                else:
+                    for choice in result.choices:
+                        combo.addItem(choice.label, choice.id)
+                    if configured_id is not None:
+                        BaseSettingsTab.set_combo_data(combo, configured_id)
             del blocker
 
             has_choices = bool(result.choices)
@@ -1017,12 +1098,13 @@ class SettingsDialog(QDialog):
         count = len(changes)
         self._changes_label.setText(t("settings.changes.summary", "Unsaved changes ({count})", count=count))
 
-        # Build tooltip as field-level old → new (max 10 lines)
+        # Build tooltip as user-facing field/value old → new (max 10 lines).
         tooltip_lines: list[str] = []
         for c in changes[:10]:
-            old_str = _abbreviate_value(c.get("old"))
-            new_str = _abbreviate_value(c.get("new"))
-            tooltip_lines.append(f"{c['field']}: {old_str} → {new_str}")
+            field = str(c["field"])
+            old_str = _friendly_change_value(field, c.get("old"))
+            new_str = _friendly_change_value(field, c.get("new"))
+            tooltip_lines.append(f"{_friendly_change_field(field)}: {old_str} → {new_str}")
         if len(changes) > 10:
             tooltip_lines.append(t("settings.changes.more", "... and {count} more", count=len(changes) - 10))
         self._changes_label.setToolTip("\n".join(tooltip_lines))
@@ -1088,3 +1170,23 @@ def _abbreviate_value(val: object) -> str:
     if len(s) > 60:
         return s[:57] + "..."
     return s
+
+
+def _friendly_change_field(field: str) -> str:
+    """Return a localized field label, with an honest dotted-path fallback."""
+    key = _CHANGE_FIELD_LABEL_KEYS.get(field)
+    if key is None:
+        return t("settings.changes.field_fallback", "Setting ({field})", field=field)
+    return t(key).rstrip(":：")
+
+
+def _friendly_change_value(field: str, value: object) -> str:
+    """Project common settings values to localized labels without hiding unknown data."""
+    if isinstance(value, bool):
+        return t("settings.changes.enabled" if value else "settings.changes.disabled")
+    if value == "":
+        return t("settings.changes.empty_value", "(empty)")
+    value_key = _CHANGE_VALUE_LABEL_KEYS.get(field, {}).get(value)
+    if value_key is not None:
+        return t(value_key)
+    return _abbreviate_value(value)
