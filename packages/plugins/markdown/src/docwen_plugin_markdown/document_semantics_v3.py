@@ -1935,10 +1935,10 @@ def _overlaps_any(candidate: SourceRange, ranges: Sequence[SourceRange]) -> bool
 
 __all__ = [
     "DIAGNOSTICS_SCHEMA",
-    "DIRECT_NUMBER_SUITE_SCHEMA",
-    "DIRECT_NUMBER_SUITE_SCHEMA_ID",
     "DIAGNOSTICS_SCHEMA_ID",
     "DIAGNOSTIC_EVIDENCE_SCHEMA",
+    "DIRECT_NUMBER_SUITE_SCHEMA",
+    "DIRECT_NUMBER_SUITE_SCHEMA_ID",
     "SEMANTICS_SCHEMA",
     "SEMANTICS_SCHEMA_ID",
     "ExternalCitationResolution",
