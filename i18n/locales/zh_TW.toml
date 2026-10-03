@@ -151,7 +151,7 @@ title = "設定"
 general = "通用"
 text = "傳入文字"
 proofread = "校對"
-export = "Markdown 資源"
+export = "OCR 與 Markdown 資源"
 document = "傳入文件"
 spreadsheet = "傳入表格"
 image = "傳入圖片"
@@ -187,6 +187,10 @@ failed = "重設設定失敗，請檢查日誌。"
 summary = "未儲存的變更（{count}）"
 more = "……還有 {count} 項"
 
+enabled = "開啟"
+disabled = "關閉"
+empty_value = "（空）"
+field_fallback = "設定項（{field}）"
 [settings.errors]
 tab_load_failed_message = "無法載入 {tab}\n\n錯誤：{error}"
 
@@ -204,7 +208,7 @@ save_success_message = "配置已保存並重新載入。"
 [settings.general]
 font_label = "字級："
 scale_label = "介面縮放："
-scale_tooltip = "相對系統縮放，同時調整文字、圖示和間距。"
+scale_tooltip = "選擇後立即預覽，並相對系統縮放同步調整文字、圖示與間距。按「套用」或「確定」儲存；按「取消」恢復上次儲存的值。"
 # 语言设置区域
 language_section = "語言"
 language_label = "選擇介面語言:"
@@ -214,11 +218,12 @@ language_tooltip = "選擇應用程式的介面顯示語言。\n更改語言後�
 theme_section = "介面外觀"
 theme_description = "調整主題、字級和介面縮放。"
 theme_label = "選擇應用程式主題:"
-theme_tooltip = "選擇應用程式的視覺主題。\n不同的主題提供不同的顏色方案和介面風格。\n更改主題會在保存後生效。"
+theme_tooltip = "選擇後立即預覽。按「套用」或「確定」儲存主題；按「取消」恢復上次儲存的主題。"
 theme_preview = "主題預覽:"
 sample_button = "範例按鈕"
 sample_text = "範例文字"
 
+font_tooltip = "選擇後立即預覽。按「套用」或「確定」儲存字級；按「取消」恢復上次儲存的值。"
 [settings.general.languages]
 zh_CN = "簡體中文"
 en_US = "英語"
@@ -264,8 +269,8 @@ batch_mode = "批量模式"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
-output_format = "預設輸出格式"
-output_format_hint = "傳入 Markdown 時，優先顯示此格式的範本。"
+output_format = "優先範本類型"
+output_format_hint = "傳入 Markdown 時優先顯示此類型的範本；此設定本身不會改變轉換輸出格式。"
 # MD转文档序号设置
 md_to_docx_section = "小標題序號設定（Markdown轉為文件）"
 remove_numbering = "默認清除原有 Markdown 小標題序號"
@@ -288,7 +293,7 @@ field_processors_toggle_failed = "無法更新「{name}」的啟用狀態，已�
 
 # 序号设置区域
 numbering_settings_section = "序號設定"
-numbering_settings_desc = "管理 Markdown 與文件互轉時，小標題序號的清理和新增方案。"
+numbering_settings_desc = "「傳入文字」與「傳入文件」進入的是同一套全域序號設定。任一編輯器中按儲存都會立即生效，本設定視窗的「取消」不會復原。"
 edit_numbering_add = "編輯小標題序號新增方案"
 edit_numbering_clean = "編輯小標題序號清理規則"
 
@@ -299,8 +304,8 @@ edit_numbering_clean = "編輯小標題序號清理規則"
 # 词库配置
 
 # 错误消息
-save_numbering_schemes_failed = "無法將序號新增方案保存到磁碟，改動未持久化。"
-save_numbering_clean_rules_failed = "無法將序號清理規則保存到磁碟，改動未持久化。"
+save_numbering_schemes_failed = "無法將序號新增方案儲存到磁碟，更改未儲存。"
+save_numbering_clean_rules_failed = "無法將序號清理規則儲存到磁碟，更改未儲存。"
 
 # -----------------------------------------------------------------------------
 # 文档设置选项卡
@@ -326,13 +331,14 @@ sensitive_words_section = "敏感詞詞典"
 sensitive_words_desc = "管理敏感詞檢測條目。"
 edit = "編輯"
 
+save_boundary_hint = "規則編輯器中的儲存與規則匯入會立即生效，本設定視窗的「取消」不會復原；本頁開關仍由「套用」或「確定」儲存。"
 [settings.extraction]
 image_extraction_mode_label = "圖片提取方式:"
 image_extraction_mode_tooltip = "設定圖片的提取形式。\n\n• 圖片檔案：保存為獨立圖片並在MD中引用\n• Base64內嵌：將圖片編碼為Base64直接嵌入MD中"
 image_extraction_mode_file = "圖片檔案"
 image_extraction_mode_base64 = "Base64內嵌"
 ocr_placement_mode_label = "OCR存放位置:"
-ocr_placement_mode_tooltip = "設定圖片OCR結果的存放位置。\n\n• 圖片對應MD：生成獨立的MD檔案存放原圖和OCR結果\n• 主文件：將OCR結果作為引用區塊直接插入主文件圖片下方（大量圖片時會導致主MD過長）"
+ocr_placement_mode_tooltip = "選擇「圖片 + OCR」的輸出位置。圖片 Markdown 會為每張圖片產生獨立 Markdown；主文件會把圖片與 OCR 寫入主 Markdown。Base64 內嵌必須使用主文件，因此會停用此控制項並強制主文件；切回圖片檔案後恢復先前選擇。"
 ocr_placement_mode_image_md = "圖片對應MD"
 ocr_placement_mode_main_md = "主文件"
 ocr_blockquote_title_enabled_label = "主MD OCR 標題行"
@@ -360,6 +366,7 @@ section = "合併儲存格匯出"
 desc = "控制合併儲存格在 Markdown 輸出中的表示方式。"
 merge_strategy_label = "合併儲存格匯出策略:"
 
+merge_strategy_help = "僅用於一般 Markdown：填充會重複合併區域左上角文字（例如「標題 | 標題」）；留空會讓被覆蓋儲存格為空（「標題 | 」）。開啟 Structural Tables 輸出時，合併儲存格改用 <、^ 結構標記。"
 [settings.table_export.strategies]
 fill = "填充"
 empty = "留空"
@@ -406,13 +413,14 @@ keep_images_tooltip = "表格轉MD時默認勾選\"提取圖片\""
 enable_ocr = "默認勾選\"圖片文字識別\""
 enable_ocr_tooltip = "表格轉MD時默認勾選\"圖片文字識別\""
 merge_mode_section = "匯總模式設定"
-merge_mode_desc = "設定表格匯總的默認模式"
+merge_mode_desc = "設定表格彙總時預設採用的彙總策略。"
 default_merge_mode_label = "預設彙總模式:"
 spreadsheet_processors_label = "表格處理軟體優先級"
 ods_conversion_label = "ODS格式轉換"
 spreadsheet_to_pdf_label = "表格轉PDF"
 
 # 汇总模式选项
+merge_mode_help = "按列/按欄會把傳入列或欄與基礎表比對：傳入項涵蓋基礎項時取代，傳入項被基礎項涵蓋時保留基礎項，否則插入最相近位置。按儲存格會忽略傳入空值、保留非空值、數值相加、相同文字只保留一次，不同非數值文字以逗號連接。"
 [settings.spreadsheet.merge_modes]
 by_row = "按行匯總"
 by_column = "按列匯總"
@@ -487,7 +495,7 @@ enable_ocr_tooltip = "其他文件轉MD時默認勾選\"圖片文字識別\""
 [settings.link]
 # Markdown链接格式区域
 format_section = "Markdown連結格式"
-format_desc = "設定生成的Markdown文件中的連結格式"
+format_desc = "設定 DocWen 產生 Markdown 時使用的連結語法。"
 image_link_style_label = "圖片連結格式:"
 image_link_style_tooltip = "設定圖片在MD文件中的連結格式\n\n• Markdown嵌入顯示: ![alt](image.png)\n• Markdown連結: [alt](image.png)\n• Wiki嵌入顯示: ![[image.png]] (Obsidian)\n• Wiki連結: [[image.png]] (Obsidian)"
 md_file_link_style_label = "MD文件連結格式:"
@@ -495,19 +503,19 @@ md_file_link_style_tooltip = "設定MD文件在MD文件中的連結格式\n\n•
 
 # 非嵌入链接处理区域
 non_embed_section = "非嵌入連結處理"
-non_embed_desc = "設定Markdown轉文件/表格時，如何處理普通連結（不帶!前綴的連結）"
+non_embed_desc = "設定 Markdown 輸入中的一般連結在產生文件或表格時如何處理。"
 wiki_link_mode = "Wiki連結處理:"
-wiki_link_tooltip = "處理 [[link]] 或 [[link|text]] 格式\n\n保留原樣: [[link|text]]\n提取文字: text（去除標記）\n完全移除: 刪除整個連結"
+wiki_link_tooltip = "處理 [[link]] 或 [[link|text]]。保留原樣：保留來源標記；擷取文字：只保留顯示文字；超連結：保留顯示文字與目標，並在目標格式支援時產生可點擊連結；完全移除：刪除連結。"
 markdown_link_mode = "Markdown連結處理:"
-markdown_link_tooltip = "處理 [text](url) 格式\n\n保留原樣: [text](url)\n提取文字: text（去除標記）\n完全移除: 刪除整個連結"
+markdown_link_tooltip = "處理 [text](url)。保留原樣：保留來源標記；擷取文字：只保留 text；超連結：保留文字與目標，並在目標格式支援時產生可點擊連結；完全移除：刪除連結。"
 
 # 嵌入链接处理区域
 embed_section = "嵌入連結處理"
-embed_desc = "設定Markdown轉文件/表格時，如何處理嵌入連結（帶!前綴的連結）"
+embed_desc = "設定 Markdown 輸入中的嵌入連結與圖片在產生文件或表格時如何處理。"
 wiki_embed_image_mode = "Wiki嵌入圖片處理:"
 wiki_embed_image_tooltip = "處理 ![[image.png]] 格式\n\n保留原樣: ![[image.png]]\n提取文字: image.png\n完全移除: 刪除連結\n插入內容: 將圖片插入到文件中"
 markdown_embed_image_mode = "Markdown嵌入圖片處理:"
-markdown_embed_image_tooltip = "處理 ![alt](image.png) 格式\n\n保留原樣: ![alt](image.png)\n提取文字: image.png\n完全移除: 刪除連結\n插入內容: 將圖片插入到文件中"
+markdown_embed_image_tooltip = "處理 ![alt](image.png)。保留原樣：保留標記；擷取文字：有 alt/顯示文字時優先使用，僅無 alt 時退回檔名；完全移除：刪除連結；插入內容：把圖片插入文件。"
 embed_md_file_mode = "Wiki嵌入的其他Markdown文件處理:"
 embed_md_file_tooltip = "處理 ![[file.md]] 格式（僅Wiki支持）\n\n保留原樣: ![[file.md]]\n提取文字: file.md\n完全移除: 刪除連結\n插入內容: 遞歸處理後插入"
 max_depth_label = "最大嵌入深度:"
@@ -574,7 +582,7 @@ horizontal_rule_tooltip = "Word 分隔線（Horizontal Rule 1/2/3 樣式）轉�
 
 # 语法选择
 syntax_selection = "語法選擇"
-syntax_selection_tooltip = "選擇文件轉為Markdown時輸出的語法格式\n（輸入時會自動識別所有格式語法）"
+syntax_selection_tooltip = "選擇文件轉 Markdown 時輸出的語法。輸入時會辨識 DocWen 支援的相應 Markdown 語法；可選方言由上方延伸開關控制。"
 bold_syntax_label = "粗體語法:"
 bold_syntax_tooltip = "選擇粗體的輸出語法格式"
 italic_syntax_label = "斜體語法:"
@@ -601,7 +609,7 @@ md_body_format_tooltip = "應用格式：將 **粗體** 轉為真正的粗體格
 md_heading_format_label = "小標題格式標記處理:"
 md_heading_format_tooltip = "應用格式：覆蓋標題樣式預設格式，可實現部分粗體效果。\n保留標記：保留標記原樣顯示。\n清理標記：去掉 Markdown 標記，讓 Word 標題樣式自然生效。\n注意：當標題樣式本身為粗體時，「應用格式」可實現局部格式差異。"
 md_table_header_format_label = "表頭格式標記處理:"
-md_table_header_format_tooltip = '應用格式：**粗體**轉為真正的粗體（可能與表格樣式重複）\n保留標記：保留標記原樣顯示\n清理標記：讓表格樣式（如 firstRow 加粗）自然生效\n注意：表格樣式通常已定義表頭加粗，建議使用"清理標記"'
+md_table_header_format_tooltip = "套用格式：把 **粗體** 轉為真正粗體（可能與表格樣式重疊）。保留標記：原樣顯示標記。清理標記：移除 Markdown 標記，讓表格樣式的首列格式自然生效。表格樣式通常會設定首列格式，因此一般較適合使用「清理標記」。"
 heading_merge_mode_label = "標題+正文合併模式:"
 heading_merge_mode_tooltip = "控制小標題與緊鄰下一行普通正文是否合併為同一段落\n有標點才合併：標題末尾有句末標點且下一行是普通正文時才合併（預設）\n緊鄰正文就合併：下一行是普通正文時就合併（不要求句末標點）\n永不合併：標題與正文始終分段解析\n註：列表/程式碼區塊/表格/引用/分隔線等不會被合併"
 heading_merge_punctuation_label = "合併觸發標點:"
@@ -611,9 +619,9 @@ heading_merge_punctuation_tooltip = "「有標點才合併」模式下用來觸�
 md_separator_mapping = "分隔符映射"
 md_separator_mapping_tooltip = "配置 Markdown 分隔符轉換為哪種 Word 分頁符/分節符/分隔線\n\n分頁符：Word 中的分頁符\n分節符：Word 中的分節符（下一頁類型）\n分隔線：段落底部邊框（視覺分隔線）"
 mermaid_title = "Mermaid 圖表"
-mermaid_tooltip = "選擇 Mermaid 圍欄程式碼區塊在文件中渲染為圖片，或保留為原始碼。圖片模式使用本機 Mermaid CLI；渲染不可用或失敗時會回退為程式碼區塊並回報警告。"
+mermaid_tooltip = "選擇把 `mermaid` 程式碼區塊渲染為圖片，或保留為原始碼。圖片模式使用本機 Mermaid CLI；渲染不可用或失敗時會保留程式碼區塊並回報警告。"
 mermaid_mode_label = "輸出方式："
-mermaid_mode_tooltip = "選擇 Mermaid 圍欄程式碼區塊寫入產生文件時的呈現方式。"
+mermaid_mode_tooltip = "選擇 `mermaid` 程式碼區塊寫入產生文件時的呈現方式。"
 mermaid_code = "保留為程式碼區塊"
 mermaid_image = "渲染為圖片"
 dash_label = "--- (三個短橫線):"
@@ -634,6 +642,8 @@ list_separator_label = "YAML 列表拼接符"
 list_separator_tooltip = "YAML 列表值拼接為字串時使用的分隔符\n\n常見值：\n• 中文頓號（、）\n• 全形逗號（，）\n• 逗號+空格（, ）\n• 空字串：直接拼接"
 
 # 格式处理选项
+mermaid_output_group = "輸出方式"
+mermaid_renderer_group = "本機渲染器"
 [settings.formatting.options]
 preserve_format = "保留格式"
 discard_format = "丟棄格式"
@@ -699,6 +709,7 @@ custom_path_label = "自定義路徑:"
 browse_title = "選擇輸出目錄"
 
 # 输出模式选项
+validation_custom_path_required = "檔案儲存：請選擇非空的自訂輸出目錄，或把輸出位置切回原檔位置。"
 [settings.output.output_modes]
 source = "源文件目錄"
 custom = "自定義目錄"
@@ -802,7 +813,7 @@ powerpoint = "PowerPoint"
 
 [settings.ocr]
 language_label = "OCR識別語言:"
-language_tooltip = "所有輸入格式共用的 OCR 辨識語言。"
+language_tooltip = "所有輸入格式共用。選擇「跟隨介面語言」時依目前介面語言選擇 OCR 語言，並非自動辨識圖片中的語言。"
 language_auto = "跟隨介面語言"
 language_chinese = "中文/英文"
 language_japanese = "日語"
@@ -813,6 +824,7 @@ language_latin = "拉丁語系（德/法/葡等）"
 language_cyrillic = "西里爾語系（俄語等）"
 section = "OCR 辨識"
 
+recognize_tables_tooltip = "僅作用於 OCR。表格結構採盡力辨識；辨識失敗的表格區域仍保留為一般 OCR 文字，不包含公式辨識。"
 [settings.rule_transfer]
 read_failed = "無法讀取目前的規則設定。"
 added = "新增"
@@ -1709,7 +1721,7 @@ output_hint = "關閉時使用一般 Markdown，並提示無法表達的結構�
 structural_tables = "Structural Tables 結構表格"
 captions_references = "Number Suite 題注和交互參照"
 extended_headings = "七至九級標題（H7–H9）"
-typed_endnotes = "類型化註腳和章節附註"
+typed_endnotes = "區分註腳與尾註（`endnote:`）"
 obsidian_preset = "使用 Obsidian 擴充預設"
 
 [activity]
@@ -1787,3 +1799,22 @@ structured_html_only = "剪貼簿沒有純文字正文；已使用通過驗證�
 structured_invalid = "剪貼簿表格或圖片結構無效，未匯入。"
 image_invalid = "剪貼簿圖片資料無效或超過支援的大小。"
 images_omitted = "有 {count} 張剪貼簿圖片沒有可驗證的內嵌資料；已保留預留位置及可用文字。"
+
+[settings.markdown_extensions.input_help]
+structural_tables = "辨識 Structural Tables 的 <、^ 等標記並保留延伸表格結構；關閉時按一般 Markdown 表格內容處理。"
+
+captions_references = "辨識 Number Suite 的題注、識別碼與交叉引用；關閉時宣告與 @ 引用保留為可見文字。"
+extended_headings = "辨識 H7–H9；關閉時開頭七至九個 # 保留為可見文字。"
+typed_endnotes = "以 endnote: 等註記標籤區分尾註與註腳；關閉時這些標籤按一般註腳處理。"
+
+[settings.markdown_extensions.output_help]
+structural_tables = "需要時輸出 Structural Tables 標記與延伸結構；關閉時攤平成一般 Markdown 表格並回報結構損失。"
+
+captions_references = "有相應語意時輸出 Number Suite 題注與交叉引用；關閉時輸出一般文字並回報引用損失。"
+extended_headings = "輸出 H7–H9；關閉時這些標題降為 H6，並回報層級損失。"
+typed_endnotes = "以類型化註記標籤保留註腳/尾註區別；關閉時尾註輸出為一般註腳，並回報類型損失。"
+
+[settings.optimization]
+availability_help = "最佳化類型來自目前執行環境。若沒有適用於此輸入類別的類型，相關控制項會停用；資源探索失敗會另外顯示錯誤。"
+
+none_available = "目前執行環境沒有適用於此輸入類別的最佳化類型。"
