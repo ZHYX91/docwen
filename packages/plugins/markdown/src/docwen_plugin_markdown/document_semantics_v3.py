@@ -14,7 +14,6 @@ from __future__ import annotations
 import base64
 import hashlib
 import re
-import unicodedata
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, cast
@@ -32,7 +31,7 @@ DIAGNOSTIC_EVIDENCE_SCHEMA = "docwen.machine.diagnostic_evidence.v1"
 
 _ID_RE = re.compile(r"^[A-Za-z0-9-]{1,128}$")
 _CITATION_KEY_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
-_CAPTION_RE = re.compile(r"^(Figure|Table|Equation|Code):(.*)$")
+_CAPTION_RE = re.compile(r"^(Figure|Table|Equation|Code):(.*)$", re.IGNORECASE)
 _HEADING_RE = re.compile(r"^( {0,3})(#{1,9})(?!#)[ \t]+(.+?)\s*$")
 _FENCE_RE = re.compile(r"^( {0,3})(?P<fence>`{3,}|~{3,})(?P<info>[^\r\n]*)$")
 _QUOTE_PREFIX_RE = re.compile(r"^ {0,3}>[ \t]?")
@@ -371,7 +370,22 @@ def analyze_markdown_semantics_v3(
             continue
 
         object_index = caption_bindings.get(index)
-        object_block = blocks[object_index] if object_index is not None else None
+        if object_index is None:
+            diagnostics.append(
+                _diagnostic(
+                    source_identity,
+                    "error",
+                    "docwen.markdown.caption.object_mismatch",
+                    (
+                        f"{block.data['canonical_keyword']} has ambiguous adjacent caption ownership."
+                        if index in ambiguous_captions
+                        else f"{block.data['canonical_keyword']} has no adjacent captionable object."
+                    ),
+                    keyword_range,
+                )
+            )
+            continue
+        object_block = blocks[object_index]
 
         caption_counters[declaration_kind] += 1
         declaration_end = max(
@@ -385,13 +399,12 @@ def analyze_markdown_semantics_v3(
             "source_form": "declaration",
             "source_keyword": block.data["source_keyword"],
             "range": SourceRange(
-                min(block.start, object_block.start) if object_block is not None else block.start,
-                max(declaration_end, object_block.end) if object_block is not None else declaration_end,
+                min(block.start, object_block.start),
+                max(declaration_end, object_block.end),
             ).as_dict(),
             "declaration_range": SourceRange(block.start, declaration_end).as_dict(),
+            "object_range": SourceRange(object_block.start, object_block.end).as_dict(),
         }
-        if object_block is not None:
-            record["object_range"] = SourceRange(object_block.start, object_block.end).as_dict()
         if anchor_id is not None and anchor_range is not None:
             record["id"] = anchor_id
             record["id_range"] = anchor_range.as_dict()
@@ -1601,13 +1614,6 @@ def _parse_reference_body(body: str) -> tuple[str | None, str, str | None]:
     return (page or None), fragment, (alias if separator else None)
 
 
-def _normalize_number_suite_title(value: str) -> str:
-    """Normalize same-file semantic names exactly at the Number Suite boundary."""
-
-    normalized = unicodedata.normalize("NFC", value.replace("\u2060", "")).strip()
-    return re.sub(r"[ \t]+", " ", normalized).casefold()
-
-
 def _resolve_reference(
     source_identity: Mapping[str, Any],
     match: re.Match[str],
@@ -1679,7 +1685,6 @@ def _resolve_reference(
                 status = "missing"
     else:
         heading_path = tuple(fragment.split("#"))
-        normalized_heading_path = tuple(_normalize_number_suite_title(item) for item in heading_path)
         record["heading_path"] = list(heading_path)
         selector_key = "#".join(heading_path)
         if any(not item for item in heading_path):
@@ -1688,25 +1693,15 @@ def _resolve_reference(
             status = "external_unresolved"
         else:
             matching_headings = [
-                heading
-                for heading in headings
-                if tuple(
-                    _normalize_number_suite_title(item)
-                    for item in heading["heading_path"][-len(heading_path) :]
-                )
-                == normalized_heading_path
+                heading for heading in headings if tuple(heading["heading_path"][-len(heading_path) :]) == heading_path
             ]
             if len(heading_path) == 1:
                 keywords = {"figure": "Figure", "table": "Table", "equation": "Equation", "code_block": "Code"}
-                normalized_fragment = _normalize_number_suite_title(fragment)
                 matching_headings.extend(
                     target
                     for target in targets
                     if target["kind"] in keywords
-                    and _normalize_number_suite_title(
-                        f"{keywords[target['kind']]}: {target['title']}".strip()
-                    )
-                    == normalized_fragment
+                    and f"{keywords[target['kind']]}: {target['title']}".strip() == fragment.strip()
                 )
             if len(matching_headings) == 1:
                 target = matching_headings[0]
