@@ -493,7 +493,6 @@ Markdown → DOCX 변환 시 변환기는 템플릿 스타일을 자동으로 �
 
 ### 사용자 정의 템플릿
 
-DocWen Core의 Runtime/Control 전송은 Windows에서는 named pipe, Linux/macOS에서는 AF_UNIX 소켓을 사용합니다. 파일 잠금은 단일 인스턴스 소유권만 설정하며 제어 명령을 파일로 전달하지 않습니다. 이는 Core 경계에 대한 설명입니다. DocWen Assistant 3.1은 Windows와 Linux 데스크톱 호스트를 지원합니다. Windows Microsoft Store 설치는 자동 감지를 사용할 수 있고, Linux에서는 호환되는 압축 해제 패키지를 수동으로 선택합니다. Assistant는 현재 macOS를 지원하지 않습니다.
 
 1. 기본 제공 템플릿을 복사하여 편집하거나 기존 DOCX/XLSX 파일을 가져옵니다.
 2. Word, Excel 또는 WPS에서 복사본의 내용, 스타일 및 자리 표시자를 수정합니다. 아래 규칙을 참고하세요.
@@ -587,10 +586,7 @@ Markdown 표에서 데이터를 추출해 플레이스홀더 위치부터 **오�
 
 ### 동작 원리
 
-DocWen Core의 runtime/control transport는 Windows 명명된 파이프 또는 Linux/macOS의 AF_UNIX
-소켓을 사용할 수 있습니다. 파일 잠금은 단일 인스턴스 소유권만 설정하며 제어 명령 전송에는
-파일을 사용하지 않습니다. 이는 Core 기능 설명일 뿐입니다. DocWen Assistant 3.1은 Windows
-데스크톱 전용이며 Linux/macOS 조합 검수는 없습니다.
+DocWen Core의 Runtime/Control 전송은 Windows에서는 named pipe, Linux/macOS에서는 AF_UNIX 소켓을 사용합니다. 파일 잠금은 단일 인스턴스 소유권만 설정하며 제어 명령을 파일로 전달하지 않습니다. 이는 Core 경계에 대한 설명입니다. DocWen Assistant 3.1은 Windows와 Linux 데스크톱 호스트를 지원합니다. Windows Microsoft Store 설치는 자동 감지를 사용할 수 있고, Linux에서는 호환되는 압축 해제 패키지를 수동으로 선택합니다. Assistant는 현재 macOS를 지원하지 않습니다.
 
 1.  **첫 클릭** → 변환기를 실행하고 현재 파일을 전달
 2.  **다시 클릭(파일 있음)** → 새 파일로 교체(단일 파일 모드)
