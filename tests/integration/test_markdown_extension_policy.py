@@ -3,6 +3,7 @@
 import hashlib
 import json
 from pathlib import Path
+from typing import Any
 from zipfile import ZipFile
 
 import pytest
@@ -184,13 +185,13 @@ def _structural_resolved_context(tmp_path: Path, authored_markdown: str) -> Fake
     )
 
 
-def _table_signatures(path: Path) -> list[tuple[object, ...]]:
+def _table_signatures(path: Path) -> list[tuple[Any, ...]]:
     document = Document(path)
 
     def cell_text(cell, _row: int, _column: int) -> str:
         return "".join(node.text or "" for node in cell.iter(qn("w:t")))
 
-    signatures: list[tuple[object, ...]] = []
+    signatures: list[tuple[Any, ...]] = []
     for table in document.tables:
         metadata = extract_semantic_table_metadata(table._tbl)
         grid = build_docx_table_semantic_grid(table._tbl, cell_text_resolver=cell_text)
