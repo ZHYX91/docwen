@@ -167,6 +167,24 @@ See @[[#^figure-id|  Figure alias  ]] and @[[#figure: standalone caption]].
     assert references[1]["resolved_target_id"] == "Figure-ID"
 
 
+def test_direct_number_suite_profile_does_not_promote_nested_caption_lines() -> None:
+    source = """> Figure: Quoted ^quoted
+>
+> body
+
+- Figure: Listed ^listed
+
+Figure: Top ^top
+"""
+
+    analysis = _analyze(source, consumer_profile="number_suite_direct")
+
+    assert not analysis.has_errors
+    captions = [item for item in analysis.projection["targets"] if item["kind"] == "figure"]
+    assert [(item["title"], item.get("id")) for item in captions] == [("Top", "top")]
+    assert all(item["title"] not in {"Quoted", "Listed"} for item in captions)
+
+
 def test_direct_number_suite_profile_does_not_invent_hierarchical_title_references() -> None:
     source = "# Parent\n## Child\n\n@[[#Parent#Child]]\n"
 
