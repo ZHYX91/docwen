@@ -583,11 +583,11 @@ Hay un plugin complementario de Obsidian publicado por separado que funciona jun
 -   **🚀 Inicio con un clic** - Icono lateral para iniciar rápidamente el convertidor.
 -   **📂 Transferencia automática** - Pasa automáticamente la ruta del archivo abierto.
 -   **🔄 Gestión de instancia única** - Si ya está en ejecución, envía el archivo sin reiniciar.
--   **🔒 Control local acotado** - Usa solicitudes tipadas `status`, `open` y `activate` sin buscar procesos por nombre ni usar archivos de comandos o estado.
+-   **🔒 Control local seguro** - Usa solicitudes estructuradas `status`, `open` y `activate` sin buscar procesos por nombre ni usar archivos de comandos o estado.
 
 ### Principio de funcionamiento
 
-El transporte Runtime/Control de DocWen Core usa una canalización con nombre en Windows y un socket AF_UNIX en Linux/macOS. El bloqueo de archivo solo establece la propiedad de instancia única; los comandos de control no se transportan mediante archivos. Esto describe únicamente el límite de Core. DocWen Assistant 3.1 admite hosts de escritorio Windows y Linux. En Windows, las instalaciones de Microsoft Store pueden detectarse automáticamente; en Linux se selecciona manualmente un paquete compatible ya extraído. Assistant no admite macOS actualmente.
+DocWen Core usa una canalización con nombre para el control local en Windows y un socket AF_UNIX en Linux/macOS. El bloqueo de archivo solo establece la propiedad de instancia única; los comandos de control no se transportan mediante archivos. Esto describe únicamente el límite de Core. DocWen Assistant 3.1 admite hosts de escritorio Windows y Linux. En Windows, las instalaciones de Microsoft Store pueden detectarse automáticamente; en Linux se selecciona manualmente un paquete compatible ya extraído. Assistant no admite macOS actualmente.
 
 1.  **Primer clic** → Inicia el convertidor y pasa el archivo actual.
 2.  **Clic de nuevo (con archivo)** → Sustituye el archivo (modo de archivo único).
