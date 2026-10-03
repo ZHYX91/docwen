@@ -1759,12 +1759,11 @@ class SettingsViewModel(QObject):
                 {"file_prefix": "docwen"},
             )
         except ConfigSemanticError:
-            key = (
-                "settings.logging.validation_prefix_required"
+            errors.append(
+                _t("settings.logging.validation_prefix_required")
                 if not logging_config.file_prefix.strip()
-                else "settings.logging.validation_prefix_invalid"
+                else _t("settings.logging.validation_prefix_invalid")
             )
-            errors.append(_t(key))
 
         try:
             directory_overridden = bool(log_directory_override_source())

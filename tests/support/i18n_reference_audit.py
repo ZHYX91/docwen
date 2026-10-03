@@ -179,6 +179,109 @@ def _literal_fallback(expected_count: int, default: str, rationale: str) -> Lite
 # This is deliberately exhaustive: a new non-literal translator call fails
 # until its finite producer and exact suffix set are reviewed here.
 DYNAMIC_CALL_CONTRACTS: Mapping[tuple[str, str], DynamicCallContract] = {
+    ("packages/apps/gui/src/docwen_gui/widgets/settings/dialog.py", "key"): _contract(
+        1,
+        frozenset(
+            {
+                "action_area.recognize_tables",
+                "settings.formatting.mermaid_mode_label",
+                "settings.general.font_label",
+                "settings.general.language_label",
+                "settings.general.scale_label",
+                "settings.general.theme_label",
+                "settings.image.compress_mode_label",
+                "settings.image.size_limit_label",
+                "settings.image.size_unit_label",
+                "settings.logging.custom_directory_label",
+                "settings.logging.directory_mode_label",
+                "settings.logging.file_prefix_label",
+                "settings.ocr.language_label",
+                "settings.output.custom_path_label",
+                "settings.output.date_folder.create_label",
+                "settings.output.date_folder.format_label",
+                "settings.output.output_mode_label",
+                "settings.spreadsheet.default_merge_mode_label",
+                "settings.table_export.merge_strategy_label",
+                "settings.text.output_format",
+            }
+        ),
+        "finite reviewed change-summary field label map",
+    ),
+    ("packages/apps/gui/src/docwen_gui/widgets/settings/dialog.py", "value_key"): _contract(
+        1,
+        frozenset(
+            {
+                "settings.formatting.mermaid_code",
+                "settings.formatting.mermaid_image",
+                "settings.general.themes.dark",
+                "settings.general.themes.light",
+                "settings.general.themes.system",
+                "settings.image.compress_limit_size",
+                "settings.image.compress_lossless",
+                "settings.logging.dir_modes.custom",
+                "settings.logging.dir_modes.temp",
+                "settings.logging.dir_modes.user",
+                "settings.ocr.language_auto",
+                "settings.ocr.language_chinese",
+                "settings.ocr.language_chinese_cht",
+                "settings.ocr.language_cyrillic",
+                "settings.ocr.language_english",
+                "settings.ocr.language_japanese",
+                "settings.ocr.language_korean",
+                "settings.ocr.language_latin",
+                "settings.output.output_modes.custom",
+                "settings.output.output_modes.source",
+                "settings.spreadsheet.merge_modes.by_cell",
+                "settings.spreadsheet.merge_modes.by_column",
+                "settings.spreadsheet.merge_modes.by_row",
+                "settings.table_export.strategies.empty",
+                "settings.table_export.strategies.fill",
+            }
+        ),
+        "finite reviewed change-summary option label maps",
+    ),
+    (
+        "packages/apps/gui/src/docwen_gui/widgets/settings/dialog.py",
+        "f'settings.markdown_extensions.{direction}'",
+    ): _contract(
+        1,
+        frozenset({"settings.markdown_extensions.input", "settings.markdown_extensions.output"}),
+        "summary directions are guarded input/output values",
+    ),
+    (
+        "packages/apps/gui/src/docwen_gui/widgets/settings/dialog.py",
+        "f'settings.markdown_extensions.{name}'",
+    ): _contract(
+        1,
+        frozenset(
+            {
+                "settings.markdown_extensions.captions_references",
+                "settings.markdown_extensions.extended_headings",
+                "settings.markdown_extensions.structural_tables",
+                "settings.markdown_extensions.typed_endnotes",
+            }
+        ),
+        "summary extension names use an explicit four-name guard",
+    ),
+    (
+        "packages/apps/gui/src/docwen_gui/widgets/settings/formatting_tab.py",
+        "f'settings.markdown_extensions.{direction}_help.{name}'",
+    ): _contract(
+        1,
+        frozenset(
+            {
+                "settings.markdown_extensions.input_help.captions_references",
+                "settings.markdown_extensions.input_help.extended_headings",
+                "settings.markdown_extensions.input_help.structural_tables",
+                "settings.markdown_extensions.input_help.typed_endnotes",
+                "settings.markdown_extensions.output_help.captions_references",
+                "settings.markdown_extensions.output_help.extended_headings",
+                "settings.markdown_extensions.output_help.structural_tables",
+                "settings.markdown_extensions.output_help.typed_endnotes",
+            }
+        ),
+        "eight directional help entries from two directions and four extension names",
+    ),
     (
         "packages/apps/gui/src/docwen_gui/widgets/settings/proofread_transfer.py",
         "_CHANGE_LABEL_KEYS[change.kind]",

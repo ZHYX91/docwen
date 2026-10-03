@@ -837,6 +837,8 @@ class SettingsDialog(QDialog):
     def _wire_view_model(self) -> None:
         """Connect ViewModel signals."""
         self._vm.dirty_state_changed.connect(self._refresh_changes_summary)
+        self._vm.config_changed.connect(lambda _section, _key, _value: self._refresh_changes_summary())
+        self._vm.config_reloaded.connect(self._refresh_changes_summary)
         self._vm.status_changed.connect(self._show_status)
 
     # ── Tab changed ─────────────────────────────────────────────────────────
@@ -1213,7 +1215,7 @@ def _friendly_change_field(field: str) -> str:
 def _friendly_change_value(field: str, value: object) -> str:
     """Project common settings values to localized labels without hiding unknown data."""
     if isinstance(value, bool):
-        return t("settings.changes.enabled" if value else "settings.changes.disabled")
+        return t("settings.changes.enabled") if value else t("settings.changes.disabled")
     if value == "":
         return t("settings.changes.empty_value", "(empty)")
     value_key: str | None = None
