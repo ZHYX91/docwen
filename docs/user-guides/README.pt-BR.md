@@ -19,7 +19,7 @@ O DocWen nasceu para tarefas cotidianas de preparação de documentos, nas quais
 
 ## ✨ Funcionalidades Principais
 
-- **📄 Conversão de Formato de Documento** - Conversão bidirecional Word ↔ Markdown. Suporta conversão de fórmulas matemáticas, conversão bidirecional de separadores (três tipos de separadores do Markdown vs. quebras de página, quebras de seção e linhas horizontais do Word) e a restauração de marker explícitos `<` / `^` de tabelas Markdown para mesclagens retangulares de tabelas do Word. Suporta formatos como DOCX/DOC/WPS/RTF/ODT.
+- **📄 Conversão de Formato de Documento** - Conversão bidirecional Word ↔ Markdown. Suporta conversão de fórmulas matemáticas, conversão bidirecional de separadores (três tipos de separadores do Markdown vs. quebras de página, quebras de seção e linhas horizontais do Word) e a restauração de marcadores explícitos `<` / `^` de tabelas Markdown para mesclagens retangulares de tabelas do Word. Suporta formatos como DOCX/DOC/WPS/RTF/ODT.
 - **📊 Conversão de Formato de Planilha** - Conversão bidirecional Excel ↔ Markdown. Suporta formatos XLSX/XLS/ET/ODS/CSV/TSV, estratégias configuráveis de exportação de células mescladas (`fill / empty / marker`) e ferramentas de resumo de tabelas. Templates Markdown→XLSX voltaram a aceitar campos YAML e placeholders verticais e horizontais de coluna; a restauração completa de templates Excel, imagens e mesclas segue como meta de paridade.
 - **📑 PDF e Arquivos de Layout** - Conversão de PDF/XPS/OFD para Markdown ou DOCX. Suporta fusão, divisão e outras operações de PDF.
 - **🖼️ Processamento de Imagem** - Suporta conversão bidirecional e compressão de formatos JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC.
