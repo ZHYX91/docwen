@@ -116,7 +116,11 @@ def test_direct_number_suite_standalone_caption_round_trips_without_inventing_ca
     instructions = [item.text or "" for item in reopened.element.iter(qn("w:instrText"))]
     assert any("SEQ Figure" in item for item in instructions)
     assert any("SEQ Table" in item for item in instructions)
-    assert sum(" REF " in item for item in instructions) == 1
+    # Both the block-ID and title references resolve to the addressable Figure;
+    # the ID-less Table reference remains a soft reference.
+    references = [item for item in instructions if " REF " in item]
+    assert len(references) == 2
+    assert references[0] == references[1]
 
     markdown = docx_to_md(
         round_trip_runtime,
