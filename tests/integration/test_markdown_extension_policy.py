@@ -79,7 +79,6 @@ def _context(tmp_path: Path, source: Path, target: str, extensions: dict) -> Fak
     )
 
 
-
 def _structural_config() -> FakeConfigView:
     return FakeConfigView(
         {"conversion": {"markdown_extensions": {"input": {"structural_tables": True}}}}
@@ -273,7 +272,6 @@ def test_output_switches_are_independent_and_need_only_docx(tmp_path: Path, dial
         assert "^metrics" not in markdown
     if dialect != MarkdownExtensions.obsidian():
         assert any("flattened" in (item.code or "") for item in result.diagnostics)
-
 
 
 def test_structural_tables_direct_and_resolved_routes_share_docx_semantics(tmp_path: Path) -> None:
