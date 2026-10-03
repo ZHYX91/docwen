@@ -171,6 +171,22 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
             _number, root = owned[STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE]
             standalone_occurrences = parse_standalone_caption_occurrence_map(root)
 
+        target_by_tag = {item.tag: item for item in targets}
+        addressable_standalone_tags: set[str] = set()
+        for occurrence in standalone_occurrences:
+            if occurrence.target_id is None:
+                continue
+            target = target_by_tag.get(occurrence.tag)
+            if (
+                target is None
+                or target.kind != occurrence.kind
+                or target.source_id != occurrence.target_id
+            ):
+                raise DocxSemanticsV3Error(
+                    "resolved-v4 addressable standalone occurrence contradicts the target map"
+                )
+            addressable_standalone_tags.add(occurrence.tag)
+
         citations = read_proven_resolved_citations(path)
         citation_records: tuple[Any, ...] = ()
         citation_tokens: dict[str, str] = {}
@@ -214,6 +230,7 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
                 topology,
                 topology_map_present=ANCHOR_TOPOLOGY_MAP_NAMESPACE in owned,
                 caption_parser=parse_caption,
+                standalone_target_tags=frozenset(addressable_standalone_tags),
             ),
         )
         recovery._resolved_v4_inline_tokens = inline_tokens
@@ -360,6 +377,8 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         from docx.oxml.ns import qn
 
         body = document.element.body
+        idless = [item for item in occurrences if item.target_id is None]
+        addressable = [item for item in occurrences if item.target_id is not None]
         physical = [
             item
             for item in body
@@ -370,14 +389,14 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
             for item in body.iter(qn("w:sdt"))
             if (sdt_tag(item) or "").startswith(STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX)
         ]
-        if physical != nested or [sdt_tag(item) for item in physical] != [item.tag for item in occurrences]:
+        if physical != nested or [sdt_tag(item) for item in physical] != [item.tag for item in idless]:
             raise DocxSemanticsV3Error("resolved-v4 standalone-caption physical order/cardinality differs from its map")
         if not occurrences:
             return
         styles = {item.semantic_key: item.resolved_style_id for item in caption_styles}
         recovered = list(self.recovered_captions)
         reference_ranges = [(item.source_start, item.source_end, item.tag) for item in (*soft_references, *references)]
-        for wrapper, occurrence in zip(physical, occurrences, strict=True):
+        for wrapper, occurrence in zip(physical, idless, strict=True):
             style_id = styles.get(_CAPTION_STYLE_KEY[occurrence.kind])
             if style_id is None:
                 raise DocxSemanticsV3Error("resolved-v4 standalone caption lacks its caption-style binding")
@@ -412,6 +431,24 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
                     object_elements=(),
                 )
             )
+        for occurrence in addressable:
+            matches = [
+                item
+                for item in recovered
+                if item.kind == occurrence.kind and item.source_id == occurrence.target_id
+            ]
+            if len(matches) != 1:
+                raise DocxSemanticsV3Error("resolved-v4 addressable standalone caption is missing or duplicated")
+            [caption] = matches
+            expected_number = occurrence.derived_number or ""
+            if (
+                caption.object_elements
+                or caption.cached_number != expected_number
+                or bool(caption.cached_number) != occurrence.enabled
+            ):
+                raise DocxSemanticsV3Error(
+                    "resolved-v4 addressable standalone caption contradicts its occurrence authority"
+                )
         self.recovered_captions = tuple(recovered)
 
 
