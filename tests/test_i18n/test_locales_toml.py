@@ -137,6 +137,43 @@ def _reference_locale_path() -> Path:
     return LOCALES_DIR / "zh_CN.toml"
 
 
+
+def _flatten_string_values(data: dict[str, Any], prefix: str = "") -> dict[str, str]:
+    result: dict[str, str] = {}
+    for key, value in data.items():
+        path = f"{prefix}.{key}" if prefix else key
+        if isinstance(value, dict):
+            result.update(_flatten_string_values(value, path))
+        elif isinstance(value, str):
+            result[path] = value
+    return result
+
+
+def _placeholders(value: str) -> list[str]:
+    return sorted(re.findall(r"\{([A-Za-z_][A-Za-z0-9_]*)\}", value))
+
+
+def test_all_locale_string_keys_and_placeholders_match_zh_cn() -> None:
+    reference = _flatten_string_values(_read_toml_file(_reference_locale_path()))
+    assert reference
+
+    for path in sorted(LOCALES_DIR.glob("*.toml")):
+        actual = _flatten_string_values(_read_toml_file(path))
+        assert set(actual) == set(reference), (
+            f"{path.name} string-key set differs from zh_CN: "
+            f"missing={sorted(set(reference) - set(actual))[:20]}, "
+            f"extra={sorted(set(actual) - set(reference))[:20]}"
+        )
+        mismatches = [
+            key
+            for key, source in reference.items()
+            if _placeholders(actual[key]) != _placeholders(source)
+        ]
+        assert not mismatches, (
+            f"{path.name} changed interpolation placeholders for: {mismatches[:20]}"
+        )
+
+
 def test_locales_dir_exists() -> None:
     assert LOCALES_DIR.is_dir()
 
