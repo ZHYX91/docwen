@@ -145,6 +145,7 @@ def test_real_stdio_process_emits_integrity_pinned_docx_bundle(tmp_path: Path, r
     capabilities = {item["capability_id"]: item for item in discovery["result"]["capabilities"]}
     assert set(capabilities) == {
         "convert.markdown.to_docx",
+        "convert.markdown_source.to_docx",
         "convert.markdown.to_xlsx",
         "convert.docx.to_markdown",
         "convert.pdf.to_markdown",
