@@ -269,3 +269,24 @@ def test_extension_labels_use_available_row_width_and_remain_accessible(qapp, lo
     finally:
         tab.close()
         set_locale(previous)
+
+
+def test_each_markdown_extension_has_directional_keyboard_help(qapp) -> None:
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QToolButton, QWidget
+
+    from docwen_gui.models.settings_config import SettingsConfig
+    from docwen_gui.view_models.settings_vm import SettingsViewModel
+    from docwen_gui.widgets.settings.formatting_tab import FormattingTab
+
+    tab = FormattingTab(SettingsViewModel(config=SettingsConfig()))
+    for direction in ("Input", "Output"):
+        card = tab.findChild(QWidget, f"markdownExtensions{direction}Card")
+        assert card is not None
+        buttons = card.findChildren(QToolButton, "settingsInfoButton")
+        assert len(buttons) == 4
+        for button in buttons:
+            assert button.toolTip().strip()
+            assert button.accessibleName().strip()
+            assert button.accessibleDescription() == button.toolTip()
+            assert button.focusPolicy() == Qt.FocusPolicy.StrongFocus
