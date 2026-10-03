@@ -1756,7 +1756,7 @@ def _resolve_reference(
             else:
                 status = "missing"
     else:
-        heading_path = tuple(fragment.split("#"))
+        heading_path = (fragment,) if normalize_titles else tuple(fragment.split("#"))
         record["heading_path"] = list(heading_path)
         selector_key = "#".join(heading_path)
         if any(not item for item in heading_path):
