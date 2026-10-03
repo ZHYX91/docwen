@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from docwen_plugin_markdown.document_semantics_v3 import MarkdownSemanticsV3Analysis
 from docwen_plugin_markdown.document_semantics_v3_fenced_source import (
     fenced_source_info_insertion_offset_v3,
 )
@@ -90,8 +91,13 @@ def prepare_resolved_source_carriers_v4(
     edits = tuple(_carrier_edit(source, marker) for marker in carrier_markers)
     _prove_edit_family(source, edits)
     shielded_source = _apply_edits(source, edits)
+    carrier_analysis = MarkdownSemanticsV3Analysis(
+        projection=full_plan.analysis.projection,
+        diagnostics=tuple(carrier_diagnostics),
+        literal_ranges=full_plan.analysis.literal_ranges,
+    )
     carrier_plan = RuntimeSemanticsV3Plan(
-        analysis=full_plan.analysis,
+        analysis=carrier_analysis,
         shielded_source=shielded_source,
         markers=carrier_markers,
         body_start=full_plan.body_start,
