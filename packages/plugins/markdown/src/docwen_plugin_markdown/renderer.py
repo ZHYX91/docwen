@@ -539,6 +539,18 @@ class MdToDocxRenderer:
             self._bind_v3_ordinary_anchor((p._p,), node)
         return p
 
+    def _handle__docwen_v3_caption_declaration(self, node: dict[str, Any]):
+        """Render an authenticated caption declaration with no bound object."""
+
+        target = node.get("_docwen_v3_caption_target")
+        if not isinstance(target, dict) or target.get("object_range") is not None:
+            raise ValueError("standalone v3 caption owner has an invalid source projection")
+        caption = self._create_v3_caption(target)
+        boundary = self._doc.add_paragraph()
+        if self._semantic_v3_session is not None:
+            self._semantic_v3_session.bind_caption(caption, (), target)
+        return [boundary, caption] if target["kind"] == "figure" else [caption, boundary]
+
     def _handle_heading(self, node: dict[str, Any], next_node: dict[str, Any] | None = None):
         """Render a heading (levels 1-9; levels 7-9 are a DocWen extension).
 
