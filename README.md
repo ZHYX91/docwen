@@ -284,6 +284,7 @@ The table below lists common commands only. For the full command surface, use `d
 | `resources list templates [--target docx\|xlsx]` | List available templates. |
 | `resources list numbering-schemes` | List available numbering schemes. |
 | `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | Start or activate DocWen and optionally open one absolute file path through the local GUI-control boundary; this does not require a Machine session. |
+| `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | Start or activate DocWen and optionally open one absolute file through the separate local GUI-control boundary. |
 | `--template <id>` | Exact canonical resource ID returned by `resources list templates`; display names, filenames, and paths are rejected. DOCX IDs apply to `docx/doc/odt/rtf/wps/pdf`, XLSX IDs to `xlsx/xls/ods/csv`. CSV without a template remains direct table export; CSV with an XLSX template uses the MD→XLSX template workbook → per-sheet CSV artifact chain. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Image extraction and OCR options for `convert --to md`. |
 | `--image-mode file|base64|embed|omit` | Control how images are emitted during Markdown export. |
@@ -513,6 +514,8 @@ Note (Markdown proofreading report):
 Manage DOCX/XLSX templates in **Settings → Templates**. Built-in templates are read-only; custom templates use writable user storage. Enable, disable, sort and choose defaults here. MSIX users do not need to modify WindowsApps.
 
 ### Custom Templates
+
+DocWen Core's runtime/control transport uses a Windows named pipe or an AF_UNIX socket on Linux/macOS. A file lock only establishes single-instance ownership; files are not used to transport control commands. This describes the Core transport only. DocWen Assistant 3.1 supports Windows and Linux desktop hosts. Windows Microsoft Store installations can use automatic detection; Linux uses manual package selection. The Assistant does not currently support macOS.
 
 1. Select a built-in template and choose **Copy and edit**, or import an existing DOCX/XLSX file.
 2. Edit the custom copy in Word, Excel or WPS; adjust styles and placeholders as described below.
