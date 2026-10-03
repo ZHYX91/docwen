@@ -84,7 +84,11 @@ _RESOLVED_CAPTION_CHILDREN_KEY = "_docwen_resolved_v4_caption_children"
 
 def _contains_request_semantics(nodes: list[dict[str, Any]]) -> bool:
     for node in nodes:
-        if node.get("schema") in {"docwen.markdown_semantics.v3", _DIRECT_NUMBER_SUITE_SCHEMA, RESOLVED_DOCUMENT_SCHEMA}:
+        if node.get("schema") in {
+            "docwen.markdown_semantics.v3",
+            _DIRECT_NUMBER_SUITE_SCHEMA,
+            RESOLVED_DOCUMENT_SCHEMA,
+        }:
             return True
         children = node.get("children")
         if isinstance(children, list) and _contains_request_semantics(children):
