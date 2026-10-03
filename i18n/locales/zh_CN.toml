@@ -686,13 +686,13 @@ underscore_tooltip = "Markdown ___ 分隔符转换为 Word 分页符/分节符\n
 
 # 表格样式
 table_style = "表格样式"
-table_style_tooltip = "配置 Markdown 表格转换为 Word 表格时使用的样式\\n\\n【内置样式】\\n三线表/网格表：自动检测模板是否已有所需样式；缺少时自动创建\\n\\n【自定义样式】\\n检测模板中是否存在该样式；缺少时创建一个网格表格式的同名样式"
+table_style_tooltip = "配置 Markdown 表格转换为 Word 表格时使用的样式\n\n【内置样式】\n三线表/网格表：自动检测模板是否已有所需样式；缺少时自动创建\n\n【自定义样式】\n检测模板中是否存在该样式；缺少时创建一个网格表格式的同名样式"
 builtin_style_radio = "使用内置样式"
 custom_style_radio = "使用自定义样式名称"
 
 # 列表拼接符
 list_separator_label = "YAML 列表分隔符"
-list_separator_tooltip = "模板填充时，若 YAML 字段值为列表，使用此分隔符连接各项\\n\\n常见值：\\n• 顿号（、）：中文列表常用\\n• 逗号（，）：中文通用分隔\\n• 逗号空格（, ）：英文风格\\n• 空字符串：各项直接连接"
+list_separator_tooltip = "模板填充时，若 YAML 字段值为列表，使用此分隔符连接各项\n\n常见值：\n• 顿号（、）：中文列表常用\n• 逗号（，）：中文通用分隔\n• 逗号空格（, ）：英文风格\n• 空字符串：各项直接连接"
 
 # 格式处理选项
 mermaid_output_group = "输出方式"
