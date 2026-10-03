@@ -126,6 +126,7 @@ def test_output_switches_are_independent_and_need_only_docx(tmp_path: Path, dial
     if dialect != MarkdownExtensions.obsidian():
         assert any("flattened" in (item.code or "") for item in result.diagnostics)
 
+
 def test_no_header_structural_table_round_trips_from_isolated_docx(tmp_path: Path) -> None:
     source = tmp_path / "no-header.md"
     source.write_text("| --- | --- |\n| Alice | 10 |\n| Bob | 20 |\n", encoding="utf-8")
@@ -160,6 +161,7 @@ def test_no_header_structural_table_round_trips_from_isolated_docx(tmp_path: Pat
     assert disabled.success, disabled.error
     codes = {item.code for item in disabled.diagnostics}
     assert "docwen.conversion.markdown_extension.structural_tables.flattened" in codes
+
 
 def test_request_override_does_not_change_other_direction_or_config() -> None:
     config = FakeConfigView({"conversion": {"markdown_extensions": {"input": MarkdownExtensions.obsidian().to_dict()}}})
