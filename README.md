@@ -6,16 +6,16 @@
 
 [English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)
 
-A document and chart format conversion tool supporting Word/Markdown/Excel bidirectional conversion. Runs completely locally, ensuring data security and reliability.
+A local document and table conversion tool for Word, Markdown, Excel, and related office formats. It is designed for reliable offline workflows and keeps document processing on the user's machine.
 
 ## 📖 Project Background
 
-This software was originally designed for the daily work of the printing office to solve the following problems:
-- Document formats sent by various departments are chaotic and need to be organized into standardized formats.
-- There are many types of documents, each with different fixed format requirements.
-- Needs to run offline, adapting to intranet environments and legacy equipment.
+DocWen was originally built for everyday document-preparation work, where teams commonly need to:
+- normalize documents received in inconsistent formats;
+- handle many file types with different formatting requirements;
+- work offline in intranet environments and on older equipment.
 
-**Design Philosophy**: This software is positioned as a lightweight, fool-proof tool. While it cannot compare with professional tools like LaTeX or Pandoc in terms of professionalism and functional completeness, it excels in zero learning cost and out-of-the-box usability, making it suitable for daily office scenarios where format requirements are not extremely strict.
+**Design philosophy**: DocWen prioritizes low-friction, ready-to-use workflows for everyday office conversion and cleanup. It is not intended to replace specialized publishing or conversion systems such as LaTeX or Pandoc; instead, it focuses on making common document tasks straightforward while preserving clear technical boundaries.
 
 ## ✨ Core Features
 
