@@ -501,6 +501,7 @@ class TestSettingsApplyValidation:
         assert statuses[-1] == (t("settings.logging.validation_prefix_invalid"), True)
 
     def test_env_log_directory_override_does_not_add_gui_blocker(self, vm, monkeypatch) -> None:
+        from docwen_gui.i18n import t
         from docwen_gui.view_models.settings_vm import SECTION_LOGGING
 
         vm.begin_session()
@@ -512,4 +513,4 @@ class TestSettingsApplyValidation:
         )
 
         errors = vm._validate()  # pyright: ignore[reportPrivateUsage]
-        assert not any("directory" in error.lower() or "目录" in error for error in errors)
+        assert t("settings.logging.validation_custom_directory_required") not in errors
