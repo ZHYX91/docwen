@@ -218,7 +218,11 @@ def analyze_markdown_semantics_v3(
     semantic_source = _mask_yaml_front_matter(source)
     lines = _split_lines(semantic_source)
     caption_re = _NUMBER_SUITE_CAPTION_RE if consumer_profile == "number_suite_direct" else _CAPTION_RE
-    blocks = _scan_blocks(lines, caption_re=caption_re)
+    blocks = _scan_blocks(
+        lines,
+        caption_re=caption_re,
+        captions_top_level_only=consumer_profile == "number_suite_direct",
+    )
     dialect = extensions or MarkdownExtensions.obsidian()
     literal_ranges: list[SourceRange] = []
 
@@ -895,13 +899,20 @@ def _split_lines(source: str) -> list[_Line]:
     return lines
 
 
-def _scan_blocks(lines: Sequence[_Line], *, caption_re: re.Pattern[str] = _CAPTION_RE) -> list[_Block]:
+def _scan_blocks(
+    lines: Sequence[_Line],
+    *,
+    caption_re: re.Pattern[str] = _CAPTION_RE,
+    captions_top_level_only: bool = False,
+) -> list[_Block]:
     blocks = _scan_container_blocks(
         lines,
         container_path=(),
         container_segments=(),
         paragraph_kind="paragraph",
         caption_re=caption_re,
+        captions_top_level_only=captions_top_level_only,
+        allow_caption_declarations=True,
     )
     return sorted(
         blocks,
@@ -921,6 +932,8 @@ def _scan_container_blocks(
     container_segments: tuple[tuple[str, int, int], ...],
     paragraph_kind: str,
     caption_re: re.Pattern[str] = _CAPTION_RE,
+    captions_top_level_only: bool = False,
+    allow_caption_declarations: bool = True,
 ) -> list[_Block]:
     blocks: list[_Block] = []
     index = 0
@@ -1071,7 +1084,7 @@ def _scan_container_blocks(
             )
             index += 1
             continue
-        caption = caption_re.fullmatch(line.text)
+        caption = caption_re.fullmatch(line.text) if allow_caption_declarations else None
         if caption is not None and re.search(r"\{#[^{}\s]+\}[ \t]*$", caption.group(2)):
             # Historical Pandoc-style attributes are ordinary current source.
             # Only the explicit migration module may reinterpret them.
@@ -1191,7 +1204,7 @@ def _scan_container_blocks(
             candidate = lines[end_index + 1].text
             if (
                 _HEADING_RE.fullmatch(candidate)
-                or caption_re.fullmatch(candidate)
+                or (allow_caption_declarations and caption_re.fullmatch(candidate))
                 or _match_fence_opener_v3(candidate)
                 or _ANCHOR_ONLY_CANDIDATE_RE.fullmatch(candidate)
                 or _QUOTE_PREFIX_RE.match(candidate) is not None
@@ -1232,6 +1245,8 @@ def _scan_container_blocks(
                     container_segments=child_segments,
                     paragraph_kind="container_text",
                     caption_re=caption_re,
+                    captions_top_level_only=captions_top_level_only,
+                    allow_caption_declarations=not captions_top_level_only,
                 )
             )
         elif block.kind == "list":
@@ -1251,6 +1266,8 @@ def _scan_container_blocks(
                         container_segments=item_segments,
                         paragraph_kind="list_item",
                         caption_re=caption_re,
+                        captions_top_level_only=captions_top_level_only,
+                        allow_caption_declarations=not captions_top_level_only,
                     )
                 )
     return [*blocks, *nested]
