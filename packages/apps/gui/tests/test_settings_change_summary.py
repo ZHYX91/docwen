@@ -9,7 +9,11 @@ from __future__ import annotations
 import pytest
 
 from docwen_gui.view_models.settings_vm import SECTION_GUI, SECTION_OUTPUT, SettingsViewModel
-from docwen_gui.widgets.settings.dialog import _abbreviate_value
+from docwen_gui.widgets.settings.dialog import (
+    _abbreviate_value,
+    _friendly_change_field,
+    _friendly_change_value,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -64,3 +68,13 @@ def test_change_summary_tooltip_values_are_abbreviated() -> None:
 
     assert _abbreviate_value(long_value) == ("x" * 57) + "..."
     assert _abbreviate_value("short") == "short"
+
+
+def test_change_summary_projects_known_fields_and_values_but_keeps_honest_fallbacks() -> None:
+    from docwen_gui.i18n import t
+
+    assert _friendly_change_field("gui.theme") == t("settings.general.theme_label").rstrip(":：")
+    assert _friendly_change_value("gui.theme", "dark") == t("settings.general.themes.dark")
+    assert _friendly_change_value("output.create_date_subfolder", True) == t("settings.changes.enabled")
+    unknown = _friendly_change_field("future.section.value")
+    assert "future.section.value" in unknown
