@@ -10,7 +10,7 @@ from docx import Document
 from docx.enum.style import WD_STYLE_TYPE
 
 from docwen_core._docx_semantics_v3_model import DocxSemanticsV3Error
-from docwen_core.docx_numbering_ooxml import append_complex_field
+from docwen_core.docx_semantics_v3 import append_complex_field
 from docwen_core.docx_standalone_caption_occurrence import (
     derive_standalone_caption_occurrence,
     parse_standalone_caption_occurrence_map,
