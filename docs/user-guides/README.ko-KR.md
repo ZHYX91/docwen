@@ -71,8 +71,7 @@ docwen      # CLI 모드
 
 ### macOS 설치 안내
 
-**현재 제한**: macOS에서는 `convert`, `validate`, `number`, `merge`, `split` capability를 현재
-사용할 수 없습니다. 아래 내용은 개발 실험을 위한 선택적 의존성만 설명합니다.
+**현재 제한**: macOS에서는 `convert`, `validate`, `number`, `merge`, `split` 기능을 현재 사용할 수 없습니다. 아래 내용은 개발 실험을 위한 선택적 의존성만 설명합니다.
 
 **LibreOffice 지원(선택)**
 
