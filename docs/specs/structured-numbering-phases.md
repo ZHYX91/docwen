@@ -224,6 +224,17 @@ Disabled ID-less captions round-trip through the independent closed
 [Markdown compatibility](markdown-compatibility.md#disabled-id-less-caption-occurrence-authority--禁用且无-id-题注出现权威).
 They are not inferred from style/adjacency and receive no target, bookmark, field, or hidden ID.
 
+A resolved caption target does not require a carrier. When the provider supplies a caption declaration whose local
+carrier relation is absent or ambiguous, DocWen materializes it as a standalone caption and must not guess an object
+from wider document structure. An ID-bearing standalone caption keeps the normal target map/bookmark but its target
+SDT contains exactly the caption paragraph. Every ID-less standalone caption, enabled or disabled, instead has one
+independent `document-standalone-caption-occurrence-map/v1` record and one caption-only block SDT tagged
+`docwen-standalone-caption-v1:<digest32>`. The record binds source/plan identity, source range, semantic kind,
+enabled state and exact derived number when enabled; `target_id` remains empty. Enabled standalone captions retain
+their already-proven closed `SEQ`/optional `STYLEREF` materialization, while disabled records contain no numbering
+field. The standalone authority creates no hidden ID or bookmark and is the only basis for recovering an ID-less
+standalone declaration; caption style or physical adjacency alone is insufficient.
+
 DocWen never writes a derived number into Markdown, rewrites a Heading, interprets a WikiLink, or runs an upstream
 resolver. Any provider consumes the same Conversion Port, export plan, corpus, and physical acceptance contract.
 
