@@ -65,6 +65,24 @@ def test_carrier_bridge_keeps_numbering_and_resolution_profile_free() -> None:
     assert fence["_docwen_v3_ordinary_anchor_parent_source_id"] == "outer-quote"
 
 
+def test_carrier_bridge_ignores_caption_and_reference_profile_diagnostics() -> None:
+    source = "Figure: Planned ^planned\n\n\nordinary paragraph\n\n@[[#^planned]]\n"
+
+    plan = prepare_resolved_source_carriers_v4(
+        source,
+        input_id="standalone.md",
+        expected_source_sha256=_sha256(source),
+    )
+
+    assert plan.marker_edits == ()
+    assert plan.shielded_source == source
+    assert not plan.runtime_plan.analysis.has_errors
+    ast = parse_markdown_text(plan.shielded_source, auto_link_bare_url=False)
+    restored = apply_resolved_source_carriers_v4(ast, plan)
+    assert restored
+    assert all("_docwen_v3_caption_target" not in node for node in _walk(restored))
+
+
 @pytest.mark.parametrize(
     "mutated_hash",
     ["0" * 64, "f" * 64],

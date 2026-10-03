@@ -629,6 +629,20 @@ class DocxToMarkdownConverter:
         total_elements = len(body_elements) if body_elements else 1
         active_list_context_level: int | None = None
 
+        def _v3_caption_declaration(caption: Any) -> str:
+            keyword = {
+                "figure": "Figure",
+                "table": "Table",
+                "equation": "Equation",
+                "code_block": "Code",
+            }[caption.kind]
+            declaration = f"{keyword}:"
+            if caption.title:
+                declaration += f" {caption.title}"
+            if caption.source_id is not None:
+                declaration += f" ^{caption.source_id}"
+            return declaration
+
         for idx, child in enumerate(body_elements):
             # Check cancellation periodically
             if idx % 10 == 0:
@@ -639,6 +653,9 @@ class DocxToMarkdownConverter:
             tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
 
             if self._extensions.captions_references and self._semantic_v3_recovery.is_caption_element(child):
+                recovered_caption = self._semantic_v3_recovery.caption_for_element(child)
+                if recovered_caption is not None and not recovered_caption.object_elements:
+                    lines.extend((_v3_caption_declaration(recovered_caption), ""))
                 _append_textboxes(body_textboxes_by_anchor.get(idx, []))
                 continue
 
@@ -646,18 +663,7 @@ class DocxToMarkdownConverter:
                 self._semantic_v3_recovery.caption_for_object(child) if self._extensions.captions_references else None
             )
             if v3_caption is not None:
-                keyword = {
-                    "figure": "Figure",
-                    "table": "Table",
-                    "equation": "Equation",
-                    "code_block": "Code",
-                }[v3_caption.kind]
-                declaration = f"{keyword}:"
-                if v3_caption.title:
-                    declaration += f" {v3_caption.title}"
-                if v3_caption.source_id is not None:
-                    declaration += f" ^{v3_caption.source_id}"
-                lines.extend((declaration, ""))
+                lines.extend((_v3_caption_declaration(v3_caption), ""))
 
             if tag == "p":
                 if idx in semantic_caption_indices:
