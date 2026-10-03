@@ -196,7 +196,7 @@ def markdown_table_lines(
     if not rendered or not any(any(cell for cell in row) for row in rendered):
         return []
     width = len(rendered[0])
-    bounded_header_rows = max(1, min(header_rows, len(rendered)))
+    bounded_header_rows = max(0, min(header_rows, len(rendered)))
     bounded_header_columns = max(0, min(header_columns, width))
     lines: list[str] = []
     for row_index, row in enumerate(rendered):

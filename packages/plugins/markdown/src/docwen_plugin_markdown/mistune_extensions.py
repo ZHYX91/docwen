@@ -37,10 +37,10 @@ from mistune.plugins.formatting import (
 from docwen_core.markdown_extensions import MarkdownExtensions
 
 _EXTENDED_ATX_HEADING_TRIM = re.compile(r"(\s+|^)#+\s*$")
-_STRUCTURAL_TABLE_DELIMITER_CELL = re.compile(r"^:?-{3,}:?$")
+_STRUCTURAL_TABLE_DELIMITER_CELL = re.compile(r"^:?-+:?$")
 _STRUCTURAL_TABLE_BLOCK = (
     r"^ {0,3}(?P<structural_table_rows>"
-    r"(?:\|[^\n]*\|[ \t]*(?:\n|$)){2,})"
+    r"(?:[^\n]*\|[^\n]*(?:\n|$)){2,})"
 )
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -223,14 +223,17 @@ def _structural_delimiter(line: str) -> tuple[list[str | None], int] | None:
 
 def _structural_table_cell(text: str, alignment: str | None, *, head: bool) -> dict[str, Any]:
     stripped = text.strip()
+    attrs: dict[str, Any] = {
+        "align": alignment,
+        "head": head,
+        "docwen_literal_merge_marker": stripped in {r"\<", r"\^"},
+    }
+    if stripped in {"<", "^"}:
+        attrs["docwen_merge_marker"] = stripped
     return {
         "type": "table_cell",
         "text": stripped,
-        "attrs": {
-            "align": alignment,
-            "head": head,
-            "docwen_literal_merge_marker": stripped in {r"\<", r"\^"},
-        },
+        "attrs": attrs,
     }
 
 
@@ -255,14 +258,12 @@ def plugin_structural_tables(md: mistune.Markdown) -> None:
             return None
         delimiter_index, (alignments, header_columns) = delimiters[0]
         column_count = len(alignments)
-        if delimiter_index < 1:
-            return None
         content_rows = [*rows[:delimiter_index], *rows[delimiter_index + 1 :]]
         if any(row is None or len(row) != column_count for row in content_rows):
             return None
         concrete_rows = [row for row in content_rows if row is not None]
         marker_found = any(cell.strip() in {"<", "^"} for row in concrete_rows for cell in row)
-        structural = marker_found or delimiter_index > 1 or header_columns > 0
+        structural = marker_found or delimiter_index != 1 or header_columns > 0
 
         head_rows = [
             {
