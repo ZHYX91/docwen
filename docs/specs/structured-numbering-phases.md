@@ -242,6 +242,23 @@ turning it into a standalone caption. Caption style or physical adjacency alone 
 DocWen never writes a derived number into Markdown, rewrites a Heading, interprets a WikiLink, or runs an upstream
 resolver. Any provider consumes the same Conversion Port, export plan, corpus, and physical acceptance contract.
 
+### Direct Number Suite Markdown consumer / 直接 Number Suite Markdown 消费
+
+The ordinary Markdown→DOCX route has a separate internal consumer profile only when the request explicitly enables
+the input `captions_references` extension. This profile does **not** redefine the frozen
+`docwen.markdown_semantics.v3` oracle or its corpus. It consumes authored Markdown with the same source-determined
+Number Suite rules used by the external interop route: canonical-case caption keywords, Figure/Table visible-title
+requirements, Equation/Code ID-only allowance, NFC+lowercase block-ID identity, Number Suite title normalization, and
+standalone captions when no unique local carrier can be proven. Standalone direct captions reuse the same authenticated
+standalone-caption authority described above, so reverse conversion never infers them from style or adjacency.
+
+Private Number Suite plugin state is not an input to this route and is not required for parity. Source-native
+conversion is determined by the authenticated authored Markdown, declared resources, DocWen Markdown-extension
+selection, and the current request's explicit numbering controls. An editor plugin's current enabled/disabled counters,
+derived display numbers, or private templates must not change the result implicitly. A consumer that already owns a
+fully resolved provider-neutral plan may instead choose the separate resolved-v4 Conversion Port; that is a distinct
+capability, not a hidden fallback for source-native conversion.
+
 ## DOCX-to-neutral extraction / DOCX 到中立语义提取
 
 Import separates a number from visible text only when the package proves Word semantics: Heading list numbering

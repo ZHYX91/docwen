@@ -68,6 +68,13 @@ from docwen_core._docx_semantics_v3_topology import (
     prove_source_recovery_records,
 )
 from docwen_core.docx_bookmarks import build_docx_bookmark_inventory, prove_bookmark_name
+from docwen_core.docx_standalone_caption_occurrence import (
+    STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE,
+    STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX,
+    StandaloneCaptionOccurrenceIdentity,
+    parse_standalone_caption_occurrence_map,
+    prove_standalone_caption_occurrence_sdt,
+)
 
 _TARGET_BOOKMARK_RE = re.compile(r"^DW_T_[0-9a-f]{35}$")
 
@@ -135,6 +142,7 @@ class DocxSemanticsV3Recovery:
         occurrences: list[ReferenceOccurrenceIdentityV3] = []
         fenced_sources: list[FencedSourceIdentityV3] = []
         anchor_topology: list[AnchorTopologyEdgeV3] = []
+        standalone_occurrences: list[StandaloneCaptionOccurrenceIdentity] = []
         if TARGET_MAP_NAMESPACE in owned:
             _number, root = owned[TARGET_MAP_NAMESPACE]
             targets, anchors = parse_semantic_map(root)
@@ -150,7 +158,19 @@ class DocxSemanticsV3Recovery:
         if fenced.FENCED_SOURCE_MAP_NAMESPACE in owned:
             _number, root = owned[fenced.FENCED_SOURCE_MAP_NAMESPACE]
             fenced_sources = parse_fenced_source_map(root)
-        return cls._bind_document_evidence(
+        if STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE in owned:
+            _number, root = owned[STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE]
+            standalone_occurrences = parse_standalone_caption_occurrence_map(root)
+        target_by_tag = {item.tag: item for item in targets}
+        addressable_standalone_tags: set[str] = set()
+        for occurrence in standalone_occurrences:
+            if occurrence.target_id is None:
+                continue
+            target = target_by_tag.get(occurrence.tag)
+            if target is None or target.kind != occurrence.kind or target.source_id != occurrence.target_id:
+                raise DocxSemanticsV3Error("direct Number Suite standalone authority contradicts the target map")
+            addressable_standalone_tags.add(occurrence.tag)
+        recovery = cls._bind_document_evidence(
             document,
             targets,
             anchors,
@@ -160,7 +180,17 @@ class DocxSemanticsV3Recovery:
             fenced_sources,
             anchor_topology,
             topology_map_present=ANCHOR_TOPOLOGY_MAP_NAMESPACE in owned,
+            standalone_target_tags=frozenset(addressable_standalone_tags),
         )
+        recovery._bind_direct_standalone_occurrences(
+            document,
+            standalone_occurrences,
+            caption_styles,
+        )
+        recovery.caption_signatures = tuple(
+            (item.kind, item.source_id, item.title, item.cached_number) for item in recovery.recovered_captions
+        )
+        return recovery
 
     @classmethod
     def _bind_document_evidence(
@@ -336,6 +366,83 @@ class DocxSemanticsV3Recovery:
             fenced_sources_by_paragraph=fenced_sources_by_paragraph,
         )
 
+    def _bind_direct_standalone_occurrences(
+        self,
+        document: Any,
+        occurrences: list[StandaloneCaptionOccurrenceIdentity],
+        caption_styles: tuple[CaptionStyleBindingV3, ...],
+    ) -> None:
+        from docx.oxml.ns import qn
+
+        if not occurrences:
+            return
+        body = document.element.body
+        idless = [item for item in occurrences if item.target_id is None]
+        addressable = [item for item in occurrences if item.target_id is not None]
+        physical = [
+            item
+            for item in body
+            if item.tag == qn("w:sdt") and (sdt_tag(item) or "").startswith(STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX)
+        ]
+        nested = [
+            item
+            for item in body.iter(qn("w:sdt"))
+            if (sdt_tag(item) or "").startswith(STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX)
+        ]
+        if physical != nested or [sdt_tag(item) for item in physical] != [item.tag for item in idless]:
+            raise DocxSemanticsV3Error(
+                "direct Number Suite standalone-caption physical order/cardinality differs from its map"
+            )
+        styles = {item.semantic_key: item.resolved_style_id for item in caption_styles}
+        style_key = {
+            "figure": "figure_caption",
+            "table": "table_caption",
+            "equation": "equation_caption",
+            "code_block": "code_block_caption",
+        }
+        recovered = list(self.recovered_captions)
+        for wrapper, occurrence in zip(physical, idless, strict=True):
+            style_id = styles.get(style_key[occurrence.kind])
+            if style_id is None:
+                raise DocxSemanticsV3Error("direct standalone caption lacks its caption-style binding")
+            caption = prove_standalone_caption_occurrence_sdt(
+                wrapper,
+                occurrence,
+                caption_style_id=style_id,
+            )
+            title, number = _parse_v3_caption(caption, occurrence.kind, required_bookmark=None)
+            expected_number = occurrence.derived_number or ""
+            if not occurrence.enabled or number != expected_number:
+                raise DocxSemanticsV3Error("direct standalone caption numbering differs from its authority")
+            content = wrapper.find(qn("w:sdtContent"))
+            if content is None:
+                raise DocxSemanticsV3Error("direct standalone caption has no physical content")
+            self._block_elements[wrapper] = tuple(content)
+            recovered.append(
+                RecoveredCaptionV3(
+                    kind=occurrence.kind,
+                    source_id=None,
+                    title=title,
+                    cached_number=number,
+                    caption_element=caption,
+                    object_elements=(),
+                )
+            )
+        for occurrence in addressable:
+            matches = [
+                item for item in recovered if item.kind == occurrence.kind and item.source_id == occurrence.target_id
+            ]
+            if len(matches) != 1:
+                raise DocxSemanticsV3Error("direct addressable standalone caption is missing or duplicated")
+            [caption] = matches
+            if (
+                caption.object_elements
+                or not occurrence.enabled
+                or caption.cached_number != (occurrence.derived_number or "")
+            ):
+                raise DocxSemanticsV3Error("direct addressable standalone caption contradicts its authority")
+        self.recovered_captions = tuple(recovered)
+
     def logical_body_elements(self, document: Any) -> list[Any]:
         """Flatten only authenticated owned block SDTs for the legacy walker."""
 
@@ -406,7 +513,7 @@ def _prove_caption_target_group(
 ) -> tuple[Any, tuple[Any, ...]]:
     from docx.oxml.ns import qn
 
-    if len(blocks) == 1 and caption_parser is not None and standalone:
+    if len(blocks) == 1 and standalone:
         caption = blocks[0]
         object_elements: tuple[Any, ...] = ()
     elif len(blocks) == 2:

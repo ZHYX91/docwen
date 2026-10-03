@@ -145,6 +145,7 @@ def test_real_stdio_process_emits_integrity_pinned_docx_bundle(tmp_path: Path, r
     capabilities = {item["capability_id"]: item for item in discovery["result"]["capabilities"]}
     assert set(capabilities) == {
         "convert.markdown.to_docx",
+        "convert.markdown_source.to_docx",
         "convert.markdown.to_xlsx",
         "convert.docx.to_markdown",
         "convert.pdf.to_markdown",
@@ -209,6 +210,31 @@ def test_real_stdio_process_emits_integrity_pinned_docx_bundle(tmp_path: Path, r
         "relation_types": [],
         "atomic_bundle": True,
     }
+    assert capabilities["convert.markdown_source.to_docx"]["limitations"] == expected_semantic_limitations
+    assert capabilities["convert.markdown_source.to_docx"]["input_shape"] == {
+        "slots": [
+            {
+                "role": "source",
+                "kind": "document",
+                "media_types": ["text/markdown"],
+                "min_items": 1,
+                "max_items": 1,
+            },
+            {
+                "role": "linked_resource",
+                "kind": "resource",
+                "media_types": ["image/png", "image/jpeg", "image/gif", "image/bmp", "image/webp"],
+                "min_items": 0,
+            },
+        ],
+        "undeclared_roles": "reject",
+    }
+    assert {
+        "remove_numbering",
+        "add_numbering",
+        "numbering_scheme",
+        "heading_numbering_render_mode",
+    } <= set(capabilities["convert.markdown_source.to_docx"]["options_schema"]["properties"])
     for capability_id in (
         "convert.pdf.to_markdown",
         "convert.ofd.to_markdown",

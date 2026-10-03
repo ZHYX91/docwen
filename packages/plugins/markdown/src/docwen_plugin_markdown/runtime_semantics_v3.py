@@ -23,6 +23,7 @@ from typing import Any, Literal
 
 from docwen_core.docx_semantics_v3 import fenced_source_identity_from_mapping_v3
 from docwen_core.markdown_extensions import MarkdownExtensions
+from docwen_plugin_markdown import number_suite_direct_semantics
 from docwen_plugin_markdown.document_semantics_v3 import (
     MarkdownSemanticsV3Analysis,
     analyze_markdown_semantics_v3,
@@ -33,6 +34,7 @@ from docwen_plugin_markdown.document_semantics_v3_fenced_source import (
     recover_fenced_logical_body_v3,
 )
 
+type SemanticConsumerProfile = Literal["frozen_v3", "number_suite_direct"]
 type _MarkerRole = Literal[
     "heading_target",
     "caption_declaration",
@@ -87,12 +89,29 @@ class RuntimeSemanticsV3Plan:
 
 
 def prepare_runtime_semantics_v3(
-    source: str, *, input_id: str, extensions: MarkdownExtensions | None = None
+    source: str,
+    *,
+    input_id: str,
+    extensions: MarkdownExtensions | None = None,
+    consumer_profile: SemanticConsumerProfile = "frozen_v3",
 ) -> RuntimeSemanticsV3Plan:
     """Analyze and shield one exact accepted input before generic processing."""
 
     try:
-        analysis = analyze_markdown_semantics_v3(source, input_id=input_id, extensions=extensions)
+        analysis = (
+            number_suite_direct_semantics.analyze_markdown_semantics_v3(
+                source,
+                input_id=input_id,
+                extensions=extensions,
+                consumer_profile="number_suite_direct",
+            )
+            if consumer_profile == "number_suite_direct"
+            else analyze_markdown_semantics_v3(
+                source,
+                input_id=input_id,
+                extensions=extensions,
+            )
+        )
     except ValueError as exc:
         raise RuntimeSemanticsV3Unsupported(str(exc)) from exc
     body_start = markdown_semantics_body_start_v3(source)
@@ -227,7 +246,8 @@ def apply_runtime_semantics_v3(
     if plan.analysis.has_errors:
         raise ValueError("an invalid v3 analysis cannot be applied to an AST")
     markers = {marker.marker: marker for marker in plan.markers}
-    restored = [_restore_node(node, markers) for node in ast_nodes]
+    semantic_schema = str(plan.analysis.projection["schema"])
+    restored = [_restore_node(node, markers, semantic_schema=semantic_schema) for node in ast_nodes]
     _bind_fenced_source_markers(restored, plan)
     for node in restored:
         _bind_block_markers(node)
@@ -413,21 +433,25 @@ def _bind_fenced_source_markers(
 def _restore_node(
     node: dict[str, Any],
     markers: dict[str, RuntimeMarkerV3],
+    *,
+    semantic_schema: str,
 ) -> dict[str, Any]:
     output = dict(node)
     children = node.get("children")
     if isinstance(children, list):
-        output["children"] = _restore_children(children, markers)
+        output["children"] = _restore_children(children, markers, semantic_schema=semantic_schema)
     return output
 
 
 def _restore_children(
     children: list[dict[str, Any]],
     markers: dict[str, RuntimeMarkerV3],
+    *,
+    semantic_schema: str,
 ) -> list[dict[str, Any]]:
     output: list[dict[str, Any]] = []
     for child in children:
-        restored = _restore_node(child, markers)
+        restored = _restore_node(child, markers, semantic_schema=semantic_schema)
         if restored.get("type") != "text":
             output.append(restored)
             continue
@@ -443,7 +467,7 @@ def _restore_children(
             marker_start, marker = match
             if marker_start > cursor:
                 output.append({"type": "text", key: text[cursor:marker_start]})
-            output.append(_marker_ast_node(marker))
+            output.append(_marker_ast_node(marker, semantic_schema=semantic_schema))
             cursor = marker_start + len(marker.marker)
     return output
 
@@ -458,19 +482,19 @@ def _next_marker(
     return min(present, key=lambda item: item[0]) if present else None
 
 
-def _marker_ast_node(marker: RuntimeMarkerV3) -> dict[str, Any]:
+def _marker_ast_node(marker: RuntimeMarkerV3, *, semantic_schema: str) -> dict[str, Any]:
     if marker.role == "literal":
         return {"type": "text", "raw": marker.payload["raw"]}
     if marker.role == "cross_reference":
         return {
             "type": "semantic_cross_reference",
-            "schema": "docwen.markdown_semantics.v3",
+            "schema": semantic_schema,
             **marker.payload,
         }
     if marker.role == "citation":
         return {
             "type": "semantic_citation",
-            "schema": "docwen.markdown_semantics.v3",
+            "schema": semantic_schema,
             **marker.payload,
         }
     return {
@@ -548,8 +572,11 @@ def _bind_caption_targets(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     candidate_sets: dict[int, set[int]] = {}
     for declaration_index in declarations:
         target = nodes[declaration_index]["_docwen_v3_caption_target"]
+        object_range = target.get("object_range")
+        if not isinstance(object_range, dict):
+            continue
         declaration_start = int(target["declaration_range"]["start"])
-        object_start = int(target["object_range"]["start"])
+        object_start = int(object_range["start"])
         direction = -1 if object_start < declaration_start else 1
         candidates = {
             candidate
@@ -559,7 +586,7 @@ def _bind_caption_targets(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
         candidate_sets[declaration_index] = candidates
     bindings = _require_unique_caption_bindings(candidate_sets)
 
-    removed = set(declarations)
+    removed = set(bindings)
     for declaration_index, object_index in bindings.items():
         target = nodes[declaration_index]["_docwen_v3_caption_target"]
         object_node = nodes[object_index]

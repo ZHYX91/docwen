@@ -19,6 +19,7 @@ from docwen_application.conversion_contracts import (
     JSON_MEDIA_TYPE,
     MARKDOWN_MEDIA_TYPE,
     MARKDOWN_NUMBERING_CAPABILITY_ID,
+    MARKDOWN_SOURCE_TO_DOCX_CAPABILITY_ID,
     MARKDOWN_TABLES_TO_CSV_CAPABILITY_ID,
     MARKDOWN_TO_DOCX_CAPABILITY_ID,
     MARKDOWN_TO_XLSX_CAPABILITY_ID,
@@ -55,6 +56,7 @@ from docwen_core.formats import (
     CATEGORY_MARKDOWN,
     CATEGORY_SPREADSHEET,
 )
+from docwen_core.links.declared_resources import MARKDOWN_RESOURCE_BINDINGS_SCHEMA
 from docwen_core.markdown_extensions import MARKDOWN_EXTENSIONS_OPTIONS_SCHEMA
 from docwen_core.models.resolved_numbering import (
     NUMBERING_EXPORT_PLAN_MEDIA_TYPE,
@@ -211,6 +213,24 @@ _MARKDOWN_TO_DOCX_OPTIONS = _strict_options(
             "type": "string",
             "enum": ["punct_required", "never", "always"],
             "default": "punct_required",
+        },
+    }
+)
+
+
+_MARKDOWN_SOURCE_TO_DOCX_OPTIONS = _strict_options(
+    {
+        **_MARKDOWN_TO_DOCX_OPTIONS["properties"],
+        "markdown_resource_bindings": MARKDOWN_RESOURCE_BINDINGS_SCHEMA,
+        "remove_numbering": {"type": "boolean"},
+        "add_numbering": {"type": "boolean"},
+        "numbering_scheme": {
+            "type": "string",
+            "x-docwen-resource-kind": "numbering-schemes",
+        },
+        "heading_numbering_render_mode": {
+            "type": "string",
+            "enum": ["text", "word_native"],
         },
     }
 )
@@ -416,6 +436,31 @@ class CapabilityBinding:
                     ),
                 )
             )
+        if self.capability_id == MARKDOWN_SOURCE_TO_DOCX_CAPABILITY_ID:
+            return InputShape(
+                slots=(
+                    InputSlot(
+                        role="source",
+                        kind="document",
+                        media_types=(MARKDOWN_MEDIA_TYPE,),
+                        min_items=1,
+                        max_items=1,
+                    ),
+                    InputSlot(
+                        role="linked_resource",
+                        kind="resource",
+                        media_types=(
+                            PNG_MEDIA_TYPE,
+                            JPEG_MEDIA_TYPE,
+                            GIF_MEDIA_TYPE,
+                            BMP_MEDIA_TYPE,
+                            WEBP_MEDIA_TYPE,
+                        ),
+                        min_items=0,
+                        max_items=None,
+                    ),
+                )
+            )
         source_kind: Literal["document", "resource"] = (
             "document" if self.input_category in {CATEGORY_DOCUMENT, CATEGORY_MARKDOWN} else "resource"
         )
@@ -441,6 +486,17 @@ CAPABILITY_BINDINGS = (
         runtime_route_id="docwen_plugin_markdown:markdown:docx:convert",
         options_schema=_MARKDOWN_TO_DOCX_OPTIONS,
         limitations=_RESOLVED_DOCUMENT_MACHINE_LIMITATIONS,
+    ),
+    CapabilityBinding(
+        capability_id=MARKDOWN_SOURCE_TO_DOCX_CAPABILITY_ID,
+        input_media_type=MARKDOWN_MEDIA_TYPE,
+        input_format="markdown",
+        input_category=CATEGORY_MARKDOWN,
+        target_format="docx",
+        output_media_type=DOCX_MEDIA_TYPE,
+        runtime_route_id="docwen_plugin_markdown:markdown:docx:convert",
+        options_schema=_MARKDOWN_SOURCE_TO_DOCX_OPTIONS,
+        limitations=_DOCUMENT_SEMANTICS_MACHINE_LIMITATIONS,
     ),
     CapabilityBinding(
         capability_id=MARKDOWN_TO_XLSX_CAPABILITY_ID,

@@ -77,13 +77,18 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+_DIRECT_NUMBER_SUITE_SCHEMA = "docwen.number_suite_direct.v1"
 _RESOLVED_TARGET_KEY = "_docwen_resolved_v4_target"
 _RESOLVED_CAPTION_CHILDREN_KEY = "_docwen_resolved_v4_caption_children"
 
 
 def _contains_request_semantics(nodes: list[dict[str, Any]]) -> bool:
     for node in nodes:
-        if node.get("schema") in {"docwen.markdown_semantics.v3", RESOLVED_DOCUMENT_SCHEMA}:
+        if node.get("schema") in {
+            "docwen.markdown_semantics.v3",
+            _DIRECT_NUMBER_SUITE_SCHEMA,
+            RESOLVED_DOCUMENT_SCHEMA,
+        }:
             return True
         children = node.get("children")
         if isinstance(children, list) and _contains_request_semantics(children):
@@ -538,6 +543,18 @@ class MdToDocxRenderer:
         if self._source_carrier_session is not None and node.get("_docwen_v3_ordinary_anchor") is not None:
             self._bind_v3_ordinary_anchor((p._p,), node)
         return p
+
+    def _handle__docwen_v3_caption_declaration(self, node: dict[str, Any]):
+        """Render one authenticated direct Number Suite caption without a bound object."""
+
+        target = node.get("_docwen_v3_caption_target")
+        if not isinstance(target, dict) or target.get("object_range") is not None:
+            raise ValueError("standalone direct caption has an invalid source projection")
+        if self._semantic_v3_session is None:
+            raise ValueError("standalone direct caption requires a semantic session")
+        caption = self._create_v3_caption(target)
+        self._semantic_v3_session.bind_caption(caption, (), target)
+        return caption
 
     def _handle__docwen_resolved_v4_caption_declaration(self, node: dict[str, Any]):
         """Render one authenticated resolved caption that has no bound object."""
@@ -1391,7 +1408,7 @@ class MdToDocxRenderer:
                 source_end=int(node["source_end"]),
             )
             return
-        if node.get("schema") == "docwen.markdown_semantics.v3":
+        if node.get("schema") in {"docwen.markdown_semantics.v3", _DIRECT_NUMBER_SUITE_SCHEMA}:
             if self._semantic_v3_session is None:
                 raise ValueError("v3 semantic reference requires a request-owned DOCX session")
             self._semantic_v3_session.render_reference(parent, node)

@@ -118,10 +118,12 @@ DocWen accepts the Structural Tables pipe-table dialect in addition to ordinary 
 
 DOCX export maps these roles and merge rectangles to native table semantics. DOCX import emits the canonical
 Structural Tables spelling when native table metadata requires zero or multiple column-header rows, or row-header
-columns; a one-row column header without row headers remains ordinary GFM. Number Suite interoperation is consumer-neutral: an Obsidian adapter supplies
-authenticated heading/caption/reference facts and their effective displayed counters in DocWen's resolved document
-and exact-two numbering plan. DocWen does not import Number Suite code, scan a Vault, or infer numbers from visible
-prefixes.
+columns; a one-row column header without row headers remains ordinary GFM. Number Suite dialect interoperation is
+source-defined for ordinary conversion: DocWen reads authenticated
+heading/caption/reference syntax from the Markdown source and applies the explicit conversion numbering policy.
+An Obsidian adapter may supply declared image resources, but Number Suite plugin state is not conversion authority.
+The separate resolved-provider route remains available for consumers that intentionally supply a complete resolved plan.
+DocWen never imports Number Suite code or scans a Vault.
 
 The GUI-internal structured clipboard source follows the same request-scoped output policy rather than enabling this
 dialect globally. With `markdown_extensions.output.structural_tables=true`, a flat clipboard table is emitted in
@@ -142,9 +144,11 @@ continues to use the selected input dialect and is not globally made literal.
 分隔行内唯一相邻的 `||` 标记其左侧为行表头且不增加列；严格匹配的 `<` 向左合并、`^` 向上合并，`\<` 与
 `\^` 表示字面量；转义管道和代码跨度中的管道不会切分单元格；无效宽度或结构保持为可见源码而不猜测。
 DOCX 导出把这些角色与矩形合并映射为原生表格语义；导入在原生表格元数据要求零行或多行列表头、或存在
-行表头列时输出规范 Structural Tables 写法；只有一行列表头且没有行表头列的普通表格继续输出普通 GFM。Number Suite 互通通过消费者无关数据完成：Obsidian
-适配器提供经过认证的标题、题注、引用和实际显示计数；DocWen 不导入 Number Suite 代码、不扫描 Vault，
-也不从可见前缀猜测编号。
+行表头列时输出规范 Structural Tables 写法；只有一行列表头且没有行表头列的普通表格继续输出普通 GFM。
+普通转换中的 Number Suite 方言由 Markdown 源码本身
+定义：DocWen 识别标题、题注、引用语法，并按本次显式转换编号策略输出；Obsidian 适配器可声明图片资源，
+但 Number Suite 插件安装状态或私有配置不是转换 authority。完整 resolved plan 仍可通过独立 provider route
+显式提供。DocWen 不导入 Number Suite 代码，也不扫描 Vault。
 
 GUI 内部的结构化剪贴板来源也遵守同一个 request-scoped 输出策略，不会全局开启该方言。当
 `markdown_extensions.output.structural_tables=true` 时，只有其连续行/列表头和 merge 矩形能够被该方言表达的
@@ -357,12 +361,28 @@ Heading level. There is no hidden-display mode that retains a semantic number. T
 zero Markdown changes. Ordinary WikiLinks continue to navigate an unnumbered target, while semantic `@[[...]]`
 fails with the unnumbered-target diagnostic.
 
-DocWen consumes a provider-neutral resolved document plus resolved numbering/export plan under the separate
-[Resolved structured numbering and export plan](structured-numbering-phases.md). The upstream semantic provider owns profile selection,
-counter scope/reset/format/label/chapter inclusion and WikiLink resolution. DocWen neither parses private consumer models nor guesses a
-counter from authored text. The source-authoring controls `remove_numbering`, `add_numbering`, `numbering_scheme`, and
-regex Heading cleanup belong only to capabilities that declare them. They are rejected on the resolved-plan route
-and are not inputs to that Conversion Port.
+Ordinary Markdown→DOCX uses the source-native capability: DocWen parses the selected public Markdown dialect directly,
+accepts only explicitly declared linked raster resources, and applies request-scoped `remove_numbering`, `add_numbering`,
+`numbering_scheme`, and `heading_numbering_render_mode` without rewriting the source file. These choices belong to
+the conversion request, not to any installed editor plugin. Number Suite installation/configuration therefore cannot change
+an otherwise identical source-native conversion.
+
+The Machine source capability advertises `markdown_resource_bindings` with shape
+`{authored_sha256, images: [{authored_token, logical_path}]}`. The SHA-256 binds the complete UTF-8 source;
+each token must be a visible authored image and each path must identify a declared resource. Bindings preserve
+short Wiki names, cross-folder targets and spaces without basename discovery or source rewriting. Wiki and
+Markdown image policies remain independent. Local Wiki navigation requiring filesystem search and Markdown
+transclusion are outside this declared-image route; text-only link policies do not require file discovery.
+
+Machine 原文入口通过 `markdown_resource_bindings` 将完整 UTF-8 原文 SHA-256、可见图片标记和已声明资源逻辑路径绑定。
+短 Wiki 名称、跨目录目标及空格文件名不需要按文件名搜索，也不改写原文。Wiki 图片与 Markdown 图片分别遵循各自策略。
+需要文件搜索的本地 Wiki 导航及 Markdown 嵌入展开不在此声明图片入口的范围内；纯文本链接策略无需搜索文件。
+
+A separate provider-neutral route consumes `resolved_document` plus `numbering_export_plan` under
+[Resolved structured numbering and export plan](structured-numbering-phases.md). On that exact-two route the upstream
+provider already owns profile selection, counter scope/reset/format/label/chapter inclusion and WikiLink resolution;
+DocWen neither parses private consumer models nor derives a replacement plan. The source-authoring controls above remain
+undeclared and rejected there.
 
 Provider-neutral authored Markdown Heading targets use ATX levels 1..9; levels 7..9 are DocWen extensions to
 CommonMark. Heading target materialization, caption restart binding, and chapter-number binding accept the same 1..9

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -92,6 +92,7 @@ def _replace_markdown_images(
     temp_dir: str | None,
     table_safe: bool,
     image_scope: str | None,
+    declared_image: Callable[[str, str], str] | None = None,
 ) -> str:
     """Apply a mode to standard ``![alt](target)`` image syntax."""
     normalized_mode = EmbeddedImageMode(mode)
@@ -133,6 +134,7 @@ def _replace_markdown_images(
                 temp_dir=temp_dir,
                 table_safe=table_safe,
                 image_scope=image_scope,
+                declared_image=declared_image,
             )
             if embedded is None:
                 replacement = original
@@ -328,6 +330,7 @@ def process_markdown_links(
     _depth: int = 0,
     _canonicalize_local_docx_targets: bool = False,
     _boundary_rescan_remaining: int = 1,
+    declared_image: Callable[[str, str], str] | None = None,
 ) -> str:
     """Process Markdown links using one immutable request policy."""
     if not text:
@@ -437,6 +440,7 @@ def process_markdown_links(
                 image_scope=image_scope,
                 process_links=_process_child,
                 _table_context_scoped=True,
+                declared_image=declared_image,
             )
             if normalized_target == "docx" and replacement == original:
                 replacement = escape_markdown_source_literal(original)
@@ -462,6 +466,7 @@ def process_markdown_links(
         lambda segment: _replace_markdown_images(
             segment,
             mode=str(resolved_markdown_image_mode),
+            declared_image=declared_image,
             target_format=normalized_target,
             source_file_path=resolved_source,
             search_dirs=resolved_search_dirs,
@@ -520,6 +525,7 @@ def process_markdown_links(
                 _depth=_depth,
                 _canonicalize_local_docx_targets=(_canonicalize_local_docx_targets),
                 _boundary_rescan_remaining=0,
+                declared_image=declared_image,
             )
             if span_in_table:
                 replacement = escape_unescaped_pipes(replacement)

@@ -61,6 +61,44 @@ def test_md_to_docx_text_and_word_native_use_request_cleanup_rules() -> None:
         assert "GLOBAL: Global title" in paragraph_text
 
 
+def test_md_to_docx_uses_text_config_when_request_numbering_options_are_omitted(monkeypatch) -> None:
+    from docwen_plugin_markdown.to_docx import converter as converter_module
+
+    calls: list[tuple[str, str | None]] = []
+
+    def remove_numbering(content: str, *, rules) -> str:
+        calls.append(("remove", None))
+        return content
+
+    def add_numbering(content: str, *, scheme: str, registry) -> str:
+        calls.append(("add", scheme))
+        return content
+
+    monkeypatch.setattr(converter_module, "remove_md_numbering", remove_numbering)
+    monkeypatch.setattr(converter_module, "add_md_numbering", add_numbering)
+
+    md_path = write_temp_md("# Scope\n")
+    ctx, _ = make_context(
+        md_path,
+        target_format="docx",
+        options={},
+        config_values={
+            "text": {
+                "remove_numbering": True,
+                "add_numbering": True,
+                "numbering_scheme": "legal_standard",
+                "heading_numbering_render_mode": "text",
+            }
+        },
+        numbering_registry=repository_numbering_registry(),
+    )
+
+    result = MdToDocxConverter().convert(ctx)
+
+    assert result.success, result.error
+    assert calls == [("remove", None), ("add", "legal_standard")]
+
+
 class TestDocxListNumbering:
     """Unit tests for the numbering context collector."""
 

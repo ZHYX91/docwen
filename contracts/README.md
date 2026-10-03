@@ -79,8 +79,10 @@ accepted task.
 1. `initialize` fixes protocol `2.0`, feature support, the method set, Bundle schema, and concurrency.
 2. `capability/list` returns provider-specific capability IDs, typed input slots, capability-specific closed option schemas,
    dependency availability, and the expected artifact graph shape. Each `input_shape` declares unique roles and
-   rejects undeclared roles. Ordinary capabilities have a required `source`; the v4 Markdown-to-DOCX capability
-   instead has the exact required pair `neutral_document` + `numbering_export_plan`. A consumer maps these IDs at its boundary;
+   rejects undeclared roles. Ordinary capabilities have a required `source`. The resolved v4 Markdown-to-DOCX
+   capability has the exact required pair `neutral_document` + `numbering_export_plan`, while the separate
+   source-native Markdown-to-DOCX capability has one required Markdown `source` plus optional declared image
+   `linked_resource` inputs. A consumer maps these IDs at its boundary;
    they are not consumer-domain IDs. An optimizer additionally declares `optimization_id`, the ID of its
    optimization resource, and must use `operation=transform`. Consumers select it by resource identity,
    input shape, and output media type; ordinary conversion excludes optimizer capabilities. A resource

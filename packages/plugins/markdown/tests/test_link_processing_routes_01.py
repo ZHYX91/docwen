@@ -78,7 +78,6 @@ def test_docx_typed_route_rejects_undeclared_physical_sibling(tmp_path: Path) ->
         "![[assets/pixel.png]]",
         "![[outside.md]]",
         "[[outside.md|outside]]",
-        "[outside](outside.md)",
     ],
 )
 def test_docx_typed_route_rejects_wiki_transclusion_before_filesystem_lookup(
@@ -112,7 +111,10 @@ def test_docx_typed_route_rejects_wiki_transclusion_before_filesystem_lookup(
 
     assert result.success is False
     assert result.error is not None
-    assert "unavailable for declared-input requests" in result.error.message
+    assert any(
+        message in result.error.message
+        for message in ("unavailable for declared-input requests", "undeclared linked resource")
+    )
 
 
 def test_docx_typed_route_keeps_remote_and_fragment_links(tmp_path: Path) -> None:

@@ -85,6 +85,60 @@ def test_figure_captioned_multi_image_table_round_trips_as_native_table(
     assert "| --- | --- |" in markdown
 
 
+def test_direct_number_suite_standalone_caption_round_trips_without_inventing_carrier(
+    round_trip_runtime: Any,
+    tmp_path: Path,
+) -> None:
+    source_path = tmp_path / "direct-standalone.md"
+    source = (
+        "Figure: Planned architecture ^Plan\n\n\n"
+        "ordinary paragraph\n\n"
+        "Table: Planned table\n\n\n"
+        "second ordinary paragraph\n\n"
+        "See @[[#^plan]], @[[#figure: planned architecture]], and @[[#table: planned table]].\n"
+    )
+    source_path.write_text(source, encoding="utf-8")
+
+    output = md_to_docx(
+        round_trip_runtime,
+        source_path,
+        tmp_path / "direct-standalone-docx",
+        request_id="direct-number-suite-standalone",
+    )
+
+    reopened = Document(str(output))
+    recovery = DocxSemanticsV3Recovery.load(output, reopened)
+    assert [(item.kind, item.source_id, item.title, item.cached_number) for item in recovery.recovered_captions] == [
+        ("figure", "Plan", "Planned architecture", "1"),
+        ("table", None, "Planned table", "1"),
+    ]
+    assert all(item.object_elements == () for item in recovery.recovered_captions)
+    instructions = [item.text or "" for item in reopened.element.iter(qn("w:instrText"))]
+    assert any("SEQ Figure" in item for item in instructions)
+    assert any("SEQ Table" in item for item in instructions)
+    # Both the block-ID and title references resolve to the addressable Figure;
+    # the ID-less Table reference remains a soft reference.
+    references = [item for item in instructions if " REF " in item]
+    assert len(references) == 2
+    assert references[0] == references[1]
+
+    markdown = docx_to_md(
+        round_trip_runtime,
+        output,
+        tmp_path / "direct-standalone-md",
+        request_id="direct-number-suite-standalone-reverse",
+        preserve_numbering=False,
+    )
+    assert "Figure: Planned architecture ^Plan" in markdown
+    assert "ordinary paragraph" in markdown
+    assert "Table: Planned table" in markdown
+    assert "second ordinary paragraph" in markdown
+    assert "@[[#^plan]]" in markdown
+    assert "@[[#figure: planned architecture]]" in markdown
+    assert "@[[#table: planned table]]" in markdown
+    assert "![image omitted]()" not in markdown
+
+
 def test_exact_two_figure_captioned_multi_image_table_round_trips_with_short_target_range(
     round_trip_runtime: Any,
     tmp_path: Path,

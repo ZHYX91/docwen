@@ -27,7 +27,6 @@ from docwen_core.docx_semantics_v3 import (
 from docwen_core.export_semantics import LinkRuntimeConfig
 from docwen_core.links import (
     DeclaredResourceResolver,
-    bind_declared_markdown_images,
     process_markdown_links,
     reject_declared_input_link_lookups,
 )
@@ -568,6 +567,10 @@ class MdToDocxConverter:
                 )
             progress.report_progress(5.0, "Reading Markdown input")
             content, input_bytes = read_input_markdown(input_path)
+            if declared_resource_resolver is not None:
+                declared_resource_resolver = declared_resource_resolver.with_bindings(
+                    content, options.get("markdown_resource_bindings")
+                )
             extensions = resolve_markdown_extensions(options, context.config, direction="input")
 
             # Analyze the exact accepted input before numbering, YAML
@@ -578,10 +581,12 @@ class MdToDocxConverter:
                 source_input.metadata.get("machine_input_id", "source") if source_input is not None else "source"
             )
             try:
+                direct_number_suite = bool(extensions.captions_references)
                 semantic_v3_plan = prepare_runtime_semantics_v3(
                     content,
                     input_id=semantic_input_id,
                     extensions=extensions,
+                    consumer_profile="number_suite_direct" if direct_number_suite else "frozen_v3",
                 )
             except RuntimeSemanticsV3Unsupported as exc:
                 return _semantic_v3_failure(
@@ -628,19 +633,39 @@ class MdToDocxConverter:
                 )
 
             # ── 3. Optionally remove/add heading numbering ────────────
-            remove_num: bool = options.get("remove_numbering", False)
+            remove_num = (
+                bool(options["remove_numbering"])
+                if "remove_numbering" in options
+                else bool(_config_value(context.config, "text.remove_numbering", False))
+            )
             cleanup_rules = getattr(context, "heading_cleanup_rules", ()) or ()
             if remove_num and render_body:
                 progress.report_progress(10.0, "Removing heading numbering")
                 content = remove_md_numbering(content, rules=cleanup_rules)
 
-            add_num: bool = options.get("add_numbering", False)
-            render_mode: str = options.get("heading_numbering_render_mode", "text")
+            add_num = (
+                bool(options["add_numbering"])
+                if "add_numbering" in options
+                else bool(_config_value(context.config, "text.add_numbering", False))
+            )
+            render_mode = _option_or_config(
+                options,
+                "heading_numbering_render_mode",
+                context.config,
+                "text.heading_numbering_render_mode",
+                "text",
+                allowed={"text", "word_native"},
+            )
             word_native_translation = None  # set if word_native mode is used
             approximate_warning: str | None = None
 
             if add_num and render_body:
-                scheme: str = options.get("numbering_scheme", "")
+                scheme = str(
+                    options.get(
+                        "numbering_scheme",
+                        _config_value(context.config, "text.numbering_scheme", "hierarchical_standard"),
+                    )
+                )
                 try:
                     if render_mode == "word_native":
                         # Word adds the resolved scheme; source text remains clean.
@@ -732,22 +757,9 @@ class MdToDocxConverter:
                 # Numbering may have changed the full shielded source. Use the
                 # freshly extracted body rather than the plan's old YAML offset.
                 link_source = md_body
-                if declared_resource_resolver is not None:
-                    # Semantic references are inert in ``link_source`` and cannot
-                    # trigger a filesystem lookup. Ordinary WikiLinks remain
-                    # visible here and are rejected at the declared-input boundary.
-                    reject_declared_input_link_lookups(link_source)
-                    # Bind request-declared resources in the already shielded
-                    # projection.  Replacing the authored body here would discard
-                    # semantic markers and, conversely, processing the pre-bind
-                    # snapshot would fall back to the physical source directory.
-                    link_source = bind_declared_markdown_images(
-                        link_source,
-                        declared_resource_resolver,
-                    )
-
-                # 2a. Apply the request-scoped link policy after YAML extraction.
                 link_config = _request_link_config(context.config)
+                if declared_resource_resolver is not None:
+                    reject_declared_input_link_lookups(link_source, wiki_mode=link_config.non_embed_wiki_mode)
                 image_scope = secrets.token_urlsafe(24)
                 md_body = process_markdown_links(
                     link_source,
@@ -756,6 +768,9 @@ class MdToDocxConverter:
                     target_format="docx",
                     temp_dir=str(workspace.staging_dir),
                     image_scope=image_scope,
+                    declared_image=(
+                        declared_resource_resolver.resolve_image if declared_resource_resolver is not None else None
+                    ),
                 )
                 md_body = materialize_image_placeholders(
                     md_body,
@@ -987,6 +1002,7 @@ class MdToDocxConverter:
                 semantic_v3_session = DocxSemanticsV3Session(
                     doc,
                     source_sha256=semantic_v3_plan.source_sha256,
+                    standalone_caption_authority=direct_number_suite,
                     caption_style_bindings=tuple(
                         CaptionStyleBindingV3(
                             semantic_key=semantic_key,

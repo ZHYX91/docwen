@@ -13,6 +13,7 @@ from docwen_core.models import (
 )
 
 MARKDOWN_TO_DOCX_CAPABILITY_ID = "convert.markdown.to_docx"
+MARKDOWN_SOURCE_TO_DOCX_CAPABILITY_ID = "convert.markdown_source.to_docx"
 MARKDOWN_TO_XLSX_CAPABILITY_ID = "convert.markdown.to_xlsx"
 DOCX_TO_MARKDOWN_CAPABILITY_ID = "convert.docx.to_markdown"
 XLSX_TO_MARKDOWN_CAPABILITY_ID = "convert.xlsx.to_markdown"

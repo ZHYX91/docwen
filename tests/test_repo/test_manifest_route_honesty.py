@@ -23,6 +23,7 @@ covered by the per-plugin route tests (for example, ``test_print_routes.py``).
 
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 import pytest
@@ -33,6 +34,42 @@ from docwen_core.models.manifest import HonestyRoute
 pytestmark = pytest.mark.unit
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _option_read_keys(source: str) -> set[str]:
+    keys: set[str] = set()
+    for node in ast.walk(ast.parse(source)):
+        key = None
+        if isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name) and node.value.id == "options":
+            key = node.slice
+        elif (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == "options"
+            and node.func.attr == "get"
+            and node.args
+        ):
+            key = node.args[0]
+        elif (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "_option_or_config"
+            and len(node.args) >= 2
+            and isinstance(node.args[0], ast.Name)
+            and node.args[0].id == "options"
+        ):
+            key = node.args[1]
+        if isinstance(key, ast.Constant) and isinstance(key.value, str):
+            keys.add(key.value)
+    return keys
+
+
+def test_option_read_inventory_tracks_access_and_policy_helper_without_matching_comments() -> None:
+    assert _option_read_keys(
+        'options.get("defaulted", False)\noptions["required"]\n# options.get("comment")\nother["unrelated"]\n'
+        '_option_or_config(options, "policy", config, "config.policy", "text")\n'
+    ) == {"defaulted", "required", "policy"}
 
 
 # Plugins that carry honesty metadata. Each entry is the package providing
@@ -587,6 +624,7 @@ def test_remaining_plugin_source_option_reads_match_route_schemas() -> None:
 
     docx_properties = MD_TO_DOCX_OPTIONS_SCHEMA["properties"]
     assert docx_properties["locale"]["enum"] == list(SHIPPED_STYLE_LOCALES)
+    docx_option_reads = _option_read_keys(markdown_docx_source)
     for key in (
         "formatting_mode",
         "remove_numbering",
@@ -596,7 +634,7 @@ def test_remaining_plugin_source_option_reads_match_route_schemas() -> None:
         "template_name",
         "hr_mapping",
     ):
-        assert f'options.get("{key}"' in markdown_docx_source
+        assert key in docx_option_reads
         assert key in docx_properties
     assert "list_separator" not in docx_properties
     policy_source = (

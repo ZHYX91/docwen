@@ -477,11 +477,14 @@ def _has_explicit_resolved_v4_signal(
 
     if {
         NUMBERING_OCCURRENCE_MAP_NAMESPACE,
-        STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE,
         CITATION_ITEM_MAP_NAMESPACE,
         CITATION_OCCURRENCE_MAP_NAMESPACE,
     }.intersection(owned):
         return True
+    # Standalone occurrence authority is shared with the direct source writer.
+    # Its presence alone does not select the resolved caption field layout;
+    # inspect the physical caption below, then let the selected reader prove
+    # the same occurrence map and exact SDT inventory.
     target_by_tag = {item.tag: item for item in targets}
     caption_style_ids = {item.resolved_style_id for item in caption_styles}
     for paragraph in document.element.body.iter(qn("w:p")):

@@ -146,6 +146,7 @@ def process_single_embed(
     table_safe: bool = False,
     image_scope: str | None = None,
     process_links: Callable[..., str] | None = None,
+    declared_image: Callable[[str, str], str] | None = None,
 ) -> str | None:
     """Dispatch a single embedded link to the correct processor.
 
@@ -193,6 +194,21 @@ def process_single_embed(
 
     image_mode = EmbeddedImageMode(image_mode)
     md_mode_enum = EmbeddedMdMode(md_mode)
+
+    if declared_image is not None:
+        # A declared-input request must never reach path search or embed recursion.
+        image_path = declared_image(original_link, link_target)
+        if get_file_type(image_path) != "image":
+            raise ValueError("declared embed is not an image")
+        return process_embedded_image(
+            image_path,
+            original_link,
+            mode=image_mode,
+            display_text=display_text or Path(unquote(link_target)).name,
+            width=width,
+            height=height,
+            image_scope=image_scope,
+        )
 
     # ── 1. Data URI image ─────────────────────────────────────────────
     if is_data_uri_image(link_target):
@@ -378,6 +394,7 @@ def resolve_embedded_links(
     table_safe: bool = False,
     image_scope: str | None = None,
     process_links: Callable[..., str] | None = None,
+    declared_image: Callable[[str, str], str] | None = None,
     _table_context_scoped: bool = False,
 ) -> str:
     """Scan Markdown *content* for ``![[...]]`` wiki-embed links and resolve
@@ -501,6 +518,7 @@ def resolve_embedded_links(
             table_safe=in_table,
             image_scope=image_scope,
             process_links=process_links if process_links is not None else _recurse,
+            declared_image=declared_image,
         )
 
         parts.append(content[cursor : match.start()])

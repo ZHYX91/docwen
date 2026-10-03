@@ -2701,6 +2701,7 @@ def _run_machine_protocol_smoke_impl(
     }
     expected_capability_ids = {
         "convert.markdown.to_docx",
+        "convert.markdown_source.to_docx",
         "convert.markdown.to_xlsx",
         "convert.docx.to_markdown",
         "convert.pdf.to_markdown",
@@ -2785,6 +2786,40 @@ def _run_machine_protocol_smoke_impl(
             "packaged_machine_protocol_markdown_input_shape_mismatch:"
             f"{markdown_capability.get('input_shape') if isinstance(markdown_capability, dict) else markdown_capability}"
         )
+    source_markdown_capability = capability_by_id.get("convert.markdown_source.to_docx")
+    expected_source_markdown_input_shape = {
+        "slots": [
+            {
+                "role": "source",
+                "kind": "document",
+                "media_types": ["text/markdown"],
+                "min_items": 1,
+                "max_items": 1,
+            },
+            {
+                "role": "linked_resource",
+                "kind": "resource",
+                "media_types": ["image/png", "image/jpeg", "image/gif", "image/bmp", "image/webp"],
+                "min_items": 0,
+            },
+        ],
+        "undeclared_roles": "reject",
+    }
+    if (
+        not isinstance(source_markdown_capability, dict)
+        or source_markdown_capability.get("input_shape") != expected_source_markdown_input_shape
+        or source_markdown_capability.get("limitations") != expected_semantic_limitations
+    ):
+        raise RuntimeError("packaged_machine_protocol_source_markdown_contract_mismatch")
+    source_properties = source_markdown_capability.get("options_schema", {}).get("properties", {})
+    if not {
+        "remove_numbering",
+        "add_numbering",
+        "numbering_scheme",
+        "heading_numbering_render_mode",
+    }.issubset(source_properties):
+        raise RuntimeError("packaged_machine_protocol_source_markdown_numbering_options_missing")
+
     physical_capability_ids = (
         "convert.pdf.to_markdown",
         "convert.ofd.to_markdown",
