@@ -228,14 +228,16 @@ A resolved caption target does not require a carrier. On this resolved-v4 consum
 uses the exact canonical-case `Figure:`, `Table:`, `Equation:`, or `Code:` keyword; lowercase or other
 case-only variants are not widened into Number Suite declarations. When the provider supplies a valid caption
 declaration whose local carrier relation is absent or ambiguous, DocWen materializes it as a standalone caption and
-must not guess an object from wider document structure. An ID-bearing standalone caption keeps the normal target map/bookmark but its target
-SDT contains exactly the caption paragraph. Every ID-less standalone caption, enabled or disabled, instead has one
-independent `document-standalone-caption-occurrence-map/v1` record and one caption-only block SDT tagged
-`docwen-standalone-caption-v1:<digest32>`. The record binds source/plan identity, source range, semantic kind,
-enabled state and exact derived number when enabled; `target_id` remains empty. Enabled standalone captions retain
+must not guess an object from wider document structure. Every standalone caption has one independent
+`document-standalone-caption-occurrence-map/v1` record that proves the source/plan identity, source range,
+semantic kind, enabled state, target ID when present, and exact derived number when enabled. An ID-bearing standalone
+caption keeps its normal target-map identity/bookmark and its caption-only `docwen-target-v1:` SDT; the standalone
+record points at that same target tag and does not create a second wrapper. An ID-less standalone caption instead
+uses one caption-only block SDT tagged `docwen-standalone-caption-v1:<digest32>`. Enabled standalone captions retain
 their already-proven closed `SEQ`/optional `STYLEREF` materialization, while disabled records contain no numbering
-field. The standalone authority creates no hidden ID or bookmark and is the only basis for recovering an ID-less
-standalone declaration; caption style or physical adjacency alone is insufficient.
+field. The standalone authority creates no hidden ID or bookmark and is the only basis for accepting a caption-only
+target/occurrence; deleting a carrier from an ordinary bound target therefore fails closed rather than silently
+turning it into a standalone caption. Caption style or physical adjacency alone is insufficient.
 
 DocWen never writes a derived number into Markdown, rewrites a Heading, interprets a WikiLink, or runs an upstream
 resolver. Any provider consumes the same Conversion Port, export plan, corpus, and physical acceptance contract.
