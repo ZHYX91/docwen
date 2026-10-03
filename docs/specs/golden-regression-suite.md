@@ -147,7 +147,6 @@ Candidate-blocking corpora additionally include:
   REF; both ID-less cases prove the closed standalone-caption occurrence map/SDT, exact enabled/derived-number
   authority, no invented target ID, isolated DOCX reopening, and canonical Markdown reconstruction without changing
   subsequent caption counters;
-
 - every disabled ID-less caption has one canonical `document-numbering-occurrence-map/v1` record and one exact
   two-block `docwen-numbering-occurrence-v1:` SDT, bound to source hash/range, kind, false enabled state, empty
   target/derived values, and plan SHA. Fixtures inspect the digest preimage, closed attribute order, canonical
