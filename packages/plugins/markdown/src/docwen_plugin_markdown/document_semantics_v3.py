@@ -14,6 +14,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import re
+import unicodedata
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, cast
@@ -32,6 +33,7 @@ DIAGNOSTIC_EVIDENCE_SCHEMA = "docwen.machine.diagnostic_evidence.v1"
 _ID_RE = re.compile(r"^[A-Za-z0-9-]{1,128}$")
 _CITATION_KEY_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
 _CAPTION_RE = re.compile(r"^(Figure|Table|Equation|Code):(.*)$", re.IGNORECASE)
+_NUMBER_SUITE_CAPTION_RE = re.compile(r"^(Figure|Table|Equation|Code):(.*)$")
 _HEADING_RE = re.compile(r"^( {0,3})(#{1,9})(?!#)[ \t]+(.+?)\s*$")
 _FENCE_RE = re.compile(r"^( {0,3})(?P<fence>`{3,}|~{3,})(?P<info>[^\r\n]*)$")
 _QUOTE_PREFIX_RE = re.compile(r"^ {0,3}>[ \t]?")
@@ -70,6 +72,7 @@ _YAML_FRONT_OPEN_RE = re.compile(r"^(?:\ufeff)?---[ \t]*(?:\r?\n)")
 _YAML_FRONT_CLOSE_RE = re.compile(r"^---[ \t]*(?:\r?\n|$)", re.MULTILINE)
 
 type TargetKind = Literal["heading", "figure", "table", "equation", "code_block"]
+type SemanticConsumerProfile = Literal["frozen_v3", "number_suite_direct"]
 type ResolutionStatus = Literal[
     "resolved",
     "missing",
@@ -187,6 +190,7 @@ def analyze_markdown_semantics_v3(
     rename_replacements: Mapping[int, str] | None = None,
     semantic_id_replacements: Mapping[int, str] | None = None,
     extensions: MarkdownExtensions | None = None,
+    consumer_profile: SemanticConsumerProfile = "frozen_v3",
 ) -> MarkdownSemanticsV3Analysis:
     """Parse one authenticated Markdown source into the v3 source oracle.
 
@@ -197,6 +201,8 @@ def analyze_markdown_semantics_v3(
 
     if not input_id or len(input_id) > 256:
         raise ValueError("input_id must contain 1..256 characters")
+    if consumer_profile not in {"frozen_v3", "number_suite_direct"}:
+        raise ValueError("semantic consumer profile is outside the closed set")
     unsupported_separator = _UNSUPPORTED_LINE_SEPARATOR_RE.search(source)
     if unsupported_separator is not None:
         raise ValueError(
@@ -209,7 +215,8 @@ def analyze_markdown_semantics_v3(
     source_identity = _source_identity(input_id, source_sha256)
     semantic_source = _mask_yaml_front_matter(source)
     lines = _split_lines(semantic_source)
-    blocks = _scan_blocks(lines)
+    caption_re = _NUMBER_SUITE_CAPTION_RE if consumer_profile == "number_suite_direct" else _CAPTION_RE
+    blocks = _scan_blocks(lines, caption_re=caption_re)
     dialect = extensions or MarkdownExtensions.obsidian()
     literal_ranges: list[SourceRange] = []
 
@@ -370,7 +377,7 @@ def analyze_markdown_semantics_v3(
             continue
 
         object_index = caption_bindings.get(index)
-        if object_index is None:
+        if object_index is None and consumer_profile == "frozen_v3":
             diagnostics.append(
                 _diagnostic(
                     source_identity,
@@ -385,7 +392,7 @@ def analyze_markdown_semantics_v3(
                 )
             )
             continue
-        object_block = blocks[object_index]
+        object_block = blocks[object_index] if object_index is not None else None
 
         caption_counters[declaration_kind] += 1
         declaration_end = max(
@@ -398,13 +405,18 @@ def analyze_markdown_semantics_v3(
             "number": str(caption_counters[declaration_kind]),
             "source_form": "declaration",
             "source_keyword": block.data["source_keyword"],
-            "range": SourceRange(
-                min(block.start, object_block.start),
-                max(declaration_end, object_block.end),
-            ).as_dict(),
+            "range": (
+                SourceRange(
+                    min(block.start, object_block.start),
+                    max(declaration_end, object_block.end),
+                ).as_dict()
+                if object_block is not None
+                else SourceRange(block.start, declaration_end).as_dict()
+            ),
             "declaration_range": SourceRange(block.start, declaration_end).as_dict(),
-            "object_range": SourceRange(object_block.start, object_block.end).as_dict(),
         }
+        if object_block is not None:
+            record["object_range"] = SourceRange(object_block.start, object_block.end).as_dict()
         if anchor_id is not None and anchor_range is not None:
             record["id"] = anchor_id
             record["id_range"] = anchor_range.as_dict()
@@ -567,6 +579,7 @@ def analyze_markdown_semantics_v3(
             heading_records,
             owners,
             external_reference_map,
+            normalize_titles=consumer_profile == "number_suite_direct",
         )
         references.append(reference)
         diagnostics.extend(reference_diagnostics)
@@ -859,12 +872,13 @@ def _split_lines(source: str) -> list[_Line]:
     return lines
 
 
-def _scan_blocks(lines: Sequence[_Line]) -> list[_Block]:
+def _scan_blocks(lines: Sequence[_Line], *, caption_re: re.Pattern[str] = _CAPTION_RE) -> list[_Block]:
     blocks = _scan_container_blocks(
         lines,
         container_path=(),
         container_segments=(),
         paragraph_kind="paragraph",
+        caption_re=caption_re,
     )
     return sorted(
         blocks,
@@ -883,6 +897,7 @@ def _scan_container_blocks(
     container_path: tuple[tuple[str, int], ...],
     container_segments: tuple[tuple[str, int, int], ...],
     paragraph_kind: str,
+    caption_re: re.Pattern[str] = _CAPTION_RE,
 ) -> list[_Block]:
     blocks: list[_Block] = []
     index = 0
@@ -1033,7 +1048,7 @@ def _scan_container_blocks(
             )
             index += 1
             continue
-        caption = _CAPTION_RE.fullmatch(line.text)
+        caption = caption_re.fullmatch(line.text)
         if caption is not None and re.search(r"\{#[^{}\s]+\}[ \t]*$", caption.group(2)):
             # Historical Pandoc-style attributes are ordinary current source.
             # Only the explicit migration module may reinterpret them.
@@ -1153,7 +1168,7 @@ def _scan_container_blocks(
             candidate = lines[end_index + 1].text
             if (
                 _HEADING_RE.fullmatch(candidate)
-                or _CAPTION_RE.fullmatch(candidate)
+                or caption_re.fullmatch(candidate)
                 or _match_fence_opener_v3(candidate)
                 or _ANCHOR_ONLY_CANDIDATE_RE.fullmatch(candidate)
                 or _QUOTE_PREFIX_RE.match(candidate) is not None
@@ -1193,6 +1208,7 @@ def _scan_container_blocks(
                     container_path=child_path,
                     container_segments=child_segments,
                     paragraph_kind="container_text",
+                    caption_re=caption_re,
                 )
             )
         elif block.kind == "list":
@@ -1211,6 +1227,7 @@ def _scan_container_blocks(
                         container_path=item_path,
                         container_segments=item_segments,
                         paragraph_kind="list_item",
+                        caption_re=caption_re,
                     )
                 )
     return [*blocks, *nested]
@@ -1602,6 +1619,11 @@ def _validate_external_citations(
     return output
 
 
+def _normalize_number_suite_title(value: str) -> str:
+    normalized = unicodedata.normalize("NFC", value.replace("\u2060", "")).strip()
+    return re.sub(r"[ \t]+", " ", normalized).casefold()
+
+
 def _parse_reference_body(body: str) -> tuple[str | None, str, str | None]:
     selector_text, separator, alias = body.partition("|")
     if separator and (not alias or "|" in alias):
@@ -1622,6 +1644,8 @@ def _resolve_reference(
     headings: Sequence[dict[str, Any]],
     owners: Mapping[str, Sequence[_Owner]],
     external: Mapping[tuple[str, str, str], ExternalReferenceResolution],
+    *,
+    normalize_titles: bool = False,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     diagnostics: list[dict[str, Any]] = []
     body = match.group("body")
@@ -1692,8 +1716,21 @@ def _resolve_reference(
         elif page_locator is not None:
             status = "external_unresolved"
         else:
+            normalized_heading_path = tuple(
+                _normalize_number_suite_title(item) for item in heading_path
+            )
             matching_headings = [
-                heading for heading in headings if tuple(heading["heading_path"][-len(heading_path) :]) == heading_path
+                heading
+                for heading in headings
+                if (
+                    tuple(
+                        _normalize_number_suite_title(item)
+                        for item in heading["heading_path"][-len(heading_path) :]
+                    )
+                    == normalized_heading_path
+                    if normalize_titles
+                    else tuple(heading["heading_path"][-len(heading_path) :]) == heading_path
+                )
             ]
             if len(heading_path) == 1:
                 keywords = {"figure": "Figure", "table": "Table", "equation": "Equation", "code_block": "Code"}
@@ -1701,7 +1738,14 @@ def _resolve_reference(
                     target
                     for target in targets
                     if target["kind"] in keywords
-                    and f"{keywords[target['kind']]}: {target['title']}".strip() == fragment.strip()
+                    and (
+                        _normalize_number_suite_title(
+                            f"{keywords[target['kind']]}: {target['title']}".strip()
+                        )
+                        == _normalize_number_suite_title(fragment)
+                        if normalize_titles
+                        else f"{keywords[target['kind']]}: {target['title']}".strip() == fragment.strip()
+                    )
                 )
             if len(matching_headings) == 1:
                 target = matching_headings[0]
@@ -1855,6 +1899,7 @@ __all__ = [
     "ExternalCitationResolution",
     "ExternalReferenceResolution",
     "MarkdownSemanticsV3Analysis",
+    "SemanticConsumerProfile",
     "SourceRange",
     "analyze_markdown_semantics_v3",
     "is_resource_less_image_carrier_v3",
