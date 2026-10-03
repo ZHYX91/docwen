@@ -139,7 +139,7 @@ class _DisabledOccurrenceBinding:
 
 
 @dataclass(frozen=True, slots=True)
-class _StandaloneDisabledOccurrenceBinding:
+class _StandaloneOccurrenceBinding:
     identity: StandaloneCaptionOccurrenceIdentity
     caption_element: Any
 
@@ -219,7 +219,7 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
         self._heading_payload_snapshots: dict[tuple[int, int, str], tuple[Any, ...]] = {}
         self._source_projected_heading_keys: set[tuple[int, int, str]] = set()
         self._occurrence_bindings: list[_DisabledOccurrenceBinding] = []
-        self._standalone_occurrence_bindings: list[_StandaloneDisabledOccurrenceBinding] = []
+        self._standalone_occurrence_bindings: list[_StandaloneOccurrenceBinding] = []
         self._reference_occurrences: list[ReferenceOccurrenceIdentityV3] = []
         self._soft_references: list[SoftReferenceIdentityV3] = []
         self._stable_reference_target_ids: list[str] = []
@@ -437,27 +437,28 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
         if identity is not None:
             physical = (*object_elements, caption._p) if kind == "figure" else (caption._p, *object_elements)
             self._target_bindings.append(TargetBindingV3(identity, physical))
+        elif not logical_objects:
+            occurrence = derive_standalone_caption_occurrence(
+                source_sha256=self._port.source_sha256,
+                source_start=source_start,
+                source_end=source_end,
+                kind=kind,  # type: ignore[arg-type]
+                plan_sha256=self._port.plan_sha256,
+                enabled=plan_target.enabled,
+                derived_number=plan_target.derived_number,
+            )
+            self._standalone_occurrence_bindings.append(
+                _StandaloneOccurrenceBinding(occurrence, caption._p)
+            )
         elif not plan_target.enabled:
-            if logical_objects:
-                occurrence = derive_numbering_occurrence(
-                    source_sha256=self._port.source_sha256,
-                    source_start=source_start,
-                    source_end=source_end,
-                    kind=kind,  # type: ignore[arg-type]
-                    plan_sha256=self._port.plan_sha256,
-                )
-                self._occurrence_bindings.append(_DisabledOccurrenceBinding(occurrence, caption._p, object_elements))
-            else:
-                occurrence = derive_standalone_caption_occurrence(
-                    source_sha256=self._port.source_sha256,
-                    source_start=source_start,
-                    source_end=source_end,
-                    kind=kind,  # type: ignore[arg-type]
-                    plan_sha256=self._port.plan_sha256,
-                )
-                self._standalone_occurrence_bindings.append(
-                    _StandaloneDisabledOccurrenceBinding(occurrence, caption._p)
-                )
+            occurrence = derive_numbering_occurrence(
+                source_sha256=self._port.source_sha256,
+                source_start=source_start,
+                source_end=source_end,
+                kind=kind,  # type: ignore[arg-type]
+                plan_sha256=self._port.plan_sha256,
+            )
+            self._occurrence_bindings.append(_DisabledOccurrenceBinding(occurrence, caption._p, object_elements))
 
     def render_reference(self, paragraph: Any, *, source_start: int, source_end: int) -> None:
         if self._finalized:
