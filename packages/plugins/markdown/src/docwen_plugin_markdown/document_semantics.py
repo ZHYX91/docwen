@@ -675,7 +675,7 @@ def _project_inline_content(children: list[dict[str, Any]]) -> list[dict[str, An
     projected: list[dict[str, Any]] = []
     for child in children:
         child_type = child.get("type")
-        if child.get("schema") == "docwen.markdown_semantics.v3":
+        if child.get("schema") in {"docwen.markdown_semantics.v3", "docwen.number_suite_direct.v1"}:
             # The v1 projection is a test oracle for the superseded grammar,
             # not a second authority for current Markdown semantics.  Keep
             # already-typed v3 constructs literal here; their authoritative
