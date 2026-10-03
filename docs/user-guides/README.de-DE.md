@@ -199,9 +199,12 @@ Zusätzlich zur grafischen Oberfläche bietet DocWen eine Kommandozeilenschnitts
 Für Skripte, Agents oder Plugin-Integrationen wird diese Reihenfolge empfohlen:
 
 1. `inspect <file> [--json]`: zuerst den tatsächlichen Dateityp, das Format und die unterstützten Aktionen erkennen.
-2. `schema convert`: den maschinenlesbaren Vertrag und die Bedingungen von `convert` abrufen.
-3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: Erkennung, Normalisierung und Routing vorab prüfen, ohne Dateien zu schreiben.
-4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: die echte Konvertierung erst danach ausführen.
+2. `resources list formats --json`: die tatsächlich verfügbaren Runtime-Routen und Abhängigkeitsprüfungen lesen.
+3. `schema convert`: den maschinenlesbaren Vertrag und die Bedingungen von `convert` abrufen.
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: Erkennung, Normalisierung und Routing vorab prüfen, ohne Dateien zu schreiben.
+5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: die echte Konvertierung erst danach ausführen.
+
+Externe Inhaltsintegrationen verwenden `serve --stdio` mit Machine Protocol v2: Fähigkeiten ermitteln, eine Aufgabe planen und anschließend ausführen. Das CLI-Format `--json` dient nur der Terminaldarstellung und ist nicht die produktübergreifende Kompatibilitätsgrenze. Für lokale Desktop-Steuerung gibt es getrennt die stabile Oberfläche `gui open|activate|status`.
 
 ### Häufige Beispiele
 
@@ -259,8 +262,10 @@ Die folgende Tabelle zeigt nur haeufige Befehle. Fuer die vollstaendige Befehlsf
 | `inspect <file> [--json]` | Dateikategorie/-format, empfohlene Aktionen und Warnungen bei Erweiterungs-/Inhaltsabweichungen anzeigen. |
 | `doctor --json` | Gibt Diagnosen zusammen mit Laufzeitfähigkeits-Zusammenfassungen und Abhängigkeits-Gates aus. |
 | `resources list formats --json` | Listet Zielformate nach Quellkategorie auf und ergänzt Zusammenfassungen zu Laufzeit-Abhängigkeiten und Einschränkungen. |
+| `resources list optimizations --json` | Typisierte Optimierungsressourcen und ihre kanonischen Routenbindungen auflisten. |
 | `resources list templates` | Verfügbare Vorlagen auflisten. |
 | `resources list numbering-schemes` | Verfügbare Nummerierungsschemata auflisten. |
+| `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | DocWen über die getrennte lokale GUI-Steuerung starten oder aktivieren und optional eine absolute Datei öffnen. |
 | `--template <id>` | Exakte kanonische Ressourcen-ID aus `resources list templates`; Anzeigenamen, Dateinamen und Pfade werden abgelehnt. DOCX-IDs gelten für `docx/doc/odt/rtf/wps/pdf`, XLSX-IDs für `xlsx/xls/ods/csv`. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Bildextraktion und OCR für `convert --to md`. |
 | `--image-mode file|base64|embed|omit` | Steuert, wie Bilder beim Markdown-Export ausgegeben werden. |
@@ -491,6 +496,8 @@ Hinweis (JSON-Bericht für Markdown-Korrektur):
 Verwalten Sie DOCX/XLSX-Vorlagen unter **Einstellungen → Vorlagen**: aktivieren, deaktivieren, sortieren und als Standard festlegen. Integrierte Vorlagen sind schreibgeschützt; eigene Vorlagen liegen im beschreibbaren Benutzerverzeichnis. Bei MSIX müssen Sie WindowsApps nicht ändern.
 
 ### Benutzerdefinierte Vorlagen
+
+DocWen Core verwendet für Runtime/Control unter Windows eine Named Pipe und unter Linux/macOS einen AF_UNIX-Socket. Eine Dateisperre stellt nur die Einzelinstanz-Eigentümerschaft her; Steuerbefehle werden nicht über Dateien transportiert. Dies beschreibt nur die Core-Grenze. DocWen Assistant 3.1 unterstützt Windows- und Linux-Desktop-Hosts. Microsoft-Store-Installationen unter Windows können automatisch erkannt werden; unter Linux wird ein kompatibles entpacktes Paket manuell ausgewählt. macOS wird vom Assistant derzeit nicht unterstützt.
 
 1. Kopieren und bearbeiten Sie eine integrierte Vorlage oder importieren Sie eine DOCX/XLSX-Datei.
 2. Bearbeiten Sie Inhalt, Formatvorlagen und Platzhalter der eigenen Kopie in Word, Excel oder WPS; die Regeln stehen unten.
