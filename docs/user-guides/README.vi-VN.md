@@ -6,7 +6,7 @@
 
 [English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)
 
-Công cụ chuyển đổi định dạng tài liệu và bảng biểu: hỗ trợ chuyển đổi hai chiều Word/Markdown/Excel. Chạy trên máy (offline), đảm bảo an toàn dữ liệu.
+DocWen là công cụ chuyển đổi tài liệu và bảng biểu cục bộ cho Word, Markdown, Excel và các định dạng văn phòng liên quan. Công cụ ưu tiên quy trình offline ổn định và xử lý tài liệu ngay trên thiết bị của người dùng.
 
 ## 📖 Bối cảnh dự án
 
@@ -15,7 +15,7 @@ Phần mềm được tạo ra để giải quyết các vấn đề thường g
 - Nhiều loại file với yêu cầu định dạng khác nhau.
 - Cần chạy offline trong môi trường intranet/thiết bị cũ.
 
-**Triết lý thiết kế**: công cụ nhẹ, dễ dùng, chi phí học thấp. Không nhằm thay thế các công cụ chuyên nghiệp như LaTeX/Pandoc.
+**Triết lý thiết kế**: DocWen ưu tiên các quy trình chuyển đổi và sắp xếp tài liệu hằng ngày dễ học và có thể dùng ngay. Công cụ không nhằm thay thế các hệ thống dàn trang hoặc chuyển đổi chuyên biệt như LaTeX hay Pandoc; mục tiêu là làm cho các tác vụ tài liệu phổ biến trở nên trực tiếp, rõ ràng và vẫn giữ ranh giới kỹ thuật minh bạch.
 
 ## ✨ Tính năng chính
 
