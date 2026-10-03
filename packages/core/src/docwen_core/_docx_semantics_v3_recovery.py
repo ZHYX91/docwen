@@ -513,7 +513,7 @@ def _prove_caption_target_group(
 ) -> tuple[Any, tuple[Any, ...]]:
     from docx.oxml.ns import qn
 
-    if len(blocks) == 1 and caption_parser is not None and standalone:
+    if len(blocks) == 1 and standalone:
         caption = blocks[0]
         object_elements: tuple[Any, ...] = ()
     elif len(blocks) == 2:
