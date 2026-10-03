@@ -693,7 +693,7 @@ class SettingsDialog(QDialog):
             combo.clear()
             if result.status == "failed":
                 combo.addItem(
-                    t("main_window.runtime_unavailable", "Runtime is unavailable; conversion cannot start."),
+                    t("main_window.runtime_unavailable", "Conversion service is unavailable; conversion cannot start."),
                     None,
                 )
                 error_text = str(result.error or "")
