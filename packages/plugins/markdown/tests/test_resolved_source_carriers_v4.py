@@ -66,11 +66,7 @@ def test_carrier_bridge_keeps_numbering_and_resolution_profile_free() -> None:
 
 
 def test_carrier_bridge_ignores_caption_and_reference_profile_diagnostics() -> None:
-    source = (
-        "Figure: Planned ^planned\n\n\n"
-        "ordinary paragraph\n\n"
-        "@[[#^planned]]\n"
-    )
+    source = "Figure: Planned ^planned\n\n\nordinary paragraph\n\n@[[#^planned]]\n"
 
     plan = prepare_resolved_source_carriers_v4(
         source,
