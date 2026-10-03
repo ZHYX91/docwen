@@ -551,7 +551,9 @@ def analyze_markdown_semantics_v3(
         for later in occurrences[1:]:
             fixes: tuple[dict[str, Any], ...] = ()
             replacement = replacements.get(later.id_range.start)
-            replacement_key = _number_suite_id_key(replacement) if normalize_ids and replacement is not None else replacement
+            replacement_key = (
+                _number_suite_id_key(replacement) if normalize_ids and replacement is not None else replacement
+            )
             if replacement is not None and _valid_id(replacement) and replacement_key not in owners:
                 fixes = (
                     {
@@ -1764,17 +1766,12 @@ def _resolve_reference(
         elif page_locator is not None:
             status = "external_unresolved"
         else:
-            normalized_heading_path = tuple(
-                _normalize_number_suite_title(item) for item in heading_path
-            )
+            normalized_heading_path = tuple(_normalize_number_suite_title(item) for item in heading_path)
             matching_headings = [
                 heading
                 for heading in headings
                 if (
-                    tuple(
-                        _normalize_number_suite_title(item)
-                        for item in heading["heading_path"][-len(heading_path) :]
-                    )
+                    tuple(_normalize_number_suite_title(item) for item in heading["heading_path"][-len(heading_path) :])
                     == normalized_heading_path
                     if normalize_titles
                     else tuple(heading["heading_path"][-len(heading_path) :]) == heading_path
@@ -1787,9 +1784,7 @@ def _resolve_reference(
                     for target in targets
                     if target["kind"] in keywords
                     and (
-                        _normalize_number_suite_title(
-                            f"{keywords[target['kind']]}: {target['title']}".strip()
-                        )
+                        _normalize_number_suite_title(f"{keywords[target['kind']]}: {target['title']}".strip())
                         == _normalize_number_suite_title(fragment)
                         if normalize_titles
                         else f"{keywords[target['kind']]}: {target['title']}".strip() == fragment.strip()
