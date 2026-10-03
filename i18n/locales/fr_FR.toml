@@ -1033,7 +1033,7 @@ pending = "En attente"
 processing = "Traitement en cours"
 completed = "Termine"
 skipped = "Ignore"
-failed = "Echec"
+failed = "Échec"
 cancelled = "Annule"
 
 # 文件选择器
