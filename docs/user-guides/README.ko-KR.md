@@ -6,7 +6,7 @@
 
 [English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)
 
-Word/Markdown/Excel 양방향 변환을 지원하는 문서·표 변환 도구입니다. 완전 로컬 실행으로 데이터 보안과 신뢰성을 보장합니다.
+DocWen은 Word, Markdown, Excel 등 업무용 형식을 위한 로컬 문서·표 변환 도구입니다. 안정적인 오프라인 작업 흐름을 지향하며 문서 처리를 사용자의 장치 안에서 수행합니다.
 
 ## 📖 프로젝트 배경
 
@@ -15,7 +15,7 @@ Word/Markdown/Excel 양방향 변환을 지원하는 문서·표 변환 도구�
 - 문서 유형이 다양하고 유형별로 요구되는 고정 포맷이 다름
 - 내부망/구형 PC에서도 동작해야 하므로 오프라인 실행이 필요함
 
-**설계 철학**: 전문 툴(LaTeX, Pandoc 등)만큼의 범용성과 완성도를 목표로 하기보다는, 학습 비용이 거의 없는 “간단하고 바로 쓰는” 변환 도구에 초점을 맞춥니다.
+**설계 철학**: DocWen은 일상적인 변환과 문서 정리를 쉽게 배우고 바로 사용할 수 있는 흐름에 초점을 둡니다. LaTeX나 Pandoc 같은 전문 조판·변환 시스템을 대체하려는 것이 아니라, 자주 쓰는 문서 작업을 단순하고 명확하게 만들면서 기술적 경계를 분명히 유지하는 것이 목표입니다.
 
 ## ✨ 핵심 기능
 
