@@ -196,9 +196,12 @@ DocWen은 GUI 외에도 자동화 스크립트, 배치 처리, 외부 연동을 
 스크립트, Agent, 플러그인 연동에서는 다음 순서를 권장합니다.
 
 1. `inspect <file> [--json]`: 먼저 실제 파일 범주, 형식, 지원 동작을 확인합니다.
-2. `schema convert`: `convert` 의 기계 판독 가능한 계약과 조건 규칙을 읽습니다.
-3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: 결과를 쓰지 않고 탐지, 정규화, 라우팅을 미리 확인합니다.
-4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: 확인 후 실제 변환을 실행합니다.
+2. `resources list formats --json`: 현재 Runtime에서 실제로 사용할 수 있는 경로와 의존성 조건을 확인합니다.
+3. `schema convert`: `convert` 의 기계 판독 가능한 계약과 조건 규칙을 읽습니다.
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: 결과를 쓰지 않고 탐지, 정규화, 라우팅을 미리 확인합니다.
+5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: 확인 후 실제 변환을 실행합니다.
+
+외부 콘텐츠 통합은 `serve --stdio`와 Machine Protocol v2를 사용하여 기능을 확인하고 작업을 계획한 뒤 실행합니다. CLI의 `--json`은 터미널 표시 형식일 뿐 제품 간 호환성 경계가 아닙니다. 로컬 데스크톱 제어에는 별도의 안정적인 `gui open|activate|status` 인터페이스를 사용합니다.
 
 ### 자주 쓰는 예시
 
@@ -256,8 +259,10 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `inspect <file> [--json]` | 파일 범주/형식, 권장 동작, 확장자와 내용 불일치 경고를 확인합니다. |
 | `doctor --json` | 진단 결과와 함께 런타임 능력 요약 및 의존성 게이트를 출력합니다. |
 | `resources list formats --json` | 원본 범주별 대상 형식과 의존성 게이트 / 제한 요약을 출력합니다. |
+| `resources list optimizations --json` | 형식화된 최적화 리소스와 정규 경로 연결을 나열합니다. |
 | `resources list templates` | 사용 가능한 템플릿을 나열합니다. |
 | `resources list numbering-schemes` | 사용 가능한 번호 체계를 나열합니다. |
+| `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | 별도의 로컬 GUI 제어로 DocWen을 시작하거나 활성화하고 필요하면 절대 경로 파일 하나를 엽니다. |
 | `--template <id>` | `resources list templates`가 반환한 정규 리소스 ID를 그대로 사용합니다. 표시 이름·파일명·경로는 거부됩니다. DOCX ID는 `docx/doc/odt/rtf/wps/pdf`, XLSX ID는 `xlsx/xls/ods/csv`에 적용됩니다. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | `convert --to md` 용 이미지 추출 및 OCR 옵션입니다. |
 | `--image-mode file|base64|embed|omit` | Markdown 내보내기 시 이미지 출력 방식을 제어합니다. |
@@ -487,6 +492,8 @@ Markdown → DOCX 변환 시 변환기는 템플릿 스타일을 자동으로 �
 **설정 → 템플릿**에서 DOCX/XLSX 템플릿의 활성화, 비활성화, 순서 및 기본값을 관리합니다. 기본 제공 템플릿은 읽기 전용이며 사용자 지정 템플릿은 쓰기 가능한 사용자 폴더에 저장됩니다. MSIX에서도 WindowsApps를 수정할 필요가 없습니다.
 
 ### 사용자 정의 템플릿
+
+DocWen Core의 Runtime/Control 전송은 Windows에서는 named pipe, Linux/macOS에서는 AF_UNIX 소켓을 사용합니다. 파일 잠금은 단일 인스턴스 소유권만 설정하며 제어 명령을 파일로 전달하지 않습니다. 이는 Core 경계에 대한 설명입니다. DocWen Assistant 3.1은 Windows와 Linux 데스크톱 호스트를 지원합니다. Windows Microsoft Store 설치는 자동 감지를 사용할 수 있고, Linux에서는 호환되는 압축 해제 패키지를 수동으로 선택합니다. Assistant는 현재 macOS를 지원하지 않습니다.
 
 1. 기본 제공 템플릿을 복사하여 편집하거나 기존 DOCX/XLSX 파일을 가져옵니다.
 2. Word, Excel 또는 WPS에서 복사본의 내용, 스타일 및 자리 표시자를 수정합니다. 아래 규칙을 참고하세요.
