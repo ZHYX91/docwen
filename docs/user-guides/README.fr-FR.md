@@ -199,9 +199,12 @@ En plus de l'interface graphique, DocWen fournit une interface en ligne de comma
 Pour les scripts, agents ou plugins, l'ordre recommandé est le suivant :
 
 1. `inspect <file> [--json]` : détecter d'abord la catégorie réelle du fichier, son format et les actions prises en charge.
-2. `schema convert` : lire le contrat lisible par machine et les contraintes conditionnelles de `convert`.
-3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` : prévisualiser détection, normalisation et routage sans écrire de sortie.
-4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...` : lancer ensuite la conversion réelle.
+2. `resources list formats --json` : lire les routes Runtime réellement disponibles et leurs dépendances.
+3. `schema convert` : lire le contrat lisible par machine et les contraintes conditionnelles de `convert`.
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` : prévisualiser détection, normalisation et routage sans écrire de sortie.
+5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...` : lancer ensuite la conversion réelle.
+
+Les intégrations de contenu externes utilisent `serve --stdio` avec Machine Protocol v2 : découverte des capacités, planification de la tâche, puis exécution. La sortie CLI `--json` est une présentation pour le terminal, pas la frontière de compatibilité entre produits. Le contrôle local de l’application de bureau utilise séparément l’interface stable `gui open|activate|status`.
 
 ### Exemples courants
 
@@ -259,8 +262,10 @@ Le tableau ci-dessous ne liste que les commandes les plus courantes. Pour la sur
 | `inspect <file> [--json]` | Inspecte la catégorie/le format du fichier, les actions recommandées et les avertissements de décalage entre extension et contenu. |
 | `doctor --json` | Retourne les diagnostics avec le résumé des capacités d’exécution et les portes de dépendance. |
 | `resources list formats --json` | Liste les formats cibles par catégorie source avec des résumés des dépendances à l’exécution et des limitations. |
+| `resources list optimizations --json` | Lister les ressources d’optimisation typées et leurs liaisons de route canoniques. |
 | `resources list templates` | Liste les modèles disponibles. |
 | `resources list numbering-schemes` | Liste les schémas de numérotation disponibles. |
+| `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | Démarrer ou activer DocWen via le contrôle GUI local séparé et ouvrir éventuellement un fichier absolu. |
 | `--template <id>` | ID canonique exact renvoyé par `resources list templates` ; les noms affichés, noms de fichier et chemins sont rejetés. Les ID DOCX s'appliquent à `docx/doc/odt/rtf/wps/pdf`, les ID XLSX à `xlsx/xls/ods/csv`. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Extraction d'images et OCR pour `convert --to md`. |
 | `--image-mode file|base64|embed|omit` | Contrôle la façon dont les images sont émises pendant l'export Markdown. |
@@ -493,6 +498,8 @@ Note (rapport JSON de correction Markdown) :
 Gérez les modèles DOCX/XLSX dans **Paramètres → Modèles** : activation, désactivation, ordre et modèle par défaut. Les modèles intégrés sont en lecture seule ; les modèles personnalisés sont stockés dans un dossier utilisateur accessible en écriture. MSIX ne nécessite aucune modification de WindowsApps.
 
 ### Modèles personnalisés
+
+Le transport Runtime/Control de DocWen Core utilise un canal nommé sous Windows et un socket AF_UNIX sous Linux/macOS. Le verrou de fichier sert uniquement à la propriété de l’instance unique ; les commandes de contrôle ne transitent pas par des fichiers. Cette description concerne uniquement Core. DocWen Assistant 3.1 prend en charge les postes de bureau Windows et Linux. Sous Windows, l’installation Microsoft Store peut être détectée automatiquement ; sous Linux, un paquet compatible extrait est sélectionné manuellement. Assistant ne prend actuellement pas en charge macOS.
 
 1. Copiez et modifiez un modèle intégré, ou importez un fichier DOCX/XLSX existant.
 2. Modifiez le contenu, les styles et les espaces réservés de la copie dans Word, Excel ou WPS ; les règles figurent ci-dessous.
