@@ -189,10 +189,6 @@ def _public_readme_paths() -> list[Path]:
     return [ROOT / "README.md", *(DOCS / "user-guides" / name for name in LOCALIZED_READMES)]
 
 
-def _h2_sections(text: str) -> list[str]:
-    return re.split(r"^## .+$", text, flags=re.MULTILINE)[1:]
-
-
 CLI_SECTION_HEADING_MARKERS = {
     "README.md": "Command Line Usage",
     "README.de-DE.md": "CLI-Verwendung",
