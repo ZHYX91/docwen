@@ -850,7 +850,7 @@ acknowledgments = "감사의 말"
 acknowledgments_intro = "이 프로젝트는 다음의 훌륭한 오픈 소스 프로젝트와 도구를 사용합니다. 특별히 감사드립니다:"
 
 # 开源工具描述
-subtitle = "공문 차트 형식 변환 소프트웨어(공문 변환기)"
+subtitle = "문서 및 스프레드시트 형식 변환 도구(공문 변환기)"
 
 [about.tools]
 python_docx = "docx와 markdown 간 양방향 변환, 문서 스타일/구조 처리"

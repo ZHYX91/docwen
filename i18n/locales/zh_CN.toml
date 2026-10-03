@@ -895,7 +895,7 @@ exported = "完整规则已导出。"
 [about]
 title = "关于"
 # 仅简体中文使用的品牌副标题，其他语言 locale 无需翻译该键
-subtitle = "公文图表格式转换软件（公文转换器）"
+subtitle = "文档与表格格式转换工具（公文转换器）"
 version_info = "版本 {version}"
 version_tooltip = "本软件离线运行，请手动检查更新。"
 contact = "联系邮箱: {email}"

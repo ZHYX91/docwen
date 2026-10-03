@@ -850,7 +850,7 @@ acknowledgments = "謝辞"
 acknowledgments_intro = "このプロジェクトは以下の優れたオープンソースプロジェクトとツールを使用しています。以下に感謝します："
 
 # 开源工具描述
-subtitle = "公文書・図表変換ソフトウェア（公文書コンバーター）"
+subtitle = "文書・表形式変換ツール（公文書コンバーター）"
 
 [about.tools]
 python_docx = "docxとmarkdownの双方向変換用、ドキュメントスタイルと構造を処理"

@@ -849,7 +849,7 @@ acknowledgments = "致謝"
 acknowledgments_intro = "本項目使用了以下優秀的開源項目和工具，特此致謝："
 
 # 开源工具描述
-subtitle = "公文圖表格式轉換軟體（公文轉換器）"
+subtitle = "文件與表格格式轉換工具（公文轉換器）"
 
 [about.tools]
 python_docx = "用於實現 docx 與 markdown 的雙向轉換，處理文件樣式和結構"
