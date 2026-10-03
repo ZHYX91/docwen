@@ -8,7 +8,12 @@ from dataclasses import dataclass
 from itertools import pairwise
 from typing import Any, Literal
 
-from docwen_core._docx_semantics_v3_model import DocxSemanticsV3Error, require_sha256
+from docwen_core._docx_semantics_v3_model import (
+    DocxSemanticsV3Error,
+    derive_target_identity_v3,
+    require_sha256,
+    require_source_id,
+)
 from docwen_core._docx_semantics_v3_ooxml import sdt_tag, wrap_direct_body_group
 
 STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE = "https://docwen.dev/schema/document-standalone-caption-occurrence-map/v1"
@@ -29,7 +34,7 @@ class StandaloneCaptionOccurrenceIdentity:
     kind: CaptionKind
     plan_sha256: str
     enabled: bool
-    target_id: None
+    target_id: str | None
     derived_number: str | None
     sha256: str
 
@@ -42,6 +47,7 @@ def derive_standalone_caption_occurrence(
     kind: CaptionKind,
     plan_sha256: str,
     enabled: bool,
+    target_id: str | None,
     derived_number: str | None,
 ) -> StandaloneCaptionOccurrenceIdentity:
     """Derive the canonical digest and block-SDT tag."""
@@ -52,6 +58,8 @@ def derive_standalone_caption_occurrence(
         raise DocxSemanticsV3Error("standalone-caption occurrence source range must be non-empty and ordered")
     if kind not in {"figure", "table", "equation", "code_block"}:
         raise DocxSemanticsV3Error("standalone-caption occurrence kind is invalid")
+    if target_id is not None:
+        require_source_id(target_id)
     if type(enabled) is not bool:
         raise DocxSemanticsV3Error("standalone-caption occurrence enabled flag is invalid")
     if enabled:
@@ -61,21 +69,27 @@ def derive_standalone_caption_occurrence(
         raise DocxSemanticsV3Error("disabled standalone-caption occurrence must not carry a derived number")
     encoded_number = derived_number or ""
     encoded_enabled = "true" if enabled else "false"
+    encoded_target = target_id or ""
     preimage = (
         "docwen-standalone-caption-occurrence-map-v1\0"
         f"{source_sha256}\0{source_start}\0{source_end}\0{kind}\0"
-        f"{encoded_enabled}\0\0{encoded_number}\0{plan_sha256}"
+        f"{encoded_enabled}\0{encoded_target}\0{encoded_number}\0{plan_sha256}"
     )
     digest = hashlib.sha256(preimage.encode("utf-8")).hexdigest()
+    tag = (
+        f"{STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX}{digest[:32]}"
+        if target_id is None
+        else derive_target_identity_v3(kind, target_id).tag
+    )
     return StandaloneCaptionOccurrenceIdentity(
-        tag=f"{STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX}{digest[:32]}",
+        tag=tag,
         source_sha256=source_sha256,
         source_start=source_start,
         source_end=source_end,
         kind=kind,
         plan_sha256=plan_sha256,
         enabled=enabled,
-        target_id=None,
+        target_id=target_id,
         derived_number=derived_number,
         sha256=digest,
     )
@@ -92,7 +106,8 @@ def standalone_caption_occurrence_map_xml(
         (
             f'<occurrence tag="{item.tag}" source_sha256="{item.source_sha256}" '
             f'source_start="{item.source_start}" source_end="{item.source_end}" '
-            f'kind="{item.kind}" enabled="{"true" if item.enabled else "false"}" target_id="" '
+            f'kind="{item.kind}" enabled="{"true" if item.enabled else "false"}" '
+            f'target_id="{_xml_attr(item.target_id or "")}" '
             f'derived_number="{_xml_attr(item.derived_number or "")}" '
             f'plan_sha256="{item.plan_sha256}" sha256="{item.sha256}"/>'
         )
@@ -140,7 +155,6 @@ def parse_standalone_caption_occurrence_map(root: Any) -> list[StandaloneCaption
             or element.text is not None
             or element.tail is not None
             or len(element) != 0
-            or element.get("target_id") != ""
             or element.get("plan_sha256") != plan_sha256
         ):
             raise DocxSemanticsV3Error("standalone-caption occurrence record is not canonical")
@@ -148,6 +162,8 @@ def parse_standalone_caption_occurrence_map(root: Any) -> list[StandaloneCaption
         if raw_enabled not in {"true", "false"}:
             raise DocxSemanticsV3Error("standalone-caption occurrence enabled flag is invalid")
         enabled = raw_enabled == "true"
+        raw_target_id = element.get("target_id", "")
+        resolved_target_id = raw_target_id or None
         derived_number = element.get("derived_number", "")
         if not derived_number:
             resolved_number: str | None = None
@@ -168,6 +184,7 @@ def parse_standalone_caption_occurrence_map(root: Any) -> list[StandaloneCaption
             kind=kind,  # type: ignore[arg-type]
             plan_sha256=plan_sha256,
             enabled=enabled,
+            target_id=resolved_target_id,
             derived_number=resolved_number,
         )
         if element.get("tag") != derived.tag or element.get("sha256") != derived.sha256:
@@ -196,6 +213,7 @@ def validate_standalone_caption_occurrences(
             kind=item.kind,
             plan_sha256=item.plan_sha256,
             enabled=item.enabled,
+            target_id=item.target_id,
             derived_number=item.derived_number,
         )
         if item != expected:
@@ -212,6 +230,8 @@ def wrap_standalone_caption_occurrence(
 ) -> None:
     """Wrap exactly one direct-body caption paragraph."""
 
+    if identity.target_id is not None:
+        raise DocxSemanticsV3Error("addressable standalone caption uses its target SDT, not a second wrapper")
     owner = _direct_body_owner(caption_element)
     wrap_direct_body_group((owner,), identity.tag)
 
@@ -227,6 +247,8 @@ def prove_standalone_caption_occurrence_sdt(
 
     from docx.oxml.ns import qn
 
+    if identity.target_id is not None:
+        raise DocxSemanticsV3Error("addressable standalone caption is proven by its target SDT")
     if sdt.tag != qn("w:sdt") or sdt_tag(sdt) != identity.tag:
         raise DocxSemanticsV3Error("standalone-caption occurrence SDT tag is invalid")
     properties = sdt.find(qn("w:sdtPr"))
