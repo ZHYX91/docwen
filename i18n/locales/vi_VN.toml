@@ -1014,7 +1014,7 @@ sort_size = "Kích thước"
 sort_mtime = "Ngày sửa đổi"
 sort_ascending = "Tăng dần"
 sort_descending = "Giảm dần"
-filter_button = "Loc"
+filter_button = "Lọc"
 filter_button_with_label = "Lọc: {label}"
 filter_all = "Tất cả"
 filter_failed = "Thất bại"
@@ -1171,7 +1171,7 @@ split_invalid_range_warning = "Nhập số trang trong tệp, như 1-2 hoặc 1,
 selected_split_file = "Tệp hiện tại: {pages} trang"
 invalid_page_range = "Phạm vi trang không hợp lệ: {part}"
 invalid_page = "Trang không hợp lệ: {part}"
-split_mode_single_page_warning = "⚠️ Tep nay chi co 1 trang; khong can tach"
+split_mode_single_page_warning = "⚠️ Tệp này chỉ có 1 trang; không cần tách"
 
 # 表格转换区
 [conversion_panel.spreadsheet]
