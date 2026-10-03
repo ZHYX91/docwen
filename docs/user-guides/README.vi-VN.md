@@ -197,9 +197,12 @@ Ngoài giao diện đồ họa, DocWen còn cung cấp giao diện dòng lệnh 
 Đối với script, agent hoặc plugin, nên dùng thứ tự sau:
 
 1. `inspect <file> [--json]`: trước tiên nhận diện loại tệp thực tế, định dạng và các thao tác được hỗ trợ.
-2. `schema convert`: đọc hợp đồng máy đọc được và các ràng buộc điều kiện của `convert`.
-3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: xem trước quá trình nhận diện, chuẩn hóa và định tuyến mà không ghi tệp đầu ra.
-4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: sau khi xác nhận, mới chạy chuyển đổi thật.
+2. `resources list formats --json`: đọc các tuyến Runtime thực sự khả dụng và các điều kiện phụ thuộc.
+3. `schema convert`: đọc hợp đồng máy đọc được và các ràng buộc điều kiện của `convert`.
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: xem trước quá trình nhận diện, chuẩn hóa và định tuyến mà không ghi tệp đầu ra.
+5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: sau khi xác nhận, mới chạy chuyển đổi thật.
+
+Tích hợp nội dung bên ngoài dùng `serve --stdio` với Machine Protocol v2: khám phá khả năng, lập kế hoạch tác vụ rồi thực thi. `--json` của CLI chỉ là định dạng trình bày cho terminal, không phải ranh giới tương thích giữa các sản phẩm. Điều khiển ứng dụng desktop cục bộ dùng riêng giao diện ổn định `gui open|activate|status`.
 
 ### Ví dụ thường dùng
 
@@ -257,8 +260,10 @@ Bảng dưới đây chỉ liệt kê các lệnh thông dụng. Để xem đầ
 | `inspect <file> [--json]` | Kiểm tra loại/định dạng tệp, hành động gợi ý và cảnh báo khi phần mở rộng không khớp nội dung. |
 | `doctor --json` | Trả về chẩn đoán cùng với phần tóm tắt khả năng chạy và cổng phụ thuộc. |
 | `resources list formats --json` | Liệt kê định dạng đích theo loại nguồn và kèm cổng phụ thuộc / bản tóm tắt giới hạn. |
+| `resources list optimizations --json` | Liệt kê các tài nguyên tối ưu hóa có kiểu và liên kết tuyến chuẩn của chúng. |
 | `resources list templates` | Liệt kê các mẫu có sẵn. |
 | `resources list numbering-schemes` | Liệt kê các sơ đồ đánh số có sẵn. |
+| `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | Khởi chạy hoặc kích hoạt DocWen qua đường điều khiển GUI cục bộ riêng và tùy chọn mở một tệp bằng đường dẫn tuyệt đối. |
 | `--template <id>` | ID tài nguyên chuẩn chính xác từ `resources list templates`; tên hiển thị, tên tệp và đường dẫn đều bị từ chối. ID DOCX dùng cho `docx/doc/odt/rtf/wps/pdf`, ID XLSX cho `xlsx/xls/ods/csv`. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Tùy chọn trích ảnh và OCR cho `convert --to md`. |
 | `--image-mode file|base64|embed|omit` | Kiểm soát cách ảnh được xuất ra khi xuất Markdown. |
@@ -489,6 +494,8 @@ Ghi chú (báo cáo JSON khi kiểm tra Markdown):
 Quản lý mẫu DOCX/XLSX trong **Cài đặt → Mẫu**: bật, tắt, sắp xếp và chọn mặc định. Mẫu tích hợp chỉ được đọc; mẫu tùy chỉnh nằm trong thư mục người dùng có quyền ghi. Với MSIX, không cần sửa WindowsApps.
 
 ### Template tuỳ chỉnh
+
+Kênh Runtime/Control của DocWen Core dùng named pipe trên Windows và socket AF_UNIX trên Linux/macOS. Khóa tệp chỉ xác lập quyền sở hữu một phiên bản chạy; lệnh điều khiển không được truyền qua tệp. Nội dung này chỉ mô tả ranh giới Core. DocWen Assistant 3.1 hỗ trợ máy tính để bàn Windows và Linux. Bản Microsoft Store trên Windows có thể dùng tự động phát hiện; trên Linux người dùng chọn thủ công gói tương thích đã giải nén. Assistant hiện chưa hỗ trợ macOS.
 
 1. Sao chép và chỉnh sửa mẫu tích hợp, hoặc nhập tệp DOCX/XLSX có sẵn.
 2. Sửa nội dung, kiểu và chỗ giữ chỗ của bản sao bằng Word, Excel hoặc WPS; xem quy tắc bên dưới.
