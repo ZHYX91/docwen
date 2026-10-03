@@ -123,7 +123,14 @@ def test_source_markdown_docx_capability_owns_request_numbering_and_declared_ima
         },
     ]
     properties = capability["options_schema"]["properties"]
-    assert {"remove_numbering", "add_numbering", "numbering_scheme", "heading_numbering_render_mode"} <= set(properties)
+    request_numbering_keys = {
+        "remove_numbering",
+        "add_numbering",
+        "numbering_scheme",
+        "heading_numbering_render_mode",
+    }
+    assert request_numbering_keys <= set(properties)
+    assert all("default" not in properties[key] for key in request_numbering_keys)
 
     request = _request(
         source,
