@@ -7,6 +7,7 @@ from ._conversion_service_support import (
     IMAGES_MERGE_TO_TIFF_CAPABILITY_ID,
     MARKDOWN_MEDIA_TYPE,
     MARKDOWN_NUMBERING_CAPABILITY_ID,
+    MARKDOWN_SOURCE_TO_DOCX_CAPABILITY_ID,
     MARKDOWN_TO_DOCX_CAPABILITY_ID,
     MARKDOWN_TO_XLSX_CAPABILITY_ID,
     MARKDOWN_VALIDATE_CAPABILITY_ID,
@@ -102,6 +103,67 @@ def test_capability_and_successful_plan_execute_closed_loop(tmp_path: Path) -> N
         (0, "docwen.numbering_export_plan.missing"),
     ],
 )
+def test_source_markdown_docx_capability_owns_request_numbering_and_declared_images(tmp_path: Path) -> None:
+    source = tmp_path / "note.md"
+    image = tmp_path / "image.png"
+    source.write_text("# Scope\n\nFigure: Chart ^chart\n\n![[image.png]]\n", encoding="utf-8")
+    image.write_bytes(b"png fixture")
+    staging = tmp_path / "staging"
+    staging.mkdir()
+    service = ConversionService(_Controller(), _Committer())
+
+    capabilities = {item.capability_id: item for item in service.list_capabilities()}
+    capability = capabilities[MARKDOWN_SOURCE_TO_DOCX_CAPABILITY_ID].to_dict()
+    assert capability["input_shape"]["slots"] == [
+        {
+            "role": "source",
+            "kind": "document",
+            "media_types": [MARKDOWN_MEDIA_TYPE],
+            "min_items": 1,
+            "max_items": 1,
+        },
+        {
+            "role": "linked_resource",
+            "kind": "resource",
+            "media_types": ["image/png", "image/jpeg", "image/gif", "image/bmp", "image/webp"],
+            "min_items": 0,
+        },
+    ]
+    properties = capability["options_schema"]["properties"]
+    assert {"remove_numbering", "add_numbering", "numbering_scheme", "heading_numbering_render_mode"} <= set(properties)
+
+    request = _request(
+        source,
+        staging,
+        capability_id=MARKDOWN_SOURCE_TO_DOCX_CAPABILITY_ID,
+        media_type=MARKDOWN_MEDIA_TYPE,
+        options={
+            "markdown_extensions": {"input": {"captions_references": True}},
+            "remove_numbering": True,
+            "add_numbering": True,
+            "numbering_scheme": "gongwen_standard",
+            "heading_numbering_render_mode": "word_native",
+        },
+    )
+    linked = LocalInputHandle(
+        input_id="input.image",
+        path=str(image),
+        kind="resource",
+        role="linked_resource",
+        logical_path="image.png",
+        media_type=PNG_MEDIA_TYPE,
+        size_bytes=image.stat().st_size,
+        sha256=_sha256(image),
+    )
+    plan = service.plan(replace(request, inputs=(*request.inputs, linked)))
+
+    assert plan.effective_options["remove_numbering"] is True
+    assert plan.effective_options["add_numbering"] is True
+    assert plan.effective_options["numbering_scheme"] == "gongwen_standard"
+    assert plan.effective_options["heading_numbering_render_mode"] == "word_native"
+    assert plan.effective_options["markdown_extensions"]["input"]["captions_references"] is True
+
+
 def test_v4_dual_input_missing_role_fails_without_artifact(
     tmp_path: Path, retained_index: int, expected_code: str
 ) -> None:
