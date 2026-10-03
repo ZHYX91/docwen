@@ -1206,7 +1206,7 @@ no_compatible_output = "Không có định dạng đầu ra tương thích cho t
 export_options = "Tùy chọn xuất"
 generation_options = "Tùy chọn tạo"
 extract_images = "Trích xuất ảnh"
-generate = "Tao"
+generate = "Tạo"
 ocr = "OCR ảnh"
 optimization_unavailable = "Các tùy chọn tối ưu hóa hiện không khả dụng; chuyển đổi tiêu chuẩn vẫn dùng được."
 
