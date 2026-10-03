@@ -25,7 +25,7 @@ SOURCE_SHA = hashlib.sha256(b"standalone captions").hexdigest()
 PLAN_SHA = hashlib.sha256(b"plan").hexdigest()
 
 
-def _identity(*, enabled: bool, derived_number: str | None):
+def _identity(*, enabled: bool, derived_number: str | None, target_id: str | None = None):
     return derive_standalone_caption_occurrence(
         source_sha256=SOURCE_SHA,
         source_start=3,
@@ -33,6 +33,7 @@ def _identity(*, enabled: bool, derived_number: str | None):
         kind="table",
         plan_sha256=PLAN_SHA,
         enabled=enabled,
+        target_id=target_id,
         derived_number=derived_number,
     )
 
@@ -72,6 +73,21 @@ def test_map_round_trips_enabled_and_disabled_occurrences(
     assert parse_standalone_caption_occurrence_map(root) == [identity]
     assert f'enabled="{"true" if enabled else "false"}"'.encode() in data
     assert f'derived_number="{derived_number or ""}"'.encode() in data
+
+
+def test_addressable_occurrence_points_at_the_existing_target_tag() -> None:
+    identity = _identity(enabled=True, derived_number="3", target_id="table-a")
+    data = standalone_caption_occurrence_map_xml([identity])
+    root = etree.fromstring(data)
+
+    assert parse_standalone_caption_occurrence_map(root) == [identity]
+    assert identity.tag.startswith("docwen-target-v1:")
+    assert b'target_id="table-a"' in data
+
+    document = Document()
+    caption = document.add_paragraph("Results")
+    with pytest.raises(DocxSemanticsV3Error, match="target SDT"):
+        wrap_standalone_caption_occurrence(caption._p, identity)
 
 
 @pytest.mark.parametrize("enabled", [False, True])
