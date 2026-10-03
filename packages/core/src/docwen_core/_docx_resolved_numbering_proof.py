@@ -552,13 +552,10 @@ class ResolvedNumberingProofMixin:
         style_ids = {item.semantic_key: item.resolved_style_id for item in self._caption_style_bindings}
         binding_by_key = {item.document_target.occurrence_key: item for item in self._caption_plan_bindings}
         for sdt, occurrence in zip(physical, expected, strict=True):
-            parent = sdt.getparent()
-            if parent is not body and (
-                parent is None
-                or parent.tag != qn("w:sdtContent")
-                or not (sdt_tag(parent.getparent()) or "").startswith(ANCHOR_TAG_PREFIX)
-            ):
-                raise ResolvedNumberingDocxError("standalone-caption occurrence has an unsupported block owner")
+            if sdt.getparent() is not body:
+                raise ResolvedNumberingDocxError(
+                    "standalone-caption occurrence must be a direct main-body block"
+                )
             key = (
                 occurrence.identity.source_start,
                 occurrence.identity.source_end,
