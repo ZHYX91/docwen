@@ -143,7 +143,8 @@ Candidate-blocking corpora additionally include:
   fixtures separate a number only from authenticated Word list/field semantics; ambiguous visible prefixes remain
   authored text plus diagnostic and semantic numbering is never written into Markdown;
 - resolved-v4 standalone caption fixtures cover an addressable enabled caption, an enabled ID-less caption and a
-  disabled ID-less caption with no unique carrier. The addressable target proves a caption-only target SDT and stable
+  disabled ID-less caption with no unique carrier, plus a lowercase keyword near-miss that the resolved consumer
+  rejects instead of widening into a Number Suite declaration. The addressable target proves a caption-only target SDT and stable
   REF; both ID-less cases prove the closed standalone-caption occurrence map/SDT, exact enabled/derived-number
   authority, no invented target ID, isolated DOCX reopening, and canonical Markdown reconstruction without changing
   subsequent caption counters;
