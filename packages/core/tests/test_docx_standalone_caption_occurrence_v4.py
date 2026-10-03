@@ -41,7 +41,7 @@ def _identity(*, enabled: bool, derived_number: str | None, target_id: str | Non
 def _wrapped_caption(*, enabled: bool):
     document = Document()
     style = document.styles.add_style("Standalone Table Caption", WD_STYLE_TYPE.PARAGRAPH)
-    caption = document.add_paragraph(style=style)
+    caption = document.add_paragraph(style=style.style_id)
     if enabled:
         caption.add_run("Table ")
         append_complex_field(
@@ -54,7 +54,7 @@ def _wrapped_caption(*, enabled: bool):
         caption.add_run("Results")
     identity = _identity(enabled=enabled, derived_number="3" if enabled else None)
     wrap_standalone_caption_occurrence(caption._p, identity)
-    [wrapper] = list(document.element.body)[:-1]
+    [wrapper] = list(document.element.body)[:-1]  # pyright: ignore[reportAttributeAccessIssue]
     return document, wrapper, caption, style.style_id, identity
 
 
