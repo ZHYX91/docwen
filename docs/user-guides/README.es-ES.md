@@ -19,7 +19,7 @@ Este software se diseñó originalmente para resolver problemas comunes en entor
 
 ## ✨ Funciones principales
 
-- **📄 Conversión de documentos** - Word ↔ Markdown, con conversión de fórmulas, mapeo de separadores (---/***/___) a saltos de página/sección/líneas horizontales y restauración de marker explícitos `<` / `^` de tablas Markdown como combinaciones rectangulares en Word. DOCX/DOC/WPS/RTF/ODT.
+- **📄 Conversión de documentos** - Word ↔ Markdown, con conversión de fórmulas, mapeo de separadores (---/***/___) a saltos de página/sección/líneas horizontales y restauración de marcadores explícitos `<` / `^` de tablas Markdown como combinaciones rectangulares en Word. DOCX/DOC/WPS/RTF/ODT.
 - **📊 Conversión de hojas de cálculo** - Excel ↔ Markdown. XLSX/XLS/ET/ODS/CSV/TSV. Incluye estrategias configurables de exportación de celdas combinadas (`fill / empty / marker`) y herramientas de resumen de tablas. Las plantillas Markdown→XLSX vuelven a admitir campos YAML y placeholders verticales y horizontales de columna; la restauración completa de plantillas Excel, imágenes y combinaciones sigue siendo un objetivo de paridad.
 - **📑 PDF y archivos de maquetación** - PDF/XPS/OFD → Markdown o DOCX. Soporta unir/dividir PDF.
 - **🖼️ Imágenes** - Conversión y compresión JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC.
