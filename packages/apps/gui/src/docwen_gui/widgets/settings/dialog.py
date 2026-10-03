@@ -1186,7 +1186,13 @@ def _friendly_change_value(field: str, value: object) -> str:
         return t("settings.changes.enabled" if value else "settings.changes.disabled")
     if value == "":
         return t("settings.changes.empty_value", "(empty)")
-    value_key = _CHANGE_VALUE_LABEL_KEYS.get(field, {}).get(value)
+    value_key: str | None = None
+    value_labels = _CHANGE_VALUE_LABEL_KEYS.get(field)
+    if value_labels is not None:
+        try:
+            value_key = value_labels.get(value)
+        except TypeError:
+            value_key = None
     if value_key is not None:
         return t(value_key)
     return _abbreviate_value(value)
