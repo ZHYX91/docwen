@@ -54,7 +54,7 @@ _RESERVED_KEYS = frozenset(
 )
 
 _ATX_HEADING_RE = re.compile(r"^(?P<indent> {0,3})(?P<marks>#{1,9})(?!#)[ \t]+(?P<body>.*?)[ \t]*$")
-_CAPTION_RE = re.compile(r"^(?P<keyword>Figure|Table|Equation|Code):(?P<body>.*)$", re.IGNORECASE)
+_CAPTION_RE = re.compile(r"^(?P<keyword>Figure|Table|Equation|Code):(?P<body>.*)$")
 _TRAILING_ID_RE = re.compile(r"(?P<space>[ \t]+)(?P<token>\^(?P<id>[^\s]+))[ \t]*$")
 _CLOSING_ATX_RE = re.compile(r"[ \t]+#+$")
 _HISTORICAL_ATTRIBUTE_RE = re.compile(r"\{#[^{}\s]+\}[ \t]*$")
@@ -275,8 +275,6 @@ def _target_marker_spec(source: str, target: ResolvedDocumentTarget) -> _MarkerS
     standalone_id = _standalone_target_id(source, target_lines[declaration_index][1], target)
     spec = _caption_marker_spec(content, absolute_start, target, standalone_id=standalone_id)
     directions = _caption_source_directions(source, target, spec.source_start, standalone_id=standalone_id)
-    if not directions:
-        raise ResolvedRuntimeV4Unsupported("resolved caption has no object within one blank source line")
     return replace(spec, caption_carrier_directions=directions)
 
 
@@ -780,10 +778,8 @@ def _bind_target_markers(
         elif marker.trim_preceding_space:
             if index != len(children) - 1:
                 raise ResolvedRuntimeV4Unsupported("caption target ID marker is not at the declaration boundary")
-        elif (
-            inline_image_before is None
-            and authored_inline_text(children[:index]).casefold()
-            != ({"code_block": "Code"}.get(target.kind, target.kind.title()) + ":").casefold()
+        elif inline_image_before is None and authored_inline_text(children[:index]) != (
+            {"code_block": "Code"}.get(target.kind, target.kind.title()) + ":"
         ):
             raise ResolvedRuntimeV4Unsupported("ID-less caption target marker moved away from its kind colon")
         node["type"] = "_docwen_resolved_v4_caption_declaration"
@@ -818,7 +814,7 @@ def _caption_content_children(
         raise ResolvedRuntimeV4Unsupported("caption declaration lost its authored kind prefix")
     key = "raw" if "raw" in output[first_text] else "text"
     value = str(output[first_text].get(key, ""))
-    if not value.casefold().startswith(expected.casefold()):
+    if not value.startswith(expected):
         raise ResolvedRuntimeV4Unsupported("caption AST kind prefix differs from its typed target")
     remainder = value[len(expected) :]
     if remainder:
@@ -926,9 +922,9 @@ def _bind_caption_targets(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
             if candidate is not None and _captionable_node_kind(nodes[candidate]) is not None
         }
         candidate_sets[declaration_index] = candidates
-    bindings = _require_unique_caption_bindings(candidate_sets)
+    bindings = _unique_caption_bindings(candidate_sets)
 
-    removed = set(declarations)
+    removed = set(bindings)
     for declaration_index, object_index in bindings.items():
         declaration = nodes[declaration_index]
         object_node = nodes[object_index]
@@ -986,15 +982,18 @@ def _captionable_node_kind(node: dict[str, Any]) -> str | None:
     return None
 
 
-def _require_unique_caption_bindings(candidate_sets: dict[int, set[int]]) -> dict[int, int]:
-    """Require one local carrier per declaration and one claimant per carrier."""
+def _unique_caption_bindings(candidate_sets: dict[int, set[int]]) -> dict[int, int]:
+    """Bind only one-to-one local carrier claims; leave every other caption standalone."""
 
-    if any(len(candidates) != 1 for candidates in candidate_sets.values()):
-        raise ResolvedRuntimeV4Unsupported("caption declarations do not have one unique object matching")
-    bindings = {caption: next(iter(candidates)) for caption, candidates in candidate_sets.items()}
-    if len(set(bindings.values())) != len(bindings):
-        raise ResolvedRuntimeV4Unsupported("caption declarations do not have one unique object matching")
-    return bindings
+    provisional = {
+        caption: next(iter(candidates)) for caption, candidates in candidate_sets.items() if len(candidates) == 1
+    }
+    claims_by_object: dict[int, int] = {}
+    for object_index in provisional.values():
+        claims_by_object[object_index] = claims_by_object.get(object_index, 0) + 1
+    return {
+        caption: object_index for caption, object_index in provisional.items() if claims_by_object[object_index] == 1
+    }
 
 
 def _is_image_paragraph(node: dict[str, Any]) -> bool:

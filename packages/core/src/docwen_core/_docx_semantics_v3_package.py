@@ -52,6 +52,11 @@ from docwen_core.docx_numbering_occurrence import (
     numbering_occurrence_map_xml,
     parse_numbering_occurrence_map,
 )
+from docwen_core.docx_standalone_caption_occurrence import (
+    STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE,
+    parse_standalone_caption_occurrence_map,
+    standalone_caption_occurrence_map_xml,
+)
 
 _RELATIONSHIPS_NAMESPACE = "http://schemas.openxmlformats.org/package/2006/relationships"
 _CONTENT_TYPES_NAMESPACE = "http://schemas.openxmlformats.org/package/2006/content-types"
@@ -71,6 +76,7 @@ _OWNED_MAP_NAMESPACES = frozenset(
         CITATION_ITEM_MAP_NAMESPACE,
         CITATION_OCCURRENCE_MAP_NAMESPACE,
         NUMBERING_OCCURRENCE_MAP_NAMESPACE,
+        STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE,
         TARGET_MAP_NAMESPACE,
         SOFT_REFERENCE_MAP_NAMESPACE,
         REFERENCE_OCCURRENCE_MAP_NAMESPACE,
@@ -541,6 +547,8 @@ def _canonical_owned_map_bytes(namespace: str, root: Any) -> bytes:
         expected = clipboard_table_association_map_xml(parse_clipboard_table_association_map(root))
     elif namespace == NUMBERING_OCCURRENCE_MAP_NAMESPACE:
         expected = numbering_occurrence_map_xml(parse_numbering_occurrence_map(root))
+    elif namespace == STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE:
+        expected = standalone_caption_occurrence_map_xml(parse_standalone_caption_occurrence_map(root))
     elif namespace == CITATION_ITEM_MAP_NAMESPACE:
         expected = citation_item_map_xml(parse_citation_item_map(root))
     elif namespace == CITATION_OCCURRENCE_MAP_NAMESPACE:

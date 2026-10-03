@@ -176,6 +176,7 @@ class DocxSemanticsV3Recovery:
         *,
         topology_map_present: bool,
         caption_parser: Callable[..., tuple[str, str]] | None = None,
+        standalone_target_tags: frozenset[str] = frozenset(),
     ) -> DocxSemanticsV3Recovery:
         from docx.oxml.ns import qn
 
@@ -237,6 +238,7 @@ class DocxSemanticsV3Recovery:
                         target,
                         caption_style_bindings,
                         caption_parser=caption_parser,
+                        standalone=tag in standalone_target_tags,
                     )
                     block_anchors[caption] = SourceAnchorV3("semantic_target", target.source_id, target.kind)
             elif tag in anchor_by_tag:
@@ -286,6 +288,7 @@ class DocxSemanticsV3Recovery:
             block_elements,
             caption_style_bindings,
             caption_parser=caption_parser,
+            standalone_target_tags=standalone_target_tags,
         )
         prove_source_recovery_records(soft_references, [*reference_occurrences, *fenced_sources])
         fenced_sources_by_paragraph = fenced.bind_fenced_source_document_v3(body, fenced_sources)
@@ -365,8 +368,14 @@ class DocxSemanticsV3Recovery:
             None,
         )
 
+    def caption_for_element(self, element: Any) -> RecoveredCaptionV3 | None:
+        return next(
+            (item for item in self.recovered_captions if item.caption_element is element),
+            None,
+        )
+
     def is_caption_element(self, element: Any) -> bool:
-        return any(item.caption_element is element for item in self.recovered_captions)
+        return self.caption_for_element(element) is not None
 
     def render_paragraph_text(self, paragraph_element: Any, *, emit_references: bool = True) -> str | None:
         """Recover exact authored v3 reference tokens from one paragraph."""
@@ -393,22 +402,27 @@ def _prove_caption_target_group(
     caption_style_bindings: tuple[CaptionStyleBindingV3, ...],
     *,
     caption_parser: Callable[..., tuple[str, str]] | None = None,
+    standalone: bool = False,
 ) -> tuple[Any, tuple[Any, ...]]:
     from docx.oxml.ns import qn
 
-    if len(blocks) != 2:
-        raise DocxSemanticsV3Error("caption target SDT must contain one caption and one logical object")
-    if target.kind == "figure":
-        object_slot, caption = blocks
+    if len(blocks) == 1 and caption_parser is not None and standalone:
+        caption = blocks[0]
+        object_elements: tuple[Any, ...] = ()
+    elif len(blocks) == 2:
+        if target.kind == "figure":
+            object_slot, caption = blocks
+        else:
+            caption, object_slot = blocks
+        object_elements = logical_group_elements((object_slot,))
+        _prove_caption_object_kind(target.kind, object_elements)
     else:
-        caption, object_slot = blocks
+        raise DocxSemanticsV3Error("caption target SDT must contain one caption and one logical object")
     if caption.tag != qn("w:p"):
         raise DocxSemanticsV3Error("caption target has no caption paragraph")
     if not caption_style_bindings:
         raise DocxSemanticsV3Error("caption target lacks its authenticated caption-style binding map")
     prove_caption_paragraph_style(caption, target.kind, caption_style_bindings)
-    object_elements = logical_group_elements((object_slot,))
-    _prove_caption_object_kind(target.kind, object_elements)
     parser = _parse_v3_caption if caption_parser is None else caption_parser
     parser(caption, target.kind, required_bookmark=target.bookmark_name)
     return caption, object_elements
@@ -461,6 +475,7 @@ def _recover_captions(
     caption_style_bindings: tuple[CaptionStyleBindingV3, ...],
     *,
     caption_parser: Callable[..., tuple[str, str]] | None = None,
+    standalone_target_tags: frozenset[str] = frozenset(),
 ) -> list[RecoveredCaptionV3]:
     from docx.oxml.ns import qn
 
@@ -477,6 +492,7 @@ def _recover_captions(
             target,
             caption_style_bindings,
             caption_parser=caption_parser,
+            standalone=(tag or "") in standalone_target_tags,
         )
         parser = _parse_v3_caption if caption_parser is None else caption_parser
         title, number = parser(

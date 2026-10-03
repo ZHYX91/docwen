@@ -283,28 +283,6 @@ def test_cross_type_captions_bind_all_carriers_in_both_orders_and_supported_spac
     assert _inline_text(owners[0][_CAPTION_CHILDREN_KEY]) == "Composite"
 
 
-def test_resolved_chain_does_not_use_global_matching_to_resolve_local_ambiguity() -> None:
-    source = "Figure: First\n\n| first |\n|---|\n| 1 |\n\nTable: Second\n\n![second](second.png)\n"
-    targets = tuple(
-        _target(
-            source,
-            source.index(declaration),
-            source.index(declaration) + len(declaration),
-            kind=kind,
-            target_id=None,
-            authored_text=title,
-        )
-        for declaration, kind, title in (
-            ("Figure: First", "figure", "First"),
-            ("Table: Second", "table", "Second"),
-        )
-    )
-    plan = prepare_resolved_runtime_v4(_port(source, targets))
-
-    with pytest.raises(ResolvedRuntimeV4Unsupported, match="one unique object matching"):
-        apply_resolved_runtime_v4(parse_markdown_text(plan.shielded_source), plan)
-
-
 def test_exact_markers_bind_all_targets_references_and_citations_without_deriving_numbers() -> None:
     port = _full_port()
     plan = prepare_resolved_runtime_v4(port)
@@ -345,10 +323,10 @@ def test_exact_markers_bind_all_targets_references_and_citations_without_derivin
     assert body_citation["raw"] == "[@smith; @wang]"
 
 
-def test_idless_heading_closing_marks_and_nested_case_insensitive_caption_bind_structurally() -> None:
-    source = "# **2.3 标题** @key #\n\n> figure: Nested\n>\n> ![x](image.png)\n"
+def test_idless_heading_closing_marks_and_nested_canonical_caption_bind_structurally() -> None:
+    source = "# **2.3 标题** @key #\n\n> Figure: Nested\n>\n> ![x](image.png)\n"
     heading_end = source.index("\n")
-    figure_start = source.index("> figure:")
+    figure_start = source.index("> Figure:")
     targets = (
         _target(
             source,
@@ -609,21 +587,6 @@ def test_apply_rejects_missing_or_duplicated_marker(mutation: str) -> None:
     tampered = plan.shielded_source.replace(marker, replacement, 1)
     with pytest.raises(ResolvedRuntimeV4Unsupported):
         apply_resolved_runtime_v4(parse_markdown_text(tampered), plan)
-
-
-def test_caption_marker_rejects_wrong_adjacent_object_before_any_renderer_binding() -> None:
-    source = "Figure: Caption\n\nnot an image\n"
-    target = _target(
-        source,
-        0,
-        len(source),
-        kind="figure",
-        target_id=None,
-        authored_text="Caption",
-    )
-    plan = prepare_resolved_runtime_v4(_port(source, (target,)))
-    with pytest.raises(ResolvedRuntimeV4Unsupported, match="one unique object matching"):
-        apply_resolved_runtime_v4(parse_markdown_text(plan.shielded_source), plan)
 
 
 def test_next_line_heading_and_caption_ids_bind_to_targets_not_carriers() -> None:

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from docwen_plugin_markdown.document_semantics_v3 import MarkdownSemanticsV3Analysis
 from docwen_plugin_markdown.document_semantics_v3_fenced_source import (
     fenced_source_info_insertion_offset_v3,
 )
@@ -65,16 +66,22 @@ def prepare_resolved_source_carriers_v4(
 ) -> ResolvedSourceCarrierPlanV4:
     """Project only anchors and fences from the frozen source oracle.
 
-    A source diagnostic remains fatal at this boundary.  The resolved port may
-    not use a provider-authored plan to bypass invalid authored Markdown.
+    Diagnostics owned by ordinary anchors/fenced-source recovery remain fatal.
+    Caption/reference diagnostics belong to the resolved port's typed authority
+    and must not become a second semantic gate at this carrier-only boundary.
     """
 
     full_plan = prepare_runtime_semantics_v3(source, input_id=input_id)
     if full_plan.source_sha256 != expected_source_sha256:
         raise RuntimeSemanticsV3Unsupported("source-carrier projection belongs to a different authenticated source")
-    if full_plan.analysis.has_errors:
-        codes = ", ".join(sorted({str(item["code"]) for item in full_plan.analysis.diagnostics}))
-        raise RuntimeSemanticsV3Unsupported(f"authored Markdown has source-oracle diagnostics: {codes or 'unknown'}")
+    carrier_diagnostics = [
+        item
+        for item in full_plan.analysis.diagnostics
+        if not str(item["code"]).startswith(("docwen.markdown.caption.", "docwen.markdown.cross_reference."))
+    ]
+    if any(item["severity"] == "error" for item in carrier_diagnostics):
+        codes = ", ".join(sorted({str(item["code"]) for item in carrier_diagnostics}))
+        raise RuntimeSemanticsV3Unsupported(f"authored Markdown has source-carrier diagnostics: {codes or 'unknown'}")
 
     carrier_markers = tuple(
         marker for marker in full_plan.markers if marker.role in {"ordinary_anchor", "fenced_source"}
@@ -82,8 +89,13 @@ def prepare_resolved_source_carriers_v4(
     edits = tuple(_carrier_edit(source, marker) for marker in carrier_markers)
     _prove_edit_family(source, edits)
     shielded_source = _apply_edits(source, edits)
+    carrier_analysis = MarkdownSemanticsV3Analysis(
+        projection=full_plan.analysis.projection,
+        diagnostics=tuple(carrier_diagnostics),
+        literal_ranges=full_plan.analysis.literal_ranges,
+    )
     carrier_plan = RuntimeSemanticsV3Plan(
-        analysis=full_plan.analysis,
+        analysis=carrier_analysis,
         shielded_source=shielded_source,
         markers=carrier_markers,
         body_start=full_plan.body_start,

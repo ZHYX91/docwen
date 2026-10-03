@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any, cast
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -14,7 +15,12 @@ from docx.enum.style import WD_STYLE_TYPE
 from docx.oxml.ns import qn
 from lxml import etree
 
-from docwen_core._docx_semantics_v3_model import CaptionStyleBindingV3, CaptionStyleKeyV3
+from docwen_core._docx_semantics_v3_model import (
+    CaptionStyleBindingV3,
+    CaptionStyleKeyV3,
+    DocxSemanticsV3Error,
+    derive_target_identity_v3,
+)
 from docwen_core.docx_numbering_import import AMBIGUOUS_VISIBLE_PREFIX_DIAGNOSTIC
 from docwen_core.docx_resolved_numbering import ResolvedNumberingDocxSession
 from docwen_core.docx_resolved_numbering_recovery import (
@@ -26,6 +32,7 @@ from docwen_core.models.request import ConversionRequest, OutputPolicy
 from docwen_core.models.resolved_numbering import (
     NUMBERING_EXPORT_PLAN_MEDIA_TYPE,
     RESOLVED_DOCUMENT_MEDIA_TYPE,
+    CaptionMaterialization,
     HeadingCounterSegment,
     HeadingDefinition,
     HeadingInstance,
@@ -38,6 +45,8 @@ from docwen_core.models.resolved_numbering import (
     ResolvedDocumentTarget,
     ResolvedNumberingPlan,
     ResolvedNumberingPort,
+    ResolvedReference,
+    canonicalize_numbering_plan,
 )
 from docwen_plugin_document.to_markdown.converter import DocxToMarkdownConverter
 from docwen_plugin_markdown.to_docx.converter import MdToDocxConverter
@@ -62,25 +71,153 @@ def _sha(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
 
 
-def _forward_context(tmp_path: Path) -> FakeExecutionContext:
+def _write_standalone_caption_pair(tmp_path: Path) -> tuple[Path, Path]:
+    source = (
+        "Figure: Planned figure ^fig-plan\n\n\nBody A.\n\n"
+        "Table: Planned table\n\n\nBody B.\n\n"
+        "Code: Planned code\n\n\nBody C.\n\n"
+        "See @[[#^fig-plan]].\n"
+    )
+    figure_start = source.index("Figure:")
+    figure_end = source.index("\n", figure_start)
+    table_start = source.index("Table:")
+    table_end = source.index("\n", table_start)
+    code_start = source.index("Code:")
+    code_end = source.index("\n", code_start)
+    targets = (
+        ResolvedDocumentTarget(
+            figure_start,
+            figure_end,
+            _sha(source[figure_start:figure_end]),
+            "figure",
+            "fig-plan",
+            None,
+            "Planned figure",
+        ),
+        ResolvedDocumentTarget(
+            table_start,
+            table_end,
+            _sha(source[table_start:table_end]),
+            "table",
+            None,
+            None,
+            "Planned table",
+        ),
+        ResolvedDocumentTarget(
+            code_start,
+            code_end,
+            _sha(source[code_start:code_end]),
+            "code_block",
+            None,
+            None,
+            "Planned code",
+        ),
+    )
+    reference_token = "@[[#^fig-plan]]"
+    reference_start = source.index(reference_token)
+    reference = ResolvedReference(
+        reference_start,
+        reference_start + len(reference_token),
+        _sha(reference_token),
+        reference_token,
+        figure_start,
+        figure_end,
+        "figure",
+        "fig-plan",
+        "1",
+        None,
+    )
+    figure_materialization = CaptionMaterialization(
+        "simple_seq",
+        "Figure",
+        "arabic_half",
+        "continue",
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        "1",
+        "Figure",
+        " ",
+    )
+    table_materialization = CaptionMaterialization(
+        "simple_seq",
+        "Table",
+        "arabic_half",
+        "continue",
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        "1",
+        "Table",
+        " ",
+    )
+    plan = ResolvedNumberingPlan(
+        (),
+        (),
+        (
+            NumberingTarget(figure_start, figure_end, "figure", True, "fig-plan", "1", figure_materialization),
+            NumberingTarget(table_start, table_end, "table", True, None, "1", table_materialization),
+            NumberingTarget(code_start, code_end, "code_block", False, None, None, None),
+        ),
+    )
+    plan_body = json.loads(json.dumps(asdict(plan)))
+    plan_sha256 = hashlib.sha256(canonicalize_numbering_plan(plan_body)).hexdigest()
+    source_sha256 = _sha(source)
+    document = ResolvedDocument(source, targets, (reference,), (), (), ())
+    neutral_payload = {
+        "$schema": "urn:docwen:schema:resolved-document:v1",
+        "schema": "docwen.resolved_document.v1",
+        "input_id": "standalone-captions",
+        "source_sha256": source_sha256,
+        "plan_sha256": plan_sha256,
+        "document": asdict(document),
+    }
+    plan_payload = {
+        "$schema": "urn:docwen:schema:numbering-export-plan:v1",
+        "schema": "docwen.numbering_export_plan.v1",
+        "input_id": "standalone-captions",
+        "source_sha256": source_sha256,
+        "plan_sha256": plan_sha256,
+        "plan": plan_body,
+    }
+    neutral = tmp_path / "standalone-neutral.json"
+    plan_path = tmp_path / "standalone-plan.json"
+    neutral.write_text(json.dumps(neutral_payload, separators=(",", ":")), encoding="utf-8")
+    plan_path.write_text(json.dumps(plan_payload, separators=(",", ":")), encoding="utf-8")
+    return neutral, plan_path
+
+
+def _forward_context(
+    tmp_path: Path,
+    neutral: Path = _NEUTRAL,
+    plan: Path = _PLAN,
+) -> FakeExecutionContext:
     staging = tmp_path / "forward-staging"
     staging.mkdir()
     refs = (
         FileRef(
-            path=str(_NEUTRAL),
+            path=str(neutral),
             format="markdown",
             category="document",
-            size_bytes=_NEUTRAL.stat().st_size,
+            size_bytes=neutral.stat().st_size,
             input_kind="document",
             input_role="neutral_document",
             logical_path="document.json",
             media_type=RESOLVED_DOCUMENT_MEDIA_TYPE,
         ),
         FileRef(
-            path=str(_PLAN),
+            path=str(plan),
             format="json",
             category="resource",
-            size_bytes=_PLAN.stat().st_size,
+            size_bytes=plan.stat().st_size,
             input_kind="resource",
             input_role="numbering_export_plan",
             logical_path="numbering-plan.json",
@@ -94,7 +231,7 @@ def _forward_context(tmp_path: Path) -> FakeExecutionContext:
         options={"locale": "zh_CN", "heading_merge_mode": "never"},
         output_policy=OutputPolicy(),
     )
-    workspace = FakeWorkspaceHandle(str(_NEUTRAL), str(staging), refs)
+    workspace = FakeWorkspaceHandle(str(neutral), str(staging), refs)
     styles = build_document_style_catalog(
         {"gui": {"language": {"locale": "zh_CN"}}},
         locales_dir=_PROJECT_ROOT / "i18n" / "locales",
@@ -190,6 +327,77 @@ def test_representative_proves_four_kinds_refs_citation_and_preserves_tokens_wit
         ("equation", "energy-main", "", "1"),
         ("code_block", "entry-main", "Entry point", "1"),
     )
+
+
+def test_bound_caption_cannot_be_downgraded_to_standalone_by_removing_its_carrier(tmp_path: Path) -> None:
+    source = _forward_representative(tmp_path)
+    tampered = tmp_path / "bound-caption-without-carrier.docx"
+    tampered.write_bytes(source.read_bytes())
+
+    with ZipFile(tampered) as package:
+        infos = package.infolist()
+        members = {item.filename: package.read(item.filename) for item in infos}
+    root = etree.fromstring(members["word/document.xml"])
+    target_tag = derive_target_identity_v3("figure", "system-overview").tag
+    target = next(
+        item
+        for item in root.iter(qn("w:sdt"))
+        if (tag := item.find(f"{qn('w:sdtPr')}/{qn('w:tag')}")) is not None and tag.get(qn("w:val")) == target_tag
+    )
+    content = target.find(qn("w:sdtContent"))
+    assert content is not None and len(content) == 2
+    content.remove(content[0])
+    members["word/document.xml"] = etree.tostring(
+        root,
+        encoding="UTF-8",
+        xml_declaration=True,
+        standalone=True,
+    )
+    rewritten = tampered.with_suffix(".rewrite.docx")
+    with ZipFile(rewritten, "w", compression=ZIP_DEFLATED) as output:
+        for info in infos:
+            output.writestr(info, members[info.filename])
+    rewritten.replace(tampered)
+
+    with pytest.raises(DocxSemanticsV3Error, match="caption target SDT"):
+        ResolvedNumberingV4Recovery.load_if_present(tampered, Document(str(tampered)))
+
+
+def test_standalone_captions_round_trip_with_numbering_and_reference_authority(tmp_path: Path) -> None:
+    neutral, plan = _write_standalone_caption_pair(tmp_path)
+    forward = MdToDocxConverter().convert(_forward_context(tmp_path, neutral, plan))
+
+    assert forward.success, forward.error
+    source = Path(forward.artifacts[0].staging_path)
+    recovery = ResolvedNumberingV4Recovery.load_if_present(source, Document(str(source)))
+    assert recovery is not None
+    assert recovery.caption_signatures == (
+        ("figure", "fig-plan", "Planned figure", "1"),
+        ("table", None, "Planned table", "1"),
+        ("code_block", None, "Planned code", ""),
+    )
+    assert all(not item.object_elements for item in recovery.recovered_captions)
+
+    with ZipFile(source) as package:
+        document_xml = package.read("word/document.xml")
+        all_xml = b"".join(package.read(name) for name in package.namelist() if name.endswith(".xml"))
+    assert document_xml.count(b"docwen-standalone-caption-v1:") == 2
+    assert b"https://docwen.dev/schema/document-standalone-caption-occurrence-map/v1" in all_xml
+    assert b"SEQ Figure" in document_xml
+    assert b"SEQ Table" in document_xml
+    assert b"SEQ Code" not in document_xml
+    assert b" REF " in document_xml
+
+    reverse = DocxToMarkdownConverter().convert(_reverse_context(tmp_path, source, request_id="standalone-captions"))
+
+    assert reverse.success, reverse.error
+    markdown = Path(reverse.artifacts[0].staging_path).read_text(encoding="utf-8")
+    assert "Figure: Planned figure ^fig-plan" in markdown
+    assert "Table: Planned table" in markdown
+    assert "Code: Planned code" in markdown
+    assert "See @[[#^fig-plan]]." in markdown
+    assert "Figure: 1" not in markdown
+    assert "Table: 1" not in markdown
 
 
 @pytest.mark.parametrize("enabled", [True, False])

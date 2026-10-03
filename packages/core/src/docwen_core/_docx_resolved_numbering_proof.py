@@ -79,6 +79,12 @@ from docwen_core.docx_numbering_ooxml import (
     prove_caption_number,
     prove_heading_numbering_projection,
 )
+from docwen_core.docx_standalone_caption_occurrence import (
+    STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE,
+    STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX,
+    parse_standalone_caption_occurrence_map,
+    prove_standalone_caption_occurrence_sdt,
+)
 
 
 class ResolvedNumberingDocxError(ResolvedNumberingOoxmlError):
@@ -100,6 +106,7 @@ class ResolvedNumberingProofMixin:
     _heading_style_ids: dict[int, str]
     _heading_style_names: dict[str, str]
     _occurrence_bindings: list[Any]
+    _standalone_occurrence_bindings: list[Any]
     _ordinary_anchors: list[Any]
     _anchor_topology_edges: tuple[Any, ...]
     _fenced_sources: list[Any]
@@ -132,6 +139,7 @@ class ResolvedNumberingProofMixin:
             self._prove_reference_occurrence_map(owned)
             self._prove_caption_style_map(package, owned)
             self._prove_numbering_occurrence_map(owned)
+            self._prove_standalone_caption_occurrence_map(owned)
             citation_namespaces = {
                 CITATION_ITEM_MAP_NAMESPACE,
                 CITATION_OCCURRENCE_MAP_NAMESPACE,
@@ -161,6 +169,7 @@ class ResolvedNumberingProofMixin:
         caption_paragraphs = self._prove_caption_paragraphs(reopened, bookmark_inventory)
         self._prove_inline_reference_sdts(reopened)
         self._prove_numbering_occurrence_sdts(reopened, caption_paragraphs)
+        self._prove_standalone_caption_occurrence_sdts(reopened, caption_paragraphs)
         if self._citation_projection is not None:
             prove_citation_projection(reopened, self._citation_projection)
         self._prove_source_carriers(reopened, set(caption_paragraphs.values()))
@@ -272,6 +281,21 @@ class ResolvedNumberingProofMixin:
         )
         if parse_numbering_occurrence_map(root) != expected:
             raise ResolvedNumberingDocxError("numbering-occurrence map differs after reopen")
+
+    def _prove_standalone_caption_occurrence_map(self, owned: dict[str, tuple[int, Any]]) -> None:
+        if not self._standalone_occurrence_bindings:
+            if STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE in owned:
+                raise ResolvedNumberingDocxError("unexpected standalone-caption occurrence map is present")
+            return
+        if STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE not in owned:
+            raise ResolvedNumberingDocxError("standalone-caption occurrence map is missing")
+        _number, root = owned[STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE]
+        expected = sorted(
+            (item.identity for item in self._standalone_occurrence_bindings),
+            key=lambda item: (item.source_start, item.source_end, item.tag),
+        )
+        if parse_standalone_caption_occurrence_map(root) != expected:
+            raise ResolvedNumberingDocxError("standalone-caption occurrence map differs after reopen")
 
     def _prove_target_sdts(self, document: Any, bookmark_inventory: Any) -> None:
         from docx.oxml.ns import qn
@@ -428,7 +452,17 @@ class ResolvedNumberingProofMixin:
                 if owner is None or owner.tag != qn("w:sdtContent") or sdt_tag(sdt) != identity.tag:
                     raise ResolvedNumberingDocxError("addressable caption is outside its target SDT")
             elif plan_target.enabled:
-                if owner is document.element.body:
+                wrapper_tag = sdt_tag(sdt) if sdt is not None else None
+                if binding.object_count == 0:
+                    if (
+                        owner is None
+                        or owner.tag != qn("w:sdtContent")
+                        or not (wrapper_tag or "").startswith(STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX)
+                    ):
+                        raise ResolvedNumberingDocxError(
+                            "enabled standalone ID-less caption lacks its occurrence wrapper"
+                        )
+                elif owner is document.element.body:
                     pass
                 elif (
                     owner is None
@@ -497,6 +531,84 @@ class ResolvedNumberingProofMixin:
             if caption is not caption_paragraphs.get(key):
                 raise ResolvedNumberingDocxError("numbering-occurrence tag is not bound to its exact caption paragraph")
 
+    def _prove_standalone_caption_occurrence_sdts(
+        self,
+        document: Any,
+        caption_paragraphs: dict[tuple[int, int, str], Any],
+    ) -> None:
+        from docx.oxml.ns import qn
+
+        expected = sorted(
+            self._standalone_occurrence_bindings,
+            key=lambda item: (item.identity.source_start, item.identity.source_end, item.identity.tag),
+        )
+        idless = [item for item in expected if item.identity.target_id is None]
+        addressable = [item for item in expected if item.identity.target_id is not None]
+        body = document.element.body
+        physical = [
+            sdt
+            for sdt in body.iter(qn("w:sdt"))
+            if (sdt_tag(sdt) or "").startswith(STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX)
+        ]
+        expected_tags = [item.identity.tag for item in idless]
+        if [sdt_tag(item) for item in physical] != expected_tags:
+            raise ResolvedNumberingDocxError(
+                "standalone-caption occurrence physical order/cardinality differs from source authority"
+            )
+        style_by_kind = {
+            "figure": "figure_caption",
+            "table": "table_caption",
+            "equation": "equation_caption",
+            "code_block": "code_block_caption",
+        }
+        style_ids = {item.semantic_key: item.resolved_style_id for item in self._caption_style_bindings}
+        binding_by_key = {item.document_target.occurrence_key: item for item in self._caption_plan_bindings}
+        for sdt, occurrence in zip(physical, idless, strict=True):
+            if sdt.getparent() is not body:
+                raise ResolvedNumberingDocxError("standalone-caption occurrence must be a direct main-body block")
+            key = (
+                occurrence.identity.source_start,
+                occurrence.identity.source_end,
+                occurrence.identity.kind,
+            )
+            binding = binding_by_key[key]
+            inline_tags = (
+                ()
+                if binding.payload_fragments is None
+                else tuple(
+                    fragment.carrier_tag for fragment in binding.payload_fragments if fragment.carrier_tag is not None
+                )
+            )
+            caption = prove_standalone_caption_occurrence_sdt(
+                sdt,
+                occurrence.identity,
+                caption_style_id=style_ids[style_by_kind[occurrence.identity.kind]],
+                allowed_inline_tags=inline_tags,
+            )
+            if caption is not caption_paragraphs.get(key):
+                raise ResolvedNumberingDocxError(
+                    "standalone-caption occurrence tag is not bound to its exact caption paragraph"
+                )
+        for occurrence in addressable:
+            key = (
+                occurrence.identity.source_start,
+                occurrence.identity.source_end,
+                occurrence.identity.kind,
+            )
+            binding = binding_by_key[key]
+            if binding.object_count != 0 or binding.document_target.target_id != occurrence.identity.target_id:
+                raise ResolvedNumberingDocxError("addressable standalone-caption authority contradicts its target")
+            caption = caption_paragraphs.get(key)
+            owner = None if caption is None else caption.getparent()
+            wrapper = None if owner is None else owner.getparent()
+            if (
+                caption is None
+                or owner is None
+                or owner.tag != qn("w:sdtContent")
+                or sdt_tag(wrapper) != occurrence.identity.tag
+            ):
+                raise ResolvedNumberingDocxError("addressable standalone caption is not inside its exact target SDT")
+
     def _prove_source_carriers(self, document: Any, caption_paragraphs: set[Any]) -> None:
         """Reopen and authenticate the carrier-only source projection."""
 
@@ -504,6 +616,7 @@ class ResolvedNumberingProofMixin:
             *(item.identity.tag for item in self._target_bindings),
             *(item.identity.tag for item in self._ordinary_anchors),
             *(item.identity.tag for item in self._occurrence_bindings),
+            *(item.identity.tag for item in self._standalone_occurrence_bindings),
         }
         try:
             wrappers = prove_resolved_block_hierarchy_v4(
@@ -670,7 +783,7 @@ class ResolvedNumberingProofMixin:
             raise ResolvedNumberingDocxError("caption lost its directly adjacent logical object")
         parent_tag = sdt_tag(container.getparent()) if container.tag == qn("w:sdtContent") else None
         exact_owner = parent_tag is not None and parent_tag.startswith(
-            ("docwen-target-v1:", "docwen-numbering-occurrence-v1:")
+            ("docwen-target-v1:", "docwen-numbering-occurrence-v1:", STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX)
         )
         if exact_owner and (len(children) != count + 1 or not exact_slot):
             raise ResolvedNumberingDocxError("caption ownership wrapper has wrong block cardinality")
@@ -682,12 +795,14 @@ class ResolvedNumberingProofMixin:
             raise ResolvedNumberingDocxError("caption logical object OOXML differs from its bind snapshot")
 
     def _validate_caption_object_elements(self, kind: str, elements: tuple[Any, ...]) -> tuple[Any, ...]:
+        if kind not in {"figure", "table", "equation", "code_block"}:
+            raise ResolvedNumberingDocxError("caption target has an unsupported semantic kind")
+        if not elements:
+            return ()
         try:
             logical = captionable_logical_elements(elements)
         except DocxSemanticsV3Error as exc:
             raise ResolvedNumberingDocxError("caption logical object wrapper is invalid") from exc
-        if kind not in {"figure", "table", "equation", "code_block"}:
-            raise ResolvedNumberingDocxError("caption target has an unsupported semantic kind")
         return tuple(logical)
 
     def _caption_style_ids_by_kind(self) -> dict[str, str]:
