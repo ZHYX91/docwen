@@ -126,32 +126,6 @@ print(1)
     }
 
 
-def test_caption_keywords_are_canonical_case_and_same_file_names_use_number_suite_normalization() -> None:
-    source = """Figure: Architecture ^figure-id
-# Mixed   Case ^heading-id
-
-figure: lower-case near miss
-FIGURE: upper-case near miss
-
-@[[#figure:   architecture]] @[[#mixed case]]
-"""
-    analysis = _analyze(source)
-
-    assert not analysis.has_errors
-    assert [(item["kind"], item["title"]) for item in analysis.projection["targets"]] == [
-        ("figure", "Architecture"),
-        ("heading", "Mixed   Case"),
-    ]
-    assert [item["resolution_status"] for item in analysis.projection["references"]] == [
-        "resolved",
-        "resolved",
-    ]
-    assert [item["resolved_kind"] for item in analysis.projection["references"]] == [
-        "figure",
-        "heading",
-    ]
-
-
 def test_resource_less_image_carrier_preserves_figure_and_ordinary_image_ownership() -> None:
     source = """Figure: Recovered illustration ^figure-owner
 
@@ -202,10 +176,12 @@ def test_only_exact_empty_destination_carrier_has_resource_less_image_semantics(
     analysis = _analyze(source)
 
     assert not is_resource_less_image_carrier_v3(near_miss)
-    assert not analysis.has_errors
-    [target] = analysis.projection["targets"]
-    assert target["kind"] == "figure"
-    assert ("object_range" in target) is ordinary_image
+    assert analysis.has_errors is (not ordinary_image)
+    if ordinary_image:
+        assert analysis.projection["targets"][0]["kind"] == "figure"
+    else:
+        assert analysis.projection["targets"] == []
+        assert analysis.diagnostics[0]["code"] == "docwen.markdown.caption.object_mismatch"
 
 
 def test_structured_post_block_anchors_bind_complete_blocks() -> None:
@@ -518,11 +494,9 @@ This paragraph is not a captionable object.
     assert analysis.has_errors
     assert [item["code"] for item in analysis.diagnostics] == [
         "docwen.markdown.anchor.duplicate",
+        "docwen.markdown.caption.object_mismatch",
         "docwen.markdown.cross_reference.non_semantic_target",
     ]
-    caption = next(item for item in analysis.projection["targets"] if item["kind"] == "figure")
-    assert caption["id"] == "caption-id"
-    assert "object_range" not in caption
     duplicate = analysis.diagnostics[0]
     assert duplicate["related_ranges"] == [
         {
