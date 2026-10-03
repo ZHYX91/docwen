@@ -252,11 +252,12 @@ requirements, Equation/Code ID-only allowance, NFC+lowercase block-ID identity, 
 standalone captions when no unique local carrier can be proven. Standalone direct captions reuse the same authenticated
 standalone-caption authority described above, so reverse conversion never infers them from style or adjacency.
 
-This direct route has no access to private Number Suite plugin settings. Therefore parity with
-Assistant→`resolved_document` is exact for facts determined by authored Markdown plus the same explicit DocWen
-numbering settings. Number Suite-only effective state that is not encoded in the Markdown—such as plugin-specific
-enabled/disabled numbering or custom display templates—can only be reproduced when that state is supplied through
-the resolved numbering port; the direct route never guesses it.
+Private Number Suite plugin state is not an input to this route and is not required for parity. Source-native
+conversion is determined by the authenticated authored Markdown, declared resources, DocWen Markdown-extension
+selection, and the current request's explicit numbering controls. An editor plugin's current enabled/disabled counters,
+derived display numbers, or private templates must not change the result implicitly. A consumer that already owns a
+fully resolved provider-neutral plan may instead choose the separate resolved-v4 Conversion Port; that is a distinct
+capability, not a hidden fallback for source-native conversion.
 
 ## DOCX-to-neutral extraction / DOCX 到中立语义提取
 
