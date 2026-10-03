@@ -199,7 +199,7 @@ Zusätzlich zur grafischen Oberfläche bietet DocWen eine Kommandozeilenschnitts
 Für Skripte, Agents oder Plugin-Integrationen wird diese Reihenfolge empfohlen:
 
 1. `inspect <file> [--json]`: zuerst den tatsächlichen Dateityp, das Format und die unterstützten Aktionen erkennen.
-2. `resources list formats --json`: die tatsächlich verfügbaren Runtime-Routen und Abhängigkeitsprüfungen lesen.
+2. `resources list formats --json`: die in DocWen tatsächlich verfügbaren Routen und Abhängigkeitsbedingungen lesen.
 3. `schema convert`: den maschinenlesbaren Vertrag und die Bedingungen von `convert` abrufen.
 4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: Erkennung, Normalisierung und Routing vorab prüfen, ohne Dateien zu schreiben.
 5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: die echte Konvertierung erst danach ausführen.
