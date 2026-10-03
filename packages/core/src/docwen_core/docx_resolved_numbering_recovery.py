@@ -177,14 +177,8 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
             if occurrence.target_id is None:
                 continue
             target = target_by_tag.get(occurrence.tag)
-            if (
-                target is None
-                or target.kind != occurrence.kind
-                or target.source_id != occurrence.target_id
-            ):
-                raise DocxSemanticsV3Error(
-                    "resolved-v4 addressable standalone occurrence contradicts the target map"
-                )
+            if target is None or target.kind != occurrence.kind or target.source_id != occurrence.target_id:
+                raise DocxSemanticsV3Error("resolved-v4 addressable standalone occurrence contradicts the target map")
             addressable_standalone_tags.add(occurrence.tag)
 
         citations = read_proven_resolved_citations(path)
@@ -433,9 +427,7 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
             )
         for occurrence in addressable:
             matches = [
-                item
-                for item in recovered
-                if item.kind == occurrence.kind and item.source_id == occurrence.target_id
+                item for item in recovered if item.kind == occurrence.kind and item.source_id == occurrence.target_id
             ]
             if len(matches) != 1:
                 raise DocxSemanticsV3Error("resolved-v4 addressable standalone caption is missing or duplicated")
