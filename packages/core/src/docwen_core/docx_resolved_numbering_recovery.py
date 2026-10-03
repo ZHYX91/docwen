@@ -66,6 +66,13 @@ from docwen_core.docx_numbering_occurrence import (
     parse_numbering_occurrence_map,
     prove_numbering_occurrence_sdt,
 )
+from docwen_core.docx_standalone_caption_occurrence import (
+    STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE,
+    STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX,
+    StandaloneCaptionOccurrenceIdentity,
+    parse_standalone_caption_occurrence_map,
+    prove_standalone_caption_occurrence_sdt,
+)
 
 _CAPTION_COUNTER = {
     "figure": "Figure",
@@ -140,6 +147,7 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         fenced_sources: list[Any] = []
         topology: list[Any] = []
         occurrences: list[NumberingOccurrenceIdentity] = []
+        standalone_occurrences: list[StandaloneCaptionOccurrenceIdentity] = []
 
         if TARGET_MAP_NAMESPACE in owned:
             _number, root = owned[TARGET_MAP_NAMESPACE]
@@ -159,6 +167,9 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         if NUMBERING_OCCURRENCE_MAP_NAMESPACE in owned:
             _number, root = owned[NUMBERING_OCCURRENCE_MAP_NAMESPACE]
             occurrences = parse_numbering_occurrence_map(root)
+        if STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE in owned:
+            _number, root = owned[STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE]
+            standalone_occurrences = parse_standalone_caption_occurrence_map(root)
 
         citations = read_proven_resolved_citations(path)
         citation_records: tuple[Any, ...] = ()
@@ -171,7 +182,9 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
             citation_ranges = [(item.source_start, item.source_end, item.tag) for item in citation_records]
         elif CITATION_ITEM_MAP_NAMESPACE in owned:
             raise DocxSemanticsV3Error("resolved-v4 Citation item map has no occurrence map")
-        _prove_one_source_identity((*soft, *references, *fenced_sources, *occurrences, *citation_records))
+        _prove_one_source_identity(
+            (*soft, *references, *fenced_sources, *occurrences, *standalone_occurrences, *citation_records)
+        )
         _prove_merged_inline_order(document, (*soft, *references, *citation_records))
 
         inline_tokens = {
@@ -210,6 +223,15 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         recovery._bind_disabled_occurrences(
             document,
             occurrences,
+            caption_styles,
+            soft,
+            references,
+            citation_ranges,
+            parse_caption,
+        )
+        recovery._bind_standalone_occurrences(
+            document,
+            standalone_occurrences,
             caption_styles,
             soft,
             references,
@@ -325,6 +347,76 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
             )
         self.recovered_captions = tuple(recovered)
 
+    def _bind_standalone_occurrences(
+        self,
+        document: Any,
+        occurrences: list[StandaloneCaptionOccurrenceIdentity],
+        caption_styles: tuple[Any, ...],
+        soft_references: list[Any],
+        references: list[Any],
+        citation_ranges: list[tuple[int, int, str]],
+        parse_caption: Any,
+    ) -> None:
+        from docx.oxml.ns import qn
+
+        body = document.element.body
+        physical = [
+            item
+            for item in body
+            if item.tag == qn("w:sdt")
+            and (sdt_tag(item) or "").startswith(STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX)
+        ]
+        nested = [
+            item
+            for item in body.iter(qn("w:sdt"))
+            if (sdt_tag(item) or "").startswith(STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX)
+        ]
+        if physical != nested or [sdt_tag(item) for item in physical] != [item.tag for item in occurrences]:
+            raise DocxSemanticsV3Error(
+                "resolved-v4 standalone-caption physical order/cardinality differs from its map"
+            )
+        if not occurrences:
+            return
+        styles = {item.semantic_key: item.resolved_style_id for item in caption_styles}
+        recovered = list(self.recovered_captions)
+        reference_ranges = [(item.source_start, item.source_end, item.tag) for item in (*soft_references, *references)]
+        for wrapper, occurrence in zip(physical, occurrences, strict=True):
+            style_id = styles.get(_CAPTION_STYLE_KEY[occurrence.kind])
+            if style_id is None:
+                raise DocxSemanticsV3Error("resolved-v4 standalone caption lacks its caption-style binding")
+            allowed = tuple(
+                tag
+                for start, end, tag in sorted((*reference_ranges, *citation_ranges))
+                if occurrence.source_start <= start and end <= occurrence.source_end
+            )
+            caption = prove_standalone_caption_occurrence_sdt(
+                wrapper,
+                occurrence,
+                caption_style_id=style_id,
+                allowed_inline_tags=allowed,
+            )
+            title, number = parse_caption(caption, occurrence.kind, required_bookmark=None)
+            expected_number = occurrence.derived_number or ""
+            if number != expected_number or bool(number) != occurrence.enabled:
+                raise DocxSemanticsV3Error(
+                    "resolved-v4 standalone caption numbering differs from its occurrence authority"
+                )
+            content = wrapper.find(qn("w:sdtContent"))
+            if content is None:
+                raise DocxSemanticsV3Error("resolved-v4 standalone caption has no physical content")
+            self._block_elements[wrapper] = tuple(content)
+            recovered.append(
+                RecoveredCaptionV3(
+                    kind=occurrence.kind,
+                    source_id=None,
+                    title=title,
+                    cached_number=number,
+                    caption_element=caption,
+                    object_elements=(),
+                )
+            )
+        self.recovered_captions = tuple(recovered)
+
 
 def _prove_one_source_identity(records: tuple[Any, ...]) -> None:
     identities = {item.source_sha256 for item in records}
@@ -359,6 +451,7 @@ def _has_explicit_resolved_v4_signal(
 
     if {
         NUMBERING_OCCURRENCE_MAP_NAMESPACE,
+        STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE,
         CITATION_ITEM_MAP_NAMESPACE,
         CITATION_OCCURRENCE_MAP_NAMESPACE,
     }.intersection(owned):
