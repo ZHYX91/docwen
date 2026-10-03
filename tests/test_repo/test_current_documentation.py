@@ -232,6 +232,20 @@ ASSISTANT_PLATFORM_SUPPORT_MARKERS = {
     "README.zh-TW.md": "支援 Windows 與 Linux 桌面端",
 }
 
+ASSISTANT_MACOS_UNSUPPORTED_MARKERS = {
+    "README.md": "does not currently support macOS",
+    "README.de-DE.md": "macOS wird vom Assistant derzeit nicht unterstützt",
+    "README.es-ES.md": "Assistant no admite macOS actualmente",
+    "README.fr-FR.md": "Assistant ne prend actuellement pas en charge macOS",
+    "README.ja-JP.md": "Assistant は現在 macOS をサポートしていません",
+    "README.ko-KR.md": "Assistant는 현재 macOS를 지원하지 않습니다",
+    "README.pt-BR.md": "Assistant atualmente não oferece suporte ao macOS",
+    "README.ru-RU.md": "macOS в Assistant сейчас не поддерживается",
+    "README.vi-VN.md": "Assistant hiện chưa hỗ trợ macOS",
+    "README.zh-CN.md": "Assistant 目前不支持 macOS",
+    "README.zh-TW.md": "Assistant 目前不支援 macOS",
+}
+
 STALE_ASSISTANT_PLATFORM_MARKERS = (
     "remains Windows desktop-only",
     "仍仅限 Windows 桌面端",
@@ -259,8 +273,10 @@ def test_public_readmes_describe_current_assistant_platform_boundary() -> None:
     for path in _public_readme_paths():
         text = path.read_text(encoding="utf-8")
         obsidian = _named_h2_section(text, "Obsidian")
-        assert ASSISTANT_PLATFORM_SUPPORT_MARKERS[path.name] in obsidian, path.name
-        assert "macOS" in obsidian, path.name
+        support_marker = ASSISTANT_PLATFORM_SUPPORT_MARKERS[path.name]
+        assert support_marker in obsidian, path.name
+        assert text.count(support_marker) == 1, path.name
+        assert ASSISTANT_MACOS_UNSUPPORTED_MARKERS[path.name] in obsidian, path.name
         assert not any(marker in text for marker in STALE_ASSISTANT_PLATFORM_MARKERS), path.name
 
 
