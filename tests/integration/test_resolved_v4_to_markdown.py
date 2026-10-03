@@ -342,8 +342,7 @@ def test_bound_caption_cannot_be_downgraded_to_standalone_by_removing_its_carrie
     target = next(
         item
         for item in root.iter(qn("w:sdt"))
-        if (tag := item.find(f"{qn('w:sdtPr')}/{qn('w:tag')}")) is not None
-        and tag.get(qn("w:val")) == target_tag
+        if (tag := item.find(f"{qn('w:sdtPr')}/{qn('w:tag')}")) is not None and tag.get(qn("w:val")) == target_tag
     )
     content = target.find(qn("w:sdtContent"))
     assert content is not None and len(content) == 2
