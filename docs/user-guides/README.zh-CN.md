@@ -595,11 +595,11 @@ Excel 模板中的 `{{→月份}}` 会依次向右填充"1月"、"2月"、"3月"
 - **🚀 一键启动** - 侧边栏图标快速启动转换器
 - **📂 自动传递** - 自动传递当前打开的文件路径
 - **🔄 单实例管理** - 程序已运行时自动发送文件，无需重复启动
-- **🔒 有界本机控制** - 使用有类型的 `status`、`open`、`activate` 请求，不按进程名探测，也不使用命令文件或状态文件
+- **🔒 安全的本机控制** - 使用结构化的 `status`、`open`、`activate` 请求，不按进程名探测，也不使用命令文件或状态文件
 
 ### 工作原理
 
-DocWen Core 的运行时/控制传输在 Windows 使用命名管道，在 Linux/macOS 使用 AF_UNIX socket。文件锁只负责单实例所有权，不承载控制命令。这里描述的是 Core 能力。DocWen Assistant 3.1 支持 Windows 和 Linux 桌面端；Windows Microsoft Store 安装版可使用自动检测，Linux 使用手动选择的兼容解压包。Assistant 目前不支持 macOS。
+DocWen Core 在 Windows 使用命名管道进行本机控制，在 Linux/macOS 使用 AF_UNIX socket。文件锁只负责单实例所有权，不承载控制命令。这里描述的是 Core 能力。DocWen Assistant 3.1 支持 Windows 和 Linux 桌面端；Windows Microsoft Store 安装版可使用自动检测，Linux 使用手动选择的兼容解压包。Assistant 目前不支持 macOS。
 
 1. **首次点击** → 启动转换器并传入当前文件
 2. **再次点击（有文件）** → 替换为新文件（单文件模式）
