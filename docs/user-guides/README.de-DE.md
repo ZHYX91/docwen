@@ -497,7 +497,6 @@ Verwalten Sie DOCX/XLSX-Vorlagen unter **Einstellungen → Vorlagen**: aktiviere
 
 ### Benutzerdefinierte Vorlagen
 
-DocWen Core verwendet für Runtime/Control unter Windows eine Named Pipe und unter Linux/macOS einen AF_UNIX-Socket. Eine Dateisperre stellt nur die Einzelinstanz-Eigentümerschaft her; Steuerbefehle werden nicht über Dateien transportiert. Dies beschreibt nur die Core-Grenze. DocWen Assistant 3.1 unterstützt Windows- und Linux-Desktop-Hosts. Microsoft-Store-Installationen unter Windows können automatisch erkannt werden; unter Linux wird ein kompatibles entpacktes Paket manuell ausgewählt. macOS wird vom Assistant derzeit nicht unterstützt.
 
 1. Kopieren und bearbeiten Sie eine integrierte Vorlage oder importieren Sie eine DOCX/XLSX-Datei.
 2. Bearbeiten Sie Inhalt, Formatvorlagen und Platzhalter der eigenen Kopie in Word, Excel oder WPS; die Regeln stehen unten.
@@ -591,10 +590,7 @@ Ein begleitendes Obsidian-Plugin wird separat veröffentlicht und arbeitet mit d
 
 ### Funktionsprinzip
 
-Der runtime/control-Transport von DocWen Core verwendet unter Windows eine Named Pipe und unter
-Linux/macOS einen AF_UNIX-Socket. Eine Dateisperre stellt nur den Besitz der Einzelinstanz sicher;
-Steuerbefehle werden nicht über Dateien übertragen. Dies beschreibt nur die Core-Fähigkeit. DocWen
-Assistant 3.1 bleibt auf Windows-Desktop beschränkt und besitzt keine Linux/macOS-Kombinationsabnahme.
+DocWen Core verwendet für Runtime/Control unter Windows eine Named Pipe und unter Linux/macOS einen AF_UNIX-Socket. Eine Dateisperre stellt nur die Einzelinstanz-Eigentümerschaft her; Steuerbefehle werden nicht über Dateien transportiert. Dies beschreibt nur die Core-Grenze. DocWen Assistant 3.1 unterstützt Windows- und Linux-Desktop-Hosts. Microsoft-Store-Installationen unter Windows können automatisch erkannt werden; unter Linux wird ein kompatibles entpacktes Paket manuell ausgewählt. macOS wird vom Assistant derzeit nicht unterstützt.
 
 1.  **Erster Klick** → Konverter starten und aktuelle Datei übergeben.
 2.  **Klick erneut (Mit Datei)** → Durch neue Datei ersetzen (Einzeldateimodus).
