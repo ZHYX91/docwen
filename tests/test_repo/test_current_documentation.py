@@ -218,15 +218,50 @@ def test_public_readmes_keep_cli_integration_anchors() -> None:
         assert ordered == sorted(ordered), path.name
 
 
+ASSISTANT_PLATFORM_SUPPORT_MARKERS = {
+    "README.md": "supports Windows and Linux desktop hosts",
+    "README.de-DE.md": "unterstützt Windows- und Linux-Desktop-Hosts",
+    "README.es-ES.md": "admite hosts de escritorio Windows y Linux",
+    "README.fr-FR.md": "prend en charge les postes de bureau Windows et Linux",
+    "README.ja-JP.md": "Windows と Linux のデスクトップ環境をサポート",
+    "README.ko-KR.md": "Windows와 Linux 데스크톱 호스트를 지원",
+    "README.pt-BR.md": "oferece suporte a desktops Windows e Linux",
+    "README.ru-RU.md": "поддерживает настольные системы Windows и Linux",
+    "README.vi-VN.md": "hỗ trợ máy tính để bàn Windows và Linux",
+    "README.zh-CN.md": "支持 Windows 和 Linux 桌面端",
+    "README.zh-TW.md": "支援 Windows 與 Linux 桌面端",
+}
+
+STALE_ASSISTANT_PLATFORM_MARKERS = (
+    "remains Windows desktop-only",
+    "仍仅限 Windows 桌面端",
+    "仍僅限 Windows 桌面端",
+    "bleibt auf Windows-Desktop beschränkt",
+    "reste limité au bureau Windows",
+    "sigue limitado al escritorio de Windows",
+    "permanece exclusivo para desktop Windows",
+    "остаётся только для Windows desktop",
+    "Windows デスクトップ専用のまま",
+    "Windows 데스크톱 전용",
+    "vẫn chỉ dành cho Windows",
+)
+
+
+def _named_h2_section(text: str, token: str) -> str:
+    lines = text.splitlines()
+    start = next((index for index, line in enumerate(lines) if line.startswith("## ") and token in line), None)
+    assert start is not None
+    end = next((index for index in range(start + 1, len(lines)) if lines[index].startswith("## ")), len(lines))
+    return "\n".join(lines[start:end])
+
+
 def test_public_readmes_describe_current_assistant_platform_boundary() -> None:
     for path in _public_readme_paths():
-        sections = _h2_sections(path.read_text(encoding="utf-8"))
-        assert len(sections) >= 10, path.name
-        obsidian = sections[9]
-        assert "DocWen Assistant 3.1" in obsidian, path.name
-        assert "Windows" in obsidian, path.name
-        assert "Linux" in obsidian, path.name
+        text = path.read_text(encoding="utf-8")
+        obsidian = _named_h2_section(text, "Obsidian")
+        assert ASSISTANT_PLATFORM_SUPPORT_MARKERS[path.name] in obsidian, path.name
         assert "macOS" in obsidian, path.name
+        assert not any(marker in text for marker in STALE_ASSISTANT_PLATFORM_MARKERS), path.name
 
 
 def test_public_readmes_describe_the_exact_network_guard_boundary() -> None:
