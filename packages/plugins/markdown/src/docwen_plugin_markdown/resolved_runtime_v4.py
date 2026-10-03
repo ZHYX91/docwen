@@ -54,7 +54,7 @@ _RESERVED_KEYS = frozenset(
 )
 
 _ATX_HEADING_RE = re.compile(r"^(?P<indent> {0,3})(?P<marks>#{1,9})(?!#)[ \t]+(?P<body>.*?)[ \t]*$")
-_CAPTION_RE = re.compile(r"^(?P<keyword>Figure|Table|Equation|Code):(?P<body>.*)$", re.IGNORECASE)
+_CAPTION_RE = re.compile(r"^(?P<keyword>Figure|Table|Equation|Code):(?P<body>.*)$")
 _TRAILING_ID_RE = re.compile(r"(?P<space>[ \t]+)(?P<token>\^(?P<id>[^\s]+))[ \t]*$")
 _CLOSING_ATX_RE = re.compile(r"[ \t]+#+$")
 _HISTORICAL_ATTRIBUTE_RE = re.compile(r"\{#[^{}\s]+\}[ \t]*$")
@@ -780,8 +780,8 @@ def _bind_target_markers(
                 raise ResolvedRuntimeV4Unsupported("caption target ID marker is not at the declaration boundary")
         elif (
             inline_image_before is None
-            and authored_inline_text(children[:index]).casefold()
-            != ({"code_block": "Code"}.get(target.kind, target.kind.title()) + ":").casefold()
+            and authored_inline_text(children[:index])
+            != ({"code_block": "Code"}.get(target.kind, target.kind.title()) + ":")
         ):
             raise ResolvedRuntimeV4Unsupported("ID-less caption target marker moved away from its kind colon")
         node["type"] = "_docwen_resolved_v4_caption_declaration"
@@ -816,7 +816,7 @@ def _caption_content_children(
         raise ResolvedRuntimeV4Unsupported("caption declaration lost its authored kind prefix")
     key = "raw" if "raw" in output[first_text] else "text"
     value = str(output[first_text].get(key, ""))
-    if not value.casefold().startswith(expected.casefold()):
+    if not value.startswith(expected):
         raise ResolvedRuntimeV4Unsupported("caption AST kind prefix differs from its typed target")
     remainder = value[len(expected) :]
     if remainder:
