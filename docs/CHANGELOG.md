@@ -5,6 +5,17 @@
 
 ## Unreleased / 未发布
 
+## 0.16.0 (2026-10-04)
+
+- Preserve Structural Tables document round trips, including zero or multiple header rows, row headers, rectangular merges and formatted literal markers. Keep direct and declared-source conversion table semantics aligned under the same effective configuration.
+- 保留 Structural Tables 文档往返中的无表头、多行表头、行标题列、矩形合并及格式化字面标记；相同有效配置下，直接转换与声明源文档入口使用一致的表格语义。
+- Align direct Markdown caption and reference parsing with Number Suite, including standalone captions, normalized identifiers and literal shielding. Preserve standalone caption recovery when importing generated DOCX.
+- 对齐 Markdown 直接转换与 Number Suite 的题注、引用语义，覆盖独立题注、规范化标识和字面量保护；生成 DOCX 再导入时保留独立题注。
+- Add source-hash-bound declared image mappings so consumers can preserve authored Markdown while resolving cross-folder image links to declared resources. Reject stale or conflicting mappings.
+- 新增绑定源文件摘要的声明图片映射，消费者可保留 Markdown 原文并将跨目录图片链接解析到已声明资源；拒绝失效或冲突映射。
+- Correct multilingual labels, accents, tooltips and documentation. Machine Protocol 2.0 and Artifact Bundle v3 remain unchanged.
+- 修正多语言标签、重音、提示与文档；Machine Protocol 2.0 和 Artifact Bundle v3 保持不变。
+
 ## 0.15.0 (2026-10-02)
 
 - Make TIFF Markdown results navigable: show preserved frames when OCR is off, or link ordered OCR pages and their images when OCR is on. Preserve links through result-directory relocation.
