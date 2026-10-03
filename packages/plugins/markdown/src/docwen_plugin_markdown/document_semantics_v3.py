@@ -1649,11 +1649,11 @@ def _validate_external_citations(
 
 def _normalize_number_suite_title(value: str) -> str:
     normalized = unicodedata.normalize("NFC", value.replace("\u2060", "")).strip()
-    return re.sub(r"[ \t]+", " ", normalized).casefold()
+    return re.sub(r"[ \t]+", " ", normalized).lower()
 
 
 def _number_suite_id_key(value: str) -> str:
-    return unicodedata.normalize("NFC", value).casefold()
+    return unicodedata.normalize("NFC", value).lower()
 
 
 def _parse_reference_body(body: str) -> tuple[str | None, str, str | None]:
