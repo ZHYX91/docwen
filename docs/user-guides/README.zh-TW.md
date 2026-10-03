@@ -19,7 +19,7 @@ DocWen 最初面向文印室等日常文件整理情境，主要解決這些問�
 
 ## ✨ 核心功能
 
-- **📄 文檔格式轉換** - Word ↔ Markdown 互轉，支持數學公式轉換、分隔符雙向轉換（Markdown 的三種分隔線與文檔中的分頁符、分節符、分隔線），以及將 Markdown 表格顯式 `<` / `^` marker 恢復為 Word 矩形合併。支持 DOCX/DOC/WPS/RTF/ODT 等格式。
+- **📄 文檔格式轉換** - Word ↔ Markdown 互轉，支持數學公式轉換、分隔符雙向轉換（Markdown 的三種分隔線與文檔中的分頁符、分節符、分隔線），以及將 Markdown 表格顯式 `<` / `^` 合併標記恢復為 Word 矩形合併。支持 DOCX/DOC/WPS/RTF/ODT 等格式。
 - **📊 表格格式轉換** - Excel ↔ Markdown 互轉，支持 XLSX/XLS/ET/ODS/CSV/TSV 等格式；支持合併單元格導出策略（`fill / empty / marker`）和表格匯總工具。Markdown→XLSX 範本已恢復 YAML 欄位、縱向和橫向欄占位符核心能力，完整 Excel 範本區域/圖片/合併恢復仍是對照審計中的遷移目標。
 - **📑 PDF與版式文件** - PDF/XPS/OFD 轉 Markdown 或 DOCX，支持 PDF 合併、拆分等操作。
 - **🖼️ 圖片處理** - 支持 JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC 等格式互轉和壓縮。
@@ -264,7 +264,7 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `resources list templates` | 列出可用模板。 |
 | `resources list numbering-schemes` | 列出可用編號方案。 |
 | `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | 透過獨立的本機 GUI 控制介面啟動或啟用 DocWen，並可開啟一個絕對路徑檔案。 |
-| `--template <id>` | 原樣使用 `resources list templates` 回傳的 canonical 資源 ID；顯示名稱、檔名與路徑直接拒絕。DOCX ID 用於 `docx/doc/odt/rtf/wps/pdf`，XLSX ID 用於 `xlsx/xls/ods/csv`。 |
+| `--template <id>` | 原樣使用 `resources list templates` 回傳的資源 ID；顯示名稱、檔名與路徑直接拒絕。DOCX ID 用於 `docx/doc/odt/rtf/wps/pdf`，XLSX ID 用於 `xlsx/xls/ods/csv`。 |
 | `--extract-img` / `--no-extract-img` / `--ocr` | `convert --to md` 的圖片提取與 OCR 選項。 |
 | `--image-mode file|base64|embed|omit` | 控制 Markdown 匯出時圖片的落地方式。 |
 | `--ocr-placement image_md|main_md` | 控制 OCR 文字寫入圖片配套 Markdown 或主 Markdown。 |
@@ -569,7 +569,7 @@ Excel 範本中的 `{{→月份}}` 會依次向右填充"1月"、"2月"、"3月"
 **合併儲存格處理**：
 
 - Markdown -> Excel 會繼續保留範本原有的 merged ranges。
-- 對由連續整格 `{{↓欄位名}}` 組成的已知列式範本區域，支援根據 Markdown 表格中的顯式 `<` / `^` marker 還原矩形合併。
+- 對由連續整格 `{{↓欄位名}}` 組成的已知列式範本區域，支援根據 Markdown 表格中的顯式 `<` / `^` 合併標記還原矩形合併。
 - 僅當儲存格去掉首尾空白後精確等於 `<` 或 `^` 時才參與 merge 識別；`\<`、`\^` 會保留為字面文字。
 - 非法矩形或與範本原有 merged ranges 衝突時，預設降級為普通文字並記錄警告，不會強制覆蓋範本結構。
 
