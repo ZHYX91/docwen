@@ -850,7 +850,7 @@ acknowledgments = "Danksagung"
 acknowledgments_intro = "Dank an folgende Open-Source-Projekte:"
 
 # 开源工具描述
-subtitle = "Software zur Konvertierung von Dokumenten, Tabellen und Grafiken"
+subtitle = "Werkzeug zur Konvertierung von Dokument- und Tabellenformaten"
 
 [about.tools]
 python_docx = "DOCX/Markdown Konvertierung"
