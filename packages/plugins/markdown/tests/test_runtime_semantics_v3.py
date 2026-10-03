@@ -73,6 +73,50 @@ See [[Page#^raw]] and ![[Page#^raw]], @[[#^intro]], @[[#Other|Current title]], a
     assert citations[0]["items"][0]["key"] == "fig-legacy"
 
 
+def test_direct_number_suite_runtime_retains_standalone_owner_and_direct_schema() -> None:
+    source = """Figure: Planned ^Plan
+
+
+ordinary paragraph
+
+See @[[#^plan]] and @[[#figure: planned]].
+
+figure: lowercase is ordinary
+"""
+    plan = prepare_runtime_semantics_v3(
+        source,
+        input_id="direct.md",
+        consumer_profile="number_suite_direct",
+    )
+
+    assert not plan.analysis.has_errors
+    assert plan.analysis.projection["schema"] == "docwen.number_suite_direct.v1"
+    ast = apply_runtime_semantics_v3(
+        parse_markdown_text(plan.shielded_source, auto_link_bare_url=False),
+        plan,
+    )
+
+    [standalone] = [item for item in ast if item.get("type") == "_docwen_v3_caption_declaration"]
+    assert standalone["_docwen_v3_caption_target"]["id"] == "Plan"
+    assert "object_range" not in standalone["_docwen_v3_caption_target"]
+    references = [
+        child
+        for node in ast
+        for child in node.get("children", [])
+        if child.get("type") == "semantic_cross_reference"
+    ]
+    assert len(references) == 2
+    assert all(item["schema"] == "docwen.number_suite_direct.v1" for item in references)
+    assert all(item["cached_number"] == "1" for item in references)
+    assert any(
+        node.get("type") == "paragraph"
+        and "figure: lowercase is ordinary" in "".join(
+            str(child.get("raw", "")) for child in node.get("children", [])
+        )
+        for node in ast
+    )
+
+
 def test_runtime_adapter_binds_figure_caption_and_whole_list_anchor() -> None:
     source = "Figure: Caption ^figure\n\n![image](pixel.png)\n\n- one\n- two\n\n^whole-list\n"
     plan = prepare_runtime_semantics_v3(source, input_id="source")
