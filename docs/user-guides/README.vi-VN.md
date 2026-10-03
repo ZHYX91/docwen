@@ -584,11 +584,11 @@ Plugin Obsidian đồng hành được phát hành ở repo riêng và hoạt đ
 -   **🚀 Khởi chạy 1 lần nhấn** - Icon ở sidebar để mở nhanh bộ chuyển đổi.
 -   **📂 Bàn giao tự động** - Tự truyền đường dẫn file đang mở.
 -   **🔄 Quản lý đơn phiên bản** - Nếu chương trình đang chạy, chỉ gửi file, không cần khởi chạy lại.
--   **🔒 Điều khiển cục bộ có giới hạn** - Dùng các yêu cầu có kiểu `status`, `open`, `activate`, không dò tên tiến trình và không dùng file lệnh/trạng thái.
+-   **🔒 Điều khiển cục bộ an toàn** - Dùng các yêu cầu có cấu trúc `status`, `open`, `activate`, không dò tên tiến trình và không dùng tệp lệnh/trạng thái.
 
 ### Nguyên lý hoạt động
 
-Kênh Runtime/Control của DocWen Core dùng named pipe trên Windows và socket AF_UNIX trên Linux/macOS. Khóa tệp chỉ xác lập quyền sở hữu một phiên bản chạy; lệnh điều khiển không được truyền qua tệp. Nội dung này chỉ mô tả ranh giới Core. DocWen Assistant 3.1 hỗ trợ máy tính để bàn Windows và Linux. Bản Microsoft Store trên Windows có thể dùng tự động phát hiện; trên Linux người dùng chọn thủ công gói tương thích đã giải nén. Assistant hiện chưa hỗ trợ macOS.
+DocWen Core dùng named pipe để điều khiển cục bộ trên Windows và socket AF_UNIX trên Linux/macOS. Khóa tệp chỉ xác lập quyền sở hữu một phiên bản chạy; lệnh điều khiển không được truyền qua tệp. Nội dung này chỉ mô tả ranh giới Core. DocWen Assistant 3.1 hỗ trợ máy tính để bàn Windows và Linux. Bản Microsoft Store trên Windows có thể dùng tự động phát hiện; trên Linux người dùng chọn thủ công gói tương thích đã giải nén. Assistant hiện chưa hỗ trợ macOS.
 
 1.  **Nhấn lần đầu** → Khởi chạy bộ chuyển đổi và truyền file hiện tại.
 2.  **Nhấn lại (có file)** → Thay file mới (chế độ 1 file).
