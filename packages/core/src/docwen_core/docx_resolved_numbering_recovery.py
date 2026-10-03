@@ -363,8 +363,7 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
         physical = [
             item
             for item in body
-            if item.tag == qn("w:sdt")
-            and (sdt_tag(item) or "").startswith(STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX)
+            if item.tag == qn("w:sdt") and (sdt_tag(item) or "").startswith(STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX)
         ]
         nested = [
             item
@@ -372,9 +371,7 @@ class ResolvedNumberingV4Recovery(DocxSemanticsV3Recovery):
             if (sdt_tag(item) or "").startswith(STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX)
         ]
         if physical != nested or [sdt_tag(item) for item in physical] != [item.tag for item in occurrences]:
-            raise DocxSemanticsV3Error(
-                "resolved-v4 standalone-caption physical order/cardinality differs from its map"
-            )
+            raise DocxSemanticsV3Error("resolved-v4 standalone-caption physical order/cardinality differs from its map")
         if not occurrences:
             return
         styles = {item.semantic_key: item.resolved_style_id for item in caption_styles}
