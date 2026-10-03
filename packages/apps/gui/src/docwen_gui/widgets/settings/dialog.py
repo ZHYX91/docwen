@@ -737,7 +737,7 @@ class SettingsDialog(QDialog):
     def _populate_optimization_types(self) -> None:
         """Populate optimization policy controls from Runtime capabilities.
 
-        A valid empty catalog leaves an empty disabled combo.  Discovery
+        A valid empty catalog shows a localized disabled placeholder. Discovery
         failure instead shows a disabled error item, while the remainder of
         the settings page stays usable.
         """
