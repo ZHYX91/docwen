@@ -515,7 +515,6 @@ Manage DOCX/XLSX templates in **Settings → Templates**. Built-in templates are
 
 ### Custom Templates
 
-DocWen Core's runtime/control transport uses a Windows named pipe or an AF_UNIX socket on Linux/macOS. A file lock only establishes single-instance ownership; files are not used to transport control commands. This describes the Core transport only. DocWen Assistant 3.1 supports Windows and Linux desktop hosts. Windows Microsoft Store installations can use automatic detection; Linux uses manual package selection. The Assistant does not currently support macOS.
 
 1. Select a built-in template and choose **Copy and edit**, or import an existing DOCX/XLSX file.
 2. Edit the custom copy in Word, Excel or WPS; adjust styles and placeholders as described below.
@@ -609,10 +608,7 @@ A companion Obsidian plugin is published separately and works in tandem with the
 
 ### Working Principle
 
-DocWen Core's runtime/control transport uses a Windows named pipe or an AF_UNIX socket on
-Linux/macOS. A file lock only establishes single-instance ownership; files are not used to transport
-control commands. This describes the Core transport only. DocWen Assistant 3.1 remains Windows
-desktop-only and has no Linux/macOS combination acceptance.
+DocWen Core's runtime/control transport uses a Windows named pipe or an AF_UNIX socket on Linux/macOS. A file lock only establishes single-instance ownership; files are not used to transport control commands. This describes the Core transport only. DocWen Assistant 3.1 supports Windows and Linux desktop hosts. Windows Microsoft Store installations can use automatic detection; Linux uses manual package selection. The Assistant does not currently support macOS.
 
 1.  **First Click** → Launch converter and pass current file.
 2.  **Click Again (With File)** → Replace with new file (Single File Mode).
