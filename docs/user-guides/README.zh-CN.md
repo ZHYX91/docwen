@@ -505,7 +505,6 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 ### 自定义模板
 
-DocWen Core 的运行时/控制传输在 Windows 使用命名管道，在 Linux/macOS 使用 AF_UNIX socket。文件锁只负责单实例所有权，不承载控制命令。这里描述的是 Core 能力。DocWen Assistant 3.1 支持 Windows 和 Linux 桌面端；Windows Microsoft Store 安装版可使用自动检测，Linux 使用手动选择的兼容解压包。Assistant 目前不支持 macOS。
 
 1. 选择内置模板并点击**复制并编辑**，或使用**导入模板**添加已有 DOCX/XLSX 文件。
 2. 在 Word、Excel 或 WPS 中修改自定义副本的内容、样式和占位符，具体规则见下文。
@@ -600,9 +599,7 @@ Excel 模板中的 `{{→月份}}` 会依次向右填充"1月"、"2月"、"3月"
 
 ### 工作原理
 
-DocWen Core 的 runtime/control transport 可在 Windows 使用命名管道，在 Linux/macOS 使用
-AF_UNIX 套接字。文件锁只负责单实例所有权，控制命令不通过文件传输。这只是 Core 能力说明；
-DocWen Assistant 3.1 仍仅限 Windows 桌面端，尚无 Linux/macOS 组合验收。
+DocWen Core 的运行时/控制传输在 Windows 使用命名管道，在 Linux/macOS 使用 AF_UNIX socket。文件锁只负责单实例所有权，不承载控制命令。这里描述的是 Core 能力。DocWen Assistant 3.1 支持 Windows 和 Linux 桌面端；Windows Microsoft Store 安装版可使用自动检测，Linux 使用手动选择的兼容解压包。Assistant 目前不支持 macOS。
 
 1. **首次点击** → 启动转换器并传入当前文件
 2. **再次点击（有文件）** → 替换为新文件（单文件模式）
