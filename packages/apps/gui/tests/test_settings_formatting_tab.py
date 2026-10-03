@@ -280,13 +280,17 @@ def test_each_markdown_extension_has_directional_keyboard_help(qapp) -> None:
     from docwen_gui.widgets.settings.formatting_tab import FormattingTab
 
     tab = FormattingTab(SettingsViewModel(config=SettingsConfig()))
-    for direction in ("Input", "Output"):
-        card = tab.findChild(QWidget, f"markdownExtensions{direction}Card")
-        assert card is not None
-        buttons = card.findChildren(QToolButton, "settingsInfoButton")
-        assert len(buttons) == 4
-        for button in buttons:
-            assert button.toolTip().strip()
-            assert button.accessibleName().strip()
-            assert button.accessibleDescription() == button.toolTip()
-            assert button.focusPolicy() == Qt.FocusPolicy.StrongFocus
+    try:
+        for direction in ("Input", "Output"):
+            card = tab.findChild(QWidget, f"markdownExtensions{direction}Card")
+            assert card is not None
+            buttons = card.findChildren(QToolButton, "settingsInfoButton")
+            assert len(buttons) == 4
+            for button in buttons:
+                assert button.toolTip().strip()
+                assert button.accessibleName().strip()
+                assert button.accessibleDescription() == button.toolTip()
+                assert button.focusPolicy() == Qt.FocusPolicy.StrongFocus
+    finally:
+        tab.close()
+        tab.deleteLater()
