@@ -20,7 +20,7 @@ DocWen 最初面向文印室等日常文档整理场景，主要解决这些问�
 
 ## ✨ 核心功能
 
-- **📄 文档格式转换** - Word ↔ Markdown 互转，支持数学公式转换、分隔符双向转换（Markdown的三种分隔线与文档中的分页符、分节符、分隔线），以及 Markdown 表格显式 `<` / `^` marker 到 Word 矩形合并的恢复。支持 DOCX/DOC/WPS/RTF/ODT 等格式。
+- **📄 文档格式转换** - Word ↔ Markdown 互转，支持数学公式转换、分隔符双向转换（Markdown的三种分隔线与文档中的分页符、分节符、分隔线），以及 Markdown 表格显式 `<` / `^` 合并标记到 Word 矩形合并的恢复。支持 DOCX/DOC/WPS/RTF/ODT 等格式。
 - **📊 表格格式转换** - Excel ↔ Markdown 互转，支持 XLSX/XLS/ET/ODS/CSV/TSV 等格式；支持合并单元格导出策略（`fill / empty / marker`）、模板字段和表格汇总工具。
 - **📑 PDF与版式文件** - PDF/XPS/OFD 转 Markdown 或 DOCX，支持 PDF 合并、拆分等操作。
 - **🖼️ 图片处理** - 支持 JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC 等格式互转和压缩。
@@ -199,7 +199,7 @@ pip install pillow-heif
 对于脚本、Agent 或插件集成，建议按下面顺序调用：
 
 1. `inspect <file> [--json]`：先识别文件真实类别、格式与可执行动作。
-2. `resources list formats --json`：读取当前 Runtime 实际可用的转换路线和依赖门控。
+2. `resources list formats --json`：读取当前 DocWen 实际可用的转换路线和依赖条件。
 3. `schema convert`：读取 `convert` 的机器可读参数契约与条件约束。
 4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`：先预演检测、归一化和路由结果，不直接落地转换。
 5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`：确认后再执行正式转换。
@@ -257,7 +257,7 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | 统一转换入口。 |
 | `convert <markdown> --to docx --output-dir <dir> --proofread [--check ...]` | Markdown→DOCX 转换后校对；`--check` 必须与 `--proofread` 同时使用，省略 `--check` 时使用已配置的校对默认值。 |
 | `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | 仅预演检测、归一化、路由与生效参数，不执行实际转换。 |
-| `validate` / `number markdown` / `merge` / `split` | 校对、编号、合并和拆分使用各自的领域命令，不暴露内部 action 名称。 |
+| `validate` / `number markdown` / `merge` / `split` | 校对、编号、合并和拆分使用各自的领域命令，不暴露内部操作名称。 |
 | `validate <file> --check ... [--report <path>]` | 默认只读校对；只有显式指定 `--report` 才写出报告文件。 |
 | `schema convert` | 导出 `convert` 的机器可读参数契约、默认值、条件约束与规范键。 |
 | `inspect <file> [--json]` | 查询文件类别/格式、推荐动作，以及扩展名与内容不一致警告。 |
@@ -267,7 +267,7 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `resources list templates` | 列出可用模板。 |
 | `resources list numbering-schemes` | 列出可用序号方案。 |
 | `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | 通过独立的本机 GUI 控制接口启动或激活 DocWen，并可打开一个绝对路径文件。 |
-| `--template <id>` | 原样使用 `resources list templates` 返回的 canonical 资源 ID；显示名、文件名和路径直接拒绝。DOCX ID 用于 `docx/doc/odt/rtf/wps/pdf`，XLSX ID 用于 `xlsx/xls/ods/csv`。 |
+| `--template <id>` | 原样使用 `resources list templates` 返回的资源 ID；显示名、文件名和路径直接拒绝。DOCX ID 用于 `docx/doc/odt/rtf/wps/pdf`，XLSX ID 用于 `xlsx/xls/ods/csv`。 |
 | `--extract-img` / `--no-extract-img` / `--ocr` | `convert --to md` 的图片提取与 OCR 选项。 |
 | `--image-mode file|base64|embed|omit` | 控制 Markdown 导出中的图片落地方式。 |
 | `--ocr-placement image_md|main_md` | 控制 OCR 文本写入图片配套 Markdown 还是主 Markdown。 |
@@ -580,7 +580,7 @@ Excel 模板中的 `{{→月份}}` 会依次向右填充"1月"、"2月"、"3月"
 **合并单元格处理**：
 
 - Markdown -> Excel 会继续保留模板原有 merged ranges。
-- 对由连续整格 `{{↓字段名}}` 组成的已知列式模板区域，支持根据 Markdown 表格中的显式 `<` / `^` marker 恢复矩形合并。
+- 对由连续整格 `{{↓字段名}}` 组成的已知列式模板区域，支持根据 Markdown 表格中的显式 `<` / `^` 合并标记恢复矩形合并。
 - 仅当单元格去掉首尾空白后精确等于 `<` 或 `^` 时才参与 merge 识别；`\<`、`\^` 会保留为字面文本。
 - 非法矩形或与模板原有 merged ranges 冲突时，默认降级为普通文本并记录警告，不会强行覆盖模板结构。
 
