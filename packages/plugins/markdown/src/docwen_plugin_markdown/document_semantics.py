@@ -417,11 +417,10 @@ def _table_anchor_cells(
         for column_index in range(column_count):
             cell = row[column_index] if column_index < len(row) else {"type": "table_cell", "children": []}
             cell_nodes[(row_index, column_index)] = cell
-            raw = _plain_inline_text(cell.get("children", [])).strip()
             attributes = cell.get("attrs", {})
-            literal_marker = isinstance(attributes, dict) and attributes.get("docwen_literal_merge_marker") is True
-            if raw in {"<", "^"} and not literal_marker:
-                markers[(row_index, column_index)] = raw
+            merge_marker = attributes.get("docwen_merge_marker") if isinstance(attributes, dict) else None
+            if merge_marker in {"<", "^"}:
+                markers[(row_index, column_index)] = merge_marker
 
     resolved: dict[tuple[int, int], tuple[int, int] | None] = {}
 
