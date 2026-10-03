@@ -102,6 +102,13 @@ from docwen_core.docx_numbering_occurrence import (
     numbering_occurrence_map_xml,
     wrap_numbering_occurrence,
 )
+from docwen_core.docx_standalone_caption_occurrence import (
+    STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE,
+    StandaloneCaptionOccurrenceIdentity,
+    derive_standalone_caption_occurrence,
+    standalone_caption_occurrence_map_xml,
+    wrap_standalone_caption_occurrence,
+)
 from docwen_core.docx_numbering_ooxml import (
     HeadingNumberingProjection,
     apply_heading_numbering,
@@ -129,6 +136,12 @@ class _DisabledOccurrenceBinding:
     identity: NumberingOccurrenceIdentity
     caption_element: Any
     object_elements: tuple[Any, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class _StandaloneDisabledOccurrenceBinding:
+    identity: StandaloneCaptionOccurrenceIdentity
+    caption_element: Any
 
 
 @dataclass(frozen=True, slots=True)
@@ -206,6 +219,7 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
         self._heading_payload_snapshots: dict[tuple[int, int, str], tuple[Any, ...]] = {}
         self._source_projected_heading_keys: set[tuple[int, int, str]] = set()
         self._occurrence_bindings: list[_DisabledOccurrenceBinding] = []
+        self._standalone_occurrence_bindings: list[_StandaloneDisabledOccurrenceBinding] = []
         self._reference_occurrences: list[ReferenceOccurrenceIdentityV3] = []
         self._soft_references: list[SoftReferenceIdentityV3] = []
         self._stable_reference_target_ids: list[str] = []
@@ -424,14 +438,26 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
             physical = (*object_elements, caption._p) if kind == "figure" else (caption._p, *object_elements)
             self._target_bindings.append(TargetBindingV3(identity, physical))
         elif not plan_target.enabled:
-            occurrence = derive_numbering_occurrence(
-                source_sha256=self._port.source_sha256,
-                source_start=source_start,
-                source_end=source_end,
-                kind=kind,  # type: ignore[arg-type]
-                plan_sha256=self._port.plan_sha256,
-            )
-            self._occurrence_bindings.append(_DisabledOccurrenceBinding(occurrence, caption._p, object_elements))
+            if logical_objects:
+                occurrence = derive_numbering_occurrence(
+                    source_sha256=self._port.source_sha256,
+                    source_start=source_start,
+                    source_end=source_end,
+                    kind=kind,  # type: ignore[arg-type]
+                    plan_sha256=self._port.plan_sha256,
+                )
+                self._occurrence_bindings.append(_DisabledOccurrenceBinding(occurrence, caption._p, object_elements))
+            else:
+                occurrence = derive_standalone_caption_occurrence(
+                    source_sha256=self._port.source_sha256,
+                    source_start=source_start,
+                    source_end=source_end,
+                    kind=kind,  # type: ignore[arg-type]
+                    plan_sha256=self._port.plan_sha256,
+                )
+                self._standalone_occurrence_bindings.append(
+                    _StandaloneDisabledOccurrenceBinding(occurrence, caption._p)
+                )
 
     def render_reference(self, paragraph: Any, *, source_start: int, source_end: int) -> None:
         if self._finalized:
@@ -557,6 +583,18 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
                     payload=binding,
                 )
             )
+        for binding in self._standalone_occurrence_bindings:
+            groups.append(
+                resolved_semantic_group_v4(
+                    role="standalone_occurrence",
+                    tag=binding.identity.tag,
+                    elements=(binding.caption_element,),
+                    source_start=binding.identity.source_start,
+                    source_end=binding.identity.source_end,
+                    source_kind=binding.identity.kind,
+                    payload=binding,
+                )
+            )
         try:
             body = self._document.element.body
             validate_fenced_anchor_ranges_v4(
@@ -577,6 +615,10 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
                         binding.object_elements,
                         binding.identity,
                     )
+                    continue
+                if group.role == "standalone_occurrence":
+                    binding = group.payload
+                    wrap_standalone_caption_occurrence(binding.caption_element, binding.identity)
                     continue
                 owners = tuple(dict.fromkeys(self._direct_body_owner(item) for item in group.elements))
                 wrap_direct_body_group(owners, group.tag)
@@ -651,6 +693,15 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
                 (
                     NUMBERING_OCCURRENCE_MAP_NAMESPACE,
                     numbering_occurrence_map_xml([item.identity for item in self._occurrence_bindings]),
+                )
+            )
+        if self._standalone_occurrence_bindings:
+            parts.append(
+                (
+                    STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE,
+                    standalone_caption_occurrence_map_xml(
+                        [item.identity for item in self._standalone_occurrence_bindings]
+                    ),
                 )
             )
         if self._citation_projection is not None:
