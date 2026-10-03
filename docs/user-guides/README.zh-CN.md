@@ -504,7 +504,6 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 ### 自定义模板
 
-
 1. 选择内置模板并点击**复制并编辑**，或使用**导入模板**添加已有 DOCX/XLSX 文件。
 2. 在 Word、Excel 或 WPS 中修改自定义副本的内容、样式和占位符，具体规则见下文。
 3. 保存文件，返回 DocWen 点击**刷新**，无需重启。
