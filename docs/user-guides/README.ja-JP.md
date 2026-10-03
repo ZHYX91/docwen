@@ -198,7 +198,7 @@ DocWen は GUI に加えて、自動化スクリプト、バッチ処理、外�
 スクリプト、Agent、プラグイン連携では、次の順序を推奨します。
 
 1. `inspect <file> [--json]`：まず実際のファイル種別、形式、利用可能なアクションを確認します。
-2. `resources list formats --json`：現在の Runtime で実際に利用できるルートと依存条件を確認します。
+2. `resources list formats --json`：現在の DocWen で実際に利用できるルートと依存条件を確認します。
 3. `schema convert`：`convert` の機械可読な契約と条件ルールを取得します。
 4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`：出力を書き出さずに検出、正規化、ルーティングを事前確認します。
 5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`：問題がなければ本番の変換を実行します。
