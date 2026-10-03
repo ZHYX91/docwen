@@ -338,3 +338,23 @@ def _table_with_grid_offset(document: DocumentType, name: str, value: str | None
     table = document.add_table(rows=1, cols=1)
     _set_row_grid_offset(table.rows[0]._tr, name, value)
     return table
+
+
+def test_structural_markdown_projection_preserves_zero_header_rows() -> None:
+    rendered = [["Alice", "10"], ["Bob", "20"]]
+
+    assert markdown_table_lines(rendered, header_rows=0) == [
+        "| --- | --- |",
+        "| Alice | 10 |",
+        "| Bob | 20 |",
+    ]
+
+
+def test_structural_markdown_projection_allows_row_headers_without_column_headers() -> None:
+    rendered = [["North", "10"], ["South", "8"]]
+
+    assert markdown_table_lines(rendered, header_rows=0, header_columns=1) == [
+        "| --- || --- |",
+        "| North | 10 |",
+        "| South | 8 |",
+    ]
