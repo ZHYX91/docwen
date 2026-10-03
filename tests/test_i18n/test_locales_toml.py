@@ -342,6 +342,59 @@ def test_locale_short_labels_are_not_left_as_english_placeholders() -> None:
             )
 
 
+def test_restored_locale_typography_is_preserved() -> None:
+    """High-frequency UI copy should keep native accents, diacritics and scripts."""
+    expected_values = {
+        "de_DE.toml": {
+            "settings.reset.tab_button": "Tab zurücksetzen",
+            "settings.formatting.heading_merge_mode_label": "Modus zum Zusammenführen von Überschrift und Text:",
+            "components.file_drop.add_file_action": "Dateien hinzufügen",
+            "components.file_drop.batch_list.sort_size": "Größe",
+        },
+        "fr_FR.toml": {
+            "settings.reset.tab_button": "Réinitialiser l’onglet",
+            "settings.toml_editor.save_success_title": "Enregistré",
+            "components.file_drop.select_folder_dialog": "Sélectionner un dossier",
+            "components.file_drop.status.failed": "Échec",
+        },
+        "vi_VN.toml": {
+            "main_window.window_title": "DocWen (Phiên bản ngoại tuyến)",
+            "settings.reset.tab_confirm_title": "Xác nhận đặt lại",
+            "components.file_drop.add_file_action": "Thêm tệp",
+            "components.file_drop.batch_list.filter_button": "Lọc",
+            "conversion_panel.layout.split_mode_single_page_warning": "⚠️ Tệp này chỉ có 1 trang; không cần tách",
+            "action_area.md_to_spreadsheet.generate": "Tạo",
+        },
+        "ru_RU.toml": {
+            "components.file_drop.add_file_action": "Добавить файлы",
+            "components.file_drop.select_folder_dialog": "Выбрать папку",
+            "settings.layout.render_dpi_label": "DPI рендеринга:",
+        },
+        "zh_TW.toml": {
+            "components.template_selector.source_tooltip": "來源資料夾：{value}",
+        },
+        "es_ES.toml": {
+            "settings.layout.render_dpi_label": "DPI de renderizado:",
+        },
+        "ja_JP.toml": {
+            "settings.layout.render_dpi_label": "レンダリング DPI：",
+        },
+        "ko_KR.toml": {
+            "settings.layout.render_dpi_label": "렌더링 DPI:",
+        },
+        "pt_BR.toml": {
+            "settings.layout.render_dpi_label": "DPI de renderização:",
+        },
+    }
+
+    for locale_name, key_values in expected_values.items():
+        locale_data = _read_toml_file(LOCALES_DIR / locale_name)
+        for key, expected_value in key_values.items():
+            assert _get_nested_value(locale_data, key) == expected_value, (
+                f"{locale_name} should preserve native typography for {key}"
+            )
+
+
 def test_zh_tw_gui_status_messages_use_traditional_chinese_wording() -> None:
     """繁中 GUI 状态消息应保持繁体用词，不回退到简体口径。"""
     locale_data = _read_toml_file(LOCALES_DIR / "zh_TW.toml")
