@@ -633,7 +633,7 @@ underscore_tooltip = "Markdown ___ 分隔符轉換為 Word 分頁符/分節符\n
 
 # 表格样式
 table_style = "表格樣式"
-table_style_tooltip = "設定 Markdown 表格轉換為 Word 表格時使用的樣式\\n\\n【內建樣式】\\n三線表/網格表：自動檢查範本是否已有所需樣式；缺少時自動建立\\n\\n【自訂樣式】\\n檢查範本中是否存在該樣式；缺少時建立一個網格表格式的同名樣式"
+table_style_tooltip = "設定 Markdown 表格轉換為 Word 表格時使用的樣式\n\n【內建樣式】\n三線表/網格表：自動檢查範本是否已有所需樣式；缺少時自動建立\n\n【自訂樣式】\n檢查範本中是否存在該樣式；缺少時建立一個網格表格式的同名樣式"
 builtin_style_radio = "使用內置樣式"
 custom_style_radio = "使用自定義樣式名稱"
 
