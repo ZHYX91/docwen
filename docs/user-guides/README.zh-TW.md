@@ -196,7 +196,7 @@ pip install pillow-heif
 對於腳本、Agent 或外掛整合，建議依照以下順序呼叫：
 
 1. `inspect <file> [--json]`：先識別檔案的真實類別、格式與可執行動作。
-2. `resources list formats --json`：讀取目前 Runtime 實際可用的轉換路線與相依性門檻。
+2. `resources list formats --json`：讀取目前 DocWen 實際可用的轉換路線與相依性條件。
 3. `schema convert`：讀取 `convert` 的機器可讀參數契約與條件約束。
 4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`：先預演檢測、正規化與路由結果，不直接落地轉換。
 5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`：確認後再執行正式轉換。
