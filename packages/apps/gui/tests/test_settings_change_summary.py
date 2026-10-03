@@ -90,6 +90,10 @@ def test_change_summary_expands_dict_backed_conversion_defaults_to_leaf_lines() 
         }
     )
 
+    from docwen_gui.i18n import t
+
     assert len(lines) == 2
     assert all("conversion_defaults.image" not in line for line in lines)
-    assert "Lossless" in lines[0] or "Limit" in lines[0]
+    assert t("settings.image.compress_mode_label").rstrip(":：") in lines[0]
+    assert t("settings.image.compress_lossless") in lines[0]
+    assert t("settings.image.compress_limit_size") in lines[0]
