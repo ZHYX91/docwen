@@ -497,7 +497,6 @@ Verwalten Sie DOCX/XLSX-Vorlagen unter **Einstellungen → Vorlagen**: aktiviere
 
 ### Benutzerdefinierte Vorlagen
 
-
 1. Kopieren und bearbeiten Sie eine integrierte Vorlage oder importieren Sie eine DOCX/XLSX-Datei.
 2. Bearbeiten Sie Inhalt, Formatvorlagen und Platzhalter der eigenen Kopie in Word, Excel oder WPS; die Regeln stehen unten.
 3. Speichern Sie die Datei und aktualisieren Sie die Liste in DocWen. Ein Neustart ist nicht erforderlich.
