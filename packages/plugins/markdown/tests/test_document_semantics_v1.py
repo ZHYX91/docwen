@@ -6,6 +6,7 @@ from zipfile import ZipFile
 
 import pytest
 from docx import Document
+from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
 from docwen_core.docx_bookmarks import build_docx_bookmark_inventory
@@ -213,3 +214,29 @@ def test_legacy_caption_extractor_ignores_unbalanced_target_bookmark() -> None:
     inventory = build_docx_bookmark_inventory(document)
 
     assert extract_semantic_caption(caption._p, bookmark_inventory=inventory) is None
+
+
+def test_table_metadata_recognizes_contiguous_native_repeat_header_rows() -> None:
+    document = Document()
+    table = document.add_table(rows=3, cols=2)
+    for row in table.rows[:2]:
+        header = OxmlElement("w:tblHeader")
+        header.set(qn("w:val"), "1")
+        row._tr.get_or_add_trPr().append(header)
+
+    metadata = extract_semantic_table_metadata(table._tbl)
+
+    assert metadata.header_rows == 2
+    assert metadata.repeat_header == "always"
+
+
+def test_table_metadata_preserves_explicit_zero_header_rows() -> None:
+    document = Document()
+    table = document.add_table(rows=2, cols=2)
+    table_look = table._tbl.tblPr.find(qn("w:tblLook"))
+    assert table_look is not None
+    table_look.set(qn("w:firstRow"), "0")
+
+    metadata = extract_semantic_table_metadata(table._tbl)
+
+    assert metadata.header_rows == 0
