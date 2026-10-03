@@ -77,6 +77,40 @@ def _mermaid_options() -> list[tuple[str, str]]:
     ]
 
 
+_EXTENSION_HELP_FALLBACKS: dict[tuple[str, str], str] = {
+    ("input", "structural_tables"): (
+        "Recognize Structural Tables markers such as < and ^ and preserve extended table structure. "
+        "When disabled, treat them as ordinary Markdown table content."
+    ),
+    ("output", "structural_tables"): (
+        "Write Structural Tables markers and extended structure when needed. When disabled, flatten to ordinary "
+        "Markdown tables and report lost structure."
+    ),
+    ("input", "captions_references"): (
+        "Recognize Number Suite captions, identifiers and cross-references. When disabled, declarations and @ "
+        "references remain visible text."
+    ),
+    ("output", "captions_references"): (
+        "Generate Number Suite captions and cross-references when available. When disabled, emit ordinary text and "
+        "report lost references."
+    ),
+    ("input", "extended_headings"): (
+        "Recognize H7–H9 syntax. When disabled, seven to nine leading # characters remain visible text."
+    ),
+    ("output", "extended_headings"): (
+        "Generate H7–H9 headings. When disabled, those headings become H6 and the loss is reported."
+    ),
+    ("input", "typed_endnotes"): (
+        "Use note labels such as endnote: to distinguish endnotes from footnotes. When disabled, those labels are "
+        "treated as ordinary footnotes."
+    ),
+    ("output", "typed_endnotes"): (
+        "Preserve the footnote/endnote distinction with typed note labels. When disabled, endnotes are exported as "
+        "ordinary footnotes and the loss is reported."
+    ),
+}
+
+
 class FormattingTab(BaseSettingsTab):
     """Formatting settings tab backed by typed draft state."""
 
@@ -116,10 +150,15 @@ class FormattingTab(BaseSettingsTab):
                 object_name=f"markdownExtensions{direction.title()}Card",
             )
             for name in EXTENSION_NAMES:
-                checkbox = self.create_checkbox(t(f"settings.markdown_extensions.{name}", name.replace("_", " ")))
+                label = t(f"settings.markdown_extensions.{name}", name.replace("_", " "))
+                help_text = t(
+                    f"settings.markdown_extensions.{direction}_help.{name}",
+                    _EXTENSION_HELP_FALLBACKS[(direction, name)],
+                )
+                help_widget, checkbox = self._create_toggle_with_info(label, help_text)
                 checkbox.setObjectName(f"markdownExtension{direction.title()}{name.title().replace('_', '')}")
                 self._extension_checks[(direction, name)] = checkbox
-                self.add_form_row(form, "", checkbox)
+                form.addRow(help_widget)
                 checkbox.toggled.connect(self._save_extensions)
             preset = QPushButton(t("settings.markdown_extensions.obsidian_preset", "Use Obsidian extensions"))
             preset.setObjectName(f"markdownExtensions{direction.title()}Preset")
@@ -200,6 +239,10 @@ class FormattingTab(BaseSettingsTab):
             ),
             object_name="formattingMdMermaidCard",
         )
+        self.add_form_description(
+            f_mermaid,
+            t("settings.formatting.mermaid_output_group", "Output method"),
+        )
         self._mermaid_mode = self.create_combobox(
             _mermaid_options(),
             t(
@@ -212,6 +255,10 @@ class FormattingTab(BaseSettingsTab):
             f_mermaid,
             t("settings.formatting.mermaid_mode_label", "Output:"),
             self._mermaid_mode,
+        )
+        self.add_form_description(
+            f_mermaid,
+            t("settings.formatting.mermaid_renderer_group", "Local renderer"),
         )
         self._mermaid_controls = MermaidControls(self, f_mermaid, self._vm)
 
