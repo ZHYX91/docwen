@@ -159,11 +159,7 @@ def test_all_locale_string_keys_and_placeholders_match_zh_cn() -> None:
     for path in sorted(LOCALES_DIR.glob("*.toml")):
         actual = _flatten_string_values(_read_toml_file(path))
         assert set(actual) == set(reference)
-        mismatches = [
-            key
-            for key, source in reference.items()
-            if _placeholders(actual[key]) != _placeholders(source)
-        ]
+        mismatches = [key for key, source in reference.items() if _placeholders(actual[key]) != _placeholders(source)]
         assert mismatches == []
 
 
