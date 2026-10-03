@@ -434,10 +434,15 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
                 payload_fragments,
             )
         )
+        standalone = not logical_objects
         if identity is not None:
-            physical = (*object_elements, caption._p) if kind == "figure" else (caption._p, *object_elements)
+            physical = (
+                (caption._p,)
+                if standalone
+                else ((*object_elements, caption._p) if kind == "figure" else (caption._p, *object_elements))
+            )
             self._target_bindings.append(TargetBindingV3(identity, physical))
-        elif not logical_objects:
+        if standalone:
             occurrence = derive_standalone_caption_occurrence(
                 source_sha256=self._port.source_sha256,
                 source_start=source_start,
@@ -445,10 +450,11 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
                 kind=kind,  # type: ignore[arg-type]
                 plan_sha256=self._port.plan_sha256,
                 enabled=plan_target.enabled,
+                target_id=document_target.target_id,
                 derived_number=plan_target.derived_number,
             )
             self._standalone_occurrence_bindings.append(_StandaloneOccurrenceBinding(occurrence, caption._p))
-        elif not plan_target.enabled:
+        elif identity is None and not plan_target.enabled:
             occurrence = derive_numbering_occurrence(
                 source_sha256=self._port.source_sha256,
                 source_start=source_start,
@@ -583,6 +589,8 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
                 )
             )
         for binding in self._standalone_occurrence_bindings:
+            if binding.identity.target_id is not None:
+                continue
             groups.append(
                 resolved_semantic_group_v4(
                     role="standalone_occurrence",
