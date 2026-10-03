@@ -137,8 +137,9 @@ Figure: Bound caption
 ![bound](bound.png)
 
 figure: lowercase near miss ^raw-id
+Figure:no-space ^raw-no-space
 
-See @[[#^figure-id]] and @[[#figure: standalone caption]].
+See @[[#^figure-id|  Figure alias  ]] and @[[#figure: standalone caption]].
 """
     analysis = _analyze(source, consumer_profile="number_suite_direct")
 
@@ -152,7 +153,8 @@ See @[[#^figure-id]] and @[[#figure: standalone caption]].
     assert "object_range" not in captions[0]
     assert source[captions[1]["object_range"]["start"] : captions[1]["object_range"]["end"]].startswith("![bound]")
     assert [(item["id"], item["block_kind"]) for item in analysis.projection["anchors"]] == [
-        ("raw-id", "paragraph")
+        ("raw-id", "paragraph"),
+        ("raw-no-space", "paragraph"),
     ]
     references = analysis.projection["references"]
     assert [(item["resolution_status"], item["cached_number"]) for item in references] == [
@@ -160,6 +162,7 @@ See @[[#^figure-id]] and @[[#figure: standalone caption]].
         ("resolved", "1"),
     ]
     assert references[0]["target_id"] == "Figure-ID"
+    assert references[0]["alias"] == "Figure alias"
     assert references[1]["resolved_target_id"] == "Figure-ID"
 
 
