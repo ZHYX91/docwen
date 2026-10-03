@@ -127,6 +127,57 @@ def test_output_switches_are_independent_and_need_only_docx(tmp_path: Path, dial
         assert any("flattened" in (item.code or "") for item in result.diagnostics)
 
 
+
+def test_no_header_structural_table_round_trips_from_isolated_docx(tmp_path: Path) -> None:
+    source = tmp_path / "no-header.md"
+    source.write_text("| --- | --- |\n| Alice | 10 |\n| Bob | 20 |\n", encoding="utf-8")
+
+    forward_root = tmp_path / "forward"
+    forward_root.mkdir()
+    forward = MdToDocxConverter().convert(
+        _context(
+            forward_root,
+            source,
+            "docx",
+            {"input": MarkdownExtensions(structural_tables=True).to_dict()},
+        )
+    )
+    assert forward.success, forward.error
+    generated = Path(forward.artifacts[0].staging_path)
+    with ZipFile(generated) as package:
+        xml = package.read("word/document.xml").decode()
+        assert 'w:firstRow="0"' in xml
+
+    isolated = tmp_path / "isolated.docx"
+    isolated.write_bytes(generated.read_bytes())
+    source.unlink()
+
+    enabled_root = tmp_path / "enabled"
+    enabled_root.mkdir()
+    enabled = DocxToMarkdownConverter().convert(
+        _context(
+            enabled_root,
+            isolated,
+            "md",
+            {"output": MarkdownExtensions(structural_tables=True).to_dict()},
+        )
+    )
+    assert enabled.success, enabled.error
+    markdown = Path(enabled.artifacts[0].staging_path).read_text(encoding="utf-8")
+    assert "| --- | --- |\n| Alice | 10 |\n| Bob | 20 |" in markdown
+
+    disabled_root = tmp_path / "disabled"
+    disabled_root.mkdir()
+    disabled = DocxToMarkdownConverter().convert(
+        _context(disabled_root, isolated, "md", {"output": MarkdownExtensions().to_dict()})
+    )
+    assert disabled.success, disabled.error
+    assert any(
+        item.code == "docwen.conversion.markdown_extension.structural_tables.flattened"
+        for item in disabled.diagnostics
+    )
+
+
 def test_request_override_does_not_change_other_direction_or_config() -> None:
     config = FakeConfigView({"conversion": {"markdown_extensions": {"input": MarkdownExtensions.obsidian().to_dict()}}})
     options = {"markdown_extensions": {"input": {"structural_tables": False}}}
