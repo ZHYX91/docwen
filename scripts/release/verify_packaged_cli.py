@@ -2701,6 +2701,7 @@ def _run_machine_protocol_smoke_impl(
     }
     expected_capability_ids = {
         "convert.markdown.to_docx",
+        "convert.markdown_source.to_docx",
         "convert.markdown.to_xlsx",
         "convert.docx.to_markdown",
         "convert.pdf.to_markdown",
