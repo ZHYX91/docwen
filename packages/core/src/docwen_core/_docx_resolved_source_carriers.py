@@ -25,9 +25,15 @@ from docwen_core._docx_semantics_v3_model import (
     require_source_id,
 )
 from docwen_core._docx_semantics_v3_ooxml import sdt_tag
+from docwen_core.docx_standalone_caption_occurrence import STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX
 
 _NUMBERING_OCCURRENCE_TAG_PREFIX = "docwen-numbering-occurrence-v1:"
-_BLOCK_TAG_PREFIXES = (TARGET_TAG_PREFIX, ANCHOR_TAG_PREFIX, _NUMBERING_OCCURRENCE_TAG_PREFIX)
+_BLOCK_TAG_PREFIXES = (
+    TARGET_TAG_PREFIX,
+    ANCHOR_TAG_PREFIX,
+    _NUMBERING_OCCURRENCE_TAG_PREFIX,
+    STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX,
+)
 _CONTAINER_KINDS = frozenset({"list", "list_item", "block_quote", "callout"})
 _SOURCE_BLOCK_KINDS = frozenset(
     {
@@ -52,7 +58,7 @@ _RAW_TARGET_KIND = {
 }
 _POST_BLOCK_GAP_CHARS = frozenset(" \t\r\n>+-*0123456789.)[]xX")
 
-type ResolvedCarrierRole = Literal["anchor", "target", "occurrence"]
+type ResolvedCarrierRole = Literal["anchor", "target", "occurrence", "standalone_occurrence"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -185,7 +191,7 @@ def resolved_anchor_group_v4(binding: ResolvedOrdinaryAnchorBindingV4) -> Resolv
 
 def resolved_semantic_group_v4(
     *,
-    role: Literal["target", "occurrence"],
+    role: Literal["target", "occurrence", "standalone_occurrence"],
     tag: str,
     elements: tuple[Any, ...],
     source_start: int,
@@ -195,7 +201,11 @@ def resolved_semantic_group_v4(
 ) -> ResolvedBlockCarrierGroupV4:
     if source_kind not in {"heading", "figure", "table", "equation", "code_block"}:
         raise DocxSemanticsV3Error("resolved semantic carrier kind is outside the closed set")
-    expected_prefix = TARGET_TAG_PREFIX if role == "target" else _NUMBERING_OCCURRENCE_TAG_PREFIX
+    expected_prefix = {
+        "target": TARGET_TAG_PREFIX,
+        "occurrence": _NUMBERING_OCCURRENCE_TAG_PREFIX,
+        "standalone_occurrence": STANDALONE_CAPTION_OCCURRENCE_TAG_PREFIX,
+    }[role]
     if not tag.startswith(expected_prefix):
         raise DocxSemanticsV3Error("resolved semantic carrier tag has the wrong role prefix")
     if source_start < 0 or source_end <= source_start or not elements:
