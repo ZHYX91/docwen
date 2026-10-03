@@ -365,8 +365,14 @@ class DocxSemanticsV3Recovery:
             None,
         )
 
+    def caption_for_element(self, element: Any) -> RecoveredCaptionV3 | None:
+        return next(
+            (item for item in self.recovered_captions if item.caption_element is element),
+            None,
+        )
+
     def is_caption_element(self, element: Any) -> bool:
-        return any(item.caption_element is element for item in self.recovered_captions)
+        return self.caption_for_element(element) is not None
 
     def render_paragraph_text(self, paragraph_element: Any, *, emit_references: bool = True) -> str | None:
         """Recover exact authored v3 reference tokens from one paragraph."""
@@ -396,19 +402,23 @@ def _prove_caption_target_group(
 ) -> tuple[Any, tuple[Any, ...]]:
     from docx.oxml.ns import qn
 
-    if len(blocks) != 2:
-        raise DocxSemanticsV3Error("caption target SDT must contain one caption and one logical object")
-    if target.kind == "figure":
-        object_slot, caption = blocks
+    if len(blocks) == 1 and caption_parser is not None:
+        caption = blocks[0]
+        object_elements: tuple[Any, ...] = ()
+    elif len(blocks) == 2:
+        if target.kind == "figure":
+            object_slot, caption = blocks
+        else:
+            caption, object_slot = blocks
+        object_elements = logical_group_elements((object_slot,))
+        _prove_caption_object_kind(target.kind, object_elements)
     else:
-        caption, object_slot = blocks
+        raise DocxSemanticsV3Error("caption target SDT must contain one caption and one logical object")
     if caption.tag != qn("w:p"):
         raise DocxSemanticsV3Error("caption target has no caption paragraph")
     if not caption_style_bindings:
         raise DocxSemanticsV3Error("caption target lacks its authenticated caption-style binding map")
     prove_caption_paragraph_style(caption, target.kind, caption_style_bindings)
-    object_elements = logical_group_elements((object_slot,))
-    _prove_caption_object_kind(target.kind, object_elements)
     parser = _parse_v3_caption if caption_parser is None else caption_parser
     parser(caption, target.kind, required_bookmark=target.bookmark_name)
     return caption, object_elements
