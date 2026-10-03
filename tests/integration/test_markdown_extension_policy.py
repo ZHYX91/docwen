@@ -126,8 +126,6 @@ def test_output_switches_are_independent_and_need_only_docx(tmp_path: Path, dial
     if dialect != MarkdownExtensions.obsidian():
         assert any("flattened" in (item.code or "") for item in result.diagnostics)
 
-
-
 def test_no_header_structural_table_round_trips_from_isolated_docx(tmp_path: Path) -> None:
     source = tmp_path / "no-header.md"
     source.write_text("| --- | --- |\n| Alice | 10 |\n| Bob | 20 |\n", encoding="utf-8")
