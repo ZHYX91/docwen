@@ -77,9 +77,7 @@ def prepare_resolved_source_carriers_v4(
     carrier_diagnostics = [
         item
         for item in full_plan.analysis.diagnostics
-        if not str(item["code"]).startswith(
-            ("docwen.markdown.caption.", "docwen.markdown.cross_reference.")
-        )
+        if not str(item["code"]).startswith(("docwen.markdown.caption.", "docwen.markdown.cross_reference."))
     ]
     if any(item["severity"] == "error" for item in carrier_diagnostics):
         codes = ", ".join(sorted({str(item["code"]) for item in carrier_diagnostics}))
