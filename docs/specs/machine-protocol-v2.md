@@ -91,6 +91,24 @@ optimizer families remain resource metadata until they have an explicit Machine 
 输出媒体类型选择唯一可用能力，不解析能力 ID 的命名，也不把资源列表当作可执行保证。公文优化及普通
 文档转 Markdown 都检查完整预转换链；优化参数来自实际优化路线，不能套用普通转换独有的参数。
 
+## Source-native Markdown-to-DOCX / 源 Markdown 转 DOCX
+
+Machine also exposes the separate capability `convert.markdown_source.to_docx` for consumers that own authored
+Markdown rather than a pre-resolved numbering plan. It accepts exactly one required `source` document with media
+type `text/markdown` plus zero or more declared `linked_resource` image resources. Undeclared roles remain
+rejected. Resource lookup is limited to those typed inputs; the converter does not scan a consumer workspace or
+filesystem namespace to find a matching image.
+
+This source-native capability owns authored-source interpretation. `markdown_extensions` follows the ordinary
+request/config override rules. Its closed option schema additionally exposes `remove_numbering`, `add_numbering`,
+`numbering_scheme`, and `heading_numbering_render_mode`. The selected numbering scheme is resolved from DocWen's
+numbering registry at execution time. These options describe the current conversion request; a consumer must not
+derive them implicitly from an editor plugin's private display/counter state.
+
+该能力与下面的 resolved-v4 能力并存而不是替代后者。源 Markdown 路径由 DocWen 自己解释公开方言，
+编号由本次请求和 DocWen 的编号方案注册表决定；是否安装某个编辑器插件不能成为转换结果的隐藏输入。
+resolved-v4 路径仍由上游提供完整已解析计划，并继续拒绝 authored-source 编号控制。
+
 ## Resolved-numbering inputs / 已解析编号输入
 
 The v4 plan-aware Markdown→DOCX capability requires exactly two input resources; neither is optional or repeatable:
