@@ -127,3 +127,38 @@ def test_ordinary_and_invalid_structural_tables_remain_outside_the_extension() -
     assert ordinary["type"] == "table"
     assert "_structural_table" not in ordinary
     assert invalid["type"] == "paragraph"
+
+
+def test_structural_table_dialect_accepts_no_column_header_rows() -> None:
+    source = "| - | - |\n| Alice | 10 |\n| Bob | 20 |"
+    analysis = analyze_document_semantics(parse_markdown_text(source), current_v3=True)
+
+    assert not analysis.has_errors
+    metadata = analysis.ast[0]["_document_semantics_table"]
+    assert metadata["header_rows"] == 0
+    assert metadata["header_columns"] == 0
+    assert all(anchor["role"] == "data" for anchor in metadata["anchors"])
+
+
+def test_structural_table_accepts_short_delimiters_without_outer_pipes() -> None:
+    source = "Region | Sales | <\nQuarter | Q1 | Q2\n- | - | -\nNorth | 10 | 12"
+    analysis = analyze_document_semantics(parse_markdown_text(source), current_v3=True)
+
+    assert not analysis.has_errors
+    metadata = analysis.ast[0]["_document_semantics_table"]
+    assert metadata["header_rows"] == 2
+    assert metadata["header_columns"] == 0
+    assert metadata["anchors"][0]["column_span"] == 1
+    assert metadata["anchors"][1]["column_span"] == 2
+
+
+def test_formatted_merge_markers_are_literal_cell_content() -> None:
+    source = """| Code left | Strong left | Link left | Math left | Code up | Strong up |
+| --- | --- | --- | --- | --- | --- |
+| `<` | **<** | [<](https://example.com) | $<$ | `^` | **^** |"""
+    analysis = analyze_document_semantics(parse_markdown_text(source), current_v3=True)
+
+    assert not analysis.has_errors
+    metadata = analysis.ast[0]["_document_semantics_table"]
+    for anchor in metadata["anchors"]:
+        assert anchor["row_span"] == anchor["column_span"] == 1
