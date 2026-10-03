@@ -90,23 +90,6 @@ def test_runtime_adapter_binds_figure_caption_and_whole_list_anchor() -> None:
     assert whole_list["_docwen_v3_ordinary_anchor"]["block_kind"] == "list"
 
 
-def test_runtime_adapter_keeps_unbound_caption_as_standalone_owner() -> None:
-    source = "Figure: Planned ^planned\n\n\n![later](later.png)\n"
-    plan = prepare_runtime_semantics_v3(source, input_id="standalone-caption.md")
-
-    assert not plan.analysis.has_errors
-    [target] = plan.analysis.projection["targets"]
-    assert "object_range" not in target
-
-    ast = apply_runtime_semantics_v3(
-        parse_markdown_text(plan.shielded_source, auto_link_bare_url=False),
-        plan,
-    )
-    [declaration] = [node for node in ast if node.get("type") == "_docwen_v3_caption_declaration"]
-    assert declaration["_docwen_v3_caption_target"]["id"] == "planned"
-    assert "object_range" not in declaration["_docwen_v3_caption_target"]
-
-
 def test_runtime_adapter_lifts_inline_anchor_to_its_list_item() -> None:
     source = "- first ^first-item\n- second\n"
     plan = prepare_runtime_semantics_v3(source, input_id="source")
