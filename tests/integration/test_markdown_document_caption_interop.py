@@ -127,8 +127,8 @@ def test_direct_number_suite_standalone_caption_round_trips_without_inventing_ca
     )
     assert "Figure: Planned architecture ^Plan" in markdown
     assert "ordinary paragraph" in markdown
-    assert "@[[#^Plan]]" in markdown
-    assert "@[[#Figure: Planned architecture]]" in markdown
+    assert "@[[#^plan]]" in markdown
+    assert "@[[#figure: planned architecture]]" in markdown
     assert "![image omitted]()" not in markdown
 
 
