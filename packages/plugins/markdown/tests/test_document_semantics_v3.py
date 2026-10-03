@@ -137,6 +137,7 @@ Figure: Bound caption
 ![bound](bound.png)
 
 figure: lowercase near miss ^raw-id
+
 Figure:no-space ^raw-no-space
 
 See @[[#^figure-id|  Figure alias  ]] and @[[#figure: standalone caption]].
