@@ -93,7 +93,7 @@ pip install pillow-heif
 không mở rộng cam kết sang bản phân phối hoặc kiến trúc khác.
 
 - Có môi trường desktop (GNOME, KDE, XFCE, ...)
-- GUI dùng PySide6 (Qt6) và không còn phụ thuộc vào Python Tk. Nếu khởi động lỗi vì thiếu thư viện hệ thống, hãy cài các phụ thuộc runtime của Qt theo thông báo lỗi (thường liên quan OpenGL/X11).
+- GUI dùng PySide6 (Qt6) và không còn phụ thuộc vào Python Tk. Nếu khởi động lỗi vì thiếu thư viện hệ thống, hãy cài các thư viện cần thiết để chạy Qt theo thông báo lỗi (thường liên quan OpenGL/X11).
 - Với máy chủ headless, hãy ưu tiên entry CLI `docwen` thay vì GUI; bản đóng gói Windows cũng cung cấp `DocWenCLI.exe`.
 
 ### Hướng dẫn nhanh
