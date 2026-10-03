@@ -6,7 +6,7 @@
 
 [English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)
 
-Word/Markdown/Excel 양방향 변환을 지원하는 문서·표 변환 도구입니다. 완전 로컬 실행으로 데이터 보안과 신뢰성을 보장합니다.
+DocWen은 Word, Markdown, Excel 등 업무용 형식을 위한 로컬 문서·표 변환 도구입니다. 안정적인 오프라인 작업 흐름을 지향하며 문서 처리를 사용자의 장치 안에서 수행합니다.
 
 ## 📖 프로젝트 배경
 
@@ -15,11 +15,11 @@ Word/Markdown/Excel 양방향 변환을 지원하는 문서·표 변환 도구�
 - 문서 유형이 다양하고 유형별로 요구되는 고정 포맷이 다름
 - 내부망/구형 PC에서도 동작해야 하므로 오프라인 실행이 필요함
 
-**설계 철학**: 전문 툴(LaTeX, Pandoc 등)만큼의 범용성과 완성도를 목표로 하기보다는, 학습 비용이 거의 없는 “간단하고 바로 쓰는” 변환 도구에 초점을 맞춥니다.
+**설계 철학**: DocWen은 일상적인 변환과 문서 정리를 쉽게 배우고 바로 사용할 수 있는 흐름에 초점을 둡니다. LaTeX나 Pandoc 같은 전문 조판·변환 시스템을 대체하려는 것이 아니라, 자주 쓰는 문서 작업을 단순하고 명확하게 만들면서 기술적 경계를 분명히 유지하는 것이 목표입니다.
 
 ## ✨ 핵심 기능
 
-- **📄 문서 변환** - Word ↔ Markdown 양방향 변환. 수식 변환, 구분선(---/***/___)과 페이지/구역/가로선 매핑을 지원하며, Markdown 표의 명시적 `<` / `^` marker 를 Word의 직사각형 셀 병합으로 복원할 수 있습니다. DOCX/DOC/WPS/RTF/ODT 지원.
+- **📄 문서 변환** - Word ↔ Markdown 양방향 변환. 수식 변환, 구분선(---/***/___)과 페이지/구역/가로선 매핑을 지원하며, Markdown 표의 명시적 `<` / `^` 병합 표시를 Word의 직사각형 셀 병합으로 복원할 수 있습니다. DOCX/DOC/WPS/RTF/ODT 지원.
 - **📊 스프레드시트 변환** - Excel ↔ Markdown 양방향 변환. XLSX/XLS/ET/ODS/CSV/TSV, 병합 셀 내보내기 전략(`fill / empty / marker`), 표 요약 도구와 아래에 설명된 템플릿 플레이스홀더를 지원합니다.
 - **📑 PDF/레이아웃 파일** - PDF/XPS/OFD → Markdown 또는 DOCX. PDF 병합/분할 등 지원.
 - **🖼️ 이미지 처리** - JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC 변환 및 압축.
@@ -71,8 +71,7 @@ docwen      # CLI 모드
 
 ### macOS 설치 안내
 
-**현재 제한**: macOS에서는 `convert`, `validate`, `number`, `merge`, `split` capability를 현재
-사용할 수 없습니다. 아래 내용은 개발 실험을 위한 선택적 의존성만 설명합니다.
+**현재 제한**: macOS에서는 `convert`, `validate`, `number`, `merge`, `split` 기능을 현재 사용할 수 없습니다. 아래 내용은 개발 실험을 위한 선택적 의존성만 설명합니다.
 
 **LibreOffice 지원(선택)**
 
@@ -196,9 +195,12 @@ DocWen은 GUI 외에도 자동화 스크립트, 배치 처리, 외부 연동을 
 스크립트, Agent, 플러그인 연동에서는 다음 순서를 권장합니다.
 
 1. `inspect <file> [--json]`: 먼저 실제 파일 범주, 형식, 지원 동작을 확인합니다.
-2. `schema convert`: `convert` 의 기계 판독 가능한 계약과 조건 규칙을 읽습니다.
-3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: 결과를 쓰지 않고 탐지, 정규화, 라우팅을 미리 확인합니다.
-4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: 확인 후 실제 변환을 실행합니다.
+2. `resources list formats --json`: 현재 DocWen에서 실제로 사용할 수 있는 경로와 의존성 조건을 확인합니다.
+3. `schema convert`: `convert` 의 기계 판독 가능한 계약과 조건 규칙을 읽습니다.
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: 결과를 쓰지 않고 탐지, 정규화, 라우팅을 미리 확인합니다.
+5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: 확인 후 실제 변환을 실행합니다.
+
+외부 콘텐츠 통합은 `serve --stdio`와 Machine Protocol v2를 사용하여 기능을 확인하고 작업을 계획한 뒤 실행합니다. CLI의 `--json`은 터미널 표시 형식일 뿐 제품 간 호환성 경계가 아닙니다. 로컬 데스크톱 제어에는 별도의 안정적인 `gui open|activate|status` 인터페이스를 사용합니다.
 
 ### 자주 쓰는 예시
 
@@ -256,8 +258,10 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `inspect <file> [--json]` | 파일 범주/형식, 권장 동작, 확장자와 내용 불일치 경고를 확인합니다. |
 | `doctor --json` | 진단 결과와 함께 런타임 능력 요약 및 의존성 게이트를 출력합니다. |
 | `resources list formats --json` | 원본 범주별 대상 형식과 의존성 게이트 / 제한 요약을 출력합니다. |
+| `resources list optimizations --json` | 형식화된 최적화 리소스와 정규 경로 연결을 나열합니다. |
 | `resources list templates` | 사용 가능한 템플릿을 나열합니다. |
 | `resources list numbering-schemes` | 사용 가능한 번호 체계를 나열합니다. |
+| `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | 별도의 로컬 GUI 제어로 DocWen을 시작하거나 활성화하고 필요하면 절대 경로 파일 하나를 엽니다. |
 | `--template <id>` | `resources list templates`가 반환한 정규 리소스 ID를 그대로 사용합니다. 표시 이름·파일명·경로는 거부됩니다. DOCX ID는 `docx/doc/odt/rtf/wps/pdf`, XLSX ID는 `xlsx/xls/ods/csv`에 적용됩니다. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | `convert --to md` 용 이미지 추출 및 OCR 옵션입니다. |
 | `--image-mode file|base64|embed|omit` | Markdown 내보내기 시 이미지 출력 방식을 제어합니다. |
@@ -561,7 +565,7 @@ Markdown 표에서 데이터를 추출해 플레이스홀더 위치부터 **오�
 **병합 셀 처리**:
 
 - Markdown -> Excel 은 템플릿에 원래 있던 merged ranges 를 계속 유지합니다.
-- 연속된 `{{↓Field Name}}` 플레이스홀더로 구성된 알려진 세로형 템플릿 영역에서는 Markdown 표의 명시적 `<` / `^` marker 로부터 직사각형 병합을 복원할 수 있습니다.
+- 연속된 `{{↓Field Name}}` 플레이스홀더로 구성된 알려진 세로형 템플릿 영역에서는 Markdown 표의 명시적 `<` / `^` 병합 표시로부터 직사각형 병합을 복원할 수 있습니다.
 - 앞뒤 공백을 제거한 내용이 정확히 `<` 또는 `^` 인 셀만 병합 판정에 참여하며, `\<` 와 `\^` 는 리터럴 텍스트로 유지됩니다.
 - 잘못된 직사각형이거나 템플릿의 기존 merged ranges 와 충돌하면 템플릿 구조를 강제로 덮어쓰지 않고 경고를 남긴 뒤 일반 텍스트로 강등합니다.
 
@@ -576,14 +580,11 @@ Markdown 표에서 데이터를 추출해 플레이스홀더 위치부터 **오�
 -   **🚀 원클릭 실행** - 사이드바 아이콘으로 변환기 빠르게 실행
 -   **📂 자동 전달** - 현재 열려 있는 파일 경로를 자동으로 전달
 -   **🔄 단일 인스턴스 관리** - 이미 실행 중이면 파일만 전송하고 재시작 불필요
--   **🔒 범위가 제한된 로컬 제어** - 프로세스 이름 탐색이나 명령/상태 파일 없이 형식화된 `status`, `open`, `activate` 요청을 사용
+-   **🔒 안전한 로컬 제어** - 프로세스 이름 탐색이나 명령/상태 파일 없이 구조화된 `status`, `open`, `activate` 요청을 사용
 
 ### 동작 원리
 
-DocWen Core의 runtime/control transport는 Windows 명명된 파이프 또는 Linux/macOS의 AF_UNIX
-소켓을 사용할 수 있습니다. 파일 잠금은 단일 인스턴스 소유권만 설정하며 제어 명령 전송에는
-파일을 사용하지 않습니다. 이는 Core 기능 설명일 뿐입니다. DocWen Assistant 3.1은 Windows
-데스크톱 전용이며 Linux/macOS 조합 검수는 없습니다.
+DocWen Core는 Windows의 로컬 제어에 named pipe를, Linux/macOS에서는 AF_UNIX 소켓을 사용합니다. 파일 잠금은 단일 인스턴스 소유권만 설정하며 제어 명령을 파일로 전달하지 않습니다. 이는 Core 경계에 대한 설명입니다. DocWen Assistant 3.1은 Windows와 Linux 데스크톱 호스트를 지원합니다. Windows Microsoft Store 설치는 자동 감지를 사용할 수 있고, Linux에서는 호환되는 압축 해제 패키지를 수동으로 선택합니다. Assistant는 현재 macOS를 지원하지 않습니다.
 
 1.  **첫 클릭** → 변환기를 실행하고 현재 파일을 전달
 2.  **다시 클릭(파일 있음)** → 새 파일로 교체(단일 파일 모드)

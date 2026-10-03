@@ -6,21 +6,21 @@
 
 [English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)
 
-DocWen - 支持 Word/Markdown/Excel 互转，完全本地运行，数据安全可靠。
+DocWen 是面向 Word、Markdown、Excel 等办公格式的本地文档与表格转换工具，强调离线可用、流程清晰，并将文档处理留在用户设备上。
 
 ## 📖 项目背景
 
-本软件最初为文印室日常工作设计，解决以下问题：
+DocWen 最初面向文印室等日常文档整理场景，主要解决这些问题：
 
-- 各科室发来的文档格式混乱，需要整理为规范格式
-- 文档类型繁多，每种类型有不同的固定格式要求
-- 需要离线运行，并适配内网环境和老旧设备
+- 不同部门提供的文档格式不统一，需要整理为规范格式
+- 文件类型多，不同类型有各自的格式要求
+- 需要在内网、离线环境和较旧设备上稳定工作
 
-**设计理念**：本软件定位为轻量级傻瓜式工具，在专业性和功能完整性上无法与 LaTeX、Pandoc 等专业工具相比，但胜在零学习成本、开箱即用，适合对格式要求不高的日常办公场景。
+**设计理念**：DocWen 优先提供低门槛、开箱即用的日常办公转换与整理流程。它不以替代 LaTeX、Pandoc 等专业排版或转换系统为目标，而是把常见文档任务做得直接、清晰，同时保留明确的技术边界。
 
 ## ✨ 核心功能
 
-- **📄 文档格式转换** - Word ↔ Markdown 互转，支持数学公式转换、分隔符双向转换（Markdown的三种分隔线与文档中的分页符、分节符、分隔线），以及 Markdown 表格显式 `<` / `^` marker 到 Word 矩形合并的恢复。支持 DOCX/DOC/WPS/RTF/ODT 等格式。
+- **📄 文档格式转换** - Word ↔ Markdown 互转，支持数学公式转换、分隔符双向转换（Markdown的三种分隔线与文档中的分页符、分节符、分隔线），以及 Markdown 表格显式 `<` / `^` 合并标记到 Word 矩形合并的恢复。支持 DOCX/DOC/WPS/RTF/ODT 等格式。
 - **📊 表格格式转换** - Excel ↔ Markdown 互转，支持 XLSX/XLS/ET/ODS/CSV/TSV 等格式；支持合并单元格导出策略（`fill / empty / marker`）、模板字段和表格汇总工具。
 - **📑 PDF与版式文件** - PDF/XPS/OFD 转 Markdown 或 DOCX，支持 PDF 合并、拆分等操作。
 - **🖼️ 图片处理** - 支持 JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC 等格式互转和压缩。
@@ -72,8 +72,7 @@ docwen      # 命令行
 
 ### macOS 安装说明
 
-**当前限制**：macOS 上的 `convert`、`validate`、`number`、`merge`、`split` capability 当前均为
-unavailable。下面只记录开发实验所需的可选依赖。
+**当前限制**：macOS 上的 `convert`、`validate`、`number`、`merge`、`split` 操作目前都不可用。下面只记录开发实验所需的可选依赖。
 
 **LibreOffice 支持（可选）**
 
@@ -199,9 +198,12 @@ pip install pillow-heif
 对于脚本、Agent 或插件集成，建议按下面顺序调用：
 
 1. `inspect <file> [--json]`：先识别文件真实类别、格式与可执行动作。
-2. `schema convert`：读取 `convert` 的机器可读参数契约与条件约束。
-3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`：先预演检测、归一化和路由结果，不直接落地转换。
-4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`：确认后再执行正式转换。
+2. `resources list formats --json`：读取当前 DocWen 实际可用的转换路线和依赖条件。
+3. `schema convert`：读取 `convert` 的机器可读参数契约与条件约束。
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`：先预演检测、归一化和路由结果，不直接落地转换。
+5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`：确认后再执行正式转换。
+
+外部内容消费者使用 `serve --stdio` 与 Machine Protocol v2：先发现能力，再规划任务，最后执行。CLI 的 `--json` 只是终端呈现格式，不是跨产品兼容边界。本机桌面控制使用独立且稳定的 `gui open|activate|status` 接口。
 
 ### 常用示例
 
@@ -254,15 +256,17 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `convert <file> --to <fmt> (--output-dir <dir> | --output <path>)` | 统一转换入口。 |
 | `convert <markdown> --to docx --output-dir <dir> --proofread [--check ...]` | Markdown→DOCX 转换后校对；`--check` 必须与 `--proofread` 同时使用，省略 `--check` 时使用已配置的校对默认值。 |
 | `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json` | 仅预演检测、归一化、路由与生效参数，不执行实际转换。 |
-| `validate` / `number markdown` / `merge` / `split` | 校对、编号、合并和拆分使用各自的领域命令，不暴露内部 action 名称。 |
+| `validate` / `number markdown` / `merge` / `split` | 校对、编号、合并和拆分使用各自的领域命令，不暴露内部操作名称。 |
 | `validate <file> --check ... [--report <path>]` | 默认只读校对；只有显式指定 `--report` 才写出报告文件。 |
 | `schema convert` | 导出 `convert` 的机器可读参数契约、默认值、条件约束与规范键。 |
 | `inspect <file> [--json]` | 查询文件类别/格式、推荐动作，以及扩展名与内容不一致警告。 |
 | `doctor --json` | 输出诊断结果，并附带运行时能力摘要与依赖门控信息。 |
 | `resources list formats --json` | 按源类别列出可用目标格式，并附带运行时依赖门控 / 限制摘要。 |
+| `resources list optimizations --json` | 列出可用优化资源及其规范路线绑定。 |
 | `resources list templates` | 列出可用模板。 |
 | `resources list numbering-schemes` | 列出可用序号方案。 |
-| `--template <id>` | 原样使用 `resources list templates` 返回的 canonical 资源 ID；显示名、文件名和路径直接拒绝。DOCX ID 用于 `docx/doc/odt/rtf/wps/pdf`，XLSX ID 用于 `xlsx/xls/ods/csv`。 |
+| `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | 通过独立的本机 GUI 控制接口启动或激活 DocWen，并可打开一个绝对路径文件。 |
+| `--template <id>` | 原样使用 `resources list templates` 返回的资源 ID；显示名、文件名和路径直接拒绝。DOCX ID 用于 `docx/doc/odt/rtf/wps/pdf`，XLSX ID 用于 `xlsx/xls/ods/csv`。 |
 | `--extract-img` / `--no-extract-img` / `--ocr` | `convert --to md` 的图片提取与 OCR 选项。 |
 | `--image-mode file|base64|embed|omit` | 控制 Markdown 导出中的图片落地方式。 |
 | `--ocr-placement image_md|main_md` | 控制 OCR 文本写入图片配套 Markdown 还是主 Markdown。 |
@@ -574,7 +578,7 @@ Excel 模板中的 `{{→月份}}` 会依次向右填充"1月"、"2月"、"3月"
 **合并单元格处理**：
 
 - Markdown -> Excel 会继续保留模板原有 merged ranges。
-- 对由连续整格 `{{↓字段名}}` 组成的已知列式模板区域，支持根据 Markdown 表格中的显式 `<` / `^` marker 恢复矩形合并。
+- 对由连续整格 `{{↓字段名}}` 组成的已知列式模板区域，支持根据 Markdown 表格中的显式 `<` / `^` 合并标记恢复矩形合并。
 - 仅当单元格去掉首尾空白后精确等于 `<` 或 `^` 时才参与 merge 识别；`\<`、`\^` 会保留为字面文本。
 - 非法矩形或与模板原有 merged ranges 冲突时，默认降级为普通文本并记录警告，不会强行覆盖模板结构。
 
@@ -589,13 +593,11 @@ Excel 模板中的 `{{→月份}}` 会依次向右填充"1月"、"2月"、"3月"
 - **🚀 一键启动** - 侧边栏图标快速启动转换器
 - **📂 自动传递** - 自动传递当前打开的文件路径
 - **🔄 单实例管理** - 程序已运行时自动发送文件，无需重复启动
-- **🔒 有界本机控制** - 使用有类型的 `status`、`open`、`activate` 请求，不按进程名探测，也不使用命令文件或状态文件
+- **🔒 安全的本机控制** - 使用结构化的 `status`、`open`、`activate` 请求，不按进程名探测，也不使用命令文件或状态文件
 
 ### 工作原理
 
-DocWen Core 的 runtime/control transport 可在 Windows 使用命名管道，在 Linux/macOS 使用
-AF_UNIX 套接字。文件锁只负责单实例所有权，控制命令不通过文件传输。这只是 Core 能力说明；
-DocWen Assistant 3.1 仍仅限 Windows 桌面端，尚无 Linux/macOS 组合验收。
+DocWen Core 在 Windows 使用命名管道进行本机控制，在 Linux/macOS 使用 AF_UNIX socket。文件锁只负责单实例所有权，不承载控制命令。这里描述的是 Core 能力。DocWen Assistant 3.1 支持 Windows 和 Linux 桌面端；Windows Microsoft Store 安装版可使用自动检测，Linux 使用手动选择的兼容解压包。Assistant 目前不支持 macOS。
 
 1. **首次点击** → 启动转换器并传入当前文件
 2. **再次点击（有文件）** → 替换为新文件（单文件模式）

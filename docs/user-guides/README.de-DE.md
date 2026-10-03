@@ -6,21 +6,21 @@
 
 [English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)
 
-Eine Software zur Konvertierung von Dokumenten- und Diagrammformaten - Unterstützt die bidirektionale Konvertierung von Word/Markdown/Excel. Läuft vollständig lokal und gewährleistet Datensicherheit und Zuverlässigkeit.
+DocWen ist ein lokales Werkzeug zur Konvertierung von Dokumenten und Tabellen für Word, Markdown, Excel und verwandte Büroformate. Es ist für zuverlässige Offline-Arbeitsabläufe ausgelegt und verarbeitet Dokumente auf dem Gerät des Benutzers.
 
 ## 📖 Projekthintergrund
 
-Diese Software wurde ursprünglich für die tägliche Arbeit der Druckerei entwickelt, um folgende Probleme zu lösen:
-- Die von verschiedenen Abteilungen gesendeten Dokumentformate sind chaotisch und müssen in standardisierte Formate organisiert werden.
-- Es gibt viele Arten von Dokumenten, jede mit unterschiedlichen festen Formatanforderungen.
-- Muss offline laufen und sich an Intranet-Umgebungen und ältere Geräte anpassen.
+DocWen entstand für alltägliche Dokumentaufbereitung, bei der typischerweise:
+- Dokumente aus verschiedenen Abteilungen in uneinheitlichen Formaten vereinheitlicht werden müssen;
+- viele Dateitypen mit unterschiedlichen Formatvorgaben vorkommen;
+- die Arbeit offline, im Intranet und auf älterer Hardware möglich sein soll.
 
-**Designphilosophie**: Diese Software ist als leichtes, narrensicheres Werkzeug positioniert. Obwohl sie in Bezug auf Professionalität und funktionale Vollständigkeit nicht mit professionellen Werkzeugen wie LaTeX oder Pandoc verglichen werden kann, zeichnet sie sich durch null Lernkosten und sofortige Einsatzbereitschaft aus, was sie für tägliche Büroszenarien geeignet macht, in denen die Formatanforderungen nicht extrem streng sind.
+**Designphilosophie**: DocWen setzt auf leicht zugängliche, sofort nutzbare Abläufe für alltägliche Konvertierungs- und Aufräumarbeiten. Es soll spezialisierte Satz- oder Konvertierungssysteme wie LaTeX oder Pandoc nicht ersetzen, sondern häufige Dokumentaufgaben verständlich und direkt machen und dabei klare technische Grenzen beibehalten.
 
 ## ✨ Kernfunktionen
 
 - **📄 Dokumentformatkonvertierung** - Bidirektionale Word ↔ Markdown Konvertierung. Unterstützt mathematische Formelkonvertierung, bidirektionale Trennzeichenkonvertierung (Markdowns drei Arten von Trennlinien vs. Words Seitenumbrüche, Abschnittswechsel und horizontale Linien) sowie die Wiederherstellung expliziter Markdown-Tabellenmarker `<` / `^` zu rechteckigen Word-Zellzusammenführungen. Unterstützt Formate wie DOCX/DOC/WPS/RTF/ODT.
-- **📊 Tabellenformatkonvertierung** - Bidirektionale Excel ↔ Markdown Konvertierung. Unterstützt XLSX/XLS/ET/ODS/CSV/TSV Formate, konfigurierbare Exportstrategien für zusammengeführte Zellen (`fill / empty / marker`) und Tabellenzusammenfassungswerkzeuge. Markdown→XLSX-Vorlagen unterstützen wieder YAML-Felder sowie vertikale und horizontale Spaltenplatzhalter; die vollständige Excel-Vorlagen-/Bild-/Merge-Wiederherstellung bleibt ein verfolgtes Parity-Ziel.
+- **📊 Tabellenformatkonvertierung** - Bidirektionale Excel ↔ Markdown Konvertierung. Unterstützt XLSX/XLS/ET/ODS/CSV/TSV Formate, konfigurierbare Exportstrategien für zusammengeführte Zellen (`fill / empty / marker`) und Tabellenzusammenfassungswerkzeuge. Markdown→XLSX-Vorlagen unterstützen wieder YAML-Felder sowie vertikale und horizontale Spaltenplatzhalter; die vollständige Wiederherstellung von Excel-Vorlagen, Bildern und Zellzusammenführungen bleibt ein nachverfolgtes Ziel zur Funktionsgleichheit.
 - **📑 PDF und Layoutdateien** - PDF/XPS/OFD zu Markdown oder DOCX Konvertierung. Unterstützt PDF-Zusammenführung, -Teilung und andere Operationen.
 - **🖼️ Bildverarbeitung** - Unterstützt bidirektionale Konvertierung und Komprimierung von JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC Formaten.
 - **📥 Import anderer Formate** - Unterstützt die einseitige Konvertierung von HTML/MHTML/ENEX/EPUB/PPTX/PPT nach Markdown.
@@ -199,9 +199,12 @@ Zusätzlich zur grafischen Oberfläche bietet DocWen eine Kommandozeilenschnitts
 Für Skripte, Agents oder Plugin-Integrationen wird diese Reihenfolge empfohlen:
 
 1. `inspect <file> [--json]`: zuerst den tatsächlichen Dateityp, das Format und die unterstützten Aktionen erkennen.
-2. `schema convert`: den maschinenlesbaren Vertrag und die Bedingungen von `convert` abrufen.
-3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: Erkennung, Normalisierung und Routing vorab prüfen, ohne Dateien zu schreiben.
-4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: die echte Konvertierung erst danach ausführen.
+2. `resources list formats --json`: die in DocWen tatsächlich verfügbaren Routen und Abhängigkeitsbedingungen lesen.
+3. `schema convert`: den maschinenlesbaren Vertrag und die Bedingungen von `convert` abrufen.
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: Erkennung, Normalisierung und Routing vorab prüfen, ohne Dateien zu schreiben.
+5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: die echte Konvertierung erst danach ausführen.
+
+Externe Inhaltsintegrationen verwenden `serve --stdio` mit Machine Protocol v2: Fähigkeiten ermitteln, eine Aufgabe planen und anschließend ausführen. Das CLI-Format `--json` dient nur der Terminaldarstellung und ist nicht die produktübergreifende Kompatibilitätsgrenze. Für lokale Desktop-Steuerung gibt es getrennt die stabile Oberfläche `gui open|activate|status`.
 
 ### Häufige Beispiele
 
@@ -259,8 +262,10 @@ Die folgende Tabelle zeigt nur haeufige Befehle. Fuer die vollstaendige Befehlsf
 | `inspect <file> [--json]` | Dateikategorie/-format, empfohlene Aktionen und Warnungen bei Erweiterungs-/Inhaltsabweichungen anzeigen. |
 | `doctor --json` | Gibt Diagnosen zusammen mit Laufzeitfähigkeits-Zusammenfassungen und Abhängigkeits-Gates aus. |
 | `resources list formats --json` | Listet Zielformate nach Quellkategorie auf und ergänzt Zusammenfassungen zu Laufzeit-Abhängigkeiten und Einschränkungen. |
+| `resources list optimizations --json` | Typisierte Optimierungsressourcen und ihre kanonischen Routenbindungen auflisten. |
 | `resources list templates` | Verfügbare Vorlagen auflisten. |
 | `resources list numbering-schemes` | Verfügbare Nummerierungsschemata auflisten. |
+| `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | DocWen über die getrennte lokale GUI-Steuerung starten oder aktivieren und optional eine absolute Datei öffnen. |
 | `--template <id>` | Exakte kanonische Ressourcen-ID aus `resources list templates`; Anzeigenamen, Dateinamen und Pfade werden abgelehnt. DOCX-IDs gelten für `docx/doc/odt/rtf/wps/pdf`, XLSX-IDs für `xlsx/xls/ods/csv`. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Bildextraktion und OCR für `convert --to md`. |
 | `--image-mode file|base64|embed|omit` | Steuert, wie Bilder beim Markdown-Export ausgegeben werden. |
@@ -518,7 +523,7 @@ Verwalten Sie DOCX/XLSX-Vorlagen unter **Einstellungen → Vorlagen**: aktiviere
 
 **Mehrsprachige Unterstützung**: Die Platzhalter für Titel und Inhalt unterstützen mehrere Sprachen, z.B. Titel kann `{{Titel}}`, `{{title}}`, `{{标题}}` usw. sein, Inhalt kann `{{Inhalt}}`, `{{body}}`, `{{正文}}` usw. sein.
 
-#### Excel-Vorlagenplatzhalter (Legacy-Parity-Ziel)
+#### Excel-Vorlagenplatzhalter (Ziel zur Wiederherstellung früherer Funktionsgleichheit)
 
 XLSX-Vorlagen unterstützen YAML-Feldplatzhalter, vertikale `{{↓Feld}}`- und horizontale `{{→Feld}}`-Tabellenspalten-Platzhalter, Bildplatzhalter sowie verbundene und geschützte Zellen.
 
@@ -580,14 +585,11 @@ Ein begleitendes Obsidian-Plugin wird separat veröffentlicht und arbeitet mit d
 -   **🚀 Ein-Klick-Start** - Seitenleistensymbol zum schnellen Starten des Konverters.
 -   **📂 Automatische Übergabe** - Übergibt automatisch den aktuell geöffneten Dateipfad.
 -   **🔄 Einzelinstanzverwaltung** - Sendet Datei automatisch, wenn das Programm bereits läuft, kein Neustart erforderlich.
--   **🔒 Begrenzte lokale Steuerung** - Verwendet typisierte `status`-, `open`- und `activate`-Anfragen ohne Prozessnamensuche oder Befehls-/Statusdateien.
+-   **🔒 Sichere lokale Steuerung** - Verwendet strukturierte `status`-, `open`- und `activate`-Anfragen ohne Prozessnamensuche oder Befehls-/Statusdateien.
 
 ### Funktionsprinzip
 
-Der runtime/control-Transport von DocWen Core verwendet unter Windows eine Named Pipe und unter
-Linux/macOS einen AF_UNIX-Socket. Eine Dateisperre stellt nur den Besitz der Einzelinstanz sicher;
-Steuerbefehle werden nicht über Dateien übertragen. Dies beschreibt nur die Core-Fähigkeit. DocWen
-Assistant 3.1 bleibt auf Windows-Desktop beschränkt und besitzt keine Linux/macOS-Kombinationsabnahme.
+DocWen Core verwendet für die lokale Steuerung unter Windows eine Named Pipe und unter Linux/macOS einen AF_UNIX-Socket. Eine Dateisperre stellt nur die Einzelinstanz-Eigentümerschaft her; Steuerbefehle werden nicht über Dateien transportiert. Dies beschreibt nur die Core-Grenze. DocWen Assistant 3.1 unterstützt Windows- und Linux-Desktop-Hosts. Microsoft-Store-Installationen unter Windows können automatisch erkannt werden; unter Linux wird ein kompatibles entpacktes Paket manuell ausgewählt. macOS wird vom Assistant derzeit nicht unterstützt.
 
 1.  **Erster Klick** → Konverter starten und aktuelle Datei übergeben.
 2.  **Klick erneut (Mit Datei)** → Durch neue Datei ersetzen (Einzeldateimodus).
