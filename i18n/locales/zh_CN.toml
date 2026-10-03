@@ -392,9 +392,9 @@ image_extraction_mode_file = "图片文件"
 image_extraction_mode_base64 = "Base64内联"
 ocr_placement_mode_label = "图文输出位置（图片 + OCR）:"
 ocr_placement_mode_tooltip = "选择“图片 + OCR”的输出位置。图片 Markdown 会为每张图片生成独立 Markdown；主文档会把图片和 OCR 写入主 Markdown。Base64 内联必须使用主文档，因此会禁用此控件并强制主文档；切回图片文件后恢复此前选择。"
-ocr_placement_mode_image_md = "图片对应MD"
+ocr_placement_mode_image_md = "图片 Markdown"
 ocr_placement_mode_main_md = "主文档"
-ocr_blockquote_title_enabled_label = "主MD OCR 标题行"
+ocr_blockquote_title_enabled_label = "主 Markdown OCR 标题"
 ocr_blockquote_title_enabled_tooltip = "全局设置：当 OCR 存放位置为“主文档”时，是否在引用块首行显示标题行。标题文本来自当前语言包。"
 ocr_blockquote_title_text_label = "标题行文本（当前语言）:"
 ocr_blockquote_title_text_tooltip = "仅影响当前界面语言。\n留空或与默认值相同则使用语言包默认文案。"
@@ -686,13 +686,13 @@ underscore_tooltip = "Markdown ___ 分隔符转换为 Word 分页符/分节符\n
 
 # 表格样式
 table_style = "表格样式"
-table_style_tooltip = "配置 Markdown 表格转换为 Word 表格时使用的样式\n\n【内置样式】\n三线表/网格表：自动检测模板是否存在，若不存在则注入样式定义\n\n【自定义样式】\n检测模板中是否存在该样式，若不存在则创建一个网格表格式的同名样式"
+table_style_tooltip = "配置 Markdown 表格转换为 Word 表格时使用的样式\\n\\n【内置样式】\\n三线表/网格表：自动检测模板是否已有所需样式；缺少时自动创建\\n\\n【自定义样式】\\n检测模板中是否存在该样式；缺少时创建一个网格表格式的同名样式"
 builtin_style_radio = "使用内置样式"
 custom_style_radio = "使用自定义样式名称"
 
 # 列表拼接符
-list_separator_label = "YAML列表拼接符"
-list_separator_tooltip = "YAML字段值为列表时，使用此分隔符拼接为字符串\n\n常见值：\n• 顿号（、）：中文列表常用\n• 逗号（，）：中文通用分隔\n• 逗号空格（, ）：英文风格\n• 空字符串：无分隔符直接拼接"
+list_separator_label = "YAML 列表分隔符"
+list_separator_tooltip = "模板填充时，若 YAML 字段值为列表，使用此分隔符连接各项\\n\\n常见值：\\n• 顿号（、）：中文列表常用\\n• 逗号（，）：中文通用分隔\\n• 逗号空格（, ）：英文风格\\n• 空字符串：各项直接连接"
 
 # 格式处理选项
 mermaid_output_group = "输出方式"
