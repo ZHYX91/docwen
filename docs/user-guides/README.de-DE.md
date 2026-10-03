@@ -20,7 +20,7 @@ DocWen entstand für alltägliche Dokumentaufbereitung, bei der typischerweise:
 ## ✨ Kernfunktionen
 
 - **📄 Dokumentformatkonvertierung** - Bidirektionale Word ↔ Markdown Konvertierung. Unterstützt mathematische Formelkonvertierung, bidirektionale Trennzeichenkonvertierung (Markdowns drei Arten von Trennlinien vs. Words Seitenumbrüche, Abschnittswechsel und horizontale Linien) sowie die Wiederherstellung expliziter Markdown-Tabellenmarker `<` / `^` zu rechteckigen Word-Zellzusammenführungen. Unterstützt Formate wie DOCX/DOC/WPS/RTF/ODT.
-- **📊 Tabellenformatkonvertierung** - Bidirektionale Excel ↔ Markdown Konvertierung. Unterstützt XLSX/XLS/ET/ODS/CSV/TSV Formate, konfigurierbare Exportstrategien für zusammengeführte Zellen (`fill / empty / marker`) und Tabellenzusammenfassungswerkzeuge. Markdown→XLSX-Vorlagen unterstützen wieder YAML-Felder sowie vertikale und horizontale Spaltenplatzhalter; die vollständige Excel-Vorlagen-/Bild-/Merge-Wiederherstellung bleibt ein verfolgtes Parity-Ziel.
+- **📊 Tabellenformatkonvertierung** - Bidirektionale Excel ↔ Markdown Konvertierung. Unterstützt XLSX/XLS/ET/ODS/CSV/TSV Formate, konfigurierbare Exportstrategien für zusammengeführte Zellen (`fill / empty / marker`) und Tabellenzusammenfassungswerkzeuge. Markdown→XLSX-Vorlagen unterstützen wieder YAML-Felder sowie vertikale und horizontale Spaltenplatzhalter; die vollständige Wiederherstellung von Excel-Vorlagen, Bildern und Zellzusammenführungen bleibt ein nachverfolgtes Ziel zur Funktionsgleichheit.
 - **📑 PDF und Layoutdateien** - PDF/XPS/OFD zu Markdown oder DOCX Konvertierung. Unterstützt PDF-Zusammenführung, -Teilung und andere Operationen.
 - **🖼️ Bildverarbeitung** - Unterstützt bidirektionale Konvertierung und Komprimierung von JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC Formaten.
 - **📥 Import anderer Formate** - Unterstützt die einseitige Konvertierung von HTML/MHTML/ENEX/EPUB/PPTX/PPT nach Markdown.
@@ -524,7 +524,7 @@ Verwalten Sie DOCX/XLSX-Vorlagen unter **Einstellungen → Vorlagen**: aktiviere
 
 **Mehrsprachige Unterstützung**: Die Platzhalter für Titel und Inhalt unterstützen mehrere Sprachen, z.B. Titel kann `{{Titel}}`, `{{title}}`, `{{标题}}` usw. sein, Inhalt kann `{{Inhalt}}`, `{{body}}`, `{{正文}}` usw. sein.
 
-#### Excel-Vorlagenplatzhalter (Legacy-Parity-Ziel)
+#### Excel-Vorlagenplatzhalter (Ziel zur Wiederherstellung früherer Funktionsgleichheit)
 
 XLSX-Vorlagen unterstützen YAML-Feldplatzhalter, vertikale `{{↓Feld}}`- und horizontale `{{→Feld}}`-Tabellenspalten-Platzhalter, Bildplatzhalter sowie verbundene und geschützte Zellen.
 
