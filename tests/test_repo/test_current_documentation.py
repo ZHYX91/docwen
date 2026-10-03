@@ -185,7 +185,6 @@ def test_public_readmes_share_one_language_navigation_contract() -> None:
     assert LANGUAGE_NAV in docs_readme
 
 
-
 def _public_readme_paths() -> list[Path]:
     return [ROOT / "README.md", *(DOCS / "user-guides" / name for name in LOCALIZED_READMES)]
 
