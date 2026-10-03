@@ -162,7 +162,5 @@ def test_formatted_angle_markers_are_literal_cell_content() -> None:
 
     assert not analysis.has_errors
     metadata = analysis.ast[0]["_document_semantics_table"]
-    assert all(
-        anchor["row_span"] == 1 and anchor["column_span"] == 1
-        for anchor in metadata["anchors"]
-    )
+    for anchor in metadata["anchors"]:
+        assert anchor["row_span"] == anchor["column_span"] == 1
