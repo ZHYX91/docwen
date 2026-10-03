@@ -494,7 +494,6 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 ### 自定義範本
 
-DocWen Core 的執行階段/控制傳輸在 Windows 使用命名管道，在 Linux/macOS 使用 AF_UNIX socket。檔案鎖只負責單一執行個體所有權，不承載控制命令。這裡描述的是 Core 能力。DocWen Assistant 3.1 支援 Windows 與 Linux 桌面端；Windows Microsoft Store 安裝版可使用自動偵測，Linux 使用手動選取的相容解壓縮套件。Assistant 目前不支援 macOS。
 
 1. 選擇內建範本並**複製並編輯**，或匯入現有 DOCX/XLSX 檔案。
 2. 在 Word、Excel 或 WPS 中修改自訂副本的內容、樣式與預留位置，規則見下文。
@@ -589,9 +588,7 @@ Excel 範本中的 `{{→月份}}` 會依次向右填充"1月"、"2月"、"3月"
 
 ### 工作原理
 
-DocWen Core 的 runtime/control transport 可在 Windows 使用命名管道，在 Linux/macOS 使用
-AF_UNIX 通訊端。檔案鎖只負責單一實例所有權，控制命令不透過檔案傳輸。這只是 Core 能力
-說明；DocWen Assistant 3.1 仍僅限 Windows 桌面端，尚無 Linux/macOS 組合驗收。
+DocWen Core 的執行階段/控制傳輸在 Windows 使用命名管道，在 Linux/macOS 使用 AF_UNIX socket。檔案鎖只負責單一執行個體所有權，不承載控制命令。這裡描述的是 Core 能力。DocWen Assistant 3.1 支援 Windows 與 Linux 桌面端；Windows Microsoft Store 安裝版可使用自動偵測，Linux 使用手動選取的相容解壓縮套件。Assistant 目前不支援 macOS。
 
 1. **首次點擊** → 啟動轉換器並傳入當前文件
 2. **再次點擊（有文件）** → 替換為新文件（單文件模式）
