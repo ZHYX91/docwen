@@ -28,13 +28,13 @@ from docwen_plugin_markdown.document_semantics_v3 import (
     analyze_markdown_semantics_v3,
     markdown_semantics_body_start_v3,
 )
-from docwen_plugin_markdown.number_suite_direct_semantics import (
-    MarkdownSemanticsV3Analysis as NumberSuiteDirectAnalysis,
-    analyze_markdown_semantics_v3 as analyze_number_suite_direct_semantics,
-)
 from docwen_plugin_markdown.document_semantics_v3_fenced_source import (
     fenced_source_info_insertion_offset_v3,
     recover_fenced_logical_body_v3,
+)
+from docwen_plugin_markdown.number_suite_direct_semantics import (
+    MarkdownSemanticsV3Analysis as NumberSuiteDirectAnalysis,
+    analyze_markdown_semantics_v3 as analyze_number_suite_direct_semantics,
 )
 
 type SemanticConsumerProfile = Literal["frozen_v3", "number_suite_direct"]
