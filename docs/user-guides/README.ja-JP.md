@@ -198,9 +198,12 @@ DocWen は GUI に加えて、自動化スクリプト、バッチ処理、外�
 スクリプト、Agent、プラグイン連携では、次の順序を推奨します。
 
 1. `inspect <file> [--json]`：まず実際のファイル種別、形式、利用可能なアクションを確認します。
-2. `schema convert`：`convert` の機械可読な契約と条件ルールを取得します。
-3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`：出力を書き出さずに検出、正規化、ルーティングを事前確認します。
-4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`：問題がなければ本番の変換を実行します。
+2. `resources list formats --json`：現在の Runtime で実際に利用できるルートと依存条件を確認します。
+3. `schema convert`：`convert` の機械可読な契約と条件ルールを取得します。
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`：出力を書き出さずに検出、正規化、ルーティングを事前確認します。
+5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`：問題がなければ本番の変換を実行します。
+
+外部のコンテンツ連携は `serve --stdio` と Machine Protocol v2 を使用し、機能を検出してタスクを計画した後に実行します。CLI の `--json` は端末向けの表示形式であり、製品間互換性の境界ではありません。ローカルのデスクトップ制御には、独立した安定インターフェース `gui open|activate|status` を使用します。
 
 ### よく使う例
 
@@ -256,8 +259,10 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `inspect <file> [--json]` | ファイル種別/形式、推奨アクション、拡張子と内容の不一致に関する警告を確認します。 |
 | `doctor --json` | 診断結果に加えて、ランタイム能力サマリーと依存ゲートを出力します。 |
 | `resources list formats --json` | ソースカテゴリごとのターゲット形式と依存ゲート / 制限サマリーを出力します。 |
+| `resources list optimizations --json` | 型付き最適化リソースと、その正規ルートへの関連付けを一覧表示します。 |
 | `resources list templates` | 利用可能なテンプレートを一覧表示します。 |
 | `resources list numbering-schemes` | 利用可能な番号付けスキームを一覧表示します。 |
+| `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | 独立したローカル GUI 制御で DocWen を起動またはアクティブ化し、必要に応じて絶対パスのファイルを開きます。 |
 | `--template <id>` | `resources list templates` が返す正規リソース ID をそのまま指定します。表示名・ファイル名・パスは拒否されます。DOCX ID は `docx/doc/odt/rtf/wps/pdf`、XLSX ID は `xlsx/xls/ods/csv` 用です。 |
 | `--extract-img` / `--no-extract-img` / `--ocr` | `convert --to md` 向けの画像抽出と OCR オプションです。 |
 | `--image-mode file|base64|embed|omit` | Markdown エクスポート時の画像出力方法を制御します。 |
@@ -487,6 +492,8 @@ Markdown -> DOCX でクリック可能なリンクをサポートします:
 **設定 → テンプレート**で DOCX/XLSX テンプレートの有効・無効、並び順、既定値を管理します。内蔵テンプレートは読み取り専用で、カスタムテンプレートはユーザーが書き込める場所に保存されます。MSIX でも WindowsApps の変更は不要です。
 
 ### カスタムテンプレート
+
+DocWen Core の Runtime/Control 通信は Windows では名前付きパイプ、Linux/macOS では AF_UNIX ソケットを使用します。ファイルロックは単一インスタンスの所有権だけを確立し、制御コマンドの転送には使用しません。これは Core の境界だけを説明しています。DocWen Assistant 3.1 は Windows と Linux のデスクトップ環境をサポートします。Windows の Microsoft Store 版は自動検出を利用でき、Linux では互換性のある展開済みパッケージを手動で選択します。Assistant は現在 macOS をサポートしていません。
 
 1. 内蔵テンプレートをコピーして編集するか、既存の DOCX/XLSX ファイルをインポートします。
 2. Word、Excel、WPS でコピーの内容、スタイル、プレースホルダーを編集します。規則は以下を参照してください。
