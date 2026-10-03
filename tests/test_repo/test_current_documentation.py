@@ -219,6 +219,7 @@ def test_public_readmes_keep_cli_integration_anchors() -> None:
         text = path.read_text(encoding="utf-8")
         cli = _named_h2_section(text, CLI_SECTION_HEADING_MARKERS[path.name])
         assert all(token in cli for token in required), path.name
+        assert cli.count("| `gui open [ABSOLUTE_FILE]") == 1, path.name
         ordered = [
             cli.index("inspect <file> [--json]"),
             cli.index("resources list formats --json"),
