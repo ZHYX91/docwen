@@ -25,6 +25,7 @@ from docwen_core.docx_semantics_v3 import fenced_source_identity_from_mapping_v3
 from docwen_core.markdown_extensions import MarkdownExtensions
 from docwen_plugin_markdown.document_semantics_v3 import (
     MarkdownSemanticsV3Analysis,
+    SemanticConsumerProfile,
     analyze_markdown_semantics_v3,
     markdown_semantics_body_start_v3,
 )
@@ -87,12 +88,21 @@ class RuntimeSemanticsV3Plan:
 
 
 def prepare_runtime_semantics_v3(
-    source: str, *, input_id: str, extensions: MarkdownExtensions | None = None
+    source: str,
+    *,
+    input_id: str,
+    extensions: MarkdownExtensions | None = None,
+    consumer_profile: SemanticConsumerProfile = "frozen_v3",
 ) -> RuntimeSemanticsV3Plan:
     """Analyze and shield one exact accepted input before generic processing."""
 
     try:
-        analysis = analyze_markdown_semantics_v3(source, input_id=input_id, extensions=extensions)
+        analysis = analyze_markdown_semantics_v3(
+            source,
+            input_id=input_id,
+            extensions=extensions,
+            consumer_profile=consumer_profile,
+        )
     except ValueError as exc:
         raise RuntimeSemanticsV3Unsupported(str(exc)) from exc
     body_start = markdown_semantics_body_start_v3(source)
@@ -548,8 +558,11 @@ def _bind_caption_targets(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     candidate_sets: dict[int, set[int]] = {}
     for declaration_index in declarations:
         target = nodes[declaration_index]["_docwen_v3_caption_target"]
+        object_range = target.get("object_range")
+        if not isinstance(object_range, dict):
+            continue
         declaration_start = int(target["declaration_range"]["start"])
-        object_start = int(target["object_range"]["start"])
+        object_start = int(object_range["start"])
         direction = -1 if object_start < declaration_start else 1
         candidates = {
             candidate
@@ -559,7 +572,7 @@ def _bind_caption_targets(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
         candidate_sets[declaration_index] = candidates
     bindings = _require_unique_caption_bindings(candidate_sets)
 
-    removed = set(declarations)
+    removed = set(bindings)
     for declaration_index, object_index in bindings.items():
         target = nodes[declaration_index]["_docwen_v3_caption_target"]
         object_node = nodes[object_index]
