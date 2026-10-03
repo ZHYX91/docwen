@@ -6,16 +6,16 @@
 
 [English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)
 
-Eine Software zur Konvertierung von Dokumenten- und Diagrammformaten - Unterstützt die bidirektionale Konvertierung von Word/Markdown/Excel. Läuft vollständig lokal und gewährleistet Datensicherheit und Zuverlässigkeit.
+DocWen ist ein lokales Werkzeug zur Konvertierung von Dokumenten und Tabellen für Word, Markdown, Excel und verwandte Büroformate. Es ist für zuverlässige Offline-Arbeitsabläufe ausgelegt und verarbeitet Dokumente auf dem Gerät des Benutzers.
 
 ## 📖 Projekthintergrund
 
-Diese Software wurde ursprünglich für die tägliche Arbeit der Druckerei entwickelt, um folgende Probleme zu lösen:
-- Die von verschiedenen Abteilungen gesendeten Dokumentformate sind chaotisch und müssen in standardisierte Formate organisiert werden.
-- Es gibt viele Arten von Dokumenten, jede mit unterschiedlichen festen Formatanforderungen.
-- Muss offline laufen und sich an Intranet-Umgebungen und ältere Geräte anpassen.
+DocWen entstand für alltägliche Dokumentaufbereitung, bei der typischerweise:
+- Dokumente aus verschiedenen Abteilungen in uneinheitlichen Formaten vereinheitlicht werden müssen;
+- viele Dateitypen mit unterschiedlichen Formatvorgaben vorkommen;
+- die Arbeit offline, im Intranet und auf älterer Hardware möglich sein soll.
 
-**Designphilosophie**: Diese Software ist als leichtes, narrensicheres Werkzeug positioniert. Obwohl sie in Bezug auf Professionalität und funktionale Vollständigkeit nicht mit professionellen Werkzeugen wie LaTeX oder Pandoc verglichen werden kann, zeichnet sie sich durch null Lernkosten und sofortige Einsatzbereitschaft aus, was sie für tägliche Büroszenarien geeignet macht, in denen die Formatanforderungen nicht extrem streng sind.
+**Designphilosophie**: DocWen setzt auf leicht zugängliche, sofort nutzbare Abläufe für alltägliche Konvertierungs- und Aufräumarbeiten. Es soll spezialisierte Satz- oder Konvertierungssysteme wie LaTeX oder Pandoc nicht ersetzen, sondern häufige Dokumentaufgaben verständlich und direkt machen und dabei klare technische Grenzen beibehalten.
 
 ## ✨ Kernfunktionen
 
