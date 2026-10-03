@@ -80,9 +80,11 @@ def test_carrier_bridge_ignores_caption_and_reference_profile_diagnostics() -> N
 
     assert plan.marker_edits == ()
     assert plan.shielded_source == source
-    assert {
-        item["code"] for item in plan.runtime_plan.analysis.diagnostics
-    } >= {"docwen.markdown.caption.object_mismatch"}
+    assert not plan.runtime_plan.analysis.has_errors
+    ast = parse_markdown_text(plan.shielded_source, auto_link_bare_url=False)
+    restored = apply_resolved_source_carriers_v4(ast, plan)
+    assert restored
+    assert all("_docwen_v3_caption_target" not in node for node in _walk(restored))
 
 
 @pytest.mark.parametrize(
