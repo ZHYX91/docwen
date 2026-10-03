@@ -77,13 +77,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+_DIRECT_NUMBER_SUITE_SCHEMA = "docwen.number_suite_direct.v1"
 _RESOLVED_TARGET_KEY = "_docwen_resolved_v4_target"
 _RESOLVED_CAPTION_CHILDREN_KEY = "_docwen_resolved_v4_caption_children"
 
 
 def _contains_request_semantics(nodes: list[dict[str, Any]]) -> bool:
     for node in nodes:
-        if node.get("schema") in {"docwen.markdown_semantics.v3", RESOLVED_DOCUMENT_SCHEMA}:
+        if node.get("schema") in {"docwen.markdown_semantics.v3", _DIRECT_NUMBER_SUITE_SCHEMA, RESOLVED_DOCUMENT_SCHEMA}:
             return True
         children = node.get("children")
         if isinstance(children, list) and _contains_request_semantics(children):
@@ -1391,7 +1392,7 @@ class MdToDocxRenderer:
                 source_end=int(node["source_end"]),
             )
             return
-        if node.get("schema") == "docwen.markdown_semantics.v3":
+        if node.get("schema") in {"docwen.markdown_semantics.v3", _DIRECT_NUMBER_SUITE_SCHEMA}:
             if self._semantic_v3_session is None:
                 raise ValueError("v3 semantic reference requires a request-owned DOCX session")
             self._semantic_v3_session.render_reference(parent, node)
