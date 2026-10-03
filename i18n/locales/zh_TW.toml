@@ -339,9 +339,9 @@ image_extraction_mode_file = "圖片檔案"
 image_extraction_mode_base64 = "Base64內嵌"
 ocr_placement_mode_label = "OCR存放位置:"
 ocr_placement_mode_tooltip = "選擇「圖片 + OCR」的輸出位置。圖片 Markdown 會為每張圖片產生獨立 Markdown；主文件會把圖片與 OCR 寫入主 Markdown。Base64 內嵌必須使用主文件，因此會停用此控制項並強制主文件；切回圖片檔案後恢復先前選擇。"
-ocr_placement_mode_image_md = "圖片對應MD"
+ocr_placement_mode_image_md = "圖片 Markdown"
 ocr_placement_mode_main_md = "主文件"
-ocr_blockquote_title_enabled_label = "主MD OCR 標題行"
+ocr_blockquote_title_enabled_label = "主 Markdown OCR 標題"
 ocr_blockquote_title_enabled_tooltip = "全局設定：當 OCR 存放位置為「主文件」時，是否在引用區塊首行顯示標題行。標題文本來自當前語言包。"
 ocr_blockquote_title_text_label = "標題行文本（當前語言）:"
 ocr_blockquote_title_text_tooltip = "僅影響當前介面語言。\n留空或與預設值相同則使用語言包預設文案。"
@@ -633,7 +633,7 @@ underscore_tooltip = "Markdown ___ 分隔符轉換為 Word 分頁符/分節符\n
 
 # 表格样式
 table_style = "表格樣式"
-table_style_tooltip = "配置 Markdown 表格轉換為 Word 表格時使用的樣式\n\n【內置樣式】\n三線表/網格表：自動檢測範本是否存在，若不存在則注入樣式定義\n\n【自定義樣式】\n檢測範本中是否存在該樣式，若不存在則創建一個網格表格式的同名樣式"
+table_style_tooltip = "設定 Markdown 表格轉換為 Word 表格時使用的樣式\\n\\n【內建樣式】\\n三線表/網格表：自動檢查範本是否已有所需樣式；缺少時自動建立\\n\\n【自訂樣式】\\n檢查範本中是否存在該樣式；缺少時建立一個網格表格式的同名樣式"
 builtin_style_radio = "使用內置樣式"
 custom_style_radio = "使用自定義樣式名稱"
 
