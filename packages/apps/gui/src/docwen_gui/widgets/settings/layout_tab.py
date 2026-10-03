@@ -35,6 +35,11 @@ class LayoutTab(DynamicSettingsTab):
             },
             {
                 "title": t("settings.layout.optimization_section", "Optimization"),
+                "description": t(
+                    "settings.optimization.availability_help",
+                    "Optimization types come from the current runtime. If none apply to this input category, "
+                    "the controls are disabled; discovery failures are reported separately.",
+                ),
                 "presentation": "card",
                 "fields": [
                     {
