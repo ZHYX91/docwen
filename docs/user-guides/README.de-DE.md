@@ -586,11 +586,11 @@ Ein begleitendes Obsidian-Plugin wird separat veröffentlicht und arbeitet mit d
 -   **🚀 Ein-Klick-Start** - Seitenleistensymbol zum schnellen Starten des Konverters.
 -   **📂 Automatische Übergabe** - Übergibt automatisch den aktuell geöffneten Dateipfad.
 -   **🔄 Einzelinstanzverwaltung** - Sendet Datei automatisch, wenn das Programm bereits läuft, kein Neustart erforderlich.
--   **🔒 Begrenzte lokale Steuerung** - Verwendet typisierte `status`-, `open`- und `activate`-Anfragen ohne Prozessnamensuche oder Befehls-/Statusdateien.
+-   **🔒 Sichere lokale Steuerung** - Verwendet strukturierte `status`-, `open`- und `activate`-Anfragen ohne Prozessnamensuche oder Befehls-/Statusdateien.
 
 ### Funktionsprinzip
 
-DocWen Core verwendet für Runtime/Control unter Windows eine Named Pipe und unter Linux/macOS einen AF_UNIX-Socket. Eine Dateisperre stellt nur die Einzelinstanz-Eigentümerschaft her; Steuerbefehle werden nicht über Dateien transportiert. Dies beschreibt nur die Core-Grenze. DocWen Assistant 3.1 unterstützt Windows- und Linux-Desktop-Hosts. Microsoft-Store-Installationen unter Windows können automatisch erkannt werden; unter Linux wird ein kompatibles entpacktes Paket manuell ausgewählt. macOS wird vom Assistant derzeit nicht unterstützt.
+DocWen Core verwendet für die lokale Steuerung unter Windows eine Named Pipe und unter Linux/macOS einen AF_UNIX-Socket. Eine Dateisperre stellt nur die Einzelinstanz-Eigentümerschaft her; Steuerbefehle werden nicht über Dateien transportiert. Dies beschreibt nur die Core-Grenze. DocWen Assistant 3.1 unterstützt Windows- und Linux-Desktop-Hosts. Microsoft-Store-Installationen unter Windows können automatisch erkannt werden; unter Linux wird ein kompatibles entpacktes Paket manuell ausgewählt. macOS wird vom Assistant derzeit nicht unterstützt.
 
 1.  **Erster Klick** → Konverter starten und aktuelle Datei übergeben.
 2.  **Klick erneut (Mit Datei)** → Durch neue Datei ersetzen (Einzeldateimodus).
