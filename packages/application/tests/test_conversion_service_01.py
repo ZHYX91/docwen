@@ -96,13 +96,6 @@ def test_capability_and_successful_plan_execute_closed_loop(tmp_path: Path) -> N
     assert service.cancel(task_id) == "already_terminal"
 
 
-@pytest.mark.parametrize(
-    ("retained_index", "expected_code"),
-    [
-        (1, "docwen.resolved_document.missing"),
-        (0, "docwen.numbering_export_plan.missing"),
-    ],
-)
 def test_source_markdown_docx_capability_owns_request_numbering_and_declared_images(tmp_path: Path) -> None:
     source = tmp_path / "note.md"
     image = tmp_path / "image.png"
@@ -164,6 +157,13 @@ def test_source_markdown_docx_capability_owns_request_numbering_and_declared_ima
     assert plan.effective_options["markdown_extensions"]["input"]["captions_references"] is True
 
 
+@pytest.mark.parametrize(
+    ("retained_index", "expected_code"),
+    [
+        (1, "docwen.resolved_document.missing"),
+        (0, "docwen.numbering_export_plan.missing"),
+    ],
+)
 def test_v4_dual_input_missing_role_fails_without_artifact(
     tmp_path: Path, retained_index: int, expected_code: str
 ) -> None:
