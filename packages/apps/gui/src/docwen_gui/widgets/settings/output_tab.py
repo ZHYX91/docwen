@@ -25,6 +25,7 @@ class OutputTab(BaseSettingsTab):
         self._vm = view_model
         self._output_mode: QComboBox = _cast(QComboBox, None)
         self._custom_path: QLineEdit = _cast(QLineEdit, None)
+        self._browse_btn: QPushButton = _cast(QPushButton, None)
         self._create_date_subfolder: QCheckBox = _cast(QCheckBox, None)
         self._date_format: QComboBox = _cast(QComboBox, None)
         self._auto_open_folder: QCheckBox = _cast(QCheckBox, None)
@@ -62,9 +63,7 @@ class OutputTab(BaseSettingsTab):
             t("settings.output.output_mode_tooltip", "Output directory mode"),
         )
         self.add_form_row(f2, t("settings.output.output_mode_label", "Directory Mode:"), self._output_mode)
-        self._output_mode.currentIndexChanged.connect(
-            lambda _: self._vm.set_field(SECTION_OUTPUT, "output_mode", self.get_combo_data(self._output_mode))
-        )
+        self._output_mode.currentIndexChanged.connect(self._on_output_mode_changed)
 
         path_row = QWidget()
         path_row.setObjectName("outputCustomPathRow")
@@ -73,12 +72,12 @@ class OutputTab(BaseSettingsTab):
         set_metric(path_layout, "setSpacing", Spacing.CONTROL_GAP)
         self._custom_path = QLineEdit()
         self._custom_path.setObjectName("outputCustomPathEdit")
-        browse_btn = QPushButton(t("common.browse", "Browse"))
-        browse_btn.setObjectName("outputBrowseButton")
-        browse_btn.clicked.connect(self._browse_path)
+        self._browse_btn = QPushButton(t("common.browse", "Browse"))
+        self._browse_btn.setObjectName("outputBrowseButton")
+        self._browse_btn.clicked.connect(self._browse_path)
         self._custom_path.textChanged.connect(lambda t: self._vm.set_field(SECTION_OUTPUT, "custom_path", t))
         path_layout.addWidget(self._custom_path)
-        path_layout.addWidget(browse_btn)
+        path_layout.addWidget(self._browse_btn)
         self.add_form_row(f2, t("settings.output.custom_path_label", "Custom Path:"), path_row)
 
         # ── Date subfolder card ─────────────────────────────────────────
@@ -92,9 +91,7 @@ class OutputTab(BaseSettingsTab):
             t("settings.output.date_folder.create_tooltip", "Place output files in a folder named by date"),
         )
         self.add_form_row(f3, "", self._create_date_subfolder)
-        self._create_date_subfolder.toggled.connect(
-            lambda v: self._vm.set_field(SECTION_OUTPUT, "create_date_subfolder", v)
-        )
+        self._create_date_subfolder.toggled.connect(self._on_date_subfolder_toggled)
 
         self._date_format = self.create_combobox(
             [
@@ -125,6 +122,20 @@ class OutputTab(BaseSettingsTab):
         self.add_form_row(f4, "", self._auto_open_folder)
         self._auto_open_folder.toggled.connect(lambda v: self._vm.set_field(SECTION_OUTPUT, "auto_open_folder", v))
 
+    def _on_output_mode_changed(self, _index: int) -> None:
+        self._vm.set_field(SECTION_OUTPUT, "output_mode", self.get_combo_data(self._output_mode))
+        self._sync_dependency_state()
+
+    def _on_date_subfolder_toggled(self, checked: bool) -> None:
+        self._vm.set_field(SECTION_OUTPUT, "create_date_subfolder", checked)
+        self._sync_dependency_state()
+
+    def _sync_dependency_state(self) -> None:
+        custom_enabled = self.get_combo_data(self._output_mode) == "custom"
+        self._custom_path.setEnabled(custom_enabled)
+        self._browse_btn.setEnabled(custom_enabled)
+        self._date_format.setEnabled(self._create_date_subfolder.isChecked())
+
     def _browse_path(self) -> None:
         path = QFileDialog.getExistingDirectory(self, t("settings.output.browse_title", "Select Output Directory"))
         if path and self._custom_path is not None:
@@ -139,6 +150,7 @@ class OutputTab(BaseSettingsTab):
         self.set_combo_data(self._date_format, out.date_folder_format)
         self._auto_open_folder.setChecked(out.auto_open_folder)
         self._save_intermediate.setChecked(out.save_intermediate_files)
+        self._sync_dependency_state()
 
     def reload_from_config(self) -> None:
         self._load_values()
