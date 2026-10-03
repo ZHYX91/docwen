@@ -539,6 +539,17 @@ class MdToDocxRenderer:
             self._bind_v3_ordinary_anchor((p._p,), node)
         return p
 
+    def _handle__docwen_resolved_v4_caption_declaration(self, node: dict[str, Any]):
+        """Render one authenticated resolved caption that has no bound object."""
+
+        target = self._resolved_caption_target(node)
+        if target is None:
+            raise ValueError("standalone resolved caption has no typed target")
+        caption = self._create_resolved_caption(node, object_elements=())
+        if caption is None:
+            raise ValueError("standalone resolved caption could not be materialized")
+        return caption
+
     def _handle_heading(self, node: dict[str, Any], next_node: dict[str, Any] | None = None):
         """Render a heading (levels 1-9; levels 7-9 are a DocWen extension).
 
