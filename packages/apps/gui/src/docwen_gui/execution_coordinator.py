@@ -118,7 +118,7 @@ class ExecutionCoordinator(QObject):
         controller = self._view_model.controller
         if controller is None or not controller.has_runtime:
             self._info_area_vm.add_message(
-                _t("main_window.runtime_unavailable", "Runtime is unavailable; conversion cannot start."),
+                _t("main_window.runtime_unavailable", "Conversion service is unavailable; conversion cannot start."),
                 "warning",
             )
             return

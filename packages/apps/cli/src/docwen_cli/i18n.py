@@ -68,8 +68,8 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "en_US": "Input file paths (supports glob patterns)",
     },
     "cli.help.template": {
-        "zh_CN": "模板资源 ID（必须是 resources list templates 返回的精确 canonical ID）",
-        "en_US": "Exact canonical template resource ID returned by resources list templates",
+        "zh_CN": "模板资源 ID（来自 resources list templates）；请使用返回的 ID，不要填写显示名称、文件名或路径",
+        "en_US": "Template resource ID from resources list templates; use the returned ID instead of a display name, filename, or path",
     },
     "cli.help.check_punct": {
         "zh_CN": "检测项: punct(标点), typo(错别字), symbol(符号), sensitive(敏感词), all, none",
@@ -104,8 +104,8 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "en_US": "OCR text placement (image_md/main_md) (requires --ocr)",
     },
     "cli.help.list_optimizations": {
-        "zh_CN": "列出可用的 action 型优化项及其适用 scope",
-        "en_US": "List available action-based optimization types and their scopes",
+        "zh_CN": "列出可用优化方案及适用范围",
+        "en_US": "List available optimizations and where they apply",
     },
     "cli.help.clean_numbering": {
         "zh_CN": "清理 MD 小标题序号: default/remove/keep",
@@ -160,8 +160,8 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "en_US": "Number of concurrent batch jobs (default: 1)",
     },
     "cli.help.inspect": {
-        "zh_CN": "查询文件可执行的操作",
-        "en_US": "Query supported actions for a file",
+        "zh_CN": "检查文件实际类型、格式和可用操作",
+        "en_US": "Inspect the file type, format, and available operations",
     },
     "cli.help.list": {
         "zh_CN": "列出可用资源",

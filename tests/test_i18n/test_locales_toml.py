@@ -137,6 +137,32 @@ def _reference_locale_path() -> Path:
     return LOCALES_DIR / "zh_CN.toml"
 
 
+def _flatten_string_values(data: dict[str, Any], prefix: str = "") -> dict[str, str]:
+    result: dict[str, str] = {}
+    for key, value in data.items():
+        path = f"{prefix}.{key}" if prefix else key
+        if isinstance(value, dict):
+            result.update(_flatten_string_values(value, path))
+        elif isinstance(value, str):
+            result[path] = value
+    return result
+
+
+def _placeholders(value: str) -> list[str]:
+    return sorted(re.findall(r"\{([A-Za-z_][A-Za-z0-9_]*)\}", value))
+
+
+def test_all_locale_string_keys_and_placeholders_match_zh_cn() -> None:
+    reference = _flatten_string_values(_read_toml_file(_reference_locale_path()))
+    assert reference
+
+    for path in sorted(LOCALES_DIR.glob("*.toml")):
+        actual = _flatten_string_values(_read_toml_file(path))
+        assert set(actual) == set(reference)
+        mismatches = [key for key, source in reference.items() if _placeholders(actual[key]) != _placeholders(source)]
+        assert mismatches == []
+
+
 def test_locales_dir_exists() -> None:
     assert LOCALES_DIR.is_dir()
 
@@ -339,6 +365,59 @@ def test_locale_short_labels_are_not_left_as_english_placeholders() -> None:
         for key, expected_value in key_values.items():
             assert _get_nested_value(locale_data, key) == expected_value, (
                 f"{locale_name} should use localized value for {key}"
+            )
+
+
+def test_restored_locale_typography_is_preserved() -> None:
+    """High-frequency UI copy should keep native accents, diacritics and scripts."""
+    expected_values = {
+        "de_DE.toml": {
+            "settings.reset.tab_button": "Tab zurücksetzen",
+            "settings.formatting.heading_merge_mode_label": "Modus zum Zusammenführen von Überschrift und Text:",
+            "components.file_drop.add_file_action": "Dateien hinzufügen",
+            "components.file_drop.batch_list.sort_size": "Größe",
+        },
+        "fr_FR.toml": {
+            "settings.reset.tab_button": "Réinitialiser l’onglet",
+            "settings.toml_editor.save_success_title": "Enregistré",
+            "components.file_drop.select_folder_dialog": "Sélectionner un dossier",
+            "components.file_drop.status.failed": "Échec",
+        },
+        "vi_VN.toml": {
+            "main_window.window_title": "DocWen (Phiên bản ngoại tuyến)",
+            "settings.reset.tab_confirm_title": "Xác nhận đặt lại",
+            "components.file_drop.add_file_action": "Thêm tệp",
+            "components.file_drop.batch_list.filter_button": "Lọc",
+            "conversion_panel.layout.split_mode_single_page_warning": "⚠️ Tệp này chỉ có 1 trang; không cần tách",
+            "action_area.generate": "Tạo",
+        },
+        "ru_RU.toml": {
+            "components.file_drop.add_file_action": "Добавить файлы",
+            "components.file_drop.select_folder_dialog": "Выбрать папку",
+            "settings.layout.render_dpi_label": "DPI рендеринга:",
+        },
+        "zh_TW.toml": {
+            "components.template_selector.source_tooltip": "來源資料夾：{value}",
+        },
+        "es_ES.toml": {
+            "settings.layout.render_dpi_label": "DPI de renderizado:",
+        },
+        "ja_JP.toml": {
+            "settings.layout.render_dpi_label": "レンダリング DPI：",
+        },
+        "ko_KR.toml": {
+            "settings.layout.render_dpi_label": "렌더링 DPI:",
+        },
+        "pt_BR.toml": {
+            "settings.layout.render_dpi_label": "DPI de renderização:",
+        },
+    }
+
+    for locale_name, key_values in expected_values.items():
+        locale_data = _read_toml_file(LOCALES_DIR / locale_name)
+        for key, expected_value in key_values.items():
+            assert _get_nested_value(locale_data, key) == expected_value, (
+                f"{locale_name} should preserve native typography for {key}"
             )
 
 

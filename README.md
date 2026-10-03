@@ -6,16 +6,16 @@
 
 [English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)
 
-A document and chart format conversion tool supporting Word/Markdown/Excel bidirectional conversion. Runs completely locally, ensuring data security and reliability.
+A local document and table conversion tool for Word, Markdown, Excel, and related office formats. It is designed for reliable offline workflows and keeps document processing on the user's machine.
 
 ## 📖 Project Background
 
-This software was originally designed for the daily work of the printing office to solve the following problems:
-- Document formats sent by various departments are chaotic and need to be organized into standardized formats.
-- There are many types of documents, each with different fixed format requirements.
-- Needs to run offline, adapting to intranet environments and legacy equipment.
+DocWen was originally built for everyday document-preparation work, where teams commonly need to:
+- normalize documents received in inconsistent formats;
+- handle many file types with different formatting requirements;
+- work offline in intranet environments and on older equipment.
 
-**Design Philosophy**: This software is positioned as a lightweight, fool-proof tool. While it cannot compare with professional tools like LaTeX or Pandoc in terms of professionalism and functional completeness, it excels in zero learning cost and out-of-the-box usability, making it suitable for daily office scenarios where format requirements are not extremely strict.
+**Design philosophy**: DocWen prioritizes low-friction, ready-to-use workflows for everyday office conversion and cleanup. It is not intended to replace specialized publishing or conversion systems such as LaTeX or Pandoc; instead, it focuses on making common document tasks straightforward while preserving clear technical boundaries.
 
 ## ✨ Core Features
 
@@ -276,15 +276,15 @@ The table below lists common commands only. For the full command surface, use `d
 | `merge pdf\|tables\|images <files...> --output <path>` | Run an explicit aggregate operation. |
 | `split pdf <file> --pages <range> --output-dir <dir>` | Split selected PDF pages into an explicit directory. |
 | `batch convert\|validate <files...>` | Run an explicit multi-file conversion or proofreading operation. |
-| `schema convert` | Export the machine-readable conversion contract, defaults, conditions, and canonical keys. |
+| `schema convert` | Export the machine-readable conversion contract, defaults, conditions, and accepted parameter keys. |
 | `inspect <file> [--json]` | Inspect file category/format, recommended actions, and extension/content mismatch warnings. |
 | `doctor --json` | Output diagnostics together with runtime capability summaries and dependency gates. |
-| `resources list formats --json` | List canonical Runtime routes, dependency gates, availability, and limitations. |
-| `resources list optimizations --json` | List typed optimization resources and their canonical route bindings. |
+| `resources list formats --json` | List available Runtime routes, dependency requirements, availability, and limitations. |
+| `resources list optimizations --json` | List optimization resources and their declared route bindings. |
 | `resources list templates [--target docx\|xlsx]` | List available templates. |
 | `resources list numbering-schemes` | List available numbering schemes. |
 | `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | Start or activate DocWen and optionally open one absolute file path through the local GUI-control boundary; this does not require a Machine session. |
-| `--template <id>` | Exact canonical resource ID returned by `resources list templates`; display names, filenames, and paths are rejected. DOCX IDs apply to `docx/doc/odt/rtf/wps/pdf`, XLSX IDs to `xlsx/xls/ods/csv`. CSV without a template remains direct table export; CSV with an XLSX template uses the MD→XLSX template workbook → per-sheet CSV artifact chain. |
+| `--template <id>` | Exact resource ID returned by `resources list templates`; display names, filenames, and paths are rejected. DOCX IDs apply to `docx/doc/odt/rtf/wps/pdf`, XLSX IDs to `xlsx/xls/ods/csv`. CSV without a template remains direct table export; CSV with an XLSX template uses the MD→XLSX template workbook → per-sheet CSV artifact chain. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Image extraction and OCR options for `convert --to md`. |
 | `--image-mode file|base64|embed|omit` | Control how images are emitted during Markdown export. |
 | `--ocr-placement image_md|main_md` | Control whether OCR text is written to image-side Markdown or the main Markdown file. |
@@ -602,14 +602,11 @@ A companion Obsidian plugin is published separately and works in tandem with the
 -   **🚀 One-Click Launch** - Sidebar icon to quickly launch the converter.
 -   **📂 Automatic Handover** - Automatically passes the currently open file path.
 -   **🔄 Single Instance Management** - Automatically sends file if the program is already running, no need to restart.
--   **🔒 Bounded Local Control** - Uses typed `status`, `open`, and `activate` requests without process-name probing or command/status files.
+-   **🔒 Safe Local Control** - Uses structured `status`, `open`, and `activate` requests without process-name probing or command/status files.
 
 ### Working Principle
 
-DocWen Core's runtime/control transport uses a Windows named pipe or an AF_UNIX socket on
-Linux/macOS. A file lock only establishes single-instance ownership; files are not used to transport
-control commands. This describes the Core transport only. DocWen Assistant 3.1 remains Windows
-desktop-only and has no Linux/macOS combination acceptance.
+DocWen Core uses a Windows named pipe for local control on Windows and an AF_UNIX socket on Linux/macOS. A file lock only establishes single-instance ownership; files are not used to transport control commands. This describes the Core transport only. DocWen Assistant 3.1 supports Windows and Linux desktop hosts. Windows Microsoft Store installations can use automatic detection; Linux uses manual package selection. The Assistant does not currently support macOS.
 
 1.  **First Click** → Launch converter and pass current file.
 2.  **Click Again (With File)** → Replace with new file (Single File Mode).

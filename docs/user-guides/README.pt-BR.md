@@ -6,20 +6,20 @@
 
 [English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)
 
-Uma ferramenta de conversão de formatos de documentos e gráficos que suporta conversão bidirecional Word/Markdown/Excel. Executa completamente localmente, garantindo a segurança e confiabilidade dos dados.
+DocWen é uma ferramenta local de conversão de documentos e tabelas para Word, Markdown, Excel e outros formatos de escritório. Foi projetada para fluxos offline confiáveis e mantém o processamento dos documentos no computador do usuário.
 
 ## 📖 Contexto do Projeto
 
-Este software foi originalmente projetado para o trabalho diário do escritório de impressão para resolver os seguintes problemas:
-- Os formatos de documentos enviados por vários departamentos são caóticos e precisam ser organizados em formatos padronizados.
-- Existem muitos tipos de documentos, cada um com diferentes requisitos de formato fixo.
-- Precisa rodar offline, adaptando-se a ambientes de intranet e equipamentos legados.
+O DocWen nasceu para tarefas cotidianas de preparação de documentos, nas quais é comum:
+- padronizar documentos recebidos em formatos inconsistentes;
+- lidar com vários tipos de arquivo e requisitos de formatação diferentes;
+- trabalhar offline, em intranets e em equipamentos mais antigos.
 
-**Filosofia de Design**: Este software posiciona-se como uma ferramenta leve e à prova de falhas. Embora não possa ser comparado com ferramentas profissionais como LaTeX ou Pandoc em termos de profissionalismo e integridade funcional, ele se destaca pelo custo zero de aprendizado e usabilidade imediata, tornando-o adequado para cenários de escritório diários onde os requisitos de formato não são extremamente rigorosos.
+**Filosofia de design**: o DocWen prioriza fluxos de conversão e organização fáceis de aprender e prontos para uso no dia a dia. Ele não pretende substituir sistemas especializados de editoração ou conversão como LaTeX ou Pandoc; o objetivo é tornar tarefas documentais comuns diretas e claras, mantendo limites técnicos bem definidos.
 
 ## ✨ Funcionalidades Principais
 
-- **📄 Conversão de Formato de Documento** - Conversão bidirecional Word ↔ Markdown. Suporta conversão de fórmulas matemáticas, conversão bidirecional de separadores (três tipos de separadores do Markdown vs. quebras de página, quebras de seção e linhas horizontais do Word) e a restauração de marker explícitos `<` / `^` de tabelas Markdown para mesclagens retangulares de tabelas do Word. Suporta formatos como DOCX/DOC/WPS/RTF/ODT.
+- **📄 Conversão de Formato de Documento** - Conversão bidirecional Word ↔ Markdown. Suporta conversão de fórmulas matemáticas, conversão bidirecional de separadores (três tipos de separadores do Markdown vs. quebras de página, quebras de seção e linhas horizontais do Word) e a restauração de marcadores explícitos `<` / `^` de tabelas Markdown para mesclagens retangulares de tabelas do Word. Suporta formatos como DOCX/DOC/WPS/RTF/ODT.
 - **📊 Conversão de Formato de Planilha** - Conversão bidirecional Excel ↔ Markdown. Suporta formatos XLSX/XLS/ET/ODS/CSV/TSV, estratégias configuráveis de exportação de células mescladas (`fill / empty / marker`) e ferramentas de resumo de tabelas. Templates Markdown→XLSX voltaram a aceitar campos YAML e placeholders verticais e horizontais de coluna; a restauração completa de templates Excel, imagens e mesclas segue como meta de paridade.
 - **📑 PDF e Arquivos de Layout** - Conversão de PDF/XPS/OFD para Markdown ou DOCX. Suporta fusão, divisão e outras operações de PDF.
 - **🖼️ Processamento de Imagem** - Suporta conversão bidirecional e compressão de formatos JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC.
@@ -95,7 +95,7 @@ pip install pillow-heif
 24.04 x64. Estes pré-requisitos não ampliam esse compromisso para outra distribuição ou arquitetura.
 
 - Ambiente de desktop instalado (GNOME, KDE, XFCE, etc.)
-- A GUI usa PySide6 (Qt6) e não depende mais de Python Tk. Se a inicialização falhar por falta de bibliotecas do sistema, instale as dependências de runtime do Qt indicadas pelo erro (geralmente relacionadas a OpenGL/X11).
+- A GUI usa PySide6 (Qt6) e não depende mais de Python Tk. Se a inicialização falhar por falta de bibliotecas do sistema, instale as bibliotecas necessárias para executar o Qt indicadas pelo erro (geralmente relacionadas a OpenGL/X11).
 - Para servidores headless, priorize a entrada CLI `docwen` em vez da GUI; as compilações empacotadas para Windows também incluem `DocWenCLI.exe`.
 
 ### Guia de Início Rápido
@@ -198,9 +198,12 @@ Além da interface gráfica, o DocWen oferece uma interface de linha de comando 
 Para scripts, agentes ou plugins, recomenda-se esta ordem:
 
 1. `inspect <file> [--json]`: detectar primeiro a categoria real do arquivo, o formato e as ações suportadas.
-2. `schema convert`: ler o contrato legível por máquina e as regras condicionais de `convert`.
-3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: pré-visualizar detecção, normalização e roteamento sem gravar arquivos.
-4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: executar a conversão real somente depois.
+2. `resources list formats --json`: ler as rotas realmente disponíveis no DocWen e seus requisitos de dependência.
+3. `schema convert`: ler o contrato legível por máquina e as regras condicionais de `convert`.
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: pré-visualizar detecção, normalização e roteamento sem gravar arquivos.
+5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: executar a conversão real somente depois.
+
+Integrações externas de conteúdo usam `serve --stdio` com Machine Protocol v2: descobrem capacidades, planejam uma tarefa e então a executam. A saída CLI `--json` é apenas apresentação para terminal, não a fronteira de compatibilidade entre produtos. O controle local do aplicativo desktop usa separadamente a interface estável `gui open|activate|status`.
 
 ### Exemplos comuns
 
@@ -256,8 +259,10 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `inspect <file> [--json]` | Inspeciona categoria/formato do arquivo, ações recomendadas e avisos de divergência entre extensão e conteúdo. |
 | `doctor --json` | Retorna diagnósticos junto com resumos de capacidades em tempo de execução e portas de dependência. |
 | `resources list formats --json` | Lista formatos de destino por categoria de origem com resumos de dependências em tempo de execução e limitações. |
+| `resources list optimizations --json` | Listar recursos de otimização tipados e seus vínculos de rota canônicos. |
 | `resources list templates` | Lista os modelos disponíveis. |
 | `resources list numbering-schemes` | Lista os esquemas de numeração disponíveis. |
+| `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | Iniciar ou ativar o DocWen pelo controle GUI local separado e, opcionalmente, abrir um arquivo absoluto. |
 | `--template <id>` | ID canônico exato retornado por `resources list templates`; nomes exibidos, nomes de arquivos e caminhos são rejeitados. IDs DOCX valem para `docx/doc/odt/rtf/wps/pdf`, IDs XLSX para `xlsx/xls/ods/csv`. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Extração de imagens e OCR para `convert --to md`. |
 | `--image-mode file|base64|embed|omit` | Controla como as imagens são emitidas durante a exportação para Markdown. |
@@ -579,14 +584,11 @@ Um plugin Obsidian complementar é publicado separadamente e funciona integrado 
 -   **🚀 Lançamento em Um Clique** - Ícone da barra lateral para iniciar rapidamente o conversor.
 -   **📂 Transferência Automática** - Passa automaticamente o caminho do arquivo aberto atualmente.
 -   **🔄 Gerenciamento de Instância Única** - Envia automaticamente o arquivo se o programa já estiver em execução, sem necessidade de reiniciar.
--   **🔒 Controle local limitado** - Usa solicitações tipadas `status`, `open` e `activate` sem procurar processos pelo nome nem usar arquivos de comando ou status.
+-   **🔒 Controle local seguro** - Usa solicitações estruturadas `status`, `open` e `activate` sem procurar processos pelo nome nem usar arquivos de comando ou status.
 
 ### Princípio de Funcionamento
 
-O transporte runtime/control do DocWen Core pode usar um pipe nomeado do Windows ou um socket AF_UNIX
-no Linux/macOS. Um bloqueio de arquivo estabelece apenas a propriedade da instância única; arquivos
-não transportam comandos de controle. Isso descreve apenas a capacidade do Core. O DocWen Assistant
-2.0 permanece exclusivo para desktop Windows e não tem aceite combinado no Linux/macOS.
+O DocWen Core usa named pipe para controle local no Windows e socket AF_UNIX no Linux/macOS. O bloqueio de arquivo apenas estabelece a propriedade da instância única; comandos de controle não são transportados por arquivos. Isto descreve somente a fronteira do Core. O DocWen Assistant 3.1 oferece suporte a desktops Windows e Linux. No Windows, instalações da Microsoft Store podem usar detecção automática; no Linux, um pacote compatível extraído é selecionado manualmente. O Assistant atualmente não oferece suporte ao macOS.
 
 1.  **Primeiro Clique** → Inicia o conversor e passa o arquivo atual.
 2.  **Clique Novamente (Com Arquivo)** → Substitui pelo novo arquivo (Modo de Arquivo Único).

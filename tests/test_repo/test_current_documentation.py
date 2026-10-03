@@ -185,6 +185,112 @@ def test_public_readmes_share_one_language_navigation_contract() -> None:
     assert LANGUAGE_NAV in docs_readme
 
 
+def _public_readme_paths() -> list[Path]:
+    return [ROOT / "README.md", *(DOCS / "user-guides" / name for name in LOCALIZED_READMES)]
+
+
+CLI_SECTION_HEADING_MARKERS = {
+    "README.md": "Command Line Usage",
+    "README.de-DE.md": "CLI-Verwendung",
+    "README.es-ES.md": "Uso de la CLI",
+    "README.fr-FR.md": "Utilisation en ligne de commande",
+    "README.ja-JP.md": "コマンドライン利用",
+    "README.ko-KR.md": "명령줄 사용",
+    "README.pt-BR.md": "Uso da CLI",
+    "README.ru-RU.md": "Использование CLI",
+    "README.vi-VN.md": "Sử dụng CLI",
+    "README.zh-CN.md": "命令行使用",
+    "README.zh-TW.md": "命令列使用",
+}
+
+
+def test_public_readmes_keep_cli_integration_anchors() -> None:
+    required = (
+        "inspect <file> [--json]",
+        "resources list formats --json",
+        "schema convert",
+        "--dry-run --json",
+        "serve --stdio",
+        "Machine Protocol v2",
+        "resources list optimizations --json",
+        "gui open",
+    )
+    for path in _public_readme_paths():
+        text = path.read_text(encoding="utf-8")
+        cli = _named_h2_section(text, CLI_SECTION_HEADING_MARKERS[path.name])
+        assert all(token in cli for token in required), path.name
+        assert cli.count("| `gui open [ABSOLUTE_FILE]") == 1, path.name
+        ordered = [
+            cli.index("inspect <file> [--json]"),
+            cli.index("resources list formats --json"),
+            cli.index("schema convert"),
+            cli.index("--dry-run --json"),
+        ]
+        assert ordered == sorted(ordered), path.name
+
+
+ASSISTANT_PLATFORM_SUPPORT_MARKERS = {
+    "README.md": "supports Windows and Linux desktop hosts",
+    "README.de-DE.md": "unterstützt Windows- und Linux-Desktop-Hosts",
+    "README.es-ES.md": "admite hosts de escritorio Windows y Linux",
+    "README.fr-FR.md": "prend en charge les postes de bureau Windows et Linux",
+    "README.ja-JP.md": "Windows と Linux のデスクトップ環境をサポート",
+    "README.ko-KR.md": "Windows와 Linux 데스크톱 호스트를 지원",
+    "README.pt-BR.md": "oferece suporte a desktops Windows e Linux",
+    "README.ru-RU.md": "поддерживает настольные системы Windows и Linux",
+    "README.vi-VN.md": "hỗ trợ máy tính để bàn Windows và Linux",
+    "README.zh-CN.md": "支持 Windows 和 Linux 桌面端",
+    "README.zh-TW.md": "支援 Windows 與 Linux 桌面端",
+}
+
+ASSISTANT_MACOS_UNSUPPORTED_MARKERS = {
+    "README.md": "does not currently support macOS",
+    "README.de-DE.md": "macOS wird vom Assistant derzeit nicht unterstützt",
+    "README.es-ES.md": "Assistant no admite macOS actualmente",
+    "README.fr-FR.md": "Assistant ne prend actuellement pas en charge macOS",
+    "README.ja-JP.md": "Assistant は現在 macOS をサポートしていません",
+    "README.ko-KR.md": "Assistant는 현재 macOS를 지원하지 않습니다",
+    "README.pt-BR.md": "Assistant atualmente não oferece suporte ao macOS",
+    "README.ru-RU.md": "macOS в Assistant сейчас не поддерживается",
+    "README.vi-VN.md": "Assistant hiện chưa hỗ trợ macOS",
+    "README.zh-CN.md": "Assistant 目前不支持 macOS",
+    "README.zh-TW.md": "Assistant 目前不支援 macOS",
+}
+
+STALE_ASSISTANT_PLATFORM_MARKERS = (
+    "remains Windows desktop-only",
+    "仍仅限 Windows 桌面端",
+    "仍僅限 Windows 桌面端",
+    "bleibt auf Windows-Desktop beschränkt",
+    "reste limité au bureau Windows",
+    "sigue limitado al escritorio de Windows",
+    "permanece exclusivo para desktop Windows",
+    "остаётся только для Windows desktop",
+    "Windows デスクトップ専用のまま",
+    "Windows 데스크톱 전용",
+    "vẫn chỉ dành cho Windows",
+)
+
+
+def _named_h2_section(text: str, token: str) -> str:
+    lines = text.splitlines()
+    start = next((index for index, line in enumerate(lines) if line.startswith("## ") and token in line), None)
+    assert start is not None
+    end = next((index for index in range(start + 1, len(lines)) if lines[index].startswith("## ")), len(lines))
+    return "\n".join(lines[start:end])
+
+
+def test_public_readmes_describe_current_assistant_platform_boundary() -> None:
+    for path in _public_readme_paths():
+        text = path.read_text(encoding="utf-8")
+        obsidian = _named_h2_section(text, "Obsidian")
+        support_marker = ASSISTANT_PLATFORM_SUPPORT_MARKERS[path.name]
+        assert support_marker in obsidian, path.name
+        assert text.count(support_marker) == 1, path.name
+        assert ASSISTANT_MACOS_UNSUPPORTED_MARKERS[path.name] in obsidian, path.name
+        assert not any(marker in text for marker in STALE_ASSISTANT_PLATFORM_MARKERS), path.name
+
+
 def test_public_readmes_describe_the_exact_network_guard_boundary() -> None:
     public_readmes = [ROOT / "README.md", *(DOCS / "user-guides" / name for name in LOCALIZED_READMES)]
     assert {path.name for path in public_readmes} == set(NETWORK_GUARD_DNS_MARKERS)

@@ -6,20 +6,20 @@
 
 [English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)
 
-Word/Markdown/Excelの双方向変換をサポートするドキュメントおよびチャート形式変換ツール。完全にローカルで実行され、データのセキュリティと信頼性を保証します。
+DocWen は Word、Markdown、Excel などのオフィス形式を扱うローカルの文書・表変換ツールです。信頼できるオフライン作業を重視し、文書処理をユーザーの端末内で完結させます。
 
 ## 📖 プロジェクトの背景
 
-このソフトウェアは、印刷オフィスの日常業務のために、以下の問題を解決するために設計されました：
-- さまざまな部門から送信されるドキュメント形式が混沌としており、標準化された形式に整理する必要がある。
-- ドキュメントの種類が多く、それぞれに異なる固定フォーマット要件がある。
-- イントラネット環境やレガシー機器に適応し、オフラインで実行する必要がある。
+DocWen は、日常の文書整理でよく発生する次のような課題を解決するために作られました：
+- 部門ごとに異なる形式で届く文書を標準化する必要がある。
+- 多様なファイル形式と、それぞれ異なる書式要件を扱う必要がある。
+- イントラネットやオフライン環境、比較的古い機器でも安定して作業する必要がある。
 
-**設計哲学**：このソフトウェアは、軽量で誰でも使えるツールとして位置付けられています。プロフェッショナリズムと機能の完全性の点ではLaTeXやPandocのようなプロフェッショナルツールと比較することはできませんが、学習コストがゼロで、すぐに使える使いやすさに優れており、フォーマット要件がそれほど厳しくない日常のオフィスシナリオに適しています。
+**設計方針**：DocWen は、日常的な変換や文書整理を低い学習コストですぐ使えることを重視します。LaTeX や Pandoc のような専門的な組版・変換システムを置き換えることは目的とせず、一般的な文書作業を分かりやすく直接実行できるようにしながら、技術的な境界を明確に保ちます。
 
 ## ✨ 主な機能
 
-- **📄 ドキュメント形式変換** - Word ↔ Markdownの双方向変換。数式変換、双方向セパレーター変換（Markdownの3種類のセパレーターとWordの改ページ、セクション区切り、水平線）に加え、Markdown表の明示的な `<` / `^` marker を Word の矩形セル結合へ復元できます。DOCX/DOC/WPS/RTF/ODTなどの形式をサポートします。
+- **📄 ドキュメント形式変換** - Word ↔ Markdownの双方向変換。数式変換、双方向セパレーター変換（Markdownの3種類のセパレーターとWordの改ページ、セクション区切り、水平線）に加え、Markdown表の明示的な `<` / `^` 結合マーカーを Word の矩形セル結合へ復元できます。DOCX/DOC/WPS/RTF/ODTなどの形式をサポートします。
 - **📊 スプレッドシート形式変換** - Excel ↔ Markdownの双方向変換。XLSX/XLS/ET/ODS/CSV/TSV形式、結合セルのエクスポート戦略（`fill / empty / marker`）、テーブル要約ツール、以下で説明するテンプレートプレースホルダーをサポートします。
 - **📑 PDFおよびレイアウトファイル** - PDF/XPS/OFDからMarkdownまたはDOCXへの変換。PDFの結合、分割、その他の操作をサポートします。
 - **🖼️ 画像処理** - JPEG/PNG/GIF/BMP/TIFF/WebP/HEIC形式の双方向変換と圧縮をサポートします。
@@ -198,9 +198,12 @@ DocWen は GUI に加えて、自動化スクリプト、バッチ処理、外�
 スクリプト、Agent、プラグイン連携では、次の順序を推奨します。
 
 1. `inspect <file> [--json]`：まず実際のファイル種別、形式、利用可能なアクションを確認します。
-2. `schema convert`：`convert` の機械可読な契約と条件ルールを取得します。
-3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`：出力を書き出さずに検出、正規化、ルーティングを事前確認します。
-4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`：問題がなければ本番の変換を実行します。
+2. `resources list formats --json`：現在の DocWen で実際に利用できるルートと依存条件を確認します。
+3. `schema convert`：`convert` の機械可読な契約と条件ルールを取得します。
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`：出力を書き出さずに検出、正規化、ルーティングを事前確認します。
+5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`：問題がなければ本番の変換を実行します。
+
+外部のコンテンツ連携は `serve --stdio` と Machine Protocol v2 を使用し、機能を検出してタスクを計画した後に実行します。CLI の `--json` は端末向けの表示形式であり、製品間互換性の境界ではありません。ローカルのデスクトップ制御には、独立した安定インターフェース `gui open|activate|status` を使用します。
 
 ### よく使う例
 
@@ -256,8 +259,10 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `inspect <file> [--json]` | ファイル種別/形式、推奨アクション、拡張子と内容の不一致に関する警告を確認します。 |
 | `doctor --json` | 診断結果に加えて、ランタイム能力サマリーと依存ゲートを出力します。 |
 | `resources list formats --json` | ソースカテゴリごとのターゲット形式と依存ゲート / 制限サマリーを出力します。 |
+| `resources list optimizations --json` | 型付き最適化リソースと、その正規ルートへの関連付けを一覧表示します。 |
 | `resources list templates` | 利用可能なテンプレートを一覧表示します。 |
 | `resources list numbering-schemes` | 利用可能な番号付けスキームを一覧表示します。 |
+| `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | 独立したローカル GUI 制御で DocWen を起動またはアクティブ化し、必要に応じて絶対パスのファイルを開きます。 |
 | `--template <id>` | `resources list templates` が返す正規リソース ID をそのまま指定します。表示名・ファイル名・パスは拒否されます。DOCX ID は `docx/doc/odt/rtf/wps/pdf`、XLSX ID は `xlsx/xls/ods/csv` 用です。 |
 | `--extract-img` / `--no-extract-img` / `--ocr` | `convert --to md` 向けの画像抽出と OCR オプションです。 |
 | `--image-mode file|base64|embed|omit` | Markdown エクスポート時の画像出力方法を制御します。 |
@@ -561,7 +566,7 @@ Excelテンプレート内の `{{→Month}}` は、右方向に「1月」、「2
 **結合セルの処理**：
 
 - Markdown -> Excel では、テンプレートに元からある merged ranges をそのまま保持します。
-- 連続した `{{↓フィールド名}}` プレースホルダーで構成された既知の縦方向テンプレート領域では、Markdown テーブル中の明示的な `<` / `^` marker から矩形の結合を復元できます。
+- 連続した `{{↓フィールド名}}` プレースホルダーで構成された既知の縦方向テンプレート領域では、Markdown テーブル中の明示的な `<` / `^` 結合マーカーから矩形の結合を復元できます。
 - 前後の空白を除去した内容が厳密に `<` または `^` と一致するセルだけが結合判定に参加し、`\<` と `\^` はリテラル文字として保持されます。
 - 不正な矩形やテンプレート既存の merged ranges との競合がある場合は、テンプレート構造を強制的に上書きせず、警告を記録して通常のテキストに降格します。
 
@@ -576,14 +581,11 @@ Excelテンプレート内の `{{→Month}}` は、右方向に「1月」、「2
 -   **🚀 ワンクリック起動** - サイドバーアイコンでコンバーターをすばやく起動。
 -   **📂 自動ハンドオーバー** - 現在開いているファイルパスを自動的に渡します。
 -   **🔄 シングルインスタンス管理** - プログラムがすでに実行されている場合、再起動せずにファイルを自動的に送信します。
--   **🔒 境界付きローカル制御** - プロセス名の探索やコマンド／状態ファイルを使わず、型付きの `status`、`open`、`activate` リクエストを使用します。
+-   **🔒 安全なローカル制御** - プロセス名の探索やコマンド／状態ファイルを使わず、構造化された `status`、`open`、`activate` リクエストを使用します。
 
 ### 動作原理
 
-DocWen Core の runtime/control transport は、Windows では名前付きパイプ、Linux/macOS では
-AF_UNIX ソケットを使用します。ファイルロックは単一インスタンスの所有権だけを確立し、
-制御コマンドの転送にはファイルを使用しません。これは Core の能力説明だけです。DocWen
-Assistant 3.1 は Windows デスクトップ専用のままで、Linux/macOS の組み合わせ受入実績はありません。
+DocWen Core は Windows のローカル制御に名前付きパイプを、Linux/macOS では AF_UNIX ソケットを使用します。ファイルロックは単一インスタンスの所有権だけを確立し、制御コマンドの転送には使用しません。これは Core の境界だけを説明しています。DocWen Assistant 3.1 は Windows と Linux のデスクトップ環境をサポートします。Windows の Microsoft Store 版は自動検出を利用でき、Linux では互換性のある展開済みパッケージを手動で選択します。Assistant は現在 macOS をサポートしていません。
 
 1.  **最初のクリック** → コンバーターを起動し、現在のファイルを渡します。
 2.  **再クリック（ファイルあり）** → 新しいファイルに置き換えます（単一ファイルモード）。

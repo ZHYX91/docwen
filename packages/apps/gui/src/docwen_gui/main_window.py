@@ -2126,7 +2126,7 @@ class MainWindow(QWidget):
             else:
                 message = _t(
                     "components.file_drop.clipboard_retry_unavailable",
-                    "The original clipboard snapshot for {name} is no longer available; paste again to create a new input.",
+                    "The original clipboard content for {name} is no longer available; paste it again to create a new input.",
                     name=label or _t("components.file_drop.clipboard_name_generic", "Clipboard Markdown"),
                 )
             self._info_area_vm.add_message(message, "warning")
