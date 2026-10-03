@@ -27,6 +27,9 @@ def test_output_tab_uses_runtime_config_values(qapp) -> None:
     assert _combo_values(tab._date_format) == ["%Y-%m-%d", "%Y%m%d", "%Y年%m月%d日"]  # pyright: ignore[reportPrivateUsage]
     assert tab._custom_path.text() == vm.config.output.custom_path  # pyright: ignore[reportPrivateUsage]
     assert tab._save_intermediate.isChecked() is vm.config.output.save_intermediate_files  # pyright: ignore[reportPrivateUsage]
+    assert tab._custom_path.isEnabled() is False  # pyright: ignore[reportPrivateUsage]
+    assert tab._browse_btn.isEnabled() is False  # pyright: ignore[reportPrivateUsage]
+    assert tab._date_format.isEnabled() is False  # pyright: ignore[reportPrivateUsage]
 
 
 def test_output_tab_user_edits_update_view_model(qapp, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -57,3 +60,34 @@ def test_output_tab_user_edits_update_view_model(qapp, monkeypatch: pytest.Monke
     tab._browse_path()  # pyright: ignore[reportPrivateUsage]
 
     assert vm.config.output.custom_path == "D:/Done"
+
+
+def test_output_tab_dependencies_preserve_values_and_reload_state(qapp) -> None:
+    from docwen_gui.models.settings_config import SettingsConfig
+    from docwen_gui.view_models.settings_vm import SettingsViewModel
+    from docwen_gui.widgets.settings.output_tab import OutputTab
+
+    vm = SettingsViewModel(config=SettingsConfig())
+    tab = OutputTab(vm)
+
+    _set_combo_data(tab._output_mode, "custom")  # pyright: ignore[reportPrivateUsage]
+    tab._custom_path.setText("D:/Exports")  # pyright: ignore[reportPrivateUsage]
+    tab._create_date_subfolder.setChecked(True)  # pyright: ignore[reportPrivateUsage]
+    _set_combo_data(tab._date_format, "%Y%m%d")  # pyright: ignore[reportPrivateUsage]
+    assert tab._custom_path.isEnabled()  # pyright: ignore[reportPrivateUsage]
+    assert tab._browse_btn.isEnabled()  # pyright: ignore[reportPrivateUsage]
+    assert tab._date_format.isEnabled()  # pyright: ignore[reportPrivateUsage]
+
+    _set_combo_data(tab._output_mode, "source")  # pyright: ignore[reportPrivateUsage]
+    tab._create_date_subfolder.setChecked(False)  # pyright: ignore[reportPrivateUsage]
+    assert tab._custom_path.text() == "D:/Exports"  # pyright: ignore[reportPrivateUsage]
+    assert tab.get_combo_data(tab._date_format) == "%Y%m%d"  # pyright: ignore[reportPrivateUsage]
+    assert tab._custom_path.isEnabled() is False  # pyright: ignore[reportPrivateUsage]
+    assert tab._browse_btn.isEnabled() is False  # pyright: ignore[reportPrivateUsage]
+    assert tab._date_format.isEnabled() is False  # pyright: ignore[reportPrivateUsage]
+
+    tab.reload_from_config()
+    assert tab._custom_path.text() == "D:/Exports"  # pyright: ignore[reportPrivateUsage]
+    assert tab.get_combo_data(tab._date_format) == "%Y%m%d"  # pyright: ignore[reportPrivateUsage]
+    assert tab._custom_path.isEnabled() is False  # pyright: ignore[reportPrivateUsage]
+    assert tab._date_format.isEnabled() is False  # pyright: ignore[reportPrivateUsage]
