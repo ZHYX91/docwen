@@ -499,7 +499,6 @@ Gérez les modèles DOCX/XLSX dans **Paramètres → Modèles** : activation, d�
 
 ### Modèles personnalisés
 
-Le transport Runtime/Control de DocWen Core utilise un canal nommé sous Windows et un socket AF_UNIX sous Linux/macOS. Le verrou de fichier sert uniquement à la propriété de l’instance unique ; les commandes de contrôle ne transitent pas par des fichiers. Cette description concerne uniquement Core. DocWen Assistant 3.1 prend en charge les postes de bureau Windows et Linux. Sous Windows, l’installation Microsoft Store peut être détectée automatiquement ; sous Linux, un paquet compatible extrait est sélectionné manuellement. Assistant ne prend actuellement pas en charge macOS.
 
 1. Copiez et modifiez un modèle intégré, ou importez un fichier DOCX/XLSX existant.
 2. Modifiez le contenu, les styles et les espaces réservés de la copie dans Word, Excel ou WPS ; les règles figurent ci-dessous.
@@ -593,10 +592,7 @@ Un plugin Obsidian compagnon est publié séparément et fonctionne avec le conv
 
 ### Principe de fonctionnement
 
-Le transport runtime/control de DocWen Core utilise un canal nommé Windows ou un socket AF_UNIX sous
-Linux/macOS. Un verrou de fichier établit uniquement la propriété de l'instance unique ; aucun fichier
-ne transporte les commandes de contrôle. Cela décrit uniquement la capacité du Core. DocWen Assistant
-2.0 reste limité au bureau Windows et ne dispose d'aucune recette combinée sous Linux/macOS.
+Le transport Runtime/Control de DocWen Core utilise un canal nommé sous Windows et un socket AF_UNIX sous Linux/macOS. Le verrou de fichier sert uniquement à la propriété de l’instance unique ; les commandes de contrôle ne transitent pas par des fichiers. Cette description concerne uniquement Core. DocWen Assistant 3.1 prend en charge les postes de bureau Windows et Linux. Sous Windows, l’installation Microsoft Store peut être détectée automatiquement ; sous Linux, un paquet compatible extrait est sélectionné manuellement. Assistant ne prend actuellement pas en charge macOS.
 
 1.  **Premier clic** → Lancer le convertisseur et passer le fichier actuel.
 2.  **Cliquer à nouveau (Avec fichier)** → Remplacer par le nouveau fichier (Mode fichier unique).
