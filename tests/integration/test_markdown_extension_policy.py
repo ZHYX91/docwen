@@ -80,9 +80,7 @@ def _context(tmp_path: Path, source: Path, target: str, extensions: dict) -> Fak
 
 
 def _structural_config() -> FakeConfigView:
-    return FakeConfigView(
-        {"conversion": {"markdown_extensions": {"input": {"structural_tables": True}}}}
-    )
+    return FakeConfigView({"conversion": {"markdown_extensions": {"input": {"structural_tables": True}}}})
 
 
 def _structural_direct_context(tmp_path: Path, source: Path) -> FakeExecutionContext:
@@ -308,12 +306,7 @@ def test_structural_tables_direct_and_resolved_routes_share_docx_semantics(tmp_p
     assert len(direct_signatures) == 3
     assert direct_signatures[0][:2] == (2, 1)
     assert direct_signatures[1][:2] == (0, 0)
-    assert any(
-        cell[3:5] == (2, 2)
-        for row in direct_signatures[1][3]
-        for cell in row
-        if not cell[5]
-    )
+    assert any(cell[3:5] == (2, 2) for row in direct_signatures[1][3] for cell in row if not cell[5])
 
 
 def test_no_header_structural_table_round_trips_from_isolated_docx(tmp_path: Path) -> None:
