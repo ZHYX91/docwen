@@ -447,9 +447,7 @@ class ResolvedNumberingDocxSession(ResolvedNumberingProofMixin):
                 enabled=plan_target.enabled,
                 derived_number=plan_target.derived_number,
             )
-            self._standalone_occurrence_bindings.append(
-                _StandaloneOccurrenceBinding(occurrence, caption._p)
-            )
+            self._standalone_occurrence_bindings.append(_StandaloneOccurrenceBinding(occurrence, caption._p))
         elif not plan_target.enabled:
             occurrence = derive_numbering_occurrence(
                 source_sha256=self._port.source_sha256,
