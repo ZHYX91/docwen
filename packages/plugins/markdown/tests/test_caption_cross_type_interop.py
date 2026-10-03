@@ -100,18 +100,9 @@ def test_two_blank_lines_break_caption_ownership(caption_first: bool) -> None:
 
     analysis = analyze_markdown_semantics_v3(source, input_id="spacing.md")
 
-    assert not analysis.has_errors
-    [target] = analysis.projection["targets"]
-    assert (target["kind"], target["title"], target["number"]) == ("figure", "Composite", "1")
-    assert "object_range" not in target
-    plan = prepare_runtime_semantics_v3(source, input_id="spacing.md")
-    owners = [
-        node
-        for node in apply_runtime_semantics_v3(parse_markdown_text(plan.shielded_source), plan)
-        if node.get("type") == "_docwen_v3_caption_declaration"
-    ]
-    assert len(owners) == 1
-    assert "object_range" not in owners[0]["_docwen_v3_caption_target"]
+    assert analysis.has_errors
+    assert analysis.projection["targets"] == []
+    assert [item["code"] for item in analysis.diagnostics] == ["docwen.markdown.caption.object_mismatch"]
 
 
 @pytest.mark.parametrize(
@@ -121,19 +112,12 @@ def test_two_blank_lines_break_caption_ownership(caption_first: bool) -> None:
         "Figure: First\n\n| shared |\n|---|\n| 1 |\n\nTable: Second\n",
     ],
 )
-def test_ambiguous_caption_object_graph_keeps_captions_unbound(source: str) -> None:
+def test_ambiguous_caption_object_graph_fails_closed(source: str) -> None:
     analysis = analyze_markdown_semantics_v3(source, input_id="ambiguous.md")
 
-    assert not analysis.has_errors
-    assert analysis.projection["targets"]
-    assert all("object_range" not in item for item in analysis.projection["targets"])
-    plan = prepare_runtime_semantics_v3(source, input_id="ambiguous.md")
-    declarations = [
-        node
-        for node in apply_runtime_semantics_v3(parse_markdown_text(plan.shielded_source), plan)
-        if node.get("type") == "_docwen_v3_caption_declaration"
-    ]
-    assert len(declarations) == len(analysis.projection["targets"])
+    assert analysis.has_errors
+    assert analysis.projection["targets"] == []
+    assert all(item["code"] == "docwen.markdown.caption.object_mismatch" for item in analysis.diagnostics)
 
 
 def test_chain_does_not_use_global_matching_to_resolve_a_locally_ambiguous_caption() -> None:
@@ -141,25 +125,13 @@ def test_chain_does_not_use_global_matching_to_resolve_a_locally_ambiguous_capti
 
     analysis = analyze_markdown_semantics_v3(source, input_id="ambiguous-chain.md")
 
-    assert not analysis.has_errors
-    assert [(item["kind"], item["title"]) for item in analysis.projection["targets"]] == [
-        ("figure", "First"),
-        ("table", "Second"),
-    ]
-    assert "object_range" in analysis.projection["targets"][0]
-    assert "object_range" not in analysis.projection["targets"][1]
+    assert analysis.has_errors
+    assert [(item["kind"], item["title"]) for item in analysis.projection["targets"]] == [("figure", "First")]
+    assert [item["code"] for item in analysis.diagnostics] == ["docwen.markdown.caption.object_mismatch"]
     plan = prepare_runtime_semantics_v3(source, input_id="ambiguous-chain.md")
-    ast = apply_runtime_semantics_v3(parse_markdown_text(plan.shielded_source), plan)
-    assert any(
-        node.get("_docwen_v3_caption_target", {}).get("kind") == "figure"
-        and node.get("type") == "table"
-        for node in ast
-    )
-    assert any(
-        node.get("_docwen_v3_caption_target", {}).get("kind") == "table"
-        and node.get("type") == "_docwen_v3_caption_declaration"
-        for node in ast
-    )
+    assert plan.analysis.has_errors
+    with pytest.raises(ValueError, match="invalid v3 analysis"):
+        apply_runtime_semantics_v3(parse_markdown_text(plan.shielded_source), plan)
 
 
 def test_next_line_caption_id_and_post_block_object_id_keep_distinct_owners() -> None:
