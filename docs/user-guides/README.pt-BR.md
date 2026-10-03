@@ -198,9 +198,12 @@ Além da interface gráfica, o DocWen oferece uma interface de linha de comando 
 Para scripts, agentes ou plugins, recomenda-se esta ordem:
 
 1. `inspect <file> [--json]`: detectar primeiro a categoria real do arquivo, o formato e as ações suportadas.
-2. `schema convert`: ler o contrato legível por máquina e as regras condicionais de `convert`.
-3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: pré-visualizar detecção, normalização e roteamento sem gravar arquivos.
-4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: executar a conversão real somente depois.
+2. `resources list formats --json`: ler as rotas Runtime realmente disponíveis e suas dependências.
+3. `schema convert`: ler o contrato legível por máquina e as regras condicionais de `convert`.
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: pré-visualizar detecção, normalização e roteamento sem gravar arquivos.
+5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: executar a conversão real somente depois.
+
+Integrações externas de conteúdo usam `serve --stdio` com Machine Protocol v2: descobrem capacidades, planejam uma tarefa e então a executam. A saída CLI `--json` é apenas apresentação para terminal, não a fronteira de compatibilidade entre produtos. O controle local do aplicativo desktop usa separadamente a interface estável `gui open|activate|status`.
 
 ### Exemplos comuns
 
@@ -256,8 +259,10 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `inspect <file> [--json]` | Inspeciona categoria/formato do arquivo, ações recomendadas e avisos de divergência entre extensão e conteúdo. |
 | `doctor --json` | Retorna diagnósticos junto com resumos de capacidades em tempo de execução e portas de dependência. |
 | `resources list formats --json` | Lista formatos de destino por categoria de origem com resumos de dependências em tempo de execução e limitações. |
+| `resources list optimizations --json` | Listar recursos de otimização tipados e seus vínculos de rota canônicos. |
 | `resources list templates` | Lista os modelos disponíveis. |
 | `resources list numbering-schemes` | Lista os esquemas de numeração disponíveis. |
+| `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | Iniciar ou ativar o DocWen pelo controle GUI local separado e, opcionalmente, abrir um arquivo absoluto. |
 | `--template <id>` | ID canônico exato retornado por `resources list templates`; nomes exibidos, nomes de arquivos e caminhos são rejeitados. IDs DOCX valem para `docx/doc/odt/rtf/wps/pdf`, IDs XLSX para `xlsx/xls/ods/csv`. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Extração de imagens e OCR para `convert --to md`. |
 | `--image-mode file|base64|embed|omit` | Controla como as imagens são emitidas durante a exportação para Markdown. |
@@ -490,6 +495,8 @@ Observação (relatório JSON de revisão para Markdown):
 Gerencie modelos DOCX/XLSX em **Configurações → Modelos**: ativação, ordem e modelo padrão. Os modelos integrados são somente leitura; os personalizados ficam em uma pasta gravável do usuário. O MSIX não exige alterações em WindowsApps.
 
 ### Modelos Personalizados
+
+O transporte Runtime/Control do DocWen Core usa named pipe no Windows e socket AF_UNIX no Linux/macOS. O bloqueio de arquivo apenas estabelece a propriedade da instância única; comandos de controle não são transportados por arquivos. Isto descreve somente a fronteira do Core. O DocWen Assistant 3.1 oferece suporte a desktops Windows e Linux. No Windows, instalações da Microsoft Store podem usar detecção automática; no Linux, um pacote compatível extraído é selecionado manualmente. O Assistant atualmente não oferece suporte ao macOS.
 
 1. Copie e edite um modelo integrado ou importe um arquivo DOCX/XLSX existente.
 2. Ajuste conteúdo, estilos e espaços reservados da cópia no Word, Excel ou WPS; consulte as regras abaixo.
