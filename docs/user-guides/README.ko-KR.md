@@ -195,7 +195,7 @@ DocWen은 GUI 외에도 자동화 스크립트, 배치 처리, 외부 연동을 
 스크립트, Agent, 플러그인 연동에서는 다음 순서를 권장합니다.
 
 1. `inspect <file> [--json]`: 먼저 실제 파일 범주, 형식, 지원 동작을 확인합니다.
-2. `resources list formats --json`: 현재 Runtime에서 실제로 사용할 수 있는 경로와 의존성 조건을 확인합니다.
+2. `resources list formats --json`: 현재 DocWen에서 실제로 사용할 수 있는 경로와 의존성 조건을 확인합니다.
 3. `schema convert`: `convert` 의 기계 판독 가능한 계약과 조건 규칙을 읽습니다.
 4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: 결과를 쓰지 않고 탐지, 정규화, 라우팅을 미리 확인합니다.
 5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: 확인 후 실제 변환을 실행합니다.
