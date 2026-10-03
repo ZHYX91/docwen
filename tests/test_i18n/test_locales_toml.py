@@ -158,17 +158,13 @@ def test_all_locale_string_keys_and_placeholders_match_zh_cn() -> None:
 
     for path in sorted(LOCALES_DIR.glob("*.toml")):
         actual = _flatten_string_values(_read_toml_file(path))
-        assert set(actual) == set(reference), (
-            f"{path.name} string-key set differs from zh_CN: "
-            f"missing={sorted(set(reference) - set(actual))[:20]}, "
-            f"extra={sorted(set(actual) - set(reference))[:20]}"
-        )
+        assert set(actual) == set(reference)
         mismatches = [
             key
             for key, source in reference.items()
             if _placeholders(actual[key]) != _placeholders(source)
         ]
-        assert not mismatches, f"{path.name} changed interpolation placeholders for: {mismatches[:20]}"
+        assert mismatches == []
 
 
 def test_locales_dir_exists() -> None:
