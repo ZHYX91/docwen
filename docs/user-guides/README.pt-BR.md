@@ -198,7 +198,7 @@ Além da interface gráfica, o DocWen oferece uma interface de linha de comando 
 Para scripts, agentes ou plugins, recomenda-se esta ordem:
 
 1. `inspect <file> [--json]`: detectar primeiro a categoria real do arquivo, o formato e as ações suportadas.
-2. `resources list formats --json`: ler as rotas Runtime realmente disponíveis e suas dependências.
+2. `resources list formats --json`: ler as rotas realmente disponíveis no DocWen e seus requisitos de dependência.
 3. `schema convert`: ler o contrato legível por máquina e as regras condicionais de `convert`.
 4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: pré-visualizar detecção, normalização e roteamento sem gravar arquivos.
 5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: executar a conversão real somente depois.
