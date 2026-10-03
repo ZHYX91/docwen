@@ -196,7 +196,7 @@ Ngoài giao diện đồ họa, DocWen còn cung cấp giao diện dòng lệnh 
 Đối với script, agent hoặc plugin, nên dùng thứ tự sau:
 
 1. `inspect <file> [--json]`: trước tiên nhận diện loại tệp thực tế, định dạng và các thao tác được hỗ trợ.
-2. `resources list formats --json`: đọc các tuyến Runtime thực sự khả dụng và các điều kiện phụ thuộc.
+2. `resources list formats --json`: đọc các tuyến thực sự khả dụng trong DocWen và các điều kiện phụ thuộc.
 3. `schema convert`: đọc hợp đồng máy đọc được và các ràng buộc điều kiện của `convert`.
 4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`: xem trước quá trình nhận diện, chuẩn hóa và định tuyến mà không ghi tệp đầu ra.
 5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`: sau khi xác nhận, mới chạy chuyển đổi thật.
