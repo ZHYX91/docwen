@@ -585,11 +585,11 @@ Um plugin Obsidian complementar é publicado separadamente e funciona integrado 
 -   **🚀 Lançamento em Um Clique** - Ícone da barra lateral para iniciar rapidamente o conversor.
 -   **📂 Transferência Automática** - Passa automaticamente o caminho do arquivo aberto atualmente.
 -   **🔄 Gerenciamento de Instância Única** - Envia automaticamente o arquivo se o programa já estiver em execução, sem necessidade de reiniciar.
--   **🔒 Controle local limitado** - Usa solicitações tipadas `status`, `open` e `activate` sem procurar processos pelo nome nem usar arquivos de comando ou status.
+-   **🔒 Controle local seguro** - Usa solicitações estruturadas `status`, `open` e `activate` sem procurar processos pelo nome nem usar arquivos de comando ou status.
 
 ### Princípio de Funcionamento
 
-O transporte Runtime/Control do DocWen Core usa named pipe no Windows e socket AF_UNIX no Linux/macOS. O bloqueio de arquivo apenas estabelece a propriedade da instância única; comandos de controle não são transportados por arquivos. Isto descreve somente a fronteira do Core. O DocWen Assistant 3.1 oferece suporte a desktops Windows e Linux. No Windows, instalações da Microsoft Store podem usar detecção automática; no Linux, um pacote compatível extraído é selecionado manualmente. O Assistant atualmente não oferece suporte ao macOS.
+O DocWen Core usa named pipe para controle local no Windows e socket AF_UNIX no Linux/macOS. O bloqueio de arquivo apenas estabelece a propriedade da instância única; comandos de controle não são transportados por arquivos. Isto descreve somente a fronteira do Core. O DocWen Assistant 3.1 oferece suporte a desktops Windows e Linux. No Windows, instalações da Microsoft Store podem usar detecção automática; no Linux, um pacote compatível extraído é selecionado manualmente. O Assistant atualmente não oferece suporte ao macOS.
 
 1.  **Primeiro Clique** → Inicia o conversor e passa o arquivo atual.
 2.  **Clique Novamente (Com Arquivo)** → Substitui pelo novo arquivo (Modo de Arquivo Único).
