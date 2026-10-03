@@ -902,7 +902,7 @@ copyright = "© {year} {author}"
 acknowledgments = "Agradecimientos"
 acknowledgments_intro = "Este proyecto utiliza los siguientes proyectos y herramientas de código abierto. Gracias especialmente a:"
 
-subtitle = "Software de conversión de formatos de documentos oficiales y gráficos (convertidor de documentos oficiales)"
+subtitle = "Herramienta de conversión de documentos y hojas de cálculo (convertidor de documentos oficiales)"
 
 # 开源工具描述
 [about.tools]
