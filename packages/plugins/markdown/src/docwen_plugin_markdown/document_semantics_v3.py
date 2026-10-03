@@ -14,7 +14,6 @@ from __future__ import annotations
 import base64
 import hashlib
 import re
-import unicodedata
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, cast
@@ -26,8 +25,6 @@ from docwen_plugin_markdown.document_semantics_v3_fenced_source import (
 
 SEMANTICS_SCHEMA = "docwen.markdown_semantics.v3"
 SEMANTICS_SCHEMA_ID = "urn:docwen:schema:markdown-semantics:v3"
-DIRECT_NUMBER_SUITE_SCHEMA = "docwen.number_suite_direct.v1"
-DIRECT_NUMBER_SUITE_SCHEMA_ID = "urn:docwen:internal:number-suite-direct:v1"
 DIAGNOSTICS_SCHEMA = "docwen.markdown_diagnostics.v3"
 DIAGNOSTICS_SCHEMA_ID = "urn:docwen:schema:markdown-diagnostics:v3"
 DIAGNOSTIC_EVIDENCE_SCHEMA = "docwen.machine.diagnostic_evidence.v1"
@@ -35,7 +32,6 @@ DIAGNOSTIC_EVIDENCE_SCHEMA = "docwen.machine.diagnostic_evidence.v1"
 _ID_RE = re.compile(r"^[A-Za-z0-9-]{1,128}$")
 _CITATION_KEY_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
 _CAPTION_RE = re.compile(r"^(Figure|Table|Equation|Code):(.*)$", re.IGNORECASE)
-_NUMBER_SUITE_CAPTION_RE = re.compile(r"^(?: {0,3})(Figure|Table|Equation|Code):(?:[ \t]+)(.*\S|\S)[ \t]*$")
 _HEADING_RE = re.compile(r"^( {0,3})(#{1,9})(?!#)[ \t]+(.+?)\s*$")
 _FENCE_RE = re.compile(r"^( {0,3})(?P<fence>`{3,}|~{3,})(?P<info>[^\r\n]*)$")
 _QUOTE_PREFIX_RE = re.compile(r"^ {0,3}>[ \t]?")
@@ -74,7 +70,6 @@ _YAML_FRONT_OPEN_RE = re.compile(r"^(?:\ufeff)?---[ \t]*(?:\r?\n)")
 _YAML_FRONT_CLOSE_RE = re.compile(r"^---[ \t]*(?:\r?\n|$)", re.MULTILINE)
 
 type TargetKind = Literal["heading", "figure", "table", "equation", "code_block"]
-type SemanticConsumerProfile = Literal["frozen_v3", "number_suite_direct"]
 type ResolutionStatus = Literal[
     "resolved",
     "missing",
@@ -192,7 +187,6 @@ def analyze_markdown_semantics_v3(
     rename_replacements: Mapping[int, str] | None = None,
     semantic_id_replacements: Mapping[int, str] | None = None,
     extensions: MarkdownExtensions | None = None,
-    consumer_profile: SemanticConsumerProfile = "frozen_v3",
 ) -> MarkdownSemanticsV3Analysis:
     """Parse one authenticated Markdown source into the v3 source oracle.
 
@@ -203,8 +197,6 @@ def analyze_markdown_semantics_v3(
 
     if not input_id or len(input_id) > 256:
         raise ValueError("input_id must contain 1..256 characters")
-    if consumer_profile not in {"frozen_v3", "number_suite_direct"}:
-        raise ValueError("semantic consumer profile is outside the closed set")
     unsupported_separator = _UNSUPPORTED_LINE_SEPARATOR_RE.search(source)
     if unsupported_separator is not None:
         raise ValueError(
@@ -217,12 +209,7 @@ def analyze_markdown_semantics_v3(
     source_identity = _source_identity(input_id, source_sha256)
     semantic_source = _mask_yaml_front_matter(source)
     lines = _split_lines(semantic_source)
-    caption_re = _NUMBER_SUITE_CAPTION_RE if consumer_profile == "number_suite_direct" else _CAPTION_RE
-    blocks = _scan_blocks(
-        lines,
-        caption_re=caption_re,
-        captions_top_level_only=consumer_profile == "number_suite_direct",
-    )
+    blocks = _scan_blocks(lines)
     dialect = extensions or MarkdownExtensions.obsidian()
     literal_ranges: list[SourceRange] = []
 
@@ -245,7 +232,6 @@ def analyze_markdown_semantics_v3(
     active_heading_titles: list[str] = []
     semantic_anchor_marker_ranges: set[tuple[int, int]] = set()
     caption_bindings, ambiguous_captions = _caption_object_bindings(blocks)
-    normalize_ids = consumer_profile == "number_suite_direct"
 
     # Headings and declarations own semantic IDs.  Raw objects never do.
     for index, block in enumerate(blocks):
@@ -301,7 +287,6 @@ def analyze_markdown_semantics_v3(
                         owners,
                         anchor_id,
                         _Owner("semantic_target", "heading", token_range, len(targets)),
-                        normalize_id=normalize_ids,
                     )
                 else:
                     diagnostics.append(
@@ -385,7 +370,7 @@ def analyze_markdown_semantics_v3(
             continue
 
         object_index = caption_bindings.get(index)
-        if object_index is None and consumer_profile == "frozen_v3":
+        if object_index is None:
             diagnostics.append(
                 _diagnostic(
                     source_identity,
@@ -400,7 +385,7 @@ def analyze_markdown_semantics_v3(
                 )
             )
             continue
-        object_block = blocks[object_index] if object_index is not None else None
+        object_block = blocks[object_index]
 
         caption_counters[declaration_kind] += 1
         declaration_end = max(
@@ -413,18 +398,13 @@ def analyze_markdown_semantics_v3(
             "number": str(caption_counters[declaration_kind]),
             "source_form": "declaration",
             "source_keyword": block.data["source_keyword"],
-            "range": (
-                SourceRange(
-                    min(block.start, object_block.start),
-                    max(declaration_end, object_block.end),
-                ).as_dict()
-                if object_block is not None
-                else SourceRange(block.start, declaration_end).as_dict()
-            ),
+            "range": SourceRange(
+                min(block.start, object_block.start),
+                max(declaration_end, object_block.end),
+            ).as_dict(),
             "declaration_range": SourceRange(block.start, declaration_end).as_dict(),
+            "object_range": SourceRange(object_block.start, object_block.end).as_dict(),
         }
-        if object_block is not None:
-            record["object_range"] = SourceRange(object_block.start, object_block.end).as_dict()
         if anchor_id is not None and anchor_range is not None:
             record["id"] = anchor_id
             record["id_range"] = anchor_range.as_dict()
@@ -432,7 +412,6 @@ def analyze_markdown_semantics_v3(
                 owners,
                 anchor_id,
                 _Owner("semantic_target", declaration_kind, anchor_range, len(targets)),
-                normalize_id=normalize_ids,
             )
         targets.append(record)
 
@@ -487,12 +466,7 @@ def analyze_markdown_semantics_v3(
                 "container_path": _container_path_projection(block),
             }
         )
-        _register_owner(
-            owners,
-            anchor_id,
-            _Owner("ordinary_anchor", None, token_range, len(anchors) - 1),
-            normalize_id=normalize_ids,
-        )
+        _register_owner(owners, anchor_id, _Owner("ordinary_anchor", None, token_range, len(anchors) - 1))
 
     for index, block in enumerate(blocks):
         if block.kind != "anchor_marker":
@@ -542,12 +516,7 @@ def analyze_markdown_semantics_v3(
                 "container_path": _container_path_projection(owner_block),
             }
         )
-        _register_owner(
-            owners,
-            anchor_id,
-            _Owner("ordinary_anchor", None, token_range, len(anchors) - 1),
-            normalize_id=normalize_ids,
-        )
+        _register_owner(owners, anchor_id, _Owner("ordinary_anchor", None, token_range, len(anchors) - 1))
 
     # Duplicate ownership is document-wide and reported on every later owner.
     for anchor_id, occurrences in owners.items():
@@ -555,10 +524,7 @@ def analyze_markdown_semantics_v3(
         for later in occurrences[1:]:
             fixes: tuple[dict[str, Any], ...] = ()
             replacement = replacements.get(later.id_range.start)
-            replacement_key = (
-                _number_suite_id_key(replacement) if normalize_ids and replacement is not None else replacement
-            )
-            if replacement is not None and _valid_id(replacement) and replacement_key not in owners:
+            if replacement is not None and _valid_id(replacement) and replacement not in owners:
                 fixes = (
                     {
                         "fix_id": "docwen.markdown.fix.rename_anchor",
@@ -601,8 +567,6 @@ def analyze_markdown_semantics_v3(
             heading_records,
             owners,
             external_reference_map,
-            normalize_titles=consumer_profile == "number_suite_direct",
-            normalize_ids=normalize_ids,
         )
         references.append(reference)
         diagnostics.extend(reference_diagnostics)
@@ -661,13 +625,9 @@ def analyze_markdown_semantics_v3(
         )
         occupied.append(token_range)
 
-    projection_schema = DIRECT_NUMBER_SUITE_SCHEMA if consumer_profile == "number_suite_direct" else SEMANTICS_SCHEMA
-    projection_schema_id = (
-        DIRECT_NUMBER_SUITE_SCHEMA_ID if consumer_profile == "number_suite_direct" else SEMANTICS_SCHEMA_ID
-    )
     projection = {
-        "$schema": projection_schema_id,
-        "schema": projection_schema,
+        "$schema": SEMANTICS_SCHEMA_ID,
+        "schema": SEMANTICS_SCHEMA,
         "source": source_identity,
         "targets": sorted(targets, key=lambda item: (item["range"]["start"], item["kind"])),
         "anchors": sorted(anchors, key=lambda item: item["range"]["start"]),
@@ -899,20 +859,12 @@ def _split_lines(source: str) -> list[_Line]:
     return lines
 
 
-def _scan_blocks(
-    lines: Sequence[_Line],
-    *,
-    caption_re: re.Pattern[str] = _CAPTION_RE,
-    captions_top_level_only: bool = False,
-) -> list[_Block]:
+def _scan_blocks(lines: Sequence[_Line]) -> list[_Block]:
     blocks = _scan_container_blocks(
         lines,
         container_path=(),
         container_segments=(),
         paragraph_kind="paragraph",
-        caption_re=caption_re,
-        captions_top_level_only=captions_top_level_only,
-        allow_caption_declarations=True,
     )
     return sorted(
         blocks,
@@ -931,9 +883,6 @@ def _scan_container_blocks(
     container_path: tuple[tuple[str, int], ...],
     container_segments: tuple[tuple[str, int, int], ...],
     paragraph_kind: str,
-    caption_re: re.Pattern[str] = _CAPTION_RE,
-    captions_top_level_only: bool = False,
-    allow_caption_declarations: bool = True,
 ) -> list[_Block]:
     blocks: list[_Block] = []
     index = 0
@@ -1084,7 +1033,7 @@ def _scan_container_blocks(
             )
             index += 1
             continue
-        caption = caption_re.fullmatch(line.text) if allow_caption_declarations else None
+        caption = _CAPTION_RE.fullmatch(line.text)
         if caption is not None and re.search(r"\{#[^{}\s]+\}[ \t]*$", caption.group(2)):
             # Historical Pandoc-style attributes are ordinary current source.
             # Only the explicit migration module may reinterpret them.
@@ -1204,7 +1153,7 @@ def _scan_container_blocks(
             candidate = lines[end_index + 1].text
             if (
                 _HEADING_RE.fullmatch(candidate)
-                or (allow_caption_declarations and caption_re.fullmatch(candidate))
+                or _CAPTION_RE.fullmatch(candidate)
                 or _match_fence_opener_v3(candidate)
                 or _ANCHOR_ONLY_CANDIDATE_RE.fullmatch(candidate)
                 or _QUOTE_PREFIX_RE.match(candidate) is not None
@@ -1244,9 +1193,6 @@ def _scan_container_blocks(
                     container_path=child_path,
                     container_segments=child_segments,
                     paragraph_kind="container_text",
-                    caption_re=caption_re,
-                    captions_top_level_only=captions_top_level_only,
-                    allow_caption_declarations=not captions_top_level_only,
                 )
             )
         elif block.kind == "list":
@@ -1265,9 +1211,6 @@ def _scan_container_blocks(
                         container_path=item_path,
                         container_segments=item_segments,
                         paragraph_kind="list_item",
-                        caption_re=caption_re,
-                        captions_top_level_only=captions_top_level_only,
-                        allow_caption_declarations=not captions_top_level_only,
                     )
                 )
     return [*blocks, *nested]
@@ -1548,15 +1491,8 @@ def _previous_non_marker_block(
     return None
 
 
-def _register_owner(
-    owners: dict[str, list[_Owner]],
-    anchor_id: str,
-    owner: _Owner,
-    *,
-    normalize_id: bool = False,
-) -> None:
-    key = _number_suite_id_key(anchor_id) if normalize_id else anchor_id
-    owners.setdefault(key, []).append(owner)
+def _register_owner(owners: dict[str, list[_Owner]], anchor_id: str, owner: _Owner) -> None:
+    owners.setdefault(anchor_id, []).append(owner)
 
 
 def _source_identity(input_id: str, source_sha256: str) -> dict[str, Any]:
@@ -1666,15 +1602,6 @@ def _validate_external_citations(
     return output
 
 
-def _normalize_number_suite_title(value: str) -> str:
-    normalized = unicodedata.normalize("NFC", value.replace("\u2060", "")).strip()
-    return re.sub(r"[ \t]+", " ", normalized).lower()
-
-
-def _number_suite_id_key(value: str) -> str:
-    return unicodedata.normalize("NFC", value).lower()
-
-
 def _parse_reference_body(body: str) -> tuple[str | None, str, str | None]:
     selector_text, separator, alias = body.partition("|")
     if separator and (not alias or "|" in alias):
@@ -1695,17 +1622,11 @@ def _resolve_reference(
     headings: Sequence[dict[str, Any]],
     owners: Mapping[str, Sequence[_Owner]],
     external: Mapping[tuple[str, str, str], ExternalReferenceResolution],
-    *,
-    normalize_titles: bool = False,
-    normalize_ids: bool = False,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     diagnostics: list[dict[str, Any]] = []
     body = match.group("body")
     try:
         page_locator, fragment, alias = _parse_reference_body(body)
-        if normalize_titles or normalize_ids:
-            fragment = fragment.strip()
-            alias = alias.strip() if alias is not None else None
     except ValueError:
         record = {
             "selector_kind": "heading_path",
@@ -1747,18 +1668,8 @@ def _resolve_reference(
         elif page_locator is not None:
             status = "external_unresolved"
         else:
-            target_key = _number_suite_id_key(target_id) if normalize_ids else target_id
-            matching_targets = [
-                item
-                for item in targets
-                if item.get("id") is not None
-                and (
-                    _number_suite_id_key(str(item["id"])) == target_key
-                    if normalize_ids
-                    else item.get("id") == target_id
-                )
-            ]
-            owner_records = owners.get(target_key, ())
+            matching_targets = [item for item in targets if item.get("id") == target_id]
+            owner_records = owners.get(target_id, ())
             if len(owner_records) > 1:
                 status = "ambiguous"
             elif matching_targets:
@@ -1766,8 +1677,6 @@ def _resolve_reference(
                 status = "resolved" if target.get("number") else "unnumbered"
                 record["resolved_kind"] = target["kind"]
                 current_title = str(target["title"])
-                if normalize_ids and target.get("id") is not None:
-                    record["target_id"] = target["id"]
                 if target.get("number"):
                     record["cached_number"] = target["number"]
             elif owner_records and owner_records[0].owner_kind == "ordinary_anchor":
@@ -1775,7 +1684,7 @@ def _resolve_reference(
             else:
                 status = "missing"
     else:
-        heading_path = (fragment,) if normalize_titles else tuple(fragment.split("#"))
+        heading_path = tuple(fragment.split("#"))
         record["heading_path"] = list(heading_path)
         selector_key = "#".join(heading_path)
         if any(not item for item in heading_path):
@@ -1783,16 +1692,8 @@ def _resolve_reference(
         elif page_locator is not None:
             status = "external_unresolved"
         else:
-            normalized_heading_path = tuple(_normalize_number_suite_title(item) for item in heading_path)
             matching_headings = [
-                heading
-                for heading in headings
-                if (
-                    tuple(_normalize_number_suite_title(item) for item in heading["heading_path"][-len(heading_path) :])
-                    == normalized_heading_path
-                    if normalize_titles
-                    else tuple(heading["heading_path"][-len(heading_path) :]) == heading_path
-                )
+                heading for heading in headings if tuple(heading["heading_path"][-len(heading_path) :]) == heading_path
             ]
             if len(heading_path) == 1:
                 keywords = {"figure": "Figure", "table": "Table", "equation": "Equation", "code_block": "Code"}
@@ -1800,12 +1701,7 @@ def _resolve_reference(
                     target
                     for target in targets
                     if target["kind"] in keywords
-                    and (
-                        _normalize_number_suite_title(f"{keywords[target['kind']]}: {target['title']}".strip())
-                        == _normalize_number_suite_title(fragment)
-                        if normalize_titles
-                        else f"{keywords[target['kind']]}: {target['title']}".strip() == fragment.strip()
-                    )
+                    and f"{keywords[target['kind']]}: {target['title']}".strip() == fragment.strip()
                 )
             if len(matching_headings) == 1:
                 target = matching_headings[0]
@@ -1954,14 +1850,11 @@ __all__ = [
     "DIAGNOSTICS_SCHEMA",
     "DIAGNOSTICS_SCHEMA_ID",
     "DIAGNOSTIC_EVIDENCE_SCHEMA",
-    "DIRECT_NUMBER_SUITE_SCHEMA",
-    "DIRECT_NUMBER_SUITE_SCHEMA_ID",
     "SEMANTICS_SCHEMA",
     "SEMANTICS_SCHEMA_ID",
     "ExternalCitationResolution",
     "ExternalReferenceResolution",
     "MarkdownSemanticsV3Analysis",
-    "SemanticConsumerProfile",
     "SourceRange",
     "analyze_markdown_semantics_v3",
     "is_resource_less_image_carrier_v3",
