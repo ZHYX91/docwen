@@ -199,9 +199,12 @@ pip install pillow-heif
 对于脚本、Agent 或插件集成，建议按下面顺序调用：
 
 1. `inspect <file> [--json]`：先识别文件真实类别、格式与可执行动作。
-2. `schema convert`：读取 `convert` 的机器可读参数契约与条件约束。
-3. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`：先预演检测、归一化和路由结果，不直接落地转换。
-4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`：确认后再执行正式转换。
+2. `resources list formats --json`：读取当前 Runtime 实际可用的转换路线和依赖门控。
+3. `schema convert`：读取 `convert` 的机器可读参数契约与条件约束。
+4. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) --dry-run --json`：先预演检测、归一化和路由结果，不直接落地转换。
+5. `convert <file> --to <fmt> (--output-dir <dir> | --output <path>) ...`：确认后再执行正式转换。
+
+外部内容消费者使用 `serve --stdio` 与 Machine Protocol v2：先发现能力，再规划任务，最后执行。CLI 的 `--json` 只是终端呈现格式，不是跨产品兼容边界。本机桌面控制使用独立且稳定的 `gui open|activate|status` 接口。
 
 ### 常用示例
 
@@ -260,8 +263,10 @@ DocWenCLI.exe validate input.md --check typo --check punct
 | `inspect <file> [--json]` | 查询文件类别/格式、推荐动作，以及扩展名与内容不一致警告。 |
 | `doctor --json` | 输出诊断结果，并附带运行时能力摘要与依赖门控信息。 |
 | `resources list formats --json` | 按源类别列出可用目标格式，并附带运行时依赖门控 / 限制摘要。 |
+| `resources list optimizations --json` | 列出可用优化资源及其规范路线绑定。 |
 | `resources list templates` | 列出可用模板。 |
 | `resources list numbering-schemes` | 列出可用序号方案。 |
+| `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | 通过独立的本机 GUI 控制接口启动或激活 DocWen，并可打开一个绝对路径文件。 |
 | `--template <id>` | 原样使用 `resources list templates` 返回的 canonical 资源 ID；显示名、文件名和路径直接拒绝。DOCX ID 用于 `docx/doc/odt/rtf/wps/pdf`，XLSX ID 用于 `xlsx/xls/ods/csv`。 |
 | `--extract-img` / `--no-extract-img` / `--ocr` | `convert --to md` 的图片提取与 OCR 选项。 |
 | `--image-mode file|base64|embed|omit` | 控制 Markdown 导出中的图片落地方式。 |
@@ -499,6 +504,8 @@ DocWenCLI.exe validate input.md --check typo --check punct
 在**设置 → 模板**中统一管理 DOCX/XLSX 模板，可启用、停用、排序和设置默认项。内置模板只读，自定义模板保存在用户可写目录；MSIX 用户无需修改 WindowsApps。
 
 ### 自定义模板
+
+DocWen Core 的运行时/控制传输在 Windows 使用命名管道，在 Linux/macOS 使用 AF_UNIX socket。文件锁只负责单实例所有权，不承载控制命令。这里描述的是 Core 能力。DocWen Assistant 3.1 支持 Windows 和 Linux 桌面端；Windows Microsoft Store 安装版可使用自动检测，Linux 使用手动选择的兼容解压包。Assistant 目前不支持 macOS。
 
 1. 选择内置模板并点击**复制并编辑**，或使用**导入模板**添加已有 DOCX/XLSX 文件。
 2. 在 Word、Excel 或 WPS 中修改自定义副本的内容、样式和占位符，具体规则见下文。
