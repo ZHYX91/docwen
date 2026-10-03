@@ -432,9 +432,7 @@ class DocxSemanticsV3Session:
             parts.append(
                 (
                     STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE,
-                    standalone_caption_occurrence_map_xml(
-                        [binding.identity for binding in self._standalone_captions]
-                    ),
+                    standalone_caption_occurrence_map_xml([binding.identity for binding in self._standalone_captions]),
                 )
             )
         if not parts:
