@@ -193,6 +193,21 @@ def _h2_sections(text: str) -> list[str]:
     return re.split(r"^## .+$", text, flags=re.MULTILINE)[1:]
 
 
+CLI_SECTION_HEADING_MARKERS = {
+    "README.md": "Command Line Usage",
+    "README.de-DE.md": "CLI-Verwendung",
+    "README.es-ES.md": "Uso de la CLI",
+    "README.fr-FR.md": "Utilisation en ligne de commande",
+    "README.ja-JP.md": "コマンドライン利用",
+    "README.ko-KR.md": "명령줄 사용",
+    "README.pt-BR.md": "Uso da CLI",
+    "README.ru-RU.md": "Использование CLI",
+    "README.vi-VN.md": "Sử dụng CLI",
+    "README.zh-CN.md": "命令行使用",
+    "README.zh-TW.md": "命令列使用",
+}
+
+
 def test_public_readmes_keep_cli_integration_anchors() -> None:
     required = (
         "inspect <file> [--json]",
@@ -205,9 +220,8 @@ def test_public_readmes_keep_cli_integration_anchors() -> None:
         "gui open",
     )
     for path in _public_readme_paths():
-        sections = _h2_sections(path.read_text(encoding="utf-8"))
-        assert len(sections) >= 10, path.name
-        cli = sections[5]
+        text = path.read_text(encoding="utf-8")
+        cli = _named_h2_section(text, CLI_SECTION_HEADING_MARKERS[path.name])
         assert all(token in cli for token in required), path.name
         ordered = [
             cli.index("inspect <file> [--json]"),
