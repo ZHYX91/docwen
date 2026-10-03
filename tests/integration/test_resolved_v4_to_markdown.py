@@ -349,9 +349,7 @@ def test_standalone_captions_round_trip_with_numbering_and_reference_authority(t
     assert b"SEQ Code" not in document_xml
     assert b" REF " in document_xml
 
-    reverse = DocxToMarkdownConverter().convert(
-        _reverse_context(tmp_path, source, request_id="standalone-captions")
-    )
+    reverse = DocxToMarkdownConverter().convert(_reverse_context(tmp_path, source, request_id="standalone-captions"))
 
     assert reverse.success, reverse.error
     markdown = Path(reverse.artifacts[0].staging_path).read_text(encoding="utf-8")
