@@ -1052,6 +1052,13 @@ class ProofreadTab(BaseSettingsTab):
         self._load_values()
 
     def _create_interface(self) -> None:
+        self.set_tab_description(
+            t(
+                "settings.proofread.save_boundary_hint",
+                "Rule editor saves and rule imports take effect immediately. Canceling this Settings window does not "
+                "undo them; the switches on this page still use Apply/OK.",
+            )
+        )
         # ── Rules card ──────────────────────────────────────────────────
         _rules_card, rules_form = self.add_settings_card(t("settings.proofread.validation_section", "Validation Rules"))
         self._symbol_pairing = self.create_settings_toggle(
