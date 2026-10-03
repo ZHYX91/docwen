@@ -86,7 +86,7 @@ save_failed = "Lưu cài đặt thất bại"
 output_each_source = "Lưu từng kết quả cạnh tệp nguồn"
 output_date_subfolder = "Lưu trong thư mục con theo ngày"
 task_warning_count = "Có {count} thông báo chuyển đổi. Mở rộng lịch sử hoạt động để xem chi tiết."
-task_progress_percent = "Tiến độ:{percent}%"
+task_progress_percent = "Tiến độ: {percent}%"
 task_state_skipped = "Đã bỏ qua"
 batch_name = "Xử lý hàng loạt ({count} tệp)"
 aggregate_name = "Gộp ({count} tệp)"
@@ -226,14 +226,14 @@ apply_failed = "Không thể áp dụng cài đặt."
 reset_success = "Đã khôi phục cài đặt mặc định."
 
 [settings.reset]
-tab_button = "Đặt lại thẻ"
+tab_button = "Đặt lại tab"
 all_button = "Đặt lại tất cả"
 tab_confirm_title = "Xác nhận đặt lại"
-tab_confirm_message = "Đặt lại tất cả cài đặt trong thẻ \"{tab_name}\" về mặc định? Hành động này không thể hoàn tác."
+tab_confirm_message = "Đặt lại tất cả cài đặt trong tab \"{tab_name}\" về mặc định? Hành động này không thể hoàn tác."
 all_confirm_title = "Xác nhận đặt lại tất cả"
 all_confirm_message = "Đặt lại tất cả cài đặt về mặc định? (Dữ liệu từ điển không bị ảnh hưởng.) Hành động này không thể hoàn tác."
 success = "Tất cả cài đặt đã được đặt lại về mặc định"
-tab_success = "Cài đặt của thẻ \"{tab_name}\" đã được đặt lại về mặc định"
+tab_success = "Cài đặt của tab \"{tab_name}\" đã được đặt lại về mặc định"
 failed = "Đặt lại cài đặt thất bại. Vui lòng kiểm tra nhật ký."
 
 [settings.changes]
@@ -241,7 +241,7 @@ summary = "Thay đổi chưa lưu ({count})"
 more = "… và thêm {count} mục"
 
 [settings.errors]
-tab_load_failed_message = "Không thể tải {tab}\\n\\nLỗi: {error}"
+tab_load_failed_message = "Không thể tải {tab}\n\nLỗi: {error}"
 
 [settings.toml_editor]
 config_label = "Cấu hình"
@@ -663,7 +663,7 @@ md_heading_format_tooltip = "Áp dụng định dạng: Ghi đè định dạng 
 md_table_header_format_label = "Xử lý markup tiêu đề bảng:"
 md_table_header_format_tooltip = "Áp dụng định dạng: **Bold** chuyển thành in đậm thực (có thể trùng với style bảng)\nGiữ markup: Hiển thị markup nguyên dạng\nLàm sạch markup: Để style bảng (vd: firstRow in đậm) tự áp dụng\nLưu ý: Style bảng thường đã in đậm tiêu đề, khuyến nghị dùng 'Làm sạch markup'"
 heading_merge_mode_label = "Chế độ gộp tiêu đề và nội dung:"
-heading_merge_mode_tooltip = "Điều khiển việc gộp tiêu đề và dòng văn bản thường ngay bên dưới thành một đoạn\\nChỉ gộp khi có dấu câu: chỉ gộp khi tiêu đề kết thúc bằng dấu câu và dòng sau là văn bản thường (mặc định)\\nGặp nội dung thì gộp: gộp nếu dòng sau là văn bản thường (không cần dấu câu)\\nKhông bao giờ gộp: tiêu đề và nội dung luôn được tách riêng\\nLưu ý: danh sách/khối mã/bảng/trích dẫn/đường phân cách sẽ không được gộp"
+heading_merge_mode_tooltip = "Điều khiển việc gộp tiêu đề và dòng nội dung thường ngay bên dưới thành một đoạn\nChỉ gộp khi có dấu câu: Chỉ gộp khi tiêu đề kết thúc bằng dấu câu và dòng sau là nội dung thường (mặc định)\nGặp nội dung là gộp: Gộp nếu dòng sau là nội dung thường (không cần dấu câu)\nKhông bao giờ gộp: Tiêu đề và nội dung luôn được tách riêng\nLưu ý: danh sách/khối mã/bảng/trích dẫn/đường phân cách sẽ không được gộp"
 heading_merge_punctuation_label = "Dấu câu để gộp:"
 heading_merge_punctuation_tooltip = "Các ký tự kích hoạt việc gộp tiêu đề và nội dung trong chế độ Chỉ gộp khi có dấu câu. Giá trị rỗng sẽ tắt việc gộp theo dấu câu."
 
@@ -695,7 +695,7 @@ apply_format = "Áp dụng định dạng"
 keep_markup = "Giữ markup"
 clean_markup = "Làm sạch markup"
 heading_merge_punct_required = "Chỉ gộp khi có dấu câu (mặc định)"
-heading_merge_always = "Gặp nội dung thì gộp"
+heading_merge_always = "Gặp nội dung là gộp"
 heading_merge_never = "Không bao giờ gộp"
 
 # 分隔符选项
@@ -896,7 +896,7 @@ exported = "Đã xuất toàn bộ quy tắc."
 [about]
 title = "Giới thiệu"
 version_info = "Phiên bản {version}"
-subtitle = "Phần mềm chuyển đổi tài liệu, bảng biểu và hình ảnh"
+subtitle = "Phần mềm chuyển đổi tài liệu và bảng biểu (Bộ chuyển đổi công văn)"
 version_tooltip = "Phần mềm này chỉ chạy ngoại tuyến. Vui lòng tự kiểm tra cập nhật."
 contact = "Liên hệ: {email}"
 copyright = "© {year} {author}"

@@ -659,7 +659,7 @@ md_heading_format_tooltip = "Balises dans les en-têtes."
 md_table_header_format_label = "En-tête de tableau :"
 md_table_header_format_tooltip = "Balises dans les en-têtes de tableau."
 heading_merge_mode_label = "Mode de fusion titre + corps :"
-heading_merge_mode_tooltip = "Contrôle si un titre et la ligne de texte ordinaire qui le suit immédiatement doivent être fusionnés dans un même paragraphe\\nPonctuation requise : fusionner seulement si le titre se termine par une ponctuation finale et que la ligne suivante est du texte ordinaire (par défaut)\\nToujours fusionner : fusionner si la ligne suivante est du texte ordinaire (sans exiger de ponctuation finale)\\nNe jamais fusionner : le titre et le texte sont toujours analysés comme des paragraphes distincts\\nRemarque : les listes/blocs de code/tableaux/citations/séparateurs ne sont pas fusionnés"
+heading_merge_mode_tooltip = "Contrôle si un titre et la ligne de texte ordinaire qui le suit immédiatement doivent être fusionnés dans un même paragraphe\nPonctuation requise : fusionner seulement si le titre se termine par une ponctuation finale et que la ligne suivante est du texte ordinaire (par défaut)\nToujours fusionner : fusionner si la ligne suivante est du texte ordinaire (sans exiger de ponctuation finale)\nNe jamais fusionner : le titre et le texte sont toujours analysés comme des paragraphes distincts\nRemarque : les listes/blocs de code/tableaux/citations/séparateurs ne sont pas fusionnés"
 heading_merge_punctuation_label = "Ponctuation de fusion :"
 heading_merge_punctuation_tooltip = "Caractères qui déclenchent la fusion du titre et du corps en mode Ponctuation requise. Une valeur vide désactive la fusion par ponctuation."
 

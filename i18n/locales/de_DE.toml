@@ -610,7 +610,7 @@ md_heading_format_tooltip = "Tags in Überschriften."
 md_table_header_format_label = "Tabellenkopf:"
 md_table_header_format_tooltip = "Tags in Tabellenköpfen."
 heading_merge_mode_label = "Modus zum Zusammenführen von Überschrift und Text:"
-heading_merge_mode_tooltip = "Steuert, ob eine Überschrift und die direkt folgende normale Textzeile zu einem Absatz zusammengeführt werden\\nSatzzeichen erforderlich: nur zusammenführen, wenn die Überschrift mit einem abschließenden Satzzeichen endet und die nächste Zeile normaler Text ist (Standard)\\nImmer zusammenführen: zusammenführen, wenn die nächste Zeile normaler Text ist (kein Satzzeichen erforderlich)\\nNiemals zusammenführen: Überschrift und Text werden immer als getrennte Absätze verarbeitet\\nHinweis: Listen/Codeblöcke/Tabellen/Zitate/Trennlinien werden nicht zusammengeführt"
+heading_merge_mode_tooltip = "Steuert, ob eine Überschrift und die direkt folgende normale Textzeile zu einem Absatz zusammengeführt werden\nSatzzeichen erforderlich: nur zusammenführen, wenn die Überschrift mit einem abschließenden Satzzeichen endet und die nächste Zeile normaler Text ist (Standard)\nImmer zusammenführen: zusammenführen, wenn die nächste Zeile normaler Text ist (kein Satzzeichen erforderlich)\nNiemals zusammenführen: Überschrift und Text werden immer als getrennte Absätze verarbeitet\nHinweis: Listen/Codeblöcke/Tabellen/Zitate/Trennlinien werden nicht zusammengeführt"
 heading_merge_punctuation_label = "Satzzeichen für die Zusammenführung:"
 heading_merge_punctuation_tooltip = "Zeichen, die im Modus 'Satzzeichen erforderlich' die Zusammenführung von Überschrift und Text auslösen. Eine leere Eingabe deaktiviert diese Zusammenführung."
 
