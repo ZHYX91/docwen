@@ -12,6 +12,7 @@ from docwen_gui.view_models.settings_vm import SECTION_GUI, SECTION_OUTPUT, Sett
 from docwen_gui.widgets.settings.dialog import (
     _abbreviate_value,
     _friendly_change_field,
+    _friendly_change_lines,
     _friendly_change_value,
 )
 
@@ -78,3 +79,17 @@ def test_change_summary_projects_known_fields_and_values_but_keeps_honest_fallba
     assert _friendly_change_value("output.create_date_subfolder", True) == t("settings.changes.enabled")
     unknown = _friendly_change_field("future.section.value")
     assert "future.section.value" in unknown
+
+
+def test_change_summary_expands_dict_backed_conversion_defaults_to_leaf_lines() -> None:
+    lines = _friendly_change_lines(
+        {
+            "field": "conversion_defaults.image",
+            "old": {"compress_mode": "lossless", "size_limit": 512},
+            "new": {"compress_mode": "limit_size", "size_limit": 1024},
+        }
+    )
+
+    assert len(lines) == 2
+    assert all("conversion_defaults.image" not in line for line in lines)
+    assert "Lossless" in lines[0] or "Limit" in lines[0]
