@@ -493,7 +493,6 @@ DocWenCLI.exe validate input.md --check typo --check punct
 
 ### 自定義範本
 
-
 1. 選擇內建範本並**複製並編輯**，或匯入現有 DOCX/XLSX 檔案。
 2. 在 Word、Excel 或 WPS 中修改自訂副本的內容、樣式與預留位置，規則見下文。
 3. 儲存檔案，返回 DocWen 並**重新整理**，無須重新啟動。
