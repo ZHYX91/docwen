@@ -69,6 +69,39 @@ def test_addressable_and_idless_captions_use_persisted_collision_binding(tmp_pat
     assert b'resolved_style_id="DocWenTableCaptionDocWen1"' in xml
 
 
+def test_addressable_standalone_caption_uses_authenticated_caption_only_target(tmp_path: Path) -> None:
+    source = "Figure: Planned architecture ^Plan"
+    document = Document()
+    bindings, styles = _add_caption_styles(document)
+    caption = document.add_paragraph(style=styles["figure_caption"])
+    caption.add_run("Figure ")
+    append_complex_field(caption, instruction=" SEQ Figure \\* ARABIC ", cached_result="1")
+    caption.add_run(": Planned architecture")
+    session = DocxSemanticsV3Session(
+        document,
+        source_sha256=hashlib.sha256(source.encode()).hexdigest(),
+        caption_style_bindings=bindings,
+        standalone_caption_authority=True,
+    )
+    session.bind_caption(
+        caption,
+        (),
+        {
+            "kind": "figure",
+            "id": "Plan",
+            "number": "1",
+            "title": "Planned architecture",
+            "declaration_range": {"start": 0, "end": len(source)},
+        },
+    )
+
+    output = _write(session, document, tmp_path / "addressable-standalone.docx")
+    recovery = DocxSemanticsV3Recovery.load(output, Document(str(output)))
+
+    assert recovery.caption_signatures == (("figure", "Plan", "Planned architecture", "1"),)
+    assert recovery.recovered_captions[0].object_elements == ()
+
+
 def test_unmapped_prefix_style_is_never_caption_authority(tmp_path: Path) -> None:
     document = Document()
     forged = document.styles.add_style("Forged Caption", WD_STYLE_TYPE.PARAGRAPH)
