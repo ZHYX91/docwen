@@ -494,7 +494,6 @@ Gestiona las plantillas DOCX/XLSX en **Configuración → Plantillas**: activar,
 
 ### Plantillas personalizadas
 
-El transporte Runtime/Control de DocWen Core usa una canalización con nombre en Windows y un socket AF_UNIX en Linux/macOS. El bloqueo de archivo solo establece la propiedad de instancia única; los comandos de control no se transportan mediante archivos. Esto describe únicamente el límite de Core. DocWen Assistant 3.1 admite hosts de escritorio Windows y Linux. En Windows, las instalaciones de Microsoft Store pueden detectarse automáticamente; en Linux se selecciona manualmente un paquete compatible ya extraído. Assistant no admite macOS actualmente.
 
 1. Copia y edita una plantilla integrada o importa un archivo DOCX/XLSX existente.
 2. Modifica el contenido, los estilos y los marcadores de la copia en Word, Excel o WPS; consulta las reglas siguientes.
@@ -588,10 +587,7 @@ Hay un plugin complementario de Obsidian publicado por separado que funciona jun
 
 ### Principio de funcionamiento
 
-El transporte runtime/control de DocWen Core usa una canalización con nombre de Windows o un socket
-AF_UNIX en Linux/macOS. Un bloqueo de archivo solo establece la propiedad de la instancia única; los
-comandos de control no se transportan mediante archivos. Esto solo describe la capacidad del Core.
-DocWen Assistant 3.1 sigue limitado al escritorio de Windows y no tiene aceptación combinada en Linux/macOS.
+El transporte Runtime/Control de DocWen Core usa una canalización con nombre en Windows y un socket AF_UNIX en Linux/macOS. El bloqueo de archivo solo establece la propiedad de instancia única; los comandos de control no se transportan mediante archivos. Esto describe únicamente el límite de Core. DocWen Assistant 3.1 admite hosts de escritorio Windows y Linux. En Windows, las instalaciones de Microsoft Store pueden detectarse automáticamente; en Linux se selecciona manualmente un paquete compatible ya extraído. Assistant no admite macOS actualmente.
 
 1.  **Primer clic** → Inicia el convertidor y pasa el archivo actual.
 2.  **Clic de nuevo (con archivo)** → Sustituye el archivo (modo de archivo único).
