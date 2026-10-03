@@ -7,6 +7,8 @@
 
 ## 0.16.0 (2026-10-04)
 
+- Keep result-directory layout for plain and extension-only Markdown after content admission, including direct and declared-source conversion.
+- 修复仅含普通段落或扩展语法的 Markdown 经内容准入后丢失结果目录布局，直接转换与声明源文档入口保持一致。
 - Preserve Structural Tables document round trips, including zero or multiple header rows, row headers, rectangular merges and formatted literal markers. Keep direct and declared-source conversion table semantics aligned under the same effective configuration.
 - 保留 Structural Tables 文档往返中的无表头、多行表头、行标题列、矩形合并及格式化字面标记；相同有效配置下，直接转换与声明源文档入口使用一致的表格语义。
 - Align direct Markdown caption and reference parsing with Number Suite, including standalone captions, normalized identifiers and literal shielding. Preserve standalone caption recovery when importing generated DOCX.
