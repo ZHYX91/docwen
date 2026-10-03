@@ -152,10 +152,10 @@ def test_structural_table_accepts_short_delimiters_without_outer_pipes() -> None
     assert metadata["anchors"][1]["column_span"] == 2
 
 
-def test_formatted_angle_markers_are_literal_cell_content() -> None:
-    source = """| Code | Strong | Link | Math |
-| --- | --- | --- | --- |
-| `<` | **<** | [<](https://example.com) | $<$ |"""
+def test_formatted_merge_markers_are_literal_cell_content() -> None:
+    source = """| Code left | Strong left | Link left | Math left | Code up | Strong up |
+| --- | --- | --- | --- | --- | --- |
+| `<` | **<** | [<](https://example.com) | $<$ | `^` | **^** |"""
     analysis = analyze_document_semantics(parse_markdown_text(source), current_v3=True)
 
     assert not analysis.has_errors
