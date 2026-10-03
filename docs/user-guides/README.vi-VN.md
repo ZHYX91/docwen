@@ -495,7 +495,6 @@ Quản lý mẫu DOCX/XLSX trong **Cài đặt → Mẫu**: bật, tắt, sắp 
 
 ### Template tuỳ chỉnh
 
-Kênh Runtime/Control của DocWen Core dùng named pipe trên Windows và socket AF_UNIX trên Linux/macOS. Khóa tệp chỉ xác lập quyền sở hữu một phiên bản chạy; lệnh điều khiển không được truyền qua tệp. Nội dung này chỉ mô tả ranh giới Core. DocWen Assistant 3.1 hỗ trợ máy tính để bàn Windows và Linux. Bản Microsoft Store trên Windows có thể dùng tự động phát hiện; trên Linux người dùng chọn thủ công gói tương thích đã giải nén. Assistant hiện chưa hỗ trợ macOS.
 
 1. Sao chép và chỉnh sửa mẫu tích hợp, hoặc nhập tệp DOCX/XLSX có sẵn.
 2. Sửa nội dung, kiểu và chỗ giữ chỗ của bản sao bằng Word, Excel hoặc WPS; xem quy tắc bên dưới.
@@ -589,10 +588,7 @@ Plugin Obsidian đồng hành được phát hành ở repo riêng và hoạt đ
 
 ### Nguyên lý hoạt động
 
-Runtime/control transport của DocWen Core có thể dùng named pipe trên Windows hoặc socket AF_UNIX trên
-Linux/macOS. Khóa file chỉ xác lập quyền sở hữu một phiên bản đang chạy; file không được dùng để truyền
-lệnh điều khiển. Đây chỉ là mô tả capability của Core. DocWen Assistant 3.1 vẫn chỉ dành cho Windows
-desktop và chưa có nghiệm thu kết hợp trên Linux/macOS.
+Kênh Runtime/Control của DocWen Core dùng named pipe trên Windows và socket AF_UNIX trên Linux/macOS. Khóa tệp chỉ xác lập quyền sở hữu một phiên bản chạy; lệnh điều khiển không được truyền qua tệp. Nội dung này chỉ mô tả ranh giới Core. DocWen Assistant 3.1 hỗ trợ máy tính để bàn Windows và Linux. Bản Microsoft Store trên Windows có thể dùng tự động phát hiện; trên Linux người dùng chọn thủ công gói tương thích đã giải nén. Assistant hiện chưa hỗ trợ macOS.
 
 1.  **Nhấn lần đầu** → Khởi chạy bộ chuyển đổi và truyền file hiện tại.
 2.  **Nhấn lại (có file)** → Thay file mới (chế độ 1 file).
