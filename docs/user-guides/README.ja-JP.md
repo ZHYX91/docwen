@@ -6,16 +6,16 @@
 
 [English](https://github.com/ZHYX91/docwen/blob/main/README.md) · [简体中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-CN.md) · [繁體中文](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.zh-TW.md) · [Deutsch](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.de-DE.md) · [Français](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.fr-FR.md) · [Español](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.es-ES.md) · [Português](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.pt-BR.md) · [Русский](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ru-RU.md) · [日本語](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ja-JP.md) · [한국어](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.ko-KR.md) · [Tiếng Việt](https://github.com/ZHYX91/docwen/blob/main/docs/user-guides/README.vi-VN.md)
 
-Word/Markdown/Excelの双方向変換をサポートするドキュメントおよびチャート形式変換ツール。完全にローカルで実行され、データのセキュリティと信頼性を保証します。
+DocWen は Word、Markdown、Excel などのオフィス形式を扱うローカルの文書・表変換ツールです。信頼できるオフライン作業を重視し、文書処理をユーザーの端末内で完結させます。
 
 ## 📖 プロジェクトの背景
 
-このソフトウェアは、印刷オフィスの日常業務のために、以下の問題を解決するために設計されました：
-- さまざまな部門から送信されるドキュメント形式が混沌としており、標準化された形式に整理する必要がある。
-- ドキュメントの種類が多く、それぞれに異なる固定フォーマット要件がある。
-- イントラネット環境やレガシー機器に適応し、オフラインで実行する必要がある。
+DocWen は、日常の文書整理でよく発生する次のような課題を解決するために作られました：
+- 部門ごとに異なる形式で届く文書を標準化する必要がある。
+- 多様なファイル形式と、それぞれ異なる書式要件を扱う必要がある。
+- イントラネットやオフライン環境、比較的古い機器でも安定して作業する必要がある。
 
-**設計哲学**：このソフトウェアは、軽量で誰でも使えるツールとして位置付けられています。プロフェッショナリズムと機能の完全性の点ではLaTeXやPandocのようなプロフェッショナルツールと比較することはできませんが、学習コストがゼロで、すぐに使える使いやすさに優れており、フォーマット要件がそれほど厳しくない日常のオフィスシナリオに適しています。
+**設計方針**：DocWen は、日常的な変換や文書整理を低い学習コストですぐ使えることを重視します。LaTeX や Pandoc のような専門的な組版・変換システムを置き換えることは目的とせず、一般的な文書作業を分かりやすく直接実行できるようにしながら、技術的な境界を明確に保ちます。
 
 ## ✨ 主な機能
 
