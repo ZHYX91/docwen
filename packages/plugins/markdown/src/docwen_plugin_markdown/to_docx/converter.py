@@ -578,10 +578,12 @@ class MdToDocxConverter:
                 source_input.metadata.get("machine_input_id", "source") if source_input is not None else "source"
             )
             try:
+                direct_number_suite = bool(extensions.captions_references)
                 semantic_v3_plan = prepare_runtime_semantics_v3(
                     content,
                     input_id=semantic_input_id,
                     extensions=extensions,
+                    consumer_profile="number_suite_direct" if direct_number_suite else "frozen_v3",
                 )
             except RuntimeSemanticsV3Unsupported as exc:
                 return _semantic_v3_failure(
@@ -987,6 +989,7 @@ class MdToDocxConverter:
                 semantic_v3_session = DocxSemanticsV3Session(
                     doc,
                     source_sha256=semantic_v3_plan.source_sha256,
+                    standalone_caption_authority=direct_number_suite,
                     caption_style_bindings=tuple(
                         CaptionStyleBindingV3(
                             semantic_key=semantic_key,
