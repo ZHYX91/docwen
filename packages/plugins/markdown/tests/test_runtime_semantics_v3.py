@@ -100,19 +100,14 @@ figure: lowercase is ordinary
     assert standalone["_docwen_v3_caption_target"]["id"] == "Plan"
     assert "object_range" not in standalone["_docwen_v3_caption_target"]
     references = [
-        child
-        for node in ast
-        for child in node.get("children", [])
-        if child.get("type") == "semantic_cross_reference"
+        child for node in ast for child in node.get("children", []) if child.get("type") == "semantic_cross_reference"
     ]
     assert len(references) == 2
     assert all(item["schema"] == "docwen.number_suite_direct.v1" for item in references)
     assert all(item["cached_number"] == "1" for item in references)
     assert any(
         node.get("type") == "paragraph"
-        and "figure: lowercase is ordinary" in "".join(
-            str(child.get("raw", "")) for child in node.get("children", [])
-        )
+        and "figure: lowercase is ordinary" in "".join(str(child.get("raw", "")) for child in node.get("children", []))
         for node in ast
     )
 
