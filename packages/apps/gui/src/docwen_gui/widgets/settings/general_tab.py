@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from docwen_gui.styles.design_tokens import Spacing
 from docwen_gui.styles.ui_scale import set_metric
 from docwen_gui.widgets.value_controls import ScrollSafeComboBox, ScrollSafeDoubleSpinBox
 
@@ -66,7 +67,7 @@ class GeneralTab(BaseSettingsTab):
         lang_container = QWidget(lang_card)
         lang_container_layout = QVBoxLayout(lang_container)
         lang_container_layout.setContentsMargins(0, 0, 0, 0)
-        set_metric(lang_container_layout, "setSpacing", 8)
+        set_metric(lang_container_layout, "setSpacing", Spacing.CONTROL_GAP)
 
         lang_combo = ScrollSafeComboBox(lang_container)
         lang_combo.setObjectName("generalLanguageCombo")
@@ -123,7 +124,15 @@ class GeneralTab(BaseSettingsTab):
         _prepare_combo(self._font_combo)
         for preset in FONT_SIZE_PRESETS:
             self._font_combo.addItem(t(f"components.font_size.{preset}", preset.title()), preset)
-        self.add_form_row(theme_form, t("settings.general.font_label", "Text size:"), self._font_combo)
+        self.add_form_row(
+            theme_form,
+            t("settings.general.font_label", "Text size:"),
+            self._font_combo,
+            t(
+                "settings.general.font_tooltip",
+                "Preview immediately. Apply or OK saves the selection; Cancel restores the last saved value.",
+            ),
+        )
         self._font_combo.currentIndexChanged.connect(self._on_font_changed)
 
         self._scale_combo = ScrollSafeComboBox(theme_card)
@@ -146,7 +155,7 @@ class GeneralTab(BaseSettingsTab):
         preview_container = QWidget(theme_card)
         preview_layout = QVBoxLayout(preview_container)
         preview_layout.setContentsMargins(0, 0, 0, 0)
-        set_metric(preview_layout, "setSpacing", 8)
+        set_metric(preview_layout, "setSpacing", Spacing.CONTROL_GAP)
         preview_title = QLabel(t("settings.general.theme_preview", "Preview:"), preview_container)
         preview_title.setObjectName("generalThemePreviewTitle")
         preview_title.setAlignment(Qt.AlignmentFlag.AlignLeft)
@@ -155,8 +164,15 @@ class GeneralTab(BaseSettingsTab):
         preview_frame = QWidget(preview_container)
         preview_frame.setObjectName("generalThemePreviewFrame")
         preview_frame_layout = QHBoxLayout(preview_frame)
-        set_metric(preview_frame_layout, "setContentsMargins", 12, 12, 12, 12)
-        set_metric(preview_frame_layout, "setSpacing", 12)
+        set_metric(
+            preview_frame_layout,
+            "setContentsMargins",
+            Spacing.CARD_PADDING,
+            Spacing.CARD_PADDING,
+            Spacing.CARD_PADDING,
+            Spacing.CARD_PADDING,
+        )
+        set_metric(preview_frame_layout, "setSpacing", Spacing.CARD_PADDING)
         sample_button = QPushButton(t("settings.general.sample_button", "Sample Button"), preview_frame)
         sample_button.setObjectName("generalThemePreviewButton")
         sample_text = QLabel(

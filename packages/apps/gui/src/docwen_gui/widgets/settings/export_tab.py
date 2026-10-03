@@ -13,8 +13,6 @@ from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLineEdit, QPushButton, QSpinBox, QWidget
 
 from docwen_gui.styles.ui_scale import set_metric
-from docwen_gui.widgets.check_box import CheckBox
-
 from ...i18n import t
 from ...styles.design_tokens import Spacing
 from ...view_models.settings_vm import SECTION_EXPORT, SettingsViewModel
@@ -43,7 +41,7 @@ class ExportTab(BaseSettingsTab):
         )
         self._ocr_language = self.create_combobox(
             [
-                (t("settings.ocr.language_auto", "Auto-detect"), "auto"),
+                (t("settings.ocr.language_auto", "Follow interface language"), "auto"),
                 (t("settings.ocr.language_chinese", "Chinese"), "chinese"),
                 (t("settings.ocr.language_chinese_cht", "Traditional Chinese"), "chinese_cht"),
                 (t("settings.ocr.language_english", "English Only"), "english"),
@@ -58,11 +56,18 @@ class ExportTab(BaseSettingsTab):
         self._ocr_language.currentIndexChanged.connect(
             lambda _index: self._vm.set_field(SECTION_EXPORT, "ocr_language", self._ocr_language.currentData())
         )
-        self._recognize_tables = CheckBox(t("action_area.recognize_tables", "Recognize table structure"))
+        recognize_tables_widget, self._recognize_tables = self._create_toggle_with_info(
+            t("action_area.recognize_tables", "Recognize table structure"),
+            t(
+                "settings.ocr.recognize_tables_tooltip",
+                "Applies only to OCR. Table structure recognition is best effort; failures remain ordinary OCR text, "
+                "and formulas are not recognized.",
+            ),
+        )
         self._recognize_tables.toggled.connect(
             lambda value: self._vm.set_field(SECTION_EXPORT, "recognize_tables", value)
         )
-        self.add_form_row(ocr_form, "", self._recognize_tables)
+        ocr_form.addRow(recognize_tables_widget)
         _card, form = self.add_settings_card(
             t("settings.export.md_export_section", "MD Export Options"),
             t("settings.export.md_export_desc", "Configure how images are handled in Markdown output."),

@@ -46,6 +46,11 @@ class SpreadsheetTab(DynamicSettingsTab):
                         "key": "to_md_table_merge_export_strategy",
                         "type": "combobox",
                         "label": t("settings.table_export.merge_strategy_label", "Merge Cell Export Strategy:"),
+                        "tooltip": t(
+                            "settings.table_export.merge_strategy_help",
+                            "For ordinary Markdown only: Fill repeats the merged anchor text; Empty leaves covered "
+                            "cells blank. With Structural Tables output enabled, merges use < and ^ structure markers.",
+                        ),
                         "items": [
                             (t("settings.table_export.strategies.fill", "Fill"), "fill"),
                             (t("settings.table_export.strategies.empty", "Empty"), "empty"),
@@ -64,6 +69,13 @@ class SpreadsheetTab(DynamicSettingsTab):
                         "key": "merge_mode",
                         "type": "combobox",
                         "label": t("settings.spreadsheet.default_merge_mode_label", "Default Merge Mode:"),
+                        "tooltip": t(
+                            "settings.spreadsheet.merge_mode_help",
+                            "By row/column matches incoming rows/columns against the base: a covering incoming item "
+                            "replaces the base item, a covered incoming item keeps the base, otherwise it is inserted "
+                            "near the closest match. By cell ignores incoming blanks, keeps the nonblank value, adds "
+                            "numbers, keeps equal text once, and joins differing text with a comma.",
+                        ),
                         "items": [
                             (t("settings.spreadsheet.merge_modes.by_row", "By Row"), 1),
                             (t("settings.spreadsheet.merge_modes.by_column", "By Column"), 2),

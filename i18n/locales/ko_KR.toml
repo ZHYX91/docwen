@@ -151,7 +151,7 @@ title = "설정"
 general = "일반"
 text = "입력 텍스트"
 proofread = "교정"
-export = "Markdown 리소스"
+export = "OCR 및 Markdown 리소스"
 document = "입력 문서"
 spreadsheet = "입력 스프레드시트"
 image = "입력 이미지"
@@ -187,6 +187,10 @@ failed = "설정 초기화에 실패했습니다. 로그를 확인하세요."
 summary = "저장되지 않은 변경 사항({count}개)"
 more = "…외 {count}개"
 
+enabled = "켜짐"
+disabled = "꺼짐"
+empty_value = "(비어 있음)"
+field_fallback = "설정 항목 ({field})"
 [settings.errors]
 tab_load_failed_message = "{tab}을(를) 불러오지 못했습니다\n\n오류: {error}"
 
@@ -204,7 +208,7 @@ save_success_message = "구성이 저장되고 다시 불러와졌습니다."
 [settings.general]
 font_label = "글자 크기:"
 scale_label = "화면 배율:"
-scale_tooltip = "시스템 배율을 기준으로 글자, 아이콘, 간격을 함께 조정합니다."
+scale_tooltip = "선택 즉시 시스템 배율을 기준으로 글자, 아이콘, 간격을 함께 미리 봅니다. 적용 또는 확인을 누르면 저장하고, 취소를 누르면 마지막 저장 값으로 복원합니다."
 # 语言设置区域
 language_section = "언어"
 language_label = "인터페이스 언어 선택:"
@@ -214,11 +218,12 @@ language_tooltip = "애플리케이션의 표시 언어를 선택합니다.\n변
 theme_section = "모양"
 theme_description = "테마, 글자 크기 및 인터페이스 배율을 조정합니다."
 theme_label = "애플리케이션 테마 선택:"
-theme_tooltip = "애플리케이션의 시각적 테마를 선택합니다.\n테마마다 색상/스타일이 다릅니다.\n변경 사항은 저장 후 적용됩니다."
+theme_tooltip = "선택 즉시 미리 봅니다. 적용 또는 확인을 누르면 테마를 저장하고, 취소를 누르면 마지막으로 저장한 테마로 복원합니다."
 theme_preview = "테마 미리보기:"
 sample_button = "샘플 버튼"
 sample_text = "샘플 텍스트"
 
+font_tooltip = "선택 즉시 미리 봅니다. 적용 또는 확인을 누르면 글자 크기를 저장하고, 취소를 누르면 마지막 저장 값으로 복원합니다."
 [settings.general.languages]
 zh_CN = "중국어(간체)"
 en_US = "영어"
@@ -264,8 +269,8 @@ batch_mode = "일괄 모드"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
-output_format = "기본 출력 형식"
-output_format_hint = "Markdown을 추가할 때 이 형식의 템플릿을 표시합니다."
+output_format = "우선 템플릿 유형"
+output_format_hint = "Markdown을 추가할 때 이 유형의 템플릿을 우선 표시합니다. 이 설정 자체가 변환 출력 형식을 바꾸지는 않습니다."
 # MD转文档序号设置
 md_to_docx_section = "제목 번호(마크다운 → 문서)"
 remove_numbering = "기본으로 마크다운 제목 번호 제거"
@@ -288,7 +293,7 @@ field_processors_toggle_failed = "“{name}”을(를) 업데이트하지 못했
 
 # 序号设置区域
 numbering_settings_section = "번호 매김 설정"
-numbering_settings_desc = "마크다운 및 문서 변환을 위한 제목 번호 정리/추가 스킴을 관리합니다."
+numbering_settings_desc = "‘입력 텍스트’와 ‘입력 문서’는 같은 전역 번호 매기기 설정을 엽니다. 어느 편집기에서든 저장하면 즉시 적용되며 이 설정 창의 취소로 되돌릴 수 없습니다."
 edit_numbering_add = "제목 번호 추가 편집"
 edit_numbering_clean = "제목 번호 정리 규칙 편집"
 
@@ -299,8 +304,8 @@ edit_numbering_clean = "제목 번호 정리 규칙 편집"
 # 词库配置
 
 # 错误消息
-save_numbering_schemes_failed = "번호 체계를 저장하지 못했습니다. 변경 사항이 유지되지 않았습니다."
-save_numbering_clean_rules_failed = "번호 정리 규칙을 저장하지 못했습니다. 변경 사항이 유지되지 않았습니다."
+save_numbering_schemes_failed = "번호 매기기 스킴을 저장하지 못했습니다. 변경 사항은 저장되지 않았습니다."
+save_numbering_clean_rules_failed = "번호 정리 규칙을 저장하지 못했습니다. 변경 사항은 저장되지 않았습니다."
 
 # -----------------------------------------------------------------------------
 # 文档设置选项卡
@@ -326,13 +331,14 @@ sensitive_words_section = "민감 단어 사전"
 sensitive_words_desc = "주의 용어 감지 항목을 관리합니다."
 edit = "편집"
 
+save_boundary_hint = "규칙 편집기의 저장과 규칙 가져오기는 즉시 적용되며 이 설정 창의 취소로 되돌릴 수 없습니다. 이 페이지의 스위치는 계속 적용/확인으로 저장합니다."
 [settings.extraction]
 image_extraction_mode_label = "이미지 추출 방식:"
 image_extraction_mode_tooltip = "Markdown에 이미지를 포함하는 방식을 선택합니다.\n\n• 이미지 파일: 별도 이미지로 저장하고 MD에서 참조\n• Base64 인라인: 이미지를 Base64로 인코딩하여 MD에 직접 포함"
 image_extraction_mode_file = "이미지 파일"
 image_extraction_mode_base64 = "Base64 인라인"
 ocr_placement_mode_label = "OCR 저장 위치:"
-ocr_placement_mode_tooltip = "OCR 결과를 저장할 위치를 선택합니다.\n\n• 이미지 MD: 이미지마다 별도의 MD 파일을 생성하여 이미지와 OCR을 저장\n• 메인 문서: 메인 MD에서 이미지 아래에 인용 블록으로 OCR을 삽입 (이미지가 많으면 메인 MD가 매우 길어질 수 있음)"
+ocr_placement_mode_tooltip = "이미지 + OCR의 출력 위치를 선택합니다. 이미지 Markdown은 이미지마다 별도 Markdown을 만들고, 메인 문서는 이미지와 OCR을 메인 Markdown에 씁니다. Base64 인라인은 메인 문서가 필수이므로 이 항목을 비활성화하고 강제합니다. 이미지 파일 모드로 돌아가면 이전 선택을 복원합니다."
 ocr_placement_mode_image_md = "이미지 MD"
 ocr_placement_mode_main_md = "메인 문서"
 ocr_blockquote_title_enabled_label = "OCR 제목 줄(메인 MD)"
@@ -360,6 +366,7 @@ section = "병합 셀 내보내기"
 desc = "Markdown 출력에서 병합 셀을 표현하는 방식을 설정합니다."
 merge_strategy_label = "병합 셀 내보내기 방식:"
 
+merge_strategy_help = "일반 Markdown에만 적용됩니다. 채우기는 병합 영역 왼쪽 위 셀의 텍스트를 반복하고(예: ‘제목 | 제목’), 비우기는 덮이는 셀을 비웁니다(‘제목 | ’). Structural Tables 출력이 켜져 있으면 대신 <, ^ 구조 표시를 사용합니다."
 [settings.table_export.strategies]
 fill = "채우기"
 empty = "비우기"
@@ -406,13 +413,14 @@ keep_images_tooltip = "스프레드시트 → MD 변환 시 기본으로 \"이�
 enable_ocr = "기본으로 \"이미지 OCR\" 선택"
 enable_ocr_tooltip = "스프레드시트 → MD 변환 시 기본으로 \"이미지 OCR\"을 선택합니다"
 merge_mode_section = "병합 모드 설정"
-merge_mode_desc = "표 병합의 기본 모드를 설정합니다"
+merge_mode_desc = "표를 합칠 때 사용할 기본 집계 전략을 선택합니다."
 default_merge_mode_label = "기본 병합 모드:"
 spreadsheet_processors_label = "스프레드시트 처리 소프트웨어 우선순위"
 ods_conversion_label = "ODS 형식 변환"
 spreadsheet_to_pdf_label = "스프레드시트 → PDF"
 
 # 汇总模式选项
+merge_mode_help = "행/열 기준은 들어오는 행/열을 기본 표와 비교합니다. 들어온 항목이 기본 항목을 포함하면 대체하고, 기본 항목이 들어온 항목을 포함하면 기본 항목을 유지하며, 그 외에는 가장 비슷한 위치 근처에 삽입합니다. 셀 기준은 빈 입력을 무시하고 비어 있지 않은 값을 유지하며, 숫자는 더하고 같은 텍스트는 한 번만 유지하고 서로 다른 비숫자 텍스트는 쉼표로 연결합니다."
 [settings.spreadsheet.merge_modes]
 by_row = "행 기준 병합"
 by_column = "열 기준 병합"
@@ -487,7 +495,7 @@ enable_ocr_tooltip = "기타 파일을 MD로 변환할 때 기본으로 \"이미
 [settings.link]
 # Markdown链接格式区域
 format_section = "마크다운 링크 형식"
-format_desc = "생성되는 마크다운 파일의 링크 형식을 설정합니다"
+format_desc = "DocWen이 Markdown을 만들 때 사용할 링크 구문을 설정합니다."
 image_link_style_label = "이미지 링크 형식:"
 image_link_style_tooltip = "MD 파일에서 이미지 링크 형식을 설정합니다\n\n• 마크다운 임베드: ![alt](image.png)\n• 마크다운 링크: [alt](image.png)\n• 위키 임베드: ![[image.png]] (Obsidian)\n• 위키 링크: [[image.png]] (Obsidian)"
 md_file_link_style_label = "MD 파일 링크 형식:"
@@ -495,19 +503,19 @@ md_file_link_style_tooltip = "MD 파일에서 MD 파일 링크 형식을 설정�
 
 # 非嵌入链接处理区域
 non_embed_section = "비임베드 링크 처리"
-non_embed_desc = "MD → 문서/표 변환 시 일반 링크(! 접두사 없음)를 어떻게 처리할지 설정합니다"
+non_embed_desc = "Markdown 입력의 일반 링크를 문서나 스프레드시트 생성 시 어떻게 처리할지 설정합니다."
 wiki_link_mode = "위키 링크 처리:"
-wiki_link_tooltip = "[[link]] 또는 [[link|text]] 형식을 처리합니다\n\n그대로 유지: [[link|text]]\n텍스트 추출: text (마크업 제거)\n제거: 링크 전체 삭제"
+wiki_link_tooltip = "[[link]] 또는 [[link|text]]를 처리합니다. 유지: 원본 마크업 유지. 텍스트 추출: 표시 텍스트만 유지. 하이퍼링크: 표시 텍스트와 대상을 유지하고 출력 형식이 지원하면 클릭 가능한 링크 생성. 제거: 링크 삭제."
 markdown_link_mode = "마크다운 링크 처리:"
-markdown_link_tooltip = "[text](url) 형식을 처리합니다\n\n그대로 유지: [text](url)\n텍스트 추출: text (마크업 제거)\n제거: 링크 전체 삭제"
+markdown_link_tooltip = "[text](url)을 처리합니다. 유지: 원본 마크업 유지. 텍스트 추출: text만 유지. 하이퍼링크: 텍스트와 대상을 유지하고 출력 형식이 지원하면 클릭 가능한 링크 생성. 제거: 링크 삭제."
 
 # 嵌入链接处理区域
 embed_section = "임베드 링크 처리"
-embed_desc = "MD → 문서/표 변환 시 임베드 링크(! 접두사 있음)를 어떻게 처리할지 설정합니다"
+embed_desc = "Markdown 입력의 임베드 링크와 이미지를 문서나 스프레드시트 생성 시 어떻게 처리할지 설정합니다."
 wiki_embed_image_mode = "위키 임베드 이미지 처리:"
 wiki_embed_image_tooltip = "![[image.png]] 형식을 처리합니다\n\n그대로 유지: ![[image.png]]\n텍스트 추출: image.png\n제거: 링크 삭제\n콘텐츠 임베드: 문서에 이미지 삽입"
 markdown_embed_image_mode = "마크다운 임베드 이미지 처리:"
-markdown_embed_image_tooltip = "![alt](image.png) 형식을 처리합니다\n\n그대로 유지: ![alt](image.png)\n텍스트 추출: image.png\n제거: 링크 삭제\n콘텐츠 임베드: 문서에 이미지 삽입"
+markdown_embed_image_tooltip = "![alt](image.png)을 처리합니다. 유지: 마크업 유지. 텍스트 추출: alt/표시 텍스트가 있으면 우선 사용하고 없을 때만 파일명을 사용합니다. 제거: 링크 삭제. 콘텐츠 임베드: 이미지 삽입."
 embed_md_file_mode = "위키 임베드 MD 파일 처리:"
 embed_md_file_tooltip = "![[file.md]] 형식을 처리합니다(위키 전용)\n\n그대로 유지: ![[file.md]]\n텍스트 추출: file.md\n제거: 링크 삭제\n콘텐츠 임베드: 재귀적으로 처리하여 삽입"
 max_depth_label = "최대 임베드 깊이:"
@@ -551,9 +559,9 @@ mermaid_test_failed = "렌더링 테스트 실패: {reason}"
 mermaid_test_passed = "사용 가능: 테스트 다이어그램을 렌더링했습니다."
 
 mermaid_title = "Mermaid 다이어그램"
-mermaid_tooltip = "로컬 Mermaid CLI로 이미지를 만들거나 코드를 유지합니다. 렌더링 실패 시 경고와 함께 코드를 유지합니다."
+mermaid_tooltip = "`mermaid` 코드 블록을 이미지로 렌더링할지 원본 코드로 유지할지 선택합니다. 이미지 모드는 로컬 Mermaid CLI를 사용하며 렌더링이 불가능하거나 실패하면 코드 블록을 유지하고 경고합니다."
 mermaid_mode_label = "출력:"
-mermaid_mode_tooltip = "문서에서 Mermaid 코드 블록을 표시할 방법을 선택합니다."
+mermaid_mode_tooltip = "생성 문서에 `mermaid` 코드 블록을 쓰는 방식을 선택합니다."
 mermaid_code = "코드 블록 유지"
 mermaid_image = "이미지로 출력"
 mermaid_ready = "CLI {cli} / Mermaid {mermaid} 감지됨. 브라우저는 변환 시 확인합니다."
@@ -581,7 +589,7 @@ horizontal_rule_tooltip = "Word 수평선(Horizontal Rule 1/2/3)을 Markdown 구
 
 # 语法选择
 syntax_selection = "구문 선택"
-syntax_selection_tooltip = "문서 → Markdown 변환 시 출력 구문 형식을 선택합니다\n(입력 시에는 모든 구문을 자동으로 인식합니다)"
+syntax_selection_tooltip = "문서를 Markdown으로 변환할 때 출력할 구문을 선택합니다. 입력 시 DocWen은 지원되는 해당 Markdown 구문을 인식하며 선택적 방언은 위 확장 스위치로 제어합니다."
 bold_syntax_label = "굵게 구문:"
 bold_syntax_tooltip = "굵게 텍스트의 출력 구문을 선택합니다"
 italic_syntax_label = "기울임 구문:"
@@ -608,7 +616,7 @@ md_body_format_tooltip = "서식 적용: **Bold**를 실제 굵게로 변환\n�
 md_heading_format_label = "제목 마크업 처리:"
 md_heading_format_tooltip = "서식 적용: 기본 제목 스타일 서식을 덮어써 부분 굵게 등을 허용\n마크업 유지: 마크업을 그대로 표시\n마크업 정리: Word 제목 스타일이 자연스럽게 적용되도록 함\n참고: 제목 스타일 자체가 굵게인 경우 \"서식 적용\"으로 부분 굵게를 구현할 수 있습니다"
 md_table_header_format_label = "표 머리글 마크업 처리:"
-md_table_header_format_tooltip = "서식 적용: **Bold**를 실제 굵게로 변환(표 스타일과 중복될 수 있음)\n마크업 유지: 마크업을 그대로 표시\n마크업 정리: 표 스타일(예: firstRow 굵게)이 자연스럽게 적용되도록 함\n참고: 표 스타일이 머리글 굵게를 정의하는 경우가 많아 \"마크업 정리\"를 권장합니다"
+md_table_header_format_tooltip = "서식 적용: **굵게**를 실제 굵게로 바꿉니다(표 스타일과 겹칠 수 있음). 마크업 유지: 마크업을 그대로 표시. 마크업 정리: Markdown 표시를 제거하고 표 스타일의 첫 행 서식이 적용되게 합니다. 표 스타일은 보통 첫 행을 서식 지정하므로 마크업 정리가 일반적으로 적합합니다."
 heading_merge_mode_label = "제목+본문 병합 모드:"
 heading_merge_mode_tooltip = "소제목과 바로 다음 줄의 일반 본문을 하나의 단락으로 합칠지 제어합니다\n문장부호가 있을 때만 병합: 제목 끝에 문장 끝 부호가 있고 다음 줄이 일반 본문일 때만 병합합니다(기본값)\n바로 본문이면 병합: 다음 줄이 일반 본문이면 병합합니다(문장부호 불필요)\n병합 안 함: 제목과 본문을 항상 별도 단락으로 처리합니다\n참고: 목록/코드 블록/표/인용/구분선 등은 병합하지 않습니다"
 heading_merge_punctuation_label = "병합 문장부호:"
@@ -635,6 +643,8 @@ list_separator_label = "YAML 목록 구분자"
 list_separator_tooltip = "YAML 목록 값을 문자열로 결합할 때 사용하는 구분자\n\n일반적인 값:\n• 중국어 쉼표（、）\n• 전각 쉼표（，）\n• 쉼표 + 공백（, ）\n• 빈 문자열：직접 연결"
 
 # 格式处理选项
+mermaid_output_group = "출력 방식"
+mermaid_renderer_group = "로컬 렌더러"
 [settings.formatting.options]
 preserve_format = "서식 유지"
 discard_format = "서식 제거"
@@ -700,6 +710,7 @@ custom_path_label = "사용자 지정 경로:"
 browse_title = "출력 디렉터리 선택"
 
 # 输出模式选项
+validation_custom_path_required = "파일 저장: 비어 있지 않은 사용자 지정 출력 폴더를 선택하거나 출력 위치를 원본 파일 폴더로 되돌리세요."
 [settings.output.output_modes]
 source = "원본 파일 디렉터리"
 custom = "사용자 지정 디렉터리"
@@ -750,9 +761,9 @@ enable_console_label = "콘솔에 로그 표시"
 enable_console_tooltip = "사용 시 로그를 콘솔 창에도 출력합니다"
 console_level_label = "콘솔 로그 레벨:"
 console_level_tooltip = "콘솔 출력의 로그 레벨을 설정합니다(파일 로그 레벨과 다를 수 있음)"
-validation_custom_directory_required = "사용자 지정 디렉터리 모드에는 비어 있지 않은 경로가 필요합니다."
-validation_prefix_invalid = '로그 파일 접두사에 사용할 수 없는 문자가 있습니다: \ / : * ? " < > |'
-validation_prefix_required = "로그 파일 접두사는 비워 둘 수 없습니다."
+validation_custom_directory_required = "로그: 사용자 지정 디렉터리 모드에서는 비어 있지 않은 경로를 입력해야 합니다."
+validation_prefix_invalid = "로그: 파일 이름 접두사에는 \\\\ / : * ? \" < > | 문자를 사용할 수 없습니다."
+validation_prefix_required = "로그: 파일 이름 접두사를 입력하세요."
 directory_auto_notice = "모드에 따라 디렉터리가 자동으로 결정되므로 사용자 지정 입력을 사용할 수 없습니다."
 directory_env_override_notice = "환경 변수가 로그 디렉터리를 지정하므로 디렉터리 설정을 사용할 수 없습니다."
 console_format_tooltip = "콘솔 형식 문자열(비어 있으면 파일 형식 재사용)"
@@ -803,8 +814,8 @@ powerpoint = "PowerPoint"
 
 [settings.ocr]
 language_label = "OCR 인식 언어:"
-language_tooltip = "모든 입력 형식에 공통으로 적용할 OCR 언어입니다."
-language_auto = "인터페이스 언어 따름"
+language_tooltip = "모든 입력 형식에 공통으로 적용됩니다. ‘인터페이스 언어 따르기’는 현재 UI 언어로 OCR 언어를 선택하며, 이미지의 언어를 자동 감지하지 않습니다."
+language_auto = "인터페이스 언어 따르기"
 language_chinese = "중국어/영어"
 language_japanese = "일본어"
 language_chinese_cht = "중국어 번체"
@@ -814,6 +825,7 @@ language_latin = "라틴 문자권(독/프/포 등)"
 language_cyrillic = "키릴 문자권(러시아어 등)"
 section = "OCR 인식"
 
+recognize_tables_tooltip = "OCR에만 적용됩니다. 표 구조 인식은 최선 노력 방식이며 실패한 영역은 일반 OCR 텍스트로 남습니다. 수식 인식은 포함되지 않습니다."
 [settings.rule_transfer]
 read_failed = "현재 규칙 설정을 읽을 수 없습니다."
 added = "추가"
@@ -1710,7 +1722,7 @@ output_hint = "일반 Markdown을 사용하고 표현할 수 없는 구조나 �
 structural_tables = "Structural Tables 구조화 표"
 captions_references = "Number Suite 캡션 및 상호 참조"
 extended_headings = "7~9단계 제목"
-typed_endnotes = "유형이 있는 각주 및 미주"
+typed_endnotes = "각주/미주 구분 (`endnote:`)"
 obsidian_preset = "Obsidian 확장 사용"
 
 [activity]
@@ -1788,3 +1800,22 @@ structured_html_only = "클립보드에 일반 텍스트 본문이 없어 검증
 structured_invalid = "클립보드의 표 또는 이미지 구조가 올바르지 않아 가져오지 않았습니다."
 image_invalid = "클립보드 이미지 데이터가 잘못되었거나 지원 크기를 초과했습니다."
 images_omitted = "클립보드 이미지 {count}개에 검증 가능한 내장 데이터가 없어 자리 표시자와 사용 가능한 텍스트를 유지했습니다."
+
+[settings.markdown_extensions.input_help]
+structural_tables = "<, ^ 등의 Structural Tables 표시를 인식하고 확장 표 구조를 유지합니다. 끄면 일반 Markdown 표 내용으로 처리합니다."
+
+captions_references = "Number Suite 캡션, 식별자, 상호 참조를 인식합니다. 끄면 선언과 @ 참조를 보이는 텍스트로 유지합니다."
+extended_headings = "H7–H9를 인식합니다. 끄면 앞의 # 7~9개를 보이는 텍스트로 유지합니다."
+typed_endnotes = "endnote: 같은 주석 레이블로 미주와 각주를 구분합니다. 끄면 해당 레이블을 일반 각주로 처리합니다."
+
+[settings.markdown_extensions.output_help]
+structural_tables = "필요할 때 Structural Tables 표시와 확장 구조를 출력합니다. 끄면 일반 Markdown 표로 평탄화하고 구조 손실을 알립니다."
+
+captions_references = "해당 의미 정보가 있으면 Number Suite 캡션과 상호 참조를 출력합니다. 끄면 일반 텍스트를 출력하고 참조 손실을 알립니다."
+extended_headings = "H7–H9를 출력합니다. 끄면 해당 제목을 H6로 낮추고 손실을 알립니다."
+typed_endnotes = "유형 주석 레이블로 각주/미주 구분을 유지합니다. 끄면 미주를 일반 각주로 내보내고 유형 손실을 알립니다."
+
+[settings.optimization]
+availability_help = "최적화 유형은 현재 런타임에서 가져옵니다. 이 입력 범주에 적용할 유형이 없으면 관련 컨트롤을 비활성화하고, 검색 실패는 별도 오류로 표시합니다."
+
+none_available = "현재 런타임에는 이 입력 범주에 적용할 수 있는 최적화 유형이 없습니다."

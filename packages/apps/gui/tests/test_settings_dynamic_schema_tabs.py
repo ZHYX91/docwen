@@ -56,6 +56,8 @@ def test_image_and_other_dynamic_schema_tabs_create_with_expected_values(qapp) -
         "cyrillic",
     ]
     assert _combo_values(compress_mode) == ["lossless", "limit_size"]
+    assert size_limit.isEnabled() is False
+    assert size_unit.isEnabled() is False
     assert _combo_values(pdf_quality) == ["original", "fit_a4", "fit_a3"]
     assert _combo_values(tiff_mode) == ["smart", "rgb"]
     assert sorted(other_widgets) == ["to_md_enable_ocr", "to_md_keep_images"]
@@ -64,8 +66,16 @@ def test_image_and_other_dynamic_schema_tabs_create_with_expected_values(qapp) -
     image_enable_ocr.setChecked(True)
     image_tab.set_combo_data(ocr_language, "japanese")
     image_tab.set_combo_data(compress_mode, "limit_size")
+    assert size_limit.isEnabled() is True
+    assert size_unit.isEnabled() is True
     size_limit.setValue(1024)
     image_tab.set_combo_data(size_unit, "MB")
+    image_tab.set_combo_data(compress_mode, "lossless")
+    assert size_limit.isEnabled() is False
+    assert size_unit.isEnabled() is False
+    assert size_limit.value() == 1024
+    assert size_unit.currentData() == "MB"
+    image_tab.set_combo_data(compress_mode, "limit_size")
     image_tab.set_combo_data(pdf_quality, "fit_a4")
     image_tab.set_combo_data(tiff_mode, "rgb")
     other_keep_images.setChecked(True)

@@ -23,7 +23,11 @@ class NumberingEditors:
         self._vm.config_reloaded.connect(on_changed)
         _card, form = tab.add_settings_card(
             t("settings.text.numbering_settings_section", "Numbering Settings"),
-            t("settings.text.numbering_settings_desc", "Edit numbering addition schemes and removal rules."),
+            t(
+                "settings.text.numbering_settings_desc",
+                "Incoming text and Incoming documents open the same global numbering configuration. Saving in either "
+                "editor takes effect immediately and is not undone by Cancel in this Settings window.",
+            ),
             object_name="numberingEditorsCard",
         )
         self.add_button = QPushButton(t("settings.text.edit_numbering_add", "Edit Numbering Addition Schemes"), tab)

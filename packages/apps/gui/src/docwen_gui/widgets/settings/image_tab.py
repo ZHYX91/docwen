@@ -5,6 +5,8 @@ Matches old ImageTab (DynamicSettingsTab, 8 fields across 3 cards).
 
 from __future__ import annotations
 
+from PySide6.QtWidgets import QComboBox
+
 from ...i18n import t
 from ...view_models.settings_vm import SettingsViewModel
 from .base_tab import DynamicSettingsTab
@@ -64,6 +66,11 @@ class ImageTab(DynamicSettingsTab):
             },
             {
                 "title": t("settings.image.optimization_section", "Optimization"),
+                "description": t(
+                    "settings.optimization.availability_help",
+                    "Optimization types come from the current runtime. If none apply to this input category, "
+                    "the controls are disabled; discovery failures are reported separately.",
+                ),
                 "presentation": "card",
                 "fields": [
                     {
@@ -108,7 +115,21 @@ class ImageTab(DynamicSettingsTab):
         ]
         self._vm = view_model
         super().__init__(None, "conversion_defaults", "image", schema)
+        compress_mode = self._widgets.get("compress_mode")
+        if isinstance(compress_mode, QComboBox):
+            compress_mode.currentIndexChanged.connect(lambda _index: self._sync_compression_controls())
         self._load_values()
+        self._sync_compression_controls()
+
+    def _sync_compression_controls(self) -> None:
+        compress_mode = self._widgets.get("compress_mode")
+        size_limit = self._widgets.get("size_limit")
+        size_unit = self._widgets.get("size_unit")
+        limit_size = isinstance(compress_mode, QComboBox) and compress_mode.currentData() == "limit_size"
+        if size_limit is not None:
+            size_limit.setEnabled(limit_size)
+        if size_unit is not None:
+            size_unit.setEnabled(limit_size)
 
     def _load_values(self) -> None:
         data = self._vm.config.conversion_defaults.image
@@ -117,3 +138,4 @@ class ImageTab(DynamicSettingsTab):
 
     def reload_from_config(self) -> None:
         self._load_values()
+        self._sync_compression_controls()

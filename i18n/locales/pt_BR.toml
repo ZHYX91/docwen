@@ -203,7 +203,7 @@ title = "Configurações"
 general = "Geral"
 text = "Texto de entrada"
 proofread = "Revisão"
-export = "Recursos Markdown"
+export = "Recursos de OCR e Markdown"
 document = "Documentos de entrada"
 spreadsheet = "Planilhas de entrada"
 image = "Imagens de entrada"
@@ -239,6 +239,10 @@ failed = "Falha ao redefinir as configurações. Verifique os logs."
 summary = "Alterações não salvas ({count})"
 more = "… e mais {count}"
 
+enabled = "Ativado"
+disabled = "Desativado"
+empty_value = "(vazio)"
+field_fallback = "Configuração ({field})"
 [settings.errors]
 tab_load_failed_message = "Falha ao carregar {tab}\n\nErro: {error}"
 
@@ -256,7 +260,7 @@ save_success_message = "Configuração salva e recarregada."
 [settings.general]
 font_label = "Tamanho do texto:"
 scale_label = "Escala da interface:"
-scale_tooltip = "Relativa à escala do sistema. Ajusta texto, ícones e espaçamento."
+scale_tooltip = "A seleção é pré-visualizada imediatamente em relação à escala do sistema, ajustando texto, ícones e espaçamento. Aplicar ou OK salva o valor; Cancelar restaura o último valor salvo."
 # 语言设置区域
 language_section = "Idioma"
 language_label = "Escolher idioma:"
@@ -266,11 +270,12 @@ language_tooltip = "Escolha o idioma de exibição.\nReinicialização necessár
 theme_section = "Aparência"
 theme_description = "Ajuste o tema, o tamanho do texto e a escala da interface."
 theme_label = "Escolher tema:"
-theme_tooltip = "Escolha o tema visual do aplicativo."
+theme_tooltip = "A seleção é pré-visualizada imediatamente. Aplicar ou OK salva o tema; Cancelar restaura o último tema salvo."
 theme_preview = "Visualização:"
 sample_button = "Exemplo"
 sample_text = "Texto"
 
+font_tooltip = "A seleção é pré-visualizada imediatamente. Aplicar ou OK salva o tamanho do texto; Cancelar restaura o último valor salvo."
 [settings.general.languages]
 zh_CN = "Chinês (simplificado)"
 en_US = "Inglês"
@@ -316,8 +321,8 @@ batch_mode = "Lote"
 # 文本设置选项卡
 # -----------------------------------------------------------------------------
 [settings.text]
-output_format = "Formato de saída padrão"
-output_format_hint = "Mostrar modelos deste formato ao adicionar Markdown."
+output_format = "Tipo de modelo preferido"
+output_format_hint = "Ao adicionar Markdown, os modelos desse tipo são priorizados. Esta configuração, sozinha, não altera o formato de saída da conversão."
 # MD转文档序号设置
 md_to_docx_section = "Numeração (MD para DOCX)"
 remove_numbering = "Remover numeração antiga"
@@ -340,7 +345,7 @@ field_processors_toggle_failed = "Falha ao atualizar “{name}”. O valor anter
 
 # 序号设置区域
 numbering_settings_section = "Configurações de numeração"
-numbering_settings_desc = "Gerenciar regras de adição e remoção."
+numbering_settings_desc = "Texto de entrada e Documentos de entrada abrem a mesma configuração global de numeração. Salvar em qualquer editor tem efeito imediato e Cancelar esta janela de configurações não desfaz a alteração."
 edit_numbering_add = "Editar esquemas de adição"
 edit_numbering_clean = "Editar regras de limpeza"
 
@@ -351,8 +356,8 @@ edit_numbering_clean = "Editar regras de limpeza"
 # 词库配置
 
 # 错误消息
-save_numbering_schemes_failed = "Não foi possível salvar os esquemas de numeração. As alterações não foram mantidas."
-save_numbering_clean_rules_failed = "Não foi possível salvar as regras de limpeza da numeração. As alterações não foram mantidas."
+save_numbering_schemes_failed = "Não foi possível salvar os esquemas de numeração. As alterações não foram salvas."
+save_numbering_clean_rules_failed = "Não foi possível salvar as regras de limpeza de numeração. As alterações não foram salvas."
 
 # -----------------------------------------------------------------------------
 # 文档设置选项卡
@@ -378,13 +383,14 @@ sensitive_words_section = "Dicionário de palavras sensíveis"
 sensitive_words_desc = "Gerenciar entradas para detectar termos sinalizados."
 edit = "Editar"
 
+save_boundary_hint = "Salvamentos do editor de regras e importações de regras têm efeito imediato. Cancelar esta janela não os desfaz; os controles desta página continuam sendo salvos com Aplicar/OK."
 [settings.extraction]
 image_extraction_mode_label = "Modo de extração de imagens:"
 image_extraction_mode_tooltip = "Escolha como as imagens são incorporadas no Markdown.\n\n• Arquivos de imagem: salvar como arquivos separados e referenciá-los no MD\n• Base64 embutido: codificar imagens em Base64 e incorporá-las diretamente no MD"
 image_extraction_mode_file = "Arquivos de imagem"
 image_extraction_mode_base64 = "Base64 embutido"
 ocr_placement_mode_label = "Local do OCR:"
-ocr_placement_mode_tooltip = "Escolha onde o texto do OCR é armazenado.\n\n• MD da imagem: gerar um arquivo MD separado por imagem contendo a imagem e o texto do OCR\n• Documento principal: inserir o texto do OCR como citação abaixo da imagem no MD principal (muitas imagens podem deixar o MD principal muito longo)"
+ocr_placement_mode_tooltip = "Escolha onde guardar imagem + OCR. MD da imagem cria um Markdown por imagem; Documento principal grava imagem e OCR no Markdown principal. Base64 inline exige Documento principal: o controle é desativado e forçado até voltar ao modo de arquivo de imagem, quando a escolha anterior é restaurada."
 ocr_placement_mode_image_md = "MD da imagem"
 ocr_placement_mode_main_md = "Documento principal"
 ocr_blockquote_title_enabled_label = "Linha de título do OCR (MD principal)"
@@ -412,6 +418,7 @@ section = "Exportação de células mescladas"
 desc = "Controla como células mescladas são representadas na saída Markdown."
 merge_strategy_label = "Estratégia de exportação de células mescladas:"
 
+merge_strategy_help = "Somente para Markdown comum: Preencher repete o texto da célula âncora (por exemplo, “Título | Título”); Vazio deixa as células cobertas vazias (“Título | ”). Com a saída Structural Tables ativada, são usados os marcadores < e ^."
 [settings.table_export.strategies]
 fill = "Preencher"
 empty = "Deixar vazio"
@@ -458,13 +465,14 @@ keep_images_tooltip = "Extrair imagens."
 enable_ocr = "Ativar OCR"
 enable_ocr_tooltip = "Ativar OCR."
 merge_mode_section = "Modo de mesclagem"
-merge_mode_desc = "Modo padrão para mesclagem de tabelas."
+merge_mode_desc = "Escolha a estratégia padrão de agregação ao combinar tabelas."
 default_merge_mode_label = "Modo de mesclagem padrão:"
 spreadsheet_processors_label = "Planilha"
 ods_conversion_label = "Conversão ODS"
 spreadsheet_to_pdf_label = "Planilha para PDF"
 
 # 汇总模式选项
+merge_mode_help = "Por linha/coluna compara linhas/colunas recebidas com a base: se a entrada cobre a base, substitui; se a base cobre a entrada, mantém a base; caso contrário, insere perto da correspondência mais próxima. Por célula ignora entradas vazias, mantém o valor não vazio, soma números, mantém texto igual uma vez e junta textos não numéricos diferentes com vírgula."
 [settings.spreadsheet.merge_modes]
 by_row = "Por linha"
 by_column = "Por coluna"
@@ -539,7 +547,7 @@ enable_ocr_tooltip = "Marcar o OCR de imagens por padrão ao converter outros ar
 [settings.link]
 # Markdown链接格式区域
 format_section = "Formato de link Markdown"
-format_desc = "Formato para links no Markdown."
+format_desc = "Escolha a sintaxe de links usada pelo DocWen ao gerar Markdown."
 image_link_style_label = "Link de imagem:"
 image_link_style_tooltip = "Estilo para incorporação de imagem."
 md_file_link_style_label = "Link de arquivo:"
@@ -547,19 +555,19 @@ md_file_link_style_tooltip = "Estilo para links de arquivos."
 
 # 非嵌入链接处理区域
 non_embed_section = "Links não incorporados"
-non_embed_desc = "Tratamento de links normais."
+non_embed_desc = "Escolha como links comuns da entrada Markdown são tratados ao gerar documentos ou planilhas."
 wiki_link_mode = "Links Wiki:"
-wiki_link_tooltip = "Tratamento de [[Links Wiki]]."
+wiki_link_tooltip = "Processa [[link]] ou [[link|text]]. Manter preserva a marcação; Extrair texto mantém apenas o texto exibido; Hiperlink mantém texto e destino e cria um link clicável quando o formato de destino oferece suporte; Remover apaga o link."
 markdown_link_mode = "Links Markdown:"
-markdown_link_tooltip = "Tratamento de [Links Markdown]."
+markdown_link_tooltip = "Processa [text](url). Manter preserva a marcação; Extrair texto mantém apenas text; Hiperlink mantém texto e destino e cria um link clicável quando o formato de destino oferece suporte; Remover apaga o link."
 
 # 嵌入链接处理区域
 embed_section = "Links incorporados"
-embed_desc = "Tratamento de incorporações (!)."
+embed_desc = "Escolha como links e imagens incorporados da entrada Markdown são tratados ao gerar documentos ou planilhas."
 wiki_embed_image_mode = "Incorporação imagem Wiki:"
 wiki_embed_image_tooltip = "![[Imagem]]."
 markdown_embed_image_mode = "Incorporação imagem Markdown:"
-markdown_embed_image_tooltip = "![Imagem]."
+markdown_embed_image_tooltip = "Processa ![alt](image.png). Manter preserva a marcação; Extrair texto usa o texto alt/exibido quando existe e só usa o nome do arquivo quando não há alt; Remover apaga o link; Incorporar conteúdo insere a imagem."
 embed_md_file_mode = "Arquivos MD incorporados:"
 embed_md_file_tooltip = "![[Arquivo.md]]."
 max_depth_label = "Profundidade máx:"
@@ -603,9 +611,9 @@ mermaid_test_failed = "Falha no teste: {reason}"
 mermaid_test_passed = "Disponível: diagrama de teste renderizado."
 
 mermaid_title = "Diagramas Mermaid"
-mermaid_tooltip = "Renderize blocos Mermaid como imagens com a CLI local ou mantenha o código. Em caso de falha, o código é preservado com um aviso."
+mermaid_tooltip = "Escolha se blocos de código `mermaid` são renderizados como imagens ou mantidos como código-fonte. O modo imagem usa a CLI Mermaid local; se o render não estiver disponível ou falhar, o bloco é preservado e um aviso é informado."
 mermaid_mode_label = "Saída:"
-mermaid_mode_tooltip = "Escolha como os blocos Mermaid aparecem nos documentos."
+mermaid_mode_tooltip = "Escolha como blocos de código `mermaid` são gravados nos documentos gerados."
 mermaid_code = "Manter como código"
 mermaid_image = "Renderizar como imagem"
 mermaid_ready = "CLI {cli} / Mermaid {mermaid} detectados. O navegador será verificado durante a conversão."
@@ -633,7 +641,7 @@ horizontal_rule_tooltip = "Borda inferior Word."
 
 # 语法选择
 syntax_selection = "Escolha de sintaxe"
-syntax_selection_tooltip = "Sintaxe Markdown para saída."
+syntax_selection_tooltip = "Escolha a sintaxe Markdown emitida ao converter documentos para Markdown. Na entrada, o DocWen reconhece a sintaxe correspondente compatível; dialetos opcionais são controlados pelos seletores de extensão acima."
 bold_syntax_label = "Negrito:"
 bold_syntax_tooltip = "Sintaxe para Negrito."
 italic_syntax_label = "Itálico:"
@@ -660,7 +668,7 @@ md_body_format_tooltip = "Aplicar ou remover tags."
 md_heading_format_label = "Cabeçalhos:"
 md_heading_format_tooltip = "Tags em cabeçalhos."
 md_table_header_format_label = "Cabeçalho de tabela:"
-md_table_header_format_tooltip = "Tags em cabeçalhos de tabela."
+md_table_header_format_tooltip = "Aplicar formatação: converte **negrito** em negrito real (pode se sobrepor ao estilo da tabela). Manter marcação: mostra a marcação literalmente. Limpar marcação: remove os marcadores Markdown e deixa a formatação da primeira linha do estilo da tabela agir. Estilos de tabela normalmente formatam a primeira linha, então Limpar marcação costuma ser preferível."
 heading_merge_mode_label = "Modo de fusão entre título e corpo:"
 heading_merge_mode_tooltip = "Controla se um título e a linha de texto comum logo abaixo devem ser fundidos em um único parágrafo\nPontuação obrigatória: funde apenas quando o título termina com pontuação de encerramento e a linha seguinte é texto comum (padrão)\nSempre fundir: funde quando a linha seguinte é texto comum (sem exigir pontuação final)\nNunca fundir: título e texto são sempre analisados como parágrafos separados\nObservação: listas/blocos de código/tabelas/citações/separadores não são fundidos"
 heading_merge_punctuation_label = "Pontuação para fusão:"
@@ -687,6 +695,8 @@ list_separator_label = "Separador de lista YAML"
 list_separator_tooltip = "Separador usado ao concatenar valores de lista YAML em string\n\nValores comuns:\n• Vírgula chinesa（、）\n• Vírgula de largura total（，）\n• Vírgula + espaço（, ）\n• String vazia：concatenação direta"
 
 # 格式处理选项
+mermaid_output_group = "Método de saída"
+mermaid_renderer_group = "Renderizador local"
 [settings.formatting.options]
 preserve_format = "Manter formato"
 discard_format = "Descartar formato"
@@ -752,6 +762,7 @@ custom_path_label = "Caminho:"
 browse_title = "Escolher pasta de saída"
 
 # 输出模式选项
+validation_custom_path_required = "Salvamento de arquivos: escolha um diretório de saída personalizado não vazio ou volte para a pasta do arquivo de origem."
 [settings.output.output_modes]
 source = "Diretório de origem"
 custom = "Personalizado"
@@ -802,9 +813,9 @@ enable_console_label = "Saída do console"
 enable_console_tooltip = "Exibir logs no console."
 console_level_label = "Nível do console:"
 console_level_tooltip = "Nível para o console."
-validation_custom_directory_required = "O modo de diretório personalizado requer um caminho não vazio."
-validation_prefix_invalid = 'O prefixo do arquivo de registro contém caracteres inválidos: \ / : * ? " < > |'
-validation_prefix_required = "O prefixo do arquivo de registro não pode ficar vazio."
+validation_custom_directory_required = "Registro: o modo de diretório personalizado exige um caminho não vazio."
+validation_prefix_invalid = "Registro: o prefixo não pode conter \\\\ / : * ? \" < > |."
+validation_prefix_required = "Registro: informe um prefixo para o nome do arquivo."
 directory_auto_notice = "O modo determina o diretório automaticamente; a entrada personalizada está desativada."
 directory_env_override_notice = "Uma variável de ambiente controla o diretório de registros; os controles de diretório estão desativados."
 console_format_tooltip = "Formato do console (vazio = reutilizar o formato do arquivo)"
@@ -855,8 +866,8 @@ powerpoint = "PowerPoint"
 
 [settings.ocr]
 language_label = "Idioma do OCR:"
-language_tooltip = "Idioma OCR compartilhado por todos os formatos de entrada."
-language_auto = "Seguir idioma da interface"
+language_tooltip = "Idioma OCR compartilhado por todos os formatos de entrada. “Usar o idioma da interface” escolhe com base no idioma atual da interface; não detecta automaticamente o idioma da imagem."
+language_auto = "Usar o idioma da interface"
 language_chinese = "Chinês/Inglês"
 language_japanese = "Japonês"
 language_chinese_cht = "Chinês tradicional"
@@ -866,6 +877,7 @@ language_latin = "Alfabeto latino (DE/FR/PT etc.)"
 language_cyrillic = "Alfabeto cirílico (RU etc.)"
 section = "Reconhecimento OCR"
 
+recognize_tables_tooltip = "Aplica-se somente ao OCR. O reconhecimento da estrutura de tabelas é de melhor esforço; regiões não reconhecidas permanecem como texto OCR comum. Não inclui reconhecimento de fórmulas."
 [settings.rule_transfer]
 read_failed = "Não foi possível ler a configuração atual das regras."
 added = "Adicionada"
@@ -1705,7 +1717,7 @@ output_hint = "Usar Markdown comum e informar estruturas que não podem ser repr
 structural_tables = "Structural Tables: tabelas estruturadas"
 captions_references = "Number Suite: legendas e referências cruzadas"
 extended_headings = "Títulos de níveis 7–9"
-typed_endnotes = "Notas de rodapé e de fim tipadas"
+typed_endnotes = "Distinção entre notas de rodapé e de fim (`endnote:`)"
 obsidian_preset = "Usar extensões do Obsidian"
 
 [activity]
@@ -1783,3 +1795,22 @@ structured_html_only = "A área de transferência não continha texto simples; o
 structured_invalid = "A estrutura de tabelas ou imagens da área de transferência é inválida e não foi importada."
 image_invalid = "Os dados de imagem da área de transferência são inválidos ou excedem o tamanho suportado."
 images_omitted = "{count} imagem(ns) da área de transferência não tinham dados incorporados verificáveis; os espaços reservados e o texto disponível foram preservados."
+
+[settings.markdown_extensions.input_help]
+structural_tables = "Reconhece marcadores de Structural Tables como < e ^ e preserva a estrutura estendida da tabela. Desativado, trata-os como conteúdo normal de tabela Markdown."
+
+captions_references = "Reconhece legendas, identificadores e referências cruzadas do Number Suite. Desativado, declarações e referências @ permanecem como texto visível."
+extended_headings = "Reconhece H7–H9. Desativado, sete a nove # iniciais permanecem como texto visível."
+typed_endnotes = "Usa rótulos como endnote: para distinguir notas de fim de notas de rodapé. Desativado, esses rótulos são tratados como notas de rodapé comuns."
+
+[settings.markdown_extensions.output_help]
+structural_tables = "Escreve marcadores e estrutura estendida de Structural Tables quando necessário. Desativado, achata para tabelas Markdown comuns e informa perda de estrutura."
+
+captions_references = "Gera legendas e referências cruzadas do Number Suite quando disponíveis. Desativado, emite texto comum e informa perda de referências."
+extended_headings = "Gera H7–H9. Desativado, esses títulos viram H6 e a perda é informada."
+typed_endnotes = "Preserva a distinção entre notas de rodapé e de fim com rótulos tipados. Desativado, notas de fim são exportadas como notas de rodapé comuns e a perda é informada."
+
+[settings.optimization]
+availability_help = "Os tipos de otimização vêm do ambiente de execução atual. Se nenhum servir para esta categoria de entrada, os controles são desativados; falhas de descoberta são mostradas separadamente."
+
+none_available = "Não há tipos de otimização disponíveis para esta categoria de entrada no ambiente atual."
