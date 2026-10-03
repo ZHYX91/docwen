@@ -563,9 +563,7 @@ class ResolvedNumberingProofMixin:
         binding_by_key = {item.document_target.occurrence_key: item for item in self._caption_plan_bindings}
         for sdt, occurrence in zip(physical, expected, strict=True):
             if sdt.getparent() is not body:
-                raise ResolvedNumberingDocxError(
-                    "standalone-caption occurrence must be a direct main-body block"
-                )
+                raise ResolvedNumberingDocxError("standalone-caption occurrence must be a direct main-body block")
             key = (
                 occurrence.identity.source_start,
                 occurrence.identity.source_end,
