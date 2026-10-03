@@ -477,6 +477,7 @@ def _has_explicit_resolved_v4_signal(
 
     if {
         NUMBERING_OCCURRENCE_MAP_NAMESPACE,
+        STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE,
         CITATION_ITEM_MAP_NAMESPACE,
         CITATION_OCCURRENCE_MAP_NAMESPACE,
     }.intersection(owned):
