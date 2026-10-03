@@ -778,10 +778,8 @@ def _bind_target_markers(
         elif marker.trim_preceding_space:
             if index != len(children) - 1:
                 raise ResolvedRuntimeV4Unsupported("caption target ID marker is not at the declaration boundary")
-        elif (
-            inline_image_before is None
-            and authored_inline_text(children[:index])
-            != ({"code_block": "Code"}.get(target.kind, target.kind.title()) + ":")
+        elif inline_image_before is None and authored_inline_text(children[:index]) != (
+            {"code_block": "Code"}.get(target.kind, target.kind.title()) + ":"
         ):
             raise ResolvedRuntimeV4Unsupported("ID-less caption target marker moved away from its kind colon")
         node["type"] = "_docwen_resolved_v4_caption_declaration"
@@ -988,17 +986,13 @@ def _unique_caption_bindings(candidate_sets: dict[int, set[int]]) -> dict[int, i
     """Bind only one-to-one local carrier claims; leave every other caption standalone."""
 
     provisional = {
-        caption: next(iter(candidates))
-        for caption, candidates in candidate_sets.items()
-        if len(candidates) == 1
+        caption: next(iter(candidates)) for caption, candidates in candidate_sets.items() if len(candidates) == 1
     }
     claims_by_object: dict[int, int] = {}
     for object_index in provisional.values():
         claims_by_object[object_index] = claims_by_object.get(object_index, 0) + 1
     return {
-        caption: object_index
-        for caption, object_index in provisional.items()
-        if claims_by_object[object_index] == 1
+        caption: object_index for caption, object_index in provisional.items() if claims_by_object[object_index] == 1
     }
 
 
