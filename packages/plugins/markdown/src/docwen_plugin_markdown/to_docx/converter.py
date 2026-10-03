@@ -630,19 +630,39 @@ class MdToDocxConverter:
                 )
 
             # ── 3. Optionally remove/add heading numbering ────────────
-            remove_num: bool = options.get("remove_numbering", False)
+            remove_num = (
+                bool(options["remove_numbering"])
+                if "remove_numbering" in options
+                else bool(_config_value(context.config, "text.remove_numbering", False))
+            )
             cleanup_rules = getattr(context, "heading_cleanup_rules", ()) or ()
             if remove_num and render_body:
                 progress.report_progress(10.0, "Removing heading numbering")
                 content = remove_md_numbering(content, rules=cleanup_rules)
 
-            add_num: bool = options.get("add_numbering", False)
-            render_mode: str = options.get("heading_numbering_render_mode", "text")
+            add_num = (
+                bool(options["add_numbering"])
+                if "add_numbering" in options
+                else bool(_config_value(context.config, "text.add_numbering", False))
+            )
+            render_mode = _option_or_config(
+                options,
+                "heading_numbering_render_mode",
+                context.config,
+                "text.heading_numbering_render_mode",
+                "text",
+                allowed={"text", "word_native"},
+            )
             word_native_translation = None  # set if word_native mode is used
             approximate_warning: str | None = None
 
             if add_num and render_body:
-                scheme: str = options.get("numbering_scheme", "")
+                scheme = str(
+                    options.get(
+                        "numbering_scheme",
+                        _config_value(context.config, "text.numbering_scheme", "hierarchical_standard"),
+                    )
+                )
                 try:
                     if render_mode == "word_native":
                         # Word adds the resolved scheme; source text remains clean.
