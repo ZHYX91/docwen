@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from docwen_gui.styles.design_tokens import Spacing
 from docwen_gui.styles.ui_scale import set_metric
 
 from ...i18n import t
@@ -130,7 +131,7 @@ class LoggingTab(BaseSettingsTab):
         dir_row = QWidget(self._scroll_container)
         dir_layout = QHBoxLayout(dir_row)
         dir_layout.setContentsMargins(0, 0, 0, 0)
-        set_metric(dir_layout, "setSpacing", 8)
+        set_metric(dir_layout, "setSpacing", Spacing.CONTROL_GAP)
         self._dir_edit = QLineEdit(self._scroll_container)
         self._dir_edit.setToolTip(
             t("settings.logging.custom_directory_tooltip", "Custom log directory (only used in Custom mode)")
@@ -162,7 +163,7 @@ class LoggingTab(BaseSettingsTab):
         btn_row = QWidget(self._scroll_container)
         btn_layout = QHBoxLayout(btn_row)
         btn_layout.setContentsMargins(0, 0, 0, 0)
-        set_metric(btn_layout, "setSpacing", 8)
+        set_metric(btn_layout, "setSpacing", Spacing.CONTROL_GAP)
         copy_btn = QPushButton(t("info_area.copy_path", "Copy path"), btn_row)
         copy_btn.setObjectName("settingsLoggingCopyPathButton")
         apply_theme_class(copy_btn, "secondary")
