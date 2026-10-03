@@ -548,11 +548,8 @@ def _bind_caption_targets(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     candidate_sets: dict[int, set[int]] = {}
     for declaration_index in declarations:
         target = nodes[declaration_index]["_docwen_v3_caption_target"]
-        object_range = target.get("object_range")
-        if not isinstance(object_range, dict):
-            continue
         declaration_start = int(target["declaration_range"]["start"])
-        object_start = int(object_range["start"])
+        object_start = int(target["object_range"]["start"])
         direction = -1 if object_start < declaration_start else 1
         candidates = {
             candidate
@@ -562,7 +559,7 @@ def _bind_caption_targets(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
         candidate_sets[declaration_index] = candidates
     bindings = _require_unique_caption_bindings(candidate_sets)
 
-    removed = set(bindings)
+    removed = set(declarations)
     for declaration_index, object_index in bindings.items():
         target = nodes[declaration_index]["_docwen_v3_caption_target"]
         object_node = nodes[object_index]
