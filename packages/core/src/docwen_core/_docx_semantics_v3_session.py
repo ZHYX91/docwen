@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from zipfile import BadZipFile
@@ -68,6 +69,19 @@ from docwen_core.docx_bookmarks import (
     bookmark_id_key,
     build_docx_bookmark_inventory,
 )
+from docwen_core.docx_standalone_caption_occurrence import (
+    STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE,
+    StandaloneCaptionOccurrenceIdentity,
+    derive_standalone_caption_occurrence,
+    standalone_caption_occurrence_map_xml,
+    wrap_standalone_caption_occurrence,
+)
+
+
+@dataclass(frozen=True, slots=True)
+class _StandaloneCaptionBinding:
+    identity: StandaloneCaptionOccurrenceIdentity
+    caption_element: Any
 
 
 class DocxSemanticsV3Session:
@@ -79,10 +93,15 @@ class DocxSemanticsV3Session:
         *,
         source_sha256: str,
         caption_style_bindings: tuple[CaptionStyleBindingV3, ...] = (),
+        standalone_caption_authority: bool = False,
     ) -> None:
         require_sha256(source_sha256)
         self._document = document
         self._source_sha256 = source_sha256
+        self._standalone_caption_authority = standalone_caption_authority
+        self._standalone_plan_sha256 = hashlib.sha256(
+            f"docwen-direct-number-suite-caption-plan-v1\0{source_sha256}".encode()
+        ).hexdigest()
         self._caption_style_bindings = (
             validate_caption_style_bindings(caption_style_bindings) if caption_style_bindings else ()
         )
@@ -90,6 +109,7 @@ class DocxSemanticsV3Session:
         self._anchors: list[AnchorBindingV3] = []
         self._anchor_topology_edges: tuple[AnchorTopologyEdgeV3, ...] = ()
         self._captions: list[CaptionBindingV3] = []
+        self._standalone_captions: list[_StandaloneCaptionBinding] = []
         self._stable_reference_target_ids: list[str] = []
         self._reference_occurrences: list[ReferenceOccurrenceIdentityV3] = []
         self._soft_references: list[SoftReferenceIdentityV3] = []
@@ -103,6 +123,7 @@ class DocxSemanticsV3Session:
             self._targets
             or self._anchors
             or self._captions
+            or self._standalone_captions
             or self._reference_occurrences
             or self._soft_references
             or self._fenced_sources
@@ -235,6 +256,24 @@ class DocxSemanticsV3Session:
                 cached_number=cached_number,
             )
         )
+        standalone = not object_elements
+        if standalone:
+            if not self._standalone_caption_authority:
+                raise DocxSemanticsV3Error("standalone caption authority is not enabled for this source route")
+            target_range = target.get("declaration_range") or target.get("range")
+            if not isinstance(target_range, dict):
+                raise DocxSemanticsV3Error("standalone caption target has no authenticated source range")
+            occurrence = derive_standalone_caption_occurrence(
+                source_sha256=self._source_sha256,
+                source_start=int(target_range["start"]),
+                source_end=int(target_range["end"]),
+                kind=kind,  # type: ignore[arg-type]
+                plan_sha256=self._standalone_plan_sha256,
+                enabled=True,
+                target_id=str(target_id) if target_id is not None else None,
+                derived_number=cached_number,
+            )
+            self._standalone_captions.append(_StandaloneCaptionBinding(occurrence, caption._p))
         if target_id is None:
             return
         identity = derive_target_identity_v3(kind, str(target_id))  # type: ignore[arg-type]
@@ -242,7 +281,9 @@ class DocxSemanticsV3Session:
         bookmark_id = self._reserve_bookmark(identity.bookmark_name)
         self._wrap_caption_seq_with_bookmark(caption, identity.bookmark_name, bookmark_id)
         physical_elements = (
-            (*object_elements, caption._p) if identity.kind == "figure" else (caption._p, *object_elements)
+            (caption._p,)
+            if standalone
+            else ((*object_elements, caption._p) if identity.kind == "figure" else (caption._p, *object_elements))
         )
         self._targets.append(TargetBindingV3(identity, physical_elements))
 
@@ -324,6 +365,9 @@ class DocxSemanticsV3Session:
         for binding in ordered:
             owners = tuple(dict.fromkeys(self._direct_body_owner(item) for item in binding.elements))
             wrap_direct_body_group(owners, binding.identity.tag)
+        for binding in self._standalone_captions:
+            if binding.identity.target_id is None:
+                wrap_standalone_caption_occurrence(binding.caption_element, binding.identity)
         for binding in self._targets:
             elements = tuple(self._direct_body_owner(element) for element in binding.elements)
             unique = tuple(dict.fromkeys(elements))
@@ -382,6 +426,15 @@ class DocxSemanticsV3Session:
                 (
                     CAPTION_STYLE_BINDING_MAP_NAMESPACE,
                     caption_style_binding_map_xml(self._caption_style_bindings),
+                )
+            )
+        if self._standalone_captions:
+            parts.append(
+                (
+                    STANDALONE_CAPTION_OCCURRENCE_MAP_NAMESPACE,
+                    standalone_caption_occurrence_map_xml(
+                        [binding.identity for binding in self._standalone_captions]
+                    ),
                 )
             )
         if not parts:
