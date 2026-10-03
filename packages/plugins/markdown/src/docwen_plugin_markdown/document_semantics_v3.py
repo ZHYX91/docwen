@@ -26,6 +26,8 @@ from docwen_plugin_markdown.document_semantics_v3_fenced_source import (
 
 SEMANTICS_SCHEMA = "docwen.markdown_semantics.v3"
 SEMANTICS_SCHEMA_ID = "urn:docwen:schema:markdown-semantics:v3"
+DIRECT_NUMBER_SUITE_SCHEMA = "docwen.number_suite_direct.v1"
+DIRECT_NUMBER_SUITE_SCHEMA_ID = "urn:docwen:internal:number-suite-direct:v1"
 DIAGNOSTICS_SCHEMA = "docwen.markdown_diagnostics.v3"
 DIAGNOSTICS_SCHEMA_ID = "urn:docwen:schema:markdown-diagnostics:v3"
 DIAGNOSTIC_EVIDENCE_SCHEMA = "docwen.machine.diagnostic_evidence.v1"
@@ -638,9 +640,13 @@ def analyze_markdown_semantics_v3(
         )
         occupied.append(token_range)
 
+    projection_schema = DIRECT_NUMBER_SUITE_SCHEMA if consumer_profile == "number_suite_direct" else SEMANTICS_SCHEMA
+    projection_schema_id = (
+        DIRECT_NUMBER_SUITE_SCHEMA_ID if consumer_profile == "number_suite_direct" else SEMANTICS_SCHEMA_ID
+    )
     projection = {
-        "$schema": SEMANTICS_SCHEMA_ID,
-        "schema": SEMANTICS_SCHEMA,
+        "$schema": projection_schema_id,
+        "schema": projection_schema,
         "source": source_identity,
         "targets": sorted(targets, key=lambda item: (item["range"]["start"], item["kind"])),
         "anchors": sorted(anchors, key=lambda item: item["range"]["start"]),
@@ -1892,6 +1898,8 @@ def _overlaps_any(candidate: SourceRange, ranges: Sequence[SourceRange]) -> bool
 
 __all__ = [
     "DIAGNOSTICS_SCHEMA",
+    "DIRECT_NUMBER_SUITE_SCHEMA",
+    "DIRECT_NUMBER_SUITE_SCHEMA_ID",
     "DIAGNOSTICS_SCHEMA_ID",
     "DIAGNOSTIC_EVIDENCE_SCHEMA",
     "SEMANTICS_SCHEMA",
