@@ -175,9 +175,7 @@ def test_direct_number_suite_profile_does_not_invent_hierarchical_title_referenc
     [reference] = analysis.projection["references"]
     assert reference["heading_path"] == ["Parent#Child"]
     assert reference["resolution_status"] == "missing"
-    assert [item["code"] for item in analysis.diagnostics] == [
-        "docwen.markdown.cross_reference.missing"
-    ]
+    assert [item["code"] for item in analysis.diagnostics] == ["docwen.markdown.cross_reference.missing"]
 
 
 def test_direct_number_suite_profile_treats_case_only_block_ids_as_duplicate() -> None:
