@@ -241,6 +241,7 @@ def analyze_markdown_semantics_v3(
     active_heading_titles: list[str] = []
     semantic_anchor_marker_ranges: set[tuple[int, int]] = set()
     caption_bindings, ambiguous_captions = _caption_object_bindings(blocks)
+    normalize_ids = consumer_profile == "number_suite_direct"
 
     # Headings and declarations own semantic IDs.  Raw objects never do.
     for index, block in enumerate(blocks):
@@ -296,6 +297,7 @@ def analyze_markdown_semantics_v3(
                         owners,
                         anchor_id,
                         _Owner("semantic_target", "heading", token_range, len(targets)),
+                        normalize_id=normalize_ids,
                     )
                 else:
                     diagnostics.append(
@@ -426,6 +428,7 @@ def analyze_markdown_semantics_v3(
                 owners,
                 anchor_id,
                 _Owner("semantic_target", declaration_kind, anchor_range, len(targets)),
+                normalize_id=normalize_ids,
             )
         targets.append(record)
 
@@ -480,7 +483,12 @@ def analyze_markdown_semantics_v3(
                 "container_path": _container_path_projection(block),
             }
         )
-        _register_owner(owners, anchor_id, _Owner("ordinary_anchor", None, token_range, len(anchors) - 1))
+        _register_owner(
+            owners,
+            anchor_id,
+            _Owner("ordinary_anchor", None, token_range, len(anchors) - 1),
+            normalize_id=normalize_ids,
+        )
 
     for index, block in enumerate(blocks):
         if block.kind != "anchor_marker":
@@ -530,7 +538,12 @@ def analyze_markdown_semantics_v3(
                 "container_path": _container_path_projection(owner_block),
             }
         )
-        _register_owner(owners, anchor_id, _Owner("ordinary_anchor", None, token_range, len(anchors) - 1))
+        _register_owner(
+            owners,
+            anchor_id,
+            _Owner("ordinary_anchor", None, token_range, len(anchors) - 1),
+            normalize_id=normalize_ids,
+        )
 
     # Duplicate ownership is document-wide and reported on every later owner.
     for anchor_id, occurrences in owners.items():
@@ -538,7 +551,8 @@ def analyze_markdown_semantics_v3(
         for later in occurrences[1:]:
             fixes: tuple[dict[str, Any], ...] = ()
             replacement = replacements.get(later.id_range.start)
-            if replacement is not None and _valid_id(replacement) and replacement not in owners:
+            replacement_key = _number_suite_id_key(replacement) if normalize_ids and replacement is not None else replacement
+            if replacement is not None and _valid_id(replacement) and replacement_key not in owners:
                 fixes = (
                     {
                         "fix_id": "docwen.markdown.fix.rename_anchor",
@@ -582,6 +596,7 @@ def analyze_markdown_semantics_v3(
             owners,
             external_reference_map,
             normalize_titles=consumer_profile == "number_suite_direct",
+            normalize_ids=normalize_ids,
         )
         references.append(reference)
         diagnostics.extend(reference_diagnostics)
@@ -1514,8 +1529,15 @@ def _previous_non_marker_block(
     return None
 
 
-def _register_owner(owners: dict[str, list[_Owner]], anchor_id: str, owner: _Owner) -> None:
-    owners.setdefault(anchor_id, []).append(owner)
+def _register_owner(
+    owners: dict[str, list[_Owner]],
+    anchor_id: str,
+    owner: _Owner,
+    *,
+    normalize_id: bool = False,
+) -> None:
+    key = _number_suite_id_key(anchor_id) if normalize_id else anchor_id
+    owners.setdefault(key, []).append(owner)
 
 
 def _source_identity(input_id: str, source_sha256: str) -> dict[str, Any]:
@@ -1630,6 +1652,10 @@ def _normalize_number_suite_title(value: str) -> str:
     return re.sub(r"[ \t]+", " ", normalized).casefold()
 
 
+def _number_suite_id_key(value: str) -> str:
+    return unicodedata.normalize("NFC", value).casefold()
+
+
 def _parse_reference_body(body: str) -> tuple[str | None, str, str | None]:
     selector_text, separator, alias = body.partition("|")
     if separator and (not alias or "|" in alias):
@@ -1652,6 +1678,7 @@ def _resolve_reference(
     external: Mapping[tuple[str, str, str], ExternalReferenceResolution],
     *,
     normalize_titles: bool = False,
+    normalize_ids: bool = False,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     diagnostics: list[dict[str, Any]] = []
     body = match.group("body")
@@ -1698,8 +1725,18 @@ def _resolve_reference(
         elif page_locator is not None:
             status = "external_unresolved"
         else:
-            matching_targets = [item for item in targets if item.get("id") == target_id]
-            owner_records = owners.get(target_id, ())
+            target_key = _number_suite_id_key(target_id) if normalize_ids else target_id
+            matching_targets = [
+                item
+                for item in targets
+                if item.get("id") is not None
+                and (
+                    _number_suite_id_key(str(item["id"])) == target_key
+                    if normalize_ids
+                    else item.get("id") == target_id
+                )
+            ]
+            owner_records = owners.get(target_key, ())
             if len(owner_records) > 1:
                 status = "ambiguous"
             elif matching_targets:
@@ -1707,6 +1744,8 @@ def _resolve_reference(
                 status = "resolved" if target.get("number") else "unnumbered"
                 record["resolved_kind"] = target["kind"]
                 current_title = str(target["title"])
+                if normalize_ids and target.get("id") is not None:
+                    record["target_id"] = target["id"]
                 if target.get("number"):
                     record["cached_number"] = target["number"]
             elif owner_records and owner_records[0].owner_kind == "ordinary_anchor":
