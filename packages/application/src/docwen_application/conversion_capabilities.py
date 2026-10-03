@@ -220,17 +220,15 @@ _MARKDOWN_TO_DOCX_OPTIONS = _strict_options(
 _MARKDOWN_SOURCE_TO_DOCX_OPTIONS = _strict_options(
     {
         **_MARKDOWN_TO_DOCX_OPTIONS["properties"],
-        "remove_numbering": {"type": "boolean", "default": False},
-        "add_numbering": {"type": "boolean", "default": False},
+        "remove_numbering": {"type": "boolean"},
+        "add_numbering": {"type": "boolean"},
         "numbering_scheme": {
             "type": "string",
-            "default": "gongwen_standard",
             "x-docwen-resource-kind": "numbering-schemes",
         },
         "heading_numbering_render_mode": {
             "type": "string",
             "enum": ["text", "word_native"],
-            "default": "text",
         },
     }
 )
