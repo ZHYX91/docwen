@@ -276,16 +276,16 @@ The table below lists common commands only. For the full command surface, use `d
 | `merge pdf\|tables\|images <files...> --output <path>` | Run an explicit aggregate operation. |
 | `split pdf <file> --pages <range> --output-dir <dir>` | Split selected PDF pages into an explicit directory. |
 | `batch convert\|validate <files...>` | Run an explicit multi-file conversion or proofreading operation. |
-| `schema convert` | Export the machine-readable conversion contract, defaults, conditions, and canonical keys. |
+| `schema convert` | Export the machine-readable conversion contract, defaults, conditions, and accepted parameter keys. |
 | `inspect <file> [--json]` | Inspect file category/format, recommended actions, and extension/content mismatch warnings. |
 | `doctor --json` | Output diagnostics together with runtime capability summaries and dependency gates. |
-| `resources list formats --json` | List canonical Runtime routes, dependency gates, availability, and limitations. |
-| `resources list optimizations --json` | List typed optimization resources and their canonical route bindings. |
+| `resources list formats --json` | List available Runtime routes, dependency requirements, availability, and limitations. |
+| `resources list optimizations --json` | List optimization resources and their declared route bindings. |
 | `resources list templates [--target docx\|xlsx]` | List available templates. |
 | `resources list numbering-schemes` | List available numbering schemes. |
 | `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | Start or activate DocWen and optionally open one absolute file path through the local GUI-control boundary; this does not require a Machine session. |
 | `gui open [ABSOLUTE_FILE] [--timeout <seconds>] [--json]` | Start or activate DocWen and optionally open one absolute file through the separate local GUI-control boundary. |
-| `--template <id>` | Exact canonical resource ID returned by `resources list templates`; display names, filenames, and paths are rejected. DOCX IDs apply to `docx/doc/odt/rtf/wps/pdf`, XLSX IDs to `xlsx/xls/ods/csv`. CSV without a template remains direct table export; CSV with an XLSX template uses the MD→XLSX template workbook → per-sheet CSV artifact chain. |
+| `--template <id>` | Exact resource ID returned by `resources list templates`; display names, filenames, and paths are rejected. DOCX IDs apply to `docx/doc/odt/rtf/wps/pdf`, XLSX IDs to `xlsx/xls/ods/csv`. CSV without a template remains direct table export; CSV with an XLSX template uses the MD→XLSX template workbook → per-sheet CSV artifact chain. |
 | `--extract-img` / `--no-extract-img` / `--ocr` | Image extraction and OCR options for `convert --to md`. |
 | `--image-mode file|base64|embed|omit` | Control how images are emitted during Markdown export. |
 | `--ocr-placement image_md|main_md` | Control whether OCR text is written to image-side Markdown or the main Markdown file. |
