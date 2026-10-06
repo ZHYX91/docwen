@@ -281,10 +281,6 @@ def parse_raw_md_tables(
                 {
                     "headers": restored_header,
                     "rows": rows,
-                    "all_rows": [restored_header, *rows],
-                    "header_rows": 1,
-                    "header_columns": 0,
-                    "structural": False,
                 }
             )
 
