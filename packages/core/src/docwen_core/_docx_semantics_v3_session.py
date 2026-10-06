@@ -319,13 +319,15 @@ class DocxSemanticsV3Session:
             )
             if any(item.tag == occurrence.tag for item in self._reference_occurrences):
                 raise DocxSemanticsV3Error("reference-occurrence tag collision")
+            authored_body = occurrence.authored_token[3:-2]
+            _authored_selector, alias_separator, authored_alias = authored_body.partition("|")
             paragraph._p.append(
                 inline_reference_sdt(
                     occurrence.tag,
                     bookmark_name=target.bookmark_name,
                     cached_number=cached_number,
                     heading_number_only=target.kind == "heading",
-                    alias=str(reference["alias"]) if reference.get("alias") is not None else None,
+                    alias=authored_alias if alias_separator else None,
                 )
             )
             self._reference_occurrences.append(occurrence)
