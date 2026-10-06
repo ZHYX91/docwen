@@ -416,11 +416,7 @@ def _plan_rectangular_merges(rows: list[list[str]]) -> tuple[list[tuple[int, int
             return None
         resolving.add(position)
         row_index, col_index = position
-        target = (
-            (row_index, col_index - 1)
-            if marker == "left"
-            else (row_index - 1, col_index)
-        )
+        target = (row_index, col_index - 1) if marker == "left" else (row_index - 1, col_index)
         if target[0] < 0 or target[1] < 0 or target[0] >= len(normalized_rows) or target[1] >= column_count:
             anchor = None
         else:
@@ -448,11 +444,7 @@ def _plan_rectangular_merges(rows: list[list[str]]) -> tuple[list[tuple[int, int
         max_row = max(row for row, _column in covered)
         min_col = min(column for _row, column in covered)
         max_col = max(column for _row, column in covered)
-        rectangle = {
-            (row, column)
-            for row in range(min_row, max_row + 1)
-            for column in range(min_col, max_col + 1)
-        }
+        rectangle = {(row, column) for row in range(min_row, max_row + 1) for column in range(min_col, max_col + 1)}
         if covered != rectangle or anchor != (min_row, min_col):
             invalid = True
             continue
