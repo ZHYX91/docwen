@@ -272,6 +272,45 @@ def test_output_switches_are_independent_and_need_only_docx(tmp_path: Path, dial
         assert any("flattened" in (item.code or "") for item in result.diagnostics)
 
 
+def test_number_suite_note_identity_and_multiline_round_trip_from_isolated_docx(tmp_path: Path) -> None:
+    source = tmp_path / "notes.md"
+    source.write_text(
+        "One[^endnote-topic], two[^Straße], three[^Strasse], rich[^rich].\n\n"
+        "[^endnote-topic]: Ordinary footnote.\n"
+        "[^Straße]: Sharp-s identity.\n"
+        "[^Strasse]: Latin ss identity.\n"
+        "[^rich]: First line\n"
+        "  second line\n"
+        "  **third line**\n",
+        encoding="utf-8",
+    )
+    obsidian = MarkdownExtensions.obsidian().to_dict()
+
+    forward_root = tmp_path / "notes-forward"
+    forward_root.mkdir()
+    forward = MdToDocxConverter().convert(_context(forward_root, source, "docx", {"input": obsidian}))
+    assert forward.success, forward.error
+    generated = Path(forward.artifacts[0].staging_path)
+    with ZipFile(generated) as package:
+        document_xml = package.read("word/document.xml").decode()
+        assert document_xml.count("<w:footnoteReference") == 4
+        assert "<w:endnoteReference" not in document_xml
+
+    isolated = tmp_path / "notes-isolated.docx"
+    isolated.write_bytes(generated.read_bytes())
+    source.unlink()
+
+    reverse_root = tmp_path / "notes-reverse"
+    reverse_root.mkdir()
+    reverse = DocxToMarkdownConverter().convert(_context(reverse_root, isolated, "md", {"output": obsidian}))
+    assert reverse.success, reverse.error
+    markdown = Path(reverse.artifacts[0].staging_path).read_text(encoding="utf-8")
+    assert "[^endnote:" not in markdown
+    assert "[^1]: Ordinary footnote." in markdown
+    assert "[^2]: Sharp-s identity." in markdown
+    assert "[^3]: Latin ss identity." in markdown
+    assert "[^4]: First line\n    second line\n    **third line**" in markdown
+
 def test_structural_tables_direct_and_resolved_routes_share_docx_semantics(tmp_path: Path) -> None:
     authored = """| Region | Sales | < |
 | Quarter | Q1 | Q2 |
