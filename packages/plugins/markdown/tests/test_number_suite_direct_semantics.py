@@ -95,3 +95,47 @@ def test_direct_number_suite_profile_treats_case_only_block_ids_as_duplicate() -
 
     assert analysis.has_errors
     assert [item["code"] for item in analysis.diagnostics] == ["docwen.markdown.anchor.duplicate"]
+
+
+def test_direct_number_suite_reference_scanner_respects_literal_regions() -> None:
+    source = """# Target ^target
+
+\\@[[#^missing]]
+<!-- @[[#^missing]] @hidden-html -->
+%% @[[#^missing]] @hidden-obsidian %%
+[Link](https://example.test/@[[#^missing]])
+<span data-ref="@[[#^missing]]">@hidden-attribute</span>
+`@[[#^missing]] @hidden-code`
+https://example.test/path@[[#^target]]
+Real @[[#^target]] @real-cite.
+"""
+
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    references = analysis.projection["references"]
+    assert [item["raw"] for item in references] == ["@[[#^target]]", "@[[#^target]]"]
+    assert all(item["resolution_status"] == "resolved" for item in references)
+    assert [item["raw"] for item in analysis.projection["citations"]] == ["@real-cite"]
+
+
+def test_direct_number_suite_multiline_comments_hide_reference_like_tokens() -> None:
+    source = """# Target ^target
+
+<!--
+@[[#^missing]]
+@hidden-html
+-->
+%%
+@[[#^missing]]
+@hidden-obsidian
+%%
+
+@[[#^target]]
+"""
+
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    assert [item["raw"] for item in analysis.projection["references"]] == ["@[[#^target]]"]
+    assert analysis.projection["citations"] == []
