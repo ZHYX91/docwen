@@ -14,7 +14,7 @@ from __future__ import annotations
 import re
 import secrets
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -185,7 +185,7 @@ def _direct_heading_number_provider(
     scheme_config: dict[str, dict[str, str]],
     *,
     supported_levels: set[int] | None = None,
-):
+) -> Callable[[str, int], str]:
     """Return a stateful provider matching the selected heading scheme."""
 
     formatter = HeadingFormatter(scheme_config)
