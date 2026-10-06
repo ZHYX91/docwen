@@ -166,7 +166,7 @@ must resolve to a style of the correct type.
 ## Existing note parts / 既有注释部件
 
 Markdown note syntax is frozen as follows: `[^id]` and `[^footnote:id]` are footnotes, while
-`[^endnote:id]` is an endnote. The retired `[^endnote-id]` spelling is rejected; DOCX → Markdown always emits the
+`[^endnote:id]` is an endnote. A dash-prefixed label such as `[^endnote-id]` is an ordinary footnote ID; DOCX → Markdown always emits the
 canonical colon form. Footnotes and endnotes are numbered independently from 1 in first-reference
 order, and repeated references reuse the first number. Missing definitions, duplicate definitions, and collisions
 between default and explicit footnote IDs fail closed. Continuation content indented by two spaces or a tab remains
