@@ -256,6 +256,92 @@ def test_document_node_link_relocation_preserves_external_targets_and_integrity(
     assert Path(artifacts["child"].staging_path).parent.parent.parent == output
 
 
+def test_document_node_link_relocation_skips_fenced_code_examples(tmp_path: Path) -> None:
+    source = tmp_path / "report.docx"
+    source.write_bytes(b"source")
+    staging = tmp_path / "staging-fence"
+    staging.mkdir()
+    main = staging / "main.md"
+    image = staging / "seal.png"
+    main.write_text(
+        "```markdown\n"
+        "![literal](assets/seal.png)\n"
+        "![[assets/seal.png]]\n"
+        '<img src="assets/seal.png">\n'
+        "```\n\n"
+        "![real](assets/seal.png)\n",
+        encoding="utf-8",
+    )
+    image.write_bytes(b"png")
+    output = tmp_path / "output-fence"
+
+    result = OutputFinalizer().finalize(
+        "task.node.fence",
+        [
+            _artifact(
+                main,
+                artifact_id="main",
+                suggested_name="report.md",
+                media_type="text/markdown",
+                primary=True,
+            ),
+            _artifact(
+                image,
+                artifact_id="image",
+                suggested_name="assets/seal.png",
+                media_type="image/png",
+            ),
+        ],
+        OutputPolicy(output_dir=str(output), overwrite_mode="error"),
+        input_path=str(source),
+    )
+
+    assert result.success is True, result.diagnostics
+    primary = next(artifact for artifact in result.artifacts if artifact.artifact_id == "main")
+    text = Path(primary.staging_path).read_text(encoding="utf-8")
+    assert "![literal](assets/seal.png)" in text
+    assert "![[assets/seal.png]]" in text
+    assert '<img src="assets/seal.png">' in text
+    assert "![real](seal.png)" in text
+
+
+def test_document_node_link_relocation_skips_unclosed_fence_to_eof(tmp_path: Path) -> None:
+    source = tmp_path / "report.docx"
+    source.write_bytes(b"source")
+    staging = tmp_path / "staging-open-fence"
+    staging.mkdir()
+    main = staging / "main.md"
+    image = staging / "seal.png"
+    main.write_text("```markdown\n![literal](assets/seal.png)\n", encoding="utf-8")
+    image.write_bytes(b"png")
+    output = tmp_path / "output-open-fence"
+
+    result = OutputFinalizer().finalize(
+        "task.node.open-fence",
+        [
+            _artifact(
+                main,
+                artifact_id="main",
+                suggested_name="report.md",
+                media_type="text/markdown",
+                primary=True,
+            ),
+            _artifact(
+                image,
+                artifact_id="image",
+                suggested_name="assets/seal.png",
+                media_type="image/png",
+            ),
+        ],
+        OutputPolicy(output_dir=str(output), overwrite_mode="error"),
+        input_path=str(source),
+    )
+
+    assert result.success is True, result.diagnostics
+    primary = next(artifact for artifact in result.artifacts if artifact.artifact_id == "main")
+    assert "![literal](assets/seal.png)" in Path(primary.staging_path).read_text(encoding="utf-8")
+
+
 def test_document_node_failure_leaves_no_partial_root(tmp_path: Path) -> None:
     source = tmp_path / "report.docx"
     source.write_bytes(b"source")
