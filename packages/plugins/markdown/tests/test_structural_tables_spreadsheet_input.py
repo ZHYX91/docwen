@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 from openpyxl import load_workbook
+import pytest
 
 from ._md_to_spreadsheet_support import MdToXlsxConverter, Path, make_context, write_temp_md
+
+pytestmark = pytest.mark.contract
 
 
 def _convert_xlsx(tmp_path: Path, source: str):
