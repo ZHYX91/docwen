@@ -95,3 +95,40 @@ def test_direct_number_suite_profile_treats_case_only_block_ids_as_duplicate() -
 
     assert analysis.has_errors
     assert [item["code"] for item in analysis.diagnostics] == ["docwen.markdown.anchor.duplicate"]
+
+
+def test_direct_number_suite_ignores_semantic_tokens_in_protected_contexts() -> None:
+    source = """# Target ^target
+
+\@[[#^missing-escaped]]
+
+%% @[[#^missing-obsidian-comment]] %%
+
+<!-- @[[#^missing-html-comment]] -->
+
+[Link](https://example.test/@[[#^missing-link-target]])
+
+    @[[#^missing-indented-code]]
+
+https://example.test/path@[[#^target]]
+"""
+
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    references = analysis.projection["references"]
+    assert [(item["target_id"], item["resolution_status"]) for item in references] == [
+        ("target", "resolved"),
+    ]
+    assert all("missing-" not in str(item) for item in references)
+
+
+def test_direct_number_suite_bare_url_does_not_swallow_adjacent_real_reference() -> None:
+    source = "# Target ^target\n\nhttps://example.test/path@[[#^target]]\n"
+
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    [reference] = analysis.projection["references"]
+    assert reference["target_id"] == "target"
+    assert reference["resolution_status"] == "resolved"
