@@ -35,13 +35,7 @@ def test_xlsx_preserves_zero_header_structural_table_rows(tmp_path: Path) -> Non
 
 
 def test_xlsx_preserves_multi_header_row_header_and_merge_geometry(tmp_path: Path) -> None:
-    source = (
-        "| Region | Sales | < |\n"
-        "| Quarter | Q1 | Q2 |\n"
-        "| --- || --- | --- |\n"
-        "| North | 10 | 12 |\n"
-        "| ^ | 8 | 11 |"
-    )
+    source = "| Region | Sales | < |\n| Quarter | Q1 | Q2 |\n| --- || --- | --- |\n| North | 10 | 12 |\n| ^ | 8 | 11 |"
     result, workbook = _convert_xlsx(tmp_path, source)
 
     sheet = workbook.active
