@@ -336,12 +336,7 @@ def _parse_structural_table_rows(
         return None
 
     marker_found = any(cell.strip() in {"<", "^"} for row in content_rows for cell in row)
-    structurally_distinctive = (
-        delimiter_index != 1
-        or header_columns > 0
-        or short_delimiter
-        or marker_found
-    )
+    structurally_distinctive = delimiter_index != 1 or header_columns > 0 or short_delimiter or marker_found
     if not structurally_distinctive:
         return None
 
