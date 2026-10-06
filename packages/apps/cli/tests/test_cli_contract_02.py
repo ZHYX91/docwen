@@ -130,15 +130,12 @@ class TestExecuteConvertActionPath:
         self,
         tmp_path,
         capsys,
-        monkeypatch,
     ) -> None:
         import json
         import threading
 
         from docwen_cli.commands.convert import execute_convert
         from docwen_core.models.result import ConversionErrorInfo, ConversionResult
-
-        _runtime_route_contract(monkeypatch)
 
         first = tmp_path / "first.docx"
         second = tmp_path / "second.docx"
