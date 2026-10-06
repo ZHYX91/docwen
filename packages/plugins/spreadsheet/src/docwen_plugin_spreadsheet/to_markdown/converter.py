@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import csv
 import os
+import re
 import uuid
 from collections import deque
 from typing import TYPE_CHECKING, Any
