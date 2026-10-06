@@ -167,7 +167,8 @@ def _worksheet_to_dataframe(
             )
         )
         anchor_value = ws.cell(row=range_min_row, column=range_min_col).value
-        cell_text_by_position.setdefault((range_min_row - 1, range_min_col - 1), str(anchor_value or ""))
+        anchor_text = "" if anchor_value is None else str(anchor_value)
+        cell_text_by_position.setdefault((range_min_row - 1, range_min_col - 1), anchor_text)
 
     if max_row <= 0 or max_col <= 0:
         return pd.DataFrame()
@@ -866,7 +867,9 @@ class SpreadsheetToMarkdownConverter:
                         ]
                         data = block.iloc[1:]
                         block_md = (
-                            data.to_markdown(index=False, headers=headers) if hasattr(data, "to_markdown") else ""
+                            data.to_markdown(index=False, headers=headers, disable_numparse=True)
+                            if hasattr(data, "to_markdown")
+                            else ""
                         )
                     else:
                         block_md = ""
