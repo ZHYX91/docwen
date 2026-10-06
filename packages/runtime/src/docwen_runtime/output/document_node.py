@@ -35,6 +35,8 @@ _WINDOWS_DRIVE_TARGET = re.compile(r"^[A-Za-z]:[\\/]")
 _URI_SCHEME_TARGET = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
 _LOCAL_LINK_UNSAFE = frozenset("%#? \t\r\n<>\"'()[]|&")
 _HTML_ATTRIBUTE_REFERENCE = re.compile(r"&#(?:[xX][0-9a-fA-F]+|[0-9]+);?|&[A-Za-z][A-Za-z0-9]*;?")
+_FENCE_OPEN = re.compile(r"^ {0,3}(?P<fence>`{3,}|~{3,})(?P<info>[^\r\n]*)$")
+_FENCE_CLOSE = re.compile(r"^ {0,3}(?P<fence>`{3,}|~{3,})[ \t]*$")
 
 
 def _decode_html_attribute(value: str) -> str:
@@ -308,6 +310,42 @@ def _serialize_local_link_path(path: str) -> str:
     return "".join(result)
 
 
+def _fenced_code_ranges(text: str) -> list[tuple[int, int]]:
+    """Return complete CommonMark fenced-code ranges, including an open EOF fence."""
+
+    ranges: list[tuple[int, int]] = []
+    active_char: str | None = None
+    active_length = 0
+    active_start = 0
+    offset = 0
+    for raw_line in text.splitlines(keepends=True):
+        line = raw_line.rstrip("\r\n")
+        if active_char is None:
+            opener = _FENCE_OPEN.fullmatch(line)
+            if opener is not None:
+                fence = opener.group("fence")
+                if fence.startswith("`") and "`" in opener.group("info"):
+                    offset += len(raw_line)
+                    continue
+                active_char = fence[0]
+                active_length = len(fence)
+                active_start = offset
+        else:
+            closer = _FENCE_CLOSE.fullmatch(line)
+            if (
+                closer is not None
+                and closer.group("fence")[0] == active_char
+                and len(closer.group("fence")) >= active_length
+            ):
+                ranges.append((active_start, offset + len(raw_line)))
+                active_char = None
+                active_length = 0
+        offset += len(raw_line)
+    if active_char is not None:
+        ranges.append((active_start, len(text)))
+    return ranges
+
+
 def _rewrite_known_links(text: str, replacements: dict[str, str]) -> str:
     normalized = {key.replace("\\", "/"): value for key, value in replacements.items()}
 
@@ -346,9 +384,23 @@ def _rewrite_known_links(text: str, replacements: dict[str, str]) -> str:
         target = raw if replaced == semantic else escape(replaced, quote=True)
         return f"{match.group('prefix')}{target}{match.group('suffix')}"
 
-    text = _MARKDOWN_LINK.sub(markdown_sub, text)
-    text = _WIKI_LINK.sub(wiki_sub, text)
-    return _HTML_LINK.sub(html_sub, text)
+    def rewrite_segment(segment: str) -> str:
+        segment = _MARKDOWN_LINK.sub(markdown_sub, segment)
+        segment = _WIKI_LINK.sub(wiki_sub, segment)
+        return _HTML_LINK.sub(html_sub, segment)
+
+    fenced = _fenced_code_ranges(text)
+    if not fenced:
+        return rewrite_segment(text)
+
+    output: list[str] = []
+    cursor = 0
+    for start, end in fenced:
+        output.append(rewrite_segment(text[cursor:start]))
+        output.append(text[start:end])
+        cursor = end
+    output.append(rewrite_segment(text[cursor:]))
+    return "".join(output)
 
 
 __all__ = [
