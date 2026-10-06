@@ -256,6 +256,57 @@ def test_document_node_link_relocation_preserves_external_targets_and_integrity(
     assert Path(artifacts["child"].staging_path).parent.parent.parent == output
 
 
+def test_document_node_link_relocation_keeps_code_samples_literal(tmp_path: Path) -> None:
+    source = tmp_path / "source.docx"
+    source.write_bytes(b"source")
+    staging = tmp_path / "staging-code-links"
+    staging.mkdir()
+    markdown = staging / "source.md"
+    image = staging / "image.png"
+    markdown.write_text(
+        "![real](assets/image.png)\n"
+        "`![inline](assets/image.png)`\n"
+        "```markdown\n"
+        "![fenced](assets/image.png)\n"
+        "![[assets/image.png]]\n"
+        '<img src="assets/image.png">\n'
+        "```\n",
+        encoding="utf-8",
+    )
+    image.write_bytes(b"png")
+    output = tmp_path / "output-code-links"
+
+    result = OutputFinalizer().finalize(
+        "task.node.code-links",
+        [
+            _artifact(
+                markdown,
+                artifact_id="main",
+                suggested_name="source.md",
+                media_type="text/markdown",
+                primary=True,
+            ),
+            _artifact(
+                image,
+                artifact_id="image",
+                suggested_name="assets/image.png",
+                media_type="image/png",
+            ),
+        ],
+        OutputPolicy(output_dir=str(output), overwrite_mode="error"),
+        input_path=str(source),
+    )
+
+    assert result.success is True, result.diagnostics
+    primary = next(item for item in result.artifacts if item.artifact_id == "main")
+    published = Path(primary.staging_path).read_text(encoding="utf-8")
+    assert "![real](image.png)" in published
+    assert "`![inline](assets/image.png)`" in published
+    assert "![fenced](assets/image.png)" in published
+    assert "![[assets/image.png]]" in published
+    assert '<img src="assets/image.png">' in published
+
+
 def test_document_node_failure_leaves_no_partial_root(tmp_path: Path) -> None:
     source = tmp_path / "report.docx"
     source.write_bytes(b"source")
