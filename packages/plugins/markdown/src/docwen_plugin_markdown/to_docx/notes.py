@@ -19,6 +19,12 @@ from zipfile import BadZipFile, ZipFile
 
 import lxml.etree as etree
 
+from docwen_plugin_markdown.source_protection import (
+    is_markdown_escaped,
+    markdown_semantic_protected_ranges,
+    overlaps_protected_range,
+)
+
 # ── OOXML constants ─────────────────────────────────────────────────────
 WML_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 XML_NS = "http://www.w3.org/XML/1998/namespace"
@@ -75,35 +81,28 @@ def _rewrite_reference_segments(
     internal_keys: dict[tuple[str, str], str],
     *,
     typed_endnotes: bool = True,
+    absolute_start: int = 0,
+    protected_ranges: list[tuple[int, int]] | None = None,
 ) -> str:
-    """Rewrite note references outside inline-code spans."""
+    """Rewrite only active note references, leaving protected source literal."""
 
-    def rewrite_segment(segment: str) -> str:
-        def replace(match: re.Match[str]) -> str:
-            kind, normalized_id, _spelling = _note_identity(match.group("label"), typed_endnotes=typed_endnotes)
-            return f"[^{internal_keys[(kind, normalized_id)]}]"
-
-        return _NOTE_REFERENCE_RE.sub(replace, segment)
-
+    protected = protected_ranges or []
     output: list[str] = []
     cursor = 0
-    while cursor < len(text):
-        tick = text.find("`", cursor)
-        if tick < 0:
-            output.append(rewrite_segment(text[cursor:]))
-            break
-        output.append(rewrite_segment(text[cursor:tick]))
-        run_end = tick
-        while run_end < len(text) and text[run_end] == "`":
-            run_end += 1
-        delimiter = text[tick:run_end]
-        close = text.find(delimiter, run_end)
-        if close < 0:
-            output.append(text[tick:])
-            break
-        close_end = close + len(delimiter)
-        output.append(text[tick:close_end])
-        cursor = close_end
+    for match in _NOTE_REFERENCE_RE.finditer(text):
+        match_start = absolute_start + match.start()
+        match_end = absolute_start + match.end()
+        if is_markdown_escaped(text, match.start()) or overlaps_protected_range(
+            protected,
+            match_start,
+            match_end,
+        ):
+            continue
+        kind, normalized_id, _spelling = _note_identity(match.group("label"), typed_endnotes=typed_endnotes)
+        output.append(text[cursor : match.start()])
+        output.append(f"[^{internal_keys[(kind, normalized_id)]}]")
+        cursor = match.end()
+    output.append(text[cursor:])
     return "".join(output)
 
 
@@ -117,6 +116,12 @@ def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
     """
 
     lines = md_body.splitlines(keepends=True)
+    line_starts: list[int] = []
+    offset = 0
+    for line in lines:
+        line_starts.append(offset)
+        offset += len(line)
+    protected_ranges = markdown_semantic_protected_ranges(md_body)
     fenced_lines: set[int] = set()
     definition_labels: dict[int, str] = {}
     continuation_leads: dict[int, int] = {}
@@ -164,6 +169,10 @@ def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
         definition_match = _NOTE_DEFINITION_RE.match(text)
         if definition_match is None:
             continue
+        definition_start = line_starts[index] + definition_match.start()
+        definition_end = line_starts[index] + definition_match.end()
+        if overlaps_protected_range(protected_ranges, definition_start, definition_end):
+            continue
 
         label = definition_match.group("label")
         kind, normalized_id, spelling = _note_identity(label, typed_endnotes=typed_endnotes)
@@ -185,23 +194,18 @@ def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
         if index in fenced_lines or index in definition_labels or index in continuation_leads:
             continue
         text = line.rstrip("\r\n")
-        cursor = 0
-        while cursor < len(text):
-            tick = text.find("`", cursor)
-            segment_end = len(text) if tick < 0 else tick
-            for match in _NOTE_REFERENCE_RE.finditer(text, cursor, segment_end):
-                kind, normalized_id, _spelling = _note_identity(match.group("label"), typed_endnotes=typed_endnotes)
-                reference_identities.append((kind, normalized_id))
-            if tick < 0:
-                break
-            run_end = tick
-            while run_end < len(text) and text[run_end] == "`":
-                run_end += 1
-            delimiter = text[tick:run_end]
-            close = text.find(delimiter, run_end)
-            if close < 0:
-                break
-            cursor = close + len(delimiter)
+        for match in _NOTE_REFERENCE_RE.finditer(text):
+            match_start = line_starts[index] + match.start()
+            match_end = line_starts[index] + match.end()
+            if is_markdown_escaped(text, match.start()) or overlaps_protected_range(
+                protected_ranges,
+                match_start,
+                match_end,
+            ):
+                continue
+            kind, normalized_id, _spelling = _note_identity(match.group("label"), typed_endnotes=typed_endnotes)
+            reference_identities.append((kind, normalized_id))
+
 
     for identity in reference_identities:
         if identity not in definitions:
@@ -243,7 +247,13 @@ def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
                 if 2 <= spaces < 4:
                     text = lead + "    " + remainder[spaces:]
         elif index not in fenced_lines:
-            text = _rewrite_reference_segments(text, internal_keys, typed_endnotes=typed_endnotes)
+            text = _rewrite_reference_segments(
+                text,
+                internal_keys,
+                typed_endnotes=typed_endnotes,
+                absolute_start=line_starts[index],
+                protected_ranges=protected_ranges,
+            )
         rewritten.append(text + newline)
     return "".join(rewritten)
 
