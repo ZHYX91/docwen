@@ -1019,10 +1019,7 @@ class ApplicationController:
                     derived_metadata.pop(FILE_ADMISSION_ACCEPTANCE_METADATA_KEY, None)
                     derived_metadata.pop(OOXML_SIGNATURE_INFO_METADATA_KEY, None)
                     source_machine_integrity = None
-                    if (
-                        "machine_input_size_bytes" in derived_metadata
-                        or "machine_input_sha256" in derived_metadata
-                    ):
+                    if "machine_input_size_bytes" in derived_metadata or "machine_input_sha256" in derived_metadata:
                         source_machine_integrity = {
                             "input_id": derived_metadata.get("machine_input_id"),
                             "size_bytes": derived_metadata.get("machine_input_size_bytes"),
