@@ -109,14 +109,33 @@ class TestProcessBodyFoundation:
             sum(child.get("type") == "footnote_ref" for node in cleaned_ast for child in node.get("children", [])) == 3
         )
 
-    def test_retired_endnote_syntax_is_rejected(self):
-        markdown = "Retired[^endnote-old].\n\n[^endnote-old]: Retired body.\n"
+    def test_endnote_dash_prefix_is_an_ordinary_footnote_id(self):
+        markdown = "Ordinary[^endnote-topic].\n\n[^endnote-topic]: Ordinary body.\n"
 
-        with pytest.raises(NoteWritebackError) as raised:
-            process_md_body_with_notes(markdown)
+        _cleaned_ast, note_ctx = process_md_body_with_notes(markdown)
 
-        assert raised.value.diagnostic_code == "MD2DOCX-NOTE-SYNTAX-INVALID"
-        assert "use the current endnote form" in str(raised.value)
+        assert len(note_ctx._footnote_children) == 1
+        assert note_ctx._endnote_children == {}
+        assert all(not key.upper().startswith("ENDNOTE-") for key in note_ctx._footnote_children)
+
+    def test_number_suite_lowercase_identity_keeps_strasse_variants_distinct(self):
+        markdown = (
+            "First[^Straße] second[^Strasse].\n\n"
+            "[^Straße]: sharp-s identity.\n"
+            "[^Strasse]: ss identity.\n"
+        )
+
+        _cleaned_ast, note_ctx = process_md_body_with_notes(markdown)
+
+        assert len(note_ctx._footnote_children) == 2
+        bodies = {
+            child.get("raw")
+            for paragraphs in note_ctx._footnote_children.values()
+            for paragraph in paragraphs
+            for child in paragraph
+            if child.get("type") == "text"
+        }
+        assert {"sharp-s identity.", "ss identity."} <= bodies
 
     @pytest.mark.parametrize(
         ("markdown", "message"),
