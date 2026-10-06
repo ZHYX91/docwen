@@ -71,42 +71,51 @@ def _note_identity(label: str, *, typed_endnotes: bool = True) -> tuple[str, str
     return kind, normalized_id, spelling
 
 
+def _mask_note_protected_source(source: str) -> str:
+    """Mask Markdown regions where note-looking text is literal metadata."""
+
+    ranges: list[tuple[int, int]] = []
+    patterns = (
+        re.compile(r"<!--.*?(?:-->|$)", re.DOTALL),
+        re.compile(r"%%.*?(?:%%|$)", re.DOTALL),
+        re.compile(r"(`+)(?:(?!\\1).)*\\1", re.DOTALL),
+        re.compile(r"!?\\[\\[[^\\]\\r\\n]+\\]\\]"),
+        re.compile(r"\\]\\((?:\\\\.|[^)\\r\\n])*\\)"),
+        re.compile(r"https?://[^\\s<]+"),
+        re.compile(r"<[^>\\r\\n]*>"),
+    )
+    for pattern in patterns:
+        ranges.extend(match.span() for match in pattern.finditer(source))
+    if not ranges:
+        return source
+
+    characters = list(source)
+    for range_start, range_end in sorted(ranges):
+        for index in range(range_start, range_end):
+            if characters[index] not in "\\r\\n":
+                characters[index] = " "
+    return "".join(characters)
+
+
 def _rewrite_reference_segments(
     text: str,
     internal_keys: dict[tuple[str, str], str],
     *,
+    scan_text: str | None = None,
     typed_endnotes: bool = True,
 ) -> str:
-    """Rewrite note references outside inline-code spans."""
+    """Rewrite note references using a same-length protected projection."""
 
-    def rewrite_segment(segment: str) -> str:
-        def replace(match: re.Match[str]) -> str:
-            kind, normalized_id, _spelling = _note_identity(match.group("label"), typed_endnotes=typed_endnotes)
-            return f"[^{internal_keys[(kind, normalized_id)]}]"
-
-        return _NOTE_REFERENCE_RE.sub(replace, segment)
-
+    source_for_scan = text if scan_text is None else scan_text
     output: list[str] = []
     cursor = 0
-    while cursor < len(text):
-        tick = text.find("`", cursor)
-        if tick < 0:
-            output.append(rewrite_segment(text[cursor:]))
-            break
-        output.append(rewrite_segment(text[cursor:tick]))
-        run_end = tick
-        while run_end < len(text) and text[run_end] == "`":
-            run_end += 1
-        delimiter = text[tick:run_end]
-        close = text.find(delimiter, run_end)
-        if close < 0:
-            output.append(text[tick:])
-            break
-        close_end = close + len(delimiter)
-        output.append(text[tick:close_end])
-        cursor = close_end
+    for match in _NOTE_REFERENCE_RE.finditer(source_for_scan):
+        output.append(text[cursor : match.start()])
+        kind, normalized_id, _spelling = _note_identity(match.group("label"), typed_endnotes=typed_endnotes)
+        output.append(f"[^{internal_keys[(kind, normalized_id)]}]")
+        cursor = match.end()
+    output.append(text[cursor:])
     return "".join(output)
-
 
 def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
     """Validate and normalize the frozen Obsidian note syntax for Mistune.
