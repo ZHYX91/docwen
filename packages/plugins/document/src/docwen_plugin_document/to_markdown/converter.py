@@ -2535,17 +2535,46 @@ class DocxToMarkdownConverter:
                 if formula_text.strip():
                     cell_text_parts.append(formula_text.strip())
             elif para is not None:
-                formatted = render_paragraph_runs(
-                    para,
-                    note_extractor=self._note_extractor,
-                    preserve_formatting=preserve_formatting,
-                    syntax_config=self._syntax_for_rendering(),
-                    style_detector_config=self._request_policy.style_detector,
+                semantic_text = self._semantic_v3_recovery.render_paragraph_text(
+                    para_elem,
+                    emit_references=self._extensions.captions_references,
                 )
+                if (
+                    self._extensions.captions_references
+                    and semantic_text is None
+                    and self._semantic_bookmark_inventory is not None
+                ):
+                    semantic_text = render_semantic_reference_text(
+                        para_elem,
+                        bookmark_inventory=self._semantic_bookmark_inventory,
+                    )
+                if semantic_text is not None:
+                    formatted = semantic_text
+                else:
+                    formatted = render_paragraph_runs(
+                        para,
+                        note_extractor=self._note_extractor,
+                        preserve_formatting=preserve_formatting,
+                        syntax_config=self._syntax_for_rendering(),
+                        style_detector_config=self._request_policy.style_detector,
+                    )
                 if formatted.strip():
                     cell_text_parts.append(formatted.strip())
             else:
-                text = self._extract_paragraph_text_raw(para_elem)
+                semantic_text = self._semantic_v3_recovery.render_paragraph_text(
+                    para_elem,
+                    emit_references=self._extensions.captions_references,
+                )
+                if (
+                    self._extensions.captions_references
+                    and semantic_text is None
+                    and self._semantic_bookmark_inventory is not None
+                ):
+                    semantic_text = render_semantic_reference_text(
+                        para_elem,
+                        bookmark_inventory=self._semantic_bookmark_inventory,
+                    )
+                text = semantic_text if semantic_text is not None else self._extract_paragraph_text_raw(para_elem)
                 if text.strip():
                     cell_text_parts.append(text.strip())
             if paragraph_image_renderer is not None:
