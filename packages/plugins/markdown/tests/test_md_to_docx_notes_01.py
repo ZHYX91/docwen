@@ -136,6 +136,30 @@ class TestProcessBodyFoundation:
         assert raised.value.diagnostic_code == "MD2DOCX-NOTE-SYNTAX-INVALID"
         assert message in str(raised.value)
 
+    def test_note_scanner_ignores_protected_contexts_and_keeps_active_reference(self):
+        markdown = """Escaped \[^missing-escaped].
+
+%% Hidden [^missing-obsidian-comment]. %%
+
+<!-- Hidden [^missing-html-comment]. -->
+
+[Link](https://example.test/[^missing-link-target])
+
+    [^missing-indented-code]
+
+Active[^ok].
+
+[^ok]: Active note.
+"""
+
+        projection = normalize_note_syntax(markdown)
+        _cleaned_ast, note_ctx = process_md_body_with_notes(markdown)
+
+        assert len(note_ctx._footnote_children) == 1
+        assert "Active note." in projection
+        assert "[^missing-link-target]" in projection
+        assert "[^missing-html-comment]" in projection
+
     def test_two_space_and_tab_continuations_stay_inside_note(self):
         markdown = """Body[^n].
 
