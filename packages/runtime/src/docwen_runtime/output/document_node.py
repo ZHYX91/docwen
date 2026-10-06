@@ -12,6 +12,8 @@ from html.entities import html5
 from pathlib import Path, PurePosixPath
 from urllib.parse import unquote
 
+from docwen_core.links import split_markdown_block_segments
+
 from docwen_core.models import (
     DOCUMENT_NODE_SCHEMA,
     ArtifactManifest,
@@ -341,14 +343,63 @@ def _rewrite_known_links(text: str, replacements: dict[str, str]) -> str:
         raw = match.group("target")
         semantic = _decode_html_attribute(raw)
         replaced = replace_target(semantic)
-        # Classify decoded HTML semantics, but keep untouched external/local
-        # attributes byte-for-byte. Only rewritten local values need escaping.
         target = raw if replaced == semantic else escape(replaced, quote=True)
         return f"{match.group('prefix')}{target}{match.group('suffix')}"
 
-    text = _MARKDOWN_LINK.sub(markdown_sub, text)
-    text = _WIKI_LINK.sub(wiki_sub, text)
-    return _HTML_LINK.sub(html_sub, text)
+    def rewrite_visible(segment: str) -> str:
+        segment = _MARKDOWN_LINK.sub(markdown_sub, segment)
+        segment = _WIKI_LINK.sub(wiki_sub, segment)
+        return _HTML_LINK.sub(html_sub, segment)
+
+    rewritten_blocks: list[str] = []
+    for block_text, is_literal_block in split_markdown_block_segments(text):
+        if is_literal_block:
+            rewritten_blocks.append(block_text)
+        else:
+            rewritten_blocks.append(_rewrite_outside_inline_code(block_text, rewrite_visible))
+    return "".join(rewritten_blocks)
+
+
+def _rewrite_outside_inline_code(text: str, rewrite) -> str:
+    """Apply rewrite only outside closed Markdown code spans."""
+
+    output: list[str] = []
+    cursor = 0
+    visible_start = 0
+    while cursor < len(text):
+        opening = text.find("`", cursor)
+        if opening < 0:
+            break
+        opening_end = opening
+        while opening_end < len(text) and text[opening_end] == "`":
+            opening_end += 1
+        delimiter_length = opening_end - opening
+        closing = _matching_backtick_delimiter(text, opening_end, delimiter_length)
+        if closing is None:
+            cursor = opening_end
+            continue
+        output.append(rewrite(text[visible_start:opening]))
+        close_end = closing + delimiter_length
+        output.append(text[opening:close_end])
+        visible_start = close_end
+        cursor = close_end
+    output.append(rewrite(text[visible_start:]))
+    return "".join(output)
+
+
+def _matching_backtick_delimiter(text: str, start: int, delimiter_length: int) -> int | None:
+    cursor = start
+    while cursor < len(text):
+        tick = text.find("`", cursor)
+        if tick < 0:
+            return None
+        run_end = tick
+        while run_end < len(text) and text[run_end] == "`":
+            run_end += 1
+        if run_end - tick == delimiter_length:
+            return tick
+        cursor = run_end
+    return None
 
 
 __all__ = [
