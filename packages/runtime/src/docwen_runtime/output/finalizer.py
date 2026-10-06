@@ -212,6 +212,7 @@ class OutputFinalizer:
                             policy.overwrite_mode,
                             input_path,
                             cancellation,
+                            allow_primary_input_replacement=bool(policy.output_path),
                         )
                     )
                 except CancellationRequested:
@@ -748,6 +749,8 @@ class OutputFinalizer:
         overwrite_mode: str,
         input_path: str,
         cancellation: CancellationTokenView | None,
+        *,
+        allow_primary_input_replacement: bool = False,
     ) -> _PreparedArtifact:
         if overwrite_mode not in {"error", "rename", "overwrite", "skip"}:
             raise ValueError(f"Unknown overwrite mode: {overwrite_mode!r}")
@@ -755,6 +758,13 @@ class OutputFinalizer:
         reused = cls._reuse_identical_input_artifact(artifact, output_dir, overwrite_mode, input_path, cancellation)
         suggested = artifact.suggested_name or os.path.basename(artifact.staging_path)
         destination, suggested = cls._safe_final_path(output_dir, suggested)
+        if (
+            artifact.is_primary
+            and input_path
+            and not allow_primary_input_replacement
+            and os.path.normcase(destination) == os.path.normcase(os.path.abspath(input_path))
+        ):
+            raise ValueError("Primary output must not replace its input file")
         rename_base = destination if overwrite_mode == "rename" else None
         if reused is not None:
             return _PreparedArtifact(
