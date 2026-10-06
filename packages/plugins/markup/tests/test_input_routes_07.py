@@ -111,6 +111,63 @@ class TestEpubToMd:
         assert markdown.strip() == "![chapter image](pic.png)"
 
     @pytest.mark.integration
+    def test_epub_same_basename_images_bind_to_each_chapter_context(self, pipeline, tmp_path) -> None:
+        from ebooklib import epub
+
+        from ._input_routes_support import _test_png_bytes
+
+        book = epub.EpubBook()
+        book.set_identifier("duplicate-image-context")
+        book.set_title("Duplicate image context")
+        book.set_language("en")
+        first_bytes = _test_png_bytes((220, 20, 20))
+        second_bytes = _test_png_bytes((20, 20, 220))
+        book.add_item(
+            epub.EpubItem(
+                uid="img-one",
+                file_name="chapters/one/images/pic.png",
+                media_type="image/png",
+                content=first_bytes,
+            )
+        )
+        book.add_item(
+            epub.EpubItem(
+                uid="img-two",
+                file_name="chapters/two/images/pic.png",
+                media_type="image/png",
+                content=second_bytes,
+            )
+        )
+        chapter_one = epub.EpubHtml(title="One", file_name="chapters/one/ch1.xhtml", lang="en")
+        chapter_one.content = "<html><body><p>First</p><img src='images/pic.png' alt='first'></body></html>"
+        chapter_two = epub.EpubHtml(title="Two", file_name="chapters/two/ch2.xhtml", lang="en")
+        chapter_two.content = "<html><body><p>Second</p><img src='images/pic.png' alt='second'></body></html>"
+        book.add_item(chapter_one)
+        book.add_item(chapter_two)
+        book.toc = [chapter_one, chapter_two]
+        book.spine = [chapter_one, chapter_two]
+
+        epub_path = tmp_path / "duplicate-images.epub"
+        epub.write_epub(str(epub_path), book)
+        output_dir = tmp_path / "output_duplicate_images"
+        output_dir.mkdir()
+        _plugin, task_mgr, _ws_mgr = pipeline
+
+        result = _run_request(task_mgr, epub_path, "epub", output_dir, image_link_style="markdown_embed")
+
+        assert result.success, result.error
+        images = [artifact for artifact in result.artifacts if artifact.kind == "image"]
+        assert len(images) == 2
+        assert Path(images[0].staging_path).read_bytes() == first_bytes
+        assert Path(images[1].staging_path).read_bytes() == second_bytes
+        content = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
+        first_link = f"![first]({images[0].suggested_name})"
+        second_link = f"![second]({images[1].suggested_name})"
+        assert first_link in content
+        assert second_link in content
+        assert content.index(first_link) < content.index(second_link)
+
+    @pytest.mark.integration
     def test_epub_to_md_matches_old_system_semantic_fixture(self, pipeline, tmp_path) -> None:
         """Current EPUB→MD should preserve old-system core book semantics."""
         from ebooklib import epub
