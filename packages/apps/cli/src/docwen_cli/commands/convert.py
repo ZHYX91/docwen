@@ -266,6 +266,19 @@ def execute_convert(
     try:
         # ── Aggregate path (merge-* actions: many-to-one) ──────────
         if execution_request.public_command(args).startswith("merge "):
+            if invalid_files:
+                return _print_invalid_input(
+                    action,
+                    args,
+                    "Aggregate operations require every requested input to pass admission.",
+                    error_code="invalid_input",
+                    details={
+                        "invalid_inputs": [
+                            {"file": file_path, "reason": reason}
+                            for file_path, reason in invalid_files
+                        ]
+                    },
+                )
             if len(valid_files) < 2:
                 return _print_invalid_input(
                     action,
@@ -610,12 +623,13 @@ def _execute_batch(
                 future = executor.submit(_convert_one, request)
                 future_to_index[future] = result_index
 
-            # Collect results in original order
+            # Collect results in original order.  When stop-on-error fires,
+            # successfully cancelled queued work is skipped, but already-running
+            # work is still collected so the reported result matches real outputs.
+            stop_requested = False
             for future in as_completed(future_to_index):
                 idx = future_to_index[future]
-                try:
-                    result = future.result()
-                except Exception as exc:
+                if future.cancelled():
                     from docwen_core.models.result import (
                         ConversionErrorInfo,
                         ConversionMetrics,
@@ -626,11 +640,30 @@ def _execute_batch(
                         task_id=f"batch-{idx}",
                         success=False,
                         error=ConversionErrorInfo(
-                            error_type="conversion_failed",
-                            message=str(exc),
+                            error_type="skipped",
+                            message="Skipped due to previous error",
                         ),
                         metrics=ConversionMetrics(),
                     )
+                else:
+                    try:
+                        result = future.result()
+                    except Exception as exc:
+                        from docwen_core.models.result import (
+                            ConversionErrorInfo,
+                            ConversionMetrics,
+                            ConversionResult,
+                        )
+
+                        result = ConversionResult(
+                            task_id=f"batch-{idx}",
+                            success=False,
+                            error=ConversionErrorInfo(
+                                error_type="conversion_failed",
+                                message=str(exc),
+                            ),
+                            metrics=ConversionMetrics(),
+                        )
 
                 results[idx] = result
                 seen_result_count += 1
@@ -638,30 +671,16 @@ def _execute_batch(
                 if progress_cb:
                     progress_cb(f"... {seen_result_count}/{len(files)}")
 
-                # Stop on error: cancel remaining futures
-                if stop_on_error and not getattr(result, "success", False):
-                    for f in future_to_index:
-                        if not f.done():
-                            f.cancel()
-                    # Mark remaining as skipped
-                    for j, r in enumerate(results):
-                        if r is None and j > idx:
-                            from docwen_core.models.result import (
-                                ConversionErrorInfo,
-                                ConversionMetrics,
-                                ConversionResult,
-                            )
-
-                            results[j] = ConversionResult(
-                                task_id=f"batch-{j}",
-                                success=False,
-                                error=ConversionErrorInfo(
-                                    error_type="skipped",
-                                    message="Skipped due to previous error",
-                                ),
-                                metrics=ConversionMetrics(),
-                            )
-                    break
+                if (
+                    stop_on_error
+                    and not stop_requested
+                    and not getattr(result, "success", False)
+                    and getattr(getattr(result, "error", None), "error_type", "") != "skipped"
+                ):
+                    stop_requested = True
+                    for pending in future_to_index:
+                        if pending is not future and not pending.done():
+                            pending.cancel()
     except KeyboardInterrupt:
         if json_mode:
             from docwen_cli.presenters.json_presenter import JsonPresenter
