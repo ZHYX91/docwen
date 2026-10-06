@@ -14,6 +14,37 @@ from docx.oxml.ns import qn
 from docx.text.run import Run
 
 
+def paragraph_visible_runs(paragraph) -> list[Run]:
+    """Return visible paragraph runs in the same order as Paragraph.text.
+
+    python-docx excludes runs nested in hyperlinks from Paragraph.runs even
+    though Paragraph.text includes their visible text. Proofreading offsets
+    therefore use iter_inner_content when available and flatten hyperlink
+    runs into one coordinate stream.
+    """
+
+    iterator = getattr(paragraph, "iter_inner_content", None)
+    if not callable(iterator):
+        return list(paragraph.runs)
+
+    visible: list[Run] = []
+    for item in iterator():
+        if isinstance(item, Run):
+            visible.append(item)
+            continue
+        nested_runs = getattr(item, "runs", None)
+        if nested_runs is not None:
+            visible.extend(nested_runs)
+    return visible
+
+
+def _coordinate_runs(paragraph) -> list[Run]:
+    runs = paragraph_visible_runs(paragraph)
+    if "".join(run.text for run in runs) != paragraph.text:
+        return []
+    return runs
+
+
 def plan_run_splits(paragraph, errors: list) -> list[int]:
     """Determine which character positions in *paragraph* need run splits.
 
@@ -23,14 +54,15 @@ def plan_run_splits(paragraph, errors: list) -> list[int]:
     Returns an empty list when no splitting is needed (all error boundaries
     already fall on run boundaries).
     """
-    if not paragraph.runs or not errors:
+    runs = _coordinate_runs(paragraph)
+    if not runs or not errors:
         return []
 
     split_positions: set[int] = set()
     for err in errors:
         for pos in (err.start_pos, err.end_pos):
             current = 0
-            for run in paragraph.runs:
+            for run in runs:
                 run_len = len(run.text)
                 if current < pos < current + run_len:
                     split_positions.add(pos)
@@ -49,11 +81,14 @@ def ensure_run_at_position(paragraph, position: int) -> object:
 
     Returns the ``Run`` object that starts at *position*.
     """
-    if not paragraph.runs:
-        return paragraph.add_run("")
+    runs = _coordinate_runs(paragraph)
+    if not runs:
+        if not paragraph.text:
+            return paragraph.add_run("")
+        return runs[-1] if runs else (paragraph.runs[-1] if paragraph.runs else paragraph.add_run(""))
 
     current = 0
-    for run in paragraph.runs:
+    for run in runs:
         run_len = len(run.text)
         run_end = current + run_len
 
@@ -106,12 +141,16 @@ def ensure_run_at_position(paragraph, position: int) -> object:
             new_t.text = after_text
             new_r.append(new_t)
 
-            # Insert the new run immediately after the original
-            p_elem = paragraph._element
-            idx = list(p_elem).index(r_elem)
-            p_elem.insert(idx + 1, new_r)
+            # Insert beside the original run inside its actual owner.
+            # Hyperlink runs are children of w:hyperlink, not direct w:p
+            # children, so inserting into paragraph._element would move text
+            # out of the hyperlink and corrupt both coordinates and semantics.
+            parent = r_elem.getparent()
+            if parent is None:
+                return run
+            idx = list(parent).index(r_elem)
+            parent.insert(idx + 1, new_r)
 
-            # Return a Run-like object wrapping the new element
             return Run(new_r, run._parent)  # type: ignore[arg-type]
 
         current = run_end
@@ -130,11 +169,15 @@ def runs_for_range(paragraph, start: int, end: int) -> list[Run]:
     if start < 0 or end <= start or end > len(paragraph.text):
         return []
 
+    runs = _coordinate_runs(paragraph)
+    if not runs:
+        return []
+
     selected: list[Run] = []
     selected_start: int | None = None
     selected_end: int | None = None
     current = 0
-    for run in paragraph.runs:
+    for run in runs:
         run_end = current + len(run.text)
         if run_end > start and current < end:
             if selected_start is None:
