@@ -77,6 +77,41 @@ class TestHtmlToMd:
         assert detached.text == "DETACHED_TOKEN"
         assert detached.attrib == {}
 
+    @pytest.mark.contract
+    def test_html_decoder_honors_admission_and_meta_charset(self) -> None:
+        from docwen_plugin_markup.web_archive.converter import _decode_html_payload
+
+        body = "<html><head><meta charset='gb18030'><title>中文标题</title></head><body>中文正文</body></html>"
+        payload = body.encode("gb18030")
+
+        assert _decode_html_payload(payload, admitted_encoding="utf-8") == body
+        assert _decode_html_payload("纯文本中文".encode("gb18030"), admitted_encoding="gb18030") == "纯文本中文"
+
+    @pytest.mark.integration
+    def test_html_companion_prefixed_src_is_not_joined_twice(self, pipeline, tmp_path) -> None:
+        from ._input_routes_support import _test_png_bytes
+
+        _plugin, task_mgr, _ws_mgr = pipeline
+        html_path = tmp_path / "saved.html"
+        resource_dir = tmp_path / "saved_files"
+        resource_dir.mkdir()
+        (resource_dir / "chart.png").write_bytes(_test_png_bytes())
+        html_path.write_text(
+            "<html><body><img src='saved_files/chart.png' alt='chart'></body></html>",
+            encoding="utf-8",
+        )
+        output_dir = tmp_path / "output_companion_prefixed"
+        output_dir.mkdir()
+
+        result = _run_request(task_mgr, html_path, "html", output_dir)
+
+        assert result.success, result.error
+        image_artifacts = [artifact for artifact in result.artifacts if artifact.kind == "image"]
+        assert len(image_artifacts) == 1
+        content = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
+        assert "chart.png" in content
+        assert "saved_files/saved_files" not in content
+
     @pytest.mark.integration
     def test_html_conversion_succeeds(self, pipeline, sample_html_file, tmp_path) -> None:
         """HTML file must convert to Markdown successfully."""
