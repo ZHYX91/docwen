@@ -1034,7 +1034,7 @@ class ApplicationController:
                                 converted_digest.update(converted_chunk)
                         derived_metadata["machine_input_size_bytes"] = converted_size
                         derived_metadata["machine_input_sha256"] = converted_digest.hexdigest()
-                    derived_metadata["_docwen_preconversion_source"] = {
+                    source_provenance = {
                         "path": ref.path,
                         "format": actual_format,
                         "sha256": pre_result.source_sha256,
@@ -1042,8 +1042,10 @@ class ApplicationController:
                         "category": ref.category,
                         "warning_message": ref.warning_message,
                         "inspection": source_inspection if isinstance(source_inspection, dict) else None,
-                        "machine_input": source_machine_integrity,
                     }
+                    if source_machine_integrity is not None:
+                        source_provenance["machine_input"] = source_machine_integrity
+                    derived_metadata["_docwen_preconversion_source"] = source_provenance
                     new_refs.append(
                         FileRef(
                             path=pre_result.pre_converted_path,
