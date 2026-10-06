@@ -15,7 +15,7 @@ import base64
 import hashlib
 import re
 import unicodedata
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, cast
 
@@ -143,6 +143,7 @@ def analyze_markdown_semantics_v3(
     semantic_id_replacements: Mapping[int, str] | None = None,
     extensions: MarkdownExtensions | None = None,
     consumer_profile: SemanticConsumerProfile = "frozen_v3",
+    heading_number_provider: Callable[[str, int], str] | None = None,
 ) -> MarkdownSemanticsV3Analysis:
     """Parse one authenticated Markdown source into the v3 source oracle.
 
@@ -221,7 +222,11 @@ def analyze_markdown_semantics_v3(
             heading_counters[level - 1] += 1
             for position in range(level, 9):
                 heading_counters[position] = 0
-            number = ".".join(str(value) for value in heading_counters[:level] if value)
+            number = (
+                heading_number_provider(title, level)
+                if consumer_profile == "number_suite_direct" and heading_number_provider is not None
+                else ".".join(str(value) for value in heading_counters[:level] if value)
+            )
             active_heading_titles = active_heading_titles[: level - 1]
             active_heading_titles.append(title)
             if anchor is None:
