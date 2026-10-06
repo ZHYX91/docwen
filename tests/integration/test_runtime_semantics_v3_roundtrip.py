@@ -62,11 +62,11 @@ See [[Page#^raw]], ![[Page#^raw]], @[[#^intro|Intro]], @[[#Other|Other]], and @f
         document_xml = package.read("word/document.xml").decode()
         package_text = b"\n".join(package.read(name) for name in package.namelist()).decode(errors="ignore")
     assert "SEQ " not in document_xml
-    assert " REF DW_T_" in document_xml
+    assert " REF DW_T_" not in document_xml
     assert ANCHOR_TAG_PREFIX in document_xml
     assert TARGET_MAP_NAMESPACE in package_text
     assert SOFT_REFERENCE_MAP_NAMESPACE in package_text
-    assert REFERENCE_OCCURRENCE_MAP_NAMESPACE in package_text
+    assert REFERENCE_OCCURRENCE_MAP_NAMESPACE not in package_text
 
     returned = docx_to_md(
         round_trip_runtime,
