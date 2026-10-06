@@ -103,6 +103,54 @@ def test_append_formatted_run_text_preserves_gray_shading_as_inline_code():
     assert "".join(parts) == "`value`"
 
 
+def test_inline_code_uses_collision_free_backtick_delimiter():
+    doc = Document()
+    run = doc.add_paragraph().add_run("a`b")
+    shading = OxmlElement("w:shd")
+    shading.set(qn("w:fill"), "D9D9D9")
+    run._r.get_or_add_rPr().append(shading)
+
+    rendered = render_paragraph_runs(
+        doc.paragraphs[0],
+        syntax_config=DocxMarkdownSyntaxConfig(),
+    )
+
+    assert rendered == "`` a`b ``"
+
+
+def test_adjacent_inline_code_runs_recompute_delimiter_after_coalescing():
+    doc = Document()
+    paragraph = doc.add_paragraph()
+    first = paragraph.add_run("a`")
+    second = paragraph.add_run("`b")
+    for run in (first, second):
+        shading = OxmlElement("w:shd")
+        shading.set(qn("w:fill"), "D9D9D9")
+        run._r.get_or_add_rPr().append(shading)
+
+    rendered = render_paragraph_runs(
+        paragraph,
+        syntax_config=DocxMarkdownSyntaxConfig(),
+    )
+
+    assert rendered == "``` a``b ```"
+
+
+def test_inline_code_preserves_edge_backticks_with_padding():
+    doc = Document()
+    run = doc.add_paragraph().add_run("`edge`")
+    shading = OxmlElement("w:shd")
+    shading.set(qn("w:fill"), "D9D9D9")
+    run._r.get_or_add_rPr().append(shading)
+
+    rendered = render_paragraph_runs(
+        doc.paragraphs[0],
+        syntax_config=DocxMarkdownSyntaxConfig(),
+    )
+
+    assert rendered == "`` `edge` ``"
+
+
 def test_render_paragraph_runs_coalesces_adjacent_runs_through_shared_helper():
     doc = Document()
     paragraph = doc.add_paragraph()
