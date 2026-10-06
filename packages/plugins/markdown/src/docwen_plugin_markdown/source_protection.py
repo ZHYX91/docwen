@@ -25,6 +25,7 @@ def markdown_semantic_protected_ranges(source: str) -> list[tuple[int, int]]:
     ranges: list[tuple[int, int]] = []
     ranges.extend(_paired_ranges(source, "%%", "%%"))
     ranges.extend(_paired_ranges(source, "<!--", "-->"))
+    ranges.extend(_escaped_semantic_token_ranges(source))
     ranges.extend(_inline_code_ranges(source))
     ranges.extend(_inline_link_destination_ranges(source))
     ranges.extend(match.span() for match in _HTML_TAG_RE.finditer(source))
@@ -55,6 +56,20 @@ def _paired_ranges(source: str, opener: str, closer: str) -> list[tuple[int, int
         end = close + len(closer)
         ranges.append((start, end))
         cursor = end
+    return ranges
+
+
+def _escaped_semantic_token_ranges(source: str) -> list[tuple[int, int]]:
+    ranges: list[tuple[int, int]] = []
+    token_patterns = (
+        re.compile(r"@\[\[[^\]\r\n]+\]\]"),
+        re.compile(r"\[\[[^\]\r\n]+\]\]"),
+        re.compile(r"\[\^[^\]\r\n]+\]"),
+    )
+    for pattern in token_patterns:
+        for match in pattern.finditer(source):
+            if is_markdown_escaped(source, match.start()):
+                ranges.append(match.span())
     return ranges
 
 
