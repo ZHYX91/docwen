@@ -622,7 +622,6 @@ class MachineProtocolServer:
             item.evidence_schema != "docwen.machine.diagnostic_evidence.v1"
             or source is None
             or source_range is None
-            or item.level != "error"
             or item.artifact_id is not None
             or not item.code.startswith("docwen.markdown.")
             or not _IDENTIFIER.fullmatch(source.input_id)
