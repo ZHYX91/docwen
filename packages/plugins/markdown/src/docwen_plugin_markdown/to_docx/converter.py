@@ -181,6 +181,10 @@ def _option_or_config(
     return value
 
 
+def _no_direct_heading_number(_title: str, _level: int) -> str:
+    return ""
+
+
 def _direct_heading_number_provider(
     scheme_config: dict[str, dict[str, str]],
     *,
@@ -745,8 +749,7 @@ class MdToDocxConverter:
             # Heading-number view before inert markers are materialized.
             if direct_number_suite:
                 if scheme_config is None:
-                    def heading_number_provider(_title: str, _level: int) -> str:
-                        return ""
+                    heading_number_provider = _no_direct_heading_number
                 else:
                     heading_number_provider = _direct_heading_number_provider(
                         scheme_config,
