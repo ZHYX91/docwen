@@ -117,6 +117,7 @@ def _rewrite_reference_segments(
     output.append(text[cursor:])
     return "".join(output)
 
+
 def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
     """Validate and normalize the frozen Obsidian note syntax for Mistune.
 
@@ -127,6 +128,9 @@ def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
     """
 
     lines = md_body.splitlines(keepends=True)
+    protected_lines = _mask_note_protected_source(md_body).splitlines(keepends=True)
+    if len(protected_lines) != len(lines):
+        raise AssertionError("note protection projection changed line cardinality")
     fenced_lines: set[int] = set()
     definition_labels: dict[int, str] = {}
     continuation_leads: dict[int, int] = {}
@@ -139,6 +143,7 @@ def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
 
     for index, line in enumerate(lines):
         text = line.rstrip("\r\n")
+        protected_text = protected_lines[index].rstrip("\r\n")
 
         if active_definition_lead is not None:
             if not text.strip():
@@ -163,7 +168,7 @@ def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
                 fence_length = 0
             continue
 
-        fence_match = _FENCE_OPEN_RE.match(text)
+        fence_match = _FENCE_OPEN_RE.match(protected_text)
         if fence_match is not None:
             fence = fence_match.group("fence")
             fence_char = fence[0]
@@ -171,7 +176,7 @@ def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
             fenced_lines.add(index)
             continue
 
-        definition_match = _NOTE_DEFINITION_RE.match(text)
+        definition_match = _NOTE_DEFINITION_RE.match(protected_text)
         if definition_match is None:
             continue
 
@@ -195,11 +200,12 @@ def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
         if index in fenced_lines or index in definition_labels or index in continuation_leads:
             continue
         text = line.rstrip("\r\n")
+        protected_text = protected_lines[index].rstrip("\r\n")
         cursor = 0
         while cursor < len(text):
             tick = text.find("`", cursor)
             segment_end = len(text) if tick < 0 else tick
-            for match in _NOTE_REFERENCE_RE.finditer(text, cursor, segment_end):
+            for match in _NOTE_REFERENCE_RE.finditer(protected_text, cursor, segment_end):
                 kind, normalized_id, _spelling = _note_identity(match.group("label"), typed_endnotes=typed_endnotes)
                 reference_identities.append((kind, normalized_id))
             if tick < 0:
@@ -223,14 +229,15 @@ def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
         if identity not in ordered_identities:
             ordered_identities.append(identity)
     internal_keys: dict[tuple[str, str], str] = {}
+    footnote_index = 0
+    endnote_index = 0
     for identity in ordered_identities:
-        label, spelling = definitions[identity]
         if identity[0] == "footnote":
-            note_id = label[len("footnote:") :] if spelling == "explicit" else label
-            internal_keys[identity] = note_id
+            footnote_index += 1
+            internal_keys[identity] = f"{_INTERNAL_FOOTNOTE_PREFIX_UC}{footnote_index}"
         else:
-            note_id = label[len("endnote:") :]
-            internal_keys[identity] = f"ENDNOTE-{note_id}"
+            endnote_index += 1
+            internal_keys[identity] = f"{_INTERNAL_ENDNOTE_PREFIX_UC}{endnote_index}"
 
     rewritten: list[str] = []
     for index, line in enumerate(lines):
@@ -253,7 +260,12 @@ def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
                 if 2 <= spaces < 4:
                     text = lead + "    " + remainder[spaces:]
         elif index not in fenced_lines:
-            text = _rewrite_reference_segments(text, internal_keys, typed_endnotes=typed_endnotes)
+            text = _rewrite_reference_segments(
+                text,
+                internal_keys,
+                scan_text=protected_lines[index].rstrip("\r\n"),
+                typed_endnotes=typed_endnotes,
+            )
         rewritten.append(text + newline)
     return "".join(rewritten)
 
