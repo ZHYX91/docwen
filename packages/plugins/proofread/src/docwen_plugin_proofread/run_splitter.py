@@ -155,8 +155,8 @@ def ensure_run_at_position(paragraph, position: int) -> object:
 
         current = run_end
 
-    # Position is beyond all existing runs — return the last run
-    return paragraph.runs[-1] if paragraph.runs else paragraph.add_run("")
+    # Position is beyond all existing runs — return the last visible run.
+    return runs[-1]
 
 
 def runs_for_range(paragraph, start: int, end: int) -> list[Run]:
