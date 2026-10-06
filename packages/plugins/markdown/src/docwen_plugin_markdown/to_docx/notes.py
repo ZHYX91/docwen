@@ -78,11 +78,11 @@ def _mask_note_protected_source(source: str) -> str:
     patterns = (
         re.compile(r"<!--.*?(?:-->|$)", re.DOTALL),
         re.compile(r"%%.*?(?:%%|$)", re.DOTALL),
-        re.compile(r"(`+)(?:(?!\\1).)*\\1", re.DOTALL),
-        re.compile(r"!?\\[\\[[^\\]\\r\\n]+\\]\\]"),
-        re.compile(r"\\]\\((?:\\\\.|[^)\\r\\n])*\\)"),
-        re.compile(r"https?://[^\\s<]+"),
-        re.compile(r"<[^>\\r\\n]*>"),
+        re.compile(r"(`+)(?:(?!\1).)*\1", re.DOTALL),
+        re.compile(r"!?\[\[[^\]\r\n]+\]\]"),
+        re.compile(r"\]\((?:\\.|[^)\r\n])*\)"),
+        re.compile(r"https?://[^\s<]+"),
+        re.compile(r"<[^>\r\n]*>"),
     )
     for pattern in patterns:
         ranges.extend(match.span() for match in pattern.finditer(source))
@@ -92,10 +92,9 @@ def _mask_note_protected_source(source: str) -> str:
     characters = list(source)
     for range_start, range_end in sorted(ranges):
         for index in range(range_start, range_end):
-            if characters[index] not in "\\r\\n":
+            if characters[index] not in "\r\n":
                 characters[index] = " "
     return "".join(characters)
-
 
 def _rewrite_reference_segments(
     text: str,
