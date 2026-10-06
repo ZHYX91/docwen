@@ -27,6 +27,7 @@ def test_xlsx_preserves_zero_header_structural_table_rows(tmp_path: Path) -> Non
     )
 
     sheet = workbook.active
+    assert sheet is not None
     assert sheet["A1"].value == "Alice"
     assert sheet["B1"].value == "10"
     assert sheet["A2"].value == "Bob"
@@ -39,6 +40,7 @@ def test_xlsx_preserves_multi_header_row_header_and_merge_geometry(tmp_path: Pat
     result, workbook = _convert_xlsx(tmp_path, source)
 
     sheet = workbook.active
+    assert sheet is not None
     assert [sheet.cell(row=2, column=column).value for column in range(1, 4)] == ["Quarter", "Q1", "Q2"]
     assert [sheet.cell(row=3, column=column).value for column in range(1, 4)] == ["North", "10", "12"]
     assert {str(merged) for merged in sheet.merged_cells.ranges} == {"B1:C1", "A3:A4"}
@@ -51,6 +53,7 @@ def test_xlsx_preserves_escaped_literal_merge_markers(tmp_path: Path) -> None:
     _result, workbook = _convert_xlsx(tmp_path, source)
 
     sheet = workbook.active
+    assert sheet is not None
     assert sheet["B1"].value == "<"
     assert sheet["B3"].value == "^"
     assert not sheet.merged_cells.ranges
