@@ -7,6 +7,7 @@ and delegates note references to NoteExtractor.
 from __future__ import annotations
 
 from collections.abc import Callable
+import re
 from typing import Any
 
 from docwen_core.docx_parsing.format_features import (
@@ -54,6 +55,55 @@ def _append_wrapped(parts: list[str], raw_text: str, wrappers: list[tuple[str, s
             parts[-1] = _apply_wrappers(previous_inner + raw_text, wrappers)
             return
     parts.append(rendered)
+
+
+def _longest_backtick_run(text: str) -> int:
+    longest = 0
+    current = 0
+    for character in text:
+        if character == "`":
+            current += 1
+            longest = max(longest, current)
+        else:
+            current = 0
+    return longest
+
+
+def _render_code_span(text: str) -> str:
+    """Render one exact code-span payload with a collision-free delimiter."""
+
+    marker = "`" * max(1, _longest_backtick_run(text) + 1)
+    if text and not text.isspace():
+        return f"{marker} {text} {marker}"
+    return f"{marker}{text}{marker}"
+
+
+def _decode_rendered_code_span(value: str) -> str | None:
+    """Recover the payload produced by :func:`_render_code_span`."""
+
+    match = re.match(r"^(`+)", value)
+    if match is None:
+        return None
+    marker = match.group(1)
+    if len(value) < len(marker) * 2 or not value.endswith(marker):
+        return None
+    payload = value[len(marker) : -len(marker)]
+    if payload and not payload.isspace() and payload.startswith(" ") and payload.endswith(" "):
+        payload = payload[1:-1]
+    return payload
+
+
+def _append_code_wrapped(parts: list[str], raw_text: str, wrappers: list[tuple[str, str]]) -> None:
+    """Append code text, safely coalescing adjacent equally-formatted runs."""
+
+    if parts:
+        previous_inner = _unwrap_wrappers(parts[-1], wrappers)
+        if previous_inner is not None:
+            previous_code = _decode_rendered_code_span(previous_inner)
+            if previous_code is not None:
+                parts[-1] = _apply_wrappers(_render_code_span(previous_code + raw_text), wrappers)
+                return
+    parts.append(_apply_wrappers(_render_code_span(raw_text), wrappers))
 
 
 def _marker_pair(kind: str, config: DocxMarkdownSyntaxConfig) -> tuple[str, str]:
@@ -184,7 +234,7 @@ def append_formatted_run_text(
     has_shading = has_shading or run_style_type == "code"
 
     wrappers = _format_wrappers(
-        has_shading=has_shading,
+        has_shading=False if has_shading else has_shading,
         has_highlight=has_highlight,
         is_superscript=is_superscript,
         is_subscript=is_subscript,
@@ -194,7 +244,10 @@ def append_formatted_run_text(
         is_italic=is_italic,
         syntax_config=syntax_config,
     )
-    _append_wrapped(parts, raw_text, wrappers)
+    if has_shading:
+        _append_code_wrapped(parts, raw_text, wrappers)
+    else:
+        _append_wrapped(parts, raw_text, wrappers)
 
 
 def resolve_hyperlink_target(para: Any, hyperlink_element: Any) -> str | None:
