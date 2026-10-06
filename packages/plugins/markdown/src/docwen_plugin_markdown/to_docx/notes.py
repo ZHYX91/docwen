@@ -336,7 +336,15 @@ def extract_notes_from_ast(
                 if not key:
                     continue
                 para_children = _extract_inline_children_per_para(item.get("children", []))
-                if key.upper().startswith(ENDNOTE_PREFIX_UC):
+                decoded = decode_internal_note_key(key)
+                if decoded is not None:
+                    kind, clean_id = decoded
+                    if kind == "endnote":
+                        note_ctx._endnote_children[clean_id] = para_children
+                    else:
+                        note_ctx._footnote_children[clean_id] = para_children
+                elif key.upper().startswith(ENDNOTE_PREFIX_UC):
+                    # Backward-compatible support for pre-opaque AST fixtures.
                     clean_id = key[_ENDNOTE_PFX_LEN:]
                     note_ctx._endnote_children[clean_id] = para_children
                 else:
@@ -395,6 +403,17 @@ def _resolve_style_id_by_name(doc, style_name: str) -> str | None:
 
 
 # ── NoteContext ──────────────────────────────────────────────────────────
+
+
+def decode_internal_note_key(key: str) -> tuple[str, str] | None:
+    """Decode one opaque request-local note key."""
+
+    upper = key.upper()
+    if upper.startswith(_INTERNAL_ENDNOTE_PREFIX_UC):
+        return "endnote", key[len(_INTERNAL_ENDNOTE_PREFIX_UC) :]
+    if upper.startswith(_INTERNAL_FOOTNOTE_PREFIX_UC):
+        return "footnote", key[len(_INTERNAL_FOOTNOTE_PREFIX_UC) :]
+    return None
 
 
 class NoteContext:
@@ -498,8 +517,11 @@ class NoteContext:
 
         Accepts keys with or without the ``ENDNOTE-`` prefix.
         """
-        # Normalise: strip prefix if present
-        clean_key = md_key[_ENDNOTE_PFX_LEN:] if md_key.upper().startswith(ENDNOTE_PREFIX_UC) else md_key
+        decoded = decode_internal_note_key(md_key)
+        if decoded is not None and decoded[0] == "endnote":
+            clean_key = decoded[1]
+        else:
+            clean_key = md_key[_ENDNOTE_PFX_LEN:] if md_key.upper().startswith(ENDNOTE_PREFIX_UC) else md_key
 
         if clean_key not in self._endnote_children:
             return None
