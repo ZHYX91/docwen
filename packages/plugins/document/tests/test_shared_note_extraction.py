@@ -71,6 +71,7 @@ def test_note_content_preserves_codespan_with_embedded_backtick():
 
     assert _extract_note_content(note, WML_NS, "footnoteRef") == "``a`b``"
 
+
 def test_build_note_definitions_formats_multiline_content():
     notes = {5: "第一行\n第二行"}
     assert build_note_definitions(notes, {5: "1"}) == "[^1]: 第一行\n    第二行"
