@@ -19,6 +19,7 @@ from __future__ import annotations
 import base64
 import hashlib
 from dataclasses import dataclass
+from collections.abc import Callable
 from typing import Any, Literal
 
 from docwen_core.docx_semantics_v3 import fenced_source_identity_from_mapping_v3
@@ -94,6 +95,7 @@ def prepare_runtime_semantics_v3(
     input_id: str,
     extensions: MarkdownExtensions | None = None,
     consumer_profile: SemanticConsumerProfile = "frozen_v3",
+    heading_number_provider: Callable[[str, int], str] | None = None,
 ) -> RuntimeSemanticsV3Plan:
     """Analyze and shield one exact accepted input before generic processing."""
 
@@ -104,6 +106,7 @@ def prepare_runtime_semantics_v3(
                 input_id=input_id,
                 extensions=extensions,
                 consumer_profile="number_suite_direct",
+                heading_number_provider=heading_number_provider,
             )
             if consumer_profile == "number_suite_direct"
             else analyze_markdown_semantics_v3(
