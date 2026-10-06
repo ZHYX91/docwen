@@ -274,6 +274,17 @@ def analyze_markdown_semantics_v3(
             block.data["content"],
             absolute_start=int(block.data["content_start"]),
         )
+        if anchor is None and consumer_profile == "number_suite_direct":
+            authored_content = str(block.data["content"])
+            stripped_content = authored_content.strip()
+            if stripped_content.startswith("^") and not any(character.isspace() for character in stripped_content):
+                leading = len(authored_content) - len(authored_content.lstrip())
+                anchor_start = int(block.data["content_start"]) + leading
+                anchor = (
+                    stripped_content,
+                    SourceRange(anchor_start, anchor_start + len(stripped_content)),
+                )
+                content = ""
         content = content.strip()
         if anchor is None:
             anchor = _standalone_semantic_anchor(blocks, index)
@@ -1625,16 +1636,23 @@ def _number_suite_id_key(value: str) -> str:
     return unicodedata.normalize("NFC", value).lower()
 
 
-def _parse_reference_body(body: str) -> tuple[str | None, str, str | None]:
+def _parse_reference_body(
+    body: str,
+    *,
+    number_suite_direct: bool = False,
+) -> tuple[str | None, str, str | None]:
     selector_text, separator, alias = body.partition("|")
-    if separator and (not alias or "|" in alias):
-        raise ValueError("semantic reference Alias must be one non-empty suffix")
+    if separator:
+        if number_suite_direct:
+            alias = alias.strip()
+        elif not alias or "|" in alias:
+            raise ValueError("semantic reference Alias must be one non-empty suffix")
     if "#" not in selector_text:
         raise ValueError("semantic reference requires an explicit # fragment")
     page, fragment = selector_text.split("#", 1)
     if not fragment:
         raise ValueError("semantic reference fragment must not be empty")
-    return (page or None), fragment, (alias if separator else None)
+    return (page or None), fragment, (alias or None if separator else None)
 
 
 def _resolve_reference(
@@ -1652,10 +1670,12 @@ def _resolve_reference(
     diagnostics: list[dict[str, Any]] = []
     body = match.group("body")
     try:
-        page_locator, fragment, alias = _parse_reference_body(body)
+        page_locator, fragment, alias = _parse_reference_body(
+            body,
+            number_suite_direct=normalize_titles or normalize_ids,
+        )
         if normalize_titles or normalize_ids:
             fragment = fragment.strip()
-            alias = alias.strip() if alias is not None else None
     except ValueError:
         record = {
             "selector_kind": "heading_path",
