@@ -641,3 +641,104 @@ class TestExecuteConvertAggregateRouting:
             exit_code = execute_convert(args, controller=mock_controller)  # type: ignore[arg-type]
 
         assert exit_code != 0
+
+
+def test_execute_convert_aggregate_rejects_any_invalid_requested_input() -> None:
+    """Aggregate requests are all-or-nothing after admission."""
+
+    from docwen_cli.commands.convert import execute_convert
+
+    controller = _aggregate_controller()
+    requested = ["/test/a.pdf", "/test/b.pdf", "/test/missing.pdf"]
+    args = _fake_args(
+        {
+            "command": "merge",
+            "command_path": "merge pdf",
+            "action": "merge_pdfs",
+            "files": requested,
+        }
+    )
+
+    def _partial_admission(files: list[str], **kwargs: object):
+        cache = kwargs.get("inspection_cache")
+        assert isinstance(cache, dict)
+        accepted = files[:2]
+        cache.update(_inspection_map(accepted))
+        return accepted, [(files[2], "missing input")], []
+
+    with patch("docwen_cli.commands.convert.validate_files", side_effect=_partial_admission):
+        exit_code = execute_convert(args, controller=controller)  # type: ignore[arg-type]
+
+    assert exit_code != 0
+    controller.execute_aggregate.assert_not_called()
+
+
+def test_batch_stop_on_error_collects_already_running_success() -> None:
+    """A running task that finishes after the first failure must not be relabeled skipped."""
+
+    import threading
+    import time
+
+    from docwen_application.runtime_capability_catalog import RuntimeRoute
+    from docwen_cli.commands.convert import _execute_batch
+    from docwen_core.models.result import ConversionErrorInfo, ConversionResult
+
+    files = ["/test/a.pdf", "/test/b.pdf"]
+    route = RuntimeRoute(
+        id="test:pdf:pdf",
+        operation="conversion",
+        source="pdf",
+        source_category="layout",
+        target="pdf",
+        action_name="",
+        available=True,
+        state="available",
+        options=(),
+    )
+    routes = {file_path: route for file_path in files}
+    controller = MagicMock()
+    second_started = threading.Event()
+
+    def _execute_single(request):
+        source = request.input_refs[0].path
+        if source.endswith("a.pdf"):
+            assert second_started.wait(2.0)
+            return ConversionResult(
+                task_id="failed-a",
+                success=False,
+                error=ConversionErrorInfo(error_type="conversion_failed", message="first failed"),
+            )
+        second_started.set()
+        time.sleep(0.1)
+        return ConversionResult(task_id="successful-b", success=True)
+
+    controller.execute_single.side_effect = _execute_single
+    args = _fake_args(
+        {
+            "command": "batch",
+            "command_path": "batch convert",
+            "quiet": True,
+            "files": files,
+            "output_dir": None,
+            "output_path": None,
+        }
+    )
+
+    with patch("docwen_cli.presenters.text_presenter.TextPresenter.present_batch") as present_batch:
+        exit_code = _execute_batch(
+            controller,
+            action="",
+            files=files,
+            target_format="pdf",
+            options={},
+            args=args,  # type: ignore[arg-type]
+            max_workers=2,
+            inspections=_inspection_map(files),
+            routes_by_file=routes,
+        )
+
+    reported = present_batch.call_args.args[0]
+    assert exit_code != 0
+    assert reported[0].success is False
+    assert reported[1].success is True
+    assert reported[1].task_id == "successful-b"
