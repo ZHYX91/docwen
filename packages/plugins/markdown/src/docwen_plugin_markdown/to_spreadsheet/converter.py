@@ -281,11 +281,22 @@ class MdToXlsxConverter:
                     output_bytes=output_bytes,
                 ),
                 diagnostics=[
+                    *(
+                        [
+                            ConversionDiagnostic(
+                                level="warning",
+                                message="One or more Structural Tables merge marker groups were not rectangular.",
+                                code="MD2XLSX-STRUCTURAL-MERGE-INVALID",
+                            )
+                        ]
+                        if structural_merge_warnings
+                        else []
+                    ),
                     ConversionDiagnostic(
                         level="info",
                         message=(f"MD→XLSX conversion successful ({actual_table_count} table(s))"),
                         code="MD2XLSX-OK",
-                    )
+                    ),
                 ],
             )
 
