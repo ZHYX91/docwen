@@ -14,7 +14,6 @@ from pathlib import Path, PurePosixPath
 from urllib.parse import unquote
 
 from docwen_core.links import split_markdown_block_segments
-
 from docwen_core.models import (
     DOCUMENT_NODE_SCHEMA,
     ArtifactManifest,
