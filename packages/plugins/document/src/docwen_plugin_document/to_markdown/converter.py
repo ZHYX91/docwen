@@ -514,7 +514,13 @@ class DocxToMarkdownConverter:
         # Note extractor for inline references and definitions block
         from docwen_plugin_document.shared.note_extraction import NoteExtractor
 
-        self._note_extractor = NoteExtractor(doc, input_path, typed_endnotes=self._extensions.typed_endnotes)
+        self._note_extractor = NoteExtractor(
+            doc,
+            input_path,
+            typed_endnotes=self._extensions.typed_endnotes,
+            syntax_config=self._syntax_for_rendering(),
+            preserve_formatting=self._preserve_formatting,
+        )
         if self._note_extractor.endnotes and not self._extensions.typed_endnotes:
             self._record_extension_loss("typed_endnotes", "Endnotes were exported as ordinary Markdown footnotes.")
 
