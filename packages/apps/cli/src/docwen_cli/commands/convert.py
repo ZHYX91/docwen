@@ -160,12 +160,7 @@ def execute_convert(
             action,
             args,
             "Aggregate operations require every requested input to be admitted.",
-            details={
-                "invalid_inputs": [
-                    {"path": file_path, "reason": reason}
-                    for file_path, reason in invalid_files
-                ]
-            },
+            details={"invalid_inputs": [{"path": file_path, "reason": reason} for file_path, reason in invalid_files]},
         )
 
     # Human mode may summarize invalid inputs. Machine mode carries the same
@@ -602,9 +597,7 @@ def _execute_batch(
             output_policy=execution_request.output_policy(args),
         )
 
-    requests_to_convert = [
-        (result_index, _build_request(file_path)) for result_index, file_path in files_to_convert
-    ]
+    requests_to_convert = [(result_index, _build_request(file_path)) for result_index, file_path in files_to_convert]
     reservations: dict[str, Any] = {}
 
     def _convert_one(request: ConversionRequest) -> Any:
