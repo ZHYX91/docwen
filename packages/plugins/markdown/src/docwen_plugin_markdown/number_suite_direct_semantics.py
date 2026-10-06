@@ -29,6 +29,10 @@ from docwen_plugin_markdown.document_semantics_v3 import (
 from docwen_plugin_markdown.document_semantics_v3_fenced_source import (
     project_fenced_source_v3,
 )
+from docwen_plugin_markdown.source_protection import (
+    is_markdown_escaped,
+    markdown_semantic_protected_ranges,
+)
 
 SEMANTICS_SCHEMA = "docwen.markdown_semantics.v3"
 SEMANTICS_SCHEMA_ID = "urn:docwen:schema:markdown-semantics:v3"
@@ -537,6 +541,8 @@ def analyze_markdown_semantics_v3(
     occupied: list[SourceRange] = []
     for match in semantic_matches:
         token_range = SourceRange(match.start(), match.end())
+        if is_markdown_escaped(semantic_source, match.start()):
+            continue
         if _overlaps_any(token_range, [*excluded, *literal_ranges]):
             continue
         occupied.append(token_range)
@@ -559,6 +565,8 @@ def analyze_markdown_semantics_v3(
 
     for match in _WIKILINK_RE.finditer(semantic_source):
         token_range = SourceRange(match.start(), match.end())
+        if is_markdown_escaped(semantic_source, match.start()):
+            continue
         if _overlaps_any(token_range, [*excluded, *occupied]):
             continue
         links.append(_project_wikilink(match, token_range))
@@ -566,6 +574,8 @@ def analyze_markdown_semantics_v3(
 
     for match in _PARENTHETICAL_CITATION_RE.finditer(semantic_source):
         token_range = SourceRange(match.start(), match.end())
+        if is_markdown_escaped(semantic_source, match.start()):
+            continue
         if _overlaps_any(token_range, [*excluded, *occupied]):
             continue
         raw = match.group(0)
@@ -590,6 +600,8 @@ def analyze_markdown_semantics_v3(
 
     for match in _NARRATIVE_CITATION_RE.finditer(semantic_source):
         token_range = SourceRange(match.start(), match.end())
+        if is_markdown_escaped(semantic_source, match.start()):
+            continue
         if _overlaps_any(token_range, [*excluded, *occupied]):
             continue
         key = match.group("key")
@@ -1878,10 +1890,7 @@ def _citation_item(
 
 def _literal_shield_ranges(source: str, blocks: Sequence[_Block]) -> list[SourceRange]:
     ranges = [SourceRange(block.start, block.end) for block in blocks if block.kind in {"code_block", "fenced_block"}]
-    for match in re.finditer(r"(`+)(?:(?!\1).)*\1", source):
-        ranges.append(SourceRange(match.start(), match.end()))
-    for match in re.finditer(r"https?://[^\s<]+|<[^>\r\n]*>", source):
-        ranges.append(SourceRange(match.start(), match.end()))
+    ranges.extend(SourceRange(start, end) for start, end in markdown_semantic_protected_ranges(source))
     return _merge_ranges(ranges)
 
 
