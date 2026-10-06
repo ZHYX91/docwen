@@ -603,9 +603,7 @@ def _execute_batch(
         )
 
     requests_to_convert = [(result_index, _build_request(file_path)) for result_index, file_path in files_to_convert]
-    reservations = {
-        str(request.request_id): deadline.register(request) for _result_index, request in requests_to_convert
-    }
+    reservations: dict[str, Any] = {}
 
     def _convert_one(request: ConversionRequest) -> Any:
         try:
@@ -629,6 +627,7 @@ def _execute_batch(
                 submitted_count += 1
                 if progress_cb:
                     progress_cb(f"... {submitted_count}/{len(files_to_convert)}")
+                reservations[str(request.request_id)] = deadline.register(request)
                 future = executor.submit(_convert_one, request)
                 future_to_index[future] = result_index
                 return True
