@@ -196,7 +196,7 @@ class TestExecuteConvertActionPath:
         assert results[0]["success"] is False
         assert results[1]["success"] is True
         assert results[2]["success"] is False
-        assert results[2]["error"]["details"] == "skipped"
+        assert results[2]["output"] == ""
 
     def test_document_to_markdown_request_carries_cli_locale_yaml_labels(self, tmp_path) -> None:
         from unittest.mock import patch
