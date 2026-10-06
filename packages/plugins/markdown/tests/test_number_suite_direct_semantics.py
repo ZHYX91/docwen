@@ -95,3 +95,40 @@ def test_direct_number_suite_profile_treats_case_only_block_ids_as_duplicate() -
 
     assert analysis.has_errors
     assert [item["code"] for item in analysis.diagnostics] == ["docwen.markdown.anchor.duplicate"]
+
+
+def test_direct_number_suite_accepts_equation_and_code_id_only_declarations() -> None:
+    source = """Equation: ^energy
+
+Code: ^snippet
+
+See @[[#^energy]] and @[[#^snippet]].
+"""
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    targets = analysis.projection["targets"]
+    assert [(item["kind"], item["title"], item.get("id")) for item in targets] == [
+        ("equation", "", "energy"),
+        ("code_block", "", "snippet"),
+    ]
+    references = analysis.projection["references"]
+    assert [(item["resolution_status"], item["cached_number"]) for item in references] == [
+        ("resolved", "1"),
+        ("resolved", "1"),
+    ]
+
+
+def test_direct_number_suite_normalizes_alias_without_rejecting_suffix_pipes() -> None:
+    source = """Figure: Planned ^plan
+
+@[[#^plan|  Friendly label  ]]
+@[[#^plan|A|B]]
+@[[#^plan|   ]]
+"""
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    references = analysis.projection["references"]
+    assert [item.get("alias") for item in references] == ["Friendly label", "A|B", None]
+    assert all(item["resolution_status"] == "resolved" for item in references)
