@@ -47,10 +47,7 @@ class TestOutputFinalizer:
             assert result.artifacts[0].staging_path == exact_path
             assert Path(exact_path).read_text() == "test content"
 
-    def test_finalize_implicit_output_dir_refuses_primary_input_replacement(
-        self,
-        finalizer: OutputFinalizer,
-    ) -> None:
+    def test_finalize_implicit_output_dir_refuses_primary_input_replacement(self, finalizer: OutputFinalizer) -> None:
         with tempfile.TemporaryDirectory() as staging, tempfile.TemporaryDirectory() as work:
             input_path = Path(work) / "source.png"
             input_path.write_bytes(b"original source bytes")
