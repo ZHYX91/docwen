@@ -39,6 +39,38 @@ def test_note_content_removes_only_structural_reference_separator(ref_tag: str):
     )
 
 
+def test_note_content_preserves_breaks_and_basic_inline_formatting():
+    note = etree.Element(f"{{{WML_NS}}}note")
+    paragraph = etree.SubElement(note, f"{{{WML_NS}}}p")
+
+    first = etree.SubElement(paragraph, f"{{{WML_NS}}}r")
+    etree.SubElement(first, f"{{{WML_NS}}}t").text = "First line"
+
+    break_run = etree.SubElement(paragraph, f"{{{WML_NS}}}r")
+    etree.SubElement(break_run, f"{{{WML_NS}}}br")
+
+    bold_run = etree.SubElement(paragraph, f"{{{WML_NS}}}r")
+    bold_props = etree.SubElement(bold_run, f"{{{WML_NS}}}rPr")
+    etree.SubElement(bold_props, f"{{{WML_NS}}}b")
+    etree.SubElement(bold_run, f"{{{WML_NS}}}t").text = "Bold line"
+
+    assert _extract_note_content(note, WML_NS, "footnoteRef") == "First line\n**Bold line**"
+
+
+def test_note_content_preserves_codespan_with_embedded_backtick():
+    note = etree.Element(f"{{{WML_NS}}}note")
+    paragraph = etree.SubElement(note, f"{{{WML_NS}}}p")
+    run = etree.SubElement(paragraph, f"{{{WML_NS}}}r")
+    props = etree.SubElement(run, f"{{{WML_NS}}}rPr")
+    fonts = etree.SubElement(props, f"{{{WML_NS}}}rFonts")
+    fonts.set(f"{{{WML_NS}}}ascii", "Consolas")
+    fonts.set(f"{{{WML_NS}}}hAnsi", "Consolas")
+    shading = etree.SubElement(props, f"{{{WML_NS}}}shd")
+    shading.set(f"{{{WML_NS}}}fill", "D9D9D9")
+    etree.SubElement(run, f"{{{WML_NS}}}t").text = "a`b"
+
+    assert _extract_note_content(note, WML_NS, "footnoteRef") == "``a`b``"
+
 def test_build_note_definitions_formats_multiline_content():
     notes = {5: "第一行\n第二行"}
     assert build_note_definitions(notes, {5: "1"}) == "[^1]: 第一行\n    第二行"
