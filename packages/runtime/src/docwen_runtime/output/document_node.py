@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import posixpath
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import datetime
 from html import escape, unescape
@@ -360,7 +361,7 @@ def _rewrite_known_links(text: str, replacements: dict[str, str]) -> str:
     return "".join(rewritten_blocks)
 
 
-def _rewrite_outside_inline_code(text: str, rewrite) -> str:
+def _rewrite_outside_inline_code(text: str, rewrite: Callable[[str], str]) -> str:
     """Apply rewrite only outside closed Markdown code spans."""
 
     output: list[str] = []
