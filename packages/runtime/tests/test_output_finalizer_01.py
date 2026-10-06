@@ -73,8 +73,7 @@ class TestOutputFinalizer:
             assert result.error is not None
             assert result.error.diagnostic_code == "FINALIZER_FAILED"
             assert any(
-                diagnostic.code == "FINALIZER_PLACE_ERROR"
-                and "must not replace its input file" in diagnostic.message
+                diagnostic.code == "FINALIZER_PLACE_ERROR" and "must not replace its input file" in diagnostic.message
                 for diagnostic in result.diagnostics
             )
             assert input_path.read_bytes() == b"original source bytes"
