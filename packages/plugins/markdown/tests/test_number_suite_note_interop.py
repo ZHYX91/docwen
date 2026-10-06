@@ -10,11 +10,7 @@ pytestmark = pytest.mark.contract
 
 
 def test_unicode_note_ids_use_nfc_plus_lowercase_not_casefold() -> None:
-    markdown = (
-        "First[^Straße], second[^Strasse].\n\n"
-        "[^Straße]: Sharp-s identity.\n"
-        "[^Strasse]: Latin ss identity.\n"
-    )
+    markdown = "First[^Straße], second[^Strasse].\n\n[^Straße]: Sharp-s identity.\n[^Strasse]: Latin ss identity.\n"
 
     _cleaned_ast, note_ctx = process_md_body_with_notes(markdown)
 
@@ -28,9 +24,10 @@ def test_note_scanner_ignores_protected_markdown_regions() -> None:
         "<!-- [^html-comment] -->\n"
         "%% [^obsidian-comment] %%\n"
         "[Link](https://example.test/[^destination])\n"
-        "<span data-note=\"[^attribute]\">literal</span>\n"
+        '<span data-note="[^attribute]">literal</span>\n'
         "https://example.test/[^raw-url]\n"
-        "`[^code]`\n\n"
+        "`[^code]`\n"
+        "    [^indented-code]\n\n"
         "[^ok]: Visible definition.\n"
     )
 
