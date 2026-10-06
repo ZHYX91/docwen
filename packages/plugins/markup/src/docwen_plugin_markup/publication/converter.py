@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import posixpath
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import unquote, urlsplit
 
 from docwen_core.models.artifact import (
     ARTIFACT_KIND_PRIMARY,
@@ -146,18 +148,27 @@ class EpubToMarkdownConverter:
                     if artifact.artifact_id not in seen_artifact_ids:
                         image_artifacts.append(artifact)
                         seen_artifact_ids.add(artifact.artifact_id)
+            basename_links: dict[str, list[str]] = {}
             for resource in resources:
                 normalized = normalize_resource_key(resource.source_key)
                 item = written.get(normalized)
                 if item is None:
                     continue
                 basename_key = normalize_resource_key(Path(resource.source_key).name)
-                image_links.setdefault(basename_key, item.markdown_link)
+                basename_links.setdefault(basename_key, []).append(item.markdown_link)
+            for basename_key, links in basename_links.items():
+                if len(links) == 1:
+                    image_links.setdefault(basename_key, links[0])
             images_written = len({artifact.artifact_id for artifact in image_artifacts if artifact.kind == "image"})
         else:
+            basename_keys: dict[str, int] = {}
             for resource in resources:
                 image_links[normalize_resource_key(resource.source_key)] = ""
-                image_links[normalize_resource_key(Path(resource.source_key).name)] = ""
+                basename_key = normalize_resource_key(Path(resource.source_key).name)
+                basename_keys[basename_key] = basename_keys.get(basename_key, 0) + 1
+            for basename_key, count in basename_keys.items():
+                if count == 1:
+                    image_links[basename_key] = ""
 
         # ── Extract text content ────────────────────────────────────
         markdown_parts: list[str] = []
@@ -249,11 +260,16 @@ class EpubToMarkdownConverter:
 
                 # Get text
                 text_root = soup.body if soup.body is not None else soup
-                text = self._html_to_markdown(text_root, image_links)
+                item_name = item.get_name() or ""
+                scoped_image_links = _epub_image_links_for_document(
+                    image_links,
+                    document_name=item_name,
+                    soup=text_root,
+                )
+                text = self._html_to_markdown(text_root, scoped_image_links)
 
                 if text.strip():
                     # Add section heading from item name if available
-                    item_name = item.get_name() or ""
                     if item_name:
                         section_title = Path(item_name).stem
                         # Only add if the title is meaningful
@@ -436,6 +452,39 @@ class EpubToMarkdownConverter:
                 )
             ],
         )
+
+
+def _epub_image_links_for_document(
+    image_links: dict[str, str],
+    *,
+    document_name: str,
+    soup: object,
+) -> dict[str, str]:
+    """Bind chapter-relative image references to exact EPUB resource identities."""
+
+    scoped = dict(image_links)
+    document_dir = posixpath.dirname(str(document_name or "").replace("\\", "/"))
+    find_all = getattr(soup, "find_all", None)
+    if not callable(find_all):
+        return scoped
+
+    for element in find_all("img"):
+        src = str(element.get("src") or "").strip()
+        if not src:
+            continue
+        parsed = urlsplit(src.replace("\\", "/"))
+        if parsed.scheme or parsed.netloc:
+            continue
+        raw_path = unquote(parsed.path)
+        if raw_path.startswith("/"):
+            resolved = raw_path.lstrip("/")
+        else:
+            resolved = posixpath.normpath(posixpath.join(document_dir, raw_path))
+        exact_key = normalize_resource_key(resolved)
+        link = image_links.get(exact_key)
+        if link is not None:
+            scoped[normalize_resource_key(src)] = link
+    return scoped
 
 
 # ── Recursive HTML-to-Markdown conversion ────────────────────────────
