@@ -23,10 +23,13 @@ import lxml.etree as etree
 WML_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 XML_NS = "http://www.w3.org/XML/1998/namespace"
 
-# Mistune uppercases footnote keys; endnote prefix is always uppercase
-# in the parsed AST.
-ENDNOTE_PREFIX_UC = "ENDNOTE-"
+# Mistune uppercases footnote keys in the parsed AST. Authored identifiers
+# never share this namespace: normalization projects every note to an opaque
+# request-local key before parsing.
+ENDNOTE_PREFIX_UC = "ENDNOTE-"  # legacy internal key accepted by NoteContext
 _ENDNOTE_PFX_LEN = len(ENDNOTE_PREFIX_UC)
+_INTERNAL_FOOTNOTE_PREFIX_UC = "DOCWEN-FN-"
+_INTERNAL_ENDNOTE_PREFIX_UC = "DOCWEN-EN-"
 
 _NOTE_DEFINITION_RE = re.compile(r"^(?P<lead> {0,3})\[\^(?P<label>[^\]\\\s]+)\]:[ \t]*(?P<body>.*)$")
 _NOTE_REFERENCE_RE = re.compile(r"(?<!\\)\[\^(?P<label>[^\]\\\s]+)\]")
@@ -44,7 +47,7 @@ def _note_syntax_invalid(message: str) -> NoReturn:
 def _note_identity(label: str, *, typed_endnotes: bool = True) -> tuple[str, str, str]:
     """Return ``(kind, normalized_id, spelling)`` for one authored label."""
 
-    folded = label.casefold()
+    folded = label.lower()
     if not typed_endnotes:
         kind, note_id, spelling = "footnote", label, "default"
     elif folded.startswith("footnote:"):
@@ -55,8 +58,6 @@ def _note_identity(label: str, *, typed_endnotes: bool = True) -> tuple[str, str
         kind = "endnote"
         note_id = label[len("endnote:") :]
         spelling = "canonical"
-    elif folded.startswith("endnote-"):
-        _note_syntax_invalid(f"Unsupported note label '[^{label}]'; use the current endnote form '[^endnote:id]'.")
     else:
         kind = "footnote"
         note_id = label
@@ -64,7 +65,7 @@ def _note_identity(label: str, *, typed_endnotes: bool = True) -> tuple[str, str
 
     if not note_id or any(char.isspace() or char in "[]\\" for char in note_id):
         _note_syntax_invalid(f"Invalid {kind} identifier in '[^{label}]'.")
-    normalized_id = unicodedata.normalize("NFC", note_id).casefold()
+    normalized_id = unicodedata.normalize("NFC", note_id).lower()
     if not normalized_id:
         _note_syntax_invalid(f"Invalid {kind} identifier in '[^{label}]'.")
     return kind, normalized_id, spelling
