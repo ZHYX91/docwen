@@ -23,8 +23,8 @@ import lxml.etree as etree
 WML_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 XML_NS = "http://www.w3.org/XML/1998/namespace"
 
-# Mistune uppercases footnote keys; endnote prefix is always uppercase
-# in the parsed AST.
+# Mistune uppercases footnote keys. This prefix belongs only to DocWen's
+# request-local parser projection; authored labels are never classified by it.
 ENDNOTE_PREFIX_UC = "ENDNOTE-"
 _ENDNOTE_PFX_LEN = len(ENDNOTE_PREFIX_UC)
 
@@ -44,27 +44,30 @@ def _note_syntax_invalid(message: str) -> NoReturn:
 def _note_identity(label: str, *, typed_endnotes: bool = True) -> tuple[str, str, str]:
     """Return ``(kind, normalized_id, spelling)`` for one authored label."""
 
-    folded = label.casefold()
+    lowered = unicodedata.normalize("NFC", label).lower()
     if not typed_endnotes:
         kind, note_id, spelling = "footnote", label, "default"
-    elif folded.startswith("footnote:"):
+    elif lowered.startswith("footnote:"):
         kind = "footnote"
         note_id = label[len("footnote:") :]
         spelling = "explicit"
-    elif folded.startswith("endnote:"):
+    elif lowered.startswith("endnote:"):
         kind = "endnote"
         note_id = label[len("endnote:") :]
         spelling = "canonical"
-    elif folded.startswith("endnote-"):
-        _note_syntax_invalid(f"Unsupported note label '[^{label}]'; use the current endnote form '[^endnote:id]'.")
     else:
+        # Only the colon form is typed syntax. A label such as endnote-topic
+        # is an ordinary footnote ID, not a retired endnote.
         kind = "footnote"
         note_id = label
         spelling = "default"
 
     if not note_id or any(char.isspace() or char in "[]\\" for char in note_id):
         _note_syntax_invalid(f"Invalid {kind} identifier in '[^{label}]'.")
-    normalized_id = unicodedata.normalize("NFC", note_id).casefold()
+    # Match Number Suite/JavaScript identity semantics: NFC plus lowercase.
+    # Python casefold is stronger and can collapse authored IDs the dialect
+    # keeps distinct, for example Straße and Strasse.
+    normalized_id = unicodedata.normalize("NFC", note_id).lower()
     if not normalized_id:
         _note_syntax_invalid(f"Invalid {kind} identifier in '[^{label}]'.")
     return kind, normalized_id, spelling
@@ -213,14 +216,35 @@ def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
         if identity not in ordered_identities:
             ordered_identities.append(identity)
     internal_keys: dict[tuple[str, str], str] = {}
+    reserved_internal_keys: set[str] = set()
     for identity in ordered_identities:
         label, spelling = definitions[identity]
         if identity[0] == "footnote":
             note_id = label[len("footnote:") :] if spelling == "explicit" else label
-            internal_keys[identity] = note_id
+            if not note_id.upper().startswith(ENDNOTE_PREFIX_UC):
+                reserved_internal_keys.add(note_id.upper())
         else:
             note_id = label[len("endnote:") :]
-            internal_keys[identity] = f"ENDNOTE-{note_id}"
+            reserved_internal_keys.add(f"{ENDNOTE_PREFIX_UC}{note_id}".upper())
+
+    escaped_footnote_index = 1
+    for identity in ordered_identities:
+        label, spelling = definitions[identity]
+        if identity[0] == "footnote":
+            note_id = label[len("footnote:") :] if spelling == "explicit" else label
+            if note_id.upper().startswith(ENDNOTE_PREFIX_UC):
+                while True:
+                    candidate = f"DOCWEN-FOOTNOTE-{escaped_footnote_index}"
+                    escaped_footnote_index += 1
+                    if candidate.upper() not in reserved_internal_keys:
+                        break
+                internal_keys[identity] = candidate
+                reserved_internal_keys.add(candidate.upper())
+            else:
+                internal_keys[identity] = note_id
+        else:
+            note_id = label[len("endnote:") :]
+            internal_keys[identity] = f"{ENDNOTE_PREFIX_UC}{note_id}"
 
     rewritten: list[str] = []
     for index, line in enumerate(lines):
