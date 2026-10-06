@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 from zipfile import ZipFile
 
@@ -13,6 +14,9 @@ def _extract_notes_with_status(
     docx_path: str | None,
     part_name: str,
     note_tag: str,
+    *,
+    syntax_config: Any = None,
+    preserve_formatting: bool = True,
 ) -> tuple[dict[int, str], bool]:
     """Extract notes from python-docx part or ZIP fallback.
 
@@ -49,7 +53,13 @@ def _extract_notes_with_status(
             continue
         if _is_system_note(note_elem, w_ns):
             continue
-        content = _extract_note_content(note_elem, w_ns, ref_tag)
+        content = _extract_note_content(
+            note_elem,
+            w_ns,
+            ref_tag,
+            syntax_config=syntax_config,
+            preserve_formatting=preserve_formatting,
+        )
         if content.strip():
             notes[int(w_id_raw)] = content
     return notes, False
@@ -75,7 +85,14 @@ def _is_system_note(elem, w_ns: str) -> bool:
     return ntype in ("separator", "continuationSeparator")
 
 
-def _extract_note_content(elem, w_ns: str, ref_tag: str) -> str:
+def _extract_note_content(
+    elem,
+    w_ns: str,
+    ref_tag: str,
+    *,
+    syntax_config: Any = None,
+    preserve_formatting: bool = True,
+) -> str:
     """Extract text content from a footnote/endnote element.
 
     Processes paragraphs individually, skipping runs that contain the
@@ -102,9 +119,40 @@ def _extract_note_content(elem, w_ns: str, ref_tag: str) -> str:
                 separator_expected = False
                 continue
             separator_expected = False
-            for t in run.findall(f"{{{w_ns}}}t"):
-                if t.text:
-                    run_texts.append(t.text)
+            raw_parts: list[str] = []
+            for run_child in run:
+                child_tag = (
+                    run_child.tag.split("}")[-1]
+                    if "}" in (run_child.tag or "")
+                    else (run_child.tag or "")
+                )
+                if child_tag == "t" and run_child.text:
+                    raw_parts.append(run_child.text)
+                elif child_tag == "tab":
+                    raw_parts.append("\t")
+                elif child_tag in {"br", "cr"}:
+                    raw_parts.append("\n")
+            raw_text = "".join(raw_parts)
+            if not raw_text:
+                continue
+            if not preserve_formatting:
+                run_texts.append(raw_text)
+                continue
+
+            from docwen_core.docx_parsing.format_features import DocxMarkdownSyntaxConfig
+            from docwen_plugin_document.shared.markdown_runs import append_formatted_run_text
+
+            effective_syntax = syntax_config or DocxMarkdownSyntaxConfig()
+            for segment in re.split("(\\n)", raw_text):
+                if segment == "\n":
+                    run_texts.append(segment)
+                elif segment:
+                    append_formatted_run_text(
+                        run_texts,
+                        segment,
+                        run,
+                        syntax_config=effective_syntax,
+                    )
         if run_texts:
             para_texts.append("".join(run_texts))
     return "\n".join(para_texts)
@@ -166,19 +214,31 @@ class NoteExtractor:
     """Aggregate footnote/endnote extraction, mapping, reference text, and
     Markdown definitions block."""
 
-    def __init__(self, doc, docx_path: str | None = None, *, typed_endnotes: bool = True) -> None:
+    def __init__(
+        self,
+        doc,
+        docx_path: str | None = None,
+        *,
+        typed_endnotes: bool = True,
+        syntax_config: Any = None,
+        preserve_formatting: bool = True,
+    ) -> None:
         self._endnote_prefix = "endnote:" if typed_endnotes else "endnote-"
         self.footnotes, self.footnote_part_failed = _extract_notes_with_status(
             doc,
             docx_path,
             "footnotes",
             "footnote",
+            syntax_config=syntax_config,
+            preserve_formatting=preserve_formatting,
         )
         self.endnotes, self.endnote_part_failed = _extract_notes_with_status(
             doc,
             docx_path,
             "endnotes",
             "endnote",
+            syntax_config=syntax_config,
+            preserve_formatting=preserve_formatting,
         )
         # Display IDs are assigned lazily from the first body reference.
         # Footnotes and endnotes own independent per-file domains.
