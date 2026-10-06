@@ -613,9 +613,10 @@ def test_cli_merge_pdf_rejects_any_unadmitted_requested_input(tmp_path: Path) ->
     payload = _payload(proc)
     assert payload["success"] is False
     assert payload["error"]["code"] == "invalid_input"
-    assert payload["error"]["details"]["invalid_inputs"] == [
-        {"path": str(missing.resolve()), "reason": payload["error"]["details"]["invalid_inputs"][0]["reason"]}
-    ]
+    invalid_inputs = payload["error"]["details"]["invalid_inputs"]
+    assert len(invalid_inputs) == 1
+    assert invalid_inputs[0]["path"] == str(missing.resolve())
+    assert invalid_inputs[0]["reason"]
     assert not output.exists()
 
 
