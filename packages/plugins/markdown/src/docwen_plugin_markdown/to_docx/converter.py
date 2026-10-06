@@ -50,6 +50,7 @@ from docwen_core.text.heading_merge import (
     normalize_heading_merge_punctuation,
 )
 from docwen_core.text.heading_numbering import (
+    HeadingFormatter,
     NumberingSchemeResolutionError,
     resolve_heading_numbering_scheme,
 )
@@ -178,6 +179,28 @@ def _option_or_config(
     if allowed is not None and value not in allowed:
         return default
     return value
+
+
+def _direct_heading_number_provider(
+    scheme_config: dict[str, dict[str, str]],
+    *,
+    supported_levels: set[int] | None = None,
+):
+    """Return a stateful provider matching the selected heading scheme."""
+
+    formatter = HeadingFormatter(scheme_config)
+
+    def provide(title: str, level: int) -> str:
+        formatted = formatter.format_heading(title, level)
+        if supported_levels is not None and level not in supported_levels:
+            return ""
+        if formatted == title:
+            return ""
+        if title and formatted.endswith(title):
+            return formatted[: -len(title)].rstrip()
+        return formatted.rstrip()
+
+    return provide
 
 
 def _resolve_body_formatting_mode(options: dict[str, object], config: object) -> str:
@@ -567,6 +590,7 @@ class MdToDocxConverter:
                 )
             progress.report_progress(5.0, "Reading Markdown input")
             content, input_bytes = read_input_markdown(input_path)
+            authored_content = content
             if declared_resource_resolver is not None:
                 declared_resource_resolver = declared_resource_resolver.with_bindings(
                     content, options.get("markdown_resource_bindings")
@@ -632,17 +656,13 @@ class MdToDocxConverter:
                     ),
                 )
 
-            # ── 3. Optionally remove/add heading numbering ────────────
+            # ── 3. Resolve one request-owned Heading numbering policy ──
             remove_num = (
                 bool(options["remove_numbering"])
                 if "remove_numbering" in options
                 else bool(_config_value(context.config, "text.remove_numbering", False))
             )
             cleanup_rules = getattr(context, "heading_cleanup_rules", ()) or ()
-            if remove_num and render_body:
-                progress.report_progress(10.0, "Removing heading numbering")
-                content = remove_md_numbering(content, rules=cleanup_rules)
-
             add_num = (
                 bool(options["add_numbering"])
                 if "add_numbering" in options
@@ -656,8 +676,11 @@ class MdToDocxConverter:
                 "text",
                 allowed={"text", "word_native"},
             )
-            word_native_translation = None  # set if word_native mode is used
+            word_native_translation = None
             approximate_warning: str | None = None
+            scheme = ""
+            scheme_config: dict[str, dict[str, str]] | None = None
+            supported_heading_levels: set[int] | None = None
 
             if add_num and render_body:
                 scheme = str(
@@ -667,22 +690,17 @@ class MdToDocxConverter:
                     )
                 )
                 try:
+                    scheme_config = resolve_heading_numbering_scheme(
+                        scheme,
+                        context.numbering_registry,
+                    )
                     if render_mode == "word_native":
-                        # Word adds the resolved scheme; source text remains clean.
-                        if not remove_num:
-                            content = remove_md_numbering(content, rules=cleanup_rules)
                         from docwen_core.text.numbering_word_adapter import (
                             translate_scheme,
                         )
 
-                        scheme_config = resolve_heading_numbering_scheme(
-                            scheme,
-                            context.numbering_registry,
-                        )
                         translation = translate_scheme(scheme_config)
-
                         if translation.verdict == "unsupported":
-                            # Return error — do NOT silently fall back to text
                             return ConversionResult(
                                 task_id=task_id,
                                 success=False,
@@ -690,8 +708,7 @@ class MdToDocxConverter:
                                     error_type="unsupported_numbering",
                                     message=(
                                         f"Scheme '{scheme}' is not compatible "
-                                        f"with word_native output: "
-                                        f"{translation.reason}"
+                                        f"with word_native output: {translation.reason}"
                                     ),
                                     diagnostic_code="MD2DOCX-NUMBERING-UNSUPPORTED",
                                 ),
@@ -699,8 +716,7 @@ class MdToDocxConverter:
                                     ConversionDiagnostic(
                                         level="error",
                                         message=(
-                                            f"Scheme '{scheme}' cannot be "
-                                            f"translated to Word native "
+                                            f"Scheme '{scheme}' cannot be translated to Word native "
                                             f"numbering: {translation.reason}"
                                         ),
                                         code="MD2DOCX-NUMBERING-UNSUPPORTED",
@@ -710,29 +726,75 @@ class MdToDocxConverter:
                                     duration_ms=(time.monotonic() - t_start) * 1000.0,
                                 ),
                             )
-                        else:
-                            # word_native mode: skip text concatenation,
-                            # inject after save
-                            word_native_translation = translation
-                            if translation.verdict == "approximate":
-                                approximate_warning = (
-                                    f"Scheme '{scheme}' uses numbering styles "
-                                    f"that Word cannot render natively for "
-                                    f"levels 6-9. Those headings will appear "
-                                    f"without numbering. "
-                                    f"Details: {translation.reason}"
-                                )
-                            # Still strip existing numbering (already done
-                            # above if remove_num). Do NOT call
-                            # add_md_numbering — headings stay as pure text.
-                    else:
+                        word_native_translation = translation
+                        supported_heading_levels = {level.ilvl + 1 for level in translation.levels}
+                        if translation.verdict == "approximate":
+                            approximate_warning = (
+                                f"Scheme '{scheme}' uses numbering styles "
+                                f"that Word cannot render natively for "
+                                f"levels 6-9. Those headings will appear "
+                                f"without numbering. Details: {translation.reason}"
+                            )
+                except NumberingSchemeResolutionError as exc:
+                    return _numbering_resolution_failure(task_id, t_start, exc)
+
+            # Direct Number Suite source semantics must consume the same
+            # request-owned Heading numbering policy that the DOCX renderer
+            # applies below.  The first source analysis above authenticates
+            # syntax/ranges; this second projection only replaces its derived
+            # Heading-number view before inert markers are materialized.
+            if direct_number_suite:
+                if scheme_config is None:
+                    heading_number_provider = lambda _title, _level: ""
+                else:
+                    heading_number_provider = _direct_heading_number_provider(
+                        scheme_config,
+                        supported_levels=supported_heading_levels,
+                    )
+                try:
+                    semantic_v3_plan = prepare_runtime_semantics_v3(
+                        authored_content,
+                        input_id=semantic_input_id,
+                        extensions=extensions,
+                        consumer_profile="number_suite_direct",
+                        heading_number_provider=heading_number_provider,
+                    )
+                except RuntimeSemanticsV3Unsupported as exc:
+                    return _semantic_v3_failure(
+                        task_id,
+                        t_start,
+                        str(exc),
+                        [],
+                        input_bytes=input_bytes,
+                    )
+                if semantic_v3_plan.analysis.has_errors:
+                    return _semantic_v3_failure(
+                        task_id,
+                        t_start,
+                        "Markdown v3 source semantics are invalid.",
+                        [_semantic_v3_diagnostic(item) for item in semantic_v3_plan.analysis.diagnostics],
+                        input_bytes=input_bytes,
+                    )
+                content = semantic_v3_plan.shielded_source
+
+            if remove_num and render_body:
+                progress.report_progress(10.0, "Removing heading numbering")
+                content = remove_md_numbering(content, rules=cleanup_rules)
+
+            if add_num and render_body:
+                if render_mode == "word_native":
+                    # Word adds the resolved scheme; source text remains clean.
+                    if not remove_num:
+                        content = remove_md_numbering(content, rules=cleanup_rules)
+                else:
+                    try:
                         content = add_md_numbering(
                             content,
                             scheme=scheme,
                             registry=context.numbering_registry,
                         )
-                except NumberingSchemeResolutionError as exc:
-                    return _numbering_resolution_failure(task_id, t_start, exc)
+                    except NumberingSchemeResolutionError as exc:
+                        return _numbering_resolution_failure(task_id, t_start, exc)
 
             # ── Stage 1: YAML extraction ───────────────────────────────
             progress.report_progress(15.0, "Extracting YAML front matter")
