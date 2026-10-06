@@ -139,6 +139,46 @@ def test_direct_number_suite_standalone_caption_round_trips_without_inventing_ca
     assert "![image omitted]()" not in markdown
 
 
+def test_number_suite_reference_inside_table_cell_round_trips_as_reference(
+    round_trip_runtime: Any,
+    tmp_path: Path,
+) -> None:
+    source_path = tmp_path / "table-cell-reference.md"
+    source = (
+        "Table: Matrix ^matrix\n\n"
+        "| Value |\n"
+        "| --- |\n"
+        "| A |\n\n"
+        "| Ref |\n"
+        "| --- |\n"
+        "| @[[#^matrix]] |\n\n"
+        "Outside @[[#^matrix]].\n"
+    )
+    source_path.write_text(source, encoding="utf-8")
+
+    output = md_to_docx(
+        round_trip_runtime,
+        source_path,
+        tmp_path / "table-cell-reference-docx",
+        request_id="table-cell-reference",
+    )
+
+    reopened = Document(str(output))
+    instructions = [item.text or "" for item in reopened.element.iter(qn("w:instrText"))]
+    assert sum(" REF " in item for item in instructions) == 2
+
+    markdown = docx_to_md(
+        round_trip_runtime,
+        output,
+        tmp_path / "table-cell-reference-md",
+        request_id="table-cell-reference-reverse",
+        preserve_numbering=False,
+    )
+    assert "| @[[#^matrix]] |" in markdown
+    assert "Outside @[[#^matrix]]." in markdown
+    assert markdown.count("@[[#^matrix]]") == 2
+
+
 def test_exact_two_figure_captioned_multi_image_table_round_trips_with_short_target_range(
     round_trip_runtime: Any,
     tmp_path: Path,
