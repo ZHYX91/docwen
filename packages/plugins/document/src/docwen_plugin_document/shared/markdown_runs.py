@@ -6,8 +6,8 @@ and delegates note references to NoteExtractor.
 
 from __future__ import annotations
 
-from collections.abc import Callable
 import re
+from collections.abc import Callable
 from typing import Any
 
 from docwen_core.docx_parsing.format_features import (
@@ -234,7 +234,7 @@ def append_formatted_run_text(
     has_shading = has_shading or run_style_type == "code"
 
     wrappers = _format_wrappers(
-        has_shading=False if has_shading else has_shading,
+        has_shading=False,
         has_highlight=has_highlight,
         is_superscript=is_superscript,
         is_subscript=is_subscript,
