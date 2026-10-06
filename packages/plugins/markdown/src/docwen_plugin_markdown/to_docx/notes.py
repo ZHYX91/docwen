@@ -83,6 +83,7 @@ def _mask_note_protected_source(source: str) -> str:
         re.compile(r"\]\((?:\\.|[^)\r\n])*\)"),
         re.compile(r"https?://[^\s<]+"),
         re.compile(r"<[^>\r\n]*>"),
+        re.compile(r"(?m)^(?: {4}|\t).*?$"),
     )
     for pattern in patterns:
         ranges.extend(match.span() for match in pattern.finditer(source))
@@ -95,6 +96,7 @@ def _mask_note_protected_source(source: str) -> str:
             if characters[index] not in "\r\n":
                 characters[index] = " "
     return "".join(characters)
+
 
 def _rewrite_reference_segments(
     text: str,
