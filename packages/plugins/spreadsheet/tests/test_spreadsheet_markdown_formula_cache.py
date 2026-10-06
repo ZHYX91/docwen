@@ -27,7 +27,9 @@ def test_xlsx_to_markdown_warns_when_formula_cache_is_unavailable(tmp_path: Path
 
     assert result.success, result.error
     warnings = [diagnostic for diagnostic in result.diagnostics if diagnostic.level == "warning"]
-    formula_warnings = [diagnostic for diagnostic in warnings if diagnostic.code == "SHEET2MD-FORMULA-CACHE-UNAVAILABLE"]
+    formula_warnings = [
+        diagnostic for diagnostic in warnings if diagnostic.code == "SHEET2MD-FORMULA-CACHE-UNAVAILABLE"
+    ]
     assert len(formula_warnings) == 1
     message = formula_warnings[0].message
     assert "27 formula cell(s)" in message
