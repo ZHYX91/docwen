@@ -311,6 +311,7 @@ def test_number_suite_note_identity_and_multiline_round_trip_from_isolated_docx(
     assert "[^3]: Latin ss identity." in markdown
     assert "[^4]: First line\n    second line\n    **third line**" in markdown
 
+
 def test_structural_tables_direct_and_resolved_routes_share_docx_semantics(tmp_path: Path) -> None:
     authored = """| Region | Sales | < |
 | Quarter | Q1 | Q2 |
