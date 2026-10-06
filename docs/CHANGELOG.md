@@ -222,7 +222,7 @@
 - Windows 打包 CLI 与源码 CLI 使用同一 fixture 验证；DocWen Assistant 2.0 和 OpenClaw 2.0
   已分别通过针对不可变 DocWen 0.9.0 Release 的组合发布门禁。
 - 脚注/尾注 Markdown 合同统一为 `[^id]`、`[^footnote:id]` 与 `[^endnote:id]`；已废弃的
-  `[^endnote-id]` 输入会被拒绝。两类注释按首次引用独立编号，缺失、重复或规范化冲突安全失败。
+  仅 `[^endnote:id]` 表示尾注，`[^endnote-id]` 等带连字符标签仍是普通脚注 ID。两类注释按首次引用独立编号，缺失、重复或规范化冲突安全失败。
 
 从 `0.8.x` 升级时，请更新所有 CLI 脚本和集成；不存在旧命令兼容层。正式附件、支持平台、
 代码签名和已知边界以 `0.9.0` Release notes 为准。
@@ -259,7 +259,7 @@
 - Source and packaged CLIs use the same contract fixtures. DocWen Assistant 2.0 and OpenClaw 2.0
   each passed their combination release gates against the immutable DocWen 0.9.0 Release.
 - Markdown notes now use `[^id]` or `[^footnote:id]` for footnotes and `[^endnote:id]` for endnotes;
-  the retired `[^endnote-id]` input is rejected. Each note domain numbers by first reference and
+  only `[^endnote:id]` is typed as an endnote; dash-prefixed labels such as `[^endnote-id]` remain ordinary footnote IDs. Each note domain numbers by first reference and
   fails closed on missing, duplicate, or normalized-collision definitions.
 
 Update all CLI scripts and integrations when upgrading from `0.8.x`; no legacy command compatibility
