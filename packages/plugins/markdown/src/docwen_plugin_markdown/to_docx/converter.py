@@ -745,7 +745,8 @@ class MdToDocxConverter:
             # Heading-number view before inert markers are materialized.
             if direct_number_suite:
                 if scheme_config is None:
-                    heading_number_provider = lambda _title, _level: ""
+                    def heading_number_provider(_title: str, _level: int) -> str:
+                        return ""
                 else:
                     heading_number_provider = _direct_heading_number_provider(
                         scheme_config,
