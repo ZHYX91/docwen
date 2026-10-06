@@ -29,11 +29,14 @@ from docwen_plugin_markdown.common_utils import (
     conversion_error_text,
     link_source_path,
     parse_md_tables,
+    parse_raw_md_tables,
     read_input_markdown,
     write_table_to_csv,
 )
 from docwen_plugin_markdown.template_policy import template_list_separator
 from docwen_plugin_markdown.to_spreadsheet.template_xlsx import (
+    _plan_rectangular_merges,
+    _restore_escaped_merge_marker_literals,
     build_template_workbook,
     process_image_placeholders,
 )
@@ -138,6 +141,12 @@ class MdToXlsxConverter:
 
             template_name = str(getattr(context.request, "options", {}).get("template_name", "") or "").strip()
             template_stats: dict[str, int] = {}
+            structural_tables = resolve_markdown_extensions(
+                context.request.options,
+                context.config,
+                direction="input",
+            ).structural_tables
+            structural_merge_warnings = 0
             if template_name:
                 template_path = Path(template_name)
                 if not template_path.is_file():
@@ -166,20 +175,22 @@ class MdToXlsxConverter:
                     source_stem=_source_stem(context),
                     image_scope=image_scope,
                     list_separator=template_list_separator(context.config),
-                    structural_tables=resolve_markdown_extensions(
-                        context.request.options, context.config, direction="input"
-                    ).structural_tables,
+                    structural_tables=structural_tables,
                 )
                 actual_table_count = template_stats.get("table_count", 0)
             else:
                 # ── Parse tables ────────────────────────────────────
                 cancellable.check()
                 progress.report_progress(30.0, "Parsing Markdown tables")
-                tables = parse_md_tables(markdown_body)
+                tables = parse_raw_md_tables(
+                    markdown_body,
+                    preserve_merge_marker_escapes=structural_tables,
+                    structural_tables=structural_tables,
+                )
 
                 if not tables:
                     # Create an empty workbook for MDs with no tables
-                    tables = [{"headers": [], "rows": []}]
+                    tables = [{"headers": [], "rows": [], "all_rows": []}]
                     actual_table_count = 0
                 else:
                     actual_table_count = len(tables)
@@ -191,18 +202,33 @@ class MdToXlsxConverter:
                 for idx, table in enumerate(tables):
                     sheet_name = f"Table_{idx + 1}" if idx > 0 else "Sheet1"
                     ws = wb.create_sheet(title=sheet_name[:31])
+                    source_rows = list(table.get("all_rows") or [])
+                    if not source_rows:
+                        headers = list(table.get("headers") or [])
+                        source_rows = ([headers] if headers else []) + list(table.get("rows") or [])
 
-                    # Headers
-                    if table["headers"]:
-                        for col_idx, header in enumerate(table["headers"], 1):
-                            ws.cell(row=1, column=col_idx, value=header)
-
-                    # Data rows
-                    start_row = 2 if table["headers"] else 1
-                    for row_idx, row in enumerate(table["rows"], start_row):
+                    for row_idx, row in enumerate(source_rows, 1):
                         cancellable.check()
-                        for col_idx, val in enumerate(row, 1):
-                            ws.cell(row=row_idx, column=col_idx, value=val)
+                        for col_idx, raw_value in enumerate(row, 1):
+                            value = (
+                                _restore_escaped_merge_marker_literals(str(raw_value))
+                                if structural_tables
+                                else raw_value
+                            )
+                            ws.cell(row=row_idx, column=col_idx, value=value)
+
+                    if structural_tables and bool(table.get("structural")):
+                        merge_regions, merge_warnings = _plan_rectangular_merges(
+                            [[str(value) for value in row] for row in source_rows]
+                        )
+                        structural_merge_warnings += merge_warnings
+                        for start_row, start_col, end_row, end_col in merge_regions:
+                            ws.merge_cells(
+                                start_row=start_row + 1,
+                                start_column=start_col + 1,
+                                end_row=end_row + 1,
+                                end_column=end_col + 1,
+                            )
 
                 process_image_placeholders(
                     wb,
