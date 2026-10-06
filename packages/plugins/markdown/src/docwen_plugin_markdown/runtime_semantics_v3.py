@@ -18,8 +18,8 @@ from __future__ import annotations
 
 import base64
 import hashlib
-from dataclasses import dataclass
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any, Literal
 
 from docwen_core.docx_semantics_v3 import fenced_source_identity_from_mapping_v3
