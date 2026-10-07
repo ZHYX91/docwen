@@ -51,7 +51,7 @@ distributions and macOS remain source/development paths and are not implied by t
 
 **Option 1: Using uv (Recommended)**
 
-Install `uv 0.12.0`, then:
+Install the production-pinned `uv 0.12.0`, then:
 
 ```bash
 git clone https://github.com/ZHYX91/docwen.git
@@ -59,7 +59,7 @@ cd docwen
 uv sync --frozen --all-extras
 ```
 
-DocWen's source/test/build contract is the checked-in lock with exactly `uv 0.12.0`.
+DocWen CI and production builds use exactly `uv 0.12.0`; dependency/lock maintenance may use a compatible `uv 0.12.x` so automated security updates can refresh the checked-in lock without changing the production toolchain.
 `pip install -e` is unsupported because pip cannot apply the repository's scoped dependency exclusion.
 
 ### Launch Program
