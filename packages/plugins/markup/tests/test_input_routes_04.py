@@ -88,6 +88,41 @@ class TestHtmlToMd:
         assert _decode_html_payload("纯文本中文".encode("gb18030"), admitted_encoding="gb18030") == "纯文本中文"
 
     @pytest.mark.integration
+    def test_html_route_uses_filereference_encoding_before_lossy_fallback(self, pipeline, tmp_path) -> None:
+        _plugin, task_mgr, _ws_mgr = pipeline
+        html_path = tmp_path / "gb18030.html"
+        body = (
+            '<html><head><meta charset="gb18030"><title>中文标题</title></head>'
+            '<body><p>中文正文</p></body></html>'
+        )
+        html_path.write_bytes(body.encode("gb18030"))
+        output_dir = tmp_path / "output_gb18030"
+        output_dir.mkdir()
+        request = ConversionRequest(
+            request_id="html-gb18030-route",
+            input_refs=[
+                FileRef(
+                    path=str(html_path),
+                    format="html",
+                    category="markup",
+                    encoding="gb18030",
+                    size_bytes=html_path.stat().st_size,
+                )
+            ],
+            target_format="md",
+            output_policy=OutputPolicy(output_dir=str(output_dir)),
+            options={"to_md_keep_images": True},
+        )
+
+        result = task_mgr.execute_single(request)
+
+        assert result.success, result.error
+        content = Path(result.artifacts[0].staging_path).read_text(encoding="utf-8")
+        assert "中文标题" in content
+        assert "中文正文" in content
+        assert "\ufffd" not in content
+
+    @pytest.mark.integration
     def test_html_companion_prefixed_src_is_not_joined_twice(self, pipeline, tmp_path) -> None:
         from ._input_routes_support import _test_png_bytes
 
