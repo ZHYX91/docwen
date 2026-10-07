@@ -4,7 +4,7 @@
 
 ### 推荐方案：使用 uv（快速、可靠）
 
-安装固定版本 `uv 0.12.0`，然后：
+安装生产环境固定的 `uv 0.12.0`，然后：
 
 ```bash
 # 安装所有依赖（包括测试、lint、打包工具）
@@ -17,7 +17,7 @@ source .venv/bin/activate  # macOS/Linux
 
 ### 安装器边界
 
-DocWen 的源码、测试与构建合同是 `uv 0.12.0` 加仓库内的 `uv.lock`。
+DocWen 的 CI 与生产构建仍严格固定 `uv 0.12.0`；依赖与锁文件维护允许兼容的 `uv 0.12.x`，以便自动安全更新刷新仓库内 `uv.lock`，而不改变生产工具链。
 不要使用 `pip install -e`：pip 不读取项目的 uv scoped dependency exclusion，会同时安装
 两个互斥且覆盖相同 `cv2` 文件的 OpenCV 分发包。
 
