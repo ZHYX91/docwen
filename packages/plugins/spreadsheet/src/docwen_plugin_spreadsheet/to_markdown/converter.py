@@ -157,6 +157,79 @@ def _dataframe_to_markdown(data: Any, headers: list[str]) -> str:
     return data.to_markdown(index=False, headers=headers)
 
 
+def _worksheet_merge_marker_positions(ws: Any) -> set[tuple[int, int]]:
+    positions: set[tuple[int, int]] = set()
+    for merged_range in list(ws.merged_cells.ranges):
+        anchor = (merged_range.min_row - 1, merged_range.min_col - 1)
+        for row in range(merged_range.min_row - 1, merged_range.max_row):
+            for column in range(merged_range.min_col - 1, merged_range.max_col):
+                if (row, column) != anchor:
+                    positions.add((row, column))
+    return positions
+
+
+def _structural_header_rows_for_block(ws: Any, block: Any) -> int:
+    if block.empty:
+        return 0
+    first_row = int(block.index[0])
+    block_columns = [int(column) for column in block.columns]
+    if not block_columns:
+        return 0
+    min_column = min(block_columns)
+    max_column = max(block_columns)
+    for merged_range in list(ws.merged_cells.ranges):
+        start_row = merged_range.min_row - 1
+        end_row = merged_range.max_row - 1
+        start_column = merged_range.min_col - 1
+        end_column = merged_range.max_col - 1
+        crosses_boundary = start_row <= first_row < end_row
+        overlaps_columns = start_column <= max_column and min_column <= end_column
+        if crosses_boundary and overlaps_columns:
+            return 0
+    return 1
+
+
+def _escape_literal_structural_markers(
+    block: Any,
+    structural_positions: set[tuple[int, int]],
+) -> Any:
+    escaped = block.copy()
+    for row_offset, row_label in enumerate(escaped.index):
+        for column_offset, column_label in enumerate(escaped.columns):
+            value = escaped.iat[row_offset, column_offset]
+            text = "" if value is None else str(value)
+            stripped = text.strip()
+            if (
+                stripped in {"<", "^"}
+                and (int(row_label), int(column_label)) not in structural_positions
+            ):
+                escaped.iat[row_offset, column_offset] = f"\\{stripped}"
+    return escaped
+
+
+def _render_structural_table_block(block: Any, *, header_rows: int) -> str:
+    rows = [
+        ["" if value is None else str(value) for value in block.iloc[row_index].tolist()]
+        for row_index in range(block.shape[0])
+    ]
+    if not rows:
+        return ""
+    delimiter = ["---"] * block.shape[1]
+
+    def render_row(values: list[str]) -> str:
+        return "| " + " | ".join(values) + " |"
+
+    output: list[str] = []
+    if header_rows == 0:
+        output.append(render_row(delimiter))
+        output.extend(render_row(row) for row in rows)
+    else:
+        output.append(render_row(rows[0]))
+        output.append(render_row(delimiter))
+        output.extend(render_row(row) for row in rows[1:])
+    return "\n".join(output)
+
+
 def _worksheet_to_dataframe(
     ws: Any,
     table_merge_strategy: str = "fill",
@@ -861,10 +934,12 @@ class SpreadsheetToMarkdownConverter:
 
             total_images_extracted += len(sheet_images)
 
-            if (
-                ws.merged_cells.ranges
-                and not resolve_markdown_extensions(options, context.config, direction="output").structural_tables
-            ):
+            structural_tables = resolve_markdown_extensions(
+                options,
+                context.config,
+                direction="output",
+            ).structural_tables
+            if ws.merged_cells.ranges and not structural_tables:
                 context.progress.report_diagnostic(
                     "warning",
                     "Merged cells were flattened to a standard Markdown table.",
@@ -902,10 +977,17 @@ class SpreadsheetToMarkdownConverter:
             if not blocks:
                 md_content += " (this sheet is empty)\n\n"
             else:
+                structural_positions = _worksheet_merge_marker_positions(ws)
                 for block in blocks:
                     block = _process_cell_newlines(block)
 
-                    if block.shape[0] > 0:
+                    if block.shape[0] > 0 and structural_tables:
+                        block = _escape_literal_structural_markers(block, structural_positions)
+                        block_md = _render_structural_table_block(
+                            block,
+                            header_rows=_structural_header_rows_for_block(ws, block),
+                        )
+                    elif block.shape[0] > 0:
                         headers = [
                             str(h) if h is not None and str(h).strip() != "" else f"Col{j}"
                             for j, h in enumerate(block.iloc[0].tolist())
