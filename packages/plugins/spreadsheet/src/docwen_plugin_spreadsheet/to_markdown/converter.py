@@ -526,6 +526,11 @@ class SpreadsheetToMarkdownConverter:
                 "block_count": stats.get("blocks", 0),
                 "image_count": stats.get("images", 0),
                 "merge_strategy": merge_strategy,
+                **(
+                    {"formula_cache_unavailable_count": stats["formula_cache_unavailable_count"]}
+                    if stats.get("formula_cache_unavailable_count")
+                    else {}
+                ),
             },
             is_primary=True,
         )
@@ -572,6 +577,16 @@ class SpreadsheetToMarkdownConverter:
                     location="workbook embedded images",
                 )
             )
+        formula_cache_warning = stats.get("formula_cache_warning_message")
+        if isinstance(formula_cache_warning, str) and formula_cache_warning:
+            diagnostics.append(
+                ConversionDiagnostic(
+                    level="warning",
+                    message=formula_cache_warning,
+                    code="SHEET2MD-FORMULA-CACHE-UNAVAILABLE",
+                    location="workbook formulas",
+                )
+            )
 
         return ConversionResult(
             task_id=task_id,
@@ -603,7 +618,7 @@ class SpreadsheetToMarkdownConverter:
         Returns (markdown_text, stats_dict).
         """
         file_stem = context.request.source_stem
-        stats: dict[str, int] = {"sheets": 0, "rows": 0, "cols": 0, "blocks": 0}
+        stats: dict[str, Any] = {"sheets": 0, "rows": 0, "cols": 0, "blocks": 0}
 
         # YAML frontmatter — routed through shared core utility (F-I2b-001)
         from docwen_core.yaml_tools import generate_basic_yaml_frontmatter
@@ -633,9 +648,9 @@ class SpreadsheetToMarkdownConverter:
         source_format: str,
         file_stem: str,
         md_content: str,
-        stats: dict[str, int],
+        stats: dict[str, Any],
         context: ConverterContext,
-    ) -> tuple[str, dict[str, int]]:
+    ) -> tuple[str, dict[str, Any]]:
         """Convert a CSV file to Markdown."""
         context.progress.report_progress(20.0, "Reading CSV...")
 
@@ -675,10 +690,10 @@ class SpreadsheetToMarkdownConverter:
         md_content: str,
         merge_strategy: str,
         keep_images: bool,
-        stats: dict[str, int],
+        stats: dict[str, Any],
         context: ConverterContext,
         options: dict | None = None,
-    ) -> tuple[str, dict[str, int]]:
+    ) -> tuple[str, dict[str, Any]]:
         """Convert an XLSX file to Markdown.
 
         When *keep_images* is ``True``, embedded images are extracted from
@@ -687,11 +702,30 @@ class SpreadsheetToMarkdownConverter:
         """
         if options is None:
             options = context.request.options
-        from docwen_plugin_spreadsheet.csv_xlsx.converter import _load_admitted_xlsx
+        from docwen_plugin_spreadsheet.csv_xlsx.converter import (
+            _find_unavailable_formula_caches,
+            _formula_cache_warning_message,
+            _load_xlsx_views,
+        )
 
         context.progress.report_progress(20.0, "Opening workbook...")
 
-        wb = _load_admitted_xlsx(input_path, data_only=True)
+        wb, formula_wb = _load_xlsx_views(input_path)
+        try:
+            unavailable_formula_count, unavailable_formula_locations = _find_unavailable_formula_caches(
+                wb,
+                formula_wb,
+                input_path=input_path,
+                cancel_check=context.cancellation.check,
+            )
+        finally:
+            formula_wb.close()
+        if unavailable_formula_count:
+            stats["formula_cache_unavailable_count"] = unavailable_formula_count
+            stats["formula_cache_warning_message"] = _formula_cache_warning_message(
+                unavailable_formula_count,
+                unavailable_formula_locations,
+            )
         stats["sheets"] = len(wb.sheetnames)
 
         total_images_extracted = 0
