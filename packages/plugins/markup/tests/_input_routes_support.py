@@ -103,6 +103,7 @@ def _run_request(
     *,
     config_snapshot: dict[str, Any] | None = None,
     _on_event=None,
+    input_encoding: str = "utf-8",
     **options,
 ) -> Any:
     """Run a single conversion request through the task manager."""
@@ -116,6 +117,7 @@ def _run_request(
                 path=str(input_path),
                 format=source_format,
                 category="markup",
+                encoding=input_encoding,
                 size_bytes=Path(input_path).stat().st_size,
             )
         ],
