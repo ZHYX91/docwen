@@ -47,6 +47,37 @@ class TestOutputFinalizer:
             assert result.artifacts[0].staging_path == exact_path
             assert Path(exact_path).read_text() == "test content"
 
+    def test_finalize_implicit_output_dir_refuses_primary_input_replacement(self, finalizer: OutputFinalizer) -> None:
+        with tempfile.TemporaryDirectory() as staging, tempfile.TemporaryDirectory() as work:
+            input_path = Path(work) / "source.png"
+            input_path.write_bytes(b"original source bytes")
+            staged_path = Path(staging) / "source.png"
+            staged_path.write_bytes(b"converted bytes")
+            artifact = ArtifactManifest(
+                artifact_id="primary",
+                kind=ARTIFACT_KIND_PRIMARY,
+                staging_path=str(staged_path),
+                suggested_name=input_path.name,
+                is_primary=True,
+            )
+
+            result = finalizer.finalize(
+                task_id="implicit-source-collision",
+                artifacts=[artifact],
+                policy=OutputPolicy(output_dir=work, overwrite_mode="overwrite"),
+                input_path=str(input_path),
+            )
+
+            assert result.success is False
+            assert result.artifacts == []
+            assert result.error is not None
+            assert result.error.diagnostic_code == "FINALIZER_FAILED"
+            assert any(
+                diagnostic.code == "FINALIZER_PLACE_ERROR" and "must not replace its input file" in diagnostic.message
+                for diagnostic in result.diagnostics
+            )
+            assert input_path.read_bytes() == b"original source bytes"
+
     def test_finalize_exact_output_refuses_existing_target(self, finalizer: OutputFinalizer) -> None:
         with tempfile.TemporaryDirectory() as staging, tempfile.TemporaryDirectory() as output:
             staging_path = _create_staging_file(staging, "generated.docx", "new")
@@ -239,6 +270,8 @@ class TestOutputFinalizer:
                 overwrite_mode,
                 input_path,
                 cancellation,
+                *,
+                allow_primary_input_replacement=False,
             ):
                 nonlocal active_calls, call_count, max_active_calls
                 with state_lock:
@@ -257,6 +290,7 @@ class TestOutputFinalizer:
                         overwrite_mode,
                         input_path,
                         cancellation,
+                        allow_primary_input_replacement=allow_primary_input_replacement,
                     )
                 finally:
                     with state_lock:
