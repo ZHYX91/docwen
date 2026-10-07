@@ -53,8 +53,12 @@ def build_template_workbook(
     """
     yaml_text, body = extract_yaml(markdown)
     yaml_data = _parse_yaml_mapping(yaml_text)
-    tables = parse_md_tables(body)
-    raw_tables = parse_raw_md_tables(body, preserve_merge_marker_escapes=True)
+    tables = parse_md_tables(body, structural_tables=structural_tables)
+    raw_tables = parse_raw_md_tables(
+        body,
+        preserve_merge_marker_escapes=True,
+        structural_tables=structural_tables,
+    )
     table_columns = _columns_from_tables(tables)
 
     with Path(template_path).open("rb") as stream:
@@ -378,48 +382,75 @@ def _find_column_placeholder_regions(workbook: Any, headers: list[str]) -> list[
 
 
 def _plan_rectangular_merges(rows: list[list[str]]) -> tuple[list[tuple[int, int, int, int]], int]:
+    """Resolve Structural Tables markers to rectangular merge regions.
+
+    Marker chains are resolved to their actual anchor instead of requiring one
+    serialized spelling.  This accepts equivalent rectangles such as a lower
+    row written as "^ | <" or "^ | ^", and it permits an intentionally empty
+    anchor cell.
+    """
     if not rows:
         return [], 0
 
     column_count = max((len(row) for row in rows), default=0)
     normalized_rows = [row + [""] * (column_count - len(row)) for row in rows]
-    merge_regions: list[tuple[int, int, int, int]] = []
-    warnings = 0
-
+    markers: dict[tuple[int, int], str] = {}
     for row_index, row in enumerate(normalized_rows):
         for col_index, raw_text in enumerate(row):
-            marker_type = _classify_merge_marker(raw_text)
-            display_text = _restore_escaped_merge_marker_literals(raw_text)
-            if marker_type is not None or not display_text.strip():
+            marker = _classify_merge_marker(raw_text)
+            if marker is not None:
+                markers[(row_index, col_index)] = marker
+
+    resolved: dict[tuple[int, int], tuple[int, int] | None] = {}
+    resolving: set[tuple[int, int]] = set()
+
+    def _resolve(position: tuple[int, int]) -> tuple[int, int] | None:
+        if position in resolved:
+            return resolved[position]
+        marker = markers.get(position)
+        if marker is None:
+            resolved[position] = position
+            return position
+        if position in resolving:
+            resolved[position] = None
+            return None
+        resolving.add(position)
+        row_index, col_index = position
+        target = (row_index, col_index - 1) if marker == "left" else (row_index - 1, col_index)
+        if target[0] < 0 or target[1] < 0 or target[0] >= len(normalized_rows) or target[1] >= column_count:
+            anchor = None
+        else:
+            anchor = _resolve(target)
+        resolving.discard(position)
+        resolved[position] = anchor
+        return anchor
+
+    groups: dict[tuple[int, int], set[tuple[int, int]]] = {}
+    invalid = False
+    for row_index in range(len(normalized_rows)):
+        for col_index in range(column_count):
+            position = (row_index, col_index)
+            anchor = _resolve(position)
+            if anchor is None:
+                invalid = True
                 continue
+            groups.setdefault(anchor, set()).add(position)
 
-            width = 1
-            while col_index + width < column_count:
-                if _classify_merge_marker(normalized_rows[row_index][col_index + width]) != "left":
-                    break
-                width += 1
+    merge_regions: list[tuple[int, int, int, int]] = []
+    for anchor, covered in sorted(groups.items()):
+        if len(covered) <= 1:
+            continue
+        min_row = min(row for row, _column in covered)
+        max_row = max(row for row, _column in covered)
+        min_col = min(column for _row, column in covered)
+        max_col = max(column for _row, column in covered)
+        rectangle = {(row, column) for row in range(min_row, max_row + 1) for column in range(min_col, max_col + 1)}
+        if covered != rectangle or anchor != (min_row, min_col):
+            invalid = True
+            continue
+        merge_regions.append((min_row, min_col, max_row, max_col))
 
-            height = 1
-            invalid_row = False
-            scan_row = row_index + 1
-            while scan_row < len(normalized_rows):
-                segment = normalized_rows[scan_row][col_index : col_index + width]
-                segment_markers = [_classify_merge_marker(value) for value in segment]
-                if all(marker == "up" for marker in segment_markers):
-                    height += 1
-                    scan_row += 1
-                    continue
-                if any(marker is not None for marker in segment_markers):
-                    invalid_row = True
-                break
-
-            if invalid_row:
-                warnings += 1
-                continue
-            if width > 1 or height > 1:
-                merge_regions.append((row_index, col_index, row_index + height - 1, col_index + width - 1))
-
-    return merge_regions, warnings
+    return merge_regions, int(invalid)
 
 
 def _classify_merge_marker(raw_text: str) -> str | None:

@@ -175,22 +175,35 @@ def _apply_numbering(content: str, formatter: Any) -> str:
 # ── MD → Spreadsheet helpers ──────────────────────────────────────────
 
 
-def parse_md_tables(content: str) -> list[dict[str, Any]]:
-    """Parse Markdown content and extract tables into structured data.
+def parse_md_tables(content: str, *, structural_tables: bool = False) -> list[dict[str, Any]]:
+    """Parse Markdown content and extract spreadsheet-facing table data.
 
-    Returns a list of dicts: {'headers': [...], 'rows': [[...], ...]}.
+    When structural_tables is enabled, the parser also accepts the Structural
+    Tables delimiter grammar: zero or multiple header rows, an optional row
+    header boundary, one-or-more delimiter dashes, and merge markers.
     """
-    return parse_raw_md_tables(content, preserve_merge_marker_escapes=False)
+    return parse_raw_md_tables(
+        content,
+        preserve_merge_marker_escapes=False,
+        structural_tables=structural_tables,
+    )
 
 
-def parse_raw_md_tables(content: str, *, preserve_merge_marker_escapes: bool = False) -> list[dict[str, Any]]:
+def parse_raw_md_tables(
+    content: str,
+    *,
+    preserve_merge_marker_escapes: bool = False,
+    structural_tables: bool = False,
+) -> list[dict[str, Any]]:
     """Parse pipe tables while preserving spreadsheet-facing cell text.
 
     Mistune is the right parser for DOCX rendering, but spreadsheet export
-    treats table cell text as Markdown source text: links remain
-    ``[label](url)``, code spans keep their backticks, and pipes inside code
-    spans do not split columns. Fenced code blocks are ignored, including
-    unclosed fences.
+    treats table cell text as Markdown source text: links remain source text,
+    code spans keep their backticks, and pipes inside code spans do not split
+    columns. Fenced code blocks are ignored, including unclosed fences.
+
+    Structural Tables recognition is deliberately opt-in so the disabled
+    dialect keeps its documented ordinary-Markdown behavior.
     """
     tables: list[dict[str, Any]] = []
     lines = content.splitlines()
@@ -211,14 +224,30 @@ def parse_raw_md_tables(content: str, *, preserve_merge_marker_escapes: bool = F
             fence_marker = ""
             index += 1
             continue
-        if in_fence or index + 1 >= len(lines):
+        if in_fence:
             index += 1
             continue
+
         nested_list_table = _is_nested_list_table_start(lines, index)
         if line.startswith(("    ", "\t")) and not nested_list_table:
             index += 1
             continue
 
+        if structural_tables:
+            parsed_structural = _parse_structural_table_rows(
+                lines,
+                index,
+                nested_list_table=nested_list_table,
+                preserve_merge_marker_escapes=preserve_merge_marker_escapes,
+            )
+            if parsed_structural is not None:
+                table, index = parsed_structural
+                tables.append(table)
+                continue
+
+        if index + 1 >= len(lines):
+            index += 1
+            continue
         header = _split_md_table_row(lines[index])
         separator = _split_md_table_row(lines[index + 1])
         table_indent = _leading_indent_columns(line) if nested_list_table else 0
@@ -245,16 +274,112 @@ def parse_raw_md_tables(content: str, *, preserve_merge_marker_escapes: bool = F
             index += 1
 
         if rows:
+            restored_header = [
+                _restore_markdown_table_cell(cell.strip(), preserve_merge_marker_escapes) for cell in header
+            ]
             tables.append(
                 {
-                    "headers": [
-                        _restore_markdown_table_cell(cell.strip(), preserve_merge_marker_escapes) for cell in header
-                    ],
+                    "headers": restored_header,
                     "rows": rows,
                 }
             )
 
     return tables
+
+
+def _parse_structural_table_rows(
+    lines: list[str],
+    start: int,
+    *,
+    nested_list_table: bool,
+    preserve_merge_marker_escapes: bool,
+) -> tuple[dict[str, Any], int] | None:
+    """Parse one structurally distinctive Structural Tables block."""
+
+    table_indent = _leading_indent_columns(lines[start]) if nested_list_table else 0
+    raw_rows: list[list[str]] = []
+    cursor = start
+    while cursor < len(lines):
+        line = lines[cursor]
+        if line.startswith(("    ", "\t")) and not nested_list_table:
+            break
+        if nested_list_table and _leading_indent_columns(line) < table_indent:
+            break
+        if _opening_fence(line) is not None:
+            break
+        row = _split_md_table_row(line)
+        if row is None:
+            break
+        raw_rows.append(row)
+        cursor += 1
+
+    if len(raw_rows) < 2:
+        return None
+
+    delimiters: list[tuple[int, int, int, bool]] = []
+    for row_index, row in enumerate(raw_rows):
+        shape = _structural_separator_shape(row)
+        if shape is None:
+            continue
+        column_count, header_columns, short_delimiter = shape
+        delimiters.append((row_index, column_count, header_columns, short_delimiter))
+    if len(delimiters) != 1:
+        return None
+
+    delimiter_index, column_count, header_columns, short_delimiter = delimiters[0]
+    content_rows = [*raw_rows[:delimiter_index], *raw_rows[delimiter_index + 1 :]]
+    if not content_rows or any(len(row) != column_count for row in content_rows):
+        return None
+
+    marker_found = any(cell.strip() in {"<", "^"} for row in content_rows for cell in row)
+    structurally_distinctive = delimiter_index != 1 or header_columns > 0 or short_delimiter or marker_found
+    if not structurally_distinctive:
+        return None
+
+    restored_rows = [
+        [_restore_markdown_table_cell(cell.strip(), preserve_merge_marker_escapes) for cell in row]
+        for row in content_rows
+    ]
+    header_rows = delimiter_index
+    headers = restored_rows[header_rows - 1] if header_rows > 0 else []
+    body_rows = restored_rows[header_rows:] if header_rows > 0 else restored_rows
+
+    return (
+        {
+            "headers": headers,
+            "rows": body_rows,
+            "all_rows": restored_rows,
+            "header_rows": header_rows,
+            "header_columns": header_columns,
+            "structural": True,
+        },
+        cursor,
+    )
+
+
+def _structural_separator_shape(cells: list[str]) -> tuple[int, int, bool] | None:
+    """Return column count, row-header boundary, and short-delimiter status."""
+
+    empty_boundaries = [index for index, cell in enumerate(cells) if cell == ""]
+    if len(empty_boundaries) > 1:
+        return None
+    boundary = empty_boundaries[0] if empty_boundaries else None
+    if boundary is not None and boundary in {0, len(cells) - 1}:
+        return None
+
+    tokens = [cell for index, cell in enumerate(cells) if index != boundary]
+    if not tokens:
+        return None
+
+    dash_lengths: list[int] = []
+    for token in tokens:
+        stripped = token.strip()
+        match = re.fullmatch(r":?(-+):?", stripped)
+        if match is None:
+            return None
+        dash_lengths.append(len(match.group(1)))
+
+    return len(tokens), (0 if boundary is None else boundary), any(length < 3 for length in dash_lengths)
 
 
 def _leading_indent_columns(line: str) -> int:
