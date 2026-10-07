@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from copy import deepcopy
+from typing import Any
 from typing import Any, cast
 
 from docx.oxml import OxmlElement
@@ -34,9 +35,9 @@ def paragraph_visible_runs(paragraph) -> list[Run]:
         if isinstance(item, Run):
             visible.append(item)
             continue
-        nested_runs = getattr(item, "runs", None)
+        nested_runs: Any = getattr(item, "runs", None)
         if nested_runs is not None:
-            visible.extend(nested_runs)
+            visible.extend(run for run in nested_runs if isinstance(run, Run))
     return visible
 
 
