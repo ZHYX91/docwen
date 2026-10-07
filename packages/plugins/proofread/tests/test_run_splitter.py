@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import pytest
 from docx import Document
+from docx.opc.constants import RELATIONSHIP_TYPE as RT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.opc.constants import RELATIONSHIP_TYPE as RT
 
 from docwen_plugin_proofread.run_splitter import (
     ensure_run_at_position,
