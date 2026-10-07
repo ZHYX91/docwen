@@ -368,15 +368,19 @@ the conversion request, not to any installed editor plugin. Number Suite install
 an otherwise identical source-native conversion.
 
 The Machine source capability advertises `markdown_resource_bindings` with shape
-`{authored_sha256, images: [{authored_token, logical_path}]}`. The SHA-256 binds the complete UTF-8 source;
-each token must be a visible authored image and each path must identify a declared resource. Bindings preserve
-short Wiki names, cross-folder targets and spaces without basename discovery or source rewriting. Wiki and
-Markdown image policies remain independent. Local Wiki navigation requiring filesystem search and Markdown
-transclusion are outside this declared-image route; text-only link policies do not require file discovery.
+`{authored_sha256, images: [{authored_token, logical_path}], wiki_links?: [{authored_token, href}]}`.
+The SHA-256 binds the complete UTF-8 source. Image tokens must be visible authored images and point to declared
+resource bytes. Wiki navigation tokens must be visible authored non-embed WikiLinks and use an allowed external
+navigation URI (`http`, `https`, `mailto`, or `obsidian`). A bound local WikiLink is resolved only from that
+authenticated URI; DocWen never probes the request host's filesystem or rewrites the source. Unbound local Wiki
+navigation still fails closed when hyperlink/resolve policy requires a target. Wiki and Markdown image policies remain
+independent, and text-only `keep`/`extract_text`/`remove` policies do not consume the navigation binding.
+Markdown note transclusion remains a separate declared-resource contract.
 
-Machine 原文入口通过 `markdown_resource_bindings` 将完整 UTF-8 原文 SHA-256、可见图片标记和已声明资源逻辑路径绑定。
-短 Wiki 名称、跨目录目标及空格文件名不需要按文件名搜索，也不改写原文。Wiki 图片与 Markdown 图片分别遵循各自策略。
-需要文件搜索的本地 Wiki 导航及 Markdown 嵌入展开不在此声明图片入口的范围内；纯文本链接策略无需搜索文件。
+Machine 原文入口通过 `markdown_resource_bindings` 将完整 UTF-8 原文 SHA-256、可见图片标记、已声明图片资源以及可选的
+普通 Wiki 导航标记绑定。普通 Wiki 导航只能使用已认证的外部导航 URI（包括 `obsidian://`），DocWen 不枚举或搜索
+Vault/本地文件；需要目标的未绑定本地 Wiki 链接仍失败关闭。纯文本链接策略不消费导航绑定。Markdown 笔记嵌入展开
+仍属于独立的声明资源合同。
 
 A separate provider-neutral route consumes `resolved_document` plus `numbering_export_plan` under
 [Resolved structured numbering and export plan](structured-numbering-phases.md). On that exact-two route the upstream

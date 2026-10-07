@@ -722,6 +722,7 @@ def _process_non_embed_links(
     table_safe: bool = False,
     literal_keep: bool = False,
     hyperlink_renderer: Callable[[str, str], str] | None = None,
+    declared_wiki_link: Callable[[str, str], str | None] | None = None,
 ) -> str:
     """Process links outside fenced and inline code.
 
@@ -758,6 +759,12 @@ def _process_non_embed_links(
             return match.group(0)
         if not target:
             return display
+
+        if declared_wiki_link is not None:
+            declared_target = declared_wiki_link(match.group(0), target)
+            if declared_target is not None:
+                destination = encode_markdown_angle_destination(declared_target)
+                return emit_link(escape_markdown_label(display), f"<{destination}>")
 
         encoded_target = encode_markdown_destination_escapes(target)
         path_and_query, separator, raw_fragment = encoded_target.partition("#")

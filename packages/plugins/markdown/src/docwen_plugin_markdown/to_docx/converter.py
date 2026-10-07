@@ -825,7 +825,11 @@ class MdToDocxConverter:
                 link_source = md_body
                 link_config = _request_link_config(context.config)
                 if declared_resource_resolver is not None:
-                    reject_declared_input_link_lookups(link_source, wiki_mode=link_config.non_embed_wiki_mode)
+                    reject_declared_input_link_lookups(
+                        link_source,
+                        wiki_mode=link_config.non_embed_wiki_mode,
+                        declared_wiki_link=declared_resource_resolver.resolve_wiki_link,
+                    )
                 image_scope = secrets.token_urlsafe(24)
                 md_body = process_markdown_links(
                     link_source,
@@ -836,6 +840,9 @@ class MdToDocxConverter:
                     image_scope=image_scope,
                     declared_image=(
                         declared_resource_resolver.resolve_image if declared_resource_resolver is not None else None
+                    ),
+                    declared_wiki_link=(
+                        declared_resource_resolver.resolve_wiki_link if declared_resource_resolver is not None else None
                     ),
                 )
                 md_body = materialize_image_placeholders(
