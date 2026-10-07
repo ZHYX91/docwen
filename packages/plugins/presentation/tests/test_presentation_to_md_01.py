@@ -168,7 +168,6 @@ class TestPptxToMd:
         assert "标题: Test Presentation" not in yaml_block
         assert "title: Test Presentation" not in yaml_block
 
-    @pytest.mark.integration
     def test_grouped_text_and_image_use_the_normal_shape_pipeline(self, pipeline, tmp_path) -> None:
         from PIL import Image
         from pptx import Presentation
@@ -208,7 +207,6 @@ class TestPptxToMd:
         assert Path(images[0].staging_path).read_bytes() == expected_image
         assert images[0].suggested_name in markdown
 
-    @pytest.mark.integration
     def test_pptx_frontmatter_quotes_yaml_sensitive_title(self, pipeline, tmp_path) -> None:
         import yaml
         from pptx import Presentation
