@@ -265,10 +265,18 @@ class ReleaseSession:
                 require(result.get("draft") is False, "publish response still describes a draft")
                 self.save(stage="published-awaiting-readback", pending=None)
         except ApiError as error:
+            explicitly_rejected = error.status == 429 or (error.status == 403 and error.limited)
+            if explicitly_rejected:
+                # GitHub returned a rate-limit rejection before accepting the
+                # write. Clear the pending marker so a later invocation can
+                # retry from the same receipt once the limit has lifted.
+                self.save(pending=None)
+                raise
             if not error.transient and error.status != 422:
                 self.save(pending=None)
                 raise
-            # A write is never automatically repeated, including after a lost response.
+            # Unknown write outcomes are never automatically repeated,
+            # including after a timeout, 5xx response, or lost response.
         except (TimeoutError, OSError, http.client.HTTPException, json.JSONDecodeError):
             pass
 
