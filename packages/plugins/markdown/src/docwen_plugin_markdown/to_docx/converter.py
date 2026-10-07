@@ -776,9 +776,7 @@ class MdToDocxConverter:
                         declared_resource_resolver.resolve_image if declared_resource_resolver is not None else None
                     ),
                     declared_wiki_link=(
-                        declared_resource_resolver.resolve_wiki_link
-                        if declared_resource_resolver is not None
-                        else None
+                        declared_resource_resolver.resolve_wiki_link if declared_resource_resolver is not None else None
                     ),
                 )
                 md_body = materialize_image_placeholders(
