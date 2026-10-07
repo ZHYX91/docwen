@@ -139,6 +139,50 @@ def test_direct_number_suite_standalone_caption_round_trips_without_inventing_ca
     assert "![image omitted]()" not in markdown
 
 
+def test_direct_number_suite_id_only_and_authored_aliases_round_trip(
+    round_trip_runtime: Any,
+    tmp_path: Path,
+) -> None:
+    source_path = tmp_path / "direct-number-suite-edge.md"
+    source = (
+        "Equation: ^energy\n\n"
+        "Code: ^snippet\n\n"
+        "Figure: Planned ^plan\n\n"
+        "See @[[#^energy]], @[[#^snippet]], @[[#^plan|  Friendly label  ]], "
+        "@[[#^plan|A|B]], and @[[#^plan|   ]].\n"
+    )
+    source_path.write_text(source, encoding="utf-8")
+
+    output = md_to_docx(
+        round_trip_runtime,
+        source_path,
+        tmp_path / "direct-number-suite-edge-docx",
+        request_id="direct-number-suite-edge",
+    )
+
+    reopened = Document(str(output))
+    recovery = DocxSemanticsV3Recovery.load(output, reopened)
+    captions = [(item.kind, item.source_id, item.title) for item in recovery.recovered_captions]
+    assert ("equation", "energy", "") in captions
+    assert ("code_block", "snippet", "") in captions
+    assert ("figure", "plan", "Planned") in captions
+
+    markdown = docx_to_md(
+        round_trip_runtime,
+        output,
+        tmp_path / "direct-number-suite-edge-md",
+        request_id="direct-number-suite-edge-reverse",
+        preserve_numbering=False,
+    )
+    assert "Equation: ^energy" in markdown
+    assert "Code: ^snippet" in markdown
+    assert "@[[#^energy]]" in markdown
+    assert "@[[#^snippet]]" in markdown
+    assert "@[[#^plan|  Friendly label  ]]" in markdown
+    assert "@[[#^plan|A|B]]" in markdown
+    assert "@[[#^plan|   ]]" in markdown
+
+
 def test_exact_two_figure_captioned_multi_image_table_round_trips_with_short_target_range(
     round_trip_runtime: Any,
     tmp_path: Path,
