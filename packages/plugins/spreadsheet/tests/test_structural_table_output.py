@@ -58,10 +58,7 @@ def test_literal_merge_markers_are_escaped_in_structural_output(tmp_path: Path) 
     metadata = analysis.ast[0]["_document_semantics_table"]
     assert all(anchor["row_span"] == anchor["column_span"] == 1 for anchor in metadata["anchors"])
     text = [
-        child["raw"]
-        for anchor in metadata["anchors"]
-        for child in anchor["children"]
-        if child.get("type") == "text"
+        child["raw"] for anchor in metadata["anchors"] for child in anchor["children"] if child.get("type") == "text"
     ]
     assert "<" in text
     assert "^" in text
@@ -89,9 +86,6 @@ def test_merge_crossing_first_row_forces_zero_header_output(tmp_path: Path) -> N
     metadata = analysis.ast[0]["_document_semantics_table"]
     assert metadata["header_rows"] == 0
     assert any(
-        anchor["row"] == 0
-        and anchor["column"] == 0
-        and anchor["row_span"] == 2
-        and anchor["column_span"] == 1
+        anchor["row"] == 0 and anchor["column"] == 0 and anchor["row_span"] == 2 and anchor["column_span"] == 1
         for anchor in metadata["anchors"]
     )
