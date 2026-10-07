@@ -1,7 +1,9 @@
 """Native settings checkboxes with readable labels at narrow widths."""
 
+import math
+
 from PySide6.QtCore import QEvent, QSize
-from PySide6.QtGui import QTextLayout, QTextOption
+from PySide6.QtGui import QFontMetricsF, QTextLayout, QTextOption
 from PySide6.QtWidgets import QCheckBox, QSizePolicy, QStyle, QStyleOptionButton, QWidget
 
 from docwen_gui.styles.ui_scale import dp
@@ -67,9 +69,10 @@ class SettingsCheckBox(CheckBox):
         self.initStyleOption(option)
         option.text = self._source_text
         metrics = self.fontMetrics()
+        float_metrics = QFontMetricsF(self.font())
         paragraphs = self._source_text.split("\n")
         size = QSize(
-            max((metrics.horizontalAdvance(line) for line in paragraphs), default=0),
+            math.ceil(max((float_metrics.horizontalAdvance(line) for line in paragraphs), default=0.0)),
             metrics.height() + (len(paragraphs) - 1) * metrics.lineSpacing(),
         )
         size = self.style().sizeFromContents(QStyle.ContentsType.CT_CheckBox, option, size, self)

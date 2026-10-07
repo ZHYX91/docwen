@@ -132,3 +132,24 @@ def test_help_checkbox_wraps_and_keeps_help_next_to_text(qapp, qtbot, locale, ta
     finally:
         tab.close()
         set_locale(previous)
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["Recognize table structure", "识别表格结构", "Enable logging"],
+)
+def test_settings_checkbox_natural_width_does_not_wrap_fractional_glyph_extent(qapp, qtbot, text) -> None:
+    from PySide6.QtGui import QFont
+    from PySide6.QtWidgets import QCheckBox
+
+    from docwen_gui.widgets.settings.check_box import SettingsCheckBox
+
+    checkbox = SettingsCheckBox(text)
+    qtbot.addWidget(checkbox)
+    checkbox.setFont(QFont("Arial", 13))
+    natural_width = checkbox.sizeHint().width()
+    checkbox.resize(natural_width, checkbox.heightForWidth(natural_width))
+    checkbox.show()
+    qapp.processEvents()
+
+    assert QCheckBox.text(checkbox) == text

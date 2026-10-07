@@ -96,6 +96,49 @@ def test_batch_paste_appends_independent_visible_snapshots(
     assert [Path(ref.path).read_text(encoding="utf-8") for ref in refs] == ["# First\n", "# Second\n"]
 
 
+def test_locate_shortcut_does_not_reveal_managed_clipboard_backing_path(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    managed_path = _paste_text(clipboard_window, qapp, qtbot, "# Managed clipboard\n")
+    opened: list[tuple[str, bool]] = []
+    monkeypatch.setattr(
+        clipboard_window,
+        "_open_path",
+        lambda path, *, open_parent=False: opened.append((path, open_parent)),
+    )
+
+    clipboard_window._on_locate_output_shortcut()
+
+    assert opened == []
+    assert managed_path not in clipboard_window._input_area_vm.selection_message
+
+
+def test_locate_shortcut_still_reveals_user_owned_file(
+    clipboard_window: MainWindow,
+    qapp: QApplication,
+    qtbot,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "owned.md"
+    source.write_text("# Owned\n", encoding="utf-8")
+    clipboard_window.view_model.add_files([str(source)])
+    qtbot.waitUntil(lambda: not clipboard_window.view_model.inspection_busy)
+    opened: list[tuple[str, bool]] = []
+    monkeypatch.setattr(
+        clipboard_window,
+        "_open_path",
+        lambda path, *, open_parent=False: opened.append((path, open_parent)),
+    )
+
+    clipboard_window._on_locate_output_shortcut()
+
+    assert opened == [(normalize_path(str(source)), True)]
+
+
 def test_file_clipboard_prefers_real_file_over_url_text(
     clipboard_window: MainWindow,
     qapp: QApplication,
