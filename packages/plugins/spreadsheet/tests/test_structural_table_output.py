@@ -71,4 +71,3 @@ def test_merge_crossing_first_row_forces_zero_header_output(tmp_path: Path) -> N
     assert lines[0] == "| --- | --- |"
     assert lines[1] == "| Merged | X |"
     assert lines[2] == "| ^ | Y |"
-
