@@ -210,9 +210,16 @@ def parse_raw_md_tables(
     index = 0
     in_fence = False
     fence_marker = ""
+    in_comment = False
 
     while index < len(lines):
         line = lines[index]
+        comment_boundary = re.fullmatch(r" {0,3}%%[ \t]*", re.sub(r"^(?: {0,3}>[ \t]?)+", "", line))
+        if in_comment:
+            if comment_boundary is not None:
+                in_comment = False
+            index += 1
+            continue
         opening_fence = _opening_fence(line) if not in_fence else None
         if opening_fence is not None:
             in_fence = True
@@ -225,6 +232,11 @@ def parse_raw_md_tables(
             index += 1
             continue
         if in_fence:
+            index += 1
+            continue
+
+        if comment_boundary is not None:
+            in_comment = True
             index += 1
             continue
 

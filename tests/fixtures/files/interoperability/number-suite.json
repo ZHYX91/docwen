@@ -1,0 +1,233 @@
+{
+  "schema": "number-suite.interoperability-corpus.v1",
+  "cases": [
+    {
+      "id": "caption-kinds-and-independent-numbering",
+      "domain": "document",
+      "source": "Figure: First\nTable: First\nFigure: Second ^fig-two\nEquation: E\nCode: Sample",
+      "expected": {
+        "captions": [
+          {
+            "kind": "Figure",
+            "title": "First",
+            "block_id": null,
+            "number": 1
+          },
+          {
+            "kind": "Table",
+            "title": "First",
+            "block_id": null,
+            "number": 1
+          },
+          {
+            "kind": "Figure",
+            "title": "Second",
+            "block_id": "fig-two",
+            "number": 2
+          },
+          {
+            "kind": "Equation",
+            "title": "E",
+            "block_id": null,
+            "number": 1
+          },
+          {
+            "kind": "Code",
+            "title": "Sample",
+            "block_id": null,
+            "number": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "id-only-equation-and-code",
+      "domain": "document",
+      "source": "Equation: ^energy\n\nCode: ^snippet\n\nSee @[[#^energy]] and @[[#^snippet]].",
+      "expected": {
+        "captions": [
+          {
+            "kind": "Equation",
+            "title": "",
+            "block_id": "energy",
+            "number": 1
+          },
+          {
+            "kind": "Code",
+            "title": "",
+            "block_id": "snippet",
+            "number": 1
+          }
+        ],
+        "references": [
+          {
+            "kind": "block",
+            "target": "energy",
+            "alias": null
+          },
+          {
+            "kind": "block",
+            "target": "snippet",
+            "alias": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "reference-alias-normalization",
+      "domain": "document",
+      "source": "Figure: Planned ^plan\n\n@[[#^plan|  Friendly label  ]]\n@[[#^plan|A|B]]\n@[[#^plan|   ]]",
+      "expected": {
+        "references": [
+          {
+            "kind": "block",
+            "target": "plan",
+            "alias": "Friendly label"
+          },
+          {
+            "kind": "block",
+            "target": "plan",
+            "alias": "A|B"
+          },
+          {
+            "kind": "block",
+            "target": "plan",
+            "alias": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "document-protected-contexts",
+      "domain": "document",
+      "source": "# Target ^target\n\n`@[[#Hidden]]`\n%% @[[#Hidden]] %%\n<!-- @[[#Hidden]] -->\n[Link](https://example.test/@[[#Hidden]])\n\n@[[#^target]]",
+      "expected": {
+        "references": [
+          {
+            "kind": "block",
+            "target": "target",
+            "alias": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "note-types-use-colon-not-dash-prefix",
+      "domain": "notes",
+      "source": "Default[^alpha], end[^endnote:gamma], dash[^endnote-topic].\n\n[^alpha]: A\n[^endnote:gamma]: C\n[^endnote-topic]: D",
+      "expected": {
+        "definitions": [
+          {
+            "kind": "footnote",
+            "id": "alpha"
+          },
+          {
+            "kind": "endnote",
+            "id": "gamma"
+          },
+          {
+            "kind": "footnote",
+            "id": "endnote-topic"
+          }
+        ],
+        "references": [
+          {
+            "kind": "footnote",
+            "id": "alpha"
+          },
+          {
+            "kind": "endnote",
+            "id": "gamma"
+          },
+          {
+            "kind": "footnote",
+            "id": "endnote-topic"
+          }
+        ]
+      }
+    },
+    {
+      "id": "note-identity-is-nfc-plus-lowercase-not-casefold",
+      "domain": "notes",
+      "source": "First[^Straße], second[^Strasse].\n\n[^Straße]: Sharp-s identity.\n[^Strasse]: Latin ss identity.",
+      "expected": {
+        "definitions": [
+          {
+            "kind": "footnote",
+            "id": "Straße"
+          },
+          {
+            "kind": "footnote",
+            "id": "Strasse"
+          }
+        ],
+        "numbered_references": [
+          {
+            "kind": "footnote",
+            "id": "Straße",
+            "number": 1
+          },
+          {
+            "kind": "footnote",
+            "id": "Strasse",
+            "number": 2
+          }
+        ]
+      }
+    },
+    {
+      "id": "notes-ignore-protected-inline-and-link-destination",
+      "domain": "notes",
+      "source": "`Code[^code]` and \\\\[^escaped] and [Link](https://example.test/[^destination]) and visible[^ok].\n\n[^ok]: Visible.",
+      "expected": {
+        "definitions": [
+          {
+            "kind": "footnote",
+            "id": "ok"
+          }
+        ],
+        "references": [
+          {
+            "kind": "footnote",
+            "id": "ok"
+          }
+        ]
+      }
+    },
+    {
+      "id": "notes-number-types-independently-and-reuse-reference",
+      "domain": "notes",
+      "source": "End[^endnote:z], foot[^a], end again[^endnote:z], foot two[^footnote:b].\n\n[^a]: A\n[^footnote:b]: B\n[^endnote:z]: Z",
+      "expected": {
+        "numbered_references": [
+          {
+            "kind": "endnote",
+            "id": "z",
+            "number": 1
+          },
+          {
+            "kind": "footnote",
+            "id": "a",
+            "number": 1
+          },
+          {
+            "kind": "endnote",
+            "id": "z",
+            "number": 1
+          },
+          {
+            "kind": "footnote",
+            "id": "b",
+            "number": 2
+          }
+        ]
+      }
+    }
+  ],
+  "unresolved_boundaries": [
+    {
+      "id": "structural-table-reference-alias-pipe",
+      "description": "The table-cell escaping order for a semantic-reference alias containing a literal pipe is not frozen as a positive cross-plugin syntax contract."
+    }
+  ]
+}

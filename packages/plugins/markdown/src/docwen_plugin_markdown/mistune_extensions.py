@@ -170,7 +170,7 @@ def _structural_pipe_row(line: str) -> list[str] | None:
     index = 0
     while index < len(line):
         character = line[index]
-        if character == "`":
+        if character == "`" and (code_ticks or not escaped):
             run = 1
             while index + run < len(line) and line[index + run] == "`":
                 run += 1
@@ -331,6 +331,25 @@ def plugin_structural_tables(md: mistune.Markdown) -> None:
             nested_rules.append("structural_table")
 
 
+def plugin_literal_obsidian_comment_blocks(md: mistune.Markdown) -> None:
+    """Keep standalone comment blocks visible without interpreting their tables."""
+
+    def parse_literal_comment(block, match, state):
+        state.append_token({"type": "paragraph", "children": [{"type": "text", "raw": match.group(0).rstrip("\n")}]})
+        return match.end()
+
+    md.block.register(
+        "literal_obsidian_comment",
+        r"^ {0,3}%%[ \t]*\n[\s\S]*?(?:^ {0,3}%%[ \t]*(?:\n|$)|\Z)",
+        parse_literal_comment,
+        before="table",
+    )
+    for rules_name in ("block_quote_rules", "list_rules"):
+        rules = getattr(md.block, rules_name, None)
+        if isinstance(rules, list) and "literal_obsidian_comment" not in rules:
+            rules.insert(0, "literal_obsidian_comment")
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Factory
 # ═══════════════════════════════════════════════════════════════════════════
@@ -407,6 +426,7 @@ def create_extended_markdown(
         plugin_single_line_block_math,
         plugin_underline,
         plugin_source_breaks,
+        plugin_literal_obsidian_comment_blocks,
     ]
     dialect = extensions or MarkdownExtensions.obsidian()
     if dialect.structural_tables:

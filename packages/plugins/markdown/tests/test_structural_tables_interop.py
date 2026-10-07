@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from docwen_plugin_markdown.common_utils import parse_raw_md_tables
 from docwen_plugin_markdown.document_semantics import analyze_document_semantics
 from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
 
@@ -214,3 +215,43 @@ def test_structural_table_backtick_boundaries_do_not_consume_column_pipes(
     assert [(child.get("type"), child.get("raw")) for child in first_anchor["children"]] == [
         (expected_kind, expected_raw)
     ]
+
+
+def test_escaped_backtick_does_not_open_a_structural_cell_code_span() -> None:
+    source = "| - | - |\n| \\`plain | literal` |\n| left | right |"
+    analysis = analyze_document_semantics(parse_markdown_text(source), current_v3=True)
+
+    assert not analysis.has_errors
+    [table] = _nested_tables(analysis.ast)
+    assert table["_document_semantics_table"]["column_count"] == 2
+
+
+@pytest.mark.parametrize("prefix", ["", "> "])
+def test_comment_tables_remain_visible_literal_source(prefix: str) -> None:
+    source = "\n".join(prefix + line for line in ["%%", "| A | < |", "| - | - |", "| 1 | 2 |", "%%"])
+    ast = parse_markdown_text(source)
+
+    assert not _nested_tables(ast)
+
+    def text(nodes):
+        return "".join(node.get("raw", "") + text(node.get("children", [])) for node in nodes)
+
+    assert "| A | < |" in text(ast)
+    assert "%%" in text(ast)
+
+
+@pytest.mark.parametrize(
+    "protected",
+    [
+        "%%\n```\n| - | - |\n| hidden | value |\n%%\n",
+        "```md\n%%\n| - | - |\n| hidden | value |\n%%\n```\n",
+    ],
+)
+def test_comment_and_fence_boundaries_do_not_hide_a_later_table(protected: str) -> None:
+    source = protected + "\n| - | - |\n| visible | value |\n"
+    analysis = analyze_document_semantics(parse_markdown_text(source), current_v3=True)
+
+    assert not analysis.has_errors
+    assert len(_nested_tables(analysis.ast)) == 1
+    [table] = parse_raw_md_tables(source, structural_tables=True)
+    assert table["all_rows"] == [["visible", "value"]]
