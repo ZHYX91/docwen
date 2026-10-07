@@ -144,8 +144,13 @@ class TestEpubToMd:
         chapter_two.content = "<html><body><p>Second</p><img src='images/pic.png' alt='second'></body></html>"
         book.add_item(chapter_one)
         book.add_item(chapter_two)
-        book.toc = [chapter_one, chapter_two]
-        book.spine = [chapter_one, chapter_two]
+        book.toc = [
+            epub.Link("chapters/one/ch1.xhtml", "One", "chapter-one"),
+            epub.Link("chapters/two/ch2.xhtml", "Two", "chapter-two"),
+        ]
+        book.add_item(epub.EpubNcx())
+        book.add_item(epub.EpubNav())
+        book.spine = ["nav", chapter_one, chapter_two]
 
         epub_path = tmp_path / "duplicate-images.epub"
         epub.write_epub(str(epub_path), book)
