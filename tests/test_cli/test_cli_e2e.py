@@ -504,6 +504,37 @@ def test_batch_convert_rejects_same_stem_collision_before_creating_output_dir(tm
     assert not output_dir.exists()
 
 
+def test_batch_convert_expands_directory_before_collision_preflight(tmp_path: Path) -> None:
+    input_dir = tmp_path / "inputs"
+    first_dir = input_dir / "first"
+    second_dir = input_dir / "second"
+    first_dir.mkdir(parents=True)
+    second_dir.mkdir(parents=True)
+    first = first_dir / "same.xlsx"
+    second = second_dir / "same.xlsx"
+    _write_xlsx(first)
+    _write_xlsx(second)
+    output_dir = tmp_path / "outputs"
+
+    proc = _run(
+        "batch",
+        "convert",
+        str(input_dir),
+        "--to",
+        "csv",
+        "--output-dir",
+        str(output_dir),
+        "--json",
+    )
+
+    assert proc.returncode == 7
+    assert proc.stderr == ""
+    payload = _payload(proc)
+    assert payload["error"]["code"] == "output_collision"
+    assert payload["error"]["details"]["collisions"] == [[str(first.resolve()), str(second.resolve())]]
+    assert not output_dir.exists()
+
+
 def test_batch_convert_rejects_existing_deterministic_target(tmp_path: Path) -> None:
     source = tmp_path / "sample.xlsx"
     _write_xlsx(source)
@@ -551,6 +582,42 @@ def test_cli_merge_pdf_uses_exact_output_path(tmp_path: Path) -> None:
         assert merged.page_count == 2
     finally:
         merged.close()
+
+
+def test_cli_merge_pdf_rejects_any_unadmitted_requested_input(tmp_path: Path) -> None:
+    import fitz
+
+    first = tmp_path / "first.pdf"
+    missing = tmp_path / "missing.pdf"
+    third = tmp_path / "third.pdf"
+    for path, label in ((first, "first"), (third, "third")):
+        document = fitz.open()
+        document.new_page(width=240, height=160).insert_text((48, 80), label)
+        document.save(path)
+        document.close()
+    output = tmp_path / "combined.pdf"
+
+    proc = _run(
+        "merge",
+        "pdf",
+        str(first),
+        str(missing),
+        str(third),
+        "--output",
+        str(output),
+        "--json",
+    )
+
+    assert proc.returncode != 0
+    assert proc.stderr == ""
+    payload = _payload(proc)
+    assert payload["success"] is False
+    assert payload["error"]["code"] == "invalid_input"
+    invalid_inputs = payload["error"]["details"]["invalid_inputs"]
+    assert len(invalid_inputs) == 1
+    assert invalid_inputs[0]["path"] == str(missing.resolve())
+    assert invalid_inputs[0]["reason"]
+    assert not output.exists()
 
 
 def test_cli_merge_tables_uses_exact_output_path(tmp_path: Path) -> None:

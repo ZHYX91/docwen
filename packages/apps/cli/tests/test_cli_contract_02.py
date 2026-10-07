@@ -126,6 +126,75 @@ class TestExecuteConvertActionPath:
         assert invalid_item["error"]["code"] == "invalid_input"
         assert invalid_item["error"]["details"] == "unsupported_extension"
 
+    def test_batch_stop_on_error_collects_started_work_and_does_not_start_more(
+        self,
+        tmp_path,
+        capsys,
+    ) -> None:
+        import json
+        import threading
+
+        from docwen_cli.commands.convert import execute_convert
+        from docwen_core.models.result import ConversionErrorInfo, ConversionResult
+
+        first = tmp_path / "first.docx"
+        second = tmp_path / "second.docx"
+        third = tmp_path / "third.docx"
+        for path in (first, second, third):
+            _write_ooxml(path)
+
+        second_started = threading.Event()
+        allow_second_finish = threading.Event()
+        executed: list[str] = []
+
+        def execute_single(request):
+            source = request.input_refs[0].path
+            executed.append(source)
+            if source == str(second):
+                second_started.set()
+                assert allow_second_finish.wait(2.0)
+                return ConversionResult(task_id="second", success=True)
+            if source == str(first):
+                assert second_started.wait(2.0)
+                allow_second_finish.set()
+                return ConversionResult(
+                    task_id="first",
+                    success=False,
+                    error=ConversionErrorInfo(
+                        error_type="conversion_failed",
+                        message="first failed",
+                    ),
+                )
+            raise AssertionError("third request must not start after stop-on-error")
+
+        mock_controller = MagicMock()
+        mock_controller.has_runtime = True
+        mock_controller.execute_single.side_effect = execute_single
+
+        args = _make_execution_args(
+            json=True,
+            batch=True,
+            jobs=2,
+            continue_on_error=False,
+            files=[str(first), str(second), str(third)],
+        )
+        exit_code = execute_convert(args, controller=mock_controller)
+
+        captured = capsys.readouterr()
+        payload = json.loads(captured.out)
+        assert exit_code == int(ExitCode.PARTIAL_FAILURE)
+        assert captured.err == ""
+        assert mock_controller.execute_single.call_count == 2
+        assert executed == [str(first), str(second)] or executed == [str(second), str(first)]
+        assert payload["data"]["total"] == 3
+        assert payload["data"]["succeeded"] == 1
+        assert payload["data"]["failed"] == 2
+        results = payload["data"]["results"]
+        assert results[0]["success"] is False
+        assert results[1]["success"] is True
+        assert results[2]["success"] is False
+        assert results[2]["output"] == ""
+
     def test_document_to_markdown_request_carries_cli_locale_yaml_labels(self, tmp_path) -> None:
         from unittest.mock import patch
 
