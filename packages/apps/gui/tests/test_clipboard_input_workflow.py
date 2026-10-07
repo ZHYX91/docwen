@@ -136,7 +136,7 @@ def test_locate_shortcut_still_reveals_user_owned_file(
 
     clipboard_window._on_locate_output_shortcut()
 
-    assert opened == [(str(source), True)]
+    assert opened == [(normalize_path(str(source)), True)]
 
 
 def test_file_clipboard_prefers_real_file_over_url_text(
