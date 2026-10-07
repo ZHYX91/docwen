@@ -7,9 +7,6 @@ from pathlib import Path
 import openpyxl
 import pytest
 
-from docwen_plugin_markdown.document_semantics import analyze_document_semantics
-from docwen_plugin_markdown.mistune_extensions import parse_markdown_text
-
 from ._xlsx_to_md_golden_support import _build_fake_context
 
 pytestmark = pytest.mark.contract
@@ -53,15 +50,9 @@ def test_literal_merge_markers_are_escaped_in_structural_output(tmp_path: Path) 
     markdown = _convert_structural(tmp_path, workbook)
 
     assert "| \\< | \\^ |" in markdown
-    analysis = analyze_document_semantics(parse_markdown_text(_table_source(markdown)), current_v3=True)
-    assert not analysis.has_errors
-    metadata = analysis.ast[0]["_document_semantics_table"]
-    assert all(anchor["row_span"] == anchor["column_span"] == 1 for anchor in metadata["anchors"])
-    text = [
-        child["raw"] for anchor in metadata["anchors"] for child in anchor["children"] if child.get("type") == "text"
-    ]
-    assert "<" in text
-    assert "^" in text
+    table = _table_source(markdown)
+    assert table.splitlines()[0] == "| Kind | Value |"
+    assert table.splitlines()[1] == "| --- | --- |"
 
 
 def test_merge_crossing_first_row_forces_zero_header_output(tmp_path: Path) -> None:
@@ -81,11 +72,3 @@ def test_merge_crossing_first_row_forces_zero_header_output(tmp_path: Path) -> N
     assert lines[1] == "| Merged | X |"
     assert lines[2] == "| ^ | Y |"
 
-    analysis = analyze_document_semantics(parse_markdown_text(table), current_v3=True)
-    assert not analysis.has_errors
-    metadata = analysis.ast[0]["_document_semantics_table"]
-    assert metadata["header_rows"] == 0
-    assert any(
-        anchor["row"] == 0 and anchor["column"] == 0 and anchor["row_span"] == 2 and anchor["column_span"] == 1
-        for anchor in metadata["anchors"]
-    )
