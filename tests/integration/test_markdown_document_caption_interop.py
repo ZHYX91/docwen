@@ -292,7 +292,6 @@ def test_number_suite_reference_inside_table_cell_round_trips_as_reference(
     assert markdown.count("@[[#^matrix]]") == 2
 
 
-
 def test_exact_two_figure_captioned_multi_image_table_round_trips_with_short_target_range(
     round_trip_runtime: Any,
     tmp_path: Path,

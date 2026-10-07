@@ -156,7 +156,6 @@ Real @[[#^target]] @real-cite.
     assert [item["raw"] for item in analysis.projection["citations"]] == ["@real-cite"]
 
 
-
 def test_direct_number_suite_multiline_comments_hide_reference_like_tokens() -> None:
     source = """# Target ^target
 
@@ -177,4 +176,3 @@ def test_direct_number_suite_multiline_comments_hide_reference_like_tokens() -> 
     assert not analysis.has_errors
     assert [item["raw"] for item in analysis.projection["references"]] == ["@[[#^target]]"]
     assert analysis.projection["citations"] == []
-
