@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import PurePosixPath
 from urllib.parse import unquote, urlsplit
@@ -207,7 +208,7 @@ def reject_declared_input_link_lookups(
     text: str,
     *,
     wiki_mode: str = "resolve",
-    declared_wiki_link=None,
+    declared_wiki_link: Callable[[str, str], str | None] | None = None,
 ) -> None:
     """Reject link forms that would make a declared-input task probe local files."""
 
