@@ -336,7 +336,9 @@ class TestHyperlinkCoordinates:
         selected = runs_for_range(paragraph, error.start_pos, error.end_pos)
 
         assert [run.text for run in selected] == ["rong"]
-        assert selected[0]._r.getparent().tag == qn("w:hyperlink")
+        parent = selected[0]._r.getparent()
+        assert parent is not None
+        assert parent.tag == qn("w:hyperlink")
         doc.add_comment(selected, text="replace", author="DocWen", initials="DW")
         assert [comment.text for comment in doc.comments] == ["replace"]
         assert paragraph.text == "prefix wrong suffix"
