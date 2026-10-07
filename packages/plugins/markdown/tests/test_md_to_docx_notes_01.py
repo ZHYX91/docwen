@@ -57,10 +57,9 @@ class TestProcessBodyFoundation:
         _, note_ctx = process_md_body_with_notes(MD_WITH_FOOTNOTES)
 
         assert note_ctx.has_endnotes
-        # The request-local projection maps canonical syntax to Mistune's ENDNOTE-X key.
-        assert "X" in note_ctx._endnote_children
-        # Endnote key has the ENDNOTE- prefix stripped
-        assert "ENDNOTE-X" not in note_ctx._endnote_children
+        # The request-local projection uses an opaque key independent of the authored ID.
+        assert "1" in note_ctx._endnote_children
+        assert all(not key.startswith("ENDNOTE-") for key in note_ctx._endnote_children)
 
     def test_foundation_no_notes_clean_passthrough(self):
         """Markdown with no notes produces an empty NoteContext."""
@@ -109,14 +108,16 @@ class TestProcessBodyFoundation:
             sum(child.get("type") == "footnote_ref" for node in cleaned_ast for child in node.get("children", [])) == 3
         )
 
-    def test_retired_endnote_syntax_is_rejected(self):
-        markdown = "Retired[^endnote-old].\n\n[^endnote-old]: Retired body.\n"
+    def test_endnote_dash_prefix_remains_an_ordinary_footnote_id(self):
+        markdown = "Ordinary[^endnote-topic].\n\n[^endnote-topic]: Ordinary body.\n"
 
-        with pytest.raises(NoteWritebackError) as raised:
-            process_md_body_with_notes(markdown)
+        cleaned_ast, note_ctx = process_md_body_with_notes(markdown)
 
-        assert raised.value.diagnostic_code == "MD2DOCX-NOTE-SYNTAX-INVALID"
-        assert "use the current endnote form" in str(raised.value)
+        assert len(note_ctx._footnote_children) == 1
+        assert note_ctx._endnote_children == {}
+        assert (
+            sum(child.get("type") == "footnote_ref" for node in cleaned_ast for child in node.get("children", [])) == 1
+        )
 
     @pytest.mark.parametrize(
         ("markdown", "message"),

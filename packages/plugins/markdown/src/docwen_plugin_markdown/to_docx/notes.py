@@ -23,10 +23,13 @@ import lxml.etree as etree
 WML_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 XML_NS = "http://www.w3.org/XML/1998/namespace"
 
-# Mistune uppercases footnote keys; endnote prefix is always uppercase
-# in the parsed AST.
-ENDNOTE_PREFIX_UC = "ENDNOTE-"
+# Mistune uppercases footnote keys in the parsed AST. Authored identifiers
+# never share this namespace: normalization projects every note to an opaque
+# request-local key before parsing.
+ENDNOTE_PREFIX_UC = "ENDNOTE-"  # legacy internal key accepted by NoteContext
 _ENDNOTE_PFX_LEN = len(ENDNOTE_PREFIX_UC)
+_INTERNAL_FOOTNOTE_PREFIX_UC = "DOCWEN-FN-"
+_INTERNAL_ENDNOTE_PREFIX_UC = "DOCWEN-EN-"
 
 _NOTE_DEFINITION_RE = re.compile(r"^(?P<lead> {0,3})\[\^(?P<label>[^\]\\\s]+)\]:[ \t]*(?P<body>.*)$")
 _NOTE_REFERENCE_RE = re.compile(r"(?<!\\)\[\^(?P<label>[^\]\\\s]+)\]")
@@ -44,7 +47,7 @@ def _note_syntax_invalid(message: str) -> NoReturn:
 def _note_identity(label: str, *, typed_endnotes: bool = True) -> tuple[str, str, str]:
     """Return ``(kind, normalized_id, spelling)`` for one authored label."""
 
-    folded = label.casefold()
+    folded = label.lower()
     if not typed_endnotes:
         kind, note_id, spelling = "footnote", label, "default"
     elif folded.startswith("footnote:"):
@@ -55,8 +58,6 @@ def _note_identity(label: str, *, typed_endnotes: bool = True) -> tuple[str, str
         kind = "endnote"
         note_id = label[len("endnote:") :]
         spelling = "canonical"
-    elif folded.startswith("endnote-"):
-        _note_syntax_invalid(f"Unsupported note label '[^{label}]'; use the current endnote form '[^endnote:id]'.")
     else:
         kind = "footnote"
         note_id = label
@@ -64,46 +65,57 @@ def _note_identity(label: str, *, typed_endnotes: bool = True) -> tuple[str, str
 
     if not note_id or any(char.isspace() or char in "[]\\" for char in note_id):
         _note_syntax_invalid(f"Invalid {kind} identifier in '[^{label}]'.")
-    normalized_id = unicodedata.normalize("NFC", note_id).casefold()
+    normalized_id = unicodedata.normalize("NFC", note_id).lower()
     if not normalized_id:
         _note_syntax_invalid(f"Invalid {kind} identifier in '[^{label}]'.")
     return kind, normalized_id, spelling
+
+
+def _mask_note_protected_source(source: str) -> str:
+    """Mask Markdown regions where note-looking text is literal metadata."""
+
+    ranges: list[tuple[int, int]] = []
+    patterns = (
+        re.compile(r"<!--.*?(?:-->|$)", re.DOTALL),
+        re.compile(r"%%.*?(?:%%|$)", re.DOTALL),
+        re.compile(r"(`+)(?:(?!\1).)*\1", re.DOTALL),
+        re.compile(r"!?\[\[[^\]\r\n]+\]\]"),
+        re.compile(r"\]\((?:\\.|[^)\r\n])*\)"),
+        re.compile(r"https?://[^\s<]+"),
+        re.compile(r"<[^>\r\n]*>"),
+        re.compile(r"(?m)^(?: {4}|\t).*?$"),
+    )
+    for pattern in patterns:
+        ranges.extend(match.span() for match in pattern.finditer(source))
+    if not ranges:
+        return source
+
+    characters = list(source)
+    for range_start, range_end in sorted(ranges):
+        for index in range(range_start, range_end):
+            if characters[index] not in "\r\n":
+                characters[index] = " "
+    return "".join(characters)
 
 
 def _rewrite_reference_segments(
     text: str,
     internal_keys: dict[tuple[str, str], str],
     *,
+    scan_text: str | None = None,
     typed_endnotes: bool = True,
 ) -> str:
-    """Rewrite note references outside inline-code spans."""
+    """Rewrite note references using a same-length protected projection."""
 
-    def rewrite_segment(segment: str) -> str:
-        def replace(match: re.Match[str]) -> str:
-            kind, normalized_id, _spelling = _note_identity(match.group("label"), typed_endnotes=typed_endnotes)
-            return f"[^{internal_keys[(kind, normalized_id)]}]"
-
-        return _NOTE_REFERENCE_RE.sub(replace, segment)
-
+    source_for_scan = text if scan_text is None else scan_text
     output: list[str] = []
     cursor = 0
-    while cursor < len(text):
-        tick = text.find("`", cursor)
-        if tick < 0:
-            output.append(rewrite_segment(text[cursor:]))
-            break
-        output.append(rewrite_segment(text[cursor:tick]))
-        run_end = tick
-        while run_end < len(text) and text[run_end] == "`":
-            run_end += 1
-        delimiter = text[tick:run_end]
-        close = text.find(delimiter, run_end)
-        if close < 0:
-            output.append(text[tick:])
-            break
-        close_end = close + len(delimiter)
-        output.append(text[tick:close_end])
-        cursor = close_end
+    for match in _NOTE_REFERENCE_RE.finditer(source_for_scan):
+        output.append(text[cursor : match.start()])
+        kind, normalized_id, _spelling = _note_identity(match.group("label"), typed_endnotes=typed_endnotes)
+        output.append(f"[^{internal_keys[(kind, normalized_id)]}]")
+        cursor = match.end()
+    output.append(text[cursor:])
     return "".join(output)
 
 
@@ -117,6 +129,9 @@ def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
     """
 
     lines = md_body.splitlines(keepends=True)
+    protected_lines = _mask_note_protected_source(md_body).splitlines(keepends=True)
+    if len(protected_lines) != len(lines):
+        raise AssertionError("note protection projection changed line cardinality")
     fenced_lines: set[int] = set()
     definition_labels: dict[int, str] = {}
     continuation_leads: dict[int, int] = {}
@@ -129,6 +144,7 @@ def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
 
     for index, line in enumerate(lines):
         text = line.rstrip("\r\n")
+        protected_text = protected_lines[index].rstrip("\r\n")
 
         if active_definition_lead is not None:
             if not text.strip():
@@ -153,7 +169,7 @@ def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
                 fence_length = 0
             continue
 
-        fence_match = _FENCE_OPEN_RE.match(text)
+        fence_match = _FENCE_OPEN_RE.match(protected_text)
         if fence_match is not None:
             fence = fence_match.group("fence")
             fence_char = fence[0]
@@ -161,7 +177,7 @@ def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
             fenced_lines.add(index)
             continue
 
-        definition_match = _NOTE_DEFINITION_RE.match(text)
+        definition_match = _NOTE_DEFINITION_RE.match(protected_text)
         if definition_match is None:
             continue
 
@@ -185,11 +201,12 @@ def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
         if index in fenced_lines or index in definition_labels or index in continuation_leads:
             continue
         text = line.rstrip("\r\n")
+        protected_text = protected_lines[index].rstrip("\r\n")
         cursor = 0
         while cursor < len(text):
             tick = text.find("`", cursor)
             segment_end = len(text) if tick < 0 else tick
-            for match in _NOTE_REFERENCE_RE.finditer(text, cursor, segment_end):
+            for match in _NOTE_REFERENCE_RE.finditer(protected_text, cursor, segment_end):
                 kind, normalized_id, _spelling = _note_identity(match.group("label"), typed_endnotes=typed_endnotes)
                 reference_identities.append((kind, normalized_id))
             if tick < 0:
@@ -213,14 +230,15 @@ def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
         if identity not in ordered_identities:
             ordered_identities.append(identity)
     internal_keys: dict[tuple[str, str], str] = {}
+    footnote_index = 0
+    endnote_index = 0
     for identity in ordered_identities:
-        label, spelling = definitions[identity]
         if identity[0] == "footnote":
-            note_id = label[len("footnote:") :] if spelling == "explicit" else label
-            internal_keys[identity] = note_id
+            footnote_index += 1
+            internal_keys[identity] = f"{_INTERNAL_FOOTNOTE_PREFIX_UC}{footnote_index}"
         else:
-            note_id = label[len("endnote:") :]
-            internal_keys[identity] = f"ENDNOTE-{note_id}"
+            endnote_index += 1
+            internal_keys[identity] = f"{_INTERNAL_ENDNOTE_PREFIX_UC}{endnote_index}"
 
     rewritten: list[str] = []
     for index, line in enumerate(lines):
@@ -243,7 +261,12 @@ def normalize_note_syntax(md_body: str, *, typed_endnotes: bool = True) -> str:
                 if 2 <= spaces < 4:
                     text = lead + "    " + remainder[spaces:]
         elif index not in fenced_lines:
-            text = _rewrite_reference_segments(text, internal_keys, typed_endnotes=typed_endnotes)
+            text = _rewrite_reference_segments(
+                text,
+                internal_keys,
+                scan_text=protected_lines[index].rstrip("\r\n"),
+                typed_endnotes=typed_endnotes,
+            )
         rewritten.append(text + newline)
     return "".join(rewritten)
 
@@ -314,7 +337,15 @@ def extract_notes_from_ast(
                 if not key:
                     continue
                 para_children = _extract_inline_children_per_para(item.get("children", []))
-                if key.upper().startswith(ENDNOTE_PREFIX_UC):
+                decoded = decode_internal_note_key(key)
+                if decoded is not None:
+                    kind, clean_id = decoded
+                    if kind == "endnote":
+                        note_ctx._endnote_children[clean_id] = para_children
+                    else:
+                        note_ctx._footnote_children[clean_id] = para_children
+                elif key.upper().startswith(ENDNOTE_PREFIX_UC):
+                    # Backward-compatible support for pre-opaque AST fixtures.
                     clean_id = key[_ENDNOTE_PFX_LEN:]
                     note_ctx._endnote_children[clean_id] = para_children
                 else:
@@ -373,6 +404,17 @@ def _resolve_style_id_by_name(doc, style_name: str) -> str | None:
 
 
 # ── NoteContext ──────────────────────────────────────────────────────────
+
+
+def decode_internal_note_key(key: str) -> tuple[str, str] | None:
+    """Decode one opaque request-local note key."""
+
+    upper = key.upper()
+    if upper.startswith(_INTERNAL_ENDNOTE_PREFIX_UC):
+        return "endnote", key[len(_INTERNAL_ENDNOTE_PREFIX_UC) :]
+    if upper.startswith(_INTERNAL_FOOTNOTE_PREFIX_UC):
+        return "footnote", key[len(_INTERNAL_FOOTNOTE_PREFIX_UC) :]
+    return None
 
 
 class NoteContext:
@@ -476,8 +518,11 @@ class NoteContext:
 
         Accepts keys with or without the ``ENDNOTE-`` prefix.
         """
-        # Normalise: strip prefix if present
-        clean_key = md_key[_ENDNOTE_PFX_LEN:] if md_key.upper().startswith(ENDNOTE_PREFIX_UC) else md_key
+        decoded = decode_internal_note_key(md_key)
+        if decoded is not None and decoded[0] == "endnote":
+            clean_key = decoded[1]
+        else:
+            clean_key = md_key[_ENDNOTE_PFX_LEN:] if md_key.upper().startswith(ENDNOTE_PREFIX_UC) else md_key
 
         if clean_key not in self._endnote_children:
             return None

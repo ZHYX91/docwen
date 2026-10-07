@@ -76,13 +76,8 @@ def _is_system_note(elem, w_ns: str) -> bool:
 
 
 def _extract_note_content(elem, w_ns: str, ref_tag: str) -> str:
-    """Extract text content from a footnote/endnote element.
+    """Extract note Markdown while preserving supported run formatting and breaks."""
 
-    Processes paragraphs individually, skipping runs that contain the
-    reference marker element (e.g. ``footnoteRef`` or ``endnoteRef``)
-    to avoid including the auto-numbering character in the content.
-    Multi-paragraph notes are joined with newlines.
-    """
     para_texts: list[str] = []
     for child in elem:
         tag = child.tag.split("}")[-1] if "}" in (child.tag or "") else (child.tag or "")
@@ -90,11 +85,7 @@ def _extract_note_content(elem, w_ns: str, ref_tag: str) -> str:
             continue
         run_texts: list[str] = []
         separator_expected = False
-        for run in child:
-            run_tag = run.tag.split("}")[-1] if "}" in (run.tag or "") else (run.tag or "")
-            if run_tag != "r":
-                separator_expected = False
-                continue
+        for run in child.iter(f"{{{w_ns}}}r"):
             if run.find(f"{{{w_ns}}}{ref_tag}") is not None:
                 separator_expected = True
                 continue
@@ -102,12 +93,98 @@ def _extract_note_content(elem, w_ns: str, ref_tag: str) -> str:
                 separator_expected = False
                 continue
             separator_expected = False
-            for t in run.findall(f"{{{w_ns}}}t"):
-                if t.text:
-                    run_texts.append(t.text)
+            rendered = _render_note_run(run, w_ns)
+            if rendered:
+                run_texts.append(rendered)
         if run_texts:
             para_texts.append("".join(run_texts))
     return "\n".join(para_texts)
+
+
+def _render_note_run(run: Any, w_ns: str) -> str:
+    """Render one note run using the Markdown formatting DocWen writes."""
+
+    parts: list[str] = []
+    for child in run:
+        if child.tag == f"{{{w_ns}}}t":
+            parts.append(child.text or "")
+        elif child.tag == f"{{{w_ns}}}br":
+            parts.append("\n")
+        elif child.tag == f"{{{w_ns}}}tab":
+            parts.append("\t")
+    text = "".join(parts)
+    if not text:
+        return ""
+
+    properties = run.find(f"{{{w_ns}}}rPr")
+    if properties is None:
+        return text
+
+    fonts = properties.find(f"{{{w_ns}}}rFonts")
+    shading = properties.find(f"{{{w_ns}}}shd")
+    code_run = (
+        fonts is not None
+        and (fonts.get(f"{{{w_ns}}}ascii") == "Consolas" or fonts.get(f"{{{w_ns}}}hAnsi") == "Consolas")
+        and shading is not None
+        and shading.get(f"{{{w_ns}}}fill") == "D9D9D9"
+    )
+    bold = _run_property_enabled(properties.find(f"{{{w_ns}}}b"), w_ns)
+    italic = _run_property_enabled(properties.find(f"{{{w_ns}}}i"), w_ns)
+    strike = _run_property_enabled(properties.find(f"{{{w_ns}}}strike"), w_ns)
+
+    return "\n".join(
+        _format_note_text_segment(
+            segment,
+            code=code_run,
+            bold=bold,
+            italic=italic,
+            strike=strike,
+        )
+        for segment in text.split("\n")
+    )
+
+
+def _run_property_enabled(element: Any, w_ns: str) -> bool:
+    if element is None:
+        return False
+    value = element.get(f"{{{w_ns}}}val")
+    return value is None or str(value).lower() not in {"0", "false", "off", "none"}
+
+
+def _format_note_text_segment(
+    text: str,
+    *,
+    code: bool,
+    bold: bool,
+    italic: bool,
+    strike: bool,
+) -> str:
+    if not text:
+        return ""
+    if code:
+        delimiter = "`" * (_longest_backtick_run(text) + 1)
+        return f"{delimiter}{text}{delimiter}"
+
+    rendered = text
+    if bold:
+        rendered = f"**{rendered}**"
+    if italic:
+        rendered = f"*{rendered}*"
+    if strike:
+        rendered = f"~~{rendered}~~"
+    return rendered
+
+
+def _longest_backtick_run(text: str) -> int:
+    longest = 0
+    current = 0
+    for character in text:
+        if character == "`":
+            current += 1
+            longest = max(longest, current)
+        else:
+            current = 0
+    return longest
 
 
 def _is_reference_separator_run(run: Any, w_ns: str) -> bool:

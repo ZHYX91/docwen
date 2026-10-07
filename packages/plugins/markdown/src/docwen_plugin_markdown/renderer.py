@@ -1696,7 +1696,17 @@ class MdToDocxRenderer:
         if not key:
             return
 
-        if key.upper().startswith("ENDNOTE-"):
+        from docwen_plugin_markdown.to_docx.notes import decode_internal_note_key
+
+        decoded = decode_internal_note_key(key)
+        if decoded is not None:
+            note_kind, clean_key = decoded
+            ref_run = (
+                self._note_ctx.create_endnote_ref_run(clean_key)
+                if note_kind == "endnote"
+                else self._note_ctx.create_footnote_ref_run(clean_key)
+            )
+        elif key.upper().startswith("ENDNOTE-"):
             ref_run = self._note_ctx.create_endnote_ref_run(key)
         else:
             ref_run = self._note_ctx.create_footnote_ref_run(key)
