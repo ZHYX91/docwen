@@ -70,8 +70,10 @@ def _longest_backtick_run(text: str) -> int:
 
 def _render_inline_code_span(text: str) -> str:
     delimiter = "`" * max(1, _longest_backtick_run(text) + 1)
-    needs_padding = text.startswith("`") or text.endswith("`") or (
-        text.startswith(" ") and text.endswith(" ") and bool(text.strip(" "))
+    needs_padding = (
+        text.startswith("`")
+        or text.endswith("`")
+        or (text.startswith(" ") and text.endswith(" ") and bool(text.strip(" ")))
     )
     body = f" {text} " if needs_padding else text
     return f"{delimiter}{body}{delimiter}"
