@@ -1902,11 +1902,30 @@ def _citation_item(
 
 
 def _literal_shield_ranges(source: str, blocks: Sequence[_Block]) -> list[SourceRange]:
+    """Return source ranges where reference-looking text is literal."""
+
     ranges = [SourceRange(block.start, block.end) for block in blocks if block.kind in {"code_block", "fenced_block"}]
-    for match in re.finditer(r"(`+)(?:(?!\1).)*\1", source):
-        ranges.append(SourceRange(match.start(), match.end()))
-    for match in re.finditer(r"https?://[^\s<]+|<[^>\r\n]*>", source):
-        ranges.append(SourceRange(match.start(), match.end()))
+
+    patterns = (
+        re.compile(r"<!--.*?(?:-->|$)", re.DOTALL),
+        re.compile(r"%%.*?(?:%%|$)", re.DOTALL),
+        re.compile(r"(`+)(?:(?!\1).)*\1", re.DOTALL),
+        re.compile(r"\]\((?:\\.|[^)\r\n])*\)"),
+        re.compile(r"<[^>\r\n]*>"),
+        re.compile(r"\\@\[\[[^\]\r\n]+\]\]"),
+        re.compile(r"\\@[A-Za-z0-9][A-Za-z0-9_-]{0,127}"),
+        re.compile(r"\\\[@[^\]\r\n]+\]"),
+    )
+    for pattern in patterns:
+        ranges.extend(SourceRange(match.start(), match.end()) for match in pattern.finditer(source))
+
+    for match in re.finditer(r"https?://[^\s<]+", source):
+        text = match.group(0)
+        semantic_start = text.find("@[[")
+        end = match.end() if semantic_start < 0 else match.start() + semantic_start
+        if end > match.start():
+            ranges.append(SourceRange(match.start(), end))
+
     return _merge_ranges(ranges)
 
 
