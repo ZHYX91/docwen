@@ -28,11 +28,24 @@ MARKDOWN_RESOURCE_BINDINGS_SCHEMA = {
                 },
             },
         },
+        "wiki_links": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["authored_token", "href"],
+                "properties": {
+                    "authored_token": {"type": "string", "minLength": 1},
+                    "href": {"type": "string", "minLength": 1},
+                },
+            },
+        },
     },
 }
 
 _WIKI_LINK_RE = re.compile(r"!?\[\[(?:[^\]\\]|\\.)+\]\]")
 _REMOTE_LINK_SCHEMES = frozenset({"ftp", "http", "https", "mailto"})
+_DECLARED_WIKI_SCHEMES = frozenset({"http", "https", "mailto", "obsidian"})
 
 
 class DeclaredResourceError(ValueError):
@@ -46,12 +59,16 @@ class DeclaredResourceResolver:
     source_logical_path: str
     resources: dict[str, str]
     bindings: dict[str, str] = field(default_factory=dict)
+    wiki_links: dict[str, str] = field(default_factory=dict)
 
     def with_bindings(self, source: str, value: object) -> DeclaredResourceResolver:
         """Authenticate token bindings against this source and the declared inventory."""
         if value is None:
             return self
-        if not isinstance(value, dict) or set(value) != {"authored_sha256", "images"}:
+        if not isinstance(value, dict):
+            raise DeclaredResourceError("invalid Markdown resource bindings")
+        allowed_keys = {"authored_sha256", "images", "wiki_links"}
+        if set(value) - allowed_keys or not {"authored_sha256", "images"} <= set(value):
             raise DeclaredResourceError("invalid Markdown resource bindings")
         if value["authored_sha256"] != hashlib.sha256(source.encode("utf-8")).hexdigest():
             raise DeclaredResourceError("Markdown resource bindings source hash mismatch")
@@ -59,6 +76,7 @@ class DeclaredResourceResolver:
         if not isinstance(images, list):
             raise DeclaredResourceError("invalid Markdown image bindings")
         visible_tokens: set[str] = set()
+        visible_wiki_links: set[str] = set()
 
         def collect(segment: str) -> str:
             from docwen_core.links._markdown_inline import parse_inline_link
@@ -80,6 +98,11 @@ class DeclaredResourceResolver:
                     visible_tokens.add(wiki.group(0))
                     index = wiki.end()
                     continue
+                navigation = _WIKI_LINK_RE.match(segment, index)
+                if navigation is not None and not navigation.group(0).startswith("!"):
+                    visible_wiki_links.add(navigation.group(0))
+                    index = navigation.end()
+                    continue
                 index += 1
             return segment
 
@@ -96,11 +119,40 @@ class DeclaredResourceResolver:
             if token in bindings and bindings[token] != logical:
                 raise DeclaredResourceError("conflicting image bindings")
             bindings[token] = logical
-        return DeclaredResourceResolver(self.source_logical_path, self.resources, bindings)
+        wiki_links: dict[str, str] = {}
+        raw_wiki_links = value.get("wiki_links", [])
+        if not isinstance(raw_wiki_links, list):
+            raise DeclaredResourceError("invalid Markdown wiki link bindings")
+        for item in raw_wiki_links:
+            if not isinstance(item, dict) or set(item) != {"authored_token", "href"}:
+                raise DeclaredResourceError("invalid Markdown wiki link binding")
+            token, href = item["authored_token"], item["href"]
+            if not isinstance(token, str) or token not in visible_wiki_links:
+                raise DeclaredResourceError("wiki link binding is not a visible authored wiki link")
+            if not isinstance(href, str):
+                raise DeclaredResourceError("invalid Markdown wiki link href")
+            parsed_href = urlsplit(href)
+            if parsed_href.scheme.lower() not in _DECLARED_WIKI_SCHEMES:
+                raise DeclaredResourceError("unsupported declared wiki link target")
+            if token in wiki_links and wiki_links[token] != href:
+                raise DeclaredResourceError("conflicting wiki link bindings")
+            wiki_links[token] = href
+        return DeclaredResourceResolver(
+            self.source_logical_path,
+            self.resources,
+            bindings,
+            wiki_links,
+        )
 
     def resolve_image(self, authored_token: str, target: str) -> str:
         logical = self.bindings.get(authored_token)
         return self.resources[logical] if logical is not None else self.resolve(target)
+
+    def resolve_wiki_link(self, authored_token: str, target: str) -> str | None:
+        """Return the authenticated navigation URI for one authored WikiLink."""
+
+        del target
+        return self.wiki_links.get(authored_token)
 
     def resolve(self, target: str) -> str:
         decoded_target = unquote(target)
@@ -151,7 +203,12 @@ def bind_declared_markdown_images(text: str, resolver: DeclaredResourceResolver)
     return _map_visible_markdown(text, bind)
 
 
-def reject_declared_input_link_lookups(text: str, *, wiki_mode: str = "resolve") -> None:
+def reject_declared_input_link_lookups(
+    text: str,
+    *,
+    wiki_mode: str = "resolve",
+    declared_wiki_link=None,
+) -> None:
     """Reject link forms that would make a declared-input task probe local files."""
 
     from docwen_core.links._markdown_inline import parse_inline_link
@@ -175,8 +232,11 @@ def reject_declared_input_link_lookups(text: str, *, wiki_mode: str = "resolve")
             index = match.end()
             if match.group(0).startswith("!"):
                 continue
-            target = match.group(0)[2:-2].split("|", 1)[0]
+            authored_token = match.group(0)
+            target = authored_token[2:-2].split("|", 1)[0]
             if target.startswith("#") or urlsplit(target).scheme.lower() in _REMOTE_LINK_SCHEMES:
+                continue
+            if declared_wiki_link is not None and declared_wiki_link(authored_token, target) is not None:
                 continue
             raise DeclaredResourceError("local wiki link resolution is unavailable for declared-input requests")
         return segment
