@@ -381,14 +381,12 @@ class PptxToMarkdownConverter:
             total_smartart_texts += smartart_cnt
 
         # M10 — YAML frontmatter
-        title_key = "title"
-        yaml_key_labels = opts.get("yaml_key_labels")
-        if isinstance(yaml_key_labels, dict):
-            label_title = yaml_key_labels.get("title")
-            if isinstance(label_title, str) and label_title.strip():
-                title_key = label_title.strip()
-        yaml_lines = ["---", "aliases:", f"  - {title}", f"{title_key}: {title}", "---"]
-        yaml_block = "\n".join(yaml_lines) + "\n"
+        from docwen_core.yaml_tools import generate_basic_yaml_frontmatter
+
+        yaml_block = generate_basic_yaml_frontmatter(
+            title,
+            yaml_key_labels=opts.get("yaml_key_labels"),
+        )
         body = yaml_block + f"# {title}\n\n" + "\n\n".join(s for s in sections if s.strip())
         body = body.strip() + "\n"
 
@@ -584,9 +582,7 @@ class PptxToMarkdownConverter:
         image_link_style = policy.export.image_link_style
         md_file_link_style = policy.export.md_file_link_style
 
-        shapes = list(getattr(slide, "shapes", []))
-        # Sort shapes by position (top, then left) for logical order
-        shapes.sort(key=lambda s: (_safe_int(getattr(s, "top", 0)), _safe_int(getattr(s, "left", 0))))
+        shapes = self._flatten_slide_shapes(getattr(slide, "shapes", []))
 
         lines: list[str] = []
         table_count = 0
@@ -888,6 +884,22 @@ class PptxToMarkdownConverter:
                     )
 
         return lines, image_count, table_count, smartart_text_count
+
+    @classmethod
+    def _flatten_slide_shapes(cls, shapes: Any) -> list[Any]:
+        """Return leaf shapes in stable visual order, recursing into groups."""
+
+        ordered = list(shapes or [])
+        ordered.sort(key=lambda shape: (_safe_int(getattr(shape, "top", 0)), _safe_int(getattr(shape, "left", 0))))
+        flattened: list[Any] = []
+        for shape in ordered:
+            nested = getattr(shape, "shapes", None)
+            shape_type = getattr(shape, "shape_type", None)
+            if nested is not None and (str(shape_type).endswith("GROUP") or shape_type == 6):
+                flattened.extend(cls._flatten_slide_shapes(nested))
+            else:
+                flattened.append(shape)
+        return flattened
 
     @staticmethod
     def _shape_media_kind(shape: Any) -> str | None:
