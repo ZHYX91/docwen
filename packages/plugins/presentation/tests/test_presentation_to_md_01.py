@@ -231,7 +231,6 @@ class TestPptxToMd:
         assert frontmatter["title"] == title
         assert frontmatter["aliases"] == [title]
 
-
     def test_pptx_slide_content(self, pipeline, sample_pptx_file, tmp_path) -> None:
         """Slide headings and text must be preserved."""
         _plugin, task_mgr, _ws_mgr = pipeline
