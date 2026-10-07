@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import posixpath
 import time
+from collections.abc import Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import unquote, urlsplit
 
 from docwen_core.models.artifact import (
@@ -468,7 +469,7 @@ def _epub_image_links_for_document(
     if not callable(find_all):
         return scoped
 
-    for element in find_all("img"):
+    for element in cast(Iterable[Any], find_all("img")):
         src = str(element.get("src") or "").strip()
         if not src:
             continue
