@@ -91,10 +91,7 @@ class TestHtmlToMd:
     def test_html_route_uses_filereference_encoding_before_lossy_fallback(self, pipeline, tmp_path) -> None:
         _plugin, task_mgr, _ws_mgr = pipeline
         html_path = tmp_path / "gb18030.html"
-        body = (
-            '<html><head><meta charset="gb18030"><title>中文标题</title></head>'
-            '<body><p>中文正文</p></body></html>'
-        )
+        body = '<html><head><meta charset="gb18030"><title>中文标题</title></head><body><p>中文正文</p></body></html>'
         html_path.write_bytes(body.encode("gb18030"))
         output_dir = tmp_path / "output_gb18030"
         output_dir.mkdir()
