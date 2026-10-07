@@ -7,7 +7,9 @@ half-open range boundaries and anchor the comment to the complete run span.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from copy import deepcopy
+from typing import Any, cast
 
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
@@ -28,7 +30,7 @@ def paragraph_visible_runs(paragraph) -> list[Run]:
         return list(paragraph.runs)
 
     visible: list[Run] = []
-    for item in iterator():
+    for item in cast(Iterable[Any], iterator()):
         if isinstance(item, Run):
             visible.append(item)
             continue
