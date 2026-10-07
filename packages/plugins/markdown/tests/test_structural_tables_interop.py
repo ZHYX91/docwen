@@ -194,22 +194,25 @@ def test_structural_tables_inside_quote_callout_and_list_are_annotated(source: s
 
 
 @pytest.mark.parametrize(
-    ("source", "first_cell"),
+    ("source", "expected_kind", "expected_raw"),
     [
-        ("| - | - |\n| `literal | value |\n| left | right |", "`literal"),
-        ("| - | - |\n| `C:\\` | value |\n| left | right |", "`C:\\`"),
+        ("| - | - |\n| `literal | value |\n| left | right |", "text", "`literal"),
+        ("| - | - |\n| `C:\\` | value |\n| left | right |", "codespan", "C:\\"),
     ],
 )
 def test_structural_table_backtick_boundaries_do_not_consume_column_pipes(
     source: str,
-    first_cell: str,
+    expected_kind: str,
+    expected_raw: str,
 ) -> None:
     analysis = analyze_document_semantics(parse_markdown_text(source), current_v3=True)
 
     assert not analysis.has_errors
     metadata = analysis.ast[0]["_document_semantics_table"]
     assert metadata["column_count"] == 2
-    text_values = [
-        child["raw"] for anchor in metadata["anchors"] for child in anchor["children"] if child.get("type") == "text"
+    first_anchor = next(
+        anchor for anchor in metadata["anchors"] if anchor["row"] == 0 and anchor["column"] == 0
+    )
+    assert [(child.get("type"), child.get("raw")) for child in first_anchor["children"]] == [
+        (expected_kind, expected_raw)
     ]
-    assert first_cell in text_values
