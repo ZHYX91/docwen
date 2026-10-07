@@ -77,10 +77,7 @@ def test_literal_structural_markers_round_trip_as_literal_cells(tmp_path: Path) 
     metadata = analysis.ast[0]["_document_semantics_table"]
     assert all(anchor["row_span"] == anchor["column_span"] == 1 for anchor in metadata["anchors"])
     values = [
-        child["raw"]
-        for anchor in metadata["anchors"]
-        for child in anchor["children"]
-        if child.get("type") == "text"
+        child["raw"] for anchor in metadata["anchors"] for child in anchor["children"] if child.get("type") == "text"
     ]
     assert "<" in values
     assert "^" in values
@@ -101,9 +98,6 @@ def test_cross_header_merge_round_trips_as_zero_header_geometry(tmp_path: Path) 
     metadata = analysis.ast[0]["_document_semantics_table"]
     assert metadata["header_rows"] == 0
     assert any(
-        anchor["row"] == 0
-        and anchor["column"] == 0
-        and anchor["row_span"] == 2
-        and anchor["column_span"] == 1
+        anchor["row"] == 0 and anchor["column"] == 0 and anchor["row_span"] == 2 and anchor["column_span"] == 1
         for anchor in metadata["anchors"]
     )
