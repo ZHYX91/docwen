@@ -20,7 +20,8 @@ HEADLESS_NAME = "opencv-python-headless"
 HEADLESS_VERSION = "4.13.0.92"
 RAPIDOCR_NAME = "rapidocr-onnxruntime"
 RAPIDOCR_VERSION = "1.4.4"
-UV_VERSION = "0.12.0"
+UV_PRODUCTION_VERSION = "0.12.0"
+UV_MAINTENANCE_RANGE = ">=0.12.0,<0.13"
 MUTUALLY_EXCLUSIVE_OPENCV_DISTRIBUTIONS = {
     "opencv-python",
     "opencv-python-headless",
@@ -92,7 +93,7 @@ def test_lock_selects_one_headless_opencv_distribution() -> None:
         "package": {"name": RAPIDOCR_NAME, "version": RAPIDOCR_VERSION},
         "dependencies": ["opencv-python"],
     }
-    assert project["tool"]["uv"]["required-version"] == f"=={UV_VERSION}"
+    assert project["tool"]["uv"]["required-version"] == UV_MAINTENANCE_RANGE
     assert project["tool"]["uv"]["exclude-dependencies"] == [expected_exclusion]
     assert lock["manifest"]["excludes"] == [expected_exclusion]
 
@@ -158,7 +159,7 @@ def test_docwen_sources_do_not_call_opencv_highgui() -> None:
     assert violations == []
 
 
-def test_source_and_ci_contracts_pin_frozen_uv() -> None:
+def test_source_maintenance_range_keeps_ci_on_frozen_production_uv() -> None:
     workflow_paths = (ROOT / ".github" / "workflows" / "tests.yml", ROOT / ".github" / "workflows" / "release.yml")
     for path in workflow_paths:
         source = path.read_text(encoding="utf-8")
@@ -166,7 +167,7 @@ def test_source_and_ci_contracts_pin_frozen_uv() -> None:
         setup_count = len(setup_actions)
         assert setup_count > 0
         assert set(setup_actions) == {"37802adc94f370d6bfd71619e3f0bf239e1f3b78"}
-        assert source.count(f'version: "{UV_VERSION}"') == setup_count
+        assert source.count(f'version: "{UV_PRODUCTION_VERSION}"') == setup_count
         sync_commands = re.findall(r"(?m)^\s*run:\s*(uv sync[^\r\n]*)$", source)
         assert sync_commands
         assert all(command.startswith("uv sync --frozen ") for command in sync_commands)
@@ -178,6 +179,6 @@ def test_source_and_ci_contracts_pin_frozen_uv() -> None:
     ]
     for path in public_source_docs:
         source = path.read_text(encoding="utf-8")
-        assert UV_VERSION in source
+        assert UV_PRODUCTION_VERSION in source
         assert "uv sync --frozen --all-extras" in source
         assert re.search(r"(?m)^\s*pip install -e\b", source) is None
