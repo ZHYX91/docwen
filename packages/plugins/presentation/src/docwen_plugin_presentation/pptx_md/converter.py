@@ -26,6 +26,7 @@ from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any
 
 from docwen_core.text.ocr import report_ocr_outcome
+from docwen_core.yaml_tools import generate_basic_yaml_frontmatter
 from docwen_plugin_presentation.pptx_md.request_policy import (
     PresentationMarkdownRequestPolicy,
     build_presentation_markdown_request_policy,
@@ -381,14 +382,10 @@ class PptxToMarkdownConverter:
             total_smartart_texts += smartart_cnt
 
         # M10 — YAML frontmatter
-        title_key = "title"
-        yaml_key_labels = opts.get("yaml_key_labels")
-        if isinstance(yaml_key_labels, dict):
-            label_title = yaml_key_labels.get("title")
-            if isinstance(label_title, str) and label_title.strip():
-                title_key = label_title.strip()
-        yaml_lines = ["---", "aliases:", f"  - {title}", f"{title_key}: {title}", "---"]
-        yaml_block = "\n".join(yaml_lines) + "\n"
+        yaml_block = generate_basic_yaml_frontmatter(
+            title,
+            yaml_key_labels=opts.get("yaml_key_labels"),
+        )
         body = yaml_block + f"# {title}\n\n" + "\n\n".join(s for s in sections if s.strip())
         body = body.strip() + "\n"
 
@@ -547,6 +544,25 @@ class PptxToMarkdownConverter:
             safe_stem = safe_stem.rstrip("._-") or "presentation"
         return safe_stem
 
+    @classmethod
+    def _ordered_content_shapes(cls, shapes: Any) -> list[Any]:
+        """Return content shapes in visual order, recursively expanding groups.
+
+        Group children are ordered only within their group so group-local
+        coordinates never compete with unrelated slide-level coordinates.
+        """
+
+        ordered = list(shapes or [])
+        ordered.sort(key=lambda s: (_safe_int(getattr(s, "top", 0)), _safe_int(getattr(s, "left", 0))))
+        result: list[Any] = []
+        for shape in ordered:
+            if getattr(shape, "shape_type", None) == 6 and hasattr(shape, "shapes"):
+                result.extend(cls._ordered_content_shapes(shape.shapes))
+            else:
+                result.append(shape)
+        return result
+
+
     def _process_slide(
         self,
         slide: Any,
@@ -584,9 +600,7 @@ class PptxToMarkdownConverter:
         image_link_style = policy.export.image_link_style
         md_file_link_style = policy.export.md_file_link_style
 
-        shapes = list(getattr(slide, "shapes", []))
-        # Sort shapes by position (top, then left) for logical order
-        shapes.sort(key=lambda s: (_safe_int(getattr(s, "top", 0)), _safe_int(getattr(s, "left", 0))))
+        shapes = self._ordered_content_shapes(getattr(slide, "shapes", []))
 
         lines: list[str] = []
         table_count = 0
