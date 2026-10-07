@@ -30,6 +30,7 @@ class ApiError(PublicationError):
         super().__init__(f"GitHub request failed: HTTP {status}")
         self.status = status
         self.retry_after = retry_after
+        self.limited = limited
         self.transient = status in {408, 429, 500, 502, 503, 504} or (status == 403 and limited)
 
 
