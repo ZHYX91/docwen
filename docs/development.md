@@ -7,7 +7,7 @@ DocWen 要求 Python 3.12。仓库使用 uv workspace 管理 core、application�
 ## Setup / 环境
 
 ```powershell
-uv sync --frozen --all-extras  # requires uv 0.12.0
+uv sync --frozen --all-extras  # CI/release pin uv 0.12.0; lock maintenance accepts compatible 0.12.x
 .\.venv\Scripts\python.exe tools\qa.py --suite fast
 docwen --help
 docwen-gui
