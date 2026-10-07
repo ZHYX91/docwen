@@ -264,11 +264,7 @@ class HtmlToMarkdownConverter:
         # ordinary HTML keeps its admitted encoding and in-document charset.
         html_bytes = Path(html_path).read_bytes()
         source_ref = context.request.input_refs[0] if context.request.input_refs else None
-        admitted_encoding = (
-            str(source_ref.encoding or "").strip()
-            if source_ref is not None and source in {"html", "htm"}
-            else "utf-8"
-        )
+        admitted_encoding = str(source_ref.encoding or "").strip() if source_ref is not None and source in {"html", "htm"} else "utf-8"
         html_text = _decode_html_payload(html_bytes, admitted_encoding=admitted_encoding)
 
         # Extract title from HTML
