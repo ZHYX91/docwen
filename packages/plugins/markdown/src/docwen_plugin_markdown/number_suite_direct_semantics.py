@@ -19,6 +19,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, cast
 
+from docwen_core.links import split_markdown_inline_segments
 from docwen_core.markdown_extensions import MarkdownExtensions
 from docwen_plugin_markdown.document_semantics_v3 import (
     ExternalCitationResolution,
@@ -1906,6 +1907,25 @@ def _literal_shield_ranges(source: str, blocks: Sequence[_Block]) -> list[Source
 
     ranges = [SourceRange(block.start, block.end) for block in blocks if block.kind in {"code_block", "fenced_block"}]
 
+    # Comment delimiters inside code are literal.  Scan the remaining syntax
+    # against a length-preserving projection so an unclosed delimiter in a
+    # code block cannot swallow later authored references.
+    characters = list(source)
+    for span in ranges:
+        for index in range(span.start, span.end):
+            if characters[index] not in "\r\n":
+                characters[index] = " "
+    projected_source = "".join(characters)
+    offset = 0
+    for segment, protected in split_markdown_inline_segments(projected_source):
+        if protected:
+            ranges.append(SourceRange(offset, offset + len(segment)))
+            for index in range(offset, offset + len(segment)):
+                if characters[index] not in "\r\n":
+                    characters[index] = " "
+        offset += len(segment)
+    projected_source = "".join(characters)
+
     patterns = (
         re.compile(r"<!--.*?(?:-->|$)", re.DOTALL),
         re.compile(r"%%.*?(?:%%|$)", re.DOTALL),
@@ -1917,7 +1937,7 @@ def _literal_shield_ranges(source: str, blocks: Sequence[_Block]) -> list[Source
         re.compile(r"\\\[@[^\]\r\n]+\]"),
     )
     for pattern in patterns:
-        ranges.extend(SourceRange(match.start(), match.end()) for match in pattern.finditer(source))
+        ranges.extend(SourceRange(match.start(), match.end()) for match in pattern.finditer(projected_source))
 
     for match in re.finditer(r"https?://[^\s<]+", source):
         text = match.group(0)

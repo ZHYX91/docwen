@@ -19,6 +19,8 @@ from zipfile import BadZipFile, ZipFile
 
 import lxml.etree as etree
 
+from docwen_core.links import split_markdown_block_segments, split_markdown_inline_segments
+
 # ── OOXML constants ─────────────────────────────────────────────────────
 WML_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 XML_NS = "http://www.w3.org/XML/1998/namespace"
@@ -75,6 +77,22 @@ def _mask_note_protected_source(source: str) -> str:
     """Mask Markdown regions where note-looking text is literal metadata."""
 
     ranges: list[tuple[int, int]] = []
+    # Shield fenced code before looking for comments.  An unmatched HTML or
+    # Obsidian comment delimiter in a literal example must not mask the notes
+    # following that code block.
+    offset = 0
+    for block, block_protected in split_markdown_block_segments(source):
+        segments = [(block, True)] if block_protected else split_markdown_inline_segments(block)
+        for segment, protected in segments:
+            if protected:
+                ranges.append((offset, offset + len(segment)))
+            offset += len(segment)
+    characters = list(source)
+    for start, end in ranges:
+        for index in range(start, end):
+            if characters[index] not in "\r\n":
+                characters[index] = " "
+    projected_source = "".join(characters)
     patterns = (
         re.compile(r"<!--.*?(?:-->|$)", re.DOTALL),
         re.compile(r"%%.*?(?:%%|$)", re.DOTALL),
@@ -86,7 +104,7 @@ def _mask_note_protected_source(source: str) -> str:
         re.compile(r"(?m)^(?: {4}|\t).*?$"),
     )
     for pattern in patterns:
-        ranges.extend(match.span() for match in pattern.finditer(source))
+        ranges.extend(match.span() for match in pattern.finditer(projected_source))
     if not ranges:
         return source
 

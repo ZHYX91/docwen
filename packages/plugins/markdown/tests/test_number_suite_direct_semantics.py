@@ -17,6 +17,28 @@ def _analyze(source: str):
     )
 
 
+@pytest.mark.parametrize("literal", ["%%", "<!--", "`%%`", "`<!--`"])
+def test_code_comment_delimiters_do_not_hide_following_semantic_references(literal: str) -> None:
+    source = f"Figure: Image ^image\n\n~~~text\n{literal}\n~~~\n\nSee @[[#^image]].\n"
+
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    [reference] = analysis.projection["references"]
+    assert reference["resolution_status"] == "resolved"
+    assert reference["target_id"] == "image"
+
+
+@pytest.mark.parametrize("literal", ["%%", "<!--"])
+def test_inline_code_comment_delimiters_do_not_hide_following_references(literal: str) -> None:
+    source = f"Figure: Image ^image\n\n`{literal}`\n\nSee @[[#^image]].\n"
+    analysis = _analyze(source)
+
+    assert not analysis.has_errors
+    [reference] = analysis.projection["references"]
+    assert reference["target_id"] == "image"
+
+
 def test_direct_number_suite_profile_keeps_standalone_captions_and_normalizes_targets() -> None:
     source = """Figure: Standalone   Caption ^Figure-ID
 
