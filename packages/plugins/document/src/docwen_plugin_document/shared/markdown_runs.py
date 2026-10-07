@@ -107,11 +107,12 @@ def _append_inline_code_wrapped(
 ) -> None:
     if parts:
         previous = _unwrap_wrappers(parts[-1], outer_wrappers) if outer_wrappers else parts[-1]
-        previous_code = _decode_rendered_inline_code_span(previous)
-        if previous_code is not None:
-            combined = _render_inline_code_span(previous_code + raw_text)
-            parts[-1] = _apply_wrappers(combined, outer_wrappers)
-            return
+        if previous is not None:
+            previous_code = _decode_rendered_inline_code_span(previous)
+            if previous_code is not None:
+                combined = _render_inline_code_span(previous_code + raw_text)
+                parts[-1] = _apply_wrappers(combined, outer_wrappers)
+                return
     parts.append(_apply_wrappers(_render_inline_code_span(raw_text), outer_wrappers))
 
 
